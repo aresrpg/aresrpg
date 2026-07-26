@@ -43,7 +43,7 @@ import l3_vectors from './l3_vectors.json'
 const CORPUS = fixture.rows
 /** The seat's AP purse — every simulator seat opens on the base pool, so this bounds what is castable. */
 const SEAT_AP = 6
-/** Seeds tried in order until one deals the spell into the opening hand (a 7-card draw off a shuffled deck). */
+/** Seeds tried in order until one opens a fight whose lane holds the cell the scenario needs. */
 const SEEDS = [0xc81f3a92, 0x1a2b3c4d, 0x5e6f7a8b, 0x9c0d1e2f, 0x33445566, 0x778899aa, 0xbbccddee, 0x0f1e2d3c]
 
 set_spell_corpus_for_test(CORPUS)
@@ -141,8 +141,9 @@ const open_fight = ({ seed, caster_class, caster_level, mob_distance }) => {
 const unlock_of = (row) => Number(row.unlock ?? 1)
 
 /**
- * A fight whose opening hand HOLDS the spell under test. The hand is a 7-card draw off a shuffled deck, so
- * for a class past its eighth unlock this walks the seed pool until the draw contains it.
+ * A fight the spell under test can be cast in. Every spell the seat's level has unlocked is castable from the
+ * first turn — there is no hand and no deal (#1012) — so the seed pool is walked only for a board whose lane
+ * can seat the mob at the scenario's distance.
  */
 const fight_holding = (row, { mob_distance }) => {
   for (const seed of SEEDS) {
@@ -152,9 +153,7 @@ const fight_holding = (row, { mob_distance }) => {
       caster_level: unlock_of(row),
       mob_distance,
     })
-    if (opened === null) continue
-    const [seat] = opened.chain.sim_state.team0
-    if (seat.hand.includes(String(row.object_id))) return opened
+    if (opened !== null) return opened
   }
   return null
 }
@@ -236,17 +235,25 @@ for (const row of CORPUS) {
       if (result.casts === 1) record(row, 'cast_in_range', 'passed')
       else disagree(row, 'cast_in_range', 'one accepted cast', `${result.casts} cast rows`)
 
-      // ── template: a spell is a CARD — casting it discards it, so the same turn cannot cast it twice ──────
-      // (The published `casts_per_turn` never gets a chance to bind: the hand does it first.)
-      const twice = cast_turn(opened, row, lane_cell(opened.geometry, reach), 2)
-      if (twice.casts === 1) record(row, 'second_cast_refused', 'passed')
-      else
-        disagree(
-          row,
-          'second_cast_refused',
-          'exactly one accepted cast — the card left the hand',
-          `${twice.casts} casts`
-        )
+      // ── template: a second same-turn cast obeys the PUBLISHED limits and nothing else (#1012) ────────────
+      // Two casts of one spell at one cell are accepted exactly when the row's own casts_per_turn /
+      // casts_per_target / cooldown allow it AND the purse can pay twice. No card ever refuses one.
+      // A FREE-CELL row is not askable this way: its first cast takes the empty cell (a teleport lands the
+      // caster on it, a trap anchors there), so the second refusal would be a targeting fact, not a limit.
+      if (expectation.free_cell) record(row, 'second_cast_limits', 'skipped', SKIP.TARGET_CELL_CONSUMED)
+      else {
+        const affordable_twice = expectation.ap_cost * 2 <= SEAT_AP
+        const allowed = repeatable(2) && affordable_twice ? 2 : 1
+        const twice = cast_turn(opened, row, lane_cell(opened.geometry, reach), 2)
+        if (twice.casts === allowed) record(row, 'second_cast_limits', 'passed')
+        else
+          disagree(
+            row,
+            'second_cast_limits',
+            `${allowed} accepted cast(s) — the published limits and the purse decide`,
+            `${twice.casts} casts`
+          )
+      }
 
       // ── template: the magnitude a damage row lands is inside the published band ────────────────────────
       if (expectation.damage === null) record(row, 'damage_bounds', 'skipped', SKIP.NO_MAGNITUDE_FAMILY)
@@ -295,10 +302,8 @@ for (const row of CORPUS) {
   }
 
   // ── template: a spell the purse cannot pay for folds NOTHING ───────────────────────────────────────────
-  // The honest AP scenario is a cost the seat cannot meet at all. An "exhaust the purse over several casts"
-  // scenario is NOT available in this game: a cast discards its card, so a turn casts each spell once and the
-  // hand — not the purse — is what refuses the second (see `second_cast_refused`). Asserting an AP law over a
-  // sequence would have been the oracle mis-attributing the sim's actual mechanism.
+  // The honest AP scenario is a cost the seat cannot meet at all; the multi-cast purse drain is covered by
+  // `second_cast_limits` above, which is where casts_per_turn and the purse are read together.
   if (expectation.ap_cost <= SEAT_AP) record(row, 'insufficient_ap_refused', 'skipped', SKIP.AP_COST_WITHIN_PURSE)
   else if (expectation.range_max === 0 || reach > expectation.range_max || !reachable(reach))
     record(

@@ -94,12 +94,9 @@ export const create_fight_shim = ({
 
   /** Fold ONE receipt through the core's door. The store drops a version at or below its frontier, so this is
    *  idempotent under a double delivery — the property the real receipt lane relies on. */
-  const feed = ({ version, receipt, hand_updates = [] }) => {
+  const feed = ({ version, receipt }) => {
     if (!live || !receipt?.events?.length) return
-    const { input } = store.getState()
-    input({ type: 'receipt', version, receipt, fight_id: live.fight_id })
-    // `hand_update` is NOT a chain row (spec §4.4's table) — it is the store's own input, forwarded verbatim.
-    for (const hand_update of hand_updates) input({ ...hand_update, fight_id: live.fight_id })
+    store.getState().input({ type: 'receipt', version, receipt, fight_id: live.fight_id })
   }
 
   const sync_status = () => {
@@ -290,8 +287,8 @@ export const create_fight_shim = ({
       },
     })
     store.getState().input({ type: 'snapshot', fight: snapshot_from_sim(chain, { now_ms: now() }), version: 1 })
-    // THE DEALT HAND (#949). The snapshot carries none, so without this the spell bar opens EMPTY on a full
-    // deck and fills only when a later turn's update lands — read as "this seat only has its first spells".
+    // THE SEAT'S CASTABLE SET (#949). The snapshot carries none, so without this the spell bar opens EMPTY
+    // and a level-200 seat reads as "this character has just its first spells".
     const hand_update = hand_update_of(chain.sim_state, seat_id)
     if (hand_update) store.getState().input({ ...hand_update, fight_id })
     pump_mobs() // the turn weave can open on a mob seat
@@ -299,7 +296,7 @@ export const create_fight_shim = ({
   }
 
   /** Seat focus (spec §6) — the production MULTICHAR path; the core re-resolves `my_key` from the new entity.
-   *  The bar's hand is a SINGLE slot, so the new seat's cards go through the same door the open used (#949) —
+   *  The bar holds a SINGLE seat's spells, so the new seat's go through the same door the open used (#949) —
    *  otherwise focus switches the board and leaves the previous seat's spells armed on the bar. */
   const focus_seat = (character_id) => {
     store.getState().input({ type: 'ctx', ctx: { my_entity_id: character_id } })

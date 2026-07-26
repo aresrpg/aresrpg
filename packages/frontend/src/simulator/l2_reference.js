@@ -58,6 +58,7 @@ export const SKIP = {
   FREE_CELL_SPELL: 'free_cell_spell_targets_empty_ground_no_victim_to_measure',
   ZERO_AP_COST: 'ap_cost_is_zero_or_exceeds_the_seat_purse_so_no_ap_scenario_exists',
   CAST_LIMIT_BINDS_FIRST: 'casts_per_turn_or_cooldown_binds_before_the_ap_purse_does',
+  TARGET_CELL_CONSUMED: 'free_cell_spell_the_first_cast_takes_the_empty_cell_the_second_would_need',
 }
 
 /** The published level block at `index`, or null when the row does not carry one. */

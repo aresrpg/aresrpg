@@ -472,8 +472,7 @@ const cast_envelope = (state, event, ctx) => {
 /**
  * Encode ONE sim event into its chain rows. Pure per event; `ctx.cells` is the running cell index the encoder
  * builds as it goes (a local accumulator, not a caller's value) so `Displaced.from_cell` is the true origin.
- * `hand_update` is the one sim event with NO chain row — it rides the store's own `hand_update` door.
- * @returns {{ rows: object[], hand_updates?: object[] }}
+ * @returns {{ rows: object[] }}
  */
 const encode_event = (event, ctx) => {
   const { fight_id, post_state, pre_state, now_ms, turn_ms } = ctx
@@ -571,18 +570,6 @@ const encode_event = (event, ctx) => {
         ],
       }
     }
-    case 'hand_update':
-      return {
-        rows: [],
-        hand_updates: [
-          {
-            entity_id: event.entity_id,
-            hand: event.hand,
-            deck_size: event.deck_size,
-            discard_size: event.discard_size,
-          },
-        ],
-      }
     case 'fight_ended':
       // winner 0 = the mobs are wiped; 1 = the roster is wiped; 2 = the stalemate DRAW, which has NO winning
       // team (reduce.js DRAW) and so folds as a loss with the page-level banner on top (spec §4.4).
@@ -596,8 +583,8 @@ const encode_event = (event, ctx) => {
 
 /**
  * THE ENCODER (spec §4.4). One reducer step — `(pre_state, sim_events, post_state)` — becomes the ordered chain
- * rows the core folds, plus the hand updates that are not chain rows. Every fighter identity resolves against
- * `post_state`, the only state that still names them all after the step (a mid-step death removes no row).
+ * rows the core folds. Every fighter identity resolves against `post_state`, the only state that still names
+ * them all after the step (a mid-step death removes no row).
  *
  * `spell_templates` is the sim's own template map (`chain.ctx.spell_templates`): the action envelope states the
  * AUTHORED effect descriptors, which live on the template and nowhere in the event. `actions` is the caster's
@@ -606,7 +593,7 @@ const encode_event = (event, ctx) => {
  * @param {{ pre_state: object, post_state: object, events: object[], fight_id: string,
  *   now_ms?: number, turn_ms?: number, spell_templates?: Map<string, object>,
  *   actions?: Record<string, number> }} params
- * @returns {{ rows: object[], hand_updates: object[], actions: Record<string, number> }}
+ * @returns {{ rows: object[], actions: Record<string, number> }}
  */
 export const encode_sim_step = ({
   pre_state,
@@ -640,9 +627,5 @@ export const encode_sim_step = ({
     },
   }
   const encoded = events.map((event) => encode_event(event, ctx))
-  return {
-    rows: encoded.flatMap((e) => e.rows),
-    hand_updates: encoded.flatMap((e) => e.hand_updates ?? []),
-    actions: counters,
-  }
+  return { rows: encoded.flatMap((e) => e.rows), actions: counters }
 }

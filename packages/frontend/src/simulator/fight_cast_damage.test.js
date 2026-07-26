@@ -32,7 +32,7 @@ import {
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
 
 import { board_of } from './board'
-import { build_start_args, class_deck_of } from './fight_start.js'
+import { build_start_args, class_spellbook_of } from './fight_start.js'
 import { EMPTY_STAT_ALLOC, INITIAL_SIMULATOR_STATE } from './reducer'
 import WIRE from './spell_corpus_wire.fixture.json'
 
@@ -170,13 +170,12 @@ const fold_through_core = (run) => {
 describe('#931 · a committed player cast lands', () => {
   const run = walk_in_and_cast()
 
-  test('the fight opens with a deck the board can NAME — the on-chain cast id, not the authored slug', () => {
+  test('the fight opens with a spell book the board can NAME — the on-chain cast id, not the authored slug', () => {
     const [seat] = start_args().args.team0
     // MECHANISM: the id space the START fold hands the chain is the one a staged cast arrives in.
-    expect(seat.deck).toContain(WARCLEAVE.object_id)
-    expect(seat.deck).not.toContain(WARCLEAVE.id)
+    expect(Object.keys(seat.spell_levels)).toContain(WARCLEAVE.object_id)
+    expect(Object.keys(seat.spell_levels)).not.toContain(WARCLEAVE.id)
     expect(seat.spell_levels[WARCLEAVE.object_id]).toBe(1)
-    expect(seat.hand[0]).toBe(WARCLEAVE.object_id)
   })
 
   test('the chain resolves that id to a REAL template — captured wire effects, none of them inert', () => {
@@ -208,7 +207,7 @@ describe('#931 · a committed player cast lands', () => {
 })
 
 describe('#931 · a spell no cast can name is dropped LOUDLY', () => {
-  test('a class row still awaiting its deployment receipt leaves the deck and names itself', () => {
+  test('a class row still awaiting its deployment receipt leaves the spell book and names itself', () => {
     // Not a wire-shape question — the row is the captured one with its receipt field taken away, which is
     // exactly the pre-publish corpus state.
     const { object_id: _dropped, ...receiptless } = WARCLEAVE
@@ -217,7 +216,7 @@ describe('#931 · a spell no cast can name is dropped LOUDLY', () => {
     console.error = (line) => shouted.push(String(line))
     try {
       const built = start_args([receiptless, ...CORPUS.filter((row) => row.id !== WARCLEAVE.id)])
-      expect(built.args.team0[0].deck).not.toContain(WARCLEAVE.id)
+      expect(Object.keys(built.args.team0[0].spell_levels)).not.toContain(WARCLEAVE.id)
     } finally {
       console.error = original
     }
@@ -228,7 +227,7 @@ describe('#931 · a spell no cast can name is dropped LOUDLY', () => {
   test('the deck fold reports the dropped rows rather than swallowing them', () => {
     const { object_id: _dropped, ...receiptless } = WARCLEAVE
     set_spell_corpus_for_test([receiptless])
-    const deck = class_deck_of(character(), [receiptless])
+    const deck = class_spellbook_of(character(), [receiptless])
     expect(deck.spell_ids).toEqual([])
     expect(deck.uncastable).toEqual([WARCLEAVE.id])
   })

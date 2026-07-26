@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// fight_open_hand.test.js — THE OPENING HAND REACHES THE BAR (#949), driven through the page's real doors.
+// fight_open_hand.test.js — THE SEAT'S SPELLS REACH THE BAR (#949, #1012), driven through the page's real doors.
 //
 // RED-FIRST for #949. The report reads "a level-200 character seats with only its first 3 spells": the spell
 // bar renders `fight.hand` and nothing else, and the store's `hand` is only ever written by a `hand_update`
-// input. `create_sim_chain` DEALS every seat its opening hand inside its own constructor — those sim events
-// are folded away there and never surface as a receipt — while `snapshot_from_sim` carries no hand on a
-// participant row at all. So the shim's open (init + snapshot) put NOTHING on the bar, whatever the deck held,
-// and the first hand the player ever saw was whatever some later turn's update happened to deliver.
+// input, which the shim's open (init + snapshot) never sent — `snapshot_from_sim` carries no spell list on a
+// participant row at all. #1012 then retired the deal itself: there is no hand and no draw, on chain or in the
+// sim, so the bar's fact is the seat's WHOLE spell book and it is written once at open (and once per focus).
 //
-// The corpus fixture is the captured 240-row publication (spell_corpus_l2.fixture.json), so the deck sizes
+// The corpus fixture is the captured 240-row publication (spell_corpus_l2.fixture.json), so the counts
 // asserted here are the shipped data sheet's own: 3 spells unlock at level 1 for every class — the exact
 // count the report saw — and 20 by level 200.
 
@@ -22,7 +21,7 @@ import { LOCAL_ADDRESS, create_sim_chain, snapshot_from_sim } from '@aresrpg/fig
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
 
 import { board_of } from './board'
-import { build_start_args, class_deck_of } from './fight_start.js'
+import { build_start_args, class_spellbook_of } from './fight_start.js'
 import { hand_update_of } from './fight_setup.js'
 import { EMPTY_STAT_ALLOC, INITIAL_SIMULATOR_STATE } from './reducer'
 import fixture from './spell_corpus_l2.fixture.json'
@@ -109,42 +108,42 @@ describe('the seat carries its level into the deck', () => {
   test('a level-200 roster row decks every unlocked class spell, not the first tier', () => {
     set_spell_corpus_for_test(CORPUS)
     // 3 at level 1 is CORRECT — it is the count the report mistook for the whole deck.
-    expect(class_deck_of(character(1), CORPUS).spell_ids.length).toBe(3)
-    expect(class_deck_of(character(200), CORPUS).spell_ids.length).toBe(20)
+    expect(class_spellbook_of(character(1), CORPUS).spell_ids.length).toBe(3)
+    expect(class_spellbook_of(character(200), CORPUS).spell_ids.length).toBe(20)
   })
 
   test('the built seat entity fights at the roster level, on the level-scaled pool', () => {
     const { built, seat } = open(200)
     expect(built.args.team0[0].level).toBe(200)
-    expect(seat.deck.length + seat.hand.length).toBe(20)
+    expect(Object.keys(seat.spell_levels).length).toBe(20)
     expect(built.args.team0[0].cell).toEqual(decode(BOARD.start_cells_a[0]))
   })
 })
 
-describe('the opening hand reaches the spell bar', () => {
-  test('the chain deals a full hand off the level-200 deck', () => {
+describe("the seat's spells reach the spell bar", () => {
+  test('a level-200 seat is castable on all 20 — nothing is held back by a deal (#1012)', () => {
     const { seat } = open(200)
-    expect(seat.hand.length).toBe(7)
-    expect(new Set(seat.hand).size).toBe(7)
+    expect(Object.keys(seat.spell_levels).length).toBe(20)
+    expect(new Set(Object.keys(seat.spell_levels)).size).toBe(20)
   })
 
-  // THE #949 MECHANISM, pinned: the adopted snapshot carries no hand, so the ctx+snapshot pair the shim opens
-  // with can never fill the bar on its own. If a participant row ever starts carrying one, this row is the
-  // reminder that the door below stops being the only source.
+  // THE #949 MECHANISM, pinned: the adopted snapshot carries no spell list, so the ctx+snapshot pair the shim
+  // opens with can never fill the bar on its own. If a participant row ever starts carrying one, this row is
+  // the reminder that the door below stops being the only source.
   test('the adopted snapshot alone leaves the bar empty — a hand is not a snapshot fact', () => {
     const { store } = open(200)
     expect(fight_view(store.getState()).hand).toEqual([])
   })
 
-  test('the opening hand_update puts the DEALT cards on the bar', () => {
+  test('the opening hand_update puts the WHOLE spell book on the bar', () => {
     const { chain, store, seat } = open(200)
     store.getState().input({ ...hand_update_of(chain.sim_state, 'sim_c1'), fight_id: FIGHT_ID })
     const view = fight_view(store.getState())
-    expect(view.hand).toEqual(seat.hand)
-    expect(view.hand.length).toBe(7)
+    expect(view.hand).toEqual(Object.keys(seat.spell_levels))
+    expect(view.hand.length).toBe(20)
   })
 
-  test('a seat the chain never dealt yields no input — never a bar of undefined', () => {
+  test('a seat the chain does not hold yields no input — never a bar of undefined', () => {
     const { chain } = open(200)
     expect(hand_update_of(chain.sim_state, 'sim_nobody')).toBe(null)
   })

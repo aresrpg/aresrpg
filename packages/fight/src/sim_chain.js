@@ -278,7 +278,7 @@ const fold_command = (chain, command) => {
  * @param {object} chain
  * @param {object[]} commands sim commands (`commands_from_staged` builds them from the store's staged draft)
  * @param {{ now_ms?: number, turn_ms?: number }} [clock]
- * @returns {{ chain: object, version: number, receipt: { events: object[] }, hand_updates: object[] }}
+ * @returns {{ chain: object, version: number, receipt: { events: object[] } }}
  */
 export const submit_commands = (chain, commands, { now_ms = 0, turn_ms = DEFAULT_TURN_MS } = {}) => {
   const folded = commands.reduce(
@@ -300,18 +300,16 @@ export const submit_commands = (chain, commands, { now_ms = 0, turn_ms = DEFAULT
       return {
         chain: step.chain,
         rows: [...acc.rows, ...encoded.rows],
-        hand_updates: [...acc.hand_updates, ...encoded.hand_updates],
         actions: encoded.actions,
       }
     },
-    { chain, rows: [], hand_updates: [], actions: chain.actions ?? {} }
+    { chain, rows: [], actions: chain.actions ?? {} }
   )
   const version = chain.version + 1
   return {
     chain: { ...folded.chain, version, actions: folded.actions },
     version,
     receipt: { events: folded.rows },
-    hand_updates: folded.hand_updates,
   }
 }
 

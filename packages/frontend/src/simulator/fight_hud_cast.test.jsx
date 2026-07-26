@@ -92,19 +92,12 @@ const open_fight = () => {
     picks: mobs.map((mob, index) => ({ cell: enemy[index], mob })),
     class_templates: new Map(),
   })
-  // Every seat needs a deck deep enough to keep casting — casting DISCARDS the card (reduce.js handle_cast).
-  const stocked = (entity) => ({ ...entity, deck: Array.from({ length: 24 }, () => MOB_ATTACK_ID) })
   const shim = create_fight_shim({ schedule: (fn) => fn(), now: () => NOW })
   const opened = shim.start({
     seed: SEED,
     fight_id: `sim:${SEED}:1`,
-    team0: team0.map(stocked),
-    team1: team1.map((entity) => ({
-      ...stocked(entity),
-      deck: [MOB_ATTACK_ID],
-      hand: [MOB_ATTACK_ID],
-      spell_levels: { [MOB_ATTACK_ID]: 1 },
-    })),
+    team0,
+    team1: team1.map((entity) => ({ ...entity, spell_levels: { [MOB_ATTACK_ID]: 1 } })),
     templates_raw: [],
     roster,
     mobs,

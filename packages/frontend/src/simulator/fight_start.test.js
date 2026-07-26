@@ -21,7 +21,7 @@ import { decode } from '@aresrpg/fight/los'
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
 
 import { board_of } from './board'
-import { build_start_args, class_deck_of, START_BLOCKED } from './fight_start.js'
+import { build_start_args, class_spellbook_of, START_BLOCKED } from './fight_start.js'
 import { EMPTY_STAT_ALLOC, INITIAL_SIMULATOR_STATE } from './reducer'
 
 const SEED = 0xc81f3a92
@@ -131,10 +131,10 @@ describe('the START fold seats the board the page is showing', () => {
     expect(built.args.mobs.every(({ level }) => level === 12)).toBe(true)
   })
 
-  test('the deck is the class spells the LEVEL has reached, at the levels the editor allocated', () => {
+  test('the spell book is the class spells the LEVEL has reached, at the levels the editor allocated', () => {
     const [seat] = built.args.team0
-    expect(seat.deck).toEqual([EMBER.id])
-    expect(seat.deck).not.toContain(LATE.id)
+    expect(Object.keys(seat.spell_levels)).toEqual([EMBER.id])
+    expect(seat.spell_levels[LATE.id]).toBeUndefined()
     // the editor stored `ember_strike: 2` (name_key); the chain reads it under the TEMPLATE id
     expect(seat.spell_levels[EMBER.id]).toBe(2)
     expect(built.args.team0[1].spell_levels[EMBER.id]).toBe(1) // untouched ⇒ the free baseline
@@ -167,7 +167,7 @@ describe('the START fold seats the board the page is showing', () => {
 describe('the deck join', () => {
   test('a class whose corpus row vanished contributes no deck id — never a template the ctx cannot resolve', () => {
     set_spell_corpus_for_test([])
-    const deck = class_deck_of(character('sim_c1', 'KAELIS', { ember_strike: 3 }), [])
+    const deck = class_spellbook_of(character('sim_c1', 'KAELIS', { ember_strike: 3 }), [])
     expect(deck.spell_ids).toEqual([])
     expect(deck.rows).toEqual([])
   })

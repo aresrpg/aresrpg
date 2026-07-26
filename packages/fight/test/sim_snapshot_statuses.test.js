@@ -86,9 +86,6 @@ const fighter = (id, cell, is_player, { health, ap, mp, deck = [], level: lvl = 
   level: lvl,
   stats: {},
   effects: [],
-  deck: [...deck],
-  hand: is_player ? [] : [...deck],
-  discard: [],
   spell_levels: Object.fromEntries(deck.map((s) => [s, 1])),
   ap_reserve: 0,
 })

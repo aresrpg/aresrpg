@@ -152,9 +152,6 @@ const fighter = (id, cell, is_player, { health, ap, mp, deck = [], level: lvl = 
   effects: [],
   // A deck of EXACTLY the opening hand size: `handle_start` deals min(7, deck.length), so the hand holds the
   // whole kit every turn (a cast discards, `end_turn` reshuffles the discard back). Deterministic control.
-  deck: [...deck],
-  hand: is_player ? [] : [...deck],
-  discard: [],
   spell_levels: Object.fromEntries(deck.map((s) => [s, 1])),
   ap_reserve: 0,
 })

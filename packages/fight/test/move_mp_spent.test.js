@@ -43,9 +43,6 @@ const fighter = (id, cell, is_player) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, chance: 0, strength: 0, range: 0 },
   effects: [],
-  deck: [],
-  hand: [],
-  discard: [],
   spell_levels: {},
   ap_reserve: 0,
 })

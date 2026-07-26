@@ -9,16 +9,16 @@
 // off the page reducer's character, it does not exist. That keeps one home per fact across the lane boundary,
 // and it means a balance change in L1 needs no edit here.
 //
-// DECKS AND SPELL LEVELS. A seat's deck is its class's published spells keyed by the CAST id — the on-chain
+// SPELL BOOKS. A seat's book is its class's published spells keyed by the CAST id — the on-chain
 // SpellTemplate object id a committed cast names (`fight_start.js cast_id_of`, #931). The page reducer holds
-// the player's allocation under `name_key`; `class_deck_of` re-keys it onto the cast id space before it gets
-// here, so a level the player allocated in the inspector is the level the sim casts at. Level 1 is the FREE
-// baseline (an absent row reads 1 on chain), so unallocated spells still enter the deck at 1.
+// the player's allocation under `name_key`; `class_spellbook_of` re-keys it onto the cast id space before it
+// gets here, so a level the player allocated in the inspector is the level the sim casts at. Level 1 is the
+// FREE baseline (an absent row reads 1 on chain), so unallocated spells still enter the book at 1.
 
 import { build_mob_spell_templates, mob_spell_id } from './content.js'
 
 /** The sim entity fields every fighter carries, whatever side it is on (`fight_state.js` FightEntity). */
-const base_entity = ({ id, name, cell, hp, max_hp, ap, mp, level, stats, template_id, is_player, deck }) => ({
+const base_entity = ({ id, name, cell, hp, max_hp, ap, mp, level, stats, template_id, is_player }) => ({
   id,
   name,
   cell,
@@ -35,11 +35,7 @@ const base_entity = ({ id, name, cell, hp, max_hp, ap, mp, level, stats, templat
   level,
   stats,
   effects: [],
-  deck,
-  // The opening hand is drawn by the sim at the turn start; seeding it with the deck's head keeps a seat able
-  // to act on turn one exactly as the chain's own opening draw does.
-  hand: deck.slice(0, 1),
-  discard: [],
+  // The spell book is the whole castable set — `seat_entity` / `mob_entity` fill it in below.
   spell_levels: {},
   ap_reserve: 0,
 })
@@ -61,7 +57,6 @@ export const seat_entity = ({ character, seat, spell_ids, cell }) => ({
     stats: seat.stats,
     template_id: character.class_id,
     is_player: true,
-    deck: spell_ids,
   }),
   // every class spell is castable; the allocated level wins, the free baseline 1 otherwise
   spell_levels: Object.fromEntries(spell_ids.map((id) => [id, Number(character.spell_levels?.[id] ?? 1)])),
@@ -91,7 +86,6 @@ export const mob_entity = ({ mob, index, cell, spells = [] }) => {
         stats: mob.stats,
         template_id: mob.template_id,
         is_player: false,
-        deck: spell_ids,
       }),
       spell_levels: Object.fromEntries(spell_ids.map((id) => [id, 1])),
     },
@@ -100,34 +94,25 @@ export const mob_entity = ({ mob, index, cell, spells = [] }) => {
 }
 
 /**
- * ONE seat's CURRENT hand as the store's own `hand_update` input (#949) — the door the spell bar's `fight.hand`
- * is written through, and the only one.
+ * ONE seat's CASTABLE SET as the store's own `hand_update` input (#949) — the door the spell bar's
+ * `fight.hand` is written through, and the only one.
  *
- * A fight's opening deal never reached it. `create_sim_chain` deals every player seat a full hand inside its
- * constructor and reports it as a sim `hand_update` event, but those start events are folded away in there and
- * never surface as a receipt, and `snapshot_from_sim` carries no hand on a participant row. So the ctx+snapshot
- * pair a fight opens with put NOTHING on the bar, whatever the deck held: a level-200 seat opened on an empty
- * bar and showed only the cards some LATER turn's update happened to deliver — read as "this character has
- * just its first spells". Read off the chain's own dealt state, so the bar holds the cards the sim holds
- * rather than a second deal, and so seat FOCUS can re-read the same fact for the seat it switches to.
+ * The set is the seat's whole spell book and it never changes mid-fight: the chain has no hand, no draw and
+ * no discard, so a spell is on the bar from the first turn to the last and only its own AP / range / cast
+ * limits decide when it may fire (#1012). One write at fight open, one more when seat FOCUS moves — the
+ * per-turn re-deals this used to need are gone with the deal.
  *
- * ONE seat, not the roster: the store keeps a SINGLE hand (the local player's — on chain the server routes
+ * ONE seat, not the roster: the store keeps a SINGLE bar (the local player's — on chain the server routes
  * each update to its owner), so handing it every seat's would leave the last one showing.
- * @param {{ team0?: Array<{ id: string, hand?: string[], deck?: string[], discard?: string[] }> }} sim_state
+ * @param {{ team0?: Array<{ id: string, spell_levels?: Record<string, number> }> }} sim_state
  * @param {string | null} entity_id  the seat the page is focused on
- * @returns {{ type: 'hand_update', entity_id: string, hand: string[], deck_size: number,
- *   discard_size: number } | null}  null when the chain holds no such seat
+ * @returns {{ type: 'hand_update', entity_id: string, hand: string[] } | null}  null when the chain holds
+ *   no such seat
  */
 export const hand_update_of = (sim_state, entity_id) => {
   const seat = (sim_state?.team0 ?? []).find(({ id }) => id === entity_id)
   if (!seat) return null
-  return {
-    type: 'hand_update',
-    entity_id: seat.id,
-    hand: seat.hand ?? [],
-    deck_size: seat.deck?.length ?? 0,
-    discard_size: seat.discard?.length ?? 0,
-  }
+  return { type: 'hand_update', entity_id: seat.id, hand: Object.keys(seat.spell_levels ?? {}) }
 }
 
 /**

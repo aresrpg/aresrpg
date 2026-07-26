@@ -95,15 +95,10 @@ const prediction_template = (spell, spell_level, critical) => {
   }
 }
 
-const with_spell_in_hand = (state, caster_id, spell_id, spell_level) => {
+/** Teach the caster the spell at the level being predicted — the ONE thing `handle_cast` reads off it. */
+const with_spell_known = (state, caster_id, spell_id, spell_level) => {
   const update = (entity) =>
-    entity.id === caster_id
-      ? {
-          ...entity,
-          hand: entity.hand.includes(spell_id) ? entity.hand : [...entity.hand, spell_id],
-          spell_levels: { ...entity.spell_levels, [spell_id]: spell_level },
-        }
-      : entity
+    entity.id === caster_id ? { ...entity, spell_levels: { ...entity.spell_levels, [spell_id]: spell_level } } : entity
   return { ...state, team0: state.team0.map(update), team1: state.team1.map(update) }
 }
 
@@ -316,7 +311,7 @@ export const predict_sim_cast = ({
   const teleport_ids = has_kind(template.levels[spell_level - 1]?.base_effects, DISPLACE_TELEPORT)
     ? new Set([caster_id])
     : new Set()
-  const prepared = with_spell_in_hand(state, caster_id, template.id, spell_level)
+  const prepared = with_spell_known(state, caster_id, template.id, spell_level)
   const output = produce_predicted_render_events(
     prepared,
     { type: 'cast', entity_id: caster_id, spell_id: template.id, target },
@@ -397,9 +392,6 @@ const sim_entity = (fighter, stats) => ({
   // only supplies another mechanic (for example hover agility); explicit adapter keys remain intentional overrides.
   stats: { range: Number(fighter.base_range ?? fighter.stats?.range ?? 0) || 0, ...(stats ?? {}) },
   effects: sim_effects_of(fighter),
-  deck: [],
-  hand: [],
-  discard: [],
   spell_levels: {},
   ap_reserve: 0,
 })

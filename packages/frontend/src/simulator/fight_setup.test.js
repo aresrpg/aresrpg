@@ -58,7 +58,7 @@ describe('a roster character becomes a player seat', () => {
 
   test('allocated spell levels ride; unallocated spells still enter at the free baseline 1', () => {
     expect(entity.spell_levels).toEqual({ fire_strike: 3, ember_wall: 1 })
-    expect(entity.deck).toEqual(['fire_strike', 'ember_wall'])
+    expect(Object.keys(entity.spell_levels)).toEqual(['fire_strike', 'ember_wall'])
   })
 
   test('a seat opens at full health with a fresh pool', () => {
@@ -86,10 +86,11 @@ describe('a picked mob becomes a mob seat with its authored kit', () => {
     expect(entity.level).toBe(12)
   })
 
-  test('its authored spell is in the deck AND in the template map — never one without the other', () => {
-    expect(entity.deck).toHaveLength(1)
-    expect(templates.has(entity.deck[0])).toBe(true)
-    expect(entity.spell_levels[entity.deck[0]]).toBe(1)
+  test('its authored spell is in the spell book AND in the template map — never one without the other', () => {
+    const [spell_id, ...rest] = Object.keys(entity.spell_levels)
+    expect(rest).toEqual([])
+    expect(templates.has(spell_id)).toBe(true)
+    expect(entity.spell_levels[spell_id]).toBe(1)
   })
 })
 
@@ -106,7 +107,7 @@ describe('build_teams merges every template into ONE map the authority carries',
     expect(team0).toHaveLength(1)
     expect(team1).toHaveLength(1)
     expect(spell_templates.has('fire_strike')).toBe(true)
-    expect(spell_templates.has(team1[0].deck[0])).toBe(true)
+    expect(spell_templates.has(Object.keys(team1[0].spell_levels)[0])).toBe(true)
   })
 
   test('mob ids are index-keyed in pick order — the turn weave depends on that order being stable', () => {

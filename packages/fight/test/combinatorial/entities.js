@@ -61,9 +61,6 @@ export const make_fighter = (
   level,
   stats,
   effects: [],
-  deck: [],
-  hand: [...hand],
-  discard: [],
   spell_levels: Object.fromEntries(hand.map((s) => [s, 1])),
   ap_reserve: 0,
 })
@@ -180,6 +177,5 @@ export const pick_by_kind = (kind, { area_shape = null, min_range_max = 1 } = {}
 /** Give an entity a specific spell in hand (the with_spell_in_hand idiom) — handle_cast only needs hand + level. */
 export const with_hand = (entity, spell_ids) => ({
   ...entity,
-  hand: [...spell_ids],
   spell_levels: Object.fromEntries(spell_ids.map((s) => [s, 1])),
 })
