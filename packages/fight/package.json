@@ -23,6 +23,9 @@
     "./v2": {
       "import": "./src/v2/index.js"
     },
+    "./bot": {
+      "import": "./src/bot/index.js"
+    },
     "./inputs": {
       "import": "./src/inputs.js"
     },

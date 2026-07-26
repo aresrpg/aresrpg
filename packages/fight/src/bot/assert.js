@@ -1,0 +1,173 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+// bot/assert.js — THE POINT OF THE BOT (#1100). Every action the policy planned is checked against the
+// FOLDED TRUTH of the turn it committed: damage dealt, AP spent, cells moved, statuses applied, a push's
+// distance AND direction. An action that reports `ok: true` without its delta produces a FAIL row here, not
+// a warning — "the tx succeeded" has never been evidence that the game did anything.
+//
+// PURE, and deliberately blind to the browser: it takes the two `__ARES_DEV_READ()` snapshots the seam took
+// either side of the commit. Every number it reads is the COMMITTED fold (`*_committed`), never the
+// presented one — the eye's HP ticks with the vfx and the eye's cell holds through the walk beat, so
+// asserting on those would be asserting on an animation clock.
+
+import { get_direction } from '@aresrpg/sim/fight_displacement'
+
+import { cell_index } from './read.js'
+
+const find = (read, id) => read?.fighters?.find((f) => f.id === id) ?? null
+const same_cell = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y
+
+const row = (index, action, check, expected, actual, pass, note = '') => ({
+  index,
+  kind: action?.kind === 0 ? 'move' : action?.kind === 1 ? `cast:${action.spell_key ?? action.spell_id}` : 'turn',
+  at: action?.cell ?? null,
+  check,
+  expected,
+  actual,
+  pass,
+  note,
+})
+
+/** Steps `moved` travelled from `from` along `dir`, or null when it left that ray. */
+const steps_along = (from, moved, dir) => {
+  if (dir.dx === 0 && dir.dy === 0) return null
+  const dx = moved.x - from.x
+  const dy = moved.y - from.y
+  if (dir.dx !== 0) return dy === 0 && Math.sign(dx) === dir.dx ? Math.abs(dx) : null
+  return dx === 0 && Math.sign(dy) === dir.dy ? Math.abs(dy) : null
+}
+
+const assert_move = (index, action, before, after) => {
+  const me_before = find(before, before.my_id)
+  const me_after = find(after, after.my_id)
+  const landed = same_cell(me_after?.cell_committed, action.cell)
+  const spent = Number(me_before?.mp_committed ?? 0) - Number(me_after?.mp_committed ?? 0)
+  return [
+    row(index, action, 'the seat stands on the cell it moved to', action.cell, me_after?.cell_committed ?? null, landed),
+    row(
+      index,
+      action,
+      'MP spent equals the path it walked',
+      action.expect.mp_cost,
+      spent,
+      spent === action.expect.mp_cost,
+      landed ? '' : 'cell assertion already failed — MP is reported for diagnosis'
+    ),
+  ]
+}
+
+const assert_damage = (index, action, before, after) => {
+  const target_before = find(before, action.expect.target_id)
+  const target_after = find(after, action.expect.target_id)
+  const dealt = Number(target_before?.hp_committed ?? 0) - Number(target_after?.hp_committed ?? 0)
+  const rows = [
+    row(index, action, 'the target lost HP', `≥ ${action.expect.min_damage}`, dealt, dealt >= action.expect.min_damage),
+  ]
+  if (action.expect.kill)
+    rows.push(
+      row(index, action, 'a lethal cast kills the target', 'dead', target_after?.alive_committed ? 'alive' : 'dead', !target_after?.alive_committed)
+    )
+  return rows
+}
+
+const assert_heal = (index, action, before, after) => {
+  const target_before = find(before, action.expect.target_id)
+  const target_after = find(after, action.expect.target_id)
+  const healed = Number(target_after?.hp_committed ?? 0) - Number(target_before?.hp_committed ?? 0)
+  return [row(index, action, 'the target gained HP', '≥ 1', healed, healed >= 1)]
+}
+
+/**
+ * THE PUSH ROW — the one the ruling names explicitly. The target's cell must have moved along the cardinal
+ * the sim derives (`get_direction`, the `combat_grid::away_dir` twin) by the authored number of cells; a
+ * SHORT push is legal ONLY when something stopped it, and the sim charges collision damage when it does. So
+ * a short push with no HP loss is a FAIL — that is exactly the silent no-op this bot exists to catch.
+ */
+const assert_push = (index, action, before, after) => {
+  const target_before = find(before, action.expect.target_id)
+  const target_after = find(after, action.expect.target_id)
+  const from = target_before?.cell_committed
+  const to = target_after?.cell_committed
+  const dir = get_direction(action.expect.from, from ?? { x: 0, y: 0 })
+  const moved = from && to ? steps_along(from, to, dir) : null
+  const wanted = action.expect.cells
+  const collided = Number(target_before?.hp_committed ?? 0) > Number(target_after?.hp_committed ?? 0)
+  const rows = [
+    row(
+      index,
+      action,
+      'the target moved along the push direction',
+      `${wanted} cell(s) ${dir.dx ? (dir.dx > 0 ? 'east' : 'west') : dir.dy > 0 ? 'south' : 'north'} from ${from?.x},${from?.y}`,
+      to ? `${to.x},${to.y} (${moved == null ? 'off the push ray' : `${moved} cell(s)`})` : 'unknown',
+      moved != null && moved >= 1 && moved <= wanted
+    ),
+  ]
+  if (moved != null && moved < wanted)
+    rows.push(
+      row(index, action, 'a short push collided (and therefore hurt)', 'HP lost on impact', collided ? 'HP lost' : 'no HP lost', collided,
+        `pushed ${moved} of ${wanted} cells`)
+    )
+  return rows
+}
+
+const assert_status = (index, action, before, after) => {
+  const target_before = find(before, action.expect.target_id)
+  const target_after = find(after, action.expect.target_id)
+  const before_kinds = (target_before?.effects ?? []).map((e) => Number(e.kind))
+  const after_kinds = (target_after?.effects ?? []).map((e) => Number(e.kind))
+  const gained = after_kinds.length - before_kinds.length
+  const rows = [row(index, action, 'a status row appeared on the target', '≥ 1 new status', gained, gained >= 1)]
+  for (const kind of action.expect.kinds ?? [])
+    rows.push(
+      row(index, action, `the ${kind} status is riding the target`, `kind ${kind} present`, after_kinds.join(',') || 'none', after_kinds.includes(Number(kind)))
+    )
+  return rows
+}
+
+const assert_trap = (index, action, before, after) => {
+  const cell = cell_index(action.expect.cell)
+  return [
+    row(index, action, 'the trap is on the board', `cell ${action.expect.cell.x},${action.expect.cell.y} armed`, (after.my_traps ?? []).join(',') || 'none', (after.my_traps ?? []).includes(cell)),
+  ]
+}
+
+const ACTION_ASSERTIONS = {
+  move: assert_move,
+  damage: assert_damage,
+  heal: assert_heal,
+  push: assert_push,
+  status: assert_status,
+  trap: assert_trap,
+}
+
+/**
+ * Check ONE committed turn. Returns one row per checked fact — `pass:false` rows are failures, never
+ * warnings.
+ * @param {{ actions: Array<object> }} plan what the policy decided
+ * @param {{ ok: boolean, error?: string, before: object, after: object }} result what the seam committed
+ * @returns {Array<object>}
+ */
+export const assert_turn = (plan, result) => {
+  if (!result.ok)
+    return [row(0, null, 'the turn committed', 'ok', result.error ?? 'refused', false, 'every action assertion is moot — the turn never landed')]
+  const { before, after } = result
+  const rows = plan.actions.flatMap((action, index) => {
+    const check = ACTION_ASSERTIONS[action.expect?.type]
+    return check
+      ? check(index, action, before, after)
+      : [row(index, action, 'the bot knows how to check this action', 'a known expectation type', action.expect?.type ?? 'none', false)]
+  })
+  // THE BUDGET ROW — actions commit as one batch, so AP is the turn's own fact, not any single cast's.
+  const ap_before = Number(find(before, before.my_id)?.ap_committed ?? 0)
+  const ap_after = Number(find(after, after.my_id)?.ap_committed ?? 0)
+  const billed = plan.actions.reduce((sum, a) => sum + Number(a.ap_cost ?? 0), 0)
+  return [...rows, row(plan.actions.length, null, 'AP spent equals the sum of the casts committed', billed, ap_before - ap_after, ap_before - ap_after === billed)]
+}
+
+/** A run's rows → the machine-readable verdict the sheet carries. */
+export const summarise = (rows) => ({
+  checks: rows.length,
+  passed: rows.filter((r) => r.pass).length,
+  failed: rows.filter((r) => !r.pass).length,
+  verdict: rows.some((r) => !r.pass) ? 'FAIL' : 'PASS',
+})
