@@ -15,6 +15,10 @@ const HASH_BYTES = 32
 // rule is stated once per side of that boundary and pinned to captured chain bytes by test).
 const FORMAT_MERKLE = 1 // a bare 32-byte Merkle root — legacy zones, witnessed by a sibling path
 const FORMAT_SET = 2 // `0x02 ‖ blake2b256(domain ‖ 0x02 ‖ bcs(MobGroupSet))` — lattice zones, NO tree
+// `0x03 ‖ blake2b256(domain ‖ 0x03 ‖ bcs(MobGroupMemberSet))` — MEMBER-LIST zones (#1110): the format-2 whole-set
+// discipline with a per-group ROSTER inside the preimage, so the commitment binds WHO is in the pack. Same
+// no-tree, empty-proof claim shape as format 2.
+const FORMAT_MEMBERS = 3
 
 // ID is a one-address-field Move struct, so its BCS bytes are exactly the address bytes.
 const mob_group_leaf_bcs = bcs.struct('MobGroupLeaf', {
@@ -49,6 +53,27 @@ const mob_group_set_bcs = bcs.struct('MobGroupSet', {
   zone_seed: bcs.u64(),
   discovered_at_ms: bcs.u64(),
   groups: bcs.vector(mob_group_bcs),
+})
+
+// The FORMAT-3 preimage (`zone_gen::MobGroupWithMembers`/`MobGroupMemberSet`): the format-2 row plus the
+// per-member template list. `template` stays the PRIMARY — the group's identity row and `members[0]`.
+const mob_group_with_members_bcs = bcs.struct('MobGroupWithMembers', {
+  spawn_id: bcs.u64(),
+  template: bcs.Address,
+  members: bcs.vector(bcs.Address),
+  x: bcs.u32(),
+  z: bcs.u32(),
+  group_size: bcs.u16(),
+  group_seed: bcs.u64(),
+})
+
+const mob_group_member_set_bcs = bcs.struct('MobGroupMemberSet', {
+  world: bcs.Address,
+  zx: bcs.u32(),
+  zy: bcs.u32(),
+  zone_seed: bcs.u64(),
+  discovered_at_ms: bcs.u64(),
+  groups: bcs.vector(mob_group_with_members_bcs),
 })
 
 const concat_bytes = (...parts) => {
@@ -95,14 +120,14 @@ const normalized_id = (value, label) => {
 }
 
 const COMMITMENT_SHAPE =
-  'group_root must be a 32-byte legacy root or a 33-byte `0x02 ‖ digest` set commitment'
+  'group_root must be a 32-byte legacy root, or a 33-byte `0x02 ‖ digest` set / `0x03 ‖ digest` member commitment'
 
 /**
  * Decode a stored `ZoneGroupCommitment.root` into the derivation it selects — the client twin of
  * `zone_gen::mob_group_commitment_format`. Anything else is a typed failure: an unknown commitment shape is a
  * chain/client version skew, never a witness to guess at.
  * @param {number[]|Uint8Array} value
- * @returns {{ format:1|2, digest:Uint8Array }}
+ * @returns {{ format:1|2|3, digest:Uint8Array }}
  */
 const normalized_commitment = value => {
   if (!Array.isArray(value) && !(value instanceof Uint8Array))
@@ -118,6 +143,8 @@ const normalized_commitment = value => {
     return { format: FORMAT_MERKLE, digest: out }
   if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_SET)
     return { format: FORMAT_SET, digest: out.subarray(1) }
+  if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_MEMBERS)
+    return { format: FORMAT_MEMBERS, digest: out.subarray(1) }
   throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
 }
 
@@ -220,6 +247,62 @@ export function mob_group_set_bytes({
     .toBytes()
 }
 
+/**
+ * Serialize the exact `zone_gen::MobGroupMemberSet` BCS layout — the FORMAT-3 commitment preimage's payload.
+ * Identical to {@link mob_group_set_bytes} except each group also carries its per-member template roster, which
+ * is what makes the commitment bind the pack's COMPOSITION and not merely its size. `members` is the FULL
+ * derived roster (the raw rolled size, capped at the kernel's MAX_MEMBERS) — never the team-bound-clamped
+ * spawn count, which is a live dial and would make the commitment un-reproducible.
+ * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
+ *   discovered_at_ms:string|number|bigint, groups:Array<{ spawn_id:string|number|bigint, template_id:string,
+ *     member_template_ids:string[], x:number, z:number, size:number, group_seed:string|number|bigint }> }} set
+ * @returns {Uint8Array}
+ */
+export function mob_group_member_set_bytes({
+  world_id,
+  zx,
+  zy,
+  zone_seed,
+  discovered_at_ms,
+  groups,
+}) {
+  return mob_group_member_set_bcs
+    .serialize({
+      world: normalized_id(world_id, 'world_id'),
+      zx: normalized_number(zx, 32, 'zx'),
+      zy: normalized_number(zy, 32, 'zy'),
+      zone_seed: normalized_unsigned(zone_seed, 64, 'zone_seed'),
+      discovered_at_ms: normalized_unsigned(
+        discovered_at_ms,
+        64,
+        'discovered_at_ms',
+      ),
+      groups: groups.map((group, position) => ({
+        spawn_id: normalized_unsigned(
+          group.spawn_id,
+          64,
+          `groups[${position}].spawn_id`,
+        ),
+        template: normalized_id(
+          group.template_id,
+          `groups[${position}].template_id`,
+        ),
+        members: (group.member_template_ids ?? []).map((id, slot) =>
+          normalized_id(id, `groups[${position}].member_template_ids[${slot}]`),
+        ),
+        x: normalized_number(group.x, 32, `groups[${position}].x`),
+        z: normalized_number(group.z, 32, `groups[${position}].z`),
+        group_size: normalized_number(group.size, 16, `groups[${position}].size`),
+        group_seed: normalized_unsigned(
+          group.group_seed,
+          64,
+          `groups[${position}].group_seed`,
+        ),
+      })),
+    })
+    .toBytes()
+}
+
 // The FORMAT-2 digest: ONE hash over the whole set, domain-separated and format-tagged exactly as
 // `zone_gen::mob_group_commitment` builds it before prefixing the tag byte.
 const set_digest = (context, groups) =>
@@ -228,6 +311,17 @@ const set_digest = (context, groups) =>
       SET_DOMAIN,
       Uint8Array.from([FORMAT_SET]),
       mob_group_set_bytes({ ...context, groups }),
+    ),
+  )
+
+// The FORMAT-3 digest — the same one-hash-over-the-whole-set shape, over the member-list preimage and tagged
+// 0x03, exactly as `zone_gen::mob_group_commitment_members` builds it.
+const member_set_digest = (context, groups) =>
+  blake2b_256(
+    concat_bytes(
+      SET_DOMAIN,
+      Uint8Array.from([FORMAT_MEMBERS]),
+      mob_group_member_set_bytes({ ...context, groups }),
     ),
   )
 
@@ -293,14 +387,17 @@ const proof_root = (leaf, proof, target_index) => {
  * @property {number} index
  * @property {{ spawn_id:string, template_id:string, x:number, z:number,
  *   group_size:number, group_seed:string }} facts
- * @property {number[]} proof flattened 32-byte sibling hashes — EMPTY on a format-2 (lattice) zone, whose
- *   commitment is a whole-set hash the chain re-derives rather than a tree
+ * @property {number[]} proof flattened 32-byte sibling hashes — EMPTY on a format-2 (lattice) or format-3
+ *   (member-list) zone, whose commitment is a whole-set hash the chain re-derives rather than a tree
  */
 
 /**
  * The witness bytes the claim door accepts for THIS commitment shape, or `null` when the locally rebuilt stream
  * does not reproduce the stored commitment (fail shut — the caller keeps the derivation door).
  *
+ * FORMAT 3 (member list, `0x03 ‖ digest`): the format-2 shape over a preimage that also carries each group's
+ * member roster — same whole-set hash, same EMPTY proof vector, and reproducing it here proves our stream
+ * agrees with the chain about WHO is in the pack, not just how many.
  * FORMAT 2 (lattice, `0x02 ‖ digest`): there is NO Merkle tree. `zone_gen::mob_group_commitment` hashes the whole
  * `MobGroupSet` once, and `zones::resolve_mob_group` re-derives the stream on-chain to compare it — so the door
  * takes an EMPTY proof vector and aborts 110 (`EBadGroupProof`) on a non-empty one. Reproducing the digest here is
@@ -309,6 +406,10 @@ const proof_root = (leaf, proof, target_index) => {
  * @returns {number[]|null}
  */
 const commitment_proof = (commitment, context, groups, target_index) => {
+  if (commitment.format === FORMAT_MEMBERS)
+    return bytes_equal(member_set_digest(context, groups), commitment.digest)
+      ? []
+      : null
   if (commitment.format === FORMAT_SET)
     return bytes_equal(set_digest(context, groups), commitment.digest)
       ? []
@@ -385,6 +486,10 @@ export function compose_mob_group_proof(input) {
           64,
           `groups[${position}].group_seed`,
         ).toString(),
+        // format-3 only; absent on a format-1/2 stream and unread by their digests
+        member_template_ids: (group.member_template_ids ?? []).map((id, slot) =>
+          normalized_id(id, `groups[${position}].member_template_ids[${slot}]`),
+        ),
       }
     })
     const commitment = normalized_commitment(group_root)

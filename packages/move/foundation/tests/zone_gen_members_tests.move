@@ -233,6 +233,10 @@ fun the_member_commitment_binds_the_roster() {
     object::id_from_address(@0x01), object::id_from_address(@0x02), object::id_from_address(@0x03),
     object::id_from_address(@0x04), object::id_from_address(@0x05),
   ];
+  // ↓ pinned below: the SDK's `mob_group_member_set_bytes` + the 0x03-tagged domain hash produce these exact
+  // 33 bytes for this stream (packages/sdk/test/fight_proof_members.test.js). Same BCS field order, same
+  // domain, same tag — the commitment is the one artifact a claim is checked against, so it is pinned on BOTH
+  // sides or a client can compose a witness the chain will never accept.
   let mut templates = vector<ID>[];
   let mut member_templates = vector<vector<ID>>[];
   let mut i = 0;
@@ -247,6 +251,7 @@ fun the_member_commitment_binds_the_roster() {
   let got = zone_gen::mob_group_commitment_members(
     world, 487, 487, SEED, 1784980009967, &ids, &templates, &member_templates, &xs, &zs, &sizes, &gseeds,
   );
+  assert!(got == x"03405e4489411fc5fd83864e61c272b3c35da8e518e4e52bd3d43fd9379af022b2", 0);
   assert!(zone_gen::mob_group_commitment_format(&got) == 3, 0);
   assert!(zone_gen::mob_group_commitment_members_matches(
     &got, world, 487, 487, SEED, 1784980009967, &ids, &templates, &member_templates, &xs, &zs, &sizes, &gseeds,
