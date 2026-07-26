@@ -215,8 +215,8 @@ asserted by the e2e slice):
    occlusion still handles fight-board framing).
 6. **Legible interaction grid**: minor grid lines = the 1 m block lattice (a driver can reason
    "one line = one block").
-7. **Probes over pixels**: assert via the dev hooks and engine api (`__ARES_PLAYER.position()`,
-   `engine.get_stats()`, `get_active_world_config()` — the `world_lobby_movement.spec.ts`
+7. **Probes over pixels**: assert via the live dev hooks and engine API (`__voxel_ctl.get_transform()`,
+   `__voxel_engine.get_stats()`, `get_active_world_config()` — the `hack_live_swap.spec.ts`
    idiom), never pixel-diffing (entity idle anim + grid shimmer make pixels non-deterministic by
    design).
 8. **The minimap is hack-mode too** (A1, §10 — this line originally said it still showed the
@@ -433,8 +433,8 @@ src/i18n`, root `bun run lint` + `bun run typecheck`; a driven dev-server boot s
 
 - **Files**: `packages/frontend/e2e/hack_mode_boot.spec.ts` (new; own file only — no shared spec
   edits).
-- **Build**: boot `/game-world?dev&hack=1` (the `world_lobby_movement.spec.ts` rig: DEV key,
-  create-if-empty, `__ARES_PLAYER` probes); assert the §3 contract: instant readiness (veil gone,
+- **Build**: boot `/game-world?dev&hack=1` (the `session_position_restore.spec.ts` rig: DEV key,
+  create-if-empty, `__voxel_ctl` probes); assert the §3 contract: instant readiness (veil gone,
   physics live under a hard small timeout), constant ground (`sample_block` probes at 3 spread
   columns), deterministic straight-line walk (hold W 2 s → x,z displacement within tolerance,
   y stays 138±ε), entities-on-plane (any visible spawn rig's y), `get_stats().resident_chunks
