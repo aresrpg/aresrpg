@@ -238,17 +238,22 @@ export function split_move_at_traps(path, trap_hits) {
 }
 
 /**
- * [msg 3254] Split a hover walk path at the mover's LIVE MP — the affordable prefix (each start-exclusive path
- * cell costs exactly 1 MP) vs the beyond-MP overflow (a 3-cell hover with 1 MP shows one green cell and the
- * other two red-ish). The caller paints `walk` on the dark-green 'path'
- * channel and `overflow` on the soft-red 'path_blocked' channel. When tackle (msg 3261) lands as a turn-start
- * MP restriction, the restricted `mp` flows through this same split — zero further display work. Pure.
- * @template T @param {T[]} path start-exclusive path cells @param {number | null | undefined} mp live MP
- * @returns {{ walk: T[], overflow: T[] }}
+ * #950 — THE PAINTED PATH IS THE PATH THE COMMIT FOLDS. The hover walk clipped to the REACHABILITY THE REDUCER
+ * OWNS (`project.move_wash`'s `reach` — the tackle-aware set, which is the chain's own escape contest folded
+ * cell-for-cell), keeping the leading prefix that lies inside it. This replaced a raw `mp`-length slice of a
+ * plain BFS path: a TACKLED seat's move is bitten short, so that slice painted a dark path across cells the
+ * walk never reaches — a preview that lies about the very move it previews. One truth, one home: whatever
+ * `move_wash` washes green is exactly how far the path can be drawn.
+ * @param {number[]} path start-exclusive ENCODED path cells @param {Set<number>} reach the wash's reach set
+ * @returns {number[]} the reachable leading prefix
  */
-export function split_path_at_mp(path, mp) {
-  const n = Math.max(0, Math.floor(mp ?? 0))
-  return { walk: (path ?? []).slice(0, n), overflow: (path ?? []).slice(n) }
+export function path_within_reach(path, reach) {
+  const out = []
+  for (const cell of path ?? []) {
+    if (!reach?.has(cell)) break
+    out.push(cell)
+  }
+  return out
 }
 
 /**

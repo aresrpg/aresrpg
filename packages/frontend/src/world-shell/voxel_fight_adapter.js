@@ -104,7 +104,7 @@ import {
   beats_from_packet,
   tackle_float_payloads,
   split_move_at_traps,
-  split_path_at_mp,
+  path_within_reach,
   wash_armed_spell,
   cast_face_target,
   seed_range_of,
@@ -1748,15 +1748,20 @@ export function create_voxel_fight_adapter(
       // move affordance is off); only the red AoE below paints on a castable cursor cell. Disarm → the D236 path
       // preview returns. Unarmed: the reachable-cell path preview is unchanged.
       if (!fight.armed_spell_id) {
-        // [msg 3254 → 07-17] MP-SPLIT HOVER, green half only: the affordable prefix keeps the D236 dark-green
-        // 'path' (the same legal_move_path the commit charges, so the green half can never lie). The soft-red
-        // beyond-MP suffix is DEAD: the lost-range read is now the WASH's static
-        // 'path_blocked' band (project.move_wash — mouse-independent, tackle-gated), never a per-hover paint.
+        // [msg 3254 → 07-17] REACH-CLIPPED HOVER, green half only: the prefix inside the wash's own reach keeps
+        // the D236 dark-green 'path' (so the preview can never lie). The soft-red beyond-MP suffix is DEAD: the
+        // lost-range read is the WASH's static 'path_blocked' band (project.move_wash — mouse-independent,
+        // tackle-gated), never a per-hover paint.
+        // #950 — the clip is the REDUCER'S reachability, not a raw `active.mp` slice of the BFS path: a TACKLED
+        // seat's move is bitten short by the chain's escape contest, so an MP-length slice painted a path
+        // across cells the walk never reaches. `move_wash` is the ONE home for that truth and the same call
+        // paint() washes green with, so the path and the wash agree cell-for-cell by construction.
         const blocked = presentation_blocked_cells(dungeon, fight.fighters, active.id)
         const path = move_path_dungeon(active, cell, { blocked, mp: GRID_CELLS })
         if (!path.length) return clear_hover()
-        const { walk } = split_path_at_mp(path, active.mp)
-        movement_path = walk
+        const wash = project.move_wash(fight_store.getState(), { busy: use_dungeon.getState().busy })
+        movement_path = path_within_reach(path, new Set(wash.reach))
+        if (!movement_path.length) return clear_hover()
       }
       // AoE/GLYPH-on-hover: while a spell is armed and the hover is a CASTABLE cell, paint the spell's FULL zone
       // footprint (cross/circle/line/glyph — spell_footprint reuses the sim's own get_aoe_cells, anchored at the
