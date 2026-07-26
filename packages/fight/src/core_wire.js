@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/wire.js — the DECODE SEAM (Fight V2 build step 2, consensus §①). The one place untrusted capsule/chain wire
+// core_wire.js — the DECODE SEAM (consensus §①). The one place untrusted capsule/chain wire
 // bytes become domain values, so the pure core never touches a raw wire shape. Two decodes live here and nowhere
 // else (one home): the `$bigint` un-wrap the capsule export leaves behind, and the chain-event coordinate.
 //

@@ -21,10 +21,10 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect } from 'bun:test'
 
-import { create_fight_store, committed_state } from '../../src/store.js'
-import { empty_core_state, ingest, project_board, revive_wire } from '../../src/v2/index.js'
-import { input_envelope } from '../../src/envelope.js'
-import { classify_input } from '../../src/classify_input.js'
+import { create_fight_store, committed_state } from '../src/store.js'
+import { empty_core_state, ingest, project_board, revive_wire } from '../src/core.js'
+import { input_envelope } from '../src/envelope.js'
+import { classify_input } from '../src/classify_input.js'
 
 /** The observable board = the fields both folds derive (cell/hp/alive/turn_number + active). Fighters
  *  sorted by key so equality is order-stable — the "byte-equal board" the ticket names. */
@@ -141,7 +141,7 @@ describe('#701 — v2 project_board ↔ v1 committed_state parity', () => {
 
   // ── FIXTURE 2: a REAL captured edge fight (trace_format-1). It re-adopts snapshots at 3 rising versions
   // (…675 → …767 → …918); on edge v2 strands turn_number at [1,1,1] while v1 accumulates [2,0,0]. ──────────────
-  const TRACE = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'parity', 'real_fight_trace.json')
+  const TRACE = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'parity', 'real_fight_trace.json')
   const trace = JSON.parse(readFileSync(TRACE, 'utf8'))
   const real_stream = trace.inputs.map((rec) => ({ msg: rec.msg, at: rec.at }))
 

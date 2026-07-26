@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/intents.js — §③ INTENTS + FORECAST (Fight V2 build step 2). The intent ledger (codex's model, consensus §2)
+// core_intents.js — §③ INTENTS + FORECAST. The intent ledger (codex's model, consensus §2)
 // and the derivation it drives: PREDICTION IS NOT STATE. The forecast is a pure twin-reduce of the ACTIVE intents on
 // top of canonical truth; any relevant change rebuilds the WHOLE scenario. There is NO per-effect rollback and NO
 // persistent overlay type anywhere — a refusal deactivates the intent and the forecast rebuilds from scratch.
@@ -21,9 +21,9 @@
 // PURE, NO THROW. Intents arrive already normalized to chain-shaped pure-data actions (the door calls
 // `normalize_intent`); this module only keeps the ledger and folds the active set.
 
-import { apply_action } from '../inputs.js'
+import { apply_action } from './inputs.js'
 
-import { inbox_resolver } from './inbox.js'
+import { inbox_resolver } from './core_inbox.js'
 
 const ACTIVE = new Set(['queued', 'submitted'])
 
@@ -33,9 +33,9 @@ export const active_intents = (ledger) => ledger.filter((intent) => ACTIVE.has(i
 /**
  * Upsert an intent into the ledger by `effect_id` (idempotence): a re-armed effect replaces its row rather than
  * doubling it; an effect_id-less commit (a bare click) appends. Fresh rows enter `queued`. Pure.
- * @param {import('./state.js').Intent[]} ledger
+ * @param {import('./core_state.js').Intent[]} ledger
  * @param {{ effect_id: string|null, basis_version: number, actions: Array<Record<string, any>> }} row
- * @returns {import('./state.js').Intent[]}
+ * @returns {import('./core_state.js').Intent[]}
  */
 export const queue_intent = (ledger, { effect_id, basis_version, actions }) => {
   const fresh = { effect_id: effect_id ?? null, status: 'queued', basis_version: Number(basis_version) || 0, actions }
@@ -55,8 +55,8 @@ export const mark_submitted = (ledger) =>
  * Deactivate intents as `refused` — a reverted/failed tx or an explicit rollback. `match` selects rows (by
  * effect_id, by predicted cells, or all active when the rollback names nothing — the whole optimistic turn). Only
  * ACTIVE rows flip; an already-resolved intent is immutable. Pure.
- * @param {import('./state.js').Intent[]} ledger
- * @param {(intent: import('./state.js').Intent) => boolean} match
+ * @param {import('./core_state.js').Intent[]} ledger
+ * @param {(intent: import('./core_state.js').Intent) => boolean} match
  */
 export const refuse_intents = (ledger, match) =>
   ledger.map((intent) => (ACTIVE.has(intent.status) && match(intent) ? { ...intent, status: 'refused' } : intent))
@@ -65,7 +65,7 @@ export const refuse_intents = (ledger, match) =>
  * Resolve intents the chain has now spoken past: every ACTIVE intent whose basis is at/below the newly-advanced
  * truth `version` leaves the forecast. A RECEIPT advance (my own tx proof) marks them `observed`; a snapshot/poll
  * advance that jumped the floor marks them `stale`. Both deactivate + let the forecast rebuild whole. Pure.
- * @param {import('./state.js').Intent[]} ledger
+ * @param {import('./core_state.js').Intent[]} ledger
  * @param {number} version the truth version just reached
  * @param {'observed'|'stale'} how
  */
@@ -78,8 +78,8 @@ export const resolve_intents = (ledger, version, how) =>
  * fold_forecast — the predicted scenario: canonical truth with every ACTIVE intent's actions folded on top through
  * the SAME `apply_action` reducer (recompute-whole; no overlay). The resolver comes from the live base view.
  * @param {ReturnType<typeof apply_action>} canonical the committed chain-truth state (fold_canonical output)
- * @param {import('./state.js').Intent[]} ledger
- * @param {import('./state.js').InboxState} inbox for the current seat resolver
+ * @param {import('./core_state.js').Intent[]} ledger
+ * @param {import('./core_state.js').InboxState} inbox for the current seat resolver
  * @returns {ReturnType<typeof apply_action>} the forecast state (canonical when no intent is active)
  */
 export const fold_forecast = (canonical, ledger, inbox) => {

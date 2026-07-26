@@ -7,7 +7,7 @@
 //
 //   · envelope capsule (trace_format-2) — `packages/fight/src/capsule.js capsule_export`, produced by the door
 //     tee (`world-shell/fight_trace_tee.js`, which parks its dumper on `window.__ARES_FIGHT_CAPSULE_DUMP`) and
-//     replayed by `packages/fight/src/v2/replay.js replay_trace`. It carries the PRESENTATION/fold pipeline.
+//     replayed by `packages/fight/src/core_replay.js replay_trace`. It carries the PRESENTATION/fold pipeline.
 //   · sim capsule — `packages/sim/src/timeline.js`, produced by sim_chain's recorder ring and replayed by
 //     `timeline.js replay_capsule`. It carries arena + templates + initial state + the COMMAND LIST, which is
 //     the deterministic one: seed + commands re-fold byte-identically, so a captured fight is a fixture

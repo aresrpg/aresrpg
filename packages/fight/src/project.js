@@ -22,7 +22,7 @@ import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
 import { participant_entity_id, participant_character_id } from './fight_control.js'
 import { apply_retirement } from './fold.js'
-import { project_board } from './v2/project.js'
+import { project_board } from './core_project.js'
 import {
   claimed_budget_state,
   committed_state,

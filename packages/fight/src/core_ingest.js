@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/ingest.js — THE SERIALIZED DOOR (Fight V2 build step 2, consensus §Unanimous): `ingest(state, envelope) →
+// core_ingest.js — THE SERIALIZED DOOR (consensus §Unanimous): `ingest(state, envelope) →
 // state` is the ONE writer. Every source — journal/receipt/poll/p2p reads, tx results, my drafts/commits, CLOCK
 // ticks, lifecycle — is an `input_envelope` reduced here; nothing else mutates the core (nothing mutates at all —
 // the door only ever RETURNS a fresh atom). No async, no store, no throw: an async result re-enters as an INPUT, the
@@ -9,11 +9,11 @@
 //
 // The door is thin by design — it routes each payload to the leg that owns it (inbox §① · ledger §③ · clock §④) and
 // threads the failures/effects those legs emit. The FOLD (§②) and PROJECTIONS (§④) are pure derivations read on
-// demand (v2/fold.js, v2/project.js) — the door never stores them, so they can never go stale.
+// demand (core_fold.js, core_project.js) — the door never stores them, so they can never go stale.
 
-import { normalize_intent, actor_from_key, seat_resolver } from '../inputs.js'
+import { normalize_intent, actor_from_key, seat_resolver } from './inputs.js'
 
-import { empty_core_state, empty_inbox } from './state.js'
+import { empty_core_state, empty_inbox } from './core_state.js'
 import {
   admit_events,
   adopt_snapshot,
@@ -23,10 +23,10 @@ import {
   batch_to_actions,
   journal_to_actions,
   truth_version,
-} from './inbox.js'
-import { queue_intent, mark_submitted, refuse_intents, resolve_intents, compact_ledger } from './intents.js'
-import { advance_cursor } from './project.js'
-import { sorted_tail } from './fold.js'
+} from './core_inbox.js'
+import { queue_intent, mark_submitted, refuse_intents, resolve_intents, compact_ledger } from './core_intents.js'
+import { advance_cursor } from './core_project.js'
+import { sorted_tail } from './core_fold.js'
 
 /** Append failure-as-data / outbound effect requests without disturbing the rest of the atom. */
 const with_failures = (state, failures, effects = []) =>
@@ -129,10 +129,10 @@ const ingest_commit = (state, payload) => {
 /**
  * ingest — reduce ONE input envelope into the core. Total over every `fight_input` kind (classify_input's union);
  * an unmapped kind is a no-op, never a throw. `now` is the envelope's tap wall-clock (the ONE time source).
- * @param {import('./state.js').CoreState} state
+ * @param {import('./core_state.js').CoreState} state
  * @param {{ payload: Record<string, any>, observed_at_ms?: number, session_id?: string|null }} envelope
  * @param {number} [now]
- * @returns {import('./state.js').CoreState}
+ * @returns {import('./core_state.js').CoreState}
  */
 export const ingest = (state, envelope, now = envelope?.observed_at_ms ?? 0) => {
   const payload = envelope?.payload

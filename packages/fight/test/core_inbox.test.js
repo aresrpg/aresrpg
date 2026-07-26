@@ -7,7 +7,7 @@
 
 import { describe, test, expect } from 'bun:test'
 
-import { empty_inbox } from '../../src/v2/state.js'
+import { empty_inbox } from '../src/core_state.js'
 import {
   admit_events,
   adopt_snapshot,
@@ -17,9 +17,9 @@ import {
   batch_to_actions,
   truth_frontier,
   truth_version,
-} from '../../src/v2/inbox.js'
-import { fold_canonical } from '../../src/v2/fold.js'
-import { revive_wire, coord_key } from '../../src/v2/wire.js'
+} from '../src/core_inbox.js'
+import { fold_canonical } from '../src/core_fold.js'
+import { revive_wire, coord_key } from '../src/core_wire.js'
 
 /** A minimal chain Hit event at (version, ordinal-by-position). */
 const hit = (victim_idx, remaining_hp) => ({

@@ -6,7 +6,7 @@
 
 import { describe, test, expect } from 'bun:test'
 
-import { empty_core_state, ingest } from '../../src/v2/index.js'
+import { empty_core_state, ingest } from '../src/core.js'
 import {
   advance_cursor,
   present_cursor,
@@ -15,7 +15,7 @@ import {
   project_board,
   project_presentation,
   PACING_POLICY,
-} from '../../src/v2/project.js'
+} from '../src/core_project.js'
 
 const opened = () =>
   ingest(empty_core_state(), {

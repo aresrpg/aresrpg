@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/inbox.js — §① INGRESS+INBOX admission (Fight V2 build step 2). The serialized door's journal-admission half:
+// core_inbox.js — §① INGRESS+INBOX admission. The serialized door's journal-admission half:
 // every chain-read source (receipt · poll · p2p · journal · snapshot) resolves to admission over ONE keyed log,
 // ordered by the chain-event coordinate, arrival-order-independent (a shuffle property pins it).
 //
@@ -29,10 +29,10 @@
 import { hash_state } from '@aresrpg/sim/evolve'
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
-import { normalize_events, seat_resolver } from '../inputs.js'
-import { board_state_from_fight } from '../board_state.js'
+import { normalize_events, seat_resolver } from './inputs.js'
+import { board_state_from_fight } from './board_state.js'
 
-import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './wire.js'
+import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
 // tx proof — never overridden); a poll/journal read is authoritative; a legacy event-shaped snapshot ranks below a
@@ -47,8 +47,8 @@ const action_coord = (action) => ({ version: Number(action.version), ordinal: Nu
  * counted; deriving makes it order-independent by construction). It is the highest coordinate of admitted truth: the
  * max log coordinate, or the adopted base (`{ base_version, -1 }`) when the log is empty — the base covers its whole
  * version, so an event at/below it is settled, not frontier. COORD_ZERO before the first read.
- * @param {import('./state.js').InboxState} inbox
- * @returns {import('./wire.js').EventCoord}
+ * @param {import('./core_state.js').InboxState} inbox
+ * @returns {import('./core_wire.js').EventCoord}
  */
 export const truth_frontier = (inbox) => {
   const base = inbox.base_version >= 0 ? { version: inbox.base_version, ordinal: -1 } : { ...COORD_ZERO }
@@ -77,7 +77,7 @@ const as_data = ({ resolve_seat, ...rest }) => rest
 /**
  * Decode a receipt/poll/p2p batch's raw events into pure-data actions keyed by `(version, ordinal=event_idx)`.
  * Reuses the SDK-proven `normalize_events` (one home for the chain-event decode) with NEITHER the seat resolver NOR
- * the turn-start budget baked in — both are VIEW-DEPENDENT and are attached at FOLD time (v2/fold.js) so the stored
+ * the turn-start budget baked in — both are VIEW-DEPENDENT and are attached at FOLD time (core_fold.js) so the stored
  * log is pure, order-independent event DATA (the shuffle property depends on this: a `TurnStarted`'s ap/mp must not
  * change with whether a snapshot happened to precede its arrival).
  * @param {any} rows the batch (already wire-revived): `{ events: [...] }` or a bare event array
@@ -174,16 +174,16 @@ const same_log = (a, b) => {
  * adopts on a collision; a DIFFERENT content hash at an occupied coordinate is failure-as-data + a refetch request.
  * The frontier is DERIVED (`truth_frontier`), so admission only touches the log. Pure: returns a fresh
  * `{ inbox, failures, effects }` (the door threads them). Events the bootstrap base already reflects
- * (version ≤ base_version) are NOT dropped here (#701): the fold's `version > base_version` filter (v2/fold.js
+ * (version ≤ base_version) are NOT dropped here (#701): the fold's `version > base_version` filter (core_fold.js
  * `sorted_tail`) settles them at fold time. Dropping on admit keyed off a MUTABLE base_version was order-DEPENDENT —
  * a transiently-higher base (a late-arriving earlier bootstrap under the shuffle property) would drop events the
  * final, lower base must keep — so the settle floor lives only in the fold, where the base is final.
  * Journal rows are re-derived over the whole received set first (`rederive_journal`) — their ordinal is chain truth
  * from `seq`, so admission is the only place that sees enough of the stream to place a page-straddling version.
- * @param {import('./state.js').InboxState} inbox
+ * @param {import('./core_state.js').InboxState} inbox
  * @param {Array<Record<string, any>>} actions pure-data actions (batch_to_actions / journal_to_actions)
  * @param {number} now
- * @returns {{ inbox: import('./state.js').InboxState, failures: any[], effects: any[] }}
+ * @returns {{ inbox: import('./core_state.js').InboxState, failures: any[], effects: any[] }}
  */
 export const admit_events = (inbox, actions, now) => {
   const placed = rederive_journal(inbox.log, actions)
@@ -224,14 +224,14 @@ export const admit_events = (inbox, actions, now) => {
  * re-adopting stranded every fighter's cell at the stale object and RESET their accumulated per-turn count to 1,
  * discarding the tail. Only a strictly-EARLIER read lowers the bootstrap floor (an out-of-order delivery of the true
  * first read). Order-independent: the base is `min(object versions)`, a pure function of the read SET, so the
- * shuffle property holds. NO destructive prune — the fold's `version > base_version` filter (v2/fold.js `sorted_tail`)
+ * shuffle property holds. NO destructive prune — the fold's `version > base_version` filter (core_fold.js `sorted_tail`)
  * settles the subsumed tail, and keeping those rows lets a late-arriving earlier bootstrap still fold them.
  * Pure. `board_state_from_fight` decodes the rich view (the ONE home); the raw `rows` are wire-revived first.
- * @param {import('./state.js').InboxState} inbox
+ * @param {import('./core_state.js').InboxState} inbox
  * @param {any} rows the raw snapshot fight object
  * @param {number} version the object version
  * @param {Record<string, any>} ctx decode context (mob identity maps, offset) — never folded
- * @returns {import('./state.js').InboxState}
+ * @returns {import('./core_state.js').InboxState}
  */
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const object_version = Number(version ?? 0)
@@ -255,9 +255,9 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
  * Buffer a COURTESY (p2p) batch as UNVERIFIED. It never advances the frontier; it graduates into the verified log
  * only when a verified row later admits byte-identical to it (handled on admit — see `reconcile_courtesy`). Until
  * then it lives in `inbox.courtesy` and may surface ONLY in a marked projection layer (rider R1). Pure.
- * @param {import('./state.js').InboxState} inbox
+ * @param {import('./core_state.js').InboxState} inbox
  * @param {Array<Record<string, any>>} actions
- * @returns {import('./state.js').InboxState}
+ * @returns {import('./core_state.js').InboxState}
  */
 export const buffer_courtesy = (inbox, actions) => {
   let { courtesy } = inbox
@@ -288,7 +288,7 @@ export const reconcile_courtesy = (inbox) => {
  * real starve signature — head advances 2→8 while the event array stays empty). Data, not a stall: receipts fill the
  * gap via the version watermark. Fired ONCE per head advance (not per empty re-poll) so the finding is a signal, not
  * spam. Returns `{ inbox, failures }`. Pure.
- * @param {import('./state.js').InboxState} inbox
+ * @param {import('./core_state.js').InboxState} inbox
  * @param {number} head
  * @param {Array<Record<string, any>>} journal_actions the just-decoded journal actions (for the delivered seq)
  * @param {number} now

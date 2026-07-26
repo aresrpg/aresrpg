@@ -13,9 +13,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, test, expect } from 'bun:test'
 import { hash_state } from '@aresrpg/sim/evolve'
 
-import { empty_core_state, ingest, project_board, coord_key, truth_frontier } from '../../src/v2/index.js'
+import { empty_core_state, ingest, project_board, coord_key, truth_frontier } from '../src/core.js'
 
-const CAPSULES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'capsules')
+const CAPSULES_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'capsules')
 const files = readdirSync(CAPSULES_DIR).filter((name) => name.endsWith('.capsule.json'))
 const load = (file) => JSON.parse(readFileSync(join(CAPSULES_DIR, file), 'utf8'))
 

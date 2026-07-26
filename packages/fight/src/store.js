@@ -30,7 +30,7 @@ import { createStore } from 'zustand/vanilla'
 
 import { classify_input } from './classify_input.js'
 import { input_envelope } from './envelope.js'
-import { empty_core_state, ingest } from './v2/index.js'
+import { empty_core_state, ingest } from './core.js'
 import { auto_commit_fire_at } from './draft_budget.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
@@ -96,7 +96,7 @@ const resolve_journal_alias = (msg, fight_id) =>
 /** The classify bridge reads whatever fields a message carries, so a hostile accessor on one of them (the
  *  trace suite's poison-getter case) would otherwise take the door down. A message the bridge cannot read is
  *  MALFORMED, and malformed is a first-class outcome here: a null payload lands on the core's `failures` as a
- *  `malformed_envelope` record (v2/ingest.js). Never a throw, never a silent skip — a failure on the record. */
+ *  `malformed_envelope` record (core_ingest.js). Never a throw, never a silent skip — a failure on the record. */
 const payload_of = (msg) => {
   try {
     return classify_input(msg)

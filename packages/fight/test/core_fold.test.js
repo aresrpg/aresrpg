@@ -9,8 +9,8 @@
 
 import { describe, test, expect } from 'bun:test'
 
-import { empty_core_state, ingest } from '../../src/v2/index.js'
-import { fold_canonical } from '../../src/v2/fold.js'
+import { empty_core_state, ingest } from '../src/core.js'
+import { fold_canonical } from '../src/core_fold.js'
 
 describe('fold_canonical — the committed chain truth (issue #549: one fold, not two)', () => {
   test('pre-snapshot: a receipt admits before any snapshot lands (inbox.js §1 primary boot scenario) — fight_id is null, even threaded the live session id, matching the corpus-proven project_board behavior', () => {

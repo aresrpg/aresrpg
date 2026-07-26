@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/project.js — §④ PROJECTIONS (Fight V2 build step 2): board · presentation · HUD, each a PURE function of
+// core_project.js — §④ PROJECTIONS: board · presentation · HUD, each a PURE function of
 // (state, clock, policy). Presentation is a projection, never state (consensus §Unanimous). The eye is a CLOCK-DRIVEN
 // CURSOR over a beat queue derived from the fold's per-event facts; beats advance by CLOCK ONLY — an animation
 // completing is NOT an input, so a slow renderer misses beats and truth never waits. Past `max_lag` the projection
@@ -13,10 +13,10 @@
 // MECHANICS the headless core owns — which beat the eye has reached, and the snap when it lags — over that queue.
 // The pacing POLICY is versioned (a bump is a visible pacing change, never a silent drift).
 
-import { apply_action } from '../inputs.js'
+import { apply_action } from './inputs.js'
 
-import { canonical_base, fold_canonical, sorted_tail } from './fold.js'
-import { truth_version } from './inbox.js'
+import { canonical_base, fold_canonical, sorted_tail } from './core_fold.js'
+import { truth_version } from './core_inbox.js'
 
 /**
  * The versioned pacing policy. `version` pins it (a change is deliberate); `beat_ms` is the eye's per-beat cadence;
@@ -30,7 +30,7 @@ export const PACING_POLICY = { version: 1, beat_ms: 400, max_lag: 24, snap_to: 6
  * One presentation-consumable fact per admitted event — the beat queue the cursor plays. Derived from the fold's
  * ordered tail (each chain event is a beat); the fact names the event kind and the fighter it touches, the minimum
  * the eye needs to pace. The §7b oracle owns the rich beat body; this is the cursor's spine.
- * @param {import('./state.js').InboxState} inbox
+ * @param {import('./core_state.js').InboxState} inbox
  * @returns {Array<{ index: number, version: number, ordinal: number, kind: string }>}
  */
 export const beat_queue = (inbox) =>
@@ -58,11 +58,11 @@ export const present_cursor = (beat_count, cursor, policy = PACING_POLICY) => {
  * Advance the clock cursor by elapsed wall time — the ONLY cursor driver (clock ticks, never animation acks). Returns
  * a fresh clock. The raw cursor is stored monotonic; `present_cursor` applies the snap at projection time so the
  * stored cursor never loses the fact that time passed.
- * @param {import('./state.js').ClockState} clock
+ * @param {import('./core_state.js').ClockState} clock
  * @param {number} now_ms
  * @param {number} beat_count
  * @param {PacingPolicy} policy
- * @returns {import('./state.js').ClockState}
+ * @returns {import('./core_state.js').ClockState}
  */
 export const advance_cursor = (clock, now_ms, beat_count, policy = PACING_POLICY) => {
   const elapsed = clock.now_ms > 0 ? Math.max(0, now_ms - clock.now_ms) : 0
@@ -76,7 +76,7 @@ export const advance_cursor = (clock, now_ms, beat_count, policy = PACING_POLICY
  * project_board — the COMMITTED board at the truth frontier: base + the WHOLE admitted tail. Legality, reach, and
  * turn logic read this (truth never waits on the eye). Pure. THE canonical fold (issue #549) — no private
  * re-implementation; this IS `fold_canonical(state.inbox)`.
- * @param {import('./state.js').CoreState} state
+ * @param {import('./core_state.js').CoreState} state
  */
 export const project_board = (state) => fold_canonical(state.inbox)
 
@@ -84,7 +84,7 @@ export const project_board = (state) => fold_canonical(state.inbox)
  * project_presentation — the board AS THE EYE SEES IT: base + the tail up to the (clock-driven, snap-corrected)
  * cursor. Always a legal prefix fold, even when the cursor is far behind the frontier (the starve state). Pure.
  * Shares `canonical_base` with `fold_canonical` (issue #549) — the same snapshot half, folded to a shorter tail.
- * @param {import('./state.js').CoreState} state
+ * @param {import('./core_state.js').CoreState} state
  * @param {PacingPolicy} policy
  */
 export const project_presentation = (state, policy = PACING_POLICY) => {
@@ -97,7 +97,7 @@ export const project_presentation = (state, policy = PACING_POLICY) => {
  * project_hud — the compact facts a HUD reads: my seat's vitals, whose turn, phase, and the pacing posture (how far
  * the eye lags truth, whether it is snapping). Read off the committed board (my own intents live in the forecast,
  * folded by the ledger — see intents.js). Pure.
- * @param {import('./state.js').CoreState} state
+ * @param {import('./core_state.js').CoreState} state
  * @param {PacingPolicy} policy
  */
 export const project_hud = (state, policy = PACING_POLICY) => {

@@ -13,11 +13,11 @@
 
 import { describe, test, expect } from 'bun:test'
 
-import { create_fight_store, committed_state } from '../../src/store.js'
-import { board_view, engine_view, committed_mob_hp } from '../../src/project.js'
-import { empty_core_state, ingest, project_board } from '../../src/v2/index.js'
-import { input_envelope } from '../../src/envelope.js'
-import { classify_input } from '../../src/classify_input.js'
+import { create_fight_store, committed_state } from '../src/store.js'
+import { board_view, engine_view, committed_mob_hp } from '../src/project.js'
+import { empty_core_state, ingest, project_board } from '../src/core.js'
+import { input_envelope } from '../src/envelope.js'
+import { classify_input } from '../src/classify_input.js'
 
 const FIGHT = '0xb0x4'
 const CHAR = '0xa11ce'

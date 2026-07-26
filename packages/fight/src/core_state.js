@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/state.js — the ONE headless-core state atom (Fight V2 build step 2). Plain immutable data; every field is a
+// core_state.js — the ONE headless-core state atom. Plain immutable data; every field is a
 // pure fold output of the input log, nothing is a latch. `ingest` (the serialized door) is the ONLY writer, and it
-// only ever RETURNS a fresh atom — no store, no mutation, no async. Consumers read PROJECTIONS (v2/project.js),
+// only ever RETURNS a fresh atom — no store, no mutation, no async. Consumers read PROJECTIONS (core_project.js),
 // never these internals.
 //
 // The atom carries three concerns, each a pure reduction of the same input log (consensus §① / §③ / §④):
@@ -14,7 +14,7 @@
 // drains, never thrown or performed in the core.
 
 /**
- * @typedef {import('./wire.js').EventCoord} EventCoord
+ * @typedef {import('./core_wire.js').EventCoord} EventCoord
  * @typedef {Record<string, any>} Action a chain-vocabulary action (inputs.js normalize_events output)
  *
  * @typedef {object} InboxState

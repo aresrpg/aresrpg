@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// v2/fold.js — §② THE FOLD (Fight V2 build step 2): TOTAL and UNCONDITIONAL. The committed observable state is a
+// core_fold.js — §② THE FOLD: TOTAL and UNCONDITIONAL. The committed observable state is a
 // pure re-fold of the snapshot base + the sorted admitted log — nothing gates it. There is NO readiness flag, render
 // ack, animation condition, or optional signal anywhere in this module's inputs or outputs; the ONLY wait that
 // exists is the explicit next-coordinate gap in the inbox (a buffered future row), and even then earlier rows still
@@ -21,7 +21,7 @@
 // ready/invisible), and its event vocabulary would require a lossy multi-event assembly (buffer a `Cast`, gather the
 // trailing `Hit`/`Displaced` into a synthetic `effects[]`) that inputs.js's own law forbids ("the client never
 // re-guesses events"). So:
-//   THE V2 CHAIN FOLD CONSUMES THE CAPSULES' FLAT CHAIN VOCABULARY THROUGH `apply_action` (consumed, never forked).
+//   THE CHAIN FOLD CONSUMES THE CAPSULES' FLAT CHAIN VOCABULARY THROUGH `apply_action` (consumed, never forked).
 //   `apply_canonical_event` REMAINS THE PREDICTION-SIDE TWIN (the sim's leaf-side fold of its own emissions); the two
 //   meet at the OBSERVABLE PROJECTION (positions · health · liveness · turn · winner) — the twin contract the CI
 //   coherence property already pins — NOT at a shared event fold. One observable, two folders.
@@ -33,10 +33,10 @@
 // PURE, NO THROW. `base_from_view` + `apply_action` are the existing homes; this module only composes them over the
 // inbox, attaching the current seat resolver at fold time (never baked stale into the log).
 
-import { apply_action, empty_state } from '../inputs.js'
-import { base_from_view, base_budget } from '../fold.js'
+import { apply_action, empty_state } from './inputs.js'
+import { base_from_view, base_budget } from './fold.js'
 
-import { inbox_resolver } from './inbox.js'
+import { inbox_resolver } from './core_inbox.js'
 
 /** The sorted authoritative tail: every admitted log action above the snapshot base, in coordinate order, with the
  *  view-dependent enrichment attached at FOLD time (never baked stale into the log — the shuffle property depends on
@@ -62,8 +62,8 @@ export const sorted_tail = (inbox) => {
  * board/presentation projections share it rather than re-deriving their own). `fight_id` comes ONLY from the
  * adopted snapshot's own id, never from an external caller: before the first snapshot lands there IS no known
  * base identity yet, whatever the session/caller already knows — this is the corpus-proven behavior (9,829
- * replayed envelopes), pinned by `test/v2/fold.test.js`.
- * @param {import('./state.js').InboxState} inbox
+ * replayed envelopes), pinned by `test/core_fold.test.js`.
+ * @param {import('./core_state.js').InboxState} inbox
  * @returns {ReturnType<typeof empty_state>}
  */
 export const canonical_base = (inbox) =>
@@ -74,7 +74,7 @@ export const canonical_base = (inbox) =>
  * `apply_action`. Total and unconditional (every admitted row reduces; nothing waits on presentation). Intents are
  * NOT here — canonical is chain-only (the ledger's forecast folds them separately, §③). THE single fold (issue
  * #549) — project.js's board/presentation projections fold through this, never a second private implementation.
- * @param {import('./state.js').InboxState} inbox
+ * @param {import('./core_state.js').InboxState} inbox
  * @returns {ReturnType<typeof empty_state>} the committed observable state (fighters · active · phase · winner)
  */
 export const fold_canonical = (inbox) => sorted_tail(inbox).reduce(apply_action, canonical_base(inbox))

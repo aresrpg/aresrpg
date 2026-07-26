@@ -6,8 +6,8 @@
 
 import { describe, test, expect } from 'bun:test'
 
-import { empty_state } from '../../src/inputs.js'
-import { empty_inbox } from '../../src/v2/state.js'
+import { empty_state } from '../src/inputs.js'
+import { empty_inbox } from '../src/core_state.js'
 import {
   queue_intent,
   mark_submitted,
@@ -16,7 +16,7 @@ import {
   active_intents,
   fold_forecast,
   compact_ledger,
-} from '../../src/v2/intents.js'
+} from '../src/core_intents.js'
 
 /** An idx-keyed optimistic Hit (no resolver needed) — the shape the door's normalize step would produce. */
 const hit_action = (victim_idx, remaining_hp) => ({

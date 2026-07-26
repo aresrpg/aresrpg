@@ -20,8 +20,8 @@
     "./capsule": {
       "import": "./src/capsule.js"
     },
-    "./v2": {
-      "import": "./src/v2/index.js"
+    "./core": {
+      "import": "./src/core.js"
     },
     "./bot": {
       "import": "./src/bot/index.js"

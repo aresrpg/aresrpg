@@ -16,7 +16,7 @@
 // therefore reads the board from before that page until the walker re-drives from `from` and redelivers it
 // contiguously. v2/inbox.js `admit_events` has no such gate — admission is keyed on the source-independent
 // `(version, ordinal)` coordinate with a content hash, so the page admits immediately and v2/fold.js `sorted_tail`
-// sorts it into place (order-independence is pinned by test/v2/shuffle.test.js). A death + rollover page carries
+// sorts it into place (order-independence is pinned by test/core_shuffle.test.js). A death + rollover page carries
 // many fields at once, which is why that boundary is where a human notices the hold. §1 reproduces the driven
 // field set byte-for-byte and proves the legacy board is HELD at its pre-page value, never a wrong value.
 //
@@ -33,11 +33,11 @@
 
 import { describe, test, expect } from 'bun:test'
 
-import { create_fight_store, committed_state } from '../../src/store.js'
-import { empty_core_state, ingest, project_board, revive_wire } from '../../src/v2/index.js'
-import { input_envelope } from '../../src/envelope.js'
-import { classify_input } from '../../src/classify_input.js'
-import { normalize_journal_page } from '../../src/journal_normalize.js'
+import { create_fight_store, committed_state } from '../src/store.js'
+import { empty_core_state, ingest, project_board, revive_wire } from '../src/core.js'
+import { input_envelope } from '../src/envelope.js'
+import { classify_input } from '../src/classify_input.js'
+import { normalize_journal_page } from '../src/journal_normalize.js'
 
 // The fields both folds derive (cell/hp/alive/turn_number + active), key-sorted so equality is order-stable.
 const FIGHTER_FIELDS = ['cell', 'hp', 'alive', 'turn_number']

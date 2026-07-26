@@ -25,9 +25,9 @@ import {
   is_legal_board,
   present_cursor,
   PACING_POLICY,
-} from '../../src/v2/index.js'
+} from '../src/core.js'
 
-const CAPSULES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'capsules')
+const CAPSULES_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'capsules')
 const files = readdirSync(CAPSULES_DIR).filter((name) => name.endsWith('.capsule.json'))
 const load = (file) => JSON.parse(readFileSync(join(CAPSULES_DIR, file), 'utf8'))
 
