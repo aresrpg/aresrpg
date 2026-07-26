@@ -75,9 +75,10 @@ export function sell_listable_items(
 
 function to_slot_item(it: ListableItem): ItemInfo {
   const template_slug = slugs[it.name]
-  const icon_slug = cosmetic_icon_of({ slug: template_slug, name: it.name }) ?? template_slug ?? ''
+  const icon_slug = cosmetic_icon_of({ slug: template_slug ?? it.slug, name: it.name }) ?? template_slug ?? it.slug
   return {
-    // Object ids remain grouping/transaction truth; the slot's art identity comes from the seed name→slug join.
+    // Object ids remain grouping/transaction truth. Cosmetics use their authored icon; every ordinary item
+    // falls through to its indexed item-type slug, which ItemImage resolves through item_icon_url.
     template_id: icon_slug,
     appearance: '',
     quantity: it.quantity,
