@@ -3007,6 +3007,7 @@
     "mobs_filter": "Filter mobs",
     "mobs_empty": "No mobs available",
     "selected": "{{count}} selected",
+    "sighted": "{{mob}} spotted — running to it",
     "found": "{{mob}} found",
     "exhausted": "No zone left to scout in that range"
   }

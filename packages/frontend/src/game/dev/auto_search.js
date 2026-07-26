@@ -7,9 +7,12 @@
 // THE SHAPE: every source the loop needs (the player's standing position, the zone grid, the fresh-TTL zone
 // set, whether the [F] gate is armed here, and the revealed spawn markers) arrives as ONE `world` snapshot
 // input; the fold decides everything and answers with COMMAND rows the adapter performs:
-//   walk (steer the body to x/z) · search (pull the same [F] lever a human presses) · found (the popup +
-//   auto-disable) · halt (cancel an in-flight walk) · exhausted (no zone left in range — an honest stop).
-// An `interrupted` input (the player taking the body back) disarms — the toggle never outlives its run.
+//   walk (steer the body to x/z) · approach (a walk that announces the sighted group) · search (pull the same
+//   [F] lever a human presses) · found (the popup + the alarm + auto-disable) · halt (cancel an in-flight walk) ·
+//   exhausted (no zone left in range — an honest stop).
+//
+// SPEND ORDER: known-rows scan → approach; only when NO revealed zone holds a wanted mob does a leg walk to the
+// next zone and pay for its search. And an `interrupted` input (the player taking the body back) disarms.
 // Nothing here knows about React, the engine, the chain, or a transaction — that is auto_search_adapter.js.
 //
 // THE SPEND GATE: `armed` has exactly ONE door — `fee_confirm` after a `toggle` raised `fee_pending`. Each
@@ -135,13 +138,28 @@ const wanted_markers = (state, world) =>
     .map((m) => ({ ...m, reach: distance(world.player.x, world.player.z, Number(m.x), Number(m.z)) }))
     .sort((a, b) => a.reach - b.reach)
 
+/**
+ * THE KNOWN-ROWS SCAN — the nearest wanted group among the rows ALREADY revealed, as an approach leg, or null
+ * when none is known. Every zone search is a real transaction, so this is checked BEFORE any leg that could
+ * spend: a mob standing in an already-revealed zone is never paid for a second time. The `approach` row is a
+ * walk that ANNOUNCES the sighting — one home for both the known-rows entry and the post-reveal one.
+ */
+const approach_match = (state, world, now) => {
+  const [hit] = wanted_markers(state, world)
+  if (!hit) return null
+  const target = { x: Number(hit.x), z: Number(hit.z), template_id: hit.template_id, name: hit.name ?? null }
+  return with_command({ ...state, phase: 'approach', leg_at: now, target }, { kind: 'approach', ...target })
+}
+
 const fold_world = (state, world, now) => {
   if (!state.armed || !world.player) return state
   switch (state.phase) {
     case 'idle':
-      return retarget(state, world, now)
+      return approach_match(state, world, now) ?? retarget(state, world, now)
 
     case 'travel': {
+      const known = approach_match(state, world, now)
+      if (known) return known
       if (in_target_zone(state, world) && world.search_armed)
         return with_command({ ...state, phase: 'search', leg_at: now }, { kind: 'search' })
       // never arrived (or arrived onto a gate that never opened) — retire this zone, take the next
@@ -153,19 +171,8 @@ const fold_world = (state, world, now) => {
       return now - state.leg_at > LEG_TIMEOUT_MS ? skip_current(state, world, now) : state
 
     case 'scan': {
-      const matches = wanted_markers(state, world)
-      if (matches.length > 0) {
-        const hit = matches[0]
-        return with_command(
-          {
-            ...state,
-            phase: 'approach',
-            leg_at: now,
-            target: { x: Number(hit.x), z: Number(hit.z), template_id: hit.template_id, name: hit.name ?? null },
-          },
-          { kind: 'walk', x: Number(hit.x), z: Number(hit.z) }
-        )
-      }
+      const known = approach_match(state, world, now)
+      if (known) return known
       // the reveal's own rows ferry in a beat after the receipt — only call it a miss once they land
       // (any row from this zone) or the grace elapses, never on the empty tick right after the tx.
       const zone_landed = (world.markers ?? []).some((m) => m.zx === state.target?.zx && m.zy === state.target?.zy)

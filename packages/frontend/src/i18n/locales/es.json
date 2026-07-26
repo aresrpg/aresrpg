@@ -3007,6 +3007,7 @@
     "mobs_filter": "Filtrar monstruos",
     "mobs_empty": "No hay monstruos disponibles",
     "selected": "{{count}} seleccionados",
+    "sighted": "{{mob}} avistado — voy hacia él",
     "found": "{{mob}} encontrado",
     "exhausted": "No queda ninguna zona que explorar en ese rango"
   }

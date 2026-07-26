@@ -237,7 +237,7 @@ describe('the receipt — a wanted template halts the loop with the found popup'
     ]
     const approaching = reduce_auto_search(receipt, world({ player: at, markers: rows }), 3100)
     expect(approaching.phase).toBe('approach')
-    expect(approaching.command.kind).toBe('walk')
+    expect(approaching.command.kind).toBe('approach') // a walk that ANNOUNCES the sighting — one home for both paths
     expect(approaching.command.x).toBe(at.x + 12)
     expect(approaching.armed).toBe(true) // still running until it arrives
   })
@@ -316,5 +316,51 @@ describe('the player always wins — taking manual control disarms the toggle', 
   test('an interruption while nothing is running changes nothing', () => {
     const idle = blank_auto_search()
     expect(reduce_auto_search(idle, { type: 'interrupted', reason: 'player' }, 1000)).toBe(idle)
+  })
+})
+
+describe('the known-rows scan — an already-revealed wanted mob is never paid for twice', () => {
+  const row = (over = {}) => ({
+    kind: 'mob',
+    template_id: 'mob_a',
+    name: 'Sewer Rat',
+    zx: 488,
+    zy: 488,
+    x: 30,
+    z: 0,
+    ...over,
+  })
+
+  test('arming while a wanted group is already revealed approaches it — ZERO searches, no zone leg', () => {
+    const rows = [row(), row({ x: 12 }), row({ template_id: 'mob_b', x: 1 })] // nearest is UNwanted
+    const state = reduce_auto_search(armed_with(['mob_a']), world({ markers: rows, search_armed: true }), 1000)
+    expect(state.phase).toBe('approach')
+    expect(state.command.kind).toBe('approach')
+    expect(state.command.x).toBe(12) // the nearest WANTED group
+    expect(state.command.name).toBe('Sewer Rat')
+  })
+
+  test('a wanted row learned mid-leg abandons the zone instead of paying for its search', () => {
+    const travelling = reduce_auto_search(armed_with(['mob_a']), world(), 1000)
+    expect(travelling.phase).toBe('travel')
+    const at = { x: travelling.command.x, z: travelling.command.z }
+    const rows = [row({ zx: travelling.target.zx, zy: travelling.target.zy, x: at.x + 20, z: at.z })]
+    // standing IN the target zone with the [F] gate armed — the ONLY thing that used to fire a paid search
+    const next = reduce_auto_search(travelling, world({ player: at, search_armed: true, markers: rows }), 2000)
+    expect(next.phase).toBe('approach')
+    expect(next.command.kind).toBe('approach')
+  })
+
+  test('no revealed wanted row still walks the annulus and searches (the ordering is a fallthrough)', () => {
+    const travelling = reduce_auto_search(
+      armed_with(['mob_a']),
+      world({ markers: [row({ template_id: 'mob_b' })] }),
+      1000
+    )
+    expect(travelling.phase).toBe('travel')
+    const at = { x: travelling.command.x, z: travelling.command.z }
+    const searching = reduce_auto_search(travelling, world({ player: at, search_armed: true }), 2000)
+    expect(searching.phase).toBe('search')
+    expect(searching.command.kind).toBe('search')
   })
 })

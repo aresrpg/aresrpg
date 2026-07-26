@@ -3007,6 +3007,7 @@
     "mobs_filter": "モンスターを絞り込む",
     "mobs_empty": "モンスターがありません",
     "selected": "{{count}} 件選択中",
+    "sighted": "{{mob}} を発見 — 向かっています",
     "found": "{{mob}} を発見",
     "exhausted": "この範囲に探索できるゾーンがありません"
   }

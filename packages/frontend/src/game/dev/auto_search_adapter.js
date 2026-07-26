@@ -8,6 +8,7 @@
 //               (auto_run.js), asked for a bare 'point' target so it never triggers an interaction on arrival.
 //   search    → `trigger_prompt('search')` — the SAME [F] lever a human presses (DiscoveryPrompts registers
 //               it, and it owns the kiosk resolve, the progress toast, the tx and the receipt into the door).
+//   approach  → the same steerer, plus the "spotted it, running over" toast (the loop is unattended).
 //   found     → the house event toast + the fold's own auto-disable.
 //   halt      → the steerer's cancel, so a stopped loop never leaves the body running.
 //
@@ -145,6 +146,12 @@ function perform(command, name_of) {
   switch (command.kind) {
     case 'walk':
       return walk_to(command.x, command.z)
+    case 'approach': {
+      // a walk that says what it saw — the scouter runs unattended, so a silent beeline reads as a stall
+      walk_to(command.x, command.z)
+      const mob = command.name || name_of(command.template_id)
+      return push_event_toast({ state: 'info', title: i18n.t('auto_search.sighted', { mob }) })
+    }
     case 'search':
       // the [F] prompt owns kiosk + tx + receipt; an unarmed prompt is a no-op the fold times out honestly
       return use_prompt_stack.getState().trigger_prompt('search')

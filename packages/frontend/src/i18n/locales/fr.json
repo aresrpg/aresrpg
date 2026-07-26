@@ -3007,6 +3007,7 @@
     "mobs_filter": "Filtrer les monstres",
     "mobs_empty": "Aucun monstre disponible",
     "selected": "{{count}} sélectionné(s)",
+    "sighted": "{{mob}} repéré — en route",
     "found": "{{mob}} trouvé",
     "exhausted": "Plus aucune zone à explorer dans cette plage"
   }

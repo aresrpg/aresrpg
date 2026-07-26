@@ -3007,6 +3007,7 @@
     "mobs_filter": "Monster filtern",
     "mobs_empty": "Keine Monster verfügbar",
     "selected": "{{count}} ausgewählt",
+    "sighted": "{{mob}} gesichtet — unterwegs dorthin",
     "found": "{{mob}} gefunden",
     "exhausted": "Keine Zone mehr in dieser Reichweite"
   }
