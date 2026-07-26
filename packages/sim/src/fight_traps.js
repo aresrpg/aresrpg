@@ -10,10 +10,16 @@
 // cell (during a move OR a push), is removed, and deals the trap's element damage. A glyph persists for N
 // turns and triggers on TURN_START for any entity standing on it.
 
-import { next_id, find_entity, effective_stats } from './fight_state.js'
-import { apply_incoming_damage } from './fight_actions.js'
+import { next_id, find_entity, effective_stats, update_entity } from './fight_state.js'
+import { apply_heal, apply_incoming_damage } from './fight_actions.js'
+import { add_row } from './fight_stat_effects.js'
 import { calculate_final_damage } from './spell_calculator.js'
 import { get_direction, handle_displacement } from './fight_displacement.js'
+
+/** A board payload's FLAT magnitude. The chain's board batch is deterministic — it reads `effect.value()` and
+ *  never re-rolls a [min,max] band (cast.move:1630 "Deterministic — no RNG"). */
+const flat = effect =>
+  Math.max(0, Math.trunc(Number(effect.value ?? effect.min ?? 0)))
 
 /**
  * Place a trap covering `cells` (donor place_trap). Returns the new state + the trap id (next_id).
@@ -184,6 +190,52 @@ const apply_payload = (
           effects: [...acc.effects, ...after.effects],
         }
       }
+      // ── The chain's board-batch kind set (cast.move `apply_board_batch_from`, 1625-1694). Board payloads are
+      // ZERO-CASTER and DETERMINISTIC there ("no RNG"): the flat `effect.value()` lands, never a re-roll. ──
+      if (effect.type === 'HEAL' && flat(effect) > 0) {
+        // cast.move:1677 — `participant::apply_heal(base)`, flat (zero-caster law).
+        const healed = apply_heal(acc.state, entity_id, flat(effect))
+        return {
+          state: healed,
+          effects: [
+            ...acc.effects,
+            {
+              target_id: entity_id,
+              heal: flat(effect),
+              new_health: find_entity(healed, entity_id)?.health ?? 0,
+            },
+          ],
+        }
+      }
+      if (effect.type === 'PERCENT_LIFE_DAMAGE' && flat(effect) > 0) {
+        // cast.move:1673-1676 — a fraction of the live HP pool, no element amplification, no resist.
+        const damage = Math.floor((target.health * flat(effect)) / 100)
+        const after = hazard_hit(acc.state, entity_id, damage, source_id)
+        return { state: after.state, effects: [...acc.effects, ...after.effects] }
+      }
+      if (
+        (effect.type === 'ADD' || effect.type === 'REMOVE') &&
+        effect.stat &&
+        flat(effect) > 0
+      ) {
+        const buff = effect.type === 'ADD'
+        const status = buff ? 'STAT_BUFF' : 'STAT_DEBUFF'
+        const row = { target_id: entity_id, status, stat: effect.stat, value: flat(effect) }
+        if (effect.stat === 'ap' || effect.stat === 'mp') {
+          // cast.move:1679-1683 — give_points / remove_points land FLAT on the pool. The board path is NOT
+          // dodge-contested (the chain calls participant::remove_points directly), unlike the cast path.
+          const moved = update_entity(acc.state, entity_id, e => ({
+            ...e,
+            [effect.stat]: Math.max(0, e[effect.stat] + (buff ? flat(effect) : -flat(effect))),
+          }))
+          return { state: moved, effects: [...acc.effects, row] }
+        }
+        // cast.move:1684-1687 — a timed alter lands as a board row and the live block re-derives from it.
+        return {
+          state: add_row(acc.state, entity_id, source_id, effect, flat(effect)),
+          effects: [...acc.effects, row],
+        }
+      }
       if (effect.type === 'PUSH' || effect.type === 'PULL') {
         const origin = anchor ?? target.cell
         const direction =
@@ -206,6 +258,11 @@ const apply_payload = (
           effects: [...acc.effects, ...displaced.effects],
         }
       }
+      // LOUD, never silent. A payload kind this sink does not model is a trap that fires, consumes itself and
+      // does NOTHING — the exact failure #954 reports. A skip must cost a line in the console, not a mystery.
+      console.error(
+        `[sim] trap/glyph payload kind not modelled: ${effect.type} (kind ${effect.kind ?? '?'}) — the hazard consumed itself and applied nothing`,
+      )
       return acc
     },
     {
