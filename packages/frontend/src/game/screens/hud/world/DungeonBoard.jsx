@@ -30,7 +30,7 @@ import { xp_progress } from '@aresrpg/sdk/experience'
 import { use_game_state, use_fight_view } from '../../../store.js'
 import { use_expedition, STATUS_ACTIVE as EXPEDITION_ACTIVE } from '../../../../roster/store'
 import { seat_character } from '../../../../world-shell/seat_character.js'
-import { fight_spell_template, resolve_class_spells } from '../fight-spells.js'
+import { fight_spell_template, resolve_class_spells, seat_spell_level, seat_spell_row } from '../fight-spells.js'
 import { push_event_toast } from '../../../core/toast.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '../../../core/modules/fight.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
@@ -235,6 +235,13 @@ export function DungeonBoard() {
   // while the mob beats drain) holds the RE-ARM until the turn is PLAYABLE — chain truth ⋀ presentation done.
   const my_turn = !!fight && fight.active_entity_id === entity_id && fight.winner === -1 && !fight.presenting
 
+  // THE SEAT'S RANK (#1077) — a spell's range, AP cost, cooldown, per-turn caps and effects are all PER-LEVEL
+  // facts, and the level this seat casts at rides its escrow row's composed build (`spell_levels`). `level_row`
+  // is the ONE reader every gate below goes through, so the click gate, the wash and the prediction can never
+  // describe different ranks of the same spell; `active_level` is the armed (or primary) spell's own row.
+  const level_row = (spell) => seat_spell_row(me, spell)
+  const active_level = useMemo(() => seat_spell_row(me, active_spell), [me, active_spell])
+
   const cast_params = useMemo(() => {
     // WEAPON slot (SPEC §17.27): the HAND / equipped-WEAPON basic attack has no seed row — its range/AP come from
     // the seat's on-chain Weapon (me.weapon.reach / ap_cost), so the `castable` gate + the board wash agree
@@ -246,14 +253,13 @@ export function DungeonBoard() {
         range_max: me?.weapon?.reach ?? WEAPON_ATTACK_RANGE[1],
         ap_cost: me?.weapon?.ap_cost ?? WEAPON_ATTACK_AP,
       }
-    const lvl = active_spell?.levels?.[0]
-    const range = lvl?.range
+    const range = active_level?.range
     return {
       range_min: range?.[0] ?? CAST_RANGE_MIN_DEFAULT,
       range_max: range?.[1] ?? CAST_RANGE_MAX_DEFAULT,
-      ap_cost: lvl?.ap ?? CAST_AP_COST_DEFAULT,
+      ap_cost: active_level?.ap ?? CAST_AP_COST_DEFAULT,
     }
-  }, [active_spell, fight?.armed_spell_id, me?.weapon])
+  }, [active_level, fight?.armed_spell_id, me?.weapon])
   // Every hook ABOVE this line runs unconditionally (Rules of Hooks) — the early return is below the last one.
   const obstacles = dungeon?.obstacles ?? []
   // The ENGINE refills AP/MP to base at begin_turn ON-CHAIN (turns.move) and persists it, so the escrow ap/mp
@@ -284,7 +290,7 @@ export function DungeonBoard() {
   // seat's fixed Weapon.damage; spell → its seeded level-1 DAMAGE base. Fed the CUMULATIVE per-target HP drop.
   const dmg_of = (/** @type {string | null} */ spell_key) => {
     if (spell_key === WEAPON_ATTACK_ID) return me?.weapon?.damage ?? 0
-    const lvl = my_spells.find((sp) => sp.name_key === spell_key)?.levels?.[0]
+    const lvl = level_row(my_spells.find((sp) => sp.name_key === spell_key))
     return damage_of(lvl?.effects)
   }
   // Like MP, presented AP has already folded every earlier cast and deterministic tackle forfeit in draft order.
@@ -292,7 +298,7 @@ export function DungeonBoard() {
   // casts_per_turn gate for the ARMED spell (the weapon has none). Count how many of it are already queued; at the
   // cap no more are castable. cpt_cap === Infinity for a weapon or any unlimited (255/0) spell — AP alone limits.
   const armed_id = fight?.armed_spell_id ?? null
-  const cpt = armed_id === WEAPON_ATTACK_ID ? Infinity : (active_spell?.levels?.[0]?.casts_per_turn ?? CASTS_UNLIMITED)
+  const cpt = armed_id === WEAPON_ATTACK_ID ? Infinity : (active_level?.casts_per_turn ?? CASTS_UNLIMITED)
   const cpt_cap = cpt === CASTS_UNLIMITED || cpt === 0 ? Infinity : cpt
   const armed_key = armed_id === WEAPON_ATTACK_ID ? WEAPON_ATTACK_ID : (active_spell?.name_key ?? null)
   const armed_queued = cast_path.reduce((n, e) => (e.spell_key === armed_key ? n + 1 : n), 0)
@@ -303,13 +309,13 @@ export function DungeonBoard() {
   //  • casts_per_target (per-cell): at the cap, that CELL drops from the castable footprint (other cells stay).
   // The weapon has none of these. `armed_key` is the primary's name_key even unarmed, so the unarmed quick-cast
   // is gated + recorded on the SAME key (no asymmetry).
-  const armed_cooldown = armed_id === WEAPON_ATTACK_ID ? 0 : (active_spell?.levels?.[0]?.cooldown ?? 0)
+  const armed_cooldown = armed_id === WEAPON_ATTACK_ID ? 0 : (active_level?.cooldown ?? 0)
   const armed_on_cd = on_cooldown(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
   const armed_cd_left = cooldown_left(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
   const cpt_cap_eff = armed_cooldown > 0 ? 1 : cpt_cap
   // The AUTHORED per-target cap rides raw so every read goes through the ONE verdict (`target_cap_reached`);
   // `cpt_target_cap` stays the resolved number the footprint loop tests for the unlimited short-circuit.
-  const cpt_target_authored = armed_id === WEAPON_ATTACK_ID ? Infinity : active_spell?.levels?.[0]?.casts_per_target
+  const cpt_target_authored = armed_id === WEAPON_ATTACK_ID ? Infinity : active_level?.casts_per_target
   const cpt_target_cap = cap_of(cpt_target_authored)
 
   // D108/D109 (Decision-A: the chain-SEEDED cell IS a valid pick) — the encoded escrow cell (`me.cell`)
@@ -439,7 +445,7 @@ export function DungeonBoard() {
     // demands a LIVING enemy ON the target cell (never an empty aim), so it falls through to the mob-only loop
     // below, gated by the SAME weapon [1, reach] cast_params + LOS the chain checks.
     if (fight?.armed_spell_id && fight.armed_spell_id !== WEAPON_ATTACK_ID) {
-      const lvl = active_spell?.levels?.[0]
+      const lvl = active_level
       // 1.29 TRAP-STACKING BAN: a trap-PLACING spell may not target a cell already anchoring
       // MY live trap — the chain aborts it (cast::ECellAlreadyTrapped), so the gate greys it here from the fold's
       // engine_view.my_traps (the ONE client trap home — the sim door reads the SAME projection, so legality and
@@ -468,7 +474,7 @@ export function DungeonBoard() {
     const out = new Set()
     const effective_range_max =
       cast_params.range_max +
-      (fight?.armed_spell_id !== WEAPON_ATTACK_ID && active_spell?.levels?.[0]?.modifiable_range
+      (fight?.armed_spell_id !== WEAPON_ATTACK_ID && active_level?.modifiable_range
         ? range_bonus_of(active_fighter)
         : 0)
     for (const [cell, o] of occupied) {
@@ -497,6 +503,7 @@ export function DungeonBoard() {
     cast_params,
     fight?.armed_spell_id,
     active_spell,
+    active_level,
     active_fighter,
     dungeon,
   ])
@@ -537,15 +544,16 @@ export function DungeonBoard() {
     const caster_idx = dungeon.escrow.findIndex((p) => (p.character ?? p.character_id) === entity_id)
     const template =
       spell_key === WEAPON_ATTACK_ID ? weapon_spell_template(me?.weapon) : fight_spell_template(spell_key)
-    const stats_of = (fighter_id) => {
-      const ref = resolve_ref(fighter_id)
-      const row = ref?.is_mob ? dungeon.mobs[ref.idx] : dungeon.escrow[ref?.idx]
-      return { agility: Number(row?.agility ?? 0), range: Number(row?.base_range ?? 0) }
-    }
+    // The RANK the chain will resolve this cast at, off the seat's composed build — never a defaulted 1. Stats
+    // need no adapter: every fighter's locked snapshot rides the fight view itself (#1077), so this cast and the
+    // authority that settles it run the same math on the same inputs.
+    const spell_level =
+      spell_key === WEAPON_ATTACK_ID ? 1 : seat_spell_level(me, my_spells.find((sp) => sp.name_key === spell_key))
     const prediction = predict_cast({
       view: fight_view(),
       caster_id: entity_id,
       spell: template,
+      spell_level,
       target_cell: mob_cell,
       critical_clock: {
         world_seed: dungeon.world_seed,
@@ -555,7 +563,6 @@ export function DungeonBoard() {
         slot: Number(me?.casts_this_turn ?? 0) + Math.max(0, queue.length - 1),
       },
       resolve_ref,
-      stats_of,
     })
     if (!prediction?.actions.length) return
     const core = fight_store.getState()
@@ -676,7 +683,7 @@ export function DungeonBoard() {
         // #321 GROUND-TARGET EXEMPTION: a free_cell spell (trap/glyph/teleport) targets the CELL itself, not a
         // fighter standing on it — cells don't move, so it must never enter the fighter retarget/drop path below,
         // whatever occupies that cell by flush time (a body walking onto a drafted trap cell must not un-draft it).
-        const ground_targeted = !is_weapon && drafted_spell?.levels?.[0]?.free_cell === true
+        const ground_targeted = !is_weapon && level_row(drafted_spell)?.free_cell === true
         // #321 PER-CAST ANCHOR: this cast's own footprint origin — the caster's cell evolved through casts
         // 1..cast_i-1's OWN displacement effects (a drafted teleport/dash among them), never the sequence's
         // static starting cell. That staleness was the drop-valid-stationary-targets class: an in-range target
@@ -715,7 +722,7 @@ export function DungeonBoard() {
           dropped += 1
           cast_drops.push(local_commit_cast_drop({ actor_id: entity_id, spell_name: spell_display_name, reason }))
           // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
-          if ((drafted_spell?.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
+          if ((level_row(drafted_spell)?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
             trap_dropped.push(entry.cell)
         }
         // A prior ordered move may have crossed a lethal known trap. The contract commits that death, but any
@@ -760,7 +767,7 @@ export function DungeonBoard() {
           })
         } else {
           // The DRAFTED spell (pinned at pick) judges the cast — a disarm/re-arm can't use the wrong spell's flags.
-          const lvl = drafted_spell?.levels?.[0]
+          const lvl = level_row(drafted_spell)
           const range = lvl?.range ?? [cast_params.range_min, cast_params.range_max]
           // SELF-ONLY BUFF (#321/#323): rmax 0 (invisibility/vanish — the spellbook 'self' marker) targets the
           // caster's OWN tile. It can never move out of reach of itself, so it NEVER re-validates (the twin of the
@@ -819,7 +826,7 @@ export function DungeonBoard() {
             spell_key: drafted_spell.name_key, // VFX handoff — the bridge's confirm replay routes element VFX by it
           }
           // A PLACE_TRAP effect ⇒ this cast lays a trap on `target_cell` — remember it to mark once committed.
-          if ((drafted_spell.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
+          if ((level_row(drafted_spell)?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
             trap_placed.push(target_cell)
         } else
           game_log('board', 'flush_commit: cast drafted but no on-chain spell id resolved — skipped', {
@@ -981,7 +988,7 @@ export function DungeonBoard() {
       if (
         fight?.fight_id &&
         armed !== WEAPON_ATTACK_ID &&
-        (active_spell?.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP')
+        (active_level?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP')
       )
         pending_trap_cells.current.add(cell)
       return

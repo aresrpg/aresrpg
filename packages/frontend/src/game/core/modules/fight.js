@@ -17,7 +17,7 @@ import { game_log } from '../../../core/log.js'
 import i18n from '../../../i18n'
 
 import { CHANNEL } from './chat.js'
-import { fight_spell, fight_spells_data } from '../../screens/hud/fight-spells.js'
+import { fight_spell, fight_spells_data, seat_spell_level } from '../../screens/hud/fight-spells.js'
 import { create_seat_follower, focus_seat } from '../../screens/hud/seat_follow.js'
 import {
   resolve_character_docs,
@@ -45,15 +45,15 @@ export function spell_templates() {
 }
 
 /**
- * Resolve a hand card's display + targeting info. MVP: every player spell is level 1, so we read
- * levels[0]. Tolerant of unknown ids (renders a neutral slot). `crit_rate` (1-in-X; 0 = never) +
- * `life.crit_value` (the crit-swapped base) feed the §7 turn-seed crit preview (deck-crit-glow.js).
+ * Resolve a hand card's display + targeting info at the RANK THE SEAT CASTS IT AT (#1077) — `seat` is the
+ * caster's composed build (its fight-view row), whose `spell_levels` name the learned level; without one the
+ * card prices the free unlock, rank 1. Tolerant of unknown ids (renders a neutral slot). `crit_rate` (1-in-X;
+ * 0 = never) + `life.crit_value` (the crit-swapped base) feed the §7 turn-seed crit preview (deck-crit-glow.js).
  * @param {string} spell_id
+ * @param {{ spell_levels?: Record<string, number> } | null} [seat]
  * @returns {{ id: string, name: string, icon: string | null, cost: number, mp: number, range: [number, number], level: import('@aresrpg/sim').SpellLevel | null, spell_level: number, crit_rate: number, life: { value: number, kind: 'damage' | 'heal', crit_value: number } | null }}
  */
-// The hand always holds a class starter at RANK 1: the on-chain `learn` sets level 1 and MVP applies no
-// upgrades (spellbook-data.grimoire likewise reports current_level 1 for every unlocked spell). Surfaced on
-// the deck box as its "Lv" so the label already reflects the rank once spell upgrades wire through.
+// A raw-id / unseeded card has no rank ladder to read — it prices the free unlock.
 const HAND_SPELL_RANK = 1
 
 /**
@@ -104,22 +104,25 @@ const chain_spell_name = (chain) => {
   return translated === key ? chain.name : translated
 }
 
-export function spell_card(spell_id) {
-  // ON-CHAIN fight spell FIRST: display facts + level-1 AP/range come straight from the chain corpus projection.
+export function spell_card(spell_id, seat = null) {
+  // ON-CHAIN fight spell FIRST: display facts + the SEAT'S rank's AP/range come straight from the chain corpus
+  // projection — the same row the board's cast gate and the cast wash price from, so the socket can never
+  // advertise a cost the board then refuses (#1077).
   const chain = fight_spell(spell_id)
   if (chain) {
-    const l1 = chain.levels?.[0] ?? {}
+    const rank = seat_spell_level(seat, chain)
+    const row = chain.levels?.[rank - 1] ?? {}
     return {
       id: spell_id,
       name: chain_spell_name(chain),
       icon: chain.icon_key, // /spells/<corpus id>.webp (#884) — tinted-letter fallback covers missing art (D53)
-      cost: l1.ap ?? 0,
-      mp: l1.mp ?? 0,
-      range: l1.range ?? [0, 0],
+      cost: row.ap ?? 0,
+      mp: row.mp ?? 0,
+      range: row.range ?? [0, 0],
       level: null,
-      spell_level: HAND_SPELL_RANK,
-      crit_rate: l1.crit_rate ?? 0, // 1-in-X off the chain SpellLevel (0 = never) — the §7 crit-glow input
-      life: seed_life(l1),
+      spell_level: rank,
+      crit_rate: row.crit_rate ?? 0, // 1-in-X off the chain SpellLevel (0 = never) — the §7 crit-glow input
+      life: seed_life(row),
     }
   }
   // Raw-id callers can still resolve the same normalized chain map; an unknown id gets the neutral card below.

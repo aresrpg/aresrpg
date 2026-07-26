@@ -20,7 +20,7 @@ import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model } from '../game/data/mobs.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from '../game/screens/character-glb.js'
-import { fight_spell } from '../game/screens/hud/fight-spells.js'
+import { fight_spell, seat_spell_level, seat_spell_row } from '../game/screens/hud/fight-spells.js'
 
 // The voxel board floats above the streamed terrain at a fixed designated origin (the cave-gen picks this in the
 // real game path; here a flat pose WELL above the world_gen surface, mirroring the engine demo's ORIGIN so the
@@ -388,13 +388,16 @@ export function board_fight_authority({ core, roster = core?.ctx?.roster ?? [] }
  * ranges clear and the idle green MP range returns the moment the budget is spent (the deck's greyed sockets
  * and the board's castable-empty gate say the same thing — one budget truth, three surfaces). The caller
  * resolves the weapon sentinel's cost off the escrow row (this module never imports the game-core module).
+ * `seat` is the caster's composed build (its fight-view / escrow row) — the cost is the SEAT'S rank's cost, not
+ * level 1's (#1077): an upgraded spell costs more, so pricing it at rank 1 kept the wash painting a cast the
+ * budget could no longer buy.
  * @param {{ armed_spell_id: string | null, active_ap: number | null | undefined, is_weapon?: boolean,
- *   weapon_ap_cost?: number }} inputs
+ *   weapon_ap_cost?: number, seat?: { spell_levels?: Record<string, number> } | null }} inputs
  * @returns {string | null}
  */
-export function wash_armed_spell({ armed_spell_id, active_ap, is_weapon = false, weapon_ap_cost = 0 }) {
+export function wash_armed_spell({ armed_spell_id, active_ap, is_weapon = false, weapon_ap_cost = 0, seat = null }) {
   if (!armed_spell_id) return null
-  const cost = is_weapon ? weapon_ap_cost : (fight_spell(armed_spell_id)?.levels?.[0]?.ap ?? 0)
+  const cost = is_weapon ? weapon_ap_cost : (seat_spell_row(seat, fight_spell(armed_spell_id))?.ap ?? 0)
   return (active_ap ?? 0) >= cost ? armed_spell_id : null
 }
 
@@ -404,10 +407,11 @@ export function wash_armed_spell({ armed_spell_id, active_ap, is_weapon = false,
  * == DungeonBoard's `castable` gate. Returns null when the spell can't be resolved (no wash, never a broken
  * 0-range gate). Pure.
  * @param {string} armed_spell_id
+ * @param {{ spell_levels?: Record<string, number> } | null} [seat] the caster's composed build (its rank)
  * @returns {[number, number] | null}
  */
-export function seed_range_of(armed_spell_id) {
-  const range = fight_spell(armed_spell_id)?.levels?.[0]?.range
+export function seed_range_of(armed_spell_id, seat = null) {
+  const range = seat_spell_row(seat, fight_spell(armed_spell_id))?.range
   return Array.isArray(range) && range.length === 2 ? [range[0], range[1]] : null
 }
 
@@ -419,11 +423,12 @@ export function seed_range_of(armed_spell_id) {
  * caster's own live trap cells to cast_range_set_dungeon's `trap_cells` drop, the 1.29 no-stack wash/gate).
  * Unresolved spell → the safe defaults (LOS on, no line, any occupancy, no placement). Pure.
  * @param {string} armed_spell_id
+ * @param {{ spell_levels?: Record<string, number> } | null} [seat] the caster's composed build (its rank)
  * @returns {{ los: boolean, linear: boolean, free_cell: boolean, modifiable_range: boolean,
  *   places_trap: boolean }}
  */
-export function seed_cast_flags_of(armed_spell_id) {
-  const lvl = fight_spell(armed_spell_id)?.levels?.[0]
+export function seed_cast_flags_of(armed_spell_id, seat = null) {
+  const lvl = seat_spell_row(seat, fight_spell(armed_spell_id))
   return {
     los: lvl?.line_of_sight !== false,
     linear: lvl?.linear === true,
@@ -456,10 +461,13 @@ export function footprint_of_effects(effects, target, caster) {
  * @param {string | null | undefined} armed_spell_id
  * @param {{ x: number, y: number }} target
  * @param {{ x: number, y: number }} caster
+ * @param {{ spell_levels?: Record<string, number> } | null} [seat] the caster's composed build (its rank)
  * @returns {{ x: number, y: number }[]}
  */
-export function spell_footprint(armed_spell_id, target, caster) {
-  const effects = fight_spell(armed_spell_id)?.template?.levels?.[0]?.base_effects ?? []
+export function spell_footprint(armed_spell_id, target, caster, seat = null) {
+  const spell = fight_spell(armed_spell_id)
+  // the AoE is a per-RANK fact too (a zone widens with the level) — read the seat's own row, never level 1
+  const effects = spell?.template?.levels?.[seat_spell_level(seat, spell) - 1]?.base_effects ?? []
   return footprint_of_effects(effects, target, caster)
 }
 

@@ -154,7 +154,9 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
-    expect(body).toMatch(/const ground_targeted = !is_weapon && drafted_spell\?\.levels\?\.\[0\]\?\.free_cell === true/)
+    // `level_row` is the board's ONE seat-rank reader (#1077) — the drafted spell's flags come off the level the
+    // seat actually casts at, never a hardcoded rank 1.
+    expect(body).toMatch(/const ground_targeted = !is_weapon && level_row\(drafted_spell\)\?\.free_cell === true/)
   })
 
   test('only the successful local commit-drop event can emit the named out-of-reach toast', async () => {

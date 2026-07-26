@@ -15,10 +15,12 @@ import { spell_card, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
  * used to only gate on `my_turn`, so it could arm an unaffordable weapon strike that a click would refuse).
  * Escape and the is_typing()/repeat/modifier guards stay in DeckCluster's effect (real DOM/focus concerns).
  * @param {KeyboardEvent} e
- * @param {{ my_turn: boolean, weapon_affordable: boolean, hand: string[], ap: number }} state
+ * @param {{ my_turn: boolean, weapon_affordable: boolean, hand: string[], ap: number,
+ *   seat?: { spell_levels?: Record<string, number> } | null }} state  `seat` = the caster's composed build, so
+ *   the hotkey affords the rank the seat actually casts (#1077)
  * @returns {string | null} the spell_id (or WEAPON_ATTACK_ID) to arm, or null to do nothing
  */
-export function resolve_key_arm(e, { my_turn, weapon_affordable, hand, ap }) {
+export function resolve_key_arm(e, { my_turn, weapon_affordable, hand, ap, seat = null }) {
   if (!my_turn) return null
   if (e.key === '`' || e.key === '§' || e.code === 'Backquote' || e.key === '0') {
     return weapon_affordable ? WEAPON_ATTACK_ID : null
@@ -26,7 +28,7 @@ export function resolve_key_arm(e, { my_turn, weapon_affordable, hand, ap }) {
   const n = Number(e.key)
   if (Number.isInteger(n) && n >= 1 && n <= 9) {
     const spell_id = hand[n - 1]
-    return spell_id && spell_card(spell_id).cost <= ap ? spell_id : null
+    return spell_id && spell_card(spell_id, seat).cost <= ap ? spell_id : null
   }
   return null
 }

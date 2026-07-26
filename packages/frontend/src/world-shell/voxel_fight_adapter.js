@@ -1581,6 +1581,8 @@ export function create_voxel_fight_adapter(
           active_ap: active.ap,
           is_weapon: fight.armed_spell_id === WEAPON_ATTACK_ID,
           weapon_ap_cost: escrow_row?.weapon?.ap_cost ?? WEAPON_ATTACK_AP,
+          // the seat's composed build — cost, range and flags are all per-RANK facts (#1077)
+          seat: active,
         })
         // MOVE RANGE + TACKLE BAND — the which-cells DECISION is the CORE's (project.move_wash, M3 render
         // contract): `reach` = LIGHT-GREEN 'mp_range' (the idle default, design ruling 2026-07-17: no spell armed ⇒ the MP
@@ -1601,7 +1603,7 @@ export function create_voxel_fight_adapter(
           wash_armed === WEAPON_ATTACK_ID
             ? [1, escrow_row?.weapon?.reach ?? WEAPON_ATTACK_RANGE[1]]
             : wash_armed
-              ? seed_range_of(wash_armed)
+              ? seed_range_of(wash_armed, active)
               : null
         if (range) {
           const grid = dungeon_grid_of(dungeon)
@@ -1610,7 +1612,7 @@ export function create_voxel_fight_adapter(
           const los = [...(dungeon.obstacles ?? [])]
           for (const p of dungeon.escrow ?? []) if (p.alive) los.push(p.cell)
           for (const m of dungeon.mobs ?? []) if (m.alive) los.push(m.cell)
-          const flags = seed_cast_flags_of(wash_armed)
+          const flags = seed_cast_flags_of(wash_armed, active)
           // 1.29 no-stack: a trap-PLACING spell greys MY live trap cells (the chain aborts cast/107 there).
           if (flags.places_trap) flags.trap_cells = fight.my_traps ?? []
           const castable = cast_range_set_dungeon(range, active, grid, los, flags)
@@ -1782,13 +1784,13 @@ export function create_voxel_fight_adapter(
         // S-25 weapon slot: the sentinel has no seed range — use its S-12 melee ring so the hover strike-highlight
         // works (and cast_range_set_dungeon never gets a null range).
         const hover_range =
-          fight.armed_spell_id === WEAPON_ATTACK_ID ? WEAPON_ATTACK_RANGE : seed_range_of(fight.armed_spell_id)
-        const flags2 = seed_cast_flags_of(fight.armed_spell_id)
+          fight.armed_spell_id === WEAPON_ATTACK_ID ? WEAPON_ATTACK_RANGE : seed_range_of(fight.armed_spell_id, active)
+        const flags2 = seed_cast_flags_of(fight.armed_spell_id, active)
         // 1.29 no-stack (the wash's hover twin): MY live trap cells are never a castable hover for a trap spell.
         if (flags2.places_trap) flags2.trap_cells = fight.my_traps ?? []
         const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
-        if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell)
+        if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)
       }
       const foot_plan = hover_footprint_plan(fight.armed_spell_id, foot_cells)
       const target_cells =

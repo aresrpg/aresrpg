@@ -228,32 +228,32 @@ export function board_state_from_fight({
     const stats = normalize_stats(p.stats)
     const base_stats = normalize_stats(p.base_stats)
     return {
-    seat,
-    addr: p.owner,
-    character: p.character,
-    name: '',
-    classe: p.class ?? '',
-    team: Number(p.team ?? 0),
-    hp: Number(p.hp ?? 0),
-    max_hp: Number(p.max_hp ?? 0),
-    ap: Number(p.ap ?? 0),
-    mp: Number(p.mp ?? 0),
-    base_ap: Number(p.base_ap ?? 6),
-    base_mp: Number(p.base_mp ?? 3),
-    cell: canon(p.cell),
-    ready: Boolean(p.ready),
-    alive: Number(p.hp ?? 0) > 0,
-    casts_this_turn: Number(p.casts_this_turn ?? 0),
-    weapon: normalize_weapon(p.weapon),
-    stats,
-    base_stats,
-    spell_levels: decode_spell_levels(p.spell_levels),
-    // LIVE agility: the tackle-contest input the move-wash projection (project.move_wash) prices the escape
-    // fraction from. DERIVED off the block above — a named scalar, never a second decode.
-    agility: stats.agility ?? 0,
-    // Immutable join/equipment range. Timed rows stay in Fight.fx.statuses and are folded exactly once by
-    // statuses.range_bonus_of; reading live stats here would double-count an already-active row.
-    base_range: base_stats.range ?? 0,
+      seat,
+      addr: p.owner,
+      character: p.character,
+      name: '',
+      classe: p.class ?? '',
+      team: Number(p.team ?? 0),
+      hp: Number(p.hp ?? 0),
+      max_hp: Number(p.max_hp ?? 0),
+      ap: Number(p.ap ?? 0),
+      mp: Number(p.mp ?? 0),
+      base_ap: Number(p.base_ap ?? 6),
+      base_mp: Number(p.base_mp ?? 3),
+      cell: canon(p.cell),
+      ready: Boolean(p.ready),
+      alive: Number(p.hp ?? 0) > 0,
+      casts_this_turn: Number(p.casts_this_turn ?? 0),
+      weapon: normalize_weapon(p.weapon),
+      stats,
+      base_stats,
+      spell_levels: decode_spell_levels(p.spell_levels),
+      // LIVE agility: the tackle-contest input the move-wash projection (project.move_wash) prices the escape
+      // fraction from. DERIVED off the block above — a named scalar, never a second decode.
+      agility: stats.agility ?? 0,
+      // Immutable join/equipment range. Timed rows stay in Fight.fx.statuses and are folded exactly once by
+      // statuses.range_bonus_of; reading live stats here would double-count an already-active row.
+      base_range: base_stats.range ?? 0,
     }
   })
   // IDENTITY JOIN KEY — the Fight's `group_template` (every FightMob is minted `template: @0x0`; provenance

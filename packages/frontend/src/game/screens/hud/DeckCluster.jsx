@@ -36,7 +36,7 @@ import { use_fight_view } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
-import { fight_spell } from './fight-spells.js'
+import { fight_spell, seat_spell_row } from './fight-spells.js'
 import { cooldown_display, cap_of } from '@aresrpg/fight/draft_budget'
 import { element_color } from './element-colors.js'
 import { Tooltip } from './Tooltip.jsx'
@@ -200,7 +200,8 @@ export function DeckCluster() {
   const my_turn_no = fight?.my_turn_no ?? 0
   /** @param {string} spell_id @returns {{ on_cd: boolean, cd_left: number, exhausted: boolean }} */
   const cast_gate = (spell_id) => {
-    const level = fight_spell(spell_id)?.levels?.[0] ?? null
+    // the SEAT'S rank's row (#1077) — cooldown and casts_per_turn are per-level facts, exactly like the AP cost
+    const level = seat_spell_row(me, fight_spell(spell_id))
     const cooldown = level?.cooldown ?? 0
     // a cooldown>0 spell aborts a SAME-turn recast on-chain (cast.move ordering) — its effective per-turn cap
     // is 1 whatever the authored casts_per_turn (the same fold DungeonBoard's cpt_cap_eff applies).
@@ -226,7 +227,7 @@ export function DeckCluster() {
         if (armed) arm_spell(armed) // toggle the armed spell off
         return
       }
-      const spell_id = resolve_key_arm(e, { my_turn, weapon_affordable, hand, ap })
+      const spell_id = resolve_key_arm(e, { my_turn, weapon_affordable, hand, ap, seat: me })
       // FIX 4: resolve_key_arm knows nothing of cooldown/casts_per_turn (deck-key-arm.js stays test-safe, no
       // store import) — the same gate the click path applies (`affordable` above) closes the keyboard bypass here.
       const cd_gate = spell_id && spell_id !== WEAPON_ATTACK_ID ? cast_gate(spell_id) : null
@@ -245,7 +246,7 @@ export function DeckCluster() {
     }
     window.addEventListener('keydown', on_key)
     return () => window.removeEventListener('keydown', on_key)
-  }, [armed, my_turn, weapon_affordable, hand, ap, phase.phase, cast_path, last_cast_turn, my_turn_no])
+  }, [armed, my_turn, weapon_affordable, hand, ap, me, phase.phase, cast_path, last_cast_turn, my_turn_no])
 
   // A bar that unmounts mid-hover (fight teardown) must not strand `hovered_spell_id`. pointerleave never
   // fires on unmount; this cleanup is the honest close.
@@ -288,7 +289,7 @@ export function DeckCluster() {
             const key_cap = !mobile && i < 9 ? String(i + 1) : null // only desktop exposes the 1-9 hotkey caps
             const spell_id = hand[i]
             if (!spell_id) return <EmptySocket key={`empty-${i}`} keyCap={key_cap} />
-            const card = spell_card(spell_id)
+            const card = spell_card(spell_id, me)
             const color = card_color(spell_id)
             const spell = fight_spell(spell_id)
             const gate = cast_gate(spell_id)

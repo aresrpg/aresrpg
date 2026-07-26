@@ -11,7 +11,7 @@ import { predict_cast, weapon_spell_template } from '@aresrpg/fight/predict_cast
 import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 import { encode } from '@aresrpg/fight/los'
 
-import { fight_spell } from './fight-spells.js'
+import { fight_spell, seat_spell_level, seat_spell_row } from './fight-spells.js'
 import { next_slot_crit, socket_glows } from './deck-crit-glow.js'
 
 export const EMPTY_PREDICTION = Object.freeze({ prediction: null, is_crit: false, effects: [], target_ref: null })
@@ -35,14 +35,21 @@ const resolve_armed_spell = (armed, me) => {
     const weapon = me?.weapon
     return {
       template: weapon_spell_template(weapon),
+      spell_level: 1,
       crit_rate: Number(weapon?.crit_rate ?? 0),
       effects: [],
       ap_cost: Number(weapon?.ap_cost ?? 0),
     }
   }
-  const level = fight_spell(armed)?.levels?.[0]
+  // THE SEAT'S RANK (#1077): crit rate, AP cost, the itemised effect rows AND the level the sim runs all come
+  // off the row the seat actually casts — its learned level, read from the composed build its escrow row
+  // carries. Reading levels[0] here made a rank-6 spell preview its rank-1 numbers.
+  const spell = fight_spell(armed)
+  const spell_level = seat_spell_level(me, spell)
+  const level = seat_spell_row(me, spell)
   return {
-    template: fight_spell(armed)?.template ?? null,
+    template: spell?.template ?? null,
+    spell_level,
     crit_rate: Number(level?.crit_rate ?? 0),
     effects: level?.effects ?? [],
     ap_cost: Number(level?.ap ?? 0),
@@ -92,20 +99,16 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   if (!my_turn) return EMPTY_PREDICTION
 
   const me = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === caster_id) ?? null
-  const { template, crit_rate, effects, ap_cost } = resolve_armed_spell(armed, me)
+  const { template, spell_level, crit_rate, effects, ap_cost } = resolve_armed_spell(armed, me)
   if (!template) return EMPTY_PREDICTION
   // CASTABLE-NOW GATE, part 2 (affordability): the same AP check wash_armed_spell applies to the range highlight
   // — spent budget ⇒ no forecast, exactly like the board's blue ranges already clear.
   if ((fight.fighters.get(caster_id)?.ap ?? 0) < ap_cost) return EMPTY_PREDICTION
 
-  // resolve_ref / stats_of mirror DungeonBoard.optimistic_cast (the board's live cast home): the tooltip preview
-  // and the real cast resolve refs + stats IDENTICALLY, so the previewed number is exactly what the cast lands.
+  // resolve_ref mirrors DungeonBoard.optimistic_cast (the board's live cast home), so the tooltip preview and
+  // the real cast resolve refs IDENTICALLY. STATS need no adapter any more (#1077): every fighter's locked
+  // snapshot rides the fight view itself, so both surfaces read the one block the authority resolves with.
   const resolve_ref = (id) => resolve_dungeon_ref(dungeon, id)
-  const stats_of = (id) => {
-    const ref = resolve_ref(id)
-    const stat_row = ref?.is_mob ? dungeon.mobs?.[ref.idx] : dungeon.escrow?.[ref?.idx]
-    return { agility: Number(stat_row?.agility ?? 0), range: Number(stat_row?.base_range ?? 0) }
-  }
   // DETERMINISTIC CRIT (#163): a fight is seed-deterministic, so whether THIS pending cast crits is a FACT
   // computable pre-cast — never a chance. It lands on the NEXT turn-seed slot (my committed casts_this_turn + the
   // live AP-queue draft), the EXACT slot the DeckCluster socket glow previews. next_slot_crit / socket_glows
@@ -128,7 +131,7 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   // Run the ONE damage home ONCE, on the RESOLVED branch — the exact number the chain lands, never a base+crit
   // pair, never a probability. `critical` is an explicit boolean, so predict_cast skips its own turn-seed clock.
   return {
-    prediction: predict_cast({ view: fight, caster_id, spell: template, target_cell, critical: is_crit, resolve_ref, stats_of }),
+    prediction: predict_cast({ view: fight, caster_id, spell: template, spell_level, target_cell, critical: is_crit, resolve_ref }),
     is_crit,
     effects: effects.filter((fx) => !HEAD_OR_MOVE_KINDS.has(fx.kind)),
     target_ref,

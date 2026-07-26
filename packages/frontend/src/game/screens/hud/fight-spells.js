@@ -118,6 +118,35 @@ export function fight_spell(key) {
   return (key && project().by_key.get(key)) || null
 }
 
+/**
+ * THE LEVEL A SEAT CASTS A SPELL AT (#1077) — read off the seat's COMPOSED BUILD, the `spell_levels` map its
+ * escrow row and its fight-view row both carry (participant.move snapshots it at join; the simulator's book
+ * re-keys onto the same space). The key is the SpellTemplate OBJECT id, because that is the id a cast names on
+ * chain — `name_key` is the display/selection identity and never appears in that map. An absent entry is
+ * level 1, the free unlock; a level past the authored ladder clamps to its last row rather than reading
+ * undefined. Pure.
+ * @param {{ spell_levels?: Record<string, number> } | null | undefined} seat  escrow row or fight-view fighter
+ * @param {{ object_id?: string | null, levels?: unknown[] } | null | undefined} spell  a FightSpell row
+ * @returns {number} 1-based level
+ */
+export function seat_spell_level(seat, spell) {
+  const learned = Number(seat?.spell_levels?.[String(spell?.object_id ?? '')] ?? 1)
+  const authored = spell?.levels?.length || 1
+  return Number.isFinite(learned) ? Math.min(Math.max(1, Math.trunc(learned)), authored) : 1
+}
+
+/**
+ * The SpellLevel row a seat actually casts a spell at — the ONE door every fight surface reads a live spell
+ * number through (range, AP cost, cooldown, per-turn caps, effects), so a floater, a range highlight and a
+ * greyed socket can never disagree about which rank they are describing. Null for an unresolved spell.
+ * @param {{ spell_levels?: Record<string, number> } | null | undefined} seat
+ * @param {{ object_id?: string | null, levels?: any[] } | null | undefined} spell  a FightSpell row
+ * @returns {any | null}
+ */
+export function seat_spell_row(seat, spell) {
+  return spell?.levels?.[seat_spell_level(seat, spell) - 1] ?? null
+}
+
 /** The normalized sim template for a live on-chain spell name_key, or null. */
 export function fight_spell_template(key) {
   return fight_spell(key)?.template ?? null

@@ -21,7 +21,14 @@ import { engine_view } from '../src/project.js'
 import { predict_cast } from '../src/predict_cast.js'
 import { create_fight_store } from '../src/store.js'
 import { encode } from '../src/los.js'
-import { LOCAL_ADDRESS, arena_from_board, create_sim_chain, derive_board, snapshot_from_sim, submit_commands } from '../src/sim_chain.js'
+import {
+  LOCAL_ADDRESS,
+  arena_from_board,
+  create_sim_chain,
+  derive_board,
+  snapshot_from_sim,
+  submit_commands,
+} from '../src/sim_chain.js'
 
 const SEED = 0xc81f3a92
 const FIGHT_ID = 'sim:1077:1'
@@ -152,13 +159,13 @@ const ref_of = (board) => (id) => {
   return idx < 0 ? null : { is_mob: false, idx }
 }
 
-describe('#1077 — the predict path runs on the seat\'s composed build, not level 1 with empty stats', () => {
+describe("#1077 — the predict path runs on the seat's composed build, not level 1 with empty stats", () => {
   const chain = boot_chain()
   const { board, view } = adopt(chain)
   const mob_cell = chain.sim_state.team1[0].cell
   const target_cell = encode(mob_cell.x, mob_cell.y)
 
-  test('the wire carries the build: the escrow row holds the seat\'s spell_levels + full stat snapshot', () => {
+  test("the wire carries the build: the escrow row holds the seat's spell_levels + full stat snapshot", () => {
     expect(board.escrow[0].spell_levels?.[SPELL_ID]).toBe(SEAT_SPELL_LEVEL)
     expect(board.escrow[0].base_stats).toMatchObject({ intelligence: 100, raw_damage: 5 })
     // the TARGET's block rides the same wire — its resistance is an input to my own damage number
@@ -183,11 +190,9 @@ describe('#1077 — the predict path runs on the seat\'s composed build, not lev
     })
     const predicted_hp = prediction.actions.find((a) => a.kind === 'Hit' && a.victim_is_mob)?.remaining_hp
 
-    const resolved = submit_commands(
-      chain,
-      [{ type: 'cast', entity_id: ME, spell_id: SPELL_ID, target: mob_cell }],
-      { now_ms: NOW }
-    )
+    const resolved = submit_commands(chain, [{ type: 'cast', entity_id: ME, spell_id: SPELL_ID, target: mob_cell }], {
+      now_ms: NOW,
+    })
     const resolved_hp = resolved.chain.sim_state.team1[0].health
 
     // the fixture must actually exercise the build: a level-1 cast with no stats would take 10 - resist off
