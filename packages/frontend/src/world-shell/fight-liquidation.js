@@ -164,6 +164,17 @@ export function maybe_force_start(view, get) {
   )
 }
 
+/** The probes above dedup per DEADLINE; the boot-resume heal below fires the very SAME doors, so it claims the
+ *  very same dedup — ONE home for "this window was already force-started" (#940: the probe used to fire a
+ *  second `force_start` off a snapshot older than the heal, which executed and aborted, one wasted gas payment
+ *  per healed boot). Claimed only once a digest exists (or an EXECUTED failure proves gas burned) — the same
+ *  latch law the probes themselves obey; a pre-flight refusal burned nothing and leaves the probe free.
+ *  @param {'crank'|'force_start'} kind @param {number} deadline */
+const claim_probe_dedup = (kind, deadline) => {
+  if (kind === 'crank') fired_for_deadline = deadline
+  else force_fired_for_deadline = deadline
+}
+
 /** Reset single-flight state on session teardown so a later fight starts clean. */
 export function reset_liquidation() {
   in_flight = false
@@ -257,10 +268,15 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   if (decision === 'skip') return { decision: 'gone', reason: chain_reason(first) }
   if (decision === 'unreadable') return { decision: 'skip', reason: chain_reason(first) }
   const door = decision === 'crank' ? crank_door : force_start_door
+  const deadline = Number(
+    (decision === 'crank' ? first.decoded?.turn_deadline_ms : first.decoded?.placement_deadline_ms) ?? 0
+  )
   let digest = /** @type {string | null} */ (null)
   try {
     digest = (await door(fight_id, true))?.digest ?? null // silent janitor tx
+    claim_probe_dedup(decision, deadline)
   } catch (error) {
+    if (executed_failure(error)) claim_probe_dedup(decision, deadline) // gas burned — never a second send
     game_log('world-fight', `boot liquidation (${decision}) did not land — resume deferred`, error)
   }
   // OBSERVE THE SENT TRANSACTION BEFORE JUDGING IT (#978). The door resolves the moment its effects are
