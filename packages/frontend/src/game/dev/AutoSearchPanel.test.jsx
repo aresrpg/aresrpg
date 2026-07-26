@@ -27,6 +27,7 @@ const test_i18n = i18next.createInstance()
 test_i18n.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
 
 const panel_source = readFileSync(new URL('./AutoSearchPanel.jsx', import.meta.url), 'utf8')
+const adapter_source = readFileSync(new URL('./auto_search_adapter.js', import.meta.url), 'utf8')
 const css_source = readFileSync(new URL('./auto-search.css', import.meta.url), 'utf8')
 const hud_source = readFileSync(new URL('../screens/hud/world/GameWorldHud.jsx', import.meta.url), 'utf8')
 
@@ -110,6 +111,29 @@ describe('the container wiring — the fee disclosure gates every enable', () =>
     expect(panel_source).toContain("on_config={() => auto_search_input({ type: 'config_open' })}")
     expect(panel_source).toContain('{config_open && (')
     expect(panel_source).toContain('<AutoSearchSheet')
+  })
+})
+
+describe("the wanted list — scoped to the CURRENT WORLD's own mob table", () => {
+  test('the picker is filtered by the world table the panel reads', () => {
+    expect(panel_source).toContain('const world_mob_ids = use_world_mob_ids()')
+    expect(panel_source).toContain('use_mob_templates(config_open || armed, world_mob_ids)')
+    expect(adapter_source).toContain('world_mob_ids.has(String(mob.template_id))')
+  })
+
+  test('the table is the World doc the zone derivation already caches — never a new fetch', () => {
+    expect(adapter_source).toContain("import { zone_world_doc } from '../zone_rows.js'")
+    expect(adapter_source.match(/use_rpc_view\(/g)).toHaveLength(1) // the bestiary read, and only it
+  })
+
+  test('an unknown table serves NO rows — never the whole global bestiary', () => {
+    expect(adapter_source).toContain('const rows = world_mob_ids')
+    expect(adapter_source).toContain('    : []')
+  })
+
+  test('a world switch prunes the selection through the fold\'s door, not a store write', () => {
+    expect(adapter_source).toContain("auto_search_input({ type: 'world_mobs', template_ids })")
+    expect(adapter_source).not.toContain('use_auto_search.setState')
   })
 })
 

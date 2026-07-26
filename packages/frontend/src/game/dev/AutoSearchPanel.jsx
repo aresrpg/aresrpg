@@ -12,7 +12,13 @@ import { useTranslation } from 'react-i18next'
 
 import { ConfirmDialog } from '../screens/hud/world/ConfirmDialog.jsx'
 
-import { auto_search_input, use_auto_search, use_auto_search_driver, use_mob_templates } from './auto_search_adapter.js'
+import {
+  auto_search_input,
+  use_auto_search,
+  use_auto_search_driver,
+  use_mob_templates,
+  use_world_mob_ids,
+} from './auto_search_adapter.js'
 import { AutoSearchRow, AutoSearchSheet } from './auto_search_view.jsx'
 import './auto-search.css'
 
@@ -27,8 +33,10 @@ export function AutoSearchPanel() {
   const wanted = use_auto_search((state) => state.wanted)
 
   // The roster the sheet picks from — the bestiary's own /v1 door, read only while the sheet is open or a
-  // running loop may need to name a find.
-  const { rows, loading } = use_mob_templates(config_open || armed)
+  // running loop may need to name a find, and SCOPED to the mobs the current world can actually spawn (the
+  // World doc's own table; it also prunes a selection the new world cannot spawn, through the fold's door).
+  const world_mob_ids = use_world_mob_ids()
+  const { rows, loading } = use_mob_templates(config_open || armed, world_mob_ids)
   use_auto_search_driver(rows)
 
   return (

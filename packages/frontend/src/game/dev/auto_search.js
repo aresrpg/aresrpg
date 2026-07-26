@@ -217,6 +217,15 @@ export function reduce_auto_search(state, input, now) {
       return { ...state, from_m: Math.min(a, b), to_m: Math.max(a, b), wanted }
     }
 
+    // The world's OWN spawn table arrived (or changed with the world): a wanted template that cannot spawn
+    // here is not a target, it is an unfindable one — prune it. NEVER widens the selection, and an unknown
+    // table (an unread World doc) never reaches this door, so a selection is only ever cut by real truth.
+    case 'world_mobs': {
+      const allowed = new Set((input.template_ids ?? []).map(String))
+      const wanted = state.wanted.filter((id) => allowed.has(id))
+      return wanted.length === state.wanted.length ? state : { ...state, wanted }
+    }
+
     case 'world':
       return fold_world(state, input, now)
 

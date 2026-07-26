@@ -100,6 +100,25 @@ describe('the config — a from/to block range and the wanted mob templates', ()
   })
 })
 
+describe("the world's own mob table — a selection can only ever name mobs THIS world spawns", () => {
+  test('a wanted template the world cannot spawn is pruned; the ones it can survive', () => {
+    const picked = drive([[{ type: 'config_set', wanted: ['mob_a', 'mob_elsewhere'] }, 0]])
+    const scoped = reduce_auto_search(picked, { type: 'world_mobs', template_ids: ['mob_a', 'mob_b'] }, 0)
+    expect(scoped.wanted).toEqual(['mob_a'])
+  })
+
+  test('the table never WIDENS a selection — it only ever cuts it', () => {
+    const picked = drive([[{ type: 'config_set', wanted: ['mob_a'] }, 0]])
+    const scoped = reduce_auto_search(picked, { type: 'world_mobs', template_ids: ['mob_a', 'mob_b', 'mob_c'] }, 0)
+    expect(scoped.wanted).toEqual(['mob_a'])
+  })
+
+  test('a table that changes nothing returns the SAME state (the fold\'s no-op contract)', () => {
+    const picked = drive([[{ type: 'config_set', wanted: ['mob_a'] }, 0]])
+    expect(reduce_auto_search(picked, { type: 'world_mobs', template_ids: ['mob_a'] }, 0)).toBe(picked)
+  })
+})
+
 describe('the walk legs — only zones whose centre sits inside the configured annulus', () => {
   test('an armed scouter walks to a zone centre INSIDE [from,to] of the world centre', () => {
     const state = reduce_auto_search(armed_with(['mob_a']), world(), 1000)

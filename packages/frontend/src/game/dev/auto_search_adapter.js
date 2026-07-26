@@ -19,7 +19,7 @@
 // CONFIRMATION the pure core demands before it ever sets `armed` (auto_search.js). The panel mounts on the
 // hack grid of every build (GameWorldHud), so the build mode guards nothing here and never did the money work.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
 import { spawn_markers, subscribe_fight_entry } from '@aresrpg/world/spawns_zones'
 import { zone_searchable } from '@aresrpg/world/spawns_reconcile'
@@ -35,6 +35,8 @@ import { use_rpc_view } from '../../rpc/use_view'
 import { get_encyclopedia } from '../../rpc/client'
 import { is_living_mob } from '../../pages/encyclopedia/living_corpus'
 import { display_mob_name } from '../../content/mob_name_overrides'
+
+import { zone_world_doc } from '../zone_rows.js'
 
 import { blank_auto_search, reduce_auto_search, zone_key_of } from './auto_search.js'
 
@@ -55,18 +57,59 @@ export const use_auto_search = create((set, get) => ({
 export const auto_search_input = (input, now) => use_auto_search.getState().input(input, now)
 
 /**
- * The live mob roster the config modal picks from — the SAME /v1 door the bestiary reads
- * (`get_encyclopedia('mobs')` behind the living-generation fence), never a second corpus copy.
+ * THE CURRENT WORLD'S mob table — the template ids that can actually spawn here. Read off the World doc the
+ * zone derivation already caches (`zone_world_doc`, one chain read per world, config-grade), never a new
+ * fetch and never a second copy of the table. `null` = not known yet / unreadable, which every caller reads
+ * as UNKNOWN (fail shut), never as "this world has no mobs".
+ *
+ * It also carries that truth into the fold the moment it lands: a selected template that this world cannot
+ * spawn is an unfindable target, so `world_mobs` prunes it — one typed input through the door, never a
+ * callback writing the store.
+ * @returns {Set<string> | null}
+ */
+export function use_world_mob_ids() {
+  const world_id = use_world_binding((state) => state.world)
+  const [ids, set_ids] = useState(/** @type {Set<string> | null} */ (null))
+
+  useEffect(() => {
+    set_ids(null) // a world switch un-knows the table until the new world's doc lands
+    if (!world_id) return undefined
+    let live = true
+    zone_world_doc(world_id).then((doc) => {
+      // An unreadable doc keeps the table UNKNOWN — pruning off a failed read would silently drop a
+      // selection the player made, and listing off one would show the global bestiary again.
+      if (!live || !doc?.mobs?.length) return
+      const template_ids = doc.mobs.map((mob) => String(mob.template_id))
+      set_ids(new Set(template_ids))
+      auto_search_input({ type: 'world_mobs', template_ids })
+    })
+    return () => {
+      live = false
+    }
+  }, [world_id])
+
+  return ids
+}
+
+/**
+ * The live mob roster the config modal picks from: the bestiary's own /v1 door
+ * (`get_encyclopedia('mobs')` behind the living-generation fence — never a second corpus copy), SCOPED to
+ * the current world's spawn table. An unknown table serves NO rows (still `loading`) rather than the whole
+ * global bestiary — the picker only ever offers mobs this world can actually spawn.
  * @param {boolean} enabled
+ * @param {Set<string> | null} world_mob_ids the current world's table (`null` = not known yet)
  * @returns {{ rows: { template_id: string, name: string }[], loading: boolean }}
  */
-export function use_mob_templates(enabled) {
+export function use_mob_templates(enabled, world_mob_ids) {
   const view = use_rpc_view((signal) => get_encyclopedia('mobs', signal), { deps: [], enabled })
-  const rows = (view.data?.mobs ?? [])
-    .filter(is_living_mob)
-    .map((mob) => ({ template_id: mob.template_id, name: display_mob_name(mob.name) || mob.template_id }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-  return { rows, loading: view.loading }
+  const rows = world_mob_ids
+    ? (view.data?.mobs ?? [])
+        .filter(is_living_mob)
+        .filter((mob) => world_mob_ids.has(String(mob.template_id)))
+        .map((mob) => ({ template_id: mob.template_id, name: display_mob_name(mob.name) || mob.template_id }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : []
+  return { rows, loading: view.loading || (enabled && !world_mob_ids) }
 }
 
 /** The world snapshot the fold reduces — assembled from the stores that already hold each fact. */
