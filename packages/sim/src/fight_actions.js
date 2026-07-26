@@ -501,13 +501,6 @@ export const check_victory = state => {
   return null
 }
 
-/** Player abandons: instantly killed, then victory re-checked. */
-export const abandon_fight = (state, entity_id) => {
-  const killed = update_entity(state, entity_id, e => ({ ...e, health: 0 }))
-  const victory = check_victory(killed)
-  return victory !== null ? { ...killed, winner: victory } : killed
-}
-
 // ── Hand mechanics (the card system) ──────────────────────────────────────────
 
 /**

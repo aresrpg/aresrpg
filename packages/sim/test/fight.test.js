@@ -336,7 +336,51 @@ describe('reduce: core loop', () => {
     const { state, ctx } = started_fight()
     const r = reduce(state, { type: 'abandon', entity_id: 'p0' }, ctx)
     expect(r.state.winner).toBe(1)
-    expect(r.events[0]?.type).toBe('fight_ended')
+    // The death is ANNOUNCED before the conclusion (actions.move: mark_abandoned's emit_abandoned, then the
+    // terminal fold) — the forfeit carries the ordinary damage row, so the kill has a named cause.
+    expect(r.events.map(e => e.type)).toEqual([
+      'fight_abandoned',
+      'fight_ended',
+    ])
+    expect(r.events[0].effects).toEqual([
+      { target_id: 'p0', damage: 30, new_health: 0, killed: true },
+    ])
+  })
+
+  // #936 / #937 — the sim's forfeit is the twin of actions.move `begin_abandon`: it refuses exactly where the
+  // chain aborts, as DATA (unchanged state, no events), so no fight is re-decided and no death is doubled.
+  test('abandon on a DECIDED fight is refused, winner untouched (EFightOver twin)', () => {
+    const { state, ctx } = started_fight()
+    const decided = reduce(state, { type: 'abandon', entity_id: 'p0' }, ctx)
+    expect(decided.state.winner).toBe(1)
+    // team1's mob now forfeits too: on-chain this aborts EFightOver (105); here it changes nothing.
+    const late = reduce(
+      decided.state,
+      { type: 'abandon', entity_id: 'm0' },
+      ctx,
+    )
+    expect(late.state).toBe(decided.state)
+    expect(late.events).toEqual([])
+    expect(late.state.winner).toBe(1)
+    expect(find_entity(late.state, 'm0')?.health).toBeGreaterThan(0)
+  })
+
+  test('abandon by an already-dead fighter is refused (EAlreadyDead twin)', () => {
+    const { state, ctx } = started_fight()
+    const dead = reduce(state, { type: 'abandon', entity_id: 'p0' }, ctx)
+    // Re-open the fight so the winner latch cannot be what refuses — ONLY the corpse gate is under test.
+    const reopened = { ...dead.state, winner: -1 }
+    const again = reduce(reopened, { type: 'abandon', entity_id: 'p0' }, ctx)
+    expect(again.state).toBe(reopened)
+    expect(again.events).toEqual([])
+    expect(find_entity(again.state, 'p0')?.health).toBe(0)
+  })
+
+  test('abandon by an unknown fighter is refused', () => {
+    const { state, ctx } = started_fight()
+    const r = reduce(state, { type: 'abandon', entity_id: 'ghost' }, ctx)
+    expect(r.state).toBe(state)
+    expect(r.events).toEqual([])
   })
 })
 

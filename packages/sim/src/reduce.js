@@ -21,7 +21,7 @@ import {
 import {
   contest_tackle,
   advance_turn,
-  abandon_fight,
+  apply_damage,
   check_victory,
   init_entity_hand,
   draw_spells,
@@ -784,24 +784,42 @@ const handle_ai_turn = (state, cmd, ctx) => {
 const drop_start = path => (path.length > 0 ? path.slice(1) : path)
 
 /**
- * Abandon: kill the entity, re-check victory. Donor actions.ts:398.
+ * Abandon (forfeit): the seat takes lethal damage, then the fight re-checks terminal. The twin of
+ * `packages/move/engine/sources/actions.move` `begin_abandon` + `mark_abandoned` — same two gates, same
+ * single death write, same announcement:
+ *   • `begin_abandon` asserts the fight is placement|active, so a TERMINAL fight aborts `EFightOver` (105) —
+ *     here the winner latch (`state.winner !== -1`) refuses instead, so a decided fight is never re-decided.
+ *   • `begin_abandon` asserts the seat `is_alive`, so a corpse aborts `EAlreadyDead` (106) — here the same
+ *     refusal, so the event stream never doubles a death.
+ * A chain ABORT is a refusal; the reducer's refusal is DATA (the input state back, no events) — never a throw.
+ * The kill goes through `apply_damage`, the SAME write a killing hit uses (mirroring `mark_abandoned`'s
+ * `participant::apply_damage(p, hp)` — no parallel death path), and `fight_abandoned` names the cause with the
+ * ordinary damage effect row, the twin of `fight_events::emit_abandoned`.
  * @param {import('./fight_state.js').FightState} state
  * @param {CmdAbandon} cmd
  * @returns {ReduceResult}
  */
 const handle_abandon = (state, cmd) => {
-  const after = abandon_fight(state, cmd.entity_id)
-  const events =
-    after.winner !== -1 && state.winner === -1
-      ? [
-          {
-            type: 'fight_ended',
-            fight_id: state.fight_id,
-            winner: after.winner,
-          },
-        ]
-      : []
-  return { state: after, events }
+  if (state.winner !== -1) return { state, events: [] }
+  const entity = find_entity(state, cmd.entity_id)
+  if (!entity || entity.health <= 0) return { state, events: [] }
+
+  const hit = apply_damage(state, cmd.entity_id, entity.health)
+  return with_victory(state.winner, hit.state, [
+    {
+      type: 'fight_abandoned',
+      fight_id: state.fight_id,
+      entity_id: cmd.entity_id,
+      effects: [
+        {
+          target_id: cmd.entity_id,
+          damage: hit.damage_dealt,
+          new_health: 0,
+          killed: true,
+        },
+      ],
+    },
+  ])
 }
 
 /**

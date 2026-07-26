@@ -1,19 +1,4 @@
 {
   "ratchet": "L1 quarantine (issue #930). Rows only SHRINK. A row is legal only while it names a filed GitHub issue for a CONFIRMED reducer defect — a row without an issue number fails the suite (SKIP is never PASS) — and only while the defect still reproduces: once it is fixed the row must be DELETED, which the hygiene test enforces. A row skips exactly one (law, command) pair; `seed: null` with `stream_id: \"*\"` means the defect is not seed-specific and every stream that hits it is covered by the one issue.",
-  "rows": [
-    {
-      "seed": null,
-      "stream_id": "*",
-      "law": "change_has_cause",
-      "command": "abandon",
-      "issue": 936
-    },
-    {
-      "seed": null,
-      "stream_id": "*",
-      "law": "winner_terminal",
-      "command": "abandon",
-      "issue": 937
-    }
-  ]
+  "rows": []
 }

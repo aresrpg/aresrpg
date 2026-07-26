@@ -232,6 +232,18 @@ export const apply_canonical_event = (state, event) => {
       const applied = apply_effects(state, event.effects)
       return { state: applied.state, frame_facts: applied.facts }
     }
+    // A forfeit: the seat's own death, carried by the ordinary damage row (reduce.js `handle_abandon`, the
+    // twin of the chain's `emit_abandoned`) — so the board evolves through the SAME door as any killing hit.
+    case 'fight_abandoned': {
+      const applied = apply_effects(state, event.effects)
+      return {
+        state: applied.state,
+        frame_facts: [
+          { kind: 'abandoned', id: event.entity_id },
+          ...applied.facts,
+        ],
+      }
+    }
 
     // ── turn machine ──
     case 'fight_turn_start':
