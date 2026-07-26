@@ -239,6 +239,112 @@ export const assert_traps_sprung = (armed, before, after) => {
   return { rows, remaining }
 }
 
+/**
+ * THE CROSS-CLIENT PROOF (#1100 coop) — the one fact a single-page bot structurally cannot check: that what
+ * seat A's turn did is TRUE ON SEAT B's SCREEN. Two browsers hold two independent folds of the same chain
+ * fight; a status applied on one and missing on the other is a desync no per-page assertion can see, because
+ * each page is individually self-consistent.
+ *
+ * Two rows per checked fact, on purpose:
+ *   FOLD — every fighter the turn touched (the actor and each action's target) must carry the SAME committed
+ *          HP, cell and life on the observer's page. Committed values only: the observer is mid-replay of the
+ *          same beats, so its PRESENTED numbers are legitimately behind and asserting on them would be
+ *          asserting on the observer's animation clock.
+ *   STATUS — a cast whose whole delta is a status row (a buff on an ally, a debuff on an enemy) must show that
+ *          row riding the same fighter on the observer's page. This is the proof the ruling names: a buff seat
+ *          A casts is visible from seat B.
+ *
+ * @param {{ actions: Array<object> }} plan what the acting seat decided
+ * @param {{ ok: boolean, after?: object }} result what its seam committed
+ * @param {object} observer another seat's `__ARES_DEV_READ()`, taken after the commit settled there
+ * @returns {{ rows: Array<object>, status_proofs: number }}
+ */
+export const assert_cross_client = (plan, result, observer) => {
+  // A refused turn has nothing to be visible: `assert_turn` already owns that failure, and adding a second
+  // FAIL row for the same fact would inflate the sheet instead of informing it.
+  if (!result.ok || !result.after) return { rows: [], status_proofs: 0 }
+  if (!observer?.ok)
+    return {
+      rows: [
+        row(
+          0,
+          null,
+          'the other client still holds the fight',
+          'a readable fight',
+          observer?.error ?? 'no read',
+          false,
+          'cross-client — an observer that cannot read the fight proves nothing about it'
+        ),
+      ],
+      status_proofs: 0,
+    }
+  const mine = result.after
+  const watched = new Set([mine.my_id, ...plan.actions.map((a) => a.expect?.target_id).filter(Boolean)])
+  const rows = []
+  for (const id of watched) {
+    const here = find(mine, id)
+    const there = find(observer, id)
+    if (!here) continue
+    rows.push(
+      row(
+        0,
+        null,
+        `the other client folds ${id} to the same committed truth`,
+        !there
+          ? 'the fighter exists on both pages'
+          : `hp ${here.hp_committed} · ${fmt(here.cell_committed)} · ${here.alive_committed ? 'alive' : 'dead'}`,
+        !there
+          ? 'absent from the observer’s read'
+          : `hp ${there.hp_committed} · ${fmt(there.cell_committed)} · ${there.alive_committed ? 'alive' : 'dead'}`,
+        !!there &&
+          Number(there.hp_committed) === Number(here.hp_committed) &&
+          same_cell(there.cell_committed, here.cell_committed) &&
+          !!there.alive_committed === !!here.alive_committed,
+        'cross-client — the committed fold, never the observer’s presented one'
+      )
+    )
+  }
+  let status_proofs = 0
+  for (const [index, action] of plan.actions.entries()) {
+    if (action.expect?.type !== 'status') continue
+    const there = find(observer, action.expect.target_id)
+    const kinds = (there?.effects ?? []).map((e) => Number(e.kind))
+    for (const kind of action.expect.kinds ?? []) {
+      status_proofs += 1
+      rows.push(
+        row(
+          index,
+          action,
+          `the status cast on ${action.expect.target_id} is visible from the other client`,
+          `kind ${kind} present`,
+          kinds.join(',') || 'none',
+          kinds.includes(Number(kind)),
+          'cross-client status visibility'
+        )
+      )
+    }
+  }
+  return { rows, status_proofs }
+}
+
+/**
+ * A coop run must actually EXERCISE the cross-client status proof, not merely be capable of it. Zero status
+ * casts across a whole fight is a run that proved nothing about status visibility, so it says so as a FAIL
+ * with the reason — never a silent pass, and never a skip dressed as one.
+ * @param {number} status_proofs how many status rows the run checked across clients
+ * @param {string} why the honest reason none fired (the seats' books, at their level)
+ */
+export const assert_status_proof_ran = (status_proofs, why) => [
+  row(
+    0,
+    null,
+    'the coop run landed at least one cross-client status proof',
+    '≥ 1 status row observed from the other client',
+    status_proofs || `0 — ${why}`,
+    status_proofs >= 1
+  ),
+]
+
 const ACTION_ASSERTIONS = {
   move: assert_move,
   damage: assert_damage,

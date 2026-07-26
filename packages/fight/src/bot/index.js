@@ -5,5 +5,5 @@
 // packages/frontend/scripts/fight_bot.mjs, which imports exactly this.
 
 export { WEIGHTS, plan_turn } from './policy.js'
-export { assert_turn, assert_traps_sprung, summarise } from './assert.js'
+export { assert_turn, assert_traps_sprung, assert_cross_client, assert_status_proof_ran, summarise } from './assert.js'
 export * from './read.js'
