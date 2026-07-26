@@ -18,8 +18,8 @@
   pointer-events: none;
   font-family: var(--font-ui);
   color: var(--fg);
-  /* GLOBAL responsive UI-scale (the single lever for a px-heavy HUD): the whole overlay is scaled to fit
-     any viewport by --ui-scale (driven off the viewport in use-ui-scale.js). transform:scale catches BOTH
+  /* GLOBAL responsive UI-scale (the single lever for a px-heavy HUD): the whole overlay can be scaled to fit
+     a viewport through --ui-scale (default 1). transform:scale catches BOTH
      px and rem uniformly (a root font-size lever would miss the ~1057 px literals). transform-origin keeps
      the pivot at the top-left corner; the inverse-scaled width/height counter-size the box so that AFTER
      the scale the overlay still exactly covers the viewport (width 100%/scale * scale = 100%). With inset:0
