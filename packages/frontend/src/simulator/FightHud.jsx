@@ -45,6 +45,7 @@ import { FightPlacementBanner } from '../game/screens/hud/FightPlacementBanner.j
 import { FightResult } from '../game/screens/hud/FightResult.jsx'
 import { FightSummary } from '../game/screens/hud/FightSummary.jsx'
 import { TurnBanner } from '../game/screens/hud/TurnBanner.jsx'
+import { SpellBar } from '../game/screens/hud/SpellBar.jsx'
 
 // THE HUD'S OWN STYLESHEETS. Every `.hud-*` / `.gw-fight-layer` rule the components below are built out of
 // lives in these three files, and they were imported by exactly ONE module in the app: GameWorldHud.jsx, the
@@ -79,6 +80,11 @@ export function SimulatorFightHud({ draw = false }) {
       <FightTimeline />
       {/* the fighter under the cursor: name + team + HP */}
       <EntityTooltip />
+      {/* the S-25 spell bar — gem Vitals on the left, the socket grid + XP strip on the right. #916 extracted it
+          out of GameWorldHud.jsx (where it was unexported), so this is the SAME module the world fight mounts,
+          not a sim copy: left-click a socket to arm, then a board cell to cast, or press 1-9 / ` for the weapon.
+          No spectator branch here — a sandbox has no seatless observer, so the bar is unconditional. */}
+      <SpellBar />
       {/* the turn-INPUT bridge: draft a move path, arm and drop a cast, end the turn. Its commit edge routes
           to `use_dungeon.commit_turn`, which fight_shim.js seeded with the local sim submit. */}
       <DungeonBoard />
