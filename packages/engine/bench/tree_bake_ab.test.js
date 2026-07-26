@@ -27,6 +27,22 @@ const N = 32 // baked variants per species — the GEN_VERSION 9 DEFAULT (a deli
 const CS = 32
 // The densest 5×5 chunk ring from a broad grove scan (~1357 tree anchors) — the reference "dense forest".
 const RING_CENTER = { cx: 20, cz: -30 }
+// WORKLOAD BOUND (#942). The population above IS the measurement and never shrinks; what was
+// bounded is the un-timed scaffolding, which cost more than the medians it framed (5s+ of body
+// under a 5000ms default the file never set). Measured over the 1357 anchors, one machine, both
+// QoS classes:
+//   REPS 5 → 3    median of 3, not 5. Rep spread is ±15% and the median moves inside that noise
+//                 (909ms at 5 reps vs 779ms at 3 on the same box) — two fewer full passes of
+//                 each path, ~2.2s off the slow case.
+//   WARM_STRIDE   1-in-4 anchors (340) warms both paths instead of all 1357. The JIT is warm well
+//                 inside 340 calls; the residual ramp lands in rep 1, which the median discards
+//                 ([990, 779, 720] ms — the reported figure is the middle one).
+// Interleaved 10×10 on one box, background QoS (a deliberately slow runner proxy): before
+// 6.0-10.8s wall (10/10 over the 5000ms default), after 3.9-6.6s (10/10 green) — p95 6.6s. The
+// test's own guard is the RATIO below, which is scale-free, so the timeout is only a runaway
+// bound: ~3× that p95, belt-and-braces over the workload cut, never the fix.
+const REPS = 3
+const WARM_STRIDE = 4
 
 const ctx = create_gen_context(DEFAULT_WORLD_GEN_CONFIG)
 const SEED = ctx.seeds.decorators
@@ -70,32 +86,33 @@ describe('bake-then-stamp A/B (schematics loaded faster than proctrees)', () => 
     const M = anchors.length
     expect(M).toBeGreaterThan(500) // a genuine dense ring
 
-    // warm the JIT for both paths (excluded from timing)
-    for (const a of anchors) generate_tree(SEED, a.wx, a.wz, a.species)
+    // warm the JIT for both paths over a deterministic 1-in-WARM_STRIDE slice (excluded from timing)
+    const warm = anchors.filter((_, i) => i % WARM_STRIDE === 0)
+    for (const a of warm) generate_tree(SEED, a.wx, a.wz, a.species)
     reset_tree_bake_cache()
-    for (const a of anchors) pick_baked_tree(SEED, a.wx, a.wz, a.species, N)
+    for (const a of warm) pick_baked_tree(SEED, a.wx, a.wz, a.species, N)
 
     // baseline: the live per-column synthesis — one full generate_tree per tree (the load cost that was felt)
     const baseline = time_ms(() => {
       for (const a of anchors) generate_tree(SEED, a.wx, a.wz, a.species)
-    }, 5)
+    }, REPS)
 
     // after: bake N variants per species ONCE (inside the timed window — the one-time world cost) + O(1) picks
     const after = time_ms(() => {
       reset_tree_bake_cache()
       for (const a of anchors) pick_baked_tree(SEED, a.wx, a.wz, a.species, N)
-    }, 5)
+    }, REPS)
 
     const species_set = new Set(anchors.map((a) => a.species))
     console.log(
       `[bake A/B] dense ring center chunk (${RING_CENTER.cx},${RING_CENTER.cz}), ${M} tree anchors, ` +
-        `${species_set.size} species, N=${N} variants/species\n` +
+        `${species_set.size} species, N=${N} variants/species, median of ${REPS} runs\n` +
         `  baseline (per-column generate_tree): ${baseline.toFixed(2)} ms  (${((baseline / M) * 1000).toFixed(2)} µs/tree)\n` +
         `  after    (bake once + O(1) pick)   : ${after.toFixed(2)} ms  (${((after / M) * 1000).toFixed(2)} µs/tree)\n` +
         `  tree-gen for the ring: ${baseline.toFixed(1)} ms → ${after.toFixed(1)} ms   (${(baseline / after).toFixed(1)}× faster)`
     )
     expect(after).toBeLessThan(baseline * 0.35) // proctree gen collapses to at least 3× stamp cost (in practice far more)
-  })
+  }, 20_000)
 
   test('CORRECTNESS: the baked pick is deterministic; n<=0 is byte-identical to live per-column gen', () => {
     reset_tree_bake_cache()
