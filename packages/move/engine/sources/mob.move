@@ -171,6 +171,73 @@ public(package) fun spawn_seeded(
   }, state)
 }
 
+// ╔════════════════ [ DISTANCE-GRADED levels (#1111 — difficulty rides distance) ] ═ ]
+
+const PROGRESS_SCALE: u64 = 1000; // `progress` ∈ [0, 1000] — the §4 curve's fixed-point unit
+/// How wide the drawn window is, as a fraction of the AUTHORED band (2500bp = a quarter). Narrow enough that a
+/// zone reads as one difficulty step, wide enough that a pack is not all the same number.
+const BAND_WINDOW_BP: u64 = 2500;
+
+/// The level window a mob is drawn from at difficulty `progress` — a `BAND_WINDOW_BP`-wide slice of the
+/// template's AUTHORED `[min_level, max_level]` band that SLIDES from the band's bottom at the world centre to
+/// its top at the edge. At progress 0 the window is the single value `min_level` (a fresh character meets the
+/// floor of every species); at 1000 it is the band's top quarter. A degenerate band (min == max) is a point
+/// everywhere, which is what an unbanded template already means.
+///
+/// This is the #1111 substitution's second half: distance no longer decides WHICH species a zone admits (that
+/// filter is gone from the pick table), it decides how hard the ones that show up are.
+public fun graded_band(min_level: u64, max_level: u64, progress: u64): (u64, u64) {
+  if (max_level <= min_level) return (min_level, min_level);
+  let span = max_level - min_level;
+  let p = if (progress > PROGRESS_SCALE) PROGRESS_SCALE else progress;
+  let top = min_level + (span * p + PROGRESS_SCALE / 2) / PROGRESS_SCALE; // round-to-nearest (level_cap's shape)
+  let width = span * BAND_WINDOW_BP / 10_000;
+  let lo = if (top > min_level + width) top - width else min_level;
+  (lo, top)
+}
+
+/// DISTANCE-GRADED twin of `spawn_seeded` — identical in every way except the level draw, which reads
+/// `graded_band(min, max, progress)` instead of the flat authored band. Sits BESIDE the original (never edits
+/// it): a live fight created under the old path must keep replaying under the old path, and the public
+/// signature of a shipped function is frozen under the COMPATIBLE upgrade policy either way.
+///
+/// PARITY LAW: this always spends EXACTLY ONE level draw, including when the window collapses to a point
+/// (progress 0, or a degenerate authored band). `spawn_seeded` skips the draw on a point band — correct for a
+/// group of one species, but fatal here, where members of DIFFERENT species share one stream: a skipped draw on
+/// one member would shift every later member's rolls, and the client mirror would compose a different pack than
+/// the chain seats. Same draw count per member, whatever the member is.
+public(package) fun spawn_seeded_graded(
+  tmpl: &MobSpec,
+  mask: &vector<u64>,
+  obstacles: &vector<u64>,
+  holes: &vector<u64>,
+  starts: &vector<u64>,
+  archimob_bp: u64,
+  progress: u64,
+  state: u64,
+): (FightMob, u64) {
+  let min_level = tmpl.min_level as u64;
+  let max_level = tmpl.max_level as u64;
+  let (lo, hi) = graded_band(min_level, max_level, progress);
+  let (state, level) = prng::rng_range(state, lo, hi);
+  // HP still scales across the template's AUTHORED band — the window moved, the species did not.
+  let hp = mob_ai::scaled_hp(tmpl.base_hp, min_level, max_level, level);
+  let (state, aroll) = prng::rng_int(state, 10000);
+  let is_archimob = archimob_bp > 0 && aroll < archimob_bp;
+  let (cell, state) = mob_ai::seeded_spawn_cell(mask, obstacles, holes, starts, state);
+  (FightMob {
+    level,
+    hp,
+    max_hp: hp,
+    cell,
+    ap: tmpl.ap,
+    mp: tmpl.mp,
+    is_archimob,
+    stats: tmpl.stats,
+    base_stats: tmpl.stats,
+  }, state)
+}
+
 // ── reads ──
 public(package) fun hp(self: &FightMob): u64 { self.hp }
 public(package) fun max_hp(self: &FightMob): u64 { self.max_hp }

@@ -9,7 +9,72 @@
 import { test, expect } from 'bun:test'
 import { rng_seed, rng_next } from '@aresrpg/sim/prng'
 
-import { derive_group_members, DEFAULT_ARCHIMOB_BP, DEFAULT_TEAM_BOUND } from './spawn_compose.js'
+import {
+  derive_group_members,
+  derive_group_members_graded,
+  graded_band,
+  DEFAULT_ARCHIMOB_BP,
+  DEFAULT_TEAM_BOUND,
+} from './spawn_compose.js'
+
+// ── MIXED PACKS + DISTANCE-GRADED LEVELS (#1110/#1111) ────────────────────────────────────────────────────────
+// Oracle: packages/move/engine/tests/mob_graded_level_tests.move, which pins the SAME three-species roster off
+// seed 0 at the same three difficulty anchors. Both sides are frozen against one stream.
+const ROSTER = [
+  { min_level: 10, max_level: 20 }, // a real band
+  { min_level: 30, max_level: 30 }, // a POINT band — the member whose skipped draw would desync the pack
+  { min_level: 100, max_level: 200 }, // a wide band
+]
+
+const graded_at = progress =>
+  derive_group_members_graded(0, {
+    members: ROSTER,
+    progress,
+    size: 3,
+    archimob_bp: 0,
+  })
+
+test('FROZEN Move vector: the graded roster at progress 0 / 500 / 1000 (mob_graded_level_tests.move)', () => {
+  expect(graded_at(0).members.map(m => m.level)).toEqual([10, 30, 100])
+  expect(graded_at(500).members.map(m => m.level)).toEqual([15, 30, 128])
+  expect(graded_at(1000).members.map(m => m.level)).toEqual([20, 30, 178])
+})
+
+test('the parity law: every member costs the same draws whatever its band', () => {
+  // A pack now holds several species. If a point-band member skipped its level draw (as the single-species
+  // path does), every later member's rolls would shift and this client would paint a pack the chain never
+  // seats. Same final state at every difficulty is the mechanical proof that no draw is ever skipped.
+  expect(graded_at(0).state).toBe(3599190429)
+  expect(graded_at(500).state).toBe(3599190429)
+  expect(graded_at(1000).state).toBe(3599190429)
+})
+
+test('the graded window slides up the authored band (mob.move graded_band)', () => {
+  expect(graded_band(10, 20, 0)).toEqual({ lo: 10, hi: 10 })
+  expect(graded_band(10, 20, 500)).toEqual({ lo: 13, hi: 15 })
+  expect(graded_band(10, 20, 1000)).toEqual({ lo: 18, hi: 20 })
+  expect(graded_band(30, 30, 1000)).toEqual({ lo: 30, hi: 30 }) // a point band stays a point
+  expect(graded_band(10, 20, 99_999)).toEqual({ lo: 18, hi: 20 }) // saturates at the authored ceiling
+})
+
+test('a pack seats min(clamped size, roster length) members, one spec each', () => {
+  // the roster is derived at the RAW rolled size; the live engine bound only clamps how many actually seat
+  expect(graded_at(1000).members).toHaveLength(3)
+  const clamped = derive_group_members_graded(0, {
+    members: ROSTER,
+    progress: 1000,
+    size: 2,
+    archimob_bp: 0,
+  })
+  expect(clamped.members.map(m => m.level)).toEqual([20, 30])
+  const over = derive_group_members_graded(0, {
+    members: ROSTER,
+    progress: 1000,
+    size: 6, // more than the roster holds — never reads past its end
+    archimob_bp: 0,
+  })
+  expect(over.members).toHaveLength(3)
+})
 
 test('prng reference chain matches the Move-side pinned vectors (prng.move)', () => {
   // prng.move `prng_matches_js_reference`: rng_seed(0) → (state, value) ×4:
