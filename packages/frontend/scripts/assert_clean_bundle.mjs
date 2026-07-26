@@ -26,6 +26,10 @@ const FORBIDDEN = [
     re: /localhost:3000/,
     why: 'the local-dev read-API host is baked into a BUILT bundle — env.ts derive_rpc_url() must resolve to the live testnet read-API on any non-dev build; a preview/production deploy that ships this spams ERR_CONNECTION_REFUSED in the console (2026-07-21)',
   },
+  {
+    re: /__ARES_DEV_[A-Z_]+/,
+    why: 'a QA DRIVE SEAM reached the shipped bundle (issue #1025). The __ARES_DEV_* window hooks let a headless driver commit turns, land casts and name board cells; they are DEV-only by adjudication (#1006) and every registration path is gated on import.meta.env.DEV behind a dynamic import so the tree drops. A hit here means a gate was removed or a seam module was statically imported from a production path — restore the gate, never allowlist the name',
+  },
 ]
 
 function walk(dir) {

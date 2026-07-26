@@ -71,6 +71,15 @@ export function create_board_viewport({ canvas, deps = {} }) {
   /** the WORLD's fight adapter while a fight owns this board (null in setup) */
   let adapter = /** @type {{ destroy: () => void } | null} */ (null)
 
+  // THE QA DRIVE SEAMS (#1025) — the window API the world registers from GameWorldHud, over the board this page
+  // mounts, so ONE headless rig drives both surfaces by cell instead of pixel-hunting a 3D raycast here. DEV
+  // builds only, dynamically imported so the whole seam tree drops out of a production bundle (#1006's ruling,
+  // pinned by packages/frontend/scripts/assert_clean_bundle.mjs).
+  if (import.meta.env.DEV)
+    void import('./dev_seams.js').then(({ register_sim_dev_seams }) => {
+      if (!destroyed) void register_sim_dev_seams({ engine, board, canvas })
+    })
+
   /**
    * THE PAINTER'S LAST ACT (#927) — every setup pixel off the board: both start bands, both seat channels,
    * every placed sprite. The handoff below cannot lean on the adapter's own `board.build()` to erase them:

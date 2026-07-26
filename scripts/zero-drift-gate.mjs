@@ -99,6 +99,11 @@ const SANCTIONED_MOCK_DOOR = ['packages/fight/src/sim_chain.js', 'packages/fight
 //   SHARED    a shared home the world reaches through a root outside this gate's fight-path roots (the page
 //             shell, the engine boot, GameWorldHud's own stylesheets). Not a divergence; a consequence of
 //             rooting on the fight, not the page.
+//   DEV       the QA drive seams and the simulator's registration site for them (#1025). They ship on NEITHER
+//             surface — every path is `import.meta.env.DEV`-gated behind a dynamic import, and
+//             packages/frontend/scripts/assert_clean_bundle.mjs fails any bundle carrying a `__ARES_DEV_` name
+//             — so they cannot be a shipped fight-path divergence. The world registers the SAME two seam
+//             modules from GameWorldHud, a root outside this gate's fight-path roots.
 const SIM_ONLY = [
   ['packages/fight/src/sim_chain.js', 'MOCK'],
   ['packages/fight/src/sim_chain_events.js', 'MOCK'],
@@ -143,6 +148,10 @@ const SIM_ONLY = [
   ['packages/engine/src/engine.js', 'BOARD'],
 
   ['packages/frontend/src/simulator/fight-hud.css', 'LAYER'],
+
+  ['packages/frontend/src/game/dev/dev_cast.js', 'DEV'],
+  ['packages/frontend/src/game/dev/dev_probe.js', 'DEV'],
+  ['packages/frontend/src/simulator/dev_seams.js', 'DEV'],
 
   ['packages/frontend/src/simulator/FightHud.jsx', 'SHARED'],
   ['packages/frontend/src/game/screens/hud/mobile_layout.js', 'SHARED'],
