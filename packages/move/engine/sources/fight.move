@@ -754,6 +754,21 @@ public fun create_for_testing(
 }
 
 #[test_only]
+/// The member door under the test brand — the suite composes `open → add_member ×N → create_members` exactly as
+/// a PTB does.
+public fun open_group_for_testing(
+  world: ID,
+  spawn_id: u64,
+  group_seed: u64,
+  progress: u64,
+  committed: vector<ID>,
+  creator: Combatant,
+  version: &Version,
+): GroupBuild {
+  open_group(TestBrand {}, world, spawn_id, 0, 12345, 100, 200, 0, true, option::none(), false, group_seed, progress, committed, creator, vector[], test_dials(), version)
+}
+
+#[test_only]
 public fun create_dungeon_fight_for_testing(
   registry: &mut FightRegistry,
   scope: ID,

@@ -260,8 +260,8 @@ public(package) fun resolve_from(fight: &mut Fight, start: u64, rng: &mut u64, n
 /// kit spell (deterministic), then its turn-end board work. No-op if no living target (the caller checks defeat).
 fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &vector<u64>) {
   // Read the shared kit base (immutable) BEFORE the mut borrow of the mob — one home per group (mob-kit dedup).
-  let base_ap = mob::kit_base_ap(fight::group_kit(fight));
-  let base_mp = mob::kit_base_mp(fight::group_kit(fight));
+  let base_ap = mob::kit_base_ap(fight::content_kit(fight::member_content(fight, midx)));
+  let base_mp = mob::kit_base_mp(fight::content_kit(fight::member_content(fight, midx)));
   // refill to net(base − debt + credit) (MOB_DEBUFF_HAT P1 — a player's retrait actually
   // throttles the boss's next turn: AP debt → fewer casts, MP debt → less movement, exactly what the AI reads
   // below; an ALLY's give-points credit BOOSTS the same refill, so the boss-feed synergy is live).
@@ -278,7 +278,7 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
   // (d) memo: reuse the crank-wide off-shape scan; bodies (moved/dead this walk) are re-read inside the builder.
   let move_blocked = cast::move_blocked_cells_memo(fight, midx, off_shape);
   let los = cast::los_obstacles(fight);
-  let (new_cell, spell_opt, target_cell) = mob::decide_turn(fight::mobs(fight).borrow(midx), mob::kit_spells(fight::group_kit(fight)), &cells, &ally_cells, &ally_missing, &move_blocked, &los, rng);
+  let (new_cell, spell_opt, target_cell) = mob::decide_turn(fight::mobs(fight).borrow(midx), mob::kit_spells(fight::content_kit(fight::member_content(fight, midx))), &cells, &ally_cells, &ally_missing, &move_blocked, &los, rng);
   let move_budget = mob::mp(fight::mobs(fight).borrow(midx));
   // TACKLE (sim twin fight_actions.js:63-100, mob orientation): a mob leaving a living adjacent player's zone
   // contests the exit off the CRANK rng thread (the wave's entropy — like mob-cast drains; mob turns are never
@@ -345,6 +345,9 @@ public(package) fun finish_pvp(fight: &mut Fight, team: u8) {
 
 #[test_only]
 public fun finish_defeat_for_testing(fight: &mut Fight) { finish_defeat(fight); }
+
+#[test_only]
+public fun finish_victory_for_testing(fight: &mut Fight) { finish_victory(fight); }
 
 /// PvP terminal DETECTION (S-13b): under MODE_PVP a fight ends when ≤1 team still has a living player —
 /// one team standing → `finish_pvp(team)`; a mutual wipe → `finish_defeat` (the winner-none draw kolizeum

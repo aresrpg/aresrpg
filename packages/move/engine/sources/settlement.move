@@ -50,8 +50,11 @@ public struct FightOutcome has key {
   xp_share: u64, // wisdom/aging/multiplier applied at settlement (multiplier = the create-time snapshot)
   aged_bp: u64,
   chance: u64, // the seat's chance stat at settlement (loot-roll input)
+  // How many times the `loot` checklist repeats at claim (`results::open`). It IS the mob count for a
+  // single-spec pack — one table, once per dead mob. A MIXED pack (#1110) ships its members' tables
+  // concatenated and repeats them ONCE: same law, every dead mob rolls its own table exactly once.
   mob_count: u64,
-  loot: vector<MobLootEntry>, // the group's table snapshot (empty on defeat)
+  loot: vector<MobLootEntry>, // the loot-roll checklist (empty on defeat)
   pvp: bool, // §17.9 ephemeral fight: the consumer must NEVER write HP/XP back for these
   team: u8, // the seat's team (0 = PvM party side)
   winner_team: Option<u8>, // the fight's winner at settlement — any single outcome proves the whole result
@@ -131,7 +134,23 @@ fun settle_core(fight: Fight, registry: &mut FightRegistry, version: &Version, t
   let aged_bp = fight::aged_bp(&fight);
   let mob_count = fight::mob_count(&fight);
   let party = fight::participant_count(&fight);
-  let total_xp = fight::group_xp(&fight) * mob_count;
+  // XP is the SUM of what each seated mob is worth (#1110 — a mixed pack's members are different species). For a
+  // single-spec fight every index reads the shared block, so this is `group_xp × mob_count` exactly, unchanged.
+  let total_xp = {
+    let (mut acc, mut j) = (0, 0);
+    while (j < mob_count) { acc = acc + fight::content_xp(fight::member_content(&fight, j)); j = j + 1; };
+    acc
+  };
+  // THE LOOT CHECKLIST + how many times it repeats (`results::open` rolls `loot` × `mob_count`). One law, two
+  // encodings: every dead mob rolls ITS OWN table exactly once. A mono pack ships one table × N mobs (unchanged
+  // bytes, unchanged storage); a mixed pack ships its members' tables concatenated × 1.
+  let (group_loot, loot_repeats) = if (fight::is_mixed(&fight)) {
+    let (mut rows, mut j) = (vector[], 0);
+    while (j < mob_count) { rows.append(*fight::content_loot(fight::member_content(&fight, j))); j = j + 1; };
+    (rows, 1)
+  } else {
+    (*fight::group_loot(&fight), mob_count)
+  };
   let xp_mult = fight::xp_mult(&fight); // create-time snapshot (see module doc)
   // §17.9: PvP fights are EPHEMERAL — per-seat outcome is THEIR TEAM vs winner_team, and outcomes carry
   // zero xp + zero loot (the consumer's pot is the prize; the real character is never wounded or rewarded here).
@@ -156,8 +175,8 @@ fun settle_core(fight: Fight, registry: &mut FightRegistry, version: &Version, t
       xp_share: if (seat_won && !pvp) xp_share_kernel(total_xp, party, wisdom, aged_bp, xp_mult) else 0,
       aged_bp,
       chance,
-      mob_count,
-      loot: if (seat_won && !pvp) *fight::group_loot(&fight) else vector[],
+      mob_count: loot_repeats,
+      loot: if (seat_won && !pvp) group_loot else vector[],
       pvp,
       team: participant::team(p),
       winner_team: winner,

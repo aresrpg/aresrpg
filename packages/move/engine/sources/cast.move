@@ -483,7 +483,7 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
     caster_cell = mob::cell(m);
     caster_level = mob::level(m);
     caster_stats = *mob::stats(m); // per-mob LIVE block (was the shared kit) — alters on THIS mob change its damage
-    sl = *mob::kit_spell_at(fight::group_kit(fight), spell_index); // spells still ride the shared kit
+    sl = *mob::kit_spell_at(fight::content_kit(fight::member_content(fight, midx)), spell_index); // THIS mob's kit (mixed packs: one kit per member)
     ap_cost = sl.sl_ap_cost();
     effects = *sl.sl_effects();
     ends_turn_on_fail = sl.sl_ends_turn_on_fail();
@@ -491,7 +491,7 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
   let caster_fid = retro_effects::fid_of(true, midx);
   assert_states(fight, caster_fid, &sl);
   let fight_id = fight::id(fight);
-  let group_template = fight::group_template(fight);
+  let group_template = fight::content_template(fight::member_content(fight, midx)); // the CASTER's species, not the pack's primary
   let (action_turn, action_ordinal) = action_envelope::next_mob_action(fight, midx);
   // Record this cast against its authored cooldown / per-turn / per-target limits, clocked by the mob's own turn
   // (`action_turn`). `mob_can_cast` already refused any violating cast, so this is a committed record — a fumble
@@ -595,7 +595,7 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
 /// mob never casts omnisciently from the cell it failed to reach.
 public(package) fun mob_can_cast(fight: &Fight, midx: u64, spell_index: u64, target_cell: u64): bool {
   let m = fight::mobs(fight).borrow(midx);
-  let sl = mob::kit_spell_at(fight::group_kit(fight), spell_index);
+  let sl = mob::kit_spell_at(fight::content_kit(fight::member_content(fight, midx)), spell_index);
   mob::ap(m) >= sl.sl_ap_cost()
     && states_satisfied(fight, mob_fid(midx), sl)
     && mob_cast_limit_violation(fight, midx, spell_index, sl, target_cell) == 0
@@ -1765,8 +1765,8 @@ fun resolve_drain(
   // P1 #1 (MOB_DEBUFF_HAT): the contest pool is the REFILL BASE, not the live residual — `removed` is what the
   // drain denies the target's NEXT refill, independent of how spent the pool happens to be right now.
   let (base, target_dodge) = if (target_is_mob) {
-    let mx = if (point_kind == spell_effect::point_ap()) mob::kit_base_ap(fight::group_kit(fight))
-      else mob::kit_base_mp(fight::group_kit(fight));
+    let kit = fight::content_kit(fight::member_content(fight, target_idx));
+    let mx = if (point_kind == spell_effect::point_ap()) mob::kit_base_ap(kit) else mob::kit_base_mp(kit);
     (mx, dodge_term(mob::stats(fight::mobs(fight).borrow(target_idx)), point_kind))
   } else {
     let p = fight::participants(fight).borrow(target_idx);
