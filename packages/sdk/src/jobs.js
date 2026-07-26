@@ -416,8 +416,9 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
 }
 
 /**
- * The URL for a spell icon — same resolver family as item_icon_url, just the `spells/` path. Accepts the spell's
- * `icon` key (e.g. 'ikari_haki'). Returns null for an empty key.
+ * The URL for a spell icon — same asset-host/fallback path machinery as item_icon_url, just the `spells/`
+ * path. Accepts the spell's `icon` key (e.g. 'ikari_haki') verbatim; unlike item_icon_url, it does not
+ * reject object-id-shaped strings. Returns null for an empty key.
  *   asset host: ${aggregator}/spells/${icon}.webp
  *   relative:   /assets/spells/${icon}.webp
  * SPELLS ARE .webp AND SINGLE-SIZE (#884) — the family diverges from items on both axes, by the content
