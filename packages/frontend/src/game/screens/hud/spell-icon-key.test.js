@@ -10,9 +10,11 @@
 //   GET https://assets.aresrpg.world/spells/greed.webp       → 404   (name_key `greed`)
 // Corroborated by the content house's own upload manifest: all 240 icons resident, every key in the id shape.
 
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 import { configure_walrus_assets, reset_walrus_assets_for_test, spell_icon_url } from '@aresrpg/sdk/jobs'
 
+import { spell_card } from '../../core/modules/fight.js'
+import { set_spell_corpus_for_test } from '../../data/spell_corpus.js'
 import { build_fight_spells } from './fight-spells-core.js'
 
 const HOST = 'https://icon-key.example'
@@ -40,5 +42,49 @@ describe('spell art resolves by the corpus id, not the display name key (#884)',
 
     expect(spell_icon_url(spell.icon_key)).toBe(`${HOST}/spells/rojin_greed.webp`)
     reset_walrus_assets_for_test()
+  })
+})
+
+// Issue #1041 RED-FIRST — the SAME wrong-key class one id-space over. A hand card names its corpus row by
+// whichever id the surface that dealt it uses: the world deals `name_key`s, the local-chain surface deals the
+// SpellTemplate OBJECT ID itself (#1025 — fight_start.js `cast_id_of`, fight_setup.js `hand_update_of`). The
+// resolver indexed name_keys ONLY, so an object-id card fell through to the neutral card, which handed the raw
+// id back as its icon — and `spell_icon_url` (unlike `item_icon_url`, which throws on a `0x…`) happily built
+// `spells/0x….webp`, one 404 per socket per render. The cure is one index over all three id spaces, so every
+// icon surface keeps reading the ONE `icon_key` fight-spells-core already resolves.
+// Shortened on purpose — the hardcoded-chain-id gate bans the full 0x+64-hex shape in source, and neither the
+// resolver nor the 404 it used to mint reads the length: `spells/<anything 0x>.webp` is the whole bug.
+const OBJECT_ID = '0xc4b8e1d6a3057c9e'
+
+afterEach(() => {
+  set_spell_corpus_for_test()
+  reset_walrus_assets_for_test()
+})
+
+describe('a hand card named by its SpellTemplate object id resolves the same art (#1041)', () => {
+  test('RED-FIRST: spell_card(<object id>) carries the corpus-id art key, never the object id', () => {
+    set_spell_corpus_for_test([{ ...corpus_row(), object_id: OBJECT_ID }])
+
+    const card = spell_card(OBJECT_ID)
+
+    expect(card.icon).toBe('rojin_greed')
+    expect(card.name).toBe('Greed') // the raw id never leaks as a player-facing name either (D14)
+    // the other two id spaces name the same row, so every surface still gets the same art key
+    expect(spell_card('greed').icon).toBe('rojin_greed') // name_key — the world's hand
+    expect(spell_card('rojin_greed').icon).toBe('rojin_greed') // corpus template_id
+  })
+
+  test('the socket therefore requests the URL that answers 200, not `spells/<object id>.webp`', () => {
+    configure_walrus_assets({ aggregator: HOST, classes: { spell: { published: true } } })
+    set_spell_corpus_for_test([{ ...corpus_row(), object_id: OBJECT_ID }])
+
+    expect(spell_icon_url(spell_card(OBJECT_ID).icon)).toBe(`${HOST}/spells/rojin_greed.webp`)
+  })
+
+  test('an id no corpus row names (a mob/cosmetic cast) carries NO art key — a guess can only 404', () => {
+    set_spell_corpus_for_test([{ ...corpus_row(), object_id: OBJECT_ID }])
+
+    expect(spell_card('mob_spell_alley_bunny_0').icon).toBeNull()
+    expect(spell_icon_url(spell_card('mob_spell_alley_bunny_0').icon)).toBeNull()
   })
 })

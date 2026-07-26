@@ -49,7 +49,7 @@ export function spell_templates() {
  * levels[0]. Tolerant of unknown ids (renders a neutral slot). `crit_rate` (1-in-X; 0 = never) +
  * `life.crit_value` (the crit-swapped base) feed the §7 turn-seed crit preview (deck-crit-glow.js).
  * @param {string} spell_id
- * @returns {{ id: string, name: string, icon: string, cost: number, mp: number, range: [number, number], level: import('@aresrpg/sim').SpellLevel | null, spell_level: number, crit_rate: number, life: { value: number, kind: 'damage' | 'heal', crit_value: number } | null }}
+ * @returns {{ id: string, name: string, icon: string | null, cost: number, mp: number, range: [number, number], level: import('@aresrpg/sim').SpellLevel | null, spell_level: number, crit_rate: number, life: { value: number, kind: 'damage' | 'heal', crit_value: number } | null }}
  */
 // The hand always holds a class starter at RANK 1: the on-chain `learn` sets level 1 and MVP applies no
 // upgrades (spellbook-data.grimoire likewise reports current_level 1 for every unlocked spell). Surfaced on
@@ -128,7 +128,10 @@ export function spell_card(spell_id) {
   return {
     id: spell_id,
     name: template?.name ?? spell_id,
-    icon: spell_id,
+    // NO ART KEY (#1041): every id the corpus names resolves above, so anything reaching here is a mob or
+    // cosmetic cast id the asset host has no `spells/<key>.webp` for. Handing the id back as the key can only
+    // mint a 404 per render; null renders the element-tinted initial the socket already falls back to.
+    icon: null,
     cost: level?.cost ?? 0,
     mp: level?.mp ?? 0,
     range: level?.range ?? [0, 0],

@@ -46,7 +46,10 @@ export function SpellSocket({
 }) {
   // REAL spell art (wire the real spell icons — no stub bubbles): the canonical asset is
   // spell_icon_url(icon) → the asset host's /spells/<icon>.webp (curl-verified 200; the SAME
-  // resolver SpellDetail ships). Load lifecycle rides the shared retry ladder (image_retry.js, design ruling
+  // resolver SpellDetail ships). `card.icon` is the ONLY key read: it is already the corpus-id art key
+  // fight-spells-core resolves, whatever id space the surface dealt this card in (#1041 — the old
+  // `?? spell_id` fallback re-keyed an object-id card onto `spells/0x….webp`, a 404 per render).
+  // Load lifecycle rides the shared retry ladder (image_retry.js, design ruling
   // 2026-07-17: pictures must not go missing until refresh): a cold-edge quilt-patch miss self-heals with a bounded backoff
   // instead of PINNING the element-tinted-initial fallback for this socket's whole mount life. A class
   // switch mounts a BURST of fresh sockets at once (new spell name_keys → new React keys — see
@@ -54,7 +57,7 @@ export function SpellSocket({
   // header names; this used to be a private useState(false) latch — the same pin-forever bug already fixed
   // for SpellArt/ItemIcon but never ported here, so a senshi switch racing a cold edge stuck on the
   // fallback until a full page refresh (fresh mount, warm edge).
-  const resolved = spell_icon_url(card.icon ?? spell_id)
+  const resolved = spell_icon_url(card.icon)
   const { url: art_url, attempt, on_failed_attempt } = use_image_retry(resolved ? [resolved] : [])
   return (
     <Tooltip placement="top" content={tip} className="tt-card--spell" visible={hovered}>

@@ -29,13 +29,25 @@ export { project_spell_effect, project_spell_level } from './fight-spells-core.j
 // LIVE projection over the runtime-loaded corpus. get_spell_corpus() returns the same array reference until the
 // blob (re)loads, so this memo re-derives exactly once per corpus change — the O(1) read the hot paths need.
 let cached_corpus = null
-let cached = { spells: [], by_name_key: new Map() }
+let cached = { spells: [], by_key: new Map() }
 function project() {
   const corpus = get_spell_corpus()
   if (corpus === cached_corpus) return cached
   cached_corpus = corpus
   const { spells } = build_fight_spells(corpus)
-  cached = { spells, by_name_key: new Map(spells.map((spell) => [spell.name_key, spell])) }
+  // ONE index over every id space a card can name its row by (#1041): the `name_key` the world deals, the
+  // corpus `template_id`, and the SpellTemplate OBJECT ID the local-chain surface deals (#1025 — fight_start.js
+  // `cast_id_of`). They are three names for the SAME row, so resolving them here is what keeps `icon_key` (and
+  // the display name, AP, range, crit) a single fact: a surface holding only an object id derives the art key
+  // through this door instead of guessing a second URL shape — the whole #1041 404 flood.
+  cached = {
+    spells,
+    by_key: new Map(
+      spells.flatMap((spell) =>
+        [spell.name_key, spell.template_id, spell.object_id].filter(Boolean).map((key) => [key, spell])
+      )
+    ),
+  }
   return cached
 }
 
@@ -100,9 +112,10 @@ export function class_spells(class_id) {
     .sort((a, b) => a.unlock_level - b.unlock_level)
 }
 
-/** The on-chain spell row for a `name_key` (the armed/hand id), or null. @param {string | null | undefined} key */
+/** The on-chain spell row a card id names — its `name_key` (the armed/hand id), its corpus `template_id`, or
+ *  its SpellTemplate object id — else null. @param {string | null | undefined} key */
 export function fight_spell(key) {
-  return (key && project().by_name_key.get(key)) || null
+  return (key && project().by_key.get(key)) || null
 }
 
 /** The normalized sim template for a live on-chain spell name_key, or null. */
