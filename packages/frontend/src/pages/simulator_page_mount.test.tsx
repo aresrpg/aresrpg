@@ -73,3 +73,7 @@ describe('the /simulator route mounts', () => {
     expect(html).not.toContain(en.simulator.equipment)
   })
 })
+
+// #927's in-FIGHT half is not assertable here: this harness renders through react-dom/server, where
+// zustand serves its INITIAL snapshot (`getServerSnapshot` = `getInitialState`), so a phase dispatched
+// before `markup()` never reaches the tree. The fight-phase chrome is proven by driving the real page.

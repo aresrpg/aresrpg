@@ -114,17 +114,19 @@ export function SimulatorBoardPane() {
 
   // The corpus is a boot-time blob: an empty index simply means it has not landed (or is unpublished).
   const mob_of = use_mob_index()
-  const scene = useMemo(() => {
-    const painted = setup_scene_of(board, {
-      roster,
-      placements,
-      mob_picks,
-      mob_name_of: (template_id) => mob_of.get(template_id)?.name ?? template_id,
-    })
-    // THE BANDS ARE A SETUP AFFORDANCE. They mean "you may put someone here"; once the fight owns the board
-    // they are a lie in blue and red, and the fighters are the only thing left to show.
-    return phase === 'setup' ? painted : { ...painted, start_a: [], start_b: [] }
-  }, [board, roster, placements, mob_picks, mob_of, phase])
+  // The SETUP scene, unconditionally — it is only ever shown in setup. The fight phase does not get a
+  // thinner version of it (#927): a half-erased setup pass is still a second writer on the fight's board, so
+  // the painter erases itself WHOLE at the handoff (mount.js `unpaint`) and this memo has one job again.
+  const scene = useMemo(
+    () =>
+      setup_scene_of(board, {
+        roster,
+        placements,
+        mob_picks,
+        mob_name_of: (template_id) => mob_of.get(template_id)?.name ?? template_id,
+      }),
+    [board, roster, placements, mob_picks, mob_of]
+  )
 
   // The LIVE state the click handler must read — a handler captured at mount would seat a stale board.
   const click_state = useRef({ board, placements, phase })

@@ -35,6 +35,8 @@ import { board_key_of, build_spec_of } from './board'
 const BOARD_TIME_OF_DAY = 0.28
 /** Where the board sits. Arbitrary — in the void there is nothing else to sit near. */
 const BOARD_ORIGIN = { x: 0, y: 0, z: 0 }
+/** Every highlight channel the setup painter writes — and therefore every one it must clear (#927). */
+const SETUP_CHANNELS = ['start_a', 'start_b', 'ally_seat', 'enemy_seat']
 
 /**
  * Create the setup-phase board viewport on `canvas`. Nothing is on screen until `show()` resolves.
@@ -68,6 +70,20 @@ export function create_board_viewport({ canvas, deps = {} }) {
   let mounted_ids = /** @type {string[]} */ ([])
   /** the WORLD's fight adapter while a fight owns this board (null in setup) */
   let adapter = /** @type {{ destroy: () => void } | null} */ (null)
+
+  /**
+   * THE PAINTER'S LAST ACT (#927) — every setup pixel off the board: both start bands, both seat channels,
+   * every placed sprite. The handoff below cannot lean on the adapter's own `board.build()` to erase them:
+   * build is a documented same-args NO-OP (contract v1.1), and the fight is fought on the very board the
+   * player was just editing, so the args routinely match and nothing is rebuilt — the start zones stay
+   * painted and every setup sprite keeps standing beside the fight's own rig. The one-writer law is the
+   * painter's to keep, in pixels as in verbs: it erases itself, it does not hope to be overwritten.
+   */
+  const unpaint = () => {
+    for (const channel of SETUP_CHANNELS) board.clear_states(channel)
+    for (const id of mounted_ids) board.entity_remove(id)
+    mounted_ids = []
+  }
 
   /** Apply a folded scene (simulator/board_paint.ts) to the board handle. */
   const paint = (/** @type {any} */ scene) => {
@@ -124,21 +140,22 @@ export function create_board_viewport({ canvas, deps = {} }) {
     /**
      * HAND THE BOARD TO THE FIGHT. `create_voxel_fight_adapter` is the world's own board driver: from here on
      * it owns the build, the rigs, the washes, the beats and the click relay, reading the SAME fight core and
-     * dungeon store the world reads (fight_shim.js seeds both). The setup painter goes quiet for the
-     * duration — two writers on one board handle is the one thing this seam must not do.
+     * dungeon store the world reads (fight_shim.js seeds both). The setup painter STANDS DOWN first
+     * (`unpaint`, #927) and stays quiet for the duration — two writers on one board handle is the one thing
+     * this seam must not do, and a residue left behind is that second writer's handwriting.
      *
      * Lazy-imported: the adapter drags the whole combat presentation tree (vfx, sfx, the fight folds), and a
      * setup session must not pay for it.
      */
     async arm_fight() {
       if (destroyed || adapter) return
+      unpaint() // #927 — synchronously, BEFORE the await: no frame ever shows setup chrome under a live fight
       const { create_voxel_fight_adapter } = await import('../world-shell/voxel_fight_adapter.js')
       if (destroyed || adapter) return
       // The board floats at the origin in the void — the same seat the setup board is built on, so the fight
       // opens exactly where the player was just editing instead of flying somewhere else.
       adapter = create_voxel_fight_adapter(board, { origin: BOARD_ORIGIN, engine, canvas })
       mounted_key = null // the adapter rebuilds the board itself; the setup bake is no longer what stands
-      mounted_ids = []
     },
 
     /** Take it back for setup. The next `show()` re-bakes the setup board from scratch (`mounted_key` null). */

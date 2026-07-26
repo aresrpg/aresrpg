@@ -241,6 +241,7 @@ export function SimulatorPage() {
   // full generation and this page re-renders on every keystroke in an open editor.
   const enemy_cells = useMemo(() => board_of(seed, anchor_nonce).start_cells_b.slice(0, MAX_MOBS), [seed, anchor_nonce])
   const editing_character = editing === 'new' ? null : (roster.find(({ id }) => id === editing) ?? null)
+  const setup = phase === 'setup'
 
   return (
     <div className="flex flex-col gap-5 p-4 lg:px-6 lg:pt-16 lg:pb-5 h-full min-h-0">
@@ -279,38 +280,51 @@ export function SimulatorPage() {
         <FightControls />
       </div>
 
-      {/* THREE PANES — your team · the board · the enemy team */}
-      {/* THREE REGIONS — separated by gutters and single hairlines, not by three nested frames. */}
-      <div className="flex-1 min-h-0 grid gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-[230px_1fr_230px] lg:divide-x lg:divide-white/[0.06]">
-        <Pane title={t('simulator.roster')} className="lg:pr-8">
-          <div className="grid grid-cols-2 lg:grid-cols-1">
-            {slots.map((character, index) => (
-              <RosterSeat
-                key={character?.id ?? `empty_${index}`}
-                character={character}
-                active={character !== null && character.id === focus_id}
-                on_open={() => {
-                  if (character) input({ type: 'focus_set', id: character.id })
-                  set_editing(character ? character.id : 'new')
-                }}
-              />
-            ))}
-          </div>
-        </Pane>
+      {/* THREE PANES in setup — your team · the board · the enemy team; separated by gutters and single
+          hairlines, not by three nested frames.
 
-        <Pane title={t('simulator.board')} className="min-h-[220px] lg:px-8">
+          THE FIGHT OWNS THE SCREEN (#927). Both side panels are SETUP surfaces: a roster whose slots open an
+          editor, and a read-out of a line-up the sim has already snapshotted. Left standing mid-fight they
+          offer edits that cannot land and duplicate the fighters the board is already showing — so they
+          unmount with the phase and the board takes the width they were spending. STOP restores all three. */}
+      <div
+        className={`flex-1 min-h-0 grid gap-6 lg:gap-8 grid-cols-1 ${
+          setup ? 'lg:grid-cols-[230px_1fr_230px] lg:divide-x lg:divide-white/[0.06]' : 'lg:grid-cols-1'
+        }`}
+      >
+        {setup && (
+          <Pane title={t('simulator.roster')} className="lg:pr-8">
+            <div className="grid grid-cols-2 lg:grid-cols-1">
+              {slots.map((character, index) => (
+                <RosterSeat
+                  key={character?.id ?? `empty_${index}`}
+                  character={character}
+                  active={character !== null && character.id === focus_id}
+                  on_open={() => {
+                    if (character) input({ type: 'focus_set', id: character.id })
+                    set_editing(character ? character.id : 'new')
+                  }}
+                />
+              ))}
+            </div>
+          </Pane>
+        )}
+
+        <Pane title={t('simulator.board')} className={`min-h-[220px] ${setup ? 'lg:px-8' : ''}`}>
           <SimulatorBoardPane />
         </Pane>
 
         {/* READ-ONLY (#883 ③): what the red band currently holds. Every verb lives on the cell itself. */}
-        <Pane title={t('simulator.mob_team')} className="lg:pl-8">
-          <div className="grid grid-cols-2 lg:grid-cols-1">
-            {enemy_cells.map((cell) => (
-              <MobRow key={cell} cell={cell} />
-            ))}
-          </div>
-          {enemy_cells.length === 0 && <span className={`${micro} text-muted`}>{t('simulator.no_mobs')}</span>}
-        </Pane>
+        {setup && (
+          <Pane title={t('simulator.mob_team')} className="lg:pl-8">
+            <div className="grid grid-cols-2 lg:grid-cols-1">
+              {enemy_cells.map((cell) => (
+                <MobRow key={cell} cell={cell} />
+              ))}
+            </div>
+            {enemy_cells.length === 0 && <span className={`${micro} text-muted`}>{t('simulator.no_mobs')}</span>}
+          </Pane>
+        )}
       </div>
 
       {editing !== null && (
