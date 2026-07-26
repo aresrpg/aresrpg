@@ -188,9 +188,9 @@ const INERT_STATUSES = new Set([
  * Encode ONE `SpellCastEffect` row (the uniform shape every sim effect producer emits — fight_spells.js
  * `SpellCastEffect`, shared verbatim by traps, glyphs, DoT ticks and displacement).
  *
- * · `damage` / `heal` → `Hit{amount, remaining_hp}`. `remaining_hp` is the sim's own post-effect health, never
- *   re-derived. HEAL rides `Hit` because it is the ONLY chain event carrying an authoritative hp — see the
- *   spec-ambiguity note in the test file's header.
+ * · `damage` / `heal` WITH a `new_health` → `Hit{amount, remaining_hp}`. `remaining_hp` is the sim's own
+ *   post-effect health, never re-derived. HEAL rides `Hit` because it is the ONLY chain event carrying an
+ *   authoritative hp — see the spec-ambiguity note in the test file's header.
  * · `has_cell`        → `Displaced{from_cell, to_cell}` (push / pull / teleport / swap / carry / throw).
  * · `status`          → the two stance events that exist (`Revealed` · `StanceChanged`), a `CriticalFailure`
  *   for the fumble marker, and nothing at all for the inert set above.
@@ -203,16 +203,30 @@ const INERT_STATUSES = new Set([
 const encode_effect = (state, effect, ctx) => {
   const { is_mob, idx } = side_of(state, effect.target_id)
   const fight = ctx.fight_id
-  if (effect.damage != null || effect.heal != null)
+  const magnitude = effect.damage ?? effect.heal
+  // AN HP ROW IS A ROW THAT STATES THE RESULTING HP (#1169). `Hit` is the only chain event carrying an
+  // authoritative hp, so it may only ever be written from one the sim ACTUALLY stated. Routing on `damage`
+  // alone and defaulting the hp to `?? 0` invented a death: the erosion RIDER (`fight_actions.js`
+  // `{ target_id, status: 'EROSION', damage: erosion }`) carries a max-HP magnitude and no hp at all, and
+  // encoding it as `Hit{ remaining_hp: 0 }` buried a mob the sim still had at full health — the client killed
+  // it, the next receipt restored its real hp (the REVIVE), and the sim never agreed anyone died, so
+  // `check_victory` never fired and the fight ran open-ended (the WEDGE). Erosion is already in
+  // INERT_STATUSES for exactly the right reason: the chain records it inside the cast's action envelope and
+  // emits no event at all (`retro_effects.move` `erode` mutates max hp silently).
+  if (magnitude != null && effect.new_health != null)
     return [
       row('Hit', {
         fight,
         victim_is_mob: is_mob,
         victim_idx: u64(idx),
-        amount: u64(effect.damage ?? effect.heal),
-        remaining_hp: u64(effect.new_health ?? 0),
+        amount: u64(magnitude),
+        remaining_hp: u64(effect.new_health),
       }),
     ]
+  // A magnitude with no resulting hp is a rider on a STATUS row — fall through and let the status arm own it.
+  // A magnitude that names no status either is an unmapped shape, and stays LOUD like every other one here.
+  if (magnitude != null && effect.status == null)
+    throw new Error(`sim_chain: effect row ${JSON.stringify(effect)} states no resulting hp`)
   if (effect.has_cell) {
     const to_cell = encode(effect.cell.x, effect.cell.y)
     const from_cell = ctx.cells.get(effect.target_id) ?? to_cell
