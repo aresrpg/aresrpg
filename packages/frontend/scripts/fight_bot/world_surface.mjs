@@ -26,9 +26,21 @@ import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 import { await_seams, open_page, wait_for } from './seam.mjs'
 import { make_seat } from './drive.mjs'
 
-/** Read ONE seat's secret from the local key file. The value never leaves this function's caller as text. */
+/**
+ * Read ONE seat's secret from the local key file. The value never leaves this function's caller as text.
+ * The file is machine-local and gitignored by design, so it is present in the main checkout and ABSENT from
+ * every worktree — which is what `FIGHT_BOT_KEYS` exists to say out loud, and why a missing file names it.
+ */
 export const seat_key = (keys_path, name) => {
-  const keys = JSON.parse(readFileSync(keys_path, 'utf8'))
+  const keys = JSON.parse(
+    (() => {
+      try {
+        return readFileSync(keys_path, 'utf8')
+      } catch (error) {
+        throw new Error(`no seat keys at ${keys_path} (${error.code ?? 'unreadable'}) — point FIGHT_BOT_KEYS at them`)
+      }
+    })()
+  )
   const secret = keys[name]
   if (typeof secret !== 'string' || !secret.startsWith('suiprivkey1'))
     throw new Error(`${keys_path} carries no bech32 secret named "${name}" — set FIGHT_BOT_SEAT_A/B to seats it has`)

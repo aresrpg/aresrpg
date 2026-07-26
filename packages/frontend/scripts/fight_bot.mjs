@@ -78,7 +78,7 @@ const SCENARIO = {
   // somewhere to go.
   mob_rank: Number(process.env.FIGHT_BOT_MOB_RANK ?? 65),
   mob_level: Number(process.env.FIGHT_BOT_MOB_LEVEL ?? 60),
-  max_turns: Number(process.env.FIGHT_BOT_MAX_TURNS ?? (ON_CHAIN ? 20 : 40)),
+  max_turns: Number(process.env.FIGHT_BOT_MAX_TURNS ?? (ON_CHAIN ? 30 : 40)),
   policy_seed: Number(process.env.FIGHT_BOT_POLICY_SEED ?? 1),
 }
 

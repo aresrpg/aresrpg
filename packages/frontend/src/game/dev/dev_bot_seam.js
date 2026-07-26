@@ -39,7 +39,7 @@
 //      simulator — which registers this same module — never pulls the transaction graph into its page.
 
 import { decode, encode } from '@aresrpg/fight/los'
-import { board_view, fight_view } from '@aresrpg/fight/project'
+import { board_view, fight_view, min_turn_left } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { fight_store } from '@aresrpg/fight/store'
 
@@ -181,6 +181,11 @@ function dev_read() {
     active_id: view.active_entity_id ?? null,
     presenting: !!view.presenting,
     turn_order: view.turn_order ?? [],
+    // THE MIN-TURN FLOOR, in the read because the bot is held to it exactly as the player is: `actions.move::
+    // assert_min_turn` aborts a turn committed inside the human-natural 3s, and the End Turn button greys out
+    // for precisely this remainder (FightControls reads the same projection off the same raw core state). A bot
+    // that could not see this clock committed the instant it was handed the turn and had half its turns refused.
+    min_turn_left_ms: min_turn_left(fight_store.getState()),
     // flat GRID_W×GRID_H walkability (0 walkable / 1 blocked) — project.js `board_cells`, obstacles and
     // holes already folded in. The policy pathfinds and traces LoS over exactly this.
     arena: { width: view.arena.width, height: view.arena.height, cells: [...view.arena.cells] },
@@ -209,18 +214,35 @@ const with_refusal = async (run) => {
   return reason ?? (live ? String(live) : null)
 }
 
-/** Refuse before touching the store, so a bad plan is a REASON, never a half-committed turn. */
+/**
+ * Refuse before touching the store, so a bad plan is a REASON, never a half-committed turn.
+ *
+ * TURN-LEVEL vs PLAN-LEVEL, and why the caller is told which. A refusal about the TURN — it is not mine yet, the
+ * store is mid-poll, the min-turn floor has not elapsed — says nothing whatsoever about the actions offered, and
+ * it passes on its own. A refusal about the PLAN is the authority judging what was asked for. A driver that
+ * cannot tell them apart blacklists a perfectly good spell the first time it is early, and then plays a fight it
+ * has blinded itself in (measured on the first world run: two timing refusals blacklisted both damage spells and
+ * the bot passed for seventeen straight turns).
+ * @returns {{ reason: string, turn_level: boolean } | null}
+ */
 const turn_refusal = (view, store, actions) => {
-  if (!store.dungeon || !view) return 'no active dungeon fight'
-  if (store.busy) return 'store busy — retry'
-  if (store.dungeon.status !== STATUS_ACTIVE) return `dungeon not ACTIVE (status=${store.dungeon.status})`
-  if (!view.my_entity_id) return 'my_entity_id null'
-  if (view.active_entity_id !== view.my_entity_id) return `not my turn (active=${view.active_entity_id})`
-  if (!Array.isArray(actions)) return 'actions must be an array'
+  const transient = (reason) => ({ reason, turn_level: true })
+  const rejected = (reason) => ({ reason, turn_level: false })
+  if (!store.dungeon || !view) return transient('no active dungeon fight')
+  if (store.busy) return transient('store busy — retry')
+  if (store.dungeon.status !== STATUS_ACTIVE) return transient(`dungeon not ACTIVE (status=${store.dungeon.status})`)
+  if (!view.my_entity_id) return transient('my_entity_id null')
+  if (view.active_entity_id !== view.my_entity_id) return transient(`not my turn (active=${view.active_entity_id})`)
+  // The floor the chain itself asserts (`actions.move::assert_min_turn`) and the End Turn button greys out for.
+  const floor_ms = min_turn_left(fight_store.getState())
+  if (floor_ms > 0) return transient(`the min-turn floor has ${floor_ms}ms left`)
+  if (!Array.isArray(actions)) return rejected('actions must be an array')
   for (const action of actions) {
-    if (action?.kind !== MOVE_KIND && action?.kind !== CAST_KIND) return `action kind ${action?.kind} is not 0 (move) or 1 (cast)`
-    if (!Number.isInteger(action?.cell?.x) || !Number.isInteger(action?.cell?.y)) return 'each action needs cell {x:int,y:int}'
-    if (action.kind === CAST_KIND && !action.spell_id) return 'a cast action needs the spell object id (`spell_id`)'
+    if (action?.kind !== MOVE_KIND && action?.kind !== CAST_KIND)
+      return rejected(`action kind ${action?.kind} is not 0 (move) or 1 (cast)`)
+    if (!Number.isInteger(action?.cell?.x) || !Number.isInteger(action?.cell?.y))
+      return rejected('each action needs cell {x:int,y:int}')
+    if (action.kind === CAST_KIND && !action.spell_id) return rejected('a cast action needs the spell object id (`spell_id`)')
   }
   return null
 }
@@ -231,13 +253,14 @@ const turn_refusal = (view, store, actions) => {
  * `{ kind: 1, cell, spell_id }` (cast — `spell_id` is the SpellTemplate object id `__ARES_DEV_READ`'s
  * spellbook publishes). An EMPTY array is a legal pass, exactly like pressing End Turn with nothing drafted.
  * @param {Array<{ kind: number, cell: { x: number, y: number }, spell_id?: string }>} actions
- * @returns {Promise<{ ok: boolean, error?: string, before?: object, after?: object }>}
+ * @returns {Promise<{ ok: boolean, error?: string, turn_level?: boolean, before?: object, after?: object }>}
+ *   `turn_level` marks a refusal about the TURN rather than the plan — transient, and never evidence about a spell.
  */
 async function dev_turn(actions = []) {
   const store = use_dungeon.getState()
   const view = fight_view()
   const refusal = turn_refusal(view, store, actions)
-  if (refusal) return { ok: false, error: refusal }
+  if (refusal) return { ok: false, error: refusal.reason, turn_level: refusal.turn_level }
 
   const before = dev_read()
   // ARM the last cast's card exactly as a real grab does (the spell bar reads `name_key`), so the VFX/hand

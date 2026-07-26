@@ -44,7 +44,18 @@ const next_actor = async ({ seats, timeout_ms, poll_ms = 400 }) => {
       !reads.some((read) => read.fighters.find((f) => f.id === read.my_id)?.alive_committed)
     )
       return { kind: 'terminal', outcome: 'defeat' }
-    const index = reads.findIndex((read) => read?.ok && read.active_id === read.my_id && !read.busy && !read.presenting)
+    // PLAYABLE, by the game's own definition (`can_end_turn`): my turn, nothing in flight, and the min-turn
+    // floor elapsed. The floor is the chain's (`actions.move::assert_min_turn`) and the End Turn button greys
+    // out for exactly this remainder — a bot that commits inside it is refused, just like a player who could
+    // click faster than the rules allow.
+    const index = reads.findIndex(
+      (read) =>
+        read?.ok &&
+        read.active_id === read.my_id &&
+        !read.busy &&
+        !read.presenting &&
+        (read.min_turn_left_ms ?? 0) === 0
+    )
     if (index >= 0) return { kind: 'actor', seat: seats[index], read: reads[index] }
     await sleep(poll_ms)
   }
@@ -84,10 +95,14 @@ const observe_others = async ({ seats, actor, plan, result, timeout_ms }) => {
  * @returns {{ rows: Array<object>, remaining: Array<object> }} the traps that sprang, and those still waiting
  */
 const record_commit = ({ seat, plan, result, turn, turn_number }) => {
+  // ONLY THE AUTHORITY'S VERDICT BLACKLISTS. A turn-level refusal (not my turn yet, the store mid-poll, the
+  // min-turn floor) judged the timing, not the spell — treating it as evidence blinds the bot to a spell that
+  // was never the problem, and it stays blind for the rest of the fight.
+  const judged = !result.ok && !result.turn_level
   for (const action of plan.actions)
     if (action.kind === 1) {
       seat.history.casts[action.spell_id] = turn_number ?? turn
-      if (!result.ok && !seat.history.blocked.includes(action.spell_id)) seat.history.blocked.push(action.spell_id)
+      if (judged && !seat.history.blocked.includes(action.spell_id)) seat.history.blocked.push(action.spell_id)
     }
   if (!result.ok) return { rows: [], remaining: seat.armed_traps }
   const sprung = assert_traps_sprung(seat.armed_traps, result.before, result.after)
@@ -138,8 +153,12 @@ export const drive_fight = async ({
     // refusal without its reason is exactly the silence this bot exists to end.
     const refusal = seat.console_lines.slice(mark).filter((line) => /commit refused|did not fold|tripwire/i.test(line))
     if (!result.ok && refusal.length) result.error = `${result.error} — ${refusal[0]}`
-    if (!result.ok && /not my turn/.test(result.error ?? '') && races++ < 2) {
-      log(`[bot] turn ${turn}: the turn pointer moved between the read and the commit — re-reading`)
+    // A TURN-LEVEL refusal is the world moving between the read and the commit — the pointer advanced, a poll
+    // landed, the floor had a moment left. It is a harness race, not a game failure, so it costs a re-read
+    // rather than a FAIL row. The budget is deliberately tiny: a THIRD one is a genuine stall, and stalls are
+    // exactly what this bot is for.
+    if (!result.ok && result.turn_level && races++ < 2) {
+      log(`[bot] turn ${turn}: ${result.error} — re-reading`)
       turn -= 1
       await sleep(1500)
       continue
