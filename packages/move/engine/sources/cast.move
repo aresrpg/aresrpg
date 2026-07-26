@@ -1115,7 +1115,7 @@ fun apply_to_player(
   } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
     // Timed (turns>0) alters live ONLY as board rows; turns==0 is permanent and lands on the base block.
     // Either way the live block re-derives from base + rows — never delta-reverted (the 0-floor leaked gains).
-    apply_alter(fight, pc, effect, base);
+    apply_alter(fight, pc, effect);
     record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
     refresh_player_stats(fight, pc);
   } else if (kind == spell_effect::k_steal_stat()) {
@@ -1239,7 +1239,7 @@ fun apply_to_mob(
   } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
     // TIMED → board row on the mob's fid; PERMANENT (turns==0) → the mob's base block. Either way the live block
     // re-derives from base + rows (the `apply_to_player` twin). Symmetric sign: a debuff shreds, an ally's buff adds.
-    apply_alter_mob(fight, midx, effect, base);
+    apply_alter_mob(fight, midx, effect);
     record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
     refresh_mob_stats(fight, midx);
   } else if (kind == spell_effect::k_steal_stat()) {
@@ -1657,7 +1657,7 @@ fun apply_board_batch_from(
         // (zero-caster law: the source is dead/anonymous). Mirrors the player board branch below.
         mob::drain_points(fight::mobs_mut(fight).borrow_mut(idx), effect.stat(), base);
       } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
-        apply_alter_mob(fight, idx, effect, base);
+        apply_alter_mob(fight, idx, effect);
         record_timed(fight, mob_fid(idx), mob_fid(idx), effect);
         refresh_mob_stats(fight, idx);
       } else if (kind == spell_effect::k_forced_death()) {
@@ -1682,7 +1682,7 @@ fun apply_board_batch_from(
       // steal-in-payload = its removal half (MOB_DEBUFF_HAT P3 cast:534) — see the mob branch above.
       participant::remove_points(fight::participants_mut(fight).borrow_mut(idx), effect.stat(), base);
     } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
-      apply_alter(fight, idx, effect, base);
+      apply_alter(fight, idx, effect);
       record_timed(fight, idx, idx, effect);
       refresh_player_stats(fight, idx);
     } else if (kind == spell_effect::k_forced_death()) {
@@ -1698,17 +1698,19 @@ fun apply_board_batch_from(
 
 /// PERMANENT (turns==0) alter application: lands on the participant's BASE block (a timed alter instead becomes
 /// a board row via `record_timed`). Exactly one of the two paths does work for any alter effect; both end in a
-/// `refresh_player_stats` re-derivation at the call site.
-fun apply_alter(fight: &mut Fight, pc: u64, effect: &Effect, base: u64) {
+/// `refresh_player_stats` re-derivation at the call site. Magnitude and sign both come out of the CENTERED
+/// value (`participant::alter_delta`, #904) — the raw `effect.value()` is an encoded number, never an amount.
+fun apply_alter(fight: &mut Fight, pc: u64, effect: &Effect) {
   if (effect.turns() > 0) return;
   // Corpus raw142 duration 0 means the bearer's current turn, not fight-permanent. `record_timed` creates its
   // synthetic one-turn row; never write this new stat id into the permanent base block.
   if (effect.kind() == spell_effect::k_alter_stat() && effect.stat() == spell_effect::stat_physical_damage()) return;
+  let (amount, neg) = participant::alter_delta(effect);
   let p = fight::participants_mut(fight).borrow_mut(pc);
   if (effect.kind() == spell_effect::k_alter_stat()) {
-    participant::alter_base_stat(p, effect.stat(), base, effect.has_flag(spell_effect::flag_negative()))
+    participant::alter_base_stat(p, effect.stat(), amount, neg)
   } else {
-    participant::alter_base_resist(p, effect.element(), base, effect.has_flag(spell_effect::flag_negative()))
+    participant::alter_base_resist(p, effect.element(), amount, neg)
   };
 }
 
@@ -1819,14 +1821,15 @@ fun record_credit(fight: &mut Fight, target_fid: u64, src_fid: u64, effect: &Eff
 }
 
 /// PERMANENT (turns==0) alter on a MOB → its base block (the `apply_alter` twin). Timed alters are rows.
-fun apply_alter_mob(fight: &mut Fight, midx: u64, effect: &Effect, base: u64) {
+fun apply_alter_mob(fight: &mut Fight, midx: u64, effect: &Effect) {
   if (effect.turns() > 0) return;
   if (effect.kind() == spell_effect::k_alter_stat() && effect.stat() == spell_effect::stat_physical_damage()) return;
+  let (amount, neg) = participant::alter_delta(effect);
   let m = fight::mobs_mut(fight).borrow_mut(midx);
   if (effect.kind() == spell_effect::k_alter_stat()) {
-    mob::alter_base_stat(m, effect.stat(), base, effect.has_flag(spell_effect::flag_negative()))
+    mob::alter_base_stat(m, effect.stat(), amount, neg)
   } else {
-    mob::alter_base_resist(m, effect.element(), base, effect.has_flag(spell_effect::flag_negative()))
+    mob::alter_base_resist(m, effect.element(), amount, neg)
   };
 }
 
@@ -1849,8 +1852,10 @@ fun apply_steal_stat(
 ) {
   let duration = if (effect.turns() == 0) 1 else effect.turns();
   let dispellable = effect.has_flag(spell_effect::flag_dispellable());
-  let debit = spell_effect::alter_stat(effect.stat(), effect.value(), true, dispellable, duration);
-  let credit = spell_effect::alter_stat(effect.stat(), effect.value(), false, dispellable, duration);
+  // STEAL_STAT (kind 12) is NOT a signed kind — its own `value` is a plain magnitude. The two ALTER_STAT rows
+  // it mints are, so both are CENTERED on the way out (#904): the board holds one encoding, minted or synthetic.
+  let debit = spell_effect::alter_stat(effect.stat(), participant::centered_value(effect.value(), true), true, dispellable, duration);
+  let credit = spell_effect::alter_stat(effect.stat(), participant::centered_value(effect.value(), false), false, dispellable, duration);
   let source = fid_of(caster_side, caster_idx);
   let target = if (target_is_mob) mob_fid(target_idx) else target_idx;
   spell_board::add_status(fight::fx_mut(fight), target, source, debit);
@@ -1900,6 +1905,8 @@ fun record_timed(fight: &mut Fight, pc: u64, src_fid: u64, effect: &Effect) {
   if (effect.turns() > 0) {
     spell_board::add_status(fight::fx_mut(fight), pc, src_fid, *effect);
   } else if (effect.kind() == spell_effect::k_alter_stat() && effect.stat() == spell_effect::stat_physical_damage()) {
+    // The value rides through VERBATIM — it is already the centered encoding (#904) and the row it lands in is
+    // read by the same fold; re-deriving it from `alter_delta` would only re-center what is already centered.
     let current_turn = spell_effect::alter_stat(
       spell_effect::stat_physical_damage(), effect.value(), effect.has_flag(spell_effect::flag_negative()), false, 1,
     );

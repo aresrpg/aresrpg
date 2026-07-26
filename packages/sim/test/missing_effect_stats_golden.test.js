@@ -28,10 +28,16 @@ import {
 } from './missing_effect_helpers.js'
 import golden from './vectors/missing_effect_stats_golden.json' with { type: 'json' }
 
+/** The centering of every signed value on chain (#904) — ALTER_STAT / ALTER_RESIST wire values only. */
+const SIGNED_SHIFT = 32_768
+
 const run_normalize_stats = vector => {
   const spell = spell_of(
     vector.id,
-    vector.input.ids.map(stat => raw_effect(K_ALTER_STAT, { stat, value: 5 })),
+    // +5 on each stat id: the wire stores a signed delta CENTERED at 32768 (#904).
+    vector.input.ids.map(stat =>
+      raw_effect(K_ALTER_STAT, { stat, value: SIGNED_SHIFT + 5 }),
+    ),
   )
   return {
     types: spell.levels[0].base_effects.map(effect => effect.type),
@@ -82,7 +88,9 @@ const run_negative_ap_dodge = vector => {
   const spell = spell_of(vector.id, [
     raw_effect(K_ALTER_STAT, {
       stat: 12,
-      value: vector.input.debuff,
+      // A debuff is a value BELOW the centering (#904). FLAG_NEGATIVE still rides along on minted rows — it
+      // just is not the sign any more, so the decode must reach REMOVE from the value alone.
+      value: SIGNED_SHIFT - vector.input.debuff,
       flags: FLAG_NEGATIVE,
       turns: 1,
     }),

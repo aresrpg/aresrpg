@@ -276,8 +276,9 @@ fun physical_damage_zero_duration_expires_at_turn_end() {
   stand_up(&mut sc);
   let mut fight = create_fresh(&mut sc, 1, CHAR_A);
   let cell = participant::cell(fight::participants(&fight).borrow(0));
+  // +20 physical damage, CENTERED at 32768 like every signed value on chain (#904).
   let effect = effect_of(
-    spell_effect::k_alter_stat(), 20, 100, 0, spell_effect::stat_physical_damage(), 0, 0,
+    spell_effect::k_alter_stat(), participant::centered_value(20, false), 100, 0, spell_effect::stat_physical_damage(), 0, 0,
   );
   let caster_stats = *participant::stats(fight::participants(&fight).borrow(0));
   let mut rng = 7;

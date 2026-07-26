@@ -226,7 +226,12 @@ fun steal_stat_has_two_timed_legs_and_both_expire() {
     fight::fx(&fight), MOB_FID, spell_effect::k_alter_stat(),
   );
   assert!(debit.is_some());
-  assert!(debit.borrow().value() == 11 && debit.borrow().has_flag(spell_effect::flag_negative()));
+  // The synthesized debit row carries the same CENTERED encoding as a minted one (#904): stored 32757, which
+  // DECODES to −11. The flag still rides along (band rule + target filter) but is never the sign.
+  assert!(debit.borrow().value() == 32_768 - 11);
+  let (debit_amount, debit_negative) = participant::alter_delta(debit.borrow());
+  assert!(debit_amount == 11 && debit_negative);
+  assert!(debit.borrow().has_flag(spell_effect::flag_negative()));
 
   cast::tick_turn_end(&mut fight, true, 0);
   cast::tick_turn_end(&mut fight, false, 0);
@@ -285,7 +290,7 @@ fun dispel_cast_filters_rows_and_reconciles_live_views() {
   let base = spell::new_stats(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
   mob::set_stats_for_testing(fight::mobs_mut(&mut fight).borrow_mut(0), base);
 
-  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), 5, true, true, 3);
+  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(5, true), true, true, 3);
   let sticky = effect_of(
     spell_effect::k_apply_state(), 111, 2, 0, 0, spell_effect::tf_not_team(),
   );

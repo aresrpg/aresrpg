@@ -190,10 +190,12 @@ public(package) fun revert_expired_max_hp(fight: &mut Fight, target_is_mob: bool
     let effect = expired.borrow(i);
     if (effect.kind() == spell_effect::k_alter_stat()
       && (effect.stat() == spell_effect::stat_vitality() || effect.stat() == spell_effect::stat_max_hp())) {
-      if (effect.has_flag(spell_effect::flag_negative())) {
-        add_max_hp(fight, target_is_mob, target_idx, effect.value());
+      // Sign and magnitude both come out of the CENTERED value (#904) — the revert is the row's own inverse.
+      let (amount, neg) = participant::alter_delta(effect);
+      if (neg) {
+        add_max_hp(fight, target_is_mob, target_idx, amount);
       } else {
-        remove_max_hp(fight, target_is_mob, target_idx, effect.value());
+        remove_max_hp(fight, target_is_mob, target_idx, amount);
       };
     };
     i = i + 1;
@@ -326,7 +328,8 @@ fun trigger_punishment(
     let gain = if (actual < effect.value()) actual else effect.value();
     let duration = if (effect.area_size() > 255) 255 else effect.area_size() as u8;
     if (gain > 0 && duration > 0) {
-      let bonus = spell_effect::alter_stat(effect.stat(), gain, false, true, duration);
+      // A synthesized alter row carries the same centered encoding as a minted one (#904).
+      let bonus = spell_effect::alter_stat(effect.stat(), participant::centered_value(gain, false), false, true, duration);
       spell_board::add_status(fight::fx_mut(fight), fighter, spell_board::status_source(row), bonus);
       if (effect.stat() == spell_effect::stat_vitality() || effect.stat() == spell_effect::stat_max_hp()) {
         add_max_hp(fight, target_is_mob, target_idx, gain);

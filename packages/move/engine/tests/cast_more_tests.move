@@ -84,7 +84,7 @@ fun single_effect_spell(effect: spell_effect::Effect): spell_effect::SpellLevel 
 /// caster, still function-covered), a self-heal (apply_to_mob), and a push (the shared displacement path).
 fun kit_spec(): mob::MobSpec {
   let kit = vector[
-    single_effect_spell(spell_effect::alter_stat(spell_effect::stat_strength(), 10, true, true, 2)),
+    single_effect_spell(spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(10, true), true, true, 2)),
     single_effect_spell(spell_effect::life_steal(spell::el_fire(), 15)),
     single_effect_spell(spell_effect::heal(20)),
     single_effect_spell(spell_effect::push(2)),

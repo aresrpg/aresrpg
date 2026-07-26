@@ -513,13 +513,15 @@ fun mob_apply_heal_raises_caps_and_never_revives() {
 
 // ╔════════════════ [ Timed-alter recompute (the revert-saturation regression) ] ═ ]
 
-fun seat_with_strength(base: u64): participant::Participant {
+fun seat_with(stats: spell::Stats): participant::Participant {
   let c = participant::new_combatant(
-    object::id_from_address(@0xA), b"iop".to_string(), 10,
-    spell::new_stats(base, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    object::id_from_address(@0xA), b"iop".to_string(), 10, stats,
     100, 100, 6, 3, participant::weapon_line_of(option::none(), false), sui::vec_map::empty(),
   );
   participant::new(c, @0xA, 0, 0)
+}
+fun seat_with_strength(base: u64): participant::Participant {
+  seat_with(spell::new_stats(base, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 }
 fun strength_of(p: &participant::Participant): u64 { spell::stat_strength(participant::stats(p)) }
 
@@ -528,7 +530,7 @@ fun strength_of(p: &participant::Participant): u64 { spell::stat_strength(partic
 /// flipped-sign revert re-added the full magnitude (30 → 0 → 50: a permanent +20 leak into loot-roll chance).
 fun timed_debuff_exceeding_stat_reverts_exactly() {
   let mut p = seat_with_strength(30);
-  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), 50, true, true, 2);
+  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(50, true), true, true, 2);
   participant::refresh_stats(&mut p, &vector[debuff]);
   assert_eq!(strength_of(&p), 0);
   participant::refresh_stats(&mut p, &vector[]); // row expired/dispelled → re-derive from base
@@ -540,14 +542,73 @@ fun timed_debuff_exceeding_stat_reverts_exactly() {
 /// Per-row delta bookkeeping cannot reproduce this (the revert itself clamps); re-derivation is exact.
 fun interleaved_clamped_alters_rederive_exactly() {
   let mut p = seat_with_strength(30);
-  let buff = spell_effect::alter_stat(spell_effect::stat_strength(), 50, false, true, 2);
-  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), 70, true, true, 3);
+  let buff = spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(50, false), false, true, 2);
+  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(70, true), true, true, 3);
   participant::refresh_stats(&mut p, &vector[buff, debuff]);
   assert_eq!(strength_of(&p), 10);
   participant::refresh_stats(&mut p, &vector[debuff]); // buff expired first
   assert_eq!(strength_of(&p), 0);
   participant::refresh_stats(&mut p, &vector[]); // debuff expired
   assert_eq!(strength_of(&p), 30);
+}
+
+// ╔════════════════ [ The signed-effect encoding — captured wire bytes (#904) ] ═ ]
+
+#[test]
+/// CAPTURED CHAIN BYTES. Signed effect values are stored CENTERED at 32768 — the sign lives in the VALUE, and
+/// `FLAG_NEGATIVE` is never read for it (#904 final ruling). Provenance: testnet `sui client object`, 2026-07-26.
+///   Razkin  0x4a00a579…be97 (version 45, digest 7i3f6jDBPuhsqGUU7P3jeTRdepwcN3bDZ9Ne5J65icBA)
+///     spells[1].effects[0] = { kind 9, stat 8 percent_damage, flags 0, value "32793", turns 2 } — authors +25
+///   Bonelet 0xb80ade53…d444 = { kind 9, stat 3 agility, flags 8, value "32751" } — authors −17
+/// The buff is a POSITIVE delta carrying flags 0 and the debuff carries flags 8: reading the flag for sign
+/// folded Razkin's raw 32793 onto the mob (a ~32768× buff) and shredded the debuffed stat to the 0 floor.
+fun captured_centered_rows_fold_their_authored_delta() {
+  let mut p = seat_with(spell::new_stats(0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0)); // agility 20
+  let razkin = spell_effect::new_effect(
+    spell_effect::k_alter_stat(), 255, 32_793, spell_effect::shape_point(), 0,
+    spell_effect::tf_not_enemy(), 100, 2, spell_effect::stat_percent_damage(), 0, spell_effect::phase_on_enter(),
+  );
+  let bonelet = spell_effect::new_effect(
+    spell_effect::k_alter_stat(), 255, 32_751, spell_effect::shape_point(), 0,
+    spell_effect::tf_not_team(), 100, 2, spell_effect::stat_agility(), spell_effect::flag_negative(),
+    spell_effect::phase_on_enter(),
+  );
+
+  participant::refresh_stats(&mut p, &vector[razkin]);
+  assert_eq!(spell::stat_percent_damage(participant::stats(&p)), 25); // +25 — NOT +32793
+
+  participant::refresh_stats(&mut p, &vector[bonelet]);
+  assert_eq!(spell::stat_agility(participant::stats(&p)), 3); // 20 − 17 — NOT floored to 0
+
+  // Both live: the two-pass ordering is untouched — every addition first, then one saturating subtraction pass.
+  participant::refresh_stats(&mut p, &vector[bonelet, razkin]);
+  assert_eq!(spell::stat_percent_damage(participant::stats(&p)), 25);
+  assert_eq!(spell::stat_agility(participant::stats(&p)), 3);
+
+  // The rows stay the single home for timed deltas: drop them and live returns to EXACTLY base.
+  participant::refresh_stats(&mut p, &vector[]);
+  assert_eq!(spell::stat_agility(participant::stats(&p)), 20);
+  assert_eq!(spell::stat_percent_damage(participant::stats(&p)), 0);
+}
+
+#[test]
+/// The encoding round-trips and the neutral point is exact: 32768 is a zero delta, not a 32768-strong buff.
+fun centered_value_round_trips_through_alter_delta() {
+  let neutral = spell_effect::alter_stat(spell_effect::stat_strength(), 32_768, false, true, 1);
+  let (amount, negative) = participant::alter_delta(&neutral);
+  assert_eq!(amount, 0);
+  assert!(!negative);
+
+  assert_eq!(participant::centered_value(25, false), 32_793); // Razkin's minted value, derived
+  assert_eq!(participant::centered_value(17, true), 32_751); // Bonelet's minted value, derived
+
+  let buff = spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(25, false), false, true, 1);
+  let (buff_amount, buff_negative) = participant::alter_delta(&buff);
+  assert_eq!(buff_amount, 25);
+  assert!(!buff_negative);
+
+  // A magnitude past the shift saturates at value 0 (the most-negative row) rather than wrapping the u64.
+  assert_eq!(participant::centered_value(40_000, true), 0);
 }
 
 #[test]
@@ -557,7 +618,7 @@ fun permanent_alter_lands_on_base() {
   participant::alter_base_stat(&mut p, spell_effect::stat_strength(), 10, false);
   participant::refresh_stats(&mut p, &vector[]);
   assert_eq!(strength_of(&p), 40);
-  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), 100, true, true, 1);
+  let debuff = spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(100, true), true, true, 1);
   participant::refresh_stats(&mut p, &vector[debuff]);
   assert_eq!(strength_of(&p), 0);
   participant::refresh_stats(&mut p, &vector[]);

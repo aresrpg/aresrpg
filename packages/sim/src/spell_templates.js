@@ -13,7 +13,6 @@
 // ingress both converge here on one internal shape.
 
 import {
-  FLAG_NEGATIVE,
   K_ALTER_RESIST,
   K_ALTER_STAT,
   K_APPLY_DOT,
@@ -62,6 +61,13 @@ import {
   TF_NOT_TEAM,
   TF_ONLY_CASTER,
 } from './spell_effect.js'
+
+/**
+ * The centering of every SIGNED value on chain (#904 final ruling): a delta is stored as `32768 + delta`.
+ * Same number, same reason as `equipment_stats.js` ITEM_STAT_SHIFT (gear) and `spell.move` RES_SHIFT (mob
+ * resistances) — one system, three surfaces. Applied here to effect kinds 9 / 11 only.
+ */
+const SIGNED_SHIFT = 32_768
 
 /**
  * One spell effect, sim-internal (UPPERCASE). A faithful subset of the donor union (spells/types.ts:162).
@@ -323,18 +329,27 @@ const unsupported = (base, spell_id, kind) => {
 const normalize_effect = (e, fallback_area, spell_id = '?') => {
   const numeric_kind = typeof e['kind'] === 'number' ? e['kind'] : undefined
   const raw_type = String(e['type'] ?? numeric_kind)
-  // ALTER_STAT / ALTER_RESIST / STEAL_STAT carry sign via FLAG_NEGATIVE alone (spell_effect.move:203) —
-  // value is a MAGNITUDE, same as the chain: the seed writer always emits `Math.abs(value)` on-chain
-  // (seed_full_corpus.mjs:365, Move's Effect.value is u64). Decode the same way here: never trust a raw
-  // corpus row's own sign for these kinds, or a double-encoded debuff (negative value + FLAG_NEGATIVE)
-  // folds as `-(-x)` = a buff (#728 — ikari_martyrs_call).
-  const magnitude_signed_kind =
-    numeric_kind === K_ALTER_STAT ||
-    numeric_kind === K_ALTER_RESIST ||
-    numeric_kind === K_STEAL_STAT
-  const value = magnitude_signed_kind
-    ? Math.abs(Number(e['value'] ?? 0))
-    : Number(e['value'] ?? 0)
+  // THE SIGNED-EFFECT WIRE DECODE (#904 final ruling). ALTER_STAT (9) and ALTER_RESIST (11) author BOTH signs
+  // into a u64 `value`, so the chain stores them CENTERED at 32768 — the one signed encoding on chain, the same
+  // convention gear ItemStatistics and mob resistances use (flag signing can never cover gear's flagless struct
+  // fields, so centered is the only achievable single system). Measured on the live mint: Razkin authors +25%
+  // damage → `value 32793, flags 0`; Bonelet authors −17 agility → `32751, flags 8`. This is the sim's wire door
+  // and therefore the ONE place the centering is stripped (decode-once) — everything downstream reads a
+  // magnitude with the sign carried by the ADD/REMOVE type, exactly as `participant::alter_delta` folds it on
+  // chain. `FLAG_NEGATIVE` is never the sign again (it stays on minted rows and still drives the band rule and
+  // target filter); reading it was what folded an unflagged centered debuff as a buff (#728, #904).
+  // STEAL_STAT (12) is NOT a signed kind: its value is a plain magnitude both here and on chain — the chain
+  // splits it into two CENTERED alter rows at cast time (cast.move `apply_steal_stat`).
+  const centered_kind =
+    numeric_kind === K_ALTER_STAT || numeric_kind === K_ALTER_RESIST
+  const centered_delta = centered_kind
+    ? Number(e['value'] ?? 0) - SIGNED_SHIFT
+    : 0
+  const value = centered_kind
+    ? Math.abs(centered_delta)
+    : numeric_kind === K_STEAL_STAT
+      ? Math.abs(Number(e['value'] ?? 0))
+      : Number(e['value'] ?? 0)
   const raw_stat = Number(e['stat'] ?? 0)
   const fixed_value = numeric_kind === undefined ? undefined : value
   const element = ELEMENT_MAP[String(e['element'])]
@@ -391,8 +406,8 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
     if (numeric_kind === K_ALTER_STAT)
       return {
         ...base,
-        type:
-          (Number(e['flags'] ?? 0) & FLAG_NEGATIVE) !== 0 ? 'REMOVE' : 'ADD',
+        // Sign from the CENTERED value, never from FLAG_NEGATIVE (#904) — mirrors participant::fold_alters.
+        type: centered_delta < 0 ? 'REMOVE' : 'ADD',
         stat: STAT_ID_MAP[Number(e['stat'])],
       }
     if (numeric_kind === K_STEAL_STAT)
@@ -406,8 +421,8 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
       // A missing element mints to 255=NONE -> neutral resist; the `stat` field is vestigial for this kind.
       return {
         ...base,
-        type:
-          (Number(e['flags'] ?? 0) & FLAG_NEGATIVE) !== 0 ? 'REMOVE' : 'ADD',
+        // Sign from the CENTERED value, never from FLAG_NEGATIVE (#904) — mirrors participant::fold_alters.
+        type: centered_delta < 0 ? 'REMOVE' : 'ADD',
         stat: RESIST_STAT_MAP[element ?? 'NONE'] ?? 'neutral_resistance',
       }
     if (numeric_kind === K_STEAL_POINTS)

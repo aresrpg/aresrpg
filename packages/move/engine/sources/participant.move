@@ -284,6 +284,32 @@ public(package) fun remove_points(self: &mut Participant, point_kind: u8, n: u64
   else self.mp = if (self.mp > n) self.mp - n else 0;
 }
 
+// ╔════════════════ [ The signed-effect encoding (#904 final ruling) ] ══════ ]
+
+/// `Effect.value` is a u64, but ALTER_STAT (9) and ALTER_RESIST (11) author BOTH signs, so those two kinds
+/// store their delta CENTERED at 32768 — `value = 32768 + delta` — the ONE signed encoding on chain, the same
+/// convention gear `ItemStatistics` and mob resistances (`spell::RES_SHIFT`) already use. Flag-based signing
+/// can never cover gear (flagless u64 struct fields, and an upgrade cannot modify a published struct), so
+/// centered is the only achievable single system. `FLAG_NEGATIVE` survives on minted rows and still drives the
+/// band rule and the target filter, but it is NEVER the sign again: the sign lives in the value.
+const SIGNED_SHIFT: u64 = 32768;
+
+/// DECODE a signed alter row → (magnitude, negative). The ONE reader of the centering in this package; every
+/// alter consumer (the fold below, `cast::apply_alter`, the max-HP expiry revert) goes through it.
+public(package) fun alter_delta(e: &Effect): (u64, bool) {
+  let v = e.value();
+  if (v >= SIGNED_SHIFT) (v - SIGNED_SHIFT, false) else (SIGNED_SHIFT - v, true)
+}
+
+/// ENCODE the inverse: a row the ENGINE synthesizes (steal's debit/credit pair, a punishment bonus) lands on
+/// the same board as a minted one and is read by the same fold and the same client decode, so it carries the
+/// same centering. A magnitude beyond the shift saturates at 0 rather than wrapping the u64.
+public(package) fun centered_value(delta: u64, negative: bool): u64 {
+  if (!negative) SIGNED_SHIFT + delta
+  else if (delta >= SIGNED_SHIFT) 0
+  else SIGNED_SHIFT - delta
+}
+
 // ╔════════════════ [ Live-stat derivation (the timed-alter recompute law) ] ═ ]
 
 /// PERMANENT (turns==0) ALTER_STAT: lands on the BASE block, saturating — a permanent effect has no revert, so
@@ -318,15 +344,18 @@ public(package) fun derive_live_stats(base: &Stats, rows: &vector<Effect>): Stat
 
 /// One fold pass: apply every row whose sign matches `negatives`. Alter rows fold with their AUTHORED
 /// element/stat/value (fully deterministic — the random-element flag died 2026-07-11 as dead vocabulary).
+/// The SIGN comes from `alter_delta` (the centered value), never from `FLAG_NEGATIVE` — the two-pass ordering
+/// is unchanged, only the question "is this row a debuff?" is now answered by the value it carries.
 fun fold_alters(s: &mut Stats, rows: &vector<Effect>, negatives: bool) {
   let n = rows.length();
   let mut i = 0;
   while (i < n) {
     let e = rows.borrow(i);
-    if (e.has_flag(spell_effect::flag_negative()) == negatives) {
+    let (amount, neg) = alter_delta(e);
+    if (neg == negatives) {
       if (e.kind() == spell_effect::k_alter_stat()) {
-        if (negatives) spell::sub_stat(s, e.stat(), e.value()) else spell::add_stat(s, e.stat(), e.value());
-      } else if (negatives) spell::sub_resist(s, e.element(), e.value()) else spell::add_resist(s, e.element(), e.value());
+        if (negatives) spell::sub_stat(s, e.stat(), amount) else spell::add_stat(s, e.stat(), amount);
+      } else if (negatives) spell::sub_resist(s, e.element(), amount) else spell::add_resist(s, e.element(), amount);
     };
     i = i + 1;
   };

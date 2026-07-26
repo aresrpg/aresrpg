@@ -38,11 +38,13 @@ fun spec(stats: Stats, ap: u64, mp: u64, hp: u64, kit: vector<SpellLevel>): MobS
   mob::new_mob_spec(1, 1, hp, ap, mp, stats, kit, 100, vector[])
 }
 fun earth_dmg(base: u64): Effect { spell_effect::damage(spell::el_earth(), base) }
-/// alter_resist by element, signed, timed (dispellable off).
+/// alter_resist by element, signed, timed (dispellable off). `amount` is the AUTHORED magnitude; the row stores
+/// it CENTERED at 32768 like every signed value on chain (#904) — the sign lives in the value, not the flag.
 fun resist_alter(element: u8, amount: u64, negative: bool, turns: u8): Effect {
   let flags = if (negative) spell_effect::flag_negative() else 0;
   let filter = if (negative) spell_effect::tf_not_team() else spell_effect::tf_not_enemy();
-  spell_effect::new_effect(spell_effect::k_alter_resist(), element, amount, spell_effect::shape_point(), 0, filter, 100, turns, 0, flags, spell_effect::phase_on_enter())
+  let value = participant::centered_value(amount, negative);
+  spell_effect::new_effect(spell_effect::k_alter_resist(), element, value, spell_effect::shape_point(), 0, filter, 100, turns, 0, flags, spell_effect::phase_on_enter())
 }
 fun steal_ap(n: u64): Effect {
   spell_effect::new_effect(spell_effect::k_steal_points(), 255, n, spell_effect::shape_point(), 0, spell_effect::tf_not_team(), 100, 0, spell_effect::point_ap(), 0, spell_effect::phase_on_enter())
@@ -153,7 +155,7 @@ fun timed_strength_shred_softens_mob_outgoing_then_expires() {
   assert!(participant::hp(fight::participants(&fight).borrow(0)) == 800, 0);
   // shred the mob's strength by 50 (timed) via a player debuff → mob live str 100→50.
   let ps = z();
-  cast::apply_effect_for_testing(&mut fight, 0, 0, PLAYER_CELL, &ps, 1, MOB0, &spell_effect::alter_stat(spell_effect::stat_strength(), 50, true, false, 2), &mut rng);
+  cast::apply_effect_for_testing(&mut fight, 0, 0, PLAYER_CELL, &ps, 1, MOB0, &spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(50, true), true, false, 2), &mut rng);
   cast::resolve_mob_cast(&mut fight, 0, 0, PLAYER_CELL, &mut rng); // now 100*(100+50)/100 = 150 → 800→650
   assert!(participant::hp(fight::participants(&fight).borrow(0)) == 650, 1);
   // expire the shred (2 turn-ends) → mob str back to 100.

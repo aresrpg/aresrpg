@@ -21,6 +21,9 @@ export const source_kinds = Object.entries(spell_effect)
 export const kind_name = kind =>
   source_kinds.find(([, value]) => value === kind)?.[0] ?? `K_${kind}`
 
+/** The centering of every signed value on chain (#904) — ALTER_STAT / ALTER_RESIST wire values only. */
+const SIGNED_SHIFT = 32_768
+
 const status = (type, value, overrides = {}) => ({
   type,
   timing: 'TURN_START',
@@ -124,7 +127,8 @@ export const matrix_rows = [
         },
       },
     },
-    { effect: { stat: spell_effect.STAT_STRENGTH, value: 5 } },
+    // +5 strength on the wire: signed kinds are stored CENTERED at 32768 (#904), STEAL_STAT below is not.
+    { effect: { stat: spell_effect.STAT_STRENGTH, value: SIGNED_SHIFT + 5 } },
   ),
   effect_row(
     spell_effect.K_STEAL_STAT,
@@ -158,7 +162,7 @@ export const matrix_rows = [
         },
       },
     },
-    { effect: { element: 2, value: 5 } },
+    { effect: { element: 2, value: SIGNED_SHIFT + 5 } }, // +5 earth resist, CENTERED (#904)
   ),
   effect_row(
     spell_effect.K_PUSH,
