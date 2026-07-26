@@ -148,18 +148,11 @@ reload machinery, no "requires reload" caveat.
 
 The WORLD is retrowave (the owner named it); the SETTINGS UI stays gothic terminal.
 
-### 2.1 Palette (hex)
+### 2.1 Palette
 
-| Token               | Value                   | Use                                  |
-| ------------------- | ----------------------- | ------------------------------------ |
-| `HACK_BG_ZENITH`    | `#05010d`               | sky zenith, scene clear              |
-| `HACK_BG_MID`       | `#2b0a4a`               | sky mid gradient (deep violet)       |
-| `HACK_HORIZON_GLOW` | `#ff6ec7`               | horizon band glow (thin)             |
-| `HACK_GROUND`       | `#0a0118`               | grid plane base (near-black purple)  |
-| `HACK_GRID_MINOR`   | `#00e5ff` @ ~0.14 alpha | 1 m block-lattice lines (cyan)       |
-| `HACK_GRID_MAJOR`   | `#ff2d95` @ ~0.55 alpha | every 8 m lines (magenta), soft glow |
-| `HACK_SUN_TOP`      | `#ffd319`               | sun disc gradient top                |
-| `HACK_SUN_BOTTOM`   | `#ff2975`               | sun disc gradient bottom             |
+The complete sRGB colour vocabulary lives in `HACK_PALETTE`
+(`packages/engine/src/render/hack_palette.js`), the shared source of truth consumed by both the
+world grid and HUD minimap. Consult that module for the current keys and hex values.
 
 Colors are authored knowing the AgX grade still runs in post — pick saturated bases; verify on
 the shipped MEDIUM taau pipeline, not raw.
