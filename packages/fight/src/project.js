@@ -14,6 +14,7 @@
 // Both project the PRESENTED state (fold at the renderer's ack floor) so the eye never sees state ahead of the
 // beats; terminal truth (winner/is_over) reads COMMITTED so fight-end logic never hangs on presentation.
 
+import { experience_to_level } from '@aresrpg/sdk/experience'
 import { tackle_contest, tackle_losses } from '@aresrpg/sim/fight_tackle'
 import { tackle_seed, turn_seed } from '@aresrpg/sim/turn_seed'
 import { rng_next, rng_seed } from '@aresrpg/sim/prng'
@@ -217,6 +218,17 @@ const character_male = (character) => {
   if (character?.sex === 'male') return true
   if (character?.sex === 'female') return false
   return undefined
+}
+
+/** A player fighter's LEVEL off its roster character (the turn card used to hardcode 1, #949). `/v1` serves the
+ *  stored progression level once a character has fought (the Progression DF supersedes the frozen genesis
+ *  fields); my own `sui.characters` rows carry `experience` only, so the fallback is the same immutable XP curve
+ *  the chain runs. No roster row yet (a co-fighter's doc still resolving) → 1, never undefined. */
+const character_level = (character) => {
+  const stored = Number(character?.level)
+  if (Number.isFinite(stored) && stored >= 1) return stored
+  const experience = Number(character?.experience)
+  return Number.isFinite(experience) && experience > 0 ? experience_to_level(experience) : 1
 }
 
 const character_colors = (character) => {
@@ -446,7 +458,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       ap_max: row.base_ap,
       mp: f.mp ?? row.mp,
       mp_max: row.base_mp,
-      level: 1,
+      level: character_level(roster_character),
       is_player: true,
       dead:
         !death_hold.has(entity_id) &&

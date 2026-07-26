@@ -139,6 +139,28 @@ describe('solo lifecycle — create → placement → activation', () => {
     expect(engine_view(store.getState()).fighters.get(ME)).toMatchObject(appearance)
   })
 
+  test('the turn card carries the fighter LEVEL off its roster character (#949 — it was hardcoded 1)', () => {
+    const level_200_xp = 7_407_232_000 // packages/sdk/src/experience.js levels[200]
+    const level_of = (store) => engine_view(store.getState()).fighters.get(ME).level
+
+    // 1) the stored progression level `/v1` serves once a character has fought
+    const fought = boot()
+    fought.getState().input({ type: 'ctx', ctx: { roster: [{ id: ME, level: 200 }] } }, T0 + 50)
+    fought.getState().input({ type: 'snapshot', fight: fight_object({ status: 0 }), version: 1 }, T0 + 100)
+    expect(level_of(fought)).toBe(200)
+
+    // 2) my own `sui.characters` rows carry `experience` only — same curve as the chain
+    const mine = boot()
+    mine.getState().input({ type: 'ctx', ctx: { roster: [{ id: ME, experience: level_200_xp }] } }, T0 + 50)
+    mine.getState().input({ type: 'snapshot', fight: fight_object({ status: 0 }), version: 1 }, T0 + 100)
+    expect(level_of(mine)).toBe(200)
+
+    // 3) no roster row yet (names still resolving) — level 1, never undefined
+    const unresolved = boot()
+    unresolved.getState().input({ type: 'snapshot', fight: fight_object({ status: 0 }), version: 1 }, T0 + 100)
+    expect(level_of(unresolved)).toBe(1)
+  })
+
   test('Placed + Ready fold onto my seat (the v1.12.28 dropped-Placed class, now a scenario row)', () => {
     const store = boot()
     store.getState().input({ type: 'snapshot', fight: fight_object({ status: 0 }), version: 1 }, T0 + 100)
