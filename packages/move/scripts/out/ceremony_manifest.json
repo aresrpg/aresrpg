@@ -168,7 +168,7 @@
   },
   "engine": {
     "pkg": "0xe8c6c46893799e85e697ef0e524626c6323ea4db5a86da6c9de4a6d53c7ac41a",
-    "upgradeCap": "0xb5d7fc8606e3614f4192e08ba9bcd0d1a9d90a7a78a4b4e16c8267f7e57d785b",
+    "upgradeCap": "0x99998b458da902e95e89a1954ab28b13d6e02c1025172a3146c099f45f76a4fb",
     "admin": "0xe8a1078cf487a41e138966c0dc27ff38394ac5d3614e373a3444ec89f8505b78",
     "version": "0x4ef9563936fb0dc7ebd8399ed68ed7b023e3e1daeaf07ca27b1b16f62eda0eb3",
     "shared": {
@@ -222,7 +222,9 @@
       150,
       209,
       111
-    ]
+    ],
+    "latest": "0x3ee7e176a401ed431a7d1e6e278a8cee3625334c48eb815aad94e2c78ebdf703",
+    "_capNote": "cap corrected 2026-07-27: prior record 0xb5d7fc86\u2026 was a fossil governing the dead pre-fresh-root lineage (0xe8c6\u2026 v1); 0x99998b\u2026 governs the live lineage (\u2026cc07 v4 \u2192 0x3ee7e176 v5)"
   },
   "aresrpg": {
     "pkg": "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9",
