@@ -403,8 +403,24 @@ fun set_loot_with_expired_temp_cap_aborts() {
 
 // ╔════════════════ [ set_spells — the live spell-kit correction door ] ══════════════════════ ]
 
-/// One `SpellLevel` carrying a single ALTER_STAT effect of `value` — the shape the encoding correction
-/// re-pushes (an authored `+25` is `value: 25` with the negative flag CLEAR, never a 32768-centered `32793`).
+/// The signed-effect centering (#904 final ruling), mirrored: ALTER_STAT (9) and ALTER_RESIST (11) store their
+/// delta CENTERED — `value = 32768 + delta` — and the sign lives in the VALUE, never in `FLAG_NEGATIVE`. The
+/// pinned constant and the decode below mirror `engine/sources/participant.move:295-301` (`SIGNED_SHIFT` /
+/// `alter_delta`), which is `public(package)` in `aresrpg_fight` and so unreachable from this package's tests.
+/// A drift in the mirror reds against the engine's own `centered_value_round_trips_through_alter_delta`.
+#[test_only]
+const SIGNED_SHIFT: u64 = 32768;
+
+/// DECODE a signed alter row the way the fold does → (magnitude, negative).
+#[test_only]
+fun alter_delta(e: &spell_effect::Effect): (u64, bool) {
+  let v = spell_effect::value(e);
+  if (v >= SIGNED_SHIFT) (v - SIGNED_SHIFT, false) else (SIGNED_SHIFT - v, true)
+}
+
+/// One `SpellLevel` carrying a single ALTER_STAT effect of the raw stored `value` — the bytes the correction
+/// door writes on chain, so every call site spells its authoring arithmetic (`SIGNED_SHIFT + 25` for a `+25`
+/// buff, `SIGNED_SHIFT - 15` for a `−15` debuff) rather than a bare magnitude.
 #[test_only]
 fun kit_level(value: u64): spell_effect::SpellLevel {
   spell_effect::new_spell_level(
@@ -420,8 +436,10 @@ fun kit_level(value: u64): spell_effect::SpellLevel {
 #[test]
 /// The additive setter REPLACES the whole spell kit in place (the twin of `set_loot`) while leaving the
 /// mint-only IDENTITY fields (name, min/max level) and the sibling `loot` table untouched. Cap + version gated
-/// at the door; the corrected effect magnitude round-trips through the free `mob_spells` getter — the #904
-/// correction's on-chain half: a mint-time CENTERED `32793` becomes the ratified magnitude `25`.
+/// at the door; the re-pushed kit round-trips through the free `mob_spells` getter AND back through the fold's
+/// own decode — the #904 final ruling's on-chain half: what the door writes is CENTERED (`32768 + delta`), and
+/// folding those bytes yields the authored deltas, sign and all. Asserting the storage bytes alone would stay
+/// green under the retired magnitude dialect, where an authored `+25` folds as a `−32743` debuff.
 fun set_spells_replaces_the_spell_kit() {
   let mut sc = ts::begin(OWNER);
   version::test_init(sc.ctx());
@@ -430,10 +448,11 @@ fun set_spells_replaces_the_spell_kit() {
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
   let ver = sc.take_shared<Version>();
-  // mint with the MIS-ENCODED kit the live census found (centered 32768 + 25) and a loot entry to guard
+  // mint a live-shaped kit (a centered `+25`, the encoding the census found and the ruling ratified) + a loot
+  // entry to guard
   let tid = mob_template::mint(
     &cap, &ver, b"rat".to_string(), 3, 9, 50, 6, 3, 0,
-    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), vector[kit_level(32793)],
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), vector[kit_level(SIGNED_SHIFT + 25)],
     vector[mob::new_loot_entry(object::id_from_address(@0xA11CE), 5000, 1, 3)], 250, sc.ctx(),
   );
   ts::return_shared(ver);
@@ -444,13 +463,26 @@ fun set_spells_replaces_the_spell_kit() {
   let ver = sc.take_shared<Version>();
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
   assert_eq!(spell_effect::value(mob_template::mob_spells(&tmpl).borrow(0).sl_effects().borrow(0)), 32793);
-  // the correction driver re-pushes the COMPLETE kit, wholesale — here a 2-level kit with true magnitudes
-  mob_template::set_spells(&cap, &ver, &mut tmpl, vector[kit_level(25), kit_level(40)], sc.ctx());
+  // the correction driver re-pushes the COMPLETE kit, wholesale — here a 3-level kit: two buffs and a debuff
+  mob_template::set_spells(
+    &cap, &ver, &mut tmpl,
+    vector[kit_level(SIGNED_SHIFT + 25), kit_level(SIGNED_SHIFT + 40), kit_level(SIGNED_SHIFT - 15)], sc.ctx(),
+  );
   let spells = mob_template::mob_spells(&tmpl);
-  assert_eq!(spells.length(), 2); // 1 level → 2 (the wholesale-replace class)
-  assert_eq!(spell_effect::value(spells.borrow(0).sl_effects().borrow(0)), 25); // decentered magnitude
-  assert_eq!(spell_effect::flags(spells.borrow(0).sl_effects().borrow(0)), 0); // positive: negative flag clear
-  assert_eq!(spell_effect::value(spells.borrow(1).sl_effects().borrow(0)), 40);
+  assert_eq!(spells.length(), 3); // 1 level → 3 (the wholesale-replace class)
+  assert_eq!(spell_effect::value(spells.borrow(0).sl_effects().borrow(0)), 32793); // stored CENTERED, not `25`
+  // …and the stored bytes fold back to what the author meant — the tooth a storage round-trip cannot grow
+  let (amount, negative) = alter_delta(spells.borrow(0).sl_effects().borrow(0));
+  assert_eq!(amount, 25);
+  assert!(!negative); // a buff: value above the shift
+  let (amount, negative) = alter_delta(spells.borrow(1).sl_effects().borrow(0));
+  assert_eq!(amount, 40);
+  assert!(!negative);
+  // the debuff proves the SIGN comes from the value alone — its `flags` are 0, FLAG_NEGATIVE clear
+  let (amount, negative) = alter_delta(spells.borrow(2).sl_effects().borrow(0));
+  assert_eq!(amount, 15);
+  assert!(negative);
+  assert_eq!(spell_effect::flags(spells.borrow(2).sl_effects().borrow(0)), 0);
   assert_eq!(spells.borrow(0).sl_ap_cost(), 3); // the level's non-effect surface round-trips too
   // identity fields and the sibling loot table stay untouched — the setter only replaces `spells`
   assert_eq!(mob_template::mob_min_level(&tmpl), 3);
@@ -486,7 +518,7 @@ fun set_spells_over_cap_aborts() {
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
   let mut spells = vector[];
   let mut i = 0;
-  while (i < 5) { spells.push_back(kit_level(25)); i = i + 1 };
+  while (i < 5) { spells.push_back(kit_level(SIGNED_SHIFT + 25)); i = i + 1 };
   mob_template::set_spells(&cap, &ver, &mut tmpl, spells, sc.ctx()); // ETooManySpells (5 > 4)
   abort
 }
@@ -513,7 +545,7 @@ fun set_spells_on_stale_version_aborts() {
   let mut ver = sc.take_shared<Version>();
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
   version::test_set_stale(&mut ver);
-  mob_template::set_spells(&cap, &ver, &mut tmpl, vector[kit_level(25)], sc.ctx()); // EWrongVersion
+  mob_template::set_spells(&cap, &ver, &mut tmpl, vector[kit_level(SIGNED_SHIFT + 25)], sc.ctx()); // EWrongVersion
   abort
 }
 
@@ -540,6 +572,6 @@ fun set_spells_with_expired_temp_cap_aborts() {
   let temp_cap = sc.take_from_sender<AdminCap>();
   let ver = sc.take_shared<Version>();
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
-  mob_template::set_spells(&temp_cap, &ver, &mut tmpl, vector[kit_level(25)], sc.ctx()); // EAdminCapExpired
+  mob_template::set_spells(&temp_cap, &ver, &mut tmpl, vector[kit_level(SIGNED_SHIFT + 25)], sc.ctx()); // EAdminCapExpired
   abort
 }
