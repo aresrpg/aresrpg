@@ -2445,7 +2445,7 @@
     "kiosk_lookup_failed": "Kiosk lookup failed — network hiccup, nothing was signed or spent; retry is safe.",
     "tx_lock_race_retry": "Another transaction is using the same resources right now — nothing was charged. Try again in a moment.",
     "tx_refusal_reason": "{{headline}}\nReason: {{reason}}",
-    "tx_refusal_reason_unmapped": "An unrecognized {{module}} rule (code {{code}}).",
+    "tx_refusal_reason_unmapped": "Unhandled {{module}} error (code {{code}}).",
     "tx_stale_reference": "A referenced item changed under you — refresh and try again.",
     "gift_not_recipient": "This gift isn't addressed to you.",
     "gift_not_sender": "Only the sender can recall this gift.",

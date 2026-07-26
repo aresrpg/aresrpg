@@ -2445,7 +2445,7 @@
     "kiosk_lookup_failed": "Die Kiosk-Suche ist fehlgeschlagen — Netzwerkproblem, nichts wurde signiert oder ausgegeben; ein erneuter Versuch ist sicher.",
     "tx_lock_race_retry": "Eine andere Transaktion nutzt gerade dieselben Ressourcen — es wurde nichts berechnet. Versuch es gleich noch einmal.",
     "tx_refusal_reason": "{{headline}}\nGrund: {{reason}}",
-    "tx_refusal_reason_unmapped": "Eine unbekannte Regel in {{module}} (Code {{code}}).",
+    "tx_refusal_reason_unmapped": "Unbehandelter Fehler in {{module}} (Code {{code}}).",
     "tx_stale_reference": "Ein referenziertes Objekt hat sich zwischenzeitlich geändert — aktualisiere und versuch es erneut.",
     "gift_not_recipient": "Dieses Geschenk ist nicht an dich adressiert.",
     "gift_not_sender": "Nur der Absender kann dieses Geschenk zurückrufen.",

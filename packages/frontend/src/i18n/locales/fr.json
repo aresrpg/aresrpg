@@ -2445,7 +2445,7 @@
     "kiosk_lookup_failed": "La recherche du kiosque a échoué — incident réseau, rien n’a été signé ni dépensé ; vous pouvez réessayer sans risque.",
     "tx_lock_race_retry": "Une autre transaction utilise les mêmes ressources en ce moment — rien n'a été débité. Réessaie dans un instant.",
     "tx_refusal_reason": "{{headline}}\nRaison : {{reason}}",
-    "tx_refusal_reason_unmapped": "Une règle non reconnue dans {{module}} (code {{code}}).",
+    "tx_refusal_reason_unmapped": "Erreur non gérée dans {{module}} (code {{code}}).",
     "tx_stale_reference": "Un élément référencé a changé entre-temps — actualise et réessaie.",
     "gift_not_recipient": "Ce cadeau ne vous est pas destiné.",
     "gift_not_sender": "Seul l'expéditeur peut rappeler ce cadeau.",

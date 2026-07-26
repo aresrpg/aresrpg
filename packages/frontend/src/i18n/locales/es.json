@@ -2445,7 +2445,7 @@
     "kiosk_lookup_failed": "La búsqueda del quiosco falló — problema de red, no se firmó ni se gastó nada; es seguro volver a intentarlo.",
     "tx_lock_race_retry": "Otra transacción está usando los mismos recursos ahora mismo — no se cobró nada. Inténtalo de nuevo en un momento.",
     "tx_refusal_reason": "{{headline}}\nMotivo: {{reason}}",
-    "tx_refusal_reason_unmapped": "Una regla no reconocida en {{module}} (código {{code}}).",
+    "tx_refusal_reason_unmapped": "Error no controlado en {{module}} (código {{code}}).",
     "tx_stale_reference": "Un elemento referenciado cambió mientras tanto — actualiza e inténtalo de nuevo.",
     "gift_not_recipient": "Este regalo no está dirigido a ti.",
     "gift_not_sender": "Solo el remitente puede recuperar este regalo.",

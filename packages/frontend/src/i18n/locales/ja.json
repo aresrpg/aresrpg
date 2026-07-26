@@ -2445,7 +2445,7 @@
     "kiosk_lookup_failed": "キオスクの検索に失敗しました — ネットワークの一時的な問題です。署名も支払いも行われていないため、安全に再試行できます。",
     "tx_lock_race_retry": "現在、別のトランザクションが同じリソースを使用しています — 料金は発生していません。少ししてからもう一度お試しください。",
     "tx_refusal_reason": "{{headline}}\n理由: {{reason}}",
-    "tx_refusal_reason_unmapped": "{{module}} 内の未対応のルールです（コード {{code}}）。",
+    "tx_refusal_reason_unmapped": "{{module}} で未処理のエラーが発生しました（コード {{code}}）。",
     "tx_stale_reference": "参照していた項目が変更されました — 更新してもう一度お試しください。",
     "gift_not_recipient": "このギフトはあなた宛てではありません。",
     "gift_not_sender": "このギフトを呼び戻せるのは送信者のみです。",
