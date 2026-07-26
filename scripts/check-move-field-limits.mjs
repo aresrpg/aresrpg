@@ -12,13 +12,19 @@
 // renders a verdict against a FRESH local `sui move build` output: the built copy of each source must be
 // byte-identical to the source it parses, which is what proves the tokenized bytes are compiler-accepted.
 //
-// FAIL-CLOSED (#896, extending #892's empty-set policy to tooling absence): this script has no exit-0
-// path that renders no verdict. Absent `sui`, absent Move sources, absent/stale build output — each is a
-// LOUD non-zero naming its remedy. It used to print `SKIP: sui CLI absent/unusable` and exit 0, which is
-// exactly what every CI runner did: the leg's verdict was absent on every PR, including the promotion PR
-// into master, under a green `ladder`. The arming lives in .github/workflows/checks.yml (ladder job:
-// pinned sui + `sui move build` for every Move package) — the only place this gate can now be satisfied
-// without a laptop.
+// FAIL-CLOSED (#896, extending #892's empty-set policy to tooling absence): no no-verdict state is ever
+// silent. Absent `sui`, absent Move sources, absent/stale build output — each is LOUD and names its remedy.
+// It used to print `SKIP: sui CLI absent/unusable` and exit 0, which is exactly what every CI runner did:
+// the leg's verdict was absent on every PR, including the promotion PR into master, under a green `ladder`.
+// The arming lives in .github/workflows/checks.yml (ladder job: pinned sui + `sui move build` for every
+// Move package) — the only place this gate can now be satisfied without a laptop.
+//
+// SEVERITY SPLIT (#938): loud stays, but the no-verdict state is NAMED and diff-aware. Exactly one
+// combination exits 0 — a missing toolchain on a checkout whose diff PROVABLY holds no `.move` change,
+// where nothing local can breach a cap the ladder has not already judged; it prints a WARN naming the
+// toolchain and the merge-base it judged against. Everything else keeps the hard red: any `.move` delta,
+// a CI run, an unreadable diff base, and all three of the other no-verdict paths below. Unknowns fail
+// CLOSED — the WARN is a strict subset of the old red (severities only ratchet up, FROZEN.md).
 //
 // Wired into scripts/check-constraints.sh (the green-check). Standalone: `node scripts/check-move-field-limits.mjs`.
 import { spawnSync as spawn_sync } from 'node:child_process'
@@ -312,12 +318,63 @@ function no_verdict(reasons, remedy) {
   process.exit(1)
 }
 
+function git_output(args) {
+  const result = spawn_sync('git', args, { cwd: repo_root, encoding: 'utf8' })
+  if (result.error || result.status !== 0) return null
+  return result.stdout
+}
+
+// Is a missing toolchain provably harmless in THIS checkout? Only when no `.move` file differs from the
+// merge-base with origin/edge — the same base the PR will be judged on. Every branch that cannot prove it
+// (a CI run, no reachable origin/edge, a diff git refuses to state) returns the red, so the answer is
+// never a guess. `detail` is printed either way: the verdict always names the base it was decided on.
+function toolchain_absence_severity() {
+  if (process.env.CI)
+    return { warn: false, detail: 'CI is set — a CI run renders the verdict or fails; it never warns.' }
+
+  const merge_base = git_output(['merge-base', 'HEAD', 'origin/edge'])?.trim()
+  if (!merge_base) {
+    return { warn: false, detail: 'no merge-base with origin/edge in this checkout — the Move delta is unknown.' }
+  }
+
+  const tracked = git_output(['diff', '--name-only', merge_base])
+  const untracked = git_output(['ls-files', '--others', '--exclude-standard'])
+  if (tracked === null || untracked === null) {
+    return { warn: false, detail: `the diff against ${merge_base} could not be read — the Move delta is unknown.` }
+  }
+
+  const move_delta = [...tracked.split('\n'), ...untracked.split('\n')]
+    .map((line) => line.trim())
+    .filter((line) => line.endsWith('.move'))
+    .sort()
+  if (move_delta.length > 0) {
+    return {
+      warn: false,
+      detail:
+        `${move_delta.length} .move file(s) differ from merge-base ${merge_base} (origin/edge) ` +
+        `and cannot be judged without the toolchain: ${move_delta.join(', ')}`,
+    }
+  }
+  return { warn: true, detail: `no .move file differs from merge-base ${merge_base} (origin/edge).` }
+}
+
 console.log('== AresRPG Move field-definition cap gate (all structs ≤ 32 fields) ==')
 
 const sui_version = spawn_sync('sui', ['--version'], { cwd: repo_root, encoding: 'utf8' })
 if (sui_version.error?.code === 'ENOENT' || sui_version.status !== 0) {
+  const toolchain_reason = 'sui CLI absent/unusable — the field-cap verdict needs a fresh `sui move build` witness.'
+  const severity = toolchain_absence_severity()
+  if (severity.warn) {
+    console.error(`  ! NO VERDICT (WARN): ${toolchain_reason}`)
+    console.error(`  ! ${severity.detail} Nothing here can breach a cap the CI ladder has not already judged.`)
+    console.error(
+      'MOVE FIELD-CAP GATE NOT RUN (WARN, exit 0). Install the Sui toolchain (`suiup install sui`) to render ' +
+        'the verdict locally; the ladder job renders it on every PR. Any `.move` edit turns this WARN back to red.'
+    )
+    process.exit(0)
+  }
   no_verdict(
-    ['sui CLI absent/unusable — the field-cap verdict needs a fresh `sui move build` witness.'],
+    [toolchain_reason, severity.detail],
     'Install the Sui toolchain (`suiup install sui`), then build the Move packages.'
   )
 }
