@@ -30,7 +30,7 @@ test('EncyclopediaMobImage uses the shield glyph when no Walrus icon can be reso
 // that as transient (bounded retry), never pin the very first error into a glyph until a full reload. ──
 
 const AGGREGATOR = 'https://first-nav.example'
-const HD_SRC = `${AGGREGATOR}/mobs/hy_bunny_hd.png`
+const HD_SRC = `${AGGREGATOR}/mobs/alley_bunny_hd.png`
 
 type StateSetter<T> = (next: T | ((current: T) => T)) => void
 type ReactInternals = { H: unknown }

@@ -102,8 +102,14 @@ export function get_mob_model(mob) {
 /**
  * The 2D encyclopedia icon URL for a mob, by NAME (the only visual-adjacent fact the /v1 bestiary
  * projection carries — see bestiary_tab.tsx: `get_encyclopedia('mobs')` has no `appearance`/GLB field).
- * SAME resolution as get_mob_model (variant / catalog_key_of(name) → the published mob_catalog → glb),
- * rendered offline by scripts/render_mob_icons.mjs and published to the `mob_icon` Walrus quilt — the
+ * SAME catalog lookup as get_mob_model (variant / catalog_key_of(name) → the published mob_catalog), but
+ * the FILENAME is the matched CATALOG KEY, never the entry's glb: the two mob namespaces are keyed
+ * differently on the asset host — geometry by the GLB basename (`models/mobs/hy_boar.glb`), the icon by
+ * the mob key (`mobs/boar.png`). #1013: naming the icon after the glb 404'd every mob, loudest on the
+ * ruled-mapping rows (glb ≠ `hy_` + key — 755/770 of the published catalog, e.g. Broodfather →
+ * hy_scarak_broodmother_model_default). The catalog entry still gates: no extracted GLB means no
+ * rendered icon exists to ask for.
+ * Icons are rendered offline by scripts/render_mob_icons.mjs and published to the `mob_icon` class — the
  * SAME thumb/_hd two-tier system item_icon_url uses (spells are single-size .webp — #884).
  * Walrus (boot manifest, `mob_icon` class) is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was migration
  * residue, gitignored and never shipped past a dev's own disk). No catalog match / quilt not yet
@@ -115,10 +121,8 @@ export function get_mob_model(mob) {
  */
 export function get_mob_icon_url(mob, { hd = false } = {}) {
   const catalog = get_catalog()
-  const by_variant = mob.variant == null ? undefined : catalog[mob.variant]
-  const entry = by_variant ?? catalog[catalog_key_of(mob.name) ?? '']
-  const glb = entry?.glb ?? null
-  if (!glb) return null
-  const file = `${glb}${hd ? '_hd' : ''}.png`
-  return walrus_asset_url('mob_icon', file)
+  const key =
+    mob.variant != null && catalog[mob.variant] ? mob.variant : (catalog_key_of(mob.name) ?? '')
+  if (!catalog[key]?.glb) return null
+  return walrus_asset_url('mob_icon', `${key}${hd ? '_hd' : ''}.png`)
 }
