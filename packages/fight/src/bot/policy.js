@@ -57,7 +57,14 @@ export const WEIGHTS = {
 /** Effect kinds (fight-spells-core `kind_names`) the bot understands. Anything else scores ZERO — the bot
  *  never claims value it could not then assert. */
 const DAMAGE_KINDS = new Set(['DAMAGE', 'PERCENT_LIFE', 'LIFE_STEAL', 'PUNISHMENT', 'CASTER_DAMAGE'])
-const BUFF_KINDS = new Set(['ALTER_STAT', 'GIVE_POINTS', 'REDUCE_DAMAGE', 'APPLY_STATE', 'REFLECT_DAMAGE', 'ALTER_RESIST'])
+const BUFF_KINDS = new Set([
+  'ALTER_STAT',
+  'GIVE_POINTS',
+  'REDUCE_DAMAGE',
+  'APPLY_STATE',
+  'REFLECT_DAMAGE',
+  'ALTER_RESIST',
+])
 const DEBUFF_KINDS = new Set(['REMOVE_POINTS', 'STEAL_POINTS', 'STEAL_STAT', 'EROSION'])
 const PUSH_KINDS = new Set(['PUSH', 'GEOMETRIC_PUSH'])
 
@@ -109,7 +116,10 @@ const score_on_fighter = (spell, caster, target) => {
   const heal = effects.filter((e) => e.kind === 'HEAL')
   if (heal.length && !enemy) {
     const missing = Math.max(0, Number(target.hp_max) - Number(target.hp_committed))
-    const healed = Math.min(missing, heal.reduce((sum, e) => sum + Number(e.base ?? 0), 0))
+    const healed = Math.min(
+      missing,
+      heal.reduce((sum, e) => sum + Number(e.base ?? 0), 0)
+    )
     if (healed <= 0) return null // a full-HP target is not a heal target — that is the "when it pays" rule
     return { value: healed * WEIGHTS.heal, fact: `hp:${target.id}`, expect: { type: 'heal', target_id: target.id } }
   }
@@ -141,7 +151,10 @@ const approach_cells = (read, caster_cell, enemy) => {
   for (let step = 0; step < 8 && (cursor.x !== caster_cell.x || cursor.y !== caster_cell.y); step++) {
     const dx = caster_cell.x - cursor.x
     const dy = caster_cell.y - cursor.y
-    cursor = Math.abs(dx) >= Math.abs(dy) ? { x: cursor.x + Math.sign(dx), y: cursor.y } : { x: cursor.x, y: cursor.y + Math.sign(dy) }
+    cursor =
+      Math.abs(dx) >= Math.abs(dy)
+        ? { x: cursor.x + Math.sign(dx), y: cursor.y }
+        : { x: cursor.x, y: cursor.y + Math.sign(dy) }
     if (cursor.x === caster_cell.x && cursor.y === caster_cell.y) break
     out.push({ ...cursor })
   }
@@ -186,9 +199,9 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
     if (!available(spell, read, history)) continue
     if (claimed.spells.has(spell.id)) continue // one cast per spell per turn (casts_per_turn is 1 for seed content)
     if (spell.free_cell) {
-      const near = enemies
+      const [near] = enemies
         .slice()
-        .sort((a, b) => manhattan(a.cell_committed, from) - manhattan(b.cell_committed, from))[0]
+        .sort((a, b) => manhattan(a.cell_committed, from) - manhattan(b.cell_committed, from))
       if (!near) continue
       for (const cell of approach_cells(read, from, near)) {
         const scored = score_on_cell(spell, read, cell, history)
@@ -211,7 +224,9 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
   }
   return rows.sort(
     (a, b) =>
-      b.value - a.value || a.spell.ap - b.spell.ap || tie_break(seed, `${a.spell.id}:${a.fact}`) - tie_break(seed, `${b.spell.id}:${b.fact}`)
+      b.value - a.value ||
+      a.spell.ap - b.spell.ap ||
+      tie_break(seed, `${a.spell.id}:${a.fact}`) - tie_break(seed, `${b.spell.id}:${b.fact}`)
   )
 }
 
@@ -235,21 +250,26 @@ const best_from = (read, me, cell, ap, seed, history) => {
  * Two rules a player would recognise: never disengage from an adjacent body (that is a free tackle), and
  * when nothing is castable from anywhere, close the distance instead of standing still.
  */
-const choose_stance = (read, me, seed, history, decisions) => {
+const choose_stance = (read, me, seed, history) => {
   const here = me.cell_committed
   const enemies = enemies_of(read)
   const mp = Number(me.mp ?? me.mp_committed ?? 0)
   const ap = Number(me.ap ?? me.ap_committed ?? 0)
-  const stay = { cell: here, cost: 0, why: 'stayed put' }
+  const stay = { cell: here, cost: 0, why: 'stayed put', decisions: [] }
   if (!enemies.length || mp <= 0) return stay
-  if (enemies.some((e) => chebyshev(e.cell_committed, here) <= 1)) {
-    decisions.push({ phase: 'move', chose: 'stay', why: 'an enemy is adjacent — disengaging invites a tackle' })
-    return stay
-  }
+  if (enemies.some((e) => chebyshev(e.cell_committed, here) <= 1))
+    return {
+      ...stay,
+      decisions: [{ phase: 'move', chose: 'stay', why: 'an enemy is adjacent — disengaging invites a tackle' }],
+    }
   const base = best_from(read, me, here, ap, seed, history)
   const nearest = (cell) => Math.min(...enemies.map((e) => manhattan(e.cell_committed, cell)))
   const options = reachable_cells(read, here, mp, me.id)
-    .map((cell) => ({ cell, cost: path_cost(read, here, cell, mp, me.id), ...best_from(read, me, cell, ap, seed, history) }))
+    .map((cell) => ({
+      cell,
+      cost: path_cost(read, here, cell, mp, me.id),
+      ...best_from(read, me, cell, ap, seed, history),
+    }))
     .filter((o) => o.cost != null)
   // Rank: offensive value first, then total value, then closer to the fight, then cheaper, then the seed.
   const ranked = options.sort(
@@ -260,7 +280,7 @@ const choose_stance = (read, me, seed, history, decisions) => {
       a.cost - b.cost ||
       tie_break(seed, `${cell_index(a.cell)}`) - tie_break(seed, `${cell_index(b.cell)}`)
   )
-  const best = ranked[0]
+  const [best] = ranked
   // KEEP RANGE. Two reasons to leave: a better shot opens up somewhere else, or NOTHING can be aimed at an
   // enemy from anywhere reachable and the gap has to be closed. A caster that can already shoot holds still.
   const unlocks = !!best && best.cost > 0 && best.enemy > base.enemy
@@ -268,9 +288,15 @@ const choose_stance = (read, me, seed, history, decisions) => {
   const target = approach
     ? ranked.filter((o) => o.cost > 0).sort((a, b) => nearest(a.cell) - nearest(b.cell) || a.cost - b.cost)[0]
     : best
-  decisions.push({
+  const decision = {
     phase: 'move',
-    considered: ranked.slice(0, 4).map((o) => ({ cell: o.cell, cost: o.cost, cast_value: o.total, enemy_value: o.enemy, nearest_enemy: nearest(o.cell) })),
+    considered: ranked.slice(0, 4).map((o) => ({
+      cell: o.cell,
+      cost: o.cost,
+      cast_value: o.total,
+      enemy_value: o.enemy,
+      nearest_enemy: nearest(o.cell),
+    })),
     chose: unlocks || approach ? target.cell : 'stay',
     why: unlocks
       ? `moving unlocks ${best.enemy} points of offensive value (vs ${base.enemy} from here)`
@@ -279,8 +305,10 @@ const choose_stance = (read, me, seed, history, decisions) => {
         : base.enemy > 0
           ? `already in range for ${base.enemy} points of offensive value — holding position`
           : 'no reachable cell improves on standing here',
-  })
-  return unlocks || approach ? { cell: target.cell, cost: target.cost, why: 'reposition' } : stay
+  }
+  return unlocks || approach
+    ? { cell: target.cell, cost: target.cost, why: 'reposition', decisions: [decision] }
+    : { ...stay, decisions: [decision] }
 }
 
 /**
@@ -293,13 +321,15 @@ const choose_stance = (read, me, seed, history, decisions) => {
  * @returns {{ actions: Array<object>, decisions: Array<object>, reason: string }}
  */
 export const plan_turn = (read, { seed = 0, history = {} } = {}) => {
-  const decisions = []
   const me = me_of(read)
-  if (!me) return { actions: [], decisions, reason: 'no seat in this fight' }
-  if (read.active_id !== read.my_id) return { actions: [], decisions, reason: 'not my turn' }
-  if (!enemies_of(read).length) return { actions: [], decisions, reason: 'no living enemy — nothing to do' }
+  if (!me) return { actions: [], decisions: [], reason: 'no seat in this fight' }
+  if (read.active_id !== read.my_id) return { actions: [], decisions: [], reason: 'not my turn' }
+  if (!enemies_of(read).length) return { actions: [], decisions: [], reason: 'no living enemy — nothing to do' }
 
-  const stance = choose_stance(read, me, seed, history, decisions)
+  const stance = choose_stance(read, me, seed, history)
+  // The decision list is BUILT, never pushed into a caller's array: `plan_turn` owns it and hands it back
+  // beside the actions, so a reader can see the whole turn's reasoning next to the turn it produced.
+  const decisions = [...stance.decisions]
   const actions = []
   if (stance.cost > 0)
     actions.push({
@@ -314,12 +344,14 @@ export const plan_turn = (read, { seed = 0, history = {} } = {}) => {
   let ap = Number(me.ap ?? me.ap_committed ?? 0)
   for (let step = 0; step < 8; step++) {
     const rows = candidates(read, me, stance.cell, ap, claimed, seed, history)
-    const pick = rows[0]
+    const [pick] = rows
     decisions.push({
       phase: 'cast',
       step,
       ap_left: ap,
-      considered: rows.slice(0, 4).map((r) => ({ spell: r.spell.name_key, ap: r.spell.ap, at: r.cell, value: r.value, fact: r.fact })),
+      considered: rows
+        .slice(0, 4)
+        .map((r) => ({ spell: r.spell.name_key, ap: r.spell.ap, at: r.cell, value: r.value, fact: r.fact })),
       chose: pick ? `${pick.spell.name_key} → ${pick.cell.x},${pick.cell.y}` : 'end turn',
       why: pick
         ? `highest value legal cast (${pick.value}) for ${pick.spell.ap} AP`

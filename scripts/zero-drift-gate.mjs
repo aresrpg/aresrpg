@@ -149,6 +149,7 @@ const SIM_ONLY = [
 
   ['packages/frontend/src/simulator/fight-hud.css', 'LAYER'],
 
+  ['packages/frontend/src/game/dev/dev_bot_seam.js', 'DEV'],
   ['packages/frontend/src/game/dev/dev_cast.js', 'DEV'],
   ['packages/frontend/src/game/dev/dev_probe.js', 'DEV'],
   ['packages/frontend/src/simulator/dev_seams.js', 'DEV'],

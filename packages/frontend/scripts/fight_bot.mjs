@@ -34,7 +34,6 @@ import { fileURLToPath } from 'node:url'
 
 import { chromium } from '@playwright/test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-
 import { assert_traps_sprung, assert_turn, plan_turn, summarise } from '@aresrpg/fight/bot'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -73,9 +72,15 @@ const log = (...args) => console.log(...args)
 
 const seam_client = (page) => ({
   /** Are the bot's doors registered yet? (The seam tree is lazily imported behind the DEV gate.) */
-  ready: () => page.evaluate(() => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function'),
+  ready: () =>
+    page.evaluate(() => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function'),
   /** Every DEV seam this build exposes — the enumeration the brief asks a driver to take, not assume. */
-  seams: () => page.evaluate(() => Object.keys(window).filter((k) => k.startsWith('__ARES_DEV_')).sort()),
+  seams: () =>
+    page.evaluate(() =>
+      Object.keys(window)
+        .filter((k) => k.startsWith('__ARES_DEV_'))
+        .sort()
+    ),
   read: () => page.evaluate(() => window.__ARES_DEV_READ()),
   /** Commit one whole player turn. `expect` riders are stripped: the seam takes kind/cell/spell_id only. */
   commit: (actions) =>
@@ -108,16 +113,25 @@ const pick_mob = async () => {
   const manifest = JSON.parse(readFileSync(resolve(FRONTEND, 'public/asset_manifest.json'), 'utf8'))
   const pin = JSON.parse(readFileSync(resolve(REPO, 'packages/move/scripts/out/seed_manifest.json'), 'utf8'))
   const response = await fetch(`${manifest.aggregator}/data/world_corpus.json`)
-  if (!response.ok) throw new Error(`world corpus unreachable (HTTP ${response.status}) — the bot needs published content`)
+  if (!response.ok)
+    throw new Error(`world corpus unreachable (HTTP ${response.status}) — the bot needs published content`)
   const blob = await response.json()
   const rows = Object.values(blob)
     .flatMap((world) => world.mobs ?? [])
     // `is_listed_mob_role` — protectors guard gatherables and are not roster mobs.
     .filter((mob) => mob.role !== 'protector' && pin.mobs?.[mob.key]?.id)
-    .map((mob) => ({ key: mob.key, id: pin.mobs[mob.key].id, name: pin.mobs[mob.key].name ?? mob.key, level: Number(mob.minLevel ?? mob.level ?? 1) }))
+    .map((mob) => ({
+      key: mob.key,
+      id: pin.mobs[mob.key].id,
+      name: pin.mobs[mob.key].name ?? mob.key,
+      level: Number(mob.minLevel ?? mob.level ?? 1),
+    }))
     .sort((a, b) => a.level - b.level || a.key.localeCompare(b.key))
   const mob = rows[SCENARIO.mob_rank]
-  if (!mob) throw new Error(`the published corpus lists ${rows.length} fightable mobs — rank ${SCENARIO.mob_rank} is out of range`)
+  if (!mob)
+    throw new Error(
+      `the published corpus lists ${rows.length} fightable mobs — rank ${SCENARIO.mob_rank} is out of range`
+    )
   return { ...mob, level: SCENARIO.mob_level }
 }
 
@@ -148,7 +162,8 @@ const seed_setup = async (page, mob) => {
     const derived = board_of(seed, 0)
     return { ally: [...derived.start_cells_a], enemy: [...derived.start_cells_b] }
   }, SCENARIO.seed)
-  if (!board.ally.length || !board.enemy.length) throw new Error(`seed ${SCENARIO.seed} derives a board with no start bands`)
+  if (!board.ally.length || !board.enemy.length)
+    throw new Error(`seed ${SCENARIO.seed} derives a board with no start bands`)
 
   await page.evaluate(
     async ({ seed, ally_cell, enemy_cell, mob_id, mob_level, class_id, level }) => {
@@ -211,7 +226,9 @@ const cell_str = (c) => (c ? `${c.x},${c.y}` : '—')
 /** Both pool clocks for one fighter — the presented bar and the committed anchor. */
 const pick_pools = (read, id) => {
   const f = read?.fighters?.find((row) => row.id === id)
-  return f ? { ap: f.ap, mp: f.mp, ap_committed: f.ap_committed, mp_committed: f.mp_committed, traps: read.my_traps } : null
+  return f
+    ? { ap: f.ap, mp: f.mp, ap_committed: f.ap_committed, mp_committed: f.mp_committed, traps: read.my_traps }
+    : null
 }
 
 /** The bar table — one line per assertion, the sheet's human face. */
@@ -219,7 +236,12 @@ const print_sheet = (sheet) => {
   log('')
   log(`  BAR SHEET — ${sheet.scenario.name}  (seed ${sheet.scenario.seed}, policy seed ${sheet.scenario.policy_seed})`)
   log('  ' + '─'.repeat(112))
-  log('  ' + ['TURN', 'ACTION', 'AT', 'CHECK', 'EXPECTED', 'ACTUAL', ''].map((h, i) => h.padEnd([6, 22, 8, 44, 14, 14, 4][i])).join(''))
+  log(
+    '  ' +
+      ['TURN', 'ACTION', 'AT', 'CHECK', 'EXPECTED', 'ACTUAL', '']
+        .map((h, i) => h.padEnd([6, 22, 8, 44, 14, 14, 4][i]))
+        .join('')
+  )
   log('  ' + '─'.repeat(112))
   for (const turn of sheet.turns)
     for (const row of turn.rows)
@@ -239,14 +261,18 @@ const print_sheet = (sheet) => {
       )
   log('  ' + '─'.repeat(112))
   const { checks, passed, failed, verdict } = sheet.summary
-  log(`  ${verdict} — ${passed}/${checks} checks passed, ${failed} failed · outcome: ${sheet.outcome} · ${sheet.turns.length} bot turns`)
+  log(
+    `  ${verdict} — ${passed}/${checks} checks passed, ${failed} failed · outcome: ${sheet.outcome} · ${sheet.turns.length} bot turns`
+  )
   log('')
 }
 
 mkdirSync(OUT_DIR, { recursive: true })
 
 const mob = await pick_mob()
-log(`[bot] scenario ${SCENARIO.name}: ${SCENARIO.class_id} lvl ${SCENARIO.level} vs ${mob.name} lvl ${mob.level} (${mob.key})`)
+log(
+  `[bot] scenario ${SCENARIO.name}: ${SCENARIO.class_id} lvl ${SCENARIO.level} vs ${mob.name} lvl ${mob.level} (${mob.key})`
+)
 
 const dev_server = spawn('bunx', ['vite', '--port', String(PORT), '--strictPort'], {
   cwd: FRONTEND,
@@ -301,7 +327,11 @@ try {
   // scenario lives in IndexedDB — whereas reloading AFTER START would throw away a live fight.
   for (let attempt = 1; attempt <= 3 && !(await client.ready()); attempt++) {
     await page
-      .waitForFunction(() => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function', null, { timeout: 45_000, polling: 1000 })
+      .waitForFunction(
+        () => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function',
+        null,
+        { timeout: 45_000, polling: 1000 }
+      )
       .catch(() => {})
     if (await client.ready()) break
     log(`[bot] the drive seams did not register on mount ${attempt} — reloading`)
@@ -314,12 +344,15 @@ try {
 
   const start = page.getByRole('button', { name: /START FIGHT/i }).first()
   await start.waitFor({ timeout: 120_000 })
-  if (!(await start.isEnabled())) throw new Error('START FIGHT is disabled — the scenario did not hydrate (roster or mob pick dropped)')
+  if (!(await start.isEnabled()))
+    throw new Error('START FIGHT is disabled — the scenario did not hydrate (roster or mob pick dropped)')
   await start.click()
 
   const opened = await wait_for(client, (r) => r.my_id && r.fighters.length > 1, { timeout_ms: 120_000 })
   if (!opened) throw new Error('the fight never opened (no seat in the read)')
-  log(`[bot] fight ${opened.fight_id} open — ${opened.fighters.length} fighters, ${opened.spellbook.length} castable spells`)
+  log(
+    `[bot] fight ${opened.fight_id} open — ${opened.fighters.length} fighters, ${opened.spellbook.length} castable spells`
+  )
 
   // THE BOT'S OWN MEMORY — what the snapshot cannot tell it. `casts` is the cooldown ledger (a card played
   // two turns ago is not playable again until its authored cooldown elapses); `blocked` holds any spell the
@@ -332,7 +365,11 @@ try {
   let races = 0
 
   for (let turn = 1; turn <= SCENARIO.max_turns; turn++) {
-    const mine = await wait_for(client, (r) => r.winner !== -1 || (r.active_id === r.my_id && !r.busy && !r.presenting), { timeout_ms: 120_000 })
+    const mine = await wait_for(
+      client,
+      (r) => r.winner !== -1 || (r.active_id === r.my_id && !r.busy && !r.presenting),
+      { timeout_ms: 120_000 }
+    )
     if (!mine) throw new Error(`turn ${turn}: the bot never got the turn back (the fight stalled)`)
     if (mine.winner !== -1) {
       sheet.outcome = mine.winner === 0 ? 'victory' : mine.winner === 1 ? 'defeat' : 'draw'
@@ -364,7 +401,9 @@ try {
       }
     // A trap proves itself the turn something walks into it, not the turn it was cast — so the ledger of
     // armed cells is carried forward and checked against every later board.
-    const sprung = result.ok ? assert_traps_sprung(armed_traps, result.before, result.after) : { rows: [], remaining: armed_traps }
+    const sprung = result.ok
+      ? assert_traps_sprung(armed_traps, result.before, result.after)
+      : { rows: [], remaining: armed_traps }
     armed_traps = sprung.remaining
     if (result.ok)
       for (const action of plan.actions)
@@ -379,7 +418,9 @@ try {
       mp: me.mp,
       hp: `${me.hp_committed}/${me.hp_max}`,
       at: me.cell_committed,
-      enemies: mine.fighters.filter((f) => f.team !== me.team && f.alive_committed).map((f) => ({ id: f.id, at: f.cell_committed, hp: f.hp_committed })),
+      enemies: mine.fighters
+        .filter((f) => f.team !== me.team && f.alive_committed)
+        .map((f) => ({ id: f.id, at: f.cell_committed, hp: f.hp_committed })),
       decisions: plan.decisions,
       actions: plan.actions,
       committed: { ok: result.ok, error: result.error ?? null },
@@ -400,7 +441,8 @@ try {
 
   if (sheet.outcome === 'not reached') {
     const last = await client.read().catch(() => null)
-    if (last?.ok && last.winner !== -1) sheet.outcome = last.winner === 0 ? 'victory' : last.winner === 1 ? 'defeat' : 'draw'
+    if (last?.ok && last.winner !== -1)
+      sheet.outcome = last.winner === 0 ? 'victory' : last.winner === 1 ? 'defeat' : 'draw'
   }
 } catch (error) {
   sheet.errors.push(String(error?.stack ?? error))

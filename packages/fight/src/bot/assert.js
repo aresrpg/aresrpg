@@ -19,7 +19,9 @@ const same_cell = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y
 
 /** Cells print as `x,y`; everything else prints as itself. A sheet full of `[object Object]` proves nothing. */
 const fmt = (value) =>
-  value && typeof value === 'object' && Number.isFinite(value.x) && Number.isFinite(value.y) ? `${value.x},${value.y}` : String(value)
+  value && typeof value === 'object' && Number.isFinite(value.x) && Number.isFinite(value.y)
+    ? `${value.x},${value.y}`
+    : String(value)
 
 const row = (index, action, check, expected, actual, pass, note = '') => ({
   index,
@@ -62,7 +64,14 @@ const assert_move = (index, action, before, after) => {
   const landed = same_cell(me_after?.cell_committed, action.cell)
   const budget = budget_mp(me_before)
   return [
-    row(index, action, 'the seat stands on the cell it moved to', action.cell, me_after?.cell_committed ?? null, landed),
+    row(
+      index,
+      action,
+      'the seat stands on the cell it moved to',
+      action.cell,
+      me_after?.cell_committed ?? null,
+      landed
+    ),
     row(
       index,
       action,
@@ -84,7 +93,14 @@ const assert_damage = (index, action, before, after) => {
   ]
   if (action.expect.kill)
     rows.push(
-      row(index, action, 'a lethal cast kills the target', 'dead', target_after?.alive_committed ? 'alive' : 'dead', !target_after?.alive_committed)
+      row(
+        index,
+        action,
+        'a lethal cast kills the target',
+        'dead',
+        target_after?.alive_committed ? 'alive' : 'dead',
+        !target_after?.alive_committed
+      )
     )
   return rows
 }
@@ -123,8 +139,15 @@ const assert_push = (index, action, before, after) => {
   ]
   if (moved != null && moved < wanted)
     rows.push(
-      row(index, action, 'a short push collided (and therefore hurt)', 'HP lost on impact', collided ? 'HP lost' : 'no HP lost', collided,
-        `pushed ${moved} of ${wanted} cells`)
+      row(
+        index,
+        action,
+        'a short push collided (and therefore hurt)',
+        'HP lost on impact',
+        collided ? 'HP lost' : 'no HP lost',
+        collided,
+        `pushed ${moved} of ${wanted} cells`
+      )
     )
   return rows
 }
@@ -138,7 +161,14 @@ const assert_status = (index, action, before, after) => {
   const rows = [row(index, action, 'a status row appeared on the target', '≥ 1 new status', gained, gained >= 1)]
   for (const kind of action.expect.kinds ?? [])
     rows.push(
-      row(index, action, `the ${kind} status is riding the target`, `kind ${kind} present`, after_kinds.join(',') || 'none', after_kinds.includes(Number(kind)))
+      row(
+        index,
+        action,
+        `the ${kind} status is riding the target`,
+        `kind ${kind} present`,
+        after_kinds.join(',') || 'none',
+        after_kinds.includes(Number(kind))
+      )
     )
   return rows
 }
@@ -155,10 +185,19 @@ const assert_status = (index, action, before, after) => {
  */
 const assert_trap = (index, action, before, after) => {
   const at = action.expect.cell
-  const standing = (after.fighters ?? []).find((f) => f.alive_committed && f.cell_committed?.x === at.x && f.cell_committed?.y === at.y)
+  const standing = (after.fighters ?? []).find(
+    (f) => f.alive_committed && f.cell_committed?.x === at.x && f.cell_committed?.y === at.y
+  )
   return [
-    row(index, action, 'the authority accepted the trap on a free cell', `${at.x},${at.y} free and untrapped`, standing ? `${standing.id} stands there` : 'accepted', !standing,
-      'placement is not published client-side — the spring row (below, on a later turn) is this trap’s delta'),
+    row(
+      index,
+      action,
+      'the authority accepted the trap on a free cell',
+      `${at.x},${at.y} free and untrapped`,
+      standing ? `${standing.id} stands there` : 'accepted',
+      !standing,
+      'placement is not published client-side — the spring row (below, on a later turn) is this trap’s delta'
+    ),
   ]
 }
 
@@ -187,7 +226,14 @@ export const assert_traps_sprung = (armed, before, after) => {
     const was = find(before, entered.id)
     const hurt = Number(was?.hp_committed ?? 0) - Number(find(after, entered.id)?.hp_committed ?? 0)
     rows.push(
-      row(0, { kind: 1, spell_key: trap.spell_key, cell: trap.cell }, `the trap armed on turn ${trap.turn} sprang when ${entered.id} stepped on it`, 'HP lost on entry', hurt, hurt >= 1)
+      row(
+        0,
+        { kind: 1, spell_key: trap.spell_key, cell: trap.cell },
+        `the trap armed on turn ${trap.turn} sprang when ${entered.id} stepped on it`,
+        'HP lost on entry',
+        hurt,
+        hurt >= 1
+      )
     )
   }
   return { rows, remaining }
@@ -211,13 +257,32 @@ const ACTION_ASSERTIONS = {
  */
 export const assert_turn = (plan, result) => {
   if (!result.ok)
-    return [row(0, null, 'the turn committed', 'ok', result.error ?? 'refused', false, 'every action assertion is moot — the turn never landed')]
+    return [
+      row(
+        0,
+        null,
+        'the turn committed',
+        'ok',
+        result.error ?? 'refused',
+        false,
+        'every action assertion is moot — the turn never landed'
+      ),
+    ]
   const { before, after } = result
   const rows = plan.actions.flatMap((action, index) => {
     const check = ACTION_ASSERTIONS[action.expect?.type]
     return check
       ? check(index, action, before, after)
-      : [row(index, action, 'the bot knows how to check this action', 'a known expectation type', action.expect?.type ?? 'none', false)]
+      : [
+          row(
+            index,
+            action,
+            'the bot knows how to check this action',
+            'a known expectation type',
+            action.expect?.type ?? 'none',
+            false
+          ),
+        ]
   })
   // THE BUDGET ROW — actions commit as one batch, so AP is the turn's own fact, not any single cast's. It
   // reads the turn-start budget (see the two-clocks note): a batch over budget is refused by the authority,
@@ -226,8 +291,15 @@ export const assert_turn = (plan, result) => {
   const billed = plan.actions.reduce((sum, a) => sum + Number(a.ap_cost ?? 0), 0)
   return [
     ...rows,
-    row(plan.actions.length, null, 'the committed casts fitted the AP the seat had', `≤ ${budget} AP`, `${billed} AP`, billed <= budget,
-      'the leftover pool is not published post-commit — an over-budget batch is refused by the authority'),
+    row(
+      plan.actions.length,
+      null,
+      'the committed casts fitted the AP the seat had',
+      `≤ ${budget} AP`,
+      `${billed} AP`,
+      billed <= budget,
+      'the leftover pool is not published post-commit — an over-budget batch is refused by the authority'
+    ),
   ]
 }
 

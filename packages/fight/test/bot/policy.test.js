@@ -40,7 +40,18 @@ const fighter = (id, team, cell, over = {}) => ({
   ...over,
 })
 
-const effect = (kind, over = {}) => ({ kind, kind_id: null, base: 0, chance: 0, turns: 0, area_shape: 'POINT', area_size: 0, element: null, target_filter: 0, ...over })
+const effect = (kind, over = {}) => ({
+  kind,
+  kind_id: null,
+  base: 0,
+  chance: 0,
+  turns: 0,
+  area_shape: 'POINT',
+  area_size: 0,
+  element: null,
+  target_filter: 0,
+  ...over,
+})
 
 const spell = (id, over = {}) => ({
   id,
@@ -93,7 +104,10 @@ describe('policy — reading the board like a player', () => {
     const plan = plan_turn(
       read({
         fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 7 })],
-        spellbook: [spell('weak', { ap: 2, effects: [effect('DAMAGE', { base: 5 })] }), spell('strong', { ap: 3, effects: [effect('DAMAGE', { base: 40 })] })],
+        spellbook: [
+          spell('weak', { ap: 2, effects: [effect('DAMAGE', { base: 5 })] }),
+          spell('strong', { ap: 3, effects: [effect('DAMAGE', { base: 40 })] }),
+        ],
       })
     )
     const casts = plan.actions.filter((a) => a.kind === 1)
@@ -105,8 +119,15 @@ describe('policy — reading the board like a player', () => {
   test('spends the AP budget across DIFFERENT facts — two mobs, two casts', () => {
     const plan = plan_turn(
       read({
-        fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 7 }), fighter('mob-1', 1, { x: 7, y: 5 })],
-        spellbook: [spell('a', { ap: 3, effects: [effect('DAMAGE', { base: 40 })] }), spell('b', { ap: 3, effects: [effect('DAMAGE', { base: 20 })] })],
+        fighters: [
+          fighter(ME, 0, { x: 5, y: 5 }),
+          fighter('mob-0', 1, { x: 5, y: 7 }),
+          fighter('mob-1', 1, { x: 7, y: 5 }),
+        ],
+        spellbook: [
+          spell('a', { ap: 3, effects: [effect('DAMAGE', { base: 40 })] }),
+          spell('b', { ap: 3, effects: [effect('DAMAGE', { base: 20 })] }),
+        ],
       })
     )
     const casts = plan.actions.filter((a) => a.kind === 1)
@@ -161,12 +182,22 @@ describe('policy — reading the board like a player', () => {
       range: [0, 0],
       effects: [effect('ALTER_STAT', { kind_id: 9, base: 30, turns: 3, target_filter: TF_ONLY_CASTER })],
     })
-    const fresh = plan_turn(read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 9 })], spellbook: [buff] }))
+    const fresh = plan_turn(
+      read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 9 })], spellbook: [buff] })
+    )
     expect(fresh.actions.find((a) => a.spell_id === 'guard')).toBeDefined()
 
     const already = plan_turn(
       read({
-        fighters: [fighter(ME, 0, { x: 5, y: 5 }, { effects: [{ kind: 9, remaining_turns: 2, value: 30, stat: 1, element: null }] }), fighter('mob-0', 1, { x: 5, y: 9 })],
+        fighters: [
+          fighter(
+            ME,
+            0,
+            { x: 5, y: 5 },
+            { effects: [{ kind: 9, remaining_turns: 2, value: 30, stat: 1, element: null }] }
+          ),
+          fighter('mob-0', 1, { x: 5, y: 9 }),
+        ],
         spellbook: [buff],
       })
     )
@@ -174,8 +205,17 @@ describe('policy — reading the board like a player', () => {
   })
 
   test('drops a trap on the mob’s approach path, never under itself or on an already-trapped cell', () => {
-    const trap = spell('snare', { ap: 3, range: [1, 6], free_cell: true, line_of_sight: false, effects: [effect('PLACE_TRAP', { base: 25 })] })
-    const board = { fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 10 })], spellbook: [trap] }
+    const trap = spell('snare', {
+      ap: 3,
+      range: [1, 6],
+      free_cell: true,
+      line_of_sight: false,
+      effects: [effect('PLACE_TRAP', { base: 25 })],
+    })
+    const board = {
+      fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 10 })],
+      spellbook: [trap],
+    }
     const plan = plan_turn(read(board))
     const cast = plan.actions.find((a) => a.spell_id === 'snare')
     expect(cast).toBeDefined()
@@ -185,13 +225,18 @@ describe('policy — reading the board like a player', () => {
     expect(cast.cell.y).toBeLessThan(10)
 
     const again = plan_turn(read({ ...board, my_traps: [encode(cast.cell.x, cast.cell.y)] }))
-    expect(again.actions.find((a) => a.expect?.cell && a.expect.cell.x === cast.cell.x && a.expect.cell.y === cast.cell.y)).toBeUndefined()
+    expect(
+      again.actions.find((a) => a.expect?.cell && a.expect.cell.x === cast.cell.x && a.expect.cell.y === cast.cell.y)
+    ).toBeUndefined()
   })
 
   test('a push is planned with its direction and distance, ready to be verified', () => {
     const plan = plan_turn(
       read({
-        fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 8, y: 5 }, { hp_committed: 400, hp_max: 400 })],
+        fighters: [
+          fighter(ME, 0, { x: 5, y: 5 }),
+          fighter('mob-0', 1, { x: 8, y: 5 }, { hp_committed: 400, hp_max: 400 }),
+        ],
         spellbook: [spell('shove', { ap: 3, range: [1, 6], effects: [effect('PUSH', { base: 3 })] })],
       })
     )
@@ -204,8 +249,14 @@ describe('policy — reading the board like a player', () => {
   test('never plans two actions claiming the same assertable fact', () => {
     const plan = plan_turn(
       read({
-        fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap_committed: 12 }), fighter('mob-0', 1, { x: 5, y: 7 }, { hp_committed: 900, hp_max: 900 })],
-        spellbook: [spell('a', { ap: 2, effects: [effect('DAMAGE', { base: 10 })] }), spell('b', { ap: 2, effects: [effect('DAMAGE', { base: 9 })] })],
+        fighters: [
+          fighter(ME, 0, { x: 5, y: 5 }, { ap_committed: 12 }),
+          fighter('mob-0', 1, { x: 5, y: 7 }, { hp_committed: 900, hp_max: 900 }),
+        ],
+        spellbook: [
+          spell('a', { ap: 2, effects: [effect('DAMAGE', { base: 10 })] }),
+          spell('b', { ap: 2, effects: [effect('DAMAGE', { base: 9 })] }),
+        ],
       })
     )
     const facts = plan.actions.filter((a) => a.kind === 1).map((a) => `${a.expect.type}:${a.expect.target_id}`)
@@ -214,7 +265,11 @@ describe('policy — reading the board like a player', () => {
 
   test('deterministic: the same seed replays the same turn', () => {
     const board = {
-      fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 8 }), fighter('mob-1', 1, { x: 8, y: 5 })],
+      fighters: [
+        fighter(ME, 0, { x: 5, y: 5 }),
+        fighter('mob-0', 1, { x: 5, y: 8 }),
+        fighter('mob-1', 1, { x: 8, y: 5 }),
+      ],
       spellbook: [spell('bolt')],
     }
     const a = plan_turn(read(board), { seed: 7 })
@@ -231,10 +286,25 @@ describe('policy — reading the board like a player', () => {
 
 describe('assertions — a success without a delta is a FAIL, never a warning', () => {
   const cast_plan = {
-    actions: [{ kind: 1, cell: { x: 5, y: 7 }, spell_id: 'bolt', spell_key: 'bolt', ap_cost: 3, from: { x: 5, y: 5 }, expect: { type: 'damage', target_id: 'mob-0', min_damage: 1, kill: false } }],
+    actions: [
+      {
+        kind: 1,
+        cell: { x: 5, y: 7 },
+        spell_id: 'bolt',
+        spell_key: 'bolt',
+        ap_cost: 3,
+        from: { x: 5, y: 5 },
+        expect: { type: 'damage', target_id: 'mob-0', min_damage: 1, kill: false },
+      },
+    ],
   }
   const snapshot = (mob_hp, my_ap) =>
-    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap: my_ap, ap_committed: my_ap }), fighter('mob-0', 1, { x: 5, y: 7 }, { hp_committed: mob_hp })] })
+    read({
+      fighters: [
+        fighter(ME, 0, { x: 5, y: 5 }, { ap: my_ap, ap_committed: my_ap }),
+        fighter('mob-0', 1, { x: 5, y: 7 }, { hp_committed: mob_hp }),
+      ],
+    })
 
   test('a cast that changed nothing fails, even though the commit said ok', () => {
     const rows = assert_turn(cast_plan, { ok: true, before: snapshot(100, 6), after: snapshot(100, 3) })
@@ -253,42 +323,82 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
   })
 
   test('a refused turn fails once, loudly, instead of reporting per-action noise', () => {
-    const rows = assert_turn(cast_plan, { ok: false, error: 'the sim refused it (range, line of sight, AP, or a cast limit)' })
+    const rows = assert_turn(cast_plan, {
+      ok: false,
+      error: 'the sim refused it (range, line of sight, AP, or a cast limit)',
+    })
     expect(rows).toHaveLength(1)
     expect(rows[0].pass).toBe(false)
     expect(rows[0].actual).toContain('the sim refused it')
   })
 
   const push_plan = (cells) => ({
-    actions: [{ kind: 1, cell: { x: 8, y: 5 }, spell_id: 'shove', spell_key: 'shove', ap_cost: 3, from: { x: 5, y: 5 }, expect: { type: 'push', target_id: 'mob-0', cells, from: { x: 5, y: 5 } } }],
+    actions: [
+      {
+        kind: 1,
+        cell: { x: 8, y: 5 },
+        spell_id: 'shove',
+        spell_key: 'shove',
+        ap_cost: 3,
+        from: { x: 5, y: 5 },
+        expect: { type: 'push', target_id: 'mob-0', cells, from: { x: 5, y: 5 } },
+      },
+    ],
   })
   const push_board = (mob_cell, mob_hp, my_ap = 3) =>
-    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap: my_ap, ap_committed: my_ap }), fighter('mob-0', 1, mob_cell, { hp_committed: mob_hp })] })
+    read({
+      fighters: [
+        fighter(ME, 0, { x: 5, y: 5 }, { ap: my_ap, ap_committed: my_ap }),
+        fighter('mob-0', 1, mob_cell, { hp_committed: mob_hp }),
+      ],
+    })
 
   test('a push that landed its full distance in the right direction passes', () => {
-    const rows = assert_turn(push_plan(3), { ok: true, before: push_board({ x: 8, y: 5 }, 100, 6), after: push_board({ x: 11, y: 5 }, 100, 3) })
+    const rows = assert_turn(push_plan(3), {
+      ok: true,
+      before: push_board({ x: 8, y: 5 }, 100, 6),
+      after: push_board({ x: 11, y: 5 }, 100, 3),
+    })
     expect(summarise(rows).verdict).toBe('PASS')
   })
 
   test('a push that did not move the target fails', () => {
-    const rows = assert_turn(push_plan(3), { ok: true, before: push_board({ x: 8, y: 5 }, 100, 6), after: push_board({ x: 8, y: 5 }, 100, 3) })
+    const rows = assert_turn(push_plan(3), {
+      ok: true,
+      before: push_board({ x: 8, y: 5 }, 100, 6),
+      after: push_board({ x: 8, y: 5 }, 100, 3),
+    })
     expect(rows.find((r) => r.check.includes('push direction')).pass).toBe(false)
   })
 
   test('a push that moved the WRONG way fails', () => {
-    const rows = assert_turn(push_plan(3), { ok: true, before: push_board({ x: 8, y: 5 }, 100, 6), after: push_board({ x: 6, y: 5 }, 100, 3) })
+    const rows = assert_turn(push_plan(3), {
+      ok: true,
+      before: push_board({ x: 8, y: 5 }, 100, 6),
+      after: push_board({ x: 6, y: 5 }, 100, 3),
+    })
     expect(rows.find((r) => r.check.includes('push direction')).pass).toBe(false)
   })
 
   test('a SHORT push is only legal when it collided — and a collision hurts', () => {
-    const stopped_free = assert_turn(push_plan(3), { ok: true, before: push_board({ x: 8, y: 5 }, 100, 6), after: push_board({ x: 9, y: 5 }, 100, 3) })
+    const stopped_free = assert_turn(push_plan(3), {
+      ok: true,
+      before: push_board({ x: 8, y: 5 }, 100, 6),
+      after: push_board({ x: 9, y: 5 }, 100, 3),
+    })
     expect(stopped_free.find((r) => r.check.includes('collided')).pass).toBe(false)
-    const stopped_hurt = assert_turn(push_plan(3), { ok: true, before: push_board({ x: 8, y: 5 }, 100, 6), after: push_board({ x: 9, y: 5 }, 85, 3) })
+    const stopped_hurt = assert_turn(push_plan(3), {
+      ok: true,
+      before: push_board({ x: 8, y: 5 }, 100, 6),
+      after: push_board({ x: 9, y: 5 }, 85, 3),
+    })
     expect(summarise(stopped_hurt).verdict).toBe('PASS')
   })
 
   test('a move that ended somewhere else fails on the cell', () => {
-    const plan = { actions: [{ kind: 0, cell: { x: 5, y: 8 }, expect: { type: 'move', cell: { x: 5, y: 8 }, mp_cost: 3 } }] }
+    const plan = {
+      actions: [{ kind: 0, cell: { x: 5, y: 8 }, expect: { type: 'move', cell: { x: 5, y: 8 }, mp_cost: 3 } }],
+    }
     const before = read({ fighters: [fighter(ME, 0, { x: 5, y: 5 })] })
     const after = read({ fighters: [fighter(ME, 0, { x: 5, y: 6 }, { mp: 2, mp_committed: 2 })] })
     const rows = assert_turn(plan, { ok: true, before, after })
@@ -296,10 +406,14 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
   })
 
   test('a walk longer than the seat’s MP fails', () => {
-    const plan = { actions: [{ kind: 0, cell: { x: 5, y: 9 }, expect: { type: 'move', cell: { x: 5, y: 9 }, mp_cost: 4 } }] }
+    const plan = {
+      actions: [{ kind: 0, cell: { x: 5, y: 9 }, expect: { type: 'move', cell: { x: 5, y: 9 }, mp_cost: 4 } }],
+    }
     const before = read({ fighters: [fighter(ME, 0, { x: 5, y: 5 })] })
     const after = read({ fighters: [fighter(ME, 0, { x: 5, y: 9 })] })
-    expect(assert_turn(plan, { ok: true, before, after }).find((r) => r.check.includes('fitted the MP')).pass).toBe(false)
+    expect(assert_turn(plan, { ok: true, before, after }).find((r) => r.check.includes('fitted the MP')).pass).toBe(
+      false
+    )
   })
 })
 
