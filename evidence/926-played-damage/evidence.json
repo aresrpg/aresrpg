@@ -1,0 +1,1491 @@
+{
+  "head": "2c7ba64a",
+  "url": "http://localhost:5280/simulator?dev&fighttrace=1",
+  "rounds": [
+    {
+      "round": 2,
+      "target": "Alley Bunny",
+      "predicted": "−5",
+      "armed_index": 1,
+      "armed_label": "Warcleave",
+      "hover": {
+        "pre": "Alley Bunny(10 −5)",
+        "post": "Alley Bunny(5)",
+        "committed": "Alley Bunny(5)"
+      },
+      "card_hp": {
+        "pre": "10",
+        "post": "10",
+        "committed": "5"
+      },
+      "damage_held": true,
+      "pointer_moved": true,
+      "pointer_moved_ms": 505,
+      "active_before": "QAKNIGHT",
+      "active_after": "Alley Bunny",
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "5",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "69",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        }
+      ],
+      "trace_slice": [
+        {
+          "sequence": 6,
+          "at_ms": 1785031017452,
+          "event": "flush_started",
+          "background": false,
+          "move_count": 0,
+          "cast_count": 1,
+          "dropped": 0
+        },
+        {
+          "sequence": 7,
+          "at_ms": 1785031017461,
+          "event": "flush_finished",
+          "background": false,
+          "ok": true
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "target": "Alley Bunny",
+      "predicted": "−5",
+      "armed_index": 1,
+      "armed_label": "Warcleave",
+      "hover": {
+        "pre": "Alley Bunny(5 −5)KILLS THE MOB",
+        "post": null,
+        "committed": null
+      },
+      "card_hp": {
+        "pre": "5",
+        "post": "5",
+        "committed": "0"
+      },
+      "damage_held": true,
+      "pointer_moved": true,
+      "pointer_moved_ms": 504,
+      "active_before": "QAKNIGHT",
+      "active_after": "Alley Bunny",
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "0",
+          "active": false,
+          "dead": true,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "68",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        }
+      ],
+      "trace_slice": [
+        {
+          "sequence": 8,
+          "at_ms": 1785031045302,
+          "event": "flush_started",
+          "background": false,
+          "move_count": 0,
+          "cast_count": 1,
+          "dropped": 0
+        },
+        {
+          "sequence": 9,
+          "at_ms": 1785031045311,
+          "event": "flush_finished",
+          "background": false,
+          "ok": true
+        }
+      ]
+    }
+  ],
+  "final": {
+    "spellbar": true,
+    "vitals_hp": "5870",
+    "sockets": [
+      {
+        "key": "`",
+        "label": "Bare Hands",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "key": "1",
+        "label": "Warcleave",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "key": "2",
+        "label": "Vault",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "key": "3",
+        "label": "Oathblade",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "key": "4",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "key": "5",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "key": "6",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "key": "7",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "key": "8",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "key": "9",
+        "label": "",
+        "empty": true,
+        "armed": false
+      }
+    ],
+    "armed_index": -1,
+    "turns": [
+      {
+        "name": "Alley Bunny",
+        "hp": "0",
+        "active": false,
+        "dead": true,
+        "team": "enemy"
+      },
+      {
+        "name": "QAKNIGHT",
+        "hp": "58",
+        "active": true,
+        "dead": false,
+        "team": "ally"
+      },
+      {
+        "name": "Alley Bunny",
+        "hp": "10",
+        "active": false,
+        "dead": false,
+        "team": "enemy"
+      }
+    ],
+    "active": "QAKNIGHT",
+    "beats": 62,
+    "last_beats": [
+      {
+        "t": 1785031319950,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031321551,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031358571,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031359972,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031361574,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031387213,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031388614,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031390216,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      }
+    ],
+    "dialogs": [],
+    "picker": false
+  },
+  "casts_landed": 2,
+  "casts_persisted": 2,
+  "fight_trace": [
+    {
+      "sequence": 1,
+      "at_ms": 1785030956850,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 2,
+      "at_ms": 1785030956851,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 3,
+      "at_ms": 1785030956859,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 4,
+      "at_ms": 1785030991101,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 5,
+      "at_ms": 1785030991109,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 6,
+      "at_ms": 1785031017452,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 1,
+      "dropped": 0
+    },
+    {
+      "sequence": 7,
+      "at_ms": 1785031017461,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 8,
+      "at_ms": 1785031045302,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 1,
+      "dropped": 0
+    },
+    {
+      "sequence": 9,
+      "at_ms": 1785031045311,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 10,
+      "at_ms": 1785031085327,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 11,
+      "at_ms": 1785031085327,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 12,
+      "at_ms": 1785031085335,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 13,
+      "at_ms": 1785031112896,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 14,
+      "at_ms": 1785031112904,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 15,
+      "at_ms": 1785031152918,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 16,
+      "at_ms": 1785031152918,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 17,
+      "at_ms": 1785031152925,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 18,
+      "at_ms": 1785031181281,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 19,
+      "at_ms": 1785031181290,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 20,
+      "at_ms": 1785031221306,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 21,
+      "at_ms": 1785031221307,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 22,
+      "at_ms": 1785031221314,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 23,
+      "at_ms": 1785031249934,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 24,
+      "at_ms": 1785031249941,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 25,
+      "at_ms": 1785031289958,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 26,
+      "at_ms": 1785031289958,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 27,
+      "at_ms": 1785031289965,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 28,
+      "at_ms": 1785031318531,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 29,
+      "at_ms": 1785031318538,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 30,
+      "at_ms": 1785031358549,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 31,
+      "at_ms": 1785031358549,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 32,
+      "at_ms": 1785031358556,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 33,
+      "at_ms": 1785031387191,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 34,
+      "at_ms": 1785031387198,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    }
+  ],
+  "probe": {
+    "beats": [
+      {
+        "t": 1785030919821,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785030956877,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785030959879,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785030959879,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785030959879,
+        "kind": "move",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785030962880,
+        "kind": "arrival",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785030962880,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785030991123,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785030994124,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785030994124,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785030994124,
+        "kind": "move",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785030995504,
+        "kind": "arrival",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785030995504,
+        "kind": "cast",
+        "id": "mob-0",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785030996802,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785030997126,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031013651,
+        "kind": "cast",
+        "id": "sim_c1",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785031015192,
+        "kind": "damage",
+        "id": "mob-0",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785031017476,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785031020477,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785031020478,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785031020478,
+        "kind": "cast",
+        "id": "mob-0",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031021880,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031023482,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031041518,
+        "kind": "cast",
+        "id": "sim_c1",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785031043059,
+        "kind": "damage",
+        "id": "mob-0",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785031045326,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785031048329,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785031048329,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785031085351,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785031086731,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785031086731,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031088029,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031088354,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031112919,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031114320,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031115922,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031152940,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031154340,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031155943,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031181306,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031182707,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031184308,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031221331,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031222731,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031224334,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031249956,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031251356,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031252959,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031289982,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031291382,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031292985,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031318550,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031319950,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031321551,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031358571,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031359972,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031361574,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031387213,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031388614,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785031390216,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      }
+    ],
+    "vfx": [
+      {
+        "t": 1785030995505,
+        "caster": "mob-0",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031014637,
+        "caster": "sim_c1",
+        "spell_id": "senshi_warcleave",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031020478,
+        "caster": "mob-0",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031042501,
+        "caster": "sim_c1",
+        "spell_id": "senshi_warcleave",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031086732,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031112919,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031152941,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031181306,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031221331,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031249957,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031289982,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031318550,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031358571,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785031387213,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      }
+    ]
+  },
+  "console_errors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Access to fetch at 'https://fullnode.testnet.sui.io/sui.rpc.v2.LedgerService/GetServiceInfo' from origin 'http://localhost:5280' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "Failed to load resource: net::ERR_FAILED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "page_errors": [],
+  "log": [
+    "[01:54:37.782] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:37.786] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:37.791] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:38.076] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:38.534] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:40.572] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:43.079] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:48.080] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:50.183] signed in as the QA key · simulator board mounted",
+    "[01:54:50.695] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:52.209] character created",
+    "[01:54:52.776] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:53.081] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:53.527] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:54:58.083] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:03.085] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:04.343] mob start cell at (693,492) after 30 probes",
+    "[01:55:07.776] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:07.909] mob row \"Alley BunnynormalLV 1–4\" → MOB TEAM 1/6",
+    "[01:55:08.088] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:08.530] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:09.791] mob start cell at (745,518) after 33 probes",
+    "[01:55:10.573] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:13.089] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:13.349] mob row \"Alley BunnynormalLV 1–4\" → MOB TEAM 2/6",
+    "[01:55:15.562] ally start cell at (797,362) after 37 probes",
+    "[01:55:16.572] setup done — placed=true roster=1 mobs=2 (37 probes)",
+    "[01:55:16.718] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:16.835] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:16.855] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:18.091] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:22.776] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:23.093] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:23.531] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:25.577] fight up — sockets filled=4 turns=3 active=QAKNIGHT",
+    "[01:55:25.671] active seat: QAKNIGHT · turns: [{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"},{\"name\":\"QAKNIGHT\",\"hp\":\"70\",\"active\":true,\"dead\":false,\"team\":\"ally\"},{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"}]",
+    "[01:55:26.297] round 1: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:55:28.097] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:33.097] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:37.776] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:38.098] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:38.532] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:40.576] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:43.104] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:48.107] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:52.776] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:53.107] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:53.534] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:55:56.851] console: [fight-state] {sequence: 1, at_ms: 1785030956850, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:55:56.851] console: [fight-state] {sequence: 2, at_ms: 1785030956851, event: flush_started, background: true, move_count: 0}",
+    "[01:55:56.860] console: [fight-state] {sequence: 3, at_ms: 1785030956859, event: flush_finished, background: true, ok: true}",
+    "[01:55:57.223] round 1: no castable cell — walking toward 755,448",
+    "[01:55:58.109] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:00.400] round 1: numkey 1 did not arm — falling back to socket clicks",
+    "[01:56:03.111] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:07.782] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:08.115] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:08.536] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:10.578] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:13.116] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:18.117] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:22.782] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:23.118] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:23.540] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:28.121] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:31.081] round 1: NO CASTABLE TARGET — ending turn",
+    "[01:56:31.102] console: [fight-state] {sequence: 4, at_ms: 1785030991101, event: flush_started, background: false, move_count: 0}",
+    "[01:56:31.109] console: [fight-state] {sequence: 5, at_ms: 1785030991109, event: flush_finished, background: false, ok: true}",
+    "[01:56:33.124] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:37.758] round 2: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:56:37.847] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:38.125] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:38.542] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:40.582] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:43.127] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:48.128] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:52.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:53.130] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:53.258] round 2: PRE-CAST target=\"Alley Bunny\" hover={\"text\":\"Alley Bunny(10 −5)\",\"enemy\":true,\"dmg\":\"−5\"} card_hp=10",
+    "[01:56:53.544] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:56:57.330] round 2: POST-CAST hover={\"text\":\"Alley Bunny(5)\",\"enemy\":true,\"dmg\":\"\"} card_hp=10",
+    "[01:56:57.452] console: [fight-state] {sequence: 6, at_ms: 1785031017452, event: flush_started, background: false, move_count: 0}",
+    "[01:56:57.462] console: [fight-state] {sequence: 7, at_ms: 1785031017461, event: flush_finished, background: false, ok: true}",
+    "[01:56:57.494] round 2: END TURN pressed (active was QAKNIGHT) present=true",
+    "[01:56:57.999] round 2: TURN POINTER MOVED QAKNIGHT → Alley Bunny after 505ms",
+    "[01:56:58.133] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:00.563] round 2: POST-END-TURN hover={\"text\":\"Alley Bunny(5)\",\"enemy\":true,\"dmg\":\"\"} card_hp=5",
+    "[01:57:00.652] round 2: DAMAGE HELD THROUGH COMMIT = true (card 10 → 10 → 5)",
+    "[01:57:03.134] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:05.167] round 3: seat returned to QAKNIGHT",
+    "[01:57:05.784] round 3: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:57:07.781] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:08.135] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:08.546] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:10.584] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:13.137] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:18.139] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:21.214] round 3: PRE-CAST target=\"Alley Bunny\" hover={\"text\":\"Alley Bunny(5 −5)KILLS THE MOB\",\"enemy\":true,\"dmg\":\"−5\"} card_hp=5",
+    "[01:57:22.783] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:23.143] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:23.551] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:25.193] round 3: POST-CAST hover=null card_hp=5",
+    "[01:57:25.302] console: [fight-state] {sequence: 8, at_ms: 1785031045302, event: flush_started, background: false, move_count: 0}",
+    "[01:57:25.311] console: [fight-state] {sequence: 9, at_ms: 1785031045311, event: flush_finished, background: false, ok: true}",
+    "[01:57:25.334] round 3: END TURN pressed (active was QAKNIGHT) present=true",
+    "[01:57:25.838] round 3: TURN POINTER MOVED QAKNIGHT → Alley Bunny after 504ms",
+    "[01:57:28.144] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:28.315] round 3: POST-END-TURN hover=null card_hp=0",
+    "[01:57:28.315] round 3: DAMAGE HELD THROUGH COMMIT = true (card 5 → 5 → 0)",
+    "[01:57:31.443] round 4: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:57:33.145] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:37.781] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:38.146] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:38.553] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:40.585] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:43.148] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:48.152] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:52.781] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:53.152] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:53.554] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:57:58.153] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:03.155] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:05.328] console: [fight-state] {sequence: 10, at_ms: 1785031085327, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:58:05.328] console: [fight-state] {sequence: 11, at_ms: 1785031085327, event: flush_started, background: true, move_count: 0}",
+    "[01:58:05.335] console: [fight-state] {sequence: 12, at_ms: 1785031085335, event: flush_finished, background: true, ok: true}",
+    "[01:58:07.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:08.158] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:08.557] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:10.587] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:13.161] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:18.163] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:22.783] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:23.164] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:23.561] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:28.166] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:32.875] round 4: no castable cell — walking toward nothing",
+    "[01:58:32.875] round 4: NO CASTABLE TARGET — ending turn",
+    "[01:58:32.896] console: [fight-state] {sequence: 13, at_ms: 1785031112896, event: flush_started, background: false, move_count: 0}",
+    "[01:58:32.904] console: [fight-state] {sequence: 14, at_ms: 1785031112904, event: flush_finished, background: false, ok: true}",
+    "[01:58:33.173] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:37.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:38.173] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:38.562] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:39.562] round 5: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:58:40.588] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:43.174] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:48.178] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:52.783] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:53.180] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:53.564] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:58:58.182] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:03.184] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:07.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:08.187] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:08.566] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:10.589] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:12.918] console: [fight-state] {sequence: 15, at_ms: 1785031152918, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:59:12.918] console: [fight-state] {sequence: 16, at_ms: 1785031152918, event: flush_started, background: true, move_count: 0}",
+    "[01:59:12.925] console: [fight-state] {sequence: 17, at_ms: 1785031152925, event: flush_finished, background: true, ok: true}",
+    "[01:59:13.188] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:18.192] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:22.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:23.195] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:23.570] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:28.196] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:33.197] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:37.785] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:38.199] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:38.572] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:40.591] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:41.260] round 5: no castable cell — walking toward nothing",
+    "[01:59:41.261] round 5: NO CASTABLE TARGET — ending turn",
+    "[01:59:41.282] console: [fight-state] {sequence: 18, at_ms: 1785031181281, event: flush_started, background: false, move_count: 0}",
+    "[01:59:41.291] console: [fight-state] {sequence: 19, at_ms: 1785031181290, event: flush_finished, background: false, ok: true}",
+    "[01:59:43.200] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:47.947] round 6: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:59:48.202] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:52.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:53.205] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:53.574] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:59:58.207] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:03.209] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:07.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:08.211] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:08.576] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:10.593] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:13.214] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:18.215] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:21.307] console: [fight-state] {sequence: 20, at_ms: 1785031221306, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[02:00:21.307] console: [fight-state] {sequence: 21, at_ms: 1785031221307, event: flush_started, background: true, move_count: 0}",
+    "[02:00:21.314] console: [fight-state] {sequence: 22, at_ms: 1785031221314, event: flush_finished, background: true, ok: true}",
+    "[02:00:22.786] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:23.216] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:23.578] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:28.218] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:33.224] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:37.783] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:38.224] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:38.586] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:40.597] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:43.226] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:48.227] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:49.906] round 6: no castable cell — walking toward nothing",
+    "[02:00:49.906] round 6: NO CASTABLE TARGET — ending turn",
+    "[02:00:49.934] console: [fight-state] {sequence: 23, at_ms: 1785031249934, event: flush_started, background: false, move_count: 0}",
+    "[02:00:49.941] console: [fight-state] {sequence: 24, at_ms: 1785031249941, event: flush_finished, background: false, ok: true}",
+    "[02:00:52.782] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:53.228] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:53.590] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:00:56.599] round 7: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[02:00:58.232] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:03.233] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:07.783] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:08.234] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:08.592] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:10.600] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:13.236] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:18.237] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:22.783] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:23.241] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:23.594] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:28.242] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:29.958] console: [fight-state] {sequence: 25, at_ms: 1785031289958, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[02:01:29.959] console: [fight-state] {sequence: 26, at_ms: 1785031289958, event: flush_started, background: true, move_count: 0}",
+    "[02:01:29.965] console: [fight-state] {sequence: 27, at_ms: 1785031289965, event: flush_finished, background: true, ok: true}",
+    "[02:01:33.243] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:37.784] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:38.245] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:38.596] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:40.602] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:43.246] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:48.188] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:52.721] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:53.189] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:53.538] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:58.190] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:01:58.513] round 7: no castable cell — walking toward nothing",
+    "[02:01:58.513] round 7: NO CASTABLE TARGET — ending turn",
+    "[02:01:58.534] console: [fight-state] {sequence: 28, at_ms: 1785031318531, event: flush_started, background: false, move_count: 0}",
+    "[02:01:58.538] console: [fight-state] {sequence: 29, at_ms: 1785031318538, event: flush_finished, background: false, ok: true}",
+    "[02:02:03.191] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:05.188] round 8: armed_index=1 socket={\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[02:02:07.721] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:08.193] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:08.538] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:10.541] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:13.197] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:18.198] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:22.722] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:23.200] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:23.540] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:28.204] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:33.205] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:37.722] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:38.206] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:38.542] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:38.549] console: [fight-state] {sequence: 30, at_ms: 1785031358549, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[02:02:38.549] console: [fight-state] {sequence: 31, at_ms: 1785031358549, event: flush_started, background: true, move_count: 0}",
+    "[02:02:38.556] console: [fight-state] {sequence: 32, at_ms: 1785031358556, event: flush_finished, background: true, ok: true}",
+    "[02:02:40.543] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:43.207] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:48.209] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:52.722] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:53.210] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:53.544] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:02:58.214] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:03:03.215] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:03:07.165] round 8: no castable cell — walking toward nothing",
+    "[02:03:07.165] round 8: NO CASTABLE TARGET — ending turn",
+    "[02:03:07.191] console: [fight-state] {sequence: 33, at_ms: 1785031387191, event: flush_started, background: false, move_count: 0}",
+    "[02:03:07.199] console: [fight-state] {sequence: 34, at_ms: 1785031387198, event: flush_finished, background: false, ok: true}",
+    "[02:03:07.722] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:03:08.217] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:03:08.545] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:03:10.544] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[02:03:13.218] console: Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ]
+}
