@@ -385,6 +385,36 @@ describe('world spawn mob-card layer route gate', () => {
     )
   })
 
+  test('#1010 — the LAST silent return on the press door is gone: a press with no group SURFACES', () => {
+    // Reported: [R] pressed at distance 4 from a mob pack produced no fight, no refusal and no log. #861 made
+    // every refusal BELOW the entry point loud (the gate, the claimed-group leg, the too-far hint), but left
+    // `if (!e) return` at engage()'s very head — the one door that still swallowed a press whole. A press can
+    // arrive with no group two ways: an armed prompt whose entry died between the arm frame and the press, and
+    // a rig click whose hit-test walk resolves no `__spawn_entry`. Both now reach the SAME door and say so.
+    // engage() is an un-exported closure (this file's own convention for that seam), so the shape is the lock.
+    const engage_at = world_spawns_source.indexOf('const engage = async (')
+    const engage_block_at = world_spawns_source.indexOf('engage_block(engage_state())', engage_at)
+    const engage_head = world_spawns_source.slice(engage_at, engage_block_at)
+    expect(engage_at).toBeGreaterThan(-1)
+    expect(engage_block_at).toBeGreaterThan(engage_at)
+    expect(engage_head, 'the no-group door no longer returns silently').not.toContain('if (!e) return')
+    expect(engage_head, '…it names the miss on the console — an armed press landing here is a bug').toContain(
+      'console.error('
+    )
+    expect(engage_head, '…and takes the SAME internal channel refuse_engage uses, so the breadcrumb survives')
+      .toContain("game_log('world-spawns'")
+
+    // the click input feeds the SAME door instead of dropping an entry-less hit on the floor
+    const walk_at = world_spawns_source.indexOf('while (o && !o.userData?.__spawn_entry) o = o.parent')
+    const handoff_at = world_spawns_source.indexOf('void engage(', walk_at)
+    expect(walk_at, 'the hit-test walk exists').toBeGreaterThan(-1)
+    expect(handoff_at, 'the walk hands its result to the ONE press door').toBeGreaterThan(walk_at)
+    expect(
+      world_spawns_source.slice(walk_at, handoff_at),
+      'no silent guard swallows a hit that resolved no entry — engage() owns that refusal'
+    ).not.toContain('if (o?.userData?.__spawn_entry)')
+  })
+
   test(
     'the ambient ghost sweep folds visible_fights into the EXISTING poll cadence — never a new poll (#480)',
     () => {

@@ -644,7 +644,17 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   }
 
   const engage = async (/** @type {any} */ e) => {
-    if (!e) return
+    // #1010 — THE LAST SILENT RETURN on this press door. Every refusal below is loud since #861; this one still
+    // swallowed a press whole — no tx, no toast, no log, the exact observable that reopened the closed row. A
+    // press reaches here with no group when an armed prompt lost its entry between the arm frame and the press,
+    // or when a rig click's hit-test walk resolves no `__spawn_entry`. There is nothing honest to TELL the
+    // player (the group they aimed at is simply not there), so it takes refuse_engage's internal channel —
+    // ring-buffered for the crash breadcrumb — plus a console line, because an armed press landing here is a
+    // bug in the arming, not a player mistake.
+    if (!e) {
+      console.error('[world-spawns] engage press with no target group — the armed prompt lost its entry')
+      return game_log('world-spawns', 'engage press refused — no_target (armed prompt lost its group)')
+    }
     // #861 — THE SAME gate the pill above renders from, re-read here at press time (state can move between the
     // frame that armed the pill and the press). [world-fight mobs] rigs stay placed during a WORLD fight
     // (in_cave = cave-only), so a direct rig CLICK can reach here mid-fight — the fight_session block is what
@@ -793,7 +803,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     if (!hit) return
     let o = hit.object
     while (o && !o.userData?.__spawn_entry) o = o.parent
-    if (o?.userData?.__spawn_entry) void engage(o.userData.__spawn_entry)
+    // ONE press door for both inputs (#1010): a hit that walked all the way up without finding an entry is a
+    // MISS, and engage() is where a miss is named — dropping it here would be a second silent no-op.
+    void engage(o?.userData?.__spawn_entry ?? null)
   }
   ;(canvas ?? window).addEventListener('pointerdown', /** @type {any} */ (on_down))
   window.addEventListener('pointerup', /** @type {any} */ (on_up))
