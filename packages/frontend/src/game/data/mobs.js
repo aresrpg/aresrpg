@@ -104,8 +104,8 @@ export function get_mob_model(mob) {
  * projection carries — see bestiary_tab.tsx: `get_encyclopedia('mobs')` has no `appearance`/GLB field).
  * SAME resolution as get_mob_model (variant / catalog_key_of(name) → the published mob_catalog → glb),
  * rendered offline by scripts/render_mob_icons.mjs and published to the `mob_icon` Walrus quilt — the
- * SAME thumb/_hd two-tier system item_icon_url/spell_icon_url use. Walrus (boot manifest, `mob_icon`
- * class) is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was migration
+ * SAME thumb/_hd two-tier system item_icon_url uses (spells are single-size .webp — #884).
+ * Walrus (boot manifest, `mob_icon` class) is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was migration
  * residue, gitignored and never shipped past a dev's own disk). No catalog match / quilt not yet
  * configured → null, NEVER the GLB debug-cube swapped in as a 2D image (caller degrades to its own
  * glyph, mirroring ItemImage's category-glyph fallback).

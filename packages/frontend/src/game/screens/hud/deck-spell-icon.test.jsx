@@ -13,13 +13,16 @@
 import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_walrus_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { SpellSocket } from './deck-spell-socket.jsx'
 import { IMAGE_RETRY_DELAYS_MS } from './image_retry.js'
 
 const AGGREGATOR = 'https://hud-retry.example'
-const url_for = (icon) => `${AGGREGATOR}/spells/${icon}.png`
+// Derived from the ONE resolver, never restated — the spell file shape (.webp, single-size) is
+// pinned in packages/sdk/test/spell_icon_webp.test.js (#884). Here the property is that the socket
+// renders the RESOLVED url and the retry ladder re-attempts it.
+const url_for = (icon) => spell_icon_url(icon)
 
 const configure = () => configure_walrus_assets({ aggregator: AGGREGATOR, classes: { spell: { published: true } } })
 

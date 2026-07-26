@@ -9,14 +9,17 @@
 
 import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_walrus_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { SpellArt } from './SpellDetail.jsx'
 import { ItemIcon } from './ItemIcon.jsx'
 import { IMAGE_RETRY_DELAYS_MS, image_load_state, reduce_image_load } from './image_retry.js'
 
 const AGGREGATOR = 'https://hud-retry.example'
-const SPELL_SRC = `${AGGREGATOR}/spells/ikari_haki.png`
+// Derived, never restated: the spell file shape (.webp, single-size — #884) has ONE home in
+// spell_icon_url. What this file pins is that the retry ladder re-attempts the RESOLVED url.
+// Lazy — the resolver only reports the host shape once configure() has published the class.
+const spell_src = () => spell_icon_url('ikari_haki')
 const ITEM_SRC = `${AGGREGATOR}/items/aberrant_faceguard.png`
 const ITEM_HD_SRC = `${AGGREGATOR}/items/aberrant_faceguard_hd.png`
 
@@ -74,7 +77,7 @@ test('SpellArt: a transient first-load failure retries on its own instead of pin
 
   const first_img = find_img(runner.render(element))
   if (!first_img) throw new Error('expected the first render to attempt the resolved spell icon')
-  expect(first_img.props.src).toBe(SPELL_SRC)
+  expect(first_img.props.src).toBe(spell_src())
 
   // The cold-edge window: the FIRST request errors.
   first_img.props.onError()
@@ -83,7 +86,7 @@ test('SpellArt: a transient first-load failure retries on its own instead of pin
   // elapsed, a FRESH <img> attempt must exist. The pin-forever behavior only heals on a page refresh.
   await Bun.sleep(1_600)
   const retry_img = find_img(runner.render(element))
-  expect(retry_img?.props.src).toBe(SPELL_SRC)
+  expect(retry_img?.props.src).toBe(spell_src())
 })
 
 test('ItemIcon: a transient thumb failure retries on its own instead of pinning the category glyph until a refresh', async () => {

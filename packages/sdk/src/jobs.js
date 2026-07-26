@@ -256,7 +256,8 @@ export function recipe_ingredients(item_id) {
 //   data blob → {host}/data/{class}.json           e.g. https://assets.aresrpg.world/data/spell_corpus.json
 // Dispatched purely by the filename's own extension — `.json` is a data blob (keyed by CLASS, not the
 // filename, since every data-blob caller already passes `${class}.json`), `.glb` is geometry, everything
-// else (png/mp3/…) is flat art. Chain mints keep BARE slugs (item.move's Display is items/{item_type}.png,
+// else (png/webp/mp3/…) is flat art — the ext is the CALLER's per-family fact (items .png, spells .webp
+// per #884), never this dispatcher's. Chain mints keep BARE slugs (item.move's Display is items/{item_type}.png,
 // already live) — item_icon_url below MUST keep resolving that identical shape for the same key.
 const ASSETS_HOST_DEFAULT = 'https://assets.aresrpg.world'
 
@@ -416,18 +417,22 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
 
 /**
  * The URL for a spell icon — same resolver family as item_icon_url, just the `spells/` path. Accepts the spell's
- * `icon` key (e.g. 'ikari_haki'). `{ hd: true }` returns the `<icon>_hd.png` large variant. Returns null for an
- * empty key.
- *   asset host: ${aggregator}/spells/${icon}[_hd].png
- *   relative:   /assets/spells/${icon}[_hd].png
+ * `icon` key (e.g. 'ikari_haki'). Returns null for an empty key.
+ *   asset host: ${aggregator}/spells/${icon}.webp
+ *   relative:   /assets/spells/${icon}.webp
+ * SPELLS ARE .webp AND SINGLE-SIZE (#884) — the family diverges from items on both axes, by the content
+ * house's serving contract: 240 icons live as `<corpus_id>.webp` at 128px, with NO `_hd` render. Probed
+ * 2026-07-26 against the live host: `spells/senshi_warcleave.webp` → 200 while the `.png` the client used
+ * to ask for (`spells/tomoda_lashline.png`) → 404. So this resolver takes no size option at all: there is
+ * no second variant to select, and an option that can only mint a 404 is worse than no option. Items keep
+ * `.png` + `_hd` — see item_icon_url; the two families share the path machinery, never the file shape.
  * @param {string | { icon?: string | null } | null | undefined} spell
- * @param {{ hd?: boolean }} [opts]
  * @returns {string | null}
  */
-export function spell_icon_url(spell, { hd = false } = {}) {
+export function spell_icon_url(spell) {
   const key = typeof spell === 'string' ? spell : (spell?.icon ?? null)
   if (!key) return null
-  const name = `${key}${hd ? '_hd' : ''}.png`
+  const name = `${key}.webp`
   return walrus_asset_url('spell', name) ?? `${ASSET_BASE}/spells/${name}`
 }
 

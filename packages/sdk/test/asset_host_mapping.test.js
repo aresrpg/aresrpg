@@ -37,14 +37,15 @@ afterEach(() => {
 })
 
 describe('the mapping law — flat art', () => {
-  test('spell_icon_url resolves {host}/spells/{icon}[_hd].png once published', () => {
+  // The `[_hd].{ext}` half of the law is per-FAMILY, not global: items are `.png` with an `_hd` render,
+  // spells are `.webp` at one size (#884). item_icon_url.test.js pins the items side.
+  test('spell_icon_url resolves {host}/spells/{icon}.webp once published', () => {
     configure_walrus_assets({ aggregator: HOST, classes: { spell: { published: true } } })
-    expect(spell_icon_url('ikari_haki')).toBe(`${HOST}/spells/ikari_haki.png`)
-    expect(spell_icon_url('ikari_haki', { hd: true })).toBe(`${HOST}/spells/ikari_haki_hd.png`)
+    expect(spell_icon_url('ikari_haki')).toBe(`${HOST}/spells/ikari_haki.webp`)
   })
 
   test('an unpublished flat-art class returns null (caller falls back)', () => {
-    expect(walrus_asset_url('spell', 'ikari_haki.png')).toBeNull()
+    expect(walrus_asset_url('spell', 'ikari_haki.webp')).toBeNull()
   })
 })
 

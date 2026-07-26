@@ -106,7 +106,7 @@ export function spell_card(spell_id) {
     return {
       id: spell_id,
       name: chain_spell_name(chain),
-      icon: chain.icon_key, // /spells/<corpus id>.png (#884) — tinted-letter fallback covers missing art (D53)
+      icon: chain.icon_key, // /spells/<corpus id>.webp (#884) — tinted-letter fallback covers missing art (D53)
       cost: l1.ap ?? 0,
       mp: l1.mp ?? 0,
       range: l1.range ?? [0, 0],

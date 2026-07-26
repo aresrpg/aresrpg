@@ -45,7 +45,7 @@ export function SpellSocket({
   hovered = false,
 }) {
   // REAL spell art (wire the real spell icons — no stub bubbles): the canonical asset is
-  // spell_icon_url(icon) → the Walrus `spell` quilt /spells/<icon>.png (curl-verified 200; the SAME
+  // spell_icon_url(icon) → the asset host's /spells/<icon>.webp (curl-verified 200; the SAME
   // resolver SpellDetail ships). Load lifecycle rides the shared retry ladder (image_retry.js, design ruling
   // 2026-07-17: pictures must not go missing until refresh): a cold-edge quilt-patch miss self-heals with a bounded backoff
   // instead of PINNING the element-tinted-initial fallback for this socket's whole mount life. A class

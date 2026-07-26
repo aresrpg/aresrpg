@@ -144,8 +144,8 @@ describe('ASSET_BASE — host-free fallback (the external asset CDN host is DELE
     // until the manifest lands either).
     configure_walrus_assets({ classes: { item: {}, spell: {} } })
     expect(item_icon_url('longsword')).toBe(`${ASSET_BASE}/items/longsword.png`)
-    expect(spell_icon_url('ikari_haki')).toBe(`${ASSET_BASE}/spells/ikari_haki.png`)
-    expect(spell_icon_url('ikari_haki', { hd: true })).toBe(`${ASSET_BASE}/spells/ikari_haki_hd.png`)
+    // Spells are .webp and single-size (#884) — the fallback keeps the family's own file shape.
+    expect(spell_icon_url('ikari_haki')).toBe(`${ASSET_BASE}/spells/ikari_haki.webp`)
     for (const u of [item_icon_url('x'), spell_icon_url('y')]) expect(u.startsWith('/assets/')).toBe(true)
   })
 })
