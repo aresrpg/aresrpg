@@ -837,6 +837,16 @@ export function DungeonBoard() {
       fight_store.getState().input({ type: 'drop_traps', cells: store_dropped })
     if (fight?.fight_id) for (const cell of [...trap_placed, ...trap_dropped]) pending_trap_cells.current.delete(cell)
     fight_state_trace('flush_finished', { background, ok })
+    // NO SILENT FAILURE (#922): a refused commit throws the whole drafted turn away, and until now the ONLY tell
+    // was this trace line's `ok:false` — which is off unless fight-state tracing is armed. The simulator's silent
+    // END-TURN loop is exactly what that costs. One honest log per refusal, on every composition; the store door
+    // that refused (chain tx or sim shim) still owns the WHY and its own toast.
+    if (!ok)
+      game_log('board', 'commit refused — the drafted turn was rolled back', {
+        background,
+        move_count: move_actions.length,
+        cast_count: resolved_casts.length,
+      })
     // FIX 4: stamp each committed SPELL cast (kind:1) onto the cooldown clock at the turn it cast (my_turn_no) —
     // mirrors enforce_and_record_cast recording only casts that LANDED (a dropped/weapon action records nothing).
     if (ok) {
