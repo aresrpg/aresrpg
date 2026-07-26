@@ -299,6 +299,20 @@ const TARGET_FILTER_MAP = {
 }
 
 /**
+ * The UNSUPPORTED terminal — LOUD, always. A template normally carries several effects, so ONE unmapped kind
+ * inside an otherwise-healthy spell used to vanish without a trace: the spell still cast, still folded its
+ * other effects, and simply did less than it says on the tin. That silence is what let #952's whole class hide
+ * (the per-template "≥1 supported effect" measurement is blind to it). One line per unmapped kind, naming the
+ * spell and the kind, is the cheapest possible tripwire.
+ */
+const unsupported = (base, spell_id, kind) => {
+  console.error(
+    `[sim] spell '${spell_id}': effect kind ${kind} is not supported — it normalizes to UNSUPPORTED and will fold NOTHING`,
+  )
+  return { ...base, type: 'UNSUPPORTED' }
+}
+
+/**
  * Normalize one AresRPG effect into the sim's UPPERCASE SpellEffect.
  * Handlers exist for: damage, heal, steal, stun, poison, teleport, push, pull, glyph, trap (placement),
  * add/remove (stat + ap/mp buff/debuff), summon, invisibility, and reveal. Still inert (flagged TODO):
@@ -306,7 +320,7 @@ const TARGET_FILTER_MAP = {
  * @param {Record<string, unknown>} e  raw AresRPG effect
  * @returns {SpellEffect}
  */
-const normalize_effect = (e, fallback_area) => {
+const normalize_effect = (e, fallback_area, spell_id = '?') => {
   const numeric_kind = typeof e['kind'] === 'number' ? e['kind'] : undefined
   const raw_type = String(e['type'] ?? numeric_kind)
   // ALTER_STAT / ALTER_RESIST / STEAL_STAT carry sign via FLAG_NEGATIVE alone (spell_effect.move:203) —
@@ -469,7 +483,7 @@ const normalize_effect = (e, fallback_area) => {
     if (numeric_kind === K_EROSION) return { ...base, type: 'EROSION' }
     if (numeric_kind === K_DAMAGE_REDIRECT)
       return { ...base, type: 'DAMAGE_REDIRECT' }
-    return { ...base, type: 'UNSUPPORTED' }
+    return unsupported(base, spell_id, numeric_kind)
   }
   switch (raw_type) {
     case 'damage':
@@ -509,13 +523,13 @@ const normalize_effect = (e, fallback_area) => {
     case 'invulnerable':
       return { ...base, type: 'SHIELD' } // closest supported analog, but min/max often absent -> inert
     default:
-      return { ...base, type: 'UNSUPPORTED' }
+      return unsupported(base, spell_id, raw_type)
   }
 }
 
 /** A placement marker owns every non-placement sibling as its deferred board payload. */
-const normalize_effect_list = (effects, fallback_area) => {
-  const normalized = effects.map(e => normalize_effect(e, fallback_area))
+const normalize_effect_list = (effects, fallback_area, spell_id) => {
+  const normalized = effects.map(e => normalize_effect(e, fallback_area, spell_id))
   const linked = []
   for (let i = 0; i < normalized.length; i += 1) {
     const effect = normalized[i]
@@ -550,7 +564,7 @@ const normalize_effect_list = (effects, fallback_area) => {
  * @param {Record<string, unknown>} lvl
  * @returns {SpellLevel}
  */
-const normalize_level = lvl => {
+const normalize_level = (lvl, spell_id) => {
   const legacy_area = {
     area_shape: AREA_SHAPE_MAP[String(lvl['area_type'])] ?? SHAPE_POINT,
     area_size: Number(lvl['area'] ?? 0),
@@ -587,10 +601,12 @@ const normalize_level = lvl => {
     base_effects: normalize_effect_list(
       effects,
       current_effects ? undefined : legacy_area,
+      spell_id,
     ),
     crit_effects: normalize_effect_list(
       crit_effects,
       current_effects ? undefined : legacy_area,
+      spell_id,
     ),
   }
 }
@@ -633,7 +649,7 @@ export const normalize_spell_templates = spells_json => {
       ),
       levels: /** @type {Record<string, unknown>[]} */ (
         spell['levels'] ?? []
-      ).map(normalize_level),
+      ).map(lvl => normalize_level(lvl, spell_id)),
     })
   }
   return templates
