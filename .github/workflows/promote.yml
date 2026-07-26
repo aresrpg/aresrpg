@@ -43,6 +43,7 @@ jobs:
   request:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.issue.number }}

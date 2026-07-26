@@ -22,6 +22,7 @@ permissions:
 jobs:
   ladder:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: setup Bun
@@ -86,6 +87,7 @@ jobs:
     # is fixed at the root in the same commit — the tests await the queue's own drained signal.
     # No leg in this job may be re-masked: severities only ratchet up (FROZEN.md).
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -135,6 +137,7 @@ jobs:
     #
     # Fork-safe: no secrets, no backend. Budget < 4 min.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: setup Bun
@@ -160,6 +163,7 @@ jobs:
 
   fp-codeql:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
