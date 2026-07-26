@@ -23,9 +23,9 @@ describe('authoritative fight status snapshot', () => {
         },
       })
     ).toEqual([
-      { fighter: 0, kind: 27, remaining_turns: 2, element: null, value: null, stat: null, chance: null },
-      { fighter: 1001, kind: 4, remaining_turns: 3, element: 2, value: 5, stat: null, chance: null },
-      { fighter: 1, kind: 27, remaining_turns: 1, element: null, value: null, stat: null, chance: null },
+      { fighter: 0, kind: 27, remaining_turns: 2, element: null, value: null, stat: null, chance: null, source: null },
+      { fighter: 1001, kind: 4, remaining_turns: 3, element: 2, value: 5, stat: null, chance: null, source: null },
+      { fighter: 1, kind: 27, remaining_turns: 1, element: null, value: null, stat: null, chance: null, source: null },
     ])
   })
 
@@ -42,9 +42,36 @@ describe('authoritative fight status snapshot', () => {
         2
       )
     ).toEqual([
-      { entity_id: 'ally', kind: 27, remaining_turns: 1, element: null, value: null, stat: null, chance: null },
-      { entity_id: 'ally', kind: 9, remaining_turns: 3, element: null, value: null, stat: 2, chance: null },
-      { entity_id: 'mob-0', kind: 27, remaining_turns: 2, element: null, value: null, stat: null, chance: null },
+      {
+        entity_id: 'ally',
+        kind: 27,
+        remaining_turns: 1,
+        element: null,
+        value: null,
+        stat: null,
+        chance: null,
+        source: null,
+      },
+      {
+        entity_id: 'ally',
+        kind: 9,
+        remaining_turns: 3,
+        element: null,
+        value: null,
+        stat: 2,
+        chance: null,
+        source: null,
+      },
+      {
+        entity_id: 'mob-0',
+        kind: 27,
+        remaining_turns: 2,
+        element: null,
+        value: null,
+        stat: null,
+        chance: null,
+        source: null,
+      },
     ])
   })
 

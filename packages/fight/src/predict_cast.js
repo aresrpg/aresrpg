@@ -14,7 +14,7 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
-import { sim_effects_of } from './statuses.js'
+import { sim_effects_of, status_row_of } from './statuses.js'
 import { WEAPON_ATTACK_ID } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
@@ -24,14 +24,6 @@ export const CHAIN_PENDING_ENGINE_VERSION = '0xe8c6c46893799e85e697ef0e524626c63
 
 // BRIDGE B7 — expires when the <next-train> ships the 8 chain arms; deletion criterion: on-chain kind handling verified.
 export const CHAIN_PENDING = new Set([10, 15, 16, 17, 22, 25, 26, 29])
-
-const K_GIVE_POINTS = 6
-const K_ALTER_STAT = 9
-const K_INVISIBILITY = 27
-const STAT_RANGE = 6
-const POINT_AP = 0
-const POINT_MP = 1
-const FLAG_NEGATIVE = 8
 
 /** The UI projection's first direct-damage base. Pricing only; prediction itself never reads this projection. */
 export const damage_of = (effects) => (effects ?? []).find((effect) => effect.kind === 'DAMAGE')?.base ?? 0
@@ -124,54 +116,10 @@ const added_effects = (before, after) => {
   })
 }
 
-/** Prediction-only projection back into the raw chain status vocabulary the fight fold exposes. Keep the bridge
- * narrow to the three self-buff rows whose client consumers are implemented; authoritative ActionEffect remains
- * the durable source once the receipt lands. */
-const status_from_sim_effect = (effect) => {
-  const remaining_turns = Number(effect?.turns_remaining) || 0
-  if (remaining_turns <= 0) return null
-  if (effect.type === 'INVISIBILITY')
-    return {
-      kind: K_INVISIBILITY,
-      remaining_turns,
-      element: null,
-      value: 0,
-      stat: null,
-      chance: 100,
-      flags: 0,
-    }
-  if ((effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') && effect.stat === 'range')
-    return {
-      // The status home speaks DECODED SIGNED deltas: `fight_status_snapshot.js` strips the chain's 32768
-      // centering at the wire door (#886), and the #904 ruling makes that value the ONLY sign fact — the fold
-      // ignores FLAG_NEGATIVE because both flag dialects occur on live rows. A predicted row lands in the same
-      // home, so it carries the same signed delta; emitting a magnitude here made `sim_effects_of` read every
-      // predicted range DEBUFF as a BUFF (value > 0), the #728 sign inversion on the prediction door.
-      kind: K_ALTER_STAT,
-      remaining_turns,
-      element: null,
-      value: (effect.type === 'STAT_DEBUFF' ? -1 : 1) * (Number(effect.value) || 0),
-      stat: STAT_RANGE,
-      chance: 100,
-      // Derived mirror of a minted row's flag, never the sign source — no reader consults it for sign.
-      flags: effect.type === 'STAT_DEBUFF' ? FLAG_NEGATIVE : 0,
-    }
-  if (effect.type === 'STAT_BUFF' && (effect.stat === 'ap' || effect.stat === 'mp'))
-    return {
-      kind: K_GIVE_POINTS,
-      remaining_turns,
-      element: null,
-      value: Number(effect.value) || 0,
-      stat: effect.stat === 'ap' ? POINT_AP : POINT_MP,
-      chance: 100,
-      flags: 0,
-    }
-  return null
-}
-
 const changed_actions = ({ before, after, caster_id, target_cell, ap_cost, resolve_ref, teleport_ids }) => {
   const actions = []
   let damaging = false
+  const caster_ref = resolve_ref(caster_id)
   for (const previous of [...before.team0, ...before.team1]) {
     const current = find_entity(after, previous.id)
     const ref = resolve_ref(previous.id)
@@ -240,14 +188,24 @@ const changed_actions = ({ before, after, caster_id, target_cell, ap_cost, resol
         stance: 27,
         active: is_invisible(current),
       })
+    // EVERY status the cast just landed paints NOW (#1049). This used to be a three-row bridge (range · ap/mp
+    // grant · invisibility), so a +20 Strength buff, a +110% damage buff, a reflect and every point DEBUFF cast
+    // to complete silence — five distinct kinds, one missing table. `status_row_of` (statuses.js) is the ONE
+    // sim→status projection the simulator's own snapshot already used, so a kind is a status at every door or
+    // at none. Authoritative ActionEffect remains the durable source once the receipt lands.
     for (const effect of added_effects(previous.effects, current.effects)) {
-      const status = status_from_sim_effect(effect)
+      const status = status_row_of(effect)
       if (status)
         actions.push({
           kind: 'StatusAdded',
           target_is_mob: ref.is_mob,
           target_idx: ref.idx,
-          status,
+          status: {
+            chance: 100,
+            ...status,
+            // Attribution, stated by the door that KNOWS it: this cast's caster (the chain's `fid_of`).
+            source: caster_ref ? (caster_ref.is_mob ? 1000 : 0) + caster_ref.idx : null,
+          },
         })
     }
   }

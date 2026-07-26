@@ -420,6 +420,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       value: st.value,
       stat: st.stat,
       chance: st.chance,
+      source: st.source ?? null,
       ...(st.flags != null ? { flags: st.flags } : {}),
     }))
   const ctx = s.ctx ?? {}

@@ -15,14 +15,22 @@
 
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
-import { INVISIBILITY_STATUS_KIND, decode_status_value } from './fight_status_snapshot.js'
+import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } from './fight_status_snapshot.js'
+import { is_status_kind } from './statuses.js'
 
-// ActionEffect is the only receipt row carrying the exact timed self-buff descriptor. Keep this deliberately
-// narrow: these three kinds produce byte-identical fighter rows for a guaranteed point effect on the caster.
-// Targeted/AoE/chance effects need outcome/recipient evidence the envelope does not carry and remain snapshot truth.
+// ActionEffect is the only receipt row carrying the exact timed status descriptor. What makes a row foldable is
+// the RECIPIENT PROOF below (a guaranteed point effect on the caster's own cell), not its kind: `cast.move`'s
+// `record_timed` copies the envelope's Effect VERBATIM into the board for every kind that reaches it, so the
+// client can restate exactly that row. The old three-kind allowlist (GIVE_POINTS · ALTER_STAT · INVISIBILITY)
+// made a self-cast `Reflects 3% · 3 turns` fold nothing at all (#1049) — the kind was simply missing from a list.
+// `is_status_kind` (statuses.js) is now the ONE membership test, minus the rows the envelope CANNOT prove:
+//   · REMOVE_POINTS (7) / STEAL_POINTS (8) — `cast.move::resolve_drain` is DODGE-CONTESTED: the row exists only
+//     if `removed > 0`, a number the envelope does not carry (the drain's own `Drain` event does).
+//   · STEAL_STAT (10) — `apply_steal_stat` splits one authored line into two DERIVED rows, never this one.
+// Targeted/AoE/chance effects fail the recipient proof and remain snapshot truth.
 const K_GIVE_POINTS = 6
 const K_REMOVE_POINTS = 7
-const SELF_STATUS_KINDS = new Set([K_GIVE_POINTS, 9, INVISIBILITY_STATUS_KIND]) // GIVE_POINTS · ALTER_STAT · INVISIBILITY
+const CONTESTED_STATUS_KINDS = new Set([7, 8, 10]) // REMOVE_POINTS · STEAL_POINTS · STEAL_STAT
 /** A GIVE/REMOVE_POINTS row's `stat` is the chain POINT id (`spell_effect` POINT_AP/POINT_MP) — the pool it moves. */
 const POINT_POOL = { 0: 'ap', 1: 'mp' }
 const SHAPE_POINT = 0
@@ -206,7 +214,8 @@ const self_status_from_effect = (state, action) => {
     Number(effect.chance) < 100 ||
     remaining_turns <= 0 ||
     !hits_caster ||
-    !SELF_STATUS_KINDS.has(kind)
+    !is_status_kind(kind) ||
+    CONTESTED_STATUS_KINDS.has(kind)
   )
     return null
   return {
@@ -218,6 +227,9 @@ const self_status_from_effect = (state, action) => {
       value: effect.value == null ? null : decode_status_value(kind, Number(effect.value)),
       stat: effect.stat == null ? null : Number(effect.stat),
       chance: effect.chance == null ? null : Number(effect.chance),
+      // A self-landing row's SOURCE is the caster — the chain's own `fid_of(caster_side, caster_idx)`
+      // (cast.move) restated, so the one projection states attribution from this door too.
+      source: (action.caster_is_mob ? MOB_FIGHTER_ID_BASE : 0) + Number(action.caster_idx),
       flags: effect.flags == null ? null : Number(effect.flags),
     },
   }

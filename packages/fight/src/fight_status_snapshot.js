@@ -56,8 +56,10 @@ const num = (value) => (value == null || value === '' ? null : Number(value))
  * same passthrough convention `element` uses on a mob; the badge component interprets them downstream. `value`
  * is the ONE exception: it is decoded HERE (see decode_status_value above) because its encoding is a property
  * of the wire, not of any one reader.
+ * `source` is the chain's own attribution field (`FighterStatus.source` — the caster's board fid): the ONE
+ * projection every status surface derives from states WHO applied the row, so nothing has to re-guess it.
  * @param {any} json
- * @returns {{ fighter:number, kind:number, remaining_turns:number, element:number|null, value:number|null, stat:number|null, chance:number|null }[]}
+ * @returns {{ fighter:number, kind:number, remaining_turns:number, element:number|null, value:number|null, stat:number|null, chance:number|null, source:number|null }[]}
  */
 export function read_fighter_statuses(json) {
   const fx = fields_of(json?.fx)
@@ -78,6 +80,7 @@ export function read_fighter_statuses(json) {
         value: decode_status_value(kind, num(effect.value)),
         stat: num(effect.stat),
         chance: num(effect.chance),
+        source: num(row.source),
         ...(num(effect.flags) != null ? { flags: num(effect.flags) } : {}),
       })
   }
@@ -114,6 +117,7 @@ export function status_snapshot_entities(rows, participant_ids, mob_count) {
       value: row.value ?? null,
       stat: row.stat ?? null,
       chance: row.chance ?? null,
+      source: row.source ?? null,
       ...(row.flags != null ? { flags: row.flags } : {}),
     })
   }

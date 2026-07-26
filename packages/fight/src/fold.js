@@ -118,6 +118,7 @@ export const base_from_view = (view, fight_id) => {
           value: status.value ?? null,
           stat: status.stat ?? null,
           chance: status.chance ?? null,
+          source: status.source ?? null,
           ...(status.flags != null ? { flags: status.flags } : {}),
         },
       ]
@@ -213,6 +214,7 @@ export const carry_statuses = (view, prior) => {
         value: st.value ?? null,
         stat: st.stat ?? null,
         chance: st.chance ?? null,
+        source: st.source ?? null,
         ...(st.flags != null ? { flags: st.flags } : {}),
       })
   }

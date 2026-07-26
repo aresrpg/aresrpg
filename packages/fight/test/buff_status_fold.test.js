@@ -171,6 +171,8 @@ describe('#481 self-buff action effects enter the fighter status fold', () => {
           value: decoded_value(row),
           stat: row.stat,
           chance: row.chance,
+          // The caster's own board fid — the chain's `FighterStatus.source`, restated by the receipt door (#1049).
+          source: 0,
           flags: row.flags,
         }))
       )

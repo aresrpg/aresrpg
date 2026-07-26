@@ -23,6 +23,7 @@ import {
   encode_status_value,
   is_signed_status_kind,
 } from './fight_status_snapshot.js'
+import { status_row_of } from './statuses.js'
 
 /** The mock package id every emitted row is namespaced under. `decode_fight_event` keys off the LAST `::`
  *  segment, so the prefix is presentation only — but it must never collide with a real deployed package. */
@@ -56,6 +57,16 @@ export const side_of = (state, entity_id) => {
   const idx = state.team1.findIndex((e) => e.id === entity_id)
   if (idx >= 0) return { is_mob: true, idx }
   throw new Error(`sim_chain: no fighter '${entity_id}' on either team`)
+}
+
+/** The chain's board fid for a sim entity id (players = seat, mobs = `MOB_FIGHTER_ID_BASE + idx`), or null when
+ *  the id names no live fighter — `spell_board::FighterStatus.source`'s own namespace (`cast.move::fid_of`). */
+const fighter_fid = (state, entity_id) => {
+  if (entity_id == null) return null
+  const seat = state.team0.findIndex((e) => e.id === entity_id)
+  if (seat >= 0) return seat
+  const idx = state.team1.findIndex((e) => e.id === entity_id)
+  return idx >= 0 ? MOB_FIGHTER_ID_BASE + idx : null
 }
 
 /** The canonical fold key (`inputs.fighter_key`) for a sim entity id. */
@@ -102,73 +113,9 @@ export const fold_projection = (folded) => {
 
 // ╔════════════════ [ The status read — the sim's live effect rows → the snapshot's status rows ] ═════════ ]
 
-/** The sim's stat keys → the chain's numeric stat id (`spell_effect.move` STAT_*; the inverse of the
- *  normalizer's STAT_ID_MAP). A key absent here carries no numeric id and rides as null. */
-const STAT_CHAIN_ID = {
-  strength: 0,
-  intelligence: 1,
-  chance: 2,
-  agility: 3,
-  wisdom: 4,
-  vitality: 5,
-  range: 6,
-  critical_hit: 7,
-  percent_damage: 8,
-  raw_damage: 9,
-  max_hp: 10,
-  heal: 11,
-  ap_dodge: 12,
-  mp_dodge: 13,
-  physical_damage: 14,
-}
-
 /** The sim `Element` string → the chain element ordinal (`ELEMENT_MAP` in spell_templates.js, inverted). An
  *  authored row whose element the sim left undefined carries NONE, the same default the seed mint writes. */
 const ELEMENT_ORDINAL = { FIRE: 0, WATER: 1, EARTH: 2, AIR: 3, NONE: 255 }
-
-/** Resist stat key → the chain element ordinal the K_ALTER_RESIST row carries (255 = NONE/neutral). */
-const RESIST_ELEMENT = {
-  fire_resistance: 0,
-  water_resistance: 1,
-  earth_resistance: 2,
-  air_resistance: 3,
-  neutral_resistance: 255,
-}
-
-/** A sim `ActiveEffect.type` → the chain status kind it is recorded as. The pool/resist variants of the two
- *  stat rows are disambiguated by the row's own `stat` in `status_kind_of`, so this table holds the rest. */
-const STATUS_KIND = {
-  INVISIBILITY: 27, // K_INVISIBILITY
-  POISON: 21, // K_APPLY_DOT
-  SHIELD: 24, // K_REDUCE_DAMAGE
-  REFLECT_DAMAGE: 25, // K_REFLECT_DAMAGE
-  RETURN_SPELL: 29, // K_RETURN_SPELL
-  APPLY_STATE: 22, // K_APPLY_STATE
-  STUN: 22, // a stun is a named state on chain (no dedicated kind)
-  DAMAGE_TO_HEAL: 32, // K_DAMAGE_TO_HEAL
-  TIMED_PAYLOAD: 34, // K_TIMED_PAYLOAD
-  NAMED_DAMAGE_STACK: 35, // K_NAMED_DAMAGE_STACK
-  STANCE: 36, // K_STANCE
-  REACTIVE_PUNISHMENT: 37, // K_REACTIVE_PUNISHMENT
-  EROSION: 38, // K_EROSION
-  DAMAGE_REDIRECT: 39, // K_DAMAGE_REDIRECT
-}
-
-/** The chain kind for one live sim effect row, or null when the row is not a status the chain records
- *  (a plain DAMAGE/HEAL tick row is bookkeeping, never a badge). */
-const status_kind_of = (effect) => {
-  if (effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') {
-    if (POOL_POINT_KIND[effect.stat] !== undefined) return effect.type === 'STAT_BUFF' ? 6 : 7 // GIVE/REMOVE_POINTS
-    return RESIST_ELEMENT[effect.stat] !== undefined ? 11 : 9 // ALTER_RESIST : ALTER_STAT
-  }
-  return STATUS_KIND[effect.type] ?? null
-}
-
-/** A live sim effect row → the SIGNED value the decoded status home speaks (sign from the row type). */
-const signed_status_value = (kind, effect) => {
-  const magnitude = Number(effect.value) || 0
-  return is_signed_status_kind(kind) && effect.type === 'STAT_DEBUFF' ? -magnitude : magnitude
-}
 
 /**
  * THE SIMULATOR'S STATUS READ. `snapshot_from_sim` is the only durable channel behind the receipt, so it must
@@ -176,8 +123,10 @@ const signed_status_value = (kind, effect) => {
  * `[]` included, as authoritative "nobody has one". A hardcoded `[]` therefore wiped the invisibility the
  * receipt had just floored and every buff badge with it, which is #952's wholesale rollback.
  *
- * Rows come out in the raw `spell_board` shape `status_snapshot_entities` decodes: `fighter` is the seat index
- * for a player and `MOB_FIGHTER_ID_BASE + idx` for a mob.
+ * The sim-row → status-row projection is `statuses.status_row_of` — the ONE home (#1049), shared verbatim with
+ * the prediction door so a kind can never be a status on one and invisible on the other. Rows come out in the
+ * raw `spell_board` shape `status_snapshot_entities` decodes: `fighter` is the seat index for a player and
+ * `MOB_FIGHTER_ID_BASE + idx` for a mob.
  * @param {object} state a sim FightState
  * @returns {object[]}
  */
@@ -186,20 +135,12 @@ export const status_rows_from_sim = (state) => {
   const collect = (team, fighter_base) =>
     team.forEach((entity, idx) => {
       for (const effect of entity.effects ?? []) {
-        const kind = status_kind_of(effect)
-        if (kind == null) continue
-        rows.push({
-          fighter: fighter_base + idx,
-          kind,
-          remaining_turns: Math.max(0, Math.trunc(Number(effect.turns_remaining) || 0)),
-          element: RESIST_ELEMENT[effect.stat] ?? null,
-          // These rows go to `status_snapshot_entities`, which sits AFTER the wire decode — so they speak the
-          // signed dialect, not the centered one. The sim carries the sign in the row type; a magnitude alone
-          // read every range/resist DEBUFF back as a buff (#983's sibling on the snapshot door).
-          value: signed_status_value(kind, effect),
-          stat: POOL_POINT_KIND[effect.stat] ?? STAT_CHAIN_ID[effect.stat] ?? null,
-          chance: effect.chance ?? null,
-        })
+        const row = status_row_of(effect)
+        if (!row) continue
+        // `source` = the chain's attribution fid for the row's caster (`FighterStatus.source`), restated from
+        // the sim's own entity id so the mock's snapshot carries what a real read carries. A row whose source is
+        // not a live fighter (a trap/glyph author already gone) rides null rather than inventing a fid.
+        rows.push({ fighter: fighter_base + idx, ...row, source: fighter_fid(state, effect.source_id) })
       }
     })
   collect(state.team0, 0)
