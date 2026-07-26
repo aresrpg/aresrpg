@@ -149,17 +149,23 @@ export async function resume_world_fight(character_id, deps = {}) {
   // ONE chain-truth gate for both live statuses (#882): expired placement → force_start, expired turn → crank,
   // and whatever the chain reports AFTER that door decides. `gone` = the door resolved it terminal (or it was
   // destroyed): route out honestly — the character is freed and its outcome recovered, never re-captured.
-  const decision = await ensure_resumable_fight(fight_id, {
+  const { decision, reason } = await ensure_resumable_fight(fight_id, {
     force_start_door: deps.force_start_door,
     crank_door: deps.crank_door,
   })
   if (!is_current()) return
   if (decision === 'gone') {
-    fight_state_trace('fight_resume_expired_gone', { fight_id, character_id })
+    fight_state_trace('fight_resume_expired_gone', { fight_id, character_id, reason })
     push_event_toast({ state: 'info', title: i18n.t('fights.expired_fight_cleared') })
     return getState()._recover_dead_fight_reference({ character_id, state: 'settled' })
   }
-  if (decision !== 'enter') return
+  if (decision !== 'enter') {
+    // NEVER a silent return (#932): the serving node says this character has a LIVE fight, so declining to
+    // re-enter leaves them roaming with a seat on chain. Say so loudly enough to reach a bug report.
+    console.error(`[world-fight] resume refused — fight ${fight_id} not re-entered: ${reason}`)
+    game_log('world-fight', 'resume refused', { fight_id, reason })
+    return
+  }
   if (!is_current() || session_busy()) return // a session opened or the request changed while reading — never stomp it
   enter_world_fight({ fight_id, world_id: current.world ?? live.world ?? null, character_id, resumed: true })
 }

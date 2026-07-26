@@ -3,8 +3,7 @@
 import { decode_fight } from '@aresrpg/sdk/fight'
 
 import { is_gone_error, read_object } from './run_reads.js'
-
-const LIVE_FIGHT_STATUSES = new Set([0, 1]) // placement | active
+import { LIVE_CHAIN_STATUSES } from './fight_chain_status.js'
 
 /**
  * Validate a persisted Fight reference before any board/session state is published. Deleted/missing and terminal
@@ -23,7 +22,7 @@ export async function read_fight_liveness(sdk, fight_id) {
   }
   if (!read) return { state: 'absent', read: null, fight: null }
   const fight = decode_fight(read.json)
-  return LIVE_FIGHT_STATUSES.has(Number(fight.status))
+  return LIVE_CHAIN_STATUSES.has(Number(fight.status))
     ? { state: 'live', read, fight }
     : { state: 'settled', read, fight }
 }
