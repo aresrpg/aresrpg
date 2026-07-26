@@ -1953,6 +1953,7 @@
     "utility": "ユーティリティ",
     "heal": "回復",
     "tag_self": "自身",
+    "target_ally": "味方",
     "tag_zone": "範囲",
     "tag_melee": "近接",
     "tag_line_of_sight": "視線",

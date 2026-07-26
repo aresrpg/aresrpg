@@ -1953,6 +1953,7 @@
     "utility": "Допоміжне",
     "heal": "Зцілення",
     "tag_self": "На себе",
+    "target_ally": "Союзник",
     "tag_zone": "Зона",
     "tag_melee": "Ближній бій",
     "tag_line_of_sight": "Лінія зору",

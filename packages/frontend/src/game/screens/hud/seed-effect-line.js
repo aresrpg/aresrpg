@@ -109,6 +109,18 @@ const finite_number = (value) => {
   return Number.isFinite(number) ? number : null
 }
 
+// Spell target-filter bits (spell_effect.move): enemy-only (`NOT_TEAM` = 1) is the compact default. Friendly
+// riders need their target named because the same effect wording otherwise reads like a gift to the enemy.
+const TF_NOT_ENEMY = 4
+const TF_ONLY_CASTER = 32
+
+const effect_target_label = (t, target_filter) => {
+  const filter = finite_number(target_filter) ?? 0
+  if ((filter & TF_ONLY_CASTER) === TF_ONLY_CASTER) return t('spells.tag_self')
+  if ((filter & TF_NOT_ENEMY) === TF_NOT_ENEMY) return t('spells.target_ally')
+  return null
+}
+
 /**
  * The authored magnitude shown by every seed-effect surface. Unequal bounds use the locale's own range
  * connector (`to` / `à` / `bis` / …); equal bounds collapse to one number. A bounded damage line missing either
@@ -159,8 +171,10 @@ const meta_of = (t, fx) => {
         : null
   const shape = fx.area_shape ?? 'POINT'
   const size = fx.area_size ?? 0
+  const target = effect_target_label(t, fx.target_filter)
   const pieces = [
     ...(fx.kind === 'REDUCE_DAMAGE' ? [t('spells.fx_any_element')] : []),
+    ...(target ? [target] : []),
     ...(turns != null && turns > 0 ? [t('spells.fx_turns', { count: turns })] : []),
     ...(critical_value != null ? [t('spells.crit_val', { value: critical_value })] : []),
     ...(is_area_effect(shape, size) ? [t(`encyclopedia.aoe_shape.${AOE_SHAPE_KEY[shape] ?? 'point'}`, { size })] : []),

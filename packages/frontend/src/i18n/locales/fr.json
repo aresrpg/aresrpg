@@ -1953,6 +1953,7 @@
     "utility": "Utilitaire",
     "heal": "Soin",
     "tag_self": "Soi",
+    "target_ally": "Allié",
     "tag_zone": "Zone",
     "tag_melee": "Mêlée",
     "tag_line_of_sight": "Ligne de vue",

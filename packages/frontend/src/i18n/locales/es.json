@@ -1953,6 +1953,7 @@
     "utility": "Utilidad",
     "heal": "Curación",
     "tag_self": "Uno mismo",
+    "target_ally": "Aliado",
     "tag_zone": "Zona",
     "tag_melee": "Cuerpo a cuerpo",
     "tag_line_of_sight": "Línea de visión",

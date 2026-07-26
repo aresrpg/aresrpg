@@ -1953,6 +1953,7 @@
     "utility": "Unterstützung",
     "heal": "Heilung",
     "tag_self": "Selbst",
+    "target_ally": "Verbündeter",
     "tag_zone": "Zone",
     "tag_melee": "Nahkampf",
     "tag_line_of_sight": "Sichtlinie",
