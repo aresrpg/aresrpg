@@ -282,6 +282,9 @@ export function create_voxel_fight_adapter(
   )
   /** The last-painted highlight signature — skip a repaint when nothing that affects a wash changed. */
   let last_paint_key = ''
+  /** `fight_id:spell_id` of the last arm reported as UNPAINTABLE (#1093) — throttles the loud log to once per
+   *  fight+spell instead of once per reconcile, while a re-arm of a different spell still speaks. */
+  let unpaintable_arm_key = /** @type {string | null} */ (null)
   /** Renderer-neutral BASE candidates retained across reconcile + hover writers. The projection consumes all
    * of them together, so a red target can replace its blue range cell instead of becoming a second surface. */
   const base_paint_candidates = /** @type {Record<string, Set<number>>} */ (
@@ -1584,6 +1587,27 @@ export function create_voxel_fight_adapter(
           // the seat's composed build — cost, range and flags are all per-RANK facts (#1077)
           seat: active,
         })
+        // LOUD FAILURE (#1093): an armed spell whose seat-rank row the corpus cannot resolve paints NOTHING —
+        // no cast range exists to draw. wash_armed_spell now refuses it (so the green MP wash keeps the board
+        // instead of a black one), but a board that silently declines to enter cast mode is still a lie to the
+        // player who just clicked a socket. Name it once per fight+spell, in the log the fight already keeps.
+        if (
+          fight.armed_spell_id &&
+          fight.armed_spell_id !== WEAPON_ATTACK_ID &&
+          !seed_range_of(fight.armed_spell_id, active)
+        ) {
+          const arm_key = `${fight.fight_id}:${fight.armed_spell_id}`
+          if (unpaintable_arm_key !== arm_key) {
+            unpaintable_arm_key = arm_key
+            console.error(
+              `[voxel-fight] armed spell ${fight.armed_spell_id} resolves to NO seed row at this seat's rank — no cast range can be painted`
+            )
+            game_log(
+              'voxel-fight',
+              `armed spell ${fight.armed_spell_id} has no seed row at the seat's rank — the cast range cannot paint; the MP wash keeps the board (#1093)`
+            )
+          }
+        }
         // MOVE RANGE + TACKLE BAND — the which-cells DECISION is the CORE's (project.move_wash, M3 render
         // contract): `reach` = LIGHT-GREEN 'mp_range' (the idle default, design ruling 2026-07-17: no spell armed ⇒ the MP
         // range paints, no re-click), `tackle_lost` = the SOFT-RED at-risk band (only while
@@ -1712,6 +1736,7 @@ export function create_voxel_fight_adapter(
     unplaceable_attempts = 0 // [bug-B] a fresh fight re-earns its full retry budget
     unplaceable_attempts_key = null
     last_paint_key = ''
+    unpaintable_arm_key = null // a fresh fight re-earns its own unpaintable-arm report (#1093)
     for (const paint of CELL_PAINT_PRIORITY) base_paint_candidates[paint].clear()
     for (const channel of BASE_PAINT_CHANNELS) rendered_base_paints.set(channel, new Set())
     observed_turn_fight_id = undefined

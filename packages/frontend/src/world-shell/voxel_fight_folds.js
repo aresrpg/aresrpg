@@ -397,7 +397,15 @@ export function board_fight_authority({ core, roster = core?.ctx?.roster ?? [] }
  */
 export function wash_armed_spell({ armed_spell_id, active_ap, is_weapon = false, weapon_ap_cost = 0, seat = null }) {
   if (!armed_spell_id) return null
-  const cost = is_weapon ? weapon_ap_cost : (seat_spell_row(seat, fight_spell(armed_spell_id))?.ap ?? 0)
+  if (is_weapon) return (active_ap ?? 0) >= weapon_ap_cost ? armed_spell_id : null
+  // #1093 — AN ARM THE BOARD CANNOT PAINT IS NOT AN ARM. `seed_range_of` is the ONE door to the seat's rank
+  // row; when it refuses (an id the corpus resolves to nothing, or a rank the corpus never authored) there is
+  // no blue cast range to draw. Pricing that ABSENT row at 0 AP made it read as affordable, and an affordable
+  // arm is exactly what flips the board into cast mode and suppresses the green MP wash — so the green went
+  // off and the blue never came on, leaving every base channel dark on a live turn. The idle MP wash keeps the
+  // board instead, and the adapter names the unpaintable arm out loud (no silent failure).
+  if (!seed_range_of(armed_spell_id, seat)) return null
+  const cost = seat_spell_row(seat, fight_spell(armed_spell_id))?.ap ?? 0
   return (active_ap ?? 0) >= cost ? armed_spell_id : null
 }
 

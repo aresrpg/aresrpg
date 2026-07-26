@@ -8,8 +8,11 @@
 //    @aresrpg/fight my_traps_fold.test.js; the render/legality/receipt collapse in trap_home_collapse.test.js).
 
 import { describe, expect, test } from 'bun:test'
+import { create_fight_store } from '@aresrpg/fight/store'
+import * as project from '@aresrpg/fight/project'
+import { encode } from '@aresrpg/fight/los'
 
-import { wash_armed_spell, tackle_float_payloads } from './voxel_fight_folds.js'
+import { wash_armed_spell, seed_range_of, tackle_float_payloads } from './voxel_fight_folds.js'
 
 describe('wash_armed_spell — the cast wash paints only while one more cast is affordable', () => {
   test('the weapon sentinel gates on the escrow ap_cost: affordable paints, spent clears', () => {
@@ -21,9 +24,116 @@ describe('wash_armed_spell — the cast wash paints only while one more cast is 
   test('nothing armed ⇒ null (the idle MP default owns the board)', () => {
     expect(wash_armed_spell({ armed_spell_id: null, active_ap: 6 })).toBeNull()
   })
+})
 
-  test('an unresolvable spell id costs 0 — honestly paints rather than silently gating', () => {
-    expect(wash_armed_spell({ armed_spell_id: 'not_a_seeded_spell', active_ap: 0 })).toBe('not_a_seeded_spell')
+// ── #1093 RED-FIRST — "the board's cell-paint stack is DARK: the MP move-range wash is absent on turns" ──────
+// THE MECHANISM: #1077 moved every board surface off `levels[0]` onto the seat's OWN rank row
+// (`seat_spell_row` — `levels[rank - 1]`, the rank the chain's `spell_levels` names). A rank the corpus never
+// authored — and any id the corpus cannot resolve at all — yields NO row. `wash_armed_spell` then priced that
+// missing row at 0 AP and called it AFFORDABLE, which is what flips the board into cast mode and suppresses the
+// green MP wash; `seed_range_of` read the SAME missing row and returned null, so no blue cast range ever
+// replaced it. Green off, blue never on: every base channel goes dark the instant such a spell is armed.
+//
+// THE RULE (one sentence): an arm the board cannot paint a range for is NOT a wash-armed spell — the idle MP
+// wash keeps the board, and the adapter names the unpaintable arm out loud instead of going dark.
+const FIGHT_ID = '0xwash-armed'
+const MY_ADDRESS = '0xowner'
+const at = (x, y) => encode(x, y)
+
+/** One seat on its own turn with MP to spend and no adjacent locker — a plain, fully-green move wash. */
+const open_my_turn = () => {
+  const store = create_fight_store()
+  store.getState().input({
+    type: 'init',
+    fight_id: FIGHT_ID,
+    my_key: null,
+    ctx: { address: MY_ADDRESS, roster: [{ id: 'c1', name: 'Kaelen' }], my_entity_id: 'c1', spectator: false },
+  })
+  store.getState().input({
+    type: 'snapshot',
+    version: 1,
+    fight: {
+      id: FIGHT_ID,
+      width: 20,
+      height: 19,
+      status: 1,
+      participants: [
+        {
+          owner: MY_ADDRESS,
+          character: 'c1',
+          class: 'senshi',
+          team: 0,
+          hp: 40,
+          max_hp: 40,
+          ap: 6,
+          mp: 5,
+          base_ap: 6,
+          base_mp: 5,
+          cell: at(2, 5),
+          ready: true,
+          casts_this_turn: 0,
+          stats: { agility: 0 },
+          base_stats: { range: 0 },
+        },
+      ],
+      mobs: [{ template: '0xmob', level: 1, hp: 20, max_hp: 20, cell: at(15, 15), ap: 4, mp: 3, alive: true }],
+      group_template: '0xgroup',
+      group_base_ap: 4,
+      group_base_mp: 3,
+      obstacles: [],
+      holes: [],
+      start_cells_a: [at(2, 5)],
+      start_cells_b: [at(15, 15)],
+      queue: [
+        { is_mob: false, idx: 0 },
+        { is_mob: true, idx: 0 },
+      ],
+      turn_ptr: 0,
+      turn_deadline_ms: 1_700_000_000_000,
+      placement_deadline_ms: 0,
+      world_seed: 1,
+      spawn_id: 1,
+      anchor_x: 0,
+      anchor_z: 0,
+      shape_mask: [],
+      invisibility_statuses: [],
+    },
+  })
+  return store
+}
+
+describe('#1093 — an arm the board cannot paint never suppresses the MP wash', () => {
+  test('a spell with no resolvable rank row is NOT wash-armed — the same row that has no range has no cost', () => {
+    const seat = { spell_levels: {} }
+    // precondition: this is exactly the unpaintable case — the ONE range door refuses it
+    expect(seed_range_of('not_a_seeded_spell', seat)).toBeNull()
+    // …so it may not arm the wash. It used to, at a free 0 AP, from that same absent row.
+    expect(wash_armed_spell({ armed_spell_id: 'not_a_seeded_spell', active_ap: 6, seat })).toBeNull()
+    expect(wash_armed_spell({ armed_spell_id: 'not_a_seeded_spell', active_ap: 0, seat })).toBeNull()
+  })
+
+  test('the weapon sentinel is untouched — it has no seed row BY DESIGN and prices off the escrow', () => {
+    const inputs = { armed_spell_id: '__weapon_attack', is_weapon: true, weapon_ap_cost: 4, seat: {} }
+    expect(wash_armed_spell({ ...inputs, active_ap: 6 })).toBe('__weapon_attack')
+    expect(wash_armed_spell({ ...inputs, active_ap: 3 })).toBeNull()
+  })
+
+  test('THE BOARD STAYS LIT: the green MP wash survives an unpaintable arm (the reported blackout)', () => {
+    const store = open_my_turn()
+    const seat = { spell_levels: {} }
+    // the adapter's exact composition: the fold's verdict is what `targeting` rides into the core's wash
+    const wash_armed = wash_armed_spell({ armed_spell_id: 'not_a_seeded_spell', active_ap: 6, seat })
+    const wash = project.move_wash(store.getState(), { busy: false, targeting: !!wash_armed })
+    // RED before the fix: wash_armed was truthy ⇒ targeting ⇒ reach [] ⇒ no green, and seed_range_of null ⇒ no
+    // blue either. Every base channel dark on a live turn.
+    expect(wash.reach.length).toBeGreaterThan(0)
+  })
+
+  test('CONTRACT: an unpaintable arm names itself — the adapter never goes dark in silence', async () => {
+    const source = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
+    expect(source).toContain('unpaintable_arm_key')
+    expect(source).toContain("no seed row at the seat's rank") // the log line, not a swallowed branch
+    expect(source).toContain('console.error(')
   })
 })
 
