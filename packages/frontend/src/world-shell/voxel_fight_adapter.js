@@ -104,7 +104,7 @@ import {
   beats_from_packet,
   tackle_float_payloads,
   split_move_at_traps,
-  path_within_reach,
+  reachable_hover_path,
   wash_armed_spell,
   cast_face_target,
   seed_range_of,
@@ -1752,15 +1752,16 @@ export function create_voxel_fight_adapter(
         // the D236 dark-green 'path' (so the preview can never lie). The soft-red beyond-MP suffix is DEAD: the
         // lost-range read is the WASH's static 'path_blocked' band (project.move_wash — mouse-independent,
         // tackle-gated), never a per-hover paint.
-        // #950 — the clip is the REDUCER'S reachability, not a raw `active.mp` slice of the BFS path: a TACKLED
-        // seat's move is bitten short by the chain's escape contest, so an MP-length slice painted a path
-        // across cells the walk never reaches. `move_wash` is the ONE home for that truth and the same call
-        // paint() washes green with, so the path and the wash agree cell-for-cell by construction.
+        // #950 → #1042 — the reach test is the REDUCER'S, and it is a GATE ON THE HOVERED CELL, not a clip:
+        // hovering a cell OUTSIDE `move_wash`'s reach (a tackled seat's bitten walk, or plain out-of-MP) paints
+        // NO path at all, because a truncated route under a cursor the walk can never reach answers a question
+        // nobody asked. `move_wash` is the ONE home for that truth and the same call paint() washes green with,
+        // so the painted path and the green wash agree cell-for-cell by construction.
         const blocked = presentation_blocked_cells(dungeon, fight.fighters, active.id)
         const path = move_path_dungeon(active, cell, { blocked, mp: GRID_CELLS })
         if (!path.length) return clear_hover()
         const wash = project.move_wash(fight_store.getState(), { busy: use_dungeon.getState().busy })
-        movement_path = path_within_reach(path, new Set(wash.reach))
+        movement_path = reachable_hover_path(path, new Set(wash.reach))
         if (!movement_path.length) return clear_hover()
       }
       // AoE/GLYPH-on-hover: while a spell is armed and the hover is a CASTABLE cell, paint the spell's FULL zone

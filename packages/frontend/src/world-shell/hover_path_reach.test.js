@@ -1,21 +1,26 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// RED-FIRST (#950, the owner-confirmed VISUAL half) — "the painted path crossed cells where the move was
-// actually TACKLED short". The hover preview sliced a plain BFS path at the mover's RAW MP, while the green
-// wash beside it came from the reducer (`project.move_wash` — the chain's escape contest folded cell-for-cell,
-// so a tackled seat's reach is BITTEN back). Two derivations of one fact: the dark path walked straight through
-// cells the wash had already refused, and the commit stopped where the wash said, not where the path drew.
+// RED-FIRST (#1042, the near-fix regression of #950) — "hovering a cell BEYOND my move range still paints the
+// dark-green path, clipped back into range". #950 replaced a raw-MP slice with a CLIP against the reducer's own
+// reachability (project.move_wash), which fixed the lying-path half and left the clip painting a TRUNCATED path
+// for a hover the walk can never honour: the cursor sits on an unreachable cell and the board still draws a
+// route to somewhere else.
 //
-// Acceptance (the issue's own words): the painted path IS the path the commit folds, every time. These drive
-// the REAL core (a seat locked by an adjacent living enemy ⇒ a real tackle) and assert the clip against
-// move_wash's own reach.
+// THE RULE (one sentence): the dark-green path preview renders ONLY when the hovered cell is itself in the
+// reachable set — hovering any other cell paints NO path. So the reach test is a GATE on the destination, not a
+// clip on the walk. These drive the REAL core (a seat locked by an adjacent living enemy ⇒ a real tackle) and
+// assert the verdict against move_wash's own reach.
+//
+// The adapter that consumes the gate cannot be MOUNTED in any environment (the senshi_male.glb missing-artifact
+// gate, #771 — a mounted-adapter test here would skip, and a skip is not a pass), so its call site is pinned by
+// a source-shape assertion instead: the one line that decides gate-vs-clip.
 
 import { describe, expect, test } from 'bun:test'
 import { create_fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
 import { bfsPath, encode } from '@aresrpg/fight/los'
 
-import { path_within_reach } from './voxel_fight_folds.js'
+import { reachable_hover_path } from './voxel_fight_folds.js'
 
 const FIGHT_ID = '0xhover-path'
 const MY_ADDRESS = '0xowner'
@@ -85,17 +90,21 @@ const open_fight = (options) => {
   return store
 }
 
-describe('#950 — the painted path derives from the reducer’s reachability', () => {
-  test('the clip keeps the leading prefix inside the reach and stops at the first refused cell', () => {
+describe('#1042 — the path preview is a REACH VERDICT on the hovered cell, never a clipped walk', () => {
+  test('a reachable destination paints the WHOLE walk; an unreachable one paints nothing at all', () => {
     const path = [10, 11, 12, 13]
-    expect(path_within_reach(path, new Set([10, 11, 12, 13]))).toEqual(path)
-    expect(path_within_reach(path, new Set([10, 11]))).toEqual([10, 11])
-    expect(path_within_reach(path, new Set([11, 12, 13]))).toEqual([]) // a refused FIRST step paints nothing
-    expect(path_within_reach(path, new Set())).toEqual([])
-    expect(path_within_reach([], new Set([10]))).toEqual([])
+    expect(reachable_hover_path(path, new Set([10, 11, 12, 13]))).toEqual(path)
+    // the #1042 report: the destination is out of reach, so the board paints NO path — never the prefix that
+    // fits, which draws a route to a cell the cursor is not on.
+    expect(reachable_hover_path(path, new Set([10, 11]))).toEqual([])
+    // and never a path THROUGH a refused cell either (a flood-fill reach cannot produce this, so the verdict
+    // owes nothing to that invariant)
+    expect(reachable_hover_path(path, new Set([11, 12, 13]))).toEqual([])
+    expect(reachable_hover_path(path, new Set())).toEqual([])
+    expect(reachable_hover_path([], new Set([10]))).toEqual([])
   })
 
-  test('a TACKLED seat: the painted path stops where the wash stops, not where raw MP would', () => {
+  test('a TACKLED seat: hovering a cell in the tackle-lost band paints ZERO path cells', () => {
     const store = open_fight({ agility: 0 }) // no dodge vs an adjacent locker ⇒ the escape is bitten
     const state = store.getState()
     const wash = project.move_wash(state, {})
@@ -103,24 +112,38 @@ describe('#950 — the painted path derives from the reducer’s reachability', 
     expect(wash.tackle_lost.length).toBeGreaterThan(0) // cells raw MP would reach and the walk will not
 
     const reach = new Set(wash.reach)
-    // hover a cell in the LOST band — exactly the report ("the path crossed cells the move was tackled short of")
+    // hover a cell in the LOST band — the exact report ("beyond my range, and it still draws a path")
     const target = wash.tackle_lost[wash.tackle_lost.length - 1]
     const path = bfsPath(at(2, 5), target, new Set([at(3, 5)]), 20 * 19)
     expect(path.length).toBeGreaterThan(0)
+    expect(reach.has(target)).toBe(false) // precondition: the hovered cell is genuinely out of reach
 
-    const painted = path_within_reach(path, reach)
-    expect(painted.length).toBeLessThan(path.length) // the flood-fill slice painted the whole thing
-    expect(painted.every((cell) => reach.has(cell))).toBe(true)
-    expect(painted.some((cell) => wash.tackle_lost.includes(cell))).toBe(false)
+    expect(reachable_hover_path(path, reach)).toEqual([]) // the clip painted its in-range prefix here
   })
 
-  test('an UNTACKLED seat paints its full walk — the clip only ever removes what the fold refuses', () => {
+  test('a reachable hover inside a TACKLED seat’s bitten reach still paints its full walk', () => {
+    const store = open_fight({ agility: 0 })
+    const wash = project.move_wash(store.getState(), {})
+    const reach = new Set(wash.reach)
+    const target = wash.reach[wash.reach.length - 1]
+    const path = bfsPath(at(2, 5), target, new Set([at(3, 5)]), 20 * 19)
+    expect(path.length).toBeGreaterThan(0)
+    expect(reachable_hover_path(path, reach)).toEqual(path)
+  })
+
+  test('an UNTACKLED seat paints its full walk — the gate only ever refuses what the fold refuses', () => {
     const store = open_fight({ mob_cell: at(15, 15) }) // no adjacent locker ⇒ no contest
     const wash = project.move_wash(store.getState(), {})
     expect(wash.tackled).toBe(false)
     const reach = new Set(wash.reach)
     const target = at(4, 5) // 2 steps, well inside 5 MP
     const path = bfsPath(at(2, 5), target, new Set(), 20 * 19)
-    expect(path_within_reach(path, reach)).toEqual(path)
+    expect(reachable_hover_path(path, reach)).toEqual(path)
+  })
+
+  test('the adapter’s unarmed hover routes through the GATE — no clip survives at the call site', async () => {
+    const src = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
+    expect(src).toContain('reachable_hover_path(path, new Set(wash.reach))')
+    expect(src).not.toContain('path_within_reach') // the clip is gone, name and all
   })
 })

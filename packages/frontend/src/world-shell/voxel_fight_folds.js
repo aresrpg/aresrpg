@@ -238,22 +238,23 @@ export function split_move_at_traps(path, trap_hits) {
 }
 
 /**
- * #950 — THE PAINTED PATH IS THE PATH THE COMMIT FOLDS. The hover walk clipped to the REACHABILITY THE REDUCER
- * OWNS (`project.move_wash`'s `reach` — the tackle-aware set, which is the chain's own escape contest folded
- * cell-for-cell), keeping the leading prefix that lies inside it. This replaced a raw `mp`-length slice of a
- * plain BFS path: a TACKLED seat's move is bitten short, so that slice painted a dark path across cells the
- * walk never reaches — a preview that lies about the very move it previews. One truth, one home: whatever
- * `move_wash` washes green is exactly how far the path can be drawn.
- * @param {number[]} path start-exclusive ENCODED path cells @param {Set<number>} reach the wash's reach set
- * @returns {number[]} the reachable leading prefix
+ * #950 → #1042 — THE PATH PREVIEW IS A REACH VERDICT ON THE HOVERED CELL. A dark-green path is the answer to
+ * "click here and I walk this route", so it may only be drawn for a cell the walk can actually END on: the
+ * hovered destination is either inside the REACHABILITY THE REDUCER OWNS (`project.move_wash`'s `reach` — the
+ * tackle-aware set, the chain's own escape contest folded cell-for-cell) and the whole walk paints, or it is
+ * not and NOTHING paints. #950 made this a CLIP (keep the prefix inside the reach), which fixed the lying
+ * path but left a truncated route drawn under a cursor sitting somewhere unreachable (#1042). A gate has no
+ * such half-answer, and it needs no separate "is this cell reachable" derivation: `move_wash` stays the one
+ * home for reach, exactly as paint() washes it green. The verdict reads EVERY cell rather than just the
+ * hovered one — with a flood-fill reach the two are the same answer, and the general form owes nothing to
+ * that invariant: no cell is ever painted dark-green that the wash has not painted light-green.
+ * @param {number[]} path start-exclusive ENCODED path cells (the last is the hovered destination)
+ * @param {Set<number>} reach the wash's reach set
+ * @returns {number[]} the whole walk when the walk is reachable, otherwise nothing
  */
-export function path_within_reach(path, reach) {
-  const out = []
-  for (const cell of path ?? []) {
-    if (!reach?.has(cell)) break
-    out.push(cell)
-  }
-  return out
+export function reachable_hover_path(path, reach) {
+  const cells = path ?? []
+  return cells.length && cells.every((cell) => reach?.has(cell)) ? cells : []
 }
 
 /**
