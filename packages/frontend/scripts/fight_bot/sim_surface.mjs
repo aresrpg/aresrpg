@@ -120,13 +120,15 @@ const seed_setup = async (page, mob, scenario) => {
  * Boot the simulator, seed the scenario, press START FIGHT, and hand back the ONE seat that plays it.
  * @returns {Promise<{ seats: Array<object>, seams: string[], fight_id: string }>}
  */
-export const open_sim_fight = async ({ browser, base, scenario, mob, log }) => {
+export const open_sim_fight = async ({ browser, base, scenario, mob, log, on_seat = () => {} }) => {
   const url = `${base}simulator?dev`
   // The sanctioned Playwright login (auth/dev_wallet.ts): a fresh, unfunded, throwaway keypair per run.
   // Nothing to fund and nothing to leak — the simulator signs no transaction at all (fight_shim.js).
   const { page, console_lines, client } = await open_page(browser, {
     dev_key: Ed25519Keypair.generate().getSecretKey(),
   })
+  const seat = make_seat({ name: 'sim', page, client, console_lines })
+  on_seat(seat)
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 180_000 })
   await page.waitForSelector('canvas', { timeout: 180_000 })
   await seed_setup(page, mob, scenario)
@@ -152,5 +154,5 @@ export const open_sim_fight = async ({ browser, base, scenario, mob, log }) => {
   log(
     `[bot] fight ${opened.fight_id} open — ${opened.fighters.length} fighters, ${opened.spellbook.length} castable spells`
   )
-  return { seats: [make_seat({ name: 'sim', page, client, console_lines })], seams, fight_id: opened.fight_id }
+  return { seats: [seat], seams, fight_id: opened.fight_id }
 }

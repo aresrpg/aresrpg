@@ -27,6 +27,8 @@ export const seam_client = (page) => ({
   place: (cell) => page.evaluate((c) => window.__ARES_DEV_PLACE(c), cell),
   /** Seat this page's character in an already-open PUBLIC world fight (the coop second seat's only door). */
   join: (fight_id) => page.evaluate((id) => window.__ARES_DEV_WORLD_JOIN(id), fight_id),
+  /** Forfeit the live fight — how a chain-backed run releases a seat it did not finish. */
+  abandon: () => page.evaluate(() => window.__ARES_DEV_ABANDON()),
 })
 
 /** Wait until `predicate(read)` holds, polling the seam. Returns the read, or null on timeout. */

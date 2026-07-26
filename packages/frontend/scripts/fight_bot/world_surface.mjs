@@ -132,35 +132,63 @@ export const join_world_fight = async ({ seat, fight_id, log, timeout_ms = 300_0
 
 /**
  * TAKE A START CELL. `place` is place-and-ready in one signature and the LAST ready starts the fight, so the
- * order across seats is load-bearing: every seat must be seated before any seat readies. The cell is chosen off
- * the seat's OWN published band, skipping cells another fighter already committed to.
+ * order across seats is load-bearing: every seat must be seated before any seat readies.
+ *
+ * OCCUPANCY IS BOTH CLOCKS, and coop is what proves it. `turns::place` aborts with EBadStartCell(104) on a cell
+ * that is not a near-side start OR is already occupied — and a joiner is seated on a start cell the moment its
+ * join lands, BEFORE anything about it is committed. Reading only the committed fold therefore saw an empty band
+ * and sent the creator onto the joiner's cell (measured: the first coop run died exactly there). Every fighter
+ * that is not me holds its cell under whichever clock reports it.
  */
 export const place_seat = async ({ seat, log, timeout_ms = 300_000 }) => {
   const read = await wait_for(seat.client, (r) => r.placement && r.placement_cells.length > 0, { timeout_ms: 120_000 })
   if (!read) throw new Error(`seat ${seat.name}: the placement window never opened (no start band in the read)`)
   const taken = new Set(
-    read.fighters.filter((f) => f.cell_committed).map((f) => `${f.cell_committed.x},${f.cell_committed.y}`)
+    read.fighters
+      .filter((f) => f.id !== read.my_id)
+      .flatMap((f) => [f.cell_committed, f.cell])
+      .filter(Boolean)
+      .map((c) => `${c.x},${c.y}`)
   )
-  const cell = read.placement_cells.find((c) => !taken.has(`${c.x},${c.y}`)) ?? read.placement_cells[0]
-  log(`[bot] seat ${seat.name}: placing on ${cell.x},${cell.y}`)
+  const free = read.placement_cells.filter((c) => !taken.has(`${c.x},${c.y}`))
+  if (!free.length)
+    throw new Error(`seat ${seat.name}: every one of the ${read.placement_cells.length} start cells is occupied`)
+  const [cell] = free
+  log(`[bot] seat ${seat.name}: placing on ${cell.x},${cell.y} (${free.length} of ${read.placement_cells.length} free)`)
   const result = await within(seat.client.place(cell), timeout_ms, `seat ${seat.name}'s placement`)
   if (!result?.ok)
     throw new Error(`seat ${seat.name} could not place on ${cell.x},${cell.y}: ${result?.error ?? 'unknown refusal'}`)
   return cell
 }
 
+/** RELEASE a fight this run opened and did not finish, so the seat is free for the next one. */
+export const abandon_fight = async ({ seat, log, timeout_ms = 300_000 }) => {
+  const result = await within(seat.client.abandon(), timeout_ms, `seat ${seat.name}'s forfeit`).catch((error) => ({
+    ok: false,
+    error: String(error?.message ?? error),
+  }))
+  log(`[bot] seat ${seat.name}: ${result.ok ? 'fight released (forfeit)' : `forfeit refused — ${result.error}`}`)
+  return result
+}
+
 /**
  * Open a WORLD fight and hand back its seats, ready to play. One seat name = solo world mode; two = coop.
+ * `on_seat` receives each seat the MOMENT it boots — the caller registers it there so a failure DURING the
+ * opening still ends with that page's console on disk (the first coop run failed at the create and left no
+ * console at all, which is the one artefact that would have explained it).
  * @returns {Promise<{ seats: Array<object>, seams: string[], fight_id: string, addresses: Record<string,string> }>}
  */
-export const open_world_fight = async ({ browser, base, keys_path, seat_names, log }) => {
+export const open_world_fight = async ({ browser, base, keys_path, seat_names, log, on_seat = () => {} }) => {
   const booted = []
   for (const name of seat_names) {
-    const seat = await boot_world_seat({ browser, base, name, secret: seat_key(keys_path, name), log })
+    // ONE seat object per seat, built here and handed out once: registering a copy and playing another would
+    // give the run two different memories for the same player.
+    const seat = make_seat(await boot_world_seat({ browser, base, name, secret: seat_key(keys_path, name), log }))
+    booted.push(seat)
+    on_seat(seat)
     const url = `${base}game-world?dev`
     if (!(await await_seams(seat.client, seat.page, url, { log })))
       throw new Error(`seat ${name}: the bot seams never registered on the world HUD`)
-    booted.push(seat)
   }
   const [creator, ...joiners] = booted
   const seams = await creator.client.seams()
@@ -180,7 +208,7 @@ export const open_world_fight = async ({ browser, base, keys_path, seat_names, l
     `[bot] fight ${fight_id} ACTIVE — ${opened.fighters.length} fighters, ${opened.spellbook.length} castable spells for ${creator.name}`
   )
   return {
-    seats: booted.map((seat) => make_seat(seat)),
+    seats: booted,
     seams,
     fight_id,
     addresses: Object.fromEntries(booted.map((seat) => [seat.name, seat.address])),

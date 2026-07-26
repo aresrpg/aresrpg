@@ -43,7 +43,7 @@ import { assert_status_proof_ran, summarise } from '@aresrpg/fight/bot'
 import { wait_for_server } from './fight_bot/seam.mjs'
 import { drive_fight } from './fight_bot/drive.mjs'
 import { open_sim_fight, pick_mob } from './fight_bot/sim_surface.mjs'
-import { open_world_fight } from './fight_bot/world_surface.mjs'
+import { abandon_fight, open_world_fight } from './fight_bot/world_surface.mjs'
 import { print_sheet } from './fight_bot/sheet.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -127,22 +127,24 @@ const sheet = {
   errors: [],
 }
 let browser
-let seats = []
+const seats = []
 
 try {
   await wait_for_server(BASE)
   browser = await chromium.launch({ headless: !HEADED, args: ['--enable-unsafe-swiftshader'] })
+  // Seats register the MOMENT they boot — `seats` IS the registry, so a failure during the opening still writes
+  // that page's console below instead of leaving the one artefact that explains it unwritten.
+  const on_seat = (seat) => seats.push(seat)
   const opened =
     MODE === 'sim'
-      ? await open_sim_fight({ browser, base: BASE, scenario: SCENARIO, mob, log })
-      : await open_world_fight({ browser, base: BASE, keys_path: KEYS_PATH, seat_names: SEAT_NAMES, log })
-  ;({ seats } = opened)
+      ? await open_sim_fight({ browser, base: BASE, scenario: SCENARIO, mob, log, on_seat })
+      : await open_world_fight({ browser, base: BASE, keys_path: KEYS_PATH, seat_names: SEAT_NAMES, log, on_seat })
   sheet.seams = opened.seams
   sheet.fight_id = opened.fight_id
   if (opened.addresses) sheet.addresses = opened.addresses
 
   const played = await drive_fight({
-    seats,
+    seats: opened.seats,
     max_turns: SCENARIO.max_turns,
     policy_seed: SCENARIO.policy_seed,
     log,
@@ -166,6 +168,12 @@ try {
   sheet.errors.push(String(error?.stack ?? error))
   log(`[bot] FATAL ${String(error?.message ?? error)}`)
 } finally {
+  // RELEASE WHAT THIS RUN DID NOT FINISH — in the TEARDOWN, because the run can fail with a fight already
+  // created (the first coop attempt died at its placement, holding both seats). A chain fight left open keeps its
+  // characters escrowed, and the NEXT run then finds no claimable group and no honest way to say why. The rig
+  // wants a free seat, never that fight's rewards. `__ARES_DEV_ABANDON` self-guards, so a seat holding nothing
+  // simply answers that it has nothing to release.
+  if (ON_CHAIN && sheet.outcome === 'not reached') for (const seat of seats) await abandon_fight({ seat, log })
   // The pages' own account of the run, written whatever happened — a failure with no console is a failure
   // nobody can diagnose, which is how the manual drives burned their hours.
   for (const seat of seats) {

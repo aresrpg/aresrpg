@@ -212,12 +212,9 @@ export const drive_fight = async ({
   return { turns, outcome, cross }
 }
 
-/** A fresh seat: its page, its seam and the memory a snapshot cannot carry. */
-export const make_seat = ({ name, page, client, console_lines }) => ({
-  name,
-  page,
-  client,
-  console_lines,
+/** A fresh seat: its page, its seam, whatever its surface knows about it, and the memory a snapshot cannot carry. */
+export const make_seat = (session) => ({
+  ...session,
   history: { casts: {}, blocked: [], traps: [] },
   armed_traps: [],
 })

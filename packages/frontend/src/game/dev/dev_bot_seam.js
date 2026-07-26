@@ -359,6 +359,30 @@ async function dev_world_join(fight_id) {
   return { ok: true, fight_id, status: use_dungeon.getState().dungeon?.status ?? null }
 }
 
+/**
+ * window.__ARES_DEV_ABANDON() — FORFEIT the live fight (`use_dungeon.abandon_fight`, the ABANDON button's own
+ * door). This is what makes a chain-backed rig REPEATABLE: a fight the bot opens and walks away from keeps its
+ * character escrowed forever, and every later run then finds no claimable group and no way to say why. The rig
+ * wants a free seat, not that fight's rewards.
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+async function dev_abandon({ settle_ms = 30_000 } = {}) {
+  if (!use_dungeon.getState().fight_id) return { ok: false, error: 'no live fight to abandon' }
+  // `abandon_fight` DROPS the call while the store is busy — it returns false without composing anything, so
+  // waiting out a background poll costs nothing and signs nothing. This is not a retry of a failed transaction
+  // (none was built); it is waiting for the door to be open before knocking.
+  const deadline = Date.now() + settle_ms
+  while (use_dungeon.getState().busy && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  const store = use_dungeon.getState()
+  if (store.busy) return { ok: false, error: `the store was still busy after ${settle_ms / 1000}s` }
+  let released = false
+  const error = await with_refusal(async () => {
+    released = await store.abandon_fight()
+  })
+  return released && !error ? { ok: true } : { ok: false, error: error ?? 'the forfeit was dropped' }
+}
+
 /** Register the hooks (idempotent; dev builds only — the caller gates on import.meta.env.DEV). */
 export function register_dev_bot_seam() {
   if (typeof window === 'undefined') return
@@ -366,4 +390,5 @@ export function register_dev_bot_seam() {
   ;(/** @type {any} */ (window)).__ARES_DEV_TURN = dev_turn
   ;(/** @type {any} */ (window)).__ARES_DEV_PLACE = dev_place
   ;(/** @type {any} */ (window)).__ARES_DEV_WORLD_JOIN = dev_world_join
+  ;(/** @type {any} */ (window)).__ARES_DEV_ABANDON = dev_abandon
 }
