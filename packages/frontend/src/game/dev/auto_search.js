@@ -9,6 +9,7 @@
 // input; the fold decides everything and answers with COMMAND rows the adapter performs:
 //   walk (steer the body to x/z) · search (pull the same [F] lever a human presses) · found (the popup +
 //   auto-disable) · halt (cancel an in-flight walk) · exhausted (no zone left in range — an honest stop).
+// An `interrupted` input (the player taking the body back) disarms — the toggle never outlives its run.
 // Nothing here knows about React, the engine, the chain, or a transaction — that is auto_search_adapter.js.
 //
 // THE SPEND GATE: `armed` has exactly ONE door — `fee_confirm` after a `toggle` raised `fee_pending`. Each
@@ -60,11 +61,13 @@ export const blank_auto_search = () => ({
 /** Attach ONE command row (the adapter performs the newest `seq` it has not seen). */
 const with_command = (state, command) => ({ ...state, seq: state.seq + 1, command: { seq: state.seq + 1, ...command } })
 
+/** Is a run actually in flight? (armed, or still winding down a phase) */
+const is_running = (state) => state.armed || state.phase !== 'idle'
+
 /** Stop everything: disarm, drop the target, and halt an in-flight walk (only when there was one). */
 const halt = (state, extra = {}) => {
-  const running = state.armed || state.phase !== 'idle'
   const stopped = { ...state, ...extra, armed: false, phase: 'idle', target: null }
-  return running ? with_command(stopped, { kind: 'halt' }) : stopped
+  return is_running(state) ? with_command(stopped, { kind: 'halt' }) : stopped
 }
 
 const distance = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz)
@@ -102,12 +105,8 @@ export function pick_zone(state, world) {
 /** Take the next zone: emit its walk leg, or stop honestly when the annulus is exhausted. */
 const retarget = (state, world, now) => {
   const next = pick_zone(state, world)
-  if (!next)
-    return with_command({ ...state, armed: false, phase: 'idle', target: null }, { kind: 'exhausted' })
-  return with_command(
-    { ...state, phase: 'travel', target: next, leg_at: now },
-    { kind: 'walk', x: next.x, z: next.z }
-  )
+  if (!next) return with_command({ ...state, armed: false, phase: 'idle', target: null }, { kind: 'exhausted' })
+  return with_command({ ...state, phase: 'travel', target: next, leg_at: now }, { kind: 'walk', x: next.x, z: next.z })
 }
 
 /** Retire the current zone (searched, missed, or unreachable) and take the next one. */
@@ -179,7 +178,13 @@ const fold_world = (state, world, now) => {
       if (reach > ARRIVE_RADIUS_M && now - state.leg_at <= LEG_TIMEOUT_MS) return state
       return with_command(
         { ...state, armed: false, phase: 'found', found: state.target },
-        { kind: 'found', template_id: state.target.template_id, name: state.target.name, x: state.target.x, z: state.target.z }
+        {
+          kind: 'found',
+          template_id: state.target.template_id,
+          name: state.target.name,
+          x: state.target.x,
+          z: state.target.z,
+        }
       )
     }
 
@@ -239,6 +244,12 @@ export function reduce_auto_search(state, input, now) {
       const key = zone_key_of(input.zx, input.zy)
       return { ...state, phase: 'idle', skipped: state.skipped.includes(key) ? state.skipped : [...state.skipped, key] }
     }
+
+    // THE PLAYER ALWAYS WINS (auto_run.js): the moment they take the body back — a movement key, Esc, or a
+    // marker of their own — the scouting is over, so the toggle must stop claiming otherwise. The steerer's
+    // OWN churn (its next leg, our halt, a stuck leg) rides the same announcement, hence the reason filter.
+    case 'interrupted':
+      return input.reason === 'player' && is_running(state) ? halt(state) : state
 
     // HARD STOPS — a fight, a world rebind, or the panel unmounting all speak through the same two inputs.
     case 'fight_entry':

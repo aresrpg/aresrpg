@@ -133,11 +133,7 @@ describe('the walk legs — only zones whose centre sits inside the configured a
   })
 
   test('a narrow annulus with no zone in it never walks — it reports exhaustion honestly', () => {
-    const state = reduce_auto_search(
-      armed_with(['mob_a'], { from_m: 1, to_m: 2 }),
-      world(),
-      1000
-    )
+    const state = reduce_auto_search(armed_with(['mob_a'], { from_m: 1, to_m: 2 }), world(), 1000)
     expect(state.command.kind).toBe('exhausted')
     expect(state.armed).toBe(false)
   })
@@ -298,5 +294,27 @@ describe('the hard stops', () => {
   test('a disarmed scouter ignores world snapshots entirely (same state reference back)', () => {
     const idle = blank_auto_search()
     expect(reduce_auto_search(idle, world(), 1000)).toBe(idle)
+  })
+})
+
+describe('the player always wins — taking manual control disarms the toggle', () => {
+  test('a player interruption stops the loop AND turns the switch off (never a lying armed state)', () => {
+    const running = reduce_auto_search(armed_with(['mob_a']), world(), 1000)
+    expect(running.armed).toBe(true)
+    const stopped = reduce_auto_search(running, { type: 'interrupted', reason: 'player' }, 1100)
+    expect(stopped.armed).toBe(false)
+    expect(stopped.phase).toBe('idle')
+    expect(stopped.command.kind).toBe('halt')
+  })
+
+  test("the scouter's OWN leg churn is not a takeover (same state reference back)", () => {
+    const running = reduce_auto_search(armed_with(['mob_a']), world(), 1000)
+    for (const reason of ['retarget', 'halt', 'blocked'])
+      expect(reduce_auto_search(running, { type: 'interrupted', reason }, 1100)).toBe(running)
+  })
+
+  test('an interruption while nothing is running changes nothing', () => {
+    const idle = blank_auto_search()
+    expect(reduce_auto_search(idle, { type: 'interrupted', reason: 'player' }, 1000)).toBe(idle)
   })
 })

@@ -39,6 +39,21 @@ const HOP_COOLDOWN_S = 0.6 //     this clears a low wall; the controller's doubl
 /** type → the prompt_stack id its manual press owns (the ONE interaction home this module pulls). */
 const INTERACT_ID = /** @type {const} */ ({ mob: 'attack', resource: 'gather' })
 
+// ── THE CANCEL ANNOUNCEMENT ────────────────────────────────────────────────────────────────────────────
+// Every way a run ends funnels through `cancel(reason)` below, so that is the ONE place that can tell a
+// headless caller steering the body (the auto-search scouter) that the PLAYER took it back. Without it a
+// cancelled scout keeps claiming to be running — a lying toggle. A plain subscriber set, not the event bus:
+// this module stays out of core/game.js's module graph so its unit test remains headless.
+/** @type {Set<(reason: string) => void>} */
+const cancel_listeners = new Set()
+
+/** Observe every auto-run cancellation and WHY it happened. @param {(reason: string) => void} fn
+ *  @returns {() => void} unsubscribe */
+export const subscribe_auto_run_cancelled = (fn) => {
+  cancel_listeners.add(fn)
+  return () => cancel_listeners.delete(fn)
+}
+
 /**
  * World-space steer yaw so the controller's forward axis (forward=1, strafe=0) points from (fx,fz) at the
  * target (tx,tz). move_direction sends forward along (-sin yaw, -cos yaw), so yaw = atan2(-(tx-fx), -(tz-fz)).
@@ -169,7 +184,13 @@ export function create_auto_run({
     chip = null
   }
 
-  const cancel = () => {
+  /**
+   * Stop the in-flight run and ANNOUNCE why. The default reason is 'player' because the only callers OUTSIDE
+   * this closure are the player-always-wins paths (embed_voxel_player.js: a movement key/stick, a jump, Esc,
+   * or an inert/cinematic gate) — this module's own exits pass their reason explicitly.
+   * @param {'player' | 'retarget' | 'arrived' | 'halt' | 'blocked'} [reason]
+   */
+  const cancel = (reason = 'player') => {
     if (phase === 'idle') return
     phase = 'idle'
     target = null
@@ -178,16 +199,19 @@ export function create_auto_run({
     block_time = 0
     hop_cd = 0
     hide_chip()
+    for (const listener of cancel_listeners) listener(reason)
   }
 
   /** Begin steering to a marker-click payload ({ type, id, position }). A no-op on a malformed payload.
    *  `{ type: 'cancel' }` stops an in-flight run — the seam a headless caller (auto-search) uses to halt
    *  the body without reaching into this closure. */
   const start = (/** @type {any} */ ev) => {
-    if (ev?.type === 'cancel') return cancel()
+    if (ev?.type === 'cancel') return cancel('halt')
     const next = normalize_target(ev)
     if (!next) return
-    cancel() // drop any in-flight run (retarget)
+    // drop any in-flight run. A bare 'point' leg is a programmatic retarget (the scouter's next leg); a mob/
+    // resource marker is the PLAYER choosing a new destination, which ends anything else driving the body.
+    cancel(next.type === 'point' ? 'retarget' : 'player')
     target = next
     phase = 'steer'
     arrive_t0 = 0
@@ -219,7 +243,7 @@ export function create_auto_run({
       while (samples.length > 2 && samples[0].t < horizon) samples.shift()
       if (is_stuck(samples, t)) {
         notify_blocked()
-        cancel()
+        cancel('blocked')
         return null
       }
       // block-hop: sustained crawl while steering → a jump pulse (edge-spaced by hop_cd so the controller
@@ -241,17 +265,17 @@ export function create_auto_run({
 
     // phase === 'arrive': a BARE point leg is already done — stand still, never look for a lever to pull.
     if (!INTERACT_ID[target.type]) {
-      cancel()
+      cancel('arrived')
       return null
     }
     // stand on the target and pull the SAME [R]/[G] lever the moment it's armed.
     if (trigger_interact(target.type)) {
-      cancel()
+      cancel('arrived')
       return null
     }
     if (t - arrive_t0 > INTERACT_GRACE_MS) {
       notify_blocked() // arrived but nothing interactable armed in time (despawned / just out of range)
-      cancel()
+      cancel('blocked')
       return null
     }
     return { forward: 0, strafe: 0, yaw, jump: false }
@@ -265,7 +289,7 @@ export function create_auto_run({
     /** The live target (for tests / an external readout), or null. */
     target: () => target,
     dispose: () => {
-      cancel()
+      cancel('halt')
       hide_chip()
     },
   }

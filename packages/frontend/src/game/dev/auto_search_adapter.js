@@ -11,6 +11,9 @@
 //   found     → the house event toast + the fold's own auto-disable.
 //   halt      → the steerer's cancel, so a stopped loop never leaves the body running.
 //
+// The steerer talks BACK too: `subscribe_auto_run_cancelled` reports every cancellation and its reason, so the
+// player taking manual control disarms the fold instead of leaving the toggle lying about a dead run.
+//
 // RECEIPTS come back off the spawns core's OWN pending map: a search subject that leaves `pending` while the
 // zones map was replaced is a receipt (fold_zone_searched rebuilds it); one that leaves with the zones map
 // untouched is a failure. One subscription, both signals, and no dependence on event ordering.
@@ -27,6 +30,7 @@ import { zone_searchable } from '@aresrpg/world/spawns_reconcile'
 import i18n from '../../i18n'
 import { context } from '../store.js'
 import { push_event_toast } from '../core/toast.js'
+import { subscribe_auto_run_cancelled } from '../auto_run.js'
 import { use_prompt_stack } from '../../world-shell/prompt_stack.js'
 import { spawns_store } from '../../world-shell/spawns_adapter.js'
 import { use_world_binding } from '../../world-shell/session_gate.js'
@@ -200,6 +204,11 @@ export function use_auto_search_driver(mob_rows) {
       }),
     []
   )
+
+  // THE PLAYER TAKING THE BODY BACK: the steerer announces every cancellation and why (auto_run.js). Its own
+  // churn — our next leg, our halt, an arrival, a stuck leg — rides the same door; the FOLD owns which reason
+  // ends the run, so a scout the player interrupted can never leave the toggle armed.
+  useEffect(() => subscribe_auto_run_cancelled((reason) => auto_search_input({ type: 'interrupted', reason })), [])
 
   // HARD STOPS: the claim → fight handoff, and any world rebind.
   useEffect(() => subscribe_fight_entry(spawns_store, () => auto_search_input({ type: 'fight_entry' })), [])
