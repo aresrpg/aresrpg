@@ -565,9 +565,14 @@ describe('FightReport — participant-row model (#342: compact single-line rows)
   })
 })
 
-// V2 SHADOW status chip (issue #522 follow-up, owner ruling 2026-07-24) — a small dev/QA readout on the
-// end-card, present only while the shadow fan-out is armed (fight_trace_tee.js's shadow_is_armed/
-// get_shadow_status — this card never reads `window` itself, it asks the tee's own getters). Poking
+// V2 SHADOW status chip — a dev/QA readout on the end-card. #912 CHANGED ITS AUDIENCE, not its content: a
+// flawless victory printing `V2 SHADOW · 1 FOLDED · 3 DIVERGED` reads as "the migration is broken" to the one
+// person who cannot know those divergences are benign, and machinery-speak is not game grammar. So the chip
+// now needs BOTH halves: the shadow armed (fight_trace_tee.js) AND a dev audience — `?fighttrace=1` or hack
+// mode (fight_state_trace.js's `trace_audience`). A player on a flawless win sees a flawless win.
+//
+// Every row below therefore arms the trace flag; the ONE row that does not is the player, and it is the row
+// this issue exists for. This card still never reads `window` itself — only its owners' getters. Poking
 // `globalThis.window` mirrors fight_trace_tee.test.js's own convention for these exact two keys; a `window`
 // another file owns keeps it (only the two keys are cleaned), and one this block created is removed whole —
 // other test files share this worker, and neither a stale key nor a location-less stub may outlive the block.
@@ -597,6 +602,8 @@ describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', 
     if (globalThis.window) {
       delete globalThis.window.__ARES_FIGHT_SHADOW_ENABLED
       delete globalThis.window.__ARES_FIGHT_SHADOW
+      delete globalThis.window.__ARES_FIGHT_TRACE_ENABLED
+      delete globalThis.window.location
     }
     if (window_is_ours) {
       delete (/** @type {any} */ (globalThis).window)
@@ -606,8 +613,24 @@ describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', 
   beforeEach(clear_shadow_state)
   afterEach(clear_shadow_state)
 
-  test('shadow unarmed — the kill switch disarms it, and the chip disappears with it', () => {
+  /** The dev audience the chip now requires: the drive/QA rail, spelled the way a driver spells it. */
+  const arm_trace = (win) => {
+    win.location = { search: '?fighttrace=1' }
+    return win
+  }
+
+  // ── THE #912 ROW: the player. Everything is at its shipped default — the shadow is DEFAULT-ON since box 3
+  // and has real counts to print — and the card says NOTHING, because nobody here is a developer.
+  test('a PLAYER never sees the chip, however loud the shadow is (#912)', () => {
     const win = arm_window()
+    win.__ARES_FIGHT_SHADOW = { fights_shadowed: 1, divergences: 3, last: { fight_id: '0xf1', fields: ['active'] } }
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
+    expect(html).not.toContain('fe-shadow-chip')
+    expect(html).not.toContain('diverged=3')
+  })
+
+  test('shadow unarmed — the kill switch disarms it, and the chip disappears with it', () => {
+    const win = arm_trace(arm_window())
     // the shadow is DEFAULT-ON since box 3 (issue #522), so "unarmed" is now something a test must ASK for:
     // `__ARES_FIGHT_SHADOW_ENABLED = false` is the two-way debug kill switch shadow_armed_on() checks first.
     win.__ARES_FIGHT_SHADOW_ENABLED = false
@@ -615,8 +638,8 @@ describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', 
     expect(html).not.toContain('fe-shadow-chip')
   })
 
-  test('no switch touched at all — the default-on shadow renders the chip (box 3 flip)', () => {
-    const win = arm_window()
+  test('a driver with the default-on shadow gets the chip (box 3 flip, kept)', () => {
+    arm_trace(arm_window())
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
     expect(html).toContain('fe-shadow-chip')
     expect(html).not.toContain('fe-shadow-chip--warn')
@@ -625,7 +648,7 @@ describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', 
   })
 
   test('armed, zero divergences — the chip renders the fold/diverge counts, no warning modifier', () => {
-    const win = arm_window()
+    const win = arm_trace(arm_window())
     win.__ARES_FIGHT_SHADOW_ENABLED = true
     win.__ARES_FIGHT_SHADOW = { fights_shadowed: 3, divergences: 0, last: null }
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
@@ -636,7 +659,7 @@ describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', 
   })
 
   test('armed with a divergence — the warning modifier lights up', () => {
-    const win = arm_window()
+    const win = arm_trace(arm_window())
     win.__ARES_FIGHT_SHADOW_ENABLED = true
     win.__ARES_FIGHT_SHADOW = {
       fights_shadowed: 5,
@@ -649,12 +672,21 @@ describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', 
   })
 
   test('armed but the shadow has never fed an envelope yet (status null) — a sane 0/0 chip, never a crash', () => {
-    const win = arm_window()
+    const win = arm_trace(arm_window())
     win.__ARES_FIGHT_SHADOW_ENABLED = true
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
     expect(html).toContain('fe-shadow-chip')
     expect(html).not.toContain('fe-shadow-chip--warn')
     expect(html).toContain('folded=0')
     expect(html).toContain('diverged=0')
+  })
+
+  // The simulator arms the tee's window switch on every START (fight_shim.js `arm_trace_tee`) — that IS a
+  // drive, and the chip's counts are exactly what it is for.
+  test('the simulator drive is a dev audience through the window switch alone', () => {
+    const win = arm_window()
+    win.__ARES_FIGHT_TRACE_ENABLED = true
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
+    expect(html).toContain('fe-shadow-chip')
   })
 })

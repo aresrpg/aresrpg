@@ -44,6 +44,7 @@ import { resolve_character_docs } from '../../../world-shell/character_name_reso
 import { seed_manifest } from '../../../content/seed_manifest'
 import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
 import { get_shadow_status, shadow_is_armed } from '../../../world-shell/fight_trace_tee.js'
+import { trace_audience } from '../../../world-shell/fight_state_trace.js'
 import './result.css'
 
 // the single-realm MVP world label (mirrors Minimap.jsx / MapDrawer.jsx — one named realm for now).
@@ -307,10 +308,15 @@ export function FightReport({
   // (FightExportReplayButton above) — has_dumpable_trace() gates its ENABLED state, never its existence. Fixed
   // at mount (this card mounts once per concluded fight; dumpability doesn't change while it's up).
   const trace_available = useMemo(() => has_dumpable_trace(), [])
-  // V2 SHADOW status chip (issue #522 follow-up, owner ruling 2026-07-24) — armed state + status are
-  // window-derived FACTS the tee owns (fight_trace_tee.js); this card never reads `window` itself, only the
-  // tee's own getters (architecture law: one window owner). Fixed at mount, same rationale as trace_available.
-  const shadow_armed = useMemo(() => shadow_is_armed(), [])
+  // V2 SHADOW status chip — armed state + status are window-derived FACTS the tee owns (fight_trace_tee.js);
+  // this card never reads `window` itself, only the tee's own getters (architecture law: one window owner).
+  // Fixed at mount, same rationale as trace_available.
+  //
+  // #912 — IT IS NOT PLAYER COPY. `V2 SHADOW · 1 FOLDED · 3 DIVERGED` on a flawless victory reads as "the
+  // migration is broken" to the one person who cannot know the divergences are benign. The shadow keeps
+  // running (the soak is the point); only its AUDIENCE changed — it renders for a driver (`?fighttrace=1`,
+  // hack mode) and for nobody else. A player on a flawless win sees a flawless win.
+  const shadow_armed = useMemo(() => shadow_is_armed() && trace_audience(), [])
   const shadow_status = useMemo(() => (shadow_armed ? get_shadow_status() : null), [shadow_armed])
   // Loot tooltips reuse the inventory/findables map for legacy slug-only rows, then overlay exact receipt IDs
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
