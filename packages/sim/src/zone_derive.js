@@ -32,6 +32,8 @@ const MIN_SPAWN_SPACING = 20 // mob group spawns pairwise ≥ 20 blocks apart
 const SPACING_D2 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING // squared compare (= 400)
 const POS_ATTEMPTS = 64 // rejection cap; on exhaustion accept the last roll (a zone too small to fit the spacing)
 const FORMAT_LATTICE = 2 // the commitment-format byte that selects LATTICE placement (zone_gen.move)
+const FORMAT_MEMBERS = 3 // MEMBER-LIST placement (#1110): lattice + a per-group roster of template indexes
+const MAX_MEMBERS = 16 // hard rail on a derived roster — zone_gen.move MAX_MEMBERS
 
 /** prng-state twin of `zone_gen::p_roll_u64` — SKIP the draw when `lo >= hi` (point/malformed band). */
 const p_roll_u64 = (state, lo, hi) =>
@@ -172,6 +174,7 @@ export const commitment_format = root => {
   if (!root) return 1
   if (root.length === 32) return 1
   if (root.length === 33 && root[0] === FORMAT_LATTICE) return FORMAT_LATTICE
+  if (root.length === 33 && root[0] === FORMAT_MEMBERS) return FORMAT_MEMBERS
   return 0
 }
 
@@ -236,6 +239,90 @@ export function derive_mob_groups({
     out.push({
       spawn_id: (BigInt(hi.value) << 32n) | BigInt(lo.value),
       template_idx: idx,
+      x: pos.x,
+      z: pos.z,
+      size: clamp_group(sz.value, size_bound),
+      group_seed: gseed.value,
+    })
+  }
+  return out
+}
+
+/**
+ * Derive a discovered zone's FULL mob-group list WITH PER-GROUP MEMBER ROSTERS (format 3, #1110/#1111) — the
+ * byte-for-byte mirror of `zone_gen::derive_mob_groups_members`. A group is no longer one species repeated:
+ * `members` lists a template index per rolled unit, `members[0]` being the primary (the row drawn exactly as
+ * format 2 draws it, from the same stream position).
+ *
+ * DRAW ORDER PER GROUP — the format-2 prefix byte-for-byte, then the members: primary pick(1) · size(1) ·
+ * lattice cell + jitter(3) · group_seed(1) · spawn_id hi/lo(2) · one weighted draw per non-primary member.
+ *
+ * THE BOSS FENCE (design amendment 2): `member_weights` is `weights` with every boss row zeroed. A primary whose
+ * member-table weight is zero IS a boss row (it could not have been picked otherwise), and that group stays
+ * SINGLE-SPEC spending no member draws — today's boss-group behaviour, unchanged. So no pack can hold a boss
+ * plus anything, and no pack can hold two bosses.
+ *
+ * The roster length is the RAW rolled size (capped at MAX_MEMBERS), never the team-bound-clamped `size`, so the
+ * stream — and therefore every spawn id — is identical for every caller whatever the live engine bound is.
+ * @param {object} p
+ * @param {number|bigint} p.seed @param {number} p.min_g @param {number} p.max_g
+ * @param {number[]} p.weights  the primary pick table (eligible rows; the ruled model does NOT level-gate it)
+ * @param {number[]} p.member_weights  `weights` with every boss row zeroed
+ * @param {number[]} p.min_group @param {number[]} p.max_group @param {number} p.size_bound
+ * @param {number} p.ox @param {number} p.oz @param {number} p.zsize @param {number} p.bx @param {number} p.bz
+ * @returns {Array<{ spawn_id: bigint, template_idx: number, members: number[], x: number, z: number,
+ *   size: number, group_seed: number }>}
+ */
+export function derive_mob_groups_members({
+  seed,
+  min_g,
+  max_g,
+  weights,
+  member_weights,
+  min_group,
+  max_group,
+  size_bound,
+  ox,
+  oz,
+  zsize,
+  bx,
+  bz,
+}) {
+  const out = []
+  // a member table that is not parallel to the pick table cannot be indexed — treat it as "no mixing" rather
+  // than throwing inside a derivation every reader runs (the Move twin's `parallel` guard)
+  const parallel = member_weights.length === weights.length
+  let s = rng_seed(mix(seed, MOB_SALT))
+  const g = p_roll_u64(s, min_g, max_g)
+  s = g.state
+  const { capacity, place } = placer(FORMAT_LATTICE, true, ox, oz, zsize, bx, bz)
+  for (let i = 0; i < g.value && i < capacity; i++) {
+    const pick = p_pick_weighted(s, weights)
+    s = pick.state
+    if (pick.idx === null) break
+    const { idx } = pick
+    const sz = p_roll_u64(s, min_group[idx], max_group[idx])
+    const pos = place(sz.state, i)
+    const gseed = rng_next(pos.state)
+    const hi = rng_next(gseed.state)
+    const lo = rng_next(hi.state)
+    s = lo.state
+    const roster = Math.min(sz.value, MAX_MEMBERS)
+    const members = [idx]
+    const mixable = parallel && member_weights[idx] > 0
+    for (let m = 1; m < roster; m++) {
+      if (!mixable) {
+        members.push(idx)
+        continue
+      }
+      const pm = p_pick_weighted(s, member_weights)
+      s = pm.state
+      members.push(pm.idx === null ? idx : pm.idx)
+    }
+    out.push({
+      spawn_id: (BigInt(hi.value) << 32n) | BigInt(lo.value),
+      template_idx: idx,
+      members,
       x: pos.x,
       z: pos.z,
       size: clamp_group(sz.value, size_bound),

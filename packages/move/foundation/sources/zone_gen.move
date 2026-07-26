@@ -44,6 +44,16 @@ const MAX_GROUPS: u64 = 64;
 /// `0x02 ‖ digest` is the whole-set commitment (format 2) that ALSO selects lattice placement for the zone.
 const GROUP_FORMAT_LEGACY: u8 = 1;
 const GROUP_FORMAT_LATTICE: u8 = 2;
+/// A 33-byte `0x03 ‖ digest` is the MEMBER-LIST commitment (format 3): lattice placement exactly like format 2,
+/// plus a per-group MEMBER LIST so one group can hold several species (#1110). Formats 1/2 keep deriving through
+/// their own untouched functions — an in-flight zone always replays the format its own stored commitment names.
+const GROUP_FORMAT_MEMBERS: u8 = 3;
+/// Hard rail on a group's derived member roster. The roll `[min_group, max_group]` is storage-clamped to 64
+/// (`world::GROUP_MAX`), but the LIVE engine bound is 6 (`GameConfig.team_size_bound`); drawing a member per
+/// rolled unit past any sane bound is pure waste, so the roster tops out here and the consumer spawns
+/// `min(group_size, roster)` of it. The roster length is deliberately INDEPENDENT of the live team bound — the
+/// bound only clamps `sizes`, never the stream, so every caller derives the same ids/positions/members.
+const MAX_MEMBERS: u64 = 16;
 
 /// Canonical BCS leaf for a searched-zone commitment. The pure foundation can calculate hashes, but only the
 /// owning `zones` module can attach a root to World state.
@@ -311,6 +321,97 @@ public fun derive_mob_groups_grid(
   (spawn_ids, tmpl_idxs, xs, zs, sizes, seeds)
 }
 
+/// MEMBER-LIST twin of `derive_mob_groups_grid` (format 3, #1110/#1111) — a group is no longer one species
+/// repeated `group_size` times: it carries a per-group MEMBER LIST of template indexes. Returns SEVEN parallel
+/// vectors: `(spawn_ids, primary_idxs, members, xs, zs, sizes, group_seeds)`.
+///
+/// DRAW ORDER PER GROUP — the format-2 prefix, byte-for-byte, then the members:
+///   primary weighted pick(1) · size roll(1) · lattice cell + jitter(3, or 2 on the last cell) · `group_seed`(1)
+///   · `spawn_id` hi+lo(2) · THEN one weighted draw per non-primary member.
+/// The primary pick reads `weights` (the zone's eligible table) exactly as format 2 does, so a group's identity,
+/// position and id are drawn from the same stream shape the previous format used; members are appended after.
+///
+/// THE BOSS FENCE (design amendment 2): `member_weights` is `weights` with every BOSS row zeroed by the caller.
+/// A primary that lands on a boss row is therefore recognisable INSIDE the kernel — `member_weights[primary]`
+/// is zero for exactly the boss rows (a primary always has a non-zero `weights` entry, or it could not have been
+/// picked) — and such a group stays SINGLE-SPEC and spends NO member draws at all, which is today's boss-group
+/// behaviour unchanged. Every other group draws its non-primary members from `member_weights`, so no boss row can
+/// ever ride along in a mixed pack and no pack can hold two bosses.
+///
+/// The roster length is `min(rolled size, MAX_MEMBERS)` — the RAW roll, never the team-bound-clamped `sizes[i]`,
+/// so the stream (and therefore every spawn id) is identical for every caller regardless of the live engine
+/// bound. The consumer spawns `min(sizes[i], members[i].length())` mobs, member `j` from `members[i][j]`.
+public fun derive_mob_groups_members(
+  seed: u64,
+  min_g: u64,
+  max_g: u64,
+  weights: &vector<u64>,
+  member_weights: &vector<u64>,
+  min_group: &vector<u64>,
+  max_group: &vector<u64>,
+  size_bound: u64,
+  ox: u32,
+  oz: u32,
+  zsize: u32,
+  bx: u32,
+  bz: u32,
+): (vector<u64>, vector<u64>, vector<vector<u16>>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let mut spawn_ids = vector<u64>[];
+  let mut tmpl_idxs = vector<u64>[];
+  let mut members = vector<vector<u16>>[];
+  let mut xs = vector<u32>[];
+  let mut zs = vector<u32>[];
+  let mut sizes = vector<u16>[];
+  let mut seeds = vector<u64>[];
+  // A member table that is not parallel to the pick table cannot be indexed safely — treat it as "no mixing"
+  // rather than aborting a derivation every reader (map, claim, RPC) runs.
+  let parallel = member_weights.length() == weights.length();
+  let mut s = prng::rng_seed(prng::mix(seed, MOB_SALT));
+  let (s0, g) = p_roll_u64(s, min_g, max_g);
+  s = s0;
+  let (cols, mut pool) = grid_cell_pool(ox, oz, zsize, bx, bz);
+  let mut i = 0;
+  while (i < g && i < pool.length()) {
+    let (s1, opt) = p_pick_weighted(s, weights);
+    s = s1;
+    if (opt.is_none()) break;
+    let idx = opt.destroy_some();
+    let (s2, raw) = p_roll_u64(s, min_group[idx], max_group[idx]);
+    let (s3, x, z) = p_pick_grid_pos(s2, &mut pool, i, cols, ox, oz);
+    let gsize = world_math::clamp_group_u16(raw, size_bound);
+    let (s4, gseed) = prng::rng_next(s3);
+    let (s5, sid_hi) = prng::rng_next(s4);
+    let (s6, sid_lo) = prng::rng_next(s5);
+    s = s6;
+    // members[0] IS the primary — the group's identity row, drawn above.
+    let roster = if (raw > MAX_MEMBERS) MAX_MEMBERS else raw;
+    let mut mlist = vector<u16>[idx as u16];
+    let mixable = parallel && member_weights[idx] > 0;
+    let mut m = 1;
+    while (m < roster) {
+      if (mixable) {
+        let (s7, mopt) = p_pick_weighted(s, member_weights);
+        s = s7;
+        // `mixable` proves the table has a positive total, so the pick always resolves; the fallback keeps the
+        // function total without a second stream shape.
+        mlist.push_back(if (mopt.is_some()) mopt.destroy_some() as u16 else idx as u16);
+      } else {
+        mlist.push_back(idx as u16);
+      };
+      m = m + 1;
+    };
+    spawn_ids.push_back((sid_hi << 32) | sid_lo);
+    tmpl_idxs.push_back(idx);
+    members.push_back(mlist);
+    xs.push_back(x);
+    zs.push_back(z);
+    sizes.push_back(gsize);
+    seeds.push_back(gseed);
+    i = i + 1;
+  };
+  (spawn_ids, tmpl_idxs, members, xs, zs, sizes, seeds)
+}
+
 // ╔════════════════ [ Authenticated mob-group commitments ] ══════════════════ ]
 
 fun mob_group_leaf_hash(
@@ -385,6 +486,7 @@ public fun mob_group_root(
 public fun mob_group_commitment_format(bytes: &vector<u8>): u8 {
   if (bytes.length() == GROUP_HASH_BYTES) GROUP_FORMAT_LEGACY
   else if (bytes.length() == GROUP_HASH_BYTES + 1 && bytes[0] == GROUP_FORMAT_LATTICE) GROUP_FORMAT_LATTICE
+  else if (bytes.length() == GROUP_HASH_BYTES + 1 && bytes[0] == GROUP_FORMAT_MEMBERS) GROUP_FORMAT_MEMBERS
   else 0
 }
 
@@ -427,6 +529,76 @@ public fun mob_group_commitment_matches(
   if (mob_group_commitment_format(commitment) != GROUP_FORMAT_LATTICE) return false;
   *commitment == mob_group_commitment(
     world, zx, zy, zone_seed, discovered_at_ms, spawn_ids, templates, xs, zs, sizes, group_seeds,
+  )
+}
+
+// ╔════════════════ [ Format-3 (member-list) commitments ] ═══════════════════ ]
+
+/// One group of a MEMBER-LIST commitment (format 3) — the format-2 row plus the per-member template list, so the
+/// commitment binds WHO is in the pack, not just how many. Positional in BCS; `template` stays the PRIMARY (the
+/// group's identity row and `members[0]`), which keeps every format-2 reader's mental model intact.
+public struct MobGroupWithMembers has copy, drop {
+  spawn_id: u64,
+  template: ID,
+  members: vector<ID>,
+  x: u32,
+  z: u32,
+  group_size: u16,
+  group_seed: u64,
+}
+
+/// The zone's ENTIRE derived member-list group set committed as one value (format 3) — the format-2 whole-set
+/// idea with per-group rosters.
+public struct MobGroupMemberSet has copy, drop {
+  world: ID,
+  zx: u32,
+  zy: u32,
+  zone_seed: u64,
+  discovered_at_ms: u64,
+  groups: vector<MobGroupWithMembers>,
+}
+
+/// Commit a member-list zone: `0x03 ‖ blake2b256(domain ‖ 0x03 ‖ bcs(MobGroupMemberSet))`. Same whole-set
+/// discipline as format 2 (a claim re-derives and compares the whole value — no Merkle path rides the tx), with
+/// the per-group roster inside the pre-image so a claimant cannot swap one member for a softer species.
+public fun mob_group_commitment_members(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, member_templates: &vector<vector<ID>>,
+  xs: &vector<u32>, zs: &vector<u32>, sizes: &vector<u16>, group_seeds: &vector<u64>,
+): vector<u8> {
+  let count = spawn_ids.length();
+  assert!(count <= MAX_GROUPS && templates.length() == count && member_templates.length() == count &&
+    xs.length() == count && zs.length() == count && sizes.length() == count && group_seeds.length() == count,
+    EBadGroupCommitmentInput);
+  let mut groups = vector<MobGroupWithMembers>[];
+  let mut i = 0;
+  while (i < count) {
+    groups.push_back(MobGroupWithMembers {
+      spawn_id: spawn_ids[i], template: templates[i], members: member_templates[i], x: xs[i], z: zs[i],
+      group_size: sizes[i], group_seed: group_seeds[i],
+    });
+    i = i + 1;
+  };
+  let set = MobGroupMemberSet { world, zx, zy, zone_seed, discovered_at_ms, groups };
+  let mut bytes = b"aresrpg.zone-group.commitment";
+  bytes.push_back(GROUP_FORMAT_MEMBERS);
+  bytes.append(bcs::to_bytes(&set));
+  let mut out = vector[GROUP_FORMAT_MEMBERS];
+  out.append(hash::blake2b256(&bytes));
+  out
+}
+
+/// `true` iff `commitment` is a format-3 commitment AND it equals the one these arrays produce. A commitment of
+/// any other format returns `false` rather than falling back — the caller picks its verifier by format, exactly
+/// as `mob_group_commitment_matches` does for format 2.
+public fun mob_group_commitment_members_matches(
+  commitment: &vector<u8>, world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, member_templates: &vector<vector<ID>>,
+  xs: &vector<u32>, zs: &vector<u32>, sizes: &vector<u16>, group_seeds: &vector<u64>,
+): bool {
+  if (mob_group_commitment_format(commitment) != GROUP_FORMAT_MEMBERS) return false;
+  *commitment == mob_group_commitment_members(
+    world, zx, zy, zone_seed, discovered_at_ms, spawn_ids, templates, member_templates, xs, zs, sizes, group_seeds,
   )
 }
 
