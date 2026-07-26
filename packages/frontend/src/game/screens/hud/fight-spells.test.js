@@ -95,12 +95,16 @@ describe('lossless chain spell projection', () => {
       ap_cost: 4,
       range_min: 1,
       range_max: 3,
+      // THE WIRE SHAPE (#951): a corpus row's magnitude is `value` / `value_max`. These rows used to carry
+      // hand-written `damageMin`/`damageMax` fields the published corpus has never had — which is how the
+      // missing value/value_max → damageMin/damageMax mapping stayed green while every tooltip rendered an
+      // em dash. Captured bytes now gate that mapping (spell_tooltip_numbers.test.js).
       effects: [
-        { kind: 0, value: 5, damageMin: 5, damageMax: 14, turns: 2, target_filter: 1, flags: 4, chance: 100 },
+        { kind: 0, value: 5, value_max: 14, turns: 2, target_filter: 1, flags: 4, chance: 100 },
         { kind: 0, value: 7, target_filter: 2, flags: 8, chance: 100 },
       ],
       crit_effects: [
-        { kind: 0, value: 11, damageMin: 15, damageMax: 24, target_filter: 16, flags: 1, chance: 100 },
+        { kind: 0, value: 15, value_max: 24, target_filter: 16, flags: 1, chance: 100 },
         { kind: 0, value: 13, target_filter: 32, flags: 2, chance: 100 },
       ],
     })
@@ -113,24 +117,27 @@ describe('lossless chain spell projection', () => {
       damageMin: 5,
       damageMax: 14,
       turns: 2,
-      crit_base: 11,
+      crit_base: 15,
       crit_effect: {
         kind: 'DAMAGE',
         kind_id: 0,
         target_filter: 16,
         flags: 1,
-        base: 11,
+        base: 15,
         damageMin: 15,
         damageMax: 24,
       },
     })
+    // an equal-bound row (no value_max) collapses to one number rather than losing its magnitude
     expect(projected.effects[1]).toMatchObject({
       kind: 'DAMAGE',
       kind_id: 0,
       target_filter: 2,
       flags: 8,
+      damageMin: 7,
+      damageMax: 7,
       crit_base: 13,
-      crit_effect: { kind: 'DAMAGE', kind_id: 0, target_filter: 32, flags: 2, base: 13 },
+      crit_effect: { kind: 'DAMAGE', kind_id: 0, target_filter: 32, flags: 2, base: 13, damageMin: 13, damageMax: 13 },
     })
   })
 })

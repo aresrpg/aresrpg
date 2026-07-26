@@ -55,6 +55,14 @@ export const project_spell_effect = (effect) => ({
     ? { element_id: effect.element, element: element_names[effect.element] ?? String(effect.element) }
     : {}),
   base: effect.value ?? 0,
+  // THE AUTHORED BAND (#951). The corpus wire row carries its magnitude as `value` / `value_max`; every
+  // display surface reads `damageMin` / `damageMax` (seed-effect-line's `seed_effect_value`, the one grammar
+  // behind the tooltip, the grimoire and the encyclopedia). Nothing mapped the two, so every magnitude row
+  // rendered its em-dash "no honest bounds" fallback — `− Earth damage · crit 5`, a spell tooltip with no
+  // damage in it. A row with no `value` at all keeps that em dash rather than inventing a 0-0 band.
+  ...(effect.value != null
+    ? { damageMin: Number(effect.value), damageMax: Number(effect.value_max ?? effect.value) }
+    : {}),
   chance: effect.chance ?? 100,
   turns: effect.turns ?? 0,
   target_filter: effect.target_filter ?? 0,
