@@ -421,9 +421,12 @@ export const assert_prediction_proofs = ({ checked = 0, unresolved = [] } = {}) 
     null,
     'the run compared at least one prediction against the authority',
     '≥ 1 resolved prediction↔chain comparison',
-    checked || `0 — ${unresolved.length ? `every cast was unpredictable (${[...new Set(unresolved)].join(', ')})` : 'the surface banked no predictions (an old build, or no cast landed)'}`,
+    checked ||
+      `0 — ${unresolved.length ? `every cast was unpredictable (${[...new Set(unresolved)].join(', ')})` : 'the surface banked no predictions (an old build, or no cast landed)'}`,
     checked >= 1,
-    unresolved.length ? `${[...new Set(unresolved)].length} unresolved reason(s): ${[...new Set(unresolved)].join(', ')}` : ''
+    unresolved.length
+      ? `${[...new Set(unresolved)].length} unresolved reason(s): ${[...new Set(unresolved)].join(', ')}`
+      : ''
   ),
 ]
 

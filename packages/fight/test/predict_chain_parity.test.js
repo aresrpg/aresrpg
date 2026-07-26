@@ -25,7 +25,6 @@
 // number AND that the other branch does not — a fixture that matched either way would prove nothing.
 
 import { describe, test, expect } from 'bun:test'
-
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { predict_cast } from '../src/predict_cast.js'
@@ -158,8 +157,10 @@ describe('predict_cast ↔ LIVE chain parity (a cast the deployed package resolv
   })
 
   test('and the damage itself matches the Hit event, not just the resting HP', () => {
-    const before = truth.pre_cast.mob_hp[0]
-    expect(before - Number(predicted(truth.cast.chain_took_critical)?.remaining_hp)).toBe(truth.chain_after.damage_dealt)
+    const [before] = truth.pre_cast.mob_hp
+    expect(before - Number(predicted(truth.cast.chain_took_critical)?.remaining_hp)).toBe(
+      truth.chain_after.damage_dealt
+    )
   })
 
   test('the pin is discriminating — the branch the chain did NOT take lands somewhere else', () => {

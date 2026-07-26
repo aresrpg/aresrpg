@@ -110,7 +110,8 @@ const record_commit = ({ seat, plan, result, turn, turn_number }) => {
   // the authority is saying "not now", never "not this spell". Blacklisting on those retired every cooldown
   // spell in the book the first time the policy's own copy of the rule was one turn optimistic — permanently,
   // and the sheet still reported PASS on the impoverished fight that followed.
-  const recoverable = /cooldown|cast limit|casts_per_turn|casts_per_target|cast_per_turn_limit|cast_per_target_limit|spell_cooldown/i
+  const recoverable =
+    /cooldown|cast limit|casts_per_turn|casts_per_target|cast_per_turn_limit|cast_per_target_limit|spell_cooldown/i
   const judged = !result.ok && !result.turn_level && !recoverable.test(String(result.error ?? ''))
   for (const action of plan.actions)
     if (action.kind === 1) {

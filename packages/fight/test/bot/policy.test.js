@@ -328,7 +328,11 @@ describe('#1157 — the bot obeys the chain’s cooldown rule, not a copy of it'
 // hardcode one cast per spell per turn, which left half a turn's damage unexercised on any authored row above 1.
 describe('#1157 — the authored cast caps come off the book', () => {
   const two_mobs = (over) => ({
-    fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 7 }), fighter('mob-1', 1, { x: 7, y: 5 })],
+    fighters: [
+      fighter(ME, 0, { x: 5, y: 5 }),
+      fighter('mob-0', 1, { x: 5, y: 7 }),
+      fighter('mob-1', 1, { x: 7, y: 5 }),
+    ],
     spellbook: [spell('twin', { ap: 3, casts_per_turn: 2, effects: [effect('DAMAGE', { base: 20 })], ...over })],
   })
 

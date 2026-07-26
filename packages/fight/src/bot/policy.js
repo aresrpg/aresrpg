@@ -22,6 +22,7 @@
 import { get_direction } from '@aresrpg/sim/fight_displacement'
 
 import { cap_of, on_cooldown, target_cap_reached } from '../draft_budget.js'
+
 import {
   allies_of,
   cell_index,

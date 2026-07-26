@@ -149,7 +149,9 @@ describe('#1144 — the bot compares its PREDICTION against the chain, not the c
     const [silent] = assert_prediction_proofs({ checked: 0, unresolved: [] })
     expect(silent.pass).toBe(false)
     expect(String(silent.actual)).toContain('banked no predictions')
-    const [proven] = assert_prediction_proofs(prediction_tally(plan, commit({ before_hp: 60, after_hp: 18, predicted: [bank(18)] })))
+    const [proven] = assert_prediction_proofs(
+      prediction_tally(plan, commit({ before_hp: 60, after_hp: 18, predicted: [bank(18)] }))
+    )
     expect(proven.pass).toBe(true)
     expect(proven.actual).toBe('1')
   })
@@ -157,7 +159,12 @@ describe('#1144 — the bot compares its PREDICTION against the chain, not the c
   test('only the PLANNED target is asserted — collateral predictions ride the sheet unasserted', () => {
     // A prediction that also touches the caster (life steal) must not be compared against a fold that later
     // actions have moved: the pre-turn bank never claimed that state.
-    const collateral = bank(18, { hp: [{ id: MOB, remaining_hp: 18 }, { id: ME, remaining_hp: 999 }] })
+    const collateral = bank(18, {
+      hp: [
+        { id: MOB, remaining_hp: 18 },
+        { id: ME, remaining_hp: 999 },
+      ],
+    })
     const rows = parity_rows(assert_turn(plan, commit({ before_hp: 60, after_hp: 18, predicted: [collateral] })))
     expect(rows).toHaveLength(1)
     expect(rows[0].pass).toBe(true)
