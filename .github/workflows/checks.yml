@@ -24,14 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
         id: setup_bun
         continue-on-error: true
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: setup Bun (retry)
         if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install deps
         run: bun install --frozen-lockfile
       - name: install semgrep (dataflow leg — commit tier)
@@ -102,14 +102,14 @@ jobs:
       matrix:
         package: [fight, sim, world, inventory, party, sdk, engine, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
         id: setup_bun
         continue-on-error: true
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: setup Bun (retry)
         if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install deps
         run: bun install --frozen-lockfile
       - name: test — packages/${{ matrix.package }}
@@ -152,14 +152,14 @@ jobs:
     timeout-minutes: 10
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
         id: setup_bun
         continue-on-error: true
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: setup Bun (retry)
         if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install deps
         run: bun install --frozen-lockfile
       - name: live chain reads vs testnet — advisory verdict, never an exit code
@@ -194,14 +194,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
         id: setup_bun
         continue-on-error: true
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: setup Bun (retry)
         if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install deps
         run: bun install --frozen-lockfile
       - name: install Playwright chromium (the version the frontend devDep pins)
@@ -224,9 +224,9 @@ jobs:
       security-events: write
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: init CodeQL (FP query pack only)
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@03e4368ac7daa2bd82b3e85262f3bf87ee112f57 # v3
         with:
           languages: javascript-typescript
           build-mode: none
@@ -237,6 +237,6 @@ jobs:
             queries:
               - uses: ./scripts/codeql/aresrpg-fp
       - name: analyze (native code scanning — baseline ratchet)
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@03e4368ac7daa2bd82b3e85262f3bf87ee112f57 # v3
         with:
           category: aresrpg-fp
