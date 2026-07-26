@@ -1101,6 +1101,14 @@
    (a transformed containing block), so `position:absolute` re-bases to the game area — clearing the sidebar. */
 .hud-spellbar {
   position: absolute;
+  /* SOCKET GEOMETRY — declared HERE, on the bar, because two things need it: the socket grid below (which
+     inherits all three) and this rule's own anchor math. `--sockcols` is the DERIVED column count SpellBar
+     and DeckCluster write inline (deck-socket-grid.js, the one home of the three-row law); the value here is
+     only the fallback for a bar rendered without them. The mobile layer re-declares --sock/--sockgap on the
+     grid itself, which wins there. */
+  --sock: 50px;
+  --sockgap: 4px;
+  --sockcols: 6;
   /* CHAT-POSITION INVARIANT: true viewport-centering (left:50%) put this bar's left edge inside the
      chat's fixed bottom-left footprint below ~1600px game-area width — the bar's content is ~496 LOCAL px
      since the 07-11 two-row compaction (FIXED width: full-height weapon + the 5+4 socket grid + the gem
@@ -1116,8 +1124,14 @@
      both if `.gw-chat`'s geometry, the socket/gem sizes, or SPELL_SLOTS ever change. A touch
      right-of-true-center on ultra-wide screens is the accepted trade (the fight UI accommodates the
      chat, not the reverse) — and it shrinks toward true-center as the viewport grows, since 140px is a
-     smaller fraction of a wider box. */
-  left: calc(50% + 140px);
+     smaller fraction of a wider box.
+     #1044 — the bar is no longer a fixed width: past a 9-spell book the grid takes extra COLUMNS (the
+     three-row law) and the box grows Δ = (cols − 6) × (sock + gap) wider, symmetrically around this anchor.
+     Half of that growth would walk the left edge back INTO the chat, so the anchor moves with it: shifting
+     by Δ/2 pins the left edge exactly where it was measured above, and the whole widening is spent to the
+     RIGHT, into the roomier FightControls gutter. The `6` is MIN_SOCKET_COLUMNS (deck-socket-grid.js) — the
+     bar width those clearances were measured at; the two constants must stay in step. */
+  left: calc(50% + 140px + ((var(--sockcols) - 6) * (var(--sock) + var(--sockgap))) / 2);
   bottom: 16px;
   transform: translateX(-50%);
   z-index: 23;
@@ -1430,16 +1444,18 @@ button.hud-gem-bezel:focus-visible {
    fill a 5-over-4 grid beside it — 5+4 (not 4+5) because default grid auto-flow gives it for free AND the
    keybind order reads naturally: 1-5 across the top, 6-9 below, ragged edge ending bottom-right where
    left-to-right/top-to-bottom reading terminates. This roughly halves the bar width (~625px grid → 320px).
-   Sockets 58→50px + gap 5→4px is the "scale content" part of the same refinement (~15% tighter). A >9-spell
-   hand (the never-hides-a-spell floor case) auto-flows extra sockets into a third row. */
+   Sockets 58→50px + gap 5→4px is the "scale content" part of the same refinement (~15% tighter).
+   THREE-ROW CAP (#1044): a full spell book (20+ sockets) used to auto-flow into a FOURTH row at this fixed
+   6-column width. The column count is now derived instead — `--sockcols` = the narrowest grid that fits
+   every socket in three rows, written inline by SpellBar/DeckCluster (deck-socket-grid.js), the weapon's
+   2-cell span included. The tray WIDENS with the book; --sock never changes, so the icons never shrink.
+   --sock/--sockgap are inherited from `.hud-spellbar` (their one home, since its anchor math reads them). */
 .hud-socketgrid {
-  --sock: 50px;
-  --sockgap: 4px;
   position: relative; /* the empty-state hint below overlays the spell region absolutely */
   display: grid;
-  grid-template-columns: repeat(6, var(--sock));
-  grid-auto-rows: var(--sock);
-  gap: var(--sockgap);
+  grid-template-columns: repeat(var(--sockcols, 6), var(--sock, 50px));
+  grid-auto-rows: var(--sock, 50px);
+  gap: var(--sockgap, 4px);
 }
 /* the weapon anchor — first child, explicit 2-row span in column 1; `height: auto` releases .hud-socket's
    fixed --sock height so the default align-self:stretch fills both rows + the gap (104px). */

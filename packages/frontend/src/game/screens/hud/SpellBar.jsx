@@ -26,6 +26,7 @@ import { seat_character } from '../../../world-shell/seat_character.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { use_fight_view, use_game_state } from '../../store.js'
 import { DeckCluster } from './DeckCluster.jsx'
+import { socket_columns } from './deck-socket-grid.js'
 import { get_saved_hp_display, save_hp_display } from './hp_display_pref.js'
 import { use_tweened_hp } from './use_tweened_hp.js'
 
@@ -179,8 +180,13 @@ export function SpellBar() {
   // The legacy Expedition level belongs to its one session character. During a same-wallet fight turn, every
   // other owned actor uses that character's own roster XP; never carry the selected leader's level into B's HUD.
   const level = run && (!fight_character_id || fight_character_id === session_character_id) ? run.char_level : xp_level
+  // #1044 — the bar's own centering anchor compensates for a WIDER grid (hud.css: the +140px chat-clearance
+  // shift moves with half the growth, so the left edge stays exactly where it was measured). Custom
+  // properties only flow DOWN, so the derived column count is written here, on the positioned element,
+  // from the same one home DeckCluster's grid reads (deck-socket-grid.js).
+  const sock_cols = socket_columns(fight?.hand?.length ?? 0)
   return (
-    <div className="hud-spellbar hud-spellbar--optE">
+    <div className="hud-spellbar hud-spellbar--optE" style={{ '--sockcols': sock_cols }}>
       <div className="hud-spellbar2__top">
         <Vitals />
         <DeckCluster />

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Spell hand — the optE SPELL BAR: the equipped-WEAPON basic attack (slot 0) + a FIXED set of SPELL_SLOTS
-// sockets: the spell hotbar has a fixed size and slot count, it does not scale
-// with the spell amounts — supersedes the earlier S-25 "no empty placeholder slots" rider below this bar
-// used to follow. LAYOUT (the 10-slot single row stretched into the chat): the
-// weapon is a FULL-HEIGHT anchor column on the left, the 9 spell slots sit beside it as a TWO-ROW 5+4 grid
-// — keybinds flow 1-5 across the top row, 6-9 across the bottom (reading order; the ragged edge ends
-// bottom-right). Pure CSS (hud.css `.hud-socketgrid` grid + `grid-row: span 2` on the weapon) — this
-// component just emits weapon + N sockets in order. Every slot the character hasn't unlocked yet still
-// renders as a hollow empty-socket frame, so the bar's total width never changes as `fight.hand` (the REAL
-// on-chain spells, resolved from the seeded SpellTemplates by DungeonBoard) grows from 0 toward
-// SPELL_SLOTS. A FILLED socket is a rounded CARVED tile holding a glossy element-tinted icon-gem, a
+// Spell hand — the optE SPELL BAR: the equipped-WEAPON basic attack (slot 0) + at least SPELL_SLOTS spell
+// sockets: the hotbar has a fixed FLOOR, it never shrinks below it — supersedes the earlier S-25 "no empty
+// placeholder slots" rider this bar used to follow. LAYOUT: the weapon is a FULL-HEIGHT anchor column on the
+// left, the spell slots sit beside it — keybinds flow 1-5 across the top row, 6-9 across the bottom (reading
+// order; the ragged edge ends bottom-right). Pure CSS (hud.css `.hud-socketgrid` grid + `grid-row: span 2`
+// on the weapon) — this component just emits weapon + N sockets in order and hands the grid its DERIVED
+// column count (deck-socket-grid.js): the bar caps at three rows and WIDENS as the book grows (#1044), so a
+// 20-spell character gets a wider tray instead of a four-row wall, at the same socket size. Every slot the
+// character hasn't unlocked yet still renders as a hollow empty-socket frame, so the bar's width holds
+// steady while `fight.hand` (the REAL on-chain spells, resolved from the seeded SpellTemplates by
+// DungeonBoard) grows from 0 toward SPELL_SLOTS. A FILLED socket is a rounded CARVED tile holding a glossy element-tinted icon-gem, a
 // select-key cap (top-left, first nine only) and an AP-cost pip (bottom-right); HOVERING it drives the single
 // socket-anchored spell card (the weapon socket keeps its own facts tooltip). An EMPTY socket is the same
 // hollow carved tile with just its dimmed keybind number —
@@ -47,6 +47,7 @@ import { use_fight_phase } from './world/use_fight_phase.js'
 import { use_mobile_input_mode } from '../../touch/mobile_input_mode.js'
 import { SpellSocket } from './deck-spell-socket.jsx'
 import { SpellHoverTip } from './spell-hover-tip.jsx'
+import { socket_columns, socket_slots } from './deck-socket-grid.js'
 
 // §17.27 weapon element id → localized element name (participant.move WL_ELEMENT: 0 fire · 1 water · 2 earth · 3 air).
 const WEAPON_ELEMENT_KEYS = ['fire', 'water', 'earth', 'air']
@@ -58,16 +59,6 @@ const is_bare_hands = (w) => !!w && w.element === 2 && w.damage === 4 && w.ap_co
 // element → gem tint from the house ramp SSOT (element_color is case-insensitive, so it takes the UPPERCASE
 // element ids the sim emits as-is and falls back to the neutral tint for a missing element).
 const card_color = (spell_id) => element_color(spell_element(spell_id))
-
-// FIXED spell-socket count: the bar must not scale with how many spells are learned. SPEC.md §7/§17
-// name no hand/deck-size cap — §7 explicitly REJECTS a deck concept ("a class's spells ARE the minted spell
-// templates... there is no deck concept", SPEC.md:337): you always have every spell you've unlocked, no
-// curation. So SPEC has no number to ground this in; falling back to the existing 1-9 keybind span below
-// (arm_spell's number-key handler only ever hotkeys hand[0..8]) — which also already matches this file's
-// own pre-S25 `.hud-socketgrid` max-width comment (hud.css: "10 * var(--sock)" = weapon + 9). A class that
-// somehow exceeds 9 real spells still renders all of them (never hides a castable spell): this is a
-// presentation FLOOR, not a data cap.
-const SPELL_SLOTS = 9
 
 // True while a text field owns focus — the number-key selection must stay inert while the player types in
 // chat / any input (typing law). Same guard the world keys use (embed_voxel / NpcPrompt).
@@ -273,7 +264,11 @@ export function DeckCluster() {
   return (
     <div className="hud-spellbar2__gridwrap">
       <div className="hud-spellbar2__gridcol">
-        <div className="hud-socketgrid">
+        {/* #1044 — the grid's column count is DERIVED (deck-socket-grid.js) so a 20-spell book never wraps
+            past three rows: the tray widens, the sockets keep their size. SpellBar writes the same value on
+            `.hud-spellbar` for the bar's anchor math; this one keeps the grid honest wherever it is mounted
+            (the design harness mounts DeckCluster without SpellBar). */}
+        <div className="hud-socketgrid" style={{ '--sockcols': socket_columns(hand.length) }}>
           {/* slot 0 — the equipped-WEAPON basic attack (always present on my side; its crit_rate rides the
               escrow weapon line, so it previews the §7 glow like any spell socket) */}
           <WeaponSocket
@@ -285,11 +280,11 @@ export function DeckCluster() {
             onPick={() => weapon_affordable && arm_spell(WEAPON_ATTACK_ID)}
             t={t}
           />
-          {/* FIXED spell row: always SPELL_SLOTS positions (more, if the character
-              somehow has more real spells than that — never hides one), each either the character's REAL
-              on-chain spell or a hollow empty-socket frame. The bar's width is now constant regardless of
-              how many spells are learned. */}
-          {Array.from({ length: Math.max(hand.length, SPELL_SLOTS) }, (_, i) => {
+          {/* the spell sockets: at least SPELL_SLOTS positions (more, when the character has more real
+              spells than that — never hides one), each either the character's REAL on-chain spell or a
+              hollow empty-socket frame. Below the floor the bar's width is constant; above it the grid
+              takes extra COLUMNS, never a fourth row. */}
+          {Array.from({ length: socket_slots(hand.length) }, (_, i) => {
             const key_cap = !mobile && i < 9 ? String(i + 1) : null // only desktop exposes the 1-9 hotkey caps
             const spell_id = hand[i]
             if (!spell_id) return <EmptySocket key={`empty-${i}`} keyCap={key_cap} />

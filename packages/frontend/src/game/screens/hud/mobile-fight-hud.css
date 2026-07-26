@@ -94,6 +94,9 @@
 .gw-fight-layer--mobile .hud-socket__cd-overlay {
   font-size: 14px;
 }
+/* the mobile strip keeps its OWN fixed 10-column shape (it ignores the desktop `--sockcols` derivation):
+   this bar is width-capped and its `.hud-spellbar2__top` scrolls horizontally, so a growing book pans
+   instead of widening the phone's HUD — and at 10 columns a full book still lands within three rows. */
 .gw-fight-layer--mobile .hud-socketgrid {
   --sock: 36px;
   --sockgap: 3px;
