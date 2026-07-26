@@ -1,0 +1,730 @@
+{
+  "_provenance": {
+    "what": "L3 HAND-OFF — published spells whose expectation cannot be stated without STATE, recorded rather than forced (#930 fence 1).",
+    "rule": "A row lands here if and only if l2_reference.expectation_of() derives no stateless effect family for it. The L2 suite asserts this set is EXACT in both directions: a row the oracle can express must never be parked here (coverage laundering), and a row it cannot express must never be silently dropped.",
+    "adjudicator": "L3 twin parity — the same command stream through @aresrpg/sim and through Move on localnet, per beat.",
+    "generated_from": "spell_corpus_l2.fixture.json (sha256_prefix 152c328b9cf2bf86), level index 0",
+    "count": 100,
+    "by_role": {
+      "teleport": 5,
+      "buff_stat": 23,
+      "damage": 7,
+      "drain_ap": 11,
+      "push": 5,
+      "punishment": 4,
+      "pull": 5,
+      "shield": 9,
+      "debuff_stat": 4,
+      "give_ap": 3,
+      "drain_mp": 4,
+      "dot": 5,
+      "glyph": 5,
+      "give_mp": 2,
+      "debuff_resist": 2,
+      "invis": 2,
+      "trap": 4
+    }
+  },
+  "vectors": [
+    {
+      "spell_id": "asobi_alleypounce",
+      "role": "teleport",
+      "kinds": [14],
+      "scenario": "cast_teleport_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [14] (role teleport): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_charmtoss",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_gamblers_grin",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_whisker_twitch",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_rigged_wheel",
+      "role": "damage",
+      "kinds": [9, 1],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9,1] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_reverse",
+      "role": "drain_ap",
+      "kinds": [7],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_double_down",
+      "role": "buff_stat",
+      "kinds": [9, 1],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9,1] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_card_counter",
+      "role": "buff_stat",
+      "kinds": [28, 9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [28,9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_cash_out",
+      "role": "push",
+      "kinds": [12],
+      "scenario": "cast_push_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [12] (role push): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "asobi_lucky_strike",
+      "role": "drain_ap",
+      "kinds": [7, 6],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7,6] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_blood_toll",
+      "role": "punishment",
+      "kinds": [22],
+      "scenario": "cast_punishment_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [22] (role punishment): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_chainhaul",
+      "role": "pull",
+      "kinds": [13],
+      "scenario": "cast_pull_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [13] (role pull): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_reckless_toll",
+      "role": "punishment",
+      "kinds": [22],
+      "scenario": "cast_punishment_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [22] (role punishment): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_whirling_toll",
+      "role": "punishment",
+      "kinds": [22],
+      "scenario": "cast_punishment_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [22] (role punishment): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_bloodletting",
+      "role": "shield",
+      "kinds": [11, 22],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11,22] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_drowning_toll",
+      "role": "punishment",
+      "kinds": [22],
+      "scenario": "cast_punishment_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [22] (role punishment): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_soul_tether",
+      "role": "pull",
+      "kinds": [13],
+      "scenario": "cast_pull_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [13] (role pull): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_martyrs_call",
+      "role": "debuff_stat",
+      "kinds": [9],
+      "scenario": "cast_debuff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role debuff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_pain_pact",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "ikari_blood_trade",
+      "role": "pull",
+      "kinds": [15],
+      "scenario": "cast_pull_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [15] (role pull): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "iyashi_rousing_word",
+      "role": "give_ap",
+      "kinds": [6, 1],
+      "scenario": "cast_give_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [6,1] (role give_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "iyashi_grim_word",
+      "role": "push",
+      "kinds": [12],
+      "scenario": "cast_push_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [12] (role push): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "iyashi_hushing_word",
+      "role": "drain_ap",
+      "kinds": [7],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "iyashi_binding_word",
+      "role": "drain_mp",
+      "kinds": [25],
+      "scenario": "cast_drain_mp_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [25] (role drain_mp): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "iyashi_baptism_of_brine",
+      "role": "damage",
+      "kinds": [9],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_rotbreath",
+      "role": "dot",
+      "kinds": [21, 9],
+      "scenario": "cast_dot_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [21,9] (role dot): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_quakebed",
+      "role": "dot",
+      "kinds": [21],
+      "scenario": "cast_dot_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [21] (role dot): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_spiteful_thorn",
+      "role": "damage",
+      "kinds": [26],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [26] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_numbing_sap",
+      "role": "drain_mp",
+      "kinds": [7],
+      "scenario": "cast_drain_mp_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7] (role drain_mp): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_rooting_glyph",
+      "role": "glyph",
+      "kinds": [20, 7],
+      "scenario": "cast_glyph_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [20,7] (role glyph): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_entangle_glyph",
+      "role": "glyph",
+      "kinds": [20, 7, 21],
+      "scenario": "cast_glyph_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [20,7,21] (role glyph): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_natures_knowledge",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_overgrowth",
+      "role": "dot",
+      "kinds": [21],
+      "scenario": "cast_dot_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [21] (role dot): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "mori_briarwall",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_rustkey",
+      "role": "debuff_stat",
+      "kinds": [9],
+      "scenario": "cast_debuff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role debuff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_greed",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_stumblehex",
+      "role": "drain_mp",
+      "kinds": [7],
+      "scenario": "cast_drain_mp_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7] (role drain_mp): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_greased_boots",
+      "role": "give_mp",
+      "kinds": [6],
+      "scenario": "cast_give_mp_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [6] (role give_mp): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_goldlust",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_fumblefield",
+      "role": "drain_ap",
+      "kinds": [7],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "rojin_fortunes_judgment",
+      "role": "drain_ap",
+      "kinds": [7, 1],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7,1] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_vault",
+      "role": "teleport",
+      "kinds": [14],
+      "scenario": "cast_teleport_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [14] (role teleport): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_draghook",
+      "role": "pull",
+      "kinds": [9],
+      "scenario": "cast_pull_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role pull): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_battle_trance",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_gust_blade",
+      "role": "push",
+      "kinds": [12],
+      "scenario": "cast_push_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [12] (role push): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_ironsurge",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_warheart",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "senshi_focused_strike",
+      "role": "damage",
+      "kinds": [9],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_tideward",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_bastion_step",
+      "role": "teleport",
+      "kinds": [14],
+      "scenario": "cast_teleport_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [14] (role teleport): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_galeward",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_aegis_sigil",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_hushmark",
+      "role": "glyph",
+      "kinds": [20, 7],
+      "scenario": "cast_glyph_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [20,7] (role glyph): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_glaremark",
+      "role": "glyph",
+      "kinds": [20, 7],
+      "scenario": "cast_glyph_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [20,7] (role glyph): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_bookbound_might",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_judgment_glyph",
+      "role": "glyph",
+      "kinds": [20, 7],
+      "scenario": "cast_glyph_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [20,7] (role glyph): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shugo_mirror_covenant",
+      "role": "shield",
+      "kinds": [29],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [29] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_deep_draught",
+      "role": "drain_mp",
+      "kinds": [7, 11, 9],
+      "scenario": "cast_drain_mp_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7,11,9] (role drain_mp): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_dread",
+      "role": "debuff_stat",
+      "kinds": [9, 12],
+      "scenario": "cast_debuff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9,12] (role debuff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_barrelstance",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_hoist",
+      "role": "pull",
+      "kinds": [16],
+      "scenario": "cast_pull_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [16] (role pull): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_heave",
+      "role": "push",
+      "kinds": [17],
+      "scenario": "cast_push_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [17] (role push): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_spiritsoak",
+      "role": "debuff_resist",
+      "kinds": [11],
+      "scenario": "cast_debuff_resist_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role debuff_resist): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_waterlog",
+      "role": "debuff_resist",
+      "kinds": [11],
+      "scenario": "cast_debuff_resist_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role debuff_resist): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_heavy_swig",
+      "role": "buff_stat",
+      "kinds": [9, 6],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9,6] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "shusen_last_round",
+      "role": "buff_stat",
+      "kinds": [9, 6, 11],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9,6,11] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_stolen_beat",
+      "role": "drain_ap",
+      "kinds": [7],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_timeslip",
+      "role": "teleport",
+      "kinds": [14, 6],
+      "scenario": "cast_teleport_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [14,6] (role teleport): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_smear",
+      "role": "drain_ap",
+      "kinds": [7, 6, 22],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7,6,22] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_clockdrag",
+      "role": "drain_ap",
+      "kinds": [7, 6],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [7,6] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_borrowed_hour",
+      "role": "give_ap",
+      "kinds": [6, 7],
+      "scenario": "cast_give_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [6,7] (role give_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_rewind_step",
+      "role": "teleport",
+      "kinds": [14, 6],
+      "scenario": "cast_teleport_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [14,6] (role teleport): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_hourthief",
+      "role": "drain_ap",
+      "kinds": [8, 6],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [8,6] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_dialstep",
+      "role": "drain_ap",
+      "kinds": [14],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [14] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_backtick",
+      "role": "drain_ap",
+      "kinds": [25, 6],
+      "scenario": "cast_drain_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [25,6] (role drain_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tokei_nightlance",
+      "role": "damage",
+      "kinds": [25, 6],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [25,6] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_beast_ward",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_goad",
+      "role": "give_ap",
+      "kinds": [6],
+      "scenario": "cast_give_ap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [6] (role give_ap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_wildhide",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_golem_aspect",
+      "role": "buff_stat",
+      "kinds": [9, 11],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9,11] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_night_howl",
+      "role": "debuff_stat",
+      "kinds": [9],
+      "scenario": "cast_debuff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role debuff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_quill_aspect",
+      "role": "shield",
+      "kinds": [11],
+      "scenario": "cast_shield_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [11] (role shield): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_lashstorm",
+      "role": "damage",
+      "kinds": [9],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "tomoda_primal_aspect",
+      "role": "give_mp",
+      "kinds": [6],
+      "scenario": "cast_give_mp_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [6] (role give_mp): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_shadowfold",
+      "role": "invis",
+      "kinds": [27, 6],
+      "scenario": "cast_invis_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [27,6] (role invis): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_prowlers_eye",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_patient_venom",
+      "role": "dot",
+      "kinds": [21],
+      "scenario": "cast_dot_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [21] (role dot): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_dread_whisper",
+      "role": "push",
+      "kinds": [12],
+      "scenario": "cast_push_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [12] (role push): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_killers_calm",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_snaptrap",
+      "role": "trap",
+      "kinds": [19, 7],
+      "scenario": "cast_trap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [19,7] (role trap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_vial_snare",
+      "role": "trap",
+      "kinds": [19, 21],
+      "scenario": "cast_trap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [19,21] (role trap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_nightsurge",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_springjaw",
+      "role": "trap",
+      "kinds": [19, 12],
+      "scenario": "cast_trap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [19,12] (role trap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_mute_snare",
+      "role": "trap",
+      "kinds": [19, 7],
+      "scenario": "cast_trap_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [19,7] (role trap): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yajin_cold_slit",
+      "role": "invis",
+      "kinds": [27],
+      "scenario": "cast_invis_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [27] (role invis): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yogen_adder_shaft",
+      "role": "dot",
+      "kinds": [21],
+      "scenario": "cast_dot_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [21] (role dot): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yogen_deadeye_draw",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yogen_horizon_draw",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yogen_full_draw",
+      "role": "damage",
+      "kinds": [9],
+      "scenario": "cast_damage_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role damage): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    },
+    {
+      "spell_id": "yogen_string_discipline",
+      "role": "buff_stat",
+      "kinds": [9],
+      "scenario": "cast_buff_stat_at_published_range",
+      "why": "No stateless per-cast expectation exists for effect kind(s) [9] (role buff_stat): the observable is a MULTI-TURN or ORDERING fact — a status that ticks, a stack that accumulates, a board entity that resolves on a later beat, or a displacement whose outcome depends on what already occupies the board. Expressing it needs the fold, which is exactly the L2 fence (#930): pushed to the Move twin for adjudication."
+    }
+  ]
+}
