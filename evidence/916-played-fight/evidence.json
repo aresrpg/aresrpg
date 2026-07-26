@@ -1,0 +1,1124 @@
+{
+  "setup_probes": 33,
+  "rounds": [
+    {
+      "round": 1,
+      "active_before": "Alley Bunny",
+      "active_after": "QAKNIGHT",
+      "pointer_moved": true,
+      "cast": false,
+      "predicted": null,
+      "armed_index": 1,
+      "mob_hp_before": "10",
+      "mob_hp_after": "10",
+      "beats_before": 3,
+      "beats_after": 15,
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "70",
+          "active": true,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "active_before": "QAKNIGHT",
+      "active_after": "Alley Bunny",
+      "pointer_moved": true,
+      "cast": false,
+      "predicted": null,
+      "armed_index": 1,
+      "mob_hp_before": "10",
+      "mob_hp_after": "10",
+      "beats_before": 15,
+      "beats_after": 30,
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "69",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "active_before": "QAKNIGHT",
+      "active_after": "Alley Bunny",
+      "pointer_moved": true,
+      "cast": true,
+      "predicted": "−5",
+      "armed_index": 1,
+      "mob_hp_before": "10",
+      "mob_hp_after": "10",
+      "beats_before": 35,
+      "beats_after": 40,
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "68",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "active_before": "QAKNIGHT",
+      "active_after": "Alley Bunny",
+      "pointer_moved": true,
+      "cast": true,
+      "predicted": "−5",
+      "armed_index": 1,
+      "mob_hp_before": "10",
+      "mob_hp_after": "10",
+      "beats_before": 45,
+      "beats_after": 49,
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "66",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "round": 3,
+      "when": "post_cast",
+      "tooltip": {
+        "text": "Alley Bunny(5)",
+        "enemy": true,
+        "dmg": ""
+      },
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "68",
+          "active": true,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "when": "post_commit",
+      "tooltip": {
+        "text": "Alley Bunny(10)",
+        "enemy": true,
+        "dmg": ""
+      },
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "68",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "when": "post_cast",
+      "tooltip": {
+        "text": "Alley Bunny(5)",
+        "enemy": true,
+        "dmg": ""
+      },
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "66",
+          "active": true,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "when": "post_commit",
+      "tooltip": {
+        "text": "Alley Bunny(10)",
+        "enemy": true,
+        "dmg": ""
+      },
+      "turns": [
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": false,
+          "dead": false,
+          "team": "enemy"
+        },
+        {
+          "name": "QAKNIGHT",
+          "hp": "66",
+          "active": false,
+          "dead": false,
+          "team": "ally"
+        },
+        {
+          "name": "Alley Bunny",
+          "hp": "10",
+          "active": true,
+          "dead": false,
+          "team": "enemy"
+        }
+      ]
+    }
+  ],
+  "final": {
+    "spellbar": true,
+    "vitals_hp": "6570",
+    "sockets": [
+      {
+        "cls": "hud-socket weapon",
+        "key": "`",
+        "label": "Bare Hands",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket",
+        "key": "1",
+        "label": "Warcleave",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket",
+        "key": "2",
+        "label": "Vault",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket",
+        "key": "3",
+        "label": "Oathblade",
+        "empty": false,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket empty",
+        "key": "4",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket empty",
+        "key": "5",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket empty",
+        "key": "6",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket empty",
+        "key": "7",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket empty",
+        "key": "8",
+        "label": "",
+        "empty": true,
+        "armed": false
+      },
+      {
+        "cls": "hud-socket empty",
+        "key": "9",
+        "label": "",
+        "empty": true,
+        "armed": false
+      }
+    ],
+    "armed_index": -1,
+    "turns": [
+      {
+        "name": "Alley Bunny",
+        "hp": "10",
+        "active": true,
+        "dead": false,
+        "team": "enemy"
+      },
+      {
+        "name": "QAKNIGHT",
+        "hp": "65",
+        "active": false,
+        "dead": false,
+        "team": "ally"
+      },
+      {
+        "name": "Alley Bunny",
+        "hp": "10",
+        "active": false,
+        "dead": false,
+        "team": "enemy"
+      }
+    ],
+    "active": "Alley Bunny",
+    "turn_banner": null,
+    "tooltip": "Alley Bunny(10)",
+    "beats": 52,
+    "vfx": 8,
+    "upserts": 200,
+    "last_beats": [
+      "damage",
+      "cast",
+      "damage",
+      "turn_end",
+      "cast",
+      "damage"
+    ],
+    "dialogs": [],
+    "picker": false
+  },
+  "casts_landed": 2,
+  "fight_trace": [
+    {
+      "sequence": 1,
+      "at_ms": 1785027649083,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 2,
+      "at_ms": 1785027649083,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 3,
+      "at_ms": 1785027649091,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 4,
+      "at_ms": 1785027689115,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 5,
+      "at_ms": 1785027689116,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 6,
+      "at_ms": 1785027689124,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 7,
+      "at_ms": 1785027729149,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 8,
+      "at_ms": 1785027729150,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 9,
+      "at_ms": 1785027729157,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 10,
+      "at_ms": 1785027769185,
+      "event": "auto_flush_fired",
+      "move_count": 0,
+      "cast_count": 0
+    },
+    {
+      "sequence": 11,
+      "at_ms": 1785027769186,
+      "event": "flush_started",
+      "background": true,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 12,
+      "at_ms": 1785027769194,
+      "event": "flush_finished",
+      "background": true,
+      "ok": true
+    },
+    {
+      "sequence": 13,
+      "at_ms": 1785027782277,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 0,
+      "dropped": 0
+    },
+    {
+      "sequence": 14,
+      "at_ms": 1785027782285,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 15,
+      "at_ms": 1785027810428,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 1,
+      "dropped": 0
+    },
+    {
+      "sequence": 16,
+      "at_ms": 1785027810436,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    },
+    {
+      "sequence": 17,
+      "at_ms": 1785027838922,
+      "event": "flush_started",
+      "background": false,
+      "move_count": 0,
+      "cast_count": 1,
+      "dropped": 0
+    },
+    {
+      "sequence": 18,
+      "at_ms": 1785027838930,
+      "event": "flush_finished",
+      "background": false,
+      "ok": true
+    }
+  ],
+  "probe": {
+    "beats": [
+      {
+        "t": 1785027692140,
+        "kind": "move",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785027695140,
+        "kind": "arrival",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785027695140,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785027729174,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027732174,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027732174,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785027732174,
+        "kind": "move",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785027735174,
+        "kind": "arrival",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785027735174,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785027769212,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027772213,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027772213,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785027772213,
+        "kind": "move",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785027772709,
+        "kind": "arrival",
+        "id": "mob-0",
+        "spell_id": null
+      },
+      {
+        "t": 1785027772709,
+        "kind": "cast",
+        "id": "mob-0",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027774110,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027775216,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027782300,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027785301,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027785301,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": null
+      },
+      {
+        "t": 1785027785301,
+        "kind": "cast",
+        "id": "mob-0",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027786702,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027788302,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027806944,
+        "kind": "cast",
+        "id": "sim_c1",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785027808484,
+        "kind": "damage",
+        "id": "mob-0",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785027810452,
+        "kind": "move",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027811832,
+        "kind": "arrival",
+        "id": "mob-1",
+        "spell_id": null
+      },
+      {
+        "t": 1785027811832,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027813129,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027813454,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027813454,
+        "kind": "cast",
+        "id": "mob-0",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027814856,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027816457,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027835590,
+        "kind": "cast",
+        "id": "sim_c1",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785027837135,
+        "kind": "damage",
+        "id": "mob-0",
+        "spell_id": "senshi_warcleave"
+      },
+      {
+        "t": 1785027838946,
+        "kind": "cast",
+        "id": "mob-1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027840347,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027841947,
+        "kind": "turn_end",
+        "id": null,
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027841947,
+        "kind": "cast",
+        "id": "mob-0",
+        "spell_id": "mob_attack_dungeon"
+      },
+      {
+        "t": 1785027843348,
+        "kind": "damage",
+        "id": "sim_c1",
+        "spell_id": "mob_attack_dungeon"
+      }
+    ],
+    "vfx": [
+      {
+        "t": 1785027772710,
+        "caster": "mob-0",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027785301,
+        "caster": "mob-0",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027807929,
+        "caster": "sim_c1",
+        "spell_id": "senshi_warcleave",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027811833,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027813454,
+        "caster": "mob-0",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027836576,
+        "caster": "sim_c1",
+        "spell_id": "senshi_warcleave",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027838946,
+        "caster": "mob-1",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      },
+      {
+        "t": 1785027841948,
+        "caster": "mob-0",
+        "spell_id": "mob_attack_dungeon",
+        "element": "neutral",
+        "delivered": true
+      }
+    ]
+  },
+  "console_errors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "page_errors": [],
+  "log": [
+    "[00:59:30.956] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:30.959] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:30.964] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:31.249] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:33.305] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:33.548] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:36.251] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:41.252] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:43.279] signed in as the QA key · simulator board mounted",
+    "[00:59:44.290] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:45.804] character created",
+    "[00:59:45.953] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:46.257] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:46.657] sweep grid: 240 points over board canvas 399x434 (board_canvas=true, canvases=2)",
+    "[00:59:46.704] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:51.264] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:54.620] mob start cell at (719,492) after 21 probes",
+    "[00:59:56.268] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[00:59:58.180] mob row \"Alley BunnynormalLV 1–4\" → MOB TEAM 1/6",
+    "[01:00:00.965] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:01.229] ally start cell at (771,362) after 27 probes",
+    "[01:00:01.272] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:01.717] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:03.565] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:04.532] mob start cell at (745,518) after 33 probes",
+    "[01:00:06.276] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:08.081] mob row \"Alley BunnynormalLV 1–4\" → MOB TEAM 2/6",
+    "[01:00:08.862] setup done — placed=true mobbed=true · roster=1 mobs=2 after 33 probes",
+    "[01:00:08.989] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:09.065] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:09.077] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:10.964] START FIGHT pressed — blocked banner: none",
+    "[01:00:11.279] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:15.969] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:16.281] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:16.723] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:18.973] fight up — sockets=10 filled=4 turns=3 active=QAKNIGHT",
+    "[01:00:19.050] active seat: QAKNIGHT · turns: [{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"},{\"name\":\"QAKNIGHT\",\"hp\":\"70\",\"active\":true,\"dead\":false,\"team\":\"ally\"},{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"}]",
+    "[01:00:19.135] round 1: active=QAKNIGHT mine=true",
+    "[01:00:19.761] round 1: armed_index=1 socket={\"cls\":\"hud-socket armed\",\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:00:21.286] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:26.288] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:30.971] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:31.289] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:31.728] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:33.572] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:36.291] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:41.292] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:45.972] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:46.296] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:46.730] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:49.083] console: [fight-state] {sequence: 1, at_ms: 1785027649083, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:00:49.084] console: [fight-state] {sequence: 2, at_ms: 1785027649083, event: flush_started, background: true, move_count: 0}",
+    "[01:00:49.091] console: [fight-state] {sequence: 3, at_ms: 1785027649091, event: flush_finished, background: true, ok: true}",
+    "[01:00:51.298] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:00:55.755] round 1: no castable cell — walking toward 801,437",
+    "[01:00:56.300] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:00.979] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:01.302] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:01.734] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:03.574] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:06.306] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:11.310] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:15.989] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:16.315] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:16.736] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:21.327] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:26.323] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:29.148] console: [fight-state] {sequence: 4, at_ms: 1785027689115, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:01:29.148] console: [fight-state] {sequence: 5, at_ms: 1785027689116, event: flush_started, background: true, move_count: 0}",
+    "[01:01:29.148] console: [fight-state] {sequence: 6, at_ms: 1785027689124, event: flush_finished, background: true, ok: true}",
+    "[01:01:30.982] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:31.327] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:31.741] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:33.283] round 1: cast target NONE",
+    "[01:01:33.291] round 1: mob hp 10 → 10 · beats 3 → 13 · last=[\"arrival\",\"turn_end\",\"move\",\"arrival\",\"turn_end\",\"move\"]",
+    "[01:01:33.302] round 1: no END TURN button found — DOM: [{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":true,\"dead\":false,\"team\":\"enemy\"},{\"name\":\"QAKNIGHT\",\"hp\":\"70\",\"active\":false,\"dead\":false,\"team\":\"ally\"},{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"}]",
+    "[01:01:33.576] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:35.317] round 1: TURN POINTER MOVED Alley Bunny → QAKNIGHT after 2s",
+    "[01:01:36.333] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:38.327] round 2: active=QAKNIGHT mine=true",
+    "[01:01:38.958] round 2: armed_index=1 socket={\"cls\":\"hud-socket armed\",\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:01:41.335] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:45.985] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:46.335] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:46.741] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:51.337] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:01:56.341] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:00.986] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:01.342] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:01.742] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:03.578] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:06.343] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:09.150] console: [fight-state] {sequence: 7, at_ms: 1785027729149, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:02:09.150] console: [fight-state] {sequence: 8, at_ms: 1785027729150, event: flush_started, background: true, move_count: 0}",
+    "[01:02:09.157] console: [fight-state] {sequence: 9, at_ms: 1785027729157, event: flush_finished, background: true, ok: true}",
+    "[01:02:11.345] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:15.979] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:16.349] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:16.744] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:21.350] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:26.351] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:28.566] round 2: no castable cell — walking toward 881,437",
+    "[01:02:30.977] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:31.353] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:31.746] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:33.579] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:36.355] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:41.359] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:45.976] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:46.359] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:46.750] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:49.186] console: [fight-state] {sequence: 10, at_ms: 1785027769185, event: auto_flush_fired, move_count: 0, cast_count: 0}",
+    "[01:02:49.186] console: [fight-state] {sequence: 11, at_ms: 1785027769186, event: flush_started, background: true, move_count: 0}",
+    "[01:02:49.195] console: [fight-state] {sequence: 12, at_ms: 1785027769194, event: flush_finished, background: true, ok: true}",
+    "[01:02:51.361] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:02:56.362] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:00.984] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:01.366] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:01.752] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:02.247] round 2: cast target NONE",
+    "[01:03:02.251] round 2: mob hp 10 → 10 · beats 15 → 29 · last=[\"turn_end\",\"move\",\"arrival\",\"cast\",\"damage\",\"turn_end\"]",
+    "[01:03:02.278] console: [fight-state] {sequence: 13, at_ms: 1785027782277, event: flush_started, background: false, move_count: 0}",
+    "[01:03:02.286] console: [fight-state] {sequence: 14, at_ms: 1785027782285, event: flush_finished, background: false, ok: true}",
+    "[01:03:02.319] round 2: END TURN pressed (active was QAKNIGHT)",
+    "[01:03:03.322] round 2: TURN POINTER MOVED QAKNIGHT → Alley Bunny after 1s",
+    "[01:03:03.581] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:06.329] round 3: active=Alley Bunny mine=false",
+    "[01:03:06.368] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:08.331] round 3: seat returned to QAKNIGHT",
+    "[01:03:08.951] round 3: armed_index=1 socket={\"cls\":\"hud-socket armed\",\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:03:11.369] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:15.977] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:16.371] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:16.754] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:21.373] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:26.376] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:26.648] round 3: cast target 796,371 · Alley Bunny(10 −5) · predicted −5",
+    "[01:03:30.320] round 3: post-cast tooltip = {\"text\":\"Alley Bunny(5)\",\"enemy\":true,\"dmg\":\"\"} · turn cards = [{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"},{\"name\":\"QAKNIGHT\",\"hp\":\"68\",\"active\":true,\"dead\":false,\"team\":\"ally\"},{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"}]",
+    "[01:03:30.323] round 3: mob hp 10 → 10 · beats 35 → 37 · last=[\"turn_end\",\"cast\",\"damage\",\"turn_end\",\"cast\",\"damage\"]",
+    "[01:03:30.429] console: [fight-state] {sequence: 15, at_ms: 1785027810428, event: flush_started, background: false, move_count: 0}",
+    "[01:03:30.437] console: [fight-state] {sequence: 16, at_ms: 1785027810436, event: flush_finished, background: false, ok: true}",
+    "[01:03:30.469] round 3: END TURN pressed (active was QAKNIGHT)",
+    "[01:03:30.976] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:31.378] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:31.473] round 3: TURN POINTER MOVED QAKNIGHT → Alley Bunny after 1s",
+    "[01:03:31.756] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:31.877] round 3: POST-COMMIT tooltip on the same cell = {\"text\":\"Alley Bunny(10)\",\"enemy\":true,\"dmg\":\"\"}",
+    "[01:03:33.585] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:34.881] round 4: active=Alley Bunny mine=false",
+    "[01:03:36.380] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:36.886] round 4: seat returned to QAKNIGHT",
+    "[01:03:37.502] round 4: armed_index=1 socket={\"cls\":\"hud-socket armed\",\"key\":\"1\",\"label\":\"Warcleave\",\"empty\":false,\"armed\":true}",
+    "[01:03:41.381] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:45.977] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:46.385] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:46.761] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:51.387] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:55.285] round 4: cast target 796,371 · Alley Bunny(10 −5) · predicted −5",
+    "[01:03:56.387] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:03:58.889] round 4: post-cast tooltip = {\"text\":\"Alley Bunny(5)\",\"enemy\":true,\"dmg\":\"\"} · turn cards = [{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"},{\"name\":\"QAKNIGHT\",\"hp\":\"66\",\"active\":true,\"dead\":false,\"team\":\"ally\"},{\"name\":\"Alley Bunny\",\"hp\":\"10\",\"active\":false,\"dead\":false,\"team\":\"enemy\"}]",
+    "[01:03:58.894] round 4: mob hp 10 → 10 · beats 45 → 47 · last=[\"turn_end\",\"cast\",\"damage\",\"turn_end\",\"cast\",\"damage\"]",
+    "[01:03:58.922] console: [fight-state] {sequence: 17, at_ms: 1785027838922, event: flush_started, background: false, move_count: 0}",
+    "[01:03:58.930] console: [fight-state] {sequence: 18, at_ms: 1785027838930, event: flush_finished, background: false, ok: true}",
+    "[01:03:58.980] round 4: END TURN pressed (active was QAKNIGHT)",
+    "[01:03:59.986] round 4: TURN POINTER MOVED QAKNIGHT → Alley Bunny after 1s",
+    "[01:04:00.387] round 4: POST-COMMIT tooltip on the same cell = {\"text\":\"Alley Bunny(10)\",\"enemy\":true,\"dmg\":\"\"}",
+    "[01:04:00.981] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:04:01.390] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:04:01.762] console: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "[01:04:03.484] casts landed: 2 · rounds with a pointer move: 4"
+  ]
+}
