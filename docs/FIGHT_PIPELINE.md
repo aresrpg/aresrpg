@@ -81,8 +81,8 @@ it against the receipt like any prediction.
 - A snapshot overwriting live fold state.
 - Purging predictions on unrelated receipts.
 - A second simultaneous runtime truth owner for fight state (parallel entity/death/position
-  caches outside the selected committed-truth fold); a diagnostic comparison fold may remain
-  alongside it without owning runtime truth.
+  caches outside the core committed fold — §2 admits one fold and no switch); a comparison
+  fold is a test artifact only, never a runtime reader (#946).
 - Effect machinery (promises, fetches, timers) inside the fight core — effects are injected
   at the edges; results re-enter as inputs (law L-P4).
 - An effect kind published in content that the sim cannot resolve: the totality gate holds a
