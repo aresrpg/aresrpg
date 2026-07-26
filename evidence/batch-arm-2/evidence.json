@@ -1,0 +1,105 @@
+{
+  "mission": "batch arming capture — PR #980 / #982 / #985",
+  "integration_head": "dc383562",
+  "worktree": "/private/tmp/aresrpg-lanes/capture-batch2",
+  "app": "http://localhost:5330/simulator?dev (vite dev, VITE_RPC_URL=https://rpc.aresrpg.world)",
+  "browser": "chromium 149.0.7827.55, HEADED (launchPersistentContext, CDP :9333), 1600x950 @dpr2",
+  "identity": "project QA key `alice` (.dev/keys.json) via the DEV-only ?dev native-wallet door — simulator fight is local, zero SUI spent",
+  "fixture": {
+    "seed": "f27a7216",
+    "board": "10 x 19, anchor 1644,1612",
+    "fight_id": "sim:f27a7216:1",
+    "characters": [
+      { "name": "Kaguya", "class": "yajin", "level": 200, "hp": 1040 },
+      { "name": "Tamotsu", "class": "rojin", "level": 200, "hp": 1045 }
+    ],
+    "mobs": [
+      { "name": "Razmo", "level": 3, "hp": 28 },
+      { "name": "Razmo", "level": 3, "hp": 28 }
+    ]
+  },
+  "verdicts": {
+    "A_dealt_hand": {
+      "pr": 980,
+      "verdict": "FAIL",
+      "observed": "the bar holds exactly 3 cards for BOTH level-200 seats; sockets 4-9 render as `div.hud-socket empty`",
+      "expected": "HAND_SIZE = 7 (packages/sim/src/reduce.js:42) out of a 20-spell class deck",
+      "proof": [
+        "yajin bar = yajin_gutterknife(4 AP) / yajin_shadowfold=VANISH(2 AP) / yajin_fanged_snare(2 AP)",
+        "rojin bar = 3 cards (costs 4/1/4)",
+        "class_spells('yajin') read live in-page = 20 rows; exactly 3 carry unlock_level=1 (gutterknife, vanish, fanged_snare)",
+        "class_spells('rojin') = 20 rows; exactly 3 at unlock_level=1 (spade_hurl, rustkey, greed)",
+        "=> the dealt deck is the unlock_level<=1 subset, i.e. gated at level 1, not 200"
+      ],
+      "sub_verdict_redeal_on_switch": "PASS — the bar swaps to the other seat's own cards when its turn comes",
+      "shots": ["11_fight_open.png", "16_hover_1.png", "16_hover_2.png"]
+    },
+    "A2_level_projection": {
+      "pr": 980,
+      "verdict": "FAIL (companion defect, same fixture)",
+      "observed": "every turn card renders `LV 1` and the HUD level badge (.hud-xplvl) renders `1` for both level-200 characters",
+      "counter_evidence": "HP 1040 / 1045 IS the level-200 curve — build_seat received level 200, so stats are right while the level projection and the deck gate read 1",
+      "shots": ["11_fight_open.png", "22_kaguya_next_turn.png"]
+    },
+    "B_seat_follow": {
+      "pr": 982,
+      "verdict": "PASS",
+      "proof": [
+        "HUD bound to Kaguya (HP 1040, yajin deck), then to Tamotsu (HP 1045, rojin deck) with no click from the driver",
+        "both seats playable in one fight",
+        "auto-pass on expiry proven for BOTH seats from the fight's own capsule: TurnEnded is_mob:false idx:0 AND idx:1, unattended, 40s turns"
+      ],
+      "shots": ["11_fight_open.png", "21_chip_3.png"],
+      "artifact": "bugreport.txt (COPY BUG REPORT — 15 canonical events)"
+    },
+    "C_names": {
+      "pr": 982,
+      "verdict": "PASS",
+      "proof": "turn cards read KAGUYA / RAZMO / TAMOTSU / RAZMO; zero 0x… anywhere on the fight surface (the sidebar 0xb495…d177 is the wallet chip, an attributed exclusion)",
+      "shots": ["11_fight_open.png"]
+    },
+    "D_tooltip_numbers": {
+      "pr": 982,
+      "verdict": "PASS",
+      "proof": [
+        "GUTTERKNIFE — 'AP COST 4 · RANGE 1 · CRIT 1/50' · effects '2 to 6 Earth damage · crit 5 to 9' + 'Push 2 cells · crit 3'",
+        "VANISH — 'AP COST 2 · RANGE 0 · COOLDOWN 11 turns' · effects 'Become invisible · 3 turns' + '+1 MP · 3 turns'",
+        "no bare '− Earth damage' anywhere"
+      ],
+      "shots": ["16_hover_1.png", "16_hover_2.png"]
+    },
+    "E_status_chips": {
+      "pr": 985,
+      "verdict": "FAIL",
+      "cast": "VANISH self-cast landed on Kaguya — AP 6→4, MP 3→4 (the +1 MP applied on the cast turn)",
+      "failures": [
+        "NO status chip renders anywhere: a full-DOM sweep for any element whose text/title/aria-label matches /invisib|vanish/ returned zero hits, and zero status/effect/buff images. There is no 3 → 2 → 1 → gone to observe.",
+        "the +1 MP pool change does NOT persist across END TURN: Kaguya's next turn opened at MP 3, not 4, with the buff still inside its 3-turn window (rollback)"
+      ],
+      "note": "the spell socket DOES track the cast (VANISH shows its 11-turn cooldown counting 11 → 8), so the receipt reaches the bar; only the status surface is missing",
+      "bonus_974": "mobs approached across the whole fight (MobMoved to cells 342 → 303 → 301, then both adjacent and attacking — Kaguya 1040 → 1038 HP). Approach behaviour is live; it could not be read as an invisibility-expiry transition because the invisibility status was never surfaced.",
+      "shots": ["18_armed_vanish.png", "20_cast_landed.png", "21_chip_3.png", "22_kaguya_next_turn.png"]
+    },
+    "F_paint_derivation": {
+      "pr": 982,
+      "verdict": "PASS",
+      "proof": [
+        "positive control: hovering a cell inside 3 MP paints the green reachable wash — a proper MP-3 diamond, not the whole board",
+        "negative: hovering a cell far beyond 3 MP paints NO path and no wash",
+        "VANISH (range 0) armed paints exactly ONE cell — the caster's own"
+      ],
+      "shots": ["23_hover_near.png", "23_hover_far.png", "18_armed_vanish.png"]
+    },
+    "G_console": {
+      "verdict": "PASS",
+      "proof": "0 pageerror, 0 JS console errors across the whole session. All 53 logged rows are network 404s on live hosts + 1 dependent WebGPU warning.",
+      "attributed_exclusions": [
+        "38x GET https://rpc.aresrpg.world/v1/config — not deployed on the live testnet read layer (env, not this diff)",
+        "6x GET https://assets.aresrpg.world/mobs/hy_rat.png — missing mob art on the asset host (content)",
+        "7x GET https://assets.aresrpg.world/spells/0x….webp — spell art published under id-named files that 404 (content)",
+        "1x CopyExternalImageToTexture warning — dependent on the missing mob art above",
+        "1x GET http://localhost:3000/v1/encyclopedia — the pre-restart boot before VITE_RPC_URL was pointed at the live read layer"
+      ]
+    }
+  }
+}
