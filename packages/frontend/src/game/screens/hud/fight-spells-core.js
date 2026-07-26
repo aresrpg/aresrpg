@@ -37,6 +37,19 @@ const kind_names = {
   27: 'INVISIBILITY',
   28: 'REVEAL',
   29: 'RETURN_SPELL',
+  // Wave-12 retro mechanics (spell_effect.move:74-84). Unnamed here, EVERY one of them read as the loud
+  // `? 32` canary on a live effect badge, because seven of them are recordable fighter statuses (#1049).
+  18: 'RESET_POSITIONS',
+  30: 'GEOMETRIC_PUSH',
+  31: 'CRITICAL_FAILURE',
+  32: 'DAMAGE_TO_HEAL',
+  33: 'FORCED_DEATH',
+  34: 'TIMED_PAYLOAD',
+  35: 'NAMED_DAMAGE_STACK',
+  36: 'STANCE',
+  37: 'REACTIVE_PUNISHMENT',
+  38: 'EROSION',
+  39: 'DAMAGE_REDIRECT',
 }
 const element_names = { 0: 'fire', 1: 'water', 2: 'earth', 3: 'air', 255: 'neutral' }
 const shape_names = { 0: 'POINT', 1: 'CIRCLE', 2: 'CROSS', 3: 'LINE', 4: 'TBAR', 5: 'RING', 6: 'ALLMAP', 7: 'CONE' }
@@ -115,6 +128,38 @@ export const project_spell_level = (level) => {
   }
 }
 
+// ── THE PUBLISHED CORPUS SPEAKS THE AUTHORED DIALECT (#1049) ──────────────────────────────────────────────
+// `spell_corpus.json` states a signed ALTER_STAT/ALTER_RESIST magnitude the way a designer writes it: `+20`
+// strength, `−8` strength. The CHAIN cannot — `Effect.value` is a u64 — so the mint CENTRES those two kinds at
+// 32768 (`participant::alter_delta`), and `@aresrpg/sim`'s normalizer, whose other caller feeds it rows read
+// straight off a minted MobTemplate, decodes that centering at its door. Handing it the authored dialect made
+// every one of the corpus' 912 alter rows fold as its own 32768-complement: a `+20 Strength · 5 turns` buff
+// became a −32748 Strength DEBUFF in every prediction the client runs. Measured against the live blob
+// 2026-07-26 — 906 plain-positive and 6 negative alter rows, ZERO centered — so the dialect is unambiguous.
+// The door that KNOWS which dialect it holds states it: authored rows are minted here, once, on the way to the
+// sim. Display keeps reading the authored row (`project_spell_effect` below), the ONE home for the signed
+// magnitude a player reads.
+const SIGNED_SHIFT = 32_768
+const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_effect.move)
+
+const minted_effect = (effect) => {
+  if (!SIGNED_KINDS.has(Number(effect?.kind))) return effect
+  const mint = (value) => (value == null ? value : SIGNED_SHIFT + Number(value))
+  return {
+    ...effect,
+    value: mint(effect.value),
+    ...(effect.value_max != null ? { value_max: mint(effect.value_max) } : {}),
+  }
+}
+
+const minted_level = (level) => ({
+  ...level,
+  ...(level?.effects ? { effects: level.effects.map(minted_effect) } : {}),
+  ...(level?.crit_effects ? { crit_effects: level.crit_effects.map(minted_effect) } : {}),
+})
+
+const minted_spell = (spell) => ({ ...spell, levels: (spell?.levels ?? []).map(minted_level) })
+
 /**
  * Project the runtime-loaded spell corpus (the merged blob the seed ceremony publishes — authored rows joined
  * to the deployment's on-chain object ids) into fight-spell rows. PURE and total: an empty/absent corpus
@@ -126,7 +171,7 @@ export const project_spell_level = (level) => {
  */
 export function build_fight_spells(spell_corpus) {
   const corpus = Array.isArray(spell_corpus) ? spell_corpus : []
-  const templates = normalize_chain_spell_corpus(corpus)
+  const templates = normalize_chain_spell_corpus(corpus.map(minted_spell))
   const spells = corpus
     .map((spell) => ({
       object_id: spell.object_id ?? null,
