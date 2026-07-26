@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// DEV-ONLY BOT SEAM (#1100) — the two doors a SCRIPTED fight bot needs and the #1028 seams do not open.
+// DEV-ONLY BOT SEAM (#1100) — the doors a SCRIPTED fight bot needs and the #1028 seams do not open.
 // Sibling of dev_cast.js / dev_probe.js: same DEV gate, same registrar pattern, same live-module closures
 // (a Playwright-side `import('/src/…')` binds a DEAD second Vite instance — the documented dev_probe trap),
 // same `__ARES_DEV_` prefix the bundle gate (scripts/assert_clean_bundle.mjs) fails any production build on.
@@ -25,6 +25,18 @@
 //
 // It returns the READ from both sides of the commit, which is what makes per-action assertion possible at
 // all: the bot compares its planned delta against the folded truth instead of trusting an `ok: true`.
+//
+//   3. __ARES_DEV_PLACE(cell) — commit the PLACEMENT the world surface opens every fight with (`turns::place`,
+//      place + READY in one signature, the last ready auto-starting the fight). The simulator writes its
+//      placements straight into its own setup store, so the sim bot never sees this phase; a WORLD fight cannot
+//      be played without it, and no other seam signs it.
+//
+//   4. __ARES_DEV_WORLD_JOIN(fight_id) — seat MY character in an already-open PUBLIC world fight, through the
+//      exact chain the FightsModal Join button runs (`run_fight_entry` → `join_world_fight` →
+//      `enter_after_world_join_receipt` → `enter_world_fight`). This is what makes a COOP bot possible at all:
+//      the creator's door (`__dev_start_world_fight`, embed_voxel_dev.js) seats exactly one character, and a
+//      second seat has no headless door anywhere else. Chain modules load LAZILY inside the call, so the
+//      simulator — which registers this same module — never pulls the transaction graph into its page.
 
 import { decode, encode } from '@aresrpg/fight/los'
 import { board_view, fight_view } from '@aresrpg/fight/project'
@@ -100,9 +112,15 @@ const fighter_row = (f, committed) => ({
  * (range / modifiable_range / linear / line_of_sight / free_cell) so the policy can call the SIM's own
  * targeting gate instead of inventing a second one. Fight resolution reads `levels[0]` only (the level-1
  * MVP — cast.move's "SPELL LEVEL" note), so that is the row published here.
+ *
+ * LEVEL-GATED, like the bar. `resolve_class_spells(class, level)` is the SAME resolver DungeonBoard's spell bar
+ * reads (`my_spells`), at the SAME level — so the book the bot plans over is the book the player can press. An
+ * ungated book was harmless on the simulator (its seat is authored at level 200, which unlocks everything) and
+ * is NOT harmless on the world: a level-1 seat would plan casts the chain refuses, and every one of those is a
+ * signed transaction that burns gas to learn what the resolver already knew.
  */
-const spell_rows = (class_id) =>
-  resolve_class_spells(class_id, Number.MAX_SAFE_INTEGER)
+const spell_rows = (class_id, level) =>
+  resolve_class_spells(class_id, Number(level) || 0)
     .filter((spell) => !!spell.object_id)
     .map((spell) => {
       const level = spell.levels?.[0] ?? {}
@@ -169,8 +187,26 @@ function dev_read() {
     my_traps: [...(view.my_traps ?? [])],
     hand: [...(view.hand ?? [])],
     fighters,
-    spellbook: me ? spell_rows(me.class_id ?? me.classe) : [],
+    spellbook: me ? spell_rows(me.class_id ?? me.classe, me.level ?? 1) : [],
   }
+}
+
+/** Capture the store's short-lived refusal reason across an await — it can be cleared by the reconciling
+ *  refresh before the promise settles, and a refusal without its reason is the silence the bot exists to end. */
+const with_refusal = async (run) => {
+  let reason = null
+  const unsubscribe = use_dungeon.subscribe((state) => {
+    if (state.error) reason = String(state.error)
+  })
+  try {
+    await run()
+  } catch (error) {
+    unsubscribe()
+    return String(error?.message ?? error)
+  }
+  unsubscribe()
+  const live = use_dungeon.getState().error
+  return reason ?? (live ? String(live) : null)
 }
 
 /** Refuse before touching the store, so a bad plan is a REASON, never a half-committed turn. */
@@ -220,25 +256,84 @@ async function dev_turn(actions = []) {
       : { kind: MOVE_KIND, target: cell }
   })
 
-  // commit_turn returns false on a swallowed refusal; its short-lived store reason can be cleared by the
-  // reconciling refresh before the await returns, so capture it live (the dev_move idiom).
-  let refusal_reason = null
-  const unsubscribe = use_dungeon.subscribe((state) => {
-    if (state.error) refusal_reason = String(state.error)
-  })
+  // commit_turn returns false on a swallowed refusal, so BOTH facts are needed: the boolean and the reason.
   let committed = false
-  try {
-    committed = await store.commit_turn(staged)
-  } finally {
-    unsubscribe()
-    use_dungeon_turn.getState().clear_picks()
-  }
+  const error = await with_refusal(async () => {
+    try {
+      committed = await store.commit_turn(staged)
+    } finally {
+      use_dungeon_turn.getState().clear_picks()
+    }
+  })
   const after = dev_read()
-  if (!committed)
-    return { ok: false, error: refusal_reason ?? String(use_dungeon.getState().error ?? 'turn commit refused'), before, after }
-  const error = use_dungeon.getState().error
-  if (error) return { ok: false, error: String(error), before, after }
+  if (!committed) return { ok: false, error: error ?? 'turn commit refused', before, after }
+  if (error) return { ok: false, error, before, after }
   return { ok: true, before, after }
+}
+
+/**
+ * window.__ARES_DEV_PLACE(cell) — take MY start cell for a fight that is still in PLACEMENT. Routes through the
+ * SAME `use_dungeon.place_at_cell` door the READY button presses (`turns::place` — place + ready in one
+ * signature; the last ready starts the fight), so an illegal cell is refused by the authority exactly as it
+ * refuses the button. Returns the read from both sides, like `__ARES_DEV_TURN`.
+ * @param {{ x: number, y: number }} cell one of `__ARES_DEV_READ().placement_cells`
+ * @returns {Promise<{ ok: boolean, error?: string, before?: object, after?: object }>}
+ */
+async function dev_place(cell) {
+  const store = use_dungeon.getState()
+  const view = fight_view()
+  if (!store.dungeon || !view) return { ok: false, error: 'no active dungeon fight' }
+  if (!view.placement) return { ok: false, error: 'the fight is not in placement' }
+  if (!Number.isInteger(cell?.x) || !Number.isInteger(cell?.y)) return { ok: false, error: 'place needs cell {x:int,y:int}' }
+  // The band is checked HERE because a placement outside it is dropped by the reducer rather than refused — a
+  // dropped placement is a silently seatless fight, which is the one failure a bot cannot diagnose from a read.
+  const band = (view.placement_cells?.[0] ?? []).some((c) => c.x === cell.x && c.y === cell.y)
+  if (!band) return { ok: false, error: `${cell.x},${cell.y} is not one of my start cells` }
+  const before = dev_read()
+  const error = await with_refusal(() => store.place_at_cell(encode(cell.x, cell.y)))
+  const after = dev_read()
+  return error ? { ok: false, error, before, after } : { ok: true, before, after }
+}
+
+/**
+ * window.__ARES_DEV_WORLD_JOIN(fight_id) — seat MY selected character in an OPEN PUBLIC world fight and mount
+ * it. Every leg is the production one, in the production order (FightsModal's `on_join`, world branch): the
+ * entry reducer wraps the join tx, one settlement recovery is allowed for the first refusal, and the join
+ * receipt itself is what authorises the mount. `party_id` is null on purpose — a public fight discards it.
+ * @param {string} fight_id the Fight object id the creator's engage published
+ * @returns {Promise<{ ok: boolean, error?: string, fight_id?: string, status?: number|null }>}
+ */
+async function dev_world_join(fight_id) {
+  if (!fight_id) return { ok: false, error: 'join needs the fight object id' }
+  const character_id = context.get_state().selected_character_id
+  if (!character_id) return { ok: false, error: 'no selected character' }
+  // LAZY, and load-bearing: the simulator registers this same module and has no transaction graph at all.
+  const [{ join_world_fight }, { enter_world_fight }, { enter_after_world_join_receipt }, { run_fight_entry }, { recover_fight_entry_refusal }] =
+    await Promise.all([
+      import('../../world-shell/dungeon_actions.js'),
+      import('../../world-shell/world_fight.js'),
+      import('../../world-shell/world_fight_receipt.js'),
+      import('../fight_engage.js'),
+      import('../../world-shell/dungeon_settlement.js'),
+    ])
+  // A stale session owns the shared store until it is dropped, and `enter_world_fight` refuses to stomp one.
+  if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) use_dungeon.getState().reset_local()
+  try {
+    await enter_after_world_join_receipt({
+      execute: () =>
+        run_fight_entry({
+          submit: () => join_world_fight({ fight_id, character_id, party_id: null }),
+          recover_refusal: (error) => recover_fight_entry_refusal(use_dungeon, character_id, error),
+        }),
+      enter: enter_world_fight,
+      fight_id,
+      character_id,
+    })
+  } catch (error) {
+    return { ok: false, error: String(error?.message ?? error) }
+  }
+  await use_dungeon.getState().refresh()
+  return { ok: true, fight_id, status: use_dungeon.getState().dungeon?.status ?? null }
 }
 
 /** Register the hooks (idempotent; dev builds only — the caller gates on import.meta.env.DEV). */
@@ -246,4 +341,6 @@ export function register_dev_bot_seam() {
   if (typeof window === 'undefined') return
   ;(/** @type {any} */ (window)).__ARES_DEV_READ = dev_read
   ;(/** @type {any} */ (window)).__ARES_DEV_TURN = dev_turn
+  ;(/** @type {any} */ (window)).__ARES_DEV_PLACE = dev_place
+  ;(/** @type {any} */ (window)).__ARES_DEV_WORLD_JOIN = dev_world_join
 }
