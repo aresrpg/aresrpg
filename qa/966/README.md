@@ -1,12 +1,35 @@
 # PR #966 — driven proof (placement-resume re-derive)
 
-Build: `lane/placement-resume-2` @ `695dab7d` · dev server from that worktree on `:5310`
+Build: `lane/placement-resume-2` · dev server from that worktree on `:5310`
 (`VITE_RPC_URL=https://rpc.aresrpg.world`) · LIVE testnet · identity `alice`
 (`0xb4951afe3682d3e9425671f1772e3676bc6ff361ac00896ea131cf52765cd177`, character
 `0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b`) · one browser throughout.
 
 Status namespaces under test (`fight_chain_status.js`): CHAIN placement=0/active=1 vs VIEW
 (`board_state`) placement=5/active=1. Evidence below quotes both, which is what makes the fix legible.
+
+### Which revision each leg actually ran on
+
+The lane sits on an automated rebase loop and moved **five times** during this pass (reflog: 10:25, 10:32 →
+`695dab7d`, 10:51, 10:59, 11:20, 11:26 → `8f207c04`). The dev server was started at 10:51:33, 16 s before the
+third rebase, and every leg is a full page reload, so each leg loaded whatever was on disk at that moment.
+
+| Leg | Wall clock | Lane head in effect |
+|---|---|---|
+| Bar 3 trial 1 | 10:56–11:01 | `d16f5cac` (then `6c5d6f76` from 10:59:24) |
+| Bars 1 · 2 · 4 · 5 | 11:35–11:38 | `8f207c04` (current head) |
+| Bar 3 trial 2 | 11:54–11:59 | `8f207c04` (current head) |
+
+**This does not weaken the verdicts.** The PR's own files are byte-identical across the whole window —
+`git diff 695dab7d..8f207c04 -- fight-liquidation.js world_fight.js fight_chain_status.js` is **empty**; the
+two #932 commits were only re-picked onto a newer `origin/edge`. Every bar therefore exercised the same PR
+code, and bar 3 additionally reproduces on two different lane revisions.
+
+What DID change underneath was edge, including `647549ff fix(fight): an expired turn advances itself, it is
+never narrated (#921)`, which rewrote `fight_expiry_gate.js` and `fight_state_trace.js` mid-pass. That is the
+origin of the `[fight] expired turn could not be advanced` line quoted later — it is #921's new
+`should_report_stall` telemetry, **not** anything this PR introduced. It first appears in my logs 12 s after
+the 10:59:24 rebase that brought #921 in.
 
 | # | Bar | Verdict |
 |---|-----|---------|
@@ -89,9 +112,11 @@ Note the door is **not** idempotent-safe to re-fire blindly: `turns::force_start
 `status == placement`, so once it lands a second call aborts. The fix is to observe the effects of the tx
 that was already sent, not to send another (tx-retry burn law).
 
-Blast radius beyond this bar: the same immediate-re-read pattern produced
-`[fight] expired turn could not be advanced` on both settle boots while `turns::crank` had in fact succeeded
-(`C4QknaVGHmPt9CV6EUwJg7cvrBwmSHhMsSFF4zXyHug`, `03:59:35.872Z`).
+Adjacent observation, **not this PR's**: `[fight] expired turn could not be advanced` fired on both settle
+boots — that line is #921's `should_report_stall` telemetry (`647549ff`), which landed in edge mid-pass. In
+trial 1 it fired at `03:59:36.674Z` while `turns::crank` had succeeded `0.8 s` earlier
+(`C4QknaVGHmPt9CV6EUwJg7cvrBwmSHhMsSFF4zXyHug`, `03:59:35.872Z`), i.e. the same read-lag family as the bar-3
+failure but reached through #921's code. Worth a look on that ticket, not this one.
 
 `shots/BAR3_20_after_expiry_boot.png` is the user-visible outcome: the character roaming in VERDANT HOLLOW
 with the "Win a Fight" quest card up, no board, while the chain has it seated in an ACTIVE fight. No
