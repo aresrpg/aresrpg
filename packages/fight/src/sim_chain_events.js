@@ -387,6 +387,19 @@ const encode_event = (event, ctx) => {
     case 'fight_trap_triggered':
     case 'fight_turn_effects':
       return { rows: effects_of(event.effects) }
+    case 'fight_abandoned': {
+      // A forfeit is its OWN chain event, never a doubled Hit (actions.move `mark_abandoned` →
+      // `fight_events::emit_abandoned{ character, seat }`), so the sim's damage row is not encoded here — the
+      // Abandoned row carries the death, exactly as `inputs.js` folds it (hp 0 + alive false).
+      // `inputs.js` keys that fold `is_mob:false` because "a forfeit is always a player". That is now an
+      // INVARIANT rather than an assumption: `reduce.js` `handle_abandon` refuses every non-seat abandon
+      // (the ENotParticipant twin — a mob and a summon hold no seat), so this event can only ever name a
+      // player. A team1 forfeit is a PvP shape this PvM encoder cannot express, so it is LOUD rather than a
+      // row silently pointing at the wrong fighter.
+      const { is_mob, idx } = side_of(post_state, event.entity_id)
+      if (is_mob) throw new Error(`sim_chain: '${event.entity_id}' forfeited from team1 — no PvM Abandoned row`)
+      return { rows: [row('Abandoned', { fight, character: event.entity_id, seat: u64(idx) })] }
+    }
     case 'ap_reserve_used': {
       const { is_mob, idx } = side_of(post_state, event.entity_id)
       return {
