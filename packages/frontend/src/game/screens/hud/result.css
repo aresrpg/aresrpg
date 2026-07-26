@@ -777,25 +777,6 @@
   color: #34d399;
 }
 
-/* V2 SHADOW status chip (issue #522 follow-up, owner ruling 2026-07-24) — dev/QA-only readout, shown only
-   while ?v2shadow=1/localStorage armed the shadow fan-out (fight_v2_shadow.js): same muted-footnote treatment
-   as .fe-cost above. --good/--warn carry a literal fallback (same defensive convention already used by
-   characters-drawer.css's var(--danger, #ff6b6b) in this same directory) since this card's actual token
-   cascade root is unverified — never a silently-blank chip if the custom property doesn't resolve. */
-.fe-shadow-chip {
-  margin-top: 10px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-  color: var(--good, #4ade80);
-}
-.fe-shadow-chip--warn {
-  color: var(--warn, #fbbf24);
-}
-
 /* DEFEAT: a dashed "no spoils" plate (no receipt). */
 .fe-nospoils {
   margin-top: 16px;

@@ -78,34 +78,16 @@ const COURTESY_EVENT_BASE = 1_000_000
 // guessed absolute (the turn's duration is the base; this only pads renderer jitter).
 export const WAVE_ACK_GRACE_MS = 6000
 
-// ── THE TRUTH SOURCE (box 4, issue #522) ──────────────────────────────────────────────────────────────────────
+// ── THE TRUTH SOURCE ──────────────────────────────────────────────────────────────────────────────────────────
 // The COMMITTED board every projection reads (project.js) is folded by the HEADLESS CORE that lives in this atom
-// as `core` — the legacy `committed_state` fold is DEMOTED to a reverse shadow (fight_trace_tee.js keeps comparing
-// it on every input, now as the shadow rather than the truth). Presentation is untouched: the paced/display folds
-// still derive from the legacy machinery until boxes 5-7 move them.
-//
-// THE ROLLBACK SWITCH: `?v2truth=0` flips committed truth back to the legacy fold for this page load, the stored
-// key `ares_v2truth='0'` flips it stickily, and an explicit query value always beats the stored preference (a URL
-// is a deliberate act, a stored key is a leftover) — the same spelling discipline the shadow's kill switch keeps
-// (fight_v2_shadow.js). Both keys are STRING DATA (quoted literals are exempt from the D756 identifier scan).
-export const TRUTH_QUERY_PARAM = 'v2truth'
-export const TRUTH_STORAGE_KEY = 'ares_v2truth'
+// as `core` (core_*.js). It is the ONLY committed-truth owner — there is no second fold to fall back to and no
+// switch between them. The settlement/presentation machinery below still owns the PACED folds (`presented_state`
+// / `display_state`), which is a different question from what is committed.
 
-/** The pure arm check behind that switch: `'legacy'` on an explicit `0`, `'core'` otherwise (the default owner).
- *  `search`/`storage_get` are INJECTED because this package is hermetic (D769 — no URL, no storage, no DOM in
- *  src): the app's one window owner (fight_trace_tee.js) does the reading and stamps `truth_source` on the atom
- *  before the first dispatch. Under node — and until that stamp lands — the atom's own default is the new owner.
- *  @returns {'core'|'legacy'} */
-export const truth_source_from = ({ search = '', storage_get = () => null } = {}) => {
-  const query = new URLSearchParams(search).get(TRUTH_QUERY_PARAM)
-  if (query != null) return query === '0' ? 'legacy' : 'core'
-  return storage_get(TRUTH_STORAGE_KEY) === '0' ? 'legacy' : 'core'
-}
-
-/** The door accepts a LEGACY `{ page }` alias for a journal delivery (the production edge always sends the
+/** The door accepts a `{ page }` alias for a journal delivery (the production edge always sends the
  *  already-normalized `{ batch }` — dungeon_run_store.js). Resolving it HERE, once at the ingress, is what keeps
- *  the legacy reducer and the core's classify bridge looking at the SAME message: a shape the door accepts must
- *  never be a shape the core silently ignores, now that the core owns committed truth. */
+ *  the settlement reducer and the core's classify bridge looking at the SAME message: a shape the door accepts
+ *  must never be a shape the core silently ignores, since the core owns committed truth. */
 const resolve_journal_alias = (msg, fight_id) =>
   msg?.type === 'journal' && msg.batch == null && msg.page != null
     ? { ...msg, batch: normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? fight_id }) }
@@ -135,10 +117,9 @@ const payload_of = (msg) => {
  * field must not reach the reducer. `ingest` returns the SAME atom for a fold no-op (a draft, an unmapped
  * lifecycle), and returning `s` unchanged makes zustand skip the notify — a no-op input costs no subscriber round.
  *
- * NO FAULT BOUNDARY, deliberately: the core is the truth owner now, so swallowing a throw here would freeze the
- * board silently — the exact class the no-silent-failure law bans. `ingest` is total by construction (v2/ingest.js)
- * and the rollback switch above is the escape hatch if that ever stops being true.
- * @param {(msg: any, now?: number) => any} door the legacy reducer door
+ * NO FAULT BOUNDARY, deliberately: the core is the truth owner, so swallowing a throw here would freeze the
+ * board silently — the exact class the no-silent-failure law bans. `ingest` is total by construction (ingest.js).
+ * @param {(msg: any, now?: number) => any} door the settlement/presentation reducer door
  * @param {(fn:(s:any)=>any)=>void} set
  * @param {()=>any} get
  */
@@ -1216,14 +1197,11 @@ export const create_fight_store = () => {
   const trace_tap = create_trace_tap()
   const store = createStore((set, get) => ({
     ...empty_fight(),
-    // THE HEADLESS CORE (box 4) — the committed-truth owner, folded by `with_core_fold` below. It is stamped HERE
-    // rather than in `empty_fight()` because it owns its OWN reset: an `init` classifies as session_opened /
-    // session_closed and the core returns a fresh atom for both (v2/ingest.js), so re-seeding it from the legacy
+    // THE HEADLESS CORE — the committed-truth owner, folded by `with_core_fold` below. It is stamped HERE rather
+    // than in `empty_fight()` because it owns its OWN reset: an `init` classifies as session_opened /
+    // session_closed and the core returns a fresh atom for both (ingest.js), so re-seeding it from the settlement
     // reset would wipe the session the very same message just opened. One home for "a new fight clears the fold".
     core: empty_core_state(null),
-    // WHICH FOLD OWNS COMMITTED TRUTH — stamped outside `empty_fight()` so a mid-session `init` can never silently
-    // re-arm the new owner under a player who rolled back. The app's window owner overwrites it at install.
-    truth_source: 'core',
     input: with_core_fold(make_input(set, get, trace_tap), set, get),
     // A raw fold helper for tests/tools that want a committed state from a log without the store plumbing.
     fold: (log) => log.reduce(apply_action, empty_state(get().fight_id)),

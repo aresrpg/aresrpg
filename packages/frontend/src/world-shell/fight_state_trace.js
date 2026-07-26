@@ -3,8 +3,8 @@
 // Fight-state switchboard for deterministic wedge captures. Disabled by default; enable with `?fighttrace=1`
 // or `window.__ARES_FIGHT_TRACE_ENABLED = true`, then read `window.__ARES_FIGHT_TRACE` from the same page.
 //
-// It also owns `trace_audience()` — the ONE answer to "is anyone here a developer?" — because the switchboard
-// is what defines the trace surface. #912 gave it its second consumer: the victory card's V2 SHADOW chip.
+// `trace_audience()` below is the ONE answer to "is anyone here a developer?" — the switchboard is what
+// defines the trace surface, so the question lives with it.
 
 import { resolve_hack_mode } from '../game/screens/hud/world/engine_flags_pref.js'
 
@@ -18,11 +18,10 @@ export function fight_trace_enabled(search = '') {
 
 /**
  * IS THIS PAGE A DEV/TRACE SURFACE? (#912) — `?fighttrace=1`, the window switch the simulator's tee arms, or
- * HACK MODE, the QA rail. The ONE home for that question: the trace capture below reads it, and so does every
- * piece of instrumentation whose audience is a driver rather than a player. Machinery-speak renders here and
- * nowhere else — a player on a flawless win sees a flawless win.
+ * HACK MODE, the QA rail. The ONE home for that question, read by the trace capture below: machinery-speak
+ * renders for a driver and nowhere else — a player on a flawless win sees a flawless win.
  */
-export function trace_audience() {
+function trace_audience() {
   if (typeof window === 'undefined') return false
   const search = window.location?.search ?? ''
   return (

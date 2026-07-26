@@ -1874,7 +1874,6 @@
     "slain_by": "Tué par {{killer}} pour {{damage}} dégâts",
     "export_replay": "Exporter la relecture",
     "export_replay_hint": "Téléchargez la trace de ce combat à joindre à un rapport de bug",
-    "shadow_status": "OMBRE V2 · {{folded}} repliés · {{diverged}} divergences",
     "continue": "Continuer",
     "you": "Vous"
   },

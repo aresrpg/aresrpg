@@ -130,7 +130,7 @@ export function resolve_on_escape(search, param, persisted) {
  * always wins, in BOTH directions — `?hack=1` arms the grid over a saved OFF (a driver needs zero clicks),
  * `?hack=0` forces the real terrain back over a saved ON (the A/B escape a hack player needs to compare).
  * That two-way win is why this is its own resolver rather than resolve_on_escape (which only recognizes an
- * arming '1'); it is the `?v2shadow` dual-spelling shape (world-shell/fight_v2_shadow.js). The persisted
+ * arming '1'). The persisted
  * value is a defaulted argument so precedence stays pure/DOM-free under test.
  * @param {string} search raw `location.search` @param {boolean} [persisted] @returns {boolean}
  */

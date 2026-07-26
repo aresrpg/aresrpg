@@ -4,9 +4,8 @@
 // #701 — V2 ↔ V1 COMMITTED PARITY. The v2 headless fold (`project_board`) and the OLD store's `committed_state`
 // derive the observable board through the SAME `apply_action` reducer over the SAME `base_from_view` base, so fed
 // the SAME input stream they must produce BYTE-EQUAL observable boards — active + per-fighter cell/hp/alive/
-// turn_number (the shadow's field set, fight_v2_shadow FIGHTER_FIELDS). This is the shuffle-test idiom extended
-// from a hash to full observable-board equality, driven through BOTH real pipelines exactly as the production tee
-// does (fight_trace_tee.js: the OLD store commits, then its board is compared against the v2 core's).
+// turn_number. This is the shuffle-test idiom extended from a hash to full observable-board equality, driven
+// through BOTH real pipelines: the store commits, then its board is compared against the core's.
 //
 // THE DEFECT this pins (RED on edge, GREEN after): v2's `adopt_snapshot` RE-ADOPTED every newer Fight OBJECT as the
 // base and pruned the events it "subsumed". But the object read is a 4s-stale / possibly-torn checkpoint, and
@@ -27,7 +26,7 @@ import { empty_core_state, ingest, project_board, revive_wire } from '../../src/
 import { input_envelope } from '../../src/envelope.js'
 import { classify_input } from '../../src/classify_input.js'
 
-/** The observable board = exactly the shadow's field set (fight_v2_shadow.js FIGHTER_FIELDS + active). Fighters
+/** The observable board = the fields both folds derive (cell/hp/alive/turn_number + active). Fighters
  *  sorted by key so equality is order-stable — the "byte-equal board" the ticket names. */
 const observable = (board) => ({
   active: board?.active ?? null,
@@ -44,8 +43,8 @@ const observable = (board) => ({
   ),
 })
 
-/** Fold a `{ msg, at }` stream through BOTH pipelines — the OLD store (committed_state) and the v2 core
- *  (project_board) — the way fight_trace_tee.js's shadow does: one classify per msg, compared post-commit. Returns
+/** Fold a `{ msg, at }` stream through BOTH pipelines — the store (committed_state) and the headless core
+ *  (project_board): one classify per msg, compared post-commit. Returns
  *  the per-step observable pair so a divergence names its exact step. Pure w.r.t. its inputs (fresh store + core). */
 const fold_both = (stream) => {
   const store = create_fight_store()

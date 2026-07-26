@@ -7,7 +7,7 @@
 // flag; hack mode is the newest rider on it.
 //
 // The session/toast effects are INJECTED (apply_wireable_flag's last argument) so this drives the real guard
-// with zero process-global mock.module stubs — the same "inject the edges" idiom shadow_enabled_from uses.
+// with zero process-global mock.module stubs — the house "inject the edges" idiom.
 
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 

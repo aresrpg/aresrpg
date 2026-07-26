@@ -1874,7 +1874,6 @@
     "slain_by": "Slain by {{killer}} for {{damage}} damage",
     "export_replay": "Export replay",
     "export_replay_hint": "Download this fight's trace to attach to a bug report",
-    "shadow_status": "V2 SHADOW · {{folded}} folded · {{diverged}} diverged",
     "continue": "Continue",
     "you": "You"
   },

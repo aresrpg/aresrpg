@@ -1,29 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// BOX 4 (issue #522) — THE TRUTH-OWNER CUTOVER. The committed board the renderer reads is now projected from the
-// HEADLESS CORE that lives in the store atom (`state.core`, fed by the ONE door), not from the legacy `committed_state`
-// fold. This suite pins WHICH SOURCE OWNS TRUTH, so it needs a state where the two folds provably DISAGREE: the
-// divergence fixture below drives one real stream through the store door and admits ONE EXTRA authoritative receipt
-// into the core alone (through the public v2 door — never a hand-written board). The legacy fold cannot know that
-// receipt, so every committed field renders one value under the old owner and another under the new one.
+// THE TRUTH OWNER. The committed board the renderer reads is projected from the HEADLESS CORE that lives in the
+// store atom (`state.core`, fed by the ONE door), never from the settlement `committed_state` fold. This suite pins
+// WHICH SOURCE OWNS TRUTH, so it needs a state where the two folds provably DISAGREE: the divergence fixture below
+// drives one real stream through the store door and admits ONE EXTRA authoritative receipt into the core alone
+// (through the public core door — never a hand-written board). The settlement fold cannot know that receipt, so
+// every committed field renders one value per fold.
 //
-// RED before the swap (the committed projections render the legacy numbers), GREEN after. The ROLLBACK case asserts
-// the epic-mandated one-flip escape hatch: `truth_source: 'legacy'` restores the legacy fold in the same projection.
-//
-// PRESENTATION IS UNTOUCHED by this box (boxes 5-7 own it): the rendered `cell` still comes from the legacy display
-// fold, and the assertions below pin that too — a cutover that silently dragged presentation along would be a
-// regression, not this ticket.
+// PRESENTATION IS A DIFFERENT QUESTION: the rendered `cell` still comes from the paced display fold, and the
+// assertions below pin that too — a committed-truth read that silently dragged presentation along would be a bug.
 
 import { describe, test, expect } from 'bun:test'
 
-import {
-  create_fight_store,
-  committed_state,
-  truth_source_from,
-  TRUTH_QUERY_PARAM,
-  TRUTH_STORAGE_KEY,
-} from '../../src/store.js'
+import { create_fight_store, committed_state } from '../../src/store.js'
 import { board_view, engine_view, committed_mob_hp } from '../../src/project.js'
 import { empty_core_state, ingest, project_board } from '../../src/v2/index.js'
 import { input_envelope } from '../../src/envelope.js'
@@ -93,7 +83,7 @@ const diverged_store = () => {
   return store
 }
 
-describe('box 4 — the core lives in the store atom, fed by the ONE door', () => {
+describe('the core lives in the store atom, fed by the ONE door', () => {
   test('driving the door folds the core: no second ingress, no closure, a pure read off the state', () => {
     const store = create_fight_store()
     expect(project_board(store.getState().core).fighters).toEqual({}) // empty before anything is dispatched
@@ -106,7 +96,7 @@ describe('box 4 — the core lives in the store atom, fed by the ONE door', () =
     expect(board).toEqual(project_board(store.getState().core))
   })
 
-  test('the legacy `{ page }` journal alias reaches the core too — an accepted shape is never silently ignored', () => {
+  test('the `{ page }` journal alias reaches the core too — an accepted shape is never silently ignored', () => {
     // seq 2 continues the accept cursor the SHARED receipt left at seq 1 (a hole would be a gap request, not a fold).
     const page = {
       fight: FIGHT,
@@ -136,24 +126,24 @@ describe('box 4 — the core lives in the store atom, fed by the ONE door', () =
   })
 })
 
-describe('box 4 — the committed truth owner', () => {
+describe('the committed truth owner', () => {
   test('the fixture DIVERGES: the two folds disagree on cell and hp (else this suite proves nothing)', () => {
     const store = diverged_store()
-    const legacy = committed_state(store.getState())
+    const settlement = committed_state(store.getState())
     const core = project_board(store.getState().core)
-    expect(legacy.fighters.p0.cell).toBe(7)
+    expect(settlement.fighters.p0.cell).toBe(7)
     expect(core.fighters.p0.cell).toBe(33)
-    expect(legacy.fighters.m0.hp).toBe(80)
+    expect(settlement.fighters.m0.hp).toBe(80)
     expect(core.fighters.m0.hp).toBe(12)
   })
 
-  test('board_view committed rows read the CORE, not the legacy fold', () => {
+  test('board_view committed rows read the CORE, not the settlement fold', () => {
     const board = board_view(diverged_store().getState())
     expect(board.escrow[0].committed.cell).toBe(33)
     expect(board.mobs[0].committed.hp).toBe(12)
   })
 
-  test('engine_view committed fields read the CORE, not the legacy fold', () => {
+  test('engine_view committed fields read the CORE, not the settlement fold', () => {
     const view = engine_view(diverged_store().getState())
     const mob = view.fighters.get('mob-0')
     expect(mob.committed_health).toBe(12)
@@ -164,38 +154,14 @@ describe('box 4 — the committed truth owner', () => {
     expect(committed_mob_hp(diverged_store().getState(), 0)).toBe(12)
   })
 
-  test('PRESENTATION stays on the legacy fold (boxes 5-7 own it): the rendered cell is unmoved', () => {
+  test('PRESENTATION stays on the paced display fold: the rendered cell is unmoved', () => {
     const board = board_view(diverged_store().getState())
     expect(board.escrow[0].cell).toBe(7)
   })
 })
 
-describe('box 4 — the one-flip rollback switch', () => {
-  test('the pure arm check: DEFAULT is the core; only an explicit "0" rolls back', () => {
-    expect(truth_source_from()).toBe('core')
-    expect(truth_source_from({})).toBe('core')
-    expect(truth_source_from({ search: `?${TRUTH_QUERY_PARAM}=0` })).toBe('legacy')
-    expect(truth_source_from({ search: `?${TRUTH_QUERY_PARAM}=1` })).toBe('core')
-    const stored = (value) => (key) => (key === TRUTH_STORAGE_KEY ? value : null)
-    expect(truth_source_from({ storage_get: stored('0') })).toBe('legacy')
-    expect(truth_source_from({ storage_get: stored('1') })).toBe('core')
-    // an EXPLICIT query value beats the stored preference, both directions
-    expect(truth_source_from({ search: `?${TRUTH_QUERY_PARAM}=1`, storage_get: stored('0') })).toBe('core')
-    expect(truth_source_from({ search: `?${TRUTH_QUERY_PARAM}=0`, storage_get: stored('1') })).toBe('legacy')
-    expect(truth_source_from({ search: '?other=1' })).toBe('core')
-  })
-
-  test("truth_source: 'legacy' restores the legacy fold in every committed projection", () => {
-    const store = diverged_store()
-    store.setState({ truth_source: 'legacy' })
-    const board = board_view(store.getState())
-    expect(board.escrow[0].committed.cell).toBe(7)
-    expect(board.mobs[0].committed.hp).toBe(80)
-    expect(engine_view(store.getState()).fighters.get('mob-0').committed_health).toBe(80)
-    expect(committed_mob_hp(store.getState(), 0)).toBe(80)
-  })
-
-  test('a hand-built state that never crossed the door (no core) still projects through the legacy fold', () => {
+describe('the coreless projection input', () => {
+  test('a hand-built state that never crossed the door (no core) still projects through its own entries', () => {
     const store = create_fight_store()
     for (const { msg, at } of SHARED) store.getState().input(msg, at)
     const { core, ...coreless } = store.getState()

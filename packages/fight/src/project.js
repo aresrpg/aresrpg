@@ -36,24 +36,21 @@ import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, ST
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
 
 /**
- * THE COMMITTED-TRUTH SOURCE (box 4, issue #522) — the ONE place this module decides which fold owns the committed
- * board. It is the HEADLESS CORE (`state.core`, fed by the same one door — store.js `with_core_fold`), projected by
- * `project_board`; the legacy `committed_state` fold stays wired and is now the REVERSE SHADOW the tee diffs against
- * it. Only the SOURCE moved: presentation (`presented_state` / `display_state` / `claimed_budget_state`) still
- * derives from the legacy machinery, so the eye's pacing, the SNAP-THEN-RUN hold and the draft budget are untouched
- * by this box.
+ * THE COMMITTED-TRUTH SOURCE — the HEADLESS CORE (`state.core`, fed by the one door, store.js `with_core_fold`),
+ * projected by `project_board`. It is the sole owner: there is no switch and no second committed fold. Presentation
+ * (`presented_state` / `display_state` / `claimed_budget_state`) is a different question and still derives from the
+ * settlement machinery, so the eye's pacing, the SNAP-THEN-RUN hold and the draft budget are untouched by this.
  *
- * TWO ARMS fall back to the legacy fold, both by construction rather than by guess:
- *   · `truth_source === 'legacy'` — the one-flip rollback switch (store.js TRUTH_QUERY_PARAM).
- *   · no `core` on the state — a hand-built projection input (tests, tools, the board authority's synthetic states)
- *     that never crossed the door and therefore HAS no core fold to read. A real store atom always carries one.
+ * ONE ARM does not read the core, by construction rather than by guess: a state with NO `core` is a hand-built
+ * projection input (tests, tools, the board authority's synthetic states) that never crossed the door and therefore
+ * HAS no core fold to read — it folds its own `entries` instead. A real store atom always carries a core.
  *
  * The APPEND-ONLY DEATH FLOOR rides on top either way: `retired` is a store-level fact about authoritative deaths
- * (fold.derive_retired), not legacy fold machinery, and dropping it here would re-open the resurrection root — a
- * later object read carrying a positive hp standing a floor-dead fighter back up.
+ * (fold.derive_retired), and dropping it here would re-open the resurrection root — a later object read carrying a
+ * positive hp standing a floor-dead fighter back up.
  */
 const committed_truth = (s) => {
-  if (s.truth_source === 'legacy' || s.core == null) return committed_state(s)
+  if (s.core == null) return committed_state(s)
   const board = project_board(s.core)
   return { ...board, fighters: apply_retirement(board.fighters, s.retired) }
 }

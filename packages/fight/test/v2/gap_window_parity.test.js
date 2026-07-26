@@ -39,7 +39,7 @@ import { input_envelope } from '../../src/envelope.js'
 import { classify_input } from '../../src/classify_input.js'
 import { normalize_journal_page } from '../../src/journal_normalize.js'
 
-// The shadow's field set (fight_v2_shadow.js FIGHTER_FIELDS + active), key-sorted so equality is order-stable.
+// The fields both folds derive (cell/hp/alive/turn_number + active), key-sorted so equality is order-stable.
 const FIGHTER_FIELDS = ['cell', 'hp', 'alive', 'turn_number']
 const observable = (board) => ({
   active: board?.active ?? null,
@@ -53,7 +53,7 @@ const observable = (board) => ({
   ),
 })
 
-/** The shadow's comparator, restated so the field set this file asserts is the one production reports. */
+/** The board comparator — the field set this file asserts a divergence over. */
 const diverging_fields = (legacy, core) => {
   const fields = []
   if ((legacy.active ?? null) !== (core.active ?? null)) fields.push('active')
@@ -65,8 +65,8 @@ const diverging_fields = (legacy, core) => {
   return fields.sort()
 }
 
-/** Fold a `{ msg, at }` stream through BOTH arms exactly as the production tee does (fight_trace_tee.js): the store
- *  commits, then the legacy board (`committed_state`) is read beside the core's (`project_board`). Returns the
+/** Fold a `{ msg, at }` stream through BOTH arms: the store commits, then the settlement board
+ *  (`committed_state`) is read beside the core's (`project_board`). Returns the
  *  per-step pair plus the legacy gap latch, so a divergence names its step AND its cause. */
 const fold_both = (stream) => {
   const store = create_fight_store()

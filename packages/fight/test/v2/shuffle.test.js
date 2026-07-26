@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
-// THE SHUFFLE PROPERTY (Fight V2 build step 2, §⑤ / consensus §Unanimous): "arrival order is irrelevant". Any
-// chunk / dupe / reorder of the chain-read arrivals converges to the SAME committed truth. The input log IS the
-// state: the inbox is a keyed fold by chain coordinate, so the committed board, the truth frontier and the adopted
-// base are pure functions of the SET of reads, never their order. This is the property that lets the shadow lane
-// fan live inputs in any order and still compare frontiers/hashes (build-order step 3).
+// THE SHUFFLE PROPERTY (§⑤ / consensus §Unanimous): "arrival order is irrelevant". Any chunk / dupe / reorder of
+// the chain-read arrivals converges to the SAME committed truth. The input log IS the state: the inbox is a keyed
+// fold by chain coordinate, so the committed board, the truth frontier and the adopted base are pure functions of
+// the SET of reads, never their order.
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
