@@ -22,6 +22,7 @@ import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
 import { use_expedition, STATUS_ACTIVE } from '../../../roster/store'
+import { seat_character } from '../../../world-shell/seat_character.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { use_fight_view, use_game_state } from '../../store.js'
 import { DeckCluster } from './DeckCluster.jsx'
@@ -161,9 +162,16 @@ function Vitals() {
 
 /** @returns {import('react').ReactElement} */
 export function SpellBar() {
-  const fight_character_id = use_fight_view()?.my_entity_id ?? null // core view (S2 mirror kill)
-  const character = use_game_state((s) =>
-    s.sui.characters.find((c) => c.id === (fight_character_id ?? s.selected_character_id))
+  const fight = use_fight_view() // core view (S2 mirror kill)
+  const fight_character_id = fight?.my_entity_id ?? null
+  // #1001 — the SAME seat door DungeonBoard's spell gate reads: the wallet's roster first, else the fight's own
+  // fighter, so a seat the wallet does not own (the simulator's) can never fall back to a level-1 strip. Both
+  // selectors return store-owned values; the derivation happens OUTSIDE them, so the snapshot stays cached.
+  const characters = use_game_state((s) => s.sui.characters)
+  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const character = useMemo(
+    () => seat_character(characters, fight?.fighters, fight_character_id ?? selected_character_id),
+    [characters, fight?.fighters, fight_character_id, selected_character_id]
   )
   const session_character_id = use_dungeon((s) => s.character_id)
   const run = use_expedition((s) => (s.expedition?.status === STATUS_ACTIVE ? s.expedition : null))

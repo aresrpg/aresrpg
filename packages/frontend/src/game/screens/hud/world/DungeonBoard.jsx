@@ -29,6 +29,7 @@ import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_game_state, use_fight_view } from '../../../store.js'
 import { use_expedition, STATUS_ACTIVE as EXPEDITION_ACTIVE } from '../../../../roster/store'
+import { seat_character } from '../../../../world-shell/seat_character.js'
 import { fight_spell_template, resolve_class_spells } from '../fight-spells.js'
 import { push_event_toast } from '../../../core/toast.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '../../../core/modules/fight.js'
@@ -181,9 +182,13 @@ export function DungeonBoard() {
 
   // My escrowed character's on-chain class — drives the seeded primary spell (its range/AP), the deck hand, and
   // the optimistic-cast damage. Resolved once here (single source) so the cast gates below read the SAME seed.
+  // #1001: the WALLET's roster is not the only source. A seat the wallet does not own — the simulator's, whose
+  // seeding door is guarded so a real session's roster is never clobbered — lives only in the fight's own
+  // fighter book, and `seat_character` gives either shape the `experience` the level gate below reads. Without
+  // it, any connected wallet owning chain characters armed this board at LEVEL 1 beside level-200 pools.
   const my_character = useMemo(
-    () => characters.find((ch) => ch.id === controlled_character_id) ?? null,
-    [characters, controlled_character_id]
+    () => seat_character(characters, fight?.fighters, controlled_character_id),
+    [characters, fight?.fighters, controlled_character_id]
   )
   const my_class =
     my_character?.classe ?? my_character?.class_id ?? fight?.fighters.get(controlled_character_id)?.class_id ?? null

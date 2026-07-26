@@ -31,7 +31,6 @@ import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from '@aresrpg/fight/board_state'
 import { GRID_W } from '@aresrpg/fight/los'
-import { level_to_experience } from '@aresrpg/sdk/experience'
 import {
   LOCAL_ADDRESS,
   abandon_fight,
@@ -43,6 +42,7 @@ import {
   submit_commands,
 } from '@aresrpg/fight/sim_chain'
 
+import { with_experience } from '../world-shell/seat_character.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { install_fight_trace_tee } from '../world-shell/fight_trace_tee.js'
 import { context } from '../game/store.js'
@@ -190,19 +190,14 @@ export const create_fight_shim = ({
   const seed_stores = ({ fight_id, roster, mobs, width, height }) => {
     if (!engine_context.get_state().sui?.characters?.length)
       engine_context.dispatch('action/sui_data', {
-        // A CHAIN CHARACTER CARRIES `experience`, NOT `level` (#949). The production surfaces this page mounts
-        // read the level they gate with off the xp curve — `xp_progress(character.experience ?? 0).level`
-        // (DungeonBoard.jsx:196) — so a row seeded with `level` alone fell to `?? 0` ⇒ LEVEL 1, and the spell
-        // bar armed only the three unlock-1 starters while the seat next to it carried level-200 pools. The
-        // row speaks BOTH: `experience` is the shape every consumer decodes, `level` the one the picker reads.
-        characters: roster.map(({ id, name, class_id, level }) => ({
-          id,
-          name,
-          classe: class_id,
-          level,
-          experience: level_to_experience(level),
-          in_dungeon: false,
-        })),
+        // A CHAIN CHARACTER CARRIES `experience`, NOT `level` (#949) — every consumer decodes the level off the
+        // xp curve, so the row speaks BOTH: `experience` for them, `level` for the picker. The derivation has
+        // ONE home (`with_experience`), the same one the HUD applies to any seat this GUARDED door never got to
+        // build (#1001) — the guard stays, because a real session's roster must never be clobbered by a sandbox
+        // seat, and no gate may depend on whether it opened.
+        characters: roster.map(({ id, name, class_id, level }) =>
+          with_experience({ id, name, classe: class_id, level, in_dungeon: false })
+        ),
         loaded: true,
         load_error: null,
         has_claimed_free_character: true,
