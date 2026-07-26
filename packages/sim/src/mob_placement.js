@@ -3,7 +3,7 @@
 // MOB PLACEMENT — the collision-free deterministic mirror of the chain's per-group mob seating. PURE (seed +
 // board geometry only; no time / IO / stored roll). Mirrors `aresrpg_foundation::mob_ai::seeded_spawn_cell`
 // (mob_ai.move) + the spawn loop in `aresrpg_fight::fight::create_inner` (fight.move) — the SAME pattern
-// board_gen.js is to board.move and spawn_compose.js is to mob::spawn_seeded.
+// board_gen.js is to board.move and packages/frontend/src/game/spawn_compose.js is to mob::spawn_seeded.
 //
 // THE BUG THIS ENCODES THE FIX FOR: entering a fight could spawn two mobs on the same
 // cell. On-chain, `create_inner` computes `all_starts = start_cells_a ∪ start_cells_b` ONCE, then loops
