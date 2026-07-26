@@ -16,7 +16,14 @@ import { remove_points } from './spell_formula.js'
 
 /** Mint ONE timed stat row on `target_id`. Shared with the board-hazard sink (fight_traps.js) so a trap
  *  payload's alter row and a cast's alter row are the SAME row shape — one home for the fact. */
-export const add_row = (state, target_id, caster_id, effect, value, force_type) => {
+export const add_row = (
+  state,
+  target_id,
+  caster_id,
+  effect,
+  value,
+  force_type,
+) => {
   const allocated = next_id(state)
   return add_effect(allocated.state, target_id, {
     id: allocated.id,

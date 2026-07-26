@@ -52,7 +52,7 @@ const fighter = (id, cell, is_player) => ({
 })
 
 /** A started state with a placer at (0,0) and a victim at (3,0) about to step onto (2,0). */
-const staged = (payload) => {
+const staged = payload => {
   const base = create_fight_state({
     fight_id: 'traps:1',
     arena_seed: 7,
@@ -64,29 +64,45 @@ const staged = (payload) => {
   return place_trap(base, 'p0', [{ x: 2, y: 0 }], payload, { x: 2, y: 0 })
 }
 
-const step_on = (state, entity_id) => check_traps(state, { x: 2, y: 0 }, entity_id)
-const mob_of = (state) => state.team1.find((e) => e.id === 'mob_0')
+const step_on = (state, entity_id) =>
+  check_traps(state, { x: 2, y: 0 }, entity_id)
+const mob_of = state => state.team1.find(e => e.id === 'mob_0')
 
 describe('trap payload · the sink resolves the kinds the chain resolves (#954)', () => {
   test('a DAMAGE payload still detonates (the control)', () => {
-    const out = step_on(staged([{ type: 'DAMAGE', element: 'EARTH', min: 12, max: 12 }]), 'mob_0')
+    const out = step_on(
+      staged([{ type: 'DAMAGE', element: 'EARTH', min: 12, max: 12 }]),
+      'mob_0',
+    )
     expect(out.triggered).toBe(true)
     expect(mob_of(out.state).health).toBeLessThan(200)
-    expect(out.effects.some((e) => e.damage > 0)).toBe(true)
+    expect(out.effects.some(e => e.damage > 0)).toBe(true)
   })
 
   test('an MP-DRAIN payload drains the pool — cast.move:1681 participant::remove_points', () => {
     // `yajin_snaptrap` / `yajin_mute_snare` shape: the trap's whole payload is a remove_points row.
-    const out = step_on(staged([{ type: 'REMOVE', kind: 7, stat: 'mp', value: 4, min: 4, max: 4 }]), 'mob_0')
+    const out = step_on(
+      staged([
+        { type: 'REMOVE', kind: 7, stat: 'mp', value: 4, min: 4, max: 4 },
+      ]),
+      'mob_0',
+    )
     expect(out.triggered).toBe(true)
     expect(mob_of(out.state).mp).toBe(2) // 6 − 4
-    expect(out.effects.some((e) => e.status === 'STAT_DEBUFF' && e.stat === 'mp')).toBe(true)
+    expect(
+      out.effects.some(e => e.status === 'STAT_DEBUFF' && e.stat === 'mp'),
+    ).toBe(true)
   })
 
   test('an AP-GRANT payload feeds the pool — cast.move:1679 participant::give_points', () => {
-    const out = step_on(staged([{ type: 'ADD', kind: 6, stat: 'ap', value: 2, min: 2, max: 2 }]), 'mob_0')
+    const out = step_on(
+      staged([{ type: 'ADD', kind: 6, stat: 'ap', value: 2, min: 2, max: 2 }]),
+      'mob_0',
+    )
     expect(mob_of(out.state).ap).toBe(12) // 10 + 2
-    expect(out.effects.some((e) => e.status === 'STAT_BUFF' && e.stat === 'ap')).toBe(true)
+    expect(
+      out.effects.some(e => e.status === 'STAT_BUFF' && e.stat === 'ap'),
+    ).toBe(true)
   })
 
   test('a HEAL payload heals flat — cast.move:1677 participant::apply_heal (zero-caster law)', () => {
@@ -94,21 +110,40 @@ describe('trap payload · the sink resolves the kinds the chain resolves (#954)'
     const wounded = { ...hurt, team1: [{ ...mob_of(hurt), health: 100 }] }
     const out = step_on(wounded, 'mob_0')
     expect(mob_of(out.state).health).toBe(115)
-    expect(out.effects.some((e) => e.heal > 0)).toBe(true)
+    expect(out.effects.some(e => e.heal > 0)).toBe(true)
   })
 
   test('a timed STAT-ALTER payload lands a row — cast.move:1684 apply_alter + record_timed', () => {
     const out = step_on(
-      staged([{ type: 'REMOVE', kind: 9, stat: 'agility', value: 30, min: 30, max: 30, turns: 2 }]),
-      'mob_0'
+      staged([
+        {
+          type: 'REMOVE',
+          kind: 9,
+          stat: 'agility',
+          value: 30,
+          min: 30,
+          max: 30,
+          turns: 2,
+        },
+      ]),
+      'mob_0',
     )
-    expect(mob_of(out.state).effects.some((e) => e.type === 'STAT_DEBUFF' && e.stat === 'agility')).toBe(true)
+    expect(
+      mob_of(out.state).effects.some(
+        e => e.type === 'STAT_DEBUFF' && e.stat === 'agility',
+      ),
+    ).toBe(true)
   })
 
   test('the placer stepping on their OWN trap takes the payload too (entrant-blind, §5f#3)', () => {
-    const out = step_on(staged([{ type: 'REMOVE', kind: 7, stat: 'mp', value: 3, min: 3, max: 3 }]), 'p0')
+    const out = step_on(
+      staged([
+        { type: 'REMOVE', kind: 7, stat: 'mp', value: 3, min: 3, max: 3 },
+      ]),
+      'p0',
+    )
     expect(out.triggered).toBe(true)
-    expect(out.state.team0.find((e) => e.id === 'p0').mp).toBe(3) // 6 − 3
+    expect(out.state.team0.find(e => e.id === 'p0').mp).toBe(3) // 6 − 3
   })
 
   test('an unmodelled payload kind is LOUD, never a silent no-op', () => {

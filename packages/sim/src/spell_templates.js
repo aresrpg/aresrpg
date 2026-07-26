@@ -529,7 +529,9 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
 
 /** A placement marker owns every non-placement sibling as its deferred board payload. */
 const normalize_effect_list = (effects, fallback_area, spell_id) => {
-  const normalized = effects.map(e => normalize_effect(e, fallback_area, spell_id))
+  const normalized = effects.map(e =>
+    normalize_effect(e, fallback_area, spell_id),
+  )
   const linked = []
   for (let i = 0; i < normalized.length; i += 1) {
     const effect = normalized[i]

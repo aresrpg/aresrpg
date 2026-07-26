@@ -10,7 +10,12 @@
 // cell (during a move OR a push), is removed, and deals the trap's element damage. A glyph persists for N
 // turns and triggers on TURN_START for any entity standing on it.
 
-import { next_id, find_entity, effective_stats, update_entity } from './fight_state.js'
+import {
+  next_id,
+  find_entity,
+  effective_stats,
+  update_entity,
+} from './fight_state.js'
 import { apply_heal, apply_incoming_damage } from './fight_actions.js'
 import { add_row } from './fight_stat_effects.js'
 import { calculate_final_damage } from './spell_calculator.js'
@@ -211,7 +216,10 @@ const apply_payload = (
         // cast.move:1673-1676 — a fraction of the live HP pool, no element amplification, no resist.
         const damage = Math.floor((target.health * flat(effect)) / 100)
         const after = hazard_hit(acc.state, entity_id, damage, source_id)
-        return { state: after.state, effects: [...acc.effects, ...after.effects] }
+        return {
+          state: after.state,
+          effects: [...acc.effects, ...after.effects],
+        }
       }
       if (
         (effect.type === 'ADD' || effect.type === 'REMOVE') &&
@@ -220,13 +228,21 @@ const apply_payload = (
       ) {
         const buff = effect.type === 'ADD'
         const status = buff ? 'STAT_BUFF' : 'STAT_DEBUFF'
-        const row = { target_id: entity_id, status, stat: effect.stat, value: flat(effect) }
+        const row = {
+          target_id: entity_id,
+          status,
+          stat: effect.stat,
+          value: flat(effect),
+        }
         if (effect.stat === 'ap' || effect.stat === 'mp') {
           // cast.move:1679-1683 — give_points / remove_points land FLAT on the pool. The board path is NOT
           // dodge-contested (the chain calls participant::remove_points directly), unlike the cast path.
           const moved = update_entity(acc.state, entity_id, e => ({
             ...e,
-            [effect.stat]: Math.max(0, e[effect.stat] + (buff ? flat(effect) : -flat(effect))),
+            [effect.stat]: Math.max(
+              0,
+              e[effect.stat] + (buff ? flat(effect) : -flat(effect)),
+            ),
           }))
           return { state: moved, effects: [...acc.effects, row] }
         }
