@@ -16,12 +16,18 @@ export const MOB_FIGHTER_ID_BASE = 1000
 // `0xb80ade53…d444` authors −17 agility → `value "32751"`, flags 8; Kraken Leviathan `0x89072bd3…af56`
 // −7 range → `32761`, flags 8.
 //
-// This function is where that wire ENTERS the client, so it is the ONE place the centering is stripped
-// (decode-once law): every downstream reader — the effect badges, the range-bonus prediction fold — sees a
+// `decode_status_value` is the ONE decoder of that centering (decode-once law), called by EVERY door the wire
+// enters the client through — the snapshot read below, and the receipt's action envelope
+// (`inputs.self_status_from_effect`, #983). Both write the same per-fighter status home, so both must strip it
+// or the home carries two dialects: every downstream reader — the effect badges, the range-bonus fold — sees a
 // real SIGNED delta and never touches 32768. Displaying the raw wire is exactly the `-32793 Percent Damage`
-// bug. Non-signed kinds pass through untouched: their `value` is a plain magnitude.
+// bug; folding it is the `+1 Range` buff that granted 32769 range. Non-signed kinds pass through untouched:
+// their `value` is a plain magnitude.
 const SIGNED_SHIFT = 32768
 const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_effect.move)
+
+/** Does this status kind ride its value CENTERED on the wire? The one membership test for the encoding. */
+export const is_signed_status_kind = (kind) => SIGNED_KINDS.has(Number(kind))
 
 /**
  * A status row's chain `value` → the real signed delta. Signed kinds strip the 32768 centering; every other
@@ -29,7 +35,15 @@ const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_e
  * @param {number} kind @param {number | null} value @returns {number | null}
  */
 export const decode_status_value = (kind, value) =>
-  value == null || !SIGNED_KINDS.has(Number(kind)) ? value : value - SIGNED_SHIFT
+  value == null || !is_signed_status_kind(kind) ? value : value - SIGNED_SHIFT
+
+/**
+ * The exact inverse — a real signed delta → the u64 the chain rides it as. Only the local mock chain needs it
+ * (its receipts must be byte-identical to a minted row, #983); nothing that talks to the real chain encodes.
+ * @param {number} kind @param {number | null} delta @returns {number | null}
+ */
+export const encode_status_value = (kind, delta) =>
+  delta == null || !is_signed_status_kind(kind) ? delta : delta + SIGNED_SHIFT
 
 const fields_of = (value) => value?.fields ?? value ?? {}
 const num = (value) => (value == null || value === '' ? null : Number(value))

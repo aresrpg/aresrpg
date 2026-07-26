@@ -176,11 +176,11 @@ describe('#973 the receipt carries the status envelope — chips are fold truth,
     expect(remaining(cast.state, 'p0', K_GIVE_POINTS)).toBe(3)
     expect(remaining(cast.state, 'p0', K_INVISIBILITY)).toBe(3)
     expect(cast.state.fighters.p0.invisible).toBe(true)
-    // THE VALUE DIALECT (#979). `inputs.js:208` writes `ActionEffect.effect.value` into the status home RAW —
-    // no 32768-centering decode, unlike the snapshot door — and the home's readers take the signed delta from
-    // it. The emitted row must therefore carry the DECODED magnitude the sim holds (`+1 MP`), never a centered
-    // wire number, or every chip reads 32768 off. Pinned here so the encoder can never drift into the other
-    // dialect while the two-dialect ingress is fixed on its own row.
+    // THE VALUE DIALECT (#979, closed by #983). Both wire doors now decode through `decode_status_value`, so
+    // the status home speaks SIGNED deltas everywhere. GIVE_POINTS is not a centered kind — its value is a
+    // plain magnitude on the wire and in the home alike — so the mock chain states `+1 MP` verbatim and the
+    // fold must hold exactly that. Pinned here so the encoder can never drift into the centered dialect for a
+    // kind that has no sign to carry.
     expect(row_of(cast.state, 'p0', K_GIVE_POINTS)).toMatchObject({ value: 1, stat: POINT_MP, chance: 100 })
 
     // Round 1: the caster ends its turn (one tick), then BOTH mobs take theirs (no tick on the player's rows).

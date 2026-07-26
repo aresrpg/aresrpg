@@ -15,7 +15,7 @@
 
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
-import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
+import { INVISIBILITY_STATUS_KIND, decode_status_value } from './fight_status_snapshot.js'
 
 // ActionEffect is the only receipt row carrying the exact timed self-buff descriptor. Keep this deliberately
 // narrow: these three kinds produce byte-identical fighter rows for a guaranteed point effect on the caster.
@@ -179,7 +179,13 @@ const fields_of = (value) => value?.fields ?? value ?? {}
 
 /** A guaranteed point effect aimed at the caster is the one action-envelope shape that proves its exact recipient
  * and status row without replaying spell resolution. ActionStarted supplies the missing target cell; both rows use
- * the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds. */
+ * the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds.
+ *
+ * THE SECOND WIRE DOOR (#983). `ActionEffect.effect` is the chain `Effect` struct VERBATIM (cast.move record_timed
+ * copies it), so a signed kind arrives 32768-CENTERED exactly like the snapshot's Fight.fx row — and lands in the
+ * SAME per-fighter status home. Writing it raw made the two doors speak two dialects: an authored `+1 Range` chip
+ * read `32769` while every signed reader (statuses.sim_effects_of → range_bonus_of, the effect badges) was 32768
+ * off. `decode_status_value` is the ONE decoder for both doors; downstream speaks signed and never sees 32768. */
 const self_status_from_effect = (state, action) => {
   const context = state.action_contexts?.[action_context_key(action)]
   const key = fighter_key({ is_mob: action.caster_is_mob, idx: action.caster_idx })
@@ -209,7 +215,7 @@ const self_status_from_effect = (state, action) => {
       kind,
       remaining_turns,
       element: effect.element == null ? null : Number(effect.element),
-      value: effect.value == null ? null : Number(effect.value),
+      value: effect.value == null ? null : decode_status_value(kind, Number(effect.value)),
       stat: effect.stat == null ? null : Number(effect.stat),
       chance: effect.chance == null ? null : Number(effect.chance),
       flags: effect.flags == null ? null : Number(effect.flags),

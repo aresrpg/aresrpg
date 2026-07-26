@@ -17,7 +17,12 @@
 // emitted row's key set AND per-key JSON type against those captured rows.
 
 import { GRID_W, encode } from './los.js'
-import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE } from './fight_status_snapshot.js'
+import {
+  INVISIBILITY_STATUS_KIND,
+  MOB_FIGHTER_ID_BASE,
+  encode_status_value,
+  is_signed_status_kind,
+} from './fight_status_snapshot.js'
 
 /** The mock package id every emitted row is namespaced under. `decode_fight_event` keys off the LAST `::`
  *  segment, so the prefix is presentation only — but it must never collide with a real deployed package. */
@@ -159,6 +164,12 @@ const status_kind_of = (effect) => {
   return STATUS_KIND[effect.type] ?? null
 }
 
+/** A live sim effect row → the SIGNED value the decoded status home speaks (sign from the row type). */
+const signed_status_value = (kind, effect) => {
+  const magnitude = Number(effect.value) || 0
+  return is_signed_status_kind(kind) && effect.type === 'STAT_DEBUFF' ? -magnitude : magnitude
+}
+
 /**
  * THE SIMULATOR'S STATUS READ. `snapshot_from_sim` is the only durable channel behind the receipt, so it must
  * state the statuses the sim HOLDS — the store's omission-hold law (fold.js `carry_statuses`) treats any array,
@@ -182,7 +193,10 @@ export const status_rows_from_sim = (state) => {
           kind,
           remaining_turns: Math.max(0, Math.trunc(Number(effect.turns_remaining) || 0)),
           element: RESIST_ELEMENT[effect.stat] ?? null,
-          value: Number(effect.value) || 0,
+          // These rows go to `status_snapshot_entities`, which sits AFTER the wire decode — so they speak the
+          // signed dialect, not the centered one. The sim carries the sign in the row type; a magnitude alone
+          // read every range/resist DEBUFF back as a buff (#983's sibling on the snapshot door).
+          value: signed_status_value(kind, effect),
           stat: POOL_POINT_KIND[effect.stat] ?? STAT_CHAIN_ID[effect.stat] ?? null,
           chance: effect.chance ?? null,
         })
@@ -383,6 +397,16 @@ const level_of = (state, entity_id, spell_id, templates) => {
 const effects_of_level = (level, is_critical) =>
   (is_critical && level.crit_effects?.length > 0 ? level.crit_effects : level.base_effects) ?? []
 
+/** A normalized sim effect → the u64 the chain's `Effect.value` rides. The sim splits a SIGNED row into its row
+ *  TYPE (`ADD`/`REMOVE`) plus a magnitude (`spell_templates.normalize_effect`); the chain re-joins them into one
+ *  centered u64, so re-center through the same home the client decodes with. Every other kind is a plain
+ *  magnitude on both sides. */
+const chain_effect_value = (effect) => {
+  const magnitude = Number(effect.value ?? 0) || 0
+  if (!is_signed_status_kind(effect.kind)) return magnitude
+  return encode_status_value(effect.kind, effect.type === 'REMOVE' ? -magnitude : magnitude)
+}
+
 /**
  * ONE authored sim effect → the chain `Effect` descriptor `ActionEffect.effect` carries. Every field is the
  * normalized row's OWN value re-stated in the chain's units: `raw_stat` IS the chain stat id the normalizer
@@ -400,9 +424,12 @@ const chain_effect_descriptor = (effect) => ({
   stat: Number(effect.raw_stat) || 0,
   target_filter: Number(effect.target_filter) || 0,
   turns: Number(effect.turns) || 0,
-  // DECODED, never the 32768-centered wire form: `inputs.js:208` writes this straight into the status home
-  // without the snapshot door's decode, and the home's readers take the signed delta from it (#979).
-  value: u64(effect.value ?? 0),
+  // THE WIRE FORM, byte-for-byte (#983). A signed kind rides CENTERED on chain (`32768 + delta`,
+  // `participant::alter_delta`), and the receipt door now decodes it exactly once like every other client door —
+  // so this encoder must state the centering rather than pre-decode it, or the simulator feeds the fold a second
+  // dialect. The sim normalizer carries the sign in the row TYPE and the magnitude in `value` (spell_templates
+  // `normalize_effect`), which is precisely what the centering re-joins.
+  value: u64(chain_effect_value(effect)),
 })
 
 /**

@@ -30,11 +30,17 @@ const effect = (kind, over = {}) => ({
   ...over,
 })
 
+// THE WIRE DIALECT (#983): a signed kind (ALTER_STAT/ALTER_RESIST) rides CENTERED at 32768, so `+1 Range` is
+// minted as `32769` and the ingress decodes it back to 1. Authoring the decoded 1 here was the two-dialect bug
+// in test form — it made the fold read -32767, the exact number the player saw on the chip.
 const effects = [
-  effect(SE.K_ALTER_STAT, { stat: SE.STAT_RANGE }),
+  effect(SE.K_ALTER_STAT, { stat: SE.STAT_RANGE, value: 32_769 }),
   effect(SE.K_GIVE_POINTS, { stat: SE.POINT_MP }),
   effect(SE.K_INVISIBILITY),
 ]
+
+/** What the status home holds for a wire row: the signed delta for a centered kind, the magnitude otherwise. */
+const decoded_value = (row) => (row.kind === SE.K_ALTER_STAT || row.kind === SE.K_ALTER_RESIST ? 1 : row.value)
 
 const rows = [
   {
@@ -162,7 +168,7 @@ describe('#481 self-buff action effects enter the fighter status fold', () => {
           kind: row.kind,
           remaining_turns: row.turns - 1,
           element: row.element,
-          value: row.value,
+          value: decoded_value(row),
           stat: row.stat,
           chance: row.chance,
           flags: row.flags,
