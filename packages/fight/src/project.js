@@ -453,6 +453,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       health_max: row.max_hp,
       effects: effects_of(f),
       base_range: row.base_range ?? 0,
+      // THE SEAT'S COMPOSED BUILD (#1077) — the ONE object the predict path reads its inputs from: the locked
+      // stat snapshot the reducer takes as this fighter's `stats` (it re-adds the timed rows itself from
+      // `effects`) and the seat's learned spell levels per SpellTemplate object id. Every fight surface that
+      // predicts, prices or ranges a cast derives from THIS, never from a per-surface subset.
+      base_stats: row.base_stats ?? {},
+      spell_levels: row.spell_levels ?? {},
       // TURN-START BUDGET: the fold predicts the begin_turn refill so the budget paints the instant it's my turn
       // (the TurnStarted event omits ap/mp); the snapshot row.ap/mp reconciles the moment a post-refill read adopts.
       ap: f.ap ?? row.ap,
@@ -492,6 +498,8 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       health_max: m.max_hp,
       effects: effects_of(f),
       base_range: m.base_range ?? 0,
+      // the TARGET's locked block — its resistances are an input to my own predicted damage (#1077)
+      base_stats: m.base_stats ?? {},
       ap: m.ap ?? 0,
       ap_max: m.base_ap ?? 0,
       mp: m.mp ?? 0,

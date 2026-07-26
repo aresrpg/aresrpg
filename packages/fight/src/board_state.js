@@ -117,6 +117,47 @@ function normalize_weapon(raw) {
   }
 }
 
+/**
+ * A decoded `spell::Stats` struct → the plain numeric snapshot the sim's damage/resistance formulas read. The
+ * field names ARE the Move struct's own (`spell.move Stats` ≡ `@aresrpg/sim` `Stats` — one vocabulary, owned by
+ * the deterministic twin and deliberately not re-listed here), so this only unwraps the gRPC `.fields` nesting
+ * and coerces u64-as-decimal-string to Number. Absent/blank ⇒ `{}`; the sim reads a missing key as 0.
+ * @param {any} raw @returns {Record<string, number>}
+ */
+export function normalize_stats(raw) {
+  const block = raw?.fields ?? raw
+  if (!block || typeof block !== 'object') return {}
+  /** @type {Record<string, number>} */
+  const out = {}
+  for (const [key, value] of Object.entries(block)) {
+    const scalar = Number(value?.fields ?? value)
+    if (Number.isFinite(scalar)) out[key] = scalar
+  }
+  return out
+}
+
+/**
+ * A decoded `VecMap<ID, u8>` (participant.move `spell_levels`) → `{ [spell_template_object_id]: level }` — the
+ * seat's LEARNED spell levels, snapshotted at join. Over gRPC json a VecMap renders flat as
+ * `{ contents: [{ key, value }] }`; a nested read wraps entries in `.fields` (the same two shapes
+ * read_character's spellbook decode handles). Absent/empty ⇒ `{}`, which every reader takes as "level 1, the
+ * free unlock" — exactly what `participant.move` means by an absent key.
+ * @param {any} raw @returns {Record<string, number>}
+ */
+export function decode_spell_levels(raw) {
+  const map = raw?.fields ?? raw
+  const contents = map?.contents ?? (Array.isArray(map) ? map : [])
+  /** @type {Record<string, number>} */
+  const out = {}
+  for (const entry of contents) {
+    const row = entry?.fields ?? entry ?? {}
+    const id = String(row.key?.fields?.id ?? row.key?.id ?? row.key ?? '')
+    const level = Number(row.value?.fields ?? row.value ?? 0)
+    if (id && Number.isFinite(level) && level > 0) out[id] = level
+  }
+  return out
+}
+
 /** The engine seat's entity id at a seat index (character id), or null. */
 export const seat_entity_at = (view, seat) => (view?.escrow?.[seat] ? participant_entity_id(view.escrow[seat]) : null)
 
@@ -178,7 +219,15 @@ export function board_state_from_fight({
   const width = Number(fight.width) || 0
   const height = Number(fight.height) || 0
   const canon = (/** @type {any} */ c) => to_canonical(c)
-  const escrow = (fight.participants ?? []).map((/** @type {any} */ p, /** @type {number} */ seat) => ({
+  const escrow = (fight.participants ?? []).map((/** @type {any} */ p, /** @type {number} */ seat) => {
+    // THE SEAT'S COMPOSED BUILD (#1077) — ONE object per fact, carried end to end so no surface has to invent a
+    // subset. `stats` is the LIVE block (participant.move re-derives it per alter: base + the timed rows);
+    // `base_stats` is the JOIN SNAPSHOT, and that is what the fight reducer takes as an entity's `stats` — it
+    // re-adds the timed rows itself from `effects`, so feeding it the live block would double-count them.
+    // `spell_levels` is the seat's learned level per SpellTemplate object id (absent ⇒ 1).
+    const stats = normalize_stats(p.stats)
+    const base_stats = normalize_stats(p.base_stats)
+    return {
     seat,
     addr: p.owner,
     character: p.character,
@@ -196,14 +245,17 @@ export function board_state_from_fight({
     alive: Number(p.hp ?? 0) > 0,
     casts_this_turn: Number(p.casts_this_turn ?? 0),
     weapon: normalize_weapon(p.weapon),
-    // LIVE agility (participant.move `stats` — re-derived on-chain per alter): the tackle-contest input the
-    // move-wash projection (project.move_wash) prices the escape fraction from. Rides the raw gRPC passthrough
-    // (decode_fight keeps participants raw; nested structs stay nested), 0 when a legacy read omits stats.
-    agility: Number(p.stats?.agility ?? 0),
+    stats,
+    base_stats,
+    spell_levels: decode_spell_levels(p.spell_levels),
+    // LIVE agility: the tackle-contest input the move-wash projection (project.move_wash) prices the escape
+    // fraction from. DERIVED off the block above — a named scalar, never a second decode.
+    agility: stats.agility ?? 0,
     // Immutable join/equipment range. Timed rows stay in Fight.fx.statuses and are folded exactly once by
     // statuses.range_bonus_of; reading live stats here would double-count an already-active row.
-    base_range: Number(p.base_stats?.range ?? 0),
-  }))
+    base_range: base_stats.range ?? 0,
+    }
+  })
   // IDENTITY JOIN KEY — the Fight's `group_template` (every FightMob is minted `template: @0x0`; provenance
   // rides the Fight). base_ap/base_mp are the group's shared kit budget, fanned out per row for the HUD.
   const group_template = fight.group_template || null
@@ -211,6 +263,10 @@ export function board_state_from_fight({
   const group_base_mp = Number(fight.group_base_mp ?? 0)
   const mobs = (fight.mobs ?? []).map((/** @type {any} */ m) => {
     const template = group_template || m.template
+    // The TARGET's block is an input to MY damage number (resistances) — it rides the same two-block shape as a
+    // seat: live for the tackle contest, the join snapshot for the reducer.
+    const stats = normalize_stats(m.stats)
+    const base_stats = normalize_stats(m.base_stats)
     return {
       template,
       element: Number(mob_elements?.[template] ?? 255),
@@ -223,10 +279,12 @@ export function board_state_from_fight({
       base_ap: group_base_ap,
       base_mp: group_base_mp,
       alive: Number(m.hp ?? 0) > 0,
+      stats,
+      base_stats,
       // LIVE agility (mob.move `FightMob.stats` — the per-fight mutable combat block): the locker side of the
       // tackle contest (project.move_wash). 0 when a legacy read omits stats (contest then prices bucket 2).
-      agility: Number(m.stats?.agility ?? 0),
-      base_range: Number(m.base_stats?.range ?? 0),
+      agility: stats.agility ?? 0,
+      base_range: base_stats.range ?? 0,
     }
   })
   const room_index = Math.max(0, (run?.room ?? 1) - 1)

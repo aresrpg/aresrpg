@@ -24,6 +24,7 @@ import { WORLD_SEED } from '@aresrpg/sim/world'
 import { rng_int, rng_seed } from '@aresrpg/sim/prng'
 import { board_seed_from_anchor, generate } from '@aresrpg/sim/board_gen'
 import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
+import { effective_stats } from '@aresrpg/sim/fight_state'
 import { create_recorder, dump_capsule, observe_reduce_checked, open_recording } from '@aresrpg/sim/recorder'
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
@@ -100,6 +101,12 @@ export const arena_from_board = (board) => {
 
 const ENGINE_STATUS_ACTIVE = 1
 
+/** A plain `{ key: value }` map → the chain's `VecMap` json shape, so the core's ONE decoder reads the mock and
+ *  the real read the same way (this module is an encoder into the chain's dialect, never a second shape). */
+const vec_map = (entries) => ({
+  contents: Object.entries(entries ?? {}).map(([key, value]) => ({ key, value })),
+})
+
 /**
  * Build the decoded-`Fight` the core's snapshot door adopts. Field set + naming follow the two existing
  * hand-builders verbatim (fight_board_simdrive.test.js `decoded_fight`, dev_synth_fight.js `decoded_fight`) —
@@ -129,8 +136,13 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
       ready: true,
       casts_this_turn: 0,
       weapon: null,
-      stats: { agility: e.stats?.agility ?? 0 },
-      base_stats: { range: e.stats?.range ?? 0 },
+      // THE WHOLE BLOCK, both halves (#1077) — the mock chain speaks `participant.move`'s own dialect, and that
+      // struct carries `stats` LIVE (base + the timed alter rows) next to the `base_stats` join snapshot. A
+      // one-key `{agility}` row was the client's blindness: every predict surface read an empty stat block and
+      // painted base damage for a geared seat. `spell_levels` rides as the chain's VecMap.
+      stats: effective_stats(e),
+      base_stats: e.stats ?? {},
+      spell_levels: vec_map(e.spell_levels),
     })),
     mobs: sim_state.team1.map((e) => ({
       template: e.template_id ?? null,
@@ -140,8 +152,8 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
       cell: encode(e.cell.x, e.cell.y),
       ap: e.ap,
       mp: e.mp,
-      stats: { agility: e.stats?.agility ?? 0 },
-      base_stats: { range: e.stats?.range ?? 0 },
+      stats: effective_stats(e),
+      base_stats: e.stats ?? {},
     })),
     group_template: chain.group_template ?? null,
     group_base_ap: sim_state.team1[0]?.ap_max ?? 0,

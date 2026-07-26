@@ -346,11 +346,18 @@ const sim_entity = (fighter, stats) => ({
   is_player: !!fighter.is_player,
   template_id: String(fighter.variant ?? fighter.class_id ?? fighter.id),
   level: Number(fighter.level ?? 1),
-  // `base_range` is immutable fight-start/gear truth. Every prediction caller gets it even when its stats adapter
-  // only supplies another mechanic (for example hover agility); explicit adapter keys remain intentional overrides.
-  stats: { range: Number(fighter.base_range ?? fighter.stats?.range ?? 0) || 0, ...(stats ?? {}) },
+  // THE FIGHTER'S OWN BUILD (#1077): `base_stats` is the locked snapshot the view carries end to end from the
+  // chain/mock wire — the SAME block the authority resolves with, so prediction and resolution are the same
+  // math on the same inputs. The reducer re-adds timed rows itself from `effects` below. `base_range` stays the
+  // named range fact (statuses.range_bonus_of folds the timed rows exactly once), and an explicit `stats_of`
+  // adapter key remains an intentional per-call override.
+  stats: {
+    ...(fighter.base_stats ?? {}),
+    range: Number(fighter.base_range ?? fighter.base_stats?.range ?? fighter.stats?.range ?? 0) || 0,
+    ...(stats ?? {}),
+  },
   effects: sim_effects_of(fighter),
-  spell_levels: {},
+  spell_levels: fighter.spell_levels ?? {},
   ap_reserve: 0,
 })
 
