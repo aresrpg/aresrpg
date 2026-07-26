@@ -12,7 +12,6 @@
 // demand (core_fold.js, core_project.js) — the door never stores them, so they can never go stale.
 
 import { normalize_intent, actor_from_key, seat_resolver } from './inputs.js'
-
 import { empty_core_state, empty_inbox } from './core_state.js'
 import {
   admit_events,

@@ -22,7 +22,6 @@
 // `normalize_intent`); this module only keeps the ledger and folds the active set.
 
 import { apply_action } from './inputs.js'
-
 import { inbox_resolver } from './core_inbox.js'
 
 const ACTIVE = new Set(['queued', 'submitted'])

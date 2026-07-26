@@ -35,7 +35,6 @@
 
 import { apply_action, empty_state } from './inputs.js'
 import { base_from_view, base_budget } from './fold.js'
-
 import { inbox_resolver } from './core_inbox.js'
 
 /** The sorted authoritative tail: every admitted log action above the snapshot base, in coordinate order, with the

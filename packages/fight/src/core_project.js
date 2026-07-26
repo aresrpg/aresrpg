@@ -14,7 +14,6 @@
 // The pacing POLICY is versioned (a bump is a visible pacing change, never a silent drift).
 
 import { apply_action } from './inputs.js'
-
 import { canonical_base, fold_canonical, sorted_tail } from './core_fold.js'
 import { truth_version } from './core_inbox.js'
 

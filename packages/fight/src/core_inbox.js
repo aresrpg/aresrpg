@@ -31,7 +31,6 @@ import { decode_fight_event } from '@aresrpg/sdk/fight'
 
 import { normalize_events, seat_resolver } from './inputs.js'
 import { board_state_from_fight } from './board_state.js'
-
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
