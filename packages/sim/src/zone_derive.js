@@ -10,10 +10,14 @@
 //   · LEGACY (format 1) — rejection sampling: re-roll a free position until it clears the spacing.
 //   · LATTICE (format 2) — the zone is diced into 40×40 cells drawn WITHOUT replacement and jittered into each
 //     cell's middle 21 blocks, so spacing is structural and every placement costs a FIXED number of draws.
+//   · MEMBER LISTS (format 3, #1110/#1111) — lattice placement, plus a per-group ROSTER: a pack holds several
+//     species, the pick table is no longer distance-gated, and `progress` rides the rows so the engine can draw
+//     each member's level from a window that slides up its own authored band.
 // WHICH one a zone uses is not a version flag we choose: the chain reads the leading byte of that zone's
 // stored commitment root and dispatches (`zones::derive_mobs`), so this module reads the same byte off the
 // zone doc. Getting it wrong derives a world the chain never committed — every spawn_id becomes fiction and
-// the claim door aborts `ESpawnNotFound`. Zones discovered by the current package are format 2.
+// the claim door aborts `ESpawnNotFound`. A zone the current package searches is format 3; older zones replay
+// the format their own commitment names, forever.
 //
 // DETERMINISM IS LAW (@aresrpg/sim): only `prng.js` (mulberry32) is the randomness source — the SAME PRNG the
 // Move `prng` module ports. No Math.random, no floats in the draw path. spawn_id is a full 64-bit value (two u32
