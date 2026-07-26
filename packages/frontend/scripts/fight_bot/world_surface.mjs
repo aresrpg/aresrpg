@@ -120,6 +120,14 @@ export const create_world_fight = async ({ seat, log, timeout_ms = 420_000 }) =>
 
 /** JOIN an open PUBLIC world fight as a SECOND seat — the coop half, through the seam's production join door. */
 export const join_world_fight = async ({ seat, fight_id, log, timeout_ms = 300_000 }) => {
+  // The join door is WORLD-ONLY by construction (dev_world_entry.js — the zero-drift gate's world-only ratchet
+  // forbids the simulator's closure reaching the chain entry), so it is registered from GameWorldHud rather than
+  // beside the other bot seams. If that registration is missing, say exactly that instead of failing on a
+  // TypeError about `undefined`.
+  if (!(await seat.page.evaluate(() => typeof window.__ARES_DEV_WORLD_JOIN === 'function')))
+    throw new Error(
+      'no __ARES_DEV_WORLD_JOIN on this build — GameWorldHud must register game/dev/dev_world_entry.js beside the other DEV seams (see that file’s header for the exact three lines)'
+    )
   log(`[bot] seat ${seat.name}: joining fight ${fight_id}`)
   const result = await within(seat.client.join(fight_id), timeout_ms, 'the world-fight join')
   // NO RETRY. A join that came back refused either never signed (free) or executed and failed (paid); both are

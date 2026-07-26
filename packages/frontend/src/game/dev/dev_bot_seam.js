@@ -31,12 +31,14 @@
 //      placements straight into its own setup store, so the sim bot never sees this phase; a WORLD fight cannot
 //      be played without it, and no other seam signs it.
 //
-//   4. __ARES_DEV_WORLD_JOIN(fight_id) — seat MY character in an already-open PUBLIC world fight, through the
-//      exact chain the FightsModal Join button runs (`run_fight_entry` → `join_world_fight` →
-//      `enter_after_world_join_receipt` → `enter_world_fight`). This is what makes a COOP bot possible at all:
-//      the creator's door (`__dev_start_world_fight`, embed_voxel_dev.js) seats exactly one character, and a
-//      second seat has no headless door anywhere else. Chain modules load LAZILY inside the call, so the
-//      simulator — which registers this same module — never pulls the transaction graph into its page.
+//   4. __ARES_DEV_ABANDON() — forfeit the live fight. What makes a CHAIN-backed rig repeatable: a fight the bot
+//      opens and walks away from keeps its character escrowed, and every later run then finds nothing to claim
+//      and no way to say why.
+//
+// EVERY DOOR HERE WORKS ON BOTH SURFACES, and that is a constraint, not an observation: this module is loaded by
+// the simulator's registrar too, so anything it imports enters the SIMULATOR's fight closure. The world-only
+// JOIN door therefore lives in its own module (dev_world_entry.js) — see the reasoning in its header, and
+// scripts/zero-drift-gate.mjs for the tooth that enforces it.
 
 import { decode, encode } from '@aresrpg/fight/los'
 import { board_view, fight_view, min_turn_left } from '@aresrpg/fight/project'
@@ -119,8 +121,8 @@ const fighter_row = (f, committed) => ({
  * is NOT harmless on the world: a level-1 seat would plan casts the chain refuses, and every one of those is a
  * signed transaction that burns gas to learn what the resolver already knew.
  */
-const spell_rows = (class_id, level) =>
-  resolve_class_spells(class_id, Number(level) || 0)
+const spell_rows = (class_id, char_level) =>
+  resolve_class_spells(class_id, Number(char_level) || 0)
     .filter((spell) => !!spell.object_id)
     .map((spell) => {
       const level = spell.levels?.[0] ?? {}
@@ -319,47 +321,6 @@ async function dev_place(cell) {
 }
 
 /**
- * window.__ARES_DEV_WORLD_JOIN(fight_id) — seat MY selected character in an OPEN PUBLIC world fight and mount
- * it. Every leg is the production one, in the production order (FightsModal's `on_join`, world branch): the
- * entry reducer wraps the join tx, one settlement recovery is allowed for the first refusal, and the join
- * receipt itself is what authorises the mount. `party_id` is null on purpose — a public fight discards it.
- * @param {string} fight_id the Fight object id the creator's engage published
- * @returns {Promise<{ ok: boolean, error?: string, fight_id?: string, status?: number|null }>}
- */
-async function dev_world_join(fight_id) {
-  if (!fight_id) return { ok: false, error: 'join needs the fight object id' }
-  const character_id = context.get_state().selected_character_id
-  if (!character_id) return { ok: false, error: 'no selected character' }
-  // LAZY, and load-bearing: the simulator registers this same module and has no transaction graph at all.
-  const [{ join_world_fight }, { enter_world_fight }, { enter_after_world_join_receipt }, { run_fight_entry }, { recover_fight_entry_refusal }] =
-    await Promise.all([
-      import('../../world-shell/dungeon_actions.js'),
-      import('../../world-shell/world_fight.js'),
-      import('../../world-shell/world_fight_receipt.js'),
-      import('../fight_engage.js'),
-      import('../../world-shell/dungeon_settlement.js'),
-    ])
-  // A stale session owns the shared store until it is dropped, and `enter_world_fight` refuses to stomp one.
-  if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) use_dungeon.getState().reset_local()
-  try {
-    await enter_after_world_join_receipt({
-      execute: () =>
-        run_fight_entry({
-          submit: () => join_world_fight({ fight_id, character_id, party_id: null }),
-          recover_refusal: (error) => recover_fight_entry_refusal(use_dungeon, character_id, error),
-        }),
-      enter: enter_world_fight,
-      fight_id,
-      character_id,
-    })
-  } catch (error) {
-    return { ok: false, error: String(error?.message ?? error) }
-  }
-  await use_dungeon.getState().refresh()
-  return { ok: true, fight_id, status: use_dungeon.getState().dungeon?.status ?? null }
-}
-
-/**
  * window.__ARES_DEV_ABANDON() — FORFEIT the live fight (`use_dungeon.abandon_fight`, the ABANDON button's own
  * door). This is what makes a chain-backed rig REPEATABLE: a fight the bot opens and walks away from keeps its
  * character escrowed forever, and every later run then finds no claimable group and no way to say why. The rig
@@ -389,6 +350,5 @@ export function register_dev_bot_seam() {
   ;(/** @type {any} */ (window)).__ARES_DEV_READ = dev_read
   ;(/** @type {any} */ (window)).__ARES_DEV_TURN = dev_turn
   ;(/** @type {any} */ (window)).__ARES_DEV_PLACE = dev_place
-  ;(/** @type {any} */ (window)).__ARES_DEV_WORLD_JOIN = dev_world_join
   ;(/** @type {any} */ (window)).__ARES_DEV_ABANDON = dev_abandon
 }
