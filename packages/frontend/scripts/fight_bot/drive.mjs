@@ -150,6 +150,7 @@ export const drive_fight = async ({
   // the rest could not be. A run that resolved none proves nothing about parity and says so at run level.
   const parity = { checked: 0, unresolved: [] }
   let outcome = 'not reached'
+  let stalled = false
   /** One re-read is allowed when the turn pointer moved between the read and the commit (a harness race, not a
    *  game failure); a second is a genuine stall and is recorded as the FAIL it is. */
   let races = 0
@@ -160,7 +161,15 @@ export const drive_fight = async ({
       ;({ outcome } = next)
       break
     }
-    if (next.kind === 'stalled') throw new Error(`turn ${turn}: no seat got the turn back (the fight stalled)`)
+    // A STALL ENDS THE RUN, IT DOES NOT ERASE IT. Throwing here discarded every turn already played — measured on
+    // a live chain run that stalled at turn 5 and reported `0/0 checks, 0 bot turns` for four REAL committed
+    // turns, one of which carried a FAIL row nobody can now read. The rig's own rule (a failure with no evidence
+    // is a failure nobody can diagnose) applies to its own sheet: the stall is the outcome, the turns are kept.
+    if (next.kind === 'stalled') {
+      outcome = `stalled at turn ${turn} — no seat got the turn back`
+      stalled = true
+      break
+    }
     const { seat, read } = next
     const me = read.fighters.find((f) => f.id === read.my_id)
 
@@ -225,6 +234,15 @@ export const drive_fight = async ({
     if (!result.ok) log(`[bot]   commit refused: ${result.error}`)
   }
 
+  // A stall may simply be a terminal the client never folded — ask every seat once before naming it a stall.
+  if (stalled)
+    for (const seat of seats) {
+      const last = await seat.client.read().catch(() => null)
+      if (last?.ok && last.winner !== -1) {
+        outcome = outcome_of(last)
+        break
+      }
+    }
   if (outcome === 'not reached')
     for (const seat of seats) {
       const last = await seat.client.read().catch(() => null)

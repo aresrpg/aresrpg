@@ -194,8 +194,10 @@ try {
 
 const all_rows = [...sheet.turns.flatMap((t) => t.rows), ...sheet.run_rows]
 sheet.summary = summarise(all_rows)
-// A run that never reached a terminal proves nothing about the fight, however green its rows are.
-if (sheet.outcome === 'not reached' || sheet.errors.length) sheet.summary.verdict = 'FAIL'
+// A run that never reached a terminal proves nothing about the fight, however green its rows are. A STALL is one
+// of those non-terminals: it now keeps its turns in the sheet (drive.mjs) instead of throwing them away, and it
+// still fails — evidence kept, verdict unchanged.
+if (!['victory', 'defeat', 'draw'].includes(sheet.outcome) || sheet.errors.length) sheet.summary.verdict = 'FAIL'
 sheet.finished_at = new Date().toISOString()
 const sheet_path = resolve(OUT_DIR, `fight_bot_sheet${MODE === 'sim' ? '' : `_${MODE}`}.json`)
 writeFileSync(sheet_path, JSON.stringify(sheet, null, 2))
