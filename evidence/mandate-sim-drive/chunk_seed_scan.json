@@ -1,0 +1,6 @@
+[
+  {
+    "chunk": "fight_shim-BtqcR7M7.js",
+    "excerpt": "}),{ok:!0}},y=({fight_id:e,roster:n,mobs:a,width:o,height:s})=>{i.get_state().sui?.characters?.length||i.dispatch(`action/sui_data`,{characters:n.map(({id:e,name:n,class_id:r,level:i})=>({id:e,name:n,classe:r,level:i,experience:t(i),in_dungeon:!1})),loaded:!0,load_error:null,has_claimed_free_character:!0}),r.setState({fight_id:e,fight_fresh:!1,dungeon_id:e,world_id:null,template_id:null,character_id:n[0]?.id??null,ru"
+  }
+]

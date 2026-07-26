@@ -1,0 +1,225 @@
+{
+  "console_errors": [],
+  "console_warnings": [
+    "Service Worker registration blocked by Playwright",
+    "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] — clamped to 3.2",
+    "CopyExternalImageToTexture(): Browser fails extracting valid resourcefrom external image. This API call will return early.",
+    "[terminal-gate2] UNGATED teardown of a TERMINAL board (status=4) — the death sequence/card was preempted; a terminal read reached teardown ahead of the gate"
+  ],
+  "page_errors": [],
+  "failed_requests": [
+    {
+      "url": "https://edge.aresrpg.world/assets/workbox-window.prod.es5-Bd17z0YL.js",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://edge.aresrpg.world/assets/embed-io9MLx4W.js",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://edge.aresrpg.world/logo.png",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_custom_woolice.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_custom_woolice.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_custom_woolice.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0xed8b42fd8b8c01e903bf70c8da794c97cd1dda75eaab9701d7980847c75e93cd.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0x493b7a4cc1e8613cf2bbb8053fd631bd57cb9359ab12f562b38b08522946a1ac.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0x617b434c6261462e120f69e59f7bf1a49916182f2392fa9c3bf385c6061a8fd1.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0x0c752fe69f24cb7e0937158e5cbb7f58918396aba42531bdc1db827498e2a5ae.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0x379426da924a43505fcdc183b50f315026134039ac017ade9612441b33aa321f.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0x39e8ae150b3f87b6c447e330cdde3291a9edca42d5cbb38deda0bab44a608763.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/spells/0x152a7d2082149891e6dd967b1664ae8e79e910c25a7f3e8920c8c525eb4c5e5f.webp",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpc.aresrpg.world/v1/config",
+      "err": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_custom_woolice.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_custom_woolice.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "url": "https://assets.aresrpg.world/mobs/hy_custom_woolice.png",
+      "err": "net::ERR_BLOCKED_BY_ORB"
+    }
+  ],
+  "total_console": 93
+}

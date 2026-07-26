@@ -1,0 +1,582 @@
+{
+  "top_keys": "array",
+  "row_keys": [
+    "id",
+    "type",
+    "classType",
+    "name",
+    "element",
+    "unlock",
+    "slot",
+    "role",
+    "tier",
+    "description_key",
+    "levels",
+    "object_id"
+  ],
+  "first_row": {
+    "id": "asobi_coinflip_cut",
+    "type": "spell",
+    "classType": "asobi",
+    "name": "Coinflip Cut",
+    "element": "earth",
+    "unlock": 1,
+    "slot": 0,
+    "role": "damage",
+    "tier": "T1",
+    "description_key": "spell.asobi_coinflip_cut.desc",
+    "levels": [
+      {
+        "min_char_level": 1,
+        "ap_cost": 3,
+        "range_min": 0,
+        "range_max": 5,
+        "modifiable_range": true,
+        "line_launch": false,
+        "line_of_sight": true,
+        "free_cell": false,
+        "casts_per_turn": 255,
+        "casts_per_target": 255,
+        "cooldown_turns": 0,
+        "crit_rate": 50,
+        "effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 11,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 7,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 12,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 3,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ]
+      },
+      {
+        "min_char_level": 1,
+        "ap_cost": 3,
+        "range_min": 0,
+        "range_max": 5,
+        "modifiable_range": true,
+        "line_launch": false,
+        "line_of_sight": true,
+        "free_cell": false,
+        "casts_per_turn": 255,
+        "casts_per_target": 255,
+        "cooldown_turns": 0,
+        "crit_rate": 50,
+        "effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 12,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 2,
+            "value_max": 9,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 13,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 4,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ]
+      },
+      {
+        "min_char_level": 1,
+        "ap_cost": 3,
+        "range_min": 0,
+        "range_max": 6,
+        "modifiable_range": true,
+        "line_launch": false,
+        "line_of_sight": true,
+        "free_cell": false,
+        "casts_per_turn": 255,
+        "casts_per_target": 255,
+        "cooldown_turns": 0,
+        "crit_rate": 50,
+        "effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 13,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 2,
+            "value_max": 9,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 14,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 4,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ]
+      },
+      {
+        "min_char_level": 1,
+        "ap_cost": 3,
+        "range_min": 0,
+        "range_max": 6,
+        "modifiable_range": true,
+        "line_launch": false,
+        "line_of_sight": true,
+        "free_cell": false,
+        "casts_per_turn": 255,
+        "casts_per_target": 255,
+        "cooldown_turns": 0,
+        "crit_rate": 50,
+        "effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 14,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 3,
+            "value_max": 10,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 15,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 5,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ]
+      },
+      {
+        "min_char_level": 1,
+        "ap_cost": 3,
+        "range_min": 0,
+        "range_max": 7,
+        "modifiable_range": true,
+        "line_launch": false,
+        "line_of_sight": true,
+        "free_cell": false,
+        "casts_per_turn": 255,
+        "casts_per_target": 255,
+        "cooldown_turns": 0,
+        "crit_rate": 50,
+        "effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 15,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 4,
+            "value_max": 11,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 4,
+            "value_max": 17,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 5,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ]
+      },
+      {
+        "min_char_level": 101,
+        "ap_cost": 3,
+        "range_min": 0,
+        "range_max": 7,
+        "modifiable_range": true,
+        "line_launch": false,
+        "line_of_sight": true,
+        "free_cell": false,
+        "casts_per_turn": 255,
+        "casts_per_target": 255,
+        "cooldown_turns": 0,
+        "crit_rate": 50,
+        "effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 6,
+            "value_max": 19,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 5,
+            "value_max": 12,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 0,
+            "element": 2,
+            "value": 9,
+            "value_max": 24,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          },
+          {
+            "kind": 5,
+            "element": 1,
+            "value": 1,
+            "value_max": 5,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance": 100,
+            "turns": 0,
+            "stat": 0,
+            "flags": 0,
+            "phase": 0
+          }
+        ]
+      }
+    ],
+    "object_id": "0x0d2255cc1c59d4ff0dfb11fd49161c498bd33bd94665ec4047d459c317e0e6cb"
+  },
+  "oid_key": "object_id",
+  "rows_with_object_id": 240,
+  "total": 240,
+  "yajin_like_count": 20,
+  "yajin_like_sample": [
+    {
+      "id": "yajin_gutterknife",
+      "name": "Gutterknife",
+      "oid": true
+    },
+    {
+      "id": "yajin_shadowfold",
+      "name": "Vanish",
+      "oid": true
+    },
+    {
+      "id": "yajin_fanged_snare",
+      "name": "Fanged Snare",
+      "oid": true
+    },
+    {
+      "id": "yajin_prowlers_eye",
+      "name": "Prowler's Eye",
+      "oid": true
+    },
+    {
+      "id": "yajin_patient_venom",
+      "name": "Patient Venom",
+      "oid": true
+    },
+    {
+      "id": "yajin_dread_whisper",
+      "name": "Dread Whisper",
+      "oid": true
+    },
+    {
+      "id": "yajin_killers_calm",
+      "name": "Killer's Calm",
+      "oid": true
+    },
+    {
+      "id": "yajin_snaptrap",
+      "name": "Snaptrap",
+      "oid": true
+    },
+    {
+      "id": "yajin_fleece",
+      "name": "Fleece",
+      "oid": true
+    },
+    {
+      "id": "yajin_vial_snare",
+      "name": "Vial Snare",
+      "oid": true
+    },
+    {
+      "id": "yajin_nightsurge",
+      "name": "Nightsurge",
+      "oid": true
+    },
+    {
+      "id": "yajin_springjaw",
+      "name": "Springjaw",
+      "oid": true
+    },
+    {
+      "id": "yajin_false_trail",
+      "name": "False Trail",
+      "oid": true
+    },
+    {
+      "id": "yajin_mute_snare",
+      "name": "Mute Snare",
+      "oid": true
+    },
+    {
+      "id": "yajin_seeking_blade",
+      "name": "Seeking Blade",
+      "oid": true
+    },
+    {
+      "id": "yajin_cold_slit",
+      "name": "Cold Slit",
+      "oid": true
+    },
+    {
+      "id": "yajin_field_of_fangs",
+      "name": "Field of Fangs",
+      "oid": true
+    },
+    {
+      "id": "yajin_quietus",
+      "name": "Quietus",
+      "oid": true
+    },
+    {
+      "id": "yajin_coffin_snare",
+      "name": "Coffin Snare",
+      "oid": true
+    },
+    {
+      "id": "yajin_death_mark",
+      "name": "Death Mark",
+      "oid": true
+    }
+  ]
+}

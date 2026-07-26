@@ -1,0 +1,65 @@
+{
+  "drive": "SLEEP MANDATE \u2014 SIM closing drive",
+  "target": "https://edge.aresrpg.world/simulator (SERVED production build, V1.13.0)",
+  "driven_at": "2026-07-26T15:00-15:20+07:00",
+  "identity": "QA key `alice` (0xb495\u2026d177) via an injected wallet-standard shim; NEVER the owner's session. Zero tx signed (shim refuses signing).",
+  "freshness": {
+    "verdict": "FRESH \u2014 not stale",
+    "proof": "served chunk fight_shim-BtqcR7M7.js contains `experience:t(i)` in the seeded roster row => commit 5a06207c (#949) IS deployed",
+    "note": "the brief's suggested marker (named turn card + LV chip) is a PRE-5a06207c marker (6e4a7cc3) and would have given a false PASS"
+  },
+  "access_finding": {
+    "severity": "process-blocker",
+    "detail": "/simulator is behind `in_app = !!address` (app.tsx:287). The sanctioned dev-wallet QA door (auth/dev_wallet.ts:69) is gated on import.meta.env.DEV and is provably tree-shaken from the production bundle \u2014 verified: ares_dev_key + ?dev set, `ares_dev_session` never written. No automated QA seat can reach edge without standing in for a wallet extension."
+  },
+  "bars": {
+    "1_level200_full_deck": {
+      "verdict": "FAIL",
+      "detail": "LEVEL 200 yajin (995 stat pts / 199 spell pts, 20 spells unlocked in the editor) seats with only 3 populated sockets; 4-9 empty. The 3 are exactly the unlock-level-1 starters (gutterknife/shadowfold(Vanish)/fanged_snare). Identical across 4 consecutive turns => a frozen level-1 deck, not a per-turn dealt hand. No picker opens on an empty socket (left- or right-click).",
+      "icons": "PASS \u2014 real .webp icons, no letters",
+      "ap_costs": "PASS \u2014 4/2/2 match the corpus",
+      "turn_card": "PASS \u2014 'KAGEMARU LV 200'"
+    },
+    "2_casts_land_and_stick": {
+      "verdict": "INCONCLUSIVE",
+      "detail": "Could not confirm a cast on a cell provably occupied by a mob. Observed: with fanged_snare armed, board clicks drained AP 6->0 and MP 3->0 with mob HP unchanged (Broodfather 1190, Eternwool 1120 all session). Cannot separate 'cast on empty cell' from 'AP spent, no fold' without cell-accurate targeting; the prod build exposes no __ARES_DEV_CELL_SCREEN."
+    },
+    "3_status_truth": {
+      "verdict": "NOT REACHED",
+      "detail": "blocked behind bar 2 \u2014 no landed cast to attach a status to"
+    },
+    "4_traps_and_974_approach": {
+      "verdict": "PARTIAL PASS",
+      "detail": "#974 mob-approach RE-CHECK PASSES: both mobs crossed the full 17x17 board and engaged, dealing 1040->360 over ~6 turns. Trap placement NOT reached (no trap spell in the 3-spell hand \u2014 a consequence of bar 1)."
+    },
+    "5_multi_seat": {
+      "verdict": "NOT REACHED",
+      "detail": "single seat only. Related observation: a lapsed turn shows an 'AUTO PASS IN 4S' banner (shots/032_fastcast.png) \u2014 the bar asks for SILENT auto-pass (cf. 647549ff #921)."
+    },
+    "6_visual_truth": {
+      "verdict": "PASS",
+      "detail": "setup panels + both start bands gone mid-fight; STOP restores roster/mob panels + START FIGHT + placement hint; movement reach + spell-range washes paint on hover/arm; tooltips carry min-max ('2 to 6 Earth damage \u00b7 crit 5 to 9', AP/RANGE/CRIT/COOLDOWN); zero 0x addresses in fight UI (only the sidebar wallet chip).",
+      "caveat": "with a ranged spell armed, NO red target paint appeared on either mob although both sat inside the blue range wash (shots/030_armed3.png) \u2014 target-red-above-range-blue not observed."
+    },
+    "7_console": {
+      "verdict": "PASS (with one sentinel)",
+      "detail": "0 console errors, 0 page errors across the session (93 console lines). assets.aresrpg.world fetches all 200. Failed requests are ERR_ABORTED teardown/navigation aborts only.",
+      "sentinel": "[terminal-gate2] UNGATED teardown of a TERMINAL board (status=4) \u2014 fired when STOP was pressed on a board that had just gone terminal (my seat died). Self-induced race, but the sentinel is designed to never fire."
+    }
+  },
+  "root_cause_pin": {
+    "symptom": "level-200 character arms only the 3 unlock-1 starters",
+    "mechanism": "fight_shim.js:191 \u2014 `if (!engine_context.get_state().sui?.characters?.length)` guards the ONLY dispatch that sets `experience: level_to_experience(level)` (5a06207c). Any signed-in account that already owns chain characters fails the guard, so the seeded row never dispatches.",
+    "capsule_evidence": "capsule ctx roster #1 = alice's 2 real chain characters (senshi, level 1, experience 97 / 0) => sui.characters.length === 2 at seed time. ctx roster #2 = KAGEMARU classe=yajin level=200 experience=None \u2014 the row the HUD reads carries NO experience.",
+    "consumer": "DungeonBoard.jsx:196 reads xp_progress(character.experience ?? 0).level => 0 => LEVEL 1 => class_spells filtered to unlock_level<=1 => 3 spells",
+    "why_the_fix_missed_it": "5a06207c was validated on a roster with no pre-existing chain characters; the guard makes it a no-op for every real player and every funded QA identity",
+    "not_the_cause": "spell corpus is complete \u2014 all 240 rows (20/20 yajin) carry a non-empty object_id, so the cast_id_of('') drop in fight_start.js:class_deck_of is NOT firing"
+  },
+  "money_shot": "shots/019_fight_b.png \u2014 the LEVEL 200 seat mid-fight with only 3 of 9 sockets armed",
+  "artifacts": {
+    "capsule": "capsule_full.json (717KB, 2591 capsules)",
+    "console": "console_tally.json",
+    "corpus": "corpus_probe.json",
+    "chunk_scan": "chunk_seed_scan.json"
+  }
+}
