@@ -325,6 +325,41 @@ public fun create_dungeon_fight_brand<W: drop>(
   create_dungeon_fight(registry, scope, nonce, world_seed, anchor_x, anchor_z, kiosk, pkcap, character_id, raised_spell_ids, mob_tmpl, group_size, config, version, engine_version, clock, ctx);
 }
 
+/// BRAND TWIN (2026-07-13 dungeon split): the ROSTER room-fight door for the PINNED dungeon sibling (#1110 ⑤).
+/// The dungeon passes the room's AUTHORED member list as the commitment, so the builder's per-slot check IS the
+/// room's allowlist — a room can be a boss plus its adds, and it can only be fought as exactly that.
+/// `group_seed` is derived the same way `create_dungeon_fight` derives it (deterministic + public: rooms are
+/// authored content and re-rolling means re-running, which costs KEYS).
+public fun open_room_group_brand<W: drop>(
+  _: W,
+  scope: ID,
+  nonce: u64,
+  world_seed: u64,
+  anchor_x: u32,
+  anchor_z: u32,
+  roster: vector<ID>,
+  progress: u64,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  character_id: ID,
+  raised_spell_ids: vector<ID>,
+  config: &GameConfig,
+  version: &Version,
+  engine_version: &EngineVersion,
+  clock: &Clock,
+): GroupBuild {
+  config.assert_dungeon_brand<W>();
+  config.assert_enabled();
+  version.assert_enabled();
+  let (creator, creator_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
+  mark_seated(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the mark applies
+  engine::open_group(
+    FightBrand {}, scope, nonce, 0, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
+    false, option::none(), true, fold_id(scope) ^ nonce, progress, roster, creator, creator_lines,
+    dial_snapshot(config), engine_version,
+  )
+}
+
 /// BRAND TWIN (2026-07-13 dungeon split): the vouched-join door for the PINNED dungeon sibling (a party member
 /// joins a room fight). Asserts the pin then delegates to `join_vouched` verbatim.
 public fun join_vouched_brand<W: drop>(
