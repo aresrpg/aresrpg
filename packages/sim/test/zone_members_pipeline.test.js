@@ -77,8 +77,7 @@ describe('derive_zone ↔ zone_comp member-list pipeline parity (format 3)', () 
     ]
     // row 2 (`0xc3`) is the world's boss_mask entry: it may be a pack's primary, and then the pack is single-spec
     for (const r of rows)
-      if (r.members.includes('0xc3'))
-        expect(new Set(r.members).size).toBe(1)
+      if (r.members.includes('0xc3')) expect(new Set(r.members).size).toBe(1)
   })
 
   test('a LEGACY zone is untouched by any of it — same doc, the level-capped monoculture', () => {

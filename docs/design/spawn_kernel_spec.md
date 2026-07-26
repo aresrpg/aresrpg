@@ -83,11 +83,11 @@ gauntlet.
 **Format is the router, never a caller preference.** A zone's stored commitment byte decides which
 claim doors accept it:
 
-| stored format | claim doors | create path | placement |
-| --- | --- | --- | --- |
-| 1 (legacy, bare 32-byte root) | `claim_mob_group[_in_zone][_with_proof]` | `fight::create` | spaced sampler |
-| 2 (`0x02‖digest`) | same | `fight::create` | lattice |
-| 3 (`0x03‖digest`) | `claim_mob_group_members[_in_zone]` | `open_group`→`add_member`→`create_members` | lattice |
+| stored format                 | claim doors                              | create path                                | placement      |
+| ----------------------------- | ---------------------------------------- | ------------------------------------------ | -------------- |
+| 1 (legacy, bare 32-byte root) | `claim_mob_group[_in_zone][_with_proof]` | `fight::create`                            | spaced sampler |
+| 2 (`0x02‖digest`)             | same                                     | `fight::create`                            | lattice        |
+| 3 (`0x03‖digest`)             | `claim_mob_group_members[_in_zone]`      | `open_group`→`add_member`→`create_members` | lattice        |
 
 Crossing the table aborts (`EMemberZone` / `ENotMemberZone`) — fail-closed, never a silent
 single-spec fallback, because a mono-spec fight over a mixed commitment is exactly the divergence
@@ -111,7 +111,7 @@ class: a mixed pack's envelope must name the CASTER's species, not the primary's
 ### 4.3 XP and loot for a mixed pack
 
 - **XP** is `Σ member_xp(j)` over the seated mobs. For a single-spec fight that is `group_xp ×
-  mob_count` exactly — one expression, no branch, byte-identical for every fight that predates this
+mob_count` exactly — one expression, no branch, byte-identical for every fight that predates this
   door.
 - **Loot**: the outcome's `loot` vector is a ROLL CHECKLIST and its `mob_count` field is how many
   times the checklist repeats (`results::open`). A single-spec fight ships one table × N mobs; a

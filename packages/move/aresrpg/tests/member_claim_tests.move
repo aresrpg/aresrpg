@@ -261,7 +261,7 @@ fun the_member_claim_door_refuses_a_legacy_zone() {
   let (cid, zx, zy, _a, _b) = discovered(&mut sc);
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
-  zones::set_legacy_commitment_for_testing(&mut w, zx, zy, TEAM_BOUND);
+  zones::set_merkle_root_commitment_for_testing(&mut w, zx, zy, TEAM_BOUND);
   let spawn_id = zones_view::mob_spawn_id(&w, zx, zy, 0);
   let mut k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();

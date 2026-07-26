@@ -827,10 +827,10 @@ public fun set_lattice_commitment_for_testing(world: &mut World, zx: u32, zy: u3
 }
 
 #[test_only]
-/// Overwrite the zone's stored commitment with a FORMAT-1 (bare Merkle root over the LEGACY derivation) one —
-/// the shape every zone the deployed package searched carries, and the only shape the per-index proof doors can
-/// authenticate. The suites that exercise those doors stand their zones up through this.
-public fun set_legacy_commitment_for_testing(world: &mut World, zx: u32, zy: u32, team_bound: u64) {
+/// Overwrite the zone's stored commitment with a FORMAT-1 one — a bare Merkle root over the spaced-sampler
+/// derivation, the shape every zone the deployed package searched carries, and the only shape the per-index
+/// proof doors can authenticate. The suites that exercise those doors stand their zones up through this.
+public fun set_merkle_root_commitment_for_testing(world: &mut World, zx: u32, zy: u32, team_bound: u64) {
   let seed = zone_seed(world, zx, zy);
   let now = zone_discovered_at(world, zx, zy);
   let wid = object::id(world);

@@ -642,6 +642,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   const boss_rows = new Set((world.boss_mask ?? []).map(Number))
   const member_weights = weights.map((w, i) => (boss_rows.has(i) ? 0 : w))
 
+  /** @type {Array<{spawn_id:bigint, template_idx:number, members?:number[], x:number, z:number, size:number, group_seed:number}>} */
   const groups = members_zone
     ? derive_mob_groups_members({
         seed,
@@ -707,7 +708,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
       // trims it: the stream derives it at the RAW rolled size, the live team bound decides how many seat.
       ...(members_zone
         ? {
-            members: g.members
+            members: (g.members ?? [])
               .slice(0, g.size)
               .map(idx => mobs[idx].template_id),
             progress,
