@@ -43,8 +43,7 @@ import {
   staged_turn_paths,
 } from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
-import { fight_view } from '@aresrpg/fight/project'
-import { committed_mob_hp } from '@aresrpg/fight/project'
+import { committed_mob_hp, committed_truth, fight_view, next_move_tackle } from '@aresrpg/fight/project'
 import {
   CAST_DROP_STALE_TARGET,
   CAST_DROP_TARGET_OUT_OF_REACH,
@@ -59,8 +58,6 @@ import {
   evolve_flush_casts,
   evolve_caster_cell,
 } from '@aresrpg/fight/predict_cast'
-import { committed_state } from '@aresrpg/fight/store'
-import { next_move_tackle } from '@aresrpg/fight/project'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
@@ -377,7 +374,7 @@ export function DungeonBoard() {
     if (committed_cell == null || !entity_id || !fight?.draft_count) return committed_cell
     const evolved = evolve_caster_cell({
       view: fight_view(),
-      committed: committed_state(fight_store.getState()),
+      committed: committed_truth(fight_store.getState()),
       caster_id: entity_id,
       actions: evolution_actions_of(staged_turn_paths(fight_store).draft_actions, my_spells, me?.weapon),
       resolve_ref,
@@ -660,7 +657,7 @@ export function DungeonBoard() {
     const evolution_actions = evolution_actions_of(draft_actions, my_spells, me?.weapon)
     const evolved = evolve_flush_casts({
       view: fight_view(),
-      committed: committed_state(fight_store.getState()),
+      committed: committed_truth(fight_store.getState()),
       caster_id: entity_id,
       actions: evolution_actions,
       resolve_ref,
@@ -708,7 +705,7 @@ export function DungeonBoard() {
         // exported; `occupied`'s idx already matches that indexing.
         const eye_target = ground_targeted ? null : occupied.get(entry.cell)
         const target_committed_cell = eye_target
-          ? (committed_state(fight_store.getState()).fighters?.[
+          ? (committed_truth(fight_store.getState()).fighters?.[
               `${eye_target.kind === 'mob' ? 'm' : 'p'}${eye_target.idx}`
             ]?.cell ?? null)
           : null

@@ -41,6 +41,10 @@ export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
  * (`presented_state` / `display_state` / `claimed_budget_state`) is a different question and still derives from the
  * settlement machinery, so the eye's pacing, the SNAP-THEN-RUN hold and the draft budget are untouched by this.
  *
+ * EXPORTED (#1027): this is the ONE committed read outside this module too — the board's draft anchor, its flush
+ * evolution, and the cast retarget that decides the PTB's target cell all come through here, so no consumer can
+ * reach a second committed derivation. ADR §2 (`docs/FIGHT_PIPELINE.md`) is the law it enforces.
+ *
  * ONE ARM does not read the core, by construction rather than by guess: a state with NO `core` is a hand-built
  * projection input (tests, tools, the board authority's synthetic states) that never crossed the door and therefore
  * HAS no core fold to read — it folds its own `entries` instead. A real store atom always carries a core.
@@ -49,7 +53,7 @@ export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
  * (fold.derive_retired), and dropping it here would re-open the resurrection root — a later object read carrying a
  * positive hp standing a floor-dead fighter back up.
  */
-const committed_truth = (s) => {
+export const committed_truth = (s) => {
   if (s.core == null) return committed_state(s)
   const board = project_board(s.core)
   return { ...board, fighters: apply_retirement(board.fighters, s.retired) }

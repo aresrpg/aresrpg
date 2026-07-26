@@ -49,7 +49,7 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
     const body = src.slice(start, end)
     // the flush evolves the COMMITTED chain state through the drafted casts (the sim door), keyed PER cast…
     expect(body).toMatch(/evolve_flush_casts\(/)
-    expect(body).toMatch(/committed:\s*committed_state\(/)
+    expect(body).toMatch(/committed:\s*committed_truth\(/)
     expect(body).toMatch(/evolved\[cast_i\]/)
     // …and the per-cast evolved occupancy `occ` — NEVER the eye-state `occupied` — feeds strike LEGALITY
     // (target_is_mob / committed_target_alive / occupied_alive), keyed on `target_cell` (LEG 0a: entry.cell unless
@@ -101,7 +101,7 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
     // never resolves it at all — see the describe block below) but still the only call site.
     expect(body).toMatch(/const eye_target = ground_targeted \? null : occupied\.get\(entry\.cell\)/)
     expect((body.match(/occupied\.get\(entry\.cell\)/g) ?? []).length).toBe(1)
-    // its committed cell (committed_state, my drafts excluded) feeds txs.retarget_cast alongside the SAME
+    // its committed cell (committed_truth, my drafts excluded) feeds txs.retarget_cast alongside the SAME
     // cast_range_set_dungeon footprint the legality check itself reaches through — one geometry home, never a
     // re-implementation — and the result REPLACES entry.cell for the rest of the entry (footprint/occupancy
     // checks + the shipped action target), not just the drop decision.
@@ -116,6 +116,17 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
     // the actual local commit-removal event is the sole feedback input (locked below).
     expect(body).toMatch(/if \(retargeted\.dropped\)/)
     expect(body).not.toMatch(/dungeons\.cast_target_unreachable/)
+  })
+
+  // #1027 — ONE COMMITTED FOLD. `docs/FIGHT_PIPELINE.md` §2: committed truth comes from the headless core fold "and
+  // by nothing else". The cell this retarget puts in the PTB is the highest-stakes committed read in the client, so
+  // the board must ask the core-backed door (project.committed_truth, the same one committed_mob_hp rides) — the
+  // legacy settlement derivation has no reader in this file at all. Behavior is pinned in
+  // @aresrpg/fight/test/truth_owner.test.js on a state where the two folds provably disagree.
+  test('#1027: every committed read in the board goes through the core-backed door, never the legacy fold', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    expect(src).not.toMatch(/committed_state/)
+    expect(src).toMatch(/target_committed_cell = eye_target[\s\S]{0,40}committed_truth\(fight_store\.getState\(\)\)/)
   })
 })
 

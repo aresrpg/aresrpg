@@ -14,7 +14,7 @@
 import { describe, test, expect } from 'bun:test'
 
 import { create_fight_store, committed_state } from '../src/store.js'
-import { board_view, engine_view, committed_mob_hp } from '../src/project.js'
+import { board_view, engine_view, committed_mob_hp, committed_truth } from '../src/project.js'
 import { empty_core_state, ingest, project_board } from '../src/core.js'
 import { input_envelope } from '../src/envelope.js'
 import { classify_input } from '../src/classify_input.js'
@@ -152,6 +152,15 @@ describe('the committed truth owner', () => {
 
   test('committed_mob_hp reads the CORE', () => {
     expect(committed_mob_hp(diverged_store().getState(), 0)).toBe(12)
+  })
+
+  // #1027 — the TX-SHAPING read. DungeonBoard's flush resolves the clicked fighter through the eye-state, then asks
+  // this door for the cell that goes into the PTB (`target_committed_cell` → txs.retarget_cast). It is the one
+  // committed read whose answer is spent as gas, so it gets its own row: the settlement fold still says 7 here.
+  test('committed_truth — the door the cast retarget shapes its PTB cell with — resolves off the CORE', () => {
+    const state = diverged_store().getState()
+    expect(committed_truth(state).fighters?.p0?.cell).toBe(33)
+    expect(committed_state(state).fighters?.p0?.cell).toBe(7)
   })
 
   test('PRESENTATION stays on the paced display fold: the rendered cell is unmoved', () => {
