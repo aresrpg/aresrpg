@@ -226,6 +226,7 @@ export const create_sim_chain = ({
     group_template,
     sim_state: initial,
     version: 1,
+    actions: {},
     recorder: open_recorder({ fight_id, arena, templates_raw, initial, capacity }),
     violations: [],
   }
@@ -290,18 +291,24 @@ export const submit_commands = (chain, commands, { now_ms = 0, turn_ms = DEFAULT
         fight_id: acc.chain.fight_id,
         now_ms,
         turn_ms,
+        // The action envelope reads the AUTHORED effect descriptors off the templates, and its action ordinal
+        // counts the caster's actions THIS TURN — a turn spans several commands, so the counter outlives one
+        // step and lives on the chain (the chain's own `casts_this_turn` / `next_mob_action` twin).
+        spell_templates: acc.chain.ctx.spell_templates,
+        actions: acc.actions,
       })
       return {
         chain: step.chain,
         rows: [...acc.rows, ...encoded.rows],
         hand_updates: [...acc.hand_updates, ...encoded.hand_updates],
+        actions: encoded.actions,
       }
     },
-    { chain, rows: [], hand_updates: [] }
+    { chain, rows: [], hand_updates: [], actions: chain.actions ?? {} }
   )
   const version = chain.version + 1
   return {
-    chain: { ...folded.chain, version },
+    chain: { ...folded.chain, version, actions: folded.actions },
     version,
     receipt: { events: folded.rows },
     hand_updates: folded.hand_updates,

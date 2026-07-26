@@ -117,6 +117,10 @@ const STAT_CHAIN_ID = {
   physical_damage: 14,
 }
 
+/** The sim `Element` string → the chain element ordinal (`ELEMENT_MAP` in spell_templates.js, inverted). An
+ *  authored row whose element the sim left undefined carries NONE, the same default the seed mint writes. */
+const ELEMENT_ORDINAL = { FIRE: 0, WATER: 1, EARTH: 2, AIR: 3, NONE: 255 }
+
 /** Resist stat key → the chain element ordinal the K_ALTER_RESIST row carries (255 = NONE/neutral). */
 const RESIST_ELEMENT = {
   fire_resistance: 0,
@@ -318,6 +322,153 @@ const tackle_losses = (pre_state, post_state, entity_id) => {
   }
 }
 
+// ╔════════════════ [ The ACTION ENVELOPE — the chain's record_timed wrapper around a cast ] ═══════════════ ]
+//
+// #973. A durable status is NOT a standalone chain event: `cast.move` records it INSIDE the cast's envelope
+// (`record_timed`, cast.move:1119/1148-1153/1243-1274), and the client learns it from the three envelope rows
+// `inputs.js` folds — `ActionStarted` (the action key + the target cell), one `ActionEffect` per AUTHORED
+// top-level effect (the exact timed descriptor), and `ActionResolved` (the closing bracket that retires the
+// key). Emitting none of them made every chip PREDICTION-only: the receipt fold carried no status row, so the
+// counter went `3 → absent` and the granted MP reverted the instant the receipt landed.
+//
+// The chain wraps EVERY committed cast, damage-only ones included (`action_envelope::emit_started` runs before
+// the effect loop for both the player and mob arms — cast.move:208-239 / 534-560; the captured corpus proves it:
+// `ActionStarted, ActionEffect(kind 0), Hit, Cast, ActionResolved`), so this encoder wraps every cast too.
+//
+// ORDER. A real receipt emits its effect rows BEFORE the `Cast` (fight_render_events.js:45); this mock has
+// always emitted them after, and `mark_damaging_casts` reads that adjacency. The envelope brackets the whole
+// action either way — `ActionStarted` … `Cast` … effect rows … `ActionResolved` — which is the ordering the
+// fold actually contracts on (context opened before any `ActionEffect`, retired after the last one).
+
+/** `ActionStarted.action_kind` / `ActionResolved.action_kind` — `fight_events::action_kind_spell()`. */
+const ACTION_KIND_SPELL = 0
+
+/** `ActionResolved.crit_bound` — `action_envelope::CRIT_BOUND`, the fixed denominator every player arm carries. */
+const CRIT_BOUND = 10_000
+
+/** A cast the chain wraps no envelope around (see `cast_envelope`). */
+const NO_ENVELOPE = { started: null, effects: [], resolved: null }
+
+/** `ActionResolved`'s unused arms — the zeros `action_envelope::emit_player_spell` / `emit_mob_spell` pass for
+ *  the WEAPON snapshot and the &Random ledger a spell never fills (action_envelope.move:105-139). */
+const NO_WEAPON = {
+  weapon_element: 0,
+  weapon_damage: u64(0),
+  weapon_crit_damage: u64(0),
+  weapon_crit_rate: u64(0),
+  weapon_ap_cost: u64(0),
+  weapon_reach: u64(0),
+  weapon_lines: [],
+}
+const NO_RANDOM = {
+  crit_roll: u64(0),
+  fumble_roll: u64(0),
+  fumble_bound: u64(0),
+  random_domains: '',
+  random_effect_ordinals: [],
+  random_rolls: [],
+  random_bounds: [],
+}
+
+/** The authored spell level a cast resolved at — the sim's own lookup (`spell_levels[id] ?? 1`, reduce.js). */
+const level_of = (state, entity_id, spell_id, templates) => {
+  const template = templates?.get?.(spell_id)
+  if (!template) return null
+  const entity = state.team0.concat(state.team1).find((e) => e.id === entity_id)
+  const level = Number(entity?.spell_levels?.[spell_id] ?? 1)
+  return template.levels?.[level - 1] ?? template.levels?.[0] ?? null
+}
+
+/** The effect list the cast resolved from — `process_spell_cast`'s own selection (fight_spells.js:558-564). */
+const effects_of_level = (level, is_critical) =>
+  (is_critical && level.crit_effects?.length > 0 ? level.crit_effects : level.base_effects) ?? []
+
+/**
+ * ONE authored sim effect → the chain `Effect` descriptor `ActionEffect.effect` carries. Every field is the
+ * normalized row's OWN value re-stated in the chain's units: `raw_stat` IS the chain stat id the normalizer
+ * read, `element` inverts `ELEMENT_MAP`, and `value`/`area_size` ride as u64 strings like every captured row.
+ */
+const chain_effect_descriptor = (effect) => ({
+  area_shape: Number(effect.area_shape) || 0,
+  area_size: u64(effect.area_size ?? 0),
+  // The sim resolves a row with no authored chance as always-applying; the chain writes that as 100.
+  chance: effect.chance == null ? 100 : Number(effect.chance),
+  element: ELEMENT_ORDINAL[effect.element] ?? 255,
+  flags: Number(effect.flags) || 0,
+  kind: effect.kind,
+  phase: Number(effect.phase) || 0,
+  stat: Number(effect.raw_stat) || 0,
+  target_filter: Number(effect.target_filter) || 0,
+  turns: Number(effect.turns) || 0,
+  // DECODED, never the 32768-centered wire form: `inputs.js:208` writes this straight into the status home
+  // without the snapshot door's decode, and the home's readers take the signed delta from it (#979).
+  value: u64(effect.value ?? 0),
+})
+
+/**
+ * The envelope rows bracketing one `fight_cast`. `turn_ordinal` is the sim's `turn_number` — the documented
+ * numeric twin of Move's per-seat `SeatTurnKey` / per-mob `action_envelope::mob_turn` (fight_state.js:154,
+ * action_envelope.move:32-34). `action_ordinal` is the caster's action counter for that turn (`participant::
+ * casts_this_turn` / `next_mob_action`), threaded by the driver because one encode step sees one command.
+ *
+ * `ActionResolved` states the identity arms the sim HOLDS and `option::none()` for the rest, exactly as
+ * `action_envelope.move` passes them: a player cast names its spell, a mob cast names its group template.
+ * `spell_level` and `mob_spell_ordinal` are authored chain artefacts the sim never receives — it carries the
+ * spell id instead — so they ride as the chain's own none rather than an invented snapshot.
+ */
+const cast_envelope = (state, event, ctx) => {
+  const { is_mob, idx } = side_of(state, event.entity_id)
+  const level = level_of(state, event.entity_id, event.spell_id, ctx.spell_templates)
+  if (!level) return NO_ENVELOPE
+  const authored = effects_of_level(level, !!event.is_critical)
+  // A chain `Effect` is identified by its numeric `kind`; the normalizer only carries one when the template was
+  // authored in the CHAIN shape. A template with NO chain kind anywhere has no chain existence at all — the
+  // sim's built-in mob strike is exactly that, and `normalize_chain_spell_corpus` excludes it from the chain
+  // corpus by design — so the chain wraps no envelope around it and neither does this encoder. A template that
+  // mixes the two shapes is corrupt, and stays LOUD rather than emitting a descriptor with an invented opcode.
+  const chain_shaped = authored.filter((effect) => typeof effect?.kind === 'number')
+  if (chain_shaped.length === 0) return NO_ENVELOPE
+  if (chain_shaped.length !== authored.length)
+    throw new Error(`sim_chain: spell '${event.spell_id}' mixes chain-shaped and legacy effect rows`)
+  const descriptors = authored.map(chain_effect_descriptor)
+  const turn_ordinal = u64(state.turn_number ?? 0)
+  const action_ordinal = u64(ctx.next_action(event.entity_id, state.turn_number ?? 0))
+  const target_cell = u64(encode(event.target.x, event.target.y))
+  const ap_cost = u64(level.cost ?? 0)
+  const key = { fight: ctx.fight_id, caster_is_mob: is_mob, caster_idx: u64(idx), turn_ordinal, action_ordinal }
+  const entity = state.team0.concat(state.team1).find((e) => e.id === event.entity_id)
+  return {
+    started: row('ActionStarted', {
+      ...key,
+      action_kind: ACTION_KIND_SPELL,
+      target_cell,
+      ap_cost,
+      effect_count: u64(descriptors.length),
+    }),
+    effects: descriptors.map((effect, ordinal) =>
+      row('ActionEffect', { ...key, effect_ordinal: u64(ordinal), effect })
+    ),
+    resolved: row('ActionResolved', {
+      ...key,
+      target_cell,
+      action_kind: ACTION_KIND_SPELL,
+      ap_cost,
+      critical: !!event.is_critical,
+      fumbled: (event.effects ?? []).some((e) => e.status === 'CRITICAL_FAILURE_FUMBLE'),
+      returned: false,
+      spell: is_mob ? null : String(event.spell_id),
+      learned_level: is_mob ? 0 : Number(entity?.spell_levels?.[event.spell_id] ?? 1),
+      spell_level: null,
+      mob_template: is_mob ? (entity?.template_id ?? null) : null,
+      mob_spell_ordinal: null,
+      ...NO_WEAPON,
+      ...NO_RANDOM,
+      crit_bound: u64(is_mob ? 0 : CRIT_BOUND),
+      effects: descriptors,
+    }),
+  }
+}
+
 /**
  * Encode ONE sim event into its chain rows. Pure per event; `ctx.cells` is the running cell index the encoder
  * builds as it goes (a local accumulator, not a caller's value) so `Displaced.from_cell` is the true origin.
@@ -382,7 +533,13 @@ const encode_event = (event, ctx) => {
         caster_idx: u64(idx),
         target_cell: u64(encode(event.target.x, event.target.y)),
       })
-      return { rows: [cast, ...effects_of(event.effects)] }
+      // The ACTION ENVELOPE brackets the cast (#973): without `ActionStarted`/`ActionEffect` the receipt states
+      // no durable status at all and every timed chip stays prediction-only.
+      const envelope = cast_envelope(post_state, event, ctx)
+      const bracketed = [cast, ...effects_of(event.effects)]
+      return {
+        rows: envelope.started ? [envelope.started, ...envelope.effects, ...bracketed, envelope.resolved] : bracketed,
+      }
     }
     case 'fight_trap_triggered':
     case 'fight_turn_effects':
@@ -441,24 +598,51 @@ const encode_event = (event, ctx) => {
  * THE ENCODER (spec §4.4). One reducer step — `(pre_state, sim_events, post_state)` — becomes the ordered chain
  * rows the core folds, plus the hand updates that are not chain rows. Every fighter identity resolves against
  * `post_state`, the only state that still names them all after the step (a mid-step death removes no row).
+ *
+ * `spell_templates` is the sim's own template map (`chain.ctx.spell_templates`): the action envelope states the
+ * AUTHORED effect descriptors, which live on the template and nowhere in the event. `actions` is the caster's
+ * per-turn action counter carried ACROSS steps (one command = one step, but a turn holds several casts) — it
+ * rides in and out so this stays a pure function of its inputs, exactly like `Displaced`'s cell map.
  * @param {{ pre_state: object, post_state: object, events: object[], fight_id: string,
- *   now_ms?: number, turn_ms?: number }} params
- * @returns {{ rows: object[], hand_updates: object[] }}
+ *   now_ms?: number, turn_ms?: number, spell_templates?: Map<string, object>,
+ *   actions?: Record<string, number> }} params
+ * @returns {{ rows: object[], hand_updates: object[], actions: Record<string, number> }}
  */
-export const encode_sim_step = ({ pre_state, post_state, events, fight_id, now_ms = 0, turn_ms = DEFAULT_TURN_MS }) => {
+export const encode_sim_step = ({
+  pre_state,
+  post_state,
+  events,
+  fight_id,
+  now_ms = 0,
+  turn_ms = DEFAULT_TURN_MS,
+  spell_templates = null,
+  actions = {},
+}) => {
   if (post_state.team0.length !== pre_state.team0.length || post_state.team1.length !== pre_state.team1.length)
     // A SUMMON grew a team. Participant/mob indices are POSITIONAL in the snapshot and the chain has no event
     // admitting a new fighter mid-fight, so this cannot be encoded — only reported. Loud by law.
     throw new Error('sim_chain: roster changed mid-step (summon) — no chain row can express it')
 
+  const counters = { ...actions }
   const ctx = {
     fight_id,
     pre_state,
     post_state,
     now_ms,
     turn_ms,
+    spell_templates,
     cells: new Map([...pre_state.team0, ...pre_state.team1].map((e) => [e.id, encode(e.cell.x, e.cell.y)])),
+    next_action: (entity_id, turn) => {
+      const key = `${entity_id}:${turn}`
+      const ordinal = counters[key] ?? 0
+      counters[key] = ordinal + 1
+      return ordinal
+    },
   }
   const encoded = events.map((event) => encode_event(event, ctx))
-  return { rows: encoded.flatMap((e) => e.rows), hand_updates: encoded.flatMap((e) => e.hand_updates ?? []) }
+  return {
+    rows: encoded.flatMap((e) => e.rows),
+    hand_updates: encoded.flatMap((e) => e.hand_updates ?? []),
+    actions: counters,
+  }
 }

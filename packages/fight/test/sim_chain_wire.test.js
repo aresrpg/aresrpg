@@ -60,8 +60,44 @@ const fighter = (id, cell, is_player) => ({
   ap_reserve: 0,
 })
 
-/** A minimal started fight — this file drives `encode_sim_step` with hand-written sim events, so no spell kit
- *  is needed; only the (side, idx) identities the rows key off. */
+/** The one authored spell this file needs: the ACTION ENVELOPE (#973) states the spell's own effect
+ *  DESCRIPTORS, so `ActionStarted`/`ActionEffect`/`ActionResolved` only exist for a cast whose template the
+ *  encoder can resolve. Chain-shaped, exactly like the seed corpus mints them. */
+const WIRE_SPELL = 'wire_probe'
+const WIRE_SPELL_ROWS = [
+  {
+    id: WIRE_SPELL,
+    name: WIRE_SPELL,
+    levels: [
+      {
+        ap_cost: 3,
+        range_min: 1,
+        range_max: 4,
+        crit_rate: 0,
+        line_of_sight: true,
+        effects: [
+          {
+            kind: 0, // K_DAMAGE — the captured exemplar's own kind, so the descriptor pins the same fields
+            element: 2,
+            value: 9,
+            area_shape: 0,
+            area_size: 0,
+            target_filter: 1,
+            chance: 100,
+            turns: 0,
+            stat: 0,
+            flags: 0,
+            phase: 0,
+          },
+        ],
+        crit_effects: [],
+      },
+    ],
+  },
+]
+
+/** A minimal started fight — this file drives `encode_sim_step` with hand-written sim events, so only the
+ *  (side, idx) identities the rows key off plus the one templated spell above are needed. */
 const chain = (() => {
   const arena = arena_from_board(derive_board(SEED).board)
   return create_sim_chain({
@@ -69,7 +105,7 @@ const chain = (() => {
     fight_id: FIGHT_ID,
     team0: [fighter('sim_c1', arena.spawns_a[0], true)],
     team1: [fighter('mob_0', arena.spawns_b[0], false)],
-    templates_raw: [],
+    templates_raw: WIRE_SPELL_ROWS,
     group_template: '0xgroup',
   })
 })()
@@ -82,8 +118,16 @@ const CAPTURED = (() => {
   for (const file of readdirSync(CAPSULE_DIR).filter((f) => f.endsWith('.json'))) {
     const envelope = JSON.parse(readFileSync(`${CAPSULE_DIR}/${file}`, 'utf8'))
     for (const capsule of envelope.capsules ?? [])
-      for (const event of capsule.payload?.rows?.events ?? [])
-        if (typeof event.type === 'string' && event.parsedJson) rows.set(event.type.split('::').pop(), event)
+      for (const event of capsule.payload?.rows?.events ?? []) {
+        if (typeof event.type !== 'string' || !event.parsedJson) continue
+        const name = event.type.split('::').pop()
+        // `ActionResolved`'s identity arms are MUTUALLY EXCLUSIVE (action_envelope.move:105/133): a player
+        // spell carries `spell`+`spell_level` with both mob Options none, a mob spell the mirror image — so
+        // the two arms have different JSON scalar types on three keys. This encoder's exemplar below is a
+        // PLAYER cast, so pin against the captured PLAYER row: mob-arm rows only fill an empty slot.
+        if (rows.has(name) && event.parsedJson.caster_is_mob === true) continue
+        rows.set(name, event)
+      }
   }
   return rows
 })()
@@ -93,7 +137,14 @@ const EMITTED = (() => {
   const state = chain.sim_state
   const [me] = state.team0
   const [mob] = state.team1
-  const step = (events) => encode_sim_step({ pre_state: state, post_state: state, events, fight_id: FIGHT_ID }).rows
+  const step = (events) =>
+    encode_sim_step({
+      pre_state: state,
+      post_state: state,
+      events,
+      fight_id: FIGHT_ID,
+      spell_templates: chain.ctx.spell_templates,
+    }).rows
   const by_kind = new Map()
   const collect = (rows) => rows.forEach((r) => by_kind.set(r.type.split('::').pop(), r))
   collect(step([{ type: 'fight_placed', entity_id: me.id, cell: me.cell }]))
@@ -108,6 +159,7 @@ const EMITTED = (() => {
       {
         type: 'fight_cast',
         entity_id: me.id,
+        spell_id: WIRE_SPELL,
         target: mob.cell,
         effects: [
           { target_id: mob.id, damage: 9, new_health: 0, killed: true },
