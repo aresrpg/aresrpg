@@ -97,21 +97,31 @@ export const project_spell_effect = (effect) => ({
 })
 
 export const project_spell_level = (level) => {
-  const critical_by_kind = new Map()
-  for (const critical of level.crit_effects ?? []) {
-    const rows = critical_by_kind.get(critical.kind) ?? []
-    critical_by_kind.set(critical.kind, [...rows, critical])
-  }
-  const occurrences = new Map()
-  const effects = (level.effects ?? []).map((effect) => {
-    const occurrence = occurrences.get(effect.kind) ?? 0
-    occurrences.set(effect.kind, occurrence + 1)
-    const critical = critical_by_kind.get(effect.kind)?.[occurrence]
+  const base_effects = level.effects ?? []
+  const critical_effects = level.crit_effects ?? []
+  const kind_occurrence = (rows, index) =>
+    rows.slice(0, index).filter((candidate) => candidate.kind === rows[index]?.kind).length
+  const effects = base_effects.map((effect, index) => {
+    const occurrence = kind_occurrence(base_effects, index)
+    const critical = critical_effects.filter((candidate) => candidate.kind === effect.kind)[occurrence]
     const decoded = project_spell_effect(effect)
     return critical
       ? { ...decoded, crit_base: critical.value ?? 0, crit_effect: project_spell_effect(critical) }
       : decoded
   })
+  // A critical list replaces the base list on-chain. Same-kind occurrences already ride their base row as the
+  // compact `crit N` clause; any extra occurrence still needs an ordinary sibling row so the tooltip remains
+  // lossless without inventing an "on critical" prefix. A non-critable level cannot expose an impossible row.
+  const critical_only_effects =
+    Number(level.crit_rate) > 0
+      ? critical_effects
+          .filter((critical, index) => {
+            const occurrence = kind_occurrence(critical_effects, index)
+            const base_count = base_effects.filter((effect) => effect.kind === critical.kind).length
+            return occurrence >= base_count
+          })
+          .map(project_spell_effect)
+      : []
   return {
     min_char_level: level.min_char_level,
     ap: level.ap_cost,
@@ -125,7 +135,7 @@ export const project_spell_level = (level) => {
     casts_per_target: level.casts_per_target,
     cooldown: level.cooldown_turns,
     crit_rate: level.crit_rate,
-    effects,
+    effects: [...effects, ...critical_only_effects],
   }
 }
 
