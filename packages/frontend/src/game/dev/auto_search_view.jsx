@@ -10,26 +10,32 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 
-/** The settings cog — inline SVG, no icon dependency. */
+/**
+ * The settings cog — inline SVG, no icon dependency. A real GEAR: one closed 6-tooth outline (trapezoid
+ * teeth on a 24-grid, root r=6.4 / tip r=9.4) plus the hub, so every edge carries the SAME stroke width and
+ * reads as teeth at HUD size — the old 8-spoke asterisk read as a sun.
+ */
 export function CogIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="11"
-      height="11"
+      width="15"
+      height="15"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" />
+      <path d="M9.2 6.2L9.6 2.9L14.4 2.9L14.8 6.2L15.6 6.7L18.6 5.4L21.1 9.6L18.4 11.6L18.4 12.4L21.1 14.4L18.6 18.6L15.6 17.3L14.8 17.8L14.4 21.1L9.6 21.1L9.2 17.8L8.4 17.3L5.4 18.6L2.9 14.4L5.6 12.4L5.6 11.6L2.9 9.6L5.4 5.4L8.4 6.7Z" />
+      <circle cx="12" cy="12" r="3.1" />
     </svg>
   )
 }
 
 /**
- * The HUD row: a REAL switch (role=switch + aria-checked, never a checkbox) and the settings cog.
+ * The HUD row: the label, then the settings cog, then the switch FLUSH RIGHT — a REAL switch (role=switch +
+ * aria-checked, never a checkbox), pill-shaped with a circular knob.
  * @param {{ armed: boolean, on_toggle: (next: boolean) => void, on_config: () => void }} props
  */
 export function AutoSearchRow({ armed, on_toggle, on_config }) {
@@ -39,6 +45,15 @@ export function AutoSearchRow({ armed, on_toggle, on_config }) {
       <span className="gw-asrch__label">{t('auto_search.label')}</span>
       <button
         type="button"
+        className="gw-asrch__cog"
+        title={t('auto_search.config_title')}
+        aria-label={t('auto_search.config_title')}
+        onClick={on_config}
+      >
+        <CogIcon />
+      </button>
+      <button
+        type="button"
         role="switch"
         aria-checked={armed}
         aria-label={t('auto_search.label')}
@@ -46,15 +61,6 @@ export function AutoSearchRow({ armed, on_toggle, on_config }) {
         onClick={() => on_toggle(!armed)}
       >
         <span className="gw-asrch__knob" />
-      </button>
-      <button
-        type="button"
-        className="gw-asrch__cog"
-        title={t('auto_search.config_title')}
-        aria-label={t('auto_search.config_title')}
-        onClick={on_config}
-      >
-        <CogIcon />
       </button>
     </div>
   )

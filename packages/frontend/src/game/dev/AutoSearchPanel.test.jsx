@@ -27,7 +27,14 @@ const test_i18n = i18next.createInstance()
 test_i18n.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
 
 const panel_source = readFileSync(new URL('./AutoSearchPanel.jsx', import.meta.url), 'utf8')
+const css_source = readFileSync(new URL('./auto-search.css', import.meta.url), 'utf8')
 const hud_source = readFileSync(new URL('../screens/hud/world/GameWorldHud.jsx', import.meta.url), 'utf8')
+
+/** One CSS rule's declaration block, by selector — the styling assertions read the shipped sheet, not a copy. */
+const css_rule = (selector) => {
+  const at = css_source.indexOf(`${selector} {`)
+  return at === -1 ? '' : css_source.slice(at, css_source.indexOf('}', at))
+}
 
 const render_row = (armed) =>
   renderToStaticMarkup(
@@ -51,6 +58,35 @@ describe('the HUD row — a real switch and a cog', () => {
     const html = render_row(true)
     expect(html).toContain('aria-checked="true"')
     expect(html).toContain('gw-asrch__switch--on')
+  })
+
+  // The owner's ruling on this control: label … cog · switch, the switch flush RIGHT, and ROUNDED.
+  test('the row reads label → cog → switch, with the switch LAST (flush right)', () => {
+    const html = render_row(false)
+    const label = html.indexOf('gw-asrch__label')
+    const cog = html.indexOf('gw-asrch__cog')
+    const swtch = html.indexOf('role="switch"')
+    expect(label).toBeGreaterThan(-1)
+    expect(cog).toBeGreaterThan(label)
+    expect(swtch).toBeGreaterThan(cog)
+    // nothing follows the switch in the row — the label's `flex: 1` is what pins it to the right edge
+    expect(html.slice(swtch)).not.toContain('gw-asrch__cog')
+    expect(css_rule('.gw-asrch__label')).toContain('flex: 1')
+  })
+
+  test('the switch is a PILL — rounded track, circular knob, gold when armed', () => {
+    expect(css_rule('.gw-asrch__switch')).toContain('border-radius: 999px')
+    expect(css_rule('.gw-asrch__knob')).toContain('border-radius: 50%')
+    expect(css_rule('.gw-asrch__switch--on')).toContain('--color-gold')
+    expect(css_rule('.gw-asrch__switch--on .gw-asrch__knob')).toContain('--color-gold')
+  })
+
+  test('the cog is one closed gear outline at the switch\'s height, with a grown hit area', () => {
+    const html = render_row(false)
+    expect(html).toContain('width="15"') // the icon matches the 16px switch height
+    expect(html.match(/<path /g)).toHaveLength(1) // ONE outline — never the old bundle of spokes
+    expect(html).toContain('stroke-width="1.5"') // one consistent stroke across teeth and hub
+    expect(css_rule('.gw-asrch__cog::after')).toContain('inset: -5px') // the tap target, at zero row height
   })
 })
 

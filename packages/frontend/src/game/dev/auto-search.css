@@ -2,7 +2,10 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* AUTO-SEARCH (#1106) — the dev scouter's row + settings sheet. Same compact glass idiom as the world
  * panel it sits under (.gw-worlds): near-black glass, one row tall, uppercase micro-label, sharp corners,
- * gold as the ONLY accent. The switch is a real switch (a gold track with a square knob), never a checkbox. */
+ * gold as the ONLY accent. The switch is a real switch (a gold track with a knob), never a checkbox.
+ * ROW ORDER (owner ruling): label … cog · switch, the switch flush right — and the switch alone is ROUNDED
+ * (a pill track with a circular knob); the sharp-corner house rule yields to that explicit ruling for THIS
+ * control and nothing else on the surface. */
 
 .gw-asrch {
   width: 100%;
@@ -28,63 +31,86 @@
   white-space: nowrap;
 }
 
-/* THE SWITCH — 26×13 track, square gold knob, gold glow when armed (the settings-page switch idiom, scaled
- * to the HUD's tiny chrome). */
+/* THE SWITCH — last in the row, so it sits flush right (the label eats the slack). A 30×16 PILL track with a
+ * 12px circular knob: near-black when off, a gold track + gold knob with a soft glow when armed, and the
+ * house's slow atmospheric travel (0.3s ease) rather than a snap. */
 .gw-asrch__switch {
   position: relative;
   flex: none;
-  width: 26px;
-  height: 13px;
+  width: 30px;
+  height: 16px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(3, 3, 6, 0.85);
   cursor: pointer;
   transition:
-    border-color 0.2s,
-    background 0.2s,
-    box-shadow 0.2s;
+    border-color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
 }
 .gw-asrch__switch:hover {
+  border-color: rgba(200, 150, 60, 0.5);
   box-shadow: 0 0 12px rgba(200, 150, 60, 0.25);
+}
+.gw-asrch__switch:focus-visible {
+  outline: 1px solid var(--color-gold, #c8963c);
+  outline-offset: 2px;
 }
 .gw-asrch__switch--on {
   border-color: var(--color-gold, #c8963c);
-  background: rgba(200, 150, 60, 0.15);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.4), rgba(139, 105, 20, 0.28));
+  box-shadow: 0 0 10px rgba(200, 150, 60, 0.28);
 }
 .gw-asrch__knob {
   position: absolute;
   top: 1px;
   left: 1px;
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
   background: #6b7280;
   transition:
-    left 0.2s,
-    background 0.2s,
-    box-shadow 0.2s;
+    left 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
 }
 .gw-asrch__switch--on .gw-asrch__knob {
-  left: 14px;
+  left: 16px;
   background: var(--color-gold, #c8963c);
-  box-shadow: 0 0 6px rgba(200, 150, 60, 0.6);
+  box-shadow: 0 0 7px rgba(200, 150, 60, 0.75);
 }
 
+/* THE COG — drawn at the switch's own height (16px) so the two read as one control pair, with the TAP TARGET
+   grown to 26px by an inset pseudo-element: a real hit area that costs the compact row no height. Muted at
+   rest, gold on hover, same slow travel. */
 .gw-asrch__cog {
+  position: relative;
   flex: none;
   display: flex;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
   border: 0;
   background: transparent;
-  color: var(--color-gold, #c8963c);
-  opacity: 0.7;
+  color: var(--color-muted, #6b7280);
   cursor: pointer;
   transition:
-    opacity 0.2s,
-    filter 0.2s;
+    color 0.3s ease,
+    filter 0.3s ease;
 }
-.gw-asrch__cog:hover {
-  opacity: 1;
+.gw-asrch__cog::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+.gw-asrch__cog:hover,
+.gw-asrch__cog:focus-visible {
+  color: var(--color-gold, #c8963c);
   filter: drop-shadow(0 0 6px rgba(200, 150, 60, 0.7));
+  outline: none;
 }
 
 /* ── THE SETTINGS SHEET — portaled to <body>; explicit colours (no companion vars out there), sitting under
