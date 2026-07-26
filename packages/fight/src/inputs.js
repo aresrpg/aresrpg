@@ -27,10 +27,13 @@ import { is_status_kind } from './statuses.js'
 //   · REMOVE_POINTS (7) / STEAL_POINTS (8) — `cast.move::resolve_drain` is DODGE-CONTESTED: the row exists only
 //     if `removed > 0`, a number the envelope does not carry (the drain's own `Drain` event does).
 //   · STEAL_STAT (10) — `apply_steal_stat` splits one authored line into two DERIVED rows, never this one.
+//   · TIMED_PAYLOAD (34) / NAMED_DAMAGE_STACK (35) / STANCE (36) — `schedule_payload`, `record_named_stack` and
+//     `retro_effects::apply_stance` each write their OWN derived record; the envelope's row is never the row.
 // Targeted/AoE/chance effects fail the recipient proof and remain snapshot truth.
 const K_GIVE_POINTS = 6
 const K_REMOVE_POINTS = 7
-const CONTESTED_STATUS_KINDS = new Set([7, 8, 10]) // REMOVE_POINTS · STEAL_POINTS · STEAL_STAT
+/** Status kinds whose chain arm does NOT record the envelope's Effect verbatim — contested, or derived. */
+const DERIVED_STATUS_KINDS = new Set([7, 8, 10, 34, 35, 36])
 /** A GIVE/REMOVE_POINTS row's `stat` is the chain POINT id (`spell_effect` POINT_AP/POINT_MP) — the pool it moves. */
 const POINT_POOL = { 0: 'ap', 1: 'mp' }
 const SHAPE_POINT = 0
@@ -215,7 +218,7 @@ const self_status_from_effect = (state, action) => {
     remaining_turns <= 0 ||
     !hits_caster ||
     !is_status_kind(kind) ||
-    CONTESTED_STATUS_KINDS.has(kind)
+    DERIVED_STATUS_KINDS.has(kind)
   )
     return null
   return {
