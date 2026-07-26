@@ -225,7 +225,9 @@ export const create_fight_shim = ({
       // this shim's own wall clock, and STOP is the only exit. So the composition SAYS SO, once, here — and
       // the shared surface reads that instead of guessing from a deadline that means something else.
       chain_backed: false,
-      dungeon: { status: STATUS_ACTIVE, width, height, escrow: roster.map(({ id }) => id) },
+      // Participant rows belong to the snapshot → board_view projection. Until that door publishes them, an
+      // empty list is honest; bare character ids are not board rows (`cave_session` reads each row's `.addr`).
+      dungeon: { status: STATUS_ACTIVE, width, height, escrow: [] },
       mob_names: Object.fromEntries(mobs.map(({ template_id, name }) => [template_id, name])),
       mob_levels: Object.fromEntries(mobs.map(({ template_id, level }) => [template_id, level])),
       mob_elements: Object.fromEntries(mobs.map(({ template_id, element }) => [template_id, element ?? 0])),
