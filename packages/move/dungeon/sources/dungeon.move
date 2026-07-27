@@ -100,7 +100,6 @@ public fun roster_for_room(world: &World, room: u16): vector<ID> {
 }
 
 /// Mint a fresh fight for the pass's current room and latch the activation character to it.
-#[allow(lint(public_random))]
 public fun next_fight(
   fight_registry: &mut FightRegistry,
   world: &World,
