@@ -5,6 +5,13 @@
 export interface ItemInfo {
   id: string
   template_id: string
+  /** The raw on-chain item_type slug (e.g. `iron_sword`) — the ONE key `item_icon_url` accepts. `template_id`
+   *  is a canonical grouping/transaction identity that is frequently NOT a valid icon slug (a hash or a
+   *  private-catalog-only id); a listing row must carry its own slug rather than let icon resolution guess it
+   *  from template_id, or every template the private catalog doesn't know 404s to the placeholder cube (#1227).
+   *  Optional: only the marketplace listing builders populate it today; other ItemInfo producers degrade to
+   *  the template_id fallback the icon resolvers already carry. */
+  slug?: string
   quantity: number
   stats_json: string
   slot: string

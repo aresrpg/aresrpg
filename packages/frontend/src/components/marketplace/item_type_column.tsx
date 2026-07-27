@@ -3,7 +3,10 @@
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { ItemImage } from '../items'
+
 import type { MarketplaceTypeBucket } from './marketplace_model'
+import { marketplace_item_icon } from './marketplace_icon'
 
 // The per-template picker ("Lorito Cloak (Sapphire)") was a top TAB over the detail
 // pane; it becomes the THIRD browse column — Category → Subcategory → THIS item-type list → the listings.
@@ -64,12 +67,19 @@ export function ItemTypeColumn({
         ) : (
           types.map((type, index) => {
             const is_selected = selected_template_id === type.template_id
+            // #1227 — the row's own icon, resolved through the ONE marketplace icon home off the bucket's
+            // already-joined asset_slug (browse_panel's all_types builder — catalog slug → item slug → id).
+            const icon = marketplace_item_icon({
+              slug: type.asset_slug,
+              name: type.catalog_name || type.name,
+              slot_category: type.classification_item_type,
+            })
             return (
               <button
                 data-marketplace-template-option={type.template_id}
                 key={type.template_id}
                 type="button"
-                className={`flex flex-col gap-0.5 px-4 py-2.5 text-left border-l-2 shrink-0 ${mobile ? 'min-w-max' : 'w-full'}`}
+                className={`flex items-center gap-2.5 px-4 py-2.5 text-left border-l-2 shrink-0 ${mobile ? 'min-w-max' : 'w-full'}`}
                 style={{
                   borderLeftColor: is_selected ? '#c8963c' : 'transparent',
                   background: is_selected
@@ -81,16 +91,25 @@ export function ItemTypeColumn({
                 aria-pressed={is_selected}
                 onClick={() => on_pick(type.template_id)}
               >
-                <span
-                  className={`text-[9px] tracking-[0.1em] uppercase truncate w-full ${is_selected ? 'text-gold' : 'text-muted'}`}
-                >
-                  {type.name}
-                </span>
-                <span className="flex items-center justify-between gap-3 w-full text-[8px] tracking-[0.08em] uppercase text-muted/45">
-                  {/* Hide the level entirely at 0/absent — cosmetics carry no level. */}
-                  {type.level > 0 ? <span>{t('entity.level_short', { level: type.level })}</span> : <span />}
-                  <span>{t('marketplace.listed', { count: type.listings.length })}</span>
-                </span>
+                <ItemImage
+                  id={icon.id}
+                  image_url={icon.image_url ?? undefined}
+                  appearance={type.appearance}
+                  category={type.classification_item_type}
+                  className="w-6 h-6 shrink-0"
+                />
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                  <span
+                    className={`text-[9px] tracking-[0.1em] uppercase truncate w-full ${is_selected ? 'text-gold' : 'text-muted'}`}
+                  >
+                    {type.name}
+                  </span>
+                  <span className="flex items-center justify-between gap-3 w-full text-[8px] tracking-[0.08em] uppercase text-muted/45">
+                    {/* Hide the level entirely at 0/absent — cosmetics carry no level. */}
+                    {type.level > 0 ? <span>{t('entity.level_short', { level: type.level })}</span> : <span />}
+                    <span>{t('marketplace.listed', { count: type.listings.length })}</span>
+                  </span>
+                </div>
               </button>
             )
           })

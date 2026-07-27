@@ -74,6 +74,9 @@ function optimistic_listing(item: ListableItem, price_mist: bigint, seller: stri
     item: {
       id: item.id,
       template_id: item.template_id ?? item.id,
+      // #1227 — carry the ListableItem's own item_type slug forward so the optimistic row's icon resolves the
+      // same way the reconciled chain row will (build_listing_from_view threads the same field).
+      slug: item.slug,
       quantity: item.quantity,
       stats_json: '{}',
       slot: '',

@@ -40,3 +40,18 @@ export function marketplace_item_icon(opts: { slug: string; name: string; slot_c
     { hd: opts.hd ?? false, resolve_icon: safe_item_icon_url }
   )
 }
+
+/**
+ * #1227 — the ONE fallback chain for a listing's icon slug: an authored catalog slug (cosmetics, when the
+ * private seed catalog resolves it) wins, else the listing's own raw item_type slug (chain truth, always a
+ * valid item_icon_url key), else the template id (a last-resort identity that is often NOT a valid slug —
+ * kept only so an unknown-template row still renders SOMETHING, degrading honestly to the placeholder glyph
+ * rather than crashing). Every marketplace surface that groups/renders a listing icon derives asset_slug
+ * through this one function — never re-implement the chain inline.
+ */
+export function marketplace_listing_icon_slug(
+  item: { slug?: string | null; template_id: string },
+  catalog_slug?: string | null
+): string {
+  return catalog_slug || item.slug || item.template_id
+}

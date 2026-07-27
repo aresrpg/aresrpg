@@ -22,7 +22,7 @@ import { make_catalog_lookup } from '../../pages/encyclopedia/item_catalog'
 import { CharactersPanel } from './characters_panel'
 import { BrowseSidebar } from './browse_sidebar'
 import { ItemTypeColumn } from './item_type_column'
-import { marketplace_item_icon } from './marketplace_icon'
+import { marketplace_item_icon, marketplace_listing_icon_slug } from './marketplace_icon'
 import { LedgerItemCard } from './ledger_item_card'
 import { MarketplaceListingRow } from './marketplace_listing_row'
 import { StackableLotRows } from './stackable_lot_rows'
@@ -83,7 +83,11 @@ export function BrowsePanel() {
       if (!groups[template_id]) {
         groups[template_id] = {
           template_id,
-          asset_slug: (catalog_name && slugs[catalog_name]) || template_id,
+          // #1227 — catalog slug (cosmetics, when the private seed catalog resolves) wins, else the listing's
+          // OWN raw item_type slug (chain truth — always a valid item_icon_url key), else the template id
+          // last resort. Before: template_id-only fallback 404'd every listing the private catalog missed
+          // (i.e. almost everything non-cosmetic in production, where that catalog ships empty).
+          asset_slug: marketplace_listing_icon_slug(listing.item, catalog_name && slugs[catalog_name]),
           classification_item_type,
           catalog_name,
           name: (template ? tt(template, 'name') : '') || listing.item.name,

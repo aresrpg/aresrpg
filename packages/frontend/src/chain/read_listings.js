@@ -118,6 +118,10 @@ export function build_listing_from_view(row, tmpl_by_slug) {
       // Legacy stack rows fall back to their object id, never the generic item_type: distinct templates cannot
       // collapse into one false ladder while an older API is rolling forward.
       template_id,
+      // #1227 — the icon-resolvable slug, carried forward instead of discarded after the category join above.
+      // template_id is a grouping/tx identity, frequently NOT a valid item_icon_url key (a hash or an id only
+      // the private seed catalog knows); the RAW item_type slug is the one key item_icon_url actually accepts.
+      slug,
       quantity,
       // This is an OWNED listed instance. Its hover resolves the roll by item id; a template range here would
       // be a dishonest fallback while that instance read is pending or unavailable.

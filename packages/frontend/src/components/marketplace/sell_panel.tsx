@@ -160,14 +160,7 @@ export function SellPanel() {
   return (
     <div className="flex flex-col lg:flex-row flex-1 min-h-0">
       {/* ── COL 1 — YOUR LISTINGS ── */}
-      <MyLotsPanel
-        listings={listings}
-        address={address}
-        busy={busy}
-        on_delist={submit_delist}
-        name_of={name_of}
-        asset_slug_of={asset_slug_of}
-      />
+      <MyLotsPanel listings={listings} address={address} busy={busy} on_delist={submit_delist} name_of={name_of} />
 
       {/* ── COL 2 — SET-PRICE CARD (kept as-is) ── */}
       <div className="flex flex-col w-full lg:w-[340px] lg:min-w-[340px] border-b lg:border-b-0 lg:border-r border-border lg:min-h-0 lg:overflow-y-auto">
