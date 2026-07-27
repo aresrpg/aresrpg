@@ -5,11 +5,9 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createPortal } from 'react-dom'
 import {
   CheckCircle2,
   XCircle,
-  X,
   Loader2,
   Copy,
   Check,
@@ -27,6 +25,7 @@ import { use_item_send, type SendItem, type ItemSendState } from '../stores/item
 
 import { ItemImage } from './items'
 import { validate_item_send_dialog } from './item_send_validation'
+import { SendModalShell as Shell } from './send_modal_shell'
 
 const address_full_re = /^0x[a-f0-9]{64}$/i
 
@@ -36,78 +35,6 @@ function truncate_digest(digest: string): string {
 
 function format_sui_exact(mist: bigint): string {
   return format_mist_to_sui(mist, 9).replace(/0+$/, '').replace(/\.$/, '')
-}
-
-function Shell({
-  children,
-  locked,
-  on_close,
-  title,
-  tone = 'default',
-}: {
-  children: React.ReactNode
-  locked: boolean
-  on_close: () => void
-  title: string
-  tone?: 'default' | 'success' | 'danger'
-}) {
-  useEffect(() => {
-    if (locked) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') on_close()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [locked, on_close])
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
-
-  const border_color =
-    tone === 'success' ? 'rgba(52,211,153,0.5)' : tone === 'danger' ? 'rgba(239,68,68,0.45)' : 'var(--color-border)'
-  const glow =
-    tone === 'success' ? '0 0 30px rgba(52,211,153,0.12)' : tone === 'danger' ? '0 0 30px rgba(239,68,68,0.10)' : 'none'
-  const title_color = tone === 'success' ? '#34d399' : tone === 'danger' ? '#f87171' : '#c8963c'
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center p-4 max-sm:p-0"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
-      onClick={(e) => {
-        if (locked) return
-        if (e.target === e.currentTarget) on_close()
-      }}
-    >
-      <div
-        className="bg-surface w-full max-w-xl max-h-[90vh] flex flex-col max-sm:max-h-none max-sm:h-full"
-        style={{ border: `1px solid ${border_color}`, boxShadow: glow, animation: 'modal-enter 0.25s ease-out' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
-          <span className="text-[13px] font-semibold tracking-[0.3em] uppercase" style={{ color: title_color }}>
-            {title}
-          </span>
-          {!locked && (
-            <button
-              type="button"
-              onClick={on_close}
-              className="cursor-pointer opacity-40 hover:opacity-80 transition-opacity"
-              aria-label="Close"
-            >
-              <X size={16} className="text-muted" />
-            </button>
-          )}
-        </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-      </div>
-    </div>,
-    document.body
-  )
 }
 
 function ItemsStrip({ items, selected_amount = null }: { items: SendItem[]; selected_amount?: bigint | null }) {
