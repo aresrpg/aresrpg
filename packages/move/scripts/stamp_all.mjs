@@ -20,6 +20,11 @@ const default_target =
   process.env.STAMP_ALL_TARGET ??
   path.join(repo, 'packages', 'sdk', 'src', 'deployment', 'release.json')
 const default_treasury_source = path.join(repo, 'packages', 'move', 'aresrpg', 'Move.toml')
+// The republish-window marker, spelled out rather than imported: this script is copied ALONE into gold's
+// isolated Move tree and must keep running standalone (the isolation test below execs the bare copy), so it
+// carries no local-module imports. The path is the same one ceremony_preflight_compat.mjs exports, and a test
+// asserts the two agree — the marker file stays the single source of truth for "the window is open".
+export const REPUBLISH_MARKER = path.join(repo, 'packages', 'move', 'REPUBLISH_WINDOW')
 const package_names = [
   'foundation',
   'spells',
@@ -76,15 +81,25 @@ const require_coin_type = (value, label) => {
 // forward pins ids this package never had (they land in the sponsor's outdated-package list, and in any
 // consumer that reads `previous` as this lineage's history). A lineage switch therefore RESETS the
 // accumulation rather than appending to it.
-export function package_row(entry, name, prior = {}) {
+//
+// REPUBLISH MODE is the one exception, and it is about PLAYERS, not lineage bookkeeping. The reset above
+// encodes UPGRADE semantics — the old lineage is finished, nobody is on it. A republish is different: it
+// mints the new lineage while the OLD one is still hosting live sessions, and those clients keep calling the
+// retired ids until they drain. Resetting to empty makes the sponsor answer them with a generic refusal
+// instead of the machine-readable `outdated-package` reason that tells a client to refresh — the drain window
+// goes dark exactly when it is load-bearing. So while packages/move/REPUBLISH_WINDOW is open, the retired
+// lineage's own ids (its origin and the latest clients were calling) are carried into `previous`. Its deeper
+// history is NOT: those drained a ceremony ago, and this list exists for callers that still exist.
+export function package_row(entry, name, prior = {}, republish = false) {
   if (!entry || typeof entry !== 'object') throw new Error(`ceremony manifest has no ${name} package`)
   const origin = require_id(entry.pkg, `${name}.pkg`)
   const latest = require_id(entry.latest ?? entry.pkg, `${name}.latest`)
   const same_lineage = !prior.origin || prior.origin === origin
-  const inherited = same_lineage ? prior.previous : []
+  const draining = republish ? [prior.origin, prior.latest] : []
+  const inherited = same_lineage ? prior.previous : draining
   const prior_latest = same_lineage ? prior.latest : null
   const retired = prior_latest && prior_latest !== latest ? [...(inherited ?? []), prior_latest] : inherited
-  const previous = [...new Set(retired ?? [])].filter((id) => id !== latest && id !== origin)
+  const previous = [...new Set(retired ?? [])].filter((id) => id && id !== latest && id !== origin)
   return {
     origin,
     latest,
@@ -217,9 +232,12 @@ function policy_row(policy, label) {
 }
 
 /** Convert a ceremony receipt into one network row while preserving non-ceremony external metadata. */
-export function release_network_from_manifest(manifest, previous = {}) {
+export function release_network_from_manifest(manifest, previous = {}, republish = false) {
   const packages = Object.fromEntries(
-    package_names.map((name) => [name, package_row(manifest[name], name, previous.packages?.[name])])
+    package_names.map((name) => [
+      name,
+      package_row(manifest[name], name, previous.packages?.[name], republish),
+    ])
   )
   return {
     chain_id: manifest._chain_id ?? previous.chain_id ?? '',
@@ -259,7 +277,12 @@ export function release_network_from_manifest(manifest, previous = {}) {
   }
 }
 
-export function release_from_manifest(manifest, previous = {}, generated_at = new Date().toISOString()) {
+export function release_from_manifest(
+  manifest,
+  previous = {},
+  generated_at = new Date().toISOString(),
+  republish = false
+) {
   const network = manifest?._network
   if (!['testnet', 'mainnet'].includes(network))
     throw new Error(`ceremony manifest _network=${JSON.stringify(network)}; expected testnet|mainnet`)
@@ -281,7 +304,7 @@ export function release_from_manifest(manifest, previous = {}, generated_at = ne
           },
         ])
       ),
-      [network]: release_network_from_manifest(manifest, previous.networks?.[network]),
+      [network]: release_network_from_manifest(manifest, previous.networks?.[network], republish),
     },
   }
 }
@@ -439,7 +462,13 @@ export function print_k8s_values_expectations(
   log(k8s_values_expectations(release.networks[network], network))
 }
 
-export function stamp_release({ manifest_path = default_manifest, target_path = default_target } = {}) {
+// `republish` reads the same marker file the compat gate does (ONE home for "the window is open"), and stays
+// an argument so the pure stamp below is drivable without touching the filesystem.
+export function stamp_release({
+  manifest_path = default_manifest,
+  target_path = default_target,
+  republish = exists_sync(REPUBLISH_MARKER),
+} = {}) {
   const manifest = JSON.parse(read_file_sync(manifest_path, 'utf8'))
   const previous = exists_sync(target_path)
     ? JSON.parse(read_file_sync(target_path, 'utf8'))
@@ -460,7 +489,7 @@ export function stamp_release({ manifest_path = default_manifest, target_path = 
       previous_network?.actors?.treasury ||
       '',
   }
-  const release = release_from_manifest(configured_manifest, previous)
+  const release = release_from_manifest(configured_manifest, previous, undefined, republish)
   validate_release(release, manifest._network)
   write_release_atomic(target_path, release)
   const disk = JSON.parse(read_file_sync(target_path, 'utf8'))
