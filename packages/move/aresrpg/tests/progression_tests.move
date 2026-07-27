@@ -130,35 +130,35 @@ fun max_hp_formula() {
 }
 
 // ╔════════════════ [ Lazy HP regen (ANNEX §5.4 — pure; no scenario) ] ═══════ ]
-// Level 1, wisdom 0 ⇒ rate num = 150 + 6 = 156 over denom 75000 ms ⇒ 1 HP every 75000/156 ≈ 480.77 ms.
+// Level 1, wisdom 0 ⇒ rate num = 50 + 6 = 56 over denom 75000 ms ⇒ 1 HP every 75000/56 ≈ 1339.29 ms.
 
 #[test]
 /// THE remainder-carry proof: two SUB-unit ticks must sum to 1 HP, not starve to 0. A partial tick that
 /// re-stamped to `now` would discard its fraction; carrying (stamp unchanged) preserves it.
 fun regen_remainder_carries_across_two_slow_ticks() {
-  // tick 1 — 400 ms < 480 ms/HP ⇒ 0 whole HP; the stamp MUST stay at 0 (carry, not re-stamped to 400)
-  let (hp1, st1) = progression::regen_hp(0, 0, 100, 1, 0, 400);
+  // tick 1 — 700 ms < 1339 ms/HP ⇒ 0 whole HP; the stamp MUST stay at 0 (carry, not re-stamped to 700)
+  let (hp1, st1) = progression::regen_hp(0, 0, 100, 1, 0, 700);
   assert_eq!(hp1, 0);
   assert_eq!(st1, 0);
-  // tick 2 — from the carried stamp, another 400 ms (now 800 total) ⇒ the two fractions sum to 1 whole HP.
-  // Had tick 1 re-stamped to 400, tick 2's 400 ms would again yield 0 — starved. It does not.
-  let (hp2, _st2) = progression::regen_hp(hp1, st1, 100, 1, 0, 800);
+  // tick 2 — from the carried stamp, another 700 ms (now 1400 total) ⇒ the two fractions sum to 1 whole HP.
+  // Had tick 1 re-stamped to 700, tick 2's 700 ms would again yield 0 — starved. It does not.
+  let (hp2, _st2) = progression::regen_hp(hp1, st1, 100, 1, 0, 1_400);
   assert_eq!(hp2, 1);
 }
 
 #[test]
-/// The consumed-time carry: 1 HP consumes 480 ms, so a 600 ms span banks 1 HP and leaves the 120 ms remainder ON
-/// the clock (stamp advances to 480, NOT to 600).
+/// The consumed-time carry: 1 HP consumes 1339 ms, so a 1459 ms span banks 1 HP and leaves the 120 ms remainder ON
+/// the clock (stamp advances to 1339, NOT to 1459).
 fun regen_consumes_only_whole_hp_time() {
-  let (hp, st) = progression::regen_hp(0, 0, 100, 1, 0, 600);
+  let (hp, st) = progression::regen_hp(0, 0, 100, 1, 0, 1_459);
   assert_eq!(hp, 1);
-  assert_eq!(st, 480); // 1 HP = 480 ms; the leftover 120 ms is carried, never discarded
+  assert_eq!(st, 1_339); // 1 HP = 1339 ms; the leftover 120 ms is carried, never discarded
 }
 
 #[test]
-/// A 0-HP character regenerates normally (§5.4: only FIGHTS are gated at 0 HP, not regen). 1000 ms → 2 HP.
+/// A 0-HP character regenerates normally (§5.4: only FIGHTS are gated at 0 HP, not regen). 3000 ms → 2 HP.
 fun regen_from_zero_hp() {
-  let (hp, _st) = progression::regen_hp(0, 0, 100, 1, 0, 1000); // 1000×156/75000 = 2
+  let (hp, _st) = progression::regen_hp(0, 0, 100, 1, 0, 3_000); // 3000×56/75000 = 2.24 → 2
   assert_eq!(hp, 2);
 }
 
@@ -176,10 +176,10 @@ fun regen_caps_at_max() {
 #[test]
 /// The rate matches the annex formula `2.0 + (level×0.4 + wisdom/7.5)/5` HP/s, over exactly 1 s (1000 ms).
 fun regen_rate_matches_annex() {
-  let (l50, _) = progression::regen_hp(0, 0, 10_000, 50, 0, 1000); // 2.0 + (50×0.4)/5 = 6.0
-  assert_eq!(l50, 6);
-  let (wis, _) = progression::regen_hp(0, 0, 10_000, 1, 75, 1000); // 2.0 + (0.4 + 75/7.5)/5 = 4.08 → floor 4
-  assert_eq!(wis, 4);
+  let (l50, _) = progression::regen_hp(0, 0, 10_000, 50, 0, 1000); // 0.667 + (50×0.4)/5 = 4.667 → floor 4
+  assert_eq!(l50, 4);
+  let (wis, _) = progression::regen_hp(0, 0, 10_000, 1, 75, 1000); // 0.667 + (0.4 + 75/7.5)/5 = 2.747 → floor 2
+  assert_eq!(wis, 2);
 }
 
 #[test]

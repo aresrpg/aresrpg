@@ -248,7 +248,7 @@ fun use_consumable_single_heals_once() {
 }
 
 #[test]
-/// Lazy regen is SETTLED FIRST: wounded to 25 @5000, drinking 2×(heal 5) @10000 → regen +10 (35) THEN +10 → 45
+/// Lazy regen is SETTLED FIRST: wounded to 25 @5000, drinking 2×(heal 5) @10000 → regen +3 (28) THEN +10 → 38
 /// (a naive add-without-regen would read 35).
 fun use_many_settles_regen_first() {
   let mut sc = ts::begin(OWNER);
@@ -258,7 +258,7 @@ fun use_many_settles_regen_first() {
   let iid = mk_stack(&mut sc, OWNER, tid, 10);
   wound(&mut sc, OWNER, cid, 25, 5000);
   do_use_many(&mut sc, OWNER, cid, iid, tid, 2, 10_000);
-  assert_eq!(hp_of(&mut sc, OWNER, cid), 45); // 25 →(regen +10)→ 35 →(heal +10)→ 45
+  assert_eq!(hp_of(&mut sc, OWNER, cid), 38); // 25 →(regen +3)→ 28 →(heal +10)→ 38
   sc.end();
 }
 

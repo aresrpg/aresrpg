@@ -51,7 +51,7 @@ const EWrongGroup: u64 = 114; // aresrpg::fight — release_group: the named gro
 const HUGE_ELAPSED: u64 = 10_000_000_000; // dwarfs any in-zone distance → travel-verify always passes
 // Senshi L1 regen: (150 + 6·level)/75_000 HP per ms = 156/75_000 → +10 HP over 5000ms; 0 whole HP over 400ms.
 const T0: u64 = 2_000 + HUGE_ELAPSED; // the defeat write-back instant (post-discovery, travel-safe)
-const PARTIAL_MS: u64 = 5_000; // → settled hp 10 (not 0, not the 70 max)
+const PARTIAL_MS: u64 = 5_000; // → settled hp 3 (not 0, not the 70 max)
 const SUBUNIT_MS: u64 = 400; // → settled hp 0 (156×400/75000 < 1 — still truly dead)
 
 // ╔════════════════ [ Harness — engine boot + real mob template + world wired to it ] ═ ]
@@ -285,7 +285,7 @@ fun group_state(sc: &mut Scenario, zx: u32, zy: u32, index: u64): (bool, vector<
 
 #[test]
 /// `combat_stats_settled`/`geared_combat_stats_settled` regenerate the STORED block by elapsed time while the raw
-/// `combat_stats` keeps reading storage: wounded 25/70 @5000 → settled 35 @10000 (+156/75000×5000), raw stays 25.
+/// `combat_stats` keeps reading storage: wounded 25/70 @5000 → settled 28 @10000 (+56/75000×5000), raw stays 25.
 /// A block-less character settles to FULL (defaults path unchanged).
 fun settled_reads_regenerate_raw_stays_stored() {
   let mut sc = ts::begin(test_world::owner());
@@ -298,8 +298,8 @@ fun settled_reads_regenerate_raw_stays_stored() {
   assert_eq!(r0, 70);
   write_hp(&mut sc, test_world::owner(), kid, cid, 25, 5_000);
   let (s1, g1, r1) = hp_reads(&mut sc, test_world::owner(), kid, cid, 10_000);
-  assert_eq!(s1, 35); // 25 + 5000ms × 156/75000 = +10
-  assert_eq!(g1, 35); // the geared fold seats the SAME settled number (no gear → same scalars)
+  assert_eq!(s1, 28); // 25 + 5000ms × 56/75000 = +3
+  assert_eq!(g1, 28); // the geared fold seats the SAME settled number (no gear → same scalars)
   assert_eq!(r1, 25); // the raw read still reports storage (block readers unchanged)
   sc.end();
 }
@@ -309,15 +309,15 @@ fun settled_reads_regenerate_raw_stays_stored() {
 #[test]
 /// THE S-69 BUG: defeat writes hp=0; after a PARTIAL regen window the character re-enters through the REAL
 /// `fight::create` door (pre-fix: the raw snapshot hp=0 hit the engine's EZeroHp forever). The seat receives the
-/// exact settled value — 10 HP (not 0, not the 70 max) — asserted at the read `combatant_of` consumes verbatim.
+/// exact settled value — 3 HP (not 0, not the 70 max) — asserted at the read `combatant_of` consumes verbatim.
 fun create_after_defeat_settles_regen_and_seats() {
   let mut sc = ts::begin(test_world::owner());
   let (cid, mob_tid, spawn0) = discovered(&mut sc);
   let kid = owner_kiosk_id(&mut sc);
   write_hp(&mut sc, test_world::owner(), kid, cid, 0, T0); // defeat → stored 0/70
   let (settled, geared, raw) = hp_reads(&mut sc, test_world::owner(), kid, cid, T0 + PARTIAL_MS);
-  assert_eq!(settled, 10); // the regen value: not 0 (door passes), not 70 (elapsed does NOT top it)
-  assert_eq!(geared, 10); // the seat snapshot number
+  assert_eq!(settled, 3); // the regen value: not 0 (door passes), not 70 (elapsed does NOT top it)
+  assert_eq!(geared, 3); // the seat snapshot number
   assert_eq!(raw, 0); // storage still says defeated — only the settle unbricks
   do_create(&mut sc, test_world::owner(), cid, spawn0, mob_tid, T0 + PARTIAL_MS); // pre-fix: aborts EZeroHp
   sc.next_tx(test_world::owner());
@@ -354,7 +354,7 @@ fun join_after_defeat_settles_regen_and_seats() {
   let kid_b = ts::most_recent_id_shared<Kiosk>().destroy_some(); // B's own kiosk (minted after A's)
   write_hp(&mut sc, @0xB, kid_b, cid_b, 0, T0); // B defeated
   let (settled, _g, raw) = hp_reads(&mut sc, @0xB, kid_b, cid_b, T0 + PARTIAL_MS);
-  assert_eq!(settled, 10);
+  assert_eq!(settled, 3);
   assert_eq!(raw, 0);
   do_join(&mut sc, @0xB, kid_b, cid_b, T0 + PARTIAL_MS); // pre-fix: EZeroHp bricked B forever
   sc.next_tx(@0xB);

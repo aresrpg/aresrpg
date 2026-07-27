@@ -462,7 +462,7 @@ fun write_back_hp_persists_and_combat_stats_reads_it() {
 
 #[test]
 /// `current_hp` regenerates the STORED HP by elapsed time (ANNEX §5.4): a fresh (block-less) character reads FULL;
-/// a wounded character reads stored + lazy regen. Senshi level 1 (max 70), rate 156/75000 HP/ms ⇒ +10 HP over 5s.
+/// a wounded character reads stored + lazy regen. Senshi level 1 (max 70), rate 56/75000 HP/ms ⇒ +3 HP over 5s.
 fun current_hp_regenerates_stored_block() {
   let mut sc = ts::begin(test_world::owner());
   test_world::boot(&mut sc);
@@ -470,13 +470,13 @@ fun current_hp_regenerates_stored_block() {
   assert_eq!(current_hp_of(&mut sc, test_world::owner(), cid, 999_999), 70); // no block → full HP
   write_hp(&mut sc, test_world::owner(), cid, 25, 5000); // wounded to 25/70, stamped at t=5000
   assert_eq!(current_hp_of(&mut sc, test_world::owner(), cid, 5000), 25); // same instant → no regen
-  assert_eq!(current_hp_of(&mut sc, test_world::owner(), cid, 10_000), 35); // +5000ms × 156/75000 = +10 → 35
+  assert_eq!(current_hp_of(&mut sc, test_world::owner(), cid, 10_000), 28); // +5000ms × 56/75000 = +3 → 28
   sc.end();
 }
 
 #[test]
 /// heal_hp SETTLES lazy regen FIRST then adds: wounded to 25/70 @5000, healed +20 @10000. Over 5000ms senshi L1
-/// regenerates 156/75000×5000 = +10 → 35, THEN the heal adds 20 → 55 (a naive add-without-regen would read 45).
+/// regenerates 56/75000×5000 = +3 → 28, THEN the heal adds 20 → 48 (a naive add-without-regen would read 45).
 fun heal_hp_settles_regen_then_adds() {
   let mut sc = ts::begin(test_world::owner());
   test_world::boot(&mut sc);
@@ -484,7 +484,7 @@ fun heal_hp_settles_regen_then_adds() {
   write_hp(&mut sc, test_world::owner(), cid, 25, 5000);
   heal(&mut sc, test_world::owner(), cid, 20, 10_000);
   let (_cl, _lvl, hp, mhp, _ap, _mp) = combat_of(&mut sc, test_world::owner(), cid);
-  assert_eq!(hp, 55); // 25 →(regen +10)→ 35 →(heal +20)→ 55
+  assert_eq!(hp, 48); // 25 →(regen +3)→ 28 →(heal +20)→ 48
   assert_eq!(mhp, 70);
   sc.end();
 }
@@ -526,7 +526,8 @@ fun heal_hp_blockless_aborts() {
 #[test]
 /// REMAINDER-CARRY preserved (§5.4): wounded to 25 @t=0, healed +5 @t=100 where regen has accrued only a SUB-UNIT
 /// (100ms → 0 whole HP), so the heal stores 30 AND leaves the regen stamp at 0 (not re-stamped to 100). Proof: a
-/// later read at t=481 regenerates +1 (481ms from stamp 0) → 31; had the stamp wrongly advanced to 100, it would read 30.
+/// later read at t=1400 regenerates +1 (1400ms from stamp 0) → 31; had the stamp wrongly advanced to 100, only
+/// 1300ms would have elapsed by t=1400 — still sub-unit — and it would read 30.
 fun heal_hp_remainder_carry_preserved() {
   let mut sc = ts::begin(test_world::owner());
   test_world::boot(&mut sc);
@@ -535,7 +536,7 @@ fun heal_hp_remainder_carry_preserved() {
   heal(&mut sc, test_world::owner(), cid, 5, 100); // sub-unit regen window → stamp carries at 0
   let (_cl, _lvl, hp, _mhp, _ap, _mp) = combat_of(&mut sc, test_world::owner(), cid);
   assert_eq!(hp, 30); // 25 + 5 (no whole regen at 100ms)
-  assert_eq!(current_hp_of(&mut sc, test_world::owner(), cid, 481), 31); // regen from stamp 0 (carry), not 100
+  assert_eq!(current_hp_of(&mut sc, test_world::owner(), cid, 1_400), 31); // regen from stamp 0 (carry), not 100
   sc.end();
 }
 
