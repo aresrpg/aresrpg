@@ -302,8 +302,7 @@
     "spectating": "Спостереження за живим світом",
     "entering_world": "Вхід у світ",
     "connecting": "З'єднання...",
-    "connect_wallet": "Підключити гаманець",
-    "no_wallet_detected": "Гаманець Sui не виявлено"
+    "connect_wallet": "Підключити гаманець"
   },
   "gate": {
     "members_only": "ЛИШЕ ДЛЯ УЧАСНИКІВ",

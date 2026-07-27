@@ -302,8 +302,7 @@
     "spectating": "Observando el mundo en vivo",
     "entering_world": "Entrando al mundo",
     "connecting": "Conectando...",
-    "connect_wallet": "Conectar cartera",
-    "no_wallet_detected": "No se detectó ninguna cartera Sui"
+    "connect_wallet": "Conectar cartera"
   },
   "gate": {
     "members_only": "SOLO MIEMBROS",

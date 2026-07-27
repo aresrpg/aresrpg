@@ -15,8 +15,6 @@ const default_state = () => ({
 
 const default_implementations = () => ({
   find_wallet: () => null,
-  list_wallets: () => [],
-  subscribe_wallets: () => () => {},
   is_zklogin_session: () => false,
   sign_and_execute_transaction: async () => ({}),
   sign_and_execute_self_pay_transaction: async () => ({}),
@@ -53,8 +51,6 @@ mock.module('../auth', () => ({
   SUI_NETWORK: 'testnet',
   SUI_CHAIN: 'sui:testnet',
   find_wallet: (...args) => implementations.find_wallet(...args),
-  list_wallets: (...args) => implementations.list_wallets(...args),
-  subscribe_wallets: (...args) => implementations.subscribe_wallets(...args),
   is_zklogin_session: (...args) => implementations.is_zklogin_session(...args),
   sign_and_execute_transaction: (...args) => implementations.sign_and_execute_transaction(...args),
   sign_and_execute_self_pay_transaction: (...args) => implementations.sign_and_execute_self_pay_transaction(...args),

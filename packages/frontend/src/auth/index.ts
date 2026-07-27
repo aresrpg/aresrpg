@@ -83,33 +83,6 @@ export function find_wallet(name: string): WalletStandard | null {
   )
 }
 
-export interface ConnectableWallet {
-  name: string
-  icon: string
-}
-
-// The installed wallet-standard Sui wallets a NON-PRODUCTION build offers under "Connect wallet" (#73):
-// every Sui-capable wallet EXCEPT the Enoki (Google/zkLogin) one, which keeps its own dedicated button.
-export function list_wallets(): ConnectableWallet[] {
-  return getWallets()
-    .get()
-    .filter(is_sui_wallet)
-    .filter((wallet) => !is_zklogin_wallet(wallet))
-    .map((wallet) => ({ name: wallet.name, icon: wallet.icon }))
-}
-
-// Wallets register asynchronously (an extension injects itself after page load), so a login surface must
-// react rather than read once. Notify `on_change` on every register/unregister; returns the unsubscribe fn.
-export function subscribe_wallets(on_change: () => void): () => void {
-  const wallets = getWallets()
-  const off_register = wallets.on('register', on_change)
-  const off_unregister = wallets.on('unregister', on_change)
-  return () => {
-    off_register()
-    off_unregister()
-  }
-}
-
 // MONEY LAW helper: is the CURRENT session a sponsorable zkLogin identity? A connected wallet-standard
 // session is not — it self-pays every transaction — so callers (world_join) route it away from the sponsor.
 export function is_zklogin_session(): boolean {

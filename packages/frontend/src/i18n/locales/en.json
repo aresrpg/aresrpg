@@ -302,8 +302,7 @@
     "spectating": "Spectating the live world",
     "entering_world": "Entering the world",
     "connecting": "Connecting...",
-    "connect_wallet": "Connect wallet",
-    "no_wallet_detected": "No Sui wallet detected"
+    "connect_wallet": "Connect wallet"
   },
   "gate": {
     "members_only": "MEMBERS ONLY",

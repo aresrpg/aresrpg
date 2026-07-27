@@ -302,8 +302,7 @@
     "spectating": "Live-Welt wird beobachtet",
     "entering_world": "Betrete die Welt",
     "connecting": "Verbinde...",
-    "connect_wallet": "Wallet verbinden",
-    "no_wallet_detected": "Kein Sui-Wallet erkannt"
+    "connect_wallet": "Wallet verbinden"
   },
   "gate": {
     "members_only": "NUR FÜR MITGLIEDER",

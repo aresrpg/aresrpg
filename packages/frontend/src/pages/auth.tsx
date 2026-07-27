@@ -92,8 +92,10 @@ function Divider({ label }: { label: string }) {
   )
 }
 
-// The glass login popup over the blurred world + the SPECTATE option.
-function LoginPopup({
+// The glass login popup over the blurred world + the SPECTATE option. Exported for its own component
+// test (pages/auth.test.tsx) — the #dappkit-modal CONNECT WALLET trigger must honor the #73 build-time
+// gate, mirrored at this composition level since the gate branch lives here, not inside the trigger.
+export function LoginPopup({
   on_login,
   on_connect_wallet,
   on_spectate,
@@ -114,10 +116,12 @@ function LoginPopup({
           <GoogleButton onClick={on_login} loading={loading} />
           {/* #73 — zkLogin can't complete on Vercel preview URLs (dynamic OAuth redirect), so preview/dev
               builds offer a direct wallet-standard connect. Build-time gate: a production release never
-              renders this branch (asserted in auth/wallet_connect_gate.test.ts, not hidden by CSS). */}
+              renders this branch (asserted in auth/wallet_connect_gate.test.ts, not hidden by CSS).
+              #dappkit-modal — the trigger's own label already reads "Connect wallet" (house tokens), so
+              this divider reuses the plain "or" separator instead of stuttering the same words twice. */}
           {is_wallet_connect_enabled() && (
             <>
-              <Divider label={t('auth.connect_wallet')} />
+              <Divider label={t('auth.or')} />
               <WalletConnectSection on_connect={on_connect_wallet} loading={loading} />
             </>
           )}
