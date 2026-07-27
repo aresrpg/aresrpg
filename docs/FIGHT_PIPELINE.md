@@ -104,8 +104,8 @@ coordinate law — and each is a normal-suite check with no network at run time.
 - **The coordinate law.** `packages/fight/test/journal_ordinal_law.test.js` pins that a version
   straddling a page boundary keeps one continuous ordinal run — the ordinal is the chain's `seq`,
   re-derived over the whole received set, never a row's position in the page that carried it
-  (#866). Its companion `core_shuffle.test.js` pins order-independence: committed truth is a
-  function of the SET of reads, never their order.
+  (#866). Its companion `packages/fight/test/reconcile_properties.test.js` pins order-independence:
+  committed truth is a function of the SET of reads, never their order.
 - **The historical corpus.** `packages/fight/test/core_corpus_replay.test.js` replays the recorded
   capsule corpus through ingress → fold and requires every projection to be a LEGAL board,
   including the starve state where the eye lags the truth frontier.

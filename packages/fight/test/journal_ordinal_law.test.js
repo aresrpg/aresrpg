@@ -16,7 +16,7 @@
 // These rows arrived with #866 inside the cutover-parity suite, which asserted them through BOTH the core and the
 // legacy settlement fold. #1027 retired that fold, so the legacy arm is gone — but the law it happened to be
 // written beside is core-side and still live, which is why it moves here instead of leaving with it. Order
-// independence has its own home (`core_shuffle.test.js`); this file owns the COORDINATE.
+// independence has its own home (`reconcile_properties.test.js`); this file owns the COORDINATE.
 
 import { describe, test, expect } from 'bun:test'
 
