@@ -94,15 +94,30 @@ export const next_index = (index, count) => (count > 0 ? (index + 1) % count : 0
  * The cursor and that intent are closure locals rather than component state on purpose: "which track is
  * loaded" already has a home in the element's own `src`, and the widget only ever needs the TITLE to render.
  *
+ * FIGHT-MUSIC HANDOFF (owner ruling): a fight in hack mode plays the SAME fight-music pool as the real world
+ * — the album never sounds over it. `fight_active` starts the engine already suppressed (no autoplay attempt)
+ * when hack mode is entered mid-fight; `set_fight_paused` pauses/resumes the SAME element on every later fight
+ * edge — never a rebuild, so the album never loses its place. Distinct from the user's own pause: a manual
+ * pause held INTO a fight stays paused after it, and the toggle control itself refuses to resume the album
+ * while a fight owns the channel (see `toggle` below) — the suppression is not just a default, it is enforced.
+ *
  * @param {ReadonlyArray<{ src: string, title: string }>} tracks in manifest order
  * @param {{ on_track?: (title: string) => void, on_playing?: (playing: boolean) => void,
- *           on_error?: () => void, make_audio?: typeof create_audio,
+ *           on_error?: () => void, make_audio?: typeof create_audio, fight_active?: boolean,
  *           gesture_target?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null }} [handlers]
- * @returns {{ toggle: () => void, dismiss_gesture_retry: () => void, dispose: () => void } | null}
+ * @returns {{ toggle: () => void, dismiss_gesture_retry: () => void, set_fight_paused: (active: boolean) => void,
+ *             dispose: () => void } | null}
  */
 export function create_radio(
   tracks,
-  { on_track, on_playing, on_error, make_audio = create_audio, gesture_target = globalThis.window } = {},
+  {
+    on_track,
+    on_playing,
+    on_error,
+    make_audio = create_audio,
+    fight_active = false,
+    gesture_target = globalThis.window,
+  } = {},
 ) {
   if (tracks.length === 0) return null
   const player = make_audio(tracks[0].src, { preload: 'none', volume: MUSIC_VOLUME })
@@ -111,6 +126,7 @@ export function create_radio(
   let cursor = 0
   let paused_by_user = false
   let armed = false
+  let fight_paused = fight_active // suppressed by the CURRENT fight — never the user's own intent
   const announce = () => on_track?.(tracks[cursor].title)
 
   // ONE shot: the listeners are gone the moment a gesture lands, whether or not the retry succeeded — a radio
@@ -139,7 +155,7 @@ export function create_radio(
     cursor = next_index(cursor, tracks.length)
     player.src = tracks[cursor].src
     announce()
-    if (!paused_by_user) play() // the boundary is exactly where the stream must NOT stall
+    if (!paused_by_user && !fight_paused) play() // the boundary is exactly where the stream must NOT stall
   }
   const on_play = () => on_playing?.(true)
   const on_pause = () => on_playing?.(false)
@@ -150,16 +166,30 @@ export function create_radio(
   player.addEventListener('pause', on_pause)
   player.addEventListener('error', on_media_error)
   announce()
-  play()
+  if (!fight_paused) play() // a fight already live when the widget mounts never gets its opening beat
 
   return {
     toggle: () => {
+      if (fight_paused) return undefined // the fight owns the channel — the control cannot resume the album
       paused_by_user = !player.paused
       return paused_by_user ? player.pause() : play()
     },
     // The control's own pointerdown calls this so the window retry cannot start playback a beat before the
     // click that follows would pause it — the button always does exactly what it says.
     dismiss_gesture_retry,
+    // FIGHT EDGE (see the doc comment above `create_radio`): pause/resume the SAME element — never a rebuild,
+    // so the cursor and the loaded track survive every fight. Idempotent; a manual pause held into the fight
+    // stays paused once it ends (checked against `paused_by_user`, never overridden by the fight edge).
+    set_fight_paused: (active) => {
+      if (active === fight_paused) return
+      fight_paused = active
+      if (active) {
+        dismiss_gesture_retry() // a fight starting mid-retry must not let a later gesture resume it anyway
+        if (!player.paused) player.pause()
+      } else if (!paused_by_user) {
+        play()
+      }
+    },
     dispose: () => {
       // Unwire BEFORE pausing: a teardown must not push one last state change into a widget that is going away.
       dismiss_gesture_retry()

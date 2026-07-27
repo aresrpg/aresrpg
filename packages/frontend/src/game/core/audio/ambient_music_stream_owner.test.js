@@ -108,6 +108,34 @@ describe('the music channel has ONE owner (hack mode streams instead of our musi
     expect(sounding()).toHaveLength(0)
   })
 
+  test('HACK-MODE FIGHT MUSIC (owner ruling): releasing the channel mid-fight surfaces the self-armed battle bed', async () => {
+    // Reproduces HackRadioPlayer's real sequencing: the stream owns the channel, a fight self-arms SILENTLY
+    // (armed-but-muted, per the test above), then the fight releases the channel (its own effect firing on a
+    // fight edge) — the world's own random-biome battle track must become audible at THAT moment, with no
+    // second set_combat call needed. This is the whole point of "one owner, one decision point": the release
+    // alone is enough to surface whatever is already armed.
+    music.set_music_stream_owned(true)
+    music.set_combat(true) // self-arms a random biome, silently — the stream still owns the channel
+    await flush()
+    expect(sounding()).toHaveLength(0)
+
+    music.set_music_stream_owned(false) // the radio's channel-handoff effect on the SAME fight edge
+    await flush()
+    expect(sounding()).toHaveLength(1)
+    expect(music.is_playing()).toBe(true)
+  })
+
+  test('HACK-MODE FIGHT MUSIC: the reverse order — releasing the channel BEFORE the fight self-arms — also sounds', async () => {
+    music.set_music_stream_owned(true)
+    music.set_music_stream_owned(false) // channel released first — no zone armed yet, a no-op
+    await flush()
+    expect(sounding()).toHaveLength(0)
+
+    music.set_combat(true) // now self-arms with the channel already free — sounds immediately
+    await flush()
+    expect(sounding()).toHaveLength(1)
+  })
+
   test('the preference itself is untouched — releasing the channel respects a muted player', async () => {
     music.set_zone_music('arctic')
     await flush()

@@ -25,7 +25,7 @@ import en from '../../../../i18n/locales/en.json'
 import { install_browser_globals } from '../../../../test_helpers/browser_globals.js'
 
 const restore_browser_globals = install_browser_globals({ with_document: true })
-let game_state = /** @type {any} */ ({ world_presentation: 'terrain' })
+let game_state = /** @type {any} */ ({ world_presentation: 'terrain', fight_mode: false })
 mock.module('../../../store.js', () => ({
   use_game_state: (/** @type {(state: any) => any} */ selector) => selector(game_state),
 }))
@@ -40,9 +40,9 @@ i18n.init({
 const { HackRadioPlayer } = await import('./HackRadioPlayer.jsx')
 const player_module = (await import('../../../core/modules/player.js')).default
 
-/** Render the widget with the live session on `presentation` — the ONE flag it gates on. */
-function render(presentation) {
-  game_state = { world_presentation: presentation }
+/** Render the widget with the live session on `presentation` (+ optional fight_mode) — the two flags it gates on. */
+function render(presentation, fight_mode = false) {
+  game_state = { world_presentation: presentation, fight_mode }
   return renderToStaticMarkup(createElement(I18nextProvider, { i18n }, createElement(HackRadioPlayer, null)))
 }
 
@@ -101,10 +101,43 @@ describe('the hack-mode album radio', () => {
     expect(fold(undefined)).toBe('terrain') // session teardown / an unknown payload never leaves the grid on
   })
 
-  test('the channel handoff is the mount itself — the beds stand down for exactly as long as it lives', () => {
+  test('the channel handoff stands the beds down OUT of a fight, and gives the channel straight back mid-fight', () => {
     const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
+    expect(source).toContain('if (!hack || fight_mode) return undefined')
     expect(source).toContain('set_music_stream_owned(true)')
     expect(source).toContain('set_music_stream_owned(false)')
+    expect(source).toContain('[hack, fight_mode]')
+  })
+
+  test('a fight pauses/resumes the SAME radio engine — never a rebuild that restarts the album at track one', () => {
+    const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
+    // the engine effect is keyed on [hack, tracks] ONLY — a fight edge must never re-run create_radio
+    expect(source).toContain('}, [hack, tracks])')
+    expect(source).toContain('fight_active: fight_mode')
+    expect(source).toContain('radio_ref.current?.set_fight_paused(fight_mode)')
+  })
+
+  test('the control disables during a fight — a click can never resume the album mid-fight', () => {
+    const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
+    expect(source).toContain('disabled={fight_mode || failed || !track}')
+  })
+
+  test('the widget persists across every page: GameWorldHost mounts it route-independently, not GameWorldHud', () => {
+    const host_source = readFileSync(new URL('../../../../GameWorldHost.tsx', import.meta.url), 'utf8')
+    expect(host_source).toContain("import('./game/screens/hud/world/HackRadioPlayer.jsx')")
+    // gated on `in_app` ALONE (never `active`, which is only true on the world tab) — the exact gate that
+    // used to hide it on every other route.
+    expect(host_source).toContain('{in_app && (')
+    expect(host_source).toContain('<HackRadioPlayer />')
+    const hud_source = readFileSync(new URL('./GameWorldHud.jsx', import.meta.url), 'utf8')
+    expect(hud_source).not.toContain('<HackRadioPlayer') // one home — the route-gated HUD no longer renders it
+    expect(hud_source).not.toContain("from './HackRadioPlayer.jsx'") // nor imports it
+  })
+
+  test('its corner is fixed to the VIEWPORT, not the world-tab canvas frame, so it survives every route', () => {
+    const css = readFileSync(new URL('./game-world-hud.css', import.meta.url), 'utf8')
+    const block = css.slice(css.indexOf('.gw-radio {'), css.indexOf('.gw-radio__text'))
+    expect(block).toContain('position: fixed;')
   })
 
   test('every string it renders ships in the locales', () => {
