@@ -10,6 +10,7 @@ import { claimed_budget_state, committed_truth, display_state, presented_state }
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
 import { trap_render_prims } from './fight_render_prims.js'
+import { stationary_placement_occupants } from './trap_ledger.js'
 import {
   DUNGEON_BOARD_ORIGIN,
   cast_presenting,
@@ -358,19 +359,32 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
   const active_entity_id = entity_id_of_key(view, c.active)
   // ④+⑦b THE LIVE trap projection (ruled 07-19) — the sim door reads THIS (state_from_view/evolve_flush_casts),
-  // never trap_overlay. A durable `my_traps` cell is LIVE unless it's `gone` (a committed fighter detonated it —
-  // permanent) OR currently under a living PRESENTED fighter (the optimistic spring — immediate + reversible if
-  // the prediction rolls back). Encoded cells, deduped.
-  const trap_occupied = new Set(
-    Object.values(p.fighters ?? {})
-      .filter((f) => f.alive && f.cell != null)
-      .map((f) => f.cell)
-  )
-  const live_traps = (s.my_traps ?? [])
-    .filter((trap) => !trap.gone)
-    .map((trap) => ({ ...trap, cells: (trap.cells ?? []).filter((cell) => !trap_occupied.has(cell)) }))
-    .filter((trap) => trap.cells.length)
-  const my_trap_cells = [...new Set(live_traps.flatMap((trap) => trap.cells))]
+  // never trap_overlay. A durable trap is LIVE unless it's `gone` (a committed entry detonated it permanently)
+  // or a living PRESENTED fighter entered its zone after placement (the optimistic spring — reversible if the
+  // prediction rolls back). Fighters already inside an AoE when it is placed are stationary occupants, not entries.
+  const projected_fighters = Object.entries(p.fighters ?? {})
+  const live_traps = (s.my_traps ?? []).filter((trap) => {
+    if (trap.gone) return false
+    const cells = new Set((trap.cells ?? []).map(Number).filter(Number.isFinite))
+    const placement_occupants = new Set(
+      stationary_placement_occupants(trap, s.entries).map(({ key, cell }) => `${String(key)}:${Number(cell)}`)
+    )
+    return !projected_fighters.some(
+      ([key, fighter]) =>
+        fighter.alive &&
+        fighter.cell != null &&
+        cells.has(Number(fighter.cell)) &&
+        !placement_occupants.has(`${String(key)}:${Number(fighter.cell)}`)
+    )
+  })
+  const my_trap_cells = [
+    ...new Set(
+      live_traps
+        .flatMap((trap) => trap.cells ?? [])
+        .map(Number)
+        .filter(Number.isFinite)
+    ),
+  ]
   // Persistent paint merges the caster's optimistic ledger with the public chain board. Local rows are owned by
   // this viewer's team by construction; every row still crosses the one visibility predicate before becoming a prim.
   const trap_prims = trap_render_prims(viewer_context, [
@@ -382,7 +396,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.
   const my_trap_payloads = {}
   for (const trap of live_traps) {
-    for (const cell of trap.cells) {
+    for (const cell of [...new Set((trap.cells ?? []).map(Number).filter(Number.isFinite))]) {
       if (cell in my_trap_payloads) continue
       my_trap_payloads[cell] = trap.payload ?? []
     }
