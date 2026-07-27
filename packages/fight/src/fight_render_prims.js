@@ -126,6 +126,48 @@ export const reconstructed_path = (from, to, board = {}) => {
 
 export const trap_covers = (trap, cell) => (trap?.cells ?? []).some((candidate) => same_cell(candidate, cell))
 
+// ╔════════════ [ WAS A TRAP ARMED HERE, WHEN THAT ROW RAN? — the ONE home (#1248) ] ════════════════════════ ]
+//
+// #1219's sequencing rule shipped twice — once in the fold, once in the renderer — and the copies disagreed on
+// the very case it exists for: the fold took the LAST `Cast` on an anchor as "the placement" and compared
+// inclusively, the renderer took the FIRST and compared strictly. Two casts on one anchor with a walk between
+// them therefore split the twins, and the renderer flashed the #1219 phantom detonation again.
+//
+// THE RULE COMES FROM THE CHAIN, not from either copy. `cast.move:1534` (`ECellAlreadyTrapped`, the 1.29
+// no-stack ban) allows at most ONE live trap per anchor at any instant, so along an ordered row stream an anchor
+// strictly ALTERNATES: Cast (arm) → entry (detonate + consume) → Cast (re-arm) → … Both consumers ask the same
+// question of that stream — "was a trap armed on this anchor when this row ran?" — and the answer is "SOME cast
+// on this anchor precedes this row". Never the first specifically, never the last overall: taking the last
+// overall is what let a placement made AFTER a crossing retroactively protect the trap that crossing consumed.
+//
+// POSITIONS ARE ORDINALS in the caller's own ordered stream — the receipt's decoded rows for the renderer, the
+// `(version, event_idx)`-sorted authoritative tail for the fold. Both are already in receipt order, so ordering
+// is an integer compare and the boundary is ONE shared `<` rather than a `<` on one side and a `>=` on the other.
+
+/** Index every anchor's placement ordinals from an ordered row stream. `anchor_of` returns the placed anchor
+ *  cell for a row, or null/undefined when the row places nothing. */
+export const placements_by_anchor = (rows, anchor_of) => {
+  const by_anchor = new Map()
+  ;(rows ?? []).forEach((row, at) => {
+    const anchor = anchor_of(row)
+    if (anchor == null) return
+    const key = Number(anchor)
+    const seen = by_anchor.get(key)
+    if (seen) seen.push(at)
+    else by_anchor.set(key, [at])
+  })
+  return by_anchor
+}
+
+/** Was a trap armed on `anchor` when the row at ordinal `at` ran? An anchor with NO placement in this window was
+ *  placed before it, so it counts as armed — the permissive default both homes already had, and the one that
+ *  errs toward "the trap stays" rather than inventing an ordering the window cannot see. */
+export const armed_at = (placements, anchor, at) => {
+  const ordinals = placements.get(Number(anchor))
+  if (!ordinals) return true
+  return ordinals.some((placed) => placed < at)
+}
+
 export const traps_removed = (before, after) => {
   const live_ids = new Set((after?.traps ?? []).map((trap) => trap.id))
   return (before?.traps ?? []).filter((trap) => !live_ids.has(trap.id))
