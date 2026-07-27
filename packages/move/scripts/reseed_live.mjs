@@ -206,13 +206,20 @@ function build_spell_call(transaction, call, context) {
 }
 
 function build_item_call(transaction, call, context) {
+  // The door takes two ItemStatistics values now (#1291) instead of 34 loose u16s, so the stat block is built
+  // in-PTB by the same `item_stats::new` constructor the Move tests use and threaded in as a result.
+  const stat_block = values =>
+    transaction.moveCall({
+      target: `${call.target}::item_stats::new`,
+      arguments: values.map(value => transaction.pure.u16(value)),
+    })
   transaction.moveCall({
     target: `${call.target}::admin::set_template_stats`,
     arguments: [
       transaction.object(context.aresrpg_admin),
       transaction.object(call.object_id),
-      ...call.payload.mins.map((value) => transaction.pure.u16(value)),
-      ...call.payload.maxs.map((value) => transaction.pure.u16(value)),
+      stat_block(call.payload.mins),
+      stat_block(call.payload.maxs),
       transaction.object(context.aresrpg_version),
     ],
   })

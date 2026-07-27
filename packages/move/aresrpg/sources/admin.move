@@ -187,59 +187,15 @@ public fun set_template_name_description(
 public fun set_template_stats(
   cap: &AdminCap,
   template: &mut item::ItemTemplate,
-  min_vitality: u16,
-  min_wisdom: u16,
-  min_strength: u16,
-  min_intelligence: u16,
-  min_chance: u16,
-  min_agility: u16,
-  min_range: u16,
-  min_movement: u16,
-  min_action: u16,
-  min_critical: u16,
-  min_raw_damage: u16,
-  min_critical_chance: u16,
-  min_critical_outcomes: u16,
-  min_earth_resistance: u16,
-  min_fire_resistance: u16,
-  min_water_resistance: u16,
-  min_air_resistance: u16,
-  max_vitality: u16,
-  max_wisdom: u16,
-  max_strength: u16,
-  max_intelligence: u16,
-  max_chance: u16,
-  max_agility: u16,
-  max_range: u16,
-  max_movement: u16,
-  max_action: u16,
-  max_critical: u16,
-  max_raw_damage: u16,
-  max_critical_chance: u16,
-  max_critical_outcomes: u16,
-  max_earth_resistance: u16,
-  max_fire_resistance: u16,
-  max_water_resistance: u16,
-  max_air_resistance: u16,
+  min: ItemStatistics,
+  max: ItemStatistics,
   version: &Version,
   ctx: &TxContext,
 ) {
   cap.verify(ctx);
   version.assert_latest();
   assert!(!item::is_stackable_category(item::template_category(template)), EStackableHasRanges);
-  item_stats::set_ranges(
-    template,
-    item_stats::new(
-      min_vitality, min_wisdom, min_strength, min_intelligence, min_chance, min_agility, min_range,
-      min_movement, min_action, min_critical, min_raw_damage, min_critical_chance, min_critical_outcomes,
-      min_earth_resistance, min_fire_resistance, min_water_resistance, min_air_resistance,
-    ),
-    item_stats::new(
-      max_vitality, max_wisdom, max_strength, max_intelligence, max_chance, max_agility, max_range,
-      max_movement, max_action, max_critical, max_raw_damage, max_critical_chance, max_critical_outcomes,
-      max_earth_resistance, max_fire_resistance, max_water_resistance, max_air_resistance,
-    ),
-  );
+  item_stats::set_ranges(template, min, max);
 }
 
 // ╔════════════════ [ Catalog control (AdminCap + version gated — authoring runs while dark) ] ═ ]
