@@ -42,7 +42,7 @@
 /// package-private inside the merged core.
 module aresrpg::extract;
 
-use aresrpg::{character::Character, extension, item::{Self, Item, LockPledge}, lot_rule, version::Version};
+use aresrpg::{character::Character, extension, item::{Self, Item, LockPledge}, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
   coin,
@@ -128,8 +128,8 @@ fun extract_locked(
   let (item, mut request) = kiosk.purchase<Item>(item_id, coin::zero<SUI>(ctx));
   // The sweep stays explicit at every Item confirmation, while this branch remains false for the sealed empty
   // extraction policy. A receipt against that zero-rule policy would make confirm_request reject the request.
-  if (transfer_policy::has_rule<Item, lot_rule::Rule>(&self.policy)) {
-    lot_rule::prove(&item, &mut request);
+  if (transfer_policy::has_rule<Item, item::LotRule>(&self.policy)) {
+    item::prove_lot(&item, &mut request);
   };
   let (_id, _paid, _from) = self.policy.confirm_request(request);
   item

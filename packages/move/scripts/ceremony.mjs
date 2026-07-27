@@ -198,7 +198,7 @@ function policyPTB(tx, M, kind, type, publisher, listing) {
       // lot_rule::add (the split is hardcoded by design): the D755 forced-lot gate
       // {1,10,100,1000 — immutable constants in lot_rule.move} attaches at POLICY BIRTH, never as a
       // separate manual step a ceremony can forget. Item policy only; uniques pass inside the rule.
-      target: `${M.aresrpg.pkg}::lot_rule::add`,
+      target: `${M.aresrpg.pkg}::item::add_lot_rule`,
       arguments: [pol, cap],
     })
   tx.moveCall({

@@ -25,7 +25,7 @@ use sui::{
   event,
   kiosk::{Kiosk, KioskOwnerCap},
   package::{Self, Publisher},
-  transfer_policy::{Self, TransferPolicy, TransferPolicyCap},
+  transfer_policy::{Self, TransferPolicy, TransferPolicyCap, TransferRequest},
   tx_context::sender
 };
 
@@ -450,4 +450,68 @@ public fun mint_zero_stack_for_testing(template: &ItemTemplate, ctx: &mut TxCont
     category: template.category,
     amount: 0,
   }
+}
+
+// ╔════════════════ [ merged from `lot_rule` — republish restructure #1287 ] ════ ]
+const ELotInvalid: u64 = 101;
+const ELotWrongItem: u64 = 102;
+
+/// Witness identifying the rule in a `TransferPolicy<Item>` and its purchase receipts.
+public struct LotRule has drop {}
+
+/// Empty policy configuration: legal lots are immutable protocol constants in this module.
+public struct LotConfig has store, drop {}
+
+/// Attach this rule to the universal Item policy. `transfer_policy::add_rule` rejects a duplicate attachment.
+public fun add_lot_rule(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>) {
+  transfer_policy::add_rule(LotRule {}, policy, cap, LotConfig {});
+}
+
+/// Prove that `item` is the object named by `request` and, when it is stackable, carries a legal kiosk lot.
+public fun prove_lot(item: &Item, request: &mut TransferRequest<Item>) {
+  assert!(object::id(item) == transfer_policy::item(request), ELotWrongItem);
+
+  if (is_stackable_category(category(item))) {
+    let amount = amount(item);
+    assert!(amount == 1 || amount == 10 || amount == 100 || amount == 1000, ELotInvalid);
+  };
+
+  transfer_policy::add_receipt(LotRule {}, request);
+}
+
+// ╔════════════════ [ merged from `item_listing_rule` — republish restructure ] ═ ]
+// ╔════════════════ [ Errors (teach, don't reject) ] ═════════════════════════ ]
+
+const EListingZeroAmount: u64 = 101; // prove_amount: the item being purchased carries 0 units (a ghost instance)
+const EListingWrongItem: u64 = 102; // prove_amount: the proven item is not the one being purchased (evasion guard)
+
+// ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
+
+/// The rule witness that authorises this policy rule (Mysten `royalty_rule::Rule` shape). `drop` only — it names
+/// the rule to the framework's `add_rule` / `add_receipt`; it is never stored or transferred.
+public struct ListingRule has drop {}
+
+/// The rule's on-policy config — EMPTY on purpose: the gate reads the item's OWN amount at prove time, so nothing
+/// is baked in here and no dial is needed. `store + drop` as the framework requires.
+public struct ListingConfig has store, drop {}
+
+// ╔════════════════ [ Creator action — ADD the rule (cap-gated; ceremony, while dark) ] ═ ]
+
+/// Attach the zero-amount gate to the Item `policy`. Authority IS the `TransferPolicyCap<Item>` — the framework
+/// `add_rule` asserts the cap matches the policy and that the rule is not already present. Mirrors
+/// `royalty_rule::add` / `character_listing_rule::add`: one line, cap-gated, no runtime config.
+public fun add_listing_rule(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>) {
+  transfer_policy::add_rule(ListingRule {}, policy, cap, ListingConfig {});
+}
+
+// ╔════════════════ [ Buyer action — PROVE the amount is non-zero to unblock confirm_request ] ═ ]
+
+/// Prove the purchased `item` carries at least 1 unit and add the receipt that unblocks `confirm_request`. Aborts
+/// `EListingWrongItem` if the proven item is not the one being transferred (the evasion guard — a buyer cannot substitute
+/// a different non-zero stack they own) and `EListingZeroAmount` if the item is a ghost (amount 0). Called by the
+/// secondary-purchase PTB after `kiosk::purchase` hands over the item by value; the buyer already holds `&Item`.
+public fun prove_listing_amount(item: &Item, request: &mut TransferRequest<Item>) {
+  assert!(object::id(item) == transfer_policy::item(request), EListingWrongItem);
+  assert!(amount(item) > 0, EListingZeroAmount);
+  transfer_policy::add_receipt(ListingRule {}, request);
 }

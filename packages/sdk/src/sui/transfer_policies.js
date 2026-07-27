@@ -53,18 +53,19 @@ function policy_rule_types(policy) {
  * This proves rule presence/identity; do not use the return value as an upgraded Kiosk-lineage call target.
  * @param {{ id?: string, rules?: string[] | { contents?: ({ name?: string } | string)[] } }} policy
  * @param {string} module_name
+ * @param {string} [type_name] rule struct name (defaults to `Rule`)
  */
-export function policy_rule_package(policy, module_name) {
+export function policy_rule_package(policy, module_name, type_name = 'Rule') {
   const matches = policy_rule_types(policy).flatMap(type => {
     const parts = String(type).split('::')
-    return parts.length === 3 && parts[1] === module_name && parts[2] === 'Rule'
+    return parts.length === 3 && parts[1] === module_name && parts[2] === type_name
       ? [normalize_package_id(parts[0])]
       : []
   })
 
   if (matches.length !== 1)
     throw new Error(
-      `[marketplace_rules] TransferPolicy ${policy?.id ?? '<unknown>'} must contain exactly one ${module_name}::Rule tag (found ${matches.length})`,
+      `[marketplace_rules] TransferPolicy ${policy?.id ?? '<unknown>'} must contain exactly one ${module_name}::${type_name} tag (found ${matches.length})`,
     )
   return matches[0]
 }
@@ -76,7 +77,8 @@ export function policy_rule_package(policy, module_name) {
  * @param {{
  *   policy: { id?: string, rules?: string[] | { contents?: ({ name?: string } | string)[] } },
  *   kiosk_rule_package_id: string,
- *   listing_rule_module: 'item_listing_rule' | 'character_listing_rule',
+ *   listing_rule_module: 'item' | 'character_listing_rule',
+ *   listing_rule_type?: string,
  *   listing_rule_package_id: string,
  * }} args
  */
@@ -84,11 +86,12 @@ export function resolve_marketplace_rule_targets({
   policy,
   kiosk_rule_package_id,
   listing_rule_module,
+  listing_rule_type = 'Rule',
   listing_rule_package_id,
 }) {
   for (const module_name of BASE_MARKETPLACE_RULES)
     policy_rule_package(policy, module_name)
-  policy_rule_package(policy, listing_rule_module)
+  policy_rule_package(policy, listing_rule_module, listing_rule_type)
 
   const kiosk_rules = normalize_package_id(kiosk_rule_package_id)
   return {

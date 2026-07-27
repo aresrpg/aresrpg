@@ -39,8 +39,10 @@ const policy_fixture = kind => ({
     `${BASE_RULE_DEFINING_PACKAGE}::royalty_rule::Rule`,
     `${BASE_RULE_DEFINING_PACKAGE}::kiosk_lock_rule::Rule`,
     `${PERSONAL_RULE_DEFINING_PACKAGE}::personal_kiosk_rule::Rule`,
-    `${IDS.aresrpg.PACKAGE_ID}::${kind}_listing_rule::Rule`,
-    ...(kind === 'item' ? [`${IDS.aresrpg.PACKAGE_ID}::lot_rule::Rule`] : []),
+    ...(kind === 'item'
+      ? [`${IDS.aresrpg.PACKAGE_ID}::item::ListingRule`]
+      : [`${IDS.aresrpg.PACKAGE_ID}::character_listing_rule::Rule`]),
+    ...(kind === 'item' ? [`${IDS.aresrpg.PACKAGE_ID}::item::LotRule`] : []),
   ],
 })
 
@@ -201,10 +203,10 @@ describe('marketplace TransferPolicy rule resolution', () => {
     expect(policy_rule_package(item_policy, 'personal_kiosk_rule')).toBe(
       PERSONAL_RULE_DEFINING_PACKAGE,
     )
-    expect(policy_rule_package(item_policy, 'item_listing_rule')).toBe(
+    expect(policy_rule_package(item_policy, 'item', 'ListingRule')).toBe(
       IDS.aresrpg.PACKAGE_ID,
     )
-    expect(policy_rule_package(item_policy, 'lot_rule')).toBe(
+    expect(policy_rule_package(item_policy, 'item', 'LotRule')).toBe(
       IDS.aresrpg.PACKAGE_ID,
     )
   })
@@ -218,13 +220,14 @@ describe('marketplace TransferPolicy rule resolution', () => {
         `${fresh_kiosk}::royalty_rule::Rule`,
         `${fresh_kiosk}::kiosk_lock_rule::Rule`,
         `${fresh_kiosk}::personal_kiosk_rule::Rule`,
-        `${fresh_core}::item_listing_rule::Rule`,
+        `${fresh_core}::item::ListingRule`,
       ],
     }
     const resolved = resolve_marketplace_rule_targets({
       policy,
       kiosk_rule_package_id: fresh_kiosk,
-      listing_rule_module: 'item_listing_rule',
+      listing_rule_module: 'item',
+      listing_rule_type: 'ListingRule',
       listing_rule_package_id: fresh_core,
     })
     expect(resolved.royalty_rule).toBe(
@@ -237,7 +240,7 @@ describe('marketplace TransferPolicy rule resolution', () => {
       policy_rule_package(policy, 'personal_kiosk_rule'),
     )
     expect(resolved.listing_rule).toBe(
-      policy_rule_package(policy, 'item_listing_rule'),
+      policy_rule_package(policy, 'item', 'ListingRule'),
     )
   })
 
@@ -245,7 +248,8 @@ describe('marketplace TransferPolicy rule resolution', () => {
     const resolved = resolve_marketplace_rule_targets({
       policy: item_policy,
       kiosk_rule_package_id: IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID,
-      listing_rule_module: 'item_listing_rule',
+      listing_rule_module: 'item',
+      listing_rule_type: 'ListingRule',
       listing_rule_package_id: IDS.aresrpg.LATEST_PACKAGE_ID,
     })
     expect(resolved).toEqual({
@@ -262,7 +266,8 @@ describe('marketplace TransferPolicy rule resolution', () => {
   test('missing, duplicate, and malformed policy tags refuse before a money PTB is built', () => {
     const args = {
       kiosk_rule_package_id: IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID,
-      listing_rule_module: 'item_listing_rule',
+      listing_rule_module: 'item',
+      listing_rule_type: 'ListingRule',
       listing_rule_package_id: IDS.aresrpg.LATEST_PACKAGE_ID,
     }
     expect(() =>
@@ -316,8 +321,8 @@ describe('marketplace buy — full policy receipt tail', () => {
       `${IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID}::royalty_rule::fee_amount`,
       'SplitCoins',
       `${IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID}::royalty_rule::pay`,
-      `${IDS.aresrpg.LATEST_PACKAGE_ID}::item_listing_rule::prove_amount`,
-      `${IDS.aresrpg.LATEST_PACKAGE_ID}::lot_rule::prove`,
+      `${IDS.aresrpg.LATEST_PACKAGE_ID}::item::prove_listing_amount`,
+      `${IDS.aresrpg.LATEST_PACKAGE_ID}::item::prove_lot`,
       `${SUI_FRAMEWORK}::kiosk::lock`,
       `${IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID}::kiosk_lock_rule::prove`,
       `${IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID}::personal_kiosk_rule::prove`,
@@ -326,13 +331,13 @@ describe('marketplace buy — full policy receipt tail', () => {
     ])
   })
 
-  test('item buy requires lot_rule and resolves it at the latest Ares linkage target', () => {
+  test('item buy requires the lot rule and resolves it at the latest Ares linkage target', () => {
     const tx = marketplace_buy_item_ptb(deployed_context)({
       ...buyer,
       item_id: id('lot-item'),
       policy: item_policy,
     })
-    const lot = find_call(tx, 'lot_rule::prove')
+    const lot = find_call(tx, 'item::prove_lot')
     expect(lot.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(lot.args).toBe(2)
 
@@ -342,10 +347,10 @@ describe('marketplace buy — full policy receipt tail', () => {
         item_id: id('missing-lot-item'),
         policy: {
           ...item_policy,
-          rules: item_policy.rules.filter(type => !type.includes('lot_rule')),
+          rules: item_policy.rules.filter(type => !type.includes('LotRule')),
         },
       }),
-    ).toThrow(/lot_rule::Rule tag \(found 0\)/)
+    ).toThrow(/item::LotRule tag \(found 0\)/)
   })
 
   test('character buy resolves the same linkage target and its own listing rule', () => {
@@ -366,7 +371,7 @@ describe('marketplace buy — full policy receipt tail', () => {
     expect(find_call(tx, 'character_listing_rule::prove_level').package).toBe(
       IDS.aresrpg.LATEST_PACKAGE_ID,
     )
-    expect(targets(tx).some(target => target === 'lot_rule::prove')).toBe(false)
+    expect(targets(tx).some(target => target === 'item::prove_lot')).toBe(false)
   })
 
   test('first buy creates a personal kiosk with the same fresh linkage target', () => {
