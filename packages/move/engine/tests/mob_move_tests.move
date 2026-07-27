@@ -12,7 +12,7 @@
 module aresrpg_fight::mob_move_tests;
 
 use aresrpg_fight::{fight::{Self, Fight}, mob, participant, turns, version::Version};
-use aresrpg_fight::fight_scaffold::{combatant, mk_clock, mob_stats, stand_up, tsreg};
+use aresrpg_fight::fight_scaffold::{combatant, mk_clock, mob_stats, stand_up, tsregs_for};
 use sui::{clock, test_scenario::{Self as ts}};
 
 const OWNER: address = @0xA;
@@ -32,13 +32,14 @@ fun mob_reposition_only_turn_changes_cell() {
   // A custom mob: base_hp 500, AP 0, MP 6, NO spells (reposition-only), one 100%-drop loot row.
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(&sc);
+    let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
     let ver = sc.take_shared<Version>();
     let loot = vector[mob::new_loot_entry(object::id_from_address(LOOT), 10000, 1, 1)];
     let spec = mob::new_mob_spec(1, 1, 500, 0, 6, mob_stats(), vector[], 100, loot); // MP 6, empty kit
     let clock = mk_clock(&mut sc, 1000);
-    fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+    fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };

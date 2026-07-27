@@ -18,7 +18,7 @@ use aresrpg_fight::{
   settlement::{Self as results, FightOutcome},
   version::Version
 };
-use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, tsreg, tsreg_for, stand_up};
+use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, tsregs_for, stand_up};
 use sui::{clock, test_scenario::{Self as ts}};
 
 const OWNER: address = @0xA;
@@ -120,11 +120,7 @@ fun last_player_abandons_defeats_and_settles() {
   actions::abandon_for_testing(&mut fight, object::id_from_address(CHAR), &ver, 1000, OWNER);
   assert!(fight::status(&fight) == fight::status_defeat());
   assert!(fight::winning_side(&fight) == option::none());
-  {
-    let mut reg2 = tsreg(&sc);
-    results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    ts::return_shared(reg2);
-  };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   sc.next_tx(OWNER);
   assert!(!ts::has_most_recent_shared<Fight>()); // the shared Fight is gone
   let r = sc.take_from_sender<FightOutcome>();
@@ -187,11 +183,12 @@ fun abandon_in_placement_empties_pvp_side_is_walkover() {
   stand_up(&mut sc);
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg_for(&sc, object::id_from_address(KOLI));
+    let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(KOLI), object::id_from_address(CHAR));
     let ver = sc.take_shared<Version>();
     let clock = mk_clock(&mut sc, 5000);
-    fight::create_pvp_fight_for_testing(&mut registry, object::id_from_address(KOLI), 1, 999, 40, 40, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+    fight::create_pvp_fight_for_testing(&mut registry, &mut latch, object::id_from_address(KOLI), 1, 999, 40, 40, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };

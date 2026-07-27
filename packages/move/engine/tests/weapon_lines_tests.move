@@ -9,7 +9,7 @@
 #[test_only]
 module aresrpg_fight::weapon_lines_tests;
 
-use aresrpg_fight::{fight::{Self, Fight}, participant::{Self, Weapon, WeaponLine}, mob, turns, actions, version::Version, fight_scaffold::{stand_up, mk_clock, tsreg}};
+use aresrpg_fight::{fight::{Self, Fight}, participant::{Self, Weapon, WeaponLine}, mob, turns, actions, version::Version, fight_scaffold::{stand_up, mk_clock, tsregs_for}};
 use aresrpg_foundation::{spell, spell_formula};
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
@@ -24,14 +24,15 @@ const BASE_HP: u64 = 500; // >> any test damage so the remaining HP never floors
 /// remaining HP. Empty `lines` ⇒ no DF ⇒ the seated-`Weapon` fallback (the pre-upgrade path).
 fun strike_remaining(sc: &mut Scenario, caster: spell::Stats, mob_st: spell::Stats, w: Weapon, lines: vector<WeaponLine>): u64 {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let loot = vector[mob::new_loot_entry(object::id_from_address(LOOT), 10000, 1, 1)];
   let spec = mob::new_mob_spec(1, 1, BASE_HP, 0, 0, mob_st, vector[], 100, loot);
   let clock0 = mk_clock(sc, 1000);
   let creator = participant::new_combatant(object::id_from_address(CHAR), b"senshi".to_string(), 1, caster, 100, 100, 6, 3, w, sui::vec_map::empty());
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 700, 12345, 100, 200, 0, true, option::none(), &spec, 1, creator, &ver, &clock0, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 700, 12345, 100, 200, 0, true, option::none(), &spec, 1, creator, &ver, &clock0, sc.ctx());
   clock::destroy_for_testing(clock0);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 
@@ -125,14 +126,15 @@ fun crit_swaps_all_lines() {
   let lines = vector[participant::new_weapon_line(spell::el_fire(), 30, 45), participant::new_weapon_line(spell::el_water(), 20, 60)];
 
   sc.next_tx(OWNER);
-  let mut registry = tsreg(&mut sc);
+  let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let loot = vector[mob::new_loot_entry(object::id_from_address(LOOT), 10000, 1, 1)];
   let spec = mob::new_mob_spec(1, 1, BASE_HP, 0, 0, spell::new_stats(0,0,0,0,0,0,0,0,0,0,0), vector[], 100, loot);
   let clock0 = mk_clock(&mut sc, 1000);
   let creator = participant::new_combatant(object::id_from_address(CHAR), b"senshi".to_string(), 1, spell::new_stats(0,0,0,0,0,0,0,0,0,0,0), 100, 100, 6, 3, w, sui::vec_map::empty());
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 701, 12345, 100, 200, 0, true, option::none(), &spec, 1, creator, &ver, &clock0, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 701, 12345, 100, 200, 0, true, option::none(), &spec, 1, creator, &ver, &clock0, sc.ctx());
   clock::destroy_for_testing(clock0);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 

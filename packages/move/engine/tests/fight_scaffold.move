@@ -68,12 +68,13 @@ public fun combatant_weapon(char: address, hp: u64, w: participant::Weapon): Com
 /// public, spawned-at 0. `now` seeds the clock (→ turn_deadline the crit seed folds in).
 public fun create_fight_crit(sc: &mut Scenario, base_hp: u64, spawn_id: u64, now: u64) {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let spec = bag_spec(base_hp);
   let clock = mk_clock(sc, now);
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant_crit(CHAR, 100), &ver, &clock, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant_crit(CHAR, 100), &ver, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -82,12 +83,13 @@ public fun create_fight_crit(sc: &mut Scenario, base_hp: u64, spawn_id: u64, now
 /// spawned-at 0; `now` seeds the clock. Creator = CHAR, hp 100.
 public fun create_fight_weapon(sc: &mut Scenario, base_hp: u64, spawn_id: u64, now: u64, w: participant::Weapon) {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let spec = bag_spec(base_hp);
   let clock = mk_clock(sc, now);
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant_weapon(CHAR, 100, w), &ver, &clock, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant_weapon(CHAR, 100, w), &ver, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -113,12 +115,13 @@ public fun create_fight(sc: &mut Scenario, base_hp: u64, spawn_id: u64, spawned_
 /// multi-fight tests must seat distinct characters).
 public fun create_fight_as(sc: &mut Scenario, base_hp: u64, spawn_id: u64, spawned_at: u64, now: u64, is_public: bool, party: Option<ID>, char_addr: address) {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(char_addr));
   let ver = sc.take_shared<Version>();
   let spec = bag_spec(base_hp);
   let clock = mk_clock(sc, now);
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, spawned_at, is_public, party, &spec, 1, combatant(char_addr, 100), &ver, &clock, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, spawned_at, is_public, party, &spec, 1, combatant(char_addr, 100), &ver, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -127,12 +130,13 @@ public fun create_fight_as(sc: &mut Scenario, base_hp: u64, spawn_id: u64, spawn
 /// rider proves the per-mob multiplier, which needs waves of 2+ mobs the single-mob `create_fight` cannot seat.
 public fun create_fight_group(sc: &mut Scenario, base_hp: u64, spawn_id: u64, now: u64, group_size: u16) {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let spec = bag_spec(base_hp);
   let clock = mk_clock(sc, now);
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, group_size, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, group_size, combatant(CHAR, 100), &ver, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -144,6 +148,19 @@ public fun tsreg_for(sc: &Scenario, scope: ID): FightRegistry {
   let shard = fight_registry::shard_for(&book, scope);
   ts::return_shared(book);
   ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
+
+/// Resolve two independent registry authorities in one transaction. `test_scenario` permits taking the shared
+/// directory only once per transaction, so split derivation/latch callers resolve both ids before taking either.
+public fun tsregs_for(sc: &Scenario, first: ID, second: ID): (FightRegistry, FightRegistry) {
+  let book = sc.take_shared<fight_registry::FightShards>();
+  let first_shard = fight_registry::shard_for(&book, first);
+  let second_shard = fight_registry::shard_for(&book, second);
+  ts::return_shared(book);
+  (
+    ts::take_shared_by_id<FightRegistry>(sc, first_shard),
+    ts::take_shared_by_id<FightRegistry>(sc, second_shard),
+  )
 }
 
 /// The shard for the scaffold's WORLD — what every suite creating through `create_fight*` needs.

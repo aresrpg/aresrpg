@@ -14,7 +14,7 @@ use aresrpg_fight::{
   turns,
   version::Version,
 };
-use aresrpg_fight::fight_scaffold::{create_fight, mk_clock, stand_up, tsreg};
+use aresrpg_fight::fight_scaffold::{create_fight, mk_clock, stand_up};
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
 const OWNER: address = @0xA;
@@ -31,11 +31,7 @@ fun outcome_getters_cover_brand_fight_world_team_winner() {
   let ver = sc.take_shared<Version>();
   win_the_fight(&mut sc, &mut fight, &ver);
   let fid_before = fight::id(&fight);
-  {
-    let mut reg2 = tsreg(&sc);
-    results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    ts::return_shared(reg2);
-  };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   ts::return_shared(ver);
 
   sc.next_tx(OWNER);

@@ -17,7 +17,7 @@ use aresrpg_fight::{
   turns,
   version::Version
 };
-use aresrpg_fight::fight_scaffold::{bag_spec, combatant, create_fight, create_fight_as, mk_clock, mob_stats, stand_up, tsreg, tsreg_for};
+use aresrpg_fight::fight_scaffold::{bag_spec, combatant, create_fight, create_fight_as, mk_clock, mob_stats, stand_up, tsreg, tsreg_for, tsregs_for};
 use aresrpg_foundation::spell;
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
@@ -47,11 +47,11 @@ fun zero_hp_cannot_create() {
   stand_up(&mut sc);
   let bag_hp = 30;
   sc.next_tx(OWNER);
-  let mut registry = tsreg(&sc);
+  let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(&mut sc, 1000);
   // creator with 0 HP → EZeroHp
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &bag_spec(30), 1, combatant(CHAR, 0), &ver, &clock, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &bag_spec(30), 1, combatant(CHAR, 0), &ver, &clock, sc.ctx());
   abort 0
 }
 
@@ -130,11 +130,7 @@ fun settle_mints_results_and_destroys() {
   let ver = sc.take_shared<Version>();
   win_the_fight(&mut sc, &mut fight, &ver);
   assert!(fight::status(&fight) == fight::status_victory());
-  {
-    let mut reg2 = tsreg(&sc);
-    results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    ts::return_shared(reg2);
-  };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   sc.next_tx(OWNER);
   assert!(!ts::has_most_recent_shared<Fight>()); // the shared Fight is GONE
   let result = sc.take_from_sender<FightOutcome>(); // soulbound, in the wallet of the seat's owner
@@ -159,11 +155,7 @@ fun settle_nonterminal_aborts() {
   sc.next_tx(OWNER);
   let fight = sc.take_shared<Fight>();
   let ver = sc.take_shared<Version>();
-  {
-    let mut reg2 = tsreg(&sc);
-    results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    ts::return_shared(reg2);
-  };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   abort 0
 }
 
@@ -198,13 +190,11 @@ fun settle_and_take_returns_mine_transfers_others() {
   let (fight, ver) = two_seat_victory(&mut sc);
   sc.next_tx(OWNER);
   {
-    let mut reg2 = tsreg(&sc);
-    let mine = results::settle_and_take(fight, object::id_from_address(CHAR), &mut reg2, &ver, sc.ctx());
+    let mine = results::settle_and_take(fight, object::id_from_address(CHAR), &ver, sc.ctx());
     assert!(results::character(&mine) == object::id_from_address(CHAR));
     assert!(results::outcome(&mine) == fight::status_victory());
     // consume it the consumer way — by-value possession is the whole point
     let (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = results::unpack(mine);
-    ts::return_shared(reg2);
   };
   sc.next_tx(OWNER);
   assert!(!ts::has_most_recent_shared<Fight>()); // the shared Fight is GONE
@@ -222,8 +212,7 @@ fun settle_and_take_not_seat_owner_aborts() {
   let mut sc = ts::begin(OWNER);
   let (fight, _ver) = two_seat_victory(&mut sc);
   sc.next_tx(OWNER);
-  let mut reg2 = tsreg(&sc);
-  let _mine = results::settle_and_take(fight, object::id_from_address(CHAR2), &mut reg2, &_ver, sc.ctx());
+  let _mine = results::settle_and_take(fight, object::id_from_address(CHAR2), &_ver, sc.ctx());
   abort 0
 }
 
@@ -237,8 +226,7 @@ fun settle_and_take_absent_character_aborts() {
   let mut fight = sc.take_shared<Fight>();
   let ver = sc.take_shared<Version>();
   win_the_fight(&mut sc, &mut fight, &ver);
-  let mut reg2 = tsreg(&sc);
-  let _mine = results::settle_and_take(fight, object::id_from_address(@0xDEAD), &mut reg2, &ver, sc.ctx());
+  let _mine = results::settle_and_take(fight, object::id_from_address(@0xDEAD), &ver, sc.ctx());
   abort 0
 }
 
@@ -364,11 +352,12 @@ fun dot_ticks_and_mob_refills_across_rounds() {
   let viper = mob::new_mob_spec(1, 1, 500, 2, 0, mob_stats(), dot_kit, 100, vector[]);
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(&sc);
+    let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
     let ver = sc.take_shared<Version>();
     let clock = mk_clock(&mut sc, 1000);
-    fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &viper, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+    fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &viper, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };
@@ -473,13 +462,14 @@ const DUNGEON: address = @0xD07; // a dungeon object id source (the door's deriv
 fun create_dungeon_fixture(sc: &mut Scenario) {
   stand_up(sc);
   sc.next_tx(OWNER);
-  let mut registry = tsreg_for(sc, object::id_from_address(DUNGEON));
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(DUNGEON), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 5000);
-  fight::create_dungeon_fight_for_testing(&mut registry, object::id_from_address(DUNGEON), 1, 999, 40, 40,
+  fight::create_dungeon_fight_for_testing(&mut registry, &mut latch, object::id_from_address(DUNGEON), 1, 999, 40, 40,
     combatant(CHAR, 100), &bag_spec(30), 2, &ver, &clock, sc.ctx(),
   );
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -540,13 +530,14 @@ const KOLI: address = @0x201; // a kolizeum lobby id source (the PvP door's deri
 fun create_pvp_fixture(sc: &mut Scenario) {
   stand_up(sc);
   sc.next_tx(OWNER);
-  let mut registry = tsreg_for(sc, object::id_from_address(KOLI));
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(KOLI), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 5000);
-  fight::create_pvp_fight_for_testing(&mut registry, object::id_from_address(KOLI), 1, 999, 40, 40, 1,
+  fight::create_pvp_fight_for_testing(&mut registry, &mut latch, object::id_from_address(KOLI), 1, 999, 40, 40, 1,
     combatant(CHAR, 40), &ver, &clock, sc.ctx(),
   );
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -588,11 +579,7 @@ fun pvp_settlement_mints_zero_reward_results() {
   assert!(turns::pvp_terminal_check(&mut fight));
   assert!(fight::winning_side(&fight) == option::some(0));
   let ver = sc.take_shared<Version>();
-  {
-    let mut reg2 = tsreg_for(&sc, object::id_from_address(KOLI));
-    results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    ts::return_shared(reg2);
-  };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   ts::return_shared(ver);
 
   sc.next_tx(OWNER);
@@ -624,8 +611,8 @@ fun same_character_cannot_enter_two_fights() {
 }
 
 #[test]
-/// Settlement FREES the latch: after settle_and_destroy the same character enters a fresh fight.
-fun settle_frees_the_latch() {
+/// The owned outcome carries latch-release authority: once its holder releases, the character enters a new fight.
+fun outcome_holder_frees_the_latch() {
   let mut sc = ts::begin(OWNER);
   stand_up(&mut sc);
   create_fight(&mut sc, 50, 1, 0, 1000, true, option::none());
@@ -637,18 +624,23 @@ fun settle_frees_the_latch() {
   turns::finish_defeat_for_testing(&mut fight);
   let ver = sc.take_shared<Version>();
   {
-    let mut reg2 = tsreg(&sc);
-    assert!(reg2.character_fight(object::id_from_address(WORLD), std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some()); // latched while live
-    results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    assert!(reg2.character_fight(object::id_from_address(WORLD), std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_none()); // freed at settlement
-    ts::return_shared(reg2);
+    let latch = tsreg_for(&sc, object::id_from_address(CHAR));
+    assert!(latch.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some());
+    ts::return_shared(latch);
   };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   ts::return_shared(ver);
 
-  create_fight(&mut sc, 50, 2, 0, 2000, true, option::none()); // same CHAR — now allowed
   sc.next_tx(OWNER);
-  let r = sc.take_from_sender<FightOutcome>();
-  sui::test_utils::destroy(r);
+  let outcome = sc.take_from_sender<FightOutcome>();
+  let mut latch = tsreg_for(&sc, object::id_from_address(CHAR));
+  assert!(latch.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some());
+  results::release_latch(&mut latch, &outcome);
+  assert!(latch.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_none());
+  ts::return_shared(latch);
+  sui::test_utils::destroy(outcome);
+
+  create_fight(&mut sc, 50, 2, 0, 2000, true, option::none()); // same CHAR — now allowed
   sc.end();
 }
 

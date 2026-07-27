@@ -10,7 +10,7 @@ use aresrpg_fight::{
   cast,
   fight::{Self, Fight},
   fight_events,
-  fight_scaffold::{combatant, create_fight, mk_clock, plain_stats, stand_up, tsreg},
+  fight_scaffold::{combatant, create_fight, mk_clock, plain_stats, stand_up, tsregs_for},
   mob,
   participant,
   statuses,
@@ -440,7 +440,7 @@ fun mob_glyph_fight(sc: &mut Scenario): Fight {
 fun mob_spell_fight(sc: &mut Scenario, level: SpellLevel): Fight {
   stand_up(sc);
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let version = sc.take_shared<Version>();
   let clock = mk_clock(sc, 1000);
   let spec = mob::new_mob_spec(
@@ -448,6 +448,7 @@ fun mob_spell_fight(sc: &mut Scenario, level: SpellLevel): Fight {
   );
   fight::create_for_testing(
     &mut registry,
+    &mut latch,
     object::id_from_address(WORLD),
     1,
     12345,
@@ -464,6 +465,7 @@ fun mob_spell_fight(sc: &mut Scenario, level: SpellLevel): Fight {
     sc.ctx(),
   );
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(version);
   sc.next_tx(OWNER);

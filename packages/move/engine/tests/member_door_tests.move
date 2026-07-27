@@ -12,7 +12,7 @@ module aresrpg_fight::member_door_tests;
 
 use aresrpg_fight::{
   fight::{Self, Fight},
-  fight_scaffold::{stand_up, combatant, mk_clock, tsreg, mob_stats},
+  fight_scaffold::{stand_up, combatant, mk_clock, tsregs_for, mob_stats},
   mob::{Self, MobSpec},
   settlement::{Self as results, FightOutcome},
   turns,
@@ -50,7 +50,7 @@ fun draugr(): MobSpec { species(50, 50, 500, LOOT_B, 9) }
 /// SEPARATELY on purpose — that is exactly the freedom a PTB author has, and what the builder must police.
 fun run_door(sc: &mut Scenario, spawn_id: u64, committed: vector<ID>, order: vector<ID>, specs: vector<MobSpec>) {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, tid(WORLD), tid(CHAR));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 1000);
   let mut build = fight::open_group_for_testing(tid(WORLD), spawn_id, 4242, 1000, committed, combatant(CHAR, 100), &ver);
@@ -59,8 +59,9 @@ fun run_door(sc: &mut Scenario, spawn_id: u64, committed: vector<ID>, order: vec
     fight::add_member(&mut build, order[i], &specs[i]);
     i = i + 1;
   };
-  fight::create_members(build, &mut registry, &ver, &clock, sc.ctx());
+  fight::create_members(build, &mut registry, &mut latch, &ver, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }
@@ -140,11 +141,7 @@ fun settlement_sums_member_xp_and_concatenates_member_loot() {
   let mut fight = sc.take_shared<Fight>();
   let ver = sc.take_shared<Version>();
   turns::finish_victory_for_testing(&mut fight);
-  {
-    let mut reg = tsreg(&sc);
-    results::settle_and_destroy(fight, &mut reg, &ver, sc.ctx());
-    ts::return_shared(reg);
-  };
+  results::settle_and_destroy(fight, &ver, sc.ctx());
   sc.next_tx(OWNER);
   let outcome = sc.take_from_sender<FightOutcome>();
   // party 1, wisdom 0, aging 0, mult 100 — so the share IS the pack's total xp through the kernel
@@ -167,11 +164,12 @@ fun a_single_spec_fight_reads_the_shared_block_at_every_index() {
   stand_up(&mut sc);
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(&sc);
+    let (mut registry, mut latch) = tsregs_for(&sc, tid(WORLD), tid(CHAR));
     let ver = sc.take_shared<Version>();
     let clock = mk_clock(&mut sc, 1000);
-    fight::create_for_testing(&mut registry, tid(WORLD), 7, 12345, 100, 200, 0, true, option::none(), &draugr(), 3, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+    fight::create_for_testing(&mut registry, &mut latch, tid(WORLD), 7, 12345, 100, 200, 0, true, option::none(), &draugr(), 3, combatant(CHAR, 100), &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };
@@ -193,15 +191,16 @@ fun graded_levels(sc: &mut Scenario, spawn_id: u64, progress: u64, creator: addr
   let committed = vector[tid(CHICKLET), tid(DRAUGR), tid(@0xE1)];
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(sc);
+    let (mut registry, mut latch) = tsregs_for(sc, tid(WORLD), tid(creator));
     let ver = sc.take_shared<Version>();
     let clock = mk_clock(sc, 1000);
     let mut build = fight::open_group_for_testing(tid(WORLD), spawn_id, 0, progress, committed, combatant(creator, 100), &ver);
     let specs = graded_roster();
     let mut i = 0;
     while (i < specs.length()) { fight::add_member(&mut build, committed[i], &specs[i]); i = i + 1; };
-    fight::create_members(build, &mut registry, &ver, &clock, sc.ctx());
+    fight::create_members(build, &mut registry, &mut latch, &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };

@@ -885,7 +885,7 @@ public fun create_for_testing(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create(TestBrand {}, registry, world, spawn_id, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, false, spec, group_size, 42, world, creator, vector[], option::none(), test_dials(), version, clock, ctx);
+  create(TestBrand {}, registry, latch, world, spawn_id, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, false, spec, group_size, 42, world, creator, vector[], option::none(), test_dials(), version, clock, ctx);
 }
 
 #[test_only]
@@ -919,7 +919,7 @@ public fun create_dungeon_fight_for_testing(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create(TestBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(), false, option::none(), true, spec, group_size, 42, scope, creator, vector[], option::none(), test_dials(), version, clock, ctx);
+  create(TestBrand {}, registry, latch, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(), false, option::none(), true, spec, group_size, 42, scope, creator, vector[], option::none(), test_dials(), version, clock, ctx);
 }
 
 #[test_only]
@@ -937,7 +937,7 @@ public fun create_pvp_fight_for_testing(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create_pvp(TestBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, per_side_bound, participant::with_full_hp(creator), test_dials(), version, clock, ctx);
+  create_pvp(TestBrand {}, registry, latch, scope, nonce, world_seed, anchor_x, anchor_z, per_side_bound, participant::with_full_hp(creator), test_dials(), version, clock, ctx);
 }
 
 #[test_only]

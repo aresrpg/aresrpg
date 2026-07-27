@@ -9,7 +9,7 @@ module aresrpg_fight::sweep_tests;
 use aresrpg_fight::{
   fight::{Self, Fight},
   fight_events,
-  fight_scaffold::{combatant, create_fight, mk_clock, stand_up, tsreg},
+  fight_scaffold::{combatant, create_fight, mk_clock, stand_up, tsregs_for},
   participant,
   settlement::{Self as results, FightOutcome},
   turns,
@@ -31,10 +31,9 @@ fun placement_before_deadline_is_live() {
   create_fight(&mut sc, 50, 1, 0, 1000, true, option::none());
   sc.next_tx(OWNER);
   let fight = sc.take_shared<Fight>();
-  let mut registry = tsreg(&sc);
   let version = sc.take_shared<Version>();
   let clock = mk_clock(&mut sc, 120_999);
-  results::sweep_fight(fight, &mut registry, &version, &clock, sc.ctx());
+  results::sweep_fight(fight, &version, &clock, sc.ctx());
   abort 0
 }
 
@@ -46,10 +45,9 @@ fun placement_expired_with_ready_seat_is_live() {
   sc.next_tx(OWNER);
   let mut fight = sc.take_shared<Fight>();
   participant::set_ready(fight::participants_mut(&mut fight).borrow_mut(0), true);
-  let mut registry = tsreg(&sc);
   let version = sc.take_shared<Version>();
   let clock = mk_clock(&mut sc, 121_000);
-  results::sweep_fight(fight, &mut registry, &version, &clock, sc.ctx());
+  results::sweep_fight(fight, &version, &clock, sc.ctx());
   abort 0
 }
 
@@ -61,10 +59,9 @@ fun active_fight_is_never_placement_sweepable() {
   sc.next_tx(OWNER);
   let mut fight = sc.take_shared<Fight>();
   fight::set_status_active_for_testing(&mut fight);
-  let mut registry = tsreg(&sc);
   let version = sc.take_shared<Version>();
   let clock = mk_clock(&mut sc, 999_999_999);
-  results::sweep_fight(fight, &mut registry, &version, &clock, sc.ctx());
+  results::sweep_fight(fight, &version, &clock, sc.ctx());
   abort 0
 }
 
@@ -77,10 +74,9 @@ fun terminal_fight_is_not_sweepable() {
   let mut fight = sc.take_shared<Fight>();
   fight::set_status_active_for_testing(&mut fight);
   turns::finish_defeat_for_testing(&mut fight);
-  let mut registry = tsreg(&sc);
   let version = sc.take_shared<Version>();
   let clock = mk_clock(&mut sc, 999_999_999);
-  results::sweep_fight(fight, &mut registry, &version, &clock, sc.ctx());
+  results::sweep_fight(fight, &version, &clock, sc.ctx());
   abort 0
 }
 
@@ -92,42 +88,54 @@ fun placement_boundary_zero_ready_sweeps_every_seat() {
   sc.next_tx(OWNER);
   let mut fight = sc.take_shared<Fight>();
   let version = sc.take_shared<Version>();
-  let mut registry = tsreg(&sc);
+  let creator_id = object::id_from_address(CHAR);
+  let joiner_id = object::id_from_address(CHAR2);
+  let (mut creator_latch, mut joiner_latch) = tsregs_for(&sc, creator_id, joiner_id);
   fight::join_latched_for_testing(
     &mut fight,
-    &mut registry,
+    &mut joiner_latch,
     combatant(CHAR2, 100),
     option::none(),
     &version,
     sc.ctx(),
   );
   let brand = std::type_name::with_defining_ids<fight::TestBrand>();
-  let scope = fight::world(&fight); // the shard the latches live in (the Fight dies before the post-sweep reads)
-  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR)).is_some());
-  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR2)).is_some());
+  assert!(creator_latch.character_fight(brand, creator_id).is_some());
+  assert!(joiner_latch.character_fight(brand, joiner_id).is_some());
 
   let clock = mk_clock(&mut sc, 121_000);
-  results::sweep_fight(fight, &mut registry, &version, &clock, sc.ctx());
+  results::sweep_fight(fight, &version, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
-  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR)).is_none());
-  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR2)).is_none());
+  assert!(creator_latch.character_fight(brand, creator_id).is_some());
+  assert!(joiner_latch.character_fight(brand, joiner_id).is_some());
   assert!(event::events_by_type<fight_events::Abandoned>().length() == 2);
   assert!(event::events_by_type<fight_events::Defeat>().length() == 1);
   assert!(event::events_by_type<fight_events::Swept>().length() == 1);
   assert!(event::events_by_type<fight_events::ResultMinted>().length() == 2);
   assert!(event::events_by_type<fight_events::Settled>().length() == 1);
-  ts::return_shared(registry);
+  ts::return_shared(creator_latch);
+  ts::return_shared(joiner_latch);
   ts::return_shared(version);
 
   sc.next_tx(OWNER);
   assert!(!ts::has_most_recent_shared<Fight>());
   let first = sc.take_from_sender<FightOutcome>();
   let second = sc.take_from_sender<FightOutcome>();
-  assert!(results::outcome(&first) == fight::status_defeat());
-  assert!(results::outcome(&second) == fight::status_defeat());
-  assert!(results::final_hp(&first) == 0);
-  assert!(results::final_hp(&second) == 0);
-  std::unit_test::destroy(first);
-  std::unit_test::destroy(second);
+  let (creator_outcome, joiner_outcome) = if (results::character(&first) == creator_id) (first, second) else (second, first);
+  assert!(results::character(&creator_outcome) == creator_id);
+  assert!(results::character(&joiner_outcome) == joiner_id);
+  let (mut creator_latch, mut joiner_latch) = tsregs_for(&sc, creator_id, joiner_id);
+  results::release_latch(&mut creator_latch, &creator_outcome);
+  results::release_latch(&mut joiner_latch, &joiner_outcome);
+  assert!(creator_latch.character_fight(brand, creator_id).is_none());
+  assert!(joiner_latch.character_fight(brand, joiner_id).is_none());
+  ts::return_shared(creator_latch);
+  ts::return_shared(joiner_latch);
+  assert!(results::outcome(&creator_outcome) == fight::status_defeat());
+  assert!(results::outcome(&joiner_outcome) == fight::status_defeat());
+  assert!(results::final_hp(&creator_outcome) == 0);
+  assert!(results::final_hp(&joiner_outcome) == 0);
+  std::unit_test::destroy(creator_outcome);
+  std::unit_test::destroy(joiner_outcome);
   sc.end();
 }

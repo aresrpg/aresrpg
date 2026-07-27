@@ -12,7 +12,7 @@
 module aresrpg_fight::mob_effects_tests;
 
 use aresrpg_fight::{cast, fight::{Self, Fight}, mob::{Self, MobSpec}, participant, turns, version::Version};
-use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, stand_up, tsreg};
+use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, stand_up, tsregs_for};
 use aresrpg_foundation::{spell::{Self, Stats}, spell_board, spell_effect::{Self, Effect, SpellLevel}, spell_formula};
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
@@ -52,11 +52,12 @@ fun steal_ap(n: u64): Effect {
 
 fun mk_fight(sc: &mut Scenario, s: MobSpec, group: u16) {
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 1000);
-  fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &s, group, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &s, group, combatant(CHAR, 100), &ver, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(ver);
 }

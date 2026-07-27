@@ -15,7 +15,7 @@ use aresrpg_fight::{
   cast,
   fight::{Self, Fight},
   fight_events,
-  fight_scaffold::{bag_spec, mk_clock, plain_stats, stand_up, tsreg, weapon_crit},
+  fight_scaffold::{bag_spec, mk_clock, plain_stats, stand_up, tsregs_for, weapon_crit},
   mob,
   participant,
   version::Version,
@@ -118,7 +118,7 @@ fun learned_fight(sc: &mut Scenario, grouped: bool): (Fight, SpellTemplate) {
   let spell_id = object::id(&spell);
   ts::return_shared(spell);
 
-  let mut registry = tsreg(sc);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
   let version = sc.take_shared<Version>();
   let clock = mk_clock(sc, 1_000);
   let mut learned = vec_map::empty();
@@ -138,6 +138,7 @@ fun learned_fight(sc: &mut Scenario, grouped: bool): (Fight, SpellTemplate) {
   let spec = bag_spec(5_000);
   fight::create_for_testing(
     &mut registry,
+    &mut latch,
     object::id_from_address(WORLD),
     1,
     12_345,
@@ -154,6 +155,7 @@ fun learned_fight(sc: &mut Scenario, grouped: bool): (Fight, SpellTemplate) {
     sc.ctx(),
   );
   clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
   ts::return_shared(registry);
   ts::return_shared(version);
 

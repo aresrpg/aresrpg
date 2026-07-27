@@ -18,7 +18,7 @@ use aresrpg_fight::{
   actions,
   fight::{Self, Fight},
   fight_events,
-  fight_scaffold::{combatant, create_fight, first_open_move_neighbor, mk_clock, mob_stats, stand_up, tsreg},
+  fight_scaffold::{combatant, create_fight, first_open_move_neighbor, mk_clock, mob_stats, stand_up, tsregs_for},
   mob,
   participant,
   statuses,
@@ -240,13 +240,14 @@ fun two_lockers_multiply_the_contest() {
   stand_up(&mut sc);
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(&sc);
+    let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
     let ver = sc.take_shared<Version>();
     let loot = vector[mob::new_loot_entry(object::id_from_address(LOOT), 10000, 1, 1)];
     let spec = mob::new_mob_spec(1, 1, 100, 0, 0, mob_stats(), vector[], 100, loot);
     let clock = mk_clock(&mut sc, 1000);
-    fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &spec, 2, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+    fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &spec, 2, combatant(CHAR, 100), &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };
@@ -287,7 +288,7 @@ fun mob_backing_off_is_contested() {
   stand_up(&mut sc);
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(&sc);
+    let (mut registry, mut latch) = tsregs_for(&sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
     let ver = sc.take_shared<Version>();
     let loot = vector[mob::new_loot_entry(object::id_from_address(LOOT), 10000, 1, 1)];
     let dmg = spell_effect::new_effect(
@@ -299,8 +300,9 @@ fun mob_backing_off_is_contested() {
     )];
     let spec = mob::new_mob_spec(1, 1, 500, 4, 6, mob_stats(), kit, 100, loot);
     let clock = mk_clock(&mut sc, 1000);
-    fight::create_for_testing(&mut registry, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+    fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
     clock::destroy_for_testing(clock);
+    ts::return_shared(latch);
     ts::return_shared(registry);
     ts::return_shared(ver);
   };
