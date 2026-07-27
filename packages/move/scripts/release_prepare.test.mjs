@@ -28,6 +28,10 @@ test('manifest exists (run `bun run release:prepare` first)', () => {
   expect(existsSync(MANIFEST)).toBe(true)
 })
 
+test('the ceremony is the only executable marketplace-policy composition', () => {
+  expect(existsSync(join(__dir, 'setup_policies.js'))).toBe(false)
+})
+
 test('manifest publish order === ceremony topological order (all 7 packages, exact sequence)', () => {
   const m = JSON.parse(readFileSync(MANIFEST, 'utf8'))
   expect(m._kind).toBe('aresrpg-release-manifest')

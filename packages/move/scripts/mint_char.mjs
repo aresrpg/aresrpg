@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Self-paid char-1 mint for a DEV-KEY wallet (bypasses the zkLogin sponsor). Replicates the SDK's
 // character_new builder (createPersonal + api::character_new + finalize) — #51a permissionless self-pay.
-// Ids come from env (mirror setup_policies.js): ARESRPG_PACKAGE_ID / ARES_ROOT / CHARACTER_POLICY / VERSION (+ optional SENDER).
+// Ids come from the ceremony manifest/env: ARESRPG_PACKAGE_ID / ARES_ROOT / CHARACTER_POLICY / VERSION
+// (+ optional SENDER).
 // DRY_RUN=1 → dry-run as $SENDER (no key needed). EXECUTE: PRIVATE_KEY=<suiprivkey> bun run scripts/mint_char.mjs
 import { KioskClient, KioskTransaction } from '@mysten/kiosk'
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
