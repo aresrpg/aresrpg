@@ -30,7 +30,7 @@ import { hash_state } from '@aresrpg/sim/evolve'
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
 import { normalize_events, seat_resolver } from './inputs.js'
-import { board_state_from_fight } from './board_state.js'
+import { board_state_from_fight, roster_open } from './board_state.js'
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
@@ -217,13 +217,25 @@ export const admit_events = (inbox, actions, now) => {
 /**
  * Adopt a decoded Fight OBJECT (snapshot) as the SNAPSHOT+TAIL base — the BOOTSTRAP seed the canonical event tail
  * folds on top of — the ONE snapshot half, shared with the presentation folds (M2b #291 DEMOTED the object read to a bootstrap
- * base + a checkpoint: "everything that guessed history from an object read is deleted"). The base is the EARLIEST
- * (lowest-version) object read; a later HIGHER-version object is a CHECKPOINT that must NOT re-adopt (#701) — its
- * cells are a 4s-stale / possibly-torn read and `base_from_view` can only DERIVE turn_number as `status→1/0`, so
- * re-adopting stranded every fighter's cell at the stale object and RESET their accumulated per-turn count to 1,
- * discarding the tail. Only a strictly-EARLIER read lowers the bootstrap floor (an out-of-order delivery of the true
- * first read). Order-independent: the base is `min(object versions)`, a pure function of the read SET, so the
- * shuffle property holds. NO destructive prune — the fold's `version > base_version` filter (core_fold.js `sorted_tail`)
+ * base + a checkpoint: "everything that guessed history from an object read is deleted").
+ *
+ * THE BASE, as a pure function of the read SET (the shuffle property — arrival order is irrelevant). A read is
+ * PROVISIONAL while the chain can still grow its roster (`roster_open` — placement is the only phase `join` is
+ * legal, engine fight.move `ENotPlacement`), and a fight leaves placement exactly once, so EVERY provisional read
+ * of a fight has a lower object version than every later one:
+ *   · a provisional read exists  → the base is the LATEST of them. The roster only grows, so the newest placement
+ *     read is the most complete one — and it costs nothing, because a fight still in placement has no turn history
+ *     to strand. Without this the creator, who adopts at creation, reports a 3-fighter board on a 4-fighter fight
+ *     for the whole fight: her turn order, her placement occupancy and every event keyed to the joiner's
+ *     character (which orphans off-seat) are all downstream of that one stale base (#1274).
+ *   · otherwise → the base is the EARLIEST read, and a later HIGHER-version object is a CHECKPOINT that must NOT
+ *     re-adopt (#701): its cells are a 4s-stale / possibly-torn read and `base_from_view` can only DERIVE
+ *     turn_number as `status→1/0`, so re-adopting stranded every fighter's cell at the stale object and RESET
+ *     their accumulated per-turn count to 1, discarding the tail. Only a strictly-EARLIER read lowers that floor
+ *     (an out-of-order delivery of the true first read — including the placement read that outranks it above).
+ * `max` over one half of the partition, `min` over the other: any arrival order converges on the same base.
+ *
+ * NO destructive prune — the fold's `version > base_version` filter (core_fold.js `sorted_tail`)
  * settles the subsumed tail, and keeping those rows lets a late-arriving earlier bootstrap still fold them.
  * Pure. `board_state_from_fight` decodes the rich view (the ONE home); the raw `rows` are wire-revived first.
  * @param {import('./core_state.js').InboxState} inbox
@@ -234,7 +246,15 @@ export const admit_events = (inbox, actions, now) => {
  */
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const object_version = Number(version ?? 0)
-  if (inbox.base_view != null && object_version >= inbox.base_version) return inbox // checkpoint — never re-adopt
+  const provisional = inbox.base_view != null && roster_open(inbox.base_view)
+  // The cheap hold — the 4s-poll steady state, decided without decoding anything: a base at-or-below this read
+  // only ever moves when BOTH are provisional (the max-over-placement half), and a provisional base is never
+  // lowered (a placement read outranks every later read, so nothing below it can win).
+  if (
+    inbox.base_view != null &&
+    (provisional ? object_version <= inbox.base_version : object_version >= inbox.base_version)
+  )
+    return inbox
   const fight = revive_wire(rows)
   const base_view = board_state_from_fight({
     fight,
@@ -247,7 +267,9 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     creator: ctx.creator ?? null,
     ...(ctx.offset ? { offset: ctx.offset } : {}),
   })
-  return { ...inbox, base_view, base_version: object_version }
+  // A PROVISIONAL base moves only to a strictly LATER provisional read (max over placement); everything else here
+  // is a strictly earlier read lowering the floor, which a frozen base always accepts.
+  return !provisional || roster_open(base_view) ? { ...inbox, base_view, base_version: object_version } : inbox
 }
 
 /**

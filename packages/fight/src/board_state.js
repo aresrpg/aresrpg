@@ -29,6 +29,20 @@ const ENGINE_PLACEMENT = 0
 const ENGINE_ACTIVE = 1
 const ENGINE_DEFEAT = 3
 
+// THE ROSTER WINDOW (#1274) — the ONE law for "can the chain still add a fighter to this fight?": `join` is legal
+// ONLY while the fight is in PLACEMENT (engine fight.move `join_inner`, `ENotPlacement`), and a fight leaves
+// placement exactly once. A base adopted inside that window is therefore PROVISIONAL — it must re-derive from a
+// later placement read, or a joiner who lands after the creator's first read is invisible to her for the entire
+// fight (her turn order, her placement occupancy, and every event keyed to his character, which orphans off-seat).
+// The two accessors below read the SAME law in the two vocabularies this module already translates between.
+
+/** The window, read off a decoded board view (client `status`). @param {{status?:number}|null} view */
+export const roster_open = (view) => view?.status === STATUS_PLACEMENT
+
+/** The window, read off a RAW decoded chain record (engine `status`) — for doors that decide whether to adopt a
+ *  read BEFORE deriving its view. @param {{status?:number}|null} fight */
+export const fight_roster_open = (fight) => Number(fight?.status ?? 0) === ENGINE_PLACEMENT
+
 /** A chain BoardGeom cell → the client's canonical cell — IDENTITY (bounds-guarded; the engine board is
  *  canonical stride-20). An out-of-range cell (decode fault) collapses to 0 rather than mis-strided. */
 function to_canonical(/** @type {number} */ cell) {
