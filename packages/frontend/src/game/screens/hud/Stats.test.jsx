@@ -271,13 +271,20 @@ describe('Stats allocation actions', () => {
 
   // The per-stat +/- steppers share Reset/Confirm's canonical outline/gold roles while keeping compact geometry.
   test('the +/- steppers carry the house gold idiom, not a per-stat flat fill', () => {
-    expect(hud_panels_css).toContain('.hud-root .stats__step {')
-    expect(hud_panels_css).toContain('.hud-root .stats__step.btn-outline {')
-    expect(hud_panels_css).toContain('.hud-root .stats__step--add.btn-gold {')
+    expect(hud_panels_css).toContain('.stats .stats__step {')
+    expect(hud_panels_css).toContain('.stats .stats__step.btn-outline {')
+    expect(hud_panels_css).toContain('.stats .stats__step--add.btn-gold {')
     expect(hud_panels_css).toContain('.stats__step.btn-outline:disabled,')
     expect(hud_panels_css).toContain('cursor: not-allowed;')
     expect(hud_panels_css).not.toContain('background: var(--tint, var(--accent));') // the old rainbow fill
     expect(hud_panels_css).not.toContain('background: #1b2330;') // the old flat neutral box
+  })
+
+  // Regression for the owner's cramped-chip report: pages/characters.tsx renders CharactersDrawer
+  // variant="page" → Stats with NO `.hud-root` ancestor (only `.stats` itself, Stats.jsx's own root
+  // div). A `.hud-root`-scoped rule silently never fires there, so the sizing must key off `.stats`.
+  test('the stepper sizing bridge fires without a .hud-root ancestor (the Characters PAGE mount)', () => {
+    expect(hud_panels_css).not.toContain('.hud-root .stats__step')
   })
 
   test('the + stepper reuses the exact Confirm gold-gradient + glow recipe (visual parity, one recipe)', () => {
