@@ -36,7 +36,10 @@ import {
 import { assert_env } from './env_guard.mjs'
 
 const DEFAULT_PACKAGES = ['foundation', 'aresrpg', 'engine', 'dungeon']
-const RELEASE_PATH = path.resolve(MOVE_DIR, '../sdk/src/deployment/release.json')
+const RELEASE_PATH = path.resolve(
+  MOVE_DIR,
+  '../sdk/src/deployment/release.json'
+)
 
 const HELP = `ceremony_preflight_compat — catch IncompatibleUpgrade BEFORE the ceremony, mechanically.
 
@@ -57,13 +60,16 @@ Env:
 Read-only against chain + local build. Never mutates on-chain state. Published.toml is patched to the
 ground-truth on-chain package id only for the duration of the CLI call, then restored byte-for-byte.`
 
-
 // Swap `[published.<net>]`'s published-at for `addr` — string surgery, not a re-parse/re-serialize, so
 // the revert writes the ORIGINAL bytes back untouched (comments, formatting, everything).
 function withPublishedAt(content, net, addr) {
-  const re = new RegExp(`(\\[published\\.${net}\\][\\s\\S]*?published-at\\s*=\\s*)"[^"]*"`)
+  const re = new RegExp(
+    `(\\[published\\.${net}\\][\\s\\S]*?published-at\\s*=\\s*)"[^"]*"`
+  )
   if (!re.test(content))
-    throw new Error(`Published.toml has no [published.${net}] published-at to patch`)
+    throw new Error(
+      `Published.toml has no [published.${net}] published-at to patch`
+    )
   return content.replace(re, `$1"${addr}"`)
 }
 
@@ -71,7 +77,9 @@ function withPublishedAt(content, net, addr) {
 // Both streams get concatenated before this runs so a toolchain change never silently blinds the gate.
 function parseCompatErrors(output) {
   const counts = new Map()
-  for (const [, code, reason] of output.matchAll(/error\[Compatibility (E\d{5})\]: ([^\n]+)/g)) {
+  for (const [, code, reason] of output.matchAll(
+    /error\[Compatibility (E\d{5})\]: ([^\n]+)/g
+  )) {
     const key = `${code} ${reason.trim()}`
     counts.set(key, (counts.get(key) ?? 0) + 1)
   }
@@ -87,25 +95,41 @@ async function resolveGroundTruth(client, name, entry) {
     })
     const cap = objects?.[0]
     if (cap instanceof Error) throw cap
-    if (cap?.json?.package) return { target: cap.json.package, source: 'upgrade-cap' }
-    console.warn(`${name}: UpgradeCap content not decoded by the node — falling back to manifest`)
+    if (cap?.json?.package)
+      return { target: cap.json.package, source: 'upgrade-cap' }
+    console.warn(
+      `${name}: UpgradeCap content not decoded by the node — falling back to manifest`
+    )
   } catch (e) {
-    console.warn(`${name}: UpgradeCap read failed (${e?.message ?? e}) — falling back to manifest`)
+    console.warn(
+      `${name}: UpgradeCap read failed (${e?.message ?? e}) — falling back to manifest`
+    )
   }
-  if (!manifestPkg) throw new Error(`${name}: no on-chain cap.package and no manifest pkg/latest — refusing to guess`)
+  if (!manifestPkg)
+    throw new Error(
+      `${name}: no on-chain cap.package and no manifest pkg/latest — refusing to guess`
+    )
   return { target: manifestPkg, source: 'manifest' }
 }
 
 async function checkPackage(client, release, network, name) {
   const entry = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))[name]
-  if (!entry) return { name, status: 'error', detail: `no "${name}" entry in ${MANIFEST_PATH}` }
-  if (!entry.upgradeCap) return { name, status: 'error', detail: 'manifest entry has no upgradeCap' }
+  if (!entry)
+    return {
+      name,
+      status: 'error',
+      detail: `no "${name}" entry in ${MANIFEST_PATH}`,
+    }
+  if (!entry.upgradeCap)
+    return { name, status: 'error', detail: 'manifest entry has no upgradeCap' }
 
   const { target, source } = await resolveGroundTruth(client, name, entry)
 
   const releasePkg = release?.networks?.[network]?.packages?.[name]?.latest
   if (releasePkg && releasePkg !== target)
-    console.warn(`${name}: release.json .latest (${releasePkg}) disagrees with ${source} (${target}) — using ${source}`)
+    console.warn(
+      `${name}: release.json .latest (${releasePkg}) disagrees with ${source} (${target}) — using ${source}`
+    )
 
   const pkgPath = path.join(MOVE_DIR, name)
   const pubFile = path.join(pkgPath, 'Published.toml')
@@ -113,7 +137,8 @@ async function checkPackage(client, release, network, name) {
   const prior = parsePublishedToml(original, network)
   const needsPatch = prior?.publishedAt !== target
 
-  if (needsPatch) fs.writeFileSync(pubFile, withPublishedAt(original, network, target))
+  if (needsPatch)
+    fs.writeFileSync(pubFile, withPublishedAt(original, network, target))
 
   let output = ''
   let exitCode = 0
@@ -130,9 +155,14 @@ async function checkPackage(client, release, network, name) {
   }
 
   const errors = parseCompatErrors(output)
-  if (errors.size > 0) return { name, status: 'incompatible', errors, target, source }
+  if (errors.size > 0)
+    return { name, status: 'incompatible', errors, target, source }
   if (exitCode !== 0)
-    return { name, status: 'error', detail: `exit ${exitCode} — ${output.trim().split('\n').slice(-5).join(' | ')}` }
+    return {
+      name,
+      status: 'error',
+      detail: `exit ${exitCode} — ${output.trim().split('\n').slice(-5).join(' | ')}`,
+    }
   return { name, status: 'compatible', target, source }
 }
 
@@ -148,16 +178,23 @@ async function main() {
   const requested = process.argv.slice(2)
   const packages = requested.length ? requested : DEFAULT_PACKAGES
   for (const name of packages)
-    if (!(name in PKG_DEPS)) throw new Error(`unknown package "${name}" — one of: ${Object.keys(PKG_DEPS).join(', ')}`)
+    if (!(name in PKG_DEPS))
+      throw new Error(
+        `unknown package "${name}" — one of: ${Object.keys(PKG_DEPS).join(', ')}`
+      )
 
-  const release = fs.existsSync(RELEASE_PATH) ? JSON.parse(fs.readFileSync(RELEASE_PATH, 'utf8')) : null
+  const release = fs.existsSync(RELEASE_PATH)
+    ? JSON.parse(fs.readFileSync(RELEASE_PATH, 'utf8'))
+    : null
   const client = getClient(network)
 
   let anyFailed = false
   for (const name of packages) {
     const result = await checkPackage(client, release, network, name)
     if (result.status === 'compatible') {
-      console.log(`${name} COMPATIBLE  (target ${result.target}, from ${result.source})`)
+      console.log(
+        `${name} COMPATIBLE  (target ${result.target}, from ${result.source})`
+      )
     } else if (result.status === 'incompatible') {
       anyFailed = true
       const detail = [...result.errors].map(([k, n]) => `${n}x${k}`).join('  ')
