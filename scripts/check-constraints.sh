@@ -437,12 +437,260 @@ test_reachability_gate() {
   grn "  ✓ no new orphaned test files"
 }
 
+# ── fixture-adjudication gate (#1101) ────────────────────────────────────────────────────────────
+# Fixtures are evidence, not ordinary source: changing an existing one can make the implementation
+# and its oracle agree on the same lie. The repository's tracked corpus has two conventions:
+#   · packages/*/test/fixtures/**             (fight + sim today)
+#   · packages/*/test/**/*_golden.json        (sim/test/vectors today)
+# A file newly added by a commit has no earlier evidence to overwrite and is exempt. Every other
+# per-commit change under those pathspecs needs an Adjudicated-by trailer whose email differs from
+# the author (both canonicalized through .mailmap). The range is the PR's exact base..head in CI and
+# merge-base(origin/edge, HEAD)..HEAD in a contributor checkout.
+FIXTURE_PATHSPEC=(
+  ':(glob)packages/*/test/fixtures/**'
+  ':(glob)packages/*/test/**/*_golden.json'
+)
+FIXTURE_RANGE_BASE=
+FIXTURE_RANGE_HEAD=
+FIXTURE_RANGE_CONTEXT=
+FIXTURE_RANGE_SKIP=0
+resolve_fixture_pr_range() {
+  FIXTURE_RANGE_BASE=
+  FIXTURE_RANGE_HEAD=
+  FIXTURE_RANGE_CONTEXT=
+  FIXTURE_RANGE_SKIP=0
+
+  if [ -n "${FIXTURE_ADJUDICATION_BASE_SHA:-}" ] || [ -n "${FIXTURE_ADJUDICATION_HEAD_SHA:-}" ]; then
+    if [ -z "${FIXTURE_ADJUDICATION_BASE_SHA:-}" ] || [ -z "${FIXTURE_ADJUDICATION_HEAD_SHA:-}" ]; then
+      red "  ✗ RED: FIXTURE_ADJUDICATION_BASE_SHA and FIXTURE_ADJUDICATION_HEAD_SHA must be supplied together."
+      return 1
+    fi
+    FIXTURE_RANGE_BASE="$FIXTURE_ADJUDICATION_BASE_SHA"
+    FIXTURE_RANGE_HEAD="$FIXTURE_ADJUDICATION_HEAD_SHA"
+    FIXTURE_RANGE_CONTEXT=explicit
+  elif [ "${GITHUB_EVENT_NAME:-}" = pull_request ] || [ "${GITHUB_EVENT_NAME:-}" = pull_request_target ]; then
+    if [ -z "${GITHUB_EVENT_PATH:-}" ] || [ ! -r "$GITHUB_EVENT_PATH" ]; then
+      red "  ✗ RED: pull-request event payload is unavailable — the fixture commit range cannot be stated."
+      return 1
+    fi
+    local event_range
+    event_range="$(
+      node -e '
+        const fs = require("node:fs")
+        const event = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
+        const base = event.pull_request?.base?.sha
+        const head = event.pull_request?.head?.sha
+        if (!base || !head) process.exit(2)
+        process.stdout.write(`${base}\n${head}\n`)
+      ' "$GITHUB_EVENT_PATH"
+    )" || {
+      red "  ✗ RED: pull-request base/head SHAs could not be read from $GITHUB_EVENT_PATH."
+      return 1
+    }
+    FIXTURE_RANGE_BASE="$(printf '%s\n' "$event_range" | sed -n '1p')"
+    FIXTURE_RANGE_HEAD="$(printf '%s\n' "$event_range" | sed -n '2p')"
+    FIXTURE_RANGE_CONTEXT=pull-request
+  elif [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+    FIXTURE_RANGE_SKIP=1
+    FIXTURE_RANGE_CONTEXT="${GITHUB_EVENT_NAME:-non-PR CI} has no PR commit range"
+    return 0
+  else
+    FIXTURE_RANGE_HEAD=HEAD
+    FIXTURE_RANGE_BASE="$(git merge-base HEAD origin/edge 2>/dev/null)" || {
+      red "  ✗ RED: no merge-base with origin/edge — the local fixture commit range is unknown."
+      return 1
+    }
+    FIXTURE_RANGE_CONTEXT=local
+  fi
+
+  if ! git cat-file -e "${FIXTURE_RANGE_BASE}^{commit}" 2>/dev/null; then
+    red "  ✗ RED: fixture range base $FIXTURE_RANGE_BASE is not present as a commit."
+    return 1
+  fi
+  if ! git cat-file -e "${FIXTURE_RANGE_HEAD}^{commit}" 2>/dev/null; then
+    red "  ✗ RED: fixture range head $FIXTURE_RANGE_HEAD is not present as a commit."
+    return 1
+  fi
+  FIXTURE_RANGE_BASE="$(git rev-parse "$FIXTURE_RANGE_BASE")" || return 1
+  FIXTURE_RANGE_HEAD="$(git rev-parse "$FIXTURE_RANGE_HEAD")" || return 1
+}
+
+COMMIT_DIFF_FILES=()
+collect_commit_diff_files() {
+  local parent="$1"
+  local commit="$2"
+  local filter="$3"
+  local output_file
+  COMMIT_DIFF_FILES=()
+  output_file="$(mktemp "${TMPDIR:-/tmp}/ares-fixture-diff.XXXXXX")" || return 1
+  if ! git diff-tree --no-commit-id --name-only --no-renames --diff-filter="$filter" -r -z \
+    "$parent" "$commit" -- "${FIXTURE_PATHSPEC[@]}" >"$output_file"; then
+    rm -f "$output_file"
+    return 1
+  fi
+  local file
+  while IFS= read -r -d '' file; do
+    COMMIT_DIFF_FILES+=("$file")
+  done <"$output_file"
+  rm -f "$output_file"
+}
+
+fixture_adjudicators() {
+  local commit="$1"
+  local trailers
+  trailers="$(git show -s --format=%B "$commit" | git interpret-trailers --parse)" || return 1
+  local line
+  while IFS= read -r line; do
+    local key="${line%%:*}"
+    key="$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')"
+    if [ "$key" = adjudicated-by ]; then
+      printf '%s\n' "${line#*: }"
+    fi
+  done <<<"$trailers"
+}
+
+fixture_adjudication_gate() {
+  echo "== AresRPG fixture-adjudication gate (#1101: existing fixture mutations need a non-author trailer) =="
+  if ! resolve_fixture_pr_range; then
+    red "FIXTURE-ADJUDICATION GATE FAILED (nothing was judged). Fetch the complete PR history and rerun."
+    return 1
+  fi
+  if [ "$FIXTURE_RANGE_SKIP" -eq 1 ]; then
+    grn "  ✓ PASS: $FIXTURE_RANGE_CONTEXT; this row judges pull-request ranges."
+    return 0
+  fi
+
+  local commit_output
+  commit_output="$(git rev-list --reverse "$FIXTURE_RANGE_BASE..$FIXTURE_RANGE_HEAD")" || {
+    red "  ✗ RED: git could not enumerate $FIXTURE_RANGE_BASE..$FIXTURE_RANGE_HEAD."
+    red "FIXTURE-ADJUDICATION GATE FAILED (nothing was judged). Fetch the complete PR history and rerun."
+    return 1
+  }
+  local commits=()
+  local commit
+  while IFS= read -r commit; do
+    [ -n "$commit" ] && commits+=("$commit")
+  done <<<"$commit_output"
+
+  local red_rows=0
+  local mutating_commits=0
+  local mutated_files=0
+  local exempt_additions=0
+  for commit in "${commits[@]}"; do
+    local parent
+    parent="$(git rev-parse "${commit}^1" 2>/dev/null)" || {
+      red "  ✗ RED: $commit has no readable first parent; its fixture delta cannot be judged."
+      red_rows=$((red_rows + 1))
+      continue
+    }
+
+    if ! collect_commit_diff_files "$parent" "$commit" MDTUXB; then
+      red "  ✗ RED: $commit fixture mutations could not be read."
+      red_rows=$((red_rows + 1))
+      continue
+    fi
+    local mutations=("${COMMIT_DIFF_FILES[@]}")
+    if ! collect_commit_diff_files "$parent" "$commit" A; then
+      red "  ✗ RED: $commit new-fixture additions could not be read."
+      red_rows=$((red_rows + 1))
+      continue
+    fi
+    local additions=("${COMMIT_DIFF_FILES[@]}")
+    exempt_additions=$((exempt_additions + ${#additions[@]}))
+
+    local short
+    local subject
+    short="$(git rev-parse --short=12 "$commit")"
+    subject="$(git show -s --format=%s "$commit")"
+    if [ "${#mutations[@]}" -eq 0 ]; then
+      if [ "${#additions[@]}" -gt 0 ]; then
+        grn "  ✓ PASS $short $subject — ${#additions[@]} new fixture addition(s) exempt"
+      else
+        grn "  ✓ PASS $short $subject — no existing fixture mutation"
+      fi
+      continue
+    fi
+
+    mutating_commits=$((mutating_commits + 1))
+    mutated_files=$((mutated_files + ${#mutations[@]}))
+    local author_name
+    local author_email
+    author_name="$(git show -s --format=%aN "$commit")"
+    author_email="$(git show -s --format=%aE "$commit")"
+    local author_email_lower
+    author_email_lower="$(printf '%s' "$author_email" | tr '[:upper:]' '[:lower:]')"
+
+    local adjudicator_output
+    if ! adjudicator_output="$(fixture_adjudicators "$commit")"; then
+      red "  ✗ RED $short $subject — commit trailers could not be parsed"
+      printf '      %s\n' "${mutations[@]}"
+      red_rows=$((red_rows + 1))
+      continue
+    fi
+    local adjudicators=()
+    local identity
+    while IFS= read -r identity; do
+      [ -n "$identity" ] && adjudicators+=("$identity")
+    done <<<"$adjudicator_output"
+
+    local accepted_identity=
+    local self_identity=
+    for identity in "${adjudicators[@]}"; do
+      local canonical
+      canonical="$(git check-mailmap "$identity" 2>/dev/null)" || continue
+      local adjudicator_email=
+      case "$canonical" in
+        *'<'*'>'*)
+          adjudicator_email="${canonical##*<}"
+          adjudicator_email="${adjudicator_email%%>*}"
+          ;;
+      esac
+      [ -n "$adjudicator_email" ] || continue
+      local adjudicator_email_lower
+      adjudicator_email_lower="$(printf '%s' "$adjudicator_email" | tr '[:upper:]' '[:lower:]')"
+      if [ "$adjudicator_email_lower" = "$author_email_lower" ]; then
+        self_identity="$identity"
+      elif [ -z "$accepted_identity" ]; then
+        accepted_identity="$identity"
+      fi
+    done
+
+    if [ -n "$accepted_identity" ]; then
+      grn "  ✓ PASS $short $subject — ${#mutations[@]} existing fixture(s), Adjudicated-by: $accepted_identity"
+      printf '      %s\n' "${mutations[@]}"
+    elif [ -n "$self_identity" ]; then
+      red "  ✗ RED $short $subject — self-adjudication: $self_identity matches author $author_name <$author_email>"
+      printf '      %s\n' "${mutations[@]}"
+      red_rows=$((red_rows + 1))
+    else
+      red "  ✗ RED $short $subject — missing a parseable non-author Adjudicated-by: Name <email> trailer"
+      printf '      %s\n' "${mutations[@]}"
+      red_rows=$((red_rows + 1))
+    fi
+  done
+
+  echo "  range=$FIXTURE_RANGE_BASE..$FIXTURE_RANGE_HEAD context=$FIXTURE_RANGE_CONTEXT commits=${#commits[@]} mutating_commits=$mutating_commits mutated_files=$mutated_files new_fixture_additions_exempt=$exempt_additions red=$red_rows"
+  if [ "$red_rows" -gt 0 ]; then
+    red "FIXTURE-ADJUDICATION GATE FAILED. A fixture mutation can let a wrong fix hide its own evidence — the lying-green class at its root. Carry an Adjudicated-by: Name <email> trailer from someone other than the commit author."
+    return 1
+  fi
+  grn "FIXTURE-ADJUDICATION GATE PASSED."
+}
+
 if [ "${1:-}" = "--test-reachability" ]; then
   test_reachability_gate
   exit $?
 fi
+if [ "${1:-}" = "--fixture-adjudication" ]; then
+  if [ "$#" -ne 1 ]; then
+    echo "usage: bash scripts/check-constraints.sh --fixture-adjudication" >&2
+    exit 2
+  fi
+  fixture_adjudication_gate
+  exit $?
+fi
 if [ "$#" -ne 0 ]; then
-  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --test-reachability | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
+  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --test-reachability | --fixture-adjudication | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
   exit 2
 fi
 
@@ -475,6 +723,11 @@ fi
 
 echo
 if ! test_reachability_gate; then
+  FAIL=1
+fi
+
+echo
+if ! fixture_adjudication_gate; then
   FAIL=1
 fi
 
