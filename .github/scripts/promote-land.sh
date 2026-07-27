@@ -45,6 +45,8 @@ OWNER_LOGIN=Sceat
 LABEL=promote-requested
 PR="${1:?PR number required}"
 REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY required}"
+# shellcheck source=.github/scripts/promote-land-dispatch.sh
+source "$(dirname "${BASH_SOURCE[0]}")/promote-land-dispatch.sh"
 
 # emit <result> — record the outcome for the caller (never let the $GITHUB_OUTPUT write trip
 # `set -e`: a plain `&&` returns non-zero when the guard is false and would abort the script).
@@ -167,13 +169,21 @@ fi
 # ── the landing: a plain fast-forward push (git itself rejects anything non-ff) ─────────────
 git push origin "$HEAD_SHA:$BASE"
 echo "landed PR #$PR onto $BASE ($HEAD_SHA)"
+if [ "$BASE" = edge ]; then
+  dispatch_edge_landing_automations "$HEAD_SHA"
+fi
 
 # ── master-only post-landing tail (best-effort; the promotion already HAPPENED at the push) ──
 if [ "$BASE" = master ]; then
   # Align edge to the promoted head so the branches never drift at release points (skip-warn
   # when edge has already moved ahead).
   if git merge-base --is-ancestor "refs/remotes/origin/edge" "$HEAD_SHA"; then
-    git push origin "$HEAD_SHA:edge" && echo "edge aligned to master ($HEAD_SHA)" || echo "WARN: edge align push failed (non-fatal; master already landed)"
+    if git push origin "$HEAD_SHA:edge"; then
+      echo "edge aligned to master ($HEAD_SHA)"
+      dispatch_edge_landing_automations "$HEAD_SHA"
+    else
+      echo "WARN: edge align push failed (non-fatal; master already landed)"
+    fi
   else
     echo "edge has moved ahead of the promoted head — no align needed"
   fi
