@@ -23,6 +23,16 @@ const SIM_ABORT_RE = /abort code:?\s*(\d+)[,\s]+in\s+'?(?:0x[0-9a-fA-F]+::)?(\w+
  *  abort-capable, player-reachable Move source module is either here or in that gate's documented exclusion set. */
 export const decoder_covered_modules = () => Object.keys(TABLE)
 
+/** module → the abort codes the decoder maps. The coverage gate classifies at CODE granularity: a mapped
+ * module with an UNMAPPED code is exactly how a renumbered door silently falls back to generic copy. */
+export const decoder_covered_codes = () =>
+  Object.fromEntries(
+    Object.entries(TABLE).map(([module_name, codes]) => [
+      module_name,
+      new Set(Object.keys(codes).map(Number)),
+    ]),
+  )
+
 /** @type {Record<string, Record<number, string>>} module → abort code → i18n key */
 const TABLE = {
   character: {
@@ -95,11 +105,6 @@ const TABLE = {
     103: 'errors.spell_char_level', // ECharLevelTooLow — character level below the TARGET level's min_char_level
     104: 'errors.spell_no_points', // ENoSpellPoints — fewer unspent points than the escalating S8 cost
   },
-  // CHARACTERISTIC-POINT allocation (`aresrpg::stat_allocation` — the raise-stat player door). ENoStatPoints/103 is
-  // the actionable wall; EBadStat/EZeroPoints (101/102) are client-clamped defensive races → generic fallback.
-  stat_allocation: {
-    103: 'errors.stat_no_points', // ENoStatPoints — fewer unspent characteristic points than the requested allocation
-  },
   // #31 out-of-fight consumable USE (`aresrpg::consume::use_many`) + its heal target (character_link::heal_hp).
   // Only the player-reachable races are mapped — the UI pre-checks both, so these fire on stale reads only;
   // the structural codes (ENotConsumable / EUnsupportedEffect / EZeroQuantity) keep the generic fallback.
@@ -108,6 +113,10 @@ const TABLE = {
   },
   character_link: {
     105: 'inventory.already_full_hp', // EAlreadyFullHp — a heal at full HP is blocked when pointless (SPEC §10)
+    // CHARACTERISTIC-POINT allocation — the raise-stat player door. `stat_allocation` merged into this module at
+    // the republish restructure and its codes moved to the 130 block. 132 is the actionable wall; EBadStat/
+    // EZeroPoints (130/131) are client-clamped defensive races → generic fallback.
+    132: 'errors.stat_no_points', // ENoStatPoints — fewer unspent characteristic points than the requested allocation
   },
   // aresrpg_items::shop mint-on-sale (S-19a — the retired M1 aresrpg_shop lineage is gone; `shop` is now unique
   // to the items package, the legacy commerce modules being `template_sale` / `cosmetic_shop`). Codes mirror

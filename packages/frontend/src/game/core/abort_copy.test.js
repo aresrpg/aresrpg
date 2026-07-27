@@ -901,3 +901,20 @@ describe('character_extract arm — delete-door refusals map to honest copy', ()
     expect(humanize_tx_error(grpc_abort('character', 111))).not.toBe(i18n.t('errors.first_char_undeletable'))
   })
 })
+
+// The raise-stat door moved from `stat_allocation` into `character_link` at the republish restructure, and its
+// codes moved to a 130 block. The decoder mapped only the retired pair, so the one actionable wall — no unspent
+// points — rendered as generic "transaction failed".
+describe('humanize_abort — characteristic-point allocation after the module merge', () => {
+  test('132 ENoStatPoints — the actionable wall, under its new module', () => {
+    const out = humanize_abort(grpc_abort('character_link', 132))
+    expect(out).toBe(i18n.t('errors.stat_no_points'))
+    expect(out).not.toBe(i18n.t('errors.tx_failed'))
+  })
+
+  test('the retired stat_allocation module no longer carries the copy', () => {
+    expect(humanize_abort(grpc_abort('stat_allocation', 103))).toBe(
+      i18n.t('errors.tx_failed'),
+    )
+  })
+})
