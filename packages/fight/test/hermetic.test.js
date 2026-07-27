@@ -57,4 +57,13 @@ describe('@aresrpg/fight hermeticity (D769 MODULE LAW)', () => {
     expect(typeof surface.pace_segment).toBe('function')
     expect(typeof surface.produce_receipt_render_turns).toBe('function')
   })
+
+  test('raw fight-state decoding has exactly one production importer (renderer seam excluded)', () => {
+    const importers = src_files
+      .filter((file) => path.basename(file) !== 'fight_render_events.js')
+      .filter((file) => import_specifiers(fs.readFileSync(file, 'utf8')).includes('@aresrpg/sdk/fight'))
+      .map((file) => path.basename(file))
+      .sort()
+    expect(importers).toEqual(['core_inbox.js'])
+  })
 })

@@ -68,7 +68,7 @@ describe('admit_events — dedupe, source priority, failure-as-data', () => {
   })
 })
 
-describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the tail, never re-adopt)', () => {
+describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
   const fight = {
     width: 12,
     height: 12,
@@ -90,22 +90,20 @@ describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the 
     expect(fold_canonical(adopted).fighters.p0.hp).not.toBe(50)
   })
 
-  test('a later HIGHER-version snapshot is a CHECKPOINT — it never re-adopts (the bootstrap base is frozen)', () => {
-    // THE #701 FIX: the OLD store demoted the object read to a bootstrap base + checkpoint (M2b #291). A later
-    // object is stale/torn and base_from_view can only derive turn_number as status→1/0 — re-adopting reset the
-    // accumulated per-turn count and stranded cells at the stale object. So a higher-version read is a no-op here.
+  test('a snapshot ahead of the fold cursor fully re-adopts through the same door', () => {
     const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
-    const later = adopt_snapshot(at200, { ...fight, status: 3 }, 300, {})
-    expect(later.base_version).toBe(200)
-    expect(later).toBe(at200) // untouched — never re-folded from an object read
+    const later = adopt_snapshot(at200, { ...fight, status: 3, participants: [{ ...fight.participants[0], hp: 33 }] }, 300, {})
+    expect(later.base_version).toBe(300)
+    expect(later.base_view.status).toBe(3)
+    expect(later.base_view.escrow[0].hp).toBe(33)
   })
 
-  test('a strictly-EARLIER read lowers the bootstrap floor (min-version base — order-independent / shuffle-safe)', () => {
-    // The base is min(object versions): whatever arrival order, the earliest object is the bootstrap the tail folds
-    // on. An out-of-order delivery of the true-first read (lower version, later arrival) correctly lowers the floor.
+  test('a snapshot at or behind the fold cursor is discarded whole', () => {
     const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
     const earlier = adopt_snapshot(at200, fight, 150, {})
-    expect(earlier.base_version).toBe(150)
+    const equal = adopt_snapshot(at200, fight, 200, {})
+    expect(earlier).toBe(at200)
+    expect(equal).toBe(at200)
   })
 
   // THE ROSTER WINDOW (#1274) — `join` is legal only in placement, so a placement base is PROVISIONAL and the
@@ -153,6 +151,31 @@ describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the 
     const at100 = adopt_snapshot(empty_inbox(), fight, 100, {})
     const with_tail = admit_events(at100, receipt_actions([hit(0, 20)], 150), 1).inbox
     expect(Object.keys(with_tail.log)).toEqual(['150:0'])
+  })
+
+  test('red: a folded buff survives an older snapshot behind the event cursor', () => {
+    const at100 = adopt_snapshot(empty_inbox(), fight, 100, {})
+    const buff = {
+      kind: 'StatusAdded',
+      target_is_mob: false,
+      target_idx: 0,
+      status: { kind: 6, remaining_turns: 3, stat: 0, value: 1 },
+      version: 200,
+      event_idx: 0,
+      source: 'receipt',
+    }
+    const buffed = admit_events(at100, [buff], 1).inbox
+    expect(fold_canonical(buffed).fighters.p0.statuses).toHaveLength(1)
+
+    const stale = adopt_snapshot(
+      buffed,
+      { ...fight, participants: [{ ...fight.participants[0], hp: '1' }] },
+      150,
+      {}
+    )
+    expect(stale).toBe(buffed)
+    expect(fold_canonical(stale).fighters.p0.statuses).toEqual([buff.status])
+    expect(fold_canonical(stale).fighters.p0.hp).toBe(70)
   })
 })
 
