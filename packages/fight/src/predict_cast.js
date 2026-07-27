@@ -420,7 +420,12 @@ const state_from_view = (view, caster_id, stats_of) => {
   }
 }
 
-/** Resolve the chain's public critical branch. null means the branch cannot be known client-side yet. */
+/**
+ * Resolve the chain's public critical branch. null means the branch cannot be known client-side yet.
+ * A NEGATIVE seat or slot is not an index — it is a lookup that MISSED (#1190: `escrow.findIndex` answers -1),
+ * and mixing it into turn_seed yields a confident branch off a seat that does not exist, indistinguishable from
+ * a right answer. Composition refuses to build one; this is the same law at the consumer.
+ */
 export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
   if (!(critical_chance > 0)) return false
   if (
@@ -428,7 +433,9 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
     clock?.spawn_id == null ||
     clock?.turn_deadline_ms == null ||
     clock?.seat == null ||
-    clock?.slot == null
+    clock?.slot == null ||
+    !(clock.seat >= 0) ||
+    !(clock.slot >= 0)
   )
     return null
   const seed = turn_seed(clock)
