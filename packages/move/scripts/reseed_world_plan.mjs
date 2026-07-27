@@ -22,7 +22,7 @@ const resource_pack = (row) => {
   )
 }
 
-function resolve_world_rows(world, seed_manifest) {
+function resolve_world_rows(world, seed_manifest, mob_level_by_key) {
   const blockers = []
   const resources = (world.resources ?? []).map((row) => {
     const template_id = seed_manifest.items?.[row.slug]
@@ -59,11 +59,30 @@ function resolve_world_rows(world, seed_manifest) {
       return template_id
     })
   )
-  return { desired: { resources, mobs, dungeon_rooms }, blockers }
+  // DISTANCE DIFFICULTY: `clear_tables` empties the level vector and `add_mob_entry` re-inits every row to 0, so
+  // a plan that does not re-emit `set_mob_level` silently erases every authored level on each reseed. The level is
+  // the template's authored ceiling — the same projection `seed_full_corpus` writes at fresh authoring.
+  const mob_levels = (world.mobGroups ?? []).map((row) => {
+    const authored = mob_level_by_key.get(row.mob)
+    if (authored === undefined)
+      blockers.push(`world ${world.id}: mob ${row.mob} has no authored level`)
+    return as_number(authored ?? 1)
+  })
+  return { desired: { resources, mobs, mob_levels, dungeon_rooms }, blockers }
+}
+
+/// The World is `{ id, inner: Versioned }` since the republish restructure, and `Versioned` stores the payload
+/// as a dynamic field whose JSON nests under `inner.value`. Reading the ROOT yields an empty world, which makes
+/// every reseed rewrite everything and never converge. Falls back to the root so a pre-wrap object still reads.
+function world_payload(chain) {
+  const root = fields_of(chain)
+  const inner = fields_of(root.inner)
+  const wrapped = fields_of(inner.value)
+  return wrapped.mobs || wrapped.resources || wrapped.dungeon_rooms ? wrapped : root
 }
 
 function normalize_chain_world(chain) {
-  const value = fields_of(chain)
+  const value = world_payload(chain)
   return {
     resources: (value.resources ?? []).map((entry) => {
       const row = fields_of(entry)
@@ -85,6 +104,7 @@ function normalize_chain_world(chain) {
         max_group: as_number(row.max_group),
       }
     }),
+    mob_levels: (value.mob_levels ?? []).map(as_number),
     dungeon_rooms: (value.dungeon_rooms ?? []).map((room) => {
       const row = fields_of(room)
       return (row.mobs ?? []).map(id_string)
@@ -143,6 +163,15 @@ function world_calls(world_id, world_key, desired, target) {
       summary: `${world_key} add_mob_entry[${index}]`,
     })
   )
+  // AFTER every add_mob_entry: the level is positional, so the row must exist before it is set.
+  desired.mob_levels.forEach((level, index) =>
+    calls.push({
+      ...base,
+      function: 'set_mob_level',
+      payload: { template_id: desired.mobs[index]?.template_id, level },
+      summary: `${world_key} set_mob_level[${index}]`,
+    })
+  )
   desired.dungeon_rooms.forEach((mob_ids, index) =>
     calls.push({
       ...base,
@@ -165,6 +194,10 @@ export function build_world_leg({
   const transactions = []
   const row_deltas = []
   const role_projection_drift = []
+  // the authored eligibility ceiling per mob key — `seed_full_corpus` projects the same value at fresh authoring
+  const mob_level_by_key = new Map(
+    (mob_rows ?? []).map((mob) => [mob.key, mob.maxLevel ?? mob.minLevel ?? 1])
+  )
 
   for (const world of seed_rows) {
     const world_entry = seed_manifest.worlds?.find(
@@ -180,7 +213,8 @@ export function build_world_leg({
     }
     const { desired, blockers: row_blockers } = resolve_world_rows(
       world,
-      seed_manifest
+      seed_manifest,
+      mob_level_by_key
     )
     blockers.push(...row_blockers)
     if (row_blockers.length) continue

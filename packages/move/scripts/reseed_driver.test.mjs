@@ -270,6 +270,9 @@ test('changed world is one atomic clear + complete ordered re-author PTB; role s
     'clear_tables',
     'add_resource_entry',
     'add_mob_entry',
+    // clear_tables empties the level vector and add_mob_entry re-inits it to 0, so the authored eligibility
+    // ceiling has to be re-emitted per row or every reseed silently erases it
+    'set_mob_level',
     'add_dungeon_room',
   ])
   expect(leg.totals.mob_groups).toEqual({ removed: 1, added: 0 })
@@ -285,6 +288,8 @@ test('changed world is one atomic clear + complete ordered re-author PTB; role s
       [world_id]: {
         resources: chain_state[world_id].resources,
         mobs: chain_state[world_id].mobs.slice(0, 1),
+        // the authored ceiling for `rat` (no maxLevel in the row above ⇒ the level-1 default)
+        mob_levels: [1],
         dungeon_rooms: chain_state[world_id].dungeon_rooms,
       },
     },
