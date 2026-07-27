@@ -20,8 +20,9 @@ import { fight_store } from '@aresrpg/fight/store'
 import { input_envelope } from '@aresrpg/fight/envelope'
 import { classify_input } from '@aresrpg/fight/classify_input'
 import { push_bounded, capsule_export, CAPSULE_RING_LIMIT } from '@aresrpg/fight/capsule'
+import { fight_diagnostics } from '@aresrpg/fight/core'
 
-import { fight_trace_enabled } from './fight_state_trace.js'
+import { fight_state_trace, fight_trace_enabled } from './fight_state_trace.js'
 
 const CAPSULE_RING = '__ARES_FIGHT_CAPSULE' // window home of the bounded envelope ring
 const CAPSULE_DUMP = '__ARES_FIGHT_CAPSULE_DUMP' // the copy-trace affordance, upgraded to format-2
@@ -44,6 +45,7 @@ export const install_fight_trace_tee = (store = fight_store) => {
   if (typeof original !== 'function' || /** @type {any} */ (original)[TEE_WRAPPED]) return
   let capture_seq = 0
   let url_flag = null // memoized ?fighttrace= parse for THIS installation
+  let last_diagnostic = null
 
   const tee_enabled = () => {
     if (target.__ARES_FIGHT_TRACE_ENABLED === true) return true
@@ -75,13 +77,44 @@ export const install_fight_trace_tee = (store = fight_store) => {
     })
   }
 
+  // Dev-overlay hook: both clients can paste the same one-liner and compare hash/turn/cursors at the live fold.
+  const diagnostics = () => fight_diagnostics(store.getState().core)
+  Object.defineProperty(target, '__ARES_FIGHT_DIVERGENCE', {
+    configurable: true,
+    value: diagnostics,
+  })
+
+  /** Emit only when canonical truth or ingestion progress changes; drafts/ticks do not spam the console. */
+  const report_diagnostics = () => {
+    if (!tee_enabled()) return
+    const report = diagnostics()
+    if (report.roster_count === 0) return
+    const signature = JSON.stringify({
+      hash: report.hash,
+      turn_anchor: report.turn_anchor,
+      frontier: report.frontier,
+      received: report.ingestion.received,
+      folded: report.ingestion.folded,
+      dropped: report.ingestion.dropped,
+    })
+    if (signature === last_diagnostic) return
+    last_diagnostic = signature
+    fight_state_trace('fight_fingerprint', report)
+  }
+
   const teed = (msg, now = Date.now()) => {
     try {
       record_input(msg, now)
     } catch {
       /* a diagnostic tap NEVER perturbs the fight flow */
     }
-    return original(msg, now)
+    const result = original(msg, now)
+    try {
+      report_diagnostics()
+    } catch {
+      /* a diagnostic tap NEVER perturbs the fight flow */
+    }
+    return result
   }
   Object.defineProperty(teed, TEE_WRAPPED, { value: true })
   store.setState({ input: teed })

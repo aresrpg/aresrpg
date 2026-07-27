@@ -132,4 +132,53 @@ describe('fight_trace_tee — transparent capture on the door', () => {
     delete globalThis.window.__ARES_FIGHT_CAPSULE
     expect(ring()).toEqual([])
   })
+
+  test('the live hook and console trace expose fingerprint plus ingestion cursors', () => {
+    const store = create_fight_store()
+    const original_info = console.info
+    const lines = []
+    console.info = (...args) => lines.push(args)
+    try {
+      enable()
+      install_fight_trace_tee(store)
+      store.getState().input({ type: 'init', fight_id: '0xdiagnostic', my_key: 'p0' }, 400)
+      store.getState().input(
+        {
+          type: 'snapshot',
+          fight_id: '0xdiagnostic',
+          version: 10,
+          journal_head: '0',
+          fight: {
+            id: '0xdiagnostic',
+            status: 1,
+            width: 12,
+            height: 12,
+            participants: [{ character: '0xa11ce', cell: 5, hp: 50, ap: 6, mp: 3 }],
+            mobs: [],
+            queue: [{ is_mob: false, idx: 0 }],
+            turn_ptr: 0,
+          },
+        },
+        401
+      )
+
+      const report = globalThis.window.__ARES_FIGHT_DIVERGENCE()
+      expect(report).toMatchObject({
+        roster_count: 1,
+        frontier: { version: 10, ordinal: -1 },
+        ingestion: {
+          input_cursor: 1,
+          last: {
+            source: 'snapshot',
+            disposition: 'snapshot_adopted',
+            cursor: { snapshot_head: '0', base_version: 10 },
+          },
+        },
+      })
+      expect(typeof report.hash).toBe('string')
+      expect(lines.some((args) => args[0] === '[fight-state]' && args[1]?.event === 'fight_fingerprint')).toBe(true)
+    } finally {
+      console.info = original_info
+    }
+  })
 })
