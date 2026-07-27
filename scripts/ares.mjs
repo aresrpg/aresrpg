@@ -162,6 +162,7 @@ export const unit_test_files = [
   'scripts/eslint-rules/fp_law.test.mjs', // the FP-LAW tripwires' RuleTester suite (docs/CODE_LAW.md)
   'packages/rpc/api/indexer_log_ship.test.mjs', // Rust indexer JSON-error -> Sentry sidecar decoder/fingerprint
   'scripts/sentry_triage.test.mjs', // hourly Sentry -> GitHub dedupe/material-growth loop pure core
+  'scripts/board_hygiene.test.mjs', // #845's close chain: close-keyword parsing, the landing sweep's reopen guard, the stale clock's bot exclusion
   'scripts/check-move-field-limits.test.mjs', // the field-cap gate's no-verdict severity split (#938) — real subprocess, disposable git fixtures
   'test/gold/specs_anchor/click_verify_test.ts', // the harness click-decision pure unit (*_test.ts on purpose: the anchor playwright config's testMatch must never collect it)
   'test/gold/specs_anchor/fight_recovery_test.ts', // the stale-fight recovery classifier + tx-door invocation count (same *_test.ts law)

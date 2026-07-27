@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+#
+# THE BOARD DRAINS ITSELF — board hygiene stops being a hand pass.
+#
+# ROOT CAUSE (#845): every landing here is a FAST-FORWARD PUSH into `edge`. GitHub fires a
+# `Fixes #N` close-keyword only when a pull request is MERGED into the DEFAULT branch, so the
+# native close chain is inert in this repo and a fixed row outlives its fix. The `landing` job
+# below is that chain rebuilt: the board drains as work lands, not on a calendar.
+#
+# The jobs, in order of how much of the work they carry:
+#   landing   — PRIMARY, event-driven on every push to edge. Reads the pushed commits and their
+#               pull requests for close-keyword refs and closes each still-open row, citing the
+#               landing PR and commit as evidence.
+#   backstop  — the same sweep on a daily schedule over pull requests merged into edge in the last
+#               14 days, so a missed, failed, or raced landing run self-heals.
+#   ref_gate  — a `fix:`/`feat:` pull request with ZERO issue refs gets ONE warning comment: the
+#               close chain has nothing to close. A WARNING, never a merge blocker.
+#   stale     — the background backstop for rows nobody ever picked up: 7 days without human
+#               activity earns `stale-warning`, 7 more earn a not-planned close. Exempt by label:
+#               P0, P1, security, owner-gated, epic.
+#
+# SCHEDULES FIRE FROM THE DEFAULT BRANCH (#809, and gate.yml's `release_pins` header says the same):
+# until this file reaches master, the `schedule:` trigger runs ZERO times, so `backstop` and `stale`
+# are reachable only via workflow_dispatch. `landing` — the primary mechanism — is on `push`, which
+# fires from the branch the file lives on, so it works the moment this lands on edge. This is
+# stated rather than assumed on purpose: an arming path disjoint from its check is the #858 disease.
+#
+# Least privilege: read-only at the top, one write scope per job, and none of them can touch code.
+# Fork-safe: no secrets anywhere in this file. `ref_gate` is skipped for fork pull requests, whose
+# GITHUB_TOKEN is read-only by design — commenting would 403, and `pull_request_target` (which would
+# hand a write token to a fork-triggered run) is not worth a warning comment.
+# Board text is untrusted DATA: the script parses it for issue numbers and places it in JSON bodies.
+# No board-derived string is ever interpolated into a shell command here.
+name: board hygiene
+on:
+  push:
+    branches: [edge]
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+    branches: [edge, master]
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: board-hygiene-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  landing:
+    name: close on landing
+    # A branch-creation or force-push push event carries no usable base to compare against; the
+    # daily backstop reconciles those instead of failing loudly on an unreachable commit.
+    if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: close every row this push landed
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/board_hygiene.mjs landing --base "${{ github.event.before }}" --head "${{ github.sha }}"
+
+  backstop:
+    name: landed-but-open backstop
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: replay the landing sweep over recently merged pull requests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/board_hygiene.mjs backstop --since-days 14
+
+  stale:
+    name: stale ladder
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: warn at 7 days of silence, close 7 days after the warning
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/board_hygiene.mjs stale
+
+  ref_gate:
+    name: issue-ref gate (warning only)
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: 'warn when a fix:/feat: pull request references no row'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/board_hygiene.mjs ref-gate --pr ${{ github.event.pull_request.number }}
