@@ -27,8 +27,19 @@ public(package) fun record_trap_owner(fight: &mut Fight, anchor: u64, owner_seat
     let stored = df::borrow_mut<TrapOwnerKey, u64>(fight::uid_mut(fight), key);
     *stored = owner_seat;
   } else {
+    fight::note_field(fight, key);
     df::add(fight::uid_mut(fight), key, owner_seat);
   };
+}
+
+#[test_only]
+/// Does the trap-attribution row still exist? (Key struct is module-private — the probe must live here.)
+public fun test_row_exists(fight: &Fight, anchor: u64): bool { df::exists(fight::uid(fight), TrapOwnerKey { anchor }) }
+
+/// Reclaim the trap-attribution rows a fight never detonated (S-07 — `settlement` calls this before
+/// `fight::destroy`). The key is a board anchor, so the write set rides the index rather than a 380-cell walk.
+public(package) fun sweep_fields(fight: &mut Fight) {
+  fight::sweep_indexed<TrapOwnerKey, u64>(fight);
 }
 
 /// Consume attribution with the trap. Missing means the trap predates this module, so level 1 is canonical.

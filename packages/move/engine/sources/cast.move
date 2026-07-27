@@ -302,6 +302,33 @@ public(package) fun note_seat_turn(fight: &mut Fight, seat: u64) {
   };
 }
 
+#[test_only]
+/// Drive one limited cast through the recorder — the field-reclaim suite's writer for the four cast families.
+public fun test_record_cast(fight: &mut Fight, seat: u64, spell: ID, target_cell: u64) {
+  enforce_and_record_cast(fight, seat, spell, 1, 1, 1, target_cell);
+}
+
+#[test_only]
+/// Do this module's rows still exist on the Fight? (Key structs are module-private — the probe must live here.)
+public fun test_rows_exist(fight: &Fight, seat: u64, spell: ID, target_cell: u64): bool {
+  df::exists(fight::uid(fight), SeatTurnKey { seat })
+    || df::exists(fight::uid(fight), CastKey { seat, spell })
+    || df::exists(fight::uid(fight), TargetKey { seat, spell, cell: target_cell })
+}
+
+/// Reclaim every field family this module writes onto the Fight UID (S-07 — called by `settlement` before
+/// `fight::destroy`). Seat clocks are bounded by the seat count; the four cast-limit families carry a spell id
+/// in their key, so they ride the write-set index.
+public(package) fun sweep_fields(fight: &mut Fight) {
+  let seats = fight::participant_count(fight);
+  let mut s = 0;
+  while (s < seats) { fight::drop_field<SeatTurnKey, u64>(fight, SeatTurnKey { seat: s }); s = s + 1; };
+  fight::sweep_indexed<CastKey, CastRecord>(fight);
+  fight::sweep_indexed<TargetKey, TargetRecord>(fight);
+  fight::sweep_indexed<MobCastKey, CastRecord>(fight);
+  fight::sweep_indexed<MobTargetKey, TargetRecord>(fight);
+}
+
 /// Mob twin of the seat clock. Kept at the cast boundary so turn orchestration and direct resolver tests share
 /// one exact seam; the dynamic field preserves the frozen Fight layout.
 public(package) fun note_mob_turn(fight: &mut Fight, midx: u64) {
@@ -416,7 +443,7 @@ fun read_cast_record<K: copy + drop + store>(fight: &Fight, key: K): Option<Cast
 
 fun write_cast_record<K: copy + drop + store>(fight: &mut Fight, key: K, rec: CastRecord) {
   if (df::exists(fight::uid(fight), key)) *df::borrow_mut<K, CastRecord>(fight::uid_mut(fight), key) = rec
-  else df::add(fight::uid_mut(fight), key, rec);
+  else { fight::note_field(fight, key); df::add(fight::uid_mut(fight), key, rec); };
 }
 
 fun read_target_record<K: copy + drop + store>(fight: &Fight, key: K): Option<TargetRecord> {
@@ -426,7 +453,7 @@ fun read_target_record<K: copy + drop + store>(fight: &Fight, key: K): Option<Ta
 
 fun write_target_record<K: copy + drop + store>(fight: &mut Fight, key: K, rec: TargetRecord) {
   if (df::exists(fight::uid(fight), key)) *df::borrow_mut<K, TargetRecord>(fight::uid_mut(fight), key) = rec
-  else df::add(fight::uid_mut(fight), key, rec);
+  else { fight::note_field(fight, key); df::add(fight::uid_mut(fight), key, rec); };
 }
 
 // ── Mob cast-limit twin (§17.21 AI resolution) — the CHAIN gaining the enforcement @aresrpg/sim already models.
