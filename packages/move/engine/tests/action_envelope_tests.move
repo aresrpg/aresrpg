@@ -265,7 +265,11 @@ fun effect_matches(left: &Effect, right: &Effect): bool {
 }
 
 fun assert_effect_manifest(envelope: &fight_events::ActionResolved, expected: vector<u8>) {
-  let (ordinals, kinds) = fight_events::action_resolved_effects_for_testing(envelope);
+  let rows = event::events_by_type<fight_events::ActionEffect>();
+  let (ordinals, effects) = fight_events::action_effects_of_for_testing(&rows, envelope);
+  let mut kinds = vector[];
+  let mut k = 0;
+  while (k < effects.length()) { kinds.push_back(effects.borrow(k).kind()); k = k + 1; };
   let n = expected.length();
   assert!(ordinals.length() == n && kinds.length() == n, 40);
   let mut i = 0;
@@ -277,7 +281,8 @@ fun assert_effect_manifest(envelope: &fight_events::ActionResolved, expected: ve
 }
 
 fun assert_full_effect_manifest(envelope: &fight_events::ActionResolved, expected: vector<Effect>) {
-  let effects = fight_events::action_resolved_effect_descriptors_for_testing(envelope);
+  let rows = event::events_by_type<fight_events::ActionEffect>();
+  let (_ordinals, effects) = fight_events::action_effects_of_for_testing(&rows, envelope);
   assert!(effects.length() == expected.length(), 43);
   let mut i = 0;
   while (i < expected.length()) {

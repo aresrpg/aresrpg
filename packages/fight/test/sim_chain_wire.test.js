@@ -200,10 +200,23 @@ describe('captured wire bytes — the encoder speaks the chain dialect, not a se
     for (const event of CAPTURED.values()) expect(event.type).toMatch(/^0x[0-9a-f]{64}::fight_events::/)
   })
 
+  // FIELDS THE PACKAGE DROPPED SINCE THIS CORPUS WAS CAPTURED. The capsules are real bytes from a live
+  // session, so they cannot be edited to follow the source — they are the evidence. Naming a removal here
+  // keeps every other key under the assertion while the corpus is re-captured from the republished package,
+  // at which point the entry is deleted rather than carried.
+  //   • ActionResolved.effects — the action's effect manifest was serialized twice per action (once per
+  //     `ActionEffect` row, then again whole inside the closing bracket). No consumer ever read the copy:
+  //     `inputs.js` uses `ActionResolved` only to retire the action key, and the indexer defers the triple.
+  const DROPPED_SINCE_CAPTURE = { ActionResolved: ['effects'] }
+  const without_dropped = (kind, shape) => {
+    const dropped = DROPPED_SINCE_CAPTURE[kind] ?? []
+    return Object.fromEntries(Object.entries(shape).filter(([key]) => !dropped.includes(key)))
+  }
+
   for (const [kind, captured] of CAPTURED)
     if (EMITTED.has(kind))
       test(`${kind} — key set + JSON scalar types match the captured row`, () => {
-        expect(shape_of(EMITTED.get(kind).parsedJson)).toEqual(shape_of(captured.parsedJson))
+        expect(shape_of(EMITTED.get(kind).parsedJson)).toEqual(without_dropped(kind, shape_of(captured.parsedJson)))
       })
 
   test('every emitted kind is pinned by the captured corpus, or explicitly justified', () => {

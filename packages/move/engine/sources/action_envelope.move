@@ -112,13 +112,12 @@ public(package) fun emit_player_spell(
   random_effect_ordinals: vector<u64>,
   random_rolls: vector<u64>,
   random_bounds: vector<u64>,
-  effects: vector<Effect>,
 ) {
   fight_events::emit_action_resolved(
     fight, false, seat, target, fight_events::action_kind_spell(), turn, action, ap_cost,
     critical, fumbled, returned, option::some(spell), learned_level, option::some(level),
     option::none(), option::none(), 0, 0, 0, 0, 0, 0, vector[], crit_roll, CRIT_BOUND,
-    fumble_roll, fumble_bound, random_domains, random_effect_ordinals, random_rolls, random_bounds, effects,
+    fumble_roll, fumble_bound, random_domains, random_effect_ordinals, random_rolls, random_bounds,
   );
 }
 
@@ -140,13 +139,12 @@ public(package) fun emit_mob_spell(
   random_effect_ordinals: vector<u64>,
   random_rolls: vector<u64>,
   random_bounds: vector<u64>,
-  effects: vector<Effect>,
 ) {
   fight_events::emit_action_resolved(
     fight, true, mob, target, fight_events::action_kind_spell(), turn, action, ap_cost,
     false, fumbled, returned, option::none(), 0, option::some(level), option::some(group_template),
     option::some(spell_ordinal), 0, 0, 0, 0, 0, 0, vector[], 0, 0, fumble_roll, fumble_bound,
-    random_domains, random_effect_ordinals, random_rolls, random_bounds, effects,
+    random_domains, random_effect_ordinals, random_rolls, random_bounds,
   );
 }
 
@@ -169,12 +167,11 @@ public(package) fun emit_weapon(
   random_effect_ordinals: vector<u64>,
   random_rolls: vector<u64>,
   random_bounds: vector<u64>,
-  effect: Effect,
 ) {
   fight_events::emit_action_resolved(
     fight, false, seat, target, fight_events::action_kind_weapon(), turn, action, ap_cost,
     critical, false, false, option::none(), 0, option::none(), option::none(), option::none(),
     element, damage, crit_damage, crit_rate, ap_cost, reach, lines, crit_roll, CRIT_BOUND, 0, 0,
-    random_domains, random_effect_ordinals, random_rolls, random_bounds, vector[effect],
+    random_domains, random_effect_ordinals, random_rolls, random_bounds,
   );
 }

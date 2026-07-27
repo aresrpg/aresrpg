@@ -177,7 +177,7 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
     action_envelope::emit_player_spell(
       fight_id, seat, target_cell, action_turn, casts, sl.sl_ap_cost(), is_crit, true, false,
       spell_id, learned, sl, crit_roll, failure_roll, failure_bound,
-      vector[], vector[], vector[], vector[], vector[],
+      vector[], vector[], vector[], vector[],
     );
     return
   };
@@ -187,7 +187,7 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
   let mut random_rolls = vector[];
   let mut random_bounds = vector[];
   let mut return_rng = prng::mix(spell_formula::dodge_seed(turn_seed, casts), spell_effect::k_return_spell() as u64);
-  let (returned, returned_damage, returned_effects) = try_return_spell(
+  let (returned, returned_damage, _returned_effects) = try_return_spell(
     fight, PLAYER_SIDE, seat, action_turn, casts, sl.sl_ap_cost(), &caster_stats, target_cell, &effects,
     &mut return_rng, &mut random_domains, &mut random_effect_ordinals, &mut random_rolls,
     &mut random_bounds,
@@ -201,7 +201,7 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
     action_envelope::emit_player_spell(
       fight_id, seat, target_cell, action_turn, casts, sl.sl_ap_cost(), is_crit, false, true,
       spell_id, learned, sl, crit_roll, failure_roll, failure_bound, random_domains,
-      random_effect_ordinals, random_rolls, random_bounds, returned_effects,
+      random_effect_ordinals, random_rolls, random_bounds,
     );
     return
   };
@@ -279,7 +279,7 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
   action_envelope::emit_player_spell(
     fight_id, seat, target_cell, action_turn, casts, sl.sl_ap_cost(), is_crit, false, false,
     spell_id, learned, sl, crit_roll, failure_roll, failure_bound, random_domains,
-    random_effect_ordinals, random_rolls, random_bounds, effects,
+    random_effect_ordinals, random_rolls, random_bounds,
   );
 }
 
@@ -567,13 +567,13 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
       action_envelope::emit_mob_spell(
         fight_id, midx, target_cell, action_turn, action_ordinal, ap_cost, true, false,
         group_template, spell_index, sl, failure_roll, denominator, vector[], vector[], vector[],
-        vector[], vector[],
+        vector[],
       );
       return
     };
   };
   let mut did_damage = false;
-  let (returned, returned_damage, returned_effects) = try_return_spell(
+  let (returned, returned_damage, _returned_effects) = try_return_spell(
     fight, MOB_SIDE, midx, action_turn, action_ordinal, ap_cost, &caster_stats, target_cell, &effects,
     rng, &mut random_domains, &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
   );
@@ -636,7 +636,6 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
     fight_id, midx, target_cell, action_turn, action_ordinal, ap_cost, false, returned,
     group_template, spell_index, sl, failure_roll, denominator, random_domains,
     random_effect_ordinals, random_rolls, random_bounds,
-    if (returned) returned_effects else effects,
   );
 }
 
@@ -776,7 +775,7 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   action_envelope::emit_weapon(
     fight_id, seat, target_cell, action_turn, slot, is_crit, element, dmg_base, crit_base,
     crit_rate, ap_cost, reach, lines, crit_roll, random_domains, random_effect_ordinals,
-    random_rolls, random_bounds, effect,
+    random_rolls, random_bounds,
   );
 }
 
@@ -844,7 +843,7 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
   action_envelope::emit_weapon(
     fight_id, seat, target_cell, action_turn, slot, is_crit, element, dmg_base, crit_base,
     crit_rate, ap_cost, reach, lines, crit_roll, random_domains, random_effect_ordinals,
-    random_rolls, random_bounds, effect,
+    random_rolls, random_bounds,
   );
 }
 

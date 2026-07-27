@@ -92,19 +92,22 @@ const envelope_of = ({ learned_level, levels = LADDER }) => {
     ],
   })
   const of_type = (name) => rows.find((r) => r.type.endsWith(`::${name}`))?.parsedJson ?? null
-  return { started: of_type('ActionStarted'), resolved: of_type('ActionResolved') }
+  // The effect manifest is stated ONCE, on the `ActionEffect` rows — `ActionResolved` is the closing bracket
+  // and no longer repeats it, so the rank's damage is read where the wire actually states it.
+  const effects = rows.filter((r) => r.type.endsWith('::ActionEffect')).map((r) => r.parsedJson.effect)
+  return { started: of_type('ActionStarted'), resolved: of_type('ActionResolved'), effects }
 }
 
 describe('the action envelope prices the rank the seat actually holds', () => {
   test('a resolving level index prices ITS rank — never rank 1 by default', () => {
     const priced = [1, 2, 3].map((learned_level) => {
-      const { started, resolved } = envelope_of({ learned_level })
+      const { started, resolved, effects } = envelope_of({ learned_level })
       return {
         learned_level,
         ap_cost: Number(started.ap_cost),
         // the row's own claim about which rank it resolved at, read back from the same envelope
         stated_level: Number(resolved.learned_level),
-        damage: Number(resolved.effects[0].value),
+        damage: Number(effects[0].value),
       }
     })
     expect(priced).toEqual([
