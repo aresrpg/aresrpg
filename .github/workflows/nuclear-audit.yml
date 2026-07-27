@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# GitHub Actions schedules only fire from the default branch (#809). Until master carries this
+# tooling, the path-filtered push-to-edge trigger below is the actually-live enforcement tooth.
+name: nuclear audit
+
+on:
+  push:
+    branches: [edge]
+    paths:
+      - 'packages/*/src/**'
+      - 'api/**'
+      - 'scripts/nuclear_audit.mjs'
+      - 'scripts/fixtures/nuclear_audit_baseline.json'
+      - 'scripts/fixtures/nuclear_audit.test.mjs'
+      - 'scripts/fixtures/nuclear_audit/**'
+      - '.github/workflows/nuclear-audit.yml'
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nuclear-audit:
+    name: nuclear-audit (advisory ratchet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Day one: a grown count leaves a red job/check + full summary but cannot block landing.
+    # Delete this one line in the later reviewed change that gives the check landing power.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: prove the three scanners and ratchet semantics
+        run: node --test scripts/fixtures/nuclear_audit.test.mjs
+      - name: census clones, import fan-out, and repeated literals
+        run: node scripts/nuclear_audit.mjs
