@@ -30,7 +30,7 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
     const scene = new Scene()
     const terrain = make(scene)
     const win = { __terrain_renderer: terrain }
-    expect(mesh_count(scene)).toBe(6) // solid/foliage/cutout/canopy/liquid pools + foliage's scene_depth_mesh
+    expect(mesh_count(scene)).toBe(5) // one pool mesh per render class: solid/foliage/cutout/canopy/liquid
 
     dispose_terrain(terrain, win)
 
@@ -78,7 +78,7 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
     // Next scene mount builds a brand-new renderer — must construct, upload, and report cleanly.
     const scene2 = new Scene()
     const next = make(scene2)
-    expect(mesh_count(scene2)).toBe(6)
+    expect(mesh_count(scene2)).toBe(5)
     // one solid grass-top quad (x=y=z=0,w=h=32,face=2,block=3) in the frozen 8-byte wire format
     const word_a = ((31 << 18) | (31 << 23) | (2 << 28)) >>> 0
     const word_b = (3 | (15 << 12) | (0xff << 20)) >>> 0
