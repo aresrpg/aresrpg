@@ -10,10 +10,11 @@
 // · wave_turns_of — pace an accepted batch's non-local events into presentation wave turns (window in seq space).
 
 import { participant_entity_id } from './fight_control.js'
-import { apply_action, empty_state, seat_resolver } from './inputs.js'
+import { apply_action, empty_state, fighter_key, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
 import { GRID_W } from './los.js'
+import { decoded_cell, encoded_cell, reconstructed_path } from './fight_render_prims.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
 import {
@@ -304,14 +305,48 @@ export const recompute = (draft, now) => {
   // force-stop/damage while the chain kept it armed (and, dual-home, a re-cast then aborted ECellAlreadyTrapped and
   // nuked the whole batch). Fight.fx is dropped from reads, so my_traps only RETIRES on committed entry/occupancy
   // proof — it errs toward "it stays".
+  // THE CROSSING (#954/#1050): a `Moved`/`MobMoved` row carries only the LANDED cell, but the chain detonates a
+  // trap the instant its cell is ENTERED, anywhere along the walk (`movement.move:43`, inline + resume). Sampling
+  // `to_cell` alone let a mob walk straight through a trap the chain had already sprung while the client kept
+  // painting it armed. Re-derive the walk instead — the same `reconstructed_path` the renderer beats read, over
+  // the same board facts, so "which cells did this walk enter" has ONE answer client-wide. A `Displaced` slide
+  // force-stops on the first trap it meets, so its landing cell IS its only entry.
+  const board_facts = {
+    obstacles: draft.view?.obstacles,
+    holes: draft.view?.holes,
+    shape_mask: draft.view?.shape_mask,
+    board_width: draft.view?.width,
+    board_height: draft.view?.grid_height,
+    width: GRID_W,
+  }
+  const resolve_seat_key = seat_resolver(draft.view)
+  const cell_at = new Map(
+    Object.entries(base.fighters ?? {}).map(([key, fighter]) => [key, fighter.cell])
+  )
+  const committed_entries = []
+  for (const entry of authoritative_tail) {
+    if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) continue
+    const key =
+      entry.kind === 'Displaced'
+        ? fighter_key({ is_mob: entry.target_is_mob, idx: entry.target_idx, resolve_seat: resolve_seat_key })
+        : fighter_key({ is_mob: true, idx: entry.idx, character: entry.character, resolve_seat: resolve_seat_key })
+    const to = Number(entry.to_cell)
+    const from = cell_at.get(key)
+    const version = Number(entry.version)
+    const entered =
+      entry.kind === 'Displaced' || from == null
+        ? [to]
+        : reconstructed_path(decoded_cell(from, GRID_W), decoded_cell(to, GRID_W), board_facts).map((cell) =>
+            encoded_cell(cell, GRID_W)
+          )
+    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version })
+    cell_at.set(key, to)
+  }
   const occupied_cells = new Set(
     Object.values(chain_committed.fighters ?? {})
       .filter((fighter) => fighter.cell != null)
       .map((fighter) => fighter.cell)
   )
-  const committed_entries = authoritative_tail
-    .filter((entry) => ['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) && entry.to_cell != null)
-    .map((entry) => ({ cell: Number(entry.to_cell), version: Number(entry.version) }))
   const my_traps = (draft.my_traps ?? []).map((t) =>
     t.gone ||
     !t.cells.some(
