@@ -7,7 +7,14 @@
 // radius, so those constants are probe-geometry closed forms, not re-implementations of the fit.
 import { describe, expect, test } from 'bun:test'
 
-import { FILL, HEAD_PROBE, MIN_RADIUS, TAN_HALF, head_fit_params, within_margins } from './shop_head_autofit.mjs'
+import {
+  FILL,
+  HEAD_PROBE,
+  MIN_RADIUS,
+  TAN_HALF,
+  head_fit_params,
+  within_margins,
+} from '../../scripts/shop_head_autofit.mjs'
 
 const CANVAS = 512
 

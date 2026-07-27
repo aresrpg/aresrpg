@@ -362,7 +362,6 @@ test_reachability_hits() {
     const baseline_prefixes = [
       "packages/engine/bench/", // visual-regression .spec.js benches — `bun run bench` (playwright), a manual tool, never ares test
       "packages/frontend/e2e/", // legacy e2e suite driven by scripts/golden_path.sh, predates test/gold, not an ares test leg
-      "packages/frontend/scripts/", // asset-pipeline .test.mjs helpers outside src/ (frontend test script = "bun test src")
       "packages/move/scripts/", // Move ceremony-script tests — packages/move has NO "test" script at all
       "packages/rpc/", // rpc-api + gas-pool — NOT a bun workspace member (bun pm ls: packages/rpc has no package.json)
       "packages/simlab/", // no "test" script (dev/build only)
