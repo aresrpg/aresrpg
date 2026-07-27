@@ -17,24 +17,20 @@
 //      A floating `rev = "testnet"` is what let the second framework lineage in: the branch moved,
 //      the re-resolution pulled a different framework, and the lock grew a second rev.
 //
-// STATE OF THE TREE, MEASURED 2026-07-27 (why this is `bun run check:move-locks` and not yet a leg
-// of `bun run lint`): the gate is RED today — 6 of 10 locks carry a dual, and 7 manifests float
-// Kiosk on `rev = "testnet"`. Fixing the lock content is NOT a lock edit, which is what the ticket
-// assumed. Three collapse attempts and what each disproved, on `sui 1.76.0-6effb4523834`:
-//   · pin Kiosk to the branch tip (a1cd2010…) + hand-collapse every lock onto 8fc60f1f: all nine
-//     packages build, byte-identical sizes — and the next `sui move build` re-expands the lock with
-//     the CLI's own implicit framework (6effb452…). A collapsed lock the toolchain rewrites is
-//     cosmetic, so it is not committed here.
-//   · drop our explicit `[dependencies.Sui]`/`[dependencies.MoveStdlib]` (what the CLI's own NOTE
-//     suggests): still dual — Kiosk's manifest at a1cd2010 pins the framework at d50b7888…, and the
-//     resolver hands THAT pin to the root while Kiosk itself links the implicit rev.
-//   · `override = true` (already in every manifest): does not reach a dependency's own edge — the
-//     `Sui`/`Sui_1` pair in the lock IS that failure, already recorded in #1284.
-// So one rev per environment is reachable only when our pin, Kiosk's pin and the build CLI's own
-// framework commit are the SAME commit — a toolchain-pin decision (which sui release ships
-// d50b7888…, and CI's pinned sui bumped with it), not a repo edit. That decision is #1284's
-// remaining half; this gate is what makes its verdict mechanical the day it lands, and what proves
-// the condition today instead of asserting it in a comment.
+// HOW THE RULE IS SATISFIED (measured 2026-07-27, `sui 1.76.0-6effb4523834`). The dual was never a
+// lock-editing problem, which is why hand-collapsing it always came back:
+//   · `override = true` does NOT reach a dependency's own edge — the `Sui`/`Sui_1` pair IS that
+//     failure. Kiosk resolves its framework to the build CLI's IMPLICIT rev regardless.
+//   · So the graph is single-rev if and only if OUR pin is that same rev. Scratch-built both ways:
+//     pin = 6effb4523834 (the CLI's own) → one rev per environment, with Kiosk pinned as-is;
+//     pin = d50b7888 (Kiosk's own manifest pin) → two revs, every time.
+//   · A hand-collapsed lock under a divergent pin is cosmetic: the next `sui move build` re-expands
+//     it. The fix is real only when a second full build leaves every lock BYTE-IDENTICAL, which is
+//     the state this gate now protects.
+// Consequence, recorded in packages/move/Move.toml and in checks.yml's sui pin: CI's installed sui
+// and the ceremony operator's sui must be the same build, and re-pinning one means re-pinning every
+// manifest in the same commit. Both environments must be re-resolved when they do
+// (`sui move build` resolves only the ACTIVE one — `--build-env mainnet` for the other).
 //
 // Usage: node check_move_lock_revs.mjs [--root <dir>]   (default: packages/move)
 //        bun run check:move-locks

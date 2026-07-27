@@ -8,13 +8,13 @@ edition = "2024"
 [dependencies.Sui]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
-rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+rev = "6effb4523834cf2536be21d8ebe577b0cc9e0160"
 override = true
 
 [dependencies.MoveStdlib]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/move-stdlib"
-rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+rev = "6effb4523834cf2536be21d8ebe577b0cc9e0160"
 override = true
 
 # Party proves current character custody through the same personal-kiosk capability seam as
@@ -22,7 +22,7 @@ override = true
 [dependencies.Kiosk]
 git = "https://github.com/MystenLabs/apps.git"
 subdir = "kiosk"
-rev = "testnet"
+rev = "a1cd20107340bf8f6e6913ed20b9fafe92fe3d03"
 
 [environments]
 testnet = { chain-id = "4c78adac" }

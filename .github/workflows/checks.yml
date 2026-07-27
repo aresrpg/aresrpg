@@ -45,13 +45,21 @@ jobs:
         # this toolchain produced. Only the `sui` member is extracted from the release tarball.
         # A tag names a location, not bytes — SUI_SHA256 pins the artifact itself and SUI_VERSION
         # asserts the toolchain that answers, so neither can drift under the tag unnoticed (#945).
-        # Provenance: sha256 of sui-testnet-v1.75.1-ubuntu-x86_64.tgz downloaded from the URL below
-        # and cross-read from the release-asset digest API; version string from run 30177710763's
-        # own `sui --version` line. Both read 2026-07-27 — bumping SUI_RELEASE re-reads both.
+        # Provenance: sha256 read from the release-asset digest API for
+        # sui-testnet-v1.76.0-ubuntu-x86_64.tgz; version string is the ceremony machine's own
+        # `sui --version`. Both read 2026-07-27 — bumping SUI_RELEASE re-reads both.
+        #
+        # #1284 — THIS PIN IS LOAD-BEARING, not housekeeping. Every Move.toml pins the framework at
+        # the build CLI's OWN framework commit, because that is the only configuration that resolves
+        # to a single framework rev (Kiosk's transitive edge takes the CLI's implicit rev whatever
+        # `override = true` says). So CI's sui and the ceremony's sui must be the SAME build: if they
+        # drift, CI re-resolves the locks against a different framework and the Move framework-rev
+        # gate in `bun run lint` goes red — by design, loudly, instead of a dual reaching a publish.
+        # Bumping this pin means re-pinning every packages/move/**/Move.toml in the same commit.
         env:
-          SUI_RELEASE: testnet-v1.75.1
-          SUI_SHA256: d85ec6ff2ba50005751b262fc4ca79eed54ecc7c8229136ab607c7f28f3fb98e
-          SUI_VERSION: sui 1.75.1-623521008f1c
+          SUI_RELEASE: testnet-v1.76.0
+          SUI_SHA256: 4a34ef21e56650772064f946919d262d9e22102034007dccec3cc3418b93505d
+          SUI_VERSION: sui 1.76.0-6effb4523834
         run: |
           set -euo pipefail
           curl -fsSL -o /tmp/sui.tgz \

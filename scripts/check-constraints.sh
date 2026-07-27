@@ -701,6 +701,20 @@ else
   fi
 fi
 
+# ── Move framework-rev gate (#1284) ─────────────────────────────────────────────────────────────
+# The rule packages/move/Move.toml carried as PROSE since the FeatureNotYetSupported incident: ONE
+# sui-framework + ONE move-stdlib rev per environment, and no floating git revs. It was broken anyway,
+# for a year, because nothing read the lock — the graduation trigger. Pure repo bytes: no chain, no
+# CLI, no network, so it costs nothing and cannot flake.
+echo
+echo "== AresRPG Move framework-rev gate (one framework lineage per environment) =="
+if node packages/move/scripts/check_move_lock_revs.mjs; then
+  :
+else
+  red "MOVE LOCK REV GATE FAILED."
+  FAIL=1
+fi
+
 echo
 if [ "$FAIL" -eq 0 ]; then
   grn "ALL CONSTRAINT GATES PASSED."

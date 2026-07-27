@@ -7,18 +7,22 @@ version = "0.1.0"
 edition = "2024"
 authors = ["AresRPG"]
 
-# FRAMEWORK PIN: single-rev, matched to the active CLI's own framework hash (`sui --version` →
-# 1.74.1-8fc60f1fa966) — identical to every source package so the whole graph compiles against one lineage.
+# FRAMEWORK PIN: single-rev, matched to the build CLI's OWN framework hash (`sui --version` →
+# 1.76.0-6effb4523834) — identical to every sibling package so the whole graph compiles against one lineage.
+# Measured, not assumed (#1284): a pin that DIVERGES from the CLI's implicit framework is what produced the
+# `Sui`/`Sui_1` dual — Kiosk's transitive edge resolves to the CLI's rev whatever `override = true` says, so
+# the two only collapse when our pin IS that rev. Re-pin here whenever the CLI moves; check_move_lock_revs.mjs
+# fails the build if a second rev ever reappears.
 [dependencies.Sui]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
-rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+rev = "6effb4523834cf2536be21d8ebe577b0cc9e0160"
 override = true
 
 [dependencies.MoveStdlib]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/move-stdlib"
-rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+rev = "6effb4523834cf2536be21d8ebe577b0cc9e0160"
 override = true
 
 # Kiosk LOCK + TransferPolicy (the kiosk-lock constitution: every item/character in a personal kiosk). The default
@@ -26,7 +30,7 @@ override = true
 [dependencies.Kiosk]
 git = "https://github.com/MystenLabs/apps.git"
 subdir = "kiosk"
-rev = "testnet"
+rev = "a1cd20107340bf8f6e6913ed20b9fafe92fe3d03"
 
 # The pure-math combat foundation (spell/effect/formula/target/grid/prng/book/board). Stays standalone (S-46:
 # "only generic math lives elsewhere"). Arrow flows downward (aresrpg → foundation), never back.

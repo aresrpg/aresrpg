@@ -13,26 +13,28 @@ authors = ["AresRPG"]
 [dependencies.Kiosk]
 git = "https://github.com/MystenLabs/apps.git"
 subdir = "kiosk"
-rev = "testnet"
+rev = "a1cd20107340bf8f6e6913ed20b9fafe92fe3d03"
 
-# FRAMEWORK REV PIN (upgrade-safety, the FeatureNotYetSupported saga): Kiosk's floating `rev="testnet"` pulled the
-# Sui framework at ff1fe0ec while the active CLI's implicit system framework is 8fc60f1f → TWO framework revs in
-# one build. A package linking a DUAL framework rev is rejected by testnet-128's UPGRADE path (FeatureNotYetSupported);
-# a trivial single-rev pkg upgraded fine (devops control) — so it's the DUAL, not the version. These `override = true`
-# pins force the ENTIRE graph (incl Kiosk's transitive) to ONE rev = 8fc60f1f, the ACTIVE sui CLI's own framework
-# (`sui --version` → 1.75.1-8fc60f1fa966), which the control PROVED testnet-128 accepts for upgrades.
-# VERIFICATION: Move.lock has ONE sui-framework + ONE move-stdlib rev (no duals). STANDING RULE: NO floating revs —
-# pins only, and the pin MUST match the build CLI's framework hash (re-pin to the new `sui --version` hash if the CLI changes).
+# FRAMEWORK REV PIN (upgrade-safety, the FeatureNotYetSupported saga): a package linking a DUAL framework rev is
+# rejected by testnet-128's UPGRADE path; a trivial single-rev package upgraded fine (devops control) — so it is the
+# DUAL, not the version. What was believed about the fix was wrong for a year, and #1284 measured it: `override = true`
+# does NOT reach a dependency's own edge. Kiosk resolves its framework to the build CLI's IMPLICIT rev, so the graph
+# is single-rev if and only if OUR pin is that same rev — pinning anything else (however deliberate) manufactures the
+# `Sui`/`Sui_1` pair. Proven on scratch builds: pin = 6effb4523834 (the CLI's own) → one rev per environment; pin =
+# anything else → two, every time, whatever Kiosk is pinned to.
+# STANDING RULE: NO floating revs — pins only, and the framework pin MUST equal the build CLI's framework hash
+# (`sui --version`); re-pin every manifest together when the CLI moves, and keep CI's installed sui on that same
+# build. VERIFICATION is no longer prose: `bun run check:move-locks` (in `bun run lint`) fails on a second rev.
 [dependencies.Sui]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
-rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+rev = "6effb4523834cf2536be21d8ebe577b0cc9e0160"
 override = true
 
 [dependencies.MoveStdlib]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/move-stdlib"
-rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+rev = "6effb4523834cf2536be21d8ebe577b0cc9e0160"
 override = true
 
 [addresses]
