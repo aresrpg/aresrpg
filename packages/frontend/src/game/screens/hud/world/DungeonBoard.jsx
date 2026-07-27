@@ -330,8 +330,19 @@ export function DungeonBoard() {
     /** @type {Map<number, { kind: 'player' | 'mob', alive: boolean, idx: number }>} */
     const map = new Map()
     if (!dungeon) return map
-    dungeon.escrow.forEach((p, i) => map.set(p.cell, { kind: 'player', alive: p.committed?.alive ?? p.alive, idx: i }))
-    dungeon.mobs.forEach((m, i) => map.set(m.cell, { kind: 'mob', alive: m.committed?.alive ?? m.alive, idx: i }))
+    // LIVING-WINS (#1214): a corpse keeps its on-chain cell but never body-blocks, so a live occupant may legally
+    // share it. This candidate set must resolve the SAME living occupant `find_living_mob_at` / `find_entity_at`
+    // do (cast.move / fight_state.js — a fresh scan, corpses can never shadow a living target) — a last-write-wins
+    // collapse let a later-indexed corpse silently overwrite a live occupant sharing its cell (a mob walking onto
+    // its own kill's corpse), refusing a legal weapon cast and letting a shadowed live mob dodge LOS. A living
+    // occupant is claimed once and never displaced, whatever the write order.
+    const claim = (cell, occupant) => {
+      const existing = map.get(cell)
+      if (existing?.alive && !occupant.alive) return // a corpse never displaces the living occupant already here
+      map.set(cell, occupant)
+    }
+    dungeon.escrow.forEach((p, i) => claim(p.cell, { kind: 'player', alive: p.committed?.alive ?? p.alive, idx: i }))
+    dungeon.mobs.forEach((m, i) => claim(m.cell, { kind: 'mob', alive: m.committed?.alive ?? m.alive, idx: i }))
     return map
   }, [dungeon])
 
