@@ -112,6 +112,34 @@ public fun distance_progress(ax: u32, az: u32, bx: u32, bz: u32): u64 {
   }
 }
 
+/// Difficulty distance between a searched zone RECTANGLE and the centred first-join rectangle, expressed as
+/// `distance_progress`. Zero when they intersect (so ANY legal fresh-join position sees the roster floor), then
+/// growing continuously from the spawn-zone boundary through the authored 250/1000/5000 anchors. Plain scalars in,
+/// one scalar out — the caller supplies the zone origin and the world's bounds/spawn-box dials, so the kernel needs
+/// nothing about a World object to answer.
+public fun spawn_distance_progress(
+  ox: u32, oz: u32, zsize: u32, bx: u32, bz: u32, spawn_x: u32, spawn_z: u32,
+): u64 {
+  let spawn_min_x = bx / 2 - spawn_x / 2;
+  let spawn_min_z = bz / 2 - spawn_z / 2;
+  let spawn_max_x = spawn_min_x + spawn_x - 1;
+  let spawn_max_z = spawn_min_z + spawn_z - 1;
+  let raw_zone_max_x = ox + zsize - 1;
+  let raw_zone_max_z = oz + zsize - 1;
+  let zone_max_x = if (raw_zone_max_x < bx) raw_zone_max_x else bx - 1;
+  let zone_max_z = if (raw_zone_max_z < bz) raw_zone_max_z else bz - 1;
+  let dx = axis_gap(ox, zone_max_x, spawn_min_x, spawn_max_x);
+  let dz = axis_gap(oz, zone_max_z, spawn_min_z, spawn_max_z);
+  distance_progress(dx, dz, 0, 0)
+}
+
+/// Gap between two closed intervals on one axis — 0 when they overlap.
+fun axis_gap(a_min: u32, a_max: u32, b_min: u32, b_max: u32): u32 {
+  if (a_max < b_min) b_min - a_max
+  else if (b_max < a_min) a_min - b_max
+  else 0
+}
+
 /// The mob-LEVEL cap at `progress`: `roster_min` lerped to `roster_max` (round-to-nearest). A zone at the spawn
 /// (progress 0) admits only the roster floor; the edge (progress 1000) admits the whole roster. NEVER divides by
 /// the roster span, so a single-level roster (min == max) is safe (the lerp term is just 0). Result ∈ [min, max].

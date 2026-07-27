@@ -41,7 +41,7 @@ fun derive_mobs_inner(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u6
   // the first-join box therefore stays at the roster floor; beyond its edge the existing continuous curve runs.
   // Levels default 0 (unauthored) → dormant.
   let (rmin, rmax) = world_math::roster_bounds(&mob_lv);
-  let progress = spawn_distance_progress(
+  let progress = world_math::spawn_distance_progress(
     ox, oz, zsize, bx, bz, world::spawn_zone_x(world), world::spawn_zone_z(world),
   );
   let lvl_cap = world_math::level_cap(progress, rmin, rmax);
@@ -103,7 +103,7 @@ public(package) fun derive_mobs_members(world: &World, zx: u32, zy: u32, seed: u
   let bz = world::bounds_z(world);
   let (ox, oz) = world::zone_origin(world, zx, zy);
   let mob_tab = world::mobs_snapshot(world);
-  let progress = spawn_distance_progress(
+  let progress = world_math::spawn_distance_progress(
     ox, oz, zsize, bx, bz, world::spawn_zone_x(world), world::spawn_zone_z(world),
   );
   let size_bound = world_math::size_cap(progress, team_bound);
@@ -219,34 +219,9 @@ fun eligible_mob_weights(tab: &vector<world::MobEntry>, levels: &vector<u16>, lv
   w
 }
 
-/// Difficulty distance between the searched zone rectangle and the centred first-join rectangle. Distance is
-/// zero when they intersect (so ANY legal fresh-join position sees the roster floor), then grows continuously
-/// from the spawn-zone boundary through `world_math::distance_progress`'s authored 250/1000/5000 anchors.
-fun spawn_distance_progress(
-  ox: u32, oz: u32, zsize: u32, bx: u32, bz: u32, spawn_x: u32, spawn_z: u32,
-): u64 {
-  let spawn_min_x = bx / 2 - spawn_x / 2;
-  let spawn_min_z = bz / 2 - spawn_z / 2;
-  let spawn_max_x = spawn_min_x + spawn_x - 1;
-  let spawn_max_z = spawn_min_z + spawn_z - 1;
-  let raw_zone_max_x = ox + zsize - 1;
-  let raw_zone_max_z = oz + zsize - 1;
-  let zone_max_x = if (raw_zone_max_x < bx) raw_zone_max_x else bx - 1;
-  let zone_max_z = if (raw_zone_max_z < bz) raw_zone_max_z else bz - 1;
-  let dx = axis_gap(ox, zone_max_x, spawn_min_x, spawn_max_x);
-  let dz = axis_gap(oz, zone_max_z, spawn_min_z, spawn_max_z);
-  world_math::distance_progress(dx, dz, 0, 0)
-}
-
-fun axis_gap(a_min: u32, a_max: u32, b_min: u32, b_max: u32): u32 {
-  if (a_max < b_min) b_min - a_max
-  else if (b_max < a_min) a_min - b_max
-  else 0
-}
-
 #[test_only]
 public(package) fun distance_progress_for_testing(
   zx: u32, zy: u32, zsize: u32, bx: u32, bz: u32, spawn_x: u32, spawn_z: u32,
 ): u64 {
-  spawn_distance_progress(zx * zsize, zy * zsize, zsize, bx, bz, spawn_x, spawn_z)
+  world_math::spawn_distance_progress(zx * zsize, zy * zsize, zsize, bx, bz, spawn_x, spawn_z)
 }
