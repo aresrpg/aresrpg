@@ -12,6 +12,7 @@
     "dev": "bun run dev:frontend",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . && prettier . --check && bun scripts/check-doc-file-references.mjs && bun run --cwd packages/sim lint && bash scripts/check-constraints.sh",
     "check:constraints": "bash scripts/check-constraints.sh",
+    "check:move-locks": "node packages/move/scripts/check_move_lock_revs.mjs",
     "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/sim typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
     "release:prepare": "bun run --cwd packages/move release:prepare",
