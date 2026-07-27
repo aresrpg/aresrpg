@@ -37,6 +37,18 @@ public(package) fun mob_turn(fight: &Fight, mob: u64): u64 {
   if (df::exists(fight::uid(fight), key)) df::borrow<MobActionKey, MobActionState>(fight::uid(fight), key).turn else 0
 }
 
+#[test_only]
+/// Does the per-mob action row still exist? (Key struct is module-private — the probe must live here.)
+public fun test_row_exists(fight: &Fight, mob: u64): bool { df::exists(fight::uid(fight), MobActionKey { mob }) }
+
+/// Reclaim the per-mob action state (S-07 — `settlement` calls this before `fight::destroy`). Bounded by the
+/// seated mob count, so the destroy walk regenerates the whole key space.
+public(package) fun sweep_fields(fight: &mut Fight) {
+  let mobs = fight::mob_count(fight);
+  let mut m = 0;
+  while (m < mobs) { fight::drop_field<MobActionKey, MobActionState>(fight, MobActionKey { mob: m }); m = m + 1; };
+}
+
 /// Reserve this committed action's pre-action ordinal. A transaction abort rolls the reservation back.
 public(package) fun next_mob_action(fight: &mut Fight, mob: u64): (u64, u64) {
   let key = MobActionKey { mob };

@@ -21,7 +21,10 @@
 /// config adapter exists. BRAND LAW: sweep events expose only AresRPG fight identity and numeric state.
 module aresrpg_fight::settlement;
 
-use aresrpg_fight::{fight::{Self, Fight}, fight_events, mob::MobLootEntry, participant, fight_registry::{Self, FightRegistry}, turns, version::Version};
+use aresrpg_fight::{
+  action_envelope, cast, displacement, fight::{Self, Fight}, fight_events, mob::MobLootEntry, participant,
+  fight_registry::{Self, FightRegistry}, retro_effects, turns, version::Version
+};
 use aresrpg_foundation::spell;
 use std::type_name::TypeName;
 use sui::clock::Clock;
@@ -122,7 +125,18 @@ public fun settle_and_take(fight: Fight, character: ID, registry: &mut FightRegi
 /// The ONE settlement body (entry janitor + take door are thin shells): mints per seat, transfers every seat's
 /// outcome to its owner EXCEPT the `take_character` seat (ownership-asserted, handed back by value), unlatches,
 /// deletes the Fight.
-fun settle_core(fight: Fight, registry: &mut FightRegistry, version: &Version, take_character: Option<ID>, ctx: &mut TxContext): Option<FightOutcome> {
+/// Run every owner module's field reclaim before the Fight dies. THE storage-rebate door: `object::delete` does
+/// not track dynamic fields (S-07), so a family missing from this list is orphaned in storage forever and its
+/// deposit is never rebated — the janitor's tip shrinks by exactly that much. One line per module that writes
+/// onto the Fight UID; `fight::destroy` handles the two families that module owns itself.
+fun sweep_fields(fight: &mut Fight) {
+  cast::sweep_fields(fight);
+  retro_effects::sweep_fields(fight);
+  displacement::sweep_fields(fight);
+  action_envelope::sweep_fields(fight);
+}
+
+fun settle_core(mut fight: Fight, registry: &mut FightRegistry, version: &Version, take_character: Option<ID>, ctx: &mut TxContext): Option<FightOutcome> {
   version.assert_enabled();
   let status = fight::status(&fight);
   let won = status == fight::status_victory();
@@ -193,6 +207,7 @@ fun settle_core(fight: Fight, registry: &mut FightRegistry, version: &Version, t
     i = i + 1;
   };
   fight_events::emit_settled(fid, status, party);
+  sweep_fields(&mut fight);
   fight::destroy(fight);
   taken
 }

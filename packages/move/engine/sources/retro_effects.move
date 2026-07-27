@@ -115,6 +115,7 @@ public(package) fun record_named_stack(
   if (bonus == 0 || duration == 0) return;
   let key = NamedStackKey { caster, spell, target };
   if (!df::exists(fight::uid(fight), key)) {
+    fight::note_field(fight, key);
     df::add(fight::uid_mut(fight), key, vector<NamedStackRow>[]);
   };
   df::borrow_mut<NamedStackKey, vector<NamedStackRow>>(fight::uid_mut(fight), key).push_back(
@@ -394,6 +395,25 @@ fun capped_effect_sum(rows: &vector<spell_board::FighterStatus>, cap: u64): u64 
 }
 
 // ╔════════════════ [ Small helpers / test probes ] ════════════════════════
+
+#[test_only]
+/// Do this module's rows still exist? (Key structs are module-private — the probe must live here.)
+public fun test_rows_exist(fight: &Fight, fighter: u64, caster: u64, spell: ID, target: u64): bool {
+  df::exists(fight::uid(fight), TimedPayloadKey { fighter })
+    || df::exists(fight::uid(fight), NamedStackKey { caster, spell, target })
+}
+
+/// Reclaim both families this module writes (S-07 — `settlement` calls this before `fight::destroy`). Timed
+/// payloads are keyed by FIGHTER ID, whose domain is exactly the seats plus the mob namespace; named stacks
+/// carry a spell id, so they ride the write-set index.
+public(package) fun sweep_fields(fight: &mut Fight) {
+  let (seats, mobs) = (fight::participant_count(fight), fight::mob_count(fight));
+  let mut s = 0;
+  while (s < seats) { fight::drop_field<TimedPayloadKey, vector<TimedPayload>>(fight, TimedPayloadKey { fighter: s }); s = s + 1; };
+  let mut m = 0;
+  while (m < mobs) { fight::drop_field<TimedPayloadKey, vector<TimedPayload>>(fight, TimedPayloadKey { fighter: MOB_FID_BASE + m }); m = m + 1; };
+  fight::sweep_indexed<NamedStackKey, vector<NamedStackRow>>(fight);
+}
 
 public(package) fun fid_of(is_mob: bool, idx: u64): u64 { if (is_mob) MOB_FID_BASE + idx else idx }
 

@@ -700,8 +700,53 @@ public(package) fun content_loot(c: &GroupContent): &vector<MobLootEntry> { &c.l
 public(package) fun content_kit(c: &GroupContent): &MobKit { &c.kit }
 
 
-public(package) fun destroy(mut fight: Fight) {
-  // Reclaim the per-member content fields (the settler's storage rebate) — one per seated mob, or none at all.
+// ╔════════════════ [ Dynamic-field reclaim (S-07 — `object::delete` does not track fields) ] ═ ]
+//
+// A field left attached at delete is unreachable FOREVER and its storage deposit is never rebated. Every family
+// the engine writes onto this UID therefore has to be removed before the struct dies. Two shapes, because the
+// families have two shapes:
+//
+//   • BOUNDED domain (per seat / per mob / per fighter-id) — `drop_field` in a loop over the known count. No
+//     hot-path cost at all: the destroy walk regenerates the key space.
+//   • UNBOUNDED domain (a spell ID or a board cell in the key) — the key space cannot be regenerated, so each
+//     family carries a WRITE-SET INDEX: the first write of a key pushes it into `FieldIndexKey<K>`, and
+//     `sweep_indexed` reclaims exactly those rows. One vector push per NEW key, never per write.
+//
+// Families live in the modules that own their key types (cast, retro_effects, displacement, action_envelope);
+// `settlement::sweep_fields` is the one orchestrator that runs them all before `destroy` — a module that owns a
+// key type cannot be imported here without a dependency cycle, so the generic seam lives here and the type
+// knowledge stays where the keys are.
+
+/// The write-set index of an unbounded key family: `FieldIndexKey<CastKey> → vector<CastKey>`.
+public struct FieldIndexKey<phantom K> has copy, drop, store {}
+
+/// Record a key of an UNBOUNDED family. Call once, on the branch that CREATES the row.
+public(package) fun note_field<K: copy + drop + store>(fight: &mut Fight, key: K) {
+  let ik = FieldIndexKey<K> {};
+  if (!df::exists(&fight.id, ik)) df::add(&mut fight.id, ik, vector<K>[]);
+  df::borrow_mut<FieldIndexKey<K>, vector<K>>(&mut fight.id, ik).push_back(key);
+}
+
+/// Reclaim one row of a BOUNDED family if it exists.
+public(package) fun drop_field<K: copy + drop + store, V: store + drop>(fight: &mut Fight, key: K) {
+  if (df::exists(&fight.id, key)) { let _: V = df::remove<K, V>(&mut fight.id, key); };
+}
+
+/// Reclaim every row of an UNBOUNDED family, plus the index itself.
+public(package) fun sweep_indexed<K: copy + drop + store, V: store + drop>(fight: &mut Fight) {
+  let ik = FieldIndexKey<K> {};
+  if (!df::exists(&fight.id, ik)) return;
+  let keys = df::remove<FieldIndexKey<K>, vector<K>>(&mut fight.id, ik);
+  let mut i = 0;
+  while (i < keys.length()) {
+    drop_field<K, V>(fight, keys[i]);
+    i = i + 1;
+  };
+}
+
+/// Reclaim the three families THIS module writes: the per-member content blocks and the two seat-indexed weapon
+/// families. All bounded, so the destroy walk regenerates the whole key space.
+public(package) fun sweep_own_fields(fight: &mut Fight) {
   let seated = fight.mobs.length();
   let mut m = 0;
   while (m < seated) {
@@ -711,6 +756,25 @@ public(package) fun destroy(mut fight: Fight) {
     };
     m = m + 1;
   };
+  let seats = fight.participants.length();
+  let mut s = 0;
+  while (s < seats) {
+    drop_field<WeaponLinesKey, vector<WeaponLine>>(fight, WeaponLinesKey { seat: s });
+    drop_field<WeaponCategoryKey, String>(fight, WeaponCategoryKey { seat: s });
+    s = s + 1;
+  };
+}
+
+#[test_only]
+/// Do this module's rows still exist? (Key structs are module-private — the probe must live here.)
+public fun test_rows_exist(fight: &Fight, seat: u64, member: u64): bool {
+  df::exists(&fight.id, WeaponLinesKey { seat })
+    || df::exists(&fight.id, WeaponCategoryKey { seat })
+    || df::exists(&fight.id, MemberContentKey { index: member })
+}
+
+public(package) fun destroy(mut fight: Fight) {
+  sweep_own_fields(&mut fight);
   let Fight {
     id, brand: _, world: _, spawn_id: _, world_seed: _, anchor_x: _, anchor_z: _, public_fight: _, party_id: _, aged_bp: _,
     turn_ms: _, placement_ms: _, team_bound: _, xp_mult: _, loot_mult: _, status: _, mode: _, winner_team: _, gated_joins: _, participants: _, mobs: _,
