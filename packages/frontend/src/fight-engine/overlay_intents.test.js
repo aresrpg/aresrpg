@@ -11,6 +11,7 @@ import { encode, GRID_W, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fig
 
 import {
   move_reachable_set,
+  move_plan_dungeon,
   move_path_dungeon,
   cast_range_set_dungeon,
   cast_range_set_world,
@@ -109,6 +110,39 @@ describe('move_path_dungeon — the preview path (== the MP commit charges)', ()
   })
   it('empty when unreachable within MP (out of budget → honest refusal upstream)', () => {
     expect(move_path_dungeon({ cell: c(0, 0) }, c(5, 0), { blocked: new Set(), mp: 2 })).toEqual([])
+  })
+})
+
+describe('#933 — a legal non-adjacent click carries one path + MP verdict', () => {
+  it('plans the highlighted path and exact MP cost to a reachable cell', () => {
+    const plan = move_plan_dungeon({ cell: c(0, 0) }, c(2, 0), { blocked: new Set(), mp: 5 })
+
+    expect(plan).toEqual({
+      path: [encode(1, 0), encode(2, 0)],
+      mp_cost: 2,
+      mp_left: 3,
+    })
+  })
+
+  it('uses the existing blocker-aware BFS detour and charges every highlighted cell', () => {
+    const blocker = encode(1, 0)
+    const target = encode(2, 0)
+    const plan = move_plan_dungeon({ cell: c(0, 0) }, c(2, 0), { blocked: new Set([blocker]), mp: 5 })
+
+    expect(plan).not.toBeNull()
+    expect(plan.path).not.toContain(blocker)
+    expect(plan.path.at(-1)).toBe(target)
+    expect(plan.mp_cost).toBe(plan.path.length)
+    expect(plan.mp_cost).toBe(4)
+    expect(plan.mp_left).toBe(1)
+  })
+
+  it('keeps self, blocked, and over-budget clicks silent', () => {
+    const subject = { cell: c(0, 0) }
+
+    expect(move_plan_dungeon(subject, c(0, 0), { blocked: new Set(), mp: 5 })).toBeNull()
+    expect(move_plan_dungeon(subject, c(1, 0), { blocked: new Set([encode(1, 0)]), mp: 5 })).toBeNull()
+    expect(move_plan_dungeon(subject, c(3, 0), { blocked: new Set(), mp: 2 })).toBeNull()
   })
 })
 

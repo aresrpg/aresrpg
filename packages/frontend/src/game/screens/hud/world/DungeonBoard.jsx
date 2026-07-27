@@ -60,9 +60,9 @@ import {
   evolve_caster_cell,
 } from '@aresrpg/fight/predict_cast'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
-import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
+import { cast_range_set_dungeon, move_plan_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
-import { GRID_W, GRID_CELLS, encode, decode, lineOfSight, bfsPathCost, bfsPath, bfsReachable } from '@aresrpg/fight/los'
+import { GRID_W, encode, decode, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
 import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
@@ -529,23 +529,19 @@ export function DungeonBoard() {
   // this as a LOCAL wave turn (prediction-first, natural durations) the instant it folds — replacing the old
   // fight-intents.js mask + packet/fightMoved dispatch. The on-chain 1.29 rule (each move charges its own
   // segment) is mirrored — every drafted step is one commit action.
-  const optimistic_walk = (draft) => {
+  const optimistic_walk = (dest, plan) => {
     if (!fight.fighters.has(entity_id) || draft_caster_cell == null) return
-    // Same prefix-vacated blocked set as `reachable`: any earlier drafted kill has already freed its cell.
-    const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
-    const dest = draft.length ? draft[draft.length - 1] : draft_caster_cell
-    // The displayed fighter may still be presenting the previous walk. The ordered evolver is action truth, so a
-    // rapid next step starts at the prior action's real destination (or at a teleport/tackle-adjusted cell).
-    const from_enc = draft_caster_cell
-    const path = from_enc === dest ? [] : bfsPath(from_enc, dest, blocked, GRID_CELLS).map(decode)
-    const segment_cost = bfsPathCost(from_enc, dest, blocked, my_mp_eff)
-    const mp_left = Math.max(0, my_mp_eff - segment_cost)
     fight_store.getState().input({
       type: 'intent',
-      intent: { kind: 'move', character: entity_id, to_cell: dest, mp_left },
+      intent: { kind: 'move', character: entity_id, to_cell: dest, mp_left: plan.mp_left },
       // The drafted path renders THIS frame; local_move_beats bridges it to the producer's move_path RESOLVER
       // contract (a raw array here is invoked as a function → the S2 "instance of Array" crash — regression-locked).
-      beats: local_move_beats({ fight_id: fight.fight_id, character: entity_id, to_cell: dest, path }),
+      beats: local_move_beats({
+        fight_id: fight.fight_id,
+        character: entity_id,
+        to_cell: dest,
+        path: plan.path.map(decode),
+      }),
     })
   }
 
@@ -1036,6 +1032,15 @@ export function DungeonBoard() {
     // free cancel-and-replay that also ate the turn clock, feeding ③). Rollback of a draft is not a user gesture; a
     // click on your own cell is now an inert no-op (the anchor is excluded from `reachable`) and a drafted turn stands.
     if (reachable.has(cell)) {
+      // #933: prove the exact existing BFS route + MP cost BEFORE any draft write. `reachable` and this plan use
+      // the same blocker set and budget; a defensive mismatch remains the ruled silent non-event.
+      const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
+      const plan = move_plan_dungeon(
+        { cell: decode(draft_caster_cell) },
+        decode(cell),
+        { blocked, mp: my_mp_eff }
+      )
+      if (!plan) return
       // NO-WALK LAW (v31 — tackles are deterministic, so the walk must not be allowed at all): consult the
       // SAME deterministic contest the commit path enforces. A bitten move is STILL a committed attempt — the
       // chain rolls act_move(cell), fails the escape, and forfeits both pools with ZERO displacement (the sim's
@@ -1046,7 +1051,7 @@ export function DungeonBoard() {
       append_move_step(cell)
       fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell, landed: !bite } })
       if (bite) predict_tackle(bite)
-      else optimistic_walk([...move_path, cell])
+      else optimistic_walk(cell, plan)
     }
   }
 

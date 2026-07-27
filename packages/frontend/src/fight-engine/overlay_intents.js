@@ -117,10 +117,29 @@ export function move_reachable_set(subject, ctx) {
 // project.move_wash — tackle-zone gated, the chain contest's own fraction), where the render contract puts it.
 
 /**
+ * #933 — one dungeon move verdict for click execution and preview. The existing blocker-aware BFS supplies the
+ * start-exclusive highlighted path; its length is exactly the MP the contract charges. Invalid, self, blocked,
+ * or over-budget targets return null so the input edge stays a silent non-event.
+ *
+ * @param {{ cell: Cell }} subject
+ * @param {Cell} target
+ * @param {{ blocked: Set<number> | number[], mp: number }} ctx
+ * @returns {{ path: number[], mp_cost: number, mp_left: number } | null}
+ */
+export function move_plan_dungeon(subject, target, ctx) {
+  const start = encode(subject.cell.x, subject.cell.y)
+  const goal = encode(target.x, target.y)
+  if (start === goal) return null
+  const budget = Math.max(0, Number(ctx.mp) || 0)
+  const path = bfsPath(start, goal, ctx.blocked, budget)
+  if (!path.length || path.at(-1) !== goal) return null
+  const mp_cost = path.length
+  return { path, mp_cost, mp_left: Math.max(0, budget - mp_cost) }
+}
+
+/**
  * The concrete walk PATH `subject` takes to `target` (the dark-green preview), ENCODED, EXCLUDING the start.
- * `[]` when the target is unreachable within MP (the caller then draws its honest refusal instead). DUNGEON
- * only — the world path uses the consumer's `steered_path` (kept in fight-pathfinding.js; identical to the sim
- * click-move). Its length == the MP the commit spends (`bfsPath` over the same blocked set as the reach).
+ * `[]` when no legal move plan exists. DUNGEON only — the world path uses the consumer's `steered_path`.
  *
  * @param {{ cell: Cell }} subject
  * @param {Cell} target
@@ -128,10 +147,7 @@ export function move_reachable_set(subject, ctx) {
  * @returns {number[]} encoded path cells (start-exclusive)
  */
 export function move_path_dungeon(subject, target, ctx) {
-  const start = encode(subject.cell.x, subject.cell.y)
-  const goal = encode(target.x, target.y)
-  if (start === goal) return []
-  return bfsPath(start, goal, ctx.blocked, ctx.mp)
+  return move_plan_dungeon(subject, target, ctx)?.path ?? []
 }
 
 /** Is `cell` on the arena board (inside the 10×10 index window)? The hover-refusal / cast-range clip guard. */

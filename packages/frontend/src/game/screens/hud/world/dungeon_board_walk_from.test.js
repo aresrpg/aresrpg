@@ -8,12 +8,10 @@
 // The ordered draft anchor `draft_caster_cell` (committed truth evolved through the staged prefix via the sim twin)
 // is the SYNCHRONOUS truth (it re-derives from the staged actions this frame), so it is where the new segment begins.
 //
-// optimistic_walk is a closure inside a browser-only component (DungeonBoard.jsx imports the 3D engine → not
-// headless-importable, and the repo has no jsdom — .test.jsx renders only leaf components via renderToStaticMarkup).
-// So, exactly like wash_armed_affordability.test.js pins its un-drivable render binding: (A) a REAL @aresrpg/fight
-// fold proves the display-hold divergence that is the re-walk's root (the held cell IS the origin while the draft
-// already reads the dest), and (B) a source-contract locks that optimistic_walk anchors on the draft, not the held
-// cell — the red at HEAD.
+// DungeonBoard is browser-only (it imports the 3D engine and the repo has no jsdom). So, exactly like
+// wash_armed_affordability.test.js pins its un-drivable render binding: (A) a REAL @aresrpg/fight fold proves the
+// display-hold divergence that is the re-walk's root (the held cell IS the origin while the draft already reads the
+// dest), and (B) a source-contract locks the shared move plan to the draft anchor before any staged write.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -97,19 +95,21 @@ describe('DungeonBoard optimistic_walk — the walk from is the drafted step, ne
     expect(engine_view(store.getState()).fighters.get(CHAR).cell).not.toEqual(dec(STEP1_DEST))
   })
 
-  // (B) THE FIX, source-contract (red at HEAD): optimistic_walk's `from_enc` anchors on the ordered draft anchor
-  //     `draft_caster_cell` (the staged prefix evolved through the sim twin), and NEVER on the held `me_slice.cell`.
-  test('(B) optimistic_walk anchors from_enc on the ordered draft anchor, not the held me_slice.cell', async () => {
+  // (B) THE FIX, source-contract: the click's shared move plan anchors on `draft_caster_cell` (the staged prefix
+  //     evolved through the sim twin) BEFORE append/stage, and NEVER on the held `me_slice.cell`.
+  test('(B) the move plan anchors on the ordered draft cell before staging', async () => {
     const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
-    const start = src.indexOf('const optimistic_walk = (draft) =>')
-    const end = src.indexOf('const optimistic_cast =', start)
+    const start = src.indexOf('const on_cell_click =')
+    const end = src.indexOf('// Relay:', start)
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
     const body = src.slice(start, end)
-    const from_line = body.split('\n').find((l) => l.includes('from_enc ='))
-    expect(from_line).toBeTruthy()
-    // the from is the ordered draft anchor (staged prefix evolved through the sim twin), NOT the display-held cell.
-    expect(from_line).toMatch(/draft_caster_cell/)
-    expect(from_line).not.toMatch(/me_slice/)
+    const plan_at = body.indexOf('const plan = move_plan_dungeon')
+    expect(plan_at).toBeGreaterThan(-1)
+    expect(body.slice(plan_at, body.indexOf('if (!plan) return', plan_at))).toContain(
+      '{ cell: decode(draft_caster_cell) }'
+    )
+    expect(plan_at).toBeLessThan(body.indexOf('append_move_step(cell)'))
+    expect(body).not.toMatch(/me_slice/)
   })
 })

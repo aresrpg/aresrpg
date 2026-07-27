@@ -21,7 +21,7 @@ describe('DungeonBoard — the next-action anchor evolves through the ordered dr
     // Every next-action consumer reads that cell. Remaining MP is the already-folded ordered pool, so no flattened
     // moves-only path can charge across an intervening teleport or denied tackle.
     expect(src).toMatch(/bfsReachable\(draft_caster_cell, my_mp_eff, blocked\)/)
-    expect(src).toMatch(/const from_enc = draft_caster_cell/)
+    expect(src).toMatch(/move_plan_dungeon\(\s*\{ cell: decode\(draft_caster_cell\) \}/)
     expect(src).toMatch(/const caster_cell = draft_caster_cell/)
     expect(src).not.toMatch(/draft_move_cost\(/)
     // the memo re-runs whenever the canonical stage grows.
