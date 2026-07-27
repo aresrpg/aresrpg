@@ -32,6 +32,7 @@ import { decode_fight_event } from '@aresrpg/sdk/fight'
 import { normalize_events, seat_resolver } from './inputs.js'
 import { board_state_from_fight, roster_open } from './board_state.js'
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
+import { snapshot_reconcile } from './snapshot_reconcile.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
 // tx proof — never overridden); a poll/journal read is authoritative; a legacy event-shaped snapshot ranks below a
@@ -141,6 +142,13 @@ export const journal_to_actions = (rows) => {
 /** A journal row — the one source whose coordinate is DERIVED from `seq` rather than carried by its own transport. */
 const is_journal = (action) => action.source === 'journal' && action.seq != null
 
+/** Stable identity for ingestion accounting. Journal placement can move when an earlier page arrives, so its dense
+ * seq (not its derived ordinal) is the delivery identity. Other sources already share the canonical coordinate. */
+const delivery_key = (action) =>
+  is_journal(action)
+    ? `journal:${Number(action.version)}:${Number(action.seq)}:${action_hash(action)}`
+    : `${coord_key(action_coord(action))}:${action_hash(action)}`
+
 /**
  * Re-place EVERY journal row — the ones already in the log and the arriving ones — over their UNION, so one object
  * version keeps a single continuous ordinal run however the read layer happened to cut the pages that carried it.
@@ -182,9 +190,16 @@ const same_log = (a, b) => {
  * @param {import('./core_state.js').InboxState} inbox
  * @param {Array<Record<string, any>>} actions pure-data actions (batch_to_actions / journal_to_actions)
  * @param {number} now
- * @returns {{ inbox: import('./core_state.js').InboxState, failures: any[], effects: any[] }}
+ * @returns {{
+ *   inbox: import('./core_state.js').InboxState,
+ *   failures: any[],
+ *   effects: any[],
+ *   accounting:{received:number,folded:number,dropped:number}
+ * }}
  */
 export const admit_events = (inbox, actions, now) => {
+  const prior_deliveries = new Set(Object.values(inbox.log).map(delivery_key))
+  const arriving = new Set(actions.map(delivery_key))
   const placed = rederive_journal(inbox.log, actions)
   let { log } = placed
   const failures = []
@@ -211,50 +226,53 @@ export const admit_events = (inbox, actions, now) => {
     }
     log = { ...log, [key]: action }
   }
-  return { inbox: same_log(log, inbox.log) ? inbox : { ...inbox, log }, failures, effects }
+  const final_deliveries = new Set(Object.values(log).map(delivery_key))
+  const folded = [...arriving].filter((key) => !prior_deliveries.has(key) && final_deliveries.has(key)).length
+  return {
+    inbox: same_log(log, inbox.log) ? inbox : { ...inbox, log },
+    failures,
+    effects,
+    accounting: { received: actions.length, folded, dropped: Math.max(0, actions.length - folded) },
+  }
 }
 
 /**
- * Adopt a decoded Fight OBJECT (snapshot) as the SNAPSHOT+TAIL base — the BOOTSTRAP seed the canonical event tail
- * folds on top of — the ONE snapshot half, shared with the presentation folds (M2b #291 DEMOTED the object read to a bootstrap
- * base + a checkpoint: "everything that guessed history from an object read is deleted").
+ * Adopt a Fight OBJECT as a WHOLE snapshot base only when its event cursor proves it does not regress the accepted
+ * event prefix. A behind/cursorless-after-events read is an identity no-op; an aligned/ahead read replaces the
+ * base whole. There is no partial merge and no destructive log prune: `sorted_tail` settles rows the new base
+ * subsumes, while retaining them keeps diagnostics and replay provenance intact.
  *
- * THE BASE, as a pure function of the read SET (the shuffle property — arrival order is irrelevant). A read is
- * PROVISIONAL while the chain can still grow its roster (`roster_open` — placement is the only phase `join` is
- * legal, engine fight.move `ENotPlacement`), and a fight leaves placement exactly once, so EVERY provisional read
- * of a fight has a lower object version than every later one:
- *   · a provisional read exists  → the base is the LATEST of them. The roster only grows, so the newest placement
- *     read is the most complete one — and it costs nothing, because a fight still in placement has no turn history
- *     to strand. Without this the creator, who adopts at creation, reports a 3-fighter board on a 4-fighter fight
- *     for the whole fight: her turn order, her placement occupancy and every event keyed to the joiner's
- *     character (which orphans off-seat) are all downstream of that one stale base (#1274).
- *   · otherwise → the base is the EARLIEST read, and a later HIGHER-version object is a CHECKPOINT that must NOT
- *     re-adopt (#701): its cells are a 4s-stale / possibly-torn read and `base_from_view` can only DERIVE
- *     turn_number as `status→1/0`, so re-adopting stranded every fighter's cell at the stale object and RESET
- *     their accumulated per-turn count to 1, discarding the tail. Only a strictly-EARLIER read lowers that floor
- *     (an out-of-order delivery of the true first read — including the placement read that outranks it above).
- * `max` over one half of the partition, `min` over the other: any arrival order converges on the same base.
- *
- * NO destructive prune — the fold's `version > base_version` filter (core_fold.js `sorted_tail`)
- * settles the subsumed tail, and keeping those rows lets a late-arriving earlier bootstrap still fold them.
- * Pure. `board_state_from_fight` decodes the rich view (the ONE home); the raw `rows` are wire-revived first.
  * @param {import('./core_state.js').InboxState} inbox
  * @param {any} rows the raw snapshot fight object
  * @param {number} version the object version
  * @param {Record<string, any>} ctx decode context (mob identity maps, offset) — never folded
+ * @param {{ snapshot_head?:string|number|bigint|null, accepted_head?:string|number|bigint|null }} cursors
  * @returns {import('./core_state.js').InboxState}
  */
-export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
+export const adopt_snapshot = (inbox, rows, version, ctx = {}, cursors = {}) => {
   const object_version = Number(version ?? 0)
+  const cursorless_legacy = cursors.snapshot_head == null && cursors.accepted_head == null
   const provisional = inbox.base_view != null && roster_open(inbox.base_view)
-  // The cheap hold — the 4s-poll steady state, decided without decoding anything: a base at-or-below this read
-  // only ever moves when BOTH are provisional (the max-over-placement half), and a provisional base is never
-  // lowered (a placement read outranks every later read, so nothing below it can win).
+  // Format-1 capsules predate cursor capture. Preserve their deterministic set fold (max placement, otherwise the
+  // earliest base) so replay/shuffle stays meaningful; the live store always supplies its accepted cursor once an
+  // event lands, so this compatibility arm cannot authorize a late production overwrite.
   if (
+    cursorless_legacy &&
     inbox.base_view != null &&
     (provisional ? object_version <= inbox.base_version : object_version >= inbox.base_version)
   )
     return inbox
+  const decision = cursorless_legacy
+    ? { kind: 'adopt' }
+    : snapshot_reconcile({
+        has_base: inbox.base_view != null,
+        base_version: inbox.base_version,
+        event_version: truth_version(inbox),
+        read_version: object_version,
+        accepted_head: cursors.accepted_head,
+        snapshot_head: cursors.snapshot_head,
+      })
+  if (decision.kind === 'discard') return inbox
   const fight = revive_wire(rows)
   const base_view = board_state_from_fight({
     fight,
@@ -267,9 +285,8 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     creator: ctx.creator ?? null,
     ...(ctx.offset ? { offset: ctx.offset } : {}),
   })
-  // A PROVISIONAL base moves only to a strictly LATER provisional read (max over placement); everything else here
-  // is a strictly earlier read lowering the floor, which a frozen base always accepts.
-  return !provisional || roster_open(base_view) ? { ...inbox, base_view, base_version: object_version } : inbox
+  if (cursorless_legacy && provisional && !roster_open(base_view)) return inbox
+  return { ...inbox, base_view, base_version: object_version }
 }
 
 /**

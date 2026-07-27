@@ -11,8 +11,12 @@ import {
   admit_events,
   batch_to_actions,
   canonical_fingerprint,
+  empty_core_state,
   empty_inbox,
+  fight_diagnostics,
+  ingest,
 } from '../src/core.js'
+import { input_envelope, journal_rows_received } from '../src/envelope.js'
 
 const FIGHT = '0xf1'
 const PLAYER = '0xcharacter'
@@ -83,10 +87,7 @@ const fight_object = ({ mob_count = 2, statuses = STATUSES } = {}) => ({
   height: 19,
   participants: [participant],
   mobs: Array.from({ length: mob_count }, (_, i) => mob(40 + i)),
-  queue: [
-    { is_mob: false, idx: 0 },
-    ...Array.from({ length: mob_count }, (_, idx) => ({ is_mob: true, idx })),
-  ],
+  queue: [{ is_mob: false, idx: 0 }, ...Array.from({ length: mob_count }, (_, idx) => ({ is_mob: true, idx }))],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
   invisibility_statuses: statuses,
@@ -124,6 +125,7 @@ describe('canonical_fingerprint — co-op divergence detector', () => {
     expect(actual).toMatchObject({
       roster_count: 3,
       frontier: { version: 11, ordinal: 1 },
+      turn_ordinal: 2,
       turn_anchor: { source: 'event', version: 11, event_idx: 0, owner: PLAYER },
     })
   })
@@ -149,5 +151,48 @@ describe('canonical_fingerprint — co-op divergence detector', () => {
     expect(two_mobs.roster_count).toBe(3)
     expect(one_mob.roster_count).toBe(2)
     expect(one_mob.hash).not.toBe(two_mobs.hash)
+  })
+
+  test('the reducer accounts for fresh and duplicate deliveries with both input and event cursors', () => {
+    const step = (state, payload, input_seq) =>
+      ingest(state, input_envelope({ session_id: FIGHT, input_seq, observed_at_ms: input_seq, payload }))
+    const snapshot = journal_rows_received({
+      source: 'snapshot',
+      fight_id: FIGHT,
+      version: 10,
+      rows: fight_object(),
+      snapshot_head: '0',
+    })
+    const receipt = journal_rows_received({
+      source: 'receipt',
+      fight_id: FIGHT,
+      version: 11,
+      rows: { events: TURN_AND_MOVE },
+    })
+
+    let core = step(empty_core_state(FIGHT), snapshot, 0)
+    core = step(core, receipt, 1)
+    expect(fight_diagnostics(core).ingestion).toMatchObject({
+      received: 2,
+      folded: 2,
+      dropped: 0,
+      input_cursor: 1,
+      last: {
+        source: 'receipt',
+        received: 2,
+        folded: 2,
+        dropped: 0,
+        cursor: { base_version: 10, frontier: { version: 11, ordinal: 1 } },
+      },
+    })
+
+    core = step(core, receipt, 2)
+    expect(fight_diagnostics(core).ingestion).toMatchObject({
+      received: 4,
+      folded: 2,
+      dropped: 2,
+      input_cursor: 2,
+      last: { source: 'receipt', received: 2, folded: 0, dropped: 2 },
+    })
   })
 })

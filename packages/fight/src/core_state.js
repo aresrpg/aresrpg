@@ -46,6 +46,7 @@
  * @property {InboxState} inbox
  * @property {Intent[]} ledger the intent ledger
  * @property {ClockState} clock
+ * @property {object} ingestion cumulative delivery accounting + the last input/event cursor observation
  * @property {Array<Record<string, any>>} failures failure-as-data records (hash conflict, gap age, refusal)
  * @property {Array<Record<string, any>>} effects outbound effect REQUESTS the shell performs (refetch a version)
  */
@@ -58,6 +59,16 @@ export const empty_inbox = () => ({
   base_version: -1,
   seq_head: -1,
   delivered_seq: -1,
+})
+
+/** Per-session instrumentation. `buffered` is the unverified p2p lane; it is neither canonical-folded nor dropped. */
+export const empty_ingestion = () => ({
+  received: 0,
+  folded: 0,
+  dropped: 0,
+  buffered: 0,
+  input_cursor: null,
+  last: null,
 })
 
 /**
@@ -74,6 +85,7 @@ export const empty_core_state = (fight_id = null) => ({
   inbox: empty_inbox(),
   ledger: [],
   clock: { now_ms: 0, cursor: 0 },
+  ingestion: empty_ingestion(),
   failures: [],
   effects: [],
 })

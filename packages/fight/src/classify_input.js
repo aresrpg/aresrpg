@@ -84,6 +84,7 @@ export const classify_input = (msg = {}) => {
         fight_id: msg.fight_id,
         version: msg.version,
         rows: rows_of(msg),
+        ...(msg.type === 'snapshot' ? { snapshot_head: msg.journal_head, accepted_head: msg.accepted_head } : {}),
       })
     case 'journal':
       return journal_rows_received({

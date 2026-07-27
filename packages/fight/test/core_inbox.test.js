@@ -68,7 +68,7 @@ describe('admit_events — dedupe, source priority, failure-as-data', () => {
   })
 })
 
-describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the tail, never re-adopt)', () => {
+describe('adopt_snapshot — cursor-honest whole-base reconciliation', () => {
   const fight = {
     width: 12,
     height: 12,
@@ -90,26 +90,20 @@ describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the 
     expect(fold_canonical(adopted).fighters.p0.hp).not.toBe(50)
   })
 
-  test('a later HIGHER-version snapshot is a CHECKPOINT — it never re-adopts (the bootstrap base is frozen)', () => {
-    // THE #701 FIX: the OLD store demoted the object read to a bootstrap base + checkpoint (M2b #291). A later
-    // object is stale/torn and base_from_view can only derive turn_number as status→1/0 — re-adopting reset the
-    // accumulated per-turn count and stranded cells at the stale object. So a higher-version read is a no-op here.
+  test('a cursorless legacy checkpoint keeps the deterministic earliest active base', () => {
     const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
     const later = adopt_snapshot(at200, { ...fight, status: 3 }, 300, {})
-    expect(later.base_version).toBe(200)
-    expect(later).toBe(at200) // untouched — never re-folded from an object read
+    expect(later).toBe(at200)
   })
 
-  test('a strictly-EARLIER read lowers the bootstrap floor (min-version base — order-independent / shuffle-safe)', () => {
-    // The base is min(object versions): whatever arrival order, the earliest object is the bootstrap the tail folds
-    // on. An out-of-order delivery of the true-first read (lower version, later arrival) correctly lowers the floor.
+  test('a cursorless legacy read lowers the active base independent of arrival order', () => {
     const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
     const earlier = adopt_snapshot(at200, fight, 150, {})
     expect(earlier.base_version).toBe(150)
   })
 
-  // THE ROSTER WINDOW (#1274) — `join` is legal only in placement, so a placement base is PROVISIONAL and the
-  // base is max(placement reads) while any exists, min(the rest) otherwise. Both halves are pure over the SET.
+  // THE ROSTER WINDOW (#1274) — before event ingestion, a later whole read is the creator's authoritative way to
+  // learn the joiner's seat. The same monotonic rule applies in every phase; lifecycle guesses are not a cursor.
   const placement = { ...fight, status: 0 }
   const joined = { ...placement, participants: [...placement.participants, { character: '0xb', cell: '6', hp: '70' }] }
 
@@ -122,13 +116,23 @@ describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the 
     expect(after_join.base_view.escrow.map((row) => row.character)).toEqual(['0xa', '0xb'])
   })
 
-  test('a read that has LEFT placement never re-adopts — the roster is frozen, the journal owns the rest (#701)', () => {
+  test('a cursor-ahead read that has left placement performs a full re-adopt', () => {
     const created = adopt_snapshot(empty_inbox(), placement, 200, {})
-    const activated = adopt_snapshot(created, { ...joined, status: 1 }, 220, {})
-    expect(activated).toBe(created) // untouched
+    const activated = adopt_snapshot(
+      created,
+      { ...joined, status: 1 },
+      220,
+      {},
+      {
+        accepted_head: '2',
+        snapshot_head: '4',
+      }
+    )
+    expect(activated.base_version).toBe(220)
+    expect(activated.base_view.escrow).toHaveLength(2)
   })
 
-  test('the roster window is ORDER-INDEPENDENT — every arrival order converges on the same base', () => {
+  test('cursorless legacy roster reads remain order-independent', () => {
     const reads = [
       [placement, 200],
       [joined, 210],
@@ -144,9 +148,17 @@ describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the 
     ]
     for (const order of orders) {
       const inbox = fold(order)
-      expect(inbox.base_version).toBe(210) // max over the placement reads
+      expect(inbox.base_version).toBe(210)
       expect(inbox.base_view.escrow).toHaveLength(2)
     }
+  })
+
+  test('a cursorless read after a folded event is discarded even when its object version is higher', () => {
+    const base = adopt_snapshot(empty_inbox(), fight, 100, {})
+    const with_tail = admit_events(base, receipt_actions([hit(0, 20)], 150), 1).inbox
+    const stale = adopt_snapshot(with_tail, { ...fight, participants: [{ ...fight.participants[0], hp: '70' }] }, 200)
+    expect(stale).toBe(with_tail)
+    expect(fold_canonical(stale).fighters.p0.hp).toBe(20)
   })
 
   test('events above the adopted base survive the adoption', () => {

@@ -21,6 +21,7 @@ import {
   note_journal_head,
   batch_to_actions,
   journal_to_actions,
+  truth_frontier,
   truth_version,
 } from './core_inbox.js'
 import { queue_intent, mark_submitted, refuse_intents, resolve_intents, compact_ledger } from './core_intents.js'
@@ -48,47 +49,129 @@ const wrong_fight = (state, payload) =>
   state.fight_id != null &&
   String(payload.fight_id) !== String(state.fight_id)
 
+/** Native delivery length before decoding. Malformed rows therefore land in `dropped`, not outside the instrument. */
+const raw_event_count = (rows) => {
+  if (Array.isArray(rows)) return rows.length
+  return Array.isArray(rows?.events) ? rows.events.length : 0
+}
+
+/** Append one chain-read observation to the per-session instrument without becoming another truth home. */
+const with_ingestion = (prior, state, payload, input_seq, accounting) => {
+  const before = prior.ingestion
+  const received = Number(accounting.received ?? 0)
+  const folded = Number(accounting.folded ?? 0)
+  const dropped = Number(accounting.dropped ?? 0)
+  const buffered = Number(accounting.buffered ?? 0)
+  const input_cursor = Number.isFinite(Number(input_seq)) ? Number(input_seq) : before.input_cursor
+  return {
+    ...state,
+    ingestion: {
+      received: before.received + received,
+      folded: before.folded + folded,
+      dropped: before.dropped + dropped,
+      buffered: before.buffered + buffered,
+      input_cursor,
+      last: {
+        input_cursor,
+        source: payload.source,
+        version: payload.version == null ? null : Number(payload.version),
+        received,
+        folded,
+        dropped,
+        buffered,
+        disposition: accounting.disposition ?? null,
+        cursor: {
+          snapshot_head: payload.snapshot_head ?? null,
+          accepted_head: payload.accepted_head ?? null,
+          base_version: state.inbox.base_version,
+          frontier: truth_frontier(state.inbox),
+          journal_head: state.inbox.seq_head,
+          delivered_seq: state.inbox.delivered_seq,
+        },
+      },
+    },
+  }
+}
+
 /** Admit a VERIFIED chain-event batch, reconcile courtesy against it, and resolve intents the chain has now spoken
  *  past. `how` marks the intent resolution ('observed' for a receipt — my own tx proof; 'stale' for a read floor). */
 const admit_verified = (state, actions, version, how, now) => {
   const admitted = admit_events(state.inbox, actions, now)
   const inbox = reconcile_courtesy(admitted.inbox)
   const ledger = compact_ledger(resolve_intents(state.ledger, version, how), truth_version(inbox))
-  return with_failures({ ...state, inbox, ledger }, admitted.failures, admitted.effects)
+  return {
+    state: with_failures({ ...state, inbox, ledger }, admitted.failures, admitted.effects),
+    accounting: admitted.accounting,
+  }
 }
 
 /** Route a chain-read (`journal_rows_received`) by its source to the admission leg it belongs to. */
 const ingest_chain_read = (state, payload, now) => {
   const { source, version, fight_id } = payload
   const ver = Number(version ?? 0)
+  const received = raw_event_count(payload.rows)
   if (source === 'snapshot') {
-    const inbox = adopt_snapshot(state.inbox, payload.rows, ver, state.ctx)
+    const inbox = adopt_snapshot(state.inbox, payload.rows, ver, state.ctx, {
+      snapshot_head: payload.snapshot_head,
+      accepted_head: payload.accepted_head,
+    })
     const with_base = reconcile_courtesy(inbox)
     const ledger = compact_ledger(
       resolve_intents(state.ledger, with_base.base_version, 'stale'),
       truth_version(with_base)
     )
-    return { ...state, inbox: with_base, ledger, my_seat: resolve_my_seat(with_base, state.ctx, state.my_seat) }
+    return {
+      state: { ...state, inbox: with_base, ledger, my_seat: resolve_my_seat(with_base, state.ctx, state.my_seat) },
+      accounting: {
+        received: 0,
+        folded: 0,
+        dropped: 0,
+        disposition: inbox === state.inbox ? 'snapshot_discarded' : 'snapshot_adopted',
+      },
+    }
   }
   if (source === 'receipt') {
     const actions = batch_to_actions(payload.rows, { version: ver, source, fight_id })
-    return admit_verified(state, actions, ver, 'observed', now)
+    const result = admit_verified(state, actions, ver, 'observed', now)
+    return {
+      ...result,
+      accounting: { ...result.accounting, received, dropped: result.accounting.dropped + received - actions.length },
+    }
   }
   if (source === 'poll' || source === 'terminal') {
     const actions = batch_to_actions(payload.rows, { version: ver, source: 'poll', fight_id })
-    return admit_verified(state, actions, ver, 'stale', now)
+    const result = admit_verified(state, actions, ver, 'stale', now)
+    return {
+      ...result,
+      accounting: { ...result.accounting, received, dropped: result.accounting.dropped + received - actions.length },
+    }
   }
   if (source === 'p2p') {
     const actions = batch_to_actions(payload.rows, { version: ver, source: 'p2p', fight_id })
-    return { ...state, inbox: buffer_courtesy(state.inbox, actions) }
+    const inbox = buffer_courtesy(state.inbox, actions)
+    const buffered = Object.keys(inbox.courtesy).length - Object.keys(state.inbox.courtesy).length
+    return {
+      state: { ...state, inbox },
+      accounting: { received, folded: 0, dropped: Math.max(0, received - buffered), buffered },
+    }
   }
   if (source === 'journal') {
     const actions = journal_to_actions(payload.rows)
     const admitted = admit_verified(state, actions, ver, 'observed', now)
-    const headed = note_journal_head(admitted.inbox, payload.rows?.head, actions, now)
-    return with_failures({ ...admitted, inbox: headed.inbox }, headed.failures)
+    const headed = note_journal_head(admitted.state.inbox, payload.rows?.head, actions, now)
+    return {
+      state: with_failures({ ...admitted.state, inbox: headed.inbox }, headed.failures),
+      accounting: {
+        ...admitted.accounting,
+        received,
+        dropped: admitted.accounting.dropped + received - actions.length,
+      },
+    }
   }
-  return state // an unknown source is a no-op (total; the classify bridge never emits one)
+  return {
+    state,
+    accounting: { received, folded: 0, dropped: received, disposition: 'unknown_source' },
+  }
 }
 
 /** Normalize a player commit into chain-shaped, pure-data intent actions (resolver attached at forecast-fold time). */
@@ -137,10 +220,18 @@ export const ingest = (state, envelope, now = envelope?.observed_at_ms ?? 0) => 
   const payload = envelope?.payload
   if (!payload || typeof payload.kind !== 'string')
     return with_failures(state, [{ kind: 'malformed_envelope', at: now }])
-  if (wrong_fight(state, payload))
-    return with_failures(state, [
+  if (wrong_fight(state, payload)) {
+    const refused = with_failures(state, [
       { kind: 'wrong_fight', got: String(payload.fight_id), want: String(state.fight_id), at: now },
     ])
+    const received = raw_event_count(payload.rows)
+    return with_ingestion(state, refused, payload, envelope.input_seq, {
+      received,
+      folded: 0,
+      dropped: received,
+      disposition: 'wrong_fight',
+    })
+  }
 
   switch (payload.kind) {
     case 'session_opened':
@@ -165,8 +256,10 @@ export const ingest = (state, envelope, now = envelope?.observed_at_ms ?? 0) => 
       const beats = sorted_tail(state.inbox).length
       return { ...state, clock: advance_cursor(state.clock, now, beats) }
     }
-    case 'journal_rows_received':
-      return ingest_chain_read(state, payload, now)
+    case 'journal_rows_received': {
+      const result = ingest_chain_read(state, payload, now)
+      return with_ingestion(state, result.state, payload, envelope.input_seq, result.accounting)
+    }
     case 'tx_submitted':
       return { ...state, ledger: mark_submitted(state.ledger) }
     case 'tx_refused': {

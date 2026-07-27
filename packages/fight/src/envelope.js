@@ -40,9 +40,11 @@ export const input_envelope = ({ session_id = null, input_seq, observed_at_ms, p
 
 /** A chain-read delivery. `source` discriminates the read (receipt | poll | p2p | snapshot | journal |
  *  terminal); `rows` carries that source's native data (a receipt object, an events array, the decoded
- *  fight object, or a journal batch) — the V2 inbox dedupes/orders by the chain event index inside it. */
-export const journal_rows_received = ({ source, fight_id, version, rows } = {}) =>
-  tagged('journal_rows_received', { source, fight_id, version, rows })
+ *  fight object, or a journal batch) — the V2 inbox dedupes/orders by the chain event index inside it.
+ *  Snapshot reads additionally carry their own event-count cursor plus the reducer's accepted seq floor, so
+ *  reconciliation compares like with like instead of mistaking object version for event progress. */
+export const journal_rows_received = ({ source, fight_id, version, rows, snapshot_head, accepted_head } = {}) =>
+  tagged('journal_rows_received', { source, fight_id, version, rows, snapshot_head, accepted_head })
 
 /** A signed transaction left the client. */
 export const tx_submitted = ({ turn_key, signal, phase, action_count, background, digest } = {}) =>

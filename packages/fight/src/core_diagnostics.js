@@ -16,6 +16,8 @@ const finite_or_null = (value) => {
   return Number.isFinite(n) ? n : null
 }
 
+const lexical = (a, b) => (a < b ? -1 : a > b ? 1 : 0)
+
 /** A fold fighter key → its chain identity. Players use Character ids; mobs have chain-stable slot identities. */
 const entity_id = (view, key) => {
   if (key.startsWith('p')) {
@@ -46,7 +48,7 @@ const active_statuses = (fighter) =>
       source: finite_or_null(status.source),
       flags: finite_or_null(status.flags),
     }))
-    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+    .sort((a, b) => lexical(JSON.stringify(a), JSON.stringify(b)))
 
 const canonical_roster = (inbox, board) =>
   Object.entries(board.fighters ?? {})
@@ -56,7 +58,7 @@ const canonical_roster = (inbox, board) =>
       hp: finite_or_null(fighter.hp),
       statuses: active_statuses(fighter),
     }))
-    .sort((a, b) => a.id.localeCompare(b.id))
+    .sort((a, b) => lexical(a.id, b.id))
 
 /** The last TurnStarted above the adopted base, independent of delivery/object insertion order. */
 const latest_turn_started = (inbox) =>
@@ -96,11 +98,24 @@ const turn_anchor = (inbox) => {
 export const canonical_fingerprint = (inbox) => {
   const board = fold_canonical(inbox)
   const anchor = turn_anchor(inbox)
+  const turn_ordinal = finite_or_null(board.fighters?.[board.active]?.turn_number)
   const roster = canonical_roster(inbox, board)
   return {
-    hash: hash_state({ turn_anchor: anchor, roster }),
+    hash: hash_state({ turn_ordinal, turn_anchor: anchor, roster }),
+    turn_ordinal,
     turn_anchor: anchor,
     roster_count: roster.length,
     frontier: truth_frontier(inbox),
   }
 }
+
+/**
+ * The complete live detector report exposed to clients. Accounting is reducer-owned provenance, not hash input:
+ * two clients can hold identical truth after different delivery paths, while the counters still show where a gap
+ * or duplicate appeared.
+ * @param {import('./core_state.js').CoreState} state
+ */
+export const fight_diagnostics = (state) => ({
+  ...canonical_fingerprint(state.inbox),
+  ingestion: state.ingestion,
+})
