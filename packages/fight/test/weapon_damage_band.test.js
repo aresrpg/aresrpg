@@ -229,3 +229,73 @@ describe('#577 — the kill threshold moves with the roll (a target inside the b
     expect(outcomes.map((hp) => hp === 0)).toEqual(damages.map((amount) => amount >= MOB_HP))
   })
 })
+
+// ── #1323 — THE SEAM SEAL: item → seat line → preview, chain-SHAPED ────────────────────────────────────────
+//
+// The three assertions above hand-feed `SWORD` straight into `weapon_spell_template`, so they crossed neither
+// seam that was actually broken: the chain seat averaged the item's band into a fixed line (#1324), and
+// `normalize_weapon`'s whitelist dropped `damage_max`/`crit_damage_max` on the way in (#1323). Both halves could
+// be — and were — wrong while this file stayed green.
+//
+// This seal starts from the shape the CHAIN delivers (gRPC `.fields` nesting, u64-as-string) and walks the real
+// decode path into the preview, so a regression at either seam reds here.
+describe('#1323 — the authored band survives decode into the preview', () => {
+  /** A Fight as the SDK hands it over: the seat's Weapon carries the authored band the chain now seats. */
+  const chain_fight = () => ({
+    id: '0xband',
+    status: 5,
+    width: 15,
+    height: 17,
+    participants: [
+      {
+        owner: LOCAL_ADDRESS,
+        character: '0xchar',
+        team: 0,
+        hp: '30',
+        max_hp: '30',
+        cell: 0,
+        // the seat's weapon exactly as gRPC nests it — the authored band, 16..29 normal / 24..43 crit
+        weapon: {
+          fields: {
+            element: 2,
+            damage: '16',
+            damage_max: '29',
+            crit_damage: '24',
+            crit_damage_max: '43',
+            crit_rate: '0',
+            ap_cost: '3',
+            reach: '1',
+          },
+        },
+      },
+    ],
+    mobs: [],
+  })
+
+  const seat_weapon = () => {
+    const view = board_state_from_fight({ fight: chain_fight(), version: 1 })
+    const seat = view.escrow.find((p) => p.character === '0xchar')
+    return seat.weapon
+  }
+
+  test('the decode carries both maxima off the chain shape', () => {
+    const weapon = seat_weapon()
+    expect(weapon.damage).toBe(16)
+    expect(weapon.damage_max).toBe(29) // the whitelist used to drop this
+    expect(weapon.crit_damage).toBe(24)
+    expect(weapon.crit_damage_max).toBe(43)
+  })
+
+  test('the preview template rolls the decoded band, not its floor', () => {
+    const built = weapon_spell_template({ ...seat_weapon(), reach: 1 })
+    const template = Array.isArray(built) ? built[0] : built
+    const [level] = template.levels
+    const [normal] = level.base_effects
+    const [crit] = level.crit_effects
+    expect([normal.min, normal.max]).toEqual([16, 29])
+    expect([crit.min, crit.max]).toEqual([24, 43])
+    // the defect's signature: a collapsed band previews as one number, min === max
+    expect(normal.max).toBeGreaterThan(normal.min)
+    expect(crit.max).toBeGreaterThan(crit.min)
+  })
+})

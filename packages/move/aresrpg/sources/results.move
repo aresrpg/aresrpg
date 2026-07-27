@@ -10,12 +10,12 @@
 /// DEFEAT outcomes carry xp 0 / empty table (§7 defeat costs only time) — opening one just writes back HP.
 module aresrpg::results;
 
-use aresrpg::{character_link, config::GameConfig, fight_marker, version::Version};
+use aresrpg::{character_link, config::GameConfig, version::Version, fight};
 use aresrpg::{extension, item::{Self, Item, ItemTemplate}};
 use aresrpg_fight::{mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
 use aresrpg_foundation::prng;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use sui::{clock::Clock, event, kiosk::Kiosk, random::{Self, Random}, transfer_policy::TransferPolicy};
+use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random}, transfer_policy::TransferPolicy};
 
 // (102 EAlreadyOpened / 103 ENotOpened retired — engine unpack is one-shot; codes stay reserved in the error map)
 const ENoMatching: u64 = 104; // mint_rolled: nothing owed for this template
@@ -43,6 +43,13 @@ public struct FightResult has key {
 
 public struct RolledLoot has copy, drop, store { item_template: ID, qty: u64 }
 
+/// #758 — the ticket's STAT-ROLL entropy, planted as a dynamic field on the `FightResult` UID at `open` (the one
+/// moment this claim touches `&Random`) and spent at `mint_rolled`, where the template object finally exists but
+/// no randomness does. A DF, not a struct field: the layout of a live `key` struct is frozen across upgrades.
+/// Tickets opened BEFORE this shipped carry no seed — they mint blank, exactly as they did before (honest, never
+/// a fabricated roll).
+public struct StatSeedKey has copy, drop, store {}
+
 // ── claim events (core-side; the engine emits the settlement events) ──
 public struct ResultOpened has copy, drop { result: ID, character: ID, xp_share: u64, loot_units: u64 }
 public struct LootMinted has copy, drop { result: ID, item_template: ID, qty: u64 }
@@ -64,7 +71,7 @@ entry fun open(
   ctx: &mut TxContext,
 ) {
   let mut rng = prng::rng_seed(random::new_generator(r, ctx).generate_u64());
-  z82(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
+  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
 }
 
 /// PTB-composition twin of `open` (`entry` cannot consume a prior command's result): ONE tx chains
@@ -85,11 +92,11 @@ public fun open_taken(
   ctx: &mut TxContext,
 ) {
   let mut rng = prng::rng_seed(random::new_generator(r, ctx).generate_u64());
-  z82(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
+  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z82(
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y131(
   outcome: FightOutcome,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -105,18 +112,18 @@ fun z82(
   // (aresrpg::fight's private FightBrand witness) are honored. A foreign consumer's outcome is refused here.
   let (brand, fight, world, character_id, outcome_status, final_hp, xp_share, aged_bp, chance, mob_count, loot, pvp, team, winner_team, loot_mult) =
     settlement::unpack(outcome);
-  assert!(brand == aresrpg::fight::z34(), EWrongBrand);
+  assert!(brand == aresrpg::fight::y45(), EWrongBrand);
 
   // write-backs FIRST (§17.23 — the fight's outcome reaches the character even if the roll lands nothing)
   let owner_cap = personal_kiosk::borrow(pkcap);
   let character = kiosk.borrow_mut(owner_cap, character_id);
   if (!pvp) {
     // §17.9: an ephemeral (PvP) fight NEVER touches the real character — no XP grant, no HP write-back.
-    if (xp_share > 0) character_link::z10(config, character, xp_share, version);
-    character_link::z11(character, final_hp, now_ms, version);
+    if (xp_share > 0) character_link::y12(config, character, xp_share, version);
+    character_link::y13(character, final_hp, now_ms, version);
     // the unfinished-business counter decrements HERE and only here — the truth landed, the character is free
     // to fight and to sell again.
-    fight_marker::clear(character, version);
+    fight::clear(character, version);
   };
 
   // roll the checklist: the table once PER KILLED MOB, chance/aging/multiplier scaled (empty table on defeat)
@@ -125,14 +132,17 @@ fun z82(
   while (m < mob_count) {
     let mut e = 0;
     while (e < loot.length()) {
-      let one = z83(rng, loot.borrow(e), chance, aged_bp, loot_mult);
-      if (one.is_some()) z85(&mut rolled, one.destroy_some()) else one.destroy_none();
+      let one = y135(rng, loot.borrow(e), chance, aged_bp, loot_mult);
+      if (one.is_some()) y137(&mut rolled, one.destroy_some()) else one.destroy_none();
       e = e + 1;
     };
     m = m + 1;
   };
-  let units = z86(&rolled);
-  let result = FightResult { id: object::new(ctx), fight, world, character: character_id, outcome: outcome_status, final_hp, xp_share, pvp, team, winner_team, rolled };
+  let units = y138(&rolled);
+  let mut result = FightResult { id: object::new(ctx), fight, world, character: character_id, outcome: outcome_status, final_hp, xp_share, pvp, team, winner_team, rolled };
+  // the stat-roll entropy for whatever gear this ticket owes — drawn HERE, off the same `&Random` stream that
+  // rolled the checklist, because `mint_rolled` has none (#758).
+  df::add(&mut result.id, StatSeedKey {}, prng::draw(rng));
   event::emit(ResultOpened { result: object::id(&result), character: character_id, xp_share, loot_units: units });
   transfer::transfer(result, ctx.sender());
 }
@@ -140,7 +150,8 @@ fun z82(
 // ╔════════════════ [ Mint the rolled loot (per template) ] ═══════════════════ ]
 
 /// Mint what the roll owes for ONE template into the result-holder's personal kiosk (LockPledge law). Stackables mint
-/// as ONE stack of the owed qty; gear mints qty singletons. Only the result's owner can call (owned object).
+/// as ONE stack of the owed qty; gear mints qty singletons, each born with its rolled stat block (#758). Only the
+/// result's owner can call (owned object).
 entry fun mint_rolled(
   result: &mut FightResult,
   template: &ItemTemplate,
@@ -150,38 +161,84 @@ entry fun mint_rolled(
   policy: &TransferPolicy<Item>,
   ctx: &mut TxContext,
 ) {
+  y132(result, template, version, kiosk, pkcap, policy, ctx);
+}
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// The mint body, returning the minted item ids (the `entry` discards them; tests assert on them).
+fun y132(
+  result: &mut FightResult,
+  template: &ItemTemplate,
+  version: &Version,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  policy: &TransferPolicy<Item>,
+  ctx: &mut TxContext,
+): vector<ID> {
   version.assert_enabled();
   let tid = item::template_id(template);
-  let qty = z84(result, tid); // aborts ENoMatching if nothing owed
+  let qty = y136(result, tid); // aborts ENoMatching if nothing owed
   let owner_cap = personal_kiosk::borrow(pkcap);
+  let mut minted = vector<ID>[];
   if (item::is_stackable_category(item::template_category(template))) {
-    let (stack, pledge) = extension::z20(template, qty, version, ctx);
+    let (stack, pledge) = extension::y30(template, qty, version, ctx);
+    minted.push_back(object::id(&stack));
     item::lock_in_kiosk(pledge, stack, kiosk, owner_cap, policy);
   } else {
+    let base = y133(result);
     let mut i = 0;
     while (i < qty) {
-      let (loot_item, pledge) = extension::z502(template, version, ctx);
+      let seed = if (base.is_some()) option::some(y134(*base.borrow(), tid, i)) else option::none();
+      let (loot_item, pledge) = extension::y29(template, seed, version, ctx);
+      minted.push_back(object::id(&loot_item));
       item::lock_in_kiosk(pledge, loot_item, kiosk, owner_cap, policy);
       i = i + 1;
     };
   };
   event::emit(LootMinted { result: object::id(result), item_template: tid, qty });
+  minted
 }
 
 /// Delete an EMPTIED result (the storage rebate). Aborts while rolled loot remains — mint it first.
-entry fun burn_result(result: FightResult) {
+entry fun burn_result(mut result: FightResult) {
   assert!(result.rolled.is_empty(), ENotEmpty);
+  // the stat seed dies with its ticket — a UID with a live dynamic field cannot be deleted. Pre-#758 tickets
+  // carry none, hence the existence check.
+  if (df::exists(&result.id, StatSeedKey {})) { let _: u64 = df::remove(&mut result.id, StatSeedKey {}); };
   let FightResult { id, fight: _, world: _, character: _, outcome: _, final_hp: _, xp_share: _, pvp: _, team: _, winner_team: _, rolled: _ } = result;
   event::emit(ResultBurned { result: id.to_inner() });
   object::delete(id);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// This ticket's open-time stat entropy, or NONE for a ticket opened before #758 shipped (it mints blank gear —
+/// the same honestly-empty block it would have had, never a fabricated one).
+fun y133(result: &FightResult): Option<u64> {
+  if (df::exists(&result.id, StatSeedKey {})) option::some(*df::borrow(&result.id, StatSeedKey {}))
+  else option::none()
+}
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// The per-unit stat seed: the ticket's own entropy folded with the template id and the unit index. DERIVED, never
+/// a running counter — unit `i` of template `t` always rolls the same block, so a holder cannot shop the mint
+/// ORDER of the templates they owe to steer a good roll onto the item they care about.
+fun y134(base: u64, template: ID, index: u64): u64 {
+  let bytes = object::id_to_bytes(&template);
+  let mut acc = base;
+  let mut i = 0;
+  while (i < bytes.length()) {
+    acc = prng::mix(acc, bytes[i] as u64);
+    i = i + 1;
+  };
+  prng::mix(acc, index)
+}
+
 // ╔════════════════ [ Roll kernels (pure — harvested from dungeon_claim, aging-scaled) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// One loot entry roll: effective_bp = min(10000, chance_bp × (700+claimer_chance)/700); on a hit, quantity in
 /// [min,max] scaled by aging ×(10000+aged_bp)/10000 and the loot multiplier ×mult/100.
-fun z83(rng: &mut u64, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
+fun y135(rng: &mut u64, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
   let effective_bp = loot_effective_bp(mob::loot_entry_chance_bp(entry) as u64, claimer_chance);
   if (prng::draw(rng) % BP_ONE >= effective_bp) return option::none();
   let min_q = mob::loot_entry_min_qty(entry) as u64;
@@ -199,9 +256,9 @@ public fun loot_effective_bp(chance_bp: u64, claimer_chance: u64): u64 {
 
 // ╔════════════════ [ Checklist helpers ] ════════════════════════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Remove + return the owed qty for `template` from the rolled checklist. Aborts if none.
-fun z84(result: &mut FightResult, template: ID): u64 {
+fun y136(result: &mut FightResult, template: ID): u64 {
   let list = &mut result.rolled;
   let mut idx = option::none();
   let mut i = 0;
@@ -214,8 +271,8 @@ fun z84(result: &mut FightResult, template: ID): u64 {
   qty
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z85(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y137(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
   let n = rolled.length();
   let mut i = 0;
   while (i < n) {
@@ -226,8 +283,8 @@ fun z85(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
   rolled.push_back(loot);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z86(rolled: &vector<RolledLoot>): u64 {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y138(rolled: &vector<RolledLoot>): u64 {
   let mut u = 0;
   let mut i = 0;
   while (i < rolled.length()) { u = u + rolled.borrow(i).qty; i = i + 1; };
@@ -259,6 +316,20 @@ public fun rolled_qty(result: &FightResult, template: ID): u64 {
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 
 #[test_only]
+/// `mint_rolled` returning the minted ids, so a test can read the born-rolled stat block off the kiosk.
+public fun mint_rolled_for_testing(
+  result: &mut FightResult,
+  template: &ItemTemplate,
+  version: &Version,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  policy: &TransferPolicy<Item>,
+  ctx: &mut TxContext,
+): vector<ID> {
+  y132(result, template, version, kiosk, pkcap, policy, ctx)
+}
+
+#[test_only]
 public fun open_for_testing(
   outcome: FightOutcome,
   kiosk: &mut Kiosk,
@@ -269,5 +340,5 @@ public fun open_for_testing(
   ctx: &mut TxContext,
 ) {
   let mut rng = prng::rng_seed(42);
-  z82(outcome, kiosk, pkcap, config, version, now_ms, &mut rng, ctx);
+  y131(outcome, kiosk, pkcap, config, version, now_ms, &mut rng, ctx);
 }

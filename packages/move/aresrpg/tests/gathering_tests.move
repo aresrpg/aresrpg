@@ -7,20 +7,7 @@
 #[test_only]
 module aresrpg::gathering_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  gathering,
-  item::{Item, ItemTemplate},
-  mob_template::{Self, MobTemplate},
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zones,
-  zones_view
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, gathering, item::{Item, ItemTemplate}, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}, zones, zones_view};
 use aresrpg_fight::{
   admin::{Self as fight_admin, AdminCap as FightAdminCap},
   fight::Fight,
@@ -38,7 +25,7 @@ const ENoTool: u64 = 105; // gathering
 const ETierLocked: u64 = 106; // gathering
 const ERareTemplateMismatch: u64 = 107; // gathering
 const EWrongProtector: u64 = 108; // gathering (P1-1)
-const ETravelTooFar: u64 = 102; // checkpoint
+const ETravelTooFar: u64 = 121; // checkpoint
 const EBadNode: u64 = 106; // zones (kept: undiscovered-zone / out-of-derived-range gathers)
 const ENodeEmpty: u64 = 107; // zones (double-harvest — the cell's consumed bit is already set)
 
@@ -149,7 +136,7 @@ fun pin_checkpoint(sc: &mut Scenario, who: address, cid: ID, wid: ID, x: u32, z:
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z2(chr, wid, checkpoint::z12(x, z, time, false), &ver);
+    character_link::y2(chr, wid, world::y70(x, z, time, false), &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
@@ -160,7 +147,7 @@ fun occupied_zone(sc: &mut Scenario, who: address, cid: ID, wid: ID): (u32, u32)
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
-  let (zx, zy) = world::zone_of(&w, checkpoint::x(&cp), checkpoint::z(&cp));
+  let (zx, zy) = world::zone_of(&w, world::x(&cp), world::z(&cp));
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   (zx, zy)
 }
@@ -174,7 +161,7 @@ fun job_xp_of(sc: &mut Scenario, who: address, cid: ID, job: u8): u64 {
   xp
 }
 
-fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): checkpoint::Checkpoint {
+fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): world::Checkpoint {
   sc.next_tx(who);
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -222,7 +209,7 @@ fun discovered(sc: &mut Scenario, tier: u8): (ID, ID, ID, u32, u32) {
   do_join(sc, test_world::owner(), cid, 1000);
   let (zx, zy) = occupied_zone(sc, test_world::owner(), cid, wid);
   let cp = cp_of(sc, test_world::owner(), cid, wid);
-  do_search(sc, test_world::owner(), cid, checkpoint::x(&cp), checkpoint::z(&cp), 2000);
+  do_search(sc, test_world::owner(), cid, world::x(&cp), world::z(&cp), 2000);
   (cid, wid, tid, zx, zy)
 }
 
@@ -245,8 +232,8 @@ fun gather_yields_xp_moves_checkpoint_consumes_node() {
   ts::return_shared(w);
   assert_eq!(job_xp_of(&mut sc, test_world::owner(), cid, 0), 10);
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), nx);
-  assert_eq!(checkpoint::z(&cp), nz);
+  assert_eq!(world::x(&cp), nx);
+  assert_eq!(world::z(&cp), nz);
   sc.end();
 }
 
@@ -431,7 +418,7 @@ fun gather_depleted_node_aborts() {
   let mut w = sc.take_shared<World>();
   let total = zones_view::resource_node_total(&w, zx, zy);
   let mut i = 0;
-  while (i < total) { zones::z50(&mut w, zx, zy, i); i = i + 1; }; // one bit per derived cell
+  while (i < total) { zones::y78(&mut w, zx, zy, i); i = i + 1; }; // one bit per derived cell
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 0);
   ts::return_shared(w);
   test_world::equip(&mut sc, test_world::owner(), cid, vector[0], false);
@@ -442,13 +429,13 @@ fun gather_depleted_node_aborts() {
 #[test, expected_failure(abort_code = ETierLocked, location = gathering)]
 fun gather_tier_locked_aborts() {
   let mut sc = ts::begin(test_world::owner());
-  let (cid, _wid, tid, zx, zy) = discovered(&mut sc, 2); // tier 2 → unlock level 10; a level-1 job can't
+  let (cid, _wid, tid, zx, zy) = discovered(&mut sc, 2); // tier 2 → y16 level 10; a level-1 job can't
   test_world::equip(&mut sc, test_world::owner(), cid, vector[0], false);
   do_gather(&mut sc, test_world::owner(), cid, zx, zy, 0, tid, 2000 + HUGE_ELAPSED); // ETierLocked
   abort
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 fun gather_travel_too_far_aborts() {
   let mut sc = ts::begin(test_world::owner());
   let (cid, wid, tid, zx, zy) = discovered(&mut sc, 1);
@@ -473,7 +460,7 @@ fun gather_wrong_template_aborts() {
 
 #[test]
 fun yield_scales_with_job_level() {
-  assert_eq!(gathering::test_yield(1, 1), 1); // no bonus at the unlock level
+  assert_eq!(gathering::test_yield(1, 1), 1); // no bonus at the y16 level
   assert_eq!(gathering::test_yield(6, 1), 2); // (6−1)/5 = 1
   assert_eq!(gathering::test_yield(11, 1), 3); // (11−1)/5 = 2
   assert_eq!(gathering::test_yield(50, 10), 9); // (50−10)/5 = 8
@@ -484,7 +471,7 @@ fun job_xp_full_in_band_then_decays() {
   assert_eq!(gathering::test_job_xp(1, 1), 10); // tier 1 base, in band
   assert_eq!(gathering::test_job_xp(1, 11), 10); // at the band top
   assert_eq!(gathering::test_job_xp(1, 50), 5); // out of band → decayed, never zero
-  assert_eq!(gathering::test_job_xp(3, 30), 30); // tier 3 base 30, in band (unlock 20 + width 10)
+  assert_eq!(gathering::test_job_xp(3, 30), 30); // tier 3 base 30, in band (y16 20 + width 10)
   assert_eq!(gathering::test_job_xp(3, 100), 15); // out of band → 30/2
 }
 

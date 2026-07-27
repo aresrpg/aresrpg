@@ -30,7 +30,7 @@ use sui::event;
 // The 12 canonical class SLUGS in the §3 roster order (index = class id). LOWERCASE — the exact form the SDK,
 // the spell templates ("senshi_charge"…) and character creation use. This is the machine-readable SINGLE HOME
 // of the name↔id map the roster comment below only describes in prose; `class_id_of` resolves through it (the
-// combat-snapshot seam maps a character's class string to its `ClassRow`). Order MUST match `z56`.
+// combat-snapshot seam maps a character's class string to its `ClassRow`). Order MUST match `y86`.
 const CLASS_SLUGS: vector<vector<u8>> = vector[
   b"senshi", b"yajin", b"ikari", b"mori", b"tokei", b"shugo",
   b"yogen", b"rojin", b"shusen", b"tomoda", b"asobi", b"iyashi",
@@ -110,7 +110,7 @@ const DEFAULT_BASE_MP: u64 = 3;
 
 /// One class's base combat constants (§17.31). Base HP is per-class (ANNEX §4); base AP/MP default 6/3 for
 /// every class but stay per-class TUNABLE via the clamped setters, so future rebalancing needs no upgrade.
-public struct ClassRow has copy, drop, store {
+public struct ClassRow has store, copy, drop {
   base_hp: u64,
   base_ap: u64,
   base_mp: u64,
@@ -148,7 +148,7 @@ public struct GameConfig has key {
   // identical envelope to `forge_brand` (one independent single-pin per sibling — NOT an allowlist; each brand
   // door hardcodes exactly one of these). `gifting_brand` authorizes `aresrpg_gifting`'s mint/heal/character-mint
   // doors (gift/airdrop/loot_box/consume/pool/creation); `dungeon_brand` authorizes `aresrpg_dungeon`'s two fight
-  // bridge doors (z35/z37). Both ship `none` (doors CLOSED until the ceremony pins).
+  // bridge doors (y46/y48). Both ship `none` (doors CLOSED until the ceremony pins).
   gifting_brand: Option<TypeName>,
   dungeon_brand: Option<TypeName>,
   // §17.31 — per-class combat rows (index = class id, exactly CLASS_COUNT rows)
@@ -191,14 +191,14 @@ fun init(ctx: &mut TxContext) {
     forge_brand: option::none(), // brand doors ship CLOSED — the ceremony pins the sibling witness
     gifting_brand: option::none(), // idem — the gifting satellite's witness is pinned at its ceremony step
     dungeon_brand: option::none(), // idem — the dungeon satellite's witness is pinned at its ceremony step
-    classes: z56(),
+    classes: y86(),
   });
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The 12 default class rows (§17.31 / ANNEX §4). Base HP is per-class; base AP/MP = 6/3 universally.
 /// Order MUST match the frozen class-id table above.
-fun z56(): vector<ClassRow> {
+fun y86(): vector<ClassRow> {
   vector[
     row(70), // 0 SENSHI
     row(45), // 1 YAJIN
@@ -267,7 +267,7 @@ public fun domain_forgemagie(): u16 { DOMAIN_FORGEMAGIE }
 /// twin): the extracted rune-forge sibling constructs its witness (private constructor, its own module only),
 /// so a pinned brand makes those doors sibling-exclusive; an unpinned config (`none`) keeps them CLOSED.
 public fun assert_forge_brand<W: drop>(self: &GameConfig) {
-  assert!(self.forge_brand.contains(&type_name::with_defining_ids<W>()), EWrongBrand);
+  assert!(self.forge_brand.contains(&type_name::get<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the forge sibling's witness type — the ceremony's post-publish wiring step. Cap + version
@@ -275,7 +275,7 @@ public fun assert_forge_brand<W: drop>(self: &GameConfig) {
 public fun set_forge_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  config.forge_brand = option::some(type_name::with_defining_ids<W>());
+  config.forge_brand = option::some(type_name::get<W>());
   event::emit(DialChanged { dial: b"forge_brand".to_string(), value: 1 }); // the pinned TypeName is readable on this shared object
 }
 
@@ -287,14 +287,14 @@ public fun forge_brand(self: &GameConfig): &Option<TypeName> { &self.forge_brand
 /// Abort unless `W` is the PINNED gifting witness — first line of every gifting-branded core value door
 /// (`mint_and_lock_output_brand` / `heal_hp_brand` / `character::new_brand`). Same envelope as `assert_forge_brand`.
 public fun assert_gifting_brand<W: drop>(self: &GameConfig) {
-  assert!(self.gifting_brand.contains(&type_name::with_defining_ids<W>()), EWrongBrand);
+  assert!(self.gifting_brand.contains(&type_name::get<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the gifting sibling's witness type — the ceremony's post-publish wiring step. Cap + version gated.
 public fun set_gifting_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  config.gifting_brand = option::some(type_name::with_defining_ids<W>());
+  config.gifting_brand = option::some(type_name::get<W>());
   event::emit(DialChanged { dial: b"gifting_brand".to_string(), value: 1 });
 }
 
@@ -306,14 +306,14 @@ public fun gifting_brand(self: &GameConfig): &Option<TypeName> { &self.gifting_b
 /// Abort unless `W` is the PINNED dungeon witness — first line of the two dungeon-branded core fight doors
 /// (`create_dungeon_fight_brand` / `join_vouched_brand`). Same envelope as `assert_forge_brand`.
 public fun assert_dungeon_brand<W: drop>(self: &GameConfig) {
-  assert!(self.dungeon_brand.contains(&type_name::with_defining_ids<W>()), EWrongBrand);
+  assert!(self.dungeon_brand.contains(&type_name::get<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the dungeon sibling's witness type — the ceremony's post-publish wiring step. Cap + version gated.
 public fun set_dungeon_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  config.dungeon_brand = option::some(type_name::with_defining_ids<W>());
+  config.dungeon_brand = option::some(type_name::get<W>());
   event::emit(DialChanged { dial: b"dungeon_brand".to_string(), value: 1 });
 }
 
@@ -420,25 +420,25 @@ public fun set_team_size_bound(cap: &AdminCap, config: &mut GameConfig, value: u
 public fun set_class_base_hp(cap: &AdminCap, config: &mut GameConfig, class_id: u64, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  let row = z901(config, class_id);
+  let row = y87(config, class_id);
   row.base_hp = clamp(value, HP_MIN, HP_MAX);
-  z505(config, class_id);
+  y88(config, class_id);
 }
 
 public fun set_class_base_ap(cap: &AdminCap, config: &mut GameConfig, class_id: u64, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  let row = z901(config, class_id);
+  let row = y87(config, class_id);
   row.base_ap = clamp(value, AP_MIN, AP_MAX);
-  z505(config, class_id);
+  y88(config, class_id);
 }
 
 public fun set_class_base_mp(cap: &AdminCap, config: &mut GameConfig, class_id: u64, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  let row = z901(config, class_id);
+  let row = y87(config, class_id);
   row.base_mp = clamp(value, MP_MIN, MP_MAX);
-  z505(config, class_id);
+  y88(config, class_id);
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
@@ -447,15 +447,15 @@ fun clamp(v: u64, lo: u64, hi: u64): u64 {
   if (v < lo) lo else if (v > hi) hi else v
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Mutable borrow of a class row; aborts `EBadClass` on an out-of-range index (a class id can never be clamped).
-fun z901(config: &mut GameConfig, class_id: u64): &mut ClassRow {
+fun y87(config: &mut GameConfig, class_id: u64): &mut ClassRow {
   assert!(class_id < CLASS_COUNT, EBadClass);
   &mut config.classes[class_id]
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z505(config: &GameConfig, class_id: u64) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y88(config: &GameConfig, class_id: u64) {
   let r = &config.classes[class_id];
   event::emit(ClassRowSet { class_id, base_hp: r.base_hp, base_ap: r.base_ap, base_mp: r.base_mp });
 }

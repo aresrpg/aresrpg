@@ -513,10 +513,18 @@ export async function abandon_fight(
  * `sign` rides (src/tx) — never a guessed constant. `character_id` = the caller's seat; `open` kiosk-borrows it,
  * so we resolve the kiosk that HOLDS it, never kiosk[0] (a multi-kiosk wallet would 0x2::kiosk abort 11). SILENT:
  * the settlement chain signs with no toast (the recap/card is the surface). kiosk_resolve.js.
- * @param {{ fight_id:string, run_pass_id?:string|null, world_id?:string|null, character_id:string }} args
+ * @param {{ fight_id:string, run_pass_id?:string|null, world_id?:string|null, character_id:string,
+ *   lost_group?:{world_id:string,zx:number,zy:number,index:number}|null }} args `lost_group` = the claimed mob
+ *   group a DEFEATED open-world fight gives back (#609); null on a victory (the door refuses a won outcome).
  * @returns {Promise<{ receipt:any, result_id:string|null, xp_share:number|null, loot_units:number|null, final_hp:number|null }>} the ResultOpened event fields (opened_result_of)
  */
-export async function settle_and_open({ fight_id, run_pass_id = null, world_id = null, character_id }) {
+export async function settle_and_open({
+  fight_id,
+  run_pass_id = null,
+  world_id = null,
+  character_id,
+  lost_group = null,
+}) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -544,11 +552,14 @@ export async function settle_and_open({ fight_id, run_pass_id = null, world_id =
     })
   } else {
     // WORLD: the SDK's plain two-call compose (settle_and_take → open_taken).
+    // `lost_group` is DATA, not a flag (#609): present ⇒ the party LOST and this is the group to give back, so
+    // the SDK composes settle → release_group → open; absent ⇒ a victory, which has no group to release.
     tx = settle_open_world_ptb(ctx)({
       fight_id,
       character_id,
       kiosk_id: handle.kiosk_id,
       personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
+      lost_group,
     })
   }
   clear_budget_cache() // FIGHT END (result open) — the fight's act shapes are dead; drop their cached budgets

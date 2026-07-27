@@ -68,7 +68,10 @@ const same_object_id = (left, right) => {
  *   deployment (create_fight_ptb ignores witnesses by law there), a zone searched before commitments existed,
  *   or a FORMAT-3 member-roster group, whose claim door takes no witness at all (see below).
  * - `blocked`: we could not prove what we are about to claim. That is a refusal, never a quieter door.
- * @typedef {{ door:'proof', proof:any } | { door:'derivation', reason:string }
+ * A resolved door also NAMES the row it is about to claim (`index`): that number is the group's identity for
+ * `fight::release_group`, so a lost fight can give the group back (#609). The occupied-zone door names no row,
+ * and records none — an unnamed group is never released rather than releasing the wrong one.
+ * @typedef {{ door:'proof', proof:any, index:number } | { door:'derivation', reason:string, index?:number }
  *   | { door:'blocked', reason:string, cause?:unknown }} WorldGroupDoor
  */
 
@@ -119,7 +122,7 @@ export function world_group_door({
   // re-derivation IS the proof (`create_member_fight_ptb` has no `group_proof` parameter). Composing one here would
   // also be impossible — the commitment preimage carries the RAW rolled roster while a `derive_zone` row carries the
   // team-bound-TRIMMED one — so the digest could never reproduce and every format-3 engage would refuse.
-  if (roster.length) return { door: 'derivation', reason: 'member_roster_door' }
+  if (roster.length) return { door: 'derivation', reason: 'member_roster_door', index }
   const proof = compose_mob_group_proof({
     world_id,
     zx,
@@ -132,7 +135,7 @@ export function world_group_door({
     index,
   })
   if (!proof) return { door: 'blocked', reason: 'commitment_mismatch' }
-  return { door: 'proof', proof }
+  return { door: 'proof', proof, index }
 }
 
 /** @returns {Promise<WorldGroupDoor>} */
@@ -199,7 +202,9 @@ const GROUP_CLAIMED_ABORT = { MoveAbort: { abortCode: 108, location: { module: '
  * @param {{ world_id:string, spawn_id:number|string, zx?:number|null, zy?:number|null, mob_template_id:string,
  *           member_template_ids?:string[], character_id:string, is_public?:boolean,
  *           party_id?:string|null }} args
- * @returns {Promise<{ receipt:any, fight_id:string|null }>}
+ * @returns {Promise<{ receipt:any, fight_id:string|null, group:{ world_id:string, zx:number, zy:number,
+ *   index:number }|null }>} `group` NAMES the claimed group for the #609 defeat release (null when the door
+ *   named no row — then a defeat releases nothing rather than guessing).
  */
 export async function create_world_fight({
   world_id,
@@ -259,6 +264,11 @@ export async function create_world_fight({
         group_proof: group_door.door === 'proof' ? group_door.proof : null,
         mob_template_id,
       })
+  // #609 — the claimed group's IDENTITY, carried out of the claim so a LOST fight can give it back at
+  // settlement (`fight::release_group`). Only a VICTORY consumes a group; a defeat that forgets which group it
+  // took drains the world's mob population by one, permanently. Known only where the door named a row.
+  const group =
+    group_door.index != null && zx != null && zy != null ? { world_id, zx, zy, index: group_door.index } : null
   mark_engage_ptb_built(tx)
   use_fight_cost.getState().reset() // FRESH fight entry — its own gas is the first line of the new total
   clear_budget_cache() // and drop any prior fight's cached act budgets (a new fight = new shapes)
@@ -267,7 +277,7 @@ export async function create_world_fight({
   const receipt = await sign(tx, i18n.t('fights.action_engage'))
   const fight_id = remember_created_fight(receipt) // + cache its pinned shared ref (zero-read)
   note_engage_fight_id(tx, fight_id)
-  return { receipt, fight_id }
+  return { receipt, fight_id, group }
 }
 
 // ╔════════════════ [ SETTLEMENT — the two standalone, no-cycle-embedded-consumer doors ] ══ ]

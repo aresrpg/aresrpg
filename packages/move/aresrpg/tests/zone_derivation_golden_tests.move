@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONE-DERIVATION GOLDEN VECTORS — behavior identity across the ceremony leg-2 twins-collapse.
 ///
-/// `claim_members_at_zone` / `find_member_group` / `z45` were near-duplicates of the
+/// `claim_members_at_zone` / `find_member_group` / `y72` were near-duplicates of the
 /// format-1/2 functions and were collapsed into them, format-gated by PARAMETER. The bodies changed
 /// legally (all three are private or `public(package)` — outside the compatibility surface), so the only
 /// thing that can prove the collapse safe is the OUTPUT.
@@ -132,7 +132,7 @@ fun sweep_mobs(w: &World, grid: bool): u64 {
       let mut c = 0;
       while (c < bs.length()) {
         let (sids, tpls, xs, zzs, sizes, gseeds) = if (grid) {
-          zone_comp::z44(w, zs[a], zs[a], ss[b], bs[c])
+          zone_comp::y71(w, zs[a], zs[a], ss[b], bs[c])
         } else {
           zone_comp::derive_mobs(w, zs[a], zs[a], ss[b], bs[c])
         };
@@ -159,7 +159,7 @@ fun sweep_res(w: &World, grid: bool): u64 {
     let mut b = 0;
     while (b < ss.length()) {
       let (sids, tpls, xs, zzs, jobs, tiers) = if (grid) {
-        zone_comp::z46(w, zs[a], zs[a], ss[b])
+        zone_comp::y73(w, zs[a], zs[a], ss[b])
       } else {
         zone_comp::derive_res(w, zs[a], zs[a], ss[b])
       };
@@ -186,7 +186,7 @@ fun sweep_members(w: &World): u64 {
       let mut c = 0;
       while (c < bs.length()) {
         let (sids, tpls, members, xs, zzs, sizes, gseeds, progress) =
-          zone_comp::z45(w, zs[a], zs[a], ss[b], bs[c]);
+          zone_comp::y72(w, zs[a], zs[a], ss[b], bs[c]);
         acc = fold_u64s(acc, &sids);
         acc = fold_ids(acc, &tpls);
         acc = fold_id_rows(acc, &members);

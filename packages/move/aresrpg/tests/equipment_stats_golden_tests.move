@@ -13,7 +13,7 @@ fun item(strength: u16, movement: u16, action: u16): ItemStatistics {
 }
 
 fun apply_item(positive_cache: &spell::Stats, malus_cache: &spell::Stats, s: &ItemStatistics): (spell::Stats, spell::Stats) {
-  let (positive, negative) = equipment_stats::deltas(s);
+  let (positive, negative) = equipment_stats::y26(s);
   (spell::stats_add(positive_cache, &positive), spell::stats_add(malus_cache, &negative))
 }
 
@@ -24,12 +24,12 @@ fun below_center_malus_subtracts() {
   let (positive, malus) = apply_item(&spell::stats_zero(), &spell::stats_zero(), &item(c + 30, c, c));
   let (positive, malus) = apply_item(&positive, &malus, &item(c - 20, c, c));
   let base = spell::new_stats(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &malus)) == 20, 0);
+  assert!(spell::stat_strength(&equipment_stats::y27(&base, &positive, &malus)) == 20, 0);
 
   // The disjoint aggregate is order-independent.
   let (reverse_positive, reverse_malus) = apply_item(&spell::stats_zero(), &spell::stats_zero(), &item(c - 20, c, c));
   let (reverse_positive, reverse_malus) = apply_item(&reverse_positive, &reverse_malus, &item(c + 30, c, c));
-  assert!(spell::stat_strength(&equipment_stats::z18(&base, &reverse_positive, &reverse_malus)) == 20, 1);
+  assert!(spell::stat_strength(&equipment_stats::y27(&base, &reverse_positive, &reverse_malus)) == 20, 1);
 }
 
 #[test]
@@ -40,14 +40,14 @@ fun malus_saturates_without_u64_underflow() {
   let negative = item(0, c, 0);
   let (positive, malus) = apply_item(&spell::stats_zero(), &spell::stats_zero(), &negative);
   let base = spell::new_stats(3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &malus)) == 0, 0);
-  assert!(equipment_stats::z19(3, spell::stat_ap_bonus(&positive), spell::stat_ap_bonus(&malus)) == 0, 1);
+  assert!(spell::stat_strength(&equipment_stats::y27(&base, &positive, &malus)) == 0, 0);
+  assert!(equipment_stats::y28(3, spell::stat_ap_bonus(&positive), spell::stat_ap_bonus(&malus)) == 0, 1);
 
   // A post-upgrade item removes its malus; an unmarked legacy item cannot manufacture a positive line.
-  let restored_malus = equipment_stats::z501(&malus, &malus, true);
-  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &restored_malus)) == 3, 2);
-  let legacy_malus = equipment_stats::z501(&spell::stats_zero(), &malus, false);
-  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &legacy_malus)) == 3, 3);
+  let restored_malus = equipment_stats::remove_malus(&malus, &malus, true);
+  assert!(spell::stat_strength(&equipment_stats::y27(&base, &positive, &restored_malus)) == 3, 2);
+  let legacy_malus = equipment_stats::remove_malus(&spell::stats_zero(), &malus, false);
+  assert!(spell::stat_strength(&equipment_stats::y27(&base, &positive, &legacy_malus)) == 3, 3);
 }
 
 #[test]
@@ -66,9 +66,9 @@ fun invented_critical_keys_are_ignored() {
   let c = item_stats::shift();
   // Shared vector: base critical_hit 4 + canonical critical 2; invented aliases carry +100 each but fold nowhere.
   let canonical = item_stats::new(c, c, c, c, c, c, c, c, c, c + 2, c, c + 100, c + 100, c, c, c, c);
-  let (positive, negative) = equipment_stats::deltas(&canonical);
+  let (positive, negative) = equipment_stats::y26(&canonical);
   assert!(spell::stat_critical_hit(&positive) == 2, 0);
   assert!(spell::stat_critical_hit(&negative) == 0, 1);
   let base = spell::new_stats(0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0);
-  assert!(spell::stat_critical_hit(&equipment_stats::z18(&base, &positive, &negative)) == 6, 2);
+  assert!(spell::stat_critical_hit(&equipment_stats::y27(&base, &positive, &negative)) == 6, 2);
 }

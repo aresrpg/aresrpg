@@ -7,13 +7,7 @@
 #[test_only]
 module aresrpg::template_damages_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  item::{Self, ItemTemplate},
-  item_damages::{Self, ItemDamages},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, item::{Self, ItemTemplate}, item_damages::{Self, ItemDamages}, version::{Self, Version}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts, Scenario};
 
@@ -26,7 +20,7 @@ fun init_all(sc: &mut Scenario) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
@@ -79,7 +73,7 @@ fun create_template(sc: &mut Scenario, damages: vector<ItemDamages>): ID {
 }
 
 /// Drive the production door over the shared template `tid`.
-fun set_damages(sc: &mut Scenario, tid: ID, damages: vector<ItemDamages>) {
+fun y59(sc: &mut Scenario, tid: ID, damages: vector<ItemDamages>) {
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
   let ver = sc.take_shared<Version>();
@@ -98,7 +92,7 @@ fun set_template_damages_replaces_all_lines_only() {
   init_all(&mut sc);
   let tid = create_template(&mut sc, vector[authored_line()]);
 
-  set_damages(&mut sc, tid, cured_lines());
+  y59(&mut sc, tid, cured_lines());
 
   sc.next_tx(OWNER);
   let tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, tid);
@@ -143,7 +137,7 @@ fun set_template_damages_attaches_when_template_had_none() {
   assert!(!item_damages::has_damages(&tmpl)); // nothing to overwrite
   ts::return_shared(tmpl);
 
-  set_damages(&mut sc, tid, vector[authored_line()]);
+  y59(&mut sc, tid, vector[authored_line()]);
 
   sc.next_tx(OWNER);
   let tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, tid);
@@ -164,7 +158,7 @@ fun set_template_damages_empty_clears_to_unauthored_state() {
   init_all(&mut sc);
   let tid = create_template(&mut sc, vector[authored_line()]);
 
-  set_damages(&mut sc, tid, vector[]);
+  y59(&mut sc, tid, vector[]);
 
   sc.next_tx(OWNER);
   let tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, tid);

@@ -6,17 +6,19 @@
 /// CENTERED at `SHIFT_U16` (32768) so a malus is simply a value below centre and no signed integers are ever
 /// needed on-chain. The dead `stamina` / `summons` / `pods` fields are intentionally NOT carried.
 ///
-/// MINT-ROLL RANDOMNESS: the admin authoring path sets [min,max] RANGES on the TEMPLATE (`attach_ranges`, via
-/// `admin::create_template`); `shop::buy` ROLLS each field uniformly in [min,max] AT PURCHASE (single-step, off
-/// `&Random`) and attaches the FIXED result to the minted ITEM (`attach_rolled`). Reads: template ranges via
+/// MINT-ROLL RANDOMNESS: the admin authoring path sets [min,max] RANGES on the TEMPLATE (`y62`, via
+/// `admin::create_template`); EVERY mint seam ROLLS each field uniformly in [min,max] AT MINT (single-step) and
+/// attaches the FIXED result to the minted ITEM (`y66`) — the roll lives in the ONE gear-mint door
+/// (`extension::y29`), so shop, loot and craft cannot drift apart. Reads: template ranges via
 /// `stats_min`/`stats_max`, the rolled instance via `rolled_stats`. The centering is a CONVENTION — the caller
-/// passes already-z511 values; the chain stores them raw and enforces no schema.
+/// passes already-y126 values; the chain stores them raw and enforces no schema.
 module aresrpg::item_stats;
 
 use aresrpg::item::{Self, Item, ItemTemplate};
-use sui::{dynamic_field as df, random::RandomGenerator};
+use aresrpg_foundation::prng;
+use sui::dynamic_field as df;
 
-/// The zero-point every stat is z511 on: stored value = 32768 + signed_stat.
+/// The zero-point every stat is y126 on: stored value = 32768 + signed_stat.
 const SHIFT_U16: u16 = 32_768;
 const PET_FULL_FEEDS: u64 = 60;
 const EInvalidScale: u64 = 101;
@@ -29,7 +31,7 @@ public struct StatsKey has copy, drop, store {}
 public struct StatsMinKey has copy, drop, store {}
 public struct StatsMaxKey has copy, drop, store {}
 
-/// The 17-field stat block (all values z511 at `SHIFT_U16`). `copy + drop + store` — pure data.
+/// The 17-field stat block (all values y126 at `SHIFT_U16`). `copy + drop + store` — pure data.
 public struct ItemStatistics has copy, drop, store {
   vitality: u16,
   wisdom: u16,
@@ -98,11 +100,11 @@ public fun shift(): u16 { SHIFT_U16 }
 // ╔════════════════ [ Raw 17-vector view (catalog id order = field order) ] ══ ]
 // 2026-07-12 forge split: these five are PURE TRANSFORMS over plain data (zero authority, no mutation) —
 // widened to `public` so the extracted rune-forge sibling package computes with them. The WRITE door below
-// (`z42`) stays package-private with a brand-gated twin.
+// (`y67`) stays package-private with a brand-gated twin.
 
 /// Centered block → 17 raw magnitudes in `rune_catalog` id order (below-centre fields → 0).
 public fun to_raw(s: &ItemStatistics): vector<u64> {
-  let c = z511(s);
+  let c = y126(s);
   let mut out = vector<u64>[];
   let mut i = 0;
   while (i < c.length()) {
@@ -113,10 +115,10 @@ public fun to_raw(s: &ItemStatistics): vector<u64> {
   out
 }
 
-/// Raw vector → z511 block, PRESERVING untouched malus fields (a raw 0 whose original was below centre
+/// Raw vector → y126 block, PRESERVING untouched malus fields (a raw 0 whose original was below centre
 /// keeps the original — the forge reducer never picks 0-valued fields, so a malus survives every outcome).
 public fun from_raw(orig: &ItemStatistics, raw: &vector<u64>): ItemStatistics {
-  let ov = z511(orig);
+  let ov = y126(orig);
   let mut c = vector<u16>[];
   let mut i = 0;
   while (i < raw.length()) {
@@ -135,7 +137,7 @@ public fun from_raw(orig: &ItemStatistics, raw: &vector<u64>): ItemStatistics {
 }
 
 /// Is `stat` (catalog id) below centre — a malus line?
-public fun is_malus(s: &ItemStatistics, stat: u8): bool { *z511(s).borrow(stat as u64) < SHIFT_U16 }
+public fun is_malus(s: &ItemStatistics, stat: u8): bool { *y126(s).borrow(stat as u64) < SHIFT_U16 }
 
 /// Template [min,max] ranges → 17 raw MAX magnitudes (no ranges ⇒ all-zero ⇒ every scribe is EXOTIC-rated).
 public fun template_max_raw(template: &ItemTemplate): vector<u64> {
@@ -151,9 +153,9 @@ public fun zero_raw(): vector<u64> {
   v
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-/// The z511 17-vector in catalog id order (single home of the field enumeration).
-fun z511(s: &ItemStatistics): vector<u16> {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// The y126 17-vector in catalog id order (single home of the field enumeration).
+fun y126(s: &ItemStatistics): vector<u16> {
   vector[
     s.vitality, s.wisdom, s.strength, s.intelligence, s.chance, s.agility, s.range, s.movement, s.action,
     s.critical, s.raw_damage, s.critical_chance, s.critical_outcomes, s.earth_resistance, s.fire_resistance,
@@ -163,96 +165,114 @@ fun z511(s: &ItemStatistics): vector<u16> {
 
 // ╔════════════════ [ Ranges: attach / read on the TEMPLATE ] ════════════════ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Attach the [min,max] stat ranges to `template` (package-private — the authoring surface calls it before the
 /// template is shared). Each field of a minted item is rolled uniformly in [min_field, max_field] at purchase
 /// (`shop::buy`). Aborts if ranges are already attached (set-once at creation). Pass min==max for a fixed stat.
-public(package) fun attach_ranges(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
-  df::add(item::template_uid_mut(template), StatsMinKey {}, min);
-  df::add(item::template_uid_mut(template), StatsMaxKey {}, max);
+public(package) fun y62(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
+  df::add(item::y57(template), StatsMinKey {}, min);
+  df::add(item::y57(template), StatsMaxKey {}, max);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Replace (or attach) the authored [min,max] ranges on a live template. Package-private: the only production
 /// caller is the AdminCap + Version-gated `admin::set_template_stats` door. Existing minted items are deliberately
 /// untouched: they carry their own fixed `StatsKey` roll, while future mints roll from these updated ranges.
-public(package) fun set_ranges(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
+public(package) fun y63(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
   if (has_ranges(template)) {
-    *df::borrow_mut(item::template_uid_mut(template), StatsMinKey {}) = min;
-    *df::borrow_mut(item::template_uid_mut(template), StatsMaxKey {}) = max;
+    *df::borrow_mut(item::y57(template), StatsMinKey {}) = min;
+    *df::borrow_mut(item::y57(template), StatsMaxKey {}) = max;
   } else {
-    attach_ranges(template, min, max);
+    y62(template, min, max);
   };
 }
 
 public fun has_ranges(template: &ItemTemplate): bool {
-  df::exists(item::template_uid(template), StatsMinKey {})
+  df::exists(item::y58(template), StatsMinKey {})
 }
 
 public fun stats_min(template: &ItemTemplate): &ItemStatistics {
-  df::borrow(item::template_uid(template), StatsMinKey {})
+  df::borrow(item::y58(template), StatsMinKey {})
 }
 
 public fun stats_max(template: &ItemTemplate): &ItemStatistics {
-  df::borrow(item::template_uid(template), StatsMaxKey {})
+  df::borrow(item::y58(template), StatsMaxKey {})
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Detach + drop the [min,max] roll ranges from `template` if present. Package-private — the burn path
 /// (`admin::burn_item_template`) calls it so deleting the template's UID orphans no dynamic field. No-op when
 /// the template carries no ranges (resource/consumable). `ItemStatistics` has `drop`, so removal just discards.
-public(package) fun drop_ranges(template: &mut ItemTemplate) {
+public(package) fun y64(template: &mut ItemTemplate) {
   if (has_ranges(template)) {
-    let _: ItemStatistics = df::remove(item::template_uid_mut(template), StatsMinKey {});
-    let _: ItemStatistics = df::remove(item::template_uid_mut(template), StatsMaxKey {});
+    let _: ItemStatistics = df::remove(item::y57(template), StatsMinKey {});
+    let _: ItemStatistics = df::remove(item::y57(template), StatsMaxKey {});
   }
 }
 
 // ╔════════════════ [ Roll (mint-roll randomness — the ONE stat-shape owner rolls all 17 fields) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-/// Roll one field in [lo, hi] INCLUSIVE off the generator (lo if the range is degenerate). Uses the framework's
-/// unbiased range draw (`generate_u16_in_range`) — DELTA from the deployed reference's `generate_u64 % (span+1)`:
-/// same inclusive semantics, but unbiased and cast-free (the docs-recommended API).
-fun z79(gen: &mut RandomGenerator, lo: u16, hi: u16): u16 {
-  if (hi <= lo) lo else gen.generate_u16_in_range(lo, hi)
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Roll one field in [lo, hi] INCLUSIVE off the seeded stream (lo if the range is degenerate — a fixed field
+/// consumes no draw). `prng` is the house entropy carrier (mulberry32, byte-identical to the sim's `prng.js`), so
+/// a roll is reproducible from its seed by any reader; the SEED is what every seam draws from `&Random`.
+fun y127(state: &mut u64, lo: u16, hi: u16): u16 {
+  if (hi <= lo) return lo;
+  let (next, value) = prng::rng_range(*state, lo as u64, hi as u64);
+  *state = next;
+  value as u16
 }
 
-/// Roll a full `ItemStatistics` with each field independently in [min_field, max_field]. Called ONCE at buy;
+/// Roll a full `ItemStatistics` with each field independently in [min_field, max_field]. Called ONCE at mint;
 /// the result is FIXED on the item forever (combat off the rolled stats stays deterministic). This module owns the
-/// 17-field shape, so the field enumeration lives HERE (the buy path just supplies the generator).
+/// 17-field shape, so the field enumeration lives HERE (the mint door just supplies the seed).
 ///
 /// RELIC DREAM-ROLL (§10, gap G5): a relic "rolls each stat from 1 to max" (trash-to-god variance) — this is the
-/// SAME uniform draw, it just falls out of the general [min,max] when the template authors `min` at the z511
-/// floor (`SHIFT + 1`, i.e. a +1 raw bonus) and `max` at the z511 ceiling. No separate roll variant is
+/// SAME uniform draw, it just falls out of the general [min,max] when the template authors `min` at the y126
+/// floor (`SHIFT + 1`, i.e. a +1 raw bonus) and `max` at the y126 ceiling. No separate roll variant is
 /// needed; a relic is the special case of the general roll where the range is authored wide, so nothing here
 /// changes — the difference is pure admin authoring data (min pinned low), plus the game package's unique-per-
 /// type equip rule (§10, cross-package). Cosmetics carry NO ranges at all (zero stats).
-public(package) fun roll(min: &ItemStatistics, max: &ItemStatistics, gen: &mut RandomGenerator): ItemStatistics {
+public(package) fun roll(min: &ItemStatistics, max: &ItemStatistics, seed: u64): ItemStatistics {
+  let mut state = prng::rng_seed(seed);
   ItemStatistics {
-    vitality: z79(gen, min.vitality, max.vitality),
-    wisdom: z79(gen, min.wisdom, max.wisdom),
-    strength: z79(gen, min.strength, max.strength),
-    intelligence: z79(gen, min.intelligence, max.intelligence),
-    chance: z79(gen, min.chance, max.chance),
-    agility: z79(gen, min.agility, max.agility),
-    range: z79(gen, min.range, max.range),
-    movement: z79(gen, min.movement, max.movement),
-    action: z79(gen, min.action, max.action),
-    critical: z79(gen, min.critical, max.critical),
-    raw_damage: z79(gen, min.raw_damage, max.raw_damage),
-    critical_chance: z79(gen, min.critical_chance, max.critical_chance),
-    critical_outcomes: z79(gen, min.critical_outcomes, max.critical_outcomes),
-    earth_resistance: z79(gen, min.earth_resistance, max.earth_resistance),
-    fire_resistance: z79(gen, min.fire_resistance, max.fire_resistance),
-    water_resistance: z79(gen, min.water_resistance, max.water_resistance),
-    air_resistance: z79(gen, min.air_resistance, max.air_resistance),
+    vitality: y127(&mut state, min.vitality, max.vitality),
+    wisdom: y127(&mut state, min.wisdom, max.wisdom),
+    strength: y127(&mut state, min.strength, max.strength),
+    intelligence: y127(&mut state, min.intelligence, max.intelligence),
+    chance: y127(&mut state, min.chance, max.chance),
+    agility: y127(&mut state, min.agility, max.agility),
+    range: y127(&mut state, min.range, max.range),
+    movement: y127(&mut state, min.movement, max.movement),
+    action: y127(&mut state, min.action, max.action),
+    critical: y127(&mut state, min.critical, max.critical),
+    raw_damage: y127(&mut state, min.raw_damage, max.raw_damage),
+    critical_chance: y127(&mut state, min.critical_chance, max.critical_chance),
+    critical_outcomes: y127(&mut state, min.critical_outcomes, max.critical_outcomes),
+    earth_resistance: y127(&mut state, min.earth_resistance, max.earth_resistance),
+    fire_resistance: y127(&mut state, min.fire_resistance, max.fire_resistance),
+    water_resistance: y127(&mut state, min.water_resistance, max.water_resistance),
+    air_resistance: y127(&mut state, min.air_resistance, max.air_resistance),
   }
+}
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Roll `template`'s authored ranges into a block, or NONE when the template carries no ranges (resource /
+/// consumable / cosmetic). The single home of "does this template roll, and with what" — every mint seam asks
+/// HERE instead of re-deriving the `has_ranges` branch.
+public(package) fun y65(template: &ItemTemplate, seed: u64): Option<ItemStatistics> {
+  if (!has_ranges(template)) return option::none();
+  option::some(roll(stats_min(template), stats_max(template), seed))
 }
 
 // ╔════════════════ [ Rolled block: attach / read on the ITEM ] ══════════════ ]
 
-/// Attach the rolled block to a freshly-minted `item` (package-private — only `shop::buy` calls it, once at
-/// purchase). Pet templates carry their full-fed endpoint, so a new pet starts at the curve's neutral count-zero
-/// block instead of inheriting the generic purchase roll. The item is new, so it cannot already carry StatsKey.
-public(package) fun attach_rolled(item: &mut Item, stats: ItemStatistics) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Attach the rolled block to a freshly-minted `item` (package-private — the gear-mint door `extension::y29`
+/// calls it, once per mint, whatever the seam). Pet templates carry their full-fed endpoint, so a new pet starts at
+/// the curve's neutral count-zero block instead of inheriting the generic mint roll. The item is new, so it cannot
+/// already carry StatsKey.
+public(package) fun y66(item: &mut Item, stats: ItemStatistics) {
   let initial = if (item::category(item) == b"pet".to_string()) {
     scale_from_center(&stats, 0, PET_FULL_FEEDS)
   } else stats;
@@ -267,10 +287,10 @@ public fun rolled_stats(item: &Item): &ItemStatistics {
   df::borrow(item::uid(item), StatsKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Overwrite (or attach) the rolled block on `item`. Package-private: the clamped `scribe` gate rewrites forged
 /// gear, while pet power writes its deterministic template-max fraction. The AdminCap has no owned-item stat door.
-public(package) fun z42(item: &mut Item, stats: ItemStatistics) {
+public(package) fun y67(item: &mut Item, stats: ItemStatistics) {
   if (has_rolled_stats(item)) *df::borrow_mut(item::uid_mut(item), StatsKey {}) = stats
   else df::add(item::uid_mut(item), StatsKey {}, stats);
 }
@@ -283,23 +303,23 @@ public(package) fun z42(item: &mut Item, stats: ItemStatistics) {
 public fun scale_from_center(value: &ItemStatistics, numerator: u64, denominator: u64): ItemStatistics {
   assert!(denominator > 0 && numerator <= denominator, EInvalidScale);
   ItemStatistics {
-    vitality: z80(value.vitality, numerator, denominator),
-    wisdom: z80(value.wisdom, numerator, denominator),
-    strength: z80(value.strength, numerator, denominator),
-    intelligence: z80(value.intelligence, numerator, denominator),
-    chance: z80(value.chance, numerator, denominator),
-    agility: z80(value.agility, numerator, denominator),
-    range: z80(value.range, numerator, denominator),
-    movement: z80(value.movement, numerator, denominator),
-    action: z80(value.action, numerator, denominator),
-    critical: z80(value.critical, numerator, denominator),
-    raw_damage: z80(value.raw_damage, numerator, denominator),
-    critical_chance: z80(value.critical_chance, numerator, denominator),
-    critical_outcomes: z80(value.critical_outcomes, numerator, denominator),
-    earth_resistance: z80(value.earth_resistance, numerator, denominator),
-    fire_resistance: z80(value.fire_resistance, numerator, denominator),
-    water_resistance: z80(value.water_resistance, numerator, denominator),
-    air_resistance: z80(value.air_resistance, numerator, denominator),
+    vitality: y128(value.vitality, numerator, denominator),
+    wisdom: y128(value.wisdom, numerator, denominator),
+    strength: y128(value.strength, numerator, denominator),
+    intelligence: y128(value.intelligence, numerator, denominator),
+    chance: y128(value.chance, numerator, denominator),
+    agility: y128(value.agility, numerator, denominator),
+    range: y128(value.range, numerator, denominator),
+    movement: y128(value.movement, numerator, denominator),
+    action: y128(value.action, numerator, denominator),
+    critical: y128(value.critical, numerator, denominator),
+    raw_damage: y128(value.raw_damage, numerator, denominator),
+    critical_chance: y128(value.critical_chance, numerator, denominator),
+    critical_outcomes: y128(value.critical_outcomes, numerator, denominator),
+    earth_resistance: y128(value.earth_resistance, numerator, denominator),
+    fire_resistance: y128(value.fire_resistance, numerator, denominator),
+    water_resistance: y128(value.water_resistance, numerator, denominator),
+    air_resistance: y128(value.air_resistance, numerator, denominator),
   }
 }
 
@@ -307,15 +327,15 @@ public fun scale_from_center(value: &ItemStatistics, numerator: u64, denominator
 /// normalization. Kept with the stat transform so `equipment` need not import `pet` and create a module cycle.
 public fun pet_full_feed_count(): u64 { PET_FULL_FEEDS }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Derive a pet item's authoritative current block from its authenticated template maximum and stored feed count.
 /// `scale_from_center` validates `feed_count <= PET_FULL_FEEDS`; a rangeless template aborts at `stats_max`.
-public(package) fun z43(template: &ItemTemplate, feed_count: u64): ItemStatistics {
+public(package) fun y68(template: &ItemTemplate, feed_count: u64): ItemStatistics {
   scale_from_center(stats_max(template), feed_count, PET_FULL_FEEDS)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z80(value: u16, numerator: u64, denominator: u64): u16 {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y128(value: u16, numerator: u64, denominator: u64): u16 {
   let magnitude = if (value >= SHIFT_U16) value - SHIFT_U16 else SHIFT_U16 - value;
   let scaled = (((magnitude as u128) * (numerator as u128) / (denominator as u128)) as u16);
   if (value >= SHIFT_U16) SHIFT_U16 + scaled else SHIFT_U16 - scaled
@@ -327,23 +347,23 @@ fun z80(value: u16, numerator: u64, denominator: u64): u16 {
 /// here. Returns a block where each field is `min(value_field, max_field)`.
 public fun clamp_to(value: &ItemStatistics, max: &ItemStatistics): ItemStatistics {
   ItemStatistics {
-    vitality: z907(value.vitality, max.vitality),
-    wisdom: z907(value.wisdom, max.wisdom),
-    strength: z907(value.strength, max.strength),
-    intelligence: z907(value.intelligence, max.intelligence),
-    chance: z907(value.chance, max.chance),
-    agility: z907(value.agility, max.agility),
-    range: z907(value.range, max.range),
-    movement: z907(value.movement, max.movement),
-    action: z907(value.action, max.action),
-    critical: z907(value.critical, max.critical),
-    raw_damage: z907(value.raw_damage, max.raw_damage),
-    critical_chance: z907(value.critical_chance, max.critical_chance),
-    critical_outcomes: z907(value.critical_outcomes, max.critical_outcomes),
-    earth_resistance: z907(value.earth_resistance, max.earth_resistance),
-    fire_resistance: z907(value.fire_resistance, max.fire_resistance),
-    water_resistance: z907(value.water_resistance, max.water_resistance),
-    air_resistance: z907(value.air_resistance, max.air_resistance),
+    vitality: y129(value.vitality, max.vitality),
+    wisdom: y129(value.wisdom, max.wisdom),
+    strength: y129(value.strength, max.strength),
+    intelligence: y129(value.intelligence, max.intelligence),
+    chance: y129(value.chance, max.chance),
+    agility: y129(value.agility, max.agility),
+    range: y129(value.range, max.range),
+    movement: y129(value.movement, max.movement),
+    action: y129(value.action, max.action),
+    critical: y129(value.critical, max.critical),
+    raw_damage: y129(value.raw_damage, max.raw_damage),
+    critical_chance: y129(value.critical_chance, max.critical_chance),
+    critical_outcomes: y129(value.critical_outcomes, max.critical_outcomes),
+    earth_resistance: y129(value.earth_resistance, max.earth_resistance),
+    fire_resistance: y129(value.fire_resistance, max.fire_resistance),
+    water_resistance: y129(value.water_resistance, max.water_resistance),
+    air_resistance: y129(value.air_resistance, max.air_resistance),
   }
 }
 
@@ -356,8 +376,8 @@ public fun uniform(v: u16): ItemStatistics {
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z907(a: u16, b: u16): u16 { if (a < b) a else b }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y129(a: u16, b: u16): u16 { if (a < b) a else b }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
 

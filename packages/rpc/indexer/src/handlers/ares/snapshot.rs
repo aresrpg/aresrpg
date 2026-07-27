@@ -28,16 +28,16 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
-use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
+use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress, TransactionDigest};
 use sui_indexer_alt_framework::types::effects::TransactionEffectsAPI;
 use sui_indexer_alt_framework::types::TypeTag;
 use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
 use sui_indexer_alt_framework::types::object::Owner;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use super::model::{
     BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemDamagesField, ItemObject,
@@ -91,10 +91,42 @@ const MOB_TEMPLATE_TYPE: &str = "MobTemplate";
 /// `aresrpg_foundation::spell_effect::Effect` shape that MobTemplate's own `aresrpg` package
 /// was built against — so the MINTING object's package address (never the bytes, which give
 /// no reliable shape signal once every field is variable-length) is the one durable signal for
-/// which width `skip_effect_vec` needs (issue #629 round-2, `effect_byte_width`). Every OLDER
-/// `aresrpg` origin (the full `aresPackages` history) keeps decoding the pre-#577 width — this
-/// constant names ONLY the boundary, not the old side's enumeration.
+/// which width `skip_effect_vec` needs (issue #629 round-2, `effect_byte_width`).
 const FRESH_ARESRPG_ORIGIN: &str = "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9";
+/// EVERY `aresrpg` origin whose MobTemplate bodies this indexer can walk, represented by a
+/// non-reversible fingerprint and paired with the `spell_effect::Effect` width that origin's
+/// templates embed. The lineage — not a boundary constant with an open-ended default (issue #1315
+/// finding 9): the republish that wraps `World` in `Versioned` mints ANOTHER origin whose Effects
+/// are still 33 bytes, and a default-25 would have misaligned every byte past `spells` for the
+/// whole new universe, silently.
+///
+/// FAIL CLOSED: an origin absent from this table resolves to NO width, so the width-dependent
+/// `loot` walk is SKIPPED (`drops: null` — the same honest-unknown convention a short tail already
+/// projects) and the drop is logged loudly. A guess is the one thing this table exists to refuse;
+/// the origin-independent prefix (name/levels/hp/element) and the fixed-width `Stats` resistances
+/// still project, because neither depends on the Effect width.
+///
+/// CEREMONY HAND-OFF: every fresh publish mints a new origin, and `stamp_all.mjs` writes it to
+/// `packages/sdk/src/deployment/release.json` (`networks.<network>.packages.aresrpg.origin`). A row
+/// here is the indexer half of that stamp — and `release_origins_are_all_registered` (in the test
+/// module) fails RED the moment the stamped origin is missing, so the hand-off cannot be forgotten
+/// into a silent loot outage. Upgrade addresses (`latest`/`previous`) are NEVER rows: a Move type
+/// tag always names the DEFINING package, so an upgraded package's objects keep the origin address.
+///
+/// The source table stores Sui-derived BLAKE2b fingerprints, not usable chain ids. That preserves
+/// exact lineage discrimination without copying live deployment pointers into hand-authored code;
+/// the ceremony-owned release artifact remains the source of the live id.
+const ORIGIN_FINGERPRINT_DOMAIN: u64 = 0x4646_455f_5345_5241; // "ARES_EFF" as little-endian bytes.
+const ARES_ORIGIN_EFFECT_BYTES: &[(&str, usize)] = &[
+    // Pre-#577 lineage — the universe live until the 2026-07-23 fresh publish (25-byte Effect).
+    ("6uaL9rsDyn1uJh4edpSg1HpxMpCU22gVFxRSGN3RScSE", 25),
+    // The post-#577 fresh-publish ceremonies. #1 and #2 were superseded (#1 never went live, #2
+    // was re-published over by the range-true universe); #3 is what release.json pins today. All
+    // three were built against the widened `Effect`, so all three walk at 33.
+    ("3tsbwLWTSELKsHycick1N11bNAJ4i7tLPth7VqPcFKaW", 33),
+    ("Gjb9CppYjWUPTruSMkfJ83ZPKP7JtkXM9otobcb6K9Hc", 33),
+    ("6XD9S2etC5Y7Jvj7sTjGSiz8ousCyJ8EVwXodh2nMXYd", 33),
+];
 /// `aresrpg::crafting::Recipe` — the §14 encyclopedia crafting blueprint. The shared object
 /// carries the FULL recipe truth (ingredient list + output + job/level/xp); the `RecipeCreated`
 /// EVENT carries only counts, so the encyclopedia's recipe view snapshots the object, exactly
@@ -139,6 +171,15 @@ const NS_CHARACTER_EQUIPMENT: u8 = 1;
 /// LIVE gate instead of the `?? 1` fallback (the production "Lv 1+ on every world" 07-17 bug).
 const WORLD_MODULE: &str = "world";
 const WORLD_TYPE: &str = "World";
+/// `aresrpg::world::WorldInner` — the version-wrapped payload #1289 moved every world field into
+/// (`World { id, inner: Versioned }`). It reaches the indexer as a `Field<u64, WorldInner>` under
+/// the shell's NESTED `Versioned` UID, so it is a Phase-1 dynamic field, not a Phase-2 object.
+const WORLD_INNER_TYPE: &str = "WorldInner";
+/// The `WorldInner` version this indexer's field order speaks (world.move's `WORLD_VERSION`). The
+/// whole point of the `Versioned` wrapper is that the next payload is a NEW version plus a migrate,
+/// so a payload keyed by any other version has an unknown field order and is DROPPED — never read
+/// at offsets that stopped meaning what they meant.
+const WORLD_INNER_VERSION: u64 = 1;
 /// The per-zone derivation-state DF key (`aresrpg::zones::ZoneKey`) — a PLAIN struct key (NOT wrapped
 /// in `NsKey`), attached to the WORLD's UID, carrying the seed + consumed bitmaps (`is_zone_key`).
 const ZONES_MODULE: &str = "zones";
@@ -266,7 +307,7 @@ pub fn map_character_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -
 /// forged look-alike cannot poison a real character: attaching a `JobXpKey` DF to a Character's UID
 /// needs `&mut UID` (package-gated), so only our own package writes these — but "our own package"
 /// spans every lineage ever published, including orphaned ones whose bytecode stays callable
-/// forever. Origin hardening lands at the CALL SITE (`process`'s `key_origin_admitted`, gating the
+/// forever. Origin hardening lands at the CALL SITE (`process`'s `origin_admitted`, gating the
 /// whole ten-arm match on `key`'s own top-level struct address) rather than here — this predicate
 /// stays a pure (module, name) shape check.
 fn is_job_xp_key(key_tag: &TypeTag) -> bool {
@@ -343,7 +384,7 @@ fn is_spell_stats_value(value_tag: &TypeTag) -> bool {
 /// match-by-name trust the sibling arms run under. Attaching a `ZoneKey` DF to a World's UID needs `&mut UID`
 /// (package-gated — only `zones::search_zone` does it), so only our own package writes these; a forged
 /// look-alike keyed to an attacker's own object lands under a non-world parent id the client never queries.
-/// Origin hardening lives at the call site (`process`'s `key_origin_admitted`), not here — see
+/// Origin hardening lives at the call site (`process`'s `origin_admitted`), not here — see
 /// [`is_job_xp_key`]'s doc for why (an orphaned lineage's `zones::search_zone` stays callable forever).
 fn is_zone_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(s) = key_tag else { return false };
@@ -359,6 +400,22 @@ fn is_zone_key(key_tag: &TypeTag) -> bool {
 fn is_group_root_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(s) = key_tag else { return false };
     s.module.as_str() == ZONES_MODULE && s.name.as_str() == ZONE_GROUP_ROOT_KEY_TYPE
+}
+
+/// Is a `0x2::dynamic_field::Field`'s KEY type parameter the bare `u64` a `Versioned` payload is
+/// keyed by (`versioned::create` does `df::add(&mut self.id, init_version, init_value)`)? UNLIKE
+/// every sibling arm the key is a PRIMITIVE, so it carries no origin address at all — which is why
+/// this arm gates on the VALUE's struct address (see [`is_world_inner_value`] and the call site).
+fn is_versioned_payload_key(key_tag: &TypeTag) -> bool {
+    matches!(key_tag, TypeTag::U64)
+}
+
+/// Is a `0x2::dynamic_field::Field`'s VALUE type parameter the wrapped World payload —
+/// `aresrpg::world::WorldInner`? Matched by (module, name) like every sibling predicate; the
+/// address half is the origin gate at the call site.
+fn is_world_inner_value(value_tag: &TypeTag) -> bool {
+    matches!(value_tag, TypeTag::Struct(v)
+        if v.module.as_str() == WORLD_MODULE && v.name.as_str() == WORLD_INNER_TYPE)
 }
 
 /// Is a `0x2::dynamic_field::Field`'s KEY type parameter the authored MIN stat-range key —
@@ -907,7 +964,7 @@ impl MobTemplatePrefix {
     /// short/foreign body past the prefix sets them `None` and never fails the prefix.
     /// `effect_bytes` resolves the `spells` walk's per-`Effect` width (issue #629 round-2 —
     /// [`effect_byte_width`] is the ONE place that maps a MobTemplate's minting origin to it).
-    fn parse(bytes: &[u8], effect_bytes: usize) -> Option<Self> {
+    fn parse(bytes: &[u8], effect_bytes: Option<usize>) -> Option<Self> {
         let mut r = ByteReader::new(bytes);
         r.skip(32)?; // UID = a bare 32-byte ObjectID (no length prefix)
         let name = r.string()?;
@@ -920,17 +977,37 @@ impl MobTemplatePrefix {
         // Best-effort: the fixed-width Stats block reads resistances (issue #629); only THEN
         // (cursor now past `stats`) is `loot` attempted — a short/foreign `spells`/`loot` tail
         // drops `drops` alone, never regressing the just-read resistances or the prefix.
+        // An UNREGISTERED origin (`effect_bytes == None`) stops exactly here: the loot walk is the
+        // only width-dependent read, so refusing it costs `drops` and nothing else.
         let resistances = r.read_mob_resistances();
-        let drops = if resistances.is_some() { r.read_mob_loot(effect_bytes) } else { None };
+        let drops = match (resistances.is_some(), effect_bytes) {
+            (true, Some(width)) => r.read_mob_loot(width),
+            _ => None,
+        };
         Some(Self { name, min_level, max_level, base_hp, element, resistances, drops })
     }
 }
 
-/// The `spell_effect::Effect` wire width for a MobTemplate minted under `package` (issue #629
-/// round-2 rider — the fresh publish's #577 `value_max: u64` widens every Effect 25→33 bytes).
-/// ONE home for the origin→width decision; `skip_effect_vec`'s caller chain never re-derives it.
-fn effect_byte_width(package: &str) -> usize {
-    if package == FRESH_ARESRPG_ORIGIN { 33 } else { 25 }
+/// Derive the stable, non-reversible table key for an origin supplied by checkpoint type truth.
+/// `ObjectID::derive_id` is Sui's domain-separated BLAKE2b constructor; treating the origin bytes
+/// as the input digest gives this table a compact exact-match key without retaining a live id.
+fn origin_fingerprint(package: &str) -> Option<String> {
+    let origin = ObjectID::from_hex_literal(package).ok()?;
+    let input = TransactionDigest::new(origin.into_bytes());
+    let fingerprint = ObjectID::derive_id(input, ORIGIN_FINGERPRINT_DOMAIN);
+    Some(TransactionDigest::new(fingerprint.into_bytes()).base58_encode())
+}
+
+/// The `spell_effect::Effect` wire width for a MobTemplate minted under `package`, or `None` when
+/// that origin's fingerprint is not in [`ARES_ORIGIN_EFFECT_BYTES`] — the fail-closed answer the
+/// loot walk must obey rather than guess. ONE home for the origin→width decision;
+/// `skip_effect_vec`'s caller chain never re-derives it.
+fn effect_byte_width(package: &str) -> Option<usize> {
+    let fingerprint = origin_fingerprint(package)?;
+    ARES_ORIGIN_EFFECT_BYTES
+        .iter()
+        .find(|(known, _)| *known == fingerprint)
+        .map(|(_, width)| *width)
 }
 
 /// Snapshot one `aresrpg::mob_template::MobTemplate` object into its encyclopedia doc
@@ -942,9 +1019,19 @@ fn effect_byte_width(package: &str) -> usize {
 /// as every other field here; the bestiary's `decode_mob_resist` already handles the null case.
 /// `package` is the object's OWN type-tag address — resolves the embedded `spells` vector's
 /// per-`Effect` width (issue #629 round-2: the fresh publish widens `Effect` 25→33 bytes; an
-/// unwidened skip would misalign `loot` for every mob minted after tonight's republish).
+/// unwidened skip would misalign `loot` for every mob minted after that republish). An origin
+/// missing from [`ARES_ORIGIN_EFFECT_BYTES`] projects the doc WITHOUT loot (`drops: null`) and
+/// says so loudly — the ceremony hand-off that table documents is what clears the warning.
 pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Option<Vec<RedisWrite>> {
-    let p = MobTemplatePrefix::parse(contents, effect_byte_width(package))?;
+    let effect_bytes = effect_byte_width(package);
+    if effect_bytes.is_none() {
+        warn!(
+            mob_template = id,
+            origin = package,
+            "unregistered aresrpg origin — MobTemplate loot dropped (add the origin's Effect width to ARES_ORIGIN_EFFECT_BYTES)"
+        );
+    }
+    let p = MobTemplatePrefix::parse(contents, effect_bytes)?;
     let key = k_mob_template(id);
     Some(vec![
         set(
@@ -976,17 +1063,77 @@ pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Opti
 /// The gate lives ONLY on the object: `world::set_required_level` fires a payload-less
 /// `WorldUpdated { world }` ("the RPC re-reads the object" — world.move), and the create
 /// event carries seed/biome only — so without this snapshot every world served "Lv 1+"
-/// (the view's `?? 1` fallback; found 2026-07-17). Prefix decode (`id | seed | biome |
-/// required_level`) tolerating the dial/spawn-table tail; latest-wins whole-doc set — the
-/// World object mutates on every dial edit and spawn-nonce bump, so the doc self-heals.
-/// `None` = a truncated/foreign body (defensive — never fails the batch).
+/// (the view's `?? 1` fallback; found 2026-07-17). LEGACY (pre-#1289) inline shape ONLY: prefix
+/// decode (`id | seed | biome | required_level`) tolerating the dial/spawn-table tail; latest-wins
+/// whole-doc set — the World object mutates on every dial edit and spawn-nonce bump, so the doc
+/// self-heals. A WRAPPED World carries none of these fields and projects through
+/// [`map_world_inner_field`] instead. `None` = wrapped, truncated, or foreign (defensive — never
+/// fails the batch).
 pub fn map_world_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    // A wrapped shell must NEVER fall through to the legacy reader: it would read the nested
+    // `Versioned`'s UID bytes as `seed` and one of its middle bytes as a `biome` length — the exact
+    // "dropped or garbage" this branch exists to prevent (issue #1315 finding 5).
+    if world_shell(contents).is_some() {
+        return None;
+    }
     let mut r = ByteReader::new(contents);
     r.skip(32)?; // UID = a bare 32-byte ObjectID (no length prefix)
     let seed = r.u64()?;
     let biome = r.string()?;
     let required_level = r.u16()?;
-    Some(vec![
+    Some(world_doc_writes(id, seed, &biome, required_level))
+}
+
+/// The `world::World` SHELL as of #1289 — `{ id: UID, inner: Versioned { id: UID, version: u64 } }`
+/// (world.move: "everything that is *world state* lives in `WorldInner`"). Exactly 72 bytes.
+#[derive(Deserialize)]
+struct WorldShell {
+    id: ObjectID,
+    inner: VersionedShell,
+}
+
+/// `0x2::versioned::Versioned` — an id, and the version its payload dynamic field is keyed by.
+#[derive(Deserialize)]
+struct VersionedShell {
+    id: ObjectID,
+    /// Decoded but never read: these 8 bytes are what make the shell decode EXACT (see
+    /// [`world_shell`]). The version that governs the payload LAYOUT is judged where the layout is
+    /// consumed — the field's own `name` in [`map_world_inner_field`] — so it stays one home.
+    #[allow(dead_code)]
+    version: u64,
+}
+
+/// `Some` only when `contents` is EXACTLY a wrapped World shell. `bcs::from_bytes` REFUSES trailing
+/// input, and the legacy inline `World` is ≥107 bytes even with an empty biome and empty tables, so
+/// no legacy body can satisfy this and no wrapped body can be mistaken for a legacy one. THE shape
+/// discriminator — the legacy projection and the Phase-0 parent map both ask it, never a byte count.
+fn world_shell(contents: &[u8]) -> Option<WorldShell> {
+    bcs::from_bytes::<WorldShell>(contents).ok()
+}
+
+/// Project the wrapped World payload — `Field<u64, WorldInner>` attached to the shell's NESTED
+/// `Versioned` UID — onto the SAME `rpc:world:{id}` doc the inline object used to write. `world_id`
+/// is the shell association resolved in Phase 0, NOT the Field's own checkpoint parent (that is the
+/// Versioned id, which no reader ever knows). Layout: `id:UID(32) | name:u64 (the version, == the
+/// dynamic-field key) | value:WorldInner{ seed:u64 | biome:String | required_level:u16 | … }` — the
+/// same prefix the legacy path read, one indirection deeper, tolerating the dial/table tail.
+/// `None` = a version this indexer does not speak, or a truncated/foreign body (defensive).
+pub fn map_world_inner_field(world_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let mut r = ByteReader::new(contents);
+    r.skip(32)?; // the Field's OWN UID
+    if r.u64()? != WORLD_INNER_VERSION {
+        return None;
+    }
+    let seed = r.u64()?;
+    let biome = r.string()?;
+    let required_level = r.u16()?;
+    Some(world_doc_writes(world_id, seed, &biome, required_level))
+}
+
+/// ONE home for the `rpc:world:{id}` doc shape — written from the inline object (legacy) or from
+/// the wrapped payload field (post-#1289), never able to differ between them.
+fn world_doc_writes(id: &str, seed: u64, biome: &str, required_level: u16) -> Vec<RedisWrite> {
+    vec![
         set(
             k_world(id),
             "$",
@@ -999,7 +1146,7 @@ pub fn map_world_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
             }),
         ),
         sadd(K_WORLDS.into(), id.to_string()),
-    ])
+    ]
 }
 
 /// Snapshot one `aresrpg::crafting::Recipe` object into its encyclopedia doc `rpc:recipe:{id}`
@@ -1359,8 +1506,10 @@ pub fn kiosk_purchase_per_unit(price_mist: u64, amount: u64) -> Option<u64> {
 /// package (package-split 2026-07-12). Unset = match by `(module, name)` alone. Phase 2's
 /// object-snapshot loop gates every arm on `self.admits(&ty.address()...)`; Phase 1's
 /// dynamic-field arms (job-xp/progression/equipment/malus/equipped-item/zone/group-root/
-/// stats-min/stats-max/damages) gate identically via [`key_origin_admitted`] — see that
-/// method's doc for why a DF child needs its OWN origin check independent of its parent.
+/// stats-min/stats-max/damages/world-inner) gate identically via [`origin_admitted`] — see that
+/// method's doc for why a DF child needs its OWN origin check independent of its parent. The
+/// world-inner arm feeds it the VALUE tag, not the key: its key is a bare `u64` (see
+/// [`is_versioned_payload_key`]) and primitives carry no address to gate on.
 pub struct AresSnapshotHandler {
     packages: Option<HashSet<String>>,
 }
@@ -1377,8 +1526,11 @@ impl AresSnapshotHandler {
         }
     }
 
-    /// Origin gate for a Phase-1 dynamic-field KEY (the ①-fix, 2026-07-24 ghost-leak
-    /// incident). Every `is_*_key` predicate below matches purely by (module, name) —
+    /// Origin gate for a Phase-1 dynamic-field TYPE TAG — the KEY for every arm whose key is a
+    /// struct, the VALUE for the one whose key is a primitive (`Field<u64, WorldInner>`; a `u64`
+    /// carries no address, so its arm gates on `WorldInner`'s defining package instead). Born as
+    /// the ①-fix, 2026-07-24 ghost-leak
+    /// incident. Every `is_*_key` predicate below matches purely by (module, name) —
     /// deliberately, so it stays a structural shape check — which means, on its own, it
     /// admits a BYTE-IDENTICAL key attached by an ORPHANED old-lineage package just as
     /// readily as the current one. Move type-tag addresses are ALWAYS the defining
@@ -1398,8 +1550,8 @@ impl AresSnapshotHandler {
     /// Character/World itself never re-appears as an admitted output object. Without this
     /// gate, that write alone ghosts a fresh `rpc:character:{parent}` (or `rpc:zone:…`) doc
     /// into existence via the arm's own `char_init`/NX skeleton.
-    fn key_origin_admitted(&self, key_tag: &TypeTag) -> bool {
-        match key_tag {
+    fn origin_admitted(&self, tag: &TypeTag) -> bool {
+        match tag {
             TypeTag::Struct(s) => self.admits(&s.address.to_canonical_string(true)),
             _ => false,
         }
@@ -1427,6 +1579,37 @@ impl Processor for AresSnapshotHandler {
         // (like the event pipeline admits native kiosk). Only OUR objects' owners consume
         // the map (Phase 2), so unrelated dynamic fields here never produce a write.
         let mut kiosk_of_wrapper: HashMap<SuiAddress, SuiAddress> = HashMap::new();
+
+        // ── Phase 0 (checkpoint-wide): wrapped-World parent map ───────────────
+        // Post-#1289 a World's state lives in `Field<u64, WorldInner>` hung off the shell's NESTED
+        // `Versioned` UID — NOT the World's own UID (that one still carries the zone DFs). So this
+        // Field's checkpoint `ObjectOwner` is an id no `rpc:world:{id}` reader has ever seen, and
+        // the only place the edge exists is inside the shell's own bytes. Every mutation of the
+        // payload goes through `&mut World`, so the shell is re-output in the SAME checkpoint as
+        // the payload it changed and the association is always resolvable here — checkpoint-local
+        // state, nothing carried across restarts. Built BEFORE the Phase-1 loop because output
+        // order within a checkpoint is not specified: the Field can precede its shell.
+        let mut world_of_inner: HashMap<ObjectID, String> = HashMap::new();
+        for tx in &checkpoint.transactions {
+            for obj in tx.output_objects(&checkpoint.object_set) {
+                let Some(ty) = obj.type_() else { continue };
+                if ty.module().as_str() != WORLD_MODULE || ty.name().as_str() != WORLD_TYPE {
+                    continue;
+                }
+                if !self.admits(&ty.address().to_canonical_string(true)) {
+                    continue;
+                }
+                let Some(mv) = obj.data.try_as_move() else { continue };
+                let Some(shell) = world_shell(mv.contents()) else { continue }; // legacy inline World
+                // The decoded UID must BE this object's id — a foreign 72-byte body cannot claim a
+                // Versioned id it does not own, so no attacker-attached payload can hijack a world doc.
+                if shell.id != obj.id() {
+                    continue;
+                }
+                world_of_inner.insert(shell.inner.id, obj.id().to_canonical_string(true));
+            }
+        }
+
         for (tx_index, tx) in checkpoint.transactions.iter().enumerate() {
             // Preserve transaction order while making each EquipmentMap gate follow its sibling malus write.
             let mut equipment_malus_writes = Vec::new();
@@ -1454,13 +1637,16 @@ impl Processor for AresSnapshotHandler {
                     //     parent=ITEM TEMPLATE) — the authored [min,max] roll ranges (issue #219).
                     //   • damages (`Field<item_damages::DamagesKey, vector<ItemDamages>>`,
                     //     parent=ITEM TEMPLATE) — the authored weapon damage lines (issue #619 leg 3).
+                    //   • world payload (`Field<u64, world::WorldInner>`, parent=the World shell's
+                    //     NESTED `Versioned` UID) — every world dial after #1289. The one arm with a
+                    //     PRIMITIVE key and an indirect parent; see the Phase-0 map above.
                     if let Owner::ObjectOwner(parent) = obj.owner() {
                         let params = ty.type_params();
-                        // Origin-gated (the ①-fix — see `key_origin_admitted`'s doc): an
+                        // Origin-gated (the ①-fix — see `origin_admitted`'s doc): an
                         // old-lineage key fails the filter and becomes `None`, so every
                         // `key.is_some_and(is_*_key)` below is automatically `false` for it —
                         // one gate for all ten mutually-exclusive arms.
-                        let key = params.first().map(|k| &**k).filter(|k| self.key_origin_admitted(k));
+                        let key = params.first().map(|k| &**k).filter(|k| self.origin_admitted(k));
                         let value = params.get(1).map(|v| &**v);
                         let id = || ObjectID::from(*parent).to_canonical_string(true);
                         if key.is_some_and(is_job_xp_key) {
@@ -1541,6 +1727,32 @@ impl Processor for AresSnapshotHandler {
                                 if let Some(w) = map_item_damages_field(&id(), mv.contents()) {
                                     writes.extend(w);
                                 }
+                            }
+                        } else if params.first().map(|k| &**k).is_some_and(is_versioned_payload_key)
+                            && value.is_some_and(is_world_inner_value)
+                            && value.is_some_and(|v| self.origin_admitted(v))
+                        {
+                            // The wrapped World payload (#1289). The ONE arm whose parent is NOT the
+                            // doc's subject: `parent` here is the shell's nested `Versioned` id, so
+                            // the world id comes from the Phase-0 map. Origin-gated on the VALUE tag
+                            // (`WorldInner`'s defining package) because the `u64` key has no address.
+                            let versioned = ObjectID::from(*parent);
+                            match world_of_inner.get(&versioned) {
+                                Some(world) => {
+                                    if let Some(mv) = obj.data.try_as_move() {
+                                        if let Some(w) = map_world_inner_field(world, mv.contents()) {
+                                            writes.extend(w);
+                                        }
+                                    }
+                                }
+                                // FAIL CLOSED: an unattributable payload is dropped, never guessed
+                                // onto a world id. Only reachable if the shell was NOT re-output
+                                // beside its payload — an invariant break worth shouting about.
+                                None => warn!(
+                                    field = %obj.id(),
+                                    versioned = %versioned,
+                                    "WorldInner payload with no World shell in this checkpoint — dropped"
+                                ),
                             }
                         }
                     }

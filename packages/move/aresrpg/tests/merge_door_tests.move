@@ -9,14 +9,7 @@
 #[test_only]
 module aresrpg::merge_door_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  extension,
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{kiosk::{Self, Kiosk}, package::Publisher, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
@@ -36,7 +29,7 @@ fun boot(sc: &mut Scenario): (ID, ID) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let acap = sc.take_from_sender<AdminCap>();
@@ -74,7 +67,7 @@ fun mint_lock_into(sc: &mut Scenario, tid: ID, kiosk: &mut Kiosk, pkcap: &Person
   let tmpl = sc.take_shared_by_id<ItemTemplate>(tid);
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let (it, pledge) = extension::z20(&tmpl, qty, &ver, sc.ctx());
+  let (it, pledge) = extension::y30(&tmpl, qty, &ver, sc.ctx());
   let id = object::id(&it);
   item::lock_in_kiosk(pledge, it, kiosk, personal_kiosk::borrow(pkcap), &mkt);
   ts::return_shared(tmpl); ts::return_shared(ver); ts::return_shared(mkt);

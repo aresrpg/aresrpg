@@ -7,7 +7,7 @@
 ///
 /// PLACEMENT-BY-RESPONSIBILITY: this module owns only what an item IS. It holds NO supply ledger (a supply cap
 /// is the sale gate's concern — a future mob-loot gate mints with no cap at all), NO price, NO authority caps.
-/// `new_template` and `mint` are `public(package)` factories: the package's authoring surface (`admin`) and its
+/// `y49` and `mint` are `public(package)` factories: the package's authoring surface (`admin`) and its
 /// sale gate (`shop`) call them; nothing outside the package can mint. The module boundary IS the security
 /// boundary.
 ///
@@ -25,27 +25,27 @@ use sui::{
   event,
   kiosk::{Kiosk, KioskOwnerCap},
   package::{Self, Publisher},
-  transfer_policy::{Self, TransferPolicy, TransferPolicyCap},
+  transfer_policy::{Self, TransferPolicy, TransferPolicyCap, TransferRequest},
   tx_context::sender
 };
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
 const EPledgeMismatch: u64 = 101; // lock_in_kiosk: pledge id != item id
-const ELevelTooLow: u64 = 102; // z38: character level below the template's required level
+const ELevelTooLow: u64 = 102; // y50: character level below the template's required level
 const ENotPersonalKiosk: u64 = 103; // lock_in_kiosk: destination kiosk is not PERSONAL (constitution)
-const ENotStackable: u64 = 104; // z39/merge/split: the item's category does not stack (gear is a unique NFT)
-const EZeroQuantity: u64 = 105; // z39/split: a stack (or split) must carry at least 1 unit
+const ENotStackable: u64 = 104; // y54/merge/split: the item's category does not stack (gear is a unique NFT)
+const EZeroQuantity: u64 = 105; // y54/split: a stack (or split) must carry at least 1 unit
 const ETemplateMismatch: u64 = 106; // merge: the two stacks are different templates
 const ESplitTooLarge: u64 = 107; // split: take >= amount (a split must leave at least 1 unit in the source)
 
 // House stackability rule (§10): consumable + resource + rune categories are FUNGIBLE — many units fold into one
 // `amount`; every OTHER category is a unique NFT (`amount` always 1). Single-homed HERE: the item base owns "what
-// an item is," including whether it stacks. `consumable_effect` reads `z41()` so the `consumable`
+// an item is," including whether it stacks. `consumable_effect` reads `y56()` so the `consumable`
 // slug lives in exactly ONE place. Growth: this rule is DATA-derived from the category string, never a per-item flag.
 // RUNE joined 2026-07-11 (crush single-tx lane): Retro runes are fungible per family — the sibling forge
 // package's `crush` (brand-gated mint door) mints
-// them as STACKS (`z20`) and `scribe_rune` consumes UNITS off a stack; the live seed templates are
+// them as STACKS (`y30`) and `scribe_rune` consumes UNITS off a stack; the live seed templates are
 // category `rune`, so without this membership every crush mint aborted `ENotStackable` (latent, test-masked).
 const CATEGORY_CONSUMABLE: vector<u8> = b"consumable";
 const CATEGORY_RESOURCE: vector<u8> = b"resource";
@@ -78,7 +78,7 @@ public struct Item has key, store {
 /// (stat RANGES / damages / consumable effect) rides as TYPED DYNAMIC FIELDS attached at creation by `item_stats`
 /// / `item_damages` / `consumable_effect` under this template's UID — the item base owns the STORAGE, those
 /// modules own the DATA SHAPE (placement law). `category` + `level` are MANDATORY base fields: a
-/// future equip/consume system asserts `character.level >= template.level` via `z38`, and `category`
+/// future equip/consume system asserts `character.level >= template.level` via `y50`, and `category`
 /// is the differentiator every such system dispatches on (gear slot, tool job, consumable…). NO supply ledger
 /// (the sale gate's concern), NO media fields (art is a Display-only URL keyed by `item_type`). `key` only —
 /// shared, never transferable/wrappable.
@@ -162,10 +162,11 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
 
 // ╔════════════════ [ Factories (package-private — only `admin` authors, only the sale gate mints) ] ═ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Create an `ItemTemplate` and RETURN it UNSHARED. Package-private: the public authoring path is
-/// `admin::create_template`, which cap-/version-gates, attaches the typed stat/damage DFs, then `share_template`s
+/// `admin::create_template`, which cap-/version-gates, attaches the typed stat/damage DFs, then `y51`s
 /// it — all in one call so a template is published complete (one PTB). `item_type` is the catalog art slug.
-public(package) fun new_template(
+public(package) fun y49(
   name: String,
   description: String,
   item_type: String,
@@ -176,35 +177,38 @@ public(package) fun new_template(
   ItemTemplate { id: object::new(ctx), name, description, item_type, category, level }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The single home for the LEVEL gate (you can't consume or equip an item below the level of the
 /// character). `public(package)` so the future in-package equip/consume upgrade asserts through it — one place,
 /// no re-derivation. Aborts (`ELevelTooLow`) when the character is under the template's required level.
-public(package) fun z38(template: &ItemTemplate, character_level: u16) {
+public(package) fun y50(template: &ItemTemplate, character_level: u16) {
   assert!(character_level >= template.level, ELevelTooLow);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Emit `TemplateCreated` and SHARE the (now fully-authored) template, returning its id. Package-private — only
 /// the authoring surface calls it, after any stat/damage DFs are attached.
-public(package) fun share_template(template: ItemTemplate): ID {
+public(package) fun y51(template: ItemTemplate): ID {
   let tid = object::id(&template);
   event::emit(TemplateCreated { template: tid, item_type: template.item_type });
   transfer::share_object(template);
   tid
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Emit `TemplateBurned` and DESTROY a template, deleting its shared object. Package-private — only the
 /// authoring surface (`admin::burn_item_template`) calls it, AFTER the DF-owning modules (`item_stats` /
 /// `item_damages` / `consumable_effect`) have detached their typed dynamic fields, so this UID delete orphans
 /// nothing. Sui permits deleting a SHARED object passed BY VALUE: this unpacks the struct and `object::delete`s
 /// its UID. Minted `Item`s are UNAFFECTED — an item snapshots its `template` as a plain `ID` (and `item_type` as
 /// a `String`), never an object ref, so burning a template dangles no live item or sale.
-public(package) fun destroy_template(template: ItemTemplate) {
+public(package) fun y52(template: ItemTemplate) {
   let ItemTemplate { id, name: _, description: _, item_type, category: _, level: _ } = template;
   event::emit(TemplateBurned { template: id.to_inner(), item_type });
   object::delete(id);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Patch a template's display `name` + `description` IN PLACE — the ONLY mutator of these two fields after
 /// creation. Package-private: the sole caller is `admin::set_template_name_description` (AdminCap + version gated).
 /// Writes name + description ONLY; `item_type`/`category`/`level` and the typed stat/damage/effect DFs are
@@ -212,7 +216,7 @@ public(package) fun destroy_template(template: ItemTemplate) {
 /// ID is preserved — every minted `Item`, kiosk lock and drop-table ref that points at this template by `ID` stays
 /// valid, and each minted item keeps its own mint-time name snapshot (immutable provenance). Only the template
 /// Display + all FUTURE mints see the new name. Emits `TemplateRenamed`.
-public(package) fun set_name_description(template: &mut ItemTemplate, name: String, description: String) {
+public(package) fun y53(template: &mut ItemTemplate, name: String, description: String) {
   template.name = name;
   template.description = description;
   event::emit(TemplateRenamed { template: object::id(template), name: template.name });
@@ -221,8 +225,8 @@ public(package) fun set_name_description(template: &mut ItemTemplate, name: Stri
 /// Mint ONE item from `template` (amount = 1) and RETURN it with a `LockPledge` that FORCES a same-PTB kiosk lock.
 /// Package-private, NO cap, NO supply check: supply/price/pause are the sale gate's concern (`shop::buy`); a
 /// future mob-loot gate would mint here under different rules. The GEAR door — kept `(template, ctx)` frozen so
-/// its callers (`shop::buy` non-stackable branch, `extension::z502`) stay
-/// clean; a stackable buys its N units through `z39`. Snapshots the template's `item_type` + `category`.
+/// its callers (`shop::buy` non-stackable branch, `extension::y29`) stay
+/// clean; a stackable buys its N units through `y54`. Snapshots the template's `item_type` + `category`.
 public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, LockPledge) {
   let tid = object::id(template);
   let item = Item {
@@ -239,13 +243,13 @@ public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, L
   (item, LockPledge { item_id })
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Mint ONE stackable item carrying `quantity` units — the FUNGIBLE door (resources / consumables). Aborts unless
 /// the template's category STACKS (`ENotStackable` — gear is a unique NFT minted via `mint`, never a param change)
 /// and `quantity >= 1` (`EZeroQuantity`). Package-private, reached by `shop::buy_many` (stackable branch) and the
-/// cap-gated `extension::z20` (gather / pools). Returns the `LockPledge` — a stackable is personal-
+/// cap-gated `extension::y30` (gather / pools). Returns the `LockPledge` — a stackable is personal-
 /// kiosk-locked from birth like every item. Stackables carry NO stat ranges, so there is nothing to roll.
-public(package) fun z39(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): (Item, LockPledge) {
+public(package) fun y54(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): (Item, LockPledge) {
   assert!(is_stackable_category(template.category), ENotStackable);
   assert!(quantity >= 1, EZeroQuantity);
   let tid = object::id(template);
@@ -306,7 +310,7 @@ public(package) fun split(a: &mut Item, take: u64, ctx: &mut TxContext): (Item, 
 /// on a shared kiosk is exactly the royalty-evasion / wholesale path the personal-kiosk law kills), then locks
 /// it under `policy`. Composes freely: a kiosk-less minter can `kiosk::new` → `personal_kiosk::new` earlier in
 /// the same PTB and lock here. No version/enabled gate — a live pledge can only exist because a mint door
-/// (`shop::buy` or `extension::z502`) already passed its gates in this very PTB.
+/// (`shop::buy` or `extension::y29`) already passed its gates in this very PTB.
 public fun lock_in_kiosk(
   pledge: LockPledge,
   item: Item,
@@ -322,12 +326,12 @@ public fun lock_in_kiosk(
 
 // ╔════════════════ [ Re-lock pledge + destroy — the extract seam's two package-private primitives ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Build a `LockPledge` for an EXISTING item — the re-lock hot potato the `extract::unequip` path returns so the
 /// game is TYPE-FORCED to personal-kiosk-lock the item it pulled off a character. Package-private, and a pledge is
 /// inert alone: its only consumer is `lock_in_kiosk`, which matches it against the real item and forces a personal
 /// kiosk. No new authority — it just re-imposes the lock constitution on an item that already left a kiosk.
-public(package) fun z40(item_id: ID): LockPledge { LockPledge { item_id } }
+public(package) fun y55(item_id: ID): LockPledge { LockPledge { item_id } }
 
 /// DESTROY an item, deleting its object on-chain — the terminal of the CONSUME-extract flow (pool sell / crush /
 /// pet feed). Package-private: only `extract::burn` (cap-gated) calls it, after reading `template`/`amount` for the
@@ -347,10 +351,10 @@ public fun is_stackable_category(category: String): bool {
   category == CATEGORY_CONSUMABLE.to_string() || category == CATEGORY_RESOURCE.to_string() || category == CATEGORY_RUNE.to_string()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The `consumable` category slug, single-homed here. `consumable_effect::is_consumable` reads it so the literal
 /// never drifts across the package (the effect-attach gate and the stackability rule share ONE source of the slug).
-public(package) fun z41(): String { CATEGORY_CONSUMABLE.to_string() }
+public(package) fun y56(): String { CATEGORY_CONSUMABLE.to_string() }
 
 // ╔════════════════ [ Kiosk / royalty seam — Publisher gated ] ═════════════════ ]
 
@@ -390,11 +394,13 @@ public fun description(self: &Item): String { self.description }
 /// The template's flavor text (copied onto every mint).
 public fun template_description(self: &ItemTemplate): String { self.description }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Template UID access for the in-package stat/damage modules (they own the DATA shape, this module owns the
 /// storage). `&mut UID` never leaves the package.
-public(package) fun template_uid_mut(self: &mut ItemTemplate): &mut UID { &mut self.id }
+public(package) fun y57(self: &mut ItemTemplate): &mut UID { &mut self.id }
 
-public(package) fun template_uid(self: &ItemTemplate): &UID { &self.id }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+public(package) fun y58(self: &ItemTemplate): &UID { &self.id }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
 
@@ -435,14 +441,14 @@ public fun mint_for_testing(template: &ItemTemplate, ctx: &mut TxContext): Item 
 #[test_only]
 /// Mint a RAW stackable of `quantity` units (pledge discarded) — same test-only escape as `mint_for_testing`.
 public fun mint_stack_for_testing(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): Item {
-  let (item, pledge) = z39(template, quantity, ctx);
+  let (item, pledge) = y54(template, quantity, ctx);
   let LockPledge { item_id: _ } = pledge;
   item
 }
 
 #[test_only]
 /// Mint a GHOST stack (amount = 0) — the ONLY way to obtain a zero-amount `Item`, since every production door
-/// (`z39` / `split` / `merge`) keeps amount >= 1. Exists solely to drive `item_listing_rule` (the amount-0
+/// (`y54` / `split` / `merge`) keeps amount >= 1. Exists solely to drive `item_listing_rule` (the amount-0
 /// sale block); bypasses the quantity assert on purpose. Snapshots the template identity like the real factories.
 public fun mint_zero_stack_for_testing(template: &ItemTemplate, ctx: &mut TxContext): Item {
   Item {
@@ -454,4 +460,68 @@ public fun mint_zero_stack_for_testing(template: &ItemTemplate, ctx: &mut TxCont
     category: template.category,
     amount: 0,
   }
+}
+
+// ╔════════════════ [ merged from `lot_rule` — republish restructure #1287 ] ════ ]
+const ELotInvalid: u64 = 120; // from `lot_rule` — merged-in codes get their own block so module+code stays unambiguous
+const ELotWrongItem: u64 = 121; // from `lot_rule` — merged-in codes get their own block so module+code stays unambiguous
+
+/// Witness identifying the rule in a `TransferPolicy<Item>` and its purchase receipts.
+public struct LotRule has drop {}
+
+/// Empty policy configuration: legal lots are immutable protocol constants in this module.
+public struct LotConfig has store, drop {}
+
+/// Attach this rule to the universal Item policy. `transfer_policy::add_rule` rejects a duplicate attachment.
+public fun add_lot_rule(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>) {
+  transfer_policy::add_rule(LotRule {}, policy, cap, LotConfig {});
+}
+
+/// Prove that `item` is the object named by `request` and, when it is stackable, carries a legal kiosk lot.
+public fun prove_lot(item: &Item, request: &mut TransferRequest<Item>) {
+  assert!(object::id(item) == transfer_policy::item(request), ELotWrongItem);
+
+  if (is_stackable_category(category(item))) {
+    let amount = amount(item);
+    assert!(amount == 1 || amount == 10 || amount == 100 || amount == 1000, ELotInvalid);
+  };
+
+  transfer_policy::add_receipt(LotRule {}, request);
+}
+
+// ╔════════════════ [ merged from `item_listing_rule` — republish restructure ] ═ ]
+// ╔════════════════ [ Errors (teach, don't reject) ] ═════════════════════════ ]
+
+const EListingZeroAmount: u64 = 130; // from `item_listing_rule` — merged-in codes get their own block so module+code stays unambiguous // prove_amount: the item being purchased carries 0 units (a ghost instance)
+const EListingWrongItem: u64 = 131; // from `item_listing_rule` — merged-in codes get their own block so module+code stays unambiguous // prove_amount: the proven item is not the one being purchased (evasion guard)
+
+// ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
+
+/// The rule witness that authorises this policy rule (Mysten `royalty_rule::Rule` shape). `drop` only — it names
+/// the rule to the framework's `add_rule` / `add_receipt`; it is never stored or transferred.
+public struct ListingRule has drop {}
+
+/// The rule's on-policy config — EMPTY on purpose: the gate reads the item's OWN amount at prove time, so nothing
+/// is baked in here and no dial is needed. `store + drop` as the framework requires.
+public struct ListingConfig has store, drop {}
+
+// ╔════════════════ [ Creator action — ADD the rule (cap-gated; ceremony, while dark) ] ═ ]
+
+/// Attach the zero-amount gate to the Item `policy`. Authority IS the `TransferPolicyCap<Item>` — the framework
+/// `add_rule` asserts the cap matches the policy and that the rule is not already present. Mirrors
+/// `royalty_rule::add` / `character_listing_rule::add`: one line, cap-gated, no runtime config.
+public fun add_listing_rule(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>) {
+  transfer_policy::add_rule(ListingRule {}, policy, cap, ListingConfig {});
+}
+
+// ╔════════════════ [ Buyer action — PROVE the amount is non-zero to unblock confirm_request ] ═ ]
+
+/// Prove the purchased `item` carries at least 1 unit and add the receipt that unblocks `confirm_request`. Aborts
+/// `EListingWrongItem` if the proven item is not the one being transferred (the evasion guard — a buyer cannot substitute
+/// a different non-zero stack they own) and `EListingZeroAmount` if the item is a ghost (amount 0). Called by the
+/// secondary-purchase PTB after `kiosk::purchase` hands over the item by value; the buyer already holds `&Item`.
+public fun prove_listing_amount(item: &Item, request: &mut TransferRequest<Item>) {
+  assert!(object::id(item) == transfer_policy::item(request), EListingWrongItem);
+  assert!(amount(item) > 0, EListingZeroAmount);
+  transfer_policy::add_receipt(ListingRule {}, request);
 }

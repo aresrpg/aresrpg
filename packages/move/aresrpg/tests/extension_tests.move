@@ -9,14 +9,7 @@
 #[test_only]
 module aresrpg::extension_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  character,
-  extension,
-  item::{Self, Item, ItemTemplate},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, character, extension, item::{Self, Item, ItemTemplate}, item_stats, version::{Self, Version}};
 use kiosk::personal_kiosk;
 use std::unit_test::{assert_eq, destroy};
 use sui::{kiosk, package::Publisher, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
@@ -35,7 +28,7 @@ fun setup(sc: &mut Scenario, enable: bool) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
@@ -79,7 +72,7 @@ fun mint_door_mints_and_locks_personal() {
   let ver = sc.take_shared<Version>();
   let policy = sc.take_shared<TransferPolicy<Item>>();
 
-  let (item, pledge) = extension::z502(&tmpl, &ver, sc.ctx());
+  let (item, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx());
   let iid = object::id(&item);
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -93,6 +86,58 @@ fun mint_door_mints_and_locks_personal() {
   sc.end();
 }
 
+#[test]
+/// #758 — the ONE gear-mint door owns the roll, so no seam can forget it: given a seed, a RANGED template mints
+/// with its `StatsKey` already attached and inside the authored band; a rangeless template mints blank (nothing to
+/// roll); and a seedless call mints blank even on a ranged template (the caller has no entropy to offer, and an
+/// invented one would be dry-runnable). Distinct seeds give distinct rolls — the roll is a pure function of the seed.
+fun mint_door_rolls_ranged_template_from_its_seed() {
+  let mut sc = ts::begin(OWNER);
+  setup(&mut sc, true);
+
+  // a RANGED sibling template: vitality [100,200], every other field degenerate at 100
+  sc.next_tx(OWNER);
+  let ranged_tid = {
+    let cap = sc.take_from_sender<AdminCap>();
+    let cat = sc.take_shared<Catalog>();
+    let ver = sc.take_shared<Version>();
+    let tid = admin::create_template(
+      &cap, &cat, b"Relic".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1,
+      option::some(item_stats::new(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100)),
+      option::some(item_stats::new(200, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100)),
+      vector[], option::none(), &ver, sc.ctx(),
+    );
+    ts::return_shared(cat); ts::return_shared(ver); sc.return_to_sender(cap);
+    tid
+  };
+
+  sc.next_tx(OWNER);
+  let ranged = ts::take_shared_by_id<ItemTemplate>(&sc, ranged_tid);
+  let plain = sc.take_shared<ItemTemplate>(); // the rangeless "Sword" from `setup`
+  let ver = sc.take_shared<Version>();
+
+  let (rolled_a, p1) = extension::y29(&ranged, option::some(1), &ver, sc.ctx());
+  let (rolled_b, p2) = extension::y29(&ranged, option::some(999), &ver, sc.ctx());
+  let (unseeded, p3) = extension::y29(&ranged, option::none(), &ver, sc.ctx());
+  let (rangeless, p4) = extension::y29(&plain, option::some(1), &ver, sc.ctx());
+
+  assert!(item_stats::has_rolled_stats(&rolled_a));
+  assert!(item_stats::has_rolled_stats(&rolled_b));
+  let va = item_stats::vitality(item_stats::rolled_stats(&rolled_a));
+  let vb = item_stats::vitality(item_stats::rolled_stats(&rolled_b));
+  assert!(va >= 100 && va <= 200);
+  assert!(vb >= 100 && vb <= 200);
+  assert!(va != vb); // different seed, different roll
+  assert_eq!(item_stats::wisdom(item_stats::rolled_stats(&rolled_a)), 100); // degenerate field is fixed
+  assert!(!item_stats::has_rolled_stats(&unseeded)); // no entropy offered → honestly blank
+  assert!(!item_stats::has_rolled_stats(&rangeless)); // nothing authored to roll
+
+  destroy(rolled_a); destroy(rolled_b); destroy(unseeded); destroy(rangeless);
+  destroy(p1); destroy(p2); destroy(p3); destroy(p4);
+  ts::return_shared(ranged); ts::return_shared(plain); ts::return_shared(ver);
+  sc.end();
+}
+
 #[test, expected_failure(abort_code = V_ENotEnabled, location = version)]
 /// The mint door is a value path — it aborts while the package is dark.
 fun mint_door_while_dark_aborts() {
@@ -102,7 +147,7 @@ fun mint_door_while_dark_aborts() {
   sc.next_tx(OWNER);
   let tmpl = sc.take_shared<ItemTemplate>();
   let ver = sc.take_shared<Version>();
-  let (item, pledge) = extension::z502(&tmpl, &ver, sc.ctx()); // V_ENotEnabled
+  let (item, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx()); // V_ENotEnabled
   destroy(item); destroy(pledge);
   abort
 }
@@ -122,14 +167,14 @@ fun item_field_write_read_roundtrip() {
   let policy = sc.take_shared<TransferPolicy<Item>>();
 
   let (mut item, pledge) = item::mint(&tmpl, sc.ctx());
-  extension::z21(extension::ns_item(), &mut item, TestKey {}, 42u64, &ver);
-  assert!(extension::z27(&item, extension::ns_item(), TestKey {}));
-  assert_eq!(*extension::z28<TestKey, u64>(&item, extension::ns_item(), TestKey {}), 42);
-  *extension::z22<TestKey, u64>(extension::ns_item(), &mut item, TestKey {}, &ver) = 99; // mutate in place
-  assert_eq!(*extension::z28<TestKey, u64>(&item, extension::ns_item(), TestKey {}), 99);
-  let removed: u64 = extension::remove_item_field(extension::ns_item(), &mut item, TestKey {}, &ver); // detach the slot
+  extension::y31(extension::y44(), &mut item, TestKey {}, 42u64, &ver);
+  assert!(extension::y37(&item, extension::y44(), TestKey {}));
+  assert_eq!(*extension::y38<TestKey, u64>(&item, extension::y44(), TestKey {}), 42);
+  *extension::y32<TestKey, u64>(extension::y44(), &mut item, TestKey {}, &ver) = 99; // mutate in place
+  assert_eq!(*extension::y38<TestKey, u64>(&item, extension::y44(), TestKey {}), 99);
+  let removed: u64 = extension::remove_item_field(extension::y44(), &mut item, TestKey {}, &ver); // detach the slot
   assert_eq!(removed, 99);
-  assert!(!extension::z27(&item, extension::ns_item(), TestKey {})); // slot is gone
+  assert!(!extension::y37(&item, extension::y44(), TestKey {})); // slot is gone
 
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -153,13 +198,13 @@ fun character_field_write_read_roundtrip() {
   let cust = character::new_customization(1, 2, 3);
   let (mut chr, pledge) = character::new_for_testing(b"hero".to_string(), b"senshi".to_string(), true, cust, 0, sc.ctx());
 
-  let ns = extension::z31();
-  extension::z23(ns, &mut chr, TestKey {}, 7u64, &ver);
-  assert!(extension::z29(&chr, ns, TestKey {}));
-  assert_eq!(*extension::z30<TestKey, u64>(&chr, ns, TestKey {}), 7);
-  let removed: u64 = extension::z25(ns, &mut chr, TestKey {}, &ver);
+  let ns = extension::y41();
+  extension::y33(ns, &mut chr, TestKey {}, 7u64, &ver);
+  assert!(extension::y39(&chr, ns, TestKey {}));
+  assert_eq!(*extension::y40<TestKey, u64>(&chr, ns, TestKey {}), 7);
+  let removed: u64 = extension::y35(ns, &mut chr, TestKey {}, &ver);
   assert_eq!(removed, 7);
-  assert!(!extension::z29(&chr, ns, TestKey {}));
+  assert!(!extension::y39(&chr, ns, TestKey {}));
 
   destroy(chr); destroy(pledge);
   ts::return_shared(ver);
@@ -181,14 +226,14 @@ fun namespace_isolation_between_namespaces() {
   let policy = sc.take_shared<TransferPolicy<Item>>();
 
   let (mut item, pledge) = item::mint(&tmpl, sc.ctx());
-  extension::z21(0, &mut item, TestKey {}, 100u64, &ver);
-  extension::z21(1, &mut item, TestKey {}, 200u64, &ver); // SAME key, other namespace → coexists
+  extension::y31(0, &mut item, TestKey {}, 100u64, &ver);
+  extension::y31(1, &mut item, TestKey {}, 200u64, &ver); // SAME key, other namespace → coexists
 
   // each namespace holds its own value; neither clobbered the other
-  assert_eq!(*extension::z28<TestKey, u64>(&item, 0, TestKey {}), 100);
-  assert_eq!(*extension::z28<TestKey, u64>(&item, 1, TestKey {}), 200);
+  assert_eq!(*extension::y38<TestKey, u64>(&item, 0, TestKey {}), 100);
+  assert_eq!(*extension::y38<TestKey, u64>(&item, 1, TestKey {}), 200);
   // a third namespace never saw either write
-  assert!(!extension::z27(&item, 2, TestKey {}));
+  assert!(!extension::y37(&item, 2, TestKey {}));
 
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -211,7 +256,7 @@ fun write_while_dark_aborts() {
   let tmpl = sc.take_shared<ItemTemplate>();
   let ver = sc.take_shared<Version>();
   let (mut item, pledge) = item::mint(&tmpl, sc.ctx());
-  extension::z21(extension::ns_item(), &mut item, TestKey {}, 1u64, &ver); // V_ENotEnabled
+  extension::y31(extension::y44(), &mut item, TestKey {}, 1u64, &ver); // V_ENotEnabled
   destroy(item); destroy(pledge);
   abort
 }

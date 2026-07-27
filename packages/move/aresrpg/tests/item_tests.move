@@ -9,7 +9,7 @@ module aresrpg::item_tests;
 use aresrpg::{item::{Self, Item, ItemTemplate}, item_stats, test_world, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
-use sui::{kiosk::{Self, Kiosk}, package::Publisher, random, test_scenario::{Self as ts}};
+use sui::{kiosk::{Self, Kiosk}, package::Publisher, test_scenario::{Self as ts}};
 
 const OWNER: address = @0xA;
 
@@ -30,7 +30,7 @@ fun mint_then_lock_snapshots_type_and_locks() {
   item::test_init(sc.ctx());
 
   sc.next_tx(OWNER);
-  let tid = item::share_template(item::new_template(b"Iron Sword".to_string(), b"".to_string(), b"iron_sword".to_string(), b"sword".to_string(), 10, sc.ctx()));
+  let tid = item::y51(item::y49(b"Iron Sword".to_string(), b"".to_string(), b"iron_sword".to_string(), b"sword".to_string(), 10, sc.ctx()));
 
   sc.next_tx(OWNER);
   let tmpl = sc.take_shared<item::ItemTemplate>();
@@ -73,7 +73,7 @@ fun lock_with_mismatched_pledge_aborts() {
   item::test_init(sc.ctx());
 
   sc.next_tx(OWNER);
-  item::share_template(item::new_template(b"Widget".to_string(), b"".to_string(), b"widget".to_string(), b"misc".to_string(), 1, sc.ctx()));
+  item::y51(item::y49(b"Widget".to_string(), b"".to_string(), b"widget".to_string(), b"misc".to_string(), 1, sc.ctx()));
 
   sc.next_tx(OWNER);
   let tmpl = sc.take_shared<item::ItemTemplate>();
@@ -98,7 +98,7 @@ fun lock_into_non_personal_kiosk_aborts() {
   item::test_init(sc.ctx());
 
   sc.next_tx(OWNER);
-  item::share_template(item::new_template(b"Widget".to_string(), b"".to_string(), b"widget".to_string(), b"misc".to_string(), 1, sc.ctx()));
+  item::y51(item::y49(b"Widget".to_string(), b"".to_string(), b"widget".to_string(), b"misc".to_string(), 1, sc.ctx()));
 
   sc.next_tx(OWNER);
   let tmpl = sc.take_shared<item::ItemTemplate>();
@@ -112,7 +112,7 @@ fun lock_into_non_personal_kiosk_aborts() {
   abort
 }
 
-// ╔════════════════ [ Stackable amount — z39 / merge / split ] ════════ ]
+// ╔════════════════ [ Stackable amount — y54 / merge / split ] ════════ ]
 
 #[test]
 /// A stackable (resource) mint carries `amount = quantity` in ONE object, snapshots its category, and still
@@ -123,21 +123,21 @@ fun mint_stack_sets_amount_and_locks() {
   item::test_init(sc.ctx());
 
   sc.next_tx(OWNER);
-  let tmpl = item::new_template(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
   let version = sc.take_shared<Version>();
   let publisher = sc.take_from_sender<Publisher>();
   let (policy, policy_cap) = item::create_item_policy(&publisher, &version, sc.ctx());
   let (mut ksk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut ksk, kcap, sc.ctx());
 
-  let (it, pledge) = item::z39(&tmpl, 5, sc.ctx());
+  let (it, pledge) = item::y54(&tmpl, 5, sc.ctx());
   assert_eq!(item::amount(&it), 5); // one object, five units
   assert_eq!(item::category(&it), b"resource".to_string()); // category snapshotted onto the item
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut ksk, personal_kiosk::borrow(&pkcap), &policy);
   assert!(ksk.has_item(iid));
 
-  item::share_template(tmpl);
+  item::y51(tmpl);
   destroy(ksk); destroy(pkcap); destroy(policy); destroy(policy_cap); destroy(publisher);
   ts::return_shared(version);
   sc.end();
@@ -147,20 +147,20 @@ fun mint_stack_sets_amount_and_locks() {
 /// A GEAR mint is amount = 1 (a unique NFT never carries a stack).
 fun gear_mint_amount_is_one() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
   let it = item::mint_for_testing(&tmpl, sc.ctx());
   assert_eq!(item::amount(&it), 1);
   destroy(it);
-  item::share_template(tmpl);
+  item::y51(tmpl);
   sc.end();
 }
 
 #[test, expected_failure(abort_code = ENotStackable, location = item)]
-/// `z39` on a NON-stackable category aborts — gear is a unique NFT, never stack-minted.
+/// `y54` on a NON-stackable category aborts — gear is a unique NFT, never stack-minted.
 fun mint_stack_on_non_stackable_aborts() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
-  let (_it, _pledge) = item::z39(&tmpl, 5, sc.ctx()); // ENotStackable
+  let tmpl = item::y49(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
+  let (_it, _pledge) = item::y54(&tmpl, 5, sc.ctx()); // ENotStackable
   abort
 }
 
@@ -170,11 +170,11 @@ fun mint_stack_on_non_stackable_aborts() {
 /// resource-category test stand-ins).
 fun mint_stack_rune_category_stacks() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"RuneFo".to_string(), b"".to_string(), b"rune_fo".to_string(), b"rune".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"RuneFo".to_string(), b"".to_string(), b"rune_fo".to_string(), b"rune".to_string(), 1, sc.ctx());
   let it = item::mint_stack_for_testing(&tmpl, 7, sc.ctx());
   assert_eq!(item::amount(&it), 7);
   destroy(it);
-  item::share_template(tmpl);
+  item::y51(tmpl);
   sc.end();
 }
 
@@ -182,13 +182,13 @@ fun mint_stack_rune_category_stacks() {
 /// `merge` folds `b`'s units into `a` (same stackable template) and deletes `b`.
 fun merge_folds_amount_and_deletes_b() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
   let mut a = item::mint_stack_for_testing(&tmpl, 3, sc.ctx());
   let b = item::mint_stack_for_testing(&tmpl, 4, sc.ctx());
   item::merge(&mut a, b); // b deleted; a now carries 7
   assert_eq!(item::amount(&a), 7);
   destroy(a);
-  item::share_template(tmpl);
+  item::y51(tmpl);
   sc.end();
 }
 
@@ -196,8 +196,8 @@ fun merge_folds_amount_and_deletes_b() {
 /// `merge` of two DIFFERENT templates aborts (a stack is per-template).
 fun merge_wrong_template_aborts() {
   let mut sc = ts::begin(OWNER);
-  let t1 = item::new_template(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
-  let t2 = item::new_template(b"Stone".to_string(), b"".to_string(), b"stone".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let t1 = item::y49(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let t2 = item::y49(b"Stone".to_string(), b"".to_string(), b"stone".to_string(), b"resource".to_string(), 1, sc.ctx());
   let mut a = item::mint_stack_for_testing(&t1, 3, sc.ctx());
   let b = item::mint_stack_for_testing(&t2, 4, sc.ctx());
   item::merge(&mut a, b); // ETemplateMismatch
@@ -208,7 +208,7 @@ fun merge_wrong_template_aborts() {
 /// `merge` of two SAME-template but NON-stackable items aborts (two identical gear NFTs never merge).
 fun merge_non_stackable_aborts() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
   let mut a = item::mint_for_testing(&tmpl, sc.ctx());
   let b = item::mint_for_testing(&tmpl, sc.ctx());
   item::merge(&mut a, b); // passes the template check, fails ENotStackable
@@ -224,7 +224,7 @@ fun split_takes_amount_and_pledge_forces_lock() {
   item::test_init(sc.ctx());
 
   sc.next_tx(OWNER);
-  let tmpl = item::new_template(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
   let version = sc.take_shared<Version>();
   let publisher = sc.take_from_sender<Publisher>();
   let (policy, policy_cap) = item::create_item_policy(&publisher, &version, sc.ctx());
@@ -239,7 +239,7 @@ fun split_takes_amount_and_pledge_forces_lock() {
   item::lock_in_kiosk(pledge, b, &mut ksk, personal_kiosk::borrow(&pkcap), &policy); // the pledge MUST be discharged
   assert!(ksk.has_item(bid));
 
-  item::share_template(tmpl);
+  item::y51(tmpl);
   destroy(a); destroy(ksk); destroy(pkcap); destroy(policy); destroy(policy_cap); destroy(publisher);
   ts::return_shared(version);
   sc.end();
@@ -249,7 +249,7 @@ fun split_takes_amount_and_pledge_forces_lock() {
 /// `split` of `take == amount` aborts — a split must leave at least one unit in the source (never a zombie of 0).
 fun split_over_amount_aborts() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
   let mut a = item::mint_stack_for_testing(&tmpl, 5, sc.ctx());
   let (_b, _pledge) = item::split(&mut a, 5, sc.ctx()); // ESplitTooLarge (would zero the source)
   abort
@@ -259,7 +259,7 @@ fun split_over_amount_aborts() {
 /// `split` of 0 units aborts.
 fun split_zero_aborts() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
+  let tmpl = item::y49(b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, sc.ctx());
   let mut a = item::mint_stack_for_testing(&tmpl, 5, sc.ctx());
   let (_b, _pledge) = item::split(&mut a, 0, sc.ctx()); // EZeroQuantity
   abort
@@ -288,19 +288,23 @@ fun create_item_policy_yields_policy_and_cap() {
 // ╔════════════════ [ Mint-roll: values land in [min,max], degenerate fields fixed ] ═ ]
 
 #[test]
-/// The core stat-roll math (the single stat-shape `shop::buy` draws at purchase): every field rolls inside its
-/// [min,max] and a degenerate range (min==max) yields the fixed value. Drives `item_stats::roll` directly off a
-/// deterministic generator — the same body `buy` runs off a real `&Random` on-chain.
+/// The core stat-roll math (the single stat-shape EVERY mint seam draws): every field rolls inside its [min,max]
+/// and a degenerate range (min==max) yields the fixed value, over a sweep of seeds. The seed is what a seam draws
+/// from `&Random`; the roll itself is a pure function of it — same seed, same block, on every machine.
 fun roll_stays_within_ranges_and_fixes_degenerate() {
-  let mut gen = random::new_generator_for_testing();
   // vitality varies in [100,200]; every other field degenerate at 5.
   let min = item_stats::new(100, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
   let max = item_stats::new(200, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
-  let rolled = item_stats::roll(&min, &max, &mut gen);
-  let v = item_stats::vitality(&rolled);
-  assert!(v >= 100 && v <= 200);
-  assert_eq!(item_stats::wisdom(&rolled), 5); // min==max → fixed
-  assert_eq!(item_stats::air_resistance(&rolled), 5);
+  let mut seed = 0;
+  while (seed < 64) {
+    let rolled = item_stats::roll(&min, &max, seed);
+    let v = item_stats::vitality(&rolled);
+    assert!(v >= 100 && v <= 200);
+    assert_eq!(item_stats::wisdom(&rolled), 5); // min==max → fixed
+    assert_eq!(item_stats::air_resistance(&rolled), 5);
+    assert_eq!(item_stats::vitality(&item_stats::roll(&min, &max, seed)), v); // pure: same seed, same roll
+    seed = seed + 1;
+  };
 }
 
 #[test]
@@ -308,15 +312,23 @@ fun roll_stays_within_ranges_and_fixes_degenerate() {
 /// [min,max] roll produce the full "1..max" trash-to-god spread — the special case falls out of the general one,
 /// so no separate roll variant is needed.
 fun relic_dream_roll_spans_floor_to_max() {
-  let mut gen = random::new_generator_for_testing();
   let s = item_stats::shift(); // 32768 centre
   // vitality rolls across the WIDE relic span [s+1, s+2000]; every other field fixed at the centre.
   let min = item_stats::new(s + 1, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s);
   let max = item_stats::new(s + 2000, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s);
-  let rolled = item_stats::roll(&min, &max, &mut gen);
-  let v = item_stats::vitality(&rolled);
-  assert!(v >= s + 1 && v <= s + 2000); // lands anywhere in the dream-roll span
-  assert_eq!(item_stats::wisdom(&rolled), s); // a degenerate (centre) field is unaffected
+  // a spread of seeds lands DIFFERENT values across the span — the dream roll is not a fixed point
+  let mut distinct = 0u64;
+  let first = item_stats::vitality(&item_stats::roll(&min, &max, 0));
+  let mut seed = 0;
+  while (seed < 64) {
+    let rolled = item_stats::roll(&min, &max, seed);
+    let v = item_stats::vitality(&rolled);
+    assert!(v >= s + 1 && v <= s + 2000); // lands anywhere in the dream-roll span
+    assert_eq!(item_stats::wisdom(&rolled), s); // a degenerate (centre) field is unaffected
+    if (v != first) distinct = distinct + 1;
+    seed = seed + 1;
+  };
+  assert!(distinct > 0);
 }
 
 // ╔════════════════ [ Stat clamp helpers (pure math) ] ═══════════════════════ ]
@@ -381,24 +393,24 @@ fun stats_from_raw_preserves_malus_and_round_trips() {
   assert_eq!(item_stats::vitality(&lifted), s); // vitality raw 0, orig ≥ centre → back to centre
 }
 
-// ╔════════════════ [ Level gate (z38 boundary cases) ] ═════════ ]
+// ╔════════════════ [ Level gate (y50 boundary cases) ] ═════════ ]
 
 #[test]
 fun assert_usable_by_at_and_above_level_passes() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
-  item::z38(&tmpl, 30); // exactly the required level — OK
-  item::z38(&tmpl, 31); // above — OK
-  item::z38(&tmpl, 200); // well above — OK
-  item::share_template(tmpl);
+  let tmpl = item::y49(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
+  item::y50(&tmpl, 30); // exactly the required level — OK
+  item::y50(&tmpl, 31); // above — OK
+  item::y50(&tmpl, 200); // well above — OK
+  item::y51(tmpl);
   sc.end();
 }
 
 #[test, expected_failure(abort_code = ELevelTooLow, location = item)]
 fun assert_usable_by_below_level_aborts() {
   let mut sc = ts::begin(OWNER);
-  let tmpl = item::new_template(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
-  item::z38(&tmpl, 29); // one under → ELevelTooLow
+  let tmpl = item::y49(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
+  item::y50(&tmpl, 29); // one under → ELevelTooLow
   abort
 }
 

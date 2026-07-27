@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB TEMPLATE — the admin-minted mob CONTENT blueprint (stats, a ≤4-spell kit, a ≤16-entry loot table, xp).
 /// S-46 final split: the ENGINE spawns from a plain `MobSpec` — this module owns the shared authoring object and
-/// mirrors it into the spec at the core fight doors (`to_spec` — resistances stored CENTERED here are DECENTERED
+/// mirrors it into the spec at the core fight doors (`y69` — resistances stored CENTERED here are DECENTERED
 /// into true magnitudes exactly where the old engine spawn decoded them).
 module aresrpg::mob_template;
 
@@ -19,7 +19,7 @@ const ETooManySpells: u64 = 101; // mint: spell kit exceeds MAX_SPELLS
 const ETooManyLoot: u64 = 102; // mint: loot table exceeds MAX_LOOT
 
 /// A shared authoring blueprint for a mob. `stats` stores resistances CENTERED at 32768 (the mob convention —
-/// `to_spec` decodes them). `key` only — shared.
+/// `y69` decodes them). `key` only — shared.
 public struct MobTemplate has key {
   id: UID,
   name: String,
@@ -111,7 +111,7 @@ public fun burn_mob_template(cap: &AdminCap, tmpl: MobTemplate, version: &Versio
 }
 
 /// Retune a live mob template's TUNABLE STAT SURFACE in place — base_hp, ap, mp, the `stats` block (attributes
-/// + CENTERED elemental resistances, the mob convention `to_spec` decodes) and xp_reward — in ONE atomic call
+/// + CENTERED elemental resistances, the mob convention `y69` decodes) and xp_reward — in ONE atomic call
 /// (one `set_stats` call takes everything for the mob — xp, hp, ap, mp, resistance). The
 /// IDENTITY fields (name, min/max level, element) stay MINT-ONLY — an identity change is a re-author, not a
 /// stat tune; the KIT fields have their own dedicated doors (`set_loot`, `set_spells`), never this one.
@@ -192,9 +192,10 @@ public fun set_spells(
   event::emit(MobSpellsRetuned { template: object::id(tmpl), spells: tmpl.spells.length() });
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Mirror the template into the engine's plain `MobSpec` (resistances DECENTERED — true magnitudes, exactly
 /// where the old engine spawn decoded them). Called by the core fight doors at create.
-public(package) fun to_spec(self: &MobTemplate): MobSpec {
+public(package) fun y69(self: &MobTemplate): MobSpec {
   mob::new_mob_spec(
     self.min_level, self.max_level, self.base_hp, self.ap, self.mp,
     spell::decenter_mob_resistances(&self.stats), self.spells, self.xp_reward, self.loot,
@@ -212,6 +213,6 @@ public fun mob_max_level(self: &MobTemplate): u16 { self.max_level }
 public fun mob_base_hp(self: &MobTemplate): u64 { self.base_hp }
 public fun mob_ap(self: &MobTemplate): u64 { self.ap }
 public fun mob_mp(self: &MobTemplate): u64 { self.mp }
-/// The stored `Stats` block (resistances CENTERED at 32768 — the mob convention; `to_spec` decenters). Free
+/// The stored `Stats` block (resistances CENTERED at 32768 — the mob convention; `y69` decenters). Free
 /// read so the `set_stats` retune is verifiable off-chain and on-chain without a spawn.
 public fun mob_stats(self: &MobTemplate): Stats { self.stats }

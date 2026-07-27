@@ -21,7 +21,7 @@ use aresrpg_fight::{
   settlement::{Self, FightOutcome},
   version::Version as FightVersion,
 };
-use aresrpg::{character_link, checkpoint, config::GameConfig, world::{Self, World}};
+use aresrpg::{character_link, world::{Self, World}, config::GameConfig};
 use aresrpg::{character::Character, extract::{Self, BurnPledge}, item::Item, version::Version as ItemsVersion};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, kiosk::Kiosk, tx_context::sender};
@@ -83,7 +83,7 @@ public fun activate(
   run::assert_single_key_unit(amount);
 
   let pass_id = run::mint_and_bind(
-    world_id, player, checkpoint::x(&cp), checkpoint::z(&cp), character_id, ctx,
+    world_id, player, world::x(&cp), world::z(&cp), character_id, ctx,
   );
   character_link::enter_dungeon_brand(
     Dungeon {}, config, kiosk, pkcap, character_id, pass_id, world_id, items_version,

@@ -426,7 +426,8 @@ export function build_item_leg({
           row_key: row.slug,
           object_id,
           payload: { mins, maxs },
-          command_weight: 1,
+          // 3 PTB commands since #1291: item_stats::new twice, then the door itself
+          command_weight: 3,
           summary: `${row.slug} set_template_stats`,
         })
       }

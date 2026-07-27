@@ -213,7 +213,8 @@ export function list_ptb(context) {
     const rule_targets = resolve_marketplace_rule_targets({
       policy,
       kiosk_rule_package_id: a.KIOSK_ROYALTY_RULE_PACKAGE_ID,
-      listing_rule_module: 'item_listing_rule',
+      listing_rule_module: 'item',
+      listing_rule_type: 'ListingRule',
       listing_rule_package_id: a.LATEST_PACKAGE_ID,
     })
     borrow_personal_kiosk_cap(context)({
@@ -285,7 +286,8 @@ export function delist_ptb(context) {
     const rule_targets = resolve_marketplace_rule_targets({
       policy,
       kiosk_rule_package_id: a.KIOSK_ROYALTY_RULE_PACKAGE_ID,
-      listing_rule_module: 'item_listing_rule',
+      listing_rule_module: 'item',
+      listing_rule_type: 'ListingRule',
       listing_rule_package_id: a.LATEST_PACKAGE_ID,
     })
     borrow_personal_kiosk_cap(context)({
@@ -327,9 +329,9 @@ function marketplace_buy_ptb(context, kind) {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const is_item = kind === 'item'
     const policy_id = is_item ? a.ITEM_POLICY : a.CHARACTER_POLICY
-    const listing_rule_module = is_item
-      ? 'item_listing_rule'
-      : 'character_listing_rule'
+    const listing_rule_module = is_item ? 'item' : 'character_listing_rule'
+    // the item listing rule moved into `item` at the republish restructure; the character one still has its module
+    const listing_rule_type = is_item ? 'ListingRule' : 'Rule'
     const asset_type = is_item ? item_type(a) : character_type(a)
     const asset_id = is_item ? item_id : character_id
     if (!asset_id || !seller_kiosk_id)
@@ -342,11 +344,12 @@ function marketplace_buy_ptb(context, kind) {
       policy,
       kiosk_rule_package_id: a.KIOSK_ROYALTY_RULE_PACKAGE_ID,
       listing_rule_module,
+      listing_rule_type,
       listing_rule_package_id: a.LATEST_PACKAGE_ID,
     })
     let lot_rule_target = null
     if (is_item) {
-      policy_rule_package(policy, 'lot_rule')
+      policy_rule_package(policy, 'item', 'LotRule')
       lot_rule_target = a.LATEST_PACKAGE_ID
     }
 
@@ -381,14 +384,14 @@ function marketplace_buy_ptb(context, kind) {
     })
 
     tx.moveCall({
-      target: `${rule_targets.listing_rule}::${listing_rule_module}::${is_item ? 'prove_amount' : 'prove_level'}`,
+      target: `${rule_targets.listing_rule}::${listing_rule_module}::${is_item ? 'prove_listing_amount' : 'prove_level'}`,
       arguments: is_item
         ? [asset, request]
         : [asset, tx.object(a.GAME_CONFIG), request],
     })
     if (lot_rule_target)
       tx.moveCall({
-        target: `${lot_rule_target}::lot_rule::prove`,
+        target: `${lot_rule_target}::item::prove_lot`,
         arguments: [asset, request],
       })
     ktx.lock({ itemType: asset_type, item: asset, policy: policy_arg })

@@ -9,16 +9,7 @@
 #[test_only]
 module aresrpg::forge_brand_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  config::{Self, GameConfig},
-  extension,
-  item::{Self, Item},
-  item_stats::{Self, ItemStatistics},
-  test_world,
-  version::Version
-};
+use aresrpg::{admin::AdminCap, character_link, config::{Self, GameConfig}, extension, item::{Self, Item}, item_stats::{Self, ItemStatistics}, test_world, version::Version};
 use aresrpg::extract::ItemExtractPolicy;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{dynamic_field as df, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};

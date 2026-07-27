@@ -10,20 +10,7 @@
 #[test_only]
 module aresrpg_dungeon::dungeon_engine_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  character::Character,
-  character_link,
-  config::{Self, GameConfig},
-  dungeon_lock,
-  extract::{Self, ItemExtractPolicy},
-  fight as fight_doors,
-  item::{Self, Item},
-  mob_template::{Self, MobTemplate},
-  version::{Self, Version},
-  world::{Self, World},
-  zones
-};
+use aresrpg::{admin::{Self, AdminCap}, character::Character, character_link, config::{Self, GameConfig}, extract::{Self, ItemExtractPolicy}, fight as fight_doors, item::{Self, Item}, mob_template::{Self, MobTemplate}, version::{Self, Version}, world::{Self, World}, zones};
 use aresrpg_dungeon::{dungeon, run::{Self, RunPass}, dungeon_world as test_world};
 use aresrpg_fight::{
   admin as eadmin,
@@ -213,8 +200,8 @@ fun activate_splits_key_locks_character_and_abandon_releases() {
     assert_eq!(item::amount(remainder), 2);
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
     assert!(character_link::in_world(chr, pass_id));
-    assert_eq!(dungeon_lock::pass(chr), option::some(pass_id));
-    assert_eq!(dungeon_lock::world(chr), option::some(wid));
+    assert_eq!(character_link::pass(chr), option::some(pass_id));
+    assert_eq!(character_link::world(chr), option::some(wid));
     let cfg = sc.take_shared<GameConfig>();
     let ver = sc.take_shared<Version>();
     dungeon::abandon(pass, &mut k, &pkcap, &cfg, &ver, sc.ctx());
@@ -227,7 +214,7 @@ fun activate_splits_key_locks_character_and_abandon_releases() {
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
     assert!(character_link::in_world(chr, wid));
-    assert!(!dungeon_lock::is_locked(chr));
+    assert!(!character_link::is_locked(chr));
     ts::return_shared(k); sc.return_to_sender(pkcap);
   };
   sc.end();
@@ -295,7 +282,7 @@ fun settle_keeps_lock_between_rooms_then_releases_on_end() {
     dungeon::settle_apply(pass, true, 3, &mut k, &pkcap, &cfg, &ver);
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
     assert!(character_link::in_world(chr, pass_id));
-    assert!(dungeon_lock::is_locked(chr));
+    assert!(character_link::is_locked(chr));
     ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
   };
 
@@ -312,7 +299,7 @@ fun settle_keeps_lock_between_rooms_then_releases_on_end() {
     dungeon::settle_apply(pass, false, 3, &mut k, &pkcap, &cfg, &ver);
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
     assert!(character_link::in_world(chr, wid));
-    assert!(!dungeon_lock::is_locked(chr));
+    assert!(!character_link::is_locked(chr));
     ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
   };
   sc.end();

@@ -74,7 +74,17 @@ export function interleave_order(players, mobs) {
 }
 
 // The §17.27 unarmed line (participant.move unarmed_line — bare hands: earth, dmg 4, ap 3, reach 1).
-const UNARMED_WEAPON = { element: 2, damage: 4, crit_damage: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
+// `damage_max`/`crit_damage_max` mirror their floors: bare hands author no band (#577 — max == min ⇒ fixed).
+const UNARMED_WEAPON = {
+  element: 2,
+  damage: 4,
+  damage_max: 4,
+  crit_damage: 6,
+  crit_damage_max: 6,
+  crit_rate: 30,
+  ap_cost: 3,
+  reach: 1,
+}
 
 /** Decode the chain-stored `shape_mask` (combat_grid.move u64 BITSET words, BigInt-lossless off the SDK) into
  *  the canonical stride-20 on-cell Set. Empty/absent ⇒ empty Set → callers use the rect fallback.
@@ -124,7 +134,12 @@ function normalize_weapon(raw) {
   return {
     element: Number(w.element ?? UNARMED_WEAPON.element),
     damage: Number(w.damage ?? UNARMED_WEAPON.damage),
+    // #577/#1323 — the AUTHORED BAND. The chain's Weapon has carried [damage, damage_max] since the roller
+    // shipped; this whitelist dropped both maxima, so the preview fell back to the floor and every previewed
+    // swing read as fixed. Absent ⇒ the floor, which is exactly "fixed" and keeps one degradation path.
+    damage_max: Number(w.damage_max ?? w.damage ?? UNARMED_WEAPON.damage_max),
     crit_damage: Number(w.crit_damage ?? UNARMED_WEAPON.crit_damage),
+    crit_damage_max: Number(w.crit_damage_max ?? w.crit_damage ?? UNARMED_WEAPON.crit_damage_max),
     crit_rate: Number(w.crit_rate ?? UNARMED_WEAPON.crit_rate),
     ap_cost: Number(w.ap_cost ?? UNARMED_WEAPON.ap_cost),
     reach: Math.max(1, Number(w.reach ?? UNARMED_WEAPON.reach)),

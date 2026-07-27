@@ -23,6 +23,16 @@ const SIM_ABORT_RE = /abort code:?\s*(\d+)[,\s]+in\s+'?(?:0x[0-9a-fA-F]+::)?(\w+
  *  abort-capable, player-reachable Move source module is either here or in that gate's documented exclusion set. */
 export const decoder_covered_modules = () => Object.keys(TABLE)
 
+/** module → the abort codes the decoder maps. The coverage gate classifies at CODE granularity: a mapped
+ * module with an UNMAPPED code is exactly how a renumbered door silently falls back to generic copy. */
+export const decoder_covered_codes = () =>
+  Object.fromEntries(
+    Object.entries(TABLE).map(([module_name, codes]) => [
+      module_name,
+      new Set(Object.keys(codes).map(Number)),
+    ]),
+  )
+
 /** @type {Record<string, Record<number, string>>} module → abort code → i18n key */
 const TABLE = {
   character: {
@@ -95,11 +105,6 @@ const TABLE = {
     103: 'errors.spell_char_level', // ECharLevelTooLow — character level below the TARGET level's min_char_level
     104: 'errors.spell_no_points', // ENoSpellPoints — fewer unspent points than the escalating S8 cost
   },
-  // CHARACTERISTIC-POINT allocation (`aresrpg::stat_allocation` — the raise-stat player door). ENoStatPoints/103 is
-  // the actionable wall; EBadStat/EZeroPoints (101/102) are client-clamped defensive races → generic fallback.
-  stat_allocation: {
-    103: 'errors.stat_no_points', // ENoStatPoints — fewer unspent characteristic points than the requested allocation
-  },
   // #31 out-of-fight consumable USE (`aresrpg::consume::use_many`) + its heal target (character_link::heal_hp).
   // Only the player-reachable races are mapped — the UI pre-checks both, so these fire on stale reads only;
   // the structural codes (ENotConsumable / EUnsupportedEffect / EZeroQuantity) keep the generic fallback.
@@ -108,6 +113,10 @@ const TABLE = {
   },
   character_link: {
     105: 'inventory.already_full_hp', // EAlreadyFullHp — a heal at full HP is blocked when pointless (SPEC §10)
+    // CHARACTERISTIC-POINT allocation — the raise-stat player door. `stat_allocation` merged into this module at
+    // the republish restructure and its codes moved to the 130 block. 132 is the actionable wall; EBadStat/
+    // EZeroPoints (130/131) are client-clamped defensive races → generic fallback.
+    132: 'errors.stat_no_points', // ENoStatPoints — fewer unspent characteristic points than the requested allocation
   },
   // aresrpg_items::shop mint-on-sale (S-19a — the retired M1 aresrpg_shop lineage is gone; `shop` is now unique
   // to the items package, the legacy commerce modules being `template_sale` / `cosmetic_shop`). Codes mirror
@@ -212,11 +221,11 @@ const TABLE = {
     103: 'errors.craft_oversupply', // EIngredientOverSupply — more units of an ingredient supplied than the recipe needs
     104: 'errors.craft_missing_ingredient', // EMissingIngredient — an ingredient is missing/short after all inputs burned
   },
-  // D54b checkpoint arm — the anti-teleport TRAVEL-VERIFICATION leaf (checkpoint.move): a pure leaf module
-  // (owns only the Checkpoint type + the math, never a Character ref) that `zones::search_zone` AND
-  // `gathering::gather` both call via `checkpoint::verify_travel` — the abort fires INSIDE checkpoint.move's
-  // own function body, so its MoveLocation module is "checkpoint", never the caller (the same leaf-module
-  // pattern as `settlement`/`run` elsewhere in this table). TEACH, DON'T REJECT (the module's own header):
+  // D54b checkpoint arm — the anti-teleport TRAVEL-VERIFICATION code, now inside `world`. The `checkpoint`
+  // leaf module merged into `world` at the republish restructure, so the abort's MoveLocation module is
+  // "world" and its codes moved to a 120 block: merged-in codes get their own range, because `world` already
+  // used 101/102 for EOutOfBounds/EBadEntryIndex and a shared value made module+code ambiguous — the travel
+  // recovery below keys on exactly this pair. TEACH, DON'T REJECT (the module's own header):
   // 102 is the one players actually hit — moved farther than the elapsed time supports at the world's speed
   // budget (e.g. rode with a pet then unequipped it) — non-punitive, elapsed only grows so a wait+retry always
   // clears it. 101 is a clock-desync transient that should never fire on a healthy chain. `wait_seconds()` is
@@ -225,9 +234,9 @@ const TABLE = {
   // confirmed), and the indexer projects only the character's last-anchored POSITION event, never the
   // Checkpoint DF's `time_ms`/`pet_equipped` — so no exact countdown can be computed client-side without new
   // SDK/RPC plumbing (out of this leaf's scope). Both codes stay the honest generic teach line.
-  checkpoint: {
-    101: 'errors.checkpoint_clock_desync', // ECheckpointFuture — the clock landed before the last checkpoint (transient desync — retry)
-    102: 'errors.travel_too_far', // ETravelTooFar — moved farther than the elapsed time supports — wait a moment, then retry
+  world: {
+    120: 'errors.checkpoint_clock_desync', // ECheckpointFuture — the clock landed before the last checkpoint (transient desync — retry)
+    121: 'errors.travel_too_far', // ETravelTooFar — moved farther than the elapsed time supports — wait a moment, then retry
   },
   // `claim_mob_group` (the [R] engage door's first call, inside create_world_fight). ESpawnNotFound/108 fires
   // for BOTH real cases behind ONE code: "the group's zone isn't the caller's CHECKPOINT zone" (the FIRST

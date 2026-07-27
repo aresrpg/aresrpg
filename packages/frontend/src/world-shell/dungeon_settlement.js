@@ -46,6 +46,7 @@ import {
 import { run_latched_claim } from './fight_claim_latch.js'
 import { settle_verdict } from './fight_settle_confirm.js'
 import { read_fight_liveness } from './fight_liveness.js'
+import { lost_group_of } from './lost_group.js'
 import { character_run_pass_id } from './team_entry.js'
 import { enqueue_mint, drain_pending_mints, sweep_stranded_results } from './pending_mints.js'
 
@@ -102,12 +103,13 @@ export const mint_deps = () => ({
  * to me — the pending-outcome pill re-fetches /v1 truth and auto-opens it). Never blindly re-fired (latch law).
  * @param {any} store
  * @param {{ terminal: boolean, fight_id?: string|null, run_pass_id?: string|null, world_id?: string|null,
- *           character_id?: string|null }} args character_id is REQUIRED for the open leg (`open` kiosk-borrows it) —
+ *           character_id?: string|null, lost?: boolean }} args `lost` = this terminal is a DEFEAT, which
+ *   releases the claimed mob group back into the world (#609). character_id is REQUIRED for the open leg (`open` kiosk-borrows it) —
  *   snapshot it explicitly on the terminal/recovery paths where the live session is being torn down or never mounted.
  * @returns {Promise<boolean>} true once the composed settle+open landed (the character's fight_marker is CLEARED);
  *   false on any halt (re-entrant, no fight, settle+open failed) — the recovery surface reads this to know it un-bricked.
  */
-export async function settle_chain(store, { terminal, on_halt, on_settled, ...ids }) {
+export async function settle_chain(store, { terminal, on_halt, on_settled, lost = false, ...ids }) {
   const { getState, setState } = store
   // #1223 ③: set on a PRE-FLIGHT halt (zero gas — the Fight was already gone, so MY outcome exists unopened).
   // Drained in the `finally`, AFTER the `_settling` flight releases: the open must acquire that same flight.
@@ -135,6 +137,9 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, ...id
         run_pass_id,
         world_id,
         character_id,
+        // #609 — a DEFEAT gives its claimed group back in this same PTB. The group is a session fact recorded
+        // at the claim (world_fight/dungeon_run_store); by settlement the claim is long gone.
+        lost_group: lost_group_of({ lost, run_pass_id, world_group: state.world_group }),
       })
       ;({ result_id, xp_share, loot_units, final_hp } = opened)
       // SETTLE HONESTY (#882 — settled=true while the chain object lived): a resolved tx is not, by itself, a

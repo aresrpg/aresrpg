@@ -11,11 +11,7 @@
 #[test_only]
 module aresrpg_kolizeum::kolizeum_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  config::{Self, GameConfig},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, config::{Self, GameConfig}, version::{Self, Version}};
 use aresrpg_kolizeum::kolizeum::{Self, Kolizeum};
 use std::unit_test::assert_eq;
 use sui::{coin::{Self, Coin}, sui::SUI, test_scenario::{Self as ts, Scenario}};

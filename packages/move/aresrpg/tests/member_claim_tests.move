@@ -10,18 +10,7 @@
 #[test_only]
 module aresrpg::member_claim_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  config::GameConfig,
-  fight as fight_doors,
-  mob_template::{Self, MobTemplate},
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zone_comp,
-  zones,
-  zones_view
-};
+use aresrpg::{admin::AdminCap, config::GameConfig, fight as fight_doors, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}, zone_comp, zones, zones_view};
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
@@ -135,7 +124,7 @@ fun discovered(sc: &mut Scenario): (ID, u32, u32, ID, ID) {
     let cp = aresrpg::character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
     ts::return_shared(k);
     sc.return_to_sender(pkcap);
-    (aresrpg::checkpoint::x(&cp), aresrpg::checkpoint::z(&cp))
+    (aresrpg::world::x(&cp), aresrpg::world::z(&cp))
   };
   do_search(sc, cid, cx, cz);
   sc.next_tx(test_world::owner());
@@ -151,7 +140,7 @@ fun derived_roster(sc: &mut Scenario, zx: u32, zy: u32, index: u64): (u64, vecto
   sc.next_tx(test_world::owner());
   let w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
-  let (sids, _tpls, members, _xs, _zs, sizes, _gs, _p) = zone_comp::z45(&w, zx, zy, seed, TEAM_BOUND);
+  let (sids, _tpls, members, _xs, _zs, sizes, _gs, _p) = zone_comp::y72(&w, zx, zy, seed, TEAM_BOUND);
   let spawn_id = sids[index];
   let mut roster = members[index];
   while (roster.length() > (sizes[index] as u64)) { roster.pop_back(); };
@@ -249,7 +238,7 @@ fun the_original_claim_door_refuses_a_member_zone() {
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(NOW);
   let ticket = zones::claim_mob_group(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
-  zones::z47(ticket);
+  zones::y74(ticket);
   abort 0
 }
 
@@ -270,7 +259,7 @@ fun the_member_claim_door_refuses_a_legacy_zone() {
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(NOW);
   let ticket = zones::claim_mob_group_members(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
-  zones::z48(ticket);
+  zones::y75(ticket);
   abort 0
 }
 

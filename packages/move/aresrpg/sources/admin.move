@@ -10,16 +10,9 @@
 /// root of trust. This module imports `item` + `version`; neither imports it, so there is no cycle.
 module aresrpg::admin;
 
-use aresrpg::{
-  catalog::{Self, Catalog},
-  consumable_effect::{Self, ConsumableEffect},
-  item,
-  item_damages::{Self, ItemDamages},
-  item_stats::{Self, ItemStatistics},
-  version::Version
-};
+use aresrpg::{consumable_effect::{Self, ConsumableEffect}, item, item_damages::{Self, ItemDamages}, item_stats::{Self, ItemStatistics}, version::Version};
 use std::string::String;
-use sui::tx_context::sender;
+use sui::{event, table::{Self, Table}, tx_context::sender};
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
@@ -45,6 +38,9 @@ public struct AdminCap has key, store {
 
 fun init(ctx: &mut TxContext) {
   transfer::transfer(AdminCap { id: object::new(ctx), epoch: option::none() }, sender(ctx));
+  // the category whitelist is born here too — `catalog` merged in at the republish restructure (#1287), and
+  // Move allows exactly one `init` per module. Seeded EMPTY; the cap holder whitelists while the package is dark.
+  transfer::share_object(Catalog { id: object::new(ctx), categories: table::new(ctx) });
 }
 
 // ╔════════════════ [ Temp cap lifecycle ] ═══════════════════════════════════ ]
@@ -108,11 +104,11 @@ public fun create_template(
   // Reject at AUTHORING (root cause) so a stackable-with-ranges template can never exist; `shop::buy` re-asserts.
   if (item::is_stackable_category(category)) assert!(stats_min.is_none() && stats_max.is_none(), EStackableHasRanges);
 
-  let mut template = item::new_template(name, description, item_type, category, level, ctx);
+  let mut template = item::y49(name, description, item_type, category, level, ctx);
 
   // Stat ranges: BOTH-or-NEITHER — a gear template carries [min,max]; a resource/consumable carries none.
   if (stats_min.is_some() && stats_max.is_some()) {
-    item_stats::attach_ranges(&mut template, stats_min.destroy_some(), stats_max.destroy_some());
+    item_stats::y62(&mut template, stats_min.destroy_some(), stats_max.destroy_some());
   } else {
     assert!(stats_min.is_none() && stats_max.is_none(), EStatsRangeMismatch);
     stats_min.destroy_none();
@@ -130,14 +126,14 @@ public fun create_template(
     effect.destroy_none();
   };
 
-  item::share_template(template)
+  item::y51(template)
 }
 
 /// BURN a template: delete its shared object on-chain (on-chain deletion only — the
 /// off-chain seed JSON is never touched by this). Version-gated (assert_latest) + AdminCap-gated, MIRRORING
 /// `create_template` — the admin cap holder prunes the catalog while dark or live. Detaches the typed DFs (stat ranges /
 /// damages / consumable effect) through their owning modules first (each value has `drop`), then destroys the
-/// template struct via the package-private `item::destroy_template`, which unpacks it and `object::delete`s the
+/// template struct via the package-private `item::y52`, which unpacks it and `object::delete`s the
 /// UID (Sui allows deleting a shared object passed BY VALUE). Emits `TemplateBurned`.
 ///
 /// SAFETY: minted `Item`s and shop `Sale`s reference a template by a plain `ID` copy (and items snapshot
@@ -148,16 +144,16 @@ public fun create_template(
 public fun burn_item_template(cap: &AdminCap, mut template: item::ItemTemplate, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  item_stats::drop_ranges(&mut template);
-  item_damages::drop_damages(&mut template);
-  consumable_effect::drop_effect(&mut template);
-  item::destroy_template(template);
+  item_stats::y64(&mut template);
+  item_damages::y60(&mut template);
+  consumable_effect::y17(&mut template);
+  item::y52(template);
 }
 
 /// PATCH a live template's display `name` + `description` IN PLACE — the canonical name/description correction
 /// door (a joke name minted into a shared `ItemTemplate` is fixed here WITHOUT a re-mint). Version-gated
 /// (assert_latest) + AdminCap-gated, MIRRORING `create_template`/`burn_item_template`; reaches the shared template
-/// through the package-private `item::set_name_description`, which writes ONLY those two fields and emits
+/// through the package-private `item::y53`, which writes ONLY those two fields and emits
 /// `TemplateRenamed`. NOTHING else is touchable — `item_type`/`category`/`level` and the typed stat/damage/effect
 /// DFs are immutable here (a stats/category change is a re-author, not a rename). Patches in place, so the template
 /// object ID is preserved: every minted item, kiosk lock and drop-table ref that points at it stays valid.
@@ -174,7 +170,7 @@ public fun set_template_name_description(
 ) {
   cap.verify(ctx);
   version.assert_latest();
-  item::set_name_description(template, name, description);
+  item::y53(template, name, description);
 }
 
 /// Replace a live, non-stackable template's complete 17-slot [min,max] stat payload IN PLACE. The scalar arity
@@ -191,66 +187,22 @@ public fun set_template_name_description(
 public fun set_template_stats(
   cap: &AdminCap,
   template: &mut item::ItemTemplate,
-  min_vitality: u16,
-  min_wisdom: u16,
-  min_strength: u16,
-  min_intelligence: u16,
-  min_chance: u16,
-  min_agility: u16,
-  min_range: u16,
-  min_movement: u16,
-  min_action: u16,
-  min_critical: u16,
-  min_raw_damage: u16,
-  min_critical_chance: u16,
-  min_critical_outcomes: u16,
-  min_earth_resistance: u16,
-  min_fire_resistance: u16,
-  min_water_resistance: u16,
-  min_air_resistance: u16,
-  max_vitality: u16,
-  max_wisdom: u16,
-  max_strength: u16,
-  max_intelligence: u16,
-  max_chance: u16,
-  max_agility: u16,
-  max_range: u16,
-  max_movement: u16,
-  max_action: u16,
-  max_critical: u16,
-  max_raw_damage: u16,
-  max_critical_chance: u16,
-  max_critical_outcomes: u16,
-  max_earth_resistance: u16,
-  max_fire_resistance: u16,
-  max_water_resistance: u16,
-  max_air_resistance: u16,
+  min: ItemStatistics,
+  max: ItemStatistics,
   version: &Version,
   ctx: &TxContext,
 ) {
   cap.verify(ctx);
   version.assert_latest();
   assert!(!item::is_stackable_category(item::template_category(template)), EStackableHasRanges);
-  item_stats::set_ranges(
-    template,
-    item_stats::new(
-      min_vitality, min_wisdom, min_strength, min_intelligence, min_chance, min_agility, min_range,
-      min_movement, min_action, min_critical, min_raw_damage, min_critical_chance, min_critical_outcomes,
-      min_earth_resistance, min_fire_resistance, min_water_resistance, min_air_resistance,
-    ),
-    item_stats::new(
-      max_vitality, max_wisdom, max_strength, max_intelligence, max_chance, max_agility, max_range,
-      max_movement, max_action, max_critical, max_raw_damage, max_critical_chance, max_critical_outcomes,
-      max_earth_resistance, max_fire_resistance, max_water_resistance, max_air_resistance,
-    ),
-  );
+  item_stats::y63(template, min, max);
 }
 
 /// Replace a live template's COMPLETE set of damage lines IN PLACE — the weapon re-magnitude door. `damages` is the
 /// full replacement (not a merge): whatever lines the template carried are gone, and exactly these remain. An empty
 /// vector CLEARS the lines, landing the template in the same state `create_template` gives an empty `damages`
 /// argument. Version-gated + AdminCap-gated exactly like the other authoring doors, and it patches through
-/// `item_damages::set_damages` so the template object ID is preserved — every minted item, kiosk lock and drop-table
+/// `item_damages::y59` so the template object ID is preserved — every minted item, kiosk lock and drop-table
 /// ref that points at it stays valid.
 ///
 /// SCOPE: the TEMPLATE's authored truth only. An already-equipped weapon keeps the snapshot `equipment::equip` copied
@@ -267,7 +219,7 @@ public fun set_template_damages(
 ) {
   cap.verify(ctx);
   version.assert_latest();
-  item_damages::set_damages(template, damages);
+  item_damages::y59(template, damages);
 }
 
 // ╔════════════════ [ Catalog control (AdminCap + version gated — authoring runs while dark) ] ═ ]
@@ -315,9 +267,54 @@ public fun is_super(cap: &AdminCap): bool { cap.epoch.is_none() }
 public fun test_init(ctx: &mut TxContext) { init(ctx) }
 
 #[test_only]
+/// Share ONLY the category whitelist (suites that stand up the catalog without the cap).
+public fun test_init_catalog(ctx: &mut TxContext) {
+  transfer::share_object(Catalog { id: object::new(ctx), categories: table::new(ctx) });
+}
+
+#[test_only]
 /// Mint a temp cap stamped to an ARBITRARY epoch, so a test can forge an already-expired cap and prove `verify`
 /// rejects it (`EAdminCapExpired`) without advancing real epochs.
 public fun test_mint_temp_at(super: &AdminCap, epoch: u64, recipient: address, ctx: &mut TxContext) {
   assert!(super.epoch.is_none(), ENotSuperAdmin);
   transfer::transfer(AdminCap { id: object::new(ctx), epoch: option::some(epoch) }, recipient);
 }
+
+// ╔════════════════ [ merged from `catalog` — republish restructure #1287 ] ═════ ]
+// ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
+
+/// The shared category whitelist. `categories` key present (== `true`) → the category is allowed. Seeded empty;
+/// the admin cap holder whitelists categories post-publish via the admin-gated wrappers. `key` only — shared, never moved.
+public struct Catalog has key {
+  id: UID,
+  categories: Table<String, bool>,
+}
+
+// ╔════════════════ [ Events ] ═══════════════════════════════════════════════ ]
+
+public struct CategoryAdded has copy, drop { category: String }
+
+public struct CategoryRemoved has copy, drop { category: String }
+
+
+// ╔════════════════ [ Package mutators (admin-gated wrappers live in `admin`) ] ═ ]
+
+/// Whitelist `category`. Aborts (table dup) if already present. Package-private — only the admin authoring
+/// surface calls it, behind the cap + version gate.
+public(package) fun add(self: &mut Catalog, category: String) {
+  self.categories.add(category, true);
+  event::emit(CategoryAdded { category });
+}
+
+/// Remove `category` from the whitelist. Aborts (table) if absent. Existing templates keep their category
+/// string (it is snapshotted at creation) — removal only blocks FUTURE templates from authoring it.
+public(package) fun remove(self: &mut Catalog, category: String) {
+  self.categories.remove(category);
+  event::emit(CategoryRemoved { category });
+}
+
+// ╔════════════════ [ Read (FREE) ] ══════════════════════════════════════════ ]
+
+public fun contains(self: &Catalog, category: String): bool { self.categories.contains(category) }
+
+// ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]

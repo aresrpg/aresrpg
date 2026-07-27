@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // gRPC reads and PTB composition for reseed_driver.mjs. The pure diff/latch contract stays in reseed_plan.mjs.
 
+import { bcs } from '@mysten/sui/bcs'
 import { Transaction as transaction_class } from '@mysten/sui/transactions'
 import { deriveDynamicFieldID as derive_dynamic_field_id } from '@mysten/sui/utils'
 
@@ -10,6 +11,8 @@ import { fixed_gas_budget_mist, spell_row_key } from './reseed_plan.mjs'
 
 const object_page_size = 50
 const empty_struct_key = Uint8Array.of(0)
+const fields_of = (value) => value?.fields ?? value ?? {}
+const uid_string = (value) => fields_of(value)?.id ?? value
 
 async function get_objects_json(client, object_ids) {
   const objects_by_id = {}
@@ -105,6 +108,45 @@ async function fetch_item_state(client, object_ids, type_package) {
   return state
 }
 
+/// Resolve each World's `Versioned` payload. `Versioned` stores its value in a dynamic field on its OWN id,
+/// keyed by the u64 version (the pinned sui-framework `versioned.move`) — never inline in the parent JSON. A
+/// fetch that stops at the outer shell therefore reports every world as EMPTY: the planner then rewrites all of
+/// them and the required post-run dry-run can never converge. Returns the shell with `inner.value` populated,
+/// which is exactly the shape `reseed_world_plan`'s payload reader expects.
+export async function fetch_world_state(client, object_ids) {
+  const shells = await get_objects_json(client, object_ids)
+  const child_requests = []
+  for (const object_id of object_ids) {
+    const inner = fields_of(fields_of(shells[object_id]).inner)
+    const versioned_id = uid_string(inner.id)
+    if (!versioned_id) continue // pre-wrap object (or unreadable) — the reader falls back to the root
+    child_requests.push({
+      world_id: object_id,
+      field_id: derive_dynamic_field_id(
+        versioned_id,
+        'u64',
+        bcs.u64().serialize(Number(inner.version ?? 0)).toBytes()
+      ),
+    })
+  }
+  const children = await get_objects_json(
+    client,
+    child_requests.map((request) => request.field_id)
+  )
+  const state = { ...shells }
+  for (const request of child_requests) {
+    const shell = fields_of(shells[request.world_id])
+    state[request.world_id] = {
+      ...shell,
+      inner: {
+        ...fields_of(shell.inner),
+        value: fields_of(children[request.field_id]).value ?? null,
+      },
+    }
+  }
+  return state
+}
+
 export async function fetch_chain_state({
   client,
   selected_legs,
@@ -127,7 +169,7 @@ export async function fetch_chain_state({
   }
   if (selected_legs.includes('worlds')) {
     const object_ids = required_world_ids(seeds.worlds, seed_manifest)
-    chain_state.worlds = await get_objects_json(client, object_ids)
+    chain_state.worlds = await fetch_world_state(client, object_ids)
   }
   return chain_state
 }
@@ -206,13 +248,20 @@ function build_spell_call(transaction, call, context) {
 }
 
 function build_item_call(transaction, call, context) {
+  // The door takes two ItemStatistics values now (#1291) instead of 34 loose u16s, so the stat block is built
+  // in-PTB by the same `item_stats::new` constructor the Move tests use and threaded in as a result.
+  const stat_block = values =>
+    transaction.moveCall({
+      target: `${call.target}::item_stats::new`,
+      arguments: values.map(value => transaction.pure.u16(value)),
+    })
   transaction.moveCall({
     target: `${call.target}::admin::set_template_stats`,
     arguments: [
       transaction.object(context.aresrpg_admin),
       transaction.object(call.object_id),
-      ...call.payload.mins.map((value) => transaction.pure.u16(value)),
-      ...call.payload.maxs.map((value) => transaction.pure.u16(value)),
+      stat_block(call.payload.mins),
+      stat_block(call.payload.maxs),
       transaction.object(context.aresrpg_version),
     ],
   })
@@ -242,6 +291,15 @@ function build_world_call(transaction, call, context) {
     ]
   else if (call.function === 'add_dungeon_room')
     payload_arguments = [transaction.pure.vector('id', call.payload.mob_ids)]
+  // `clear_tables` wipes the level vector and the boss mask alongside the tables, so the planner re-emits both
+  // after the rows exist. Both take (cap, world, ..payload.., version) — the same shape the adders use.
+  else if (call.function === 'set_mob_level')
+    payload_arguments = [
+      transaction.pure.id(call.payload.template_id),
+      transaction.pure.u16(call.payload.level),
+    ]
+  else if (call.function === 'set_boss_mask')
+    payload_arguments = [transaction.pure.vector('u16', call.payload.rows)]
   else if (call.function !== 'clear_tables')
     throw new Error(`unknown world authoring call ${call.function}`)
   transaction.moveCall({

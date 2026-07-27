@@ -181,7 +181,7 @@ describe('world spawn mob-card layer route gate', () => {
     const recover_at = world_spawns_source.indexOf('recover_refusal: (error) =>', create_at)
     const present_at = world_spawns_source.indexOf('present: () => {', recover_at)
     const swing_at = world_spawns_source.indexOf("context.events.emit('fight_entry/engage'", present_at)
-    const receipt_at = world_spawns_source.indexOf('const { fight_id } = await submitted', swing_at)
+    const receipt_at = world_spawns_source.indexOf('const { fight_id, group } = await submitted', swing_at)
 
     expect(feedback_at, 'intent feedback wraps the full preflight/compose/submit task').toBeGreaterThan(-1)
     expect(seam_at).toBeGreaterThan(feedback_at)

@@ -11,16 +11,7 @@
 #[test_only]
 module aresrpg_gifting::gift_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  config::{Self, GameConfig},
-  extension,
-  item::{Self, Item, ItemTemplate},
-  item_listing_rule,
-  lot_rule,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, config::{Self, GameConfig}, extension, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
 use aresrpg_gifting::gift;
 use kiosk::{
   kiosk_lock_rule,
@@ -57,7 +48,7 @@ fun boot(sc: &mut Scenario): ID {
   admin::test_init(sc.ctx());
   config::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let acap = sc.take_from_sender<AdminCap>();
@@ -76,8 +67,8 @@ fun boot(sc: &mut Scenario): ID {
   royalty_rule::add(&mut policy, &cap, 1000, ROYALTY_MIN); // 10% floored to the 0.01-SUI min
   kiosk_lock_rule::add(&mut policy, &cap);
   personal_kiosk_rule::add(&mut policy, &cap);
-  item_listing_rule::add(&mut policy, &cap);
-  lot_rule::add(&mut policy, &cap);
+  item::add_listing_rule(&mut policy, &cap);
+  item::add_lot_rule(&mut policy, &cap);
   transfer::public_share_object(policy);
   transfer::public_transfer(cap, OWNER);
   transfer::public_transfer(publisher, OWNER);
@@ -106,7 +97,7 @@ fun mint_lock_into(sc: &mut Scenario, who: address, kid: ID, tid: ID): ID {
   let policy = sc.take_shared<TransferPolicy<Item>>();
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item_for_testing(&tmpl, &ver, sc.ctx());
+  let (it, pledge) = extension::mint_item_for_testing(&tmpl, option::none(), &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &policy);
   ts::return_shared(tmpl); ts::return_shared(ver); ts::return_shared(policy); ts::return_shared(k); sc.return_to_sender(pkcap);

@@ -5,17 +5,7 @@
 #[test_only]
 module aresrpg::zone_group_proof_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zone_comp,
-  zones
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, test_world, version::Version, world::{Self, World}, zone_comp, zones};
 use aresrpg_foundation::zone_gen;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -49,7 +39,7 @@ public struct TicketFacts has copy, drop {
 
 fun ticket_facts(ticket: zones::GroupTicket): TicketFacts {
   let (world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed) =
-    zones::z47(ticket);
+    zones::y74(ticket);
   TicketFacts { world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
 }
 
@@ -99,7 +89,7 @@ fun discovered(sc: &mut Scenario): (ID, ID, u32, u32, u32, u32) {
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
-  let (px, pz) = (checkpoint::x(&cp), checkpoint::z(&cp));
+  let (px, pz) = (world::x(&cp), world::z(&cp));
   let (zx, zy) = world::zone_of(&w, px, pz);
   let (ox, oz) = world::zone_origin(&w, zx, zy);
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);

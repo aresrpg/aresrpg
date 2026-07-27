@@ -100,7 +100,7 @@ fun use_internal(
   // by construction — the marker covers exactly the fights whose HP belongs to the fight (§ S-12f intent).
   {
     let chr = kiosk.borrow<aresrpg::character::Character>(personal_kiosk::borrow(pkcap), character_id);
-    assert!(aresrpg::fight_marker::is_unmarked(chr), ECharacterInFight);
+    assert!(aresrpg::fight::is_unmarked(chr), ECharacterInFight);
   };
 
   // read + DISPATCH the effect off the template DF (its on-chain home). v1 handles HEAL only.

@@ -104,11 +104,11 @@ public fun new_weapon_line_shaped(element: u8, damage: u64, damage_max: u64, cri
   WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max, area_shape, area_size }
 }
 
-public(package) fun wl_element(w: &WeaponLine): u8 { w.element }
-public(package) fun wl_damage(w: &WeaponLine): u64 { w.damage } // #577 — MIN of the normal range
-public(package) fun wl_damage_max(w: &WeaponLine): u64 { w.damage_max } // #577 — MAX
-public(package) fun wl_crit_damage(w: &WeaponLine): u64 { w.crit_damage } // #577 — MIN of the crit range
-public(package) fun wl_crit_damage_max(w: &WeaponLine): u64 { w.crit_damage_max } // #577 — MAX
+public fun wl_element(w: &WeaponLine): u8 { w.element }
+public fun wl_damage(w: &WeaponLine): u64 { w.damage } // #577 — MIN of the normal range
+public fun wl_damage_max(w: &WeaponLine): u64 { w.damage_max } // #577 — MAX
+public fun wl_crit_damage(w: &WeaponLine): u64 { w.crit_damage } // #577 — MIN of the crit range
+public fun wl_crit_damage_max(w: &WeaponLine): u64 { w.crit_damage_max } // #577 — MAX
 
 // ── the §17.27 v1 per-family attack lines (parallel CONST tables, index-aligned with WL_FAMILIES). A CONST by
 // the same shape-freeze ruling as equipment's CLASS_FAMILIES: reach/AP-cost are MECHANICS, not dials. The damage

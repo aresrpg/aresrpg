@@ -24,8 +24,18 @@ const is_live = (f) => !!f && (f.status === 'placement' || f.status === 'active'
 /** ENTER: publish the minted id as a run-pass-LESS session, OPEN it in the core, start the poll (idempotent; a live
  *  session is never stomped; `resumed` suppresses the cinematic). `is_public` gates the owned-party auto-form: a
  *  PUBLIC fight discards the party id, so forming one is a wasted create tx (defaults false — form, for every
- *  non-engage entry that stays on today's behavior). @param {{fight_id,world_id?,character_id,resumed?,is_public?}} */
-export function enter_world_fight({ fight_id, world_id = null, character_id, resumed = false, is_public = false }) {
+ *  non-engage entry that stays on today's behavior). `world_group` is the claimed group's identity
+ *  ({world_id,zx,zy,index}) carried straight out of the claim — the session FACT a lost fight gives back (#609);
+ *  a resume has no claim to carry one, and releases nothing.
+ *  @param {{fight_id,world_id?,character_id,resumed?,is_public?,world_group?}} */
+export function enter_world_fight({
+  fight_id,
+  world_id = null,
+  character_id,
+  resumed = false,
+  is_public = false,
+  world_group = null,
+}) {
   const store = getState()
   const decision = receipt_entry_decision({
     current_fight_id: store.fight_id,
@@ -43,6 +53,9 @@ export function enter_world_fight({ fight_id, world_id = null, character_id, res
     fight_fresh: !resumed, // fresh create vs reload-resume — the entry cinematic gates on this stamp
     dungeon_id: fight_id, // the session identity → GameWorldHud in_dungeon stays true (no dead WS chrome)
     world_id,
+    // #609 — WHICH group this fight took, held for the whole session: settlement is the only place it can be
+    // given back, and by then the claim is long over. Null once the session ends (reset clears it).
+    world_group,
     template_id: world_id,
     character_id,
     run_pass_id: null, // a world fight has no RunPass — refresh()/settle take their world (no-run) branches

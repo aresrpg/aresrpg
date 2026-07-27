@@ -11,17 +11,7 @@
 #[test_only]
 module aresrpg::sibling_brand_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character::{Self as character},
-  character_link,
-  config::{Self, GameConfig},
-  fight as fight_doors,
-  mob_template::{Self, MobTemplate},
-  test_world,
-  version::Version,
-  world::{Self, World}
-};
+use aresrpg::{admin::AdminCap, character::Self as character, character_link, config::{Self, GameConfig}, fight as fight_doors, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}};
 use aresrpg_fight::{
   admin as eadmin,
   fight::Fight,
@@ -189,7 +179,7 @@ fun heal_hp_brand_pass() {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z11(chr, 5, 1000, &ver); // wound to 5 so the heal has room
+    character_link::y13(chr, 5, 1000, &ver); // wound to 5 so the heal has room
     character_link::heal_hp_brand(BrandA {}, &cfg, chr, 10, 1000, &ver);
     assert_eq!(character_link::progression_hp(chr), 15); // 5 + 10, zero regen (same stamp)
   };
@@ -211,7 +201,7 @@ fun heal_hp_brand_wrong_witness_aborts() {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let ver = sc.take_shared<Version>();
   let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-  character_link::z11(chr, 5, 1000, &ver);
+  character_link::y13(chr, 5, 1000, &ver);
   character_link::heal_hp_brand(BrandB {}, &cfg, chr, 10, 1000, &ver);
   abort 0
 }

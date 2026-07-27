@@ -11,7 +11,7 @@
 /// personal-kiosk + the §17.30 level gate), so a normal trade re-locks and pays — but a DELETE is not a trade:
 /// the character must come fully OUT and DIE. This module runs the zero-price flow against a permanently EMPTY
 /// policy that is WRAPPED (cap sealed inside, no accessor), so no raw `&TransferPolicy<Character>` ever escapes
-/// and no external code can confirm a hand-rolled request against it (the royalty-evasion / unlock-escape class,
+/// and no external code can confirm a hand-rolled request against it (the royalty-evasion / y16-escape class,
 /// closed by construction exactly like `extract::ItemExtractPolicy`).
 ///
 /// WHY NO ESCAPE (the type argument). Unlike the item seam, NO pledge is needed here: extraction, the guard
@@ -36,13 +36,7 @@
 /// inside the delete door. Stamped into the SDK deployment as CHARACTER_EXTRACT_POLICY at the upgrade ceremony.
 module aresrpg::character_extract;
 
-use aresrpg::{
-  character::{Self, Character},
-  dungeon_lock,
-  equipment,
-  fight_marker,
-  version::Version
-};
+use aresrpg::{character::{Self, Character}, equipment, version::Version, fight, character_link};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::string::String;
 use sui::{
@@ -122,8 +116,8 @@ public fun delete_character(
 
   // the guard set (on the extracted value — an abort reverts the extraction too)
   assert!(!equipment::any_equipped(&character), EItemsEquipped);
-  assert!(fight_marker::is_unmarked(&character), EUnfinishedBusiness);
-  assert!(!dungeon_lock::is_locked(&character), EInDungeon);
+  assert!(fight::is_unmarked(&character), EUnfinishedBusiness);
+  assert!(!character_link::is_locked(&character), EInDungeon);
 
   event::emit(CharacterDeleted {
     character: character_id,

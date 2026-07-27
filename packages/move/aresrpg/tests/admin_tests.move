@@ -8,15 +8,7 @@
 #[test_only]
 module aresrpg::admin_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  consumable_effect,
-  item,
-  item_damages,
-  item_stats,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, consumable_effect, item, item_damages, item_stats, version::{Self, Version}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts, Scenario};
 
@@ -39,7 +31,7 @@ fun init_all(sc: &mut Scenario) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
@@ -261,9 +253,9 @@ fun admin_adds_then_removes_category() {
   let mut cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
 
-  assert!(!catalog::contains(&cat, b"ring".to_string()));
+  assert!(!admin::contains(&cat, b"ring".to_string()));
   admin::add_category(&cap, &mut cat, b"ring".to_string(), &version, sc.ctx());
-  assert!(catalog::contains(&cat, b"ring".to_string()));
+  assert!(admin::contains(&cat, b"ring".to_string()));
 
   // a template can now be authored in the freshly-whitelisted category
   admin::create_template(
@@ -272,7 +264,7 @@ fun admin_adds_then_removes_category() {
   );
 
   admin::remove_category(&cap, &mut cat, b"ring".to_string(), &version, sc.ctx());
-  assert!(!catalog::contains(&cat, b"ring".to_string()));
+  assert!(!admin::contains(&cat, b"ring".to_string()));
 
   ts::return_shared(cat);
   ts::return_shared(version);

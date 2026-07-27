@@ -38,48 +38,51 @@ public fun new(from: u16, to: u16, damage_type: String, element: String): ItemDa
 
 /// Attach the damage vector to `template` (package-private — the authoring surface calls it before sharing).
 public(package) fun attach(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
-  df::add(item::template_uid_mut(template), DamagesKey {}, lines);
+  df::add(item::y57(template), DamagesKey {}, lines);
 }
 
 public fun has_damages(template: &ItemTemplate): bool {
-  df::exists(item::template_uid(template), DamagesKey {})
+  df::exists(item::y58(template), DamagesKey {})
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// REPLACE `template`'s damage lines wholesale (package-private — `admin::set_template_damages` calls it). Mirrors
-/// `item_stats::set_ranges`: overwrite in place when the DF exists, attach when it does not — so a weapon authored
+/// `item_stats::y63`: overwrite in place when the DF exists, attach when it does not — so a weapon authored
 /// WITHOUT lines heals through the same door. An EMPTY `lines` NORMALIZES to detached, leaving exactly the state
 /// `create_template` produces for an empty `damages` argument — one home for "this template carries no lines", so
 /// `has_damages` can never answer `true` for a template with nothing in it.
-public(package) fun set_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
+public(package) fun y59(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
   if (lines.is_empty()) {
     lines.destroy_empty();
-    drop_damages(template);
+    y60(template);
   } else if (has_damages(template)) {
-    *df::borrow_mut(item::template_uid_mut(template), DamagesKey {}) = lines;
+    *df::borrow_mut(item::y57(template), DamagesKey {}) = lines;
   } else {
     attach(template, lines);
   };
 }
 
 public fun damages(template: &ItemTemplate): &vector<ItemDamages> {
-  df::borrow(item::template_uid(template), DamagesKey {})
+  df::borrow(item::y58(template), DamagesKey {})
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Detach + drop the damage lines from `template` if present. Package-private — the burn path calls it so
 /// deleting the template's UID orphans no dynamic field. No-op when the template carries no damages. The
 /// `vector<ItemDamages>` has `drop`, so removal just discards.
-public(package) fun drop_damages(template: &mut ItemTemplate) {
+public(package) fun y60(template: &mut ItemTemplate) {
   if (has_damages(template)) {
-    let _: vector<ItemDamages> = df::remove(item::template_uid_mut(template), DamagesKey {});
+    let _: vector<ItemDamages> = df::remove(item::y57(template), DamagesKey {});
   }
 }
 
 // ╔════════════════ [ Instance snapshot (§17.27 wave-2a — the equip-time copy combat reads) ] ═ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Snapshot the authored lines onto a minted ITEM (package-private — `equipment::equip` calls it for a weapon,
 /// off the chain-verified template). Idempotent-guarded by the caller (weapon slot, template↔item match). Same
-/// instance-attach shape as `item_stats::attach_rolled`.
-public(package) fun attach_to_item(item: &mut Item, lines: vector<ItemDamages>) {
+/// instance-attach shape as `item_stats::y66`.
+public(package) fun y61(item: &mut Item, lines: vector<ItemDamages>) {
   df::add(item::uid_mut(item), ItemLinesKey {}, lines);
 }
 

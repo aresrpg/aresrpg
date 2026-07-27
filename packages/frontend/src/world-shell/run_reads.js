@@ -4,6 +4,8 @@
 // gRPC Core only (json + object version — the W1 monotonic guard consumes the version); every read degrades to
 // null/empty on error at the CALLER (honest-empty law) — nothing here fabricates.
 
+import { read_world_inner } from '@aresrpg/sdk/game'
+
 import { display_mob_name } from '../content/mob_name_overrides'
 
 /** Read one object's flattened json + version (null when unreadable/gone). */
@@ -48,10 +50,13 @@ export function decode_pass(/** @type {any} */ read) {
  * fight board resolves a mob's basic-attack cast VFX/SFX on (fight_view mob row → vfx_map.resolve_cast_element).
  */
 export async function load_world_meta(/** @type {any} */ sdk, /** @type {string} */ world_id) {
-  const read = await read_object(sdk, world_id)
-  if (!read) throw new Error('World not found on-chain')
-  const rooms = (read.json.dungeon_rooms ?? []).map((/** @type {any} */ r) => r?.mobs ?? [])
-  const key_template = opt(read.json.dungeon_key_template)
+  // The rooms and the key are fields of the WRAPPED payload (#1289), never of the shell — and the shell read
+  // would succeed with both absent, which reads as "this world has no dungeon" and refuses entry. ONE home for
+  // that resolution (@aresrpg/sdk/game), which fails shut on an unreadable/unknown-version payload.
+  const inner = await read_world_inner(sdk.grpc_client, world_id)
+  if (!inner) throw new Error('World not found on-chain')
+  const rooms = (inner.dungeon_rooms ?? []).map((/** @type {any} */ r) => r?.mobs ?? [])
+  const key_template = opt(inner.dungeon_key_template)
   const distinct = [...new Set(rooms.flat())]
   const mob_names = /** @type {Record<string,string>} */ ({})
   const mob_levels = /** @type {Record<string,number>} */ ({})

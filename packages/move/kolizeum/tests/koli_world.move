@@ -8,12 +8,7 @@
 #[test_only]
 module aresrpg_kolizeum::koli_world;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  character,
-  config::{Self, GameConfig},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, character, config::{Self, GameConfig}, version::{Self, Version}};
 use kiosk::personal_kiosk;
 use sui::{kiosk, package::Publisher, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 

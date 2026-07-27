@@ -49,6 +49,13 @@ export {
   gather_ptb,
 } from './sui/write/game_world.js'
 export { get_world, get_mob_template } from './sui/read/game.js'
+// The ONE home for resolving a wrapped World's payload (#1289) — every consumer that wants a world FACT the
+// `get_world` snapshot does not carry (the dungeon rooms/key) reads it through this, never off the shell.
+export {
+  read_world_inner,
+  world_inner_field_id,
+  WORLD_VERSION,
+} from './sui/read/world_inner.js'
 export { get_zone_state, decode_zone_state, zone_key_bytes } from './sui/read/zone_spawns.js'
 export { craft_ptb } from './sui/write/craft.js'
 export {
@@ -170,7 +177,7 @@ export function raise_stat_ptb(context) {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
-      target: `${a.LATEST_PACKAGE_ID}::stat_allocation::raise_stat`,
+      target: `${a.LATEST_PACKAGE_ID}::character_link::raise_stat`,
       arguments: [
         as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap

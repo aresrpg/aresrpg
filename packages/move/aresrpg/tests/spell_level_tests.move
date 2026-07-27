@@ -3,7 +3,7 @@
 /// SPELL_LEVEL spend-door test: `raise_spell_level` reads a cross-package `SpellTemplate` (class-matched to the
 /// character), gates on the target level's `min_char_level` + the character's UNSPENT spell points, then invests
 /// one level (spending `current` points). Drives it end to end off a kiosk-locked character leveled via the real
-/// `z10` progression door, with a hand-built senshi SpellTemplate whose level-2 gate is low enough for
+/// `y12` progression door, with a hand-built senshi SpellTemplate whose level-2 gate is low enough for
 /// a level-3 character to clear. The template's 6 monotone band-valid levels mirror the `aresrpg_spells` fixture.
 #[test_only]
 module aresrpg::spell_level_tests;
@@ -33,7 +33,7 @@ fun lvl(min_char_level: u16, base: u64): SpellLevel {
   )
 }
 
-/// 6 monotone levels with LOW early gates (level 2 requires char level 2), L6 = unlock(1) + 100 = 101.
+/// 6 monotone levels with LOW early gates (level 2 requires char level 2), L6 = y16(1) + 100 = 101.
 fun levels(): vector<SpellLevel> {
   vector[lvl(1, 15), lvl(2, 17), lvl(3, 19), lvl(4, 21), lvl(5, 23), lvl(101, 25)]
 }
@@ -66,7 +66,7 @@ fun level_up(sc: &mut Scenario, cid: ID, target_xp: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z10(&cfg, chr, target_xp, &ver);
+    character_link::y12(&cfg, chr, target_xp, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }

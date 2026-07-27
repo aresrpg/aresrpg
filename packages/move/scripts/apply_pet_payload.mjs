@@ -22,18 +22,22 @@ function batch_tx(batch) {
   const tx = new Transaction()
   for (const call of batch.calls) {
     const a = call.arguments
-    if (call.target.endsWith('::admin::set_template_stats'))
+    if (call.target.endsWith('::admin::set_template_stats')) {
+      // #1291: the door takes two ItemStatistics values, built in-PTB by the same constructor Move uses
+      const stats_pkg = call.target.replace('::admin::set_template_stats', '::item_stats::new')
+      const stat_block = values =>
+        tx.moveCall({ target: stats_pkg, arguments: values.map(v => tx.pure.u16(v)) })
       tx.moveCall({
         target: call.target,
         arguments: [
           tx.object(a.admin_cap_id),
           tx.object(a.pet_template_id),
-          ...a.min_stats_u16.map((v) => tx.pure.u16(v)),
-          ...a.max_stats_u16.map((v) => tx.pure.u16(v)),
+          stat_block(a.min_stats_u16),
+          stat_block(a.max_stats_u16),
           tx.object(a.version_id),
         ],
       })
-    else if (call.target.endsWith('::pet::set_food_power'))
+    } else if (call.target.endsWith('::pet::set_food_power'))
       tx.moveCall({
         target: call.target,
         arguments: [

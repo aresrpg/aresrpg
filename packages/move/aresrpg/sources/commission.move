@@ -18,8 +18,8 @@
 ///      the roll runs at the artisan's skill, the XP credits the artisan's character). Only the NAMED artisan
 ///      (`sender == request.artisan`) can accept (`EWrongArtisan`).
 ///   ③ execute(CUSTOMER): with an accepted request, the customer runs the craft on THEIR OWN kiosk/cap/ingredients
-///      (`crafting::craft_consume` burns the locked inputs; the reference-formula success roll runs at the recorded
-///      `artisan_level`; `crafting::settle_output` mints the output LOCKED into the customer's kiosk ON SUCCESS) and
+///      (`crafting::y18` burns the locked inputs; the reference-formula success roll runs at the recorded
+///      `artisan_level`; `crafting::y19` mints the output LOCKED into the customer's kiosk ON SUCCESS) and
 ///      the escrow releases to the artisan. `execute` consumes the shared request BY VALUE, so double-execute and
 ///      execute-after-cancel are impossible by construction.
 ///   cancel(EITHER party, pre-execute): refund the escrow to the CUSTOMER (its owner). Ownership-gated ONLY (never a
@@ -46,15 +46,7 @@
 /// XP is fully computed + owed ATOMICALLY at execute; the claim is a redemption, not a deferred feature.
 module aresrpg::commission;
 
-use aresrpg::{
-  character::Character,
-  character_link,
-  config::{Self, GameConfig},
-  crafting::{Self, Recipe},
-  extract::ItemExtractPolicy,
-  item::{Item, ItemTemplate},
-  version::Version
-};
+use aresrpg::{character::Character, character_link, config::{Self, GameConfig}, crafting::{Self, Recipe}, extract::ItemExtractPolicy, item::{Item, ItemTemplate}, version::Version};
 use aresrpg_foundation::job_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
@@ -217,8 +209,8 @@ public fun accept(
 // ╔════════════════ [ Execute — the customer runs the craft on their own kiosk; escrow → artisan ] ═ ]
 
 /// EXECUTE an accepted commission (terminal `&Random`): the CUSTOMER runs the craft on THEIR OWN kiosk —
-/// `crafting::craft_consume` burns their kiosk-locked `input_item_ids`, the reference-formula success roll runs at the recorded
-/// `artisan_level`, and `crafting::settle_output` mints the recipe's output LOCKED into the customer's kiosk ON
+/// `crafting::y18` burns their kiosk-locked `input_item_ids`, the reference-formula success roll runs at the recorded
+/// `artisan_level`, and `crafting::y19` mints the recipe's output LOCKED into the customer's kiosk ON
 /// SUCCESS (auto-splitting any surplus input stack). The escrow releases to the artisan REGARDLESS of the roll —
 /// NET of the 10% platform cut to `@treasury` (the artisan sold their qualified attempt); the craft XP is minted as a `CraftXpVoucher` (claimed via
 /// `redeem_craft_xp`). Only the customer may execute (`EWrongCustomer`); the request must be `accepted`
@@ -239,27 +231,28 @@ entry fun execute(
   r: &Random,
   ctx: &mut TxContext,
 ) {
-  z54(&request, recipe, ctx);
+  y84(&request, recipe, ctx);
   let mut gen = random::new_generator(r, ctx);
-  let success = crafting::success_roll(request.artisan_level, &mut gen);
-  z55(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, xpolicy, policy, config, version, ctx);
+  let success = crafting::y20(request.artisan_level, &mut gen);
+  // the output's stat roll shares this one terminal draw with the success roll (#758).
+  y85(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The execute preconditions (shared by the live entry and the deterministic test door): customer-only, accepted,
 /// bound recipe. Checked BEFORE any randomness is drawn — an un-accepted request has `artisan_level` 0, which must
 /// never reach the roll (the roll's `level − 1` floors at level 1).
-fun z54(request: &CraftRequest, recipe: &Recipe, ctx: &TxContext) {
+fun y84(request: &CraftRequest, recipe: &Recipe, ctx: &TxContext) {
   assert!(sender(ctx) == request.customer, EWrongCustomer);
   assert!(request.accepted, ENotAccepted);
   assert!(object::id(recipe) == request.recipe, EWrongRecipe);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The execute body shared by the live `&Random` entry and the deterministic test door — given the already-rolled
 /// `success`: burn the customer's inputs, mint the output ON SUCCESS, mint the artisan's XP voucher, split the
 /// escrow (artisan nets 90%, 10% → `@treasury`), emit, delete.
-fun z55(
+fun y85(
   request: CraftRequest,
   recipe: &Recipe,
   kiosk: &mut Kiosk,
@@ -267,6 +260,7 @@ fun z55(
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
   success: bool,
+  stat_seed: u64,
   xpolicy: &ItemExtractPolicy,
   policy: &TransferPolicy<Item>,
   config: &GameConfig,
@@ -279,12 +273,12 @@ fun z55(
   // Run the craft on the CUSTOMER's kiosk at the ARTISAN's proven level: burn the locked inputs (deterministic
   // refusals abort ATOMICALLY — a wrong client's tx reverts whole, escrow untouched, never lost to the dice), then
   // mint LOCKED into the customer's OWN personal kiosk ON SUCCESS (kiosk-lock constitution — never a raw address).
-  crafting::craft_consume(recipe, kiosk, pkcap, input_item_ids, output_template, artisan_level, xpolicy, policy, config, version, ctx);
+  crafting::y18(recipe, kiosk, pkcap, input_item_ids, output_template, artisan_level, xpolicy, policy, config, version, ctx);
   let owner_cap = personal_kiosk::borrow(pkcap);
-  crafting::settle_output(recipe, output_template, success, kiosk, owner_cap, policy, version, ctx);
+  crafting::y19(recipe, output_template, success, stat_seed, kiosk, owner_cap, policy, version, ctx);
 
   // ARTISAN XP (always — success or failure): computed at the artisan's level, delivered as a claim voucher.
-  let xp = crafting::craft_xp_gain(crafting::craft_xp(recipe), crafting::input_count(recipe), artisan_level);
+  let xp = crafting::y21(crafting::craft_xp(recipe), crafting::input_count(recipe), artisan_level);
   transfer::transfer(
     CraftXpVoucher { id: object::new(ctx), artisan, character: artisan_character, job: crafting::required_job(recipe), xp },
     artisan,
@@ -308,7 +302,7 @@ fun z55(
 #[test_only]
 /// Execute with an INJECTED roll outcome (no rng) — proves the success AND failure branches deterministically:
 /// the real gate + burn + escrow-release + voucher run; `success` decides mint-vs-not. The live `&Random` entry
-/// shares `z54` + `z55` exactly.
+/// shares `y84` + `y85` exactly.
 public fun execute_forced(
   request: CraftRequest,
   recipe: &Recipe,
@@ -317,14 +311,15 @@ public fun execute_forced(
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
   success: bool,
+  stat_seed: u64,
   xpolicy: &ItemExtractPolicy,
   policy: &TransferPolicy<Item>,
   config: &GameConfig,
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  z54(&request, recipe, ctx);
-  z55(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, xpolicy, policy, config, version, ctx);
+  y84(&request, recipe, ctx);
+  y85(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, stat_seed, xpolicy, policy, config, version, ctx);
 }
 
 #[test_only]
@@ -355,7 +350,7 @@ public fun redeem_craft_xp(
   assert!(sender(ctx) == artisan, EWrongArtisan);
   let owner_cap = personal_kiosk::borrow(pkcap);
   let chr = kiosk.borrow_mut<Character>(owner_cap, character);
-  character_link::add_job_xp(chr, job, xp, version);
+  character_link::y3(chr, job, xp, version);
   event::emit(CraftXpRedeemed { artisan, character, job, xp });
   id.delete();
 }

@@ -10,21 +10,10 @@ module aresrpg::equipment_tests;
 
 use aresrpg_foundation::spell;
 use aresrpg_fight::participant;
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self, Character},
-  equipment,
-  extension,
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate},
-  item_stats,
-  item_damages::{Self, ItemDamages},
-  version::{Self, Version}
-};
+use aresrpg::{fight as fight_doors, config::{Self as config, GameConfig}, admin::{Self, AdminCap, Self as catalog, Catalog}, character::{Self, Character}, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, item_stats, item_damages::{Self, ItemDamages}, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
-use sui::{kiosk::{Self, Kiosk}, package::{Self, Publisher}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
+use sui::{clock, kiosk::{Self, Kiosk}, package::{Self, Publisher}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 
 const OWNER: address = @0xA;
 
@@ -43,7 +32,8 @@ fun setup(sc: &mut Scenario) {
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
   character::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
+  config::test_init(sc.ctx()); // the seat reader needs the live dials (#1324 band test)
 
   sc.next_tx(OWNER);
   // enable the ONE package Version, whitelist every category the tests use
@@ -131,7 +121,7 @@ fun mint_lock(sc: &mut Scenario, k: &mut Kiosk, pkcap: &PersonalKioskCap, tid: I
   let tmpl = sc.take_shared_by_id<ItemTemplate>(tid);
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let (it, pledge) = extension::z502(&tmpl, &ver, sc.ctx());
+  let (it, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
   item::lock_in_kiosk(pledge, it, k, personal_kiosk::borrow(pkcap), &mkt);
   ts::return_shared(tmpl);
@@ -189,7 +179,7 @@ fun geared_combat_stats_reads_base_scalars() {
 
 #[test]
 /// The unforgeable path: equipping a class weapon SNAPSHOTS the template's authored damage lines onto the item
-/// instance, and the fight-seat read (`z15`) returns them straight off the character — no
+/// instance, and the fight-seat read (`y23`) returns them straight off the character — no
 /// template object, no client input. Two lines (fire + water) round-trip exactly.
 fun equip_weapon_snapshots_authored_lines_for_combat() {
   let mut sc = ts::begin(OWNER);
@@ -203,7 +193,7 @@ fun equip_weapon_snapshots_authored_lines_for_combat() {
 
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  let lines = equipment::z15(chr);
+  let lines = equipment::y23(chr);
   assert_eq!(lines.length(), 2);
   assert_eq!(item_damages::element_id(lines.borrow(0)), spell::el_fire());
   assert_eq!(item_damages::midpoint(lines.borrow(0)), 20); // (10+30)/2
@@ -229,7 +219,7 @@ fun tool_in_weapon_slot_yields_no_lines() {
 
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  assert!(equipment::z15(chr).is_empty()); // the tool's damages never reach combat
+  assert!(equipment::y23(chr).is_empty()); // the tool's damages never reach combat
 
   destroy(k);
   destroy(pkcap);
@@ -248,7 +238,7 @@ fun bare_and_unauthored_weapon_yield_no_lines() {
   sc.next_tx(OWNER);
   {
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-    assert!(equipment::z15(chr).is_empty());
+    assert!(equipment::y23(chr).is_empty());
   };
 
   // a real weapon whose template authored NO damage lines ⇒ still empty (family fallback)
@@ -257,7 +247,7 @@ fun bare_and_unauthored_weapon_yield_no_lines() {
   equip_item(&mut sc, &mut k, &pkcap, cid, item_id, tid);
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  assert!(equipment::z15(chr).is_empty());
+  assert!(equipment::y23(chr).is_empty());
 
   destroy(k);
   destroy(pkcap);
@@ -427,13 +417,13 @@ fun cross_class_equip_succeeds() {
 
 #[test]
 /// AFFINITY DERIVATION (DECISIONS 07-12): the fight-entry check (`fight::combatant_of`) is `equipped_family ==
-/// z14(class)`. A senshi's designed family is longsword (MATCH ⇒ affinity); club MISMATCHES. The +10%
+/// y22(class)`. A senshi's designed family is longsword (MATCH ⇒ affinity); club MISMATCHES. The +10%
 /// scales the SAME family line's damage & crit_damage by exactly ×110/100 and leaves crit_rate/ap_cost/reach alone.
 fun affinity_derivation_and_scaling() {
   let senshi = b"senshi".to_string();
   // derivation: own family matches, a cross-class family does not
-  assert!(equipment::z14(senshi) == option::some(b"longsword".to_string())); // MATCH
-  assert!(!(equipment::z14(senshi) == option::some(b"club".to_string()))); // MISMATCH
+  assert!(equipment::y22(senshi) == option::some(b"longsword".to_string())); // MATCH
+  assert!(!(equipment::y22(senshi) == option::some(b"club".to_string()))); // MISMATCH
 
   // a matched wielder's line is the SAME family line at +10% on the damage bases only (mismatched = the base line)
   let matched = participant::weapon_line_of(option::some(b"longsword".to_string()), true);
@@ -539,4 +529,39 @@ fun fold_round_trip_exact() {
   assert_eq!(spell::stat_strength(&back), 0);
   assert_eq!(spell::stat_vitality(&back), 0);
   assert_eq!(spell::stat_wisdom(&back), 0);
+}
+
+#[test]
+/// #1324 — THE AUTHORED BAND REACHES THE SEAT. Spells roll their authored range; weapon strikes did not, because
+/// the seat averaged the item's `[from,to]` into a FIXED line — `damage == damage_max` — so the engine's #577
+/// roller had nothing to roll and every strike landed on the midpoint. The band must survive into the seat, for
+/// the crit range too, or the roller is dead code.
+fun seat_carries_the_authored_damage_band() {
+  let mut sc = ts::begin(OWNER);
+  setup(&mut sc);
+  let (mut k, pkcap, cid) = mint_char(&mut sc);
+  let banded = item_damages::new(10, 30, b"melee".to_string(), b"fire".to_string());
+  let tid = author_with_damages(&mut sc, b"longsword", 1, vector[banded]);
+  let item_id = mint_lock(&mut sc, &mut k, &pkcap, tid);
+  equip_item(&mut sc, &mut k, &pkcap, cid, item_id, tid);
+
+  sc.next_tx(OWNER);
+  let cfg = sc.take_shared<GameConfig>();
+  let clk = clock::create_for_testing(sc.ctx());
+  let lines = fight_doors::weapon_lines_for_testing(&k, &pkcap, cid, &cfg, &clk);
+  assert_eq!(lines.length(), 1);
+  let line = lines.borrow(0);
+  // SENSHI wields a longsword — its own family, so the +10% own-class affinity applies to BOTH ends of the band.
+  assert_eq!(participant::wl_damage(line), 11); // 10 × 110/100
+  assert_eq!(participant::wl_damage_max(line), 33); // 30 × 110/100 — the band, not the midpoint
+  assert_eq!(participant::wl_crit_damage(line), 16); // 11 × 3/2
+  assert_eq!(participant::wl_crit_damage_max(line), 49); // 33 × 3/2
+  // the roller needs a real spread; a fixed line is what the defect produced
+  assert!(participant::wl_damage(line) < participant::wl_damage_max(line));
+
+  clock::destroy_for_testing(clk);
+  ts::return_shared(cfg);
+  destroy(k);
+  destroy(pkcap);
+  sc.end();
 }

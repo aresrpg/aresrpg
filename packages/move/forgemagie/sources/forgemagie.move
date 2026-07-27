@@ -34,7 +34,7 @@
 /// (config-pinned witness, kolizeum-precedent brand pattern) — see `Forge` below.
 module aresrpg_forgemagie::forgemagie;
 
-use aresrpg::{admin::AdminCap, character::Character, character_link, config::{Self, GameConfig}, extension, fight_marker, version::Version};
+use aresrpg::{admin::AdminCap, character::Character, character_link, config::{Self, GameConfig}, extension, fight, version::Version};
 use aresrpg::{extract::ItemExtractPolicy, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
 use aresrpg_foundation::{forgemagie as forge, job_xp, prng, rune_catalog as cat, taux};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
@@ -270,7 +270,7 @@ fun crush_roll(
   version.assert_enabled();
   {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
-    assert!(fight_marker::is_unmarked(chr), EDirty);
+    assert!(fight::is_unmarked(chr), EDirty);
   };
 
   let tid = item::template_id(gear_template);
@@ -389,7 +389,7 @@ fun crush_roll_orphan(
   version.assert_enabled();
   {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
-    assert!(fight_marker::is_unmarked(chr), EDirty);
+    assert!(fight::is_unmarked(chr), EDirty);
   };
 
   // ▲ ORPHAN: the batch must be non-empty — the burned template id is derived FROM item 0 (crush reads it off the
@@ -582,7 +582,7 @@ public fun mint_lock_stack_for_testing(config: &GameConfig, template: &ItemTempl
 #[test_only]
 /// Fixture: mint NON-stackable gear (core's test-only pledge mint) and kiosk-lock it. Returns the item id.
 public fun mint_lock_gear_for_testing(template: &ItemTemplate, kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, policy: &TransferPolicy<Item>, version: &Version, ctx: &mut TxContext): ID {
-  let (it, pledge) = extension::mint_item_for_testing(template, version, ctx);
+  let (it, pledge) = extension::mint_item_for_testing(template, option::none(), version, ctx);
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, kiosk, personal_kiosk::borrow(pkcap), policy);
   iid
@@ -617,7 +617,7 @@ fun scribe_seeded(
   version.assert_enabled();
   let (runic_level, best_job) = {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
-    assert!(fight_marker::is_unmarked(chr), EDirty);
+    assert!(fight::is_unmarked(chr), EDirty);
     let (lvl, job) = best_job_level(chr);
     assert!(lvl >= RUNE_UNLOCK_LEVEL, EScribeLocked);
     (lvl, job)

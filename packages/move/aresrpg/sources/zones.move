@@ -5,16 +5,7 @@
 /// live derivation; proof claims authenticate committed search-time facts before sharing the same security tail.
 module aresrpg::zones;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  equipment,
-  version::Version,
-  world::{Self, World},
-  zone_comp
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, equipment, version::Version, world::{Self, World}, zone_comp};
 use aresrpg_foundation::{world_math, zone_gen};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, vec_map::{Self, VecMap}};
@@ -31,6 +22,7 @@ const ENodeEmpty: u64 = 107; // gathering seam: the resource cell is already har
 const ESpawnNotFound: u64 = 108; // claim: no LIVE derived group with this spawn_id in the target zone (an unsearched/undiscovered zone has no Zone DF → also 108)
 const EBadDrainInput: u64 = 109; // drain_zones: the zx / zy coordinate lists have mismatched lengths
 const EBadGroupProof: u64 = 110; // claim: supplied facts/index/proof do not authenticate against the searched-zone root
+const EGroupNotConsumed: u64 = 111; // release: the group is already live in the world — nothing to put back
 const EMemberZone: u64 = 112; // claim: this zone derives MEMBER LISTS (format 3) — claim it through the member doors
 const ENotMemberZone: u64 = 113; // member claim: this zone predates member lists — claim it through the original doors
 
@@ -60,6 +52,8 @@ public struct ZoneGroupCommitment has store { root: vector<u8>, count: u64 }
 /// fight over a released group an address to live at (`fight_registry::group_fight_address`). Zone-scoped: the
 /// re-search that re-rolls the seed (new seed = new spawn ids) drops it with the bitmaps, and `drain_zones`
 /// reclaims it with the rest of the zone.
+public struct ZoneRoundsKey has copy, drop, store { zx: u32, zy: u32 }
+public struct ZoneRounds has store { rounds: VecMap<u64, u64> }
 
 /// The PROVENANCE HOT POTATO a successful `claim_mob_group` returns — the ONLY way to open a world fight.
 /// No abilities: it cannot be stored, dropped, or copied, so the claiming PTB MUST consume it in the same tx
@@ -92,12 +86,12 @@ public struct GroupClaimProof has drop {
   proof: vector<u8>,
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Unpack a `GroupTicket` → `(world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed)`.
 /// PUBLIC on purpose: a hot potato's security lives entirely in its CREATION gate — anyone holding one already
 /// paid the real claim (the group's bit is set), and unpacking outside `fight::create` only forfeits that claim
 /// (self-griefing, never gain). Cross-package `public(package)` does not exist, so this is the seam.
-public(package) fun z47(t: GroupTicket): (ID, ID, u64, ID, u32, u32, u16, u64, u64) {
+public(package) fun y74(t: GroupTicket): (ID, ID, u64, ID, u32, u32, u16, u64, u64) {
   let GroupTicket { world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed } = t;
   (world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed)
 }
@@ -122,10 +116,10 @@ public struct MemberGroupTicket {
   group_seed: u64,
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-/// Unpack a `MemberGroupTicket` → the `z47` tuple plus `(members, progress)`. Same seam law:
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Unpack a `MemberGroupTicket` → the `y74` tuple plus `(members, progress)`. Same seam law:
 /// the security is the CREATION gate, so unpacking outside `fight::open_group` only forfeits the claim.
-public(package) fun z48(t: MemberGroupTicket): (ID, ID, u64, ID, vector<ID>, u64, u32, u32, u16, u64, u64) {
+public(package) fun y75(t: MemberGroupTicket): (ID, ID, u64, ID, vector<ID>, u64, u32, u32, u16, u64, u64) {
   let MemberGroupTicket { world, character, spawn_id, template, members, progress, x, z, group_size, spawned_at_ms, group_seed } = t;
   (world, character, spawn_id, template, members, progress, x, z, group_size, spawned_at_ms, group_seed)
 }
@@ -138,6 +132,8 @@ public struct ZoneSearched has copy, drop { world: ID, zx: u32, zy: u32, at_ms: 
 
 public struct MobGroupClaimed has copy, drop { world: ID, character: ID, spawn_id: u64, template: ID, x: u32, z: u32, group_size: u16 }
 
+/// The mobs won: their group is back in the world at its spot, fightable again at engagement `round` (#609).
+public struct MobGroupReleased has copy, drop { world: ID, spawn_id: u64, x: u32, z: u32, round: u64 }
 
 /// A batch of discovered-zone dynamic fields (`ZoneKey → Zone`) was drained off a World UID ahead of a
 /// `world::destroy_world` (storage reclaim). `zones_removed` counts what actually existed — the drain is idempotent.
@@ -161,11 +157,11 @@ entry fun join_world(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator(r, ctx);
-  z92(world, kiosk, pkcap, character_id, config, version, clock, &mut gen);
+  y151(world, kiosk, pkcap, character_id, config, version, clock, &mut gen);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z92(
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y151(
   world: &World,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -199,14 +195,14 @@ fun z92(
     let sx = base_x + world_math::roll_u32(gen, 0, world::spawn_zone_x(world) - 1);
     let sz = base_z + world_math::roll_u32(gen, 0, world::spawn_zone_z(world) - 1);
     let pet = equipment::pet_equipped(character);
-    character_link::z2(character, wid, checkpoint::z12(sx, sz, now, pet), version);
+    character_link::y2(character, wid, world::y70(sx, sz, now, pet), version);
     (sx, sz)
   } else {
     // rejoin: keep the existing checkpoint exactly (position + clock); read it only for the event
     let cp = character_link::checkpoint(character, wid);
-    (checkpoint::x(&cp), checkpoint::z(&cp))
+    (world::x(&cp), world::z(&cp))
   };
-  character_link::z1(character, wid, version);
+  character_link::y1(character, wid, version);
   event::emit(WorldJoined { world: wid, character: character_id, x, z, first_join });
 }
 
@@ -231,11 +227,11 @@ entry fun search_zone(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator(r, ctx);
-  z93(world, kiosk, pkcap, character_id, x, z, config, version, clock, &mut gen);
+  y152(world, kiosk, pkcap, character_id, x, z, config, version, clock, &mut gen);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z93(
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y152(
   world: &mut World,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -262,8 +258,8 @@ fun z93(
   };
   // travel verification: you must have been able to WALK from your checkpoint to (x, z) — the §17.3 position
   // proof that REPLACES the old spawn-zone occupancy lock (teach-don't-reject: a refused caller waits and retries)
-  let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
-  checkpoint::verify_travel(world, &cp, x, z, now, pet_both);
+  let pet_both = world::pet_equipped(&cp) && pet_now;
+  world::verify_travel(world, &cp, x, z, now, pet_both);
   // the zone your PROVEN standing position sits in (zone_of bounds-checks — an out-of-world (x,z) aborts)
   let (zx, zy) = world::zone_of(world, x, z);
 
@@ -282,7 +278,7 @@ fun z93(
   {
     let character = kiosk.borrow_mut(owner_cap, character_id);
     let pet = equipment::pet_equipped(character);
-    character_link::z2(character, wid, checkpoint::z12(x, z, now, pet), version);
+    character_link::y2(character, wid, world::y70(x, z, now, pet), version);
   };
 
   // THE ZONE'S OWN DERIVATION — a fresh search rolls FORMAT 3 (#1110/#1111): member lists, equal spawn (no
@@ -290,8 +286,8 @@ fun z93(
   // below names, so the zone can only ever be replayed the way it was written. Zones searched before this door
   // keep replaying their own stored format, forever.
   let (msids, mt, mmembers, mx, mz, ms, mg, _progress) =
-    zone_comp::z45(world, zx, zy, seed, config.team_size_bound());
-  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::z46(world, zx, zy, seed);
+    zone_comp::y72(world, zx, zy, seed, config.team_size_bound());
+  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::y73(world, zx, zy, seed);
 
   // ── write: create-or-RE-ROLL the zone DF (new seed, bitmaps reset — the top-up's derivation-model successor) ──
   let wuid = world::uid_mut(world);
@@ -313,6 +309,7 @@ fun z93(
   } else {
     df::add(wuid, root_key, ZoneGroupCommitment { root: group_root, count: msids.length() });
   };
+  y161(wuid, zx, zy); // the re-roll renames every spawn — the old rounds name nothing
 
   event::emit(ZoneSearched { world: wid, zx, zy, at_ms: now, mob_groups: msids.length(), resource_nodes: rsids.length() });
 }
@@ -321,7 +318,7 @@ fun z93(
 
 /// OCCUPIED-ZONE claim door — the group must sit in the zone the caller's proven checkpoint OCCUPIES. A special
 /// case of `claim_mob_group_in_zone` with the zone DERIVED from the checkpoint; both funnel through
-/// `z97`.
+/// `y156`.
 public fun claim_mob_group(
   world: &mut World,
   kiosk: &mut Kiosk,
@@ -332,7 +329,7 @@ public fun claim_mob_group(
   version: &Version,
   clock: &Clock,
 ): GroupTicket {
-  z97(world, kiosk, pkcap, character_id, option::none(), spawn_id, option::none(), config, version, clock)
+  y156(world, kiosk, pkcap, character_id, option::none(), spawn_id, option::none(), config, version, clock)
 }
 
 /// GLOBAL-SEARCH door: name any searched zone, then enforce the same reachability and hot-potato gauntlet.
@@ -348,7 +345,7 @@ public fun claim_mob_group_in_zone(
   version: &Version,
   clock: &Clock,
 ): GroupTicket {
-  z97(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::none(), config, version, clock)
+  y156(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::none(), config, version, clock)
 }
 
 /// Proof-taking occupied-zone door. A committed zone verifies one authenticated index; a pre-commitment zone
@@ -359,7 +356,7 @@ public fun claim_mob_group_with_proof(
   config: &GameConfig, version: &Version, clock: &Clock,
 ): GroupTicket {
   let p = GroupClaimProof { index, template, x, z, group_size, group_seed, proof };
-  z97(world, kiosk, pkcap, character_id, option::none(), spawn_id, option::some(p), config, version, clock)
+  y156(world, kiosk, pkcap, character_id, option::none(), spawn_id, option::some(p), config, version, clock)
 }
 
 /// Proof-taking global-search door: identical proof/claim semantics with explicit searched-zone coordinates.
@@ -369,7 +366,7 @@ public fun claim_mob_group_in_zone_with_proof(
   proof: vector<u8>, config: &GameConfig, version: &Version, clock: &Clock,
 ): GroupTicket {
   let p = GroupClaimProof { index, template, x, z, group_size, group_seed, proof };
-  z97(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::some(p), config, version, clock)
+  y156(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::some(p), config, version, clock)
 }
 
 // ╔════════════════ [ MEMBER-LIST claim doors (format 3, #1110) ] ═══════════ ]
@@ -391,7 +388,7 @@ public fun claim_mob_group_members(
   version: &Version,
   clock: &Clock,
 ): MemberGroupTicket {
-  z94(world, kiosk, pkcap, character_id, option::none(), spawn_id, config, version, clock)
+  y153(world, kiosk, pkcap, character_id, option::none(), spawn_id, config, version, clock)
 }
 
 /// GLOBAL-SEARCH member claim — the format-3 twin of `claim_mob_group_in_zone`.
@@ -407,13 +404,13 @@ public fun claim_mob_group_in_zone_members(
   version: &Version,
   clock: &Clock,
 ): MemberGroupTicket {
-  z94(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, config, version, clock)
+  y153(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, config, version, clock)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-/// The member security tail — `z97`'s twin, differing only in what it authenticates (a roster
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// The member security tail — `y156`'s twin, differing only in what it authenticates (a roster
 /// and a progress alongside the group facts) and in the ticket it hands back.
-fun z94(
+fun y153(
   world: &mut World,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -425,26 +422,26 @@ fun z94(
   clock: &Clock,
 ): MemberGroupTicket {
   let (wid, template, members, progress, x, z, group_size, spawned_at_ms, group_seed) =
-    z98(world, kiosk, pkcap, character_id, zone, spawn_id, option::none(), true, config, version, clock);
+    y157(world, kiosk, pkcap, character_id, zone, spawn_id, option::none(), true, config, version, clock);
   MemberGroupTicket {
     world: wid, character: character_id, spawn_id, template, members, progress,
     x, z, group_size, spawned_at_ms, group_seed,
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Locate a LIVE derived group by `spawn_id` in zone `(zx,zy)`. `members` picks the derivation: the
 /// format-dispatching `derive_mobs` projection (formats 1/2 — what a single-spec ticket promises), or the
 /// member-list stream that carries a roster and the zone's difficulty progress. Returns the SUPERSET
 /// `(template_id, roster, progress, x, z, group_size, spawned_at_ms, group_seed, derivation index)`; the
 /// single-spec callers drop the two fields they have no ticket field for. Aborts `ESpawnNotFound` if the zone
 /// is undiscovered, no derived group carries that id, or its consumed bit is already set.
-fun z95(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, members: bool): (ID, vector<ID>, u64, u32, u32, u16, u64, u64, u64) {
+fun y154(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, members: bool): (ID, vector<ID>, u64, u32, u32, u16, u64, u64, u64) {
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), ESpawnNotFound);
   let zone: &Zone = df::borrow(world::uid(world), key);
   let (sids, tpls, rosters, xs, zs, sizes, gseeds, progress) = if (members) {
-    zone_comp::z45(world, zx, zy, zone.seed, team_bound)
+    zone_comp::y72(world, zx, zy, zone.seed, team_bound)
   } else {
     let (s, t, x, z, sz, g) = derive_mobs(world, zx, zy, zone.seed, team_bound);
     (s, t, vector<vector<ID>>[], x, z, sz, g, 0)
@@ -453,7 +450,7 @@ fun z95(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, members
   let mut i = 0;
   while (i < n) {
     if (sids[i] == spawn_id) {
-      assert!(!z909(&zone.mob_bitmap, i), ESpawnNotFound); // consumed = gone (no double-fight of one group)
+      assert!(!y164(&zone.mob_bitmap, i), ESpawnNotFound); // consumed = gone (no double-fight of one group)
       // The ROSTER the fight seats is `min(group_size, roster)` — the derived roster runs at the RAW rolled size
       // (stream law) while `sizes[i]` carries the live team-bound clamp, so the ticket ships exactly the members
       // the engine will seat and `create_members` can demand all of them. A single-spec claim has no roster, so
@@ -467,17 +464,17 @@ fun z95(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, members
   abort ESpawnNotFound
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-/// `z95` projected to the single-spec shape the original (format-1/2) ticket carries.
-fun z96(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// `y154` projected to the single-spec shape the original (format-1/2) ticket carries.
+fun y155(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
   let (t, _roster, _progress, x, z, group_size, spawned_at_ms, group_seed, index) =
-    z95(world, zx, zy, spawn_id, team_bound, false);
+    y154(world, zx, zy, spawn_id, team_bound, false);
   (t, x, z, group_size, spawned_at_ms, group_seed, index)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// One shared security tail: authenticate facts (derive or proof), travel-check, consume bit, checkpoint, ticket.
-fun z97(
+fun y156(
   world: &mut World,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -490,11 +487,11 @@ fun z97(
   clock: &Clock,
 ): GroupTicket {
   let (wid, template, _members, _progress, x, z, group_size, spawned_at_ms, group_seed) =
-    z98(world, kiosk, pkcap, character_id, zone, spawn_id, claim_proof, false, config, version, clock);
+    y157(world, kiosk, pkcap, character_id, zone, spawn_id, claim_proof, false, config, version, clock);
   GroupTicket { world: wid, character: character_id, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// ONE shared claim gauntlet behind both ticket doors: refuse, locate the zone, route on FORMAT, authenticate
 /// the group, travel-verify, consume the bit, advance the checkpoint, announce. `members` picks which half of
 /// two things differ — the format the zone must be, and whether the group is authenticated as a member list or
@@ -502,7 +499,7 @@ fun z97(
 /// on a refusal, a write, or their event.
 ///
 /// Returns the SUPERSET of what the two tickets carry; the single-spec builder drops `members`/`progress`.
-fun z98(
+fun y157(
   world: &mut World,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -534,53 +531,53 @@ fun z98(
     (zx, zy)
   } else {
     zone.destroy_none();
-    world::zone_of(world, checkpoint::x(&cp), checkpoint::z(&cp))
+    world::zone_of(world, world::x(&cp), world::z(&cp))
   };
 
   // FORMAT IS THE ROUTER, never a caller preference. A member-list zone's groups hold several species and the
   // original ticket has nowhere to put them — a single-spec fight over a mixed commitment is precisely the
   // divergence the commitment exists to prevent. A pre-member zone has no roster to commit, so a member claim
   // over it would have to invent one. Each door refuses the other's zones; both refusals live here.
-  let format = z101(world, zx, zy);
+  let format = y162(world, zx, zy);
   if (members) assert!(format == 3, ENotMemberZone) else assert!(format != 3, EMemberZone);
 
   // Authenticate the LIVE group: the member-list stream, or original derivation / the adjacent search-time commitment.
   let (template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed, index) = if (members) {
-    z95(world, zx, zy, spawn_id, config.team_size_bound(), true)
+    y154(world, zx, zy, spawn_id, config.team_size_bound(), true)
   } else {
-    let (t, x, z, gs, sa, g, ix) = z99(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
+    let (t, x, z, gs, sa, g, ix) = y158(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
     (t, vector<ID>[], 0, x, z, gs, sa, g, ix)
   };
 
   // travel verification: you must have been able to WALK from your checkpoint to the group (teach-don't-reject)
-  let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
-  checkpoint::verify_travel(world, &cp, mx, mz, now, pet_both);
+  let pet_both = world::pet_equipped(&cp) && pet_now;
+  world::verify_travel(world, &cp, mx, mz, now, pet_both);
 
   // ── WRITES: consume the group (set its bit) + advance the entry checkpoint to the group's position ──
-  z100(world, zx, zy, index);
+  y159(world, zx, zy, index);
   {
     let character = kiosk.borrow_mut(owner_cap, character_id);
     let pet = equipment::pet_equipped(character);
-    character_link::z2(character, wid, checkpoint::z12(mx, mz, now, pet), version);
+    character_link::y2(character, wid, world::y70(mx, mz, now, pet), version);
   };
 
   event::emit(MobGroupClaimed { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size });
   (wid, template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z99(
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y158(
   world: &World, zx: u32, zy: u32, spawn_id: u64, claim_proof: Option<GroupClaimProof>, team_bound: u64,
 ): (ID, u32, u32, u16, u64, u64, u64) {
   if (claim_proof.is_none()) {
     claim_proof.destroy_none();
-    return z96(world, zx, zy, spawn_id, team_bound)
+    return y155(world, zx, zy, spawn_id, team_bound)
   };
   let GroupClaimProof { index, template, x, z, group_size, group_seed, proof } = claim_proof.destroy_some();
   let uid = world::uid(world);
   let root_key = ZoneGroupRootKey { zx, zy };
   if (!df::exists(uid, root_key)) {
-    return z96(world, zx, zy, spawn_id, team_bound)
+    return y155(world, zx, zy, spawn_id, team_bound)
   };
   let key = ZoneKey { zx, zy };
   assert!(df::exists(uid, key), ESpawnNotFound);
@@ -590,46 +587,102 @@ fun z99(
     &stored.root, stored.count, object::id(world), zx, zy, zone.seed, zone.discovered_at_ms, index, spawn_id, template,
     x, z, group_size, group_seed, &proof,
   ), EBadGroupProof);
-  assert!(!z909(&zone.mob_bitmap, index), ESpawnNotFound);
+  assert!(!y164(&zone.mob_bitmap, index), ESpawnNotFound);
   (template, x, z, group_size, zone.discovered_at_ms, group_seed, index)
 }
 
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Set the consumed bit of derived mob group `index` in zone `(zx,zy)` — the write that replaced the row removal.
-fun z100(world: &mut World, zx: u32, zy: u32, index: u64) {
+fun y159(world: &mut World, zx: u32, zy: u32, index: u64) {
   let zone: &mut Zone = df::borrow_mut(world::uid_mut(world), ZoneKey { zx, zy });
-  z910(&mut zone.mob_bitmap, index);
+  y165(&mut zone.mob_bitmap, index);
+}
+
+// ╔════════════════ [ RELEASE THE GROUP (#609 — only a player VICTORY consumes it) ] ═ ]
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Put a consumed group BACK in the world at its spot: clear its consumed bit and bump its engagement round.
+/// §7 says a defeat costs only time — the mobs winning is not a reason for them to vanish, and without this the
+/// world's mob population drains as a pure function of player deaths. Package-internal on purpose: the ONLY
+/// caller is `aresrpg::fight::release_group`, which authenticates the defeat against the fight's derived address
+/// before asking for this write (this module owns the bitmap; that one owns the fight's semantics). The new round
+/// — the address namespace the next fight over the group will claim — rides the event.
+public(package) fun y76(world: &mut World, zx: u32, zy: u32, index: u64, spawn_id: u64, x: u32, z: u32) {
+  assert!(!mob_group_live(world, zx, zy, index), EGroupNotConsumed);
+  let wid = object::id(world);
+  let wuid = world::uid_mut(world);
+  {
+    let zone: &mut Zone = df::borrow_mut(wuid, ZoneKey { zx, zy });
+    y166(&mut zone.mob_bitmap, index);
+  };
+  let round = y160(wuid, zx, zy, spawn_id);
+  event::emit(MobGroupReleased { world: wid, spawn_id, x, z, round });
+}
+
+/// The group's ENGAGEMENT ROUND — 0 until the group has been released, +1 per release. `fight::create` reads it
+/// to namespace the fight's derived address; the release door reads it to authenticate an outcome against that
+/// same address. An undiscovered zone (no rounds DF) is 0, like every never-lost-to group.
+public fun group_round(world: &World, zx: u32, zy: u32, spawn_id: u64): u64 {
+  let key = ZoneRoundsKey { zx, zy };
+  if (!df::exists(world::uid(world), key)) return 0;
+  let stored: &ZoneRounds = df::borrow(world::uid(world), key);
+  if (stored.rounds.contains(&spawn_id)) *stored.rounds.get(&spawn_id) else 0
+}
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// +1 to the group's round, creating the zone's rounds map on first use. Returns the new value.
+fun y160(wuid: &mut UID, zx: u32, zy: u32, spawn_id: u64): u64 {
+  let key = ZoneRoundsKey { zx, zy };
+  if (!df::exists(wuid, key)) df::add(wuid, key, ZoneRounds { rounds: vec_map::empty() });
+  let stored: &mut ZoneRounds = df::borrow_mut(wuid, key);
+  if (!stored.rounds.contains(&spawn_id)) {
+    stored.rounds.insert(spawn_id, 1);
+    return 1
+  };
+  let r = stored.rounds.get_mut(&spawn_id);
+  *r = *r + 1;
+  *r
+}
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Drop a zone's rounds map (the re-search re-roll and the pre-destruction drain — both already discard the
+/// bitmaps, and a new seed means new spawn ids, so the old rounds name nothing).
+fun y161(wuid: &mut UID, zx: u32, zy: u32) {
+  let key = ZoneRoundsKey { zx, zy };
+  if (df::exists(wuid, key)) {
+    let ZoneRounds { rounds: _ } = df::remove(wuid, key);
+  };
 }
 
 // ╔════════════════ [ Gathering seam (package-internal derived-cell read + consume) ] ══ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Read a LIVE derived resource cell's (x, z, job, tier, template_id) by its derivation index. Aborts `EBadNode`
 /// (undiscovered zone / index past the derived range) or `ENodeEmpty` (already harvested — bit set). Immutable.
-public(package) fun z49(world: &World, zx: u32, zy: u32, node_index: u64): (u32, u32, u8, u8, ID) {
+public(package) fun y77(world: &World, zx: u32, zy: u32, node_index: u64): (u32, u32, u8, u8, ID) {
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), EBadNode);
   let zone: &Zone = df::borrow(world::uid(world), key);
   let (_sids, tpls, xs, zs, jobs, tiers) = derive_res(world, zx, zy, zone.seed);
   assert!(node_index < xs.length(), EBadNode);
-  assert!(!z909(&zone.res_bitmap, node_index), ENodeEmpty);
+  assert!(!y164(&zone.res_bitmap, node_index), ENodeEmpty);
   (xs[node_index], zs[node_index], jobs[node_index], tiers[node_index], tpls[node_index])
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Consume a resource cell: set its bit (one-harvest/one-bit design; the multi-charge `remaining`
 /// concept collapsed into the bitmap). Aborts `EBadNode` on an undiscovered zone, `ENodeEmpty` on a double
-/// harvest. The single live caller (`gathering::gather`) bounds `node_index` via `z49` in the SAME
+/// harvest. The single live caller (`gathering::gather`) bounds `node_index` via `y77` in the SAME
 /// tx, so this door does not re-derive the cell list (a phantom over-range bit is unreachable through the seam
 /// and harmless anyway — a re-search resets bitmaps).
-public(package) fun z50(world: &mut World, zx: u32, zy: u32, node_index: u64) {
+public(package) fun y78(world: &mut World, zx: u32, zy: u32, node_index: u64) {
   let key = ZoneKey { zx, zy };
   let wuid = world::uid_mut(world);
   assert!(df::exists(wuid, key), EBadNode);
   let zone: &mut Zone = df::borrow_mut(wuid, key);
-  assert!(!z909(&zone.res_bitmap, node_index), ENodeEmpty);
-  z910(&mut zone.res_bitmap, node_index);
+  assert!(!y164(&zone.res_bitmap, node_index), ENodeEmpty);
+  y165(&mut zone.res_bitmap, node_index);
 }
 
 // ╔════════════════ [ Burn / teardown — the module owning ZoneKey/Zone drains them (cap + version gated) ] ═ ]
@@ -653,6 +706,7 @@ public fun drain_zones(cap: &AdminCap, world: &mut World, zxs: vector<u32>, zys:
     if (df::exists(wuid, root_key)) {
       let ZoneGroupCommitment { root: _, count: _ } = df::remove(wuid, root_key);
     };
+    y161(wuid, zxs[i], zys[i]);
     i = i + 1;
   };
   event::emit(ZonesDrained { world: wid, zones_removed: removed });
@@ -669,22 +723,22 @@ public fun zone_exists(world: &World, zx: u32, zy: u32): bool {
   df::exists(world::uid(world), ZoneKey { zx, zy })
 }
 
-public fun zone_discovered_at(world: &World, zx: u32, zy: u32): u64 { z102(world, zx, zy).discovered_at_ms }
-public fun zone_seed(world: &World, zx: u32, zy: u32): u64 { z102(world, zx, zy).seed }
+public fun zone_discovered_at(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).discovered_at_ms }
+public fun zone_seed(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).seed }
 
 /// The COST-SHAPE probes: stored bitmap byte lengths (0 right after a search — bits grow lazily on consume).
 /// Together with the `Zone` struct shape these PROVE a search stores nothing per-mob/per-cell.
-public fun mob_bitmap_bytes(world: &World, zx: u32, zy: u32): u64 { z102(world, zx, zy).mob_bitmap.length() }
-public fun res_bitmap_bytes(world: &World, zx: u32, zy: u32): u64 { z102(world, zx, zy).res_bitmap.length() }
+public fun mob_bitmap_bytes(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).mob_bitmap.length() }
+public fun res_bitmap_bytes(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).res_bitmap.length() }
 
 /// Is derived mob group `i` still LIVE (its consumed bit clear)? The bit-side probe `zones_view` filters with.
 public fun mob_group_live(world: &World, zx: u32, zy: u32, i: u64): bool {
-  !z909(&z102(world, zx, zy).mob_bitmap, i)
+  !y164(&y163(world, zx, zy).mob_bitmap, i)
 }
 
 /// One-harvest/one-bit law: 1 while resource cell `i` is live, 0 once harvested (the legacy charge counter's shape).
 public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
-  if (z909(&z102(world, zx, zy).res_bitmap, i)) 0 else 1
+  if (y164(&y163(world, zx, zy).res_bitmap, i)) 0 else 1
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
@@ -695,12 +749,12 @@ public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
 /// over a World, and the foundation kernel is pure over scalars. Every in-package reader of a zone's groups goes
 /// through this door, so a zone can never be read with a derivation other than the one it was written with.
 public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
-  let format = z101(world, zx, zy);
+  let format = y162(world, zx, zy);
   if (format == 3) { // 3 = member lists — project them away; ids, positions and sizes are what this door promises
-    let (sids, tpls, _members, xs, zs, sizes, gseeds, _progress) = zone_comp::z45(world, zx, zy, seed, team_bound);
+    let (sids, tpls, _members, xs, zs, sizes, gseeds, _progress) = zone_comp::y72(world, zx, zy, seed, team_bound);
     (sids, tpls, xs, zs, sizes, gseeds)
   } else if (format == 2) { // 2 = zone_gen lattice commitment
-    zone_comp::z44(world, zx, zy, seed, team_bound)
+    zone_comp::y71(world, zx, zy, seed, team_bound)
   } else {
     zone_comp::derive_mobs(world, zx, zy, seed, team_bound)
   }
@@ -709,53 +763,53 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
 /// The resource twin of `derive_mobs` — the SAME commitment byte selects both streams, so a zone's mobs and its
 /// resource cells are always derived by one algorithm.
 public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  let format = z101(world, zx, zy);
+  let format = y162(world, zx, zy);
   // Formats 2 AND 3 are both LATTICE zones — the member list changed what a group HOLDS, never where anything sits.
   if (format == 2 || format == 3) {
-    zone_comp::z46(world, zx, zy, seed)
+    zone_comp::y73(world, zx, zy, seed)
   } else {
     zone_comp::derive_res(world, zx, zy, seed)
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The zone's derivation format, read off its stored commitment. A MISSING commitment reports `1` (legacy) —
 /// the zone predates commitments entirely, so its groups were placed by the spaced sampler.
-fun z101(world: &World, zx: u32, zy: u32): u8 {
+fun y162(world: &World, zx: u32, zy: u32): u8 {
   let key = ZoneGroupRootKey { zx, zy };
   if (!df::exists(world::uid(world), key)) return 1; // no commitment = a pre-commitment zone = legacy
   let stored: &ZoneGroupCommitment = df::borrow(world::uid(world), key);
   zone_gen::mob_group_commitment_format(&stored.root)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-fun z102(world: &World, zx: u32, zy: u32): &Zone {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y163(world: &World, zx: u32, zy: u32): &Zone {
   df::borrow(world::uid(world), ZoneKey { zx, zy })
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Read bit `i` of a lazily-grown bitmap — a byte past the stored length reads 0 (live). The JS mirror
 /// (`zone_derive.js::bit_get`) uses the identical layout: byte `i / 8`, bit `i % 8`.
-fun z909(bm: &vector<u8>, i: u64): bool {
+fun y164(bm: &vector<u8>, i: u64): bool {
   let byte = i / 8;
   if (byte >= bm.length()) return false;
   (bm[byte] >> ((i % 8) as u8)) & 1 == 1
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Set bit `i`, growing the bitmap with zero bytes up to the needed byte (lazy — a fresh zone stores NO bytes).
-fun z910(bm: &mut vector<u8>, i: u64) {
+fun y165(bm: &mut vector<u8>, i: u64) {
   let byte = i / 8;
   while (bm.length() <= byte) { bm.push_back(0); };
   let b = &mut bm[byte];
   *b = *b | (1 << ((i % 8) as u8));
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
-/// Clear bit `i`, then pop trailing zero bytes — the exact inverse of `z910`, so a released group leaves the
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+/// Clear bit `i`, then pop trailing zero bytes — the exact inverse of `y165`, so a released group leaves the
 /// bitmap byte-identical to what it was before its claim (the cost shape stays lazy, and the JS mirror's
-/// `z909` reads a shorter vector as all-live).
-fun z515(bm: &mut vector<u8>, i: u64) {
+/// `y164` reads a shorter vector as all-live).
+fun y166(bm: &mut vector<u8>, i: u64) {
   let byte = i / 8;
   if (byte >= bm.length()) return;
   let b = &mut bm[byte];
@@ -772,7 +826,7 @@ public fun set_lattice_commitment_for_testing(world: &mut World, zx: u32, zy: u3
   let seed = zone_seed(world, zx, zy);
   let now = zone_discovered_at(world, zx, zy);
   let wid = object::id(world);
-  let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::z44(world, zx, zy, seed, team_bound);
+  let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::y71(world, zx, zy, seed, team_bound);
   let root = zone_gen::mob_group_commitment(wid, zx, zy, seed, now, &sids, &tpls, &xs, &zs, &sizes, &gseeds);
   write_commitment_for_testing(world, zx, zy, root, sids.length());
 }
@@ -806,12 +860,12 @@ fun write_commitment_for_testing(world: &mut World, zx: u32, zy: u32, root: vect
 #[test_only]
 /// The zone's stored mob-bitmap BYTES — what the client's `zone_derive.js` mirror reads verbatim. Tests pin the
 /// exact bytes so the sim's parity fixture (`packages/sim/test/fixtures/zone_group_release.json`) has provenance.
-public fun mob_bitmap_for_testing(world: &World, zx: u32, zy: u32): vector<u8> { z102(world, zx, zy).mob_bitmap }
+public fun mob_bitmap_for_testing(world: &World, zx: u32, zy: u32): vector<u8> { y163(world, zx, zy).mob_bitmap }
 
 #[test_only]
 public fun reopen_mob_group_for_testing(world: &mut World, zx: u32, zy: u32, index: u64) {
   let zone: &mut Zone = df::borrow_mut(world::uid_mut(world), ZoneKey { zx, zy });
-  z515(&mut zone.mob_bitmap, index);
+  y166(&mut zone.mob_bitmap, index);
 }
 
 #[test_only]
@@ -839,7 +893,7 @@ public fun join_for_testing(
   clock: &Clock,
 ) {
   let mut gen = random::new_generator_for_testing();
-  z92(world, kiosk, pkcap, character_id, config, version, clock, &mut gen);
+  y151(world, kiosk, pkcap, character_id, config, version, clock, &mut gen);
 }
 
 #[test_only]
@@ -855,5 +909,5 @@ public fun search_for_testing(
   clock: &Clock,
 ) {
   let mut gen = random::new_generator_for_testing();
-  z93(world, kiosk, pkcap, character_id, x, z, config, version, clock, &mut gen);
+  y152(world, kiosk, pkcap, character_id, x, z, config, version, clock, &mut gen);
 }

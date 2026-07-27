@@ -72,7 +72,7 @@ export const POLICY_STEPS = [
       'rules::royalty_rule::add',
       'rules::kiosk_lock_rule::add',
       'rules::personal_kiosk_rule::add',
-      'core::item_listing_rule::add',
+      'core::item::add_listing_rule',
     ],
   },
   {

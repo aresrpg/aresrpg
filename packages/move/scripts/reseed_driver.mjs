@@ -19,7 +19,7 @@ import {
   fixed_gas_budget_mist,
   resolve_mode,
 } from './reseed_plan.mjs'
-import { build_world_leg } from './reseed_world_plan.mjs'
+import { build_world_leg, role_drift_report } from './reseed_world_plan.mjs'
 
 const script_dir = dirname(file_url_to_path(import.meta.url))
 const repo_dir = resolve(script_dir, '..', '..', '..')
@@ -158,12 +158,13 @@ function print_plan(plan, plan_path) {
           `rooms -${leg.totals.rooms.removed}/+${leg.totals.rooms.added}`
       )
     if (leg.role_projection_drift?.length) {
-      console.log(
-        `  mob roles: ${leg.role_projection_drift.length} projection-only differences; no chain calls`
-      )
+      // DERIVED from the emitted calls, never a fixed classification: role drives the boss mask now, so a
+      // normal↔boss change does reach chain and the operator has to be told that.
+      const report = role_drift_report(leg)
+      console.log(`  ${report.line}`)
       for (const role of leg.role_projection_drift)
         console.log(
-          `    SKIP ${role.mob}: ${role.manifest_role} -> ${role.seed_role}`
+          `    ${report.row_prefix} ${role.mob}: ${role.manifest_role} -> ${role.seed_role}`
         )
     }
     for (const blocker of leg.blockers) console.log(`  BLOCKER ${blocker}`)

@@ -3,31 +3,21 @@
 /// FIGHT-SEAM tests: the cross-package reads/writes the `aresrpg_fight` lane consumes — `zones::claim_mob_group`
 /// (travel-verify + entry checkpoint + free the spawn; happy path, double-claim, travel-too-far), the
 /// `character_link::combat_stats` snapshot (fresh-character defaults), the cap-gated progression writes
-/// `z10` (stored-level + cap-discard, wrong-cap abort) and `z11`, and an owner-gated
+/// `y12` (stored-level + cap-discard, wrong-cap abort) and `y13`, and an owner-gated
 /// `flip_world` dungeon seam. All run against the REAL value paths on the `test_world` harness.
 #[test_only]
 module aresrpg::fight_seam_tests;
 
-use aresrpg::{
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  extension,
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zones,
-  zones_view
-};
+use aresrpg::{character_link, config::GameConfig, extension, test_world, version::Version, world::{Self, World}, zones, zones_view};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::{string::String, unit_test::assert_eq};
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
 
 // ── mirrored error values (location disambiguates which module aborted) ──
 const EWrongCapNamespace: u64 = 101; // character_link
-const ETravelTooFar: u64 = 102; // checkpoint
+const ETravelTooFar: u64 = 121; // checkpoint
 const ESpawnNotFound: u64 = 108; // zones
-const EAlreadyFullHp: u64 = 105; // character_link (heal_hp — blocked when pointless)
+const EAlreadyFullHp: u64 = 105; // character_link (y14 — blocked when pointless)
 
 const HUGE_ELAPSED: u64 = 10_000_000_000; // dwarfs any in-zone distance → travel always passes
 const MOB_TEMPLATE: address = @0xB0B; // the mob entry `test_world::make_world` seeds
@@ -81,7 +71,7 @@ fun do_claim(sc: &mut Scenario, who: address, cid: ID, spawn_id: u64, now: u64):
   let wid = object::id(&w);
   let ticket = zones::claim_mob_group(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
   // the ticket is the provenance contract: it must bind the CLAIMED world + character + spawn, not just the facts
-  let (tw, tc, tsid, t, x, z, gs, sms, _seed) = zones::z47(ticket);
+  let (tw, tc, tsid, t, x, z, gs, sms, _seed) = zones::y74(ticket);
   assert!(tw == wid);
   assert!(tc == cid);
   assert!(tsid == spawn_id);
@@ -104,7 +94,7 @@ fun do_claim_in_zone(sc: &mut Scenario, who: address, cid: ID, zx: u32, zy: u32,
   clk.set_for_testing(now);
   let wid = object::id(&w);
   let ticket = zones::claim_mob_group_in_zone(&mut w, &mut k, &pkcap, cid, zx, zy, spawn_id, &cfg, &ver, &clk);
-  let (tw, tc, tsid, t, x, z, gs, sms, _seed) = zones::z47(ticket);
+  let (tw, tc, tsid, t, x, z, gs, sms, _seed) = zones::y74(ticket);
   assert!(tw == wid);
   assert!(tc == cid);
   assert!(tsid == spawn_id);
@@ -122,7 +112,7 @@ fun pin_checkpoint(sc: &mut Scenario, who: address, cid: ID, wid: ID, x: u32, z:
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z2(chr, wid, checkpoint::z12(x, z, time, false), &ver);
+    character_link::y2(chr, wid, world::y70(x, z, time, false), &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
@@ -133,12 +123,12 @@ fun occupied_zone(sc: &mut Scenario, who: address, cid: ID, wid: ID): (u32, u32)
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
-  let (zx, zy) = world::zone_of(&w, checkpoint::x(&cp), checkpoint::z(&cp));
+  let (zx, zy) = world::zone_of(&w, world::x(&cp), world::z(&cp));
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   (zx, zy)
 }
 
-fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): checkpoint::Checkpoint {
+fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): world::Checkpoint {
   sc.next_tx(who);
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -187,7 +177,7 @@ fun grant_xp(sc: &mut Scenario, who: address, cid: ID, xp: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z10(&cfg, chr, xp, &ver);
+    character_link::y12(&cfg, chr, xp, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }
@@ -199,12 +189,12 @@ fun write_hp(sc: &mut Scenario, who: address, cid: ID, hp: u64, now: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z11(chr, hp, now, &ver);
+    character_link::y13(chr, hp, now, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
 
-/// Heal `amount` HP on `who`'s character `cid` at `now` through the NS_PROGRESSION-cap `heal_hp` primitive (the
+/// Heal `amount` HP on `who`'s character `cid` at `now` through the NS_PROGRESSION-cap `y14` primitive (the
 /// consumable-use seam; a throwaway test progression cap stands in for the fight-registry-custodied one).
 fun heal(sc: &mut Scenario, who: address, cid: ID, amount: u64, now: u64) {
   sc.next_tx(who);
@@ -214,7 +204,7 @@ fun heal(sc: &mut Scenario, who: address, cid: ID, amount: u64, now: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::heal_hp(&cfg, chr, amount, now, &ver);
+    character_link::y14(&cfg, chr, amount, now, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }
@@ -247,7 +237,7 @@ fun discovered(sc: &mut Scenario): (ID, ID, u32, u32) {
   do_join(sc, test_world::owner(), cid, 1000);
   let (zx, zy) = occupied_zone(sc, test_world::owner(), cid, wid);
   let cp = cp_of(sc, test_world::owner(), cid, wid);
-  do_search(sc, test_world::owner(), cid, checkpoint::x(&cp), checkpoint::z(&cp), 2000);
+  do_search(sc, test_world::owner(), cid, world::x(&cp), world::z(&cp), 2000);
   (cid, wid, zx, zy)
 }
 
@@ -277,9 +267,9 @@ fun claim_returns_facts_writes_checkpoint_frees_spawn() {
 
   // entry checkpoint advanced to the group; the spawn freed (2 → 1)
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), mx);
-  assert_eq!(checkpoint::z(&cp), mz);
-  assert_eq!(checkpoint::time_ms(&cp), 2000 + HUGE_ELAPSED);
+  assert_eq!(world::x(&cp), mx);
+  assert_eq!(world::z(&cp), mz);
+  assert_eq!(world::time_ms(&cp), 2000 + HUGE_ELAPSED);
   sc.next_tx(test_world::owner());
   let w2 = sc.take_shared<World>();
   assert_eq!(zones_view::mob_group_count(&w2, zx, zy), 1);
@@ -300,7 +290,7 @@ fun claim_double_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 fun claim_travel_too_far_aborts() {
   let mut sc = ts::begin(test_world::owner());
   let (cid, wid, zx, zy) = discovered(&mut sc);
@@ -352,8 +342,8 @@ fun claim_in_zone_from_a_different_searched_zone_passes() {
   assert_eq!(zones_view::mob_group_count(&w2, zx, zy), 1);
   ts::return_shared(w2);
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), mx);
-  assert_eq!(checkpoint::z(&cp), mz);
+  assert_eq!(world::x(&cp), mx);
+  assert_eq!(world::z(&cp), mz);
   sc.end();
 }
 
@@ -367,7 +357,7 @@ fun claim_in_zone_unsearched_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 /// The proximity gate holds on the new door too: checkpoint pinned to the FAR corner of the target zone, 1s
 /// later (budget ~5.5 blocks/s) — ≥256 blocks away → ETravelTooFar (same math the occupied-zone door enforces).
 fun claim_in_zone_travel_too_far_aborts() {
@@ -432,7 +422,7 @@ fun combat_stats_fresh_character_defaults() {
   sc.end();
 }
 
-// ╔════════════════ [ SEAM 3 — z10 / z11 ] ══════════════ ]
+// ╔════════════════ [ SEAM 3 — y12 / y13 ] ══════════════ ]
 
 #[test]
 fun grant_fight_xp_raises_stored_level_and_cap_discards() {
@@ -475,7 +465,7 @@ fun current_hp_regenerates_stored_block() {
 }
 
 #[test]
-/// heal_hp SETTLES lazy regen FIRST then adds: wounded to 25/70 @5000, healed +20 @10000. Over 5000ms senshi L1
+/// y14 SETTLES lazy regen FIRST then adds: wounded to 25/70 @5000, healed +20 @10000. Over 5000ms senshi L1
 /// regenerates 56/75000×5000 = +3 → 28, THEN the heal adds 20 → 48 (a naive add-without-regen would read 45).
 fun heal_hp_settles_regen_then_adds() {
   let mut sc = ts::begin(test_world::owner());

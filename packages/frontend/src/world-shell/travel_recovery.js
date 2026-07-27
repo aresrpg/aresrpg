@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// ETravelTooFar RECOVERY — turn checkpoint::102 into an in-place return to chain truth. The failed tx is
+// ETravelTooFar RECOVERY — turn world::121 into an in-place return to chain truth. The failed tx is
 // NEVER retried here (an executed failure may already have burned gas): the action only re-reads the character's
 // proven checkpoint and asks the live voxel session to move its body there. The player's original action remains
 // manual after the resync.
@@ -14,7 +14,7 @@ import { parse_move_abort } from '../game/core/abort_copy.js'
 /** @param {unknown} error @param {(error: unknown) => any} parse_abort */
 export function is_travel_too_far(error, parse_abort = parse_move_abort) {
   const abort = parse_abort(error)
-  return abort?.module === 'checkpoint' && abort?.code === 102
+  return abort?.module === 'world' && abort?.code === 121
 }
 
 /**
@@ -68,7 +68,7 @@ export function create_travel_recovery({ parse_abort, translate, add_persistent,
       }
     },
 
-    /** Offer the one-click recovery only for checkpoint::102; every other failure is untouched. */
+    /** Offer the one-click recovery only for world::121 (ETravelTooFar); every other failure is untouched. */
     offer(error) {
       if (!is_travel_too_far(error, parse_abort)) return false
       if (toast_id != null) remove(toast_id)

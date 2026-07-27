@@ -5,13 +5,7 @@
 #[test_only]
 module aresrpg::template_stats_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  item::{Self, ItemTemplate},
-  item_stats,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, item::{Self, ItemTemplate}, item_stats, version::{Self, Version}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts, Scenario};
 
@@ -24,7 +18,7 @@ fun init_all(sc: &mut Scenario) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
@@ -73,10 +67,14 @@ fun set_fixture_stats(cap: &AdminCap, tmpl: &mut ItemTemplate, ver: &Version, sc
   admin::set_template_stats(
     cap,
     tmpl,
-    32_769, 32_770, 32_771, 32_772, 32_773, 32_774, 32_775, 32_776, 32_777,
-    32_778, 32_779, 32_780, 32_781, 32_782, 32_783, 32_784, 32_785,
-    32_801, 32_802, 32_803, 32_804, 32_805, 32_806, 32_807, 32_808, 32_809,
-    32_810, 32_811, 32_812, 32_813, 32_814, 32_815, 32_816, 32_817,
+    item_stats::new(
+      32_769, 32_770, 32_771, 32_772, 32_773, 32_774, 32_775, 32_776, 32_777,
+      32_778, 32_779, 32_780, 32_781, 32_782, 32_783, 32_784, 32_785,
+    ),
+    item_stats::new(
+      32_801, 32_802, 32_803, 32_804, 32_805, 32_806, 32_807, 32_808, 32_809,
+      32_810, 32_811, 32_812, 32_813, 32_814, 32_815, 32_816, 32_817,
+    ),
     ver,
     sc.ctx(),
   );

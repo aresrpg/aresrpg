@@ -9,14 +9,7 @@
 #[test_only]
 module aresrpg::item_listing_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  item::{Self, Item, ItemTemplate},
-  item_listing_rule,
-  lot_rule,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
 use std::unit_test::{assert_eq, destroy};
 use sui::{
   package::Publisher,
@@ -28,8 +21,8 @@ const OWNER: address = @0xA;
 const DUMMY_KIOSK: address = @0xCAFE; // a stand-in `from` kiosk id for the request
 
 // ── mirrored error consts (the `location` in #[expected_failure] disambiguates the aborting module) ──
-const EZeroAmount: u64 = 101; // item_listing_rule
-const EWrongItem: u64 = 102; // item_listing_rule
+const EZeroAmount: u64 = 130; // item::EListingZeroAmount // item_listing_rule
+const EWrongItem: u64 = 131; // item::EListingWrongItem // item_listing_rule
 
 // ╔════════════════ [ Harness ] ══════════════════════════════════════════════ ]
 
@@ -40,7 +33,7 @@ fun boot(sc: &mut Scenario): ID {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let acap = sc.take_from_sender<AdminCap>();
@@ -54,8 +47,8 @@ fun boot(sc: &mut Scenario): ID {
   sc.next_tx(OWNER);
   let publisher = sc.take_from_sender<Publisher>();
   let (mut policy, cap) = item::create_item_policy(&publisher, &ver, sc.ctx());
-  item_listing_rule::add(&mut policy, &cap); // ceremony: attach the zero-amount gate
-  lot_rule::add(&mut policy, &cap); // universal Item policy also carries the forced-lot gate
+  item::add_listing_rule(&mut policy, &cap); // ceremony: attach the zero-amount gate
+  item::add_lot_rule(&mut policy, &cap); // universal Item policy also carries the forced-lot gate
   transfer::public_share_object(policy);
   transfer::public_transfer(cap, OWNER);
   transfer::public_transfer(publisher, OWNER);
@@ -78,8 +71,8 @@ fun nonzero_stack_proves_and_confirms() {
   let item = item::mint_stack_for_testing(&tmpl, 10, sc.ctx()); // legal lot amount 10
   let iid = object::id(&item);
   let mut req = transfer_policy::new_request<Item>(iid, 0, object::id_from_address(DUMMY_KIOSK));
-  item_listing_rule::prove_amount(&item, &mut req); // 10 > 0 → receipt added
-  lot_rule::prove(&item, &mut req); // 10 is a legal stack lot
+  item::prove_listing_amount(&item, &mut req); // 10 > 0 → receipt added
+  item::prove_lot(&item, &mut req); // 10 is a legal stack lot
   let (i, _p, _f) = transfer_policy::confirm_request(&policy, req); // 2 receipts == 2 rules → OK
   assert_eq!(i, iid);
   destroy(item);
@@ -87,7 +80,7 @@ fun nonzero_stack_proves_and_confirms() {
   sc.end();
 }
 
-#[test, expected_failure(abort_code = EZeroAmount, location = aresrpg::item_listing_rule)]
+#[test, expected_failure(abort_code = EZeroAmount, location = aresrpg::item)]
 /// The ghost dodge is blocked: an amount-0 instance can never complete a sale — `prove_amount` aborts EZeroAmount,
 /// so the buyer can never satisfy the receipt and `confirm_request` is unreachable.
 fun zero_amount_ghost_sale_refused() {
@@ -99,15 +92,15 @@ fun zero_amount_ghost_sale_refused() {
   let ghost = item::mint_zero_stack_for_testing(&tmpl, sc.ctx()); // amount 0
   let iid = object::id(&ghost);
   let mut req = transfer_policy::new_request<Item>(iid, 0, object::id_from_address(DUMMY_KIOSK));
-  item_listing_rule::prove_amount(&ghost, &mut req); // ABORTS: amount 0
-  lot_rule::prove(&ghost, &mut req); // unreachable — every Item confirm site still wires the universal lot receipt
+  item::prove_listing_amount(&ghost, &mut req); // ABORTS: amount 0
+  item::prove_lot(&ghost, &mut req); // unreachable — every Item confirm site still wires the universal lot receipt
   let (_i, _p, _f) = transfer_policy::confirm_request(&policy, req); // unreachable — type-check only
   destroy(ghost);
   ts::return_shared(tmpl); ts::return_shared(policy);
   sc.end();
 }
 
-#[test, expected_failure(abort_code = EWrongItem, location = aresrpg::item_listing_rule)]
+#[test, expected_failure(abort_code = EWrongItem, location = aresrpg::item)]
 /// Evasion guard: a buyer purchasing an amount-0 ghost cannot satisfy the receipt by proving a DIFFERENT non-zero
 /// stack they own — the request's item id differs from the proven item → aborts EWrongItem.
 fun wrong_item_substitution_refused() {
@@ -119,8 +112,8 @@ fun wrong_item_substitution_refused() {
   let real = item::mint_stack_for_testing(&tmpl, 5, sc.ctx()); // a non-zero stack the buyer owns
   let bogus = object::id_from_address(@0xDEAD); // the item being PURCHASED is a different (ghost) instance
   let mut req = transfer_policy::new_request<Item>(bogus, 0, object::id_from_address(DUMMY_KIOSK));
-  item_listing_rule::prove_amount(&real, &mut req); // ABORTS: id(real) != bogus
-  lot_rule::prove(&real, &mut req); // unreachable — every Item confirm site still wires the universal lot receipt
+  item::prove_listing_amount(&real, &mut req); // ABORTS: id(real) != bogus
+  item::prove_lot(&real, &mut req); // unreachable — every Item confirm site still wires the universal lot receipt
   let (_i, _p, _f) = transfer_policy::confirm_request(&policy, req); // unreachable — type-check only
   destroy(real);
   ts::return_shared(tmpl); ts::return_shared(policy);

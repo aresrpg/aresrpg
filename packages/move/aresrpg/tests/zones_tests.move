@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONES tests: world MEMBERSHIP (first join rolls a spawn + inits the checkpoint; rejoin RESTORES it — never a
 /// re-roll or teleport-home; required-level gate) and ZONE DISCOVERY (search proves the claimed STANDING POSITION:
-/// travel-verified from the checkpoint and the checkpoint ADVANCES there — the S-71 walked-to-zone unlock; a
+/// travel-verified from the checkpoint and the checkpoint ADVANCES there — the S-71 walked-to-zone y16; a
 /// too-far/too-fast claim aborts; a re-search before TTL aborts; a re-search after TTL RE-ROLLS the zone — new
 /// seed, bitmaps reset (the search-cost rework's successor of the live-row top-up); a frozen game refuses). Under
 /// the rework a search stores ONLY {seed, bitmaps} — every spawn getter DERIVES (zones_view/zone_comp), and the
@@ -11,25 +11,14 @@
 #[test_only]
 module aresrpg::zones_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  test_world,
-  version::{Self, Version},
-  world::{Self, World},
-  zone_comp,
-  zones,
-  zones_view
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, test_world, version::{Self, Version}, world::{Self, World}, zone_comp, zones, zones_view};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}};
 
 // ── mirrored error values ──
 const ELevelTooLow: u64 = 101; // zones
-const ETravelTooFar: u64 = 102; // checkpoint (search travel-verifies the claimed position)
+const ETravelTooFar: u64 = 121; // checkpoint (search travel-verifies the claimed position)
 const EZoneFresh: u64 = 105; // zones
 const ENodeEmpty: u64 = 107; // zones (double-harvest of one derived cell)
 const EBadDrainInput: u64 = 109; // zones (drain_zones: mismatched zx/zy list lengths)
@@ -75,7 +64,7 @@ fun do_search(sc: &mut Scenario, who: address, cid: ID, x: u32, z: u32, now: u64
 }
 
 /// The checkpoint a character holds for the world (by value).
-fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): checkpoint::Checkpoint {
+fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): world::Checkpoint {
   sc.next_tx(who);
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -88,7 +77,7 @@ fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): checkpoint::Checkp
 /// The character's checkpoint POSITION (what a search now claims + travel-proves).
 fun cp_pos(sc: &mut Scenario, who: address, cid: ID, wid: ID): (u32, u32) {
   let cp = cp_of(sc, who, cid, wid);
-  (checkpoint::x(&cp), checkpoint::z(&cp))
+  (world::x(&cp), world::z(&cp))
 }
 
 /// The zone the character currently occupies (derived from its checkpoint).
@@ -96,7 +85,7 @@ fun occupied_zone(sc: &mut Scenario, who: address, cid: ID, wid: ID): (u32, u32)
   let cp = cp_of(sc, who, cid, wid);
   sc.next_tx(who);
   let w = sc.take_shared<World>();
-  let (zx, zy) = world::zone_of(&w, checkpoint::x(&cp), checkpoint::z(&cp));
+  let (zx, zy) = world::zone_of(&w, world::x(&cp), world::z(&cp));
   ts::return_shared(w);
   (zx, zy)
 }
@@ -118,12 +107,12 @@ fun first_join_spawns_in_zone_and_checkpoints() {
   do_join(&mut sc, test_world::owner(), cid, 1000);
 
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::time_ms(&cp), 1000);
+  assert_eq!(world::time_ms(&cp), 1000);
   // spawn lands inside the 1000×1000 box CENTERED on the world center (bounds/2 = the client's signed-coord
   // origin, D186 — the old corner roll stranded every first search ~250k blocks from the render; r5 P0 07-11)
   let center = 500_000 / 2; // DEFAULT_BOUND / 2
-  assert!(checkpoint::x(&cp) >= center - 500 && checkpoint::x(&cp) < center + 500);
-  assert!(checkpoint::z(&cp) >= center - 500 && checkpoint::z(&cp) < center + 500);
+  assert!(world::x(&cp) >= center - 500 && world::x(&cp) < center + 500);
+  assert!(world::z(&cp) >= center - 500 && world::z(&cp) < center + 500);
 
   sc.next_tx(test_world::owner());
   let k = sc.take_shared<Kiosk>();
@@ -146,9 +135,9 @@ fun rejoin_restores_checkpoint_not_rerolled() {
   let second = cp_of(&mut sc, test_world::owner(), cid, wid);
 
   // rejoin restored the EXACT prior checkpoint — position AND the old clock (never re-rolled, never re-stamped)
-  assert_eq!(checkpoint::x(&second), checkpoint::x(&first));
-  assert_eq!(checkpoint::z(&second), checkpoint::z(&first));
-  assert_eq!(checkpoint::time_ms(&second), 1000); // NOT 5000 — travel debt preserved
+  assert_eq!(world::x(&second), world::x(&first));
+  assert_eq!(world::z(&second), world::z(&first));
+  assert_eq!(world::time_ms(&second), 1000); // NOT 5000 — travel debt preserved
   sc.end();
 }
 
@@ -261,9 +250,9 @@ fun search_walked_to_fresh_zone_passes_and_advances_checkpoint() {
   assert_eq!(zones_view::mob_group_count(&w, zx, zy), 2);
   ts::return_shared(w);
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), 2000); // discovery is position-proving — the checkpoint advanced
-  assert_eq!(checkpoint::z(&cp), 2000);
-  assert_eq!(checkpoint::time_ms(&cp), now);
+  assert_eq!(world::x(&cp), 2000); // discovery is position-proving — the checkpoint advanced
+  assert_eq!(world::z(&cp), 2000);
+  assert_eq!(world::time_ms(&cp), now);
   sc.end();
 }
 
@@ -288,7 +277,7 @@ fun discovered_zone_resource_getters() {
   sc.end();
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 /// Too far, too fast: claiming a standing position ≥1000 blocks out 1s after spawn (budget ~5.5 blocks) refuses —
 /// the travel verify is the security that REPLACED the occupancy lock.
 fun search_too_far_too_fast_aborts() {
@@ -326,7 +315,7 @@ fun research_after_ttl_rerolls_zone_and_resets_consumption() {
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
   let seed_a = zones::zone_seed(&w, zx, zy);
-  zones::z50(&mut w, zx, zy, 0);
+  zones::y78(&mut w, zx, zy, 0);
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 1);
   assert_eq!(zones::res_bitmap_bytes(&w, zx, zy), 1); // the consume grew the bitmap by exactly one byte
   ts::return_shared(w);
@@ -568,7 +557,7 @@ fun search_non_gather_entry_single_cell_one_harvest() {
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 1); // NOT clustered — a single cell
   assert_eq!(zones::resource_remaining(&w, zx, zy, 0), 1); // one-bit law: 1 live harvest, NEVER the qty band
   assert_eq!(zones_view::resource_job(&w, zx, zy, 0), 5);
-  zones::z50(&mut w, zx, zy, 0); // harvest it once
+  zones::y78(&mut w, zx, zy, 0); // harvest it once
   assert_eq!(zones::resource_remaining(&w, zx, zy, 0), 0); // consumed — the bit, not a counter, went to 0
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 0);
   ts::return_shared(w);
@@ -587,8 +576,8 @@ fun consume_resource_cell_twice_aborts() {
   do_search(&mut sc, test_world::owner(), cid, px, pz, 2000);
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
-  zones::z50(&mut w, zx, zy, 0);
-  zones::z50(&mut w, zx, zy, 0); // ENodeEmpty
+  zones::y78(&mut w, zx, zy, 0);
+  zones::y78(&mut w, zx, zy, 0); // ENodeEmpty
   abort
 }
 

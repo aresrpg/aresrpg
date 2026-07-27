@@ -740,7 +740,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
             report_error(error, { area: 'fight-entry', action: 'world_engage_presentation' }),
         })
       )
-      const { fight_id } = await submitted
+      const { fight_id, group } = await submitted
       const { world_id, is_public } = request.payload
       // MOUNT the tactical board on the minted fight — the create receipt carries its id. Same run-pass-less
       // session the reconnect leg enters; the shared dungeon store's refresh/sync_engine paints the board+HUD.
@@ -753,7 +753,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
         const tpl = resolve_template(e.row.template_id)
         if (tpl?.name)
           use_dungeon.getState().note_group_identity(e.row.template_id, tpl.name, tpl.min_level, tpl.element)
-        enter_world_fight({ fight_id, world_id, character_id, is_public })
+        // The claimed group rides into the session as a FACT (#609): a defeat gives exactly this group back.
+        enter_world_fight({ fight_id, world_id, character_id, is_public, world_group: group ?? null })
       }
       // THE CLAIM RECEIPT through the door: removes the row (tombstoned against the lagging poll), advances
       // checkpoint+hunt_zone to the group, emits the fight_entry handoff. The re-poll stays for freshness.

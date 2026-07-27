@@ -255,6 +255,9 @@ const cleared_session = (/** @type {string} */ phase) => ({
   fight_started_at_ms: null,
   fight_start_partial: false,
   world_id: null,
+  // #609 — the mob group this world fight CLAIMED ({world_id,zx,zy,index}); a defeat gives exactly it back at
+  // settlement. Null for a dungeon room fight and for any session that did not come through a claim.
+  world_group: null,
   template_id: null,
   dungeon: null,
   run: null,
@@ -300,6 +303,8 @@ export const use_dungeon = create((set, get) => ({
   owned_team_settlement_blocked: false,
   /** @type {string | null} the run's World id */
   world_id: null,
+  /** @type {{world_id:string,zx:number,zy:number,index:number} | null} the claimed group a defeat releases (#609) */
+  world_group: null,
   /** Legacy alias some surfaces label by — the session identity. @type {string | null} */
   dungeon_id: null,
   /** @type {string | null} */
@@ -1589,6 +1594,7 @@ export const use_dungeon = create((set, get) => ({
       fight_started_at_ms: null,
       fight_start_partial: false,
       world_id: null,
+      world_group: null, // the claimed group dies with the session (#609)
       template_id: null,
       dungeon: null,
       run: null,

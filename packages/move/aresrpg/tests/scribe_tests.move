@@ -7,14 +7,7 @@
 #[test_only]
 module aresrpg::scribe_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog,
-  item,
-  item_stats::{Self, ItemStatistics},
-  scribe::{Self, ScribeConfig},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, item, item_stats::{Self, ItemStatistics}, scribe::{Self, ScribeConfig}, version::{Self, Version}};
 use sui::test_scenario::{Self as ts};
 
 const OWNER: address = @0xA;
@@ -35,7 +28,7 @@ fun set_band_still_writes() {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
   scribe::test_init(sc.ctx());
 
   sc.next_tx(OWNER);

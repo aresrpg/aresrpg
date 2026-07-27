@@ -13,12 +13,7 @@
 /// their own home, separate from the forgemagie write path.
 module aresrpg::scribe;
 
-use aresrpg::{
-  admin::AdminCap,
-  item::{Self, Item, ItemTemplate},
-  item_stats::{Self, ItemStatistics},
-  version::Version
-};
+use aresrpg::{admin::AdminCap, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}, version::Version};
 use sui::{event, table::{Self, Table}};
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]

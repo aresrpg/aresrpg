@@ -493,21 +493,28 @@ describe('humanize_abort — kolizeum lobby doors (KOLIZEUM LEVEL HONESTY)', () 
   })
 })
 
-// D54b — the anti-teleport travel-verification leaf (checkpoint.move), shared by zones::search_zone AND
-// gathering::gather (the abort surfaces under ITS OWN module "checkpoint", never the caller — same pattern
-// as the `settlement`/`run` leaf arms above). No client wiring can compute an approximate wait (no SDK export
-// of wait_seconds, and a Move abort carries zero payload) so both codes stay honest generic-teach lines.
-describe('humanize_abort — checkpoint travel-verification gate (D54b, zones + gathering share this leaf)', () => {
-  test('102 ETravelTooFar — moved farther than the elapsed time supports (a "search then fails" report)', () => {
-    const out = humanize_abort(grpc_abort('checkpoint', 102))
+// D54b — the anti-teleport travel-verification codes, shared by zones::search_zone AND gathering::gather. The
+// `checkpoint` leaf merged into `world` at the republish restructure, so the abort surfaces under module
+// "world" and the codes moved to a 120 block (world already used 101/102 for EOutOfBounds/EBadEntryIndex — a
+// shared value would make module+code ambiguous, and travel recovery keys on exactly this pair). No client
+// wiring can compute an approximate wait, so both stay honest generic-teach lines.
+describe('humanize_abort — travel-verification gate (D54b, zones + gathering share these codes)', () => {
+  test('121 ETravelTooFar — moved farther than the elapsed time supports (a "search then fails" report)', () => {
+    const out = humanize_abort(grpc_abort('world', 121))
     expect(out).toBe(i18n.t('errors.travel_too_far'))
     expect(out).not.toBe(i18n.t('errors.tx_failed'))
   })
 
-  test('101 ECheckpointFuture — clock landed before the last checkpoint (transient desync)', () => {
-    const out = humanize_abort(grpc_abort('checkpoint', 101))
+  test('120 ECheckpointFuture — clock landed before the last checkpoint (transient desync)', () => {
+    const out = humanize_abort(grpc_abort('world', 120))
     expect(out).toBe(i18n.t('errors.checkpoint_clock_desync'))
     expect(out).not.toBe(i18n.t('errors.tx_failed'))
+  })
+
+  test('world::102 (EBadEntryIndex) is NOT a travel line — the old shared value is unambiguous now', () => {
+    expect(humanize_abort(grpc_abort('world', 102))).not.toBe(
+      i18n.t('errors.travel_too_far'),
+    )
   })
 })
 
@@ -892,5 +899,22 @@ describe('character_extract arm — delete-door refusals map to honest copy', ()
     // character/111 no longer exists in the live module NOR the table — it must fall through to the generic
     // line, never the contradicting "Your first character can't be deleted." copy.
     expect(humanize_tx_error(grpc_abort('character', 111))).not.toBe(i18n.t('errors.first_char_undeletable'))
+  })
+})
+
+// The raise-stat door moved from `stat_allocation` into `character_link` at the republish restructure, and its
+// codes moved to a 130 block. The decoder mapped only the retired pair, so the one actionable wall — no unspent
+// points — rendered as generic "transaction failed".
+describe('humanize_abort — characteristic-point allocation after the module merge', () => {
+  test('132 ENoStatPoints — the actionable wall, under its new module', () => {
+    const out = humanize_abort(grpc_abort('character_link', 132))
+    expect(out).toBe(i18n.t('errors.stat_no_points'))
+    expect(out).not.toBe(i18n.t('errors.tx_failed'))
+  })
+
+  test('the retired stat_allocation module no longer carries the copy', () => {
+    expect(humanize_abort(grpc_abort('stat_allocation', 103))).toBe(
+      i18n.t('errors.tx_failed'),
+    )
   })
 })

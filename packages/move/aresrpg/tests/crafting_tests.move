@@ -2,30 +2,22 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// Crafting tests: the ported craft tx — consume the crafter's kiosk-locked inputs, ROLL the success chance off the
 /// crafter's job level, mint the output ON SUCCESS (locked), and credit the craft job XP either way. Adversarial-first:
-/// a short / missing / wrong / over-supplied ingredient aborts in `craft_consume` BEFORE the roll (reverting the burns
+/// a short / missing / wrong / over-supplied ingredient aborts in `y18` BEFORE the roll (reverting the burns
 /// — items are never lost), a forged output template is impossible (`EWrongOutput`), and an under-levelled crafter is
 /// refused (`EUnderLevel`). Success/failure branches are driven deterministically via `craft_forced`; the ported
 /// ported reference-corpus formulas are unit-proven; the real `&Random` `craft` entry is exercised end-to-end.
 #[test_only]
 module aresrpg::crafting_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  character_link,
-  config::GameConfig,
-  crafting::{Self, Recipe},
-  extract::ItemExtractPolicy,
-  item::{Item, ItemTemplate},
-  test_world,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, character_link, config::GameConfig, crafting::{Self, Recipe}, extract::ItemExtractPolicy, item::{Item, ItemTemplate}, test_world, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{kiosk::Kiosk, random::{Self, Random, RandomGenerator}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 
-const OWNER: address = @0xA;
-
 const TEMP: address = @0xD;
+const OWNER: address = @0xA;
+/// The stat-roll seed the forced-craft door injects (the live entry draws it from its `&Random` generator).
+const CRAFT_SEED: u64 = 0xC0FFEE;
 
 const EWrongOutput: u64 = 101; // crafting
 const EUnknownIngredient: u64 = 102; // crafting
@@ -34,9 +26,9 @@ const EMissingIngredient: u64 = 104; // crafting
 const ELengthMismatch: u64 = 105; // crafting
 const EEmptyRecipe: u64 = 106; // crafting
 const EZeroQuantity: u64 = 107; // crafting
-const EUnderLevel: u64 = 108; // crafting
 const A_EAdminCapExpired: u64 = 101; // admin
 const V_EWrongVersion: u64 = 101; // version
+const EUnderLevel: u64 = 108; // crafting
 
 // ╔════════════════ [ Harness ] ══════════════════════════════════════════════ ]
 
@@ -64,7 +56,7 @@ fun make_recipe(sc: &mut Scenario, inputs: vector<ID>, quantities: vector<u64>, 
 
 /// Craft with an INJECTED outcome (deterministic branch coverage — no rng): the real gate + burn run, then `success`
 /// decides mint-vs-not; XP is credited either way. `who`'s character `cid` is the crafter.
-fun do_craft(sc: &mut Scenario, who: address, cid: ID, input_ids: vector<ID>, output_tid: ID, success: bool) {
+fun do_craft(sc: &mut Scenario, who: address, cid: ID, input_ids: vector<ID>, output_tid: ID, success: bool): Option<ID> {
   sc.next_tx(who);
   let recipe = sc.take_shared<Recipe>();
   let mut k = sc.take_shared<Kiosk>();
@@ -74,10 +66,11 @@ fun do_craft(sc: &mut Scenario, who: address, cid: ID, input_ids: vector<ID>, ou
   let policy = sc.take_shared<TransferPolicy<Item>>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
-  crafting::craft_forced(&recipe, &mut k, &pkcap, cid, input_ids, &out_tmpl, success, &xpolicy, &policy, &cfg, &ver, sc.ctx());
+  let minted = crafting::craft_forced(&recipe, &mut k, &pkcap, cid, input_ids, &out_tmpl, success, CRAFT_SEED, &xpolicy, &policy, &cfg, &ver, sc.ctx());
   ts::return_shared(recipe); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(out_tmpl); ts::return_shared(xpolicy); ts::return_shared(policy);
   ts::return_shared(cfg); ts::return_shared(ver);
+  minted
 }
 
 /// Read `who`'s character `cid` job xp for `job`.
@@ -109,6 +102,30 @@ fun craft_success_consumes_inputs_mints_output_and_grants_xp() {
   assert!(k.item_count() == 2); // character + the 1 minted bread
   ts::return_shared(k);
   assert_eq!(job_xp_of(&mut sc, OWNER, cid, 0), 10); // full in-band craft_xp granted
+  sc.end();
+}
+
+#[test]
+/// #758 REGRESSION: a CRAFTED gear output is born with its rolled `StatsKey`. Before the fix the craft mint door
+/// never rolled, so a crafted weapon's owned-stat block was blank forever while the same template bought from the
+/// shop rolled fine. The roll rides the craft's OWN entropy (the live entry's `&Random` generator; the forced door
+/// injects `CRAFT_SEED`), so it is fixed at mint and lands inside the authored [min,max].
+fun crafted_gear_output_carries_rolled_stats() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, wheat, iron, _ore, _bread) = stage(&mut sc);
+  test_world::whitelist(&mut sc, b"weapon");
+  let sword = test_world::make_ranged_gear_template(&mut sc, b"sword", b"weapon", 100, 200);
+  let w = test_world::mint_lock_stack(&mut sc, OWNER, wheat, 2);
+  let i = test_world::mint_lock_stack(&mut sc, OWNER, iron, 3);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], sword, 1);
+
+  let kid = { sc.next_tx(OWNER); let k = sc.take_shared<Kiosk>(); let id = object::id(&k); ts::return_shared(k); id };
+  let minted = do_craft(&mut sc, OWNER, cid, vector[w, i], sword, true);
+  assert!(minted.is_some());
+
+  // red pre-#758: `rolled_stats` aborts on the crafted item — it never carried a StatsKey
+  let v = test_world::rolled_vitality(&mut sc, OWNER, kid, *minted.borrow());
+  assert!(v >= 100 && v <= 200);
   sc.end();
 }
 
@@ -190,7 +207,7 @@ fun recipe_getters_reflect_authoring() {
   sc.end();
 }
 
-// ╔════════════════ [ Adversarial matrix (aborts in craft_consume, BEFORE the roll) ] ═ ]
+// ╔════════════════ [ Adversarial matrix (aborts in y18, BEFORE the roll) ] ═ ]
 
 #[test, expected_failure(abort_code = EMissingIngredient, location = crafting)]
 /// Short: the recipe needs 3 iron but only 2 are supplied — the tally never zeroes.
@@ -296,7 +313,7 @@ fun min_level_formula_matches_hytale() {
 }
 
 #[test]
-/// ④ craft_xp_gain = base × recipeLevelMultiplier: full in-band, linear decay to 0 over +30 (CraftingFormulas.java:60-69).
+/// ④ y21 = base × recipeLevelMultiplier: full in-band, linear decay to 0 over +30 (CraftingFormulas.java:60-69).
 fun craft_xp_decay_matches_hytale() {
   // 2-input recipe: recipe_level=1, decay_start=14, zero_at=31.
   assert_eq!(crafting::test_craft_xp_gain(100, 2, 1), 100); // in band (≤ decay_start)
@@ -387,9 +404,6 @@ fun craft_random_entry_burns_and_credits() {
   sc.end();
 }
 
-// ╔════════════════ [ set_recipe_inputs — healing a LIVE shared recipe in place ] ═ ]
-
-/// Drive the production healing door over the shared `Recipe`.
 fun heal_recipe(sc: &mut Scenario, templates: vector<ID>, quantities: vector<u64>) {
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
@@ -400,6 +414,8 @@ fun heal_recipe(sc: &mut Scenario, templates: vector<ID>, quantities: vector<u64
   ts::return_shared(ver);
   sc.return_to_sender(cap);
 }
+
+// ╔════════ [ #1266 recipe-lifecycle doors — ported across the restored #758 seams ] ═ ]
 
 #[test]
 /// THE RE-SLOT: a live 2-slot recipe (knowledge gate 1) is re-slotted to 5 ingredients and `required_level` is

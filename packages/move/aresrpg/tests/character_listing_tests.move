@@ -8,16 +8,7 @@
 #[test_only]
 module aresrpg::character_listing_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character::Character,
-  character_link,
-  character_listing_rule,
-  config::{Self, GameConfig},
-  extension,
-  test_world,
-  version::Version
-};
+use aresrpg::{admin::AdminCap, character::Character, character_link, character_listing_rule, config::{Self, GameConfig}, extension, test_world, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{
@@ -44,7 +35,7 @@ fun grant_xp(sc: &mut Scenario, who: address, cid: ID, xp: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z10(&cfg, chr, xp, &ver);
+    character_link::y12(&cfg, chr, xp, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }
@@ -192,7 +183,7 @@ fun marked_character_sale_refused() {
     let ver = sc.take_shared<Version>();
     {
       let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-      aresrpg::fight_marker::mark(chr, &ver);
+      aresrpg::fight::mark(chr, &ver);
     };
     ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
   };
@@ -222,11 +213,11 @@ fun fight_marker_roundtrip() {
   let fid = object::id_from_address(@0xF16);
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    assert!(aresrpg::fight_marker::is_unmarked(chr));
-    aresrpg::fight_marker::mark(chr, &ver);
-    assert!(!aresrpg::fight_marker::is_unmarked(chr));
-    aresrpg::fight_marker::clear(chr, &ver);
-    assert!(aresrpg::fight_marker::is_unmarked(chr));
+    assert!(aresrpg::fight::is_unmarked(chr));
+    aresrpg::fight::mark(chr, &ver);
+    assert!(!aresrpg::fight::is_unmarked(chr));
+    aresrpg::fight::clear(chr, &ver);
+    assert!(aresrpg::fight::is_unmarked(chr));
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
   sc.end();

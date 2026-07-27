@@ -86,7 +86,7 @@ const WIRING = [
   },
   {
     name: 'W2 · item marketplace policy + rules',
-    desc: 'create_item_policy → royalty(1000bp,min>0)+kiosk_lock+personal_kiosk (RULES_PKG) + item_listing_rule::add (ghost-stack gate) → share policy, keep cap',
+    desc: 'create_item_policy → royalty(1000bp,min>0)+kiosk_lock+personal_kiosk (RULES_PKG) + item::add_listing_rule (ghost-stack gate) → share policy, keep cap',
     build(tx, M) {
       policyPTB(
         tx,
@@ -166,7 +166,7 @@ const WIRING = [
 ]
 
 /** Shared marketplace-policy PTB body (item + character); `listing` adds the per-kind listing rule
- *  (character → character_listing_rule level gate; item → item_listing_rule zero-amount/ghost gate). */
+ *  (character → character_listing_rule level gate; item → item::add_listing_rule zero-amount/ghost gate). */
 function policyPTB(tx, M, kind, type, publisher, listing) {
   const fn =
     kind === 'character' ? 'create_character_policy' : 'create_item_policy'
@@ -191,9 +191,13 @@ function policyPTB(tx, M, kind, type, publisher, listing) {
   })
   if (listing)
     tx.moveCall({
-      // character → character_listing_rule::add (§17.30 level gate); item → item_listing_rule::add (2026-07-11
-      // ghost-stack gate: blocks amount-0 listings). Both are non-generic type-specific fns (no typeArguments).
-      target: `${M.aresrpg.pkg}::${kind}_listing_rule::add`,
+      // character → character_listing_rule::add (§17.30 level gate); item → item::add_listing_rule (the
+      // ghost-stack gate, folded into `item` at the republish restructure — its module went away, the door did
+      // not). Both are non-generic type-specific fns (no typeArguments).
+      target:
+        kind === 'item'
+          ? `${M.aresrpg.pkg}::item::add_listing_rule`
+          : `${M.aresrpg.pkg}::${kind}_listing_rule::add`,
       arguments: [pol, cap],
     })
   if (kind === 'item')
@@ -201,7 +205,7 @@ function policyPTB(tx, M, kind, type, publisher, listing) {
       // lot_rule::add (the split is hardcoded by design): the D755 forced-lot gate
       // {1,10,100,1000 — immutable constants in lot_rule.move} attaches at POLICY BIRTH, never as a
       // separate manual step a ceremony can forget. Item policy only; uniques pass inside the rule.
-      target: `${M.aresrpg.pkg}::lot_rule::add`,
+      target: `${M.aresrpg.pkg}::item::add_lot_rule`,
       arguments: [pol, cap],
     })
   tx.moveCall({
@@ -253,7 +257,7 @@ function enablePTB(tx, M, pkg) {
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 const ASSERTIONS = [
   'S-46 authority zero: NO ExtensionCap / CreatorCap / custody-registry types exist in the merged package — nothing to wire, nothing loose (the types are gone at compile time)',
-  'Policies attached: character policy (royalty+lock+personal+listing) + item policy (royalty[min>0]+lock+personal+item_listing_rule ghost gate) shared; wrapped ItemExtractPolicy shared; both TransferPolicyCaps at the signer',
+  'Policies attached: character policy (royalty+lock+personal+listing) + item policy (royalty[min>0]+lock+personal+item::add_listing_rule ghost gate) shared; wrapped ItemExtractPolicy shared; both TransferPolicyCaps at the signer',
   'DARK: the ONE Version enabled=false + GameConfig.enabled=false (until --enable); domain kill-switch mask ships ALL-ON',
 ]
 async function runAssertions(client, M) {
