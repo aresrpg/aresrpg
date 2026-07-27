@@ -11,6 +11,7 @@ import {
   sample_relief_grid,
   hack_relief_grid,
   render_hack_grid_map,
+  render_flat_overlay,
   grid_index_at,
   project_offset,
   day_remap,
@@ -214,6 +215,40 @@ describe('hack mode — the minimap draws the RETRO GRID, never the terrain', ()
   })
 })
 
+describe('render_flat_overlay — the expanded map arrow (#1205)', () => {
+  // The modal freeze bug: the big map's overlay used to draw the player arrow pinned dead-centre regardless
+  // of live position (only its ROTATION tracked pose.yaw) — the terrain/marker anchor (`player_x/z`, the
+  // frozen open-time origin) doubled as the arrow's position too, so nothing about a moving player ever
+  // reached the arrow's screen offset. `arrow_x/z` carries the LIVE pose separately so the arrow walks across
+  // the (deliberately frozen, paint-once) terrain instead of sitting still.
+  test('arrow_x/arrow_z (live pose) offset the arrow from the anchor (player_x/z) — it is NOT pinned to centre', () => {
+    const calls = []
+    render_flat_overlay(fake_ctx(calls), /* grid */ null, {
+      size: 200,
+      ppb: 2,
+      theta: 0,
+      player_x: 0,
+      player_z: 0, // the frozen open-time origin (terrain/marker anchor)
+      arrow_x: 10,
+      arrow_z: 0, // the LIVE player position, 10 blocks east of where the map was opened
+      heading: 0,
+    })
+    const translate = calls.find((c) => c.op === 'translate')
+    expect(translate).toBeTruthy()
+    // centre (size/2, size/2) = (100, 100); the arrow must be offset by (arrow_x - player_x) * ppb = 20px.
+    expect(translate.args[0]).toBeCloseTo(120, 6)
+    expect(translate.args[1]).toBeCloseTo(100, 6)
+  })
+
+  test('arrow_x/arrow_z default to the anchor (player_x/z) — unchanged centred behaviour when omitted', () => {
+    const calls = []
+    render_flat_overlay(fake_ctx(calls), null, { size: 200, ppb: 2, theta: 0, player_x: 5, player_z: 5, heading: 0 })
+    const translate = calls.find((c) => c.op === 'translate')
+    expect(translate.args[0]).toBeCloseTo(100, 6)
+    expect(translate.args[1]).toBeCloseTo(100, 6)
+  })
+})
+
 /** A recording 2-D context double — the render fns are imperative, so the test asserts the CALLS. */
 function fake_ctx(calls) {
   const rec =
@@ -229,6 +264,11 @@ function fake_ctx(calls) {
     fill: rec('fill'),
     stroke: rec('stroke'),
     fillRect: rec('fillRect'),
+    save: rec('save'),
+    restore: rec('restore'),
+    translate: rec('translate'),
+    rotate: rec('rotate'),
+    arc: rec('arc'),
     set fillStyle(v) {
       calls.push({ op: 'fillStyle', args: [v] })
     },
