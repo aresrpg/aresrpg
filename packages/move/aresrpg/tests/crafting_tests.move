@@ -669,3 +669,116 @@ fun retire_recipe_stale_version_aborts() {
   crafting::retire_recipe(&cap, &ver, recipe, sc.ctx());
   abort
 }
+
+// ╔════════════════ [ set_recipe_craft_xp — re-balancing authored XP on a live recipe ] ═ ]
+
+/// The content driver's specimen: `craft_tusk_bludgeon` moves 121 → 144.
+const SPECIMEN_CRAFT_XP: u64 = 144;
+
+/// Drive the production XP door over the shared `Recipe`.
+fun set_craft_xp(sc: &mut Scenario, craft_xp: u64) {
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut recipe = sc.take_shared<Recipe>();
+  crafting::set_recipe_craft_xp(&cap, &ver, &mut recipe, craft_xp, sc.ctx());
+  ts::return_shared(recipe);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+}
+
+#[test]
+/// THE XP RE-BALANCE: a live recipe's authored `craft_xp` is replaced in place (the specimen's 121 → 144) and
+/// NOTHING else moves — inputs, gate, output and job all survive, and the recipe id is preserved.
+fun set_recipe_craft_xp_replaces_the_authored_base_only() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 4);
+
+  let rid = { sc.next_tx(OWNER); let r = sc.take_shared<Recipe>(); let id = object::id(&r); ts::return_shared(r); id };
+  set_craft_xp(&mut sc, SPECIMEN_CRAFT_XP);
+
+  sc.next_tx(OWNER);
+  let recipe = sc.take_shared<Recipe>();
+  assert_eq!(crafting::craft_xp(&recipe), SPECIMEN_CRAFT_XP); // the minted 10 did not survive
+  assert_eq!(object::id(&recipe), rid); // patched IN PLACE
+  assert_eq!(crafting::input_count(&recipe), 2); // everything else untouched
+  assert_eq!(crafting::required_level(&recipe), 1);
+  assert_eq!(crafting::output_template(&recipe), bread);
+  assert_eq!(crafting::output_quantity(&recipe), 4);
+  assert_eq!(crafting::required_job(&recipe), 0);
+  ts::return_shared(recipe);
+  sc.end();
+}
+
+#[test]
+/// The re-balanced value is what a crafter actually EARNS — the door reaches the runtime XP credit, not just the
+/// stored field. A 2-slot recipe crafted in-band pays the full authored base.
+fun set_recipe_craft_xp_is_what_the_crafter_earns() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  let w = test_world::mint_lock_stack(&mut sc, OWNER, wheat, 2);
+  let i = test_world::mint_lock_stack(&mut sc, OWNER, iron, 3);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 1); // authored craft_xp 10
+  set_craft_xp(&mut sc, SPECIMEN_CRAFT_XP);
+  do_craft(&mut sc, OWNER, cid, vector[w, i], bread, true);
+
+  assert_eq!(job_xp_of(&mut sc, OWNER, cid, 0), SPECIMEN_CRAFT_XP); // the NEW base, not the minted 10
+  sc.end();
+}
+
+#[test]
+/// The XP door composes with the input door in ONE heal: a recipe re-slotted AND re-balanced lands both changes,
+/// so the content driver needs a single publish, not two.
+fun set_recipe_craft_xp_composes_with_the_input_heal() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  heal_recipe(&mut sc, vector[wheat, iron, ore], vector[1, 1, 1]); // 3 slots → gate 14
+  set_craft_xp(&mut sc, SPECIMEN_CRAFT_XP);
+
+  sc.next_tx(OWNER);
+  let recipe = sc.take_shared<Recipe>();
+  assert_eq!(crafting::input_count(&recipe), 3);
+  assert_eq!(crafting::required_level(&recipe), 14); // the re-derived gate survived the XP write
+  assert_eq!(crafting::craft_xp(&recipe), SPECIMEN_CRAFT_XP);
+  ts::return_shared(recipe);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = A_EAdminCapExpired, location = admin)]
+/// ADVERSARIAL: a leaked TEMP cap used AFTER its epoch cannot re-balance a live recipe's XP.
+fun set_recipe_craft_xp_wrong_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  sc.next_tx(OWNER);
+  let super_cap = sc.take_from_sender<AdminCap>();
+  admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
+  sc.return_to_sender(super_cap);
+
+  sc.next_epoch(TEMP);
+  let expired_cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut recipe = sc.take_shared<Recipe>();
+  crafting::set_recipe_craft_xp(&expired_cap, &ver, &mut recipe, SPECIMEN_CRAFT_XP, sc.ctx());
+  abort
+}
+
+#[test, expected_failure(abort_code = V_EWrongVersion, location = version)]
+/// A stale Version refuses the XP door — the re-balance cannot land against an outdated package.
+fun set_recipe_craft_xp_stale_version_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let mut ver = sc.take_shared<Version>();
+  let mut recipe = sc.take_shared<Recipe>();
+  version::test_set_stale(&mut ver);
+  crafting::set_recipe_craft_xp(&cap, &ver, &mut recipe, SPECIMEN_CRAFT_XP, sc.ctx());
+  abort
+}

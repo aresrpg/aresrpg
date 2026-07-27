@@ -113,6 +113,10 @@ public struct RecipeInputsSet has copy, drop { recipe: ID, input_count: u64, req
 /// drops the recipe from its craftable set on this event.
 public struct RecipeRetired has copy, drop { recipe: ID, output_template: ID }
 
+/// A live recipe's authored per-craft job XP was REPLACED (`set_recipe_craft_xp`). The runtime decay is derived from
+/// the slot count, so this event carries the whole change — an indexer re-points its XP projection on it.
+public struct RecipeCraftXpSet has copy, drop { recipe: ID, craft_xp: u64 }
+
 /// A craft outcome. `success` — did the reference-formula roll pass (② )? `output_quantity` is the minted amount (0 on a
 /// failed roll — the ingredients still burned). `job_xp_gained` is credited to the crafter regardless of `success`
 /// (④). Indexer re-point: `success` + `job_xp_gained` are NEW fields on this shape.
@@ -185,6 +189,22 @@ public fun set_recipe_inputs(
     input_count: n,
     required_level: recipe.required_level,
   });
+}
+
+/// Replace a live recipe's authored per-craft job XP (④) IN PLACE. `craft_xp` is admin-trusted at authoring and had
+/// no setter, so a corpus XP re-balance could not reach recipes already on chain — every healed recipe would keep its
+/// minted value while the corpus moved beneath it. Version-gated + AdminCap-gated exactly like the other doors, and
+/// the recipe id is preserved, so this composes with `set_recipe_inputs` in the SAME healing PTB.
+///
+/// SCOPE: the authored BASE only. The runtime decay (`craft_xp_gain`) is derived from the slot count and the crafter's
+/// level, so it follows automatically — there is no second XP fact to keep in sync. Emits `RecipeCraftXpSet`.
+///
+/// UPGRADE-COMPAT: additive public function only; no existing type or signature changes.
+public fun set_recipe_craft_xp(cap: &AdminCap, version: &Version, recipe: &mut Recipe, craft_xp: u64, ctx: &TxContext) {
+  cap.verify(ctx);
+  version.assert_latest();
+  recipe.craft_xp = craft_xp;
+  event::emit(RecipeCraftXpSet { recipe: object::id(recipe), craft_xp });
 }
 
 /// RETIRE a recipe: DELETE its shared object on-chain, so it can never be crafted again. The kill switch for the
