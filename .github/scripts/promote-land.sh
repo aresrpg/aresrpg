@@ -129,10 +129,26 @@ fi
 # = not eligible, and an empty check-runs response fails closed the same way.
 # shellcheck source=.github/scripts/promote-green-eval.sh
 source "$(dirname "${BASH_SOURCE[0]}")/promote-green-eval.sh"
+# PROVENANCE (#1305 review): name-matching alone let green rows from another context satisfy a
+# master promotion. The engine now tells evaluate_green which PR and head ref a row must belong to.
+PROVENANCE_JSON=$(jq -nc --argjson pr "$PR" --arg head "$HEAD_REF" '{pr: $pr, head_ref: $head, app: "github-actions"}')
 CHECK_RUNS_JSON=$(gh api --paginate "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --jq '.check_runs[]' | jq -s '.')
-GREEN=$(evaluate_green "$CHECK_RUNS_JSON")
+GREEN=$(evaluate_green "$CHECK_RUNS_JSON" "$REQUIRED_CHECKS_JSON" "$PROVENANCE_JSON")
 if [ "$GREEN" != "green" ]; then
   emit not-green; echo "${GREEN#not-green: } on $HEAD_SHA — leaving it queued"; exit 3
+fi
+
+# ── the republish window never reaches production (#1305 review) ────────────────────────────
+# Asserted HERE, from the tree at the exact SHA about to become master, and not delegated to a
+# check-run: the preflight's own master-bound refusal is a check, and a check is only as good as
+# the provenance of the row reporting it. This reads the blob and trusts nothing.
+if [ "$BASE" = master ]; then
+  MARKER_PRESENT=no
+  if git cat-file -e "${HEAD_SHA}:packages/move/REPUBLISH_WINDOW" 2>/dev/null; then MARKER_PRESENT=yes; fi
+  WINDOW=$(evaluate_republish_window "$BASE" "$MARKER_PRESENT")
+  if [ "$WINDOW" != ok ]; then
+    emit republish-window; echo "${WINDOW#refused: } — delete the marker at ceremony close, then promote"; exit 1
+  fi
 fi
 
 # ── stamp the `promoted` status BEFORE the push (master only) — ORDER IS LOAD-BEARING ───────

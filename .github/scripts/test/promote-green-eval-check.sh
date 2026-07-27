@@ -38,13 +38,15 @@ check_run() {
 # evaluate_green() must accept).
 runs_array() { printf '%s\n' "$@" | jq -s '.'; }
 
-# expect_prefix <case-name> <expected-prefix> <check_runs_json> [required_checks_json]
+# expect_prefix <case-name> <expected-prefix> <check_runs_json> [required_checks_json] [provenance_json]
 # Asserts evaluate_green()'s output starts with expected-prefix ("green" is also a valid, exact,
 # one-word prefix of itself — startswith works for both verdicts).
 expect_prefix() {
-  local case_name="$1" expected_prefix="$2" check_runs_json="$3" required_json="${4:-}"
+  local case_name="$1" expected_prefix="$2" check_runs_json="$3" required_json="${4:-}" provenance_json="${5:-}"
   local actual
-  if [ -n "$required_json" ]; then
+  if [ -n "$provenance_json" ]; then
+    actual=$(evaluate_green "$check_runs_json" "$required_json" "$provenance_json")
+  elif [ -n "$required_json" ]; then
     actual=$(evaluate_green "$check_runs_json" "$required_json")
   else
     actual=$(evaluate_green "$check_runs_json")
@@ -221,6 +223,51 @@ expect_array_contains "fixture-plain-job-auto-joins" "totally_new_job" "$FIXTURE
 expect_array_contains "fixture-matrix-leg-auto-joins" "matrix_job (alpha)" "$FIXTURE_DERIVED_JSON"
 expect_array_contains "fixture-name-override-auto-joins" "custom display name (v2)" "$FIXTURE_DERIVED_JSON"
 expect_array_contains "fixture-codeql-analyze-step-auto-joins" "CodeQL" "$FIXTURE_DERIVED_JSON"
+
+# ── 14-17. PROVENANCE + the republish window (#1305 review, CRITICAL) ────────────────────────
+# The reported hole: `commits/{sha}/check-runs` returns every row any app ever attached to that
+# commit, and the required-set gate matched them by NAME alone — so a complete set of green rows
+# belonging to a DIFFERENT context satisfied a master promotion. These fixtures carry the full
+# shape (app + check_suite + pull_requests) the real API returns.
+prov_run() { # <name> <head_branch> <pr-number|null>
+  jq -nc --arg n "$1" --arg b "$2" --argjson pr "$3" \
+    '{name:$n, status:"completed", conclusion:"success", app:{slug:"github-actions"},
+      check_suite:{head_branch:$b},
+      pull_requests: (if $pr == null then [] else [{number:$pr}] end)}'
+}
+TARGET_PROV=$(jq -nc '{pr: 999, head_ref: "edge", app: "github-actions"}')
+
+# 14. THE REPRO: green rows from a lane-branch suite, evaluated for master-bound PR #999.
+FOREIGN_RUNS=$(runs_array \
+  "$(prov_run build "lane/whatever" 1234)" \
+  "$(prov_run smoke "lane/whatever" 1234)" \
+  "$(prov_run lint  "lane/whatever" 1234)")
+expect_prefix "foreign-context-green-rejected" not-green "$FOREIGN_RUNS" "$SMALL_SET" "$TARGET_PROV"
+# and the same rows still read green with no provenance supplied — the bug, pinned.
+expect_prefix "foreign-context-green-was-accepted-before" green "$FOREIGN_RUNS" "$SMALL_SET"
+
+# 15. The genuine article: push-triggered suites on the PR's own head ref, plus a PR-associated row.
+GENUINE_RUNS=$(runs_array \
+  "$(prov_run build "edge" null)" \
+  "$(prov_run smoke "edge" null)" \
+  "$(prov_run lint  "edge" 999)")
+expect_prefix "master-bound-rows-accepted" green "$GENUINE_RUNS" "$SMALL_SET" "$TARGET_PROV"
+
+# 16. A foreign app cannot vouch for anything, whatever the branch says.
+OTHER_APP=$(jq -nc '[{name:"build", status:"completed", conclusion:"success", app:{slug:"some-bot"}, check_suite:{head_branch:"edge"}, pull_requests:[]}]')
+expect_prefix "foreign-app-not-evidence" not-green "$OTHER_APP" "$(jq -nc '["build"]')" "$TARGET_PROV"
+
+# 17. The republish window is refused on master, and only on master.
+expect_window() { # <case> <expected-prefix> <base> <marker-present>
+  local actual; actual=$(evaluate_republish_window "$3" "$4")
+  case "$actual" in
+    "$2"*) echo "PASS  $1  →  $actual"; PASS=$((PASS + 1)) ;;
+    *) echo "FAIL  $1  →  got [$actual], expected prefix [$2]"; FAIL=$((FAIL + 1)) ;;
+  esac
+}
+expect_window "window-refused-on-master"   refused master yes
+expect_window "window-allowed-on-edge"     ok      edge   yes
+expect_window "no-window-master-unaffected" ok     master no
 
 echo
 echo "── ${PASS} passed, ${FAIL} failed ──"

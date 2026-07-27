@@ -104,12 +104,38 @@ REQUIRED_CHECKS_JSON=$(
 # Prints "green" or "not-green: <reason>" on stdout. Always returns 0 — a verdict is not a shell
 # error; callers branch on the printed string, matching how the rest of promote-land.sh's asserts
 # already convey their result via `emit` + a message, not via $?.
+#
+# PROVENANCE (#1305 review, CRITICAL): the gates above judge check-runs by NAME. Nothing tied a
+# green row to the promotion being evaluated, and `commits/{sha}/check-runs` returns every run any
+# app ever attached to that commit — so a set of green rows created in another context, or by
+# another app, satisfied a master promotion. A reviewer's synthetic edge-context result evaluated
+# green. A check-run is now evidence only when it was produced by the expected app AND belongs to
+# THIS pull request: either its `pull_requests` names that PR, or — for the push-triggered suites a
+# release PR normally rides — its check-suite is on the PR's own head branch. Rows that fail
+# provenance are not counted green and, deliberately, are not counted red either: they are not
+# evidence at all, so a foreign row can neither satisfy nor wedge the queue.
+#
+# The filter engages ONLY when a provenance object is supplied (the real engine always supplies
+# one). Fixtures that omit it exercise the name-level gates exactly as before.
 evaluate_green() {
   local check_runs_json="$1"
   local required_json="${2:-$REQUIRED_CHECKS_JSON}"
+  local provenance_json="${3:-null}"
   local runs not_green_count missing_csv
 
   runs=$(jq -c 'if type == "array" then . else .check_runs end' <<<"$check_runs_json")
+  runs=$(jq -c --argjson p "$provenance_json" '
+      if $p == null then .
+      else [ .[] | select(
+          (.app.slug // "github-actions") == ($p.app // "github-actions")
+          and (
+            if ((.pull_requests // []) | length) == 0
+            then (.check_suite.head_branch // "") == ($p.head_ref // "")
+            else ([.pull_requests[].number] | index($p.pr)) != null
+            end
+          )
+        ) ]
+      end' <<<"$runs")
 
   not_green_count=$(jq '[.[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length' <<<"$runs")
   if [ "$not_green_count" != "0" ]; then
@@ -127,4 +153,21 @@ evaluate_green() {
   fi
 
   echo green
+}
+
+# ── THE REPUBLISH WINDOW NEVER REACHES PRODUCTION (#1305 review, CRITICAL) ──────────────────────
+# packages/move/REPUBLISH_WINDOW suspends the ceremony preflight's compatibility assertions while a
+# fresh lineage is published. The preflight refuses the marker on a master-bound run, but that
+# refusal is a CHECK — and a check is only as trustworthy as the provenance of the row reporting
+# it. This engine therefore asserts the marker independently, from the tree at the exact SHA it is
+# about to fast-forward onto master, trusting no check-run at all. Pure: the caller reads the blob.
+#   evaluate_republish_window <base_ref> <marker_present: yes|no>
+# Prints "ok" or "refused: <reason>"; always returns 0 (verdict, not shell error — house idiom).
+evaluate_republish_window() {
+  local base="$1" marker_present="$2"
+  if [ "$base" = master ] && [ "$marker_present" = yes ]; then
+    echo "refused: packages/move/REPUBLISH_WINDOW is present at this SHA — the republish window lives on edge and may never be promoted to production"
+    return 0
+  fi
+  echo ok
 }
