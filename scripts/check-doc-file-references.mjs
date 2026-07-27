@@ -9,12 +9,71 @@ import { fileURLToPath as file_url_to_path } from 'node:url'
 const script_dir = path.dirname(file_url_to_path(import.meta.url))
 const default_repo_root = path.resolve(script_dir, '..')
 const repo_path_prefixes = ['.claude', '.github', 'api', 'changelog', 'docs', 'packages', 'scripts', 'test']
+const repo_root_file_names = new Set([
+  '.dependency-cruiser.cjs',
+  '.env.example',
+  '.gitignore',
+  '.prettierignore',
+  '.prettierrc',
+  'bun.lock',
+  'bunfig.toml',
+  'CLA.md',
+  'CLAUDE.md',
+  'CONTRIBUTING.md',
+  'eslint.config.js',
+  'FROZEN.md',
+  'LICENSE',
+  'package.json',
+  'README.md',
+  'SECURITY.md',
+  'tsconfig.lint.json',
+])
 const line_selector_pattern = /:\d+(?:(?:-\d+)|(?:,\d+)*)?$/
 const glob_pattern = /[*?[]/
 const remote_target_pattern = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
-const host_absolute_pattern = /^\/(?:Users|home|private|tmp|var|opt|etc)\//
+const host_absolute_pattern = /^\/(?:Users|home|private|tmp|var|opt|etc|workspace|workspaces)\//
+const windows_absolute_pattern = /^(?:[a-z]:[\\/]|\\\\)/i
 const hidden_root_file_pattern =
   /^(?:\.\/)?\.[a-z\d_-][a-z\d_.-]*\.(?:cjs|js|json|mjs|toml|ya?ml)(?::\d+(?:(?:-\d+)|(?:,\d+)*)?)?$/i
+const bare_file_pattern =
+  /^[^./\\][^/\\]*\.(?:cjs|css|csv|d\.ts|glb|html|jsx?|json|lock|md|mjs|move|png|py|sh|svelte|svg|toml|tsx?|txt|wasm|webp|ya?ml)$/i
+const deliberate_example_allowlist = [
+  {
+    cited_path: 'assets/env-*.js',
+    doc_path: 'docs/CSP.md',
+    reason: 'generated deployment asset pattern, not a source-tree path',
+  },
+  {
+    cited_path: '/draco/*.wasm',
+    doc_path: 'docs/CSP.md',
+    reason: 'deployed URL pattern, not a source-tree path',
+  },
+  {
+    cited_path: 'dist/index.html',
+    doc_path: 'docs/CSP.md',
+    reason: 'generated build output, not a source-tree path',
+  },
+  {
+    cited_path: 'constants/simulator.ts',
+    doc_path: 'docs/design/simulator_rebuild_spec.md',
+    reason: 'legacy file named in the specification deletion list',
+  },
+  {
+    cited_path: 'pages/simulator_content.ts',
+    doc_path: 'docs/design/simulator_rebuild_spec.md',
+    reason: 'legacy file named in the specification deletion list',
+  },
+  {
+    cited_path: 'world_corpus.json',
+    doc_path: 'docs/design/simulator_rebuild_spec.md',
+    reason: 'published runtime blob, not a source-tree file',
+  },
+  {
+    cited_path: 'aresrpg-simfight-<seed>-<fight_id>.json',
+    doc_path: 'docs/design/simulator_rebuild_spec.md',
+    reason: 'generated trace-download filename, not a source-tree file',
+  },
+]
 
 export function strip_fenced_blocks(markdown) {
   const reduced = markdown.split('\n').reduce(
@@ -64,56 +123,92 @@ function line_number_at(markdown, index) {
 }
 
 function normalize_cited_path(cited_path) {
-  return cited_path.replace(/^[("'[]+/, '').replace(/[)"'\],.;]+$/, '')
+  return cited_path.replace(/^[("'[|]+/, '').replace(/[)"'\],.;|]+$/, '')
+}
+
+function path_arms_are_file_shaped(cited_path) {
+  return expand_braces(cited_path).every((arm) => {
+    const selectorless_arm = strip_line_selector(arm).replaceAll('\\', '/')
+    const basename = selectorless_arm.slice(selectorless_arm.lastIndexOf('/') + 1)
+    return /\.[a-z][a-z\d+_-]*$/i.test(basename)
+  })
+}
+
+function code_token_reference(raw_token, doc_path, line) {
+  const cited_path = normalize_cited_path(raw_token)
+  if (cited_path.length === 0 || cited_path.startsWith('@')) return null
+  if (host_absolute_pattern.test(cited_path) || windows_absolute_pattern.test(cited_path))
+    return {
+      cited_path,
+      doc_path,
+      kind: 'host-absolute',
+      line,
+    }
+  if (remote_target_pattern.test(cited_path)) return null
+  const selectorless_path = strip_line_selector(cited_path)
+  const root_file = repo_root_file_names.has(selectorless_path) || hidden_root_file_pattern.test(cited_path)
+  const file_shaped = path_arms_are_file_shaped(cited_path)
+  const known_prefix = repo_path_prefixes.some(
+    (prefix) => selectorless_path.startsWith(`${prefix}/`) || selectorless_path.startsWith(`./${prefix}/`)
+  )
+  const suffix_path = file_shaped && selectorless_path.includes('/')
+  const basename =
+    file_shaped &&
+    !selectorless_path.includes('/') &&
+    expand_braces(selectorless_path).every((arm) => bare_file_pattern.test(arm))
+  if (!root_file && !known_prefix && !suffix_path && !basename) return null
+  return {
+    cited_path,
+    doc_path,
+    kind: root_file || known_prefix ? 'repo' : suffix_path ? 'repo-suffix' : 'repo-basename',
+    line,
+  }
 }
 
 function code_span_references(markdown, doc_path) {
   const without_fences = strip_fenced_blocks(markdown)
   const prefix_pattern = repo_path_prefixes.map((prefix) => prefix.replace('.', '\\.')).join('|')
-  const repo_path_pattern = new RegExp(
-    `(?:^|[\\s("'\\[])((?:\\.\\/)?(?:${prefix_pattern})\\/[A-Za-z0-9_./*?{},@+\\-\\[\\]]+(?::\\d+(?:(?:-\\d+)|(?:,\\d+)*)?)?)`,
-    'g'
-  )
   return [...without_fences.matchAll(/(`+)([\s\S]*?)\1/g)].flatMap((code_match) => {
     const [, , code] = code_match
     const code_index = code_match.index ?? 0
-    const repo_references = [...code.matchAll(repo_path_pattern)].map((path_match) => ({
-      cited_path: normalize_cited_path(path_match[1]),
-      doc_path,
-      kind: 'repo',
-      line: line_number_at(without_fences, code_index),
-    }))
-    const hidden_reference = hidden_root_file_pattern.test(code.trim())
-      ? [
-          {
-            cited_path: normalize_cited_path(code.trim()),
-            doc_path,
-            kind: 'repo',
-            line: line_number_at(without_fences, code_index),
-          },
-        ]
-      : []
-    const absolute_reference = host_absolute_pattern.test(code.trim())
-      ? [
-          {
-            cited_path: normalize_cited_path(code.trim()),
-            doc_path,
-            kind: 'host-absolute',
-            line: line_number_at(without_fences, code_index),
-          },
-        ]
-      : []
+    const repo_references = [...code.matchAll(/\S+/g)].flatMap((token_match) => {
+      const reference = code_token_reference(
+        token_match[0],
+        doc_path,
+        line_number_at(without_fences, code_index + (token_match.index ?? 0))
+      )
+      return reference === null ? [] : [reference]
+    })
     const split_path_pattern = new RegExp(
       `((?:\\.\\/)?(?:${prefix_pattern})\\/[A-Za-z0-9_./*?{},@+\\-\\[\\]]*[/_.-])\\r?\\n([A-Za-z0-9_.-]+)`,
       'g'
     )
-    const split_reference = [...code.matchAll(split_path_pattern)].map((path_match) => ({
-      cited_path: `${path_match[1]}\n${path_match[2]}`,
-      doc_path,
-      kind: 'split',
-      line: line_number_at(without_fences, code_index + (path_match.index ?? 0)),
-    }))
-    return [...repo_references, ...hidden_reference, ...absolute_reference, ...split_reference]
+    const split_references = [
+      ...[...code.matchAll(split_path_pattern)].map((path_match) => ({
+        cited_path: `${path_match[1]}\n${path_match[2]}`,
+        doc_path,
+        kind: 'split',
+        line: line_number_at(without_fences, code_index + (path_match.index ?? 0)),
+      })),
+      ...[...code.matchAll(/(\S+)\r?\n(\S+)/g)].flatMap((path_match) => {
+        const joined_reference = code_token_reference(
+          `${path_match[1]}${path_match[2]}`,
+          doc_path,
+          line_number_at(without_fences, code_index + (path_match.index ?? 0))
+        )
+        return joined_reference === null
+          ? []
+          : [
+              {
+                cited_path: `${path_match[1]}\n${path_match[2]}`,
+                doc_path,
+                kind: 'split',
+                line: joined_reference.line,
+              },
+            ]
+      }),
+    ]
+    return [...repo_references, ...split_references]
   })
 }
 
@@ -205,7 +300,7 @@ function absolute_reference_path(reference, repo_root) {
       ? path.resolve(repo_root, cited_path.slice(1))
       : path.resolve(repo_root, path.dirname(reference.doc_path), cited_path)
   }
-  return path.resolve(repo_root, cited_path.replace(/^\.\//, ''))
+  return path.resolve(repo_root, cited_path.replace(/^\.?\//, ''))
 }
 
 function arm_resolves(reference_arm, repo_root, path_exists, find_matches) {
@@ -217,9 +312,13 @@ function arm_resolves(reference_arm, repo_root, path_exists, find_matches) {
     repo_root
   )
   if (!path_is_inside(repo_root, absolute_path)) return false
-  if (!glob_pattern.test(reference_arm.arm)) return path_exists(absolute_path, repo_root)
+  if (!glob_pattern.test(reference_arm.arm) && path_exists(absolute_path, repo_root)) return true
   const relative_pattern = path.relative(repo_root, absolute_path).split(path.sep).join('/')
-  return find_matches(relative_pattern, repo_root).some((match_path) =>
+  const direct_matches = find_matches(relative_pattern, repo_root)
+  if (direct_matches.some((match_path) => path_exists(path.resolve(repo_root, match_path), repo_root))) return true
+  if (!['repo-basename', 'repo-suffix'].includes(reference_arm.reference.kind)) return false
+  const normalized_suffix = reference_arm.arm.replace(/^\.?\//, '')
+  return find_matches(`**/${normalized_suffix}`, repo_root).some((match_path) =>
     path_exists(path.resolve(repo_root, match_path), repo_root)
   )
 }
@@ -229,6 +328,7 @@ export function unresolved_references(
   {
     repo_root,
     path_exists = exact_path_exists,
+    allowlist = deliberate_example_allowlist,
     find_matches = (reference_pattern, root) =>
       fs.globSync(reference_pattern, {
         cwd: root,
@@ -237,6 +337,13 @@ export function unresolved_references(
   }
 ) {
   return references.flatMap((reference) => {
+    if (
+      allowlist.some(
+        (allowed_reference) =>
+          allowed_reference.cited_path === reference.cited_path && allowed_reference.doc_path === reference.doc_path
+      )
+    )
+      return []
     if (reference.kind === 'host-absolute')
       return [
         {
@@ -291,13 +398,30 @@ export function list_doc_paths(repo_root) {
     .sort((left, right) => left.localeCompare(right))
 }
 
+function list_repo_paths(repo_root) {
+  const result = spawn_sync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: repo_root,
+    encoding: 'utf8',
+  })
+  if (result.error) throw result.error
+  if (result.status !== 0) throw new Error(result.stderr.trim() || `git ls-files exited ${result.status}`)
+  return result.stdout.split('\0').filter(Boolean)
+}
+
 export function check_doc_file_references(repo_root) {
   const doc_paths = list_doc_paths(repo_root)
   if (doc_paths.length === 0) throw new Error('no Markdown files found under docs/')
+  const repo_paths = list_repo_paths(repo_root)
   const references = doc_paths.flatMap((doc_path) =>
     collect_references(fs.readFileSync(path.resolve(repo_root, doc_path), 'utf8'), doc_path)
   )
-  const unresolved = unresolved_references(references, { repo_root }).sort(
+  const unresolved = unresolved_references(references, {
+    find_matches: (reference_pattern) => {
+      const matcher = new Bun.Glob(reference_pattern)
+      return repo_paths.filter((repo_path) => matcher.match(repo_path))
+    },
+    repo_root,
+  }).sort(
     (left, right) =>
       left.doc_path.localeCompare(right.doc_path) ||
       left.line - right.line ||

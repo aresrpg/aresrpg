@@ -18,7 +18,7 @@ _(verbatim, issue #1110)_
 
 The build lane's investigation established three ground truths that reshape this issue:
 
-1. **The fight contract is one-spec-per-group by construction**: `engine/fight.move create_round(spec: &MobSpec, group_size)` — there is no member-list seam anywhere between the zone kernel and the engine. The commitment (`MobGroupLeaf`/format 2) commits exactly `{template, group_size, group_seed}`.
+1. **The fight contract is one-spec-per-group by construction**: `packages/move/engine/sources/fight.move create_round(spec: &MobSpec, group_size)` — there is no member-list seam anywhere between the zone kernel and the engine. The commitment (`MobGroupLeaf`/format 2) commits exactly `{template, group_size, group_seed}`.
 2. **The dungeon door REJECTS mixed** (`dungeon.move assert_homogeneous`) — the corpus's mixed families are mixed across rooms, never within a fight. Dungeons stay homogeneous (authored rooms); MIXED IS THE WORLD'S FEATURE.
 3. **Levels are drawn engine-side, uniform(min,max), distance is not an input** — no plumbed value carries progress into the engine.
 
@@ -27,7 +27,7 @@ The build lane's investigation established three ground truths that reshape this
 - `zone_gen`: `derive_mob_groups` format-3 variant emitting a per-group MEMBER LIST (`vector<template_idx>`, len = group_size); `mob_group_commitment_format` gains the format-3 byte — formats 1/2 keep deriving so every in-flight zone's stored commitment stays valid (the existing mechanism at zone_gen.move:385-389). Any draw-order change without the format bump corrupts in-flight zones — the bump is mandatory.
 - `engine`: new entry points beside the old (upgrade-compat law — never edit public signatures): a create path taking the member list, and the mob level draw gains a `progress` input (0-1000) plumbed via a new GroupTicket constructor — level bands lerp toward the authored max with distance. THIS is where #1111's gradient lands.
 - `aresrpg/zone_comp`: `eligible_mob_weights` drops its level-cap zeroing IN THE SAME COMMIT the graded draw lands — substitution, not addition. Either half alone is a shipped regression (membership-only = a fresh character meets full-band mobs at spawn; gradient-only = the monoculture survives).
-- `sdk/fight_proof.js` + `sim/zone_derive.js` + `frontend/spawn_compose.js`: format-3 mirrors, same commit, parity fixtures on pinned seeds (twin law).
+- `packages/sdk/src/fight_proof.js` + `packages/sim/src/zone_derive.js` + `packages/frontend/src/game/spawn_compose.js`: format-3 mirrors, same commit, parity fixtures on pinned seeds (twin law).
 - Migration: none — new searches roll format 3; old zones replay their committed format.
 
 ## 1. Amendment 1 — dungeon rider + composition

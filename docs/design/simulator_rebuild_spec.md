@@ -286,8 +286,8 @@ roster LOADERS are wallet/chain-coupled — and those are correctly not reused. 
   board uses.
 - Engine-store seed for HUD surfaces: `context.dispatch('action/sui_data', {characters,
 loaded:true, …})` + `use_dungeon.setState({fight_id, phase:'playing', mob_names/levels/
-elements, in_session:false, …})` — the dev_synth_fight proven seed set (`dev_synth_fight.js:
-168-205`).
+elements, in_session:false, …})` — the dev_synth_fight proven seed set
+  (`packages/frontend/src/game/dev/dev_synth_fight.js:168-205`).
 
 **Page reducer** (FP constitution: ONE reducer per stateful domain):
 `packages/frontend/src/simulator/reducer.ts` — pure
