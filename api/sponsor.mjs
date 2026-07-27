@@ -106,12 +106,20 @@ const OUTDATED_PACKAGES = normalize_set(outdated_package_ids.join(','))
 const FRAMEWORK_PACKAGES = normalize_set((network_release?.system.sponsor_framework_packages ?? []).join(','))
 const OUTDATED_PACKAGE_REASON = 'outdated-package'
 const OUTDATED_PACKAGE_ERROR_PREFIX = `sponsor-scope: ${OUTDATED_PACKAGE_REASON}`
+export const WOULD_ABORT_REASON = 'would-abort'
+export const WOULD_ABORT_ERROR_PREFIX = `sponsor-${WOULD_ABORT_REASON}:`
+
+// The refusal prefixes that ride back to the client as a MACHINE reason (never string-matched localized copy):
+// the caller branches on `reason`, so a blocking refusal blocks instead of silently re-routing to self-pay.
+const REASON_BY_PREFIX = [
+  [OUTDATED_PACKAGE_ERROR_PREFIX, OUTDATED_PACKAGE_REASON],
+  [WOULD_ABORT_ERROR_PREFIX, WOULD_ABORT_REASON],
+]
 
 export function sponsor_error_response(error) {
   const error_message = String(error?.message ?? error)
-  return error_message.startsWith(OUTDATED_PACKAGE_ERROR_PREFIX)
-    ? { error: error_message, reason: OUTDATED_PACKAGE_REASON }
-    : { error: error_message }
+  const matched = REASON_BY_PREFIX.find(([prefix]) => error_message.startsWith(prefix))
+  return matched ? { error: error_message, reason: matched[1] } : { error: error_message }
 }
 
 export function require_station_config() {
@@ -165,6 +173,27 @@ async function assert_sponsor_zklogin_challenge(sender, challenge, signature) {
   })
 }
 
+/**
+ * THE SIMULATE GATE (#1385). A simulation that ABORTS is a REFUSAL, never a price quote — before this existed
+ * the sponsor read `gasUsed` off `Transaction ?? FailedTransaction` and happily priced, reserved, co-signed and
+ * SUBMITTED a PTB its own dry-run had just proven would abort: the player burned sponsor gas on a chain failure,
+ * and the pool was grief-able by construction (an attacker submits aborting PTBs all day, each one a real spend).
+ * The gRPC core union tags a failed simulation `FailedTransaction`; a failed-but-untagged result still carries
+ * `status.success === false`; no effects at all means we learned nothing. All three refuse.
+ * SINGLE-VERDICT LAW: this is the same decision as the client's `gas_guard_decision` sim_failed arm
+ * (packages/frontend/src/game/core/gas_guard.js) — the sponsor image ships as three standalone files (api/Dockerfile)
+ * so it cannot import it; `api/sponsor.simulate_gate.test.js` runs BOTH over one fixture corpus and fails on any
+ * divergence, which is what keeps the two honest.
+ * @returns {string | null} the chain's own error string when the PTB would fail, else null
+ */
+export function simulation_abort_error(simulation) {
+  const effects = (simulation?.Transaction ?? simulation?.FailedTransaction)?.effects
+  if (!effects) return 'simulation returned no effects'
+  if (simulation?.$kind === 'FailedTransaction' || effects?.status?.success === false)
+    return String(effects?.status?.error ?? 'simulation reported failure')
+  return null
+}
+
 export function derive_budget_mist(gas_used) {
   const gross = BigInt(gas_used?.computationCost ?? 0) + BigInt(gas_used?.storageCost ?? 0)
   if (gross <= 0n)
@@ -190,6 +219,7 @@ const initial_refusals = () => ({
   rate: 0,
   daily: 0,
   ceiling: 0,
+  abort: 0,
   station: 0,
   mismatch: 0,
   execreject: 0,
@@ -334,7 +364,14 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     stats.refused.ceiling += 1
     throw new Error(`sponsor-unpriceable: simulation failed (${error?.message ?? error}) — refusing`)
   }
-  const gas_used = (simulation?.Transaction ?? simulation?.FailedTransaction)?.effects?.gasUsed
+  // THE GATE — refuse a would-abort PTB HERE: nothing reserved, nothing co-signed, nothing executed, zero gas
+  // anywhere. The chain's own error rides back so the client decodes it through its ONE abort-copy table.
+  const would_abort = simulation_abort_error(simulation)
+  if (would_abort) {
+    stats.refused.abort += 1
+    throw new Error(`${WOULD_ABORT_ERROR_PREFIX} ${would_abort}`)
+  }
+  const gas_used = simulation.Transaction.effects.gasUsed
   let budget
   try {
     budget = derive_budget_mist(gas_used)

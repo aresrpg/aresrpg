@@ -35,9 +35,19 @@ import { record_self_paid_receipt } from './gas_spend_ledger'
 import { now, stamp_preflight } from './latency.js'
 import { decide_sponsor_route, sponsor_route_log } from './sponsor_route'
 import type { SponsoredReceipt, TxReceipt } from './receipts'
-import { SPONSOR_REFUSAL_OUTDATED_PACKAGE, is_sponsor_outdated_package_refusal } from './sponsor_refusal'
+import {
+  SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+  SPONSOR_REFUSAL_WOULD_ABORT,
+  is_sponsor_outdated_package_refusal,
+  is_sponsor_would_abort_refusal,
+} from './sponsor_refusal'
 
-export { SPONSOR_REFUSAL_OUTDATED_PACKAGE, is_sponsor_outdated_package_refusal } from './sponsor_refusal'
+export {
+  SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+  SPONSOR_REFUSAL_WOULD_ABORT,
+  is_sponsor_outdated_package_refusal,
+  is_sponsor_would_abort_refusal,
+} from './sponsor_refusal'
 
 /** Turn-commit gas directive (<1s lane): the caller marks a chained commit so execute_tx pins its gas
  * coin. `skip_sim` = SOLO fight → skip the per-commit dry-run (ESomeoneOverdue is impossible with one player seat);
@@ -269,10 +279,16 @@ export async function execute_tx({
     try {
       sponsored = await deps.run_sponsored(transaction)
     } catch (sponsor_error) {
-      // PRE-flight sponsor refusal (nothing executed, zero gas). Daily-cap and outdated-package are blocking:
-      // never spend past the free promise, and never execute a retired PTB. Every other refusal (funded
-      // self-pay-required / drained pool / generic 400 / network) may use the existing self-pay route below.
-      if (is_sponsor_daily_cap_refusal(sponsor_error) || is_sponsor_outdated_package_refusal(sponsor_error))
+      // PRE-flight sponsor refusal (nothing executed, zero gas). Daily-cap, outdated-package and would-abort are
+      // blocking: never spend past the free promise, never execute a retired PTB, and never self-pay-retry a PTB
+      // the sponsor's dry-run already proved aborts (#1385 — it would abort self-paid too, and the fallback's
+      // gas-selection catch would replace the honest decoded cause with a balance error on a zero-SUI wallet).
+      // Every other refusal (funded self-pay-required / drained pool / generic 400 / network) may self-pay below.
+      if (
+        is_sponsor_daily_cap_refusal(sponsor_error) ||
+        is_sponsor_outdated_package_refusal(sponsor_error) ||
+        is_sponsor_would_abort_refusal(sponsor_error)
+      )
         throw sponsor_error
       game_log('tx', 'sponsored-first refused (non-cap) — self-paying:', sponsor_error)
       sponsor_refused = true
@@ -445,6 +461,16 @@ export async function build_sponsored_kind(transaction: Transaction, sender: str
 // (funded > 0.2 SUI — the ONLY silent self-pay re-route), DAILY_CAP (never auto-spend past the free promise),
 // and OUTDATED_PACKAGE (block and refresh onto the latest release).
 function map_sponsor_error(detail: string, status: number, reason: string | null): Error {
+  // WOULD-ABORT (#1385): the sponsor's dry-run proved this PTB aborts, so it refused BEFORE reserving gas —
+  // nothing signed, nothing executed, zero spend anywhere. The chain's own error rides in `detail`; decode it
+  // through the ONE abort-copy table with `preflight: true` so the player reads the real cause ("not your turn",
+  // "already listed") with its zero-gas provenance, never the burn-law "gas was spent, don't retry" copy.
+  if (reason === SPONSOR_REFUSAL_WOULD_ABORT) {
+    const chain_error = detail.replace(/^sponsor-would-abort:\s*/, '')
+    const would_abort = tx_error(chain_error, { preflight: true }) as Error & { sponsor_refusal?: string }
+    would_abort.sponsor_refusal = SPONSOR_REFUSAL_WOULD_ABORT
+    return would_abort
+  }
   // STRICT PACKAGE UPGRADE: the @server structurally identifies a retired aresrpg package. Keep the marker on
   // the humanized error so routing refuses immediately and the transaction edge can open the blocking modal.
   // A generic sponsor-scope refusal is intentionally NOT treated as outdated (it may be a malformed PTB).

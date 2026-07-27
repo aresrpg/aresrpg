@@ -29,6 +29,7 @@ const {
   build_sponsored_kind,
   SPONSOR_REFUSAL_DAILY_CAP,
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+  SPONSOR_REFUSAL_WOULD_ABORT,
   is_sponsor_self_pay_refusal,
   is_sponsor_daily_cap_refusal,
 } = await import('./index')
@@ -697,6 +698,36 @@ describe('execute_tx — sponsor-first route', () => {
     expect(sae).toHaveBeenCalledTimes(0)
   })
 
+  // #1385 — the sponsor now REFUSES a PTB its dry-run proved aborts. That refusal must BLOCK: self-paying it
+  // would re-simulate the same doomed PTB, and on the zero-SUI wallet the sponsor exists to serve the gas-selection
+  // catch would swap the honest decoded cause for a balance error. Zero gas either way; only the copy differs.
+  test('sponsor WOULD-ABORT refusal → propagates the decoded cause, never self-pay-retries a doomed PTB', async () => {
+    const sae = mock(async () => ({ digest: 'SELFPAY' }))
+    const deps = fallback_deps({
+      run_sponsored: mock(async () => {
+        throw Object.assign(new Error('It is not your turn.'), {
+          name: 'SimulationError',
+          sponsor_refusal: SPONSOR_REFUSAL_WOULD_ABORT,
+        })
+      }),
+    })
+
+    const refusal = await execute_tx({
+      wallet: make_zk_wallet(sae),
+      address: ADDR,
+      transaction: make_tx(),
+      chain: CHAIN,
+      cached_balance_mist: LOW,
+      cached_balance_read_at_ms: Date.now(),
+      sponsor_fallback: deps,
+    }).catch((error) => error)
+
+    expect(refusal.message).toBe('It is not your turn.')
+    expect(is_preflight_refusal(refusal)).toBe(true) // zero-gas provenance survives — never the burn-law copy
+    expect(deps.run_sponsored).toHaveBeenCalledTimes(1)
+    expect(sae).toHaveBeenCalledTimes(0) // the crux: no second doomed submit, self-paid or otherwise
+  })
+
   test('NON-cap sponsor refusal (self-pay-required / drained pool / 400) → SILENT self-pay fallback', async () => {
     _reset_log_for_test()
     sim.current = ok_sim('1000000', '2000000', '500000')
@@ -1044,6 +1075,29 @@ describe('execute_sponsored_tx — two-call station flow', () => {
   const real_fetch = globalThis.fetch
   afterEach(() => {
     globalThis.fetch = real_fetch
+  })
+
+  // #1385 wire shape: /reserve refuses a would-abort PTB with { error, reason } BEFORE any gas is reserved. The
+  // client must decode the chain error it carries (zero-gas provenance intact), tag it blocking, and never reach
+  // /execute — nothing is signed, nothing executes, no gas is spent anywhere.
+  test('reserve refuses would-abort → decoded preflight error, tagged blocking, /execute NEVER called', async () => {
+    const chain_error =
+      'MoveAbort(MoveLocation { module: ModuleId { address: e8c6, name: Identifier("turns") }, ' +
+      'function: 6, instruction: 36, function_name: Some("crank") }, 107) in command 0'
+    const spy = route({
+      reserve: async () =>
+        bad(400, JSON.stringify({ error: `sponsor-would-abort: ${chain_error}`, reason: 'would-abort' })),
+      execute: async () => {
+        throw new Error('/execute must never be reached on a would-abort refusal')
+      },
+    })
+
+    const refusal = await run().catch((error) => error)
+
+    expect(refusal.sponsor_refusal).toBe(SPONSOR_REFUSAL_WOULD_ABORT)
+    expect(is_preflight_refusal(refusal)).toBe(true)
+    expect(String(refusal.cause)).toContain('107')
+    expect(spy.mock.calls.filter(([url]) => String(url).endsWith('/execute'))).toHaveLength(0)
   })
 
   test('happy path → reserve → apply reserved gas EXACTLY → sign SENDER half → execute → consume effects', async () => {
