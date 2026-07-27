@@ -24,6 +24,21 @@ export function explorer_object_url(object_id) {
   return `https://${SUIVISION_HOST}/object/${object_id}`
 }
 
+/**
+ * CUSTODY-AWARE explorer target for an ITEM (#1226). Equipping WRAPS the item into its character, so the
+ * item id leaves Sui global storage and its object page 404s — the character is the top-level object that
+ * still resolves (the equipped item shows there as a nested field). Kiosk-held (unequipped) items are real
+ * top-level objects, so they keep their direct id link. Unknown custody = no character id = direct link.
+ * @param {{ object_id?: string | null, equipped_character_id?: string | null }} params
+ * @returns {{ url: string, equipped: boolean } | null}
+ */
+export function explorer_item_target({ object_id, equipped_character_id }) {
+  const equipped_url = equipped_character_id ? explorer_object_url(equipped_character_id) : null
+  if (equipped_url) return { url: equipped_url, equipped: true }
+  const url = explorer_object_url(object_id)
+  return url ? { url, equipped: false } : null
+}
+
 /** The one "external link" glyph shared by every explorer affordance (standalone link + menu rows). */
 function ExplorerGlyph({ color = 'currentColor' }) {
   return (
@@ -69,12 +84,15 @@ export function ExplorerLink({ object_id, className = '' }) {
  * new tab, noopener, no tx, no confirm. `on_navigate` lets the caller dismiss its own popover on click
  * without blocking the default navigation (target="_blank" still opens even when the handler runs).
  * Renders nothing when the id doesn't resolve to a real on-chain object (mirrors ExplorerLink).
- * @param {{ object_id?: string | null, on_navigate?: () => void }} props
+ * `equipped_character_id` marks the item as WRAPPED into that character (#1226): the row then links the
+ * character's page — the only one that resolves — and says so in the label.
+ * @param {{ object_id?: string | null, equipped_character_id?: string | null, on_navigate?: () => void }} props
  */
-export function ExplorerMenuRow({ object_id, on_navigate }) {
+export function ExplorerMenuRow({ object_id, equipped_character_id, on_navigate }) {
   const { t } = useTranslation()
-  const url = explorer_object_url(object_id)
-  if (!url) return null
+  const target = explorer_item_target({ object_id, equipped_character_id })
+  if (!target) return null
+  const { url, equipped } = target
   return (
     <a
       className="hud-btn"
@@ -85,7 +103,7 @@ export function ExplorerMenuRow({ object_id, on_navigate }) {
       onClick={on_navigate}
     >
       <ExplorerGlyph color="var(--accent, #c8963c)" />
-      {t('explorer.view')}
+      {equipped ? t('explorer.view_equipped') : t('explorer.view')}
     </a>
   )
 }

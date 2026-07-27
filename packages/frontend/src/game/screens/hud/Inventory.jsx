@@ -549,7 +549,9 @@ export function Inventory() {
       e.preventDefault()
       if (!equipment[slot]) return
       dismiss_item_tooltip()
-      set_equip_menu({ x: e.clientX, y: e.clientY, item: equipment[slot] })
+      // character_id rides along so the menu's explorer row can link the CHARACTER page — an equipped item
+      // is wrapped into it, so its own object id no longer resolves on chain (#1226).
+      set_equip_menu({ x: e.clientX, y: e.clientY, item: equipment[slot], character_id: character?.id })
     },
   })
 

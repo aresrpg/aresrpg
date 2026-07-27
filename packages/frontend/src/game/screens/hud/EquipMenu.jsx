@@ -12,7 +12,7 @@ import { ExplorerMenuRow } from '../../../components/explorer_link'
 import { ItemSendMenuRow } from '../../../components/item_send_menu_row'
 import { project_inventory_context_actions } from './inventory_context_actions'
 
-/** @typedef {{ x: number, y: number, item: any } | null} EquipMenuTarget */
+/** @typedef {{ x: number, y: number, item: any, character_id?: string | null } | null} EquipMenuTarget */
 
 /**
  * @param {{ menu: EquipMenuTarget, on_close: () => void }} props
@@ -57,7 +57,15 @@ export function EquipMenu({ menu, on_close }) {
       }}
     >
       {actions.includes('send') && <ItemSendMenuRow disabled title={t('gift.send.unequip_first')} />}
-      {actions.includes('explorer') && <ExplorerMenuRow object_id={menu.item?.id} on_navigate={on_close} />}
+      {actions.includes('explorer') && (
+        // Every item this menu renders is EQUIPPED by construction, i.e. wrapped into the character — so the
+        // explorer target is the character's page, never the item's own (dead) id. #1226.
+        <ExplorerMenuRow
+          object_id={menu.item?.id}
+          equipped_character_id={menu.character_id}
+          on_navigate={on_close}
+        />
+      )}
     </div>
   )
 }
