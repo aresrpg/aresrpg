@@ -112,11 +112,28 @@ jobs:
     # the pins (deterministic — never retried), exit 2 = the chain could not be read (retried
     # once, then RED). testnet only — mainnet's packages are unpublished (no upgrade_cap rows in
     # release.json), so every mainnet row reads UNKNOWN; that leg joins when mainnet publishes.
+    #
+    # #1293 SHAPE FIX — the gate was right every time; its ARMING billed the red to the wrong diff.
+    # `verdict = f(tree_pin, chain_state(t))` and the `t` term belongs to nobody in the PR: one
+    # testnet publish turned four unrelated PRs red on frozen trees, then an unrelated stamp commit
+    # on the base healed them — a re-run-to-green pattern in its purest form. A drifted pin is a
+    # property of the REPOSITORY, not of whatever happened to be in flight.
+    # So the leg splits by trigger, without weakening anything:
+    #   · push (edge/master) — the repo-wide truth-assert, unchanged and unfiltered. This is where a
+    #     drift goes red: once, attributably, on the landing that owns the tree.
+    #   · pull_request — DIFF-SCOPED. A PR that touches the pin files asserts against the chain (it
+    #     owns those bytes; #770 is exactly that PR's failure mode). A PR that touches nothing of the
+    #     sort passes without reading the chain, because it cannot regress a pin it never edited.
+    # The job name is unchanged on purpose: promote-green-eval.sh derives the required set from this
+    # file's job names (#725), so the promotion bar keeps this row either way.
     name: release-pin chain gate (testnet)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # The diff-scope decision reads the PR's own base sha, so the base commit must be present.
+          fetch-depth: 0
       - name: setup Bun
         id: setup_bun
         continue-on-error: true
@@ -126,7 +143,37 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install
         run: bun install --frozen-lockfile
+      - name: diff scope — does this PR touch the pins? (#1293)
+        id: scope
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != 'pull_request' ]; then
+            echo "assert=true" >> "$GITHUB_OUTPUT"
+            echo "reason=push on ${{ github.ref_name }} — the repo-wide truth-assert runs here" >&2
+            exit 0
+          fi
+          changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- \
+            packages/sdk/src/deployment/release.json \
+            packages/move/scripts/out/ceremony_manifest.json)
+          if [ -n "$changed" ]; then
+            echo "assert=true" >> "$GITHUB_OUTPUT"
+            printf 'this PR edits the pins:\n%s\n' "$changed" >&2
+          else
+            echo "assert=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: pins untouched — chain not read (the truth-assert lives on edge)
+        if: steps.scope.outputs.assert != 'true'
+        run: |
+          {
+            echo "### release-pin chain gate — diff-scoped pass (#1293)"
+            echo ""
+            echo "This PR edits neither \`packages/sdk/src/deployment/release.json\` nor the ceremony"
+            echo "manifest, so it cannot regress a pin. The repo-wide pins-vs-chain assert runs on every"
+            echo "push to \`edge\`/\`master\`, where a drift is attributable to the tree that owns it."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "release-pin gate: diff-scoped — no pin files in this PR, chain not read."
       - name: release pins vs chain — check_release_pins.mjs (#770)
+        if: steps.scope.outputs.assert == 'true'
         run: |
           run_pin_gate() { node packages/move/scripts/check_release_pins.mjs --network testnet; }
           status=0
