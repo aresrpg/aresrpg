@@ -215,7 +215,7 @@ export const matrix_rows = [
       setup: 'reset_positions',
       effect: { element: 255, target_filter: spell_effect.TF_NONE },
       skip_reason:
-        'conformance bug: K_RESET_POSITIONS normalizes to UNSUPPORTED and leaves displaced fighters in place',
+        'conformance bug #1039: K_RESET_POSITIONS normalizes to UNSUPPORTED and leaves displaced fighters in place',
     },
   ),
   effect_row(
@@ -292,7 +292,7 @@ export const matrix_rows = [
       setup: 'remove_state',
       effect: { value: 7 },
       skip_reason:
-        'conformance bug: K_REMOVE_STATE normalizes to UNSUPPORTED and cannot remove an active named state',
+        'conformance bug #1039: K_REMOVE_STATE normalizes to UNSUPPORTED and cannot remove an active named state',
     },
   ),
   effect_row(

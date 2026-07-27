@@ -283,9 +283,10 @@ const matrix = [
     on: ['ranged'],
     eff: { target_filter: ZONE, element: 255 },
     target: 'self',
-    // INERT TODAY — the normalizer carries no arm for kind 18, so it mints UNSUPPORTED and folds nothing.
-    // This row read green only because the retired card system discarded the cast card, which counted as a
-    // "state change" (#1012). Implementing the kind turns this red: move the row back, do not relax it.
+    // INERT TODAY (#1039) — the normalizer carries no arm for kind 18, so it mints UNSUPPORTED and folds
+    // nothing. This row read green only because the retired card system discarded the cast card, which counted
+    // as a "state change" (#1012). Implementing the kind turns this red: move the row back, do not relax it.
+    // `inert_effect_kinds.test.js` pins the SET this flag belongs to, derived from the normalizer itself.
     unsupported: true,
   },
   {
@@ -319,7 +320,7 @@ const matrix = [
     effects: true,
   },
   { kind: SE.K_APPLY_STATE, on: ['point_blank'], eff: { value: 1, turns: 2 } },
-  // INERT TODAY — same story as K_RESET_POSITIONS above: no normalizer arm for kind 23, so it mints
+  // INERT TODAY (#1039) — same story as K_RESET_POSITIONS above: no normalizer arm for kind 23, so it mints
   // UNSUPPORTED and folds nothing; the retired discard was the only reason this row ever looked alive.
   {
     kind: SE.K_REMOVE_STATE,
