@@ -72,7 +72,7 @@ fun mint_door_mints_and_locks_personal() {
   let ver = sc.take_shared<Version>();
   let policy = sc.take_shared<TransferPolicy<Item>>();
 
-  let (item, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
+  let (item, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx());
   let iid = object::id(&item);
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -116,10 +116,10 @@ fun mint_door_rolls_ranged_template_from_its_seed() {
   let plain = sc.take_shared<ItemTemplate>(); // the rangeless "Sword" from `setup`
   let ver = sc.take_shared<Version>();
 
-  let (rolled_a, p1) = extension::mint_item(&ranged, option::some(1), &ver, sc.ctx());
-  let (rolled_b, p2) = extension::mint_item(&ranged, option::some(999), &ver, sc.ctx());
-  let (unseeded, p3) = extension::mint_item(&ranged, option::none(), &ver, sc.ctx());
-  let (rangeless, p4) = extension::mint_item(&plain, option::some(1), &ver, sc.ctx());
+  let (rolled_a, p1) = extension::y29(&ranged, option::some(1), &ver, sc.ctx());
+  let (rolled_b, p2) = extension::y29(&ranged, option::some(999), &ver, sc.ctx());
+  let (unseeded, p3) = extension::y29(&ranged, option::none(), &ver, sc.ctx());
+  let (rangeless, p4) = extension::y29(&plain, option::some(1), &ver, sc.ctx());
 
   assert!(item_stats::has_rolled_stats(&rolled_a));
   assert!(item_stats::has_rolled_stats(&rolled_b));
@@ -147,7 +147,7 @@ fun mint_door_while_dark_aborts() {
   sc.next_tx(OWNER);
   let tmpl = sc.take_shared<ItemTemplate>();
   let ver = sc.take_shared<Version>();
-  let (item, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx()); // V_ENotEnabled
+  let (item, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx()); // V_ENotEnabled
   destroy(item); destroy(pledge);
   abort
 }
@@ -167,14 +167,14 @@ fun item_field_write_read_roundtrip() {
   let policy = sc.take_shared<TransferPolicy<Item>>();
 
   let (mut item, pledge) = item::mint(&tmpl, sc.ctx());
-  extension::add_item_field(extension::ns_item(), &mut item, TestKey {}, 42u64, &ver);
-  assert!(extension::item_field_exists(&item, extension::ns_item(), TestKey {}));
-  assert_eq!(*extension::borrow_item_field<TestKey, u64>(&item, extension::ns_item(), TestKey {}), 42);
-  *extension::borrow_item_field_mut<TestKey, u64>(extension::ns_item(), &mut item, TestKey {}, &ver) = 99; // mutate in place
-  assert_eq!(*extension::borrow_item_field<TestKey, u64>(&item, extension::ns_item(), TestKey {}), 99);
-  let removed: u64 = extension::remove_item_field(extension::ns_item(), &mut item, TestKey {}, &ver); // detach the slot
+  extension::y31(extension::y44(), &mut item, TestKey {}, 42u64, &ver);
+  assert!(extension::y37(&item, extension::y44(), TestKey {}));
+  assert_eq!(*extension::y38<TestKey, u64>(&item, extension::y44(), TestKey {}), 42);
+  *extension::y32<TestKey, u64>(extension::y44(), &mut item, TestKey {}, &ver) = 99; // mutate in place
+  assert_eq!(*extension::y38<TestKey, u64>(&item, extension::y44(), TestKey {}), 99);
+  let removed: u64 = extension::remove_item_field(extension::y44(), &mut item, TestKey {}, &ver); // detach the slot
   assert_eq!(removed, 99);
-  assert!(!extension::item_field_exists(&item, extension::ns_item(), TestKey {})); // slot is gone
+  assert!(!extension::y37(&item, extension::y44(), TestKey {})); // slot is gone
 
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -198,13 +198,13 @@ fun character_field_write_read_roundtrip() {
   let cust = character::new_customization(1, 2, 3);
   let (mut chr, pledge) = character::new_for_testing(b"hero".to_string(), b"senshi".to_string(), true, cust, 0, sc.ctx());
 
-  let ns = extension::ns_character_progression();
-  extension::add_character_field(ns, &mut chr, TestKey {}, 7u64, &ver);
-  assert!(extension::character_field_exists(&chr, ns, TestKey {}));
-  assert_eq!(*extension::borrow_character_field<TestKey, u64>(&chr, ns, TestKey {}), 7);
-  let removed: u64 = extension::remove_character_field(ns, &mut chr, TestKey {}, &ver);
+  let ns = extension::y41();
+  extension::y33(ns, &mut chr, TestKey {}, 7u64, &ver);
+  assert!(extension::y39(&chr, ns, TestKey {}));
+  assert_eq!(*extension::y40<TestKey, u64>(&chr, ns, TestKey {}), 7);
+  let removed: u64 = extension::y35(ns, &mut chr, TestKey {}, &ver);
   assert_eq!(removed, 7);
-  assert!(!extension::character_field_exists(&chr, ns, TestKey {}));
+  assert!(!extension::y39(&chr, ns, TestKey {}));
 
   destroy(chr); destroy(pledge);
   ts::return_shared(ver);
@@ -226,14 +226,14 @@ fun namespace_isolation_between_namespaces() {
   let policy = sc.take_shared<TransferPolicy<Item>>();
 
   let (mut item, pledge) = item::mint(&tmpl, sc.ctx());
-  extension::add_item_field(0, &mut item, TestKey {}, 100u64, &ver);
-  extension::add_item_field(1, &mut item, TestKey {}, 200u64, &ver); // SAME key, other namespace → coexists
+  extension::y31(0, &mut item, TestKey {}, 100u64, &ver);
+  extension::y31(1, &mut item, TestKey {}, 200u64, &ver); // SAME key, other namespace → coexists
 
   // each namespace holds its own value; neither clobbered the other
-  assert_eq!(*extension::borrow_item_field<TestKey, u64>(&item, 0, TestKey {}), 100);
-  assert_eq!(*extension::borrow_item_field<TestKey, u64>(&item, 1, TestKey {}), 200);
+  assert_eq!(*extension::y38<TestKey, u64>(&item, 0, TestKey {}), 100);
+  assert_eq!(*extension::y38<TestKey, u64>(&item, 1, TestKey {}), 200);
   // a third namespace never saw either write
-  assert!(!extension::item_field_exists(&item, 2, TestKey {}));
+  assert!(!extension::y37(&item, 2, TestKey {}));
 
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -256,7 +256,7 @@ fun write_while_dark_aborts() {
   let tmpl = sc.take_shared<ItemTemplate>();
   let ver = sc.take_shared<Version>();
   let (mut item, pledge) = item::mint(&tmpl, sc.ctx());
-  extension::add_item_field(extension::ns_item(), &mut item, TestKey {}, 1u64, &ver); // V_ENotEnabled
+  extension::y31(extension::y44(), &mut item, TestKey {}, 1u64, &ver); // V_ENotEnabled
   destroy(item); destroy(pledge);
   abort
 }

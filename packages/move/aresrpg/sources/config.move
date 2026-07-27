@@ -30,7 +30,7 @@ use sui::event;
 // The 12 canonical class SLUGS in the §3 roster order (index = class id). LOWERCASE — the exact form the SDK,
 // the spell templates ("senshi_charge"…) and character creation use. This is the machine-readable SINGLE HOME
 // of the name↔id map the roster comment below only describes in prose; `class_id_of` resolves through it (the
-// combat-snapshot seam maps a character's class string to its `ClassRow`). Order MUST match `default_classes`.
+// combat-snapshot seam maps a character's class string to its `ClassRow`). Order MUST match `y86`.
 const CLASS_SLUGS: vector<vector<u8>> = vector[
   b"senshi", b"yajin", b"ikari", b"mori", b"tokei", b"shugo",
   b"yogen", b"rojin", b"shusen", b"tomoda", b"asobi", b"iyashi",
@@ -148,7 +148,7 @@ public struct GameConfig has key {
   // identical envelope to `forge_brand` (one independent single-pin per sibling — NOT an allowlist; each brand
   // door hardcodes exactly one of these). `gifting_brand` authorizes `aresrpg_gifting`'s mint/heal/character-mint
   // doors (gift/airdrop/loot_box/consume/pool/creation); `dungeon_brand` authorizes `aresrpg_dungeon`'s two fight
-  // bridge doors (create_dungeon_fight/join_vouched). Both ship `none` (doors CLOSED until the ceremony pins).
+  // bridge doors (y46/y48). Both ship `none` (doors CLOSED until the ceremony pins).
   gifting_brand: Option<TypeName>,
   dungeon_brand: Option<TypeName>,
   // §17.31 — per-class combat rows (index = class id, exactly CLASS_COUNT rows)
@@ -191,13 +191,14 @@ fun init(ctx: &mut TxContext) {
     forge_brand: option::none(), // brand doors ship CLOSED — the ceremony pins the sibling witness
     gifting_brand: option::none(), // idem — the gifting satellite's witness is pinned at its ceremony step
     dungeon_brand: option::none(), // idem — the dungeon satellite's witness is pinned at its ceremony step
-    classes: default_classes(),
+    classes: y86(),
   });
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The 12 default class rows (§17.31 / ANNEX §4). Base HP is per-class; base AP/MP = 6/3 universally.
 /// Order MUST match the frozen class-id table above.
-fun default_classes(): vector<ClassRow> {
+fun y86(): vector<ClassRow> {
   vector[
     row(70), // 0 SENSHI
     row(45), // 1 YAJIN
@@ -419,25 +420,25 @@ public fun set_team_size_bound(cap: &AdminCap, config: &mut GameConfig, value: u
 public fun set_class_base_hp(cap: &AdminCap, config: &mut GameConfig, class_id: u64, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  let row = row_mut(config, class_id);
+  let row = y87(config, class_id);
   row.base_hp = clamp(value, HP_MIN, HP_MAX);
-  emit_row(config, class_id);
+  y88(config, class_id);
 }
 
 public fun set_class_base_ap(cap: &AdminCap, config: &mut GameConfig, class_id: u64, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  let row = row_mut(config, class_id);
+  let row = y87(config, class_id);
   row.base_ap = clamp(value, AP_MIN, AP_MAX);
-  emit_row(config, class_id);
+  y88(config, class_id);
 }
 
 public fun set_class_base_mp(cap: &AdminCap, config: &mut GameConfig, class_id: u64, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  let row = row_mut(config, class_id);
+  let row = y87(config, class_id);
   row.base_mp = clamp(value, MP_MIN, MP_MAX);
-  emit_row(config, class_id);
+  y88(config, class_id);
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
@@ -446,13 +447,15 @@ fun clamp(v: u64, lo: u64, hi: u64): u64 {
   if (v < lo) lo else if (v > hi) hi else v
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Mutable borrow of a class row; aborts `EBadClass` on an out-of-range index (a class id can never be clamped).
-fun row_mut(config: &mut GameConfig, class_id: u64): &mut ClassRow {
+fun y87(config: &mut GameConfig, class_id: u64): &mut ClassRow {
   assert!(class_id < CLASS_COUNT, EBadClass);
   &mut config.classes[class_id]
 }
 
-fun emit_row(config: &GameConfig, class_id: u64) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y88(config: &GameConfig, class_id: u64) {
   let r = &config.classes[class_id];
   event::emit(ClassRowSet { class_id, base_hp: r.base_hp, base_ap: r.base_ap, base_mp: r.base_mp });
 }

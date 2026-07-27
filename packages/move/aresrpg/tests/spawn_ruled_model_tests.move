@@ -109,7 +109,7 @@ fun the_ruled_model_opens_the_whole_roster_at_the_spawn_box() {
 
   // FORMAT 3 — the ruled model: equal spawn, the full roster, at the very same box.
   let (sids, primaries, members, _mx, _mz, sizes, _mg, progress) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   assert_eq!(sids.length(), 24);
   assert_eq!(primaries.length(), 24);
   assert_eq!(distinct_rows(&members), 3); // all three authored rows reachable at progress 0
@@ -139,9 +139,9 @@ fun distance_grades_difficulty_not_membership() {
   let w = sc.take_shared<World>();
 
   let (_a, _b, near_members, _c, _d, near_sizes, _e, near_progress) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   let (_f, _g, far_members, _h, _i, far_sizes, _j, far_progress) =
-    zone_comp::derive_mobs_members(&w, FAR_ZX, SPAWN_ZX + 1, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, FAR_ZX, SPAWN_ZX + 1, SEED, TEAM_BOUND);
   assert_eq!(near_progress, 0);
   assert_eq!(far_progress, 1000);
   assert_eq!(near_sizes[0], 2); // §4 size cap near the spawn
@@ -166,7 +166,7 @@ fun the_world_boss_mask_fences_the_member_draw() {
   let boss = object::id_from_address(@0xC3);
 
   let (_s, primaries, members, _x, _z, _sz, _g, _p) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   let mut boss_groups = 0;
   let mut i = 0;
   while (i < members.length()) {
@@ -194,7 +194,7 @@ fun a_mask_absent_world_matches_an_explicitly_empty_mask() {
   let w = sc.take_shared<World>();
   assert_eq!(world::boss_mask(&w), vector<u16>[]);
   let (absent_ids, _p, absent_members, _x, _z, _sz, _g, _pr) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   ts::return_shared(w);
 
   sc.next_tx(OWNER);
@@ -203,7 +203,7 @@ fun a_mask_absent_world_matches_an_explicitly_empty_mask() {
   let mut w = sc.take_shared<World>();
   world::set_boss_mask(&cap, &mut w, vector<u16>[], &ver, sc.ctx()); // explicitly empty
   let (empty_ids, _p2, empty_members, _x2, _z2, _sz2, _g2, _pr2) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   assert_eq!(absent_ids, empty_ids);
   assert_eq!(absent_members, empty_members);
   assert!(!absent_members.is_empty());
@@ -223,7 +223,7 @@ fun writing_the_mask_removes_the_boss_from_other_packs() {
   let w = sc.take_shared<World>();
   let boss = object::id_from_address(@0xC3);
   let (_a, unmasked_primaries, unmasked, _b, _c, _d, _e, _f) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   let mut riding = 0;
   let mut i = 0;
   while (i < unmasked.length()) {
@@ -239,7 +239,7 @@ fun writing_the_mask_removes_the_boss_from_other_packs() {
   let mut w = sc.take_shared<World>();
   world::set_boss_mask(&cap, &mut w, vector<u16>[ROW_BOSS], &ver, sc.ctx());
   let (_g, masked_primaries, masked, _h, _i2, _j, _k, _l) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   let mut still_riding = 0;
   let mut m = 0;
   while (m < masked.length()) {
@@ -376,7 +376,7 @@ fun the_member_pipeline_matches_the_js_derive_zone_fixture() {
   let w = sc.take_shared<World>();
 
   let (n_ids, _np, n_members, n_xs, n_zs, n_sizes, _ng, n_progress) =
-    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
   assert_eq!(n_progress, 0);
   assert_eq!(n_ids, near_ids());
   assert_eq!(n_xs, near_xs());
@@ -390,7 +390,7 @@ fun the_member_pipeline_matches_the_js_derive_zone_fixture() {
   };
 
   let (f_ids, _fp, f_members, f_xs, f_zs, f_sizes, _fg, f_progress) =
-    zone_comp::derive_mobs_members(&w, FAR_ZX, SPAWN_ZX + 1, SEED, TEAM_BOUND);
+    zone_comp::y72(&w, FAR_ZX, SPAWN_ZX + 1, SEED, TEAM_BOUND);
   assert_eq!(f_progress, 1000);
   assert_eq!(f_ids, far_ids());
   assert_eq!(f_xs, far_xs());

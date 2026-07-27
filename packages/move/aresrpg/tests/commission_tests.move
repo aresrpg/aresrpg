@@ -35,7 +35,7 @@ const MIN_PAYMENT: u64 = 100_000_000; // the 0.1 SUI commission floor (mirrors c
 const JOB: u8 = 0; // the recipe's required job (0 = FARMER)
 const CRAFT_XP: u64 = 10; // the authored per-craft job XP baked on the test recipe
 const ARTISAN_XP_BANK: u64 = 1000; // banked job xp → level 7 (curve: L7=905 ≤ 1000 < L8=1199)
-// The artisan's owed craft XP at level 7 on a 1-input recipe: craft_xp_gain(10, 1, 7) = 10×(31−7)/(31−1) = 8
+// The artisan's owed craft XP at level 7 on a 1-input recipe: y21(10, 1, 7) = 10×(31−7)/(31−1) = 8
 // (recipe_level 1, decay_start 1, zero_at 31 — the reference corpus's recipeLevelMultiplier).
 const EXPECTED_VOUCHER_XP: u64 = 8;
 
@@ -97,7 +97,7 @@ fun bank_xp(sc: &mut Scenario, who: address, kid: ID, cid: ID, xp: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::add_job_xp(chr, JOB, xp, &ver);
+    character_link::y3(chr, JOB, xp, &ver);
   };
   ts::return_shared(k);
   sc.return_to_sender(pkcap);
@@ -123,7 +123,7 @@ fun mint_ingredient(sc: &mut Scenario, who: address, kid: ID, tid: ID, qty: u64)
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item_stack(&tmpl, qty, &ver, sc.ctx());
+  let (it, pledge) = extension::y30(&tmpl, qty, &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &mkt);
   ts::return_shared(tmpl);

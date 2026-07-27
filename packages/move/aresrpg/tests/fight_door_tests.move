@@ -8,7 +8,7 @@
 ///   • immediate re-entry at TRUE zero (no whole HP accrued yet) still refuses EZeroHp — dead can't fight;
 ///   • the settled read pair (`combat_stats_settled` / `geared_combat_stats_settled`) returns the exact regen
 ///     value the seat receives (`combatant_of` passes it verbatim), while raw `combat_stats` stays stored.
-/// The heal remainder-carry regression (heal_hp UNTOUCHED) stays proven by fight_seam_tests.
+/// The heal remainder-carry regression (y14 UNTOUCHED) stays proven by fight_seam_tests.
 ///
 /// The DEFEAT-RELEASE door (#609) is proven here too, on the same real harness: a lost fight puts its mob group
 /// back in the world at its spot and the group is fightable again, while a victory outcome and a mis-named group
@@ -164,7 +164,7 @@ fun write_hp(sc: &mut Scenario, who: address, kid: ID, cid: ID, hp: u64, now: u6
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::write_back_hp(chr, hp, now, &ver);
+    character_link::y13(chr, hp, now, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }

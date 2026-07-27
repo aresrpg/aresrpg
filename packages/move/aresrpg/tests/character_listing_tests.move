@@ -35,7 +35,7 @@ fun grant_xp(sc: &mut Scenario, who: address, cid: ID, xp: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::grant_fight_xp(&cfg, chr, xp, &ver);
+    character_link::y12(&cfg, chr, xp, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }

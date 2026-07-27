@@ -73,8 +73,8 @@ fun mint_lock_shop_pet(sc: &mut Scenario, pet_template: ID): ID {
   let market = sc.take_shared<TransferPolicy<Item>>();
   let mut kiosk = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (mut pet_item, pledge) = extension::mint_item(&template, option::none(), &version, sc.ctx());
-  item_stats::attach_rolled(&mut pet_item, *item_stats::stats_max(&template));
+  let (mut pet_item, pledge) = extension::y29(&template, option::none(), &version, sc.ctx());
+  item_stats::y66(&mut pet_item, *item_stats::stats_max(&template));
   let pet_id = object::id(&pet_item);
   item::lock_in_kiosk(
     pledge, pet_item, &mut kiosk, personal_kiosk::borrow(&pkcap), &market,
@@ -99,7 +99,7 @@ fun force_legacy_power(sc: &mut Scenario, pet_id: ID, amount: u64) {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let ver = sc.take_shared<Version>();
   let pet = k.borrow_mut(personal_kiosk::borrow(&pkcap), pet_id);
-  character_link::grow_pet_power(pet, amount, &ver);
+  character_link::y11(pet, amount, &ver);
   ts::return_shared(k);
   sc.return_to_sender(pkcap);
   ts::return_shared(ver);
@@ -173,8 +173,8 @@ fun equipped_state(sc: &mut Scenario, cid: ID, pet_id: ID): (u64, u64, u64) {
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let character = k.borrow(personal_kiosk::borrow(&pkcap), cid);
-  let item = extension::borrow_character_field<ID, Item>(
-    character, extension::ns_character_equipment(), pet_id,
+  let item = extension::y40<ID, Item>(
+    character, extension::y42(), pet_id,
   );
   let feed_count = pet::feed_count(item);
   let strength = current_strength(item);
@@ -330,7 +330,7 @@ fun non_pet_target_aborts() {
 // Root cause (issue #88): the pre-cadence `feed()` door stored arbitrary power×amount in the unversioned
 // PetPowerKey; the current cadence reinterprets that SAME key as a bounded 0-60 feed count.
 // `equipment::equip` normalizes a pet's stats off the stored count BEFORE slot placement
-// (item_stats::pet_stats_at_count → scale_from_center asserts numerator <= denominator) — a legacy value past
+// (item_stats::y68 → scale_from_center asserts numerator <= denominator) — a legacy value past
 // 60 aborts item_stats::EInvalidScale(101) inside that normalization, and because the PTB
 // (extract_for_equip + equipment::equip) is one atomic transaction, the abort reverts the whole thing: the
 // item is never detached, so it lands right back where the player found it — loose, unequipped, in the

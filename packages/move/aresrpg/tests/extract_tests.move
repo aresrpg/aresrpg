@@ -69,7 +69,7 @@ fun mint_and_lock(sc: &mut Scenario, actor: address): (Kiosk, PersonalKioskCap, 
   let tmpl = sc.take_shared<ItemTemplate>();
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let (it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
+  let (it, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -85,7 +85,7 @@ fun mint_stack_and_lock(sc: &mut Scenario, actor: address, quantity: u64): (Kios
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let tid = item::template_id(&tmpl);
-  let (it, pledge) = extension::mint_item_stack(&tmpl, quantity, &ver, sc.ctx());
+  let (it, pledge) = extension::y30(&tmpl, quantity, &ver, sc.ctx());
   let item_id = object::id(&it);
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -115,7 +115,7 @@ fun equip_extract_then_confirm_attaches_item_to_character() {
   assert!(!kiosk.has_item(item_id)); // pulled OUT of the kiosk
   let (mut chr, cpledge) = a_character(&mut sc);
   extract::confirm_equip(epledge, xitem, &mut chr, &ver);
-  assert!(extension::character_field_exists(&chr, extension::ns_character_equipment(), item_id)); // now on the character
+  assert!(extension::y39(&chr, extension::y42(), item_id)); // now on the character
 
   destroy(chr); destroy(cpledge); destroy(kiosk); destroy(pkcap);
   ts::return_shared(ver); ts::return_shared(xpolicy);
@@ -249,9 +249,9 @@ fun burn_tolerates_attached_dynamic_field() {
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let xpolicy = sc.take_shared<ItemExtractPolicy>();
-  let (mut it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
+  let (mut it, pledge) = extension::y29(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
-  extension::add_item_field(extension::ns_item(), &mut it, TestKey {}, 123u64, &ver); // a live DF on the item
+  extension::y31(extension::y44(), &mut it, TestKey {}, 123u64, &ver); // a live DF on the item
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
   item::lock_in_kiosk(pledge, it, &mut kiosk, personal_kiosk::borrow(&pkcap), &mkt);

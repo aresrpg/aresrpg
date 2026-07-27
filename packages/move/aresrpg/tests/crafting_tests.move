@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// Crafting tests: the ported craft tx — consume the crafter's kiosk-locked inputs, ROLL the success chance off the
 /// crafter's job level, mint the output ON SUCCESS (locked), and credit the craft job XP either way. Adversarial-first:
-/// a short / missing / wrong / over-supplied ingredient aborts in `craft_consume` BEFORE the roll (reverting the burns
+/// a short / missing / wrong / over-supplied ingredient aborts in `y18` BEFORE the roll (reverting the burns
 /// — items are never lost), a forged output template is impossible (`EWrongOutput`), and an under-levelled crafter is
 /// refused (`EUnderLevel`). Success/failure branches are driven deterministically via `craft_forced`; the ported
 /// ported reference-corpus formulas are unit-proven; the real `&Random` `craft` entry is exercised end-to-end.
@@ -201,7 +201,7 @@ fun recipe_getters_reflect_authoring() {
   sc.end();
 }
 
-// ╔════════════════ [ Adversarial matrix (aborts in craft_consume, BEFORE the roll) ] ═ ]
+// ╔════════════════ [ Adversarial matrix (aborts in y18, BEFORE the roll) ] ═ ]
 
 #[test, expected_failure(abort_code = EMissingIngredient, location = crafting)]
 /// Short: the recipe needs 3 iron but only 2 are supplied — the tally never zeroes.
@@ -307,7 +307,7 @@ fun min_level_formula_matches_hytale() {
 }
 
 #[test]
-/// ④ craft_xp_gain = base × recipeLevelMultiplier: full in-band, linear decay to 0 over +30 (CraftingFormulas.java:60-69).
+/// ④ y21 = base × recipeLevelMultiplier: full in-band, linear decay to 0 over +30 (CraftingFormulas.java:60-69).
 fun craft_xp_decay_matches_hytale() {
   // 2-input recipe: recipe_level=1, decay_start=14, zero_at=31.
   assert_eq!(crafting::test_craft_xp_gain(100, 2, 1), 100); // in band (≤ decay_start)

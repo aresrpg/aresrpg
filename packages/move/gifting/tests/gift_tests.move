@@ -97,7 +97,7 @@ fun mint_lock_into(sc: &mut Scenario, who: address, kid: ID, tid: ID): ID {
   let policy = sc.take_shared<TransferPolicy<Item>>();
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item_for_testing(&tmpl, &ver, sc.ctx());
+  let (it, pledge) = extension::mint_item_for_testing(&tmpl, option::none(), &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &policy);
   ts::return_shared(tmpl); ts::return_shared(ver); ts::return_shared(policy); ts::return_shared(k); sc.return_to_sender(pkcap);

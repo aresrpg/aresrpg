@@ -118,16 +118,16 @@ public fun feed_pet(
   let day = clock.timestamp_ms() / UTC_DAY_MS;
   let feed_count = if (kiosk.has_item(pet_item_id)) {
     let pet = kiosk.borrow_mut(owner_cap, pet_item_id);
-    let (feed_count, stats) = advance_pet(pet, pet_template, day, version);
-    item_stats::set_rolled(pet, stats);
+    let (feed_count, stats) = y130(pet, pet_template, day, version);
+    item_stats::y67(pet, stats);
     feed_count
   } else {
     let character = kiosk.borrow_mut(owner_cap, character_id);
     let (feed_count, stats) = {
-      let pet = equipment::borrow_equipped_mut(character, pet_item_id, version);
-      advance_pet(pet, pet_template, day, version)
+      let pet = equipment::y24(character, pet_item_id, version);
+      y130(pet, pet_template, day, version)
     };
-    equipment::set_equipped_stats(character, pet_item_id, stats, version);
+    equipment::y25(character, pet_item_id, stats, version);
     feed_count
   };
 
@@ -140,7 +140,8 @@ public fun feed_pet(
   });
 }
 
-fun advance_pet(pet: &mut Item, template: &ItemTemplate, day: u64, version: &Version): (u64, ItemStatistics) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun y130(pet: &mut Item, template: &ItemTemplate, day: u64, version: &Version): (u64, ItemStatistics) {
   assert!(item::category(pet) == b"pet".to_string(), ENotPet);
   assert!(item::template_category(template) == b"pet".to_string(), ENotPet);
   assert!(item::template(pet) == item::template_id(template), ETemplateMismatch);
@@ -148,19 +149,19 @@ fun advance_pet(pet: &mut Item, template: &ItemTemplate, day: u64, version: &Ver
 
   let feed_count = character_link::pet_power(pet);
   assert!(feed_count < item_stats::pet_full_feed_count(), EFullyFed);
-  let ns = extension::ns_item();
+  let ns = extension::y44();
   let key = PetLastFeedDayKey {};
-  if (extension::item_field_exists(pet, ns, key)) {
-    let last = *extension::borrow_item_field<PetLastFeedDayKey, u64>(pet, ns, key);
+  if (extension::y37(pet, ns, key)) {
+    let last = *extension::y38<PetLastFeedDayKey, u64>(pet, ns, key);
     assert!(last < day, EAlreadyFedToday);
-    *extension::borrow_item_field_mut(ns, pet, key, version) = day;
+    *extension::y32(ns, pet, key, version) = day;
   } else {
-    extension::add_item_field(ns, pet, key, day, version);
+    extension::y31(ns, pet, key, day, version);
   };
 
   let next_count = feed_count + POWER_PER_FEED;
-  character_link::grow_pet_power(pet, POWER_PER_FEED, version);
-  (next_count, item_stats::pet_stats_at_count(template, next_count))
+  character_link::y11(pet, POWER_PER_FEED, version);
+  (next_count, item_stats::y68(template, next_count))
 }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
@@ -174,11 +175,11 @@ public fun feed_count(pet: &Item): u64 { character_link::pet_power(pet) }
 public fun full_feed_count(): u64 { item_stats::pet_full_feed_count() }
 
 public fun has_last_feed_day(pet: &Item): bool {
-  extension::item_field_exists(pet, extension::ns_item(), PetLastFeedDayKey {})
+  extension::y37(pet, extension::y44(), PetLastFeedDayKey {})
 }
 
 public fun last_feed_day(pet: &Item): u64 {
-  *extension::borrow_item_field<PetLastFeedDayKey, u64>(pet, extension::ns_item(), PetLastFeedDayKey {})
+  *extension::y38<PetLastFeedDayKey, u64>(pet, extension::y44(), PetLastFeedDayKey {})
 }
 
 public fun next_feed_available_ms(pet: &Item): u64 {

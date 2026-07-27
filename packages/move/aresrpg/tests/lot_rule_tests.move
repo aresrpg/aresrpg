@@ -22,7 +22,7 @@ const EWrongItem: u64 = 102;
 fun prove_and_confirm(category: String, amount: u64, wrong_item: bool) {
   let mut sc = ts::begin(OWNER);
   let stackable = item::is_stackable_category(category);
-  let template = item::new_template(
+  let template = item::y49(
     b"Lot Test Item".to_string(),
     b"".to_string(),
     b"lot_test_item".to_string(),

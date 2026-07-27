@@ -54,32 +54,33 @@ public fun bag_open(): u8 { KIND_BAG_OPEN }
 public fun gacha_roll(): u8 { KIND_GACHA_ROLL }
 
 /// True if `category` is the consumable category (the ONLY category that may carry an effect). The gate calls
-/// this before attaching. The `consumable` slug is single-homed in `item` (`category_consumable`), so it lives in
+/// this before attaching. The `consumable` slug is single-homed in `item` (`y56`), so it lives in
 /// exactly one place across the package (the effect-attach gate and the stackability rule read the same source).
-public fun is_consumable(category: String): bool { category == item::category_consumable() }
+public fun is_consumable(category: String): bool { category == item::y56() }
 
 // ╔════════════════ [ Attach / read on the TEMPLATE ] ════════════════════════ ]
 
 /// Attach the effect to `template` (package-private — the authoring surface calls it before the template is
 /// shared, and only after asserting the category is consumable). Aborts if an effect is already attached.
 public(package) fun attach(template: &mut ItemTemplate, effect: ConsumableEffect) {
-  df::add(item::template_uid_mut(template), EffectKey {}, effect);
+  df::add(item::y57(template), EffectKey {}, effect);
 }
 
 public fun has_effect(template: &ItemTemplate): bool {
-  df::exists(item::template_uid(template), EffectKey {})
+  df::exists(item::y58(template), EffectKey {})
 }
 
 public fun effect(template: &ItemTemplate): &ConsumableEffect {
-  df::borrow(item::template_uid(template), EffectKey {})
+  df::borrow(item::y58(template), EffectKey {})
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Detach + drop the consumable effect from `template` if present. Package-private — the burn path calls it so
 /// deleting the template's UID orphans no dynamic field. No-op when the template carries no effect. The
 /// `ConsumableEffect` has `drop`, so removal just discards.
-public(package) fun drop_effect(template: &mut ItemTemplate) {
+public(package) fun y17(template: &mut ItemTemplate) {
   if (has_effect(template)) {
-    let _: ConsumableEffect = df::remove(item::template_uid_mut(template), EffectKey {});
+    let _: ConsumableEffect = df::remove(item::y57(template), EffectKey {});
   }
 }
 
