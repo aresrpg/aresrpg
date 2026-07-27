@@ -213,6 +213,29 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
           `${status} status beat never mounted its board float`
         ).toBe(true)
 
+      // ── DRAIN keeps its OWN arm: the general status float must never swallow the status kind that
+      //    already voices itself as combat-log lines (a general arm ordered first shadows the specific one) ──
+      fight_store.getState().input({
+        type: 'predicted',
+        intent_id: 'drain-presentation',
+        basis_version: 6,
+        actions: [],
+        beats: [
+          {
+            kind: 'status',
+            at: 0,
+            duration: 0,
+            payload: { target_id: CHAR, caster_id: CHAR, status: 'DRAIN', pool: 'ap', landed: 0, dodged: 0 },
+            source_turn: 'drain-presentation',
+          },
+        ],
+      })
+      await sleep(200)
+      expect(
+        board.calls.floats.some((row) => row.text === 'DRAIN'),
+        'a DRAIN status beat mounted the generic status float — its combat-log arm is shadowed'
+      ).toBe(false)
+
       // ── the receipt: the mob's whole paced turn (move → cast → hit me for 7) enters the wave ──
       fight_store.getState().input({ type: 'receipt', receipt: { events: CASCADE }, version: 6 })
       expect(

@@ -1029,20 +1029,22 @@ export function create_voxel_fight_adapter(
           // Repaint from engine_view.trap_prims at the detonation beat. No renderer-owned list may keep it visible.
           reconcile()
           await play_trap_boom(payload)
-        } else if (spec.kind === 'status') {
-          // ONE standalone-status home: SHIELD/STUN/POISON/GLYPH (and any future named status) announce at the
-          // affected rig instead of disappearing between producer and presenter. Persistent badges/zones remain
-          // projection-owned; this short board float is the ordered "it landed now" beat.
-          const target_id = payload.target_id ?? payload.entity_id
-          if (target_id && payload.status && entity_ids.has(target_id))
-            board.float?.(target_id, { text: String(payload.status), kind: 'info' })
         } else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
         else if (spec.kind === 'status' && payload.status === 'DRAIN')
           // The receipt presenter derived this one fold outcome; every mounted viewer emits its own client-only
           // lines from those exact counts — the loss line for what landed, the dodge line for what a contest ate.
           // No contest is rolled or reconstructed at the render edge.
           emit_drain_lines(read_board_fight_state, context.dispatch, payload)
-        else if (spec.kind === 'tackled') {
+        else if (spec.kind === 'status') {
+          // ONE standalone-status home: SHIELD/STUN/POISON/GLYPH (and any future named status) announce at the
+          // affected rig instead of disappearing between producer and presenter. Persistent badges/zones remain
+          // projection-owned; this short board float is the ordered "it landed now" beat.
+          // Ordered AFTER the DRAIN arm on purpose: DRAIN voices itself as combat-log lines, so the general
+          // arm must stay the fallback for statuses that have no presentation of their own.
+          const target_id = payload.target_id ?? payload.entity_id
+          if (target_id && payload.status && entity_ids.has(target_id))
+            board.float?.(target_id, { text: String(payload.status), kind: 'info' })
+        } else if (spec.kind === 'tackled') {
           // TACKLE BITE: a tackled player plays the hit animation just before moving —
           // the runner FLINCHES; the producer already ordered this beat strictly before any retry move beat,
           // the adapter routes it through the SAME presented hit beat as ordinary damage. No HP moves here
