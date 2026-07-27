@@ -109,3 +109,63 @@ fun t_fixed_damage_is_deterministic_midpoint_no_rng() {
   let dmg = grid::fixed_damage(spell::el_fire(), 10, 20, &caster, &target, 1);
   assert!(dmg == 15, 0); // midpoint (10+20)/2, no level scaling above L1, zero resist
 }
+
+#[test]
+/// THE OPTIMIZATION'S CLAIM, checked cell by cell: the distance field answers exactly what a per-cell
+/// `bfs_path_cost` answers. The movement walker used to call that function once per candidate direction per step
+/// — up to ~25 flood fills for one move — and now reads a single field instead. That swap is only sound while
+/// these two agree everywhere, so this walks the WHOLE board and compares them, walls and all.
+///
+/// The one place they legitimately differ is a WALL cell: `bfs_path_cost` never checks whether its START is a
+/// wall and will happily path out of one, while the field only grows through open cells. Every caller tests the
+/// mask before reading, so that case is excluded here — deliberately, and named.
+///
+/// SAMPLED, not exhaustive, and for a telling reason: comparing all 380 cells means 380 flood fills, and that
+/// TIMES OUT the Move test VM. The stride covers every row and every column of the board while the whole field
+/// it is checked against costs one fill — which is the same arithmetic that made this change worth making.
+fun t_distance_field_equals_per_cell_bfs_everywhere() {
+  let target = 145;
+  let cap = 12;
+  // A wall run that forces real detours rather than open-field straight lines.
+  let mut walls = grid::empty_mask();
+  let mut c = 0;
+  while (c < 6) { grid::mask_set(&mut walls, 124 + c); c = c + 1; }; // a horizontal bar above the target
+  grid::mask_set(&mut walls, 164);
+  grid::mask_set(&mut walls, 166);
+
+  let field = grid::bfs_distance_field(target, &walls, cap);
+  // Stride 7 over a 20-wide board walks every column (7 and 20 are coprime) and every row.
+  let mut cell = 0;
+  while (cell < grid::grid_cells()) {
+    if (!grid::mask_get(&walls, cell)) {
+      let direct = grid::bfs_path_cost(cell, target, &walls, cap);
+      assert!(*field.borrow(cell) == direct, cell);
+    };
+    cell = cell + 7;
+  };
+  // Plus the cells that actually exercise the detour: the open cells hugging the wall bar.
+  let mut i = 0;
+  while (i < 6) {
+    let below = 144 + i;
+    if (!grid::mask_get(&walls, below)) {
+      assert!(*field.borrow(below) == grid::bfs_path_cost(below, target, &walls, cap), 200 + i);
+    };
+    let above = 104 + i;
+    if (!grid::mask_get(&walls, above)) {
+      assert!(*field.borrow(above) == grid::bfs_path_cost(above, target, &walls, cap), 300 + i);
+    };
+    i = i + 1;
+  };
+}
+
+#[test]
+/// The cap is a real bound on both sides: past `max_steps` the field reads UNREACHABLE, exactly as the
+/// per-cell call does with the same budget.
+fun t_distance_field_respects_its_cap() {
+  let target = 0;
+  let walls = grid::empty_mask();
+  let field = grid::bfs_distance_field(target, &walls, 3);
+  assert!(*field.borrow(3) == 3, 0); // three steps along the top row — inside the cap
+  assert!(*field.borrow(4) == grid::path_unreachable(), 1); // one step past it
+  assert!(grid::bfs_path_cost(4, target, &walls, 3) == grid::path_unreachable(), 2); // the twin agrees
+}
