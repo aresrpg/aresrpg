@@ -246,8 +246,10 @@ const REQUIRED_IDS = [
  * READ paths that need a single id (a type string for an owned-object scan, a shared registry) and must work
  * even before the package is publish-complete (e.g. VERSION still unstamped). Never throws — the caller checks
  * the '' itself. Write paths keep using `aresrpg_deployment` (the all-or-nothing stamp-or-throw gate).
+ * SCALAR pins only. The list-shaped one (the registry shards) has its own reader, `fight_registry_arg`, which
+ * picks by scope — there is no single id to hand back for it.
  * @param {'testnet' | 'mainnet' | 'devnet' | 'localnet'} network
- * @param {keyof AresrpgIds} key
+ * @param {Exclude<keyof AresrpgIds, 'FIGHT_REGISTRY_SHARDS'>} key
  * @returns {string}
  */
 export function aresrpg_id(network, key) {
