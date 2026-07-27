@@ -47,6 +47,7 @@ import { paginate_fight_journal } from '../rpc/fight_journal.js'
 import { T62_WORLDS, DEMO_NETWORK } from '../chain/deployment'
 import { display_mob_name } from '../content/mob_name_overrides'
 import { push_event_toast } from '../game/core/toast.js'
+import { run_fight_entry } from '../game/fight_engage.js'
 import i18n from '../i18n'
 import { load_roster } from '../roster/load_roster'
 import {
@@ -82,7 +83,12 @@ import { commit_with_overdue_retry } from './overdue_retry.js'
 import { read_object, decode_pass, load_world_meta, resolve_entry_key, is_gone_error } from './run_reads.js'
 import { read_fight_liveness } from './fight_liveness.js'
 import { key_candidates } from './key_pick.js'
-import { mint_owed, recover_character, auto_open_pending_outcomes } from './dungeon_settlement.js'
+import {
+  mint_owed,
+  recover_character,
+  recover_fight_entry_refusal,
+  auto_open_pending_outcomes,
+} from './dungeon_settlement.js'
 import { should_boot_open } from './pending_outcomes.js'
 import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
 import { should_hold_receipt_fight } from './world_fight_receipt.js'
@@ -528,6 +534,7 @@ export const use_dungeon = create((set, get) => ({
     // leaks across files): the two room-fight txs are injectable so the fresh-mint hold is drivable headless.
     mint_room_fight = next_room_fight,
     join_team = join_owned_dungeon_room_fight,
+    recover_refusal = null,
   } = {}) {
     if (!user) {
       game_log('dungeon', 'BLOCKED start_when_ready without a user gesture')
@@ -566,11 +573,26 @@ export const use_dungeon = create((set, get) => ({
       const room = run?.room ?? 1
       const roster = rooms[room - 1] ?? []
       if (!roster.length) throw new Error(`Room ${room} has no roster`)
-      const { fight_id: minted } = await mint_room_fight({
-        world_id,
-        run_pass_id,
-        mob_template_id: roster[0], // homogeneous room (dungeon.move asserts it)
-        character_id,
+      const { fight_id: minted } = await run_fight_entry({
+        submit: () => {
+          // A code-111 repair can advance this same RunPass while opening the prior result. Re-compose the one
+          // authorized retry from refreshed store truth instead of replaying the stale room/template arguments.
+          const live = get()
+          const live_room = live.run?.room ?? room
+          const live_roster = live.rooms[live_room - 1] ?? []
+          if (!live_roster.length) throw new Error(`Room ${live_room} has no roster`)
+          return mint_room_fight({
+            world_id: live.world_id ?? world_id,
+            run_pass_id: live.run_pass_id ?? run_pass_id,
+            mob_template_id: live_roster[0], // homogeneous room (dungeon.move asserts it)
+            character_id,
+          })
+        },
+        // The same reducer-shaped correction used by world-fight joins: only a pre-flight fight::111 opens the
+        // character's pending outcome, and only that receipt permits this explicit engage to submit once more.
+        recover_refusal:
+          recover_refusal ??
+          ((error) => recover_fight_entry_refusal(use_dungeon, character_id, error, { live_run_pass_id: run_pass_id })),
       })
       if (!minted) throw new Error('next_fight did not return a Fight id')
       // FRESH — the engage click minted it. `fight_syncing: true` is the RECEIPT-HOLD flag (world_fight_receipt):
@@ -589,8 +611,8 @@ export const use_dungeon = create((set, get) => ({
         fight_id: minted,
         character_id,
         address: use_auth.getState().address,
-        run,
-        rooms_total: rooms.length,
+        run: get().run ?? run,
+        rooms_total: get().rooms.length,
         mob_names: get().mob_names,
         mob_levels: get().mob_levels,
         mob_elements: get().mob_elements,

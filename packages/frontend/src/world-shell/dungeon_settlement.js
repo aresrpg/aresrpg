@@ -491,10 +491,15 @@ export async function find_pending_outcome(address, character_id) {
  * open receipt returns to the entry reducer; an executed entry/open failure is never retried and its original
  * error surfaces untouched. This replaces the old abort-hook callback, which could open after entry had died.
  * @param {any} store @param {string} character_id @param {unknown} refusal
- * @param {{live_world_fight_id?:string|null}} [opts]
+ * @param {{live_world_fight_id?:string|null,live_run_pass_id?:string|null}} [opts]
  * @returns {Promise<any>} the shared open receipt (null only for an already-opened stale projection row)
  */
-export async function recover_fight_entry_refusal(store, character_id, refusal, { live_world_fight_id = null } = {}) {
+export async function recover_fight_entry_refusal(
+  store,
+  character_id,
+  refusal,
+  { live_world_fight_id = null, live_run_pass_id = null } = {}
+) {
   return recover_marked_fight_entry(refusal, {
     find_result: async () => {
       const { address } = use_auth.getState()
@@ -511,6 +516,7 @@ export async function recover_fight_entry_refusal(store, character_id, refusal, 
       return open_pending_row(store, address, character_id, row, {
         allow_run_bound: true,
         live_world_fight_id,
+        live_run_pass_id,
         surface_failure: false,
       })
     },
@@ -528,7 +534,7 @@ export async function recover_fight_entry_refusal(store, character_id, refusal, 
  * @param {string} address @param {string} character_id
  * @param {{ outcome_id: string, fight_id?: string|null, world_id?: string|null }} row
  * @param {{ manual?: boolean, allow_run_bound?: boolean, live_world_fight_id?: string|null,
- *           surface_failure?: boolean }} [opts]
+ *           live_run_pass_id?: string|null, surface_failure?: boolean }} [opts]
  * @returns {Promise<{status:'opened',receipt:any}|{status:'blocked'|'failed',error:unknown|null}>} `opened`
  *   carries the receipt that re-enters the fight-entry reducer; blocked/failed retain the honest cause.
  */
@@ -537,7 +543,13 @@ export function open_pending_row(
   address,
   character_id,
   row,
-  { manual = false, allow_run_bound = false, live_world_fight_id = null, surface_failure = true } = {}
+  {
+    manual = false,
+    allow_run_bound = false,
+    live_world_fight_id = null,
+    live_run_pass_id = null,
+    surface_failure = true,
+  } = {}
 ) {
   const { getState, setState } = store
   if (!row?.outcome_id) return Promise.resolve({ status: 'blocked', error: null })
@@ -565,10 +577,21 @@ export function open_pending_row(
         return { status: 'deferred', error: new Error(i18n.t('errors.fight_result_latched')) }
       }
       // A live fight/run owns the shared store. This is a local deferral, not a refused open transaction, so the
-      // untouched result re-arms instead of being falsely latched for the rest of the session.
+      // untouched result re-arms instead of being falsely latched for the rest of the session. The dungeon engage
+      // reducer may authorize its exact run/character while it is busy: that busy flag belongs to this awaited
+      // repair itself, and every different session remains blocked.
       const session_is_live = () => {
         const live = getState()
-        return live.busy || live.run_pass_id || (live.fight_id && live.fight_id !== live_world_fight_id)
+        const owns_dungeon_entry =
+          live_run_pass_id &&
+          live.run_pass_id === live_run_pass_id &&
+          live.character_id === character_id &&
+          !live.fight_id
+        return (
+          (live.busy && !owns_dungeon_entry) ||
+          (live.run_pass_id && !owns_dungeon_entry) ||
+          (live.fight_id && live.fight_id !== live_world_fight_id)
+        )
       }
       if (session_is_live()) {
         const error = new Error(i18n.t('errors.fight_result_latched'))

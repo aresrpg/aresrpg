@@ -43,6 +43,7 @@ const RUN_PASS_ID = '0xrunpass'
 const CREATOR_PASS_ID = '0xcreatorpass'
 const WORLD_ID = '0xworld'
 const MOB_TEMPLATE_ID = '0xmob'
+const NEXT_MOB_TEMPLATE_ID = '0xnextmob'
 const MINTED_FIGHT_ID = '0xfreshfight'
 const JOIN_FIGHT_ID = '0xjoinfight'
 
@@ -110,6 +111,50 @@ describe('RIDER B(a) — a fresh room fight is HELD, never collapsed, through th
     // THE FIX: without fight_syncing:true this is false and refresh would _collapse_terminal_ghost the fresh mint.
     expect(use_dungeon.getState().fight_syncing).toBe(true)
     expect(should_hold_receipt_fight(use_dungeon.getState(), MINTED_FIGHT_ID)).toBe(true)
+  })
+
+  test('#660 a code-111 room engage repairs through the entry reducer, then retries exactly once', async () => {
+    const refusal = Object.assign(new Error('fight::ECharacterMarked'), { code: 111, module: 'fight' })
+    let attempts = 0
+    const mint_room_fight = mock(async () => {
+      attempts += 1
+      if (attempts === 1) throw refusal
+      return { fight_id: MINTED_FIGHT_ID }
+    })
+    const recover_refusal = mock(async () => {
+      // Opening the pending result advances the RunPass. The reducer's authorized retry must compose from the
+      // refreshed room, not replay the stale first attempt's roster.
+      use_dungeon.setState({ run: { room: 2, world: WORLD_ID } })
+      return { digest: '0xopen-receipt' }
+    })
+    use_dungeon.setState({
+      run_pass_id: RUN_PASS_ID,
+      owned_run_pass_ids: {},
+      owned_team_entry_blocked: false,
+      owned_team_settlement_blocked: false,
+      world_id: WORLD_ID,
+      rooms: [[MOB_TEMPLATE_ID], [NEXT_MOB_TEMPLATE_ID]],
+      run: { room: 1, world: WORLD_ID },
+      busy: false,
+      _settling: false,
+      character_id: CHARACTER_ID,
+      fight_id: null,
+      refresh: mock(async () => {}),
+    })
+
+    await use_dungeon.getState().start_when_ready({
+      user: true,
+      mint_room_fight,
+      join_team: mock(async () => {}),
+      recover_refusal,
+    })
+
+    expect(mint_room_fight).toHaveBeenCalledTimes(2)
+    expect(recover_refusal).toHaveBeenCalledTimes(1)
+    expect(recover_refusal).toHaveBeenCalledWith(refusal)
+    expect(mint_room_fight.mock.calls[1][0].mob_template_id).toBe(NEXT_MOB_TEMPLATE_ID)
+    expect(use_dungeon.getState().fight_id).toBe(MINTED_FIGHT_ID)
+    expect(use_dungeon.getState().error).toBeNull()
   })
 
   test('join_shared_dungeon (co-op JOIN) marks the fresh join fight_syncing → the receipt hold gate passes', async () => {
