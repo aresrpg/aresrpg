@@ -246,6 +246,12 @@ describe('L4 · determinism — the seed is the whole fight', () => {
     //   2. d78e5fd0 → c57c71b0 (#867), when the seats stopped fighting on off-chain HP pools: this roster's
     //      level-30 Senshi seat went 280 → 315 max HP (class base 70 + 29×5 + 100 vitality, the chain's
     //      `progression_math::max_hp_from_base`), so the same commands now kill on a different turn.
+    //   3. #577 (random damage), when the damage roll left the threaded `state.rng` for the turn-seed/crank
+    //      derivation: the simulator is its OWN authority (no chain clock), so every cast now rolls a
+    //      NON-ADVANCING `crank_damage_roll(state.rng)` instead of consuming an `rng_range` draw. Authored
+    //      bands roll a different (still in-range) value AND the rng thread no longer advances per hit, so
+    //      every downstream draw shifts. Determinism itself is untouched — the two-run equality above still
+    //      holds byte-for-byte; only the pinned number moved.
     // The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved — it seats no characters.
     expect(digest_of(a)).toMatchSnapshot()
   })

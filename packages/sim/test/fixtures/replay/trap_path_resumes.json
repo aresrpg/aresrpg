@@ -242,8 +242,8 @@
         "effects": [
           {
             "target_id": "p0",
-            "damage": 7,
-            "new_health": 93,
+            "damage": 6,
+            "new_health": 94,
             "killed": false
           }
         ]
@@ -261,14 +261,14 @@
         "mp": 5
       }
     ],
-    "terminal_digest": "f30c67c6",
+    "terminal_digest": "fd4c5690",
     "terminal_summary": {
       "winner": -1,
       "turn_number": 1,
       "entities": [
         {
           "id": "p0",
-          "health": 93,
+          "health": 94,
           "cell": {
             "x": 6,
             "y": 6
