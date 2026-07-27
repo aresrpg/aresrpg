@@ -7,7 +7,7 @@
 // fight view + dungeon escrow (mirroring DungeonBoard.optimistic_cast) and runs the ONE damage home twice —
 // never a second formula. The hook (use_target_prediction.js) only feeds it the three live slices.
 
-import { predict_cast, weapon_spell_template } from '@aresrpg/fight/predict_cast'
+import { crit_clock_of, predict_cast, weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 import { encode } from '@aresrpg/fight/los'
 
@@ -111,18 +111,11 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   const resolve_ref = (id) => resolve_dungeon_ref(dungeon, id)
   // DETERMINISTIC CRIT (#163): a fight is seed-deterministic, so whether THIS pending cast crits is a FACT
   // computable pre-cast — never a chance. It lands on the NEXT turn-seed slot (my committed casts_this_turn + the
-  // live AP-queue draft), the EXACT slot the DeckCluster socket glow previews. next_slot_crit / socket_glows
-  // (deck-crit-glow.js → @aresrpg/sim) is the ONE crit-slot home, so the tooltip and the glow can never disagree
-  // and both mirror what the chain settles. Seed-less / off-turn ⇒ the roll is unknown ⇒ the honest non-crit branch.
-  const crit_slot = next_slot_crit({
-    my_turn: true, // past the turn-ownership gate above
-    world_seed: dungeon.world_seed,
-    spawn_id: dungeon.spawn_id,
-    turn_deadline_ms: dungeon.turn_deadline_ms || null, // 0 = unstamped (placement) — never a valid seed input
-    seat: me?.seat ?? null,
-    casts_this_turn: Number(me?.casts_this_turn ?? 0),
-    draft_len,
-  })
+  // live AP-queue draft), the EXACT slot the DeckCluster socket glow previews. crit_clock_of (@aresrpg/fight) is
+  // the ONE composer of that clock and next_slot_crit / socket_glows (deck-crit-glow.js → @aresrpg/sim) roll it,
+  // so the tooltip, the glow and the cast that follows can never disagree and all mirror what the chain settles.
+  // Seed-less / seat-less ⇒ null clock ⇒ the roll is unknown ⇒ the honest non-crit branch. (Past the turn gate.)
+  const crit_slot = next_slot_crit(crit_clock_of({ fight: dungeon, seat_row: me, draft_len }))
   const is_crit = !!crit_slot && socket_glows(crit_slot.crit_roll, crit_rate)
 
   // engine_view fighter cells are DECODED {x,y}; predict_cast's target_cell is an ENCODED int (it decode()s it),

@@ -53,6 +53,7 @@ import {
 import { retarget_cast } from '@aresrpg/fight/txs'
 import { synthetic_tackled_events, local_intent_beats, local_move_beats } from '@aresrpg/fight/present'
 import {
+  crit_clock_of,
   predict_cast,
   weapon_spell_template,
   evolve_flush_casts,
@@ -538,7 +539,6 @@ export function DungeonBoard() {
   const optimistic_cast = (mob_cell) => {
     const queue = use_dungeon_turn.getState().cast_path
     const spell_key = queue.at(-1)?.spell_key ?? armed_key ?? null
-    const caster_idx = dungeon.escrow.findIndex((p) => (p.character ?? p.character_id) === entity_id)
     const template =
       spell_key === WEAPON_ATTACK_ID ? weapon_spell_template(me?.weapon) : fight_spell_template(spell_key)
     // The RANK the chain will resolve this cast at, off the seat's composed build — never a defaulted 1. Stats
@@ -552,13 +552,10 @@ export function DungeonBoard() {
       spell: template,
       spell_level,
       target_cell: mob_cell,
-      critical_clock: {
-        world_seed: dungeon.world_seed,
-        spawn_id: dungeon.spawn_id,
-        turn_deadline_ms: dungeon.turn_deadline_ms,
-        seat: caster_idx,
-        slot: Number(me?.casts_this_turn ?? 0) + Math.max(0, queue.length - 1),
-      },
+      // The §7 clock through its ONE composer (#1190): the seat is MY escrow row's own `seat`, the same tuple the
+      // socket glow and the tooltip preview roll — so a cast can never resolve against a sequence the player was
+      // not shown. The drafted queue's LAST entry is this very cast, hence length - 1.
+      critical_clock: crit_clock_of({ fight: dungeon, seat_row: me, draft_len: Math.max(0, queue.length - 1) }),
       resolve_ref,
     })
     if (!prediction?.actions.length) return

@@ -421,6 +421,35 @@ const state_from_view = (view, caster_id, stats_of) => {
 }
 
 /**
+ * THE ONE §7 CRIT-CLOCK HOME (#1190) — every surface that asks "does my next action crit" composes the clock
+ * tuple here and nowhere else, so a preview and the cast it previews can never read different seats' sequences.
+ * The seat is the projected row's OWN `seat` field (board_state stamps the participant index onto every escrow
+ * row) — never a second derivation by lookup, whose miss is -1 and whose -1 mixes into a valid-LOOKING seed.
+ * Everything unknowable degrades to null, the ONE convention `chain_critical` and `next_slot_crit` both reject:
+ * no row (a roster read that has not landed), an unstamped deadline (0 during placement), a Fight whose static
+ * seeds are absent.
+ * @param {{ fight: object|null, seat_row: object|null, draft_len?: number }} args `fight` carries the public
+ *   seed fields (world_seed / spawn_id / turn_deadline_ms); `seat_row` is MY escrow row (seat + casts_this_turn);
+ *   `draft_len` is the local AP-queue's queued cast/weapon count (moves never count — count_action).
+ * @returns {{ world_seed: number|bigint, spawn_id: number|bigint, turn_deadline_ms: number|bigint,
+ *   seat: number, slot: number } | null}
+ */
+export const crit_clock_of = ({ fight, seat_row, draft_len = 0 }) => {
+  const world_seed = fight?.world_seed ?? null
+  const spawn_id = fight?.spawn_id ?? null
+  const turn_deadline_ms = fight?.turn_deadline_ms || null // 0 = not stamped yet (placement) — never a seed input
+  const seat = seat_row?.seat ?? null
+  if (world_seed == null || spawn_id == null || turn_deadline_ms == null || seat == null || !(seat >= 0)) return null
+  return {
+    world_seed,
+    spawn_id,
+    turn_deadline_ms,
+    seat,
+    slot: Number(seat_row?.casts_this_turn ?? 0) + Number(draft_len ?? 0),
+  }
+}
+
+/**
  * Resolve the chain's public critical branch. null means the branch cannot be known client-side yet.
  * A NEGATIVE seat or slot is not an index — it is a lookup that MISSED (#1190: `escrow.findIndex` answers -1),
  * and mixing it into turn_seed yields a confident branch off a seat that does not exist, indistinguishable from

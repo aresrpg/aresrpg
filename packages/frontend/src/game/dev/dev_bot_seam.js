@@ -47,7 +47,7 @@ import { decode, encode } from '@aresrpg/fight/los'
 import { board_view, fight_view, min_turn_left } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { fight_store } from '@aresrpg/fight/store'
-import { predict_cast } from '@aresrpg/fight/predict_cast'
+import { crit_clock_of, predict_cast } from '@aresrpg/fight/predict_cast'
 
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
 import { fight_spell, resolve_class_spells, seat_spell_level, seat_spell_row } from '../screens/hud/fight-spells.js'
@@ -243,10 +243,10 @@ const bank_predictions = (actions) => {
     // with a cause instead of a quiet zero (the whole failure mode this oracle exists to end).
     return [{ index: -1, hp: [], unresolved: [`no_bank:${!dungeon ? 'no dungeon store' : 'no seat in the view'}`] }]
   const escrow_row = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === caster_id) ?? null
-  const seat = dungeon.escrow?.findIndex((p) => (p.character ?? p.character_id) === caster_id) ?? -1
   const resolve_ref = (id) => resolve_dungeon_ref(dungeon, id)
   const rows = []
-  let slot = Number(escrow_row?.casts_this_turn ?? 0)
+  // this turn's local draft count — the crit clock's slot is my committed casts_this_turn plus this (crit_clock_of).
+  let drafted = 0
   for (const [index, action] of actions.entries()) {
     if (action.kind !== CAST_KIND) continue
     const spell = fight_spell(action.spell_id)
@@ -264,7 +264,10 @@ const bank_predictions = (actions) => {
       hp: [],
       unresolved: spell?.template ? [] : [`no_template:${action.spell_id}`],
     }
-    slot += 1
+    // this cast's own slot, then the counter advances for the next one (a template-less row still consumes a slot
+    // on the chain's sequence, so it advances before the bail below).
+    const critical_clock = crit_clock_of({ fight: dungeon, seat_row: escrow_row, draft_len: drafted })
+    drafted += 1
     if (!spell?.template) {
       rows.push(banked)
       continue
@@ -275,13 +278,7 @@ const bank_predictions = (actions) => {
       spell: spell.template,
       spell_level,
       target_cell,
-      critical_clock: {
-        world_seed: dungeon.world_seed,
-        spawn_id: dungeon.spawn_id,
-        turn_deadline_ms: dungeon.turn_deadline_ms,
-        seat,
-        slot: slot - 1,
-      },
+      critical_clock,
       resolve_ref,
     })
     // Hit rows are keyed by REF (is_mob/idx) exactly as the fold takes them, so every fighter the cast changes

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // §7 turn-seed crit-glow predicate — pure-module tests (no component mount, no store mocks; deck-crit-glow.js
-// imports only @aresrpg/sim). The fight tuple below is the SAME golden vector pinned by the sim's parity suite
+// imports only @aresrpg/sim). Composing the clock is NOT this module's job any more (#1190 — crit_clock_of in
+// @aresrpg/fight owns it, tested in packages/fight/test/crit_clock_seat.test.js); these pin the ROLL.
+// The clock tuple below is the SAME golden vector pinned by the sim's parity suite
 // (packages/sim/test/turn_seed.test.js), extracted from the REAL Move packages via a `sui move test` debug
 // probe: (world_seed 123456789, spawn_id 42, deadline 1752192000000, seat 0) → turn_seed 4190174188, slot crit
 // rolls [2816, 4768, 1518] — so these tests bind the UI predicate to on-chain truth, not to itself.
@@ -10,31 +12,28 @@ import { describe, expect, it } from 'bun:test'
 
 import { next_slot_crit, socket_glows, next_hit } from './deck-crit-glow.js'
 
-const FIGHT = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n, seat: 0 }
-const ctx = (over = {}) => ({ my_turn: true, ...FIGHT, casts_this_turn: 0, draft_len: 0, ...over })
+const CLOCK = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n, seat: 0 }
+const at = (slot) => ({ ...CLOCK, slot })
 
-describe('next_slot_crit — the NEXT action slot preview', () => {
+describe('next_slot_crit — the roll for a composed clock slot', () => {
   it('derives the Move-golden crit roll for slot 0', () => {
-    expect(next_slot_crit(ctx())).toEqual({ slot: 0, crit_roll: 2816 })
+    expect(next_slot_crit(at(0))).toEqual({ slot: 0, crit_roll: 2816 })
   })
 
   it('DRAFT-ADVANCE: each queued cast/weapon action moves the slot (the live-updating glow)', () => {
-    expect(next_slot_crit(ctx({ draft_len: 1 }))).toEqual({ slot: 1, crit_roll: 4768 })
-    expect(next_slot_crit(ctx({ draft_len: 2 }))).toEqual({ slot: 2, crit_roll: 1518 })
+    expect(next_slot_crit(at(1))).toEqual({ slot: 1, crit_roll: 4768 })
+    expect(next_slot_crit(at(2))).toEqual({ slot: 2, crit_roll: 1518 })
   })
 
-  it('committed actions advance the slot identically (escrow casts_this_turn + draft compose)', () => {
-    expect(next_slot_crit(ctx({ casts_this_turn: 1, draft_len: 1 }))).toEqual({ slot: 2, crit_roll: 1518 })
-    // same slot index, same roll — the chain binds the roll to the INDEX, not to how it was reached
-    expect(next_slot_crit(ctx({ casts_this_turn: 2 }))).toEqual(next_slot_crit(ctx({ draft_len: 2 })))
+  it('the roll is bound to the INDEX only — never to how the slot was reached', () => {
+    // committed casts + local draft compose into one index upstream (crit_clock_of); 1+1 and 0+2 are one slot
+    expect(next_slot_crit(at(2))).toEqual(next_slot_crit({ ...CLOCK, slot: 2 }))
   })
 
-  it('unknowable states preview NOTHING: off-turn, or any missing seed input', () => {
-    expect(next_slot_crit(ctx({ my_turn: false }))).toBeNull()
-    expect(next_slot_crit(ctx({ world_seed: null }))).toBeNull()
-    expect(next_slot_crit(ctx({ spawn_id: null }))).toBeNull()
-    expect(next_slot_crit(ctx({ turn_deadline_ms: null }))).toBeNull()
-    expect(next_slot_crit(ctx({ seat: null }))).toBeNull()
+  it('an unknowable clock previews NOTHING — the null convention, composed once in crit_clock_of', () => {
+    // off-turn, no roster row, an unstamped deadline, a seed-less Fight: every one of them arrives here as null
+    // (@aresrpg/fight/predict_cast owns that judgement; its own suite pins each case).
+    expect(next_slot_crit(null)).toBeNull()
   })
 })
 

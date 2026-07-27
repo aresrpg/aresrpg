@@ -15,21 +15,17 @@
 import { turn_seed, slot_crit_roll, crit_at } from '@aresrpg/sim/turn_seed'
 
 /**
- * The crit PREVIEW for the NEXT action slot, or null when unknowable. Non-null only on MY active turn with the
- * full §7 seed tuple present (world_seed/spawn_id are static Fight fields; turn_deadline_ms is stamped fresh in
- * TurnStarted; seat + casts_this_turn ride my escrow row). The slot ADVANCES with the local draft (`draft_len` =
- * the AP-queue lane's queued cast/weapon count — dungeon-turn cast_path; moves never count, mirroring
- * count_action), so queuing an action live-updates which socket glows.
- * @param {{ my_turn: boolean, world_seed: number|bigint|null, spawn_id: number|bigint|null,
- *   turn_deadline_ms: number|bigint|null, seat: number|null, casts_this_turn: number, draft_len: number }} args
+ * The crit PREVIEW for the NEXT action slot: this module keeps only the ROLL. The clock it rolls comes from
+ * `crit_clock_of` (@aresrpg/fight/predict_cast), the ONE composer of the §7 tuple (#1190) — which seat, which
+ * slot, and every "unknowable ⇒ null" rule live there, so the preview and the cast it previews can never read
+ * different sequences. Callers gate turn ownership themselves (off-turn ⇒ hand null ⇒ no preview).
+ * @param {{ world_seed: number|bigint, spawn_id: number|bigint, turn_deadline_ms: number|bigint,
+ *   seat: number, slot: number } | null} clock
  * @returns {{ slot: number, crit_roll: number } | null}
  */
-export function next_slot_crit({ my_turn, world_seed, spawn_id, turn_deadline_ms, seat, casts_this_turn, draft_len }) {
-  if (!my_turn) return null
-  if (world_seed == null || spawn_id == null || turn_deadline_ms == null || seat == null) return null
-  const slot = (casts_this_turn ?? 0) + (draft_len ?? 0)
-  const seed = turn_seed({ world_seed, spawn_id, turn_deadline_ms, seat })
-  return { slot, crit_roll: slot_crit_roll(seed, slot) }
+export function next_slot_crit(clock) {
+  if (!clock) return null
+  return { slot: clock.slot, crit_roll: slot_crit_roll(turn_seed(clock), clock.slot) }
 }
 
 /**

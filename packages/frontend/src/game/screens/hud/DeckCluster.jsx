@@ -38,6 +38,7 @@ import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
 import { fight_spell, seat_spell_row } from './fight-spells.js'
 import { cooldown_display, cap_of } from '@aresrpg/fight/draft_budget'
+import { crit_clock_of } from '@aresrpg/fight/predict_cast'
 import { element_color } from './element-colors.js'
 import { spell_category } from './spell-category.js'
 import { Tooltip } from './Tooltip.jsx'
@@ -178,15 +179,15 @@ export function DeckCluster() {
   const spawn_id = use_dungeon((s) => s.dungeon?.spawn_id ?? null)
   const chain_deadline_ms = use_dungeon((s) => s.dungeon?.turn_deadline_ms ?? null)
   const draft_len = use_dungeon_turn((s) => s.cast_path.length)
-  const crit = next_slot_crit({
-    my_turn,
-    world_seed,
-    spawn_id,
-    turn_deadline_ms: chain_deadline_ms || null, // 0 = not stamped yet (placement) — never a valid seed input
-    seat: my_row?.seat ?? null,
-    casts_this_turn: my_row?.casts_this_turn ?? 0,
-    draft_len,
-  })
+  const crit = next_slot_crit(
+    my_turn
+      ? crit_clock_of({
+          fight: { world_seed, spawn_id, turn_deadline_ms: chain_deadline_ms },
+          seat_row: my_row,
+          draft_len,
+        })
+      : null
+  )
   const weapon_glow = !!crit && socket_glows(crit.crit_roll, my_weapon?.crit_rate ?? 0)
 
   // FIX 4 COOLDOWN / EXHAUSTION AFFORDANCE (07-14, display promoted to a big centered number by #368) — the

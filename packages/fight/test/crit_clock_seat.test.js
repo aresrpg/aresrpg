@@ -8,12 +8,47 @@
 // turn_seed 4190174188, slot rolls [2816, 4768, 1518].
 
 import { describe, expect, it } from 'bun:test'
-
 import { slot_crit_roll, turn_seed } from '@aresrpg/sim/turn_seed'
 
-import { chain_critical } from '../src/predict_cast.js'
+import { chain_critical, crit_clock_of } from '../src/predict_cast.js'
 
 const CLOCK = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n, slot: 0 }
+const FIGHT = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n }
+// a board_state escrow row, trimmed to what the clock reads (board_state.js stamps `seat` = participant index)
+const ROW = { seat: 0, casts_this_turn: 0, character: '0xc' }
+
+describe('crit_clock_of — the ONE composer of the §7 clock (#1190)', () => {
+  it('takes the seat off the row itself, never a lookup', () => {
+    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW })).toEqual({ ...FIGHT, seat: 0, slot: 0 })
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, seat: 3 } })?.seat).toBe(3)
+  })
+
+  it('the slot is my committed casts plus the local draft — composed once, for all four surfaces', () => {
+    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW, draft_len: 2 })?.slot).toBe(2)
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, casts_this_turn: 1 }, draft_len: 1 })?.slot).toBe(2)
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, casts_this_turn: 2 } })?.slot).toBe(2)
+  })
+
+  it('THE LIVE MISS: an empty/unlanded roster yields no row, and no row is null — never seat -1', () => {
+    // both resolving cast paths used to run escrow.findIndex here; on the simulator's empty escrow that is -1
+    expect(crit_clock_of({ fight: FIGHT, seat_row: null })).toBeNull()
+    expect(crit_clock_of({ fight: FIGHT, seat_row: {} })).toBeNull()
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { seat: -1 } })).toBeNull()
+  })
+
+  it('every other unknowable input degrades to the SAME null, so the guard downstream is one rule', () => {
+    expect(crit_clock_of({ fight: null, seat_row: ROW })).toBeNull()
+    expect(crit_clock_of({ fight: { ...FIGHT, world_seed: null }, seat_row: ROW })).toBeNull()
+    expect(crit_clock_of({ fight: { ...FIGHT, spawn_id: null }, seat_row: ROW })).toBeNull()
+    // 0 is board_state's UNSTAMPED deadline (placement), not a seed input — the normalization lives here now
+    expect(crit_clock_of({ fight: { ...FIGHT, turn_deadline_ms: 0 }, seat_row: ROW })).toBeNull()
+  })
+
+  it('a composed clock is exactly what chain_critical accepts — the two ends agree by construction', () => {
+    expect(chain_critical(crit_clock_of({ fight: FIGHT, seat_row: ROW }), 2)).toBe(true)
+    expect(chain_critical(crit_clock_of({ fight: FIGHT, seat_row: null }), 2)).toBeNull()
+  })
+})
 
 describe('chain_critical — a NOT-FOUND seat is not a seat (#1190)', () => {
   it('a findIndex-miss seat (-1) is unknowable, exactly like a missing one', () => {
