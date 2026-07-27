@@ -6,17 +6,21 @@
 // reduced-motion holds the pose still. Black-box: we recover the orbit azimuth from the camera position the
 // module writes each apply() (px = cx + horiz·sin(az); pz = cz + horiz·cos(az)) and assert the choreography.
 
-import { afterAll, describe, expect, it } from 'bun:test'
+import { afterAll, afterEach, describe, expect, it } from 'bun:test'
 import { PerspectiveCamera } from 'three'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
 // create_fight_camera wires canvas + window listeners at construction — stub the DOM it touches (bun has none).
 const restore_browser_globals = install_browser_globals()
+const browser_window = globalThis.window
 
 const { create_fight_camera } = await import('./embed_voxel_fight_camera.js')
 
 afterAll(restore_browser_globals)
+afterEach(() => {
+  globalThis.window = browser_window
+})
 
 const CELL = 1.33 // BOARD_CELL_M
 const GRID = 11 // the prepare footprint (PREP_GRID)
@@ -51,10 +55,13 @@ function fake_target() {
  *  dispatchable window for the duration of a test (the shared beforeAll stub stays a harmless no-op for every
  *  test that doesn't dispatch through it). */
 function fresh_window() {
-  const w = /** @type {any} */ (fake_target())
-  w.matchMedia = () => ({ matches: false })
-  globalThis.window = w
-  return w
+  const window_ = /** @type {any} */ ({
+    ...browser_window,
+    ...fake_target(),
+    matchMedia: () => ({ matches: false }),
+  })
+  globalThis.window = window_
+  return window_
 }
 
 /** A synthetic pointer/wheel event with a safe no-op preventDefault (every handler in the module calls it). */
@@ -107,6 +114,12 @@ function run(cam, n, dt, board_frame, positions) {
 }
 
 describe('fight camera — fight-entry prepare→settle choreography', () => {
+  it('keeps its dispatch window browser-complete for later module loads', async () => {
+    const window_ = fresh_window()
+    expect(window_.location.search).toBe('')
+    expect((await import('../tx/latency.js?issue-731-window-regression')).TX_TIMING_ON).toBe(false)
+  })
+
   it('begin_prepare engages the camera and snaps to the iso corner (motion blur off)', () => {
     const { engine, canvas, positions, blur } = make_rig()
     const cam = create_fight_camera({ engine, canvas, board_cell_m: CELL })
