@@ -105,6 +105,14 @@ public struct Recipe has key {
 
 public struct RecipeCreated has copy, drop { recipe: ID, output_template: ID, output_quantity: u64, input_count: u64, required_job: u8, required_level: u64, craft_xp: u64 }
 
+/// A live recipe's ingredient list was REPLACED (`set_recipe_inputs`). Carries the re-derived `required_level`
+/// because the knowledge gate MOVES with the slot count — an indexer that misses this keeps showing the old unlock.
+public struct RecipeInputsSet has copy, drop { recipe: ID, input_count: u64, required_level: u64 }
+
+/// A recipe was RETIRED (`retire_recipe`) — its shared object is deleted and the id stops resolving. An indexer
+/// drops the recipe from its craftable set on this event.
+public struct RecipeRetired has copy, drop { recipe: ID, output_template: ID }
+
 /// A craft outcome. `success` — did the reference-formula roll pass (② )? `output_quantity` is the minted amount (0 on a
 /// failed roll — the ingredients still burned). `job_xp_gained` is credited to the crafter regardless of `success`
 /// (④). Indexer re-point: `success` + `job_xp_gained` are NEW fields on this shape.
@@ -132,22 +140,89 @@ public fun create_recipe(
 ) {
   cap.verify(ctx);
   version.assert_latest();
-  let n = input_templates.length();
-  assert!(n == input_quantities.length(), ELengthMismatch);
-  assert!(n > 0, EEmptyRecipe);
   assert!(output_quantity >= 1, EZeroQuantity);
-  let mut inputs = vector<Ingredient>[];
-  let mut i = 0;
-  while (i < n) {
-    let quantity = input_quantities[i];
-    assert!(quantity >= 1, EZeroQuantity);
-    inputs.push_back(Ingredient { template: input_templates[i], quantity });
-    i = i + 1;
-  };
+  let inputs = build_inputs(input_templates, input_quantities);
+  let n = inputs.length();
   let required_level = min_level_for_ingredients(n); // ① derived, never mis-authored
   let recipe = Recipe { id: object::new(ctx), inputs, output_template, output_quantity, required_job, required_level, craft_xp };
   event::emit(RecipeCreated { recipe: object::id(&recipe), output_template, output_quantity, input_count: n, required_job, required_level, craft_xp });
   transfer::share_object(recipe);
+}
+
+/// HEAL a LIVE recipe's ingredient list IN PLACE — the door `create_recipe` never had. `input_templates` /
+/// `input_quantities` fully REPLACE the old `inputs` (not a merge), and `required_level` is RE-DERIVED from the new
+/// slot count through the SAME `min_level_for_ingredients` create uses, so a healed recipe is indistinguishable from
+/// one authored correctly on day one. The same authoring rules apply (`ELengthMismatch` / `EEmptyRecipe` /
+/// `EZeroQuantity`) — a recipe can never be emptied into a free mint.
+///
+/// WHY THIS EXISTS: `create_recipe` SHARES the `Recipe` with no update path, so a mis-authored ingredient list stayed
+/// craftable forever — and because `required_level` is DERIVED FROM THE SLOT COUNT (① the reference knowledge gate),
+/// an under-slotted recipe also under-gates itself: the live 3-slot bowyer recipes unlock at level 14 and mint
+/// far-above-tier bows to any L14 crafter. Re-slotting them through this door re-derives the gate and closes it.
+/// Patching in place is what makes the cure complete: the recipe ID is preserved, so every `Commission` already
+/// pointing at it heals too — a burn-and-recreate would strand those and leave the old object craftable.
+///
+/// `output_template` / `output_quantity` / `required_job` / `craft_xp` are deliberately NOT touchable here — changing
+/// what a recipe PRODUCES is a different recipe (author a new one), while what it CONSUMES is a correction.
+///
+/// UPGRADE-COMPAT: additive public function only; no existing type or signature changes.
+public fun set_recipe_inputs(
+  cap: &AdminCap,
+  version: &Version,
+  recipe: &mut Recipe,
+  input_templates: vector<ID>,
+  input_quantities: vector<u64>,
+  ctx: &TxContext,
+) {
+  cap.verify(ctx);
+  version.assert_latest();
+  let inputs = build_inputs(input_templates, input_quantities);
+  let n = inputs.length();
+  recipe.inputs = inputs;
+  recipe.required_level = min_level_for_ingredients(n); // ① re-derived — the healed gate
+  event::emit(RecipeInputsSet {
+    recipe: object::id(recipe),
+    input_count: n,
+    required_level: recipe.required_level,
+  });
+}
+
+/// RETIRE a recipe: DELETE its shared object on-chain, so it can never be crafted again. The kill switch for the
+/// recipes `set_recipe_inputs` cannot heal — an output template that no longer exists, or a duplicate of a recipe
+/// kept elsewhere. Version-gated + AdminCap-gated, MIRRORING `admin::burn_item_template`: the `Recipe` is taken BY
+/// VALUE, unpacked (every remaining field has `drop` — `Ingredient` is `copy + drop + store`), and its UID is
+/// `object::delete`d. Sui permits deleting a shared object passed by value, so this is TRUE deletion, not an inert
+/// flag: no `craftable` bit is added to the struct (that would be a layout change, and a flag leaves a live object
+/// one bug away from crafting again). Emits `RecipeRetired`.
+///
+/// BLAST RADIUS — deliberate: a retired recipe's id stops resolving, so any `CraftRequest` bound to it can no longer
+/// be accepted or executed (`commission` takes `&Recipe` — the object simply cannot be supplied). That is the POINT
+/// of a kill switch; heal with `set_recipe_inputs` instead whenever the recipe should keep serving its commissions.
+/// Items already crafted are untouched — they reference templates, never the recipe.
+public fun retire_recipe(cap: &AdminCap, version: &Version, recipe: Recipe, ctx: &TxContext) {
+  cap.verify(ctx);
+  version.assert_latest();
+  let Recipe { id, inputs: _, output_template, output_quantity: _, required_job: _, required_level: _, craft_xp: _ } = recipe;
+  event::emit(RecipeRetired { recipe: id.to_inner(), output_template });
+  object::delete(id);
+}
+
+/// Zip `templates` × `quantities` into the validated ingredient list — ONE home for the authoring rules both
+/// `create_recipe` and `set_recipe_inputs` enforce: the vectors zip 1:1 (`ELengthMismatch`), a recipe needs ≥1 input
+/// (`EEmptyRecipe` — else it is a free mint), and every quantity is ≥1 (`EZeroQuantity`).
+fun build_inputs(templates: vector<ID>, quantities: vector<u64>): vector<Ingredient> {
+  let n = templates.length();
+  assert!(n == quantities.length(), ELengthMismatch);
+  assert!(n > 0, EEmptyRecipe);
+  let mut inputs = vector<Ingredient>[];
+  let mut i = 0;
+  while (i < n) {
+    let quantity = quantities[i];
+    assert!(quantity >= 1, EZeroQuantity);
+    inputs.push_back(Ingredient { template: templates[i], quantity });
+    i = i + 1;
+  };
+  inputs
 }
 
 // ╔════════════════ [ CRAFT (terminal &Random — gate, burn, roll, mint-on-success, credit XP) ] ═ ]

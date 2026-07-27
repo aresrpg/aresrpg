@@ -10,14 +10,14 @@
 module aresrpg::crafting_tests;
 
 use aresrpg::{
-  admin::AdminCap,
+  admin::{Self, AdminCap},
   character_link,
   config::GameConfig,
   crafting::{Self, Recipe},
   extract::ItemExtractPolicy,
   item::{Item, ItemTemplate},
   test_world,
-  version::Version
+  version::{Self, Version}
 };
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -27,11 +27,18 @@ const OWNER: address = @0xA;
 /// The stat-roll seed the forced-craft door injects (the live entry draws it from its `&Random` generator).
 const CRAFT_SEED: u64 = 0xC0FFEE;
 
+const TEMP: address = @0xD;
+
 const EWrongOutput: u64 = 101; // crafting
 const EUnknownIngredient: u64 = 102; // crafting
 const EIngredientOverSupply: u64 = 103; // crafting
 const EMissingIngredient: u64 = 104; // crafting
+const ELengthMismatch: u64 = 105; // crafting
+const EEmptyRecipe: u64 = 106; // crafting
+const EZeroQuantity: u64 = 107; // crafting
 const EUnderLevel: u64 = 108; // crafting
+const A_EAdminCapExpired: u64 = 101; // admin
+const V_EWrongVersion: u64 = 101; // version
 
 // ╔════════════════ [ Harness ] ══════════════════════════════════════════════ ]
 
@@ -405,4 +412,260 @@ fun craft_random_entry_burns_and_credits() {
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
   assert_eq!(job_xp_of(&mut sc, OWNER, cid, 0), 10); // XP credited through the real &Random entry
   sc.end();
+}
+
+// ╔════════════════ [ set_recipe_inputs — healing a LIVE shared recipe in place ] ═ ]
+
+/// Drive the production healing door over the shared `Recipe`.
+fun heal_recipe(sc: &mut Scenario, templates: vector<ID>, quantities: vector<u64>) {
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut recipe = sc.take_shared<Recipe>();
+  crafting::set_recipe_inputs(&cap, &ver, &mut recipe, templates, quantities, sc.ctx());
+  ts::return_shared(recipe);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+}
+
+#[test]
+/// THE RE-SLOT: a live 2-slot recipe (knowledge gate 1) is re-slotted to 5 ingredients and `required_level` is
+/// RE-DERIVED to 39 (`min_level_for_ingredients(5)`) — the gate MOVES with the slot count, exactly as `create_recipe`
+/// derives it. Everything the recipe PRODUCES is untouched: output template, output quantity, job and craft XP.
+fun set_recipe_inputs_reslots_and_rederives_the_gate() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, ore, bread) = stage(&mut sc);
+  let clay = test_world::make_template(&mut sc, b"Clay", b"clay", b"resource", 1);
+  let silk = test_world::make_template(&mut sc, b"Silk", b"silk", b"resource", 1);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 4);
+
+  sc.next_tx(OWNER);
+  let recipe = sc.take_shared<Recipe>();
+  assert_eq!(crafting::input_count(&recipe), 2);
+  assert_eq!(crafting::required_level(&recipe), 1); // the under-gated starting point
+  ts::return_shared(recipe);
+
+  heal_recipe(&mut sc, vector[wheat, iron, ore, clay, silk], vector[1, 2, 3, 4, 5]);
+
+  sc.next_tx(OWNER);
+  let recipe = sc.take_shared<Recipe>();
+  assert_eq!(crafting::input_count(&recipe), 5);
+  assert_eq!(crafting::required_level(&recipe), 39); // min_level_for_ingredients(5) — re-derived, never authored
+  assert_eq!(crafting::output_template(&recipe), bread); // what it PRODUCES is untouched
+  assert_eq!(crafting::output_quantity(&recipe), 4);
+  assert_eq!(crafting::required_job(&recipe), 0);
+  assert_eq!(crafting::craft_xp(&recipe), 10);
+  ts::return_shared(recipe);
+  sc.end();
+}
+
+#[test]
+/// The healed recipe CRAFTS on its NEW ingredients — the same shared recipe object, no re-creation, so every
+/// reference already pointing at it keeps working.
+fun set_recipe_inputs_heals_the_craft_in_place() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 1);
+
+  let rid = { sc.next_tx(OWNER); let r = sc.take_shared<Recipe>(); let id = object::id(&r); ts::return_shared(r); id };
+  heal_recipe(&mut sc, vector[ore], vector[2]);
+
+  let o = test_world::mint_lock_stack(&mut sc, OWNER, ore, 2);
+  do_craft(&mut sc, OWNER, cid, vector[o], bread, true);
+
+  sc.next_tx(OWNER);
+  let k = sc.take_shared<Kiosk>();
+  assert!(!k.has_item(o)); // the NEW ingredient is the one consumed
+  assert!(k.item_count() == 2); // character + the minted bread
+  ts::return_shared(k);
+
+  let recipe = sc.take_shared<Recipe>();
+  assert_eq!(object::id(&recipe), rid); // patched IN PLACE — same object id as before the heal
+  ts::return_shared(recipe);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = EUnknownIngredient, location = crafting)]
+/// THE EXPLOIT DEATH (stale ingredients): after the heal the OLD ingredient list is GONE — a crafter supplying the
+/// pre-heal input is refused (`EUnknownIngredient`), not silently accepted. Full replacement, never a merge.
+fun set_recipe_inputs_kills_the_stale_ingredients() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 1);
+  heal_recipe(&mut sc, vector[ore], vector[2]);
+
+  let w = test_world::mint_lock_stack(&mut sc, OWNER, wheat, 2); // the RETIRED ingredient
+  do_craft(&mut sc, OWNER, cid, vector[w], bread, true);
+  abort
+}
+
+#[test, expected_failure(abort_code = EUnderLevel, location = crafting)]
+/// THE EXPLOIT DEATH (under-gating): the live bug is an under-slotted recipe under-gating itself — a 2-slot recipe
+/// unlocks at level 1, so a fresh crafter mints an above-tier output. Re-slotting it to 3 ingredients re-derives the
+/// gate to 14 and the SAME level-1 crafter is now refused at craft time. The cure binds on-chain, not just in the field.
+fun set_recipe_inputs_closes_the_underlevel_exploit() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1); // 2 slots → gate 1: any crafter qualifies
+  heal_recipe(&mut sc, vector[wheat, iron, ore], vector[1, 1, 1]); // 3 slots → gate 14
+
+  let w = test_world::mint_lock_stack(&mut sc, OWNER, wheat, 1);
+  let i = test_world::mint_lock_stack(&mut sc, OWNER, iron, 1);
+  let o = test_world::mint_lock_stack(&mut sc, OWNER, ore, 1);
+  do_craft(&mut sc, OWNER, cid, vector[w, i, o], bread, true); // level-1 crafter < the healed gate 14
+  abort
+}
+
+#[test, expected_failure(abort_code = A_EAdminCapExpired, location = admin)]
+/// ADVERSARIAL: a leaked TEMP cap used AFTER its epoch cannot re-slot a live recipe. (A caller holding no cap at all
+/// cannot reach the door — the `&AdminCap` parameter is unforgeable.)
+fun set_recipe_inputs_wrong_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  sc.next_tx(OWNER);
+  let super_cap = sc.take_from_sender<AdminCap>();
+  admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
+  sc.return_to_sender(super_cap);
+
+  sc.next_epoch(TEMP);
+  let expired_cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut recipe = sc.take_shared<Recipe>();
+  crafting::set_recipe_inputs(&expired_cap, &ver, &mut recipe, vector[ore], vector[1], sc.ctx());
+  abort
+}
+
+#[test, expected_failure(abort_code = V_EWrongVersion, location = version)]
+/// A stale Version refuses the door — the heal cannot land against an outdated package.
+fun set_recipe_inputs_stale_version_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let mut ver = sc.take_shared<Version>();
+  let mut recipe = sc.take_shared<Recipe>();
+  version::test_set_stale(&mut ver);
+  crafting::set_recipe_inputs(&cap, &ver, &mut recipe, vector[ore], vector[1], sc.ctx());
+  abort
+}
+
+#[test, expected_failure(abort_code = EEmptyRecipe, location = crafting)]
+/// A recipe can never be EMPTIED into a free mint — the healing door enforces the same ≥1-input rule as authoring.
+fun set_recipe_inputs_empty_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+  heal_recipe(&mut sc, vector[], vector[]);
+  abort
+}
+
+#[test, expected_failure(abort_code = ELengthMismatch, location = crafting)]
+/// Templates and quantities must zip 1:1 on the healing door too.
+fun set_recipe_inputs_length_mismatch_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+  heal_recipe(&mut sc, vector[ore, wheat], vector[1]);
+  abort
+}
+
+#[test, expected_failure(abort_code = EZeroQuantity, location = crafting)]
+/// A 0-unit ingredient is meaningless on the healing door too.
+fun set_recipe_inputs_zero_quantity_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+  heal_recipe(&mut sc, vector[ore], vector[0]);
+  abort
+}
+
+// ╔════════════════ [ retire_recipe — the kill switch for unhealable recipes ] ═ ]
+
+/// Drive the production retirement door: the shared `Recipe` is taken BY VALUE and deleted.
+fun retire(sc: &mut Scenario) {
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let recipe = sc.take_shared<Recipe>();
+  crafting::retire_recipe(&cap, &ver, recipe, sc.ctx());
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+}
+
+#[test]
+/// THE KILL SWITCH: retiring DELETES the shared recipe object — it stops resolving entirely, so it can never be
+/// crafted again. TRUE deletion, not an inert flag (Sui permits deleting a shared object passed by value, the same
+/// shape `admin::burn_item_template` uses on templates).
+fun retire_recipe_deletes_the_shared_object() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 1);
+
+  sc.next_tx(OWNER);
+  assert!(ts::has_most_recent_shared<Recipe>()); // live and craftable before the kill switch
+
+  retire(&mut sc);
+
+  sc.next_tx(OWNER);
+  assert!(!ts::has_most_recent_shared<Recipe>()); // gone — the id no longer resolves
+  sc.end();
+}
+
+#[test]
+/// Retirement touches ONLY the recipe: the output template and the crafter's items survive, so a retired recipe
+/// strands nothing that already exists.
+fun retire_recipe_leaves_templates_and_items_intact() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  let w = test_world::mint_lock_stack(&mut sc, OWNER, wheat, 2);
+  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], bread, 1);
+  retire(&mut sc);
+
+  sc.next_tx(OWNER);
+  let tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, bread);
+  ts::return_shared(tmpl); // the output template still exists
+  let k = sc.take_shared<Kiosk>();
+  assert!(k.has_item(w)); // the would-be ingredient is untouched
+  ts::return_shared(k);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = A_EAdminCapExpired, location = admin)]
+/// ADVERSARIAL: a leaked TEMP cap used AFTER its epoch cannot retire a live recipe.
+fun retire_recipe_wrong_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  sc.next_tx(OWNER);
+  let super_cap = sc.take_from_sender<AdminCap>();
+  admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
+  sc.return_to_sender(super_cap);
+
+  sc.next_epoch(TEMP);
+  let expired_cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let recipe = sc.take_shared<Recipe>();
+  crafting::retire_recipe(&expired_cap, &ver, recipe, sc.ctx());
+  abort
+}
+
+#[test, expected_failure(abort_code = V_EWrongVersion, location = version)]
+/// A stale Version refuses the kill switch — retirement cannot land against an outdated package.
+fun retire_recipe_stale_version_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (_cid, wheat, iron, _ore, bread) = stage(&mut sc);
+  make_recipe(&mut sc, vector[wheat, iron], vector[1, 1], bread, 1);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let mut ver = sc.take_shared<Version>();
+  let recipe = sc.take_shared<Recipe>();
+  version::test_set_stale(&mut ver);
+  crafting::retire_recipe(&cap, &ver, recipe, sc.ctx());
+  abort
 }
