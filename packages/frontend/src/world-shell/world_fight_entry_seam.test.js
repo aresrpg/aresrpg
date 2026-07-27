@@ -54,6 +54,7 @@ const { fight_store } = await import('@aresrpg/fight/store')
 const { fight_view, board_view } = await import('@aresrpg/fight/project')
 const { spawns_store, spawns_input } = await import('./spawns_adapter.js')
 const { enter_world_fight } = await import('./world_fight.js')
+const { publish_world_binding, reset_world_binding } = await import('./session_gate.js')
 
 const initial_dungeon = use_dungeon.getInitialState()
 const real_fetch = globalThis.fetch
@@ -116,7 +117,9 @@ beforeEach(() => {
   use_dungeon.getState()._stop_polling()
   use_dungeon.setState(initial_dungeon, true)
   fight_store.getState().input({ type: 'init', fight_id: null }) // reset the core atom
+  reset_world_binding()
   spawns_input({ type: 'world_bound', world_id: null }) // a world change is a RESET input — the core's own reset door
+  publish_world_binding(CHARACTER_ID, WORLD_ID)
   use_auth.setState({ address: OWNER })
   get_object.mockClear()
   _reset_rpc_client_for_test()
@@ -126,6 +129,7 @@ afterEach(() => {
   use_dungeon.getState()._stop_polling()
   use_dungeon.setState(initial_dungeon, true)
   fight_store.getState().input({ type: 'init', fight_id: null })
+  reset_world_binding()
   spawns_input({ type: 'world_bound', world_id: null })
   globalThis.fetch = real_fetch
   _reset_rpc_client_for_test()
@@ -167,7 +171,13 @@ describe('the world→fight handoff seam (composition root)', () => {
     })
 
     // ── the CLAIM RECEIPT: row tombstoned + the fight_entry seam output (W4's terminal fact) ──
-    spawns_input({ type: 'claim_receipt', key: SPAWN_KEY, fight_id: FIGHT_ID })
+    spawns_input({
+      type: 'claim_receipt',
+      character_id: CHARACTER_ID,
+      world_id: WORLD_ID,
+      key: SPAWN_KEY,
+      fight_id: FIGHT_ID,
+    })
     const rows = [...spawns_store.getState().zones.values()].flatMap((zone) => [...zone.rows.keys()])
     expect(rows).toEqual([]) // receipt-proven removal — the claimed group is gone
     expect(spawns_store.getState().fight_entry).toMatchObject({ fight_id: FIGHT_ID })

@@ -7,11 +7,12 @@
 // rename there must break THIS test, not silently zero the banner.
 
 /**
- * Read the `ZoneSearched` event off a run_tx normalized receipt → `{ zx, zy, mob_groups, resource_nodes }`.
+ * Read the `ZoneSearched` event off a run_tx normalized receipt
+ * → `{ zx, zy, at_ms, mob_groups, resource_nodes }`.
  * u64 fields arrive as strings — coerced to numbers. Absent event (older package / re-projection gap)
  * degrades to zeros (the banner shows "the zone lies quiet"), never throws.
  * @param {any} result the normalized receipt (`{ events: [{ type, parsedJson }] }`)
- * @returns {{ zx:number, zy:number, mob_groups:number, resource_nodes:number }}
+ * @returns {{ zx:number, zy:number, at_ms:number, mob_groups:number, resource_nodes:number }}
  */
 export function read_zone_searched(result) {
   const ev = (result?.events ?? []).find((e) => String(e?.type ?? '').endsWith('::zones::ZoneSearched'))
@@ -19,6 +20,7 @@ export function read_zone_searched(result) {
   return {
     zx: Number(j.zx ?? 0),
     zy: Number(j.zy ?? 0),
+    at_ms: Number(j.at_ms ?? 0),
     mob_groups: Number(j.mob_groups ?? 0),
     resource_nodes: Number(j.resource_nodes ?? 0),
   }

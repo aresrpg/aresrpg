@@ -96,8 +96,18 @@ test('a lagging chain-direct read (still "no checkpoint") must NOT erase an alre
 
 test('a chain-direct read that DOES confirm a checkpoint still adopts (chain truth wins when it actually answers)', async () => {
   await seed_checkpoint_spawn(CHAR, WORLD, CHAIN_POS)
+  const confirmed = { ...CHAIN_POS, time_ms: 1_700_000_000_000 }
+  read_checkpoint.mockResolvedValue(confirmed)
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    x: confirmed.x - 250_000,
+    z: confirmed.z - 250_000,
+    time_ms: confirmed.time_ms,
+  })
+
+  // Once the receipt barrier is confirmed, a later canonical checkpoint is ordinary newer chain truth.
   const moved = { x: 300, z: 400, time_ms: 1_800_000_000_000 }
-  read_checkpoint.mockResolvedValue(moved) // a LATER search moved the checkpoint; the chain read now confirms it
+  read_checkpoint.mockResolvedValue(moved)
   await resolve_checkpoint_spawn(CHAR, WORLD)
   expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
     x: moved.x - 250_000,
@@ -112,10 +122,34 @@ test('a receipt barrier rejects a lagging non-null checkpoint read', async () =>
   await resolve_checkpoint_spawn(CHAR, WORLD)
 
   const receipt_world = { x: 300 - 250_000, z: 400 - 250_000 }
-  read_checkpoint.mockResolvedValue(prior)
+  // A later revision at some other coordinate may belong to an earlier receipt whose direct read lagged.
+  read_checkpoint.mockResolvedValue({ x: 150, z: 250, time_ms: 1_500 })
   await confirm_checkpoint_spawn(CHAR, WORLD, { ...receipt_world, after_time_ms: prior.time_ms }, { retry_delays: [] })
 
   expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...receipt_world, time_ms: null })
+})
+
+test('consecutive clockless receipts retain the last canonical revision floor', async () => {
+  const prior = { x: 100, z: 200, time_ms: 1_000 }
+  read_checkpoint.mockResolvedValue(prior)
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+
+  const first_world = { x: 300 - 250_000, z: 400 - 250_000 }
+  read_checkpoint.mockResolvedValue(prior)
+  await confirm_checkpoint_spawn(CHAR, WORLD, { ...first_world, after_time_ms: prior.time_ms }, { retry_delays: [] })
+
+  const second_chain = { x: 500, z: 600, time_ms: prior.time_ms }
+  const second_world = { x: second_chain.x - 250_000, z: second_chain.z - 250_000 }
+  read_checkpoint.mockResolvedValue(second_chain)
+  await confirm_checkpoint_spawn(CHAR, WORLD, second_world, { retry_delays: [] })
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...second_world, time_ms: null })
+
+  read_checkpoint.mockResolvedValue({ ...second_chain, time_ms: prior.time_ms + 1 })
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    ...second_world,
+    time_ms: prior.time_ms + 1,
+  })
 })
 
 test('an older checkpoint revision cannot regress a newer accepted cache row', async () => {
@@ -130,6 +164,48 @@ test('an older checkpoint revision cannot regress a newer accepted cache row', a
     x: newer.x - 250_000,
     z: newer.z - 250_000,
     time_ms: newer.time_ms,
+  })
+})
+
+test('an in-flight read that predates a receipt cannot publish after that receipt', async () => {
+  const stale = { x: 100, z: 200, time_ms: 1_000 }
+  /** @type {(value:typeof stale)=>void} */
+  let release_stale
+  read_checkpoint.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        release_stale = resolve
+      })
+  )
+  const pending_read = resolve_checkpoint_spawn(CHAR, WORLD)
+  await Promise.resolve()
+
+  const receipt = { x: 300 - 250_000, z: 400 - 250_000, time_ms: 2_000 }
+  await confirm_checkpoint_spawn(CHAR, WORLD, receipt)
+  release_stale(stale)
+  await pending_read
+
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual(receipt)
+})
+
+test('the same raw checkpoint revision may correct a fallback world projection', async () => {
+  const checkpoint = { x: 100, z: 200, time_ms: 1_000 }
+  read_checkpoint.mockResolvedValue(checkpoint)
+  get_world
+    .mockImplementationOnce(() => async () => null)
+    .mockImplementationOnce(() => async () => ({ bounds_x: 2_000, bounds_z: 4_000 }))
+
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    x: checkpoint.x - 250_000,
+    z: checkpoint.z - 250_000,
+    time_ms: checkpoint.time_ms,
+  })
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    x: checkpoint.x - 1_000,
+    z: checkpoint.z - 2_000,
+    time_ms: checkpoint.time_ms,
   })
 })
 

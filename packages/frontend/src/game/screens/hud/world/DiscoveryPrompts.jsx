@@ -95,9 +95,7 @@ export function DiscoveryPrompts() {
   const player_cell = use_game_state((s) => s.player_cell)
   const gather_target = use_game_state((s) => s.gather_target ?? null)
   const characters = use_game_state((s) => s.sui.characters)
-  const created_this_session = use_world_binding(
-    (state) => state.joining && state.character_id === character_id
-  )
+  const created_this_session = use_world_binding((state) => state.joining && state.character_id === character_id)
 
   // Selected character's world (RPC doc) — the zones view is keyed by world id.
   const char_view = use_rpc_view(
@@ -210,7 +208,14 @@ export function DiscoveryPrompts() {
     const pos = character_doc?.position
     if (!pos) return
     // char.position is the INDEXER-served CHAIN checkpoint (already chain-space) — the fold zones it itself.
-    spawns_input({ type: 'checkpoint_resolved', world_id, x: Number(pos.x), z: Number(pos.z), source: 'indexed' })
+    spawns_input({
+      type: 'checkpoint_resolved',
+      character_id,
+      world_id,
+      x: Number(pos.x),
+      z: Number(pos.z),
+      source: 'indexed',
+    })
   }, [world_id, character_id, character_doc, hunt_zone_known])
 
   // [F] SEARCH ZONE

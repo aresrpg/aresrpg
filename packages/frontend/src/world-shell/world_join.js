@@ -26,6 +26,7 @@ import { tx_error } from '../game/core/abort_copy.js'
 import { run_tx } from './tx.js'
 import { join_kiosk_for_character } from './kiosk_resolve.js'
 import { publish_world_binding } from './session_gate.js'
+import { invalidate_world_position } from './spawns_adapter.js'
 import { seed_checkpoint_spawn } from './world_checkpoint.js'
 
 /**
@@ -61,8 +62,14 @@ async function fetch_join_events(digest) {
  */
 async function seed_from_join_receipt(character_id, world_id, result) {
   const joined = read_world_joined(result)
-  if (!joined) return
-  await seed_checkpoint_spawn(character_id, world_id, { x: joined.x, z: joined.z })
+  // The executed join itself proves a travel boundary even when its event projection is unavailable. Delete
+  // the target world's previous-visit row so an unchanged rejoin checkpoint cannot resurrect that old walk.
+  if (!joined) return invalidate_world_position(character_id, world_id)
+  await seed_checkpoint_spawn(character_id, world_id, {
+    x: joined.x,
+    z: joined.z,
+    first_join: joined.first_join,
+  })
 }
 
 /** Build the `zones::join_world` PTB for `character_id` with the create-effects-first kiosk pair. */

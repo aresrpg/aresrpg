@@ -52,6 +52,7 @@ import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
 import { get_sdk } from '../chain/sdk'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { spawns_store, spawns_input } from '../world-shell/spawns_adapter.js'
+import { publish_claim_checkpoint_receipt } from '../world-shell/world_checkpoint.js'
 import { create_world_fight } from '../world-shell/dungeon_engage_actions.js'
 import { recover_fight_entry_refusal } from '../world-shell/dungeon_settlement.js'
 import { instrument_cpu_callback } from './cpu_span.js'
@@ -758,7 +759,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       }
       // THE CLAIM RECEIPT through the door: removes the row (tombstoned against the lagging poll), advances
       // checkpoint+hunt_zone to the group, emits the fight_entry handoff. The re-poll stays for freshness.
-      spawns_input({ type: 'claim_receipt', key: e.key, fight_id: fight_id ?? null })
+      void publish_claim_checkpoint_receipt(character_id, world_id, e.key, fight_id ?? null, e.row)
       sync_from_core()
       void poll()
     } catch (error) {

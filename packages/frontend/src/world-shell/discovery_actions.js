@@ -9,7 +9,7 @@
 // the SDK builder carries the budget policy, nothing here guesses gas.
 
 import { search_zone_ptb, get_world } from '@aresrpg/sdk/game'
-import { world_offsets } from '@aresrpg/sdk/coords'
+import { chain_to_world, world_offsets, world_to_chain } from '@aresrpg/sdk/coords'
 import { subscribe_spawn_beats } from '@aresrpg/world/spawns_zones'
 import { SEARCH_PROGRESS_MS } from '@aresrpg/world/spawns_reconcile'
 
@@ -25,6 +25,7 @@ import { humanize_tx_error } from '../game/core/abort_copy.js'
 
 import { run_tx_random } from './tx.js'
 import { spawns_store, spawns_input } from './spawns_adapter.js'
+import { publish_checkpoint_receipt } from './world_checkpoint.js'
 
 /** True when the OS/browser asks for reduced motion — gates the camera pulse only (banner + sfx still fire). */
 const prefers_reduced_motion = () =>
@@ -96,6 +97,8 @@ export function search_zone({ world_id, x, z, character_id, kiosk_id, personal_k
   )
   /** @type {{zx:number, zy:number} | null} */
   let searched_cell = null
+  /** @type {{x:number, z:number} | null} the exact integer block position the PTB commits */
+  let searched_position = null
 
   // The PTB build runs INSIDE the chain: a synchronous builder throw (unstamped ids, bad kiosk arg) must
   // resolve the progress toast to the honest error and clear the sweep — never a forever-90% "searching".
@@ -117,6 +120,10 @@ export function search_zone({ world_id, x, z, character_id, kiosk_id, personal_k
       searched_cell = { zx: request.payload.zx, zy: request.payload.zy }
       sweep_ms = spawns_store.getState().beats.at(-1)?.duration ?? SEARCH_PROGRESS_MS
       const off = world_offsets(doc)
+      searched_position = {
+        x: chain_to_world(Math.floor(world_to_chain(x, off.x)), off.x),
+        z: chain_to_world(Math.floor(world_to_chain(z, off.z)), off.z),
+      }
       return search_zone_ptb({ network: DEMO_NETWORK })({
         world_id,
         kiosk_id,
@@ -132,10 +139,24 @@ export function search_zone({ world_id, x, z, character_id, kiosk_id, personal_k
     .then((res) => {
       resolve_progress_toast(toast_id, { state: 'success', title: i18n.t('discovery.search_done') })
       const found = read_zone_searched(res?.result)
+      const committed = searched_position ?? { x, z }
       // THE SEARCH RECEIPT through the door (one clock): checkpoint + zone + hunt_zone advance atomically in
       // the core, and the reveal juice (chime / banner / FOV punch) comes BACK as beats the module-scope
       // executor above performs — presentation is data now, this seam emits nothing itself.
-      spawns_input({ type: 'zone_searched', zx: found.zx, zy: found.zy, x, z, found })
+      void publish_checkpoint_receipt({
+        type: 'zone_searched',
+        character_id,
+        world_id,
+        zx: found.zx,
+        zy: found.zy,
+        x: committed.x,
+        z: committed.z,
+        time_ms: found.at_ms,
+        found,
+      })
+      // ZoneSearched carries the checkpoint revision itself, while this tx's signed standing position is the
+      // exact world-space coordinate the chain translated and committed. Seed that receipt proof immediately;
+      // no lagging checkpoint read may make the pre-search local pose look current again.
       // COMPASS REFRESH (UX-latency fix — "the compass takes a bit of time to update after searching a
       // zone"): broadcast the searched zone the instant the tx confirms, off the SAME shared bus every other
       // imperative→reactive signal in this app uses (context.events — the fight_entry/* pattern; zero new

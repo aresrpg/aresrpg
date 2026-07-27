@@ -12,11 +12,12 @@
 
 import { gather_ptb } from '@aresrpg/sdk/game'
 import { JOBS, JOB_CATEGORY } from '@aresrpg/sdk/jobs'
+import { chain_to_world, world_offsets } from '@aresrpg/sdk/coords'
 
 import i18n from '../i18n'
 import { DEMO_NETWORK } from '../chain/deployment'
 import { get_config } from '../rpc/client'
-import { zone_rows_chain } from '../game/zone_rows.js'
+import { zone_rows_chain, zone_world_doc } from '../game/zone_rows.js'
 import { play_gather_sfx } from '../game/core/audio/sfx.js'
 import { play_local_beat } from '../game/core/local_beat.js'
 import { note_gather } from '../game/screens/hud/world/quest_ladder_store.js' // ONBOARDING quest-ladder GATHER seam
@@ -24,6 +25,7 @@ import { push_progress_toast, update_progress_toast, resolve_progress_toast } fr
 
 import { run_tx } from './tx.js'
 import { spawns_store, spawns_input } from './spawns_adapter.js'
+import { publish_checkpoint_receipt } from './world_checkpoint.js'
 
 // The 3 GATHERING jobs in on-chain enum order (world.move: a resource node's `job` u8 is 0 FARMER /
 // 1 HERBALIST / 2 MINER) — the same SDK-sourced derivation gather_gate.js uses. Uppercased ids match the
@@ -52,19 +54,21 @@ export function gather({ world_id, zx, zy, spawn_id, template_id, character_id, 
       // Resolve the node_index from the stable spawn_id (see the header seam note), and pull
       // /v1/config in the same breath (env-fed + ~static, so no added latency; a failed read degrades to the
       // honest missing-key refusal below, never a crash before it).
-      const [rows, config] = await Promise.all([
+      const [rows, config, world] = await Promise.all([
         // PRE-FLIGHT EXEMPTION: the other zone-spawn readers (world_spawns.js/CompassStrip.jsx/
         // embed_voxel_dev.js) read /v1; this read feeds a tx pre-flight — it needs the FRESHEST on-chain
         // consumption state (see the header note above), not a short-poll RPC view, so it derives off the
         // chain-direct Zone DF read (zone_rows_chain).
         zone_rows_chain(world_id, zx, zy),
         get_config().catch(() => null),
+        zone_world_doc(world_id),
       ])
       const resources = (rows ?? []).filter((r) => r.kind === 'resource')
       // rows are LIVE-only (consumed bits filtered) and carry their DERIVATION index — the chain's node_index.
       const node = resources.find((r) => String(r.spawn_id) === String(spawn_id))
       if (!node) throw new Error(i18n.t('discovery.gather_failed'))
       const node_index = node.index
+      const off = world_offsets(world)
 
       // §17.22 PROTECTOR AMBUSH — gather_ptb REQUIRES the (job,tier)-matched protector `&MobTemplate` id (a
       // `protector_bp` roll spawns a SOLO PvM fight INTRA-call; no inert default exists). The chain carries no
@@ -83,20 +87,28 @@ export function gather({ world_id, zx, zy, spawn_id, template_id, character_id, 
         // Localized "gather failed" title (via the shared catch) + this honest subline; never a silently-wrong PTB.
         throw new Error('Gathering temporarily unavailable')
       }
-      return gather_ptb({ network: DEMO_NETWORK })({
-        world_id,
-        kiosk_id,
-        personal_kiosk_cap_id,
-        character_id,
-        zx,
-        zy,
-        node_index,
-        template_id,
-        protector_template_id,
-      })
+      return {
+        tx: gather_ptb({ network: DEMO_NETWORK })({
+          world_id,
+          kiosk_id,
+          personal_kiosk_cap_id,
+          character_id,
+          zx,
+          zy,
+          node_index,
+          template_id,
+          protector_template_id,
+        }),
+        // This row came from the chain-direct Zone DF read above. Convert its unsigned coordinates with the
+        // same World doc used to derive it, then carry that home through the async receipt.
+        checkpoint: {
+          x: chain_to_world(Number(node.x), off.x),
+          z: chain_to_world(Number(node.z), off.z),
+        },
+      }
     })
-    .then((tx) => run_tx('gather', tx))
-    .then((res) => {
+    .then(({ tx, checkpoint }) => run_tx('gather', tx).then((res) => ({ res, checkpoint })))
+    .then(({ res, checkpoint }) => {
       // Design ruling 2026-07-12: the toast shows WHAT YOU GOT — the yield scales with job level on-chain
       // (gathering.move gather_yield = 1 + (job_level−required)/5), so surface the authoritative `quantity`
       // off the ResourceGathered event rather than a flat "done". Defaults to 1 if the event is unreadable.
@@ -106,7 +118,16 @@ export function gather({ world_id, zx, zy, spawn_id, template_id, character_id, 
       const count = Number(ev?.parsedJson?.quantity) || 1
       // THE GATHER RECEIPT through the door: one charge consumed on-chain — the core decrements `remaining`
       // (receipt-shielded against the lagging poll; the last charge removes + tombstones the node).
-      spawns_input({ type: 'gather_receipt', key: core_key })
+      // ResourceGathered does not expose the checkpoint timestamp. Reconcile this exact node home strictly
+      // above the prior canonical revision.
+      void publish_checkpoint_receipt({
+        type: 'gather_receipt',
+        character_id,
+        world_id,
+        key: core_key,
+        x: checkpoint.x,
+        z: checkpoint.z,
+      })
       resolve_progress_toast(toast_id, { state: 'success', title: i18n.t('discovery.gather_done', { count }) })
       play_gather_sfx() // S-71 §2.3 — the harvest pop; fully built in sfx.js, this was its zero-callers gap
       play_local_beat('ATTACK') // 2026-07-10: a real gather swings the avatar's ATTACK clip once

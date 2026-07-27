@@ -18,9 +18,14 @@ export const spawns_store = create_spawns_store()
 
 /** Dispatch one typed spawns input without exposing store plumbing at call sites. */
 export function spawns_input(input, now) {
-  // A checkpoint read can finish after a same-world character switch. Reject it before the world-only reducer
-  // sees it; checking ownership after `.input` is too late because checkpoint/hunt_zone would already be stale.
-  if (input.type === 'checkpoint_resolved') {
+  // A checkpoint/receipt can finish after a same-world character switch. Reject it before the world-only
+  // reducer sees it; checking ownership after `.input` is too late because checkpoint/hunt_zone would be stale.
+  const scoped_chain_input =
+    input.type === 'checkpoint_resolved' ||
+    input.type === 'zone_searched' ||
+    input.type === 'claim_receipt' ||
+    input.type === 'gather_receipt'
+  if (scoped_chain_input) {
     const binding = use_world_binding.getState()
     if (input.character_id !== binding.character_id || input.world_id !== binding.world) return
   }
@@ -40,13 +45,20 @@ export function spawns_input(input, now) {
     const owns_chain_commit =
       input.type === 'zone_searched' ||
       input.type === 'claim_receipt' ||
+      input.type === 'gather_receipt' ||
       (input.type === 'checkpoint_resolved' && input.character_id === character_id)
     const committed =
       input.type === 'checkpoint_resolved' && finite_position(input.world_position)
         ? input.world_position
-        : after.checkpoint
-    if (owns_chain_commit && after.checkpoint !== before.checkpoint && finite_position(committed))
+        : input.type !== 'checkpoint_resolved' && finite_position(input)
+          ? { x: input.x, z: input.z, time_ms: input.time_ms }
+          : after.checkpoint
+    const receipt_commit =
+      input.type === 'zone_searched' || input.type === 'claim_receipt' || input.type === 'gather_receipt'
+    if (owns_chain_commit && (receipt_commit || after.checkpoint !== before.checkpoint) && finite_position(committed)) {
+      if (receipt_commit) void invalidate_world_position(character_id, after.world_id)
       adopt_position_chain_anchor(character_id, after.world_id, committed)
+    }
   }
 }
 
@@ -161,6 +173,10 @@ const save_position_snapshot = (snapshot) =>
     store.put(snapshot, position_key(snapshot.character_id, snapshot.world_id))
   ).catch(() => undefined)
 
+/** @param {string} key */
+const delete_position_snapshot = (key) =>
+  position_transaction('readwrite', (store) => store.delete(key)).catch(() => undefined)
+
 /* eslint-disable functional/no-let --
    Mutable cadence/ownership tokens are confined to this effect edge; reducer state remains immutable. */
 /** @type {Omit<PositionSnapshot, 'saved_at'> | null} */
@@ -229,7 +245,7 @@ const discard_pending_position = () => {
 
 const position_phase_is_blocked = () => {
   const phase = read_dungeon_session()
-  return phase.in_session || !!phase.dungeon_id
+  return phase.in_session || !!phase.run_pass_id || !!phase.dungeon_id || !!phase.fight_id
 }
 
 /**
@@ -324,6 +340,30 @@ export function flush_world_position(now = Date.now()) {
 }
 
 /**
+ * A chain receipt invalidates every local pose captured before it. Deletion is serialized behind any in-flight
+ * save, so an older completion cannot resurrect the row after the receipt. The next canonical anchor can then
+ * start a fresh cadence.
+ */
+export function invalidate_world_position(character_id, world_id) {
+  if (!character_id || !world_id) return position_write_tail
+  const owner = position_key(character_id, world_id)
+  if (pending_position?.character_id === character_id && pending_position.world_id === world_id)
+    discard_pending_position()
+  if (player_position_owner === owner) player_position_owner = null
+  if (last_noted_position_owner === owner) {
+    last_noted_position = null
+    last_noted_position_owner = null
+  }
+  if (position_chain_anchor_owner === owner) {
+    position_chain_anchor = null
+    position_chain_anchor_owner = null
+  }
+  restore_generation += 1
+  position_write_tail = position_write_tail.then(() => delete_position_snapshot(owner))
+  return position_write_tail
+}
+
+/**
  * Load and validate the exact character+world row, then re-enter through the existing `player_pos` reducer
  * input. The identity and anchor are checked again after the async read so a travel during IndexedDB I/O
  * cannot land a stale position in the new world.
@@ -332,14 +372,14 @@ export function flush_world_position(now = Date.now()) {
  */
 export async function restore_world_position(character_id, world_id, chain_anchor, now = Date.now()) {
   if (!character_id || !world_id || !current_binding_is(character_id, world_id)) return null
+  const generation = ++restore_generation
+  player_position_owner = null
   const known_anchor = read_position_chain_anchor(character_id, world_id)
   // A resolver miss may return an older cache entry after a receipt already advanced this edge. Never let that
   // fallback replace a conflicting receipt-proven observation; ambiguity means the chain-side live fact wins.
   if (known_anchor && !same_chain_observation(known_anchor, chain_anchor)) return null
   const current_anchor = known_anchor ?? adopt_position_chain_anchor(character_id, world_id, chain_anchor)
   if (!current_anchor || chain_anchor_time(current_anchor) === null) return null
-  const generation = ++restore_generation
-  player_position_owner = null
   const snapshot = await load_position_snapshot(position_key(character_id, world_id))
   const state = spawns_store.getState()
   if (
@@ -418,4 +458,8 @@ use_world_binding.subscribe((state, prev) => {
       discard_pending_position()
   }
   if (state.world !== prev.world) ferry_world(state.world)
+  else if (state.character_id !== prev.character_id) {
+    ferry_world(null)
+    if (state.character_id && state.world) ferry_world(state.world)
+  }
 })

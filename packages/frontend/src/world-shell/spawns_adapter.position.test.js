@@ -41,6 +41,12 @@ const create_fake_idb = () => {
       settle(request)
       return request
     },
+    delete: (key) => {
+      store_of(name).delete(key)
+      const request = { result: undefined }
+      settle(request)
+      return request
+    },
   })
   return {
     open: () => {
@@ -208,6 +214,41 @@ describe('world position IndexedDB edge', () => {
     })
   })
 
+  test('movement stop commits the newest throttled pose without a per-frame write', async () => {
+    const anchor = anchor_at(100, 200)
+    const started = Date.now()
+    const stopped = { x: 145, z: 245 }
+    bind_with_anchor(WORLD_A, anchor)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, started)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 1)
+
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    // A duplicate note does not enqueue another row, but returns the serialized tail written by the timer.
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 800)
+
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, anchor)
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, started + 1_000)).resolves.toEqual(
+      stopped
+    )
+  })
+
+  test('a receipt invalidation deletes the previous visit even when the chain anchor later matches', async () => {
+    const anchor = anchor_at(100, 200)
+    bind_with_anchor(WORLD_A, anchor)
+    void position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW)
+
+    // Join/travel receipts use this edge before rebinding. Its delete must serialize behind the in-flight save.
+    await position_edge.invalidate_world_position(CHARACTER, WORLD_A)
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, anchor)
+
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 1_000)).resolves.toBeNull()
+    expect(position_edge.spawns_store.getState().player).toBeNull()
+  })
+
   test('drops a pending movement-stop write when a dungeon phase starts before commit', async () => {
     const anchor = anchor_at(100, 200)
     bind_with_anchor(WORLD_A, anchor)
@@ -286,6 +327,8 @@ describe('world position IndexedDB edge', () => {
     const receipt_anchor = { x: 110, z: 210 }
     position_edge.spawns_input({
       type: 'zone_searched',
+      character_id: CHARACTER,
+      world_id: WORLD_A,
       zx: 0,
       zy: 0,
       x: receipt_anchor.x,
@@ -311,6 +354,8 @@ describe('world position IndexedDB edge', () => {
     const receipt_anchor = anchor_at(110, 210, CHAIN_TIME + 1_000)
     position_edge.spawns_input({
       type: 'zone_searched',
+      character_id: CHARACTER,
+      world_id: WORLD_A,
       zx: 0,
       zy: 0,
       x: receipt_anchor.x,
