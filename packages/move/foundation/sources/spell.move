@@ -119,7 +119,7 @@ public fun decenter_mob_resistances(s: &Stats): Stats {
 
 #[test]
 /// (b)+ gate proof: a mob's CENTERED resistances decode to their true positive magnitudes, and a WEAKNESS floors to
-/// 0 (neutral) — NOT to its stored centered value, which apply_resistance would cap at 50% = the "absurdly tanky"
+/// 0 (neutral) — NOT to its stored centered value, which apply_resistance would cap at 60% = the "absurdly tanky"
 /// mis-read devops flagged. This is the fix that lets the ceremony ship centered data with correct combat.
 fun decenter_mob_resistances_decodes_and_floors_weakness() {
     // fire +15 → 32783 · water 0/neutral → 32768 · earth -10 WEAKNESS → 32758 · air +7232 → 40000
@@ -276,10 +276,11 @@ public fun apply_resistance(damage: u64, element: u8, target: &Stats): u64 {
         else if (element == AIR) target.air_resistance
         else if (element == NONE) target.neutral_resistance
         else 0;
-    // S4-2 (balance_audit §7.4): CAP total applied resistance at 50% — the SPEC real-time cap — so stacked
-    // resist sources (Bulwark + Tipple + Ironbark + gear/armor lines) can never reach elemental immunity.
-    // Was: cap 100% (resistance >= 100 → 0 damage). No underflow: `capped` is always <= 50.
-    let capped = if (resistance > 50) 50 else resistance;
+    // S4-2 (balance_audit §7.4): CAP total applied resistance at 60% (owner ruling 2026-07-23 — realigns edge
+    // with the live chain, which has resolved at 60 all along) so stacked resist sources (Bulwark + Tipple +
+    // Ironbark + gear/armor lines) can never reach elemental immunity.
+    // Was: cap 100% (resistance >= 100 → 0 damage), then 50% (superseded 07-23). No underflow: `capped` <= 60.
+    let capped = if (resistance > 60) 60 else resistance;
     damage * (100 - capped) / 100
 }
 
@@ -384,15 +385,15 @@ fun t3_resistance() {
 }
 
 #[test]
-fun t4_resistance_capped_at_50() {
-    // S4-2: resistance is capped at 50% — even 120 fire resist only halves incoming damage (was → 0).
+fun t4_resistance_capped_at_60() {
+    // S4-2 (07-23 ruling): resistance is capped at 60% — 120 fire resist only takes 40% off (was → 0).
     let t120 = new_stats(0, 0, 0, 0, 0, 0, 0, 120, 0, 0, 0);
-    assert!(apply_resistance(50, FIRE, &t120) == 25, 4);
-    // exactly 50 resist = the cap boundary (half), 51 clamps back to 50 (still half — not more).
-    let t50 = new_stats(0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0);
-    let t51 = new_stats(0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0);
-    assert!(apply_resistance(100, FIRE, &t50) == 50, 4);
-    assert!(apply_resistance(100, FIRE, &t51) == 50, 4);
+    assert!(apply_resistance(50, FIRE, &t120) == 20, 4);
+    // exactly 60 resist = the cap boundary, 61 clamps back to 60 (same result — not more).
+    let t60 = new_stats(0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0);
+    let t61 = new_stats(0, 0, 0, 0, 0, 0, 0, 61, 0, 0, 0);
+    assert!(apply_resistance(100, FIRE, &t60) == 40, 4);
+    assert!(apply_resistance(100, FIRE, &t61) == 40, 4);
 }
 
 #[test]

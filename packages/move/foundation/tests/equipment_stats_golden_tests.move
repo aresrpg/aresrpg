@@ -84,8 +84,8 @@ fun critical_denominator_floor_two() {
 }
 
 #[test]
-/// Vector: resistance_caps_at_fifty.
-fun resistance_caps_at_fifty() {
+/// Vector: resistance_caps_at_sixty (07-23 ruling — was fifty).
+fun resistance_caps_at_sixty() {
   let target = spell::new_stats(0, 0, 0, 0, 0, 0, 0, 120, 0, 0, 0);
-  assert!(spell::apply_resistance(100, spell::el_fire(), &target) == 50, 0);
+  assert!(spell::apply_resistance(100, spell::el_fire(), &target) == 40, 0);
 }
