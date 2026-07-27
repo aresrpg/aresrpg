@@ -411,14 +411,12 @@ public fun clear_tables(cap: &AdminCap, w: &mut World, version: &Version, ctx: &
 
 // ╔════════════════ [ Burn / teardown (cap + version gated, unrestricted template deletion) ] ═ ]
 
-/// DRAIN this module's own link state — the golden-gather links, the distance-difficulty levels and the
-/// gather-ambush pins — for the
-/// given template ids, so a subsequent `destroy_world` strands no storage. IDEMPOTENT (each removal is
-/// `exists`-guarded, tolerating already-drained / never-set keys) and BATCHED: the firing script reads the
-/// world's live dynamic fields off-chain (`getDynamicFields`) and feeds the per-class template-id lists here,
-/// chunked. Cap + version gated like every authoring door. Mirrors the item burn, which detaches its typed DFs
-/// through their owning modules BEFORE the UID delete — here the World owns these three DF classes, so it drains
-/// them; `zones` owns the fourth (`ZoneKey → Zone`) and drains it via `zones::drain_zones`.
+/// Clear selected entries from the link state stored directly in `WorldInner`: remove `rare_links` and
+/// `protectors` keys, and zero the `mob_levels` slots whose parallel `mobs` rows match the supplied templates.
+/// Call this before `clear_tables` when the teardown needs per-link removal counts; after the inline mob roster is
+/// cleared there is no template-to-level position left to match. The operation is idempotent and may be batched by
+/// passing subsets of the current template ids. No dynamic-field discovery is involved — only discovered zones are
+/// children of the World UID, and those are drained separately through `zones::drain_zones`.
 public fun drain_world_links(
   cap: &AdminCap,
   w: &mut World,
@@ -472,12 +470,11 @@ public fun drain_world_links(
 /// ABORTS (`EWorldNotEmpty`) unless the inline spawn tables (`resources` / `mobs` / `dungeon_rooms`) are ALL empty
 /// — the deliberate two-step burn (`clear_tables` retires the content, THEN this deletes the shell), so a fully
 /// populated LIVE world can never be nuked by a single fat-fingered call. The inline rows are `copy + drop`, so the
-/// vectors carry NO stranding risk (they drop with the struct); the real stranding risk is the UID's DYNAMIC
-/// FIELDS — this module's links (`drain_world_links`) and `zones`' discovered zones (`zones::drain_zones`). Raw
-/// dynamic fields carry NO on-chain size, and a per-object counter cannot be retro-added to the frozen struct under
-/// the COMPATIBLE upgrade policy, so their COMPLETE removal is proven OFF-CHAIN (`getDynamicFields == []`) exactly
-/// as the item ghost burn proved zero references off-chain (PTB-first law: Move enforces the invariants it can, the
-/// firing script proves the rest). Emits `WorldBurned`.
+/// vectors carry NO stranding risk (they drop with the struct). The same is true of `rare_links`, `mob_levels`,
+/// `protectors`, and `boss_mask`: they are real `WorldInner` fields and are destructured with the rest of the inner
+/// value below; `drain_world_links` is optional accounting cleanup, not a UID-safety prerequisite. Discovered zones
+/// are the only dynamic fields attached to the World UID, so teardown drains them through `zones::drain_zones`
+/// before deleting the shell. Emits `WorldBurned`.
 public fun destroy_world(cap: &AdminCap, w: World, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
