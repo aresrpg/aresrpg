@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
 import { JOBS } from '@aresrpg/sdk/jobs'
 
 import { craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
@@ -121,15 +122,17 @@ describe('the recipe detail pane consumes the live item row (#799 follow-up)', (
   const [row] = rows
   const pane = (props) =>
     renderToStaticMarkup(
-      <JobItemDetail
-        item={OUTPUT_ROW}
-        recipe={row}
-        job={JOBS[ARMORSMITH]}
-        level={30}
-        owned={{}}
-        on_back={() => {}}
-        {...props}
-      />
+      <MemoryRouter>
+        <JobItemDetail
+          item={OUTPUT_ROW}
+          recipe={row}
+          job={JOBS[ARMORSMITH]}
+          level={30}
+          owned={{}}
+          on_back={() => {}}
+          {...props}
+        />
+      </MemoryRouter>
     )
 
   test('the HD icon resolves off the row’s chain art slug, never the object id', () => {
@@ -152,6 +155,26 @@ describe('the recipe detail pane consumes the live item row (#799 follow-up)', (
     expect(text).toContain('16 - 29')
     expect(text).toContain('WATER')
     expect(text).toContain('+3 to 8 Vitality')
+  })
+
+  // A bill-of-materials row names an item the player has to go find — and named it as dead text: the only way
+  // to learn what a "Diadem Lattice Crown" is was to leave the drawer and search the encyclopedia by hand.
+  // The name is now the same clickable entity reference every other surface uses (EncyclopediaLink → the ONE
+  // encyclopedia_path idiom), so an unresolved ingredient still degrades to plain text rather than a dead link.
+  test('an ingredient NAME deep-links to its encyclopedia item page', () => {
+    const ingredient = row.ingredients[0]
+    const html = pane()
+    expect(html).toContain(`href="/encyclopedia/items/${ingredient.template_id}"`)
+    expect(html).toContain(ingredient.name)
+  })
+
+  test('the link rides the TEMPLATE id — the key an unsnapshotted ingredient still carries', () => {
+    // recipes.ts EXISTENCE LAW: an ingredient the items projection has not reached keeps its row with a
+    // short-id name and NO art slug — but always its template id, which is exactly what the ency routes on.
+    const [unresolved] = craft_recipes_for_job([LIVE_RECIPE], [LIVE_ITEMS[0]], ARMORSMITH)
+    const ingredient = unresolved.ingredients[0]
+    expect(ingredient.id).toBeNull()
+    expect(pane({ recipe: unresolved })).toContain(`href="/encyclopedia/items/${ingredient.template_id}"`)
   })
 
   test('a row the projection has not reached keeps the honest recipe fallback — nothing fabricated', () => {

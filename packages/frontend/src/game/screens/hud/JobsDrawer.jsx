@@ -64,6 +64,7 @@ import { Tooltip } from './Tooltip.jsx'
 import { ItemDetailView } from '../../../components/entity_display'
 import { encyclopedia_item_view } from '../../../pages/encyclopedia/item_view_model'
 import { encyclopedia_item_asset } from '../../../pages/encyclopedia/encyclopedia_assets'
+import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { use_template_t } from '../../../i18n/template_t'
 import { craft_item } from '../../../world-shell/craft_actions.js'
 import { use_toast } from '../../../toast'
@@ -349,7 +350,12 @@ function CraftControls({ recipe, job, level, owned }) {
             <div key={ing.template_id} className="jobs__ingredient">
               <ItemIcon icon={ing.id ?? ''} size={32} />
               <span className="jobs__ingredient-id">
-                <span className="jobs__ingredient-name">{ing.name}</span>
+                {/* The bill of materials names items the player has to go FIND: each name is the standard
+                    clickable entity reference into the encyclopedia (the ONE encyclopedia_path idiom), keyed by
+                    the TEMPLATE id — the one key an unsnapshotted ingredient still carries. */}
+                <EncyclopediaLink kind="item" id={ing.template_id} className="jobs__ingredient-name">
+                  {ing.name}
+                </EncyclopediaLink>
                 <span className="jobs__ingredient-lvl hud-num">{i18n.t('jobs.lv_badge', { level: ing.level })}</span>
               </span>
               {/* OWNED/REQUIRED: GREEN when owned>=required, ORANGE when short */}
