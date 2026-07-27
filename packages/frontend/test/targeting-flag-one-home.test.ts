@@ -32,9 +32,7 @@ describe('#1249 targeting-flag bits — one home', () => {
     expect(effect_hits(TF_NOT_ENEMY, false, false)).toBe(false) // enemy: excluded
 
     const ally_targeted = spell_category({
-      effects: [
-        { kind: 'ALTER_STAT', element: 'neutral', target_filter: TF_NOT_ENEMY },
-      ],
+      effects: [{ kind: 'ALTER_STAT', element: 'neutral', target_filter: TF_NOT_ENEMY }],
     })
     expect(ally_targeted.family).toBe('buff')
 
@@ -50,9 +48,7 @@ describe('#1249 targeting-flag bits — one home', () => {
     expect(effect_hits(TF_ONLY_CASTER, false, true)).toBe(false) // ally, not caster: excluded
 
     const self_targeted = spell_category({
-      effects: [
-        { kind: 'ALTER_RESIST', element: 'neutral', target_filter: TF_ONLY_CASTER },
-      ],
+      effects: [{ kind: 'ALTER_RESIST', element: 'neutral', target_filter: TF_ONLY_CASTER }],
     })
     expect(self_targeted.family).toBe('buff')
   })
