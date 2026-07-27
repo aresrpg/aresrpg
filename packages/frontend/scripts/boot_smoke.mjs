@@ -16,6 +16,8 @@ import { fileURLToPath } from 'node:url'
 
 import { chromium } from '@playwright/test'
 
+import { is_blocking_console_error } from './boot_smoke_filter.mjs'
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const FRONTEND = resolve(HERE, '..')
 const PORT = Number(process.env.SMOKE_PORT ?? 4173)
@@ -28,28 +30,6 @@ const LANDMARK = '[data-testid="game-world-viewport"]'
 // the game chunk — the corpus consumer. We must idle long enough for that deferred import to evaluate
 // and surface any module-load throw, whether uncaught (pageerror) or swallowed to console.error.
 const SETTLE_MS = 6000
-// ALLOWLIST — console.error substrings tolerated at boot. Each entry names its cause. The PRIMARY signal is
-// pageerror === 0 (the uncaught migration-stub throw class); console.error catches loud degrades + regressions.
-const CONSOLE_ERROR_ALLOWLIST = [
-  // #106 — the spell corpus is a runtime blob (spell_corpus.json) the seed ceremony publishes, NEVER a repo
-  // artifact. Until it publishes, load_spell_corpus degrades loudly to inert spell surfaces. THIS PR's line.
-  '[spell-corpus] no spell_corpus runtime asset',
-  // #94 (merged) — the deployment-pin manifest is absent in the open-source tree; resolve_seed_manifest
-  // degrades loudly. Allowlisted per the ruling's known-content-degrade clause.
-  '[seed_manifest] no seed manifest at',
-  // #106 eager-cascade degrades (inventory rows) — content consumers that used to THROW at module load,
-  // crashing boot before the spell fix mattered; now they degrade loudly + inert. Full runtime-loader
-  // conversion is boarded follow-up; degrade-only is the crash-killer.
-  '[deployment] seed manifest carries no worlds', // deployment.ts — worlds enumeration
-  '[world_corpus] world knowledge inert', // world_corpus.ts — runtime blob unpublished/unreachable in CI (#196)
-  '[living_corpus] seed manifest carries', // living_corpus.ts — living-content fence
-  // Environmental — the headless CI preview has NO backend (RPC / Walrus aggregator / asset host), so boot-time
-  // asset & RPC fetches fail. These are BROWSER resource-load failures, not app-code errors; the pageerror
-  // assertion is what guards real JS crashes. Never masks a migration-stub throw (those are uncaught, not 404s).
-  'Failed to load resource',
-]
-
-const allowed = (text) => CONSOLE_ERROR_ALLOWLIST.some((frag) => text.includes(frag))
 
 async function wait_for_server(url, timeout_ms = 60_000) {
   const deadline = Date.now() + timeout_ms
@@ -101,7 +81,7 @@ try {
   // Idle so the deferred game-chunk import evaluates and any module-load throw surfaces.
   await page.waitForTimeout(SETTLE_MS)
 
-  const blocking_console = console_errors.filter((t) => !allowed(t))
+  const blocking_console = console_errors.filter((t) => is_blocking_console_error(t))
   const failed = page_errors.length > 0 || blocking_console.length > 0 || !landmark_seen
 
   const report = [
@@ -110,7 +90,9 @@ try {
     `pageerror events: ${page_errors.length}`,
     ...page_errors.map((e, i) => `  [pageerror ${i}] ${e.split('\n').slice(0, 4).join('\n           ')}`),
     `console.error entries: ${console_errors.length} (blocking ${blocking_console.length})`,
-    ...console_errors.map((e, i) => `  [console.error ${i}]${allowed(e) ? ' (allowlisted)' : ''} ${e}`),
+    ...console_errors.map(
+      (e, i) => `  [console.error ${i}]${is_blocking_console_error(e) ? '' : ' (non-blocking)'} ${e}`
+    ),
     '',
   ].join('\n')
 

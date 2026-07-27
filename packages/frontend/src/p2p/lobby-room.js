@@ -39,19 +39,12 @@ import { context } from '../game/core/game.js'
 import { game_log } from '../core/log.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
 
+import { RELAY_URLS } from './relays.js'
+
 const NETWORK = import.meta.env.VITE_NETWORK || 'testnet'
 const APP_ID = `aresrpg-world-lobby-${NETWORK}`
-// EXPLICIT nostr rendezvous relays (2026-07-15): trystero's baked-in default list included a dead relay
-// (chorus.pjv.me → 502 on every handshake, visible console noise + degraded discovery). Peers are
-// browser-to-browser WebRTC — relays only broker the handshake, so a diverse public list + redundancy is
-// the whole fix; self-hosting one stays a ticketed option if these ever rot too.
-const RELAY_URLS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.nostr.band',
-  'wss://nostr.mom',
-  'wss://relay.snort.social',
-]
+// EXPLICIT nostr rendezvous relays — the list itself lives in ./relays.js (its one home, shared with the
+// boot-smoke gate); redundancy 3 of 5 is why a single dead relay is a non-event for discovery.
 const RELAY_REDUNDANCY = 3
 const relay_config = { urls: RELAY_URLS, redundancy: RELAY_REDUNDANCY }
 const ROOM_ID = 'world'

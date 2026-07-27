@@ -235,7 +235,8 @@ jobs:
     # BOOT SMOKE — the class killer for the migration-stub throw family (a shape-correct-but-empty content
     # stub that throws at module load: invisible to lint + unit tests, fatal in the browser). Builds the
     # frontend, serves dist, drives the logged-out landing headless, and FAILS on any uncaught page error or
-    # any non-allowlisted console.error at boot (scripts/boot_smoke.mjs owns the allowlist + its rationale).
+    # any blocking console.error at boot (scripts/boot_smoke_filter.mjs owns that decision + its rationale:
+    # the allowlist, plus the #1361 exemption for browser-native WebSocket failures aimed at our own relays).
     #
     # ENCYCLOPEDIA LEG (issue #165) — a second, independent class killer: the prod encyclopedia once
     # rendered with ~zero item icons and empty obtention data and no gate caught it. Drives the real
