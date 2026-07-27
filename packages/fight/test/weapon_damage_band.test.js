@@ -28,13 +28,7 @@ import { engine_view } from '../src/project.js'
 import { predict_cast, weapon_spell_template } from '../src/predict_cast.js'
 import { create_fight_store } from '../src/store.js'
 import { encode } from '../src/los.js'
-import {
-  LOCAL_ADDRESS,
-  arena_from_board,
-  create_sim_chain,
-  derive_board,
-  snapshot_from_sim,
-} from '../src/sim_chain.js'
+import { LOCAL_ADDRESS, arena_from_board, create_sim_chain, derive_board, snapshot_from_sim } from '../src/sim_chain.js'
 
 const SEED = 0xc81f3a92
 const FIGHT_ID = 'sim:577:sword'

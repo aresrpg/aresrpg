@@ -504,9 +504,7 @@ export const weapon_spell_template = (weapon = {}) =>
             {
               kind: 0,
               value: Number(weapon.crit_damage ?? weapon.damage ?? 0),
-              value_max: Number(
-                weapon.crit_damage_max ?? weapon.crit_damage ?? weapon.damage ?? 0
-              ),
+              value_max: Number(weapon.crit_damage_max ?? weapon.crit_damage ?? weapon.damage ?? 0),
               element: Number(weapon.element ?? 255),
               target_filter: 1,
               chance: 100,

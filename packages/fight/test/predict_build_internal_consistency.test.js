@@ -133,9 +133,7 @@ const entity = (id, cell, is_player, extra) => ({
 const boot_chain_with = (raw, spell_id, spell_level = SEAT_SPELL_LEVEL) => {
   const { board } = derive_board(SEED)
   const arena = arena_from_board(board)
-  const team0 = [
-    entity(ME, arena.spawns_a[0], true, { stats: SEAT_STATS, spell_levels: { [spell_id]: spell_level } }),
-  ]
+  const team0 = [entity(ME, arena.spawns_a[0], true, { stats: SEAT_STATS, spell_levels: { [spell_id]: spell_level } })]
   const team1 = [entity('mob_0', arena.spawns_b[0], false, { stats: MOB_STATS, spell_levels: {} })]
   return create_sim_chain({
     seed: SEED,

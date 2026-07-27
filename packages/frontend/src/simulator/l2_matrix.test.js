@@ -428,9 +428,7 @@ describe('L2 — the corpus-derived scenario matrix', () => {
     )
     // Guard the guard: with no genuine roll band driven, the assertion below would pass vacuously.
     expect(banded.length).toBeGreaterThan(0)
-    const off_floor = banded.filter((entry) =>
-      entry.detail.hits.some((amount) => amount > entry.detail.roll_band[0])
-    )
+    const off_floor = banded.filter((entry) => entry.detail.hits.some((amount) => amount > entry.detail.roll_band[0]))
     expect(off_floor.length).toBeGreaterThan(0)
   })
 
