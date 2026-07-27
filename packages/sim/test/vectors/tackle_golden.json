@@ -5,58 +5,42 @@
     {
       "id": "equal_zero_agility_is_even",
       "runner_agility": 0,
-      "locker_agilities": [
-        0
-      ],
+      "locker_agilities": [0],
       "num": 2,
       "den": 4
     },
     {
       "id": "hundred_vs_hundred_is_even",
       "runner_agility": 100,
-      "locker_agilities": [
-        100
-      ],
+      "locker_agilities": [100],
       "num": 12,
       "den": 24
     },
     {
       "id": "runner_caps_at_certain_escape",
       "runner_agility": 200,
-      "locker_agilities": [
-        50
-      ],
+      "locker_agilities": [50],
       "num": 14,
       "den": 14
     },
     {
       "id": "two_lockers_multiply",
       "runner_agility": 60,
-      "locker_agilities": [
-        30,
-        90
-      ],
+      "locker_agilities": [30, 90],
       "num": 64,
       "den": 220
     },
     {
       "id": "four_zero_lockers_pin_runner",
       "runner_agility": 0,
-      "locker_agilities": [
-        0,
-        0,
-        0,
-        0
-      ],
+      "locker_agilities": [0, 0, 0, 0],
       "num": 16,
       "den": 256
     },
     {
       "id": "buffed_runner_vs_weak_locker",
       "runner_agility": 45,
-      "locker_agilities": [
-        10
-      ],
+      "locker_agilities": [10],
       "num": 6,
       "den": 6
     }
@@ -156,9 +140,7 @@
         "mp": 1,
         "ap": 6,
         "runner_agility": 0,
-        "locker_agilities": [
-          0
-        ],
+        "locker_agilities": [0],
         "state": 1535737762,
         "draw": 3234605891,
         "num": 2,
@@ -174,9 +156,7 @@
         "mp": 3,
         "ap": 6,
         "runner_agility": 0,
-        "locker_agilities": [
-          0
-        ],
+        "locker_agilities": [0],
         "state": 784571580,
         "draw": 582013873,
         "num": 2,
@@ -190,9 +170,7 @@
         "mp": 3,
         "ap": 6,
         "runner_agility": 100,
-        "locker_agilities": [
-          100
-        ],
+        "locker_agilities": [100],
         "state": 784571580,
         "draw": 582013873,
         "num": 12,
@@ -206,9 +184,7 @@
         "mp": 3,
         "ap": 6,
         "runner_agility": 40,
-        "locker_agilities": [
-          0
-        ],
+        "locker_agilities": [0],
         "state": 784571580,
         "draw": 582013873,
         "num": 4,
@@ -222,9 +198,7 @@
         "mp": 1,
         "ap": 6,
         "runner_agility": 0,
-        "locker_agilities": [
-          0
-        ],
+        "locker_agilities": [0],
         "state": 1535737762,
         "draw": 3234605891,
         "num": 2,
@@ -240,10 +214,7 @@
         "mp": 2,
         "ap": 6,
         "runner_agility": 0,
-        "locker_agilities": [
-          0,
-          0
-        ],
+        "locker_agilities": [0, 0],
         "state": 3656172092,
         "draw": 1529003476,
         "num": 4,
@@ -258,9 +229,7 @@
       "comment": "mob_backing_off_is_contested \u2014 the mob orientation draws the CRANK rng thread (never previewable), so only the thread-independent contest+loss surface is pinned here; the chain test asserts the full outcome.",
       "id": "mob_backing_off_is_contested",
       "runner_agility": 0,
-      "locker_agilities": [
-        5000
-      ],
+      "locker_agilities": [5000],
       "num": 2,
       "den": 1004,
       "ap": 4,
