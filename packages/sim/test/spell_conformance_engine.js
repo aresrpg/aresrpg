@@ -204,13 +204,7 @@ export const conform_effect = (raw, ap_cost) => {
   if (kind === K.DAMAGE || kind === K.LIFE_STEAL) {
     const drop = before.health - v_after.health
     checks.push(
-      band_check(
-        'damage',
-        drop,
-        authored_band(raw),
-        before.health,
-        'hp drop',
-      ),
+      band_check('damage', drop, authored_band(raw), before.health, 'hp drop'),
     )
     checks.push(
       norm.element === authored_element
