@@ -30,7 +30,7 @@ import { createStore } from 'zustand/vanilla'
 
 import { classify_input } from './classify_input.js'
 import { input_envelope } from './envelope.js'
-import { empty_core_state, ingest } from './core.js'
+import { empty_core_state, ingest, project_board } from './core.js'
 import { auto_commit_fire_at } from './draft_budget.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
@@ -52,9 +52,10 @@ import { peer_batch_legality } from './peer_legality.js'
 import { reconcile_predictions } from './reconcile_action.js'
 import { create_trace_tap } from './trace_tap.js'
 import {
+  apply_retirement,
   base_budget,
   carry_statuses,
-  committed_state,
+  entity_fold_key,
   last_action_of,
   merge_entries,
   presented_state,
@@ -62,9 +63,47 @@ import {
   wave_turns_of,
 } from './fold.js'
 
-// The two committed projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
+// The PRESENTATION projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
 // names so project.js and tools keep importing them from the store's door.
-export { claimed_budget_state, committed_state, presented_state, display_state } from './fold.js'
+export { claimed_budget_state, presented_state, display_state } from './fold.js'
+// TEST-ONLY (#1027): the legacy committed fold, kept reachable for the cutover-parity suites alone. It has no
+// runtime reader left — `committed_truth` below is the committed door — and it retires with those suites.
+export { committed_state } from './fold.js'
+
+/**
+ * THE COMMITTED-TRUTH DOOR (#1027) — the ONE committed board, repo-wide. It is the HEADLESS CORE's fold
+ * (`state.core`, fed by `with_core_fold` below) projected by `project_board`; there is no switch and no second
+ * derivation to drift from it. Presentation (`presented_state` / `display_state` / `claimed_budget_state`) is a
+ * different question and still derives from the settlement machinery, so the eye's pacing, the SNAP-THEN-RUN hold
+ * and the draft budget are untouched by this.
+ *
+ * The APPEND-ONLY DEATH FLOOR rides on top: `retired` is a store-level fact about authoritative deaths
+ * (fold.derive_retired), and dropping it here would re-open the resurrection root — a later object read carrying a
+ * positive hp standing a floor-dead fighter back up.
+ *
+ * It lives in the store rather than in `project.js` because both of its inputs (`core`, `retired`) are store atoms
+ * and the store's own doors read it; `project.js` re-exports it for the board, exactly as it does the folds above.
+ *
+ * TOTAL — there is no coreless arm. It used to fall back to a second fold over `s.entries` for hand-built
+ * projection inputs, and that arm WAS the switch ADR §2 forbids: two derivations, one of them unreachable from
+ * the door. A projection input carries a core (`empty_core_state(null)` is one) exactly as a real store atom does.
+ */
+export const committed_truth = (s) => {
+  const board = project_board(s.core)
+  return { ...board, fighters: apply_retirement(board.fighters, s.retired) }
+}
+
+/** The PRE-RECEIPT committed HP oracle the wave pricer needs (chain `Hit.amount` is raw authored damage while
+ *  `remaining_hp` is saturated, so a floater is priced from the victim's committed HP). It reads the SAME door as
+ *  everything else committed — the wave pacer receives it, never derives it (fold.js owns no committed fold). */
+const committed_health = (s) => {
+  const { fighters } = committed_truth(s)
+  const escrow = s.view?.escrow ?? []
+  return (source_id) => {
+    const key = entity_fold_key(escrow, source_id)
+    return key ? (fighters?.[key]?.hp ?? null) : null
+  }
+}
 
 export const PLAYER_TURN_FLOOR_MS = 3000
 export const MIN_ACTION_MS = 5000
@@ -557,7 +596,7 @@ const make_input =
           const raw_pace = apply.map((e) => ({ type: e.kind, parsedJson: e.data }))
           const new_turns =
             msg.type === 'receipt' && apply.length
-              ? wave_turns_of(s, raw_pace, msg.version, msg.trap_cells ?? [], base_seq)
+              ? wave_turns_of(s, raw_pace, msg.version, msg.trap_cells ?? [], base_seq, committed_health(s))
               : []
           const wave = [...s.wave, ...new_turns]
           return recompute(
@@ -638,7 +677,7 @@ const make_input =
             const ctx = observer_ctx({ ...s.ctx, ...(msg.ctx ?? {}) })
             // V2 · A5 OMISSION-HOLD: a base that does NOT model the status class must not drop a floored
             // invisibility/buff — backfill its status rows from the prior committed state (a no-op for a modelled read).
-            const view = carry_statuses(snapshot_view(ctx, msg, version), committed_state(s))
+            const view = carry_statuses(snapshot_view(ctx, msg, version), committed_truth(s))
             // The base subsumes every canonical fact at or below its version; keep only my optimistic intents + any
             // canonical tail already folded above it (a resume that raced ahead of the read).
             const entries = {}
@@ -948,7 +987,7 @@ const make_input =
         const peer_key = seat == null ? null : `p${seat}`
         // LEGALITY IS THE EYE'S FIRST LINE: reduce the batch over MY committed positions + the turn-start refill.
         const verdict = peer_batch_legality({
-          committed: committed_state(state),
+          committed: committed_truth(state),
           view: state.view,
           actor_key: peer_key,
           actions: msg.actions ?? [],

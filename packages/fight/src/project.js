@@ -21,11 +21,9 @@ import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
 import { participant_entity_id, participant_character_id } from './fight_control.js'
-import { apply_retirement } from './fold.js'
-import { project_board } from './core_project.js'
 import {
   claimed_budget_state,
-  committed_state,
+  committed_truth,
   display_state,
   PLAYER_TURN_FLOOR_MS,
   presented_state,
@@ -33,31 +31,13 @@ import {
 } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 
-export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
+// THE COMMITTED-TRUTH SOURCE lives at the store's door (`store.committed_truth` — the headless core's fold plus
+// the append-only death floor, both store atoms). Re-exported here because the board reads it through this
+// module: the draft anchor, the flush evolution and the cast retarget that decides the PTB's target cell all come
+// through this ONE read, so no consumer can reach a second committed derivation. ADR §2 is the law it enforces.
+export { committed_truth } from './store.js'
 
-/**
- * THE COMMITTED-TRUTH SOURCE — the HEADLESS CORE (`state.core`, fed by the one door, store.js `with_core_fold`),
- * projected by `project_board`. It is the sole owner: there is no switch and no second committed fold. Presentation
- * (`presented_state` / `display_state` / `claimed_budget_state`) is a different question and still derives from the
- * settlement machinery, so the eye's pacing, the SNAP-THEN-RUN hold and the draft budget are untouched by this.
- *
- * EXPORTED (#1027): this is the ONE committed read outside this module too — the board's draft anchor, its flush
- * evolution, and the cast retarget that decides the PTB's target cell all come through here, so no consumer can
- * reach a second committed derivation. ADR §2 (`docs/FIGHT_PIPELINE.md`) is the law it enforces.
- *
- * ONE ARM does not read the core, by construction rather than by guess: a state with NO `core` is a hand-built
- * projection input (tests, tools, the board authority's synthetic states) that never crossed the door and therefore
- * HAS no core fold to read — it folds its own `entries` instead. A real store atom always carries a core.
- *
- * The APPEND-ONLY DEATH FLOOR rides on top either way: `retired` is a store-level fact about authoritative deaths
- * (fold.derive_retired), and dropping it here would re-open the resurrection root — a later object read carrying a
- * positive hp standing a floor-dead fighter back up.
- */
-export const committed_truth = (s) => {
-  if (s.core == null) return committed_state(s)
-  const board = project_board(s.core)
-  return { ...board, fighters: apply_retirement(board.fighters, s.retired) }
-}
+export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
 
 const decode_cell = (encoded, width) =>
   encoded == null ? null : { x: Number(encoded) % width, y: Math.floor(Number(encoded) / width) }

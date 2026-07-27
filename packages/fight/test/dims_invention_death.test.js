@@ -13,6 +13,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { board_state_from_fight } from '../src/board_state.js'
+import { empty_core_state } from '../src/core.js'
 import * as project from '../src/project.js'
 
 /** A decoded-Fight-shaped object MISSING its BoardGeom (width/height) — the torn / dims-less shape. */
@@ -40,6 +41,9 @@ describe('RIDER B(b) — dims inventions die (hold-on-not-found, never a phantom
     const state = {
       view: { id: '0xopen', escrow: [], mobs: [], turn_queue: [], obstacles: [], holes: [], status: 0 },
       entries: {},
+      // A projection input carries a core exactly as a real store atom does — committed truth has ONE source
+      // (#1027) and no coreless arm to fall back to.
+      core: empty_core_state(null),
       wave: [],
       my_key: null,
       applied_version: 0,

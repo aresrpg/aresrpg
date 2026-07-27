@@ -6,8 +6,13 @@
 // · merge_entries / sorted_log — the keyed `(version, event_idx)` log, order-independent (dedupe / adopt / stale).
 // · base_from_view — the snapshot half of snapshot+tail: the adopted rich view → the thin fold base.
 // · recompute — snapshot base + sorted authoritative tail → committed state + the derived PROVIDER token.
-// · committed_state / presented_state — the two projections the store and its consumers read.
+// · presented_state / display_state — the PRESENTATION projections (the eye's pacing floor) the consumers read.
 // · wave_turns_of — pace an accepted batch's non-local events into presentation wave turns (window in seq space).
+//
+// COMMITTED TRUTH IS NOT HERE (#1027). The committed board is the HEADLESS CORE's, projected by `project_board`
+// and read through the store's ONE door (`store.committed_truth`). This module owns the PRESENTATION folds only —
+// which is why nothing here derives committed state for a runtime reader, and why `core_fold.js` may import this
+// file's base. `committed_state` below is the retiring legacy fold: TEST-ONLY, and leaving with its parity suites.
 
 import { participant_entity_id } from './fight_control.js'
 import { apply_action, empty_state, fighter_key, seat_resolver } from './inputs.js'
@@ -429,8 +434,9 @@ export const recompute = (draft, now) => {
   }
 }
 
-/** Snapshot + authoritative tail, excluding this client's optimistic intents. V1: `alive` derives from the
- *  retirement floor here too, so targeting / victory / tackle can never see a floor-dead fighter resurrected. */
+/** TEST-ONLY (#1027) — THE LEGACY COMMITTED FOLD, retiring. Zero runtime readers remain: every committed read
+ *  in this repo goes through the store's core-backed door (`store.committed_truth`). It survives only as the
+ *  left-hand side of the cutover-parity suites, and it leaves with them. Never import it from `src/`. */
 export const committed_state = (s) => {
   const base = base_from_view(s.view, s.fight_id)
   const log = sorted_log(s.entries ?? {}).filter((e) => e.version > s.view_version && e.source !== 'intent')
@@ -438,8 +444,18 @@ export const committed_state = (s) => {
   return { ...committed, fighters: apply_retirement(committed.fighters, s.retired) }
 }
 
-/** Canonical fold plus accepted chain-silent point grants. This is intentionally separate from `committed_state`:
- * only legality/budget anchors consume it, while targeting, outcomes and canonical-log consumers stay pure. */
+/** entity id (a character id, or `mob-N`) → its fold key `p{seat}` / `m{idx}` against an adopted view's escrow;
+ *  null when the roster does not carry it. The ONE home for that mapping — the presentation resolvers below and
+ *  the store's committed health oracle both read it, so a renamed seat can never mean two different fighters. */
+export const entity_fold_key = (escrow, source_id) => {
+  const id = String(source_id)
+  if (id.startsWith('mob-')) return `m${id.slice(4)}`
+  const seat = (escrow ?? []).findIndex((p) => participant_entity_id(p) === id)
+  return seat >= 0 ? `p${seat}` : null
+}
+
+/** Snapshot base + authoritative tail PLUS accepted chain-silent point grants — the BUDGET anchor, a presentation
+ * question (what may I still spend this turn), never committed truth: only legality/budget consumers read it. */
 export const claimed_budget_state = (s) => {
   const base = base_from_view(s.view, s.fight_id)
   const log = sorted_log(s.entries ?? {}).filter((e) => e.version > s.view_version && e.source !== 'intent')
@@ -519,8 +535,10 @@ export const display_state = (s) => wave_masked_fold(s, true)
  *     (old fight_bridge.js:885): 'mob_attack_dungeon' for a mob, 'dungeon_strike' for a seat
  *  Locality is decided by SEAT (R1): my segments never enter the paced wave, whatever id string they produced.
  *  Each turn carries its raw-receipt event-index window [from_idx, until_idx] — the presented fold
- *  (presented_state) hides exactly the entries inside a still-unacked window. */
-export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0) => {
+ *  (presented_state) hides exactly the entries inside a still-unacked window.
+ *  `fighter_health` is the PRE-RECEIPT committed HP oracle the damage pricer needs; the store supplies it from
+ *  the core door (`committed_truth`) because committed truth is not this module's to derive (#1027). */
+export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0, fighter_health = null) => {
   const ctx = draft.ctx ?? {}
   if (!Array.isArray(raw_events) || !raw_events.length || !ctx.beat_ctx) return []
   const my_entity = ctx.my_entity_id ?? null
@@ -548,10 +566,8 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
     return encoded == null ? null : { x: Number(encoded) % grid_w, y: Math.floor(Number(encoded) / grid_w) }
   }
   const fighter_cells = (source_id) => {
-    const id = String(source_id)
-    if (id.startsWith('mob-')) return cell_of(`m${id.slice(4)}`)
-    const seat = escrow.findIndex((p) => participant_entity_id(p) === id)
-    return seat >= 0 ? cell_of(`p${seat}`) : null
+    const key = entity_fold_key(escrow, source_id)
+    return key ? cell_of(key) : null
   }
   const fighter_id_of_key = (key) => {
     const idx = Number(key.slice(1))
@@ -567,13 +583,6 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
       return id && cell ? [[String(id), cell]] : []
     })
   )
-  const committed = committed_state(draft)
-  const fighter_health = (source_id) => {
-    const id = String(source_id)
-    if (id.startsWith('mob-')) return committed.fighters?.[`m${id.slice(4)}`]?.hp ?? null
-    const seat = escrow.findIndex((p) => participant_entity_id(p) === id)
-    return seat >= 0 ? (committed.fighters?.[`p${seat}`]?.hp ?? null) : null
-  }
   const resolve_cast = (event) => ({ spell_id: event.caster_is_mob ? 'mob_attack_dungeon' : 'dungeon_strike' })
   // R1 — locality by SEAT: a turn is LOCAL iff its author is my seat (character match, or a non-mob idx equal
   // to my seat index). Produced id strings never decide locality again.

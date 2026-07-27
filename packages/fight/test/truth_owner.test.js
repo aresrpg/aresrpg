@@ -169,12 +169,14 @@ describe('the committed truth owner', () => {
   })
 })
 
-describe('the coreless projection input', () => {
-  test('a hand-built state that never crossed the door (no core) still projects through its own entries', () => {
+describe('the committed door is TOTAL — there is no second fold to answer from', () => {
+  test('strip the core and the board does not resolve: no settlement arm silently stands in for it', () => {
     const store = create_fight_store()
     for (const { msg, at } of SHARED) store.getState().input(msg, at)
     const { core, ...coreless } = store.getState()
-    expect(core).toBeDefined() // the real atom always carries one — this case is tests/tools only
-    expect(board_view(coreless).escrow[0].committed.cell).toBe(7)
+    expect(core).toBeDefined() // every real atom carries one; empty_core_state(null) is one too
+    // The old fallback folded `entries` here and answered 7 — a SWITCH between two derivations, which ADR §2
+    // forbids. With the legacy fold retired there is nothing to switch to, and this is what proves it.
+    expect(() => board_view(coreless)).toThrow()
   })
 })
