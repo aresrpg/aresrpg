@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# GitHub Actions schedules only fire from the default branch (#809). Until master carries this
-# tooling, the path-filtered push-to-edge trigger below is the actually-live enforcement tooth.
+# GitHub Actions schedules only fire from the default branch (#809), and GITHUB_TOKEN ff-pushes do
+# not self-trigger workflows. The promotion engine's explicit post-edge workflow_dispatch is the
+# live enforcement tooth; the push trigger remains for human pushes and schedules stay advisory.
 name: nuclear audit
 
 on:
@@ -18,21 +19,34 @@ on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Exact SHA just fast-forwarded to edge (defaults to the dispatched ref HEAD)'
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   nuclear-audit:
-    name: nuclear-audit (advisory ratchet)
+    name: nuclear-audit (ratchet)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Day one: a grown count leaves a red job/check + full summary but cannot block landing.
-    # Delete this one line in the later reviewed change that gives the check landing power.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
       - name: prove the three scanners and ratchet semantics
         run: node --test scripts/fixtures/nuclear_audit_tests.mjs
       - name: census clones, import fan-out, and repeated literals
-        run: node scripts/nuclear_audit.mjs
+        run: |
+          set +e
+          node scripts/nuclear_audit.mjs
+          RC=$?
+          set -e
+          if [ "$RC" -eq 1 ] && [ "$GITHUB_EVENT_NAME" = schedule ]; then
+            echo "::warning::scheduled census exceeded the committed baseline (advisory; landing dispatches enforce)"
+            exit 0
+          fi
+          exit "$RC"

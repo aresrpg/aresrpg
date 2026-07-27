@@ -6,7 +6,7 @@
 # runs, so the promotion engine explicitly dispatches every landing automation with the exact SHA
 # it fast-forwarded. The callers already grant actions:write and expose github.token as GH_TOKEN.
 
-EDGE_LANDING_WORKFLOWS=(board-hygiene.yml)
+EDGE_LANDING_WORKFLOWS=(board-hygiene.yml nuclear-audit.yml)
 
 dispatch_edge_landing_automations() {
   local sha="${1:?landed sha required}" workflow

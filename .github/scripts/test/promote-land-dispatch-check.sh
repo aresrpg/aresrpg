@@ -39,14 +39,20 @@ expect_equal() {
 SHA=0123456789abcdef0123456789abcdef01234567
 dispatch_edge_landing_automations "$SHA"
 expect_equal \
-  "board hygiene receives the landed sha on edge" \
-  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
+  "both landing automations receive the landed sha on edge" \
+  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA
+workflow run nuclear-audit.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
   "$(cat "$CALL_LOG")"
 
 : >"$CALL_LOG"
 MOCK_FAIL_WORKFLOW=board-hygiene.yml
 dispatch_edge_landing_automations "$SHA"
 expect_equal "a dispatch failure stays non-fatal after the ff-push" "0" "$?"
+expect_equal \
+  "one failed dispatch does not starve the next automation" \
+  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA
+workflow run nuclear-audit.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
+  "$(cat "$CALL_LOG")"
 
 echo
 echo "post-landing dispatch: $PASS passed, $FAIL failed"
