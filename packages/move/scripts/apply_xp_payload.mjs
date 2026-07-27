@@ -48,9 +48,11 @@ const read_json = (file_path) => JSON.parse(read_file(file_path, 'utf8'))
 
 // ── constants ───────────────────────────────────────────────────────────────────────────────────
 export const RES_SHIFT = 32768 // foundation spell::RES_SHIFT — mob resistances stored centered
-export const MAX_RESIST_MAGNITUDE = 50 // the SPEC §7.4 / S4-2 real-time cap — combat clamps at foundation
-// spell.move:280 `apply_resistance` (`if (resistance > 50) 50 else resistance`). The DECENTERED magnitude a
-// restored resistance decodes to (centered − RES_SHIFT; a weakness floors to 0) must not exceed it (law ④).
+export const MAX_RESIST_MAGNITUDE = 60 // the SPEC §7.4 / S4-2 real-time cap (ruled 50 → 60 on 2026-07-23) —
+// combat clamps at foundation `spell::apply_resistance`, which is the ONE home of this number; this constant
+// mirrors it and must be re-derived from that function whenever the ruling moves (cite the SYMBOL, never a
+// line number — two citations here have already rotted). The DECENTERED magnitude a restored resistance
+// decodes to (centered − RES_SHIFT; a weakness floors to 0) must not exceed it (law ④).
 export const MAX_CALLS_PER_PTB = 30 // ≤30 set_stats calls per batch (each expands to new_stats + set_stats)
 export const GAS_BUDGET_MIST = 50_000_000 // fixed 0.05 SUI/PTB: the post-upgrade target isn't
 // simulatable pre-ceremony, and Sui charges ACTUAL — a high fixed budget is safe, only a LOW one burns (D747 shape).
@@ -223,7 +225,7 @@ export function field_histogram(changed) {
 }
 
 /** LAW ④ CAP GATE. Every RESTORED resistance (the desired value each planned set_stats writes) must decode to a
- * magnitude ≤ MAX_RESIST_MAGNITUDE — the SPEC §7.4 / foundation spell.move:280 real-time cap. Decenter each of
+ * magnitude ≤ MAX_RESIST_MAGNITUDE — the SPEC §7.4 / foundation `spell::apply_resistance` real-time cap. Decenter each of
  * the 4 elementals (centered − RES_SHIFT; a weakness < RES_SHIFT floors to 0, exactly as `apply_resistance`
  * reads it) and collect any that exceed the cap. A NON-EMPTY return is a NEEDS-RULING refusal — never silently
  * applied (a value over the cap is meaningless in combat AND an authoring error the ceremony must not bake in). */
@@ -355,7 +357,9 @@ async function main() {
     `fields (mobs differing per field): xp=${hist.xp_reward} hp=${hist.base_hp} ap=${hist.ap} mp=${hist.mp} stats=${hist.stats}`,
   )
   console.log(`coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`)
-  console.log(`resistance-cap: ≤${MAX_RESIST_MAGNITUDE} decentered magnitude (spell.move:280) · outliers=${outliers.length}`)
+  console.log(
+    `resistance-cap: ≤${MAX_RESIST_MAGNITUDE} decentered magnitude (spell::apply_resistance) · outliers=${outliers.length}`,
+  )
   console.log(`batches: ${batches.length} (≤${MAX_CALLS_PER_PTB}/PTB) · fixed gas=${GAS_BUDGET_MIST} MIST/PTB`)
   console.log('samples (old→new):')
   for (const row of diff.changed.slice(0, 5)) console.log(sample_line(row))
@@ -367,7 +371,9 @@ async function main() {
         (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : ''),
     )
   if (outliers.length) {
-    console.error(`\nNEEDS-RULING — ${outliers.length} restored resistance(s) exceed the ${MAX_RESIST_MAGNITUDE}% cap (spell.move:280):`)
+    console.error(
+      `\nNEEDS-RULING — ${outliers.length} restored resistance(s) exceed the ${MAX_RESIST_MAGNITUDE}% cap (spell::apply_resistance):`,
+    )
     for (const o of outliers) console.error(`  ${o.key} [${o.id.slice(0, 10)}…] ${o.field} magnitude=${o.magnitude} > ${o.cap}`)
     throw new Error(
       `${outliers.length} over-cap resistance(s) — refusing to apply an out-of-SPEC value (fix the seed to ≤${MAX_RESIST_MAGNITUDE} or rule it). NEVER silently applied.`,
