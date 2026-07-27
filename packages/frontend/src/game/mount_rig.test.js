@@ -5,17 +5,11 @@
 // same headless discipline as fast_travel_flight.test.js.
 import { describe, expect, test } from 'bun:test'
 
-import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
-
-// MISSING-ARTIFACT (#117): mount_rig.js imports get_glb_loader/apply_avatar_material from
-// @aresrpg/engine3/player, which unconditionally re-exports create_character_avatar — a static import of the
-// absent-by-design senshi_male.glb (see test_helpers/glb_fixture.js). The whole module is unreachable without
-// the asset, so the whole file guards together, same as fast_travel_flight.test.js.
-const { pick_mount_clips } = SENSHI_MALE_GLB_AVAILABLE ? await import('./mount_rig.js') : {}
+import { pick_mount_clips } from './cosmetic_glb.js'
 
 const clip = (/** @type {string} */ name) => ({ name })
 
-describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pick_mount_clips — idle/move naming convention', () => {
+describe('pick_mount_clips — idle/move naming convention', () => {
   test('ground rig: idle + walk/run picked by name', () => {
     const { idle, move } = pick_mount_clips([clip('Idle'), clip('Walk'), clip('Run')])
     expect(idle?.name).toBe('Idle')
@@ -97,7 +91,7 @@ const DRAGON_FIRE_GLB_CLIPS = [
 ].map(clip)
 const DRAGON_FROST_GLB_CLIPS = [clip('IDLE'), clip('RUN'), clip('ATTACK')]
 
-describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pick_mount_clips — REAL dragon GLB clip lists (#370 ground truth)', () => {
+describe('pick_mount_clips — REAL dragon GLB clip lists (#370 ground truth)', () => {
   test('dragon-fire.glb (production default skin): the real `fly` clip drives the flight loop, not walk', () => {
     const { idle, move } = pick_mount_clips(DRAGON_FIRE_GLB_CLIPS, { flight: true })
     expect(idle?.name).toBe('idle')

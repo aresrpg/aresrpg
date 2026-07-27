@@ -57,6 +57,24 @@ export const MOUNT_TABLE = {
 }
 export const MOUNT_FALLBACK_H = 1.6 // unknown ids ride at a sane mid-quadruped height
 
+/** Pick the idle/move clip PAIR by name convention. Ground vocabulary: run/walk/move/hop/gallop. Flight
+ *  vocabulary: fly/flap/wing (the sky_dragon.js ambient dragon's own proven names — #175: mount_rig's old
+ *  fly-only fallback missed a plain "Flap"/"Wing" clip name, silently falling through to the fragile
+ *  clips[1] positional guess). `flight` (mount_is_flight — a dragon is ridden airborne only) flips which
+ *  vocabulary wins when a model ships BOTH: the 2026-07-28 dragon-fire re-author added a real `fly` loop next
+ *  to its `walk`, and a flying dragon must not run in mid-air. Either way the other vocabulary is still the
+ *  fallback, so a flight mount with no fly clip keeps its gait (dragon-frost) and a ground mount whose only
+ *  loop is a hover keeps working (corbac). Pure — no mixer, no GLB.
+ *  @param {{name:string}[]} clips @param {{ flight?: boolean }} [opts]
+ *  @returns {{ idle: {name:string}|null, move: {name:string}|null }} */
+export function pick_mount_clips(clips, { flight = false } = {}) {
+  const idle = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0] ?? null
+  const gait = clips.find((/** @type {any} */ c) => /run|walk|move|hop|gallop/i.test(c.name)) ?? null
+  const air = clips.find((/** @type {any} */ c) => /fly|flap|wing/i.test(c.name)) ?? null
+  const move = (flight ? [air, gait] : [gait, air]).find(Boolean) ?? (clips.length > 1 ? clips[1] : null)
+  return { idle, move: move && move !== idle ? move : null }
+}
+
 // FLIGHT MOUNTS — ridden ONLY in the air (the fast-travel dragons: the pilot spawns one at takeoff and
 // disposes it on touchdown, so every frame of their rig's life is airborne). The one thing this changes is
 // the animation loop mount_rig.js picks: a flight mount prefers its fly/flap/wing clip over a walk/run gait,
@@ -65,7 +83,7 @@ const FLIGHT_MOUNTS = new Set(['dragon-fire', 'dragon-frost', 'dragon-void'])
 
 /** The MOUNT_TABLE key a mount GLB URL resolves to — its file stem, lowercased (`.../pet/corbac.glb` and
  *  `${ASSETS_URL}/cosmetics/corbac.glb?v=2` both resolve 'corbac'). @param {string | null | undefined} glb_url */
-const mount_stem = (glb_url) =>
+export const mount_stem = (glb_url) =>
   String(glb_url ?? '')
     .split(/[?#]/)[0]
     ?.split('/')

@@ -16,7 +16,7 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
 import { canonical_walrus_asset_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
 
-import { mount_is_flight, mount_target_height } from './cosmetic_glb.js'
+import { mount_is_flight, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
 import { game_log } from '../core/log.js'
 
 const SEAT_LIFT = 0.8 // fraction of the mount's height the rider sits at (bbox top of the back ≈ ×0.8)
@@ -56,24 +56,6 @@ export function ft_dragon_glb_url() {
 export function preload_mount_glb(glb_url) {
   const source_url = resolve_source_url(glb_url)
   if (source_url) load_glb(source_url).catch(() => {})
-}
-
-/** Pick the idle/move clip PAIR by name convention. Ground vocabulary: run/walk/move/hop/gallop. Flight
- *  vocabulary: fly/flap/wing (the sky_dragon.js ambient dragon's own proven names — #175: mount_rig's old
- *  fly-only fallback missed a plain "Flap"/"Wing" clip name, silently falling through to the fragile
- *  clips[1] positional guess). `flight` (cosmetic_glb's mount_is_flight — a dragon is ridden airborne only)
- *  flips which vocabulary wins when a model ships BOTH: the 2026-07-28 dragon-fire re-author added a real
- *  `fly` loop next to its `walk`, and a flying dragon must not run in mid-air. Either way the other
- *  vocabulary is still the fallback, so a flight mount with no fly clip keeps its gait (dragon-frost) and a
- *  ground mount whose only loop is a hover keeps working (corbac). Pure — no mixer, no GLB.
- *  @param {{name:string}[]} clips @param {{ flight?: boolean }} [opts]
- *  @returns {{ idle: {name:string}|null, move: {name:string}|null }} */
-export function pick_mount_clips(clips, { flight = false } = {}) {
-  const idle = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0] ?? null
-  const gait = clips.find((/** @type {any} */ c) => /run|walk|move|hop|gallop/i.test(c.name)) ?? null
-  const air = clips.find((/** @type {any} */ c) => /fly|flap|wing/i.test(c.name)) ?? null
-  const move = (flight ? [air, gait] : [gait, air]).find(Boolean) ?? (clips.length > 1 ? clips[1] : null)
-  return { idle, move: move && move !== idle ? move : null }
 }
 
 /**
