@@ -33,19 +33,11 @@ import { get_class } from '../../data/classes.js'
 import { use_spell_corpus } from '../../data/use_spell_corpus.js'
 import { upgrade_spell } from '../../../world-shell/spell_actions.js'
 import { mark_ui_updated } from '../../../world-shell/tx.js'
-import { read_spell_state } from '../../../chain/read_spell_state.js'
 import { use_toast } from '../../../toast'
+import { use_spell_seat } from '../../../stores/spell_seat'
 
-import {
-  apply_upgrade_receipt,
-  clear_confirmed_spell,
-  merge_confirmed,
-  record_confirmed_spell,
-  spell_alloc_caught_up,
-  use_spell_alloc_session,
-} from './spell_alloc_session.js'
+import { apply_upgrade_receipt, record_confirmed_spell } from './spell_alloc_session.js'
 
-import { class_spells } from './fight-spells.js'
 import { grimoire, upgrade_state, crit_pct, spell_effects, MAX_SPELL_LEVEL } from './spellbook-data.js'
 import { spell_category } from './spell-category.js'
 import { spell_range_caption_key } from './spell-range-caption.js'
@@ -75,32 +67,7 @@ export function Spellbook({ on_open, embedded = false }) {
   // `confirmed` is the receipt-proven projection (spell_alloc_session — survives this drawer's remounts); the
   // rendered `alloc` is the chain read FLOORED up to it, so a stale fullnode snapshot can never regress a just-
   // proven upgrade (a spell that just leveled must never re-display as unlevelled). One home per fact, receipt floor, no async set().
-  const [chain_alloc, set_chain_alloc] = useState(
-    /** @type {{ spent: number, levels: Record<string, number>, degraded?: boolean } | null} */ (null)
-  )
-  const confirmed = use_spell_alloc_session().confirmed[character?.id] ?? null
-  const alloc = useMemo(() => merge_confirmed(chain_alloc, confirmed), [chain_alloc, confirmed])
-  useEffect(() => {
-    set_chain_alloc(null)
-    if (!character?.id) return
-    let live = true
-    const ids = class_spells(class_id).map((s) => s.object_id)
-    read_spell_state(character.id, ids)
-      .then((state) => {
-        if (live) set_chain_alloc(state)
-      })
-      .catch(() => {
-        if (live) set_chain_alloc({ spent: 0, levels: {}, degraded: true })
-      })
-    return () => {
-      live = false
-    }
-  }, [character?.id, class_id, spell_corpus])
-  // Drop the receipt-proven projection the instant the chain read reaches it (Stats.jsx's caught-up law) — after
-  // that the chain read alone is truth. Never regresses: spell_alloc_caught_up only fires when chain ≥ the floor.
-  useEffect(() => {
-    if (character?.id && spell_alloc_caught_up(chain_alloc, confirmed)) clear_confirmed_spell(character.id, confirmed)
-  }, [chain_alloc, confirmed, character?.id])
+  const { allocation: alloc, chain_allocation: chain_alloc, confirmed, refetch } = use_spell_seat(character)
 
   const book = useMemo(() => {
     if (!character) return null
@@ -112,20 +79,13 @@ export function Spellbook({ on_open, embedded = false }) {
     return { ...grimoire(class_id, level, points, alloc?.levels ?? {}), level, points }
   }, [character, class_id, alloc, spell_corpus])
 
-  const refetch = () => {
-    if (!character?.id) return
-    const ids = class_spells(class_id).map((s) => s.object_id)
-    read_spell_state(character.id, ids)
-      .then(set_chain_alloc) // merge_confirmed FLOORS this — a stale read can never regress the receipt
-      .catch(() => {}) // keep the confirmed projection — the next mount/refetch reconciles
-  }
   // PREDICT ON RECEIPT (#39, CLIENT-INDEPENDENCE law): a proven raise_spell_level success records the projection
   // (spell +1, spent +cost) into the shared session — it survives this drawer's remounts and FLOORS the chain
   // read until the fullnode indexes the tx. No optimistic-before-receipt paint (so no rollback on an abort).
   const on_upgraded = (spell_id, cost) => {
     if (!character?.id) return
     record_confirmed_spell(character.id, apply_upgrade_receipt(confirmed, chain_alloc, spell_id, cost))
-    refetch()
+    void refetch()
   }
 
   if (!character || !book)

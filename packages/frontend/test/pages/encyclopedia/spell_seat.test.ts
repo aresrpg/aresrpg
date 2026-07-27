@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression #1088: encyclopedia rank truth comes from the Character's namespaced spell-state read.
 
+import { readFileSync } from 'node:fs'
+
 import { afterEach, expect, spyOn, test } from 'bun:test'
 
 import * as spell_state from '../../../src/chain/read_spell_state.js'
@@ -38,4 +40,16 @@ test("loads the selected character's learned levels from the canonical spell-sta
   } finally {
     read_spy.mockRestore()
   }
+})
+
+test('the HUD and encyclopedia derive from one reducer-owned spell allocation composition', () => {
+  const store = readFileSync(new URL('../../../src/stores/spell_seat.ts', import.meta.url), 'utf8')
+  const spellbook = readFileSync(new URL('../../../src/game/screens/hud/Spellbook.jsx', import.meta.url), 'utf8')
+  const encyclopedia = readFileSync(new URL('../../../src/pages/encyclopedia/spell_seat.ts', import.meta.url), 'utf8')
+
+  expect(store).toContain("from '../chain/read_spell_state.js'")
+  expect(spellbook).toContain("from '../../../stores/spell_seat'")
+  expect(spellbook).not.toContain("from '../../../chain/read_spell_state.js'")
+  expect(encyclopedia).toContain("from '../../stores/spell_seat'")
+  expect(encyclopedia).not.toContain("from '../../chain/read_spell_state.js'")
 })
