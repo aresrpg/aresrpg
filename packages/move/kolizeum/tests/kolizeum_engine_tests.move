@@ -14,6 +14,7 @@ use aresrpg::{character::Character, config::GameConfig, version::Version};
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
+  fight_latch::{Self, FightLatch, FightLatchShards},
   fight_registry::{Self, FightRegistry, FightShards},
   settlement,
   version::{Self as eversion, Version as EVersion}
@@ -24,13 +25,25 @@ use std::type_name;
 use sui::{clock, coin, kiosk::Kiosk, sui::SUI, test_scenario::{Self as ts, Scenario}};
 
 const PLEDGE: u64 = 1_000;
-/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
-/// exactly as a client does. Kolizeum's derivation scope is the LOBBY id.
-fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
-  let book = sc.take_shared<FightShards>();
-  let shard = fight_registry::shard_for(&book, scope);
+/// The character-keyed latch shard. Kolizeum seating and open never touch a derivation registry.
+fun latch_of(sc: &Scenario, character: ID): FightLatch {
+  let book = sc.take_shared<FightLatchShards>();
+  let shard = fight_latch::shard_for(&book, character);
   ts::return_shared(book);
-  ts::take_shared_by_id<FightRegistry>(sc, shard)
+  ts::take_shared_by_id<FightLatch>(sc, shard)
+}
+
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightLatch) {
+  let registries = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&registries, scope);
+  ts::return_shared(registries);
+  let latches = sc.take_shared<FightLatchShards>();
+  let latch_shard = fight_latch::shard_for(&latches, character);
+  ts::return_shared(latches);
+  (
+    ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
+    ts::take_shared_by_id<FightLatch>(sc, latch_shard),
+  )
 }
 
 const JOINER: address = @0xB1;
@@ -42,6 +55,7 @@ const EWrongOutcomeBrand: u64 = 117; // kolizeum::open
 fun boot_engine(sc: &mut Scenario) {
   sc.next_tx(koli_world::owner());
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
   eversion::test_init(sc.ctx());
   eadmin::test_init(sc.ctx());
   sc.next_tx(koli_world::owner());
@@ -104,7 +118,7 @@ fun kolizeum_start_seat_settle_open() {
   sc.next_tx(koli_world::owner());
   {
     let mut lobby = sc.take_shared<Kolizeum>();
-    let mut reg = shard_of(&sc, object::id(&lobby));
+    let (mut reg, mut latch) = shards_for(&sc, object::id(&lobby), creator_cid);
     let k = ts::take_shared_by_id<Kiosk>(&sc, creator_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -112,9 +126,9 @@ fun kolizeum_start_seat_settle_open() {
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    kolizeum::start(&mut lobby, &mut reg, &k, &pkcap, creator_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+    kolizeum::start(&mut lobby, &mut reg, &mut latch, &k, &pkcap, creator_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
   };
 
@@ -123,7 +137,7 @@ fun kolizeum_start_seat_settle_open() {
   {
     let lobby = sc.take_shared<Kolizeum>();
     let mut f = sc.take_shared<Fight>();
-    let mut reg = shard_of(&sc, object::id(&lobby));
+    let mut latch = latch_of(&sc, joiner_cid);
     let k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -131,9 +145,9 @@ fun kolizeum_start_seat_settle_open() {
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    kolizeum::seat(&lobby, &mut f, &mut reg, &k, &pkcap, joiner_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+    kolizeum::seat(&lobby, &mut f, &mut latch, &k, &pkcap, joiner_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(lobby); ts::return_shared(f); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(lobby); ts::return_shared(f); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
   };
 
@@ -144,14 +158,15 @@ fun kolizeum_start_seat_settle_open() {
     let f = sc.take_shared<Fight>();
     let fight_id = object::id(&f);
     let ver = sc.take_shared<Version>();
+    let mut latch = latch_of(&sc, creator_cid);
     let outcome = settlement::outcome_for_testing(
       kolizeum::brand_type(), fight_id, object::id_from_address(@0x0), creator_cid,
       engine::status_victory(), 0, 0, 0, 0, 0, vector[], true, 0, option::some(0), 100, sc.ctx(),
     );
     kolizeum::settle(&mut lobby, &outcome, &ver, sc.ctx());
-    kolizeum::open(outcome); // the brand-asserted terminal consumes it (storage rebate)
+    kolizeum::open(outcome, &mut latch); // the brand-asserted terminal consumes it (storage rebate)
     assert!(kolizeum::pot_value(&lobby) == 0); // the pot fully distributed to the winning side
-    ts::return_shared(lobby); ts::return_shared(f); ts::return_shared(ver);
+    ts::return_shared(lobby); ts::return_shared(f); ts::return_shared(latch); ts::return_shared(ver);
   };
   sc.end();
 }
@@ -161,12 +176,16 @@ fun kolizeum_start_seat_settle_open() {
 /// consume must land xp/hp write-backs + clear the fight marker in core's results door) is REFUSED at `open`.
 fun open_foreign_brand_refused() {
   let mut sc = ts::begin(koli_world::owner());
+  fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
+  sc.next_tx(koli_world::owner());
+  let mut latch = latch_of(&sc, object::id_from_address(@0xC0));
   let outcome = settlement::outcome_for_testing(
     type_name::with_defining_ids<Kolizeum>(), // any type that is NOT KolizeumBrand
     object::id_from_address(@0xF16), object::id_from_address(@0x0), object::id_from_address(@0xC0),
     2, 0, 0, 0, 0, 0, vector[], false, 0, option::some(0), 100, sc.ctx(),
   );
-  kolizeum::open(outcome); // EWrongOutcomeBrand
+  kolizeum::open(outcome, &mut latch); // EWrongOutcomeBrand
   abort
 }
 
@@ -203,7 +222,7 @@ fun lobby_up(sc: &mut Scenario): (ID, ID) {
 fun do_start(sc: &mut Scenario, who: address, kid: ID, character_id: ID) {
   sc.next_tx(who);
   let mut lobby = sc.take_shared<Kolizeum>();
-  let mut reg = shard_of(sc, object::id(&lobby));
+  let (mut reg, mut latch) = shards_for(sc, object::id(&lobby), character_id);
   let k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -211,9 +230,9 @@ fun do_start(sc: &mut Scenario, who: address, kid: ID, character_id: ID) {
   let ever = sc.take_shared<EVersion>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(1000);
-  kolizeum::start(&mut lobby, &mut reg, &k, &pkcap, character_id, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+  kolizeum::start(&mut lobby, &mut reg, &mut latch, &k, &pkcap, character_id, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
   clk.destroy_for_testing();
-  ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+  ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
 }
 
@@ -282,7 +301,7 @@ fun seat_on_open_lobby_refused() {
   let lobby_b_id = ts::most_recent_id_shared<Kolizeum>().destroy_some();
   {
     let mut lobby = ts::take_shared_by_id<Kolizeum>(&sc, lobby_b_id);
-    let mut reg = shard_of(&sc, object::id(&lobby));
+    let (mut reg, mut latch) = shards_for(&sc, object::id(&lobby), b_cid);
     let k = ts::take_shared_by_id<Kiosk>(&sc, b_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -290,9 +309,9 @@ fun seat_on_open_lobby_refused() {
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    kolizeum::start(&mut lobby, &mut reg, &k, &pkcap, b_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+    kolizeum::start(&mut lobby, &mut reg, &mut latch, &k, &pkcap, b_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
   };
   // aim lobby B's Fight at the OPEN lobby A → ENotStarted
@@ -300,7 +319,7 @@ fun seat_on_open_lobby_refused() {
   {
     let lobby_a = ts::take_shared_by_id<Kolizeum>(&sc, lobby_a_id);
     let mut f = sc.take_shared<Fight>();
-    let mut reg = shard_of(&sc, object::id(&lobby_a));
+    let mut latch = latch_of(&sc, creator_cid);
     let k = ts::take_shared_by_id<Kiosk>(&sc, creator_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -308,7 +327,7 @@ fun seat_on_open_lobby_refused() {
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    kolizeum::seat(&lobby_a, &mut f, &mut reg, &k, &pkcap, creator_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx()); // ENotStarted
+    kolizeum::seat(&lobby_a, &mut f, &mut latch, &k, &pkcap, creator_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx()); // ENotStarted
     abort 0
   }
 }
@@ -318,7 +337,7 @@ fun start_lobby(sc: &mut Scenario, lobby_id: ID, who: address, kid: ID, characte
   sc.next_tx(who);
   {
     let mut lobby = ts::take_shared_by_id<Kolizeum>(sc, lobby_id);
-    let mut reg = shard_of(sc, object::id(&lobby));
+    let (mut reg, mut latch) = shards_for(sc, object::id(&lobby), character_id);
     let k = ts::take_shared_by_id<Kiosk>(sc, kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -326,9 +345,9 @@ fun start_lobby(sc: &mut Scenario, lobby_id: ID, who: address, kid: ID, characte
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    kolizeum::start(&mut lobby, &mut reg, &k, &pkcap, character_id, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+    kolizeum::start(&mut lobby, &mut reg, &mut latch, &k, &pkcap, character_id, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(lobby); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
   };
   sc.next_tx(who);
@@ -340,7 +359,7 @@ fun do_seat(sc: &mut Scenario, lobby_id: ID, fight_id: ID, who: address, kid: ID
   sc.next_tx(who);
   let lobby = ts::take_shared_by_id<Kolizeum>(sc, lobby_id);
   let mut f = ts::take_shared_by_id<Fight>(sc, fight_id);
-  let mut reg = shard_of(sc, object::id(&lobby));
+  let mut latch = latch_of(sc, character_id);
   let k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -348,9 +367,9 @@ fun do_seat(sc: &mut Scenario, lobby_id: ID, fight_id: ID, who: address, kid: ID
   let ever = sc.take_shared<EVersion>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(1000);
-  kolizeum::seat(&lobby, &mut f, &mut reg, &k, &pkcap, character_id, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+  kolizeum::seat(&lobby, &mut f, &mut latch, &k, &pkcap, character_id, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
   clk.destroy_for_testing();
-  ts::return_shared(lobby); ts::return_shared(f); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+  ts::return_shared(lobby); ts::return_shared(f); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
 }
 

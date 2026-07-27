@@ -12,7 +12,7 @@ module aresrpg::results;
 
 use aresrpg::{character_link, config::GameConfig, version::Version, fight};
 use aresrpg::{extension, item::{Self, Item, ItemTemplate}};
-use aresrpg_fight::{fight_registry::FightRegistry, mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
+use aresrpg_fight::{fight_latch::FightLatch, mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
 use aresrpg_foundation::prng;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, transfer_policy::TransferPolicy};
@@ -62,7 +62,7 @@ public struct ResultBurned has copy, drop { result: ID }
 /// checklist, and mint the `FightResult` claim ticket to yourself. Once, anytime, no deadline. Terminal `&Random`.
 entry fun open(
   outcome: FightOutcome,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -84,7 +84,7 @@ entry fun open(
 #[allow(lint(public_random))]
 public fun open_taken(
   outcome: FightOutcome,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -100,7 +100,7 @@ public fun open_taken(
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y131(
   outcome: FightOutcome,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -120,10 +120,12 @@ fun y131(
   assert!(brand == aresrpg::fight::y45(), EWrongBrand);
 
   // write-backs FIRST (§17.23 — the fight's outcome reaches the character even if the roll lands nothing)
-  let owner_cap = personal_kiosk::borrow(pkcap);
-  let character = kiosk.borrow_mut(owner_cap, character_id);
   if (!pvp) {
     // §17.9: an ephemeral (PvP) fight NEVER touches the real character — no XP grant, no HP write-back.
+    // The kiosk borrow lives INSIDE the guard: an ephemeral seat's character need not be in THIS kiosk, and
+    // borrowing it unconditionally aborts (kiosk EItemNotFound) before the roll ever runs.
+    let owner_cap = personal_kiosk::borrow(pkcap);
+    let character = kiosk.borrow_mut(owner_cap, character_id);
     if (xp_share > 0) character_link::y12(config, character, xp_share, version);
     character_link::y13(character, final_hp, now_ms, version);
     // the unfinished-business counter decrements HERE and only here — the truth landed, the character is free
@@ -341,7 +343,7 @@ public fun mint_rolled_for_testing(
 #[test_only]
 public fun open_for_testing(
   outcome: FightOutcome,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,

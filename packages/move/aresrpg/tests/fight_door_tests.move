@@ -21,6 +21,7 @@ use aresrpg_fight::{
   actions,
   admin as eadmin,
   fight::{Self as engine, Fight},
+  fight_latch::{Self, FightLatch, FightLatchShards},
   fight_registry::{Self, FightRegistry, FightShards},
   settlement,
   version::{Self as eversion, Version as EVersion}
@@ -30,23 +31,23 @@ use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
 
-/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
-/// exactly as a client does.
-fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
-  let book = sc.take_shared<FightShards>();
-  let shard = fight_registry::shard_for(&book, scope);
+fun latch_of(sc: &Scenario, character: ID): FightLatch {
+  let book = sc.take_shared<FightLatchShards>();
+  let shard = fight_latch::shard_for(&book, character);
   ts::return_shared(book);
-  ts::take_shared_by_id<FightRegistry>(sc, shard)
+  ts::take_shared_by_id<FightLatch>(sc, shard)
 }
 
-fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightRegistry) {
-  let book = sc.take_shared<FightShards>();
-  let scope_shard = fight_registry::shard_for(&book, scope);
-  let latch_shard = fight_registry::shard_for(&book, character);
-  ts::return_shared(book);
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightLatch) {
+  let registries = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&registries, scope);
+  ts::return_shared(registries);
+  let latches = sc.take_shared<FightLatchShards>();
+  let latch_shard = fight_latch::shard_for(&latches, character);
+  ts::return_shared(latches);
   (
     ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
-    ts::take_shared_by_id<FightRegistry>(sc, latch_shard),
+    ts::take_shared_by_id<FightLatch>(sc, latch_shard),
   )
 }
 
@@ -67,6 +68,7 @@ const SUBUNIT_MS: u64 = 400; // → settled hp 0 (156×400/75000 < 1 — still t
 fun boot_engine(sc: &mut Scenario) {
   sc.next_tx(test_world::owner());
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
   eversion::test_init(sc.ctx());
   eadmin::test_init(sc.ctx());
   sc.next_tx(test_world::owner());
@@ -229,7 +231,7 @@ fun do_create(sc: &mut Scenario, who: address, cid: ID, spawn_id: u64, mob_tid: 
 fun do_join(sc: &mut Scenario, who: address, kid: ID, cid: ID, now: u64) {
   sc.next_tx(who);
   let mut f = sc.take_shared<Fight>();
-  let mut latch = shard_of(sc, cid);
+  let mut latch = latch_of(sc, cid);
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();

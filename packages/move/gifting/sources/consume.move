@@ -10,7 +10,7 @@
 ///
 /// v1 = HEAL only. The other frozen §10 effect kinds (stat_reset / spell_reset / bag_open / gacha_roll) abort
 /// `EUnsupportedEffect` — their targets (a stat-point ledger, a bag-contents table) are unbuilt DFs (the S-14
-/// delivered map). A character in a LIVE fight cannot drink (the S-12f latch: `fight_registry::character_fight`) — HP is
+/// delivered map). A character in a LIVE fight cannot drink (the S-12f latch: `fight_latch::character_fight`) — HP is
 /// the fight's to write while it runs. NO `&Random` anywhere: HEAL is deterministic, and SPEC §10 forbids a second
 /// Random consumer in one tx — so `use_many(quantity)` is ONE call that heals the batched magnitude (the debounce).
 module aresrpg_gifting::consume;

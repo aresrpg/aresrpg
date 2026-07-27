@@ -17,6 +17,7 @@ use aresrpg::{fight as fight_doors, mob_template::{Self, MobTemplate}, version::
 use aresrpg_dungeon::{dungeon_events, run::{Self, RunPass}};
 use aresrpg_fight::{
   fight::{Self as engine, Fight, GroupBuild},
+  fight_latch::FightLatch,
   fight_registry::{Self, FightRegistry},
   settlement::{Self, FightOutcome},
   version::Version as FightVersion,
@@ -102,6 +103,7 @@ public fun roster_for_room(world: &World, room: u16): vector<ID> {
 /// Mint a fresh fight for the pass's current room and latch the activation character to it.
 public fun next_fight(
   fight_registry: &mut FightRegistry,
+  latch: &mut FightLatch,
   world: &World,
   pass: &mut RunPass,
   mob_tmpl: &MobTemplate,
@@ -135,7 +137,7 @@ public fun next_fight(
   );
   run::latch(pass, fight_id, character_id);
   fight_doors::create_dungeon_fight_brand(
-    Dungeon {}, fight_registry, scope, room as u64, world::seed(world), room as u32, 0,
+    Dungeon {}, fight_registry, latch, scope, room as u64, world::seed(world), room as u32, 0,
     kiosk, pkcap, character_id, raised_spell_ids, mob_tmpl, group_size, config, items_version,
     fight_version, clock, ctx,
   );
@@ -201,6 +203,7 @@ public fun open_room_fight(
 /// Join a party fight only when it re-derives from the creator pass at this pass's current room.
 public fun join_fight(
   fight_registry: &mut FightRegistry,
+  latch: &mut FightLatch,
   fight: &mut Fight,
   pass: &mut RunPass,
   creator_pass_id: ID,
@@ -223,7 +226,7 @@ public fun join_fight(
   let fight_id = object::id(fight);
   assert_same_room(fight_registry, fight_id, creator_pass_id, room);
   fight_doors::join_vouched_brand(
-    Dungeon {}, fight, fight_registry, kiosk, pkcap, character_id, raised_spell_ids,
+    Dungeon {}, fight, latch, kiosk, pkcap, character_id, raised_spell_ids,
     config, items_version, fight_version, clock, ctx,
   );
   run::latch(pass, fight_id, character_id);

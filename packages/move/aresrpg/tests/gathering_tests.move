@@ -11,6 +11,7 @@ use aresrpg::{admin::AdminCap, character_link, config::GameConfig, gathering, it
 use aresrpg_fight::{
   admin::{Self as fight_admin, AdminCap as FightAdminCap},
   fight::Fight,
+  fight_latch::{Self, FightLatch, FightLatchShards},
   fight_registry::{Self, FightRegistry, FightShards},
   version::{Self as fight_version, Version as EngineVersion}
 };
@@ -19,14 +20,16 @@ use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 
-fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightRegistry) {
-  let book = sc.take_shared<FightShards>();
-  let scope_shard = fight_registry::shard_for(&book, scope);
-  let latch_shard = fight_registry::shard_for(&book, character);
-  ts::return_shared(book);
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightLatch) {
+  let registries = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&registries, scope);
+  ts::return_shared(registries);
+  let latches = sc.take_shared<FightLatchShards>();
+  let latch_shard = fight_latch::shard_for(&latches, character);
+  ts::return_shared(latches);
   (
     ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
-    ts::take_shared_by_id<FightRegistry>(sc, latch_shard),
+    ts::take_shared_by_id<FightLatch>(sc, latch_shard),
   )
 }
 
@@ -196,6 +199,7 @@ fun boot_fight_engine(sc: &mut Scenario) {
   fight_version::test_init(sc.ctx());
   fight_admin::test_init(sc.ctx());
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
   sc.next_tx(test_world::owner());
   let fcap = sc.take_from_sender<FightAdminCap>();
   let mut fver = sc.take_shared<EngineVersion>();

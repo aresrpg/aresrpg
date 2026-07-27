@@ -3,7 +3,7 @@
 module aresrpg_kolizeum::kolizeum;
 
 use aresrpg::fight as core_fight;
-use aresrpg_fight::{fight::{Self as engine, Fight}, fight_registry::{Self as fight_reg, FightRegistry}, participant, settlement::{Self as results, FightOutcome}, version::Version as FightVersion};
+use aresrpg_fight::{fight::{Self as engine, Fight}, fight_latch::FightLatch, fight_registry::{Self as fight_reg, FightRegistry}, participant, settlement::{Self as results, FightOutcome}, version::Version as FightVersion};
 use aresrpg::{character_link, config::GameConfig};
 use aresrpg::character::Character;
 use aresrpg::version::Version;
@@ -243,6 +243,7 @@ const KOLIZEUM_WORLD_SEED: u64 = 0x4B4F4C495A45554D; // "KOLIZEUM" — the arena
 public fun start(
   kolizeum: &mut Kolizeum,
   registry: &mut FightRegistry,
+  latch: &mut FightLatch,
   kiosk: &Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -267,7 +268,7 @@ public fun start(
 
   let creator = participant::with_full_hp(core_fight::combat_snapshot(kiosk, pkcap, character_id, raised_spell_ids, config, clock));
   engine::create_pvp(
-    KolizeumBrand {}, registry, scope, FIGHT_NONCE, KOLIZEUM_WORLD_SEED, anchor_x, anchor_z, per_side,
+    KolizeumBrand {}, registry, latch, scope, FIGHT_NONCE, KOLIZEUM_WORLD_SEED, anchor_x, anchor_z, per_side,
     creator, core_fight::dial_snapshot(config), fight_version, clock, ctx,
   );
 }
@@ -275,7 +276,7 @@ public fun start(
 public fun seat(
   kolizeum: &Kolizeum,
   fight: &mut Fight,
-  fight_registry: &mut FightRegistry,
+  latch: &mut FightLatch,
   kiosk: &Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -293,7 +294,7 @@ public fun seat(
   let side = member_side(kolizeum, sender(ctx), character_id);
   assert!(side.is_some(), ENotParticipant); // a non-member (or wrong character) cannot seat
   let joiner = core_fight::combat_snapshot(kiosk, pkcap, character_id, raised_spell_ids, config, clock);
-  engine::join(KolizeumBrand {}, fight, fight_registry, joiner, vector[], option::none(), option::none(), *side.borrow(), true, fight_version, ctx);
+  engine::join(KolizeumBrand {}, fight, latch, joiner, vector[], option::none(), option::none(), *side.borrow(), true, fight_version, ctx);
 }
 
 public(package) fun mark_started(kolizeum: &mut Kolizeum) {
@@ -308,8 +309,9 @@ public fun settle(kolizeum: &mut Kolizeum, result: &FightOutcome, version: &Vers
   settle_internal(kolizeum, results::fight_id(result), results::winner_team(result), ctx);
 }
 
-public fun open(outcome: FightOutcome) {
+public fun open(outcome: FightOutcome, latch: &mut FightLatch) {
   assert!(results::brand(&outcome) == brand_type(), EWrongOutcomeBrand);
+  results::release_latch(latch, &outcome);
   let (_brand, fight, _world, character, _status, _hp, _xp, _aged, _chance, _mobs, _loot, _pvp, _team, _winner, _mult) =
     results::unpack(outcome);
   kolizeum_events::emit_outcome_opened(fight, character);

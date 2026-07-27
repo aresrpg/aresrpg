@@ -15,6 +15,7 @@ use aresrpg_dungeon::{dungeon, run::{Self, RunPass}, dungeon_world as test_world
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
+  fight_latch::{Self, FightLatch, FightLatchShards},
   fight_registry::{Self, FightRegistry, FightShards},
   settlement,
   version::{Self as eversion, Version as EVersion}
@@ -24,13 +25,17 @@ use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{clock, coin, kiosk::Kiosk, sui::SUI, test_scenario::{Self as ts, Scenario}};
 
-/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
-/// exactly as a client does. The dungeon's derivation scope is the RUN PASS id.
-fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
-  let book = sc.take_shared<FightShards>();
-  let shard = fight_registry::shard_for(&book, scope);
-  ts::return_shared(book);
-  ts::take_shared_by_id<FightRegistry>(sc, shard)
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightLatch) {
+  let registries = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&registries, scope);
+  ts::return_shared(registries);
+  let latches = sc.take_shared<FightLatchShards>();
+  let latch_shard = fight_latch::shard_for(&latches, character);
+  ts::return_shared(latches);
+  (
+    ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
+    ts::take_shared_by_id<FightLatch>(sc, latch_shard),
+  )
 }
 
 
@@ -40,6 +45,7 @@ fun fid(): ID { object::id_from_address(@0xF16) }
 fun boot_engine(sc: &mut Scenario) {
   sc.next_tx(test_world::owner());
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
   eversion::test_init(sc.ctx());
   eadmin::test_init(sc.ctx());
   sc.next_tx(test_world::owner());
@@ -354,7 +360,7 @@ fun next_fight_then_join_fight() {
   // NEXT FIGHT — mint the room fight + latch the creator's pass
   sc.next_tx(test_world::owner());
   {
-    let mut reg = shard_of(&sc, creator_pass_id);
+    let (mut reg, mut latch) = shards_for(&sc, creator_pass_id, creator_cid);
     let world = ts::take_shared_by_id<World>(&sc, wid);
     let mut k = ts::take_shared_by_id<Kiosk>(&sc, creator_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -364,9 +370,9 @@ fun next_fight_then_join_fight() {
     let tmpl = ts::take_shared_by_id<MobTemplate>(&sc, mob_tid);
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    dungeon::next_fight(&mut reg, &world, &mut creator_pass, &tmpl, &mut k, &pkcap, creator_cid, vector[], &cfg, &ever, &ver, &ver, &clk, sc.ctx());
+    dungeon::next_fight(&mut reg, &mut latch, &world, &mut creator_pass, &tmpl, &mut k, &pkcap, creator_cid, vector[], &cfg, &ever, &ver, &ver, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(reg); ts::return_shared(world); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(world); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever); ts::return_shared(tmpl);
   };
 
@@ -375,7 +381,7 @@ fun next_fight_then_join_fight() {
   let mut joiner_pass = run::new(wid, @0xB1, 0, 0, joiner_cid, sc.ctx());
   sc.next_tx(@0xB1);
   {
-    let mut reg = shard_of(&sc, creator_pass_id);
+    let (mut reg, mut latch) = shards_for(&sc, creator_pass_id, joiner_cid);
     let mut f = sc.take_shared<Fight>();
     let mut k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -384,9 +390,9 @@ fun next_fight_then_join_fight() {
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    dungeon::join_fight(&mut reg, &mut f, &mut joiner_pass, creator_pass_id, &mut k, &pkcap, joiner_cid, vector[], &cfg, &ever, &ver, &ver, &clk, sc.ctx());
+    dungeon::join_fight(&mut reg, &mut latch, &mut f, &mut joiner_pass, creator_pass_id, &mut k, &pkcap, joiner_cid, vector[], &cfg, &ever, &ver, &ver, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(reg); ts::return_shared(f); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(f); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
   };
 

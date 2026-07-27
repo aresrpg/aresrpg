@@ -14,6 +14,7 @@ use aresrpg::{admin::AdminCap, config::GameConfig, fight as fight_doors, mob_tem
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
+  fight_latch::{Self, FightLatch, FightLatchShards},
   fight_registry::{Self, FightRegistry, FightShards},
   version::{Self as eversion, Version as EVersion}
 };
@@ -33,6 +34,7 @@ const EWrongMember: u64 = 114; // aresrpg_fight::fight — add_member: not the n
 fun boot_engine(sc: &mut Scenario) {
   sc.next_tx(test_world::owner());
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
   eversion::test_init(sc.ctx());
   eadmin::test_init(sc.ctx());
   sc.next_tx(test_world::owner());
@@ -148,14 +150,16 @@ fun derived_roster(sc: &mut Scenario, zx: u32, zy: u32, index: u64): (u64, vecto
   (spawn_id, roster)
 }
 
-fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightRegistry) {
-  let book = sc.take_shared<FightShards>();
-  let scope_shard = fight_registry::shard_for(&book, scope);
-  let latch_shard = fight_registry::shard_for(&book, character);
-  ts::return_shared(book);
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightLatch) {
+  let registries = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&registries, scope);
+  ts::return_shared(registries);
+  let latches = sc.take_shared<FightLatchShards>();
+  let latch_shard = fight_latch::shard_for(&latches, character);
+  ts::return_shared(latches);
   (
     ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
-    ts::take_shared_by_id<FightRegistry>(sc, latch_shard),
+    ts::take_shared_by_id<FightLatch>(sc, latch_shard),
   )
 }
 

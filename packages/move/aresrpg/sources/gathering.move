@@ -32,7 +32,7 @@ module aresrpg::gathering;
 
 use aresrpg::{character_link, config::{Self, GameConfig}, equipment, fight, mob_template::MobTemplate, version::Version, world::{Self, World}, zones};
 use aresrpg::item::{Item, ItemTemplate};
-use aresrpg_fight::{fight_registry::FightRegistry, version::Version as EngineVersion};
+use aresrpg_fight::{fight_latch::FightLatch, fight_registry::FightRegistry, version::Version as EngineVersion};
 use aresrpg_foundation::job_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, event, kiosk::{Kiosk, KioskOwnerCap}, random::{Self, Random, RandomGenerator}, transfer_policy::TransferPolicy, tx_context::sender};
@@ -101,7 +101,7 @@ entry fun gather(
   rare_template: &ItemTemplate,
   policy: &TransferPolicy<Item>,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   protector_template: &MobTemplate,
   engine_version: &EngineVersion,
   config: &GameConfig,
@@ -127,7 +127,7 @@ fun y119(
   rare_template: &ItemTemplate,
   policy: &TransferPolicy<Item>,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   protector_template: &MobTemplate,
   engine_version: &EngineVersion,
   config: &GameConfig,
@@ -289,7 +289,7 @@ public fun gather_for_testing(
   rare_template: &ItemTemplate,
   policy: &TransferPolicy<Item>,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   protector_template: &MobTemplate,
   engine_version: &EngineVersion,
   config: &GameConfig,

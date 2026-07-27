@@ -11,7 +11,7 @@ use aresrpg::{extension};
 
 use aresrpg::{character_link, config::{Self, GameConfig}, equipment, item_damages, mob_template::{Self, MobTemplate}, world::{Self as game_world, World}, zones, zones_view};
 use aresrpg::{character::Character, version::Version};
-use aresrpg_fight::{fight::{Self as engine, Dials, Fight, GroupBuild}, fight_registry, participant::{Self, Combatant, WeaponLine}, settlement::{Self, FightOutcome}, version::Version as EngineVersion};
+use aresrpg_fight::{fight::{Self as engine, Dials, Fight, GroupBuild}, fight_latch, fight_registry, participant::{Self, Combatant, WeaponLine}, settlement::{Self, FightOutcome}, version::Version as EngineVersion};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::type_name::{Self, TypeName};
 use sui::{clock::Clock, kiosk::Kiosk, vec_map};
@@ -60,7 +60,7 @@ public fun dial_snapshot(config: &GameConfig): Dials {
 /// derived-address claim on `(world, spawn_id)`.
 public fun create(
   registry: &mut fight_registry::FightRegistry,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   ticket: zones::GroupTicket,
   world: &World,
   kiosk: &mut Kiosk,
@@ -184,7 +184,7 @@ public fun release_group(
 /// public/party gate.
 public fun join(
   fight: &mut Fight,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -212,7 +212,7 @@ public fun join(
 /// dirty-counter + builds the snapshot + calls the engine branded.
 public(package) fun y46(
   registry: &mut fight_registry::FightRegistry,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -252,7 +252,7 @@ public(package) fun y46(
 /// gatherer, so a player already in a fight never reverts their harvest here.
 public(package) fun y47(
   registry: &mut fight_registry::FightRegistry,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   world_id: ID,
   spawn_id: u64,
   world_seed: u64,
@@ -286,7 +286,7 @@ public(package) fun y47(
 /// its own seats — this door serves the in-package dungeon only.)
 public(package) fun y48(
   fight: &mut Fight,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -312,7 +312,7 @@ public(package) fun y48(
 public fun create_dungeon_fight_brand<W: drop>(
   _: W,
   registry: &mut fight_registry::FightRegistry,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -374,7 +374,7 @@ public fun open_room_group_brand<W: drop>(
 public fun join_vouched_brand<W: drop>(
   _: W,
   fight: &mut Fight,
-  latch: &mut fight_registry::FightRegistry,
+  latch: &mut fight_latch::FightLatch,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,

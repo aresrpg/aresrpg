@@ -10,7 +10,7 @@
 module aresrpg::results_tests;
 
 use aresrpg::{config::GameConfig, fight, item::{Item, ItemTemplate}, results::{Self, FightResult}, test_world, version::Version};
-use aresrpg_fight::{fight_registry::{Self, FightRegistry, FightShards}, mob, settlement};
+use aresrpg_fight::{fight_latch::{Self, FightLatch, FightLatchShards}, fight_registry, mob, settlement};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
@@ -18,16 +18,28 @@ use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as t
 fun fid(): ID { object::id_from_address(@0xF16) }
 fun wid(): ID { object::id_from_address(@0x301D) }
 
-fun latch_for(sc: &Scenario, character: ID): FightRegistry {
-  let book = sc.take_shared<FightShards>();
-  let shard = fight_registry::shard_for(&book, character);
+fun latch_for(sc: &Scenario, character: ID): FightLatch {
+  let book = sc.take_shared<FightLatchShards>();
+  let shard = fight_latch::shard_for(&book, character);
   ts::return_shared(book);
-  ts::take_shared_by_id<FightRegistry>(sc, shard)
+  ts::take_shared_by_id<FightLatch>(sc, shard)
+}
+
+fun latches_for(sc: &Scenario, first: ID, second: ID): (FightLatch, FightLatch) {
+  let book = sc.take_shared<FightLatchShards>();
+  let first_shard = fight_latch::shard_for(&book, first);
+  let second_shard = fight_latch::shard_for(&book, second);
+  ts::return_shared(book);
+  (
+    ts::take_shared_by_id<FightLatch>(sc, first_shard),
+    ts::take_shared_by_id<FightLatch>(sc, second_shard),
+  )
 }
 
 /// Boot the world, mint a character, and author a resource loot template. Returns (cid, loot_template_id).
 fun stage(sc: &mut Scenario): (ID, ID) {
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
   test_world::boot(sc);
   let cid = test_world::mint_character(sc, test_world::owner());
   let loot_tid = test_world::make_resource_template(sc);
@@ -217,5 +229,107 @@ fun random_open_doors() {
     clk.destroy_for_testing();
     ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
   };
+  sc.end();
+}
+
+#[test]
+/// Mandatory multi-character seating proof: two members whose latch indexes differ are both present before
+/// opening, and each member's own `results::open` call releases only that member's character-keyed shard.
+fun different_latch_shards_both_release_at_results_open() {
+  let mut sc = ts::begin(test_world::owner());
+  let (_cid, _loot_tid) = stage(&mut sc);
+  let first = object::id_from_address(@0xC0);
+  let second = object::id_from_address(@0xC2);
+  assert!(fight_registry::shard_index(first) != fight_registry::shard_index(second));
+  let brand = fight::y45();
+
+  sc.next_tx(test_world::owner());
+  {
+    let (mut first_latch, mut second_latch) = latches_for(&sc, first, second);
+    fight_latch::latch_for_testing(&mut first_latch, brand, first, fid());
+    fight_latch::latch_for_testing(&mut second_latch, brand, second, fid());
+    assert!(fight_latch::character_fight(&first_latch, brand, first).is_some());
+    assert!(fight_latch::character_fight(&second_latch, brand, second).is_some());
+    ts::return_shared(first_latch);
+    ts::return_shared(second_latch);
+  };
+
+  sc.next_tx(test_world::owner());
+  {
+    let mut latch = latch_for(&sc, first);
+    let mut k = sc.take_shared<Kiosk>();
+    let pkcap = sc.take_from_sender<PersonalKioskCap>();
+    let cfg = sc.take_shared<GameConfig>();
+    let ver = sc.take_shared<Version>();
+    let outcome = settlement::outcome_for_testing(
+      brand, fid(), wid(), first, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(0), 100, sc.ctx(),
+    );
+    results::open_for_testing(outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, 1, sc.ctx());
+    assert!(fight_latch::character_fight(&latch, brand, first).is_none());
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(cfg); ts::return_shared(ver);
+  };
+
+  sc.next_tx(test_world::owner());
+  {
+    let mut latch = latch_for(&sc, second);
+    let mut k = sc.take_shared<Kiosk>();
+    let pkcap = sc.take_from_sender<PersonalKioskCap>();
+    let cfg = sc.take_shared<GameConfig>();
+    let ver = sc.take_shared<Version>();
+    let outcome = settlement::outcome_for_testing(
+      brand, fid(), wid(), second, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(0), 100, sc.ctx(),
+    );
+    results::open_for_testing(outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, 1, sc.ctx());
+    assert!(fight_latch::character_fight(&latch, brand, second).is_none());
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(cfg); ts::return_shared(ver);
+  };
+
+  sc.next_tx(test_world::owner());
+  results::burn_result(sc.take_from_sender<FightResult>());
+  results::burn_result(sc.take_from_sender<FightResult>());
+  sc.end();
+}
+
+#[test]
+/// Same-index companion: two character rows coexist in one `FightLatch` object and two result opens clear both.
+fun same_latch_shard_pair_both_release_at_results_open() {
+  let mut sc = ts::begin(test_world::owner());
+  let (_cid, _loot_tid) = stage(&mut sc);
+  let first = object::id_from_address(@0xC0);
+  let second = object::id_from_address(@0xD0);
+  assert!(fight_registry::shard_index(first) == fight_registry::shard_index(second));
+  let brand = fight::y45();
+
+  sc.next_tx(test_world::owner());
+  {
+    let mut latch = latch_for(&sc, first);
+    fight_latch::latch_for_testing(&mut latch, brand, first, fid());
+    fight_latch::latch_for_testing(&mut latch, brand, second, fid());
+    assert!(fight_latch::character_fight(&latch, brand, first).is_some());
+    assert!(fight_latch::character_fight(&latch, brand, second).is_some());
+
+    let mut k = sc.take_shared<Kiosk>();
+    let pkcap = sc.take_from_sender<PersonalKioskCap>();
+    let cfg = sc.take_shared<GameConfig>();
+    let ver = sc.take_shared<Version>();
+    let first_outcome = settlement::outcome_for_testing(
+      brand, fid(), wid(), first, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(0), 100, sc.ctx(),
+    );
+    let second_outcome = settlement::outcome_for_testing(
+      brand, fid(), wid(), second, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(0), 100, sc.ctx(),
+    );
+    results::open_for_testing(first_outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, 1, sc.ctx());
+    results::open_for_testing(second_outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, 1, sc.ctx());
+    assert!(fight_latch::character_fight(&latch, brand, first).is_none());
+    assert!(fight_latch::character_fight(&latch, brand, second).is_none());
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(cfg); ts::return_shared(ver);
+  };
+
+  sc.next_tx(test_world::owner());
+  results::burn_result(sc.take_from_sender<FightResult>());
+  results::burn_result(sc.take_from_sender<FightResult>());
   sc.end();
 }
