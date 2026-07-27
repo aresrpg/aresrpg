@@ -41,6 +41,7 @@ import {
   targets,
   find_call,
 } from './_onchain_fixtures.js'
+import { fight_shard_index } from '../src/deployment/aresrpg.js'
 
 /** DEPLOYED context — the ONE merged `aresrpg` id block injected (the offline override seam). */
 const ctx = { network: 'testnet', ids: IDS }
@@ -1074,7 +1075,10 @@ describe('S-51b static refs — kind-only build with ZERO client', () => {
       .filter(i => i.Object?.SharedObject)
       .map(i => i.Object.SharedObject)
     const by_id = Object.fromEntries(shared.map(s => [s.objectId, s]))
-    expect(by_id[IDS.aresrpg.FIGHT_REGISTRY].mutable).toBe(true) // &mut FightRegistry
+    // The registry is sharded — the input is the shard the fight's WORLD maps to, not a singleton.
+    const shard =
+      IDS.aresrpg.FIGHT_REGISTRY_SHARDS[fight_shard_index(A.world_id)]
+    expect(by_id[shard.id].mutable).toBe(true) // &mut FightRegistry (this world's shard)
     expect(by_id[IDS.aresrpg.GAME_CONFIG].mutable).toBe(false) // &GameConfig
     expect(by_id[IDS.aresrpg.VERSION].mutable).toBe(false) // &Version
     expect(by_id[IDS.aresrpg.ENGINE_VERSION].mutable).toBe(false) // &EngineVersion

@@ -152,10 +152,7 @@
           "id": "0x4ef9563936fb0dc7ebd8399ed68ed7b023e3e1daeaf07ca27b1b16f62eda0eb3",
           "initial_shared_version": "1"
         },
-        "FIGHT_REGISTRY": {
-          "id": "0xdd4eb91118e1970d05dc76c291f87daeb4f12a355069173da245e1c917220d18",
-          "initial_shared_version": "1"
-        },
+        "FIGHT_REGISTRY_SHARDS": [],
         "VERSION": {
           "id": "0xfb2d8f228d678a2beee5bcb259ef020b1d294261c5b3f4ff30da274955fcc108",
           "initial_shared_version": "1"
@@ -378,10 +375,7 @@
           "id": "",
           "initial_shared_version": ""
         },
-        "FIGHT_REGISTRY": {
-          "id": "",
-          "initial_shared_version": ""
-        },
+        "FIGHT_REGISTRY_SHARDS": [],
         "VERSION": {
           "id": "",
           "initial_shared_version": ""

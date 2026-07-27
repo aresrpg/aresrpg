@@ -401,7 +401,10 @@ export function sdkBlock(m) {
     GAME_CONFIG: m.aresrpg.shared.GameConfig,
     CREATION: m.gifting.shared.Creation,
     CATALOG: m.aresrpg.shared.Catalog,
-    FIGHT_REGISTRY: m.engine.shared.FightRegistry,
+    FIGHT_REGISTRY_SHARDS: (m.engine.shared.FightRegistryShards ?? []).map((id, i) => ({
+      id,
+      initial_shared_version: m.engine.shared_versions?.FightRegistryShards?.[i] ?? '1',
+    })),
     POOL_REGISTRY: m.gifting.shared.PoolRegistry,
     ITEM_POLICY: m.policies?.item?.policy,
     ITEM_ROYALTY_MIN_MIST: String(10_000_000),

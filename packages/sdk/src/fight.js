@@ -4,6 +4,7 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import {
   aresrpg_deployment,
+  fight_registry_arg,
   shared_object_arg,
   random_shared_ref,
 } from './deployment/aresrpg.js'
@@ -263,13 +264,7 @@ export function create_fight_ptb(context) {
     tx.moveCall({
       target: `${a.LATEST_PACKAGE_ID}::fight::create`,
       arguments: [
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ), // registry: &mut FightRegistry
+        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry
         ticket, // ticket: zones::GroupTicket (hot potato — consumed here)
         world, // world: &World (same object; pinned to the ticket)
         kiosk, // kiosk: &mut Kiosk
@@ -408,13 +403,7 @@ export function create_member_fight_ptb(context) {
       target: `${a.ENGINE_LATEST_PACKAGE_ID}::fight::create_members`,
       arguments: [
         build, // build: GroupBuild (by value — consumed)
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ), // registry: &mut FightRegistry
+        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry
         engine_version, // version: &Version (ENGINE)
         tx.object.clock(), // clock: &Clock (0x6)
       ],
@@ -435,6 +424,7 @@ export function join_fight_ptb(context) {
   const { network } = context
   return ({
     fight_id,
+    world_id,
     kiosk_id,
     personal_kiosk_cap_id,
     character_id,
@@ -448,13 +438,7 @@ export function join_fight_ptb(context) {
       target: `${a.LATEST_PACKAGE_ID}::fight::join`,
       arguments: [
         as_object_arg(tx, fight_id), // fight: &mut Fight (a cached ref must be mutable:true)
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ), // registry: &mut FightRegistry (S-12f in-fight latch)
+        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry (S-12f in-fight latch)
         as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
@@ -837,20 +821,14 @@ export function abandon_fight_ptb(context) {
  */
 export function settle_fight_ptb(context) {
   const { network } = context
-  return ({ fight_id, tx = new Transaction() }) => {
+  return ({ fight_id, world_id, tx = new Transaction() }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
       target: `${a.ENGINE_LATEST_PACKAGE_ID}::settlement::settle_and_destroy`,
       arguments: [
         as_object_arg(tx, fight_id), // fight: Fight (BY VALUE — deleted; a cached ref must be mutable:true)
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ), // registry: &mut FightRegistry (mints one FightOutcome per seat, frees every latch)
+        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry (mints one FightOutcome per seat, frees every latch)
         shared_object_arg(
           tx,
           network,
@@ -920,7 +898,7 @@ export function open_result_ptb(context) {
  */
 export function settle_and_take_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, tx = new Transaction() }) => {
+  return ({ fight_id, world_id, character_id, tx = new Transaction() }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     const [outcome] = tx.moveCall({
@@ -928,13 +906,7 @@ export function settle_and_take_ptb(context) {
       arguments: [
         as_object_arg(tx, fight_id), // fight: Fight (BY VALUE — deleted; a cached ref must be mutable:true)
         tx.pure.id(character_id), // character: ID (the caller's OWN seat — possession-gated on-chain)
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ), // registry: &mut FightRegistry (mints every seat's outcome, frees every latch)
+        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry (mints every seat's outcome, frees every latch)
         shared_object_arg(
           tx,
           network,
@@ -1043,13 +1015,7 @@ export function release_group_ptb(context) {
       target: `${a.LATEST_PACKAGE_ID}::fight::release_group`,
       arguments: [
         as_object_arg(tx, world_id), // world: &mut World (a cached ref must carry mutable:true)
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          false,
-          a.FIGHT_REGISTRY,
-        ), // registry: &FightRegistry (read-only — the derived fight address is the proof)
+        fight_registry_arg(tx, network, a, world_id, false), // registry: &FightRegistry (read-only — the derived fight address is the proof)
         outcome, // outcome: &FightOutcome (the settle_and_take RESULT HANDLE — borrowed, NEVER an object id)
         tx.pure.u32(Number(zx)), // zx: u32
         tx.pure.u32(Number(zy)), // zy: u32
@@ -1076,6 +1042,7 @@ export function release_group_ptb(context) {
 export function settle_open_world_ptb(context) {
   return ({
     fight_id,
+    world_id,
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
@@ -1084,6 +1051,7 @@ export function settle_open_world_ptb(context) {
   }) => {
     const { tx: chained, outcome } = settle_and_take_ptb(context)({
       fight_id,
+      world_id,
       character_id,
       tx,
     })

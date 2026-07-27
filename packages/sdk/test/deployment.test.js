@@ -25,10 +25,10 @@ test('aresrpg_shared_ref: resolves fully from injected overrides — no dependen
 test('aresrpg_shared_ref: mutable is caller-stated, never inferred — true and false both pass through verbatim', () => {
   const overrides = { objectId: '0xfake', initialSharedVersion: '1' }
   expect(
-    aresrpg_shared_ref('testnet', 'FIGHT_REGISTRY', true, overrides).mutable,
+    aresrpg_shared_ref('testnet', 'POOL_REGISTRY', true, overrides).mutable,
   ).toBe(true)
   expect(
-    aresrpg_shared_ref('testnet', 'FIGHT_REGISTRY', false, overrides).mutable,
+    aresrpg_shared_ref('testnet', 'POOL_REGISTRY', false, overrides).mutable,
   ).toBe(false)
 })
 
@@ -55,7 +55,7 @@ test('aresrpg_shared_ref: a partial override (objectId only) still refuses — n
 })
 
 test('aresrpg_shared_ref: without overrides, resolves from the real ceremony-stamped testnet map', () => {
-  const ref = aresrpg_shared_ref('testnet', 'FIGHT_REGISTRY', true)
+  const ref = aresrpg_shared_ref('testnet', 'POOL_REGISTRY', true)
   expect(ref.objectId).toMatch(/^0x[0-9a-f]{64}$/)
   expect(ref.initialSharedVersion).toMatch(/^\d+$/)
   expect(ref.mutable).toBe(true)
@@ -75,7 +75,6 @@ const LOCALNET_FULL = {
   GAME_CONFIG: '0xgameconfig',
   CREATION: '0xcreation',
   CATALOG: '0xcatalog',
-  FIGHT_REGISTRY: '0xfightreg',
   POOL_REGISTRY: '0xpoolreg',
   ITEM_POLICY: '0xitempolicy',
   CHARACTER_POLICY: '0xcharpolicy',
