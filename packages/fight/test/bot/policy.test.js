@@ -494,13 +494,36 @@ describe('the deferred trap assertion — a trap proves itself when something wa
 
   test('a mob that walked onto the trap and paid for it passes, and the trap retires', () => {
     const out = assert_traps_sprung(armed, board({ x: 5, y: 8 }, 100), board({ x: 5, y: 7 }, 75))
-    expect(out.rows).toHaveLength(1)
-    expect(out.rows[0].pass).toBe(true)
+    expect(out.rows).toHaveLength(2) // the payment + the timing half
+    expect(out.rows.every((r) => r.pass)).toBe(true)
     expect(out.remaining).toEqual([])
   })
 
   test('a mob standing ON the trap at full health is the silent no-op — FAIL', () => {
     const out = assert_traps_sprung(armed, board({ x: 5, y: 8 }, 100), board({ x: 5, y: 7 }, 100))
     expect(out.rows[0].pass).toBe(false)
+  })
+
+  // #954 — THE BLIND SPOT THIS ORACLE USED TO HAVE. A mob that walks THROUGH the trap never stands on it, so a
+  // landing-cell test saw nothing and a silent trap passed every drive. The walk is what proves the entry.
+  test('a mob that CROSSES the trap mid-path is asserted, not ignored', () => {
+    const out = assert_traps_sprung(armed, board({ x: 5, y: 9 }, 100), board({ x: 5, y: 5 }, 75))
+    expect(out.rows).toHaveLength(2)
+    expect(out.rows.every((r) => r.pass)).toBe(true)
+    expect(out.rows[0].note).toContain('MID-PATH')
+    expect(out.remaining).toEqual([])
+  })
+
+  test('a mob that crosses the trap and pays NOTHING is the reported bug — FAIL', () => {
+    const out = assert_traps_sprung(armed, board({ x: 5, y: 9 }, 100), board({ x: 5, y: 5 }, 100))
+    expect(out.rows[0].pass).toBe(false)
+  })
+
+  // The #1047 ruling: a fighter already inside the trigger area when the trap was placed does NOT spring it.
+  // A spring charged to a fighter that never moved is the turn-start firing, in oracle form.
+  test('a fighter that never left the trap cell cannot be the spring’s payer — FAIL on the timing row', () => {
+    const out = assert_traps_sprung(armed, board({ x: 5, y: 7 }, 100), board({ x: 5, y: 7 }, 75))
+    expect(out.rows).toEqual([])
+    expect(out.remaining).toEqual(armed) // it never ENTERED — nothing to prove yet
   })
 })

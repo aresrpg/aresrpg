@@ -17,7 +17,9 @@
 
 import { get_direction } from '@aresrpg/sim/fight_displacement'
 
-import { cell_index } from './read.js'
+import { blocked_cells, cell_index, living } from './read.js'
+import { GRID_W } from '../los.js'
+import { reconstructed_path } from '../fight_render_prims.js'
 
 const find = (read, id) => read?.fighters?.find((f) => f.id === id) ?? null
 const same_cell = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y
@@ -255,10 +257,49 @@ const assert_trap = (index, action, before, after) => {
 }
 
 /**
- * THE TRAP'S ACTUAL PROOF — a deferred, cross-turn assertion. A trap only means something when something
- * walks into it, so the runner carries the cells it armed and this checks, each turn, whether a living enemy
- * has ENTERED one: if it did, it must have paid for it. A fighter standing on a trapped cell at full health
- * is exactly the silent no-op this bot exists to catch.
+ * Every cell each enemy ENTERED on the turn between these two reads — the committed WALK, not its landing cell.
+ *
+ * THIS IS THE ORACLE'S OWN #954 FIX. Sampling `cell_committed` alone made the bot structurally blind to the very
+ * bug it exists to catch: a mob that walks THROUGH a trap never stands on it, so the deferred proof below never
+ * fired and a silent trap passed every drive. The route is reconstructed exactly as the renderer and the fold
+ * reconstruct it (`reconstructed_path` over the read's own walkability mask — obstacles and holes already folded
+ * into `arena.cells`), so "which cells did this walk enter" has ONE answer everywhere in the client.
+ */
+const enemy_walks = (before, after) =>
+  (before?.fighters ?? [])
+    .filter((was) => was.id !== before.my_id && was.cell_committed)
+    .flatMap((was) => {
+      const now = find(after, was.id)
+      if (!now?.cell_committed || same_cell(was.cell_committed, now.cell_committed)) return []
+      return [
+        {
+          id: was.id,
+          from: was.cell_committed,
+          to: now.cell_committed,
+          entered: reconstructed_path(was.cell_committed, now.cell_committed, {
+            obstacles: blocked_cells(before),
+            board_width: before.arena?.width ?? null,
+            board_height: before.arena?.height ?? null,
+            width: GRID_W,
+            occupied_cells: living(before)
+              .filter((f) => f.id !== was.id)
+              .map((f) => f.cell_committed),
+          }),
+        },
+      ]
+    })
+
+/**
+ * THE TRAP'S ACTUAL PROOF — a deferred, cross-turn assertion, now with the TIMING half (#954 · #1050).
+ *
+ * A trap only means something when something walks into it, so the runner carries the cells it armed and this
+ * checks, each turn, whether a living enemy ENTERED one: if it did, it must have paid for it on THAT turn. Two
+ * things make the entry test truthful where it used to lie:
+ *   · a MID-PATH crossing counts — the chain detonates on entry and the route resumes (`movement.move:43`), so
+ *     the entrant's landing cell is usually somewhere past the trap and proves nothing on its own;
+ *   · a fighter ALREADY STANDING on the cell when the trap was placed does NOT spring it (the #1047 ruling), so
+ *     the payment must belong to a fighter that arrived this turn. A spring charged to a fighter that never moved
+ *     is the turn-start firing this whole family is about.
  * @param {Array<{ cell: { x: number, y: number }, turn: number, spell_key: string }>} armed
  * @param {object} before @param {object} after the reads either side of the turn just committed
  * @returns {{ rows: Array<object>, remaining: Array<object> }}
@@ -266,26 +307,40 @@ const assert_trap = (index, action, before, after) => {
 export const assert_traps_sprung = (armed, before, after) => {
   const rows = []
   const remaining = []
+  const walks = enemy_walks(before, after)
   for (const trap of armed) {
     const on_it = (read) =>
-      (read.fighters ?? []).find(
-        (f) => f.id !== read.my_id && f.cell_committed?.x === trap.cell.x && f.cell_committed?.y === trap.cell.y
-      )
-    const entered = on_it(after)
-    if (!entered || on_it(before)?.id === entered.id) {
+      (read.fighters ?? []).find((f) => f.id !== read.my_id && same_cell(f.cell_committed, trap.cell))
+    const crossed = walks.find((walk) => walk.entered.some((cell) => same_cell(cell, trap.cell)))
+    const landed = on_it(after)
+    const entrant = crossed ?? (landed && on_it(before)?.id !== landed.id ? { id: landed.id, from: find(before, landed.id)?.cell_committed, to: landed.cell_committed } : null)
+    if (!entrant) {
       remaining.push(trap)
       continue
     }
-    const was = find(before, entered.id)
-    const hurt = Number(was?.hp_committed ?? 0) - Number(find(after, entered.id)?.hp_committed ?? 0)
+    const action = { kind: 1, spell_key: trap.spell_key, cell: trap.cell }
+    const hurt = Number(find(before, entrant.id)?.hp_committed ?? 0) - Number(find(after, entrant.id)?.hp_committed ?? 0)
     rows.push(
       row(
         0,
-        { kind: 1, spell_key: trap.spell_key, cell: trap.cell },
-        `the trap armed on turn ${trap.turn} sprang when ${entered.id} stepped on it`,
-        'HP lost on entry',
+        action,
+        `the trap armed on turn ${trap.turn} sprang when ${entrant.id} entered ${fmt(trap.cell)} walking ${fmt(entrant.from)} → ${fmt(entrant.to)}`,
+        'HP lost on the entry step',
         hurt,
-        hurt >= 1
+        hurt >= 1,
+        crossed ? 'entered MID-PATH — the walk resumed past it, exactly as the chain resolves it' : ''
+      )
+    )
+    // THE TIMING HALF: the payer ARRIVED this turn. A trap that charges a fighter which never left its cell has
+    // fired detached from movement — the "damage at turn start, before it moved" symptom, in oracle form.
+    rows.push(
+      row(
+        0,
+        action,
+        'the spring belongs to a fighter that ENTERED this turn, never a standing occupant',
+        'a cell change this turn',
+        `${fmt(entrant.from)} → ${fmt(entrant.to)}`,
+        !!entrant.from && !same_cell(entrant.from, entrant.to) && !same_cell(entrant.from, trap.cell)
       )
     )
   }
