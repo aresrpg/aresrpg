@@ -44,7 +44,8 @@ import { spell_category } from './spell-category.js'
 import { Tooltip } from './Tooltip.jsx'
 import { SpellSeedTip } from './tooltip-content.jsx'
 import { resolve_key_arm, deck_my_turn, is_arm_key } from './deck-key-arm.js'
-import { next_slot_crit, socket_glows, next_hit } from './deck-crit-glow.js'
+import { next_slot_crit, socket_glows } from './deck-crit-glow.js'
+import { weapon_next_hit, weapon_strike_band, weapon_strike_elements } from '@aresrpg/fight/weapon'
 import { use_fight_phase } from './world/use_fight_phase.js'
 import { use_mobile_input_mode } from '../../touch/mobile_input_mode.js'
 import { SpellSocket } from './deck-spell-socket.jsx'
@@ -82,17 +83,32 @@ const is_typing = () => {
  * there, so the greyed state self-explains. aria-disabled (never native `disabled`) keeps the hover tooltip alive.
  * `glow` = the §7 turn-seed crit preview (the NEXT queued strike crits) — gold socket glow + the tooltip's
  * one-line "next hit" swaps to the crit damage (glow only on the socket itself, no badges/numbers).
- * @param {{ armed: boolean, enabled: boolean, weapon: any, glow: boolean, keyCap: string | null,
+ * `clock` is that same §7 tuple: it also rolls the strike's DAMAGE, so the "next hit" line is the exact number
+ * the chain will settle rather than one end of a band (#1323).
+ * @param {{ armed: boolean, enabled: boolean, weapon: any, glow: boolean, clock: any, keyCap: string | null,
  *   onPick: () => void, t: (k: string) => string }} props
  */
-function WeaponSocket({ armed, enabled, weapon, glow, keyCap, onPick, t }) {
+function WeaponSocket({ armed, enabled, weapon, glow, clock, keyCap, onPick, t }) {
   const name = is_bare_hands(weapon) ? t('fight.weapon_bare') : t('fight.weapon_attack')
-  // pass the FACTS object (element name resolved) when the escrow weapon has loaded, else `true` (name-only).
+  // The DAMAGE the tooltip states comes from the ONE strike derivation (@aresrpg/fight/weapon), not the family
+  // `Weapon` fields: a seat with authored item lines strikes for Σ(lines), across the elements those lines
+  // name, and printing the family line here was the socket's half of #1323. The band is the honest resting
+  // state; `next_hit` sharpens it to the slot-exact number whenever the §7 clock resolves.
+  const band = weapon ? weapon_strike_band(weapon, false) : null
+  const crit_band = weapon ? weapon_strike_band(weapon, true) : null
+  const rolled = weapon ? weapon_next_hit(weapon, clock, glow) : null
+  // pass the FACTS object (element names resolved) when the escrow weapon has loaded, else `true` (name-only).
   const facts = weapon
     ? {
         ...weapon,
-        element_name: weapon_element_name(t, weapon.element),
-        next_hit: { value: next_hit(weapon.damage, weapon.crit_damage, glow), crit: glow },
+        damage: band.min,
+        damage_max: band.max,
+        crit_damage: crit_band.min,
+        crit_damage_max: crit_band.max,
+        element_name: weapon_strike_elements(weapon)
+          .map((element) => weapon_element_name(t, element))
+          .join(' / '),
+        next_hit: rolled == null ? null : { value: rolled, crit: glow },
       }
     : true
   return (
@@ -182,15 +198,16 @@ export function DeckCluster() {
   const chain_turn_entropy = use_dungeon((s) => s.dungeon?.turn_entropy ?? null)
   const chain_turn_ordinal = use_dungeon((s) => s.dungeon?.turn_ordinal ?? null)
   const draft_len = use_dungeon_turn((s) => s.cast_path.length)
-  const crit = next_slot_crit(
-    my_turn
-      ? crit_clock_of({
-          fight: { world_seed, spawn_id, turn_entropy: chain_turn_entropy, turn_ordinal: chain_turn_ordinal },
-          seat_row: my_row,
-          draft_len,
-        })
-      : null
-  )
+  // The ONE composed §7 tuple: `next_slot_crit` rolls its crit stream and `weapon_next_hit` its damage stream,
+  // so the socket's glow and the number in its tooltip can never disagree about which slot they describe.
+  const seed_clock = my_turn
+    ? crit_clock_of({
+        fight: { world_seed, spawn_id, turn_entropy: chain_turn_entropy, turn_ordinal: chain_turn_ordinal },
+        seat_row: my_row,
+        draft_len,
+      })
+    : null
+  const crit = next_slot_crit(seed_clock)
   const weapon_glow = !!crit && socket_glows(crit.crit_roll, my_weapon?.crit_rate ?? 0)
 
   // FIX 4 COOLDOWN / EXHAUSTION AFFORDANCE (07-14, display promoted to a big centered number by #368) — the
@@ -283,6 +300,7 @@ export function DeckCluster() {
             enabled={weapon_affordable}
             weapon={my_weapon}
             glow={weapon_glow}
+            clock={seed_clock}
             keyCap={mobile ? null : '`'}
             onPick={() => weapon_affordable && arm_spell(WEAPON_ATTACK_ID)}
             t={t}
