@@ -59,6 +59,8 @@ const fight_object = ({ world_seed, spawn_id, mob0 = 46, mob1 = 26 }) => ({
   ],
   turn_ptr: 0,
   turn_deadline_ms: DEADLINE,
+  turn_entropy: DEADLINE,
+  turn_ordinal: 1,
 })
 
 const boot = (o) => {
@@ -84,25 +86,25 @@ const draft_cast = (s, { displace = null } = {}, now) => {
 // THE CHAIN ORACLE for one move's tackle: escape iff draw%den<num, else the exact tackle_losses forfeit — the
 // byte twin of actions.move:52-58 / tackle.move:57-67, evaluated at the given commit-order slot.
 const chain_tackle = ({ world_seed, spawn_id, seat = 0, mp, ap, agility = 40, lockers = [40], slot }) => {
-  const tseed = turn_seed({ world_seed, spawn_id, turn_deadline_ms: DEADLINE, seat })
+  const tseed = turn_seed({ world_seed, spawn_id, turn_entropy: DEADLINE, turn_ordinal: 1, seat })
   const { num, den } = tackle_contest(agility, lockers)
   const draw = rng_next(rng_seed(tackle_seed(tseed, slot, mp))).value
   return draw % den < num ? null : tackle_losses(ap, mp, num, den)
 }
 
 describe('#24/#398 drafted-sequence tackle parity — legality obeys exact staged order', () => {
-  // ws=2 at mp=2: slot 0 FAILS while slot 1 ESCAPES, making an accidental casts-after-moves regrouping visible.
+  // ws=69 at mp=2: slot 0 FAILS while slot 1 ESCAPES, making an accidental casts-after-moves regrouping visible.
   test('SLOT — move→cast→move: move2 is priced at chain slot 1 after the drafted cast', () => {
-    const s = boot({ world_seed: 2, spawn_id: 7 })
+    const s = boot({ world_seed: 69, spawn_id: 7 })
     draft_move(s, { to_cell: 25, mp_left: 2 }, 1500) // me 45→25 (1 MP); mob1@26 still locks me
     draft_cast(s, {}, 1600)
-    const oracle = chain_tackle({ world_seed: 2, spawn_id: 7, mp: 2, ap: 6, slot: 1 })
+    const oracle = chain_tackle({ world_seed: 69, spawn_id: 7, mp: 2, ap: 6, slot: 1 })
     expect(oracle).toBeNull() // guard: slot 1 really escapes (slot 0 would tackle)
     expect(next_move_tackle(s.getState())).toEqual(oracle)
   })
 
   test('DISPLACEMENT — move→push→move: move2 sees the mob at its post-push cell', () => {
-    const s = boot({ world_seed: 2, spawn_id: 7 })
+    const s = boot({ world_seed: 69, spawn_id: 7 })
     draft_move(s, { to_cell: 25, mp_left: 2 }, 1500)
     draft_cast(s, { displace: { idx: 1, to_cell: 210 } }, 1600) // push mob1 26→210 before move2
     expect(next_move_tackle(s.getState())).toBeNull()
@@ -115,9 +117,9 @@ describe('#24/#398 drafted-sequence tackle parity — legality obeys exact stage
   })
 
   test('REGRESSION cast→move (mob stays adjacent): move is priced at slot 1', () => {
-    const s = boot({ world_seed: 1, spawn_id: 7 }) // ws=1 @ mp3: slot0 tackles, slot1 escapes
+    const s = boot({ world_seed: 67, spawn_id: 7 }) // ws=67 @ mp3: slot0 tackles, slot1 escapes
     draft_cast(s, {}, 1500) // a slot-bumping cast BEFORE any move → cast_first=TRUE → the move sees casts_this_turn=1
-    const oracle = chain_tackle({ world_seed: 1, spawn_id: 7, mp: 3, ap: 6, slot: 1 })
+    const oracle = chain_tackle({ world_seed: 67, spawn_id: 7, mp: 3, ap: 6, slot: 1 })
     expect(oracle).toBeNull() // slot 1 escapes here — proves the cast IS counted (not wrongly dropped)
     expect(next_move_tackle(s.getState())).toEqual(oracle)
   })

@@ -44,7 +44,7 @@ fun critical_fold_reaches_pvm_weapon() {
     500,
     1,
     1000,
-    participant::new_weapon(spell::el_fire(), 50, 90, 3, 3, 40),
+    participant::new_weapon(spell::el_fire(), 50, 90, 4, 3, 40),
   );
   sc.next_tx(OWNER);
   let mut fight = sc.take_shared<Fight>();
@@ -56,15 +56,17 @@ fun critical_fold_reaches_pvm_weapon() {
   participant::set_cell(fight::participants_mut(&mut fight).borrow_mut(0), 100);
   mob::set_cell(fight::mobs_mut(&mut fight).borrow_mut(0), 101);
 
-  // For this seeded slot, denominator 3 (the old literal-zero fold) misses while folded critical 1 lowers it to
-  // 2 and crits. This also proves the floor cannot become zero even when the folded stat exceeds the base rate.
+  // For this seeded slot, denominator 4 (the literal-zero fold) misses while folded critical 1 lowers it to 3
+  // and crits. This also proves the floor cannot become zero even when the folded stat exceeds the base rate.
+  // The denominators moved with the turn seed: the property under test is "the fold changes the verdict", and
+  // the band that demonstrates it is wherever this seed's roll actually lands.
   let mut caster_stats = spell::stats_zero();
   spell::add_stat(&mut caster_stats, 7, 1);
   participant::set_stats_for_testing(fight::participants_mut(&mut fight).borrow_mut(0), caster_stats);
   let roll = spell_formula::slot_crit_roll(fight::turn_seed_for_testing(&fight, 0), 0);
-  assert!(roll == 4_673, 0);
-  assert!(roll >= 10_000 / 3 && roll < 10_000 / 2, 1);
-  assert!(cast::crits_with_stats(fight::turn_seed_for_testing(&fight, 0), 0, 3, &caster_stats), 2);
+  assert!(roll == 3_100, 0);
+  assert!(roll >= 10_000 / 4 && roll < 10_000 / 3, 1);
+  assert!(cast::crits_with_stats(fight::turn_seed_for_testing(&fight, 0), 0, 4, &caster_stats), 2);
   let hp_before = mob::hp(fight::mobs(&fight).borrow(0));
   actions::weapon_for_testing(&mut fight, object::id_from_address(CHAR), 101, &ver, 1000, OWNER);
   assert!(hp_before - mob::hp(fight::mobs(&fight).borrow(0)) == 90, 3);

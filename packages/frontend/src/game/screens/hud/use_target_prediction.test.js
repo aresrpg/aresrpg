@@ -131,7 +131,7 @@ describe('compute_target_prediction — the deterministic crit IS the resolved d
   // slot 0 = the pending cast's rng position (casts_this_turn 0, no draft), seat 0 — does it crit? Straight from
   // the chain twin: crit_at(slot_crit_roll(turn_seed(clock), slot), rate, 0). The forecast MUST agree with this.
   const slot0_crits = (spawn_id) =>
-    crit_at(slot_crit_roll(turn_seed({ world_seed: WORLD_SEED, spawn_id, turn_deadline_ms: DEADLINE, seat: 0 }), 0), CRIT_RATE, 0)
+    crit_at(slot_crit_roll(turn_seed({ world_seed: WORLD_SEED, spawn_id, turn_entropy: DEADLINE, turn_ordinal: 1, seat: 0 }), 0), CRIT_RATE, 0)
   const CRIT_SPAWN = [...Array(64).keys()].find(slot0_crits)
   const NOCRIT_SPAWN = [...Array(64).keys()].find((s) => !slot0_crits(s))
 
@@ -140,6 +140,8 @@ describe('compute_target_prediction — the deterministic crit IS the resolved d
       seats: [{ character: '0xme', cell: CASTER_CELL, ap: 6, mp: 3, weapon: WEAPON }],
       mobs: [{ template: '0xabc', hp: 30, max_hp: 30, cell: MOB_CELL, ap: 4, mp: 3, level: 1 }],
       turn_deadline_ms: DEADLINE,
+      turn_entropy: DEADLINE,
+      turn_ordinal: 1,
     })
     fight_store.getState().input({ type: 'arm', spell_id: WEAPON_ATTACK_ID })
     const state = fight_store.getState()

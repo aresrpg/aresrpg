@@ -44,6 +44,8 @@ const FIGHT_OBJECT = {
   queue: [{ is_mob: false, idx: 0 }],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
 }
 
 const boot = () => {

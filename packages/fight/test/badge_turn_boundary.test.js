@@ -73,6 +73,8 @@ const fight_object = (over = {}) => ({
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
   invisibility_statuses: ACTIVE_BUFF,
   ...over,
 })

@@ -32,8 +32,8 @@ const move_scramble = state => {
 // packages/move/foundation/sources/prng.move::mix.
 const move_mix = (acc, value) => move_scramble((u32(acc) + u32(value)) & MASK32)
 
-const move_turn_seed = ({ world_seed, spawn_id, turn_deadline_ms, seat }) =>
-  move_mix(move_mix(move_mix(world_seed, spawn_id), turn_deadline_ms), seat)
+const move_turn_seed = ({ world_seed, spawn_id, turn_entropy, turn_ordinal, seat }) =>
+  move_mix(move_mix(move_mix(move_mix(world_seed, spawn_id), turn_entropy), turn_ordinal), seat)
 
 const move_crit_roll = (seed, action_ordinal) =>
   move_mix(move_mix(seed, action_ordinal), DOMAIN_CRIT) % fixture.crit_bound

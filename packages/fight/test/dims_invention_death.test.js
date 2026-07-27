@@ -48,6 +48,8 @@ describe('RIDER B(b) — dims inventions die (hold-on-not-found, never a phantom
       my_key: null,
       applied_version: 0,
       turn_deadline_ms: null,
+      turn_entropy: 0,
+      turn_ordinal: 0, // no turn open — the clock composer refuses to build a seed from this
     }
     const projected = project.engine_view(state, { roster: [] })
     // Was `|| GRID_W` → a full 20×19 WALKABLE phantom arena. D771: zero walkable cells (no invented arena).

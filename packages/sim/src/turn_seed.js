@@ -5,7 +5,7 @@
 // matches the chain's settlement exactly.
 //
 // Crits are a per-turn REVEALED SEQUENCE: at turn start a `turn_seed` is derived PURELY from public fight state
-// (world_seed, spawn_id, turn_deadline_ms, seat — no stored field, upgrade-safe). Each committed damaging action
+// (world_seed, spawn_id, turn_entropy, turn_ordinal, seat). Each committed damaging action
 // of the turn takes the next SLOT index (the escrow's `casts_this_turn` counter — weapon strikes count too), and
 // slot `i` carries a fixed crit roll bound to the INDEX ONLY (never the spell/target — kills cross-target
 // fishing; slot-routing is the mechanic). The client folds this to PREVIEW, before committing, which queued
@@ -15,7 +15,7 @@
 // preview this turn's EXACT damage before committing, exactly as it previews crit.
 //
 // DERIVATION (every step a `prng.mix` fold — mirrors spell_formula.move / fight.move byte-for-byte):
-//   turn_seed   = mix(mix(mix(world_seed, spawn_id), turn_deadline_ms), seat)
+//   turn_seed   = mix(mix(mix(mix(world_seed, spawn_id), turn_entropy), turn_ordinal), seat)
 //   crit_roll   = mix(mix(turn_seed, slot), DOMAIN_CRIT) % 10000    ∈ [0, 10000)   (basis points)
 //   damage_roll = mix(mix(turn_seed, slot), DOMAIN_DMG)  % 10000    ∈ [0, 10000)   (#577, decorrelated from crit)
 // Parity is pinned by test/turn_seed.test.js against golden vectors extracted from the Move source of truth
@@ -28,15 +28,15 @@ const DOMAIN_CRIT = 0 // crit stream domain tag (spell_formula::DOMAIN_CRIT)
 const DOMAIN_DMG = 0xd1b54a35 // #577 damage stream domain tag (spell_formula::DOMAIN_DMG); ≠ crit/dodge/failure/tackle
 
 /**
- * The turn's seed — derived PURELY from public fight state (no stored field; upgrade-safe). Mirrors
- * fight.move::turn_seed. Each seat gets its own sequence; a fresh `turn_deadline_ms` (stamped + emitted in
- * TurnStarted) re-seeds every turn. Inputs may be Number or BigInt (world_seed/spawn_id/turn_deadline_ms are
- * u64 off the SDK decode — BigInt-safe).
- * @param {{ world_seed: number|bigint, spawn_id: number|bigint, turn_deadline_ms: number|bigint, seat: number|bigint }} fight
+ * The turn's seed — derived from public turn state. Mirrors fight.move::turn_seed. Each seat gets its own
+ * sequence; the turn's own entropy and ordinal (both stamped on the Fight and published in TurnStarted) re-seed
+ * it every turn. Inputs may be Number or BigInt (all four are u64 off the SDK decode — BigInt-safe).
+ * @param {{ world_seed: number|bigint, spawn_id: number|bigint, turn_entropy: number|bigint,
+ *   turn_ordinal: number|bigint, seat: number|bigint }} fight
  * @returns {number} uint32
  */
-export const turn_seed = ({ world_seed, spawn_id, turn_deadline_ms, seat }) =>
-  mix(mix(mix(world_seed, spawn_id), turn_deadline_ms), seat)
+export const turn_seed = ({ world_seed, spawn_id, turn_entropy, turn_ordinal, seat }) =>
+  mix(mix(mix(mix(world_seed, spawn_id), turn_entropy), turn_ordinal), seat)
 
 /**
  * Slot `i`'s CRIT ROLL — a spell/target-INDEPENDENT value in [0, 10000) derived from (turn_seed, slot). Mirrors

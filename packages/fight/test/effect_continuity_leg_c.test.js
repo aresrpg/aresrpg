@@ -46,6 +46,8 @@ const fight_at = (p0_cell, p0_mp, invisible, p1_cell = enc(3, 2)) => ({
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
   invisibility_statuses: invisible ? [{ fighter: 0, kind: 27, remaining_turns: 3 }] : [],
 })
 

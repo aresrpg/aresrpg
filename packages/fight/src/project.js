@@ -372,6 +372,10 @@ export const board_view = (s) => {
     decided_winner: decided_outcome(s),
     settlement_request: settlement_request(s),
     turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms,
+    // The turn-seed inputs travel with the view, the same way the deadline does — every crit/tackle preview
+    // surface composes its clock from this projection.
+    turn_entropy: s.turn_entropy ?? view.turn_entropy,
+    turn_ordinal: s.turn_ordinal ?? view.turn_ordinal,
   }
 }
 
@@ -792,12 +796,13 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   const ap = Math.max(0, Math.floor(me.ap ?? 0))
   const free = { armed, tackled: false, reach: reach_full, tackle_lost: [] }
   const { world_seed, spawn_id } = s.view
-  const deadline = s.turn_deadline_ms ?? s.view.turn_deadline_ms
-  if (world_seed != null && spawn_id != null && deadline != null) {
+  const turn_ordinal = s.turn_ordinal ?? s.view.turn_ordinal
+  const turn_entropy = s.turn_entropy ?? s.view.turn_entropy
+  if (world_seed != null && spawn_id != null && turn_ordinal) {
     // EXACT PREVIEW (the chain twin, byte-for-byte): fold the deterministic failure chain via the shared roll —
     // moves never advance the slot; every denial strips ≥1 MP and reprices the next roll at the lower MP. Only
     // mp_lost bounds the reach (ap_lost is the EXECUTION's forfeit, not the paint's — so no ap thread here).
-    const tseed = turn_seed({ world_seed, spawn_id, turn_deadline_ms: deadline, seat })
+    const tseed = turn_seed({ world_seed, spawn_id, turn_entropy, turn_ordinal, seat })
     const slot = my_next_move_slot(s, seat, row)
     let mp_now = mp
     let bitten = false
@@ -850,11 +855,12 @@ export const next_move_tackle = (s) => {
   const lockers = tackle_lockers(s, me, Number(row.team ?? 0))
   if (!lockers.length) return null // not tackled ⇒ the move walks free
   const { world_seed, spawn_id } = s.view
-  const deadline = s.turn_deadline_ms ?? s.view.turn_deadline_ms
-  if (world_seed == null || spawn_id == null || deadline == null) return null // seed-less ⇒ the receipt rules
+  const turn_ordinal = s.turn_ordinal ?? s.view.turn_ordinal
+  const turn_entropy = s.turn_entropy ?? s.view.turn_entropy
+  if (world_seed == null || spawn_id == null || !turn_ordinal) return null // seed-less ⇒ the receipt rules
   const { num, den } = tackle_contest(Number(row.agility ?? 0), lockers)
   const ap = Math.max(0, Math.floor(me.ap ?? 0))
-  const tseed = turn_seed({ world_seed, spawn_id, turn_deadline_ms: deadline, seat })
+  const tseed = turn_seed({ world_seed, spawn_id, turn_entropy, turn_ordinal, seat })
   const slot = my_next_move_slot(s, seat, row)
   return tackle_roll(tseed, slot, mp, ap, num, den)
 }

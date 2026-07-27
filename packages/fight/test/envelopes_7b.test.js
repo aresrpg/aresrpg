@@ -66,6 +66,8 @@ const two_mob_fight = () => ({
   turn_ptr: 0,
   queue: [],
   turn_deadline_ms: T0 + 30_000,
+  turn_entropy: T0 + 30_000,
+  turn_ordinal: 1,
   placement_deadline_ms: 0,
   world_seed: null,
   spawn_id: null,

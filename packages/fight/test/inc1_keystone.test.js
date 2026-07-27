@@ -44,6 +44,8 @@ const fight_object = ({ mob_hp = 20, my_hp = 50 } = {}) => ({
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
   last_action_ms: 0,
   obstacles: [],
   holes: [],

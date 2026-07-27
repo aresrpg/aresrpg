@@ -14,7 +14,7 @@ import {
 // ── PARITY FIXTURES — the Move source of truth is the oracle ────────────────────────────────────────────────
 // Golden vectors extracted from the REAL Move packages via a `sui move test` debug-print probe (scratchpad
 // parity_probe over aresrpg_foundation, sui 1.74.1): each tuple ran fight.move's exact turn_seed fold
-// (mix(mix(mix(world_seed, spawn_id), deadline_ms), seat)) + spell_formula::slot_crit_roll on-VM, and the
+// (mix(mix(mix(mix(world_seed, spawn_id), turn_entropy), turn_ordinal), seat)) + spell_formula::slot_crit_roll on-VM, and the
 // printed values are pinned here. The JS mirror MUST reproduce them byte-for-byte or client crit previews
 // desync from chain settlement. crit_at edges are copied verbatim from spell_formula's t_crit_at_bp_threshold.
 
@@ -34,41 +34,45 @@ describe('turn-seed parity (Move golden vectors)', () => {
     const a = turn_seed({
       world_seed: 123456789,
       spawn_id: 42,
-      turn_deadline_ms: 1752192000000,
+      turn_entropy: 3141592653,
+      turn_ordinal: 7,
       seat: 0,
     })
-    expect(a).toBe(4190174188)
-    expect(slot_crit_roll(a, 0)).toBe(2816)
-    expect(slot_crit_roll(a, 1)).toBe(4768)
-    expect(slot_crit_roll(a, 2)).toBe(1518)
+    expect(a).toBe(2347341858)
+    expect(slot_crit_roll(a, 0)).toBe(1089)
+    expect(slot_crit_roll(a, 1)).toBe(3920)
+    expect(slot_crit_roll(a, 2)).toBe(5988)
     // tuple B: u64-large world_seed (> 2^53) — the BigInt reduction path (Number would lose precision)
     const b = turn_seed({
       world_seed: 16045690984503098046n,
       spawn_id: 7n,
-      turn_deadline_ms: 1752192065535n,
+      turn_entropy: 4294967295n,
+      turn_ordinal: 65535n,
       seat: 3n,
     })
-    expect(b).toBe(3110118064)
-    expect(slot_crit_roll(b, 0)).toBe(8707)
-    expect(slot_crit_roll(b, 5)).toBe(1837)
+    expect(b).toBe(491877867)
+    expect(slot_crit_roll(b, 0)).toBe(6946)
+    expect(slot_crit_roll(b, 5)).toBe(6648)
     // tuple C: all zeros
     const c = turn_seed({
       world_seed: 0,
       spawn_id: 0,
-      turn_deadline_ms: 0,
+      turn_entropy: 0,
+      turn_ordinal: 0,
       seat: 0,
     })
-    expect(c).toBe(2245583870)
-    expect(slot_crit_roll(c, 0)).toBe(6605)
+    expect(c).toBe(3646879101)
+    expect(slot_crit_roll(c, 0)).toBe(2592)
     // tuple D: same fight, different seat -> a different stream (seat-bound sequences)
     const d = turn_seed({
       world_seed: 123456789,
       spawn_id: 42,
-      turn_deadline_ms: 1752192000000,
+      turn_entropy: 3141592653,
+      turn_ordinal: 7,
       seat: 1,
     })
-    expect(d).toBe(4068998909)
-    expect(slot_crit_roll(d, 0)).toBe(4166)
+    expect(d).toBe(3025877315)
+    expect(slot_crit_roll(d, 0)).toBe(9099)
   })
 
   test('crit_at matches spell_formula t_crit_at_bp_threshold verbatim', () => {

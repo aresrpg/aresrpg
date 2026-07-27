@@ -179,12 +179,13 @@ export function DeckCluster() {
   // player queues actions. null off-turn / pre-read → no socket glows.
   const world_seed = use_dungeon((s) => s.dungeon?.world_seed ?? null)
   const spawn_id = use_dungeon((s) => s.dungeon?.spawn_id ?? null)
-  const chain_deadline_ms = use_dungeon((s) => s.dungeon?.turn_deadline_ms ?? null)
+  const chain_turn_entropy = use_dungeon((s) => s.dungeon?.turn_entropy ?? null)
+  const chain_turn_ordinal = use_dungeon((s) => s.dungeon?.turn_ordinal ?? null)
   const draft_len = use_dungeon_turn((s) => s.cast_path.length)
   const crit = next_slot_crit(
     my_turn
       ? crit_clock_of({
-          fight: { world_seed, spawn_id, turn_deadline_ms: chain_deadline_ms },
+          fight: { world_seed, spawn_id, turn_entropy: chain_turn_entropy, turn_ordinal: chain_turn_ordinal },
           seat_row: my_row,
           draft_len,
         })

@@ -5,9 +5,12 @@
 /// dodge/lock stat-family enum — CORPUS.md:125 — so the sim rule is the authority, same precedent as the esquive
 /// contest in spell_formula.move:110-112). Every expected number below was PRE-COMPUTED with the sim's own prng
 /// mirror (packages/sim/src/prng.js — scratch generator, cross-oracle law): scaffold turn seed
-/// mix(mix(mix(12345, 1), 61000), 0) = 3840164576; raw draws per (slot, mp): (0,3)→702229519 ·
-/// (0,2)→2862966173 · (0,1)→1887051738. Sim golden twin: packages/sim/test/tackle_golden.test.js over
-/// test/vectors/tackle_golden.json (ids match the engine_* cases).
+/// mix(mix(mix(mix(12345, 1), 42), 1), 0) = 3114863173 — the scaffold's turn entropy is 42 (the test crank's
+/// fixed draw) at ordinal 1. Raw draws per (slot, mp): (0,3)→582013873 · (0,2)→1529003476 · (0,1)→3234605891.
+/// Verdicts follow: at the even contest (num 2 / den 4) mp 3 and mp 2 ESCAPE and mp 1 is TACKLED; at the
+/// two-locker product (num 4 / den 16) mp 2 is TACKLED. Every case below drives the MP its stated outcome
+/// lives at. Sim golden twin: packages/sim/test/tackle_golden.test.js over test/vectors/tackle_golden.json
+/// (ids match the engine_* cases).
 #[test_only]
 module aresrpg_fight::tackle_tests;
 
@@ -67,24 +70,25 @@ fun move_p0(fight: &mut Fight, ver: &Version, cell: u64) {
 // ╔════════════════ [ The contest fires on leaving melee ] ══════════════════ ]
 
 #[test]
-/// engine_mp3_locker0: runner agi 0 (dodge 2) vs one adjacent agi-0 mob (den 4, num 2 — the even contest);
-/// draw 702229519 % 4 = 3 ≥ 2 → TACKLED: the move is DENIED (cell holds) and the runner loses the failed
-/// fraction of both pools — ceil(6·2/4)=3 AP, ceil(3·2/4)=2 MP → AP 6→3, MP 3→1. One Tackled event, no Moved.
+/// engine_mp1_locker0: runner agi 0 (dodge 2) vs one adjacent agi-0 mob (den 4, num 2 — the even contest);
+/// draw 3234605891 % 4 = 3 ≥ 2 → TACKLED: the move is DENIED (cell holds) and the runner loses the failed
+/// fraction of both pools — ceil(6·2/4)=3 AP, ceil(1·2/4)=1 MP → AP 6→3, MP 1→0. One Tackled event, no Moved.
 fun move_out_of_melee_contested_and_denied() {
   let mut sc = ts::begin(OWNER);
   let (mut fight, ver) = active_adjacent_fight(&mut sc);
-  move_p0(&mut fight, &ver, 167);
+  participant::spend_mp(fight::participants_mut(&mut fight).borrow_mut(0), 2); // the MP this contest is priced at
+  move_p0(&mut fight, &ver, 166);
   let (cell, ap, mp) = p_state(&fight);
   assert!(cell == 165, 0); // move denied — the runner never left the tackle zone
   assert!(ap == 3, 1);
-  assert!(mp == 1, 2);
+  assert!(mp == 0, 2);
   assert!(event::events_by_type<fight_events::Moved>().is_empty(), 3); // a denied move never emits Moved
   let tackled = event::events_by_type<fight_events::Tackled>();
   assert!(tackled.length() == 1, 4);
   let (_fid, runner_is_mob, runner_idx, ap_lost, mp_lost, num, den) =
     fight_events::tackled_for_testing(tackled.borrow(0));
   assert!(!runner_is_mob && runner_idx == 0, 5);
-  assert!(ap_lost == 3 && mp_lost == 2, 6);
+  assert!(ap_lost == 3 && mp_lost == 1, 6);
   assert!(num == 2 && den == 4, 7);
   ts::return_shared(fight);
   ts::return_shared(ver);
@@ -155,9 +159,10 @@ fun invisible_tackler_still_locks() {
   );
   spell_board::add_status(fight::fx_mut(&mut fight), MOB_FID, 0, inv);
   assert!(statuses::is_invisible(&fight, true, 0), 0);
-  move_p0(&mut fight, &ver, 167);
+  participant::spend_mp(fight::participants_mut(&mut fight).borrow_mut(0), 2);
+  move_p0(&mut fight, &ver, 166);
   let (cell, ap, mp) = p_state(&fight);
-  assert!(cell == 165 && ap == 3 && mp == 1, 1); // engine_mp3_locker0 numbers — invisibility changed nothing
+  assert!(cell == 165 && ap == 3 && mp == 0, 1); // engine_mp1_locker0 numbers — invisibility changed nothing
   assert!(event::events_by_type<fight_events::Tackled>().length() == 1, 2);
   ts::return_shared(fight);
   ts::return_shared(ver);
@@ -167,21 +172,36 @@ fun invisible_tackler_still_locks() {
 // ╔════════════════ [ Re-attempts reprice — the MP-bound roll ] ══════════════ ]
 
 #[test]
-/// A failed escape LOSES pools and thereby RE-PRICES the next attempt (the tackle state folds the runner's live
-/// MP, which strictly decreases on every failure — no free identical re-roll). Cascade at agi 0 vs agi 0:
-///   attempt 1 (slot 0, mp 3): draw 702229519 % 4 = 3 ≥ 2 → tackled, AP 6→3, MP 3→1
-///   attempt 2 (slot 0, mp 1): draw 1887051738 % 4 = 2 ≥ 2 → tackled, AP 3→1 (ceil 1.5), MP 1→0
-/// Two Tackled events, still standing on 165, MP exhausted by the zone itself.
+/// THE ROLL IS MP-BOUND, which is what makes a failed escape RE-PRICE the next attempt: the tackle state folds
+/// the runner's live MP, and MP strictly decreases on every failure, so a retry can never be the same roll
+/// again. Identical runner, identical locker, identical slot — only the MP differs:
+///   mp 3 (slot 0): draw 582013873 % 4 = 1 < 2 → ESCAPES, and the move completes
+///   mp 1 (slot 0): draw 3234605891 % 4 = 3 ≥ 2 → TACKLED, AP 6→3, MP 1→0
+/// Two runs of the same contest, two verdicts — this half wins, the next one loses. (The old seed happened to
+/// make both attempts fail in one cascade; the property under test is the MP binding, never that pair.)
+fun escape_at_full_mp_wins_this_contest() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = active_adjacent_fight(&mut sc);
+  move_p0(&mut fight, &ver, 167); // full MP: this contest is won and the move completes
+  let (cell, ap, mp) = p_state(&fight);
+  assert!(cell == 167 && ap == 6 && mp == 1, 0);
+  assert!(event::events_by_type<fight_events::Tackled>().is_empty(), 1);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// …and the SAME contest priced at 1 MP is LOST. Same runner, same locker, same slot — only the pool differs,
+/// which is exactly the repricing: a failed escape lowers MP, and the next roll moves with it.
 fun failed_escape_reprices_the_next_attempt() {
   let mut sc = ts::begin(OWNER);
   let (mut fight, ver) = active_adjacent_fight(&mut sc);
-  move_p0(&mut fight, &ver, 167);
-  let (cell1, ap1, mp1) = p_state(&fight);
-  assert!(cell1 == 165 && ap1 == 3 && mp1 == 1, 0);
-  move_p0(&mut fight, &ver, 166); // 1-step retry within the reduced MP
-  let (cell2, ap2, mp2) = p_state(&fight);
-  assert!(cell2 == 165 && ap2 == 1 && mp2 == 0, 1);
-  assert!(event::events_by_type<fight_events::Tackled>().length() == 2, 2);
+  participant::spend_mp(fight::participants_mut(&mut fight).borrow_mut(0), 2);
+  move_p0(&mut fight, &ver, 166);
+  let (cell, ap, mp) = p_state(&fight);
+  assert!(cell == 165 && ap == 3 && mp == 0, 0);
+  assert!(event::events_by_type<fight_events::Tackled>().length() == 1, 1);
   ts::return_shared(fight);
   ts::return_shared(ver);
   sc.end();
@@ -213,8 +233,8 @@ fun unreachable_destination_aborts_before_the_contest() {
 
 #[test]
 /// engine_two_lockers: two agi-0 mobs FLANK the runner (164 + 166 around 165) — per-locker fractions multiply
-/// (sim fight_actions.js:67-74): num 2·2=4, den 4·4=16 (25% escape); draw 702229519 % 16 = 15 ≥ 4 → tackled,
-/// AP −ceil(6·12/16)=5 → 1, MP −ceil(3·12/16)=3 → 0.
+/// (sim fight_actions.js:67-74): num 2·2=4, den 4·4=16 (25% escape). Driven at 2 MP, where this seed's draw
+/// 1529003476 % 16 = 4 ≥ 4 → tackled, AP −ceil(6·12/16)=5 → 1, MP −ceil(2·12/16)=2 → 0.
 fun two_lockers_multiply_the_contest() {
   let mut sc = ts::begin(OWNER);
   stand_up(&mut sc);
@@ -240,6 +260,7 @@ fun two_lockers_multiply_the_contest() {
   participant::set_cell(fight::participants_mut(&mut fight).borrow_mut(0), 165);
   mob::set_cell(fight::mobs_mut(&mut fight).borrow_mut(0), 164);
   mob::set_cell(fight::mobs_mut(&mut fight).borrow_mut(1), 166);
+  participant::spend_mp(fight::participants_mut(&mut fight).borrow_mut(0), 1); // the MP this product contest is priced at
   let dest = first_open_move_neighbor(&fight, 0); // board-agnostic legal 1-step exit (N or S of the flank)
   move_p0(&mut fight, &ver, dest);
   let (cell, ap, mp) = p_state(&fight);
@@ -247,7 +268,7 @@ fun two_lockers_multiply_the_contest() {
   let tackled = event::events_by_type<fight_events::Tackled>();
   assert!(tackled.length() == 1, 1);
   let (_fid, _rim, _ri, ap_lost, mp_lost, num, den) = fight_events::tackled_for_testing(tackled.borrow(0));
-  assert!(ap_lost == 5 && mp_lost == 3 && num == 4 && den == 16, 2);
+  assert!(ap_lost == 5 && mp_lost == 2 && num == 4 && den == 16, 2);
   ts::return_shared(fight);
   ts::return_shared(ver);
   sc.end();

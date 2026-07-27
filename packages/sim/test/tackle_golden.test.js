@@ -52,7 +52,8 @@ describe('tackle golden — chain roll derivation (turn_seed.js mirror)', () => 
       turn_seed({
         world_seed: e.world_seed,
         spawn_id: e.spawn_id,
-        turn_deadline_ms: e.turn_deadline_ms,
+        turn_entropy: e.turn_entropy,
+        turn_ordinal: e.turn_ordinal,
         seat: e.seat,
       }),
     ).toBe(e.turn_seed)

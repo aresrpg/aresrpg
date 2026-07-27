@@ -59,6 +59,8 @@ const fight_object = (mob0_hp) => ({
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
 })
 
 const boot = () => {

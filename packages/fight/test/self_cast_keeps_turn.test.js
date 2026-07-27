@@ -44,7 +44,9 @@ const FIGHT_OBJECT = {
     { is_mob: true, idx: 0 },
   ],
   turn_ptr: 0,
-  turn_deadline_ms: 90_000, // a long, healthy turn window — nowhere near the 5s auto-commit buffer
+  turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1, // a long, healthy turn window — nowhere near the 5s auto-commit buffer
 }
 const boot = () => {
   const store = create_fight_store()

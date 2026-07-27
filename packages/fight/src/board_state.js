@@ -231,6 +231,8 @@ export function board_state_from_fight({
       turn_ptr: 0,
       turn_queue: [],
       turn_deadline_ms: 0,
+      turn_entropy: 0,
+      turn_ordinal: 0,
       placement_deadline_ms: 0,
       world_seed: null,
       spawn_id: null,
@@ -360,6 +362,10 @@ export function board_state_from_fight({
     turn_queue: fight.queue?.length ? fight.queue : interleave_order(escrow.length, mobs.length),
     turn_ms: Number(fight.turn_ms ?? 0),
     turn_deadline_ms: Number(fight.turn_deadline_ms ?? 0),
+    // The turn-seed inputs (fight.move::turn_seed). 0/0 = no turn has opened yet — `crit_clock_of` refuses to
+    // build a clock from that, exactly as it refused an unstamped deadline before.
+    turn_entropy: Number(fight.turn_entropy ?? 0),
+    turn_ordinal: Number(fight.turn_ordinal ?? 0),
     placement_deadline_ms: Number(fight.placement_deadline_ms ?? 0),
     world_seed: fight.world_seed ?? null,
     spawn_id: fight.spawn_id ?? null,

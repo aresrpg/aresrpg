@@ -16,11 +16,13 @@
 //
 // Vectors below were derived with the golden-pinned mirror itself (turn_seed/tackle_seed/rng_next) at
 // deadline 90 000, seat 0, agility 40 vs 40 (num/den = 6/12), mp 3, ap 6:
-//   ws=6  sid=7 slot=0 → roll 0 → ESCAPE
-//   ws=1  sid=7 slot=0 → roll 7 → FAIL (mp_lost 2) → mp 1 → roll ESCAPES → final_mp 1
-//   ws=4  sid=7 slot=0 → roll 9 → FAIL → mp 1 → roll 8 → FAIL (mp_lost 1) → mp 0 (exhausted)
-//   ws=1  sid=7 slot=1 → roll 2 → ESCAPE   (the SAME fight escapes once a cast is drafted — slot input)
-//   ws=6  sid=7 slot=1 → roll 6 → FAIL     (and the escaping fight starts biting — both directions)
+// (re-derived when the turn seed moved onto the turn's own entropy — the scenarios are unchanged, the world
+// seeds that produce them are not)
+//   ws=42 sid=7 slot=0 → ESCAPE
+//   ws=44 sid=7 slot=0 → FAIL once → mp 1 → ESCAPES → final_mp 1
+//   ws=41 sid=7 slot=0 → FAIL → FAIL → mp 0 (exhausted)
+//   ws=44 sid=7 slot=1 → ESCAPE   (the SAME fight escapes once a cast is drafted — slot input)
+//   ws=42 sid=7 slot=1 → FAIL     (and the escaping fight starts biting — both directions)
 
 import { describe, expect, test } from 'bun:test'
 
@@ -81,6 +83,8 @@ const fight_object = ({ world_seed = null, spawn_id = null, my_agility = 40, mob
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
 })
 
 const boot = (overrides = {}) => {
@@ -94,15 +98,15 @@ const boot = (overrides = {}) => {
 const full_reach = () => new Set(move_wash(boot({ my_agility: 100, mob_agility: 10 }).getState(), {}).reach)
 
 describe('move_wash — deterministic tackle preview (the exact chain contest, D3a)', () => {
-  test('preview ESCAPES (ws=6): NOT tackled, no red band, the full MP reach paints', () => {
-    const wash = move_wash(boot({ world_seed: 6, spawn_id: 7 }).getState(), {})
+  test('preview ESCAPES (ws=42): NOT tackled, no red band, the full MP reach paints', () => {
+    const wash = move_wash(boot({ world_seed: 42, spawn_id: 7 }).getState(), {})
     expect(wash.tackled).toBe(false)
     expect(wash.tackle_lost).toEqual([])
     expect(new Set(wash.reach)).toEqual(full_reach())
   })
 
-  test('preview FAILS once then escapes (ws=1): tackled, green = the exact post-bite 1-MP reach, red = the remainder', () => {
-    const wash = move_wash(boot({ world_seed: 1, spawn_id: 7 }).getState(), {})
+  test('preview FAILS once then escapes (ws=44): tackled, green = the exact post-bite 1-MP reach, red = the remainder', () => {
+    const wash = move_wash(boot({ world_seed: 44, spawn_id: 7 }).getState(), {})
     expect(wash.tackled).toBe(true)
     expect([...wash.reach].sort((a, b) => a - b)).toEqual(ONE_MP_REACH)
     const full = full_reach()
@@ -112,15 +116,15 @@ describe('move_wash — deterministic tackle preview (the exact chain contest, D
     for (const c of red) expect(full.has(c)).toBe(true)
   })
 
-  test('preview exhausts MP (ws=4): tackled, NO green left, the whole reach is the red band', () => {
-    const wash = move_wash(boot({ world_seed: 4, spawn_id: 7 }).getState(), {})
+  test('preview exhausts MP (ws=41): tackled, NO green left, the whole reach is the red band', () => {
+    const wash = move_wash(boot({ world_seed: 41, spawn_id: 7 }).getState(), {})
     expect(wash.tackled).toBe(true)
     expect(wash.reach).toEqual([])
     expect(new Set(wash.tackle_lost)).toEqual(full_reach())
   })
 
-  test('slot input: a drafted cast intent flips the SAME fight from fail to escape (ws=1, slot 1)', () => {
-    const store = boot({ world_seed: 1, spawn_id: 7 })
+  test('slot input: a drafted cast intent flips the SAME fight from fail to escape (ws=44, slot 1)', () => {
+    const store = boot({ world_seed: 44, spawn_id: 7 })
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'cast', target_cell: ADJ_CELL, damaging: true, ap_cost: 3 } }, 1100)
@@ -129,8 +133,8 @@ describe('move_wash — deterministic tackle preview (the exact chain contest, D
     expect(wash.tackle_lost).toEqual([])
   })
 
-  test('slot input, other direction: the escaping fight starts biting once a cast is drafted (ws=6, slot 1)', () => {
-    const store = boot({ world_seed: 6, spawn_id: 7 })
+  test('slot input, other direction: the escaping fight starts biting once a cast is drafted (ws=42, slot 1)', () => {
+    const store = boot({ world_seed: 42, spawn_id: 7 })
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'cast', target_cell: ADJ_CELL, damaging: true, ap_cost: 3 } }, 1100)

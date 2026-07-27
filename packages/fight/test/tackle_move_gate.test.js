@@ -61,6 +61,8 @@ const fight_object = ({ world_seed = null, spawn_id = null, adj = ADJ_CELL } = {
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
 })
 
 const boot = (overrides = {}) => {
@@ -71,17 +73,17 @@ const boot = (overrides = {}) => {
 }
 
 describe('next_move_tackle — the deterministic bite the optimistic move must obey (D3b)', () => {
-  test('a FAILING next roll (ws=1) returns the EXACT chain forfeit — ap_lost 3, mp_lost 2', () => {
-    expect(next_move_tackle(boot({ world_seed: 1, spawn_id: 7 }).getState())).toEqual({ ap_lost: 3, mp_lost: 2 })
+  test('a FAILING next roll (ws=44) returns the EXACT chain forfeit — ap_lost 3, mp_lost 2', () => {
+    expect(next_move_tackle(boot({ world_seed: 44, spawn_id: 7 }).getState())).toEqual({ ap_lost: 3, mp_lost: 2 })
   })
 
-  test('an ESCAPING next roll (ws=6) returns null — the move walks free', () => {
-    expect(next_move_tackle(boot({ world_seed: 6, spawn_id: 7 }).getState())).toBeNull()
+  test('an ESCAPING next roll (ws=42) returns null — the move walks free', () => {
+    expect(next_move_tackle(boot({ world_seed: 42, spawn_id: 7 }).getState())).toBeNull()
   })
 
   test('no living enemy adjacent → null (a move out of everyone’s zone never contests)', () => {
     // the near mob relocated far → me at 45 locks nobody, so even the biting ws=1 seed yields no contest.
-    expect(next_move_tackle(boot({ world_seed: 1, spawn_id: 7, adj: FAR_CELL - 1 }).getState())).toBeNull()
+    expect(next_move_tackle(boot({ world_seed: 44, spawn_id: 7, adj: FAR_CELL - 1 }).getState())).toBeNull()
   })
 
   test('a seed-less view (no world_seed/spawn_id) returns null — the roll can’t be derived, the receipt rules', () => {
@@ -94,7 +96,7 @@ describe('the optimistic tackle prediction — forfeit + hit-anim beat, NEVER a 
     character != null ? String(character) : is_mob ? `mob-${Number(idx)}` : CHAR
 
   test('folding the predicted bite drops BOTH pools by the exact forfeit and rides a tackled beat — no move beat', () => {
-    const store = boot({ world_seed: 1, spawn_id: 7 })
+    const store = boot({ world_seed: 44, spawn_id: 7 })
     const hud = () => engine_view(store.getState()).fighters.get(CHAR)
     expect(hud().mp, 'turn-start pools paint from the snapshot').toBe(3)
     expect(hud().ap).toBe(6)

@@ -629,9 +629,43 @@ public(package) fun set_turn_ptr_and_deadline(fight: &mut Fight, ptr: u64, deadl
   fight.turn_deadline_ms = deadline;
 }
 
+/// The per-turn entropy the seat's rolls hang off — the prng state left over once the turn's `&Random` draw has
+/// been threaded through the wave, plus the turn's own ordinal. A dynamic field (S-28: the struct layout is
+/// frozen) written at exactly one point, `turns::resolve_from`'s player landing.
+public struct TurnEntropyKey has copy, drop, store {}
+public struct TurnEntropy has copy, drop, store { state: u64, ordinal: u64 }
+
+/// Record the turn's entropy. One writer, one home; the ordinal counts turns for this fight so two turns can
+/// never share a seed even if the 32-bit carrier repeats.
+public(package) fun note_turn_entropy(fight: &mut Fight, state: u64) {
+  let k = TurnEntropyKey {};
+  if (df::exists(&fight.id, k)) {
+    let row = df::borrow_mut<TurnEntropyKey, TurnEntropy>(&mut fight.id, k);
+    row.state = state;
+    row.ordinal = row.ordinal + 1;
+  } else {
+    df::add(&mut fight.id, k, TurnEntropy { state, ordinal: 1 });
+  };
+}
+
+/// The turn's entropy row, or the pre-first-turn zero.
+public fun turn_entropy(fight: &Fight): (u64, u64) {
+  let k = TurnEntropyKey {};
+  if (df::exists(&fight.id, k)) {
+    let row = df::borrow<TurnEntropyKey, TurnEntropy>(&fight.id, k);
+    (row.state, row.ordinal)
+  } else (0, 0)
+}
+
+/// THE TURN SEED. Every per-turn roll a seat makes — crit, damage fraction, dodge contest, tackle escape,
+/// critical failure — derives from this one value, so what it is derived FROM decides the quality of all of them.
+/// It hangs off the turn's own beacon-derived entropy and the fight's turn ordinal; both are published on
+/// `TurnStarted`, so the seed stays readable before the player acts and client prediction is unchanged.
 public(package) fun turn_seed(fight: &Fight, seat: u64): u64 {
+  let (state, ordinal) = turn_entropy(fight);
   let disc = prng::mix(fight.world_seed, fight.spawn_id);
-  let turned = prng::mix(disc, fight.turn_deadline_ms);
+  let entropied = prng::mix(disc, state);
+  let turned = prng::mix(entropied, ordinal);
   prng::mix(turned, seat)
 }
 
@@ -763,6 +797,7 @@ public(package) fun sweep_own_fields(fight: &mut Fight) {
     drop_field<WeaponCategoryKey, String>(fight, WeaponCategoryKey { seat: s });
     s = s + 1;
   };
+  drop_field<TurnEntropyKey, TurnEntropy>(fight, TurnEntropyKey {});
 }
 
 #[test_only]
