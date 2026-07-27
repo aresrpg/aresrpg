@@ -13,7 +13,7 @@ import {
   displacement_duration,
   encoded_cell,
   FIGHT_RENDER_TIMINGS,
-  move_duration,
+  move_cell_ms,
   move_mp_spent,
   path_between,
   reconstructed_path,
@@ -128,9 +128,11 @@ export function produce_receipt_render_turns(
   const hit_damage = new Map()
   const remaining_health = new Map()
   const dead_fighters = new Set()
+  // Hits already narrated by the walk that sprang their trap (the Moved/MobMoved branch claims them, in either
+  // emitter order), so the main loop never re-renders them.
+  const claimed_hits = new Set()
   let current_turn = null
   let pending = []
-  let active_move = null
   const initial_positions = fighter_positions ?? (typeof fighter_cells === 'function' ? null : fighter_cells)
   const settled_cells = new Map(
     position_entries(initial_positions)
@@ -158,6 +160,40 @@ export function produce_receipt_render_turns(
   }
 
   const damage_of_hit = (event) => hit_damage.get(event.event_index) ?? Math.max(0, Number(event.amount) || 0)
+
+  // ONE home for "which cells did this walk ENTER". A receipt's Moved/MobMoved carries only the landing cell, so
+  // the route is reconstructed (obstacle- and body-aware, through the sim's own find_path_4dir) unless the caller
+  // resolves it. Both the trap probe and the rendered beats read it, so they can never disagree.
+  // INGESTION ASSERT (P0 move_path crash guard): move_path is a RESOLVER function or null. A non-null non-function
+  // — a producer passing a raw path ARRAY — is the S2 "instanceof Array" crash: `move_path?.(…)` throws "x is not a
+  // function" and takes the whole fight render down. Mirror the fighter_cells typeof guard: call a real resolver,
+  // treat null as "no resolver", and make a MIS-TYPED producer loud in dev/test (caught at the boundary, never
+  // re-shipped) while degrading to path_between in prod (users never see a thrown beat — the client-independence
+  // law: render the derived path, reconcile later).
+  const path_for = (event, source_id, from, to) => {
+    let supplied_path = null
+    if (typeof move_path === 'function') supplied_path = move_path(event, source_id, from, to)
+    else if (move_path != null && !import.meta.env?.PROD)
+      throw new TypeError(
+        `fight render: move_path must be a resolver function or null, got ${Array.isArray(move_path) ? 'Array' : typeof move_path}`
+      )
+    const occupied_cells = [...settled_cells.entries()].filter(([id]) => id !== source_id).map(([, cell]) => cell)
+    const path =
+      supplied_path ??
+      reconstructed_path(from, to, {
+        obstacles,
+        holes,
+        shape_mask,
+        board_width,
+        board_height,
+        width: grid_width,
+        occupied_cells,
+      })
+    return path.length > 0 ? path : [to]
+  }
+
+  const crosses_trap = (event, source_id, from, to) =>
+    path_for(event, source_id, from, to).some((cell) => matches_trap(cell, encoded_cell(cell, grid_width), event))
 
   const ensure_turn = (source_id, force_new = false, source = null) => {
     if (!force_new && current_turn?.source_id === source_id) return current_turn
@@ -284,33 +320,15 @@ export function produce_receipt_render_turns(
     pending = []
   }
 
-  for (const event of decoded_events) {
+  for (let cursor = 0; cursor < decoded_events.length; cursor += 1) {
+    const event = decoded_events[cursor]
+    // A trap Hit already narrated by the walk that sprang it (see the Moved/MobMoved branch) — its beats are
+    // written at the step it fired on, so re-rendering it here would double the floater.
+    if (claimed_hits.has(event.event_index)) continue
     if (PENDING_WINDOW_KINDS.has(event.kind)) {
       // These BUFFER into `pending` (below) rather than trip the else-branch's premature `flush_pending()` — the
       // #290 fix. write_receipt_effects renders only Displaced/Hit/Drain/StanceChanged; the action envelope +
       // Revealed/CriticalFailure carry no beat and are inert once flushed. See PENDING_WINDOW_KINDS for the why.
-      if (event.kind === 'Hit' && active_move?.trap) {
-        const target_id = fighter_id_from(event, 'victim', resolve_fighter_id)
-        if (target_id === active_move.source_id) {
-          if (!active_move.triggered) {
-            append_to(active_move.turn, 'trap_trigger', TRAP_BEAT_MS, {
-              entity_id: target_id,
-              target_id,
-              cell: active_move.cell,
-              damage: damage_of_hit(event),
-              trap_owner_id: active_move.trap_owner_id,
-              source_event: event,
-            })
-            active_move.triggered = true
-          }
-          write_receipt_effects(
-            active_move.turn,
-            [event],
-            [{ event_index: event.event_index, trap_owner_id: active_move.trap_owner_id }]
-          )
-          continue
-        }
-      }
       pending.push(event)
       continue
     }
@@ -338,72 +356,100 @@ export function produce_receipt_render_turns(
       })
       write_receipt_effects(turn, pending)
       pending = []
-      active_move = null
       continue
     }
 
     if (event.kind === 'Moved' || event.kind === 'MobMoved') {
-      flush_pending()
       const role = event.kind === 'Moved' ? 'mover' : 'mob'
       const source_id = fighter_id_from(event, role, resolve_fighter_id)
+      const to = decoded_cell(event.to_cell, grid_width)
+      const cells_lookup = () =>
+        typeof fighter_cells === 'function'
+          ? fighter_cells(source_id, event)
+          : (fighter_cells?.get?.(source_id) ?? fighter_cells?.[source_id] ?? null)
+      // ── THE DESTINATION-ONLY ROW (#954/#1050) ──────────────────────────────────────────────────────────────
+      // A receipt collapses a whole walk into its LANDED cell, so a trap crossed MID-PATH has no row of its own.
+      // The chain fires it INLINE inside `movement::walk` and emits this row only AFTER the walk returns
+      // (actions.move:69 / turns.move:305), so its `Hit` arrives BEFORE this row and would flush into a bare
+      // `fight` turn at at:0 — read on screen as "the mob took the damage at turn start, before it moved".
+      // Claim those Hits BEFORE the flush can orphan them; the walk below splits at the trap cell.
+      const mover_hit = (candidate) =>
+        candidate.kind === 'Hit' && fighter_id_from(candidate, 'victim', resolve_fighter_id) === source_id
+      const pushed_to = [...pending]
+        .reverse()
+        .find((c) => c.kind === 'Displaced' && fighter_id_from(c, 'target', resolve_fighter_id) === source_id)
+      const probe_from = pushed_to ? decoded_cell(pushed_to.to_cell, grid_width) : (settled_cells.get(source_id) ?? cells_lookup())
+      const held = crosses_trap(event, source_id, probe_from, to) ? pending.filter(mover_hit) : []
+      pending = pending.filter((candidate) => !held.includes(candidate))
+      flush_pending()
       const turn = ensure_turn(
         source_id,
         false,
         event.kind === 'Moved' ? { character: event.character } : { is_mob: true, idx: Number(event.idx) }
       )
-      const to = decoded_cell(event.to_cell, grid_width)
-      const known_from =
-        settled_cells.get(source_id) ??
-        (typeof fighter_cells === 'function'
-          ? fighter_cells(source_id, event)
-          : (fighter_cells?.get?.(source_id) ?? fighter_cells?.[source_id] ?? null))
-      const occupied_cells = [...settled_cells.entries()].filter(([id]) => id !== source_id).map(([, cell]) => cell)
-      // INGESTION ASSERT (P0 move_path crash guard): move_path is a RESOLVER function or null. A non-null
-      // non-function — a producer passing a raw path ARRAY — is the S2 "instanceof Array" crash: `move_path?.(…)`
-      // throws "x is not a function" and takes the whole fight render down. Mirror the fighter_cells typeof guard
-      // above (:522): call a real resolver, treat null as "no resolver", and make a MIS-TYPED producer loud in
-      // dev/test (caught at the boundary, never re-shipped) while degrading to path_between in prod (users never
-      // see a thrown beat — the client-independence law: render the derived path, reconcile later).
-      let supplied_path = null
-      if (typeof move_path === 'function') supplied_path = move_path(event, source_id, known_from, to)
-      else if (move_path != null && !import.meta.env?.PROD)
-        throw new TypeError(
-          `fight render: move_path must be a resolver function or null, got ${Array.isArray(move_path) ? 'Array' : typeof move_path}`
-        )
-      const path =
-        supplied_path ??
-        reconstructed_path(known_from, to, {
-          obstacles,
-          holes,
-          shape_mask,
-          board_width,
-          board_height,
-          width: grid_width,
-          occupied_cells,
-        })
+      const known_from = settled_cells.get(source_id) ?? cells_lookup()
+      const rendered_path = path_for(event, source_id, known_from, to)
       if (!dead_fighters.has(source_id)) settled_cells.set(source_id, to)
-      const rendered_path = path.length > 0 ? path : [to]
-      append_to(turn, 'move', move_duration(rendered_path), {
-        fight_id: event.fight,
-        entity_id: source_id,
-        path: rendered_path,
-        mp_spent: move_mp_spent(rendered_path), // green MP-spent floater (§ move beat carries no chain cost)
-        source_event: event,
-      })
-      append_to(turn, 'arrival', 0, {
-        entity_id: source_id,
-        cell: to,
-        source_event: event,
-      })
-      const trap = matches_trap(to, event.to_cell, event)
-      active_move = {
-        source_id,
-        turn,
-        cell: to,
-        trap,
-        trap_owner_id: trap ? (resolve_trap_owner?.(to, event.to_cell, event) ?? null) : null,
-        triggered: false,
+      // Every trap cell the walk ENTERS, in path order — the chain fires each one and resumes (movement.move:43).
+      // The endpoint is simply the last step, so the case the renderer used to special-case falls out of this.
+      const trap_steps = rendered_path.flatMap((cell, index) =>
+        matches_trap(cell, encoded_cell(cell, grid_width), event) ? [index] : []
+      )
+      // The SIM emitter returns the move event first (reduce.js `handle_move`), so the same Hits sit AFTER this
+      // row instead of before it. Claim them here too: both emitter orders must render identically, which is
+      // exactly what lets sim_chain_events align to the chain's order without the simulator inheriting the
+      // symptom above (an earlier lane reverted that alignment for want of this).
+      const trap_hits = [...held]
+      if (trap_steps.length > 0)
+        for (let ahead = cursor + 1; ahead < decoded_events.length; ahead += 1) {
+          const candidate = decoded_events[ahead]
+          // A fresh action's envelope closes the walk's window: its Hits belong to the cast, not to the trap.
+          if (!PENDING_WINDOW_KINDS.has(candidate.kind) || candidate.kind === 'ActionStarted') break
+          if (!mover_hit(candidate)) continue
+          trap_hits.push(candidate)
+          claimed_hits.add(candidate.event_index)
+        }
+      // The gait belongs to the WHOLE walk, never to a leg — splitting a run-length path must not silently drop
+      // the mover to a walking cadence on both halves.
+      const cell_ms = move_cell_ms(rendered_path.length)
+      const write_leg = (leg, landing) => {
+        append_to(turn, 'move', Math.max(1, leg.length) * cell_ms, {
+          fight_id: event.fight,
+          entity_id: source_id,
+          path: leg,
+          mp_spent: move_mp_spent(leg), // green MP-spent floater (§ move beat carries no chain cost)
+          source_event: event,
+        })
+        append_to(turn, 'arrival', 0, { entity_id: source_id, cell: landing, source_event: event })
       }
+      let walked = 0
+      for (const [ordinal, step] of trap_steps.entries()) {
+        const leg = rendered_path.slice(walked, step + 1)
+        const cell = rendered_path[step]
+        const encoded = encoded_cell(cell, grid_width)
+        // The LAST trap absorbs any surplus Hits — a payload may fold several rows (damage + a collision).
+        const hits = ordinal === trap_steps.length - 1 ? trap_hits.slice(ordinal) : trap_hits.slice(ordinal, ordinal + 1)
+        const trap_owner_id = resolve_trap_owner?.(cell, encoded, event) ?? null
+        write_leg(leg, cell)
+        append_to(turn, 'trap_trigger', TRAP_BEAT_MS, {
+          entity_id: source_id,
+          target_id: source_id,
+          cell,
+          damage: hits.reduce((sum, hit) => sum + damage_of_hit(hit), 0),
+          trap_owner_id,
+          source_event: hits[0] ?? event,
+        })
+        write_receipt_effects(
+          turn,
+          hits,
+          hits.map((hit) => ({ event_index: hit.event_index, trap_owner_id }))
+        )
+        walked = step + 1
+        // The chain stops the route when the trigger removes the mover from it (death) — so does the narration.
+        if (dead_fighters.has(source_id)) break
+      }
+      const tail = rendered_path.slice(walked)
+      if (tail.length > 0) write_leg(tail, to) // no tail ⇒ the walk ENDED on a trap; its arrival is already written
       continue
     }
 
@@ -415,7 +461,6 @@ export function produce_receipt_render_turns(
       // the MP-forfeit presentation. u64 fields ride as strings off Sui JSON — coerce here, the renderer reads
       // numbers. num/den stay on source_event for anyone pricing the contest; the beat carries the losses.
       flush_pending()
-      active_move = null
       const runner_is_mob = !!event.runner_is_mob
       const idx = Number(event.runner_idx)
       const source_id = resolve_fighter_id({ is_mob: runner_is_mob, idx, role: 'runner', event })
@@ -431,7 +476,6 @@ export function produce_receipt_render_turns(
     }
 
     flush_pending()
-    active_move = null
     if (event.kind === 'TurnStarted' || event.kind === 'TurnEnded') {
       const source_id = fighter_id_from(event, 'turn', resolve_fighter_id)
       const turn = ensure_turn(source_id, event.kind === 'TurnStarted', {

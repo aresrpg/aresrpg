@@ -105,7 +105,9 @@ describe('mid-path trap crossing — the destination-only row no longer eats the
     const receipt = produce_receipt_render_turns([hit, moved], {
       fight_id: FIGHT,
       trap_cells: new Set([enc(8, 0)]),
-      resolve_fighter_id: ({ character, is_mob, idx }) => character ?? `${is_mob ? 'm' : 'p'}${idx}`,
+      // Production shape (`inputs.js seat_resolver`): a seat index and its character id name the SAME fighter —
+      // the walker and the Hit's victim must resolve identically or nothing can be attributed.
+      resolve_fighter_id: ({ character, is_mob, idx }) => character ?? (is_mob ? `m${idx}` : '0xc1'),
       fighter_cells: new Map([['0xc1', { x: 10, y: 0 }]]),
     })
     expect(receipt.turns.map((turn) => turn.source_id)).toEqual(['0xc1'])
