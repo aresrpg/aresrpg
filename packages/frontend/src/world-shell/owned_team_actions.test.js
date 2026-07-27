@@ -27,12 +27,13 @@ describe('owned team production sequencing', () => {
     const receipts = await actions.join_owned_world_fight({
       fight_id: 'fight',
       party_id: 'party',
-      members: [{ character_id: 'alt-a', raised_spell_ids: ['spell-a'] }, { character_id: 'alt-a' }, 'alt-b'],
+      members: [{ character_id: 'alt-a' }, { character_id: 'alt-a' }, 'alt-b'],
     })
 
     expect(calls).toEqual([
-      { fight_id: 'fight', character_id: 'alt-a', party_id: 'party', raised_spell_ids: ['spell-a'] },
-      { fight_id: 'fight', character_id: 'alt-b', party_id: 'party', raised_spell_ids: [] },
+      // #1206: no per-member spell vector rides here — each door derives its OWN seat's raised spells.
+      { fight_id: 'fight', character_id: 'alt-a', party_id: 'party' },
+      { fight_id: 'fight', character_id: 'alt-b', party_id: 'party' },
     ])
     expect([...receipts]).toEqual([
       ['alt-a', 'receipt-alt-a'],

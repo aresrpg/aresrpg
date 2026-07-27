@@ -36,7 +36,6 @@ export function create_owned_team_actions({ join_world_fight, activate_run, join
         fight_id,
         character_id: member.character_id,
         party_id,
-        raised_spell_ids: member.raised_spell_ids ?? [],
         ...(queued ? { queued: true } : {}),
       })
       receipts_by_character.set(member.character_id, receipt)
@@ -75,7 +74,6 @@ export function create_owned_team_actions({ join_world_fight, activate_run, join
         creator_pass_id,
         run_pass_id: member.run_pass_id,
         character_id: member.character_id,
-        raised_spell_ids: member.raised_spell_ids ?? [],
       })
       receipts_by_character.set(member.character_id, receipt)
     }

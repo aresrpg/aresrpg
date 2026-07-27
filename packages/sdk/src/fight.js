@@ -277,7 +277,10 @@ export function create_fight_ptb(context) {
         as_object_arg(tx, mob_template_id), // mob_template: &MobTemplate
         tx.pure.bool(is_public), // is_public: bool
         tx.pure.option('id', party_id), // party_id: Option<ID> (null → none)
-        tx.pure.vector('id', raised_spell_ids), // raised_spell_ids: vector<ID> (F-07 — the seat's raised spells; [] = all level 1)
+        // raised_spell_ids: vector<ID> (F-07 — the seat's raised spells). NAMING them is the caller's half of the
+        // contract: an unnamed spell is snapshotted at the free baseline 1 (#1206), so `[]` means a level-1 kit,
+        // never "read them all". The app derives it per seat (world-shell/raised_spells.js).
+        tx.pure.vector('id', raised_spell_ids),
         config, // config: &GameConfig
         version, // version: &Version (core)
         shared_object_arg(

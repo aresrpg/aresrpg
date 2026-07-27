@@ -89,6 +89,8 @@ export const ctx_of = (/** @type {any} */ sdk) => ({ network: DEMO_NETWORK, kios
 import { kiosk_for_character, any_personal_kiosk, cap_for_kiosk } from './kiosk_resolve.js'
 // FIGHT COST LEDGER: the per-fight net-gas accumulator the result card reads.
 import { use_fight_cost } from './fight_gas_ledger.js'
+// #1206 — the F-07 half the client owes the chain: a fight snapshots ONLY the spell ids its PTB names.
+import { raised_spell_ids_for } from './raised_spells.js'
 import { offer_travel_resync } from './travel_recovery.js'
 import { receipt_final_hp } from './fight_result_receipt.js'
 import { attach_executed_digest } from './tx_digest_error.js'
@@ -245,17 +247,14 @@ function opened_result_of(/** @type {any} */ receipt) {
 // ╔════════════════ [ WORLD FIGHT — join (create_world_fight moved to dungeon_engage_actions.js) ] ═ ]
 
 /** JOIN an existing world fight during placement — `fight::join` (public/party gate is on-chain). */
-export async function join_world_fight({
-  fight_id,
-  character_id,
-  party_id = null,
-  raised_spell_ids = [],
-  queued = false,
-}) {
+export async function join_world_fight({ fight_id, character_id, party_id = null, queued = false }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
-  const handle = await kiosk_for_character(sdk, address, character_id)
+  const [handle, raised_spell_ids] = await Promise.all([
+    kiosk_for_character(sdk, address, character_id),
+    raised_spell_ids_for(character_id), // #1206 — the seat's LEARNED levels ride the join snapshot
+  ])
   if (!handle) throw new Error('That character is not in your kiosk')
   const tx = join_fight_ptb(ctx_of(sdk))({
     fight_id,
@@ -317,11 +316,14 @@ export async function activate_run({
  * (`dungeon::next_fight`, deterministic). Fires from the mob-cluster ENGAGE click only (tx-provenance law).
  * @returns {Promise<{ receipt:any, fight_id:string|null }>}
  */
-export async function next_room_fight({ world_id, run_pass_id, mob_template_id, character_id, raised_spell_ids = [] }) {
+export async function next_room_fight({ world_id, run_pass_id, mob_template_id, character_id }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
-  const handle = await kiosk_for_character(sdk, address, character_id)
+  const [handle, raised_spell_ids] = await Promise.all([
+    kiosk_for_character(sdk, address, character_id),
+    raised_spell_ids_for(character_id), // #1206
+  ])
   if (!handle) throw new Error('That character is not in your kiosk')
   const tx = next_fight_ptb(ctx_of(sdk))({
     world_id,
@@ -347,11 +349,14 @@ export async function next_room_fight({ world_id, run_pass_id, mob_template_id, 
  * JOIN a party member's room fight (`dungeon::join_fight`): same-room proven on-chain by re-deriving the fight
  * from `creator_pass_id` + MY OWN pass's room. Latches my pass.
  */
-export async function join_room_fight({ fight_id, run_pass_id, creator_pass_id, character_id, raised_spell_ids = [] }) {
+export async function join_room_fight({ fight_id, run_pass_id, creator_pass_id, character_id }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
-  const handle = await kiosk_for_character(sdk, address, character_id)
+  const [handle, raised_spell_ids] = await Promise.all([
+    kiosk_for_character(sdk, address, character_id),
+    raised_spell_ids_for(character_id), // #1206
+  ])
   if (!handle) throw new Error('That character is not in your kiosk')
   const tx = join_dungeon_fight_ptb(ctx_of(sdk))({
     fight_id,

@@ -37,6 +37,8 @@ import { rows_from_state, zone_world_doc } from '../game/zone_rows.js'
 
 import { kiosk_for_character, any_personal_kiosk } from './kiosk_resolve.js'
 import { use_fight_cost } from './fight_gas_ledger.js'
+// #1206 — the F-07 half the client owes the chain: a fight snapshots ONLY the spell ids its PTB names.
+import { raised_spell_ids_for } from './raised_spells.js'
 // The shared tx choke: BOTH files sign through the same money-safety logic (gas ledger, digest handling, the
 // tx-retry-burn law) — one home, imported back. dungeon_actions.js exports these for exactly this reuse.
 import { sign, ctx_of, remember_created_fight } from './dungeon_actions.js'
@@ -195,7 +197,7 @@ const GROUP_CLAIMED_ABORT = { MoveAbort: { abortCode: 108, location: { module: '
  * the `*_members` claim door seats it one `add_member` at a time; no roster is the mono-spec door, unchanged.
  * There is no flag: a format-1/2 row has no roster to carry, and that absence IS the signal.
  * @param {{ world_id:string, spawn_id:number|string, zx?:number|null, zy?:number|null, mob_template_id:string,
- *           member_template_ids?:string[], character_id:string, raised_spell_ids?:string[], is_public?:boolean,
+ *           member_template_ids?:string[], character_id:string, is_public?:boolean,
  *           party_id?:string|null }} args
  * @returns {Promise<{ receipt:any, fight_id:string|null }>}
  */
@@ -207,14 +209,13 @@ export async function create_world_fight({
   mob_template_id,
   member_template_ids = [],
   character_id,
-  raised_spell_ids = [],
   is_public = true,
   party_id = null,
 }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
-  const [handle, group_door, live_fights] = await Promise.all([
+  const [handle, group_door, live_fights, raised_spell_ids] = await Promise.all([
     kiosk_for_character(sdk, address, character_id),
     load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, member_template_ids, zx, zy }),
     // TOCTOU SHRINK (leg ③): the SAME /v1 fight truth the engage affordance gates on, read FRESH here (parallel
@@ -222,6 +223,9 @@ export async function create_world_fight({
     // 6s snapshot and this press collapses to one read. A claimed spawn shows a live fight here even when the
     // client's polled set was still stale (the exact regression TOCTOU SHRINK addresses).
     get_fights({ world: world_id }).catch(() => null),
+    // #1206: the seat's LEARNED spell levels are snapshotted for EXACTLY the ids this PTB names — an unnamed
+    // spell casts at the free baseline 1 whatever the character invested. Read in the same parallel leg.
+    raised_spell_ids_for(character_id),
   ])
   if (!handle) throw new Error('That character is not in your kiosk')
   // A live fight already holds this spawn ⇒ refuse PRE-SIGN (zero gas, no digest) with the structured zones-108
