@@ -8,9 +8,11 @@
 // every socket whose crit_rate crosses the next slot's roll gets the gold glow (the exact UI rule —
 // glow only, no labels/badges/numbers on the socket; the number rides the tooltip).
 //
-// DAMAGE IS EXACT: a hit deals precisely its authored base — crit swaps to the crit
-// base, nothing else moves (the pre-ceremony ±15% variance band was removed on-chain). `next_hit` is that rule's
-// one client home.
+// DAMAGE IS EXACT BUT NOT FIXED (#577): a hit deals its authored band ROLLED on the action's slot — the same
+// §7 derivation as the crit above, so it is knowable before committing — and crit swaps the whole band. `next_hit`
+// below is the SPELL bar's home for that swap. It is deliberately NOT the weapon's: a strike resolves from the
+// seat's authored item lines across their own elements (#1323), and that derivation has one home,
+// `@aresrpg/fight/weapon` — this module never re-reads a weapon.
 
 import { turn_seed, slot_crit_roll, crit_at } from '@aresrpg/sim/turn_seed'
 

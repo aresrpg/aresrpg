@@ -119,19 +119,25 @@ export function StatTip({ stat, label, value }) {
  * element_name } → a facts grid so daggers-3AP vs battleaxe-5AP (and bare-hands flat 3) is visible, which also
  * self-explains the greyed "can't afford" socket. Labels reuse existing i18n keys where they exist.
  * `next_hit` (spells) / `weapon.next_hit` = the §7 turn-seed SLOT-EXACT preview { value, crit }: the exact
- * number the NEXT queued action lands for (the authored base, crit-swapped while the socket glows — damage is
- * identity). One line, gold when it is the crit base.
+ * number the NEXT queued action lands for — the authored band ROLLED on that slot (#577), crit-swapped while
+ * the socket glows. One line, gold when it is the crit branch; null (no line) when the slot is unknowable, and
+ * the damage row's band is then the honest statement.
  * `status` (FIX 4, 07-14): one optional honest line explaining why the socket is greyed beyond AP/turn —
  * "on cooldown — N turns" or "casts per turn used up" (already-localized string, or null for nothing to say).
  * @param {{ t: (k: string) => string, name: string, color?: string, ap?: number, mp?: number,
  *   range?: [number, number], life?: { value: number, damageMin?: number, damageMax?: number,
  *     kind: 'damage' | 'heal' } | null,
  *   next_hit?: { value: number, crit: boolean } | null,
- *   weapon?: boolean | { ap_cost: number, damage: number, crit_damage: number, reach: number, element_name?: string,
+ *   weapon?: boolean | { ap_cost: number, damage: number, damage_max?: number, crit_damage: number,
+ *     crit_damage_max?: number, reach: number, element_name?: string,
  *     next_hit?: { value: number, crit: boolean } | null },
  *   status?: string | null }} props
  * @returns {import('react').JSX.Element}
  */
+/** An authored `[min, max]` as one player-facing figure — `max === min` (a fixed line) reads as the bare
+ *  number, so a weapon that authors no spread renders exactly as it always did. */
+const band_text = (min, max) => (max != null && Number(max) > Number(min) ? `${min} - ${max}` : `${min}`)
+
 export function SpellSeedTip({ t, name, color = 'var(--accent)', ap, mp, range, life, next_hit, weapon, status }) {
   const range_txt =
     Array.isArray(range) && range.length === 2
@@ -171,8 +177,12 @@ export function SpellSeedTip({ t, name, color = 'var(--accent)', ap, mp, range, 
           <dd>{w.ap_cost}</dd>
           <dt>{t('spells.damage')}</dt>
           <dd style={{ color }}>
-            {w.damage}
-            {w.crit_damage > w.damage ? ` (${t('spells.crit_val', { value: w.crit_damage })})` : ''}
+            {/* the strike's authored BAND (#1323 — Σ over the seat's item lines, or the family line when it has
+                none). A fixed weapon has max == min and reads as one number, exactly as before. */}
+            {band_text(w.damage, w.damage_max)}
+            {w.crit_damage > w.damage
+              ? ` (${t('spells.crit_val', { value: band_text(w.crit_damage, w.crit_damage_max) })})`
+              : ''}
           </dd>
           <dt>{t('fight.weapon_reach')}</dt>
           <dd>{w.reach}</dd>
