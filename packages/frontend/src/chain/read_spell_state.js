@@ -6,7 +6,7 @@
 // baseline level 1), and unspent points are DERIVED — (character level − 1) earnable minus the
 // `character_link::SpellPointsSpentKey {}` running total (absent = 0). Namespace: NS_CHARACTER_WORLD
 // (extension.move). Reads ride the SDK's cap-free `read_namespaced_field` transport (derived DF id → gRPC
-// json — no dynamic-field pagination). The grimoire (Spellbook.jsx) is the one consumer.
+// json — no dynamic-field pagination). The grimoire and encyclopedia both consume this one door.
 
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { ITEMS_NS } from '@aresrpg/sdk/sui'

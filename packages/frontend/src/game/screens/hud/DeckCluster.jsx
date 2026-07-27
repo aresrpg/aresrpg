@@ -60,8 +60,8 @@ const is_bare_hands = (w) => !!w && w.element === 2 && w.damage === 4 && w.ap_co
 
 // Seeded socket gems follow the selected level's actual-effect category. A legacy simulator-only card has no
 // projected spell row here, so it keeps the existing normalized element tint instead of guessing.
-const card_color = (spell_id, spell) =>
-  spell ? spell_category(spell.levels?.[0]).color : element_color(spell_element(spell_id))
+const card_color = (spell_id, spell, seat) =>
+  spell ? spell_category(seat_spell_row(seat, spell)).color : element_color(spell_element(spell_id))
 
 // True while a text field owns focus — the number-key selection must stay inert while the player types in
 // chat / any input (typing law). Same guard the world keys use (embed_voxel / NpcPrompt).
@@ -294,7 +294,7 @@ export function DeckCluster() {
             if (!spell_id) return <EmptySocket key={`empty-${i}`} keyCap={key_cap} />
             const card = spell_card(spell_id, me)
             const spell = fight_spell(spell_id)
-            const color = card_color(spell_id, spell)
+            const color = card_color(spell_id, spell, me)
             const gate = cast_gate(spell_id)
             const affordable = my_turn && card.cost <= ap && !gate.on_cd && !gate.exhausted
             return (
@@ -316,6 +316,7 @@ export function DeckCluster() {
                       t={t}
                       name={card.name}
                       spell={spell}
+                      seat={me}
                       cd_left={gate.on_cd ? gate.cd_left : 0}
                     />
                   ) : null

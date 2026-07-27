@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // #55 SPELL-ALLOCATION RECEIPT FLOOR — the ONE home for a `raise_spell_level` receipt's proven effect, held
-// across the Spellbook drawer's remounts until the chain-direct read (read_spell_state.js) catches up. Mirrors
+// across grimoire-surface remounts until the chain-direct read (read_spell_state.js) catches up. Mirrors
 // Stats.jsx's characteristic-point `allocation_session` EXACTLY (copy > abstract): a raised spell level + the
 // spent point is a receipt-proven FACT, and a lagging chain read must NEVER regress it (a spell that just leveled
 // must never re-display as unlevelled, with available points reverting too — the panel's blind `refetch().then(set_alloc)`

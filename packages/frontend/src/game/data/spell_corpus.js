@@ -17,6 +17,11 @@ import { walrus_asset_url } from '@aresrpg/sdk/jobs'
 let corpus = []
 let loaded = false
 let warned = false
+const listeners = new Set()
+
+const publish = () => {
+  for (const listener of listeners) listener()
+}
 
 // ONE deduped content-degrade shout (per session). The boot-smoke check allowlists this exact prefix — the
 // spell_corpus blob is a seed-side publish dependency, not a repo artifact (issue #106).
@@ -46,6 +51,7 @@ export async function load_spell_corpus() {
     const rows = await response.json()
     corpus = Array.isArray(rows) ? rows : []
     loaded = true
+    publish()
   } catch (error) {
     // Network / parse failure — stay retryable; the spell surfaces stay inert until a later load lands.
     warn_absent(`fetch failed: ${error?.message ?? error}`)
@@ -54,6 +60,12 @@ export async function load_spell_corpus() {
 
 /** The cached corpus rows (synchronous — the hot resolver read). Empty until load_spell_corpus resolves it. */
 export const get_spell_corpus = () => corpus
+
+/** Subscribe to corpus-reference changes so already-mounted spell surfaces re-resolve after boot loading. */
+export const subscribe_spell_corpus = (listener) => {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
 
 /**
  * Test seam (mirrors set_catalog_for_test): seed the module-state corpus directly, no fetch. Pass the merged
@@ -67,4 +79,5 @@ export function set_spell_corpus_for_test(next) {
   corpus = Array.isArray(next) ? next : []
   loaded = Array.isArray(next)
   warned = false
+  publish()
 }

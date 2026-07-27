@@ -17,7 +17,7 @@
 import { spell_upgrade_cost } from '@aresrpg/sdk/progression'
 
 import { element_color } from './element-colors.js'
-import { class_spells } from './fight-spells.js'
+import { class_spells, seat_spell_level, seat_spell_row } from './fight-spells.js'
 import { spell_category } from './spell-category.js'
 // The house heal-pink grammar — ONE home in seed-effect-line.js (the effect-line tone SSOT).
 import { HEAL_PINK } from './seed-effect-line.js'
@@ -85,12 +85,14 @@ const descriptor = level => {
  * @param {Record<string, number>} [invested]  SpellTemplate object id → invested level (read_spell_state)
  */
 export const grimoire = (class_id, char_level, points, invested = {}) => {
+  const seat = { spell_levels: invested }
   const rows = class_spells(class_id).map(sp => {
-    const kind = spell_category(sp.levels[0])
     const unlocked = char_level >= sp.unlock_level
     // Chain truth: an unlocked class spell is ALWAYS at least level 1 (free baseline — absent DF reads 1);
     // a locked one renders 0 (not yet usable). `invested` overrides with the real raised level.
-    const current_level = unlocked ? Number(invested?.[sp.object_id] ?? 1) : 0
+    const current_level = unlocked ? seat_spell_level(seat, sp) : 0
+    const level = unlocked ? seat_spell_row(seat, sp) : sp.levels[0]
+    const kind = spell_category(level)
     return {
       id: sp.object_id, // the shared SpellTemplate object id — the spend PTB target
       name: sp.name, // on-chain display name (the i18n fallback)
@@ -102,7 +104,7 @@ export const grimoire = (class_id, char_level, points, invested = {}) => {
       current_level,
       color: kind.color,
       subline_kind: kind.key,
-      subline_descriptor: descriptor(sp.levels[0]),
+      subline_descriptor: descriptor(level),
     }
   })
   const unlocked_count = rows.filter(r => r.unlocked).length

@@ -5,6 +5,7 @@
 // second spell-info source to drift.
 
 import { seed_effect_line, seed_el_label } from './seed-effect-line.js'
+import { seat_spell_row } from './fight-spells.js'
 import { spell_category } from './spell-category.js'
 import { spell_effects } from './spellbook-data.js'
 
@@ -12,11 +13,12 @@ import { spell_effects } from './spellbook-data.js'
  * PURE: one seeded spell row to the exact facts displayed by the hotbar card.
  * @param {(key: string, params?: object) => string} t
  * @param {{ kind?: string, levels?: Array<object> } | null | undefined} spell
+ * @param {{ spell_levels?: Record<string, number> } | null | undefined} seat
  * @returns {{ ap: number, range_txt: string, crit_txt: string, cooldown_txt: string, subline: string,
  *   color: string, effects: Array<{ text: string, color: string }> }}
  */
-export const spell_hover_facts = (t, spell) => {
-  const level = spell?.levels?.[0] ?? null
+export const spell_hover_facts = (t, spell, seat) => {
+  const level = seat_spell_row(seat, spell)
   const [range_min, range_max] = level?.range ?? [0, 0]
   const category = spell_category(level)
   const subline =
@@ -46,11 +48,12 @@ export const spell_hover_facts = (t, spell) => {
  * greyed affordance refuses a cast attempt, right here at hover, reusing the toast's own copy
  * (`dungeons.spell_on_cooldown`) so the reason never drifts from what a cast attempt would already say.
  * @param {{ t: (key: string, params?: object) => string, name: string,
- *   spell: { kind?: string, levels?: Array<object> }, cd_left?: number }} props
+ *   spell: { kind?: string, levels?: Array<object> }, seat?: { spell_levels?: Record<string, number> } | null,
+ *   cd_left?: number }} props
  * @returns {import('react').JSX.Element}
  */
-export function SpellHoverTip({ t, name, spell, cd_left = 0 }) {
-  const facts = spell_hover_facts(t, spell)
+export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0 }) {
+  const facts = spell_hover_facts(t, spell, seat)
   const rows = [
     [t('spells.ap_cost'), `${facts.ap}`],
     [t('spells.range'), facts.range_txt],

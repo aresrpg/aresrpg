@@ -5,6 +5,7 @@ import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 're
 import { useTranslation } from 'react-i18next'
 
 import { app_mobile_classes, use_mobile_mode } from '../../game/screens/hud/mobile_layout.js'
+import { use_fight_view, use_game_state } from '../../game/store.js'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 
@@ -16,6 +17,7 @@ import { BestiaryTab } from './bestiary_tab'
 import { ClassesTab } from './classes_tab'
 import { JobsTab } from './jobs_tab'
 import { GameplayTab } from './gameplay_tab'
+import { use_encyclopedia_spell_seat } from './spell_seat'
 import { WorldTab, type WorldRow } from './world_tab'
 
 // T8 (board ticket #8): the DUNGEONS tab was deleted — the seed has no dungeon content and the tab only ever
@@ -88,6 +90,12 @@ function BestiaryTabRoute({ is_mobile }: { is_mobile: boolean }) {
 function ClassesTabRoute({ classes, is_mobile }: { classes: any[]; is_mobile: boolean }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const character = use_game_state(
+    (state) => state.sui.characters?.find((character: any) => character.id === state.selected_character_id) ?? null
+  )
+  const fight = use_fight_view()
+  const fight_seat = character?.id ? (fight?.fighters.get(character.id) ?? null) : null
+  const seat = use_encyclopedia_spell_seat(character, fight_seat)
   return (
     <ClassesTab
       selected_class_id={id || null}
@@ -95,6 +103,7 @@ function ClassesTabRoute({ classes, is_mobile }: { classes: any[]; is_mobile: bo
       on_navigate_to_item={(item_id) => navigate(`/encyclopedia/items/${item_id}`)}
       classes={classes}
       is_mobile={is_mobile}
+      seat={seat}
     />
   )
 }

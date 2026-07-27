@@ -6,7 +6,7 @@ import { Sparkles, Heart, ArrowLeft } from 'lucide-react'
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { use_template_t } from '../../i18n/template_t'
-import { class_spells } from '../../game/screens/hud/fight-spells.js'
+import { class_spells, seat_spell_level } from '../../game/screens/hud/fight-spells.js'
 import {
   seed_effect_parts,
   seed_effect_value,
@@ -125,19 +125,20 @@ function StatChip({
   )
 }
 
-function SpellDetail({ spell }: { spell: any }) {
+function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
   const { t } = useTranslation()
   const tt = use_template_t()
   const levels: any[] = spell.levels ?? []
-  const [active_idx, set_active_idx] = useState(0)
+  const learned_idx = seat_spell_level(seat, spell) - 1
+  const [active_idx, set_active_idx] = useState(learned_idx)
   // Switching spells (Ember Strike L3 → Guardian Mend) must not carry the old level tab forward — each newly
-  // selected spell's own level 1 is the honest starting view. Keyed by name_key (the stable spell identity
+  // selected spell starts on the seat's learned level. Keyed by name_key (the stable spell identity
   // used everywhere else in this file for selection/list keys), not the `spell` object reference, which can
   // change shape across re-renders without the selected spell actually changing.
   useEffect(() => {
-    set_active_idx(0)
-  }, [spell.name_key])
-  const idx = active_idx < levels.length ? active_idx : 0
+    set_active_idx(learned_idx)
+  }, [spell.name_key, learned_idx])
+  const idx = active_idx < levels.length ? active_idx : learned_idx
   const lvl = levels[idx] ?? null
   const category = lvl ? spell_category(lvl) : null
   const self_cast = Array.isArray(lvl?.range) && finite_number(lvl.range[0]) === 0 && finite_number(lvl.range[1]) === 0
@@ -353,12 +354,14 @@ function ClassesTab({
   on_navigate_to_item,
   classes,
   is_mobile,
+  seat = null,
 }: {
   selected_class_id: string | null
   on_select_class: (id: string) => void
   on_navigate_to_item: (id: string) => void
   classes: any[]
   is_mobile: boolean
+  seat?: any
 }) {
   const { t } = useTranslation()
   const tt = use_template_t()
@@ -472,7 +475,7 @@ function ClassesTab({
             )
           })}
         </div>
-        <div className="p-3">{selected_spell ? <SpellDetail spell={selected_spell} /> : null}</div>
+        <div className="p-3">{selected_spell ? <SpellDetail spell={selected_spell} seat={seat} /> : null}</div>
       </div>
     ) : (
       <div className="flex gap-0 border border-border" style={{ minHeight: 300 }}>
@@ -514,7 +517,7 @@ function ClassesTab({
           })}
         </div>
         {/* Spell detail - right */}
-        <div className="flex-1 p-4">{selected_spell ? <SpellDetail spell={selected_spell} /> : null}</div>
+        <div className="flex-1 p-4">{selected_spell ? <SpellDetail spell={selected_spell} seat={seat} /> : null}</div>
       </div>
     )
 

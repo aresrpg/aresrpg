@@ -30,6 +30,7 @@ import { spell_points_for_level } from '@aresrpg/sdk/progression'
 
 import { use_game_state } from '../../store.js'
 import { get_class } from '../../data/classes.js'
+import { use_spell_corpus } from '../../data/use_spell_corpus.js'
 import { upgrade_spell } from '../../../world-shell/spell_actions.js'
 import { mark_ui_updated } from '../../../world-shell/tx.js'
 import { read_spell_state } from '../../../chain/read_spell_state.js'
@@ -59,6 +60,7 @@ export function Spellbook({ on_open, embedded = false }) {
   const { t } = useTranslation()
   const characters = use_game_state((s) => s.sui.characters)
   const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const spell_corpus = use_spell_corpus()
   const [sel_id, set_sel] = useState(/** @type {string | null} */ (null))
 
   const character = useMemo(
@@ -92,7 +94,7 @@ export function Spellbook({ on_open, embedded = false }) {
     return () => {
       live = false
     }
-  }, [character?.id, class_id])
+  }, [character?.id, class_id, spell_corpus])
   // Drop the receipt-proven projection the instant the chain read reaches it (Stats.jsx's caught-up law) — after
   // that the chain read alone is truth. Never regresses: spell_alloc_caught_up only fires when chain ≥ the floor.
   useEffect(() => {
@@ -107,7 +109,7 @@ export function Spellbook({ on_open, embedded = false }) {
     // running spent total; per-spell invested levels come off the SpellLevelKey DFs (absent = baseline 1).
     const points = Math.max(0, spell_points_for_level(level) - (alloc?.spent ?? 0))
     return { ...grimoire(class_id, level, points, alloc?.levels ?? {}), level, points }
-  }, [character, class_id, alloc])
+  }, [character, class_id, alloc, spell_corpus])
 
   const refetch = () => {
     if (!character?.id) return
