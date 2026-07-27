@@ -11,7 +11,6 @@ import {
   search_zone_ptb,
   gather_ptb,
 } from '../src/sui/write/game_world.js'
-import { get_world } from '../src/sui/read/game.js'
 
 import {
   IDS,
@@ -101,107 +100,6 @@ describe('game builders — target strings + arg shapes', () => {
   })
 })
 
-describe('get_world — null-safe read', () => {
-  test('returns null when the object is unreadable', async () => {
-    const grpc_client = { core: { getObject: async () => ({ object: null }) } }
-    expect(await get_world({ grpc_client })(id('w0'))).toBeNull()
-  })
-  test('decodes the core world fields + optional dungeon key', async () => {
-    const grpc_client = {
-      core: {
-        getObject: async () => ({
-          object: {
-            json: {
-              id: id('w0'),
-              seed: '42',
-              biome: 'glacial',
-              required_level: 10,
-              zone_ttl_ms: '3600000',
-              dungeon_key_template: { vec: [id('dk0')] },
-            },
-          },
-        }),
-      },
-    }
-    const world = await get_world({ grpc_client })(id('w0'))
-    expect(world.seed).toBe(42n)
-    expect(world.biome).toBe('glacial')
-    expect(world.required_level).toBe(10)
-    expect(world.zone_ttl_ms).toBe(3600000n)
-    expect(world.dungeon_key_template).toBe(id('dk0'))
-  })
-
-  test('reads each MobLevelKey DF so client composition mirrors the chain distance gate', async () => {
-    let field_request
-    const grpc_client = {
-      network: 'testnet',
-      core: {
-        getObject: async () => ({
-          object: {
-            json: {
-              id: id('w0'),
-              mobs: [
-                {
-                  template_id: id('mob:low'),
-                  rate_bp: 8000,
-                  min_group: 2,
-                  max_group: 3,
-                },
-                {
-                  template_id: id('mob:high'),
-                  rate_bp: 6000,
-                  min_group: 2,
-                  max_group: 3,
-                },
-              ],
-            },
-          },
-        }),
-        getObjects: async request => {
-          field_request = request
-          // two MobLevelKey values, then the BossMaskKey vector<u16> (#1110) — ONE batch, in that order
-          return {
-            objects: [
-              { json: { value: 3 } },
-              { json: { value: 12 } },
-              { json: { value: [1] } },
-            ],
-          }
-        },
-      },
-    }
-    const world = await get_world({
-      grpc_client,
-      network: 'testnet',
-      ids: IDS,
-    })(id('w0'))
-    expect(world.mobs.map(mob => mob.level)).toEqual([3, 12])
-    // the boss mask rides the SAME batch — a client deriving member packs without it mixes bosses in
-    expect(world.boss_mask).toEqual([1])
-    expect(field_request.objectIds).toHaveLength(3)
-    expect(new Set(field_request.objectIds).size).toBe(3)
-    expect(field_request.include).toEqual({ json: true })
-  })
-
-  test('fails shut when mob-level DFs cannot be read', async () => {
-    const grpc_client = {
-      network: 'testnet',
-      core: {
-        getObject: async () => ({
-          object: {
-            json: {
-              id: id('w0'),
-              mobs: [{ template_id: id('mob:one') }],
-            },
-          },
-        }),
-        getObjects: async () => {
-          throw new Error('transport unavailable')
-        },
-      },
-    }
-    expect(
-      await get_world({ grpc_client, network: 'testnet', ids: IDS })(id('w0')),
-    ).toBeNull()
-  })
-})
+// `get_world`'s READ tests moved to world_inner.test.js: a World's state now lives in a version-wrapped
+// payload (#1289), so every read test must drive the REAL wrapped serialization — the flat-shell mocks that
+// used to live here passed against a decoder that returned a zeroed world (PR #1315 review finding 2).
