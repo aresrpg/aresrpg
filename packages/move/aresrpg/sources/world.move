@@ -22,7 +22,7 @@ use aresrpg_foundation::world_math;
 
 use aresrpg::{admin::AdminCap, version::Version};
 use std::string::String;
-use sui::{dynamic_field as df, event, vec_map::{Self, VecMap}};
+use sui::{dynamic_field as df, event, vec_map::{Self, VecMap}, versioned::{Self, Versioned}};
 
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
@@ -102,8 +102,23 @@ public struct DungeonRoom has store, copy, drop { mobs: vector<ID> }
 
 /// THE world template. Shared once at `create_world`; every field is admin-tunable within its clamp band. Spawn
 /// tables + roster grow via the append setters. `spawn_nonce` mints unique per-world spawn ids for `zones`.
+/// The world SHELL — an id and a version-wrapped payload. The shell's own `UID` still carries the zone dynamic
+/// fields (`zones` writes them through `uid_mut`); everything that is *world state* lives in `WorldInner`.
+///
+/// WHY (#1289): a `key` struct's layout freezes at publish, and this package already paid for that four times —
+/// `rare_links`, `mob_levels`, `protectors` and `boss_mask` were all dynamic-field workarounds for a field that
+/// could not be added. Wrapping the payload in `Versioned` (the DeepBookV3 `RegistryInner` shape) means the next
+/// dial is a new inner struct plus one migrate, never a new DF key class. Costs one indirection per read.
+const WORLD_VERSION: u64 = 1;
+const EWrongInnerVersion: u64 = 199; // the wrapped payload is not the version this package speaks
+
 public struct World has key {
   id: UID,
+  inner: Versioned,
+}
+
+/// The world's actual state. Add fields here freely — a new version + `migrate` is the whole ceremony.
+public struct WorldInner has store {
   seed: u64,
   biome: String,
   required_level: u16,
@@ -159,8 +174,7 @@ public struct WorldBurned has copy, drop { world: ID, seed: u64, biome: String }
 public fun create_world(cap: &AdminCap, version: &Version, seed: u64, biome: String, ctx: &mut TxContext): ID {
   cap.verify(ctx);
   version.assert_latest();
-  let world = World {
-    id: object::new(ctx),
+  let inner = WorldInner {
     seed,
     biome,
     required_level: 1,
@@ -186,8 +200,9 @@ public fun create_world(cap: &AdminCap, version: &Version, seed: u64, biome: Str
     dungeon_rooms: vector[],
     spawn_nonce: 0,
   };
+  let world = World { id: object::new(ctx), inner: versioned::create(WORLD_VERSION, inner, ctx) };
   let wid = object::id(&world);
-  event::emit(WorldCreated { world: wid, seed, biome: world.biome });
+  event::emit(WorldCreated { world: wid, seed, biome });
   transfer::share_object(world);
   wid
 }
@@ -196,46 +211,46 @@ public fun create_world(cap: &AdminCap, version: &Version, seed: u64, biome: Str
 
 public fun set_required_level(cap: &AdminCap, w: &mut World, value: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.required_level = clamp_u16(value, LEVEL_MIN as u16, LEVEL_MAX as u16);
+  load_inner_mut(w).required_level = clamp_u16(value, LEVEL_MIN as u16, LEVEL_MAX as u16);
   touched(w);
 }
 
 public fun set_bounds(cap: &AdminCap, w: &mut World, x: u32, z: u32, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.bounds_x = clamp_u32(x, BOUND_MIN, BOUND_MAX);
-  w.bounds_z = clamp_u32(z, BOUND_MIN, BOUND_MAX);
+  load_inner_mut(w).bounds_x = clamp_u32(x, BOUND_MIN, BOUND_MAX);
+  load_inner_mut(w).bounds_z = clamp_u32(z, BOUND_MIN, BOUND_MAX);
   touched(w);
 }
 
 public fun set_zone_size(cap: &AdminCap, w: &mut World, value: u32, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.zone_size = clamp_u32(value, ZONE_SIZE_MIN, ZONE_SIZE_MAX);
+  load_inner_mut(w).zone_size = clamp_u32(value, ZONE_SIZE_MIN, ZONE_SIZE_MAX);
   touched(w);
 }
 
 public fun set_zone_ttl_ms(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.zone_ttl_ms = clamp_u64(value, TTL_MIN, TTL_MAX);
+  load_inner_mut(w).zone_ttl_ms = clamp_u64(value, TTL_MIN, TTL_MAX);
   touched(w);
 }
 
 public fun set_speed_budget(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.speed_budget = clamp_u64(value, SPEED_MIN, SPEED_MAX);
+  load_inner_mut(w).speed_budget = clamp_u64(value, SPEED_MIN, SPEED_MAX);
   touched(w);
 }
 
 public fun set_spawn_zone(cap: &AdminCap, w: &mut World, x: u32, z: u32, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   // the spawn box can never exceed the world bounds (a roll inside it must land in-bounds)
-  w.spawn_zone_x = clamp_u32(x, 1, w.bounds_x);
-  w.spawn_zone_z = clamp_u32(z, 1, w.bounds_z);
+  load_inner_mut(w).spawn_zone_x = clamp_u32(x, 1, load_inner_mut(w).bounds_x);
+  load_inner_mut(w).spawn_zone_z = clamp_u32(z, 1, load_inner_mut(w).bounds_z);
   touched(w);
 }
 
 public fun set_protector_bp(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.protector_bp = clamp_u64(value, 0, BP_MAX);
+  load_inner_mut(w).protector_bp = clamp_u64(value, 0, BP_MAX);
   touched(w);
 }
 
@@ -243,17 +258,17 @@ public fun set_protector_bp(cap: &AdminCap, w: &mut World, value: u64, version: 
 /// band; a search rolls a target within it. Clamped to the hard rail, then `max ≥ min` enforced (`EBadRange`).
 public fun set_density(cap: &AdminCap, w: &mut World, min_groups: u16, max_groups: u16, min_nodes: u16, max_nodes: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.min_groups = clamp_u16(min_groups, 0, DENSITY_MAX);
-  w.max_groups = clamp_u16(max_groups, 0, DENSITY_MAX);
-  w.min_nodes = clamp_u16(min_nodes, 0, DENSITY_MAX);
-  w.max_nodes = clamp_u16(max_nodes, 0, DENSITY_MAX);
-  assert!(w.max_groups >= w.min_groups && w.max_nodes >= w.min_nodes, EBadRange);
+  load_inner_mut(w).min_groups = clamp_u16(min_groups, 0, DENSITY_MAX);
+  load_inner_mut(w).max_groups = clamp_u16(max_groups, 0, DENSITY_MAX);
+  load_inner_mut(w).min_nodes = clamp_u16(min_nodes, 0, DENSITY_MAX);
+  load_inner_mut(w).max_nodes = clamp_u16(max_nodes, 0, DENSITY_MAX);
+  assert!(load_inner_mut(w).max_groups >= load_inner_mut(w).min_groups && load_inner_mut(w).max_nodes >= load_inner_mut(w).min_nodes, EBadRange);
   touched(w);
 }
 
 public fun set_dungeon_key(cap: &AdminCap, w: &mut World, template_id: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.dungeon_key_template = option::some(template_id);
+  load_inner_mut(w).dungeon_key_template = option::some(template_id);
   touched(w);
 }
 
@@ -264,8 +279,8 @@ public fun set_dungeon_key(cap: &AdminCap, w: &mut World, template_id: ID, versi
 /// door. Storing an id (not a typed ref) mirrors the spawn-table seam law.
 public fun set_rare_link(cap: &AdminCap, w: &mut World, template: ID, rare_template: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  if (w.rare_links.contains(&template)) { *w.rare_links.get_mut(&template) = rare_template; }
-  else { w.rare_links.insert(template, rare_template); };
+  if (load_inner_mut(w).rare_links.contains(&template)) { *load_inner_mut(w).rare_links.get_mut(&template) = rare_template; }
+  else { load_inner_mut(w).rare_links.insert(template, rare_template); };
   event::emit(RareLinkSet { world: object::id(w), template, rare_template });
   touched(w);
 }
@@ -273,7 +288,7 @@ public fun set_rare_link(cap: &AdminCap, w: &mut World, template: ID, rare_templ
 /// UNLINK a base resource's rare variant (no more jackpot for it). Aborts if no link exists (`df::remove`).
 public fun clear_rare_link(cap: &AdminCap, w: &mut World, template: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let (_, _) = w.rare_links.remove(&template);
+  let (_, _) = load_inner_mut(w).rare_links.remove(&template);
   event::emit(RareLinkCleared { world: object::id(w), template });
   touched(w);
 }
@@ -287,7 +302,7 @@ public fun set_mob_level(cap: &AdminCap, w: &mut World, template: ID, level: u16
   gate(cap, version, ctx);
   // PARALLEL to the table (#1290): the level lives at the row's index, so the snapshot is a plain field read.
   let i = mob_row_index(w, template);
-  *&mut w.mob_levels[i] = level;
+  *&mut load_inner_mut(w).mob_levels[i] = level;
   touched(w);
 }
 
@@ -301,20 +316,20 @@ public fun set_mob_level(cap: &AdminCap, w: &mut World, template: ID, level: u16
 /// table that has since shrunk aborts here instead of silently fencing the wrong species.
 public fun set_boss_mask(cap: &AdminCap, w: &mut World, rows: vector<u16>, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let n = w.mobs.length();
+  let n = load_inner_mut(w).mobs.length();
   let mut i = 0;
   while (i < rows.length()) {
     assert!((rows[i] as u64) < n, EBadEntryIndex);
     i = i + 1;
   };
-  w.boss_mask = rows;
+  load_inner_mut(w).boss_mask = rows;
   touched(w);
 }
 
 /// The world's BOSS row indexes — EMPTY when no mask was ever written (the uniform absent ≡ empty rule). Read by
 /// `zone_comp` when it builds the member pick table for a format-3 zone.
 public fun boss_mask(w: &World): vector<u16> {
-  w.boss_mask
+  load_inner(w).boss_mask
 }
 
 /// PIN (or clear) the gather-ambush defender for resource `template_id` — a real `protectors` map entry
@@ -327,10 +342,10 @@ public fun set_resource_protector(cap: &AdminCap, w: &mut World, template_id: ID
   gate(cap, version, ctx);
   if (protector_template.is_some()) {
     let pid = *protector_template.borrow();
-    if (w.protectors.contains(&template_id)) { *w.protectors.get_mut(&template_id) = pid; }
-    else { w.protectors.insert(template_id, pid); };
-  } else if (w.protectors.contains(&template_id)) {
-    let (_, _) = w.protectors.remove(&template_id);
+    if (load_inner_mut(w).protectors.contains(&template_id)) { *load_inner_mut(w).protectors.get_mut(&template_id) = pid; }
+    else { load_inner_mut(w).protectors.insert(template_id, pid); };
+  } else if (load_inner_mut(w).protectors.contains(&template_id)) {
+    let (_, _) = load_inner_mut(w).protectors.remove(&template_id);
   };
   touched(w);
 }
@@ -344,7 +359,7 @@ public fun add_resource_entry(cap: &AdminCap, w: &mut World, template_id: ID, ra
   let lo = clamp_u16(min_qty, 1, DENSITY_MAX);
   let hi = clamp_u16(max_qty, 1, DENSITY_MAX);
   assert!(hi >= lo, EBadRange);
-  w.resources.push_back(ResourceEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_qty: lo, max_qty: hi, job, tier });
+  load_inner_mut(w).resources.push_back(ResourceEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_qty: lo, max_qty: hi, job, tier });
   touched(w);
 }
 
@@ -355,15 +370,15 @@ public fun add_mob_entry(cap: &AdminCap, w: &mut World, template_id: ID, rate_bp
   let lo = clamp_u16(min_group, GROUP_MIN, GROUP_MAX);
   let hi = clamp_u16(max_group, GROUP_MIN, GROUP_MAX);
   assert!(hi >= lo, EBadRange);
-  w.mobs.push_back(MobEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_group: lo, max_group: hi });
-  w.mob_levels.push_back(0); // stays PARALLEL to `mobs`; 0 = unauthored, the dormant default
+  load_inner_mut(w).mobs.push_back(MobEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_group: lo, max_group: hi });
+  load_inner_mut(w).mob_levels.push_back(0); // stays PARALLEL to `mobs`; 0 = unauthored, the dormant default
   touched(w);
 }
 
 /// Append a dungeon room (its mob-template IDs). Rooms are ordered; the roster is `dungeon_rooms` in order (§9).
 public fun add_dungeon_room(cap: &AdminCap, w: &mut World, mob_templates: vector<ID>, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.dungeon_rooms.push_back(DungeonRoom { mobs: mob_templates });
+  load_inner_mut(w).dungeon_rooms.push_back(DungeonRoom { mobs: mob_templates });
   touched(w);
 }
 
@@ -373,8 +388,8 @@ public fun add_dungeon_room(cap: &AdminCap, w: &mut World, mob_templates: vector
 /// performs no empty-vector check, so neither does this — same idiom, same event (`touched`).
 public fun set_dungeon_room(cap: &AdminCap, w: &mut World, index: u64, mob_templates: vector<ID>, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  assert!(index < w.dungeon_rooms.length(), EBadEntryIndex);
-  *w.dungeon_rooms.borrow_mut(index) = DungeonRoom { mobs: mob_templates };
+  assert!(index < load_inner_mut(w).dungeon_rooms.length(), EBadEntryIndex);
+  *load_inner_mut(w).dungeon_rooms.borrow_mut(index) = DungeonRoom { mobs: mob_templates };
   touched(w);
 }
 
@@ -382,13 +397,13 @@ public fun set_dungeon_room(cap: &AdminCap, w: &mut World, index: u64, mob_templ
 /// TEMPLATE tables reset; already-spawned entities persist until they age/expire (§8).
 public fun clear_tables(cap: &AdminCap, w: &mut World, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.resources = vector[];
-  w.mobs = vector[];
-  w.dungeon_rooms = vector[];
+  load_inner_mut(w).resources = vector[];
+  load_inner_mut(w).mobs = vector[];
+  load_inner_mut(w).dungeon_rooms = vector[];
   // the boss mask indexes the mob table BY POSITION — a mask that outlives its table names the wrong species,
   // so retiring the content retires the mask with it (and leaves nothing stranded for `destroy_world`).
-  w.boss_mask = vector[];
-  w.mob_levels = vector[]; // parallel to `mobs`, which this call just emptied
+  load_inner_mut(w).boss_mask = vector[];
+  load_inner_mut(w).mob_levels = vector[]; // parallel to `mobs`, which this call just emptied
   touched(w);
 }
 
@@ -416,8 +431,8 @@ public fun drain_world_links(
   let mut i = 0;
   while (i < rare_templates.length()) {
     let t = rare_templates[i];
-    if (w.rare_links.contains(&t)) {
-      let (_, _) = w.rare_links.remove(&t);
+    if (load_inner_mut(w).rare_links.contains(&t)) {
+      let (_, _) = load_inner_mut(w).rare_links.remove(&t);
       rare_removed = rare_removed + 1;
     };
     i = i + 1;
@@ -426,11 +441,11 @@ public fun drain_world_links(
   let mut j = 0;
   while (j < mob_templates.length()) {
     let t = mob_templates[j];
-    let n = w.mobs.length();
+    let n = load_inner_mut(w).mobs.length();
     let mut r = 0;
     while (r < n) {
-      if (w.mobs[r].template_id == t && w.mob_levels[r] != 0) {
-        *&mut w.mob_levels[r] = 0;
+      if (load_inner_mut(w).mobs[r].template_id == t && load_inner_mut(w).mob_levels[r] != 0) {
+        *&mut load_inner_mut(w).mob_levels[r] = 0;
         levels_removed = levels_removed + 1;
       };
       r = r + 1;
@@ -441,8 +456,8 @@ public fun drain_world_links(
   let mut k = 0;
   while (k < protector_templates.length()) {
     let t = protector_templates[k];
-    if (w.protectors.contains(&t)) {
-      let (_, _) = w.protectors.remove(&t);
+    if (load_inner_mut(w).protectors.contains(&t)) {
+      let (_, _) = load_inner_mut(w).protectors.remove(&t);
       protectors_removed = protectors_removed + 1;
     };
     k = k + 1;
@@ -464,9 +479,9 @@ public fun drain_world_links(
 public fun destroy_world(cap: &AdminCap, w: World, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  assert!(w.resources.is_empty() && w.mobs.is_empty() && w.dungeon_rooms.is_empty(), EWorldNotEmpty);
-  let World {
-    id,
+  assert!(load_inner(&w).resources.is_empty() && load_inner(&w).mobs.is_empty() && load_inner(&w).dungeon_rooms.is_empty(), EWorldNotEmpty);
+  let World { id, inner } = w;
+  let WorldInner {
     seed,
     biome,
     required_level: _,
@@ -483,15 +498,15 @@ public fun destroy_world(cap: &AdminCap, w: World, version: &Version, ctx: &TxCo
     min_nodes: _,
     max_nodes: _,
     dungeon_key_template: _,
-    resources: _,
-    mobs: _,
-    dungeon_rooms: _,
-    spawn_nonce: _,
     rare_links: _,
     mob_levels: _,
     protectors: _,
     boss_mask: _,
-  } = w;
+    resources: _,
+    mobs: _,
+    dungeon_rooms: _,
+    spawn_nonce: _,
+  } = versioned::destroy(inner);
   event::emit(WorldBurned { world: id.to_inner(), seed, biome });
   object::delete(id);
 }
@@ -501,26 +516,37 @@ public fun destroy_world(cap: &AdminCap, w: World, version: &Version, ctx: &TxCo
 /// Abort unless `(x,z)` is inside the world's barrier bounds — the precondition that makes every zone index
 /// meaningful. Called before any `zone_of`.
 public fun assert_in_bounds(w: &World, x: u32, z: u32) {
-  assert!(x < w.bounds_x && z < w.bounds_z, EOutOfBounds);
+  assert!(x < load_inner(w).bounds_x && z < load_inner(w).bounds_z, EOutOfBounds);
 }
 
 /// The zone index owning `(x,z)`: `(x / zone_size, z / zone_size)`. u32/u32 division — NO overflow is possible.
 /// Bounds-checked first, so an out-of-world coordinate ABORTS rather than indexing a phantom zone.
 public fun zone_of(w: &World, x: u32, z: u32): (u32, u32) {
   assert_in_bounds(w, x, z);
-  (x / w.zone_size, z / w.zone_size)
+  (x / load_inner(w).zone_size, z / load_inner(w).zone_size)
 }
 
 /// The block origin (min corner) of zone `(zx, zy)`. `zx * zone_size` can overflow u32 only for a zx past the
 /// world's own zone count — callers derive `zx` from an in-bounds `zone_of`, so this is safe there; a raw caller
 /// gets Move's checked-arithmetic abort (never a silent wrap).
 public fun zone_origin(w: &World, zx: u32, zy: u32): (u32, u32) {
-  (zx * w.zone_size, zy * w.zone_size)
+  (zx * load_inner(w).zone_size, zy * load_inner(w).zone_size)
 }
 
 // ╔════════════════ [ Package seam (zones attaches zone DFs) ] ═══════════════ ]
 // (`reserve_spawn_ids` retired with the search-cost rework — spawn ids now DERIVE from the zone seed; the
 // `spawn_nonce` World field stays as an inert struct slot so the World BCS layout is untouched mid-train.)
+
+/// Read the version-wrapped payload, asserting this package speaks its version (DeepBookV3 shape).
+fun load_inner(w: &World): &WorldInner {
+  assert!(w.inner.version() == WORLD_VERSION, EWrongInnerVersion);
+  w.inner.load_value()
+}
+
+fun load_inner_mut(w: &mut World): &mut WorldInner {
+  assert!(w.inner.version() == WORLD_VERSION, EWrongInnerVersion);
+  w.inner.load_value_mut()
+}
 
 public(package) fun uid(self: &World): &UID { &self.id }
 
@@ -528,52 +554,52 @@ public(package) fun uid_mut(self: &mut World): &mut UID { &mut self.id }
 
 // ╔════════════════ [ Getters (hot paths + RPC read these) ] ══════════════════ ]
 
-public fun seed(w: &World): u64 { w.seed }
-public fun biome(w: &World): String { w.biome }
-public fun required_level(w: &World): u16 { w.required_level }
-public fun bounds_x(w: &World): u32 { w.bounds_x }
-public fun bounds_z(w: &World): u32 { w.bounds_z }
-public fun zone_size(w: &World): u32 { w.zone_size }
-public fun zone_ttl_ms(w: &World): u64 { w.zone_ttl_ms }
-public fun speed_budget(w: &World): u64 { w.speed_budget }
-public fun spawn_zone_x(w: &World): u32 { w.spawn_zone_x }
-public fun spawn_zone_z(w: &World): u32 { w.spawn_zone_z }
-public fun protector_bp(w: &World): u64 { w.protector_bp }
-public fun min_groups(w: &World): u16 { w.min_groups }
-public fun max_groups(w: &World): u16 { w.max_groups }
-public fun min_nodes(w: &World): u16 { w.min_nodes }
-public fun max_nodes(w: &World): u16 { w.max_nodes }
-public fun dungeon_key_template(w: &World): Option<ID> { w.dungeon_key_template }
+public fun seed(w: &World): u64 { load_inner(w).seed }
+public fun biome(w: &World): String { load_inner(w).biome }
+public fun required_level(w: &World): u16 { load_inner(w).required_level }
+public fun bounds_x(w: &World): u32 { load_inner(w).bounds_x }
+public fun bounds_z(w: &World): u32 { load_inner(w).bounds_z }
+public fun zone_size(w: &World): u32 { load_inner(w).zone_size }
+public fun zone_ttl_ms(w: &World): u64 { load_inner(w).zone_ttl_ms }
+public fun speed_budget(w: &World): u64 { load_inner(w).speed_budget }
+public fun spawn_zone_x(w: &World): u32 { load_inner(w).spawn_zone_x }
+public fun spawn_zone_z(w: &World): u32 { load_inner(w).spawn_zone_z }
+public fun protector_bp(w: &World): u64 { load_inner(w).protector_bp }
+public fun min_groups(w: &World): u16 { load_inner(w).min_groups }
+public fun max_groups(w: &World): u16 { load_inner(w).max_groups }
+public fun min_nodes(w: &World): u16 { load_inner(w).min_nodes }
+public fun max_nodes(w: &World): u16 { load_inner(w).max_nodes }
+public fun dungeon_key_template(w: &World): Option<ID> { load_inner(w).dungeon_key_template }
 
 /// The RARE variant linked to base resource `template`, or `none` (no golden-gather jackpot for it). FREE read —
 /// the gather roll and the RPC both consume it; `df::exists` guards the typed borrow.
 public fun rare_link(w: &World, template: ID): Option<ID> {
-  if (w.rare_links.contains(&template)) option::some(*w.rare_links.get(&template)) else option::none()
+  if (load_inner(w).rare_links.contains(&template)) option::some(*load_inner(w).rare_links.get(&template)) else option::none()
 }
-public fun resource_count(w: &World): u64 { w.resources.length() }
+public fun resource_count(w: &World): u64 { load_inner(w).resources.length() }
 
 /// The pinned gather-ambush defender for resource `template`. `none` = never
 /// ambushes (also the answer for an unknown template — defensive read). FREE read — the gather ambush gate
 /// consumes it; `df::exists` guards the typed borrow, mirroring `rare_link`.
 public fun resource_protector(w: &World, template: ID): Option<ID> {
-  if (w.protectors.contains(&template)) option::some(*w.protectors.get(&template)) else option::none()
+  if (load_inner(w).protectors.contains(&template)) option::some(*load_inner(w).protectors.get(&template)) else option::none()
 }
-public fun mob_count(w: &World): u64 { w.mobs.length() }
+public fun mob_count(w: &World): u64 { load_inner(w).mobs.length() }
 
 /// The distance-difficulty eligibility level for mob `template` (its authored `max_level` ceiling), or 0 when
 /// unset (always eligible — feature dormant for that mob). FREE read; `df::exists` guards the typed borrow.
 public fun mob_level(w: &World, template: ID): u16 {
-  let n = w.mobs.length();
+  let n = load_inner(w).mobs.length();
   let mut i = 0;
-  while (i < n) { if (w.mobs[i].template_id == template) return w.mob_levels[i]; i = i + 1; };
+  while (i < n) { if (load_inner(w).mobs[i].template_id == template) return load_inner(w).mob_levels[i]; i = i + 1; };
   0
 }
 
 /// Row index of mob `template` in the table — the write half of the parallel `mob_levels` vector.
 fun mob_row_index(w: &World, template: ID): u64 {
-  let n = w.mobs.length();
+  let n = load_inner(w).mobs.length();
   let mut i = 0;
-  while (i < n) { if (w.mobs[i].template_id == template) return i; i = i + 1; };
+  while (i < n) { if (load_inner(w).mobs[i].template_id == template) return i; i = i + 1; };
   abort EBadEntryIndex
 }
 
@@ -581,29 +607,29 @@ fun mob_row_index(w: &World, template: ID): u64 {
 /// this to gate the distance roll without holding `&World` while it also holds the zone-DF `&mut UID`. Derived
 /// from the same `mobs` vector order, so it can never desync from the roster it mirrors.
 public fun mob_levels_snapshot(w: &World): vector<u16> {
-  w.mob_levels
+  load_inner(w).mob_levels
 }
-public fun room_count(w: &World): u64 { w.dungeon_rooms.length() }
+public fun room_count(w: &World): u64 { load_inner(w).dungeon_rooms.length() }
 
 /// Full-table copies (rows are `copy`) — `zones` snapshots these to roll spawns WITHOUT holding `&World` while it
 /// also holds the zone-DF `&mut UID`; the RPC reads them for the encyclopedia.
-public fun resources_snapshot(w: &World): vector<ResourceEntry> { w.resources }
-public fun mobs_snapshot(w: &World): vector<MobEntry> { w.mobs }
+public fun resources_snapshot(w: &World): vector<ResourceEntry> { load_inner(w).resources }
+public fun mobs_snapshot(w: &World): vector<MobEntry> { load_inner(w).mobs }
 
 /// Immutable borrow of a resource row (aborts `EBadEntryIndex` out of range). `zones` reads these to roll spawns.
 public fun resource_entry(w: &World, i: u64): &ResourceEntry {
-  assert!(i < w.resources.length(), EBadEntryIndex);
-  &w.resources[i]
+  assert!(i < load_inner(w).resources.length(), EBadEntryIndex);
+  &load_inner(w).resources[i]
 }
 
 public fun mob_entry(w: &World, i: u64): &MobEntry {
-  assert!(i < w.mobs.length(), EBadEntryIndex);
-  &w.mobs[i]
+  assert!(i < load_inner(w).mobs.length(), EBadEntryIndex);
+  &load_inner(w).mobs[i]
 }
 
 public fun dungeon_room(w: &World, i: u64): &DungeonRoom {
-  assert!(i < w.dungeon_rooms.length(), EBadEntryIndex);
-  &w.dungeon_rooms[i]
+  assert!(i < load_inner(w).dungeon_rooms.length(), EBadEntryIndex);
+  &load_inner(w).dungeon_rooms[i]
 }
 
 // Row field accessors (RPC + zones).
@@ -637,7 +663,7 @@ fun clamp_u16(v: u16, lo: u16, hi: u16): u16 { if (v < lo) lo else if (v > hi) h
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 
 #[test_only]
-public fun set_spawn_nonce_for_testing(w: &mut World, n: u64) { w.spawn_nonce = n; }
+public fun set_spawn_nonce_for_testing(w: &mut World, n: u64) { load_inner_mut(w).spawn_nonce = n; }
 
 // ╔════════════════ [ merged from `checkpoint` — republish restructure #1287 ] ══════ ]
 // ╔════════════════ [ Errors (documented for the frontend in the module header) ] ═ ]
