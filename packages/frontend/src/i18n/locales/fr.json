@@ -2369,6 +2369,8 @@
     "spell_no_points": "Pas assez de points de sort pour l'améliorer.",
     "spell_char_level": "Votre niveau de personnage est trop bas pour ce niveau de sort.",
     "gas_over_ceiling": "Transaction refusée — elle coûterait ~{{cost}} SUI (limite {{limit}}).",
+    "spend_guard_circuit_open": "Relances automatiques arrêtées — cette transaction a déjà échoué sur la chaîne et consommé du gas.",
+    "spend_guard_session_frozen": "Transactions automatiques gelées pour cette session — la limite de gas automatique a été atteinte.",
     "insufficient_balance": "Pas assez de SUI pour couvrir les frais de cette transaction.",
     "sponsor_empty": "Le service de sponsoring est vide. Ajoute des SUI à ton compte pour payer les frais de transaction.",
     "sponsor_unreachable": "Impossible de joindre le sponsor de gas pour le moment. Vérifie ta connexion et réessaie.",

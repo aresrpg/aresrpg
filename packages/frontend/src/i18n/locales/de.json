@@ -2369,6 +2369,8 @@
     "spell_no_points": "Nicht genug Zauberpunkte für diese Verbesserung.",
     "spell_char_level": "Deine Charakterstufe ist zu niedrig für diese Zauberstufe.",
     "gas_over_ceiling": "Transaktion abgelehnt — sie würde ~{{cost}} SUI kosten (Limit {{limit}}).",
+    "spend_guard_circuit_open": "Automatische Wiederholungen gestoppt — diese Transaktion ist on-chain bereits fehlgeschlagen und hat Gas verbraucht.",
+    "spend_guard_session_frozen": "Automatische Transaktionen für diese Sitzung eingefroren — das automatische Gas-Limit ist erreicht.",
     "insufficient_balance": "Nicht genug SUI, um die Gas-Gebühr dieser Transaktion zu decken.",
     "sponsor_empty": "Der Sponsor-Dienst ist leer. Bitte füge deinem Konto etwas SUI hinzu, um die Transaktionsgebühren zu bezahlen.",
     "sponsor_unreachable": "Der Gas-Sponsor ist gerade nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",

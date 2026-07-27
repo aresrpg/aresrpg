@@ -2369,6 +2369,8 @@
     "spell_no_points": "No tienes suficientes puntos de hechizo para mejorarlo.",
     "spell_char_level": "Tu nivel de personaje es demasiado bajo para ese nivel de hechizo.",
     "gas_over_ceiling": "Transacción rechazada — costaría ~{{cost}} SUI (límite {{limit}}).",
+    "spend_guard_circuit_open": "Reintentos automáticos detenidos — esa transacción ya falló en la cadena y gastó gas.",
+    "spend_guard_session_frozen": "Transacciones automáticas congeladas en esta sesión — se alcanzó el límite de gas automático.",
     "insufficient_balance": "No tienes suficiente SUI para cubrir el gas de esta transacción.",
     "sponsor_empty": "El servicio de patrocinio está vacío. Añade algo de SUI a tu cuenta para pagar las comisiones de transacción.",
     "sponsor_unreachable": "No se puede contactar con el patrocinador de gas ahora mismo. Comprueba tu conexión e inténtalo de nuevo.",

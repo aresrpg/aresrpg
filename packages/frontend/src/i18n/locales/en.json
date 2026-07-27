@@ -2369,6 +2369,8 @@
     "spell_no_points": "Not enough spell points to level that up.",
     "spell_char_level": "Your character level is too low for that spell level.",
     "gas_over_ceiling": "Transaction refused — it would cost ~{{cost}} SUI (limit {{limit}}).",
+    "spend_guard_circuit_open": "Automatic retries stopped — that transaction already failed on chain and spent gas.",
+    "spend_guard_session_frozen": "Automatic transactions frozen for this session — the automated gas limit was reached.",
     "insufficient_balance": "Not enough SUI to cover this transaction's gas.",
     "sponsor_empty": "The sponsor service is empty. Please add some Sui to your account to pay for transaction fees.",
     "sponsor_unreachable": "Can't reach the gas sponsor right now. Check your connection and try again.",
