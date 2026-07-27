@@ -41,6 +41,114 @@ const RELEASE_PATH = path.resolve(
   '../sdk/src/deployment/release.json'
 )
 
+// object_size ceiling the chain enforces on a published/upgraded Move package (protocol parameter
+// `max_object_size`, protocol version 130). Publish/upgrade creates a MovePackage object; exceeding
+// this aborts `MovePackageTooBig { object_size, max_object_size }` at EXECUTION — a dry-run/live cost,
+// not a build-time one, which is exactly why a package can compile clean and still die on the chain
+// (foundation/#1202, discovered mid-ceremony leg 2, 2026-07-27: aresrpg compiled fine, then refused
+// on-chain at object_size 106584 against this 102400 ceiling).
+const MAX_OBJECT_SIZE = 102_400
+
+// ── Package-size preflight ──────────────────────────────────────────────────────────────────────
+// Predicts the on-chain MovePackage object size from local build artifacts alone — no network round
+// trip, so a TooBig refusal is known before the ceremony ever dry-runs against a live upgrade cap.
+// The real check BCS-serializes the MovePackage: module bytecode + a module_map name-key per module +
+// a type_origin_table entry per struct/enum the package DEFINES + a linkage_table entry per
+// transitively-linked dependency package. This mirrors that shape from the build's own artifacts.
+const OBJECT_ID_BYTES = 32
+// linkage_table is a VecMap<ObjectID, UpgradeInfo>; UpgradeInfo = { upgraded_id: ObjectID (32),
+// upgraded_version: u64 (8) }, keyed by another ObjectID (32) — 72 bytes per linked dependency.
+const LINKAGE_ENTRY_BYTES = OBJECT_ID_BYTES + OBJECT_ID_BYTES + 8
+
+// BCS variable-length collections (String, Vec<u8>, and VecMap's entry count) carry a ULEB128 length
+// prefix ahead of the payload.
+function uleb128Len(n) {
+  let bytes = 1
+  while (n >= 128) {
+    n = Math.floor(n / 128)
+    bytes++
+  }
+  return bytes
+}
+
+// Strip `//`/`///` line comments before scanning for struct/enum declarations — a bare regex over raw
+// source false-positives on prose like "hardcoded enum baked into..." (16 false hits measured live on
+// aresrpg's sources before this fix).
+function stripLineComments(src) {
+  return src
+    .split('\n')
+    .map((line) => line.replace(/\/\/.*/, ''))
+    .join('\n')
+}
+
+// CALIBRATION (2026-07-27, foundation/#1202): this formula measured 107054 bytes for aresrpg against
+// the SAME edge sources whose real on-chain dry-run failed at object_size 106584 — 470 bytes / 0.44%
+// over ground truth, inside the ~1% bar. The gap is the residual BCS envelope this proxy doesn't model
+// (the package UID + version fields, a handful of ULEB128 rounding edges) — negligible next to a
+// 102400-byte ceiling and it only ever OVER-estimates, so it never hides a real TooBig risk.
+function measurePackageSize(pkgPath) {
+  const srcDir = path.join(pkgPath, 'sources')
+  const buildDir = path.join(pkgPath, 'build')
+  if (!fs.existsSync(srcDir) || !fs.existsSync(buildDir)) return null
+
+  // `build/<name>` is named after the package's OWN Move.toml `name` field (e.g. "aresrpg_foundation"
+  // for the "foundation" manifest entry), never the manifest key — and it's the only entry under
+  // build/, since dependencies nest inside bytecode_modules/dependencies/ rather than getting their
+  // own top-level build/<dep> folder.
+  const [buildPkgName] = fs
+    .readdirSync(buildDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+  if (!buildPkgName) return null
+  const bcDir = path.join(buildDir, buildPkgName, 'bytecode_modules')
+  if (!fs.existsSync(bcDir)) return null
+
+  let ownBytes = 0
+  let moduleMapOverhead = 1 // module_map VecMap entry-count ULEB128 prefix
+  let typeOriginBytes = 1 // type_origin_table Vec entry-count ULEB128 prefix
+
+  for (const file of fs
+    .readdirSync(srcDir)
+    .filter((f) => f.endsWith('.move'))) {
+    const content = stripLineComments(
+      fs.readFileSync(path.join(srcDir, file), 'utf8')
+    )
+    const modMatch = content.match(/^module\s+[a-zA-Z0-9_]+::([a-zA-Z0-9_]+)/m)
+    if (!modMatch) continue
+    const [, modName] = modMatch
+    const mvPath = path.join(bcDir, `${modName}.mv`)
+    if (!fs.existsSync(mvPath)) continue // module didn't compile — the compat check above already reports why
+
+    const mvBytes = fs.statSync(mvPath).size
+    ownBytes += mvBytes
+    moduleMapOverhead +=
+      uleb128Len(modName.length) + modName.length + uleb128Len(mvBytes)
+
+    for (const [, typeName] of content.matchAll(
+      /\b(?:public\s+)?(?:struct|enum)\s+([A-Za-z_][A-Za-z0-9_]*)/g
+    ))
+      typeOriginBytes +=
+        uleb128Len(modName.length) +
+        modName.length +
+        uleb128Len(typeName.length) +
+        typeName.length +
+        OBJECT_ID_BYTES
+  }
+
+  // Every transitively-linked dependency package shows up as its own subdirectory under
+  // bytecode_modules/dependencies/ (framework packages included: Sui, MoveStdlib, Kiosk, …) — reading
+  // that directory listing is exact, no "INCLUDING DEPENDENCY" stdout/stderr parsing needed.
+  const depsDir = path.join(bcDir, 'dependencies')
+  const depCount = fs.existsSync(depsDir)
+    ? fs
+        .readdirSync(depsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory()).length
+    : 0
+  const linkageBytes = 1 + depCount * LINKAGE_ENTRY_BYTES
+
+  return ownBytes + moduleMapOverhead + typeOriginBytes + linkageBytes
+}
+
 const HELP = `ceremony_preflight_compat — catch IncompatibleUpgrade BEFORE the ceremony, mechanically.
 
 Usage: node ceremony_preflight_compat.mjs [pkg...]
@@ -51,7 +159,10 @@ Usage: node ceremony_preflight_compat.mjs [pkg...]
 For each package, runs \`sui client upgrade --serialize-unsigned-transaction\` against its source dir
 (no signing, no execution, no gas) and parses the local compatibility verifier's verdict. Prints one row
 per package — "<name> COMPATIBLE" or "<name> INCOMPATIBLE  <count>x<E-code> ..." — and exits non-zero if
-any requested package is incompatible (or errors for a non-compatibility reason).
+any requested package is incompatible (or errors for a non-compatibility reason). Also prints a SIZE row
+per package — "<name> SIZE <bytes> / 102400 (<margin>)" — a local proxy for the on-chain MovePackage
+object size (see measurePackageSize), and exits non-zero if any package would exceed the chain's
+max_object_size (MovePackageTooBig at execution, caught here before the ceremony ever dry-runs).
 
 Env:
   NETWORK          testnet (default) | mainnet — must match the CLI's active-env (assert_env, fail-closed)
@@ -154,16 +265,21 @@ async function checkPackage(client, release, network, name) {
     if (needsPatch) fs.writeFileSync(pubFile, original)
   }
 
+  // Read from whatever the CLI call just built — compat errors and TooBig risk are independent
+  // verdicts over the SAME build, so both ride one compile instead of two.
+  const size = measurePackageSize(pkgPath)
+
   const errors = parseCompatErrors(output)
   if (errors.size > 0)
-    return { name, status: 'incompatible', errors, target, source }
+    return { name, status: 'incompatible', errors, target, source, size }
   if (exitCode !== 0)
     return {
       name,
       status: 'error',
       detail: `exit ${exitCode} — ${output.trim().split('\n').slice(-5).join(' | ')}`,
+      size,
     }
-  return { name, status: 'compatible', target, source }
+  return { name, status: 'compatible', target, source, size }
 }
 
 async function main() {
@@ -202,6 +318,17 @@ async function main() {
     } else {
       anyFailed = true
       console.log(`${name} ERROR  ${result.detail}`)
+    }
+
+    if (result.size != null) {
+      const over = result.size > MAX_OBJECT_SIZE
+      if (over) anyFailed = true
+      const margin = over
+        ? `${result.size - MAX_OBJECT_SIZE} over`
+        : `${MAX_OBJECT_SIZE - result.size} under`
+      console.log(
+        `${name} SIZE ${result.size} / ${MAX_OBJECT_SIZE} (${margin})`
+      )
     }
   }
 
