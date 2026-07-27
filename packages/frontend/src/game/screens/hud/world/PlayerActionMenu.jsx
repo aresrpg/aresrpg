@@ -55,14 +55,13 @@ export function PlayerActionMenu() {
   const is_self = !!address && !!my_address && address === my_address
   const can_fast_travel = !!target && !!selected_character_id && !is_self && (!!target.id || !!address)
 
-  // PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): the moment this menu shows the
-  // Fast Travel option, warm the dragon GLB cache — NOT on confirm. A cold asset-host fetch (multi-MB, first
-  // request this session) otherwise sits entirely on the travel critical path (mount_rig.js only asks for it
-  // once resolve/join finish); kicking it here runs it in PARALLEL with that wait instead. Idempotent
-  // (module-cached by URL in mount_rig.js) — reopening the menu on other targets just no-ops after the first.
+  // PRELOAD AT WORLD-HUD BOOT + TRAVEL INTENT: this component is always mounted by GameWorldHud, so `!target`
+  // starts the small (~1.15 MB) default dragon before any remote/local ride can spawn. Opening a valid travel
+  // target retries (or joins) that same canonical cache key. The route effect independently waits for resolution
+  // before it can enter `flying`, so this is early work, never a hidden confirm-time fetch.
   useEffect(() => {
-    if (can_fast_travel) preload_mount_glb(ft_dragon_glb_url())
-  }, [can_fast_travel])
+    if (!target || can_fast_travel) void preload_mount_glb(ft_dragon_glb_url())
+  }, [target, can_fast_travel])
 
   if (!target) return null
 

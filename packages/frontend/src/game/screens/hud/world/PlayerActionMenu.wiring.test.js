@@ -20,6 +20,8 @@ import { readFileSync } from 'node:fs'
 const source = readFileSync(new URL('./PlayerActionMenu.jsx', import.meta.url), 'utf8')
 const friends_source = readFileSync(new URL('./OnlinePlayers.jsx', import.meta.url), 'utf8')
 const roster_source = readFileSync(new URL('../../../../world-shell/friends_reads.js', import.meta.url), 'utf8')
+const effects_source = readFileSync(new URL('../../../../world-shell/fast_travel_effects.js', import.meta.url), 'utf8')
+const group_source = readFileSync(new URL('../../../../world-shell/group_wiring.js', import.meta.url), 'utf8')
 
 describe('PlayerActionMenu cold-start party (#329)', () => {
   it('the cold-start invite path calls create_bare(), never the owned-alt-sweeping create()', () => {
@@ -47,5 +49,12 @@ describe('friend-list fast travel (#327)', () => {
     expect(source).toContain('ft_dispatch({ ...input, traveler_id: selected_character_id })')
     expect(source).not.toContain("from '../../../../world-shell/world_join.js'")
     expect(source).not.toContain("from '../../../fast_travel_pilot.js'")
+  })
+
+  it('warms at picker intent and both flight producers wait for that resolved cache entry', () => {
+    expect(source).toContain('void preload_mount_glb(ft_dragon_glb_url())')
+    expect(effects_source).toContain('const dragon_ready = preload_mount_glb(ft_dragon_glb_url())')
+    expect(effects_source).toContain('out.ok && !(await dragon_ready)')
+    expect(group_source).toContain('await preload_mount_glb(ft_dragon_glb_url())')
   })
 })

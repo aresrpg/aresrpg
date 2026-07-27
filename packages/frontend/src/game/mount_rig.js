@@ -16,22 +16,15 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
 import { mount_is_flight, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
+import { create_mount_glb_cache } from './mount_glb_cache.js'
 import { game_log } from '../core/log.js'
 import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
 
 const SEAT_LIFT = 0.8 // fraction of the mount's height the rider sits at (bbox top of the back ≈ ×0.8)
 const BLEND_RATE = 8 // idle↔move weight ease (per-second lambda)
 
-/** @type {Map<string, Promise<any>>} fetch+parse each unique mount GLB ONCE; clone per rig. */
-const _cache = new Map()
-const load_glb = (/** @type {string} */ url) => {
-  let p = _cache.get(url)
-  if (!p) {
-    p = load_glb_checked(url)
-    _cache.set(url, p)
-  }
-  return p
-}
+/** Fetch+parse each unique mount GLB once; failed work is evicted, resolved render data stays page-cached. */
+const glb_cache = create_mount_glb_cache((/** @type {string} */ url) => load_glb_checked(url))
 
 /** The mount GLB refusal rule (non-CDN URLs rejected) — ONE home, shared by create_mount_rig and the
  *  #175 preload below so a preload always warms the EXACT cache key the real mount will ask for.
@@ -47,15 +40,19 @@ export function ft_dragon_glb_url() {
   return model_asset_url('mob', file)
 }
 
-/** PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): a cold asset-host dragon GLB fetch
- *  (multi-MB, first request this session) currently sits entirely on the travel critical path — create_mount_rig
- *  only ever asks for it once the resolve/join phases finish. Kick the SAME cache entry the moment the travel
- *  UI shows the option (PlayerActionMenu), not on confirm, so the fetch runs IN PARALLEL with resolve/join
- *  instead of serialized after it. Fire-and-forget: a failure here is silent — create_mount_rig's own load
- *  still retries the URL and surfaces its own error normally. @param {string} glb_url */
+/** PRELOAD-ON-INTENT: fetch+parse the SAME canonical key spawn will consume, and resolve only once that render
+ *  data is in the warm cache. Failure stays retryable (the cache evicts it) and resolves false so the travel
+ *  effect can refuse before entering flight. @param {string} glb_url @returns {Promise<boolean>} */
 export function preload_mount_glb(glb_url) {
   const source_url = resolve_source_url(glb_url)
-  if (source_url) load_glb(source_url).catch(() => {})
+  if (!source_url) return Promise.resolve(false)
+  return glb_cache
+    .preload(source_url)
+    .then(() => true)
+    .catch((error) => {
+      game_log('mount', `GLB preload failed (${source_url}):`, error)
+      return false
+    })
 }
 
 /**
@@ -75,7 +72,9 @@ export function create_mount_rig({ engine, glb_url }) {
   let want_visible = true
   const source_url = resolve_source_url(glb_url)
 
-  const load = source_url ? load_glb(source_url) : Promise.reject(new Error('refused non-CDN mount asset URL'))
+  const load = source_url
+    ? glb_cache.for_spawn(source_url, { warm_only: mount_is_flight(source_url) })
+    : Promise.reject(new Error('refused non-CDN mount asset URL'))
   load
     .then((/** @type {any} */ gltf) => {
       if (disposed) return

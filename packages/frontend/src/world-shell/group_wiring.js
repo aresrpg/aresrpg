@@ -11,6 +11,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { context } from '../game/store.js'
 import { use_auth } from '../auth'
 import { run_fight_entry } from '../game/fight_engage.js'
+import { ft_dragon_glb_url, preload_mount_glb } from '../game/mount_rig.js'
 import { game_log } from '../core/log.js'
 import i18n from '../i18n'
 
@@ -40,7 +41,11 @@ const DRAGON_FLIGHT_MS = 12_000
  *  same-world `resolved` skip the resolve/join edges (the follower already stands in the leader's world). The
  *  slot goes `flying`, so switching to the follower mid-air hands the existing pilot its live flight; the timer
  *  then lands + clears it (the group loop seats the follower beside the leader on follow_dragon_arrived). */
-function dragon_catch_up(character_id, world_id, target) {
+async function dragon_catch_up(character_id, world_id, target) {
+  // This shortcut is the second `resolved` producer (manual travel uses fast_travel_effects). Warm the same model
+  // before opening the follower's flight slice so switching to that character mid-catch-up can only spawn from
+  // resolved cache data, never initiate a fetch.
+  if (!(await preload_mount_glb(ft_dragon_glb_url()))) throw new Error('fast-travel dragon unavailable')
   ft_dispatch({ traveler_id: character_id, type: 'begin', character_id, world_id, x: target.x, z: target.z })
   ft_dispatch({
     traveler_id: character_id,

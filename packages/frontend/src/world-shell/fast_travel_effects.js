@@ -10,6 +10,7 @@
 import { get_characters } from '../rpc/client'
 import { context } from '../game/store.js'
 import { push_event_toast } from '../game/core/toast.js'
+import { ft_dragon_glb_url, preload_mount_glb } from '../game/mount_rig.js'
 import { game_log } from '../core/log.js'
 import i18n from '../i18n'
 
@@ -36,6 +37,10 @@ const dispatch = (input) => fast_travel_store.getState().input(input)
  *  `traveler_id` is WHO is flying (the active player, or a steered follower) — its /v1 doc is the "my" gate. */
 async function run_resolve(traveler_id, target) {
   try {
+    // The picker already started this exact cache key at travel intent. Joining it here keeps route I/O in
+    // parallel with the GLB work while enforcing the warm-only spawn invariant: no `resolved` input, and thus no
+    // `flying` phase, can happen until the fully fetched+parsed dragon is cached.
+    const dragon_ready = preload_mount_glb(ft_dragon_glb_url())
     const my_id = traveler_id
     // A friend begin carries the exact live character id, never an owner guess. Its p2p cell refines position only;
     // world + cross-world anchor still come together from this /v1 document (the routing law).
@@ -64,6 +69,7 @@ async function run_resolve(traveler_id, target) {
             ? peer_pos_of(cid)
             : null,
     })
+    if (out.ok && !(await dragon_ready)) return dispatch({ traveler_id, type: 'refused', reason: REALM_UNREACHABLE })
     dispatch(
       out.ok
         ? { traveler_id, type: 'resolved', character_id: cid, ...out.facts }
