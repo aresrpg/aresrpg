@@ -94,7 +94,21 @@ describe('fixture-adjudication constraint row', () => {
     expect(output).toContain('self-adjudication')
   })
 
-  it('exempts a new fixture but recognizes an existing golden JSON', () => {
+  it('does not let a later commit adjudicate an earlier mutation', () => {
+    const fixture = fixture_repo()
+    fs.writeFileSync(fixture.fixture_path, '{"state":"mutated"}\n')
+    commit_all(fixture, 'test: unadjudicated fixture mutation')
+    fs.writeFileSync(path.join(fixture.dir, 'note.txt'), 'later\n')
+    commit_all(fixture, 'docs: later review\n\nAdjudicated-by: Evidence Reviewer <reviewer@aresrpg.world>')
+
+    const { status, output } = run_gate(fixture)
+    expect(status).toBe(1)
+    expect(output).toContain('RED')
+    expect(output).toContain('test: unadjudicated fixture mutation')
+    expect(output).toContain('commits=2')
+  })
+
+  it('exempts a new fixture once, then protects it and an existing golden JSON', () => {
     const fixture = fixture_repo()
     const new_fixture_path = path.join(fixture.dir, 'packages/fight/test/fixtures/new.json')
     fs.mkdirSync(path.dirname(new_fixture_path), { recursive: true })
@@ -105,10 +119,12 @@ describe('fixture-adjudication constraint row', () => {
     expect(result.status).toBe(0)
     expect(result.output).toContain('new fixture addition(s) exempt')
 
+    fs.writeFileSync(new_fixture_path, '{"state":"now-existing"}\n')
     fs.writeFileSync(fixture.golden_path, '{"state":"mutated"}\n')
-    commit_all(fixture, 'test: mutate golden\n\nAdjudicated-by: Evidence Reviewer <reviewer@aresrpg.world>')
+    commit_all(fixture, 'test: mutate fixtures\n\nAdjudicated-by: Evidence Reviewer <reviewer@aresrpg.world>')
     result = run_gate(fixture)
     expect(result.status).toBe(0)
+    expect(result.output).toContain('packages/fight/test/fixtures/new.json')
     expect(result.output).toContain('packages/sim/test/vectors/case_golden.json')
   })
 })
