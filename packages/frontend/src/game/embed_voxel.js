@@ -33,11 +33,11 @@ import { join_lobby } from '../p2p/lobby-room.js'
 import { get_saved_quality } from './screens/hud/world/quality_pref.js'
 import { apply_saved_engine_flags, resolve_hack_mode } from './screens/hud/world/engine_flags_pref.js'
 import {
-  can_cache_live_position,
-  note_live_position,
-  read_live_position,
-  flush_live_position,
-} from './session_position.js'
+  can_persist_world_position,
+  flush_world_position,
+  note_world_position,
+  read_world_position,
+} from '../world-shell/spawns_adapter.js'
 import { should_reuse_pending_session } from './voxel_session_identity.js'
 import { resume_zone_music, set_zone_music, stop_zone_music, suspend_zone_music } from './core/audio/ambient_music.js'
 import { create_region_follower, region_zone_key } from './core/audio/region_music.js'
@@ -373,22 +373,19 @@ function create_session(
   // through the identical accessor the physics uses, cave override included for free.
   const env = { ...make_block_env(sample), block_id_at: sample }
 
-  // SESSION POSITION RESTORE (save the last position to localStorage with a timestamp) —
-  // session_position.js owns the per-character, world-scoped x/z cache. ONLY the render boot point moves here;
-  // every claim/travel decision still reads the chain checkpoint untouched. Cheap synchronous checks only
-  // (character+world+freshness live
-  // inside read_live_position; bounds are plain numeric compares) — "does real ground exist there" can't be
-  // answered yet (nothing has streamed in at this point in boot, even for WORLD_SPAWN itself), so that part
-  // of the validation rides the EXISTING D173 entombment guard below, now correctly scoped to boot_spawn
-  // instead of the hardcoded constant (a restored spot could sit far outside WORLD_SPAWN's own column).
+  // SESSION POSITION RESTORE — GameWorldHost awaited the IndexedDB edge before mounting, and an accepted row
+  // re-entered through the spawns reducer's `player_pos` door. This synchronous render point only projects that
+  // reduced, identity-scoped candidate into the boot arbiter; every claim/travel decision still reads chain
+  // truth. "Does real ground exist there" cannot be answered before streaming, so the D173 entombment guard
+  // below remains the terrain check for every chosen boot position.
   boot_spawn = WORLD_SPAWN
   let boot_yaw = 0
   let restored = false
   let from_checkpoint = false
   if (character?.id) {
     const world_id = use_world_binding.getState().world ?? null
-    // SESSION restore (the per-character localStorage cache) — kept only if inside the engine's zone fence.
-    const stored = read_live_position(character.id, world_id)
+    // The adapter returns reducer state only when it belongs to this exact character+world.
+    const stored = read_world_position(character.id, world_id)
     const bounds = engine.get_zone_bounds?.() ?? null
     const in_bounds =
       !bounds ||
@@ -396,12 +393,8 @@ function create_session(
       (stored.x >= bounds.min_x && stored.x <= bounds.max_x && stored.z >= bounds.min_z && stored.z <= bounds.max_z)
     if (stored && !in_bounds) game_log('voxel', 'stored session position outside the zone fence — ignored', stored)
     const session = stored && in_bounds ? stored : null
-    // CHAIN TRUTH (§5): the on-chain per-world CHECKPOINT — advanced by every zone SEARCH / join / world-fight
-    // claim — is the authoritative resume, resolved + cached by the world-shell join flow BEFORE this synchronous
-    // boot (world_checkpoint.js). It WINS over the local session restore when they disagree (chain is the source
-    // of truth); absent only pre-first-join, where the WORLD_SPAWN default (D186) is right. Without this the
-    // client rendered every reload at the origin while the checkpoint sat zones away — invisible mobs/nodes +
-    // the next search aborting ETravelTooFar forever.
+    // CHAIN TRUTH (§5): use the canonical checkpoint cache populated before mount. The pure boot projection
+    // applies the distance guard again, so a local row can never outrank a disagreeing chain anchor.
     const checkpoint = world_id ? read_checkpoint_spawn(character.id, world_id) : null
     const chosen = resolve_boot_spawn({ checkpoint, session, fallback: WORLD_SPAWN, y_seed: WORLD_SPAWN[1] })
     boot_spawn = chosen.position
@@ -448,15 +441,15 @@ function create_session(
       checkpoint.z,
     ])
     ctl.teleport(destination)
-    // Keep the session ergonomics cache aligned too: a later ordinary remount may not restore the rejected,
-    // far-away local pose over the checkpoint we just chose. Chain remains the source of x/z truth.
-    note_live_position({
+    // Keep the reducer + persistence edge aligned too. The freshly resolved checkpoint is captured as this
+    // row's anchor, so a later ordinary remount cannot resurrect the pre-resync pose over chain truth.
+    void note_world_position({
       character_id: character.id,
       world_id,
       x: destination[0],
       z: destination[2],
     })
-    flush_live_position()
+    void flush_world_position()
     game_log('checkpoint', `resynced live body to proven position [${destination.join(', ')}]`)
     return true
   })
@@ -622,7 +615,7 @@ function create_session(
   // the cave transition. Therefore no fight/dungeon frame — and no unload WHILE in one — writes the cache.
   const can_persist_position = () => {
     const dungeon = use_dungeon.getState()
-    return can_cache_live_position({
+    return can_persist_world_position({
       character_id: character?.id ?? null,
       world_id: bound_world,
       in_fight: fight_camera.is_active(),
@@ -631,7 +624,7 @@ function create_session(
     })
   }
   const flush_position = () => {
-    if (can_persist_position()) flush_live_position()
+    if (can_persist_position()) void flush_world_position()
   }
   let physics_live = false // Lane 66: ONE readiness bit gates both input and controller ticks.
   const player = create_player({
@@ -763,10 +756,10 @@ function create_session(
       )
     }
     player.frame2(t, dt) // broadcast our pose/cell + pose the avatar/mount/plate + aura, then the walk camera (a fight hides the body)
-    // LAST POSITION note (session_position.js owns the ~5s localStorage cadence). The SAME predicate gates
-    // pagehide below, so a frozen world-fight controller and a cave/dungeon controller can never write.
+    // LAST POSITION input — the world-shell adapter owns the ~5s IndexedDB cadence. The SAME predicate gates
+    // pagehide below, so a frozen world-fight controller and a cave/dungeon controller can never persist.
     if (can_persist_position())
-      note_live_position({
+      void note_world_position({
         character_id: character.id,
         world_id: bound_world,
         x: t.position[0],
@@ -1087,7 +1080,7 @@ export function reboot_voxel_session_tier(tier) {
   const dungeon = use_dungeon.getState()
   if (dungeon.dungeon || dungeon.dungeon_id) return { ok: false, reason: 'fight' }
   const { host, character, follow } = session
-  // Commit the freshest pose NOW (the ~2s throttle + no in-place pagehide would else rewind the player), then
+  // Commit the freshest pose NOW (the ~5s cadence + no in-place pagehide would else rewind the player), then
   // tear down (synchronous GPU release) and rebuild at the new tier on the SAME host — create_session
   // re-attaches the container in-DOM, re-reads the pose, and raises its own boot veil over the re-stream.
   // `follow` rides along from the dying session so a live tier-reboot mid-follow never resurrects this

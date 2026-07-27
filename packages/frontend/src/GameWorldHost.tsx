@@ -10,6 +10,7 @@ import { use_follow, world_to_biome } from './follow'
 import { use_mobile_mode } from './game/screens/hud/mobile_layout.js'
 import { use_world_binding, reset_world_binding, fetch_world_binding, end_join } from './world-shell/session_gate.js'
 import { resolve_checkpoint_spawn } from './world-shell/world_checkpoint.js'
+import { restore_world_position } from './world-shell/spawns_adapter.js'
 import { TouchControlsLayer } from './game/touch/TouchControls.jsx'
 import { use_mobile_input_mode, use_mobile_touch_hygiene } from './game/touch/mobile_input_mode.js'
 import './game/touch/touch-hygiene.css'
@@ -297,14 +298,17 @@ export function GameWorldHost(): ReactElement {
             } else if (world) {
               mounted_world = world // carry into the mount-identity key so a travel re-boots the scene
 
-              // Resolve + cache the on-chain CHECKPOINT spawn BEFORE the resident mount so create_session boots
-              // the avatar AT its chain checkpoint (the searched/claimed zone) instead of the WORLD_SPAWN origin —
-              // where its zone-scoped mobs/nodes are, and where its next search stays travel-legal. Fail-safe: a
-              // null/failed resolve just leaves the WORLD_SPAWN fallback (world_checkpoint.js). Runs alongside the
-              // bound world's CHAIN BIOME resolve (world_to_biome — follow.ts's fallback wrapper over
-              // world_biome.js's resolve_world_biome, which still populates the SAME cache create_session reads
-              // synchronously to pick the engine recipe — DECISIONS 07-12 wiring lane).
-              await Promise.all([resolve_checkpoint_spawn(char_id, world), world_to_biome(world)])
+              // Resolve the on-chain CHECKPOINT before consulting IndexedDB: the chain anchor is the staleness
+              // witness for the local free-walk row. Only after both chain reads settle may the accepted local
+              // position re-enter through the spawns reducer's `player_pos` input; the resident mount then reads
+              // that reduced state synchronously. A token check on each async boundary prevents an abandoned
+              // character/world boot from hydrating the next one.
+              const [chain_anchor] = await Promise.all([
+                resolve_checkpoint_spawn(char_id, world),
+                world_to_biome(world),
+              ])
+              if (token !== boot_token.current) return
+              await restore_world_position(char_id, world, chain_anchor)
               if (token !== boot_token.current) return
             }
           }

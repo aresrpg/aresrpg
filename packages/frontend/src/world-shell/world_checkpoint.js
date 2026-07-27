@@ -49,7 +49,15 @@ export async function resolve_checkpoint_spawn(character_id, world_id) {
     const doc = await get_world({ grpc_client: sdk.grpc_client })(world_id).catch(() => null)
     const world_pos = checkpoint_to_world(cp, doc)
     _cache.set(key, world_pos)
-    spawns_input({ type: 'checkpoint_resolved', world_id, x: Number(cp.x), z: Number(cp.z), source: 'read' })
+    spawns_input({
+      type: 'checkpoint_resolved',
+      character_id,
+      world_id,
+      x: Number(cp.x),
+      z: Number(cp.z),
+      world_position: world_pos,
+      source: 'read',
+    })
     return world_pos
   } catch (error) {
     game_log('checkpoint', 'spawn resolve failed — falling back to WORLD_SPAWN', error)
@@ -79,7 +87,15 @@ export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
     const world_pos = checkpoint_to_world({ x, z }, doc)
     if (!world_pos) return null
     _cache.set(_key(character_id, world_id), world_pos)
-    spawns_input({ type: 'checkpoint_resolved', world_id, x, z, source: 'receipt' })
+    spawns_input({
+      type: 'checkpoint_resolved',
+      character_id,
+      world_id,
+      x,
+      z,
+      world_position: world_pos,
+      source: 'receipt',
+    })
     return world_pos
   } catch (error) {
     game_log('checkpoint', 'receipt-seeded spawn resolve failed', error)

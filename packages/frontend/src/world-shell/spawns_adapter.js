@@ -17,7 +17,30 @@ export const spawns_store = create_spawns_store()
 
 /** Dispatch one typed spawns input without exposing store plumbing at call sites. */
 export function spawns_input(input, now) {
+  const before = spawns_store.getState()
   spawns_store.getState().input(input, now)
+  const after = spawns_store.getState()
+  if (input.type === 'world_bound' && after.world_id !== before.world_id) {
+    discard_pending_position()
+    player_position_owner = null
+    last_noted_position = null
+    last_noted_position_owner = null
+    position_chain_anchor = null
+    position_chain_anchor_owner = null
+    restore_generation += 1
+  } else {
+    const { character_id } = use_world_binding.getState()
+    const owns_chain_commit =
+      input.type === 'zone_searched' ||
+      input.type === 'claim_receipt' ||
+      (input.type === 'checkpoint_resolved' && input.character_id === character_id)
+    const committed =
+      input.type === 'checkpoint_resolved' && finite_position(input.world_position)
+        ? input.world_position
+        : after.checkpoint
+    if (owns_chain_commit && after.checkpoint !== before.checkpoint && finite_position(committed))
+      adopt_position_chain_anchor(character_id, after.world_id, committed)
+  }
 }
 
 /**
@@ -36,6 +59,7 @@ const position_db_name = 'aresrpg_world_position'
 const position_db_version = 1
 const position_store_name = 'positions'
 const write_interval_ms = 5_000
+const movement_stop_ms = 750
 const max_age_ms = 30 * 60 * 1_000
 
 /** @typedef {{x:number,z:number}} WorldPosition */
@@ -127,8 +151,19 @@ const save_position_snapshot = (snapshot) =>
 let pending_position = null
 /** @type {Map<string, number>} */
 const last_position_write = new Map()
+/** @type {ReturnType<typeof setTimeout> | null} */
+let position_timer = null
 /** @type {string | null} identity that owns spawns_store.state.player */
 let player_position_owner = null
+/** @type {WorldPosition | null} */
+let last_noted_position = null
+/** @type {string | null} */
+let last_noted_position_owner = null
+/** Canonical signed chain anchor associated with the current character+world edge identity. */
+/** @type {WorldPosition | null} */
+let position_chain_anchor = null
+/** @type {string | null} */
+let position_chain_anchor_owner = null
 let restore_generation = 0
 /** Serialize separate IndexedDB transactions so an older completion can never overwrite a newer pose. */
 let position_write_tail = Promise.resolve()
@@ -139,11 +174,57 @@ const current_binding_is = (character_id, world_id) => {
   return binding.character_id === character_id && binding.world === world_id
 }
 
+const adopt_position_chain_anchor = (character_id, world_id, chain_anchor) => {
+  if (
+    !character_id ||
+    !world_id ||
+    !finite_position(chain_anchor) ||
+    !current_binding_is(character_id, world_id) ||
+    spawns_store.getState().world_id !== world_id
+  )
+    return null
+  position_chain_anchor_owner = position_key(character_id, world_id)
+  position_chain_anchor = { x: Number(chain_anchor.x), z: Number(chain_anchor.z) }
+  return position_chain_anchor
+}
+
+const read_position_chain_anchor = (character_id, world_id) =>
+  position_chain_anchor_owner === position_key(character_id, world_id) && finite_position(position_chain_anchor)
+    ? position_chain_anchor
+    : null
+
+const clear_position_timer = () => {
+  if (position_timer !== null) clearTimeout(position_timer)
+  position_timer = null
+}
+
 const discard_pending_position = () => {
   pending_position = null
+  clear_position_timer()
+}
+
+/**
+ * PURE eligibility gate shared by movement notes and explicit lifecycle flushes.
+ * @param {{
+ *   character_id?:string|null,
+ *   world_id?:string|null,
+ *   in_fight?:boolean,
+ *   in_dungeon?:boolean,
+ *   in_cave?:boolean,
+ * }} state
+ */
+export function can_persist_world_position({
+  character_id,
+  world_id,
+  in_fight = false,
+  in_dungeon = false,
+  in_cave = false,
+}) {
+  return !!character_id && !!world_id && !in_fight && !in_dungeon && !in_cave
 }
 
 const commit_pending_position = (now = Date.now()) => {
+  clear_position_timer()
   const pending = pending_position
   pending_position = null
   if (!pending) return position_write_tail
@@ -151,7 +232,7 @@ const commit_pending_position = (now = Date.now()) => {
   if (
     !current_binding_is(pending.character_id, pending.world_id) ||
     state.world_id !== pending.world_id ||
-    !same_position(pending.chain_anchor, state.checkpoint)
+    !same_position(pending.chain_anchor, read_position_chain_anchor(pending.character_id, pending.world_id))
   )
     return position_write_tail
   const snapshot = { ...pending, saved_at: now }
@@ -161,9 +242,9 @@ const commit_pending_position = (now = Date.now()) => {
 }
 
 /**
- * Note one eligible free-walk position. The input is reduced immediately, but IndexedDB receives at most one
- * write per five seconds. Since movement reports continuously, the durable row trails a stop by at most that
- * interval; explicit lifecycle flushes commit the newest pending note sooner.
+ * Note one eligible free-walk position. The input is reduced immediately; continuous movement writes at most
+ * once per five seconds, while a trailing debounce commits the final pose after movement stops. Explicit
+ * lifecycle flushes commit the newest pending note sooner.
  * @param {{character_id:string,world_id:string,x:number,z:number}} position
  * @param {number} [now]
  */
@@ -171,18 +252,30 @@ export function note_world_position({ character_id, world_id, x, z }, now = Date
   if (!character_id || !world_id || !finite_position({ x, z }) || !current_binding_is(character_id, world_id))
     return position_write_tail
   const before = spawns_store.getState()
-  if (before.world_id !== world_id || !finite_position(before.checkpoint)) return position_write_tail
+  const chain_anchor = read_position_chain_anchor(character_id, world_id)
+  if (before.world_id !== world_id || !chain_anchor) return position_write_tail
   spawns_input({ type: 'player_pos', x, z })
-  player_position_owner = position_key(character_id, world_id)
+  const owner = position_key(character_id, world_id)
+  player_position_owner = owner
+  const noted = { x: Number(x), z: Number(z) }
+  if (last_noted_position_owner === owner && same_position(last_noted_position, noted)) return position_write_tail
+  last_noted_position_owner = owner
+  last_noted_position = noted
   pending_position = {
     character_id,
     world_id,
-    x: Number(x),
-    z: Number(z),
-    chain_anchor: { x: Number(before.checkpoint.x), z: Number(before.checkpoint.z) },
+    ...noted,
+    chain_anchor: { x: Number(chain_anchor.x), z: Number(chain_anchor.z) },
   }
-  const elapsed = now - (last_position_write.get(player_position_owner) ?? 0)
+  const elapsed = now - (last_position_write.get(owner) ?? 0)
   if (elapsed >= write_interval_ms) return commit_pending_position(now)
+  clear_position_timer()
+  // This is a persistence debounce at the app edge, not a reducer clock: no state transition reads it.
+  // eslint-disable-next-line one-pipeline/no-settimeout-in-stores
+  position_timer = setTimeout(() => {
+    void commit_pending_position()
+  }, movement_stop_ms)
+  if (typeof position_timer.unref === 'function') position_timer.unref()
   return position_write_tail
 }
 
@@ -195,10 +288,12 @@ export function flush_world_position(now = Date.now()) {
  * Load and validate the exact character+world row, then re-enter through the existing `player_pos` reducer
  * input. The identity and anchor are checked again after the async read so a travel during IndexedDB I/O
  * cannot land a stale position in the new world.
+ * @param {WorldPosition|null} chain_anchor canonical signed position returned by world_checkpoint.js
  * @returns {Promise<WorldPosition|null>}
  */
-export async function restore_world_position(character_id, world_id, now = Date.now()) {
+export async function restore_world_position(character_id, world_id, chain_anchor, now = Date.now()) {
   if (!character_id || !world_id || !current_binding_is(character_id, world_id)) return null
+  if (!adopt_position_chain_anchor(character_id, world_id, chain_anchor)) return null
   const generation = ++restore_generation
   player_position_owner = null
   const snapshot = await load_position_snapshot(position_key(character_id, world_id))
@@ -210,13 +305,15 @@ export async function restore_world_position(character_id, world_id, now = Date.
     !position_snapshot_is_current(snapshot, {
       character_id,
       world_id,
-      chain_anchor: state.checkpoint,
+      chain_anchor: read_position_chain_anchor(character_id, world_id),
       now,
     })
   )
     return null
   spawns_input({ type: 'player_pos', x: snapshot.x, z: snapshot.z })
   player_position_owner = position_key(character_id, world_id)
+  last_noted_position_owner = player_position_owner
+  last_noted_position = { x: Number(snapshot.x), z: Number(snapshot.z) }
   const { player } = spawns_store.getState()
   return player ? { x: player.x, z: player.z } : null
 }
@@ -240,6 +337,10 @@ export function _reset_position_persistence_for_test() {
   discard_pending_position()
   last_position_write.clear()
   player_position_owner = null
+  last_noted_position = null
+  last_noted_position_owner = null
+  position_chain_anchor = null
+  position_chain_anchor_owner = null
   restore_generation += 1
   position_write_tail = Promise.resolve()
 }
@@ -254,6 +355,10 @@ ferry_world(use_world_binding.getState().world)
 use_world_binding.subscribe((state, prev) => {
   if (state.character_id !== prev.character_id || state.world !== prev.world) {
     player_position_owner = null
+    last_noted_position = null
+    last_noted_position_owner = null
+    position_chain_anchor = null
+    position_chain_anchor_owner = null
     restore_generation += 1
     if (
       pending_position &&

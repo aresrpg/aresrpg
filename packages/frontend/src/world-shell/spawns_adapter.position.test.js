@@ -4,6 +4,8 @@
 // missing persistence edge around that door. IndexedDB is driven with its real request/transaction callback
 // protocol so save → module-memory reset → restore proves the reload contract, not an in-memory shortcut.
 
+import { readFileSync } from 'node:fs'
+
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { publish_world_binding, reset_world_binding } from './session_gate.js'
@@ -60,6 +62,8 @@ const create_fake_idb = () => {
 
 const real_indexeddb = globalThis.indexedDB
 const position_edge = await import('./spawns_adapter.js')
+const host_source = readFileSync(new URL('../GameWorldHost.tsx', import.meta.url), 'utf8')
+const embed_source = readFileSync(new URL('../game/embed_voxel.js', import.meta.url), 'utf8')
 
 const bind_with_anchor = (world_id, anchor) => {
   reset_world_binding()
@@ -71,6 +75,7 @@ const bind_with_anchor = (world_id, anchor) => {
   })
   position_edge.spawns_input({
     type: 'checkpoint_resolved',
+    character_id: CHARACTER,
     world_id,
     x: OFFSET + anchor.x,
     z: OFFSET + anchor.z,
@@ -95,6 +100,16 @@ afterAll(() => {
 })
 
 describe('world position IndexedDB edge', () => {
+  test('only free-walking overworld positions are eligible for persistence', () => {
+    const free_walk = { character_id: CHARACTER, world_id: WORLD_A }
+    expect(position_edge.can_persist_world_position(free_walk)).toBe(true)
+    expect(position_edge.can_persist_world_position({ ...free_walk, in_fight: true })).toBe(false)
+    expect(position_edge.can_persist_world_position({ ...free_walk, in_dungeon: true })).toBe(false)
+    expect(position_edge.can_persist_world_position({ ...free_walk, in_cave: true })).toBe(false)
+    expect(position_edge.can_persist_world_position({ ...free_walk, character_id: null })).toBe(false)
+    expect(position_edge.can_persist_world_position({ ...free_walk, world_id: null })).toBe(false)
+  })
+
   test('persists and restores per character+world through the existing player_pos reducer door', async () => {
     const anchor = { x: 100, z: 200 }
     const walked = { x: 137.5, z: 164.5 }
@@ -109,9 +124,26 @@ describe('world position IndexedDB edge', () => {
     bind_with_anchor(WORLD_A, anchor)
     expect(position_edge.spawns_store.getState().player).toBeNull()
 
-    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, NOW + 1_000)).resolves.toEqual(walked)
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 1_000)).resolves.toEqual(walked)
     expect(position_edge.spawns_store.getState().player).toEqual(walked)
     expect(position_edge.read_world_position(CHARACTER, WORLD_A)).toEqual(walked)
+  })
+
+  test('reduces every movement note but never writes IndexedDB per frame', async () => {
+    const anchor = { x: 100, z: 200 }
+    bind_with_anchor(WORLD_A, anchor)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, NOW)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW + 1_000)
+    expect(position_edge.spawns_store.getState().player).toEqual({ x: 120, z: 220 })
+
+    // Lose the unflushed module tail. IndexedDB must still contain the first cadence write, not the per-frame note.
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, anchor)
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 2_000)).resolves.toEqual({
+      x: 110,
+      z: 210,
+    })
   })
 
   test('rejects a snapshot from the character’s previous world when the chain binding moved worlds', async () => {
@@ -120,9 +152,12 @@ describe('world position IndexedDB edge', () => {
     await position_edge.flush_world_position(NOW)
 
     position_edge._reset_position_persistence_for_test()
-    bind_with_anchor(WORLD_B, { x: -300, z: 400 })
+    const moved_anchor = { x: -300, z: 400 }
+    bind_with_anchor(WORLD_B, moved_anchor)
 
-    await expect(position_edge.restore_world_position(CHARACTER, WORLD_B, NOW + 1_000)).resolves.toBeNull()
+    await expect(
+      position_edge.restore_world_position(CHARACTER, WORLD_B, moved_anchor, NOW + 1_000)
+    ).resolves.toBeNull()
     expect(position_edge.spawns_store.getState().player).toBeNull()
     expect(position_edge.read_world_position(CHARACTER, WORLD_B)).toBeNull()
   })
@@ -135,9 +170,12 @@ describe('world position IndexedDB edge', () => {
     position_edge._reset_position_persistence_for_test()
     // Deliberately still near the saved pose: distance alone would accept it. The changed committed anchor
     // proves the local row predates a chain-known move, so chain truth must win.
-    bind_with_anchor(WORLD_A, { x: 110, z: 210 })
+    const moved_anchor = { x: 110, z: 210 }
+    bind_with_anchor(WORLD_A, moved_anchor)
 
-    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, NOW + 1_000)).resolves.toBeNull()
+    await expect(
+      position_edge.restore_world_position(CHARACTER, WORLD_A, moved_anchor, NOW + 1_000)
+    ).resolves.toBeNull()
     expect(position_edge.spawns_store.getState().player).toBeNull()
   })
 
@@ -150,7 +188,7 @@ describe('world position IndexedDB edge', () => {
     position_edge.spawns_input({ type: 'world_bound', world_id: null })
     position_edge._reset_position_persistence_for_test()
     bind_with_anchor(WORLD_A, anchor)
-    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, NOW + 1_000)).resolves.toBeNull()
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 1_000)).resolves.toBeNull()
 
     bind_with_anchor(WORLD_A, anchor)
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 10, z: 10 }, NOW)
@@ -159,7 +197,17 @@ describe('world position IndexedDB edge', () => {
     position_edge._reset_position_persistence_for_test()
     bind_with_anchor(WORLD_A, anchor)
     await expect(
-      position_edge.restore_world_position(CHARACTER, WORLD_A, NOW + 30 * 60 * 1_000 + 1)
+      position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 30 * 60 * 1_000 + 1)
     ).resolves.toBeNull()
+  })
+
+  test('boot awaits chain then IndexedDB, and the renderer reads only reducer-owned position state', () => {
+    const chain_at = host_source.indexOf('const [chain_anchor] = await Promise.all([')
+    const restore_at = host_source.indexOf('await restore_world_position(char_id, world, chain_anchor)')
+    expect(chain_at).toBeGreaterThan(-1)
+    expect(restore_at).toBeGreaterThan(chain_at)
+    expect(embed_source).toContain('const stored = read_world_position(character.id, world_id)')
+    expect(embed_source).toContain('const checkpoint = world_id ? read_checkpoint_spawn(character.id, world_id) : null')
+    expect(embed_source).toContain('void note_world_position({')
   })
 })
