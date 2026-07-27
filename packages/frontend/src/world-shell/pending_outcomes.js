@@ -247,6 +247,33 @@ export async function recover_marked_fight_entry(refusal, { find_result, open_re
   throw opened?.error ?? refusal
 }
 
+/**
+ * THE SETTLE-OBSERVED AUTO-OPEN (#1223 ruling ③). A settlement that halts PRE-FLIGHT is itself the detection
+ * signal: the Fight was already gone, so a racing janitor (or another seat) settled it and minted MY
+ * `FightOutcome` — it exists RIGHT NOW, unopened, and the character stays fight_marker-MARKED until it opens.
+ * Nothing else re-detects that this session (the boot pass fires once per wallet), so the strand used to wait for
+ * a reload or for the next engage to eat abort 111. The same shape as `recover_marked_fight_entry` above, on a
+ * different signal: find the row, hand it to the injected open action, report the verdict as DATA.
+ *
+ * BURN LAW: an EXECUTED halt (a digest exists — gas was spent and the whole PTB reverted, so the Fight is still
+ * LIVE and there is no outcome to open) composes NOTHING and does not even read. Never throws: it runs
+ * fire-and-forget behind an already-returned settle verdict, so a rejection here would be unhandled.
+ * @param {'transient'|'executed_failure'} halt the settlement's own classification (is_preflight_failure)
+ * @param {{find_result:()=>Promise<any>, open_result:(row:any)=>Promise<any>, announce?:()=>void}} effects
+ *   `announce` is the visible "opening it now…" beat — fired ONLY once a row is proven, before the tx builds.
+ * @returns {Promise<{status:'skipped'|'clean'|'opened'|'failed', receipt?:any, error?:unknown}>}
+ */
+export async function recover_settled_elsewhere(halt, { find_result, open_result, announce }) {
+  if (halt !== 'transient') return { status: 'skipped', error: null }
+  const row = await find_result().catch(() => null) // a blind read never composes an open
+  if (!row?.outcome_id) return { status: 'clean' }
+  announce?.()
+  const opened = await open_result(row).catch((error) => ({ status: 'failed', error }))
+  return opened?.status === 'opened'
+    ? { status: 'opened', receipt: opened.receipt ?? null }
+    : { status: 'failed', error: opened?.error ?? null }
+}
+
 /** @param {string} outcome_id @returns {'inflight' | 'latched' | 'opened' | null} */
 export function attempt_state(outcome_id) {
   return attempts.get(outcome_id)?.state ?? null
