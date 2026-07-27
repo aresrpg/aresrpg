@@ -164,14 +164,11 @@ const approach_cells = (read, caster_cell, enemy) => {
 }
 
 /** Score a free-cell spell (trap / glyph) on one board cell. */
-const score_on_cell = (spell, read, cell, history) => {
+const score_on_cell = (spell, read, cell) => {
   const trap = spell.effects.find((e) => e.kind === 'PLACE_TRAP' || e.kind === 'PLACE_GLYPH')
   if (!trap) return null
-  // ONE TRAP PER CELL. `read.my_traps` is the client's own ledger and it does NOT learn about a trap
-  // committed through the seam (see assert.js) — so the bot carries its own `history.traps`. Without it the
-  // policy re-proposes a cell the SIM already holds a trap on and the authority refuses the whole turn.
-  const held = [...(read.my_traps ?? []), ...(history?.traps ?? [])]
-  if (held.includes(cell_index(cell))) return null
+  // ONE TRAP PER CELL. The fold-backed read is the sole client ledger for board drafts and seam commits alike.
+  if ((read.my_traps ?? []).includes(cell_index(cell))) return null
   return {
     value: Math.max(1, Number(trap.base ?? 0)) * WEIGHTS.trap,
     fact: `trap:${cell_index(cell)}`,
@@ -217,7 +214,7 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
         .sort((a, b) => manhattan(a.cell_committed, from) - manhattan(b.cell_committed, from))
       if (!near) continue
       for (const cell of approach_cells(read, from, near)) {
-        const scored = score_on_cell(spell, read, cell, history)
+        const scored = score_on_cell(spell, read, cell)
         if (!scored || claimed.facts.has(scored.fact)) continue
         if (target_cap_reached(claimed.cast_path, spell.name_key, cell_index(cell), spell.casts_per_target)) continue
         if (!spell_reaches(read, spell, from, cell, me.id)) continue
@@ -332,8 +329,7 @@ const choose_stance = (read, me, seed, history) => {
  * @param {object} read a `__ARES_DEV_READ()` snapshot
  * @param {{ seed?: number, history?: { casts?: Record<string, number>, blocked?: string[] } }} [options]
  *   `seed` breaks exact-value ties (same seed ⇒ same turn); `history` is what the snapshot cannot carry —
- *   `casts` (the cooldown ledger), `blocked` (spells the authority already refused this fight) and `traps`
- *   (encoded cells the bot has armed, which the client's own ledger never learns about).
+ *   `casts` (the cooldown ledger) and `blocked` (spells the authority already refused this fight).
  * @returns {{ actions: Array<object>, decisions: Array<object>, reason: string }}
  */
 export const plan_turn = (read, { seed = 0, history = {} } = {}) => {

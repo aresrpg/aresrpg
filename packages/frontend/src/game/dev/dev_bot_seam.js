@@ -262,6 +262,7 @@ const bank_predictions = (actions) => {
       // stats and rank it was predicted with instead of being an anecdote.
       caster_build: { stats: me.base_stats ?? {}, level: me.level ?? 1 },
       hp: [],
+      place_traps: [],
       unresolved: spell?.template ? [] : [`no_template:${action.spell_id}`],
     }
     // this cast's own slot, then the counter advances for the next one (a template-less row still consumes a slot
@@ -289,17 +290,41 @@ const bank_predictions = (actions) => {
         .filter(([ref]) => !!ref)
         .map(([ref, id]) => [`${ref.is_mob ? 'm' : 'p'}${ref.idx}`, id])
     )
-    banked.hp = (prediction?.actions ?? [])
+    const hp = (prediction?.actions ?? [])
       .filter((row) => row.kind === 'Hit')
       .map((row) => ({
         id: by_ref.get(`${row.victim_is_mob ? 'm' : 'p'}${row.victim_idx}`) ?? null,
         remaining_hp: Number(row.remaining_hp),
       }))
       .filter((row) => !!row.id)
-    banked.unresolved = [...banked.unresolved, ...(prediction?.unresolved ?? [])]
-    rows.push(banked)
+    rows.push({
+      ...banked,
+      hp,
+      place_traps: prediction?.placed_traps ?? [],
+      unresolved: [...banked.unresolved, ...(prediction?.unresolved ?? [])],
+    })
   }
   return rows
+}
+
+/**
+ * Re-enter authority-accepted seam traps through the SAME reducer input the board's optimistic cast uses.
+ * The receipt already folded the cast outcomes, so only the trap payload enters: replaying prediction actions
+ * here would apply damage/status twice. A committed-floor basis makes the ledger record immune to draft rollback.
+ */
+const fold_committed_traps = (predicted) => {
+  for (const row of predicted) {
+    const place_traps = row.place_traps ?? []
+    if (!place_traps.length) continue
+    const core = fight_store.getState()
+    core.input({
+      type: 'predicted',
+      intent_id: `seam:${core.fight_id}:${core.applied_version}:${row.index}`,
+      basis_version: core.applied_version,
+      actions: [],
+      place_traps,
+    })
+  }
 }
 
 /** Capture the store's short-lived refusal reason across an await — it can be cleared by the reconciling
@@ -398,6 +423,7 @@ async function dev_turn(actions = []) {
       use_dungeon_turn.getState().clear_picks()
     }
   })
+  if (committed && !error) fold_committed_traps(predicted)
   const after = dev_read()
   if (!committed) return { ok: false, error: error ?? 'turn commit refused', before, after, predicted }
   if (error) return { ok: false, error, before, after, predicted }

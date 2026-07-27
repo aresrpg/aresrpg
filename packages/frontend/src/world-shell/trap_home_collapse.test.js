@@ -73,6 +73,48 @@ const place_trap = (store) =>
   )
 
 describe('trap home collapse — the fold (engine_view.my_traps) is the ONE client trap home', () => {
+  test('#1114 RED: a successful seam commit re-enters placed traps through the predicted reducer door', async () => {
+    const seam = await Bun.file(new URL('../game/dev/dev_bot_seam.js', import.meta.url)).text()
+    const policy = await Bun.file(new URL('../../../fight/src/bot/policy.js', import.meta.url)).text()
+    const drive = await Bun.file(new URL('../../scripts/fight_bot/drive.mjs', import.meta.url)).text()
+    const bank_start = seam.indexOf('const bank_predictions =')
+    const turn_start = seam.indexOf('async function dev_turn')
+    const bank = seam.slice(bank_start, turn_start)
+    const fold_start = seam.indexOf('const fold_committed_traps =')
+    const fold = seam.slice(fold_start, seam.indexOf('/** Capture the store', fold_start))
+    const turn = seam.slice(turn_start, seam.indexOf('async function dev_place'))
+
+    expect(bank).toContain('place_traps: prediction?.placed_traps ?? []')
+    expect(fold).toContain("type: 'predicted'")
+    expect(fold).toContain('actions: []')
+    expect(fold).toContain('basis_version: core.applied_version')
+    expect(fold).toContain('place_traps,')
+    expect(turn).toContain('if (committed && !error) fold_committed_traps(predicted)')
+    expect(turn.indexOf('fold_committed_traps(predicted)')).toBeGreaterThan(
+      turn.indexOf('await store.commit_turn(staged)')
+    )
+    expect(turn.indexOf('fold_committed_traps(predicted)')).toBeLessThan(turn.indexOf('const after = dev_read()'))
+    expect(policy).not.toContain('history?.traps')
+    expect(drive).not.toContain('history.traps')
+  })
+
+  test('the committed seam payload can write my_traps without replaying optimistic cast actions', () => {
+    const store = boot()
+    const core = store.getState()
+    core.input({
+      type: 'predicted',
+      intent_id: 'seam-committed:trap1',
+      basis_version: core.applied_version,
+      actions: [],
+      place_traps: [{ cell: TRAP, payload: [] }],
+    })
+
+    expect(engine_view(store.getState()).my_traps).toEqual([TRAP])
+    expect(Object.keys(store.getState().entries)).toHaveLength(0)
+    core.input({ type: 'drop_traps', cells: [TRAP] })
+    expect(engine_view(store.getState()).my_traps).toEqual([TRAP])
+  })
+
   test('THE DIVERGENCE: a fold-armed trap blocks the no-stack cast that an EMPTY overlay would leak (ECellAlreadyTrapped)', () => {
     const store = boot()
     place_trap(store)

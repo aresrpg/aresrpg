@@ -127,9 +127,6 @@ const record_commit = ({ seat, plan, result, turn, turn_number }) => {
     .filter((action) => action.expect?.type === 'trap')
     .map((action) => ({ cell: action.expect.cell, turn, spell_key: action.spell_key }))
   seat.armed_traps = [...sprung.remaining, ...armed]
-  // The client's own trap ledger never learns about a trap committed through the seam, so the policy keeps its
-  // own — canonical stride-20 encode, the board's own indexing.
-  seat.history.traps = [...seat.history.traps, ...armed.map(({ cell }) => cell.y * 20 + cell.x)]
   return sprung
 }
 
@@ -266,6 +263,6 @@ export const drive_fight = async ({
 /** A fresh seat: its page, its seam, whatever its surface knows about it, and the memory a snapshot cannot carry. */
 export const make_seat = (session) => ({
   ...session,
-  history: { casts: {}, blocked: [], traps: [] },
+  history: { casts: {}, blocked: [] },
   armed_traps: [],
 })
