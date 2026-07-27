@@ -5,7 +5,6 @@
 // in overlay_intents.test.js and this source contract pins the click edge to that one home.
 
 import { describe, expect, test } from 'bun:test'
-
 import { decode } from '@aresrpg/fight/los'
 import { local_move_beats } from '@aresrpg/fight/present'
 

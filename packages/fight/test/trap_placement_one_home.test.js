@@ -21,7 +21,6 @@
 // `<` on one side and a `>=` on the other.
 
 import { describe, expect, test } from 'bun:test'
-
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 
 import { create_fight_store } from '../src/store.js'
