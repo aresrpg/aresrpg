@@ -23,6 +23,7 @@
 
 mod handlers;
 mod store;
+mod stream;
 
 use anyhow::{Context, Result};
 use clap::{error::ErrorKind, Parser};
