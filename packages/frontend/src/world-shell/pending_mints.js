@@ -77,15 +77,19 @@ const positive_delta = (/** @type {unknown} */ amount) => {
 /**
  * Pure receipt projection for recovery observability. ItemMinted is the exact object+quantity delta already used
  * by the inventory reducer; positive balanceChanges ride too if a future normalized receipt exposes them.
+ * `template_by_id` (the shared item catalog) resolves the display NAME — the one input the player-facing summary
+ * needs; an absent/missing catalog degrades to the item_type slug, never to the object id.
  * @param {MintOutcome} outcome
+ * @param {Map<string, any>} [template_by_id]
  * @returns {MintRecovery}
  */
-export function mint_recovery_detail(outcome) {
+export function mint_recovery_detail(outcome, template_by_id = new Map()) {
   const settlement = outcome?.verdict === 'minted' ? outcome.settlement : null
   const receipt = settlement?.receipt ?? {}
-  const minted_objects = settled_loot_rows(settlement).map((row) => ({
+  const minted_objects = settled_loot_rows(settlement, template_by_id).map((row) => ({
     object_id: String(row.id),
     item_type: String(row.item_type),
+    name: String(row.name ?? ''),
     amount: Number(row.amount),
   }))
   const created_objects = (receipt?.objectChanges ?? [])
@@ -93,6 +97,7 @@ export function mint_recovery_detail(outcome) {
     .map((/** @type {any} */ change) => ({
       object_id: String(change.objectId),
       item_type: String(change.objectType ?? ''),
+      name: '', // a raw objectChange has no catalog row — ONE delta shape, honestly unnamed
       amount: 1,
     }))
   return {
@@ -121,6 +126,34 @@ export function mint_recovery_line(recovery) {
     ({ coin_type, amount }) => `${positive_delta(amount) ? '+' : ''}${amount}${coin_type ? ` ${coin_type}` : ''}`
   )
   return `${recovery.digest || '?'} → ${[...objects, ...balances].join(', ') || '∅'}`
+}
+
+// A recovery row is only NAMEABLE by something a player can read. Anything carrying `0x` is an address or a Move
+// type repr — an id by another name — and is dropped rather than shown (#1223: the toast never prints hex).
+const SUMMARY_LIMIT = 6
+const player_label = (/** @type {{ name?: string, item_type?: string }} */ delta) =>
+  [delta?.name, delta?.item_type].map((v) => String(v ?? '').trim()).find((v) => v && !v.includes('0x')) ?? ''
+
+/**
+ * THE player-facing recovery line: every recovered object delta as `Name ×qty`, merged across the sweep's
+ * results, first-seen order, bounded by an ellipsis. Returns '' when nothing nameable was collected (an
+ * all-husk sweep) — the toast's own localized title is then the whole honest message, so this owes no i18n key
+ * (names come from the localized catalog; `×` and `…` are symbols in every locale).
+ * @param {Array<{ object_deltas?: Array<{ name?: string, item_type?: string, amount?: number }> }>} recoveries
+ * @returns {string}
+ */
+export function recovery_item_summary(recoveries) {
+  /** @type {Map<string, number>} */
+  const totals = new Map()
+  for (const recovery of recoveries ?? [])
+    for (const delta of recovery?.object_deltas ?? []) {
+      const label = player_label(delta)
+      if (!label) continue
+      const amount = Number(delta?.amount ?? 0)
+      totals.set(label, (totals.get(label) ?? 0) + (Number.isFinite(amount) && amount > 0 ? amount : 1))
+    }
+  const rows = [...totals].map(([label, amount]) => `${label} ×${amount}`)
+  return rows.length > SUMMARY_LIMIT ? `${rows.slice(0, SUMMARY_LIMIT).join(', ')}…` : rows.join(', ')
 }
 
 /**
@@ -232,10 +265,11 @@ function schedule_retry(deps) {
  * SAME queue — the 41 stranded results recover on the next session. Enumeration rides `/v1/fight-results`
  * (candidate discovery only — every mint is still CHAIN-gated by process_mint); `opened === true` rows are the core
  * FightResults that owe a mint/burn (the unopened engine rows are the auto-open path's concern). A quiet success
- * sweep: NO per-result toast — ONE summary once the readable set drains.
+ * sweep: NO per-result toast — ONE summary once the readable set drains. `template_by_id` is the shared item
+ * catalog: it names what was recovered for the player, while the digest lines stay in the dev log (#1223).
  * @param {string} address
  * @param {MintDeps & { fetch_results: (address: string) => Promise<any[]>,
- *   notify: (count: number, details: string) => void }} deps
+ *   notify: (count: number, details: string) => void, template_by_id?: Map<string, any> }} deps
  * @returns {Promise<number>} the count recovered (minted+burned) in this pass
  */
 export async function sweep_stranded_results(address, deps) {
@@ -262,11 +296,15 @@ export async function sweep_stranded_results(address, deps) {
   const recovered_promises = fresh.flatMap((/** @type {string} */ id) =>
     queue.get(id)?.status === 'done' && outcome_promises.get(id) ? [outcome_promises.get(id)] : []
   )
-  const recoveries = (await Promise.all(recovered_promises)).map(mint_recovery_detail)
+  const recoveries = (await Promise.all(recovered_promises)).map((outcome) =>
+    mint_recovery_detail(outcome, deps.template_by_id)
+  )
   if (recoveries.length) {
-    const details = recoveries.map(mint_recovery_line)
-    for (const detail of details) game_log('dungeon', 'mint-sweep recovered stranded reward:', detail)
-    deps.notify(recoveries.length, details.join('; ')) // ONE toast, exact receipt facts from every recovery
+    // TWO AUDIENCES, one projection: the DEV log keeps the full digest→delta provenance (a recovery is a spent
+    // transaction and must stay traceable), the PLAYER gets item names only — never a hex address (#1223).
+    for (const detail of recoveries.map(mint_recovery_line))
+      game_log('dungeon', 'mint-sweep recovered stranded reward:', detail)
+    deps.notify(recoveries.length, recovery_item_summary(recoveries)) // ONE toast
   }
   return recoveries.length
 }

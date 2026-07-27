@@ -596,12 +596,16 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
   if (!announce)
     await sweep_stranded_results(address, {
       ...mint_deps(),
+      // The catalog NAMES what the sweep recovered — the toast is a game message, never a chain dump (#1223).
+      // A catalog read failure degrades to item_type slugs; it never blocks or fails the recovery itself.
+      template_by_id: await get_template_map().catch(() => new Map()),
       fetch_results: get_fight_results,
       notify: (/** @type {number} */ count, details) =>
         push_event_toast({
           state: 'success',
           title: i18n.t('dungeons.results_recovered', { count }),
-          message: details,
+          // An all-husk sweep collected nothing nameable — the localized title alone is the honest message.
+          ...(details ? { message: details } : {}),
         }),
     }).catch((error) => game_log('dungeon', 'mint-sweep failed (next boot re-checks)', error))
 }
