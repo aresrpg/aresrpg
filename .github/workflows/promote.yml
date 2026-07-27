@@ -30,10 +30,6 @@ name: promote
 on:
   issue_comment:
     types: [created]
-# Serialize every landing run (this handler + the queue) so concurrent ff-pushes can't race.
-concurrency:
-  group: promotion-landing
-  cancel-in-progress: false
 permissions:
   contents: write
   actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
@@ -42,6 +38,11 @@ permissions:
 jobs:
   request:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
+    # Keep the landing lock behind the event-shape/command gate above: an ordinary issue comment
+    # must never enter this concurrency group and queue behind or displace a real promotion.
+    concurrency:
+      group: promotion-landing
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
