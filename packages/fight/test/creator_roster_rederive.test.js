@@ -139,15 +139,14 @@ describe('#1274 — the creator re-derives her roster when a join lands', () => 
     expect(project.engine_view(alice.getState()).fighters.get(BOB)?.cell).toEqual({ x: 7, y: 0 })
   })
 
-  test('CONTROL — an ACTIVE base is FINAL: a later object read is still an inert checkpoint (#701)', () => {
+  test('CONTROL — a cursorless ACTIVE read cannot claim that it is ahead', () => {
     const alice = client(ALICE, ALICE_ADDR)
     poll(alice, fight_record({ participants: ALONE, status: 1 }), 10)
 
-    // the chain cannot produce this (join is placement-only) — it stands in for the whole stale-read class #701
-    // banned: once the roster is frozen, an object read never re-folds the board.
+    // The source omitted its event cursor, so it cannot authorize a full active-state replacement.
     poll(alice, fight_record({ participants: BOTH, status: 1 }), 11)
 
-    expect(alice.getState().view_version).toBe(10) // no re-adopt
+    expect(alice.getState().view_version).toBe(10)
     expect(project.board_view(alice.getState()).escrow).toHaveLength(1)
   })
 

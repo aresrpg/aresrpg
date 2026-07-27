@@ -157,8 +157,8 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
       })
       expect(store.getState().divergence).toBeNull()
 
-      // A post-M2b object read is checkpoint-only. Even though its row also says mp=4, it cannot be the repair
-      // path: the accepted claim overlay above must already hold, and the bootstrap view remains at version 5.
+      // This object's journal cursor is aligned with the accepted Cast, so it replaces the base whole. The row's
+      // mp=4 independently confirms the same pool; the claim bridge is no longer needed after the re-adopt.
       store.getState().input(
         {
           type: 'snapshot',
@@ -168,7 +168,7 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
         },
         2_200
       )
-      expect(store.getState().view_version).toBe(5)
+      expect(store.getState().view_version).toBe(7)
       expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
       expect(wash_cells(store).has(four_steps_away)).toBe(true)
 
@@ -180,12 +180,12 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
       expect(presented_state(store.getState()).fighters.p0.mp, 'one accepted-grant MP was spent').toBe(3)
       expect(project.board_view(store.getState()).escrow[0].committed.mp, 'draft anchor keeps the 4 MP pool').toBe(4)
 
-      // The target's own turn-end is the give_points credit-row boundary. It wins even when it shares an ingress
-      // batch with the claim, and prevents the non-canonical bridge from leaking into a later turn.
+      // The target's own turn-end clears any remaining claim bridge. The cursor-aligned snapshot is now the whole
+      // base, so its authoritative mp=4 remains until a later chain read/TurnStarted changes that pool.
       store.getState().input(confirm_turn_end[source](), 2_300)
       expect(store.getState().claimed_budget).toEqual([])
-      expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
-      expect(project.board_view(store.getState()).escrow[0].committed.mp).toBe(3)
+      expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
+      expect(project.board_view(store.getState()).escrow[0].committed.mp).toBe(4)
     })
 
   test('a CriticalFailure→Cast claim retires Vanish without inventing the suppressed grant', () => {

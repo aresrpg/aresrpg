@@ -105,7 +105,7 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
     expect(view.start_cells_a).toEqual([5, 6, 7])
   })
 
-  test('a torn re-read mid-fight holds AT THE LAST GOOD frame; the healed read is an inert checkpoint (M2b)', () => {
+  test('a torn re-read mid-fight holds AT THE LAST GOOD frame; a cursorless active read stays inert', () => {
     const store = boot()
     // bootstrap on an ACTIVE fight: the roster is frozen, so the M2b checkpoint law is the one under test here
     store.getState().input({ type: 'snapshot', fight: real_fight({ status: 1 }), version: 5 })
@@ -115,12 +115,11 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
     expect(held).toMatchObject({ grid_width: 13, grid_height: 12 }) // never the fallback frame — the torn read is dropped
     expect(store.getState().view_version).toBe(5) // the torn read raised no floor
 
-    // M2b · ONE INGRESS: the geometry is fixed at bootstrap; a healed mid-fight object read is an inert CHECKPOINT
-    // (it never re-adopts). The good frame HOLDS from the base, and dynamic state (a fighter's cell) rides the
-    // journal, not a re-adopted read — so the board never regresses to the fallback frame.
+    // This legacy source omitted its event cursor, so an active higher-version read cannot prove it subsumes the
+    // fold. The good frame holds; a cursor-aware ahead read has a separate full-re-adopt path.
     store.getState().input({ type: 'snapshot', fight: real_fight({ cell: 6, status: 1 }), version: 6 })
-    expect(store.getState().view_version).toBe(5) // checkpoint: no re-adopt
-    expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 }) // frame held, never fallback
+    expect(store.getState().view_version).toBe(5)
+    expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 })
   })
 
   test('the hold survives the ROSTER WINDOW: in placement a healed read re-adopts, a torn one still never does', () => {
