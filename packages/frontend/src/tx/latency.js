@@ -23,7 +23,7 @@ export const now = () => (typeof performance !== 'undefined' ? performance.now()
 
 // ?txtiming=1 (lever 3) — off by default; flip it to SEE where a turn's seconds go. Debug-console only.
 export const TX_TIMING_ON =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('txtiming') === '1'
+  typeof window !== 'undefined' && new URLSearchParams(window.location?.search ?? '').get('txtiming') === '1'
 
 // Per-tx preflight timings, keyed by the Transaction object itself: execute_tx stamps { dry_run_ms, sign_ms }
 // (both live in src/tx), then the fight sign() choke — which holds the SAME tx ref + the submit→effects wait —

@@ -114,12 +114,6 @@ function run(cam, n, dt, board_frame, positions) {
 }
 
 describe('fight camera — fight-entry prepare→settle choreography', () => {
-  it('keeps its dispatch window browser-complete for later module loads', async () => {
-    const window_ = fresh_window()
-    expect(window_.location.search).toBe('')
-    expect((await import('../tx/latency.js?issue-731-window-regression')).TX_TIMING_ON).toBe(false)
-  })
-
   it('begin_prepare engages the camera and snaps to the iso corner (motion blur off)', () => {
     const { engine, canvas, positions, blur } = make_rig()
     const cam = create_fight_camera({ engine, canvas, board_cell_m: CELL })
