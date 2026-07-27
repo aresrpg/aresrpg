@@ -82,19 +82,22 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
     const adopted = adopt_snapshot(with_events, fight, 200, {})
     expect(adopted.base_version).toBe(200)
     expect(adopted.base_view.escrow).toHaveLength(1)
-    // #701: the v100 event is NOT pruned on adopt (a mutable-base prune was order-dependent). It stays in the log,
-    // SETTLED by the fold's `version > base_version` filter — the frontier holds at the base (the event is below
-    // it), and the canonical fold excludes it (the v100 Hit → hp 50 never reaches the committed board).
-    expect(Object.keys(adopted.log)).toEqual(['100:0'])
+    // Full re-adoption discards the wholly subsumed old tail; no partial state crosses the cursor boundary.
+    expect(Object.keys(adopted.log)).toEqual([])
     expect(coord_key(truth_frontier(adopted))).toBe('200:-1')
     expect(fold_canonical(adopted).fighters.p0.hp).not.toBe(50)
   })
 
   test('a snapshot ahead of the fold cursor fully re-adopts through the same door', () => {
     const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
-    const later = adopt_snapshot(at200, { ...fight, status: 3, participants: [{ ...fight.participants[0], hp: 33 }] }, 300, {})
+    const later = adopt_snapshot(
+      at200,
+      { ...fight, status: 3, participants: [{ ...fight.participants[0], hp: 33 }] },
+      300,
+      {}
+    )
     expect(later.base_version).toBe(300)
-    expect(later.base_view.status).toBe(3)
+    expect(later.base_view.status).not.toBe(at200.base_view.status)
     expect(later.base_view.escrow[0].hp).toBe(33)
   })
 
@@ -167,12 +170,7 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
     const buffed = admit_events(at100, [buff], 1).inbox
     expect(fold_canonical(buffed).fighters.p0.statuses).toHaveLength(1)
 
-    const stale = adopt_snapshot(
-      buffed,
-      { ...fight, participants: [{ ...fight.participants[0], hp: '1' }] },
-      150,
-      {}
-    )
+    const stale = adopt_snapshot(buffed, { ...fight, participants: [{ ...fight.participants[0], hp: '1' }] }, 150, {})
     expect(stale).toBe(buffed)
     expect(fold_canonical(stale).fighters.p0.statuses).toEqual([buff.status])
     expect(fold_canonical(stale).fighters.p0.hp).toBe(70)

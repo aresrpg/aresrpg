@@ -75,11 +75,21 @@ const play = (store, { script, chain, print }) => {
     } else if (s.settlement?.attempt?.verdict === 'opened') {
       print('★ FightResult OPENED — session closed')
       return { closed: true, trace }
-    } else if (is_my_turn(s) && !presenting(s) && !s.pending_end_turn && script.length) {
+    } else if (
+      is_my_turn(s) &&
+      !presenting(s) &&
+      !s.pending_end_turn &&
+      !s.log.some((action) => action.source === 'intent' && action.kind === 'TurnEnded') &&
+      script.length
+    ) {
       const act = script.shift()
       print(`> ${act.label}`)
       store.getState().input(act.input, now)
-    } else if (!is_my_turn(s) && s.phase === 'active' && chain.length) {
+    } else if (
+      (!is_my_turn(s) || s.log.some((action) => action.source === 'intent' && action.kind === 'TurnEnded')) &&
+      s.phase === 'active' &&
+      chain.length
+    ) {
       store.getState().input(chain.shift()(), (now += 600)) // the chain answers my committed turn
     } else {
       store.getState().input({ type: 'flush' }, (now += 500)) // idle: min-turn floor flush + the tick clock

@@ -12,8 +12,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { empty_core_state, fight_fingerprint, ingest } from '../src/core.js'
 
-const FIXTURE =
-  '0x9a062c08605fea9cf663edc1617643496c09f6c07d919c16e67edbf9ae0adaa6-1784658245869.capsule.json'
+const FIXTURE = '0x9a062c08605fea9cf663edc1617643496c09f6c07d919c16e67edbf9ae0adaa6-1784658245869.capsule.json'
 const capsule = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'capsules', FIXTURE), 'utf8')
 )

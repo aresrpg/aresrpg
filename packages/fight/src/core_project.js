@@ -109,6 +109,7 @@ export const project_hud = (state, policy = PACING_POLICY) => {
     phase: board.phase,
     winner: board.winner,
     active: board.active,
+    turn_ordinal: board.turn_ordinal,
     my_turn: board.active != null && board.active === state.my_seat,
     me: me ? { cell: me.cell, hp: me.hp, ap: me.ap ?? null, mp: me.mp ?? null, alive: me.alive } : null,
     truth_version: truth_version(state.inbox),

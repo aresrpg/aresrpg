@@ -38,11 +38,11 @@ import { base_from_view, base_budget } from './fold.js'
 import { inbox_resolver } from './core_inbox.js'
 
 /** The sorted authoritative tail: every admitted log action above the snapshot base, in coordinate order, with the
- *  view-dependent enrichment attached at FOLD time (never baked stale into the log — the shuffle property depends on
- *  it): the CURRENT seat resolver (character-keyed events resolve against the live base view) and the deterministic
+ *  view-dependent enrichment attached at FOLD time (never baked stale into the log): the CURRENT seat resolver
+ *  (character-keyed events resolve against the live base view) and the deterministic
  *  turn-start budget (a player `TurnStarted` carries no ap/mp — the begin_turn refill is predicted from the base
  *  view's escrow, exactly as V1 injects it, so the projected budget is not the stale pre-refill snapshot). */
-export const sorted_tail = (inbox) => {
+export const enrich_actions = (inbox, actions) => {
   const resolve_seat = inbox_resolver(inbox)
   const budget_of = base_budget(inbox.base_view)
   const enrich = (action) => {
@@ -50,11 +50,16 @@ export const sorted_tail = (inbox) => {
     const budget = budget_of(Number(action.idx))
     return budget ? { ...action, resolve_seat, ap: budget.ap, mp: budget.mp } : { ...action, resolve_seat }
   }
-  return Object.values(inbox.log)
-    .filter((action) => Number(action.version) > inbox.base_version)
-    .sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
-    .map(enrich)
+  return actions.map(enrich)
 }
+
+export const sorted_tail = (inbox) =>
+  enrich_actions(
+    inbox,
+    Object.values(inbox.log)
+      .filter((action) => Number(action.version) > inbox.base_version)
+      .sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
+  )
 
 /**
  * canonical_base — the snapshot half of the canonical fold (issue #549: the ONE home for this fact — project.js's

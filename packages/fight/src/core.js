@@ -14,7 +14,7 @@ export { empty_core_state, empty_inbox } from './core_state.js'
 export { ingest } from './core_ingest.js'
 export { replay, replay_trace } from './core_replay.js'
 
-export { fold_canonical, sorted_tail } from './core_fold.js'
+export { fold_canonical, sorted_tail, enrich_actions } from './core_fold.js'
 export { active_intents, fold_forecast, queue_intent, refuse_intents, resolve_intents } from './core_intents.js'
 export {
   project_board,
@@ -32,8 +32,10 @@ export {
   buffer_courtesy,
   reconcile_courtesy,
   batch_to_actions,
+  decode_fight_batch,
   journal_to_actions,
   truth_version,
   truth_frontier,
 } from './core_inbox.js'
 export { revive_wire, coord_key, coord_cmp, coord_after, COORD_ZERO } from './core_wire.js'
+export { fingerprint_state, fight_fingerprint } from './fingerprint.js'

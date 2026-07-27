@@ -89,8 +89,8 @@ export const classify_input = (msg = {}) => {
       return journal_rows_received({
         source: msg.batch?.source ?? 'journal',
         fight_id: msg.fight_id,
-        version: msg.version ?? msg.batch?.head,
-        rows: msg.batch,
+        version: msg.version ?? msg.batch?.head ?? msg.page?.journal_head,
+        rows: msg.batch ?? msg.page,
       })
     case 'terminal_confirmation':
       return journal_rows_received({

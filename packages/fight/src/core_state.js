@@ -15,7 +15,7 @@
 
 /**
  * @typedef {import('./core_wire.js').EventCoord} EventCoord
- * @typedef {Record<string, any>} Action a chain-vocabulary action (inputs.js normalize_events output)
+ * @typedef {Record<string, any>} Action a chain-vocabulary action (core_inbox's single decoder output)
  *
  * @typedef {object} InboxState
  * @property {Record<string, Action>} log admitted VERIFIED chain events, keyed `"<version>:<ordinal>"`
@@ -46,6 +46,7 @@
  * @property {InboxState} inbox
  * @property {Intent[]} ledger the intent ledger
  * @property {ClockState} clock
+ * @property {null|Record<string, any>} last_read normalized result of the latest chain-read input for presentation
  * @property {Array<Record<string, any>>} failures failure-as-data records (hash conflict, gap age, refusal)
  * @property {Array<Record<string, any>>} effects outbound effect REQUESTS the shell performs (refetch a version)
  */
@@ -74,6 +75,7 @@ export const empty_core_state = (fight_id = null) => ({
   inbox: empty_inbox(),
   ledger: [],
   clock: { now_ms: 0, cursor: 0 },
+  last_read: null,
   failures: [],
   effects: [],
 })

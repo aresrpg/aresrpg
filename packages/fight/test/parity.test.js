@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect } from 'bun:test'
 
-import { canonical_state, fold_log, normalize_events, state_hash } from '../src/inputs.js'
+import { canonical_state, fold_log, state_hash } from '../src/inputs.js'
+import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
 import { committed_truth, create_fight_store } from '../src/store.js'
 
 // PARITY PROOF — S0's definition of done (FIGHT_REWRITE_DESIGN §1/§5). The FIGHTREAL-captured REAL testnet receipt

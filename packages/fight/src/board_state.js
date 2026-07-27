@@ -366,6 +366,7 @@ export function board_state_from_fight({
     // build a clock from that, exactly as it refused an unstamped deadline before.
     turn_entropy: Number(fight.turn_entropy ?? 0),
     turn_ordinal: Number(fight.turn_ordinal ?? 0),
+    last_action_ms: Number(fight.last_action_ms ?? 0),
     placement_deadline_ms: Number(fight.placement_deadline_ms ?? 0),
     world_seed: fight.world_seed ?? null,
     spawn_id: fight.spawn_id ?? null,

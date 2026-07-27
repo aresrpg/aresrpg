@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // WAVE A — the ALGEBRA PROPERTIES (BLANKPAGE_RECONCILIATION §⑤ classes 1/2/6 + SEAT_DERIVATION §4 T-B), the
 // written specs this wave implements (not my own semantics). They exercise the reducer through the ONE store door
-// and assert the commutative-fold guarantees: monotonic-idempotence, retirement-permanence, fold-catch-up, and
-// the T-B bar (receipt idempotence · stale-snapshot no-op · death permanence · provider refusal). Wired into
+// and assert the commutative-fold guarantees: cursor honesty, full base replacement, fold-catch-up, and
+// the T-B bar (receipt idempotence · behind-snapshot no-op · provider refusal). Wired into
 // `bun test packages/fight` so the reachability tooth reaches them.
 
 import { describe, expect, test } from 'bun:test'
@@ -72,7 +72,7 @@ const mob0 = (store) => engine_view(store.getState()).fighters.get('mob-0')
 
 // ── CLASS 1 — MONOTONIC-IDEMPOTENCE ──────────────────────────────────────────────────────────────────────────
 describe('§⑤.1 monotonic-idempotence', () => {
-  test('a snapshot at v ≤ canonical_version is a no-op (reduce(S, snapshot(v)) === S)', () => {
+  test('objects at or behind the event cursor are inert once a base exists', () => {
     const store = boot()
     store.getState().input(
       {
@@ -85,13 +85,16 @@ describe('§⑤.1 monotonic-idempotence', () => {
     )
     drain(store, 2_100)
     const before = state_hash(store.getState())
-    // every stale/equal-version object read is inert — below-floor (v3, v5) AND equal-version (v6), any content.
+    // v3 and v5 are behind the v6 event cursor: both are discarded whole.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(1, 1) }), version: 3 }, 2_200)
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(9, 9) }), version: 5 }, 2_300)
+    expect(state_hash(store.getState()), 'behind reads are inert').toBe(before)
+
+    // The v6 object is settled by the event-proven cursor. It cannot roll the move back to its own stale cell.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(1, 1) }), version: 6 }, 2_400)
-    expect(state_hash(store.getState()), 'no field moved below its floor — the stale/equal reads are inert').toBe(
-      before
-    )
+    expect(store.getState().view_version).toBe(5)
+    expect(mob0(store).cell).toEqual({ x: 6, y: 4 })
+    expect(state_hash(store.getState())).toBe(before)
   })
 
   test('delivery order cannot alter the terminal state (commutative fold under floors)', () => {
@@ -124,9 +127,9 @@ describe('§⑤.1 monotonic-idempotence', () => {
   })
 })
 
-// ── CLASS 2 — RETIREMENT-PERMANENCE ──────────────────────────────────────────────────────────────────────────
-describe('§⑤.2 retirement-permanence', () => {
-  test('death@vD held ⇒ no snapshot sequence (vD-1 / vD / vD+3, positive hp) + stale foreign event resurrects it', () => {
+// ── CLASS 2 — SNAPSHOT BOUNDARY REPLACEMENT ─────────────────────────────────────────────────────────────────
+describe('§⑤.2 snapshot boundary replacement', () => {
+  test('an at/behind object cannot resurrect; an ahead object replaces without retirement carry', () => {
     const store = boot()
     store.getState().input(
       {
@@ -139,10 +142,16 @@ describe('§⑤.2 retirement-permanence', () => {
     )
     drain(store, 2_100)
     expect(mob0(store).committed_dead).toBe(true)
-    // hammer it with every resurrection vector: a stale read below the floor, an equal-version read, a genuinely
-    // NEWER read carrying the mob ALIVE at full hp, and a stale foreign move event — none may bring it back.
+    // The v5 object is behind the v6 cursor and is discarded.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 5 }, 2_200)
+    expect(mob0(store).committed_dead).toBe(true)
+
+    // The v6 object is settled by the event cursor and cannot resurrect the event-proven death.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 6 }, 2_300)
+    expect(store.getState().view_version).toBe(5)
+    expect(mob0(store).committed_dead).toBe(true)
+
+    // A later complete object follows the same door; a foreign event behind it remains inert.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 9 }, 2_400) // vD+3, positive hp
     store.getState().input(
       {
@@ -153,10 +162,9 @@ describe('§⑤.2 retirement-permanence', () => {
       },
       2_500
     )
-    expect(mob0(store).committed_dead, 'a floored death is permanent against every stale/newer/foreign input').toBe(
-      true
-    )
-    expect(mob0(store).committed_alive).toBe(false)
+    expect(store.getState().view_version).toBe(9)
+    expect(mob0(store).committed_alive).toBe(true)
+    expect(mob0(store).health).toBe(20)
   })
 
   test('trap: detonate@vD then re-lay@vL>vD has zero cross-talk (independent records)', () => {
@@ -265,8 +273,7 @@ describe('§⑤.6 fold-catch-up', () => {
     )
     for (const t of [...replay.getState().wave]) replay.getState().input({ type: 'presented', seq: t.seq }, 1_400)
 
-    // Path B — CATCH-UP through the ONE door (M2b): a client that bootstrapped at v5 catches the terminal up from
-    // the journal/receipt (the mob's move + killing hit), never a re-adopted top-version object read.
+    // Path B catches up from a v5 base through a v8 receipt.
     const folded = create_fight_store()
     folded
       .getState()
@@ -285,8 +292,7 @@ describe('§⑤.6 fold-catch-up', () => {
       },
       1_100
     )
-    // an out-of-order INTERMEDIATE stale OBJECT read (mob alive, v7) is now an inert checkpoint — it must NOT
-    // resurrect the dead mob (no flicker); canonical death is the receipt-folded floor, structurally.
+    // The out-of-order v7 object is behind the v8 event cursor and is discarded whole.
     folded
       .getState()
       .input({ type: 'snapshot', fight: fight_object({ mob_hp: 5, mob_cell: encode(6, 4) }), version: 7 }, 1_150)
@@ -301,7 +307,7 @@ describe('§⑤.6 fold-catch-up', () => {
 })
 
 // ── SEAT §4 T-B ──────────────────────────────────────────────────────────────────────────────────────────────
-describe('§4 T-B — receipt idempotence · stale no-op · death permanence · provider refusal', () => {
+describe('§4 T-B — receipt idempotence · behind-snapshot no-op · provider refusal', () => {
   test('receipt idempotence: a re-delivered receipt does not change committed state', () => {
     const store = boot()
     const r = {

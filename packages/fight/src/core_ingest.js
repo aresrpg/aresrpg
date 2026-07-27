@@ -50,11 +50,33 @@ const wrong_fight = (state, payload) =>
 
 /** Admit a VERIFIED chain-event batch, reconcile courtesy against it, and resolve intents the chain has now spoken
  *  past. `how` marks the intent resolution ('observed' for a receipt — my own tx proof; 'stale' for a read floor). */
-const admit_verified = (state, actions, version, how, now) => {
+const admit_verified = (state, actions, version, source, how, now) => {
+  const before = state.inbox.log
   const admitted = admit_events(state.inbox, actions, now)
   const inbox = reconcile_courtesy(admitted.inbox)
   const ledger = compact_ledger(resolve_intents(state.ledger, version, how), truth_version(inbox))
-  return with_failures({ ...state, inbox, ledger }, admitted.failures, admitted.effects)
+  // Journal page boundaries can re-stamp an arriving row's ordinal over the union with held rows. Expose the
+  // admitted coordinates, not the page-local pre-admission guess, to the presentation adapter.
+  const observed = actions.map((action) => {
+    if (action.source === 'journal')
+      return (
+        Object.values(inbox.log).find(
+          (row) =>
+            row.source === 'journal' &&
+            Number(row.version) === Number(action.version) &&
+            Number(row.seq) === Number(action.seq)
+        ) ?? action
+      )
+    return inbox.log[`${action.version}:${action.event_idx}`] ?? action
+  })
+  const changed = observed.filter(
+    (action) => inbox.log[`${action.version}:${action.event_idx}`] !== before[`${action.version}:${action.event_idx}`]
+  )
+  return with_failures(
+    { ...state, inbox, ledger, last_read: { source, version, actions: observed, changed } },
+    admitted.failures,
+    admitted.effects
+  )
 }
 
 /** Route a chain-read (`journal_rows_received`) by its source to the admission leg it belongs to. */
@@ -68,24 +90,34 @@ const ingest_chain_read = (state, payload, now) => {
       resolve_intents(state.ledger, with_base.base_version, 'stale'),
       truth_version(with_base)
     )
-    return { ...state, inbox: with_base, ledger, my_seat: resolve_my_seat(with_base, state.ctx, state.my_seat) }
+    return {
+      ...state,
+      inbox: with_base,
+      ledger,
+      my_seat: resolve_my_seat(with_base, state.ctx, state.my_seat),
+      last_read: { source, version: ver, actions: [], changed: [], adopted: inbox !== state.inbox },
+    }
   }
   if (source === 'receipt') {
     const actions = batch_to_actions(payload.rows, { version: ver, source, fight_id })
-    return admit_verified(state, actions, ver, 'observed', now)
+    return admit_verified(state, actions, ver, source, 'observed', now)
   }
   if (source === 'poll' || source === 'terminal') {
     const actions = batch_to_actions(payload.rows, { version: ver, source: 'poll', fight_id })
-    return admit_verified(state, actions, ver, 'stale', now)
+    return admit_verified(state, actions, ver, source, 'stale', now)
   }
   if (source === 'p2p') {
     const actions = batch_to_actions(payload.rows, { version: ver, source: 'p2p', fight_id })
-    return { ...state, inbox: buffer_courtesy(state.inbox, actions) }
+    return {
+      ...state,
+      inbox: buffer_courtesy(state.inbox, actions),
+      last_read: { source, version: ver, actions, changed: [] },
+    }
   }
   if (source === 'journal') {
     const actions = journal_to_actions(payload.rows)
-    const admitted = admit_verified(state, actions, ver, 'observed', now)
-    const headed = note_journal_head(admitted.inbox, payload.rows?.head, actions, now)
+    const admitted = admit_verified(state, actions, ver, source, 'observed', now)
+    const headed = note_journal_head(admitted.inbox, payload.rows?.head ?? payload.rows?.journal_head, actions, now)
     return with_failures({ ...admitted, inbox: headed.inbox }, headed.failures)
   }
   return state // an unknown source is a no-op (total; the classify bridge never emits one)

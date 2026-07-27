@@ -2,22 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/inputs.js — the ONE reducer for ALL fight contexts (world / dungeon / kolizeum).
 //
-// A classic tactical fight is an ordered action log; `state = fold(log)`; every view is a projection of it and nothing
-// else is state (FIGHT_REWRITE_DESIGN §2). This module owns: (1) normalize {intent · receipt · snapshot · p2p ·
-// poll} into ordered ACTIONS keyed `(version, event_idx)`, and (2) the pure `apply_action` fold + `fold_log`.
-// There are NO context branches here — the shims (S2) only supply the fight id + roster and route settlement.
+// A classic tactical fight is an ordered action log; `state = fold(log)`; every view is a projection of it and
+// nothing else is state (FIGHT_REWRITE_DESIGN §2). This module owns the pure action vocabulary:
+// `normalize_intent`, `apply_action`, and `fold_log`. Raw receipt/journal/snapshot decoding lives only in
+// core_inbox.js. There are NO viewer-context branches here.
 //
 // Chain events are the authoritative log entries (move/engine/sources/fight_events.move). The client NEVER
-// re-guesses them by snapshot-diffing (the dead mess) — it decodes the exact ordered events with the SDK's
-// proven `decode_fight_event` and applies each event's declared delta. `@aresrpg/sim` is the PREDICTION source
-// for my own intents (same deterministic reducer the chain mirrors); its events feed the SAME action vocabulary,
-// so there is one fold, one home for fight state.
-
-import { decode_fight_event } from '@aresrpg/sdk/fight'
-import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+// re-guesses them by snapshot-diffing (the dead mess) — core_inbox decodes the exact ordered events once and this
+// fold applies each event's declared delta. `@aresrpg/sim` is the PREDICTION source for my own intents; its events
+// feed the SAME action vocabulary, so there is one fold and one home for canonical fight state.
 
 import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } from './fight_status_snapshot.js'
-import { decode, encode } from './los.js'
 import { is_status_kind } from './statuses.js'
 
 // ActionEffect is the only receipt row carrying the exact timed status descriptor. What makes a row foldable is
@@ -31,13 +26,14 @@ import { is_status_kind } from './statuses.js'
 //   · STEAL_STAT (10) — `apply_steal_stat` splits one authored line into two DERIVED rows, never this one.
 //   · TIMED_PAYLOAD (34) / NAMED_DAMAGE_STACK (35) / STANCE (36) — `schedule_payload`, `record_named_stack` and
 //     `retro_effects::apply_stance` each write their OWN derived record; the envelope's row is never the row.
-// Chance-gated effects and rows aimed away from the caster fail the recipient proof and remain snapshot truth.
+// Targeted/AoE/chance effects fail the recipient proof and remain snapshot truth.
 const K_GIVE_POINTS = 6
 const K_REMOVE_POINTS = 7
 /** Status kinds whose chain arm does NOT record the envelope's Effect verbatim — contested, or derived. */
 const DERIVED_STATUS_KINDS = new Set([7, 8, 10, 34, 35, 36])
 /** A GIVE/REMOVE_POINTS row's `stat` is the chain POINT id (`spell_effect` POINT_AP/POINT_MP) — the pool it moves. */
 const POINT_POOL = { 0: 'ap', 1: 'mp' }
+const SHAPE_POINT = 0
 const TF_NOT_TEAM = 1
 const TF_NOT_SELF = 2
 const TF_ONLY_CASTER = 32
@@ -71,6 +67,9 @@ export const empty_state = (fight_id = null) => ({
   phase: 'active',
   fighters: {},
   active: null,
+  // Chain-owned turn identity. A positive TurnStarted deadline is shared verbatim by the event and Fight object;
+  // zero-deadline turns fall back to the event coordinate. Never incremented from local receipt order.
+  turn_ordinal: null,
   turn_deadline_ms: null,
   // Provenance bit folded with the current turn. The numeric clock may be held monotonically by store.js across
   // a torn read, but only a positive deadline observed on THIS folded TurnStarted/snapshot may drive an action.
@@ -189,23 +188,9 @@ const action_context_key = (action) =>
 
 const fields_of = (value) => value?.fields ?? value ?? {}
 
-/** Is the CASTER's own cell inside the effect's zone? The chain's own recipient test, restated (#1172): every
- * effect is applied to the fighters standing in `combat_grid::zone_cells(shape, size, target_cell, caster_cell)`
- * (cast.move:987 → `zone.contains(&pcell)`), and `get_aoe_cells` is the sim twin of that enumeration — the same
- * function the targeting overlay already paints the zone with. A POINT zone is the ONE-CELL case, so this single
- * question replaces the old point-only triple (`shape == POINT && size == 0 && target_cell == caster.cell`) that
- * made every AoE self-buff unprovable. A shape the sim does not enumerate collapses to `[target]` — conservative
- * by construction: the row simply stays snapshot truth rather than being invented. */
-const zone_hits_caster = (effect, target_cell, caster_cell) =>
-  get_aoe_cells(
-    { area_shape: Number(effect.area_shape) || 0, area_size: Number(effect.area_size) || 0 },
-    decode(target_cell),
-    decode(caster_cell)
-  ).some((cell) => encode(cell.x, cell.y) === caster_cell)
-
-/** A guaranteed effect whose zone covers the caster is the one action-envelope shape that proves its exact
- * recipient and status row without replaying spell resolution. ActionStarted supplies the missing target cell;
- * both rows use the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds.
+/** A guaranteed point effect aimed at the caster is the one action-envelope shape that proves its exact recipient
+ * and status row without replaying spell resolution. ActionStarted supplies the missing target cell; both rows use
+ * the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds.
  *
  * THE SECOND WIRE DOOR (#983). `ActionEffect.effect` is the chain `Effect` struct VERBATIM (cast.move record_timed
  * copies it), so a signed kind arrives 32768-CENTERED exactly like the snapshot's Fight.fx row — and lands in the
@@ -226,7 +211,9 @@ const self_status_from_effect = (state, action) => {
   if (
     !context ||
     caster?.cell == null ||
-    !zone_hits_caster(effect, Number(context.target_cell), Number(caster.cell)) ||
+    Number(context.target_cell) !== Number(caster.cell) ||
+    Number(effect.area_shape) !== SHAPE_POINT ||
+    Number(effect.area_size) !== 0 ||
     Number(effect.chance) < 100 ||
     remaining_turns <= 0 ||
     !hits_caster ||
@@ -378,6 +365,10 @@ export const apply_action = (state, action) => {
       const withturn = {
         ...next,
         active: key,
+        turn_ordinal:
+          observed_deadline != null
+            ? String(observed_deadline)
+            : `${Number(action.version ?? 0)}:${Number(action.event_idx ?? 0)}`,
         turn_deadline_ms: observed_deadline,
         turn_deadline_fresh: observed_deadline != null,
       }
@@ -546,76 +537,6 @@ export const apply_action = (state, action) => {
 /** Fold a whole (sorted) action log into committed state. `state = fold(log)` — the design's core identity. */
 export const fold_log = (log, fight_id = null) => log.reduce(apply_action, empty_state(fight_id))
 
-// ── Normalizers: every input door → ordered actions keyed (version, event_idx) ────────────────────────────────
-
-/** A Cast is DAMAGING if a later Hit in the same segment strikes a fighter OTHER than the caster (before the next
- *  Cast / turn boundary). Drives the optimistic invisibility reveal for receipt/peer segments. */
-const mark_damaging_casts = (decoded) => {
-  const out = decoded.map((e) => ({ ...e }))
-  for (let i = 0; i < out.length; i++) {
-    if (out[i].kind !== 'Cast') continue
-    const caster_key = fighter_key({ is_mob: out[i].caster_is_mob, idx: out[i].caster_idx })
-    for (let j = i + 1; j < out.length; j++) {
-      if (out[j].kind === 'Cast' || out[j].kind === 'TurnStarted' || out[j].kind === 'TurnEnded') break
-      if (out[j].kind !== 'Hit') continue
-      const victim_key = fighter_key({ is_mob: out[j].victim_is_mob, idx: out[j].victim_idx })
-      if (victim_key !== caster_key) {
-        out[i].damaging = true
-        break
-      }
-    }
-  }
-  return out
-}
-
-/**
- * Normalize a receipt / poll / p2p relay ({ events: [{ type, parsedJson }] } or a bare event array) into ordered
- * actions keyed `(version, event_idx)`. `version` scopes the batch; `event_idx` its position — the dedupe key is
- * `version:event_idx`. Reuses the SDK's proven `decode_fight_event` verbatim (FIGHTREAL: zero shape drift).
- */
-export const normalize_events = (
-  receipt,
-  { version, source = 'receipt', fight_id = null, resolve_seat = null, base_of = null } = {}
-) => {
-  const raw = Array.isArray(receipt) ? receipt : (receipt?.events ?? [])
-  // event_idx = the event's position in the RAW receipt (same clock as the render producer's event_index) —
-  // the presentation windows (store.presented_state) join the two lanes on this one index.
-  const decoded = raw
-    .map((event, event_idx) => {
-      const e = decode_fight_event(event)
-      return e ? { ...e, event_idx } : null
-    })
-    .filter((e) => e && (!fight_id || String(e.fight) === String(fight_id)))
-  return mark_damaging_casts(decoded).map((e) => {
-    // TURN-START BUDGET: a player TurnStarted predicts the begin_turn refill — inject the seat's base_ap/base_mp
-    // (from the current view via `base_of`) so the fold paints the budget the event itself omits (see apply_action).
-    const budget = base_of && e.kind === 'TurnStarted' && !e.is_mob ? base_of(Number(e.idx)) : null
-    return { ...e, version, source, resolve_seat, ...(budget ? { ap: budget.ap, mp: budget.mp } : {}) }
-  })
-}
-
-/**
- * Normalize the accept machine's `apply` stream (M2b, #291) into ordered canonical actions. Each accepted event
- * is `{ kind, data, seq, version }` — already deduped, contiguous and gap-free by the accept machine, so this is
- * the ONE canonical source the store folds. `event_idx = Number(seq)`: the per-fight seq is a bounded contiguous
- * ordinal (never near 2^53 for one fight — the u64 discipline that guards the WIRE lives in journal_u64/the accept
- * machine, in BigInt), so it is a lossless, globally-unique presentation ordinal that sorts the log by true order.
- * Same seat-budget injection + damaging-cast marking as `normalize_events`, so a receipt event and its journal twin
- * fold byte-identically.
- */
-export const normalize_accepted = (events, { resolve_seat = null, base_of = null } = {}) => {
-  const decoded = (events ?? [])
-    .map((e) => {
-      const d = decode_fight_event({ type: e.kind, json: e.data })
-      return d ? { ...d, version: Number(e.version), event_idx: Number(e.seq) } : null
-    })
-    .filter(Boolean)
-  return mark_damaging_casts(decoded).map((e) => {
-    const budget = base_of && e.kind === 'TurnStarted' && !e.is_mob ? base_of(Number(e.idx)) : null
-    return { ...e, source: 'canonical', resolve_seat, ...(budget ? { ap: budget.ap, mp: budget.mp } : {}) }
-  })
-}
-
 /** My fighter identity from my key: `p0` → { is_mob:false, idx:0 }, `m2` → { is_mob:true, idx:2 }. */
 export const actor_from_key = (key) =>
   key && (key[0] === 'p' || key[0] === 'm') ? { is_mob: key[0] === 'm', idx: Number(key.slice(1)) } : null
@@ -670,49 +591,4 @@ export const normalize_intent = (intent, { version, event_idx = 0, actor = null,
   }
 }
 
-/** Stable byte image of the committed state — fighters sorted by key. Equal strings ⇒ byte parity.
- *  ORACLE WIDENING (B-F18, INC-0): AP/MP/ready and the presentation/settlement surface join the image — exactly
- *  the fields the reconcile bugs corrupt, invisible to the old oracle (a green fightcore was a partial lie).
- *  `?? null` / `?? []` defaults keep a bare committed fold byte-identical to a quiescent store fold, so the
- *  parity proof (store vs direct fold) survives; a live store's draining wave / terminal signal now register. */
-export const canonical_state = (state) => ({
-  fight_id: state.fight_id,
-  phase: state.phase,
-  active: state.active,
-  turn_deadline_ms: state.turn_deadline_ms,
-  winner: state.winner,
-  fighters: Object.keys(state.fighters)
-    .sort()
-    .map((key) => {
-      const f = state.fighters[key]
-      return {
-        key,
-        cell: f.cell,
-        hp: f.hp,
-        alive: f.alive,
-        invisible: f.invisible,
-        ap: f.ap ?? null,
-        mp: f.mp ?? null,
-        ready: f.ready ?? null,
-      }
-    }),
-  wave: (state.wave ?? []).map((t) => ({
-    seq: t.seq,
-    version: t.version,
-    source_id: t.source_id ?? null,
-    is_local: !!t.is_local,
-  })),
-  presented_seq: state.presented_seq ?? 0,
-  settlement: state.settlement?.chain_terminal?.signal ?? null,
-})
-
-/** Compact FNV-1a digest of the canonical state — the parity "hash" for reports/logs. */
-export const state_hash = (state) => {
-  const text = JSON.stringify(canonical_state(state))
-  let h = 0x811c9dc5
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  return (h >>> 0).toString(16).padStart(8, '0')
-}
+export { canonical_state, state_hash } from './legacy_hash.js'

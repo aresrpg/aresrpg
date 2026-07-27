@@ -1,17 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE DOUBLE-DEATH ("the mob is dying twice") — the eye's projection resurrected a floor-dead mob.
-//
-// v1.12.36 made kills STICK: an authoritative death floors `retired` (V1) and `apply_retirement` overrides any
-// later higher-version read that carries a positive hp. But the floor was applied ONLY in committed_truth (and
-// recompute's output) — NOT in wave_masked_fold, the re-fold that backs presented_state / display_state. So
-// while a MASKING wave drains (any mob/peer turn) over a version-inflated-but-stale view that still carries the
-// dead mob alive, presented_state re-folds from that base WITHOUT the floor → engine_view.dead flips back to
-// FALSE (the corpse stands up), then true again when the wave acks. The adapter re-upserts the corpse then
-// despawns it a SECOND time: one kill, two death animations.
-//
-// The invariant these lock: a floor-dead fighter is dead in EVERY projection — committed, presented, display —
-// regardless of masking waves or stale views. The death presents EXACTLY ONCE.
+// #1336 cursor honesty at the presentation seam. A behind object cannot alter a receipt fold. An object ahead of
+// the cursor is instead the complete new base, so every projection must drop the old retirement state together.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -130,8 +120,8 @@ const confirm_kill = (store, now = 3_000) =>
     now
   )
 
-describe('presented-projection retirement floor — the mob dies exactly once', () => {
-  test('a floor-dead mob does not RESURRECT in engine_view while a masking wave drains over a stale view', () => {
+describe('#1336 retirement state across snapshot boundaries', () => {
+  test('a behind object is discarded and cannot resurrect a fighter during a masking wave', () => {
     const store = boot()
     predict_kill(store) // intent-predicted death
     confirm_kill(store) // the same death, proven by the receipt → retired floor set
@@ -139,17 +129,15 @@ describe('presented-projection retirement floor — the mob dies exactly once', 
     expect(mob0(store).dead, 'the confirmed kill presents dead once its own turn drains').toBe(true)
     expect(store.getState().retired?.m0, 'the receipt floored the death').toBeGreaterThanOrEqual(0)
 
-    // A version-inflated but semantically STALE object read adopts, carrying mob-0 ALIVE again (hp 8). The floor
-    // must win — committed_truth already does. (No masking wave yet, so presented still returns the floored `s`.)
-    store.getState().input({ type: 'snapshot', fight: fight_object(8), version: 8 }, 4_000)
-    expect(mob0(store).committed_dead, 'committed truth holds the floor').toBe(true)
+    store.getState().input({ type: 'snapshot', fight: fight_object(8), version: 5 }, 4_000)
+    expect(mob0(store).committed_dead, 'the behind object is inert').toBe(true)
 
-    // Now a masking wave: mob-1 takes a turn. presented_state re-folds from the stale base for the whole wave.
+    // A later event wave still folds over the death-proven base.
     store.getState().input(
       {
         type: 'receipt',
         fight_id: FIGHT,
-        version: 9,
+        version: 7,
         receipt: {
           events: [
             ev('TurnStarted', { is_mob: true, idx: 1 }),
@@ -160,23 +148,21 @@ describe('presented-projection retirement floor — the mob dies exactly once', 
       },
       5_000
     )
-    // THE BUG: mob-0 (already killed AND floored) must NOT read alive again just because another mob is animating.
-    // A false here is the corpse standing back up — the second death animation fires when the wave later acks.
-    expect(mob0(store).dead, 'a floor-dead mob must never present alive during another turn (no double death)').toBe(
-      true
-    )
+    expect(mob0(store).dead, 'a behind read cannot alter the presented fold').toBe(true)
 
     drain(store, 6_000)
     expect(mob0(store).dead, 'still dead after the wave — the death presented exactly once').toBe(true)
   })
 
-  test('presented_state and display_state respect the retirement floor (parity with committed_truth)', () => {
+  test('an ahead object replaces retirement state in committed, presented, and display projections', () => {
     const store = boot()
     predict_kill(store)
     confirm_kill(store)
     drain(store, 3_500)
     store.getState().input({ type: 'snapshot', fight: fight_object(8), version: 8 }, 4_000)
-    // A masking wave keeps presented/display on their re-fold branch.
+    expect(store.getState().view_version).toBe(8)
+    expect(mob0(store).committed_dead, 'the complete v8 base says the mob is alive').toBe(false)
+    // A masking wave keeps presented/display on their re-fold branch; neither may carry the discarded retirement.
     store.getState().input(
       {
         type: 'receipt',
@@ -193,8 +179,8 @@ describe('presented-projection retirement floor — the mob dies exactly once', 
       5_000
     )
     const s = store.getState()
-    expect(committed_truth(s).fighters?.m0?.alive, 'committed floor').toBe(false)
-    expect(presented_state(s).fighters?.m0?.alive, 'presented must not resurrect the floor-dead mob').toBe(false)
-    expect(display_state(s).fighters?.m0?.alive, 'display must not resurrect the floor-dead mob').toBe(false)
+    expect(committed_truth(s).fighters?.m0?.alive).toBe(true)
+    expect(presented_state(s).fighters?.m0?.alive).toBe(true)
+    expect(display_state(s).fighters?.m0?.alive).toBe(true)
   })
 })

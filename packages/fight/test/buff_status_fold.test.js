@@ -184,4 +184,28 @@ describe('#481 self-buff action effects enter the fighter status fold', () => {
       expect(committed_truth(store.getState()).fighters.p0.invisible).toBe(true)
       expect(committed_truth(store.getState()).action_contexts).toEqual({})
     })
+
+  test('an older Fight snapshot cannot erase the already-folded buff', () => {
+    const store = drive(receipt())
+    const before = engine_view(store.getState()).fingerprint
+
+    store.getState().input(
+      {
+        type: 'snapshot',
+        fight: {
+          ...fight_object,
+          participants: [{ ...fight_object.participants[0], hp: 1 }],
+          invisibility_statuses: [],
+        },
+        version: 1,
+        journal_head: '0',
+      },
+      1_200
+    )
+
+    const committed = committed_truth(store.getState())
+    expect(committed.fighters.p0.statuses).toHaveLength(effects.length)
+    expect(committed.fighters.p0.hp).toBe(50)
+    expect(engine_view(store.getState()).fingerprint).toEqual(before)
+  })
 })

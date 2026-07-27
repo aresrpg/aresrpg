@@ -32,7 +32,8 @@ import { digest, replay_capsule, terminal_summary } from '@aresrpg/sim/timeline'
 
 import { board_state_from_fight } from '../src/board_state.js'
 import { base_budget, base_from_view } from '../src/fold.js'
-import { apply_action, normalize_events, seat_resolver } from '../src/inputs.js'
+import { apply_action, seat_resolver } from '../src/inputs.js'
+import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
 import { encode } from '../src/los.js'
 import {
   abandon_fight,

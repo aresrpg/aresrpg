@@ -1,0 +1,445 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+// fight/project_views.js — pure legacy-shaped board and engine projections.
+
+import { experience_to_level } from '@aresrpg/sdk/experience'
+
+import { GRID_W, GRID_H, decode as decode_xy } from './los.js'
+import { participant_entity_id, participant_character_id } from './fight_control.js'
+import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
+import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
+import { fight_fingerprint } from './fingerprint.js'
+import {
+  DUNGEON_BOARD_ORIGIN,
+  cast_presenting,
+  chain_terminal_status,
+  deadline_starved,
+  decided_outcome,
+  presenting,
+  settlement_request,
+} from './project_state.js'
+
+/** Fighters whose killing damage beat is unacked. This masks rendered liveness only; targeting remains committed. */
+const death_presenting_ids = (s) => {
+  const ids = new Set()
+  for (const t of s.wave ?? [])
+    for (const b of t.beats ?? [])
+      if (b.kind === 'damage' && b.payload?.killed && b.payload?.target_id) ids.add(b.payload.target_id)
+  return ids
+}
+
+const seat_key = (seat) => `p${seat}`
+const mob_key = (idx) => `m${idx}`
+
+const character_male = (character) => {
+  if (typeof character?.male === 'boolean') return character.male
+  if (character?.sex === 'male') return true
+  if (character?.sex === 'female') return false
+  return undefined
+}
+
+/** A player fighter's LEVEL off its roster character (the turn card used to hardcode 1, #949). `/v1` serves the
+ *  stored progression level once a character has fought (the Progression DF supersedes the frozen genesis
+ *  fields); my own `sui.characters` rows carry `experience` only, so the fallback is the same immutable XP curve
+ *  the chain runs. No roster row yet (a co-fighter's doc still resolving) → 1, never undefined. */
+const character_level = (character) => {
+  const stored = Number(character?.level)
+  if (Number.isFinite(stored) && stored >= 1) return stored
+  const experience = Number(character?.experience)
+  return Number.isFinite(experience) && experience > 0 ? experience_to_level(experience) : 1
+}
+
+const character_colors = (character) => {
+  if (!character) return null
+  const nested = Array.isArray(character.colors) ? null : character.colors
+  const colors = Array.isArray(character.colors)
+    ? character.colors
+    : [
+        character.color_1 ?? nested?.color_1 ?? 0,
+        character.color_2 ?? nested?.color_2 ?? 0,
+        character.color_3 ?? nested?.color_3 ?? 0,
+      ]
+  return colors.some(Boolean) ? colors : null
+}
+const positive_delta = (value, base) => {
+  const delta = Number(value) - Number(base)
+  return Number.isFinite(delta) ? Math.max(0, delta) : 0
+}
+
+/** MP from this seat's still-live prediction rows. Unlike a spell-template/cast-path sum this is keyed by the
+ * core's per-cast intent batches, so M2b claim retirement removes exactly the confirmed cast and leaves unrelated
+ * pending grants intact. @param {any[]} log @param {number} seat */
+const drafted_mp_grant = (log, seat) =>
+  (log ?? []).reduce(
+    (sum, e) =>
+      e.source === 'intent' &&
+      e.kind === 'Granted' &&
+      Number(e.point_kind) === 1 &&
+      !e.target_is_mob &&
+      Number(e.target_idx) === seat
+        ? sum + (Number(e.granted) || 0)
+        : sum,
+    0
+  )
+
+/** A mob's authoritative HP: snapshot + peer/receipt tail, with this client's optimistic intents excluded. */
+export const committed_mob_hp = (state, idx) => committed_truth(state).fighters?.[mob_key(idx)]?.hp ?? null
+
+/** Entity id of a thin-fold key (`p0` → the seat's character id, `m2` → `mob-2`), resolved through the view. */
+export const entity_id_of_key = (view, key) => {
+  if (!key || !view) return null
+  if (key[0] === 'm') return `mob-${Number(key.slice(1))}`
+  const row = view.escrow?.[Number(key.slice(1))]
+  return row ? (participant_entity_id(row) ?? null) : null
+}
+
+/** The board terrain for the arena — canonical GRID, non-walkable = 1: obstacles ∪ holes ∪ OUT-OF-BOARD.
+ *  Out-of-board = beyond the true grid dims OR outside the stored shape mask (a shaped board carves the
+ *  canonical window — e.g. an octagon's corners). BOOT22 dead-click root: this projection used to leave
+ *  out-of-shape cells 0 ("walkable"), so an arena consumer could aim at a cell the board never built —
+ *  board_picking correctly nulls there (D75: void cells are never pickable), a silent dead click. One home
+ *  for walkability truth: the arena gates on the SAME shape (dims + mask) the rendered board is built from. */
+export const project_board_cells = (view) => {
+  // D771 (no invented dims): a dims-less view — the OPEN roam plane carries no BoardGeom by design — has NO
+  // tactical arena; every canonical cell stays non-walkable (1) instead of fabricating a phantom full
+  // GRID_W×GRID_H walkable board. A real fight view carries positive dims → identical clamping as before.
+  const raw_w = Number(view.grid_width)
+  const raw_h = Number(view.grid_height)
+  const width = raw_w > 0 ? Math.min(raw_w, GRID_W) : 0
+  const height = raw_h > 0 ? Math.min(raw_h, GRID_H) : 0
+  const mask = view.shape_mask // canonical in-shape cell Set (board_state decode) — absent = full-rect board
+  const cells = new Array(GRID_W * GRID_H).fill(1)
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const idx = y * GRID_W + x
+      if (!mask || mask.has(idx)) cells[idx] = 0
+    }
+  for (const idx of view.obstacles ?? []) if (idx >= 0 && idx < cells.length) cells[idx] = 1
+  for (const idx of view.holes ?? []) if (idx >= 0 && idx < cells.length) cells[idx] = 1
+  return cells
+}
+
+/** Fold-derived lifecycle status: the view's chain status advanced by any fresher folded events. */
+const projected_status = (s) => {
+  const view_status = s.view?.status ?? STATUS_ACTIVE
+  const { run = null, rooms_total = 0 } = s.ctx ?? {}
+  if (s.winner === 0) return run && rooms_total > 0 && (run.room ?? 1) < rooms_total ? STATUS_ROOM_CLEARED : STATUS_WON
+  if (s.winner === 1) return STATUS_FAILED
+  // A folded TurnStarted while the snapshot still says placement = the chain activated under us.
+  if (view_status === STATUS_PLACEMENT && s.active != null) return STATUS_ACTIVE
+  return view_status
+}
+
+/**
+ * The legacy `dungeon` view — the adopted board snapshot with the presented fold overlaid on its rows.
+ * DungeonBoard / phase.js / dungeon_dimension / the board adapter read exactly this shape (fight_view's
+ * contract, preserved verbatim through the flip).
+ */
+export const board_view = (s) => {
+  const { view } = s
+  if (!view) return null
+  const p = presented_state(s)
+  const d = display_state(s) // DISPLAY cell only — holds an in-flight walk at its pre-move cell (SNAP-THEN-RUN)
+  const c = committed_truth(s)
+  const budget = claimed_budget_state(s)
+  const escrow = (view.escrow ?? []).map((row, seat) => {
+    const cf = c.fighters?.[seat_key(seat)]
+    const bf = budget.fighters?.[seat_key(seat)]
+    const canonical_ap = cf?.ap ?? row.ap
+    const canonical_mp = cf?.mp ?? row.mp
+    const budget_ap = bf?.ap ?? canonical_ap
+    const budget_mp = bf?.mp ?? canonical_mp
+    // The seat's CHAIN-COMMITTED anchor (my drafted intents excluded): the pool DungeonBoard's draft math
+    // subtracts its OWN cast_path/move_path ledger from. Accepted chain-silent point grants join ONLY the AP/MP
+    // budget: their Cast/sibling claim is authoritative enough for legality, but they remain outside canonical
+    // history. `pending_mp` is the exact per-intent remainder after M2b claim retirement; DungeonBoard uses it
+    // instead of correlating an aggregate claimed delta against spell templates.
+    // Cell/HP remain strictly canonical. Never use the presented values below — those already fold the draft's
+    // ap_cost/mp_left intents, so budgeting against them counts every queued action TWICE (gate9 P1).
+    const committed = {
+      ap: budget_ap,
+      mp: budget_mp,
+      claimed_ap: positive_delta(budget_ap, canonical_ap),
+      claimed_mp: positive_delta(budget_mp, canonical_mp),
+      pending_mp: drafted_mp_grant(s.log, seat),
+      cell: cf?.cell ?? row.cell,
+      hp: cf?.hp ?? row.hp,
+      alive: cf?.hp != null ? cf.alive : row.alive,
+    }
+    const f = p.fighters?.[seat_key(seat)]
+    if (!f) return { ...row, committed }
+    return {
+      ...row,
+      committed,
+      // The rendered cell is the DISPLAY fold — my own walk holds at its pre-move cell until the walk beat
+      // presents (never jumps ahead of the run); every other fact stays the effective/presented value.
+      cell: d.fighters?.[seat_key(seat)]?.cell ?? f.cell ?? row.cell,
+      hp: f.hp ?? row.hp,
+      alive: f.hp != null ? f.alive : row.alive,
+      ready: f.ready ?? row.ready,
+      // TURN-START BUDGET: the fold's predicted begin_turn refill wins over the stale pre-refill snapshot; row.ap/mp
+      // is the authoritative fallback (a post-refill read prunes the overlay → f.ap/mp go null → the snapshot shows).
+      ap: f.ap ?? row.ap,
+      mp: f.mp ?? row.mp,
+    }
+  })
+  const mobs = (view.mobs ?? []).map((row, idx) => {
+    const cf = c.fighters?.[mob_key(idx)]
+    const committed = {
+      cell: cf?.cell ?? row.cell,
+      hp: cf?.hp ?? row.hp,
+      alive: cf?.hp != null ? cf.alive : row.alive,
+    }
+    const f = p.fighters?.[mob_key(idx)]
+    if (!f) return { ...row, committed }
+    const cell = d.fighters?.[mob_key(idx)]?.cell ?? f.cell ?? row.cell // DISPLAY cell (walk-hold); rest presented
+    return { ...row, committed, cell, hp: f.hp ?? row.hp, alive: f.hp != null ? f.alive : row.alive }
+  })
+  return {
+    ...view,
+    escrow,
+    mobs,
+    status: projected_status(s), // committed fold decides terminal truth (never hangs on presentation)
+    chain_terminal: chain_terminal_status(s),
+    // The dialog OPEN gate (shape ②): client-knowable, receipt-proven fight-over — the terminal effect fires
+    // claim() off THIS the instant the killing receipt folds, so a lagged settle never dead-airs a won fight.
+    decided_winner: decided_outcome(s),
+    settlement_request: settlement_request(s),
+    turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms,
+    // The CHAIN turn-seed inputs travel with the view, the same way the deadline does — every crit/tackle
+    // preview surface composes its clock from this projection. Distinct from `engine_view.turn_ordinal`, which
+    // is the core fold's turn ANCHOR token (a string): this pair is `fight.move::turn_seed`'s numeric input.
+    turn_entropy: s.turn_entropy ?? view.turn_entropy,
+    turn_ordinal: s.turn_ordinal ?? view.turn_ordinal,
+  }
+}
+
+/**
+ * The FightSlice shape (fighters Map, turn/placement machine, ready set) — projected from the PRESENTED
+ * state. Every HUD consumer reads it SYNCHRONOUSLY via `use_fight_view()` / `fight_view()` (the memoized
+ * doors below) — the async game-core mirror is dead. `roster` (my kiosk characters) resolves the local seat
+ * names; its ONE home is the core's own ctx (`ctx.roster`, pumped by the fight edge module on sui_data), the
+ * param remains as a pure-injection override for tests/board_fight_authority.
+ */
+export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
+  const { view } = s
+  if (!view) return null
+  const p = presented_state(s)
+  const d = display_state(s) // DISPLAY cell only — an in-flight walk holds at its pre-move cell (SNAP-THEN-RUN)
+  const c = committed_truth(s)
+  const death_hold = death_presenting_ids(s) // liveness-only mask: dead presents at the killing turn's ack
+  // LEG P — while a peer/mob replay drains, the HP NUMBER must hold with the beat: the turn card only updates
+  // once the vfx ends. `presented_health` = the paced presented fold during a wave, the settled committed value
+  // when nothing presents. `health` stays the effective/predicted fold; the timeline card reads presented_health.
+  const wave_presenting = presenting(s)
+  // LEG Q — every active fighter status (was invisibility-only) as the effect-badge array: raw chain ints, one home
+  // (the fold's per-fighter `statuses`); `invisible` stays derived from a kind-27 row. Badges read this via engine_view.
+  const effects_of = (fighter) =>
+    (fighter?.statuses ?? []).map((st, i) => ({
+      id: `${st.kind}:${i}`,
+      kind: st.kind,
+      remaining_turns: st.remaining_turns,
+      element: st.element,
+      value: st.value,
+      stat: st.stat,
+      chance: st.chance,
+      source: st.source ?? null,
+      ...(st.flags != null ? { flags: st.flags } : {}),
+    }))
+  const ctx = s.ctx ?? {}
+  const map = new Map()
+  const ready = new Set()
+  for (const [seat, row] of (view.escrow ?? []).entries()) {
+    const entity_id = participant_entity_id(row)
+    if (!entity_id) continue
+    const f = p.fighters?.[seat_key(seat)] ?? {}
+    const cf = c.fighters?.[seat_key(seat)] ?? {}
+    const character_id = participant_character_id(row)
+    const roster_character = roster.find((c) => c.id === character_id)
+    const roster_name = roster_character?.name
+    const male = character_male(roster_character) ?? character_male(row)
+    if (f.ready ?? row.ready) ready.add(entity_id)
+    map.set(entity_id, {
+      id: entity_id,
+      owner: row.addr,
+      character_id,
+      name: row.name || roster_name || `${String(row.addr).slice(0, 6)}…${String(row.addr).slice(-4)}`,
+      team: Number(row.team ?? 0), // the CHAIN's side (fight.move seats team 1 only in PvP) — never assumed PvM
+      // DISPLAY cell — my own walk holds at its pre-move cell until the walk beat presents (the rig follows
+      // the run, never teleports to the target ahead of it); health/ap/mp stay the effective/presented fold.
+      cell: decode_xy(d.fighters?.[seat_key(seat)]?.cell ?? f.cell ?? row.cell),
+      health: f.hp ?? row.hp,
+      presented_health: wave_presenting ? (f.hp ?? row.hp) : (cf.hp ?? row.hp),
+      committed_health: cf.hp ?? row.hp,
+      committed_alive: cf.hp != null ? cf.alive : row.alive,
+      committed_dead: !(cf.hp != null ? cf.alive : row.alive),
+      health_max: row.max_hp,
+      effects: effects_of(f),
+      base_range: row.base_range ?? 0,
+      // THE SEAT'S COMPOSED BUILD (#1077) — the ONE object the predict path reads its inputs from: the locked
+      // stat snapshot the reducer takes as this fighter's `stats` (it re-adds the timed rows itself from
+      // `effects`) and the seat's learned spell levels per SpellTemplate object id. Every fight surface that
+      // predicts, prices or ranges a cast derives from THIS, never from a per-surface subset.
+      base_stats: row.base_stats ?? {},
+      spell_levels: row.spell_levels ?? {},
+      // TURN-START BUDGET: the fold predicts the begin_turn refill so the budget paints the instant it's my turn
+      // (the TurnStarted event omits ap/mp); the snapshot row.ap/mp reconciles the moment a post-refill read adopts.
+      ap: f.ap ?? row.ap,
+      ap_max: row.base_ap,
+      mp: f.mp ?? row.mp,
+      mp_max: row.base_mp,
+      level: character_level(roster_character),
+      is_player: true,
+      dead:
+        !death_hold.has(entity_id) &&
+        ((s.busy && s.optimistic_dead?.[seat_key(seat)] != null) || (f.hp != null ? !f.alive : !row.alive)),
+      class_id: row.classe || roster_character?.classe || roster_character?.class || undefined,
+      sex: male == null ? undefined : male ? 'male' : 'female',
+      male,
+      hue: 0, // was color_to_hue(0) ≡ 0 — a constant call; the game/data/color edge died with the promotion
+      // The roster edge is deliberately shape-tolerant: owned/enriched cards carry flat color_N fields while
+      // raw /v1 teammate docs carry them under `colors`. All-zero means "use the authored base texture", exactly
+      // like the roam avatar; `hue` stays the legacy 2D-sprite value above.
+      colors: character_colors(roster_character) ?? character_colors(row),
+      invisible: !!f.invisible,
+    })
+  }
+  ;(view.mobs ?? []).forEach((m, i) => {
+    const f = p.fighters?.[mob_key(i)] ?? {}
+    const cf = c.fighters?.[mob_key(i)] ?? {}
+    map.set(`mob-${i}`, {
+      id: `mob-${i}`,
+      variant: m.template,
+      name: view.mob_names?.[m.template] || 'Mob',
+      team: 1,
+      cell: decode_xy(d.fighters?.[mob_key(i)]?.cell ?? f.cell ?? m.cell), // DISPLAY cell (walk-hold)
+      health: f.hp ?? m.hp,
+      presented_health: wave_presenting ? (f.hp ?? m.hp) : (cf.hp ?? m.hp),
+      committed_health: cf.hp ?? m.hp,
+      committed_alive: cf.hp != null ? cf.alive : m.alive,
+      committed_dead: !(cf.hp != null ? cf.alive : m.alive),
+      health_max: m.max_hp,
+      effects: effects_of(f),
+      base_range: m.base_range ?? 0,
+      // the TARGET's locked block — its resistances are an input to my own predicted damage (#1077)
+      base_stats: m.base_stats ?? {},
+      ap: m.ap ?? 0,
+      ap_max: m.base_ap ?? 0,
+      mp: m.mp ?? 0,
+      mp_max: m.base_mp ?? 0,
+      level: m.level || 1,
+      is_player: false,
+      dead:
+        !death_hold.has(`mob-${i}`) &&
+        ((s.busy && s.optimistic_dead?.[mob_key(i)] != null) || (f.hp != null ? !f.alive : !m.alive)),
+      element: m.element,
+      invisible: !!f.invisible,
+    })
+  })
+  const status = projected_status(s)
+  const placement = status === STATUS_PLACEMENT
+  const address = ctx.address ?? null
+  const spectator = ctx.spectator === true
+  const controlled_entity_ids = spectator
+    ? []
+    : (view.escrow ?? [])
+        .filter((row) => address && String(row.addr) === String(address))
+        .map(participant_entity_id)
+        .filter(Boolean)
+  const my_entity_id = spectator
+    ? null
+    : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
+  const active_entity_id = entity_id_of_key(view, c.active)
+  // ④+⑦b THE LIVE trap projection (ruled 07-19) — the sim door reads THIS (state_from_view/evolve_flush_casts),
+  // never trap_overlay. A durable `my_traps` cell is LIVE unless it's `gone` (a committed fighter detonated it —
+  // permanent) OR currently under a living PRESENTED fighter (the optimistic spring — immediate + reversible if
+  // the prediction rolls back). Encoded cells, deduped.
+  const trap_occupied = new Set(
+    Object.values(p.fighters ?? {})
+      .filter((f) => f.alive && f.cell != null)
+      .map((f) => f.cell)
+  )
+  const my_trap_cells = [
+    ...new Set(
+      (s.my_traps ?? [])
+        .filter((t) => !t.gone)
+        .flatMap((t) => t.cells ?? [])
+        .filter((c) => !trap_occupied.has(c))
+    ),
+  ]
+  // ① each LIVE trap cell → its detonation payload, so the sim door rebuilds the trap WITH damage (not payload:[]).
+  // Same live-cell predicate as my_trap_cells (non-gone, not presented-occupied); first record wins a shared cell.
+  // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.
+  const my_trap_payloads = {}
+  for (const t of s.my_traps ?? []) {
+    if (t.gone) continue
+    for (const c of t.cells ?? []) {
+      if (trap_occupied.has(c) || c in my_trap_payloads) continue
+      my_trap_payloads[c] = t.payload ?? []
+    }
+  }
+  // THE LIVE glyph zone projection — every non-gone glyph's full AoE, deduped (the render paints these as the
+  // persistent orange ground zone). Unlike traps there is NO occupied-cell exclusion: a glyph is not sprung by a
+  // fighter standing on it (check_glyphs persists), so the zone stays lit under whoever walks through it.
+  const my_glyph_cells = [...new Set((s.my_glyphs ?? []).filter((g) => !g.gone).flatMap((g) => g.cells ?? []))]
+  // PLACEMENT GHOSTS — peers' uncommitted picks (p2p cosmetic hint), gated to the placement phase itself: once
+  // the fight leaves placement (projected_status flips to STATUS_ACTIVE — see `placement` above) this reads []
+  // even a tick before the fold's own GC catches up, so "on fight start" never depends on GC timing.
+  const placement_ghosts = placement
+    ? Object.entries(s.placement_ghosts ?? {}).map(([character, g]) => ({ character, cell: g.cell }))
+    : []
+  return {
+    fight_id: view.id,
+    my_traps: my_trap_cells,
+    my_trap_payloads,
+    my_glyphs: my_glyph_cells,
+    placement_ghosts,
+    arena: { width: GRID_W, height: GRID_H, cells: project_board_cells(view) },
+    origin: DUNGEON_BOARD_ORIGIN,
+    fighters: map,
+    turn_order: (view.turn_queue ?? [])
+      .map((a) => (a.is_mob ? `mob-${a.idx}` : participant_entity_id(view.escrow?.[a.idx] ?? {})))
+      .filter(Boolean),
+    active_entity_id,
+    turn_ordinal: c.turn_ordinal ?? null,
+    fingerprint: fight_fingerprint(s.core),
+    // R4 — the PRESENTATION clock's actor: the head unacked non-local wave turn (a real entity id — 'mob-N'
+    // or a character id). Null while nothing drains. The chain clock (active_entity_id) is untouched.
+    presenting_entity_id: (s.wave ?? []).find((t) => !t.is_local)?.source_id ?? null,
+    my_entity_id,
+    controlled_entity_ids,
+    active_controlled_character_id:
+      active_entity_id && controlled_entity_ids.includes(active_entity_id) ? active_entity_id : null,
+    spectator,
+    hand: s.hand ?? [],
+    draft_count: s.staged?.length ?? 0,
+    deck_size: 0,
+    discard_size: 0,
+    ap_reserve: 0,
+    // The committed SeatTurnKey twin: each accepted player TurnStarted advances this in the canonical fold, so a
+    // WORLD journal page that commits a whole round cannot hide the edge by beginning and ending playable.
+    turn_number: c.fighters?.[s.my_key]?.turn_number ?? 0,
+    // The presentation/playable edge clock stays separate for cooldown UI and local-turn gating.
+    my_turn_no: s.my_turn_no ?? 0,
+    winner: s.winner ?? -1,
+    placement,
+    placement_deadline_ms: view.placement_deadline_ms ?? 0,
+    turn_ms: view.turn_ms ?? 0,
+    // BOTH declared zones (#1093): the board paints my band and the opposing one, and placement_click gates on
+    // mine — a team whose zone the projection drops is a bare board (PvM's enemy band) or a dead click (a PvP
+    // team-1 seat). The chain stores both sides; this reads them, it never assumes the PvM side.
+    placement_cells: placement
+      ? { 0: (view.start_cells_a ?? []).map(decode_xy), 1: (view.start_cells_b ?? []).map(decode_xy) }
+      : { 0: [], 1: [] },
+    turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms ?? 0,
+    deadline_starved: deadline_starved(s),
+    ready,
+    armed_spell_id: s.armed_spell_id ?? null,
+    hovered_spell_id: s.hovered_spell_id ?? null,
+    summary: null,
+    presenting: presenting(s),
+    // MP-ZONE MISCLICK GUARD — projected so DungeonBoard's click gate (`reachable`) reads the SAME
+    // fact move_wash suppresses on, never a second UI-side flag (see cast_presenting's doc above).
+    cast_presenting: cast_presenting(s),
+  }
+}

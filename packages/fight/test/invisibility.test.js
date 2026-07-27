@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { apply_action, empty_state, normalize_events } from '../src/inputs.js'
+import { apply_action, empty_state } from '../src/inputs.js'
+import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
 import { create_fight_store } from '../src/store.js'
 
 // REGRESSION STUB — optimistic invisibility reveal (FIGHTREAL delta#1). The chain reveals a hidden fighter on any

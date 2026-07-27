@@ -127,7 +127,7 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
   })
 
   for (const source of ['receipt', 'journal'])
-    test(`M2b ${source.toUpperCase()}: the Cast claim preserves its chain-silent grant across a checkpoint`, () => {
+    test(`#1336 ${source.toUpperCase()}: an ahead snapshot re-adopts the chain-confirmed grant wholesale`, () => {
       const store = boot()
       const four_steps_away = cell(9, 5)
       expect(wash_cells(store).has(four_steps_away), 'base 3 MP cannot reach a cell four steps away').toBe(false)
@@ -159,8 +159,8 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
       })
       expect(store.getState().divergence).toBeNull()
 
-      // A post-M2b object read is checkpoint-only. Even though its row also says mp=4, it cannot be the repair
-      // path: the accepted claim overlay above must already hold, and the bootstrap view remains at version 5.
+      // The v7 object is ahead of the accepted event cursor. It confirms mp=4 through the same bootstrap/reconcile
+      // door, replacing the v5 base wholesale rather than carrying a local grant overlay across the boundary.
       store.getState().input(
         {
           type: 'snapshot',
@@ -170,7 +170,7 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
         },
         2_200
       )
-      expect(store.getState().view_version).toBe(5)
+      expect(store.getState().view_version).toBe(7)
       expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
       expect(wash_cells(store).has(four_steps_away)).toBe(true)
 
@@ -182,12 +182,12 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
       expect(presented_state(store.getState()).fighters.p0.mp, 'one accepted-grant MP was spent').toBe(3)
       expect(project.board_view(store.getState()).escrow[0].committed.mp, 'draft anchor keeps the 4 MP pool').toBe(4)
 
-      // The target's own turn-end is the give_points credit-row boundary. It wins even when it shares an ingress
-      // batch with the claim, and prevents the non-canonical bridge from leaking into a later turn.
+      // The target's own turn-end retires the later optimistic spend. Since the v7 snapshot is the complete base,
+      // the reducer must not reconstruct a missing spend by carrying the pre-boundary claim bridge into it.
       store.getState().input(confirm_turn_end[source](), 2_300)
       expect(store.getState().claimed_budget).toEqual([])
-      expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
-      expect(project.board_view(store.getState()).escrow[0].committed.mp).toBe(3)
+      expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
+      expect(project.board_view(store.getState()).escrow[0].committed.mp).toBe(4)
     })
 
   test('a CriticalFailure→Cast claim retires Vanish without inventing the suppressed grant', () => {

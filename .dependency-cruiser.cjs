@@ -100,6 +100,19 @@ module.exports = {
       to: { path: '^packages/fight/src/(fight_render_events|fight_predicted_render)\\.js$' },
     },
     {
+      name: 'fight-state-ingress-single-home',
+      comment:
+        'Issue #1336: raw fight events and chain Fight snapshots enter canonical state only through ' +
+        'core_inbox.js. fight_render_events.js is the explicitly fenced presentation-only sibling seam; it ' +
+        'may decode VFX rows but cannot write the fold.',
+      severity: 'error',
+      from: {
+        path: '^packages/fight/src/',
+        pathNot: '^packages/fight/src/(core_inbox|fight_render_events)\\.js$',
+      },
+      to: { path: '^packages/sdk/src/fight\\.js$' },
+    },
+    {
       name: 'simulator-consumes-shared-only',
       comment:
         'ZERO-DIVERGENCE law (owner ruling 2026-07-25): "everything we use in the simulator is the exact same ' +

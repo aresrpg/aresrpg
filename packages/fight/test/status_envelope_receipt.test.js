@@ -18,7 +18,8 @@ import { describe, expect, test } from 'bun:test'
 import { K_GIVE_POINTS, K_INVISIBILITY, POINT_MP, SHAPE_POINT, TF_ONLY_CASTER } from '../../sim/src/spell_effect.js'
 import { board_state_from_fight } from '../src/board_state.js'
 import { base_budget, base_from_view } from '../src/fold.js'
-import { apply_action, empty_state, normalize_events, seat_resolver } from '../src/inputs.js'
+import { apply_action, empty_state, seat_resolver } from '../src/inputs.js'
+import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
 import {
   arena_from_board,
   create_sim_chain,

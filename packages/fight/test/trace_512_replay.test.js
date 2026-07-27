@@ -18,6 +18,8 @@ const FIGHT_ID = '0x3f6103fb3fb842bac763a3d275f607d33e49fcde787f004229c18e900e95
 const FIXTURE = new URL(`./fixtures/traces/trace_${FIGHT_ID}.json`, import.meta.url)
 const CONSUMPTION_INDEX = 695
 const CONSUMED_CELL = 8
+// Later object reads are at/behind the already-folded event cursor and therefore cannot replace this last ahead base.
+const CURSOR_HONEST_BASE_VERSION = 949_515_927
 
 const load_trace = async () => parse_trace(await Bun.file(FIXTURE).text())
 
@@ -69,7 +71,7 @@ describe('issue #512 — the live fold never starves behind trap presentation', 
         receipt_seq: final.receipt_seq,
       },
       'the fresh fold must reach the final captured reducer anchors'
-    ).toEqual(final_anchor)
+    ).toEqual({ ...final_anchor, view_version: CURSOR_HONEST_BASE_VERSION })
     expect(jam, 'canonical trap consumption must not wait for, or be undone by, presentation').toBeNull()
     expect(engine_view(final).my_traps, 'neither consumed trap cell may repaint at the end of the capsule').toEqual([])
   })

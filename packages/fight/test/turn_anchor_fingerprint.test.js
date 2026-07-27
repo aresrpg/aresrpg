@@ -3,13 +3,9 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import {
-  admit_events,
-  adopt_snapshot,
-  empty_core_state,
-  fight_fingerprint,
-  project_board,
-} from '../src/core.js'
+import { admit_events, adopt_snapshot, empty_core_state, fight_fingerprint, project_board } from '../src/core.js'
+import { engine_view } from '../src/project.js'
+import { create_fight_store } from '../src/store.js'
 
 const fight = {
   id: '0xfight',
@@ -54,6 +50,33 @@ describe('chain-anchored turn owner', () => {
     expect(project_board(b).active).toBe('p1')
     expect(project_board(a).turn_ordinal).toBe('9000')
     expect(project_board(b).turn_ordinal).toBe('9000')
+  })
+
+  test('the UI-facing projection agrees across clients that received those turns in opposite orders', () => {
+    const raw = (is_mob, idx, deadline_ms) => ({
+      type: '0xpkg::fight_events::TurnStarted',
+      parsedJson: { fight: fight.id, is_mob, idx, deadline_ms },
+    })
+    const drive = (messages) => {
+      const store = create_fight_store()
+      store.getState().input({
+        type: 'init',
+        fight_id: fight.id,
+        ctx: { my_entity_id: '0xa' },
+      })
+      store.getState().input({ type: 'snapshot', fight, version: 10 })
+      for (const message of messages) store.getState().input(message)
+      return engine_view(store.getState())
+    }
+    const mob = { type: 'receipt', version: 11, receipt: { events: [raw(true, 0, 0)] } }
+    const partner = { type: 'receipt', version: 12, receipt: { events: [raw(false, 1, 9000)] } }
+    const first = drive([mob, partner])
+    const second = drive([partner, mob])
+
+    expect(first.active_entity_id).toBe('0xb')
+    expect(second.active_entity_id).toBe('0xb')
+    expect(first.turn_ordinal).toBe('9000')
+    expect(second.turn_ordinal).toBe('9000')
   })
 })
 

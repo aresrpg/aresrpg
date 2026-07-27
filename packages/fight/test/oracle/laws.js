@@ -18,7 +18,8 @@ import { replay_capsule, stable_stringify, terminal_summary } from '@aresrpg/sim
 
 import { board_state_from_fight } from '../../src/board_state.js'
 import { base_budget, base_from_view } from '../../src/fold.js'
-import { apply_action, normalize_events, seat_resolver } from '../../src/inputs.js'
+import { apply_action, seat_resolver } from '../../src/inputs.js'
+import { decode_fight_batch as normalize_events } from '../../src/core_inbox.js'
 import { capsule_of, fold_projection, sim_projection } from '../../src/sim_chain.js'
 
 /** The core's view of the fight, built from the chain snapshot exactly as production does. */

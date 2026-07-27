@@ -171,17 +171,18 @@ describe('M2b — one ingress: the fold is invariant to arrival order (idempoten
     ).toBe(reference)
   })
 
-  test('a mid-fight SNAPSHOT never changes the fold (adoption is dead — checkpoint only)', () => {
+  test('a snapshot ahead of the event cursor fully re-adopts', () => {
     const with_snapshot = committed_hash(drive([receipt(STREAM, '3'), stale_snapshot(9)]))
-    expect(with_snapshot, 'the stale object read must not rewrite committed truth').toBe(reference)
+    expect(with_snapshot, 'the ahead object is the new complete base').not.toBe(reference)
+    expect(with_snapshot).toBe(committed_hash(drive([stale_snapshot(9)])))
   })
 
-  test('a stale SNAPSHOT interleaved anywhere is inert to the fold', () => {
+  test('events and snapshots behind the latest adopted cursor are inert', () => {
     expect(
       committed_hash(
         drive([stale_snapshot(9), receipt(STREAM.slice(0, 2), '2'), stale_snapshot(10), journal_page(STREAM)])
       )
-    ).toBe(reference)
+    ).toBe(committed_hash(drive([stale_snapshot(10)])))
   })
 
   test('BOOTSTRAP-from-snapshot + journal backfill == journal-from-zero', () => {

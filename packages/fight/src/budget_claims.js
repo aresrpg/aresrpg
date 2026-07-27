@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Non-canonical budget proof helpers for M2b claim retirement. These never admit canonical history: accept_batch
-// remains the one ingress; they only retain simulator facts whose accepted events omit pool values.
+// Non-canonical budget proof helpers for claim retirement. These never admit canonical history; they only retain
+// simulator facts whose chain events omit pool values.
 
 import { apply_action, fighter_key } from './inputs.js'
 
@@ -63,7 +63,7 @@ const boundary_target = (action) => {
 export const without_expired_budget_predictions = (log) => {
   const boundaries = new Map()
   for (const action of log ?? []) {
-    if (action.source === 'intent') continue
+    if (action.source === 'intent' && action.courtesy !== true) continue
     const target = boundary_target(action)
     const version = Number(action.version)
     if (target && Number.isFinite(version))

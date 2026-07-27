@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
 // core_inbox.js — §① INGRESS+INBOX admission. The serialized door's journal-admission half:
-// every chain-read source (receipt · poll · p2p · journal · snapshot) resolves to admission over ONE keyed log,
-// ordered by the chain-event coordinate, arrival-order-independent (a shuffle property pins it).
+// every chain-read source (receipt · poll · p2p · journal · snapshot) resolves to admission over ONE keyed log.
+// Verified events are ordered/deduped by their chain coordinate, never by local delivery order.
 //
 // THE EVENT COORDINATE (step-0 finding, decided + documented). The consensus ideal keys the frontier on the chain's
 // DENSE journal `seq` (0,1,2… contiguous). The corpus proves that index is not the delivery vehicle for event
@@ -29,8 +29,8 @@
 import { hash_state } from '@aresrpg/sim/evolve'
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
-import { normalize_events, seat_resolver } from './inputs.js'
-import { board_state_from_fight, roster_open } from './board_state.js'
+import { fighter_key, seat_resolver } from './inputs.js'
+import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
@@ -73,20 +73,69 @@ const action_hash = (action) => {
  *  re-attached at FOLD time from the CURRENT base view (never baked stale into the log), and `seq` rides separately. */
 const as_data = ({ resolve_seat, ...rest }) => rest
 
+/** A Cast is damaging when its segment later hits somebody other than its caster. This is a chain-decode fact:
+ * it lives here, beside the sole raw event decoder, rather than in the reducer. */
+const mark_damaging_casts = (decoded) => {
+  const out = decoded.map((event) => ({ ...event }))
+  for (let i = 0; i < out.length; i++) {
+    if (out[i].kind !== 'Cast') continue
+    const caster = fighter_key({ is_mob: out[i].caster_is_mob, idx: out[i].caster_idx })
+    for (let j = i + 1; j < out.length; j++) {
+      if (['Cast', 'TurnStarted', 'TurnEnded'].includes(out[j].kind)) break
+      if (out[j].kind !== 'Hit') continue
+      const victim = fighter_key({ is_mob: out[j].victim_is_mob, idx: out[j].victim_idx })
+      if (victim !== caster) {
+        out[i].damaging = true
+        break
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * The sole receipt/poll raw-event decoder. Tests and tooling that need decoded actions enter through this same
+ * function; production state admission wraps it with `batch_to_actions` below.
+ */
+export const decode_fight_batch = (
+  rows,
+  { version, source = 'receipt', fight_id = null, resolve_seat = null, base_of = null } = {}
+) => {
+  const raw = Array.isArray(rows) ? rows : (rows?.events ?? [])
+  const decoded = raw
+    .map((event, event_idx) => {
+      const decoded_event = decode_fight_event(event)
+      return decoded_event ? { ...decoded_event, event_idx } : null
+    })
+    .filter((event) => event && (!fight_id || String(event.fight) === String(fight_id)))
+  return mark_damaging_casts(decoded).map((event) => {
+    const budget = base_of && event.kind === 'TurnStarted' && !event.is_mob ? base_of(Number(event.idx)) : null
+    return {
+      ...event,
+      version: Number(version ?? 0),
+      source,
+      resolve_seat,
+      ...(budget ? { ap: budget.ap, mp: budget.mp } : {}),
+    }
+  })
+}
+
 /**
  * Decode a receipt/poll/p2p batch's raw events into pure-data actions keyed by `(version, ordinal=event_idx)`.
- * Reuses the SDK-proven `normalize_events` (one home for the chain-event decode) with NEITHER the seat resolver NOR
- * the turn-start budget baked in — both are VIEW-DEPENDENT and are attached at FOLD time (core_fold.js) so the stored
- * log is pure, order-independent event DATA (the shuffle property depends on this: a `TurnStarted`'s ap/mp must not
- * change with whether a snapshot happened to precede its arrival).
+ * The seat resolver and turn-start budget are VIEW-DEPENDENT derivations attached at FOLD time (core_fold.js), so
+ * the admitted log stays pure chain-event data.
  * @param {any} rows the batch (already wire-revived): `{ events: [...] }` or a bare event array
  * @param {{ version:number, source:string, fight_id?:string|null }} opts
  * @returns {Array<Record<string, any>>}
  */
 export const batch_to_actions = (rows, { version, source, fight_id = null }) =>
-  normalize_events(rows, { version: Number(version ?? 0), source, fight_id, resolve_seat: null, base_of: null }).map(
-    as_data
-  )
+  decode_fight_batch(rows, {
+    version: Number(version ?? 0),
+    source,
+    fight_id,
+    resolve_seat: null,
+    base_of: null,
+  }).map(as_data)
 
 /**
  * Stamp a SET of journal rows with their intra-version ordinal, DERIVED from the chain's own dense per-fight `seq`:
@@ -145,8 +194,8 @@ const is_journal = (action) => action.source === 'journal' && action.seq != null
  * Re-place EVERY journal row — the ones already in the log and the arriving ones — over their UNION, so one object
  * version keeps a single continuous ordinal run however the read layer happened to cut the pages that carried it.
  * The held rows are lifted out and re-admitted through the same door as the newcomers: placement is a DERIVATION
- * over the received set, never a latch, which is exactly what lets a late-arriving EARLIER page (the walker's
- * re-drive after a gap, `journal_accept.js` fetch_gap) heal the run instead of colliding with it.
+ * over the received set, never a latch, which is exactly what lets a late-arriving EARLIER page from the journal
+ * walker's gap re-drive heal the run instead of colliding with it.
  * @param {Record<string, Record<string, any>>} log
  * @param {Array<Record<string, any>>} actions
  * @returns {{ log: Record<string, Record<string, any>>, actions: Array<Record<string, any>> }}
@@ -172,11 +221,9 @@ const same_log = (a, b) => {
  * Admit verified chain-event actions into the inbox log. Idempotent by coordinate; a higher-or-equal-rank source
  * adopts on a collision; a DIFFERENT content hash at an occupied coordinate is failure-as-data + a refetch request.
  * The frontier is DERIVED (`truth_frontier`), so admission only touches the log. Pure: returns a fresh
- * `{ inbox, failures, effects }` (the door threads them). Events the bootstrap base already reflects
- * (version ≤ base_version) are NOT dropped here (#701): the fold's `version > base_version` filter (core_fold.js
- * `sorted_tail`) settles them at fold time. Dropping on admit keyed off a MUTABLE base_version was order-DEPENDENT —
- * a transiently-higher base (a late-arriving earlier bootstrap under the shuffle property) would drop events the
- * final, lower base must keep — so the settle floor lives only in the fold, where the base is final.
+ * `{ inbox, failures, effects }` (the door threads them). Events the adopted base already reflects
+ * (`version <= base_version`) are discarded at admission. The base cursor is monotonic under #1336 (older
+ * snapshots never lower it), so those rows can never become relevant again.
  * Journal rows are re-derived over the whole received set first (`rederive_journal`) — their ordinal is chain truth
  * from `seq`, so admission is the only place that sees enough of the stream to place a page-straddling version.
  * @param {import('./core_state.js').InboxState} inbox
@@ -185,7 +232,11 @@ const same_log = (a, b) => {
  * @returns {{ inbox: import('./core_state.js').InboxState, failures: any[], effects: any[] }}
  */
 export const admit_events = (inbox, actions, now) => {
-  const placed = rederive_journal(inbox.log, actions)
+  // The adopted snapshot is an inclusive fold cursor. Rows at or behind it are already represented by the base and
+  // are discarded at admission; retaining them would make the inbox depend on whether an old page arrived before
+  // or after re-adoption even though the canonical board was equal.
+  const ahead = actions.filter((action) => Number(action.version) > inbox.base_version)
+  const placed = rederive_journal(inbox.log, ahead)
   let { log } = placed
   const failures = []
   const effects = []
@@ -215,29 +266,13 @@ export const admit_events = (inbox, actions, now) => {
 }
 
 /**
- * Adopt a decoded Fight OBJECT (snapshot) as the SNAPSHOT+TAIL base — the BOOTSTRAP seed the canonical event tail
- * folds on top of — the ONE snapshot half, shared with the presentation folds (M2b #291 DEMOTED the object read to a bootstrap
- * base + a checkpoint: "everything that guessed history from an object read is deleted").
+ * Adopt a decoded Fight OBJECT through the ONE bootstrap/reconcile door. The admitted event frontier is the cursor:
+ * a snapshot at or behind it is discarded WHOLE; a snapshot ahead of it becomes the complete new base. There is no
+ * field merge and no second "joiner rebuild" path. Re-adoption clears the now-subsumed event log: by definition an
+ * ahead snapshot is newer than every admitted row, and keeping a partial tail would let old facts leak across the
+ * authoritative base boundary. Initial bootstrap is simply the same rule against the empty cursor.
  *
- * THE BASE, as a pure function of the read SET (the shuffle property — arrival order is irrelevant). A read is
- * PROVISIONAL while the chain can still grow its roster (`roster_open` — placement is the only phase `join` is
- * legal, engine fight.move `ENotPlacement`), and a fight leaves placement exactly once, so EVERY provisional read
- * of a fight has a lower object version than every later one:
- *   · a provisional read exists  → the base is the LATEST of them. The roster only grows, so the newest placement
- *     read is the most complete one — and it costs nothing, because a fight still in placement has no turn history
- *     to strand. Without this the creator, who adopts at creation, reports a 3-fighter board on a 4-fighter fight
- *     for the whole fight: her turn order, her placement occupancy and every event keyed to the joiner's
- *     character (which orphans off-seat) are all downstream of that one stale base (#1274).
- *   · otherwise → the base is the EARLIEST read, and a later HIGHER-version object is a CHECKPOINT that must NOT
- *     re-adopt (#701): its cells are a 4s-stale / possibly-torn read and `base_from_view` can only DERIVE
- *     turn_number as `status→1/0`, so re-adopting stranded every fighter's cell at the stale object and RESET
- *     their accumulated per-turn count to 1, discarding the tail. Only a strictly-EARLIER read lowers that floor
- *     (an out-of-order delivery of the true first read — including the placement read that outranks it above).
- * `max` over one half of the partition, `min` over the other: any arrival order converges on the same base.
- *
- * NO destructive prune — the fold's `version > base_version` filter (core_fold.js `sorted_tail`)
- * settles the subsumed tail, and keeping those rows lets a late-arriving earlier bootstrap still fold them.
- * Pure. `board_state_from_fight` decodes the rich view (the ONE home); the raw `rows` are wire-revived first.
+ * Pure. `board_state_from_fight` is the one rich-view decode home; the raw wire rows are revived here first.
  * @param {import('./core_state.js').InboxState} inbox
  * @param {any} rows the raw snapshot fight object
  * @param {number} version the object version
@@ -246,16 +281,13 @@ export const admit_events = (inbox, actions, now) => {
  */
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const object_version = Number(version ?? 0)
-  const provisional = inbox.base_view != null && roster_open(inbox.base_view)
-  // The cheap hold — the 4s-poll steady state, decided without decoding anything: a base at-or-below this read
-  // only ever moves when BOTH are provisional (the max-over-placement half), and a provisional base is never
-  // lowered (a placement read outranks every later read, so nothing below it can win).
-  if (
-    inbox.base_view != null &&
-    (provisional ? object_version <= inbox.base_version : object_version >= inbox.base_version)
-  )
-    return inbox
+  const cursor = truth_version(inbox)
+  // A receipt-first joiner can reach version V before its first complete Fight object at V arrives. Equality may
+  // seed that MISSING base once. With an existing base, however, an object at the event cursor is settled: letting
+  // it replace event-proven state is the same-version position rollback #1336 records.
+  if (object_version < cursor || (object_version === cursor && inbox.base_view != null)) return inbox
   const fight = revive_wire(rows)
+  if (fight != null && !fight_geometry_complete(fight)) return inbox
   const base_view = board_state_from_fight({
     fight,
     version: object_version,
@@ -267,9 +299,7 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     creator: ctx.creator ?? null,
     ...(ctx.offset ? { offset: ctx.offset } : {}),
   })
-  // A PROVISIONAL base moves only to a strictly LATER provisional read (max over placement); everything else here
-  // is a strictly earlier read lowering the floor, which a frozen base always accepts.
-  return !provisional || roster_open(base_view) ? { ...inbox, base_view, base_version: object_version } : inbox
+  return { ...inbox, log: {}, base_view, base_version: object_version }
 }
 
 /**

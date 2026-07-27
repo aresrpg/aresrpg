@@ -4,7 +4,7 @@
 // "test a fight programatically with simple objects"). No DOM, no React, no chain: explicit clocks, synthetic
 // Fight objects and receipts, every assertion a projection read. Covers: create → placement → activation
 // (turn-start budget refill) → STACKED casts (the 12−5−5 double-charge class, red-first) → the single-PTB
-// turn receipt (intent purge + mob wave pacing + presented mask) → snapshot deferral under a draining wave →
+// turn receipt (intent purge + mob wave pacing + presented mask) → ahead-snapshot re-adoption under a draining wave →
 // kill death-hold (§7b: attack → hit → floater → only then despawn) → victory → settlement machine →
 // commit_due edge → the 3s player min-turn floor.
 import { describe, test, expect } from 'bun:test'
@@ -350,11 +350,11 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
     expect(view.fighters.get(ME).health).toBe(44) // …and my HP drops exactly at the ack
   })
 
-  test('M2b: a fresher object read is an inert CHECKPOINT — the receipt drives the wave, no leapfrog', () => {
+  test('#1336: a fresher object read re-adopts through the one door and never rolls back afterward', () => {
     const store = active_store()
     store.getState().input({ type: 'receipt', receipt: turn_receipt(), version: 4 }, T0 + 6_000)
-    // M2b · ONE INGRESS: the object read NEVER adopts mid-fight, so it can neither leapfrog the draining wave nor
-    // overwrite the receipt-folded truth. The old deferral is deleted — there is nothing to stash.
+    // The v5 object is ahead of the v4 event cursor. It is a complete chain statement, so the one door re-adopts it
+    // wholesale instead of trying to merge it into the receipt fold.
     store.getState().input(
       {
         type: 'snapshot',
@@ -368,12 +368,12 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
       },
       T0 + 6_500
     )
-    expect(store.getState().view_version).toBe(1) // the checkpoint never re-adopts the base
-    const { seq } = store.getState().wave.at(-1)
-    store.getState().input({ type: 'presented', seq }, T0 + 9_100)
+    expect(store.getState().view_version).toBe(5)
+    expect(engine_view(store.getState()).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 })
+    expect(store.getState().wave, 're-adopt deletes the subsumed presentation tail with the event tail').toEqual([])
     const s = store.getState()
-    expect(s.view_version).toBe(1) // still the bootstrap base — canonical catch-up rides the journal, not a re-adopt
-    expect(engine_view(s).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 }) // the receipt's wave moved the mob
+    expect(s.view_version).toBe(5)
+    expect(engine_view(s).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 })
   })
 })
 

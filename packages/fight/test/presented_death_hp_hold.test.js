@@ -10,8 +10,8 @@
 // HP — the fix is to NOT floor a fighter whose death beat is still presenting; it dies exactly when the beat acks.
 //
 // The invariant: presented_health follows the BEAT — it holds the last pre-death value through the death-presenting
-// window, then converges to 0/dead the moment the killing turn drains. Every OTHER retired fighter still floors
-// (the #134 stale-resurrection must never come back).
+// window, then converges to 0/dead the moment the killing turn drains. That floor belongs to the current fold; an
+// ahead authoritative object replaces it together with every other canonical field.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -109,18 +109,17 @@ describe('#8 — the timeline card HP holds through the death beat, never snaps 
     expect(after.dead, 'and the fighter finally reads dead — exactly once').toBe(true)
   })
 
-  test('the #134 floor still binds: a retired fighter whose death is NOT presenting stays floored to 0', () => {
-    // A fresh retirement floor with NO matching death beat in the wave (an already-presented / stale-resurrected
-    // death) must still clamp presented HP — the death-presenting exemption is the ONLY hole in the floor.
+  test('#1336: an ahead object replaces a presented death without carrying the retirement side map', () => {
     const store = boot()
     mob_kills_me(store)
     // Drain so the death has PRESENTED (mob-0's turn acked) — I am now floor-dead with no live death beat.
     for (const t of [...store.getState().wave]) store.getState().input({ type: 'presented', seq: t.seq }, 2_500)
-    // A version-inflated but STALE object read re-carries me ALIVE at hp 10 (the #134 resurrection shape).
+    // v8 is ahead of the death receipt. The complete object becomes the base, including its hp/alive statement.
     store.getState().input({ type: 'snapshot', fight: base_fight(), version: 8 }, 3_000)
     const revived = me(store)
-    expect(revived.presented_health, 'the floor clamps the stale-resurrected HP to 0').toBe(0)
-    expect(revived.dead, 'and holds the fighter dead — no resurrection').toBe(true)
-    expect(presented_state(store.getState()).fighters.p0.alive, 'presented stays floored dead').toBe(false)
+    expect(store.getState().view_version).toBe(8)
+    expect(revived.presented_health).toBe(10)
+    expect(revived.dead).toBe(false)
+    expect(presented_state(store.getState()).fighters.p0.alive).toBe(true)
   })
 })

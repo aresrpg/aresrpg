@@ -25,7 +25,8 @@ import { describe, expect, test } from 'bun:test'
 import * as SE from '../../sim/src/spell_effect.js'
 import { board_state_from_fight } from '../src/board_state.js'
 import { base_budget, base_from_view } from '../src/fold.js'
-import { apply_action, normalize_events, seat_resolver } from '../src/inputs.js'
+import { apply_action, seat_resolver } from '../src/inputs.js'
+import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
 import { encode } from '../src/los.js'
 import {
   arena_from_board,

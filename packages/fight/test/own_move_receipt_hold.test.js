@@ -117,9 +117,9 @@ describe('#25 own-move receipt must not roll the display back to origin', () => 
     expect(board_me(store)).toBe(ME_DEST) // MUST hold — no rollback on adoption
   })
 
-  // ORDER 1c — the confirming POLL lands DURING the walk (deferred behind the masking walk leg), then the ack
-  // flushes the deferred adopt. The double-show hint: adoption must reveal DEST once, never origin-then-dest.
-  test('poll snapshot deferred behind the walk, flushed at ack, lands on dest', () => {
+  // ORDER 1c — #1336: an ahead confirming object re-adopts canonical state immediately. Visual walk masking is the
+  // sibling renderer seam; this fold test pins that neither the read nor its later ack can roll back the destination.
+  test('ahead poll re-adopts the destination; the later walk ack cannot roll it back', () => {
     const store = boot()
     move_intent(store, 1_100)
     expect(board_me(store)).toBe(ME_CELL)
@@ -127,11 +127,11 @@ describe('#25 own-move receipt must not roll the display back to origin', () => 
       ...FIGHT_OBJECT,
       participants: [{ ...FIGHT_OBJECT.participants[0], cell: ME_DEST }],
     }
-    store.getState().input({ type: 'snapshot', fight: moved_object, version: 6 }, 1_300) // deferred (walk masks)
-    expect(board_me(store)).toBe(ME_CELL) // still held behind the walk
     const t = walk_turn(store)
-    store.getState().input({ type: 'presented', seq: t.seq }, 1_600) // ack → deferred adopt flushes
-    expect(board_me(store)).toBe(ME_DEST) // revealed on dest, no origin flicker
+    store.getState().input({ type: 'snapshot', fight: moved_object, version: 6 }, 1_300)
+    expect(board_me(store)).toBe(ME_DEST)
+    store.getState().input({ type: 'presented', seq: t.seq }, 1_600)
+    expect(board_me(store)).toBe(ME_DEST)
   })
 
   // MULTI-STEP (D254 cumulative) — the intent moves to the FINAL cell in one shot; the receipt confirms it as
