@@ -48,6 +48,7 @@ import { GUST, advance_gust, gather_night_tint, node_glow, synth_gather_buffer }
 import { GATHER_JOB_KEYS, gather_resource_for } from '@aresrpg/sdk/jobs'
 
 import { advance_member_wander, feet_of, make_rng } from './ambient_placement.js'
+import { pick_mount_clips } from './cosmetic_glb.js'
 import { get_mob_model } from './data/mobs.js'
 import { game_log } from '../core/log.js'
 
@@ -142,8 +143,7 @@ export function create_rig_layer({ engine, sample, resolve_template, is_disposed
         const mixer = new AnimationMixer(root)
         // idle + a walk/run clip, cross-blended by weight while the member ambles (roam_member) so a wandering
         // mob steps instead of ice-skating; a static member just holds idle (move weight stays 0).
-        const idle_clip = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0]
-        const move_clip = clips.find((/** @type {any} */ c) => /run|walk|move|hop|jump/i.test(c.name)) ?? idle_clip
+        const { idle: idle_clip, move: move_clip } = pick_mount_clips(clips)
         const idle_action = idle_clip ? mixer.clipAction(idle_clip) : null
         const move_action = move_clip && move_clip !== idle_clip ? mixer.clipAction(move_clip) : null
         idle_action?.play()

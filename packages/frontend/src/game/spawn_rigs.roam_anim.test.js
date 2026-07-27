@@ -4,9 +4,9 @@
 // animation — they glided without animation. This is the INSTRUMENT-BEFORE-FIX proof for create_rig_layer's
 // idle↔move blend (spawn_rigs.js): loads a REAL reference-corpus mob GLB (hy_bunny — IDLE/WALK/RUN, the same
 // fixture packages/engine's mob_render_parity.test.js already proves loads headless) through the REAL
-// create_mob_model factory, mirrors spawn_rig's own clip-selection (spawn_rig itself is a private closure, not
-// exported — these 6 lines are copied verbatim from spawn_rigs.js so drift shows up as a diff, not a silent
-// skip), then drives the REAL exported `roam_member` for two seconds of "walking" and asserts the move clip's
+// create_mob_model factory, uses spawn_rig's shared clip-selection seam (spawn_rig itself is a private closure,
+// so the picker is the headless seam), then drives the REAL exported `roam_member` for two seconds of "walking"
+// and asserts the move clip's
 // mixer TIME actually advances (not just that a weight number moved) — the only way to tell "playing a walk
 // clip" from "frozen bind pose sliding across the ground" from outside three's render loop.
 import { existsSync } from 'node:fs'
@@ -15,6 +15,24 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { AnimationMixer } from 'three'
 
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+import { pick_mount_clips } from './cosmetic_glb.js'
+
+const clip = (/** @type {string} */ name) => ({ name })
+
+describe('spawn rig clip selection — the shared ground-rig convention', () => {
+  it('Gallop is locomotion: a Gallop-authored rig never moves clipless', () => {
+    const { idle, move } = pick_mount_clips([clip('Idle'), clip('Attack'), clip('Gallop')])
+    expect(idle?.name).toBe('Idle')
+    expect(move?.name).toBe('Gallop')
+  })
+
+  it('Jump is not walking: an otherwise unnamed second clip remains the positional fallback', () => {
+    const { idle, move } = pick_mount_clips([clip('Idle'), clip('Attack'), clip('Jump')])
+    expect(idle?.name).toBe('Idle')
+    expect(move?.name).toBe('Attack')
+  })
+})
 
 // MISSING-ARTIFACT (#117): spawn_rigs.js (and @aresrpg/engine3/player directly) unconditionally reach
 // character_avatar.js — a static import of the absent-by-design senshi_male.glb — see
@@ -65,11 +83,9 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE || !HY_BUNNY_GLB_AVAILABLE)(
     // Asset sanity — this fixture must actually carry locomotion clips or the probe proves nothing.
     expect(clips.map((c) => c.name)).toEqual(expect.arrayContaining(['IDLE', 'WALK', 'RUN']))
 
-    // Verbatim mirror of spawn_rig's clip-selection (spawn_rigs.js create_rig_layer, ~line 138-144) — the
-    // closure itself is not exported, so this is the smallest faithful copy (6 lines) rather than a mock.
+    // The shared picker is the same seam spawn_rig calls; the private closure itself is not exported.
     const mixer = new AnimationMixer(root)
-    const idle_clip = clips.find((c) => /idle/i.test(c.name)) ?? clips[0]
-    const move_clip = clips.find((c) => /run|walk|move|hop|jump/i.test(c.name)) ?? idle_clip
+    const { idle: idle_clip, move: move_clip } = pick_mount_clips(clips)
     const idle_action = idle_clip ? mixer.clipAction(idle_clip) : null
     const move_action = move_clip && move_clip !== idle_clip ? mixer.clipAction(move_clip) : null
     idle_action?.play()
@@ -123,8 +139,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE || !HY_BUNNY_GLB_AVAILABLE)(
     const url = await fixture_data_url()
     const { root, clips, measured, dispose } = await create_mob_model(url, { label: 'hy_bunny:roam-anim-probe-idle' })
     const mixer = new AnimationMixer(root)
-    const idle_clip = clips.find((c) => /idle/i.test(c.name)) ?? clips[0]
-    const move_clip = clips.find((c) => /run|walk|move|hop|jump/i.test(c.name)) ?? idle_clip
+    const { idle: idle_clip, move: move_clip } = pick_mount_clips(clips)
     const idle_action = idle_clip ? mixer.clipAction(idle_clip) : null
     const move_action = move_clip && move_clip !== idle_clip ? mixer.clipAction(move_clip) : null
     idle_action?.play()
