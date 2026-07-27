@@ -63,7 +63,7 @@ export function FightsModal() {
   const dungeon_fights = use_game_state((s) => s.visible_dungeon_fights)
   // In a dungeon the SAME panel lists my party's room-fights (team up for the boss fight) — a distinct
   // data source (party runs) + join door (dungeon::join_fight), but one panel, one look.
-  const in_dungeon = use_dungeon((s) => !!s.dungeon_id)
+  const in_dungeon = use_dungeon((s) => !!s.in_session)
   const address = use_auth((s) => s.address)
   const party_members = use_party((s) => s.party?.members ?? null)
   // #498: the viewer's own character ids — gates whether a hovered fight's player-side column is genuinely

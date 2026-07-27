@@ -25,9 +25,9 @@ import {
   compose_fight_roster,
   fight_roster_signature,
 } from '../../../world-shell/character_name_resolve.js'
+import { world_fight_active } from '../../../world-shell/fight_session_scope.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
-
 // The live chain corpus, normalized through @aresrpg/sim by fight-spells' door — keyed by armed name_key AND
 // template_id. LIVE (a function, not a module-load const): the corpus loads async as a runtime blob
 // (game/data/spell_corpus.js), so a captured snapshot would freeze empty before it arrives. Memoized on the
@@ -614,24 +614,24 @@ export default function fight() {
       //    The party path already does this for GROUP members (group_loop's turn_started → hud_focus); here it
       //    covers every composition, including a simulator sandbox with no group at all.
       const follower = create_seat_follower()
-      // 3) FIGHT-MODE EDGE + 4) COMBAT MUSIC: flip `action/fight_mode` only on the null↔non-null EDGE
-      //    (player.js folds it, unchanged) and drive the D111 battle bed off the FRESH synchronous view.
-      let was_active = fight_view() != null
+      // 3) WORLD FIGHT-MODE EDGE + 4) COMBAT MUSIC: only a WORLD-scoped adopted view may replace roaming;
+      //    the simulator's `sim:` session keeps its own route, renderer and battle bed.
+      let was_active = world_fight_active(fight_store.getState())
       const sync = () => {
         ensure_roster()
         const view = fight_view()
-        // The ctx input below re-enters this subscriber; the follower's turn latch has already advanced, so the
-        // second pass answers null — one bind per turn change, never a loop.
+        // The ctx input re-enters this subscriber after the follower latch advances: one bind, never a loop.
         const seat = follower.follow(view)
         if (seat) focus_seat(seat)
-        if ((view != null) !== was_active) {
-          was_active = view != null
-          dispatch('action/fight_mode', view != null)
+        const world_active = world_fight_active(fight_store.getState())
+        if (world_active !== was_active) {
+          was_active = world_active
+          dispatch('action/fight_mode', world_active)
         }
         // EFFECT ISOLATION (the game.js observer never-freeze law, applied at this edge): this subscriber runs
         // INSIDE every core input()'s set — a throwing audio engine must never break the reducer's caller.
         try {
-          set_combat(combat_music_active({ fight_mode: view != null, fight: view }))
+          set_combat(combat_music_active({ fight_mode: world_active, fight: world_active ? view : null }))
         } catch (error) {
           game_log('fight', 'combat-music edge threw (isolated); the input that triggered it is unaffected', error)
         }

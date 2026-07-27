@@ -125,8 +125,8 @@ export function create_world_fights_discovery({ get_player_pos, engine = null })
     polling = true
     try {
       // In a dungeon → the room-fights of my PARTY (the "team up for the boss" join panel). In the overworld →
-      // the world fights within 50 blocks. One prompt ([V]), one panel — the mode follows dungeon_id.
-      const in_dungeon = use_dungeon.getState().dungeon_id != null
+      // the world fights within 50 blocks. One prompt ([V]), one panel — the mode follows the cave-session flag.
+      const in_dungeon = !!use_dungeon.getState().in_session
       const world_id = current_world_id()
       let count = 0
       if (in_dungeon) {

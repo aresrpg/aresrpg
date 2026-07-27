@@ -5,8 +5,8 @@
 // it wasn't removed properly" — a peer's WORLD avatar stood mid-board like a ghost). The cull keys on VIEW MODE
 // (a fight/dungeon session is LIVE), never on who's fighting — reusing the EXACT signal world_spawns.js already
 // veils mobs/resources on for the identical bug class (a 2026-07-15 report: "i'm not supposed to see other mobs
-// while in a fight"; 2026-07-19 "gahterable ressource appear above the fight board" — spawn_veil.js's
-// IN-FIGHT VEIL, use_dungeon().fight_id): never a bespoke flag, one home for "is a fight/dungeon session live".
+// while in a fight"; 2026-07-19 "gahterable ressource appear above the fight board"): never a bespoke flag,
+// one home for "is a WORLD fight active", and never a simulator-session cull.
 //
 // remote_players.js owns a browser+network dependency graph (a DOM chip layer, a self-contained rAF render
 // loop, a real /v1 fetch at construction, THREE avatar/mount/aura creation via @aresrpg/engine3) that a unit
@@ -42,7 +42,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('remote_rig_visible — fight view o
   })
 
   it('keys on the SAME fight-session signal spawn_veil.js already veils mobs/resources on — never a new flag', () => {
-    expect(source).toContain('use_dungeon.getState().fight_id')
+    expect(source).toContain('world_fight_active(fight_store.getState())')
   })
 
   it('wired at every render-output site — avatar body, mount, pet, aura, and nameplate all gate on it', () => {

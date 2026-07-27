@@ -167,7 +167,7 @@ describe('ack-window mob position authority (the BOOT23 rollback)', () => {
     // adapter's authority read must BE that shared surface, never a second local cache.
     const adapter = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
     expect(adapter, 'the adapter authority read is the shared memoized core view').toContain(
-      'const read_board_fight = fight_view'
+      'fight_view_in_scope(fight_store.getState(), scope)'
     )
     const project_src = await Bun.file(new URL('../../../fight/src/project.js', import.meta.url)).text()
     expect(project_src, 'the one projection memo lives in @aresrpg/fight project.js').toContain(

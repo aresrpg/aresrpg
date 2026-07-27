@@ -26,7 +26,6 @@ import { Vector3 } from 'three'
 import { GLYPH_TICK_FLARE, TEAM_COLORS } from '@aresrpg/engine3/tactical'
 import * as project from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
-import { fight_view } from '@aresrpg/fight/project'
 import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
@@ -92,6 +91,7 @@ import { create_fight_audio_observer, fight_audio_sfx_key, fight_damage_audio_be
 import { fight_state_trace } from './fight_state_trace.js'
 import { use_dungeon } from './dungeon_store.js'
 import { damage_floater } from './damage-floater.js'
+import { fight_active_in_scope, fight_scope_world, fight_view_in_scope } from './fight_session_scope.js'
 import { presentation_blocked_cells } from './fight_board_blockers.js'
 import { create_fight_render_queue } from './fight_render_queue.js'
 // PURE FOLDS live in a sibling module (voxel_fight_folds.js) so they're unit-testable WITHOUT the browser-only
@@ -215,21 +215,19 @@ const probe_push = (lane, row) => {
 }
 
 // ── THE ADAPTER (imperative wiring over the pure folds) ───────────────────────────────────────────────────────
-
 /**
- * Wire a live tactical BoardHandle to the dungeon/fight stores. Returns a `{ destroy, get_board_frame,
- * tick_hover }` handle — destroy on scene teardown; get_board_frame feeds the embed's fight camera (D230);
- * tick_hover re-anchors the entity tooltip AND every living fighter's "cell under a fighter" marker every
- * render tick (call after the fight camera's own apply()).
+ * Wire a tactical BoardHandle to the stores. Destroy on teardown; get_board_frame feeds the fight camera;
+ * tick_hover re-anchors the tooltip and fighter cell markers after the camera applies.
  * @param {import('@aresrpg/engine3/tactical').BoardHandle} board a built create_tactical_board() handle
  * @param {{ origin?: { x: number, y: number, z: number },
  *   origin_of?: () => ({ origin: { x: number, y: number, z: number }, clear_footprint: boolean } |
  *     Promise<{ origin: { x: number, y: number, z: number }, clear_footprint: boolean }>),
+ *   scope?: 'world' | 'sim', game_context?: typeof context,
  *   on_fight?: (active: boolean) => void }} [opts] D230: `origin_of` resolves the LIVE origin per build (the cave's
  *   board_anchor while a cave is mounted; a WORLD fight seats on the footprint's dominant high plane — may be async
  *   while the terrain streams) plus `clear_footprint` (arms the render-side footprint clear for open-terrain boards
- *   only). `on_fight` flips the embed's camera/controller
- *   authority: board.camera_lock is BANNED here (its iso dolly flies out through the cave roof — architect
+ *   only). `on_fight` flips the embed's camera/controller authority: board.camera_lock is BANNED here (its iso
+ *   dolly flies out through the cave roof — architect
  *   bench law) and it lost the writer war anyway (the walk loop re-poses the camera every frame); the EMBED
  *   is the single camera writer and drives the D4 corner-iso pose itself while `on_fight(true)` holds.
  * @returns {{ destroy: () => void, get_board_frame: () => { origin: {x:number,y:number,z:number}, grid_w: number, grid_h: number } | null, tick_hover: () => void }}
@@ -239,6 +237,8 @@ export function create_voxel_fight_adapter(
   {
     origin = VOXEL_BOARD_ORIGIN,
     origin_of = () => ({ origin, clear_footprint: false }),
+    scope = fight_scope_world,
+    game_context = context,
     on_fight = () => {},
     on_my_turn = () => {},
     cue_shake = (/** @type {number} */ _magnitude) => {}, // [fight-feel] the fight camera's add_shake (embed wires it) — a magnitude-scaled impact jolt on the ONE camera writer (D230). Default no-op (headless/tests).
@@ -358,10 +358,8 @@ export function create_voxel_fight_adapter(
     })
     .catch((error) => game_log('worn', 'fight cosmetic template join failed — worn GLBs stay unmounted', error))
 
-  /** The adapter's ONE live fight read — the app-wide memoized core projection (fight/project.js
-   *  `fight_view`): synchronous engine_view (presentation mask included), one shared computation per core
-   *  change (roster rides the core's own ctx now), reference-stable for the 60–120 calls/s tooltip path. */
-  const read_board_fight = fight_view
+  // WORLD and SIM share the singleton; admit only this adapter's memoized engine view.
+  const read_board_fight = () => fight_view_in_scope(fight_store.getState(), scope)
   const read_board_fight_state = () => ({ fight: read_board_fight() })
 
   // ── the raw board input → the SAME store relay fight-overlay.js uses (the adapter decides MEANING; the engine
@@ -478,7 +476,7 @@ export function create_voxel_fight_adapter(
     const done = board.entity_beat(id, { anim: 'hit', float: { text: `-${hit.damage}`, kind: 'damage' }, face: cell })
     // COMBAT LOG (realtime): the locally owned trap is known through engine_view.my_entity_id; a legacy/foreign
     // hit without that owner uses the neutral fallback, never the victim as attacker.
-    emit_trap_line(read_board_fight_state, context.dispatch, {
+    emit_trap_line(read_board_fight_state, game_context.dispatch, {
       owner_id: hit.trap_owner_id ?? read_board_fight()?.my_entity_id ?? null,
       target_id: id,
       damage: hit.damage,
@@ -515,7 +513,7 @@ export function create_voxel_fight_adapter(
     cue_shake(feel.shake * mag)
     trigger_fight_flash({ color: feel.flash, intensity: 0.3 * mag, grade: feel.grade })
     if (id)
-      emit_trap_line(read_board_fight_state, context.dispatch, {
+      emit_trap_line(read_board_fight_state, game_context.dispatch, {
         owner_id: event.trap_owner_id ?? null,
         target_id: id,
         damage: event.damage ?? 0,
@@ -546,7 +544,7 @@ export function create_voxel_fight_adapter(
     })
     if (kind !== 'heal' && hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
     if (event.source_id && floater && !event.trap_damage)
-      emit_effect_line(read_board_fight_state, context.dispatch, {
+      emit_effect_line(read_board_fight_state, game_context.dispatch, {
         entity_id: event.source_id,
         effect: {
           target_id: id,
@@ -572,7 +570,7 @@ export function create_voxel_fight_adapter(
     if (!id || !entity_ids.has(id) || !observe_death(id, true)) return
     dying.add(id)
     const done = board.entity_beat(id, { anim: 'death', face })
-    emit_death_line(read_board_fight_state, context.dispatch, { target_id: id })
+    emit_death_line(read_board_fight_state, game_context.dispatch, { target_id: id })
     if (is_mob(id)) schedule_corpse_removal(id, done)
     await done
     if (!is_mob(id)) {
@@ -636,7 +634,7 @@ export function create_voxel_fight_adapter(
     // COMBAT LOG (realtime): the "<caster> cast <spell>" context line fires HERE — at the cast's own beat (paced
     // for a mob, instant for the player), never batched at packet-dispatch. The per-effect + death lines fire
     // below as their victim beats play (play_victim_reaction). One composition home = fight.js.
-    emit_cast_context_line(read_board_fight_state, context.dispatch, {
+    emit_cast_context_line(read_board_fight_state, game_context.dispatch, {
       entity_id: packet.entity_id,
       spell_id: packet.spell_id,
     })
@@ -718,7 +716,7 @@ export function create_voxel_fight_adapter(
       // flinch/floater beat. Composition home stays fight.js (emit_effect_line).
       for (const effect of effects)
         if ((effect?.damage ?? 0) <= 0)
-          emit_effect_line(read_board_fight_state, context.dispatch, {
+          emit_effect_line(read_board_fight_state, game_context.dispatch, {
             entity_id: packet.entity_id,
             effect,
             is_critical: packet.is_critical,
@@ -738,7 +736,7 @@ export function create_voxel_fight_adapter(
         // (its damage effect — the 1:1 source beats_from_packet built this beat from). One home = fight.js.
         const dmg_effect = effects.find((e) => e?.target_id === beat.id && (e?.damage ?? 0) > 0)
         if (dmg_effect)
-          emit_effect_line(read_board_fight_state, context.dispatch, {
+          emit_effect_line(read_board_fight_state, game_context.dispatch, {
             entity_id: packet.entity_id,
             effect: dmg_effect,
             is_critical: packet.is_critical,
@@ -1077,7 +1075,9 @@ export function create_voxel_fight_adapter(
     return { beats: turn.beats, claimed }
   }
   const drain_wave = () => {
-    const { wave, fight_id, session_generation } = fight_store.getState()
+    const fight_state = fight_store.getState()
+    if (!fight_active_in_scope(fight_state, scope)) return reconcile()
+    const { wave, fight_id, session_generation } = fight_state
     for (const turn of wave) {
       if (turn.seq <= last_enqueued_seq) continue
       last_enqueued_seq = turn.seq
@@ -1378,7 +1378,7 @@ export function create_voxel_fight_adapter(
         // deaths are announced (cast kills log in play_victim_reaction; the `dying`→'skip' split guarantees no
         // double). Streams AT the beat, matching the flinch/floater trap line play_trap_trigger already emitted.
         if (observe_death(f.id, true)) {
-          emit_death_line(read_board_fight_state, context.dispatch, { target_id: f.id })
+          emit_death_line(read_board_fight_state, game_context.dispatch, { target_id: f.id })
           schedule_corpse_removal(f.id, board.entity_beat(f.id, { anim: 'death' }))
         }
         continue
@@ -1864,13 +1864,13 @@ export function create_voxel_fight_adapter(
    *  dispatch when nothing changed is cheap, and EntityTooltip only re-renders on an actual value change. */
   const reproject_hover = () => {
     const id = hovered_id
-    if (!id || !engine || !board_frame) return context.dispatch('action/fight_hover/clear', {})
+    if (!id || !engine || !board_frame) return game_context.dispatch('action/fight_hover/clear', {})
     const fight = read_board_fight()
     const f = fight?.fighters?.get(id)
     const cam = engine.get_camera?.()
     if (!f?.cell || !cam) {
       hovered_id = null // the hovered fighter is gone (despawned / fold removed it) — nothing left to track
-      return context.dispatch('action/fight_hover/clear', {})
+      return game_context.dispatch('action/fight_hover/clear', {})
     }
     const { x: ox, y: oy, z: oz } = board_frame.origin
     // [faithful-mob-sizes 2026-07-13] anchor the tooltip at the fighter's MEASURED head height (the
@@ -1881,7 +1881,7 @@ export function create_voxel_fight_adapter(
     proj.set(ox + (f.cell.x + 0.5) * CELL_M, oy + head_y, oz + (f.cell.y + 0.5) * CELL_M).project(cam)
     if (proj.z >= 1) {
       hovered_id = null // behind the camera this frame — treat like any other invalid hover
-      return context.dispatch('action/fight_hover/clear', {})
+      return game_context.dispatch('action/fight_hover/clear', {})
     }
     const rect = canvas?.getBoundingClientRect() ?? {
       left: 0,
@@ -1889,7 +1889,7 @@ export function create_voxel_fight_adapter(
       width: window.innerWidth,
       height: window.innerHeight,
     }
-    context.dispatch('action/fight_hover/set', {
+    game_context.dispatch('action/fight_hover/set', {
       entity_id: id,
       x: rect.left + ((proj.x + 1) / 2) * rect.width,
       y: rect.top + ((1 - proj.y) / 2) * rect.height,
@@ -1958,7 +1958,7 @@ export function create_voxel_fight_adapter(
     }
   )
 
-  const off_state = subscribe_state(reconcile)
+  const off_state = subscribe_state(game_context, reconcile)
   const off_picks = use_dungeon_turn.subscribe(reconcile)
   const off_dungeon = use_dungeon.subscribe(reconcile)
   const off_wave = fight_store.subscribe(drain_wave) // S2: the core's wave — plays + acks new turns (drain_wave)
@@ -1971,7 +1971,7 @@ export function create_voxel_fight_adapter(
       off_hover() // D236 — the hover-path stream dies with the adapter
       off_entity_hover() // D239 — the tooltip feed dies too
       hovered_id = null // no dangling tick_hover reproject after teardown
-      context.dispatch('action/fight_hover/clear', {}) // no dangling tooltip after teardown
+      game_context.dispatch('action/fight_hover/clear', {}) // no dangling tooltip after teardown
       off_state()
       off_picks()
       off_dungeon()
@@ -2047,9 +2047,9 @@ function paint_key(result, fight, dungeon, replaying, busy) {
   return sig
 }
 
-/** Subscribe to engine STATE_UPDATED (the fight slice's push channel). @param {() => void} cb */
-function subscribe_state(cb) {
+/** Subscribe to engine STATE_UPDATED (the fight slice's push channel). @param {typeof context} game_context @param {() => void} cb */
+function subscribe_state(game_context, cb) {
   const handler = () => cb()
-  context.events.on('STATE_UPDATED', handler)
-  return () => context.events.off('STATE_UPDATED', handler)
+  game_context.events.on('STATE_UPDATED', handler)
+  return () => game_context.events.off('STATE_UPDATED', handler)
 }

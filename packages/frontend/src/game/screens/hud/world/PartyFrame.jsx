@@ -17,6 +17,7 @@ import { project_party_view } from '@aresrpg/party/reduce'
 
 import { use_party } from '../../../../world-shell/party_store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
+import { world_fight_session } from '../../../../world-shell/fight_session_scope.js'
 import { get_characters } from '../../../../rpc/client'
 import { game_log } from '../../../../core/log.js'
 import { open_player_menu } from './player_menu_store.js'
@@ -78,7 +79,9 @@ export function PartyFrame() {
   const clear_incoming_dungeon = use_party((state) => state.clear_incoming_dungeon)
   const join_shared_dungeon = use_dungeon((state) => state.join_shared_dungeon)
   const dungeon_busy = use_dungeon((state) => state.busy)
-  const my_dungeon_id = use_dungeon((state) => state.dungeon_id)
+  const my_dungeon_id = use_dungeon((state) =>
+    state.in_session || world_fight_session(state) ? state.dungeon_id : null
+  )
   const selected_character_id = use_game_state((state) => state.selected_character_id)
   const my_char_name = use_game_state(
     (state) => state.sui?.characters?.find((character) => character.id === state.selected_character_id)?.name

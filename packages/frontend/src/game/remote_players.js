@@ -12,10 +12,12 @@
 // dispose() tears everything down. NO game logic here.
 
 import { create_character_avatar, create_title_aura, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
+import { fight_store } from '@aresrpg/fight/store'
 
 import { get_peer_state } from '../p2p/lobby-room.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
+import { world_fight_active } from '../world-shell/fight_session_scope.js'
 
 import { feet_of } from './ambient_placement.js'
 import { same_render_instance } from './remote_visibility_scope.js'
@@ -50,10 +52,8 @@ const PLATE_FADE_M = 28 // …and fades in over the last few blocks approaching 
 // like a ghost). Keys on VIEW MODE, not on who's fighting: ANY live fight/dungeon session hides EVERY remote
 // rig's RENDER (body + mount + aura + nameplate) — the frame loop's presence/position bookkeeping keeps
 // folding regardless (so a post-fight rig is instantly correct, no pop-in); this is the ONLY thing that
-// decides what actually gets DRAWN. Reuses the EXACT signal world_spawns.js already veils mobs/resources on
-// for the identical bug class (a 2026-07-15 report: "i'm not supposed to see other mobs while in a fight";
-// 2026-07-19 "gahterable ressource appear above the fight board" — spawn_veil.js's IN-FIGHT VEIL,
-// use_dungeon().fight_id, truthy for both world AND dungeon-room fights) — never a bespoke flag.
+// decides what actually gets DRAWN. Reuses the scoped WORLD fight predicate that veils world spawns, so the
+// simulator's `sim:` session never culls the resident world's remote rigs.
 /** @param {boolean} fight_active */
 export const remote_rig_visible = (fight_active) => !fight_active
 
@@ -251,8 +251,9 @@ export function create_remote_players(engine, world_canvas = null) {
    * source them from (never a second, competing read). @param {string} id */
   const peer_scope = (/** @type {string} */ id) => {
     const peer = get_peer_state(id)
+    const dungeon = use_dungeon.getState()
     return {
-      mine_dungeon_id: use_dungeon.getState().dungeon_id ?? null,
+      mine_dungeon_id: dungeon.in_session ? (dungeon.dungeon_id ?? null) : null,
       peer_dungeon_id: peer?.dungeon_id ?? null,
       mine_party_id: use_party.getState().party_id ?? null,
       peer_party_id: peer?.party_id ?? null,
@@ -295,7 +296,7 @@ export function create_remote_players(engine, world_canvas = null) {
     const visible = context.get_state().visible_characters
     const cam = engine.get_camera?.() // viewer eye — the D237 overworld range reference (read once per frame)
     // FIGHT-VIEW CULL signal — read once per frame (same idiom as `cam` above); see remote_rig_visible.
-    const fight_active = !!use_dungeon.getState().fight_id
+    const fight_active = world_fight_active(fight_store.getState())
     // D237: gate SPAWNS on instance scope + overworld range — an out-of-instance or too-far peer never gets a
     // rig (one-time DEV log per peer; cleared on spawn so a later drop re-logs).
     for (const [id, entry] of visible) {

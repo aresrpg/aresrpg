@@ -17,8 +17,9 @@ import { character_max_hp } from '../../../../chain/read_character.js'
 import { experience_to_level, xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_projected_hp } from '../../../../hooks/use_projected_hp.js'
-import { use_game_state, use_fight_view } from '../../../store.js'
+import { use_fight, use_game_state } from '../../../store.js'
 import { use_expedition, STATUS_ACTIVE } from '../../../../roster/store'
+import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
 // `my_entity_id` comes from the CORE fight view (S2 mirror kill) — passed in, never re-read off game-core state.
 const selected_character = (state, my_entity_id) =>
@@ -66,7 +67,7 @@ function use_oneshot(signal) {
 /** @returns {import('react').ReactElement} */
 export function SelfPlate() {
   const { t } = useTranslation()
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill)
+  const fight = use_fight(world_fight_view)
   const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
   const character = use_game_state((state) => selected_character(state, fight?.my_entity_id ?? null))
   use_game_state((state) => character_hp_revision(state, fight?.my_entity_id ?? null))

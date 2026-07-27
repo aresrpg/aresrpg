@@ -4,7 +4,7 @@
 // render scopes. Opening a simulator fight must never make the hidden world adapter build that local board and
 // reveal it when the player returns to WORLD.
 
-import { afterAll, describe, expect, test } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../../src/test_helpers/browser_globals.js'
 
@@ -26,6 +26,8 @@ const { fight_store } = await import('@aresrpg/fight/store')
 const { create_fight_shim } = await import('../../src/simulator/fight_shim.js')
 const { use_dungeon } = await import('../../src/world-shell/dungeon_store.js')
 const { create_voxel_fight_adapter } = await import('../../src/world-shell/voxel_fight_adapter.js')
+const { fight_scope_sim, fight_scope_world, world_fight_view } =
+  await import('../../src/world-shell/fight_session_scope.js')
 
 const seed = 0x00c0ffee
 const fight_id = 'sim:00c0ffee:1'
@@ -83,8 +85,22 @@ const make_board = () => {
   }
 }
 
+const game_context = {
+  events: { on: () => {}, off: () => {} },
+  dispatch: () => {},
+}
+
+const make_view_probe = () => {
+  let selected_view = 'world'
+  return {
+    on_fight: (active) => {
+      selected_view = active ? 'fight' : 'world'
+    },
+    selected_view: () => selected_view,
+  }
+}
+
 const open_simulator_fight = () => {
-  use_dungeon.getState().reset_local()
   const probe = create_sim_chain({ seed, fight_id: 'probe', team0: [], team1: [], templates_raw: [] })
   const team0 = [fighter(character_id, decode(probe.board.start_cells_a[0]), true)]
   const team1 = [fighter('mob_0', decode(probe.board.start_cells_b[0]), false)]
@@ -110,6 +126,11 @@ const open_simulator_fight = () => {
   return shim
 }
 
+beforeEach(() => {
+  use_dungeon.getState().reset_local()
+  fight_store.getState().input({ type: 'init', fight_id: null, my_key: null, ctx: {} })
+})
+
 afterAll(() => {
   use_dungeon.getState().reset_local()
   if (!had_audio) delete globalThis.Audio
@@ -117,16 +138,48 @@ afterAll(() => {
 })
 
 describe('world fight rendering is mode-partitioned', () => {
-  test('a live simulator session leaves the WORLD adapter on the world view', async () => {
-    const shim = open_simulator_fight()
+  test('a resident WORLD adapter stays on the world view when a simulator fight opens', async () => {
     const board = make_board()
-    const adapter = create_voxel_fight_adapter(board, { scope: 'world' })
+    const view = make_view_probe()
+    const adapter = create_voxel_fight_adapter(board, {
+      scope: fight_scope_world,
+      game_context,
+      on_fight: view.on_fight,
+    })
+    const shim = open_simulator_fight()
 
     await new Promise((resolve) => setTimeout(resolve, 20))
-    const selected_view = board.calls.builds.length > 0 ? 'fight' : 'world'
+    const scoped_view = world_fight_view(fight_store.getState())
+    const board_frame = adapter.get_board_frame()
+    const build_count = board.calls.builds.length
+    const selected_view = view.selected_view()
 
     adapter.destroy()
     shim.dispose()
+    expect(scoped_view).toBeNull()
+    expect(board_frame).toBeNull()
+    expect(build_count).toBe(0)
     expect(selected_view).toBe('world')
+  })
+
+  test('a resident SIM adapter selects the same simulator session as its fight view', async () => {
+    const board = make_board()
+    const view = make_view_probe()
+    const adapter = create_voxel_fight_adapter(board, {
+      scope: fight_scope_sim,
+      game_context,
+      on_fight: view.on_fight,
+    })
+    const shim = open_simulator_fight()
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const board_frame = adapter.get_board_frame()
+    const selected_view = view.selected_view()
+
+    adapter.destroy()
+    shim.dispose()
+    expect(board_frame).not.toBeNull()
+    expect(board.calls.builds).toHaveLength(1)
+    expect(selected_view).toBe('fight')
   })
 })

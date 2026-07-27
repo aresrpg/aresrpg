@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
+import { fight_scope_sim, fight_session_in_scope } from '../../../../world-shell/fight_session_scope.js'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { use_fight_phase } from './use_fight_phase.js'
 import { should_mount_board, should_show_result } from '../../../../fight-engine/phase.js'
@@ -34,6 +35,7 @@ export function DungeonLeaveButton() {
   const status = use_dungeon(s => s.dungeon?.status)
   const busy = use_dungeon(s => s.busy)
   const spectating = use_dungeon(s => s.spectating)
+  const simulator_session = use_dungeon(s => fight_session_in_scope(s, fight_scope_sim))
   const abandon = use_dungeon(s => s.abandon)
   const abandon_fight = use_dungeon(s => s.abandon_fight)
   const reset_local = use_dungeon(s => s.reset_local)
@@ -67,7 +69,7 @@ export function DungeonLeaveButton() {
   // ONLY when the board is absent (half-init / plane states) AND no result card owns the close. Machine-derived
   // so it can never disagree with what actually mounted (the old `hud_mounted` flag could lag a frame).
   const show = latched && !should_mount_board(phase) && !should_show_result(phase)
-  if (!show) return null
+  if (simulator_session || !show) return null
 
   // A WATCH session owns no participant and must never expose either chain abandon door. During initial sync (or
   // an honest half-init hold) this is the reachable local-only escape; ACTIVE uses FightControls' identical door.

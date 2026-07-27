@@ -28,7 +28,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state, use_fight_view } from '../../../store.js'
+import { use_fight, use_game_state } from '../../../store.js'
 import { select_online_count } from '../../../core/presence_count.js'
 import { send_chat_message } from '../../../core/chat_send.js'
 import { CHANNEL } from '../../../core/modules/chat.js'
@@ -39,6 +39,7 @@ import { AddressName } from '../../../../components/address_name'
 import { open_player_menu } from './player_menu_store.js'
 import { resolve_segment_text } from './combat_log_names.js'
 import { chat_line_in_scope } from './world_chat_scope.js'
+import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 // Self-contained styling (D207): the chat mounts OUTSIDE GameWorldHud now (the spectate overlay) — it
 // carries its own css instead of riding the hud's imports. Vite dedupes; the hud path is unchanged.
 import './game-world-hud.css'
@@ -97,7 +98,7 @@ export function WorldChat({ readonly = false } = {}) {
   const history = use_game_state((s) => s.message_history)
   // LIVE fighters map for combat-log name healing (resolve_segment_text) — the core view (S2 mirror kill):
   // a NEW Map only per core fold (memoized view identity), so this stays a stable read between fight ticks.
-  const fighters = use_fight_view()?.fighters
+  const fighters = use_fight(world_fight_view)?.fighters
   const online_count = use_game_state(select_online_count)
   const link_status = use_presence((state) => state.link_status)
   const link_error = use_presence((state) => state.link_error)

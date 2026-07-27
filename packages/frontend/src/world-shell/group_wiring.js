@@ -7,7 +7,6 @@
 // The reducer (@aresrpg/party group_loop) owns every decision; nothing here decides — it feeds and obeys.
 
 import { fight_store } from '@aresrpg/fight/store'
-import { fight_view } from '@aresrpg/fight/project'
 
 import { context } from '../game/store.js'
 import { use_auth } from '../auth'
@@ -25,6 +24,7 @@ import { read_checkpoint_spawn, resolve_checkpoint_spawn, write_follow_checkpoin
 import { ft_dispatch } from './fast_travel_store.js'
 import { recover_fight_entry_refusal } from './dungeon_settlement.js'
 import { set_app_managed_followers } from './follow_gate.js'
+import { fight_scope_sim, fight_session_in_scope, world_fight_view } from './fight_session_scope.js'
 import {
   create_group_wiring,
   build_follow_entries,
@@ -113,6 +113,7 @@ function apply_follow(rows) {
 /** Dungeon state only changes the transit row modifier; its own party/run flow remains untouched. */
 function dungeon_active() {
   const phase = use_dungeon.getState()
+  if (fight_session_in_scope(phase, fight_scope_sim)) return false
   return !!(phase.in_session || phase.run_pass_id || phase.dungeon || phase.dungeon_id || phase.fight_id)
 }
 
@@ -247,7 +248,7 @@ export function wire_group_loop() {
   // fight feeder — the join window is open only while THIS session's WORLD fight (no RunPass) sits in
   // placement; dungeon room fights keep their RunPass join path and only feed seat focus here.
   fight_store.subscribe(() => {
-    const view = fight_view()
+    const view = world_fight_view(fight_store.getState())
     const phase = use_dungeon.getState()
     const join_open = !!view?.placement && phase.fight_id === view.fight_id && phase.run_pass_id == null
     wiring?.fight_snapshot(fight_facts_of(view), { join_open })

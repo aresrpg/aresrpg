@@ -68,7 +68,7 @@ import { engage_block, engage_block_copy_key } from './engage_gate.js'
 import { start_fight_engage } from './fight_engage.js'
 import { push_event_toast } from './core/toast.js'
 import { context } from './core/game.js'
-import { fight_view } from '@aresrpg/fight/project'
+import { fight_store } from '@aresrpg/fight/store'
 import { parse_move_abort } from './core/abort_copy.js'
 import { plate_occluded, project_plate } from './nameplate_occlusion.js'
 import { render_group_card, update_group_aging } from './spawn_card.js'
@@ -80,6 +80,7 @@ import {
   select_rig_budget,
 } from './spawn_rigs.js'
 import { apply_veil } from './spawn_veil.js'
+import { world_fight_active, world_fight_session } from '../world-shell/fight_session_scope.js'
 
 const POLL_MS = 6000 // the CompassStrip zone cadence — reused, never a second loop
 // (The search fast-path grace + all receipt/poll reconcile discipline live in the spawns CORE now —
@@ -529,11 +530,14 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // #861 — the live inputs of the ONE engage gate (engage_gate.js). This is the whole effectful half: the
   // predicate itself is pure, so both the pill's presentation and engage()'s press door decide off the SAME
   // fact and can never disagree about whether — or why — a press is refused.
-  const engage_state = () => ({
-    engaging,
-    fight_session_id: use_dungeon.getState().fight_id ?? use_dungeon.getState().run_pass_id ?? null,
-    character_id: context.get_state().selected_character_id,
-  })
+  const engage_state = () => {
+    const phase = use_dungeon.getState()
+    return {
+      engaging,
+      fight_session_id: world_fight_session(phase) ? phase.fight_id : (phase.run_pass_id ?? null),
+      character_id: context.get_state().selected_character_id,
+    }
+  }
 
   // NO SILENT FAILURES (docs craft law): a refused press always leaves a trace. Player-relevant blocks get the
   // house event toast — the same copy the on-chain refusal words this way; the in-flight re-entry latch is
@@ -802,7 +806,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     press = null
     if (!p || p.button !== 0) return
     if (Math.hypot(ev.clientX - p.x, ev.clientY - p.y) > CLICK_SLOP_PX) return // a drag (camera), not a click
-    if (fight_view() || use_dungeon.getState().dungeon_id != null) return // never mid-fight/in-cave (core view — S2 mirror kill)
+    const phase = use_dungeon.getState()
+    if (world_fight_session(phase) || phase.in_session) return
     const cam = engine.get_camera?.()
     if (!cam) return
     const rect = canvas_rect()
@@ -938,14 +943,10 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     const p = get_player_pos()
     const px = Number(p[0])
     const pz = Number(p[2])
-    // BUGFIX 2026-07-13 (world-fight mobs going missing mid-fight): the suspend
-    // signal is the CAVE plane (`in_session` — dungeon create/join/resume set it; cave_session mounts on it),
-    // NOT `dungeon_id`: enter_world_fight sets dungeon_id = fight_id as its session alias, so the old read
-    // treated every WORLD fight as a cave and TORE DOWN every spawn rig in the surrounding world for the
-    // fight's whole duration — the defeat card then overlooked an emptied world. A world fight keeps the
-    // world alive (rigs roam on; the engaged group stays hidden via e.engaged; the [R]/[G] interactions are
-    // fight-gated below so no second create/gather tx can fire mid-fight).
+    // The suspend signal is the CAVE plane (`in_session`), not `dungeon_id`: a WORLD fight aliases its id there
+    // but keeps the overworld alive. Its rigs stay resident; the scoped gate below veils their visuals/actions.
     const in_cave = use_dungeon.getState().in_session
+    const world_fight = world_fight_active(fight_store.getState())
     const rect = canvas_rect()
     const t = now / 1000
     gather.tick(t) // one global pulse of the shared apex-node glow
@@ -954,15 +955,10 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // [G] hysteresis + [R] proximity arming off the reported group homes (a standing-still frame is a no-op commit).
     spawns_input({ type: 'player_pos', x: px, z: pz })
 
-    // IN-FIGHT VISUAL VEIL: mobs should stay invisible mid-fight, but the rigs themselves STAY resident/roaming
-    // so the post-fight world is instantly alive; only their VISUALS hide while a world-fight session is live.
-    // The mask covers EVERY roam population — mob rigs AND gatherable node meshes + their chips (a gatherable
-    // resource used to render above the fight board): apply_veil is kind-agnostic, so a node no longer
-    // floats above the board. fight_id is the world-fight session alias (enter_world_fight); flips are
-    // edge-detected so the veil costs one pass per transition, not per frame.
-    const in_world_fight = !!use_dungeon.getState().fight_id
-    if (in_world_fight !== fight_veiled) {
-      fight_veiled = in_world_fight
+    // The scoped WORLD-fight veil covers mob rigs, resource meshes and chips while leaving them resident, then
+    // restores them without pop-in. Edge detection keeps the mask to one pass per transition.
+    if (world_fight !== fight_veiled) {
+      fight_veiled = world_fight
       apply_veil(entries.values(), fight_veiled)
     }
 
@@ -1027,7 +1023,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // plumbing, gated by the cross-domain fight/cave locks IT owns (the core never reads another store).
     const core = spawns_store.getState()
     const target_res =
-      !in_cave && !fight_view() && core.gather_target_key ? (entries.get(core.gather_target_key) ?? null) : null
+      !in_cave && !world_fight && core.gather_target_key ? (entries.get(core.gather_target_key) ?? null) : null
 
     // arm/clear the [G] gather prompt — only for targets WE own (never stomp a JobsDrawer selection).
     // [world-fight mobs] fight-gated like [R] below: rigs stay VISIBLE during a world fight, but no gather
@@ -1044,7 +1040,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // arm/clear the [R] ATTACK prompt + card highlight off the core's WIDER visibility ring; `attack_engageable`
     // decides gold-vs-visible (PromptStack owns key+click). The core owns both flags — this only routes them.
     const attack_armed =
-      !in_cave && !engaging && !fight_view() && core.attack_target_key
+      !in_cave && !engaging && !world_fight && core.attack_target_key
         ? (entries.get(core.attack_target_key) ?? null)
         : null
     // a group a LIVE fight already claimed arms VISIBLE, never gold-claimable — the honest "taken" cue paired with

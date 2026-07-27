@@ -29,7 +29,7 @@ import './world_toast_overlay.css'
 // `.hud-*` rules are namespaced (no `.gw-*` / global bleed), so importing it here is safe.
 import '../hud.css'
 import '../mobile-fight-hud.css'
-import { use_game_state } from '../../../store.js'
+import { use_fight, use_game_state } from '../../../store.js'
 import { select_hack_presentation } from '../../../core/world_presentation.js'
 import { event_toast_store } from '../../../core/toast.js'
 import { WorldChat } from './WorldChat.jsx'
@@ -99,7 +99,7 @@ import { RewardRecap } from './RewardRecap.jsx'
 import { FightSyncIndicator } from './FightSyncIndicator.jsx'
 import { use_fight_phase } from './use_fight_phase.js'
 import { should_mount_board } from '../../../../fight-engine/phase.js'
-import { use_fight_view } from '../../../store.js'
+import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
 /** @returns {import('react').ReactElement} */
 export function GameWorldHud() {
@@ -115,13 +115,15 @@ export function GameWorldHud() {
   const mobile = use_mobile_mode()
   // Tactical fight flag (engine store, set by core/modules/fight.js): combat replaces the world VIEW (the
   // board renders INTO the roam scene), so the combat chrome below mounts off this flag, not a panel set.
-  const fight_mode = use_game_state((s) => s.fight_mode)
+  const fight = use_fight(world_fight_view)
+  const world_fight = fight != null
+  const fight_mode = use_game_state((s) => s.fight_mode) && world_fight
   // HACK GRID (#812's reducer-door signal, never a second read of the preference): the LIVE session's
   // presentation, so arming/disarming hack mode adds/removes the dev entry's surfaces without a reload.
   const hack_grid = use_game_state(select_hack_presentation)
   // VIEW-ONLY spectate: a spectator sends no commands, so the deck hand is hidden (the
   // turn controls become a "Leave spectate" — FightControls handles that itself).
-  const spectating = !!use_fight_view()?.spectator // synchronous core view (S2 mirror kill)
+  const spectating = !!fight?.spectator
   // is the CURRENT fight_mode a dungeon (chain-direct) or a WS fight? Only ever the former now (no backend),
   // but this keeps the WS combat chrome byte-identical/untouched for prod builds where a real backend exists.
   const in_dungeon = use_dungeon((s) => !!s.dungeon_id)
@@ -134,7 +136,7 @@ export function GameWorldHud() {
   // live phase — placement, active turn, or terminal — with zero "fight awaits / ENTER" gate. The mount is
   // the phase machine's call ALONE. (D107's tx-provenance half is untouched: mounting a BOARD signs nothing;
   // every fight-starting tx still demands a user gesture in the store.)
-  const mount_dungeon_board = should_mount_board(phase)
+  const mount_dungeon_board = world_fight && should_mount_board(phase)
   // CHAT-LIFT SCOPE (regression fix): the bottom-band chat only reflows UP when the spell chrome
   // is ACTUALLY mounted — keyed on the SAME condition as the SpellBar/board below (mount_dungeon_board, or the
   // dead WS branch), NOT the raw `fight_mode` slice. `fight_mode` stays true on the dungeon plane BETWEEN

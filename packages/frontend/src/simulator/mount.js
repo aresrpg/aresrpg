@@ -28,6 +28,7 @@ import { create_engine } from '@aresrpg/engine3'
 import { create_tactical_board, TEAM_COLORS } from '@aresrpg/engine3/tactical'
 
 import { get_saved_quality, LABEL_TO_TIER } from '../game/screens/hud/world/quality_pref.js'
+import { fight_scope_sim } from '../world-shell/fight_session_scope.js'
 
 import { board_key_of, build_spec_of } from './board'
 
@@ -163,7 +164,7 @@ export function create_board_viewport({ canvas, deps = {} }) {
       if (destroyed || adapter) return
       // The board floats at the origin in the void — the same seat the setup board is built on, so the fight
       // opens exactly where the player was just editing instead of flying somewhere else.
-      adapter = create_voxel_fight_adapter(board, { origin: BOARD_ORIGIN, engine, canvas })
+      adapter = create_voxel_fight_adapter(board, { origin: BOARD_ORIGIN, scope: fight_scope_sim, engine, canvas })
       mounted_key = null // the adapter rebuilds the board itself; the setup bake is no longer what stands
     },
 
