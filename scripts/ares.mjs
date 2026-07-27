@@ -164,6 +164,7 @@ export const unit_test_files = [
   'scripts/sentry_triage.test.mjs', // hourly Sentry -> GitHub dedupe/material-growth loop pure core
   'scripts/board_hygiene.test.mjs', // #845's close chain: close-keyword parsing, the landing sweep's reopen guard, the stale clock's bot exclusion
   'scripts/check-move-field-limits.test.mjs', // the field-cap gate's no-verdict severity split (#938) — real subprocess, disposable git fixtures
+  'scripts/check-fixture-adjudication.test.mjs', // #1101 — existing fixture mutations need independent commit-trailer ratification
   'test/gold/specs_anchor/click_verify_test.ts', // the harness click-decision pure unit (*_test.ts on purpose: the anchor playwright config's testMatch must never collect it)
   'test/gold/specs_anchor/fight_recovery_test.ts', // the stale-fight recovery classifier + tx-door invocation count (same *_test.ts law)
   'test/gold/specs_anchor/search_retry_test.ts', // the fixture-search retry classifier + bounded settle loop (same *_test.ts law)
