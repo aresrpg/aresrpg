@@ -14,7 +14,7 @@
 /**
  * @param {{
  *   fighters: Map<string, { id: string, name: string, team: number, level: number, is_player: boolean,
- *     dead: boolean, owner?: string }> | null | undefined,
+ *     dead: boolean, owner?: string, variant?: string | null }> | null | undefined,
  *   my_addr: string | null,
  *   winner: number,        // winning TEAM index — the player team is 0 (engine_view contract)
  *   xp?: number,           // defeat consolation pool (rides the summary; the win card ignores it)
@@ -28,7 +28,7 @@
  *     duration_ms UNDERSTATES the true length. The card renders it with a "~" prefix instead of false precision.
  * }} args
  * @returns {{ summary: { winner: number, participants: Array<{ id: string, name: string, team: number,
- *   level: number, is_player: boolean, alive: boolean }>, duration_ms: number, duration_partial: boolean,
+ *   level: number, is_player: boolean, template_id: string | null, alive: boolean }>, duration_ms: number, duration_partial: boolean,
  *   xp: number, loot: never[], cause: null }, won: boolean }}
  */
 export function fight_recap_payload({ fighters, my_addr, winner, xp = 0, duration_ms = 0, duration_partial = false }) {
@@ -42,6 +42,10 @@ export function fight_recap_payload({ fighters, my_addr, winner, xp = 0, duratio
         team: f.team,
         level: f.level,
         is_player: f.is_player,
+        // The mob's on-chain TEMPLATE id (project.js: variant = view.mobs[].template) — the id the encyclopedia
+        // bestiary routes on, so the card's mob rows can deep-link. `f.id` is a fight-scoped seat key ('mob-0'),
+        // never an entity identity. Players have no template → null, and the link degrades to plain text.
+        template_id: f.variant ?? null,
         // On a DEFEAT the local player is ALWAYS a fallen row, even when a claim/escrow race still says alive
         // (the pre-split behavior, kept verbatim); on a WIN liveness is the core's own truth — beaten enemies
         // read dead → the card's DEFEATED rows, and a fallen-but-carried ally honestly stays a dead row.

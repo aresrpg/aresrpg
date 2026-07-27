@@ -16,8 +16,10 @@ const fighters = (rows) => new Map(rows.map((f) => [f.id, f]))
 const razkin_win = () =>
   fighters([
     { id: 'seat-0', name: 'hero', team: 0, level: 12, is_player: true, dead: false, owner: ME },
-    { id: 'mob-0', name: 'Razkin', team: 1, level: 8, is_player: false, dead: true },
-    { id: 'mob-1', name: 'Razkin Alpha', team: 1, level: 10, is_player: false, dead: true },
+    // `variant` is the mob's on-chain TEMPLATE id (project.js: variant = view.mobs[].template) — the id the
+    // encyclopedia bestiary routes on. Players carry none.
+    { id: 'mob-0', name: 'Razkin', team: 1, level: 8, is_player: false, dead: true, variant: '0xTPL_RAZKIN' },
+    { id: 'mob-1', name: 'Razkin Alpha', team: 1, level: 10, is_player: false, dead: true, variant: '0xTPL_ALPHA' },
   ])
 
 describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', () => {
@@ -26,9 +28,26 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
     expect(won).toBe(true)
     expect(summary.winner).toBe(0)
     expect(summary.participants.filter((p) => p.team === 1)).toEqual([
-      { id: 'mob-0', name: 'Razkin', team: 1, level: 8, is_player: false, alive: false },
-      { id: 'mob-1', name: 'Razkin Alpha', team: 1, level: 10, is_player: false, alive: false },
+      { id: 'mob-0', name: 'Razkin', team: 1, level: 8, is_player: false, alive: false, template_id: '0xTPL_RAZKIN' },
+      {
+        id: 'mob-1',
+        name: 'Razkin Alpha',
+        team: 1,
+        level: 10,
+        is_player: false,
+        alive: false,
+        template_id: '0xTPL_ALPHA',
+      },
     ])
+  })
+
+  // The end-fight card's mob rows deep-link into the bestiary, so the recap — the ONE projection both cards
+  // read — must carry the mob's TEMPLATE id. A fighter id ('mob-0') is a fight-scoped seat key, not an entity
+  // identity: the card could not have built the link from it.
+  it('a mob row carries its TEMPLATE id; a player row carries none (never a fabricated bestiary link)', () => {
+    const { summary } = fight_recap_payload({ fighters: razkin_win(), my_addr: ME, winner: 0 })
+    expect(summary.participants.find((p) => p.id === 'mob-0')?.template_id).toBe('0xTPL_RAZKIN')
+    expect(summary.participants.find((p) => p.id === 'seat-0')?.template_id).toBe(null)
   })
 
   it('on a WIN the local player keeps the core liveness — alive when alive, honestly dead when carried', () => {
