@@ -96,6 +96,7 @@ import { use_fight_cost } from './fight_gas_ledger.js'
 import { raised_spell_ids_for } from './raised_spells.js'
 import { offer_travel_resync } from './travel_recovery.js'
 import { receipt_final_hp } from './fight_result_receipt.js'
+import { result_open_intent } from './pending_outcomes.js'
 import { attach_executed_digest } from './tx_digest_error.js'
 import { run_character_action } from './tx.js'
 
@@ -601,11 +602,13 @@ export async function settle_and_open({
  * DUNGEON settle chain (§9, ONE PTB): `dungeon::settle_run` (BORROWS the outcome — victory advances the room /
  * defeat+last-room consume the pass) THEN `results::open` (CONSUMES the outcome, rolls loot, terminal &Random).
  * Random-terminal legal: settle_run precedes the one &Random call.
- * @param {{ run_pass_id:string, outcome_id:string, world_id?:string|null, character_id:string }} args
+ * @param {{ run_pass_id:string, outcome_id:string, world_id?:string|null, character_id:string,
+ *   automated?:boolean }} args
  *   character_id = outcome.character — `open` kiosk-borrows it, so the kiosk MUST be the one holding it.
+ *   `automated` (#1383) puts the submission under the spend guard's per-outcome circuit + backoff.
  * @returns {Promise<{ receipt:any, result_id:string|null, xp_share:number|null, loot_units:number|null, final_hp:number|null }>} the ResultOpened event fields (opened_result_of)
  */
-export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id }) {
+export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id, automated = false }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -632,7 +635,10 @@ export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, c
   clear_budget_cache() // FIGHT END (result open) — the fight's act shapes are dead; drop their cached budgets
   clear_fight_ref_cache() // + its pinned shared-ref (the Fight is being destroyed)
   clear_gas_coin_cache() // + the chained gas-coin pin (the fight's commit chain is done)
-  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true)
+  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true, null, {
+    intent: result_open_intent(outcome_id),
+    automated,
+  })
   return { receipt, ...opened_result_of(receipt) }
 }
 
@@ -640,9 +646,14 @@ export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, c
  * OPEN a WORLD-fight `FightOutcome` (no run to settle): `results::open` alone — consumes the outcome, mints my
  * soulbound `FightResult` with the rolled loot checklist + XP/HP write-backs (terminal &Random).
  * `character_id` = outcome.character — `open` kiosk-borrows it, so we MUST pass the kiosk that holds it.
+ * `automated` (#1383) puts the submission under the spend guard's per-outcome circuit + backoff.
  * @returns {Promise<{ receipt:any, result_id:string|null, xp_share:number|null, loot_units:number|null, final_hp:number|null }>} the ResultOpened event fields (opened_result_of)
  */
-export async function open_outcome(/** @type {string} */ outcome_id, /** @type {string} */ character_id) {
+export async function open_outcome(
+  /** @type {string} */ outcome_id,
+  /** @type {string} */ character_id,
+  /** @type {boolean} */ automated = false
+) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -658,7 +669,10 @@ export async function open_outcome(/** @type {string} */ outcome_id, /** @type {
   clear_budget_cache() // FIGHT END (result open) — the fight's act shapes are dead; drop their cached budgets
   clear_fight_ref_cache() // + its pinned shared-ref (the Fight is being destroyed)
   clear_gas_coin_cache() // + the chained gas-coin pin (the fight's commit chain is done)
-  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true)
+  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true, null, {
+    intent: result_open_intent(outcome_id),
+    automated,
+  })
   return { receipt, ...opened_result_of(receipt) }
 }
 
