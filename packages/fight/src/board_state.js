@@ -126,12 +126,46 @@ export function voids_from_shape_mask(width, height, inside) {
   return voids
 }
 
+/**
+ * The seat's AUTHORED weapon lines (`participant.move WeaponLine`) → the plain per-element bands the strike is
+ * priced from. §17.27 wave-2a: the engine seats them from the equipped item at fight entry and stores them as a
+ * per-seat DYNAMIC FIELD (`fight.move WeaponLinesKey`), so they arrive BESIDE the Fight object rather than inside
+ * it. Absent/blank ⇒ `[]`, which every reader takes as "this seat has no authored lines" — the exact condition
+ * `cast.move`'s `weapon_damage_total` falls back to the single family `Weapon` on. Tolerates the `.fields` wrap
+ * and u64-as-string like every other chain decode. `area_shape`/`area_size` (§387) are deliberately NOT read:
+ * no chain path consumes them yet, so decoding them here would invent a client-only rule.
+ * @param {any} raw @returns {{ element:number, damage:number, damage_max:number, crit_damage:number, crit_damage_max:number }[]}
+ */
+function normalize_weapon_lines(raw) {
+  const rows = raw?.fields ?? raw
+  if (!Array.isArray(rows)) return []
+  return rows.map((row) => {
+    const line = row?.fields ?? row ?? {}
+    const damage = Number(line.damage ?? 0)
+    const crit_damage = Number(line.crit_damage ?? damage)
+    return {
+      element: Number(line.element ?? 255),
+      damage,
+      // Absent maxima ⇒ their own floor, which is exactly the FIXED line (`new_weapon_line`'s alias sets
+      // `damage_max: damage` on chain) — one degradation path, never a second shape.
+      damage_max: Number(line.damage_max ?? damage),
+      crit_damage,
+      crit_damage_max: Number(line.crit_damage_max ?? crit_damage),
+    }
+  })
+}
+
 /** A decoded participant `Weapon` struct → the plain attack line the board prices the strike from. Tolerates the
- * `.fields` VecMap wrap; missing/blank falls back to the unarmed line (never a 0-reach gate). */
-function normalize_weapon(raw) {
+ * `.fields` VecMap wrap; missing/blank falls back to the unarmed line (never a 0-reach gate). `lines` are the
+ * seat's AUTHORED item bands (#1323): the chain resolves a strike from THEM whenever it has them and only falls
+ * back to the fields below when it does not, so they ride on the same object every preview surface already
+ * reads — one weapon fact, one home, no surface left to price off the family line by omission. */
+function normalize_weapon(raw, lines) {
   const w = raw?.fields ?? raw
-  if (!w || typeof w !== 'object') return { ...UNARMED_WEAPON }
+  const authored = normalize_weapon_lines(lines)
+  if (!w || typeof w !== 'object') return { ...UNARMED_WEAPON, lines: authored }
   return {
+    lines: authored,
     element: Number(w.element ?? UNARMED_WEAPON.element),
     damage: Number(w.damage ?? UNARMED_WEAPON.damage),
     // #577/#1323 — the AUTHORED BAND. The chain's Weapon has carried [damage, damage_max] since the roller
@@ -249,6 +283,10 @@ export function board_state_from_fight({
   const width = Number(fight.width) || 0
   const height = Number(fight.height) || 0
   const canon = (/** @type {any} */ c) => to_canonical(c)
+  // #1323 — the seat-keyed AUTHORED weapon lines. They live in per-seat DYNAMIC FIELDS on the Fight
+  // (`fight.move WeaponLinesKey`), so the read layer carries them alongside the object rather than inside it —
+  // the same shape `invisibility_statuses` already rides on. Absent ⇒ every seat falls back to its family line.
+  const weapon_lines = fight.weapon_lines ?? {}
   const escrow = (fight.participants ?? []).map((/** @type {any} */ p, /** @type {number} */ seat) => {
     // THE SEAT'S COMPOSED BUILD (#1077) — ONE object per fact, carried end to end so no surface has to invent a
     // subset. `stats` is the LIVE block (participant.move re-derives it per alter: base + the timed rows);
@@ -274,7 +312,7 @@ export function board_state_from_fight({
       ready: Boolean(p.ready),
       alive: Number(p.hp ?? 0) > 0,
       casts_this_turn: Number(p.casts_this_turn ?? 0),
-      weapon: normalize_weapon(p.weapon),
+      weapon: normalize_weapon(p.weapon, weapon_lines[seat]),
       stats,
       base_stats,
       spell_levels: decode_spell_levels(p.spell_levels),
