@@ -88,8 +88,7 @@ const boot = (fight = fight_object()) => {
 
 /** The array the effect-badge HUD renders — the projection the field report was about. */
 const badges = (store) => engine_view(store.getState()).fighters.get(CHAR).effects
-const buff_turns = (store) =>
-  badges(store).find((row) => row.kind === SE.K_ALTER_STAT)?.remaining_turns ?? null
+const buff_turns = (store) => badges(store).find((row) => row.kind === SE.K_ALTER_STAT)?.remaining_turns ?? null
 
 const feed = (store, version, events, now) =>
   store.getState().input({ type: 'receipt', fight_id: FIGHT, version, receipt: { events } }, now)
@@ -172,7 +171,9 @@ describe('#598/#597 the badge lifetime survives the turn boundary (post-V2-cutov
     store
       .getState()
       .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } } })
-    store.getState().input({ type: 'snapshot', fight: fight_object({ invisibility_statuses: undefined }), version: 5 }, 1_000)
+    store
+      .getState()
+      .input({ type: 'snapshot', fight: fight_object({ invisibility_statuses: undefined }), version: 5 }, 1_000)
 
     expect(store.getState().view_version, 'this read DID seed the base').toBe(5)
     expect(badges(store), 'nothing to carry from an empty prior fold — the hold is not an invention').toEqual([])

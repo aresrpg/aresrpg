@@ -155,9 +155,9 @@ describe('#1083 the reverse door promotes every stat row prediction can price', 
     ]
     const round_trip = sim_effects_of({ id: 'p0', effects: rows.map(status_row_of) })
 
-    expect(round_trip.map(({ type, stat, value, turns_remaining }) => ({ type, stat, value, turns_remaining }))).toEqual(
-      rows.map(({ type, stat, value, turns_remaining }) => ({ type, stat, value, turns_remaining }))
-    )
+    expect(
+      round_trip.map(({ type, stat, value, turns_remaining }) => ({ type, stat, value, turns_remaining }))
+    ).toEqual(rows.map(({ type, stat, value, turns_remaining }) => ({ type, stat, value, turns_remaining })))
   })
 
   test('POOL rows stay out of the sim effects — the fold owns ap/mp, and two homes would double-count', () => {
