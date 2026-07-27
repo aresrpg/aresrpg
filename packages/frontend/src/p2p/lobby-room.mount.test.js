@@ -17,11 +17,23 @@ import { presence_store } from '../world-shell/presence_adapter.js'
 import {
   reset_trystero_mock,
   trystero_actions as actions,
+  trystero_relay_sent,
+  trystero_relay_socket,
+  trystero_rooms,
   trystero_sent as sent,
 } from '../test_helpers/trystero_mock.js'
 
-const { broadcast_state, join_lobby, leave_lobby, nudge_party_invite, set_local_cosmetic } =
-  await import('./lobby-room.js')
+const {
+  broadcast_party_chat,
+  broadcast_position,
+  broadcast_state,
+  join_lobby,
+  leave_lobby,
+  nudge_party_invite,
+  set_local_cosmetic,
+  sync_party_room,
+} = await import('./lobby-room.js')
+const { trystero_room_topic } = await import('./relay-signaling.js')
 
 const fire_state = (/** @type {any} */ p) => actions.get('state').onMessage(p, { peerId: `peer-${p.id}` })
 const fire_pos = (/** @type {any} */ p) => actions.get('pos').onMessage(p, { peerId: `peer-${p.id}` })
@@ -102,5 +114,49 @@ test('party invite nudge carries the exact invited character id', async () => {
     invited_character_id: '0xINVITED_CHARACTER',
     from_name: 'Leader',
   })
+  leave_lobby()
+})
+
+test('party chat has one direct action home and receiver-filters the exact party id', async () => {
+  leave_lobby()
+  reset_trystero_mock()
+  join_lobby('0xMINE', { x: 0, y: 0 })
+  sync_party_room('0xPARTY')
+
+  broadcast_party_chat('0xMINE', 'Mine', 'hello', 'CHAT_GROUP')
+  expect(sent.find((row) => row.name === 'pchat')?.payload).toMatchObject({
+    party_id: '0xPARTY',
+    id: '0xMINE',
+    message: 'hello',
+  })
+
+  const before = presence_store.getState().chat_seq
+  actions.get('pchat').onMessage({ party_id: '0xOTHER', id: '0xPEER', message: 'private', channel: 'CHAT_GROUP' })
+  expect(presence_store.getState().chat_seq).toBe(before)
+  actions.get('pchat').onMessage({ party_id: '0xPARTY', id: '0xPEER', message: 'party', channel: 'CHAT_GROUP' })
+  expect(presence_store.getState().chat_seq).toBe(before + 1)
+  sync_party_room(null)
+  leave_lobby()
+})
+
+test('an established direct peer silences root relay notes while game actions stay on makeAction', async () => {
+  leave_lobby()
+  reset_trystero_mock()
+  join_lobby('0xMINE', { x: 0, y: 0 })
+  trystero_rooms[0].connectPeer('peer-direct')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  const root_topic = await trystero_room_topic('aresrpg-world-lobby-testnet', 'world')
+  const event = (topic, payload) =>
+    JSON.stringify(['EVENT', { tags: [['x', topic]], content: JSON.stringify(payload) }])
+
+  trystero_relay_socket.send(event(root_topic, { peerId: 'bun-test-peer' }))
+  expect(trystero_relay_sent).toHaveLength(0)
+  trystero_relay_socket.send(event('peer-topic', { peerId: 'bun-test-peer', offer: 'encrypted' }))
+  expect(trystero_relay_sent).toHaveLength(1)
+
+  broadcast_position('0xMINE', 1, 2)
+  expect(sent.at(-1)).toMatchObject({ name: 'pos', payload: { id: '0xMINE', x: 1, y: 2 } })
+  expect(trystero_relay_sent).toHaveLength(1)
   leave_lobby()
 })

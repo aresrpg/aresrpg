@@ -35,20 +35,14 @@ afterEach(() => {
   room_configs.length = 0
 })
 
-test('the lobby and party rooms pass explicit Nostr relays through Trystero 0.25.3 relayConfig', () => {
+test('one signaling room carries lobby and party actions over the shared direct peer channel', () => {
   join_lobby('0xcharacter', { x: 0, y: 0 })
   sync_party_room('0xparty')
 
-  expect(room_configs).toHaveLength(2)
+  expect(room_configs).toHaveLength(1)
   for (const config of room_configs) {
     expect(config.relayConfig).toEqual({
-      urls: [
-        'wss://relay.damus.io',
-        'wss://nos.lol',
-        'wss://relay.nostr.band',
-        'wss://nostr.mom',
-        'wss://relay.snort.social',
-      ],
+      urls: ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band'],
       redundancy: 3,
     })
     expect(config.relayUrls).toBeUndefined()

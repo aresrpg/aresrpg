@@ -22,7 +22,7 @@
 // position + state (read from the presence ATOM) DIRECTLY to that one peer (SendOptions.target) the moment it
 // appears, so two stationary tabs see each other within one RTT of the handshake completing.
 
-import { joinRoom, getRelaySockets } from 'trystero'
+import { joinRoom, getRelaySockets, pauseRelayReconnection, resumeRelayReconnection } from 'trystero'
 import {
   peer_state_of,
   peer_state_by_address,
@@ -40,13 +40,16 @@ import { game_log } from '../core/log.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
 
 import { RELAY_URLS } from './relays.js'
+import { suppress_periodic_room_announcements, trystero_room_topic } from './relay-signaling.js'
 
 const NETWORK = import.meta.env.VITE_NETWORK || 'testnet'
 const APP_ID = `aresrpg-world-lobby-${NETWORK}`
 // EXPLICIT nostr rendezvous relays — the list itself lives in ./relays.js (its one home, shared with the
 // boot-smoke gate); redundancy 3 of 5 is why a single dead relay is a non-event for discovery.
 const RELAY_REDUNDANCY = 3
-const relay_config = { urls: RELAY_URLS, redundancy: RELAY_REDUNDANCY }
+// Trystero uses every explicit URL and ignores `redundancy` when `urls` is present. Slice here so the configured
+// fanout really is three relays instead of five signed copies of every signaling note.
+const relay_config = { urls: RELAY_URLS.slice(0, RELAY_REDUNDANCY), redundancy: RELAY_REDUNDANCY }
 const ROOM_ID = 'world'
 
 // WebRTC ICE — STUN-first (direct P2P when the NAT allows it) + TURN fallback (relayed only when direct fails)
@@ -54,7 +57,7 @@ const ROOM_ID = 'world'
 // ZERO hosted infra — free PUBLIC providers ONLY (no self-hosted coturn, ever). Resilience = STACK multiple free
 // providers + multiple ports/transports so one provider's outage or a blocked port doesn't kill peer transport.
 // Env-swappable (VITE_TURN_URL comma-separated + USER/CRED) to add/replace providers without a code change.
-// Passed to BOTH Trystero rooms. (Signaling works over nostr/WSS regardless; TURN only rescues the data channel.)
+// Passed to the single Trystero room. (Signaling works over nostr/WSS regardless; TURN only rescues the data channel.)
 const TURN_URLS = (
   import.meta.env.VITE_TURN_URL ||
   'turn:openrelay.metered.ca:80,turn:openrelay.metered.ca:443,turn:openrelay.metered.ca:443?transport=tcp,turns:openrelay.metered.ca:443'
@@ -80,24 +83,59 @@ const RTC_CONFIG = {
 let room = null
 let pos_action = null
 let chat_action = null
+let party_chat_action = null
 let state_action = null
 let party_invite_action = null
 let dungeon_share_action = null
 let fight_stream_action = null
 let commission_request_action = null
-// PARTY chat room (v2): a SECOND Trystero room scoped to the on-chain party id, reusing the SAME
-// appId + discovery infra as the lobby (NOT the shared `world` room). Party lines broadcast here reach ONLY
-// party members. Lifecycle is PARTY-driven (party_store._publish_state → sync_party_room), independent of the
-// world-scene mount, so it survives World-tab remounts and closes only when membership ends (party_id → null).
-let party_room = null
-let party_chat_action = null
+// Party chat is a distinct ACTION on the existing direct world-room data channel. `party_room_id` is only the
+// local routing scope; it never creates a second Trystero room (and therefore never doubles relay announcements).
 let party_room_id = null
 /** @type {Map<string, string>} trystero peer_id → the on-chain character_id it broadcasts as — the one
  * transport-level routing fact that stays OUTSIDE the atom (the core never sees trystero peer ids). */
 const peer_characters = new Map()
+const relay_root_topic = trystero_room_topic(APP_ID, ROOM_ID)
+/** @type {Map<WebSocket, () => void>} */
+const relay_announcement_restores = new Map()
 
 /** The live session id — read from the atom (the transport's own-echo filter + send guard). */
 const my_character_id = () => presence_store.getState().character_id
+const direct_peer_count = () => Object.keys(room?.getPeers?.() ?? {}).length
+
+/** Keep relay subscriptions + targeted SDP signaling live, but suppress Trystero's periodic root-room note once
+ * a direct RTCDataChannel exists. New browsers still announce on the root topic; this client receives that note
+ * and answers on the peer-specific topic. Re-run on health samples so a replaced relay socket is patched too. */
+async function _suppress_relay_announcements() {
+  const active_room = room
+  const root_topic = await relay_root_topic
+  if (!active_room || room !== active_room || direct_peer_count() === 0) return
+  const sockets = new Set(Object.values(getRelaySockets?.() ?? {}))
+  for (const [socket, restore] of relay_announcement_restores)
+    if (!sockets.has(socket)) {
+      restore()
+      relay_announcement_restores.delete(socket)
+    }
+  for (const socket of sockets)
+    if (!relay_announcement_restores.has(socket))
+      relay_announcement_restores.set(socket, suppress_periodic_room_announcements({ relay: socket }, root_topic))
+}
+
+function _restore_relay_announcements() {
+  for (const restore of relay_announcement_restores.values()) restore()
+  relay_announcement_restores.clear()
+}
+
+function _clear_room_actions() {
+  pos_action = null
+  chat_action = null
+  party_chat_action = null
+  state_action = null
+  party_invite_action = null
+  dungeon_share_action = null
+  fight_stream_action = null
+  commission_request_action = null
+}
 
 /** TR-97 — compose + send our `state` off the ATOM (my_state + my_cosmetic merged). ONE send home:
  *  broadcast_state, set_local_cosmetic, and the peer-join replay all route through here. */
@@ -143,6 +181,8 @@ export function join_lobby(character_id, initial_cell) {
   }
   presence_input({ type: 'session', character_id: character_id ?? null })
   if (initial_cell) presence_input({ type: 'my_cell', ...initial_cell })
+  presence_input({ type: 'link_start' })
+  resumeRelayReconnection()
   _build_room()
   _start_watchdogs()
 }
@@ -157,10 +197,10 @@ export function join_lobby(character_id, initial_cell) {
 //    online / visibility-return feed `network_recover`. Recovery is an EFFECT REQUEST the core makes and this edge
 //    performs — a jittered/bounded rejoin, then a full re-announce so both sides reconverge. No callback set()s a
 //    store; every branch dispatches a typed INPUT through the presence door.
-// The edge-only bookkeeping (timers, the first-connect latch, the per-(re)join grace window) is pure scheduling —
+// The edge-only bookkeeping (timers, in-flight guard, and the per-(re)join grace window) is pure scheduling —
 // the game/roster state all lives in the reducer.
 let rejoin_timer = null
-let relays_ever_up = false // latched on the FIRST relay connect of this lobby session; a later drop-to-0 is real death
+let rejoin_in_flight = false
 let link_grace_until = 0 // after each (re)join, don't judge the link dead until sockets have had time to connect
 let watchdog_interval = null
 let heartbeat_interval = null
@@ -178,6 +218,7 @@ function _build_room() {
   room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, ROOM_ID)
   pos_action = room.makeAction('pos')
   chat_action = room.makeAction('chat')
+  party_chat_action = room.makeAction('pchat')
   state_action = room.makeAction('state')
   party_invite_action = room.makeAction('pinvite')
   dungeon_share_action = room.makeAction('dshare')
@@ -199,6 +240,14 @@ function _build_room() {
 
   chat_action.onMessage = (data) => {
     const { id, message, name, channel, target } = /** @type {any} */ (data ?? {})
+    presence_input({ type: 'chat_received', row: { id, message, address: id, name, channel, target } })
+  }
+
+  // Party chat shares the same direct data channel as every other game action. The exact current party id is
+  // carried and receiver-filtered, so a whole-room RTC broadcast never leaks a line into another party's log.
+  party_chat_action.onMessage = (data) => {
+    const { party_id, id, message, name, channel, target } = /** @type {any} */ (data ?? {})
+    if (!party_id || party_id !== party_room_id) return
     presence_input({ type: 'chat_received', row: { id, message, address: id, name, channel, target } })
   }
 
@@ -255,6 +304,10 @@ function _build_room() {
     const id = peer_characters.get(peerId)
     peer_characters.delete(peerId)
     if (id) presence_input({ type: 'peer_leave', id })
+    if (direct_peer_count() === 0) {
+      _restore_relay_announcements()
+      presence_input({ type: 'peer_disconnected' })
+    }
   }
 
   // P1-B: the instant a new peer's WebRTC data channel is ready, hand it our current position + state
@@ -267,6 +320,8 @@ function _build_room() {
     const { character_id, my_cell } = presence_store.getState()
     if (character_id && my_cell) pos_action?.send({ id: character_id, ...my_cell }, { target: peerId }).catch(() => {})
     if (character_id) _send_state(peerId) // TR-97 — merges the live cosmetic flags too (guards on my_state)
+    presence_input({ type: 'peer_connected' })
+    void _suppress_relay_announcements()
   }
 
   // D222: flush any pre-join parked state now that the actions exist (publish/join order-independence).
@@ -281,7 +336,7 @@ function _build_room() {
     const sockets = Object.values(getRelaySockets?.() ?? {})
     const connected = sockets.filter((/** @type {any} */ s) => s?.readyState === 1)
     const errors = sockets.filter((/** @type {any} */ s) => s?.readyState === 3).map((/** @type {any} */ s) => s?.url)
-    game_log('p2p', `joinRoom fired · relays connected: ${connected.length}/${RELAY_URLS.length}`, { errors })
+    game_log('p2p', `joinRoom fired · relays connected: ${connected.length}/${relay_config.urls.length}`, { errors })
   }, 4000)
 }
 
@@ -300,23 +355,55 @@ function _reannounce() {
   if (character_id) _send_state()
 }
 
-/** REJOIN — tear the DEAD room down cleanly and rebuild it (the atom survives). The core schedules this via a
- *  bounded backoff; this edge adds the jitter. On success the health poll sees relays return and feeds rejoin_ok. */
-function _rejoin() {
-  room?.leave()
+/** REJOIN — await teardown before rebuilding. Trystero keeps a room registered during its async leave delay;
+ * rebuilding synchronously would return that same doomed room and turn the recovery schedule into churn. */
+async function _rejoin() {
+  if (rejoin_in_flight || presence_store.getState().link_status === 'failed') return
+  rejoin_in_flight = true
+  _restore_relay_announcements()
+  const previous_room = room
   room = null
   peer_characters.clear() // trystero peer ids are stale after a leave; the character rows persist in the atom
+  try {
+    await previous_room?.leave()
+  } catch {
+    // A dead transport may reject its courtesy leave send. Teardown still proceeds; the finite retry state owns
+    // whether another room may be built.
+  } finally {
+    rejoin_in_flight = false
+  }
+  if (!watchdogs_started || room || presence_store.getState().link_status === 'failed') return
   _build_room()
 }
 
-/** LINK HEALTH — 0 connected relays ⇒ the signaling lifeline is dead ⇒ `room_lost` (only after relays have EVER
- *  been up this session, the per-(re)join grace has elapsed, and no rejoin is already scheduled — so the backoff
- *  never inflates faster than its own schedule). Relays back while we were lost ⇒ `rejoin_ok`. */
+/** Terminal recovery state: stop room announcements and Trystero's relay-socket retry engine. The presence atom
+ * remains mounted so the WorldChat header can render the failure instead of silently disappearing it. */
+function _retire_failed_room() {
+  pauseRelayReconnection()
+  _restore_relay_announcements()
+  const failed_room = room
+  room = null
+  _clear_room_actions()
+  peer_characters.clear()
+  Promise.resolve(failed_room?.leave()).catch(() => {})
+}
+
+/** LINK HEALTH — an active RTCDataChannel is the primary truth. Relay loss during that direct session must never
+ * tear down the game channel. With no direct peer, relay sockets are the signaling-lifeline fallback. */
 function _health_check() {
+  if (direct_peer_count() > 0) {
+    void _suppress_relay_announcements()
+    if (presence_store.getState().rejoin_attempt > 0) {
+      if (rejoin_timer) clearTimeout(rejoin_timer)
+      rejoin_timer = null
+      presence_input({ type: 'rejoin_ok' })
+    } else if (presence_store.getState().link_status !== 'connected') presence_input({ type: 'peer_connected' })
+    return
+  }
+  _restore_relay_announcements()
   const sockets = Object.values(getRelaySockets?.() ?? {})
   const connected = sockets.filter((/** @type {any} */ s) => s?.readyState === 1).length
   if (connected > 0) {
-    relays_ever_up = true
     if (presence_store.getState().rejoin_attempt > 0) {
       // recovered (our rejoin OR trystero's own relay reconnect) — cancel any pending teardown so a relay FLAP
       // never rejoins a room that just came back on its own, then reset the backoff + re-announce.
@@ -326,7 +413,15 @@ function _health_check() {
     }
     return
   }
-  if (relays_ever_up && Date.now() >= link_grace_until && !rejoin_timer) presence_input({ type: 'room_lost' })
+  if (
+    Date.now() >= link_grace_until &&
+    !rejoin_timer &&
+    !rejoin_in_flight &&
+    presence_store.getState().link_status !== 'failed'
+  ) {
+    presence_input({ type: 'room_lost' })
+    if (presence_store.getState().link_status === 'failed') _retire_failed_room()
+  }
 }
 
 /** Arm the self-heal watchdogs ONCE per lobby session (idempotent). Cleared by leave_lobby → _stop_watchdogs. */
@@ -338,7 +433,7 @@ function _start_watchdogs() {
     rejoin_timer = setTimeout(
       () => {
         rejoin_timer = null
-        _rejoin()
+        void _rejoin()
       },
       delay + Math.random() * REJOIN_JITTER_MS
     )
@@ -374,6 +469,7 @@ function _start_watchdogs() {
  *  gets its own fresh initial-connect grace. */
 function _stop_watchdogs() {
   watchdogs_started = false
+  _restore_relay_announcements()
   unsub_rejoin?.()
   unsub_rejoin = null
   unsub_reannounce?.()
@@ -389,7 +485,6 @@ function _stop_watchdogs() {
   if (visibility_handler && typeof document !== 'undefined')
     document.removeEventListener('visibilitychange', visibility_handler)
   visibility_handler = null
-  relays_ever_up = false
   link_grace_until = 0
 }
 
@@ -407,31 +502,18 @@ export function broadcast_chat(character_id, name, message, channel, target = ''
 }
 
 /**
- * Join / leave the PARTY chat room (v2) — a dedicated Trystero room scoped to the on-chain party id, so
- * PARTY lines reach ONLY party members instead of the whole `world` lobby. Reuses the SAME appId + nostr
- * discovery infra (a sibling room, no new dep / no rebuild). Idempotent per id; call whenever the party_id
- * changes (party_store._publish_state). `null` id → leave (solo). Lifecycle is party-driven, NOT tied to the
- * world-scene mount, so party chat survives World-tab remounts and closes only when membership ends.
+ * Set the PARTY chat routing scope. Party messages use the existing world room's direct `pchat` action and carry
+ * this id for receiver-side filtering; changing party therefore causes zero signaling joins/leaves.
  * @param {string | null} party_id the on-chain Party object id (null = not in a party)
  */
 export function sync_party_room(party_id) {
-  if (party_id === party_room_id) return
-  party_room?.leave()
-  party_room = null
-  party_chat_action = null
   party_room_id = party_id ?? null
-  if (!party_id) return
-  party_room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, `party-${party_id}`)
-  party_chat_action = party_room.makeAction('chat')
-  party_chat_action.onMessage = (data) => {
-    const { id, message, name, channel, target } = /** @type {any} */ (data ?? {})
-    presence_input({ type: 'chat_received', row: { id, message, address: id, name, channel, target } })
-  }
 }
 
-/** Broadcast a chat line to the PARTY room only (party members) — no-op if not in a party. See sync_party_room. */
+/** Broadcast a party-scoped line over the shared direct data channel — no-op while solo. */
 export function broadcast_party_chat(character_id, name, message, channel, target = '') {
-  party_chat_action?.send({ id: character_id, name, message, channel, target }).catch(() => {})
+  if (!party_room_id) return
+  party_chat_action?.send({ party_id: party_room_id, id: character_id, name, message, channel, target }).catch(() => {})
 }
 
 /**
@@ -516,13 +598,7 @@ export function leave_lobby() {
   _stop_watchdogs()
   room?.leave()
   room = null
-  pos_action = null
-  chat_action = null
-  state_action = null
-  party_invite_action = null
-  dungeon_share_action = null
-  fight_stream_action = null
-  commission_request_action = null
+  _clear_room_actions()
   peer_characters.clear()
   presence_input({ type: 'reset' })
 }
