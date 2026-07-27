@@ -214,9 +214,12 @@ scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at th
   both clean = hard-zero), `no-circular` — zero debt is represented by no baseline file (issue
   #95 burned down the 2026-07-17 census). Non-empty baselines ARE burn-down worklists;
   `--write-baseline` tightens
-  after a fix, never absorbs new debt unreviewed. semgrep binary absent → that half SKIPs green
-  (`uv tool install semgrep` | `brew install semgrep`); depcruise runs under bun (node 25 is
-  outside its support matrix).
+  after a fix, never absorbs new debt unreviewed. An absent semgrep, dependency-cruiser, or bun
+  binary is a loud failure because an unavailable check has no verdict. The narrow local escape
+  hatch is `ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1`: it turns only a missing-tool failure into an
+  explicit SKIP and must never be set by the default lint or CI. Install semgrep with
+  `uv tool install semgrep` or `brew install semgrep`; depcruise runs under bun (node 25 is outside
+  its support matrix).
 - Burn-down protocol: clean a domain → flip it to **ERROR** with a `files` block in
   `scripts/eslint-rules/fp_law.config.mjs` / `typed_fp.config.mjs` (the fight core's one-pipeline
   block is the template).

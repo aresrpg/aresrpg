@@ -16,14 +16,17 @@
 # ABSORB a new finding unless the debt is deliberate and reviewed.
 #
 # semgrep is a system binary, not a devDep. Install: `uv tool install semgrep` (used on the dev Mac,
-# ~/.local/bin) | `brew install semgrep` | `pipx install semgrep`. When absent the gate SKIPS green
-# (exit 0) so composite lint never reds on a missing tool — the arch net is simply off on that machine.
+# ~/.local/bin) | `brew install semgrep` | `pipx install semgrep`. Missing means FAIL: a machine
+# without the analyzer has no verdict. A caller that deliberately accepts that loss may set
+# ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1; the resulting SKIP stays loud.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 
 SEMGREP="${SEMGREP_BIN:-}"
-if [ -z "$SEMGREP" ]; then
-  for candidate in semgrep "$HOME/.local/bin/semgrep" /opt/homebrew/bin/semgrep; do
+if [ -n "$SEMGREP" ]; then
+  command -v "$SEMGREP" >/dev/null 2>&1 || SEMGREP=""
+else
+  for candidate in semgrep "${HOME:-}/.local/bin/semgrep" /opt/homebrew/bin/semgrep; do
     if command -v "$candidate" >/dev/null 2>&1; then
       SEMGREP="$candidate"
       break
@@ -33,8 +36,13 @@ fi
 
 echo "== AresRPG arch gate · semgrep (dataflow: laundered writes, fight effect-freedom, functor purity) =="
 if [ -z "$SEMGREP" ]; then
-  echo "  SKIP: semgrep not installed (uv tool install semgrep | brew install semgrep | pipx install semgrep)"
-  exit 0
+  if [ "${ARESRPG_ALLOW_MISSING_ARCH_TOOLS:-}" = "1" ]; then
+    echo "  SKIP: semgrep not installed — explicitly allowed by ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
+    exit 0
+  fi
+  echo "  FAIL: semgrep not installed (uv tool install semgrep | brew install semgrep | pipx install semgrep)"
+  echo "  Intentional local skip only: ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
+  exit 1
 fi
 
 SCAN=("$SEMGREP" scan --config scripts/arch/arch_law.yml --config scripts/arch/laundered_extract.yml
