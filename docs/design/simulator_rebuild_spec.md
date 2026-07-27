@@ -8,7 +8,7 @@ through `@aresrpg/sim` as the sole authority with chain randomness mocked locall
 exportable and replayable, ZERO drift from the real game (real generic modules only), fully
 persisted in IndexedDB, no chain read or write.
 
-All paths below are repo-absolute from `/Users/sceatstudio/dev/aresrpg/`.
+All paths below are repository-root-relative.
 
 ---
 
@@ -81,9 +81,9 @@ Legend: GENERIC = consumed as-is, zero change. SEAM = a named, minimal change (l
 | 23  | `packages/frontend/src/content/seed_manifest.ts`                                                                   | living-content ids (mob/spell identity join) — build-inlined receipt, not a chain read                                                                        | GENERIC                                                                      |
 | 24  | `packages/sdk/src/stats.js` (`@aresrpg/sdk/stats`)                                                                 | base AP 6 / MP 3, `get_max_health` (30 + 5·level + vitality), `get_total_stat`, `STATISTICS` vocabulary                                                       | GENERIC                                                                      |
 | 25  | `@aresrpg/sdk/classes`, `@aresrpg/sdk/items-data`, `@aresrpg/sdk/jobs` (asset urls)                                | class list, the bundled item catalog with `stats: Record<key,[min,max]>` ranges (max roll = `range[1]`), icons                                                | GENERIC                                                                      |
-| 26  | `packages/frontend/src/components/{items,search_picker_modal,entity_display}`                                      | ItemSlot paper-doll (kept-verbatim look), SearchPickerModal, stat/element color tokens                                                                        | GENERIC                                                                      |
+| 26  | `packages/frontend/src/components/{items.tsx,search_picker_modal.tsx,entity_display.tsx}`                          | ItemSlot paper-doll (kept-verbatim look), SearchPickerModal, stat/element color tokens                                                                        | GENERIC                                                                      |
 | 27  | `packages/frontend/src/game/core/draft.js`                                                                         | the IndexedDB promise-wrapper PATTERN (copied shape, own DB)                                                                                                  | pattern reference                                                            |
-| 28  | Roster loaders `packages/frontend/src/roster/{boot_roster,load_roster,store.ts}`                                   | NOT consumed (chain-coupled by design); the simulator seeds the engine store roster directly (`context.dispatch('action/sui_data', …)` — dev_synth precedent) | correctly out of scope                                                       |
+| 28  | Roster loaders `packages/frontend/src/roster/{boot_roster.js,load_roster.js,store.ts}`                             | NOT consumed (chain-coupled by design); the simulator seeds the engine store roster directly (`context.dispatch('action/sui_data', …)` — dev_synth precedent) | correctly out of scope                                                       |
 | 29  | `packages/frontend/src/world-shell/dungeon_fight_shim.js`                                                          | NOT consumed — the PATTERN for the sim shim (thin ≤120-LoC shim, gate c verb-ban)                                                                             | reference only                                                               |
 | 30  | Move sources `packages/move/engine/sources/{fight_events,mob,interleave}.move`, `foundation/sources/mob_ai.move`   | the encoder's shape oracle; `scaled_hp` formula (S3)                                                                                                          | oracle only                                                                  |
 
@@ -198,12 +198,13 @@ Effect-record field shapes: read `packages/sim/src/fight_spells.js` (`process_sp
 effects) and `fight_actions.js` at implementation time — the encoder switches on
 `effect.type`. Every unmapped effect type must `throw` in dev (loud), never silently drop.
 
-**The drift gate (mandatory, RED-first):** `packages/fight/src/sim_chain.test.js` — for a
+**The drift gate (mandatory, RED-first):** `packages/fight/test/sim_chain.test.js` — for a
 scripted multi-turn fight (moves, casts w/ AoE + displacement + DoT + trap + a death + victory),
 fold the encoder's rows through `apply_action` and assert the OBSERVABLE PROJECTION (cell / hp /
 alive / active / winner per fighter) equals the sim post-state's own projection at every batch
-boundary. This is the "one observable, two folders" twin contract (`packages/fight/src/core_
-fold.js` header) applied to the mock — the mechanical proof the mock cannot drift.
+boundary. This is the "one observable, two folders" twin contract
+(`packages/fight/src/core_fold.js` header) applied to the mock — the mechanical proof the mock
+cannot drift.
 
 ### 4.5 The submit door (player turns) — zero new seams
 
@@ -457,7 +458,7 @@ negative-stat item included), class seat build (hp/ap/mp) vs the sdk formulas, m
 and without the combat block (degrade path asserted), `scaled_hp` golden matches Move values.
 
 **L2 — `sim_chain` core (the mock chain).**
-Files: `packages/fight/src/sim_chain.js` (+ export row), `packages/fight/src/sim_chain.test.js`.
+Files: `packages/fight/src/sim_chain.js` (+ export row), `packages/fight/test/sim_chain.test.js`.
 Pure only — no frontend imports. Board derivation, snapshot builder, encoder, submit fold,
 ai-turn fold, recorder tap, capsule dump.
 Acceptance (RED-first): the §4.4 twin-observable parity test over a scripted fight covering

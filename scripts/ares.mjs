@@ -142,6 +142,7 @@ export const unit_test_files = [
   // corpus through the reducer and asserts its effect-class postcondition held. RED the moment any SUPPORTED
   // effect kind regresses; the known-unsupported kinds are the enumerated worklist in MATRIX_CONVICTIONS.md.
   'packages/sim/test/spell_effect_conformance_matrix.test.js',
+  'test/scripts/check-doc-file-references.test.mjs',
   'scripts/check-chain-ids.test.mjs',
   'packages/move/scripts/crit_fold.test.mjs',
   'packages/move/scripts/spell_wire.test.mjs', // #1250 RED-FIRST parity fixture — the ONE new_effect signed-value dialect home

@@ -373,7 +373,7 @@ identical; only the scenery changes. Applies live (blocked during a fight).`
 | `hack` whitelist in the peer fold                                                                                              | `packages/world/src/presence.js:173-196`                                                                  |
 | hack axis on the render-instance predicate                                                                                     | `packages/frontend/src/game/remote_visibility_scope.js:22-28`                                             |
 | scope read (mine/peer hack)                                                                                                    | `packages/frontend/src/game/remote_players.js:251-259`                                                    |
-| e2e rail spec (NEW)                                                                                                            | `packages/frontend/e2e/hack_mode_boot.spec.ts`                                                            |
+| e2e rail spec                                                                                                                  | `packages/frontend/e2e/hack_live_swap.spec.ts`                                                            |
 | minimap lattice rendering — ADDED BY AMENDMENT A1 (§10), not in the original list                                              | `game/screens/hud/use_minimap.js`, `hud/MinimapModal.jsx`, `hud/minimap_engine.js`                        |
 
 **Live-lane fences respected**: `packages/engine/src/tactical/*` + the entity-placeholder /
@@ -431,7 +431,7 @@ src/i18n`, root `bun run lint` + `bun run typecheck`; a driven dev-server boot s
 
 ### Slice D — the QA rail (the contract, executable)
 
-- **Files**: `packages/frontend/e2e/hack_mode_boot.spec.ts` (new; own file only — no shared spec
+- **Files**: `packages/frontend/e2e/hack_live_swap.spec.ts` (own file only — no shared spec
   edits).
 - **Build**: boot `/game-world?dev&hack=1` (the `session_position_restore.spec.ts` rig: DEV key,
   create-if-empty, `__voxel_ctl` probes); assert the §3 contract: instant readiness (veil gone,
@@ -441,7 +441,7 @@ src/i18n`, root `bun run lint` + `bun run typecheck`; a driven dev-server boot s
 === 0` + draw-call ceiling as the perf tooth.
 - **Accept**: spec green headless against the dev server; documented at the top as "the QA
   contract of docs/design/hack_mode_spec.md §3 — drivers code against THIS".
-- **Prove**: `cd packages/frontend && bunx playwright test e2e/hack_mode_boot.spec.ts`.
+- **Prove**: `cd packages/frontend && bunx playwright test e2e/hack_live_swap.spec.ts`.
 
 Every slice: conventional commit, its files only, root `bun run test` / `lint` / `typecheck`
 verbatim before handing back (CI-exact-invocation law). Attempt budget 2 per slice, then

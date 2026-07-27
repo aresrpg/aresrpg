@@ -211,9 +211,9 @@ scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at th
   there first) and ratchet the tree against `scripts/arch/semgrep_baseline.json`; import law lives
   in `.dependency-cruiser.cjs` — `fight-core-hermetic` (resolved ALLOWLIST generalizing
   `ares test fightcore` gate a), `engine-quarantine` (engine3 only under game/ + world-shell/,
-  both clean = hard-zero), `no-circular` — ratcheted by the now-empty
-  `.dependency-cruiser-known-violations.json` (issue #95 burned down the 2026-07-17 census). Non-empty
-  baselines ARE burn-down worklists; `--write-baseline` tightens
+  both clean = hard-zero), `no-circular` — zero debt is represented by no baseline file (issue
+  #95 burned down the 2026-07-17 census). Non-empty baselines ARE burn-down worklists;
+  `--write-baseline` tightens
   after a fix, never absorbs new debt unreviewed. semgrep binary absent → that half SKIPs green
   (`uv tool install semgrep` | `brew install semgrep`); depcruise runs under bun (node 25 is
   outside its support matrix).
