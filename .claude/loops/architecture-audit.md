@@ -6,6 +6,9 @@
 the counter is that every verdict must cite file:line evidence or name the exact absence checked
 (globs searched + a positive control). An unevidenced verdict is an invalid run.
 
+**Handoff:** ssot-watch owns the hourly recent-landings window and rotating global census.
+architecture-audit defers to existing ssot-watch rows: add comments, never twin issues.
+
 ## Inputs (artifacts only — never chat memory)
 - The diff since the last audit issue's recorded commit anchor (`git diff <anchor>..edge`).
 - `docs/CODE_LAW.md` + `FROZEN.md` + the ADR set (`docs/adr/`).

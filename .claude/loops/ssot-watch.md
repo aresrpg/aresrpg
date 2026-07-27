@@ -4,6 +4,9 @@ Standing priority (owner ruling 2026-07-28): duplicates and multiple sources of 
 critical defect class — this loop exists to catch them within hours of their creation, before
 they diverge.
 
+**Handoff:** ssot-watch owns the hourly recent-landings window and rotating global census.
+architecture-audit defers to existing ssot-watch rows: add comments, never twin issues.
+
 ## Every pass, two sweeps
 
 ### 1. The recent-landings sweep (primary — every pass)
