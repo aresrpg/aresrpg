@@ -43,6 +43,7 @@ import {
   pack_qty_for_job,
 } from './seed_economy.mjs'
 import { seed_mob_stat_values } from './seed_mob_stats.mjs'
+import { encode_effect_value } from './spell_wire.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 
@@ -358,26 +359,29 @@ const fxVec = (tx, effects) =>
   tx.makeMoveVec({ type: T.effect, elements: effects })
 // Universal effect envelope (PHASE 8): all 22 corpus effect kinds are defined discriminants ≤ 29, so
 // `new_effect` builds them all and `is_legal` admits each (engine kinds the resolver doesn't yet READ mint
-// fine as data — balance C-6 FOLLOWUPS). element null→255; `value` = MAGNITUDE (sign rides FLAG_NEGATIVE);
+// fine as data — balance C-6 FOLLOWUPS). element null→255; `value`/`flags` ride spell_wire.mjs's
+// `encode_effect_value` (#1250 — CENTERED for alter_stat/alter_resist, magnitude passthrough otherwise);
 // `phase` per kind (glyph/dot tick at turn START, else on-enter=0) — signature in foundation spell_effect.
 const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
-const effectFx = (tx, e) =>
-  tx.moveCall({
+const effectFx = (tx, e) => {
+  const { value, flags } = encode_effect_value(e.kind, e.value ?? 0, e.flags ?? 0)
+  return tx.moveCall({
     target: `${CFND}::spell_effect::new_effect`,
     arguments: [
       tx.pure.u8(e.kind),
       tx.pure.u8(e.element ?? 255),
-      tx.pure.u64(Math.abs(e.value ?? 0)),
+      tx.pure.u64(value),
       tx.pure.u8(e.area_shape ?? 0),
       tx.pure.u64(e.area_size ?? 0),
       tx.pure.u8(e.target_filter ?? 0),
       tx.pure.u8(e.chance ?? 100),
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),
-      tx.pure.u8(e.flags ?? 0),
+      tx.pure.u8(flags),
       tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
     ],
   })
+}
 // Mob spell effects: `op` + string `element` + magnitude in `base` (dmg/dot/life-steal) or `value`
 // (points/stat), no target_filter. Normalize to the effectFx envelope (numeric element, magnitude in
 // `value`, offensive → TF_NOT_TEAM = spell_effect::damage's own default).

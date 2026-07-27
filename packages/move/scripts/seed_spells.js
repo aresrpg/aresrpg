@@ -26,7 +26,10 @@
 import { bcs } from '@mysten/sui/bcs'
 import { Transaction } from '@mysten/sui/transactions'
 
+import { K_ALTER_RESIST } from '../../sim/src/spell_effect.js'
+
 import { keypair, sui_client } from './client.js'
+import { encode_effect_value } from './spell_wire.mjs'
 
 const CORE = process.env.CORE_PKG
 const FND = process.env.FOUNDATION_PKG
@@ -128,11 +131,14 @@ const reduce_fx = (tx, g, element, flat, turns) =>
   })
 
 // resist_fx(element, pct, turns): new_effect(k_alter_resist, element, pct, shape_point, 0, tf_not_enemy, 100, turns, 0, flag_percent, phase_on_enter)
+// alter_resist (kind 11) is a SIGNED kind (#1250/#904) — `pct` is the AUTHORED delta (every caller here
+// authors a non-negative buff), so it rides CENTERED via spell_wire.mjs's encode_effect_value; FLAG_PERCENT
+// still comes straight off the chain getter since FLAG_NEGATIVE never applies to a non-negative pct.
 const resist_fx = (tx, g, element, pct, turns) =>
   tx.moveCall({
     target: `${FND}::spell_effect::new_effect`,
     arguments: [
-      g.k_alter_resist(), element, u64(tx, pct), g.shape_point(), u64(tx, 0),
+      g.k_alter_resist(), element, u64(tx, encode_effect_value(K_ALTER_RESIST, pct).value), g.shape_point(), u64(tx, 0),
       g.tf_not_enemy(), u8(tx, 100), u8(tx, turns), u8(tx, 0), g.flag_percent(), g.phase_on_enter(),
     ],
   })

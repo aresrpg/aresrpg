@@ -39,11 +39,14 @@
 // `Effect.value` is a u64, but alter_stat (9) and alter_resist (11) author BOTH signs, so the chain rides those
 // two kinds CENTERED (#904 final ruling — the same convention gear ItemStatistics and mob resistances use; both
 // runtimes read the SIGN off the centered value, never off FLAG_NEGATIVE). The payload therefore carries the REAL
-// authored delta (+42, −17) and this driver encodes it at the wire door through the ONE dialect home,
-// `packages/fight/src/fight_status_snapshot.js` (`encode_status_value` / `is_signed_status_kind`). There is no
-// local shift constant here on purpose: a second copy of that number is how the two dialects were born.
-// `FLAG_NEGATIVE` is DERIVED from the delta's sign (never an independent authored fact) — an authored flag that
-// disagrees with the sign is corrected, so the sign lives exactly once.
+// authored delta (+42, −17) and this driver encodes it at the wire door through `spell_wire.mjs`'s
+// `encode_effect_value` — the ONE shared home every `new_effect` PTB encoder under packages/move/scripts/ now
+// imports (#1250), itself riding the ONE decode home, `packages/fight/src/fight_status_snapshot.js`
+// (`encode_status_value` / `is_signed_status_kind`). There is no local shift constant here on purpose: a second
+// copy of that number is how the two dialects were born. `FLAG_NEGATIVE` is DERIVED from the delta's sign
+// (never an independent authored fact) — an authored flag that disagrees with the sign is corrected, so the
+// sign lives exactly once. Every default mirrors `seed_spells_phase.mjs` (the mint path) byte-identically BY
+// CONSTRUCTION now — both ride the same `encode_effect_value`, not two hand-kept copies of the same rule.
 //
 // ── THE BATCH WIDTH (arithmetic, not a vibe) ────────────────────────────────────────────────────────
 // A kit is command-DENSE and, unlike loot, VARIABLE: one set_spells expands to
@@ -75,6 +78,7 @@ import {
 } from '../../sim/src/spell_effect.js'
 
 import { getClient as get_client } from './ceremony_lib.mjs'
+import { encode_effect_value } from './spell_wire.mjs'
 
 export { FLAG_DISPELLABLE, FLAG_NEGATIVE, K_ALTER_RESIST, K_ALTER_STAT, K_APPLY_DOT, K_DAMAGE }
 
@@ -127,18 +131,19 @@ export function encode_effect(effect) {
   if (signed && (delta < SIGNED_DELTA_MIN || delta > SIGNED_DELTA_MAX))
     throw new Error(`signed delta ${delta} outside the centered domain [${SIGNED_DELTA_MIN}, ${SIGNED_DELTA_MAX}]`)
   const authored_flags = to_int(effect?.flags ?? 0, 'flags', MAX_U8)
+  // the sign lives ONCE — in the value; the flag is re-derived, so an authored disagreement is corrected
+  const { value, flags } = encode_effect_value(kind, delta, authored_flags)
   return {
     kind,
     element: to_int(effect?.element ?? 255, 'element', MAX_U8),
-    value: signed ? encode_status_value(kind, delta) : delta,
+    value,
     area_shape: to_int(effect?.area_shape ?? 0, 'area_shape', MAX_U8),
     area_size: to_int(effect?.area_size ?? 0, 'area_size'),
     target_filter: to_int(effect?.target_filter ?? 0, 'target_filter', MAX_U8),
     chance: to_int(effect?.chance ?? 100, 'chance', MAX_U8),
     turns: to_int(effect?.turns ?? 0, 'turns', MAX_U8),
     stat: to_int(effect?.stat ?? 0, 'stat', MAX_U8),
-    // the sign lives ONCE — in the value; the flag is re-derived, so an authored disagreement is corrected
-    flags: signed ? (authored_flags & ~FLAG_NEGATIVE) | (delta < 0 ? FLAG_NEGATIVE : 0) : authored_flags,
+    flags,
     phase: to_int(effect?.phase ?? KIND_PHASE[kind] ?? 0, 'phase', MAX_U8),
   }
 }
