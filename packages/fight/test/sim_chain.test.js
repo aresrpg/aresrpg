@@ -174,9 +174,46 @@ const build_chain = ({ seed = SEED, fight_id = FIGHT_ID } = {}) => {
 
 const living = (state, team) => state[team].filter((e) => e.health > 0)
 
-/** The scripted turn for a player seat: cast a rotating spell at the nearest living mob (or its own cell for
- *  the self-heal / trap), then step toward it. Pure over the state — no clock, no rng, no board assumptions. */
-const player_staged = (state, entity_id, round) => {
+/** The rotation the scripted seat cycles — every arm of the kit, one per round. */
+const ROTATION = ['s_nuke', 's_aoe', 's_dot', 's_push', 's_trap', 's_heal', 's_jab']
+
+/** The kit's own authored reach and free-cell demand, read from PLAYER_KIT rather than restated — a copy would
+ *  be a second home for the same fact and would drift the moment a kit entry changed (#1033). */
+const LEVEL_OF = Object.fromEntries(PLAYER_KIT.map((spell) => [spell.id, spell.levels[0]]))
+
+/** The first free walkable 4-neighbour of `cell`, or undefined. A `free_cell` spell (the trap) aborts on an
+ *  OCCUPIED anchor, so a trap staged at the caster's own feet is a command the reducer refuses outright. */
+const free_neighbour = (state, arena, cell) => {
+  const taken = new Set(
+    [...state.team0, ...state.team1].filter((e) => e.health > 0).map((e) => `${e.cell.x},${e.cell.y}`)
+  )
+  return [
+    { x: cell.x + 1, y: cell.y },
+    { x: cell.x - 1, y: cell.y },
+    { x: cell.x, y: cell.y + 1 },
+    { x: cell.x, y: cell.y - 1 },
+  ].find(
+    (c) =>
+      c.x >= 0 &&
+      c.y >= 0 &&
+      c.x < arena.width &&
+      c.y < arena.height &&
+      arena.cells[c.y * arena.width + c.x] === 0 &&
+      !taken.has(`${c.x},${c.y}`)
+  )
+}
+
+/** The scripted turn for a player seat: cast a rotating spell at the nearest living mob (at its own cell for the
+ *  self-heal, at a free neighbouring cell for the trap), then step toward it. Pure over the state and the arena
+ *  — no clock, no rng, no board assumptions.
+ *
+ *  #1033 — THE CAST IS STAGED ONLY WHEN THE REDUCER CAN RESOLVE IT. The teams spawn ~25 cells apart on this
+ *  seed against a kit that reaches 14, and the trap demands a `free_cell` anchor it never got while aimed at
+ *  the caster's own feet, so the ungated script fed `reduce` commands it refused outright — silently, for the
+ *  whole approach phase and for every trap in the run. A refused cast spends no AP and emits no event, so the
+ *  gate simply measured less than it claimed. Staging only resolvable casts is what lets the fold-count
+ *  sentinel below assert the corpus is fully live. */
+const player_staged = (state, entity_id, round, arena) => {
   const me = state.team0.find((e) => e.id === entity_id)
   const mobs = living(state, 'team1')
   if (!me || mobs.length === 0) return []
@@ -186,10 +223,13 @@ const player_staged = (state, entity_id, round) => {
       ? m
       : best
   )
-  const rotation = ['s_nuke', 's_aoe', 's_dot', 's_push', 's_trap', 's_heal', 's_jab']
-  const spell_id = rotation[round % rotation.length]
-  const self_targeted = spell_id === 's_heal' || spell_id === 's_trap'
-  const target = self_targeted ? me.cell : nearest.cell
+  const spell_id = ROTATION[round % ROTATION.length]
+  const level_of_spell = LEVEL_OF[spell_id]
+  const target = level_of_spell.free_cell
+    ? free_neighbour(state, arena, me.cell)
+    : spell_id === 's_heal'
+      ? me.cell
+      : nearest.cell
   // One step toward the nearest mob, on the 4-connected axis with the larger gap (the sim rebuilds the
   // canonical route from the destination alone — handle_move's destination-only door).
   const dx = nearest.cell.x - me.cell.x
@@ -198,8 +238,10 @@ const player_staged = (state, entity_id, round) => {
     Math.abs(dx) >= Math.abs(dy)
       ? { x: me.cell.x + Math.sign(dx), y: me.cell.y }
       : { x: me.cell.x, y: me.cell.y + Math.sign(dy) }
+  const in_reach =
+    target != null && Math.abs(target.x - me.cell.x) + Math.abs(target.y - me.cell.y) <= level_of_spell.range_max
   return [
-    { kind: 1, target: encode(target.x, target.y), spell_template_id: spell_id },
+    ...(in_reach ? [{ kind: 1, target: encode(target.x, target.y), spell_template_id: spell_id }] : []),
     ...(dx === 0 && dy === 0 ? [] : [{ kind: 0, target: encode(step.x, step.y) }]),
   ]
 }
@@ -210,9 +252,15 @@ const next_batch = (chain, round) => {
   const actor = current_actor(chain)
   if (actor == null) return null
   const mob = pending_mob_turn(chain)
-  return mob
-    ? run_ai_turn(chain, mob, { now_ms: NOW })
-    : submit_commands(chain, commands_from_staged(player_staged(chain.sim_state, actor, round), actor), { now_ms: NOW })
+  // `staged_casts` is the LEFT half of the inertness sentinel below: the cast commands this batch put IN, to be
+  // compared against the `Cast` rows that came OUT. A mob batch is driven by `run_ai_turn` (production code, not
+  // this corpus), so it stages nothing of ours and is not measured.
+  if (mob) return { ...run_ai_turn(chain, mob, { now_ms: NOW }), staged_casts: null }
+  const staged = player_staged(chain.sim_state, actor, round, chain.arena)
+  return {
+    ...submit_commands(chain, commands_from_staged(staged, actor), { now_ms: NOW }),
+    staged_casts: staged.filter((entry) => entry.kind === 1).map((entry) => entry.spell_template_id),
+  }
 }
 
 /**
@@ -233,7 +281,12 @@ const drive = ({ seed = SEED, fight_id = FIGHT_ID, max_batches = 60 } = {}) => {
         chain: result.chain,
         batches: [
           ...acc.batches,
-          { version: result.version, receipt: result.receipt, sim: sim_projection(result.chain.sim_state) },
+          {
+            version: result.version,
+            receipt: result.receipt,
+            staged_casts: result.staged_casts,
+            sim: sim_projection(result.chain.sim_state),
+          },
         ],
       }
     },
@@ -343,6 +396,29 @@ describe('THE DRIFT GATE — one observable, two folders (spec §4.4)', () => {
     expect(run.batches.length).toBeGreaterThan(6)
     const dead = [...run.chain.sim_state.team0, ...run.chain.sim_state.team1].filter((e) => e.health <= 0)
     expect(dead.length).toBeGreaterThan(0)
+  })
+
+  // #1033 — THE INERTNESS SENTINEL, the durable half of that row. A drift gate whose inputs silently no-op
+  // measures less than it claims: the corpus used to stage every cast at the nearest mob regardless of the
+  // spell's `range_max`, and every trap at the caster's own occupied feet against a `free_cell` spell, so the
+  // reducer refused them and they folded nothing (`handle_cast` returns [] on an illegal resolution — no event,
+  // no AP, no state). The gate read green over a fight whose whole approach phase, and whose every trap, were
+  // dead commands. This asserts the fold COUNT the corpus expects — every staged cast comes back out as a
+  // `Cast` row — plus the coverage floor that keeps the count honest: a script that stages NOTHING would
+  // otherwise satisfy 0 === 0 forever. Both halves survive any later reshape of the script or the board.
+  test('every staged cast FOLDS — the corpus stages no inert command', () => {
+    const measured = run.batches
+      .map((batch, index) => ({
+        batch: index,
+        staged_casts: batch.staged_casts,
+        cast_rows: batch.receipt.events.filter((e) => e.type.endsWith('::Cast')).length,
+      }))
+      .filter((row) => row.staged_casts != null)
+    // named batch by batch, so an inert command reports the exact turn it was staged on
+    expect(measured.filter((row) => row.cast_rows !== row.staged_casts.length)).toEqual([])
+    // …and every arm of the rotation is actually cast at least once — the fold count the corpus EXPECTS
+    const cast_spells = new Set(measured.flatMap((row) => row.staged_casts))
+    expect(ROTATION.filter((spell) => !cast_spells.has(spell))).toEqual([])
   })
 
   test('the encoder fold equals the sim projection at EVERY batch boundary', () => {
@@ -580,3 +656,4 @@ describe('loudness — the mock never drops a fact', () => {
     expect(commands_from_staged([], 'sim_c1')).toEqual([{ type: 'end_turn', entity_id: 'sim_c1' }])
   })
 })
+
