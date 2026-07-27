@@ -26,15 +26,18 @@ function fixture_repo() {
 
   const fixture_path = path.join(dir, 'packages/sim/test/fixtures/replay/case.json')
   const golden_path = path.join(dir, 'packages/sim/test/vectors/case_golden.json')
+  const root_golden_path = path.join(dir, 'test/gold/receipts/case.json')
   fs.mkdirSync(path.dirname(fixture_path), { recursive: true })
   fs.mkdirSync(path.dirname(golden_path), { recursive: true })
+  fs.mkdirSync(path.dirname(root_golden_path), { recursive: true })
   fs.writeFileSync(fixture_path, '{"state":"seed"}\n')
   fs.writeFileSync(golden_path, '{"state":"seed"}\n')
+  fs.writeFileSync(root_golden_path, '{"state":"seed"}\n')
   git('add', '.')
   git('-c', 'commit.gpgsign=false', 'commit', '--no-verify', '--quiet', '--message', 'seed')
   const base = git('rev-parse', 'HEAD').trim()
   git('update-ref', 'refs/remotes/origin/edge', base)
-  return { dir, git, base, fixture_path, golden_path }
+  return { dir, git, base, fixture_path, golden_path, root_golden_path }
 }
 
 function commit_all(fixture, message) {
@@ -121,10 +124,12 @@ describe('fixture-adjudication constraint row', () => {
 
     fs.writeFileSync(new_fixture_path, '{"state":"now-existing"}\n')
     fs.writeFileSync(fixture.golden_path, '{"state":"mutated"}\n')
+    fs.writeFileSync(fixture.root_golden_path, '{"state":"mutated"}\n')
     commit_all(fixture, 'test: mutate fixtures\n\nAdjudicated-by: Evidence Reviewer <reviewer@aresrpg.world>')
     result = run_gate(fixture)
     expect(result.status).toBe(0)
     expect(result.output).toContain('packages/fight/test/fixtures/new.json')
     expect(result.output).toContain('packages/sim/test/vectors/case_golden.json')
+    expect(result.output).toContain('test/gold/receipts/case.json')
   })
 })
