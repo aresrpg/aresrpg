@@ -14,6 +14,15 @@
 
 import { describe, expect, it } from 'bun:test'
 import { produce_receipt_render_turns } from '@aresrpg/fight/fight_render_events'
+import { encode } from '@aresrpg/fight/los'
+import {
+  arena_from_board,
+  commands_from_staged,
+  create_sim_chain,
+  derive_board,
+  submit_commands,
+} from '@aresrpg/fight/sim_chain'
+import * as SE from '@aresrpg/sim/spell_effect'
 
 import { emit_cast_log, emit_deaths, emit_death_line, emit_drain_lines, emit_trap_line } from './fight.js'
 import { resolve_segment_text } from '../../screens/hud/world/combat_log_names.js'
@@ -50,6 +59,85 @@ const drain_outcome = ({ requested, removed, point_kind = 1 }) => {
       resolve_fighter_id: ({ is_mob, idx }) => (is_mob ? `mob-${idx}` : `p${Number(idx) + 1}`),
     }
   )
+  return events.find((event) => event.payload?.status === 'DRAIN')?.payload
+}
+
+/** Run one real simulator cast, then pass its receipt through the production Drain presenter. */
+const sim_drain_outcome = ({ seed, requested, caster_wisdom, target_dodge }) => {
+  const spell_id = `drain_${requested}`
+  const { board } = derive_board(seed)
+  const arena = arena_from_board(board)
+  const player_cell = arena.spawns_a[0]
+  const mob_cell = arena.spawns_b[0]
+  const make_fighter = (id, cell, is_player, stats, deck) => ({
+    id,
+    name: id,
+    cell,
+    health: 100,
+    health_max: 100,
+    ap: 6,
+    ap_max: 6,
+    mp: 3,
+    mp_max: 3,
+    ap_used: 0,
+    mp_used: 0,
+    is_player,
+    template_id: is_player ? 'senshi' : '0xmob_template',
+    level: 20,
+    stats,
+    effects: [],
+    spell_levels: Object.fromEntries(deck.map((id) => [id, 1])),
+    ap_reserve: 0,
+  })
+  const chain = create_sim_chain({
+    seed,
+    fight_id: `dodge:${seed}`,
+    group_template: '0xgroup',
+    templates_raw: [
+      {
+        id: spell_id,
+        levels: [
+          {
+            ap_cost: 0,
+            range_min: 0,
+            range_max: 99,
+            modifiable_range: false,
+            line_launch: false,
+            line_of_sight: false,
+            free_cell: false,
+            casts_per_turn: 1,
+            casts_per_target: 1,
+            cooldown_turns: 0,
+            crit_rate: 0,
+            effects: [
+              {
+                kind: SE.K_REMOVE_POINTS,
+                stat: SE.POINT_AP,
+                value: requested,
+                flags: SE.FLAG_DODGE,
+                target_filter: SE.TF_NOT_TEAM,
+                chance: 100,
+              },
+            ],
+            crit_effects: [],
+          },
+        ],
+      },
+    ],
+    team0: [make_fighter('p0', player_cell, true, { wisdom: caster_wisdom }, [spell_id])],
+    team1: [make_fighter('mob_0', mob_cell, false, { ap_dodge: target_dodge }, [])],
+  })
+  const receipt = submit_commands(
+    chain,
+    commands_from_staged(
+      [{ kind: 1, target: encode(mob_cell.x, mob_cell.y), spell_template_id: spell_id }],
+      'p0'
+    )
+  ).receipt
+  const { events } = produce_receipt_render_turns(receipt.events, {
+    fight_id: `dodge:${seed}`,
+    resolve_fighter_id: ({ is_mob, idx }) => (is_mob ? `mob-${idx}` : `player-${idx}`),
+  })
   return events.find((event) => event.payload?.status === 'DRAIN')?.payload
 }
 
@@ -324,6 +412,44 @@ describe('emit_drain_lines — one decoded drain outcome, one simple line per ha
 
     expect(actions).toHaveLength(1)
     expect(find_by_prefix(actions, 'ap-drain').message).toBe('Aldric drained 2 AP from Sewer Rat')
+  })
+})
+
+describe('sim fight → Drain row → combat log', () => {
+  const fighters = new Map([
+    ['player-0', { name: 'Aldric' }],
+    ['mob-0', { name: 'Sewer Rat' }],
+  ])
+
+  it('a full dodge speaks the pinned dodge line from the simulator receipt', () => {
+    const outcome = sim_drain_outcome({
+      seed: 0,
+      requested: 2,
+      caster_wisdom: 0,
+      target_dodge: 100,
+    })
+    const { actions, dispatch } = recorder()
+
+    emit_drain_lines(() => ({ fight: { fighters } }), dispatch, outcome)
+
+    expect(actions.map((action) => action.payload.message)).toEqual(['Sewer Rat dodged the loss of 2 AP'])
+  })
+
+  it('a partial dodge speaks the loss line and the pinned dodge line from the same simulator receipt', () => {
+    const outcome = sim_drain_outcome({
+      seed: 424242,
+      requested: 3,
+      caster_wisdom: 200,
+      target_dodge: 1,
+    })
+    const { actions, dispatch } = recorder()
+
+    emit_drain_lines(() => ({ fight: { fighters } }), dispatch, outcome)
+
+    expect(actions.map((action) => action.payload.message)).toEqual([
+      'Aldric drained 1 AP from Sewer Rat',
+      'Sewer Rat dodged the loss of 2 AP',
+    ])
   })
 })
 
