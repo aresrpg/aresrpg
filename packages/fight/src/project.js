@@ -508,7 +508,9 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   const my_entity_id = spectator
     ? null
     : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
-  const active_entity_id = entity_id_of_key(view, p.active)
+  // Control follows the canonical TurnStarted/snapshot turn anchor. `p.active` is deliberately behind while a
+  // receipt wave plays; using it here made two clients agree on truth yet name different owners (a co-op deadlock).
+  const active_entity_id = entity_id_of_key(view, c.active)
   // ④+⑦b THE LIVE trap projection (ruled 07-19) — the sim door reads THIS (state_from_view/evolve_flush_casts),
   // never trap_overlay. A durable trap is LIVE unless it's `gone` (a committed entry detonated it permanently)
   // or a living PRESENTED fighter entered its zone after placement (the optimistic spring — reversible if the
