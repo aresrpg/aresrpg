@@ -1083,6 +1083,10 @@ describe('S-51b static refs — kind-only build with ZERO client', () => {
     expect(by_id[shard.id].mutable).toBe(true) // &mut FightRegistry (this world's shard)
     const latch =
       IDS.aresrpg.FIGHT_LATCH_SHARDS[fight_shard_index(A.character_id)]
+    expect(fight_shard_index(A.world_id)).toBe(
+      fight_shard_index(A.character_id),
+    )
+    expect(latch.id).not.toBe(shard.id) // equal indexes still select distinct family objects
     expect(by_id[latch.id].mutable).toBe(true) // &mut FightLatch (this character's shard)
     expect(by_id[IDS.aresrpg.GAME_CONFIG].mutable).toBe(false) // &GameConfig
     expect(by_id[IDS.aresrpg.VERSION].mutable).toBe(false) // &Version
