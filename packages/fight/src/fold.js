@@ -351,8 +351,33 @@ export const recompute = (draft, now) => {
             ...board_facts,
             occupied_cells,
           }).map((cell) => encoded_cell(cell, GRID_W))
-    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version })
+    const event_idx = Number(entry.event_idx ?? 0)
+    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version, event_idx })
     cell_at.set(key, to)
+  }
+  // THE SEQUENCE (#1219, the regression the crossing widening above shipped): a whole turn commits as ONE receipt
+  // at ONE version, so a walk and a trap cast in that same turn are indistinguishable by version — and a walk that
+  // happened BEFORE the trap existed retired it on arrival ("cast a trap onto a cell of my own earlier path — it
+  // never appears"). The log is already ordered `(version, event_idx)`, and a trap's placement is the `Cast` row
+  // that targeted its anchor, so the ordering is READ off the receipts rather than stored. LAST such row wins: a
+  // re-cast on a freed anchor is a new trap, and only crossings after THAT placement may retire it.
+  const placed_at = new Map()
+  for (const entry of authoritative_tail)
+    if (entry.kind === 'Cast' && entry.target_cell != null)
+      placed_at.set(Number(entry.target_cell), {
+        version: Number(entry.version),
+        event_idx: Number(entry.event_idx ?? 0),
+      })
+  // A placement whose row is NOT in this tail predates the whole window, so every crossing in it is after the
+  // trap — the permissive default this ledger has always had (it errs toward "it stays", never toward inventing
+  // an ordering it cannot see).
+  const after_placement = (entry, trap) => {
+    const placement = trap.cells.map((cell) => placed_at.get(Number(cell))).find(Boolean)
+    if (!placement) return true
+    return (
+      entry.version > placement.version ||
+      (entry.version === placement.version && entry.event_idx >= placement.event_idx)
+    )
   }
   const occupied_cells = new Set(
     Object.values(chain_committed.fighters ?? {})
@@ -365,7 +390,10 @@ export const recompute = (draft, now) => {
       (cell) =>
         occupied_cells.has(cell) ||
         committed_entries.some(
-          (entry) => entry.cell === Number(cell) && entry.version >= Number(t.basis_version ?? entry.version)
+          (entry) =>
+            entry.cell === Number(cell) &&
+            entry.version >= Number(t.basis_version ?? entry.version) &&
+            after_placement(entry, t)
         )
     )
       ? t
