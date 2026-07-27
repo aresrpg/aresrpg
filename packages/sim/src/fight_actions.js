@@ -2,8 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Immutable fight transitions. Shuffle and tackle use the single deterministic integer PRNG thread.
 
-import { rng_int } from './prng.js'
+import { rng_int, rng_next, rng_seed } from './prng.js'
 import { turn_rng_of, with_turn_rng } from './combat_clock.js'
+import { tackle_seed, turn_seed } from './turn_seed.js'
 import {
   find_entity,
   next_id,
@@ -27,19 +28,28 @@ import {
 
 // ── Movement + tackle ───────────────────────────────────────────────────────────
 // The contest math lives in fight_tackle.js (the Move-parity formula home, golden-pinned by
-// test/tackle_golden.test.js); this path owns only the roll draw off the explicit turn_rng thread + state writes.
+// test/tackle_golden.test.js); this path owns only the roll DRAW + the state writes. Two draws, exactly as the
+// chain has them (actions.move:49-63): a PLAYER move reads the public turn clock — previewable, so the board's
+// `next_move_tackle` gate and this resolver decide the SAME contest — while a mob move draws the crank thread.
 
 /**
  * Contest the start-cell tackle ONCE: every living enemy adjacent to `entity_id`'s current cell locks the exit
- * as one exact product fraction (fight_tackle.js — the Move-parity math home). Returns the turn_rng-advanced state
- * plus whether the mover ESCAPED; a failed escape applies the AP/MP penalty and denies the move. No adjacent
- * enemy ⇒ a free escape with NO roll (turn_rng untouched). The single home shared by apply_move and the ordinary-move
- * trap walk (reduce.js) — both contest exactly once, before any cell is entered.
+ * as one exact product fraction (fight_tackle.js — the Move-parity math home). Returns the state plus whether
+ * the mover ESCAPED; a failed escape applies the AP/MP penalty and denies the move. No adjacent enemy ⇒ a free
+ * escape with NO roll (no draw at all). The single home shared by apply_move and the ordinary-move trap walk
+ * (reduce.js) — both contest exactly once, before any cell is entered.
+ *
+ * A PLAYER move with a turn clock draws `rng_next(tackle_seed(turn_seed(clock), slot, live mp))` and leaves the
+ * crank thread ALONE (#1207) — the twin of spell_formula::tackle_seed, so the client previews the exact escape
+ * the resolver will roll. Moves never advance the slot; the runner's MP reprices every re-attempt. Everything
+ * else (mob moves, standalone fixtures) keeps the crank draw off `turn_rng`.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
+ * @param {import('./reduce.js').ReduceContext['turn_context']|null} [turn_context] the public clock at this
+ *   move's action position; ignored for a non-player mover.
  * @returns {{ state: import('./fight_state.js').FightState, escaped: boolean }}
  */
-export const contest_tackle = (state, entity_id) => {
+export const contest_tackle = (state, entity_id, turn_context = null) => {
   const entity = find_entity(state, entity_id)
   if (!entity) return { state, escaped: true }
   const adjacent_enemies = find_adjacent_enemies(state, entity.cell, entity_id)
@@ -49,9 +59,20 @@ export const contest_tackle = (state, entity_id) => {
     effective_stats(entity).agility ?? 0,
     adjacent_enemies.map(e => effective_stats(e).agility ?? 0),
   )
-  const roll = rng_int(turn_rng_of(state), escape.den)
-  if (roll.value < escape.num)
-    return { state: with_turn_rng(state, roll.state), escaped: true }
+  // Same gate the cast path uses for its damage/crit rolls (fight_spells.js): clock + player + a stamped slot.
+  const clocked =
+    !!turn_context && !!entity.is_player && turn_context.slot != null
+  const crank = clocked ? null : rng_int(turn_rng_of(state), escape.den)
+  const roll = clocked
+    ? rng_next(
+        rng_seed(
+          tackle_seed(turn_seed(turn_context), turn_context.slot, entity.mp),
+        ),
+      ).value % escape.den
+    : crank.value
+  // A clocked draw is scratch: it never advances the fight's crank thread.
+  const threaded = clocked ? state : with_turn_rng(state, crank.state)
+  if (roll < escape.num) return { state: threaded, escaped: true }
   // A failed escape loses the failed fraction of both pools and denies movement.
   const { ap_lost, mp_lost } = tackle_losses(
     entity.ap,
@@ -59,15 +80,11 @@ export const contest_tackle = (state, entity_id) => {
     escape.num,
     escape.den,
   )
-  const tackled_state = update_entity(
-    with_turn_rng(state, roll.state),
-    entity_id,
-    e => ({
-      ...e,
-      ap: Math.max(0, e.ap - ap_lost),
-      mp: Math.max(0, e.mp - mp_lost),
-    }),
-  )
+  const tackled_state = update_entity(threaded, entity_id, e => ({
+    ...e,
+    ap: Math.max(0, e.ap - ap_lost),
+    mp: Math.max(0, e.mp - mp_lost),
+  }))
   return { state: tackled_state, escaped: false }
 }
 
@@ -76,9 +93,10 @@ export const contest_tackle = (state, entity_id) => {
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @param {import('./cell.js').Cell[]} path   inclusive of the start cell
+ * @param {import('./reduce.js').ReduceContext['turn_context']|null} [turn_context]
  * @returns {{ state: import('./fight_state.js').FightState, success: boolean, error?: string, tackled?: boolean, cells_moved: number }}
  */
-export const apply_move = (state, entity_id, path) => {
+export const apply_move = (state, entity_id, path, turn_context = null) => {
   if (!state.started)
     return {
       state,
@@ -96,7 +114,7 @@ export const apply_move = (state, entity_id, path) => {
   if (entity.mp < mp_cost)
     return { state, success: false, error: 'INSUFFICIENT_MP', cells_moved: 0 }
 
-  const contest = contest_tackle(state, entity_id)
+  const contest = contest_tackle(state, entity_id, turn_context)
   if (!contest.escaped)
     return {
       state: contest.state,

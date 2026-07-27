@@ -184,10 +184,22 @@ describe('tackle / lock (agility escape roll)', () => {
     let sample_tackle = null
     for (let seed = 1; seed <= seeds; seed++) {
       const state = lock_state(seed, mover_agi, enemies)
-      const res = apply_move(state, 'mover', [
-        { x: 5, y: 5 },
-        { x: 6, y: 5 },
-      ])
+      const res = apply_move(
+        state,
+        'mover',
+        [
+          { x: 5, y: 5 },
+          { x: 6, y: 5 },
+        ],
+        {
+          world_seed: 12345,
+          spawn_id: 1,
+          turn_entropy: seed,
+          turn_ordinal: 1,
+          seat: 0,
+          slot: 0,
+        },
+      )
       if (res.success) escaped++
       if (res.tackled) {
         tackled++

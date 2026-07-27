@@ -65,6 +65,8 @@ const total_health = state =>
  * #577: `turn_context` is the public turn-seed clock
  * {world_seed, spawn_id, turn_entropy, turn_ordinal, seat, slot}; when
  * present, a PLAYER cast rolls its damage off it (previewable), mirroring the chain. Absent/mob -> crank roll.
+ * #1207: a PLAYER move's tackle escape draws off the SAME clock, so the board's preview and this resolver
+ * decide one contest instead of two independent coins.
  * @property {{ world_seed:number|bigint|string, spawn_id:number|bigint|string,
  *   turn_entropy:number|bigint|string, turn_ordinal:number|bigint|string,
  *   seat:number|bigint, slot:number }} [turn_context]
@@ -75,7 +77,8 @@ const total_health = state =>
  * @typedef {{ type: 'place', entity_id: string, cell: import('./cell.js').Cell }} CmdPlace
  * @typedef {{ type: 'ready', entity_id: string }} CmdReady
  * @typedef {{ type: 'start' }} CmdStart
- * @typedef {{ type: 'move', entity_id: string, path: import('./cell.js').Cell[] }} CmdMove
+ * @typedef {{ type: 'move', entity_id: string, path: import('./cell.js').Cell[],
+ *   turn_context?: ReduceContext['turn_context'] }} CmdMove
  * @typedef {{ type: 'cast', entity_id: string, spell_id: string, target: import('./cell.js').Cell,
  *   turn_context?: ReduceContext['turn_context'] }} CmdCast
  * @typedef {{ type: 'end_turn', entity_id: string }} CmdEndTurn
@@ -441,7 +444,13 @@ const handle_move = (state, cmd, ctx) => {
  */
 const walk_path = (state, cmd, ctx) => {
   const terrain = cell => terrain_walkable(ctx.arena, cell)
-  const contest = contest_tackle(state, cmd.entity_id)
+  // #1207 — the same precedence handle_cast uses: a recorded capsule carries the exact public clock the live
+  // fold ran with, so a replayed move re-rolls the identical escape.
+  const contest = contest_tackle(
+    state,
+    cmd.entity_id,
+    cmd.turn_context ?? ctx.turn_context ?? null,
+  )
   if (!contest.escaped)
     return { state: contest.state, traversed: [], events: [], tackled: true }
   const walked = cmd.path.reduce(
