@@ -16,6 +16,8 @@ const bob_appearance = {
   color_1: 11,
   color_2: 22,
   color_3: 33,
+  level: 1,
+  experience: 0,
 }
 
 const player = (character_id) => ({ is_player: true, character_id })
@@ -46,7 +48,7 @@ describe('fight roster appearance adoption', () => {
       resolve_read = resolve
     })
     const published = []
-    let carried = []
+    let carried = [{ id: BOB, name: 'Mireth', level: 42, experience: 123_456 }]
     const ensure_roster = create_fight_roster_adoption({
       get_mine: () => [{ id: ALICE, name: 'Kaelen' }],
       get_fighters: () =>
@@ -65,14 +67,28 @@ describe('fight roster appearance adoption', () => {
 
     ensure_roster()
     expect(published).toHaveLength(1)
-    expect(published[0].find((row) => row.id === BOB)).toEqual({ id: BOB, name: BOB })
+    expect(published[0].find((row) => row.id === BOB)).toMatchObject({
+      id: BOB,
+      name: 'Mireth',
+      level: 42,
+      experience: 123_456,
+    })
 
     resolve_read(new Map([[BOB, bob_appearance]]))
     await read
     await flush()
 
     expect(published).toHaveLength(2)
-    expect(published[1].find((row) => row.id === BOB)).toBe(bob_appearance)
+    expect(published[1].find((row) => row.id === BOB)).toMatchObject({
+      id: BOB,
+      name: 'Mireth',
+      level: 42,
+      experience: 123_456,
+      male: false,
+      color_1: 11,
+      color_2: 22,
+      color_3: 33,
+    })
   })
 
   test('a new fight re-reads the partner and rejects the prior fight response', async () => {
@@ -110,7 +126,10 @@ describe('fight roster appearance adoption', () => {
     reads[0](new Map([[BOB, old_appearance]]))
     await flush()
 
-    expect(carried.find((row) => row.id === BOB)).toBe(new_appearance)
+    expect(carried.find((row) => row.id === BOB)).toMatchObject({
+      id: BOB,
+      color_1: new_appearance.color_1,
+    })
   })
 
   test('a rejected appearance read clears pending state so a later pass retries', async () => {
@@ -142,6 +161,9 @@ describe('fight roster appearance adoption', () => {
     await flush()
 
     expect(attempts).toBe(2)
-    expect(carried.find((row) => row.id === BOB)).toBe(bob_appearance)
+    expect(carried.find((row) => row.id === BOB)).toMatchObject({
+      id: BOB,
+      color_1: bob_appearance.color_1,
+    })
   })
 })

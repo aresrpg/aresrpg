@@ -74,6 +74,19 @@ const empty_adoption = (session_key) => ({
   last_roster: /** @type {any[]} */ ([]),
 })
 
+// read_character also carries immutable base progression. Fight roster adoption needs only identity/appearance;
+// carried `/v1` progression remains authoritative and must not be replaced by genesis experience.
+const appearance_roster_row = (character) => ({
+  id: character.id,
+  name: character.name,
+  classe: character.classe,
+  sex: character.sex,
+  male: character.male,
+  color_1: character.color_1,
+  color_2: character.color_2,
+  color_3: character.color_3,
+})
+
 /**
  * Create the live fight's roster adopter. Effects are injected for tests; production defaults read/write only at
  * this edge. The returned function is synchronous: it publishes the provisional book now and schedules a second
@@ -101,15 +114,23 @@ export function create_fight_roster_adoption({
 
   const push_roster = (session_key) => {
     if (get_session_key() !== session_key || adoption.session_key !== session_key) return
+    const carried = get_carried()
+    const carried_by_id = new Map(carried.map((row) => [String(row?.id), row]))
+    const resolved = [...adoption.known.values()]
+      .filter(Boolean)
+      .map((character) => ({
+        ...(carried_by_id.get(String(character.id)) ?? {}),
+        ...appearance_roster_row(character),
+      }))
     const rows = compose_fight_roster({
       mine: get_mine(),
-      resolved: [...adoption.known.values()].filter(Boolean),
-      carried: get_carried(),
+      resolved,
+      carried,
       fighters: get_fighters(),
     })
     if (!rows.length) return
     const signature = fight_roster_signature(rows)
-    if (signature === adoption.last_signature && get_carried() === adoption.last_roster) return
+    if (signature === adoption.last_signature && carried === adoption.last_roster) return
     adoption = { ...adoption, last_signature: signature, last_roster: rows }
     publish(rows)
   }
