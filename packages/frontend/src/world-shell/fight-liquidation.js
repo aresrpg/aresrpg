@@ -29,6 +29,7 @@ import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
 import { crank as tx_crank, force_start as tx_force_start } from './dungeon_actions'
 import { is_gone_error, read_object } from './run_reads.js'
 import { turn_liquidatable } from './fight_expiry_gate.js'
+import { error_executed_digest } from './tx_digest_error.js'
 import { CHAIN_STATUS_ACTIVE, CHAIN_STATUS_PLACEMENT } from './fight_chain_status.js'
 
 // TWO NAMESPACES LIVE IN THIS FILE, and they disagree on placement (#932) — so NEITHER is spelled here, both
@@ -43,12 +44,13 @@ let fired_for_deadline = /** @type {number | null} */ (null)
 let force_in_flight = false
 let force_fired_for_deadline = /** @type {number | null} */ (null)
 
-/** A tx failure that EXECUTED on-chain (digest exists — gas burned). dungeon_actions' sign() throws the
- *  humanized MoveAbort via tx_error(), whose `.cause` carries the structured abort; a pre-flight/network
- *  failure has no cause and usually no Move context. Conservative: treat a `.cause`-carrying error OR an
- *  explicit Move abort text as EXECUTED (latch); everything else as pre-flight (re-arm). */
-const executed_failure = (/** @type {any} */ error) =>
-  Boolean(error?.cause) || /MoveAbort|abort|EInvalid|ENot|deadline/i.test(String(error?.message ?? ''))
+/** A tx failure that EXECUTED on-chain (a digest exists — gas burned). #1262: this used to be a LOCAL heuristic
+ *  (`.cause` present, or an abort-shaped MESSAGE) that missed the shape the chain still charges for — a
+ *  submission that got its digest and then failed on the finality leg. It read that as "pre-flight, nothing
+ *  burned", re-armed the deadline, and turned a stale fight into one executed failing transaction per poll
+ *  (0.0213 SUI in one boot). The burn law now keys on its ONE structural proof, the digest dungeon_actions'
+ *  sign() stamps onto every post-submission failure — the same predicate the spend guard's circuit uses. */
+const executed_failure = (/** @type {any} */ error) => Boolean(error_executed_digest(error))
 
 /** The active turn's on-chain deadline has passed (and there IS a live turn to liquidate) — fight_expiry_gate.js
  *  is its ONE home now: the player-facing "this fight cannot advance" surface reads the SAME predicate (#882). */

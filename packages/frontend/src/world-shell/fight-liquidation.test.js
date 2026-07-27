@@ -11,6 +11,8 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, mock, spyOn } fr
 
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
 
+import { attach_executed_digest } from './tx_digest_error.js'
+
 /** @type {{ id: string, silent: boolean }[]} */
 let force_calls = []
 let force_impl = /** @type {(id: string, silent: boolean) => Promise<any>} */ (
@@ -181,7 +183,11 @@ describe('D110 placement force-start liquidation', () => {
   })
 
   it('LATCHES an executed on-chain race abort (losing racer): same window never re-fires; a fresh one does', async () => {
-    force_impl = () => Promise.reject(new Error('MoveAbort: ENotPlacement — already started'))
+    // #1262 FIXTURE CORRECTION: the latch keys on the DIGEST, not on abort-shaped prose, so this fixture now
+    // carries the shape production actually throws — dungeon_actions' sign() stamps the digest onto EVERY
+    // post-submission failure, and an on-chain abort is by definition post-submission.
+    force_impl = () =>
+      Promise.reject(attach_executed_digest(new Error('MoveAbort: ENotPlacement — already started'), '0xraced'))
     const d = expired_placement()
     // must not reject: the probe catches the executed abort (debug-only, silent) and LATCHES the deadline.
     expect(() => maybe_force_start(d, make_get(d))).not.toThrow()
