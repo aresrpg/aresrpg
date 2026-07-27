@@ -17,9 +17,10 @@
 import { Vector3 } from 'three'
 
 import { encode } from '@aresrpg/fight/los'
+import { fight_store } from '@aresrpg/fight/store'
 import { context } from '../store.js'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { fight_view } from '@aresrpg/fight/project'
+import { engine_view_of, fight_view } from '@aresrpg/fight/project'
 import { use_dungeon_turn } from '../screens/dungeon-turn.js'
 import { fight_end_state } from '../../fight-engine/fight_end_machine.js'
 import { cast_vfx, burst_vfx, is_burst_element } from '../fight_cast_vfx.js'
@@ -93,11 +94,35 @@ function dev_state() {
     me: fight?.my_entity_id ?? null,
     active: fight?.active_entity_id ?? null,
     turn: fight?.turn_number ?? null,
+    fight_fingerprint: fight?.fingerprint ?? null,
     deadline: d.dungeon?.turn_deadline_ms ?? null,
     move_path: use_dungeon_turn.getState().move_path.length,
     armed: fight?.armed_spell_id ?? null,
     cast_target: use_dungeon_turn.getState().cast_target ?? null,
   }
+}
+
+/** Canonical divergence hook: returns and logs the viewer-free per-turn fingerprint. */
+function dev_fight_fingerprint() {
+  const fingerprint = fight_view()?.fingerprint ?? null
+  console.info('[fight:fingerprint]', fingerprint)
+  return fingerprint
+}
+
+const fingerprint_key = (fight) => {
+  const fingerprint = fight?.fingerprint ?? null
+  return fingerprint ? `${fight?.fight_id ?? ''}:${fingerprint.turn_ordinal ?? ''}:${fingerprint.hash}` : null
+}
+
+const log_fight_fingerprint = (state, previous_state = null) => {
+  const fight = engine_view_of(state)
+  const fingerprint = fight?.fingerprint ?? null
+  if (fingerprint_key(fight) === fingerprint_key(previous_state ? engine_view_of(previous_state) : null)) return
+  if (fingerprint)
+    console.info('[fight:fingerprint]', {
+      fight_id: fight?.fight_id ?? null,
+      ...fingerprint,
+    })
 }
 
 // ── VOXEL-FIGHT probe hooks (qa's board eyes) ────────────────────────────────────────────────────────────────
@@ -263,8 +288,13 @@ function dev_cast_vfx({ from, to, element = 'fire', impact = true, dmg = 150, ki
 /** Register the hooks (idempotent; dev builds only — the caller gates on import.meta.env.DEV). */
 export function register_dev_probe() {
   if (typeof window === 'undefined') return
+  const dev_window = /** @type {any} */ (window)
+  dev_window.__ARES_DEV_FIGHT_FINGERPRINT_UNSUBSCRIBE?.()
+  log_fight_fingerprint(fight_store.getState())
+  dev_window.__ARES_DEV_FIGHT_FINGERPRINT_UNSUBSCRIBE = fight_store.subscribe(log_fight_fingerprint)
   ;(/** @type {any} */ (window)).__ARES_DEV_MOVE = dev_move
   ;(/** @type {any} */ (window)).__ARES_DEV_STATE = dev_state
+  ;(/** @type {any} */ (window)).__ARES_DEV_FIGHT_FINGERPRINT = dev_fight_fingerprint
   ;(/** @type {any} */ (window)).__ARES_DEV_CELL_SCREEN = dev_cell_screen
   ;(/** @type {any} */ (window)).__ARES_DEV_PLACE_READY = dev_place_ready
   ;(/** @type {any} */ (window)).__ARES_DEV_CAST_VFX = dev_cast_vfx

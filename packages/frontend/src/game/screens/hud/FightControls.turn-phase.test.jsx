@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, describe, expect, test } from 'bun:test'
+import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { I18nextProvider } from 'react-i18next'
 
+import en from '../../../i18n/locales/en.json'
 import { fight_layer_class } from './mobile_layout.js'
 
 // FightControls imports the browser-flavoured dungeon store (auth registers Enoki at module load).
@@ -31,7 +34,15 @@ globalThis.Audio ??= /** @type {any} */ (
   }
 )
 
-const { FightControls, FightEndTurnButton, fight_turn_control_phase } = await import('./FightControls.jsx')
+const EN_I18N = i18next.createInstance()
+await EN_I18N.init({
+  lng: 'en',
+  resources: { en: { translation: en } },
+  interpolation: { escapeValue: false },
+})
+
+const { FightControls, FightEndTurnButton, fight_turn_control_phase, turn_commit_countdown_s } =
+  await import('./FightControls.jsx')
 const { engine_view } = await import('@aresrpg/fight/project')
 const { PLAYER_TURN_FLOOR_MS } = await import('@aresrpg/fight/store')
 const { subscribe_commit_due } = await import('@aresrpg/fight/txs')
@@ -46,7 +57,7 @@ const fight_state = (overrides = {}) => ({
   my_entity_id: ME,
   fighters: new Map([
     [ME, { id: ME }],
-    [MOB, { id: MOB }],
+    [MOB, { id: MOB, name: 'Sewer Rat' }],
   ]),
   winner: -1,
   spectator: false,
@@ -127,8 +138,54 @@ describe('fight turn controls — one phase source for the button and silent aut
     expect(renderToStaticMarkup(pressed)).toContain('disabled=""')
   })
 
-  test('an armed turn and its chain advance render no auto-pass narration', async () => {
-    seed()
+  test('the map-resolved phase is the only countdown gate', () => {
+    const deadline_ms = 40_000
+    expect(fight_turn_control_phase(fight_state(), false)).toBe('armed')
+    expect(fight_turn_control_phase(fight_state({ active_entity_id: 'missing' }), false)).toBe('hidden')
+    expect(fight_turn_control_phase(fight_state({ presenting: true }), false)).toBe('hidden')
+    expect(fight_turn_control_phase(fight_state({ active_entity_id: MOB }), false)).toBe('waiting')
+    expect(fight_turn_control_phase(fight_state({ active_entity_id: MOB, winner: 0 }), false)).toBe('hidden')
+    expect(fight_turn_control_phase(fight_state({ active_entity_id: MOB, spectator: true }), false)).toBe('hidden')
+    // HONEST DEADLINE (#323): the cue counts to the AUTO-COMMIT FIRE moment (deadline − COMMIT_BUFFER_MS 5s),
+    // the same honest deadline FightTimeline shows — NOT the raw chain deadline (that read 10 while the turn
+    // actually locked in 5). Raw gap 10s → honest window 5s.
+    expect(turn_commit_countdown_s('armed', true, deadline_ms, 30_000)).toBe(5)
+    expect(turn_commit_countdown_s('hidden', true, deadline_ms, 30_000)).toBeNull()
+    expect(turn_commit_countdown_s('armed', false, deadline_ms, 30_000)).toBeNull()
+  })
+
+  test('a chain-anchored off-turn actor gets a named disabled control, never a spend door', () => {
+    const phase = fight_turn_control_phase(fight_state({ active_entity_id: MOB }), false)
+    let clicks = 0
+    const button = FightEndTurnButton({
+      phase,
+      on_end_turn: () => {
+        clicks += 1
+      },
+      end_label: 'END',
+      disabled_label: 'Waiting for Sewer Rat',
+    })
+
+    expect(phase).toBe('waiting')
+    expect(button.props.disabled).toBe(true)
+    expect(renderToStaticMarkup(button)).toContain('Waiting for Sewer Rat')
+    expect(clicks).toBe(0)
+  })
+
+  test('the cue reaches 0 exactly when the background commit fires, never at the raw chain deadline (#323)', () => {
+    const deadline_ms = 45_000 // a default 45s turn; the auto-commit fires at 40_000 (deadline − 5s buffer)
+    // at the fire moment the honest cue reads 0 (the turn is locking now) …
+    expect(turn_commit_countdown_s('armed', true, deadline_ms, 40_000)).toBe(0)
+    // … while the raw chain deadline still has 5s to run — the over-promise this fix removes.
+    expect(turn_commit_countdown_s('armed', true, deadline_ms, 40_000)).not.toBe(5)
+  })
+
+  test('a chain turn-advance disables END TURN with the active fighter name and removes its cue', async () => {
+    const seats = [
+      { character: ME, name: 'Me' },
+      { character: ALT, name: 'Aster' },
+    ]
+    seed({ seats })
     let clicks = 0
     const props = {
       placement: false,
@@ -136,21 +193,31 @@ describe('fight turn controls — one phase source for the button and silent aut
       end_label: 'END',
       has_turn_draft: true,
       turn_deadline_ms: Date.now() + 10_000,
-      auto_commit_label: (n) => `AUTO ${n}`,
+      turn_deadline_label: (n) => `DEADLINE ${n}`,
       on_end_turn: () => {
         clicks += 1
       },
     }
     const armed = renderToStaticMarkup(<FightControls {...props} />)
     expect(armed).toContain('hud-fightctl__end')
-    expect(armed).not.toContain('dgb-commit-cue')
+    // #1381: the deadline is VISIBLE on your own armed turn — a HUD with no clock is the worse product.
+    expect(armed).toContain('dgb-commit-cue')
+    expect(armed).toContain('DEADLINE')
+    // #1003's real cure survives in the COPY: nothing is narrated as an auto pass, ever.
     expect(armed).not.toContain('AUTO')
 
-    seed({ active: MOB, version: 2 })
+    const store = seed({ seats, active: ALT, version: 2 })
+    store.getState().input({ type: 'ctx', ctx: { roster: [{ id: ALT, name: 'Aster' }] } })
 
-    const advanced = renderToStaticMarkup(<FightControls {...props} />)
+    const advanced = renderToStaticMarkup(
+      <I18nextProvider i18n={EN_I18N}>
+        <FightControls {...props} />
+      </I18nextProvider>
+    )
     expect(clicks).toBe(0)
-    expect(advanced).not.toContain('hud-fightctl__end')
+    expect(advanced).toContain('hud-fightctl__end')
+    expect(advanced).toContain('disabled=""')
+    expect(advanced).toContain('Waiting for Aster')
     expect(advanced).not.toContain('dgb-commit-cue')
     expect(advanced).not.toContain('AUTO')
   })
@@ -201,7 +268,8 @@ describe('fight turn controls — one phase source for the button and silent aut
   // untouched; it simply no longer has a sign pointing at it.
   test('no expiry banner renders in ANY expired state — the bar keeps only its doors', () => {
     seed()
-    const bar = (props) => renderToStaticMarkup(<FightControls abandon_label="FORFEIT" end_label="END TURN" {...props} />)
+    const bar = (props) =>
+      renderToStaticMarkup(<FightControls abandon_label="FORFEIT" end_label="END TURN" {...props} />)
 
     for (const props of [
       { fight_status: 1, turn_deadline_ms: Date.now() + 45_000 }, // live

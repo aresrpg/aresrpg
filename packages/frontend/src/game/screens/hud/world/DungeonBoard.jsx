@@ -1212,7 +1212,7 @@ export function DungeonBoard() {
             turn_deadline_ms={dungeon.turn_deadline_ms}
             fight_status={dungeon.status} /* #882: with the deadline above, the whole input of the expiry gate */
             has_turn_draft={has_draft}
-            auto_commit_label={(n) => t('dungeons.auto_pass_in', { n })}
+            turn_deadline_label={(n) => t('dungeons.turn_deadline_in', { n })}
             abandon_disabled={busy}
             ready_disabled={effective_pick == null || busy} /* D109: seeded cell is the default pick → enabled */
           />
