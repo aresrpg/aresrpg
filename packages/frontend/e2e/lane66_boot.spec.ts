@@ -34,12 +34,25 @@ test('Lane 66: resident feet column grounds and unlocks before focus_ready', asy
     async ({ character_id, world_id }) => {
       // Fully generated rainforest terrain at (8,0) has open ground y=130 but resident AIR at the old
       // provisional probe y=137. It deterministically reproduces the exact-y D188 wedge.
-      localStorage.setItem(
-        `ares:last_position:v1:${character_id}`,
-        JSON.stringify({ x: 8.5, z: 0.5, world_id, ts: Date.now() })
-      )
       const { publish_world_binding } = await import('/src/world-shell/session_gate.js')
       publish_world_binding(character_id, world_id)
+      const { flush_world_position, note_world_position, spawns_input } =
+        await import('/src/world-shell/spawns_adapter.js')
+      spawns_input({
+        type: 'world_doc',
+        doc: { bounds_x: 500_000, bounds_z: 500_000, zone_size: 512 },
+      })
+      spawns_input({
+        type: 'checkpoint_resolved',
+        character_id,
+        world_id,
+        x: 250_008,
+        z: 250_000,
+        world_position: { x: 8, z: 0 },
+        source: 'read',
+      })
+      await note_world_position({ character_id, world_id, x: 8.5, z: 0.5 })
+      await flush_world_position()
       const { mount_voxel_scene } = await import('/src/game/embed_voxel.js')
       const host = document.getElementById('host')
       if (!host) throw new Error('Lane 66 harness host missing')

@@ -4,8 +4,8 @@ import { test, expect, type Page } from '@playwright/test'
 
 // SESSION POSITION RESTORE — regression: refreshing the page did not restore the last on-foot position —
 // proves the golden path against the REAL app: walk away from spawn, refresh, land back
-// where you stood (not at the hardcoded WORLD_SPAWN / chain checkpoint). session_position.js owns the
-// sessionStorage contract; embed_voxel.js reads it at boot to pick boot_spawn instead of WORLD_SPAWN.
+// where you stood (not at the hardcoded WORLD_SPAWN / chain checkpoint). The world-shell spawns adapter owns
+// the IndexedDB edge; boot awaits it, validates it against chain truth, then re-enters through `player_pos`.
 //
 // Reads the LIVE controller position via the DEV-only `window.__voxel_ctl` hook (embed_voxel_dev.js) — a
 // direct, deterministic signal instead of screenshot heuristics, and the CURRENT hook now that
@@ -61,7 +61,7 @@ test('walking away from spawn then refreshing restores the live position (not WO
   await page.keyboard.down('KeyW')
   await page.waitForTimeout(13_000)
   await page.keyboard.up('KeyW')
-  await page.waitForTimeout(2_600) // clear the ~2s note_live_position throttle so the final rest position lands
+  await page.waitForTimeout(5_200) // clear the 5s IndexedDB cadence so the final rest position lands
 
   const walked_to = await ctl_position(page)
   console.log('[session-position] walked to:', walked_to)

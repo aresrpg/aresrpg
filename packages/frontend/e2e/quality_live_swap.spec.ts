@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test'
 //   • the fps HUD keeps ticking on the freshly-booted engine, and (WebGPU only) the tier + render-scale in
 //     engine stats actually moved,
 //   • same-tier content counts return to baseline (the two MEDIUM re-boots) — no unbounded accumulation,
-//   • the player POSE is preserved across the swaps (the session_position flush) — never snapped to spawn.
+//   • the player POSE is preserved across the swaps (the world-position edge flush) — never snapped to spawn.
 // Modeled on the proven dev-login + reach-the-world path (world_rig.ts owns it for the world drives).
 
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
@@ -189,7 +189,7 @@ test('live quality swap re-boots the pipeline in place — no page reload', asyn
     ).toBeLessThan(meds[0].resident * 0.5 + 30)
   }
 
-  // Pose preserved across the four re-boots (the session_position flush) — only asserted when movement took.
+  // Pose preserved across the four re-boots (the world-position edge flush) — only asserted when movement took.
   if (moved) {
     const pos_end = await player_pos()
     expect(!!pos_end, 'controller alive after swaps').toBe(true)
