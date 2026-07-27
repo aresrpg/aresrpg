@@ -253,6 +253,7 @@ const cleared_session = (/** @type {string} */ phase) => ({
   fight_id: null,
   fight_started_at_ms: null,
   fight_start_partial: false,
+  fight_scope_id: null,
   world_id: null,
   template_id: null,
   dungeon: null,
@@ -297,6 +298,13 @@ export const use_dungeon = create((set, get) => ({
   owned_team_entry_blocked: false,
   /** A failed/missing companion outcome blocks the next room; no digest-bearing settle is auto-replayed. */
   owned_team_settlement_blocked: false,
+  /**
+   * The live fight's DERIVATION SCOPE — the `world` field of the Fight object itself, which is what picks its
+   * registry shard. NOT `world_id`: a dungeon room fight derives from the CREATOR's RunPass, so for a member the
+   * two differ and only this one addresses the right shard. Set wherever a fight session starts, cleared with it.
+   * @type {string | null}
+   */
+  fight_scope_id: null,
   /** @type {string | null} the run's World id */
   world_id: null,
   /** Legacy alias some surfaces label by — the session identity. @type {string | null} */
@@ -554,6 +562,7 @@ export const use_dungeon = create((set, get) => ({
       // instead of the world leg's receipt-first hold. The flag clears the instant the object hydrates.
       set({
         fight_id: minted,
+        fight_scope_id: run_pass_id, // I minted it, so MY pass is the fight's derivation scope
         fight_fresh: true,
         fight_syncing: true,
         phase: 'playing',
@@ -624,6 +633,7 @@ export const use_dungeon = create((set, get) => ({
       // that misses the read-after-write HOLDS the id (world_fight_receipt) instead of collapsing the session.
       set({
         fight_id,
+        fight_scope_id: creator_pass_id, // the room fight derived from the CREATOR's pass, never mine
         fight_fresh: true,
         fight_syncing: true,
         phase: 'playing',
@@ -1448,6 +1458,7 @@ export const use_dungeon = create((set, get) => ({
     // still needs them). character_id rides along: results::open kiosk-borrows it, so the open leg derives ITS kiosk.
     const chain_ids = {
       fight_id,
+      fight_scope_id: get().fight_scope_id,
       run_pass_id: get().run_pass_id,
       world_id: get().world_id,
       character_id: get().character_id,
@@ -1487,6 +1498,7 @@ export const use_dungeon = create((set, get) => ({
           winner === 0 ? STATUS_WON : STATUS_FAILED,
           {
             fight_id: chain_ids.fight_id,
+            fight_scope_id: chain_ids.fight_scope_id,
             run_pass_id: chain_ids.run_pass_id,
             world_id: chain_ids.world_id,
             character_id: chain_ids.character_id,
@@ -1561,6 +1573,7 @@ export const use_dungeon = create((set, get) => ({
         state.dungeon?.status,
         {
           fight_id: state.fight_id,
+          fight_scope_id: state.fight_scope_id,
           run_pass_id: state.run_pass_id,
           world_id: state.world_id,
           character_id,

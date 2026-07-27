@@ -86,6 +86,9 @@ export const ctx_of = (/** @type {any} */ sdk) => ({ network: DEMO_NETWORK, kios
 // Kiosk resolution — THE one derive-from-character home (kiosk_resolve.js; traced 2026-07-09: a first-cap
 // or scan pick against a multi-kiosk wallet built PTBs on the WRONG kiosk → 0x2::kiosk borrow aborts).
 // `any_personal_kiosk` stays legal ONLY as the loot lock-target (mint_rolled/burn — no character binding).
+// The character↔world binding — the ONE home for which world a character is in, and therefore the derivation
+// scope (registry shard) of any WORLD fight it joins.
+import { use_world_binding } from './session_gate.js'
 import { kiosk_for_character, any_personal_kiosk, cap_for_kiosk } from './kiosk_resolve.js'
 // FIGHT COST LEDGER: the per-fight net-gas accumulator the result card reads.
 import { use_fight_cost } from './fight_gas_ledger.js'
@@ -254,7 +257,27 @@ function opened_result_of(/** @type {any} */ receipt) {
 // ╔════════════════ [ WORLD FIGHT — join (create_world_fight moved to dungeon_engage_actions.js) ] ═ ]
 
 /** JOIN an existing world fight during placement — `fight::join` (public/party gate is on-chain). */
+/**
+ * The fight's DERIVATION SCOPE is not optional and has no sane default. The registry is sharded, the chain
+ * asserts the door got the shard its scope maps to, and the scope is the Fight's OWN `world` field — which for a
+ * dungeon room is the CREATOR's RunPass, not the run's world. Defaulting to `world_id` would address the wrong
+ * shard for every party member but the creator, so a missing scope refuses here, by name, before any signing.
+ * @param {string|null|undefined} scope @param {string} where
+ */
+function assert_fight_scope(scope, where) {
+  if (!scope)
+    throw new Error(
+      `[${where}] missing fight_scope_id — the Fight's own world field picks its registry shard; pass it from fight state, never from the run's world_id.`
+    )
+}
+
 export async function join_world_fight({ fight_id, character_id, party_id = null, queued = false }) {
+  // A WORLD fight derives from the World itself, and the engine only seats a character that is IN that world —
+  // so the joiner's binding IS the fight's scope, and the shard follows from it. One home (session_gate), no
+  // caller plumbing, and no chance of a UI surface passing the run's world for a dungeon by mistake: this door
+  // is the world path by definition (a room fight joins through `join_room_fight`).
+  const fight_scope_id = use_world_binding.getState().world
+  assert_fight_scope(fight_scope_id, 'join_world_fight')
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -265,6 +288,7 @@ export async function join_world_fight({ fight_id, character_id, party_id = null
   if (!handle) throw new Error('That character is not in your kiosk')
   const tx = join_fight_ptb(ctx_of(sdk))({
     fight_id,
+    world_id: fight_scope_id,
     kiosk_id: handle.kiosk_id,
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
     character_id,
@@ -513,10 +537,13 @@ export async function abandon_fight(
  * `sign` rides (src/tx) — never a guessed constant. `character_id` = the caller's seat; `open` kiosk-borrows it,
  * so we resolve the kiosk that HOLDS it, never kiosk[0] (a multi-kiosk wallet would 0x2::kiosk abort 11). SILENT:
  * the settlement chain signs with no toast (the recap/card is the surface). kiosk_resolve.js.
- * @param {{ fight_id:string, run_pass_id?:string|null, world_id?:string|null, character_id:string }} args
+ * @param {{ fight_id:string, fight_scope_id:string, run_pass_id?:string|null, world_id?:string|null,
+ *   character_id:string }} args `fight_scope_id` is the Fight's OWN `world` field — what picks its registry
+ *   shard. For a dungeon room that is the CREATOR's RunPass, so it is NOT `world_id` and never defaults to it.
  * @returns {Promise<{ receipt:any, result_id:string|null, xp_share:number|null, loot_units:number|null, final_hp:number|null }>} the ResultOpened event fields (opened_result_of)
  */
-export async function settle_and_open({ fight_id, run_pass_id = null, world_id = null, character_id }) {
+export async function settle_and_open({ fight_id, fight_scope_id, run_pass_id = null, world_id = null, character_id }) {
+  assert_fight_scope(fight_scope_id, 'settle_and_open')
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -527,7 +554,7 @@ export async function settle_and_open({ fight_id, run_pass_id = null, world_id =
   if (run_pass_id) {
     // DUNGEON: settle_and_take yields the outcome HANDLE → settle_run BORROWS it (&FightOutcome) → open_taken
     // CONSUMES it BY VALUE with the terminal &Random LAST. Order pinned (Sui Random-PTB rule).
-    const { tx: chained, outcome } = settle_and_take_ptb(ctx)({ fight_id, character_id })
+    const { tx: chained, outcome } = settle_and_take_ptb(ctx)({ fight_id, world_id: fight_scope_id, character_id })
     settle_run_taken_ptb(ctx)({
       run_pass_id,
       outcome,
@@ -546,6 +573,7 @@ export async function settle_and_open({ fight_id, run_pass_id = null, world_id =
     // WORLD: the SDK's plain two-call compose (settle_and_take → open_taken).
     tx = settle_open_world_ptb(ctx)({
       fight_id,
+      world_id: fight_scope_id,
       character_id,
       kiosk_id: handle.kiosk_id,
       personal_kiosk_cap_id: handle.personal_kiosk_cap_id,

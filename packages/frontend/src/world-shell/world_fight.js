@@ -43,6 +43,9 @@ export function enter_world_fight({ fight_id, world_id = null, character_id, res
     fight_fresh: !resumed, // fresh create vs reload-resume — the entry cinematic gates on this stamp
     dungeon_id: fight_id, // the session identity → GameWorldHud in_dungeon stays true (no dead WS chrome)
     world_id,
+    // A world fight's own `world` field IS this id, so the session's registry shard follows from it (a dungeon
+    // room seeds this from the CREATOR's pass instead — see dungeon_run_store).
+    fight_scope_id: world_id,
     template_id: world_id,
     character_id,
     run_pass_id: null, // a world fight has no RunPass — refresh()/settle take their world (no-run) branches
@@ -90,6 +93,9 @@ export function spectate_world_fight({ fight_id, world_id = null, public_fight =
     fight_fresh: false,
     dungeon_id: fight_id,
     world_id,
+    // A world fight's own `world` field IS this id, so the session's registry shard follows from it (a dungeon
+    // room seeds this from the CREATOR's pass instead — see dungeon_run_store).
+    fight_scope_id: world_id,
     template_id: world_id,
     character_id: null,
     run_pass_id: null,
