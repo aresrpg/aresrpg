@@ -4,7 +4,7 @@
 // It owns NO fight logic: it only decodes a Fight OBJECT read and feeds its snapshot + public render facts through
 // the core's ONE input door, plus the per-world render offset. The shim re-exports both so importers are unchanged.
 
-import { decode_fight } from '@aresrpg/sdk/fight'
+import { decode_fight, get_weapon_lines } from '@aresrpg/sdk/fight'
 import { world_offsets } from '@aresrpg/sdk/coords'
 import { get_world } from '@aresrpg/sdk/game'
 import { fight_store } from '@aresrpg/fight/store'
@@ -26,6 +26,27 @@ export async function resolve_world_offset(/** @type {any} */ sdk, /** @type {st
   return off
 }
 
+// #1323 — the seat's AUTHORED weapon lines. `cast.move` resolves a strike from them and falls back to the
+// participant's family `Weapon` only when a seat has none, so a client that cannot see them previews a number the
+// chain will not settle. They live in per-seat DYNAMIC FIELDS on the Fight (never in the object json the poll
+// already reads), and they are IMMUTABLE for a seat's lifetime — attached once at create/join — so this resolves
+// ONCE per fight and re-reads only when the roster GREW (a joiner seated new lines). Unreadable ⇒ `{}` ⇒ every
+// seat honestly falls back to its family line, exactly as the chain does for an un-authored weapon.
+/** @type {Map<string, { seats: number, by_seat: Record<number, any[]> }>} */
+const _weapon_lines_cache = new Map()
+export async function resolve_weapon_lines(
+  /** @type {any} */ sdk,
+  /** @type {string | null | undefined} */ fight_id,
+  /** @type {number} */ seats
+) {
+  if (!fight_id || seats <= 0) return {}
+  const hit = _weapon_lines_cache.get(fight_id)
+  if (hit && hit.seats >= seats) return hit.by_seat
+  const by_seat = await get_weapon_lines({ grpc_client: sdk.grpc_client })(fight_id)
+  _weapon_lines_cache.set(fight_id, { seats, by_seat })
+  return by_seat
+}
+
 /**
  * SNAPSHOT a decoded Fight OBJECT read into the core (the base lane). `read` = { json, version } for a live fight,
  * or null for the pre-engage OPEN roam view (a run with no fight yet — versioned by `open_version`, the RunPass
@@ -38,12 +59,24 @@ export async function resolve_world_offset(/** @type {any} */ sdk, /** @type {st
  * the only thing that touches snapshot state (below-floor drops, equal-version compares — keystone #3 — higher
  * adopts). A gRPC read NEVER pushes state by any other path. The transport swap (gRPC → /v1 versioned feed) is P2
  * (a k8s deploy, owner-gated) and orthogonal to this discipline — delete this bridge when P2 lands.
- * @param {{ read: { json:any, version:any }|null, run?: any, rooms_total?: number, ctx?: any, open_version?: number }} args
+ * `weapon_lines` is the seat-keyed authored-line map from `resolve_weapon_lines` — a per-seat DYNAMIC FIELD read
+ * that rides ALONGSIDE the object, attached here like the fighter statuses above so `board_state` sees one
+ * complete fight record (#1323).
+ * @param {{ read: { json:any, version:any }|null, run?: any, rooms_total?: number, ctx?: any, open_version?: number,
+ *           weapon_lines?: Record<number, any[]> }} args
  */
-export function sync_dungeon_fight({ read, run = null, rooms_total = 0, ctx = {}, open_version = 0 }) {
+export function sync_dungeon_fight({
+  read,
+  run = null,
+  rooms_total = 0,
+  ctx = {},
+  open_version = 0,
+  weapon_lines = {},
+}) {
   const fight = read ? decode_fight(read.json) : null
   const chain_traps = read ? read_fight_traps(read.json) : []
   if (fight && read) fight.invisibility_statuses = read_fighter_statuses(read.json)
+  if (fight) fight.weapon_lines = weapon_lines
   fight_store.getState().input({
     type: 'snapshot',
     fight,
