@@ -95,6 +95,25 @@ const RPC_URL = process.env.VITE_RPC_URL ?? 'https://rpc.aresrpg.world'
 
 const log = (...args) => console.log(...args)
 
+/**
+ * THE WORLD SURFACE NEEDS A REAL GPU — measured, not assumed. Headless software WebGL renders the voxel world
+ * at 0.57 FPS (median frame gap 1747ms, max 24068ms), and the page's own timeout-bounded reads then fire for a
+ * reason that is not the game's: the kiosk resolve every claim candidate makes blew its 5s/25s ceilings and fell
+ * back to a chain-direct walk, so the create scan spent its whole 420s on a handful of candidates and created
+ * nothing. The chain surfaces therefore run on the GPU, and background throttling is off because a coop run has
+ * TWO windows and only one of them can hold focus — an occluded seat that stops rendering stops polling too.
+ * The SIMULATOR is a board, not a world, and stays happy on swiftshader.
+ */
+const BROWSER_ARGS = ON_CHAIN
+  ? [
+      '--use-angle=metal',
+      '--ignore-gpu-blocklist',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-background-timer-throttling',
+    ]
+  : ['--enable-unsafe-swiftshader']
+
 mkdirSync(OUT_DIR, { recursive: true })
 
 const mob = MODE === 'sim' ? await pick_mob({ frontend: FRONTEND, repo: REPO, scenario: SCENARIO }) : null
@@ -136,7 +155,7 @@ const on_evidence = (patch) => Object.assign(coop_evidence, patch)
 
 try {
   await wait_for_server(BASE)
-  browser = await chromium.launch({ headless: !HEADED, args: ['--enable-unsafe-swiftshader'] })
+  browser = await chromium.launch({ headless: !HEADED && !ON_CHAIN, args: BROWSER_ARGS })
   // Seats register the MOMENT they boot — `seats` IS the registry, so a failure during the opening still writes
   // that page's console below instead of leaving the one artefact that explains it unwritten.
   const on_seat = (seat) => seats.push(seat)
