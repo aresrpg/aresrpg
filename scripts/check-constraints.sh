@@ -439,15 +439,16 @@ test_reachability_gate() {
 # ── fixture-adjudication gate (#1101) ────────────────────────────────────────────────────────────
 # Fixtures are evidence, not ordinary source: changing an existing one can make the implementation
 # and its oracle agree on the same lie. The repository's tracked corpus has two conventions:
-#   · packages/*/test/fixtures/**             (fight + sim today)
-#   · packages/*/test/**/*_golden.json        (sim/test/vectors today)
+#   · packages/*/test/fixtures/**        (fight + sim today; JSON and executable fixtures)
+#   · every *.json under package/root test trees (fixtures, vectors, oracles, and test/gold)
 # A file newly added by a commit has no earlier evidence to overwrite and is exempt. Every other
 # per-commit change under those pathspecs needs an Adjudicated-by trailer whose email differs from
 # the author (both canonicalized through .mailmap). The range is the PR's exact base..head in CI and
 # merge-base(origin/edge, HEAD)..HEAD in a contributor checkout.
 FIXTURE_PATHSPEC=(
   ':(glob)packages/*/test/fixtures/**'
-  ':(glob)packages/*/test/**/*_golden.json'
+  ':(glob)packages/*/test/**/*.json'
+  ':(glob)test/**/*.json'
 )
 FIXTURE_RANGE_BASE=
 FIXTURE_RANGE_HEAD=
