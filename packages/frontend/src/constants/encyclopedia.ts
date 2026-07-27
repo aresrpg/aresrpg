@@ -28,7 +28,7 @@ export const ITEM_CATEGORIES = [
   'PET',
   'RELIC',
   'TOOL_HERBALIST',
-  'TOOL_PAYSAN',
+  'TOOL_FARMER',
   'TOOL_MINER',
   'CONSUMABLE',
   'RESOURCE',
@@ -74,7 +74,7 @@ export const CATEGORY_GROUPS = {
   PETS: new Set(['PET']),
   RUNES: new Set(['RUNE']),
   RELICS: new Set(['RELIC']),
-  TOOLS: new Set(['TOOL_HERBALIST', 'TOOL_PAYSAN', 'TOOL_MINER']),
+  TOOLS: new Set(['TOOL_HERBALIST', 'TOOL_FARMER', 'TOOL_MINER']),
   CONSUMABLES: new Set(['CONSUMABLE']),
   RESOURCES: new Set(['RESOURCE']),
 } as const
