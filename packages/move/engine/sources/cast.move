@@ -1175,7 +1175,7 @@ fun apply_to_player(
   } else if (kind == spell_effect::k_punishment_damage()) {
     // The `apply_to_mob` twin. Missing here, this fell to the tail and became a STATUS ROW, so a mob casting a
     // punishment line at a player did no damage at all — while @aresrpg/sim folded it as DAMAGE for both sides.
-    let damage = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     hit_player_from(
       fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
