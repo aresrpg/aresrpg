@@ -179,3 +179,46 @@ describe('duplicate mob keys canonicalize first-wins, matching fresh authoring',
     expect(mask_call?.payload.rows).toEqual([0])
   })
 })
+
+// ── the operator message must describe what the plan EMITS ──────────────────────────────────────────────────
+import { role_drift_report } from './reseed_world_plan.mjs'
+
+/// Role used to be pure projection metadata, so the driver hardcoded "projection-only differences; no chain
+/// calls". Role now drives the boss mask, and a normal↔boss change queues a `set_boss_mask` — a chain call. The
+/// line has to be derived from the leg, or the operator is told the opposite of what is about to run.
+describe('role drift reporting derives from the emitted calls', () => {
+  test('with a boss-mask write queued, the report says the drift reaches chain', () => {
+    const report = role_drift_report({
+      role_projection_drift: [{ mob: 'm', manifest_role: 'normal', seed_role: 'boss' }],
+      boss_mask_calls: 1,
+    })
+    expect(report.reaches_chain).toBe(true)
+    expect(report.line).not.toMatch(/no chain calls/)
+    expect(report.row_prefix).not.toBe('SKIP')
+  })
+
+  test('with no boss-mask write, it is still honestly projection-only', () => {
+    const report = role_drift_report({
+      role_projection_drift: [{ mob: 'm', manifest_role: 'archi', seed_role: 'trash' }],
+      boss_mask_calls: 0,
+    })
+    expect(report.reaches_chain).toBe(false)
+    expect(report.line).toMatch(/no chain calls/)
+    expect(report.row_prefix).toBe('SKIP')
+  })
+
+  test('a leg that queues a boss mask reports it as a fact', () => {
+    const leg = build_world_leg({
+      seed_rows: [
+        { id: WID, resources: [], mobGroups: [{ mob: 'b' }], dungeonRooms: [] },
+      ],
+      mob_rows: [{ key: 'b', role: 'boss', maxLevel: 5 }],
+      seed_manifest: { worlds: [{ wid: WID, id: OBJ }], mobs: { b: { id: MOB_A, role: 'boss' } } },
+      chain_state: {
+        [OBJ]: { fields: { id: OBJ, inner: { fields: { value: { fields: {} } } } } },
+      },
+      target: TARGET,
+    })
+    expect(leg.boss_mask_calls).toBe(1)
+  })
+})

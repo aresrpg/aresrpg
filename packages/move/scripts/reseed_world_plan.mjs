@@ -203,6 +203,23 @@ function world_calls(world_id, world_key, desired, target) {
   return calls
 }
 
+/// The operator line for mob-role drift, DERIVED from what the leg actually queues. Role used to be pure
+/// projection metadata; it now drives the boss mask, so a normal↔boss change emits `set_boss_mask` — a real
+/// chain call. Reporting a hardcoded "projection-only; no chain calls" would tell the operator the opposite of
+/// what is about to run, which is why this reads the emitted calls instead of a fixed classification.
+export function role_drift_report(leg) {
+  const count = leg.role_projection_drift?.length ?? 0
+  const mask_calls = leg.boss_mask_calls ?? 0
+  const reaches_chain = mask_calls > 0
+  return {
+    reaches_chain,
+    row_prefix: reaches_chain ? 'ROLE' : 'SKIP',
+    line: reaches_chain
+      ? `mob roles: ${count} difference(s); role drives the boss mask — ${mask_calls} set_boss_mask write(s) queued`
+      : `mob roles: ${count} projection-only differences; no chain calls`,
+  }
+}
+
 export function build_world_leg({
   seed_rows,
   mob_rows,
@@ -285,6 +302,13 @@ export function build_world_leg({
   return {
     seed_rows: seed_rows.length,
     rows_drifted: transactions.length,
+    boss_mask_calls: transactions.reduce(
+      (sum, transaction) =>
+        sum +
+        transaction.calls.filter((call) => call.function === 'set_boss_mask')
+          .length,
+      0
+    ),
     call_count: transactions.reduce(
       (sum, transaction) => sum + transaction.call_count,
       0
