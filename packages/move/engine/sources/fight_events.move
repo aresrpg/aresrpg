@@ -112,7 +112,6 @@ public struct ActionResolved has copy, drop {
   random_effect_ordinals: vector<u64>,
   random_rolls: vector<u64>,
   random_bounds: vector<u64>,
-  effects: vector<Effect>,
 }
 /// A status-driven 1-in-N fumble committed the cast but suppressed its payload.
 public struct CriticalFailure has copy, drop { fight: ID, caster_is_mob: bool, caster_idx: u64 }
@@ -220,14 +219,13 @@ public(package) fun emit_action_resolved(
   random_effect_ordinals: vector<u64>,
   random_rolls: vector<u64>,
   random_bounds: vector<u64>,
-  effects: vector<Effect>,
 ) {
   event::emit(ActionResolved {
     fight, caster_is_mob, caster_idx, target_cell, action_kind, turn_ordinal, action_ordinal, ap_cost,
     critical, fumbled, returned, spell, learned_level, spell_level, mob_template, mob_spell_ordinal,
     weapon_element, weapon_damage, weapon_crit_damage, weapon_crit_rate, weapon_ap_cost, weapon_reach,
     weapon_lines, crit_roll, crit_bound, fumble_roll, fumble_bound, random_domains,
-    random_effect_ordinals, random_rolls, random_bounds, effects,
+    random_effect_ordinals, random_rolls, random_bounds,
   });
 }
 public(package) fun emit_critical_failure(fight: ID, caster_is_mob: bool, caster_idx: u64) {
@@ -332,18 +330,24 @@ public fun action_resolved_random_labels_for_testing(e: &ActionResolved): (vecto
 }
 
 #[test_only]
-public fun action_resolved_effects_for_testing(e: &ActionResolved): (vector<u64>, vector<u8>) {
+/// THE action's effect rows, picked out of a captured `ActionEffect` stream by the envelope's own action key.
+/// One home for "which effects belong to this action" now that `ActionResolved` no longer carries a second copy
+/// of them — a suite reads the manifest where the wire actually states it.
+public fun action_effects_of_for_testing(rows: &vector<ActionEffect>, e: &ActionResolved): (vector<u64>, vector<Effect>) {
   let mut ordinals = vector[];
-  let mut kinds = vector[];
-  let n = e.effects.length();
+  let mut effects = vector[];
   let mut i = 0;
-  while (i < n) {
-    ordinals.push_back(i);
-    kinds.push_back(e.effects.borrow(i).kind());
+  while (i < rows.length()) {
+    let row = rows.borrow(i);
+    if (row.fight == e.fight
+      && row.caster_is_mob == e.caster_is_mob
+      && row.caster_idx == e.caster_idx
+      && row.turn_ordinal == e.turn_ordinal
+      && row.action_ordinal == e.action_ordinal) {
+      ordinals.push_back(row.effect_ordinal);
+      effects.push_back(row.effect);
+    };
     i = i + 1;
   };
-  (ordinals, kinds)
+  (ordinals, effects)
 }
-
-#[test_only]
-public fun action_resolved_effect_descriptors_for_testing(e: &ActionResolved): vector<Effect> { e.effects }

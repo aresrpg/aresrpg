@@ -297,7 +297,8 @@ const tackle_losses = (pre_state, post_state, entity_id) => {
 // (`record_timed`, cast.move:1119/1148-1153/1243-1274), and the client learns it from the three envelope rows
 // `inputs.js` folds — `ActionStarted` (the action key + the target cell), one `ActionEffect` per AUTHORED
 // top-level effect (the exact timed descriptor), and `ActionResolved` (the closing bracket that retires the
-// key). Emitting none of them made every chip PREDICTION-only: the receipt fold carried no status row, so the
+// key — and ONLY that: the effect manifest is stated once, on the `ActionEffect` rows, so `ActionResolved`
+// no longer carries a second copy of it on either twin). Emitting none of them made every chip PREDICTION-only: the receipt fold carried no status row, so the
 // counter went `3 → absent` and the granted MP reverted the instant the receipt landed.
 //
 // The chain wraps EVERY committed cast, damage-only ones included (`action_envelope::emit_started` runs before
@@ -446,7 +447,6 @@ const cast_envelope = (state, event, ctx) => {
       ...NO_WEAPON,
       ...NO_RANDOM,
       crit_bound: u64(is_mob ? 0 : CRIT_BOUND),
-      effects: descriptors,
     }),
   }
 }

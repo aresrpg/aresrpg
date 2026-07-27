@@ -121,7 +121,7 @@ fun mob_actions_carry_immutable_ability_identity_and_monotonic_turns() {
     assert!(template.is_some() && *template.borrow() == group_template, 6);
     assert!(spell_ordinal.is_some() && *spell_ordinal.borrow() == 1, 7);
     assert!(level.is_some() && level.borrow().sl_ap_cost() == 4, 8);
-    let descriptors = fight_events::action_resolved_effect_descriptors_for_testing(envelope);
+    let (_ords, descriptors) = fight_events::action_effects_of_for_testing(&markers, envelope);
     assert!(descriptors.length() == 1 && effect_matches(descriptors.borrow(0), &expected_effect), 9);
     let (player_spell, learned_level) = fight_events::action_resolved_spell_for_testing(envelope);
     assert!(player_spell.is_none() && learned_level == 0, 14);
