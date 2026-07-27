@@ -93,6 +93,9 @@ const SEAT_NAMES =
 // which no bot run has. Point it at the live read API unless the caller says otherwise.
 const RPC_URL = process.env.VITE_RPC_URL ?? 'https://rpc.aresrpg.world'
 
+/** The outcomes that mean the fight actually ENDED — the one home for that list (teardown reads it too). */
+const TERMINAL = ['victory', 'defeat', 'draw']
+
 const log = (...args) => console.log(...args)
 
 /**
@@ -214,7 +217,10 @@ try {
   // THE MONEY TRAIL, read off each page's own tx ledger BEFORE the browser closes — every digest this run
   // signed, per seat. A chain-backed run that cannot name what it spent is not auditable.
   if (ON_CHAIN && seats.length) sheet.digests = await run_digests(seats).catch(() => null)
-  if (ON_CHAIN && sheet.outcome === 'not reached') for (const seat of seats) await abandon_fight({ seat, log })
+  // ANY non-terminal outcome, not just 'not reached'. A STALL walks away holding both characters exactly as a
+  // failed setup does — measured: run D stalled at turn 2 and left its fight live with both seats escrowed,
+  // which is the very strand `release_strand` exists to clean up. The rig must not manufacture its own debris.
+  if (ON_CHAIN && !TERMINAL.includes(sheet.outcome)) for (const seat of seats) await abandon_fight({ seat, log })
   // The pages' own account of the run, written whatever happened — a failure with no console is a failure
   // nobody can diagnose, which is how the manual drives burned their hours.
   for (const seat of seats) {
@@ -248,7 +254,7 @@ sheet.summary = summarise(all_rows)
 // A run that never reached a terminal proves nothing about the fight, however green its rows are. A STALL is one
 // of those non-terminals: it now keeps its turns in the sheet (drive.mjs) instead of throwing them away, and it
 // still fails — evidence kept, verdict unchanged.
-if (!['victory', 'defeat', 'draw'].includes(sheet.outcome) || sheet.errors.length) sheet.summary.verdict = 'FAIL'
+if (!TERMINAL.includes(sheet.outcome) || sheet.errors.length) sheet.summary.verdict = 'FAIL'
 sheet.finished_at = new Date().toISOString()
 const sheet_path = resolve(OUT_DIR, `fight_bot_sheet${MODE === 'sim' ? '' : `_${MODE}`}.json`)
 writeFileSync(sheet_path, JSON.stringify(sheet, null, 2))
