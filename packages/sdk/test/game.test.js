@@ -139,8 +139,8 @@ describe('game progression builders — targets + arg shapes', () => {
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(5)
   })
-  test('raise_stat → stat_allocation::raise_stat, 6 args (kiosk+pkcap+id+stat+points+version — the raise_spell_level twin)', () => {
-    const call = find_call(raise_stat_ptb(ctx)(A), 'stat_allocation::raise_stat')
+  test('raise_stat → character_link::raise_stat, 6 args (kiosk+pkcap+id+stat+points+version — the raise_spell_level twin)', () => {
+    const call = find_call(raise_stat_ptb(ctx)(A), 'character_link::raise_stat')
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(6)
   })
