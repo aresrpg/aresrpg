@@ -99,10 +99,10 @@ fun max_hp_slope_and_floor() {
 
 #[test]
 fun regen_carries_remainder() {
-  // senshi L1 (num 156): 5000ms → +10 whole HP, stamp advances by the CONSUMED ms only (4807), not to now.
+  // senshi L1 (num 56): 5000ms → +3 whole HP, stamp advances by the CONSUMED ms only (4017), not to now.
   let (hp, stamp) = regen_hp(25, 5_000, 70, 1, 0, 10_000);
-  assert!(hp == 35, 0);
-  assert!(stamp == 5_000 + 10 * 75_000 / 156, 1); // 9807 — the 193ms fraction stays on the clock
+  assert!(hp == 28, 0);
+  assert!(stamp == 5_000 + 3 * 75_000 / 56, 1); // 9017 — the fraction stays on the clock
   // sub-unit window → both unchanged (the carry law).
   let (hp2, stamp2) = regen_hp(25, 5_000, 70, 1, 0, 5_400);
   assert!(hp2 == 25 && stamp2 == 5_000, 2);

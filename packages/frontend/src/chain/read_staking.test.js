@@ -292,8 +292,8 @@ describe('v1_character_to_party_row — /v1 row → PartyFrame HP-math subset', 
     const row = v1_character_to_party_row(V1_SNAPSHOTTED)
     // Fight-equivalent aggregate wins over the positive-only cache: 70 + allocated 10 + signed gear 3.
     expect(character_max_hp(row)).toBe(83)
-    // projected_hp: kernel regen (senshi L1, num 156 ≈ 2 HP/s) — 10s after the stamp → +floor(10_000·156/75_000)=20 → 50.
-    expect(projected_hp(row, 1_000_000 + 10_000)).toBe(50)
+    // projected_hp: kernel regen (senshi L1, num 56 ≈ 0.667 HP/s) — 10s after the stamp → +floor(10_000·56/75_000)=7 → 37.
+    expect(projected_hp(row, 1_000_000 + 10_000)).toBe(37)
     // Clock-skew guard: a `now` BEFORE the stamp adds nothing (never underflows).
     expect(projected_hp(row, 999_999)).toBe(30)
   })

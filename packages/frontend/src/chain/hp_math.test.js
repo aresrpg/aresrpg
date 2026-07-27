@@ -33,12 +33,12 @@ describe('max_hp_from_base — mirrors progression_math.move max_hp_slope_and_fl
   })
 })
 
-describe('regen_hp — mirrors progression_math.move regen_carries_remainder (senshi L1, num 156)', () => {
-  test('5000ms → +10 whole HP; stamp advances by the CONSUMED ms only (9807), not to now', () => {
+describe('regen_hp — mirrors progression_math.move regen_carries_remainder (senshi L1, num 56)', () => {
+  test('5000ms → +3 whole HP; stamp advances by the CONSUMED ms only (9017), not to now', () => {
     const [hp, stamp] = regen_hp(25, 5_000, 70, 1, 0, 10_000)
-    expect(hp).toBe(35)
-    expect(stamp).toBe(5_000 + Math.floor((10 * 75_000) / 156)) // 9807 — the 193ms fraction stays on the clock
-    expect(stamp).toBe(9_807)
+    expect(hp).toBe(28)
+    expect(stamp).toBe(5_000 + Math.floor((3 * 75_000) / 56)) // 9017 — the fraction stays on the clock
+    expect(stamp).toBe(9_017)
   })
   test('sub-unit window → BOTH hp and stamp unchanged (the carry law — the whole span rolls forward)', () => {
     const [hp, stamp] = regen_hp(25, 5_000, 70, 1, 0, 5_400)
@@ -59,17 +59,17 @@ describe('regen_hp — mirrors progression_math.move regen_carries_remainder (se
   })
 })
 
-describe('regen_hp — wisdom term is faithful to the kernel (num = 150 + level·6 + wisdom·2)', () => {
-  test('wisdom raises the accrual (num 156 → 186 at wisdom 15) — proves the port is not hardcoded to 0', () => {
-    // level 1: num(wis 0) = 156, num(wis 15) = 150 + 6 + 30 = 186. Over 20_000ms from a deep-damaged char:
-    // accrued(0)  = floor(20000·156/75000) = floor(41.6)  = 41 → 41 hp
-    // accrued(15) = floor(20000·186/75000) = floor(49.6)  = 49 → 49 hp (wisdom regenerates faster)
-    expect(regen_hp(0, 0, 300, 1, 0, 20_000)[0]).toBe(41)
-    expect(regen_hp(0, 0, 300, 1, 15, 20_000)[0]).toBe(49)
+describe('regen_hp — wisdom term is faithful to the kernel (num = 50 + level·6 + wisdom·2)', () => {
+  test('wisdom raises the accrual (num 56 → 86 at wisdom 15) — proves the port is not hardcoded to 0', () => {
+    // level 1: num(wis 0) = 56, num(wis 15) = 50 + 6 + 30 = 86. Over 20_000ms from a deep-damaged char:
+    // accrued(0)  = floor(20000·56/75000) = floor(14.93)  = 14 → 14 hp
+    // accrued(15) = floor(20000·86/75000) = floor(22.93)  = 22 → 22 hp (wisdom regenerates faster)
+    expect(regen_hp(0, 0, 300, 1, 0, 20_000)[0]).toBe(14)
+    expect(regen_hp(0, 0, 300, 1, 15, 20_000)[0]).toBe(22)
   })
-  test('num scales with level too (level 100, wisdom 0): num = 150 + 600 = 750', () => {
-    // accrued = floor(10000·750/75000) = floor(100) = 100
-    expect(regen_hp(0, 0, 300, 100, 0, 10_000)[0]).toBe(100)
+  test('num scales with level too (level 100, wisdom 0): num = 50 + 600 = 650', () => {
+    // accrued = floor(10000·650/75000) = floor(86.67) = 86
+    expect(regen_hp(0, 0, 300, 100, 0, 10_000)[0]).toBe(86)
   })
 })
 
@@ -83,9 +83,9 @@ describe('regen_hp — remainder-carry STARVATION guard (the bug the flat 1%/min
   })
   test('stepwise regen reaches the same HP as one-shot (fraction never lost across tick boundaries)', () => {
     const [one_shot] = regen_hp(25, 5_000, 70, 1, 0, 15_000)
-    const step1 = regen_hp(25, 5_000, 70, 1, 0, 10_000) // [35, 9807]
+    const step1 = regen_hp(25, 5_000, 70, 1, 0, 10_000) // [28, 9017]
     const step2 = regen_hp(step1[0], step1[1], 70, 1, 0, 15_000) // carry the stamp
-    expect(step2[0]).toBe(one_shot) // both 45 — no HP starved by re-stamping
+    expect(step2[0]).toBe(one_shot) // both 32 — no HP starved by re-stamping
   })
 })
 

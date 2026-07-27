@@ -3,7 +3,7 @@
 // HP TRUTH — proves character_max_hp / projected_hp reproduce the LIVE on-chain kernels EXACTLY
 // (aresrpg_foundation::progression_math max_hp_from_base + regen_hp, via hp_math.js), so a client read matches
 // what a chain settle computes. Display max = per-class base_hp + 5·(level−1) + (vitality + gear), while regen
-// settles against the pre-gear max; rate = (150 + level·6 + wisdom·2)/75 HP/s with remainder-carry and wisdom 0
+// settles against the pre-gear max; rate = (50 + level·6 + wisdom·2)/75 HP/s with remainder-carry and wisdom 0
 // (the live callers at character_link.move:365/406). Kernel-level parity lives in hp_math.test.js.
 import { describe, expect, test } from 'bun:test'
 import { level_to_experience } from '@aresrpg/sdk/experience'
@@ -57,25 +57,25 @@ describe('projected_hp — exact on-chain lazy regen (kernel rate + remainder-ca
     const carried = char({ current_hp: 35, hp_updated_ms: 9_807 })
 
     expect(projected_hp(carried, 9_807)).toBe(35)
-    expect(projected_hp(carried, 10_287)).toBe(35)
-    expect(projected_hp(carried, 10_288)).toBe(36)
-    expect(next_projected_hp_ms(carried, 10_287)).toBe(10_288)
-    expect(projected_hp(carried, 10_768)).toBe(36)
-    expect(next_projected_hp_ms(carried, 10_768)).toBe(10_769)
-    expect(projected_hp(carried, 10_769)).toBe(37)
-    // Absolute boundaries retain the fractional cadence; five points take 2404ms, not 5×481=2405ms.
-    expect(next_projected_hp_ms(carried, 11_731)).toBe(12_211)
-    expect(projected_hp(carried, 12_210)).toBe(39)
-    expect(projected_hp(carried, 12_211)).toBe(40)
+    expect(projected_hp(carried, 11_146)).toBe(35)
+    expect(projected_hp(carried, 11_147)).toBe(36)
+    expect(next_projected_hp_ms(carried, 11_146)).toBe(11_147)
+    expect(projected_hp(carried, 12_485)).toBe(36)
+    expect(next_projected_hp_ms(carried, 12_485)).toBe(12_486)
+    expect(projected_hp(carried, 12_486)).toBe(37)
+    // Absolute boundaries retain the fractional cadence; five points take 6697ms, not 5×1340=6700ms.
+    expect(next_projected_hp_ms(carried, 13_825)).toBe(15_165)
+    expect(projected_hp(carried, 16_503)).toBe(39)
+    expect(projected_hp(carried, 16_504)).toBe(40)
   })
 
   test('0 elapsed → stored current_hp (honest damage, NOT full)', () => {
     expect(projected_hp(damaged, 0)).toBe(40)
   })
 
-  test('senshi L1 kernel vector: 25 hp @5000ms → +10 by now=10000 (num 156) → 35', () => {
-    // The EXACT vector from progression_math.move regen_carries_remainder (hp 35; the 193ms fraction carries).
-    expect(projected_hp(char({ current_hp: 25, hp_updated_ms: 5_000 }), 10_000)).toBe(35)
+  test('senshi L1 kernel vector: 25 hp @5000ms → +3 by now=10000 (num 56) → 28', () => {
+    // The EXACT vector from progression_math.move regen_carries_remainder (hp 28; the fraction carries).
+    expect(projected_hp(char({ current_hp: 25, hp_updated_ms: 5_000 }), 10_000)).toBe(28)
   })
 
   test('sub-unit window → HP unchanged (the carry law: 25 hp @5000ms, now 5400 = <1 whole HP) → 25', () => {
@@ -125,7 +125,7 @@ describe('projected_hp — exact on-chain lazy regen (kernel rate + remainder-ca
         if (hp >= regen_max_hp) return regen_max_hp
         if (now_ms <= anchor_ms) return hp
         const elapsed = BigInt(now_ms - anchor_ms)
-        const num = 150n + BigInt(level) * 6n // live callers pass wisdom=0
+        const num = 50n + BigInt(level) * 6n // live callers pass wisdom=0
         const accrued = (elapsed * num) / 75_000n
         if (accrued === 0n) return hp
         return Number(BigInt(hp) + accrued >= BigInt(regen_max_hp) ? BigInt(regen_max_hp) : BigInt(hp) + accrued)
