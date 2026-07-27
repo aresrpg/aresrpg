@@ -31,7 +31,7 @@ public fun encode(x: u64, y: u64): u64 { y * GRID_W + x }
 public fun in_grid(cell: u64): bool { cell < GRID_CELLS }
 
 /// PATHFINDING (retro-exact): the 4-connected BFS shortest-path STEP COUNT from `start` to
-/// `target` over the 10×10 grid, treating every cell SET in `wall_mask` (obstacles ∪ holes ∪ occupied fighters —
+/// `target` over the GRID_W×GRID_H board, treating every cell SET in `wall_mask` (obstacles ∪ holes ∪ occupied fighters —
 /// body-blocking; a MASK_WORDS-word bitset — gas-diet #1) as a WALL. Returns the exact MP cost (= path steps) if
 /// `target` is reachable within `max_steps`, else `GRID_CELLS` (a sentinel larger than any real cost) meaning
 /// UNREACHABLE. Deterministic + integer-only; the JS twin (`fight-los bfsPathCost`) computes the same COST from
@@ -73,6 +73,56 @@ public fun bfs_path_cost(start: u64, target: u64, wall_mask: &vector<u64>, max_s
     frontier = next;
   };
   GRID_CELLS
+}
+
+/// THE DISTANCE FIELD to `target`: one BFS outward from the target producing, for every cell, its 4-connected
+/// shortest step count TO the target over the same wall set — `path_unreachable()` for a wall, for a cell no
+/// path reaches, and for anything farther than `max_steps`.
+///
+/// This is `bfs_path_cost` answered for every cell at once, and it exists because the movement walker needed the
+/// answer ~25 times per move: one flood fill for the route cost, then another PER CANDIDATE DIRECTION per step.
+/// The graph is undirected (a wall blocks from either side), so distance-to-target read off a field grown FROM
+/// the target is the same number `bfs_path_cost(cell, target, …)` returns — the walker's tie-break predicate is
+/// unchanged, byte for byte, and only the number of flood fills moves.
+///
+/// The field does NOT answer for a wall cell, while `bfs_path_cost` never checks whether its START is a wall.
+/// Every caller tests `mask_get(walls, cell)` before reading, so the two agree everywhere they are consulted.
+public fun bfs_distance_field(target: u64, wall_mask: &vector<u64>, max_steps: u64): vector<u64> {
+  let mut field = vector<u64>[];
+  let mut i = 0;
+  while (i < GRID_CELLS) { field.push_back(GRID_CELLS); i = i + 1; };
+  if (!in_grid(target) || mask_get(wall_mask, target)) return field;
+
+  *field.borrow_mut(target) = 0;
+  let mut frontier = vector<u64>[target];
+  let mut steps = 0;
+  while (steps < max_steps && !frontier.is_empty()) {
+    steps = steps + 1;
+    let mut next = vector<u64>[];
+    let mut j = 0;
+    while (j < frontier.length()) {
+      let c = *frontier.borrow(j);
+      let x = cell_x(c);
+      let y = cell_y(c);
+      let mut nbrs = vector<u64>[];
+      if (x > 0) nbrs.push_back(c - 1);
+      if (x + 1 < GRID_W) nbrs.push_back(c + 1);
+      if (y > 0) nbrs.push_back(c - GRID_W);
+      if (y + 1 < GRID_H) nbrs.push_back(c + GRID_W);
+      let mut k = 0;
+      while (k < nbrs.length()) {
+        let n = *nbrs.borrow(k);
+        if (*field.borrow(n) == GRID_CELLS && !mask_get(wall_mask, n)) {
+          *field.borrow_mut(n) = steps;
+          next.push_back(n);
+        };
+        k = k + 1;
+      };
+      j = j + 1;
+    };
+    frontier = next;
+  };
+  field
 }
 
 /// The UNREACHABLE sentinel `bfs_path_cost` returns when no path ≤ max_steps exists (a wrapper for readability + the JS twin).
