@@ -258,6 +258,10 @@ describe('L4 · determinism — the seed is the whole fight', () => {
     //      different tuple, so each turn's crit/damage/dodge slots land elsewhere and the trace shifts. Again
     //      only the number: the two-run equality, the different-seed divergence, and the replay-to-terminal
     //      check in this same file all still pass untouched.
+    //   5. #1207, when a PLAYER move's tackle escape left the crank thread for that same public turn clock —
+    //      the coin the board already previews. Contested moves now decide differently AND stop advancing the
+    //      crank, so every draw after one shifts. Determinism is again untouched: the capsule records the clock
+    //      on the move command it folded with, so the replay re-rolls the identical escape.
     // The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved — it seats no characters.
     expect(digest_of(a)).toMatchSnapshot()
   })

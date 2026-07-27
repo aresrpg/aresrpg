@@ -37,22 +37,13 @@ const state_of = () => ({
   fight_id: 'tackle-entropy-parity',
   started: true,
   rng: RNG_SENTINEL,
+  turn_rng: RNG_SENTINEL,
   next_id: 1,
   team0: [
-    entity(
-      'mover',
-      { x: 5, y: 5 },
-      fixture.contest.runner_agility,
-      true,
-    ),
+    entity('mover', { x: 5, y: 5 }, fixture.contest.runner_agility, true),
   ],
   team1: [
-    entity(
-      'locker',
-      { x: 4, y: 5 },
-      fixture.contest.locker_agility,
-      false,
-    ),
+    entity('locker', { x: 4, y: 5 }, fixture.contest.locker_agility, false),
   ],
   turn_order: ['mover'],
   current_turn_idx: 0,
@@ -90,7 +81,13 @@ describe('tackle entropy parity — Move turn clock versus sim resolution', () =
       const mover = find_entity(result.state, 'mover')
       expect(mover?.ap, vector.id).toBe(vector.ap_after)
       expect(mover?.mp, vector.id).toBe(vector.mp_after)
-      expect(result.state.rng, `${vector.id}: tackle must not consume state.rng`).toBe(
+      // A clocked contest is a scratch draw: neither the legacy capsule field nor the crank thread moves, so a
+      // mob's later draws are identical whether or not a player was tackled on the way there.
+      expect(
+        result.state.turn_rng,
+        `${vector.id}: a clocked tackle must not advance the crank thread`,
+      ).toBe(RNG_SENTINEL)
+      expect(result.state.rng, `${vector.id}: state.rng is legacy`).toBe(
         RNG_SENTINEL,
       )
     })
