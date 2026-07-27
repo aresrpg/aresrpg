@@ -24,7 +24,7 @@ import {
   PROXIMITY_M,
   SEARCH_PROGRESS_MS,
   zone_searchable,
-  is_group_claimable,
+  engage_d2,
   zone_key,
   zone_row_of,
   parse_key,
@@ -148,8 +148,10 @@ const fold_claim_intent = (state, input, now) => {
   const k = parse_key(key)
   const row = state.zones.get(k.zone)?.rows.get(k.rk)
   if (!row || row.kind !== 'mob' || state.pending.has(`claim:${key}`)) return state
-  const home = state.group_homes.get(key) ?? row
-  if (!state.player || !is_group_claimable(state.player.x, state.player.z, home.x, home.z, PROXIMITY_M)) return state
+  // ONE ENGAGE ORIGIN (#1318): the door measures with `engage_d2` — the same rule the [R] pill's
+  // `attack_engageable` flag reads, so the gold ring and the press door can never disagree about legality.
+  // (negated form on purpose: a NaN distance from a garbage position must REFUSE, never fall through)
+  if (!state.player || !(engage_d2(state, key, row, state.player) <= PROXIMITY_M * PROXIMITY_M)) return state
   const pending = new Map(state.pending)
   pending.set(`claim:${key}`, { kind: 'claim', at: now })
   return retarget(

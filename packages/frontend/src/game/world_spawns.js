@@ -39,6 +39,7 @@ import { Raycaster, Vector2 } from 'three'
 import { get_mob_template } from '@aresrpg/sdk/game'
 import { zone_of_world } from '@aresrpg/sdk/coords'
 import { spawn_rows as core_spawn_rows } from '@aresrpg/world/spawns_zones'
+import { engage_offset } from '@aresrpg/world/spawns_reconcile'
 import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
@@ -62,6 +63,7 @@ import { use_party } from '../world-shell/party_store.js'
 import { enter_world_fight, resume_world_fight } from '../world-shell/world_fight.js'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 
+import { cardinal_of } from './screens/hud/world/compass_math.js'
 import { engage_block, engage_block_copy_key } from './engage_gate.js'
 import { start_fight_engage } from './fight_engage.js'
 import { push_event_toast } from './core/toast.js'
@@ -508,11 +510,21 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     e.chip.style.boxShadow = mode === 'claimable' ? '0 0 20px rgba(200,150,60,.55)' : 'none'
   }
 
-  // GLOBAL-SEARCH claim: the proximity gate lives in the CORE now (claim_intent reads the same stable HOME
-  // this renderer placed, falling back to the row only before placement).
-  // A refused intent on the CLICK path (on_up raycasts placed rigs to the despawn radius) teaches "get
-  // closer" instead of firing a doomed claim.
-  const hint_too_far = () => push_event_toast({ state: 'info', title: i18n.t('discovery.engage_too_far') })
+  // GLOBAL-SEARCH claim: the proximity gate lives in the CORE now (claim_intent measures with `engage_d2` — the
+  // nearer of the group's derivation anchor and its rendered home). A refused intent on the CLICK path (on_up
+  // raycasts placed rigs to the despawn radius) teaches "get closer" instead of firing a doomed claim — and
+  // NAMES THE WAY (#1318: a bare "get closer" cost a 6-point spiral). The bearing comes from the core's engage
+  // geometry through the compass strip's own 8 labels, so the hint and the strip can never disagree.
+  const hint_too_far = (/** @type {string|null} */ key = null) => {
+    const offset = key ? engage_offset(spawns_store.getState(), key) : null
+    const title = offset
+      ? i18n.t('discovery.engage_too_far_dir', {
+          dist: Math.max(1, Math.round(offset.distance)),
+          dir: cardinal_of(offset.dx, offset.dz),
+        })
+      : i18n.t('discovery.engage_too_far')
+    push_event_toast({ state: 'info', title })
+  }
 
   // #861 — the live inputs of the ONE engage gate (engage_gate.js). This is the whole effectful half: the
   // predicate itself is pure, so both the pill's presentation and engage()'s press door decide off the SAME
@@ -683,7 +695,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // closer" instead of firing a doomed claim; an accepted one marks the row pending (the optimistic hide as
     // data) and emits the claim_tx request THIS adapter executes.
     spawns_input({ type: 'claim_intent', key: e.key })
-    if (!spawns_store.getState().pending.has(`claim:${e.key}`)) return hint_too_far()
+    if (!spawns_store.getState().pending.has(`claim:${e.key}`)) return hint_too_far(e.key)
     start_engage_timing('world')
     const request = spawns_store.getState().tx_request
     engaging = true

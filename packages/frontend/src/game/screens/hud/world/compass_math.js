@@ -65,6 +65,13 @@ export const CARDINALS = [
   { label: 'NW', bearing: -Math.PI / 4, major: false },
 ]
 
+/** The compass POINT a world-XZ offset falls under ('N', 'NE', … — the strip's own 8 labels, so a direction
+ *  hint and the strip the player reads it against can never name the same bearing differently). */
+export function cardinal_of(dx, dz) {
+  const octant = Math.round(bearing_of(dx, dz) / (Math.PI / 4))
+  return CARDINALS[((octant % 8) + 8) % 8].label
+}
+
 /** Distance tier for the mockup's pip fade: near = full, mid/far shrink + dim. */
 export function pip_tier(dist) {
   if (dist < 80) return 'near'

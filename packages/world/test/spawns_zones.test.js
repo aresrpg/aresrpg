@@ -26,7 +26,8 @@ import {
 import {
   zone_row_of,
   pick_gather_target,
-  is_group_claimable,
+  engage_d2,
+  engage_offset,
   zone_searchable,
   PROXIMITY_M,
   GATHER_HYSTERESIS_M,
@@ -453,6 +454,47 @@ describe('attack visibility widens to the nearest member; engage legality uses t
     ctx.input({ type: 'member_positions', key: '5:5:mob:7', members: [] }) // renderer tore the group down
     expect(ctx.state().attack_target_key).toBe(null) // anchor 12 > 10 → no longer visible off the anchor
   })
+  // #1318 — the mirror of #367: the ring used to measure ONLY from the rendered home, so a player standing on
+  // the DERIVED ANCHOR (what the chain authenticates, what the compass pips point at) got "get closer" with no
+  // direction and had to spiral for the accepting spot. Both origins accept now; the hint names the nearer one.
+  it('accepts engage 2m from the DERIVED ANCHOR even when the render seek drifted the home away (#1318)', () => {
+    const ctx = boot()
+    ctx.input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }], // derived anchor world (20, 40)
+    })
+    ctx.input({
+      type: 'member_positions',
+      key: '5:5:mob:7',
+      home: { x: 29, z: 40 }, // the dry-footing seek walked the render home 9m off its anchor
+      members: [{ x: 29, z: 40 }],
+    })
+    ctx.input({ type: 'player_pos', x: 22, z: 40 }) // 2m from the anchor, 7m from the drifted home
+    expect(ctx.state().attack_target_key).toBe('5:5:mob:7')
+    expect(ctx.state().attack_engageable).toBe(true) // RED before the fix: measured 7m from the home only
+    ctx.input({ type: 'claim_intent', key: '5:5:mob:7' })
+    expect(ctx.state().tx_request).toMatchObject({ kind: 'claim', payload: { spawn_id: '7' } })
+  })
+
+  it('engage_offset points at the NEARER origin so the refusal hint can name a direction (#1318)', () => {
+    const ctx = boot()
+    ctx.input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }], // anchor world (20, 40)
+    })
+    ctx.input({ type: 'player_pos', x: 8, z: 40 }) // 12m due WEST of the anchor — out of both rings
+    expect(ctx.state().attack_engageable).toBe(false)
+    expect(engage_offset(ctx.state(), '5:5:mob:7')).toEqual({ dx: 12, dz: 0, distance: 12 })
+    // once the renderer places the pack nearer than the anchor, the hint follows the pack
+    ctx.input({ type: 'member_positions', key: '5:5:mob:7', home: { x: 10, z: 43 }, members: [{ x: 10, z: 43 }] })
+    expect(engage_offset(ctx.state(), '5:5:mob:7')).toEqual({ dx: 2, dz: 3, distance: Math.sqrt(13) })
+    expect(engage_offset(ctx.state(), '5:5:mob:404')).toBe(null) // an unknown group hints nothing
+  })
+
   it('accepts engage when the player is co-located with the renderer-placed group home', () => {
     const ctx = boot()
     ctx.input({
@@ -578,11 +620,14 @@ describe('affordance rows — [F]/[G]/[R] as one data contract', () => {
 })
 
 describe('the pure rules stand alone (moved homes: hunt_zone / spawn_rigs / compass_math)', () => {
-  it('is_group_claimable — in reach claims, far does not, garbage never', () => {
-    expect(is_group_claimable(0, 0, 3, 4, PROXIMITY_M)).toBe(true)
-    expect(is_group_claimable(0, 0, 5, 5, 6)).toBe(false)
-    expect(is_group_claimable(NaN, 0, 1, 1, 6)).toBe(false)
-    expect(is_group_claimable(0, 0, 1, 1, 0)).toBe(false)
+  it('engage_d2 — the NEARER of the two engage origins, garbage never in reach', () => {
+    const blank = { group_homes: new Map() }
+    const row = { x: 3, z: 4 }
+    expect(engage_d2(blank, 'k', row, { x: 0, z: 0 })).toBe(25) // no rendered home → the anchor alone
+    const placed = { group_homes: new Map([['k', { x: 20, z: 0 }]]) }
+    expect(engage_d2(placed, 'k', row, { x: 0, z: 0 })).toBe(25) // anchor nearer than the drifted home
+    expect(engage_d2(placed, 'k', row, { x: 19, z: 0 })).toBe(1) // …and the home nearer than the anchor
+    expect(engage_d2(blank, 'k', row, { x: NaN, z: 0 }) <= PROXIMITY_M * PROXIMITY_M).toBe(false) // garbage never
   })
   it('pick_gather_target — the hysteresis table', () => {
     expect(

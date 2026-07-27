@@ -2544,6 +2544,7 @@
     "gathering": "採取中…",
     "gather_done": "×{{count}} 採取 — キオスクに追加しました",
     "gather_failed": "採取に失敗しました",
+    "engage_too_far_dir": "近づいて交戦する — {{dir}}へ{{dist}}m",
     "engage_too_far": "近づいて交戦する",
     "gather_requires_tool": "{{tool}} が必要です",
     "gather_tier_locked": "{{job}} レベル {{level}} が必要です",

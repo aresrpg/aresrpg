@@ -2546,6 +2546,7 @@
     "gathering": "Збір…",
     "gather_done": "Зібрано ×{{count}} — додано до вашого кіоску",
     "gather_failed": "Збір не вдався",
+    "engage_too_far_dir": "Підійдіть ближче, щоб атакувати — {{dist}} м {{dir}}",
     "engage_too_far": "Підійдіть ближче, щоб атакувати",
     "gather_requires_tool": "Потрібен {{tool}}",
     "gather_tier_locked": "Потрібен {{job}} рівень {{level}}",

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'bun:test'
 import {
   wrap_pi,
   bearing_of,
+  cardinal_of,
   camera_heading,
   relative_bearing,
   strip_x,
@@ -44,6 +45,25 @@ describe('bearing_of (N = -Z, E = +X)', () => {
     expect(bearing_of(1, 0)).toBeCloseTo(Math.PI / 2) // east
     expect(Math.abs(bearing_of(0, 1))).toBeCloseTo(Math.PI) // south (±π)
     expect(bearing_of(-1, 0)).toBeCloseTo(-Math.PI / 2) // west
+  })
+})
+
+describe('cardinal_of (#1318 — the direction the "get closer" hint names)', () => {
+  it('lands every axis and diagonal on the strip label a player would read off the compass', () => {
+    expect(cardinal_of(0, -1)).toBe('N')
+    expect(cardinal_of(1, -1)).toBe('NE')
+    expect(cardinal_of(1, 0)).toBe('E')
+    expect(cardinal_of(1, 1)).toBe('SE')
+    expect(cardinal_of(0, 1)).toBe('S')
+    expect(cardinal_of(-1, 1)).toBe('SW')
+    expect(cardinal_of(-1, 0)).toBe('W')
+    expect(cardinal_of(-1, -1)).toBe('NW')
+  })
+  it('rounds to the NEAREST of the eight points (a 20° offset still reads north)', () => {
+    const rad = (deg) => (deg * Math.PI) / 180
+    expect(cardinal_of(Math.sin(rad(20)), -Math.cos(rad(20)))).toBe('N')
+    expect(cardinal_of(Math.sin(rad(-20)), -Math.cos(rad(-20)))).toBe('N')
+    expect(cardinal_of(Math.sin(rad(200)), -Math.cos(rad(200)))).toBe('S')
   })
 })
 

@@ -2544,6 +2544,7 @@
     "gathering": "Gathering…",
     "gather_done": "Gathered ×{{count}} — added to your kiosk",
     "gather_failed": "Gather failed",
+    "engage_too_far_dir": "Get closer to engage — {{dist}}m {{dir}}",
     "engage_too_far": "Get closer to engage",
     "gather_requires_tool": "Requires a {{tool}}",
     "gather_tier_locked": "Requires {{job}} level {{level}}",

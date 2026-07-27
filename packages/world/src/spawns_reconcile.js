@@ -77,12 +77,44 @@ export function zone_row_of(zones, zx, zy) {
 
 // ── the claimability + hysteresis rules (moved from hunt_zone.js / spawn_rigs.js — renderer decides nothing) ──
 
-/** True when the player stands within engage range of the group's stable rendered home. */
-export function is_group_claimable(player_x, player_z, group_x, group_z, range) {
-  const dx = Number(player_x) - Number(group_x)
-  const dz = Number(player_z) - Number(group_z)
-  if (!Number.isFinite(dx) || !Number.isFinite(dz) || !(range > 0)) return false
-  return dx * dx + dz * dz <= range * range
+/**
+ * THE ENGAGE ORIGIN (#367 + #1318 — the same rule was written twice and each copy got the origin wrong in the
+ * opposite direction). A mob group occupies TWO positions that legitimately disagree: the DERIVATION ANCHOR
+ * (`row`, the chain-authenticated seed position `zones.move` re-derives and `verify_travel` validates against)
+ * and the RENDERED HOME (`group_homes`, the terrain-resolved seat the renderer's dry-footing seek walked to so
+ * the pack does not stand in water). Engage distance is the distance to the NEARER of the two: standing on the
+ * mobs you SEE engages (#367), and so does standing on the anchor the chain and the compass point at (#1318).
+ *
+ * Widening is safe against the chain: the on-chain gate is `checkpoint::verify_travel` — a travel-TIME check
+ * between the character's checkpoint and the derived anchor — so it never reads where the player is standing
+ * and this can produce no new class of doomed tx. An unplaced group has only its anchor.
+ * @param {SpawnsState} state @param {string} key @param {SpawnRow} row @param {{x:number,z:number}} p
+ */
+export function engage_d2(state, key, row, p) {
+  const anchor_d2 = (row.x - p.x) ** 2 + (row.z - p.z) ** 2
+  const home = state.group_homes.get(key)
+  if (!home) return anchor_d2
+  return Math.min(anchor_d2, (home.x - p.x) ** 2 + (home.z - p.z) ** 2)
+}
+
+/**
+ * The engage geometry of `key` relative to the player, for the "get closer" refusal's DIRECTION hint (#1318: a
+ * refusal that only says "get closer" costs a 6-point spiral). Offsets point at whichever engage origin is
+ * nearer — the same one `engage_d2` measures, so the hint can never send a player away from the accepting spot.
+ * Null when the group or the player position is unknown.
+ * @param {SpawnsState} state @param {string} key
+ * @returns {{ dx: number, dz: number, distance: number } | null}
+ */
+export function engage_offset(state, key) {
+  const p = state.player
+  const k = parse_key(key)
+  const row = state.zones.get(k.zone)?.rows.get(k.rk)
+  if (!p || !row) return null
+  const home = state.group_homes.get(key)
+  const anchor_d2 = (row.x - p.x) ** 2 + (row.z - p.z) ** 2
+  const home_d2 = home ? (home.x - p.x) ** 2 + (home.z - p.z) ** 2 : Infinity
+  const origin = home_d2 < anchor_d2 ? home : row
+  return { dx: origin.x - p.x, dz: origin.z - p.z, distance: Math.sqrt(Math.min(anchor_d2, home_d2)) }
 }
 
 /** HYSTERESIS: hold the armed gather target unless a different node is MEANINGFULLY closer (margin_m). */
@@ -214,7 +246,7 @@ const nearest_member_d2 = (members, row, p) => {
  *  The mob VISIBILITY ring is the wider ATTACK_VISIBLE_M measured from the nearest MEMBER; its rendered-HOME
  *  distance rides along so retarget can flag whether that armed target is also within the ENGAGE ring. */
 const scan_targets = (state, p) => {
-  const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring from its anchor; mob ENGAGE from its rendered home
+  const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring from its anchor; mob ENGAGE from `engage_d2`
   const visible2 = ATTACK_VISIBLE_M * ATTACK_VISIBLE_M // the wider mob PROMPT ring, from the nearest member
   const hit = {
     nearest_res: null,
@@ -237,10 +269,9 @@ const scan_targets = (state, p) => {
       } else if (!state.pending.has(`claim:${key}`)) {
         const member_d2 = nearest_member_d2(state.members.get(key), row, p)
         if (member_d2 < hit.nearest_mob_d2) {
-          const home = state.group_homes.get(key) ?? row
           hit.nearest_mob_d2 = member_d2
           hit.nearest_mob = key
-          hit.nearest_mob_home_d2 = (home.x - p.x) ** 2 + (home.z - p.z) ** 2
+          hit.nearest_mob_home_d2 = engage_d2(state, key, row, p)
         }
       }
     }

@@ -2544,6 +2544,7 @@
     "gathering": "Récolte…",
     "gather_done": "Récolté ×{{count}} — ajouté à votre kiosque",
     "gather_failed": "Échec de la récolte",
+    "engage_too_far_dir": "Rapprochez-vous pour engager — {{dist}} m {{dir}}",
     "engage_too_far": "Rapprochez-vous pour engager",
     "gather_requires_tool": "Nécessite un(e) {{tool}}",
     "gather_tier_locked": "Nécessite {{job}} niveau {{level}}",

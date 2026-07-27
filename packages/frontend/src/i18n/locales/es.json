@@ -2544,6 +2544,7 @@
     "gathering": "Recolectando…",
     "gather_done": "Recolectado ×{{count}} — añadido a tu kiosco",
     "gather_failed": "Recolección fallida",
+    "engage_too_far_dir": "Acércate para atacar — {{dist}} m {{dir}}",
     "engage_too_far": "Acércate para atacar",
     "gather_requires_tool": "Requiere un {{tool}}",
     "gather_tier_locked": "Requiere {{job}} nivel {{level}}",

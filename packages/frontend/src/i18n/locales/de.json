@@ -2544,6 +2544,7 @@
     "gathering": "Sammeln…",
     "gather_done": "×{{count}} gesammelt — zu deinem Kiosk hinzugefügt",
     "gather_failed": "Sammeln fehlgeschlagen",
+    "engage_too_far_dir": "Komm näher, um anzugreifen — {{dist}} m {{dir}}",
     "engage_too_far": "Komm näher, um anzugreifen",
     "gather_requires_tool": "Benötigt {{tool}}",
     "gather_tier_locked": "Benötigt {{job}} Stufe {{level}}",
