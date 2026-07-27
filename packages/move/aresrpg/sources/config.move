@@ -21,7 +21,6 @@
 /// hardcoded like the SPEC promises. Everything a number could shape in gameplay that ISN'T one of those curves
 /// lives on this object.
 module aresrpg::config;
-use sui::versioned::{Self, Versioned};
 
 use aresrpg::{admin::AdminCap, version::Version};
 use std::string::String;
@@ -118,19 +117,8 @@ public struct ClassRow has store, copy, drop {
 }
 
 /// THE game object. Shared once at init; ships DARK (`enabled == false`). Fields group by spec section.
-const CONFIG_VERSION: u64 = 1;
-const EWrongInnerVersion: u64 = 199; // the wrapped payload is not the version this package speaks
-
-/// The config SHELL — an id plus a version-wrapped payload (#1289, DeepBookV3 `RegistryInner` shape). A `key`
-/// struct's layout freezes at publish; wrapping the dials means the next one is a new inner struct and one
-/// migrate, never a dynamic-field workaround.
 public struct GameConfig has key {
   id: UID,
-  inner: Versioned,
-}
-
-/// Every live dial. Add fields here freely.
-public struct GameConfigInner has store {
   enabled: bool, // GLOBAL game freeze (distinct from per-package version.enabled)
   // §17.20 — economy clamps
   xp_multiplier: u64, // hundredths of 1× (100..100_000 → 1×..1000×)
@@ -182,19 +170,9 @@ public struct ClassRowSet has copy, drop { class_id: u64, base_hp: u64, base_ap:
 
 // ╔════════════════ [ Init ] ═════════════════════════════════════════════════ ]
 
-/// Read the version-wrapped payload, asserting this package speaks its version.
-fun load_inner(c: &GameConfig): &GameConfigInner {
-  assert!(c.inner.version() == CONFIG_VERSION, EWrongInnerVersion);
-  c.inner.load_value()
-}
-
-fun load_inner_mut(c: &mut GameConfig): &mut GameConfigInner {
-  assert!(c.inner.version() == CONFIG_VERSION, EWrongInnerVersion);
-  c.inner.load_value_mut()
-}
-
 fun init(ctx: &mut TxContext) {
-  let inner = GameConfigInner {
+  transfer::share_object(GameConfig {
+    id: object::new(ctx),
     enabled: false, // ships dark — the admin flips the global switch at launch
     xp_multiplier: DEFAULT_MULT,
     loot_multiplier: DEFAULT_MULT,
@@ -214,8 +192,7 @@ fun init(ctx: &mut TxContext) {
     gifting_brand: option::none(), // idem — the gifting satellite's witness is pinned at its ceremony step
     dungeon_brand: option::none(), // idem — the dungeon satellite's witness is pinned at its ceremony step
     classes: default_classes(),
-  };
-  transfer::share_object(GameConfig { id: object::new(ctx), inner: versioned::create(CONFIG_VERSION, inner, ctx) });
+  });
 }
 
 /// The 12 default class rows (§17.31 / ANNEX §4). Base HP is per-class; base AP/MP = 6/3 universally.
@@ -244,14 +221,14 @@ fun row(base_hp: u64): ClassRow { ClassRow { base_hp, base_ap: DEFAULT_BASE_AP, 
 /// Abort unless the game is globally enabled — every VALUE path that takes `&GameConfig` calls this (the
 /// global kill-switch). Pure reads/derivations do NOT gate on it.
 public fun assert_enabled(self: &GameConfig) {
-  assert!(load_inner(self).enabled, ENotEnabled);
+  assert!(self.enabled, ENotEnabled);
 }
 
 /// Flip the GLOBAL game switch (launch = `true`, emergency freeze = `false`). Cap-gated but NOT version-gated,
 /// so an emergency global freeze always works even on a stale package version.
 public fun set_enabled(cap: &AdminCap, config: &mut GameConfig, enabled: bool, ctx: &TxContext) {
   cap.verify(ctx);
-  load_inner_mut(config).enabled = enabled;
+  config.enabled = enabled;
   event::emit(ConfigEnabledSet { enabled });
 }
 
@@ -260,19 +237,19 @@ public fun set_enabled(cap: &AdminCap, config: &mut GameConfig, enabled: bool, c
 /// Abort unless domain `bit` is live. Every domain's ENTRY doors call this alongside the global
 /// `assert_enabled` — one incident darks one domain while the rest of the game keeps running.
 public fun assert_domain(self: &GameConfig, bit: u16) {
-  assert!(load_inner(self).domain_enabled & bit == bit, EDomainDisabled);
+  assert!(self.domain_enabled & bit == bit, EDomainDisabled);
 }
 
 /// Flip ONE domain bit (emergency: `on = false` darks that domain). Cap-gated but NOT version-gated — an
 /// emergency domain freeze must always work, exactly like the global switch.
 public fun set_domain_enabled(cap: &AdminCap, config: &mut GameConfig, bit: u16, on: bool, ctx: &TxContext) {
   cap.verify(ctx);
-  load_inner_mut(config).domain_enabled = if (on) load_inner_mut(config).domain_enabled | bit else load_inner_mut(config).domain_enabled & (bit ^ 0xFFFF);
-  event::emit(DomainSet { bit, on, mask: load_inner_mut(config).domain_enabled });
+  config.domain_enabled = if (on) config.domain_enabled | bit else config.domain_enabled & (bit ^ 0xFFFF);
+  event::emit(DomainSet { bit, on, mask: config.domain_enabled });
 }
 
 /// The live domain bitmask (RPC / pre-flight read).
-public fun domains(self: &GameConfig): u16 { load_inner(self).domain_enabled }
+public fun domains(self: &GameConfig): u16 { self.domain_enabled }
 
 public fun domain_fight(): u16 { DOMAIN_FIGHT }
 public fun domain_dungeon(): u16 { DOMAIN_DUNGEON }
@@ -289,7 +266,7 @@ public fun domain_forgemagie(): u16 { DOMAIN_FORGEMAGIE }
 /// twin): the extracted rune-forge sibling constructs its witness (private constructor, its own module only),
 /// so a pinned brand makes those doors sibling-exclusive; an unpinned config (`none`) keeps them CLOSED.
 public fun assert_forge_brand<W: drop>(self: &GameConfig) {
-  assert!(load_inner(self).forge_brand.contains(&type_name::get<W>()), EWrongBrand);
+  assert!(self.forge_brand.contains(&type_name::get<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the forge sibling's witness type — the ceremony's post-publish wiring step. Cap + version
@@ -297,72 +274,72 @@ public fun assert_forge_brand<W: drop>(self: &GameConfig) {
 public fun set_forge_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).forge_brand = option::some(type_name::get<W>());
+  config.forge_brand = option::some(type_name::get<W>());
   event::emit(DialChanged { dial: b"forge_brand".to_string(), value: 1 }); // the pinned TypeName is readable on this shared object
 }
 
 /// The pinned forge witness (RPC / pre-flight read; `none` = brand doors closed).
-public fun forge_brand(self: &GameConfig): &Option<TypeName> { &load_inner(self).forge_brand }
+public fun forge_brand(self: &GameConfig): &Option<TypeName> { &self.forge_brand }
 
 // ╔════════════════ [ Gifting brand pin (2026-07-13 split — the aresrpg_gifting witness gate) ] ═ ]
 
 /// Abort unless `W` is the PINNED gifting witness — first line of every gifting-branded core value door
 /// (`mint_and_lock_output_brand` / `heal_hp_brand` / `character::new_brand`). Same envelope as `assert_forge_brand`.
 public fun assert_gifting_brand<W: drop>(self: &GameConfig) {
-  assert!(load_inner(self).gifting_brand.contains(&type_name::get<W>()), EWrongBrand);
+  assert!(self.gifting_brand.contains(&type_name::get<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the gifting sibling's witness type — the ceremony's post-publish wiring step. Cap + version gated.
 public fun set_gifting_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).gifting_brand = option::some(type_name::get<W>());
+  config.gifting_brand = option::some(type_name::get<W>());
   event::emit(DialChanged { dial: b"gifting_brand".to_string(), value: 1 });
 }
 
 /// The pinned gifting witness (RPC / pre-flight read; `none` = the gifting doors are closed).
-public fun gifting_brand(self: &GameConfig): &Option<TypeName> { &load_inner(self).gifting_brand }
+public fun gifting_brand(self: &GameConfig): &Option<TypeName> { &self.gifting_brand }
 
 // ╔════════════════ [ Dungeon brand pin (2026-07-13 split — the aresrpg_dungeon witness gate) ] ═ ]
 
 /// Abort unless `W` is the PINNED dungeon witness — first line of the two dungeon-branded core fight doors
 /// (`create_dungeon_fight_brand` / `join_vouched_brand`). Same envelope as `assert_forge_brand`.
 public fun assert_dungeon_brand<W: drop>(self: &GameConfig) {
-  assert!(load_inner(self).dungeon_brand.contains(&type_name::get<W>()), EWrongBrand);
+  assert!(self.dungeon_brand.contains(&type_name::get<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the dungeon sibling's witness type — the ceremony's post-publish wiring step. Cap + version gated.
 public fun set_dungeon_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).dungeon_brand = option::some(type_name::get<W>());
+  config.dungeon_brand = option::some(type_name::get<W>());
   event::emit(DialChanged { dial: b"dungeon_brand".to_string(), value: 1 });
 }
 
 /// The pinned dungeon witness (RPC / pre-flight read; `none` = the dungeon doors are closed).
-public fun dungeon_brand(self: &GameConfig): &Option<TypeName> { &load_inner(self).dungeon_brand }
+public fun dungeon_brand(self: &GameConfig): &Option<TypeName> { &self.dungeon_brand }
 
 // ╔════════════════ [ §17.20 economy setters (cap + version gated, clamped) ] ═ ]
 
 public fun set_xp_multiplier(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).xp_multiplier = clamp(value, MULT_MIN, MULT_MAX);
-  event::emit(DialChanged { dial: b"xp_multiplier".to_string(), value: load_inner_mut(config).xp_multiplier });
+  config.xp_multiplier = clamp(value, MULT_MIN, MULT_MAX);
+  event::emit(DialChanged { dial: b"xp_multiplier".to_string(), value: config.xp_multiplier });
 }
 
 public fun set_loot_multiplier(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).loot_multiplier = clamp(value, MULT_MIN, MULT_MAX);
-  event::emit(DialChanged { dial: b"loot_multiplier".to_string(), value: load_inner_mut(config).loot_multiplier });
+  config.loot_multiplier = clamp(value, MULT_MIN, MULT_MAX);
+  event::emit(DialChanged { dial: b"loot_multiplier".to_string(), value: config.loot_multiplier });
 }
 
 public fun set_max_reachable_level(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).max_reachable_level = clamp(value, LEVEL_MIN, LEVEL_MAX);
-  event::emit(DialChanged { dial: b"max_reachable_level".to_string(), value: load_inner_mut(config).max_reachable_level });
+  config.max_reachable_level = clamp(value, LEVEL_MIN, LEVEL_MAX);
+  event::emit(DialChanged { dial: b"max_reachable_level".to_string(), value: config.max_reachable_level });
 }
 
 // ╔════════════════ [ §17.26 engine-dial setters (cap + version gated, clamped) ] ═ ]
@@ -370,71 +347,71 @@ public fun set_max_reachable_level(cap: &AdminCap, config: &mut GameConfig, valu
 public fun set_turn_duration_ms(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).turn_duration_ms = clamp(value, TURN_MS_MIN, TURN_MS_MAX);
-  event::emit(DialChanged { dial: b"turn_duration_ms".to_string(), value: load_inner_mut(config).turn_duration_ms });
+  config.turn_duration_ms = clamp(value, TURN_MS_MIN, TURN_MS_MAX);
+  event::emit(DialChanged { dial: b"turn_duration_ms".to_string(), value: config.turn_duration_ms });
 }
 
 public fun set_placement_ms(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).placement_ms = clamp(value, PLACEMENT_MS_MIN, PLACEMENT_MS_MAX);
-  event::emit(DialChanged { dial: b"placement_ms".to_string(), value: load_inner_mut(config).placement_ms });
+  config.placement_ms = clamp(value, PLACEMENT_MS_MIN, PLACEMENT_MS_MAX);
+  event::emit(DialChanged { dial: b"placement_ms".to_string(), value: config.placement_ms });
 }
 
 public fun set_claim_window_epochs(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).claim_window_epochs = clamp(value, CLAIM_EPOCHS_MIN, CLAIM_EPOCHS_MAX);
-  event::emit(DialChanged { dial: b"claim_window_epochs".to_string(), value: load_inner_mut(config).claim_window_epochs });
+  config.claim_window_epochs = clamp(value, CLAIM_EPOCHS_MIN, CLAIM_EPOCHS_MAX);
+  event::emit(DialChanged { dial: b"claim_window_epochs".to_string(), value: config.claim_window_epochs });
 }
 
 public fun set_archimob_bp(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).archimob_bp = clamp(value, 0, BP_MAX);
-  event::emit(DialChanged { dial: b"archimob_bp".to_string(), value: load_inner_mut(config).archimob_bp });
+  config.archimob_bp = clamp(value, 0, BP_MAX);
+  event::emit(DialChanged { dial: b"archimob_bp".to_string(), value: config.archimob_bp });
 }
 
 public fun set_aging_bp_per_hour(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).aging_bp_per_hour = clamp(value, 0, BP_MAX);
-  event::emit(DialChanged { dial: b"aging_bp_per_hour".to_string(), value: load_inner_mut(config).aging_bp_per_hour });
+  config.aging_bp_per_hour = clamp(value, 0, BP_MAX);
+  event::emit(DialChanged { dial: b"aging_bp_per_hour".to_string(), value: config.aging_bp_per_hour });
 }
 
 public fun set_aging_cap_bp(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).aging_cap_bp = clamp(value, 0, AGING_CAP_MAX);
-  event::emit(DialChanged { dial: b"aging_cap_bp".to_string(), value: load_inner_mut(config).aging_cap_bp });
+  config.aging_cap_bp = clamp(value, 0, AGING_CAP_MAX);
+  event::emit(DialChanged { dial: b"aging_cap_bp".to_string(), value: config.aging_cap_bp });
 }
 
 public fun set_reclaim_cooldown_ms(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).reclaim_cooldown_ms = clamp(value, 0, RECLAIM_MS_MAX);
-  event::emit(DialChanged { dial: b"reclaim_cooldown_ms".to_string(), value: load_inner_mut(config).reclaim_cooldown_ms });
+  config.reclaim_cooldown_ms = clamp(value, 0, RECLAIM_MS_MAX);
+  event::emit(DialChanged { dial: b"reclaim_cooldown_ms".to_string(), value: config.reclaim_cooldown_ms });
 }
 
 public fun set_pvp_level_gate(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).pvp_level_gate = clamp(value, LEVEL_MIN, LEVEL_MAX);
-  event::emit(DialChanged { dial: b"pvp_level_gate".to_string(), value: load_inner_mut(config).pvp_level_gate });
+  config.pvp_level_gate = clamp(value, LEVEL_MIN, LEVEL_MAX);
+  event::emit(DialChanged { dial: b"pvp_level_gate".to_string(), value: config.pvp_level_gate });
 }
 
 public fun set_listing_level_gate(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).listing_level_gate = clamp(value, LEVEL_MIN, LEVEL_MAX);
-  event::emit(DialChanged { dial: b"listing_level_gate".to_string(), value: load_inner_mut(config).listing_level_gate });
+  config.listing_level_gate = clamp(value, LEVEL_MIN, LEVEL_MAX);
+  event::emit(DialChanged { dial: b"listing_level_gate".to_string(), value: config.listing_level_gate });
 }
 
 public fun set_team_size_bound(cap: &AdminCap, config: &mut GameConfig, value: u64, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  load_inner_mut(config).team_size_bound = clamp(value, TEAM_MIN, TEAM_MAX);
-  event::emit(DialChanged { dial: b"team_size_bound".to_string(), value: load_inner_mut(config).team_size_bound });
+  config.team_size_bound = clamp(value, TEAM_MIN, TEAM_MAX);
+  event::emit(DialChanged { dial: b"team_size_bound".to_string(), value: config.team_size_bound });
 }
 
 // ╔════════════════ [ §17.31 per-class setters (cap + version gated; index aborts, value clamps) ] ═ ]
@@ -472,36 +449,36 @@ fun clamp(v: u64, lo: u64, hi: u64): u64 {
 /// Mutable borrow of a class row; aborts `EBadClass` on an out-of-range index (a class id can never be clamped).
 fun row_mut(config: &mut GameConfig, class_id: u64): &mut ClassRow {
   assert!(class_id < CLASS_COUNT, EBadClass);
-  &mut load_inner_mut(config).classes[class_id]
+  &mut config.classes[class_id]
 }
 
 fun emit_row(config: &GameConfig, class_id: u64) {
-  let r = &load_inner(config).classes[class_id];
+  let r = &config.classes[class_id];
   event::emit(ClassRowSet { class_id, base_hp: r.base_hp, base_ap: r.base_ap, base_mp: r.base_mp });
 }
 
 // ╔════════════════ [ Getters — hot paths read these off `&GameConfig` ] ═════ ]
 
-public fun is_enabled(self: &GameConfig): bool { load_inner(self).enabled }
-public fun xp_multiplier(self: &GameConfig): u64 { load_inner(self).xp_multiplier }
-public fun loot_multiplier(self: &GameConfig): u64 { load_inner(self).loot_multiplier }
-public fun max_reachable_level(self: &GameConfig): u64 { load_inner(self).max_reachable_level }
-public fun turn_duration_ms(self: &GameConfig): u64 { load_inner(self).turn_duration_ms }
-public fun placement_ms(self: &GameConfig): u64 { load_inner(self).placement_ms }
-public fun claim_window_epochs(self: &GameConfig): u64 { load_inner(self).claim_window_epochs }
-public fun archimob_bp(self: &GameConfig): u64 { load_inner(self).archimob_bp }
-public fun aging_bp_per_hour(self: &GameConfig): u64 { load_inner(self).aging_bp_per_hour }
-public fun aging_cap_bp(self: &GameConfig): u64 { load_inner(self).aging_cap_bp }
-public fun reclaim_cooldown_ms(self: &GameConfig): u64 { load_inner(self).reclaim_cooldown_ms }
-public fun pvp_level_gate(self: &GameConfig): u64 { load_inner(self).pvp_level_gate }
-public fun listing_level_gate(self: &GameConfig): u64 { load_inner(self).listing_level_gate }
-public fun team_size_bound(self: &GameConfig): u64 { load_inner(self).team_size_bound }
+public fun is_enabled(self: &GameConfig): bool { self.enabled }
+public fun xp_multiplier(self: &GameConfig): u64 { self.xp_multiplier }
+public fun loot_multiplier(self: &GameConfig): u64 { self.loot_multiplier }
+public fun max_reachable_level(self: &GameConfig): u64 { self.max_reachable_level }
+public fun turn_duration_ms(self: &GameConfig): u64 { self.turn_duration_ms }
+public fun placement_ms(self: &GameConfig): u64 { self.placement_ms }
+public fun claim_window_epochs(self: &GameConfig): u64 { self.claim_window_epochs }
+public fun archimob_bp(self: &GameConfig): u64 { self.archimob_bp }
+public fun aging_bp_per_hour(self: &GameConfig): u64 { self.aging_bp_per_hour }
+public fun aging_cap_bp(self: &GameConfig): u64 { self.aging_cap_bp }
+public fun reclaim_cooldown_ms(self: &GameConfig): u64 { self.reclaim_cooldown_ms }
+public fun pvp_level_gate(self: &GameConfig): u64 { self.pvp_level_gate }
+public fun listing_level_gate(self: &GameConfig): u64 { self.listing_level_gate }
+public fun team_size_bound(self: &GameConfig): u64 { self.team_size_bound }
 public fun class_count(): u64 { CLASS_COUNT }
 
 /// Immutable borrow of a class row by id (aborts `EBadClass` out of range). `progression::max_hp` reads it.
 public fun class_row(self: &GameConfig, class_id: u64): &ClassRow {
   assert!(class_id < CLASS_COUNT, EBadClass);
-  &load_inner(self).classes[class_id]
+  &self.classes[class_id]
 }
 
 public fun base_hp(row: &ClassRow): u64 { row.base_hp }
