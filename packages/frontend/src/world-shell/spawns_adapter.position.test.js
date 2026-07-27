@@ -222,14 +222,17 @@ describe('world position IndexedDB edge', () => {
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, started)
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 1)
 
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // Bun may wake an unref'ed timer in the same timers turn as this referenced wait during the full 500-file
+    // suite. Give it one additional timers turn before observing the serialized write tail.
+    await new Promise((resolve) => setTimeout(resolve, 1_200))
+    await new Promise((resolve) => setTimeout(resolve, 25))
     // A duplicate note does not enqueue another row, but returns the serialized tail written by the timer.
-    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 800)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 1_225)
 
     position_edge.spawns_input({ type: 'world_bound', world_id: null })
     position_edge._reset_position_persistence_for_test()
     bind_with_anchor(WORLD_A, anchor)
-    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, started + 1_000)).resolves.toEqual(
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, started + 1_500)).resolves.toEqual(
       stopped
     )
   })
