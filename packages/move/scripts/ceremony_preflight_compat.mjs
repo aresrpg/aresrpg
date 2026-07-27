@@ -21,9 +21,13 @@
 // NETWORK env selects the target (default testnet); the CLI's ambient active-env must already match it
 // (assert_env — fail-closed, never switches for you). Exits non-zero if any requested package is
 // INCOMPATIBLE (or errors for a non-compatibility reason) — wire this into CI/pre-ceremony checks.
+//
+// REPUBLISH MODE: while packages/move/REPUBLISH_WINDOW exists this gate runs SIZE-ONLY — see
+// republish_window_verdict below for the mode's rules and its master-bound refusal.
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   MOVE_DIR,
@@ -48,6 +52,71 @@ const RELEASE_PATH = path.resolve(
 // (foundation/#1202, discovered mid-ceremony leg 2, 2026-07-27: aresrpg compiled fine, then refused
 // on-chain at object_size 106584 against this 102400 ceiling).
 const MAX_OBJECT_SIZE = 102_400
+
+// ── The republish window ────────────────────────────────────────────────────────────────────────
+// A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's
+// verdict is an assertion about a lineage nobody will ever upgrade. Asserting it anyway reds every
+// PR that legitimately removes a module or changes a public struct — the exact work a republish
+// exists to allow. The marker file packages/move/REPUBLISH_WINDOW declares that window open and
+// switches this gate from compat-assert to SIZE-ONLY.
+//
+// What does NOT relax: the chain's 102400-byte package ceiling, which is a property of the protocol
+// and not of the lineage. A republish that compiles over the cap fails at execution either way.
+//
+// This is a scoped mode with a visible in-diff switch, not a severity demotion: the compat teeth
+// come back mechanically the moment the marker file is deleted at ceremony close, with no baseline
+// to re-tighten and nothing to remember. And the window may never reach production — a master-bound
+// run treats the marker's mere presence as a FAILURE (see republish_window_verdict), so the mode
+// cannot survive the edge→master promotion unnoticed.
+export const REPUBLISH_MARKER_PATH = path.join(MOVE_DIR, 'REPUBLISH_WINDOW')
+
+// The CI facts the verdict is a function of — read once, at the edge, so the verdict itself is pure.
+export function ci_context(env = process.env) {
+  return {
+    ci: Boolean(env.GITHUB_ACTIONS),
+    event: env.GITHUB_EVENT_NAME || null,
+    base_ref: env.GITHUB_BASE_REF || null,
+    ref_name: env.GITHUB_REF_NAME || null,
+  }
+}
+
+// Pure. → { mode: 'compat' | 'size-only' | 'refused', reason }
+// Fail-closed on every context this does not recognise: an unrecognised CI event carrying the marker
+// is refused rather than trusted, because the one thing that must never happen is the window opening
+// on a master-bound run.
+export function republish_window_verdict({
+  marker_present,
+  ci,
+  event,
+  base_ref,
+  ref_name,
+}) {
+  if (!marker_present)
+    return { mode: 'compat', reason: 'no REPUBLISH_WINDOW marker' }
+  if (!ci)
+    return {
+      mode: 'size-only',
+      reason: 'REPUBLISH_WINDOW marker, local run (no CI context)',
+    }
+  if (event === 'pull_request')
+    return base_ref === 'edge'
+      ? { mode: 'size-only', reason: 'REPUBLISH_WINDOW marker, PR into edge' }
+      : {
+          mode: 'refused',
+          reason: `REPUBLISH_WINDOW marker on a PR into "${base_ref}" — the window lives on edge and may never be promoted`,
+        }
+  if (event === 'push')
+    return ref_name === 'edge'
+      ? { mode: 'size-only', reason: 'REPUBLISH_WINDOW marker, push on edge' }
+      : {
+          mode: 'refused',
+          reason: `REPUBLISH_WINDOW marker on a push to "${ref_name}" — the window lives on edge and may never be promoted`,
+        }
+  return {
+    mode: 'refused',
+    reason: `REPUBLISH_WINDOW marker under an unrecognised CI event ("${event}") — refusing rather than guessing the branch context`,
+  }
+}
 
 // ── Package-size preflight ──────────────────────────────────────────────────────────────────────
 // Predicts the on-chain MovePackage object size from local build artifacts alone — no network round
@@ -149,12 +218,52 @@ function measurePackageSize(pkgPath) {
   return ownBytes + moduleMapOverhead + typeOriginBytes + linkageBytes
 }
 
+// SIZE-ONLY pass (the republish window's whole gate). Builds each package with `sui move build` —
+// no chain read, no upgrade cap, no identity, nothing to serialize — and measures the predicted
+// MovePackage object size against the protocol ceiling. Same measurePackageSize as the compat path,
+// over the same build artifacts, so the two modes never disagree about a package's size.
+function size_only_run(packages) {
+  let any_failed = false
+  for (const name of packages) {
+    const pkg_path = path.join(MOVE_DIR, name)
+    try {
+      execSync(`sui move build --path ${pkg_path}`, {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      })
+    } catch (e) {
+      any_failed = true
+      const output = `${e.stdout ?? ''}${e.stderr ?? ''}`.trim()
+      console.log(
+        `${name} ERROR  build failed — ${output.split('\n').slice(-5).join(' | ')}`
+      )
+      continue
+    }
+    const size = measurePackageSize(pkg_path)
+    if (size == null) {
+      any_failed = true
+      console.log(`${name} ERROR  build produced no bytecode to measure`)
+      continue
+    }
+    const over = size > MAX_OBJECT_SIZE
+    if (over) any_failed = true
+    const margin = over
+      ? `${size - MAX_OBJECT_SIZE} over`
+      : `${MAX_OBJECT_SIZE - size} under`
+    console.log(`${name} SIZE ${size} / ${MAX_OBJECT_SIZE} (${margin})`)
+  }
+  return any_failed
+}
+
 const HELP = `ceremony_preflight_compat — catch IncompatibleUpgrade BEFORE the ceremony, mechanically.
 
-Usage: node ceremony_preflight_compat.mjs [pkg...]
+Usage: node ceremony_preflight_compat.mjs [pkg...] [--mode-check]
 
-  pkg    one or more of: ${Object.keys(PKG_DEPS).join(', ')}
-         defaults to: ${DEFAULT_PACKAGES.join(' ')}
+  pkg           one or more of: ${Object.keys(PKG_DEPS).join(', ')}
+                defaults to: ${DEFAULT_PACKAGES.join(' ')}
+                (in republish mode, defaults to every package instead)
+  --mode-check  print which mode the gate would run in and exit — no build, no chain, no CLI.
+                Non-zero only when a REPUBLISH_WINDOW marker is refused by its branch context.
 
 For each package, runs \`sui client upgrade --serialize-unsigned-transaction\` against its source dir
 (no signing, no execution, no gas) and parses the local compatibility verifier's verdict. Prints one row
@@ -169,7 +278,11 @@ Env:
   SUI_CONFIG_DIR   override for ~/.sui/sui_config (identity/env source)
 
 Read-only against chain + local build. Never mutates on-chain state. Published.toml is patched to the
-ground-truth on-chain package id only for the duration of the CLI call, then restored byte-for-byte.`
+ground-truth on-chain package id only for the duration of the CLI call, then restored byte-for-byte.
+
+REPUBLISH MODE: while packages/move/REPUBLISH_WINDOW exists, the compat leg is suspended and this runs
+SIZE-ONLY — the 102400-byte ceiling still fails the gate. The marker is refused (hard failure) on any
+master-bound run, so the window can never be promoted to production.`
 
 // Swap `[published.<net>]`'s published-at for `addr` — string surgery, not a re-parse/re-serialize, so
 // the revert writes the ORIGINAL bytes back untouched (comments, formatting, everything).
@@ -282,29 +395,79 @@ async function checkPackage(client, release, network, name) {
   return { name, status: 'compatible', target, source, size }
 }
 
-async function main() {
-  if (process.argv.slice(2).some((a) => a === '--help' || a === '-h')) {
-    console.log(HELP)
-    return
-  }
-
-  const network = getNetwork()
-  assert_env(network)
-
-  const requested = process.argv.slice(2)
-  const packages = requested.length ? requested : DEFAULT_PACKAGES
+function assert_known_packages(packages) {
   for (const name of packages)
     if (!(name in PKG_DEPS))
       throw new Error(
         `unknown package "${name}" — one of: ${Object.keys(PKG_DEPS).join(', ')}`
       )
+}
+
+async function main() {
+  const args = process.argv.slice(2)
+  if (args.some((a) => a === '--help' || a === '-h')) {
+    console.log(HELP)
+    return 0
+  }
+
+  const marker_present = fs.existsSync(REPUBLISH_MARKER_PATH)
+  const verdict = republish_window_verdict({
+    marker_present,
+    ...ci_context(),
+  })
+
+  if (verdict.mode === 'refused') {
+    console.error('════════════════════════════════════════════════════════')
+    console.error('  REPUBLISH WINDOW REFUSED — this run is master-bound.')
+    console.error(`  ${verdict.reason}`)
+    console.error(
+      '  Delete packages/move/REPUBLISH_WINDOW to close the window; the compat teeth return with it.'
+    )
+    console.error('════════════════════════════════════════════════════════')
+    return 1
+  }
+
+  if (args.includes('--mode-check')) {
+    console.log(
+      `preflight mode: ${verdict.mode.toUpperCase()} — ${verdict.reason}`
+    )
+    return 0
+  }
+
+  const requested = args.filter((a) => !a.startsWith('--'))
+
+  if (verdict.mode === 'size-only') {
+    const packages = requested.length ? requested : Object.keys(PKG_DEPS)
+    assert_known_packages(packages)
+    console.log('════════════════════════════════════════════════════════')
+    console.log(
+      '  REPUBLISH MODE — compat assertions SUSPENDED, size assertions BINDING.'
+    )
+    console.log(`  marker: ${REPUBLISH_MARKER_PATH}`)
+    for (const line of fs
+      .readFileSync(REPUBLISH_MARKER_PATH, 'utf8')
+      .trim()
+      .split('\n'))
+      console.log(`  > ${line}`)
+    console.log(
+      `  every package still fails over ${MAX_OBJECT_SIZE} bytes; delete the marker to restore the compat leg.`
+    )
+    console.log('════════════════════════════════════════════════════════')
+    return size_only_run(packages) ? 1 : 0
+  }
+
+  const network = getNetwork()
+  assert_env(network)
+
+  const packages = requested.length ? requested : DEFAULT_PACKAGES
+  assert_known_packages(packages)
 
   const release = fs.existsSync(RELEASE_PATH)
     ? JSON.parse(fs.readFileSync(RELEASE_PATH, 'utf8'))
     : null
   const client = getClient(network)
 
-  let anyFailed = false
+  let any_failed = false
   for (const name of packages) {
     const result = await checkPackage(client, release, network, name)
     if (result.status === 'compatible') {
@@ -312,17 +475,17 @@ async function main() {
         `${name} COMPATIBLE  (target ${result.target}, from ${result.source})`
       )
     } else if (result.status === 'incompatible') {
-      anyFailed = true
+      any_failed = true
       const detail = [...result.errors].map(([k, n]) => `${n}x${k}`).join('  ')
       console.log(`${name} INCOMPATIBLE  ${detail}`)
     } else {
-      anyFailed = true
+      any_failed = true
       console.log(`${name} ERROR  ${result.detail}`)
     }
 
     if (result.size != null) {
       const over = result.size > MAX_OBJECT_SIZE
-      if (over) anyFailed = true
+      if (over) any_failed = true
       const margin = over
         ? `${result.size - MAX_OBJECT_SIZE} over`
         : `${MAX_OBJECT_SIZE - result.size} under`
@@ -332,10 +495,18 @@ async function main() {
     }
   }
 
-  process.exit(anyFailed ? 1 : 0)
+  return any_failed ? 1 : 0
 }
 
-main().catch((e) => {
-  console.error(`ceremony_preflight_compat: ${e?.message ?? e}`)
-  process.exit(1)
-})
+// Guarded so the pure republish-window verdict can be imported and unit-tested without the CLI half
+// (which needs a fullnode, an identity and a live upgrade cap) ever running.
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  try {
+    process.exitCode = await main()
+  } catch (e) {
+    console.error(`ceremony_preflight_compat: ${e?.message ?? e}`)
+    process.exitCode = 1
+  }
