@@ -25,7 +25,7 @@ use aresrpg::{
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
-  fight_registry::{Self, FightRegistry},
+  fight_registry::{Self, FightRegistry, FightShards},
   version::{Self as eversion, Version as EVersion}
 };
 use aresrpg_foundation::spell;
@@ -159,6 +159,15 @@ fun derived_roster(sc: &mut Scenario, zx: u32, zy: u32, index: u64): (u64, vecto
   (spawn_id, roster)
 }
 
+/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
+/// exactly as a client does. A world fight derives from the WORLD.
+fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
+
 /// Drive the whole door: claim → open → add every template in `order` → create. `rat`/`wolf` are the two shared
 /// templates the world authored — taken ONCE and reused across the adds, exactly as a PTB passes one object
 /// input to several commands.
@@ -170,7 +179,7 @@ fun engage(sc: &mut Scenario, cid: ID, spawn_id: u64, order: vector<ID>, rat: ID
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
   let ever = sc.take_shared<EVersion>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&w));
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(NOW);
   let ticket = zones::claim_mob_group_members(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
