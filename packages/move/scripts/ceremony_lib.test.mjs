@@ -17,6 +17,7 @@ import {
   normalizeReceipt,
   netGas,
   classify,
+  probeBatchSize,
   parsePublishedToml,
   bumpPublishedToml,
   resolveUpgradeTarget,
@@ -57,6 +58,38 @@ describe('runPreflightedBatches — refuse every batch before the phase mints an
       )
     ).rejects.toThrow(/refusing batch at offset 2/)
     expect(minted).toEqual([])
+  })
+})
+
+describe('probeBatchSize — simulation failures retain their original Move abort', () => {
+  test('a failed floor surfaces module/code/message and preserves the raw abort as its cause', async () => {
+    const abort = {
+      $kind: 'MoveAbort',
+      message: "MoveAbort in '0xabc::spell_book::seed' (instruction 7)",
+      MoveAbort: { abortCode: '205', location: { module: 'spell_book' } },
+    }
+    const client = {
+      simulateTransaction: async () => ({
+        $kind: 'FailedTransaction',
+        FailedTransaction: {
+          effects: { status: { success: false, error: abort } },
+        },
+      }),
+    }
+    const tx = { setSenderIfNotSet: () => {} }
+
+    try {
+      await probeBatchSize(client, '0xsender', [{}], () => tx)
+      throw new Error('expected probeBatchSize to reject')
+    } catch (error) {
+      expect(error).toMatchObject({
+        name: 'ProbeSimulationError',
+        module: 'spell_book',
+        code: 205,
+        message: abort.message,
+        cause: abort,
+      })
+    }
   })
 })
 

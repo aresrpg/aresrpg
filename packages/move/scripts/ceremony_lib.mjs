@@ -346,6 +346,24 @@ export async function run(
  * Returns the winning `{ size, gasNet, budgetMist, ceilingMist, probed }`, or THROWS if nothing at all
  * clears (refuses to guess a size — same law as `deriveBudget`).
  */
+function probeSimulationError(raw) {
+  const abort = raw?.MoveAbort ?? raw?.moveAbort ?? null
+  const rawCode = abort?.abortCode ?? raw?.code
+  const code =
+    rawCode == null || Number.isNaN(Number(rawCode)) ? rawCode : Number(rawCode)
+  const module = abort?.location?.module ?? raw?.module
+  const message =
+    raw?.message ??
+    (module && code != null
+      ? `${module}::${code}`
+      : 'Simulation failed without an error message')
+  const error = new Error(message, { cause: raw })
+  error.name = 'ProbeSimulationError'
+  if (module) error.module = module
+  if (code != null) error.code = code
+  return error
+}
+
 export async function probeBatchSize(
   client,
   sender,
@@ -354,6 +372,7 @@ export async function probeBatchSize(
   opts = {}
 ) {
   const { start = 50, cap = 100, step = 10, ceilingSuiPerItem = 0.03 } = opts
+  let lastSimulationFailure = null
   const tryN = async (n) => {
     const tx = buildBatch(rows.slice(0, n))
     tx.setSenderIfNotSet(sender)
@@ -364,7 +383,12 @@ export async function probeBatchSize(
         include: { effects: true },
       })
     } catch (probe_error) {
-      if (process.env.PROBE_DEBUG) console.error('[probe-debug] build/sim threw:', probe_error?.message ?? probe_error)
+      if (process.env.PROBE_DEBUG)
+        console.error(
+          '[probe-debug] build/sim threw:',
+          probe_error?.message ?? probe_error
+        )
+      lastSimulationFailure = probe_error
       return null
     } // build-time reject (e.g. "maximum commands in a programmable transaction is 1024")
     if (
@@ -372,9 +396,20 @@ export async function probeBatchSize(
       sim.Transaction.effects.status.success === false
     ) {
       if (process.env.PROBE_DEBUG)
-        console.error('[probe-debug] sim status:', JSON.stringify(sim?.Transaction?.effects?.status ?? sim?.$kind).slice(0, 400))
+        console.error(
+          '[probe-debug] sim status:',
+          JSON.stringify(sim?.Transaction?.effects?.status ?? sim?.$kind).slice(
+            0,
+            400
+          )
+        )
+      lastSimulationFailure =
+        sim?.FailedTransaction?.effects?.status?.error ??
+        sim?.Transaction?.effects?.status?.error ??
+        sim
       return null
     }
+    lastSimulationFailure = null
     const gasNet = netGas(sim.Transaction.effects.gasUsed)
     const budgetMist = Math.ceil(gasNet * 1.5)
     const ceilingMist = Math.floor(n * ceilingSuiPerItem * 1e9)
@@ -384,9 +419,11 @@ export async function probeBatchSize(
   if (rows.length <= start) {
     const r = await tryN(rows.length)
     if (!r)
-      throw new Error(
-        `probeBatchSize: the full ${rows.length}-row phase fails to clear simulate — refusing to guess a size`
-      )
+      throw lastSimulationFailure
+        ? probeSimulationError(lastSimulationFailure)
+        : new Error(
+            `probeBatchSize: the full ${rows.length}-row phase fails to clear simulate — refusing to guess a size`
+          )
     return { ...r, probed: true }
   }
   let best = await tryN(start)
@@ -404,9 +441,11 @@ export async function probeBatchSize(
   }
   const floor = await tryN(1) // guarantee the true floor is tested, not just multiples of `step`
   if (floor) return { ...floor, probed: true }
-  throw new Error(
-    'probeBatchSize: even a single row fails to clear simulate — refusing to guess a size'
-  )
+  throw lastSimulationFailure
+    ? probeSimulationError(lastSimulationFailure)
+    : new Error(
+        'probeBatchSize: even a single row fails to clear simulate — refusing to guess a size'
+      )
 }
 
 /**
