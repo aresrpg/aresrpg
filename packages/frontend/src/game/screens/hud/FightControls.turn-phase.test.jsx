@@ -31,8 +31,7 @@ globalThis.Audio ??= /** @type {any} */ (
   }
 )
 
-const { FightControls, FightEndTurnButton, fight_turn_control_phase, turn_commit_countdown_s } =
-  await import('./FightControls.jsx')
+const { FightControls, FightEndTurnButton, fight_turn_control_phase } = await import('./FightControls.jsx')
 const { engine_view } = await import('@aresrpg/fight/project')
 const { PLAYER_TURN_FLOOR_MS } = await import('@aresrpg/fight/store')
 const { subscribe_commit_due } = await import('@aresrpg/fight/txs')
@@ -65,7 +64,7 @@ const seed = ({ active = ME, my = ME, seats = [{ character: ME }], version = 1 }
 
 afterEach(reset_fight_core)
 
-describe('fight turn controls — one phase source for the button and countdown', () => {
+describe('fight turn controls — one phase source for the button and silent auto-pass', () => {
   test('a LETHAL cast auto-commits after the one turn floor, no manual END TURN (owner ruling 2026-07-21)', () => {
     const store = seed()
     const start = store.getState().turn_started_at
@@ -126,31 +125,9 @@ describe('fight turn controls — one phase source for the button and countdown'
     expect(fight_turn_control_phase(mine, busy)).toBe('committing')
     expect(pressed.props.disabled).toBe(true)
     expect(renderToStaticMarkup(pressed)).toContain('disabled=""')
-    expect(turn_commit_countdown_s('committing', true, 40_000, 30_000)).toBeNull()
   })
 
-  test('the map-resolved phase is the only countdown gate', () => {
-    const deadline_ms = 40_000
-    expect(fight_turn_control_phase(fight_state(), false)).toBe('armed')
-    expect(fight_turn_control_phase(fight_state({ active_entity_id: 'missing' }), false)).toBe('hidden')
-    expect(fight_turn_control_phase(fight_state({ presenting: true }), false)).toBe('hidden')
-    // HONEST DEADLINE (#323): the cue counts to the AUTO-COMMIT FIRE moment (deadline − COMMIT_BUFFER_MS 5s),
-    // the same honest deadline FightTimeline shows — NOT the raw chain deadline (that read 10 while the turn
-    // actually locked in 5). Raw gap 10s → honest window 5s.
-    expect(turn_commit_countdown_s('armed', true, deadline_ms, 30_000)).toBe(5)
-    expect(turn_commit_countdown_s('hidden', true, deadline_ms, 30_000)).toBeNull()
-    expect(turn_commit_countdown_s('armed', false, deadline_ms, 30_000)).toBeNull()
-  })
-
-  test('the cue reaches 0 exactly when the background commit fires, never at the raw chain deadline (#323)', () => {
-    const deadline_ms = 45_000 // a default 45s turn; the auto-commit fires at 40_000 (deadline − 5s buffer)
-    // at the fire moment the honest cue reads 0 (the turn is locking now) …
-    expect(turn_commit_countdown_s('armed', true, deadline_ms, 40_000)).toBe(0)
-    // … while the raw chain deadline still has 5s to run — the over-promise this fix removes.
-    expect(turn_commit_countdown_s('armed', true, deadline_ms, 40_000)).not.toBe(5)
-  })
-
-  test('a chain turn-advance event unmounts END TURN and its cue without a click', async () => {
+  test('an armed turn and its chain advance render no auto-pass narration', async () => {
     seed()
     let clicks = 0
     const props = {
@@ -166,8 +143,8 @@ describe('fight turn controls — one phase source for the button and countdown'
     }
     const armed = renderToStaticMarkup(<FightControls {...props} />)
     expect(armed).toContain('hud-fightctl__end')
-    expect(armed).toContain('dgb-commit-cue')
-    expect(armed).toContain('AUTO')
+    expect(armed).not.toContain('dgb-commit-cue')
+    expect(armed).not.toContain('AUTO')
 
     seed({ active: MOB, version: 2 })
 

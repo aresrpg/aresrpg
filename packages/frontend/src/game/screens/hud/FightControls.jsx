@@ -6,8 +6,8 @@
 // the action. Which control shows depends on the phase:
 //   - PLACEMENT: the big READY button (force-start on all-ready or the 60s timer) + Forfeit.
 //   - YOUR TURN: the big END TURN button + Forfeit.
-//   - COMMITTING: END TURN stays visible but disabled; its countdown is gone.
-//   - OTHERS' TURN / presenting: just Forfeit (End turn unmounts with its countdown).
+//   - COMMITTING: END TURN stays visible but disabled.
+//   - OTHERS' TURN / presenting: just Forfeit (End turn unmounts).
 //   - SPECTATING: local Leave spectate only; no participant or chain-write controls.
 // FORFEIT (S-80): `actions::abandon` on the ENGINE package — you can abandon
 // any fight; it's considered a death. Universal now (every fight type has this door — a WORLD fight used to
@@ -31,7 +31,6 @@ import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
 import { push_event_toast } from '../../core/toast.js'
 import { min_turn_left } from '@aresrpg/fight/project'
-import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 import { copy_fight_bug_report, fight_bug_report_issue_url } from './fight_bug_report.js'
 
@@ -50,7 +49,7 @@ const default_ready = () => {
 }
 
 /**
- * One turn-control phase verdict for the END TURN button and its auto-commit cue. Resolve the actor through the
+ * One turn-control phase verdict for the END TURN button. Resolve the actor through the
  * live fighter map, exactly like voxel_fight_adapter's input gate: an id without a fighter is a transient/incoherent
  * turn, never a playable one. `busy` flips synchronously when commit starts (before chain confirmation), while
  * `presenting` stays true while another actor's replay drains.
@@ -65,17 +64,6 @@ export function fight_turn_control_phase(fight, busy, entity_id = fight?.my_enti
     !!fight && !fight.spectator && fight.winner === -1 && entity_id != null && active?.id === entity_id
   if (!turn_input_armed(chain_my_turn, false, !!fight?.presenting)) return 'hidden'
   return turn_input_armed(chain_my_turn, busy, false) ? 'armed' : 'committing'
-}
-
-/** The END TURN companion cue exists only in the same armed phase as the control itself. Pure.
- *  HONEST DEADLINE (#323): the cue counts to the AUTO-COMMIT FIRE moment (`auto_commit_fire_at` = deadline −
- *  COMMIT_BUFFER_MS), NOT the raw chain deadline — the SAME honest deadline FightTimeline shows. While a draft
- *  exists the turn LOCKS when the background commit fires (buffer seconds before the chain deadline), so counting
- *  to the raw deadline over-promised the drafting window by the buffer and the turn "auto-ended" while the cue
- *  still read time left. `turn_ms` feeds the short-admin-dial clamp (0 = the default deadline − buffer). */
-export function turn_commit_countdown_s(turn_phase, has_draft, deadline_ms, now_ms, turn_ms = 0) {
-  if (turn_phase !== 'armed' || !has_draft || !deadline_ms) return null
-  return Math.ceil((auto_commit_fire_at(deadline_ms, turn_ms) - now_ms) / 1000)
 }
 
 /** Hook-free action seam: the real button used below and by the click fixture.
@@ -109,7 +97,7 @@ export function FightEndTurnButton({ phase, disabled = false, on_end_turn, end_l
  *   leave_spectate_label?: string,
  *   end_disabled?: boolean, abandon_disabled?: boolean, ready_disabled?: boolean,
  *   placement_deadline_ms?: number, placement_label?: (n: number) => string,
- *   turn_deadline_ms?: number, has_turn_draft?: boolean, auto_commit_label?: (n: number) => string,
+ *   turn_deadline_ms?: number, has_turn_draft?: boolean,
  * }} [props]
  */
 export function FightControls({
@@ -141,11 +129,10 @@ export function FightControls({
   // flag (which qa proved can stay stale-TRUE after the chain went ACTIVE → the READY rendered over a live board).
   // The WS path omits it → falls back to the slice flag (byte-identical legacy behaviour, no backend to diverge).
   placement: placement_override,
-  // ACTIVE urgency cue. DungeonBoard supplies the chain deadline + draft presence + localized label; this
-  // component owns their one clock and phase verdict so the cue cannot outlive the END TURN action.
+  // DungeonBoard supplies the chain deadline + draft presence. They keep the silent auto-pass clock live;
+  // deadline machinery is never rendered as player-facing narration.
   turn_deadline_ms = 0,
   has_turn_draft = false,
-  auto_commit_label,
   // #882: the CHAIN status beside the chain deadline already drilled above — together they are the whole input
   // of the expiry gate (fight_expiry_gate.js), the SAME two fields the permissionless crank door watches. The
   // dungeon/world board passes `dungeon.status`; a mount that omits it simply never claims a fight is stalled.
@@ -180,9 +167,9 @@ export function FightControls({
   const has_placement_deadline = placement_deadline_ms > 0
   const has_turn_deadline = !placement && turn_phase === 'armed' && has_turn_draft && turn_deadline_ms > 0
   const chain_turn = { status: fight_status, turn_deadline_ms }
-  // One clock for every countdown rendered by this action bar. The old DungeonBoard urgency interval was a
-  // parallel renderer that survived commit-phase changes; it is deliberately gone. A live chain deadline joins
-  // it (#882): the stalled notice must appear when the deadline actually lapses, not when a poll next lands.
+  // One clock for the placement countdown and silent deadline effects. The old DungeonBoard urgency interval was
+  // a parallel renderer that survived commit-phase changes; it is deliberately gone. A live chain deadline joins
+  // it (#882): silent expiry effects must run when the deadline actually lapses, not when a poll next lands.
   const clock_live =
     min_turn_gating ||
     (placement && has_placement_deadline) ||
@@ -248,8 +235,6 @@ export function FightControls({
   // placement with a real deadline + a label factory (the dungeon path).
   const countdown_s =
     placement && has_placement_deadline ? Math.max(0, Math.ceil((placement_deadline_ms - now_ms) / 1000)) : null
-  const commit_in_s = turn_commit_countdown_s(turn_phase, has_turn_draft, turn_deadline_ms, now_ms, fight?.turn_ms ?? 0)
-  const show_commit_cue = !placement && commit_in_s != null && commit_in_s <= 15 && !!auto_commit_label
 
   const on_forfeit_confirmed = () => {
     set_confirm_open(false)
@@ -291,11 +276,6 @@ export function FightControls({
 
   return (
     <>
-      {show_commit_cue && (
-        <div className="dgb-commit-cue" role="status">
-          {auto_commit_label?.(Math.max(0, commit_in_s ?? 0))}
-        </div>
-      )}
       <div className="hud-fightctl" data-controlled-character={fight.my_entity_id ?? undefined}>
         {placement && countdown_s != null && placement_label && (
           <span className="hud-fightctl__countdown" role="status" aria-live="polite">
