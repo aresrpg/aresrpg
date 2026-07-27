@@ -13,6 +13,19 @@
 ///
 /// S-46: the two custodied ExtensionCaps (NS_MINT_FIGHT loot-mint, NS_CHARACTER_PROGRESSION xp/hp) are GONE —
 /// minting + progression writes are `public(package)` doors now, called directly by `results`/`fight`.
+///
+/// SHARDED (S-01/S-02). Both jobs are taken `&mut` on every create, join and settle, and a mutable shared access
+/// is the kind that consumes an object's per-commit execution budget — so ONE registry made fight ENTRY and EXIT
+/// a global chokepoint while the in-fight action path (per-fight shared objects) was already fully parallel.
+/// The docs' first-choice remedy is to stop using a single shared object, so `init` shares SHARD_COUNT
+/// registries and every door takes the one its SCOPE maps to. Nothing else moves: same type, same signatures
+/// plus the scope the callers already hold, and `FightShards` is the directory that resolves scope → shard.
+///
+/// The shard key is the SCOPE ALONE (never the spawn id), because the latch's uniqueness domain sets the floor:
+/// a character must find its own latch from any fight it tries to enter, and it can only be looked for in one
+/// shard. So intra-scope entry still serialises — the win is that every world, dungeon run and kolizeum match
+/// no longer serialises against each other. Splitting the derivation half onto a finer key is a later move, and
+/// it costs a second shared input per create; it waits for a real scope to hit a real budget.
 module aresrpg_fight::fight_registry;
 
 use std::type_name::TypeName;
@@ -21,17 +34,58 @@ use sui::table::{Self, Table};
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
 const ECharacterInFight: u64 = 103; // join/create: this character is already seated in a LIVE fight (S-12f — one fight at a time; settle the old one first)
+const EWrongShard: u64 = 104; // every door: this registry is not the shard this scope maps to (see `shard_index`)
+
+// ╔════════════════ [ Sharding ] ═════════════════════════════════════════════ ]
+
+/// How many registries `init` shares. 16 is the smallest power of two that keeps every live scope class — worlds,
+/// dungeon runs, kolizeum matches — spread wide enough that no two busy ones are likely to collide, while staying
+/// a list a human can read in the deployment pins.
+const SHARD_COUNT: u64 = 16;
+
+/// Which shard a scope belongs to. The LAST BYTE of the id, so a client picks its shard from the hex string with
+/// no derivation math and no hash to keep twinned.
+public fun shard_index(scope: ID): u64 {
+  let bytes = object::id_to_bytes(&scope);
+  (bytes[bytes.length() - 1] as u64) % SHARD_COUNT
+}
+
+public fun shard_count(): u64 { SHARD_COUNT }
+
+/// THE door every mutable and derived-address path runs first: a caller that hands the wrong shard would claim
+/// the fight address under a different parent, and one mob group could then host two live fights. Uniqueness is
+/// a state invariant only while scope → shard is a function, so this assert is correctness, not tidiness.
+public fun assert_scope(registry: &FightRegistry, scope: ID) {
+  assert!(registry.index == shard_index(scope), EWrongShard);
+}
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// The derivation parent + in-fight latch. `key` only — shared once at init, never moved.
+/// The derivation parent + in-fight latch. `key` only — shared once at init, never moved. One instance per shard.
 public struct FightRegistry has key {
   id: UID,
+  /// This shard's ordinal — the whole authority behind `assert_scope`.
+  index: u64,
   // S-12f — the IN-FIGHT LATCH ((brand, character id) → live fight id): one character, one live fight PER
   // CONSUMER BRAND (a foreign witness's forged fight can never latch-grief another consumer's characters).
   // Registry-homed (never a character DF) so a mid-fight character SALE can never brick the buyer.
   active_fighters: Table<LatchKey, ID>,
 }
+
+/// The shard DIRECTORY: one shared object, read-only for the whole life of the package, resolving scope → shard
+/// for clients, tests and the indexer alike. One home for the fact "these are the registries".
+public struct FightShards has key {
+  id: UID,
+  shards: vector<ID>,
+}
+
+/// The registry a scope's fights and latches live in.
+public fun shard_for(book: &FightShards, scope: ID): ID { book.shards[shard_index(scope)] }
+
+/// Every shard, in index order.
+public fun shards(book: &FightShards): vector<ID> { book.shards }
+
+public fun index(registry: &FightRegistry): u64 { registry.index }
 
 /// The derived-object claim key: a fight is unique per (world, spawn_id). A second claim on the same pair
 /// aborts in `derived_object::claim` — the first-come gate.
@@ -49,10 +103,15 @@ public struct LatchKey has copy, drop, store { brand: TypeName, character: ID }
 // ╔════════════════ [ Init ] ═════════════════════════════════════════════════ ]
 
 fun init(ctx: &mut TxContext) {
-  transfer::share_object(FightRegistry {
-    id: object::new(ctx),
-    active_fighters: table::new(ctx),
-  });
+  let mut shards = vector[];
+  let mut i = 0;
+  while (i < SHARD_COUNT) {
+    let shard = FightRegistry { id: object::new(ctx), index: i, active_fighters: table::new(ctx) };
+    shards.push_back(object::id(&shard));
+    transfer::share_object(shard);
+    i = i + 1;
+  };
+  transfer::share_object(FightShards { id: object::new(ctx), shards });
 }
 
 // ╔════════════════ [ First-come derivation (called by fight::create) ] ══════ ]
@@ -61,7 +120,11 @@ fun init(ctx: &mut TxContext) {
 /// `fight::create` (the constructing function — the object verifier requires a key struct's UID to originate
 /// from `claim` in the SAME function it is wrapped into a struct): a second `create` for the same
 /// (world, spawn_id) aborts in `claim` — THE first-come gate.
-public(package) fun uid_mut(registry: &mut FightRegistry): &mut UID { &mut registry.id }
+/// Takes the SCOPE so the shard check cannot be forgotten: this is the only way to reach the derivation parent.
+public(package) fun uid_mut(registry: &mut FightRegistry, scope: ID): &mut UID {
+  assert_scope(registry, scope);
+  &mut registry.id
+}
 
 public(package) fun new_key(world: ID, spawn_id: u64): FightKey { FightKey { world, spawn_id } }
 
@@ -71,11 +134,13 @@ public(package) fun new_round_key(world: ID, spawn_id: u64, round: u64): FightRo
 /// taken".) Since #609 a released group is fought again at round ≥ 1, so pair this with the group's live bit —
 /// this alone answers "was it ever fought", never "is it fightable now".
 public fun fight_exists(registry: &FightRegistry, world: ID, spawn_id: u64): bool {
+  assert_scope(registry, world);
   sui::derived_object::exists(&registry.id, FightKey { world, spawn_id })
 }
 
 /// The deterministic address a (world, spawn_id) fight lives at — a client resolves the Fight without a scan.
 public fun fight_address(registry: &FightRegistry, world: ID, spawn_id: u64): address {
+  assert_scope(registry, world);
   sui::derived_object::derive_address(registry.id.to_inner(), FightKey { world, spawn_id })
 }
 
@@ -83,6 +148,7 @@ public fun fight_address(registry: &FightRegistry, world: ID, spawn_id: u64): ad
 /// `fight::create_round` claims and the consumer's defeat-release door authenticates an outcome against
 /// (#609: the outcome carries the fight id, so matching it against this address PROVES which group was lost).
 public fun group_fight_address(registry: &FightRegistry, world: ID, spawn_id: u64, round: u64): address {
+  assert_scope(registry, world);
   if (round == 0) fight_address(registry, world, spawn_id)
   else sui::derived_object::derive_address(registry.id.to_inner(), FightRoundKey { world, spawn_id, round })
 }
@@ -91,7 +157,8 @@ public fun group_fight_address(registry: &FightRegistry, world: ID, spawn_id: u6
 
 /// Latch `character` into `fight` — aborts if it is already seated in a LIVE fight (the multi-fight XP-farm
 /// vector: N concurrent fights off one stale HP snapshot). Every seat path (create/join/doors) runs this.
-public(package) fun latch_character(registry: &mut FightRegistry, brand: TypeName, character: ID, fight: ID) {
+public(package) fun latch_character(registry: &mut FightRegistry, scope: ID, brand: TypeName, character: ID, fight: ID) {
+  assert_scope(registry, scope);
   let k = LatchKey { brand, character };
   assert!(!registry.active_fighters.contains(k), ECharacterInFight);
   registry.active_fighters.add(k, fight);
@@ -99,13 +166,16 @@ public(package) fun latch_character(registry: &mut FightRegistry, brand: TypeNam
 
 /// Clear a seat's latch (settlement — every seat, in the same tx that deletes the Fight). Idempotent-tolerant:
 /// a missing entry is a no-op (defensive: test doors seat without latching).
-public(package) fun unlatch_character(registry: &mut FightRegistry, brand: TypeName, character: ID) {
+public(package) fun unlatch_character(registry: &mut FightRegistry, scope: ID, brand: TypeName, character: ID) {
+  assert_scope(registry, scope);
   let k = LatchKey { brand, character };
   if (registry.active_fighters.contains(k)) { registry.active_fighters.remove(k); };
 }
 
-/// The live fight `character` is seated in, if any (RPC pre-flight + client teach-don't-reject).
-public fun character_fight(registry: &FightRegistry, brand: TypeName, character: ID): Option<ID> {
+/// The live fight `character` is seated in, if any (RPC pre-flight + client teach-don't-reject). Takes the scope
+/// because latches are shard-homed: ask the shard the character's world maps to.
+public fun character_fight(registry: &FightRegistry, scope: ID, brand: TypeName, character: ID): Option<ID> {
+  assert_scope(registry, scope);
   let k = LatchKey { brand, character };
   if (registry.active_fighters.contains(k)) option::some(*registry.active_fighters.borrow(k)) else option::none()
 }

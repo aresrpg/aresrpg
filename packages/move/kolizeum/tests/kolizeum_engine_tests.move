@@ -14,7 +14,7 @@ use aresrpg::{character::Character, config::GameConfig, version::Version};
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
-  fight_registry::{Self, FightRegistry},
+  fight_registry::{Self, FightRegistry, FightShards},
   settlement,
   version::{Self as eversion, Version as EVersion}
 };
@@ -24,6 +24,15 @@ use std::type_name;
 use sui::{clock, coin, kiosk::Kiosk, sui::SUI, test_scenario::{Self as ts, Scenario}};
 
 const PLEDGE: u64 = 1_000;
+/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
+/// exactly as a client does. Kolizeum's derivation scope is the LOBBY id.
+fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
+
 const JOINER: address = @0xB1;
 
 // ── mirrored error values (`location` disambiguates the aborting module) ──
@@ -95,7 +104,7 @@ fun kolizeum_start_seat_settle_open() {
   sc.next_tx(koli_world::owner());
   {
     let mut lobby = sc.take_shared<Kolizeum>();
-    let mut reg = sc.take_shared<FightRegistry>();
+    let mut reg = shard_of(&sc, object::id(&lobby));
     let k = ts::take_shared_by_id<Kiosk>(&sc, creator_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -114,7 +123,7 @@ fun kolizeum_start_seat_settle_open() {
   {
     let lobby = sc.take_shared<Kolizeum>();
     let mut f = sc.take_shared<Fight>();
-    let mut reg = sc.take_shared<FightRegistry>();
+    let mut reg = shard_of(&sc, object::id(&lobby));
     let k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -194,7 +203,7 @@ fun lobby_up(sc: &mut Scenario): (ID, ID) {
 fun do_start(sc: &mut Scenario, who: address, kid: ID, character_id: ID) {
   sc.next_tx(who);
   let mut lobby = sc.take_shared<Kolizeum>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&lobby));
   let k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -273,7 +282,7 @@ fun seat_on_open_lobby_refused() {
   let lobby_b_id = ts::most_recent_id_shared<Kolizeum>().destroy_some();
   {
     let mut lobby = ts::take_shared_by_id<Kolizeum>(&sc, lobby_b_id);
-    let mut reg = sc.take_shared<FightRegistry>();
+    let mut reg = shard_of(&sc, object::id(&lobby));
     let k = ts::take_shared_by_id<Kiosk>(&sc, b_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -291,7 +300,7 @@ fun seat_on_open_lobby_refused() {
   {
     let lobby_a = ts::take_shared_by_id<Kolizeum>(&sc, lobby_a_id);
     let mut f = sc.take_shared<Fight>();
-    let mut reg = sc.take_shared<FightRegistry>();
+    let mut reg = shard_of(&sc, object::id(&lobby_a));
     let k = ts::take_shared_by_id<Kiosk>(&sc, creator_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -309,7 +318,7 @@ fun start_lobby(sc: &mut Scenario, lobby_id: ID, who: address, kid: ID, characte
   sc.next_tx(who);
   {
     let mut lobby = ts::take_shared_by_id<Kolizeum>(sc, lobby_id);
-    let mut reg = sc.take_shared<FightRegistry>();
+    let mut reg = shard_of(sc, object::id(&lobby));
     let k = ts::take_shared_by_id<Kiosk>(sc, kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -331,7 +340,7 @@ fun do_seat(sc: &mut Scenario, lobby_id: ID, fight_id: ID, who: address, kid: ID
   sc.next_tx(who);
   let lobby = ts::take_shared_by_id<Kolizeum>(sc, lobby_id);
   let mut f = ts::take_shared_by_id<Fight>(sc, fight_id);
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&lobby));
   let k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();

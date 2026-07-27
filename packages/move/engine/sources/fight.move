@@ -250,9 +250,9 @@ fun assemble(
   // (world, spawn_id) address, and a claimed address is `Reserved` forever — so a RE-ENGAGED group (round ≥ 1)
   // must claim in the round-namespaced key or its rematch would abort on an address nobody occupies any more.
   let id = if (round == 0) {
-    sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_key(world, spawn_id))
+    sui::derived_object::claim(fight_registry::uid_mut(registry, world), fight_registry::new_key(world, spawn_id))
   } else {
-    sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_round_key(world, spawn_id, round))
+    sui::derived_object::claim(fight_registry::uid_mut(registry, world), fight_registry::new_round_key(world, spawn_id, round))
   };
 
   Fight {
@@ -294,7 +294,7 @@ fun seat_creator(mut fight: Fight, registry: &mut FightRegistry, creator_lines: 
   let creator_id = participant::character(fight.participants.borrow(0));
   attach_weapon_lines(&mut fight, 0, creator_lines); // §17.27 wave-2a — the creator seats at index 0
   attach_weapon_category(&mut fight, 0, creator_category); // §387 — the creator's weapon shape category
-  fight_registry::latch_character(registry, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
+  fight_registry::latch_character(registry, fight.world, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
   fight_events::emit_created(fid, fight.world, fight.spawn_id, fight.anchor_x, fight.anchor_z, fight.public_fight, fight.aged_bp, fight.mobs.length());
   fight_events::emit_joined(fid, creator_id, 0);
   transfer::share_object(fight);
@@ -446,7 +446,7 @@ public fun create_pvp<W: drop>(
   let now = clock.timestamp_ms();
   let bspec = board::generate_for_anchor(world_seed, anchor_x, anchor_z);
   assert!(bspec.start_cells_a().length() >= per_side_bound && bspec.start_cells_b().length() >= per_side_bound, EBadStartCells);
-  let id = sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_key(scope, nonce));
+  let id = sui::derived_object::claim(fight_registry::uid_mut(registry, scope), fight_registry::new_key(scope, nonce));
   let fid = id.to_inner();
   let creator_id = participant::combatant_character(&creator);
 
@@ -481,7 +481,7 @@ public fun create_pvp<W: drop>(
     placement_deadline_ms: now + dials.placement_ms,
     group: GroupContent { template: scope, xp: 0, loot: vector[], kit: mob::empty_kit() }, // PvP: no mobs — settlement + kit never read (mode-gated)
   };
-  fight_registry::latch_character(registry, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
+  fight_registry::latch_character(registry, fight.world, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
   fight_events::emit_created(fid, scope, nonce, anchor_x, anchor_z, false, 0, 0);
   fight_events::emit_joined(fid, creator_id, 0);
   transfer::share_object(fight);
@@ -538,7 +538,7 @@ fun join_inner<W: drop>(
       assert!(joiner_party.is_some() && fight.party_id.is_some() && *joiner_party.borrow() == *fight.party_id.borrow(), ENotParty);
     };
   };
-  fight_registry::latch_character(registry, fight.brand, participant::combatant_character(&joiner), object::id(fight)); // S-12f (brand-scoped)
+  fight_registry::latch_character(registry, fight.world, fight.brand, participant::combatant_character(&joiner), object::id(fight)); // S-12f (brand-scoped)
   let joiner = if (fight.mode == MODE_PVP) participant::with_full_hp(joiner) else joiner;
   let seat = seat_joiner(fight, joiner, ctx.sender(), team);
   attach_weapon_lines(fight, seat, joiner_lines); // §17.27 wave-2a
@@ -909,7 +909,7 @@ public fun join_for_testing(fight: &mut Fight, joiner: Combatant, joiner_party: 
 
 #[test_only]
 public fun join_latched_for_testing(fight: &mut Fight, registry: &mut FightRegistry, joiner: Combatant, joiner_party: Option<ID>, version: &Version, ctx: &TxContext) {
-  fight_registry::latch_character(registry, fight.brand, participant::combatant_character(&joiner), object::id(fight));
+  fight_registry::latch_character(registry, fight.world, fight.brand, participant::combatant_character(&joiner), object::id(fight));
   join_for_testing(fight, joiner, joiner_party, version, ctx);
 }
 

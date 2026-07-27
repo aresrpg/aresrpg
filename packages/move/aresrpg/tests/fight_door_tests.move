@@ -21,7 +21,7 @@ use aresrpg_fight::{
   actions,
   admin as eadmin,
   fight::{Self as engine, Fight},
-  fight_registry::{Self, FightRegistry},
+  fight_registry::{Self, FightRegistry, FightShards},
   settlement,
   version::{Self as eversion, Version as EVersion}
 };
@@ -29,6 +29,15 @@ use aresrpg_foundation::spell;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
+
+/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
+/// exactly as a client does.
+fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
 
 // ── mirrored error values (location disambiguates the aborting module) ──
 const ENGINE_EZeroHp: u64 = 101; // aresrpg_fight::fight — §17.23 (create/join refuse a 0-HP snapshot)
@@ -193,7 +202,7 @@ fun do_create(sc: &mut Scenario, who: address, cid: ID, spawn_id: u64, mob_tid: 
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
   let ever = sc.take_shared<EVersion>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&w));
   let tmpl = ts::take_shared_by_id<MobTemplate>(sc, mob_tid);
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
@@ -209,7 +218,8 @@ fun do_create(sc: &mut Scenario, who: address, cid: ID, spawn_id: u64, mob_tid: 
 fun do_join(sc: &mut Scenario, who: address, kid: ID, cid: ID, now: u64) {
   sc.next_tx(who);
   let mut f = sc.take_shared<Fight>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let world_id = { let w = sc.take_shared<World>(); let id = object::id(&w); ts::return_shared(w); id };
+  let mut reg = shard_of(sc, world_id);
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
