@@ -29,6 +29,15 @@ describe('ExplorerMenuRow — the right-click "See on explorer" row', () => {
     expect(html).toContain('View on Explorer')
   })
 
+  // #1226 control — a kiosk-held UNEQUIPPED item is a real top-level object, so its page resolves: the
+  // custody-aware change must leave this path byte-identical (direct item-id link, plain label).
+  test('an unequipped (kiosk-held) item keeps the DIRECT item-id link', () => {
+    const html = render('0xbeef99')
+    expect(html).toContain(`href="${explorer_object_url('0xbeef99')}"`)
+    expect(html).toContain('View on Explorer')
+    expect(html).not.toContain('View equipped on Explorer')
+  })
+
   test('a template-only item (no valid on-chain id) renders nothing — never a dead link', () => {
     expect(render(null)).toBe('')
     expect(render(undefined)).toBe('')
