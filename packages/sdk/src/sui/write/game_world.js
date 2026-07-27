@@ -4,6 +4,7 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import {
   aresrpg_deployment,
+  fight_latch_arg,
   fight_registry_arg,
   shared_object_arg,
   random_shared_ref,
@@ -178,7 +179,8 @@ export function gather_ptb(context) {
         as_object_arg(tx, template_id), // template: &ItemTemplate (the node's yielded item)
         as_object_arg(tx, rare_template_id), // rare_template: &ItemTemplate (§6 golden variant; dummy-defaults to template — inert unless a rare link exists)
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY), // policy: &TransferPolicy<Item>
-        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry (§17.22 ambush — the WORLD's shard: derivation parent + in-fight latch)
+        fight_registry_arg(tx, network, a, world_id, true), // registry: &mut FightRegistry (WORLD derivation shard)
+        fight_latch_arg(tx, network, a, character_id, true), // latch: &mut FightLatch (gatherer character shard)
         as_object_arg(tx, protector_template_id), // protector_template: &MobTemplate (the (job,tier)-matched world protector — REQUIRED)
         shared_object_arg(tx, network, 'ENGINE_VERSION', false, a.ENGINE_VERSION), // engine_version: &EngineVersion (the ENGINE package's shared Version)
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig

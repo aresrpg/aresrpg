@@ -88,12 +88,11 @@ describe('game builders — target strings + arg shapes', () => {
     expect(call.args).toBe(10)
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
   })
-  test('gather → gathering::gather, 17 args (§6 rare_template + §17.22 registry/protector/engine_version added), terminal random', () => {
+  test('gather → gathering::gather, 18 args (§6 rare_template + parallel registry/latch families), terminal random', () => {
     const tx = gather_ptb(deployed_context)(args)
     const call = find_call(tx, 'gathering::gather')
-    // 14 (prior) + 3 §17.22 ambush args (registry &mut FightRegistry, protector_template &MobTemplate,
-    // engine_version &EngineVersion) inserted between policy and config — pinned against the Move source.
-    expect(call.args).toBe(17)
+    // registry + latch + protector template + engine version sit between policy and config.
+    expect(call.args).toBe(18)
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     // &Random (0x8) is the LAST move call in the tx → Random-PTB compliant
     expect(targets(tx).at(-1)).toBe('gathering::gather')

@@ -147,18 +147,18 @@ describe('dungeon activate — split exactly one then enter with an internal mut
 })
 
 describe('dungeon next_fight / join_fight / settle_run — targets, arg shapes, Random discipline', () => {
-  test('next_fight → dungeon::next_fight, 13 args, deterministic; fight_version = ENGINE_VERSION', () => {
+  test('next_fight → dungeon::next_fight, 14 args, deterministic; fight_version = ENGINE_VERSION', () => {
     const tx = next_fight_ptb(ctx)(A)
     const call = find_call(tx, 'dungeon::next_fight')
     expect(call.package).toBe(IDS.aresrpg.DUNGEON_PACKAGE_ID)
-    expect(call.args).toBe(13)
+    expect(call.args).toBe(14)
     expect(has_no_random(tx)).toBe(true)
     // the S-57 type-split fix: fight_version (FightVersion) is the ENGINE's Version, NOT core VERSION
     expect(input_ids(tx)).toContain(IDS.aresrpg.ENGINE_VERSION)
   })
-  test('join_fight → dungeon::join_fight, 13 args (clock appended LAST), deterministic; fight_version = ENGINE_VERSION', () => {
+  test('join_fight → dungeon::join_fight, 14 args (clock appended LAST), deterministic; fight_version = ENGINE_VERSION', () => {
     const tx = join_fight_ptb(ctx)(A)
-    expect(find_call(tx, 'dungeon::join_fight').args).toBe(13)
+    expect(find_call(tx, 'dungeon::join_fight').args).toBe(14)
     expect(targets(tx)).toEqual(['dungeon::join_fight'])
     expect(input_ids(tx)).toContain(IDS.aresrpg.ENGINE_VERSION)
   })

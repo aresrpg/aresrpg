@@ -298,12 +298,13 @@ async function runAssertions(client, M) {
       M.aresrpg.upgradeCap &&
       M.aresrpg.shared.GameConfig &&
       M.engine.shared.FightRegistryShards?.length &&
+      M.engine.shared.FightLatchShards?.length &&
       // 2026-07-13 gifting split: pool.move's init (and its shared PoolRegistry) live in aresrpg_gifting now.
       M.gifting.shared.PoolRegistry
     )
     results.push({
       label:
-        'A3 core objects accounted (admin/version/upgradeCap/GameConfig/FightRegistryShards/PoolRegistry)',
+        'A3 core objects accounted (admin/version/upgradeCap/GameConfig/FightRegistryShards/FightLatchShards/PoolRegistry)',
       pass,
       detail: `admin=${M.aresrpg.admin} version=${M.aresrpg.version}`,
     })
@@ -447,7 +448,7 @@ async function runCeremony({ net, client, signer, me }) {
   }
 
   await resolvePublishers(client, M)
-  await resolveFightShards(client, M) // the registry shard list, ordered by its own on-chain index
+  await resolveFightShards(client, M) // both fight families, each ordered by its own on-chain index
   M._rules = resolveRulesPkg(M)
   M._station = process.env.SPONSOR_STATION || null
   for (const a of LEGACY_ALIASES) M[a] = M.aresrpg // seed compatibility aliases; release.json stays semantic

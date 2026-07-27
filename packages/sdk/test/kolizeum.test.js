@@ -54,13 +54,13 @@ describe('kolizeum bridge builders — refuse loudly when undeployed', () => {
 })
 
 describe('kolizeum bridge builders — targets + arg shapes (no Random)', () => {
-  test('start → kolizeum::start, 10 args, aresrpg_kolizeum package; fight_version = ENGINE_VERSION', () => {
+  test('start → kolizeum::start, 11 args, aresrpg_kolizeum package; fight_version = ENGINE_VERSION', () => {
     const tx = start_ptb(ctx)(A)
     const call = find_call(tx, 'kolizeum::start')
     // package-split: the target is the sibling aresrpg_kolizeum package, NOT the core LATEST_PACKAGE_ID
     expect(call.package).toBe(IDS.aresrpg.KOLIZEUM_PACKAGE_ID)
     expect(call.package).not.toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
-    expect(call.args).toBe(10)
+    expect(call.args).toBe(11)
     // the type-split: fight_version (FightVersion) is the ENGINE's Version, NOT core VERSION
     expect(input_ids(tx)).toContain(IDS.aresrpg.ENGINE_VERSION)
   })
@@ -82,11 +82,11 @@ describe('kolizeum bridge builders — targets + arg shapes (no Random)', () => 
 })
 
 describe('kolizeum arena-outcome terminal — open + the one-PTB compose', () => {
-  test('open → kolizeum::open, 1 arg (outcome by value), aresrpg_kolizeum package', () => {
+  test('open → kolizeum::open, 2 args (outcome + character latch), aresrpg_kolizeum package', () => {
     const tx = open_ptb(ctx)(A)
     const call = find_call(tx, 'kolizeum::open')
     expect(call.package).toBe(IDS.aresrpg.KOLIZEUM_PACKAGE_ID)
-    expect(call.args).toBe(1)
+    expect(call.args).toBe(2)
     expect(targets(tx)).toEqual(['kolizeum::open'])
   })
   test('settle_arena → settle_and_take (ENGINE) → kolizeum::settle(&o) → kolizeum::open(o)', () => {
@@ -107,9 +107,9 @@ describe('kolizeum arena-outcome terminal — open + the one-PTB compose', () =>
     expect(find_call(tx, 'kolizeum::open').package).toBe(
       IDS.aresrpg.KOLIZEUM_PACKAGE_ID,
     )
-    // settle borrows the handle (3 args) → open consumes it by value (1 arg)
+    // settle borrows the handle (3 args) → open consumes it by value with the character latch
     expect(find_call(tx, 'kolizeum::settle').args).toBe(3)
-    expect(find_call(tx, 'kolizeum::open').args).toBe(1)
+    expect(find_call(tx, 'kolizeum::open').args).toBe(2)
   })
 })
 

@@ -10,6 +10,7 @@ import {
 } from '../src/dungeon.js'
 import { join_fight_ptb } from '../src/fight.js'
 import { party_invite_accept_own_ptb } from '../src/social.js'
+import { fight_shard_index } from '../src/deployment/aresrpg.js'
 
 import {
   IDS,
@@ -288,9 +289,14 @@ describe('dungeon RunPass batch entry — one locked stack funds N characters', 
 })
 
 describe('dungeon fight joins — one PTB, caller order', () => {
-  test('appends one unchanged 13-argument dungeon::join_fight per member', () => {
+  test('appends one 14-argument dungeon::join_fight per member, each with its own latch shard', () => {
     const first = dungeon_join_member('first')
     const second = dungeon_join_member('second')
+    first.character_id = `0x${'0'.repeat(63)}1`
+    second.character_id = `0x${'0'.repeat(63)}2`
+    expect(fight_shard_index(first.character_id)).not.toBe(
+      fight_shard_index(second.character_id),
+    )
     const supplied_tx = new Transaction()
     const tx = compose_members(join_dungeon_fight_ptb(ctx))({
       members: [first, second],
@@ -299,16 +305,26 @@ describe('dungeon fight joins — one PTB, caller order', () => {
 
     expect(tx).toBe(supplied_tx)
     expect(targets(tx)).toEqual(['dungeon::join_fight', 'dungeon::join_fight'])
-    expect(move_calls(tx).map(call => call.args)).toEqual([13, 13])
+    expect(move_calls(tx).map(call => call.args)).toEqual([14, 14])
     expect(move_calls(tx).map(call => call.package)).toEqual([
       IDS.aresrpg.DUNGEON_PACKAGE_ID,
       IDS.aresrpg.DUNGEON_PACKAGE_ID,
     ])
     const { commands } = tx.getData()
-    expect(argument_object_id(tx, commands.at(0).MoveCall.arguments[4])).toBe(
+    expect(argument_object_id(tx, commands.at(0).MoveCall.arguments[1])).toBe(
+      IDS.aresrpg.FIGHT_LATCH_SHARDS[
+        fight_shard_index(first.character_id)
+      ].id,
+    )
+    expect(argument_object_id(tx, commands.at(1).MoveCall.arguments[1])).toBe(
+      IDS.aresrpg.FIGHT_LATCH_SHARDS[
+        fight_shard_index(second.character_id)
+      ].id,
+    )
+    expect(argument_object_id(tx, commands.at(0).MoveCall.arguments[5])).toBe(
       first.kiosk_id,
     )
-    expect(argument_object_id(tx, commands.at(1).MoveCall.arguments[4])).toBe(
+    expect(argument_object_id(tx, commands.at(1).MoveCall.arguments[5])).toBe(
       second.kiosk_id,
     )
     expect(typeof tx.serialize()).toBe('string')

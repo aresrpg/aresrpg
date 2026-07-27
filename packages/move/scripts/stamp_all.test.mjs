@@ -134,6 +134,10 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
       id: row.id,
       initial_shared_version: row.initial_shared_version,
     })),
+    FIGHT_LATCH_SHARDS: shared.FIGHT_LATCH_SHARDS.map(row => ({
+      id: row.id,
+      initial_shared_version: row.initial_shared_version,
+    })),
     POOL_REGISTRY: shared.POOL_REGISTRY.id,
     ITEM_POLICY: policies.item.id,
     CHARACTER_POLICY: policies.character.id,
@@ -302,8 +306,15 @@ function with_fight_shards(manifest) {
     (_, i) => `0x${(i + 1).toString(16).padStart(64, '0')}`
   )
   manifest.engine.shared_versions.FightRegistryShards ??= Array.from({ length: 16 }, () => '1')
+  manifest.engine.shared.FightLatchShards ??= Array.from(
+    { length: 16 },
+    (_, i) => `0x${(i + 17).toString(16).padStart(64, '0')}`
+  )
+  manifest.engine.shared_versions.FightLatchShards ??= Array.from({ length: 16 }, () => '1')
   delete manifest.engine.shared.FightRegistry
   delete manifest.engine.shared_versions.FightRegistry
+  delete manifest.engine.shared.FightLatch
+  delete manifest.engine.shared_versions.FightLatch
   return manifest
 }
 

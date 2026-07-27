@@ -48,6 +48,10 @@ export const IDS = {
       id: id(`a5fr${i.toString(16)}`),
       initial_shared_version: '1',
     })),
+    FIGHT_LATCH_SHARDS: Array.from({ length: 16 }, (_, i) => ({
+      id: id(`a5fl${i.toString(16)}`),
+      initial_shared_version: '1',
+    })),
     POOL_REGISTRY: id('a5pr'),
     ITEM_POLICY: id('a5b0'),
     CHARACTER_POLICY: id('a5b1'),

@@ -77,6 +77,10 @@ export const legacy_cosmetic_variants =
  *                                          the stamp step writes these rows where it used to write the single
  *                                          `FIGHT_REGISTRY` id — one row per shard, in index order, each with its
  *                                          own `initial_shared_version`. Length must equal `FIGHT_SHARD_COUNT`.
+ * @property {SharedPin[]} FIGHT_LATCH_SHARDS The parallel `fight_latch::FightLatch` SHARD LIST, index-ordered.
+ *                                          A character's shard is selected by the SAME `fight_shard_index`
+ *                                          function as registries. These remain distinct shared objects even
+ *                                          when the scope and character indexes happen to match.
  * @property {string} POOL_REGISTRY         Shared `pool::PoolRegistry` (pool derivation parent; cap fields died).
  * @property {string} ITEM_POLICY           `TransferPolicy<Item>` — every item mint locks through it.
  * @property {string} CHARACTER_POLICY      `TransferPolicy<Character>` — creation locks the character through it.
@@ -144,6 +148,12 @@ export function sdk_ids_from_release(release) {
     CREATION: shared.CREATION?.id ?? '',
     CATALOG: shared.CATALOG?.id ?? '',
     FIGHT_REGISTRY_SHARDS: (shared.FIGHT_REGISTRY_SHARDS ?? []).map(
+      /** @param {any} row */ row => ({
+        id: row?.id ?? '',
+        initial_shared_version: row?.initial_shared_version ?? '',
+      }),
+    ),
+    FIGHT_LATCH_SHARDS: (shared.FIGHT_LATCH_SHARDS ?? []).map(
       /** @param {any} row */ row => ({
         id: row?.id ?? '',
         initial_shared_version: row?.initial_shared_version ?? '',
@@ -249,7 +259,7 @@ const REQUIRED_IDS = [
  * SCALAR pins only. The list-shaped one (the registry shards) has its own reader, `fight_registry_arg`, which
  * picks by scope — there is no single id to hand back for it.
  * @param {'testnet' | 'mainnet' | 'devnet' | 'localnet'} network
- * @param {Exclude<keyof AresrpgIds, 'FIGHT_REGISTRY_SHARDS'>} key
+ * @param {Exclude<keyof AresrpgIds, 'FIGHT_REGISTRY_SHARDS' | 'FIGHT_LATCH_SHARDS'>} key
  * @returns {string}
  */
 export function aresrpg_id(network, key) {
@@ -387,7 +397,7 @@ export function shared_object_arg(tx, network, key, mutable, object_id) {
 export const FIGHT_SHARD_COUNT = 16
 
 /**
- * The registry shard a SCOPE's fights and latches live in — the JS twin of Move's
+ * The shard index shared by both parallel fight families — the JS twin of Move's
  * `fight_registry::shard_index`: the LAST BYTE of the scope id, modulo the shard count. The last two hex
  * characters of an object id ARE that byte whatever the string's leading-zero form, so this needs no address
  * normalisation and no hash to keep byte-identical with the chain.
@@ -421,13 +431,44 @@ export function fight_shard_index(scope) {
  * @returns {ReturnType<import('@mysten/sui/transactions').Transaction['object']>}
  */
 export function fight_registry_arg(tx, network, a, scope, mutable) {
-  const shards = a.FIGHT_REGISTRY_SHARDS ?? []
+  return fight_family_arg(
+    tx,
+    network,
+    a.FIGHT_REGISTRY_SHARDS,
+    'FIGHT_REGISTRY_SHARDS',
+    scope,
+    mutable,
+  )
+}
+
+/**
+ * Place the `FightLatch` shard for one CHARACTER. Selection deliberately delegates to the same private family
+ * helper and exported `fight_shard_index` as registry selection; there is exactly one index implementation.
+ * @param {import('@mysten/sui/transactions').Transaction} tx
+ * @param {'testnet' | 'mainnet' | 'devnet' | 'localnet'} network
+ * @param {AresrpgIds} a resolved deployment ids
+ * @param {string | { objectId?: string }} character character id, or a cached ref carrying it
+ * @param {boolean} mutable whether THIS call mutates the latch
+ */
+export function fight_latch_arg(tx, network, a, character, mutable) {
+  return fight_family_arg(
+    tx,
+    network,
+    a.FIGHT_LATCH_SHARDS,
+    'FIGHT_LATCH_SHARDS',
+    character,
+    mutable,
+  )
+}
+
+function fight_family_arg(tx, network, shards, key, shard_key, mutable) {
+  shards ??= []
   if (shards.length !== FIGHT_SHARD_COUNT)
     throw new Error(
-      `[fight_registry_arg] FIGHT_REGISTRY_SHARDS holds ${shards.length} rows, expected ${FIGHT_SHARD_COUNT} — the ceremony stamps one row per shard, in index order. Refusing to guess a shard.`,
+      `[fight_family_arg] ${key} holds ${shards.length} rows, expected ${FIGHT_SHARD_COUNT} — the ceremony stamps one row per shard, in index order. Refusing to guess a shard.`,
     )
-  const shard = shards[fight_shard_index(scope)]
-  const ref = aresrpg_shared_ref(network, 'FIGHT_REGISTRY_SHARDS', mutable, {
+  const shard = shards[fight_shard_index(shard_key)]
+  const ref = aresrpg_shared_ref(network, key, mutable, {
     objectId: shard.id,
     initialSharedVersion: shard.initial_shared_version,
   })

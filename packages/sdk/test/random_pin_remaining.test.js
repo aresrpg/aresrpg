@@ -26,9 +26,18 @@ const FIGHT_SHARDS = Array.from({ length: 16 }, (_, i) => ({
   id: id(`5ard${i.toString(16)}`),
   initial_shared_version: '1',
 }))
+const FIGHT_LATCHES = Array.from({ length: 16 }, (_, i) => ({
+  id: id(`1a7c${i.toString(16)}`),
+  initial_shared_version: '1',
+}))
 const ctx = {
   network: 'testnet',
-  ids: { aresrpg: { FIGHT_REGISTRY_SHARDS: FIGHT_SHARDS } },
+  ids: {
+    aresrpg: {
+      FIGHT_REGISTRY_SHARDS: FIGHT_SHARDS,
+      FIGHT_LATCH_SHARDS: FIGHT_LATCHES,
+    },
+  },
 }
 // forgemagie is a not-yet-stamped SIBLING package (package-split 2026-07-12): its id is '' in the live testnet
 // map until the 7-package ceremony re-publishes, so the scribe/crush guard refuses without it. Layer ONLY the

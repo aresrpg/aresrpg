@@ -355,7 +355,7 @@ const SINGLE_CALL_BUILDERS = [
     settle_fight_ptb,
     { ...A },
     'settlement::settle_and_destroy', // ENGINE package, module `settlement` (not core `results`)
-    3, // fight (by value), FIGHT_REGISTRY, ENGINE_VERSION — no GameConfig, no core version
+    2, // fight (by value), ENGINE_VERSION — latch release belongs to each result-open
     false,
     IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID, // S-68: engine doors target the CALL TARGET, not the type origin
   ],
@@ -364,7 +364,7 @@ const SINGLE_CALL_BUILDERS = [
     open_result_ptb,
     { ...A },
     'results::open',
-    7, // outcome (by value), kiosk, pkcap, config, version, clock, random — exactly ONE version
+    8, // outcome, FIGHT_LATCH, kiosk, pkcap, config, version, clock, random
     true,
     IDS.aresrpg.LATEST_PACKAGE_ID,
   ],
@@ -490,12 +490,12 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     // arg counts (ctx auto-injected everywhere; the merge dropped claim's link + second version)
     expect(calls[0].args).toBe(8)
-    expect(calls[1].args).toBe(13)
+    expect(calls[1].args).toBe(14)
 
     // create is DETERMINISTIC now (verifier law — spawn rolls at place/force_start): no Random in this PTB
-    // the GroupTicket hot potato flows claim→create IN-PTB: create's 2nd arg is claim's result (NestedResult 0)
+    // the GroupTicket hot potato flows claim→create IN-PTB: create's 3rd arg is claim's result (NestedResult 0)
     const create_cmd = tx.getData().commands.at(1)
-    const ticket_arg = create_cmd.MoveCall.arguments.at(1)
+    const ticket_arg = create_cmd.MoveCall.arguments.at(2)
     expect(ticket_arg.$kind).toBe('NestedResult')
     expect(ticket_arg.NestedResult[0]).toBe(0) // result of command 0 (claim_mob_group)
 
@@ -516,11 +516,11 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     expect(calls[0].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     // arg counts: claim gains zx+zy (8 → 10); create unchanged (ctx auto-injected)
     expect(calls[0].args).toBe(10)
-    expect(calls[1].args).toBe(13)
+    expect(calls[1].args).toBe(14)
 
-    // the GroupTicket hot potato still flows claim→create IN-PTB (create's 2nd arg = claim's result)
+    // the GroupTicket hot potato still flows claim→create IN-PTB (create's 3rd arg = claim's result)
     const create_cmd = tx.getData().commands.at(1)
-    const ticket_arg = create_cmd.MoveCall.arguments.at(1)
+    const ticket_arg = create_cmd.MoveCall.arguments.at(2)
     expect(ticket_arg.$kind).toBe('NestedResult')
     expect(ticket_arg.NestedResult[0]).toBe(0)
 
@@ -536,8 +536,8 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
       'fight::create',
     ])
     expect(calls[0].args).toBe(15)
-    expect(calls[1].args).toBe(13)
-    const ticket_arg = tx.getData().commands.at(1).MoveCall.arguments.at(1)
+    expect(calls[1].args).toBe(14)
+    const ticket_arg = tx.getData().commands.at(1).MoveCall.arguments.at(2)
     expect(ticket_arg.$kind).toBe('NestedResult')
     expect(ticket_arg.NestedResult[0]).toBe(0)
     expect(has_no_random(tx)).toBe(true)
@@ -557,7 +557,7 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
       'fight::create',
     ])
     expect(calls[0].args).toBe(17)
-    expect(calls[1].args).toBe(13)
+    expect(calls[1].args).toBe(14)
     expect(has_no_random(tx)).toBe(true)
     expect(typeof tx.serialize()).toBe('string')
   })
@@ -622,10 +622,10 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     ).toThrow(/group_proof facts\.group_seed/)
   })
 
-  // BCS bytes of create's `party_id: Option<ID>` pure input (create is command 1, party_id is arg 7).
+  // BCS bytes of create's `party_id: Option<ID>` pure input (create is command 1, party_id is arg 8).
   function party_id_bytes(tx) {
     const data = tx.getData()
-    const arg = data.commands.at(1).MoveCall.arguments.at(7)
+    const arg = data.commands.at(1).MoveCall.arguments.at(8)
     return Buffer.from(data.inputs.at(arg.Input).Pure.bytes, 'base64')
   }
 
@@ -644,11 +644,11 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
 })
 
 describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded outcome)', () => {
-  test('settle_and_take alone: 4 args, ENGINE package, deterministic (no &Random), returns {tx, outcome}', () => {
+  test('settle_and_take alone: 3 args, ENGINE package, deterministic (no &Random), returns {tx, outcome}', () => {
     const { tx, outcome } = settle_and_take_ptb(ctx)(A)
     expect(targets(tx)).toEqual(['settlement::settle_and_take'])
     const call = find_call(tx, 'settlement::settle_and_take')
-    expect(call.args).toBe(4) // fight (by value), character_id, FIGHT_REGISTRY, ENGINE_VERSION
+    expect(call.args).toBe(3) // fight (by value), character_id, ENGINE_VERSION
     expect(call.package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
     expect(has_no_random(tx)).toBe(true)
     expect(outcome).toBeDefined()
@@ -659,6 +659,7 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
     const { tx, outcome } = settle_and_take_ptb(ctx)(A)
     const chained = open_taken_ptb(ctx)({
       outcome,
+      character_id: A.character_id,
       kiosk_id: A.kiosk_id,
       personal_kiosk_cap_id: A.personal_kiosk_cap_id,
       tx,
@@ -670,8 +671,8 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
     ])
     expect(calls[0].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
     expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
-    expect(calls[0].args).toBe(4)
-    expect(calls[1].args).toBe(7) // outcome, kiosk, pkcap, config, version, clock, random
+    expect(calls[0].args).toBe(3)
+    expect(calls[1].args).toBe(8) // outcome, FIGHT_LATCH, kiosk, pkcap, config, version, clock, random
 
     // the outcome flows settle_and_take → open_taken IN-PTB: open_taken's 1st arg is settle_and_take's
     // RESULT (a NestedResult), never an object id/ref — as_object_arg is never invoked for this argument.
@@ -697,6 +698,7 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
     })
     open_taken_ptb(ctx)({
       outcome,
+      character_id: A.character_id,
       kiosk_id: A.kiosk_id,
       personal_kiosk_cap_id: A.personal_kiosk_cap_id,
       tx,
@@ -739,8 +741,8 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
     ])
     expect(calls[0].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
     expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
-    expect(calls[0].args).toBe(4)
-    expect(calls[1].args).toBe(7)
+    expect(calls[0].args).toBe(3)
+    expect(calls[1].args).toBe(8)
 
     const open_cmd = tx.getData().commands.at(1)
     const outcome_arg = open_cmd.MoveCall.arguments.at(0)
@@ -1079,6 +1081,9 @@ describe('S-51b static refs — kind-only build with ZERO client', () => {
     const shard =
       IDS.aresrpg.FIGHT_REGISTRY_SHARDS[fight_shard_index(A.world_id)]
     expect(by_id[shard.id].mutable).toBe(true) // &mut FightRegistry (this world's shard)
+    const latch =
+      IDS.aresrpg.FIGHT_LATCH_SHARDS[fight_shard_index(A.character_id)]
+    expect(by_id[latch.id].mutable).toBe(true) // &mut FightLatch (this character's shard)
     expect(by_id[IDS.aresrpg.GAME_CONFIG].mutable).toBe(false) // &GameConfig
     expect(by_id[IDS.aresrpg.VERSION].mutable).toBe(false) // &Version
     expect(by_id[IDS.aresrpg.ENGINE_VERSION].mutable).toBe(false) // &EngineVersion

@@ -2,7 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Transaction } from '@mysten/sui/transactions'
 
-import { fight_registry_arg, shared_object_arg } from './deployment/aresrpg.js'
+import {
+  fight_latch_arg,
+  fight_registry_arg,
+  shared_object_arg,
+} from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
 import { settle_and_take_ptb } from './fight.js'
 import { kolizeum_ids } from './sui/write/kolizeum_lobby.js'
@@ -73,6 +77,7 @@ export function start_ptb(context) {
       arguments: [
         as_object_arg(tx, kolizeum_id), // kolizeum: &mut Kolizeum (a cached ref must be mutable:true)
         fight_registry_arg(tx, network, a, kolizeum_id, true), // registry: &mut FightRegistry
+        fight_latch_arg(tx, network, a, character_id, true), // latch: &mut FightLatch (creator character)
         as_object_arg(tx, kiosk_id), // kiosk: &Kiosk (READ-ONLY here — a kiosk ref may be mutable:false)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
@@ -114,7 +119,7 @@ export function seat_ptb(context) {
       arguments: [
         as_object_arg(tx, kolizeum_id), // kolizeum: &Kolizeum (READ-ONLY here — a ref may be mutable:false)
         as_object_arg(tx, fight_id), // fight: &mut Fight (a cached ref must be mutable:true)
-        fight_registry_arg(tx, network, a, kolizeum_id, true), // fight_registry: &mut FightRegistry
+        fight_latch_arg(tx, network, a, character_id, true), // latch: &mut FightLatch (seat derives nothing)
         as_object_arg(tx, kiosk_id), // kiosk: &Kiosk (READ-ONLY post-split — a ref may be mutable:false)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
@@ -169,13 +174,14 @@ export function settle_ptb(context) {
  */
 export function open_ptb(context) {
   const { network } = context
-  return ({ outcome_id, tx = new Transaction() }) => {
+  return ({ outcome_id, character_id, tx = new Transaction() }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
 
     tx.moveCall({
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::open`,
       arguments: [
         as_object_arg(tx, outcome_id), // outcome: FightOutcome (BY VALUE — consumed; OWNED, ref-or-id seam)
+        fight_latch_arg(tx, network, a, character_id, true), // latch: &mut FightLatch (released at arena result-open)
       ],
     })
     return tx
@@ -203,7 +209,6 @@ export function settle_arena_ptb(context) {
     // 1. settle_and_take (ENGINE) → the caller's own outcome as a chainable RESULT HANDLE (the Fight is consumed here)
     const { tx: chained, outcome } = settle_and_take_ptb(context)({
       fight_id,
-      world_id: kolizeum_id, // the arena fight derived from the LOBBY — that is its registry shard's scope
       character_id,
       tx,
     })
@@ -221,7 +226,10 @@ export function settle_arena_ptb(context) {
     // 3. kolizeum::open(outcome) — CONSUME the handle by value at the brand-asserted arena terminal
     chained.moveCall({
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::open`,
-      arguments: [outcome], // outcome: FightOutcome (BY VALUE — the same handle; NEVER an object id)
+      arguments: [
+        outcome, // outcome: FightOutcome (BY VALUE — the same handle; NEVER an object id)
+        fight_latch_arg(chained, network, a, character_id, true), // latch: &mut FightLatch
+      ],
     })
 
     return chained

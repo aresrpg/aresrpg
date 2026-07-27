@@ -104,11 +104,8 @@ function shared_row(id, initial_shared_version, label) {
   }
 }
 
-/// THE FIGHT-REGISTRY HAND-OFF. `fight_registry::init` shares one registry PER SHARD, so the ceremony stamps a
-/// LIST where it used to stamp a single id: `shared.FightRegistryShards` and `shared_versions.FightRegistryShards`
-/// are index-ordered arrays of the same length, and that length must equal the Move `SHARD_COUNT` (mirrored in the
-/// SDK as `FIGHT_SHARD_COUNT`). Short, long or ragged input refuses here rather than shipping a pin that would
-/// abort `EWrongShard` on every create.
+/// THE PARALLEL FIGHT-FAMILY HAND-OFF. Registry and latch init each share one object PER SHARD, so the ceremony
+/// stamps two index-ordered lists. Both lengths must equal the Move `SHARD_COUNT` mirrored in the SDK.
 const FIGHT_SHARD_COUNT = 16
 
 function shared_row_list(ids, versions, label, expected) {
@@ -152,6 +149,12 @@ function shared_rows(manifest) {
       manifest.engine.shared?.FightRegistryShards,
       manifest.engine.shared_versions?.FightRegistryShards,
       'FIGHT_REGISTRY_SHARDS',
+      FIGHT_SHARD_COUNT
+    ),
+    FIGHT_LATCH_SHARDS: shared_row_list(
+      manifest.engine.shared?.FightLatchShards,
+      manifest.engine.shared_versions?.FightLatchShards,
+      'FIGHT_LATCH_SHARDS',
       FIGHT_SHARD_COUNT
     ),
     VERSION: shared_row(

@@ -770,14 +770,18 @@ function collect_shared(map, key, value) {
 const simpleStruct = (t) => t.replace(/<.*$/, '').split('::').pop()
 
 /**
- * Order the fight-registry SHARD list by each registry's own `index` field, and rename it to the key the stamp
- * step reads (`FightRegistryShards`). `init` shares one registry per shard and the shard a scope maps to is its
- * INDEX, so a list ordered by anything else (object-change order, address order) would stamp pins that abort
- * `EWrongShard` on every create. Reads the index off chain rather than trusting creation order.
+ * Order both parallel fight SHARD lists by each object's own `index` field and rename them to the keys the stamp
+ * step reads. Creation order is not authority for either family. Registry and latch objects remain separate
+ * even when a scope and character select the same ordinal.
  */
 export async function resolveFightShards(client, M) {
-  const ids = M.engine.shared.FightRegistry
-  const versions = M.engine.shared_versions.FightRegistry
+  await resolveFightFamilyShards(client, M, 'FightRegistry')
+  await resolveFightFamilyShards(client, M, 'FightLatch')
+}
+
+async function resolveFightFamilyShards(client, M, family) {
+  const ids = M.engine.shared[family]
+  const versions = M.engine.shared_versions[family]
   if (ids == null) return
   const id_list = Array.isArray(ids) ? ids : [ids]
   const version_list = Array.isArray(versions) ? versions : [versions]
@@ -794,12 +798,12 @@ export async function resolveFightShards(client, M) {
   for (const [i, row] of indexed.entries())
     if (row.index !== i)
       throw new Error(
-        `[ceremony] fight-registry shard list is not contiguous from 0 — got index ${row.index} at position ${i}. The publish shared a wrong number of registries.`
+        `[ceremony] ${family} shard list is not contiguous from 0 — got index ${row.index} at position ${i}. The publish shared a wrong number of shards.`
       )
-  M.engine.shared.FightRegistryShards = indexed.map((row) => row.id)
-  M.engine.shared_versions.FightRegistryShards = indexed.map((row) => row.version)
-  delete M.engine.shared.FightRegistry
-  delete M.engine.shared_versions.FightRegistry
+  M.engine.shared[`${family}Shards`] = indexed.map((row) => row.id)
+  M.engine.shared_versions[`${family}Shards`] = indexed.map((row) => row.version)
+  delete M.engine.shared[family]
+  delete M.engine.shared_versions[family]
 }
 
 /** Resolve the item vs character Publisher by its `module_name` field (mirrors 02_policies.mjs). */
@@ -861,9 +865,11 @@ export function syntheticManifest() {
   M.gifting.shared.Creation = fresh()
   M.aresrpg.shared.GameConfig = fresh()
   M.gifting.shared.PoolRegistry = fresh()
-  // one registry per shard, index order (see `resolveFightShards`)
+  // two distinct fight families, each one object per shard, index order (see `resolveFightShards`)
   M.engine.shared.FightRegistryShards = Array.from({ length: 16 }, () => fresh())
   M.engine.shared_versions.FightRegistryShards = Array.from({ length: 16 }, () => '1')
+  M.engine.shared.FightLatchShards = Array.from({ length: 16 }, () => fresh())
+  M.engine.shared_versions.FightLatchShards = Array.from({ length: 16 }, () => '1')
   for (const a of LEGACY_ALIASES) M[a] = M.aresrpg // alias keys → the core (downstream scripts)
   M.fight = M.engine // the fight home now points at the ENGINE package
   M._rules = '0xKIOSK_RULES_PKG'
