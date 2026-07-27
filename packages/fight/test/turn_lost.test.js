@@ -40,6 +40,8 @@ const fight_object = {
     { is_mob: true, idx: 0 },
   ],
   turn_deadline_ms: DEADLINE,
+  turn_entropy: DEADLINE,
+  turn_ordinal: 1,
   last_action_ms: 1_000,
 }
 const my_turn_started = {

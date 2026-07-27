@@ -33,6 +33,8 @@ const FIGHT_OBJECT = {
   ],
   mobs: [],
   turn_deadline_ms: 40_000,
+  turn_entropy: 40_000,
+  turn_ordinal: 1,
   last_action_ms: 50_000,
 }
 const STALE_FIGHT_OBJECT = { ...FIGHT_OBJECT, last_action_ms: 1_000 }

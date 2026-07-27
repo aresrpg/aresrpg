@@ -320,7 +320,7 @@ describe('#577 + #965 — an authored damage BAND rolls, and the preview is the 
     const target_cell = encode(chain.sim_state.team1[0].cell.x, chain.sim_state.team1[0].cell.y)
 
     // A clock is a pure INPUT to predict_cast (public fight state on a world fight); its constants need no board.
-    const clock = { world_seed: 0x51ee7, spawn_id: 42, turn_deadline_ms: NOW + 30_000, seat: 0, slot: 0 }
+    const clock = { world_seed: 0x51ee7, spawn_id: 42, turn_entropy: NOW + 30_000, turn_ordinal: 1, seat: 0, slot: 0 }
     const rolled = roll_in_range(BAND_MIN, BAND_MAX, slot_damage_roll(turn_seed(clock), clock.slot))
     // The fixture must actually roll OFF the floor, or the assertion below cannot tell a roll from a flat fold.
     expect(rolled).toBeGreaterThan(BAND_MIN)

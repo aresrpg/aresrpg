@@ -129,7 +129,8 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
     ? {
         world_seed: dungeon.world_seed,
         spawn_id: dungeon.spawn_id,
-        turn_deadline_ms: dungeon.turn_deadline_ms || null,
+        turn_entropy: dungeon.turn_entropy ?? 0,
+        turn_ordinal: dungeon.turn_ordinal || null,
         seat: me?.seat ?? null,
         slot: crit_slot.slot,
       }

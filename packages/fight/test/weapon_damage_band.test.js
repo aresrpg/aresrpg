@@ -124,7 +124,7 @@ const swing_remaining = ({ board, view, mob_cell }, slot) =>
     spell_level: 1,
     target_cell: encode(mob_cell.x, mob_cell.y),
     critical: false, // the crit branch is its own swap; this file measures the NORMAL band
-    critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_deadline_ms: NOW + 30_000, seat: 0, slot },
+    critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_entropy: NOW + 30_000, turn_ordinal: 1, seat: 0, slot },
     resolve_ref: ref_of(board),
   }).actions.find((action) => action.kind === 'Hit' && action.victim_is_mob)?.remaining_hp
 
@@ -210,7 +210,7 @@ describe('#577 — the kill threshold moves with the roll (a target inside the b
       spell_level: 1,
       target_cell: encode(mob_cell.x, mob_cell.y),
       critical: false,
-      critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_deadline_ms: NOW + 30_000, seat: 0, slot },
+      critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_entropy: NOW + 30_000, turn_ordinal: 1, seat: 0, slot },
       resolve_ref: ref_of(board),
     }).actions.find((action) => action.kind === 'Hit' && action.victim_is_mob)?.remaining_hp
 

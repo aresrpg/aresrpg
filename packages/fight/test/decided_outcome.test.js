@@ -56,6 +56,8 @@ const fight_object = ({ status = 1, mob = {}, deadline = T0 + 30_000 } = {}) => 
   turn_ptr: 0,
   queue: [{ is_mob: false, idx: 0 }],
   turn_deadline_ms: deadline,
+  turn_entropy: deadline,
+  turn_ordinal: 1,
   placement_deadline_ms: T0 + 60_000,
   world_seed: null,
   spawn_id: null,

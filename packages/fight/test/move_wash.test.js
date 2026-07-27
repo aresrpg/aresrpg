@@ -65,6 +65,8 @@ const fight_object = ({ my_agility = 40, mob_agility = 40, mob_hp = 30, mob_cell
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
 })
 
 const boot = (overrides = {}) => {

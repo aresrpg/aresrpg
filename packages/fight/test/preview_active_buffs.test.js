@@ -65,6 +65,8 @@ const fight_object = (statuses, base_stats) => ({
   queue: [{ is_mob: false, idx: 0 }],
   turn_ptr: 0,
   turn_deadline_ms: 100_000,
+  turn_entropy: 100_000,
+  turn_ordinal: 1,
   invisibility_statuses: statuses,
 })
 

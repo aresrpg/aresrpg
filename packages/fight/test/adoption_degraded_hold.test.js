@@ -53,6 +53,8 @@ const real_fight = ({ cell = 5, status = 0 } = {}) => ({
   queue: [],
   turn_ptr: 0,
   turn_deadline_ms: 0,
+  turn_entropy: 0,
+  turn_ordinal: 1,
   placement_deadline_ms: 90_000,
   last_action_ms: 0,
   obstacles: [],

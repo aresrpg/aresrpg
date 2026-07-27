@@ -98,6 +98,8 @@ describe('INC-1 · invisibility snapshot mapping (register #53 — object-vs-id 
     turn_queue: [{ is_mob: false, idx: 0 }],
     turn_ptr: 0,
     turn_deadline_ms: 0,
+    turn_entropy: 0,
+    turn_ordinal: 1,
     invisibility_statuses: [
       { entity_id: '0xchar', kind: 27, remaining_turns: 3 },
       { entity_id: 'mob-0', kind: 27, remaining_turns: 2 },

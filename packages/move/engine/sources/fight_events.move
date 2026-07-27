@@ -33,7 +33,16 @@ public struct FightCreated has copy, drop {
 public struct FightJoined has copy, drop { fight: ID, character: ID, seat: u64 }
 public struct Placed has copy, drop { fight: ID, character: ID, cell: u64 }
 public struct Ready has copy, drop { fight: ID, character: ID }
-public struct TurnStarted has copy, drop { fight: ID, is_mob: bool, idx: u64, deadline_ms: u64 }
+/// `turn_entropy`/`turn_ordinal` publish the inputs `fight::turn_seed` hangs on, so a client derives this turn's
+/// rolls the instant the turn opens — the same role `deadline_ms` used to play in that derivation.
+public struct TurnStarted has copy, drop {
+  fight: ID,
+  is_mob: bool,
+  idx: u64,
+  deadline_ms: u64,
+  turn_entropy: u64,
+  turn_ordinal: u64,
+}
 public struct Moved has copy, drop { fight: ID, character: ID, to_cell: u64 }
 /// A MOB repositioned during its turn. Keyed by `idx` (the mob's slot), NOT an object id — mobs have no standalone
 /// object like a Character, so every mob-side event (Cast/Hit/TurnStarted/TurnEnded) keys by `idx`; this mirrors
@@ -152,7 +161,9 @@ public(package) fun emit_created(fight: ID, world: ID, spawn_id: u64, anchor_x: 
 public(package) fun emit_joined(fight: ID, character: ID, seat: u64) { event::emit(FightJoined { fight, character, seat }); }
 public(package) fun emit_placed(fight: ID, character: ID, cell: u64) { event::emit(Placed { fight, character, cell }); }
 public(package) fun emit_ready(fight: ID, character: ID) { event::emit(Ready { fight, character }); }
-public(package) fun emit_turn_started(fight: ID, is_mob: bool, idx: u64, deadline_ms: u64) { event::emit(TurnStarted { fight, is_mob, idx, deadline_ms }); }
+public(package) fun emit_turn_started(fight: ID, is_mob: bool, idx: u64, deadline_ms: u64, turn_entropy: u64, turn_ordinal: u64) {
+  event::emit(TurnStarted { fight, is_mob, idx, deadline_ms, turn_entropy, turn_ordinal });
+}
 public(package) fun emit_moved(fight: ID, character: ID, to_cell: u64) { event::emit(Moved { fight, character, to_cell }); }
 public(package) fun emit_mob_moved(fight: ID, idx: u64, to_cell: u64) { event::emit(MobMoved { fight, idx, to_cell }); }
 public(package) fun emit_displaced(fight: ID, target_is_mob: bool, target_idx: u64, kind: u8, from_cell: u64, to_cell: u64, requested: u64, blocked: u64) {

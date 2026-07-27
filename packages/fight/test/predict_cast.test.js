@@ -70,6 +70,8 @@ const fight_object = (caster_cell) => ({
   queue: [{ is_mob: false, idx: 0 }],
   turn_ptr: 0,
   turn_deadline_ms: 100_000,
+  turn_entropy: 100_000,
+  turn_ordinal: 1,
   last_action_ms: 0,
 })
 
@@ -444,11 +446,13 @@ describe('sim-backed own-cast prediction', () => {
     const clock = {
       world_seed: 123456789,
       spawn_id: 42,
-      turn_deadline_ms: 1752192000000,
+      turn_entropy: 3141592653,
+      turn_ordinal: 7,
       seat: 0,
     }
-    expect(chain_critical({ ...clock, slot: 0 }, 4, 0)).toBe(false)
-    expect(chain_critical({ ...clock, slot: 2 }, 4, 0)).toBe(true)
+    // slot 0 rolls 1089 (below the rate-4 threshold 2500), slot 2 rolls 5988 (above it) — the slot IS an input.
+    expect(chain_critical({ ...clock, slot: 0 }, 4, 0)).toBe(true)
+    expect(chain_critical({ ...clock, slot: 2 }, 4, 0)).toBe(false)
   })
 
   test('a known-critical turn-seed slot marks the drafted damage beat as critical', () => {
@@ -456,9 +460,10 @@ describe('sim-backed own-cast prediction', () => {
       {
         world_seed: 123456789,
         spawn_id: 42,
-        turn_deadline_ms: 1752192000000,
+        turn_entropy: 3141592653,
+        turn_ordinal: 7,
         seat: 0,
-        slot: 2,
+        slot: 0,
       },
       4,
       0
@@ -473,7 +478,7 @@ describe('sim-backed own-cast prediction', () => {
     })
     const damage = prediction.beats.find((beat) => beat.kind === 'damage')
 
-    expect(critical).toBe(true) // fixture slot 2 roll 1518 is below the rate-4 threshold 2500
+    expect(critical).toBe(true) // fixture slot 0 roll 1089 is below the rate-4 threshold 2500
     expect(damage.payload).toMatchObject({ damage: 9, is_critical: true })
   })
 })

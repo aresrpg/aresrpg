@@ -41,6 +41,8 @@ const FIGHT_OBJECT = {
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
+  turn_entropy: 90_000,
+  turn_ordinal: 1,
 }
 const CASCADE = [
   event('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: 105 }),

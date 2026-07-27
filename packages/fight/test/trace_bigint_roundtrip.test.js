@@ -73,7 +73,9 @@ const real_decoded_fight = () => ({
   start_cells_b: [],
   turn_ptr: 0,
   queue: [],
-  turn_deadline_ms: 1_700_000_090_000n, // to_bigint(json.turn_deadline_ms)
+  turn_deadline_ms: 1_700_000_090_000n,
+  turn_entropy: 1_700_000_090_000n,
+  turn_ordinal: 1, // to_bigint(json.turn_deadline_ms)
   last_action_ms: 1_700_000_000_000n, // to_bigint(json.last_action_ms)
   placement_deadline_ms: 1_700_000_060_000n, // to_bigint(json.placement_deadline_ms)
   group_template: '0xmob_t',

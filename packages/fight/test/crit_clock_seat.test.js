@@ -12,8 +12,8 @@ import { slot_crit_roll, turn_seed } from '@aresrpg/sim/turn_seed'
 
 import { chain_critical, crit_clock_of } from '../src/predict_cast.js'
 
-const CLOCK = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n, slot: 0 }
-const FIGHT = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n }
+const CLOCK = { world_seed: 123456789n, spawn_id: 42n, turn_entropy: 3141592653n, turn_ordinal: 7n, slot: 0 }
+const FIGHT = { world_seed: 123456789n, spawn_id: 42n, turn_entropy: 3141592653n, turn_ordinal: 7n }
 // a board_state escrow row, trimmed to what the clock reads (board_state.js stamps `seat` = participant index)
 const ROW = { seat: 0, casts_this_turn: 0, character: '0xc' }
 
@@ -41,7 +41,7 @@ describe('crit_clock_of — the ONE composer of the §7 clock (#1190)', () => {
     expect(crit_clock_of({ fight: { ...FIGHT, world_seed: null }, seat_row: ROW })).toBeNull()
     expect(crit_clock_of({ fight: { ...FIGHT, spawn_id: null }, seat_row: ROW })).toBeNull()
     // 0 is board_state's UNSTAMPED deadline (placement), not a seed input — the normalization lives here now
-    expect(crit_clock_of({ fight: { ...FIGHT, turn_deadline_ms: 0 }, seat_row: ROW })).toBeNull()
+    expect(crit_clock_of({ fight: { ...FIGHT, turn_ordinal: 0 }, seat_row: ROW })).toBeNull()
   })
 
   it('a composed clock is exactly what chain_critical accepts — the two ends agree by construction', () => {
@@ -62,15 +62,15 @@ describe('chain_critical — a NOT-FOUND seat is not a seat (#1190)', () => {
   })
 
   it('a REAL seat still answers — the guard narrows nothing legitimate', () => {
-    // seat 0's slot-0 roll is 2816: a 1-in-2 spell (threshold 5000) crits, a 1-in-4 (2500) does not.
+    // seat 0's slot-0 roll is 1089: a 1-in-2 spell (threshold 5000) crits, a 1-in-10 (1000) does not.
     expect(chain_critical({ ...CLOCK, seat: 0 }, 2)).toBe(true)
-    expect(chain_critical({ ...CLOCK, seat: 0 }, 4)).toBe(false)
+    expect(chain_critical({ ...CLOCK, seat: 0 }, 10)).toBe(false)
   })
 
   it('the leak was never benign: the -1 seed is a different sequence with a different verdict', () => {
     expect(turn_seed({ ...CLOCK, seat: -1 })).not.toBe(turn_seed({ ...CLOCK, seat: 0 }))
-    // seat -1's slot-0 roll is 6828 — that same 1-in-2 spell reads as NO crit off the phantom seat.
-    expect(slot_crit_roll(turn_seed({ ...CLOCK, seat: -1 }), 0)).toBe(6828)
-    expect(slot_crit_roll(turn_seed({ ...CLOCK, seat: 0 }), 0)).toBe(2816)
+    // seat -1's slot-0 roll is 2378 — that same 1-in-10 spell reads as a CRIT off the phantom seat.
+    expect(slot_crit_roll(turn_seed({ ...CLOCK, seat: -1 }), 0)).toBe(2378)
+    expect(slot_crit_roll(turn_seed({ ...CLOCK, seat: 0 }), 0)).toBe(1089)
   })
 })

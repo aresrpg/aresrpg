@@ -59,7 +59,8 @@ describe('dodge_seed — the turn-seed dodge stream ↔ spell_formula::dodge_see
     const ts = turn_seed({
       world_seed: 12345,
       spawn_id: 1,
-      turn_deadline_ms: 999,
+      turn_entropy: 999,
+      turn_ordinal: 1,
       seat: 0,
     })
     expect(dodge_seed(ts, 0)).toBe(dodge_seed(ts, 0)) // deterministic

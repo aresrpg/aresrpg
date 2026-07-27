@@ -236,9 +236,14 @@ public(package) fun resolve_from(fight: &mut Fight, start: u64, rng: &mut u64, n
         participant::begin_turn(fight::participants_mut(fight).borrow_mut(seat), ap_debt, mp_debt, ap_credit, mp_credit);
         if (cast::tick_turn_start(fight, false, seat)) {
           cast::note_seat_turn(fight, seat); // advance the caster's OWN turn clock (cast cooldown / per-turn reset anchor)
+          // THE TURN'S ENTROPY, stamped at the one point a player turn begins: `rng` here is the state left
+          // over once THIS transaction's `&Random` draw has been threaded through the wave, so every roll the
+          // landing seat makes hangs off the beacon rather than off anything the previous turn's sender picked.
+          fight::note_turn_entropy(fight, *rng);
           let deadline = now + fight::turn_ms(fight) + mobs_since_player * MOB_TURN_EXTRA_MS;
           fight::set_turn_ptr_and_deadline(fight, pos, deadline);
-          fight_events::emit_turn_started(fight::id(fight), false, seat, deadline);
+          let (entropy, ordinal) = fight::turn_entropy(fight);
+          fight_events::emit_turn_started(fight::id(fight), false, seat, deadline, entropy, ordinal);
           return
         };
         // the start-tick killed the seat — a side may have wiped (PvP) or the party may be gone (PvM).

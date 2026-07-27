@@ -47,7 +47,8 @@ const participant = ({ character, owner = '0xaaa', team = 0, ap = 6, mp = 3, hp 
  * @param {{
  *   fight_id?: string, my?: string | null, seats?: Array<Record<string, any>>,
  *   mobs?: Array<Record<string, any>>, active?: string | null, placement?: boolean,
- *   turn_deadline_ms?: number, placement_deadline_ms?: number, version?: number, status?: number,
+ *   turn_deadline_ms?: number, turn_entropy?: number, turn_ordinal?: number,
+ *   placement_deadline_ms?: number, version?: number, status?: number,
  * }} [opts]
  */
 export function seed_fight_core({
@@ -58,6 +59,8 @@ export function seed_fight_core({
   active = my,
   placement = false,
   turn_deadline_ms = Date.now() + 90_000,
+  turn_entropy = 0,
+  turn_ordinal = 0,
   placement_deadline_ms = 0,
   version = 1,
   status = placement ? 0 : 1,
@@ -89,6 +92,8 @@ export function seed_fight_core({
       queue,
       turn_ptr: active_ptr,
       turn_deadline_ms,
+      turn_entropy,
+      turn_ordinal,
       placement_deadline_ms,
       start_cells_a: placement ? [100, 101, 102] : [],
       start_cells_b: [],

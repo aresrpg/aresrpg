@@ -54,6 +54,8 @@ const fight_object = () => ({
   turn_ptr: 0,
   queue: [],
   turn_deadline_ms: T0 + 90_000,
+  turn_entropy: T0 + 90_000,
+  turn_ordinal: 1,
   placement_deadline_ms: 0,
   world_seed: null,
   spawn_id: null,

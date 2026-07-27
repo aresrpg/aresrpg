@@ -56,6 +56,8 @@ const FIGHT_OBJECT = {
   turn_ptr: 0,
   queue: [],
   turn_deadline_ms: 0,
+  turn_entropy: 0,
+  turn_ordinal: 1,
   placement_deadline_ms: 90_000,
   world_seed: 1,
   spawn_id: 1,

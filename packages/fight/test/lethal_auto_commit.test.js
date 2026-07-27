@@ -51,6 +51,8 @@ const fight_object = (mobs) => ({
   ],
   turn_ptr: 0,
   turn_deadline_ms: 100_000,
+  turn_entropy: 100_000,
+  turn_ordinal: 1,
   last_action_ms: 0,
 })
 

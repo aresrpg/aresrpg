@@ -269,7 +269,7 @@ export const predict_sim_cast = ({
   arena,
   critical = null,
   resolve_ref = entity_ref,
-  turn_context = null, // #577 — the public turn-seed clock {world_seed,spawn_id,turn_deadline_ms,seat,slot}: the sim rolls this player cast's damage off it (previewable), matching the chain
+  turn_context = null, // #577 — the public turn-seed clock {world_seed,spawn_id,turn_entropy,turn_ordinal,seat,slot}: the sim rolls this player cast's damage off it (previewable), matching the chain
 }) => {
   const prediction = prediction_template(spell, spell_level, critical)
   if (!prediction)
@@ -447,21 +447,24 @@ const state_from_view = (view, caster_id, stats_of) => {
  * no row (a roster read that has not landed), an unstamped deadline (0 during placement), a Fight whose static
  * seeds are absent.
  * @param {{ fight: object|null, seat_row: object|null, draft_len?: number }} args `fight` carries the public
- *   seed fields (world_seed / spawn_id / turn_deadline_ms); `seat_row` is MY escrow row (seat + casts_this_turn);
- *   `draft_len` is the local AP-queue's queued cast/weapon count (moves never count — count_action).
- * @returns {{ world_seed: number|bigint, spawn_id: number|bigint, turn_deadline_ms: number|bigint,
- *   seat: number, slot: number } | null}
+ *   seed fields (world_seed / spawn_id / turn_entropy / turn_ordinal); `seat_row` is MY escrow row (seat +
+ *   casts_this_turn); `draft_len` is the local AP-queue's queued cast/weapon count (moves never count).
+ * @returns {{ world_seed: number|bigint, spawn_id: number|bigint, turn_entropy: number|bigint,
+ *   turn_ordinal: number|bigint, seat: number, slot: number } | null}
  */
 export const crit_clock_of = ({ fight, seat_row, draft_len = 0 }) => {
   const world_seed = fight?.world_seed ?? null
   const spawn_id = fight?.spawn_id ?? null
-  const turn_deadline_ms = fight?.turn_deadline_ms || null // 0 = not stamped yet (placement) — never a seed input
+  // 0 = no turn has opened yet (placement) — never a seed input, the same rule the deadline carried before it.
+  const turn_ordinal = fight?.turn_ordinal || null
+  const turn_entropy = turn_ordinal == null ? null : (fight?.turn_entropy ?? 0) // pass-through: u64 off the decode may be BigInt
   const seat = seat_row?.seat ?? null
-  if (world_seed == null || spawn_id == null || turn_deadline_ms == null || seat == null || !(seat >= 0)) return null
+  if (world_seed == null || spawn_id == null || turn_ordinal == null || seat == null || !(seat >= 0)) return null
   return {
     world_seed,
     spawn_id,
-    turn_deadline_ms,
+    turn_entropy,
+    turn_ordinal,
     seat,
     slot: Number(seat_row?.casts_this_turn ?? 0) + Number(draft_len ?? 0),
   }
@@ -478,7 +481,8 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
   if (
     clock?.world_seed == null ||
     clock?.spawn_id == null ||
-    clock?.turn_deadline_ms == null ||
+    clock?.turn_entropy == null ||
+    clock?.turn_ordinal == null ||
     clock?.seat == null ||
     clock?.slot == null ||
     !(clock.seat >= 0) ||
