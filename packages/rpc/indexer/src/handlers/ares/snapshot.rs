@@ -121,11 +121,12 @@ const ARES_ORIGIN_EFFECT_BYTES: &[(&str, usize)] = &[
     // Pre-#577 lineage — the universe live until the 2026-07-23 fresh publish (25-byte Effect).
     ("6uaL9rsDyn1uJh4edpSg1HpxMpCU22gVFxRSGN3RScSE", 25),
     // The post-#577 fresh-publish ceremonies. #1 and #2 were superseded (#1 never went live, #2
-    // was re-published over by the range-true universe); #3 is what release.json pins today. All
-    // three were built against the widened `Effect`, so all three walk at 33.
+    // was re-published over by the range-true universe); #3 and #4 both reached release stamps.
+    // All four were built against the widened `Effect`, so all four walk at 33.
     ("3tsbwLWTSELKsHycick1N11bNAJ4i7tLPth7VqPcFKaW", 33),
     ("Gjb9CppYjWUPTruSMkfJ83ZPKP7JtkXM9otobcb6K9Hc", 33),
     ("6XD9S2etC5Y7Jvj7sTjGSiz8ousCyJ8EVwXodh2nMXYd", 33),
+    ("9qxy69fWNHZGUgYTr9oJStEYXk9TDMgwetkES4YSW1tH", 33),
 ];
 /// `aresrpg::crafting::Recipe` — the §14 encyclopedia crafting blueprint. The shared object
 /// carries the FULL recipe truth (ingredient list + output + job/level/xp); the `RecipeCreated`
