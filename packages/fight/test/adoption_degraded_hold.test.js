@@ -40,10 +40,12 @@ const participant = (cell = 5) => ({
   weapon: null,
 })
 
-/** The REAL arena — 13×12, deliberately ≠ the 20×19 GRID fallback so a fallback present is distinguishable. */
-const real_fight = ({ cell = 5 } = {}) => ({
+/** The REAL arena — 13×12, deliberately ≠ the 20×19 GRID fallback so a fallback present is distinguishable.
+ *  `status` picks the phase: 0 = engine PLACEMENT (the roster window, #1274), 1 = ACTIVE (the roster is frozen and
+ *  the M2b checkpoint law governs — an object read never re-adopts). */
+const real_fight = ({ cell = 5, status = 0 } = {}) => ({
   id: FIGHT,
-  status: 0, // engine PLACEMENT
+  status,
   width: 13,
   height: 12,
   participants: [participant(cell)],
@@ -105,7 +107,8 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
 
   test('a torn re-read mid-fight holds AT THE LAST GOOD frame; the healed read is an inert checkpoint (M2b)', () => {
     const store = boot()
-    store.getState().input({ type: 'snapshot', fight: real_fight(), version: 5 }) // bootstrap: the good geometry base
+    // bootstrap on an ACTIVE fight: the roster is frozen, so the M2b checkpoint law is the one under test here
+    store.getState().input({ type: 'snapshot', fight: real_fight({ status: 1 }), version: 5 })
 
     store.getState().input({ type: 'snapshot', fight: degraded_fight(), version: 6 })
     const held = project.board_view(store.getState())
@@ -115,9 +118,26 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
     // M2b · ONE INGRESS: the geometry is fixed at bootstrap; a healed mid-fight object read is an inert CHECKPOINT
     // (it never re-adopts). The good frame HOLDS from the base, and dynamic state (a fighter's cell) rides the
     // journal, not a re-adopted read — so the board never regresses to the fallback frame.
-    store.getState().input({ type: 'snapshot', fight: real_fight({ cell: 6 }), version: 6 })
+    store.getState().input({ type: 'snapshot', fight: real_fight({ cell: 6, status: 1 }), version: 6 })
     expect(store.getState().view_version).toBe(5) // checkpoint: no re-adopt
     expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 }) // frame held, never fallback
+  })
+
+  test('the hold survives the ROSTER WINDOW: in placement a healed read re-adopts, a torn one still never does', () => {
+    const store = boot()
+    store.getState().input({ type: 'snapshot', fight: real_fight(), version: 5 }) // engine PLACEMENT — provisional
+
+    // the torn read is refused on BOTH phases — hold-not-degrade is about the record, not the lifecycle
+    store.getState().input({ type: 'snapshot', fight: degraded_fight(), version: 6 })
+    expect(store.getState().view_version).toBe(5)
+    expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 })
+
+    // #1274: while the chain can still `join` a fighter in, the newest COMPLETE placement read is the base — this
+    // is the seam that lets the creator learn a joiner who landed after her first read.
+    store.getState().input({ type: 'snapshot', fight: real_fight({ cell: 6 }), version: 6 })
+    expect(store.getState().view_version).toBe(6)
+    expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 }) // frame never regresses
+    expect(project.board_view(store.getState()).escrow[0].cell).toBe(6)
   })
 
   test('the hold CONVERGES: a complete read at the entry floor still seeds a null view', () => {

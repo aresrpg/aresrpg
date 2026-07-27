@@ -108,6 +108,47 @@ describe('adopt_snapshot — the BOOTSTRAP base (#701: bootstrap-once, fold the 
     expect(earlier.base_version).toBe(150)
   })
 
+  // THE ROSTER WINDOW (#1274) — `join` is legal only in placement, so a placement base is PROVISIONAL and the
+  // base is max(placement reads) while any exists, min(the rest) otherwise. Both halves are pure over the SET.
+  const placement = { ...fight, status: 0 }
+  const joined = { ...placement, participants: [...placement.participants, { character: '0xb', cell: '6', hp: '70' }] }
+
+  test('a PLACEMENT base re-derives from a later placement read — the joiner becomes visible', () => {
+    const created = adopt_snapshot(empty_inbox(), placement, 200, {})
+    expect(created.base_view.escrow).toHaveLength(1)
+
+    const after_join = adopt_snapshot(created, joined, 210, {})
+    expect(after_join.base_version).toBe(210)
+    expect(after_join.base_view.escrow.map((row) => row.character)).toEqual(['0xa', '0xb'])
+  })
+
+  test('a read that has LEFT placement never re-adopts — the roster is frozen, the journal owns the rest (#701)', () => {
+    const created = adopt_snapshot(empty_inbox(), placement, 200, {})
+    const activated = adopt_snapshot(created, { ...joined, status: 1 }, 220, {})
+    expect(activated).toBe(created) // untouched
+  })
+
+  test('the roster window is ORDER-INDEPENDENT — every arrival order converges on the same base', () => {
+    const reads = [
+      [placement, 200],
+      [joined, 210],
+      [{ ...joined, status: 1 }, 220],
+    ]
+    const fold = (order) => order.reduce((inbox, [rows, v]) => adopt_snapshot(inbox, rows, v, {}), empty_inbox())
+    const orders = [
+      [reads[0], reads[1], reads[2]],
+      [reads[2], reads[1], reads[0]],
+      [reads[1], reads[2], reads[0]],
+      [reads[2], reads[0], reads[1]],
+      [reads[1], reads[0], reads[2], reads[1]], // + a dupe: adoption is idempotent
+    ]
+    for (const order of orders) {
+      const inbox = fold(order)
+      expect(inbox.base_version).toBe(210) // max over the placement reads
+      expect(inbox.base_view.escrow).toHaveLength(2)
+    }
+  })
+
   test('events above the adopted base survive the adoption', () => {
     const at100 = adopt_snapshot(empty_inbox(), fight, 100, {})
     const with_tail = admit_events(at100, receipt_actions([hit(0, 20)], 150), 1).inbox

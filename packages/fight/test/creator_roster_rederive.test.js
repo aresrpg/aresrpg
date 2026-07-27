@@ -114,7 +114,8 @@ describe('#1274 — the creator re-derives her roster when a join lands', () => 
     expect(after.turn_order).toEqual(bob_view.turn_order) // all four seats, same order as his
     expect(project.board_view(alice.getState()).escrow).toHaveLength(2)
     // occupancy: his start cell is taken, so she can no longer place on top of him (5-of-6 free, not 6-of-6)
-    expect(after.fighters[BOB]).toMatchObject({ cell: 6 })
+    expect(after.fighters.get(BOB)?.cell).toEqual(bob_view.fighters.get(BOB)?.cell)
+    expect(after.fighters.get(BOB)?.cell).toEqual({ x: 6, y: 0 })
     // the V2 core rides the same door and reaches the same roster (chain_truth_export's home)
     expect(project_board(alice.getState().core).fighters.p1).toBeTruthy()
   })
@@ -135,7 +136,7 @@ describe('#1274 — the creator re-derives her roster when a join lands', () => 
       },
     })
 
-    expect(project.engine_view(alice.getState()).fighters[BOB]).toMatchObject({ cell: 7 })
+    expect(project.engine_view(alice.getState()).fighters.get(BOB)?.cell).toEqual({ x: 7, y: 0 })
   })
 
   test('CONTROL — an ACTIVE base is FINAL: a later object read is still an inert checkpoint (#701)', () => {
