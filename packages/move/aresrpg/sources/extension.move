@@ -100,6 +100,7 @@ public(package) fun borrow_item_field_mut<K: copy + drop + store, V: store>(name
   df::borrow_mut(item::uid_mut(item), NsKey { namespace, key })
 }
 
+#[test_only]
 public(package) fun remove_item_field<K: copy + drop + store, V: store>(namespace: u8, item: &mut Item, key: K, version: &Version): V {
   version.assert_enabled();
   df::remove(item::uid_mut(item), NsKey { namespace, key })
