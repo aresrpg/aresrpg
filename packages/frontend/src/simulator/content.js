@@ -90,7 +90,7 @@ export const centered_max_roll = (item) => {
  * @param {CorpusItem[]} items
  * @returns {Record<string, number>}
  */
-const equipment_aggregate = (items) =>
+export const equipment_aggregate = (items) =>
   items.reduce((totals, item) => {
     const worn = /** @type {any} */ ({ equipment_stats: equip_item(item) })
     return ITEM_STAT_CATALOG_ORDER.reduce((carried, key) => {

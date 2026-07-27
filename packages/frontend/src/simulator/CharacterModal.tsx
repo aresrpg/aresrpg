@@ -32,8 +32,10 @@ import { seed_el_label } from '../game/screens/hud/seed-effect-line.js'
 import { SpellHoverTip } from '../game/screens/hud/spell-hover-tip.jsx'
 import { SpellRow, spell_copy } from '../game/screens/hud/spell_row.jsx'
 import { StatIdentity } from '../game/screens/hud/stat_row.jsx'
+import { use_item_corpus } from '../pages/encyclopedia/item_corpus'
 
 import { character_spell_rows, spell_level_options, type GrimoireRow } from './build_view'
+import { equipment_aggregate, resolve_loadout } from './content.js'
 import { LoadoutSection } from './LoadoutSection'
 import {
   MAX_LEVEL,
@@ -150,7 +152,10 @@ function BudgetHeader({
 function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
   const { t } = useTranslation()
   const input = use_simulator((state) => state.input)
+  const { by_id } = use_item_corpus()
   const budget = stat_budget(character.level)
+  const { items } = resolve_loadout(by_id, character.loadout)
+  const equipment_stats = equipment_aggregate(items)
 
   return (
     <div className="flex flex-col gap-2">
@@ -161,22 +166,27 @@ function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
         on_reset={() => input({ type: 'stats_reset', id: character.id })}
       />
       <div>
-        {SIM_STATS.map((stat: SimStat) => (
-          <div className="stats__prow" key={stat}>
-            <StatIdentity t={t} stat_key={stat} describe={false} />
-            <input
-              type="number"
-              aria-label={stat}
-              className="template-input w-16 text-right"
-              value={character.stat_alloc[stat]}
-              min={0}
-              max={budget}
-              onChange={(event) =>
-                input({ type: 'stat_set', id: character.id, stat, value: Number(event.target.value) })
-              }
-            />
-          </div>
-        ))}
+        {SIM_STATS.map((stat: SimStat) => {
+          const bonus = equipment_stats[stat] ?? 0
+          const signed_bonus = bonus > 0 ? `+${bonus}` : bonus
+          return (
+            <div className="stats__prow" key={stat}>
+              <StatIdentity t={t} stat_key={stat} describe={false} />
+              <input
+                type="number"
+                aria-label={stat}
+                className="template-input w-16 text-right"
+                value={character.stat_alloc[stat]}
+                min={0}
+                max={budget}
+                onChange={(event) =>
+                  input({ type: 'stat_set', id: character.id, stat, value: Number(event.target.value) })
+                }
+              />
+              {bonus !== 0 && <span className="stats__prow-bonus"> ({signed_bonus})</span>}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
