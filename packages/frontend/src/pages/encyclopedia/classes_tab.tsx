@@ -15,6 +15,7 @@ import {
   is_area_effect,
 } from '../../game/screens/hud/seed-effect-line.js'
 import { spell_category } from '../../game/screens/hud/spell-category.js'
+import { spell_range_caption_key } from '../../game/screens/hud/spell-range-caption.js'
 import { EffectLine } from '../../game/screens/hud/EffectLine.jsx'
 
 import { AoeMiniGrid, aoe_grid_view } from './effect_aoe_grid'
@@ -206,7 +207,9 @@ function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
         </div>
       )}
 
-      {/* Stats row — AP + range (chain: SpellLevel.ap_cost / range_min / range_max / modifiable_range) */}
+      {/* Stats row — AP + range (chain: SpellLevel.ap_cost / range_min / range_max / modifiable_range).
+          The range ALWAYS carries its modifiability verdict (spell-range-caption.js, the one home every
+          range surface reads) — silence would leave a fixed range indistinguishable from an extendable one. */}
       {lvl && (
         <div className="flex gap-2 flex-wrap">
           <StatChip label={t('encyclopedia.ap_cost')} value={lvl.ap ?? 0} />
@@ -215,13 +218,7 @@ function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
               label={t('encyclopedia.range')}
               value={`${lvl.range[0]}–${lvl.range[1]}`}
               gold
-              note={
-                self_cast
-                  ? (t('encyclopedia.self_cast') as string)
-                  : lvl.modifiable_range
-                    ? (t('encyclopedia.range_extendable') as string)
-                    : null
-              }
+              note={t(spell_range_caption_key(lvl)) as string}
               data_name="range"
             />
           )}

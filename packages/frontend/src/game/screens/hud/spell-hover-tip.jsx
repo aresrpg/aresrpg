@@ -7,6 +7,7 @@
 import { seed_effect_line, seed_el_label } from './seed-effect-line.js'
 import { seat_spell_row } from './fight-spells.js'
 import { spell_category } from './spell-category.js'
+import { spell_range_caption_key } from './spell-range-caption.js'
 import { spell_effects } from './spellbook-data.js'
 
 /**
@@ -14,8 +15,8 @@ import { spell_effects } from './spellbook-data.js'
  * @param {(key: string, params?: object) => string} t
  * @param {{ kind?: string, levels?: Array<object> } | null | undefined} spell
  * @param {{ spell_levels?: Record<string, number> } | null | undefined} seat
- * @returns {{ ap: number, range_txt: string, crit_txt: string, cooldown_txt: string, subline: string,
- *   color: string, effects: Array<{ text: string, color: string }> }}
+ * @returns {{ ap: number, range_txt: string, range_caption: string, crit_txt: string, cooldown_txt: string,
+ *   subline: string, color: string, effects: Array<{ text: string, color: string }> }}
  */
 export const spell_hover_facts = (t, spell, seat) => {
   const level = seat_spell_row(seat, spell)
@@ -30,6 +31,9 @@ export const spell_hover_facts = (t, spell, seat) => {
   return {
     ap: level?.ap ?? 0,
     range_txt: range_min === range_max ? `${range_min}` : `${range_min}-${range_max}`,
+    // Whether the +range stat reaches this spell is half of what a range MEANS in a fight — a number alone
+    // leaves the player guessing. Same verdict, same words as the grimoire and the encyclopedia (one home).
+    range_caption: t(spell_range_caption_key(level)),
     crit_txt: level?.crit_rate > 0 ? `1 / ${level.crit_rate}` : none,
     cooldown_txt: level?.cooldown > 0 ? `${level.cooldown} ${t('spells.turns')}` : none,
     subline,
@@ -56,7 +60,7 @@ export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0 }) {
   const facts = spell_hover_facts(t, spell, seat)
   const rows = [
     [t('spells.ap_cost'), `${facts.ap}`],
-    [t('spells.range'), facts.range_txt],
+    [t('spells.range'), facts.range_txt, facts.range_caption],
     [t('spells.crit_chance'), facts.crit_txt],
     [t('spells.cooldown'), facts.cooldown_txt],
   ]
@@ -80,10 +84,11 @@ export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0 }) {
       {cd_left > 0 && <div className="tt-spell-card__reason">{t('dungeons.spell_on_cooldown', { n: cd_left })}</div>}
 
       <div className="tt-spell-card__facts">
-        {rows.map(([label, value]) => (
+        {rows.map(([label, value, note]) => (
           <div className="tt-spell-card__fact" key={label}>
             <span className="tt-spell-card__label">{label}</span>
             <span className="tt-spell-card__value tt-num">{value}</span>
+            {note && <span className="tt-spell-card__note">{note}</span>}
           </div>
         ))}
       </div>

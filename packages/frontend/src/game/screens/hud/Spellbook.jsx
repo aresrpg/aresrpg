@@ -48,6 +48,7 @@ import {
 import { class_spells } from './fight-spells.js'
 import { grimoire, upgrade_state, crit_pct, spell_effects, MAX_SPELL_LEVEL } from './spellbook-data.js'
 import { spell_category } from './spell-category.js'
+import { spell_range_caption_key } from './spell-range-caption.js'
 import { seed_effect_parts, seed_el_label } from './seed-effect-line.js'
 import { EffectLine } from './EffectLine.jsx'
 // The row (art + name + subline + trailing slot) and the i18n-first spell copy live in ONE home so the
@@ -315,7 +316,10 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
 
   const facts = [
     { k: t('spells.ap_cost'), v: `${sl?.ap ?? '—'}` },
-    { k: t('spells.range'), v: sl ? `${sl.range[0]}–${sl.range[1]}` : '—' },
+    // The range and its modifiability are ONE fact, read together: the number plus whether the +range stat
+    // reaches it. This used to be a detached "Modifiable Range: Yes/No" row three cells away — same truth,
+    // second wording. Now it is the shared caption (spell-range-caption.js) every range surface prints.
+    { k: t('spells.range'), v: sl ? `${sl.range[0]}–${sl.range[1]}` : '—', n: sl ? t(spell_range_caption_key(sl)) : null },
     { k: t('spells.cooldown'), v: sl?.cooldown > 0 ? `${sl.cooldown}` : '—' },
     {
       k: t('spells.crit_chance'),
@@ -329,13 +333,12 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
           '—'
         ),
     },
-    // #55 reference-standard lines, DATA-TRUE off the chain SpellLevel (spell_effect.move): casts_per_turn
-    // (u8; 255 = spell_bands::CASTS_UNLIMITED) + modifiable_range (bool). Seed uniform (255/false).
+    // #55 reference-standard line, DATA-TRUE off the chain SpellLevel (spell_effect.move): casts_per_turn
+    // (u8; 255 = spell_bands::CASTS_UNLIMITED). Its sibling `modifiable_range` now rides the RANGE cell above.
     {
       k: t('spells.casts_per_turn'),
       v: sl ? (sl.casts_per_turn === 255 ? t('spells.unlimited') : `${sl.casts_per_turn}`) : '—',
     },
-    { k: t('spells.modifiable_range'), v: sl ? t(sl.modifiable_range ? 'spells.yes' : 'spells.no') : '—' },
   ]
 
   return (
@@ -386,6 +389,7 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
           <div className="sb__scell" key={f.k}>
             <div className="sb__scell-k">{f.k}</div>
             <div className="sb__scell-v">{f.v}</div>
+            {f.n && <div className="sb__scell-n">{f.n}</div>}
           </div>
         ))}
       </div>

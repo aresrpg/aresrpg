@@ -295,6 +295,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The range fact's modifiability verdict — a dim micro-caption under the number, the same uppercase idiom
+   the encyclopedia's range chip uses. Wraps (unlike the value) so no locale gets ellipsed into a half-truth. */
+.tt-spell-card__note {
+  color: var(--fg-faint, #6b7280);
+  font-size: 8px;
+  font-style: italic;
+  letter-spacing: 0.1em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
 .tt-fx {
   display: flex;
   flex-direction: column;
