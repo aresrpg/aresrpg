@@ -230,15 +230,6 @@ public(package) fun mint_and_lock_resource(template: &ItemTemplate, quantity: u6
   item::lock_in_kiosk(pledge, item, kiosk, owner_cap, policy);
 }
 
-/// CONSUME a kiosk-LOCKED item its holder has: pull it OUT via the extract seam and DESTROY it, returning the
-/// `(template_id, amount)` that died. The SINGLE home of the game-side burn (craft inputs, pet food, crushed gear,
-/// scribe runes all flow through HERE). Royalty-safe (the abilityless `BurnPledge` is dischargeable only by
-/// `extract::burn`; the item never reaches an address).
-public(package) fun burn_locked(kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, item_id: ID, xpolicy: &ItemExtractPolicy, version: &Version, ctx: &mut TxContext): (ID, u64) {
-  let (item, pledge) = extract::extract_for_burn(kiosk, pkcap, item_id, xpolicy, version, ctx);
-  extract::burn(pledge, item, version)
-}
-
 /// BRAND TWIN (2026-07-12 forge split): the scribe's one-unit rune burn through the PINNED forge sibling's
 /// witness. Zero behavior drift — delegates to `consume_units` verbatim.
 public fun consume_units_brand<W: drop>(_: W, config: &GameConfig, template: &ItemTemplate, units: u64, item_id: ID, kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, xpolicy: &ItemExtractPolicy, market_policy: &TransferPolicy<Item>, version: &Version, ctx: &mut TxContext): ID {
