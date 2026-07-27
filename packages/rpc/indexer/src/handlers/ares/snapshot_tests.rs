@@ -671,7 +671,7 @@ fn group_root_garbage_bytes_are_a_safe_none() {
 // min/stats-max/damages) to a legacy parent — the `is_*_key` predicates above match purely by
 // (module, name), so without this gate the write ghosts a fresh `rpc:character:{parent}` (or
 // `rpc:zone:…`) doc into existence via the arm's own NX skeleton, even though the parent object
-// itself never re-appears as an admitted Phase-2 output. `key_origin_admitted` is what `process`
+// itself never re-appears as an admitted Phase-2 output. `origin_admitted` is what `process`
 // filters `key` through before ANY of the ten arms run — proven here at the same TypeTag level
 // the `is_*_key_discriminates_…` tests above already use for the (module, name) half.
 
@@ -693,16 +693,16 @@ fn orphaned_lineage_progression_key_is_rejected_fresh_lineage_is_admitted() {
     ))
     .unwrap();
 
-    assert!(handler.key_origin_admitted(&fresh_key));
-    assert!(!handler.key_origin_admitted(&orphaned_key));
+    assert!(handler.origin_admitted(&fresh_key));
+    assert!(!handler.origin_admitted(&orphaned_key));
 
-    // The exact mechanism `process` runs: `key.filter(|k| self.key_origin_admitted(k))` collapses
+    // The exact mechanism `process` runs: `key.filter(|k| self.origin_admitted(k))` collapses
     // an orphaned key to `None` before `key.is_some_and(is_progression_key)` — the real dispatch
     // condition — ever runs, even though the (module, name) shape is byte-identical and would
     // otherwise match.
-    assert!(handler.key_origin_admitted(&fresh_key) && is_progression_key(&fresh_key));
+    assert!(handler.origin_admitted(&fresh_key) && is_progression_key(&fresh_key));
     assert!(
-        !(handler.key_origin_admitted(&orphaned_key) && is_progression_key(&orphaned_key)),
+        !(handler.origin_admitted(&orphaned_key) && is_progression_key(&orphaned_key)),
         "orphaned-lineage progression DF must NOT project"
     );
 }
@@ -719,12 +719,12 @@ fn orphaned_lineage_zone_key_is_rejected_the_unwrapped_struct_shape_too() {
     let fresh_key = TypeTag::from_str(&format!("{fresh}::zones::ZoneKey")).unwrap();
     let orphaned_key = TypeTag::from_str(&format!("{orphaned}::zones::ZoneKey")).unwrap();
 
-    assert!(handler.key_origin_admitted(&fresh_key));
-    assert!(!handler.key_origin_admitted(&orphaned_key));
+    assert!(handler.origin_admitted(&fresh_key));
+    assert!(!handler.origin_admitted(&orphaned_key));
 
-    assert!(handler.key_origin_admitted(&fresh_key) && is_zone_key(&fresh_key));
+    assert!(handler.origin_admitted(&fresh_key) && is_zone_key(&fresh_key));
     assert!(
-        !(handler.key_origin_admitted(&orphaned_key) && is_zone_key(&orphaned_key)),
+        !(handler.origin_admitted(&orphaned_key) && is_zone_key(&orphaned_key)),
         "orphaned-lineage zone DF must NOT project"
     );
 }
@@ -737,15 +737,17 @@ fn unset_allowlist_admits_every_origin() {
     use std::str::FromStr;
     let handler = AresSnapshotHandler::new(None);
     let any_origin = TypeTag::from_str("0xdeadbeef::zones::ZoneKey").unwrap();
-    assert!(handler.key_origin_admitted(&any_origin));
+    assert!(handler.origin_admitted(&any_origin));
 }
 
 #[test]
 fn non_struct_key_is_conservatively_rejected() {
-    // The ten Phase-1 arms only ever see struct keys, but the type is generic — a non-struct
-    // TypeTag (never happens in practice) must fail closed, not panic or vacuously admit.
+    // A primitive TypeTag carries no address, so it can never be admitted as an ORIGIN. This is
+    // load-bearing, not hypothetical: the wrapped-World payload arm is keyed by a bare `u64`
+    // (`Versioned` keys its payload by version), which is exactly why that arm gates on its VALUE
+    // tag instead — see `world_inner_field_is_matched_by_the_u64_key_and_the_value_origin`.
     let handler = AresSnapshotHandler::new(None);
-    assert!(!handler.key_origin_admitted(&TypeTag::U64));
+    assert!(!handler.origin_admitted(&TypeTag::U64));
 }
 
 // ── Taux (forgemagie) events ─────────────────────────────────────────────────
@@ -1302,8 +1304,10 @@ const REAL_MOB_BRUTE_BCS_HEX: &str = "0be2e4ae1dc4ae65256b6cb6a5e321fd750d3ab748
 fn real_testnet_mob_template_decodes_prefix_and_loot() {
     let bytes = hex::decode(REAL_MOB_BRUTE_BCS_HEX).unwrap();
     let id = "0x0be2e4ae1dc4ae65256b6cb6a5e321fd750d3ab7484e08cc12f92451dfc66ffb";
-    // Captured pre-2026-07-23 republish — the pre-#577 25-byte Effect shape (any non-fresh origin).
-    let writes = map_mob_template_object(id, &bytes, "0xold").expect("real mob bytes must decode");
+    // Captured pre-2026-07-23 republish, so its MINTING origin is the pre-#577 lineage — named
+    // exactly, not a placeholder: the width now comes from a registered origin or not at all.
+    let writes = map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN)
+        .expect("real mob bytes must decode");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
 
     // Prefix (unchanged behaviour).
@@ -1351,8 +1355,10 @@ const REAL_MOB_BOAR_BCS_HEX: &str = "c6be9c23359f0bb512b494b4635920acf4f7d96e04c
 fn real_testnet_boar_mob_projects_nonzero_resistances() {
     let bytes = hex::decode(REAL_MOB_BOAR_BCS_HEX).unwrap();
     let id = "0xc6be9c23359f0bb512b494b4635920acf4f7d96e04c0915f88f241e073d07f35";
-    // Captured pre-2026-07-23 republish — the pre-#577 25-byte Effect shape (any non-fresh origin).
-    let writes = map_mob_template_object(id, &bytes, "0xold").expect("real Boar bytes must decode");
+    // Captured pre-2026-07-23 republish, so its MINTING origin is the pre-#577 lineage — named
+    // exactly, not a placeholder: the width now comes from a registered origin or not at all.
+    let writes = map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN)
+        .expect("real Boar bytes must decode");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
 
     assert!(doc.contains(r#""name":"Boar""#), "doc: {doc}");
@@ -1403,12 +1409,47 @@ fn mob_template_truncated_body_is_dropped_not_panicked() {
 
 // ── Dual-shape Effect width (issue #629 round-2: 2026-07-23 republish widens Effect 25→33B) ──
 
+/// The pre-#577 origin — the last universe live before the 2026-07-23 fresh publish, and the one
+/// registered 25-byte lineage. Named here so the width tests below read as lineage, not placeholders.
+const NARROW_EFFECT_ARESRPG_ORIGIN: &str = "0x4217b46f8dfe7c1ccc6a5e1c37e012a53bf25b07e0edb228a3c5a1575eeb2b06";
+
 #[test]
-fn effect_byte_width_keys_on_the_fresh_aresrpg_origin_only() {
-    assert_eq!(effect_byte_width(FRESH_ARESRPG_ORIGIN), 33);
-    assert_eq!(effect_byte_width("0xold"), 25);
-    // Every prior origin in the aresPackages history — not just a generic placeholder.
-    assert_eq!(effect_byte_width("0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8"), 25);
+fn effect_byte_width_resolves_registered_origins_and_refuses_the_rest() {
+    assert_eq!(effect_byte_width(FRESH_ARESRPG_ORIGIN), Some(33));
+    assert_eq!(effect_byte_width(NARROW_EFFECT_ARESRPG_ORIGIN), Some(25));
+    // FAIL CLOSED (issue #1315 finding 9): the republish mints an origin nobody has registered yet.
+    // The old code answered 25 for it — a guess that misaligns every byte past `spells`.
+    assert_eq!(effect_byte_width("0xnot_a_registered_origin"), None);
+    assert_eq!(effect_byte_width("0xold"), None);
+}
+
+/// THE CEREMONY GATE (issue #1315 finding 9). `stamp_all.mjs` writes each ceremony's new package
+/// ids into `packages/sdk/src/deployment/release.json`; the layout dimension that file does not
+/// carry lives in [`ARES_ORIGIN_EFFECT_BYTES`]. Binding the two here means a republish CANNOT land
+/// a stamped origin the indexer would decode blind — the omission is a red test, not a silent loot
+/// outage discovered in the encyclopedia weeks later. Read at RUNTIME (never `include_str!`): the
+/// indexer's Docker build context is the crate directory alone, so a compile-time reach into a
+/// sibling package would break the image build.
+#[test]
+fn release_origins_are_all_registered() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../sdk/src/deployment/release.json");
+    let raw = std::fs::read_to_string(path).expect("release.json is the ceremony's own output");
+    let release: serde_json::Value = serde_json::from_str(&raw).expect("release.json parses");
+    let networks = release["networks"].as_object().expect("release.json has networks");
+    let mut checked = 0;
+    for (network, row) in networks {
+        let origin = row["packages"]["aresrpg"]["origin"].as_str().unwrap_or_default();
+        if origin.is_empty() {
+            continue; // an unpublished network (mainnet today) pins nothing yet
+        }
+        assert!(
+            effect_byte_width(origin).is_some(),
+            "release.json pins {network} aresrpg origin {origin}, which ARES_ORIGIN_EFFECT_BYTES does \
+             not register — add it with the Effect width that ceremony's package was built against"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no published aresrpg origin found in release.json — the gate must not vacuously pass");
 }
 
 /// Build a `spells: vector<SpellLevel>` (ONE level, ONE `effects` entry sized `effect_bytes`,
@@ -1456,7 +1497,7 @@ fn fresh_origin_mob_decodes_resistances_and_loot_past_the_widened_effect() {
 #[test]
 fn old_origin_mob_using_the_25_byte_effect_still_decodes_loot() {
     // The SAME shape of fixture as the fresh-origin test above, but with the PRE-#577 25-byte
-    // Effect and an old-lineage origin — the sibling half of the dual-shape proof.
+    // Effect and the registered old-lineage origin — the sibling half of the dual-shape proof.
     let loot_template = "aa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf";
     let trailing_stats = vec![0u8; 176];
     let mut trailing = trailing_stats;
@@ -1464,10 +1505,36 @@ fn old_origin_mob_using_the_25_byte_effect_still_decodes_loot() {
     let bytes = mob_template_bytes("Glowmoth Elder", 20, 30, 200, 3, &trailing);
     let id = "0x0000000000000000000000000000000000000000000000000000000000fee6";
 
-    let writes = map_mob_template_object(id, &bytes, "0xold").expect("old-shape mob must parse");
+    let writes =
+        map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN).expect("old-shape mob must parse");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
     assert!(doc.contains(&format!(r#""template_id":"0x{loot_template}""#)), "doc: {doc}");
     assert!(doc.contains(r#""chance_bp":5000"#), "doc: {doc}");
+}
+
+/// RED (issue #1315 finding 9): the republish mints an origin absent from the table, and the old
+/// `else 25` walked genuinely-33-byte bodies at the wrong width. On this fixture that walk did not
+/// even look broken — it resumed 8 bytes early, read a zeroed Effect byte as the `loot` count and
+/// projected `"drops":[]`: a mob that drops nothing, asserted as fact. The honest answer for an
+/// unresolvable width is `null` (unknown), which the bestiary already renders as a gap.
+#[test]
+fn unregistered_origin_never_guesses_a_width_it_reports_unknown_loot() {
+    let loot_template = "aa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf";
+    let mut trailing = vec![0u8; 176];
+    trailing[56..64].copy_from_slice(&32_808u64.to_le_bytes()); // fire_resistance — width-independent
+    trailing.extend_from_slice(&spells_and_loot_tail(33, loot_template));
+    let bytes = mob_template_bytes("Glowmoth", 20, 30, 200, 3, &trailing);
+    let id = "0x0000000000000000000000000000000000000000000000000000000000fee8";
+
+    let writes = map_mob_template_object(id, &bytes, "0xa_republished_origin_nobody_registered")
+        .expect("the origin-independent prefix still projects");
+    let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
+    // Everything that does NOT depend on the Effect width still projects — failing closed costs
+    // exactly the loot walk, not the whole encyclopedia row.
+    assert!(doc.contains(r#""name":"Glowmoth""#), "doc: {doc}");
+    assert!(doc.contains(r#""fire_resistance":32808"#), "doc: {doc}");
+    // No guess, and — critically — no FABRICATED empty drop list either.
+    assert!(doc.contains(r#""drops":null"#), "doc: {doc}");
 }
 
 #[test]
@@ -1482,8 +1549,11 @@ fn fresh_origin_bytes_decoded_with_the_wrong_old_width_misaligns_loot() {
     let bytes = mob_template_bytes("Glowmoth", 20, 30, 200, 3, &trailing);
     let id = "0x0000000000000000000000000000000000000000000000000000000000fee7";
 
-    // Wrong origin ⇒ wrong (old, 25B) width chosen for genuinely fresh (33B) bytes.
-    let writes = map_mob_template_object(id, &bytes, "0xold").expect("prefix still parses");
+    // Wrong origin ⇒ wrong (old, 25B) width chosen for genuinely fresh (33B) bytes. The origin must
+    // be a REGISTERED narrow one: an unregistered origin refuses the walk outright (the sibling
+    // fail-closed test), which would prove the guard, not the misalignment this control is about.
+    let writes =
+        map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN).expect("prefix still parses");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
     assert!(
         !doc.contains(&format!(r#""template_id":"0x{loot_template}""#)),
@@ -1559,6 +1629,178 @@ fn real_testnet_world_snapshots_its_live_join_gate() {
     assert!(doc.contains(r#""biome":"ash_steppe""#), "doc: {doc}");
     assert!(doc.contains(r#""required_level":10"#), "doc: {doc}"); // the band[0] gate the seeder minted
     assert!(has_sadd(&writes, "rpc:idx:worlds", id));
+}
+
+// ── Wrapped World (#1289: `World { id, inner: Versioned }`) ──────────────────
+// The republish moves EVERY world field out of the object body and into a
+// `Field<u64, WorldInner>` hung off the shell's nested `Versioned` UID. Two shapes must decode
+// through the transition: the legacy inline body above (real captured bytes, still green) and the
+// wrapped pair below (issue #1315 finding 5).
+
+/// The post-#1289 `world::World` SHELL body: `id: UID(32) | inner: Versioned { id: UID(32),
+/// version: u64 }` — 72 bytes, no tail. `versioned` is supplied raw so a test can choose bytes that
+/// the LEGACY prefix reader would happily (and wrongly) consume.
+fn wrapped_world_shell_bytes(world_fill: u8, versioned: &[u8; 32], version: u64) -> Vec<u8> {
+    let mut b = vec![world_fill; 32];
+    b.extend_from_slice(versioned);
+    b.extend_from_slice(&version.to_le_bytes());
+    b
+}
+
+/// A `Versioned` UID whose bytes are ALSO a valid legacy `seed | biome | required_level` prefix:
+/// byte 8 is a 3-byte biome length followed by UTF-8. Without this the legacy reader would fail on
+/// a short/oversized string length and the regression would look like a benign drop instead of the
+/// fabricated world row it really is.
+fn legacy_readable_versioned_uid() -> [u8; 32] {
+    let mut uid = [0xaau8; 32];
+    uid[8] = 3; // ULEB biome length
+    uid[9..12].copy_from_slice(b"bad");
+    uid[12..14].copy_from_slice(&77u16.to_le_bytes()); // would surface as required_level 77
+    uid
+}
+
+/// Assemble a `Field<u64, WorldInner>` body — the dynamic field `versioned::create` adds to the
+/// `Versioned`'s UID (`df::add(&mut self.id, init_version, init_value)`): `id: UID(32) | name: u64
+/// (the version, == the df key) | value: WorldInner`.
+///
+/// `WorldInner`'s field order here is DIFFABLE, line by line, against its struct DECLARATION in
+/// `packages/move/aresrpg/sources/world.move` (BCS is positional and follows the declaration, NOT
+/// `create_world`'s differently-ordered struct literal):
+///   seed u64 · biome String · required_level u16 · bounds_x u32 · bounds_z u32 · zone_size u32 ·
+///   zone_ttl_ms u64 · speed_budget u64 · spawn_zone_x u32 · spawn_zone_z u32 · protector_bp u64 ·
+///   min_groups u16 · max_groups u16 · min_nodes u16 · max_nodes u16 · dungeon_key_template
+///   Option<ID> · resources vector<ResourceEntry> · mobs vector<MobEntry> · dungeon_rooms
+///   vector<DungeonRoom> · spawn_nonce u64 · rare_links VecMap<ID,ID> · mob_levels vector<u16> ·
+///   protectors VecMap<ID,ID> · boss_mask vector<u16>
+/// The projection reads the first three; the rest is the tail it must tolerate — encoded in FULL
+/// (empty tables, real `mob_levels`/`boss_mask` rows) so this is a whole payload, not a prefix.
+fn world_inner_field_bytes(version: u64, seed: u64, biome: &str, required_level: u16) -> Vec<u8> {
+    let mut b = vec![0x5eu8; 32]; // the Field's own UID
+    b.extend_from_slice(&version.to_le_bytes()); // name: u64 — the df key IS the version
+    b.extend_from_slice(&seed.to_le_bytes());
+    b.push(biome.len() as u8); // ULEB128 length (single byte for a short biome)
+    b.extend_from_slice(biome.as_bytes());
+    b.extend_from_slice(&required_level.to_le_bytes());
+    b.extend_from_slice(&512u32.to_le_bytes()); // bounds_x
+    b.extend_from_slice(&512u32.to_le_bytes()); // bounds_z
+    b.extend_from_slice(&32u32.to_le_bytes()); // zone_size
+    b.extend_from_slice(&600_000u64.to_le_bytes()); // zone_ttl_ms
+    b.extend_from_slice(&320u64.to_le_bytes()); // speed_budget
+    b.extend_from_slice(&8u32.to_le_bytes()); // spawn_zone_x
+    b.extend_from_slice(&9u32.to_le_bytes()); // spawn_zone_z
+    b.extend_from_slice(&150u64.to_le_bytes()); // protector_bp
+    b.extend_from_slice(&1u16.to_le_bytes()); // min_groups
+    b.extend_from_slice(&4u16.to_le_bytes()); // max_groups
+    b.extend_from_slice(&2u16.to_le_bytes()); // min_nodes
+    b.extend_from_slice(&6u16.to_le_bytes()); // max_nodes
+    b.push(0); // dungeon_key_template: Option<ID> = none
+    b.push(0); // resources: vector<ResourceEntry> = empty
+    b.push(0); // mobs: vector<MobEntry> = empty
+    b.push(0); // dungeon_rooms: vector<DungeonRoom> = empty
+    b.extend_from_slice(&42u64.to_le_bytes()); // spawn_nonce
+    b.push(0); // rare_links: VecMap<ID,ID> = empty (BCS: a vector of entries)
+    b.push(2); // mob_levels: vector<u16> — two rows, parallel to `mobs`
+    b.extend_from_slice(&11u16.to_le_bytes());
+    b.extend_from_slice(&12u16.to_le_bytes());
+    b.push(0); // protectors: VecMap<ID,ID> = empty
+    b.push(1); // boss_mask: vector<u16> — one row
+    b.extend_from_slice(&1u16.to_le_bytes());
+    b
+}
+
+/// RED (issue #1315 finding 5): before the fix, the Phase-2 object arm fed a WRAPPED shell straight
+/// into the legacy prefix reader, which read the nested `Versioned`'s UID bytes as `seed` and its
+/// 9th byte as a `biome` length — measured output for this exact fixture:
+/// `{"world":"0x…0e05","seed":"12297829382473034410","biome":"bad","required_level":77}`. A
+/// fabricated world row, indistinguishable from a real one at the `/v1/encyclopedia` seam. The
+/// wrapped shell carries NO world state, so the honest projection from it is nothing at all.
+#[test]
+fn wrapped_world_shell_never_projects_through_the_legacy_reader() {
+    let id = "0x0000000000000000000000000000000000000000000000000000000000000e05";
+    let bytes = wrapped_world_shell_bytes(0x0e, &legacy_readable_versioned_uid(), 1);
+    assert_eq!(bytes.len(), 72, "the wrapped shell is exactly UID | Versioned{{UID,u64}}");
+    assert!(
+        map_world_object(id, &bytes).is_none(),
+        "a wrapped shell must project NOTHING — its state lives in the Field<u64, WorldInner>"
+    );
+}
+
+/// The other half of the transition: the payload field carries what the object used to, and lands
+/// on the SAME `rpc:world:{id}` doc + `idx:worlds` index — keyed by the WORLD id resolved from the
+/// shell, never by the Field's own parent (which is the Versioned id no reader knows).
+#[test]
+fn wrapped_world_payload_projects_the_live_join_gate() {
+    let id = "0x0000000000000000000000000000000000000000000000000000000000000e06";
+    let bytes = world_inner_field_bytes(1, 4242, "emberfall_steppe", 27);
+    let writes = map_world_inner_field(id, &bytes).expect("wrapped payload must decode");
+    let doc = set_json(&writes, "$").expect("world writes its whole doc");
+    assert!(doc.contains(&format!(r#""world":"{id}""#)), "doc: {doc}");
+    assert!(doc.contains(r#""seed":"4242""#), "doc: {doc}");
+    assert!(doc.contains(r#""biome":"emberfall_steppe""#), "doc: {doc}");
+    assert!(doc.contains(r#""required_level":27"#), "doc: {doc}");
+    assert!(has_sadd(&writes, "rpc:idx:worlds", id));
+}
+
+/// Byte-for-byte identical doc from both shapes — the transition cannot flip a world's served row.
+#[test]
+fn wrapped_and_legacy_worlds_project_the_same_doc() {
+    let id = "0x0000000000000000000000000000000000000000000000000000000000000e07";
+    let legacy = map_world_object(id, &world_bytes(777, "archipelago", 34, &[])).expect("legacy decodes");
+    let wrapped = map_world_inner_field(id, &world_inner_field_bytes(1, 777, "archipelago", 34))
+        .expect("wrapped decodes");
+    assert_eq!(legacy, wrapped);
+}
+
+/// FAIL CLOSED on the dial the `Versioned` wrapper exists to turn: a payload keyed by a version
+/// this indexer does not speak has an UNKNOWN field order, so it is dropped rather than read at
+/// offsets that stopped meaning what they meant.
+#[test]
+fn wrapped_world_payload_of_an_unspoken_version_is_dropped() {
+    let id = "0x0000000000000000000000000000000000000000000000000000000000000e08";
+    assert!(map_world_inner_field(id, &world_inner_field_bytes(2, 777, "archipelago", 34)).is_none());
+    assert!(map_world_inner_field(id, &[0u8; 20]).is_none()); // truncated — dropped, never panicked
+}
+
+/// The shape discriminator itself, from both sides — including the REAL captured legacy bytes, so
+/// no future body-length change can quietly start routing live worlds down the wrapped path.
+#[test]
+fn world_shape_discriminator_separates_wrapped_from_legacy() {
+    let real_legacy = hex::decode(REAL_WORLD_BCS_PREFIX_HEX).unwrap();
+    assert!(world_shell(&real_legacy).is_none(), "a real live World is NOT a wrapped shell");
+    assert!(world_shell(&world_bytes(1, "testlands", 1, &[])).is_none());
+    let shell = wrapped_world_shell_bytes(0x0e, &legacy_readable_versioned_uid(), 1);
+    let decoded = world_shell(&shell).expect("the wrapped shell decodes");
+    assert_eq!(decoded.inner.id, ObjectID::from_bytes(legacy_readable_versioned_uid()).unwrap());
+    // Trailing input is REFUSED — that strictness is what makes the two shapes unconfusable.
+    let mut with_tail = shell.clone();
+    with_tail.push(0);
+    assert!(world_shell(&with_tail).is_none());
+}
+
+/// The world-inner arm's type guards. Its key is a bare `u64` (a `Versioned` payload is keyed by
+/// its version), so — uniquely among the Phase-1 arms — the origin gate rides the VALUE tag; see
+/// `non_struct_key_is_conservatively_rejected` for the primitive key's own (correct) refusal.
+#[test]
+fn world_inner_field_is_matched_by_the_u64_key_and_the_value_origin() {
+    use std::str::FromStr;
+    let fresh = FRESH_ARESRPG_ORIGIN;
+    let orphaned = "0xd0";
+    let handler = AresSnapshotHandler::new(Some(HashSet::from([fresh.to_string()])));
+
+    let fresh_value = TypeTag::from_str(&format!("{fresh}::world::WorldInner")).unwrap();
+    let orphaned_value = TypeTag::from_str(&format!("{orphaned}::world::WorldInner")).unwrap();
+
+    assert!(is_versioned_payload_key(&TypeTag::U64));
+    assert!(!is_versioned_payload_key(&fresh_value));
+    assert!(is_world_inner_value(&fresh_value));
+    assert!(!is_world_inner_value(&TypeTag::from_str(&format!("{fresh}::world::World")).unwrap()));
+
+    // The exact dispatch condition `process` runs for this arm.
+    assert!(is_world_inner_value(&fresh_value) && handler.origin_admitted(&fresh_value));
+    assert!(
+        !(is_world_inner_value(&orphaned_value) && handler.origin_admitted(&orphaned_value)),
+        "an orphaned lineage's WorldInner payload must NOT project"
+    );
 }
 
 // ── Recipe object snapshot (§14 encyclopedia crafting truth) ──────────────────
