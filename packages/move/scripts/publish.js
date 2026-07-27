@@ -5,9 +5,14 @@ import { execSync } from 'child_process'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { NETWORK, keypair, sui_client } from './client.js'
-import { with_env } from './env_guard.mjs'
+import { assert_trunk_ancestry, with_env } from './env_guard.mjs'
 
 // publish gate: the localnet publish_guard was retired 2026-07-14 (REDUCTION_PLAN §8) — the honest gate is `ares test` (SINGLE_FRAMEWORK_SPEC)
+
+// FAIL-CLOSED before anything is built or signed (#1298): the publishing HEAD must already be on
+// trunk. Ceremony #3 published from an unmerged draft branch — live bytecode edge never carried.
+// No override exists; a tree that is not on edge lands on edge first.
+assert_trunk_ancestry()
 
 const tx = new Transaction()
 
@@ -25,7 +30,9 @@ const build_out = await with_env(NETWORK, () =>
     encoding: 'utf-8',
   })
 )
-const cli_result = build_out.split('\n').find((l) => l.trimStart().startsWith('{'))
+const cli_result = build_out
+  .split('\n')
+  .find((l) => l.trimStart().startsWith('{'))
 
 const { modules, dependencies } = JSON.parse(cli_result)
 
@@ -54,8 +61,8 @@ await sui_client.waitForTransaction({ digest: result.digest })
 // Full manifest: the package id + every object the publish tx created (UpgradeCap, AdminWhitelist,
 // OwnerCap, Publisher/Display, etc.) so the caller can hand a complete cutover spec downstream
 // without a second RPC round-trip.
-const published = result.objectChanges?.find(c => c.type === 'published')
-const created = (result.objectChanges ?? []).filter(c => c.type === 'created')
+const published = result.objectChanges?.find((c) => c.type === 'published')
+const created = (result.objectChanges ?? []).filter((c) => c.type === 'created')
 
 console.log('package published:', result.digest)
 console.log('package id:', published?.packageId)
@@ -69,7 +76,11 @@ console.log(
       digest: result.digest,
       network: NETWORK,
       packageId: published?.packageId,
-      created: created.map(o => ({ type: o.objectType, id: o.objectId, owner: o.owner })),
+      created: created.map((o) => ({
+        type: o.objectType,
+        id: o.objectId,
+        owner: o.owner,
+      })),
     },
     null,
     2

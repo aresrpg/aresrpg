@@ -34,7 +34,7 @@ import {
   bumpPublishedToml,
   resolveUpgradeTarget,
 } from './ceremony_lib.mjs'
-import { assert_env } from './env_guard.mjs'
+import { assert_env, assert_trunk_ancestry } from './env_guard.mjs'
 
 const { UPGRADE_CAP, PACKAGE_ID, PKG_PATH } = process.env
 if (!UPGRADE_CAP || !PKG_PATH)
@@ -46,6 +46,10 @@ if (!UPGRADE_CAP || !PKG_PATH)
 // active-env): refuse unless the CLI's active-env matches NETWORK. Replaces delta-1's PROSE assumption
 // ("active env is already testnet") with a real gate (seat tripwire, DECISIONS 2026-07-19 13:35/13:40).
 assert_env(NETWORK)
+
+// FAIL-CLOSED on the wrong TREE, the sibling of the wrong-network door above (#1298): the publishing
+// HEAD must already be on trunk. No override exists — a publish that is not on edge lands on edge first.
+assert_trunk_ancestry()
 
 // publish gate: the localnet publish_guard was retired 2026-07-14 (REDUCTION_PLAN §8) — the honest gate is `ares test` (SINGLE_FRAMEWORK_SPEC)
 
@@ -192,7 +196,9 @@ try {
       zone_group_root: published.packageId,
     }
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
-  console.log(`manifest: ${key}.latest → ${published.packageId} (release writer reads this)`)
+  console.log(
+    `manifest: ${key}.latest → ${published.packageId} (release writer reads this)`
+  )
   // AUTO-STAMP: atomically replace the one deployment config, fail-fast.
   execSync('node stamp_all.mjs', {
     cwd: path.dirname(fileURLToPath(import.meta.url)),

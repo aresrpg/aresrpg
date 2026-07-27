@@ -70,3 +70,76 @@ export async function with_env(
     switch_to(found)
   }
 }
+
+// ── THE TRUNK-ANCESTRY GATE (#1298) ─────────────────────────────────────────────────────────────
+// The chain is the one artifact no revert reaches. Ceremony #3 published from an UNMERGED draft
+// branch, so live bytecode ran code `edge` had never carried and no review had ever seen — the tree
+// that was published existed only on the operator's disk. `assert_env` closes the wrong-network
+// door; this closes the wrong-tree one, and the two are the same class: a precondition the operator
+// believed rather than checked.
+//
+// The rule: the publishing tree's HEAD must be an ANCESTOR of GitHub's `edge`. Ancestor, not "equal"
+// — publishing from a commit edge has since moved past is fine, because that code did land on trunk;
+// publishing from anything edge never absorbed is not, whatever the branch is called.
+//
+// THERE IS NO ESCAPE HATCH, and adding one (an env var, a flag, a "just this once") re-opens exactly
+// the door this closes: an override is used precisely in the moment that produced #1298 — a hurry.
+// If a publish genuinely must ship code that is not on edge, land it on edge first; that is a
+// two-minute fast-forward, not a reason to weaken the gate.
+//
+// Ground truth is GitHub, read directly: `edge` is fetched from the remote per call, never from a
+// local ref a stale fetch (or a lane's local `origin`) could have left pointing anywhere.
+export const EDGE_REMOTE = 'https://github.com/aresrpg/aresrpg.git'
+
+// Pure. → { ok } | { ok: false, reason }
+export function trunk_ancestry_verdict({ head, edge, is_ancestor }) {
+  if (!head) return { ok: false, reason: 'could not read HEAD' }
+  if (!edge)
+    return {
+      ok: false,
+      reason: `could not read ${EDGE_REMOTE} refs/heads/edge`,
+    }
+  if (head === edge) return { ok: true, reason: 'HEAD is edge' }
+  if (is_ancestor)
+    return {
+      ok: true,
+      reason: `HEAD is an ancestor of edge (${edge.slice(0, 8)})`,
+    }
+  return {
+    ok: false,
+    reason: `HEAD ${head.slice(0, 8)} is NOT an ancestor of edge ${edge.slice(0, 8)} — this tree carries code trunk never absorbed`,
+  }
+}
+
+const git = (args) => execSync(`git ${args}`, { encoding: 'utf8' }).trim()
+
+// Effectful shell around the verdict; I/O injectable so the rule is testable with zero subprocess.
+export function assert_trunk_ancestry({
+  read_head = () => git('rev-parse HEAD'),
+  read_edge = () =>
+    git(`ls-remote ${EDGE_REMOTE} refs/heads/edge`).split(/\s+/)[0],
+  is_ancestor = (head, edge) => {
+    git(`fetch --quiet ${EDGE_REMOTE} edge`)
+    try {
+      git(`merge-base --is-ancestor ${head} ${edge}`)
+      return true
+    } catch {
+      return false
+    }
+  },
+} = {}) {
+  const head = read_head()
+  const edge = read_edge()
+  const verdict = trunk_ancestry_verdict({
+    head,
+    edge,
+    is_ancestor: head && edge ? is_ancestor(head, edge) : false,
+  })
+  if (verdict.ok) {
+    console.log(`[env_guard] trunk ancestry OK — ${verdict.reason}`)
+    return verdict
+  }
+  throw new Error(
+    `TRUNK ANCESTRY REFUSED (#1298): ${verdict.reason}. The chain is the one artifact no revert reaches — land this tree on edge and publish from there. There is no override.`
+  )
+}

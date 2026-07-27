@@ -10,7 +10,12 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 
-import { assert_env, with_env, read_active_env } from './env_guard.mjs'
+import {
+  assert_env,
+  with_env,
+  read_active_env,
+  assert_trunk_ancestry,
+} from './env_guard.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 
@@ -110,6 +115,35 @@ describe('WIRED: ceremony_upgrade refuses under a mocked MAINNET active-env', ()
     expect(err.status).not.toBe(0)
     expect(`${err.stdout || ''}${err.stderr || ''}`).toMatch(
       /ENV GUARD REFUSED.*requires "testnet"/s
+    )
+  })
+})
+
+describe('trunk ancestry (#1298) — the wrong-TREE door', () => {
+  const io = (head, edge, is_ancestor) => ({
+    read_head: () => head,
+    read_edge: () => edge,
+    is_ancestor: () => is_ancestor,
+  })
+  const sha = (h) => h.repeat(40).slice(0, 40)
+
+  test('a HEAD edge already carries passes — ancestor, not equality', () => {
+    expect(assert_trunk_ancestry(io(sha('a'), sha('b'), true)).ok).toBe(true)
+    expect(assert_trunk_ancestry(io(sha('a'), sha('a'), false)).ok).toBe(true)
+  })
+
+  test('a HEAD trunk never absorbed is REFUSED — the #1298 ceremony', () => {
+    expect(() => assert_trunk_ancestry(io(sha('a'), sha('b'), false))).toThrow(
+      /TRUNK ANCESTRY REFUSED/
+    )
+  })
+
+  test('an unreadable HEAD or edge refuses too — never a silent pass', () => {
+    expect(() => assert_trunk_ancestry(io('', sha('b'), true))).toThrow(
+      /could not read HEAD/
+    )
+    expect(() => assert_trunk_ancestry(io(sha('a'), '', true))).toThrow(
+      /could not read/
     )
   })
 })
