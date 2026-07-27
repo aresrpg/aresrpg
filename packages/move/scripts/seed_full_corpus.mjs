@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { keypair, sui_client } from './client.js'
+import { canonical_map, canonical_rows, mob_level_of } from './corpus_canon.mjs'
 import {
   run,
   netGas,
@@ -956,10 +957,9 @@ export async function seed_full_corpus() {
     OUT.mobs[row.key] = { id, name: row.name, role: row.role }
   }
 
-  const seenMobKeys = new Set() // corpus-dupe dedupe, first wins (parity with the old exec-label guard)
-  const mobRows = C.mobs.filter(
-    (m) => !seenMobKeys.has(m.key) && seenMobKeys.add(m.key)
-  )
+  // corpus-dupe dedupe, FIRST WINS — one home in `corpus_canon.mjs`, shared with the reseed planner so the
+  // mint and a later reseed can never disagree about what a duplicated key means.
+  const mobRows = canonical_rows(C.mobs)
   await backfillPending('mobs:', mobCreatedOf, (created) =>
     claimCreated(
       mobRows.filter((m) => !OUT.mobs[m.key]),
@@ -999,11 +999,8 @@ export async function seed_full_corpus() {
   }
 
   // ── PHASE 6 · worlds (create + author: required_level, resource/mob spawn tables, dungeon key + rooms) ──
-  const mob_level_by_key = new Map()
-  for (const mob of C.mobs)
-    // PHASE 5 mints duplicate keys first-wins; project the level from that SAME canonical row.
-    if (!mob_level_by_key.has(mob.key))
-      mob_level_by_key.set(mob.key, mob.maxLevel ?? mob.minLevel ?? 1)
+  // PHASE 5 mints duplicate keys first-wins; project the level from that SAME canonical row.
+  const mob_level_by_key = canonical_map(C.mobs, mob_level_of)
   for (const W of C.worlds) {
     const label = `world:${W.id}`
     const { r: wr } = await exec(`${label}:create`, (tx) => {

@@ -2,6 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure world-table planning for reseed_driver.mjs. Kept separate so every driver file stays below 600 LoC.
 
+
+import { canonical_map, mob_level_of } from './corpus_canon.mjs'
+
 const fields_of = (value) => value?.fields ?? value ?? {}
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right)
 const as_number = (value) => Number(value ?? 0)
@@ -211,11 +214,10 @@ export function build_world_leg({
   const transactions = []
   const row_deltas = []
   const role_projection_drift = []
-  // the authored eligibility ceiling per mob key — `seed_full_corpus` projects the same value at fresh authoring
-  const mob_level_by_key = new Map(
-    (mob_rows ?? []).map((mob) => [mob.key, mob.maxLevel ?? mob.minLevel ?? 1])
-  )
-  const mob_role_by_key = new Map((mob_rows ?? []).map((mob) => [mob.key, mob.role]))
+  // Duplicate keys canonicalize FIRST-WINS — the same rule `seed_full_corpus` mints by (one home:
+  // `corpus_canon.mjs`). A last-wins map here would make reseed disagree with the mint about a duplicated key.
+  const mob_level_by_key = canonical_map(mob_rows, mob_level_of)
+  const mob_role_by_key = canonical_map(mob_rows, (mob) => mob.role)
 
   for (const world of seed_rows) {
     const world_entry = seed_manifest.worlds?.find(

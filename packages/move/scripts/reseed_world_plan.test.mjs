@@ -133,3 +133,49 @@ describe('reseed world plan — wrapped World + authored levels', () => {
     expect(transactions[0].call_count).toBe(calls.length)
   })
 })
+
+// ── duplicate corpus keys: ONE canonicalization, and it is fresh authoring's ────────────────────────────────
+/// `seed_full_corpus` mints duplicate mob keys FIRST-WINS and projects the level from that same canonical row.
+/// The reseed planner built its level/role maps with `new Map(rows.map(...))`, which is LAST-WINS — so the two
+/// paths disagreed about what a duplicated key means, and reseed would drive the world away from what fresh
+/// authoring had established. Fresh is the canon; reseed converges to it.
+describe('duplicate mob keys canonicalize first-wins, matching fresh authoring', () => {
+  const DUP = '0x' + 'c'.repeat(64)
+  const dup_manifest = {
+    worlds: [{ wid: WID, id: OBJ }],
+    mobs: { dup: { id: DUP, role: 'normal' } },
+  }
+  const dup_seed_rows = [
+    { id: WID, resources: [], mobGroups: [{ mob: 'dup', rate: 0.01 }], dungeonRooms: [] },
+  ]
+  // the SAME key twice — the first row is the canonical one for both level and role
+  const dup_mob_rows = [
+    { key: 'dup', role: 'boss', maxLevel: 30 },
+    { key: 'dup', role: 'normal', maxLevel: 120 },
+  ]
+
+  const leg = () =>
+    build_world_leg({
+      seed_rows: dup_seed_rows,
+      mob_rows: dup_mob_rows,
+      seed_manifest: dup_manifest,
+      chain_state: {
+        [OBJ]: { fields: { id: OBJ, inner: { fields: { value: { fields: {} } } } } },
+      },
+      target: TARGET,
+    })
+
+  test('the level comes from the FIRST row, not the last', () => {
+    const level_call = leg().transactions[0].calls.find(
+      call => call.function === 'set_mob_level',
+    )
+    expect(level_call.payload.level).toBe(30)
+  })
+
+  test('the role comes from the FIRST row, so the boss mask holds the row', () => {
+    const mask_call = leg().transactions[0].calls.find(
+      call => call.function === 'set_boss_mask',
+    )
+    expect(mask_call?.payload.rows).toEqual([0])
+  })
+})
