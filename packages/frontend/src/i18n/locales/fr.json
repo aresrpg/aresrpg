@@ -2699,6 +2699,7 @@
     "fighters_n_one": "{{count}} combattant",
     "fighters_n_other": "{{count}} combattants",
     "fighters_label": "Combattants",
+    "join_window_closed": "Fenêtre de participation fermée",
     "phase_placement": "En formation",
     "phase_active": "En combat",
     "phase_victory": "Gagné",

@@ -15,6 +15,7 @@ import {
   fight_distance,
   in_range,
   is_join_legal,
+  join_window_closed,
   is_dungeon_join_legal,
   is_spectatable,
   sort_friends_first,
@@ -131,6 +132,16 @@ describe('join / spectate legality', () => {
     expect(is_join_legal(to_fight_marker(served({ public: true, status: 'active' })))).toBe(false) // started
     expect(is_join_legal(to_fight_marker(served({ public: false, status: 'active' })), true)).toBe(false)
     expect(is_join_legal(null)).toBe(false)
+  })
+  // #1316 — the join window used to close in silence: the JOIN action simply vanished from the panel while a
+  // player was still walking toward the fight. The state is now a fact the row can name.
+  test('JOIN WINDOW CLOSED is the fight I could have joined that started without me', () => {
+    expect(join_window_closed(to_fight_marker(served({ public: true, status: 'active' })))).toBe(true)
+    expect(join_window_closed(to_fight_marker(served({ public: false, status: 'active' })), true)).toBe(true)
+    expect(join_window_closed(to_fight_marker(served({ public: false, status: 'active' })))).toBe(false) // never mine
+    expect(join_window_closed(to_fight_marker(served({ public: true, status: 'placement' })))).toBe(false) // still open
+    expect(join_window_closed(to_fight_marker(served({ public: true, status: 'victory' })))).toBe(false) // over, not closed
+    expect(join_window_closed(null)).toBe(false)
   })
   test('DUNGEON join legal in placement regardless of the (always-private) openness — vouched same-room on-chain', () => {
     expect(is_dungeon_join_legal(to_fight_marker(served({ public: false, status: 'placement' })))).toBe(true)

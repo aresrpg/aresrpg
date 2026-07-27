@@ -143,6 +143,16 @@ export function is_join_legal(marker, group_member = false) {
 }
 
 /**
+ * JOIN-WINDOW CLOSED (#1316 — the signal half): a fight this player could have joined (public, or their own
+ * party's) that left placement WITHOUT them. The panel's JOIN action used to just disappear mid-approach, so a
+ * player walking toward a partner's fight learned nothing; this is the fact that replaces the bare phase word.
+ * A terminal fight is over, not closed-to-join, and a fight still in placement is open — neither is this state.
+ */
+export function join_window_closed(marker, group_member = false) {
+  return !!marker && marker.status === 'active' && (marker.public === true || group_member)
+}
+
+/**
  * DUNGEON-room JOIN legality: lets a party team up for the boss. A dungeon room-fight is created gated + private
  * (public_fight false), so the world's public gate does NOT apply — `dungeon::join_fight` is VOUCHED: it needs
  * placement phase + the SAME room (re-derived on-chain from the creator's pass) + the joiner's own RunPass. This

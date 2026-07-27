@@ -30,6 +30,7 @@ import { run_fight_entry } from '../../../fight_engage.js'
 import {
   cap_and_filter,
   is_join_legal,
+  join_window_closed,
   is_dungeon_join_legal,
   is_spectatable,
   party_character_ids,
@@ -308,7 +309,12 @@ export function FightsModal() {
 export function FightRow({ marker, dungeon, is_friend, group_member, selected, busy, on_hover, on_join, on_watch, t }) {
   const joinable = dungeon ? is_dungeon_join_legal(marker) : is_join_legal(marker, group_member)
   const watchable = is_spectatable(marker)
-  const phase_label = t(`fights.phase_${marker.status}`, { defaultValue: marker.status })
+  // #1316: a fight I could have joined that started without me says SO, in the one line it owns — the JOIN
+  // action used to vanish silently mid-approach and leave the phase word ("Battling") to explain nothing.
+  const closed = join_window_closed(marker, group_member)
+  const phase_label = closed
+    ? t('fights.join_window_closed')
+    : t(`fights.phase_${marker.status}`, { defaultValue: marker.status })
   return (
     <li
       className={`gw-ft__row${is_friend ? ' gw-ft__row--friend' : ''}${selected ? ' gw-ft__row--selected' : ''}`}

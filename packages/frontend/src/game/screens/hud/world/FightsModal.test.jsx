@@ -16,3 +16,13 @@ describe('FightsModal hover-card party label (#498)', () => {
     expect(fights_modal_source).not.toContain("<FightTeam title={t('fight_end.your_party')}")
   })
 })
+
+// #1316: a coop fight's join window used to close in silence — the JOIN button simply stopped rendering while
+// the partner was still walking, and the row fell back to a bare phase word. The rule is unit-tested in
+// @aresrpg/world (nearby_fights.test.js); this pins the WIRING — the row must read it and say so.
+describe('FightsModal join-window notice (#1316)', () => {
+  test('a fight that started without me names the closed window in place of the phase word', () => {
+    expect(fights_modal_source).toContain('join_window_closed(marker, group_member)')
+    expect(fights_modal_source).toContain("t('fights.join_window_closed')")
+  })
+})

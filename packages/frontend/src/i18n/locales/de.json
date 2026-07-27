@@ -2699,6 +2699,7 @@
     "fighters_n_one": "{{count}} Kämpfer",
     "fighters_n_other": "{{count}} Kämpfer",
     "fighters_label": "Kämpfer",
+    "join_window_closed": "Beitrittsfenster geschlossen",
     "phase_placement": "Formiert sich",
     "phase_active": "Im Kampf",
     "phase_victory": "Gewonnen",
