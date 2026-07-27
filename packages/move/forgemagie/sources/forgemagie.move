@@ -34,7 +34,7 @@
 /// (config-pinned witness, kolizeum-precedent brand pattern) — see `Forge` below.
 module aresrpg_forgemagie::forgemagie;
 
-use aresrpg::{admin::AdminCap, character::Character, character_link, config::{Self, GameConfig}, extension, fight_marker, version::Version};
+use aresrpg::{admin::AdminCap, character::Character, character_link, config::{Self, GameConfig}, extension, fight, version::Version};
 use aresrpg::{extract::ItemExtractPolicy, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
 use aresrpg_foundation::{forgemagie as forge, job_xp, prng, rune_catalog as cat, taux};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
@@ -270,7 +270,7 @@ fun crush_roll(
   version.assert_enabled();
   {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
-    assert!(fight_marker::is_unmarked(chr), EDirty);
+    assert!(fight::is_unmarked(chr), EDirty);
   };
 
   let tid = item::template_id(gear_template);
@@ -389,7 +389,7 @@ fun crush_roll_orphan(
   version.assert_enabled();
   {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
-    assert!(fight_marker::is_unmarked(chr), EDirty);
+    assert!(fight::is_unmarked(chr), EDirty);
   };
 
   // ▲ ORPHAN: the batch must be non-empty — the burned template id is derived FROM item 0 (crush reads it off the
@@ -617,7 +617,7 @@ fun scribe_seeded(
   version.assert_enabled();
   let (runic_level, best_job) = {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
-    assert!(fight_marker::is_unmarked(chr), EDirty);
+    assert!(fight::is_unmarked(chr), EDirty);
     let (lvl, job) = best_job_level(chr);
     assert!(lvl >= RUNE_UNLOCK_LEVEL, EScribeLocked);
     (lvl, job)

@@ -8,12 +8,7 @@
 #[test_only]
 module aresrpg_gifting::creation_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  character::{Self, Character},
-  config::{Self, GameConfig},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, character::{Self, Character}, config::{Self, GameConfig}, version::{Self, Version}};
 use aresrpg_gifting::{creation::{Self, Creation}, gifting::Gifting};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};

@@ -8,11 +8,7 @@
 #[test_only]
 module aresrpg_forgemagie::forgemagie_entry_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  config::GameConfig,
-  version::Version
-};
+use aresrpg::{admin::AdminCap, config::GameConfig, version::Version};
 use aresrpg_forgemagie::{forge_world as test_world, forgemagie::{Self, CrushBoard}};
 use aresrpg::{extract::ItemExtractPolicy, item::{Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};

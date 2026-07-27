@@ -10,16 +10,7 @@
 #[test_only]
 module aresrpg_forgemagie::forge_world;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self as character},
-  config::{Self as config, GameConfig},
-  extract,
-  item::{Self as item, Item, ItemTemplate},
-  item_stats::ItemStatistics,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self as character}, config::{Self as config, GameConfig}, extract, item::{Self as item, Item, ItemTemplate}, item_stats::ItemStatistics, version::{Self, Version}};
 use aresrpg_forgemagie::forgemagie::{Self, Forge};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{

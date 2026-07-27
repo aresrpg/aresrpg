@@ -10,17 +10,7 @@
 #[test_only]
 module aresrpg_dungeon::dungeon_world;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self as character},
-  config::{Self as config, GameConfig},
-  extension,
-  extract,
-  item::{Self as item, Item, ItemTemplate},
-  version::{Self, Version},
-  world::{Self as world, World}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self as character}, config::{Self as config, GameConfig}, extension, extract, item::{Self as item, Item, ItemTemplate}, version::{Self, Version}, world::{Self as world, World}};
 use aresrpg_dungeon::dungeon::Dungeon;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{

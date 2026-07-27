@@ -11,16 +11,7 @@
 #[test_only]
 module aresrpg_gifting::gift_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  config::{Self, GameConfig},
-  extension,
-  item::{Self, Item, ItemTemplate},
-  item_listing_rule,
-  lot_rule,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, config::{Self, GameConfig}, extension, item::{Self, Item, ItemTemplate}, item_listing_rule, lot_rule, version::{Self, Version}};
 use aresrpg_gifting::gift;
 use kiosk::{
   kiosk_lock_rule,

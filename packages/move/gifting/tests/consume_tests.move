@@ -8,18 +8,7 @@
 #[test_only]
 module aresrpg_gifting::consume_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self as character},
-  character_link,
-  config::{Self as gconfig, GameConfig},
-  consumable_effect,
-  extension,
-  extract::{Self, ItemExtractPolicy},
-  item::{Self as item, Item, ItemTemplate},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self as character}, character_link, config::{Self as gconfig, GameConfig}, consumable_effect, extension, extract::{Self, ItemExtractPolicy}, item::{Self as item, Item, ItemTemplate}, version::{Self, Version}};
 use aresrpg_gifting::{consume, gifting::Gifting};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -163,7 +152,7 @@ fun latch(sc: &mut Scenario, who: address, cid: ID) {
     let mut k = sc.take_shared<Kiosk>();
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    aresrpg::fight_marker::mark_for_testing(chr, &ver); // in a live PvM fight ⇒ MARKED (the S-46 gate)
+    aresrpg::fight::mark_for_testing(chr, &ver); // in a live PvM fight ⇒ MARKED (the S-46 gate)
     ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
   };
 }

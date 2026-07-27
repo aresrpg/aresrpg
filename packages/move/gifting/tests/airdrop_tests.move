@@ -10,13 +10,7 @@
 #[test_only]
 module aresrpg_gifting::airdrop_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  config::{Self, GameConfig},
-  item::{Self, Item, ItemTemplate},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, config::{Self, GameConfig}, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
 use aresrpg_gifting::{airdrop, gifting::Gifting};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;

@@ -16,13 +16,7 @@
 /// mint door — ZERO extra core bytes (the whole point of the split), single-homed for the two callers here.
 module aresrpg_gifting::gifting;
 
-use aresrpg::{
-  character_link,
-  config::GameConfig,
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate},
-  version::Version
-};
+use aresrpg::{character_link, config::GameConfig, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{kiosk::Kiosk, transfer_policy::TransferPolicy};
 

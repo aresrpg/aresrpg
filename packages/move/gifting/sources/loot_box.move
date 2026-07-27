@@ -22,15 +22,7 @@
 /// box is burned — a bad open costs only gas. A single draw; no auto-retry semantics anywhere.
 module aresrpg_gifting::loot_box;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  config::GameConfig,
-  consumable_effect,
-  extract::ItemExtractPolicy,
-  item::{Self, Item, ItemTemplate},
-  version::Version
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, consumable_effect, extract::ItemExtractPolicy, item::{Self, Item, ItemTemplate}, version::Version};
 use aresrpg_gifting::gifting;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, table::{Self, Table}, transfer_policy::TransferPolicy, tx_context::sender};

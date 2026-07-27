@@ -11,14 +11,7 @@
 #[test_only]
 module aresrpg_dungeon::room_roster_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  config::GameConfig,
-  fight as fight_doors,
-  mob_template::{Self, MobTemplate},
-  version::Version,
-  world::{Self, World}
-};
+use aresrpg::{admin::AdminCap, config::GameConfig, fight as fight_doors, mob_template::{Self, MobTemplate}, version::Version, world::{Self, World}};
 use aresrpg_dungeon::{dungeon, run::{Self, RunPass}, dungeon_world as test_world};
 use aresrpg_fight::{
   admin as eadmin,

@@ -16,13 +16,9 @@
 #[test_only]
 module aresrpg_forgemagie::forgemagie_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  config::{Self, GameConfig},
-  version::Version
-};
+use aresrpg::{admin::AdminCap, config::{Self, GameConfig}, version::Version};
 use aresrpg_forgemagie::{forge_world as test_world, forgemagie::{Self, CrushBoard}};
-use aresrpg::{extract::ItemExtractPolicy, fight_marker, item::{Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
+use aresrpg::{extract::ItemExtractPolicy, fight, item::{Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{kiosk::Kiosk, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 
@@ -116,7 +112,7 @@ fun mark_dirty(sc: &mut Scenario, cid: ID) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    fight_marker::mark_for_testing(chr, &ver);
+    fight::mark_for_testing(chr, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }

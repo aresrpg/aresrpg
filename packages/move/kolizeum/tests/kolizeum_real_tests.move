@@ -7,11 +7,7 @@
 #[test_only]
 module aresrpg_kolizeum::kolizeum_real_tests;
 
-use aresrpg::{
-  character::{Self, Character},
-  config::GameConfig,
-  version::Version
-};
+use aresrpg::{character::{Self, Character}, config::GameConfig, version::Version};
 use aresrpg_kolizeum::{kolizeum::{Self, Kolizeum}, koli_world};
 use aresrpg_social::{
   admin::{Self as social_admin, AdminCap as SocialAdminCap},
