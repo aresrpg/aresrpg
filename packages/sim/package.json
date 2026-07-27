@@ -26,6 +26,10 @@
       "types": "./types/cell.d.ts",
       "import": "./src/cell.js"
     },
+    "./spell_effect": {
+      "types": "./types/spell_effect.d.ts",
+      "import": "./src/spell_effect.js"
+    },
     "./pathfind": {
       "types": "./types/pathfind.d.ts",
       "import": "./src/pathfind.js"
