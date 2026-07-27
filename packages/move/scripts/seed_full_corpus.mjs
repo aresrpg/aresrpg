@@ -47,25 +47,47 @@ import { encode_effect_value } from './spell_wire.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 
-// Repo root = first ancestor holding BOTH seed/mainnet AND packages/move (works from the gold copy too).
-function find_repo(start) {
-  let d = start
-  for (let i = 0; i < 12; i += 1) {
-    if (
-      fs.existsSync(path.join(d, 'seed', 'mainnet')) &&
-      fs.existsSync(path.join(d, 'packages', 'move'))
+// CORPUS DIRECTORY — resolved at the first CALL that reads the corpus, NEVER at module scope: importing this
+// module must not depend on a corpus being on disk (#1302 — a module-scope throw killed seed_testnet's
+// `--corpus mainnet` delegation and the DEFAULT gold boot before a single exported function ran).
+// Post-split the authored corpus lives in the PRIVATE seed repo, so `ARES_SEED_DIR` is the override and the
+// default is the sibling checkout — the same idiom the seed repo already uses in the other direction
+// (its ceremony_lib's `ARES_MOVE_DIR` → ../aresrpg/packages/move). The monorepo/merged-gold-copy layout
+// (<root>/seed/mainnet) stays a candidate so an assembled copy still resolves without the env.
+// A candidate HOLDS the corpus when it carries numbered biome directories — exactly what loadCorpus walks.
+const holds_corpus = (dir) =>
+  fs.existsSync(dir) &&
+  fs.statSync(dir).isDirectory() &&
+  fs
+    .readdirSync(dir)
+    .some((d) => /^\d/.test(d) && fs.statSync(path.join(dir, d)).isDirectory())
+export const seed_dir_candidates = () =>
+  [
+    process.env.ARES_SEED_DIR,
+    path.resolve(
+      __dir,
+      '..',
+      '..',
+      '..',
+      '..',
+      'aresrpg-seed',
+      'seed',
+      'mainnet'
+    ),
+    path.resolve(__dir, '..', '..', '..', 'seed', 'mainnet'),
+  ].filter(Boolean)
+export const pick_corpus_dir = (candidates) => {
+  const found = candidates.find(holds_corpus)
+  if (!found)
+    throw new Error(
+      `seed_full_corpus: no authored corpus found — set ARES_SEED_DIR to the seed repo's seed/mainnet directory. Tried: ${candidates.join(', ') || '(none)'}`
     )
-      return d
-    const up = path.dirname(d)
-    if (up === d) break
-    d = up
-  }
-  throw new Error(
-    `seed_full_corpus: could not locate the repo root (seed/mainnet + packages/move) walking up from ${start}`
-  )
+  return found
 }
-const REPO = find_repo(__dir)
-const SEED_DIR = path.join(REPO, 'seed', 'mainnet')
+// The ONE home for the resolved corpus path; the seeder only ever reads it through `seed_dir()`.
+export const resolve_seed_dir = () => pick_corpus_dir(seed_dir_candidates())
+let seed_dir_memo = null
+const seed_dir = () => (seed_dir_memo ??= resolve_seed_dir())
 const MANIFEST = JSON.parse(
   fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8')
 )
@@ -156,7 +178,10 @@ const OUT = {
 }
 // RESUME (lineage-guarded): fold the persisted partial ONLY if its stamp matches the current lineage;
 // else archive it aside (never delete) and start fresh — dead ids never fold in as "already seeded".
-if (fs.existsSync(OUT_PATH)) {
+// Runs when the SEED runs, never at import: as module-scope code a bare `import()` of this file renamed a
+// tracked manifest on the reader's disk (#1302 — imports read nothing, seeds do).
+function resume_from_disk() {
+  if (!fs.existsSync(OUT_PATH)) return
   let prev = null
   try {
     prev = JSON.parse(fs.readFileSync(OUT_PATH, 'utf8'))
@@ -461,11 +486,12 @@ const world_seed = (id) => {
 }
 
 export function loadCorpus() {
+  const corpus_dir = seed_dir()
   const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
   const biomes = fs
-    .readdirSync(SEED_DIR)
+    .readdirSync(corpus_dir)
     .filter(
-      (d) => /^\d/.test(d) && fs.statSync(path.join(SEED_DIR, d)).isDirectory()
+      (d) => /^\d/.test(d) && fs.statSync(path.join(corpus_dir, d)).isDirectory()
     )
     .sort()
   const items = [],
@@ -475,14 +501,14 @@ export function loadCorpus() {
     worlds = [],
     shop = []
   // top-level shop.json is an OBJECT { _meta, cosmetics, pets } — flatten both row sets. Optional.
-  const topShop = path.join(SEED_DIR, 'shop.json')
+  const topShop = path.join(corpus_dir, 'shop.json')
   if (fs.existsSync(topShop)) {
     const cat = readJson(topShop)
     for (const s of [...(cat.cosmetics || []), ...(cat.pets || [])])
       shop.push(s)
   }
   for (const b of biomes) {
-    const f = (n) => path.join(SEED_DIR, b, n)
+    const f = (n) => path.join(corpus_dir, b, n)
     const g = (n) => (fs.existsSync(f(n)) ? readJson(f(n)) : [])
     for (const it of g('items.json')) items.push(it)
     for (const r of g('resources.json')) resources.push(r)
@@ -495,7 +521,7 @@ export function loadCorpus() {
   // already-present slug is REUSED via PHASE 2's slug dedupe); gacha boxes fold into `shop` (KIND_GACHA_ROLL
   // rides `gacha:true`). `petBoxes` keeps the pools for the post-mint loot-table phase (PHASE 7b).
   const petBoxes = []
-  const petBoxFile = path.join(SEED_DIR, 'pet_boxes.json')
+  const petBoxFile = path.join(corpus_dir, 'pet_boxes.json')
   if (fs.existsSync(petBoxFile)) {
     const pb = readJson(petBoxFile)
     for (const p of pb.pets || []) items.push(p)
@@ -515,6 +541,9 @@ export function loadCorpus() {
 
 // ════════════════════════════════════ PHASES ════════════════════════════════════
 export async function seed_full_corpus() {
+  // FIRST — before any throwing guard: the CLI catch below persists OUT, so a run that dies early must
+  // already hold the persisted partial (an unfolded OUT would clobber it with an empty skeleton).
+  resume_from_disk()
   guard_network()
   const C = loadCorpus()
   console.log(
@@ -1267,7 +1296,7 @@ export async function seed_full_corpus() {
   //    the most command-dense shape (~31 cmd/row) so their probed size lands well below items/mobs. ──
   const SPELL_B = 30,
     SPELL_P = 9
-  const spellsDir = path.join(SEED_DIR, 'spells')
+  const spellsDir = path.join(seed_dir(), 'spells')
   const spellFiles = fs.existsSync(spellsDir)
     ? fs
         .readdirSync(spellsDir)

@@ -17,6 +17,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { expect, test } from 'bun:test'
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 
 import { classify } from './ceremony_lib.mjs'
 
@@ -68,6 +69,14 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
   expect(readFileSync(path.join(here, 'seed_full_corpus.mjs'), 'utf8')).not.toContain(
     "execSync('node stamp_all.mjs'"
   )
+  // #1302: the read above proves what the FILE says — it stayed green for weeks over a module that could not
+  // be imported at all. One assertion goes through a REAL import so a dead seeder can never pass again. (The
+  // seeder reads THIS test's ceremony manifest at import, hence its home inside the manifest-gated test.)
+  const prev_key = process.env.PRIVATE_KEY
+  process.env.PRIVATE_KEY ??= Ed25519Keypair.generate().getSecretKey() // throwaway: no chain call, no keystore read
+  const { seed_full_corpus } = await import('./seed_full_corpus.mjs')
+  if (prev_key === undefined) delete process.env.PRIVATE_KEY
+  expect(typeof seed_full_corpus).toBe('function')
   for (const [artifact, applicator, generator] of [
     ['pet_feed_payload.json', 'apply_pet_payload.mjs', 'seed/generators/pet_feed_payload.mjs'],
     ['mob_distance_payload.json', 'apply_mob_distance_payload.mjs', 'seed/generators/mob_distance_payload.mjs'],
