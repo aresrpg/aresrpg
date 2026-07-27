@@ -261,6 +261,55 @@ test('package_row rolls the retired latest into `previous` on repoint (sponsor d
   ).toEqual([id('f1')])
 })
 
+test('the republish marker has ONE home — both readers resolve the same file', async () => {
+  // stamp_all.mjs spells the marker path out instead of importing it (it is copied alone into gold's isolated
+  // Move tree and must run standalone). That is a deliberate duplication of a STRING, not of the fact — the
+  // marker file itself is the fact. This assert is what keeps the duplication honest: rename or move the marker
+  // and the reader that was not updated fails here, rather than going silently blind mid-ceremony.
+  const { REPUBLISH_MARKER } = await import(pathToFileURL(path.join(here, 'stamp_all.mjs')).href)
+  const { REPUBLISH_MARKER_PATH } = await import(
+    pathToFileURL(path.join(here, 'ceremony_preflight_compat.mjs')).href
+  )
+  expect(REPUBLISH_MARKER).toBe(REPUBLISH_MARKER_PATH)
+})
+
+test('package_row keeps the DRAINING lineage in `previous` during a republish window', async () => {
+  const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))
+  stamp_all_url.searchParams.set('republish-test', String(Date.now()))
+  const { package_row } = await import(stamp_all_url.href)
+  const id = (h) => '0x' + h.padEnd(64, '0')
+  const cap = { upgradeCap: id('ca9') }
+  const rolled = (entry, prior, republish) => package_row(entry, 'engine', prior, republish).previous
+  // THE DRAIN CASE. A republish mints the new lineage while the OLD one still hosts live sessions, so the ids
+  // those clients are still calling — the retired lineage's origin and its latest — stay in `previous`. Without
+  // them the sponsor answers a mid-session client with a generic refusal instead of `outdated-package`.
+  expect(
+    rolled({ pkg: id('f0'), latest: id('f0'), ...cap }, { origin: id('e0'), latest: id('e5') }, true)
+  ).toEqual([id('e0'), id('e5')])
+  // The retired lineage's DEEPER history is not resurrected — those drained a ceremony ago.
+  expect(
+    rolled(
+      { pkg: id('f0'), latest: id('f0'), ...cap },
+      { origin: id('e0'), latest: id('e5'), previous: [id('e3'), id('e4')] },
+      true
+    )
+  ).toEqual([id('e0'), id('e5')])
+  // An un-upgraded prior lineage (origin == latest) contributes one id, not a duplicate pair.
+  expect(
+    rolled({ pkg: id('f0'), latest: id('f0'), ...cap }, { origin: id('e0'), latest: id('e0') }, true)
+  ).toEqual([id('e0')])
+  // The window changes ONLY the lineage-switch case: an in-lineage upgrade still accumulates exactly as before.
+  expect(
+    rolled({ pkg: id('e0'), latest: id('e4'), ...cap }, { origin: id('e0'), latest: id('e3') }, true)
+  ).toEqual([id('e3')])
+  // A first publish has no draining lineage to keep, window open or not.
+  expect(rolled({ pkg: id('e0'), latest: id('e0'), ...cap }, undefined, true)).toBeUndefined()
+  // And with the window CLOSED the same switch drops the prior lineage — upgrade semantics, unchanged.
+  expect(
+    rolled({ pkg: id('f0'), latest: id('f0'), ...cap }, { origin: id('e0'), latest: id('e5') }, false)
+  ).toBeUndefined()
+})
+
 test('release validation rejects malformed preserved deployment ids', async () => {
   const release = JSON.parse(readFileSync(release_path, 'utf8'))
   const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))
