@@ -386,6 +386,17 @@ public fun add_dungeon_room(cap: &AdminCap, w: &mut World, mob_templates: vector
   touched(w);
 }
 
+/// REPLACE the dungeon room at `index` in place (its mob-template IDs) — repairs an authored room (e.g. one
+/// referencing a retired mob-template id) without reflowing the rest of the roster order (§9). Aborts
+/// `EBadEntryIndex` past the room count, mirroring the getters' bounds check (`dungeon_room`). `add_dungeon_room`
+/// performs no empty-vector check, so neither does this — same idiom, same event (`touched`).
+public fun set_dungeon_room(cap: &AdminCap, w: &mut World, index: u64, mob_templates: vector<ID>, version: &Version, ctx: &TxContext) {
+  gate(cap, version, ctx);
+  assert!(index < w.dungeon_rooms.length(), EBadEntryIndex);
+  *w.dungeon_rooms.borrow_mut(index) = DungeonRoom { mobs: mob_templates };
+  touched(w);
+}
+
 /// Clear the spawn tables + roster for re-authoring (dark-package tuning). Live zone DFs are untouched — only the
 /// TEMPLATE tables reset; already-spawned entities persist until they age/expire (§8).
 public fun clear_tables(cap: &AdminCap, w: &mut World, version: &Version, ctx: &TxContext) {
