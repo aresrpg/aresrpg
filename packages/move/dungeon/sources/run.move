@@ -37,7 +37,7 @@ const EWrongCharacter: u64 = 107; // act/settle: character differs from the pass
 
 /// The pass's live commitment: the fight it is latched to + the character it seated there. Set by `latch` at
 /// NEXT-FIGHT/join, matched against the seat's `FightResult` at settlement, cleared on victory-advance.
-public struct Commitment has store, copy, drop { fight: ID, character: ID }
+public struct Commitment has copy, drop, store { fight: ID, character: ID }
 
 /// The bound run. `key` ONLY → non-transferable. `room` is the 1-based progress counter; `return_x/z` freeze the
 /// pre-entry position; `owner` binds it; `character` is the only character this run may seat or release; `commit`

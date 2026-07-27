@@ -57,7 +57,7 @@ public struct Rule has drop {}
 
 /// The rule's on-policy config — EMPTY on purpose: the gate reads the LIVE dial off `GameConfig` at prove time,
 /// so nothing is baked in here and a dial change needs no re-attach. `store + drop` as the framework requires.
-public struct Config has store, drop {}
+public struct Config has drop, store {}
 
 // ╔════════════════ [ Creator action — ADD the rule (cap-gated; ceremony, while dark) ] ═ ]
 

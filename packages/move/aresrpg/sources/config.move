@@ -110,7 +110,7 @@ const DEFAULT_BASE_MP: u64 = 3;
 
 /// One class's base combat constants (§17.31). Base HP is per-class (ANNEX §4); base AP/MP default 6/3 for
 /// every class but stay per-class TUNABLE via the clamped setters, so future rebalancing needs no upgrade.
-public struct ClassRow has store, copy, drop {
+public struct ClassRow has copy, drop, store {
   base_hp: u64,
   base_ap: u64,
   base_mp: u64,

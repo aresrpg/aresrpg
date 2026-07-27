@@ -48,7 +48,7 @@ const EClaimMismatch: u64 = 106; // claim_pet: the passed template is not the cl
 
 /// One weighted row of a box's pool: the pet template to mint on a hit + its RELATIVE weight (basis is the row
 /// sum, not a fixed denominator — so rows are addable/removable pre-mainnet without re-normalising).
-public struct LootEntry has store, copy, drop {
+public struct LootEntry has copy, drop, store {
   template: ID,
   weight: u64,
 }

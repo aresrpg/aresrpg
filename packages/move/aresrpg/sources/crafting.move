@@ -79,7 +79,7 @@ const RECIPE_XP_DECAY_RANGE: u64 = 30;
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
 /// One recipe input: `quantity` units of the item `template`. `copy + drop + store` — pure data on the recipe.
-public struct Ingredient has store, copy, drop {
+public struct Ingredient has copy, drop, store {
   template: ID,
   quantity: u64,
 }

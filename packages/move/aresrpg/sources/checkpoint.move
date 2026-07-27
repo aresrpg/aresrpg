@@ -32,7 +32,7 @@ const ETravelTooFar: u64 = 102;
 
 /// Proven position + proven time + the pet-equipped SNAPSHOT taken at the WRITE (the only verifiable form of the
 /// "both ends" mount rule — §17.2). `copy + drop + store`: it rides as a DF value and passes by value freely.
-public struct Checkpoint has store, copy, drop {
+public struct Checkpoint has copy, drop, store {
   x: u32,
   z: u32,
   time_ms: u64,

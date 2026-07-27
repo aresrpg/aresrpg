@@ -21,7 +21,7 @@ const EWrongItem: u64 = 102;
 public struct Rule has drop {}
 
 /// Empty policy configuration: legal lots are immutable protocol constants in this module.
-public struct Config has store, drop {}
+public struct Config has drop, store {}
 
 /// Attach this rule to the universal Item policy. `transfer_policy::add_rule` rejects a duplicate attachment.
 public fun add(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>) {

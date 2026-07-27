@@ -16,7 +16,7 @@ use sui::vec_map::VecMap;
 
 // ╔════════════════ [ Type ] ═════════════════════════════════════════════════ ]
 
-public struct Participant has store, drop {
+public struct Participant has drop, store {
   character: ID, // the escrowed/authorised character's id (auth is against `owner`)
   owner: address, // the wallet that may act for this seat (a kiosk-locked char can't prove ownership itself)
   team: u8, // 0 = the players' side (PvM); reserved so dungeon/kolizeum can reuse the engine with two player sides

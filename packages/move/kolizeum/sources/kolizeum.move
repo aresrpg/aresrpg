@@ -68,7 +68,7 @@ public struct KolizeumBrand has drop {}
 public fun brand_type(): TypeName { type_name::with_defining_ids<KolizeumBrand>() }
 
 
-public struct Fighter has store, drop {
+public struct Fighter has drop, store {
   owner: address, // the wallet that pledged + may act for / exit this seat
   character: ID, // the fighting character (one seat per character — double-join guard)
   level: u64, // snapshot at join (the level gate + max-diff read it once, here)

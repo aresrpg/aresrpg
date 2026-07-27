@@ -311,7 +311,6 @@ public fun has_flag(e: &Effect, flag: u8): bool { e.flags & flag == flag }
 // (`spell_formula::roll_in_range` needs no change — centered endpoints are ordinary ascending u64s) and the decode
 // applies to the ROLLED result.
 const SIGNED_SHIFT: u64 = 32768;
-public fun signed_shift(): u64 { SIGNED_SHIFT }
 
 /// The KIND_SIGNED set — the only kinds whose `value`/`value_max` are centered (else the field is raw).
 public fun is_signed_kind(kind: u8): bool { kind == K_ALTER_STAT || kind == K_ALTER_RESIST }
@@ -359,27 +358,8 @@ const NONE_ELEMENT: u8 = 255; //  spell::el_none() — neutral/elementless
 public fun damage(element: u8, base: u64): Effect {
   new_effect(K_DAMAGE, element, base, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
 }
-// §387 — enemy damage over an explicit AoE (`area_shape`/`area_size`), enemies only (TF_NOT_TEAM), fixed base. The
-// weapon strike builds its shaped damage marker off this so the emitted effect carries the strike's cell-set shape.
-public fun damage_shaped(element: u8, base: u64, area_shape: u8, area_size: u64): Effect {
-  new_effect(K_DAMAGE, element, base, area_shape, area_size, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
-}
 public fun heal(base: u64): Effect {
   new_effect(K_HEAL, 255, base, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
-}
-// #577 — RANGE variants of the damage family: the turn-seed roll picks a value in `[min, max]` (min == max ⇒ the
-// fixed constructors above). The seed serializer mints authored spreads through these.
-public fun damage_range(element: u8, min: u64, max: u64): Effect {
-  new_effect_ranged(K_DAMAGE, element, min, max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
-}
-public fun heal_range(min: u64, max: u64): Effect {
-  new_effect_ranged(K_HEAL, 255, min, max, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
-}
-public fun life_steal_range(element: u8, min: u64, max: u64): Effect {
-  new_effect_ranged(K_LIFE_STEAL, element, min, max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
-}
-public fun apply_dot_range(element: u8, per_tick_min: u64, per_tick_max: u64, turns: u8): Effect {
-  new_effect_ranged(K_APPLY_DOT, element, per_tick_min, per_tick_max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, turns, 0, 0, PHASE_START)
 }
 public fun life_steal(element: u8, base: u64): Effect {
   new_effect(K_LIFE_STEAL, element, base, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)

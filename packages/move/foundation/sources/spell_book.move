@@ -57,7 +57,7 @@ public fun level_of(s: &Spell, level: u8): &SpellLevel {
 
 /// A character's spellbook: the current level of each learned spell (absent = not learned = level 0) plus the
 /// unspent spell points earned at level-up. `store,drop` so `Character` embeds it.
-public struct SpellAllocation has store, drop {
+public struct SpellAllocation has drop, store {
   points: u64,
   levels: VecMap<u16, u8>,
 }

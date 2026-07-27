@@ -54,7 +54,7 @@ public struct Rule has drop {}
 
 /// The rule's on-policy config — EMPTY on purpose: the gate reads the item's OWN amount at prove time, so nothing
 /// is baked in here and no dial is needed. `store + drop` as the framework requires.
-public struct Config has store, drop {}
+public struct Config has drop, store {}
 
 // ╔════════════════ [ Creator action — ADD the rule (cap-gated; ceremony, while dark) ] ═ ]
 

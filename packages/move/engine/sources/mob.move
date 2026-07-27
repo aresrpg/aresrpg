@@ -88,7 +88,7 @@ public fun spec_loot(spec: &MobSpec): vector<MobLootEntry> { spec.loot }
 /// `FightMob` now owns a MUTABLE per-fight combat block (base_stats + live stats) so a drain/alter lands on THAT
 /// mob alone (one shredded boss must not shred its clones). The kit keeps only the truly
 /// group-identical data (spells + AP/MP base).
-public struct MobKit has store, drop {
+public struct MobKit has drop, store {
   spells: vector<SpellLevel>,
   base_ap: u64,
   base_mp: u64,
@@ -117,7 +117,7 @@ public(package) fun kit_base_mp(kit: &MobKit): u64 { kit.base_mp }
 /// instance was pure byte-tax on the shared Fight. `ap`/`mp` are the live budget, refilled each turn from the
 /// group kit base (F-13, `begin_turn`). `is_archimob` records the §8 rarity roll (the variant stat/loot swap is a
 /// content-integration seam — the ROLL lives here). `level`/`hp`/`cell` are the real rolled/live per-mob values.
-public struct FightMob has store, drop {
+public struct FightMob has drop, store {
   level: u64,
   hp: u64,
   max_hp: u64,

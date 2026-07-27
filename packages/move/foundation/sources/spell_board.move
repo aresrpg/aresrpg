@@ -44,7 +44,7 @@ public struct FighterStatus has copy, drop, store {
 
 /// The board's persistent combat state. `store` so it embeds in `Dungeon`; `drop` so a terminal dungeon
 /// tears down cleanly (all fields are copy/drop/store).
-public struct BoardState has store, drop {
+public struct BoardState has drop, store {
   cell_entries: vector<CellEntry>,
   statuses: vector<FighterStatus>,
 }
