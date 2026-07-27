@@ -16,7 +16,7 @@ import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
 import { occupancy_of } from './occupancy.js'
 import { sim_effects_of, status_row_of } from './statuses.js'
-import { WEAPON_ATTACK_ID } from './weapon.js'
+import { WEAPON_ATTACK_ID, weapon_damage_rows } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
 // RITUAL: on every engine upgrade re-stamp this to `ceremony_manifest.engine.latest` (the boundary test asserts the
@@ -510,6 +510,19 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
   return crit_at(slot_crit_roll(seed, clock.slot), critical_chance, critical_bonus)
 }
 
+/** The strike's damage rows in the corpus dialect `normalize_spell_templates` reads — the ONE weapon-damage
+ *  derivation (weapon.js `weapon_damage_rows`), never a second reading of the seat's lines. #577's `value_max`
+ *  is the row's band MAX (== value ⇒ fixed); the strike rolls in [value, value_max] off the turn seed. */
+const weapon_damage_effects = (weapon, critical) =>
+  weapon_damage_rows(weapon, critical).map((row) => ({
+    kind: 0,
+    value: row.min,
+    value_max: row.max,
+    element: row.element,
+    target_filter: 1,
+    chance: 100,
+  }))
+
 /** Build the equipped weapon's attack line through the same sim template normalizer. */
 export const weapon_spell_template = (weapon = {}) =>
   normalize_spell_templates([
@@ -527,27 +540,8 @@ export const weapon_spell_template = (weapon = {}) =>
           casts_per_target: 255,
           cooldown_turns: 0,
           crit_rate: Number(weapon.crit_rate ?? 0),
-          effects: [
-            {
-              kind: 0,
-              value: Number(weapon.damage ?? 0),
-              // #577 — the weapon's normal-hit range MAX (== value ⇒ fixed); the strike rolls in [value, value_max].
-              value_max: Number(weapon.damage_max ?? weapon.damage ?? 0),
-              element: Number(weapon.element ?? 255),
-              target_filter: 1,
-              chance: 100,
-            },
-          ],
-          crit_effects: [
-            {
-              kind: 0,
-              value: Number(weapon.crit_damage ?? weapon.damage ?? 0),
-              value_max: Number(weapon.crit_damage_max ?? weapon.crit_damage ?? weapon.damage ?? 0),
-              element: Number(weapon.element ?? 255),
-              target_filter: 1,
-              chance: 100,
-            },
-          ],
+          effects: weapon_damage_effects(weapon, false),
+          crit_effects: weapon_damage_effects(weapon, true),
         },
       ],
     },
