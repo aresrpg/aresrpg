@@ -119,6 +119,30 @@ describe('marketplace item-type column (report A: the per-template list is colum
     )
     expect(html).not.toContain('Lv. 0')
   })
+
+  // #1227 — the BUY tab's left search-list rows resolve a real item icon off the bucket's already-joined
+  // asset_slug, not the placeholder cube. RED before the fix: this column rendered no icon at all.
+  test('a row with a resolvable asset_slug renders its real icon path', () => {
+    const html = render(
+      <ItemTypeColumn
+        types={[
+          {
+            ...type(),
+            name: 'Razmoket',
+            asset_slug: 'razmoket',
+            catalog_name: '',
+            classification_item_type: 'resource',
+          } as never,
+        ]}
+        selected_template_id="t1"
+        search=""
+        mobile={false}
+        on_pick={() => {}}
+        on_search={() => {}}
+      />
+    )
+    expect(html).toContain('items/razmoket')
+  })
 })
 
 function row(overrides: Partial<React.ComponentProps<typeof MarketplaceListingRow>> = {}) {
@@ -277,11 +301,58 @@ describe('MyLotsPanel marketplace visibility', () => {
         busy={false}
         on_delist={() => {}}
         name_of={(_template_id, fallback) => fallback}
-        asset_slug_of={(template_id) => template_id}
       />
     )
     expect(html).toContain('VALID TEN')
     expect(html).not.toContain('LEGACY SEVEN')
+  })
+
+  // #1227 — YOUR LISTINGS resolves the SAME icon the inventory would for the same item: off the listing's own
+  // item_type slug (chain truth), never the raw template_id (a grouping/tx identity the private seed catalog
+  // is the only thing that can turn into art, and that catalog ships EMPTY in production). RED before the fix:
+  // MyLotsPanel had no `item.slug` to read and fed ItemImage the raw template_id, which 404s to the cube.
+  test('a listing whose item template is known resolves its real icon path, never the raw template id', () => {
+    const seller = '0xviewer'
+    const known = lot_listing('KNOWN ONE', 1, '2000000000', seller)
+    known.item.slug = 'razmoket'
+    known.item.template_id = 'private-catalog-only-id-9999' // not a valid item_icon_url key on its own
+
+    const html = render(
+      <MyLotsPanel
+        listings={[known]}
+        address={seller}
+        busy={false}
+        on_delist={() => {}}
+        name_of={(_template_id, fallback) => fallback}
+      />
+    )
+    expect(html).toContain('items/razmoket')
+    expect(html).not.toContain('private-catalog-only-id-9999')
+  })
+
+  // Control: a genuinely unresolved item (no slug, an on-chain OBJECT ID for a template_id, no cosmetic name
+  // match) must keep degrading to the honest placeholder glyph — never fabricate a URL from an address.
+  test('an unknown-template listing (no slug, an object-id template) still degrades to the placeholder glyph', () => {
+    const seller = '0xviewer'
+    const unknown = lot_listing('MYSTERY ONE', 1, '2000000000', seller)
+    unknown.item.slug = undefined
+    unknown.item.name = 'Nonexistent Cosmetic Name'
+    // Short, non-census-shaped object-id stand-in (the chain-id gate's 64-hex-char detector treats a real
+    // one as a hardcoded package/object id needing a baseline entry — this only needs to trip
+    // item_icon_url's own `/^0x[0-9a-f]+$/i` object-id guard, which any 0x-hex string satisfies).
+    unknown.item.template_id = '0xdeadf00d'
+
+    const html = render(
+      <MyLotsPanel
+        listings={[unknown]}
+        address={seller}
+        busy={false}
+        on_delist={() => {}}
+        name_of={(_template_id, fallback) => fallback}
+      />
+    )
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('0xdeadf00d')
   })
 })
 

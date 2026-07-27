@@ -212,6 +212,10 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
     expect(l.price_mist).toBe('5000000000')
     expect(l.seller_sui_address).toBe(row.seller)
     expect(l.item.template_id).toBe('0xtemplate-sword')
+    // #1227 — the raw item_type slug must survive the join (it's the ONE valid item_icon_url key; template_id
+    // is a grouping/tx identity a listing icon can't safely resolve from). RED before the fix: no `slug` field
+    // existed on the built item at all, so every marketplace icon surface fell back to template_id.
+    expect(l.item.slug).toBe('iron_sword')
     expect(l.item.category).toBe('Sword') // ui_category(UPPERCASE template category)
     expect(l.item.name).toBe('Iron Sword')
     expect(l.item.level).toBe(12) // row.level null → template level
@@ -228,6 +232,7 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
       tmpl_by_slug
     )
     expect(l.item.template_id).toBe('unknown_slug')
+    expect(l.item.slug).toBe('unknown_slug') // #1227 — the slug still rides along even on a template miss
     expect(l.item.name).toBe('unknown_slug') // no template → slug is the honest display fallback
     expect(l.item.category).toBe('Misc') // ui_category('') → Misc → EQUIPMENT bucket
     expect(l.item.level).toBe(7) // row.level present → used directly
