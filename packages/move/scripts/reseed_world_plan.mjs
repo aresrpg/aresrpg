@@ -22,7 +22,7 @@ const resource_pack = (row) => {
   )
 }
 
-function resolve_world_rows(world, seed_manifest, mob_level_by_key) {
+function resolve_world_rows(world, seed_manifest, mob_level_by_key, mob_role_by_key) {
   const blockers = []
   const resources = (world.resources ?? []).map((row) => {
     const template_id = seed_manifest.items?.[row.slug]
@@ -68,7 +68,15 @@ function resolve_world_rows(world, seed_manifest, mob_level_by_key) {
       blockers.push(`world ${world.id}: mob ${row.mob} has no authored level`)
     return as_number(authored ?? 1)
   })
-  return { desired: { resources, mobs, mob_levels, dungeon_rooms }, blockers }
+  // THE BOSS MASK (#1110): row indexes whose authored role is `boss`. `clear_tables` wipes it alongside the
+  // level vector, so a reseed that never re-emits it leaves every format-3 boss group mixable with adds.
+  const boss_mask = (world.mobGroups ?? [])
+    .map((row, index) => (mob_role_by_key.get(row.mob) === 'boss' ? index : -1))
+    .filter((index) => index >= 0)
+  return {
+    desired: { resources, mobs, mob_levels, boss_mask, dungeon_rooms },
+    blockers,
+  }
 }
 
 /// The World is `{ id, inner: Versioned }` since the republish restructure, and `Versioned` stores the payload
@@ -105,6 +113,7 @@ function normalize_chain_world(chain) {
       }
     }),
     mob_levels: (value.mob_levels ?? []).map(as_number),
+    boss_mask: (value.boss_mask ?? []).map(as_number),
     dungeon_rooms: (value.dungeon_rooms ?? []).map((room) => {
       const row = fields_of(room)
       return (row.mobs ?? []).map(id_string)
@@ -172,6 +181,14 @@ function world_calls(world_id, world_key, desired, target) {
       summary: `${world_key} set_mob_level[${index}]`,
     })
   )
+  // AFTER every add_mob_entry, like the level vector: the mask indexes the table BY POSITION.
+  if (desired.boss_mask.length)
+    calls.push({
+      ...base,
+      function: 'set_boss_mask',
+      payload: { rows: desired.boss_mask },
+      summary: `${world_key} set_boss_mask`,
+    })
   desired.dungeon_rooms.forEach((mob_ids, index) =>
     calls.push({
       ...base,
@@ -198,6 +215,7 @@ export function build_world_leg({
   const mob_level_by_key = new Map(
     (mob_rows ?? []).map((mob) => [mob.key, mob.maxLevel ?? mob.minLevel ?? 1])
   )
+  const mob_role_by_key = new Map((mob_rows ?? []).map((mob) => [mob.key, mob.role]))
 
   for (const world of seed_rows) {
     const world_entry = seed_manifest.worlds?.find(
@@ -214,7 +232,8 @@ export function build_world_leg({
     const { desired, blockers: row_blockers } = resolve_world_rows(
       world,
       seed_manifest,
-      mob_level_by_key
+      mob_level_by_key,
+      mob_role_by_key
     )
     blockers.push(...row_blockers)
     if (row_blockers.length) continue

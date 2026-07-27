@@ -24,8 +24,8 @@ const seed_manifest = {
 
 // the authored corpus rows the driver passes as `mob_rows` — `maxLevel` is the eligibility ceiling
 const mob_rows = [
-  { key: 'mob_a', role: 'r', maxLevel: 30 },
-  { key: 'mob_b', role: 'r', maxLevel: 120 },
+  { key: 'mob_a', role: 'normal', maxLevel: 30 },
+  { key: 'mob_b', role: 'boss', maxLevel: 120 },
 ]
 
 const seed_rows = [
@@ -68,6 +68,7 @@ const wrapped_world = {
               },
             ],
             mob_levels: [30, 120],
+            boss_mask: [1],
             dungeon_rooms: [],
           },
         },
@@ -101,6 +102,22 @@ describe('reseed world plan — wrapped World + authored levels', () => {
     expect(transactions.length).toBe(1)
     const fns = transactions[0].calls.map(call => call.function)
     expect(fns).toContain('set_mob_level')
+  })
+
+  test('a rewritten world re-emits the boss mask after the rows exist', () => {
+    const { transactions } = plan({
+      [OBJ]: { fields: { id: OBJ, inner: { fields: { value: { fields: {} } } } } },
+    })
+    const fns = transactions[0].calls.map(call => call.function)
+    // clear_tables wipes the mask too, so it has to come back — and only after the rows it indexes
+    expect(fns).toContain('set_boss_mask')
+    expect(fns.lastIndexOf('add_mob_entry')).toBeLessThan(
+      fns.indexOf('set_boss_mask'),
+    )
+    const mask = transactions[0].calls.find(
+      call => call.function === 'set_boss_mask',
+    )
+    expect(mask.payload.rows).toEqual([1]) // mob_b is the boss row
   })
 
   test('a rewritten world carries every authored level through the rebuild', () => {

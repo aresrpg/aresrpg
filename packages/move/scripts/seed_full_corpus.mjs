@@ -1114,6 +1114,23 @@ export async function seed_full_corpus() {
           ])
         }
       }
+      // THE BOSS MASK (#1110): the mob-table row indexes whose authored role is `boss`. `zone_comp` reads it to
+      // keep a boss group single-spec — without it every format-3 boss can be mixed with adds. Written AFTER all
+      // add_mob_entry rows in the SAME PTB, because the mask indexes the table BY POSITION: mask and table are
+      // committed together or a reseed could fence the wrong species. Wholesale overwrite, empty is meaningful.
+      {
+        const boss_rows = (W.mobGroups || [])
+          .filter((grp) => OUT.mobs[grp.mob])
+          .map((grp, index) => (OUT.mobs[grp.mob].role === 'boss' ? index : -1))
+          .filter((index) => index >= 0)
+        if (boss_rows.length)
+          g('set_boss_mask', [
+            tx.object(CAP.game),
+            tx.object(WID),
+            tx.pure.vector('u16', boss_rows),
+            tx.object(VER.game),
+          ])
+      }
       if (W.dungeonKey && OUT.items[W.dungeonKey])
         g('set_dungeon_key', [
           tx.object(CAP.game),
