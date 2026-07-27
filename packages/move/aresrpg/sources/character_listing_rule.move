@@ -16,7 +16,7 @@
 /// the three linked Mysten rules — none gate `list`).
 ///
 /// LIVE DIAL — the gate reads `GameConfig.listing_level_gate` at prove time (NOT baked into the rule `Config`), so
-/// the admin retunes the threshold with no policy re-z503 (single home of the number stays on GameConfig). The
+/// the admin retunes the threshold with no policy re-attach (single home of the number stays on GameConfig). The
 /// character's level is the same progression view the world gate + combat snapshot read (`character_link::level`):
 /// the STORED progression level once a fight has granted xp, else the base-experience curve — a fresh, never-played
 /// character is level 1. So a name-squatter must actually PLAY the character to the gate before any buyer can
@@ -56,7 +56,7 @@ const EUnfinishedBusiness: u64 = 103; // prove_level: the character carries an u
 public struct Rule has drop {}
 
 /// The rule's on-policy config — EMPTY on purpose: the gate reads the LIVE dial off `GameConfig` at prove time,
-/// so nothing is baked in here and a dial change needs no re-z503. `store + drop` as the framework requires.
+/// so nothing is baked in here and a dial change needs no re-attach. `store + drop` as the framework requires.
 public struct Config has store, drop {}
 
 // ╔════════════════ [ Creator action — ADD the rule (cap-gated; ceremony, while dark) ] ═ ]

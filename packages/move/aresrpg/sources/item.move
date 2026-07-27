@@ -32,20 +32,20 @@ use sui::{
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
 const EPledgeMismatch: u64 = 101; // lock_in_kiosk: pledge id != item id
-const ELevelTooLow: u64 = 102; // z37: character level below the template's required level
+const ELevelTooLow: u64 = 102; // assert_usable_by: character level below the template's required level
 const ENotPersonalKiosk: u64 = 103; // lock_in_kiosk: destination kiosk is not PERSONAL (constitution)
-const ENotStackable: u64 = 104; // z38/merge/split: the item's category does not stack (gear is a unique NFT)
-const EZeroQuantity: u64 = 105; // z38/split: a stack (or split) must carry at least 1 unit
+const ENotStackable: u64 = 104; // mint_stack/merge/split: the item's category does not stack (gear is a unique NFT)
+const EZeroQuantity: u64 = 105; // mint_stack/split: a stack (or split) must carry at least 1 unit
 const ETemplateMismatch: u64 = 106; // merge: the two stacks are different templates
 const ESplitTooLarge: u64 = 107; // split: take >= amount (a split must leave at least 1 unit in the source)
 
 // House stackability rule (§10): consumable + resource + rune categories are FUNGIBLE — many units fold into one
 // `amount`; every OTHER category is a unique NFT (`amount` always 1). Single-homed HERE: the item base owns "what
-// an item is," including whether it stacks. `consumable_effect` reads `z40()` so the `consumable`
+// an item is," including whether it stacks. `consumable_effect` reads `category_consumable()` so the `consumable`
 // slug lives in exactly ONE place. Growth: this rule is DATA-derived from the category string, never a per-item flag.
 // RUNE joined 2026-07-11 (crush single-tx lane): Retro runes are fungible per family — the sibling forge
 // package's `crush` (brand-gated mint door) mints
-// them as STACKS (`z19`) and `scribe_rune` consumes UNITS off a stack; the live seed templates are
+// them as STACKS (`mint_item_stack`) and `scribe_rune` consumes UNITS off a stack; the live seed templates are
 // category `rune`, so without this membership every crush mint aborted `ENotStackable` (latent, test-masked).
 const CATEGORY_CONSUMABLE: vector<u8> = b"consumable";
 const CATEGORY_RESOURCE: vector<u8> = b"resource";
@@ -78,7 +78,7 @@ public struct Item has key, store {
 /// (stat RANGES / damages / consumable effect) rides as TYPED DYNAMIC FIELDS attached at creation by `item_stats`
 /// / `item_damages` / `consumable_effect` under this template's UID — the item base owns the STORAGE, those
 /// modules own the DATA SHAPE (placement law). `category` + `level` are MANDATORY base fields: a
-/// future equip/consume system asserts `character.level >= template.level` via `z37`, and `category`
+/// future equip/consume system asserts `character.level >= template.level` via `assert_usable_by`, and `category`
 /// is the differentiator every such system dispatches on (gear slot, tool job, consumable…). NO supply ledger
 /// (the sale gate's concern), NO media fields (art is a Display-only URL keyed by `item_type`). `key` only —
 /// shared, never transferable/wrappable.
@@ -176,11 +176,10 @@ public(package) fun new_template(
   ItemTemplate { id: object::new(ctx), name, description, item_type, category, level }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The single home for the LEVEL gate (you can't consume or equip an item below the level of the
 /// character). `public(package)` so the future in-package equip/consume upgrade asserts through it — one place,
 /// no re-derivation. Aborts (`ELevelTooLow`) when the character is under the template's required level.
-public(package) fun z37(template: &ItemTemplate, character_level: u16) {
+public(package) fun assert_usable_by(template: &ItemTemplate, character_level: u16) {
   assert!(character_level >= template.level, ELevelTooLow);
 }
 
@@ -221,8 +220,8 @@ public(package) fun set_name_description(template: &mut ItemTemplate, name: Stri
 /// Mint ONE item from `template` (amount = 1) and RETURN it with a `LockPledge` that FORCES a same-PTB kiosk lock.
 /// Package-private, NO cap, NO supply check: supply/price/pause are the sale gate's concern (`shop::buy`); a
 /// future mob-loot gate would mint here under different rules. The GEAR door — kept `(template, ctx)` frozen so
-/// its callers (`shop::buy` non-stackable branch, `extension::z505`) stay
-/// clean; a stackable buys its N units through `z38`. Snapshots the template's `item_type` + `category`.
+/// its callers (`shop::buy` non-stackable branch, `extension::mint_item`) stay
+/// clean; a stackable buys its N units through `mint_stack`. Snapshots the template's `item_type` + `category`.
 public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, LockPledge) {
   let tid = object::id(template);
   let item = Item {
@@ -239,13 +238,12 @@ public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, L
   (item, LockPledge { item_id })
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Mint ONE stackable item carrying `quantity` units — the FUNGIBLE door (resources / consumables). Aborts unless
 /// the template's category STACKS (`ENotStackable` — gear is a unique NFT minted via `mint`, never a param change)
 /// and `quantity >= 1` (`EZeroQuantity`). Package-private, reached by `shop::buy_many` (stackable branch) and the
-/// cap-gated `extension::z19` (gather / pools). Returns the `LockPledge` — a stackable is personal-
+/// cap-gated `extension::mint_item_stack` (gather / pools). Returns the `LockPledge` — a stackable is personal-
 /// kiosk-locked from birth like every item. Stackables carry NO stat ranges, so there is nothing to roll.
-public(package) fun z38(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): (Item, LockPledge) {
+public(package) fun mint_stack(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): (Item, LockPledge) {
   assert!(is_stackable_category(template.category), ENotStackable);
   assert!(quantity >= 1, EZeroQuantity);
   let tid = object::id(template);
@@ -306,7 +304,7 @@ public(package) fun split(a: &mut Item, take: u64, ctx: &mut TxContext): (Item, 
 /// on a shared kiosk is exactly the royalty-evasion / wholesale path the personal-kiosk law kills), then locks
 /// it under `policy`. Composes freely: a kiosk-less minter can `kiosk::new` → `personal_kiosk::new` earlier in
 /// the same PTB and lock here. No version/enabled gate — a live pledge can only exist because a mint door
-/// (`shop::buy` or `extension::z505`) already passed its gates in this very PTB.
+/// (`shop::buy` or `extension::mint_item`) already passed its gates in this very PTB.
 public fun lock_in_kiosk(
   pledge: LockPledge,
   item: Item,
@@ -322,12 +320,11 @@ public fun lock_in_kiosk(
 
 // ╔════════════════ [ Re-lock pledge + destroy — the extract seam's two package-private primitives ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Build a `LockPledge` for an EXISTING item — the re-lock hot potato the `extract::unequip` path returns so the
 /// game is TYPE-FORCED to personal-kiosk-lock the item it pulled off a character. Package-private, and a pledge is
 /// inert alone: its only consumer is `lock_in_kiosk`, which matches it against the real item and forces a personal
 /// kiosk. No new authority — it just re-imposes the lock constitution on an item that already left a kiosk.
-public(package) fun z39(item_id: ID): LockPledge { LockPledge { item_id } }
+public(package) fun new_lock_pledge(item_id: ID): LockPledge { LockPledge { item_id } }
 
 /// DESTROY an item, deleting its object on-chain — the terminal of the CONSUME-extract flow (pool sell / crush /
 /// pet feed). Package-private: only `extract::burn` (cap-gated) calls it, after reading `template`/`amount` for the
@@ -347,10 +344,9 @@ public fun is_stackable_category(category: String): bool {
   category == CATEGORY_CONSUMABLE.to_string() || category == CATEGORY_RESOURCE.to_string() || category == CATEGORY_RUNE.to_string()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The `consumable` category slug, single-homed here. `consumable_effect::is_consumable` reads it so the literal
-/// never drifts across the package (the effect-z503 gate and the stackability rule share ONE source of the slug).
-public(package) fun z40(): String { CATEGORY_CONSUMABLE.to_string() }
+/// never drifts across the package (the effect-attach gate and the stackability rule share ONE source of the slug).
+public(package) fun category_consumable(): String { CATEGORY_CONSUMABLE.to_string() }
 
 // ╔════════════════ [ Kiosk / royalty seam — Publisher gated ] ═════════════════ ]
 
@@ -435,14 +431,14 @@ public fun mint_for_testing(template: &ItemTemplate, ctx: &mut TxContext): Item 
 #[test_only]
 /// Mint a RAW stackable of `quantity` units (pledge discarded) — same test-only escape as `mint_for_testing`.
 public fun mint_stack_for_testing(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): Item {
-  let (item, pledge) = z38(template, quantity, ctx);
+  let (item, pledge) = mint_stack(template, quantity, ctx);
   let LockPledge { item_id: _ } = pledge;
   item
 }
 
 #[test_only]
 /// Mint a GHOST stack (amount = 0) — the ONLY way to obtain a zero-amount `Item`, since every production door
-/// (`z38` / `split` / `merge`) keeps amount >= 1. Exists solely to drive `item_listing_rule` (the amount-0
+/// (`mint_stack` / `split` / `merge`) keeps amount >= 1. Exists solely to drive `item_listing_rule` (the amount-0
 /// sale block); bypasses the quantity assert on purpose. Snapshots the template identity like the real factories.
 public fun mint_zero_stack_for_testing(template: &ItemTemplate, ctx: &mut TxContext): Item {
   Item {

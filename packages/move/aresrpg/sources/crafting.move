@@ -12,7 +12,7 @@
 /// replicated exactly). Four pieces, each cited to its source:
 ///   ① KNOWLEDGE GATE — a recipe needs job level `min_level_for_ingredients(slots)` (CraftingFormulas.java:38-42,
 ///      the dual of the `maxIngredients(level)` gate enforced at CraftingPage.java:255,340). The recipe's ITEM tier
-///      is NOT the z502 (CraftingPage.java:252-253) — the z502 is the ingredient-slot count. `create_recipe`
+///      is NOT the unlock (CraftingPage.java:252-253) — the unlock is the ingredient-slot count. `create_recipe`
 ///      DERIVES `required_level` from the slot count so it can never be mis-authored; `craft` refuses an
 ///      under-levelled crafter (`EUnderLevel`). Commission reads the SAME field (accept-time knowledge proof).
 ///   ② SUCCESS CHANCE — `success_rate_bp(level) = min(9900, 5000 + (level−1)×50)` bp, i.e. 50% at job level 1,
@@ -79,7 +79,7 @@ public struct Ingredient has store, copy, drop {
 /// An admin-authored recipe. Shared (read by every craft tx); authored while the package is dark. Exact-ingredient:
 /// `inputs` (each a distinct template by authoring convention) → `output_quantity` of `output_template`.
 /// `required_job` is the job whose level gates + earns; `required_level` is the KNOWLEDGE threshold (§6/①) DERIVED
-/// from the ingredient-slot count (`min_level_for_ingredients`) at authoring so it is always the exact reference z502
+/// from the ingredient-slot count (`min_level_for_ingredients`) at authoring so it is always the exact reference unlock
 /// — `craft` refuses an under-levelled crafter and `commission::accept` proves the artisan holds it. `craft_xp` is
 /// the authored per-craft job XP (④; the seeds bake it, the reference `craftXpFromIngredients`), decayed at runtime once
 /// the crafter out-levels the recipe tier. ONE data home for each fact.
@@ -108,7 +108,7 @@ public struct Crafted has copy, drop { recipe: ID, crafter: address, output_temp
 /// (`ELengthMismatch`). A recipe needs ≥1 input (`EEmptyRecipe` — else it is a free mint) and every quantity ≥1
 /// (`EZeroQuantity`). Authoring convention: distinct input templates (the craft matcher takes the first match).
 /// `required_level` is NOT a param — it is DERIVED from the distinct-ingredient count via `min_level_for_ingredients`
-/// (the exact reference z502, CraftingFormulas.java:38-42) so it can never disagree with the success/XP math.
+/// (the exact reference unlock, CraftingFormulas.java:38-42) so it can never disagree with the success/XP math.
 /// `required_job` + `craft_xp` are admin-trusted (like `output_quantity`); `craft_xp` is the seed-baked per-craft
 /// job XP (④).
 public fun create_recipe(
@@ -309,7 +309,7 @@ fun success_rate_bp(level: u64): u64 {
   if (bp > SUCCESS_CAP_BP) SUCCESS_CAP_BP else bp
 }
 
-/// ① Minimum job level to z502 a recipe with `n` distinct ingredient slots (CraftingFormulas.java:38-42):
+/// ① Minimum job level to unlock a recipe with `n` distinct ingredient slots (CraftingFormulas.java:38-42):
 /// `n ≤ 2 → 1`, else `min(100, ceil((n−2)×99/8) + 1)`. `ceil(a/8) = (a + 7)/8` in integer math.
 fun min_level_for_ingredients(n: u64): u64 {
   if (n <= 2) return 1;

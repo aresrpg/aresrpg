@@ -36,9 +36,9 @@ fun spell_ledger_and_progression_hp_roundtrip() {
     let ver = sc.take_shared<Version>();
     {
       let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-      character_link::z3(chr, sid, 3, &ver); // invest this spell to level 3
-      character_link::z4(chr, 1_000_000, &ver); // spend far more than any earnable total
-      character_link::z11(chr, 42, 1000, &ver); // births the progression block with hp = 42
+      character_link::set_spell_level(chr, sid, 3, &ver); // invest this spell to level 3
+      character_link::add_spell_points_spent(chr, 1_000_000, &ver); // spend far more than any earnable total
+      character_link::write_back_hp(chr, 42, 1000, &ver); // births the progression block with hp = 42
     };
     ts::return_shared(k);
     sc.return_to_sender(pkcap);

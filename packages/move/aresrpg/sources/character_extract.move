@@ -11,7 +11,7 @@
 /// personal-kiosk + the §17.30 level gate), so a normal trade re-locks and pays — but a DELETE is not a trade:
 /// the character must come fully OUT and DIE. This module runs the zero-price flow against a permanently EMPTY
 /// policy that is WRAPPED (cap sealed inside, no accessor), so no raw `&TransferPolicy<Character>` ever escapes
-/// and no external code can confirm a hand-rolled request against it (the royalty-evasion / z502-escape class,
+/// and no external code can confirm a hand-rolled request against it (the royalty-evasion / unlock-escape class,
 /// closed by construction exactly like `extract::ItemExtractPolicy`).
 ///
 /// WHY NO ESCAPE (the type argument). Unlike the item seam, NO pledge is needed here: extraction, the guard

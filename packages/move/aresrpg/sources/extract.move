@@ -16,7 +16,7 @@
 /// hands back the raw `Item` PLUS an ABILITYLESS pledge:
 ///   • EQUIP:   `extract_for_equip` → (Item, `EquipPledge`). The pledge is consumed ONLY by `confirm_equip`, which
 ///     re-attaches the item as a dynamic field UNDER a kiosk-locked character (§1's "second state") via the package-private
-///     `extension::z22` (`NS_CHARACTER_EQUIPMENT` namespace — S-46: `public(package)` is the gate, not a cap). `unequip` reverses it, returning a `LockPledge` that FORCES a
+///     `extension::add_character_field` (`NS_CHARACTER_EQUIPMENT` namespace — S-46: `public(package)` is the gate, not a cap). `unequip` reverses it, returning a `LockPledge` that FORCES a
 ///     personal-kiosk re-lock (the constitution re-imposed on the way back).
 ///   • BURN:    `extract_for_burn` → (Item, `BurnPledge`). The pledge is consumed ONLY by `burn`, which DESTROYS
 ///     the item and returns `(template_id, amount)` — via the package-private `item::destroy`; the abilityless
@@ -62,7 +62,7 @@ const ESameStack: u64 = 102; // merge_locked_stacks: target and source are the s
 
 /// The WRAPPED extraction policy. The inner `policy` is a permanently rule-less `TransferPolicy<Item>` and `cap`
 /// is its `TransferPolicyCap<Item>` — SEALED inside with no accessor, so no rule can ever be added and the policy
-/// stays confirmable-with-no-receipts forever. Neither field is ever exposed: only `z71` (this module)
+/// stays confirmable-with-no-receipts forever. Neither field is ever exposed: only `extract_locked` (this module)
 /// reaches `&self.policy` to confirm the zero-price request. Because a raw `&TransferPolicy<Item>` never escapes,
 /// no external code can confirm a hand-rolled `TransferRequest<Item>` against it (the royalty-evasion path). `key`
 /// only — shared, never wrapped or moved.
@@ -73,7 +73,7 @@ public struct ItemExtractPolicy has key {
 }
 
 /// The EQUIP hot potato — NO abilities. Carries the id of the extracted item; the ONLY consumer is `confirm_equip`
-/// (z503 onto a character). Cannot be dropped/stored/transferred, so the compiler forces the extracted item onto
+/// (attach onto a character). Cannot be dropped/stored/transferred, so the compiler forces the extracted item onto
 /// a kiosk-locked character in the SAME PTB.
 public struct EquipPledge { item_id: ID }
 
@@ -111,13 +111,12 @@ public fun create_extract_policy(publisher: &Publisher, version: &Version, ctx: 
 
 // ╔════════════════ [ The zero-price extraction (private — the ONLY confirm against the wrapped policy) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Pull a kiosk-LOCKED item OUT via the policy-compliant zero-price flow: list at price 0, purchase with a zero
 /// coin, and CONFIRM the resulting `TransferRequest<Item>` against the WRAPPED empty policy (no rules → no
 /// receipts needed). `list` aborts (`EItemNotFound`) unless the caller's kiosk actually holds the item, so a caller
 /// can only extract items from a kiosk they hold the cap to. This is the sole site that reads `&self.policy` — the
 /// wrapping is what keeps this confirm unreachable to any hand-rolled request (royalty-evasion barrier).
-fun z71(
+fun extract_locked(
   self: &ItemExtractPolicy,
   kiosk: &mut Kiosk,
   personal_cap: &PersonalKioskCap,
@@ -150,14 +149,14 @@ public fun extract_for_equip(
   ctx: &mut TxContext,
 ): (Item, EquipPledge) {
   version.assert_enabled();
-  let item = z71(policy, kiosk, personal_cap, item_id, ctx);
+  let item = extract_locked(policy, kiosk, personal_cap, item_id, ctx);
   let extracted_id = object::id(&item);
   (item, EquipPledge { item_id: extracted_id })
 }
 
 /// Discharge an `EquipPledge` by ATTACHING the item onto `character` as a dynamic field under the EQUIPMENT
 /// namespace, keyed by the item's own id (so `unequip` can find it). Package-gated, not cap-gated (S-46): the write
-/// goes through the `public(package)` `extension::z22` under the `NS_CHARACTER_EQUIPMENT` namespace —
+/// goes through the `public(package)` `extension::add_character_field` under the `NS_CHARACTER_EQUIPMENT` namespace —
 /// reachable only by sibling aresrpg modules, and version-gates (assert_enabled) inside it. The item now lives ON the
 /// kiosk-locked character (§1's second state) — still no raw-address path.
 public fun confirm_equip(
@@ -171,20 +170,20 @@ public fun confirm_equip(
   let template = item::template(&item);
   let amount = item::amount(&item);
   let character_id = object::id(character);
-  extension::z22(extension::z31(), character, item_id, item, version);
+  extension::add_character_field(extension::ns_character_equipment(), character, item_id, item, version);
   event::emit(ItemEquipped { character: character_id, item: item_id, template, amount });
 }
 
 /// Reverse of `confirm_equip`: DETACH the item (stored under `key` = its id) from `character` and return it with a
 /// `LockPledge` that FORCES a personal-kiosk re-lock — the constitution re-imposed the moment the item leaves the
 /// character. Package-gated (S-46 — no cap): the read/remove is `public(package)` under the `NS_CHARACTER_EQUIPMENT` namespace and version-gates
-/// inside `extension::z24`.
+/// inside `extension::remove_character_field`.
 public fun unequip(
   character: &mut Character,
   key: ID,
   version: &Version,
 ): (Item, LockPledge) {
-  let item: Item = extension::z24(extension::z31(), character, key, version);
+  let item: Item = extension::remove_character_field(extension::ns_character_equipment(), character, key, version);
   let item_id = object::id(&item);
   event::emit(ItemUnequipped {
     character: object::id(character),
@@ -192,7 +191,7 @@ public fun unequip(
     template: item::template(&item),
     amount: item::amount(&item),
   });
-  (item, item::z39(item_id))
+  (item, item::new_lock_pledge(item_id))
 }
 
 // ╔════════════════ [ Flavor 2 — CONSUME (item ceases to exist) ] ═════════════ ]
@@ -209,7 +208,7 @@ public fun extract_for_burn(
   ctx: &mut TxContext,
 ): (Item, BurnPledge) {
   version.assert_enabled();
-  let item = z71(policy, kiosk, personal_cap, item_id, ctx);
+  let item = extract_locked(policy, kiosk, personal_cap, item_id, ctx);
   let extracted_id = object::id(&item);
   (item, BurnPledge { item_id: extracted_id })
 }
@@ -220,7 +219,7 @@ public fun extract_for_burn(
 ///
 /// For a multi-unit stack, both values created by `item::split` are first re-locked under the sealed extraction
 /// policy: the original object (now the remainder) gets a fresh `LockPledge`, and the one-unit child consumes the
-/// pledge returned by `split`. The child is then immediately re-extracted through `z71`. Thus EVERY
+/// pledge returned by `split`. The child is then immediately re-extracted through `extract_locked`. Thus EVERY
 /// surviving item is kiosk-locked when this call returns; only the burn-bound unit is transiently outside.
 /// Keeping the remainder's original id also lets one PTB repeat this call N times against one owned key stack.
 public fun extract_one_for_burn(
@@ -232,7 +231,7 @@ public fun extract_one_for_burn(
   ctx: &mut TxContext,
 ): (Item, BurnPledge) {
   version.assert_enabled();
-  let mut remainder = z71(policy, kiosk, personal_cap, item_id, ctx);
+  let mut remainder = extract_locked(policy, kiosk, personal_cap, item_id, ctx);
   if (item::amount(&remainder) == 1) {
     let unit_id = object::id(&remainder);
     (remainder, BurnPledge { item_id: unit_id })
@@ -244,9 +243,9 @@ public fun extract_one_for_burn(
 
     // KIOSK-LOCK CONSTITUTION: EVERY item stays kiosk-locked. Neither half crosses a public boundary unlocked;
     // `policy.policy` remains sealed inside this module and the burn-bound child is immediately re-extracted.
-    item::lock_in_kiosk(item::z39(remainder_id), remainder, kiosk, owner_cap, &policy.policy);
+    item::lock_in_kiosk(item::new_lock_pledge(remainder_id), remainder, kiosk, owner_cap, &policy.policy);
     item::lock_in_kiosk(unit_lock, unit, kiosk, owner_cap, &policy.policy);
-    let unit = z71(policy, kiosk, personal_cap, unit_id, ctx);
+    let unit = extract_locked(policy, kiosk, personal_cap, unit_id, ctx);
     (unit, BurnPledge { item_id: unit_id })
   }
 }
@@ -298,13 +297,13 @@ public fun merge_locked_stacks(
 ): (Item, LockPledge) {
   version.assert_enabled();
   assert!(target_id != source_id, ESameStack);
-  let mut target = z71(policy, kiosk, personal_cap, target_id, ctx);
-  let source = z71(policy, kiosk, personal_cap, source_id, ctx);
+  let mut target = extract_locked(policy, kiosk, personal_cap, target_id, ctx);
+  let source = extract_locked(policy, kiosk, personal_cap, source_id, ctx);
   let added = item::amount(&source);
   item::merge(&mut target, source); // asserts same template + stackable; adds source's units, deletes source
   let merged_id = object::id(&target);
   event::emit(StacksMerged { target: merged_id, source: source_id, added, total: item::amount(&target) });
-  (target, item::z39(merged_id))
+  (target, item::new_lock_pledge(merged_id))
 }
 
 /// Split `amount` units from one stack already locked in `kiosk`, then immediately lock BOTH the original remainder
@@ -324,13 +323,13 @@ public fun split_locked_stack(
   ctx: &mut TxContext,
 ): ID {
   version.assert_enabled();
-  let mut source = z71(extract_policy, kiosk, personal_cap, item_id, ctx);
+  let mut source = extract_locked(extract_policy, kiosk, personal_cap, item_id, ctx);
   let (child, child_pledge) = item::split(&mut source, amount, ctx);
   let source_id = object::id(&source);
   let child_id = object::id(&child);
   let owner_cap = personal_kiosk::borrow(personal_cap);
 
-  item::lock_in_kiosk(item::z39(source_id), source, kiosk, owner_cap, marketplace_policy);
+  item::lock_in_kiosk(item::new_lock_pledge(source_id), source, kiosk, owner_cap, marketplace_policy);
   item::lock_in_kiosk(child_pledge, child, kiosk, owner_cap, marketplace_policy);
   child_id
 }

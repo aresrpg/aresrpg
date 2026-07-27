@@ -438,7 +438,7 @@ fun kit_level(value: u64): spell_effect::SpellLevel {
 /// mint-only IDENTITY fields (name, min/max level) and the sibling `loot` table untouched. Cap + version gated
 /// at the door; the re-pushed kit round-trips through the free `mob_spells` getter AND back through the fold's
 /// own decode — the #904 final ruling's on-chain half: what the door writes is CENTERED (`32768 + delta`), and
-/// folding those bytes yields the authored z504, sign and all. Asserting the storage bytes alone would stay
+/// folding those bytes yields the authored deltas, sign and all. Asserting the storage bytes alone would stay
 /// green under the retired magnitude dialect, where an authored `+25` folds as a `−32743` debuff.
 fun set_spells_replaces_the_spell_kit() {
   let mut sc = ts::begin(OWNER);

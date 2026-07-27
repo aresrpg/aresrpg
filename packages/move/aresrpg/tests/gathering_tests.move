@@ -136,7 +136,7 @@ fun pin_checkpoint(sc: &mut Scenario, who: address, cid: ID, wid: ID, x: u32, z:
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::z2(chr, wid, world::z44(x, z, time, false), &ver);
+    character_link::write_checkpoint(chr, wid, world::new_checkpoint(x, z, time, false), &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
@@ -418,7 +418,7 @@ fun gather_depleted_node_aborts() {
   let mut w = sc.take_shared<World>();
   let total = zones_view::resource_node_total(&w, zx, zy);
   let mut i = 0;
-  while (i < total) { zones::z52(&mut w, zx, zy, i); i = i + 1; }; // one bit per derived cell
+  while (i < total) { zones::consume_resource_node(&mut w, zx, zy, i); i = i + 1; }; // one bit per derived cell
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 0);
   ts::return_shared(w);
   test_world::equip(&mut sc, test_world::owner(), cid, vector[0], false);
@@ -429,7 +429,7 @@ fun gather_depleted_node_aborts() {
 #[test, expected_failure(abort_code = ETierLocked, location = gathering)]
 fun gather_tier_locked_aborts() {
   let mut sc = ts::begin(test_world::owner());
-  let (cid, _wid, tid, zx, zy) = discovered(&mut sc, 2); // tier 2 → z502 level 10; a level-1 job can't
+  let (cid, _wid, tid, zx, zy) = discovered(&mut sc, 2); // tier 2 → unlock level 10; a level-1 job can't
   test_world::equip(&mut sc, test_world::owner(), cid, vector[0], false);
   do_gather(&mut sc, test_world::owner(), cid, zx, zy, 0, tid, 2000 + HUGE_ELAPSED); // ETierLocked
   abort
@@ -460,7 +460,7 @@ fun gather_wrong_template_aborts() {
 
 #[test]
 fun yield_scales_with_job_level() {
-  assert_eq!(gathering::test_yield(1, 1), 1); // no bonus at the z502 level
+  assert_eq!(gathering::test_yield(1, 1), 1); // no bonus at the unlock level
   assert_eq!(gathering::test_yield(6, 1), 2); // (6−1)/5 = 1
   assert_eq!(gathering::test_yield(11, 1), 3); // (11−1)/5 = 2
   assert_eq!(gathering::test_yield(50, 10), 9); // (50−10)/5 = 8
@@ -471,7 +471,7 @@ fun job_xp_full_in_band_then_decays() {
   assert_eq!(gathering::test_job_xp(1, 1), 10); // tier 1 base, in band
   assert_eq!(gathering::test_job_xp(1, 11), 10); // at the band top
   assert_eq!(gathering::test_job_xp(1, 50), 5); // out of band → decayed, never zero
-  assert_eq!(gathering::test_job_xp(3, 30), 30); // tier 3 base 30, in band (z502 20 + width 10)
+  assert_eq!(gathering::test_job_xp(3, 30), 30); // tier 3 base 30, in band (unlock 20 + width 10)
   assert_eq!(gathering::test_job_xp(3, 100), 15); // out of band → 30/2
 }
 

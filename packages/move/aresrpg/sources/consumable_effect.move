@@ -3,7 +3,7 @@
 /// CONSUMABLE EFFECT — the typed effect block attached as a DYNAMIC FIELD to a consumable `ItemTemplate`. This
 /// is the on-chain HOME for a consumable's gameplay effect: `{ kind, amount }`. Same placement as `item_stats`/
 /// `item_damages` — the item base owns the storage (it exposes the template UID package-privately), THIS module
-/// owns the effect data shape + z503/read. Set at TEMPLATE CREATION (`admin::create_template`), ONLY when the
+/// owns the effect data shape + attach/read. Set at TEMPLATE CREATION (`admin::create_template`), ONLY when the
 /// template's category is `consumable` (the gate asserts it there).
 ///
 /// CLOSED VOCABULARY (§10 / §17.15, sealed in `docs/ANNEX_SHAPE_FREEZE.md §2): `kind` is a `u8` discriminant
@@ -40,7 +40,7 @@ public struct ConsumableEffect has copy, drop, store {
 // ╔════════════════ [ Constructor (public — a PTB builds the effect to pass to create_template) ] ═ ]
 
 /// Build an effect, VALIDATING the discriminant against the frozen vocabulary (`EInvalidEffectKind` otherwise).
-/// This is the SOLE constructor, so an out-of-range `kind` can never reach `z503` or the stored DF.
+/// This is the SOLE constructor, so an out-of-range `kind` can never reach `attach` or the stored DF.
 public fun new(kind: u8, amount: u64): ConsumableEffect {
   assert!(kind <= KIND_MAX, EInvalidEffectKind);
   ConsumableEffect { kind, amount }
@@ -54,16 +54,15 @@ public fun bag_open(): u8 { KIND_BAG_OPEN }
 public fun gacha_roll(): u8 { KIND_GACHA_ROLL }
 
 /// True if `category` is the consumable category (the ONLY category that may carry an effect). The gate calls
-/// this before attaching. The `consumable` slug is single-homed in `item` (`z40`), so it lives in
-/// exactly one place across the package (the effect-z503 gate and the stackability rule read the same source).
-public fun is_consumable(category: String): bool { category == item::z40() }
+/// this before attaching. The `consumable` slug is single-homed in `item` (`category_consumable`), so it lives in
+/// exactly one place across the package (the effect-attach gate and the stackability rule read the same source).
+public fun is_consumable(category: String): bool { category == item::category_consumable() }
 
 // ╔════════════════ [ Attach / read on the TEMPLATE ] ════════════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Attach the effect to `template` (package-private — the authoring surface calls it before the template is
 /// shared, and only after asserting the category is consumable). Aborts if an effect is already attached.
-public(package) fun z503(template: &mut ItemTemplate, effect: ConsumableEffect) {
+public(package) fun attach(template: &mut ItemTemplate, effect: ConsumableEffect) {
   df::add(item::template_uid_mut(template), EffectKey {}, effect);
 }
 

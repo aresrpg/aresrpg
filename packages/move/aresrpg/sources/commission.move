@@ -231,28 +231,26 @@ entry fun execute(
   r: &Random,
   ctx: &mut TxContext,
 ) {
-  z56(&request, recipe, ctx);
+  execute_gate(&request, recipe, ctx);
   let mut gen = random::new_generator(r, ctx);
   let success = crafting::success_roll(request.artisan_level, &mut gen);
   // the output's stat roll shares this one terminal draw with the success roll (#758).
-  z57(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
+  execute_body(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The execute preconditions (shared by the live entry and the deterministic test door): customer-only, accepted,
 /// bound recipe. Checked BEFORE any randomness is drawn — an un-accepted request has `artisan_level` 0, which must
 /// never reach the roll (the roll's `level − 1` floors at level 1).
-fun z56(request: &CraftRequest, recipe: &Recipe, ctx: &TxContext) {
+fun execute_gate(request: &CraftRequest, recipe: &Recipe, ctx: &TxContext) {
   assert!(sender(ctx) == request.customer, EWrongCustomer);
   assert!(request.accepted, ENotAccepted);
   assert!(object::id(recipe) == request.recipe, EWrongRecipe);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The execute body shared by the live `&Random` entry and the deterministic test door — given the already-rolled
 /// `success`: burn the customer's inputs, mint the output ON SUCCESS, mint the artisan's XP voucher, split the
 /// escrow (artisan nets 90%, 10% → `@treasury`), emit, delete.
-fun z57(
+fun execute_body(
   request: CraftRequest,
   recipe: &Recipe,
   kiosk: &mut Kiosk,
@@ -302,7 +300,7 @@ fun z57(
 #[test_only]
 /// Execute with an INJECTED roll outcome (no rng) — proves the success AND failure branches deterministically:
 /// the real gate + burn + escrow-release + voucher run; `success` decides mint-vs-not. The live `&Random` entry
-/// shares `z56` + `z57` exactly.
+/// shares `execute_gate` + `execute_body` exactly.
 public fun execute_forced(
   request: CraftRequest,
   recipe: &Recipe,
@@ -318,8 +316,8 @@ public fun execute_forced(
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  z56(&request, recipe, ctx);
-  z57(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, stat_seed, xpolicy, policy, config, version, ctx);
+  execute_gate(&request, recipe, ctx);
+  execute_body(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, stat_seed, xpolicy, policy, config, version, ctx);
 }
 
 #[test_only]

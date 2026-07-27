@@ -39,7 +39,7 @@ public struct TicketFacts has copy, drop {
 
 fun ticket_facts(ticket: zones::GroupTicket): TicketFacts {
   let (world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed) =
-    zones::z48(ticket);
+    zones::consume_group_ticket(ticket);
   TicketFacts { world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
 }
 

@@ -105,7 +105,7 @@ fun mint_lock(sc: &mut Scenario, k: &mut Kiosk, pkcap: &PersonalKioskCap, tid: I
   let tmpl = sc.take_shared_by_id<ItemTemplate>(tid);
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let (it, pledge) = extension::z505(&tmpl, option::none(), &ver, sc.ctx());
+  let (it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
   item::lock_in_kiosk(pledge, it, k, personal_kiosk::borrow(pkcap), &mkt);
   ts::return_shared(tmpl);
