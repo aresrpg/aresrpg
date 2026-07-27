@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store, committed_state } from '../src/store.js'
+import { create_fight_store, committed_truth } from '../src/store.js'
 import { state_hash } from '../src/inputs.js'
 
 const FIGHT = '0xf1647'
@@ -137,14 +137,14 @@ const drive = (inputs) => {
   return store
 }
 
-const committed_hash = (store) => state_hash(committed_state(store.getState()))
+const committed_hash = (store) => state_hash(committed_truth(store.getState()))
 
 describe('M2b — one ingress: the fold is invariant to arrival order (idempotence #290 → full ingress)', () => {
   // The reference: the whole stream folded once, in order, through the receipt door.
   const reference = committed_hash(drive([receipt(STREAM, '3')]))
 
   test('the mob turn folds — mob walked to 44, my hp is 44, the turn is over', () => {
-    const committed = committed_state(drive([receipt(STREAM, '3')]).getState())
+    const committed = committed_truth(drive([receipt(STREAM, '3')]).getState())
     expect(committed.fighters.m0.cell).toBe(44)
     expect(committed.fighters.p0.hp).toBe(44)
     expect(committed.active).toBeNull()

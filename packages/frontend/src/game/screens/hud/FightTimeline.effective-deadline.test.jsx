@@ -79,7 +79,7 @@ describe('FightTimeline — the HP card reads presented_health (chain-anchored),
   test('a not-yet-committed optimistic Hit on the mob holds the card at last-COMMITTED hp, not the predicted one', () => {
     seed_my_turn_fight(Date.now() + 90_000) // default seed: my seat 50 hp, one mob ('mob-0') at 30 hp
 
-    // MY OWN optimistic cast prediction against the mob — source 'intent', excluded from committed_state until a
+    // MY OWN optimistic cast prediction against the mob — source 'intent', excluded from committed truth until a
     // receipt lands (the exact shape packages/fight/src/optimistic_hp.test.js locks for this input door).
     fight_store
       .getState()

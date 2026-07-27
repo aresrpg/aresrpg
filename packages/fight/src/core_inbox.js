@@ -216,7 +216,7 @@ export const admit_events = (inbox, actions, now) => {
 
 /**
  * Adopt a decoded Fight OBJECT (snapshot) as the SNAPSHOT+TAIL base — the BOOTSTRAP seed the canonical event tail
- * folds on top of, EXACTLY as the OLD store's `committed_state` (M2b #291 DEMOTED the object read to a bootstrap
+ * folds on top of — the ONE snapshot half, shared with the presentation folds (M2b #291 DEMOTED the object read to a bootstrap
  * base + a checkpoint: "everything that guessed history from an object read is deleted"). The base is the EARLIEST
  * (lowest-version) object read; a later HIGHER-version object is a CHECKPOINT that must NOT re-adopt (#701) — its
  * cells are a 4s-stale / possibly-torn read and `base_from_view` can only DERIVE turn_number as `status→1/0`, so

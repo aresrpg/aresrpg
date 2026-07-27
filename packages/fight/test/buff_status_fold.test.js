@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test'
 
 import * as SE from '../../sim/src/spell_effect.js'
 import { engine_view } from '../src/project.js'
-import { committed_state, create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -162,7 +162,7 @@ describe('#481 self-buff action effects enter the fighter status fold', () => {
   ])
     test(`${source}: range, MP, and invisibility rows reach statuses and engine_view.effects`, () => {
       const store = drive(input())
-      const { statuses } = committed_state(store.getState()).fighters.p0
+      const { statuses } = committed_truth(store.getState()).fighters.p0
       expect(statuses).toEqual(
         effects.map((row) => ({
           kind: row.kind,
@@ -179,7 +179,7 @@ describe('#481 self-buff action effects enter the fighter status fold', () => {
       expect(engine_view(store.getState()).fighters.get(CHAR).effects).toEqual(
         statuses.map((row, id) => ({ id: `${row.kind}:${id}`, ...row }))
       )
-      expect(committed_state(store.getState()).fighters.p0.invisible).toBe(true)
-      expect(committed_state(store.getState()).action_contexts).toEqual({})
+      expect(committed_truth(store.getState()).fighters.p0.invisible).toBe(true)
+      expect(committed_truth(store.getState()).action_contexts).toEqual({})
     })
 })

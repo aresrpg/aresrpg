@@ -24,7 +24,7 @@ import { can_target } from '../../sim/src/spell_targeting.js'
 import * as SE from '../../sim/src/spell_effect.js'
 import { engine_view } from '../src/project.js'
 import { range_bonus_of } from '../src/statuses.js'
-import { committed_state, create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 
 const FIGHT = '0xf983'
 const CHAR = '0xc983'
@@ -144,7 +144,7 @@ const drive = (row) => {
   return store
 }
 
-const folded_row = (store) => committed_state(store.getState()).fighters.p0.statuses[0]
+const folded_row = (store) => committed_truth(store.getState()).fighters.p0.statuses[0]
 const projected = (store) => engine_view(store.getState()).fighters.get(CHAR)
 
 /** The exact legality gate the cast wash runs (`overlay_intents` adds `range_bonus_of` to the authored rmax and

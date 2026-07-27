@@ -11,8 +11,7 @@
 //
 // COMMITTED TRUTH IS NOT HERE (#1027). The committed board is the HEADLESS CORE's, projected by `project_board`
 // and read through the store's ONE door (`store.committed_truth`). This module owns the PRESENTATION folds only —
-// which is why nothing here derives committed state for a runtime reader, and why `core_fold.js` may import this
-// file's base. `committed_state` below is the retiring legacy fold: TEST-ONLY, and leaving with its parity suites.
+// which is why nothing here derives committed state at all, and why `core_fold.js` may import this file's base.
 
 import { participant_entity_id } from './fight_control.js'
 import { apply_action, empty_state, fighter_key, seat_resolver } from './inputs.js'
@@ -434,16 +433,6 @@ export const recompute = (draft, now) => {
   }
 }
 
-/** TEST-ONLY (#1027) — THE LEGACY COMMITTED FOLD, retiring. Zero runtime readers remain: every committed read
- *  in this repo goes through the store's core-backed door (`store.committed_truth`). It survives only as the
- *  left-hand side of the cutover-parity suites, and it leaves with them. Never import it from `src/`. */
-export const committed_state = (s) => {
-  const base = base_from_view(s.view, s.fight_id)
-  const log = sorted_log(s.entries ?? {}).filter((e) => e.version > s.view_version && e.source !== 'intent')
-  const committed = log.reduce(apply_action, base)
-  return { ...committed, fighters: apply_retirement(committed.fighters, s.retired) }
-}
-
 /** entity id (a character id, or `mob-N`) → its fold key `p{seat}` / `m{idx}` against an adopted view's escrow;
  *  null when the roster does not carry it. The ONE home for that mapping — the presentation resolvers below and
  *  the store's committed health oracle both read it, so a renamed seat can never mean two different fighters. */
@@ -497,7 +486,7 @@ const wave_masked_fold = (s, hold_intents) => {
   const base = base_from_view(s.view, s.fight_id)
   const log = (s.log ?? []).filter((e) => (e.source === 'intent' && !hold_intents) || !masked(e))
   // V1 · RETIREMENT FLOOR — the re-fold reads the RAW view base, so it must re-apply the append-only death floor
-  // exactly as committed_state does. Without it a floor-dead fighter RESURRECTS in the eye's projection whenever a
+  // exactly as the committed door does. Without it a floor-dead fighter RESURRECTS in the eye's projection whenever a
   // masking wave drains over a version-inflated-but-stale view that still carries it alive — the corpse stands up,
   // then dies a SECOND time when the wave acks (the double-death). The floor holds authoritative deaths only
   // (intents never retire), so a live prediction is untouched; the death-present HOLD stays owned by

@@ -9,7 +9,7 @@
 // commit_due edge → the 3s player min-turn floor.
 import { describe, test, expect } from 'bun:test'
 
-import { committed_state, create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 import { engine_view, board_view, presenting, commit_due, min_turn_left } from '../src/project.js'
 import { STATUS_PLACEMENT, STATUS_WON } from '../src/board_state.js'
 import { MOB_TURN_MS, local_intent_beats, synthetic_cast_events } from '../src/present.js'
@@ -288,7 +288,7 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
   test('an open-world journal advances its committed round across multi-round state progress', () => {
     const store = active_store()
     const surfaced_rounds = [engine_view(store.getState()).turn_number]
-    const folded_rounds = [committed_state(store.getState()).fighters.p0.turn_number]
+    const folded_rounds = [committed_truth(store.getState()).fighters.p0.turn_number]
     const rounds = [
       { from_seq: 3, version: 4, mob_cell: 41, remaining_hp: 44, deadline_ms: T0 + 90_000 },
       { from_seq: 10, version: 5, mob_cell: 42, remaining_hp: 38, deadline_ms: T0 + 120_000 },
@@ -300,7 +300,7 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
         .input({ type: 'journal', fight_id: FIGHT, page: world_round_page(round) }, T0 + 6_000 + index * 4_000)
       const state = store.getState()
       const view = engine_view(state)
-      folded_rounds.push(committed_state(state).fighters.p0.turn_number)
+      folded_rounds.push(committed_truth(state).fighters.p0.turn_number)
       surfaced_rounds.push(view.turn_number)
       expect(view.fighters.get('mob-0').cell).toEqual({ x: round.mob_cell % 20, y: 2 })
       expect(view.fighters.get(ME).health).toBe(round.remaining_hp)

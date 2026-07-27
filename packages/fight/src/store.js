@@ -66,9 +66,6 @@ import {
 // The PRESENTATION projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
 // names so project.js and tools keep importing them from the store's door.
 export { claimed_budget_state, presented_state, display_state } from './fold.js'
-// TEST-ONLY (#1027): the legacy committed fold, kept reachable for the cutover-parity suites alone. It has no
-// runtime reader left — `committed_truth` below is the committed door — and it retires with those suites.
-export { committed_state } from './fold.js'
 
 /**
  * THE COMMITTED-TRUTH DOOR (#1027) — the ONE committed board, repo-wide. It is the HEADLESS CORE's fold
@@ -415,7 +412,7 @@ const empty_fight = () => ({
   // ACCEPTED SILENT BUDGET FACTS — bounded, non-canonical overlays [{key,intent_id,action}]. M2b claim retirement
   // otherwise loses give_points and the Moved budget delta because neither is carried by its canonical event and
   // live snapshots are checkpoint-only. Retain them until the TARGET fighter's own TurnEnded (or death). fold.js
-  // applies them to effective/claim-budget projections only: canonical history and committed_state stay untouched.
+  // applies them to effective/claim-budget projections only: canonical history and committed truth stay untouched.
   claimed_budget: [],
   // BUDGET PREDICTION EVIDENCE — prediction metadata only, keyed by prediction identity. Canonical ingress can
   // overwrite an intent at the same `(version,event_idx)` before journal confirmation (p2p/poll-first), so each

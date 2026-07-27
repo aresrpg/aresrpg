@@ -18,14 +18,15 @@
 import { describe, expect, test } from 'bun:test'
 
 import { active_store, ev, fight_object, mob, T0 } from '../harness/fixtures.js'
-import { committed_state, presented_state } from '../src/fold.js'
+import { presented_state } from '../src/fold.js'
+import { committed_truth } from '../src/store.js'
 
 // A two-mob board so an "unrelated" action (touching m1) is unambiguously distinct from a cast on m0.
 const two_mob_store = () => active_store({ fight: fight_object({ mobs: [mob(45, { hp: 20 }), mob(60, { hp: 20 })] }) })
 
 const mob_hp = (store, key = 'm0') => presented_state(store.getState()).fighters?.[key]?.hp
 const mob_alive = (store, key = 'm0') => presented_state(store.getState()).fighters?.[key]?.alive
-const committed_hp = (store, key = 'm0') => committed_state(store.getState()).fighters?.[key]?.hp
+const committed_hp = (store, key = 'm0') => committed_truth(store.getState()).fighters?.[key]?.hp
 
 // MY optimistic cast: Cast by seat 0 + a Hit on the target mob down to `remaining_hp`. basis = the version the
 // cast predicts (applied_version + 1) — the same shape predict_cast emits through the composite door.

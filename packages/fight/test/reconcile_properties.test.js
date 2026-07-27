@@ -9,8 +9,8 @@
 import { describe, expect, test } from 'bun:test'
 
 import { state_hash } from '../src/inputs.js'
-import { apply_retirement, committed_state } from '../src/fold.js'
-import { create_fight_store } from '../src/store.js'
+import { apply_retirement } from '../src/fold.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
 import { encode } from '../src/los.js'
 
@@ -203,7 +203,7 @@ describe('§⑤.2 retirement-permanence', () => {
 // ── apply_retirement — L-I2 FRESH-MAP-BY-CONSTRUCTION (codeql boundary-mutation 90b4dd91) ─────────────────────
 // The clamp returns a FRESH map (the caller's `fighters` is never written), and the two documented no-ops —
 // nothing retired, and every retired key already dead — return the SAME reference (the identity downstream ===
-// checks in recompute/committed_state lean on). Direct-function rows: nothing else asserts these contracts.
+// checks in recompute/committed_truth lean on). Direct-function rows: nothing else asserts these contracts.
 describe('apply_retirement — fresh-map-by-construction + identity no-op', () => {
   const fighters = { m0: { key: 'm0', alive: true, hp: 12 }, p0: { key: 'p0', alive: true, hp: 30 } }
   test('nothing retired ({}) returns the SAME reference (identity no-op)', () => {
@@ -290,7 +290,7 @@ describe('§⑤.6 fold-catch-up', () => {
       .input({ type: 'snapshot', fight: fight_object({ mob_hp: 5, mob_cell: encode(6, 4) }), version: 7 }, 1_150)
 
     const term = (store) => {
-      const m = committed_state(store.getState()).fighters.m0
+      const m = committed_truth(store.getState()).fighters.m0
       return { cell: m.cell, alive: m.alive, hp: m.hp }
     }
     expect(term(folded), 'top-version fold == full replay terminal').toEqual(term(replay))

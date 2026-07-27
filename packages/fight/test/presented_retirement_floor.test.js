@@ -3,7 +3,7 @@
 // THE DOUBLE-DEATH ("the mob is dying twice") — the eye's projection resurrected a floor-dead mob.
 //
 // v1.12.36 made kills STICK: an authoritative death floors `retired` (V1) and `apply_retirement` overrides any
-// later higher-version read that carries a positive hp. But the floor was applied ONLY in committed_state (and
+// later higher-version read that carries a positive hp. But the floor was applied ONLY in committed_truth (and
 // recompute's output) — NOT in wave_masked_fold, the re-fold that backs presented_state / display_state. So
 // while a MASKING wave drains (any mob/peer turn) over a version-inflated-but-stale view that still carries the
 // dead mob alive, presented_state re-folds from that base WITHOUT the floor → engine_view.dead flips back to
@@ -15,9 +15,9 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
-import { committed_state, presented_state, display_state } from '../src/fold.js'
+import { presented_state, display_state } from '../src/fold.js'
 import { local_intent_beats, synthetic_cast_events } from '../src/present.js'
 import { encode } from '../src/los.js'
 
@@ -138,7 +138,7 @@ describe('presented-projection retirement floor — the mob dies exactly once', 
     expect(store.getState().retired?.m0, 'the receipt floored the death').toBeGreaterThanOrEqual(0)
 
     // A version-inflated but semantically STALE object read adopts, carrying mob-0 ALIVE again (hp 8). The floor
-    // must win — committed_state already does. (No masking wave yet, so presented still returns the floored `s`.)
+    // must win — committed_truth already does. (No masking wave yet, so presented still returns the floored `s`.)
     store.getState().input({ type: 'snapshot', fight: fight_object(8), version: 8 }, 4_000)
     expect(mob0(store).committed_dead, 'committed truth holds the floor').toBe(true)
 
@@ -168,7 +168,7 @@ describe('presented-projection retirement floor — the mob dies exactly once', 
     expect(mob0(store).dead, 'still dead after the wave — the death presented exactly once').toBe(true)
   })
 
-  test('presented_state and display_state respect the retirement floor (parity with committed_state)', () => {
+  test('presented_state and display_state respect the retirement floor (parity with committed_truth)', () => {
     const store = boot()
     predict_kill(store)
     confirm_kill(store)
@@ -191,7 +191,7 @@ describe('presented-projection retirement floor — the mob dies exactly once', 
       5_000
     )
     const s = store.getState()
-    expect(committed_state(s).fighters?.m0?.alive, 'committed floor').toBe(false)
+    expect(committed_truth(s).fighters?.m0?.alive, 'committed floor').toBe(false)
     expect(presented_state(s).fighters?.m0?.alive, 'presented must not resurrect the floor-dead mob').toBe(false)
     expect(display_state(s).fighters?.m0?.alive, 'display must not resurrect the floor-dead mob').toBe(false)
   })

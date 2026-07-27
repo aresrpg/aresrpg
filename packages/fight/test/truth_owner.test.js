@@ -2,18 +2,18 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
 // THE TRUTH OWNER. The committed board the renderer reads is projected from the HEADLESS CORE that lives in the
-// store atom (`state.core`, fed by the ONE door), never from the settlement `committed_state` fold. This suite pins
-// WHICH SOURCE OWNS TRUTH, so it needs a state where the two folds provably DISAGREE: the divergence fixture below
-// drives one real stream through the store door and admits ONE EXTRA authoritative receipt into the core alone
-// (through the public core door — never a hand-written board). The settlement fold cannot know that receipt, so
-// every committed field renders one value per fold.
+// store atom (`state.core`, fed by the ONE door). This suite pins WHICH SOURCE OWNS TRUTH, so it needs a state
+// where committed truth and the eye provably DISAGREE: the fixture below drives one real stream through the store
+// door and admits ONE EXTRA authoritative receipt into the core alone (through the public core door — never a
+// hand-written board), so the committed reads land on 33/12 while the paced presentation still holds 7.
 //
-// PRESENTATION IS A DIFFERENT QUESTION: the rendered `cell` still comes from the paced display fold, and the
-// assertions below pin that too — a committed-truth read that silently dragged presentation along would be a bug.
+// The legacy settlement fold used to be the other half of these rows (#1027 retired it, PR #1171's ruling). The
+// discriminator is now the one that always mattered: PRESENTATION IS A DIFFERENT QUESTION — the rendered `cell`
+// comes from the paced display fold, so a committed read that silently dragged presentation along still fails.
 
 import { describe, test, expect } from 'bun:test'
 
-import { create_fight_store, committed_state } from '../src/store.js'
+import { create_fight_store } from '../src/store.js'
 import { board_view, engine_view, committed_mob_hp, committed_truth } from '../src/project.js'
 import { empty_core_state, ingest, project_board } from '../src/core.js'
 import { input_envelope } from '../src/envelope.js'
@@ -110,7 +110,6 @@ describe('the core lives in the store atom, fed by the ONE door', () => {
     store.getState().input({ type: 'journal', fight_id: FIGHT, page }, 5)
 
     expect(project_board(store.getState().core).fighters.p0.cell).toBe(44)
-    expect(committed_state(store.getState()).fighters.p0.cell).toBe(44) // both folds saw the same page
   })
 
   test('a message the classify bridge cannot read lands as a FAILURE on the core, never a throw', () => {
@@ -127,23 +126,21 @@ describe('the core lives in the store atom, fed by the ONE door', () => {
 })
 
 describe('the committed truth owner', () => {
-  test('the fixture DIVERGES: the two folds disagree on cell and hp (else this suite proves nothing)', () => {
+  test('the fixture DIVERGES: the core-only receipt is one the eye has not reached (else this proves nothing)', () => {
     const store = diverged_store()
-    const settlement = committed_state(store.getState())
     const core = project_board(store.getState().core)
-    expect(settlement.fighters.p0.cell).toBe(7)
-    expect(core.fighters.p0.cell).toBe(33)
-    expect(settlement.fighters.m0.hp).toBe(80)
+    expect(core.fighters.p0.cell).toBe(33) // the extra receipt only the core admitted
     expect(core.fighters.m0.hp).toBe(12)
+    expect(board_view(store.getState()).escrow[0].cell).toBe(7) // the paced fold has not moved
   })
 
-  test('board_view committed rows read the CORE, not the settlement fold', () => {
+  test('board_view committed rows read the CORE, never the paced fold beside it', () => {
     const board = board_view(diverged_store().getState())
     expect(board.escrow[0].committed.cell).toBe(33)
     expect(board.mobs[0].committed.hp).toBe(12)
   })
 
-  test('engine_view committed fields read the CORE, not the settlement fold', () => {
+  test('engine_view committed fields read the CORE, never the paced fold beside it', () => {
     const view = engine_view(diverged_store().getState())
     const mob = view.fighters.get('mob-0')
     expect(mob.committed_health).toBe(12)
@@ -156,11 +153,10 @@ describe('the committed truth owner', () => {
 
   // #1027 — the TX-SHAPING read. DungeonBoard's flush resolves the clicked fighter through the eye-state, then asks
   // this door for the cell that goes into the PTB (`target_committed_cell` → txs.retarget_cast). It is the one
-  // committed read whose answer is spent as gas, so it gets its own row: the settlement fold still says 7 here.
+  // committed read whose answer is spent as gas, so it gets its own row: the eye still shows 7 here.
   test('committed_truth — the door the cast retarget shapes its PTB cell with — resolves off the CORE', () => {
     const state = diverged_store().getState()
     expect(committed_truth(state).fighters?.p0?.cell).toBe(33)
-    expect(committed_state(state).fighters?.p0?.cell).toBe(7)
   })
 
   test('PRESENTATION stays on the paced display fold: the rendered cell is unmoved', () => {

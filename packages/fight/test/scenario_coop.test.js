@@ -9,7 +9,7 @@ import { describe, test, expect } from 'bun:test'
 
 import { create_fight_store } from '../src/store.js'
 import { state_hash, canonical_state } from '../src/inputs.js'
-import { committed_state } from '../src/store.js'
+import { committed_truth } from '../src/store.js'
 import { engine_view, board_view, presenting } from '../src/project.js'
 import { MOB_TURN_MS } from '../src/present.js'
 
@@ -136,8 +136,8 @@ describe('coop — two actors, one truth', () => {
     expect(bob_remote.map((t) => t.source_id)).toEqual(['mob-0'])
 
     // CONVERGENCE: both committed folds are byte-identical — the parity guarantee across clients.
-    const a = committed_state(alice.getState())
-    const b = committed_state(bob.getState())
+    const a = committed_truth(alice.getState())
+    const b = committed_truth(bob.getState())
     expect(state_hash(a)).toBe(state_hash(b))
     expect(JSON.stringify(canonical_state(a))).toBe(JSON.stringify(canonical_state(b)))
     expect(a.fighters.m0.hp).toBe(12)

@@ -10,7 +10,8 @@
 import { describe, expect, test } from 'bun:test'
 
 import { active_store, ev, fight_object, mob, participant, ME, PEER, T0 } from '../harness/fixtures.js'
-import { committed_state, presented_state } from '../src/fold.js'
+import { presented_state } from '../src/fold.js'
+import { committed_truth } from '../src/store.js'
 import { apply_peer_batch, drafted_batches, subscribe_flagged } from '../src/txs.js'
 
 // encode(x,y)=y*20+x: 21=(1,1) 22=(2,1) 24=(4,1) 28=(8,1) 45=(5,2). A coop board: ME at seat 0 (cell 21), a PEER
@@ -26,9 +27,9 @@ const coop_store = () =>
   })
 
 const peer_cell = (store, key = 'p1') => presented_state(store.getState()).fighters?.[key]?.cell
-const committed_peer_cell = (store, key = 'p1') => committed_state(store.getState()).fighters?.[key]?.cell
+const committed_peer_cell = (store, key = 'p1') => committed_truth(store.getState()).fighters?.[key]?.cell
 const mob_hp = (store) => presented_state(store.getState()).fighters?.m0?.hp
-const committed_mob_hp = (store) => committed_state(store.getState()).fighters?.m0?.hp
+const committed_mob_hp = (store) => committed_truth(store.getState()).fighters?.m0?.hp
 
 // A receipt paces its NON-LOCAL (peer) turn into a presentation wave; presented_state holds at the pre-wave floor
 // until the renderer acks it. Drain the wave so a post-receipt presented read reflects the fully-played state.

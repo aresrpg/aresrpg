@@ -10,7 +10,7 @@
 // (the #332 budget projection), so the MP phase is preserved until the player's own End Turn / the deadline.
 import { describe, expect, test } from 'bun:test'
 
-import { committed_state, create_fight_store, presented_state } from '../src/store.js'
+import { committed_truth, create_fight_store, presented_state } from '../src/store.js'
 
 const GRID_W = 20
 const FIGHT = '0xf1'
@@ -72,14 +72,14 @@ const vanish_predicted = (target) => ({
 describe('#323 a self-cast keeps the turn open — the auto-end is the deadline, never the cast', () => {
   test('it is my turn before the cast (precondition)', () => {
     const store = boot()
-    expect(committed_state(store.getState()).active).toBe('p0')
+    expect(committed_truth(store.getState()).active).toBe('p0')
   })
 
   test('casting a self-buff does NOT end my turn — active stays mine, granted MP is spendable', () => {
     const store = boot()
     store.getState().input(vanish_predicted(START), 2_000)
     // the turn is STILL mine (no implicit end-turn) …
-    expect(committed_state(store.getState()).active).toBe('p0')
+    expect(committed_truth(store.getState()).active).toBe('p0')
     // … and the +1 MP the buff granted is live on the presented pool (spendable this turn — the MP phase held).
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
   })
@@ -89,6 +89,6 @@ describe('#323 a self-cast keeps the turn open — the auto-end is the deadline,
     store.getState().input(vanish_predicted(START), 2_000)
     store.getState().input({ type: 'tick', draft_count: 1 }, 3_000) // long before deadline − buffer (85_000)
     expect(store.getState().commit_due).toBe(false) // NOT robbed — the turn stays open until End Turn / the deadline
-    expect(committed_state(store.getState()).active).toBe('p0')
+    expect(committed_truth(store.getState()).active).toBe('p0')
   })
 })

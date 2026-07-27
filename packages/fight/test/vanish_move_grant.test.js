@@ -7,7 +7,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { bfsReachable } from '../src/los.js'
 import * as project from '../src/project.js'
-import { create_fight_store, committed_state, presented_state } from '../src/store.js'
+import { create_fight_store, committed_truth, presented_state } from '../src/store.js'
 
 const GRID_W = 20
 const FIGHT = '0xf1'
@@ -119,7 +119,7 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
     expect(project.draft_cast_first(store.getState().log)).toBe(true)
     // committed base 3 + immediate grant 1 = 4 MP of reach from the un-moved cell.
     const expected = bfsReachable(START, 4, wash_blocked(store)).length
-    expect(committed_state(store.getState()).fighters.p0.mp).toBe(3)
+    expect(committed_truth(store.getState()).fighters.p0.mp).toBe(3)
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
     expect(wash_reach(store)).toBe(expected)
   })

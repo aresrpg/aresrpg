@@ -7,7 +7,7 @@
 // OTHER direction as a pure, versioned seam the V2 core needs: given the sim's OWN emitted event, evolve the
 // PRESENTATION-OBSERVABLE state and hand back the frame facts of that event. It is the leaf-side twin of the
 // fight core's chain-event fold (`@aresrpg/fight` inputs.js `apply_action`, which folds the chain's decoded
-// journal onto its committed_state) — SAME relationship as `produce_predicted_render_events` (sim) ↔
+// journal into committed truth) — SAME relationship as `produce_predicted_render_events` (sim) ↔
 // `produce_receipt_render_turns` (chain). It invents no math: every delta it applies is a value the sim event
 // ALREADY carries (a hit's `new_health`, a push's `cell`), and where an event does not carry enough to
 // reconstruct the observable state that is a FINDING the coherence property surfaces, never a value we fabricate.

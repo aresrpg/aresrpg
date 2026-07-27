@@ -21,7 +21,7 @@
 import { describe, expect, test } from 'bun:test'
 import { create_fight_store } from '@aresrpg/fight/store'
 import { decode } from '@aresrpg/fight/los'
-import { committed_state } from '@aresrpg/fight/store'
+import { committed_truth } from '@aresrpg/fight/store'
 import { normalize_spell_templates, MOB_ATTACK_ID } from '@aresrpg/sim/spell_templates'
 import { digest, replay_capsule } from '@aresrpg/sim/timeline'
 import {
@@ -217,7 +217,7 @@ describe('L4 · a seeded fight runs start → decided, headless', () => {
   })
 
   test('ONE OBSERVABLE, TWO FOLDERS — the core’s committed hp agrees with the sim’s own', () => {
-    const committed = committed_state(fold_through_core(run).getState())
+    const committed = committed_truth(fold_through_core(run).getState())
     for (const [index, mob] of run.chain.sim_state.team1.entries()) {
       const folded = committed.fighters?.[`m${index}`]
       if (!folded) continue

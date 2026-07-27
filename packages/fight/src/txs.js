@@ -128,7 +128,7 @@ export const build_turn_batch = (store, to_cell = null) => {
  * re-implementation of range/LoS). When it can't reach, the cast is DROPPED. Re-validation reports only this
  * domain decision; the local commit flow owns any player-facing cancellation event. A void cast or a still-valid
  * target composes the drafted cell unchanged.
- * Pure: the caller resolves the drafted cast's target fighter → its committed cell (committed_state, my drafts
+ * Pure: the caller resolves the drafted cast's target fighter → its committed cell (`committed_truth`, my drafts
  * excluded — the chain base the PTB fires against), and passes the reach predicate it already owns.
  * @param {{ target_cell:number, committed_cell:number|null|undefined, reaches:(cell:number)=>boolean }} params
  * @returns {{ target:number } | { dropped:true }}

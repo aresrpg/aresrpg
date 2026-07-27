@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, test, expect } from 'bun:test'
 
 import { canonical_state, fold_log, normalize_events, state_hash } from '../src/inputs.js'
-import { committed_state, create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 
 // PARITY PROOF — S0's definition of done (FIGHT_REWRITE_DESIGN §1/§5). The FIGHTREAL-captured REAL testnet receipt
 // (digest 5wdRBuZzjp: TurnEnded→MobMoved→Hit→Cast→TurnStarted) folded through the dark core must (1) byte-match a
@@ -86,7 +86,7 @@ describe('fight-core parity — real receipt → sim-shaped state (byte parity)'
       const s = create_fight_store()
       s.getState().input({ type: 'init', fight_id: FIGHT_ID, my_key: 'p0' })
       for (const p of pages) s.getState().input(p, 0)
-      return state_hash(committed_state(s.getState()))
+      return state_hash(committed_truth(s.getState()))
     }
     // in-order (head + tail in one page) vs out-of-order (the tail page waits on the gap, the head page fills it):
     // both fold to active=p0, deadline=5, p0.hp=30 — the same committed state.

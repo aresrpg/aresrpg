@@ -18,7 +18,7 @@
 // core — the same door a chain receipt enters in the live game.
 
 import { describe, expect, test } from 'bun:test'
-import { committed_state, create_fight_store } from '@aresrpg/fight/store'
+import { committed_truth, create_fight_store } from '@aresrpg/fight/store'
 import { encode } from '@aresrpg/fight/los'
 import {
   commands_from_staged,
@@ -200,7 +200,7 @@ describe('#931 · a committed player cast lands', () => {
   })
 
   test('and the PRODUCTION core folds the same loss — one observable, two folders', () => {
-    const committed = committed_state(fold_through_core(run).getState())
+    const committed = committed_truth(fold_through_core(run).getState())
     expect(committed.fighters.m0.hp).toBe(run.chain.sim_state.team1[0].health)
     expect(committed.fighters.m0.hp).toBeLessThan(run.target_hp_before)
   })

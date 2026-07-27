@@ -15,9 +15,9 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
-import { presented_state, committed_state } from '../src/fold.js'
+import { presented_state } from '../src/fold.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -98,7 +98,7 @@ describe('#8 — the timeline card HP holds through the death beat, never snaps 
     expect(during.dead, 'the fighter is held visually alive through its own death beat').toBe(false)
     // The re-fold itself holds the fighter alive at pre-death while the killing Hit is masked.
     expect(presented_state(store.getState()).fighters.p0.alive, 'presented holds alive through the beat').toBe(true)
-    expect(committed_state(store.getState()).fighters.p0.alive, 'committed already floored dead').toBe(false)
+    expect(committed_truth(store.getState()).fighters.p0.alive, 'committed already floored dead').toBe(false)
 
     // Drain the paced wave → the death beat presents → the card converges to committed truth (0 / dead).
     for (const t of [...store.getState().wave]) store.getState().input({ type: 'presented', seq: t.seq }, 2_500)

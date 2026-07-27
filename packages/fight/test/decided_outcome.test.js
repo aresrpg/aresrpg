@@ -12,9 +12,8 @@
 // and fills when the settle receipt lands.
 import { describe, test, expect } from 'bun:test'
 
-import { create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 import * as project from '../src/project.js'
-import { committed_state } from '../src/fold.js'
 
 const FIGHT = '0xvl'
 const ME = '0xhero'
@@ -117,7 +116,7 @@ describe('A9 — the victory dialog mounts on client-knowable fight-over (settle
     fold_killing_receipt(store)
     const s = store.getState()
     // client-knowable, RECEIPT-PROVEN: every enemy mob is dead in the COMMITTED fold (intents excluded).
-    const mobs = Object.values(committed_state(s).fighters ?? {}).filter((f) => f.is_mob)
+    const mobs = Object.values(committed_truth(s).fighters ?? {}).filter((f) => f.is_mob)
     expect(mobs.length).toBeGreaterThan(0)
     expect(mobs.every((f) => !f.alive)).toBe(true)
     // the receipt-gated settle machine is deliberately NOT armed (no Victory action / WON read) — a17c9fc stands.
@@ -136,7 +135,7 @@ describe('A9 — the victory dialog mounts on client-knowable fight-over (settle
 
   test('receipt-proven ONLY: an OPTIMISTIC kill (my intent) never decides the dialog (no false victory)', () => {
     const store = active_store()
-    // my optimistic cast predicts the kill (source intent) — committed_state excludes it, so it must NOT decide.
+    // my optimistic cast predicts the kill (source intent) — committed_truth excludes it, so it must NOT decide.
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'cast', ap_cost: 5, damaging: true, target_cell: 45 } }, T0 + 2_000)
@@ -227,7 +226,7 @@ describe('A9 — the victory dialog mounts on client-knowable fight-over (settle
       T0 + 6_000
     )
     const s = store.getState()
-    expect(committed_state(s).fighters.p0.alive).toBe(false) // I am down
+    expect(committed_truth(s).fighters.p0.alive).toBe(false) // I am down
     expect(project.outcome_winner(s)).toBe(null) // no false victory — the downed-winner case defers to the settle read
     expect(project.board_view(s).decided_winner).toBe(null)
   })

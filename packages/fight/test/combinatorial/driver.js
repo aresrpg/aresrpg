@@ -10,7 +10,7 @@
 import { reduce } from '@aresrpg/sim/reduce'
 import { get_current_turn_entity, find_entity } from '@aresrpg/sim/fight_state'
 import { is_invisible } from '@aresrpg/sim/fight_statuses'
-import { create_fight_store, committed_state } from '@aresrpg/fight/store'
+import { create_fight_store, committed_truth } from '@aresrpg/fight/store'
 
 import { build_templates, build_state } from './entities.js'
 import { sim_to_chain, snapshot_of, entity_index } from './bridge.js'
@@ -57,7 +57,7 @@ const capture = (initial, ctx, combo) => {
 
 /** The committed terminal fold projected to { key → {health, cell{x,y}, alive, invisible} }. */
 const fold_terminal = (store) => {
-  const c = committed_state(store.getState())
+  const c = committed_truth(store.getState())
   const out = {}
   for (const [key, f] of Object.entries(c.fighters ?? {}))
     out[key] = { health: f.hp, cell: decode(f.cell), alive: f.alive, invisible: !!f.invisible }
