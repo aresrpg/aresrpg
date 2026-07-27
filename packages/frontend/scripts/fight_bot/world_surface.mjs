@@ -187,6 +187,34 @@ const place_all = async ({ seats, log, on_evidence }) => {
   return placements
 }
 
+/**
+ * RELEASE A STRAND THIS RUN INHERITED — the setup half of the teardown rule, and the reason a drive can be run
+ * twice in a row at all.
+ *
+ * A character escrowed in a live chain fight cannot create another one, and the escrow outlives whoever left
+ * it: a crashed run, an expired turn nobody advanced, a play session that walked away. The world session
+ * RECONNECTS the seat into that fight at boot, and `__dev_start_world_fight` then drops it LOCALLY
+ * (`reset_local`) while the chain escrow stays — so every one of its several hundred candidates refuses and
+ * the scan spends its whole ceiling learning one fact. Measured exactly there (#1184's second run: fight
+ * 0xb294e4fc…, journal_head 25, turn expired, 420s burned, zero diagnosis).
+ *
+ * So the seat is freed BEFORE the scan, and the read is the signal: a seat holding nothing answers `no active
+ * fight` and this costs one read. The rig wants a free seat, never that fight's rewards.
+ */
+export const release_strand = async ({ seat, log, settle_ms = 60_000 }) => {
+  // Polled slowly on purpose: on a CLEAN seat this wait ends in a timeout, and the whole cost of proving the
+  // seat is free should be a handful of reads rather than a hundred and fifty.
+  const held = await wait_for(seat.client, (read) => !!read.ok, { timeout_ms: settle_ms, poll_ms: 2000 })
+  if (!held) return { ok: true, released: false }
+  log(`[bot] seat ${seat.name}: inherited a live fight ${held.fight_id} — releasing it before claiming`)
+  const result = await abandon_fight({ seat, log })
+  if (!result.ok)
+    throw new Error(
+      `seat ${seat.name} is escrowed in ${held.fight_id} and could not forfeit it (${result.error}) — no create can succeed while that escrow stands`
+    )
+  return { ok: true, released: true, fight_id: held.fight_id }
+}
+
 /** RELEASE a fight this run opened and did not finish, so the seat is free for the next one. */
 export const abandon_fight = async ({ seat, log, timeout_ms = 300_000 }) => {
   const result = await within(seat.client.abandon(), timeout_ms, `seat ${seat.name}'s forfeit`).catch((error) => ({
@@ -229,6 +257,12 @@ export const open_world_fight = async ({
   const seams = await creator.client.seams()
   log(`[bot] DEV seams live: ${seams.join(' ')}`)
 
+  // A SEAT MUST BE FREE BEFORE IT CAN CLAIM — every seat, because a joiner escrowed elsewhere cannot join
+  // either. Done for all of them up front so one strand does not surface three steps later as a refusal that
+  // names the wrong thing.
+  const strands = []
+  for (const seat of booted) strands.push({ seat: seat.name, ...(await release_strand({ seat, log })) })
+  on_evidence({ strands })
   // THE SEARCH LEG (#1184) — the dry-scan first (its refusals are free), and only when it finds nothing does
   // the seat pay to provision a zone. A drive that cannot do this dead-ends on any world that has been played.
   const provisioned = await provision_fight({
@@ -238,7 +272,7 @@ export const open_world_fight = async ({
     max_hops,
   })
   on_evidence({ provisioning: provisioned })
-  const fight_id = provisioned.fight_id
+  const { fight_id } = provisioned
   if (!fight_id)
     throw new Error(
       `no claimable mob group in reach and the search leg could not provision one — ${provisioned.why ?? 'no reason given'}`
