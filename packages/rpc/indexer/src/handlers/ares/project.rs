@@ -472,7 +472,13 @@ pub(super) fn map_with_context(
         // is DERIVED at read time from `level` (object snapshot) minus Σ allocations
         // (the flat 1:1 cost makes Σ allocations == points spent). `$.stats` is NX-init'd
         // here (not in char_init) so the arm is self-contained.
-        ("stat_allocation", "StatRaised") => {
+        //
+        // TWO emitting modules, one projection: the #1289 module merge folded
+        // `stat_allocation` into `character_link` (same event name, same field order, same
+        // meaning). Both are matched because BOTH exist in the indexed history — the old
+        // module's events stay in every checkpoint before the republish, and re-indexing
+        // from an earlier watermark must still project them.
+        ("stat_allocation" | "character_link", "StatRaised") => {
             let e: StatRaised = decode(contents)?;
             let ch = e.character.to_canonical_string(true);
             let key = k_character(&ch);

@@ -1157,6 +1157,30 @@ fn stat_raised_upserts_absolute_per_stat_allocation() {
     assert!(w.iter().all(|x| !matches!(x, RedisWrite::NumIncrBy { .. })));
 }
 
+/// REGRESSION (issue #1315 finding 8): the #1289 module merge folded `stat_allocation` into
+/// `character_link`, so every FRESH stat raise is emitted as `character_link::StatRaised`. Matching
+/// the retired module alone silently stopped indexing stat allocations — the character doc kept
+/// serving the pre-republish `$.stats` while the chain moved on. Same body, same projection.
+#[test]
+fn stat_raised_projects_from_the_merged_character_link_module() {
+    let ch = oid(0xc2);
+    let body = enc(&StatRaised { character: ch, stat: 3, points: 5, stat_total: 41 });
+    let merged = map("character_link", "StatRaised", PKG, SENDER, TS, &body).unwrap();
+    let cs = ch.to_canonical_string(true);
+    let key = k_character(&cs);
+    assert_eq!(
+        merged,
+        vec![
+            char_init(&key, &cs),
+            set_nx(key.clone(), "$.stats", json!({})),
+            set(key, "$.stats[\"3\"]", json!(41)),
+        ]
+    );
+    // Byte-identical projection from BOTH emitters — the history before the republish keeps
+    // re-indexing correctly, which is why the retired module is matched rather than replaced.
+    assert_eq!(merged, map("stat_allocation", "StatRaised", PKG, SENDER, TS, &body).unwrap());
+}
+
 #[test]
 fn protector_triggered_writes_the_per_gatherer_signal() {
     let (world, tmpl) = (oid(0xe0), oid(0x7b));
