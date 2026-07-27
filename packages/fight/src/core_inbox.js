@@ -30,7 +30,7 @@ import { hash_state } from '@aresrpg/sim/evolve'
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
 import { fighter_key, seat_resolver } from './inputs.js'
-import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
+import { board_state_from_fight, fight_geometry_complete, roster_open } from './board_state.js'
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
@@ -66,6 +66,14 @@ export const truth_version = (inbox) => truth_frontier(inbox).version
  *  belong to content, so they are excluded — which also keeps the stored log pure DATA (shuffle-safe, serializable). */
 const action_hash = (action) => {
   const { source, resolve_seat, version, event_idx, seq, ...content } = action
+  return hash_state(content)
+}
+
+const roster_hash = (view) =>
+  hash_state((view?.escrow ?? []).map((row) => [String(row.character ?? ''), String(row.addr ?? '')]))
+
+const snapshot_content_hash = (view) => {
+  const { version, invisibility_statuses, ...content } = view ?? {}
   return hash_state(content)
 }
 
@@ -266,11 +274,11 @@ export const admit_events = (inbox, actions, now) => {
 }
 
 /**
- * Adopt a decoded Fight OBJECT through the ONE bootstrap/reconcile door. The admitted event frontier is the cursor:
- * a snapshot at or behind it is discarded WHOLE; a snapshot ahead of it becomes the complete new base. There is no
- * field merge and no second "joiner rebuild" path. Re-adoption clears the now-subsumed event log: by definition an
- * ahead snapshot is newer than every admitted row, and keeping a partial tail would let old facts leak across the
- * authoritative base boundary. Initial bootstrap is simply the same rule against the empty cursor.
+ * Adopt a decoded Fight OBJECT through the ONE bootstrap/reconcile door. Placement is the roster window: its newest
+ * complete read wins even if an active read arrived first, because joins are legal only there and arrival order must
+ * not decide which seats exist. Once the roster is frozen, same-phase object reads are checkpoints; dynamic fight
+ * state rides the event tail. An ahead lifecycle transition may replace the base through this same door. Rows the
+ * replacement subsumes are dropped while a tail above a lowered placement base is retained.
  *
  * Pure. `board_state_from_fight` is the one rich-view decode home; the raw wire rows are revived here first.
  * @param {import('./core_state.js').InboxState} inbox
@@ -281,11 +289,6 @@ export const admit_events = (inbox, actions, now) => {
  */
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const object_version = Number(version ?? 0)
-  const cursor = truth_version(inbox)
-  // A receipt-first joiner can reach version V before its first complete Fight object at V arrives. Equality may
-  // seed that MISSING base once. With an existing base, however, an object at the event cursor is settled: letting
-  // it replace event-proven state is the same-version position rollback #1336 records.
-  if (object_version < cursor || (object_version === cursor && inbox.base_view != null)) return inbox
   const fight = revive_wire(rows)
   if (fight != null && !fight_geometry_complete(fight)) return inbox
   const base_view = board_state_from_fight({
@@ -299,7 +302,38 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     creator: ctx.creator ?? null,
     ...(ctx.offset ? { offset: ctx.offset } : {}),
   })
-  return { ...inbox, log: {}, base_view, base_version: object_version }
+  const has_base = inbox.base_view != null
+  const current_roster_open = roster_open(inbox.base_view)
+  const incoming_roster_open = roster_open(base_view)
+  const cursor = truth_version(inbox)
+  const has_event_tail = Object.values(inbox.log).some((action) => Number(action.version) > inbox.base_version)
+
+  if (has_base) {
+    // Placement bases converge on max(version); a placement read outranks an active read that raced ahead.
+    if (incoming_roster_open) {
+      if (current_roster_open && object_version <= inbox.base_version) return inbox
+    } else {
+      // Leaving placement may reconcile only the SAME frozen roster. An active read that introduces a joiner is a
+      // raced checkpoint; the later placement read remains the only lawful roster source. The event tail must have
+      // already proved the lifecycle transition, otherwise arrival order between one placement and one active object
+      // would decide the roster base.
+      if (object_version <= cursor) return inbox
+      if (current_roster_open && roster_hash(base_view) !== roster_hash(inbox.base_view)) return inbox
+      if (current_roster_open && !has_event_tail) return inbox
+      if (base_view.status === inbox.base_view.status) {
+        if (roster_hash(base_view) !== roster_hash(inbox.base_view)) return inbox
+        if (!has_event_tail && snapshot_content_hash(base_view) === snapshot_content_hash(inbox.base_view)) return inbox
+      }
+    }
+  } else if (object_version < cursor) {
+    // A receipt-first joiner may seed a missing base at the cursor, never behind it.
+    return inbox
+  }
+
+  const log = Object.fromEntries(
+    Object.entries(inbox.log).filter(([, action]) => Number(action.version) > object_version)
+  )
+  return { ...inbox, log, base_view, base_version: object_version }
 }
 
 /**
