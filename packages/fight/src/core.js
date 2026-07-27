@@ -15,6 +15,7 @@ export { ingest } from './core_ingest.js'
 export { replay, replay_trace } from './core_replay.js'
 
 export { fold_canonical, sorted_tail } from './core_fold.js'
+export { canonical_fingerprint } from './core_diagnostics.js'
 export { active_intents, fold_forecast, queue_intent, refuse_intents, resolve_intents } from './core_intents.js'
 export {
   project_board,
