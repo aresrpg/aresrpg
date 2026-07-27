@@ -17,6 +17,8 @@ import {
   move_mp_spent,
   path_between,
   reconstructed_path,
+  armed_at,
+  placements_by_anchor,
   TELEPORT_ARRIVAL_MS,
   TRAP_BEAT_MS,
 } from './fight_render_prims.js'
@@ -164,18 +166,12 @@ export function produce_receipt_render_turns(
   // WHEN a trap became armed, within THIS receipt (#1219). `my_traps` is written OPTIMISTICALLY at draft time, so
   // by the time a receipt is narrated the client's trap ledger already holds a cell the turn only takes LATER —
   // and matching that cell against an EARLIER walk flashed a detonation on a path the player had already left.
-  // A trap's placement is the `Cast` row that targeted its anchor; a walk is only armed by placements before it.
-  const placed_in_receipt = new Map()
-  decoded_events.forEach((candidate, index) => {
-    if (candidate.kind !== 'Cast' || candidate.target_cell == null) return
-    const anchor = Number(candidate.target_cell)
-    if (!placed_in_receipt.has(anchor)) placed_in_receipt.set(anchor, index)
-  })
-  /** Was this cell's trap already armed when the row at `cursor` ran? A placement outside this receipt predates it. */
-  const armed_before = (encoded, cursor) => {
-    const placed = placed_in_receipt.get(Number(encoded))
-    return placed == null || placed < cursor
-  }
+  // The selection rule and its boundary live in ONE home shared with the fold (#1248): this stream's ordinal is
+  // the decoded row index, and `armed_at` answers the rest.
+  const placements = placements_by_anchor(decoded_events, (candidate) =>
+    candidate.kind === 'Cast' ? candidate.target_cell : null
+  )
+  const armed_before = (encoded, cursor) => armed_at(placements, encoded, cursor)
 
   // ONE home for "which cells did this walk ENTER". A receipt's Moved/MobMoved carries only the landing cell, so
   // the route is reconstructed (obstacle- and body-aware, through the sim's own find_path_4dir) unless the caller

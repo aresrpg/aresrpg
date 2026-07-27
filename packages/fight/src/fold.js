@@ -18,7 +18,7 @@ import { apply_action, empty_state, fighter_key, seat_resolver } from './inputs.
 import * as settle_input from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
 import { GRID_W } from './los.js'
-import { decoded_cell, encoded_cell, reconstructed_path } from './fight_render_prims.js'
+import { armed_at, decoded_cell, encoded_cell, placements_by_anchor, reconstructed_path } from './fight_render_prims.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
 import {
@@ -326,8 +326,8 @@ export const recompute = (draft, now) => {
   const resolve_seat_key = seat_resolver(draft.view)
   const cell_at = new Map(Object.entries(base.fighters ?? {}).map(([key, fighter]) => [key, fighter.cell]))
   const committed_entries = []
-  for (const entry of authoritative_tail) {
-    if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) continue
+  authoritative_tail.forEach((entry, at) => {
+    if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) return
     // Keyed EXACTLY as `apply_action` keys the same row (its own `resolve_seat` first) — a ledger that disagreed
     // with the fold about who moved would track the wrong body's walk.
     const resolve_seat = entry.resolve_seat ?? resolve_seat_key
@@ -351,34 +351,20 @@ export const recompute = (draft, now) => {
             ...board_facts,
             occupied_cells,
           }).map((cell) => encoded_cell(cell, GRID_W))
-    const event_idx = Number(entry.event_idx ?? 0)
-    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version, event_idx })
+    // `at` is this row's ordinal in the sorted tail — the position the shared placement rule compares against.
+    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version, at })
     cell_at.set(key, to)
-  }
+  })
   // THE SEQUENCE (#1219, the regression the crossing widening above shipped): a whole turn commits as ONE receipt
   // at ONE version, so a walk and a trap cast in that same turn are indistinguishable by version — and a walk that
   // happened BEFORE the trap existed retired it on arrival ("cast a trap onto a cell of my own earlier path — it
-  // never appears"). The log is already ordered `(version, event_idx)`, and a trap's placement is the `Cast` row
-  // that targeted its anchor, so the ordering is READ off the receipts rather than stored. LAST such row wins: a
-  // re-cast on a freed anchor is a new trap, and only crossings after THAT placement may retire it.
-  const placed_at = new Map()
-  for (const entry of authoritative_tail)
-    if (entry.kind === 'Cast' && entry.target_cell != null)
-      placed_at.set(Number(entry.target_cell), {
-        version: Number(entry.version),
-        event_idx: Number(entry.event_idx ?? 0),
-      })
-  // A placement whose row is NOT in this tail predates the whole window, so every crossing in it is after the
-  // trap — the permissive default this ledger has always had (it errs toward "it stays", never toward inventing
-  // an ordering it cannot see).
-  const after_placement = (entry, trap) => {
-    const placement = trap.cells.map((cell) => placed_at.get(Number(cell))).find(Boolean)
-    if (!placement) return true
-    return (
-      entry.version > placement.version ||
-      (entry.version === placement.version && entry.event_idx >= placement.event_idx)
-    )
-  }
+  // never appears"). The selection rule and its boundary live in ONE home shared with the renderer (#1248,
+  // `fight_render_prims.armed_at`); `authoritative_tail` is already sorted `(version, event_idx)`, so this
+  // stream's ordinal is simply the tail index.
+  const placements = placements_by_anchor(authoritative_tail, (entry) =>
+    entry.kind === 'Cast' ? entry.target_cell : null
+  )
+  const after_placement = (entry, trap) => trap.cells.some((cell) => armed_at(placements, cell, entry.at))
   const occupied_cells = new Set(
     Object.values(chain_committed.fighters ?? {})
       .filter((fighter) => fighter.cell != null)
