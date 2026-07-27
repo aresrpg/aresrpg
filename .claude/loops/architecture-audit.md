@@ -12,6 +12,10 @@ the counter is that every verdict must cite file:line evidence or name the exact
 - The standing loop issues (coverage/meaning/drift) for context on known debt.
 
 ## The rubric — answer each with evidence
+**PRIMARY STANDING AXIS (owner ruling 07-28):** multiple-sources-of-truth is the most severe
+finding class — logic used in ≥2 places that was never extracted is hunted every pass, recent
+landings first.
+
 1. **Smallest architecture:** for each new module/abstraction in the diff — does it have a second
    concrete use? Could it be deleted by moving its logic into an existing seam? Name the seam.
 2. **Single source of truth:** does any fact now live in two homes (a value, a formula, a state
