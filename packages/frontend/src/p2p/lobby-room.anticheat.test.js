@@ -1,23 +1,29 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // ANTI-CHEAT WIRING VERIFICATION — a CENSUS of what packages/world/src/presence.js's
-// CHEATER-PLAUSIBILITY DROP actually catches on the inbound WebRTC peer-state path, driven through the REAL
-// lobby-room.js wiring (the lobby-room mock idiom — trystero mocked, the app's own pos_action/state_action
-// .onMessage fired exactly as a received Trystero data message would trigger it). No server exists to
-// validate anyone (see presence.js header) — this suite proves what the CLIENT-SIDE self-regulation actually
+// CHEATER-PLAUSIBILITY DROP actually catches on the inbound courier position path, driven through the REAL
+// SSE-row decoder and presence door. The courier validates shape and authenticates the posting address, while
+// the presence fold still owns movement plausibility. This suite proves what the CLIENT-SIDE self-regulation
 // does today, greens and gaps both. Six rows: valid movement / teleport /
 // bounds-NaN-absurd / malformed schema / spoofed identity mid-session / rapid-fire spam.
 
 import { test, expect } from 'bun:test'
 
 import '../test_helpers/expedition_sdk_mock.js'
+import { ingest_courier_event } from '../courier/world.js'
 import { presence_store } from '../world-shell/presence_adapter.js'
 import { reset_trystero_mock, trystero_actions as actions } from '../test_helpers/trystero_mock.js'
 
 const { join_lobby, leave_lobby } = await import('./lobby-room.js')
 
-const fire_pos = (/** @type {any} */ p, /** @type {string} */ peer_id = `peer-${p.id}`) =>
-  actions.get('pos').onMessage(p, { peerId: peer_id })
+const fire_pos = (/** @type {any} */ p, /** @type {string} */ _connection = `courier-${p.id}`) =>
+  ingest_courier_event({
+    type: 'position',
+    character: p.id,
+    x: p.x,
+    z: p.y,
+    heading: p.yw,
+  })
 const fire_state = (/** @type {any} */ p, /** @type {string} */ peer_id = `peer-${p.id}`) =>
   actions.get('state').onMessage(p, { peerId: peer_id })
 const peer = (/** @type {string} */ id) => presence_store.getState().peers.get(id)
@@ -130,8 +136,8 @@ test('ROW 4c peer_state: missing id dropped at the transport door; hostile/malfo
   console.log('ROW 4c verdict: peer_state color_1 from a non-numeric string →', p?.color_1)
 })
 
-// ─── ROW 5 — spoofed identity mid-session (census: identity is NOT a fixable class in this lane) ───
-test('ROW 5a the SAME webrtc connection can broadcast as two different character_ids (no peerId↔id binding)', () => {
+// ─── ROW 5 — address/character binding (census: ownership verification stays outside this lane) ───
+test('ROW 5a one authenticated address may post positions for two character_ids', () => {
   boot()
   fire_pos({ id: '0xALICE', x: 0, y: 0 }, 'attacker-conn')
   fire_pos({ id: '0xBOB', x: 0, y: 0 }, 'attacker-conn') // SAME peerId, different claimed identity
@@ -139,15 +145,15 @@ test('ROW 5a the SAME webrtc connection can broadcast as two different character
   expect(peer('0xBOB')).toBeDefined() // both accepted as distinct peers — census, not asserting a fix
 })
 
-test('ROW 5b a DIFFERENT connection can hijack an already-live character_id within speed-check bounds', () => {
+test('ROW 5b a different authenticated address can update an already-live character_id within speed-check bounds', () => {
   with_fake_clock((advance) => {
     boot()
     fire_pos({ id: '0xVICTIM', x: 0, y: 0 }, 'victim-conn') // the real victim announces
     advance(250)
-    // an unrelated connection ('attacker-conn') sends a plausible-pace update AS the victim's character_id
+    // an unrelated authenticated address sends a plausible-pace update AS the victim's character_id
     fire_pos({ id: '0xVICTIM', x: 1, y: 0 }, 'attacker-conn')
-    // census verdict below — the fold has zero notion of peerId, only the claimed `id`
-    console.log('ROW 5b verdict: cross-connection hijack of 0xVICTIM →', peer('0xVICTIM')?.cell)
+    // census verdict below — the fold has the verified address on chat, but position identity is the claimed id.
+    console.log('ROW 5b verdict: cross-address update of 0xVICTIM →', peer('0xVICTIM')?.cell)
   })
 })
 

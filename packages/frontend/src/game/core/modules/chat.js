@@ -3,7 +3,8 @@
 // Chat — stateless courier POSTs fan out on the world presence SSE. Incoming messages flow through
 // @aresrpg/world's presence atom: the stream adapter dispatches `chat_received`, the core carries the chat head, and this module's
 // `observe` subscribes to it and folds each row into message_history (session-local, no backlog). CHANNEL
-// routes the render color; `address` (= the sender's character id off the wire) drives the "me" test.
+// routes the render color; `id` is the character identity used for the "me" test, while `address` is the
+// zkLogin-verified wallet address.
 
 import { subscribe_chat } from '@aresrpg/world/presence'
 
@@ -41,20 +42,17 @@ export default function chat() {
       // delivers each row exactly once, in order — fold it into message_history. from_me compares the
       // sender's character id against MY active character. `address` is the zkLogin-verified wallet address,
       // while `id` remains the character identity used for the local/remote display verdict.
-      subscribe_chat(
-        presence_store,
-        ({ id, message, address, name = '', channel = CHANNEL.general, target = '' }) => {
-          dispatch('action/chat_message', {
-            id,
-            message,
-            address,
-            name,
-            channel,
-            target,
-            from_me: id === get_state().selected_character_id,
-          })
-        },
-      )
+      subscribe_chat(presence_store, ({ id, message, address, name = '', channel = CHANNEL.general, target = '' }) => {
+        dispatch('action/chat_message', {
+          id,
+          message,
+          address,
+          name,
+          channel,
+          target,
+          from_me: id === get_state().selected_character_id,
+        })
+      })
     },
   }
 }
