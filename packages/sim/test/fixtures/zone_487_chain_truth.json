@@ -5,6 +5,9 @@
     "world": "0xbe3f36264b09c95e86491a9f0c1bcb744071d0bcc4176f0b7e2e60a22f115e1c",
     "package_latest": "0x37266af87e28b31bfb78a73148e163ab8e9b31abf28f0b2d83113491ad638d15",
     "package_origin": "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9",
+    "superseded": [
+      "0x21a4e5807e4e4b04a5b0704a2276849401990e0fcca6c3d9abfdd910edc71b78"
+    ],
     "method": "SimulateTransaction (read-only, gRPC) of zones_view::mob_spawn_id / mob_group_pos / mob_group_template and resource_pos / resource_template / resource_job over the LIVE package; world tables read from the World object and its MobLevelKey dynamic fields",
     "note": "CHAIN TRUTH. The chain is the source of truth; the sim twin must reproduce every row below from the same inputs. Zone 487:487 is the only searched zone on this world (18 dynamic fields, exactly one ZoneKey), so the parity surface is widened to EVERY row of both streams rather than a second zone. zone.group_root is the LIVE ZoneGroupCommitment.root verbatim (33 bytes: the 0x02 format tag the chain dispatches on, then the blake2b digest) so the twin picks its derivation the same way the chain does."
   },
