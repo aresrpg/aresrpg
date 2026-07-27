@@ -14,4 +14,14 @@ export {
   prediction_tally,
   summarise,
 } from './assert.js'
+export {
+  assert_joiner_seated,
+  assert_placements,
+  assert_turn_order,
+  assert_move_proofs,
+  assert_settlement_seen,
+  assert_member_loot,
+  coop_rows,
+} from './coop.js'
+export { MAX_HOPS, pick_hop, plan_provision, zone_key_of } from './provision.js'
 export * from './read.js'

@@ -378,7 +378,7 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
 
   test('a cast that landed passes, budget row included', () => {
     const rows = assert_turn(cast_plan, { ok: true, before: snapshot(100, 6), after: snapshot(80, 3) })
-    expect(summarise(rows)).toEqual({ checks: 2, passed: 2, failed: 0, verdict: 'PASS' })
+    expect(summarise(rows)).toEqual({ checks: 2, passed: 2, failed: 0, gated: 0, verdict: 'PASS' })
   })
 
   test('a batch billed over the seat’s AP is its own failure', () => {

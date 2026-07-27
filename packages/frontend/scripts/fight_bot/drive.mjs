@@ -78,6 +78,7 @@ const next_actor = async ({ seats, timeout_ms, poll_ms = 400 }) => {
 const observe_others = async ({ seats, actor, plan, result, timeout_ms }) => {
   const rows = []
   let status_proofs = 0
+  let move_proofs = 0
   for (const other of seats) {
     if (other === actor) continue
     const settled =
@@ -89,8 +90,9 @@ const observe_others = async ({ seats, actor, plan, result, timeout_ms }) => {
     const checked = assert_cross_client(plan, result, settled)
     rows.push(...checked.rows.map((row) => ({ ...row, observer: other.name })))
     status_proofs += checked.status_proofs
+    move_proofs += checked.move_proofs
   }
-  return { rows, status_proofs }
+  return { rows, status_proofs, move_proofs }
 }
 
 /**
@@ -146,7 +148,11 @@ export const drive_fight = async ({
   observe_timeout_ms = 60_000,
 }) => {
   const turns = []
-  const cross = { rows: [], status_proofs: 0 }
+  const cross = { rows: [], status_proofs: 0, move_proofs: 0 }
+  // THE TURN CARDS, round by round: `turn_order` as the ACTING seat's own read published it. A seat missing
+  // from it is a player who silently never acts, which no per-turn assertion can see (the turns it never got
+  // simply do not appear), so the run keeps the orders and grades them at run level.
+  const turn_orders = []
   // THE RUN'S PARITY TALLY (#1144) — how many casts were actually compared prediction↔authority, and the reasons
   // the rest could not be. A run that resolved none proves nothing about parity and says so at run level.
   const parity = { checked: 0, unresolved: [] }
@@ -173,6 +179,7 @@ export const drive_fight = async ({
     }
     const { seat, read } = next
     const me = read.fighters.find((f) => f.id === read.my_id)
+    turn_orders.push({ turn, seat: seat.name, order: [...(read.turn_order ?? [])] })
 
     const plan = plan_turn(read, { seed: policy_seed, history: seat.history })
     const mark = seat.console_lines.length
@@ -199,6 +206,7 @@ export const drive_fight = async ({
     if (observed) {
       cross.rows.push(...observed.rows)
       cross.status_proofs += observed.status_proofs
+      cross.move_proofs += observed.move_proofs
     }
     const rows = [...assert_turn(plan, result), ...sprung.rows, ...(observed?.rows ?? [])]
     const tally = prediction_tally(plan, result)
@@ -252,7 +260,23 @@ export const drive_fight = async ({
         break
       }
     }
-  return { turns, outcome, cross, parity }
+  // THE SETTLEMENT, PER SEAT — asked of EVERY seat rather than the first one that answers. "Both players see
+  // the result" is precisely the fact the outcome loops above cannot state: they stop at the first seat that
+  // folded a terminal, which is exactly the seat a one-sided settlement would still be true for.
+  const finals = await Promise.all(
+    seats.map(async (seat) => {
+      const last = await seat.client.read().catch((error) => ({ ok: false, error: String(error?.message ?? error) }))
+      return {
+        seat: seat.name,
+        ok: !!last?.ok,
+        winner: last?.winner ?? -1,
+        status: last?.status ?? null,
+        turn_number: last?.turn_number ?? 0,
+        error: last?.error ?? null,
+      }
+    })
+  )
+  return { turns, outcome, cross, parity, turn_orders, finals }
 }
 
 /** A fresh seat: its page, its seam, whatever its surface knows about it, and the memory a snapshot cannot carry. */

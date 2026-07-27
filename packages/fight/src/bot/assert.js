@@ -31,7 +31,9 @@ const fmt = (value) =>
     ? `${value.x},${value.y}`
     : String(value)
 
-const row = (index, action, check, expected, actual, pass, note = '') => ({
+/** ONE checked fact, in the sheet's own shape. Exported for bot/coop.js — the run-level rows are the same
+ *  rows as the turn-level ones, and a second row shape is a second sheet format nobody can read. */
+export const row = (index, action, check, expected, actual, pass, note = '') => ({
   index,
   kind: action?.kind === 0 ? 'move' : action?.kind === 1 ? `cast:${action.spell_key ?? action.spell_id}` : 'turn',
   at: action?.cell ?? null,
@@ -376,7 +378,7 @@ export const assert_traps_sprung = (armed, before, after) => {
 export const assert_cross_client = (plan, result, observer) => {
   // A refused turn has nothing to be visible: `assert_turn` already owns that failure, and adding a second
   // FAIL row for the same fact would inflate the sheet instead of informing it.
-  if (!result.ok || !result.after) return { rows: [], status_proofs: 0 }
+  if (!result.ok || !result.after) return { rows: [], status_proofs: 0, move_proofs: 0 }
   if (!observer?.ok)
     return {
       rows: [
@@ -391,14 +393,25 @@ export const assert_cross_client = (plan, result, observer) => {
         ),
       ],
       status_proofs: 0,
+      move_proofs: 0,
     }
   const mine = result.after
   const watched = new Set([mine.my_id, ...plan.actions.map((a) => a.expect?.target_id).filter(Boolean)])
+  // A REMOTE MOVE is the actor's own fold row on a turn that actually walked — counted here rather than
+  // re-derived by the caller, because only this function knows which row belongs to the actor.
+  const walked = plan.actions.some((action) => action.expect?.type === 'move')
+  let move_proofs = 0
   const rows = []
   for (const id of watched) {
     const here = find(mine, id)
     const there = find(observer, id)
     if (!here) continue
+    const folded =
+      !!there &&
+      Number(there.hp_committed) === Number(here.hp_committed) &&
+      same_cell(there.cell_committed, here.cell_committed) &&
+      !!there.alive_committed === !!here.alive_committed
+    if (walked && id === mine.my_id && folded) move_proofs += 1
     rows.push(
       row(
         0,
@@ -410,10 +423,7 @@ export const assert_cross_client = (plan, result, observer) => {
         !there
           ? 'absent from the observer’s read'
           : `hp ${there.hp_committed} · ${fmt(there.cell_committed)} · ${there.alive_committed ? 'alive' : 'dead'}`,
-        !!there &&
-          Number(there.hp_committed) === Number(here.hp_committed) &&
-          same_cell(there.cell_committed, here.cell_committed) &&
-          !!there.alive_committed === !!here.alive_committed,
+        folded,
         'cross-client — the committed fold, never the observer’s presented one'
       )
     )
@@ -438,7 +448,7 @@ export const assert_cross_client = (plan, result, observer) => {
       )
     }
   }
-  return { rows, status_proofs }
+  return { rows, status_proofs, move_proofs }
 }
 
 /**
@@ -563,10 +573,21 @@ export const assert_turn = (plan, result) => {
   ]
 }
 
-/** A run's rows → the machine-readable verdict the sheet carries. */
-export const summarise = (rows) => ({
-  checks: rows.length,
-  passed: rows.filter((r) => r.pass).length,
-  failed: rows.filter((r) => !r.pass).length,
-  verdict: rows.some((r) => !r.pass) ? 'FAIL' : 'PASS',
-})
+/**
+ * A run's rows → the machine-readable verdict the sheet carries.
+ *
+ * A `gated` row is a check this surface structurally cannot see (bot/coop.js). It is neither a pass nor a
+ * failure: counting it green would be the skip-dressed-as-a-pass this rig exists to refuse, and counting it
+ * red would make an honest hole indistinguishable from a broken game. It gets its own bucket, and a sheet
+ * carrying one says so out loud.
+ */
+export const summarise = (rows) => {
+  const graded = rows.filter((r) => !r.gated)
+  return {
+    checks: rows.length,
+    passed: graded.filter((r) => r.pass).length,
+    failed: graded.filter((r) => !r.pass).length,
+    gated: rows.length - graded.length,
+    verdict: graded.some((r) => !r.pass) ? 'FAIL' : 'PASS',
+  }
+}

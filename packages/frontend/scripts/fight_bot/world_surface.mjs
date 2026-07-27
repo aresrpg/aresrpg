@@ -25,6 +25,7 @@ import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 
 import { await_seams, open_page, wait_for } from './seam.mjs'
 import { make_seat } from './drive.mjs'
+import { provision_fight, tx_digests } from './world_search.mjs'
 
 /**
  * Read ONE seat's secret from the local key file. The value never leaves this function's caller as text.
@@ -110,12 +111,8 @@ export const create_world_fight = async ({ seat, log, timeout_ms = 420_000 }) =>
     timeout_ms,
     'the world-fight create'
   )
-  if (!fight_id)
-    throw new Error(
-      'no claimable mob group in reach — the seat’s checkpoint zone holds no unclaimed group, or the zone reads came back empty'
-    )
-  log(`[bot] seat ${seat.name}: fight ${fight_id} created`)
-  return fight_id
+  if (fight_id) log(`[bot] seat ${seat.name}: fight ${fight_id} created`)
+  return fight_id ?? null
 }
 
 /** JOIN an open PUBLIC world fight as a SECOND seat — the coop half, through the seam's production join door. */
@@ -169,6 +166,27 @@ export const place_seat = async ({ seat, log, timeout_ms = 300_000 }) => {
   return cell
 }
 
+/**
+ * Every seat's start cell, recorded as EVIDENCE before the first one is thrown away. A placement that refuses
+ * still ends the run — but the coop block's "both seats placed" row is then a measured red rather than a
+ * missing row, which is the difference between a diagnosis and a shrug.
+ */
+const place_all = async ({ seats, log, on_evidence }) => {
+  const placements = []
+  for (const seat of seats) {
+    const placed = await place_seat({ seat, log }).then(
+      (cell) => ({ seat: seat.name, cell, ok: true }),
+      (error) => ({ seat: seat.name, ok: false, error: String(error?.message ?? error) })
+    )
+    placements.push(placed)
+    on_evidence({ placements })
+    // EVERY SEAT SEATED BEFORE ANY SEAT READIES is already violated once one refuses — the fight cannot start,
+    // so stop here rather than signing the rest of the band into a board that will never leave placement.
+    if (!placed.ok) throw new Error(placed.error)
+  }
+  return placements
+}
+
 /** RELEASE a fight this run opened and did not finish, so the seat is free for the next one. */
 export const abandon_fight = async ({ seat, log, timeout_ms = 300_000 }) => {
   const result = await within(seat.client.abandon(), timeout_ms, `seat ${seat.name}'s forfeit`).catch((error) => ({
@@ -186,7 +204,16 @@ export const abandon_fight = async ({ seat, log, timeout_ms = 300_000 }) => {
  * console at all, which is the one artefact that would have explained it).
  * @returns {Promise<{ seats: Array<object>, seams: string[], fight_id: string, addresses: Record<string,string> }>}
  */
-export const open_world_fight = async ({ browser, base, keys_path, seat_names, log, on_seat = () => {} }) => {
+export const open_world_fight = async ({
+  browser,
+  base,
+  keys_path,
+  seat_names,
+  log,
+  on_seat = () => {},
+  on_evidence = () => {},
+  max_hops = 3,
+}) => {
   const booted = []
   for (const name of seat_names) {
     // ONE seat object per seat, built here and handed out once: registering a copy and playing another would
@@ -202,11 +229,30 @@ export const open_world_fight = async ({ browser, base, keys_path, seat_names, l
   const seams = await creator.client.seams()
   log(`[bot] DEV seams live: ${seams.join(' ')}`)
 
-  const fight_id = await create_world_fight({ seat: creator, log })
+  // THE SEARCH LEG (#1184) — the dry-scan first (its refusals are free), and only when it finds nothing does
+  // the seat pay to provision a zone. A drive that cannot do this dead-ends on any world that has been played.
+  const provisioned = await provision_fight({
+    seat: creator,
+    claim: () => create_world_fight({ seat: creator, log }),
+    log,
+    max_hops,
+  })
+  on_evidence({ provisioning: provisioned })
+  const fight_id = provisioned.fight_id
+  if (!fight_id)
+    throw new Error(
+      `no claimable mob group in reach and the search leg could not provision one — ${provisioned.why ?? 'no reason given'}`
+    )
   // EVERY SEAT SEATED BEFORE ANY SEAT READIES — a placement is also a ready, and the last ready starts the
   // fight, so a joiner arriving after the creator's placement arrives after the door closed.
   for (const joiner of joiners) await join_world_fight({ seat: joiner, fight_id, log })
-  for (const seat of booted) await place_seat({ seat, log })
+  // THE JOINER-PRESENCE EVIDENCE, taken HERE: the creator's own board with every join landed and the placement
+  // window still open. This is the exact moment the reported breakage is about — a joiner on chain that the
+  // creator's view never seats — and it is unrecoverable one placement later.
+  on_evidence({
+    placement_read: await creator.client.read().catch((error) => ({ ok: false, error: String(error?.message ?? error) })),
+  })
+  await place_all({ seats: booted, log, on_evidence })
 
   const opened = await wait_for(creator.client, (r) => !r.placement && r.my_id && r.fighters.length > 1, {
     timeout_ms: 300_000,
@@ -219,6 +265,11 @@ export const open_world_fight = async ({ browser, base, keys_path, seat_names, l
     seats: booted,
     seams,
     fight_id,
+    provisioning: provisioned,
     addresses: Object.fromEntries(booted.map((seat) => [seat.name, seat.address])),
   }
 }
+
+/** Every digest every seat fired this run, per seat — the money trail a chain-backed drive owes its reader. */
+export const run_digests = async (seats) =>
+  Object.fromEntries(await Promise.all(seats.map(async (seat) => [seat.name, await tx_digests(seat)])))

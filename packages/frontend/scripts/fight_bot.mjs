@@ -38,12 +38,12 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { chromium } from '@playwright/test'
-import { assert_prediction_proofs, assert_status_proof_ran, summarise } from '@aresrpg/fight/bot'
+import { assert_prediction_proofs, assert_status_proof_ran, coop_rows, summarise } from '@aresrpg/fight/bot'
 
 import { wait_for_server } from './fight_bot/seam.mjs'
 import { drive_fight } from './fight_bot/drive.mjs'
 import { open_sim_fight, pick_mob } from './fight_bot/sim_surface.mjs'
-import { abandon_fight, open_world_fight } from './fight_bot/world_surface.mjs'
+import { abandon_fight, open_world_fight, run_digests } from './fight_bot/world_surface.mjs'
 import { print_sheet } from './fight_bot/sheet.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -123,11 +123,16 @@ const sheet = {
   run_rows: [],
   cross: null,
   outcome: 'not reached',
-  summary: { checks: 0, passed: 0, failed: 0, verdict: 'FAIL' },
+  summary: { checks: 0, passed: 0, failed: 0, gated: 0, verdict: 'FAIL' },
   errors: [],
 }
 let browser
 const seats = []
+// THE COOP EVIDENCE, gathered at the moments it exists and nowhere else: the joiner-presence read is only true
+// while the placement window is open, and a failure two steps later would erase it. Handed in by the opener as
+// it goes, so a run that dies mid-setup still writes down everything it had already proven.
+const coop_evidence = { provisioning: null, placement_read: null, placements: [], loot: null }
+const on_evidence = (patch) => Object.assign(coop_evidence, patch)
 
 try {
   await wait_for_server(BASE)
@@ -138,10 +143,19 @@ try {
   const opened =
     MODE === 'sim'
       ? await open_sim_fight({ browser, base: BASE, scenario: SCENARIO, mob, log, on_seat })
-      : await open_world_fight({ browser, base: BASE, keys_path: KEYS_PATH, seat_names: SEAT_NAMES, log, on_seat })
+      : await open_world_fight({
+          browser,
+          base: BASE,
+          keys_path: KEYS_PATH,
+          seat_names: SEAT_NAMES,
+          log,
+          on_seat,
+          on_evidence,
+        })
   sheet.seams = opened.seams
   sheet.fight_id = opened.fight_id
   if (opened.addresses) sheet.addresses = opened.addresses
+  if (opened.provisioning) sheet.provisioning = opened.provisioning
 
   const played = await drive_fight({
     seats: opened.seats,
@@ -156,19 +170,18 @@ try {
   sheet.outcome = played.outcome
   sheet.cross = played.cross
   sheet.parity = played.parity
+  on_evidence({
+    turn_orders: played.turn_orders,
+    finals: played.finals,
+    status_proofs: played.cross.status_proofs,
+    move_proofs: played.cross.move_proofs,
+  })
   // THE PARITY ROW, on every surface (#1144). Every other row in this sheet reads the committed fold on both
   // sides; this one compares what the client PREDICTED against what the authority resolved. A run that never
   // landed one such comparison has not swept parity, whatever else it proved — so it fails and names why.
   sheet.run_rows.push(...assert_prediction_proofs(played.parity))
   // THE COOP RULING'S OWN ROW. A coop run that never landed a status across clients has not shown what coop was
   // built to show, so it says so — with the reason, and as a FAIL. A skip dressed as a pass is worse than a gap.
-  if (MODE === 'coop')
-    sheet.run_rows.push(
-      ...assert_status_proof_ran(
-        played.cross.status_proofs,
-        'no seat ever planned a status-only cast — check the seats’ level against the first buff/debuff in their class book'
-      )
-    )
 } catch (error) {
   sheet.errors.push(String(error?.stack ?? error))
   log(`[bot] FATAL ${String(error?.message ?? error)}`)
@@ -178,6 +191,9 @@ try {
   // characters escrowed, and the NEXT run then finds no claimable group and no honest way to say why. The rig
   // wants a free seat, never that fight's rewards. `__ARES_DEV_ABANDON` self-guards, so a seat holding nothing
   // simply answers that it has nothing to release.
+  // THE MONEY TRAIL, read off each page's own tx ledger BEFORE the browser closes — every digest this run
+  // signed, per seat. A chain-backed run that cannot name what it spent is not auditable.
+  if (ON_CHAIN && seats.length) sheet.digests = await run_digests(seats).catch(() => null)
   if (ON_CHAIN && sheet.outcome === 'not reached') for (const seat of seats) await abandon_fight({ seat, log })
   // The pages' own account of the run, written whatever happened — a failure with no console is a failure
   // nobody can diagnose, which is how the manual drives burned their hours.
@@ -192,7 +208,22 @@ try {
   writeFileSync(resolve(OUT_DIR, 'fight_bot_server.log'), server_log)
 }
 
-const all_rows = [...sheet.turns.flatMap((t) => t.rows), ...sheet.run_rows]
+// THE COOP VERDICT BLOCK (#1184) — seven run-level rows a two-account fight is judged on, built from the
+// evidence captured at each moment it existed. It is assembled OUTSIDE the try so a run that died mid-setup
+// still publishes it: a coop drive that fell over at the join has an answer for row ①, and it is a red one.
+if (MODE === 'coop') {
+  const rows = coop_rows(
+    {
+      ...coop_evidence,
+      seats: seats.map(({ name, character_id, address }) => ({ name, character_id, address })),
+      creator: SEAT_NAMES[0],
+    },
+    assert_status_proof_ran
+  )
+  sheet.coop = { evidence: coop_evidence, rows, summary: summarise(rows) }
+}
+
+const all_rows = [...sheet.turns.flatMap((t) => t.rows), ...sheet.run_rows, ...(sheet.coop?.rows ?? [])]
 sheet.summary = summarise(all_rows)
 // A run that never reached a terminal proves nothing about the fight, however green its rows are. A STALL is one
 // of those non-terminals: it now keeps its turns in the sheet (drive.mjs) instead of throwing them away, and it
