@@ -40,7 +40,8 @@ export const RAW_SOURCE_MODULES = Object.freeze([
 
 const source_extensions = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx'])
 const extension_order = ['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']
-const ignored_literal_path = /(?:^|\/)(?:fixtures?|i18n)(?:\/|$)|(?:^|\/)[^/]*\.(?:test|spec)\.[cm]?[jt]sx?$/
+const ignored_literal_path =
+  /(?:^|\/)(?:__tests__|fixtures?|i18n|tests?|test_helpers)(?:\/|$)|(?:^|\/)[^/]*\.(?:fixture|spec|test)\.[cm]?[jt]sx?$/
 const number_pattern =
   /^(?:0[xX][\dA-Fa-f](?:_?[\dA-Fa-f])*|0[bB][01](?:_?[01])*|0[oO][0-7](?:_?[0-7])*|\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?(?:[eE][+-]?\d(?:_?\d)*)?)n?$/
 const identifier_pattern = /^[A-Za-z_$][\w$]*$/
@@ -284,6 +285,12 @@ function import_literal_lines(source) {
   return new Set(import_specifiers(source).map(({ line }) => line))
 }
 
+function numeric_digit_count(raw) {
+  const value = raw.replace(/n$/, '').replaceAll('_', '').toLowerCase()
+  if (/^0[xbo]/.test(value)) return value.length - 2
+  return value.replaceAll(/\D/g, '').length
+}
+
 export function scan_repeated_literals(files) {
   const occurrences = new Map()
   for (const file of files) {
@@ -295,7 +302,7 @@ export function scan_repeated_literals(files) {
       if (token.kind === 'string' && !import_lines.has(token.line)) {
         literal = string_value(token.raw)
         if (literal === null || [...literal].length < 8 || !/[\p{L}\p{N}]/u.test(literal)) continue
-      } else if (token.kind === 'number' && token.raw.replaceAll(/\D/g, '').length > 2) {
+      } else if (token.kind === 'number' && numeric_digit_count(token.raw) > 2) {
         literal = token.raw.replaceAll('_', '').toLowerCase()
       } else {
         continue

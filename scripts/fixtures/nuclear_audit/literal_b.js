@@ -2,3 +2,4 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 export const beta_key = 'shared-state-key'
+export const beta_mask = 0xfff

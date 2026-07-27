@@ -53,13 +53,19 @@ test('multi-importer scanner detects a planted second importer', () => {
 })
 
 test('repeated-literal scanner detects a planted literal in three source files', () => {
-  const files = ['a', 'b', 'c'].map((name) => virtual_file(`packages/${name}/src/value.js`, `literal_${name}.js`))
+  const files = [
+    ...['a', 'b', 'c'].map((name) => virtual_file(`packages/${name}/src/value.js`, `literal_${name}.js`)),
+    virtual_file('packages/frontend/src/test_helpers/value.js', 'literal_a.js'),
+  ]
 
   const findings = scan_repeated_literals(files)
 
   const planted = findings.find(({ literal }) => literal === 'shared-state-key')
+  const hexadecimal = findings.find(({ literal }) => literal === '0xfff')
   assert.ok(planted)
   assert.equal(planted.homes.length, 3)
+  assert.ok(hexadecimal)
+  assert.equal(hexadecimal.homes.length, 3)
 })
 
 test('ratchet exits 1 on count growth', () => {
