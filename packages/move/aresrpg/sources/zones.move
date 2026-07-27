@@ -425,57 +425,30 @@ fun claim_members_at_zone(
   version: &Version,
   clock: &Clock,
 ): MemberGroupTicket {
-  config.assert_enabled();
-  version.assert_enabled();
-  let now = clock.timestamp_ms();
-  let wid = object::id(world);
-  let owner_cap = personal_kiosk::borrow(pkcap);
-
-  let (cp, pet_now) = {
-    let character = kiosk.borrow(owner_cap, character_id);
-    assert!(character_link::in_world(character, wid), ENotInWorld);
-    assert!(character_link::has_checkpoint(character, wid), ENoCheckpoint);
-    (character_link::checkpoint(character, wid), equipment::pet_equipped(character))
-  };
-  let (zx, zy) = if (zone.is_some()) {
-    let ZoneKey { zx, zy } = zone.destroy_some();
-    (zx, zy)
-  } else {
-    zone.destroy_none();
-    world::zone_of(world, checkpoint::x(&cp), checkpoint::z(&cp))
-  };
-  // FORMAT IS THE ROUTER, never a caller preference: a pre-member zone has no roster to commit, so a member
-  // claim over it would have to invent one. Refuse instead (the original doors still serve it, forever).
-  assert!(group_commitment_format(world, zx, zy) == 3, ENotMemberZone);
-
-  let (template_id, members, progress, mx, mz, group_size, spawned_at_ms, group_seed, index) =
-    find_member_group(world, zx, zy, spawn_id, config.team_size_bound());
-
-  let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
-  checkpoint::verify_travel(world, &cp, mx, mz, now, pet_both);
-
-  mark_mob_consumed(world, zx, zy, index);
-  {
-    let character = kiosk.borrow_mut(owner_cap, character_id);
-    let pet = equipment::pet_equipped(character);
-    character_link::write_checkpoint(character, wid, checkpoint::new_checkpoint(mx, mz, now, pet), version);
-  };
-
-  event::emit(MobGroupClaimed { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size });
+  let (wid, template, members, progress, x, z, group_size, spawned_at_ms, group_seed) =
+    claim_at_zone(world, kiosk, pkcap, character_id, zone, spawn_id, option::none(), true, config, version, clock);
   MemberGroupTicket {
-    world: wid, character: character_id, spawn_id, template: template_id, members, progress,
-    x: mx, z: mz, group_size, spawned_at_ms, group_seed,
+    world: wid, character: character_id, spawn_id, template, members, progress,
+    x, z, group_size, spawned_at_ms, group_seed,
   }
 }
 
-/// Locate a LIVE derived member-list group by `spawn_id` — `find_mob_group`'s format-3 twin, carrying the roster
-/// and the zone's difficulty progress out with the group facts.
-fun find_member_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, vector<ID>, u64, u32, u32, u16, u64, u64, u64) {
+/// Locate a LIVE derived group by `spawn_id` in zone `(zx,zy)`. `members` picks the derivation: the
+/// format-dispatching `derive_mobs` projection (formats 1/2 — what a single-spec ticket promises), or the
+/// member-list stream that carries a roster and the zone's difficulty progress. Returns the SUPERSET
+/// `(template_id, roster, progress, x, z, group_size, spawned_at_ms, group_seed, derivation index)`; the
+/// single-spec callers drop the two fields they have no ticket field for. Aborts `ESpawnNotFound` if the zone
+/// is undiscovered, no derived group carries that id, or its consumed bit is already set.
+fun find_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, members: bool): (ID, vector<ID>, u64, u32, u32, u16, u64, u64, u64) {
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), ESpawnNotFound);
   let zone: &Zone = df::borrow(world::uid(world), key);
-  let (sids, tpls, members, xs, zs, sizes, gseeds, progress) =
-    zone_comp::derive_mobs_members(world, zx, zy, zone.seed, team_bound);
+  let (sids, tpls, rosters, xs, zs, sizes, gseeds, progress) = if (members) {
+    zone_comp::derive_mobs_members(world, zx, zy, zone.seed, team_bound)
+  } else {
+    let (s, t, x, z, sz, g) = derive_mobs(world, zx, zy, zone.seed, team_bound);
+    (s, t, vector<vector<ID>>[], x, z, sz, g, 0)
+  };
   let n = sids.length();
   let mut i = 0;
   while (i < n) {
@@ -483,14 +456,22 @@ fun find_member_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound
       assert!(!bit_get(&zone.mob_bitmap, i), ESpawnNotFound); // consumed = gone (no double-fight of one group)
       // The ROSTER the fight seats is `min(group_size, roster)` — the derived roster runs at the RAW rolled size
       // (stream law) while `sizes[i]` carries the live team-bound clamp, so the ticket ships exactly the members
-      // the engine will seat and `create_members` can demand all of them.
-      let mut roster = members[i];
+      // the engine will seat and `create_members` can demand all of them. A single-spec claim has no roster, so
+      // the clamp is a no-op there.
+      let mut roster = if (members) rosters[i] else vector<ID>[];
       while (roster.length() > (sizes[i] as u64)) { roster.pop_back(); };
       return (tpls[i], roster, progress, xs[i], zs[i], sizes[i], zone.discovered_at_ms, gseeds[i], i)
     };
     i = i + 1;
   };
   abort ESpawnNotFound
+}
+
+/// `find_group` projected to the single-spec shape the original (format-1/2) ticket carries.
+fun single_spec_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
+  let (t, _roster, _progress, x, z, group_size, spawned_at_ms, group_seed, index) =
+    find_group(world, zx, zy, spawn_id, team_bound, false);
+  (t, x, z, group_size, spawned_at_ms, group_seed, index)
 }
 
 /// One shared security tail: authenticate facts (derive or proof), travel-check, consume bit, checkpoint, ticket.
@@ -506,6 +487,31 @@ fun claim_group_at_zone(
   version: &Version,
   clock: &Clock,
 ): GroupTicket {
+  let (wid, template, _members, _progress, x, z, group_size, spawned_at_ms, group_seed) =
+    claim_at_zone(world, kiosk, pkcap, character_id, zone, spawn_id, claim_proof, false, config, version, clock);
+  GroupTicket { world: wid, character: character_id, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
+}
+
+/// ONE shared claim gauntlet behind both ticket doors: refuse, locate the zone, route on FORMAT, authenticate
+/// the group, travel-verify, consume the bit, advance the checkpoint, announce. `members` picks which half of
+/// two things differ — the format the zone must be, and whether the group is authenticated as a member list or
+/// through the original derive-or-proof path. Everything else is one body, so the two doors cannot drift apart
+/// on a refusal, a write, or their event.
+///
+/// Returns the SUPERSET of what the two tickets carry; the single-spec builder drops `members`/`progress`.
+fun claim_at_zone(
+  world: &mut World,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  character_id: ID,
+  zone: Option<ZoneKey>,
+  spawn_id: u64,
+  claim_proof: Option<GroupClaimProof>,
+  members: bool,
+  config: &GameConfig,
+  version: &Version,
+  clock: &Clock,
+): (ID, ID, vector<ID>, u64, u32, u32, u16, u64, u64) {
   config.assert_enabled();
   version.assert_enabled();
   let now = clock.timestamp_ms();
@@ -528,14 +534,20 @@ fun claim_group_at_zone(
     world::zone_of(world, checkpoint::x(&cp), checkpoint::z(&cp))
   };
 
-  // FORMAT IS THE ROUTER: a member-list zone's groups hold several species, and this door's ticket has nowhere to
-  // put them — a single-spec fight over a mixed commitment is precisely the divergence the commitment exists to
-  // prevent, so refuse rather than silently seat the primary N times. The member doors serve these zones.
-  assert!(group_commitment_format(world, zx, zy) != 3, EMemberZone);
+  // FORMAT IS THE ROUTER, never a caller preference. A member-list zone's groups hold several species and the
+  // original ticket has nowhere to put them — a single-spec fight over a mixed commitment is precisely the
+  // divergence the commitment exists to prevent. A pre-member zone has no roster to commit, so a member claim
+  // over it would have to invent one. Each door refuses the other's zones; both refusals live here.
+  let format = group_commitment_format(world, zx, zy);
+  if (members) assert!(format == 3, ENotMemberZone) else assert!(format != 3, EMemberZone);
 
-  // Authenticate the LIVE group by original derivation or by the adjacent search-time commitment.
-  let (template_id, mx, mz, group_size, spawned_at_ms, group_seed, index) =
-    resolve_mob_group(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
+  // Authenticate the LIVE group: the member-list stream, or original derivation / the adjacent search-time commitment.
+  let (template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed, index) = if (members) {
+    find_group(world, zx, zy, spawn_id, config.team_size_bound(), true)
+  } else {
+    let (t, x, z, gs, sa, g, ix) = resolve_mob_group(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
+    (t, vector<ID>[], 0, x, z, gs, sa, g, ix)
+  };
 
   // travel verification: you must have been able to WALK from your checkpoint to the group (teach-don't-reject)
   let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
@@ -550,7 +562,7 @@ fun claim_group_at_zone(
   };
 
   event::emit(MobGroupClaimed { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size });
-  GroupTicket { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size, spawned_at_ms, group_seed }
+  (wid, template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed)
 }
 
 fun resolve_mob_group(
@@ -558,13 +570,13 @@ fun resolve_mob_group(
 ): (ID, u32, u32, u16, u64, u64, u64) {
   if (claim_proof.is_none()) {
     claim_proof.destroy_none();
-    return find_mob_group(world, zx, zy, spawn_id, team_bound)
+    return single_spec_group(world, zx, zy, spawn_id, team_bound)
   };
   let GroupClaimProof { index, template, x, z, group_size, group_seed, proof } = claim_proof.destroy_some();
   let uid = world::uid(world);
   let root_key = ZoneGroupRootKey { zx, zy };
   if (!df::exists(uid, root_key)) {
-    return find_mob_group(world, zx, zy, spawn_id, team_bound)
+    return single_spec_group(world, zx, zy, spawn_id, team_bound)
   };
   let key = ZoneKey { zx, zy };
   assert!(df::exists(uid, key), ESpawnNotFound);
@@ -578,25 +590,6 @@ fun resolve_mob_group(
   (template, x, z, group_size, zone.discovered_at_ms, group_seed, index)
 }
 
-/// Locate a LIVE derived mob group by `spawn_id` in zone `(zx,zy)`; returns `(template_id, x, z, group_size,
-/// spawned_at_ms, group_seed, derivation index)`. Aborts `ESpawnNotFound` if the zone is undiscovered, no derived
-/// group carries that id, or its consumed bit is already set.
-fun find_mob_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
-  let key = ZoneKey { zx, zy };
-  assert!(df::exists(world::uid(world), key), ESpawnNotFound);
-  let zone: &Zone = df::borrow(world::uid(world), key);
-  let (sids, tpls, xs, zs, sizes, gseeds) = derive_mobs(world, zx, zy, zone.seed, team_bound);
-  let n = sids.length();
-  let mut i = 0;
-  while (i < n) {
-    if (sids[i] == spawn_id) {
-      assert!(!bit_get(&zone.mob_bitmap, i), ESpawnNotFound); // consumed = gone (no double-fight of one group)
-      return (tpls[i], xs[i], zs[i], sizes[i], zone.discovered_at_ms, gseeds[i], i)
-    };
-    i = i + 1;
-  };
-  abort ESpawnNotFound
-}
 
 /// Set the consumed bit of derived mob group `index` in zone `(zx,zy)` — the write that replaced the row removal.
 fun mark_mob_consumed(world: &mut World, zx: u32, zy: u32, index: u64) {
