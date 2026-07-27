@@ -14,13 +14,13 @@
 // which is why nothing here derives committed state at all, and why `core_fold.js` may import this file's base.
 
 import { participant_entity_id } from './fight_control.js'
-import { apply_action, empty_state, fighter_key, seat_resolver } from './inputs.js'
+import { apply_action, empty_state, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
 import { GRID_W } from './los.js'
-import { armed_at, decoded_cell, encoded_cell, placements_by_anchor, reconstructed_path } from './fight_render_prims.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
+import { fold_trap_ledger } from './trap_ledger.js'
 import {
   claim_version,
   fold_claimed_budget,
@@ -295,102 +295,13 @@ export const recompute = (draft, now) => {
   // fresher TurnStarted tail; preserve the greatest observed chain deadline without synthesising a client deadline.
   const turn_deadline_ms = Math.max(observed_deadline, Number(committed.turn_deadline_ms ?? 0)) || null
   const provider = provider_of({ presenting, playable, view: draft.view, spectator })
-  // ④+⑦b TRAP SPRING (durable, receipt-proven): a `my_traps` cell detonates → mark `gone` FOREVER (never regress a
-  // receipt-proven fact; the optimistic spring is engine_view's reversible presented-occupied exclusion). Already-
-  // gone rows keep identity. A trap fires ON-CHAIN only when a fighter ENTERS its cell (spell_board::on_enter), so
-  // consume it from the COMMITTED transition log, not from the batch's final fighter positions. A pushed fighter
-  // may land on the trap and then take its mob turn away in the SAME receipt (#512); final-position sampling loses
-  // that entry and lets the marker resurrect when presentation drains. The canonical fold is unconditional while
-  // presentation owns only pacing. The standing-position proof remains for bootstrap/legacy rows, including a dead
-  // trigger: a trap can only be placed on an empty cell, so a committed occupant proves entry.
-  // NO version-bump proxy (RESIDUAL FIX, v1.12.34: trap reconciliation between sim and
-  // chain still drifted): a routine poll re-reads the Fight OBJECT and bumps view_version — that is NOT a firing. The removed
-  // `superseded` predicate retired EVERY placed trap on the next snapshot, so the sim door stopped predicting its
-  // force-stop/damage while the chain kept it armed (and, dual-home, a re-cast then aborted ECellAlreadyTrapped and
-  // nuked the whole batch). Fight.fx is dropped from reads, so my_traps only RETIRES on committed entry/occupancy
-  // proof — it errs toward "it stays".
-  // THE CROSSING (#954/#1050): a `Moved`/`MobMoved` row carries only the LANDED cell, but the chain detonates a
-  // trap the instant its cell is ENTERED, anywhere along the walk (`movement.move:43`, inline + resume). Sampling
-  // `to_cell` alone let a mob walk straight through a trap the chain had already sprung while the client kept
-  // painting it armed. Re-derive the walk instead — the same `reconstructed_path` the renderer beats read, over
-  // the same board facts, so "which cells did this walk enter" has ONE answer client-wide. A `Displaced` slide
-  // force-stops on the first trap it meets, so its landing cell IS its only entry.
-  const board_facts = {
-    obstacles: draft.view?.obstacles,
-    holes: draft.view?.holes,
-    shape_mask: draft.view?.shape_mask,
-    board_width: draft.view?.width,
-    board_height: draft.view?.grid_height,
-    width: GRID_W,
-  }
-  const resolve_seat_key = seat_resolver(draft.view)
-  const cell_at = new Map(Object.entries(base.fighters ?? {}).map(([key, fighter]) => [key, fighter.cell]))
-  const committed_entries = []
-  authoritative_tail.forEach((entry, at) => {
-    if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) return
-    // Keyed EXACTLY as `apply_action` keys the same row (its own `resolve_seat` first) — a ledger that disagreed
-    // with the fold about who moved would track the wrong body's walk.
-    const resolve_seat = entry.resolve_seat ?? resolve_seat_key
-    const key =
-      entry.kind === 'Displaced'
-        ? fighter_key({ is_mob: entry.target_is_mob, idx: entry.target_idx, resolve_seat })
-        : fighter_key({ is_mob: entry.kind === 'MobMoved', idx: entry.idx, character: entry.character, resolve_seat })
-    const to = Number(entry.to_cell)
-    const from = cell_at.get(key)
-    const version = Number(entry.version)
-    // Live bodies are half of Move's frozen wall mask, so the route has to see them or it may cut through a
-    // fighter and retire a trap the walk never entered — and a FALSELY retired trap is the ECellAlreadyTrapped
-    // batch-nuke this ledger errs against. `cell_at` already holds every fighter's cell at this point in the tail.
-    const occupied_cells = [...cell_at.entries()]
-      .filter(([other, cell]) => other !== key && cell != null)
-      .map(([, cell]) => decoded_cell(cell, GRID_W))
-    const entered =
-      entry.kind === 'Displaced' || from == null
-        ? [to]
-        : reconstructed_path(decoded_cell(from, GRID_W), decoded_cell(to, GRID_W), {
-            ...board_facts,
-            occupied_cells,
-          }).map((cell) => encoded_cell(cell, GRID_W))
-    // `at` is this row's ordinal in the sorted tail — the position the shared placement rule compares against.
-    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version, at })
-    cell_at.set(key, to)
+  const my_traps = fold_trap_ledger({
+    authoritative_tail,
+    base,
+    chain_committed,
+    traps: draft.my_traps,
+    view: draft.view,
   })
-  // THE SEQUENCE (#1219, the regression the crossing widening above shipped): a whole turn commits as ONE receipt
-  // at ONE version, so a walk and a trap cast in that same turn are indistinguishable by version — and a walk that
-  // happened BEFORE the trap existed retired it on arrival ("cast a trap onto a cell of my own earlier path — it
-  // never appears"). The selection rule and its boundary live in ONE home shared with the renderer (#1248,
-  // `fight_render_prims.armed_at`); `authoritative_tail` is already sorted `(version, event_idx)`, so this
-  // stream's ordinal is simply the tail index.
-  const placements = placements_by_anchor(authoritative_tail, (entry) =>
-    entry.kind === 'Cast' ? entry.target_cell : null
-  )
-  // A trap row carries its WHOLE zone in `cells`, but only its ANCHOR was ever a cast target — so the anchor is
-  // the one cell that can carry a placement, and the zone's other cells must not each vote (they have no
-  // placement, so they would each return the permissive default and defeat the rule for every AoE trap).
-  const after_placement = (entry, trap) => {
-    const anchor = (trap.cells ?? []).find((cell) => placements.has(Number(cell)))
-    return anchor == null || armed_at(placements, anchor, entry.at)
-  }
-  const occupied_cells = new Set(
-    Object.values(chain_committed.fighters ?? {})
-      .filter((fighter) => fighter.cell != null)
-      .map((fighter) => fighter.cell)
-  )
-  const my_traps = (draft.my_traps ?? []).map((t) =>
-    t.gone ||
-    !t.cells.some(
-      (cell) =>
-        occupied_cells.has(cell) ||
-        committed_entries.some(
-          (entry) =>
-            entry.cell === Number(cell) &&
-            entry.version >= Number(t.basis_version ?? entry.version) &&
-            after_placement(entry, t)
-        )
-    )
-      ? t
-      : { ...t, gone: true }
-  )
   // GLYPH EXPIRY (persistent, NOT detonated): unlike a trap, a glyph is never sprung by a fighter standing on it
   // (check_glyphs ticks + persists). It dies only by decay_glyphs — so decrement turns_remaining on each of MY
   // turn-advances (the my_turn_no rising edge = the ONE clean client turn signal; the client has no chain glyph

@@ -147,6 +147,35 @@ describe('#1248 — the placement selector', () => {
   })
 })
 
+// #1047 — placing an AoE trap may cover a fighter who was ALREADY standing inside the zone. Trap activation is
+// entry-triggered, so that stationary body did not spring the new trap. The old whole-zone occupancy proof marked
+// the entire record gone during the placement input itself, leaving engine_view.my_traps empty and the world board
+// with literally nothing to paint.
+describe('#1047 — a stationary fighter inside a newly placed AoE does not consume it', () => {
+  test('the free cells stay armed and paintable when the caster already occupies another zone cell', () => {
+    const store = create_fight_store()
+    const zone = [X, START, enc(8, 4)]
+    store
+      .getState()
+      .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: W } } })
+    store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 }, 1_000)
+    store.getState().input(
+      {
+        type: 'predicted',
+        basis_version: 6,
+        intent_id: 'aoe-occupied',
+        actions: [{ kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: X, ap_cost: 2 }],
+        beats: [{ kind: 'cast', at: 0, duration: 100, payload: {} }],
+        place_traps: zone,
+      },
+      1_100
+    )
+
+    expect(store.getState().my_traps).toMatchObject([{ cells: zone, gone: false }])
+    expect(engine_view(store.getState()).my_traps).toEqual([X, enc(8, 4)])
+  })
+})
+
 // AN AoE TRAP carries its whole zone in `cells`, but only its ANCHOR was ever a cast target. If every zone cell
 // got a vote, the cells with no placement would each return the permissive default and the sequencing rule would
 // be defeated for every AoE trap — #1219, back again, for exactly the shape #1047 reports.
