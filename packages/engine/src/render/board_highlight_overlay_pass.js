@@ -21,6 +21,8 @@
 // group): the pass records a representative floor-level depth for composite()'s occlusion mask, while the
 // washes still BLEND by renderOrder (depthTest off ⇒ none occlude one another — the D150 layered-wash look is
 // preserved). Blending stays UNCHANGED (NormalBlending) — highlights are alpha washes, not additive glow.
+// This routing is CONDITIONAL on the pass existing (set_board_highlight_overlay_mounted, #1175): with no post
+// stack nothing renders layer 11, so the paints stay on the default layer and the main pass draws them.
 //
 // COLOUR — DAYTIME INVARIANCE (cited transform chain). The scene's own output transform is
 // renderOutput(col, AgX, sRGB) = toneMapping(AgX, LIVE_exposure) → linear→sRGB (post_stack:440). This overlay
@@ -58,13 +60,40 @@ import { EXPOSURE_BASELINE } from './lighting/auto_exposure.js'
  *  same. NOT 0 (default) / 10 (FIGHT_VFX_LAYER) / 31 (webgl_fallback park) — layer 11 is otherwise unused. */
 export const BOARD_HIGHLIGHT_LAYER = 11
 
+/** Is the layer-11 overlay PASS actually mounted this session? Exactly one thing renders layer 11 —
+ *  create_highlight_overlay, built inside create_post_stack. On the BARE render path (`post` null: hack mode's
+ *  `atmosphere:false`, or the post-stack construction-failure catch on WebGL2-only/no-WebGPU GPUs) that pass
+ *  does not exist and the camera keeps its default layer-0 mask, so routing a highlight to layer 11 sends it
+ *  where NOTHING renders — every placement band, cell blob and hover paint goes dark on a byte-healthy
+ *  projection (#1175). Default true = the healthy path; create_renderer flips it ONCE, after the post stack's
+ *  fate is known, so both bare sites are covered by this one door (the set_water_depth_texture_type idiom). */
+let overlay_pass_mounted = true
+
+/**
+ * Tell the highlight router which render path this session took — called ONCE by create_renderer with
+ * `post !== null`, after the try/catch that decides it. False ⇒ route_board_highlight_overlay stops moving
+ * meshes to layer 11 and stops overriding their depth flags, so highlights render in the MAIN pass exactly as
+ * board_highlight_materials.js authors them (transparent, depthWrite OFF, depthTest ON, unlit + fog-exempt):
+ * the pre-overlay in-scene look. The board-render laws still hold on that path — the paints stay UNLIT
+ * (MeshBasicNodeMaterial), one blob per cell per channel, and the per-order WASH_LIFT stack keeps target-red
+ * above range-blue geometrically instead of by renderOrder. What is lost is the night-wash fix (they take the
+ * shared AgX + live auto-exposure again) and the composite's occlusion mask (real depthTest instead) — the
+ * same "SEEN beats invisible" trade enable_fight_vfx_layer already makes for the VFX layer.
+ * @param {boolean} mounted whether the post stack — and with it the layer-11 overlay pass — constructed
+ */
+export function set_board_highlight_overlay_mounted(mounted) {
+  overlay_pass_mounted = Boolean(mounted)
+}
+
 /**
  * Route the board-highlight subtree onto the POST-AgX overlay: every mesh moves to BOARD_HIGHLIGHT_LAYER (so
  * the main pass auto-excludes it from AgX), depthWrite ON so the overlay pass records a representative floor
  * depth for composite()'s scene-occlusion mask, depthTest OFF so overlapping washes still BLEND by renderOrder
  * (the D150 layered look — none occlude one another). Blending is left UNCHANGED (NormalBlending — these are
- * alpha washes, NOT the VFX additive glow). PURE (mirrors route_overlay_group — traverse, touch only objects
- * with a material); idempotent; returns how many meshes were routed. The highlight controller calls it on
+ * alpha washes, NOT the VFX additive glow). With NO overlay pass mounted (see above) the meshes keep the
+ * default layer and their authored depth flags — only the shadow axes are still closed, since that is a
+ * paint's own law on every render path. PURE (mirrors route_overlay_group — traverse, touch only objects
+ * with a material); idempotent; returns how many meshes were touched. The highlight controller calls it on
  * every mesh it creates (washes / traps / feel-cues / entity anchors) at creation.
  * @param {import('three').Object3D} root a highlight mesh or subtree (a flat Mesh, or the trap blob+spike Group)
  * @returns {number} meshes routed
@@ -74,14 +103,16 @@ export function route_board_highlight_overlay(root) {
   root.traverse((/** @type {*} */ o) => {
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []
     if (mats.length === 0) return
-    o.layers.set(BOARD_HIGHLIGHT_LAYER)
     // Standing overlay law: hostile/future factory defaults cannot opt a tactical paint into either shadow
     // path. BasicNode already ignores scene lights; these object flags close the cast/receive axes explicitly.
     o.castShadow = false
     o.receiveShadow = false
-    for (const m of mats) {
-      m.depthWrite = true // record a representative floor depth for the occlusion mask
-      m.depthTest = false // overlapping washes still blend by renderOrder (none occlude one another)
+    if (overlay_pass_mounted) {
+      o.layers.set(BOARD_HIGHLIGHT_LAYER)
+      for (const m of mats) {
+        m.depthWrite = true // record a representative floor depth for the occlusion mask
+        m.depthTest = false // overlapping washes still blend by renderOrder (none occlude one another)
+      }
     }
     routed += 1
   })

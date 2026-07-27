@@ -48,6 +48,7 @@ import { world_surface_y } from '../gen/world_gen.js'
 import { create_atmosphere } from '../render/atmosphere.js'
 import { create_post_stack } from '../render/lighting/post_stack.js'
 import { enable_fight_vfx_layer } from '../render/vfx_preset_engine.js'
+import { set_board_highlight_overlay_mounted } from '../render/board_highlight_overlay_pass.js'
 import { create_auto_exposure } from '../render/lighting/auto_exposure.js'
 import { couple_lighting, shadow_intensity_for, is_moon_key } from '../render/lighting/sky_light_coupling.js'
 import { create_underwater_pass } from '../render/lighting/underwater.js'
@@ -910,6 +911,16 @@ export async function create_renderer({
       error
     )
   }
+
+  // BOARD-HIGHLIGHT ROUTING (#1175) — resolved HERE, once, for the SAME reason the water grab below is:
+  // this is the only point where the post stack's fate is known, and it covers BOTH bare sites (hack mode's
+  // `atmosphere: false` skip and the catch above) with one call instead of two compensations. Layer 11 is
+  // rendered by exactly one thing — the post stack's highlight overlay pass; with `post` null, routing a paint
+  // there hides it from every pass, so the fight board lost ALL its paints (placement bands, cell blobs, hover)
+  // on a byte-healthy projection. False here keeps the highlights on the default layer, where the main pass
+  // draws them with their authored material flags. (The VFX layer takes the other shape of the same fix —
+  // enable_fight_vfx_layer widens the camera mask — because its meshes carry overlay-only blending.)
+  set_board_highlight_overlay_mounted(post !== null)
 
   // WATER DEPTH-GRAB FORMAT (NG2-ATMO integration): the water material grabs scene depth every frame,
   // and the copy only validates when its grab texture matches THE ACTIVE RENDER PATH's depth format.
