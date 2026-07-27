@@ -9,7 +9,7 @@ module aresrpg::item_tests;
 use aresrpg::{item::{Self, Item, ItemTemplate}, item_stats, test_world, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
-use sui::{kiosk::{Self, Kiosk}, package::Publisher, test_scenario::{Self as ts}};
+use sui::{kiosk::{Self, Kiosk}, package::Publisher, random, test_scenario::{Self as ts}};
 
 const OWNER: address = @0xA;
 
@@ -288,23 +288,19 @@ fun create_item_policy_yields_policy_and_cap() {
 // ╔════════════════ [ Mint-roll: values land in [min,max], degenerate fields fixed ] ═ ]
 
 #[test]
-/// The core stat-roll math (the single stat-shape EVERY mint seam draws): every field rolls inside its [min,max]
-/// and a degenerate range (min==max) yields the fixed value, over a sweep of seeds. The seed is what a seam draws
-/// from `&Random`; the roll itself is a pure function of it — same seed, same block, on every machine.
+/// The core stat-roll math (the single stat-shape `shop::buy` draws at purchase): every field rolls inside its
+/// [min,max] and a degenerate range (min==max) yields the fixed value. Drives `item_stats::roll` directly off a
+/// deterministic generator — the same body `buy` runs off a real `&Random` on-chain.
 fun roll_stays_within_ranges_and_fixes_degenerate() {
+  let mut gen = random::new_generator_for_testing();
   // vitality varies in [100,200]; every other field degenerate at 5.
   let min = item_stats::new(100, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
   let max = item_stats::new(200, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
-  let mut seed = 0;
-  while (seed < 64) {
-    let rolled = item_stats::roll(&min, &max, seed);
-    let v = item_stats::vitality(&rolled);
-    assert!(v >= 100 && v <= 200);
-    assert_eq!(item_stats::wisdom(&rolled), 5); // min==max → fixed
-    assert_eq!(item_stats::air_resistance(&rolled), 5);
-    assert_eq!(item_stats::vitality(&item_stats::roll(&min, &max, seed)), v); // pure: same seed, same roll
-    seed = seed + 1;
-  };
+  let rolled = item_stats::roll(&min, &max, &mut gen);
+  let v = item_stats::vitality(&rolled);
+  assert!(v >= 100 && v <= 200);
+  assert_eq!(item_stats::wisdom(&rolled), 5); // min==max → fixed
+  assert_eq!(item_stats::air_resistance(&rolled), 5);
 }
 
 #[test]
@@ -312,23 +308,15 @@ fun roll_stays_within_ranges_and_fixes_degenerate() {
 /// [min,max] roll produce the full "1..max" trash-to-god spread — the special case falls out of the general one,
 /// so no separate roll variant is needed.
 fun relic_dream_roll_spans_floor_to_max() {
+  let mut gen = random::new_generator_for_testing();
   let s = item_stats::shift(); // 32768 centre
   // vitality rolls across the WIDE relic span [s+1, s+2000]; every other field fixed at the centre.
   let min = item_stats::new(s + 1, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s);
   let max = item_stats::new(s + 2000, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s, s);
-  // a spread of seeds lands DIFFERENT values across the span — the dream roll is not a fixed point
-  let mut distinct = 0u64;
-  let first = item_stats::vitality(&item_stats::roll(&min, &max, 0));
-  let mut seed = 0;
-  while (seed < 64) {
-    let rolled = item_stats::roll(&min, &max, seed);
-    let v = item_stats::vitality(&rolled);
-    assert!(v >= s + 1 && v <= s + 2000); // lands anywhere in the dream-roll span
-    assert_eq!(item_stats::wisdom(&rolled), s); // a degenerate (centre) field is unaffected
-    if (v != first) distinct = distinct + 1;
-    seed = seed + 1;
-  };
-  assert!(distinct > 0);
+  let rolled = item_stats::roll(&min, &max, &mut gen);
+  let v = item_stats::vitality(&rolled);
+  assert!(v >= s + 1 && v <= s + 2000); // lands anywhere in the dream-roll span
+  assert_eq!(item_stats::wisdom(&rolled), s); // a degenerate (centre) field is unaffected
 }
 
 // ╔════════════════ [ Stat clamp helpers (pure math) ] ═══════════════════════ ]

@@ -7,16 +7,14 @@
 /// needed on-chain. The dead `stamina` / `summons` / `pods` fields are intentionally NOT carried.
 ///
 /// MINT-ROLL RANDOMNESS: the admin authoring path sets [min,max] RANGES on the TEMPLATE (`attach_ranges`, via
-/// `admin::create_template`); EVERY mint seam ROLLS each field uniformly in [min,max] AT MINT (single-step) and
-/// attaches the FIXED result to the minted ITEM (`attach_rolled`) — the roll lives in the ONE gear-mint door
-/// (`extension::mint_item`), so shop, loot and craft cannot drift apart. Reads: template ranges via
+/// `admin::create_template`); `shop::buy` ROLLS each field uniformly in [min,max] AT PURCHASE (single-step, off
+/// `&Random`) and attaches the FIXED result to the minted ITEM (`attach_rolled`). Reads: template ranges via
 /// `stats_min`/`stats_max`, the rolled instance via `rolled_stats`. The centering is a CONVENTION — the caller
 /// passes already-centered values; the chain stores them raw and enforces no schema.
 module aresrpg::item_stats;
 
 use aresrpg::item::{Self, Item, ItemTemplate};
-use aresrpg_foundation::prng;
-use sui::dynamic_field as df;
+use sui::{dynamic_field as df, random::RandomGenerator};
 
 /// The zero-point every stat is centered on: stored value = 32768 + signed_stat.
 const SHIFT_U16: u16 = 32_768;
@@ -208,19 +206,16 @@ public(package) fun drop_ranges(template: &mut ItemTemplate) {
 
 // ╔════════════════ [ Roll (mint-roll randomness — the ONE stat-shape owner rolls all 17 fields) ] ═ ]
 
-/// Roll one field in [lo, hi] INCLUSIVE off the seeded stream (lo if the range is degenerate — a fixed field
-/// consumes no draw). `prng` is the house entropy carrier (mulberry32, byte-identical to the sim's `prng.js`), so
-/// a roll is reproducible from its seed by any reader; the SEED is what every seam draws from `&Random`.
-fun roll_field(state: &mut u64, lo: u16, hi: u16): u16 {
-  if (hi <= lo) return lo;
-  let (next, value) = prng::rng_range(*state, lo as u64, hi as u64);
-  *state = next;
-  value as u16
+/// Roll one field in [lo, hi] INCLUSIVE off the generator (lo if the range is degenerate). Uses the framework's
+/// unbiased range draw (`generate_u16_in_range`) — DELTA from the deployed reference's `generate_u64 % (span+1)`:
+/// same inclusive semantics, but unbiased and cast-free (the docs-recommended API).
+fun roll_field(gen: &mut RandomGenerator, lo: u16, hi: u16): u16 {
+  if (hi <= lo) lo else gen.generate_u16_in_range(lo, hi)
 }
 
-/// Roll a full `ItemStatistics` with each field independently in [min_field, max_field]. Called ONCE at mint;
+/// Roll a full `ItemStatistics` with each field independently in [min_field, max_field]. Called ONCE at buy;
 /// the result is FIXED on the item forever (combat off the rolled stats stays deterministic). This module owns the
-/// 17-field shape, so the field enumeration lives HERE (the mint door just supplies the seed).
+/// 17-field shape, so the field enumeration lives HERE (the buy path just supplies the generator).
 ///
 /// RELIC DREAM-ROLL (§10, gap G5): a relic "rolls each stat from 1 to max" (trash-to-god variance) — this is the
 /// SAME uniform draw, it just falls out of the general [min,max] when the template authors `min` at the centered
@@ -228,43 +223,33 @@ fun roll_field(state: &mut u64, lo: u16, hi: u16): u16 {
 /// needed; a relic is the special case of the general roll where the range is authored wide, so nothing here
 /// changes — the difference is pure admin authoring data (min pinned low), plus the game package's unique-per-
 /// type equip rule (§10, cross-package). Cosmetics carry NO ranges at all (zero stats).
-public(package) fun roll(min: &ItemStatistics, max: &ItemStatistics, seed: u64): ItemStatistics {
-  let mut state = prng::rng_seed(seed);
+public(package) fun roll(min: &ItemStatistics, max: &ItemStatistics, gen: &mut RandomGenerator): ItemStatistics {
   ItemStatistics {
-    vitality: roll_field(&mut state, min.vitality, max.vitality),
-    wisdom: roll_field(&mut state, min.wisdom, max.wisdom),
-    strength: roll_field(&mut state, min.strength, max.strength),
-    intelligence: roll_field(&mut state, min.intelligence, max.intelligence),
-    chance: roll_field(&mut state, min.chance, max.chance),
-    agility: roll_field(&mut state, min.agility, max.agility),
-    range: roll_field(&mut state, min.range, max.range),
-    movement: roll_field(&mut state, min.movement, max.movement),
-    action: roll_field(&mut state, min.action, max.action),
-    critical: roll_field(&mut state, min.critical, max.critical),
-    raw_damage: roll_field(&mut state, min.raw_damage, max.raw_damage),
-    critical_chance: roll_field(&mut state, min.critical_chance, max.critical_chance),
-    critical_outcomes: roll_field(&mut state, min.critical_outcomes, max.critical_outcomes),
-    earth_resistance: roll_field(&mut state, min.earth_resistance, max.earth_resistance),
-    fire_resistance: roll_field(&mut state, min.fire_resistance, max.fire_resistance),
-    water_resistance: roll_field(&mut state, min.water_resistance, max.water_resistance),
-    air_resistance: roll_field(&mut state, min.air_resistance, max.air_resistance),
+    vitality: roll_field(gen, min.vitality, max.vitality),
+    wisdom: roll_field(gen, min.wisdom, max.wisdom),
+    strength: roll_field(gen, min.strength, max.strength),
+    intelligence: roll_field(gen, min.intelligence, max.intelligence),
+    chance: roll_field(gen, min.chance, max.chance),
+    agility: roll_field(gen, min.agility, max.agility),
+    range: roll_field(gen, min.range, max.range),
+    movement: roll_field(gen, min.movement, max.movement),
+    action: roll_field(gen, min.action, max.action),
+    critical: roll_field(gen, min.critical, max.critical),
+    raw_damage: roll_field(gen, min.raw_damage, max.raw_damage),
+    critical_chance: roll_field(gen, min.critical_chance, max.critical_chance),
+    critical_outcomes: roll_field(gen, min.critical_outcomes, max.critical_outcomes),
+    earth_resistance: roll_field(gen, min.earth_resistance, max.earth_resistance),
+    fire_resistance: roll_field(gen, min.fire_resistance, max.fire_resistance),
+    water_resistance: roll_field(gen, min.water_resistance, max.water_resistance),
+    air_resistance: roll_field(gen, min.air_resistance, max.air_resistance),
   }
-}
-
-/// Roll `template`'s authored ranges into a block, or NONE when the template carries no ranges (resource /
-/// consumable / cosmetic). The single home of "does this template roll, and with what" — every mint seam asks
-/// HERE instead of re-deriving the `has_ranges` branch.
-public(package) fun roll_for_template(template: &ItemTemplate, seed: u64): Option<ItemStatistics> {
-  if (!has_ranges(template)) return option::none();
-  option::some(roll(stats_min(template), stats_max(template), seed))
 }
 
 // ╔════════════════ [ Rolled block: attach / read on the ITEM ] ══════════════ ]
 
-/// Attach the rolled block to a freshly-minted `item` (package-private — the gear-mint door `extension::mint_item`
-/// calls it, once per mint, whatever the seam). Pet templates carry their full-fed endpoint, so a new pet starts at
-/// the curve's neutral count-zero block instead of inheriting the generic mint roll. The item is new, so it cannot
-/// already carry StatsKey.
+/// Attach the rolled block to a freshly-minted `item` (package-private — only `shop::buy` calls it, once at
+/// purchase). Pet templates carry their full-fed endpoint, so a new pet starts at the curve's neutral count-zero
+/// block instead of inheriting the generic purchase roll. The item is new, so it cannot already carry StatsKey.
 public(package) fun attach_rolled(item: &mut Item, stats: ItemStatistics) {
   let initial = if (item::category(item) == b"pet".to_string()) {
     scale_from_center(&stats, 0, PET_FULL_FEEDS)

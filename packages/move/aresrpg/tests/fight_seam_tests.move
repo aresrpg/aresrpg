@@ -59,11 +59,6 @@ fun do_search(sc: &mut Scenario, who: address, cid: ID, x: u32, z: u32, now: u64
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
   zones::search_for_testing(&mut w, &mut k, &pkcap, cid, x, z, &cfg, &ver, &clk);
-  // FORMAT-1 PREMISE (#1110): a fresh search now writes a MEMBER-LIST (format 3) commitment, and the original
-  // claim doors this suite exercises refuse those zones by design. Dropping it leaves the zone in exactly the
-  // shape every zone the deployed package ever discovered carries — legacy — which is the population these
-  // doors serve forever. The member doors have their own end-to-end suite (`member_claim_tests`).
-  { let (zx, zy) = world::zone_of(&w, x, z); zones::remove_group_commitment_for_testing(&mut w, zx, zy); };
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver);

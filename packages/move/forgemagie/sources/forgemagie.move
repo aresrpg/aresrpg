@@ -582,7 +582,7 @@ public fun mint_lock_stack_for_testing(config: &GameConfig, template: &ItemTempl
 #[test_only]
 /// Fixture: mint NON-stackable gear (core's test-only pledge mint) and kiosk-lock it. Returns the item id.
 public fun mint_lock_gear_for_testing(template: &ItemTemplate, kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, policy: &TransferPolicy<Item>, version: &Version, ctx: &mut TxContext): ID {
-  let (it, pledge) = extension::mint_item_for_testing(template, option::none(), version, ctx);
+  let (it, pledge) = extension::mint_item_for_testing(template, version, ctx);
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, kiosk, personal_kiosk::borrow(pkcap), policy);
   iid

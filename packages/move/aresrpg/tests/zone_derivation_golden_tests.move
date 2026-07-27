@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// ZONE-DERIVATION GOLDEN VECTORS — behavior identity across the ceremony leg-2 twins-collapse.
+/// ZONE-DERIVATION GOLDEN VECTORS — the published format-1/2 derivations, pinned byte-for-byte.
 ///
 /// `claim_members_at_zone` / `find_member_group` / `derive_mobs_members` were near-duplicates of the
 /// format-1/2 functions and were collapsed into them, format-gated by PARAMETER. The bodies changed
@@ -88,7 +88,7 @@ fun boot(sc: &mut Scenario) {
 
 /// A world with a three-row mob roster at distinct eligibility levels (so the legacy level cap actually
 /// bites at close range and relaxes far out) and a two-row resource table.
-fun make(sc: &mut Scenario, boss_mask: vector<u16>) {
+fun make(sc: &mut Scenario) {
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
   let ver = sc.take_shared<Version>();
@@ -112,7 +112,6 @@ fun make(sc: &mut Scenario, boss_mask: vector<u16>) {
   world::add_resource_entry(&cap, &mut w, object::id_from_address(@0xD1), 100, 1, 3, 0, 1, &ver, sc.ctx());
   world::add_resource_entry(&cap, &mut w, object::id_from_address(@0xD2), 200, 2, 2, 1, 2, &ver, sc.ctx());
   world::set_density(&cap, &mut w, 6, 24, 3, 9, &ver, sc.ctx());
-  if (!boss_mask.is_empty()) world::set_boss_mask(&cap, &mut w, boss_mask, &ver, sc.ctx());
   ts::return_shared(w); ts::return_shared(ver); sc.return_to_sender(cap);
 }
 
@@ -176,79 +175,24 @@ fun sweep_res(w: &World, grid: bool): u64 {
   acc
 }
 
-fun sweep_members(w: &World): u64 {
-  let (zs, ss, bs) = (zones(), seeds(), bounds());
-  let mut acc = 0u64;
-  let mut a = 0;
-  while (a < zs.length()) {
-    let mut b = 0;
-    while (b < ss.length()) {
-      let mut c = 0;
-      while (c < bs.length()) {
-        let (sids, tpls, members, xs, zzs, sizes, gseeds, progress) =
-          zone_comp::derive_mobs_members(w, zs[a], zs[a], ss[b], bs[c]);
-        acc = fold_u64s(acc, &sids);
-        acc = fold_ids(acc, &tpls);
-        acc = fold_id_rows(acc, &members);
-        acc = fold_u32s(acc, &xs);
-        acc = fold_u32s(acc, &zzs);
-        acc = fold_u16s(acc, &sizes);
-        acc = fold_u64s(acc, &gseeds);
-        acc = fold(acc, progress);
-        c = c + 1;
-      };
-      b = b + 1;
-    };
-    a = a + 1;
-  };
-  acc
-}
-
 // ── The pinned vectors. Captured 2026-07-27 on the PRE-collapse tree (commit 078211e6). ──
 const GOLDEN_MOBS_STREAM: u64 = 821012158;
 const GOLDEN_MOBS_GRID: u64 = 365082555;
 const GOLDEN_RES_STREAM: u64 = 456134711;
 const GOLDEN_RES_GRID: u64 = 1611368815;
-const GOLDEN_MEMBERS_NO_MASK: u64 = 101554010;
-const GOLDEN_MEMBERS_MASKED: u64 = 866799028;
 
 #[test]
 /// FORMAT 1/2 — the published derivation. This hash may never move: every in-flight zone replays it.
 fun format_1_2_derivation_is_byte_identical() {
   let mut sc = ts::begin(OWNER);
   boot(&mut sc);
-  make(&mut sc, vector[]);
+  make(&mut sc);
   sc.next_tx(OWNER);
   let w = sc.take_shared<World>();
   assert_eq!(sweep_mobs(&w, false), GOLDEN_MOBS_STREAM);
   assert_eq!(sweep_mobs(&w, true), GOLDEN_MOBS_GRID);
   assert_eq!(sweep_res(&w, false), GOLDEN_RES_STREAM);
   assert_eq!(sweep_res(&w, true), GOLDEN_RES_GRID);
-  ts::return_shared(w);
-  sc.end();
-}
-
-#[test]
-/// FORMAT 3 — the ruled model's own stream, with and without a boss mask.
-fun format_3_derivation_is_byte_identical() {
-  let mut sc = ts::begin(OWNER);
-  boot(&mut sc);
-  make(&mut sc, vector[]);
-  sc.next_tx(OWNER);
-  let w = sc.take_shared<World>();
-  assert_eq!(sweep_members(&w), GOLDEN_MEMBERS_NO_MASK);
-  ts::return_shared(w);
-  sc.end();
-}
-
-#[test]
-fun format_3_masked_derivation_is_byte_identical() {
-  let mut sc = ts::begin(OWNER);
-  boot(&mut sc);
-  make(&mut sc, vector[2]);
-  sc.next_tx(OWNER);
-  let w = sc.take_shared<World>();
-  assert_eq!(sweep_members(&w), GOLDEN_MEMBERS_MASKED);
   ts::return_shared(w);
   sc.end();
 }

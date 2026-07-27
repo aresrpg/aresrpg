@@ -24,8 +24,6 @@ use std::unit_test::assert_eq;
 use sui::{kiosk::Kiosk, random::{Self, Random, RandomGenerator}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 
 const OWNER: address = @0xA;
-/// The stat-roll seed the forced-craft door injects (the live entry draws it from its `&Random` generator).
-const CRAFT_SEED: u64 = 0xC0FFEE;
 
 const EWrongOutput: u64 = 101; // crafting
 const EUnknownIngredient: u64 = 102; // crafting
@@ -59,7 +57,7 @@ fun make_recipe(sc: &mut Scenario, inputs: vector<ID>, quantities: vector<u64>, 
 
 /// Craft with an INJECTED outcome (deterministic branch coverage — no rng): the real gate + burn run, then `success`
 /// decides mint-vs-not; XP is credited either way. `who`'s character `cid` is the crafter.
-fun do_craft(sc: &mut Scenario, who: address, cid: ID, input_ids: vector<ID>, output_tid: ID, success: bool): Option<ID> {
+fun do_craft(sc: &mut Scenario, who: address, cid: ID, input_ids: vector<ID>, output_tid: ID, success: bool) {
   sc.next_tx(who);
   let recipe = sc.take_shared<Recipe>();
   let mut k = sc.take_shared<Kiosk>();
@@ -69,11 +67,10 @@ fun do_craft(sc: &mut Scenario, who: address, cid: ID, input_ids: vector<ID>, ou
   let policy = sc.take_shared<TransferPolicy<Item>>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
-  let minted = crafting::craft_forced(&recipe, &mut k, &pkcap, cid, input_ids, &out_tmpl, success, CRAFT_SEED, &xpolicy, &policy, &cfg, &ver, sc.ctx());
+  crafting::craft_forced(&recipe, &mut k, &pkcap, cid, input_ids, &out_tmpl, success, &xpolicy, &policy, &cfg, &ver, sc.ctx());
   ts::return_shared(recipe); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(out_tmpl); ts::return_shared(xpolicy); ts::return_shared(policy);
   ts::return_shared(cfg); ts::return_shared(ver);
-  minted
 }
 
 /// Read `who`'s character `cid` job xp for `job`.
@@ -105,30 +102,6 @@ fun craft_success_consumes_inputs_mints_output_and_grants_xp() {
   assert!(k.item_count() == 2); // character + the 1 minted bread
   ts::return_shared(k);
   assert_eq!(job_xp_of(&mut sc, OWNER, cid, 0), 10); // full in-band craft_xp granted
-  sc.end();
-}
-
-#[test]
-/// #758 REGRESSION: a CRAFTED gear output is born with its rolled `StatsKey`. Before the fix the craft mint door
-/// never rolled, so a crafted weapon's owned-stat block was blank forever while the same template bought from the
-/// shop rolled fine. The roll rides the craft's OWN entropy (the live entry's `&Random` generator; the forced door
-/// injects `CRAFT_SEED`), so it is fixed at mint and lands inside the authored [min,max].
-fun crafted_gear_output_carries_rolled_stats() {
-  let mut sc = ts::begin(OWNER);
-  let (cid, wheat, iron, _ore, _bread) = stage(&mut sc);
-  test_world::whitelist(&mut sc, b"weapon");
-  let sword = test_world::make_ranged_gear_template(&mut sc, b"sword", b"weapon", 100, 200);
-  let w = test_world::mint_lock_stack(&mut sc, OWNER, wheat, 2);
-  let i = test_world::mint_lock_stack(&mut sc, OWNER, iron, 3);
-  make_recipe(&mut sc, vector[wheat, iron], vector[2, 3], sword, 1);
-
-  let kid = { sc.next_tx(OWNER); let k = sc.take_shared<Kiosk>(); let id = object::id(&k); ts::return_shared(k); id };
-  let minted = do_craft(&mut sc, OWNER, cid, vector[w, i], sword, true);
-  assert!(minted.is_some());
-
-  // red pre-#758: `rolled_stats` aborts on the crafted item — it never carried a StatsKey
-  let v = test_world::rolled_vitality(&mut sc, OWNER, kid, *minted.borrow());
-  assert!(v >= 100 && v <= 200);
   sc.end();
 }
 

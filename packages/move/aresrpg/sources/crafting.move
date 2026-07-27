@@ -176,8 +176,7 @@ entry fun craft(
   let crafter_level = read_crafter_level(kiosk, pkcap, character_id, recipe.required_job);
   let mut gen = random::new_generator(r, ctx);
   let success = success_roll(crafter_level, &mut gen);
-  // the OUTPUT's stat roll rides the same terminal draw as the success roll (#758) — one generator, one call.
-  self_craft_body(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
+  self_craft_body(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, xpolicy, policy, config, version, ctx);
 }
 
 /// The self-craft body shared by the live `&Random` entry and the deterministic test doors. Given the crafter's
@@ -192,16 +191,15 @@ fun self_craft_body(
   output_template: &ItemTemplate,
   crafter_level: u64,
   success: bool,
-  stat_seed: u64,
   xpolicy: &ItemExtractPolicy,
   policy: &TransferPolicy<Item>,
   config: &GameConfig,
   version: &Version,
   ctx: &mut TxContext,
-): Option<ID> {
+) {
   craft_consume(recipe, kiosk, pkcap, input_item_ids, output_template, crafter_level, xpolicy, policy, config, version, ctx);
   let owner_cap = personal_kiosk::borrow(pkcap);
-  let minted = settle_output(recipe, output_template, success, stat_seed, kiosk, owner_cap, policy, version, ctx);
+  settle_output(recipe, output_template, success, kiosk, owner_cap, policy, version, ctx);
   let gained_xp = craft_xp_gain(recipe.craft_xp, recipe.inputs.length(), crafter_level);
   {
     let character = kiosk.borrow_mut(owner_cap, character_id);
@@ -215,7 +213,6 @@ fun self_craft_body(
     success,
     job_xp_gained: gained_xp,
   });
-  minted
 }
 
 /// ① + ③ CONSUME: the deterministic front half of a craft — assert enabled + kill-switch, output match, the ①
@@ -288,17 +285,15 @@ public(package) fun settle_output(
   recipe: &Recipe,
   output_template: &ItemTemplate,
   success: bool,
-  stat_seed: u64,
   kiosk: &mut Kiosk,
   owner_cap: &sui::kiosk::KioskOwnerCap,
   policy: &TransferPolicy<Item>,
   version: &Version,
   ctx: &mut TxContext,
-): Option<ID> {
-  // `stat_seed` rides the SAME terminal `&Random` draw as the success roll (#758): a crafted gear NFT is born
-  // with its rolled stat block, exactly like a bought or looted one. Returns the minted id (none on a failed roll).
-  if (!success) return option::none();
-  option::some(character_link::mint_and_lock_output(output_template, recipe.output_quantity, option::some(stat_seed), version, kiosk, owner_cap, policy, ctx))
+) {
+  // `mint_and_lock_output` now returns the minted id (pool ghost-refill seam); crafting ignores it — the block
+  // wrap discards the droppable ID so this stays an `if`-without-else statement.
+  if (success) { character_link::mint_and_lock_output(output_template, recipe.output_quantity, version, kiosk, owner_cap, policy, ctx); };
 }
 
 /// ② The reference-formula success roll: draw `0..=9999` from the threaded rng and pass if `< success_rate_bp(level)`
@@ -381,16 +376,16 @@ public fun craft_for_testing(
   config: &GameConfig,
   version: &Version,
   ctx: &mut TxContext,
-): Option<ID> {
+) {
   let crafter_level = read_crafter_level(kiosk, pkcap, character_id, recipe.required_job);
   let mut gen = random::new_generator_for_testing();
   let success = success_roll(crafter_level, &mut gen);
-  self_craft_body(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, gen.generate_u64(), xpolicy, policy, config, version, ctx)
+  self_craft_body(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, xpolicy, policy, config, version, ctx);
 }
 
 #[test_only]
 /// Self-craft with an INJECTED outcome (no rng) — proves the success AND failure BRANCHES deterministically: the
-/// real gate + burn run, then `success` decides mint-vs-not; XP is credited either way. Returns the minted id.
+/// real gate + burn run, then `success` decides mint-vs-not; XP is credited either way.
 public fun craft_forced(
   recipe: &Recipe,
   kiosk: &mut Kiosk,
@@ -399,15 +394,14 @@ public fun craft_forced(
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
   success: bool,
-  stat_seed: u64,
   xpolicy: &ItemExtractPolicy,
   policy: &TransferPolicy<Item>,
   config: &GameConfig,
   version: &Version,
   ctx: &mut TxContext,
-): Option<ID> {
+) {
   let crafter_level = read_crafter_level(kiosk, pkcap, character_id, recipe.required_job);
-  self_craft_body(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, stat_seed, xpolicy, policy, config, version, ctx)
+  self_craft_body(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, xpolicy, policy, config, version, ctx);
 }
 
 #[test_only]

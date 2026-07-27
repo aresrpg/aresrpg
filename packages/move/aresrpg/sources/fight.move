@@ -81,98 +81,13 @@ public fun create(
   assert!(mob_template::template_id(mob_tmpl) == t_template, EWrongTemplate);
   let (creator, creator_lines) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, t_character, version);
-  // The group's ENGAGEMENT ROUND (#609): 0 for a group nobody has lost to — byte-identical to every fight ever
-  // created — and +1 per release, because a fight's derived address is claimed once and reserved forever.
-  let (zx, zy) = game_world::zone_of(world, anchor_x, anchor_z);
-  let round = zones::group_round(world, zx, zy, spawn_id);
+  // The group's ENGAGEMENT ROUND stays 0 for the whole of leg 2: nothing releases a group until #609 rides
+  // round 2, so every fight is a first engagement — byte-identical to every fight ever created.
   engine::create_round(
-    FightBrand {}, registry, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
+    FightBrand {}, registry, t_world, spawn_id, 0, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
     is_public, party_id, false, &mob_template::to_spec(mob_tmpl), group_size, group_seed,
     t_template, creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
   );
-}
-
-// ╔════════════════ [ MIXED-PACK create — the member door (#1110/#1111) ] ════ ]
-
-/// OPEN a fight over a claimed MEMBER-LIST group. Everything `create` does — ticket provenance, the authentic
-/// creator snapshot, the dirty-counter mark, the #609 engagement round — happens right here, once; what follows
-/// in the PTB is `add_member` per species and then `engine::create_members`.
-///
-/// The PTB shape exists because a pack of N species needs N `&MobTemplate` shared objects in one create, and
-/// Move has no signature that takes a variable roster of them. It costs nothing in trust: the roster the ticket
-/// carries is the one the zone COMMITTED, and every `add_member` is checked against it in order.
-public fun open_group(
-  ticket: zones::MemberGroupTicket,
-  world: &World,
-  kiosk: &mut Kiosk,
-  pkcap: &PersonalKioskCap,
-  is_public: bool,
-  party_id: Option<ID>,
-  raised_spell_ids: vector<ID>,
-  config: &GameConfig,
-  version: &Version,
-  engine_version: &EngineVersion,
-  clock: &Clock,
-): GroupBuild {
-  config.assert_enabled();
-  config.assert_domain(config::domain_fight()); // S-46 kill-switch bit
-  version.assert_enabled();
-  let (t_world, t_character, spawn_id, _t_template, members, progress, anchor_x, anchor_z, _group_size, spawned_at_ms, group_seed) =
-    zones::consume_member_ticket(ticket);
-  assert!(object::id(world) == t_world, EWrongWorld);
-  let (creator, creator_lines) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
-  mark_seated(kiosk, pkcap, t_character, version);
-  let (zx, zy) = game_world::zone_of(world, anchor_x, anchor_z);
-  let round = zones::group_round(world, zx, zy, spawn_id);
-  engine::open_group(
-    FightBrand {}, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
-    is_public, party_id, false, group_seed, progress, members, creator, creator_lines,
-    dial_snapshot(config), engine_version,
-  )
-}
-
-/// ADD the next committed member's template. `to_spec` is the same mirror `create` uses, so a member of a mixed
-/// pack is combat-identical to the same species fought alone. The engine holds the only check that matters (the
-/// template's id against the committed roster) — this door adds no second opinion.
-public fun add_member(build: &mut GroupBuild, mob_tmpl: &MobTemplate) {
-  engine::add_member(build, mob_template::template_id(mob_tmpl), &mob_template::to_spec(mob_tmpl));
-}
-
-// ╔════════════════ [ DEFEAT RELEASES THE GROUP (#609) ] ══════════════════════ ]
-
-/// The mobs won — so their group goes BACK into the world at its spot. Only a player VICTORY consumes a group
-/// (§7: a defeat costs only time); without this door every lost fight permanently drained the world's mob
-/// population. BORROWS the outcome, so it composes in the settling seat's own PTB between
-/// `settlement::settle_and_take` and `results::open_taken`, exactly like the dungeon's `settle_run(&o)`.
-///
-/// Nothing the caller says is trusted — `(zx, zy, index)` only NAMES a group, and the naming is then proven:
-/// the group derives to a `spawn_id` whose fight address at the group's current round IS the outcome's fight id
-/// (`derived_object` addresses are collision-free), so a caller can only release the very group they just lost
-/// to. The brand assert rejects a foreign consumer's outcome, and the defeat assert rejects the farm loop
-/// "win the group, then release it with any other outcome". Bumping the round is what makes the released group
-/// FIGHTABLE again, and it doubles as the replay nonce: the outcome authenticates against exactly one round.
-public fun release_group(
-  world: &mut World,
-  registry: &fight_registry::FightRegistry,
-  outcome: &FightOutcome,
-  zx: u32,
-  zy: u32,
-  index: u64,
-  config: &GameConfig,
-  version: &Version,
-) {
-  config.assert_enabled();
-  version.assert_enabled();
-  assert!(settlement::brand(outcome) == brand_type(), EWrongBrand);
-  assert!(settlement::outcome(outcome) == engine::status_defeat(), ENotDefeat);
-  let wid = object::id(world);
-  assert!(settlement::world(outcome) == wid, EWrongGroup);
-  let spawn_id = zones_view::mob_spawn_id(world, zx, zy, index);
-  let round = zones::group_round(world, zx, zy, spawn_id);
-  let expected = fight_registry::group_fight_address(registry, wid, spawn_id, round);
-  assert!(object::id_from_address(expected) == settlement::fight_id(outcome), EWrongGroup);
-  let (x, z) = zones_view::mob_group_pos(world, zx, zy, index);
-  zones::release_mob_group(world, zx, zy, index, spawn_id, x, z);
 }
 
 /// Join an existing overworld fight during placement (§7 explicit join tx): carries the Clock so the seat
@@ -323,41 +238,6 @@ public fun create_dungeon_fight_brand<W: drop>(
 ) {
   config.assert_dungeon_brand<W>();
   create_dungeon_fight(registry, scope, nonce, world_seed, anchor_x, anchor_z, kiosk, pkcap, character_id, raised_spell_ids, mob_tmpl, group_size, config, version, engine_version, clock, ctx);
-}
-
-/// BRAND TWIN (2026-07-13 dungeon split): the ROSTER room-fight door for the PINNED dungeon sibling (#1110 ⑤).
-/// The dungeon passes the room's AUTHORED member list as the commitment, so the builder's per-slot check IS the
-/// room's allowlist — a room can be a boss plus its adds, and it can only be fought as exactly that.
-/// `group_seed` is derived the same way `create_dungeon_fight` derives it (deterministic + public: rooms are
-/// authored content and re-rolling means re-running, which costs KEYS).
-public fun open_room_group_brand<W: drop>(
-  _: W,
-  scope: ID,
-  nonce: u64,
-  world_seed: u64,
-  anchor_x: u32,
-  anchor_z: u32,
-  roster: vector<ID>,
-  progress: u64,
-  kiosk: &mut Kiosk,
-  pkcap: &PersonalKioskCap,
-  character_id: ID,
-  raised_spell_ids: vector<ID>,
-  config: &GameConfig,
-  version: &Version,
-  engine_version: &EngineVersion,
-  clock: &Clock,
-): GroupBuild {
-  config.assert_dungeon_brand<W>();
-  config.assert_enabled();
-  version.assert_enabled();
-  let (creator, creator_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
-  mark_seated(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the mark applies
-  engine::open_group(
-    FightBrand {}, scope, nonce, 0, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
-    false, option::none(), true, fold_id(scope) ^ nonce, progress, roster, creator, creator_lines,
-    dial_snapshot(config), engine_version,
-  )
 }
 
 /// BRAND TWIN (2026-07-13 dungeon split): the vouched-join door for the PINNED dungeon sibling (a party member

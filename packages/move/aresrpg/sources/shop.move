@@ -2,9 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// SHOP — the SALE GATE that owns supply, price, an optional time window, and pause. A `Sale` is a shared
 /// vending machine for one item template; `buy` mints ONE item and `buy_many` mints N — each mints through the
-/// ONE gear-mint door (`extension::mint_item`, which ROLLS the template's [min,max] ranges off the seed this call
-/// draws) and LOCKS the item(s) straight into the buyer's PERSONAL kiosk — all in ONE terminal call. Items never
-/// touch a raw address — only the SUI change does.
+/// package-private `item::mint`, ROLLS stats from the template's [min,max] ranges (if any), and LOCKS the
+/// item(s) straight into the buyer's PERSONAL kiosk — all in ONE terminal call. Items never touch a raw address
+/// — only the SUI change does.
 ///
 /// PLACEMENT-BY-RESPONSIBILITY: the supply cap lives HERE, on the gate that owns the "how many may be sold"
 /// decision — NOT on the item template (a future mob-loot gate has no supply cap at all). Price, the time window
@@ -32,7 +32,7 @@
 ///   << TESTNET-MEASURED per-item `buy` gas: TO BE STAMPED at the publish rehearsal; ship it × 1.5 × quantity. >>
 module aresrpg::shop;
 
-use aresrpg::{admin::AdminCap, config::GameConfig, extension, item::{Self, Item, ItemTemplate}, item_stats, version::Version};
+use aresrpg::{admin::AdminCap, config::GameConfig, item::{Self, Item, ItemTemplate}, item_stats, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
   clock::Clock,
@@ -241,7 +241,7 @@ fun buy_internal(
   clock: &Clock,
   version: &Version,
   ctx: &mut TxContext,
-): vector<ID> {
+) {
   version.assert_enabled();
   assert!(quantity >= 1 && quantity <= MAX_BUY_QUANTITY, EInvalidQuantity);
   assert!(!sale.paused, ESalePaused);
@@ -264,7 +264,6 @@ fun buy_internal(
   else transfer::public_transfer(payment, buyer);
 
   let owner_cap = personal_kiosk::borrow(pkcap);
-  let mut minted = vector<ID>[]; // the ids this call landed in the kiosk (the entries discard them; tests read them)
 
   if (item::is_stackable_category(item::template_category(template))) {
     // STACKABLE (resource/consumable): the whole batch is ONE item carrying amount = quantity — no per-unit NFTs,
@@ -280,14 +279,17 @@ fun buy_internal(
       price: sale.price,
       amount: quantity,
     });
-    minted.push_back(object::id(&item));
     item::lock_in_kiosk(pledge, item, kiosk, owner_cap, policy);
   } else {
-    // NON-STACKABLE (gear): mint N UNIQUE items through the ONE gear-mint door, each carrying its OWN seed drawn
-    // from this call's single generator — the door rolls the template ranges (if any) and attaches the block.
+    // NON-STACKABLE (gear): mint N UNIQUE items, each independently rolled from the template ranges (if any).
+    let has_ranges = item_stats::has_ranges(template);
     let mut i = 0;
     while (i < quantity) {
-      let (item, pledge) = extension::mint_item(template, option::some(generator.generate_u64()), version, ctx);
+      let (mut item, pledge) = item::mint(template, ctx);
+      if (has_ranges) {
+        let rolled = item_stats::roll(item_stats::stats_min(template), item_stats::stats_max(template), generator);
+        item_stats::attach_rolled(&mut item, rolled);
+      };
       event::emit(SaleBought {
         sale: object::id(sale),
         template: sale.template,
@@ -296,12 +298,10 @@ fun buy_internal(
         price: sale.price,
         amount: 1,
       });
-      minted.push_back(object::id(&item));
       item::lock_in_kiosk(pledge, item, kiosk, owner_cap, policy);
       i = i + 1;
     };
   };
-  minted
 }
 
 /// Abort unless `now` is inside the sale window: start INCLUSIVE, end EXCLUSIVE, each `none` side open.
@@ -331,9 +331,9 @@ public fun buy_for_testing(
   clock: &Clock,
   version: &Version,
   ctx: &mut TxContext,
-): vector<ID> {
+) {
   let mut generator = random::new_generator_for_testing();
-  buy_internal(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx)
+  buy_internal(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
 #[test_only]
@@ -349,9 +349,9 @@ public fun buy_many_for_testing(
   clock: &Clock,
   version: &Version,
   ctx: &mut TxContext,
-): vector<ID> {
+) {
   let mut generator = random::new_generator_for_testing();
-  buy_internal(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx)
+  buy_internal(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]

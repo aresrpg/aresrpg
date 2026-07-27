@@ -78,10 +78,6 @@ fun search(sc: &mut Scenario, cid: ID, x: u32, z: u32, now: u64) {
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
   zones::search_for_testing(&mut w, &mut k, &pkcap, cid, x, z, &cfg, &ver, &clk);
-  // FORMAT-1 PREMISE (#1110): a fresh search now writes a MEMBER-LIST (format 3) commitment, whose whole-set
-  // shape carries no per-index Merkle path. The per-index PROOF doors this suite is about authenticate against
-  // the bare root every zone the deployed package searched carries, so the zone is restamped to that format.
-  { let (zx, zy) = world::zone_of(&w, x, z); zones::set_merkle_root_commitment_for_testing(&mut w, zx, zy, 6); };
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver);

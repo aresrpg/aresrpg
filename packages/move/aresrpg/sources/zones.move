@@ -17,7 +17,7 @@ use aresrpg::{
 };
 use aresrpg_foundation::{world_math, zone_gen};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, vec_map::{Self, VecMap}};
+use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}};
 
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
@@ -31,9 +31,6 @@ const ENodeEmpty: u64 = 107; // gathering seam: the resource cell is already har
 const ESpawnNotFound: u64 = 108; // claim: no LIVE derived group with this spawn_id in the target zone (an unsearched/undiscovered zone has no Zone DF → also 108)
 const EBadDrainInput: u64 = 109; // drain_zones: the zx / zy coordinate lists have mismatched lengths
 const EBadGroupProof: u64 = 110; // claim: supplied facts/index/proof do not authenticate against the searched-zone root
-const EGroupNotConsumed: u64 = 111; // release: the group is already live in the world — nothing to put back
-const EMemberZone: u64 = 112; // claim: this zone derives MEMBER LISTS (format 3) — claim it through the member doors
-const ENotMemberZone: u64 = 113; // member claim: this zone predates member lists — claim it through the original doors
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -54,15 +51,6 @@ public struct ZoneKey has copy, drop, store { zx: u32, zy: u32 }
 /// Adjacent root storage is owned here: no sibling module can construct this private-field key or write roots.
 public struct ZoneGroupRootKey has copy, drop, store { zx: u32, zy: u32 }
 public struct ZoneGroupCommitment has store { root: vector<u8>, count: u64 }
-
-/// The zone's ENGAGEMENT ROUNDS (#609 — a group the mobs WON goes back into the world at its spot): `spawn_id →
-/// how many times this group has been released`. Absent, or a spawn absent from the map, means 0 — never lost to.
-/// A fight's derived address is claimed once and stays reserved forever, so the round is what gives the NEXT
-/// fight over a released group an address to live at (`fight_registry::group_fight_address`). Zone-scoped: the
-/// re-search that re-rolls the seed (new seed = new spawn ids) drops it with the bitmaps, and `drain_zones`
-/// reclaims it with the rest of the zone.
-public struct ZoneRoundsKey has copy, drop, store { zx: u32, zy: u32 }
-public struct ZoneRounds has store { rounds: VecMap<u64, u64> }
 
 /// The PROVENANCE HOT POTATO a successful `claim_mob_group` returns — the ONLY way to open a world fight.
 /// No abilities: it cannot be stored, dropped, or copied, so the claiming PTB MUST consume it in the same tx
@@ -104,33 +92,6 @@ public(package) fun consume_group_ticket(t: GroupTicket): (ID, ID, u64, ID, u32,
   (world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed)
 }
 
-/// The FORMAT-3 provenance hot potato (#1110) — `GroupTicket` plus the two facts a mixed pack needs: the
-/// committed member ROSTER in draw order, and the zone's §4 `progress` (the graded level window's input).
-///
-/// A second struct rather than two more fields: `GroupTicket` is published, and a COMPATIBLE Sui upgrade cannot
-/// change a struct's layout. Everything else about it is identical — no abilities, one constructor, and that
-/// constructor sits behind the same full claim gauntlet.
-public struct MemberGroupTicket {
-  world: ID,
-  character: ID,
-  spawn_id: u64,
-  template: ID, // the PRIMARY — the group's identity row and `members[0]`
-  members: vector<ID>,
-  progress: u64,
-  x: u32,
-  z: u32,
-  group_size: u16,
-  spawned_at_ms: u64,
-  group_seed: u64,
-}
-
-/// Unpack a `MemberGroupTicket` → the `consume_group_ticket` tuple plus `(members, progress)`. Same seam law:
-/// the security is the CREATION gate, so unpacking outside `fight::open_group` only forfeits the claim.
-public(package) fun consume_member_ticket(t: MemberGroupTicket): (ID, ID, u64, ID, vector<ID>, u64, u32, u32, u16, u64, u64) {
-  let MemberGroupTicket { world, character, spawn_id, template, members, progress, x, z, group_size, spawned_at_ms, group_seed } = t;
-  (world, character, spawn_id, template, members, progress, x, z, group_size, spawned_at_ms, group_seed)
-}
-
 // ╔════════════════ [ Events ] ═══════════════════════════════════════════════ ]
 
 public struct WorldJoined has copy, drop { world: ID, character: ID, x: u32, z: u32, first_join: bool }
@@ -138,9 +99,6 @@ public struct WorldJoined has copy, drop { world: ID, character: ID, x: u32, z: 
 public struct ZoneSearched has copy, drop { world: ID, zx: u32, zy: u32, at_ms: u64, mob_groups: u64, resource_nodes: u64 }
 
 public struct MobGroupClaimed has copy, drop { world: ID, character: ID, spawn_id: u64, template: ID, x: u32, z: u32, group_size: u16 }
-
-/// The mobs won: their group is back in the world at its spot, fightable again at engagement `round` (#609).
-public struct MobGroupReleased has copy, drop { world: ID, spawn_id: u64, x: u32, z: u32, round: u64 }
 
 /// A batch of discovered-zone dynamic fields (`ZoneKey → Zone`) was drained off a World UID ahead of a
 /// `world::destroy_world` (storage reclaim). `zones_removed` counts what actually existed — the drain is idempotent.
@@ -286,13 +244,9 @@ fun search_internal(
     character_link::write_checkpoint(character, wid, checkpoint::new_checkpoint(x, z, now, pet), version);
   };
 
-  // THE ZONE'S OWN DERIVATION — a fresh search rolls FORMAT 3 (#1110/#1111): member lists, equal spawn (no
-  // level-gated membership) and lattice placement. It is derived HERE with the very kernel the commitment written
-  // below names, so the zone can only ever be replayed the way it was written. Zones searched before this door
-  // keep replaying their own stored format, forever.
-  let (msids, mt, mmembers, mx, mz, ms, mg, _progress) =
-    zone_comp::derive_mobs_members(world, zx, zy, seed, config.team_size_bound());
-  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::derive_res_grid(world, zx, zy, seed);
+  // derived counts for the honest event (compute-only — nothing per-row is stored)
+  let (msids, mt, mx, mz, ms, mg) = zone_comp::derive_mobs(world, zx, zy, seed, config.team_size_bound());
+  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::derive_res(world, zx, zy, seed);
 
   // ── write: create-or-RE-ROLL the zone DF (new seed, bitmaps reset — the top-up's derivation-model successor) ──
   let wuid = world::uid_mut(world);
@@ -305,7 +259,7 @@ fun search_internal(
   } else {
     df::add(wuid, key, Zone { discovered_at_ms: now, seed, mob_bitmap: vector[], res_bitmap: vector[] });
   };
-  let group_root = zone_gen::mob_group_commitment_members(wid, zx, zy, seed, now, &msids, &mt, &mmembers, &mx, &mz, &ms, &mg);
+  let group_root = zone_gen::mob_group_root(wid, zx, zy, seed, now, &msids, &mt, &mx, &mz, &ms, &mg);
   let root_key = ZoneGroupRootKey { zx, zy };
   if (df::exists(wuid, root_key)) {
     let stored: &mut ZoneGroupCommitment = df::borrow_mut(wuid, root_key);
@@ -314,7 +268,6 @@ fun search_internal(
   } else {
     df::add(wuid, root_key, ZoneGroupCommitment { root: group_root, count: msids.length() });
   };
-  drop_zone_rounds(wuid, zx, zy); // the re-roll renames every spawn — the old rounds name nothing
 
   event::emit(ZoneSearched { world: wid, zx, zy, at_ms: now, mob_groups: msids.length(), resource_nodes: rsids.length() });
 }
@@ -374,106 +327,6 @@ public fun claim_mob_group_in_zone_with_proof(
   claim_group_at_zone(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::some(p), config, version, clock)
 }
 
-// ╔════════════════ [ MEMBER-LIST claim doors (format 3, #1110) ] ═══════════ ]
-
-/// OCCUPIED-ZONE member claim — the format-3 twin of `claim_mob_group`. Same gauntlet, same writes; the ticket
-/// additionally carries the committed ROSTER and the zone's difficulty `progress`, which is what lets
-/// `fight::open_group` build a pack of several species without trusting anything the caller says.
-///
-/// NO PROOF VARIANT: a format-3 zone commits its WHOLE derived set (roster included), so authenticating means
-/// re-deriving it — the derivation IS the proof, exactly as it is for format 2. There is nothing a Merkle path
-/// would save.
-public fun claim_mob_group_members(
-  world: &mut World,
-  kiosk: &mut Kiosk,
-  pkcap: &PersonalKioskCap,
-  character_id: ID,
-  spawn_id: u64,
-  config: &GameConfig,
-  version: &Version,
-  clock: &Clock,
-): MemberGroupTicket {
-  claim_members_at_zone(world, kiosk, pkcap, character_id, option::none(), spawn_id, config, version, clock)
-}
-
-/// GLOBAL-SEARCH member claim — the format-3 twin of `claim_mob_group_in_zone`.
-public fun claim_mob_group_in_zone_members(
-  world: &mut World,
-  kiosk: &mut Kiosk,
-  pkcap: &PersonalKioskCap,
-  character_id: ID,
-  zx: u32,
-  zy: u32,
-  spawn_id: u64,
-  config: &GameConfig,
-  version: &Version,
-  clock: &Clock,
-): MemberGroupTicket {
-  claim_members_at_zone(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, config, version, clock)
-}
-
-/// The member security tail — `claim_group_at_zone`'s twin, differing only in what it authenticates (a roster
-/// and a progress alongside the group facts) and in the ticket it hands back.
-fun claim_members_at_zone(
-  world: &mut World,
-  kiosk: &mut Kiosk,
-  pkcap: &PersonalKioskCap,
-  character_id: ID,
-  zone: Option<ZoneKey>,
-  spawn_id: u64,
-  config: &GameConfig,
-  version: &Version,
-  clock: &Clock,
-): MemberGroupTicket {
-  let (wid, template, members, progress, x, z, group_size, spawned_at_ms, group_seed) =
-    claim_at_zone(world, kiosk, pkcap, character_id, zone, spawn_id, option::none(), true, config, version, clock);
-  MemberGroupTicket {
-    world: wid, character: character_id, spawn_id, template, members, progress,
-    x, z, group_size, spawned_at_ms, group_seed,
-  }
-}
-
-/// Locate a LIVE derived group by `spawn_id` in zone `(zx,zy)`. `members` picks the derivation: the
-/// format-dispatching `derive_mobs` projection (formats 1/2 — what a single-spec ticket promises), or the
-/// member-list stream that carries a roster and the zone's difficulty progress. Returns the SUPERSET
-/// `(template_id, roster, progress, x, z, group_size, spawned_at_ms, group_seed, derivation index)`; the
-/// single-spec callers drop the two fields they have no ticket field for. Aborts `ESpawnNotFound` if the zone
-/// is undiscovered, no derived group carries that id, or its consumed bit is already set.
-fun find_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, members: bool): (ID, vector<ID>, u64, u32, u32, u16, u64, u64, u64) {
-  let key = ZoneKey { zx, zy };
-  assert!(df::exists(world::uid(world), key), ESpawnNotFound);
-  let zone: &Zone = df::borrow(world::uid(world), key);
-  let (sids, tpls, rosters, xs, zs, sizes, gseeds, progress) = if (members) {
-    zone_comp::derive_mobs_members(world, zx, zy, zone.seed, team_bound)
-  } else {
-    let (s, t, x, z, sz, g) = derive_mobs(world, zx, zy, zone.seed, team_bound);
-    (s, t, vector<vector<ID>>[], x, z, sz, g, 0)
-  };
-  let n = sids.length();
-  let mut i = 0;
-  while (i < n) {
-    if (sids[i] == spawn_id) {
-      assert!(!bit_get(&zone.mob_bitmap, i), ESpawnNotFound); // consumed = gone (no double-fight of one group)
-      // The ROSTER the fight seats is `min(group_size, roster)` — the derived roster runs at the RAW rolled size
-      // (stream law) while `sizes[i]` carries the live team-bound clamp, so the ticket ships exactly the members
-      // the engine will seat and `create_members` can demand all of them. A single-spec claim has no roster, so
-      // the clamp is a no-op there.
-      let mut roster = if (members) rosters[i] else vector<ID>[];
-      while (roster.length() > (sizes[i] as u64)) { roster.pop_back(); };
-      return (tpls[i], roster, progress, xs[i], zs[i], sizes[i], zone.discovered_at_ms, gseeds[i], i)
-    };
-    i = i + 1;
-  };
-  abort ESpawnNotFound
-}
-
-/// `find_group` projected to the single-spec shape the original (format-1/2) ticket carries.
-fun single_spec_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
-  let (t, _roster, _progress, x, z, group_size, spawned_at_ms, group_seed, index) =
-    find_group(world, zx, zy, spawn_id, team_bound, false);
-  (t, x, z, group_size, spawned_at_ms, group_seed, index)
-}
-
 /// One shared security tail: authenticate facts (derive or proof), travel-check, consume bit, checkpoint, ticket.
 fun claim_group_at_zone(
   world: &mut World,
@@ -487,31 +340,6 @@ fun claim_group_at_zone(
   version: &Version,
   clock: &Clock,
 ): GroupTicket {
-  let (wid, template, _members, _progress, x, z, group_size, spawned_at_ms, group_seed) =
-    claim_at_zone(world, kiosk, pkcap, character_id, zone, spawn_id, claim_proof, false, config, version, clock);
-  GroupTicket { world: wid, character: character_id, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
-}
-
-/// ONE shared claim gauntlet behind both ticket doors: refuse, locate the zone, route on FORMAT, authenticate
-/// the group, travel-verify, consume the bit, advance the checkpoint, announce. `members` picks which half of
-/// two things differ — the format the zone must be, and whether the group is authenticated as a member list or
-/// through the original derive-or-proof path. Everything else is one body, so the two doors cannot drift apart
-/// on a refusal, a write, or their event.
-///
-/// Returns the SUPERSET of what the two tickets carry; the single-spec builder drops `members`/`progress`.
-fun claim_at_zone(
-  world: &mut World,
-  kiosk: &mut Kiosk,
-  pkcap: &PersonalKioskCap,
-  character_id: ID,
-  zone: Option<ZoneKey>,
-  spawn_id: u64,
-  claim_proof: Option<GroupClaimProof>,
-  members: bool,
-  config: &GameConfig,
-  version: &Version,
-  clock: &Clock,
-): (ID, ID, vector<ID>, u64, u32, u32, u16, u64, u64) {
   config.assert_enabled();
   version.assert_enabled();
   let now = clock.timestamp_ms();
@@ -534,20 +362,9 @@ fun claim_at_zone(
     world::zone_of(world, checkpoint::x(&cp), checkpoint::z(&cp))
   };
 
-  // FORMAT IS THE ROUTER, never a caller preference. A member-list zone's groups hold several species and the
-  // original ticket has nowhere to put them — a single-spec fight over a mixed commitment is precisely the
-  // divergence the commitment exists to prevent. A pre-member zone has no roster to commit, so a member claim
-  // over it would have to invent one. Each door refuses the other's zones; both refusals live here.
-  let format = group_commitment_format(world, zx, zy);
-  if (members) assert!(format == 3, ENotMemberZone) else assert!(format != 3, EMemberZone);
-
-  // Authenticate the LIVE group: the member-list stream, or original derivation / the adjacent search-time commitment.
-  let (template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed, index) = if (members) {
-    find_group(world, zx, zy, spawn_id, config.team_size_bound(), true)
-  } else {
-    let (t, x, z, gs, sa, g, ix) = resolve_mob_group(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
-    (t, vector<ID>[], 0, x, z, gs, sa, g, ix)
-  };
+  // Authenticate the LIVE group by original derivation or by the adjacent search-time commitment.
+  let (template_id, mx, mz, group_size, spawned_at_ms, group_seed, index) =
+    resolve_mob_group(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
 
   // travel verification: you must have been able to WALK from your checkpoint to the group (teach-don't-reject)
   let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
@@ -562,7 +379,7 @@ fun claim_at_zone(
   };
 
   event::emit(MobGroupClaimed { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size });
-  (wid, template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed)
+  GroupTicket { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size, spawned_at_ms, group_seed }
 }
 
 fun resolve_mob_group(
@@ -570,13 +387,13 @@ fun resolve_mob_group(
 ): (ID, u32, u32, u16, u64, u64, u64) {
   if (claim_proof.is_none()) {
     claim_proof.destroy_none();
-    return single_spec_group(world, zx, zy, spawn_id, team_bound)
+    return find_mob_group(world, zx, zy, spawn_id, team_bound)
   };
   let GroupClaimProof { index, template, x, z, group_size, group_seed, proof } = claim_proof.destroy_some();
   let uid = world::uid(world);
   let root_key = ZoneGroupRootKey { zx, zy };
   if (!df::exists(uid, root_key)) {
-    return single_spec_group(world, zx, zy, spawn_id, team_bound)
+    return find_mob_group(world, zx, zy, spawn_id, team_bound)
   };
   let key = ZoneKey { zx, zy };
   assert!(df::exists(uid, key), ESpawnNotFound);
@@ -590,64 +407,30 @@ fun resolve_mob_group(
   (template, x, z, group_size, zone.discovered_at_ms, group_seed, index)
 }
 
+/// Locate a LIVE derived mob group by `spawn_id` in zone `(zx,zy)`; returns `(template_id, x, z, group_size,
+/// spawned_at_ms, group_seed, derivation index)`. Aborts `ESpawnNotFound` if the zone is undiscovered, no derived
+/// group carries that id, or its consumed bit is already set.
+fun find_mob_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
+  let key = ZoneKey { zx, zy };
+  assert!(df::exists(world::uid(world), key), ESpawnNotFound);
+  let zone: &Zone = df::borrow(world::uid(world), key);
+  let (sids, tpls, xs, zs, sizes, gseeds) = derive_mobs(world, zx, zy, zone.seed, team_bound);
+  let n = sids.length();
+  let mut i = 0;
+  while (i < n) {
+    if (sids[i] == spawn_id) {
+      assert!(!bit_get(&zone.mob_bitmap, i), ESpawnNotFound); // consumed = gone (no double-fight of one group)
+      return (tpls[i], xs[i], zs[i], sizes[i], zone.discovered_at_ms, gseeds[i], i)
+    };
+    i = i + 1;
+  };
+  abort ESpawnNotFound
+}
 
 /// Set the consumed bit of derived mob group `index` in zone `(zx,zy)` — the write that replaced the row removal.
 fun mark_mob_consumed(world: &mut World, zx: u32, zy: u32, index: u64) {
   let zone: &mut Zone = df::borrow_mut(world::uid_mut(world), ZoneKey { zx, zy });
   bit_set(&mut zone.mob_bitmap, index);
-}
-
-// ╔════════════════ [ RELEASE THE GROUP (#609 — only a player VICTORY consumes it) ] ═ ]
-
-/// Put a consumed group BACK in the world at its spot: clear its consumed bit and bump its engagement round.
-/// §7 says a defeat costs only time — the mobs winning is not a reason for them to vanish, and without this the
-/// world's mob population drains as a pure function of player deaths. Package-internal on purpose: the ONLY
-/// caller is `aresrpg::fight::release_group`, which authenticates the defeat against the fight's derived address
-/// before asking for this write (this module owns the bitmap; that one owns the fight's semantics). The new round
-/// — the address namespace the next fight over the group will claim — rides the event.
-public(package) fun release_mob_group(world: &mut World, zx: u32, zy: u32, index: u64, spawn_id: u64, x: u32, z: u32) {
-  assert!(!mob_group_live(world, zx, zy, index), EGroupNotConsumed);
-  let wid = object::id(world);
-  let wuid = world::uid_mut(world);
-  {
-    let zone: &mut Zone = df::borrow_mut(wuid, ZoneKey { zx, zy });
-    bit_clear(&mut zone.mob_bitmap, index);
-  };
-  let round = bump_group_round(wuid, zx, zy, spawn_id);
-  event::emit(MobGroupReleased { world: wid, spawn_id, x, z, round });
-}
-
-/// The group's ENGAGEMENT ROUND — 0 until the group has been released, +1 per release. `fight::create` reads it
-/// to namespace the fight's derived address; the release door reads it to authenticate an outcome against that
-/// same address. An undiscovered zone (no rounds DF) is 0, like every never-lost-to group.
-public fun group_round(world: &World, zx: u32, zy: u32, spawn_id: u64): u64 {
-  let key = ZoneRoundsKey { zx, zy };
-  if (!df::exists(world::uid(world), key)) return 0;
-  let stored: &ZoneRounds = df::borrow(world::uid(world), key);
-  if (stored.rounds.contains(&spawn_id)) *stored.rounds.get(&spawn_id) else 0
-}
-
-/// +1 to the group's round, creating the zone's rounds map on first use. Returns the new value.
-fun bump_group_round(wuid: &mut UID, zx: u32, zy: u32, spawn_id: u64): u64 {
-  let key = ZoneRoundsKey { zx, zy };
-  if (!df::exists(wuid, key)) df::add(wuid, key, ZoneRounds { rounds: vec_map::empty() });
-  let stored: &mut ZoneRounds = df::borrow_mut(wuid, key);
-  if (!stored.rounds.contains(&spawn_id)) {
-    stored.rounds.insert(spawn_id, 1);
-    return 1
-  };
-  let r = stored.rounds.get_mut(&spawn_id);
-  *r = *r + 1;
-  *r
-}
-
-/// Drop a zone's rounds map (the re-search re-roll and the pre-destruction drain — both already discard the
-/// bitmaps, and a new seed means new spawn ids, so the old rounds name nothing).
-fun drop_zone_rounds(wuid: &mut UID, zx: u32, zy: u32) {
-  let key = ZoneRoundsKey { zx, zy };
-  if (df::exists(wuid, key)) {
-    let ZoneRounds { rounds: _ } = df::remove(wuid, key);
-  };
 }
 
 // ╔════════════════ [ Gathering seam (package-internal derived-cell read + consume) ] ══ ]
@@ -699,7 +482,6 @@ public fun drain_zones(cap: &AdminCap, world: &mut World, zxs: vector<u32>, zys:
     if (df::exists(wuid, root_key)) {
       let ZoneGroupCommitment { root: _, count: _ } = df::remove(wuid, root_key);
     };
-    drop_zone_rounds(wuid, zxs[i], zys[i]);
     i = i + 1;
   };
   event::emit(ZonesDrained { world: wid, zones_removed: removed });
@@ -742,11 +524,7 @@ public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
 /// over a World, and the foundation kernel is pure over scalars. Every in-package reader of a zone's groups goes
 /// through this door, so a zone can never be read with a derivation other than the one it was written with.
 public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
-  let format = group_commitment_format(world, zx, zy);
-  if (format == 3) { // 3 = member lists — project them away; ids, positions and sizes are what this door promises
-    let (sids, tpls, _members, xs, zs, sizes, gseeds, _progress) = zone_comp::derive_mobs_members(world, zx, zy, seed, team_bound);
-    (sids, tpls, xs, zs, sizes, gseeds)
-  } else if (format == 2) { // 2 = zone_gen lattice commitment
+  if (group_commitment_format(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
     zone_comp::derive_mobs_grid(world, zx, zy, seed, team_bound)
   } else {
     zone_comp::derive_mobs(world, zx, zy, seed, team_bound)
@@ -756,9 +534,7 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
 /// The resource twin of `derive_mobs` — the SAME commitment byte selects both streams, so a zone's mobs and its
 /// resource cells are always derived by one algorithm.
 public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  let format = group_commitment_format(world, zx, zy);
-  // Formats 2 AND 3 are both LATTICE zones — the member list changed what a group HOLDS, never where anything sits.
-  if (format == 2 || format == 3) {
+  if (group_commitment_format(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
     zone_comp::derive_res_grid(world, zx, zy, seed)
   } else {
     zone_comp::derive_res(world, zx, zy, seed)
@@ -794,17 +570,6 @@ fun bit_set(bm: &mut vector<u8>, i: u64) {
   *b = *b | (1 << ((i % 8) as u8));
 }
 
-/// Clear bit `i`, then pop trailing zero bytes — the exact inverse of `bit_set`, so a released group leaves the
-/// bitmap byte-identical to what it was before its claim (the cost shape stays lazy, and the JS mirror's
-/// `bit_get` reads a shorter vector as all-live).
-fun bit_clear(bm: &mut vector<u8>, i: u64) {
-  let byte = i / 8;
-  if (byte >= bm.length()) return;
-  let b = &mut bm[byte];
-  *b = *b & (255u8 ^ (1u8 << ((i % 8) as u8)));
-  while (!bm.is_empty() && bm[bm.length() - 1] == 0) { bm.pop_back(); };
-}
-
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 
 #[test_only]
@@ -816,33 +581,11 @@ public fun set_lattice_commitment_for_testing(world: &mut World, zx: u32, zy: u3
   let wid = object::id(world);
   let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::derive_mobs_grid(world, zx, zy, seed, team_bound);
   let root = zone_gen::mob_group_commitment(wid, zx, zy, seed, now, &sids, &tpls, &xs, &zs, &sizes, &gseeds);
-  write_commitment_for_testing(world, zx, zy, root, sids.length());
-}
-
-#[test_only]
-/// Overwrite the zone's stored commitment with a FORMAT-1 one — a bare Merkle root over the spaced-sampler
-/// derivation, the shape every zone the deployed package searched carries, and the only shape the per-index
-/// proof doors can authenticate. The suites that exercise those doors stand their zones up through this.
-public fun set_merkle_root_commitment_for_testing(world: &mut World, zx: u32, zy: u32, team_bound: u64) {
-  let seed = zone_seed(world, zx, zy);
-  let now = zone_discovered_at(world, zx, zy);
-  let wid = object::id(world);
-  let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::derive_mobs(world, zx, zy, seed, team_bound);
-  let root = zone_gen::mob_group_root(wid, zx, zy, seed, now, &sids, &tpls, &xs, &zs, &sizes, &gseeds);
-  write_commitment_for_testing(world, zx, zy, root, sids.length());
-}
-
-#[test_only]
-fun write_commitment_for_testing(world: &mut World, zx: u32, zy: u32, root: vector<u8>, count: u64) {
+  let count = sids.length();
   let wuid = world::uid_mut(world);
-  let key = ZoneGroupRootKey { zx, zy };
-  if (df::exists(wuid, key)) {
-    let stored: &mut ZoneGroupCommitment = df::borrow_mut(wuid, key);
-    stored.root = root;
-    stored.count = count;
-  } else {
-    df::add(wuid, key, ZoneGroupCommitment { root, count });
-  };
+  let stored: &mut ZoneGroupCommitment = df::borrow_mut(wuid, ZoneGroupRootKey { zx, zy });
+  stored.root = root;
+  stored.count = count;
 }
 
 #[test_only]
@@ -853,7 +596,12 @@ public fun mob_bitmap_for_testing(world: &World, zx: u32, zy: u32): vector<u8> {
 #[test_only]
 public fun reopen_mob_group_for_testing(world: &mut World, zx: u32, zy: u32, index: u64) {
   let zone: &mut Zone = df::borrow_mut(world::uid_mut(world), ZoneKey { zx, zy });
-  bit_clear(&mut zone.mob_bitmap, index);
+  let byte = index / 8;
+  if (byte < zone.mob_bitmap.length()) {
+    let b = &mut zone.mob_bitmap[byte];
+    *b = *b & (255u8 ^ (1u8 << ((index % 8) as u8)));
+    while (!zone.mob_bitmap.is_empty() && zone.mob_bitmap[zone.mob_bitmap.length() - 1] == 0) { zone.mob_bitmap.pop_back(); };
+  };
 }
 
 #[test_only]
