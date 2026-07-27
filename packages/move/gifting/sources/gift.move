@@ -19,7 +19,7 @@
 ///     `Gift`. Emits `GiftSent`. The items stay physically in the sender's kiosk (exclusively listed) — the cap
 ///     is the transferable right to buy them for 0.
 ///   • claim(RECIPIENT-ONLY): consume the `Gift` — for EACH cap `purchase_with_cap` (paying the 0-price into the
-///     sender's kiosk profits) and resolve the FULL Item TransferPolicy receipt (`item_listing_rule` + `lot_rule` +
+///     sender's kiosk profits) and resolve the FULL Item TransferPolicy receipt (`item::ListingRule` + `item::LotRule` +
 ///     `royalty_rule::pay` from the escrowed balance + `kiosk_lock_rule` + `personal_kiosk_rule` +
 ///     `confirm_request`), landing each item LOCKED in the recipient's personal kiosk (kiosk-lock constitution).
 ///     Royalty + lock rules FIRE exactly as a normal purchase — nothing is bypassed. Any over-funded royalty
@@ -34,7 +34,7 @@
 /// the sender `recall`s. A separate receiver-side "reject" is redundant surface.
 module aresrpg_gifting::gift;
 
-use aresrpg::{config::GameConfig, item::Item, item_listing_rule, lot_rule, version::Version};
+use aresrpg::{config::GameConfig, item::{Self, Item}, version::Version};
 use kiosk::{
   kiosk_lock_rule,
   personal_kiosk::{Self, PersonalKioskCap},
@@ -162,8 +162,8 @@ public fun claim(
 
     // Receipt tail — the SAME order the marketplace-purchase PTB uses (the two Ares rules need `&item` BEFORE the
     // lock consumes it; the two lock rules need the item ALREADY re-locked in the recipient's kiosk):
-    item_listing_rule::prove_amount(&item, &mut request); // amount-0 ghost gate (real stacks pass)
-    lot_rule::prove(&item, &mut request); // legal stack lot, or trivial pass for a unique Item
+    item::prove_listing_amount(&item, &mut request); // amount-0 ghost gate (real stacks pass)
+    item::prove_lot(&item, &mut request); // legal stack lot, or trivial pass for a unique Item
     let fee = royalty_rule::fee_amount(policy, 0); // 10% × 0 floored to the 0.01-SUI min_amount
     royalty_rule::pay(policy, &mut request, coin::from_balance(royalty_bal.split(fee), ctx)); // from ESCROW
     recipient_kiosk.lock(owner_cap, policy, item); // → recipient kiosk (framework kiosk::lock; personal-kiosk proven by the two rules below)
