@@ -41,6 +41,8 @@
 // AoE labels reuse `encyclopedia.aoe_shape.*` (one taxonomy). An unmapped kind renders the loud untranslated
 // `? KIND` canary (asserted never to fire for the live corpus by spell-coverage.test.js).
 
+import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
+
 import { element_color } from './element-colors.js'
 
 // ── the house value tones (single home — spellbook-data.js + classes_tab.tsx import from here) ──────────────
@@ -109,11 +111,9 @@ const finite_number = (value) => {
   return Number.isFinite(number) ? number : null
 }
 
-// Spell target-filter bits (spell_effect.move): enemy-only (`NOT_TEAM` = 1) is the compact default. Friendly
-// riders need their target named because the same effect wording otherwise reads like a gift to the enemy.
-const TF_NOT_ENEMY = 4
-const TF_ONLY_CASTER = 32
-
+// Spell target-filter bits (spell_effect.move, canon @aresrpg/sim/spell_effect): enemy-only (`NOT_TEAM` = 1)
+// is the compact default. Friendly riders need their target named because the same effect wording otherwise
+// reads like a gift to the enemy.
 const effect_target_label = (t, target_filter) => {
   const filter = finite_number(target_filter) ?? 0
   if ((filter & TF_ONLY_CASTER) === TF_ONLY_CASTER) return t('spells.tag_self')

@@ -3,6 +3,8 @@
 // Display-only spell taxonomy shared by the hotbar, grimoire, and encyclopedia. A category describes the
 // selected level's rendered effects, never the spell-family metadata that can describe a different level.
 
+import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
+
 import { element_color } from './element-colors.js'
 
 // The established spell-deck violet, moved here so every spell surface shares the same existing family tint.
@@ -25,12 +27,10 @@ const BUFF_EFFECTS = new Set([
   'RETURN_SPELL',
 ])
 const FRIENDLY_BUFF_EFFECTS = new Set(['ALTER_STAT', 'ALTER_RESIST'])
-const TF_ALLY = 4
-const TF_SELF = 32
 
 const has_friendly_target = (effect) => {
   const target_filter = Number(effect?.target_filter ?? 0)
-  return (target_filter & (TF_ALLY | TF_SELF)) !== 0
+  return (target_filter & (TF_NOT_ENEMY | TF_ONLY_CASTER)) !== 0
 }
 
 /**
