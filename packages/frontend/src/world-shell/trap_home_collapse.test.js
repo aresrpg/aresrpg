@@ -140,7 +140,7 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
   })
 
   test('CONTRACT: the RECEIPT path sources trap_cells from the fold, never trap_overlay', async () => {
-    const src = await Bun.file(new URL('./dungeon_run_store.js', import.meta.url)).text()
+    const src = await Bun.file(new URL('./dungeon_run_fight_actions.js', import.meta.url)).text()
     expect(src).not.toContain('trap_overlay')
     expect(src).toContain('engine_view(fight_store.getState()).my_traps')
   })

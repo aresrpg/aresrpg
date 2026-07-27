@@ -8,6 +8,7 @@
 import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
 import { STATUS_ROOM_CLEARED } from '@aresrpg/fight/board_state'
+import { GRID_W } from '@aresrpg/fight/los'
 
 import { TERMINAL_HOLD_CAP_MS } from '../fight-engine/overlay_intents.js'
 
@@ -54,7 +55,7 @@ export function init_dungeon_fight({
       mob_levels,
       mob_elements,
       offset,
-      beat_ctx: { grid_width: 20 },
+      beat_ctx: { grid_width: GRID_W },
     },
   })
 }

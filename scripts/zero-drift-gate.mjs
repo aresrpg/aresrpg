@@ -14,7 +14,7 @@
 // simulator's — and asserts the difference is exactly the enumerated, classified manifest below. A module that
 // enters one path and not the other reds the commit it appears in.
 //
-// ── THE THREE TEETH ─────────────────────────────────────────────────────────────────────────────────────────
+// ── THE FOUR TEETH ──────────────────────────────────────────────────────────────────────────────────────────
 //   1. FORK GUARD (hard, unmanifestable). The ONE sanctioned divergence is the receipt source. So inside
 //      `packages/fight/src/**` — the headless core that owns every fight fact — the only modules the simulator
 //      may reach that the world does not are the mock chain door (`sim_chain.js` + `sim_chain_events.js`).
@@ -27,6 +27,8 @@
 //      It is ONE row — the chain entry — and it must stay one. This is the tooth that would have caught the
 //      board fork: before #915 the simulator painted its own setup scene through a running fight and this list
 //      held fifteen rows (the whole voxel_fight_adapter closure: vfx, sfx, the render queue, the seat rigs).
+//   4. GRID-WIDTH SOURCE (hard, unmanifestable). Every `beat_ctx.grid_width` on either production closure reads
+//      the canonical fight/los export. A numeric property literal is a copy that can drift after a stride change.
 //
 // Run: `bun scripts/zero-drift-gate.mjs` (wired into scripts/check-constraints.sh, so `bun run lint` and CI).
 //      `bun scripts/zero-drift-gate.mjs --print` re-prints both live sets in manifest form after a deliberate
@@ -269,6 +271,25 @@ if (process.argv.includes('--print')) {
 }
 
 let failed = false
+
+// TOOTH 4 — a copied grid stride agrees only until the canonical fight/los value changes. Scan the resolved
+// production closures (tests and test helpers were excluded by the cruise) and name every literal site.
+const grid_width_literals = [...new Set([...world, ...sim])].flatMap((source) => {
+  if (!source.startsWith('packages/') || !fs.existsSync(source)) return []
+  return fs
+    .readFileSync(source, 'utf8')
+    .split('\n')
+    .flatMap((line, index) =>
+      /\bgrid_width\s*:\s*\d+(?:\.\d+)?\b/.test(line) ? [`${source}:${index + 1}: ${line.trim()}`] : []
+    )
+})
+if (grid_width_literals.length) {
+  failed = true
+  red(`  ✗ FAIL: ${grid_width_literals.length} copied grid_width literal(s) on the production fight paths:`)
+  for (const literal of grid_width_literals) red(`      ${literal}`)
+  red('    Import GRID_W from @aresrpg/fight/los and derive each beat context from that one home.')
+}
+
 const diff_report = (label, live, manifest, hint) => {
   const declared = new Set(manifest.map(([source]) => source))
   const undeclared = live.filter((source) => !declared.has(source))
