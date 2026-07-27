@@ -17,7 +17,7 @@
     "dev": "vite --port 5199",
     "preview": "vite preview --port 5199",
     "build": "vite build",
-    "test": "bun test src bench/tree_bake_ab.test.js bench/degenerate_render.test.js",
+    "test": "bun test src ./test bench/tree_bake_ab.test.js bench/degenerate_render.test.js",
     "bench": "playwright test",
     "typecheck": "tsc --noEmit --checkJs"
   },

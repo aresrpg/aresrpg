@@ -1,3 +1,2 @@
 [test]
-root = "src"
 preload = ["../../test/preload/glb_url_plugin.js"]

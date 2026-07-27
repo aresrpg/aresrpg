@@ -2,11 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE DAY-NIGHT CYCLE'S PURE CLOCK — split out of DayNightDial.jsx so it is testable headless. DayNightDial.jsx
 // (the React-bound driver + the compass progress line) statically imports the voxel engine handle
-// (embed_voxel.js), whose graph resolves a real character GLB fixture that is absent from every environment
-// until #771 lands (see test_helpers/glb_fixture.js) — so a test file that imports DayNightDial.jsx directly
-// cannot run. Nothing here needs the engine at all: `day_cycle_tod` is the ONE source of truth both the
-// driver and the compass bar read, `game_clock`/`phase_key` are pure formatting, and this module's only
-// "heavy" import (game/store.js) is the plain event-emitter core, not the voxel engine.
+// (embed_voxel.js). That graph's engine-local character GLB path is absent, but the #771 Bun resolver maps
+// it to the tracked frontend runtime GLB, so direct DayNightDial.jsx imports now resolve. Nothing here needs
+// the engine at all: `day_cycle_tod` is the ONE source of truth both the driver and the compass bar read,
+// `game_clock`/`phase_key` are pure formatting, and this module's only "heavy" import (game/store.js) is the
+// plain event-emitter core, not the voxel engine.
 
 import { context } from '../../../store.js'
 import { select_hack_presentation } from '../../../core/world_presentation.js'

@@ -11,9 +11,9 @@
 // clip on the walk. These drive the REAL core (a seat locked by an adjacent living enemy ⇒ a real tackle) and
 // assert the verdict against move_wash's own reach.
 //
-// The adapter that consumes the gate cannot be MOUNTED in any environment (the senshi_male.glb missing-artifact
-// gate, #771 — a mounted-adapter test here would skip, and a skip is not a pass), so its call site is pinned by
-// a source-shape assertion instead: the one line that decides gate-vs-clip.
+// The #771 Bun resolver now makes the adapter graph mountable despite its absent engine-local GLB path. This
+// focused fold suite still pins the call site by a source-shape assertion: the one line that decides
+// gate-vs-clip, while the dedicated adapter suites exercise real mounted behavior.
 
 import { describe, expect, test } from 'bun:test'
 import { create_fight_store } from '@aresrpg/fight/store'

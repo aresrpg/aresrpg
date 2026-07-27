@@ -40,9 +40,8 @@ if (!had_audio) globalThis.Audio = AudioStub
 const { fight_store } = await import('@aresrpg/fight/store')
 const { use_dungeon } = await import('./dungeon_store.js')
 const { SENSHI_MALE_GLB_AVAILABLE } = await import('../test_helpers/glb_fixture.js')
-// MISSING-ARTIFACT (settled #117 · revival tracked by #771): voxel_fight_adapter.js imports @aresrpg/engine3/tactical, whose board_entities.js
-// unconditionally imports character_avatar.js — a static import of the absent-by-design senshi_male.glb
-// (test_helpers/glb_fixture.js; full chain documented in packages/engine/src/test_helpers/glb_fixture.js).
+// GLB RESOLVER (#771): voxel_fight_adapter.js reaches an absent engine-local senshi_male.glb import;
+// the Bun preload maps it to the tracked frontend runtime GLB's CDN route (see test_helpers/glb_fixture.js).
 const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import('./voxel_fight_adapter.js') : {}
 
 const FIGHT = '0xbeat-fight'
