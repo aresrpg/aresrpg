@@ -29,11 +29,16 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { predict_cast } from '../src/predict_cast.js'
 import { GRID_W, decode } from '../src/los.js'
+import release from '../../sdk/src/deployment/release.json'
 
 import truth from './fixtures/parity/chain_cast_outcome.json'
 
 const CASTER = truth.cast.caster_id
 const num = (value) => Number(value)
+
+/** The release pins for the network this fixture was captured on, and the staleness predicate over them. */
+const pins = release.networks[truth._provenance.network].packages
+const is_current = (name, package_id) => pins[name].latest === package_id
 
 /** Chain stat blocks are u64 strings; the sim reads numbers. A cast, never a computation. */
 const stats_of = (block) => Object.fromEntries(Object.entries(block).map(([key, value]) => [key, num(value)]))
@@ -165,6 +170,24 @@ describe('predict_cast ↔ LIVE chain parity (a cast the deployed package resolv
 
   test('the pin is discriminating — the branch the chain did NOT take lands somewhere else', () => {
     expect(predicted(!truth.cast.chain_took_critical)?.remaining_hp).not.toBe(truth.chain_after.target_hp_committed)
+  })
+
+  // STALENESS BINDING (#1189). A chain-truth fixture is only chain truth while the bytecode that produced it is
+  // still the bytecode we call. Without this, an engine upgrade that changes the damage math leaves the parity
+  // assert green forever against a cast an older package resolved — parity with a chain we used to have. The pin
+  // is `latest` for each package whose bytecode produced these bytes: `latest` is the CALL TARGET every SDK
+  // moveCall resolves through (`packages/move/scripts/check_release_pins.mjs`, itself gated against the live
+  // fullnode in CI), so the day a republish or an upgrade lands, this goes red and the fixture owes a re-capture.
+  test('the fixture has not gone stale: its provenance names the CURRENT release pins', () => {
+    expect(is_current('engine', truth._provenance.engine_package)).toBe(true)
+    expect(is_current('spells', truth._provenance.spell_package)).toBe(true)
+  })
+
+  test('the binding discriminates — every superseded id of those packages is REJECTED', () => {
+    // The same predicate over REAL dead ids, taken from the packages' own retired-lineage lists. A binding that
+    // said `true` here would be a green light with nothing behind it — the failure #1189 was filed about.
+    for (const name of ['engine', 'spells'])
+      for (const dead of pins[name].previous ?? []) expect(is_current(name, dead), `${name} ${dead}`).toBe(false)
   })
 
   test('the shared SpellTemplate object agrees with the row the receipt resolved with', () => {

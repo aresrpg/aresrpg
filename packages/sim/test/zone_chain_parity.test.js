@@ -14,8 +14,13 @@
 import { describe, test, expect } from 'bun:test'
 
 import { derive_zone, commitment_format } from '../src/zone_derive.js'
+import release from '../../sdk/src/deployment/release.json'
 
 import truth from './fixtures/zone_487_chain_truth.json'
+
+/** The release pins for the network this fixture was captured on, and the staleness predicate over them. */
+const pin = release.networks[truth._provenance.network].packages.aresrpg
+const is_current = package_id => pin.latest === package_id
 
 const derived = () =>
   derive_zone({
@@ -30,6 +35,22 @@ const mob_rows = () => derived().filter(row => row.kind === 'mob')
 const res_rows = () => derived().filter(row => row.kind === 'resource')
 
 describe('zone_derive ↔ LIVE chain parity (zone 487:487, testnet)', () => {
+  // STALENESS BINDING (#1189). This fixture records its `_provenance` but nothing ever read it, so a republish or
+  // an upgrade would leave every row below green against bytes a package we no longer call produced. `latest` is
+  // the CALL TARGET every SDK moveCall resolves through (packages/move/scripts/check_release_pins.mjs, gated
+  // against the live fullnode in CI); the day it moves, this goes red and the fixture owes a re-capture.
+  test('the fixture has not gone stale: its provenance names the CURRENT release pins', () => {
+    expect(is_current(truth._provenance.package_latest)).toBe(true)
+    expect(pin.origin).toBe(truth._provenance.package_origin)
+  })
+
+  test('the binding discriminates — every superseded id of that package is REJECTED', () => {
+    // The same predicate over REAL dead ids from the package's own retired-lineage list. A binding that said
+    // `true` here would be a green light with nothing behind it.
+    for (const dead of pin.previous ?? [])
+      expect(is_current(dead), dead).toBe(false)
+  })
+
   test('the derived group COUNT matches the chain', () => {
     expect(mob_rows()).toHaveLength(truth.chain_group_count)
   })
