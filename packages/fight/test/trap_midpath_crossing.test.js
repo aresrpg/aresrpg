@@ -27,6 +27,7 @@ import {
   produce_receipt_render_turns,
 } from '../src/fight_render_events.js'
 import { FIGHT_RENDER_TIMINGS } from '../src/fight_render_prims.js'
+import { encode_sim_step } from '../src/sim_chain_events.js'
 
 const W = 20
 const enc = (x, y) => y * W + x
@@ -136,6 +137,7 @@ describe('mid-path trap crossing — the destination-only row no longer eats the
 
   // The gait is a property of the WALK, not of a leg: splitting a long (run-cadence) path must not silently
   // slow the mover down to a walk on both halves.
+  // (the encoder's own order is pinned in the `mock chain` block below)
   test('splitting a run-length path keeps the run cadence on both legs', () => {
     const receipt = render([ev('MobMoved', { idx: '0', to_cell: String(enc(4, 0)) }), TRAP_HIT], {
       trap_cell: enc(8, 0),
@@ -147,5 +149,51 @@ describe('mid-path trap crossing — the destination-only row no longer eats the
       2 * FIGHT_RENDER_TIMINGS.run_cell,
       4 * FIGHT_RENDER_TIMINGS.run_cell,
     ])
+  })
+})
+
+// ── THE MOCK CHAIN'S EMISSION ORDER (④) ────────────────────────────────────────────────────────────────────
+// The simulator's local "chain" must speak the real chain's dialect or the two surfaces are different products.
+// `movement::walk` fires a crossed trap INLINE and the walk's single row is emitted only after it returns
+// (actions.move:69 / turns.move:305), so the Hit precedes the Moved row. The sim reducer returns them the other
+// way round, and an earlier lane's attempt to align this was reverted — correctly, because with the renderer
+// blind to mid-path traps the alignment only handed the simulator the world's symptom. The equality asserted
+// above ("SIM order renders byte-identically to the chain order") is what makes it safe now.
+describe('the mock chain emits a crossed trap the way the chain does (④)', () => {
+  const fighter = (id, cell) => ({ id, cell, health: 200, health_max: 200, effects: [], is_player: id === 'p0' })
+  const state = (mob_cell) => ({
+    team0: [fighter('p0', { x: 0, y: 0 })],
+    team1: [{ ...fighter('mob_0', mob_cell), health: 190 }],
+  })
+
+  test('the trap Hit precedes the walk row it fired inside', () => {
+    const { rows } = encode_sim_step({
+      pre_state: state({ x: 10, y: 0 }),
+      post_state: state({ x: 7, y: 0 }),
+      fight_id: FIGHT,
+      events: [
+        // the reducer's own order: the move, then the trap it sprang on the way (reduce.js handle_move)
+        {
+          type: 'fight_moved',
+          fight_id: FIGHT,
+          entity_id: 'mob_0',
+          path: [
+            { x: 9, y: 0 },
+            { x: 8, y: 0 },
+            { x: 7, y: 0 },
+          ],
+          tackled: false,
+          mp_remaining: 0,
+        },
+        {
+          type: 'fight_trap_triggered',
+          fight_id: FIGHT,
+          entity_id: 'mob_0',
+          cell: { x: 8, y: 0 },
+          effects: [{ target_id: 'mob_0', damage: 10, new_health: 190, killed: false }],
+        },
+      ],
+    })
+    expect(rows.map((row) => row.type.split('::').at(-1))).toEqual(['Hit', 'MobMoved'])
   })
 })

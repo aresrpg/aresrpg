@@ -609,5 +609,38 @@ export const encode_sim_step = ({
     },
   }
   const encoded = events.map((event) => encode_event(event, ctx))
-  return { rows: encoded.flatMap((e) => e.rows), actions: counters }
+  return { rows: chain_emission_order(events, encoded), actions: counters }
+}
+
+/**
+ * THE CHAIN'S EMISSION ORDER (#954). `movement::walk` fires a crossed trap INLINE, so the chain emits the
+ * detonation's `Hit` rows and only THEN the walk's single `Moved`/`MobMoved` row (`actions.move:69`,
+ * `turns.move:305` — both emit after `walk` returns). The sim reducer returns the move event first
+ * (`reduce.js handle_move`: `[moved_event, ...walked.events]`), so the mock chain has to hoist a move's trap
+ * triggers ahead of it or the simulator speaks a dialect the world never speaks.
+ *
+ * THE ROWS ARE REORDERED, NEVER THE EVENTS: encoding stays in reducer order so the running cell map still
+ * resolves each `Displaced.from_cell` from the true origin.
+ *
+ * WHY THIS IS SAFE NOW, having been reverted once: alone, the alignment merely handed the simulator the world's
+ * symptom — with the renderer blind to mid-path traps, a `Hit` arriving before its move row was flushed into a
+ * bare `fight` turn at at:0 and read as "damage at turn start, before the mob moved". The renderer now claims a
+ * walk's trap Hits in EITHER order and pins that equality
+ * (`trap_midpath_crossing.test.js`, "SIM order renders byte-identically to the chain order"), so the two
+ * emitter orders are indistinguishable downstream and this only removes a divergence.
+ */
+const chain_emission_order = (events, encoded) => {
+  const rows = []
+  for (let index = 0; index < events.length; index += 1) {
+    if (events[index].type !== 'fight_moved') {
+      rows.push(...encoded[index].rows)
+      continue
+    }
+    let after = index + 1
+    while (after < events.length && events[after].type === 'fight_trap_triggered') after += 1
+    for (let trap = index + 1; trap < after; trap += 1) rows.push(...encoded[trap].rows)
+    rows.push(...encoded[index].rows)
+    index = after - 1
+  }
+  return rows
 }
