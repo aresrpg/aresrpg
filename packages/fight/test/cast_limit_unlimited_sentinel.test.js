@@ -98,7 +98,7 @@ describe('the client decoder agrees with the authority', () => {
   // (draft_budget.js:83-84) reads `authored === 0` as unlimited, so it returns Infinity where the chain accepts
   // exactly one cast. Un-skip when the two readers share one decoder; `draft_budget.test.js:136`
   // (`expect(cap_of(0)).toBe(Infinity)`) pins the divergent behaviour and flips in the same commit.
-  test.skip('an authored 0 decodes to the chain\'s cap, not to unlimited (#1071)', () => {
+  test.skip("an authored 0 decodes to the chain's cap, not to unlimited (#1071)", () => {
     expect({ authored: 0, cap: cap_of(0) }).toEqual({ authored: 0, cap: chain_cap_of(0) })
   })
 })

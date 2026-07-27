@@ -18,7 +18,6 @@
 // done — it cannot go green without the production change that replaces the fallback with a refusal.
 
 import { describe, expect, test } from 'bun:test'
-
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import * as SE from '../../sim/src/spell_effect.js'
@@ -115,7 +114,7 @@ describe('the action envelope prices the rank the seat actually holds', () => {
     ])
   })
 
-  test('an UNLEARNED spell resolves at rank 1 — the sim\'s documented `spell_levels[id] ?? 1` default', () => {
+  test("an UNLEARNED spell resolves at rank 1 — the sim's documented `spell_levels[id] ?? 1` default", () => {
     const { started, resolved } = envelope_of({ learned_level: null })
     expect({ ap_cost: Number(started.ap_cost), stated_level: Number(resolved.learned_level) }).toEqual({
       ap_cost: 2,

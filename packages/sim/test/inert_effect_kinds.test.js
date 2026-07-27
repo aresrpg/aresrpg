@@ -28,13 +28,17 @@ import { matrix_rows } from './seeded_spell_effect_conformance_matrix.js'
 const ALL_KINDS = [
   ...new Set(
     Object.entries(SE)
-      .filter(([name, value]) => name.startsWith('K_') && typeof value === 'number')
+      .filter(
+        ([name, value]) => name.startsWith('K_') && typeof value === 'number',
+      )
       .map(([, value]) => value),
   ),
 ].toSorted((a, b) => a - b)
 
 const kind_name = kind =>
-  Object.entries(SE).find(([name, value]) => name.startsWith('K_') && value === kind)?.[0] ?? `K_${kind}`
+  Object.entries(SE).find(
+    ([name, value]) => name.startsWith('K_') && value === kind,
+  )?.[0] ?? `K_${kind}`
 
 /** GROUND TRUTH: push one authored effect of `kind` through the real normalizer and report whether it survived
  *  as a foldable row. `UNSUPPORTED` is the normalizer's own terminal for "no arm for this kind" — it is loud on
@@ -64,25 +68,37 @@ const folds = kind => {
       ],
     },
   ])
-  return templates.get(spell_id).levels[0].base_effects[0].type !== 'UNSUPPORTED'
+  return (
+    templates.get(spell_id).levels[0].base_effects[0].type !== 'UNSUPPORTED'
+  )
 }
 
 const INERT = ALL_KINDS.filter(kind => !folds(kind))
 
 describe('the inert effect kinds are exactly the two the board knows about', () => {
   test('the normalizer degrades K_RESET_POSITIONS and K_REMOVE_STATE, and nothing else, to UNSUPPORTED', () => {
-    expect(INERT.map(kind_name)).toEqual(['K_RESET_POSITIONS', 'K_REMOVE_STATE'])
+    expect(INERT.map(kind_name)).toEqual([
+      'K_RESET_POSITIONS',
+      'K_REMOVE_STATE',
+    ])
     // wiring either arm makes this list shrink — flip `unsupported: true` in effect_kind_matrix.test.js and
     // drop the matching `skip_reason` in seeded_spell_effect_conformance_matrix.js in the SAME commit (#1039)
     expect(ALL_KINDS.length - INERT.length).toBe(38)
   })
 
   test('the seeded conformance matrix quarantines exactly the inert kinds — no more, no fewer', () => {
-    const quarantined = matrix_rows.filter(row => row.skip_reason !== undefined).map(row => row.kind)
-    expect(quarantined.toSorted((a, b) => a - b).map(kind_name)).toEqual(INERT.map(kind_name))
+    const quarantined = matrix_rows
+      .filter(row => row.skip_reason !== undefined)
+      .map(row => row.kind)
+    expect(quarantined.toSorted((a, b) => a - b).map(kind_name)).toEqual(
+      INERT.map(kind_name),
+    )
     // …and every quarantine names the row it is waiting on, so a skipped contract is never an orphan
     for (const row of matrix_rows.filter(r => r.skip_reason !== undefined))
-      expect({ kind: kind_name(row.kind), cites_issue: /#\d+/.test(row.skip_reason) }).toEqual({
+      expect({
+        kind: kind_name(row.kind),
+        cites_issue: /#\d+/.test(row.skip_reason),
+      }).toEqual({
         kind: kind_name(row.kind),
         cites_issue: true,
       })
