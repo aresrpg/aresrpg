@@ -288,7 +288,6 @@ export async function join_world_fight({ fight_id, character_id, party_id = null
   if (!handle) throw new Error('That character is not in your kiosk')
   const tx = join_fight_ptb(ctx_of(sdk))({
     fight_id,
-    world_id: fight_scope_id,
     kiosk_id: handle.kiosk_id,
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
     character_id,
@@ -563,7 +562,7 @@ export async function settle_and_open({
   if (run_pass_id) {
     // DUNGEON: settle_and_take yields the outcome HANDLE → settle_run BORROWS it (&FightOutcome) → open_taken
     // CONSUMES it BY VALUE with the terminal &Random LAST. Order pinned (Sui Random-PTB rule).
-    const { tx: chained, outcome } = settle_and_take_ptb(ctx)({ fight_id, world_id: fight_scope_id, character_id })
+    const { tx: chained, outcome } = settle_and_take_ptb(ctx)({ fight_id, character_id })
     settle_run_taken_ptb(ctx)({
       run_pass_id,
       outcome,
@@ -574,6 +573,7 @@ export async function settle_and_open({
     })
     tx = open_taken_ptb(ctx)({
       outcome,
+      character_id, // picks the latch shard released at result-open — keyed by the character, not the scope
       kiosk_id: handle.kiosk_id,
       personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
       tx: chained,
@@ -584,7 +584,6 @@ export async function settle_and_open({
     // the SDK composes settle → release_group → open; absent ⇒ a victory, which has no group to release.
     tx = settle_open_world_ptb(ctx)({
       fight_id,
-      world_id: fight_scope_id,
       character_id,
       kiosk_id: handle.kiosk_id,
       personal_kiosk_cap_id: handle.personal_kiosk_cap_id,

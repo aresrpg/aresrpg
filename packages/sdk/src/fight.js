@@ -1045,7 +1045,6 @@ export function release_group_ptb(context) {
 export function settle_open_world_ptb(context) {
   return ({
     fight_id,
-    world_id,
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
