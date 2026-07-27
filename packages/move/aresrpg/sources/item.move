@@ -128,6 +128,13 @@ public struct ItemPolicyCreated has copy, drop { policy: ID }
 
 // ╔════════════════ [ Display (media is a PATTERN keyed by item_type, never a struct field) ] ═ ]
 
+/// The ONE home for the item art URL pattern. ABSOLUTE on purpose: a Display value is read by wallets and
+/// explorers, which have no AresRPG origin to resolve a relative path against — a host-free form renders
+/// broken images everywhere outside the game client.
+fun image_url(): String {
+  utf8(b"https://assets.aresrpg.world/items/{item_type}.png")
+}
+
 /// Claims the `Publisher` and registers `Display<Item>` + `Display<ItemTemplate>`. Media lives ONLY in these
 /// Display objects as an interpolation over the `item_type` slug — the art CDN is keyed by that catalog slug,
 /// so both an item and its template resolve to the same art. The structs carry ZERO url/image fields. The
@@ -138,7 +145,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
   let item_keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let item_values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback)
+    image_url(),
     utf8(b"{description}"),
     utf8(b"https://aresrpg.world"),
   ];
@@ -148,7 +155,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
   let tmpl_keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let tmpl_values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback)
+    image_url(),
     utf8(b"{description}"),
     utf8(b"https://aresrpg.world"),
   ];
