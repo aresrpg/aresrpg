@@ -425,9 +425,17 @@ export function render_flat_terrain(ctx, grid, o) {
  * @param {object} o
  * @param {number} o.size viewport side (px) @param {number} o.ppb pixels per block
  * @param {number} [o.theta] marker projection rotation (rad, default 0 — must match render_flat_terrain's)
- * @param {number} o.player_x live player world-x @param {number} o.player_z live player world-z
+ * @param {number} o.player_x terrain/marker projection anchor world-x (the frozen paint-once origin at region
+ * scale — must match render_flat_terrain's anchor or markers drift off the terrain)
+ * @param {number} o.player_z terrain/marker projection anchor world-z
  * @param {Array<{x:number,z:number,kind:string,hot?:boolean}>} [o.markers]
  * @param {boolean} [o.arrow] draw the player arrow (default true) @param {number} [o.heading] arrow rotation (rad, default 0)
+ * @param {number} [o.arrow_x] LIVE player world-x for the arrow's screen offset (defaults to `player_x` — draws
+ * dead-centre, the old behaviour). Split from the terrain/marker anchor on purpose: the region-scale terrain
+ * paints ONCE (too costly to re-rasterize every pose tick — see render_flat_terrain's header), so the arrow is
+ * the one thing this overlay can afford to move every tick — it walks across the frozen map instead of the map
+ * re-centring under it (#1205 — the modal used to draw the arrow pinned to the anchor, so it never moved).
+ * @param {number} [o.arrow_z] LIVE player world-z for the arrow's screen offset (defaults to `player_z`)
  * @returns {void}
  */
 export function render_flat_overlay(ctx, grid, o) {
@@ -452,7 +460,13 @@ export function render_flat_overlay(ctx, grid, o) {
     }
   }
 
-  if (o.arrow !== false) draw_player_arrow(ctx, c, c, o.heading ?? 0)
+  if (o.arrow !== false) {
+    const adx = (o.arrow_x ?? player_x) - player_x
+    const adz = (o.arrow_z ?? player_z) - player_z
+    const ax = c + (adx * cos - adz * sin) * ppb
+    const ay = c + (adx * sin + adz * cos) * ppb
+    draw_player_arrow(ctx, ax, ay, o.heading ?? 0)
+  }
   const np = project_offset(0, -1, theta, 1)
   const nlen = Math.hypot(np.x, np.z) || 1
   draw_north_tick(ctx, c + (np.x / nlen) * r, c + (np.z / nlen) * r)

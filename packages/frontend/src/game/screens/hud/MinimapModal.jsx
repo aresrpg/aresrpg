@@ -102,9 +102,11 @@ export function MinimapModal({ onClose }) {
   const SIZE = use_viewport_size()
   const ppb = SIZE / SPAN // north-up, no rotation ⇒ the sampled span exactly fills the canvas — no inset math needed
 
-  // The map is a SNAPSHOT centred on wherever the player was AT OPEN (region scale — "a map consult, not a
-  // live render"): the terrain never re-samples while open. `origin` anchors both the terrain AND the
-  // markers (so they never drift apart); the player ARROW still tracks the LIVE heading (cheap — see below).
+  // The TERRAIN is a SNAPSHOT centred on wherever the player was AT OPEN (region scale — "a map consult, not
+  // a live render"): it never re-samples or re-paints while open (too costly — see the header PERF note).
+  // `origin` anchors both the terrain AND the markers (so they never drift apart) — but the player ARROW
+  // tracks the LIVE pose on both axes (heading + position, cheap — see below): it walks across the frozen
+  // map instead of sitting pinned at its open-moment spot (#1205).
   const grid_ref = useRef(/** @type {import('./minimap_engine.js').ReliefGrid | null} */ (null))
   const origin_ref = useRef({ x: 0, z: 0 })
   // Same reducer-door signal the world + small map read (one home) — hack sessions map the grid, not the
@@ -173,8 +175,10 @@ export function MinimapModal({ onClose }) {
 
   // OVERLAY paint — markers + player arrow + north tick. Cheap (O(#markers)): redraws on every pose/hover
   // change with zero cost to the terrain layer. Markers stay pinned to `origin` (matching the terrain, so
-  // they never drift off their real spot); the arrow's ROTATION alone tracks the live heading — unlike the
-  // small map, the terrain here never rotates, so the arrow rotates instead to show facing (round 5).
+  // they never drift off their real spot); the arrow tracks the LIVE pose on BOTH axes — heading (rotation)
+  // and position (screen offset from `origin`, via arrow_x/arrow_z) — so it walks across the frozen map
+  // instead of sitting pinned at open-moment position (#1205). `pose` is the SAME store subscription every
+  // other HUD surface reads (~6/s heartbeat, see presence_markers.js) — no second polling mechanism.
   useEffect(() => {
     const canvas = overlay_ref.current
     const grid = grid_ref.current
@@ -183,7 +187,17 @@ export function MinimapModal({ onClose }) {
     if (!ctx) return
     const origin = origin_ref.current
     const heading = MAP_YAW_SIGN * (pose.yaw ?? 0) + MAP_YAW_OFFSET
-    render_flat_overlay(ctx, grid, { size: SIZE, ppb, theta: 0, player_x: origin.x, player_z: origin.z, markers, heading })
+    render_flat_overlay(ctx, grid, {
+      size: SIZE,
+      ppb,
+      theta: 0,
+      player_x: origin.x,
+      player_z: origin.z,
+      arrow_x: pose.x,
+      arrow_z: pose.z,
+      markers,
+      heading,
+    })
   }, [pose, markers, grid_ver, SIZE, ppb])
 
   const spawn_of = (/** @type {string} */ key) => spawns.find((s) => s.key === key) ?? null
