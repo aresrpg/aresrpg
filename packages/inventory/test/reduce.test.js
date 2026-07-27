@@ -295,3 +295,76 @@ describe('equip_worn — a signed equip tx re-projects the worn cosmetic slots (
     expect(after.characters[1]).toBe(other)
   })
 })
+
+describe('#1127 — a Character mint receipt seeds the roster through the reducer door', () => {
+  const prior_character = { id: '0xprior', name: 'Prior', experience: 100 }
+  const minted_character = { id: '0xminted', name: 'Minted', experience: 0, level: 1 }
+
+  test('the typed receipt input replaces the submit ghost and paints the real object immediately', () => {
+    const ghost = { id: 'ghost:Minted', name: 'Minted', ghost: true }
+    const start = base({
+      characters: [prior_character, ghost],
+      minted_character_floor: {},
+      load_error: 'stale read error',
+    })
+
+    const after = reduce_sui_data(start, {
+      kind: 'receipt_patch',
+      op: 'mint_character',
+      row: minted_character,
+    })
+
+    expect(ids(after.characters)).toEqual(['0xprior', '0xminted'])
+    expect(after.characters[0]).toBe(prior_character)
+    expect(after.characters[1]).toBe(minted_character)
+    expect(after.minted_character_floor).toEqual({ '0xminted': minted_character })
+    expect(after.loaded).toBe(true)
+    expect(after.load_error).toBeNull()
+    expect(after.has_claimed_free_character).toBe(true)
+  })
+
+  test('an index-lagged snapshot cannot erase the receipt-proven row; chain presence later takes authority', () => {
+    const minted = reduce_sui_data(base({ characters: [prior_character], minted_character_floor: {} }), {
+      kind: 'receipt_patch',
+      op: 'mint_character',
+      row: minted_character,
+    })
+
+    const lagged_prior = { ...prior_character, experience: 150 }
+    const lagged = reduce_sui_data(minted, {
+      kind: 'snapshot',
+      characters: [lagged_prior],
+    })
+    expect(ids(lagged.characters)).toEqual(['0xprior', '0xminted'])
+    expect(lagged.characters[0]).toBe(lagged_prior)
+    expect(lagged.characters[1]).toBe(minted_character)
+    expect(lagged.minted_character_floor).toEqual({ '0xminted': minted_character })
+
+    const authoritative_mint = { ...minted_character, world_id: '0xworld', experience: 25 }
+    const caught_up = reduce_sui_data(lagged, {
+      kind: 'snapshot',
+      characters: [lagged_prior, authoritative_mint],
+    })
+    expect(caught_up.characters.filter(({ id }) => id === '0xminted')).toEqual([authoritative_mint])
+    expect(caught_up.characters[1]).toBe(authoritative_mint)
+    expect(caught_up.minted_character_floor).toEqual({})
+  })
+
+  test('a later delete receipt clears the mint floor so no stale snapshot can resurrect the character', () => {
+    const minted = reduce_sui_data(base({ minted_character_floor: {} }), {
+      kind: 'receipt_patch',
+      op: 'mint_character',
+      row: minted_character,
+    })
+    expect(ids(minted.characters)).toEqual(['0xminted'])
+    const deleted = reduce_sui_data(minted, {
+      kind: 'receipt_patch',
+      op: 'remove_character',
+      id: minted_character.id,
+    })
+    const lagged = reduce_sui_data(deleted, { kind: 'snapshot', characters: [] })
+
+    expect(lagged.characters).toEqual([])
+    expect(lagged.minted_character_floor).toEqual({})
+  })
+})

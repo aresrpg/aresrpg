@@ -17,11 +17,11 @@ import { begin_join } from '../world-shell/session_gate.js'
 import { game_log } from '../core/log.js'
 import { get_sdk, type ExpeditionSdk } from '../chain/sdk'
 import { normalize_receipt } from '../chain/receipt'
-import { normalize_character } from '../chain/read_character.js'
 import { execute_create_routed } from '../chain/money_route'
 import { is_aresrpg_character, ARESRPG_PACKAGE_ID } from '../chain/character_lineage'
 
 import { load_roster } from './load_roster'
+import { mint_session_matches, project_character_mint } from './mint_receipt'
 import {
   EXPEDITION_INITIAL_STATE,
   reduce_expedition,
@@ -57,14 +57,14 @@ export type CharacterCard = {
 
 // #42: the chosen-identity draft from the EXISTING 3D creator (ExpeditionCreate → character_create).
 // Colors are already u32 (the adapter converted from hex), matching what `sdk.character_new` packs.
-export type CharacterDraft = {
+export type character_draft = Readonly<{
   name: string
   classe: string
   male: boolean
   color_1: number
   color_2: number
   color_3: number
-}
+}>
 
 // expedition.status: 0 ACTIVE, 1 RETURNING, 2 DEAD (aresrpg::expedition)
 const STATUS_ACTIVE = 0
@@ -79,6 +79,19 @@ function err_message(e: unknown): string {
 function mint_error(error?: string | null): Error {
   const e = error ?? 'Character mint failed'
   return new Error(ENAME_TAKEN.test(e) ? 'That name is already taken, choose another.' : humanize_abort(e))
+}
+
+/** Feed a settled Character mint through the roster reducer door and memoize its receipt-proven kiosk pair. */
+function ingest_character_mint_receipt(receipt: any, draft: character_draft) {
+  const projection = project_character_mint(receipt, draft)
+  if (!projection) return null
+  if (projection.kiosk_id && projection.personal_kiosk_cap_id)
+    remember_character_kiosk(projection.character.id, {
+      kiosk_id: projection.kiosk_id,
+      personal_kiosk_cap_id: projection.personal_kiosk_cap_id,
+    })
+  context.dispatch('action/sui_data', projection.roster_input)
+  return projection
 }
 
 interface ExpeditionStore {
@@ -96,8 +109,8 @@ interface ExpeditionStore {
 
   input: (message: ExpeditionInput) => void
   load_character: () => Promise<void>
-  create_character: (draft: CharacterDraft) => Promise<void>
-  create_character_paid: (draft: CharacterDraft) => Promise<void>
+  create_character: (draft: character_draft) => Promise<void>
+  create_character_paid: (draft: character_draft) => Promise<void>
   refresh: () => Promise<void>
 }
 
@@ -112,7 +125,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
   load_character: async () => {
     const { address } = use_auth.getState()
     if (!address) return
-    set({ loading: true })
+    get().input({ type: 'character_load/started' })
     try {
       const sdk = await get_sdk()
 
@@ -158,8 +171,8 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
         personal_kiosk_cap_id = personal_caps[0].objectId
       }
 
-      set({
-        loading: false,
+      get().input({
+        type: 'character_load/settled',
         kiosk_id,
         personal_kiosk_cap_id,
         character,
@@ -172,7 +185,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
         await get().refresh()
       }
     } catch (e) {
-      set({ loading: false })
+      get().input({ type: 'character_load/failed' })
       use_toast.getState().add(err_message(e), 'error')
     }
   },
@@ -192,7 +205,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       use_toast.getState().add('Not signed in', 'error')
       return
     }
-    set({ busy: true })
+    get().input({ type: 'character_mint/started' })
     try {
       const sdk = await get_sdk()
 
@@ -262,52 +275,14 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
         }
       )
       game_log('d93', 'create tx+wait', Math.round(performance.now() - t0), 'ms')
+      if (!mint_session_matches(address, use_auth.getState().address)) return
 
-      // ── D93 (live bug: character switch felt slow — a stale read before the receipt landed) — RECEIPT-INGEST, the read-after-write
-      // class killer (3rd surface: place_at/D77, dungeon status, now create). The receipt NAMES everything:
-      // the new Character/Kiosk/PersonalKioskCap ids. No blind full re-walks before routing — the lobby gets
-      // a PREDICTED character (D9: we hold the full appearance from the form) THIS FRAME, and the truth
-      // reconciles in the background with a found-guard so an index-lagging walk can never wipe it.
-      const created = (receipt?.objectChanges ?? []).filter((c: any) => c.type === 'created')
-      const char_created = created.find((c: any) => String(c.objectType ?? '').endsWith('::character::Character'))
-      const kiosk_created = created.find((c: any) => String(c.objectType ?? '') === '0x2::kiosk::Kiosk')
-      const cap_created = created.find((c: any) => String(c.objectType ?? '').includes('PersonalKioskCap'))
-      // HYDRATE-FROM-OWN-EFFECTS (S-57 create→auto-join race, design ruling 2026-07-12): memoize the EXACT kiosk pair this mint
-      // just created so the AUTO-JOIN firing seconds later (DiscoveryPrompts, off the world-less doc) resolves with
-      // ZERO reads — never racing the chain-direct owned-object index on a just-minted object. The derive-from-
-      // character resolver stays the truth for every other character (rejoin / legacy-unjoined / switch).
-      if (char_created && kiosk_created && cap_created)
-        remember_character_kiosk(String(char_created.objectId), {
-          kiosk_id: String(kiosk_created.objectId),
-          personal_kiosk_cap_id: String(cap_created.objectId),
-        })
-      const predicted = char_created
-        ? {
-            ...normalize_character(
-              {
-                name: draft.name,
-                classe: draft.classe,
-                sex: draft.male ? 'male' : 'female',
-                color_1: draft.color_1,
-                color_2: draft.color_2,
-                color_3: draft.color_3,
-                experience: 0,
-                health: 100,
-              },
-              String(char_created.objectId),
-              String(char_created.objectType)
-            ),
-          }
-        : null
-      if (predicted) {
-        // instant lobby: the engine roster + selection get the predicted record NOW (avatar spawns this frame)
-        const cur = context.get_state()
-        context.dispatch('action/sui_data', {
-          characters: [...(cur.sui?.characters ?? []).filter((c: any) => c.id !== predicted.id), predicted],
-          loaded: true,
-          load_error: null,
-          has_claimed_free_character: true,
-        })
+      // ── #1127 RECEIPT INPUT ── the settled Character/Kiosk ids + submitted appearance are projected by the
+      // pure adapter, then enter the roster through ONE typed reducer delta. The reducer folds against the latest
+      // roster, replaces the submit ghost, and owns the optimistic floor until /v1 contains the real object id.
+      const projection = ingest_character_mint_receipt(receipt, draft)
+      if (projection) {
+        const predicted = projection.character
         // ONE-BOOT create→play (07-13): select the just-minted character AND enter the JOINING hold NOW —
         // the instant the create tx landed. GameWorldHost holds ONE loading veil (no decorative→spectate→resident
         // boot storm, no spectate sky-view detour) until the auto-join resolves the world and the resident scene
@@ -320,31 +295,18 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           select_character: (id) => context.dispatch('action/select_character', id),
           begin_join,
         })
-        set({
-          busy: false,
+        get().input({
+          type: 'character_mint/settled',
           character: predicted as any,
-          kiosk_id: kiosk_created ? String(kiosk_created.objectId) : get().kiosk_id,
-          personal_kiosk_cap_id: cap_created ? String(cap_created.objectId) : get().personal_kiosk_cap_id,
+          kiosk_id: projection.kiosk_id,
+          personal_kiosk_cap_id: projection.personal_kiosk_cap_id,
         })
         game_log('d93', 'predicted spawn dispatched', Math.round(performance.now() - t0), 'ms')
-        // BACKGROUND reconcile (non-blocking): one targeted walk; if the index lags and the walk misses the
-        // new char, RE-ASSERT the predicted record and retry once — a lagging walk must never blank the lobby.
+        // BACKGROUND reconcile (non-blocking): the reducer-owned receipt floor preserves the prediction through
+        // any lagging snapshot and self-drains when the authoritative row includes this exact object id.
         void (async () => {
           try {
-            await get().load_character()
             await load_roster()
-            const seen = context.get_state().sui?.characters?.some((c: any) => c.id === predicted.id)
-            if (!seen) {
-              game_log('d93', 'reconcile walk missed the fresh character — re-asserting predicted + one retry')
-              const cur2 = context.get_state()
-              context.dispatch('action/sui_data', {
-                characters: [...(cur2.sui?.characters ?? []).filter((c: any) => c.id !== predicted.id), predicted],
-                loaded: true,
-                load_error: null,
-                has_claimed_free_character: true,
-              })
-              setTimeout(() => void load_roster().catch(() => {}), 2000)
-            }
             game_log('d93', 'reconcile complete', Math.round(performance.now() - t0), 'ms')
           } catch (e) {
             game_log('d93', 'background reconcile failed (predicted record holds)', e)
@@ -358,10 +320,10 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       const { kiosk_id, personal_kiosk_cap_id, character } = get()
       if (!character || !kiosk_id || !personal_kiosk_cap_id)
         throw new Error('Mint succeeded but the new character could not be read back')
-      set({ busy: false })
+      get().input({ type: 'character_mint/finished' })
       await load_roster().catch(() => {})
     } catch (e) {
-      set({ busy: false })
+      get().input({ type: 'character_mint/finished' })
       // re-throw so character_create's submit() shows the error inline + re-enables the form
       throw e instanceof Error ? e : new Error(err_message(e))
     }
@@ -375,16 +337,16 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
   // hardcoded number (a stale-low price aborts EInsufficientPayment). The S-54 tx choke dry-runs BEFORE
   // signing, so a would-fail tx refuses pre-sign with ZERO gas and an insufficient wallet is rejected at
   // submission (no execution, no gas). Re-throws on failure so the creator surfaces it inline. Success (delta
-  // (4)) is the standard roster refresh — load_roster repaints the drawer with the new on-chain character; the
-  // host closes back to the list. NO predicted lobby-spawn / embody-reload: an additional character must never
-  // yank the player off the one they are currently playing (that path is FIRST-character only).
+  // (4)) sends the mint receipt through the roster reducer immediately, then reconciles with load_roster in the
+  // background. NO embody-reload: an additional character must never yank the player off the one they are
+  // currently playing (that path is FIRST-character only).
   create_character_paid: async (draft) => {
     const { address, wallet_name } = use_auth.getState()
     if (!address || !wallet_name) {
       use_toast.getState().add('Not signed in', 'error')
       return
     }
-    set({ busy: true })
+    get().input({ type: 'character_mint/started' })
     try {
       const sdk = await get_sdk()
       // LIVE price (authoritative): read the gate fresh right before building — an exact split refunds nothing,
@@ -392,6 +354,8 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       // only; the mint price is ALWAYS the on-chain truth.
       const creation = await sdk.get_creation_state()
       if (!creation) throw new Error('Could not read the on-chain character price')
+      /** The paid receipt must survive the toast effect so it can enter the roster reducer immediately. */
+      let receipt: any = null
       await use_toast.getState().promise(
         (async () => {
           const tx = sdk.create_character_paid_ptb({
@@ -407,7 +371,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           const { digest } = await sign_and_execute_transaction(wallet_name, address, tx)
           // #23 gRPC: wait + normalize to the { effects.status } shape the success-check reads (self-pay returns
           // BCS-string effects, so status is read off the WAITED receipt — mirrors world_join / dungeon_actions).
-          const receipt = normalize_receipt(
+          receipt = normalize_receipt(
             await sdk.grpc_client.core.waitForTransaction({
               digest,
               include: { effects: true, objectTypes: true },
@@ -420,11 +384,21 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           success: i18n.t('world.tx_create_character_success', { name: draft.name }),
         }
       )
-      set({ busy: false })
-      // roster refresh → the new character appears in the CharactersDrawer (and the 3D lobby roster); switchable.
+      if (!mint_session_matches(address, use_auth.getState().address)) return
+      get().input({ type: 'character_mint/finished' })
+      // The additional character becomes a real, switchable roster row from its OWN receipt now. Unlike the
+      // first-character path, do not select/join it — creating an alt must never yank the active character.
+      const projection = ingest_character_mint_receipt(receipt, draft)
+      if (projection) {
+        game_log('d93', 'paid mint seeded from receipt', projection.character.id)
+        void load_roster().catch(() => {})
+        return
+      }
+      // Unexpected receipt shape: retain the old blocking read-back fallback rather than fabricate an id.
+      game_log('d93', 'paid receipt had no created Character — falling back to blocking roster read')
       await load_roster().catch(() => {})
     } catch (e) {
-      set({ busy: false })
+      get().input({ type: 'character_mint/finished' })
       // re-throw so character_create's submit() shows the error inline + re-enables the form
       throw e instanceof Error ? e : new Error(err_message(e))
     }
@@ -435,7 +409,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
     if (!expedition_id) return
     const sdk = await get_sdk()
     const expedition = await sdk.get_expedition({ expedition_id })
-    set({ expedition })
+    get().input({ type: 'expedition/refreshed', expedition })
   },
 }))
 

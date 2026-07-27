@@ -67,6 +67,8 @@ export default function sui_session() {
               characters: [],
               items: [],
               settled_item_floor: {},
+              // Drop receipt-proven Character rows — a mint from account A can never survive into account B.
+              minted_character_floor: {},
               loaded: false,
               load_error: null,
               // Drop the receipt-proven XP floors — the next account's roster starts unbound.

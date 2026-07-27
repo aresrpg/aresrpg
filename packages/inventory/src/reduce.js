@@ -14,7 +14,7 @@
 //                     row until the id appears) — ONLY an explicit receipt delta removes an item.
 //   'receipt_patch' — a delta PROVEN by the client's own signed tx: a fight settlement (HP/XP → RAISES the
 //                     per-character XP floor; ItemMinted rows → a bag floor), an equip/consume/buy bag delta,
-//                     or the create ghost row.
+//                     the create ghost row, or a settled Character mint → a roster floor.
 //                     Authoritative — folds against the latest state, never a stale captured array.
 //   'enrichment'    — a chain-direct cosmetics/stats read (colors, vitality) that must NEVER clobber a
 //                     newer receipt-proven fact (XP / level / current HP); it carries the immutable base.
@@ -86,10 +86,39 @@ function floor_settled_items(items, settled_item_floor) {
   }
 }
 
+/**
+ * Hold receipt-proven Character rows until a roster snapshot contains the same object id. Presence drains the
+ * floor and lets the authoritative row win; omission is only index lag and keeps the optimistic row visible.
+ * Deleted ids are never reintroduced.
+ * @param {any[]} characters
+ * @param {Record<string, any>} [minted_character_floor]
+ * @param {Record<string, true>} [deleted_ids]
+ */
+function floor_minted_characters(characters, minted_character_floor, deleted_ids) {
+  const entries = Object.entries(minted_character_floor ?? {}).filter(
+    ([id, row]) => id && row?.id && !deleted_ids?.[id]
+  )
+  if (!entries.length) return { characters, minted_character_floor: {} }
+  const have = new Set((characters ?? []).map((/** @type {any} */ character) => character?.id))
+  const pending = entries.filter(([id]) => !have.has(id))
+  return {
+    characters: pending.length ? [...(characters ?? []), ...pending.map(([, row]) => row)] : characters,
+    minted_character_floor: Object.fromEntries(pending),
+  }
+}
+
 /** Snapshot: floor characters/items, run items through the pending ledgers, spread flags. */
 function merge_snapshot(sui, { kind, characters, items, ...flags }) {
   const next = { ...sui, ...flags }
-  if (characters) next.characters = floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor)
+  if (characters) {
+    const roster = floor_minted_characters(
+      floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor),
+      sui.minted_character_floor,
+      sui.deleted_ids
+    )
+    next.characters = roster.characters
+    next.minted_character_floor = roster.minted_character_floor
+  }
   // KEEP-on-omit: mask consumed units, then re-add any pending-buy the feed hasn't projected yet.
   if (items) {
     const floored = floor_settled_items(merge_pending_buys(mask_pending_items(items)), sui.settled_item_floor)
@@ -102,8 +131,15 @@ function merge_snapshot(sui, { kind, characters, items, ...flags }) {
 /** Legacy full merge (no kind): spread + floor characters (items already ledger-merged by the caller). */
 function merge_default(sui, payload) {
   const next = { ...sui, ...payload }
-  if (payload.characters)
-    next.characters = floor_characters(drop_deleted(payload.characters, sui.deleted_ids), sui.xp_floor)
+  if (payload.characters) {
+    const roster = floor_minted_characters(
+      floor_characters(drop_deleted(payload.characters, sui.deleted_ids), sui.xp_floor),
+      sui.minted_character_floor,
+      sui.deleted_ids
+    )
+    next.characters = roster.characters
+    next.minted_character_floor = roster.minted_character_floor
+  }
   if (payload.items) {
     const floored = floor_settled_items(payload.items, sui.settled_item_floor)
     next.items = floored.items
@@ -159,6 +195,26 @@ function apply_settled_loot(sui, rows) {
     sui.settled_item_floor ?? {}
   )
   return { ...sui, items: add.length ? [...sui.items, ...add] : sui.items, settled_item_floor }
+}
+
+/** Paint a settled Character against the latest roster and floor it until an authoritative snapshot sees its id.
+ * @param {any} sui @param {any} row */
+function apply_minted_character(sui, row) {
+  if (!row?.id) return sui
+  const characters = [
+    ...(sui.characters ?? []).filter(
+      (/** @type {any} */ character) => !is_ghost(character) && character?.id !== row.id
+    ),
+    row,
+  ]
+  return {
+    ...sui,
+    characters,
+    minted_character_floor: { ...(sui.minted_character_floor ?? {}), [row.id]: row },
+    loaded: true,
+    load_error: null,
+    has_claimed_free_character: true,
+  }
 }
 
 /** Remove receipt-proven ids from both the rendered bag and the settled-loot floor.
@@ -225,6 +281,8 @@ function apply_receipt_patch(sui, payload) {
       // and record a pure reducer-owned floor so an indexer-lagged full snapshot cannot erase them afterward.
       return apply_settled_loot(sui, payload.rows)
     }
+    case 'mint_character':
+      return apply_minted_character(sui, payload.row)
     case 'remove_items': {
       // Equip / consume-to-zero: drop the ids from the LATEST bag (never a stale captured array — that WAS
       // the lost-update race). KEEP-on-omit does not apply here: a receipt is explicit proof the item left.
@@ -243,7 +301,10 @@ function apply_receipt_patch(sui, payload) {
       if (!id) return sui
       const deleted_ids = { ...(sui.deleted_ids ?? {}), [id]: /** @type {true} */ (true) }
       const characters = sui.characters.filter((/** @type {any} */ c) => c?.id !== id)
-      return { ...sui, characters, deleted_ids }
+      const minted_character_floor = Object.fromEntries(
+        Object.entries(sui.minted_character_floor ?? {}).filter(([character_id]) => character_id !== id)
+      )
+      return { ...sui, characters, deleted_ids, minted_character_floor }
     }
     case 'set_ghost':
       // D9 click-instant create prediction — one ghost row, replacing any prior ghost.

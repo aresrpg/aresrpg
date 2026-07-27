@@ -106,6 +106,8 @@ export const INITIAL_STATE = {
     items: [],
     /** @type {Record<string, any>} receipt-proven loot rows held until a snapshot includes each exact id */
     settled_item_floor: {},
+    /** @type {Record<string, any>} receipt-proven mint rows held until a roster snapshot includes each exact id */
+    minted_character_floor: {},
     /** @type {any[]} */
     items_for_sale: [],
     /** @type {bigint | null} */
