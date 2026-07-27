@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+
 export function settle_alpha(state) {
-  const ready = state.ready
-  const amount = state.amount
+  const { ready } = state
+  const { amount } = state
   if (!ready) return state
   const next = amount + 1
   const capped = Math.min(next, 999)
