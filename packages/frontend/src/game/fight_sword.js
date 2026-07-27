@@ -18,7 +18,7 @@
 
 import { Box3 } from 'three'
 
-import { get_glb_loader } from '@aresrpg/engine3/player'
+import { load_glb_checked } from '@aresrpg/engine3/player'
 import { create_vfx_preset, PRESETS } from '@aresrpg/engine3/vfx'
 
 import { play_sfx } from './core/audio/sfx.js'
@@ -139,8 +139,7 @@ export function plant_fight_sword({ engine, anchor }) {
     }
   }
 
-  get_glb_loader()
-    .loadAsync(SWORD_URL)
+  load_glb_checked(SWORD_URL)
     .then((/** @type {any} */ gltf) => {
       if (disposed) return
       root = gltf.scene

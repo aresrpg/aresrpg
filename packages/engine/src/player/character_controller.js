@@ -32,6 +32,7 @@ export {
   apply_avatar_material,
   apply_pixel_filter,
   create_mob_model,
+  load_glb_checked,
   prepare_mob_render,
 } from './mob_model.js'
 // D195 — the dapp consumes the DEMO's exact camera feel + collision oracle (walk_mode.js wiring):

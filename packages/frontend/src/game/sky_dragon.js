@@ -5,7 +5,7 @@
 // absent by default (zero cost when the flag is off — the module never imports). Client-only, zero
 // chain / zero p2p — pure decoration, like the ambient mob packs.
 //
-// PATTERN PROVENANCE (ported, not reinvented): the GLB load (module-cached `loadAsync` → SkeletonUtils
+// PATTERN PROVENANCE (ported, not reinvented): the GLB load (checked fetch/parse → SkeletonUtils
 // clone → apply_avatar_material → mixer) + REMOVE-ONLY teardown are lifted VERBATIM from ambient_mobs.js;
 // the dragon GLBs are the SAME rig-fixed models the ambient/cave packs already fly (post-#94 FK fix). Own
 // rAF, like ambient_mobs/remote_players — dispose() cancels it and detaches the rig (never a GPU free).
@@ -16,14 +16,14 @@
 import { AnimationMixer, Box3, Group, Vector3 } from 'three'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
-import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
-import { asset_url } from '@aresrpg/sdk/jobs'
+import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 import { game_log } from '../core/log.js'
+import { model_asset_url } from './model_asset_url.js'
 
 const VARIANTS = /** @type {Record<string, string>} */ ({
-  void: '/sprites/mobs/models/dragon-void.glb',
-  frost: '/sprites/mobs/models/dragon-frost.glb',
-  fire: '/sprites/mobs/models/dragon-fire.glb',
+  void: 'dragon-void.glb',
+  frost: 'dragon-frost.glb',
+  fire: 'dragon-fire.glb',
 })
 const TARGET_SPAN = 12 // world blocks — the dragon's longest dimension after normalisation (big, cinematic)
 const RADIUS = 140 // circle radius (blocks) around the spawn — sweeps the whole sky above the zone
@@ -44,9 +44,9 @@ export function create_sky_dragon({ engine, center, variant }) {
   const key = String(
     variant ?? new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('dragon') ?? ''
   ).toLowerCase()
-  const local = VARIANTS[key] ?? VARIANTS.void
-  // asset-host-first (the dragon GLBs live in the `mob` quilt), bundled /sprites fallback — progressive migration.
-  const url = asset_url('mob', local.split('/').pop() ?? '') ?? local
+  const filename = VARIANTS[key] ?? VARIANTS.void
+  const url = model_asset_url('mob', filename)
+  if (!url) return { dispose() {} }
   const [cx, cyBase, cz] = center
   const cy = cyBase + ALTITUDE
 
@@ -63,8 +63,7 @@ export function create_sky_dragon({ engine, center, variant }) {
   let last_t = performance.now()
   let theta = 0
 
-  get_glb_loader()
-    .loadAsync(url)
+  load_glb_checked(url)
     .then((gltf) => {
       if (disposed) return
       const root = clone_skinned(gltf.scene)

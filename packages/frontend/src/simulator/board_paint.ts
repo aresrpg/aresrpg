@@ -118,7 +118,8 @@ export const setup_scene_of = (
         id: `sim_mob_${cell}`,
         kind: 'mob' as const,
         cell: decode(cell),
-        glb_variant: get_mob_model({ variant: pick.template_id, name: setup.mob_name_of(pick.template_id) }).url,
+        glb_variant:
+          get_mob_model({ variant: pick.template_id, name: setup.mob_name_of(pick.template_id) }).url ?? undefined,
       })),
     ],
   }

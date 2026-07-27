@@ -23,9 +23,10 @@ import { use_auth } from './auth'
 import { install_wallet_session_reset } from './auth/session_reset_subscription'
 
 // Full asset manifest (ALL classes — item/spell/vanilla/mob/cosmetic/music) served at the web root
-// (VITE_ASSETS_MANIFEST_URL overrides). Each class resolves the MinIO asset host first, with the
-// CDN/local copy as the FALLBACK (asset_url returns null for an
-// unpublished class). ALWAYS ON — the asset host is THE asset store, unconditionally. Resolver config is
+// (VITE_ASSETS_MANIFEST_URL overrides). Each class resolves the MinIO asset host first. Flat art/audio may
+// have an explicit local presentation fallback; geometry never does: an unpublished model class stays in its
+// caller's error/placeholder state instead of asking the SPA for a relative GLB (the rewrite answers one with
+// index.html at status 200). ALWAYS ON — the asset host is THE asset store, unconditionally. Resolver config is
 // module state, so this critical manifest settles before React mounts. The load is retry-with-backoff (the
 // ONE home, src/asset_manifest.ts): a transient boot failure is NO LONGER cached as an empty manifest —
 // it stays retryable and self-heals in the background, invalidating blank tiles via the re-render below —

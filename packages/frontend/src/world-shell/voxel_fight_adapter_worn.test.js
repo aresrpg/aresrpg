@@ -8,10 +8,12 @@
 // the cosmetics never board. This mounts the REAL adapter and drives its REAL sync_entities upsert seam.
 
 import { afterAll, describe, expect, test } from 'bun:test'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
 const restore_browser_globals = install_browser_globals()
+configure_assets({ aggregator: 'https://assets.test', classes: { cosmetic: { published: true } } })
 
 function AudioStub() {
   this.play = () => Promise.resolve()

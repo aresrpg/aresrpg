@@ -30,7 +30,7 @@ const TEMPLATES = new Map([
 // mob class config for pet_of — SAME registration pet_companion_resolver.test.js already makes (merge-only,
 // process-shared per jobs.js's reset_assets_for_test doc — the identical values keep this idempotent
 // regardless of bun test's file load order).
-configure_assets({ aggregator: 'https://fake-assets', classes: { mob: { published: true } } })
+configure_assets({ aggregator: 'https://fake-assets', classes: { mob: { published: true }, cosmetic: { published: true } } })
 const mob_url = (glb) => `https://fake-assets/models/mobs/${glb}.glb`
 
 // A captured/real `/v1/characters` row shape (views.js handle_characters): `worn` is keyed by CATEGORY, each
@@ -65,8 +65,8 @@ describe('create_remote_character_cache — peer worn cosmetics resolve from /v1
     await cache.refresh(['0xPEER'])
     expect(calls).toEqual([['0xPEER']]) // ONE batched /v1 read, no per-frame spam
     expect(cache.worn_of('0xPEER')).toEqual({
-      head: { url: 'https://cdn.test/cosmetics/sui_helmet.glb', variant: null },
-      back: { url: 'https://cdn.test/cosmetics/cape_fuwa.glb', variant: 'black' },
+      head: { url: 'https://fake-assets/models/cosmetics/sui_helmet.glb', variant: null },
+      back: { url: 'https://fake-assets/models/cosmetics/cape_fuwa.glb', variant: 'black' },
     })
   })
 

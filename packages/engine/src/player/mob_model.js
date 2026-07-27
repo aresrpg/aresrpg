@@ -47,6 +47,43 @@ function get_loader() {
  *  DRACOLoader on the client). */
 export const get_glb_loader = get_loader
 
+const GLB_CONTENT_TYPES = new Set([
+  'application/gltf-buffer',
+  'application/octet-stream',
+  'application/x-gltf',
+  'binary/octet-stream',
+  'model/gltf-binary',
+])
+
+/** @param {string | null | undefined} value */
+export function is_glb_content_type(value) {
+  return GLB_CONTENT_TYPES.has(
+    String(value ?? '')
+      .split(';', 1)[0]
+      .trim()
+      .toLowerCase()
+  )
+}
+
+/**
+ * Fetch a GLB, reject non-model responses before parsing, then hand verified bytes to the shared DRACO loader.
+ * This catches the SPA rewrite failure mode (`text/html` with status 200) at the network boundary.
+ * @param {string} url
+ * @param {{ fetch_impl?: typeof fetch, loader?: GLTFLoader }} [opts]
+ */
+export async function load_glb_checked(url, { fetch_impl = globalThis.fetch, loader = get_loader() } = {}) {
+  if (typeof url !== 'string' || !url) throw new TypeError('GLB URL is unavailable')
+  const response = await fetch_impl(url)
+  if (!response.ok) throw new Error(`GLB request failed (${response.status}) for ${url}`)
+  const content_type = response.headers?.get?.('content-type')
+  if (!is_glb_content_type(content_type))
+    throw new TypeError(`Refused non-model content-type "${content_type ?? '<missing>'}" for ${url}`)
+  const bytes = await response.arrayBuffer()
+  const document_base = typeof document !== 'undefined' ? document.baseURI : 'http://localhost/'
+  const response_url = new URL(response.url || url, document_base)
+  return loader.parseAsync(bytes, new URL('.', response_url).href)
+}
+
 /**
  * [D193/D242] Neutralize the raw glTF PBR "gold/black" class on every mesh under a model: a metalness of
  * 1 (or any > 0) reflects NOTHING without an envmap (the engine ships none) and reads as OVERSATURATED
@@ -174,7 +211,7 @@ function clone_instance_materials(root) {
 async function load_mob_source(url) {
   let p = _glb_cache.get(url)
   if (!p) {
-    p = get_loader().loadAsync(url)
+    p = load_glb_checked(url)
     _glb_cache.set(url, p)
   }
   return p

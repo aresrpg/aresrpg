@@ -19,11 +19,10 @@
 // corpus, never a pet-only quilt. No match anywhere -> no-spawn, logged once per distinct slug (this resolves
 // every frame — dedupe, never flood): the no-silent-substitute law applied to pets.
 
-import { asset_url } from '@aresrpg/sdk/jobs'
-
 import { get_pet_catalog } from './data/pet_catalog.js'
 import { get_catalog as get_mob_catalog } from './data/mob_catalog.js'
 import { game_log } from '../core/log.js'
+import { model_asset_url } from './model_asset_url.js'
 
 // Call-time read on purpose (cosmetic_glb.js's law): vite statically inlines `import.meta.env.DEV`; bun
 // tests flip `process.env.DEV` per-call instead of racing the process-global module registry.
@@ -40,7 +39,7 @@ export function resolve_pet_model_url(slug) {
   const pet_catalog = get_pet_catalog()
   const mob_catalog = get_mob_catalog()
   const glb = pet_catalog[slug]?.glb ?? mob_catalog[slug]?.glb ?? mob_catalog[slug.replace(/^pet_/, '')]?.glb ?? null
-  if (glb) return asset_url('mob', `${glb}.glb`)
+  if (glb) return model_asset_url('mob', `${glb}.glb`)
   if (!warned_slugs.has(slug)) {
     warned_slugs.add(slug)
     game_log('pet', `no catalog entry for equipped pet slug '${slug}' — companion stays unspawned`)

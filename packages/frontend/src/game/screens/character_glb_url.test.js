@@ -15,10 +15,11 @@
 // `sprites/characters/` and 404 under `models/characters/`. This asserts the resolver against where the
 // bytes ACTUALLY are, not against where the law assumed they'd be — the assumption is what broke.
 
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 
 import { configure_assets, asset_url } from '@aresrpg/sdk/jobs'
 
+import { reset_model_asset_errors_for_test } from '../model_asset_url.js'
 import { CHARACTER_MODELS, character_glb_url } from './character-glb.js'
 
 const HOST = 'https://assets.aresrpg.world'
@@ -53,6 +54,7 @@ afterEach(() => {
   // Explicit unpublish — bun shares the resolver's module state across the whole run; never leak a
   // published class forward to a later file (see reset_assets_for_test's doc).
   configure_assets({ aggregator: HOST, classes: { character: {} } })
+  reset_model_asset_errors_for_test()
 })
 
 describe('character rigs resolve to URLs the asset host actually serves', () => {
@@ -70,7 +72,14 @@ describe('character rigs resolve to URLs the asset host actually serves', () => 
     expect(asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/sprites/characters/senshi_male.glb`)
   })
 
-  test('an unpublished character class still falls back to the bundled local copy', () => {
-    expect(character_glb_url('/sprites/characters/senshi_male.glb')).toBe('/sprites/characters/senshi_male.glb')
+  test('an unpublished character class takes the explicit error path, never a relative fetch', () => {
+    const error = spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      expect(character_glb_url('/sprites/characters/senshi_male.glb')).toBeNull()
+      expect(error).toHaveBeenCalledTimes(1)
+      expect(String(error.mock.calls[0]?.[0])).toContain('character')
+    } finally {
+      error.mockRestore()
+    }
   })
 })
