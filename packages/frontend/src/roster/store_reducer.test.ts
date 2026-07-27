@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 const { context } = await import('../game/core/game.js')
 const { begin_join, use_world_binding, reset_world_binding } = await import('../world-shell/session_gate.js')
-const { adopt_predicted_character } = await import('./store_reducer')
+const { adopt_paid_mint_if_first, adopt_predicted_character } = await import('./store_reducer')
 
 const STALE_CHAR = `0x${'a'.repeat(64)}`
 const NEW_CHAR = `0x${'b'.repeat(64)}`
@@ -72,5 +72,47 @@ describe('adopt_predicted_character — selection and the join gate can never di
 
     expect(context.get_state().selected_character_id).toBe(NEW_CHAR)
     expect(use_world_binding.getState().character_id).toBe(NEW_CHAR)
+  })
+})
+
+describe('adopt_paid_mint_if_first — paid onboarding without active-character theft', () => {
+  test('a wallet first mint selects and joins its receipt-projected character immediately', async () => {
+    await select_in_real_store(null)
+
+    adopt_paid_mint_if_first(
+      NEW_CHAR,
+      {
+        characters: [{ id: 'ghost:ReceiptHero', ghost: true }],
+        selected_character_id: null,
+      },
+      {
+        select_character: (id) => context.dispatch('action/select_character', id),
+        begin_join,
+      }
+    )
+    await wait_for_selected_character(NEW_CHAR)
+
+    expect(context.get_state().selected_character_id).toBe(NEW_CHAR)
+    expect(use_world_binding.getState().character_id).toBe(NEW_CHAR)
+  })
+
+  test('an additional paid mint preserves the active character and its join gate', async () => {
+    await select_in_real_store(STALE_CHAR)
+    begin_join(STALE_CHAR)
+
+    adopt_paid_mint_if_first(
+      NEW_CHAR,
+      {
+        characters: [{ id: STALE_CHAR }, { id: 'ghost:ReceiptHero', ghost: true }],
+        selected_character_id: STALE_CHAR,
+      },
+      {
+        select_character: (id) => context.dispatch('action/select_character', id),
+        begin_join,
+      }
+    )
+
+    expect(context.get_state().selected_character_id).toBe(STALE_CHAR)
+    expect(use_world_binding.getState().character_id).toBe(STALE_CHAR)
   })
 })

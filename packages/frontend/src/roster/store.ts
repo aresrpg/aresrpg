@@ -26,6 +26,7 @@ import {
   EXPEDITION_INITIAL_STATE,
   reduce_expedition,
   adopt_predicted_character,
+  adopt_paid_mint_if_first,
   type ExpeditionInput,
 } from './store_reducer'
 
@@ -386,10 +387,23 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       )
       if (!mint_session_matches(address, use_auth.getState().address)) return
       get().input({ type: 'character_mint/finished' })
-      // The additional character becomes a real, switchable roster row from its OWN receipt now. Unlike the
-      // first-character path, do not select/join it — creating an alt must never yank the active character.
+      // Decide FIRST-vs-ADDITIONAL against the state from BEFORE the receipt row enters the reducer. A wallet's
+      // first character uses this paid door too and must select/join immediately; a true alt remains roster-only
+      // and can never yank the active character.
+      const roster_before_receipt = context.get_state()
       const projection = ingest_character_mint_receipt(receipt, draft)
       if (projection) {
+        adopt_paid_mint_if_first(
+          String(projection.character.id),
+          {
+            characters: roster_before_receipt.sui.characters,
+            selected_character_id: roster_before_receipt.selected_character_id,
+          },
+          {
+            select_character: (id) => context.dispatch('action/select_character', id),
+            begin_join,
+          }
+        )
         game_log('d93', 'paid mint seeded from receipt', projection.character.id)
         void load_roster().catch(() => {})
         return

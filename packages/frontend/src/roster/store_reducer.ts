@@ -109,3 +109,33 @@ export function adopt_predicted_character(
   deps.select_character(predicted_id)
   deps.begin_join(predicted_id)
 }
+
+/** A wallet's paid mint is also its onboarding mint only when no settled roster row or active identity preceded
+ * the receipt. Ignore the creator's click-instant `ghost:*` row. Keep this decision on the pre-receipt state:
+ * the receipt reducer itself inserts the real row, so reading afterward would misclassify every first paid mint
+ * as an additional character. */
+export function should_adopt_paid_mint(
+  prior: Readonly<{
+    characters: ReadonlyArray<Readonly<{ id?: unknown; ghost?: boolean }> | null | undefined>
+    selected_character_id: string | null
+  }>
+): boolean {
+  const has_settled_character = prior.characters.some(
+    (character) => character?.ghost !== true && !String(character?.id ?? '').startsWith('ghost:')
+  )
+  return !has_settled_character && prior.selected_character_id === null
+}
+
+/** Paid first-mint adoption shares the free path's selection↔join invariant. Additional paid mints are roster
+ * deltas only and must leave the active character untouched. Effects stay injected at this transaction edge. */
+export function adopt_paid_mint_if_first(
+  predicted_id: string,
+  prior: Readonly<{
+    characters: ReadonlyArray<Readonly<{ id?: unknown; ghost?: boolean }> | null | undefined>
+    selected_character_id: string | null
+  }>,
+  deps: { select_character: (id: string) => void; begin_join: (id: string) => void }
+): void {
+  if (!should_adopt_paid_mint(prior)) return
+  adopt_predicted_character(predicted_id, deps)
+}
