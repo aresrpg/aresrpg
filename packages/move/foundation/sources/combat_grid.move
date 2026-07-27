@@ -508,6 +508,12 @@ public fun manhattan(a: u64, b: u64): u64 {
   abs_diff(cell_x(a), cell_x(b)) + abs_diff(cell_y(a), cell_y(b))
 }
 
+/// §387 — are `a` and `b` on the SAME straight cardinal line (a shared row OR column)? The spellbook LINE class may
+/// only aim along a cardinal line from the attacker.
+public fun same_axis(a: u64, b: u64): bool {
+  cell_x(a) == cell_x(b) || cell_y(a) == cell_y(b)
+}
+
 /// Greedy 4-DIRECTIONAL (N/S/E/W only, no diagonals) approach toward `to_cell`, up to `budget` steps, STOPPING as
 /// soon as Manhattan distance <= 1 (adjacent — never land on the target's own cell). Mirrors `approach`'s
 /// structure exactly but reduces Manhattan distance instead of Chebyshev: each step moves exactly ONE cell along
@@ -669,6 +675,7 @@ public fun zone_cells(shape: u8, size: u64, anchor: u64, caster: u64): vector<u6
   if (shape == spell_effect::shape_point()) return vector[anchor];
   if (shape == spell_effect::shape_line()) return line_cells(anchor, caster, size);
   if (shape == spell_effect::shape_tbar()) return tbar_cells(anchor, caster, size);
+  if (shape == spell_effect::shape_podium()) return podium_cells(anchor, caster, size);
   if (shape == spell_effect::shape_cone()) return cone_cells(anchor, caster, size);
   // circle / cross / ring / allmap — scan the board.
   let mut out = vector[];
@@ -705,6 +712,23 @@ fun tbar_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   let mut out = vector[anchor];
   out.append(walk(anchor, perp_a, size));
   out.append(walk(anchor, perp_b, size));
+  out
+}
+
+/// PODIUM (#387 — battleaxe / mace / hammer): the TBAR front-arc AT `anchor` PLUS one cell BEYOND `anchor` along
+/// the strike axis (caster→anchor). At `size` 1 it touches exactly 4 cells. With the attacker at `A` striking the
+/// target `T` to the east (caster→anchor = +x), the touched set (`#`) is:
+///
+///        . P .            P = anchor + perpendicular (tbar half-length `size`, both ways)
+///     A  T F .            T = anchor (the aimed cell)     F = anchor + strike-dir (the "beyond" stem)
+///        . P .            A = attacker (never hit)
+///
+/// = tbar_cells(anchor, caster, size) ∪ { step_cell(anchor, away_dir(caster, anchor)) }. The forward stem drops
+/// off-grid cells (Option). `caster == anchor` (no direction) degenerates to the tbar/point set, same as line/tbar.
+fun podium_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
+  let mut out = tbar_cells(anchor, caster, size);
+  let fwd = step_cell(anchor, away_dir(caster, anchor));
+  if (fwd.is_some()) out.push_back(fwd.destroy_some());
   out
 }
 

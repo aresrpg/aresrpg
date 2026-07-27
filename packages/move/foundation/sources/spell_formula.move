@@ -83,16 +83,18 @@ public fun roll_crit(rng: u64, crit_rate: u64, crit_bonus: u64): (u64, bool) {
 // varies it (the global ±15% damage band must not exist; damage is EXACTLY the authored
 // base, always). Mob casts and board ticks carry no crit roll either (fully deterministic).
 //
-// DAMAGE STREAM — RESERVED, NOT LIVE: `apply_variance(base, factor)` below stays as the generic (base × factor /
-// 10000, min-1-floored) application primitive for a LATER authored-range layer (a spells-package schema
-// evolution — per-spell [min,max], not a global band). It takes an explicit factor with NO default baked in;
-// nothing today computes a non-identity one, so every call path passes `base` straight through untouched.
-// `DOMAIN_DMG = 0xD1B54A35` is the reserved decorrelation tag that future layer should reuse (same
-// mix(slot_base, DOMAIN_DMG) pattern as DOMAIN_CRIT above) to keep its roll independent of the crit stream — not
-// a live const until that layer lands.
+// DAMAGE STREAM — LIVE (#577, owner ruling 2026-07-23): `slot_damage_roll(turn_seed, slot)` draws ONE per-turn
+// per-slot fraction in [0, 10000) off the SAME public turn seed as crit, decorrelated by its own `DOMAIN_DMG` tag
+// (`mix(mix(turn_seed, slot), DOMAIN_DMG)`) — so a client previews this turn's exact damage before committing,
+// exactly as it previews crit. `roll_in_range(min, max, roll)` maps that fraction onto an effect's authored
+// `[min, max]`; a whole cast shares ONE roll (crit-slot symmetry — spell/target-independent ⇒ fishing-proof), and
+// each of its effects maps the shared fraction through its own range. `max == min` ⇒ the fixed base (byte-identical
+// to the pre-#577 single-value behaviour). The §5h amplification applies AFTER the roll. `apply_variance` below is
+// the retired ±band primitive, kept only for its own tests (the authored-range layer replaced it).
 
-const CRIT_SCALE: u64 = 10000; // crit-roll fixed-point scale (basis points); also apply_variance's identity divisor
+const CRIT_SCALE: u64 = 10000; // crit/damage-roll fixed-point scale (basis points); also apply_variance's identity divisor
 const DOMAIN_CRIT: u64 = 0; // crit stream domain tag
+const DOMAIN_DMG: u64 = 0xD1B54A35; // #577 damage stream domain tag (≠ crit 0 / dodge 0xD0D6E / failure 0xFA117 / tackle 0x7AC1E)
 
 /// The identity variance factor (×1) — pairs with `apply_variance` below. No current caller in the resolver
 /// (every damage path uses `base` directly per the no-global-variance ruling); kept for the reserved authored-band
@@ -102,6 +104,29 @@ public fun no_variance(): u64 { CRIT_SCALE }
 /// Slot `i`'s CRIT ROLL — a spell/target-INDEPENDENT value in [0, 10000) derived purely from (turn_seed, slot).
 public fun slot_crit_roll(turn_seed: u64, slot: u64): u64 {
   prng::mix(prng::mix(turn_seed, slot), DOMAIN_CRIT) % CRIT_SCALE
+}
+
+/// #577 — Slot `i`'s DAMAGE ROLL — a spell/target-INDEPENDENT fraction in [0, 10000) from (turn_seed, slot),
+/// decorrelated from the crit stream by `DOMAIN_DMG`. Twin of `slot_crit_roll`; the @aresrpg/sim mirror
+/// (turn_seed.js `slot_damage_roll`) derives the identical value so a client previews this turn's exact damage.
+public fun slot_damage_roll(turn_seed: u64, slot: u64): u64 {
+  prng::mix(prng::mix(turn_seed, slot), DOMAIN_DMG) % CRIT_SCALE
+}
+
+/// #577 — a MOB's damage roll fraction in [0, 10000). Mobs have no turn seed (crank-driven, never previewable),
+/// so the fraction derives from the crank rng STATE by a NON-ADVANCING `scramble` — one roll per cast that does
+/// NOT consume the stream, so a fixed effect stays byte-identical and a range never shifts the mob's dodge draws.
+/// Replay-exact from the recorded crank seed.
+public fun crank_damage_roll(rng_state: u64): u64 {
+  prng::scramble(rng_state) % CRIT_SCALE
+}
+
+/// #577 — Map a damage roll `roll` ∈ [0, 10000) onto an authored `[min, max]` (inclusive): `min + roll·span/10000`
+/// where `span = max − min + 1`. `max <= min` ⇒ `min` (the fixed/degenerate case — no range). Integer-only,
+/// deterministic; both twins call this so chain and client pick the identical value from the identical roll.
+public fun roll_in_range(min: u64, max: u64, roll: u64): u64 {
+  if (max <= min) return min;
+  min + roll * (max - min + 1) / CRIT_SCALE
 }
 
 // ── AP/MP-REMOVAL DODGE: the esquive contest draws from the SAME public turn-seed
@@ -434,6 +459,81 @@ fun t_slot_crit_roll_deterministic_and_index_bound() {
   assert!(slot_crit_roll(ts, 0) == slot_crit_roll(ts, 0), 0);
   // index-bound: different slots → different rolls (reordering actions swaps which slot crits).
   assert!(slot_crit_roll(ts, 0) != slot_crit_roll(ts, 1), 1);
+}
+
+// ── #577 turn-seed DAMAGE roll ──
+
+#[test]
+fun t_slot_damage_roll_deterministic_slot_bound_and_decorrelated() {
+  let ts = 123456789;
+  // deterministic: same (seed, slot) → same roll (this-turn damage is knowable before commit).
+  assert!(slot_damage_roll(ts, 0) == slot_damage_roll(ts, 0), 0);
+  // slot-bound: different slots → different rolls.
+  assert!(slot_damage_roll(ts, 0) != slot_damage_roll(ts, 1), 1);
+  // a DIFFERENT turn seed rolls differently (each new turn re-rolls the whole sequence).
+  assert!(slot_damage_roll(987654321, 0) != slot_damage_roll(ts, 0), 2);
+  // decorrelated from the crit stream at the same (seed, slot) — distinct domain tags, not the same number.
+  assert!(slot_damage_roll(ts, 0) != slot_crit_roll(ts, 0), 3);
+  // in range [0, 10000).
+  assert!(slot_damage_roll(ts, 5) < CRIT_SCALE, 4);
+}
+
+#[test]
+fun t_slot_damage_roll_parity_vectors() {
+  // #577 TWIN PARITY — the SAME (turn_seed, slot) → damage roll the @aresrpg/sim mirror pins
+  // (packages/sim/test/turn_seed.test.js). The seed constants are fight::turn_seed goldens (tuples A–D there);
+  // slot_damage_roll is pinned identically on BOTH twins, so a drift on EITHER side breaks its suite.
+  assert!(slot_damage_roll(4190174188, 0) == 9589, 0);
+  assert!(slot_damage_roll(4190174188, 1) == 3257, 1);
+  assert!(slot_damage_roll(4190174188, 2) == 3915, 2);
+  assert!(slot_damage_roll(3110118064, 0) == 7992, 3);
+  assert!(slot_damage_roll(3110118064, 5) == 9380, 4);
+  assert!(slot_damage_roll(2245583870, 0) == 2410, 5);
+  assert!(slot_damage_roll(4068998909, 0) == 2904, 6); // seat-bound: ≠ tuple A slot 0
+  // distinct domain tag from crit ⇒ a different number at the same (seed, slot)
+  assert!(slot_damage_roll(4190174188, 0) != slot_crit_roll(4190174188, 0), 7);
+  // roll_in_range maps identically to the sim twin
+  assert!(roll_in_range(10, 20, slot_damage_roll(4190174188, 0)) == 20, 8);
+  assert!(roll_in_range(5, 9, slot_damage_roll(4190174188, 0)) == 9, 9);
+  assert!(roll_in_range(100, 200, slot_damage_roll(3110118064, 0)) == 180, 10);
+}
+
+#[test]
+fun t_roll_in_range_endpoints_and_degenerate() {
+  // roll 0 → min; roll at the top → max; degenerate max<=min → min (fixed).
+  assert!(roll_in_range(10, 20, 0) == 10, 0);
+  assert!(roll_in_range(10, 20, 9999) == 20, 1); // 10 + 9999*11/10000 = 10 + 10 = 20
+  assert!(roll_in_range(10, 20, 5000) == 15, 2); // 10 + 5000*11/10000 = 10 + 5 = 15
+  assert!(roll_in_range(7, 7, 9999) == 7, 3); // min==max ⇒ fixed
+  assert!(roll_in_range(7, 3, 9999) == 7, 4); // malformed max<min ⇒ min (never > min)
+  assert!(roll_in_range(0, 0, 9999) == 0, 5); // zero stays zero
+  // #574-SIBLING — DEGENERATE-SPAN PARITY: roll_in_range's `roll * span` is checked-u64 here (aborts clean past
+  // ~1.8e15), but the sim twin is a JS Number — silently imprecise past ~9e11 with NO abort, a twin break the
+  // #574 mix() fix didn't cover (this is a different multiply). Pin a LARGE-BUT-SAFE span (8e11, an order below
+  // the JS boundary) so both twins are proven byte-identical at real stress magnitude, not just small authored
+  // ranges. A span beyond ~9e11 is a SEED-VALIDATOR concern (the content pipeline's authored value_max cap,
+  // armed separately) — never a runtime path either twin has to defend past this point.
+  assert!(roll_in_range(0, 799999999999, 9999) == 799920000000, 6);
+}
+
+#[test]
+fun t_distribution_damage_roll_spans_the_range_over_10k() {
+  // Sweep 10k decorrelated turn seeds at slot 0, mapping onto [1, 10]: every bucket is hit and the mean is central.
+  let mut lo = false;
+  let mut hi = false;
+  let mut sum = 0;
+  let mut i = 0;
+  while (i < 10000) {
+    let ts = prng::scramble(i);
+    let v = roll_in_range(1, 10, slot_damage_roll(ts, 0));
+    if (v == 1) lo = true;
+    if (v == 10) hi = true;
+    sum = sum + v;
+    i = i + 1;
+  };
+  assert!(lo && hi, 0); // both endpoints reached
+  let mean = sum / 10000; // expected ≈ 5.5 → floor 5; a fixed pipeline would pin one value
+  assert!(mean >= 4 && mean <= 6, mean);
 }
 
 // ── tackle contest — golden twins of packages/sim/test/vectors/tackle_golden.json (ids match; every number

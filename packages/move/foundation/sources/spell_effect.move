@@ -6,11 +6,14 @@
 /// `spell`'s element consts, `dungeon::Actor.is_mob`). Element and stat are PARAMETERS, never separate
 /// opcodes, so ~130 reference effect-IDs collapse to ~24 kinds (taxonomy §5a). SUMMONING is EXCLUDED.
 ///
-/// OWNER ADDENDUM (the one allowed 1.29 deviation): NO damage ranges. Every damage/heal effect stores a
-/// single FIXED `base` (min==max); the exact 1.29 elemental-stat amplification (§5h) still applies. Crit is a
-/// DETERMINISTIC bonus — a separate higher-fixed `crit_effects` list, not a ×multiplier — so the ONLY RNG in
-/// the damage path is the crit boolean (predict-then-reconcile friendly). The value math lives in
-/// `spell_formula`; targeting in `spell_target`; persistent board state (traps/glyphs/DoT) in `spell_board`.
+/// #577 — RANDOM DAMAGE (owner ruling 2026-07-23, REVERSES the prior "NO damage ranges" addendum). Every
+/// damage/heal/life-steal/DoT effect stores an authored RANGE `[value, value_max]` (min..=max). One per-TURN
+/// seed roll (`spell_formula::slot_damage_roll`, DOMAIN_DMG) picks a value in that range for the whole cast —
+/// the client mirrors it byte-for-byte to preview this turn's exact damage before committing. `value_max == value`
+/// is the degenerate FIXED case (byte-identical to the old single-base behaviour), so non-range kinds and any
+/// un-authored content keep working unchanged. The exact 1.29 elemental-stat amplification (§5h) applies AFTER
+/// the roll; crit stays a DETERMINISTIC higher-range `crit_effects` swap (turn-seed boolean), never a ×multiplier.
+/// The value math lives in `spell_formula`; targeting in `spell_target`; persistent board state in `spell_board`.
 ///
 /// PURE DATA — no `Dungeon`/`Character` coupling. This is the vocabulary the (held) `apply_cast` rewrite will
 /// resolve against once the dungeon worker lands the Participant/board touchpoints.
@@ -133,7 +136,13 @@ const SHAPE_TBAR: u8 = 4; //  perpendicular bar of half-length = size
 const SHAPE_RING: u8 = 5; //  hollow lozenge perimeter at radius = size
 const SHAPE_ALLMAP: u8 = 6; //  every cell on the board (1.29 "C_")
 const SHAPE_CONE: u8 = 7; //  #55-E9 triangle fanning from the caster toward the target — tip 1-wide, widening to 3, `size` deep
+const SHAPE_PODIUM: u8 = 8; //  #387 weapon PODIUM — the TBAR front-arc PLUS one cell beyond the target along the strike axis
+// The WeaponLine shape-OVERRIDE sentinel: an authored line whose `area_shape` is this value carries NO override and
+// falls through to the category resolver (`weapon_shape_of`). 255 (NOT 0 — SHAPE_POINT=0 is a live single-cell
+// override a line may legitimately author). Lives HERE because a line's override uses the SAME spell shape vocabulary.
+const SHAPE_NO_OVERRIDE: u8 = 255;
 
+public fun shape_no_override(): u8 { SHAPE_NO_OVERRIDE }
 public fun shape_point(): u8 { SHAPE_POINT }
 public fun shape_circle(): u8 { SHAPE_CIRCLE }
 public fun shape_cross(): u8 { SHAPE_CROSS }
@@ -142,6 +151,7 @@ public fun shape_tbar(): u8 { SHAPE_TBAR }
 public fun shape_ring(): u8 { SHAPE_RING }
 public fun shape_allmap(): u8 { SHAPE_ALLMAP }
 public fun shape_cone(): u8 { SHAPE_CONE }
+public fun shape_podium(): u8 { SHAPE_PODIUM }
 
 // ╔════════════════ [ Per-effect target filter bitmask (taxonomy §2b) ] ══════════ ]
 // Values match the reference SpellEffectTarget bits. ONLY_INVOC/NOT_INVOC omitted (summons EXCLUDED).
@@ -225,7 +235,8 @@ public fun phase_end(): u8 { PHASE_END }
 public struct Effect has copy, drop, store {
   kind: u8,
   element: u8, //  spell element for damage/resist; spell::el_none() otherwise
-  value: u64, //  base dmg / heal / points / distance / stat amount / pct / state_id (per kind)
+  value: u64, //  base dmg / heal / points / distance / stat amount / pct / state_id (per kind); RANGE kinds: the MIN
+  value_max: u64, //  #577 — RANGE kinds (damage/heal/life-steal/DoT): the MAX of the authored roll range (== value ⇒ fixed). Other kinds: == value, ignored.
   area_shape: u8, //  §3 shape for the effect's own zone
   area_size: u64, //  shape radius/length
   target_filter: u8, //  §2b bitmask — who in the zone this effect hits
@@ -236,7 +247,8 @@ public struct Effect has copy, drop, store {
   phase: u8, //  PHASE_* — trigger timing for traps/glyphs/DoT
 }
 
-/// Full constructor — every field explicit. Convenience constructors below cover the common kinds.
+/// Full FIXED constructor — every field explicit, `value_max == value` (a single fixed base). Signature is
+/// UNCHANGED across #577 (its ~50 callers stay put); it delegates to `new_effect_ranged` with a degenerate range.
 public fun new_effect(
   kind: u8,
   element: u8,
@@ -250,13 +262,34 @@ public fun new_effect(
   flags: u8,
   phase: u8,
 ): Effect {
-  Effect { kind, element, value, area_shape, area_size, target_filter, chance, turns, stat, flags, phase }
+  new_effect_ranged(kind, element, value, value, area_shape, area_size, target_filter, chance, turns, stat, flags, phase)
+}
+
+/// #577 — the RANGE-aware full constructor: `value` = MIN, `value_max` = MAX. `aresrpg_spells` mints
+/// damage/heal/life-steal/DoT effects through this (or the range convenience constructors) when a spread is
+/// authored; every other kind mints through `new_effect` (max == min). The ONE home for the `Effect` literal.
+public fun new_effect_ranged(
+  kind: u8,
+  element: u8,
+  value: u64,
+  value_max: u64,
+  area_shape: u8,
+  area_size: u64,
+  target_filter: u8,
+  chance: u8,
+  turns: u8,
+  stat: u8,
+  flags: u8,
+  phase: u8,
+): Effect {
+  Effect { kind, element, value, value_max, area_shape, area_size, target_filter, chance, turns, stat, flags, phase }
 }
 
 // -- Accessors (field privacy: only this module can read Effect's fields) --
 public fun kind(e: &Effect): u8 { e.kind }
 public fun element(e: &Effect): u8 { e.element }
-public fun value(e: &Effect): u64 { e.value }
+public fun value(e: &Effect): u64 { e.value } //  RANGE kinds: the MIN/base of the roll range
+public fun value_max(e: &Effect): u64 { e.value_max } //  #577 — RANGE kinds: the MAX; == value() for fixed effects
 public fun area_shape(e: &Effect): u8 { e.area_shape }
 public fun area_size(e: &Effect): u64 { e.area_size }
 public fun target_filter(e: &Effect): u8 { e.target_filter }
@@ -266,6 +299,33 @@ public fun stat(e: &Effect): u8 { e.stat }
 public fun flags(e: &Effect): u8 { e.flags }
 public fun phase(e: &Effect): u8 { e.phase }
 public fun has_flag(e: &Effect, flag: u8): bool { e.flags & flag == flag }
+
+// ╔════════════════ [ Signed-value convention — the KIND_SIGNED {alter_stat, alter_resist} decode ] ══════ ]
+// R3 (owner ruling 2026-07-23 — negative stat/resist deltas must WORK): effect kinds 9/11 author BOTH signs in
+// the corpus (a debuff spell authors −8..−33), but `value`/`value_max` are u64 — negatives cannot mint raw. For
+// EXACTLY these two kinds the fields are CENTERED at 32768 (`value = 32768 + delta`), the SAME convention gear
+// `ItemStatistics` and mob resistances already use (spell.move RES_SHIFT). Damage/heal and every other kind stay
+// RAW. `signed_delta` is the ONE decode home both apply call sites (permanent `apply_alter`, timed `fold_alters`)
+// AND the sim twin (`spell_effect.js`) read through, so a rolled/stored centered value always resolves to the same
+// (is_negative, magnitude) pair on chain and client. A ranged debuff rolls on the centered endpoints first
+// (`spell_formula::roll_in_range` needs no change — centered endpoints are ordinary ascending u64s) and the decode
+// applies to the ROLLED result.
+const SIGNED_SHIFT: u64 = 32768;
+public fun signed_shift(): u64 { SIGNED_SHIFT }
+
+/// The KIND_SIGNED set — the only kinds whose `value`/`value_max` are centered (else the field is raw).
+public fun is_signed_kind(kind: u8): bool { kind == K_ALTER_STAT || kind == K_ALTER_RESIST }
+
+/// Decode a (possibly centered) effect `value` for `kind` → `(is_negative, magnitude)`. Signed kinds decode the
+/// 32768-centering; every other kind passes through as `(false, value)` (raw). The magnitude is the absolute
+/// stat/resist delta the apply path adds (buff) or saturating-subtracts (debuff).
+public fun signed_delta(kind: u8, value: u64): (bool, u64) {
+  if (is_signed_kind(kind)) {
+    if (value >= SIGNED_SHIFT) (false, value - SIGNED_SHIFT) else (true, SIGNED_SHIFT - value)
+  } else {
+    (false, value)
+  }
+}
 
 // ╔════════════════ [ Structural legality — the "legal against the effect system" gate ] ══════ ]
 // The `aresrpg_spells` admission (`mint_spell`) AND every cap-gated live-tune setter run this on EVERY effect of
@@ -282,13 +342,14 @@ const FLAG_ALL_MASK: u8 = 31; //  all five FLAG_* bits (1|2|4|8|16) — bit 32 (
 
 public fun is_legal(e: &Effect): bool {
   e.kind <= K_DAMAGE_REDIRECT
-    && e.area_shape <= SHAPE_CONE
+    && e.area_shape <= SHAPE_PODIUM
     && (e.target_filter | TF_ALL_MASK) == TF_ALL_MASK
     && e.chance <= 100
     && (e.flags | FLAG_ALL_MASK) == FLAG_ALL_MASK
     && e.phase <= PHASE_END
     && e.stat <= STAT_PHYSICAL_DAMAGE
     && (e.element <= AIR_ELEMENT || e.element == NONE_ELEMENT) // fire/water/earth/air, or neutral(255)
+    && e.value_max >= e.value // #577 — a well-formed roll range (fixed effects have value_max == value)
 }
 const AIR_ELEMENT: u8 = 3; //  spell::el_air() — the top damage-element discriminant
 const NONE_ELEMENT: u8 = 255; //  spell::el_none() — neutral/elementless
@@ -298,8 +359,27 @@ const NONE_ELEMENT: u8 = 255; //  spell::el_none() — neutral/elementless
 public fun damage(element: u8, base: u64): Effect {
   new_effect(K_DAMAGE, element, base, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
 }
+// §387 — enemy damage over an explicit AoE (`area_shape`/`area_size`), enemies only (TF_NOT_TEAM), fixed base. The
+// weapon strike builds its shaped damage marker off this so the emitted effect carries the strike's cell-set shape.
+public fun damage_shaped(element: u8, base: u64, area_shape: u8, area_size: u64): Effect {
+  new_effect(K_DAMAGE, element, base, area_shape, area_size, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
 public fun heal(base: u64): Effect {
   new_effect(K_HEAL, 255, base, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+// #577 — RANGE variants of the damage family: the turn-seed roll picks a value in `[min, max]` (min == max ⇒ the
+// fixed constructors above). The seed serializer mints authored spreads through these.
+public fun damage_range(element: u8, min: u64, max: u64): Effect {
+  new_effect_ranged(K_DAMAGE, element, min, max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+public fun heal_range(min: u64, max: u64): Effect {
+  new_effect_ranged(K_HEAL, 255, min, max, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+public fun life_steal_range(element: u8, min: u64, max: u64): Effect {
+  new_effect_ranged(K_LIFE_STEAL, element, min, max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+public fun apply_dot_range(element: u8, per_tick_min: u64, per_tick_max: u64, turns: u8): Effect {
+  new_effect_ranged(K_APPLY_DOT, element, per_tick_min, per_tick_max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, turns, 0, 0, PHASE_START)
 }
 public fun life_steal(element: u8, base: u64): Effect {
   new_effect(K_LIFE_STEAL, element, base, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
@@ -338,6 +418,11 @@ public fun credit_row(point_kind: u8, given: u64, turns: u8): Effect {
 public fun give_points(point_kind: u8, n: u64): Effect {
   new_effect(K_GIVE_POINTS, 255, n, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 1, point_kind, 0, PHASE_ON_ENTER)
 }
+/// `amount` is the STORED value verbatim — the caller centers. The signed encoding's ONE home is
+/// `aresrpg_fight::participant::centered_value` (#904), which every runtime alter row (a steal split, a retro
+/// grant, a seed template) already passes through before it reaches here; `signed_delta` below is the matching
+/// decode. FLAG_NEGATIVE stays set as the declared sign the mint-time bands legality (`spell_bands` F5) and
+/// dispel classification read.
 public fun alter_stat(stat_id: u8, amount: u64, negative: bool, dispellable: bool, turns: u8): Effect {
   let mut flags = 0;
   if (negative) flags = flags | FLAG_NEGATIVE;
@@ -515,6 +600,38 @@ fun t_alter_stat_sign_and_filter() {
   let debuff = alter_stat(STAT_AGILITY, 40, true, false, 2);
   assert!(debuff.has_flag(FLAG_NEGATIVE), 0);
   assert!(debuff.target_filter() == TF_NOT_TEAM, 0); // debuffs target enemies
+}
+
+#[test]
+fun t_signed_delta_centering_roundtrip() {
+  // R3: `signed_delta` decodes a CENTERED alter value back to the authored (sign, magnitude). The centering
+  // itself happens at the call site (`aresrpg_fight::participant::centered_value`, #904) — this module only
+  // stores and decodes, so the test centers explicitly rather than through the constructor.
+  let buff = alter_stat(STAT_STRENGTH, SIGNED_SHIFT + 50, false, true, 3);
+  assert!(buff.value() == SIGNED_SHIFT + 50, 0); // +50 centered
+  let (neg, mag) = signed_delta(buff.kind(), buff.value());
+  assert!(!neg && mag == 50, 1);
+  let debuff = alter_stat(STAT_AGILITY, SIGNED_SHIFT - 33, true, true, 2);
+  assert!(debuff.value() == SIGNED_SHIFT - 33, 2); // −33 centered
+  let (dneg, dmag) = signed_delta(debuff.kind(), debuff.value());
+  assert!(dneg && dmag == 33, 3);
+  // Raw kinds pass through unchanged (magnitude == value, never negative).
+  let (rneg, rmag) = signed_delta(K_DAMAGE, 42);
+  assert!(!rneg && rmag == 42, 4);
+  // A centered ranged debuff (delta −33..−8 ⇒ centered 32735..32760): each endpoint decodes to its magnitude,
+  // and roll_in_range on the centered endpoints then decode yields the exact delta. These three (roll → magnitude)
+  // pairs are the SIM PARITY FIXTURE twin (signed_alter_r3.test.js) — chain and client decode the identical delta.
+  let (lo_neg, lo_mag) = signed_delta(K_ALTER_STAT, SIGNED_SHIFT - 33); // 32735
+  let (hi_neg, hi_mag) = signed_delta(K_ALTER_STAT, SIGNED_SHIFT - 8); //  32760
+  assert!(lo_neg && lo_mag == 33 && hi_neg && hi_mag == 8, 5);
+  let lo = SIGNED_SHIFT - 33;
+  let hi = SIGNED_SHIFT - 8;
+  let (r0_neg, r0_mag) = signed_delta(K_ALTER_STAT, aresrpg_foundation::spell_formula::roll_in_range(lo, hi, 0));
+  let (r5_neg, r5_mag) = signed_delta(K_ALTER_STAT, aresrpg_foundation::spell_formula::roll_in_range(lo, hi, 5000));
+  let (r9_neg, r9_mag) = signed_delta(K_ALTER_STAT, aresrpg_foundation::spell_formula::roll_in_range(lo, hi, 9999));
+  assert!(r0_neg && r0_mag == 33, 6); // roll 0 → the min (most-negative) endpoint
+  assert!(r5_neg && r5_mag == 20, 7); // roll 5000 → −20
+  assert!(r9_neg && r9_mag == 8, 8); //  roll 9999 → the max (least-negative) endpoint
 }
 
 #[test]
