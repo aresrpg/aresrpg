@@ -4,14 +4,13 @@
 import { readFileSync as read_file } from 'node:fs'
 
 import { Transaction, TransactionDataBuilder } from '@mysten/sui/transactions'
-import { parseSerializedSignature } from '@mysten/sui/cryptography'
 import { fromBase64, normalizeSuiAddress, toBase64 } from '@mysten/sui/utils'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
-import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
 
 import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
 import { init_reporting, report_error } from './report.js'
+import { assert_zklogin_challenge } from './zklogin_auth.mjs'
 import {
   ADDR_DAILY_CAP_MIST,
   ADDR_RL_MAX,
@@ -55,12 +54,6 @@ const CORS = {
 }
 const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
 const CHALLENGE_TTL_MS = Number(process.env.SPONSOR_CHALLENGE_TTL_MS || 5 * 60_000)
-const ZKLOGIN_ISS_ALLOWLIST = new Set(
-  (process.env.SPONSOR_ZKLOGIN_ISS || 'https://accounts.google.com,accounts.google.com')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-)
 const normalize_set = (csv) =>
   new Set(
     String(csv)
@@ -156,33 +149,20 @@ export function assert_ptb_scope(txKindBytes) {
     )
 }
 
-async function assert_zklogin_challenge(sender, challenge, signature) {
+async function assert_sponsor_zklogin_challenge(sender, challenge, signature) {
   // Env-gated QA escape hatch, default off, with a deliberately loud warning.
   if (process.env.SPONSOR_DEV_BYPASS_ZKLOGIN === '1') {
     console.warn('[sponsor] ⚠️ DEV zkLogin bypass ON — QA/dev throwaway only, never prod')
     return
   }
-  if (!challenge || !signature) throw new Error('zklogin-required: challenge + signature required')
-  const prefix = `aresrpg-sponsor:${sender}:`
-  if (!challenge.startsWith(prefix)) throw new Error('zklogin-invalid: challenge does not match sender')
-  const encoded_ts = challenge.slice(prefix.length)
-  const timestamp = Number(encoded_ts)
-  if (!Number.isFinite(timestamp) || String(timestamp) !== encoded_ts)
-    throw new Error('zklogin-invalid: malformed challenge timestamp')
-  const age = Date.now() - timestamp
-  if (age < 0 || age >= CHALLENGE_TTL_MS) throw new Error('zklogin-stale: challenge expired — retry')
-  let parsed
-  try {
-    parsed = parseSerializedSignature(signature)
-  } catch {
-    throw new Error('zklogin-invalid: unparseable signature')
-  }
-  if (parsed.signatureScheme !== 'ZkLogin')
-    throw new Error(`zklogin-required: signature scheme is ${parsed.signatureScheme}, not zkLogin`)
-  const issuer = parsed.zkLogin?.iss
-  if (!ZKLOGIN_ISS_ALLOWLIST.has(issuer))
-    throw new Error(`zklogin-issuer: issuer ${issuer ?? '(none)'} is not sponsored`)
-  await verifyPersonalMessageSignature(new TextEncoder().encode(challenge), signature, { client, address: sender })
+  await assert_zklogin_challenge({
+    sender,
+    challenge,
+    signature,
+    purpose: 'aresrpg-sponsor',
+    client,
+    ttl_ms: CHALLENGE_TTL_MS,
+  })
 }
 
 export function derive_budget_mist(gas_used) {
@@ -324,7 +304,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   if (!txKindBytes || !sender) throw new Error('txKindBytes + sender required')
   roll_stats()
   try {
-    await assert_zklogin_challenge(sender, challenge, signature)
+    await assert_sponsor_zklogin_challenge(sender, challenge, signature)
   } catch (error) {
     stats.refused.zklogin += 1
     throw error
@@ -462,34 +442,36 @@ export default async function handler(request, response) {
   }
 }
 
+export async function sponsor_fetch(request) {
+  const url = new URL(request.url)
+  if (request.method === 'OPTIONS') return new Response(null, { headers: CORS })
+  if (url.pathname === '/') return new Response('OK', { headers: CORS })
+  if ((url.pathname === '/stats' || url.pathname === '/api/stats') && request.method === 'GET')
+    return Response.json(sponsor_stats(), { headers: CORS })
+  if (
+    request.method === 'POST' &&
+    ['/api/sponsor', '/api/sponsor/reserve', '/api/sponsor/execute'].includes(url.pathname)
+  ) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
+    if (await rate_limited(ip)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
+    try {
+      const result = await handle_sponsor_post(url.pathname, await request.json())
+      return Response.json(result.json, { status: result.status, headers: CORS })
+    } catch (error) {
+      report_error(error, { area: 'sponsor', action: 'handle_post' })
+      return Response.json(sponsor_error_response(error), { status: 400, headers: CORS })
+    }
+  }
+  return Response.json({ error: 'not found' }, { status: 404, headers: CORS })
+}
+
 if (typeof Bun !== 'undefined' && import.meta.main) {
   const port = Number(process.env.SPONSOR_PORT || 9528)
   require_station_config()
   console.log(`[sponsor] station-only net=${NETWORK} :${port}`)
   Bun.serve({
     port,
-    async fetch(request) {
-      const url = new URL(request.url)
-      if (request.method === 'OPTIONS') return new Response(null, { headers: CORS })
-      if (url.pathname === '/') return new Response('OK', { headers: CORS })
-      if ((url.pathname === '/stats' || url.pathname === '/api/stats') && request.method === 'GET')
-        return Response.json(sponsor_stats(), { headers: CORS })
-      if (
-        request.method === 'POST' &&
-        ['/api/sponsor', '/api/sponsor/reserve', '/api/sponsor/execute'].includes(url.pathname)
-      ) {
-        const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
-        if (await rate_limited(ip)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
-        try {
-          const result = await handle_sponsor_post(url.pathname, await request.json())
-          return Response.json(result.json, { status: result.status, headers: CORS })
-        } catch (error) {
-          report_error(error, { area: 'sponsor', action: 'handle_post' })
-          return Response.json(sponsor_error_response(error), { status: 400, headers: CORS })
-        }
-      }
-      return Response.json({ error: 'not found' }, { status: 404, headers: CORS })
-    },
+    fetch: sponsor_fetch,
     // The one surface fetch()'s own try/catch doesn't cover (e.g. `new URL()` on a malformed
     // request line): report_error no-ops without SENTRY_DSN — same response either way.
     error(error) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# api/run_tests.sh — the sponsor api unit suite, ONE bun process PER FILE (issue #683).
+# api/run_tests.sh — the stateless api unit suite, ONE bun process PER FILE (issue #683).
 #
 # sponsor.mjs resolves its Redis client + PTB allowlist ONCE at module load and memoizes them for
 # the life of the process (api/sponsor_state.mjs) — the same module-global class
@@ -11,8 +11,8 @@
 # dev and CI get exactly what every file already demands — never the single combined `bun test` run
 # the files' own comments forbid.
 #
-# sponsor.test.js alone proves the cross-instance SHARED rate-limit store, so it alone needs a REAL
-# throwaway Redis — this script starts and tears down one on 127.0.0.1:$REDIS_PORT around that one
+# sponsor.test.js and courier.test.js prove cross-instance shared gates/TTL, so they need a REAL
+# throwaway Redis — this script starts and tears down one on 127.0.0.1:$REDIS_PORT around those
 # file's invocation only. Every other file sets or defaults its own REDIS_URL internally (see each
 # file's header); this script never sets an ambient REDIS_URL for the whole run, because
 # sponsor.failclosed.test.js's entire point is Redis genuinely UNREACHABLE — sharing one URL across
@@ -55,7 +55,7 @@ else
   fi
 fi
 
-echo "starting throwaway redis on 127.0.0.1:$REDIS_PORT for sponsor.test.js"
+echo "starting throwaway redis on 127.0.0.1:$REDIS_PORT for sponsor.test.js + courier.test.js"
 if ! docker run --detach --rm --name "$REDIS_CONTAINER" --publish "$REDIS_PORT:6379" "$REDIS_IMAGE" >/dev/null; then
   echo "throwaway redis container failed to start — aborting" >&2
   exit 1
@@ -76,7 +76,7 @@ fi
 for file in *.test.js; do
   echo "── $file ──"
   ok=1
-  if [ "$file" = sponsor.test.js ]; then
+  if [ "$file" = sponsor.test.js ] || [ "$file" = courier.test.js ]; then
     REDIS_URL="redis://127.0.0.1:$REDIS_PORT" bun test "$file" || ok=0
   else
     bun test "$file" || ok=0
