@@ -23,6 +23,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
 
+import { RELEASE_PACKAGE_SET } from './publish_packages.mjs'
+
+export { RELEASE_PACKAGE_SET }
+
 const script_path = file_url_to_path(import.meta.url)
 const repo = path.resolve(path.dirname(script_path), '../../..')
 const RELEASE_PATH = 'packages/sdk/src/deployment/release.json'
@@ -37,20 +41,8 @@ const RELEASE_PATH = 'packages/sdk/src/deployment/release.json'
  */
 // The nine packages a release MUST account for. A row-driven gate only checks rows that exist, so
 // deleting a package from release.json used to remove its UpgradeCap check and still pass green
-// (#1305 review) — absence was invisible to a loop over presence. Kept as data next to the
-// comparison it guards; ceremony_lib's PKG_DEPS is the same set, and expect_release_set fails when
-// the two disagree, so neither can drift alone.
-export const RELEASE_PACKAGE_SET = [
-  'foundation',
-  'spells',
-  'social',
-  'engine',
-  'aresrpg',
-  'kolizeum',
-  'forgemagie',
-  'gifting',
-  'dungeon',
-]
+// (#1305 review) — absence was invisible to a loop over presence. The expected set derives from
+// the same publish graph as ceremony_lib's PKG_DEPS and TICKET_ORDER, so those checks cannot drift.
 
 /**
  * Pure. → [] when `packages` is exactly the expected set with a usable row each; otherwise one

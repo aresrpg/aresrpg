@@ -25,6 +25,10 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { bcs } from '@mysten/sui/bcs'
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 
+import { PKG_DEPS, TICKET_ORDER } from './publish_packages.mjs'
+
+export { PKG_DEPS, TICKET_ORDER }
+
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 export const MOVE_DIR = path.resolve(__dir, '..') // packages/move
 export const OUT = path.join(__dir, 'out')
@@ -54,32 +58,10 @@ const FRAMEWORK_IDS = new Set(
   ['0x1', '0x2', '0x3', '0x5', '0xb', '0xdee9'].map(norm)
 )
 
-// ── The 7-package dependency graph (S-46 final split + the 2026-07-11/12 size splits: foundation = math libs;
+// ── The package dependency graph (S-46 final split + the 2026-07-11/12 size splits: foundation = math libs;
 //    spells/social standalone; engine (aresrpg_fight) = the generic branded combat engine; aresrpg = THE core
 //    game; kolizeum (aresrpg_kolizeum) = the PvP wager arena; forgemagie (aresrpg_forgemagie) = the Retro
 //    rune forge — both extracted when core hit the 102,400 B publish cap (07-11 kolizeum, 07-12 forgemagie)) ──
-export const PKG_DEPS = {
-  foundation: [],
-  spells: ['foundation'],
-  social: [],
-  engine: ['foundation', 'spells'],
-  aresrpg: ['foundation', 'spells', 'social', 'engine'],
-  kolizeum: ['aresrpg', 'engine', 'social'],
-  forgemagie: ['aresrpg', 'foundation'],
-  gifting: ['aresrpg'],
-  dungeon: ['aresrpg', 'engine'],
-}
-export const TICKET_ORDER = [
-  'foundation',
-  'spells',
-  'social',
-  'engine',
-  'aresrpg',
-  'kolizeum',
-  'forgemagie',
-  'gifting',
-  'dungeon',
-]
 
 // The old per-package manifest keys retained for seed-script compatibility.
 // S-46: they all resolve to the ONE aresrpg entry — written as ALIASES into the manifest so downstream scripts
