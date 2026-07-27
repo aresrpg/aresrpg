@@ -85,6 +85,8 @@ services:
         condition: service_healthy
     environment:
       REDIS_URL: redis://redis:6379
+      # Topic-keyed SSE surface (fight replay/live + location-local presence).
+      STREAM_BIND: 0.0.0.0:3001
       # Reliable HTTP checkpoint source (backfill + polling). Watermark advances
       # from this alone.
       REMOTE_STORE_URL: ${REMOTE_STORE_URL:-https://checkpoints.testnet.sui.io}
@@ -114,9 +116,10 @@ services:
       INDEXER_ERROR_LOG: /var/log/aresrpg/indexer-errors.jsonl
     volumes:
       - indexer-error-log:/var/log/aresrpg
-    # No healthcheck: the binary exposes no HTTP/TCP surface (pure Redis writer)
-    # and the debian:bookworm-slim runtime has no curl/wget/bun to add one
-    # without a new dependency. Liveness = `docker compose ps` + /v1/status lag.
+    ports:
+      - '${STREAM_PORT:-3001}:3001'
+    # The binary now exposes SSE but deliberately no synthetic health route;
+    # liveness remains the ingestion watermark (`/v1/status` on the read API).
     restart: unless-stopped
 
   api:

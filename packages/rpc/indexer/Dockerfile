@@ -78,8 +78,10 @@ COPY --from=builder /usr/local/bin/aresrpg-rpc-indexer /usr/local/bin/aresrpg-rp
 #   NETWORK           (default testnet) — label stamped onto records
 #   FIRST_CHECKPOINT  (optional) — start checkpoint for a fresh pipeline (else genesis)
 #   METRICS_PREFIX    (optional) — prometheus metrics prefix
+#   STREAM_BIND       (default 0.0.0.0:3001) — topic-keyed SSE listener
 #   INDEXER_ERROR_LOG (optional) — ERROR-only structured JSONL for the Sentry sidecar
 #   RUST_LOG          (default info)
 ENV RUST_LOG=info
 
+EXPOSE 3001
 ENTRYPOINT ["aresrpg-rpc-indexer"]

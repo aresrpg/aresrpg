@@ -215,6 +215,19 @@ board = presence + client sim replay). An optional `ARES_PACKAGES` allowlist
 (canonical `0x…` addresses) hardens it against look-alike foreign packages once
 the packages publish.
 
+The indexer also binds a topic-keyed SSE surface on `STREAM_BIND`
+(`0.0.0.0:3001` by default):
+
+- `GET /v1/stream/fight/{fight_id}` — stored journal replay followed by live
+  local-Redis tip polling. `Last-Event-ID` is
+  `<checkpoint_sequence>:<intra_checkpoint_event_index>`.
+- `GET /v1/stream/presence/{world_id}?address=…&character=…` — connection-observed
+  `current-set`/`join`/`leave` events over a ~30-second TTL registry. At least one
+  identity query field is required.
+
+Both routes emit heartbeat comments about every 15 seconds. Presence is
+location-local by design; neither route introduces Redis-to-Redis replication.
+
 ### Valkey swap
 
 The store uses only standard Redis 8 features (native JSON + the query engine).

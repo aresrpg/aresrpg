@@ -641,7 +641,8 @@ end card after `settle_and_destroy`.
   checkpoints). **member** = `"{tx_index:06}:{event_index:04}|{payload_json}"` — the zero-padded
   `(tx, event)` prefix makes the ZSET's within-checkpoint (equal-score) lexicographic tie-break
   the exact `(tx, event)` order, so the set is totally ordered by `(checkpoint, tx, event)` with
-  NO score packing/cap to overflow. `payload` = `{ kind, data, digest, version }`.
+  NO score packing/cap to overflow. `payload` = `{ id, kind, data, digest, version }`; `id` is
+  the chain-derived SSE cursor described below and is ignored by the ordinal JSON page.
 - **idempotent** — a distinct event has a distinct member (its prefix or its payload digest
   differ), so a crash-replay `ZADD` of the byte-identical member is a no-op (like the sales-log).
   NO rank cap (it would drop early seqs and break contiguous replay); an idle **`EXPIRE` 24 h**
@@ -671,6 +672,39 @@ page that reaches the live head is **`no-store`** (more events may still append 
 cached copy would strand the client on a stale tail). A malformed id is a 400; an unjournalled
 fight is `{ events:[], journal_head:0 }`.
 
+### Topic stream — `/v1/stream/fight/{fight_id}` (#1382)
+
+The Rust indexer also serves the journal as SSE on `STREAM_BIND` (default `:3001`).
+Each `event: fight` frame carries the journal payload and an SSE `id` encoded as
+`<checkpoint_sequence>:<intra_checkpoint_event_index>`. The second component is
+the zero-based ordinal among **all** events in the checkpoint, walking transactions
+and their event arrays in chain order. Both coordinates are re-derived from chain
+data during the existing `ares` decode; a Redis rank/counter is never an event id.
+
+`Last-Event-ID` is exclusive: the endpoint replays every stored event strictly after
+that cursor, then tip-polls the same local Redis journal for live additions. A replica
+whose `ares` watermark is behind the presented checkpoint holds the stream without
+frames or heartbeat comments until caught up. Once eligible, `: heartbeat` comments
+are emitted every 15 seconds. Rows written before the cursor field existed remain
+available to the ordinal JSON route but are not assigned invented SSE ids.
+
+This is one ingestion with two consumers: the existing projection/journal write and
+the SSE journal reader. The SSE route never BCS-decodes an event. Fan-out is a
+location-local Redis tip-poll; there is no Redis-to-Redis transport.
+
+### Presence stream — `/v1/stream/presence/{world_id}` (#1382)
+
+The same Rust surface accepts `?address=<sui-address>`, `?character=<object-id>`, or
+both. An open socket upserts `{ address?, character?, world }` into
+`rpc:presence:{world}` with a 30-second score TTL and refreshes it on the stream's
+15-second heartbeat. Each connection receives `current-set`, then `join`/`leave`
+events by tip-polling and diffing that registry. Closing a tab stops refresh; expiry
+therefore produces `leave` without a server session or disconnect hook.
+
+Presence is intentionally **location-local**. It describes connections observed by
+the Redis colocated with this indexer only; it is not a global player directory and
+must never be replicated Redis-to-Redis.
+
 **Backfill is OPERATIONAL, not code** (same lever the DF snapshots name): the `ares` watermark is
 already at the tip, so this arm journals only checkpoints from deploy on — NEW fights journal from
 their true seq 0. Historical/in-progress fights are NOT retroactively journalled unless the `ares`
@@ -680,7 +714,7 @@ fight straddling the deploy falls back to the snapshot, which M2 keeps as bootst
 
 | Event (flat `fight_events`) | Redis writes |
 | --- | --- |
-| any journalled event above | `ZADD rpc:fight:{fight}:journal {checkpoint} "{tx:06}:{event:04}|{kind,data,digest,version}"`; `EXPIRE … 24h` |
+| any journalled event above | `ZADD rpc:fight:{fight}:journal {checkpoint} "{tx:06}:{event:04}|{id,kind,data,digest,version}"`; `EXPIRE … 24h` |
 
 ## FightResult (soulbound) — `/v1/fight-results?owner=`
 
