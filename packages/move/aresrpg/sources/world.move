@@ -301,8 +301,21 @@ public fun clear_rare_link(cap: &AdminCap, w: &mut World, template: ID, version:
 public fun set_mob_level(cap: &AdminCap, w: &mut World, template: ID, level: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   // PARALLEL to the table (#1290): the level lives at the row's index, so the snapshot is a plain field read.
-  let i = y143(w, template);
-  *&mut y142(w).mob_levels[i] = level;
+  // EVERY row of this template, not just the first. The retired `MobLevelKey` dynamic field was keyed BY
+  // TEMPLATE, so one level always applied to every row carrying it; authoring permits duplicate rows, and
+  // updating only the first would silently leave the later duplicates dormant at 0. Update-all reproduces the
+  // pre-republish semantics exactly and can never reject a corpus that already authored duplicates.
+  let n = y141(w).mobs.length();
+  let mut i = 0;
+  let mut found = false;
+  while (i < n) {
+    if (y141(w).mobs[i].template_id == template) {
+      *&mut y142(w).mob_levels[i] = level;
+      found = true;
+    };
+    i = i + 1;
+  };
+  assert!(found, EBadEntryIndex);
   y144(w);
 }
 
@@ -597,14 +610,6 @@ public fun mob_level(w: &World, template: ID): u16 {
   0
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
-/// Row index of mob `template` in the table — the write half of the parallel `mob_levels` vector.
-fun y143(w: &World, template: ID): u64 {
-  let n = y141(w).mobs.length();
-  let mut i = 0;
-  while (i < n) { if (y141(w).mobs[i].template_id == template) return i; i = i + 1; };
-  abort EBadEntryIndex
-}
 
 /// The eligibility level of EVERY mob-table row, in table order (PARALLEL to `mobs_snapshot`). `zones` snapshots
 /// this to gate the distance roll without holding `&World` while it also holds the zone-DF `&mut UID`. Derived

@@ -485,3 +485,31 @@ fun destroy_world_on_stale_version_aborts() {
   world::destroy_world(&cap, w, &ver, sc.ctx()); // EWrongVersion
   abort
 }
+
+#[test]
+/// DUPLICATE TEMPLATE ROWS: authoring permits the same mob template in several rows, and the retired
+/// `MobLevelKey` dynamic field was keyed BY TEMPLATE — one level always applied to every row carrying it. The
+/// parallel level vector must reproduce that: `set_mob_level` writes EVERY matching row, not just the first,
+/// or the later duplicates stay dormant at 0 and spawn outside their authored difficulty band.
+fun set_mob_level_updates_every_row_of_a_duplicated_template() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  let _wid = make(&mut sc);
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  let dup = object::id_from_address(@0xD00B);
+  let other = object::id_from_address(@0x0E1);
+  world::add_mob_entry(&cap, &mut w, dup, 100, 1, 4, &ver, sc.ctx()); // row 0
+  world::add_mob_entry(&cap, &mut w, other, 100, 1, 4, &ver, sc.ctx()); // row 1
+  world::add_mob_entry(&cap, &mut w, dup, 100, 1, 4, &ver, sc.ctx()); // row 2 — same template as row 0
+  world::set_mob_level(&cap, &mut w, dup, 77, &ver, sc.ctx());
+  // rows 0 AND 2 carry the level; the unrelated row stays at its dormant default
+  assert_eq!(world::mob_levels_snapshot(&w), vector<u16>[77, 0, 77]);
+  assert_eq!(world::mob_level(&w, dup), 77);
+  ts::return_shared(w);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+  sc.end();
+}
