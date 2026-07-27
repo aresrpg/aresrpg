@@ -11,6 +11,8 @@ import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'
 import { configure_walrus_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
 
+import { capture_timeout } from '../../../test_helpers/captured_timeout.js'
+
 import { SpellArt } from './SpellDetail.jsx'
 import { ItemIcon } from './ItemIcon.jsx'
 import { IMAGE_RETRY_DELAYS_MS, image_load_state, reduce_image_load } from './image_retry.js'
@@ -70,7 +72,7 @@ function find_img(root) {
   return null
 }
 
-test('SpellArt: a transient first-load failure retries on its own instead of pinning the tinted initial until a refresh', async () => {
+test('SpellArt: a transient first-load failure retries on its own instead of pinning the tinted initial until a refresh', () => {
   configure()
   const runner = hook_runner()
   const element = <SpellArt icon="ikari_haki" color="#f00" name="Ikari Haki" />
@@ -80,16 +82,17 @@ test('SpellArt: a transient first-load failure retries on its own instead of pin
   expect(first_img.props.src).toBe(spell_src())
 
   // The cold-edge window: the FIRST request errors.
-  first_img.props.onError()
+  const retry = capture_timeout(() => first_img.props.onError())
 
   // Degrading to the tinted initial immediately is fine — but once the first retry deadline has
   // elapsed, a FRESH <img> attempt must exist. The pin-forever behavior only heals on a page refresh.
-  await Bun.sleep(1_600)
+  expect(retry.delay_ms).toBe(IMAGE_RETRY_DELAYS_MS[0])
+  retry.fire()
   const retry_img = find_img(runner.render(element))
   expect(retry_img?.props.src).toBe(spell_src())
 })
 
-test('ItemIcon: a transient thumb failure retries on its own instead of pinning the category glyph until a refresh', async () => {
+test('ItemIcon: a transient thumb failure retries on its own instead of pinning the category glyph until a refresh', () => {
   configure()
   const runner = hook_runner()
   const element = <ItemIcon item="aberrant_faceguard" alt="Aberrant Faceguard" />
@@ -98,14 +101,15 @@ test('ItemIcon: a transient thumb failure retries on its own instead of pinning 
   if (!first_img) throw new Error('expected the first render to attempt the resolved item icon')
   expect(first_img.props.src).toBe(ITEM_SRC)
 
-  first_img.props.onError()
+  const retry = capture_timeout(() => first_img.props.onError())
 
-  await Bun.sleep(1_600)
+  expect(retry.delay_ms).toBe(IMAGE_RETRY_DELAYS_MS[0])
+  retry.fire()
   const retry_img = find_img(runner.render(element))
   expect(retry_img?.props.src).toBe(ITEM_SRC)
 })
 
-test('ItemIcon hd: still falls back hd→base immediately, then a fully-failed pass retries the ladder instead of pinning', async () => {
+test('ItemIcon hd: still falls back hd→base immediately, then a fully-failed pass retries the ladder instead of pinning', () => {
   configure()
   const runner = hook_runner()
   const element = <ItemIcon item="aberrant_faceguard" hd alt="Aberrant Faceguard" />
@@ -119,8 +123,9 @@ test('ItemIcon hd: still falls back hd→base immediately, then a fully-failed p
   expect(base_img?.props.src).toBe(ITEM_SRC)
 
   // Both variants failing (cold edge) currently pins the glyph forever; it must retry from hd.
-  base_img.props.onError()
-  await Bun.sleep(1_600)
+  const retry = capture_timeout(() => base_img.props.onError())
+  expect(retry.delay_ms).toBe(IMAGE_RETRY_DELAYS_MS[0])
+  retry.fire()
   const retry_img = find_img(runner.render(element))
   expect(retry_img?.props.src).toBe(ITEM_HD_SRC)
 })
