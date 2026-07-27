@@ -13,8 +13,10 @@
 // Env I/O is injectable (`read`/`switch_to`) so the primitives are testable with zero subprocess/CLI.
 
 import fs from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { homedir } from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const config_dir = () =>
   process.env.SUI_CONFIG_DIR || `${homedir()}/.sui/sui_config`
@@ -111,17 +113,65 @@ export function trunk_ancestry_verdict({ head, edge, is_ancestor }) {
   }
 }
 
-const git = (args) => execSync(`git ${args}`, { encoding: 'utf8' }).trim()
+// ── Sanitized git ───────────────────────────────────────────────────────────────────────────────
+// The guard's own repository, derived from THIS FILE's location — never the ambient cwd, which a
+// caller chooses. Every git invocation below is pinned to it.
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../..'
+)
+
+// Environment a hostile or merely careless caller could use to point git at a DIFFERENT repository
+// (or a rewritten history) while the publish scripts compile the bytes in front of them. Stripped,
+// not trusted: an ancestry proof about someone else's clean checkout is worse than no proof.
+const GIT_ENV_STRIPPED = [
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_NAMESPACE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_CEILING_DIRECTORIES',
+  'GIT_REPLACE_REF_BASE',
+  'GIT_CONFIG',
+  'GIT_CONFIG_GLOBAL',
+  'GIT_CONFIG_SYSTEM',
+  'GIT_CONFIG_COUNT',
+]
+
+function git_env() {
+  const env = { ...process.env }
+  for (const key of Object.keys(env))
+    if (
+      GIT_ENV_STRIPPED.includes(key) ||
+      /^GIT_CONFIG_(KEY|VALUE|PARAMETERS)/.test(key)
+    )
+      delete env[key]
+  // Config files are ALSO instructions (url.*.insteadOf rewrites the remote out from under us).
+  env.GIT_CONFIG_NOSYSTEM = '1'
+  env.GIT_CONFIG_GLOBAL = '/dev/null'
+  env.GIT_TERMINAL_PROMPT = '0'
+  return env
+}
+
+// Argument ARRAY, fixed cwd, replacement history disabled — no shell to quote through, no ambient
+// state to inherit.
+const git = (args) =>
+  execFileSync('git', ['--no-replace-objects', '-C', REPO_ROOT, ...args], {
+    encoding: 'utf8',
+    env: git_env(),
+  }).trim()
 
 // Effectful shell around the verdict; I/O injectable so the rule is testable with zero subprocess.
 export function assert_trunk_ancestry({
-  read_head = () => git('rev-parse HEAD'),
+  read_head = () => git(['rev-parse', 'HEAD']),
   read_edge = () =>
-    git(`ls-remote ${EDGE_REMOTE} refs/heads/edge`).split(/\s+/)[0],
+    git(['ls-remote', EDGE_REMOTE, 'refs/heads/edge']).split(/\s+/)[0],
   is_ancestor = (head, edge) => {
-    git(`fetch --quiet ${EDGE_REMOTE} edge`)
+    git(['fetch', '--quiet', EDGE_REMOTE, 'edge'])
     try {
-      git(`merge-base --is-ancestor ${head} ${edge}`)
+      git(['merge-base', '--is-ancestor', head, edge])
       return true
     } catch {
       return false
@@ -142,4 +192,69 @@ export function assert_trunk_ancestry({
   throw new Error(
     `TRUNK ANCESTRY REFUSED (#1298): ${verdict.reason}. The chain is the one artifact no revert reaches — land this tree on edge and publish from there. There is no override.`
   )
+}
+
+// ── THE TREE-INTEGRITY GATE (#1305 review, CRITICAL) ────────────────────────────────────────────
+// Ancestry proves a COMMIT is on trunk. It says nothing about the BYTES the compiler is about to
+// read: an edited-but-uncommitted module, or an untracked one, publishes happily from an ancestor
+// HEAD. And `ceremony_upgrade` compiles whatever PKG_PATH it is handed — a directory that need not
+// belong to the verified repository at all. Both holes have the same shape as the one ancestry
+// closed (a precondition believed rather than checked), so they close the same way.
+//
+// Two assertions, and the chain doors below run them together:
+//   · every path about to be compiled resolves INSIDE the guard's own repository, under packages/move;
+//   · `git status --porcelain` over packages/move is EMPTY — no modified, no staged, no untracked
+//     files. What is published is then exactly what the verified commit contains.
+const MOVE_SCOPE = 'packages/move'
+
+// Pure. → { ok } | { ok: false, reason }
+export function clean_tree_verdict(status_lines) {
+  const dirty = status_lines.map((l) => l.trim()).filter(Boolean)
+  if (!dirty.length) return { ok: true, reason: `${MOVE_SCOPE} matches HEAD` }
+  return {
+    ok: false,
+    reason: `${dirty.length} uncommitted change(s) under ${MOVE_SCOPE}: ${dirty.slice(0, 5).join(' · ')}${dirty.length > 5 ? ' …' : ''}`,
+  }
+}
+
+// Pure. → { ok } | { ok: false, reason }. `resolved` is the realpath; `root` the guard's repo root.
+export function path_inside_repo_verdict(resolved, root = REPO_ROOT) {
+  const move_root = path.join(root, MOVE_SCOPE)
+  if (resolved === move_root || resolved.startsWith(move_root + path.sep))
+    return { ok: true, reason: `inside ${MOVE_SCOPE}` }
+  return {
+    ok: false,
+    reason: `${resolved} is outside ${move_root} — the verified tree cannot vouch for it`,
+  }
+}
+
+// Effectful. Every chain-writing door calls this ONE function: trunk ancestry (the commit), a clean
+// Move tree (the bytes), and every compiled path inside the verified repository. Injectable I/O so
+// the rules are testable without a subprocess. No override exists, deliberately — see above.
+export function assert_publishable_tree({
+  paths = [],
+  root = REPO_ROOT,
+  ancestry = assert_trunk_ancestry,
+  read_status = () =>
+    git(['status', '--porcelain', '--untracked-files=all', '--', MOVE_SCOPE]),
+  resolve_path = (p) => fs.realpathSync(path.resolve(p)),
+} = {}) {
+  ancestry()
+
+  const tree = clean_tree_verdict(read_status().split('\n'))
+  if (!tree.ok)
+    throw new Error(
+      `PUBLISH TREE REFUSED (#1305): ${tree.reason}. Ancestry proves a commit; this proves the BYTES. Commit or remove them, then publish from a tree that matches trunk.`
+    )
+  console.log(`[env_guard] publish tree clean — ${tree.reason}`)
+
+  for (const candidate of paths) {
+    const verdict = path_inside_repo_verdict(resolve_path(candidate), root)
+    if (!verdict.ok)
+      throw new Error(`PUBLISH PATH REFUSED (#1305): ${verdict.reason}`)
+  }
+  if (paths.length)
+    console.log(
+      `[env_guard] ${paths.length} publish path(s) inside the verified tree`
+    )
 }

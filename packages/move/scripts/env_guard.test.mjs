@@ -15,6 +15,9 @@ import {
   with_env,
   read_active_env,
   assert_trunk_ancestry,
+  assert_publishable_tree,
+  clean_tree_verdict,
+  path_inside_repo_verdict,
 } from './env_guard.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
@@ -145,5 +148,77 @@ describe('trunk ancestry (#1298) — the wrong-TREE door', () => {
     expect(() => assert_trunk_ancestry(io(sha('a'), '', true))).toThrow(
       /could not read/
     )
+  })
+})
+
+describe('tree integrity (#1305) — the wrong-BYTES door', () => {
+  const clean = () => ''
+  const dirty = () =>
+    ' M packages/move/aresrpg/sources/world.move\n?? packages/move/aresrpg/sources/injected.move'
+
+  test('a clean Move tree with in-repo paths passes', () => {
+    expect(() =>
+      assert_publishable_tree({
+        ancestry: () => {},
+        read_status: clean,
+        root: '/repo',
+        resolve_path: () => '/repo/packages/move/aresrpg',
+        paths: ['packages/move/aresrpg'],
+      })
+    ).not.toThrow()
+  })
+
+  test('uncommitted or untracked Move files are REFUSED — ancestry alone never saw them', () => {
+    expect(() =>
+      assert_publishable_tree({
+        ancestry: () => {},
+        read_status: dirty,
+        paths: [],
+      })
+    ).toThrow(/PUBLISH TREE REFUSED/)
+  })
+
+  test('a package path outside the verified repository is REFUSED', () => {
+    expect(() =>
+      assert_publishable_tree({
+        ancestry: () => {},
+        read_status: clean,
+        root: '/repo',
+        resolve_path: () => '/somewhere/else/aresrpg',
+        paths: ['/somewhere/else/aresrpg'],
+      })
+    ).toThrow(/PUBLISH PATH REFUSED/)
+  })
+
+  test('ancestry still runs FIRST — a clean tree on the wrong commit is no defence', () => {
+    expect(() =>
+      assert_publishable_tree({
+        ancestry: () => {
+          throw new Error('TRUNK ANCESTRY REFUSED (#1298): synthetic')
+        },
+        read_status: clean,
+        paths: [],
+      })
+    ).toThrow(/TRUNK ANCESTRY REFUSED/)
+  })
+
+  test('clean_tree_verdict ignores blank lines, counts real ones', () => {
+    expect(clean_tree_verdict(['', '   ', '']).ok).toBe(true)
+    expect(clean_tree_verdict([' M a.move', '?? b.move']).reason).toContain(
+      '2 uncommitted'
+    )
+  })
+
+  test('path_inside_repo_verdict accepts packages/move and its children only', () => {
+    const root = '/repo'
+    expect(path_inside_repo_verdict('/repo/packages/move', root).ok).toBe(true)
+    expect(
+      path_inside_repo_verdict('/repo/packages/move/aresrpg', root).ok
+    ).toBe(true)
+    expect(path_inside_repo_verdict('/repo/packages/moveX', root).ok).toBe(
+      false
+    )
+    expect(path_inside_repo_verdict('/repo/packages', root).ok).toBe(false)
+    expect(path_inside_repo_verdict('/elsewhere', root).ok).toBe(false)
   })
 })
