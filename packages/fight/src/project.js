@@ -31,12 +31,14 @@ import {
 } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { stationary_placement_occupants } from './trap_ledger.js'
+import { trap_render_prims } from './fight_render_prims.js'
 
 // THE COMMITTED-TRUTH SOURCE lives at the store's door (`store.committed_truth` — the headless core's fold plus
 // the append-only death floor, both store atoms). Re-exported here because the board reads it through this
 // module: the draft anchor, the flush evolution and the cast retarget that decides the PTB's target cell all come
 // through this ONE read, so no consumer can reach a second committed derivation. ADR §2 is the law it enforces.
 export { committed_truth } from './store.js'
+export { read_fight_traps } from './trap_ledger.js'
 
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
 
@@ -499,6 +501,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   const placement = status === STATUS_PLACEMENT
   const address = ctx.address ?? null
   const spectator = ctx.spectator === true
+  const viewer_seat =
+    !spectator && typeof s.my_key === 'string' && s.my_key.startsWith('p') ? Number(s.my_key.slice(1)) : null
+  const viewer_context = {
+    seat: viewer_seat,
+    team: viewer_seat == null ? null : Number(view.escrow?.[viewer_seat]?.team),
+  }
   const controlled_entity_ids = spectator
     ? []
     : (view.escrow ?? [])
@@ -538,6 +546,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
         .filter(Number.isFinite)
     ),
   ]
+  // Persistent paint merges the caster's optimistic ledger with the public chain board. Local rows are owned by
+  // this viewer's team by construction; every row still crosses the ONE visibility predicate before becoming a prim.
+  const trap_prims = trap_render_prims(viewer_context, [
+    ...(ctx.chain_traps ?? []),
+    ...live_traps.map((trap) => ({ ...trap, owner_team: viewer_context.team })),
+  ])
   // ① each LIVE trap cell → its detonation payload, so the sim door rebuilds the trap WITH damage (not payload:[]).
   // Same live-trap predicate as my_trap_cells; first record wins a shared cell.
   // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.
@@ -561,6 +575,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   return {
     fight_id: view.id,
     my_traps: my_trap_cells,
+    trap_prims,
     my_trap_payloads,
     my_glyphs: my_glyph_cells,
     placement_ghosts,

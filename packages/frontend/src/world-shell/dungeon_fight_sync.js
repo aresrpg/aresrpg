@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // S2 SYNC SEAM — the chain-read → core-snapshot leg extracted from dungeon_fight_shim.js (thin-shim ≤120 LoC gate).
-// It owns NO fight logic: it only decodes a Fight OBJECT read and feeds it through the core's ONE snapshot door,
-// plus the per-world render offset the read is placed against. The shim re-exports both so importers are unchanged.
+// It owns NO fight logic: it only decodes a Fight OBJECT read and feeds its snapshot + public render facts through
+// the core's ONE input door, plus the per-world render offset. The shim re-exports both so importers are unchanged.
 
 import { decode_fight } from '@aresrpg/sdk/fight'
 import { world_offsets } from '@aresrpg/sdk/coords'
 import { get_world } from '@aresrpg/sdk/game'
 import { fight_store } from '@aresrpg/fight/store'
 import { read_fighter_statuses } from '@aresrpg/fight/fight_status_snapshot'
+import { read_fight_traps } from '@aresrpg/fight/project'
 
 import { mark_engage_fight_adopted } from '../core/engage_timing.js'
 
@@ -33,14 +34,15 @@ export async function resolve_world_offset(/** @type {any} */ sdk, /** @type {st
  * the fold groups and engine_view exposes as `effects`).
  *
  * QUARANTINE ENTRY POINT — BRIDGE B6 (expiry: P2, register #17/#51). This is the SOLE entry of a chain-direct gRPC
- * tactical Fight read into fight state: it dispatches the `snapshot` input, and the reducer's VERSIONED MERGE is the
- * only thing that touches state (below-floor drops, equal-version compares — keystone #3 — higher adopts). A gRPC
- * read NEVER pushes state by any other path. The transport swap (gRPC → /v1 versioned feed) is P2 (a k8s deploy,
- * owner-gated) and orthogonal to this discipline — delete this bridge when P2 lands.
+ * tactical Fight read into fight state: it dispatches through the reducer door, and the reducer's VERSIONED MERGE is
+ * the only thing that touches snapshot state (below-floor drops, equal-version compares — keystone #3 — higher
+ * adopts). A gRPC read NEVER pushes state by any other path. The transport swap (gRPC → /v1 versioned feed) is P2
+ * (a k8s deploy, owner-gated) and orthogonal to this discipline — delete this bridge when P2 lands.
  * @param {{ read: { json:any, version:any }|null, run?: any, rooms_total?: number, ctx?: any, open_version?: number }} args
  */
 export function sync_dungeon_fight({ read, run = null, rooms_total = 0, ctx = {}, open_version = 0 }) {
   const fight = read ? decode_fight(read.json) : null
+  const chain_traps = read ? read_fight_traps(read.json) : []
   if (fight && read) fight.invisibility_statuses = read_fighter_statuses(read.json)
   fight_store.getState().input({
     type: 'snapshot',
@@ -51,8 +53,13 @@ export function sync_dungeon_fight({ read, run = null, rooms_total = 0, ctx = {}
     version: read ? Number(read.version) : Number(open_version) || 0,
     run,
     rooms_total,
-    ctx,
+    ctx: { ...ctx, chain_traps },
   })
+  // Active object reads are checkpoint-only after bootstrap, so refresh the public board prim input through the
+  // existing reducer context door too. Apply it only after the session-gated snapshot proves this read still owns
+  // the core; a stale fight-A read must never write fight A's traps into a newer fight B session.
+  if (String(fight_store.getState().fight_id ?? '') === String(fight?.id ?? ''))
+    fight_store.getState().input({ type: 'ctx', ctx: { chain_traps } })
   if (fight?.id && String(fight_store.getState().view?.id) === String(fight.id)) mark_engage_fight_adopted(fight.id)
   return fight
 }

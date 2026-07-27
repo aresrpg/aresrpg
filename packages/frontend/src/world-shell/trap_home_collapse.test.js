@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // TRAP HOME-B COLLAPSE (kill-revert cluster, 2nd half) — the frontend's parallel trap home (trap_overlay.js)
-// is DEAD; render + cast-legality + the receipt trap_cells all read the fold's ONE projection, engine_view.my_traps
-// (own-only — the caster knows only their OWN casts, mirroring the retired overlay's coverage exactly). The divergent
+// is DEAD; cast-legality + receipt inference keep reading the caster's engine_view.my_traps, while persistent paint
+// reads the viewer-scoped engine_view.trap_prims projection. The divergent
 // overlay lifecycle (living-only spring, no corpse/version-bump handling) produced invisible-armed traps →
 // ECellAlreadyTrapped → whole-turn reverts. This spec pins: (a) the fold home carries the no-stack truth an empty
 // overlay would leak, (b) the receipt render path paints a trap cross from the fold-sourced cells, and (c) every
@@ -166,13 +166,13 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
     expect(beats.some((e) => e.kind === 'trap_trigger')).toBe(true)
   })
 
-  test('CONTRACT: the RENDER seam paints engine_view.my_traps directly, never a parallel presentation list', async () => {
+  test('CONTRACT: the RENDER seam paints engine_view.trap_prims directly, never a parallel presentation list', async () => {
     const src = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
     expect(src).not.toContain('trap_overlay')
     expect(src).not.toContain('trap_presentation')
     expect(src).not.toContain('presented_traps')
-    expect(src).toContain('const traps = fight.my_traps ?? []')
-    expect(src).toContain("sig += `|tr:${(fight.my_traps ?? []).join(',')}`")
+    expect(src).toContain('const traps = fight.trap_prims ?? []')
+    expect(src).toContain("sig += `|tr:${(fight.trap_prims ?? []).join(',')}`")
   })
 
   test('CONTRACT: the CAST-LEGALITY seam reads the fold, never trap_overlay', async () => {

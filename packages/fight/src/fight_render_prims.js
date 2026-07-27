@@ -126,6 +126,20 @@ export const reconstructed_path = (from, to, board = {}) => {
 
 export const trap_covers = (trap, cell) => (trap?.cells ?? []).some((candidate) => same_cell(candidate, cell))
 
+// The 1.29-aligned product visibility is deliberately this one line so the spectator ruling is easy to re-rule later.
+export const trap_visible_to = ({ seat, team }, trap) => seat == null || team === trap.owner_team
+
+/** Encoded board cells for the traps this viewer may see. Set-dedup keeps exactly one paint blob per cell. */
+export const trap_render_prims = (viewer_context, traps) => [
+  ...new Set(
+    (traps ?? [])
+      .filter((trap) => trap_visible_to(viewer_context, trap))
+      .flatMap((trap) => trap.cells ?? [trap.anchor])
+      .map(Number)
+      .filter(Number.isFinite)
+  ),
+]
+
 // ╔════════════ [ WAS A TRAP ARMED HERE, WHEN THAT ROW RAN? — the ONE home (#1248) ] ════════════════════════ ]
 //
 // #1219's sequencing rule shipped twice — once in the fold, once in the renderer — and the copies disagreed on

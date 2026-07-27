@@ -1025,10 +1025,9 @@ export function create_voxel_fight_adapter(
             cast_vfx_live.add(handle)
           }
         } else if (spec.kind === 'trap_place')
-          reconcile() // the fold's place_traps (at cast) owns the durable my_traps marker; repaint to reflect it
+          reconcile() // repaint the viewer-scoped trap prims (including the caster's optimistic place_traps row)
         else if (spec.kind === 'trap_trigger') {
-          // Repaint from engine_view.my_traps at the detonation beat. The projection has already retired the
-          // consumed cell; no renderer-owned list may keep it visible past this point.
+          // Repaint from engine_view.trap_prims at the detonation beat. No renderer-owned list may keep it visible.
           reconcile()
           await play_trap_boom(payload)
         } else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
@@ -1651,10 +1650,9 @@ export function create_voxel_fight_adapter(
         }
       }
     }
-    // TRAP MARKERS — paint the projection's live list directly. project.engine_view excludes every `gone` trap, so
-    // a committed detonation clears the marker without a renderer-owned mirror. A won/lost board stops painting it.
+    // TRAP MARKERS — paint the viewer-scoped prims directly. A won/lost board stops painting them.
     if (fight.winner === -1) {
-      const traps = fight.my_traps ?? []
+      const traps = fight.trap_prims ?? []
       if (traps.length) lit.trap = traps
       // GLYPH ZONES (an orange blob on the ground that stays, like the traps but covering the zone) —
       // the caster's OWN placed glyphs, a persistent orange ground wash over each glyph's full AoE. Read straight
@@ -2040,8 +2038,8 @@ function paint_key(result, fight, dungeon, replaying, busy) {
     sig += `${id}:${f.dead ? 'x' : `${f.cell.x},${f.cell.y},${f.mp},${f.ap},r${range_bonus_of(f)}`}|`
   // the local placement pick moves the stand-here highlight; track it.
   sig += `pp:${use_dungeon_turn.getState().placement_pick ?? ''}`
-  // The projection's live trap cells ride the memo, so a committed live→gone transition repaints the removal.
-  sig += `|tr:${(fight.my_traps ?? []).join(',')}`
+  // The viewer-scoped live trap cells ride the memo, so visibility/placement/removal all repaint.
+  sig += `|tr:${(fight.trap_prims ?? []).join(',')}`
   // the caster's own glyph zones — a just-placed or expired glyph must bust the memo so the orange wash repaints.
   sig += `|gl:${(fight.my_glyphs ?? []).join(',')}`
   // peers' placement ghosts — a pick/supersede/expiry must bust the memo so the cyan hint repaints.

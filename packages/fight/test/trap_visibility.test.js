@@ -11,6 +11,7 @@ import { engine_view } from '../src/project.js'
 
 const FIGHT = '0xf1'
 const CASTER = '0xc1'
+const ALLY = '0xa1'
 const ENEMY = '0xe1'
 const TRAP = 108
 
@@ -33,11 +34,16 @@ const fight_object = {
   status: 1,
   width: 20,
   height: 19,
-  participants: [participant(CASTER, '0xaaa', 0, 105), participant(ENEMY, '0xbbb', 1, 110)],
+  participants: [
+    participant(CASTER, '0xaaa', 0, 105),
+    participant(ALLY, '0xaaa', 0, 109),
+    participant(ENEMY, '0xbbb', 1, 110),
+  ],
   mobs: [],
   queue: [
     { is_mob: false, idx: 0 },
     { is_mob: false, idx: 1 },
+    { is_mob: false, idx: 2 },
   ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
@@ -56,6 +62,8 @@ const trap_prims_for = (ctx) => {
 describe('trap visibility — public chain traps become viewer-scoped render prims', () => {
   test('a spectator fold renders a placed trap', () => {
     expect(trap_prims_for({ spectator: true })).toEqual([TRAP])
+    expect(trap_prims_for({ my_entity_id: CASTER })).toEqual([TRAP])
+    expect(trap_prims_for({ my_entity_id: ALLY })).toEqual([TRAP])
   })
 
   test('an enemy seat fold does not render the placed trap', () => {
