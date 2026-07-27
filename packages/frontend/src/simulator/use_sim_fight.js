@@ -13,6 +13,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { mob_corpus_of } from '../pages/encyclopedia/world_corpus'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
+import { report_chunk_load_failure } from '../core/stale_deploy_recovery'
 
 import { board_of } from './board'
 import { build_start_args } from './fight_start.js'
@@ -26,6 +27,21 @@ import { use_simulator } from './store'
  * One dynamic import keeps the page's own shell cheap and rendered.
  */
 const load_shim = () => import('./fight_shim.js')
+
+/**
+ * A shim that will not load is a STALE PAGE, never a build without a local chain — the only way that import
+ * fails in production is a deploy retiring the chunk hash this tab still points at, and the host answers the
+ * retired path with the SPA shell, so the browser refuses it as a module. The page said "the local chain is
+ * not available in this build", which blames the build the player cannot see for the state of the tab they
+ * are holding; the truth is one reload away and the app already owns that reload
+ * (`stale_deploy_recovery`). Report it there — Vite's preload helper cancels its own report the moment the
+ * recovery listener handles it, so a caught rejection is otherwise lost — and name the reason honestly.
+ * @returns {string} the blocked reason the page prints
+ */
+export const on_shim_load_failure = () => {
+  report_chunk_load_failure()
+  return 'stale_build'
+}
 
 /**
  * @returns {{ phase: string, can_start: boolean, blocked: string | null,
@@ -49,9 +65,9 @@ export function use_sim_fight() {
       mob_spells_of: (id) => mob_corpus_of(id)?.spells ?? [],
     })
     if (!built.ok) return set_blocked(built.reason)
-    // A chunk that will not load is a REASON, not a dead button (`simulator.fight_blocked_sim_chain_missing`).
+    // A chunk that will not load is a REASON, not a dead button (`simulator.fight_blocked_stale_build`).
     const loaded = await load_shim().catch(() => null)
-    if (!loaded) return set_blocked('sim_chain_missing')
+    if (!loaded) return set_blocked(on_shim_load_failure())
     const { create_fight_shim } = loaded
 
     // The reducer mints the fight id (`sim:<seed>:<n>`, fresh on every START — spec §4.7), so the phase flips

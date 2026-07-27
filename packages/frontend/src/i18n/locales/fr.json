@@ -1277,7 +1277,7 @@
     "fight_draw": "ÉGALITÉ",
     "fight_blocked_empty_roster": "Placez au moins un personnage avant de commencer.",
     "fight_blocked_no_mobs": "Choisissez au moins un monstre avant de commencer.",
-    "fight_blocked_sim_chain_missing": "La chaîne locale n'est pas disponible dans cette version.",
+    "fight_blocked_stale_build": "Cette page n'est plus à jour. Rechargez pour lancer le combat.",
     "mob_team": "ÉQUIPE DE MONSTRES",
     "edit_character": "MODIFIER LE PERSONNAGE",
     "equipment": "ÉQUIPEMENT",

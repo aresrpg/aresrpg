@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import i18n from './i18n'
-import { use_toast } from './toast'
+import i18n from '../i18n'
+import { use_toast } from '../toast'
 
 export const CHUNK_RELOAD_GUARD_KEY = 'chunk_reload_at'
 
@@ -92,6 +92,18 @@ export async function request_service_worker_update(
     if (timeout_id !== undefined) clearTimeout(timeout_id)
     service_worker.removeEventListener('controllerchange', on_controller_change)
   }
+}
+
+/**
+ * THE ONE DOOR app code uses to report a lazy chunk that would not load. Vite's preload helper reports its
+ * own failures through `vite:preloadError`, but a caller that CATCHES its own `import()` rejection swallows
+ * that report — and a swallowed chunk failure is an app that lies about itself ("this build is broken")
+ * while the fix, a reload onto the deploy that replaced it, is one event away. Dispatching the same
+ * cancelable event keeps ONE recovery, ONE reload guard, ONE story: never a second recovery path.
+ */
+export function report_chunk_load_failure() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event('vite:preloadError', { cancelable: true }))
 }
 
 export function install_stale_deploy_recovery({

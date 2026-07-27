@@ -1277,7 +1277,7 @@
     "fight_draw": "EMPATE",
     "fight_blocked_empty_roster": "Coloca al menos un personaje antes de empezar.",
     "fight_blocked_no_mobs": "Elige al menos un monstruo antes de empezar.",
-    "fight_blocked_sim_chain_missing": "La cadena local no está disponible en esta versión.",
+    "fight_blocked_stale_build": "Esta página está desactualizada. Recarga para iniciar el combate.",
     "mob_team": "EQUIPO DE MOBS",
     "edit_character": "EDITAR PERSONAJE",
     "equipment": "EQUIPO",

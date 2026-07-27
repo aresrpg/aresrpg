@@ -1277,7 +1277,7 @@
     "fight_draw": "UNENTSCHIEDEN",
     "fight_blocked_empty_roster": "Platziere mindestens einen Charakter, bevor du startest.",
     "fight_blocked_no_mobs": "Wähle mindestens einen Gegner, bevor du startest.",
-    "fight_blocked_sim_chain_missing": "Die lokale Chain ist in diesem Build nicht verfügbar.",
+    "fight_blocked_stale_build": "Diese Seite ist veraltet. Lade neu, um den Kampf zu starten.",
     "mob_team": "MONSTER-TEAM",
     "edit_character": "CHARAKTER BEARBEITEN",
     "equipment": "AUSRÜSTUNG",

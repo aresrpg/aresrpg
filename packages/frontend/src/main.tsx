@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// <reference types="vite/client" />
 import './boot_shim' // D146: MUST stay the first import — see boot_shim.ts (hoisting-safe process global)
-import './stale_deploy_recovery'
+import './core/stale_deploy_recovery'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
