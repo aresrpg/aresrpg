@@ -35,7 +35,7 @@ fun grant_xp(sc: &mut Scenario, who: address, cid: ID, xp: u64) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::grant_fight_xp(&cfg, chr, xp, &ver);
+    character_link::z10(&cfg, chr, xp, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }
@@ -92,7 +92,7 @@ fun at_gate_proves_and_confirms() {
   let cid = test_world::mint_character(&mut sc, OWNER);
   grant_xp(&mut sc, OWNER, cid, 2800); // level-5 threshold → stored level 5
   set_gate(&mut sc, 5); // dial exactly at the character's level
-  add_rule(&mut sc); // attach the gate to the Character policy (ceremony)
+  add_rule(&mut sc); // z503 the gate to the Character policy (ceremony)
   sc.next_tx(OWNER);
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();

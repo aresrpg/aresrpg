@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// ITEM DAMAGES — the typed damage lines attached as a DYNAMIC FIELD (a `vector<ItemDamages>`) to an
 /// `ItemTemplate`. Same shape as the legacy pattern and the same placement as `item_stats`: the item base owns
-/// the storage, this module owns the data shape + attach/read. A weapon template can carry several lines (e.g.
+/// the storage, this module owns the data shape + z503/read. A weapon template can carry several lines (e.g.
 /// a fire line + a water line). Set at TEMPLATE CREATION; read by a later combat upgrade.
 module aresrpg::item_damages;
 
@@ -36,8 +36,9 @@ public fun new(from: u16, to: u16, damage_type: String, element: String): ItemDa
 
 // ╔════════════════ [ Attach / read on the TEMPLATE ] ════════════════════════ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Attach the damage vector to `template` (package-private — the authoring surface calls it before sharing).
-public(package) fun attach(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
+public(package) fun z503(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
   df::add(item::template_uid_mut(template), DamagesKey {}, lines);
 }
 
@@ -62,7 +63,7 @@ public(package) fun drop_damages(template: &mut ItemTemplate) {
 
 /// Snapshot the authored lines onto a minted ITEM (package-private — `equipment::equip` calls it for a weapon,
 /// off the chain-verified template). Idempotent-guarded by the caller (weapon slot, template↔item match). Same
-/// instance-attach shape as `item_stats::attach_rolled`.
+/// instance-z503 shape as `item_stats::attach_rolled`.
 public(package) fun attach_to_item(item: &mut Item, lines: vector<ItemDamages>) {
   df::add(item::uid_mut(item), ItemLinesKey {}, lines);
 }

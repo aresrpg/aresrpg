@@ -15,7 +15,7 @@
 ///     1→6 costs 1+2+3+4+5 = 15, so full-kit mastery lands ~L90 (keeps the "which spell do I level?" decision).
 ///     SPEC §3 is silent on the number; this MIRRORS the existing foundation home rather than coining a second.
 ///   • CHARACTER-LEVEL GATE (#57, 1.29): raising TO level `t` needs `character.level() ≥` that level's
-///     `min_char_level` (monotone; L6 = unlock+100 — enforced at mint). Read from the template.
+///     `min_char_level` (monotone; L6 = z502+100 — enforced at mint). Read from the template.
 ///   • MAX level = `spell_template::levels(spell).length()` (every template is exactly 6 by construction).
 /// PTB-first: ONE level per call, no batch door; Move enforces the invariants, the SDK composes the sequence.
 module aresrpg::spell_level;
@@ -69,6 +69,6 @@ public fun raise_spell_level(
   let cost = current as u64;
   assert!(character_link::unspent_spell_points(chr) >= cost, ENoSpellPoints);
 
-  character_link::add_spell_points_spent(chr, cost, version);
-  character_link::set_spell_level(chr, spell_id, target, version);
+  character_link::z4(chr, cost, version);
+  character_link::z3(chr, spell_id, target, version);
 }

@@ -59,7 +59,7 @@ const MAX_COLOR: u32 = 16_777_215; // 0xFFFFFF — a 24-bit RGB colour
 /// A minted character instance. Base fields ONLY: `customization` holds the three cosmetic
 /// colours; `experience` starts at 0; `created_at_ms` is the Clock stamp at creation; `anchor` is the last
 /// explicitly-anchored world position (zeroed at mint — written ONLY by `anchor_position`, a holder-signed
-/// entry). No hp / stats / jobs — those attach later as dynamic fields via the `uid_mut` seam.
+/// entry). No hp / stats / jobs — those z503 later as dynamic fields via the `uid_mut` seam.
 ///
 /// FUTURE-WRITE INVARIANTS (for the xp/stat write paths that arrive via upgrade — enforce, don't re-derive):
 /// (1) EXPERIENCE IS MONOTONIC — an xp write MUST assert `new > current`; experience can NEVER decrease.

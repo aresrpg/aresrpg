@@ -36,6 +36,7 @@ public struct NsKey<K: copy + drop + store> has copy, drop, store {
 
 // ╔════════════════ [ Item MINT door (assert_enabled-gated; returns the LockPledge hot potato) ] ═ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The single cross-cutting GEAR-mint path (shop purchase, loot claims, craft output, gacha, pool item-out).
 /// Returns the `LockPledge` hot potato so the caller is TYPE-FORCED to lock the item into a personal kiosk in the
 /// same PTB (kiosk-lock constitution). `assert_enabled` like every value path.
@@ -45,36 +46,37 @@ public struct NsKey<K: copy + drop + store> has copy, drop, store {
 /// `&Random` (shop: the buy generator; loot: the fight result's open-time seed; craft: the craft generator);
 /// `none` means the caller HAS no entropy to offer and the item mints blank — the honest state, never a
 /// predictable stand-in (a `ctx`-derived seed would be dry-runnable, i.e. free re-rolls).
-public(package) fun mint_item(template: &ItemTemplate, stat_seed: Option<u64>, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
+public(package) fun z505(template: &ItemTemplate, stat_seed: Option<u64>, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
   version.assert_enabled();
   let (mut item, pledge) = item::mint(template, ctx);
-  let rolled = if (stat_seed.is_some()) item_stats::roll_for_template(template, stat_seed.destroy_some()) else option::none();
+  let rolled = if (stat_seed.is_some()) item_stats::z41(template, stat_seed.destroy_some()) else option::none();
   if (rolled.is_some()) item_stats::attach_rolled(&mut item, *rolled.borrow());
   (item, pledge)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The stackable mint twin (gather yields, pool item-out): mints ONE item carrying `quantity` units.
-/// `item::mint_stack` asserts the template's category actually STACKS.
-public(package) fun mint_item_stack(template: &ItemTemplate, quantity: u64, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
+/// `item::z38` asserts the template's category actually STACKS.
+public(package) fun z19(template: &ItemTemplate, quantity: u64, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
   version.assert_enabled();
-  item::mint_stack(template, quantity, ctx)
+  item::z38(template, quantity, ctx)
 }
 
 /// BRAND TWIN (2026-07-12 forge split): crush-yield rune stacks mint through the PINNED forge sibling's witness
 /// (`config.assert_forge_brand` — sibling-private constructor, doors closed until pinned). Zero behavior drift —
-/// delegates to `mint_item_stack` verbatim; the `LockPledge` hot potato still type-forces the kiosk lock.
+/// delegates to `z19` verbatim; the `LockPledge` hot potato still type-forces the kiosk lock.
 public fun mint_item_stack_brand<W: drop>(_: W, config: &GameConfig, template: &ItemTemplate, quantity: u64, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
   config.assert_forge_brand<W>();
-  mint_item_stack(template, quantity, version, ctx)
+  z19(template, quantity, version, ctx)
 }
 
 /// BRAND TWIN (2026-07-12 forge split): the rolled-stat REWRITE for the PINNED forge sibling (scribe outcome
 /// write). Lives HERE, not in `item_stats` — `config → admin → item_stats` already form a chain, so an
 /// `item_stats → config` edge would cycle; this module is the established cross-package item seam and imports
-/// both sides cycle-free. Zero behavior drift: delegates to `item_stats::set_rolled` verbatim.
+/// both sides cycle-free. Zero behavior drift: delegates to `item_stats::z42` verbatim.
 public fun set_rolled_brand<W: drop>(_: W, config: &GameConfig, item: &mut Item, stats: ItemStatistics) {
   config.assert_forge_brand<W>();
-  item_stats::set_rolled(item, stats)
+  item_stats::z42(item, stats)
 }
 
 /// BRAND TWIN (2026-07-12 forge split): `&mut UID` access on an Item for the PINNED forge sibling — the item's
@@ -90,12 +92,12 @@ public fun item_uid_mut_brand<W: drop>(_: W, config: &GameConfig, item: &mut Ite
 
 // ╔════════════════ [ Namespaced DF writes on an ITEM ] ═══════════════════════ ]
 
-public(package) fun add_item_field<K: copy + drop + store, V: store>(namespace: u8, item: &mut Item, key: K, value: V, version: &Version) {
+public(package) fun z20<K: copy + drop + store, V: store>(namespace: u8, item: &mut Item, key: K, value: V, version: &Version) {
   version.assert_enabled();
   df::add(item::uid_mut(item), NsKey { namespace, key }, value);
 }
 
-public(package) fun borrow_item_field_mut<K: copy + drop + store, V: store>(namespace: u8, item: &mut Item, key: K, version: &Version): &mut V {
+public(package) fun z21<K: copy + drop + store, V: store>(namespace: u8, item: &mut Item, key: K, version: &Version): &mut V {
   version.assert_enabled();
   df::borrow_mut(item::uid_mut(item), NsKey { namespace, key })
 }
@@ -108,24 +110,24 @@ public(package) fun remove_item_field<K: copy + drop + store, V: store>(namespac
 
 // ╔════════════════ [ Namespaced DF writes on a CHARACTER (twin of the item set) ] ═ ]
 
-public(package) fun add_character_field<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, value: V, version: &Version) {
+public(package) fun z22<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, value: V, version: &Version) {
   version.assert_enabled();
   df::add(character::uid_mut(character), NsKey { namespace, key }, value);
 }
 
-public(package) fun borrow_character_field_mut<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): &mut V {
+public(package) fun z23<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): &mut V {
   version.assert_enabled();
   df::borrow_mut(character::uid_mut(character), NsKey { namespace, key })
 }
 
-public(package) fun remove_character_field<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): V {
+public(package) fun z24<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): V {
   version.assert_enabled();
   df::remove(character::uid_mut(character), NsKey { namespace, key })
 }
 
 /// Exit-class upsert for the dungeon release path. Unlike ordinary value writes, a live dungeon lock must be
 /// releasable while the package is frozen; upgrade freshness still gates the single executable layout.
-public(package) fun set_character_field_latest<K: copy + drop + store, V: drop + store>(
+public(package) fun z25<K: copy + drop + store, V: drop + store>(
   namespace: u8,
   character: &mut Character,
   key: K,
@@ -144,28 +146,32 @@ public(package) fun set_character_field_latest<K: copy + drop + store, V: drop +
 
 // ╔════════════════ [ FREE namespaced reads (no version gate — on-chain data is public) ] ══ ]
 
-public(package) fun item_field_exists<K: copy + drop + store>(item: &Item, namespace: u8, key: K): bool {
+public(package) fun z26<K: copy + drop + store>(item: &Item, namespace: u8, key: K): bool {
   df::exists(item::uid(item), NsKey { namespace, key })
 }
 
-public(package) fun borrow_item_field<K: copy + drop + store, V: store>(item: &Item, namespace: u8, key: K): &V {
+public(package) fun z27<K: copy + drop + store, V: store>(item: &Item, namespace: u8, key: K): &V {
   df::borrow(item::uid(item), NsKey { namespace, key })
 }
 
-public(package) fun character_field_exists<K: copy + drop + store>(character: &Character, namespace: u8, key: K): bool {
+public(package) fun z28<K: copy + drop + store>(character: &Character, namespace: u8, key: K): bool {
   df::exists(character::uid(character), NsKey { namespace, key })
 }
 
-public(package) fun borrow_character_field<K: copy + drop + store, V: store>(character: &Character, namespace: u8, key: K): &V {
+public(package) fun z29<K: copy + drop + store, V: store>(character: &Character, namespace: u8, key: K): &V {
   df::borrow(character::uid(character), NsKey { namespace, key })
 }
 
 // ╔════════════════ [ Namespace accessors (package callers name their reserved slots) ] ═ ]
 
-public(package) fun ns_character_progression(): u8 { NS_CHARACTER_PROGRESSION }
-public(package) fun ns_character_equipment(): u8 { NS_CHARACTER_EQUIPMENT }
-public(package) fun ns_character_world(): u8 { NS_CHARACTER_WORLD }
-public(package) fun ns_item(): u8 { NS_ITEM }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+public(package) fun z30(): u8 { NS_CHARACTER_PROGRESSION }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+public(package) fun z31(): u8 { NS_CHARACTER_EQUIPMENT }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+public(package) fun z32(): u8 { NS_CHARACTER_WORLD }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+public(package) fun z506(): u8 { NS_ITEM }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 
@@ -173,12 +179,12 @@ public(package) fun ns_item(): u8 { NS_ITEM }
 /// Pledge-carrying mint for SIBLING test fixtures (forge split): the only public route to (Item, LockPledge)
 /// outside the package — test builds only, stripped from every publish.
 public fun mint_item_for_testing(template: &ItemTemplate, stat_seed: Option<u64>, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
-  mint_item(template, stat_seed, version, ctx)
+  z505(template, stat_seed, version, ctx)
 }
 
 #[test_only]
 /// Stackable twin of `mint_item_for_testing` for SIBLING test fixtures (gifting/dungeon splits): the only public
 /// route to a (stack Item, LockPledge) outside the package — test builds only, stripped from every publish.
 public fun mint_item_stack_for_testing(template: &ItemTemplate, quantity: u64, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
-  mint_item_stack(template, quantity, version, ctx)
+  z19(template, quantity, version, ctx)
 }

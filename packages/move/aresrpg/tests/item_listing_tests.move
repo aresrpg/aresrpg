@@ -47,7 +47,7 @@ fun boot(sc: &mut Scenario): ID {
   sc.next_tx(OWNER);
   let publisher = sc.take_from_sender<Publisher>();
   let (mut policy, cap) = item::create_item_policy(&publisher, &ver, sc.ctx());
-  item_listing_rule::add(&mut policy, &cap); // ceremony: attach the zero-amount gate
+  item_listing_rule::add(&mut policy, &cap); // ceremony: z503 the zero-amount gate
   lot_rule::add(&mut policy, &cap); // universal Item policy also carries the forced-lot gate
   transfer::public_share_object(policy);
   transfer::public_transfer(cap, OWNER);

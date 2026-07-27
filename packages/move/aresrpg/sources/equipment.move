@@ -12,7 +12,7 @@
 /// SLOT MODEL. 14 slot KINDS (weapon, 7 armor/amulet, ring, pet, relic, 3 cosmetic) cover the 20 physical slots:
 /// ring×2 and relic×6 are the only multi-slots (SPEC: weapon·helmet·chestplate·belt·gauntlets·pants·boots·amulet·
 /// 2 rings·pet·6 relics = 17 combat, + title·hat·cloak = 3 cosmetic). NO mount slot (cut from scope).
-/// An item's `category` is the dispatcher (item.move law); `slot_kind_of` maps it to a kind. The WEAPON slot is the
+/// An item's `category` is the dispatcher (item.move law); `z59` maps it to a kind. The WEAPON slot is the
 /// only shared one: it holds EITHER a weapon (any of the 11-family table below — UNIVERSAL: any class equips any
 /// weapon per DECISIONS 07-12; its family is recorded so the fight can grant the +10% own-class affinity) OR a
 /// gathering tool (`tool_farmer`/`_herbalist`/`_miner` — no dedicated tool slot in the 17, so a tool occupies the
@@ -74,7 +74,7 @@ const RELIC_SLOTS: u64 = 6;
 // ── the 12-class → weapon-family AFFINITY table (SPEC §3; DECISIONS 07-12: weapons are UNIVERSAL, and the wielder's
 // OWN-class weapon gets +10% damage). A CONST table by ruling (shape-freeze, never a GameConfig dial). Index = the
 // §3 class id from `config::class_id_of` (single home of the slug↔id map — we only add the families). TOKEI(4) and
-// IYASHI(11) both wield STAFF. These slugs ARE the weapon `category` a template authors; `family_for_class` feeds
+// IYASHI(11) both wield STAFF. These slugs ARE the weapon `category` a template authors; `z13` feeds
 // the fight-entry affinity check (equipped family == the wielder's designed family ⇒ the bonus).
 const CLASS_FAMILIES: vector<vector<u8>> = vector[
   b"longsword", // 0 senshi
@@ -142,26 +142,26 @@ public fun equip(
   let item_id = object::id(&item);
   let template_id = item::template(&item);
   assert!(template_id == item::template_id(template), ETemplateMismatch);
-  let kind = slot_kind_of(category);
+  let kind = z59(category);
   assert!(kind.is_some(), ENotEquippable);
   let kind = kind.destroy_some();
 
   // A direct sale rolls every ranged non-stackable from its template, including pets. Pet power supersedes that
   // purchase roll: normalize from the authenticated template + stored feed count before folding or attaching.
   if (category == b"pet".to_string() && item_stats::has_ranges(template)) {
-    let current = item_stats::pet_stats_at_count(template, character_link::pet_power(&item));
-    item_stats::set_rolled(&mut item, current);
+    let current = item_stats::z43(template, character_link::pet_power(&item));
+    item_stats::z42(&mut item, current);
   };
   let has_rolled_stats = item_stats::has_rolled_stats(&item);
   let (bonus, malus) = if (has_rolled_stats) {
-    equipment_stats::deltas(item_stats::rolled_stats(&item))
+    equipment_stats::z504(item_stats::rolled_stats(&item))
   } else (spell::stats_zero(), spell::stats_zero());
-  if (has_rolled_stats) mark_signed_fold(&mut item, version);
+  if (has_rolled_stats) z67(&mut item, version);
 
   // §17.27 wave-2a: snapshot the template's chain-verified authored damage lines onto the WEAPON instance (the
   // template↔item match is asserted above), so a fight seat reads them straight off the character — the exact
-  // unforgeable path gear stats take. Guarded against re-attach (a re-equipped weapon already carries the copy).
-  if (is_weapon_family(category) && item_damages::has_damages(template) && !item_damages::has_item_lines(&item)) {
+  // unforgeable path gear stats take. Guarded against re-z503 (a re-equipped weapon already carries the copy).
+  if (z60(category) && item_damages::has_damages(template) && !item_damages::has_item_lines(&item)) {
     item_damages::attach_to_item(&mut item, *item_damages::damages(template));
   };
 
@@ -171,12 +171,12 @@ public fun equip(
   // level gate (single home of the required level = the template)
   assert!(character_link::level(character) >= (item::template_level(template) as u64), ELevelTooLow);
 
-  ensure_map(character, version);
+  z69(character, version);
   {
-    let map = borrow_map_mut(character, version);
+    let map = z68(character, version);
     place(map, kind, category, item_id, template_id, &bonus);
   };
-  if (has_rolled_stats) add_malus(character, &malus, version);
+  if (has_rolled_stats) z518(character, &malus, version);
   extract::confirm_equip(pledge, item, character, version);
 }
 
@@ -200,13 +200,13 @@ public fun unequip(
   let category = item::category(&item);
   let template_id = item::template(&item);
   let has_rolled_stats = item_stats::has_rolled_stats(&item);
-  let signed_folded = item_uses_signed_fold(&item);
+  let signed_folded = z66(&item);
   let (bonus, malus) = if (has_rolled_stats) {
-    equipment_stats::deltas(item_stats::rolled_stats(&item))
+    equipment_stats::z504(item_stats::rolled_stats(&item))
   } else (spell::stats_zero(), spell::stats_zero());
   {
-    let map = borrow_map_mut(character, version);
-    unplace(map, category, template_id, &bonus);
+    let map = z68(character, version);
+    z512(map, category, template_id, &bonus);
   };
   if (has_rolled_stats) remove_malus(character, &malus, signed_folded, version);
   (item, lock)
@@ -219,8 +219,8 @@ public fun unequip(
 fun place(map: &mut EquipmentMap, kind: u8, category: String, item_id: ID, template_id: ID, bonus: &Stats) {
   if (kind == SK_WEAPON) {
     assert!(map.weapon_item.is_none(), ESlotOccupied);
-    if (is_tool(category)) {
-      map.tool_job = tool_job_of(category); // some (is_tool ⇒ present)
+    if (z513(category)) {
+      map.tool_job = z61(category); // some (z513 ⇒ present)
     } else {
       map.weapon_family = option::some(category); // any weapon family — its own-class affinity is decided at fight entry
     };
@@ -242,10 +242,11 @@ fun place(map: &mut EquipmentMap, kind: u8, category: String, item_id: ID, templ
   map.gear = spell::stats_add(&map.gear, bonus);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Undo `place` for the item now coming off (its `category`/`template_id` derive the kind; the item was equipped so
 /// its category is a known slot). Subtracts exactly the delta `place` added (never underflows).
-fun unplace(map: &mut EquipmentMap, category: String, template_id: ID, bonus: &Stats) {
-  let kind = slot_kind_of(category).destroy_some();
+fun z512(map: &mut EquipmentMap, category: String, template_id: ID, bonus: &Stats) {
+  let kind = z59(category).destroy_some();
   if (kind == SK_WEAPON) {
     map.weapon_item = option::none();
     map.weapon_family = option::none();
@@ -266,10 +267,11 @@ fun unplace(map: &mut EquipmentMap, category: String, template_id: ID, bonus: &S
 
 // ╔════════════════ [ Category → slot taxonomy + the class-lock lookups ] ═════ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Map an item `category` to its slot kind, or `none` if it is not equippable (consumable/resource/…). Weapon
 /// families AND gathering tools both route to the weapon slot (the tool/weapon split is resolved in `place`).
-fun slot_kind_of(category: String): Option<u8> {
-  if (is_weapon_family(category) || is_tool(category)) option::some(SK_WEAPON)
+fun z59(category: String): Option<u8> {
+  if (z60(category) || z513(category)) option::some(SK_WEAPON)
   else if (category == b"helmet".to_string()) option::some(SK_HELMET)
   else if (category == b"chestplate".to_string()) option::some(SK_CHESTPLATE)
   else if (category == b"belt".to_string()) option::some(SK_BELT)
@@ -286,11 +288,14 @@ fun slot_kind_of(category: String): Option<u8> {
   else option::none()
 }
 
-fun is_weapon_family(category: String): bool { contains_slug(WEAPON_FAMILIES, category) }
-fun is_tool(category: String): bool { contains_slug(TOOL_CATEGORIES, category) }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z60(category: String): bool { z62(WEAPON_FAMILIES, category) }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z513(category: String): bool { z62(TOOL_CATEGORIES, category) }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The gathering job a tool serves (index in `TOOL_CATEGORIES` = SPEC §6 job id). `none` if not a tool category.
-fun tool_job_of(category: String): Option<u8> {
+fun z61(category: String): Option<u8> {
   let tools = TOOL_CATEGORIES;
   let mut i = 0;
   while (i < tools.length()) {
@@ -300,16 +305,18 @@ fun tool_job_of(category: String): Option<u8> {
   option::none()
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The DESIGNED weapon family for a class slug (single home of the slug↔id map is `config::class_id_of`) — the
 /// fight-entry affinity check (`aresrpg::fight::combatant_of`) compares it to the equipped family for the +10%.
-public(package) fun family_for_class(class: String): Option<String> {
+public(package) fun z13(class: String): Option<String> {
   let cid = config::class_id_of(class);
   if (cid.is_none()) return option::none();
   let families = CLASS_FAMILIES;
   option::some(families[cid.destroy_some()].to_string())
 }
 
-fun contains_slug(slugs: vector<vector<u8>>, category: String): bool {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z62(slugs: vector<vector<u8>>, category: String): bool {
   let mut i = 0;
   while (i < slugs.length()) {
     if (slugs[i].to_string() == category) return true;
@@ -321,16 +328,16 @@ fun contains_slug(slugs: vector<vector<u8>>, category: String): bool {
 // ╔════════════════ [ Reads (FREE — on-chain state is public; the migrated shim reads + the fight seam) ] ═ ]
 
 /// Does the character have an equipment map yet? (The old shim's `equipment_attached` — gather refuses without it.)
-public fun equipment_attached(character: &Character): bool { has_map(character) }
+public fun equipment_attached(character: &Character): bool { z515(character) }
 
 /// Is a gathering tool for `job` equipped? (Weapon slot holds a tool whose job == `job`.) Migrated shim read.
 public fun tool_equipped_for(character: &Character, job: u8): bool {
-  has_map(character) && map_ref(character).tool_job == option::some(job)
+  z515(character) && z516(character).tool_job == option::some(job)
 }
 
 /// Is a pet equipped? Feeds the checkpoint pet-equipped snapshot (§17.2 mount ×1.5). Migrated shim read.
 public fun pet_equipped(character: &Character): bool {
-  has_map(character) && map_ref(character).pet
+  z515(character) && z516(character).pet
 }
 
 /// TRUE iff at least ONE item occupies any slot — weapon/tool, an armor single, a ring, a pet, or a relic.
@@ -339,8 +346,8 @@ public fun pet_equipped(character: &Character): bool {
 /// map still exists (emptied, not removed) reads FALSE. The character-delete door guards on this — a delete
 /// with anything equipped would orphan the kiosk-locked Items attached under NS_CHARACTER_EQUIPMENT.
 public fun any_equipped(character: &Character): bool {
-  if (!has_map(character)) return false;
-  let map = map_ref(character);
+  if (!z515(character)) return false;
+  let map = z516(character);
   !map.singles.is_empty() || map.ring_count > 0 || !map.relic_templates.is_empty()
     || map.weapon_item.is_some() || map.pet
 }
@@ -348,20 +355,21 @@ public fun any_equipped(character: &Character): bool {
 /// The folded gear stats — allocated base plus positive equipment aggregate minus maluses, floored per field.
 public fun folded_stats(character: &Character): Stats {
   // §3 stat-allocation rider (2026-07-11): the character's ALLOCATED stats are the BASE the gear fold adds onto.
-  // Vitality flows to `fold_gear`'s max-HP recompute; strength/intelligence/agility/chance to the §17.27 damage
+  // Vitality flows to `z514`'s max-HP recompute; strength/intelligence/agility/chance to the §17.27 damage
   // lines — via the SAME consumer gear already uses (no new formula). Un-allocated ⇒ all-zero ⇒ no behavior change.
-  let allocated = allocated_stat_block(character);
-  if (!has_map(character)) allocated
-  else if (has_malus_cache(character)) {
-    equipment_stats::apply_fold(&allocated, &map_ref(character).gear, malus_ref(character))
-  } else spell::stats_add(&allocated, &map_ref(character).gear)
+  let allocated = z63(character);
+  if (!z515(character)) allocated
+  else if (z65(character)) {
+    equipment_stats::z17(&allocated, &z516(character).gear, z517(character))
+  } else spell::stats_add(&allocated, &z516(character).gear)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The character's ALLOCATED §3 stats (read from `character_link`) as a combat `Stats` block. The player-allocatable
 /// set is strength/intelligence/chance/agility (core damage) + wisdom + vitality (ext); raw_damage/crit/range/
 /// resistances are GEAR-ONLY, so they stay 0 here. One home: the stat DF lives on `character_link`; this maps it
 /// into the combat block `folded_stats` sums with gear.
-fun allocated_stat_block(character: &Character): Stats {
+fun z63(character: &Character): Stats {
   let mut s = spell::new_stats(
     character_link::stat_allocated(character, character_link::stat_strength()),
     character_link::stat_allocated(character, character_link::stat_intelligence()),
@@ -376,30 +384,31 @@ fun allocated_stat_block(character: &Character): Stats {
 /// The equipped WEAPON item id (none if the weapon slot is empty or holds a tool). The fight reads the item's
 /// template damage lines to build the §17.27 attack line.
 public fun equipped_weapon(character: &Character): Option<ID> {
-  if (!has_map(character)) return option::none();
-  let map = map_ref(character);
+  if (!z515(character)) return option::none();
+  let map = z516(character);
   if (map.weapon_family.is_some()) map.weapon_item else option::none()
 }
 
 /// The equipped weapon's family category (none if empty/tool) — the fight keys AP-cost/reach/crit tuning off it.
 public fun equipped_weapon_family(character: &Character): Option<String> {
-  if (!has_map(character)) return option::none();
-  map_ref(character).weapon_family
+  if (!z515(character)) return option::none();
+  z516(character).weapon_family
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// §17.27 wave-2a — the equipped WEAPON's authored damage lines (snapshotted onto the instance at equip). Empty
 /// when: no class weapon is equipped (tool/bare), the weapon predates this upgrade (re-equip migrates it), or the
 /// template authored no lines. The fight seat reads these through the ownership-proven character borrow and threads
 /// them into combat — the SAME unforgeable trust path as gear vitality; the client supplies no numbers. The
 /// `to`/`from` range + string element convert to combat values via `item_damages::midpoint`/`element_id`.
-public(package) fun equipped_weapon_item_lines(character: &Character): vector<ItemDamages> {
-  if (!has_map(character)) return vector[];
+public(package) fun z14(character: &Character): vector<ItemDamages> {
+  if (!z515(character)) return vector[];
   let wid = {
-    let map = map_ref(character);
+    let map = z516(character);
     if (map.weapon_family.is_none() || map.weapon_item.is_none()) return vector[]; // tool or empty slot ⇒ no lines
     *map.weapon_item.borrow()
   };
-  let item: &Item = extension::borrow_character_field<ID, Item>(character, extension::ns_character_equipment(), wid);
+  let item: &Item = extension::z29<ID, Item>(character, extension::z31(), wid);
   if (item_damages::has_item_lines(item)) *item_damages::item_lines(item) else vector[]
 }
 
@@ -413,7 +422,7 @@ public(package) fun equipped_weapon_item_lines(character: &Character): vector<It
 /// `action`/`movement` adjust the returned base AP/MP scalars, which are the fight's turn-refill budgets.
 public fun geared_combat_stats(character: &Character, config: &config::GameConfig): (String, u64, u64, u64, u64, u64, Stats) {
   let (class, level, hp, base_max_hp, base_ap, base_mp) = character_link::combat_stats(character, config);
-  fold_gear(character, config, class, level, hp, base_max_hp, base_ap, base_mp)
+  z514(character, config, class, level, hp, base_max_hp, base_ap, base_mp)
 }
 
 /// `geared_combat_stats` with current HP regen-SETTLED at `now_ms` (ANNEX §5.4) — the FIGHT-ENTRY variant every
@@ -421,130 +430,144 @@ public fun geared_combat_stats(character: &Character, config: &config::GameConfi
 /// the hp input is the virtually-settled `character_link::combat_stats_settled` read.
 public fun geared_combat_stats_settled(character: &Character, config: &config::GameConfig, now_ms: u64): (String, u64, u64, u64, u64, u64, Stats) {
   let (class, level, hp, base_max_hp, base_ap, base_mp) = character_link::combat_stats_settled(character, config, now_ms);
-  fold_gear(character, config, class, level, hp, base_max_hp, base_ap, base_mp)
+  z514(character, config, class, level, hp, base_max_hp, base_ap, base_mp)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The shared equipment FOLD over the character scalars (raw or settled): vit-aware max-HP recompute + the
 /// stranded-hp clamp — one home for what "geared" means.
-fun fold_gear(character: &Character, config: &config::GameConfig, class: String, level: u64, hp: u64, base_max_hp: u64, base_ap: u64, base_mp: u64): (String, u64, u64, u64, u64, u64, Stats) {
+fun z514(character: &Character, config: &config::GameConfig, class: String, level: u64, hp: u64, base_max_hp: u64, base_ap: u64, base_mp: u64): (String, u64, u64, u64, u64, u64, Stats) {
   let stats = folded_stats(character);
   let vit = spell::stat_vitality(&stats);
-  let max_hp = if (has_map(character)) {
+  let max_hp = if (z515(character)) {
     let cid = config::class_id_of(class);
     assert!(cid.is_some(), EUnknownClass);
     progression::max_hp(config::class_row(config, cid.destroy_some()), level, vit)
   } else base_max_hp;
-  let (folded_ap, folded_mp) = if (!has_map(character)) (base_ap, base_mp)
-    else if (has_malus_cache(character)) {
-      fold_action_movement(base_ap, base_mp, &map_ref(character).gear, malus_ref(character))
+  let (folded_ap, folded_mp) = if (!z515(character)) (base_ap, base_mp)
+    else if (z65(character)) {
+      z64(base_ap, base_mp, &z516(character).gear, z517(character))
     } else {
       let zero = spell::stats_zero();
-      fold_action_movement(base_ap, base_mp, &map_ref(character).gear, &zero)
+      z64(base_ap, base_mp, &z516(character).gear, &zero)
     };
   let hp_clamped = if (hp > max_hp) max_hp else hp;
   (class, level, hp_clamped, max_hp, folded_ap, folded_mp, stats)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Fold the signed item `action`/`movement` cache into the class scalars. The fight stores and refills these exact
 /// values; keeping the pair here gives the production handoff and its golden vector one implementation.
-fun fold_action_movement(base_ap: u64, base_mp: u64, bonus: &Stats, malus: &Stats): (u64, u64) {
+fun z64(base_ap: u64, base_mp: u64, bonus: &Stats, malus: &Stats): (u64, u64) {
   (
-    equipment_stats::apply_scalar(base_ap, spell::stat_ap_bonus(bonus), spell::stat_ap_bonus(malus)),
-    equipment_stats::apply_scalar(base_mp, spell::stat_mp_bonus(bonus), spell::stat_mp_bonus(malus)),
+    equipment_stats::z18(base_ap, spell::stat_ap_bonus(bonus), spell::stat_ap_bonus(malus)),
+    equipment_stats::z18(base_mp, spell::stat_mp_bonus(bonus), spell::stat_mp_bonus(malus)),
   )
 }
 
 // ╔════════════════ [ In-place mutation of an EQUIPPED item (pet-feed / rune-scribe reach the item HERE) ] ═ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Package-internal: borrow an EQUIPPED item MUTABLY by its id, through the custodied NS_EQUIPMENT cap. The item
 /// was attached by `extract::confirm_equip` under NS_EQUIPMENT keyed by its own id; a non-equipped id aborts. The
 /// pet-feed lane grows pet power through this borrow; the returned reference borrows `character` for its lifetime.
-public(package) fun borrow_equipped_mut(character: &mut Character, item_id: ID, version: &Version): &mut Item {
-  extension::borrow_character_field_mut<ID, Item>(extension::ns_character_equipment(), character, item_id, version)
+public(package) fun z15(character: &mut Character, item_id: ID, version: &Version): &mut Item {
+  extension::z23<ID, Item>(extension::z31(), character, item_id, version)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Replace an equipped item's effective stats and refresh both signed cache blocks atomically. Pet power uses this
 /// after deriving the current block from its template; combat therefore observes the same block stored on the item.
-public(package) fun set_equipped_stats(character: &mut Character, item_id: ID, stats: ItemStatistics, version: &Version) {
-  let (new_bonus, new_malus) = equipment_stats::deltas(&stats);
+public(package) fun z16(character: &mut Character, item_id: ID, stats: ItemStatistics, version: &Version) {
+  let (new_bonus, new_malus) = equipment_stats::z504(&stats);
   let (old_bonus, old_malus, signed_folded) = {
-    let item = borrow_equipped_mut(character, item_id, version);
-    let signed_folded = item_uses_signed_fold(item);
+    let item = z15(character, item_id, version);
+    let signed_folded = z66(item);
     let (old_bonus, old_malus) = if (item_stats::has_rolled_stats(item)) {
-      equipment_stats::deltas(item_stats::rolled_stats(item))
+      equipment_stats::z504(item_stats::rolled_stats(item))
     } else (spell::stats_zero(), spell::stats_zero());
-    item_stats::set_rolled(item, stats);
-    mark_signed_fold(item, version);
+    item_stats::z42(item, stats);
+    z67(item, version);
     (old_bonus, old_malus, signed_folded)
   };
   {
-    let map = borrow_map_mut(character, version);
+    let map = z68(character, version);
     map.gear = spell::stats_add(&spell::stats_sub(&map.gear, &old_bonus), &new_bonus);
   };
   remove_malus(character, &old_malus, signed_folded, version);
-  add_malus(character, &new_malus, version);
+  z518(character, &new_malus, version);
 }
 
 
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-fun has_map(character: &Character): bool {
-  extension::character_field_exists(character, extension::ns_character_equipment(), EquipmentKey {})
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z515(character: &Character): bool {
+  extension::z28(character, extension::z31(), EquipmentKey {})
 }
 
-fun map_ref(character: &Character): &EquipmentMap {
-  extension::borrow_character_field<EquipmentKey, EquipmentMap>(character, extension::ns_character_equipment(), EquipmentKey {})
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z516(character: &Character): &EquipmentMap {
+  extension::z29<EquipmentKey, EquipmentMap>(character, extension::z31(), EquipmentKey {})
 }
 
-fun has_malus_cache(character: &Character): bool {
-  extension::character_field_exists(character, extension::ns_character_equipment(), MALUS_CACHE_KEY)
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z65(character: &Character): bool {
+  extension::z28(character, extension::z31(), MALUS_CACHE_KEY)
 }
 
-fun malus_ref(character: &Character): &Stats {
-  extension::borrow_character_field<u64, Stats>(character, extension::ns_character_equipment(), MALUS_CACHE_KEY)
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z517(character: &Character): &Stats {
+  extension::z29<u64, Stats>(character, extension::z31(), MALUS_CACHE_KEY)
 }
 
-fun add_malus(character: &mut Character, delta: &Stats, version: &Version) {
-  let ns = extension::ns_character_equipment();
-  if (extension::character_field_exists(character, ns, MALUS_CACHE_KEY)) {
-    let cache: &mut Stats = extension::borrow_character_field_mut(ns, character, MALUS_CACHE_KEY, version);
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z518(character: &mut Character, delta: &Stats, version: &Version) {
+  let ns = extension::z31();
+  if (extension::z28(character, ns, MALUS_CACHE_KEY)) {
+    let cache: &mut Stats = extension::z23(ns, character, MALUS_CACHE_KEY, version);
     *cache = spell::stats_add(cache, delta);
   } else {
-    extension::add_character_field(ns, character, MALUS_CACHE_KEY, *delta, version);
+    extension::z22(ns, character, MALUS_CACHE_KEY, *delta, version);
   };
 }
 
 fun remove_malus(character: &mut Character, delta: &Stats, signed_folded: bool, version: &Version) {
-  let ns = extension::ns_character_equipment();
-  if (extension::character_field_exists(character, ns, MALUS_CACHE_KEY)) {
-    let cache: &mut Stats = extension::borrow_character_field_mut(ns, character, MALUS_CACHE_KEY, version);
+  let ns = extension::z31();
+  if (extension::z28(character, ns, MALUS_CACHE_KEY)) {
+    let cache: &mut Stats = extension::z23(ns, character, MALUS_CACHE_KEY, version);
     *cache = equipment_stats::remove_malus(cache, delta, signed_folded);
   };
 }
 
-fun item_uses_signed_fold(item: &Item): bool {
-  extension::item_field_exists(item, extension::ns_item(), SIGNED_ITEM_MARKER_KEY)
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z66(item: &Item): bool {
+  extension::z26(item, extension::z506(), SIGNED_ITEM_MARKER_KEY)
 }
 
-fun mark_signed_fold(item: &mut Item, version: &Version) {
-  let ns = extension::ns_item();
-  if (!extension::item_field_exists(item, ns, SIGNED_ITEM_MARKER_KEY)) {
-    extension::add_item_field(ns, item, SIGNED_ITEM_MARKER_KEY, true, version);
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z67(item: &mut Item, version: &Version) {
+  let ns = extension::z506();
+  if (!extension::z26(item, ns, SIGNED_ITEM_MARKER_KEY)) {
+    extension::z20(ns, item, SIGNED_ITEM_MARKER_KEY, true, version);
   };
 }
 
-fun borrow_map_mut(character: &mut Character, version: &Version): &mut EquipmentMap {
-  extension::borrow_character_field_mut<EquipmentKey, EquipmentMap>(extension::ns_character_equipment(), character, EquipmentKey {}, version)
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z68(character: &mut Character, version: &Version): &mut EquipmentMap {
+  extension::z23<EquipmentKey, EquipmentMap>(extension::z31(), character, EquipmentKey {}, version)
 }
 
-fun ensure_map(character: &mut Character, version: &Version) {
-  if (!extension::character_field_exists(character, extension::ns_character_equipment(), EquipmentKey {})) {
-    extension::add_character_field(extension::ns_character_equipment(), character, EquipmentKey {}, empty_map(), version);
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z69(character: &mut Character, version: &Version) {
+  if (!extension::z28(character, extension::z31(), EquipmentKey {})) {
+    extension::z22(extension::z31(), character, EquipmentKey {}, z519(), version);
   };
 }
 
-fun empty_map(): EquipmentMap {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z519(): EquipmentMap {
   EquipmentMap {
     singles: vector[],
     ring_count: 0,
@@ -561,7 +584,7 @@ fun empty_map(): EquipmentMap {
 
 // ── fold-math surface (statful items need `shop::buy` cross-package; these unit-test the fold on hand-built stats) ──
 #[test_only]
-public fun test_gear_delta(is: &ItemStatistics): Stats { let (bonus, _) = equipment_stats::deltas(is); bonus }
+public fun test_gear_delta(is: &ItemStatistics): Stats { let (bonus, _) = equipment_stats::z504(is); bonus }
 #[test_only]
 public fun test_stats_add(a: &Stats, b: &Stats): Stats { spell::stats_add(a, b) }
 #[test_only]
@@ -570,7 +593,7 @@ public fun test_stats_sub(a: &Stats, b: &Stats): Stats { spell::stats_sub(a, b) 
 public fun test_zero_stats(): Stats { spell::stats_zero() }
 #[test_only]
 public fun test_fold_action_movement(base_ap: u64, base_mp: u64, bonus: &Stats, malus: &Stats): (u64, u64) {
-  fold_action_movement(base_ap, base_mp, bonus, malus)
+  z64(base_ap, base_mp, bonus, malus)
 }
 
 #[test_only]
@@ -578,10 +601,10 @@ public fun test_fold_action_movement(base_ap: u64, base_mp: u64, bonus: &Stats, 
 /// replacement for the old `character_link::attach_equipment_shim`. `tool_jobs` (≤1 in practice, one weapon slot)
 /// seeds `tool_job`; `pet` seeds the pet flag. Uses a fresh NS_EQUIPMENT test cap, returned for the caller to sink.
 public fun attach_map_for_testing(character: &mut Character, tool_jobs: vector<u8>, pet: bool, version: &Version) {
-  let mut map = empty_map();
+  let mut map = z519();
   if (!tool_jobs.is_empty()) { map.tool_job = option::some(*tool_jobs.borrow(0)); };
   map.pet = pet;
-  extension::add_character_field(extension::ns_character_equipment(), character, EquipmentKey {}, map, version);
+  extension::z22(extension::z31(), character, EquipmentKey {}, map, version);
 }
 
 #[test_only]
@@ -590,7 +613,7 @@ public fun attach_map_for_testing(character: &mut Character, tool_jobs: vector<u
 /// cheaply. The map starts at ZERO gear (the item's stats are NOT pre-folded), so a scribe test asserts exactly
 /// the delta the rewrite folds in. Uses a fresh NS_EQUIPMENT test cap, returned for the caller to sink.
 public fun attach_item_for_testing(character: &mut Character, item: Item, version: &Version) {
-  ensure_map(character, version);
+  z69(character, version);
   let item_id = object::id(&item);
-  extension::add_character_field(extension::ns_character_equipment(), character, item_id, item, version);
+  extension::z22(extension::z31(), character, item_id, item, version);
 }

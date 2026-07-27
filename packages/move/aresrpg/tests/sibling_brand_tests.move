@@ -179,7 +179,7 @@ fun heal_hp_brand_pass() {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::write_back_hp(chr, 5, 1000, &ver); // wound to 5 so the heal has room
+    character_link::z11(chr, 5, 1000, &ver); // wound to 5 so the heal has room
     character_link::heal_hp_brand(BrandA {}, &cfg, chr, 10, 1000, &ver);
     assert_eq!(character_link::progression_hp(chr), 15); // 5 + 10, zero regen (same stamp)
   };
@@ -201,7 +201,7 @@ fun heal_hp_brand_wrong_witness_aborts() {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let ver = sc.take_shared<Version>();
   let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-  character_link::write_back_hp(chr, 5, 1000, &ver);
+  character_link::z11(chr, 5, 1000, &ver);
   character_link::heal_hp_brand(BrandB {}, &cfg, chr, 10, 1000, &ver);
   abort 0
 }

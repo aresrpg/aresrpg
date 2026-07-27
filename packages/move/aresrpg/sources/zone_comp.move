@@ -12,7 +12,7 @@ module aresrpg::zone_comp;
 use aresrpg::world::{Self, World};
 use aresrpg_foundation::{world_math, zone_gen};
 
-/// Which derivation `derive_mobs_all` runs. STREAM and GRID are the PUBLISHED formats (1/2) and differ only in
+/// Which derivation `z92` runs. STREAM and GRID are the PUBLISHED formats (1/2) and differ only in
 /// placement; MEMBERS is the ruled member-list model (format 3, #1110/#1111).
 const MODE_STREAM: u8 = 0;
 const MODE_GRID: u8 = 1;
@@ -23,17 +23,19 @@ const MODE_MEMBERS: u8 = 2;
 /// `team_size_bound` dial) feeds ONLY the §4 size cap: the kernel's size clamp never draws, so ids/positions/
 /// templates are identical for any bound (callers that never read sizes pass 1).
 public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
-  let (sids, tpls, _m, xs, zs, sizes, gseeds, _p) = derive_mobs_all(world, zx, zy, seed, team_bound, MODE_STREAM);
+  let (sids, tpls, _m, xs, zs, sizes, gseeds, _p) = z92(world, zx, zy, seed, team_bound, MODE_STREAM);
   (sids, tpls, xs, zs, sizes, gseeds)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// LATTICE variant — identical snapshot + §4 inputs, `zone_gen::derive_mob_groups_grid` for placement. Selected
 /// per zone by `zones::derive_mobs` off the stored commitment's format byte, never by a caller's preference.
-public(package) fun derive_mobs_grid(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
-  let (sids, tpls, _m, xs, zs, sizes, gseeds, _p) = derive_mobs_all(world, zx, zy, seed, team_bound, MODE_GRID);
+public(package) fun z45(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let (sids, tpls, _m, xs, zs, sizes, gseeds, _p) = z92(world, zx, zy, seed, team_bound, MODE_GRID);
   (sids, tpls, xs, zs, sizes, gseeds)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The ONE snapshot + §4 difficulty pipeline EVERY mob derivation shares. `mode` names the only three things
 /// that differ — which kernel places the groups, how the pick table is weighted, and whether a member roster
 /// comes back. Everything around them (the table snapshot, the §4 progress and size cap, the per-row group
@@ -43,7 +45,7 @@ public(package) fun derive_mobs_grid(world: &World, zx: u32, zy: u32, seed: u64,
 /// Returns the SUPERSET; the format-1/2 wrappers drop the two fields they have no use for. `member_tpls` is
 /// empty and `progress` is still the real §4 value for modes 0/1 — an absent roster is the empty one, never a
 /// second shape.
-fun derive_mobs_all(
+fun z92(
   world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64, mode: u8,
 ): (vector<u64>, vector<ID>, vector<vector<ID>>, vector<u32>, vector<u32>, vector<u16>, vector<u64>, u64) {
   let zsize = world::zone_size(world);
@@ -95,7 +97,7 @@ fun derive_mobs_all(
     let mob_lv = world::mob_levels_snapshot(world);
     let (rmin, rmax) = world_math::roster_bounds(&mob_lv);
     let lvl_cap = world_math::level_cap(progress, rmin, rmax);
-    let elig_w = eligible_mob_weights(&mob_tab, &mob_lv, lvl_cap);
+    let elig_w = z94(&mob_tab, &mob_lv, lvl_cap);
     let (s, ix, x, z, sz, g) = if (mode == MODE_GRID) {
       zone_gen::derive_mob_groups_grid(
         seed, min_g, max_g, &elig_w, &min_gs, &max_gs, size_bound, ox, oz, zsize, bx, bz,
@@ -128,10 +130,11 @@ fun derive_mobs_all(
   (sids, tpls, member_tpls, xs, zs, sizes, gseeds, progress)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// MEMBER-LIST variant (format 3, #1110/#1111) — the RULED SPAWN MODEL. Two substitutions land here together,
 /// because either one alone is a shipped regression (the design ruling's words):
 ///
-/// 1. **The level cap is GONE from the pick table.** `eligible_mob_weights` zeroes a row whose eligibility level
+/// 1. **The level cap is GONE from the pick table.** `z94` zeroes a row whose eligibility level
 ///    sits above the zone's distance cap, which is what made 9 of 20 worlds admit ≤2 species at their own spawn
 ///    box (7 of them at 100% one mob). The ruled model is EQUAL SPAWN EVERYWHERE: every authored row of the
 ///    world may appear anywhere in it, and DISTANCE grades the difficulty instead of the membership. So this
@@ -147,24 +150,26 @@ fun derive_mobs_all(
 /// The MEMBER table is the pick table with every row named by the world's `boss_mask` zeroed — the kernel reads
 /// a zero there as "this primary is a boss" and keeps that group single-spec. An absent mask reads as EMPTY, so
 /// the member table is simply the pick table: one degradation path, no second shape.
-public(package) fun derive_mobs_members(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<vector<ID>>, vector<u32>, vector<u32>, vector<u16>, vector<u64>, u64) {
-  derive_mobs_all(world, zx, zy, seed, team_bound, MODE_MEMBERS)
+public(package) fun z46(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<vector<ID>>, vector<u32>, vector<u32>, vector<u16>, vector<u64>, u64) {
+  z92(world, zx, zy, seed, team_bound, MODE_MEMBERS)
 }
 
 /// Derive the zone's FULL resource-cell list from `seed` — table snapshot → the pure `zone_gen` kernel (gather
 /// entries grow contiguous FIELDS; every cell is one-harvest/one-bit). Returns PARALLEL `(spawn_ids,
 /// template_ids, xs, zs, jobs, tiers)` in stream order — the index IS the zone res-bitmap's bit index.
 public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  derive_res_inner(world, zx, zy, seed, false)
+  z93(world, zx, zy, seed, false)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// LATTICE variant — identical table snapshot, `zone_gen::derive_resources_grid` for anchor placement.
-public(package) fun derive_res_grid(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  derive_res_inner(world, zx, zy, seed, true)
+public(package) fun z47(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+  z93(world, zx, zy, seed, true)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The ONE table-snapshot pipeline both resource variants share — `grid` picks only the anchor kernel.
-fun derive_res_inner(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+fun z93(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
   let zsize = world::zone_size(world);
   let bx = world::bounds_x(world);
   let bz = world::bounds_z(world);
@@ -210,11 +215,12 @@ fun derive_res_inner(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (v
   (sids, tpls, xs, zs, jobs, tiers)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Weight vector for the DISTANCE-GATED mob roll (§4 wave-2b): a row keeps its `rate_bp` weight iff its eligibility
 /// level (`levels[i]`, PARALLEL to `tab`) is at or below `lvl_cap` (the zone-distance ceiling), else 0 — rare mobs
 /// stay rare WITHIN the eligible set (weights untouched, only zeroed when locked out). `roster_bounds` floors the
 /// cap at a REAL roster level, so the floor mob always survives and the kernel's pick is never starved.
-fun eligible_mob_weights(tab: &vector<world::MobEntry>, levels: &vector<u16>, lvl_cap: u16): vector<u64> {
+fun z94(tab: &vector<world::MobEntry>, levels: &vector<u16>, lvl_cap: u16): vector<u64> {
   let mut w = vector[];
   let mut i = 0;
   while (i < tab.length()) {

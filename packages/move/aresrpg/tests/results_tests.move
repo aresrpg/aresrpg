@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// RESULTS tests — the core claims-v2 settlement landing. A branded `FightOutcome` (fabricated via the engine's
-/// `settlement::outcome_for_testing`, stamped with core's OWN `fight::brand_type()` so the brand-assert accepts it)
+/// `settlement::outcome_for_testing`, stamped with core's OWN `fight::z33()` so the brand-assert accepts it)
 /// is OPENED: HP/XP write-backs + the dirty-counter clear land on the kiosk-borrowed character, the loot checklist
 /// rolls, and a soulbound `FightResult` is minted. Then the claim ticket's reads round-trip, the rolled loot is
 /// minted per template, and the emptied ticket is burned. The two `&Random` entry doors (`open` / `open_taken`)
@@ -60,7 +60,7 @@ fun open_settles_reads_mints_and_burns() {
     // one loot line at 100% (chance_bp 10000), exactly 1 unit; mob_count 1 → rolled once
     let loot = vector[mob::new_loot_entry(loot_tid, 10_000, 1, 1)];
     let outcome = settlement::outcome_for_testing(
-      fight::brand_type(), fid(), wid(), cid,
+      fight::z33(), fid(), wid(), cid,
       1 /*outcome*/, 100 /*final_hp*/, 50 /*xp_share*/, 0 /*aged_bp*/, 0 /*chance*/, 1 /*mob_count*/,
       loot, false /*pvp*/, 0 /*team*/, option::none() /*winner_team*/, 100 /*loot_mult*/, sc.ctx(),
     );
@@ -118,7 +118,7 @@ fun loot_minted_gear_carries_rolled_stats() {
     let ver = sc.take_shared<Version>();
     let loot = vector[mob::new_loot_entry(gear_tid, 10_000, 1, 1)];
     let outcome = settlement::outcome_for_testing(
-      fight::brand_type(), fid(), wid(), cid, 1, 100, 50, 0, 0, 2 /*mob_count*/, loot, false, 0, option::none(), 100, sc.ctx(),
+      fight::z33(), fid(), wid(), cid, 1, 100, 50, 0, 0, 2 /*mob_count*/, loot, false, 0, option::none(), 100, sc.ctx(),
     );
     results::open_for_testing(outcome, &mut k, &pkcap, &cfg, &ver, 2000, sc.ctx());
     ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
@@ -181,7 +181,7 @@ fun random_open_doors() {
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(3000);
     let o = settlement::outcome_for_testing(
-      fight::brand_type(), fid(), wid(), cid, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(1), 100, sc.ctx(),
+      fight::z33(), fid(), wid(), cid, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(1), 100, sc.ctx(),
     );
     results::open(o, &mut k, &pkcap, &cfg, &ver, &clk, &rr, sc.ctx());
     clk.destroy_for_testing();
@@ -199,7 +199,7 @@ fun random_open_doors() {
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(4000);
     let o = settlement::outcome_for_testing(
-      fight::brand_type(), fid(), wid(), cid, 2, 0, 0, 0, 0, 0, vector[], true, 1, option::some(1), 100, sc.ctx(),
+      fight::z33(), fid(), wid(), cid, 2, 0, 0, 0, 0, 0, vector[], true, 1, option::some(1), 100, sc.ctx(),
     );
     results::open_taken(o, &mut k, &pkcap, &cfg, &ver, &clk, &rr, sc.ctx());
     clk.destroy_for_testing();

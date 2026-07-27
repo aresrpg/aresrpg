@@ -120,7 +120,7 @@ fun mint_lock(sc: &mut Scenario, k: &mut Kiosk, pkcap: &PersonalKioskCap, tid: I
   let tmpl = sc.take_shared_by_id<ItemTemplate>(tid);
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let (it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
+  let (it, pledge) = extension::z505(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
   item::lock_in_kiosk(pledge, it, k, personal_kiosk::borrow(pkcap), &mkt);
   ts::return_shared(tmpl);
@@ -178,7 +178,7 @@ fun geared_combat_stats_reads_base_scalars() {
 
 #[test]
 /// The unforgeable path: equipping a class weapon SNAPSHOTS the template's authored damage lines onto the item
-/// instance, and the fight-seat read (`equipped_weapon_item_lines`) returns them straight off the character — no
+/// instance, and the fight-seat read (`z14`) returns them straight off the character — no
 /// template object, no client input. Two lines (fire + water) round-trip exactly.
 fun equip_weapon_snapshots_authored_lines_for_combat() {
   let mut sc = ts::begin(OWNER);
@@ -192,7 +192,7 @@ fun equip_weapon_snapshots_authored_lines_for_combat() {
 
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  let lines = equipment::equipped_weapon_item_lines(chr);
+  let lines = equipment::z14(chr);
   assert_eq!(lines.length(), 2);
   assert_eq!(item_damages::element_id(lines.borrow(0)), spell::el_fire());
   assert_eq!(item_damages::midpoint(lines.borrow(0)), 20); // (10+30)/2
@@ -218,7 +218,7 @@ fun tool_in_weapon_slot_yields_no_lines() {
 
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  assert!(equipment::equipped_weapon_item_lines(chr).is_empty()); // the tool's damages never reach combat
+  assert!(equipment::z14(chr).is_empty()); // the tool's damages never reach combat
 
   destroy(k);
   destroy(pkcap);
@@ -237,7 +237,7 @@ fun bare_and_unauthored_weapon_yield_no_lines() {
   sc.next_tx(OWNER);
   {
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-    assert!(equipment::equipped_weapon_item_lines(chr).is_empty());
+    assert!(equipment::z14(chr).is_empty());
   };
 
   // a real weapon whose template authored NO damage lines ⇒ still empty (family fallback)
@@ -246,7 +246,7 @@ fun bare_and_unauthored_weapon_yield_no_lines() {
   equip_item(&mut sc, &mut k, &pkcap, cid, item_id, tid);
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  assert!(equipment::equipped_weapon_item_lines(chr).is_empty());
+  assert!(equipment::z14(chr).is_empty());
 
   destroy(k);
   destroy(pkcap);
@@ -416,13 +416,13 @@ fun cross_class_equip_succeeds() {
 
 #[test]
 /// AFFINITY DERIVATION (DECISIONS 07-12): the fight-entry check (`fight::combatant_of`) is `equipped_family ==
-/// family_for_class(class)`. A senshi's designed family is longsword (MATCH ⇒ affinity); club MISMATCHES. The +10%
+/// z13(class)`. A senshi's designed family is longsword (MATCH ⇒ affinity); club MISMATCHES. The +10%
 /// scales the SAME family line's damage & crit_damage by exactly ×110/100 and leaves crit_rate/ap_cost/reach alone.
 fun affinity_derivation_and_scaling() {
   let senshi = b"senshi".to_string();
   // derivation: own family matches, a cross-class family does not
-  assert!(equipment::family_for_class(senshi) == option::some(b"longsword".to_string())); // MATCH
-  assert!(!(equipment::family_for_class(senshi) == option::some(b"club".to_string()))); // MISMATCH
+  assert!(equipment::z13(senshi) == option::some(b"longsword".to_string())); // MATCH
+  assert!(!(equipment::z13(senshi) == option::some(b"club".to_string()))); // MISMATCH
 
   // a matched wielder's line is the SAME family line at +10% on the damage bases only (mismatched = the base line)
   let matched = participant::weapon_line_of(option::some(b"longsword".to_string()), true);

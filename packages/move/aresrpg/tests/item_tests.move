@@ -112,7 +112,7 @@ fun lock_into_non_personal_kiosk_aborts() {
   abort
 }
 
-// ╔════════════════ [ Stackable amount — mint_stack / merge / split ] ════════ ]
+// ╔════════════════ [ Stackable amount — z38 / merge / split ] ════════ ]
 
 #[test]
 /// A stackable (resource) mint carries `amount = quantity` in ONE object, snapshots its category, and still
@@ -130,7 +130,7 @@ fun mint_stack_sets_amount_and_locks() {
   let (mut ksk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut ksk, kcap, sc.ctx());
 
-  let (it, pledge) = item::mint_stack(&tmpl, 5, sc.ctx());
+  let (it, pledge) = item::z38(&tmpl, 5, sc.ctx());
   assert_eq!(item::amount(&it), 5); // one object, five units
   assert_eq!(item::category(&it), b"resource".to_string()); // category snapshotted onto the item
   let iid = object::id(&it);
@@ -156,11 +156,11 @@ fun gear_mint_amount_is_one() {
 }
 
 #[test, expected_failure(abort_code = ENotStackable, location = item)]
-/// `mint_stack` on a NON-stackable category aborts — gear is a unique NFT, never stack-minted.
+/// `z38` on a NON-stackable category aborts — gear is a unique NFT, never stack-minted.
 fun mint_stack_on_non_stackable_aborts() {
   let mut sc = ts::begin(OWNER);
   let tmpl = item::new_template(b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, sc.ctx());
-  let (_it, _pledge) = item::mint_stack(&tmpl, 5, sc.ctx()); // ENotStackable
+  let (_it, _pledge) = item::z38(&tmpl, 5, sc.ctx()); // ENotStackable
   abort
 }
 
@@ -393,15 +393,15 @@ fun stats_from_raw_preserves_malus_and_round_trips() {
   assert_eq!(item_stats::vitality(&lifted), s); // vitality raw 0, orig ≥ centre → back to centre
 }
 
-// ╔════════════════ [ Level gate (assert_usable_by boundary cases) ] ═════════ ]
+// ╔════════════════ [ Level gate (z37 boundary cases) ] ═════════ ]
 
 #[test]
 fun assert_usable_by_at_and_above_level_passes() {
   let mut sc = ts::begin(OWNER);
   let tmpl = item::new_template(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
-  item::assert_usable_by(&tmpl, 30); // exactly the required level — OK
-  item::assert_usable_by(&tmpl, 31); // above — OK
-  item::assert_usable_by(&tmpl, 200); // well above — OK
+  item::z37(&tmpl, 30); // exactly the required level — OK
+  item::z37(&tmpl, 31); // above — OK
+  item::z37(&tmpl, 200); // well above — OK
   item::share_template(tmpl);
   sc.end();
 }
@@ -410,7 +410,7 @@ fun assert_usable_by_at_and_above_level_passes() {
 fun assert_usable_by_below_level_aborts() {
   let mut sc = ts::begin(OWNER);
   let tmpl = item::new_template(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
-  item::assert_usable_by(&tmpl, 29); // one under → ELevelTooLow
+  item::z37(&tmpl, 29); // one under → ELevelTooLow
   abort
 }
 

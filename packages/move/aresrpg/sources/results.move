@@ -71,7 +71,7 @@ entry fun open(
   ctx: &mut TxContext,
 ) {
   let mut rng = prng::rng_seed(random::new_generator(r, ctx).generate_u64());
-  open_internal(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
+  z83(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
 }
 
 /// PTB-composition twin of `open` (`entry` cannot consume a prior command's result): ONE tx chains
@@ -92,10 +92,11 @@ public fun open_taken(
   ctx: &mut TxContext,
 ) {
   let mut rng = prng::rng_seed(random::new_generator(r, ctx).generate_u64());
-  open_internal(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
+  z83(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
 }
 
-fun open_internal(
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z83(
   outcome: FightOutcome,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
@@ -111,15 +112,15 @@ fun open_internal(
   // (aresrpg::fight's private FightBrand witness) are honored. A foreign consumer's outcome is refused here.
   let (brand, fight, world, character_id, outcome_status, final_hp, xp_share, aged_bp, chance, mob_count, loot, pvp, team, winner_team, loot_mult) =
     settlement::unpack(outcome);
-  assert!(brand == aresrpg::fight::brand_type(), EWrongBrand);
+  assert!(brand == aresrpg::fight::z33(), EWrongBrand);
 
   // write-backs FIRST (§17.23 — the fight's outcome reaches the character even if the roll lands nothing)
   let owner_cap = personal_kiosk::borrow(pkcap);
   let character = kiosk.borrow_mut(owner_cap, character_id);
   if (!pvp) {
     // §17.9: an ephemeral (PvP) fight NEVER touches the real character — no XP grant, no HP write-back.
-    if (xp_share > 0) character_link::grant_fight_xp(config, character, xp_share, version);
-    character_link::write_back_hp(character, final_hp, now_ms, version);
+    if (xp_share > 0) character_link::z10(config, character, xp_share, version);
+    character_link::z11(character, final_hp, now_ms, version);
     // the unfinished-business counter decrements HERE and only here — the truth landed, the character is free
     // to fight and to sell again.
     fight::clear(character, version);
@@ -131,13 +132,13 @@ fun open_internal(
   while (m < mob_count) {
     let mut e = 0;
     while (e < loot.length()) {
-      let one = roll_loot_entry(rng, loot.borrow(e), chance, aged_bp, loot_mult);
-      if (one.is_some()) push_or_merge(&mut rolled, one.destroy_some()) else one.destroy_none();
+      let one = z85(rng, loot.borrow(e), chance, aged_bp, loot_mult);
+      if (one.is_some()) z87(&mut rolled, one.destroy_some()) else one.destroy_none();
       e = e + 1;
     };
     m = m + 1;
   };
-  let units = total_units(&rolled);
+  let units = z88(&rolled);
   let mut result = FightResult { id: object::new(ctx), fight, world, character: character_id, outcome: outcome_status, final_hp, xp_share, pvp, team, winner_team, rolled };
   // the stat-roll entropy for whatever gear this ticket owes — drawn HERE, off the same `&Random` stream that
   // rolled the checklist, because `mint_rolled` has none (#758).
@@ -160,11 +161,12 @@ entry fun mint_rolled(
   policy: &TransferPolicy<Item>,
   ctx: &mut TxContext,
 ) {
-  mint_rolled_internal(result, template, version, kiosk, pkcap, policy, ctx);
+  z84(result, template, version, kiosk, pkcap, policy, ctx);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The mint body, returning the minted item ids (the `entry` discards them; tests assert on them).
-fun mint_rolled_internal(
+fun z84(
   result: &mut FightResult,
   template: &ItemTemplate,
   version: &Version,
@@ -175,19 +177,19 @@ fun mint_rolled_internal(
 ): vector<ID> {
   version.assert_enabled();
   let tid = item::template_id(template);
-  let qty = take_rolled(result, tid); // aborts ENoMatching if nothing owed
+  let qty = z86(result, tid); // aborts ENoMatching if nothing owed
   let owner_cap = personal_kiosk::borrow(pkcap);
   let mut minted = vector<ID>[];
   if (item::is_stackable_category(item::template_category(template))) {
-    let (stack, pledge) = extension::mint_item_stack(template, qty, version, ctx);
+    let (stack, pledge) = extension::z19(template, qty, version, ctx);
     minted.push_back(object::id(&stack));
     item::lock_in_kiosk(pledge, stack, kiosk, owner_cap, policy);
   } else {
-    let base = stat_seed(result);
+    let base = z524(result);
     let mut i = 0;
     while (i < qty) {
-      let seed = if (base.is_some()) option::some(unit_seed(*base.borrow(), tid, i)) else option::none();
-      let (loot_item, pledge) = extension::mint_item(template, seed, version, ctx);
+      let seed = if (base.is_some()) option::some(z525(*base.borrow(), tid, i)) else option::none();
+      let (loot_item, pledge) = extension::z505(template, seed, version, ctx);
       minted.push_back(object::id(&loot_item));
       item::lock_in_kiosk(pledge, loot_item, kiosk, owner_cap, policy);
       i = i + 1;
@@ -208,17 +210,19 @@ entry fun burn_result(mut result: FightResult) {
   object::delete(id);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// This ticket's open-time stat entropy, or NONE for a ticket opened before #758 shipped (it mints blank gear —
 /// the same honestly-empty block it would have had, never a fabricated one).
-fun stat_seed(result: &FightResult): Option<u64> {
+fun z524(result: &FightResult): Option<u64> {
   if (df::exists(&result.id, StatSeedKey {})) option::some(*df::borrow(&result.id, StatSeedKey {}))
   else option::none()
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// The per-unit stat seed: the ticket's own entropy folded with the template id and the unit index. DERIVED, never
 /// a running counter — unit `i` of template `t` always rolls the same block, so a holder cannot shop the mint
 /// ORDER of the templates they owe to steer a good roll onto the item they care about.
-fun unit_seed(base: u64, template: ID, index: u64): u64 {
+fun z525(base: u64, template: ID, index: u64): u64 {
   let bytes = object::id_to_bytes(&template);
   let mut acc = base;
   let mut i = 0;
@@ -231,9 +235,10 @@ fun unit_seed(base: u64, template: ID, index: u64): u64 {
 
 // ╔════════════════ [ Roll kernels (pure — harvested from dungeon_claim, aging-scaled) ] ═ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// One loot entry roll: effective_bp = min(10000, chance_bp × (700+claimer_chance)/700); on a hit, quantity in
 /// [min,max] scaled by aging ×(10000+aged_bp)/10000 and the loot multiplier ×mult/100.
-fun roll_loot_entry(rng: &mut u64, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
+fun z85(rng: &mut u64, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
   let effective_bp = loot_effective_bp(mob::loot_entry_chance_bp(entry) as u64, claimer_chance);
   if (prng::draw(rng) % BP_ONE >= effective_bp) return option::none();
   let min_q = mob::loot_entry_min_qty(entry) as u64;
@@ -251,8 +256,9 @@ public fun loot_effective_bp(chance_bp: u64, claimer_chance: u64): u64 {
 
 // ╔════════════════ [ Checklist helpers ] ════════════════════════════════════ ]
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
 /// Remove + return the owed qty for `template` from the rolled checklist. Aborts if none.
-fun take_rolled(result: &mut FightResult, template: ID): u64 {
+fun z86(result: &mut FightResult, template: ID): u64 {
   let list = &mut result.rolled;
   let mut idx = option::none();
   let mut i = 0;
@@ -265,7 +271,8 @@ fun take_rolled(result: &mut FightResult, template: ID): u64 {
   qty
 }
 
-fun push_or_merge(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z87(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
   let n = rolled.length();
   let mut i = 0;
   while (i < n) {
@@ -276,7 +283,8 @@ fun push_or_merge(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
   rolled.push_back(loot);
 }
 
-fun total_units(rolled: &vector<RolledLoot>): u64 {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+fun z88(rolled: &vector<RolledLoot>): u64 {
   let mut u = 0;
   let mut i = 0;
   while (i < rolled.length()) { u = u + rolled.borrow(i).qty; i = i + 1; };
@@ -318,7 +326,7 @@ public fun mint_rolled_for_testing(
   policy: &TransferPolicy<Item>,
   ctx: &mut TxContext,
 ): vector<ID> {
-  mint_rolled_internal(result, template, version, kiosk, pkcap, policy, ctx)
+  z84(result, template, version, kiosk, pkcap, policy, ctx)
 }
 
 #[test_only]
@@ -332,5 +340,5 @@ public fun open_for_testing(
   ctx: &mut TxContext,
 ) {
   let mut rng = prng::rng_seed(42);
-  open_internal(outcome, kiosk, pkcap, config, version, now_ms, &mut rng, ctx);
+  z83(outcome, kiosk, pkcap, config, version, now_ms, &mut rng, ctx);
 }

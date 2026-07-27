@@ -5,7 +5,7 @@
 /// upgrade law forbids removing modules — as thin delegates that keep every published signature and add the
 /// core-side gates/reads: the GameConfig freeze gate, the class-row base lookup). The live progression block
 /// these feed (total xp / stored level / current hp / lazy-regen last-touch) is the `Progression` DYNAMIC FIELD
-/// the sibling `character_link` module owns + writes; this module only computes the deltas that block stores.
+/// the sibling `character_link` module owns + writes; this module only computes the z504 that block stores.
 module aresrpg::progression;
 
 use aresrpg::config::{Self, GameConfig, ClassRow};

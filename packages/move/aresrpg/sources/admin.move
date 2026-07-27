@@ -112,13 +112,13 @@ public fun create_template(
     stats_max.destroy_none();
   };
 
-  if (!damages.is_empty()) item_damages::attach(&mut template, damages)
+  if (!damages.is_empty()) item_damages::z503(&mut template, damages)
   else damages.destroy_empty();
 
   // Consumable effect (the on-chain home for heal): attachable ONLY on the `consumable` category.
   if (effect.is_some()) {
     assert!(consumable_effect::is_consumable(category), EEffectNotConsumable);
-    consumable_effect::attach(&mut template, effect.destroy_some());
+    consumable_effect::z503(&mut template, effect.destroy_some());
   } else {
     effect.destroy_none();
   };
