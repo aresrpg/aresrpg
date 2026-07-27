@@ -22,7 +22,7 @@ use aresrpg_foundation::world_math;
 
 use aresrpg::{admin::AdminCap, version::Version};
 use std::string::String;
-use sui::{dynamic_field as df, event};
+use sui::{dynamic_field as df, event, vec_map::{Self, VecMap}};
 
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
@@ -89,43 +89,16 @@ public struct MobEntry has store, copy, drop {
 /// no boss mechanic). IDs, never typed refs.
 public struct DungeonRoom has store, copy, drop { mobs: vector<ID> }
 
-/// GOLDEN-GATHER (§6 jackpot) DF KEY on the World UID: a base resource TEMPLATE id → its unique RARE variant's
-/// template id (`wheat → golden_wheat`). A dynamic field (NOT a `World`/`ResourceEntry` field) so both frozen
-/// struct layouts stay untouched — adding golden-gather is upgrade-legal (new DF key + new fns only). The gather
-/// roll READS it (`rare_link`); the AdminCap doors below WRITE it.
-public struct RareLinkKey has copy, drop, store { template: ID }
 
-/// DISTANCE-DIFFICULTY (§4 wave-2b) DF KEY on the World UID: a mob TEMPLATE id → its ELIGIBILITY LEVEL (the
-/// template's `max_level` ceiling — the toughest member it can roll). A dynamic field (NOT a `MobEntry`/`World`
-/// field) so both frozen struct layouts stay untouched under the COMPATIBLE upgrade — adding distance-difficulty
-/// is a new DF key + new fns only, exactly the golden-gather `RareLinkKey` precedent above. `zones::search_zone`
-/// READS it to gate which roster mobs may spawn at a zone's distance; the AdminCap door below WRITES it at
-/// authoring (the level already lives in the seed's mobs.json → ONE seed home, projected here so the spawn roll
-/// stays level-aware WITHOUT loading every MobTemplate object).
-public struct MobLevelKey has copy, drop, store { template: ID }
 
-/// GATHER-AMBUSH PIN (P1-1) DF KEY on the World UID: a resource TEMPLATE id → the MobTemplate id an ambush MUST
-/// seat (closing the client-chosen-defender hole — `gathering` asserts the passed defender against this). A
-/// dynamic field (NOT a `ResourceEntry` field) because the LIVE struct layout is FROZEN under the COMPATIBLE
-/// upgrade policy — a field add (like a param add on `add_resource_entry`) is a hard publish-time reject; this is
-/// exactly the `MobLevelKey` precedent above. `none`/absent = this resource never ambushes. The AdminCap door
-/// below WRITES it; `resource_protector` READS it.
-public struct ProtectorKey has copy, drop, store { template: ID }
 
 /// THE BOSS FENCE (#1110 design amendment 2) DF KEY on the World UID: the world-scoped list of mob-table row
 /// INDEXES that are BOSS rows. Mixed-species packs draw their non-primary members from the eligible roster, and
 /// 9 boss rows sit in the live pick tables — without a boss predicate the draw could mint multi-boss packs or a
 /// boss riding a chicklet group. `MobTemplate` carries no family/boss field and a COMPATIBLE upgrade cannot add
 /// one to a frozen struct, so the predicate lives here as a dynamic field — the same extension-gate pattern
-/// `MobLevelKey` and `ProtectorKey` already set.
+/// the mob-level and protector state already set.
 ///
-/// SHAPE: `vector<u16>` of row indexes, NOT a positional bitmask. Most worlds carry 0-1 boss rows (9 across all
-/// 20 worlds; 11 worlds are dungeon-only-boss and mask to EMPTY), so the vector is usually empty or tiny,
-/// `contains` is the whole read, and ABSENT ≡ EMPTY gives one uniform degradation path with no bit math.
-/// Written in the SAME PTB family that writes/reorders the mob table (`set_boss_mask` + the table doors), so the
-/// mask and the table can never drift across a reseed — the alternative, a loose off-chain artifact, rots on the
-/// first row reorder.
-public struct BossMaskKey has copy, drop, store {}
 
 /// THE world template. Shared once at `create_world`; every field is admin-tunable within its clamp band. Spawn
 /// tables + roster grow via the append setters. `spawn_nonce` mints unique per-world spawn ids for `zones`.
@@ -151,6 +124,13 @@ public struct World has key {
   mobs: vector<MobEntry>,
   dungeon_rooms: vector<DungeonRoom>,
   spawn_nonce: u64,
+  // Republish restructure (#1289): these four were dynamic-field workarounds for a frozen layout. The republish
+  // window let them become what they always were — state of the world. `mob_levels` is PARALLEL to `mobs`, so a
+  // roster snapshot is one field read instead of 2N dynamic-field ops (#1290).
+  rare_links: VecMap<ID, ID>,
+  mob_levels: vector<u16>,
+  protectors: VecMap<ID, ID>,
+  boss_mask: vector<u16>,
 }
 
 // ╔════════════════ [ Events ] ═══════════════════════════════════════════════ ]
@@ -165,7 +145,7 @@ public struct RareLinkSet has copy, drop { world: ID, template: ID, rare_templat
 /// A base resource's golden-gather link was removed (§6) — no more jackpot for it.
 public struct RareLinkCleared has copy, drop { world: ID, template: ID }
 
-/// A batch of this module's own dynamic-field children (RareLinkKey → ID, MobLevelKey → u16, ProtectorKey → ID)
+/// A batch of this module's own link state (rare links, mob levels, protector pins)
 /// was drained ahead of a `destroy_world` (storage reclaim). Counts what actually existed — the drain is idempotent.
 public struct WorldLinksDrained has copy, drop { world: ID, rare_removed: u64, levels_removed: u64, protectors_removed: u64 }
 
@@ -197,6 +177,10 @@ public fun create_world(cap: &AdminCap, version: &Version, seed: u64, biome: Str
     min_nodes: DEFAULT_MIN_NODES,
     max_nodes: DEFAULT_MAX_NODES,
     dungeon_key_template: option::none(),
+    rare_links: vec_map::empty(),
+    mob_levels: vector[],
+    protectors: vec_map::empty(),
+    boss_mask: vector[],
     resources: vector[],
     mobs: vector[],
     dungeon_rooms: vector[],
@@ -280,9 +264,8 @@ public fun set_dungeon_key(cap: &AdminCap, w: &mut World, template_id: ID, versi
 /// door. Storing an id (not a typed ref) mirrors the spawn-table seam law.
 public fun set_rare_link(cap: &AdminCap, w: &mut World, template: ID, rare_template: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let key = RareLinkKey { template };
-  if (df::exists(&w.id, key)) { *df::borrow_mut<RareLinkKey, ID>(&mut w.id, key) = rare_template; }
-  else { df::add(&mut w.id, key, rare_template); };
+  if (w.rare_links.contains(&template)) { *w.rare_links.get_mut(&template) = rare_template; }
+  else { w.rare_links.insert(template, rare_template); };
   event::emit(RareLinkSet { world: object::id(w), template, rare_template });
   touched(w);
 }
@@ -290,7 +273,7 @@ public fun set_rare_link(cap: &AdminCap, w: &mut World, template: ID, rare_templ
 /// UNLINK a base resource's rare variant (no more jackpot for it). Aborts if no link exists (`df::remove`).
 public fun clear_rare_link(cap: &AdminCap, w: &mut World, template: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let _: ID = df::remove(&mut w.id, RareLinkKey { template });
+  let (_, _) = w.rare_links.remove(&template);
   event::emit(RareLinkCleared { world: object::id(w), template });
   touched(w);
 }
@@ -302,9 +285,9 @@ public fun clear_rare_link(cap: &AdminCap, w: &mut World, template: ID, version:
 /// keyed by template id mirrors the spawn-table seam law (the level's ONE home is the seed JSON — projected here).
 public fun set_mob_level(cap: &AdminCap, w: &mut World, template: ID, level: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let key = MobLevelKey { template };
-  if (df::exists(&w.id, key)) { *df::borrow_mut<MobLevelKey, u16>(&mut w.id, key) = level; }
-  else { df::add(&mut w.id, key, level); };
+  // PARALLEL to the table (#1290): the level lives at the row's index, so the snapshot is a plain field read.
+  let i = mob_row_index(w, template);
+  *&mut w.mob_levels[i] = level;
   touched(w);
 }
 
@@ -324,34 +307,30 @@ public fun set_boss_mask(cap: &AdminCap, w: &mut World, rows: vector<u16>, versi
     assert!((rows[i] as u64) < n, EBadEntryIndex);
     i = i + 1;
   };
-  let key = BossMaskKey {};
-  if (df::exists(&w.id, key)) { *df::borrow_mut<BossMaskKey, vector<u16>>(&mut w.id, key) = rows; }
-  else { df::add(&mut w.id, key, rows); };
+  w.boss_mask = rows;
   touched(w);
 }
 
 /// The world's BOSS row indexes — EMPTY when no mask was ever written (the uniform absent ≡ empty rule). Read by
 /// `zone_comp` when it builds the member pick table for a format-3 zone.
 public fun boss_mask(w: &World): vector<u16> {
-  let key = BossMaskKey {};
-  if (df::exists(&w.id, key)) *df::borrow<BossMaskKey, vector<u16>>(&w.id, key) else vector[]
+  w.boss_mask
 }
 
-/// PIN (or clear) the gather-ambush defender for resource `template_id` — a `ProtectorKey → ID` DF on the World
-/// UID (P1-1 live-ops dial; worlds seeded before the pin re-arm through this). `some` UPSERTS the pin; `none`
+/// PIN (or clear) the gather-ambush defender for resource `template_id` — a real `protectors` map entry
+/// (P1-1 live-ops dial; worlds seeded before the pin re-arm through this). `some` UPSERTS the pin; `none`
 /// DISARMS (removes the DF — idempotent: disarming a never-pinned template is a no-op). Cap + version gated,
 /// MIRRORING `set_mob_level` exactly — including its roster-agnostic shape: no row lookup, the key is the
 /// template id (DECLARED change from the retired row-field draft, which aborted `EBadEntryIndex` on a missing
 /// row; the DF door pins by template identity, valid before OR after the row lands).
 public fun set_resource_protector(cap: &AdminCap, w: &mut World, template_id: ID, protector_template: Option<ID>, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let key = ProtectorKey { template: template_id };
   if (protector_template.is_some()) {
     let pid = *protector_template.borrow();
-    if (df::exists(&w.id, key)) { *df::borrow_mut<ProtectorKey, ID>(&mut w.id, key) = pid; }
-    else { df::add(&mut w.id, key, pid); };
-  } else if (df::exists(&w.id, key)) {
-    let _: ID = df::remove(&mut w.id, key);
+    if (w.protectors.contains(&template_id)) { *w.protectors.get_mut(&template_id) = pid; }
+    else { w.protectors.insert(template_id, pid); };
+  } else if (w.protectors.contains(&template_id)) {
+    let (_, _) = w.protectors.remove(&template_id);
   };
   touched(w);
 }
@@ -377,6 +356,7 @@ public fun add_mob_entry(cap: &AdminCap, w: &mut World, template_id: ID, rate_bp
   let hi = clamp_u16(max_group, GROUP_MIN, GROUP_MAX);
   assert!(hi >= lo, EBadRange);
   w.mobs.push_back(MobEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_group: lo, max_group: hi });
+  w.mob_levels.push_back(0); // stays PARALLEL to `mobs`; 0 = unauthored, the dormant default
   touched(w);
 }
 
@@ -407,15 +387,15 @@ public fun clear_tables(cap: &AdminCap, w: &mut World, version: &Version, ctx: &
   w.dungeon_rooms = vector[];
   // the boss mask indexes the mob table BY POSITION — a mask that outlives its table names the wrong species,
   // so retiring the content retires the mask with it (and leaves nothing stranded for `destroy_world`).
-  let key = BossMaskKey {};
-  if (df::exists(&w.id, key)) { let _: vector<u16> = df::remove(&mut w.id, key); };
+  w.boss_mask = vector[];
+  w.mob_levels = vector[]; // parallel to `mobs`, which this call just emptied
   touched(w);
 }
 
 // ╔════════════════ [ Burn / teardown (cap + version gated, unrestricted template deletion) ] ═ ]
 
-/// DRAIN this module's own DYNAMIC-FIELD children — the golden-gather links (`RareLinkKey → ID`), the
-/// distance-difficulty levels (`MobLevelKey → u16`) and the gather-ambush pins (`ProtectorKey → ID`) — for the
+/// DRAIN this module's own link state — the golden-gather links, the distance-difficulty levels and the
+/// gather-ambush pins — for the
 /// given template ids, so a subsequent `destroy_world` strands no storage. IDEMPOTENT (each removal is
 /// `exists`-guarded, tolerating already-drained / never-set keys) and BATCHED: the firing script reads the
 /// world's live dynamic fields off-chain (`getDynamicFields`) and feeds the per-class template-id lists here,
@@ -435,9 +415,9 @@ public fun drain_world_links(
   let mut rare_removed = 0;
   let mut i = 0;
   while (i < rare_templates.length()) {
-    let key = RareLinkKey { template: rare_templates[i] };
-    if (df::exists(&w.id, key)) {
-      let _: ID = df::remove(&mut w.id, key);
+    let t = rare_templates[i];
+    if (w.rare_links.contains(&t)) {
+      let (_, _) = w.rare_links.remove(&t);
       rare_removed = rare_removed + 1;
     };
     i = i + 1;
@@ -445,19 +425,24 @@ public fun drain_world_links(
   let mut levels_removed = 0;
   let mut j = 0;
   while (j < mob_templates.length()) {
-    let key = MobLevelKey { template: mob_templates[j] };
-    if (df::exists(&w.id, key)) {
-      let _: u16 = df::remove(&mut w.id, key);
-      levels_removed = levels_removed + 1;
+    let t = mob_templates[j];
+    let n = w.mobs.length();
+    let mut r = 0;
+    while (r < n) {
+      if (w.mobs[r].template_id == t && w.mob_levels[r] != 0) {
+        *&mut w.mob_levels[r] = 0;
+        levels_removed = levels_removed + 1;
+      };
+      r = r + 1;
     };
     j = j + 1;
   };
   let mut protectors_removed = 0;
   let mut k = 0;
   while (k < protector_templates.length()) {
-    let key = ProtectorKey { template: protector_templates[k] };
-    if (df::exists(&w.id, key)) {
-      let _: ID = df::remove(&mut w.id, key);
+    let t = protector_templates[k];
+    if (w.protectors.contains(&t)) {
+      let (_, _) = w.protectors.remove(&t);
       protectors_removed = protectors_removed + 1;
     };
     k = k + 1;
@@ -502,6 +487,10 @@ public fun destroy_world(cap: &AdminCap, w: World, version: &Version, ctx: &TxCo
     mobs: _,
     dungeon_rooms: _,
     spawn_nonce: _,
+    rare_links: _,
+    mob_levels: _,
+    protectors: _,
+    boss_mask: _,
   } = w;
   event::emit(WorldBurned { world: id.to_inner(), seed, biome });
   object::delete(id);
@@ -559,36 +548,40 @@ public fun dungeon_key_template(w: &World): Option<ID> { w.dungeon_key_template 
 /// The RARE variant linked to base resource `template`, or `none` (no golden-gather jackpot for it). FREE read —
 /// the gather roll and the RPC both consume it; `df::exists` guards the typed borrow.
 public fun rare_link(w: &World, template: ID): Option<ID> {
-  let key = RareLinkKey { template };
-  if (df::exists(&w.id, key)) option::some(*df::borrow<RareLinkKey, ID>(&w.id, key)) else option::none()
+  if (w.rare_links.contains(&template)) option::some(*w.rare_links.get(&template)) else option::none()
 }
 public fun resource_count(w: &World): u64 { w.resources.length() }
 
-/// The pinned gather-ambush defender for resource `template` (a `ProtectorKey → ID` DF read). `none` = never
+/// The pinned gather-ambush defender for resource `template`. `none` = never
 /// ambushes (also the answer for an unknown template — defensive read). FREE read — the gather ambush gate
 /// consumes it; `df::exists` guards the typed borrow, mirroring `rare_link`.
 public fun resource_protector(w: &World, template: ID): Option<ID> {
-  let key = ProtectorKey { template };
-  if (df::exists(&w.id, key)) option::some(*df::borrow<ProtectorKey, ID>(&w.id, key)) else option::none()
+  if (w.protectors.contains(&template)) option::some(*w.protectors.get(&template)) else option::none()
 }
 public fun mob_count(w: &World): u64 { w.mobs.length() }
 
 /// The distance-difficulty eligibility level for mob `template` (its authored `max_level` ceiling), or 0 when
 /// unset (always eligible — feature dormant for that mob). FREE read; `df::exists` guards the typed borrow.
 public fun mob_level(w: &World, template: ID): u16 {
-  let key = MobLevelKey { template };
-  if (df::exists(&w.id, key)) *df::borrow<MobLevelKey, u16>(&w.id, key) else 0
+  let n = w.mobs.length();
+  let mut i = 0;
+  while (i < n) { if (w.mobs[i].template_id == template) return w.mob_levels[i]; i = i + 1; };
+  0
+}
+
+/// Row index of mob `template` in the table — the write half of the parallel `mob_levels` vector.
+fun mob_row_index(w: &World, template: ID): u64 {
+  let n = w.mobs.length();
+  let mut i = 0;
+  while (i < n) { if (w.mobs[i].template_id == template) return i; i = i + 1; };
+  abort EBadEntryIndex
 }
 
 /// The eligibility level of EVERY mob-table row, in table order (PARALLEL to `mobs_snapshot`). `zones` snapshots
 /// this to gate the distance roll without holding `&World` while it also holds the zone-DF `&mut UID`. Derived
 /// from the same `mobs` vector order, so it can never desync from the roster it mirrors.
 public fun mob_levels_snapshot(w: &World): vector<u16> {
-  let n = w.mobs.length();
-  let mut v = vector[];
-  let mut i = 0;
-  while (i < n) { v.push_back(mob_level(w, w.mobs[i].template_id)); i = i + 1; };
-  v
+  w.mob_levels
 }
 public fun room_count(w: &World): u64 { w.dungeon_rooms.length() }
 
