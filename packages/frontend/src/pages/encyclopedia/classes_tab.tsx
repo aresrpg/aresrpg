@@ -6,6 +6,7 @@ import { Sparkles, Heart, ArrowLeft } from 'lucide-react'
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { use_template_t } from '../../i18n/template_t'
+import { use_spell_corpus } from '../../game/data/use_spell_corpus.js'
 import { class_spells, seat_spell_level } from '../../game/screens/hud/fight-spells.js'
 import {
   seed_effect_parts,
@@ -365,6 +366,7 @@ function ClassesTab({
 }) {
   const { t } = useTranslation()
   const tt = use_template_t()
+  const spell_corpus = use_spell_corpus()
 
   const selected_class = useMemo(() => {
     if (!selected_class_id) return null
@@ -374,7 +376,10 @@ function ClassesTab({
   // §14: a class's spell deck is ONLY its minted SpellTemplates — resolved from the on-chain seed manifest by
   // fight-spells.js (each row carries the act_cast SpellTemplate object id + its levels). A class with none
   // minted resolves to [] → the honest "no spells minted" state below, never a seed-invented deck.
-  const spells: any[] = useMemo(() => (selected_class ? class_spells(selected_class.id) : []), [selected_class])
+  const spells: any[] = useMemo(
+    () => (selected_class ? class_spells(selected_class.id) : []),
+    [selected_class, spell_corpus]
+  )
   const [selected_spell_key, set_selected_spell_key] = useState<string | null>(null)
 
   useEffect(() => {
