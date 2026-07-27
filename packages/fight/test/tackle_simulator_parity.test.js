@@ -5,13 +5,12 @@
 // `next_move_tackle` (project.js) is the gate the mounted board obeys before a walk: non-null ⇒ the move is
 // DENIED and both pools forfeit, null ⇒ the walk plays optimistically. It derives the chain's own roll —
 // spell_formula::tackle_seed(fight::turn_seed, casts_this_turn, live mp) → prng::rng_next → escape iff
-// draw % den < num (actions.move:53-61).
+// draw % den < num (actions.move:53-63). The turn seed folds the turn's stamped entropy carrier + ordinal.
 //
 // The SIMULATOR mounts that same board (frontend/src/simulator/FightHud.jsx:41,90 → DungeonBoard.jsx:1021) over
-// the local mock chain, whose snapshot ships world_seed + spawn_id + turn_deadline_ms (sim_chain.js:166-169), so
+// the local mock chain, whose snapshot ships world_seed + spawn_id + turn_entropy + turn_ordinal, so
 // the gate takes its EXACT-PREVIEW branch there. But the mock's RESOLVER is `@aresrpg/sim`'s reducer, whose
-// contest draws off the sim's own sequential PRNG thread instead (fight_actions.js:41-71 `contest_tackle` →
-// `rng_int(state.rng, den)`).
+// contest must receive those same bytes at the same cast slot.
 //
 // Two independent coins for one contest. This gate drives the real mock chain end to end and asserts they are
 // the SAME verdict for every seed: the preview's bite ⇔ the resolver's denial, and the forfeit it announced ⇔

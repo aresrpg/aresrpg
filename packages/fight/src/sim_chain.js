@@ -300,9 +300,16 @@ const active_turn_context = (
   }
 }
 
-/** A capsule command must be JSON-safe while preserving every u64-ish clock byte exactly. */
+// A cast AND a move both resolve off the actor's clock at its live slot — the cast for crit/damage, the move
+// for its tackle escape (#1207) — so both re-derive it at fold time rather than reusing the carried context,
+// whose slot was computed before the previous step's action counter advanced.
+const CLOCKED_COMMANDS = new Set(['cast', 'move'])
+
+/** A capsule command must be JSON-safe while preserving every u64-ish clock byte exactly. A player MOVE carries
+ *  it too (#1207): its tackle escape draws off the clock, so a replay stripped of it re-rolls a different
+ *  contest and decides a different fight. */
 const recorded_command = (chain, command, turn_context) => {
-  if (command.type !== 'cast' || !chain.sim_state.team0.some((entity) => entity.id === command.entity_id))
+  if (!CLOCKED_COMMANDS.has(command.type) || !chain.sim_state.team0.some((entity) => entity.id === command.entity_id))
     return command
   return {
     ...command,
@@ -318,8 +325,9 @@ const recorded_command = (chain, command, turn_context) => {
 }
 
 const fold_command = (chain, command, actions = chain.actions ?? {}) => {
-  const turn_context =
-    command.type === 'cast' ? active_turn_context(chain, chain.sim_state, actions) : chain.ctx.turn_context
+  const turn_context = CLOCKED_COMMANDS.has(command.type)
+    ? active_turn_context(chain, chain.sim_state, actions)
+    : chain.ctx.turn_context
   const { state, events } = reduce(chain.sim_state, command, { ...chain.ctx, turn_context })
   // Production stamps fresh entropy only when `turns::resolve_from` lands on a PLAYER; mobs resolve inside the
   // crank wave. Count those landings directly instead of borrowing sim `turn_number`, which counts rounds and
