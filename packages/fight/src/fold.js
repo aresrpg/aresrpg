@@ -324,10 +324,13 @@ export const recompute = (draft, now) => {
   const committed_entries = []
   for (const entry of authoritative_tail) {
     if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) continue
+    // Keyed EXACTLY as `apply_action` keys the same row (its own `resolve_seat` first) — a ledger that disagreed
+    // with the fold about who moved would track the wrong body's walk.
+    const resolve_seat = entry.resolve_seat ?? resolve_seat_key
     const key =
       entry.kind === 'Displaced'
-        ? fighter_key({ is_mob: entry.target_is_mob, idx: entry.target_idx, resolve_seat: resolve_seat_key })
-        : fighter_key({ is_mob: true, idx: entry.idx, character: entry.character, resolve_seat: resolve_seat_key })
+        ? fighter_key({ is_mob: entry.target_is_mob, idx: entry.target_idx, resolve_seat })
+        : fighter_key({ is_mob: entry.kind === 'MobMoved', idx: entry.idx, character: entry.character, resolve_seat })
     const to = Number(entry.to_cell)
     const from = cell_at.get(key)
     const version = Number(entry.version)
