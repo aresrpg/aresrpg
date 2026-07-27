@@ -230,14 +230,10 @@ const assert_status = (index, action, before, after) => {
 }
 
 /**
- * A TRAP HAS NO PLACEMENT OBSERVABLE for a seam-committed cast — also measured. `my_traps` is the client's
- * LOCAL durable ledger (fold.js: "the local-only durable trap ledger") and its ONLY writer is the board's
- * OPTIMISTIC draft path (DungeonBoard `optimistic_cast` → `input({ type:'predicted', place_traps })`); the
- * receipt carries no trap row, so a trap committed through the seam is invisible client-side even though the
- * sim holds it (proven: the sim then REFUSED a second trap on the same cell — the authority knew, the client
- * did not). So placement asserts what the authority itself answered — it accepted a `free_cell` cast the sim
- * gates on occupancy, terrain AND a live trap — and the trap's REAL proof is deferred to `assert_traps_sprung`
- * below, which watches for the detonation.
+ * The receipt has no placement row, so the seam banks the board's own prediction before commit and, after success,
+ * re-enters its trap payload through the SAME `predicted` reducer input as an optimistic board cast. This assertion
+ * still checks the authority's acceptance rather than sampling `my_traps`: a mob may enter and consume the trap in
+ * the same committed turn. The durable proof remains `assert_traps_sprung` below, which watches that entry.
  */
 const assert_trap = (index, action, before, after) => {
   const at = action.expect.cell

@@ -809,7 +809,8 @@ const make_input =
         const base_version = Math.max(1, Number(msg.basis_version ?? state.applied_version + 1))
         const actor = settle_input.actor_from_key(state.my_key)
         const resolve_seat = msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view)
-        let projected = presented_state(state)
+        const before_prediction = presented_state(state)
+        let projected = before_prediction
         const actions = (msg.actions ?? []).map((raw, i) => {
           const action = normalize_intent(raw, {
             version: raw.version ?? base_version,
@@ -876,9 +877,42 @@ const make_input =
           // stores flat cells (the projection/drop-path read them raw) + the trap's shared detonation payload.
           // Recorded at dispatch so the force-stop is live THIS frame; the flush-drop path removes it if uncommitted.
           const place_traps = Array.isArray(msg.place_traps) ? msg.place_traps : []
-          const trap_cells = place_traps.map((e) => (e != null && typeof e === 'object' ? e.cell : e))
+          const trap_cells = [
+            ...new Set(
+              place_traps
+                .map((entry) => (entry != null && typeof entry === 'object' ? entry.cell : entry))
+                .map(Number)
+                .filter(Number.isFinite)
+            ),
+          ]
           const trap_payload =
             place_traps.map((e) => (e != null && typeof e === 'object' ? e.payload : null)).find((p) => p?.length) ?? []
+          const trap_cell_set = new Set(trap_cells.map(Number))
+          const placement_cast = [...actions]
+            .reverse()
+            .find((action) => action.kind === 'Cast' && trap_cell_set.has(Number(action.target_cell)))
+          const anchor_value = Number(msg.trap_anchor ?? placement_cast?.target_cell)
+          const anchor = Number.isFinite(anchor_value) ? anchor_value : null
+          const placed_at_input = msg.placed_at ?? placement_cast
+          const placed_at = {
+            version: Number(placed_at_input?.version ?? base_version),
+            event_idx: Number(placed_at_input?.event_idx ?? Number.MAX_SAFE_INTEGER),
+          }
+          // #1047: an AoE may be placed around fighters who are already inside it. Remember their exact
+          // fighter+cell pairs at the reducer door so the projection can paint the WHOLE new footprint without
+          // mistaking stationary occupancy for entry. Moving to any other zone cell is still a fresh entry.
+          const occupant_rows = Array.isArray(msg.placement_occupants)
+            ? msg.placement_occupants
+            : Object.entries(before_prediction.fighters ?? {})
+                .filter(([, fighter]) => fighter.alive !== false && trap_cell_set.has(Number(fighter.cell)))
+                .map(([key, fighter]) => ({ key, cell: Number(fighter.cell) }))
+          const placement_occupants = [
+            ...new Map(
+              occupant_rows
+                .filter(({ key, cell }) => key != null && Number.isFinite(Number(cell)))
+                .map(({ key, cell }) => [`${String(key)}:${Number(cell)}`, { key: String(key), cell: Number(cell) }])
+            ).values(),
+          ]
           const my_traps = trap_cells.length
             ? [
                 ...s.my_traps,
@@ -893,6 +927,9 @@ const make_input =
                   cells: trap_cells,
                   gone: false,
                   payload: trap_payload,
+                  anchor,
+                  placed_at,
+                  placement_occupants,
                 },
               ]
             : s.my_traps

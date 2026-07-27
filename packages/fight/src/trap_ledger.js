@@ -51,7 +51,44 @@ const committed_entries_of = ({ authoritative_tail, base, view }) => {
   return committed_entries
 }
 
+const movement_fighter_key = (entry) => {
+  if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind)) return null
+  if (entry.kind === 'Displaced')
+    return fighter_key({
+      is_mob: entry.target_is_mob,
+      idx: entry.target_idx,
+      resolve_seat: entry.resolve_seat,
+    })
+  return fighter_key({
+    is_mob: entry.kind === 'MobMoved',
+    idx: entry.idx,
+    character: entry.character,
+    resolve_seat: entry.resolve_seat,
+  })
+}
+
+const after_placement = (entry, placed_at) =>
+  Number(entry.version) > Number(placed_at.version) ||
+  (Number(entry.version) === Number(placed_at.version) && Number(entry.event_idx) > Number(placed_at.event_idx))
+
+/**
+ * Placement occupants are exempt only while they have no later optimistic movement row. Deriving that fact from
+ * the live log keeps it reversible: rolling a prediction back removes the row and restores the exemption.
+ */
+export const stationary_placement_occupants = (trap, entries) => {
+  const occupants = trap?.placement_occupants ?? []
+  if (!occupants.length || !trap?.placed_at) return occupants
+  const moved = new Set(
+    Object.values(entries ?? {})
+      .filter((entry) => entry.source === 'intent' && after_placement(entry, trap.placed_at))
+      .map(movement_fighter_key)
+      .filter(Boolean)
+  )
+  return occupants.filter(({ key }) => !moved.has(String(key)))
+}
+
 const trap_anchor = (placements, trap) => {
+  if (trap.anchor != null) return Number(trap.anchor)
   const anchor = (trap.cells ?? []).find((cell) => placements.has(Number(cell)))
   return anchor == null ? null : Number(anchor)
 }

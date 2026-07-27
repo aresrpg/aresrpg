@@ -84,7 +84,7 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
     const fold = seam.slice(fold_start, seam.indexOf('/** Capture the store', fold_start))
     const turn = seam.slice(turn_start, seam.indexOf('async function dev_place'))
 
-    expect(bank).toContain('place_traps: prediction?.placed_traps ?? []')
+    expect(bank).toContain('const place_traps = prediction?.placed_traps ?? []')
     expect(fold).toContain("type: 'predicted'")
     expect(fold).toContain('actions: []')
     expect(fold).toContain('basis_version: core.applied_version')

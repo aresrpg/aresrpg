@@ -30,6 +30,7 @@ import {
   fight_store,
 } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
+import { stationary_placement_occupants } from './trap_ledger.js'
 
 // THE COMMITTED-TRUTH SOURCE lives at the store's door (`store.committed_truth` — the headless core's fold plus
 // the append-only death floor, both store atoms). Re-exported here because the board reads it through this
@@ -509,31 +510,42 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
   const active_entity_id = entity_id_of_key(view, p.active)
   // ④+⑦b THE LIVE trap projection (ruled 07-19) — the sim door reads THIS (state_from_view/evolve_flush_casts),
-  // never trap_overlay. A durable `my_traps` cell is LIVE unless it's `gone` (a committed fighter detonated it —
-  // permanent) OR currently under a living PRESENTED fighter (the optimistic spring — immediate + reversible if
-  // the prediction rolls back). Encoded cells, deduped.
-  const trap_occupied = new Set(
-    Object.values(p.fighters ?? {})
-      .filter((f) => f.alive && f.cell != null)
-      .map((f) => f.cell)
-  )
+  // never trap_overlay. A durable trap is LIVE unless it's `gone` (a committed entry detonated it permanently)
+  // or a living PRESENTED fighter entered its zone after placement (the optimistic spring — reversible if the
+  // prediction rolls back). #1047: fighters already inside an AoE when it is placed are not entries. The reducer
+  // records their exact fighter+cell pairs, so stationary occupants preserve the WHOLE painted footprint while
+  // moving onto any other zone cell springs the whole trap immediately.
+  const projected_fighters = Object.entries(p.fighters ?? {})
+  const live_traps = (s.my_traps ?? []).filter((trap) => {
+    if (trap.gone) return false
+    const cells = new Set((trap.cells ?? []).map(Number).filter(Number.isFinite))
+    const placement_occupants = new Set(
+      stationary_placement_occupants(trap, s.entries).map(({ key, cell }) => `${String(key)}:${Number(cell)}`)
+    )
+    return !projected_fighters.some(
+      ([key, fighter]) =>
+        fighter.alive &&
+        fighter.cell != null &&
+        cells.has(Number(fighter.cell)) &&
+        !placement_occupants.has(`${String(key)}:${Number(fighter.cell)}`)
+    )
+  })
   const my_trap_cells = [
     ...new Set(
-      (s.my_traps ?? [])
-        .filter((t) => !t.gone)
-        .flatMap((t) => t.cells ?? [])
-        .filter((c) => !trap_occupied.has(c))
+      live_traps
+        .flatMap((trap) => trap.cells ?? [])
+        .map(Number)
+        .filter(Number.isFinite)
     ),
   ]
   // ① each LIVE trap cell → its detonation payload, so the sim door rebuilds the trap WITH damage (not payload:[]).
-  // Same live-cell predicate as my_trap_cells (non-gone, not presented-occupied); first record wins a shared cell.
+  // Same live-trap predicate as my_trap_cells; first record wins a shared cell.
   // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.
   const my_trap_payloads = {}
-  for (const t of s.my_traps ?? []) {
-    if (t.gone) continue
-    for (const c of t.cells ?? []) {
-      if (trap_occupied.has(c) || c in my_trap_payloads) continue
-      my_trap_payloads[c] = t.payload ?? []
+  for (const trap of live_traps) {
+    for (const cell of [...new Set((trap.cells ?? []).map(Number).filter(Number.isFinite))]) {
+      if (cell in my_trap_payloads) continue
+      my_trap_payloads[cell] = trap.payload ?? []
     }
   }
   // THE LIVE glyph zone projection — every non-gone glyph's full AoE, deduped (the render paints these as the

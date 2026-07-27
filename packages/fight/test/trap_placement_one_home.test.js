@@ -22,6 +22,8 @@
 
 import { describe, expect, test } from 'bun:test'
 
+import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+
 import { create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
 import { produce_receipt_render_turns } from '../src/fight_render_events.js'
@@ -152,27 +154,102 @@ describe('#1248 — the placement selector', () => {
 // the entire record gone during the placement input itself, leaving engine_view.my_traps empty and the world board
 // with literally nothing to paint.
 describe('#1047 — a stationary fighter inside a newly placed AoE does not consume it', () => {
-  test('the free cells stay armed and paintable when the caster already occupies another zone cell', () => {
+  const AOE_ANCHOR_XY = { x: 7, y: 5 }
+  const AOE_ANCHOR = enc(AOE_ANCHOR_XY.x, AOE_ANCHOR_XY.y)
+  const INSIDE_MOB = enc(7, 4)
+  const OUTSIDE = enc(4, 5)
+  const ZONE = get_aoe_cells({ area_type: 'CIRCLE', area: 2 }, AOE_ANCHOR_XY).map(({ x, y }) => enc(x, y))
+  const PAYLOAD = [{ kind: 3, value: 7 }]
+
+  const place_occupied_zone = () => {
     const store = create_fight_store()
-    const zone = [X, START, enc(8, 4)]
     store
       .getState()
       .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: W } } })
-    store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 }, 1_000)
+    store.getState().input(
+      {
+        type: 'snapshot',
+        fight: {
+          ...FIGHT_OBJECT,
+          mobs: [{ ...FIGHT_OBJECT.mobs[0], cell: INSIDE_MOB }],
+        },
+        version: 5,
+      },
+      1_000
+    )
     store.getState().input(
       {
         type: 'predicted',
         basis_version: 6,
         intent_id: 'aoe-occupied',
-        actions: [{ kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: X, ap_cost: 2 }],
+        actions: [{ kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: AOE_ANCHOR, ap_cost: 2 }],
         beats: [{ kind: 'cast', at: 0, duration: 100, payload: {} }],
-        place_traps: zone,
+        // A mixed numeric/string duplicate proves the reducer normalizes to one blob per encoded cell.
+        place_traps: [...ZONE.map((cell) => ({ cell, payload: PAYLOAD })), { cell: String(ZONE[0]), payload: PAYLOAD }],
       },
       1_100
     )
+    return store
+  }
 
-    expect(store.getState().my_traps).toMatchObject([{ cells: zone, gone: false }])
-    expect(engine_view(store.getState()).my_traps).toEqual([X, enc(8, 4)])
+  test('the whole footprint stays paintable under the stationary caster and mob', () => {
+    const store = place_occupied_zone()
+    const view = engine_view(store.getState())
+
+    expect(ZONE).toHaveLength(13)
+    expect(store.getState().my_traps).toMatchObject([{ anchor: AOE_ANCHOR, cells: ZONE, gone: false }])
+    expect(view.my_traps).toEqual(ZONE)
+    expect(new Set(view.my_traps).size).toBe(13)
+    expect(
+      Object.keys(view.my_trap_payloads)
+        .map(Number)
+        .sort((a, b) => a - b)
+    ).toEqual([...ZONE].sort((a, b) => a - b))
+    expect(Object.values(view.my_trap_payloads).every((payload) => payload === PAYLOAD)).toBe(true)
+  })
+
+  test('moving onto another zone cell after placement still springs the whole footprint optimistically', () => {
+    const store = place_occupied_zone()
+    store.getState().input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: X, mp_left: 2 } }, 1_200)
+
+    expect(store.getState().my_traps).toMatchObject([{ cells: ZONE, gone: false }])
+    expect(engine_view(store.getState()).my_traps).toEqual([])
+  })
+
+  test('leaving and entering the original occupied cell anew springs the trap', () => {
+    const store = place_occupied_zone()
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: OUTSIDE, mp_left: 2 } }, 1_200)
+    expect(engine_view(store.getState()).my_traps).toEqual(ZONE)
+
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START, mp_left: 1 } }, 1_300)
+    expect(engine_view(store.getState()).my_traps).toEqual([])
+  })
+
+  test('the full footprint survives confirmation when nobody entered after placement', () => {
+    const store = place_occupied_zone()
+    store.getState().input(
+      {
+        type: 'receipt',
+        version: 7,
+        receipt: {
+          events: [
+            ev('Cast', {
+              caster_is_mob: false,
+              caster_idx: 0,
+              target_cell: AOE_ANCHOR,
+            }),
+          ],
+        },
+      },
+      1_200
+    )
+    for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, 1_300)
+
+    expect(engine_view(store.getState()).my_traps).toEqual(ZONE)
   })
 })
 

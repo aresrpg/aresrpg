@@ -297,10 +297,21 @@ const bank_predictions = (actions) => {
         remaining_hp: Number(row.remaining_hp),
       }))
       .filter((row) => !!row.id)
+    const place_traps = prediction?.placed_traps ?? []
+    const trap_cells = new Set(place_traps.map((trap) => Number(trap?.cell)).filter(Number.isFinite))
+    const placement_occupants = [...view.fighters.entries()]
+      .map(([id, fighter]) => {
+        const ref = resolve_ref(id)
+        const cell = fighter?.cell == null ? null : encode(fighter.cell.x, fighter.cell.y)
+        return ref && cell != null ? { key: `${ref.is_mob ? 'm' : 'p'}${ref.idx}`, cell } : null
+      })
+      .filter((row) => row && trap_cells.has(row.cell))
     rows.push({
       ...banked,
       hp,
-      place_traps: prediction?.placed_traps ?? [],
+      place_traps,
+      trap_anchor: target_cell,
+      placement_occupants,
       unresolved: [...banked.unresolved, ...(prediction?.unresolved ?? [])],
     })
   }
@@ -323,6 +334,9 @@ const fold_committed_traps = (predicted) => {
       basis_version: core.applied_version,
       actions: [],
       place_traps,
+      trap_anchor: row.trap_anchor,
+      placed_at: { version: core.applied_version, event_idx: Number.MAX_SAFE_INTEGER },
+      placement_occupants: row.placement_occupants,
     })
   }
 }
