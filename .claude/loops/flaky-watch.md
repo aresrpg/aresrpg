@@ -28,6 +28,7 @@
    can see.
 
 ## Output contract
+- **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.
 - One issue per newly detected flake (`flaky` label), reproduction command + observed failure
   rate in the body.
 - Never auto-fixes, never auto-skips, never auto-quarantines without the issue existing first.

@@ -26,6 +26,7 @@ counter is rule 3 below: every ADR must be checked against the CODE, not against
    That finding outranks everything else in the report.
 
 ## Output contract
+- **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.
 - One comment on the standing ADR-review issue: per-rubric verdicts with cites.
 - Drift findings → issues labeled `adr` + `tech-debt`.
 - Contradictions/dead ADRs → draft superseding ADRs as PRs (status: proposed — a human accepts).

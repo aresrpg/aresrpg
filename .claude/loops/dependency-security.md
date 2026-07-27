@@ -34,6 +34,7 @@ found in this repo's own code — that goes through the private security advisor
    non-reachability proof) in the alert's own dismiss reason, never a silent close.
 
 ## Output contract
+- **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.
 - One issue per boarded alert (`security`, `dependencies` labels), version + reachability
   evidence in the body.
 - Dismissals recorded on the alert itself, evidence-first — never silent.

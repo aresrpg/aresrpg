@@ -28,6 +28,7 @@ evidence about whether each loop still touches reality (its anchor), not whether
    two cycles is either mis-targeted or theater — retune it or propose its deletion.
 
 ## Output contract
+- **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.
 - One comment on the standing meta-audit issue: per-loop verdict (grounded / circling / gamed /
   theater) with evidence.
 - New invariants/fixtures from rubric 4 → issues labeled `anchor`.

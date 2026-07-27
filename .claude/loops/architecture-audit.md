@@ -34,6 +34,7 @@ landings first.
 7. **The uncomfortable half:** what in this diff would its author least want examined? Examine it.
 
 ## Output contract (GitHub artifacts, nothing else)
+- **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.
 - One issue comment per audit on the standing `loop:conscience`-adjacent audit issue — verdict
   per rubric item, `file:line` cites, severity-ordered.
 - Concrete violations → their own issues (labels: `tech-debt` or `bug`, `area:*`, priority).

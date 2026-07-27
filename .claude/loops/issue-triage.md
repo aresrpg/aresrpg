@@ -28,6 +28,7 @@ list — never last run's memory of it.
    starter task, or has the surrounding code moved out from under it since it was applied?
 
 ## Output contract
+- **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.
 - Label changes and comments only — this loop never pushes code, never closes without a reason
   comment.
 - Anything ambiguous (is this really a duplicate? really stale?) gets a comment proposing the
