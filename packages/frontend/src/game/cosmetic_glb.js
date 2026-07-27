@@ -57,20 +57,37 @@ export const MOUNT_TABLE = {
 }
 export const MOUNT_FALLBACK_H = 1.6 // unknown ids ride at a sane mid-quadruped height
 
+// FLIGHT MOUNTS — ridden ONLY in the air (the fast-travel dragons: the pilot spawns one at takeoff and
+// disposes it on touchdown, so every frame of their rig's life is airborne). The one thing this changes is
+// the animation loop mount_rig.js picks: a flight mount prefers its fly/flap/wing clip over a walk/run gait,
+// where a ground mount keeps preferring the gait. Keyed by the same file stem as MOUNT_TABLE.
+const FLIGHT_MOUNTS = new Set(['dragon-fire', 'dragon-frost', 'dragon-void'])
+
+/** The MOUNT_TABLE key a mount GLB URL resolves to — its file stem, lowercased (`.../pet/corbac.glb` and
+ *  `${ASSETS_URL}/cosmetics/corbac.glb?v=2` both resolve 'corbac'). @param {string | null | undefined} glb_url */
+const mount_stem = (glb_url) =>
+  String(glb_url ?? '')
+    .split(/[?#]/)[0]
+    ?.split('/')
+    .pop()
+    ?.replace(/\.glb$/i, '')
+    .toLowerCase() ?? ''
+
 /**
- * Target world height (blocks) for a mount GLB — keyed by the URL's file stem (`.../pet/corbac.glb` and
- * `${ASSETS_URL}/cosmetics/corbac.glb` both resolve 'corbac'); unknown stems fall back to MOUNT_FALLBACK_H.
+ * Target world height (blocks) for a mount GLB — keyed by the URL's file stem; unknown stems fall back to
+ * MOUNT_FALLBACK_H.
  * @param {string | null | undefined} glb_url @returns {number}
  */
 export function mount_target_height(glb_url) {
-  const stem =
-    String(glb_url ?? '')
-      .split(/[?#]/)[0]
-      ?.split('/')
-      .pop()
-      ?.replace(/\.glb$/i, '')
-      .toLowerCase() ?? ''
-  return MOUNT_TABLE[stem] ?? MOUNT_FALLBACK_H
+  return MOUNT_TABLE[mount_stem(glb_url)] ?? MOUNT_FALLBACK_H
+}
+
+/**
+ * Is this mount GLB ridden in the air? Unknown stems are ground mounts. @param {string | null | undefined}
+ * glb_url @returns {boolean}
+ */
+export function mount_is_flight(glb_url) {
+  return FLIGHT_MOUNTS.has(mount_stem(glb_url))
 }
 
 /**

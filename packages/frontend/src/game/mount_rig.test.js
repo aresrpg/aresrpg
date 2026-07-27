@@ -58,31 +58,62 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pick_mount_clips — idle/move nami
 // GROUND TRUTH (#370 — "kill the regex guessing, pin the real name in a test with the clip list cited as
 // fixture data"). Every test above uses INVENTED clip names ("Flap", "Wing", "TPose"…) never verified against a
 // real GLB — exactly the gap #370 calls out. This fixture is the ACTUAL clip list of the fast-travel dragon's
-// GLBs, fetched from the production CDN URL ft_dragon_glb_url() derives (walrus_asset_url('mob', file) → the
-// published asset_manifest.json's 'mob' quilt) and enumerated from each GLB's own JSON chunk
+// GLBs, fetched from the production CDN URL ft_dragon_glb_url() derives (walrus_asset_url('mob', file) →
+// `https://assets.aresrpg.world/models/mobs/<file>`) and enumerated from each GLB's own JSON chunk
 // (`animations[].name` — a raw glTF-binary chunk read, not three.js's GLTFLoader, which needs a DOM):
-//   dragon-fire.glb  (production default skin) — https://cdn.aresrpg.world/walrus/v1/blobs/by-quilt-id/
-//     BxyR4mkAgTQ2s3NBytTar_Skzhec5vTP8gmkEt3aTDk/dragon-fire.glb — 1,147,800 bytes, fetched 2026-07-22 —
-//     animations: ["IDLE", "RUN"]
-//   dragon-frost.glb (DEV-only ?ftdragon=frost preview) — same quilt, dragon-frost.glb — 1,554,648 bytes —
+//   dragon-fire.glb  (production default skin, SADDLED variant) — https://assets.aresrpg.world/models/mobs/
+//     dragon-fire.glb — 521,332 bytes, sha256
+//     d7a4a93b0b4a89a64f14fe1af219cbe0cdf9444d0ae0ba85c8deec1090e2471e, fetched 2026-07-28 — animations:
+//     ["idle", "walk", "idle_once", "fly", "fireball_air", "fireball_ground", "fireflame_air",
+//     "fireflame_ground", "bite", "grab", "wing_swing", "falling", "death_ground", "death_fall"]
+//     (a Cloudflare edge in front of this key ignores cache-busting QUERY strings — it served the previous
+//     bytes for a fresh `?v=` URL; `Cache-Control: no-cache` is what actually reaches origin. The sha is the
+//     anchor, never the URL.)
+//   dragon-frost.glb (DEV-only ?ftdragon=frost preview) — .../dragon-frost.glb — 1,554,648 bytes —
 //     animations: ["IDLE", "RUN", "ATTACK"]
-//   dragon-void.glb  (DEV-only ?ftdragon=void preview)  — same quilt, dragon-void.glb  — 1,077,592 bytes —
+//   dragon-void.glb  (DEV-only ?ftdragon=void preview)  — .../dragon-void.glb  — 1,077,592 bytes —
 //     animations: [] (ZERO clips)
-// NONE of the three ships a fly/flap/wing clip — content follow-up needed (a real flight loop doesn't exist
-// yet). RUN is the best available loop for all skins that have one: a cyclic locomotion clip beats a static
-// IDLE for a mount that's supposed to read as airborne and moving; dragon-void's empty list already falls
-// through the empty-list case proven above (idle=null, move=null — the rig still renders, just unanimated).
-const DRAGON_FIRE_GLB_CLIPS = [clip('IDLE'), clip('RUN')]
+// LINEAGE (2026-07-28): dragon-fire.glb was RE-AUTHORED under the same key — the capture above REPLACES the
+// 2026-07-22 one (1,147,800 bytes, animations ["IDLE", "RUN"]). That old model had no flight loop at all, so
+// RUN drove the flight animation as a documented stopgap; the new model ships a real 1.3s `fly` loop, and
+// mount_is_flight('dragon-fire') makes it win the move slot. frost/void are byte-identical to the 07-22
+// capture: frost still flies on RUN (no fly clip to prefer), and void's empty list falls through the
+// empty-list case proven above (idle=null, move=null — the rig still renders, just unanimated).
+const DRAGON_FIRE_GLB_CLIPS = [
+  'idle',
+  'walk',
+  'idle_once',
+  'fly',
+  'fireball_air',
+  'fireball_ground',
+  'fireflame_air',
+  'fireflame_ground',
+  'bite',
+  'grab',
+  'wing_swing',
+  'falling',
+  'death_ground',
+  'death_fall',
+].map(clip)
 const DRAGON_FROST_GLB_CLIPS = [clip('IDLE'), clip('RUN'), clip('ATTACK')]
 
 describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pick_mount_clips — REAL dragon GLB clip lists (#370 ground truth)', () => {
-  test('dragon-fire.glb (production default skin): RUN drives the flight loop — no fly clip exists in the real GLB', () => {
-    const { idle, move } = pick_mount_clips(DRAGON_FIRE_GLB_CLIPS)
-    expect(idle?.name).toBe('IDLE')
-    expect(move?.name).toBe('RUN')
+  test('dragon-fire.glb (production default skin): the real `fly` clip drives the flight loop, not walk', () => {
+    const { idle, move } = pick_mount_clips(DRAGON_FIRE_GLB_CLIPS, { flight: true })
+    expect(idle?.name).toBe('idle')
+    expect(move?.name).toBe('fly')
   })
-  test('dragon-frost.glb (DEV preview skin): the extra ATTACK clip never wins the move/flight slot', () => {
-    const { idle, move } = pick_mount_clips(DRAGON_FROST_GLB_CLIPS)
+  test('dragon-fire.glb: no combat/death/wing_swing clip can win a slot (14 clips, only 2 are locomotion)', () => {
+    const { idle, move } = pick_mount_clips(DRAGON_FIRE_GLB_CLIPS, { flight: true })
+    expect(['idle', 'fly']).toContain(idle?.name)
+    expect(['idle', 'fly']).toContain(move?.name)
+  })
+  test('dragon-fire.glb ridden as a GROUND mount would still walk — flight only flips the preference', () => {
+    const { move } = pick_mount_clips(DRAGON_FIRE_GLB_CLIPS)
+    expect(move?.name).toBe('walk')
+  })
+  test('dragon-frost.glb (DEV preview skin): no fly clip, so RUN still flies it; ATTACK never wins a slot', () => {
+    const { idle, move } = pick_mount_clips(DRAGON_FROST_GLB_CLIPS, { flight: true })
     expect(idle?.name).toBe('IDLE')
     expect(move?.name).toBe('RUN')
   })

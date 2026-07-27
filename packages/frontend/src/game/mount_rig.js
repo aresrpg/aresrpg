@@ -16,7 +16,7 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
 import { canonical_walrus_asset_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
 
-import { mount_target_height } from './cosmetic_glb.js'
+import { mount_is_flight, mount_target_height } from './cosmetic_glb.js'
 import { game_log } from '../core/log.js'
 
 const SEAT_LIFT = 0.8 // fraction of the mount's height the rider sits at (bbox top of the back ≈ ×0.8)
@@ -58,17 +58,21 @@ export function preload_mount_glb(glb_url) {
   if (source_url) load_glb(source_url).catch(() => {})
 }
 
-/** Pick the idle/move clip PAIR by name convention. Ground rigs: run/walk/move/hop/gallop. Flight rigs:
- *  fly/flap/wing (the sky_dragon.js ambient dragon's own proven vocabulary — #175: mount_rig's old
+/** Pick the idle/move clip PAIR by name convention. Ground vocabulary: run/walk/move/hop/gallop. Flight
+ *  vocabulary: fly/flap/wing (the sky_dragon.js ambient dragon's own proven names — #175: mount_rig's old
  *  fly-only fallback missed a plain "Flap"/"Wing" clip name, silently falling through to the fragile
- *  clips[1] positional guess). Pure — no mixer, no GLB — so the convention is unit-testable without a rig.
- *  @param {{name:string}[]} clips @returns {{ idle: {name:string}|null, move: {name:string}|null }} */
-export function pick_mount_clips(clips) {
+ *  clips[1] positional guess). `flight` (cosmetic_glb's mount_is_flight — a dragon is ridden airborne only)
+ *  flips which vocabulary wins when a model ships BOTH: the 2026-07-28 dragon-fire re-author added a real
+ *  `fly` loop next to its `walk`, and a flying dragon must not run in mid-air. Either way the other
+ *  vocabulary is still the fallback, so a flight mount with no fly clip keeps its gait (dragon-frost) and a
+ *  ground mount whose only loop is a hover keeps working (corbac). Pure — no mixer, no GLB.
+ *  @param {{name:string}[]} clips @param {{ flight?: boolean }} [opts]
+ *  @returns {{ idle: {name:string}|null, move: {name:string}|null }} */
+export function pick_mount_clips(clips, { flight = false } = {}) {
   const idle = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0] ?? null
-  const move =
-    clips.find((/** @type {any} */ c) => /run|walk|move|hop|gallop/i.test(c.name)) ??
-    clips.find((/** @type {any} */ c) => /fly|flap|wing/i.test(c.name)) ??
-    (clips.length > 1 ? clips[1] : null)
+  const gait = clips.find((/** @type {any} */ c) => /run|walk|move|hop|gallop/i.test(c.name)) ?? null
+  const air = clips.find((/** @type {any} */ c) => /fly|flap|wing/i.test(c.name)) ?? null
+  const move = (flight ? [air, gait] : [gait, air]).find(Boolean) ?? (clips.length > 1 ? clips[1] : null)
   return { idle, move: move && move !== idle ? move : null }
 }
 
@@ -119,10 +123,12 @@ export function create_mount_rig({ engine, glb_url }) {
       root.visible = want_visible
       const mixer = new AnimationMixer(root)
       const clips = gltf.animations ?? []
-      // GROUND clips before FLY: a bird mount's fly loop carries baked altitude — never pick it while a
-      // walk/run exists. (corbac ships idle+walk only, but its "walk" IS a hover — the root-Y pin below is
-      // the guarantee either way.) pick_mount_clips is the pure, unit-tested naming convention (#175).
-      const { idle: idle_clip, move: move_clip } = pick_mount_clips(clips)
+      // GROUND clips before FLY for a walking mount: a bird's fly loop carries baked altitude — never pick
+      // it while a walk/run exists. (corbac ships idle+walk only, but its "walk" IS a hover — the root-Y pin
+      // below is the guarantee either way.) A FLIGHT mount (cosmetic_glb's mount_is_flight — the fast-travel
+      // dragons, airborne for their rig's whole life) inverts that: its fly loop is the ride.
+      // pick_mount_clips is the pure, unit-tested naming convention (#175).
+      const { idle: idle_clip, move: move_clip } = pick_mount_clips(clips, { flight: mount_is_flight(source_url) })
       const idle = idle_clip ? mixer.clipAction(idle_clip) : null
       const move = move_clip ? mixer.clipAction(move_clip) : null
       idle?.play()

@@ -324,6 +324,26 @@ describe('resolve_worn_cosmetics — ?equip dev override (js/remote-property-inj
   })
 })
 
+// The rig reads "is this mount ridden airborne" from the MODEL (here, one home with the world-height table),
+// not from live flight state — so BOTH rider paths get it: the local pilot's dragon (embed_voxel_player's
+// mount_dragon) and a peer's dragon rebuilt from the p2p `mount_glb` broadcast (remote_players), which
+// carries no flight flag at all. mount_rig.js turns it into the fly-clip preference (see its #370 fixture).
+describe('mount_is_flight — which mounts are ridden in the air', () => {
+  test('every fast-travel dragon skin is a flight mount, whatever URL shape it arrives in', async () => {
+    const { mount_is_flight } = await import('./cosmetic_glb.js')
+    expect(mount_is_flight('https://assets.aresrpg.world/models/mobs/dragon-fire.glb')).toBe(true)
+    expect(mount_is_flight('/sprites/mobs/models/dragon-frost.glb?v=2')).toBe(true)
+    expect(mount_is_flight('/models/pet/DRAGON-VOID.GLB')).toBe(true)
+  })
+  test('ground mounts, unknown models and empty ids are not flight mounts', async () => {
+    const { mount_is_flight } = await import('./cosmetic_glb.js')
+    expect(mount_is_flight('/models/pet/corbac.glb')).toBe(false)
+    expect(mount_is_flight('/cosmetics/mystery_mount.glb')).toBe(false)
+    expect(mount_is_flight('')).toBe(false)
+    expect(mount_is_flight(null)).toBe(false)
+  })
+})
+
 describe('mount_target_height — per-mount world-size normalisation table', () => {
   test('resolves the file stem from any URL shape (dev models path, cosmetics CDN, query)', async () => {
     const { mount_target_height, MOUNT_TABLE } = await import('./cosmetic_glb.js')
