@@ -9,25 +9,29 @@
 // defect and asserts the verdict flips, per the project's RED-FIRST law.
 import { describe, expect, test } from 'bun:test'
 
+import { encode_effect_value } from '../../packages/move/scripts/spell_wire.mjs'
+
 import { diff_corpus } from './mint_readback.mjs'
 
 const KIND_PHASE = { 20: 1, 21: 1 }
 const clone = (value) => JSON.parse(JSON.stringify(value))
 
-// The mint's documented transform (seed_spells_phase.mjs effectFx), reproduced so a faithful chain object is
-// exactly mint(seed) — the diff must then find zero transform-drift.
+// The mint's documented transform (seed_spells_phase.mjs effectFx, now spell_wire.mjs's encode_effect_value —
+// #1250), reproduced so a faithful chain object is exactly mint(seed) — the diff must then find zero
+// transform-drift.
 function mint_effect(effect) {
+  const { value, flags } = encode_effect_value(effect.kind ?? 0, effect.value ?? 0, effect.flags ?? 0)
   return {
     kind: effect.kind ?? 0,
     element: effect.element ?? 255,
-    value: Math.abs(effect.value ?? 0),
+    value,
     area_shape: effect.area_shape ?? 0,
     area_size: effect.area_size ?? 0,
     target_filter: effect.target_filter ?? 0,
     chance: effect.chance ?? 100,
     turns: effect.turns ?? 0,
     stat: effect.stat ?? 0,
-    flags: effect.flags ?? 0,
+    flags,
     phase: KIND_PHASE[effect.kind] ?? 0,
   }
 }

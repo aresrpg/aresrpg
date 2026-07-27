@@ -73,6 +73,19 @@ jobs:
           for manifest in packages/move/*/Move.toml; do
             sui move build --path "$(dirname "$manifest")"
           done
+      - name: test Move packages (#1242 — 1100+ Move tests now gate, not just build)
+        # fail-fast OFF by hand (no `set -e`): every package's suite must report, one red package must
+        # never hide another. `overall` latches the worst exit code across the loop.
+        run: |
+          set -uo pipefail
+          overall=0
+          for manifest in packages/move/*/Move.toml; do
+            dir="$(dirname "$manifest")"
+            echo "::group::sui move test — $dir"
+            sui move test --path "$dir" || overall=1
+            echo "::endgroup::"
+          done
+          exit "$overall"
       - name: enforcement ladder — bun run lint
         run: bun run lint
 

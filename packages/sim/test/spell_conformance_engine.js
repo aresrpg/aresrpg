@@ -14,8 +14,10 @@
 // map would make the check circular (a bug in that map would pass itself). The sim's numbers come from DRIVING
 // the reducer; the authored numbers come from the raw corpus row; the two are compared here.
 //
-// A field the sim+chain twin cannot express (e.g. the authored damage `value_max` — no on-chain Effect field,
-// no per-cast damage roll under the single-PTB turn law) is a NAMED GAP, never a silent skip.
+// A field the sim+chain twin cannot express is a NAMED GAP, never a silent skip. The authored damage
+// `value_max` USED to be the headline example; #577 made it real on both twins (`Effect.value_max` on chain,
+// the turn-seed roll in the reducer), so its gap rows are gone and the magnitude axes below assert the resolved
+// value lands inside its authored BAND instead of equalling the band's floor.
 
 import { process_spell_cast } from '../src/fight_spells.js'
 import { process_turn_effects } from '../src/fight_actions.js'
@@ -136,6 +138,30 @@ const snapshot = e => ({
 // A verdict row: one axis of one effect. status ∈ PASS | MISMATCH | GAP.
 const verdict = (axis, status, detail = '') => ({ axis, status, detail })
 
+// #577 — the authored ROLL BAND of a magnitude effect: `[value, value_max]`, absolute (the sign is carried by
+// the kind/flag, never the band). `value_max == value` ⇒ the band collapses and every magnitude check below
+// stays the exact equality it has always been, so fixed content reads identically. The oracle bounds the roll by
+// the AUTHORED numbers and never imports the reducer's own `roll_in_range` — per the CONFORMANCE-ORACLE LAW
+// above, an oracle that borrows the system's arithmetic proves nothing. That the roll is DETERMINISTIC (same
+// seed+slot ⇒ same value, twin-identical) is pinned separately by turn_seed.test.js and the replay capsules.
+const authored_band = raw => {
+  const lo = Math.abs(raw.value ?? 0)
+  const hi = Math.abs(raw.value_max ?? lo)
+  return hi >= lo ? [lo, hi] : [lo, lo]
+}
+
+// The band clamped into an observable window (HP available to lose / room left to heal), then the verdict.
+const band_check = (axis, observed, [lo, hi], ceiling, label) => {
+  const [low, high] = [Math.min(lo, ceiling), Math.min(hi, ceiling)]
+  return observed >= low && observed <= high
+    ? verdict(axis, 'PASS')
+    : verdict(
+        axis,
+        'MISMATCH',
+        `${label} ${observed} outside authored band [${low},${high}]${hi > ceiling ? ` (band capped at ${ceiling})` : ''}`,
+      )
+}
+
 // The added timed row(s) on an entity after a drive (rows whose id is new).
 const added_rows = (before_ids, entity) =>
   entity.effects.filter(e => !before_ids.has(e.id))
@@ -177,15 +203,8 @@ export const conform_effect = (raw, ap_cost) => {
   // The victim floors at 0 HP, so the observable drop caps at the HP it had; expect min(authored, available).
   if (kind === K.DAMAGE || kind === K.LIFE_STEAL) {
     const drop = before.health - v_after.health
-    const expected = Math.min(mag, before.health)
     checks.push(
-      drop === expected
-        ? verdict('damage', 'PASS')
-        : verdict(
-            'damage',
-            'MISMATCH',
-            `hp drop ${drop} != authored value ${expected}${mag > before.health ? ` (value ${mag} capped at ${before.health} HP)` : ''}`,
-          ),
+      band_check('damage', drop, authored_band(raw), before.health, 'hp drop'),
     )
     checks.push(
       norm.element === authored_element
@@ -196,25 +215,16 @@ export const conform_effect = (raw, ap_cost) => {
             `element ${norm.element} != authored ${authored_element}`,
           ),
     )
-    if (raw.value_max !== raw.value)
-      checks.push(
-        verdict(
-          'range',
-          'GAP',
-          `authored range [${raw.value},${raw.value_max}] resolves as fixed value ${raw.value} — no per-cast damage roll on the single-PTB twin (value_max has no on-chain Effect field)`,
-        ),
-      )
   } else if (kind === K.CASTER_DAMAGE) {
     const drop = caster_before.health - caster_after.health
-    const expected = Math.min(mag, caster_before.health)
     checks.push(
-      drop === expected
-        ? verdict('damage', 'PASS')
-        : verdict(
-            'damage',
-            'MISMATCH',
-            `caster recoil ${drop} != authored value ${expected}`,
-          ),
+      band_check(
+        'damage',
+        drop,
+        authored_band(raw),
+        caster_before.health,
+        'caster recoil',
+      ),
     )
   } else if (kind === K.PERCENT_LIFE_DAMAGE || kind === K.PUNISHMENT_DAMAGE) {
     const drop = before.health - v_after.health
@@ -238,15 +248,14 @@ export const conform_effect = (raw, ap_cost) => {
     )
   } else if (kind === K.HEAL) {
     const rise = v_after.health - before.health
-    const expected = Math.min(mag, before.health_max - before.health)
     checks.push(
-      rise === expected
-        ? verdict('heal', 'PASS')
-        : verdict(
-            'heal',
-            'MISMATCH',
-            `hp rise ${rise} != authored value ${expected} (cap ${before.health_max})`,
-          ),
+      band_check(
+        'heal',
+        rise,
+        authored_band(raw),
+        before.health_max - before.health,
+        'hp rise',
+      ),
     )
   }
 

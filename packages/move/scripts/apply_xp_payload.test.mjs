@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { readFileSync as read_file } from 'node:fs'
+import { existsSync as file_exists, readdirSync as read_dir, readFileSync as read_file } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
 
@@ -36,6 +36,19 @@ const stats = (over = {}) => {
   return { ...base, ...over }
 }
 const state = (over = {}) => ({ base_hp: 30, ap: 6, mp: 3, stats: stats(), xp_reward: 10, ...over })
+
+// ONE home for the real mainnet corpus read. The corpus is authored in the private sibling tree, so a
+// tree-subset checkout (this repo alone) has no seed/ — a missing tree is a ROUTING FACT, never a red, the
+// same rule scripts/ares.mjs applies to the unit-slice file list this suite is now a row of.
+const corpus_dir = join(repo_dir, 'seed', 'mainnet')
+const corpus_present = file_exists(corpus_dir)
+const corpus_rows = () =>
+  read_dir(corpus_dir)
+    .filter((name) => /^\d\d_/.test(name))
+    .flatMap((dir) => {
+      const mobs = join(corpus_dir, dir, 'mobs.json')
+      return file_exists(mobs) ? JSON.parse(read_file(mobs, 'utf8')) : []
+    })
 
 // ── seed→stats mapping: the CORRECTION (reads both schemas, centers resistances) ──────────────────
 test('seed_stats_to_centered reads BOTH resistance schemas and centers them (the seeder-bug correction)', () => {
@@ -162,33 +175,29 @@ test('field_histogram splits the two-set headline (xp vs stats)', () => {
   expect(field_histogram(changed)).toMatchObject({ xp_reward: 2, stats: 2, base_hp: 0 })
 })
 
-// ── LAW ④: the 50% resistance cap gate (spell.move:280) ───────────────────────────────────────────
+// ── LAW ④: the resistance cap gate (foundation `spell::apply_resistance`, ruled 60 on 2026-07-23) ──
+// The boundary is pinned as a LITERAL here on purpose: a cap test that reads the cap from the constant it
+// guards proves nothing — the driver drifted to 50 behind exactly that kind of self-referential assert.
 const changed_row = (over) => ({ key: 'm', id: id(1), desired: state({ stats: stats(over) }) })
 
-test('resistance_outliers FLAGS a restored resistance whose decentered magnitude exceeds the cap', () => {
-  const out = resistance_outliers([changed_row({ earth_resistance: RES_SHIFT + 60 })])
-  expect(out).toEqual([{ key: 'm', id: id(1), field: 'earth_resistance', magnitude: 60, cap: MAX_RESIST_MAGNITUDE }])
+test('resistance_outliers FLAGS a restored resistance above the ruled 60 cap (61 > 60)', () => {
+  const out = resistance_outliers([changed_row({ earth_resistance: RES_SHIFT + 61 })])
+  expect(out).toEqual([{ key: 'm', id: id(1), field: 'earth_resistance', magnitude: 61, cap: 60 }])
+  expect(MAX_RESIST_MAGNITUDE).toBe(60)
 })
 
-test('resistance_outliers PASSES a value exactly at the cap and a weakness (floors to 0)', () => {
-  const at_cap = changed_row({ fire_resistance: RES_SHIFT + MAX_RESIST_MAGNITUDE }) // 50 == cap, not > cap
+test('resistance_outliers PASSES the 51–60 band the ruling opened, and a weakness (floors to 0)', () => {
+  const ruled_band = [51, 55, 60].map((m) => changed_row({ fire_resistance: RES_SHIFT + m }))
   const weakness = changed_row({ air_resistance: RES_SHIFT - 25 }) // decenters to 0
-  expect(resistance_outliers([at_cap, weakness])).toEqual([])
+  expect(resistance_outliers([...ruled_band, weakness])).toEqual([])
 })
 
-test('the real corpus surfaces its over-cap authoring outlier (ramrage earthRes 55 > 50 — NEEDS-RULING)', () => {
-  const dirs = require('node:fs')
-    .readdirSync(join(repo_dir, 'seed', 'mainnet'))
-    .filter((name) => /^\d\d_/.test(name))
-  const rows = dirs.flatMap((dir) => {
-    const p = join(repo_dir, 'seed', 'mainnet', dir, 'mobs.json')
-    return require('node:fs').existsSync(p) ? JSON.parse(read_file(p, 'utf8')) : []
-  })
-  const { desired } = desired_state_by_key(rows)
+test.skipIf(!corpus_present)('the real corpus carries NO resistance over the ruled 60 cap', () => {
+  const { desired } = desired_state_by_key(corpus_rows())
   const corpus_changed = Object.entries(desired).map(([key, d]) => ({ key, id: id(1), desired: d }))
   const out = resistance_outliers(corpus_changed)
-  // The mechanical assert turns "should be clean" into PROOF: exactly one authored value breaks the cap today.
-  expect(out.map(({ key, field, magnitude }) => `${key}:${field}=${magnitude}`)).toEqual(['ramrage:earth_resistance=55'])
+  // The mechanical assert turns "should be clean" into PROOF: no authored value exceeds the cap the ruling set.
+  expect(out.map(({ key, field, magnitude }) => `${key}:${field}=${magnitude}`)).toEqual([])
 })
 
 // ── mode + deployment ─────────────────────────────────────────────────────────────────────────────
@@ -211,18 +220,11 @@ test('deployment_from_release throws on a missing network', () => {
 })
 
 // ── real corpus guard ─────────────────────────────────────────────────────────────────────────────
-test('the real mob corpus derives a valid xp>0 desired-tuple for every seeded key', () => {
+test.skipIf(!corpus_present)('the real mob corpus derives a valid xp>0 desired-tuple for every seeded key', () => {
   const seed_manifest = JSON.parse(
     read_file(join(script_dir, 'out', 'seed_manifest.json'), 'utf8'),
   )
-  const dirs = require('node:fs')
-    .readdirSync(join(repo_dir, 'seed', 'mainnet'))
-    .filter((name) => /^\d\d_/.test(name))
-  const rows = dirs.flatMap((dir) => {
-    const p = join(repo_dir, 'seed', 'mainnet', dir, 'mobs.json')
-    return require('node:fs').existsSync(p) ? JSON.parse(read_file(p, 'utf8')) : []
-  })
-  const { desired, invalid } = desired_state_by_key(rows)
+  const { desired, invalid } = desired_state_by_key(corpus_rows())
   expect(invalid).toEqual([]) // every authored mob has xp>0 (mob_xp_derive ran)
   // every minted manifest mob resolves to a desired tuple (no missing_seed against the live corpus)
   const missing = Object.keys(seed_manifest.mobs ?? {}).filter((key) => !(key in desired))

@@ -76,6 +76,14 @@ const band_of = (effects, family) => {
     // The widest single effect — what ONE hit row may carry when a cast lands several.
     per_effect_min: Math.min(...rows.map((effect) => Number(effect.value ?? 0))),
     per_effect_max: Math.max(...rows.map((effect) => Number(effect.value_max ?? effect.value ?? 0))),
+    // #965 — the genuine per-cast ROLL span: the band of a LONE magnitude effect whose `value_max` exceeds its
+    // `value`. Deliberately NOT `[per_effect_min, per_effect_max]`: on a multi-effect cast those two numbers come
+    // from DIFFERENT effects, so that interval is wide without anything ever rolling. Conflating the two is how a
+    // variance check passes on a corpus folded flat at its floor — measured, not theorised. Null ⇒ no roll claim.
+    roll_band:
+      rows.length === 1 && Number(rows[0].value_max ?? rows[0].value ?? 0) > Number(rows[0].value ?? 0)
+        ? [Number(rows[0].value ?? 0), Number(rows[0].value_max)]
+        : null,
   }
 }
 
@@ -88,6 +96,8 @@ const union = (left, right) => {
     max: Math.max(left.max, right.max),
     per_effect_min: Math.min(left.per_effect_min, right.per_effect_min),
     per_effect_max: Math.max(left.per_effect_max, right.per_effect_max),
+    // Two live branches ⇒ a hit cannot be attributed to either one's roll, so no roll claim survives the union.
+    roll_band: null,
   }
 }
 

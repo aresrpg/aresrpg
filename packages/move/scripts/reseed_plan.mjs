@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure planning core for reseed_driver.mjs. No client, signer, filesystem, or transaction imports live here:
 // fixture tests can prove every diff, batch, DRY_RUN guard, and failure-latch rule without network access.
+import { encode_effect_value } from './spell_wire.mjs'
 
 export const fixed_gas_budget_mist = 50_000_000
 export const max_ptb_commands = 30
@@ -41,10 +42,6 @@ const fields_of = (value) => value?.fields ?? value ?? {}
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right)
 const as_number = (value) => Number(value ?? 0)
 const as_integer = (value) => BigInt(value ?? 0).toString()
-const absolute_integer = (value) => {
-  const integer = BigInt(value ?? 0)
-  return (integer < 0n ? -integer : integer).toString()
-}
 export const call_package = (entry) => entry?.latest ?? entry?.pkg
 export const spell_row_key = (row) => `${row.classType}:${row.unlock}:${row.id}`
 
@@ -64,17 +61,20 @@ export function resolve_mode(environment) {
 
 export function normalize_seed_effect(effect) {
   const kind = as_number(effect.kind)
+  // value/flags ride spell_wire.mjs's encode_effect_value (#1250 — CENTERED for alter_stat/alter_resist,
+  // magnitude passthrough otherwise) — the ONE home every new_effect PTB encoder shares.
+  const { value, flags } = encode_effect_value(kind, as_number(effect.value), as_number(effect.flags ?? 0))
   return {
     kind,
     element: as_number(effect.element ?? 255),
-    value: absolute_integer(effect.value),
+    value: String(value),
     area_shape: as_number(effect.area_shape ?? effect.zone?.shape ?? 0),
     area_size: as_integer(effect.area_size ?? effect.zone?.size ?? 0),
     target_filter: as_number(effect.target_filter ?? 0),
     chance: as_number(effect.chance ?? 100),
     turns: as_number(effect.turns ?? 0),
     stat: as_number(effect.stat ?? 0),
-    flags: as_number(effect.flags ?? 0),
+    flags,
     phase: kind_phase[kind] ?? 0,
   }
 }

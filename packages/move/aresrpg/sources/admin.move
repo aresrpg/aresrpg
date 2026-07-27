@@ -198,6 +198,30 @@ public fun set_template_stats(
   item_stats::set_ranges(template, min, max);
 }
 
+/// Replace a live template's COMPLETE set of damage lines IN PLACE — the weapon re-magnitude door. `damages` is the
+/// full replacement (not a merge): whatever lines the template carried are gone, and exactly these remain. An empty
+/// vector CLEARS the lines, landing the template in the same state `create_template` gives an empty `damages`
+/// argument. Version-gated + AdminCap-gated exactly like the other authoring doors, and it patches through
+/// `item_damages::set_damages` so the template object ID is preserved — every minted item, kiosk lock and drop-table
+/// ref that points at it stays valid.
+///
+/// SCOPE: the TEMPLATE's authored truth only. An already-equipped weapon keeps the snapshot `equipment::equip` copied
+/// onto its instance (`ItemLinesKey`); re-equipping re-reads the template, so the correction reaches live gear the
+/// same way a stat re-roll does. No base field, stat range or consumable effect is touched here.
+///
+/// UPGRADE-COMPAT: additive public function only; no existing type or signature changes.
+public fun set_template_damages(
+  cap: &AdminCap,
+  template: &mut item::ItemTemplate,
+  damages: vector<ItemDamages>,
+  version: &Version,
+  ctx: &TxContext,
+) {
+  cap.verify(ctx);
+  version.assert_latest();
+  item_damages::set_damages(template, damages);
+}
+
 // ╔════════════════ [ Catalog control (AdminCap + version gated — authoring runs while dark) ] ═ ]
 
 /// Whitelist an item category (`sword`, `ring`, `consumable`, `tool_farmer`, …). The category set is OPEN-ENDED

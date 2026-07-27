@@ -35,6 +35,7 @@ import {
   claimCreated,
   getReceipt,
 } from './ceremony_lib.mjs'
+import { encode_effect_value } from './spell_wire.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const REPO = path.resolve(__dir, '..', '..', '..')
@@ -99,23 +100,27 @@ function guard_network() {
 const T_EFFECT = `${FND}::spell_effect::Effect`
 const T_LEVEL = `${FND}::spell_effect::SpellLevel`
 const KIND_PHASE = { 20: 1, 21: 1 }
-const effectFx = (tx, e) =>
-  tx.moveCall({
+// value/flags ride spell_wire.mjs's encode_effect_value (#1250 — CENTERED for alter_stat/alter_resist,
+// magnitude passthrough otherwise) — the ONE home every new_effect PTB encoder shares.
+const effectFx = (tx, e) => {
+  const { value, flags } = encode_effect_value(e.kind, e.value ?? 0, e.flags ?? 0)
+  return tx.moveCall({
     target: `${FND}::spell_effect::new_effect`,
     arguments: [
       tx.pure.u8(e.kind),
       tx.pure.u8(e.element ?? 255),
-      tx.pure.u64(Math.abs(e.value ?? 0)),
+      tx.pure.u64(value),
       tx.pure.u8(e.area_shape ?? 0),
       tx.pure.u64(e.area_size ?? 0),
       tx.pure.u8(e.target_filter ?? 0),
       tx.pure.u8(e.chance ?? 100),
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),
-      tx.pure.u8(e.flags ?? 0),
+      tx.pure.u8(flags),
       tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
     ],
   })
+}
 const fxVec = (tx, effects) =>
   tx.makeMoveVec({ type: T_EFFECT, elements: effects })
 const spellLevel = (tx, o, fx, crit) =>

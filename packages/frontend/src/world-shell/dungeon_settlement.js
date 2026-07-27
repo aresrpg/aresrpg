@@ -39,6 +39,7 @@ import {
   attempt_state,
   acquire_settlement_flight,
   recover_marked_fight_entry,
+  recover_settled_elsewhere,
   run_result_auto_open,
   is_preflight_failure,
 } from './pending_outcomes.js'
@@ -108,6 +109,9 @@ export const mint_deps = () => ({
  */
 export async function settle_chain(store, { terminal, on_halt, on_settled, ...ids }) {
   const { getState, setState } = store
+  // #1223 ③: set on a PRE-FLIGHT halt (zero gas — the Fight was already gone, so MY outcome exists unopened).
+  // Drained in the `finally`, AFTER the `_settling` flight releases: the open must acquire that same flight.
+  let strand = null
   if (getState()._settling) return false
   const state = getState()
   const fight_id = ids.fight_id ?? state.fight_id
@@ -161,16 +165,22 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, ...id
     } catch (error) {
       // ATOMIC: the composed settle+open either landed WHOLE or changed nothing — there is no half-settled brick.
       // A PRE-FLIGHT failure means the Fight was already gone (a racing janitor's settle_and_destroy minted MY
-      // outcome to me): the pill re-fetches /v1 truth and auto-opens it. An EXECUTED abort rolled the whole PTB
-      // back (fight still live, retriable). NEVER blindly re-fired (latch law) — loud + re-arm the pill + stop.
+      // outcome to me): `strand` below re-reads /v1 truth and opens it on the spot (#1223 ③ — this used to wait
+      // for a reload or the next abort-111 engage). An EXECUTED abort rolled the whole PTB back (fight still
+      // live, retriable). NEVER blindly re-fired (latch law) — loud + re-arm the pill + stop.
       game_log(
         'dungeon',
         'settle+open failed (raced-gone or executed abort) — settlement halted:',
         humanize_abort(error?.message ?? String(error))
       )
-      push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
+      const preflight = is_preflight_failure(error)
+      // #1223 ③: a PRE-FLIGHT halt is not a dead end any more — it PROVES the racing settle minted my outcome, and
+      // the drain below opens it right now. Only an EXECUTED halt (gas burned, fight still live, never re-fired)
+      // still tells the player to go press the pill themselves.
+      if (!preflight) push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
       invalidate_pending_outcomes() // a racing janitor may have minted MY outcome — the pill re-fetches truth
-      on_halt?.(is_preflight_failure(error) ? 'transient' : 'executed_failure')
+      on_halt?.(preflight ? 'transient' : 'executed_failure')
+      if (preflight) strand = { character_id, fight_id }
       return false
     }
     setState({ fight_id: null })
@@ -181,7 +191,47 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, ...id
     return true
   } finally {
     setState({ _settling: false })
+    // FIRE-AND-FORGET (#1223 ③), after the flight released — the open re-acquires it. The caller already has its
+    // own verdict (false); this owns the strand's surface from here.
+    if (strand)
+      void open_settled_elsewhere(store, strand).catch((error) =>
+        game_log('dungeon', 'settle-observed auto-open crashed (the roster pill still owns the manual open):', error)
+      )
   }
+}
+
+/**
+ * THE SETTLE-OBSERVED AUTO-OPEN (#1223 ruling ③ — "the client composes a sponsored fire-and-forget open the
+ * moment settle is observed"). A pre-flight settle halt proves someone else's settle destroyed the Fight and
+ * minted MY unopened `FightOutcome`; nothing looked again until a reload or the next abort-111 engage. Rides the
+ * pill's whole rails: `open_pending_row` owns the per-outcome single-flight + burn-law latch, and its tx takes
+ * the ordinary `run_character_action` door (sponsor-first for a zkLogin wallet — tx/sponsor_route.ts), so the
+ * spend guard binds it like any automated submission. Never throws; never silent (info beat, then a loud toast).
+ * @param {any} store @param {{ character_id: string|null, fight_id: string|null }} strand
+ */
+async function open_settled_elsewhere(store, { character_id, fight_id }) {
+  const { address } = use_auth.getState()
+  if (!address || !character_id) return
+  const verdict = await recover_settled_elsewhere('transient', {
+    // The boot memo predates the racing settle → one fresh /v1 read (the registry still coalesces a live flight).
+    find_result: async () => {
+      invalidate_pending_outcomes()
+      return find_pending_outcome(address, character_id)
+    },
+    announce: () => push_event_toast({ state: 'info', title: i18n.t('errors.fight_result_opening') }),
+    open_result: (row) =>
+      open_pending_row(store, address, character_id, row, {
+        allow_run_bound: true, // the settle we just lost carried the run leg; the open composes the same one
+        live_world_fight_id: fight_id, // that fight id is still in the store and is DEAD — not a live session
+        surface_failure: false, // ONE failure home: the honest toast below
+      }),
+  })
+  if (verdict.status !== 'failed') return
+  game_log('dungeon', 'settle-observed auto-open failed — the roster pill is the manual fallback:', verdict.error)
+  push_event_toast({
+    state: 'error',
+    title: verdict.error ? humanize_abort(verdict.error) : i18n.t('errors.fight_result_latched'),
+  })
 }
 
 /**

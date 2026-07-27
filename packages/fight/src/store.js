@@ -46,7 +46,7 @@ import * as settle_input from './inputs.js'
 import { accept_batch, empty_accept_state, seed_accept_state } from './journal_accept.js'
 import { content_key, normalize_journal_page, normalize_receipt } from './journal_normalize.js'
 import { u64 } from './journal_u64.js'
-import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
+import { board_state_from_fight, fight_geometry_complete, fight_roster_open, roster_open } from './board_state.js'
 import { prediction_identity } from './budget_claims.js'
 import { peer_batch_legality } from './peer_legality.js'
 import { reconcile_predictions } from './reconcile_action.js'
@@ -666,9 +666,15 @@ const make_input =
         // to width/height 0) is a TORN record, not a shape — drop it whole; the poll loop re-reads until it is whole.
         if (msg.fight != null && !fight_geometry_complete(msg.fight)) return
         const version = Number(msg.version ?? 0)
-        // BOOTSTRAP — the first base of this fight (view still null), or every roam view (there is no journal to fold
-        // a lobby view on top of). This is the SOLE moment an object read writes the fold: it seeds the base + cursor.
-        if (is_open || state.view == null) {
+        // BOOTSTRAP — the first base of this fight (view still null), every roam view (there is no journal to fold
+        // a lobby view on top of), or one PLACEMENT read superseding another. That last case is the roster window
+        // (#1274): while the chain can still `join` a fighter in, the newest placement read is the most complete
+        // roster and there is no turn history to strand — so the base is the LAST placement read rather than the
+        // creator's stale first one. A read that has left placement never re-adopts, whatever the base holds: the
+        // fight's history rides the journal from there (#701). This is the SOLE moment an object read writes the
+        // fold: it seeds the base + cursor.
+        const placement_refresh = roster_open(state.view) && fight_roster_open(msg.fight)
+        if (is_open || state.view == null || placement_refresh) {
           if (!is_open && version <= state.view_version) return // never regress the base below itself
           set((s) => {
             const ctx = observer_ctx({ ...s.ctx, ...(msg.ctx ?? {}) })
@@ -686,7 +692,9 @@ const make_input =
                 ...s,
                 view,
                 view_version: version,
-                accept_state: is_open ? s.accept_state : seed_accept_state(msg.journal_head),
+                // The accept cursor is seeded ONCE, at the true bootstrap: re-seeding on a provisional re-adopt
+                // would rewind the head AND clear the digest dedupe, re-applying rows already folded.
+                accept_state: is_open || s.view != null ? s.accept_state : seed_accept_state(msg.journal_head),
                 entries,
                 // A bootstrap base already contains every silent pool mutation at/below its version. Normally no
                 // claim can predate the first view (the provider gate blocks local prediction), but keep the seam

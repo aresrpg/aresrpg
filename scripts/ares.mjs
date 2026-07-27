@@ -144,6 +144,8 @@ export const unit_test_files = [
   'packages/sim/test/spell_effect_conformance_matrix.test.js',
   'scripts/check-chain-ids.test.mjs',
   'packages/move/scripts/crit_fold.test.mjs',
+  'packages/move/scripts/spell_wire.test.mjs', // #1250 RED-FIRST parity fixture — the ONE new_effect signed-value dialect home
+  'packages/move/scripts/apply_xp_payload.test.mjs', // the ceremony driver's LAW ④ cap gate + payload core — unwired until #1246, which is how MAX_RESIST_MAGNITUDE sat at the superseded 50 for days
   'scripts/prod_smoke_registration.test.mjs',
   'scripts/prod_asset_census.test.mjs',
   'scripts/airdrop_dump.test.mjs', // AIRDROP CLAIM-MAPPING ORACLE: resources.json include-set fix (2026-07-19 queue row 4)

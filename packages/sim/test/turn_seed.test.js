@@ -3,7 +3,13 @@
 import { describe, test, expect } from 'bun:test'
 
 import { mix, scramble } from '../src/prng.js'
-import { turn_seed, slot_crit_roll, crit_at } from '../src/turn_seed.js'
+import {
+  turn_seed,
+  slot_crit_roll,
+  crit_at,
+  slot_damage_roll,
+  roll_in_range,
+} from '../src/turn_seed.js'
 
 // ── PARITY FIXTURES — the Move source of truth is the oracle ────────────────────────────────────────────────
 // Golden vectors extracted from the REAL Move packages via a `sui move test` debug-print probe (scratchpad
@@ -94,5 +100,51 @@ describe('turn-seed parity (Move golden vectors)', () => {
       if (crit_at(slot_crit_roll(scramble(i), 0), 20, 0)) crits++
     expect(crits).toBeGreaterThanOrEqual(380) // the Move test's own generous chi band
     expect(crits).toBeLessThanOrEqual(620)
+  })
+
+  // ── #577 DAMAGE roll — the same seeds pinned on BOTH twins (spell_formula::t_slot_damage_roll_parity_vectors) ──
+  test('slot_damage_roll reproduces the Move goldens and is decorrelated from crit', () => {
+    // the turn_seed values are the fight::turn_seed goldens above (tuples A–D); slot_damage_roll(seed, slot) is
+    // pinned identically in aresrpg_foundation::spell_formula so a drift on EITHER twin breaks its suite.
+    expect(slot_damage_roll(4190174188, 0)).toBe(9589)
+    expect(slot_damage_roll(4190174188, 1)).toBe(3257)
+    expect(slot_damage_roll(4190174188, 2)).toBe(3915)
+    expect(slot_damage_roll(3110118064, 0)).toBe(7992)
+    expect(slot_damage_roll(3110118064, 5)).toBe(9380)
+    expect(slot_damage_roll(2245583870, 0)).toBe(2410)
+    expect(slot_damage_roll(4068998909, 0)).toBe(2904) // seat-bound: ≠ tuple A's slot-0 roll
+    // a distinct domain tag from crit ⇒ a different number at the same (seed, slot)
+    expect(slot_damage_roll(4190174188, 0)).not.toBe(
+      slot_crit_roll(4190174188, 0),
+    )
+  })
+
+  test('roll_in_range maps the roll onto [min,max] identically to spell_formula::roll_in_range', () => {
+    // mapped goldens (chain-pinned)
+    expect(roll_in_range(10, 20, slot_damage_roll(4190174188, 0))).toBe(20)
+    expect(roll_in_range(5, 9, slot_damage_roll(4190174188, 0))).toBe(9)
+    expect(roll_in_range(100, 200, slot_damage_roll(3110118064, 0))).toBe(180)
+    // endpoints + degenerate (mirror spell_formula t_roll_in_range_endpoints_and_degenerate)
+    expect(roll_in_range(10, 20, 0)).toBe(10)
+    expect(roll_in_range(10, 20, 9999)).toBe(20)
+    expect(roll_in_range(10, 20, 5000)).toBe(15)
+    expect(roll_in_range(7, 7, 9999)).toBe(7) // min==max ⇒ fixed
+    expect(roll_in_range(7, 3, 9999)).toBe(7) // malformed max<min ⇒ min
+  })
+
+  test('damage roll spans its range over 10k decorrelated seeds (both endpoints hit, mean central)', () => {
+    let lo = false
+    let hi = false
+    let sum = 0
+    for (let i = 0; i < 10000; i++) {
+      const v = roll_in_range(1, 10, slot_damage_roll(scramble(i), 0))
+      if (v === 1) lo = true
+      if (v === 10) hi = true
+      sum += v
+    }
+    expect(lo && hi).toBe(true)
+    const mean = Math.floor(sum / 10000)
+    expect(mean).toBeGreaterThanOrEqual(4)
+    expect(mean).toBeLessThanOrEqual(6)
   })
 })

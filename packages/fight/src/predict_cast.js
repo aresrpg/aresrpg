@@ -22,7 +22,24 @@ import { WEAPON_ATTACK_ID } from './weapon.js'
 // equality) and re-verify CHAIN_PENDING against the new arms. Re-stamped to ceremony #3's fresh publish id (07-24).
 export const CHAIN_PENDING_ENGINE_VERSION = '0xe8c6c46893799e85e697ef0e524626c6323ea4db5a86da6c9de4a6d53c7ac41a'
 
-// BRIDGE B7 — expires when the <next-train> ships the 8 chain arms; deletion criterion: on-chain kind handling verified.
+// BRIDGE B7 — the kinds own-cast prediction refuses to resolve: it paints `Cast` and waits for the receipt.
+//
+// THE CRITERION, CORRECTED (#1082). This comment used to read "expires when the next train ships the 8 chain
+// arms", and that criterion is SPENT: against the lineage stamped above, every one of the eight has an arm on
+// BOTH chain paths — `apply_to_player` resolves steal_stat/throw/swap/carry/dispel by name (cast.move:1121-1136)
+// and records every remaining kind through its catch-all `record_timed` (cast.move:1152), and `apply_to_mob`
+// mirrors it (cast.move:1245-1256, 1271-1274). Three of them are CONSUMED as well, not merely recorded:
+// apply_state gates casts (`fighter_has_state`, cast.move:314/320), return_spell decides the redirect
+// (cast.move:859) and reflect_damage rides the retro sink (retro_effects.move:249). The sim carries its own arm
+// for all eight (`fight_spells.js` SWAP_POSITIONS/CARRY/THROW/APPLY_STATE/REFLECT_DAMAGE/DISPEL/RETURN_SPELL;
+// `fight_stat_effects.js` STEAL_STAT).
+//
+// So "does an arm exist" no longer answers anything, and arm-existence is NOT what makes prediction safe: the
+// twins have to AGREE. The real deletion criterion is the one already mechanized — the conviction matrix in
+// `test/predict_cast.test.js` compares chain and sim convictions with exactly this set filtered out, so dropping
+// a kind means flipping it on there and watching the matrix stay green. That gate reads the authored corpus,
+// which is content-pipeline output absent from this repo by design (CLAUDE.md, "The content boundary"), so a
+// membership change is adjudicated where the corpus lives — never by reading Move sources, and never here.
 export const CHAIN_PENDING = new Set([10, 15, 16, 17, 22, 25, 26, 29])
 
 /** The UI projection's first direct-damage base. Pricing only; prediction itself never reads this projection. */
@@ -252,6 +269,7 @@ export const predict_sim_cast = ({
   arena,
   critical = null,
   resolve_ref = entity_ref,
+  turn_context = null, // #577 — the public turn-seed clock {world_seed,spawn_id,turn_deadline_ms,seat,slot}: the sim rolls this player cast's damage off it (previewable), matching the chain
 }) => {
   const prediction = prediction_template(spell, spell_level, critical)
   if (!prediction)
@@ -273,7 +291,7 @@ export const predict_sim_cast = ({
   const output = produce_predicted_render_events(
     prepared,
     { type: 'cast', entity_id: caster_id, spell_id: template.id, target },
-    { arena, spell_templates: new Map([[template.id, template]]), teleport_ids }
+    { arena, spell_templates: new Map([[template.id, template]]), teleport_ids, turn_context }
   )
   const cast_event = output.sim_events.find((event) => event.type === 'fight_cast')
   if (!cast_event)
@@ -492,6 +510,8 @@ export const weapon_spell_template = (weapon = {}) =>
             {
               kind: 0,
               value: Number(weapon.damage ?? 0),
+              // #577 — the weapon's normal-hit range MAX (== value ⇒ fixed); the strike rolls in [value, value_max].
+              value_max: Number(weapon.damage_max ?? weapon.damage ?? 0),
               element: Number(weapon.element ?? 255),
               target_filter: 1,
               chance: 100,
@@ -501,6 +521,7 @@ export const weapon_spell_template = (weapon = {}) =>
             {
               kind: 0,
               value: Number(weapon.crit_damage ?? weapon.damage ?? 0),
+              value_max: Number(weapon.crit_damage_max ?? weapon.crit_damage ?? weapon.damage ?? 0),
               element: Number(weapon.element ?? 255),
               target_filter: 1,
               chance: 100,
@@ -538,6 +559,8 @@ export const predict_cast = ({
     critical:
       critical === undefined ? chain_critical(critical_clock, level?.critical_chance ?? 0, critical_bonus) : critical,
     resolve_ref,
+    // #577 — the SAME clock feeds the damage roll: the preview shows this turn's exact damage, chain-identical.
+    turn_context: critical_clock,
   })
 }
 

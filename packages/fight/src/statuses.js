@@ -17,8 +17,9 @@ import { effective_stats } from '@aresrpg/sim/fight_state'
 import { is_signed_status_kind } from './fight_status_snapshot.js'
 
 const K_ALTER_STAT = 9
+const K_ALTER_RESIST = 11
 const K_INVISIBILITY = 27
-const STAT_RANGE = 6
+const ELEMENT_NEUTRAL = 255
 const FLAG_NEGATIVE = 8
 
 /** `Drain`/`Granted` point discriminant (`spell_effect::point_ap()` = 0, `point_mp()` = 1). Only these two sim
@@ -128,9 +129,39 @@ export const status_row_of = (effect) => {
 
 const active = (row) => row?.remaining_turns == null || Number(row.remaining_turns) > 0
 
-/** Convert the active raw status rows exposed by engine_view into the sim effects prediction consumes. Already-
- * normalized effects pass through for the legacy world-fight view. Other raw kinds stay presentation-only until a
- * mechanics consumer explicitly supports them. */
+/** Chain stat id → the sim stat key it moves. DERIVED from `STAT_CHAIN_ID` above, never a second table: the two
+ *  directions of one fact drift the moment they are written twice. */
+const SIM_STAT_OF_CHAIN_ID = Object.freeze(
+  Object.fromEntries(Object.entries(STAT_CHAIN_ID).map(([key, id]) => [id, key]))
+)
+
+/** Chain element ordinal → the sim resist stat key a K_ALTER_RESIST row moves — the inverse of RESIST_ELEMENT. */
+const SIM_RESIST_OF_ELEMENT = Object.freeze(
+  Object.fromEntries(Object.entries(RESIST_ELEMENT).map(([key, ordinal]) => [ordinal, key]))
+)
+
+/** The sim stat key ONE raw status row moves, or null when the row is not a timed stat row. A resist row with no
+ *  element is NEUTRAL — the same default the seed mint writes (255 = NONE) and the sim's own RESIST_STAT_MAP takes. */
+const sim_stat_of = (row) => {
+  const kind = Number(row?.kind)
+  if (kind === K_ALTER_STAT) return SIM_STAT_OF_CHAIN_ID[Number(row.stat)] ?? null
+  if (kind === K_ALTER_RESIST)
+    return SIM_RESIST_OF_ELEMENT[row.element == null ? ELEMENT_NEUTRAL : Number(row.element)] ?? null
+  return null
+}
+
+/** Convert the active raw status rows exposed by engine_view into the sim effects prediction consumes — the
+ * REVERSE of `status_row_of`, and total over the same stat vocabulary (#1083). It used to promote a RANGE alter
+ * row and invisibility ONLY, so an active `+20 Strength` or `+110% Damage` was presentation-only: the damage
+ * floater priced the unbuffed number while the chain resolved the buffed one. Range was never special — it was
+ * the one stat someone had needed so far — so the special case now falls out of the general one.
+ *
+ * The ap/mp POOL rows (GIVE/REMOVE_POINTS) stay out on purpose: `inputs.pool_grant` already folds them into the
+ * fighter's turn-start budget and `project.js` hands that RESULT to the sim entity, so promoting them here would
+ * count the same grant twice. One home per fact. Every other kind (shields, reflects, DoTs) stays presentation-
+ * only until a mechanics consumer states what it does — a badge is not a mechanic.
+ *
+ * Already-normalized effects pass through for the legacy world-fight view. */
 export const sim_effects_of = (fighter) => {
   const effects = []
   for (const [index, row] of (fighter?.effects ?? []).entries()) {
@@ -140,18 +171,19 @@ export const sim_effects_of = (fighter) => {
       continue
     }
     const kind = Number(row?.kind)
-    if (kind === K_ALTER_STAT && Number(row.stat) === STAT_RANGE) {
+    const stat = sim_stat_of(row)
+    if (stat) {
       // The row's `value` is already the real SIGNED delta (fight_status_snapshot.js strips the chain's
       // 32768 centering at the wire door, issue #886), so the SIGN LIVES ONCE — in the value. Reading
       // FLAG_NEGATIVE here as well would re-apply it: the sim vocabulary carries the sign in the row TYPE,
       // so a debuff is `STAT_DEBUFF` + the magnitude (effective_stats subtracts it).
       const delta = Number(row.value) || 0
       effects.push({
-        id: row.id ?? `range:${index}`,
+        id: row.id ?? `${stat}:${index}`,
         type: delta < 0 ? 'STAT_DEBUFF' : 'STAT_BUFF',
         timing: 'TURN_END',
         source_id: fighter?.id ?? null,
-        stat: 'range',
+        stat,
         value: Math.abs(delta),
         turns_remaining: Number(row.remaining_turns) || 0,
       })
