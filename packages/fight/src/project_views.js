@@ -9,6 +9,7 @@ import { participant_entity_id, participant_character_id } from './fight_control
 import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
+import { trap_render_prims } from './fight_render_prims.js'
 import {
   DUNGEON_BOARD_ORIGIN,
   cast_presenting,
@@ -340,6 +341,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   const placement = status === STATUS_PLACEMENT
   const address = ctx.address ?? null
   const spectator = ctx.spectator === true
+  const viewer_seat =
+    !spectator && typeof s.my_key === 'string' && s.my_key.startsWith('p') ? Number(s.my_key.slice(1)) : null
+  const viewer_context = {
+    seat: viewer_seat,
+    team: viewer_seat == null ? null : Number(view.escrow?.[viewer_seat]?.team),
+  }
   const controlled_entity_ids = spectator
     ? []
     : (view.escrow ?? [])
@@ -359,23 +366,25 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       .filter((f) => f.alive && f.cell != null)
       .map((f) => f.cell)
   )
-  const my_trap_cells = [
-    ...new Set(
-      (s.my_traps ?? [])
-        .filter((t) => !t.gone)
-        .flatMap((t) => t.cells ?? [])
-        .filter((c) => !trap_occupied.has(c))
-    ),
-  ]
+  const live_traps = (s.my_traps ?? [])
+    .filter((trap) => !trap.gone)
+    .map((trap) => ({ ...trap, cells: (trap.cells ?? []).filter((cell) => !trap_occupied.has(cell)) }))
+    .filter((trap) => trap.cells.length)
+  const my_trap_cells = [...new Set(live_traps.flatMap((trap) => trap.cells))]
+  // Persistent paint merges the caster's optimistic ledger with the public chain board. Local rows are owned by
+  // this viewer's team by construction; every row still crosses the one visibility predicate before becoming a prim.
+  const trap_prims = trap_render_prims(viewer_context, [
+    ...(ctx.chain_traps ?? []),
+    ...live_traps.map((trap) => ({ ...trap, owner_team: viewer_context.team })),
+  ])
   // ① each LIVE trap cell → its detonation payload, so the sim door rebuilds the trap WITH damage (not payload:[]).
   // Same live-cell predicate as my_trap_cells (non-gone, not presented-occupied); first record wins a shared cell.
   // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.
   const my_trap_payloads = {}
-  for (const t of s.my_traps ?? []) {
-    if (t.gone) continue
-    for (const c of t.cells ?? []) {
-      if (trap_occupied.has(c) || c in my_trap_payloads) continue
-      my_trap_payloads[c] = t.payload ?? []
+  for (const trap of live_traps) {
+    for (const cell of trap.cells) {
+      if (cell in my_trap_payloads) continue
+      my_trap_payloads[cell] = trap.payload ?? []
     }
   }
   // THE LIVE glyph zone projection — every non-gone glyph's full AoE, deduped (the render paints these as the
@@ -391,6 +400,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   return {
     fight_id: view.id,
     my_traps: my_trap_cells,
+    trap_prims,
     my_trap_payloads,
     my_glyphs: my_glyph_cells,
     placement_ghosts,

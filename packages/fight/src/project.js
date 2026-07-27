@@ -14,6 +14,7 @@ import { engine_view, project_board_cells } from './project_views.js'
 
 export * from './project_state.js'
 export { board_view, committed_mob_hp, engine_view, entity_id_of_key } from './project_views.js'
+export { read_fight_traps } from './trap_ledger.js'
 
 // One memoized synchronous surface shared by every consumer.
 const VIEWS = new WeakMap()
