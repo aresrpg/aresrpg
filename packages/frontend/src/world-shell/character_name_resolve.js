@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE ONE HOME for "character id → display name" resolution off the /v1 read layer (07-19: raw
-// addresses were leaking onto the fights-in-range modal AND the live fight-HUD turn order — two surfaces,
-// two ad hoc resolutions, one bug class). rpc/client's get_characters is the ONE fetch home (its own LRU
-// absorbs repeat calls — no second cache here); this is the ONE shaping home on top of it, so
-// every fighter-name surface falls back to the exact same truncated id, never a bespoke one per component.
-// Consumers: FightsModal (party/enemy hover card) and fight.js's ensure_roster (ctx.roster — the live fight
-// HUD's turn-order names, ONE HOME per project.js's engine_view: `roster.find(c => c.id === character_id)`).
+// THE ONE shaping home for character display names and fight-roster composition. `/v1` consumers share the
+// batched resolver; the live fight adopter supplies its full normalized custody/display rows to this composition
+// so names and appearance cannot diverge. Every unresolved surface uses the same short-id fallback.
 
 import { get_characters } from '../rpc/client'
 
@@ -47,7 +43,8 @@ export async function resolve_character_docs(ids, fetch_characters = get_charact
  *     lets a non-`/v1` seeder (the simulator shim seeds its roster into ctx at start) keep its real names
  *     instead of being wiped by the next recompose — the dual-writer clobber that made #929 fire on EVERY
  *     sim player row even after the seats were named.
- *   · RESOLVED — `/v1/characters` docs (the coop remote's real name, once the read lands).
+ *   · RESOLVED — normalized custody/display rows. A coop remote's name, class, sex and colors land through
+ *     read_character, the same full appearance home as the owned avatar; there is no second partial fetch.
  *   · MINE — my own kiosk characters, always the freshest truth about my own seats.
  *
  * Pure: no IO, no store read. @param {{ mine?: readonly any[], resolved?: readonly any[],
@@ -67,7 +64,27 @@ export function compose_fight_roster({ mine = [], resolved = [], carried = [], f
 }
 
 /** Stable identity of a composed roster — the change gate for re-publishing it through the ctx door. */
-export const fight_roster_signature = (rows) => (rows ?? []).map((row) => `${row?.id}:${row?.name ?? ''}`).join('|')
+export const fight_roster_signature = (rows) =>
+  (rows ?? [])
+    .map((row) => {
+      const nested = Array.isArray(row?.colors) ? null : row?.colors
+      const colors = Array.isArray(row?.colors)
+        ? row.colors
+        : [
+            row?.color_1 ?? nested?.color_1 ?? '',
+            row?.color_2 ?? nested?.color_2 ?? '',
+            row?.color_3 ?? nested?.color_3 ?? '',
+          ]
+      return [
+        row?.id,
+        row?.name ?? '',
+        row?.classe ?? row?.class ?? '',
+        row?.sex ?? '',
+        typeof row?.male === 'boolean' ? row.male : '',
+        ...colors,
+      ].join(':')
+    })
+    .join('|')
 
 /**
  * Player-fighter character ids a live fight's ctx.roster still needs a doc for (07-19: a party member's

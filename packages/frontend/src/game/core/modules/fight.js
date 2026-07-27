@@ -1,15 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Fight — the game-core EDGE of the fight system. The `state.fight` MIRROR IS DEAD (ratified:
-// the copy folded through game.js's ASYNC action pump, so every HUD read lagged the core ≥1
-// dispatch cycle — the AP-desync / "two systems fighting" root). Fight truth now has ONE home
-// (fight/store.js) and ONE read surface (fight/project.js `use_fight_view`/`fight_view` — synchronous).
-// What remains here is exactly the edge work a game-core module owns:
-//   · observe(): pump the sui roster into the core's ctx (display names — one home, ctx.roster), flip
-//     `action/fight_mode` on the fight's null↔non-null EDGE (player.js folds it), and drive the D111
-//     combat-music bed — effects at the edges, zero state copies.
-//   · the spell-card/element seed lookups, the real-time combat-log composers (emit_*), the
-//     WEAPON_ATTACK_* sentinel, and the arm/spectator helpers (all writing through the core's input() door).
+// Fight — the game-core EDGE. Fight truth has ONE home (fight/store.js) and ONE synchronous read surface
+// (fight/project.js); the lagging `state.fight` mirror is dead. This module owns only edge effects: roster ctx,
+// fight-mode/music, spell display, combat-log composition and arm/spectator helpers. Every write uses input().
 
 import { set_combat } from '../audio/ambient_music.js'
 import { combat_music_active } from '../../../fight-engine/combat_music.js'
@@ -19,13 +12,8 @@ import i18n from '../../../i18n'
 import { CHANNEL } from './chat.js'
 import { fight_spell, fight_spells_data, seat_spell_level } from '../../screens/hud/fight-spells.js'
 import { create_seat_follower, focus_seat } from '../../screens/hud/seat_follow.js'
-import {
-  resolve_character_docs,
-  missing_roster_character_ids,
-  compose_fight_roster,
-  fight_roster_signature,
-} from '../../../world-shell/character_name_resolve.js'
 import { world_fight_active } from '../../../world-shell/fight_session_scope.js'
+import { create_fight_roster_adoption } from './fight_roster_adoption.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 // The live chain corpus, normalized through @aresrpg/sim by fight-spells' door — keyed by armed name_key AND
@@ -611,43 +599,11 @@ export default function fight() {
     /** @param {import('../game.js').Context} context */
     observe({ events, get_state, dispatch }) {
       // THE FIGHT EDGE (S2 mirror kill): no state copy — three edge effects only.
-      // 1) ROSTER → CORE CTX: the fight's NAME BOOK — one row per player fighter, keyed by CHARACTER id
-      //    (compose_fight_roster is the ONE composition home; engine_view is its ONE consumer). Sources:
-      //    my own alts, the `/v1` docs resolved for every OTHER seated fighter, the rows already published
-      //    for this fight (a non-/v1 seeder — the simulator shim — keeps its real seat names), and an honest
-      //    short-CHARACTER-id placeholder for anyone still unresolved. #929: this used to REPLACE ctx.roster
-      //    with `sui.characters` alone, so the sim's seeded seat names were clobbered on the very next input
-      //    and every player row fell to engine_view's owner-address fallback (one mock owner ⇒ one address on
-      //    every row). `known`: doc once resolved, `undefined` mid-flight (dedupes either way).
-      const known = new Map()
-      let last_signature = null
-      let last_roster = /** @type {any[]} */ ([])
-      const push_roster = () => {
-        const rows = compose_fight_roster({
-          mine: get_state().sui?.characters ?? [],
-          resolved: [...known.values()].filter(Boolean),
-          carried: fight_store.getState().ctx?.roster ?? [],
-          fighters: fight_view()?.fighters,
-        })
-        if (!rows.length) return
-        const signature = fight_roster_signature(rows)
-        // Re-publish when the book CHANGED, or when the core no longer holds the array we last published (a
-        // fresh `init` empties ctx — a second fight with the identical roster must re-seed, not dedupe away).
-        if (signature === last_signature && fight_store.getState().ctx?.roster === last_roster) return
-        last_signature = signature
-        last_roster = rows
-        fight_store.getState().input({ type: 'ctx', ctx: { roster: rows } })
-      }
-      const ensure_roster = () => {
-        const missing = missing_roster_character_ids(fight_view()?.fighters, get_state().sui?.characters, known)
-        for (const id of missing) known.set(id, undefined)
-        if (missing.length)
-          void resolve_character_docs(missing).then((docs) => {
-            for (const id of missing) known.set(id, docs.get(id))
-            if (docs.size) push_roster() // a resolution landed mid-fight — heal ctx.roster now, not next tick
-          })
-        push_roster()
-      }
+      // 1) ROSTER → CORE CTX: remote seats reuse the local avatar's normalized custody/display read; its async
+      //    result re-enters only through the reducer's ctx input. The extracted edge keeps this module <600 LoC.
+      const ensure_roster = create_fight_roster_adoption({
+        get_mine: () => get_state().sui?.characters ?? [],
+      })
       // 2) SEAT FOLLOW (#948): on every turn change, bind the HUD to the active seat when it is one of MINE.
       //    Everything turn-scoped — deck, vitals, END TURN, the deadline auto-pass — hangs off the core's
       //    my_entity_id, so a second seated character was unplayable AND its expired turn never auto-passed.

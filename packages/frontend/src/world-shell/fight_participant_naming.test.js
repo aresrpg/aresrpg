@@ -14,7 +14,7 @@ import { describe, test, expect } from 'bun:test'
 import { create_fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
 
-import { compose_fight_roster, short_fighter_id } from './character_name_resolve.js'
+import { compose_fight_roster, fight_roster_signature, short_fighter_id } from './character_name_resolve.js'
 
 const FIGHT_ID = '0xnaming-fight'
 /** The simulator's shape: every seat is owned by the SAME mock address (fight/sim_chain LOCAL_ADDRESS). */
@@ -161,5 +161,52 @@ describe('#929 — turn-card names key off the CHARACTER, never the owner addres
     ])
     const rows = compose_fight_roster({ fighters })
     expect(rows.map((row) => row.id).sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('coop roster appearance adoption', () => {
+  test('the normalized custody/display row carries into the partner roster entry and projection', () => {
+    const colors = [0xc58b6a, 0x375a7f, 0xd6b36a]
+    const appearance = {
+      id: 'sim_c2',
+      name: 'Mireth',
+      classe: 'senshi',
+      sex: 'female',
+      male: false,
+      color_1: colors[0],
+      color_2: colors[1],
+      color_3: colors[2],
+    }
+    const store = open_fight([
+      { id: 'sim_c1', name: 'Kaelen' },
+      { id: appearance.id, name: appearance.name },
+    ])
+    const prior_rows = store.getState().ctx?.roster ?? []
+    const enriched_rows = compose_fight_roster({
+      mine: [],
+      resolved: [appearance],
+      carried: prior_rows,
+      fighters: project.engine_view_of(store.getState()).fighters,
+    })
+
+    // The production publication gate: name resolution has already produced the same name, so only appearance
+    // changes. Before this regression fix both signatures were identical and the richer row never re-entered.
+    if (fight_roster_signature(enriched_rows) !== fight_roster_signature(prior_rows))
+      store.getState().input({ type: 'ctx', ctx: { roster: enriched_rows } })
+
+    expect(store.getState().ctx?.roster?.find((row) => row.id === appearance.id)).toMatchObject(appearance)
+    expect(project.engine_view_of(store.getState()).fighters.get(appearance.id)).toMatchObject({
+      class_id: 'senshi',
+      sex: 'female',
+      male: false,
+      colors,
+    })
+  })
+
+  test('appearance-only enrichment invalidates the roster publication signature', () => {
+    const thin = [{ id: 'sim_c2', name: 'Mireth' }]
+    const enriched = [{ ...thin[0], male: false, color_1: 11, color_2: 22, color_3: 33 }]
+
+    expect(fight_roster_signature(enriched)).not.toBe(fight_roster_signature(thin))
   })
 })
