@@ -34,7 +34,7 @@ import {
   bumpPublishedToml,
   resolveUpgradeTarget,
 } from './ceremony_lib.mjs'
-import { assert_env, assert_trunk_ancestry } from './env_guard.mjs'
+import { assert_env, assert_publishable_tree } from './env_guard.mjs'
 
 const { UPGRADE_CAP, PACKAGE_ID, PKG_PATH } = process.env
 if (!UPGRADE_CAP || !PKG_PATH)
@@ -48,8 +48,10 @@ if (!UPGRADE_CAP || !PKG_PATH)
 assert_env(NETWORK)
 
 // FAIL-CLOSED on the wrong TREE, the sibling of the wrong-network door above (#1298): the publishing
-// HEAD must already be on trunk. No override exists — a publish that is not on edge lands on edge first.
-assert_trunk_ancestry()
+// HEAD must already be on trunk, the Move tree must match that commit byte for byte, and PKG_PATH —
+// which this script otherwise compiles sight-unseen — must live inside the repository the ancestry
+// proof is about (#1305 review). No override exists; a publish that is not on edge lands on edge first.
+assert_publishable_tree({ paths: [PKG_PATH] })
 
 // publish gate: the localnet publish_guard was retired 2026-07-14 (REDUCTION_PLAN §8) — the honest gate is `ares test` (SINGLE_FRAMEWORK_SPEC)
 

@@ -15,12 +15,15 @@
 // sponsor fence, then assertions (policies attached · ONE Version dark · GameConfig disabled · zero loose
 // authority), then --enable flips the one Version + the global GameConfig freeze.
 import fs from 'node:fs'
+import path from 'node:path'
 import { execSync } from 'node:child_process'
 
 import { Transaction } from '@mysten/sui/transactions'
 import { bcs } from '@mysten/sui/bcs'
 
 import {
+  MOVE_DIR,
+  PKG_DEPS,
   ROYALTY_BP,
   ROYALTY_MIN,
   OUT,
@@ -40,7 +43,7 @@ import {
   resolveRulesPkg,
   isSome,
 } from './ceremony_lib.mjs'
-import { with_env } from './env_guard.mjs'
+import { assert_publishable_tree, with_env } from './env_guard.mjs'
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 // WIRING PTBs — S-46: only the POLICY layer + the mainnet sponsor fence. `(tx, M) => void` builders; real mode
@@ -549,6 +552,18 @@ async function main() {
   if (skip) process.env.CEREMONY_SKIP = skip
 
   if (flag('--dry-run')) return printPlan()
+
+  // ── EXECUTE MODE STARTS HERE (#1305 review, CRITICAL) ───────────────────────────────────────
+  // Everything below this line signs chain transactions: doCeremony publishes nine packages,
+  // doEnable flips the live switch. Both used to reach `tx.publish` from any branch, any commit,
+  // any working tree — the ancestry guard existed but this orchestrator, the one the ceremony
+  // actually runs, never called it. It is armed HERE, at the single shared entry, before the
+  // client, the signer, the build or the enable path is touched, so no future door can be added
+  // below it and miss it. `--dry-run` returns above, untouched and unguarded — it signs nothing.
+  assert_publishable_tree({
+    paths: Object.keys(PKG_DEPS).map((pkg) => path.join(MOVE_DIR, pkg)),
+  })
+
   if (flag('--enable')) return doEnable()
   return doCeremony()
 }

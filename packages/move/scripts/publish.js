@@ -5,14 +5,14 @@ import { execSync } from 'child_process'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { NETWORK, keypair, sui_client } from './client.js'
-import { assert_trunk_ancestry, with_env } from './env_guard.mjs'
+import { assert_publishable_tree, with_env } from './env_guard.mjs'
 
 // publish gate: the localnet publish_guard was retired 2026-07-14 (REDUCTION_PLAN §8) — the honest gate is `ares test` (SINGLE_FRAMEWORK_SPEC)
 
 // FAIL-CLOSED before anything is built or signed (#1298): the publishing HEAD must already be on
 // trunk. Ceremony #3 published from an unmerged draft branch — live bytecode edge never carried.
 // No override exists; a tree that is not on edge lands on edge first.
-assert_trunk_ancestry()
+assert_publishable_tree({ paths: ['./'] })
 
 const tx = new Transaction()
 

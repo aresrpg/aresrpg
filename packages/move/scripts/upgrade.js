@@ -6,7 +6,12 @@ import { setTimeout } from 'timers/promises'
 import { Transaction, UpgradePolicy } from '@mysten/sui/transactions'
 
 import { NETWORK, keypair, sui_client } from './client.js'
-import { with_env } from './env_guard.mjs'
+import { assert_publishable_tree, with_env } from './env_guard.mjs'
+
+// FAIL-CLOSED before anything is built or signed (#1305 review): this legacy door is still what
+// `bun run upgrade:testnet|upgrade:mainnet` invokes, so it carries the same guard as the ceremony —
+// trunk ancestry, a clean Move tree, and a compiled path inside the verified repository.
+assert_publishable_tree({ paths: ['./'] })
 
 const { UPGRADE_CAP, PACKAGE_ID } = process.env
 
