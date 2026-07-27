@@ -397,6 +397,10 @@ export function produce_receipt_render_turns(
       const trap_steps = rendered_path.flatMap((cell, index) =>
         matches_trap(cell, encoded_cell(cell, grid_width), event) ? [index] : []
       )
+      // The claim above ran on the pre-flush route; if the post-flush one disagrees (a pending Displaced moved a
+      // body the walk had to route around), give the held Hits back rather than swallow them — a dropped floater
+      // is a worse bug than the one this fixes.
+      if (trap_steps.length === 0 && held.length > 0) write_receipt_effects(turn, held)
       // The SIM emitter returns the move event first (reduce.js `handle_move`), so the same Hits sit AFTER this
       // row instead of before it. Claim them here too: both emitter orders must render identically, which is
       // exactly what lets sim_chain_events align to the chain's order without the simulator inheriting the
