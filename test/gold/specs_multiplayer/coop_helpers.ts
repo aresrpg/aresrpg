@@ -476,14 +476,14 @@ export async function assert_victory_and_continue(page: Page): Promise<bigint> {
  *  Per-client channels stay out by design: my_entity_id, prediction ap/mp, presented paces, trap overlays. */
 export async function chain_truth_export(page: Page): Promise<unknown> {
   return page.evaluate(async () => {
-    const [{ decode, fight_store, engine_view_of }, { committed_state }] = await Promise.all([
+    const [{ decode, fight_store, engine_view_of }, { committed_truth }] = await Promise.all([
       import('/@id/@aresrpg/fight'),
       import('/@id/@aresrpg/fight/store'),
     ])
     const state = fight_store.getState()
     const view = engine_view_of(state)
     if (!view?.fighters) return null
-    const committed = committed_state(state)
+    const committed = committed_truth(state)
     let player_index = 0
     let mob_index = 0
     return [...view.fighters.values()]
