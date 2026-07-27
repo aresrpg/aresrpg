@@ -913,7 +913,7 @@
       "blocking": "SHIELDS",
       "blocking_desc": "Some spells grant a shield that soaks incoming damage of a matching element until it is used up. There is no stamina or guard stance, shields are the only damage absorption.",
       "resistance": "RESISTANCE",
-      "resistance_desc": "Elemental resistance is a percentage reduction applied to the final damage, capped at 50% per element. Negative resistance (a weakness) amplifies the damage instead.",
+      "resistance_desc": "Elemental resistance is a percentage reduction applied to the final damage, capped at 60% per element. Negative resistance (a weakness) amplifies the damage instead.",
       "life_steal": "LIFE STEAL",
       "life_steal_desc": "Drain spell effects deal damage and heal the caster for half of the health the target actually loses. Only a player's drain heals: a mob casting the same spell deals its damage and heals nothing.",
       "life_steal_note": "Damage runs through the standard damage formula first, then the caster heals for half of the health the intended target actually lost — a hit redirected onto another fighter, or one the target converts into healing, steals nothing back.",

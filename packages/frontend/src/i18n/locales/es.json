@@ -880,7 +880,7 @@
       "blocking": "ESCUDOS",
       "blocking_desc": "Algunos hechizos otorgan un escudo que absorbe el daño entrante de un elemento correspondiente hasta agotarse. No hay aguante ni postura de guardia, los escudos son la única absorción de daño.",
       "resistance": "RESISTENCIA",
-      "resistance_desc": "La resistencia elemental es una reducción porcentual aplicada al daño final, con un tope del 50% por elemento. La resistencia negativa (una debilidad) amplifica el daño en su lugar.",
+      "resistance_desc": "La resistencia elemental es una reducción porcentual aplicada al daño final, con un tope del 60% por elemento. La resistencia negativa (una debilidad) amplifica el daño en su lugar.",
       "life_steal": "ROBO DE VIDA",
       "life_steal_desc": "Los efectos de hechizo de drenaje infligen daño y curan al lanzador la mitad de la vida que el objetivo pierde realmente. Solo el drenaje de un jugador cura: un mob que lanza el mismo hechizo inflige su daño y no se cura nada.",
       "life_steal_note": "El daño pasa primero por la fórmula de daño estándar, luego el lanzador se cura la mitad de la vida que el objetivo previsto perdió realmente — un golpe redirigido a otro combatiente, o convertido en curación por el objetivo, no devuelve nada.",

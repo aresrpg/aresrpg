@@ -880,7 +880,7 @@
       "blocking": "SCHILDE",
       "blocking_desc": "Manche Zauber gewähren einen Schild, der eingehenden Schaden eines passenden Elements absorbiert, bis er aufgebraucht ist. Es gibt keine Ausdauer und keine Verteidigungshaltung, Schilde sind die einzige Schadensabsorption.",
       "resistance": "WIDERSTAND",
-      "resistance_desc": "Elementar-Widerstand ist eine prozentuale Reduktion, die auf den finalen Schaden angewendet wird, gedeckelt bei 50% pro Element. Negativer Widerstand (eine Schwäche) verstärkt den Schaden stattdessen.",
+      "resistance_desc": "Elementar-Widerstand ist eine prozentuale Reduktion, die auf den finalen Schaden angewendet wird, gedeckelt bei 60% pro Element. Negativer Widerstand (eine Schwäche) verstärkt den Schaden stattdessen.",
       "life_steal": "LEBENSRAUB",
       "life_steal_desc": "Drain-Zaubereffekte verursachen Schaden und heilen den Wirker um die Hälfte der Lebenspunkte, die das Ziel tatsächlich verliert. Nur der Drain eines Spielers heilt: Ein Monster, das denselben Zauber wirkt, verursacht seinen Schaden und heilt sich nicht.",
       "life_steal_note": "Der Schaden durchläuft zuerst die Standard-Schadensformel, dann heilt sich der Wirker um die Hälfte der Lebenspunkte, die das vorgesehene Ziel tatsächlich verloren hat — ein auf einen anderen Kämpfer umgeleiteter Treffer, oder einer, den das Ziel in Heilung umwandelt, gibt nichts zurück.",
