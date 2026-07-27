@@ -30,6 +30,7 @@ import { use_world_binding } from '../world-shell/session_gate.js'
 import { read_world_biome } from '../world-shell/world_biome.js'
 import { resolve_engine_recipe } from '../chain/deployment'
 import { join_lobby } from '../p2p/lobby-room.js'
+import { join_courier } from '../courier/world.js'
 import { get_saved_quality } from './screens/hud/world/quality_pref.js'
 import { apply_saved_engine_flags, resolve_hack_mode } from './screens/hud/world/engine_flags_pref.js'
 import {
@@ -1139,6 +1140,7 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
     character_id: incoming_character_id,
     follow: !!follow,
   }
+  if (!follow) join_courier(incoming_world_id, mode === 'session' ? incoming_character_id : null)
   if (session?.dispose_timer) {
     clearTimeout(session.dispose_timer)
     session.dispose_timer = null

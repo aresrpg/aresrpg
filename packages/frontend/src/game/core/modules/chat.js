@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Chat — serverless P2P (no WS server exists). The composition-edge `chat_send.js` broadcasts a line to the
-// Trystero lobby (the party-scoped direct action for GROUP) and echoes it locally through this reducer. Incoming PEER
-// messages flow through @aresrpg/world's presence atom (D770a W3b — the WS-era `packet/chatMessage` shim is
-// dead): the transport dispatches `chat_received`, the core carries the chat stream head, and this module's
+// Chat — stateless courier POSTs fan out on the world presence SSE. Incoming messages flow through
+// @aresrpg/world's presence atom: the stream adapter dispatches `chat_received`, the core carries the chat head, and this module's
 // `observe` subscribes to it and folds each row into message_history (session-local, no backlog). CHANNEL
 // routes the render color; `address` (= the sender's character id off the wire) drives the "me" test.
 
@@ -41,10 +39,8 @@ export default function chat() {
     observe({ get_state, dispatch }) {
       // Incoming PEER chat: the presence core's chat stream head (fed `chat_received` by the transport)
       // delivers each row exactly once, in order — fold it into message_history. from_me compares the
-      // sender's character id (`address`, per the header above) against MY active character
-      // (selected_character_id) — a wallet address would be a category error here regardless (a character
-      // id can never equal one). My own outgoing lines already echo locally through chat_send.js, so this
-      // only ever resolves true for another session/tab on the same active character (#707).
+      // sender's character id against MY active character. `address` is the zkLogin-verified wallet address,
+      // while `id` remains the character identity used for the local/remote display verdict.
       subscribe_chat(
         presence_store,
         ({ id, message, address, name = '', channel = CHANNEL.general, target = '' }) => {
@@ -55,7 +51,7 @@ export default function chat() {
             name,
             channel,
             target,
-            from_me: address === get_state().selected_character_id,
+            from_me: id === get_state().selected_character_id,
           })
         },
       )

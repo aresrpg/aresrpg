@@ -38,6 +38,7 @@ import {
 import { context } from '../game/core/game.js'
 import { game_log } from '../core/log.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
+import { sync_party_room as sync_courier_party_room } from '../courier/world.js'
 
 import { RELAY_URLS } from './relays.js'
 import { suppress_periodic_room_announcements, trystero_room_topic } from './relay-signaling.js'
@@ -81,17 +82,11 @@ const RTC_CONFIG = {
 }
 
 let room = null
-let pos_action = null
-let chat_action = null
-let party_chat_action = null
 let state_action = null
 let party_invite_action = null
 let dungeon_share_action = null
 let fight_stream_action = null
 let commission_request_action = null
-// Party chat is a distinct ACTION on the existing direct world-room data channel. `party_room_id` is only the
-// local routing scope; it never creates a second Trystero room (and therefore never doubles relay announcements).
-let party_room_id = null
 /** @type {Map<string, string>} trystero peer_id → the on-chain character_id it broadcasts as — the one
  * transport-level routing fact that stays OUTSIDE the atom (the core never sees trystero peer ids). */
 const peer_characters = new Map()
@@ -127,9 +122,6 @@ function _restore_relay_announcements() {
 }
 
 function _clear_room_actions() {
-  pos_action = null
-  chat_action = null
-  party_chat_action = null
   state_action = null
   party_invite_action = null
   dungeon_share_action = null
@@ -216,40 +208,11 @@ let watchdogs_started = false
 function _build_room() {
   link_grace_until = Date.now() + LINK_GRACE_MS // fresh sockets connect async — grace the death judgment
   room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, ROOM_ID)
-  pos_action = room.makeAction('pos')
-  chat_action = room.makeAction('chat')
-  party_chat_action = room.makeAction('pchat')
   state_action = room.makeAction('state')
   party_invite_action = room.makeAction('pinvite')
   dungeon_share_action = room.makeAction('dshare')
   fight_stream_action = room.makeAction('fstream')
   commission_request_action = room.makeAction('crequest')
-
-  // RECEIVE → typed inputs through the presence door. The plausibility drop + own-echo filtering live in the
-  // FOLD (the core knows the session id via the `session` input) — this adapter only routes + maps peer ids.
-  pos_action.onMessage = (data, { peerId }) => {
-    const { id, x, y, h, yw } = /** @type {{ id: string, x: number, y: number, h?: number, yw?: number }} */ (
-      data ?? {}
-    )
-    if (!id || typeof x !== 'number' || typeof y !== 'number') return
-    if (id !== my_character_id()) peer_characters.set(peerId, id)
-    // D217: h carries the broadcast WORLD height (0 = old/unknown payload → renderer ground-scans);
-    // D222: yw rides too — the remote rig's true facing.
-    presence_input({ type: 'peer_pos', id, x, y, h, yw })
-  }
-
-  chat_action.onMessage = (data) => {
-    const { id, message, name, channel, target } = /** @type {any} */ (data ?? {})
-    presence_input({ type: 'chat_received', row: { id, message, address: id, name, channel, target } })
-  }
-
-  // Party chat shares the same direct data channel as every other game action. The exact current party id is
-  // carried and receiver-filtered, so a whole-room RTC broadcast never leaks a line into another party's log.
-  party_chat_action.onMessage = (data) => {
-    const { party_id, id, message, name, channel, target } = /** @type {any} */ (data ?? {})
-    if (!party_id || party_id !== party_room_id) return
-    presence_input({ type: 'chat_received', row: { id, message, address: id, name, channel, target } })
-  }
 
   state_action.onMessage = (data, { peerId }) => {
     const row = /** @type {any} */ (data ?? {})
@@ -310,15 +273,13 @@ function _build_room() {
     }
   }
 
-  // P1-B: the instant a new peer's WebRTC data channel is ready, hand it our current position + state
-  // DIRECTLY (SendOptions.target) instead of waiting for our next move / state change — both read from the
-  // ATOM (the join-replay facts live there now). Covers the "both tabs stand still" case.
+  // The instant a remaining courtesy/presence data channel is ready, hand it our low-frequency state directly.
+  // Position replay now comes from the courier registry on the world presence stream.
   room.onPeerJoin = (peerId) => {
     // Diagnostic: a peer's data channel opened → we're in a SHARED room and
     // receiving. A read-only SPECTATOR (feature #19) sends nothing below but STILL sees this count climb.
     game_log('p2p', `peer joined · peers: ${Object.keys(room?.getPeers?.() ?? {}).length}`)
-    const { character_id, my_cell } = presence_store.getState()
-    if (character_id && my_cell) pos_action?.send({ id: character_id, ...my_cell }, { target: peerId }).catch(() => {})
+    const { character_id } = presence_store.getState()
     if (character_id) _send_state(peerId) // TR-97 — merges the live cosmetic flags too (guards on my_state)
     presence_input({ type: 'peer_connected' })
     void _suppress_relay_announcements()
@@ -340,19 +301,14 @@ function _build_room() {
   }, 4000)
 }
 
-/** HEARTBEAT — re-broadcast my last cell (reusing `pos`) so a peer that stands still is still provably alive on
- *  the other side's expiry clock. Low-frequency; no-op with no id/cell (spectator or pre-spawn). */
+/** Remaining low-frequency presence heartbeat. Live positions are independently refreshed through the courier. */
 function _heartbeat() {
-  const { character_id, my_cell } = presence_store.getState()
-  if (character_id && my_cell) pos_action?.send({ id: character_id, ...my_cell }).catch(() => {})
+  if (my_character_id()) _send_state()
 }
 
-/** RE-ANNOUNCE — push my cell + state to the WHOLE room (not one peer) so both sides reconverge after a recovery
- *  without anyone refreshing. The core requests this on rejoin success / a healthy network recovery. */
+/** Re-announce the remaining low-frequency state after a recovery. Position replay belongs to the SSE registry. */
 function _reannounce() {
-  const { character_id, my_cell } = presence_store.getState()
-  if (character_id && my_cell) pos_action?.send({ id: character_id, ...my_cell }).catch(() => {})
-  if (character_id) _send_state()
+  if (my_character_id()) _send_state()
 }
 
 /** REJOIN — await teardown before rebuilding. Trystero keeps a room registered during its async leave delay;
@@ -488,32 +444,13 @@ function _stop_watchdogs() {
   link_grace_until = 0
 }
 
-/** Broadcast our current cell — call ONLY on an actual cell change (already throttled by the caller).
- *  D217: `h` = the WORLD height (feet y); D222: `yw` = facing_yaw (radians). The atom records it (the
- *  peer-join replay reads it back); the wire send is the effect. */
-export function broadcast_position(character_id, x, y, h = 0, yw = 0) {
-  presence_input({ type: 'my_cell', x, y, h, yw })
-  pos_action?.send({ id: character_id, x, y, h, yw }).catch(() => {})
-}
-
-/** Broadcast a chat line to every peer in the lobby room. */
-export function broadcast_chat(character_id, name, message, channel, target = '') {
-  chat_action?.send({ id: character_id, name, message, channel, target }).catch(() => {})
-}
-
 /**
- * Set the PARTY chat routing scope. Party messages use the existing world room's direct `pchat` action and carry
- * this id for receiver-side filtering; changing party therefore causes zero signaling joins/leaves.
+ * Set the courier PARTY chat routing scope. Kept as a compatibility export until the sibling presence migration
+ * deletes this module; no peer chat action survives here.
  * @param {string | null} party_id the on-chain Party object id (null = not in a party)
  */
 export function sync_party_room(party_id) {
-  party_room_id = party_id ?? null
-}
-
-/** Broadcast a party-scoped line over the shared direct data channel — no-op while solo. */
-export function broadcast_party_chat(character_id, name, message, channel, target = '') {
-  if (!party_room_id) return
-  party_chat_action?.send({ party_id: party_room_id, id: character_id, name, message, channel, target }).catch(() => {})
+  sync_courier_party_room(party_id)
 }
 
 /**

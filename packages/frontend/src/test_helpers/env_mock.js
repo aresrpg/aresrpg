@@ -8,6 +8,7 @@ mock.module('../env', () => ({
   ASSETS_URL: 'https://cdn.test',
   RPC_URL: 'http://localhost:3000',
   SPONSOR_URL: '/api/sponsor',
+  COURIER_URL: 'http://localhost:9529',
   SENTRY_DSN: '',
   NETWORK: 'testnet',
   UNSAFE_DEV_GAS_MIST: null,

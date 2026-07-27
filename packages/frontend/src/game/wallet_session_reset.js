@@ -28,6 +28,7 @@ import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
 import { use_expedition } from '../roster/store'
 import { leave_lobby } from '../p2p/lobby-room.js'
+import { leave_courier } from '../courier/world.js'
 import { invalidate as invalidate_kiosk_cap_cache } from '../chain/kiosk_cap_cache'
 
 /** @typedef {{ type: 'wallet_session/reset' }} WalletSessionInput */
@@ -63,6 +64,7 @@ export function reset_wallet_session(input = { type: 'wallet_session/reset' }) {
   //    the `if (room) return` no-op path and A's identity lingers (the spectate backdrop's join_lobby(null) can't
   //    re-identify while my_character_id is still A). B's lobby remount then join_lobby(B_id)'s into a fresh room.
   leave_lobby()
+  leave_courier()
 
   // 5. EXPEDITION store (S-19a — the gap this closes) — the character / kiosk / personal-kiosk-cap + active-run
   //    mirror that the in-world HUD reads (GameWorldHud / SelfPlate / CharacterMenu). It is wallet-scoped but

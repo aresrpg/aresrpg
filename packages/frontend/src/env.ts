@@ -50,6 +50,13 @@ export const RPC_URL = derive_rpc_url(
 // wallets stay self-pay.
 export const SPONSOR_URL = env.VITE_SPONSOR_URL || '/api/sponsor'
 
+// Stateless zkLogin-authenticated position/chat courier + public presence SSE. Production defaults to the
+// sponsor sibling host; local development runs api/courier.mjs on 9529 unless explicitly overridden.
+export const COURIER_URL = derive_rpc_url(
+  env.VITE_COURIER_URL,
+  import.meta.env.DEV ? 'http://localhost:9529' : 'https://sponsor.aresrpg.world'
+)
+
 // Sentry error-reporting (errors-only scope — no tracing, no replay; see core/report.js). DSN present ⇒ the
 // reporter inits; ABSENT (the default for dev/local) ⇒ init is a hard no-op, so a bare boot never phones home.
 // NEVER commit the DSN value — it lives in the gitignored .env / .env.production; .env.example templates the

@@ -11,8 +11,8 @@
 //
 // SPEAK selector: the START of the input row carries a compact GENERAL | PARTY toggle — the ONLY
 // two postable channels. COMMERCE and COMBAT stay VIEW-ONLY read filters (their lines arrive from other
-// players/screens). GENERAL and PARTY both use the shared `world` RTCDataChannel; PARTY carries its exact party id
-// and is receiver-filtered — chat.js branches broadcast_chat vs broadcast_party_chat on the selected speak channel.
+// players/screens). GENERAL and PARTY both use the world's presence SSE; PARTY carries its exact party id and
+// is receiver-filtered — chat.js branches broadcast_chat vs broadcast_party_chat on the selected speak channel.
 // Dropped from the full vendored Chat for the roam HUD: private DMs, the social menu, slash-commands (all live
 // in the full game HUD, not P2).
 //
@@ -22,11 +22,11 @@
 // visible_characters is a Map mutated in place (its ref never changes) — subscribe to a stable digest
 // primitive so React observes spawn/despawn notifications from the presence module.
 //
-// PURE P2P chat: serverless Trystero lobby (chat.js broadcast_chat + lobby-room bridge). The presence atom exposes
-// the direct-link lifecycle in this header, including finite-retry exhaustion; chat input remains locally usable.
+// Courier chat: zkLogin-authenticated POST, then one presence-stream receive fold for local and remote lines.
 
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { COURIER_CHAT_MAX_LENGTH } from '@aresrpg/sdk/courier'
 
 import { use_fight, use_game_state } from '../../../store.js'
 import { select_online_count } from '../../../core/presence_count.js'
@@ -284,7 +284,7 @@ export function WorldChat({ readonly = false } = {}) {
             onKeyDown={(e) => {
               if (e.key === 'Escape') input_ref.current?.blur() // Escape → back to the world (submit handles Enter)
             }}
-            maxLength={200}
+            maxLength={COURIER_CHAT_MAX_LENGTH}
             placeholder={t('world_chat.type_message')}
           />
         </form>

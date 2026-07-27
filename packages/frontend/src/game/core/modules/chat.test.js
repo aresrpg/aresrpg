@@ -47,13 +47,13 @@ test('an incoming peer chat row dispatches action/chat_message (from_me=false)',
   })
 })
 
-test('a row whose address is my own active character folds as from_me — #707', () => {
+test('a row whose character id is my own active character folds as from_me — #707', () => {
   const dispatched = mount_chat('0xMY_CHARACTER')
   presence_input({ type: 'chat_received', row: { id: '0xMY_CHARACTER', message: 'echo', address: '0xMY_CHARACTER' } })
   expect(dispatched.at(-1)?.payload.from_me).toBe(true)
 })
 
-test('a row from a DIFFERENT character never folds as from_me, even though my own resolves true — #707', () => {
+test('a row from a DIFFERENT character never folds as from_me, regardless of its verified wallet address — #707', () => {
   const dispatched = mount_chat('0xMY_CHARACTER')
   presence_input({ type: 'chat_received', row: { id: '0xother', message: 'gm', address: '0xother' } })
   expect(dispatched.at(-1)?.payload.from_me).toBe(false)
