@@ -14,8 +14,10 @@
 // so there is one fold, one home for fight state.
 
 import { decode_fight_event } from '@aresrpg/sdk/fight'
+import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 
 import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } from './fight_status_snapshot.js'
+import { decode, encode } from './los.js'
 import { is_status_kind } from './statuses.js'
 
 // ActionEffect is the only receipt row carrying the exact timed status descriptor. What makes a row foldable is
@@ -29,14 +31,13 @@ import { is_status_kind } from './statuses.js'
 //   · STEAL_STAT (10) — `apply_steal_stat` splits one authored line into two DERIVED rows, never this one.
 //   · TIMED_PAYLOAD (34) / NAMED_DAMAGE_STACK (35) / STANCE (36) — `schedule_payload`, `record_named_stack` and
 //     `retro_effects::apply_stance` each write their OWN derived record; the envelope's row is never the row.
-// Targeted/AoE/chance effects fail the recipient proof and remain snapshot truth.
+// Chance-gated effects and rows aimed away from the caster fail the recipient proof and remain snapshot truth.
 const K_GIVE_POINTS = 6
 const K_REMOVE_POINTS = 7
 /** Status kinds whose chain arm does NOT record the envelope's Effect verbatim — contested, or derived. */
 const DERIVED_STATUS_KINDS = new Set([7, 8, 10, 34, 35, 36])
 /** A GIVE/REMOVE_POINTS row's `stat` is the chain POINT id (`spell_effect` POINT_AP/POINT_MP) — the pool it moves. */
 const POINT_POOL = { 0: 'ap', 1: 'mp' }
-const SHAPE_POINT = 0
 const TF_NOT_TEAM = 1
 const TF_NOT_SELF = 2
 const TF_ONLY_CASTER = 32
@@ -188,9 +189,23 @@ const action_context_key = (action) =>
 
 const fields_of = (value) => value?.fields ?? value ?? {}
 
-/** A guaranteed point effect aimed at the caster is the one action-envelope shape that proves its exact recipient
- * and status row without replaying spell resolution. ActionStarted supplies the missing target cell; both rows use
- * the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds.
+/** Is the CASTER's own cell inside the effect's zone? The chain's own recipient test, restated (#1172): every
+ * effect is applied to the fighters standing in `combat_grid::zone_cells(shape, size, target_cell, caster_cell)`
+ * (cast.move:987 → `zone.contains(&pcell)`), and `get_aoe_cells` is the sim twin of that enumeration — the same
+ * function the targeting overlay already paints the zone with. A POINT zone is the ONE-CELL case, so this single
+ * question replaces the old point-only triple (`shape == POINT && size == 0 && target_cell == caster.cell`) that
+ * made every AoE self-buff unprovable. A shape the sim does not enumerate collapses to `[target]` — conservative
+ * by construction: the row simply stays snapshot truth rather than being invented. */
+const zone_hits_caster = (effect, target_cell, caster_cell) =>
+  get_aoe_cells(
+    { area_shape: Number(effect.area_shape) || 0, area_size: Number(effect.area_size) || 0 },
+    decode(target_cell),
+    decode(caster_cell)
+  ).some((cell) => encode(cell.x, cell.y) === caster_cell)
+
+/** A guaranteed effect whose zone covers the caster is the one action-envelope shape that proves its exact
+ * recipient and status row without replaying spell resolution. ActionStarted supplies the missing target cell;
+ * both rows use the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds.
  *
  * THE SECOND WIRE DOOR (#983). `ActionEffect.effect` is the chain `Effect` struct VERBATIM (cast.move record_timed
  * copies it), so a signed kind arrives 32768-CENTERED exactly like the snapshot's Fight.fx row — and lands in the
@@ -211,9 +226,7 @@ const self_status_from_effect = (state, action) => {
   if (
     !context ||
     caster?.cell == null ||
-    Number(context.target_cell) !== Number(caster.cell) ||
-    Number(effect.area_shape) !== SHAPE_POINT ||
-    Number(effect.area_size) !== 0 ||
+    !zone_hits_caster(effect, Number(context.target_cell), Number(caster.cell)) ||
     Number(effect.chance) < 100 ||
     remaining_turns <= 0 ||
     !hits_caster ||
