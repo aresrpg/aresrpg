@@ -17,9 +17,10 @@
 
 import { get_direction } from '@aresrpg/sim/fight_displacement'
 
-import { blocked_cells, cell_index, living } from './read.js'
 import { GRID_W } from '../los.js'
 import { reconstructed_path } from '../fight_render_prims.js'
+
+import { blocked_cells, cell_index, living } from './read.js'
 
 const find = (read, id) => read?.fighters?.find((f) => f.id === id) ?? null
 const same_cell = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y
@@ -313,13 +314,18 @@ export const assert_traps_sprung = (armed, before, after) => {
       (read.fighters ?? []).find((f) => f.id !== read.my_id && same_cell(f.cell_committed, trap.cell))
     const crossed = walks.find((walk) => walk.entered.some((cell) => same_cell(cell, trap.cell)))
     const landed = on_it(after)
-    const entrant = crossed ?? (landed && on_it(before)?.id !== landed.id ? { id: landed.id, from: find(before, landed.id)?.cell_committed, to: landed.cell_committed } : null)
+    const entrant =
+      crossed ??
+      (landed && on_it(before)?.id !== landed.id
+        ? { id: landed.id, from: find(before, landed.id)?.cell_committed, to: landed.cell_committed }
+        : null)
     if (!entrant) {
       remaining.push(trap)
       continue
     }
     const action = { kind: 1, spell_key: trap.spell_key, cell: trap.cell }
-    const hurt = Number(find(before, entrant.id)?.hp_committed ?? 0) - Number(find(after, entrant.id)?.hp_committed ?? 0)
+    const hurt =
+      Number(find(before, entrant.id)?.hp_committed ?? 0) - Number(find(after, entrant.id)?.hp_committed ?? 0)
     rows.push(
       row(
         0,

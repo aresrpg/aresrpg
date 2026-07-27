@@ -320,9 +320,7 @@ export const recompute = (draft, now) => {
     width: GRID_W,
   }
   const resolve_seat_key = seat_resolver(draft.view)
-  const cell_at = new Map(
-    Object.entries(base.fighters ?? {}).map(([key, fighter]) => [key, fighter.cell])
-  )
+  const cell_at = new Map(Object.entries(base.fighters ?? {}).map(([key, fighter]) => [key, fighter.cell]))
   const committed_entries = []
   for (const entry of authoritative_tail) {
     if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) continue

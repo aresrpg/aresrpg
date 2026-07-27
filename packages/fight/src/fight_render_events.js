@@ -378,7 +378,9 @@ export function produce_receipt_render_turns(
       const pushed_to = [...pending]
         .reverse()
         .find((c) => c.kind === 'Displaced' && fighter_id_from(c, 'target', resolve_fighter_id) === source_id)
-      const probe_from = pushed_to ? decoded_cell(pushed_to.to_cell, grid_width) : (settled_cells.get(source_id) ?? cells_lookup())
+      const probe_from = pushed_to
+        ? decoded_cell(pushed_to.to_cell, grid_width)
+        : (settled_cells.get(source_id) ?? cells_lookup())
       const held = crosses_trap(event, source_id, probe_from, to) ? pending.filter(mover_hit) : []
       pending = pending.filter((candidate) => !held.includes(candidate))
       flush_pending()
@@ -428,7 +430,8 @@ export function produce_receipt_render_turns(
         const cell = rendered_path[step]
         const encoded = encoded_cell(cell, grid_width)
         // The LAST trap absorbs any surplus Hits — a payload may fold several rows (damage + a collision).
-        const hits = ordinal === trap_steps.length - 1 ? trap_hits.slice(ordinal) : trap_hits.slice(ordinal, ordinal + 1)
+        const hits =
+          ordinal === trap_steps.length - 1 ? trap_hits.slice(ordinal) : trap_hits.slice(ordinal, ordinal + 1)
         const trap_owner_id = resolve_trap_owner?.(cell, encoded, event) ?? null
         write_leg(leg, cell)
         append_to(turn, 'trap_trigger', TRAP_BEAT_MS, {

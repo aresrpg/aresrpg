@@ -21,11 +21,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import {
-  DAMAGE_BEAT_MS,
-  TRAP_BEAT_MS,
-  produce_receipt_render_turns,
-} from '../src/fight_render_events.js'
+import { DAMAGE_BEAT_MS, TRAP_BEAT_MS, produce_receipt_render_turns } from '../src/fight_render_events.js'
 import { FIGHT_RENDER_TIMINGS } from '../src/fight_render_prims.js'
 import { encode_sim_step } from '../src/sim_chain_events.js'
 
