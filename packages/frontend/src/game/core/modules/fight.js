@@ -393,6 +393,38 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
 }
 
 /**
+ * Emit the combat-log account of one partially or fully dodged point drain. The receipt presenter owns the
+ * arithmetic and hands this composer `{ attempted, dodged, landed }`; this seam only names and colours that
+ * already-derived fact, so chat, spectators, and the board cannot disagree about the outcome.
+ * @param {() => any} get_state @param {(type: string, payload: any) => void} dispatch
+ * @param {{ caster_id: string, target_id: string, pool: 'ap'|'mp', attempted: number, dodged: number, landed: number }} outcome
+ */
+export const emit_dodge_line = (get_state, dispatch, outcome) => {
+  if (!(outcome?.dodged > 0)) return
+  const fighters = get_state().fight?.fighters
+  if (!fighters) return
+  const unknown = i18n.t('world_chat.log_unknown_fighter')
+  const caster = fighters.get(outcome.caster_id)?.name || unknown
+  const target = fighters.get(outcome.target_id)?.name || unknown
+  const pool = i18n.t(outcome.pool === 'ap' ? 'fight.ap' : 'fight.mp')
+  const num_cls = `clog-num clog-num--${outcome.pool === 'ap' ? 'ap' : 'mp'}`
+  dispatch(
+    'action/chat_message',
+    combat_log_line(
+      `${outcome.pool === 'ap' ? 'ap' : 'mp'}-dodge`,
+      segment_template(i18n.t('world_chat.log_dodge', { ...outcome, caster, target, pool }), [
+        { value: target, cls: 'clog-target', ref: outcome.target_id },
+        { value: caster, cls: 'clog-name', ref: outcome.caster_id },
+        { value: `${outcome.attempted}`, cls: num_cls },
+        { value: pool, cls: num_cls },
+        { value: `${outcome.dodged}`, cls: num_cls },
+        { value: `${outcome.landed}`, cls: num_cls },
+      ])
+    )
+  )
+}
+
+/**
  * Emit ONE "<owner>'s trap hit <target> for N" line, or the explicit neutral fallback when this client has no
  * owner data. Fired by the adapter at the trap beat so it streams with the flinch+floater. Owner and target name
  * segments carry refs for late-identity healing; the number stays damage-red.

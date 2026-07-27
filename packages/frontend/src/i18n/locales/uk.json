@@ -1852,6 +1852,7 @@
     "log_trap_neutral": "Пастка вдарила {{target}} на {{amount}}",
     "log_ap_drain": "{{caster}} забрав {{amount}} ОД у {{target}}",
     "log_mp_drain": "{{caster}} забрав {{amount}} ОР у {{target}}",
+    "log_dodge": "{{target}} ухилився від {{caster}}: спроба {{attempted}} {{pool}}, ухилено {{dodged}}, влучило {{landed}}",
     "log_crit_prefix": "КРИТ!",
     "log_unknown_fighter": "Боєць"
   },

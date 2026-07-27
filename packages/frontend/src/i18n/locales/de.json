@@ -1852,6 +1852,7 @@
     "log_trap_neutral": "Eine Falle trifft {{target}} mit {{amount}}",
     "log_ap_drain": "{{caster}} entzieht {{target}} {{amount}} AP",
     "log_mp_drain": "{{caster}} entzieht {{target}} {{amount}} BP",
+    "log_dodge": "{{target}} weicht {{caster}} aus: {{attempted}} {{pool}} versucht, {{dodged}} ausgewichen, {{landed}} getroffen",
     "log_crit_prefix": "KRITISCH!",
     "log_unknown_fighter": "Ein Kämpfer"
   },

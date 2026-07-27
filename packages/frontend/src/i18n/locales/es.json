@@ -1852,6 +1852,7 @@
     "log_trap_neutral": "Una trampa golpea a {{target}} por {{amount}}",
     "log_ap_drain": "{{caster}} drena {{amount}} PA a {{target}}",
     "log_mp_drain": "{{caster}} drena {{amount}} PM a {{target}}",
+    "log_dodge": "{{target}} esquiva a {{caster}}: {{attempted}} {{pool}} intentados, {{dodged}} esquivados, {{landed}} aplicados",
     "log_crit_prefix": "¡CRÍTICO!",
     "log_unknown_fighter": "Un luchador"
   },

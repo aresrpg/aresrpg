@@ -80,6 +80,7 @@ import {
   // COMBAT-LOG REALTIME: the log lines compose in fight.js (one home) but fire HERE, at each
   // beat, so they stream with the paced replay instead of dumping at packet-dispatch time.
   emit_cast_context_line,
+  emit_dodge_line,
   emit_effect_line,
   emit_death_line,
   emit_trap_line,
@@ -1029,6 +1030,10 @@ export function create_voxel_fight_adapter(
           reconcile()
           await play_trap_boom(payload)
         } else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
+        else if (spec.kind === 'status' && payload.status === 'DRAIN' && payload.dodged > 0)
+          // The receipt presenter derived this one fold outcome; every mounted viewer emits its own client-only
+          // combat line from those exact counts. No contest is rolled or reconstructed at the render edge.
+          emit_dodge_line(read_board_fight_state, context.dispatch, payload)
         else if (spec.kind === 'tackled') {
           // TACKLE BITE: a tackled player plays the hit animation just before moving —
           // the runner FLINCHES; the producer already ordered this beat strictly before any retry move beat,

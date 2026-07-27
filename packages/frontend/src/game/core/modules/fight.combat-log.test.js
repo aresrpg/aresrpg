@@ -13,8 +13,9 @@
 // compose end-to-end without wiring fight.js and WorldChat.jsx together in production code.
 
 import { describe, expect, it } from 'bun:test'
+import { produce_receipt_render_turns } from '@aresrpg/fight/fight_render_events'
 
-import { emit_cast_log, emit_deaths, emit_death_line, emit_trap_line } from './fight.js'
+import { emit_cast_log, emit_deaths, emit_death_line, emit_dodge_line, emit_trap_line } from './fight.js'
 import { resolve_segment_text } from '../../screens/hud/world/combat_log_names.js'
 
 /** A fake dispatch that records every action, plus a lookup by id_prefix (combat_log_line's `id` is
@@ -25,6 +26,32 @@ const recorder = () => {
 }
 
 const find_by_prefix = (actions, prefix) => actions.find((a) => a.payload.id.startsWith(`${prefix}-`))?.payload
+
+const drain_outcome = ({ requested, removed }) => {
+  const package_id = `0x${'a'.repeat(64)}`
+  const fight_id = `0x${'b'.repeat(64)}`
+  const raw = (name, json) => ({
+    type: `${package_id}::fight_events::${name}`,
+    parsedJson: { fight: fight_id, ...json },
+  })
+  const { events } = produce_receipt_render_turns(
+    [
+      raw('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: 3 }),
+      raw('Drain', {
+        target_is_mob: true,
+        target_idx: 0,
+        point_kind: 1,
+        requested,
+        removed,
+      }),
+    ],
+    {
+      fight_id,
+      resolve_fighter_id: ({ is_mob, idx }) => (is_mob ? `mob-${idx}` : `p${Number(idx) + 1}`),
+    }
+  )
+  return events.find((event) => event.payload?.status === 'DRAIN')?.payload
+}
 
 describe('emit_cast_log — combat-log composer attaches a live ref to every name segment', () => {
   it('a hit on a mob whose identity has NOT resolved yet: text is the "Mob" placeholder, ref is the real fighter id', () => {
@@ -248,6 +275,37 @@ describe('OWNER COLOUR GRAMMAR (07-12) — segment classes match the requested g
     })
     const absorb = find_by_prefix(actions, 'absorb')
     expect(absorb.message).toBe('Aldric hit Sewer Rat but dealt no damage')
+  })
+})
+
+describe('emit_dodge_line — one decoded drain outcome tells every viewer what was attempted and landed', () => {
+  const fighters = new Map([
+    ['p1', { name: 'Aldric' }],
+    ['mob-0', { name: 'Sewer Rat' }],
+  ])
+
+  it('prints a fully-dodged MP drain', () => {
+    const outcome = drain_outcome({ requested: 2, removed: 0 })
+    expect(outcome).toMatchObject({ pool: 'mp', attempted: 2, dodged: 2, landed: 0 })
+    const { actions, dispatch } = recorder()
+
+    emit_dodge_line(() => ({ fight: { fighters } }), dispatch, outcome)
+
+    const dodge = find_by_prefix(actions, 'mp-dodge')
+    expect(dodge.message).toBe('Sewer Rat dodged Aldric: attempted 2 MP, dodged 2, landed 0')
+    expect(dodge.segments).toContainEqual({ text: 'Sewer Rat', cls: 'clog-target', ref: 'mob-0' })
+    expect(dodge.segments).toContainEqual({ text: 'Aldric', cls: 'clog-name', ref: 'p1' })
+  })
+
+  it('prints a partially-dodged MP drain from the same outcome shape', () => {
+    const outcome = drain_outcome({ requested: 3, removed: 1 })
+    expect(outcome).toMatchObject({ pool: 'mp', attempted: 3, dodged: 2, landed: 1 })
+    const { actions, dispatch } = recorder()
+
+    emit_dodge_line(() => ({ fight: { fighters } }), dispatch, outcome)
+
+    const dodge = find_by_prefix(actions, 'mp-dodge')
+    expect(dodge.message).toBe('Sewer Rat dodged Aldric: attempted 3 MP, dodged 2, landed 1')
   })
 })
 

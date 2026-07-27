@@ -315,12 +315,22 @@ export function produce_receipt_render_turns(
       }
     }
 
-    for (const event of effects.filter((candidate) => candidate.kind === 'Drain'))
+    for (const event of effects.filter((candidate) => candidate.kind === 'Drain')) {
+      // The Drain row is the one authoritative dodge outcome: requested is what the cast attempted and removed
+      // is what landed. Derive the missing share once here so every presenter consumes the same three counts.
+      const landed = Math.max(0, Math.trunc(Number(event.removed) || 0))
+      const attempted = Math.max(landed, Math.trunc(Number(event.requested) || 0))
       append_to(turn, 'status', 0, {
         target_id: fighter_id_from(event, 'target', resolve_fighter_id),
+        caster_id: turn.source_id,
         status: 'DRAIN',
+        pool: Number(event.point_kind) === 0 ? 'ap' : 'mp',
+        attempted,
+        dodged: attempted - landed,
+        landed,
         source_event: event,
       })
+    }
     for (const event of effects.filter((candidate) => candidate.kind === 'StanceChanged'))
       append_to(turn, 'status', 0, {
         target_id: fighter_id_from(event, 'target', resolve_fighter_id),
