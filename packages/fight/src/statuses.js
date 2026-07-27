@@ -86,8 +86,11 @@ const STATUS_KIND_SET = new Set(STATUS_KINDS)
 export const is_status_kind = (kind) => STATUS_KIND_SET.has(Number(kind))
 
 /** The chain kind for one live sim effect row, or null when the row is not a status the chain records
- *  (a plain DAMAGE/HEAL tick row is bookkeeping, never a badge). */
+ *  (a plain DAMAGE/HEAL tick row is bookkeeping, never a badge). Poison is the one exception: fight_spells.js
+ *  rides its tick on a `type: 'DAMAGE'` row (reusing the generic damage-tick machinery, #1211) and marks it
+ *  `dot: true` so it still reports as K_APPLY_DOT here — a badge for its target, mob or player alike. */
 const status_kind_of = (effect) => {
+  if (effect.dot) return STATUS_KIND.POISON
   if (effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') {
     if (POOL_POINT_KIND[effect.stat] !== undefined) return effect.type === 'STAT_BUFF' ? 6 : 7 // GIVE/REMOVE_POINTS
     return RESIST_ELEMENT[effect.stat] !== undefined ? 11 : 9 // ALTER_RESIST : ALTER_STAT

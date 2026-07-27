@@ -396,7 +396,13 @@ export const apply_spell_effect = (
     const draw = rng_range(s2.rng, effect.min, effect.max)
     const poisoned = add_effect({ ...s2, rng: draw.state }, target_id, {
       id,
+      // `type: 'DAMAGE'` is deliberate — it rides the SAME tick machinery a plain damage-over-time row uses
+      // (process_turn_effects only special-cases `type === 'DAMAGE'`), so the reducer never needs a parallel
+      // POISON damage path. `dot: true` is the ONLY discriminant that survives to say "this DAMAGE row is a
+      // Poison/K_APPLY_DOT status, not bookkeeping" — statuses.status_kind_of (#1211) reads it to badge the
+      // row on the turn card/tooltip exactly like every other timed status, for a mob target same as a player.
       type: 'DAMAGE',
+      dot: true,
       timing: 'TURN_START',
       source_id: caster.id,
       element: effect.element,
