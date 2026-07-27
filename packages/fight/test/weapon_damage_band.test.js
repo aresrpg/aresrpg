@@ -60,12 +60,12 @@ const ZERO_STATS = {
   air_resistance: 0,
 }
 
-const entity = (id, cell, is_player) => ({
+const entity = (id, cell, is_player, health = 4000) => ({
   id,
   name: id,
   cell,
-  health: 4000, // deep enough that N swings never kill and every swing is observable
-  health_max: 4000,
+  health, // default deep enough that N swings never kill and every swing is observable
+  health_max: health,
   ap: 99,
   ap_max: 99,
   mp: 4,
@@ -81,7 +81,7 @@ const entity = (id, cell, is_player) => ({
   spell_levels: {},
 })
 
-const boot = () => {
+const boot = (mob_health = 4000) => {
   const { board } = derive_board(SEED)
   const arena = arena_from_board(board)
   return create_sim_chain({
@@ -90,7 +90,7 @@ const boot = () => {
     team0: [entity(ME, arena.spawns_a[0], true)],
     // ADJACENT, on the neighbouring spawn cell: a sword is reach-1, and `weapon_spell_template` hardcodes
     // line_of_sight — put the mob across the carved board and every swing is refused for LOS, not measured.
-    team1: [entity('mob_0', arena.spawns_a[1], false)],
+    team1: [entity('mob_0', arena.spawns_a[1], false, mob_health)],
     templates_raw: [],
     group_template: '0xgroup',
   })
@@ -118,28 +118,43 @@ const ref_of = (board) => (id) => {
   return idx < 0 ? null : { is_mob: false, idx }
 }
 
-describe('#577 — the sword rolls its band instead of always swinging the low bound', () => {
-  const chain = boot()
+const TEMPLATE = weapon_spell_template({ ...SWORD, reach: 1 })
+const SLOTS = [...Array(16).keys()]
+
+/** One swing of the sword on §7 turn slot `slot`, over `fixture`, returned as the HP the mob is left on. */
+const swing_remaining = ({ board, view, mob_cell }, slot) =>
+  predict_cast({
+    view,
+    caster_id: ME,
+    spell: TEMPLATE,
+    spell_level: 1,
+    target_cell: encode(mob_cell.x, mob_cell.y),
+    critical: false, // the crit branch is its own swap; this file measures the NORMAL band
+    critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_deadline_ms: NOW + 30_000, seat: 0, slot },
+    resolve_ref: ref_of(board),
+  }).actions.find((action) => action.kind === 'Hit' && action.victim_is_mob)?.remaining_hp
+
+/** A booted fixture at `mob_health`, adopted through the production snapshot door. */
+const fixture_at = (mob_health) => {
+  const chain = boot(mob_health)
   const { board, view } = adopt(chain)
-  const seat_cell = chain.sim_state.team0[0].cell
-  const mob_cell = chain.sim_state.team1[0].cell
-  const template = weapon_spell_template({ ...SWORD, reach: 1 })
+  return {
+    board,
+    view,
+    seat_cell: chain.sim_state.team0[0].cell,
+    mob_cell: chain.sim_state.team1[0].cell,
+  }
+}
 
-  /** One swing on §7 turn slot `slot`, returned as the HP the mob is left on. */
-  const swing_hp = (slot) =>
-    predict_cast({
-      view,
-      caster_id: ME,
-      spell: template,
-      spell_level: 1,
-      target_cell: encode(mob_cell.x, mob_cell.y),
-      critical: false, // the crit branch is its own swap; this file measures the NORMAL band
-      critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_deadline_ms: NOW + 30_000, seat: 0, slot },
-      resolve_ref: ref_of(board),
-    }).actions.find((action) => action.kind === 'Hit' && action.victim_is_mob)?.remaining_hp
+// The DEEP fixture: 4000 HP, so no swing can be truncated by the victim's remaining HP and every roll is
+// observable in full. Both describes below read this one measurement — the kill-threshold block derives its
+// expected death set from these exact numbers, so the two can never drift apart.
+const DEEP = fixture_at(4000)
+const damages = SLOTS.map((slot) => 4000 - swing_remaining(DEEP, slot))
 
-  const SLOTS = [...Array(16).keys()]
-  const damages = SLOTS.map((slot) => 4000 - swing_hp(slot))
+describe('#577 — the sword rolls its band instead of always swinging the low bound', () => {
+  const { seat_cell, mob_cell } = DEEP
+  const template = TEMPLATE
 
   test('the fixture actually swings — an adjacent mob, in reach, taking real hits', () => {
     // Guard the guard: a refused cast yields no Hit row, and `4000 - undefined` is NaN — which would make the
@@ -171,8 +186,52 @@ describe('#577 — the sword rolls its band instead of always swinging the low b
   test('DETERMINISM — the same turn-seed slot always swings the same number, so it is previewable', () => {
     // Variance alone would be a different bug: the §7 contract is that the roll is a FUNCTION of (turn_seed,
     // slot), which is what lets the client paint the number before committing and lets a replay reproduce it.
-    expect(SLOTS.map((slot) => 4000 - swing_hp(slot))).toEqual(damages)
+    expect(SLOTS.map((slot) => 4000 - swing_remaining(DEEP, slot))).toEqual(damages)
     // …and it is genuinely slot-keyed, not one cached number handed back every time.
-    expect(new Set(SLOTS.map((slot) => 4000 - swing_hp(slot))).size).toBe(new Set(damages).size)
+    expect(new Set(SLOTS.map((slot) => 4000 - swing_remaining(DEEP, slot))).size).toBe(new Set(damages).size)
+  })
+})
+
+// ── The second field report: a mob DIED on chain but SURVIVED in the sim ──────────────────────────────────
+// Same defect, its most expensive face. A kill threshold is a band question: a target sitting inside the band
+// dies to a high roll and lives through a low one. With the band folded flat at its floor the sim could only
+// ever deal the minimum, so any target above that minimum was UNKILLABLE in the sim while the chain's in-range
+// roll crossed lethal — the prediction says "survives", the receipt says "dead".
+//
+// Expressed sim-side and deterministically: park a mob strictly INSIDE the 16–29 band and assert the outcome
+// actually splits across turn-seed slots. Deliberately not a chain-capture parity assert — this is the
+// mechanism that produced the divergence, and it is measurable without a fixture the repo cannot hold.
+describe('#577 — the kill threshold moves with the roll (a target inside the band is not immortal)', () => {
+  const MOB_HP = 20 // strictly inside 16–29: unreachable at the floor, lethal on a high roll
+  const chain = boot(MOB_HP)
+  const { board, view } = adopt(chain)
+  const mob_cell = chain.sim_state.team1[0].cell
+  const template = weapon_spell_template({ ...SWORD, reach: 1 })
+
+  const remaining = (slot) =>
+    predict_cast({
+      view,
+      caster_id: ME,
+      spell: template,
+      spell_level: 1,
+      target_cell: encode(mob_cell.x, mob_cell.y),
+      critical: false,
+      critical_clock: { world_seed: 0x51ee7, spawn_id: 7, turn_deadline_ms: NOW + 30_000, seat: 0, slot },
+      resolve_ref: ref_of(board),
+    }).actions.find((action) => action.kind === 'Hit' && action.victim_is_mob)?.remaining_hp
+
+  const outcomes = [...Array(16).keys()].map((slot) => remaining(slot))
+
+  test('some slots KILL the 20 HP mob and some leave it standing — the outcome is roll-decided', () => {
+    // Under the flat fold every swing dealt 16, so a 20 HP mob survived every single slot: lethal count 0.
+    // That is the reported divergence in one number.
+    expect(outcomes.some((hp) => hp === 0)).toBe(true)
+    expect(outcomes.some((hp) => hp > 0)).toBe(true)
+  })
+
+  test('the split is exactly the band arithmetic — lethal iff that slot rolled >= the mob HP', () => {
+    // No tolerance and no sampling: which slots kill is a FUNCTION of the roll, so the kill set is derivable
+    // from the damage numbers the band test already measured. Ties the death outcome to the roll, not to luck.
+    expect(outcomes.map((hp) => hp === 0)).toEqual(damages.map((amount) => amount >= MOB_HP))
   })
 })
