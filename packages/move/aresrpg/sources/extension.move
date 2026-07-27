@@ -36,21 +36,12 @@ public struct NsKey<K: copy + drop + store> has copy, drop, store {
 
 // ╔════════════════ [ Item MINT door (assert_enabled-gated; returns the LockPledge hot potato) ] ═ ]
 
-/// The single cross-cutting GEAR-mint path (shop purchase, loot claims, craft output, gacha, pool item-out).
-/// Returns the `LockPledge` hot potato so the caller is TYPE-FORCED to lock the item into a personal kiosk in the
-/// same PTB (kiosk-lock constitution). `assert_enabled` like every value path.
-///
-/// #758 — THE ROLL LIVES HERE, so no seam can forget it: a template carrying authored [min,max] ranges mints with
-/// its FIXED rolled block already attached. `stat_seed` is the entropy every caller derives from its OWN terminal
-/// `&Random` (shop: the buy generator; loot: the fight result's open-time seed; craft: the craft generator);
-/// `none` means the caller HAS no entropy to offer and the item mints blank — the honest state, never a
-/// predictable stand-in (a `ctx`-derived seed would be dry-runnable, i.e. free re-rolls).
-public(package) fun mint_item(template: &ItemTemplate, stat_seed: Option<u64>, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
+/// The single cross-cutting item-mint path (loot claims, craft output, gacha, pool item-out). Returns the
+/// `LockPledge` hot potato so the caller is TYPE-FORCED to lock the item into a personal kiosk in the same PTB
+/// (kiosk-lock constitution). `assert_enabled` like every value path.
+public(package) fun mint_item(template: &ItemTemplate, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
   version.assert_enabled();
-  let (mut item, pledge) = item::mint(template, ctx);
-  let rolled = if (stat_seed.is_some()) item_stats::roll_for_template(template, stat_seed.destroy_some()) else option::none();
-  if (rolled.is_some()) item_stats::attach_rolled(&mut item, *rolled.borrow());
-  (item, pledge)
+  item::mint(template, ctx)
 }
 
 /// The stackable mint twin (gather yields, pool item-out): mints ONE item carrying `quantity` units.
@@ -172,8 +163,8 @@ public(package) fun ns_item(): u8 { NS_ITEM }
 #[test_only]
 /// Pledge-carrying mint for SIBLING test fixtures (forge split): the only public route to (Item, LockPledge)
 /// outside the package — test builds only, stripped from every publish.
-public fun mint_item_for_testing(template: &ItemTemplate, stat_seed: Option<u64>, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
-  mint_item(template, stat_seed, version, ctx)
+public fun mint_item_for_testing(template: &ItemTemplate, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
+  mint_item(template, version, ctx)
 }
 
 #[test_only]

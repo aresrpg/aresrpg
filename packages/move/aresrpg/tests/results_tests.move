@@ -103,63 +103,6 @@ fun open_settles_reads_mints_and_burns() {
   sc.end();
 }
 
-// ╔════════════════ [ #758 — loot-minted GEAR is born rolled ] ═══════════════ ]
-
-#[test]
-/// #758 REGRESSION: gear claimed off a fight result carries its rolled `StatsKey`. Before the fix `mint_rolled`
-/// minted through a door that never rolled, so every looted item's owned-stat block was blank forever — only
-/// `shop::buy` attached one. Two units are claimed in one call: each lands a block inside the authored [min,max],
-/// each from its OWN derived seed (the ticket's open-time entropy folded with the template id and the unit index).
-fun loot_minted_gear_carries_rolled_stats() {
-  let mut sc = ts::begin(test_world::owner());
-  let (cid, _res_tid) = stage(&mut sc);
-  mark_character(&mut sc, cid);
-  test_world::whitelist(&mut sc, b"hat");
-  let gear_tid = test_world::make_ranged_gear_template(&mut sc, b"hat", b"hat", 100, 200);
-
-  // OPEN owing 2 units of the gear template (one 100%-chance line, 2 mobs killed → 1 + 1)
-  sc.next_tx(test_world::owner());
-  {
-    let mut k = sc.take_shared<Kiosk>();
-    let pkcap = sc.take_from_sender<PersonalKioskCap>();
-    let cfg = sc.take_shared<GameConfig>();
-    let ver = sc.take_shared<Version>();
-    let loot = vector[mob::new_loot_entry(gear_tid, 10_000, 1, 1)];
-    let outcome = settlement::outcome_for_testing(
-      fight::brand_type(), fid(), wid(), cid, 1, 100, 50, 0, 0, 2 /*mob_count*/, loot, false, 0, option::none(), 100, sc.ctx(),
-    );
-    results::open_for_testing(outcome, &mut k, &pkcap, &cfg, &ver, 2000, sc.ctx());
-    ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
-  };
-
-  // CLAIM both units
-  sc.next_tx(test_world::owner());
-  let mut result = sc.take_from_sender<FightResult>();
-  assert_eq!(results::rolled_qty(&result, gear_tid), 2);
-  let (kid, minted) = {
-    let tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, gear_tid);
-    let mut k = sc.take_shared<Kiosk>();
-    let pkcap = sc.take_from_sender<PersonalKioskCap>();
-    let policy = sc.take_shared<TransferPolicy<Item>>();
-    let ver = sc.take_shared<Version>();
-    let kid = object::id(&k);
-    let minted = results::mint_rolled_for_testing(&mut result, &tmpl, &ver, &mut k, &pkcap, &policy, sc.ctx());
-    assert_eq!(minted.length(), 2);
-    ts::return_shared(tmpl); ts::return_shared(k); sc.return_to_sender(pkcap);
-    ts::return_shared(policy); ts::return_shared(ver);
-    (kid, minted)
-  };
-  results::burn_result(result); // the ticket's stat seed dies with it — a live DF would block the delete
-
-  // each looted unit carries a rolled block INSIDE the authored band (this is the assert that was red pre-#758:
-  // `rolled_stats` aborts on an item with no StatsKey)
-  let v0 = test_world::rolled_vitality(&mut sc, test_world::owner(), kid, minted[0]);
-  let v1 = test_world::rolled_vitality(&mut sc, test_world::owner(), kid, minted[1]);
-  assert!(v0 >= 100 && v0 <= 200);
-  assert!(v1 >= 100 && v1 <= 200);
-  sc.end();
-}
-
 // ╔════════════════ [ The &Random entry doors ] ══════════════════════════════ ]
 
 #[test]

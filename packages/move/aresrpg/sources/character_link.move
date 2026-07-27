@@ -261,14 +261,12 @@ public(package) fun consume_units(template: &ItemTemplate, units: u64, item_id: 
 /// in the same call, RETURNING the minted item's id (the pool ghost-refill seam reads it; other callers ignore
 /// the droppable ID). Branches on the output template's category: a STACKABLE output rides as ONE stack; a
 /// non-stackable output (a gear NFT) mints exactly ONE (`ENonStackableQtyGtOne` if a recipe mis-authors qty > 1).
-/// `stat_seed` is the gear roll's entropy (#758), forwarded to the mint door — the craft path draws it from the
-/// SAME terminal `&Random` generator that rolled the craft's success; a stackable output ignores it.
-public(package) fun mint_and_lock_output(template: &ItemTemplate, quantity: u64, stat_seed: Option<u64>, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext): ID {
+public(package) fun mint_and_lock_output(template: &ItemTemplate, quantity: u64, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext): ID {
   let (item, pledge) = if (item::is_stackable_category(item::template_category(template))) {
     extension::mint_item_stack(template, quantity, version, ctx)
   } else {
     assert!(quantity == 1, ENonStackableQtyGtOne);
-    extension::mint_item(template, stat_seed, version, ctx)
+    extension::mint_item(template, version, ctx)
   };
   let item_id = object::id(&item);
   item::lock_in_kiosk(pledge, item, kiosk, owner_cap, policy);
@@ -277,16 +275,11 @@ public(package) fun mint_and_lock_output(template: &ItemTemplate, quantity: u64,
 
 /// BRAND TWIN (2026-07-13 gifting split): claim-mint + kiosk-lock for the PINNED gifting sibling — the ONE mint
 /// door airdrop/loot_box/pool/creation-adjacent flows ride (returns the minted id for pool's ghost-refill merge).
-/// Delegates to `mint_and_lock_output` after asserting the pin. `config` carries the pin; the
+/// Delegates to `mint_and_lock_output` verbatim after asserting the pin. `config` carries the pin; the
 /// `LockPledge` inside the delegate still type-forces the personal-kiosk lock (kiosk-lock constitution).
-///
-/// NO STAT SEED (#758): this signature is FROZEN by upgrade compatibility, so the sibling has no channel to hand
-/// its own `&Random` entropy through — a gear item minted here still lands with a blank block, and inventing a
-/// `ctx`-derived seed instead would hand the caller free dry-run re-rolls. The gifting sibling gets a seeded door
-/// of its own at its next publish (#777); its live flows mint stackables, which never roll.
 public fun mint_and_lock_output_brand<W: drop>(_: W, config: &GameConfig, template: &ItemTemplate, quantity: u64, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext): ID {
   config.assert_gifting_brand<W>();
-  mint_and_lock_output(template, quantity, option::none(), version, kiosk, owner_cap, policy, ctx)
+  mint_and_lock_output(template, quantity, version, kiosk, owner_cap, policy, ctx)
 }
 
 

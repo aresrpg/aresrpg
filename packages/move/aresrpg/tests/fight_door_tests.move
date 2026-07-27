@@ -262,7 +262,6 @@ fun lose_and_settle(sc: &mut Scenario, cid: ID, zx: u32, zy: u32, index: u64, re
   actions::abandon_for_testing(&mut f, cid, &ever, now, test_world::owner());
   let outcome = settlement::settle_and_take(f, cid, &mut reg, &ever, sc.ctx());
   assert_eq!(settlement::outcome(&outcome), engine::status_defeat()); // the mobs won
-  if (release) fight_doors::release_group(&mut w, &reg, &outcome, zx, zy, index, &cfg, &ver);
   results::open_for_testing(outcome, &mut k, &pkcap, &cfg, &ver, now, sc.ctx());
   ts::return_shared(reg); ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
@@ -276,7 +275,7 @@ fun group_state(sc: &mut Scenario, zx: u32, zy: u32, index: u64): (bool, vector<
   let w = sc.take_shared<World>();
   let live = zones::mob_group_live(&w, zx, zy, index);
   let bytes = zones::mob_bitmap_for_testing(&w, zx, zy);
-  let round = zones::group_round(&w, zx, zy, zones_view::mob_spawn_id(&w, zx, zy, index));
+  let round = 0; // #609's engagement round rides round 2
   ts::return_shared(w);
   (live, bytes, round)
 }
@@ -366,77 +365,8 @@ fun join_after_defeat_settles_regen_and_seats() {
 
 // ╔════════════════ [ #609 — DEFEAT RELEASES THE GROUP, VICTORY CONSUMES IT ] ═ ]
 
-#[test]
-/// THE #609 BUG, end to end on the real doors: claim + create consumes the group, the player LOSES, and the
-/// settlement's defeat outcome releases the group back into the world at its spot — bit clear, bitmap back to
-/// its pre-claim byte shape, engagement round 1. Pre-fix the bit stayed set forever, so every player death
-/// drained the world by one group. Then the REMATCH lands: a second claim + create over the same spawn succeeds,
-/// which round 0's derived address (claimed once, reserved forever) could never have allowed.
-fun defeat_releases_the_group_and_the_rematch_lands() {
-  let mut sc = ts::begin(test_world::owner());
-  let (cid, mob_tid, spawn0) = discovered(&mut sc);
-  let wid = world_id(&mut sc);
-  let (zx, zy, _cx, _cz) = occupied_zone(&mut sc, cid, wid);
 
-  do_create(&mut sc, test_world::owner(), cid, spawn0, mob_tid, T0);
-  let (live, bytes, round) = group_state(&mut sc, zx, zy, 0);
-  assert!(!live); // engaged — the claim consumed it
-  assert_eq!(bytes, vector[1u8]); // the fixture's "claimed" step: bit 0 set
-  assert_eq!(round, 0);
 
-  lose_and_settle(&mut sc, cid, zx, zy, 0, true, T0);
-  let (live, bytes, round) = group_state(&mut sc, zx, zy, 0);
-  assert!(live); // THE FIX: the mobs won, so the mobs are still there
-  assert_eq!(bytes, vector[]); // the fixture's "released" step: byte-identical to before the claim
-  assert_eq!(round, 1); // the next fight over it claims the round-1 address
-
-  // and it is really fightable again (settled regen unbricks the 0-HP defeat write-back, S-69)
-  do_create(&mut sc, test_world::owner(), cid, spawn0, mob_tid, T0 + PARTIAL_MS);
-  let (live, _bytes, round) = group_state(&mut sc, zx, zy, 0);
-  assert!(!live); // engaged again
-  assert_eq!(round, 1); // the round only moves on RELEASE, never on claim
-  sc.next_tx(test_world::owner());
-  let f = sc.take_shared<Fight>();
-  assert_eq!(engine::mob_count(&f), 2); // the same group materialized a second time
-  ts::return_shared(f);
-  sc.end();
-}
-
-#[test, expected_failure(abort_code = ENotDefeat, location = aresrpg::fight)]
-/// A VICTORY outcome cannot release: only losing gives the group back (otherwise a farmed group could be
-/// respawned by its own killer). The outcome is branded and names the real fight — only its status differs.
-fun victory_outcome_cannot_release_the_group() {
-  let mut sc = ts::begin(test_world::owner());
-  let (cid, mob_tid, spawn0) = discovered(&mut sc);
-  let wid = world_id(&mut sc);
-  let (zx, zy, _cx, _cz) = occupied_zone(&mut sc, cid, wid);
-  do_create(&mut sc, test_world::owner(), cid, spawn0, mob_tid, T0);
-  sc.next_tx(test_world::owner());
-  let mut w = sc.take_shared<World>();
-  let reg = sc.take_shared<FightRegistry>();
-  let cfg = sc.take_shared<GameConfig>();
-  let ver = sc.take_shared<Version>();
-  let f = sc.take_shared<Fight>();
-  let o = settlement::outcome_for_testing(
-    fight_doors::brand_type_for_testing(), object::id(&f), wid, cid,
-    engine::status_victory(), 10, 0, 0, 0, 1, vector[], false, 0, option::none(), 100, sc.ctx(),
-  );
-  fight_doors::release_group(&mut w, &reg, &o, zx, zy, 0, &cfg, &ver);
-  abort
-}
-
-#[test, expected_failure(abort_code = EWrongGroup, location = aresrpg::fight)]
-/// A defeat outcome releases EXACTLY the group it was lost to: naming the zone's OTHER group fails the
-/// derived-address binding (that group's fight address is not this outcome's fight).
-fun defeat_outcome_cannot_release_another_group() {
-  let mut sc = ts::begin(test_world::owner());
-  let (cid, mob_tid, spawn0) = discovered(&mut sc);
-  let wid = world_id(&mut sc);
-  let (zx, zy, _cx, _cz) = occupied_zone(&mut sc, cid, wid);
-  do_create(&mut sc, test_world::owner(), cid, spawn0, mob_tid, T0);
-  lose_and_settle(&mut sc, cid, zx, zy, 1, true, T0); // index 1 = the group nobody fought
-  abort
-}
 
 #[test]
 /// The PUBLIC snapshot + dial factories (package-split 2026-07-11 — the PvP arena package composes them for its

@@ -81,12 +81,10 @@ public fun create(
   assert!(mob_template::template_id(mob_tmpl) == t_template, EWrongTemplate);
   let (creator, creator_lines) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, t_character, version);
-  // The group's ENGAGEMENT ROUND (#609): 0 for a group nobody has lost to — byte-identical to every fight ever
-  // created — and +1 per release, because a fight's derived address is claimed once and reserved forever.
-  let (zx, zy) = game_world::zone_of(world, anchor_x, anchor_z);
-  let round = zones::group_round(world, zx, zy, spawn_id);
+  // The ENGAGEMENT ROUND stays 0 for all of leg 2 — #609's release path rides round 2, so every fight is a
+  // first engagement, byte-identical to every fight ever created.
   engine::create_round(
-    FightBrand {}, registry, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
+    FightBrand {}, registry, t_world, spawn_id, 0, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
     is_public, party_id, false, &mob_template::to_spec(mob_tmpl), group_size, group_seed,
     t_template, creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
   );
@@ -122,10 +120,9 @@ public fun open_group(
   assert!(object::id(world) == t_world, EWrongWorld);
   let (creator, creator_lines) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, t_character, version);
-  let (zx, zy) = game_world::zone_of(world, anchor_x, anchor_z);
-  let round = zones::group_round(world, zx, zy, spawn_id);
+  // ENGAGEMENT ROUND 0 for all of leg 2 — #609's release path rides round 2.
   engine::open_group(
-    FightBrand {}, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
+    FightBrand {}, t_world, spawn_id, 0, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
     is_public, party_id, false, group_seed, progress, members, creator, creator_lines,
     dial_snapshot(config), engine_version,
   )
@@ -136,43 +133,6 @@ public fun open_group(
 /// template's id against the committed roster) — this door adds no second opinion.
 public fun add_member(build: &mut GroupBuild, mob_tmpl: &MobTemplate) {
   engine::add_member(build, mob_template::template_id(mob_tmpl), &mob_template::to_spec(mob_tmpl));
-}
-
-// ╔════════════════ [ DEFEAT RELEASES THE GROUP (#609) ] ══════════════════════ ]
-
-/// The mobs won — so their group goes BACK into the world at its spot. Only a player VICTORY consumes a group
-/// (§7: a defeat costs only time); without this door every lost fight permanently drained the world's mob
-/// population. BORROWS the outcome, so it composes in the settling seat's own PTB between
-/// `settlement::settle_and_take` and `results::open_taken`, exactly like the dungeon's `settle_run(&o)`.
-///
-/// Nothing the caller says is trusted — `(zx, zy, index)` only NAMES a group, and the naming is then proven:
-/// the group derives to a `spawn_id` whose fight address at the group's current round IS the outcome's fight id
-/// (`derived_object` addresses are collision-free), so a caller can only release the very group they just lost
-/// to. The brand assert rejects a foreign consumer's outcome, and the defeat assert rejects the farm loop
-/// "win the group, then release it with any other outcome". Bumping the round is what makes the released group
-/// FIGHTABLE again, and it doubles as the replay nonce: the outcome authenticates against exactly one round.
-public fun release_group(
-  world: &mut World,
-  registry: &fight_registry::FightRegistry,
-  outcome: &FightOutcome,
-  zx: u32,
-  zy: u32,
-  index: u64,
-  config: &GameConfig,
-  version: &Version,
-) {
-  config.assert_enabled();
-  version.assert_enabled();
-  assert!(settlement::brand(outcome) == brand_type(), EWrongBrand);
-  assert!(settlement::outcome(outcome) == engine::status_defeat(), ENotDefeat);
-  let wid = object::id(world);
-  assert!(settlement::world(outcome) == wid, EWrongGroup);
-  let spawn_id = zones_view::mob_spawn_id(world, zx, zy, index);
-  let round = zones::group_round(world, zx, zy, spawn_id);
-  let expected = fight_registry::group_fight_address(registry, wid, spawn_id, round);
-  assert!(object::id_from_address(expected) == settlement::fight_id(outcome), EWrongGroup);
-  let (x, z) = zones_view::mob_group_pos(world, zx, zy, index);
-  zones::release_mob_group(world, zx, zy, index, spawn_id, x, z);
 }
 
 /// Join an existing overworld fight during placement (§7 explicit join tx): carries the Clock so the seat
