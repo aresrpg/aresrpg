@@ -42,7 +42,8 @@ export const print_sheet = (sheet, log) => {
           row.pass ? 'PASS' : 'FAIL',
         ])
       )
-  for (const row of sheet.run_rows ?? []) log(line(['run', '—', row.kind, cell_str(row.at), row.check, row.expected, row.actual, mark(row)]))
+  for (const row of sheet.run_rows ?? [])
+    log(line(['run', '—', row.kind, cell_str(row.at), row.check, row.expected, row.actual, mark(row)]))
   log('  ' + '─'.repeat(118))
   const { checks, passed, failed, gated, verdict } = sheet.summary
   log(
@@ -62,7 +63,9 @@ export const print_sheet = (sheet, log) => {
  */
 const print_coop = ({ rows, summary }, log) => {
   log('')
-  log(`  COOP VERDICT — ${summary.verdict} (${summary.passed}/${summary.checks - summary.gated} graded, ${summary.gated} content-gated)`)
+  log(
+    `  COOP VERDICT — ${summary.verdict} (${summary.passed}/${summary.checks - summary.gated} graded, ${summary.gated} content-gated)`
+  )
   log('  ' + '─'.repeat(118))
   for (const [index, row] of rows.entries())
     log(

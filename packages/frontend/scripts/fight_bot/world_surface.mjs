@@ -250,7 +250,9 @@ export const open_world_fight = async ({
   // window still open. This is the exact moment the reported breakage is about — a joiner on chain that the
   // creator's view never seats — and it is unrecoverable one placement later.
   on_evidence({
-    placement_read: await creator.client.read().catch((error) => ({ ok: false, error: String(error?.message ?? error) })),
+    placement_read: await creator.client
+      .read()
+      .catch((error) => ({ ok: false, error: String(error?.message ?? error) })),
   })
   await place_all({ seats: booted, log, on_evidence })
 

@@ -37,7 +37,11 @@ describe('① the joiner is really in the creator’s fight', () => {
   })
 
   test('an unreadable creator board is a failure, never a silent skip', () => {
-    const rows = assert_joiner_seated({ seats: SEATS, creator: 'alice', placement_read: { ok: false, error: 'no read' } })
+    const rows = assert_joiner_seated({
+      seats: SEATS,
+      creator: 'alice',
+      placement_read: { ok: false, error: 'no read' },
+    })
     expect(rows).toHaveLength(1)
     expect(rows[0].pass).toBe(false)
   })
@@ -130,7 +134,12 @@ describe('⑦ per-member loot, and the honest hole', () => {
   })
 
   test('published rows are graded normally, one per member', () => {
-    const rows = assert_member_loot({ rows: [{ seat: 'alice', units: 2 }, { seat: 'bob', units: 0 }] })
+    const rows = assert_member_loot({
+      rows: [
+        { seat: 'alice', units: 2 },
+        { seat: 'bob', units: 0 },
+      ],
+    })
     expect(rows.map((r) => r.pass)).toEqual([true, false])
   })
 })

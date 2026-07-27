@@ -132,7 +132,9 @@ export const assert_settlement_seen = ({ seats = [], finals = [] }) => {
       null,
       'both seats folded the SAME result',
       'one winner across every seat',
-      winners.size === 1 ? `winner ${[...winners][0]}` : `${winners.size} distinct winner(s): ${[...winners].join(', ')}`,
+      winners.size === 1
+        ? `winner ${[...winners][0]}`
+        : `${winners.size} distinct winner(s): ${[...winners].join(', ')}`,
       winners.size === 1,
       'two clients disagreeing about who won is a desync, not a display bug'
     ),

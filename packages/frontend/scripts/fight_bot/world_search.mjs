@@ -27,9 +27,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /** Every transaction this page has fired, newest last — klass + digest only (world-shell/tx.js's own ledger). */
 export const tx_digests = (seat) =>
-  seat.page
-    .evaluate(() => (window.__TX_TIMINGS ?? []).map(({ klass, digest }) => ({ klass, digest })))
-    .catch(() => [])
+  seat.page.evaluate(() => (window.__TX_TIMINGS ?? []).map(({ klass, digest }) => ({ klass, digest }))).catch(() => [])
 
 /** The digests a page fired since `mark` — what one leg cost, without re-reading the whole run's ledger. */
 const digests_since = async (seat, mark) => (await tx_digests(seat)).slice(mark)
