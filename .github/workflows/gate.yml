@@ -152,9 +152,16 @@ jobs:
             echo "reason=push on ${{ github.ref_name }} — the repo-wide truth-assert runs here" >&2
             exit 0
           fi
+          # Scope = the pins THEMSELVES plus everything that decides the verdict about them
+          # (#1305 review): a PR that edits the gate or its checker must run the live assertion it
+          # is changing, or the change ships unexercised — as the PR that introduced this very
+          # scoping did.
           changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- \
             packages/sdk/src/deployment/release.json \
-            packages/move/scripts/out/ceremony_manifest.json)
+            packages/move/scripts/out/ceremony_manifest.json \
+            packages/move/scripts/check_release_pins.mjs \
+            packages/move/scripts/ceremony_lib.mjs \
+            .github/workflows/gate.yml)
           if [ -n "$changed" ]; then
             echo "assert=true" >> "$GITHUB_OUTPUT"
             printf 'this PR edits the pins:\n%s\n' "$changed" >&2

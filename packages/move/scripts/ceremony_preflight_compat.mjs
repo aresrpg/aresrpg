@@ -98,10 +98,26 @@ export function republish_window_verdict({
 }) {
   if (!marker_present)
     return { mode: 'compat', reason: 'no REPUBLISH_WINDOW marker' }
+  // A CONTRADICTORY context is refused before the local-run branch (#1305 review): "not CI" used to
+  // rest on GITHUB_ACTIONS alone, so unsetting one variable while still supplying pull_request/master
+  // facts downgraded a master-bound run to a permissive local one. If any GitHub context fact is
+  // present, the whole context must be present and coherent.
+  const partial = [event, base_ref, ref_name].some(Boolean)
+  if (!ci && partial)
+    return {
+      mode: 'refused',
+      reason: `REPUBLISH_WINDOW marker with a partial GitHub context (event="${event}", base="${base_ref}", ref="${ref_name}") — refusing a context that claims to be both CI and not`,
+    }
   if (!ci)
     return {
       mode: 'size-only',
       reason: 'REPUBLISH_WINDOW marker, local run (no CI context)',
+    }
+  if (event === 'pull_request' && !base_ref)
+    return {
+      mode: 'refused',
+      reason:
+        'REPUBLISH_WINDOW marker on a pull_request with no base ref — refusing rather than guessing',
     }
   if (event === 'pull_request')
     return base_ref === 'edge'

@@ -96,3 +96,36 @@ test('ci_context reads the GitHub context, and reports absence as absence', () =
     ref_name: null,
   })
 })
+
+test('a partial GitHub context is REFUSED — unsetting one variable is not a local run', () => {
+  const base = {
+    marker_present: true,
+    ci: false,
+    event: null,
+    base_ref: null,
+    ref_name: null,
+  }
+  expect(
+    republish_window_verdict({
+      ...base,
+      event: 'pull_request',
+      base_ref: 'master',
+    }).mode
+  ).toBe('refused')
+  expect(republish_window_verdict({ ...base, ref_name: 'master' }).mode).toBe(
+    'refused'
+  )
+  expect(republish_window_verdict(base).mode).toBe('size-only')
+})
+
+test('a CI pull_request with no base ref is refused rather than guessed', () => {
+  expect(
+    republish_window_verdict({
+      marker_present: true,
+      ci: true,
+      event: 'pull_request',
+      base_ref: null,
+      ref_name: null,
+    }).mode
+  ).toBe('refused')
+})

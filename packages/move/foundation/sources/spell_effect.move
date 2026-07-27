@@ -265,9 +265,11 @@ public fun new_effect(
   new_effect_ranged(kind, element, value, value, area_shape, area_size, target_filter, chance, turns, stat, flags, phase)
 }
 
-/// #577 — the RANGE-aware full constructor: `value` = MIN, `value_max` = MAX. `aresrpg_spells` mints
-/// damage/heal/life-steal/DoT effects through this (or the range convenience constructors) when a spread is
-/// authored; every other kind mints through `new_effect` (max == min). The ONE home for the `Effect` literal.
+/// #577 — the RANGE-aware full constructor: `value` = MIN, `value_max` = MAX, and the SOLE range door:
+/// the `damage_range`/`heal_range`/`life_steal_range`/`apply_dot_range` conveniences were deleted
+/// unpublished (#1292) because nothing called them. `aresrpg_spells` mints damage/heal/life-steal/DoT
+/// spreads through this; every other kind mints through `new_effect` (max == min), which delegates
+/// here with a degenerate range. The ONE home for the `Effect` literal.
 public fun new_effect_ranged(
   kind: u8,
   element: u8,

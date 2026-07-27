@@ -35,6 +35,50 @@ const RELEASE_PATH = 'packages/sdk/src/deployment/release.json'
  * @param {Record<string, string | null>} cap_packages upgrade_cap id → the package it points at
  * @returns {{ name: string, pinned: string, chain: string | null, status: 'ok' | 'drift' | 'unknown' }[]}
  */
+// The nine packages a release MUST account for. A row-driven gate only checks rows that exist, so
+// deleting a package from release.json used to remove its UpgradeCap check and still pass green
+// (#1305 review) — absence was invisible to a loop over presence. Kept as data next to the
+// comparison it guards; ceremony_lib's PKG_DEPS is the same set, and expect_release_set fails when
+// the two disagree, so neither can drift alone.
+export const RELEASE_PACKAGE_SET = [
+  'foundation',
+  'spells',
+  'social',
+  'engine',
+  'aresrpg',
+  'kolizeum',
+  'forgemagie',
+  'gifting',
+  'dungeon',
+]
+
+/**
+ * Pure. → [] when `packages` is exactly the expected set with a usable row each; otherwise one
+ * complaint per missing, unexpected, empty, or duplicate-cap row.
+ */
+export function release_set_violations(
+  packages,
+  expected = RELEASE_PACKAGE_SET
+) {
+  const rows = Object.entries(packages ?? {})
+  const names = rows.map(([name]) => name)
+  const out = []
+  for (const name of expected)
+    if (!names.includes(name)) out.push(`missing package row: ${name}`)
+  for (const name of names)
+    if (!expected.includes(name)) out.push(`unexpected package row: ${name}`)
+  for (const [name, row] of rows) {
+    if (!row?.latest) out.push(`${name}: no pinned \`latest\``)
+    if (!row?.upgrade_cap)
+      out.push(`${name}: no \`upgrade_cap\` to check it against`)
+  }
+  const caps = rows.map(([, row]) => row?.upgrade_cap).filter(Boolean)
+  for (const cap of new Set(caps))
+    if (caps.filter((c) => c === cap).length > 1)
+      out.push(`upgrade_cap ${cap} is claimed by more than one package`)
+  return out
+}
+
 export function compare_release_pins(packages, cap_packages) {
   return Object.entries(packages ?? {}).map(([name, row]) => {
     const pinned = row?.latest ?? ''
@@ -48,7 +92,7 @@ export function compare_release_pins(packages, cap_packages) {
 export function format_pin_rows(rows) {
   return rows.map(
     ({ name, pinned, chain, status }) =>
-      `${name.padEnd(11)} pinned.latest=${pinned || '(unset)'} chain.latest=${chain ?? '(unreadable)'} ${status.toUpperCase()}`,
+      `${name.padEnd(11)} pinned.latest=${pinned || '(unset)'} chain.latest=${chain ?? '(unreadable)'} ${status.toUpperCase()}`
   )
 }
 
@@ -60,37 +104,69 @@ async function read_cap_packages(client, cap_ids) {
   return Object.fromEntries(
     cap_ids.map((cap_id, index) => {
       const object = objects?.[index]
-      return [cap_id, object instanceof Error ? null : (object?.json?.package ?? null)]
-    }),
+      return [
+        cap_id,
+        object instanceof Error ? null : (object?.json?.package ?? null),
+      ]
+    })
   )
 }
 
 async function main(network = 'testnet') {
   const { SuiGrpcClient } = await import('@mysten/sui/grpc')
-  const release = JSON.parse(fs.readFileSync(path.join(repo, RELEASE_PATH), 'utf8'))
+  const release = JSON.parse(
+    fs.readFileSync(path.join(repo, RELEASE_PATH), 'utf8')
+  )
   const packages = release?.networks?.[network]?.packages
-  if (!packages) throw new Error(`${RELEASE_PATH} has no networks.${network}.packages`)
+  if (!packages)
+    throw new Error(`${RELEASE_PATH} has no networks.${network}.packages`)
+
+  // The set assert runs BEFORE any chain read: a deleted row cannot be checked against the chain,
+  // so absence has to be caught by shape, not by the loop that walks what is present (#1305 review).
+  const set_problems = release_set_violations(packages)
+  if (set_problems.length) {
+    console.log(`== AresRPG release-pin chain gate (${network}) ==`)
+    for (const problem of set_problems) console.log(`  ${problem}`)
+    console.log(
+      'RELEASE PIN GATE FAILED. release.json must account for every published package — a row that is absent is a package nothing checks.'
+    )
+    return 1
+  }
 
   const client = new SuiGrpcClient({
     network,
-    baseUrl: process.env.SUI_GRPC_URL || `https://fullnode.${network}.sui.io:443`,
+    baseUrl:
+      process.env.SUI_GRPC_URL || `https://fullnode.${network}.sui.io:443`,
   })
-  const cap_ids = [...new Set(Object.values(packages).map(row => row.upgrade_cap).filter(Boolean))]
-  const rows = compare_release_pins(packages, await read_cap_packages(client, cap_ids))
+  const cap_ids = [
+    ...new Set(
+      Object.values(packages)
+        .map((row) => row.upgrade_cap)
+        .filter(Boolean)
+    ),
+  ]
+  const rows = compare_release_pins(
+    packages,
+    await read_cap_packages(client, cap_ids)
+  )
 
-  console.log(`== AresRPG release-pin chain gate (${network}: UpgradeCap.package vs ${RELEASE_PATH} latest, #770) ==`)
+  console.log(
+    `== AresRPG release-pin chain gate (${network}: UpgradeCap.package vs ${RELEASE_PATH} latest, #770) ==`
+  )
   for (const line of format_pin_rows(rows)) console.log(`  ${line}`)
 
-  const broken = rows.filter(row => row.status !== 'ok')
+  const broken = rows.filter((row) => row.status !== 'ok')
   if (!broken.length) {
-    console.log(`RELEASE PIN GATE PASSED. every ${network} package pins the chain's newest version.`)
+    console.log(
+      `RELEASE PIN GATE PASSED. every ${network} package pins the chain's newest version.`
+    )
     return 0
   }
   console.log(
-    'RELEASE PIN GATE FAILED. A pinned `latest` is not the chain\'s newest package version — every SDK moveCall through LATEST_PACKAGE_ID targets retired bytecode (#770 class).',
+    "RELEASE PIN GATE FAILED. A pinned `latest` is not the chain's newest package version — every SDK moveCall through LATEST_PACKAGE_ID targets retired bytecode (#770 class)."
   )
   console.log(
-    '  Fix: record the fresh id in packages/move/scripts/out/ceremony_manifest.json (`<pkg>.latest`) and re-run `node packages/move/scripts/stamp_all.mjs` — never hand-edit release.json.',
+    '  Fix: record the fresh id in packages/move/scripts/out/ceremony_manifest.json (`<pkg>.latest`) and re-run `node packages/move/scripts/stamp_all.mjs` — never hand-edit release.json.'
   )
   return 1
 }
@@ -98,7 +174,9 @@ async function main(network = 'testnet') {
 if (process.argv[1] && path.resolve(process.argv[1]) === script_path) {
   const index = process.argv.indexOf('--network')
   try {
-    process.exitCode = await main(index === -1 ? 'testnet' : process.argv[index + 1])
+    process.exitCode = await main(
+      index === -1 ? 'testnet' : process.argv[index + 1]
+    )
   } catch (error) {
     console.error(`release-pin gate: ${error.message}`)
     process.exitCode = 2
