@@ -7,7 +7,8 @@
 // digest). Capsules are the fixture format of the fight-replay gate AND the client recorder's
 // export shape (a Sentry capsule replays through the exact same door). Replaying a capsule folds
 // its commands through `reduce` and asserts three things:
-//   1. PHYSICS — the invariant sweep holds at every step (dead stays dead, occupancy exclusive…).
+//   1. PHYSICS — the invariant sweep holds from PLACEMENT onward: the initial state is swept before
+//      any command, then every step (dead stays dead, occupancy exclusive…).
 //   2. PARITY — events and terminal state match the committed expectation byte-for-byte.
 //   3. DETERMINISM — two independent replays of the same capsule produce identical traces.
 // A golden that changes is a deliberate act (regold + citation), never drift: the sim is pure, so
@@ -239,8 +240,8 @@ export const terminal_summary = state => ({
 })
 
 /**
- * Fold a capsule's commands through the reducer, sweeping physics invariants at every transition.
- * Pure — no assertions, no I/O; callers judge the returned record.
+ * Fold a capsule's commands through the reducer, sweeping physics invariants over the INITIAL state and then
+ * at every transition. Pure — no assertions, no I/O; callers judge the returned record.
  * @param {Capsule} capsule
  * @returns {{ steps: ReplayStep[], events: object[], terminal: object, violations: string[], trace_digest: string }}
  */
@@ -258,6 +259,18 @@ export const replay_capsule = capsule => {
     team0: capsule.initial.team0,
     team1: capsule.initial.team1,
   })
+  // STEP ZERO (#1218). The laws are properties of a STATE, not of a step, so the placement snapshot gets the
+  // same sweep every later state gets — run as a SELF-transition (prev === next, no events), which the two
+  // transition-shaped rules read as a no-op by construction: nothing rose, nothing changed, no winner moved.
+  // Without it a fight that BEGINS illegally — two living fighters on one cell, the shape reported in #1218 —
+  // replayed clean until something happened to move somebody, and a capsule with no commands never checked at
+  // all. One law, one home; the start is no longer a blind spot.
+  const start_violations = check_tripwires(
+    initial,
+    initial,
+    { type: 'start' },
+    [],
+  ).map(violation => `[${violation.rule}] start: ${violation.message}`)
   const folded = capsule.commands.reduce(
     (acc, command, index) => {
       const { state, events } = reduce(acc.state, command, ctx)
@@ -274,7 +287,7 @@ export const replay_capsule = capsule => {
     {
       state: initial,
       steps: /** @type {ReplayStep[]} */ ([]),
-      violations: /** @type {string[]} */ ([]),
+      violations: /** @type {string[]} */ (start_violations),
     },
   )
   return {
