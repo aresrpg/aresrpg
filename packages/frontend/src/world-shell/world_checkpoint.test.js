@@ -31,6 +31,7 @@ import * as checkpoint_read from '../chain/read_checkpoint.js'
 const world_checkpoint_sdk = async () => ({ grpc_client: {} })
 
 const {
+  confirm_checkpoint_spawn,
   resolve_checkpoint_spawn,
   read_checkpoint_spawn,
   seed_checkpoint_spawn,
@@ -102,6 +103,33 @@ test('a chain-direct read that DOES confirm a checkpoint still adopts (chain tru
     x: moved.x - 250_000,
     z: moved.z - 250_000,
     time_ms: moved.time_ms,
+  })
+})
+
+test('a receipt barrier rejects a lagging non-null checkpoint read', async () => {
+  const prior = { x: 100, z: 200, time_ms: 1_000 }
+  read_checkpoint.mockResolvedValue(prior)
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+
+  const receipt_world = { x: 300 - 250_000, z: 400 - 250_000 }
+  read_checkpoint.mockResolvedValue(prior)
+  await confirm_checkpoint_spawn(CHAR, WORLD, { ...receipt_world, after_time_ms: prior.time_ms }, { retry_delays: [] })
+
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...receipt_world, time_ms: null })
+})
+
+test('an older checkpoint revision cannot regress a newer accepted cache row', async () => {
+  const newer = { x: 300, z: 400, time_ms: 2_000 }
+  const older = { x: 100, z: 200, time_ms: 1_000 }
+  read_checkpoint.mockResolvedValueOnce(newer).mockResolvedValueOnce(older)
+
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    x: newer.x - 250_000,
+    z: newer.z - 250_000,
+    time_ms: newer.time_ms,
   })
 })
 

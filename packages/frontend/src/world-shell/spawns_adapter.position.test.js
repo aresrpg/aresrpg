@@ -68,6 +68,7 @@ const real_indexeddb = globalThis.indexedDB
 const position_edge = await import('./spawns_adapter.js')
 const host_source = readFileSync(new URL('../GameWorldHost.tsx', import.meta.url), 'utf8')
 const embed_source = readFileSync(new URL('../game/embed_voxel.js', import.meta.url), 'utf8')
+const prompts_source = readFileSync(new URL('../game/screens/hud/world/DiscoveryPrompts.jsx', import.meta.url), 'utf8')
 
 const bind_with_anchor = (world_id, anchor, character_id = CHARACTER) => {
   reset_world_binding()
@@ -213,7 +214,7 @@ describe('world position IndexedDB edge', () => {
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, NOW)
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW + 1_000)
 
-    publish_dungeon_session({ in_session: true, character_id: CHARACTER })
+    publish_dungeon_session({ fight_id: '0xFIGHT', character_id: CHARACTER })
     await position_edge.flush_world_position(NOW + 2_000)
     expect(position_edge.spawns_store.getState().player).toEqual({ x: 120, z: 220 })
 
@@ -298,6 +299,46 @@ describe('world position IndexedDB edge', () => {
       ...receipt_anchor,
       time_ms: null,
     })
+    expect(position_edge.read_world_position(CHARACTER, WORLD_A)).toBeNull()
+  })
+
+  test('persists walking that happens after a timestamped search receipt', async () => {
+    const old_anchor = anchor_at(100, 200)
+    bind_with_anchor(WORLD_A, old_anchor)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW)
+    await position_edge.flush_world_position(NOW)
+
+    const receipt_anchor = anchor_at(110, 210, CHAIN_TIME + 1_000)
+    position_edge.spawns_input({
+      type: 'zone_searched',
+      zx: 0,
+      zy: 0,
+      x: receipt_anchor.x,
+      z: receipt_anchor.z,
+      time_ms: receipt_anchor.time_ms,
+      found: null,
+    })
+    const walked = { x: 140, z: 240 }
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...walked }, NOW + 1_000)
+    await position_edge.flush_world_position(NOW + 1_001)
+
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, receipt_anchor)
+    await expect(
+      position_edge.restore_world_position(CHARACTER, WORLD_A, receipt_anchor, NOW + 2_000)
+    ).resolves.toEqual(walked)
+  })
+
+  test('a same-world character switch resets the reducer before the new checkpoint arrives', async () => {
+    bind_with_anchor(WORLD_A, anchor_at(100, 200))
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW)
+
+    publish_world_binding(OTHER_CHARACTER, WORLD_A)
+
+    expect(position_edge.spawns_store.getState().checkpoint).toBeNull()
+    expect(position_edge.spawns_store.getState().hunt_zone).toBeNull()
+    expect(position_edge.spawns_store.getState().player).toBeNull()
   })
 
   test('rejects a late checkpoint result for the previously selected character before reducer entry', () => {
@@ -350,5 +391,10 @@ describe('world position IndexedDB edge', () => {
     expect(embed_source).toContain('const stored = read_world_position(character.id, world_id)')
     expect(embed_source).toContain('read_world_chain_anchor(character.id, world_id) ?? read_checkpoint_spawn')
     expect(embed_source).toContain('void note_world_position({')
+    const indexed_seed = prompts_source.slice(
+      prompts_source.indexOf('// char.position is the INDEXER-served CHAIN checkpoint'),
+      prompts_source.indexOf('}, [world_id, character_id, character_doc, hunt_zone_known])')
+    )
+    expect(indexed_seed).toContain('character_id,')
   })
 })

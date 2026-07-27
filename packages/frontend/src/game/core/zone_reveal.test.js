@@ -21,13 +21,13 @@ test('read_zone_searched decodes the ZoneSearched event (string u64s → numbers
       },
     ],
   }
-  expect(read_zone_searched(result)).toEqual({ zx: 3, zy: 7, mob_groups: 3, resource_nodes: 2 })
+  expect(read_zone_searched(result)).toEqual({ zx: 3, zy: 7, at_ms: 1700, mob_groups: 3, resource_nodes: 2 })
 })
 
 test('read_zone_searched degrades to zeros when the event is absent (never throws)', () => {
-  expect(read_zone_searched({ events: [] })).toEqual({ zx: 0, zy: 0, mob_groups: 0, resource_nodes: 0 })
-  expect(read_zone_searched(null)).toEqual({ zx: 0, zy: 0, mob_groups: 0, resource_nodes: 0 })
-  expect(read_zone_searched(undefined)).toEqual({ zx: 0, zy: 0, mob_groups: 0, resource_nodes: 0 })
+  expect(read_zone_searched({ events: [] })).toEqual({ zx: 0, zy: 0, at_ms: 0, mob_groups: 0, resource_nodes: 0 })
+  expect(read_zone_searched(null)).toEqual({ zx: 0, zy: 0, at_ms: 0, mob_groups: 0, resource_nodes: 0 })
+  expect(read_zone_searched(undefined)).toEqual({ zx: 0, zy: 0, at_ms: 0, mob_groups: 0, resource_nodes: 0 })
 })
 
 test('reveal_zone fills the store slot; a newer reveal wins (single-slot cinematic channel)', () => {
