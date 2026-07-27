@@ -70,7 +70,7 @@ public struct PetPowerKey has copy, drop, store {} // → u64 accumulated pet po
 /// A character's LIVE progression state. `xp` is the live character xp (seeded from the base `experience` genesis
 /// on first write). `level` is the §3 STORED level, recomputed on every xp grant. `hp` is current HP (write-back
 /// after a fight; §17.23). `hp_updated_ms` is the lazy-regen last-touch stamp (ANNEX §5.4). `copy` for free reads.
-public struct Progression has store, copy, drop {
+public struct Progression has copy, drop, store {
   xp: u64,
   level: u16,
   hp: u64,

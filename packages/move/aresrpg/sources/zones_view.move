@@ -40,11 +40,6 @@ public fun mob_group_pos(world: &World, zx: u32, zy: u32, i: u64): (u32, u32) {
   (xs[i], zs[i])
 }
 
-public fun mob_group_template(world: &World, zx: u32, zy: u32, i: u64): ID {
-  let (_sids, tpls, _x, _z, _s, _g) = zones::derive_mobs(world, zx, zy, zones::zone_seed(world, zx, zy), 1);
-  tpls[i]
-}
-
 /// Group size DOES read the live `team_size_bound` dial (§4 size cap) — the one getter needing `config`.
 public fun mob_group_size(world: &World, config: &GameConfig, zx: u32, zy: u32, i: u64): u16 {
   let (_sids, _t, _x, _z, sizes, _g) = zones::derive_mobs(world, zx, zy, zones::zone_seed(world, zx, zy), config.team_size_bound());

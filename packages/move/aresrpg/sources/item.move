@@ -470,7 +470,7 @@ const ELotWrongItem: u64 = 121; // from `lot_rule` — merged-in codes get their
 public struct LotRule has drop {}
 
 /// Empty policy configuration: legal lots are immutable protocol constants in this module.
-public struct LotConfig has store, drop {}
+public struct LotConfig has drop, store {}
 
 /// Attach this rule to the universal Item policy. `transfer_policy::add_rule` rejects a duplicate attachment.
 public fun add_lot_rule(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>) {
@@ -503,7 +503,7 @@ public struct ListingRule has drop {}
 
 /// The rule's on-policy config — EMPTY on purpose: the gate reads the item's OWN amount at prove time, so nothing
 /// is baked in here and no dial is needed. `store + drop` as the framework requires.
-public struct ListingConfig has store, drop {}
+public struct ListingConfig has drop, store {}
 
 // ╔════════════════ [ Creator action — ADD the rule (cap-gated; ceremony, while dark) ] ═ ]
 

@@ -110,7 +110,7 @@ const DEFAULT_BASE_MP: u64 = 3;
 
 /// One class's base combat constants (§17.31). Base HP is per-class (ANNEX §4); base AP/MP default 6/3 for
 /// every class but stay per-class TUNABLE via the clamped setters, so future rebalancing needs no upgrade.
-public struct ClassRow has store, copy, drop {
+public struct ClassRow has copy, drop, store {
   base_hp: u64,
   base_ap: u64,
   base_mp: u64,
@@ -267,7 +267,7 @@ public fun domain_forgemagie(): u16 { DOMAIN_FORGEMAGIE }
 /// twin): the extracted rune-forge sibling constructs its witness (private constructor, its own module only),
 /// so a pinned brand makes those doors sibling-exclusive; an unpinned config (`none`) keeps them CLOSED.
 public fun assert_forge_brand<W: drop>(self: &GameConfig) {
-  assert!(self.forge_brand.contains(&type_name::get<W>()), EWrongBrand);
+  assert!(self.forge_brand.contains(&type_name::with_defining_ids<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the forge sibling's witness type — the ceremony's post-publish wiring step. Cap + version
@@ -275,7 +275,7 @@ public fun assert_forge_brand<W: drop>(self: &GameConfig) {
 public fun set_forge_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  config.forge_brand = option::some(type_name::get<W>());
+  config.forge_brand = option::some(type_name::with_defining_ids<W>());
   event::emit(DialChanged { dial: b"forge_brand".to_string(), value: 1 }); // the pinned TypeName is readable on this shared object
 }
 
@@ -287,14 +287,14 @@ public fun forge_brand(self: &GameConfig): &Option<TypeName> { &self.forge_brand
 /// Abort unless `W` is the PINNED gifting witness — first line of every gifting-branded core value door
 /// (`mint_and_lock_output_brand` / `heal_hp_brand` / `character::new_brand`). Same envelope as `assert_forge_brand`.
 public fun assert_gifting_brand<W: drop>(self: &GameConfig) {
-  assert!(self.gifting_brand.contains(&type_name::get<W>()), EWrongBrand);
+  assert!(self.gifting_brand.contains(&type_name::with_defining_ids<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the gifting sibling's witness type — the ceremony's post-publish wiring step. Cap + version gated.
 public fun set_gifting_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  config.gifting_brand = option::some(type_name::get<W>());
+  config.gifting_brand = option::some(type_name::with_defining_ids<W>());
   event::emit(DialChanged { dial: b"gifting_brand".to_string(), value: 1 });
 }
 
@@ -306,14 +306,14 @@ public fun gifting_brand(self: &GameConfig): &Option<TypeName> { &self.gifting_b
 /// Abort unless `W` is the PINNED dungeon witness — first line of the two dungeon-branded core fight doors
 /// (`create_dungeon_fight_brand` / `join_vouched_brand`). Same envelope as `assert_forge_brand`.
 public fun assert_dungeon_brand<W: drop>(self: &GameConfig) {
-  assert!(self.dungeon_brand.contains(&type_name::get<W>()), EWrongBrand);
+  assert!(self.dungeon_brand.contains(&type_name::with_defining_ids<W>()), EWrongBrand);
 }
 
 /// Pin (or re-pin) the dungeon sibling's witness type — the ceremony's post-publish wiring step. Cap + version gated.
 public fun set_dungeon_brand<W: drop>(cap: &AdminCap, config: &mut GameConfig, version: &Version, ctx: &TxContext) {
   cap.verify(ctx);
   version.assert_latest();
-  config.dungeon_brand = option::some(type_name::get<W>());
+  config.dungeon_brand = option::some(type_name::with_defining_ids<W>());
   event::emit(DialChanged { dial: b"dungeon_brand".to_string(), value: 1 });
 }
 
