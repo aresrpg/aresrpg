@@ -91,7 +91,8 @@ export function FightResult() {
   })
   const enemy_rows = roster
     .filter(p => p.team !== my_team)
-    .map(p => ({ id: p.id, name: p.name, level: p.level, is_player: p.is_player, alive: p.alive, hp_pct: p.alive ? 100 : 0 }))
+    // template_id: the mob's on-chain template (fight_recap.js) — the row's bestiary deep-link. Players: null.
+    .map(p => ({ id: p.id, name: p.name, level: p.level, is_player: p.is_player, alive: p.alive, hp_pct: p.alive ? 100 : 0, template_id: p.template_id ?? null }))
 
   // SPOILS receipt (silent-auto — the card IS the receipt). tokens=0: no on-chain token reward exists yet.
   const spoils = { xp: reward.xp, tokens: 0, loot: reward.loot ?? [] }

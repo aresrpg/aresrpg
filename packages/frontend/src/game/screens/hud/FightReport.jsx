@@ -37,6 +37,7 @@ import { resolve_loot_tile } from './loot-tile-resolve.js'
 import { resolvable_row_ids, apply_resolved_names } from './fight_report_names.js'
 import { format_mmss } from './world/compass_math.js'
 import { ItemDetailView } from '../../../components/item_detail_view'
+import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { use_template_t } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
@@ -156,7 +157,7 @@ function LootSkelTile() {
  * "not visible to you" (never its own line anymore), or the local player's real xp/loot receipt, which alone
  * still earns a tight second line (see .fe-row__spoils in result.css). The row stays the single direct child
  * of .fe-rows (the entrance stagger keys off `.fe-rows .fe-row:nth-child`).
- * @param {{ f: { id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }, is_enemy: boolean, settled_dead?: boolean, spoils_slot?: import('react').ReactNode | null, t: (k: string) => string }} props
+ * @param {{ f: { id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null, template_id?: string | null }, is_enemy: boolean, settled_dead?: boolean, spoils_slot?: import('react').ReactNode | null, t: (k: string) => string }} props
  */
 function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
   const alive = f.alive && !settled_dead
@@ -172,7 +173,16 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
         {initial(f.name)}
       </div>
       <div className="fe-row__name">
-        <span className="fe-row__nametext">{f.name || 'Fighter'}</span>
+        {/* A mob's name deep-links to its BESTIARY page (the ONE encyclopedia_path idiom), keyed by the recap's
+            mob template id — the card names the exact creature just fought, so it is also the way to look it up.
+            A player row carries no template: plain text, never a fabricated bestiary link. */}
+        {f.template_id ? (
+          <EncyclopediaLink kind="mob" id={f.template_id} className="fe-row__nametext">
+            {f.name || 'Fighter'}
+          </EncyclopediaLink>
+        ) : (
+          <span className="fe-row__nametext">{f.name || 'Fighter'}</span>
+        )}
         {f.is_me && <span className="fe-you">{t('fight_end.you')}</span>}
         <span className="fe-row__meta">
           {f.class_name ? `${f.class_name} · ` : ''}Lv {f.level}
@@ -249,7 +259,7 @@ function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units,
  * @param {{
  *   verdict: 'Victory' | 'Defeat',
  *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }>,
- *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number }>,
+ *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number, template_id?: string | null }>,
  *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }> } | null,
  *   items: any[],
  *   cost: { sui: string, is_refund: boolean } | null,

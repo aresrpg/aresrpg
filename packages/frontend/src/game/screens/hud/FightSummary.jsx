@@ -82,7 +82,8 @@ export function FightSummary() {
   })
   const enemy_rows = roster
     .filter(p => p.team !== my_team)
-    .map(p => ({ id: p.id, name: p.name, level: p.level, is_player: p.is_player, alive: p.alive, hp_pct: p.alive ? 100 : 0 }))
+    // template_id: the mob's on-chain template (fight_recap.js) — the row's bestiary deep-link. Players: null.
+    .map(p => ({ id: p.id, name: p.name, level: p.level, is_player: p.is_player, alive: p.alive, hp_pct: p.alive ? 100 : 0, template_id: p.template_id ?? null }))
 
   // [defeat-cause] compose the localized "slain by X for N" line from the summary's killer stash (fight_bridge
   // captured it as the killing wave replayed). i18n lives HERE (the view), never in the shared FightReport shell.

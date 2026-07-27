@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
 import { fight_store } from '@aresrpg/fight/store'
 
 import player_experience from '../../core/modules/player_experience.js'
@@ -562,5 +563,28 @@ describe('FightReport — participant-row model (#342: compact single-line rows)
       expect(html).toContain(`Ally${i}`)
       expect(html).toContain(`Foe${i}`)
     }
+  })
+})
+
+// A beaten mob's name was dead text: the card names the exact creature the player just fought and gave no way
+// to look it up. Each mob row's name is now the standard clickable entity reference into the BESTIARY (the ONE
+// encyclopedia_path idiom), keyed by the recap's mob TEMPLATE id. Player rows carry no template — they stay
+// plain text, never a fabricated bestiary link (their names are characters, not encyclopedia entries).
+describe('FightReport — mob rows deep-link into the bestiary', () => {
+  const in_router = (element) => renderToStaticMarkup(<MemoryRouter>{element}</MemoryRouter>)
+  const enemies = [
+    { id: 'mob-0', name: 'Razkin', level: 8, alive: false, hp_pct: 0, is_player: false, template_id: '0xTPL_RAZKIN' },
+  ]
+
+  test('a mob row name is an <a> to /encyclopedia/bestiary/:template_id', () => {
+    const html = in_router(<FightReport {...base} enemies={enemies} cost={null} />)
+    expect(html).toContain('href="/encyclopedia/bestiary/0xTPL_RAZKIN"')
+    expect(html).toContain('Razkin')
+  })
+
+  test('a PLAYER row stays plain text — no template, no link, the row markup unchanged', () => {
+    const html = in_router(<FightReport {...base} enemies={[]} cost={null} />)
+    expect(html).not.toContain('/encyclopedia/')
+    expect(html).toContain('<span class="fe-row__nametext">Hero</span>')
   })
 })
