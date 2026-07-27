@@ -285,7 +285,7 @@ public fun set_rare_link(cap: &AdminCap, w: &mut World, template: ID, rare_templ
   y144(w);
 }
 
-/// UNLINK a base resource's rare variant (no more jackpot for it). Aborts if no link exists (`df::remove`).
+/// UNLINK a base resource's rare variant (no more jackpot for it). Aborts if `WorldInner.rare_links` has no entry.
 public fun clear_rare_link(cap: &AdminCap, w: &mut World, template: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   let (_, _) = y142(w).rare_links.remove(&template);
@@ -573,7 +573,7 @@ public fun max_nodes(w: &World): u16 { y141(w).max_nodes }
 public fun dungeon_key_template(w: &World): Option<ID> { y141(w).dungeon_key_template }
 
 /// The RARE variant linked to base resource `template`, or `none` (no golden-gather jackpot for it). FREE read —
-/// the gather roll and the RPC both consume it; `df::exists` guards the typed borrow.
+/// the gather roll and the RPC both consume it; the inline `rare_links` map's `contains` guards `get`.
 public fun rare_link(w: &World, template: ID): Option<ID> {
   if (y141(w).rare_links.contains(&template)) option::some(*y141(w).rare_links.get(&template)) else option::none()
 }
@@ -581,14 +581,14 @@ public fun resource_count(w: &World): u64 { y141(w).resources.length() }
 
 /// The pinned gather-ambush defender for resource `template`. `none` = never
 /// ambushes (also the answer for an unknown template — defensive read). FREE read — the gather ambush gate
-/// consumes it; `df::exists` guards the typed borrow, mirroring `rare_link`.
+/// consumes it; the inline `protectors` map's `contains` guards `get`, mirroring `rare_link`.
 public fun resource_protector(w: &World, template: ID): Option<ID> {
   if (y141(w).protectors.contains(&template)) option::some(*y141(w).protectors.get(&template)) else option::none()
 }
 public fun mob_count(w: &World): u64 { y141(w).mobs.length() }
 
 /// The distance-difficulty eligibility level for mob `template` (its authored `max_level` ceiling), or 0 when
-/// unset (always eligible — feature dormant for that mob). FREE read; `df::exists` guards the typed borrow.
+/// unset (always eligible — feature dormant for that mob). FREE read of the `mob_levels` field parallel to `mobs`.
 public fun mob_level(w: &World, template: ID): u16 {
   let n = y141(w).mobs.length();
   let mut i = 0;
