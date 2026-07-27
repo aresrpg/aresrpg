@@ -6,7 +6,7 @@
 # never a rename that silently breaks the build + desyncs from the live package.
 name = "aresrpg"
 version = "0.1.0"
-edition = "2024.alpha"
+edition = "2024"
 
 authors = ["AresRPG"]
 

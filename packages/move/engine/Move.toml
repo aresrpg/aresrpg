@@ -5,7 +5,7 @@
 [package]
 name = "aresrpg_fight"
 version = "0.1.0"
-edition = "2024.alpha"
+edition = "2024"
 authors = ["AresRPG"]
 
 [dependencies.Sui]

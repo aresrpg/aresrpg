@@ -4,7 +4,7 @@
 /// 2026-07-13). This module owns the ONE brand witness the whole package authenticates with, and the single home
 /// of the fungible burn-all + re-mint-remainder path that `loot_box` and `consume` share.
 ///
-/// THE BRAND (mirrors forgemagie's `Forge`): `GameConfig.gifting_brand` pins `type_name::get<Gifting>()` at the
+/// THE BRAND (mirrors forgemagie's `Forge`): `GameConfig.gifting_brand` pins `type_name::with_defining_ids<Gifting>()` at the
 /// ceremony, and the gifting-branded core value doors (`character_link::mint_and_lock_output_brand` /
 /// `heal_hp_brand` / `character::new_brand`) refuse every witness but this one. FENCE: the constructor is
 /// `public(package)` — only aresrpg_gifting modules mint the witness, so no other package can drive those doors,

@@ -17,7 +17,7 @@
 // restores the original file byte-for-byte after (switch-back law, mirrors env_guard.mjs) — success,
 // failure, or throw.
 //
-// Usage: node ceremony_preflight_compat.mjs [pkg...]   (default: foundation aresrpg engine dungeon)
+// Usage: node ceremony_preflight_compat.mjs [pkg...]   (default: every publishable package)
 // NETWORK env selects the target (default testnet); the CLI's ambient active-env must already match it
 // (assert_env — fail-closed, never switches for you). Exits non-zero if any requested package is
 // INCOMPATIBLE (or errors for a non-compatibility reason) — wire this into CI/pre-ceremony checks.
@@ -39,7 +39,11 @@ import {
 } from './ceremony_lib.mjs'
 import { assert_env } from './env_guard.mjs'
 
-const DEFAULT_PACKAGES = ['foundation', 'aresrpg', 'engine', 'dungeon']
+// EVERY publishable package, both modes (#1243): the old four-package default silently omitted
+// kolizeum, forgemagie and gifting — precisely the three whose Published.toml disagrees with
+// release.json. A package the gate never checks is a ceremony wedge by construction, so the default
+// is the publish set itself and stays that way as packages are added.
+const DEFAULT_PACKAGES = Object.keys(PKG_DEPS)
 const RELEASE_PATH = path.resolve(
   MOVE_DIR,
   '../sdk/src/deployment/release.json'
@@ -261,7 +265,6 @@ Usage: node ceremony_preflight_compat.mjs [pkg...] [--mode-check]
 
   pkg           one or more of: ${Object.keys(PKG_DEPS).join(', ')}
                 defaults to: ${DEFAULT_PACKAGES.join(' ')}
-                (in republish mode, defaults to every package instead)
   --mode-check  print which mode the gate would run in and exit — no build, no chain, no CLI.
                 Non-zero only when a REPUBLISH_WINDOW marker is refused by its branch context.
 
@@ -437,7 +440,7 @@ async function main() {
   const requested = args.filter((a) => !a.startsWith('--'))
 
   if (verdict.mode === 'size-only') {
-    const packages = requested.length ? requested : Object.keys(PKG_DEPS)
+    const packages = requested.length ? requested : DEFAULT_PACKAGES
     assert_known_packages(packages)
     console.log('════════════════════════════════════════════════════════')
     console.log(

@@ -42,7 +42,7 @@ use sui::{dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random}, tabl
 
 // ╔════════════════ [ The brand witness (core's `*_brand` doors key on this) ] ═ ]
 
-/// THE forge witness: `GameConfig.forge_brand` pins `type_name::get<Forge>()` at the ceremony, and every
+/// THE forge witness: `GameConfig.forge_brand` pins `type_name::with_defining_ids<Forge>()` at the ceremony, and every
 /// brand-gated core value door (`set_rolled_brand` / `mint_item_stack_brand` / `add_job_xp_brand` /
 /// `consume_units_brand` / `item_uid_mut_brand`) refuses any other witness. FENCE: no public constructor —
 /// `Forge {}` is packed ONLY inside this module's functions, NEVER returned, NEVER stored; `drop` means every
