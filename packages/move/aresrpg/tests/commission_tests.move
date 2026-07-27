@@ -16,18 +16,7 @@
 #[test_only]
 module aresrpg::commission_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  commission::{Self, CraftRequest, CraftXpVoucher},
-  config::GameConfig,
-  crafting::{Self, Recipe},
-  extension,
-  extract::ItemExtractPolicy,
-  item::{Self, Item, ItemTemplate},
-  test_world,
-  version::Version
-};
+use aresrpg::{admin::AdminCap, character_link, commission::{Self, CraftRequest, CraftXpVoucher}, config::GameConfig, crafting::{Self, Recipe}, extension, extract::ItemExtractPolicy, item::{Self, Item, ItemTemplate}, test_world, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{

@@ -19,18 +19,10 @@
 /// gather/zones consume. The arrow is `equipment → character_link` (it reads `level` for the equip gate), so this
 /// module must not depend back on it.
 module aresrpg::character_link;
+use sui::{event};
+use sui::dynamic_field as df;
 
-use aresrpg::{
-  character::{Self, Character},
-  checkpoint::Checkpoint,
-  config::{Self, GameConfig},
-  dungeon_lock,
-  extension,
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate},
-  progression,
-  version::Version
-};
+use aresrpg::{character::{Self, Character}, world::Checkpoint, config::{Self, GameConfig}, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, progression, version::Version, character_link};
 use aresrpg_foundation::character_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::string::String;
@@ -113,7 +105,7 @@ fun add_field<K: copy + drop + store>(character: &mut Character, key: K, delta: 
 
 /// Set (or overwrite) the character's current world field.
 public(package) fun set_world_field(character: &mut Character, world: ID, version: &Version) {
-  dungeon_lock::assert_unlocked(character);
+  assert_unlocked(character);
   set_field(character, WorldFieldKey {}, world, version);
 }
 
@@ -151,7 +143,7 @@ public fun enter_dungeon_brand<W: drop>(
   let character = kiosk.borrow_mut(personal_kiosk::borrow(pkcap), character_id);
   assert!(in_world(character, world), EWrongDungeonWorld);
   set_world_field(character, pass, version);
-  dungeon_lock::lock(character, pass, world);
+  lock(character, pass, world);
 }
 
 /// Release a terminal/abandoned run. The same pinned witness and owner cap are required, and both the dynamic
@@ -171,7 +163,7 @@ public fun exit_dungeon_brand<W: drop>(
   version.assert_latest();
   let character = kiosk.borrow_mut(personal_kiosk::borrow(pkcap), character_id);
   assert!(in_world(character, pass), EWrongDungeonPass);
-  dungeon_lock::unlock(character, pass, world);
+  unlock(character, pass, world);
   extension::set_character_field_latest(
     extension::ns_character_world(), character, WorldFieldKey {}, world, version,
   );
@@ -561,4 +553,87 @@ fun resolve_class_id(character: &Character): u64 {
   let cid = config::class_id_of(character::class(character));
   assert!(cid.is_some(), EUnknownClass);
   cid.destroy_some()
+}
+
+// ╔════════════════ [ merged from `dungeon_lock` — republish restructure #1287 ] ══════ ]
+const EAlreadyLocked: u64 = 101;
+const ENotLocked: u64 = 102;
+const EWrongLock: u64 = 103;
+
+public struct DungeonLockKey has copy, drop, store {}
+
+public struct DungeonLock has copy, drop, store {
+  pass: ID,
+  world: ID,
+}
+
+public(package) fun assert_unlocked(character: &Character) {
+  assert!(!is_locked(character), EAlreadyLocked);
+}
+
+public(package) fun lock(character: &mut Character, pass: ID, world: ID) {
+  assert_unlocked(character);
+  df::add(character::uid_mut(character), DungeonLockKey {}, DungeonLock { pass, world });
+}
+
+public(package) fun unlock(character: &mut Character, pass: ID, world: ID) {
+  assert!(is_locked(character), ENotLocked);
+  let lock: DungeonLock = df::remove(character::uid_mut(character), DungeonLockKey {});
+  assert!(lock.pass == pass && lock.world == world, EWrongLock);
+}
+
+public fun is_locked(character: &Character): bool {
+  df::exists(character.uid(), DungeonLockKey {})
+}
+
+public fun pass(character: &Character): Option<ID> {
+  if (is_locked(character)) {
+    option::some(df::borrow<DungeonLockKey, DungeonLock>(character.uid(), DungeonLockKey {}).pass)
+  } else option::none()
+}
+
+public fun world(character: &Character): Option<ID> {
+  if (is_locked(character)) {
+    option::some(df::borrow<DungeonLockKey, DungeonLock>(character.uid(), DungeonLockKey {}).world)
+  } else option::none()
+}
+
+// ╔════════════════ [ merged from `stat_allocation` — republish restructure #1287 ] ══════ ]
+// ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
+
+const EBadStat: u64 = 101; // the stat index is out of range (>= stat_count())
+const EZeroPoints: u64 = 102; // a raise must allocate at least 1 point
+const ENoStatPoints: u64 = 103; // fewer unspent stat points than the requested allocation
+
+// ╔════════════════ [ Event ] ════════════════════════════════════════════════ ]
+
+/// A stat was raised: `stat` index, `points` allocated this call, `stat_total` = the stat's NEW allocated total.
+public struct StatRaised has copy, drop { character: ID, stat: u8, points: u64, stat_total: u64 }
+
+// ╔════════════════ [ Spend door (holder-gated, PTB-first) ] ═══════════════════ ]
+
+/// Spend `points` stat points to raise the character's `stat` allocation. Owner-gated by the personal-kiosk cap
+/// EXACTLY like `spell_level::raise_spell_level`. Aborts (all before any write): `EBadStat` (stat >= count),
+/// `EZeroPoints` (points == 0), `sui::kiosk::ENotOwner` (wrong cap), `ENoStatPoints` (unspent < points).
+public fun raise_stat(
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  character_id: ID,
+  stat: u8,
+  points: u64,
+  version: &Version,
+) {
+  version.assert_enabled();
+  assert!(stat < stat_count(), EBadStat);
+  assert!(points >= 1, EZeroPoints);
+
+  let owner_cap = personal_kiosk::borrow(pkcap);
+  let chr = kiosk.borrow_mut(owner_cap, character_id);
+
+  // DERIVED unspent = the STAT half of the per-level grant MINUS points already spent (never banked, floors at 0).
+  assert!(unspent_stat_points(chr) >= points, ENoStatPoints);
+
+  add_stat_points_spent(chr, points, version);
+  let stat_total = add_stat_allocated(chr, stat, points, version);
+  event::emit(StatRaised { character: character_id, stat, points, stat_total });
 }

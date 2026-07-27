@@ -8,17 +8,7 @@
 #[test_only]
 module aresrpg::fight_seam_tests;
 
-use aresrpg::{
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  extension,
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zones,
-  zones_view
-};
+use aresrpg::{character_link, config::GameConfig, extension, test_world, version::Version, world::{Self, World}, zones, zones_view};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::{string::String, unit_test::assert_eq};
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
@@ -122,7 +112,7 @@ fun pin_checkpoint(sc: &mut Scenario, who: address, cid: ID, wid: ID, x: u32, z:
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::write_checkpoint(chr, wid, checkpoint::new_checkpoint(x, z, time, false), &ver);
+    character_link::write_checkpoint(chr, wid, world::new_checkpoint(x, z, time, false), &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
@@ -133,12 +123,12 @@ fun occupied_zone(sc: &mut Scenario, who: address, cid: ID, wid: ID): (u32, u32)
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
-  let (zx, zy) = world::zone_of(&w, checkpoint::x(&cp), checkpoint::z(&cp));
+  let (zx, zy) = world::zone_of(&w, world::x(&cp), world::z(&cp));
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   (zx, zy)
 }
 
-fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): checkpoint::Checkpoint {
+fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): world::Checkpoint {
   sc.next_tx(who);
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -247,7 +237,7 @@ fun discovered(sc: &mut Scenario): (ID, ID, u32, u32) {
   do_join(sc, test_world::owner(), cid, 1000);
   let (zx, zy) = occupied_zone(sc, test_world::owner(), cid, wid);
   let cp = cp_of(sc, test_world::owner(), cid, wid);
-  do_search(sc, test_world::owner(), cid, checkpoint::x(&cp), checkpoint::z(&cp), 2000);
+  do_search(sc, test_world::owner(), cid, world::x(&cp), world::z(&cp), 2000);
   (cid, wid, zx, zy)
 }
 
@@ -277,9 +267,9 @@ fun claim_returns_facts_writes_checkpoint_frees_spawn() {
 
   // entry checkpoint advanced to the group; the spawn freed (2 → 1)
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), mx);
-  assert_eq!(checkpoint::z(&cp), mz);
-  assert_eq!(checkpoint::time_ms(&cp), 2000 + HUGE_ELAPSED);
+  assert_eq!(world::x(&cp), mx);
+  assert_eq!(world::z(&cp), mz);
+  assert_eq!(world::time_ms(&cp), 2000 + HUGE_ELAPSED);
   sc.next_tx(test_world::owner());
   let w2 = sc.take_shared<World>();
   assert_eq!(zones_view::mob_group_count(&w2, zx, zy), 1);
@@ -300,7 +290,7 @@ fun claim_double_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 fun claim_travel_too_far_aborts() {
   let mut sc = ts::begin(test_world::owner());
   let (cid, wid, zx, zy) = discovered(&mut sc);
@@ -352,8 +342,8 @@ fun claim_in_zone_from_a_different_searched_zone_passes() {
   assert_eq!(zones_view::mob_group_count(&w2, zx, zy), 1);
   ts::return_shared(w2);
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), mx);
-  assert_eq!(checkpoint::z(&cp), mz);
+  assert_eq!(world::x(&cp), mx);
+  assert_eq!(world::z(&cp), mz);
   sc.end();
 }
 
@@ -367,7 +357,7 @@ fun claim_in_zone_unsearched_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 /// The proximity gate holds on the new door too: checkpoint pinned to the FAR corner of the target zone, 1s
 /// later (budget ~5.5 blocks/s) — ≥256 blocks away → ETravelTooFar (same math the occupied-zone door enforces).
 fun claim_in_zone_travel_too_far_aborts() {

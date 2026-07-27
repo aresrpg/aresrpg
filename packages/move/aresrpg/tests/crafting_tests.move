@@ -9,16 +9,7 @@
 #[test_only]
 module aresrpg::crafting_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  config::GameConfig,
-  crafting::{Self, Recipe},
-  extract::ItemExtractPolicy,
-  item::{Item, ItemTemplate},
-  test_world,
-  version::Version
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, crafting::{Self, Recipe}, extract::ItemExtractPolicy, item::{Item, ItemTemplate}, test_world, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{kiosk::Kiosk, random::{Self, Random, RandomGenerator}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};

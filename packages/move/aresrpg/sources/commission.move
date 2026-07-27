@@ -46,15 +46,7 @@
 /// XP is fully computed + owed ATOMICALLY at execute; the claim is a redemption, not a deferred feature.
 module aresrpg::commission;
 
-use aresrpg::{
-  character::Character,
-  character_link,
-  config::{Self, GameConfig},
-  crafting::{Self, Recipe},
-  extract::ItemExtractPolicy,
-  item::{Item, ItemTemplate},
-  version::Version
-};
+use aresrpg::{character::Character, character_link, config::{Self, GameConfig}, crafting::{Self, Recipe}, extract::ItemExtractPolicy, item::{Item, ItemTemplate}, version::Version};
 use aresrpg_foundation::job_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{

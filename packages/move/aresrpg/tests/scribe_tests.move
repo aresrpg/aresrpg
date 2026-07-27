@@ -7,14 +7,7 @@
 #[test_only]
 module aresrpg::scribe_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog,
-  item,
-  item_stats::{Self, ItemStatistics},
-  scribe::{Self, ScribeConfig},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog, item, item_stats::{Self, ItemStatistics}, scribe::{Self, ScribeConfig}, version::{Self, Version}};
 use sui::test_scenario::{Self as ts};
 
 const OWNER: address = @0xA;

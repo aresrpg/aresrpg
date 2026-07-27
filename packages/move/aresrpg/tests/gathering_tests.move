@@ -7,20 +7,7 @@
 #[test_only]
 module aresrpg::gathering_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  gathering,
-  item::{Item, ItemTemplate},
-  mob_template::{Self, MobTemplate},
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zones,
-  zones_view
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, gathering, item::{Item, ItemTemplate}, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}, zones, zones_view};
 use aresrpg_fight::{
   admin::{Self as fight_admin, AdminCap as FightAdminCap},
   fight::Fight,
@@ -149,7 +136,7 @@ fun pin_checkpoint(sc: &mut Scenario, who: address, cid: ID, wid: ID, x: u32, z:
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::write_checkpoint(chr, wid, checkpoint::new_checkpoint(x, z, time, false), &ver);
+    character_link::write_checkpoint(chr, wid, world::new_checkpoint(x, z, time, false), &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
@@ -160,7 +147,7 @@ fun occupied_zone(sc: &mut Scenario, who: address, cid: ID, wid: ID): (u32, u32)
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
-  let (zx, zy) = world::zone_of(&w, checkpoint::x(&cp), checkpoint::z(&cp));
+  let (zx, zy) = world::zone_of(&w, world::x(&cp), world::z(&cp));
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   (zx, zy)
 }
@@ -174,7 +161,7 @@ fun job_xp_of(sc: &mut Scenario, who: address, cid: ID, job: u8): u64 {
   xp
 }
 
-fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): checkpoint::Checkpoint {
+fun cp_of(sc: &mut Scenario, who: address, cid: ID, wid: ID): world::Checkpoint {
   sc.next_tx(who);
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -222,7 +209,7 @@ fun discovered(sc: &mut Scenario, tier: u8): (ID, ID, ID, u32, u32) {
   do_join(sc, test_world::owner(), cid, 1000);
   let (zx, zy) = occupied_zone(sc, test_world::owner(), cid, wid);
   let cp = cp_of(sc, test_world::owner(), cid, wid);
-  do_search(sc, test_world::owner(), cid, checkpoint::x(&cp), checkpoint::z(&cp), 2000);
+  do_search(sc, test_world::owner(), cid, world::x(&cp), world::z(&cp), 2000);
   (cid, wid, tid, zx, zy)
 }
 
@@ -245,8 +232,8 @@ fun gather_yields_xp_moves_checkpoint_consumes_node() {
   ts::return_shared(w);
   assert_eq!(job_xp_of(&mut sc, test_world::owner(), cid, 0), 10);
   let cp = cp_of(&mut sc, test_world::owner(), cid, wid);
-  assert_eq!(checkpoint::x(&cp), nx);
-  assert_eq!(checkpoint::z(&cp), nz);
+  assert_eq!(world::x(&cp), nx);
+  assert_eq!(world::z(&cp), nz);
   sc.end();
 }
 
@@ -448,7 +435,7 @@ fun gather_tier_locked_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = ETravelTooFar, location = checkpoint)]
+#[test, expected_failure(abort_code = ETravelTooFar, location = world)]
 fun gather_travel_too_far_aborts() {
   let mut sc = ts::begin(test_world::owner());
   let (cid, wid, tid, zx, zy) = discovered(&mut sc, 1);

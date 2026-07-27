@@ -10,20 +10,7 @@
 #[test_only]
 module aresrpg::character_extract_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self, Character},
-  character_extract::{Self, CharacterExtractPolicy},
-  character_link,
-  dungeon_lock,
-  equipment,
-  extension,
-  extract::{Self, ItemExtractPolicy},
-  fight_marker,
-  item::{Self, Item, ItemTemplate},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self, Character}, character_extract::{Self, CharacterExtractPolicy}, character_link, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::{Self, Version}, fight};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{
@@ -311,7 +298,7 @@ fun delete_marked_character_aborts() {
   {
     let ver = sc.take_shared<Version>();
     let character: &mut Character = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    fight_marker::mark_for_testing(character, &ver);
+    fight::mark_for_testing(character, &ver);
     ts::return_shared(ver);
   };
 
@@ -328,7 +315,7 @@ fun delete_dungeon_locked_character_aborts() {
   sc.next_tx(OWNER);
   {
     let character: &mut Character = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    dungeon_lock::lock(character, object::id_from_address(@0xBEEF), object::id_from_address(@0xCAFE));
+    character_link::lock(character, object::id_from_address(@0xBEEF), object::id_from_address(@0xCAFE));
   };
 
   delete(&mut sc, &mut k, &pkcap, cid, OWNER); // EInDungeon — exit/abandon the run first

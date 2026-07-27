@@ -7,7 +7,7 @@
 #[test_only]
 module aresrpg::zone_format_dispatch_tests;
 
-use aresrpg::{character_link, checkpoint, config::GameConfig, test_world, version::Version, world::{Self, World}, zone_comp, zones, zones_view};
+use aresrpg::{character_link, config::GameConfig, test_world, version::Version, world::{Self, World}, zone_comp, zones, zones_view};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
 
@@ -62,7 +62,7 @@ fun searched_zone(sc: &mut Scenario): (u32, u32) {
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
   ts::return_shared(k);
   sc.return_to_sender(pkcap);
-  let (px, pz) = (checkpoint::x(&cp), checkpoint::z(&cp));
+  let (px, pz) = (world::x(&cp), world::z(&cp));
   do_search(sc, cid, px, pz, 2000);
   sc.next_tx(test_world::owner());
   let w = sc.take_shared<World>();

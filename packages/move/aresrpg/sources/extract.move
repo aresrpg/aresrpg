@@ -42,13 +42,7 @@
 /// package-private inside the merged core.
 module aresrpg::extract;
 
-use aresrpg::{
-  character::Character,
-  extension,
-  item::{Self, Item, LockPledge},
-  lot_rule,
-  version::Version
-};
+use aresrpg::{character::Character, extension, item::{Self, Item, LockPledge}, lot_rule, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
   coin,

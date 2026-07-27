@@ -10,18 +10,7 @@ module aresrpg::equipment_tests;
 
 use aresrpg_foundation::spell;
 use aresrpg_fight::participant;
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self, Character},
-  equipment,
-  extension,
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate},
-  item_stats,
-  item_damages::{Self, ItemDamages},
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self, Character}, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, item_stats, item_damages::{Self, ItemDamages}, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{kiosk::{Self, Kiosk}, package::{Self, Publisher}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};

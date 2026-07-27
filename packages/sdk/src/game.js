@@ -170,7 +170,7 @@ export function raise_stat_ptb(context) {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
-      target: `${a.LATEST_PACKAGE_ID}::stat_allocation::raise_stat`,
+      target: `${a.LATEST_PACKAGE_ID}::character_link::raise_stat`,
       arguments: [
         as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap

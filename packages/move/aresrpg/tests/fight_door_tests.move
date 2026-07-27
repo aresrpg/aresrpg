@@ -16,20 +16,7 @@
 #[test_only]
 module aresrpg::fight_door_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  config::GameConfig,
-  equipment,
-  fight as fight_doors,
-  mob_template::{Self, MobTemplate},
-  results,
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zones,
-  zones_view
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, equipment, fight as fight_doors, mob_template::{Self, MobTemplate}, results, test_world, version::Version, world::{Self, World}, zones, zones_view};
 use aresrpg_fight::{
   actions,
   admin as eadmin,
@@ -164,9 +151,9 @@ fun occupied_zone(sc: &mut Scenario, cid: ID, wid: ID): (u32, u32, u32, u32) {
   let k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cp = character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
-  let (zx, zy) = world::zone_of(&w, aresrpg::checkpoint::x(&cp), aresrpg::checkpoint::z(&cp));
+  let (zx, zy) = world::zone_of(&w, aresrpg::world::x(&cp), aresrpg::world::z(&cp));
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
-  (zx, zy, aresrpg::checkpoint::x(&cp), aresrpg::checkpoint::z(&cp))
+  (zx, zy, aresrpg::world::x(&cp), aresrpg::world::z(&cp))
 }
 
 /// Defeat write-back on `who`'s character in kiosk `kid` (the §17.23 post-fight hp store, stamped at `now`).

@@ -8,15 +8,7 @@
 #[test_only]
 module aresrpg::admin_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  consumable_effect,
-  item,
-  item_damages,
-  item_stats,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, consumable_effect, item, item_damages, item_stats, version::{Self, Version}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts, Scenario};
 

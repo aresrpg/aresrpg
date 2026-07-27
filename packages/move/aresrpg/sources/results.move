@@ -10,7 +10,7 @@
 /// DEFEAT outcomes carry xp 0 / empty table (§7 defeat costs only time) — opening one just writes back HP.
 module aresrpg::results;
 
-use aresrpg::{character_link, config::GameConfig, fight_marker, version::Version};
+use aresrpg::{character_link, config::GameConfig, version::Version, fight};
 use aresrpg::{extension, item::{Self, Item, ItemTemplate}};
 use aresrpg_fight::{mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
 use aresrpg_foundation::prng;
@@ -122,7 +122,7 @@ fun open_internal(
     character_link::write_back_hp(character, final_hp, now_ms, version);
     // the unfinished-business counter decrements HERE and only here — the truth landed, the character is free
     // to fight and to sell again.
-    fight_marker::clear(character, version);
+    fight::clear(character, version);
   };
 
   // roll the checklist: the table once PER KILLED MOB, chance/aging/multiplier scaled (empty table on defeat)

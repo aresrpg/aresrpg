@@ -30,18 +30,7 @@
 /// stack agree (S-11b items amendment; the old "ONE NFT + amount in the event only" seam is resolved).
 module aresrpg::gathering;
 
-use aresrpg::{
-  character_link,
-  checkpoint,
-  config::{Self, GameConfig},
-  equipment,
-  fight,
-  fight_marker,
-  mob_template::MobTemplate,
-  version::Version,
-  world::{Self, World},
-  zones
-};
+use aresrpg::{character_link, config::{Self, GameConfig}, equipment, fight, mob_template::MobTemplate, version::Version, world::{Self, World}, zones};
 use aresrpg::item::{Item, ItemTemplate};
 use aresrpg_fight::{fight_registry::FightRegistry, version::Version as EngineVersion};
 use aresrpg_foundation::job_xp;
@@ -167,13 +156,13 @@ fun gather_internal(
     assert!(equipment::tool_equipped_for(character, njob), ENoTool);
     let cp = character_link::checkpoint(character, wid);
     // ×1.5 mount budget only when a pet was equipped at BOTH ends (stored snapshot AND now — §17.2)
-    let pet_both = checkpoint::pet_equipped(&cp) && equipment::pet_equipped(character);
+    let pet_both = world::pet_equipped(&cp) && equipment::pet_equipped(character);
     let job_level = job_xp::level_from_xp(character_link::job_xp(character, njob));
     (cp, pet_both, job_level)
   };
 
   // 3) travel verification: you must have been able to WALK from your checkpoint to the node (teach-don't-reject)
-  checkpoint::verify_travel(world, &cp, nx, nz, now, pet_both);
+  world::verify_travel(world, &cp, nx, nz, now, pet_both);
 
   // 4) tier gate — the node's tier must be unlocked for the gatherer's job level (§6)
   let required = job_xp::tier_to_level(ntier as u64);
@@ -195,7 +184,7 @@ fun gather_internal(
   {
     let character = kiosk.borrow_mut(owner_cap, character_id);
     let pet = equipment::pet_equipped(character);
-    character_link::write_checkpoint(character, wid, checkpoint::new_checkpoint(nx, nz, now, pet), version);
+    character_link::write_checkpoint(character, wid, world::new_checkpoint(nx, nz, now, pet), version);
     character_link::add_job_xp(character, njob, gained_xp, version);
   };
 
@@ -251,7 +240,7 @@ fun protector_fires(bp: u64, gen: &mut RandomGenerator): bool {
 /// seated into a protector ambush (`fight::mark_seated` would abort), so the caller SKIPS the spawn — the harvest
 /// still completes. Read-only borrow through the holder's cap (ownership already proven by the outer gather gates).
 fun gatherer_unmarked(kiosk: &Kiosk, owner_cap: &KioskOwnerCap, character_id: ID): bool {
-  fight_marker::is_unmarked(kiosk.borrow(owner_cap, character_id))
+  fight::is_unmarked(kiosk.borrow(owner_cap, character_id))
 }
 
 /// GOLDEN-GATHER settle (§6): read this resource's rare link. No link ⇒ NO draw, param inert (loot-philosophy —

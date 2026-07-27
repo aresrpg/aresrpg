@@ -9,15 +9,7 @@
 #[test_only]
 module aresrpg::results_tests;
 
-use aresrpg::{
-  config::GameConfig,
-  fight,
-  fight_marker,
-  item::{Item, ItemTemplate},
-  results::{Self, FightResult},
-  test_world,
-  version::Version
-};
+use aresrpg::{config::GameConfig, fight, item::{Item, ItemTemplate}, results::{Self, FightResult}, test_world, version::Version};
 use aresrpg_fight::{mob, settlement};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -42,7 +34,7 @@ fun mark_character(sc: &mut Scenario, cid: ID) {
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    fight_marker::mark(chr, &ver);
+    fight::mark(chr, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }

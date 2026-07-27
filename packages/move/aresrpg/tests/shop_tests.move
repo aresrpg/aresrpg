@@ -10,14 +10,7 @@
 #[test_only]
 module aresrpg::shop_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  item::{Self as item, Item, ItemTemplate},
-  item_stats,
-  shop::{Self as shop, Sale},
-  version::{Self as version, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, item::{Self as item, Item, ItemTemplate}, item_stats, shop::{Self as shop, Sale}, version::{Self as version, Version}};
 use std::unit_test::{assert_eq, destroy};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{

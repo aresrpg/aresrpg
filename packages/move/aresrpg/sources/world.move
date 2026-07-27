@@ -18,6 +18,7 @@
 /// out-of-band value); an out-of-range table index ABORTS (no meaningful clamp). Zone coordinate math is
 /// OVERFLOW-PROOF by construction: a zone index is `pos / zone_size` (u32/u32, no overflow), bounds-checked first.
 module aresrpg::world;
+use aresrpg_foundation::world_math;
 
 use aresrpg::{admin::AdminCap, version::Version};
 use std::string::String;
@@ -644,3 +645,55 @@ fun clamp_u16(v: u16, lo: u16, hi: u16): u16 { if (v < lo) lo else if (v > hi) h
 
 #[test_only]
 public fun set_spawn_nonce_for_testing(w: &mut World, n: u64) { w.spawn_nonce = n; }
+
+// ╔════════════════ [ merged from `checkpoint` — republish restructure #1287 ] ══════ ]
+// ╔════════════════ [ Errors (documented for the frontend in the module header) ] ═ ]
+
+const ECheckpointFuture: u64 = 101;
+const ETravelTooFar: u64 = 102;
+
+// ╔════════════════ [ Type ] ═════════════════════════════════════════════════ ]
+
+/// Proven position + proven time + the pet-equipped SNAPSHOT taken at the WRITE (the only verifiable form of the
+/// "both ends" mount rule — §17.2). `copy + drop + store`: it rides as a DF value and passes by value freely.
+public struct Checkpoint has store, copy, drop {
+  x: u32,
+  z: u32,
+  time_ms: u64,
+  pet_equipped: bool,
+}
+
+public(package) fun new_checkpoint(x: u32, z: u32, time_ms: u64, pet_equipped: bool): Checkpoint {
+  Checkpoint { x, z, time_ms, pet_equipped }
+}
+
+public fun x(cp: &Checkpoint): u32 { cp.x }
+public fun z(cp: &Checkpoint): u32 { cp.z }
+public fun time_ms(cp: &Checkpoint): u64 { cp.time_ms }
+public fun pet_equipped(cp: &Checkpoint): bool { cp.pet_equipped }
+
+// ╔════════════════ [ Verification (abort form — the value-path gate) ] ═══════ ]
+
+/// Abort unless traveling from `cp` to `(to_x, to_z)` by `now_ms` is physically plausible at the world's speed
+/// budget. `pet_both` MUST already fold "pet equipped at both ends" (`cp.pet_equipped && pet_now`); the caller
+/// owns reading the live pet flag. Non-punitive by design: elapsed only grows, so a refused caller waits and
+/// retries (§17.3) — see `wait_seconds`.
+public fun verify_travel(w: &World, cp: &Checkpoint, to_x: u32, to_z: u32, now_ms: u64, pet_both: bool) {
+  assert!(now_ms >= cp.time_ms, ECheckpointFuture);
+  assert!(travel_ok(w, cp, to_x, to_z, now_ms, pet_both), ETravelTooFar);
+}
+
+/// The boolean core (also the test oracle). `true` iff the move is coverable. Same math as `verify_travel`,
+/// exposed for callers that want to branch rather than abort.
+public fun travel_ok(w: &World, cp: &Checkpoint, to_x: u32, to_z: u32, now_ms: u64, pet_both: bool): bool {
+  world_math::travel_ok(speed_budget(w), cp.x, cp.z, cp.time_ms, to_x, to_z, now_ms, pet_both)
+}
+
+// ╔════════════════ [ wait_seconds (public pure UI helper — teach, don't reject) ] ═ ]
+
+/// How many MORE seconds until the move becomes legal (0 if already legal). The UI reads this to say "wait Ns".
+/// Uses an integer sqrt for the linear distance (non-consensus — the abort path stays exact via squared compare),
+/// so it may be off by <1 block; that is fine for a countdown. `pet_both` mirrors the check's mount rule.
+public fun wait_seconds(w: &World, cp: &Checkpoint, to_x: u32, to_z: u32, now_ms: u64, pet_both: bool): u64 {
+  world_math::wait_seconds(speed_budget(w), cp.x, cp.z, cp.time_ms, to_x, to_z, now_ms, pet_both)
+}

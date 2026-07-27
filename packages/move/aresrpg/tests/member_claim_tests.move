@@ -10,18 +10,7 @@
 #[test_only]
 module aresrpg::member_claim_tests;
 
-use aresrpg::{
-  admin::AdminCap,
-  config::GameConfig,
-  fight as fight_doors,
-  mob_template::{Self, MobTemplate},
-  test_world,
-  version::Version,
-  world::{Self, World},
-  zone_comp,
-  zones,
-  zones_view
-};
+use aresrpg::{admin::AdminCap, config::GameConfig, fight as fight_doors, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}, zone_comp, zones, zones_view};
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
@@ -135,7 +124,7 @@ fun discovered(sc: &mut Scenario): (ID, u32, u32, ID, ID) {
     let cp = aresrpg::character_link::checkpoint(k.borrow(personal_kiosk::borrow(&pkcap), cid), wid);
     ts::return_shared(k);
     sc.return_to_sender(pkcap);
-    (aresrpg::checkpoint::x(&cp), aresrpg::checkpoint::z(&cp))
+    (aresrpg::world::x(&cp), aresrpg::world::z(&cp))
   };
   do_search(sc, cid, cx, cz);
   sc.next_tx(test_world::owner());

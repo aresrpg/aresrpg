@@ -10,14 +10,7 @@
 /// root of trust. This module imports `item` + `version`; neither imports it, so there is no cycle.
 module aresrpg::admin;
 
-use aresrpg::{
-  catalog::{Self, Catalog},
-  consumable_effect::{Self, ConsumableEffect},
-  item,
-  item_damages::{Self, ItemDamages},
-  item_stats::{Self, ItemStatistics},
-  version::Version
-};
+use aresrpg::{catalog::{Self, Catalog}, consumable_effect::{Self, ConsumableEffect}, item, item_damages::{Self, ItemDamages}, item_stats::{Self, ItemStatistics}, version::Version};
 use std::string::String;
 use sui::tx_context::sender;
 

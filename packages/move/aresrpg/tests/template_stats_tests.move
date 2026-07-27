@@ -5,13 +5,7 @@
 #[test_only]
 module aresrpg::template_stats_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  item::{Self, ItemTemplate},
-  item_stats,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, item::{Self, ItemTemplate}, item_stats, version::{Self, Version}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts, Scenario};
 

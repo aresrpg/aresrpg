@@ -42,16 +42,8 @@
 /// `public(package)` so `commission::execute` composes the SAME craft off a customer's kiosk at the ARTISAN's level.
 module aresrpg::crafting;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  config::GameConfig,
-  version::Version
-};
-use aresrpg::{
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate}
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, version::Version};
+use aresrpg::{extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}};
 use aresrpg_foundation::job_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, transfer_policy::TransferPolicy, tx_context::sender};

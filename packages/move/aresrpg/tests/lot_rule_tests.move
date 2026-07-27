@@ -5,10 +5,7 @@
 #[test_only]
 module aresrpg::lot_rule_tests;
 
-use aresrpg::{
-  item::{Self, Item},
-  lot_rule
-};
+use aresrpg::{item::{Self, Item}, lot_rule};
 use std::{string::String, unit_test::{assert_eq, destroy}};
 use sui::{
   test_scenario::{Self as ts},

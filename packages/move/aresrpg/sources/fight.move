@@ -7,8 +7,9 @@
 /// (constructible ONLY here): every engine create/join is branded with it, and `results::open` asserts the
 /// settlement outcome echoes it — compile-time self-authentication, zero stored bindings, zero ceremony.
 module aresrpg::fight;
+use aresrpg::{extension};
 
-use aresrpg::{character_link, config::{Self, GameConfig}, equipment, fight_marker, item_damages, mob_template::{Self, MobTemplate}, world::{Self as game_world, World}, zones, zones_view};
+use aresrpg::{character_link, config::{Self, GameConfig}, equipment, item_damages, mob_template::{Self, MobTemplate}, world::{Self as game_world, World}, zones, zones_view};
 use aresrpg::{character::Character, version::Version};
 use aresrpg_fight::{fight::{Self as engine, Dials, Fight, GroupBuild}, fight_registry, participant::{Self, Combatant, WeaponLine}, settlement::{Self, FightOutcome}, version::Version as EngineVersion};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
@@ -386,8 +387,8 @@ public fun join_vouched_brand<W: drop>(
 /// counter's own underflow assert is the backstop), then increment the dirty counter. PvP paths never call this.
 fun mark_seated(kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, character_id: ID, version: &Version) {
   let character: &mut Character = kiosk.borrow_mut(personal_kiosk::borrow(pkcap), character_id);
-  assert!(fight_marker::is_unmarked(character), ECharacterMarked);
-  fight_marker::mark(character, version);
+  assert!(is_unmarked(character), ECharacterMarked);
+  mark(character, version);
 }
 
 /// The PUBLIC authentic-snapshot factory (package-split law): a sibling FEATURE package (the PvP arena) builds
@@ -461,3 +462,51 @@ fun fold_id(id: ID): u64 {
   while (i < bytes.length()) { acc = (acc << 8) ^ (acc >> 56) ^ (*bytes.borrow(i) as u64); i = i + 1; };
   acc
 }
+
+// ╔════════════════ [ merged from `fight_marker` — republish restructure #1287 ] ══════ ]
+const ENotMarked: u64 = 103; // clear: nothing to clear (results gate on `rolled` — a double-open cannot happen — so this is defensive)
+
+/// The namespaced DF key. Present ⇒ the character owes ≥1 pending resolution; the stored `u64` is the count.
+public struct DirtyKey has copy, drop, store {}
+
+/// INCREMENT the pending-obligations counter (a PvM seat). First mark creates the slot at 1. NS_CHARACTER_PROGRESSION
+/// home; `public(package)` — the fight seat paths call it (they pre-check `is_unmarked`, so today the count is 0→1,
+/// but the counter shape lets other obligations stack).
+public(package) fun mark(character: &mut Character, version: &Version) {
+  let ns = extension::ns_character_progression();
+  if (extension::character_field_exists(character, ns, DirtyKey {})) {
+    let slot: &mut u64 = extension::borrow_character_field_mut(ns, character, DirtyKey {}, version);
+    *slot = *slot + 1;
+  } else {
+    extension::add_character_field(ns, character, DirtyKey {}, 1u64, version);
+  };
+}
+
+/// DECREMENT the counter (a result OPEN — the only discharge: opening lands the XP/HP truth first). Aborts if
+/// already zero (`ENotMarked`, defensive). Removes the slot at zero so a clean character carries no DF.
+public(package) fun clear(character: &mut Character, version: &Version) {
+  let ns = extension::ns_character_progression();
+  assert!(extension::character_field_exists(character, ns, DirtyKey {}), ENotMarked);
+  let remaining = {
+    let slot: &mut u64 = extension::borrow_character_field_mut(ns, character, DirtyKey {}, version);
+    *slot = *slot - 1;
+    *slot
+  };
+  if (remaining == 0) { let _: u64 = extension::remove_character_field(ns, character, DirtyKey {}, version); };
+}
+
+/// FREE read: the character's pending-obligations count (0 when clean). Seat pre-flight, the listing rule, RPC.
+public fun pending_obligations(c: &Character): u64 {
+  let ns = extension::ns_character_progression();
+  if (extension::character_field_exists(c, ns, DirtyKey {})) {
+    *extension::borrow_character_field<DirtyKey, u64>(c, ns, DirtyKey {})
+  } else 0
+}
+
+/// Convenience for gates: is the character free of unfinished business? (Every gated action asserts this.)
+public fun is_unmarked(c: &Character): bool { pending_obligations(c) == 0 }
+
+#[test_only]
+/// Sibling test suites (forge split) mark a character dirty to drive their EDirty walls — test builds only,
+/// stripped from every publish.
+public fun mark_for_testing(character: &mut Character, version: &Version) { mark(character, version) }

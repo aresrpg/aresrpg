@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// STAT-ALLOCATION spend-door tests (§3 rider): `stat_allocation::raise_stat` turns earned STAT points (the half
+/// STAT-ALLOCATION spend-door tests (§3 rider): `character_link::raise_stat` turns earned STAT points (the half
 /// of `points_for_level_range` that was DISCARDED before this rider) into per-stat allocations, and the allocated
 /// VITALITY flows into the HP formula while the full block flows into `equipment::folded_stats` (the combat
 /// consumer). Drives the REAL door off a kiosk-locked character leveled through `grant_fight_xp`, plus the
@@ -8,7 +8,7 @@
 #[test_only]
 module aresrpg::stat_allocation_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, character_link, config::GameConfig, equipment, stat_allocation, test_world, version::Version};
+use aresrpg::{admin::{Self, AdminCap}, character_link, config::GameConfig, equipment, test_world, version::Version};
 use aresrpg_foundation::{character_xp, spell};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -19,9 +19,9 @@ const OTHER: address = @0xB; // a non-owner attacker
 // ── mirrored error codes (location disambiguates the aborting module) ──
 const K_ENotOwner: u64 = 0; // sui::kiosk (ownership check)
 const V_ENotEnabled: u64 = 102; // aresrpg::version
-const EBadStat: u64 = 101; // aresrpg::stat_allocation
-const EZeroPoints: u64 = 102; // aresrpg::stat_allocation
-const ENoStatPoints: u64 = 103; // aresrpg::stat_allocation
+const EBadStat: u64 = 101; // aresrpg::character_link
+const EZeroPoints: u64 = 102; // aresrpg::character_link
+const ENoStatPoints: u64 = 103; // aresrpg::character_link
 
 // ╔════════════════ [ Drivers ] ══════════════════════════════════════════════ ]
 
@@ -43,7 +43,7 @@ fun raise(sc: &mut Scenario, cid: ID, stat: u8, points: u64) {
   let mut k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let ver = sc.take_shared<Version>();
-  stat_allocation::raise_stat(&mut k, &pkcap, cid, stat, points, &ver);
+  character_link::raise_stat(&mut k, &pkcap, cid, stat, points, &ver);
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
 
@@ -151,7 +151,7 @@ fun allocated_stats_flow_into_combat_block() {
 
 // ╔════════════════ [ Adversary matrix ] ═════════════════════════════════════ ]
 
-#[test, expected_failure(abort_code = ENoStatPoints, location = aresrpg::stat_allocation)]
+#[test, expected_failure(abort_code = ENoStatPoints, location = aresrpg::character_link)]
 /// Spend MORE than the derived unspent (11 > 10) → ENoStatPoints, no partial write (the tx reverts).
 fun spend_more_than_available_aborts() {
   let mut sc = ts::begin(test_world::owner());
@@ -171,7 +171,7 @@ fun non_owner_cannot_raise() {
   let pkcap_b = personal_kiosk::new(&mut kb, kcapb, sc.ctx()); // the attacker's OWN cap (for kb, a fresh kiosk — not the shared one below)
   let mut k_owner = sc.take_shared<Kiosk>(); // the only shared kiosk — owned by OWNER
   let ver = sc.take_shared<Version>();
-  stat_allocation::raise_stat(&mut k_owner, &pkcap_b, cid, character_link::stat_vitality(), 1, &ver); // ENotOwner
+  character_link::raise_stat(&mut k_owner, &pkcap_b, cid, character_link::stat_vitality(), 1, &ver); // ENotOwner
   ts::return_shared(k_owner); ts::return_shared(ver);
   personal_kiosk::transfer_to_sender(pkcap_b, sc.ctx());
   transfer::public_share_object(kb);
@@ -191,7 +191,7 @@ fun raise_while_dark_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = EBadStat, location = aresrpg::stat_allocation)]
+#[test, expected_failure(abort_code = EBadStat, location = aresrpg::character_link)]
 /// A stat index at/above the §3 stat count is refused (no phantom stat slot).
 fun bad_stat_index_aborts() {
   let mut sc = ts::begin(test_world::owner());
@@ -200,7 +200,7 @@ fun bad_stat_index_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = EZeroPoints, location = aresrpg::stat_allocation)]
+#[test, expected_failure(abort_code = EZeroPoints, location = aresrpg::character_link)]
 /// A zero-point allocation is refused (a raise must move at least 1 point).
 fun zero_points_aborts() {
   let mut sc = ts::begin(test_world::owner());

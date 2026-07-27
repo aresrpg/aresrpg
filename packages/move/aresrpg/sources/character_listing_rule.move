@@ -39,7 +39,7 @@
 /// first sale (only resale) — spec-correct, a freshly-minted character is the creator's own to lock.
 module aresrpg::character_listing_rule;
 
-use aresrpg::{character_link, config::GameConfig, fight_marker};
+use aresrpg::{character_link, config::GameConfig, fight};
 use aresrpg::character::Character;
 use sui::transfer_policy::{Self, TransferPolicy, TransferPolicyCap, TransferRequest};
 
@@ -80,6 +80,6 @@ public fun prove_level(character: &Character, config: &GameConfig, request: &mut
   assert!(character_link::level(character) >= config.listing_level_gate(), ELevelTooLow);
   // UNFINISHED BUSINESS: a marked character (unopened PvM result / live seat) cannot complete
   // a SALE — only the seller can open its result, so letting the sale through would brick the buyer forever.
-  assert!(fight_marker::is_unmarked(character), EUnfinishedBusiness);
+  assert!(fight::is_unmarked(character), EUnfinishedBusiness);
   transfer_policy::add_receipt(Rule {}, request);
 }

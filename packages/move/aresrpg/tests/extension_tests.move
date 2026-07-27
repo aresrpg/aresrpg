@@ -9,15 +9,7 @@
 #[test_only]
 module aresrpg::extension_tests;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self, Catalog},
-  character,
-  extension,
-  item::{Self, Item, ItemTemplate},
-  item_stats,
-  version::{Self, Version}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, character, extension, item::{Self, Item, ItemTemplate}, item_stats, version::{Self, Version}};
 use kiosk::personal_kiosk;
 use std::unit_test::{assert_eq, destroy};
 use sui::{kiosk, package::Publisher, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};

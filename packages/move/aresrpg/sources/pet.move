@@ -5,19 +5,8 @@
 /// pet Item after every feed. Equipped pets also refresh the character's folded-stat cache in the same transaction.
 module aresrpg::pet;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  config::GameConfig,
-  equipment,
-  extension,
-  version::Version
-};
-use aresrpg::{
-  extract::{Self, ItemExtractPolicy},
-  item::{Self, Item, ItemTemplate},
-  item_stats::{Self, ItemStatistics}
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, equipment, extension, version::Version};
+use aresrpg::{extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, event, kiosk::Kiosk, table::{Self, Table}, tx_context::sender};
 

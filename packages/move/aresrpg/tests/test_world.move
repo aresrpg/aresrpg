@@ -8,22 +8,7 @@
 #[test_only]
 module aresrpg::test_world;
 
-use aresrpg::{
-  admin::{Self, AdminCap},
-  catalog::{Self as catalog, Catalog},
-  character::{Self as character},
-  character_link,
-  config::{Self as config, GameConfig},
-  equipment,
-  extension,
-  extract,
-  item::{Self as item, Item, ItemTemplate},
-  item_stats,
-  pet,
-  scribe,
-  version::{Self, Version},
-  world::{Self as world, World}
-};
+use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self as character}, character_link, config::{Self as config, GameConfig}, equipment, extension, extract, item::{Self as item, Item, ItemTemplate}, item_stats, pet, scribe, version::{Self, Version}, world::{Self as world, World}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
   kiosk::{Self, Kiosk},

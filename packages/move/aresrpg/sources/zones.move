@@ -5,16 +5,7 @@
 /// live derivation; proof claims authenticate committed search-time facts before sharing the same security tail.
 module aresrpg::zones;
 
-use aresrpg::{
-  admin::AdminCap,
-  character_link,
-  checkpoint,
-  config::GameConfig,
-  equipment,
-  version::Version,
-  world::{Self, World},
-  zone_comp
-};
+use aresrpg::{admin::AdminCap, character_link, config::GameConfig, equipment, version::Version, world::{Self, World}, zone_comp};
 use aresrpg_foundation::{world_math, zone_gen};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, vec_map::{Self, VecMap}};
@@ -201,12 +192,12 @@ fun join_internal(
     let sx = base_x + world_math::roll_u32(gen, 0, world::spawn_zone_x(world) - 1);
     let sz = base_z + world_math::roll_u32(gen, 0, world::spawn_zone_z(world) - 1);
     let pet = equipment::pet_equipped(character);
-    character_link::write_checkpoint(character, wid, checkpoint::new_checkpoint(sx, sz, now, pet), version);
+    character_link::write_checkpoint(character, wid, world::new_checkpoint(sx, sz, now, pet), version);
     (sx, sz)
   } else {
     // rejoin: keep the existing checkpoint exactly (position + clock); read it only for the event
     let cp = character_link::checkpoint(character, wid);
-    (checkpoint::x(&cp), checkpoint::z(&cp))
+    (world::x(&cp), world::z(&cp))
   };
   character_link::set_world_field(character, wid, version);
   event::emit(WorldJoined { world: wid, character: character_id, x, z, first_join });
@@ -263,8 +254,8 @@ fun search_internal(
   };
   // travel verification: you must have been able to WALK from your checkpoint to (x, z) — the §17.3 position
   // proof that REPLACES the old spawn-zone occupancy lock (teach-don't-reject: a refused caller waits and retries)
-  let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
-  checkpoint::verify_travel(world, &cp, x, z, now, pet_both);
+  let pet_both = world::pet_equipped(&cp) && pet_now;
+  world::verify_travel(world, &cp, x, z, now, pet_both);
   // the zone your PROVEN standing position sits in (zone_of bounds-checks — an out-of-world (x,z) aborts)
   let (zx, zy) = world::zone_of(world, x, z);
 
@@ -283,7 +274,7 @@ fun search_internal(
   {
     let character = kiosk.borrow_mut(owner_cap, character_id);
     let pet = equipment::pet_equipped(character);
-    character_link::write_checkpoint(character, wid, checkpoint::new_checkpoint(x, z, now, pet), version);
+    character_link::write_checkpoint(character, wid, world::new_checkpoint(x, z, now, pet), version);
   };
 
   // THE ZONE'S OWN DERIVATION — a fresh search rolls FORMAT 3 (#1110/#1111): member lists, equal spawn (no
@@ -531,7 +522,7 @@ fun claim_at_zone(
     (zx, zy)
   } else {
     zone.destroy_none();
-    world::zone_of(world, checkpoint::x(&cp), checkpoint::z(&cp))
+    world::zone_of(world, world::x(&cp), world::z(&cp))
   };
 
   // FORMAT IS THE ROUTER, never a caller preference. A member-list zone's groups hold several species and the
@@ -550,15 +541,15 @@ fun claim_at_zone(
   };
 
   // travel verification: you must have been able to WALK from your checkpoint to the group (teach-don't-reject)
-  let pet_both = checkpoint::pet_equipped(&cp) && pet_now;
-  checkpoint::verify_travel(world, &cp, mx, mz, now, pet_both);
+  let pet_both = world::pet_equipped(&cp) && pet_now;
+  world::verify_travel(world, &cp, mx, mz, now, pet_both);
 
   // ── WRITES: consume the group (set its bit) + advance the entry checkpoint to the group's position ──
   mark_mob_consumed(world, zx, zy, index);
   {
     let character = kiosk.borrow_mut(owner_cap, character_id);
     let pet = equipment::pet_equipped(character);
-    character_link::write_checkpoint(character, wid, checkpoint::new_checkpoint(mx, mz, now, pet), version);
+    character_link::write_checkpoint(character, wid, world::new_checkpoint(mx, mz, now, pet), version);
   };
 
   event::emit(MobGroupClaimed { world: wid, character: character_id, spawn_id, template: template_id, x: mx, z: mz, group_size });
