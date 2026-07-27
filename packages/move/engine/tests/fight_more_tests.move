@@ -8,7 +8,7 @@
 module aresrpg_fight::fight_more_tests;
 
 use aresrpg_fight::{fight::{Self, Fight}, version::Version};
-use aresrpg_fight::fight_scaffold::{bag_spec, combatant, mk_clock, stand_up, tsreg_for, tsregs_for};
+use aresrpg_fight::fight_scaffold::{bag_spec, combatant, mk_clock, stand_up, tslatch_for, tsregs_for};
 use sui::{clock, test_scenario::{Self as ts}};
 
 const OWNER: address = @0xA;
@@ -38,7 +38,7 @@ fun real_create_and_join_door_cover_seat_and_field_getters() {
 
   sc.next_tx(OWNER);
   let mut fight = sc.take_shared<Fight>();
-  let mut latch = tsreg_for(&sc, object::id_from_address(CHAR2));
+  let mut latch = tslatch_for(&sc, object::id_from_address(CHAR2));
   let ver = sc.take_shared<Version>();
   fight::join<W>(W {}, &mut fight, &mut latch, combatant(CHAR2, 100), vector[], option::none(), option::none(), 0, false, &ver, sc.ctx());
   assert!(fight::participant_count(&fight) == 2);

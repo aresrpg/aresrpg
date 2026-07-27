@@ -13,7 +13,7 @@
 #[test_only]
 module aresrpg_fight::latch_authority_tests;
 
-use aresrpg_fight::{fight, fight_registry::{Self, FightRegistry, FightShards}, fight_scaffold::stand_up};
+use aresrpg_fight::{fight, fight_latch::{Self, FightLatch, FightLatchShards}, fight_registry, fight_scaffold::stand_up};
 use sui::test_scenario::{Self as ts};
 
 const OWNER: address = @0xA;
@@ -23,15 +23,15 @@ const SCOPE_A: address = @0xa0;
 const SCOPE_B: address = @0xb7;
 
 /// The latch authority for a CHARACTER — the shard its own id maps to, whatever fight is asking.
-fun latch_shard(sc: &ts::Scenario, character: ID): FightRegistry {
-  let book = sc.take_shared<FightShards>();
-  let shard = fight_registry::shard_for(&book, character);
+fun latch_shard(sc: &ts::Scenario, character: ID): FightLatch {
+  let book = sc.take_shared<FightLatchShards>();
+  let shard = fight_latch::shard_for(&book, character);
   ts::return_shared(book);
-  ts::take_shared_by_id<FightRegistry>(sc, shard)
+  ts::take_shared_by_id<FightLatch>(sc, shard)
 }
 
 #[test]
-#[expected_failure(abort_code = 103, location = aresrpg_fight::fight_registry)]
+#[expected_failure(abort_code = 103, location = aresrpg_fight::fight_latch)]
 /// The same character, latched under two scopes that live on DIFFERENT shards. The second latch must abort
 /// `ECharacterInFight` — the character is already in a live fight, and which scope asks changes nothing.
 fun the_same_character_cannot_latch_under_two_scopes() {
@@ -47,12 +47,12 @@ fun the_same_character_cannot_latch_under_two_scopes() {
 
   // The authority is the CHARACTER's shard both times — the scope cannot choose it, which is the whole fix.
   let mut reg_a = latch_shard(&sc, character);
-  fight_registry::latch_character(&mut reg_a, brand, character, object::id_from_address(@0xF1));
+  fight_latch::latch_character(&mut reg_a, brand, character, object::id_from_address(@0xF1));
   ts::return_shared(reg_a);
 
   sc.next_tx(OWNER);
   let mut reg_b = latch_shard(&sc, character);
-  fight_registry::latch_character(&mut reg_b, brand, character, object::id_from_address(@0xF2));
+  fight_latch::latch_character(&mut reg_b, brand, character, object::id_from_address(@0xF2));
   ts::return_shared(reg_b);
   abort 9999
 }

@@ -10,6 +10,7 @@ use aresrpg_fight::{
   admin::{Self, AdminCap},
   cast,
   fight,
+  fight_latch::{Self, FightLatch},
   mob::{Self, MobSpec},
   participant::{Self, Combatant},
   fight_registry::{Self, FightRegistry},
@@ -29,6 +30,7 @@ public fun stand_up(sc: &mut Scenario) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   fight_registry::test_init(sc.ctx());
+  fight_latch::test_init(sc.ctx());
 
   sc.next_tx(OWNER);
   {
@@ -150,21 +152,42 @@ public fun tsreg_for(sc: &Scenario, scope: ID): FightRegistry {
   ts::take_shared_by_id<FightRegistry>(sc, shard)
 }
 
-/// Resolve two independent registry authorities in one transaction. `test_scenario` permits taking the shared
-/// directory only once per transaction, so split derivation/latch callers resolve both ids before taking either.
-public fun tsregs_for(sc: &Scenario, first: ID, second: ID): (FightRegistry, FightRegistry) {
-  let book = sc.take_shared<fight_registry::FightShards>();
-  let first_shard = fight_registry::shard_for(&book, first);
-  let second_shard = fight_registry::shard_for(&book, second);
-  ts::return_shared(book);
+/// Resolve the scope-keyed derivation registry and character-keyed latch in one transaction.
+public fun tsregs_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightLatch) {
+  let registries = sc.take_shared<fight_registry::FightShards>();
+  let registry_shard = fight_registry::shard_for(&registries, scope);
+  ts::return_shared(registries);
+  let latches = sc.take_shared<fight_latch::FightLatchShards>();
+  let latch_shard = fight_latch::shard_for(&latches, character);
+  ts::return_shared(latches);
   (
-    ts::take_shared_by_id<FightRegistry>(sc, first_shard),
-    ts::take_shared_by_id<FightRegistry>(sc, second_shard),
+    ts::take_shared_by_id<FightRegistry>(sc, registry_shard),
+    ts::take_shared_by_id<FightLatch>(sc, latch_shard),
   )
 }
 
 /// The shard for the scaffold's WORLD — what every suite creating through `create_fight*` needs.
 public fun tsreg(sc: &Scenario): FightRegistry { tsreg_for(sc, object::id_from_address(WORLD)) }
+
+/// The latch shard for one character.
+public fun tslatch_for(sc: &Scenario, character: ID): FightLatch {
+  let book = sc.take_shared<fight_latch::FightLatchShards>();
+  let shard = fight_latch::shard_for(&book, character);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightLatch>(sc, shard)
+}
+
+/// Two distinct character latch shards in one transaction. Callers must ensure the indexes differ.
+public fun tslatches_for(sc: &Scenario, first: ID, second: ID): (FightLatch, FightLatch) {
+  let book = sc.take_shared<fight_latch::FightLatchShards>();
+  let first_shard = fight_latch::shard_for(&book, first);
+  let second_shard = fight_latch::shard_for(&book, second);
+  ts::return_shared(book);
+  (
+    ts::take_shared_by_id<FightLatch>(sc, first_shard),
+    ts::take_shared_by_id<FightLatch>(sc, second_shard),
+  )
+}
 
 // ╔════════════════ [ Board-agnostic cell finders (the procedural board makes exact cells unpredictable) ] ═ ]
 

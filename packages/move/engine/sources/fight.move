@@ -4,6 +4,7 @@ module aresrpg_fight::fight;
 
 use aresrpg_fight::{
   fight_events,
+  fight_latch::{Self, FightLatch},
   mob::{Self, MobSpec, FightMob, MobLootEntry, MobKit},
   participant::{Self, Participant, Combatant, WeaponLine},
   fight_registry::{Self, FightRegistry},
@@ -115,7 +116,7 @@ public struct GroupContent has store {
 public fun create<W: drop>(
   _w: W,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   world: ID,
   spawn_id: u64,
   world_seed: u64,
@@ -147,7 +148,7 @@ public fun create<W: drop>(
 public fun create_round<W: drop>(
   _w: W,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   world: ID,
   spawn_id: u64,
   round: u64,
@@ -175,7 +176,7 @@ public fun create_round<W: drop>(
 fun create_inner<W: drop>(
   _w: W,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   world: ID,
   spawn_id: u64,
   round: u64,
@@ -292,12 +293,12 @@ fun assemble(
 }
 
 /// The shared create TAIL: attach the creator's weapon lines + §387 shape category, latch the seat, announce, share.
-fun seat_creator(mut fight: Fight, latch: &mut FightRegistry, creator_lines: vector<WeaponLine>, creator_category: Option<String>) {
+fun seat_creator(mut fight: Fight, latch: &mut FightLatch, creator_lines: vector<WeaponLine>, creator_category: Option<String>) {
   let fid = object::id(&fight);
   let creator_id = participant::character(fight.participants.borrow(0));
   attach_weapon_lines(&mut fight, 0, creator_lines); // §17.27 wave-2a — the creator seats at index 0
   attach_weapon_category(&mut fight, 0, creator_category); // §387 — the creator's weapon shape category
-  fight_registry::latch_character(latch, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
+  fight_latch::latch_character(latch, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
   fight_events::emit_created(fid, fight.world, fight.spawn_id, fight.anchor_x, fight.anchor_z, fight.public_fight, fight.aged_bp, fight.mobs.length());
   fight_events::emit_joined(fid, creator_id, 0);
   transfer::share_object(fight);
@@ -390,7 +391,7 @@ public fun add_member(build: &mut GroupBuild, template_id: ID, spec: &MobSpec) {
 public fun create_members(
   build: GroupBuild,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   version: &Version,
   clock: &Clock,
   ctx: &TxContext,
@@ -433,7 +434,7 @@ public fun create_members(
 public fun create_pvp<W: drop>(
   _w: W,
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -486,7 +487,7 @@ public fun create_pvp<W: drop>(
     placement_deadline_ms: now + dials.placement_ms,
     group: GroupContent { template: scope, xp: 0, loot: vector[], kit: mob::empty_kit() }, // PvP: no mobs — settlement + kit never read (mode-gated)
   };
-  fight_registry::latch_character(latch, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
+  fight_latch::latch_character(latch, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
   fight_events::emit_created(fid, scope, nonce, anchor_x, anchor_z, false, 0, 0);
   fight_events::emit_joined(fid, creator_id, 0);
   transfer::share_object(fight);
@@ -508,7 +509,7 @@ fun geom_of(bspec: &board::GridSpec): BoardGeom {
 public fun join<W: drop>(
   _w: W,
   fight: &mut Fight,
-  latch: &mut FightRegistry, // the CHARACTER's shard — a join derives nothing, it only latches
+  latch: &mut FightLatch, // a join derives nothing; it touches only the character-keyed latch family
   joiner: Combatant,
   joiner_lines: vector<WeaponLine>,
   joiner_category: Option<String>, // §387 — the joiner's equipped-weapon FINE category
@@ -524,7 +525,7 @@ public fun join<W: drop>(
 fun join_inner<W: drop>(
   _w: W,
   fight: &mut Fight,
-  latch: &mut FightRegistry,
+  latch: &mut FightLatch,
   joiner: Combatant,
   joiner_lines: vector<WeaponLine>,
   joiner_category: Option<String>,
@@ -543,7 +544,7 @@ fun join_inner<W: drop>(
       assert!(joiner_party.is_some() && fight.party_id.is_some() && *joiner_party.borrow() == *fight.party_id.borrow(), ENotParty);
     };
   };
-  fight_registry::latch_character(latch, fight.brand, participant::combatant_character(&joiner), object::id(fight)); // S-12f (brand-scoped)
+  fight_latch::latch_character(latch, fight.brand, participant::combatant_character(&joiner), object::id(fight)); // S-12f (brand-scoped)
   let joiner = if (fight.mode == MODE_PVP) participant::with_full_hp(joiner) else joiner;
   let seat = seat_joiner(fight, joiner, ctx.sender(), team);
   attach_weapon_lines(fight, seat, joiner_lines); // §17.27 wave-2a
@@ -869,7 +870,7 @@ public fun test_dials(): Dials { new_dials(60_000, 120_000, 6, 50, 100, 10_000, 
 #[test_only]
 public fun create_for_testing(
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   world: ID,
   spawn_id: u64,
   world_seed: u64,
@@ -906,7 +907,7 @@ public fun open_group_for_testing(
 #[test_only]
 public fun create_dungeon_fight_for_testing(
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -925,7 +926,7 @@ public fun create_dungeon_fight_for_testing(
 #[test_only]
 public fun create_pvp_fight_for_testing(
   registry: &mut FightRegistry,
-  latch: &mut FightRegistry, // the CHARACTER's shard — the latch authority, never the scope's (see fight_registry)
+  latch: &mut FightLatch, // the CHARACTER's shard — distinct from the scope-keyed derivation registry
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -951,8 +952,8 @@ public fun join_for_testing(fight: &mut Fight, joiner: Combatant, joiner_party: 
 }
 
 #[test_only]
-public fun join_latched_for_testing(fight: &mut Fight, latch: &mut FightRegistry, joiner: Combatant, joiner_party: Option<ID>, version: &Version, ctx: &TxContext) {
-  fight_registry::latch_character(latch, fight.brand, participant::combatant_character(&joiner), object::id(fight));
+public fun join_latched_for_testing(fight: &mut Fight, latch: &mut FightLatch, joiner: Combatant, joiner_party: Option<ID>, version: &Version, ctx: &TxContext) {
+  fight_latch::latch_character(latch, fight.brand, participant::combatant_character(&joiner), object::id(fight));
   join_for_testing(fight, joiner, joiner_party, version, ctx);
 }
 

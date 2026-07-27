@@ -23,7 +23,7 @@ module aresrpg_fight::settlement;
 
 use aresrpg_fight::{
   action_envelope, cast, displacement, fight::{Self, Fight}, fight_events, mob::MobLootEntry, participant,
-  fight_registry::{Self, FightRegistry}, retro_effects, turns, version::Version
+  fight_latch::{Self, FightLatch}, retro_effects, turns, version::Version
 };
 use aresrpg_foundation::spell;
 use std::type_name::TypeName;
@@ -132,8 +132,8 @@ public fun settle_and_take(fight: Fight, character: ID, version: &Version, ctx: 
 ///
 /// Landing the release at the OPEN rather than the settle is the rule this codebase already runs on the consumer
 /// side: an unopened result keeps its obligation, so a defeated player cannot dodge the landing by walking away.
-public fun release_latch(registry: &mut FightRegistry, outcome: &FightOutcome) {
-  fight_registry::unlatch_character(registry, outcome.brand, outcome.character);
+public fun release_latch(latch: &mut FightLatch, outcome: &FightOutcome) {
+  fight_latch::unlatch_character(latch, outcome.brand, outcome.character);
 }
 
 /// Run every owner module's field reclaim before the Fight dies. THE storage-rebate door: `object::delete` does

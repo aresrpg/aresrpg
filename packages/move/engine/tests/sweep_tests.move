@@ -9,7 +9,7 @@ module aresrpg_fight::sweep_tests;
 use aresrpg_fight::{
   fight::{Self, Fight},
   fight_events,
-  fight_scaffold::{combatant, create_fight, mk_clock, stand_up, tsregs_for},
+  fight_scaffold::{combatant, create_fight, mk_clock, stand_up, tslatch_for, tslatches_for},
   participant,
   settlement::{Self as results, FightOutcome},
   turns,
@@ -20,6 +20,7 @@ use sui::{clock, event, test_scenario::{Self as ts}};
 const OWNER: address = @0xA;
 const CHAR: address = @0xC0;
 const CHAR2: address = @0xC2;
+const SAME_SHARD_CHAR: address = @0xD0;
 const E_NOT_SWEEPABLE: u64 = 104;
 const E_NOT_EXPIRED: u64 = 105;
 const E_READY_SEAT: u64 = 106;
@@ -81,7 +82,7 @@ fun terminal_fight_is_not_sweepable() {
 }
 
 #[test]
-fun placement_boundary_zero_ready_sweeps_every_seat() {
+fun different_latch_shards_both_latch_and_release_at_results() {
   let mut sc = ts::begin(OWNER);
   stand_up(&mut sc);
   create_fight(&mut sc, 50, 1, 0, 1000, true, option::none());
@@ -91,7 +92,7 @@ fun placement_boundary_zero_ready_sweeps_every_seat() {
   let creator_id = object::id_from_address(CHAR);
   let joiner_id = object::id_from_address(CHAR2);
   assert!(aresrpg_fight::fight_registry::shard_index(creator_id) != aresrpg_fight::fight_registry::shard_index(joiner_id));
-  let (mut creator_latch, mut joiner_latch) = tsregs_for(&sc, creator_id, joiner_id);
+  let (mut creator_latch, mut joiner_latch) = tslatches_for(&sc, creator_id, joiner_id);
   fight::join_latched_for_testing(
     &mut fight,
     &mut joiner_latch,
@@ -125,7 +126,7 @@ fun placement_boundary_zero_ready_sweeps_every_seat() {
   let (creator_outcome, joiner_outcome) = if (results::character(&first) == creator_id) (first, second) else (second, first);
   assert!(results::character(&creator_outcome) == creator_id);
   assert!(results::character(&joiner_outcome) == joiner_id);
-  let (mut creator_latch, mut joiner_latch) = tsregs_for(&sc, creator_id, joiner_id);
+  let (mut creator_latch, mut joiner_latch) = tslatches_for(&sc, creator_id, joiner_id);
   results::release_latch(&mut creator_latch, &creator_outcome);
   results::release_latch(&mut joiner_latch, &joiner_outcome);
   assert!(creator_latch.character_fight(brand, creator_id).is_none());
@@ -138,5 +139,53 @@ fun placement_boundary_zero_ready_sweeps_every_seat() {
   assert!(results::final_hp(&joiner_outcome) == 0);
   std::unit_test::destroy(creator_outcome);
   std::unit_test::destroy(joiner_outcome);
+  sc.end();
+}
+
+#[test]
+/// The parallel family must also hold two distinct members that collide on one latch shard. They share one
+/// `FightLatch` object, but keep separate `(brand, character)` rows and each result releases only its own row.
+fun same_latch_shard_pair_both_latch_and_release_at_results() {
+  let mut sc = ts::begin(OWNER);
+  stand_up(&mut sc);
+  create_fight(&mut sc, 50, 1, 0, 1000, true, option::none());
+  sc.next_tx(OWNER);
+  let mut fight = sc.take_shared<Fight>();
+  let version = sc.take_shared<Version>();
+  let creator_id = object::id_from_address(CHAR);
+  let joiner_id = object::id_from_address(SAME_SHARD_CHAR);
+  assert!(aresrpg_fight::fight_registry::shard_index(creator_id) == aresrpg_fight::fight_registry::shard_index(joiner_id));
+  let mut latch = tslatch_for(&sc, creator_id);
+  fight::join_latched_for_testing(
+    &mut fight,
+    &mut latch,
+    combatant(SAME_SHARD_CHAR, 100),
+    option::none(),
+    &version,
+    sc.ctx(),
+  );
+  let brand = std::type_name::with_defining_ids<fight::TestBrand>();
+  assert!(latch.character_fight(brand, creator_id).is_some());
+  assert!(latch.character_fight(brand, joiner_id).is_some());
+
+  let clock = mk_clock(&mut sc, 121_000);
+  results::sweep_fight(fight, &version, &clock, sc.ctx());
+  clock::destroy_for_testing(clock);
+  assert!(latch.character_fight(brand, creator_id).is_some());
+  assert!(latch.character_fight(brand, joiner_id).is_some());
+  ts::return_shared(latch);
+  ts::return_shared(version);
+
+  sc.next_tx(OWNER);
+  let first = sc.take_from_sender<FightOutcome>();
+  let second = sc.take_from_sender<FightOutcome>();
+  let mut latch = tslatch_for(&sc, creator_id);
+  results::release_latch(&mut latch, &first);
+  results::release_latch(&mut latch, &second);
+  assert!(latch.character_fight(brand, creator_id).is_none());
+  assert!(latch.character_fight(brand, joiner_id).is_none());
+  ts::return_shared(latch);
+  std::unit_test::destroy(first);
+  std::unit_test::destroy(second);
   sc.end();
 }

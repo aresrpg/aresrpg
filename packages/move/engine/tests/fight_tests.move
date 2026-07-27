@@ -17,7 +17,7 @@ use aresrpg_fight::{
   turns,
   version::Version
 };
-use aresrpg_fight::fight_scaffold::{bag_spec, combatant, create_fight, create_fight_as, mk_clock, mob_stats, stand_up, tsreg, tsreg_for, tsregs_for};
+use aresrpg_fight::fight_scaffold::{bag_spec, combatant, create_fight, create_fight_as, mk_clock, mob_stats, stand_up, tslatch_for, tsreg, tsreg_for, tsregs_for};
 use aresrpg_foundation::spell;
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
@@ -598,9 +598,9 @@ fun pvp_settlement_mints_zero_reward_results() {
 
 // ╔════════════════ [ S-12f — the in-fight latch (one character, one live fight) ] ═ ]
 
-const REG_ECharacterInFight: u64 = 103; // registry
+const LATCH_ECharacterInFight: u64 = 103;
 
-#[test, expected_failure(abort_code = REG_ECharacterInFight, location = aresrpg_fight::fight_registry)]
+#[test, expected_failure(abort_code = LATCH_ECharacterInFight, location = aresrpg_fight::fight_latch)]
 /// The XP-farm vector closed: one character cannot seat TWO live fights (stale-HP parallel farming).
 fun same_character_cannot_enter_two_fights() {
   let mut sc = ts::begin(OWNER);
@@ -624,7 +624,7 @@ fun outcome_holder_frees_the_latch() {
   turns::finish_defeat_for_testing(&mut fight);
   let ver = sc.take_shared<Version>();
   {
-    let latch = tsreg_for(&sc, object::id_from_address(CHAR));
+    let latch = tslatch_for(&sc, object::id_from_address(CHAR));
     assert!(latch.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some());
     ts::return_shared(latch);
   };
@@ -633,7 +633,7 @@ fun outcome_holder_frees_the_latch() {
 
   sc.next_tx(OWNER);
   let outcome = sc.take_from_sender<FightOutcome>();
-  let mut latch = tsreg_for(&sc, object::id_from_address(CHAR));
+  let mut latch = tslatch_for(&sc, object::id_from_address(CHAR));
   assert!(latch.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some());
   results::release_latch(&mut latch, &outcome);
   assert!(latch.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_none());
