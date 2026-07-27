@@ -334,12 +334,19 @@ export const recompute = (draft, now) => {
     const to = Number(entry.to_cell)
     const from = cell_at.get(key)
     const version = Number(entry.version)
+    // Live bodies are half of Move's frozen wall mask, so the route has to see them or it may cut through a
+    // fighter and retire a trap the walk never entered — and a FALSELY retired trap is the ECellAlreadyTrapped
+    // batch-nuke this ledger errs against. `cell_at` already holds every fighter's cell at this point in the tail.
+    const occupied_cells = [...cell_at.entries()]
+      .filter(([other, cell]) => other !== key && cell != null)
+      .map(([, cell]) => decoded_cell(cell, GRID_W))
     const entered =
       entry.kind === 'Displaced' || from == null
         ? [to]
-        : reconstructed_path(decoded_cell(from, GRID_W), decoded_cell(to, GRID_W), board_facts).map((cell) =>
-            encoded_cell(cell, GRID_W)
-          )
+        : reconstructed_path(decoded_cell(from, GRID_W), decoded_cell(to, GRID_W), {
+            ...board_facts,
+            occupied_cells,
+          }).map((cell) => encoded_cell(cell, GRID_W))
     for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version })
     cell_at.set(key, to)
   }
