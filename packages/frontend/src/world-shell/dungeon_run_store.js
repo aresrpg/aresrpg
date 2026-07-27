@@ -81,7 +81,7 @@ import { commit_with_overdue_retry } from './overdue_retry.js'
 import { read_object, decode_pass, load_world_meta, resolve_entry_key, is_gone_error } from './run_reads.js'
 import { read_fight_liveness } from './fight_liveness.js'
 import { key_candidates } from './key_pick.js'
-import { mint_owed, recover_character, auto_open_pending_outcomes } from './dungeon_settlement.js'
+import { mint_owed, recover_character, arm_result_resolver } from './dungeon_settlement.js'
 import { should_boot_open } from './pending_outcomes.js'
 import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
 import { should_hold_receipt_fight } from './world_fight_receipt.js'
@@ -1677,7 +1677,7 @@ use_dungeon.subscribe((state) => {
 const _kick_pending_open = () => {
   const { address } = use_auth.getState()
   if (!address) return
-  void auto_open_pending_outcomes(use_dungeon, address).catch(() => {})
+  void arm_result_resolver(use_dungeon).catch(() => {})
 }
 if (should_boot_open(use_auth.getState().address)) _kick_pending_open() // module loads post-auth (restore)
 use_auth.subscribe((s) => {

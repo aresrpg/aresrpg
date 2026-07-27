@@ -39,10 +39,12 @@ import {
   attempt_state,
   acquire_settlement_flight,
   recover_marked_fight_entry,
-  recover_settled_elsewhere,
   run_result_auto_open,
   is_preflight_failure,
+  result_open_intent,
 } from './pending_outcomes.js'
+import { resolve_pending_results, row_is_resolvable } from './result_resolver.js'
+import { spend_guard_circuit_open } from './spend_guard.js'
 import { run_latched_claim } from './fight_claim_latch.js'
 import { settle_verdict } from './fight_settle_confirm.js'
 import { read_fight_liveness } from './fight_liveness.js'
@@ -67,10 +69,10 @@ async function read_result_with_retry(read_once, sleep = (ms) => new Promise((r)
  *  event lands. Mirrors loot_from_rolled's D53 degrade shape — resolve_loot_tile.js already renders the letter fallback. */
 const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
 
-/** AUTO-FIRE NOTICE (#684 — "it's spamming me with tx"): every background claim/settle names itself BEFORE its
- *  tx builds. ONE shared copy fired at each auto-fire site (the boot sweep's two leaves + the entry-refusal
- *  recovery) — a silent wallet tx with zero UI reads as malware to a player. Best-effort: fires once per
- *  attempted row, same as the dead announce-toast below it corrects a blocked one after the fact. */
+/** AUTO-FIRE NOTICE (#684 — "it's spamming me with tx"): a background claim/settle names itself BEFORE its tx
+ *  builds — a silent wallet tx with zero UI reads as malware to a player. #1383 narrowed it to ONCE PER OUTCOME
+ *  (the FIRST attempt): the resolver's free re-simulation ticks are silent, and the only other beats a player
+ *  ever gets are the XP/loot success toast and, if an open ever burns gas, the spend guard's one circuit notice. */
 const announce_auto_claim = () => push_event_toast({ state: 'info', title: i18n.t('fights.claiming_pending_result') })
 
 /** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT.
@@ -100,7 +102,8 @@ export const mint_deps = () => ({
  * SETTLE+OPEN IN ONE PTB (`settle_and_open`): the fight settles AND opens atomically — no window where the fight
  * is settled but the marker is still set (the old two-tx brick). A halt now means NOTHING landed (the fight is
  * still live, cleanly retriable) OR the Fight was already gone (a racing janitor settled it and minted MY outcome
- * to me — the pending-outcome pill re-fetches /v1 truth and auto-opens it). Never blindly re-fired (latch law).
+ * to me — the resolver loop below then re-reads /v1 until that row appears and opens it, #1383). An EXECUTED
+ * halt is never blindly re-fired (latch law).
  * @param {any} store
  * @param {{ terminal: boolean, fight_id?: string|null, run_pass_id?: string|null, world_id?: string|null,
  *           character_id?: string|null, lost?: boolean }} args `lost` = this terminal is a DEFEAT, which
@@ -157,8 +160,9 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
         read_liveness: async (id) => read_fight_liveness(await get_sdk(), id),
       })
       if (!verdict.settled) {
+        // #1383: no toast. Whatever this tx did, the resolver loop below is what finishes it — the player is
+        // told by the XP/loot beat when it lands, or by the ONE spend-guard notice if the open burns gas.
         game_log('dungeon', 'settle+open landed with NO chain confirmation — reporting unsettled', { fight_id })
-        push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
         invalidate_pending_outcomes() // whatever this tx did, /v1 truth (not this client) owns the next step
         on_halt?.(verdict.halt) // executed: gas was spent, so the latch holds — never an automatic re-fire
         return false
@@ -184,11 +188,11 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
         humanize_abort(error?.message ?? String(error))
       )
       const preflight = is_preflight_failure(error)
-      // #1223 ③: a PRE-FLIGHT halt is not a dead end any more — it PROVES the racing settle minted my outcome, and
-      // the drain below opens it right now. Only an EXECUTED halt (gas burned, fight still live, never re-fired)
-      // still tells the player to go press the pill themselves.
-      if (!preflight) push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
-      invalidate_pending_outcomes() // a racing janitor may have minted MY outcome — the pill re-fetches truth
+      // #1223 ③: a PRE-FLIGHT halt is not a dead end — it PROVES the racing settle minted my outcome. #1383: the
+      // drain below no longer takes ONE look at a projection the indexer has not caught up to; it arms the
+      // resolver loop, which keeps re-reading and re-simulating (free) until the row appears and opens.
+      // An EXECUTED halt burned gas on a fight that is still LIVE: no outcome exists, so nothing is armed.
+      invalidate_pending_outcomes() // a racing janitor may have minted MY outcome — the next read fetches truth
       on_halt?.(preflight ? 'transient' : 'executed_failure')
       if (preflight) strand = { character_id, fight_id }
       return false
@@ -201,47 +205,35 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
     return true
   } finally {
     setState({ _settling: false })
-    // FIRE-AND-FORGET (#1223 ③), after the flight released — the open re-acquires it. The caller already has its
-    // own verdict (false); this owns the strand's surface from here.
+    // FIRE-AND-FORGET (#1223 ③ / #1383), after the flight released — the opens re-acquire it. The caller already
+    // has its own verdict (false); the resolver loop owns the strand from here and needs no UI.
     if (strand)
-      void open_settled_elsewhere(store, strand).catch((error) =>
-        game_log('dungeon', 'settle-observed auto-open crashed (the roster pill still owns the manual open):', error)
-      )
+      void arm_result_resolver(store, {
+        await_row: true, // a settle we lost PROVES my outcome exists; an empty projection is indexer lag
+        dead_fight_id: strand.fight_id, // still in the store and DEAD — not a live session the open must yield to
+      }).catch((error) => game_log('dungeon', 'result resolver crashed (the badge remains the last resort):', error))
   }
 }
 
 /**
- * THE SETTLE-OBSERVED AUTO-OPEN (#1223 ruling ③ — "the client composes a sponsored fire-and-forget open the
- * moment settle is observed"). A pre-flight settle halt proves someone else's settle destroyed the Fight and
- * minted MY unopened `FightOutcome`; nothing looked again until a reload or the next abort-111 engage. Rides the
- * pill's whole rails: `open_pending_row` owns the per-outcome single-flight + burn-law latch, and its tx takes
- * the ordinary `run_character_action` door (sponsor-first for a zkLogin wallet — tx/sponsor_route.ts), so the
- * spend guard binds it like any automated submission. Never throws; never silent (info beat, then a loud toast).
- * @param {any} store @param {{ character_id: string|null, fight_id: string|null }} strand
+ * ARM THE AUTO-RESOLUTION LOOP (#1383). The ONE door every detection signal (boot, a settlement that halted
+ * pre-flight, a recovery press) uses to say "finish whatever this wallet has unopened." The loop itself
+ * (result_resolver.js) owns the bounded backoff schedule; this binds it to the real sweep below.
+ * @param {any} store @param {{ await_row?: boolean, dead_fight_id?: string|null }} [opts]
  */
-async function open_settled_elsewhere(store, { character_id, fight_id }) {
+export function arm_result_resolver(store, { await_row = false, dead_fight_id = null } = {}) {
   const { address } = use_auth.getState()
-  if (!address || !character_id) return
-  const verdict = await recover_settled_elsewhere('transient', {
-    // The boot memo predates the racing settle → one fresh /v1 read (the registry still coalesces a live flight).
-    find_result: async () => {
-      invalidate_pending_outcomes()
-      return find_pending_outcome(address, character_id)
+  if (!address) return Promise.resolve({ ticks: 0, pending: 0 })
+  let swept = false
+  return resolve_pending_results(
+    address,
+    async () => {
+      const sweep = !swept
+      swept = true
+      return auto_open_pending_outcomes(store, address, { sweep, live_world_fight_id: dead_fight_id })
     },
-    announce: () => push_event_toast({ state: 'info', title: i18n.t('errors.fight_result_opening') }),
-    open_result: (row) =>
-      open_pending_row(store, address, character_id, row, {
-        allow_run_bound: true, // the settle we just lost carried the run leg; the open composes the same one
-        live_world_fight_id: fight_id, // that fight id is still in the store and is DEAD — not a live session
-        surface_failure: false, // ONE failure home: the honest toast below
-      }),
-  })
-  if (verdict.status !== 'failed') return
-  game_log('dungeon', 'settle-observed auto-open failed — the roster pill is the manual fallback:', verdict.error)
-  push_event_toast({
-    state: 'error',
-    title: verdict.error ? humanize_abort(verdict.error) : i18n.t('errors.fight_result_latched'),
-  })
+    { await_row }
+  )
 }
 
 /**
@@ -268,7 +260,9 @@ export async function settle_chain_latched(store, args, { manual = false } = {})
  * `_settling` single-flight. `summary_toast` fires the auto-open success beat (07-10).
  * @param {any} store
  * @param {{ outcome_id: string, run_pass_id?: string|null, world_id?: string|null, character_id: string|null,
- *           terminal: boolean, room?: number, summary_toast?: boolean, surface_failure?: boolean }} args
+ *           terminal: boolean, room?: number, summary_toast?: boolean, surface_failure?: boolean,
+ *           automated?: boolean }} args `automated` (#1383) binds the submission to the spend guard's
+ *   per-outcome circuit + backoff — the ONE machine that decides an automatic open may be sent at all.
  * @returns {Promise<{ landed: boolean, preflight?: boolean, receipt?:any, error?:unknown }>} landed=true once
  *   `results::open` landed (the character's fight_marker is CLEARED); on failure `preflight` classifies it.
  */
@@ -283,6 +277,7 @@ async function land_outcome(
     room = 0,
     summary_toast = false,
     surface_failure = true,
+    automated = false,
   }
 ) {
   let receipt = null
@@ -292,8 +287,8 @@ async function land_outcome(
   let final_hp = null
   try {
     ;({ receipt, result_id, xp_share, loot_units, final_hp } = run_pass_id
-      ? await settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id })
-      : await open_outcome(outcome_id, character_id))
+      ? await settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id, automated })
+      : await open_outcome(outcome_id, character_id, automated))
   } catch (error) {
     // results::open is where fight_marker::clear fires (the ONLY discharge). A failure here leaves the
     // character MARKED with an unopened outcome → abort 111 on the next fight. NEVER silent, NEVER auto-retried
@@ -513,27 +508,24 @@ export async function recover_fight_entry_refusal(store, character_id, refusal, 
       const { address } = use_auth.getState()
       if (!address) return Promise.resolve({ status: 'blocked', error: refusal })
       announce_auto_claim() // #684: entry-refusal recovery auto-opens with zero other UI surface in view
-      return open_pending_row(store, address, character_id, row, {
-        allow_run_bound: true,
-        live_world_fight_id,
-        surface_failure: false,
-      })
+      return open_pending_row(store, address, character_id, row, { live_world_fight_id, surface_failure: false })
     },
   })
 }
 
 /**
  * Open ONE unopened result row (`results::open` — XP/HP write-backs + fight_marker::clear + loot mint/burn).
- * AUTO mode (07-10: "unopened stuff should always auto open whenever detected") fires from the pill's
- * detection with the burn-law rails: one synchronous single-flight claim per outcome_id and ONE attempted auto
- * open per session (executed OR refused failures latch with their honest error; a local deferral attempts no tx
- * and re-arms). Boot leaves a run-bound row on the manual press; entry recovery explicitly runs that same
- * composed `settle_run + open` action. MANUAL may retry a latch, one attempt per press.
+ * AUTO mode (07-10: "unopened stuff should always auto open whenever detected") fires from every detection
+ * signal with the burn-law rails: one synchronous single-flight claim per outcome_id, and the spend guard's
+ * per-outcome circuit on the submission itself — an EXECUTED failure is never re-sent, a zero-gas refusal simply
+ * waits out a backoff and is re-simulated by the resolver's next tick. A dungeon-bound row composes the SAME
+ * `settle_run + open` PTB the manual press composes (#1383 killed the "leave it to a press" stop-rule: the run
+ * pass is read from chain truth, never improvised, and automatic resolution is the normal flow). A local
+ * deferral (a live session owns the store) attempts no tx and re-arms. MANUAL may retry a latch, one per press.
  * @param {any} store the use_dungeon zustand store
  * @param {string} address @param {string} character_id
  * @param {{ outcome_id: string, fight_id?: string|null, world_id?: string|null }} row
- * @param {{ manual?: boolean, allow_run_bound?: boolean, live_world_fight_id?: string|null,
- *           surface_failure?: boolean }} [opts]
+ * @param {{ manual?: boolean, live_world_fight_id?: string|null, surface_failure?: boolean }} [opts]
  * @returns {Promise<{status:'opened',receipt:any}|{status:'blocked'|'failed',error:unknown|null}>} `opened`
  *   carries the receipt that re-enters the fight-entry reducer; blocked/failed retain the honest cause.
  */
@@ -542,7 +534,7 @@ export function open_pending_row(
   address,
   character_id,
   row,
-  { manual = false, allow_run_bound = false, live_world_fight_id = null, surface_failure = true } = {}
+  { manual = false, live_world_fight_id = null, surface_failure = true } = {}
 ) {
   const { getState, setState } = store
   if (!row?.outcome_id) return Promise.resolve({ status: 'blocked', error: null })
@@ -559,15 +551,6 @@ export function open_pending_row(
         game_log('dungeon', 'pending-open: run read failed', error)
         if (manual && surface_failure) push_event_toast({ state: 'error', title: humanize_abort(error) })
         return { status: 'deferred', error }
-      }
-      if (!manual && !allow_run_bound && run_pass_id) {
-        // Boot detection leaves a run-bound row to the panel. Entry recovery opts in to this SAME composed
-        // settle_run+open action, without bypassing the automatic result-id latch.
-        game_log('dungeon', 'pending-open: run-bound row — left to the manual press (stop-rule)', {
-          outcome: row.outcome_id,
-          run_pass_id,
-        })
-        return { status: 'deferred', error: new Error(i18n.t('errors.fight_result_latched')) }
       }
       // A live fight/run owns the shared store. This is a local deferral, not a refused open transaction, so the
       // untouched result re-arms instead of being falsely latched for the rest of the session.
@@ -590,12 +573,13 @@ export function open_pending_row(
         }
         const { landed, receipt, error } = await land_outcome(store, {
           outcome_id: row.outcome_id,
-          run_pass_id: manual || allow_run_bound ? run_pass_id : null,
+          run_pass_id,
           world_id: row.world_id ?? null,
           character_id,
           terminal: true,
           summary_toast: true,
           surface_failure,
+          automated: !manual,
         })
         return landed ? { status: 'opened', receipt } : { status: 'failed', error: error ?? null }
       } finally {
@@ -607,53 +591,56 @@ export function open_pending_row(
 }
 
 /**
- * THE SHARED DETECT+AUTO-OPEN ENTRY (live-gap 07-10: "unopened stuff should always auto open whenever
- * DETECTED" — detection must NOT depend on a UI surface; a session once restored straight into the world,
- * the badge never mounted, and the next mob engage hit abort 111). The post-auth BOOT wire calls this once per
- * wallet; the awaited engage/join reducer door owns refusal-time detection separately. One wallet-level pass:
- * the memoized /v1 fetch, then every row
- * through open_pending_row's unchanged rails (single-flight, auto-latch, dungeon-bound = manual only).
- * `announce` copy per row: latched → the manual-badge pointer; fresh/inflight → "opening it now…", and a row
- * that then turns out non-auto-openable (dungeon-bound / session-live) corrects to the manual pointer. The
- * success beat is land_outcome's own XP/loot toast. Never throws (a route hiccup = no detection this signal).
+ * ONE DETECT+AUTO-OPEN SWEEP — the resolver loop's body (#1383), and the ONE place a pending result is acted on.
+ * Detection must NOT depend on a UI surface (07-10: a session restored straight into the world never mounts the
+ * roster). Every row goes through open_pending_row's rails: per-outcome single-flight, the spend guard's
+ * per-outcome circuit (an EXECUTED failure is never re-submitted) and its backoff (a zero-gas refusal simply
+ * waits). SILENT by construction — the only player-facing beats are the XP/loot success toast and, if the open
+ * ever burns gas, the guard's single circuit notice. Never throws (a route hiccup = no detection this tick).
  * @param {any} store the use_dungeon zustand store @param {string} address
- * @param {{ announce?: boolean }} [opts]
+ * @param {{ sweep?: boolean, live_world_fight_id?: string|null }} [opts] `sweep` runs the once-per-arming
+ *   stranded-mint recovery; `live_world_fight_id` names a fight id the store still holds that is already DEAD.
+ * @returns {Promise<{ rows: number, pending: number }>} how many rows the projection held, and how many are
+ *   still unresolved AND still retryable (0 = clean, or every remainder is stuck)
  */
-export async function auto_open_pending_outcomes(store, address, { announce = false } = {}) {
-  if (!address) return
+export async function auto_open_pending_outcomes(store, address, { sweep = true, live_world_fight_id = null } = {}) {
+  if (!address) return { rows: 0, pending: 0 }
   let map
   try {
     map = await pending_outcomes_for(address, get_pending_outcomes)
   } catch (error) {
-    game_log('dungeon', 'pending-open: /v1 detection failed (next signal re-checks)', error)
-    return
+    game_log('dungeon', 'pending-open: /v1 detection failed (next tick re-checks)', error)
+    throw error
   }
+  let unresolved = 0
+  /** The ONE resolvable/stuck verdict (result_resolver.js), read off both ledgers this open answers to. */
+  const resolvable = (/** @type {string} */ outcome_id) =>
+    row_is_resolvable({
+      attempt: attempt_state(outcome_id),
+      circuit_open: spend_guard_circuit_open(result_open_intent(outcome_id)),
+    })
   for (const [character_id, row] of map) {
+    if (!resolvable(row.outcome_id)) continue // opened (tombstone) or gas already burned here — the badge's job
     const state = attempt_state(row.outcome_id)
-    if (state === 'opened') continue // receipt tombstone outranks a lagging projection row
-    if (announce)
-      push_event_toast(
-        state === 'latched'
-          ? { state: 'error', title: i18n.t('errors.fight_result_latched') }
-          : { state: 'info', title: i18n.t('errors.fight_result_opening') }
-      )
-    if (state) continue // inflight (already opening) or latched (manual-only) — never double-fire
-    announce_auto_claim() // #684: name the claim BEFORE its tx builds — the boot sweep has no other UI surface
-    const res = await open_pending_row(store, address, character_id, row)
-    // honest correction: we announced an auto-open but the row is NOT auto-openable (dungeon-bound/session-live)
-    if (announce && res.status === 'blocked')
-      push_event_toast({ state: 'error', title: i18n.t('errors.fight_result_latched') })
+    if (state === 'inflight') {
+      unresolved += 1
+      continue // another detector already owns this exact open — never double-compose
+    }
+    // #684: name the claim BEFORE its first tx builds — a silent wallet tx with zero UI reads as malware. ONCE
+    // per outcome (state === null ⇒ nothing has been attempted yet); the retry ticks stay silent.
+    if (state === null) announce_auto_claim()
+    await open_pending_row(store, address, character_id, row, { live_world_fight_id })
+    if (resolvable(row.outcome_id)) unresolved += 1
   }
+  const swept = { rows: map.size, pending: unresolved }
   // LEAF-2 — the terminal-but-UNSETTLED fight the pending-outcomes read above CANNOT see: the settle never ran,
   // so no FightOutcome exists yet (the /v1 pending-outcomes projection is empty). This is EXACTLY that
   // 07-12 abort-111 lockout — a defeated WORLD fight left unsettled marks the character until `results::open`,
-  // but there was no outcome ROW for the leaf-3 loop above to find, so this wire did nothing. The badge's roster
-  // pill already covers it (recover_character reads /v1/fights); this closes the AUTO wire's blind spot so
-  // "unopened stuff should always auto-open whenever DETECTED" (07-10) finally holds for a terminal fight.
-  await auto_settle_terminal_fights(store, address, announce)
+  // but there was no outcome ROW for the leaf-3 loop above to find, so this wire did nothing.
+  await auto_settle_terminal_fights(store, address)
   // MINT SWEEP (stranded-loot recovery, pending_mints.js): a 41-deep backlog of opened-but-un-burned FightResults recover
-  // here — boot/sign-in ONLY (`!announce`), once-per-wallet; /v1 enumerates, every mint is chain-gated. ONE toast.
-  if (!announce)
+  // here — once per arming (never per retry tick); /v1 enumerates, every mint is chain-gated. ONE toast.
+  if (sweep)
     await sweep_stranded_results(address, {
       ...mint_deps(),
       // The catalog NAMES what the sweep recovered — the toast is a game message, never a chain dump (#1223).
@@ -668,6 +655,7 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
           ...(details ? { message: details } : {}),
         }),
     }).catch((error) => game_log('dungeon', 'mint-sweep failed (next boot re-checks)', error))
+  return swept
 }
 
 /**
@@ -677,9 +665,9 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
  * binds it) is left to the MANUAL press (stop-rule 07-10 — auto never improvises the settle_run leg; an
  * unprovable run read is conservatively treated as dungeon-bound). Reads the roster from the shared game store,
  * loading it once if a boot-restore beat the roster fetch.
- * @param {any} store @param {string} address @param {boolean} announce
+ * @param {any} store @param {string} address
  */
-async function auto_settle_terminal_fights(store, address, announce) {
+async function auto_settle_terminal_fights(store, address) {
   const { getState } = store
   let characters = context.get_state().sui?.characters ?? []
   if (!characters.length) {
@@ -710,14 +698,10 @@ async function auto_settle_terminal_fights(store, address, announce) {
     const terminal = fights.find((f) => f && (f.status === 'victory' || f.status === 'defeat'))
     const fight_id = terminal && (terminal.fight_id ?? terminal.fight)
     if (!fight_id || attempt_state(fight_id)) continue // none, or inflight/latched — never double-fire
-    if (!runs_ok || runs.some((r) => r && (r.fight_id ?? r.fight) === fight_id)) {
-      if (announce) push_event_toast({ state: 'error', title: i18n.t('errors.fight_result_latched') })
-      continue // dungeon-bound / unprovable → the manual pill owns the settle_run leg
-    }
+    if (!runs_ok || runs.some((r) => r && (r.fight_id ?? r.fight) === fight_id)) continue // dungeon-bound / unprovable → the manual pill owns the settle_run leg
     if (getState()._settling || getState().busy || getState().fight_id || getState().run_pass_id) {
       continue
     }
-    if (announce) push_event_toast({ state: 'info', title: i18n.t('errors.fight_result_opening') })
     announce_auto_claim() // #684: this leaf settles+opens a stranded terminal fight — same silent-tx exposure
     await settle_chain_latched(store, {
       terminal: true,
