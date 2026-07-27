@@ -68,8 +68,14 @@ const KIT = [
 // control — a non-DAMAGE stat alter targeted at the mob, which already worked before this fix (kind-filtering
 // on mob rows was never the miss; DAMAGE-bookkeeping was).
 const TARGET_KIT = [
-  { id: 'u_poison', levels: [level([{ kind: SE.K_APPLY_DOT, value: 5, element: 'AIR', turns: 2, target_filter: SE.TF_NOT_TEAM }])] },
-  { id: 'u_weaken', levels: [level([{ kind: SE.K_ALTER_STAT, stat: 0, value: 40, turns: 3, target_filter: SE.TF_NOT_TEAM }])] },
+  {
+    id: 'u_poison',
+    levels: [level([{ kind: SE.K_APPLY_DOT, value: 5, element: 'AIR', turns: 2, target_filter: SE.TF_NOT_TEAM }])],
+  },
+  {
+    id: 'u_weaken',
+    levels: [level([{ kind: SE.K_ALTER_STAT, stat: 0, value: 40, turns: 3, target_filter: SE.TF_NOT_TEAM }])],
+  },
 ]
 
 const MOB_KIT = [
