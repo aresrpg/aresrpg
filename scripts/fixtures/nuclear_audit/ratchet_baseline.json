@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "counts": {
+    "clones": 1,
+    "multi_importers": 1,
+    "repeated_literals": 1
+  }
+}
