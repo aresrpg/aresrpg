@@ -268,9 +268,7 @@ export async function create_world_fight({
   // settlement (`fight::release_group`). Only a VICTORY consumes a group; a defeat that forgets which group it
   // took drains the world's mob population by one, permanently. Known only where the door named a row.
   const group =
-    group_door.index != null && zx != null && zy != null
-      ? { world_id, zx, zy, index: group_door.index }
-      : null
+    group_door.index != null && zx != null && zy != null ? { world_id, zx, zy, index: group_door.index } : null
   mark_engage_ptb_built(tx)
   use_fight_cost.getState().reset() // FRESH fight entry — its own gas is the first line of the new total
   clear_budget_cache() // and drop any prior fight's cached act budgets (a new fight = new shapes)

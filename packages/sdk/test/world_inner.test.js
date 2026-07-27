@@ -5,16 +5,17 @@
 // SHELL finds none of those fields and hands back a fully ZEROED world — non-null, so the client caches it and
 // overworld spawns / world dials silently vanish. These tests drive the reader against the REAL serialization.
 //
-// WIRE PROVENANCE (captured from LIVE testnet 2026-07-27 via `grpc.core.getObject include:{json:true}`, the
-// exact transport `get_object_json` rides — see the two probes below; nothing here is a guessed shape):
-//   · a NESTED struct carrying a UID renders its UID as a BARE hex string —
-//     PetFeedConfig 0xcc84a9550765531117f197e4ea849020ad84c68d9a1704071424cb704cca6578
-//     → { "foods": { "id": "0x74baafdc…", "size": "0" }, "id": "0xcc84a955…" }
-//     so `World.inner: Versioned { id, version }` renders as { id: "0x…", version: "1" }.
-//   · a u64-KEYED dynamic field renders as { id, name, value } and `deriveDynamicFieldID(parent, 'u64', …)`
-//     resolves it on chain — SuiSystemState 0x5 (version 2) derived
-//     0x5b890eaf2abcfa2ab90b77b8e6f3d5d8609586c3e583baf3dccd5af17edf48d1 = its live
-//     `Field<u64, SuiSystemStateInnerV2>`, whose json.name was "2" and json.value the inner's fields.
+// WIRE PROVENANCE — the envelope below is not a guessed shape; both halves were read off LIVE testnet on
+// 2026-07-27 through `grpc.core.getObject({ include: { json: true } })`, the exact transport `get_object_json`
+// rides. Reproduce either probe by resolving the id from its deployment artifact, never a pasted literal:
+//   · NESTED UID → a BARE hex string. Probe the `PetFeedConfig` shared object (deployment/release.json,
+//     testnet `shared.PET_FEED_CONFIG`), whose `foods: Table<ID,u64>` nests a UID: it renders as
+//     { "foods": { "id": "0x…", "size": "0" }, "id": "0x…" } — so `World.inner: Versioned { id, version }`
+//     renders as { id: "0x…", version: "1" }, which is what this file's shell fixture encodes.
+//   · A u64-KEYED DYNAMIC FIELD → { id, name, value }, and `deriveDynamicFieldID(parent, 'u64', bcs bytes)`
+//     ADDRESSES it correctly. Probe `SuiSystemState` (the 0x5 singleton): derive from its own `version` field
+//     and the read resolves its live `Field<u64, SuiSystemStateInnerV2>` — json.name is the version as a
+//     string, json.value the inner's fields. `Versioned` stores its payload by the identical mechanism.
 import { describe, test, expect } from 'bun:test'
 import { bcs } from '@mysten/sui/bcs'
 import { deriveDynamicFieldID } from '@mysten/sui/utils'
