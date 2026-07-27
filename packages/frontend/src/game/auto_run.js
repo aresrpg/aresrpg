@@ -144,7 +144,7 @@ export function create_auto_run({
   notify_blocked = default_notify_blocked,
   now = () => performance.now(),
 }) {
-  /** @type {{ type: 'mob'|'resource', id: any, x: number, z: number } | null} */
+  /** @type {{ type: 'mob'|'resource'|'point', id: any, x: number, z: number } | null} */
   let target = null
   /** @type {'idle' | 'steer' | 'arrive'} */
   let phase = 'idle'
@@ -263,10 +263,11 @@ export function create_auto_run({
       return { forward: 1, strafe: 0, yaw, jump }
     }
 
-    // phase === 'arrive': a BARE point leg is already done — stand still, never look for a lever to pull.
+    // phase === 'arrive': a BARE point leg stays planted until its headless owner retargets or halts. Keeping
+    // this lease active matters during auto-search's stationary transaction/scan window: manual movement,
+    // Escape, or a player marker must still announce a `player` cancellation and disarm that owner.
     if (!INTERACT_ID[target.type]) {
-      cancel('arrived')
-      return null
+      return { forward: 0, strafe: 0, yaw, jump: false }
     }
     // stand on the target and pull the SAME [R]/[G] lever the moment it's armed.
     if (trigger_interact(target.type)) {

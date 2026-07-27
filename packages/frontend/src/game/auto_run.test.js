@@ -83,7 +83,7 @@ describe('bare POINT legs — walk there and stop, never interact (the auto-sear
     expect(normalize_target({ type: 'point', position: { x: 5, z: 9 } })).toMatchObject({ type: 'point', x: 5, z: 9 })
   })
 
-  test('arriving at a point finishes the run WITHOUT pulling any interaction lever', () => {
+  test('arriving at a point stays planted WITHOUT pulling any interaction lever until its owner halts', () => {
     const { ar, state } = harness()
     state.armed = true // an [R]/[G] prompt IS armed here — a point leg must still never fire it
     ar.start({ type: 'point', position: { x: 30, z: 0 } })
@@ -94,10 +94,14 @@ describe('bare POINT legs — walk there and stop, never interact (the auto-sear
     expect(ar.update(1 / 60).forward).toBe(0)
 
     state.clock += 16
-    expect(ar.update(1 / 60)).toBeNull()
-    expect(ar.active()).toBe(false)
+    expect(ar.update(1 / 60).forward).toBe(0)
+    expect(ar.active()).toBe(true)
     expect(state.triggered).toEqual([])
     expect(state.blocked).toBe(0) // arriving IS the goal — never the "can't reach it" toast
+
+    ar.start({ type: 'cancel' })
+    expect(ar.active()).toBe(false)
+    expect(ar.update(1 / 60)).toBeNull()
   })
 
   test('a cancel payload stops an in-flight run (the headless halt seam)', () => {
