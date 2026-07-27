@@ -238,7 +238,7 @@ entry fun execute(
   y85(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The execute preconditions (shared by the live entry and the deterministic test door): customer-only, accepted,
 /// bound recipe. Checked BEFORE any randomness is drawn — an un-accepted request has `artisan_level` 0, which must
 /// never reach the roll (the roll's `level − 1` floors at level 1).
@@ -248,7 +248,7 @@ fun y84(request: &CraftRequest, recipe: &Recipe, ctx: &TxContext) {
   assert!(object::id(recipe) == request.recipe, EWrongRecipe);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The execute body shared by the live `&Random` entry and the deterministic test door — given the already-rolled
 /// `success`: burn the customer's inputs, mint the output ON SUCCESS, mint the artisan's XP voucher, split the
 /// escrow (artisan nets 90%, 10% → `@treasury`), emit, delete.

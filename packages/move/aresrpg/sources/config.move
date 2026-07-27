@@ -195,7 +195,7 @@ fun init(ctx: &mut TxContext) {
   });
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The 12 default class rows (§17.31 / ANNEX §4). Base HP is per-class; base AP/MP = 6/3 universally.
 /// Order MUST match the frozen class-id table above.
 fun y86(): vector<ClassRow> {
@@ -447,14 +447,14 @@ fun clamp(v: u64, lo: u64, hi: u64): u64 {
   if (v < lo) lo else if (v > hi) hi else v
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Mutable borrow of a class row; aborts `EBadClass` on an out-of-range index (a class id can never be clamped).
 fun y87(config: &mut GameConfig, class_id: u64): &mut ClassRow {
   assert!(class_id < CLASS_COUNT, EBadClass);
   &mut config.classes[class_id]
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y88(config: &GameConfig, class_id: u64) {
   let r = &config.classes[class_id];
   event::emit(ClassRowSet { class_id, base_hp: r.base_hp, base_ap: r.base_ap, base_mp: r.base_mp });

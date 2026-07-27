@@ -31,7 +31,7 @@ const EWrongGroup: u64 = 114; // release: the outcome does not belong to the nam
 /// `type_name::with_defining_ids<FightBrand>()` into every fight/outcome created through these doors.
 public struct FightBrand has drop {}
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The brand's TypeName — `results::open` (sibling module) asserts the outcome echo against THIS.
 public(package) fun y45(): TypeName { type_name::with_defining_ids<FightBrand>() }
 
@@ -205,7 +205,7 @@ public fun join(
 
 // ╔════════════════ [ Dungeon / protector doors (package-internal — dungeon.move / gathering.move) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The dungeon ROSTER-fight door (room fights): gated joins, no aging (spawned_at = now), derivation key =
 /// `(scope = pass id, nonce = room)`. The dungeon module verified the RunPass upstream; this door marks the
 /// dirty-counter + builds the snapshot + calls the engine branded.
@@ -240,7 +240,7 @@ public(package) fun y46(
   );
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The PROTECTOR-AMBUSH door (§17.22): a gather's protector roll spawns a SOLO PvM fight vs the resource's
 /// defender. NO ticket (unlike the overworld `create`) — the provenance is the gather's own terminal-`&Random`
 /// roll, atomic in the one gather call (the roll and this spawn cannot be split across PTB commands, so the fight
@@ -276,7 +276,7 @@ public(package) fun y47(
   );
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The VOUCHED join door (dungeon rooms): the calling module verified ITS OWN entry proof (the RunPass chain);
 /// the engine skips the public/party gate but keeps seat integrity. Dungeon fights are PvM — the seat marks
 /// (unfinished business) and lands on team 0. (The PvP arena package brands its own engine fights and vouches
@@ -387,7 +387,7 @@ public fun join_vouched_brand<W: drop>(
 
 // ╔════════════════ [ Snapshot assembly + dirty mark (the game-authentic inputs) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// PvM seat-time MARK (the unfinished-business law): pre-check unmarked (teach-don't-reject — the
 /// counter's own underflow assert is the backstop), then increment the dirty counter. PvP paths never call this.
 fun y116(kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, character_id: ID, version: &Version) {
@@ -430,7 +430,7 @@ public fun combat_snapshot(
   c
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Assemble the AUTHENTIC combat snapshot for a kiosk-locked character: borrow through the personal-kiosk cap
 /// (ownership proof), read the geared combat view (§3 scalars + folded gear stats + vit-aware max HP) with hp
 /// regen-SETTLED at `now_ms` (S-69 — the raw read bricked defeated characters at the §17.23 0-HP gate forever),
@@ -483,7 +483,7 @@ fun y117(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, raised_spell
   (participant::new_combatant(character_id, class, level, stats, hp, max_hp, base_ap, base_mp, weapon, levels), weapon_lines)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Fold an ID's 32 bytes into a u64 (the dungeon composition-seed derivation).
 fun y118(id: ID): u64 {
   let bytes = object::id_to_bytes(&id);

@@ -11,7 +11,7 @@ module aresrpg::equipment_stats;
 use aresrpg::{item_stats::{Self, ItemStatistics}};
 use aresrpg_foundation::spell::{Self, Stats};
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Split one centered field into disjoint positive/malus magnitudes. Both subtractions are branch-guarded, so a
 /// below-center value can never underflow `u16`; the widened `u64` magnitude is at most 32768.
 fun y114(v: u16): (u64, u64) {
@@ -24,7 +24,7 @@ fun y114(v: u16): (u64, u64) {
 fun bonus(v: u16): u64 { let (positive, _) = y114(v); positive }
 fun malus(v: u16): u64 { let (_, negative) = y114(v); negative }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The exact item-key consumer mapping. `critical_chance` and `critical_outcomes` are deliberately absent; the
 /// reseed must write the combat denominator reduction to canonical `critical`.
 public(package) fun y26(s: &ItemStatistics): (Stats, Stats) {
@@ -53,13 +53,13 @@ public(package) fun y26(s: &ItemStatistics): (Stats, Stats) {
   (positive, negative)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Apply `base + positive - malus`, with the foundation subtraction flooring every unsigned field at zero.
 public(package) fun y27(base: &Stats, positive: &Stats, malus: &Stats): Stats {
   spell::stats_sub(&spell::stats_add(base, positive), malus)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Apply a positive and negative action/movement line to a class scalar. Addition precedes the checked subtraction,
 /// so an oversized -32768 item line floors at zero without an intermediate `u64` underflow.
 public(package) fun y28(base: u64, positive: u64, malus: u64): u64 {

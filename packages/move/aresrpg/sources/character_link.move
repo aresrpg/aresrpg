@@ -103,7 +103,7 @@ fun y80<K: copy + drop + store>(character: &mut Character, key: K, delta: u64, v
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Set (or overwrite) the character's current world field.
 public(package) fun y1(character: &mut Character, world: ID, version: &Version) {
   y15(character);
@@ -170,14 +170,14 @@ public fun exit_dungeon_brand<W: drop>(
   );
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Write (or overwrite) the per-world checkpoint. Rejoin restores by READING this — the write never erases the
 /// OTHER worlds' checkpoints (distinct keys).
 public(package) fun y2(character: &mut Character, world: ID, cp: Checkpoint, version: &Version) {
   y79(character, CheckpointKey { world }, cp, version);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Add `delta` job xp to `job`'s running total, returning the new total. First grant creates the slot.
 public(package) fun y3(character: &mut Character, job: u8, delta: u64, version: &Version): u64 {
   y80(character, JobXpKey { job }, delta, version)
@@ -190,28 +190,28 @@ public fun add_job_xp_brand<W: drop>(_: W, config: &GameConfig, character: &mut 
   y3(character, job, delta, version)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Set (or overwrite) the character's INVESTED level for spell `spell`. First raise creates the slot; an absent
 /// slot reads as the free baseline level 1. The spend door (`spell_level` module) is the only caller.
 public(package) fun y4(character: &mut Character, spell: ID, level: u8, version: &Version) {
   y79(character, SpellLevelKey { spell }, level, version);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Add `delta` to the character's running SPENT-spell-points total (first spend creates the slot). Unspent points
 /// are DERIVED (earnable-from-level − spent), never banked.
 public(package) fun y5(character: &mut Character, delta: u64, version: &Version) {
   y80(character, SpellPointsSpentKey {}, delta, version);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Add `delta` to the running SPENT-STAT-points total (first spend creates the slot). The stat twin of
 /// `y5`; unspent stat points are DERIVED (earnable-from-level − spent), never banked.
 public(package) fun y6(character: &mut Character, delta: u64, version: &Version) {
   y80(character, StatPointsSpentKey {}, delta, version);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Add `delta` points to ONE stat's allocation, returning the stat's NEW allocated total (first raise creates the
 /// slot). The stat twin of `y4` — but ACCUMULATES (stats grow by allocation, they aren't set to a
 /// target). The spend door (`stat_allocation`) is the only caller; it charges the same `delta` against the pool.
@@ -221,7 +221,7 @@ public(package) fun y7(character: &mut Character, stat: u8, delta: u64, version:
 
 // ╔════════════════ [ Cross-cutting item mint / burn / scribe / pet doors ] ═══ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Mint ONE stackable item of `quantity` units through the MINT door and LOCK it into the gatherer's PERSONAL
 /// kiosk in the SAME call. The `LockPledge` hot potato forces the lock (no address delivery). `y30`
 /// asserts the template's category STACKS.
@@ -237,7 +237,7 @@ public fun consume_units_brand<W: drop>(_: W, config: &GameConfig, template: &It
   y9(template, units, item_id, kiosk, pkcap, xpolicy, market_policy, version, ctx)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// CONSUME exactly `units` from a kiosk-LOCKED FUNGIBLE consumable stack (`item_id`), returning the burned
 /// template id. The game-side burn door the `consume` lane calls. MECHANISM — burn-all + re-mint-remainder: extract
 /// the whole stack, BURN it, and — when it held MORE than `units` — RE-MINT the remainder as a fresh stack + re-lock
@@ -258,7 +258,7 @@ public(package) fun y9(template: &ItemTemplate, units: u64, item_id: ID, kiosk: 
   tid
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// MINT a craft/crush OUTPUT of `quantity` units through the MINT door and LOCK it into the holder's personal kiosk
 /// in the same call, RETURNING the minted item's id (the pool ghost-refill seam reads it; other callers ignore
 /// the droppable ID). Branches on the output template's category: a STACKABLE output rides as ONE stack; a
@@ -292,7 +292,7 @@ public fun mint_and_lock_output_brand<W: drop>(_: W, config: &GameConfig, templa
 }
 
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// GROW a pet item's power by `delta` — a `u64` NS_ITEM dynamic field on the pet `Item`. First feed creates the
 /// slot. Checked add (aborts on the astronomically-unlikely overflow, never wraps).
 public(package) fun y11(pet: &mut Item, delta: u64, version: &Version) {
@@ -308,7 +308,7 @@ public(package) fun y11(pet: &mut Item, delta: u64, version: &Version) {
 
 // ╔════════════════ [ Progression fight-writes (public(package) — the fight domain calls directly) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Grant fight/quest xp to the character's LIVE progression. Reads the current xp (seeded from the base
 /// `experience` genesis on first grant), adds through the pure `progression::xp_add_with_cap_discard` (global XP
 /// multiplier + max-level cap-discard + global-freeze gate), then RECOMPUTES + STORES the level (§3). The block is
@@ -339,7 +339,7 @@ public fun write_back_hp_for_testing(character: &mut Character, hp: u64, now_ms:
   y13(character, hp, now_ms, version)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y13(character: &mut Character, hp: u64, now_ms: u64, version: &Version) {
   let ns = extension::y41();
   let key = ProgressionKey {};
@@ -354,7 +354,7 @@ public(package) fun y13(character: &mut Character, hp: u64, now_ms: u64, version
   };
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// HEAL the character's live progression HP by `amount` — the CONSUMABLE-USE seam. SETTLES lazy natural regen at
 /// `now_ms` FIRST (ANNEX §5.4 remainder-carry via `progression::regen_hp`), then adds the heal capped at max_hp.
 /// ABORTS `EAlreadyFullHp` when already full AFTER that regen settle (a heal at full HP is pointless, SPEC §10 —
@@ -398,7 +398,7 @@ public fun combat_stats_settled(character: &Character, config: &GameConfig, now_
   y81(character, config, option::some(now_ms))
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The ONE scalar-snapshot core behind the raw/settled pair: `settle_at_ms = some(now)` regen-settles the stored
 /// hp VIRTUALLY; `none` reports storage. Block-less = full HP (defaults path — never aborts on a fresh character).
 fun y81(character: &Character, config: &GameConfig, settle_at_ms: Option<u64>): (String, u64, u64, u64, u64, u64) {
@@ -559,12 +559,12 @@ public fun stat_count(): u8 { STAT_COUNT }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y82(character: &Character): Progression {
   *extension::y40<ProgressionKey, Progression>(character, extension::y41(), ProgressionKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Resolve the character's class SLUG to its GameConfig class id, aborting `EUnknownClass` if it is not a §3 class.
 fun y83(character: &Character): u64 {
   let cid = config::class_id_of(character::class(character));
@@ -584,7 +584,7 @@ public struct DungeonLock has copy, drop, store {
   world: ID,
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y15(character: &Character) {
   assert!(!is_locked(character), EAlreadyLocked);
 }
@@ -594,7 +594,7 @@ public(package) fun lock(character: &mut Character, pass: ID, world: ID) {
   df::add(character::uid_mut(character), DungeonLockKey {}, DungeonLock { pass, world });
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y16(character: &mut Character, pass: ID, world: ID) {
   assert!(is_locked(character), ENotLocked);
   let lock: DungeonLock = df::remove(character::uid_mut(character), DungeonLockKey {});

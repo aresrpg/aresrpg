@@ -113,7 +113,7 @@ entry fun gather(
   y119(world, kiosk, pkcap, character_id, zx, zy, node_index, template, rare_template, policy, registry, protector_template, engine_version, config, version, clock, &mut gen, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y119(
   world: &mut World,
   kiosk: &mut Kiosk,
@@ -217,14 +217,14 @@ fun y119(
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Yield quantity: base 1 + the §6 level bonus `(job_level − required)/5`, boosted (yield replaces gather time).
 /// Caller guarantees `job_level ≥ required` (the tier gate) so the subtraction never underflows.
 fun y120(job_level: u64, required: u64): u64 {
   1 + (job_level - required) / YIELD_BONUS_DIV * YIELD_BOOST
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Per-gather job XP: full in-band, decayed (never to zero) once the gatherer out-levels the tier's band (§6).
 /// Magnitudes are the declared calibration seam; the in-band/out-of-band SHAPE is spec-final.
 fun y121(tier: u8, job_level: u64): u64 {
@@ -233,14 +233,14 @@ fun y121(tier: u8, job_level: u64): u64 {
   if (job_level <= band_top) base else base / XP_OUT_OF_BAND_DIV
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Does a `bp`-basis-point roll fire? A 0 rate never fires. Draws once from the threaded rng. Shared by the
 /// protector ambush and the golden-gather jackpot — both are the same 0–9999 < bp draw.
 fun y122(bp: u64, gen: &mut RandomGenerator): bool {
   bp > 0 && random::generate_u64_in_range(gen, 0, 9999) < bp
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Is the gatherer free of unfinished business? A MARKED character (unresolved PvM result / live seat) cannot be
 /// seated into a protector ambush (`fight::mark_seated` would abort), so the caller SKIPS the spawn — the harvest
 /// still completes. Read-only borrow through the holder's cap (ownership already proven by the outer gather gates).
@@ -248,7 +248,7 @@ fun y123(kiosk: &Kiosk, owner_cap: &KioskOwnerCap, character_id: ID): bool {
   fight::is_unmarked(kiosk.borrow(owner_cap, character_id))
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// GOLDEN-GATHER settle (§6): read this resource's rare link. No link ⇒ NO draw, param inert (loot-philosophy —
 /// the jackpot is purely additive, never a throttle). Linked ⇒ the presented `rare_template` MUST be the linked
 /// variant (`ERareTemplateMismatch`) BEFORE the draw — a wrong/stale client aborts 100% deterministically (every
@@ -263,7 +263,7 @@ fun y124(world: &World, base_tid: ID, rare_template: &ItemTemplate, gen: &mut Ra
   y125(rare_template, base_tid, gatherer, wid, version, kiosk, owner_cap, policy, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Mint ONE unit of the (already-verified) linked rare variant through the SAME cap-gated door + kiosk-lock as the
 /// normal yield, then emit `RareGathered`. Identity was asserted in `y124` BEFORE the draw — the hit path
 /// itself never aborts on template identity, so a won jackpot always mints.

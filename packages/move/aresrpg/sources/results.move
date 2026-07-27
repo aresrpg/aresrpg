@@ -95,7 +95,7 @@ public fun open_taken(
   y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y131(
   outcome: FightOutcome,
   kiosk: &mut Kiosk,
@@ -164,7 +164,7 @@ entry fun mint_rolled(
   y132(result, template, version, kiosk, pkcap, policy, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The mint body, returning the minted item ids (the `entry` discards them; tests assert on them).
 fun y132(
   result: &mut FightResult,
@@ -210,7 +210,7 @@ entry fun burn_result(mut result: FightResult) {
   object::delete(id);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// This ticket's open-time stat entropy, or NONE for a ticket opened before #758 shipped (it mints blank gear —
 /// the same honestly-empty block it would have had, never a fabricated one).
 fun y133(result: &FightResult): Option<u64> {
@@ -218,7 +218,7 @@ fun y133(result: &FightResult): Option<u64> {
   else option::none()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The per-unit stat seed: the ticket's own entropy folded with the template id and the unit index. DERIVED, never
 /// a running counter — unit `i` of template `t` always rolls the same block, so a holder cannot shop the mint
 /// ORDER of the templates they owe to steer a good roll onto the item they care about.
@@ -235,7 +235,7 @@ fun y134(base: u64, template: ID, index: u64): u64 {
 
 // ╔════════════════ [ Roll kernels (pure — harvested from dungeon_claim, aging-scaled) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// One loot entry roll: effective_bp = min(10000, chance_bp × (700+claimer_chance)/700); on a hit, quantity in
 /// [min,max] scaled by aging ×(10000+aged_bp)/10000 and the loot multiplier ×mult/100.
 fun y135(rng: &mut u64, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
@@ -256,7 +256,7 @@ public fun loot_effective_bp(chance_bp: u64, claimer_chance: u64): u64 {
 
 // ╔════════════════ [ Checklist helpers ] ════════════════════════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Remove + return the owed qty for `template` from the rolled checklist. Aborts if none.
 fun y136(result: &mut FightResult, template: ID): u64 {
   let list = &mut result.rolled;
@@ -271,7 +271,7 @@ fun y136(result: &mut FightResult, template: ID): u64 {
   qty
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y137(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
   let n = rolled.length();
   let mut i = 0;
@@ -283,7 +283,7 @@ fun y137(rolled: &mut vector<RolledLoot>, loot: RolledLoot) {
   rolled.push_back(loot);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y138(rolled: &vector<RolledLoot>): u64 {
   let mut u = 0;
   let mut i = 0;

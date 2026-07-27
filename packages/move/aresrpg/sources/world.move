@@ -536,14 +536,14 @@ public fun zone_origin(w: &World, zx: u32, zy: u32): (u32, u32) {
 // (`reserve_spawn_ids` retired with the search-cost rework — spawn ids now DERIVE from the zone seed; the
 // `spawn_nonce` World field stays as an inert struct slot so the World BCS layout is untouched mid-train.)
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Read the version-wrapped payload, asserting this package speaks its version (DeepBookV3 shape).
 fun y141(w: &World): &WorldInner {
   assert!(w.inner.version() == WORLD_VERSION, EWrongInnerVersion);
   w.inner.load_value()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y142(w: &mut World): &mut WorldInner {
   assert!(w.inner.version() == WORLD_VERSION, EWrongInnerVersion);
   w.inner.load_value_mut()
@@ -648,14 +648,14 @@ fun gate(cap: &AdminCap, version: &Version, ctx: &TxContext) {
   version.assert_latest();
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y144(w: &World) { event::emit(WorldUpdated { world: object::id(w) }); }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y145(v: u64, lo: u64, hi: u64): u64 { if (v < lo) lo else if (v > hi) hi else v }
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y146(v: u32, lo: u32, hi: u32): u32 { if (v < lo) lo else if (v > hi) hi else v }
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y147(v: u16, lo: u16, hi: u16): u16 { if (v < lo) lo else if (v > hi) hi else v }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
@@ -677,7 +677,7 @@ public struct Checkpoint has copy, drop, store {
   pet_equipped: bool,
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y70(x: u32, z: u32, time_ms: u64, pet_equipped: bool): Checkpoint {
   Checkpoint { x, z, time_ms, pet_equipped }
 }

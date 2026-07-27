@@ -111,7 +111,7 @@ public fun create_extract_policy(publisher: &Publisher, version: &Version, ctx: 
 
 // ╔════════════════ [ The zero-price extraction (private — the ONLY confirm against the wrapped policy) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Pull a kiosk-LOCKED item OUT via the policy-compliant zero-price flow: list at price 0, purchase with a zero
 /// coin, and CONFIRM the resulting `TransferRequest<Item>` against the WRAPPED empty policy (no rules → no
 /// receipts needed). `list` aborts (`EItemNotFound`) unless the caller's kiosk actually holds the item, so a caller

@@ -153,7 +153,7 @@ public fun zero_raw(): vector<u64> {
   v
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The y126 17-vector in catalog id order (single home of the field enumeration).
 fun y126(s: &ItemStatistics): vector<u16> {
   vector[
@@ -165,7 +165,7 @@ fun y126(s: &ItemStatistics): vector<u16> {
 
 // ╔════════════════ [ Ranges: attach / read on the TEMPLATE ] ════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Attach the [min,max] stat ranges to `template` (package-private — the authoring surface calls it before the
 /// template is shared). Each field of a minted item is rolled uniformly in [min_field, max_field] at purchase
 /// (`shop::buy`). Aborts if ranges are already attached (set-once at creation). Pass min==max for a fixed stat.
@@ -174,7 +174,7 @@ public(package) fun y62(template: &mut ItemTemplate, min: ItemStatistics, max: I
   df::add(item::y57(template), StatsMaxKey {}, max);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Replace (or attach) the authored [min,max] ranges on a live template. Package-private: the only production
 /// caller is the AdminCap + Version-gated `admin::set_template_stats` door. Existing minted items are deliberately
 /// untouched: they carry their own fixed `StatsKey` roll, while future mints roll from these updated ranges.
@@ -199,7 +199,7 @@ public fun stats_max(template: &ItemTemplate): &ItemStatistics {
   df::borrow(item::y58(template), StatsMaxKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Detach + drop the [min,max] roll ranges from `template` if present. Package-private — the burn path
 /// (`admin::burn_item_template`) calls it so deleting the template's UID orphans no dynamic field. No-op when
 /// the template carries no ranges (resource/consumable). `ItemStatistics` has `drop`, so removal just discards.
@@ -212,7 +212,7 @@ public(package) fun y64(template: &mut ItemTemplate) {
 
 // ╔════════════════ [ Roll (mint-roll randomness — the ONE stat-shape owner rolls all 17 fields) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Roll one field in [lo, hi] INCLUSIVE off the seeded stream (lo if the range is degenerate — a fixed field
 /// consumes no draw). `prng` is the house entropy carrier (mulberry32, byte-identical to the sim's `prng.js`), so
 /// a roll is reproducible from its seed by any reader; the SEED is what every seam draws from `&Random`.
@@ -256,7 +256,7 @@ public(package) fun roll(min: &ItemStatistics, max: &ItemStatistics, seed: u64):
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Roll `template`'s authored ranges into a block, or NONE when the template carries no ranges (resource /
 /// consumable / cosmetic). The single home of "does this template roll, and with what" — every mint seam asks
 /// HERE instead of re-deriving the `has_ranges` branch.
@@ -267,7 +267,7 @@ public(package) fun y65(template: &ItemTemplate, seed: u64): Option<ItemStatisti
 
 // ╔════════════════ [ Rolled block: attach / read on the ITEM ] ══════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Attach the rolled block to a freshly-minted `item` (package-private — the gear-mint door `extension::y29`
 /// calls it, once per mint, whatever the seam). Pet templates carry their full-fed endpoint, so a new pet starts at
 /// the curve's neutral count-zero block instead of inheriting the generic mint roll. The item is new, so it cannot
@@ -287,7 +287,7 @@ public fun rolled_stats(item: &Item): &ItemStatistics {
   df::borrow(item::uid(item), StatsKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Overwrite (or attach) the rolled block on `item`. Package-private: the clamped `scribe` gate rewrites forged
 /// gear, while pet power writes its deterministic template-max fraction. The AdminCap has no owned-item stat door.
 public(package) fun y67(item: &mut Item, stats: ItemStatistics) {
@@ -327,14 +327,14 @@ public fun scale_from_center(value: &ItemStatistics, numerator: u64, denominator
 /// normalization. Kept with the stat transform so `equipment` need not import `pet` and create a module cycle.
 public fun pet_full_feed_count(): u64 { PET_FULL_FEEDS }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Derive a pet item's authoritative current block from its authenticated template maximum and stored feed count.
 /// `scale_from_center` validates `feed_count <= PET_FULL_FEEDS`; a rangeless template aborts at `stats_max`.
 public(package) fun y68(template: &ItemTemplate, feed_count: u64): ItemStatistics {
   scale_from_center(stats_max(template), feed_count, PET_FULL_FEEDS)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y128(value: u16, numerator: u64, denominator: u64): u16 {
   let magnitude = if (value >= SHIFT_U16) value - SHIFT_U16 else SHIFT_U16 - value;
   let scaled = (((magnitude as u128) * (numerator as u128) / (denominator as u128)) as u16);
@@ -376,7 +376,7 @@ public fun uniform(v: u16): ItemStatistics {
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y129(a: u16, b: u16): u16 { if (a < b) a else b }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]

@@ -27,7 +27,7 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
   (sids, tpls, xs, zs, sizes, gseeds)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// LATTICE variant — identical snapshot + §4 inputs, `zone_gen::derive_mob_groups_grid` for placement. Selected
 /// per zone by `zones::derive_mobs` off the stored commitment's format byte, never by a caller's preference.
 public(package) fun y71(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
@@ -35,7 +35,7 @@ public(package) fun y71(world: &World, zx: u32, zy: u32, seed: u64, team_bound: 
   (sids, tpls, xs, zs, sizes, gseeds)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The ONE snapshot + §4 difficulty pipeline EVERY mob derivation shares. `mode` names the only three things
 /// that differ — which kernel places the groups, how the pick table is weighted, and whether a member roster
 /// comes back. Everything around them (the table snapshot, the §4 progress and size cap, the per-row group
@@ -130,7 +130,7 @@ fun y148(
   (sids, tpls, member_tpls, xs, zs, sizes, gseeds, progress)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// MEMBER-LIST variant (format 3, #1110/#1111) — the RULED SPAWN MODEL. Two substitutions land here together,
 /// because either one alone is a shipped regression (the design ruling's words):
 ///
@@ -161,13 +161,13 @@ public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vec
   y149(world, zx, zy, seed, false)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// LATTICE variant — identical table snapshot, `zone_gen::derive_resources_grid` for anchor placement.
 public(package) fun y73(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
   y149(world, zx, zy, seed, true)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The ONE table-snapshot pipeline both resource variants share — `grid` picks only the anchor kernel.
 fun y149(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
   let zsize = world::zone_size(world);
@@ -215,7 +215,7 @@ fun y149(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, 
   (sids, tpls, xs, zs, jobs, tiers)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Weight vector for the DISTANCE-GATED mob roll (§4 wave-2b): a row keeps its `rate_bp` weight iff its eligibility
 /// level (`levels[i]`, PARALLEL to `tab`) is at or below `lvl_cap` (the zone-distance ceiling), else 0 — rare mobs
 /// stay rare WITHIN the eligible set (weights untouched, only zeroed when locked out). `roster_bounds` floors the

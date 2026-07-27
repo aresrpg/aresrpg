@@ -36,7 +36,7 @@ public struct NsKey<K: copy + drop + store> has copy, drop, store {
 
 // ╔════════════════ [ Item MINT door (assert_enabled-gated; returns the LockPledge hot potato) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The single cross-cutting GEAR-mint path (shop purchase, loot claims, craft output, gacha, pool item-out).
 /// Returns the `LockPledge` hot potato so the caller is TYPE-FORCED to lock the item into a personal kiosk in the
 /// same PTB (kiosk-lock constitution). `assert_enabled` like every value path.
@@ -54,7 +54,7 @@ public(package) fun y29(template: &ItemTemplate, stat_seed: Option<u64>, version
   (item, pledge)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The stackable mint twin (gather yields, pool item-out): mints ONE item carrying `quantity` units.
 /// `item::y54` asserts the template's category actually STACKS.
 public(package) fun y30(template: &ItemTemplate, quantity: u64, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
@@ -164,13 +164,13 @@ public(package) fun y40<K: copy + drop + store, V: store>(character: &Character,
 
 // ╔════════════════ [ Namespace accessors (package callers name their reserved slots) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y41(): u8 { NS_CHARACTER_PROGRESSION }
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y42(): u8 { NS_CHARACTER_EQUIPMENT }
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y43(): u8 { NS_CHARACTER_WORLD }
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y44(): u8 { NS_ITEM }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]

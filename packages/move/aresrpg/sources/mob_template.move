@@ -192,7 +192,7 @@ public fun set_spells(
   event::emit(MobSpellsRetuned { template: object::id(tmpl), spells: tmpl.spells.length() });
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Mirror the template into the engine's plain `MobSpec` (resistances DECENTERED — true magnitudes, exactly
 /// where the old engine spawn decoded them). Called by the core fight doors at create.
 public(package) fun y69(self: &MobTemplate): MobSpec {

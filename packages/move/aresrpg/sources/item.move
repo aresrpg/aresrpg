@@ -162,7 +162,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
 
 // ╔════════════════ [ Factories (package-private — only `admin` authors, only the sale gate mints) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Create an `ItemTemplate` and RETURN it UNSHARED. Package-private: the public authoring path is
 /// `admin::create_template`, which cap-/version-gates, attaches the typed stat/damage DFs, then `y51`s
 /// it — all in one call so a template is published complete (one PTB). `item_type` is the catalog art slug.
@@ -177,7 +177,7 @@ public(package) fun y49(
   ItemTemplate { id: object::new(ctx), name, description, item_type, category, level }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The single home for the LEVEL gate (you can't consume or equip an item below the level of the
 /// character). `public(package)` so the future in-package equip/consume upgrade asserts through it — one place,
 /// no re-derivation. Aborts (`ELevelTooLow`) when the character is under the template's required level.
@@ -185,7 +185,7 @@ public(package) fun y50(template: &ItemTemplate, character_level: u16) {
   assert!(character_level >= template.level, ELevelTooLow);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Emit `TemplateCreated` and SHARE the (now fully-authored) template, returning its id. Package-private — only
 /// the authoring surface calls it, after any stat/damage DFs are attached.
 public(package) fun y51(template: ItemTemplate): ID {
@@ -195,7 +195,7 @@ public(package) fun y51(template: ItemTemplate): ID {
   tid
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Emit `TemplateBurned` and DESTROY a template, deleting its shared object. Package-private — only the
 /// authoring surface (`admin::burn_item_template`) calls it, AFTER the DF-owning modules (`item_stats` /
 /// `item_damages` / `consumable_effect`) have detached their typed dynamic fields, so this UID delete orphans
@@ -208,7 +208,7 @@ public(package) fun y52(template: ItemTemplate) {
   object::delete(id);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Patch a template's display `name` + `description` IN PLACE — the ONLY mutator of these two fields after
 /// creation. Package-private: the sole caller is `admin::set_template_name_description` (AdminCap + version gated).
 /// Writes name + description ONLY; `item_type`/`category`/`level` and the typed stat/damage/effect DFs are
@@ -243,7 +243,7 @@ public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, L
   (item, LockPledge { item_id })
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Mint ONE stackable item carrying `quantity` units — the FUNGIBLE door (resources / consumables). Aborts unless
 /// the template's category STACKS (`ENotStackable` — gear is a unique NFT minted via `mint`, never a param change)
 /// and `quantity >= 1` (`EZeroQuantity`). Package-private, reached by `shop::buy_many` (stackable branch) and the
@@ -326,7 +326,7 @@ public fun lock_in_kiosk(
 
 // ╔════════════════ [ Re-lock pledge + destroy — the extract seam's two package-private primitives ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Build a `LockPledge` for an EXISTING item — the re-lock hot potato the `extract::unequip` path returns so the
 /// game is TYPE-FORCED to personal-kiosk-lock the item it pulled off a character. Package-private, and a pledge is
 /// inert alone: its only consumer is `lock_in_kiosk`, which matches it against the real item and forces a personal
@@ -351,7 +351,7 @@ public fun is_stackable_category(category: String): bool {
   category == CATEGORY_CONSUMABLE.to_string() || category == CATEGORY_RESOURCE.to_string() || category == CATEGORY_RUNE.to_string()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The `consumable` category slug, single-homed here. `consumable_effect::is_consumable` reads it so the literal
 /// never drifts across the package (the effect-attach gate and the stackability rule share ONE source of the slug).
 public(package) fun y56(): String { CATEGORY_CONSUMABLE.to_string() }
@@ -394,12 +394,12 @@ public fun description(self: &Item): String { self.description }
 /// The template's flavor text (copied onto every mint).
 public fun template_description(self: &ItemTemplate): String { self.description }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Template UID access for the in-package stat/damage modules (they own the DATA shape, this module owns the
 /// storage). `&mut UID` never leaves the package.
 public(package) fun y57(self: &mut ItemTemplate): &mut UID { &mut self.id }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 public(package) fun y58(self: &ItemTemplate): &UID { &self.id }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]

@@ -242,7 +242,7 @@ fun place(map: &mut EquipmentMap, kind: u8, category: String, item_id: ID, templ
   map.gear = spell::stats_add(&map.gear, bonus);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Undo `place` for the item now coming off (its `category`/`template_id` derive the kind; the item was equipped so
 /// its category is a known slot). Subtracts exactly the delta `place` added (never underflows).
 fun y95(map: &mut EquipmentMap, category: String, template_id: ID, bonus: &Stats) {
@@ -267,7 +267,7 @@ fun y95(map: &mut EquipmentMap, category: String, template_id: ID, bonus: &Stats
 
 // ╔════════════════ [ Category → slot taxonomy + the class-lock lookups ] ═════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Map an item `category` to its slot kind, or `none` if it is not equippable (consumable/resource/…). Weapon
 /// families AND gathering tools both route to the weapon slot (the tool/weapon split is resolved in `place`).
 fun y96(category: String): Option<u8> {
@@ -288,12 +288,12 @@ fun y96(category: String): Option<u8> {
   else option::none()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y97(category: String): bool { y100(WEAPON_FAMILIES, category) }
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y98(category: String): bool { y100(TOOL_CATEGORIES, category) }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The gathering job a tool serves (index in `TOOL_CATEGORIES` = SPEC §6 job id). `none` if not a tool category.
 fun y99(category: String): Option<u8> {
   let tools = TOOL_CATEGORIES;
@@ -305,7 +305,7 @@ fun y99(category: String): Option<u8> {
   option::none()
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The DESIGNED weapon family for a class slug (single home of the slug↔id map is `config::class_id_of`) — the
 /// fight-entry affinity check (`aresrpg::fight::combatant_of`) compares it to the equipped family for the +10%.
 public(package) fun y22(class: String): Option<String> {
@@ -315,7 +315,7 @@ public(package) fun y22(class: String): Option<String> {
   option::some(families[cid.destroy_some()].to_string())
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y100(slugs: vector<vector<u8>>, category: String): bool {
   let mut i = 0;
   while (i < slugs.length()) {
@@ -364,7 +364,7 @@ public fun folded_stats(character: &Character): Stats {
   } else spell::stats_add(&allocated, &y105(character).gear)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The character's ALLOCATED §3 stats (read from `character_link`) as a combat `Stats` block. The player-allocatable
 /// set is strength/intelligence/chance/agility (core damage) + wisdom + vitality (ext); raw_damage/crit/range/
 /// resistances are GEAR-ONLY, so they stay 0 here. One home: the stat DF lives on `character_link`; this maps it
@@ -395,7 +395,7 @@ public fun equipped_weapon_family(character: &Character): Option<String> {
   y105(character).weapon_family
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// §17.27 wave-2a — the equipped WEAPON's authored damage lines (snapshotted onto the instance at equip). Empty
 /// when: no class weapon is equipped (tool/bare), the weapon predates this upgrade (re-equip migrates it), or the
 /// template authored no lines. The fight seat reads these through the ownership-proven character borrow and threads
@@ -433,7 +433,7 @@ public fun geared_combat_stats_settled(character: &Character, config: &config::G
   y102(character, config, class, level, hp, base_max_hp, base_ap, base_mp)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The shared equipment FOLD over the character scalars (raw or settled): vit-aware max-HP recompute + the
 /// stranded-hp clamp — one home for what "geared" means.
 fun y102(character: &Character, config: &config::GameConfig, class: String, level: u64, hp: u64, base_max_hp: u64, base_ap: u64, base_mp: u64): (String, u64, u64, u64, u64, u64, Stats) {
@@ -455,7 +455,7 @@ fun y102(character: &Character, config: &config::GameConfig, class: String, leve
   (class, level, hp_clamped, max_hp, folded_ap, folded_mp, stats)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Fold the signed item `action`/`movement` cache into the class scalars. The fight stores and refills these exact
 /// values; keeping the pair here gives the production handoff and its golden vector one implementation.
 fun y103(base_ap: u64, base_mp: u64, bonus: &Stats, malus: &Stats): (u64, u64) {
@@ -467,7 +467,7 @@ fun y103(base_ap: u64, base_mp: u64, bonus: &Stats, malus: &Stats): (u64, u64) {
 
 // ╔════════════════ [ In-place mutation of an EQUIPPED item (pet-feed / rune-scribe reach the item HERE) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Package-internal: borrow an EQUIPPED item MUTABLY by its id, through the custodied NS_EQUIPMENT cap. The item
 /// was attached by `extract::confirm_equip` under NS_EQUIPMENT keyed by its own id; a non-equipped id aborts. The
 /// pet-feed lane grows pet power through this borrow; the returned reference borrows `character` for its lifetime.
@@ -475,7 +475,7 @@ public(package) fun y24(character: &mut Character, item_id: ID, version: &Versio
   extension::y34<ID, Item>(extension::y42(), character, item_id, version)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Replace an equipped item's effective stats and refresh both signed cache blocks atomically. Pet power uses this
 /// after deriving the current block from its template; combat therefore observes the same block stored on the item.
 public(package) fun y25(character: &mut Character, item_id: ID, stats: ItemStatistics, version: &Version) {
@@ -502,27 +502,27 @@ public(package) fun y25(character: &mut Character, item_id: ID, stats: ItemStati
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y104(character: &Character): bool {
   extension::y39(character, extension::y42(), EquipmentKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y105(character: &Character): &EquipmentMap {
   extension::y40<EquipmentKey, EquipmentMap>(character, extension::y42(), EquipmentKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y106(character: &Character): bool {
   extension::y39(character, extension::y42(), MALUS_CACHE_KEY)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y107(character: &Character): &Stats {
   extension::y40<u64, Stats>(character, extension::y42(), MALUS_CACHE_KEY)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y108(character: &mut Character, delta: &Stats, version: &Version) {
   let ns = extension::y42();
   if (extension::y39(character, ns, MALUS_CACHE_KEY)) {
@@ -541,12 +541,12 @@ fun remove_malus(character: &mut Character, delta: &Stats, signed_folded: bool, 
   };
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y109(item: &Item): bool {
   extension::y37(item, extension::y44(), SIGNED_ITEM_MARKER_KEY)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y110(item: &mut Item, version: &Version) {
   let ns = extension::y44();
   if (!extension::y37(item, ns, SIGNED_ITEM_MARKER_KEY)) {
@@ -554,19 +554,19 @@ fun y110(item: &mut Item, version: &Version) {
   };
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y111(character: &mut Character, version: &Version): &mut EquipmentMap {
   extension::y34<EquipmentKey, EquipmentMap>(extension::y42(), character, EquipmentKey {}, version)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y112(character: &mut Character, version: &Version) {
   if (!extension::y39(character, extension::y42(), EquipmentKey {})) {
     extension::y33(extension::y42(), character, EquipmentKey {}, y113(), version);
   };
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y113(): EquipmentMap {
   EquipmentMap {
     singles: vector[],

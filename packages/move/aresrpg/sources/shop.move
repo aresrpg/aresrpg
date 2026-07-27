@@ -219,7 +219,7 @@ entry fun buy_many(
   y139(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The shared buy body, generator-injected so the `entry` paths (real `&Random`) and the test path
 /// (deterministic generator) drive the SAME guarded code. Enforces, ALL before any money moves (refusal costs
 /// only gas): package enabled+latest → quantity in [1, MAX] → not paused → template matches → window open →
@@ -305,7 +305,7 @@ fun y139(
   minted
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Abort unless `now` is inside the sale window: start INCLUSIVE, end EXCLUSIVE, each `none` side open.
 fun y140(sale: &Sale, clock: &Clock) {
   let now = clock.timestamp_ms();

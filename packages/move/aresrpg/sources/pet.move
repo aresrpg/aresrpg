@@ -140,7 +140,7 @@ public fun feed_pet(
   });
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y130(pet: &mut Item, template: &ItemTemplate, day: u64, version: &Version): (u64, ItemStatistics) {
   assert!(item::category(pet) == b"pet".to_string(), ENotPet);
   assert!(item::template_category(template) == b"pet".to_string(), ENotPet);

@@ -45,7 +45,7 @@ public fun has_damages(template: &ItemTemplate): bool {
   df::exists(item::y58(template), DamagesKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// REPLACE `template`'s damage lines wholesale (package-private — `admin::set_template_damages` calls it). Mirrors
 /// `item_stats::y63`: overwrite in place when the DF exists, attach when it does not — so a weapon authored
 /// WITHOUT lines heals through the same door. An EMPTY `lines` NORMALIZES to detached, leaving exactly the state
@@ -66,7 +66,7 @@ public fun damages(template: &ItemTemplate): &vector<ItemDamages> {
   df::borrow(item::y58(template), DamagesKey {})
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Detach + drop the damage lines from `template` if present. Package-private — the burn path calls it so
 /// deleting the template's UID orphans no dynamic field. No-op when the template carries no damages. The
 /// `vector<ItemDamages>` has `drop`, so removal just discards.
@@ -78,7 +78,7 @@ public(package) fun y60(template: &mut ItemTemplate) {
 
 // ╔════════════════ [ Instance snapshot (§17.27 wave-2a — the equip-time copy combat reads) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Snapshot the authored lines onto a minted ITEM (package-private — `equipment::equip` calls it for a weapon,
 /// off the chain-verified template). Idempotent-guarded by the caller (weapon slot, template↔item match). Same
 /// instance-attach shape as `item_stats::y66`.

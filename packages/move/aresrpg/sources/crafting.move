@@ -219,7 +219,7 @@ public fun retire_recipe(cap: &AdminCap, version: &Version, recipe: Recipe, ctx:
   object::delete(id);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Zip `templates` × `quantities` into the validated ingredient list — ONE home for the authoring rules both
 /// `create_recipe` and `set_recipe_inputs` enforce: the vectors zip 1:1 (`ELengthMismatch`), a recipe needs ≥1 input
 /// (`EEmptyRecipe` — else it is a free mint), and every quantity is ≥1 (`EZeroQuantity`).
@@ -268,7 +268,7 @@ entry fun craft(
   y90(recipe, kiosk, pkcap, character_id, input_item_ids, output_template, crafter_level, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The self-craft body shared by the live `&Random` entry and the deterministic test doors. Given the crafter's
 /// level + the already-rolled `success`, it runs the exact reference pipeline: gate + burn (deterministic refusals) →
 /// mint the output ON SUCCESS → credit the craft XP to the crafter's OWN character (success OR failure) → emit.
@@ -307,7 +307,7 @@ fun y90(
   minted
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ① + ③ CONSUME: the deterministic front half of a craft — assert enabled + kill-switch, output match, the ①
 /// KNOWLEDGE GATE (`crafter_level ≥ required_level`, `EUnderLevel`), then burn the exact ingredient tally. Every
 /// abort here reverts the WHOLE tx BEFORE any roll, so a wrong client fails 100% deterministically (never only on
@@ -371,7 +371,7 @@ public(package) fun y18(
   while (m < n) { assert!(remaining[m] == 0, EMissingIngredient); m = m + 1; };
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ③ SETTLE: mint the recipe's output into the crafter's personal kiosk (locked) ONLY on a successful roll. On a
 /// failed roll nothing mints — the ingredients already burned in `y18`. Shared by self-craft and
 /// `commission::execute` (which mints into the CUSTOMER's kiosk via the customer's owner cap).
@@ -392,7 +392,7 @@ public(package) fun y19(
   option::some(character_link::y10(output_template, recipe.output_quantity, option::some(stat_seed), version, kiosk, owner_cap, policy, ctx))
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ② The reference-formula success roll: draw `0..=9999` from the threaded rng and pass if `< y91(level)`
 /// (CraftQueue.java:201 `rng.nextDouble() < successRate`). P(success) = bp/10000, exact. Shared by self-craft (the
 /// crafter's level) and `commission::execute` (the ARTISAN's proven level).
@@ -402,7 +402,7 @@ public(package) fun y20(level: u64, gen: &mut RandomGenerator): bool {
 
 // ╔════════════════ [ Internals — the ported reference formulas ] ════════════════ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ② `min(9900, 5000 + (level−1)×50)` bp (CraftingFormulas.java:13-15). `level ≥ 1` always (`level_from_xp` floors
 /// at 1), so `level − 1` never underflows.
 fun y91(level: u64): u64 {
@@ -410,7 +410,7 @@ fun y91(level: u64): u64 {
   if (bp > SUCCESS_CAP_BP) SUCCESS_CAP_BP else bp
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ① Minimum job level to y16 a recipe with `n` distinct ingredient slots (CraftingFormulas.java:38-42):
 /// `n ≤ 2 → 1`, else `min(100, ceil((n−2)×99/8) + 1)`. `ceil(a/8) = (a + 7)/8` in integer math.
 fun y92(n: u64): u64 {
@@ -419,7 +419,7 @@ fun y92(n: u64): u64 {
   if (v > job_xp::max_level()) job_xp::max_level() else v
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ④ Craft job XP = `base_xp × recipeLevelMultiplier(n, level)` (CraftQueue.java:192-194, CraftingFormulas.java
 /// :58-69): FULL `base_xp` until the crafter reaches the next recipe tier (`decay_start`), then LINEAR decay to 0 at
 /// `recipe_level + 30` (`zero_at`). Integer-exact port of the Java float multiplier `(zero_at − level)/(zero_at −
@@ -434,7 +434,7 @@ public(package) fun y21(base_xp: u64, n: u64, crafter_level: u64): u64 {
   else base_xp * (zero_at - crafter_level) / (zero_at - decay_start)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The crafter's job level for `job`, read through the personal-kiosk cap (immutable borrow — ownership already
 /// proven by holding the cap). Mirrors gather's job-level read.
 fun y93(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, job: u8): u64 {
@@ -442,7 +442,7 @@ fun y93(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, job: u8): u64
   job_xp::level_from_xp(character_link::job_xp(character, job))
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The index of the FIRST recipe ingredient whose template is `template` (authoring convention: distinct inputs).
 fun y94(recipe: &Recipe, template: ID): Option<u64> {
   let mut i = 0;

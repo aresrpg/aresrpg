@@ -86,7 +86,7 @@ public struct GroupClaimProof has drop {
   proof: vector<u8>,
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Unpack a `GroupTicket` → `(world, character, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed)`.
 /// PUBLIC on purpose: a hot potato's security lives entirely in its CREATION gate — anyone holding one already
 /// paid the real claim (the group's bit is set), and unpacking outside `fight::create` only forfeits that claim
@@ -116,7 +116,7 @@ public struct MemberGroupTicket {
   group_seed: u64,
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Unpack a `MemberGroupTicket` → the `y74` tuple plus `(members, progress)`. Same seam law:
 /// the security is the CREATION gate, so unpacking outside `fight::open_group` only forfeits the claim.
 public(package) fun y75(t: MemberGroupTicket): (ID, ID, u64, ID, vector<ID>, u64, u32, u32, u16, u64, u64) {
@@ -160,7 +160,7 @@ entry fun join_world(
   y151(world, kiosk, pkcap, character_id, config, version, clock, &mut gen);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y151(
   world: &World,
   kiosk: &mut Kiosk,
@@ -230,7 +230,7 @@ entry fun search_zone(
   y152(world, kiosk, pkcap, character_id, x, z, config, version, clock, &mut gen);
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y152(
   world: &mut World,
   kiosk: &mut Kiosk,
@@ -407,7 +407,7 @@ public fun claim_mob_group_in_zone_members(
   y153(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, config, version, clock)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The member security tail — `y156`'s twin, differing only in what it authenticates (a roster
 /// and a progress alongside the group facts) and in the ticket it hands back.
 fun y153(
@@ -429,7 +429,7 @@ fun y153(
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Locate a LIVE derived group by `spawn_id` in zone `(zx,zy)`. `members` picks the derivation: the
 /// format-dispatching `derive_mobs` projection (formats 1/2 — what a single-spec ticket promises), or the
 /// member-list stream that carries a roster and the zone's difficulty progress. Returns the SUPERSET
@@ -464,7 +464,7 @@ fun y154(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64, member
   abort ESpawnNotFound
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// `y154` projected to the single-spec shape the original (format-1/2) ticket carries.
 fun y155(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, u32, u32, u16, u64, u64, u64) {
   let (t, _roster, _progress, x, z, group_size, spawned_at_ms, group_seed, index) =
@@ -472,7 +472,7 @@ fun y155(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u64): (ID, 
   (t, x, z, group_size, spawned_at_ms, group_seed, index)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// One shared security tail: authenticate facts (derive or proof), travel-check, consume bit, checkpoint, ticket.
 fun y156(
   world: &mut World,
@@ -491,7 +491,7 @@ fun y156(
   GroupTicket { world: wid, character: character_id, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// ONE shared claim gauntlet behind both ticket doors: refuse, locate the zone, route on FORMAT, authenticate
 /// the group, travel-verify, consume the bit, advance the checkpoint, announce. `members` picks which half of
 /// two things differ — the format the zone must be, and whether the group is authenticated as a member list or
@@ -565,7 +565,7 @@ fun y157(
   (wid, template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y158(
   world: &World, zx: u32, zy: u32, spawn_id: u64, claim_proof: Option<GroupClaimProof>, team_bound: u64,
 ): (ID, u32, u32, u16, u64, u64, u64) {
@@ -592,7 +592,7 @@ fun y158(
 }
 
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Set the consumed bit of derived mob group `index` in zone `(zx,zy)` — the write that replaced the row removal.
 fun y159(world: &mut World, zx: u32, zy: u32, index: u64) {
   let zone: &mut Zone = df::borrow_mut(world::uid_mut(world), ZoneKey { zx, zy });
@@ -601,7 +601,7 @@ fun y159(world: &mut World, zx: u32, zy: u32, index: u64) {
 
 // ╔════════════════ [ RELEASE THE GROUP (#609 — only a player VICTORY consumes it) ] ═ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Put a consumed group BACK in the world at its spot: clear its consumed bit and bump its engagement round.
 /// §7 says a defeat costs only time — the mobs winning is not a reason for them to vanish, and without this the
 /// world's mob population drains as a pure function of player deaths. Package-internal on purpose: the ONLY
@@ -630,7 +630,7 @@ public fun group_round(world: &World, zx: u32, zy: u32, spawn_id: u64): u64 {
   if (stored.rounds.contains(&spawn_id)) *stored.rounds.get(&spawn_id) else 0
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// +1 to the group's round, creating the zone's rounds map on first use. Returns the new value.
 fun y160(wuid: &mut UID, zx: u32, zy: u32, spawn_id: u64): u64 {
   let key = ZoneRoundsKey { zx, zy };
@@ -645,7 +645,7 @@ fun y160(wuid: &mut UID, zx: u32, zy: u32, spawn_id: u64): u64 {
   *r
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Drop a zone's rounds map (the re-search re-roll and the pre-destruction drain — both already discard the
 /// bitmaps, and a new seed means new spawn ids, so the old rounds name nothing).
 fun y161(wuid: &mut UID, zx: u32, zy: u32) {
@@ -657,7 +657,7 @@ fun y161(wuid: &mut UID, zx: u32, zy: u32) {
 
 // ╔════════════════ [ Gathering seam (package-internal derived-cell read + consume) ] ══ ]
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Read a LIVE derived resource cell's (x, z, job, tier, template_id) by its derivation index. Aborts `EBadNode`
 /// (undiscovered zone / index past the derived range) or `ENodeEmpty` (already harvested — bit set). Immutable.
 public(package) fun y77(world: &World, zx: u32, zy: u32, node_index: u64): (u32, u32, u8, u8, ID) {
@@ -670,7 +670,7 @@ public(package) fun y77(world: &World, zx: u32, zy: u32, node_index: u64): (u32,
   (xs[node_index], zs[node_index], jobs[node_index], tiers[node_index], tpls[node_index])
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Consume a resource cell: set its bit (one-harvest/one-bit design; the multi-charge `remaining`
 /// concept collapsed into the bitmap). Aborts `EBadNode` on an undiscovered zone, `ENodeEmpty` on a double
 /// harvest. The single live caller (`gathering::gather`) bounds `node_index` via `y77` in the SAME
@@ -772,7 +772,7 @@ public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vec
   }
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// The zone's derivation format, read off its stored commitment. A MISSING commitment reports `1` (legacy) —
 /// the zone predates commitments entirely, so its groups were placed by the spaced sampler.
 fun y162(world: &World, zx: u32, zy: u32): u8 {
@@ -782,12 +782,12 @@ fun y162(world: &World, zx: u32, zy: u32): u8 {
   zone_gen::mob_group_commitment_format(&stored.root)
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y163(world: &World, zx: u32, zy: u32): &Zone {
   df::borrow(world::uid(world), ZoneKey { zx, zy })
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Read bit `i` of a lazily-grown bitmap — a byte past the stored length reads 0 (live). The JS mirror
 /// (`zone_derive.js::bit_get`) uses the identical layout: byte `i / 8`, bit `i % 8`.
 fun y164(bm: &vector<u8>, i: u64): bool {
@@ -796,7 +796,7 @@ fun y164(bm: &vector<u8>, i: u64): bool {
   (bm[byte] >> ((i % 8) as u8)) & 1 == 1
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Set bit `i`, growing the bitmap with zero bytes up to the needed byte (lazy — a fresh zone stores NO bytes).
 fun y165(bm: &mut vector<u8>, i: u64) {
   let byte = i / 8;
@@ -805,7 +805,7 @@ fun y165(bm: &mut vector<u8>, i: u64) {
   *b = *b | (1 << ((i % 8) as u8));
 }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the growth row
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Clear bit `i`, then pop trailing zero bytes — the exact inverse of `y165`, so a released group leaves the
 /// bitmap byte-identical to what it was before its claim (the cost shape stays lazy, and the JS mirror's
 /// `y164` reads a shorter vector as all-live).
