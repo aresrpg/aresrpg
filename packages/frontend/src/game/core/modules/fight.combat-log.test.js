@@ -15,7 +15,7 @@
 import { describe, expect, it } from 'bun:test'
 import { produce_receipt_render_turns } from '@aresrpg/fight/fight_render_events'
 
-import { emit_cast_log, emit_deaths, emit_death_line, emit_dodge_line, emit_trap_line } from './fight.js'
+import { emit_cast_log, emit_deaths, emit_death_line, emit_drain_lines, emit_trap_line } from './fight.js'
 import { resolve_segment_text } from '../../screens/hud/world/combat_log_names.js'
 
 /** A fake dispatch that records every action, plus a lookup by id_prefix (combat_log_line's `id` is
@@ -27,7 +27,7 @@ const recorder = () => {
 
 const find_by_prefix = (actions, prefix) => actions.find((a) => a.payload.id.startsWith(`${prefix}-`))?.payload
 
-const drain_outcome = ({ requested, removed }) => {
+const drain_outcome = ({ requested, removed, point_kind = 1 }) => {
   const package_id = `0x${'a'.repeat(64)}`
   const fight_id = `0x${'b'.repeat(64)}`
   const raw = (name, json) => ({
@@ -40,7 +40,7 @@ const drain_outcome = ({ requested, removed }) => {
       raw('Drain', {
         target_is_mob: true,
         target_idx: 0,
-        point_kind: 1,
+        point_kind,
         requested,
         removed,
       }),
@@ -278,34 +278,52 @@ describe('OWNER COLOUR GRAMMAR (07-12) — segment classes match the requested g
   })
 })
 
-describe('emit_dodge_line — one decoded drain outcome tells every viewer what was attempted and landed', () => {
+// OWNER-PINNED DODGE COPY (#1352): a dodge NEVER speaks in a composite ("attempted 3, dodged 2, landed 1").
+// Each half of one drain outcome gets its own SIMPLE line — the ordinary loss line for what landed, the dodge
+// line for what the contest ate — so a partial dodge reads as two plain sentences and a full dodge as one.
+describe('emit_drain_lines — one decoded drain outcome, one simple line per half', () => {
   const fighters = new Map([
     ['p1', { name: 'Aldric' }],
     ['mob-0', { name: 'Sewer Rat' }],
   ])
 
-  it('prints a fully-dodged MP drain', () => {
+  it('a FULLY dodged MP drain prints EXACTLY the dodge line — nothing landed, so no loss line', () => {
     const outcome = drain_outcome({ requested: 2, removed: 0 })
-    expect(outcome).toMatchObject({ pool: 'mp', attempted: 2, dodged: 2, landed: 0 })
+    expect(outcome).toMatchObject({ pool: 'mp', dodged: 2, landed: 0 })
     const { actions, dispatch } = recorder()
 
-    emit_dodge_line(() => ({ fight: { fighters } }), dispatch, outcome)
+    emit_drain_lines(() => ({ fight: { fighters } }), dispatch, outcome)
 
+    expect(actions).toHaveLength(1)
     const dodge = find_by_prefix(actions, 'mp-dodge')
-    expect(dodge.message).toBe('Sewer Rat dodged Aldric: attempted 2 MP, dodged 2, landed 0')
+    expect(dodge.message).toBe('Sewer Rat dodged the loss of 2 MP')
     expect(dodge.segments).toContainEqual({ text: 'Sewer Rat', cls: 'clog-target', ref: 'mob-0' })
-    expect(dodge.segments).toContainEqual({ text: 'Aldric', cls: 'clog-name', ref: 'p1' })
+    expect(dodge.segments).toContainEqual({ text: '2', cls: 'clog-num clog-num--mp' })
+    // the caster is NOT part of this line: the dodge is the target's fact, told the target's way
+    expect(dodge.message).not.toContain('Aldric')
   })
 
-  it('prints a partially-dodged MP drain from the same outcome shape', () => {
+  it('a PARTIALLY dodged MP drain prints BOTH lines with the right numbers', () => {
     const outcome = drain_outcome({ requested: 3, removed: 1 })
-    expect(outcome).toMatchObject({ pool: 'mp', attempted: 3, dodged: 2, landed: 1 })
+    expect(outcome).toMatchObject({ pool: 'mp', dodged: 2, landed: 1 })
     const { actions, dispatch } = recorder()
 
-    emit_dodge_line(() => ({ fight: { fighters } }), dispatch, outcome)
+    emit_drain_lines(() => ({ fight: { fighters } }), dispatch, outcome)
 
-    const dodge = find_by_prefix(actions, 'mp-dodge')
-    expect(dodge.message).toBe('Sewer Rat dodged Aldric: attempted 3 MP, dodged 2, landed 1')
+    expect(actions).toHaveLength(2)
+    expect(find_by_prefix(actions, 'mp-drain').message).toBe('Aldric drained 1 MP from Sewer Rat')
+    expect(find_by_prefix(actions, 'mp-dodge').message).toBe('Sewer Rat dodged the loss of 2 MP')
+  })
+
+  it('an UNCONTESTED AP drain is just the loss line — a dodge line with nothing dodged never prints', () => {
+    const outcome = drain_outcome({ requested: 2, removed: 2, point_kind: 0 })
+    expect(outcome).toMatchObject({ pool: 'ap', dodged: 0, landed: 2 })
+    const { actions, dispatch } = recorder()
+
+    emit_drain_lines(() => ({ fight: { fighters } }), dispatch, outcome)
+
+    expect(actions).toHaveLength(1)
+    expect(find_by_prefix(actions, 'ap-drain').message).toBe('Aldric drained 2 AP from Sewer Rat')
   })
 })
 

@@ -1852,7 +1852,7 @@
     "log_trap_neutral": "罠が{{target}}に{{amount}}のダメージ",
     "log_ap_drain": "{{caster}}が{{target}}のAPを{{amount}}奪った",
     "log_mp_drain": "{{caster}}が{{target}}のMPを{{amount}}奪った",
-    "log_dodge": "{{target}}が{{caster}}を回避: {{attempted}}{{pool}}のうち{{dodged}}回避、{{landed}}命中",
+    "log_dodge": "{{target}}が{{dodged}}{{pool}}の喪失を回避した",
     "log_crit_prefix": "クリティカル!",
     "log_unknown_fighter": "戦闘員"
   },

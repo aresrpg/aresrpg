@@ -1852,7 +1852,7 @@
     "log_trap_neutral": "A trap hit {{target}} for {{amount}}",
     "log_ap_drain": "{{caster}} drained {{amount}} AP from {{target}}",
     "log_mp_drain": "{{caster}} drained {{amount}} MP from {{target}}",
-    "log_dodge": "{{target}} dodged {{caster}}: attempted {{attempted}} {{pool}}, dodged {{dodged}}, landed {{landed}}",
+    "log_dodge": "{{target}} dodged the loss of {{dodged}} {{pool}}",
     "log_crit_prefix": "CRIT!",
     "log_unknown_fighter": "A fighter"
   },

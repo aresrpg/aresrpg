@@ -1852,7 +1852,7 @@
     "log_trap_neutral": "Un piège frappe {{target}} pour {{amount}}",
     "log_ap_drain": "{{caster}} draine {{amount}} PA à {{target}}",
     "log_mp_drain": "{{caster}} draine {{amount}} PM à {{target}}",
-    "log_dodge": "{{target}} esquive {{caster}} : {{attempted}} {{pool}} tentés, {{dodged}} esquivés, {{landed}} appliqués",
+    "log_dodge": "{{target}} esquive la perte de {{dodged}} {{pool}}",
     "log_crit_prefix": "CRITIQUE !",
     "log_unknown_fighter": "Un combattant"
   },

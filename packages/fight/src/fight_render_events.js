@@ -317,7 +317,8 @@ export function produce_receipt_render_turns(
 
     for (const event of effects.filter((candidate) => candidate.kind === 'Drain')) {
       // The Drain row is the one authoritative dodge outcome: requested is what the cast attempted and removed
-      // is what landed. Derive the missing share once here so every presenter consumes the same three counts.
+      // is what landed. Split that ONE row into the two counts every presenter speaks in — what landed and what
+      // the contest ate — so the board, the chat, and any spectator can never disagree about a drain.
       const landed = Math.max(0, Math.trunc(Number(event.removed) || 0))
       const attempted = Math.max(landed, Math.trunc(Number(event.requested) || 0))
       append_to(turn, 'status', 0, {
@@ -325,7 +326,6 @@ export function produce_receipt_render_turns(
         caster_id: turn.source_id,
         status: 'DRAIN',
         pool: Number(event.point_kind) === 0 ? 'ap' : 'mp',
-        attempted,
         dodged: attempted - landed,
         landed,
         source_event: event,

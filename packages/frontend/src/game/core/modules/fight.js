@@ -349,9 +349,9 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
         ...base,
       ])
     )
-    // AP/MP REMOVAL debuffs (colour-grammar) — composer half only, NOT YET WIRED: no producer sets
-    // `ap_loss`/`mp_loss` on a resolved effect today (K_REMOVE_POINTS has no discrete on-chain event/diff yet).
-    // Dormant but unit-tested — fires with zero further composer work the moment a producer sets these fields.
+    // AP/MP REMOVAL debuffs (colour-grammar). No wire effect carries `ap_loss`/`mp_loss` — the drain's own
+    // `Drain` event does, so emit_drain_lines (below) feeds the LANDED share through this exact branch. One
+    // home for the loss copy: a drain reads the same whether or not a contest ate part of it.
   } else if (effect.ap_loss > 0) {
     const amount = `${effect.ap_loss}`
     dispatch(
@@ -393,32 +393,40 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
 }
 
 /**
- * Emit the combat-log account of one partially or fully dodged point drain. The receipt presenter owns the
- * arithmetic and hands this composer `{ attempted, dodged, landed }`; this seam only names and colours that
- * already-derived fact, so chat, spectators, and the board cannot disagree about the outcome.
+ * Emit the combat-log account of ONE point drain, as the owner pinned it (#1352): each half of the outcome
+ * speaks its own SIMPLE line, never a composite. What LANDED rides the ordinary drain line above
+ * (emit_effect_line's ap_loss/mp_loss branch — the producer it was written for), and what a contest ate adds
+ * "<target> dodged the loss of N AP". So a partial dodge tells its whole story in two plain lines, a full dodge
+ * is the dodge line alone, and an uncontested drain is just the loss line. The receipt presenter owns the
+ * arithmetic (fight_render_events' one DRAIN row); this seam only names and colours counts it already derived.
  * @param {() => any} get_state @param {(type: string, payload: any) => void} dispatch
- * @param {{ caster_id: string, target_id: string, pool: 'ap'|'mp', attempted: number, dodged: number, landed: number }} outcome
+ * @param {{ caster_id: string, target_id: string, pool: 'ap'|'mp', dodged: number, landed: number }} outcome
  */
-export const emit_dodge_line = (get_state, dispatch, outcome) => {
-  if (!(outcome?.dodged > 0)) return
+export const emit_drain_lines = (get_state, dispatch, outcome) => {
+  const { caster_id, target_id, pool, dodged, landed } = outcome ?? {}
+  const is_ap = pool === 'ap'
+  if (landed > 0)
+    emit_effect_line(get_state, dispatch, {
+      entity_id: caster_id,
+      effect: { target_id, ...(is_ap ? { ap_loss: landed } : { mp_loss: landed }) },
+      is_critical: false,
+    })
+  if (!(dodged > 0)) return
   const fighters = get_state().fight?.fighters
   if (!fighters) return
-  const unknown = i18n.t('world_chat.log_unknown_fighter')
-  const caster = fighters.get(outcome.caster_id)?.name || unknown
-  const target = fighters.get(outcome.target_id)?.name || unknown
-  const pool = i18n.t(outcome.pool === 'ap' ? 'fight.ap' : 'fight.mp')
-  const num_cls = `clog-num clog-num--${outcome.pool === 'ap' ? 'ap' : 'mp'}`
+  const target = fighters.get(target_id)?.name || i18n.t('world_chat.log_unknown_fighter')
+  // the pool WORD is the same one the loss line right above it uses (fr PA/PM, de AP/BP, uk ОД/ОР) — one home
+  const pool_label = i18n.t(is_ap ? 'stat.action' : 'stat.movement')
+  const num_cls = `clog-num clog-num--${is_ap ? 'ap' : 'mp'}`
+  const amount = `${dodged}`
   dispatch(
     'action/chat_message',
     combat_log_line(
-      `${outcome.pool === 'ap' ? 'ap' : 'mp'}-dodge`,
-      segment_template(i18n.t('world_chat.log_dodge', { ...outcome, caster, target, pool }), [
-        { value: target, cls: 'clog-target', ref: outcome.target_id },
-        { value: caster, cls: 'clog-name', ref: outcome.caster_id },
-        { value: `${outcome.attempted}`, cls: num_cls },
-        { value: pool, cls: num_cls },
-        { value: `${outcome.dodged}`, cls: num_cls },
-        { value: `${outcome.landed}`, cls: num_cls },
+      `${is_ap ? 'ap' : 'mp'}-dodge`,
+      segment_template(i18n.t('world_chat.log_dodge', { target, dodged: amount, pool: pool_label }), [
+        { value: target, cls: 'clog-target', ref: target_id },
+        { value: amount, cls: num_cls },
+        { value: pool_label, cls: num_cls },
       ])
     )
   )
