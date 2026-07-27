@@ -195,8 +195,10 @@ export const open_world_fight = async ({ browser, base, keys_path, seat_names, l
     booted.push(seat)
     on_seat(seat)
     const url = `${base}game-world?dev`
-    if (!(await await_seams(seat.client, seat.page, url, { log })))
-      throw new Error(`seat ${name}: the bot seams never registered on the world HUD`)
+    // Throws the page's own reason (#1255); the seat is named on the way out so a coop run says WHICH client.
+    await await_seams(seat.client, seat.page, url, { log, console_lines: seat.console_lines }).catch((error) => {
+      throw new Error(`seat ${name}: ${String(error?.message ?? error)}`)
+    })
   }
   const [creator, ...joiners] = booted
   const seams = await creator.client.seams()

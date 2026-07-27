@@ -448,6 +448,15 @@ async function boot_auth(): Promise<void> {
   // from production). Lets Playwright / local dev play the real UI with a local testnet key, no
   // Google popup. No prod escape hatch (no VITE_OWNER_PLAY).
   if (import.meta.env.DEV) {
+    // #1255 — THE FAILURE NAMES ITSELF. A dev-login that dies here used to be invisible: boot fell through to
+    // `reconnect_last()`, the app rendered the logged-out spectate landing, and with it went every routed page
+    // — including /simulator and the DEV seams its BoardPane registers. A headless driver then measured the
+    // missing seams and filed a P1 against the seam chain, which had never been touched. So the outcome is
+    // written where a driver can read it without guessing: the console, and a marker on <html>. Both are
+    // inert (no behaviour reads them) and both live inside this DEV branch, so production keeps neither.
+    const mark_dev_login = (verdict: string) => {
+      document.documentElement.dataset.aresDevLogin = verdict
+    }
     try {
       const { is_dev_login, dev_session } = await import('./dev_wallet')
       if (is_dev_login()) {
@@ -460,10 +469,18 @@ async function boot_auth(): Promise<void> {
           sui_balance_mist: null,
           sui_balance_read_at_ms: null,
         })
+        mark_dev_login('ok')
         return
       }
     } catch (err) {
-      game_log('auth', 'dev-wallet bypass unavailable:', err)
+      const reason = String(err instanceof Error ? err.message : err)
+      mark_dev_login(`failed: ${reason}`)
+      // console.error, not game_log: this is the one line that explains an otherwise silent logged-out app,
+      // and a whisper at info level is what let #1255 be diagnosed backwards for a day.
+      console.error(
+        '[auth] the DEV login FAILED — the app stays logged out, so no routed page (and no DEV seam) mounts:',
+        err
+      )
     }
   }
   reconnect_last()

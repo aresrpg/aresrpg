@@ -138,8 +138,9 @@ export const open_sim_fight = async ({ browser, base, scenario, mob, log, on_sea
 
   // THE SEAMS BEFORE THE FIGHT — a reload costs nothing here (the scenario lives in IndexedDB), whereas
   // reloading AFTER START would throw away a live fight.
-  if (!(await await_seams(client, page, url, { log })))
-    throw new Error('the bot seams (__ARES_DEV_READ / __ARES_DEV_TURN) never registered')
+  // Throws the page's OWN reason (#1255) — "logged out, no route" and "the seams lost the mount race" are the
+  // same absence and different bugs, so the rig never again picks one of them by assumption.
+  await await_seams(client, page, url, { log, console_lines })
   const seams = await client.seams()
   log(`[bot] DEV seams live: ${seams.join(' ')}`)
 

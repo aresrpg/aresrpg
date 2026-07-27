@@ -316,7 +316,11 @@ function AppBody() {
         // The spectate landing floats ABOVE the live-world canvas (the host lifts the canvas above the
         // routed game-world spacer). pointer-events:none lets a logged-out visitor interact with the
         // world behind; each overlay piece re-enables pointer events for itself.
-        <div className="fixed inset-0 z-20 pointer-events-none">
+        //
+        // `data-spectate-landing` (#1255) is the page saying WHICH of the two branches above it took. It is
+        // inert — nothing reads it at runtime — but it is the difference between a driver reporting "the
+        // seams are missing" and "this page has no routes because nobody is signed in".
+        <div data-spectate-landing className="fixed inset-0 z-20 pointer-events-none">
           <SpectateLanding />
         </div>
       )}

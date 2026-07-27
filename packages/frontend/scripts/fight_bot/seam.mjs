@@ -4,11 +4,15 @@
 // decides. Split out of fight_bot.mjs when the bot grew a second and third surface (world, coop): the seam is
 // the ONE thing all of them share, and a transport copied per surface is how two surfaces start disagreeing.
 
+import { seam_failure, worth_remounting } from '@aresrpg/fight/bot'
+
+/** The bot's two doors, in the page's own words — one home for the predicate `ready` and the wait share. */
+const SEAMS_LIVE = () => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function'
+
 /** Every door the bot drives, on whichever surface the page happens to be. */
 export const seam_client = (page) => ({
   /** Are the bot's doors registered yet? (The seam tree is lazily imported behind the DEV gate.) */
-  ready: () =>
-    page.evaluate(() => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function'),
+  ready: () => page.evaluate(SEAMS_LIVE),
   /** Every DEV seam this build exposes — the enumeration the brief asks a driver to take, not assume. */
   seams: () =>
     page.evaluate(() =>
@@ -75,20 +79,41 @@ export const open_page = async (browser, { dev_key, viewport = { width: 1400, he
   return { page, console_lines, client: seam_client(page) }
 }
 
-/** Reload until the drive seams register, up to `attempts` mounts. Returns whether they are live. */
-export const await_seams = async (client, page, url, { attempts = 3, log = () => {} } = {}) => {
+/**
+ * WHAT THE PAGE SAYS ABOUT ITSELF (#1255) — the two inert markers the app writes: `<html data-ares-dev-login>`
+ * from the DEV branch of src/auth/index.ts, and `[data-spectate-landing]` from app.tsx where it renders the
+ * landing INSTEAD of the routed Layout. Together they separate "the seams lost a race" from "this page has no
+ * routes at all", which are the same absence and completely different bugs.
+ */
+const surface_reading = async (client, page) => ({
+  seams_ready: await client.ready(),
+  ...(await page.evaluate(() => ({
+    dev_login: document.documentElement.dataset.aresDevLogin ?? null,
+    logged_out: !!document.querySelector('[data-spectate-landing]'),
+  }))),
+})
+
+/** The page's own account of its login, appended to the verdict — a failure with no console is undiagnosable. */
+const with_console = (reason, console_lines) => {
+  const auth = console_lines.filter((line) => line.includes('[auth]')).slice(-2)
+  return auth.length ? `${reason}\n${auth.map((line) => `  page console: ${line}`).join('\n')}` : reason
+}
+
+/**
+ * Wait for the drive seams, remounting only while a remount can still help. THROWS the reason it failed — and
+ * the reason is the page's, not a guess: a logged-out page is named as logged out (#1255), never as a broken
+ * seam chain, and it is not reloaded three times for 147s first.
+ */
+export const await_seams = async (client, page, url, { attempts = 3, log = () => {}, console_lines = [] } = {}) => {
   for (let attempt = 1; attempt <= attempts && !(await client.ready()); attempt++) {
-    await page
-      .waitForFunction(
-        () => typeof window.__ARES_DEV_READ === 'function' && typeof window.__ARES_DEV_TURN === 'function',
-        null,
-        { timeout: 45_000, polling: 1000 }
-      )
-      .catch(() => {})
-    if (await client.ready()) break
+    await page.waitForFunction(SEAMS_LIVE, null, { timeout: 45_000, polling: 1000 }).catch(() => {})
+    const reading = await surface_reading(client, page)
+    if (reading.seams_ready || !worth_remounting(reading)) break
     log(`[bot] the drive seams did not register on mount ${attempt} — reloading`)
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 180_000 })
     await page.waitForSelector('canvas', { timeout: 180_000 })
   }
-  return client.ready()
+  const reading = await surface_reading(client, page)
+  if (reading.seams_ready) return
+  throw new Error(with_console(seam_failure(reading), console_lines))
 }

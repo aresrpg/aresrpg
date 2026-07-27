@@ -15,4 +15,5 @@ export {
   prediction_tally,
   summarise,
 } from './assert.js'
+export { DRIVE_SEAMS, seam_failure, worth_remounting } from './surface.js'
 export * from './read.js'

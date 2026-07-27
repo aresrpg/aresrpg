@@ -33,6 +33,10 @@ export const DRIVE_SEAMS = '__ARES_DEV_READ / __ARES_DEV_TURN'
 export function seam_failure(reading) {
   const { seams_ready, dev_login, logged_out } = reading
   if (seams_ready) return null
+  if (dev_login?.startsWith('failed'))
+    return `the DEV login was rejected, so the app is logged out and /simulator never mounts — ${dev_login.replace(/^failed:\s*/, '')}`
+  if (logged_out)
+    return 'the app is logged out (the spectate landing is up), so no route — and no drive seam — mounts: the boot saw no usable dev key, which means __ARES_DEV_KEY must be injected BEFORE the first script runs (page.addInitScript, never page.evaluate after goto)'
   return `the bot seams (${DRIVE_SEAMS}) never registered`
 }
 
@@ -43,5 +47,8 @@ export function seam_failure(reading) {
  * @returns {boolean}
  */
 export function worth_remounting(reading) {
-  return !reading.seams_ready
+  if (reading.seams_ready) return false
+  // A logged-out page is not a race, it is a wall: the route it would have to mount does not exist. Only an
+  // authenticated page can lose the double-mount race the reload was written for (seam.mjs).
+  return !reading.logged_out && !reading.dev_login?.startsWith('failed')
 }
