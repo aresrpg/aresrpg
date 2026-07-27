@@ -9,7 +9,7 @@ module aresrpg::item_tests;
 use aresrpg::{item::{Self, Item, ItemTemplate}, item_stats, test_world, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
-use sui::{kiosk::{Self, Kiosk}, package::Publisher, test_scenario::{Self as ts}};
+use sui::{display::{Self, Display}, kiosk::{Self, Kiosk}, package::Publisher, test_scenario::{Self as ts}, vec_map};
 
 const OWNER: address = @0xA;
 
@@ -20,6 +20,30 @@ const ENotStackable: u64 = 104; // item
 const EZeroQuantity: u64 = 105; // item
 const ETemplateMismatch: u64 = 106; // item
 const ESplitTooLarge: u64 = 107; // item
+
+// ╔════════════════ [ Display ] ══════════════════════════════════════════════ ]
+
+#[test]
+fun displays_use_absolute_canonical_item_url() {
+  let mut sc = ts::begin(OWNER);
+  item::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let item_display = sc.take_from_sender<Display<Item>>();
+  let template_display = sc.take_from_sender<Display<ItemTemplate>>();
+  let expected = b"https://assets.aresrpg.world/items/{item_type}.png".to_string();
+  assert_eq!(
+    *vec_map::get(display::fields(&item_display), &b"image_url".to_string()),
+    expected,
+  );
+  assert_eq!(
+    *vec_map::get(display::fields(&template_display), &b"image_url".to_string()),
+    expected,
+  );
+  sc.return_to_sender(item_display);
+  sc.return_to_sender(template_display);
+  sc.end();
+}
 
 // ╔════════════════ [ Lock-pledge constitution + snapshot ] ═════════════════ ]
 
