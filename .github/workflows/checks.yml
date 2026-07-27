@@ -41,17 +41,30 @@ jobs:
       - name: install sui (arms the Move field-cap leg — #896)
         # Pinned, same reason semgrep is: the field-cap verdict is only rendered against build output
         # this toolchain produced. Only the `sui` member is extracted from the release tarball.
+        # A tag names a location, not bytes — SUI_SHA256 pins the artifact itself and SUI_VERSION
+        # asserts the toolchain that answers, so neither can drift under the tag unnoticed (#945).
+        # Provenance: sha256 of sui-testnet-v1.75.1-ubuntu-x86_64.tgz downloaded from the URL below
+        # and cross-read from the release-asset digest API; version string from run 30177710763's
+        # own `sui --version` line. Both read 2026-07-27 — bumping SUI_RELEASE re-reads both.
         env:
           SUI_RELEASE: testnet-v1.75.1
+          SUI_SHA256: d85ec6ff2ba50005751b262fc4ca79eed54ecc7c8229136ab607c7f28f3fb98e
+          SUI_VERSION: sui 1.75.1-623521008f1c
         run: |
           set -euo pipefail
           curl -fsSL -o /tmp/sui.tgz \
             "https://github.com/MystenLabs/sui/releases/download/${SUI_RELEASE}/sui-${SUI_RELEASE}-ubuntu-x86_64.tgz"
+          echo "${SUI_SHA256}  /tmp/sui.tgz" | sha256sum -c -
           mkdir -p "$HOME/.local/bin"
           tar -xzf /tmp/sui.tgz -C "$HOME/.local/bin" ./sui
           rm -f /tmp/sui.tgz
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          "$HOME/.local/bin/sui" --version
+          installed=$("$HOME/.local/bin/sui" --version)
+          if [ "$installed" != "$SUI_VERSION" ]; then
+            echo "sui version drift: expected '${SUI_VERSION}', got '${installed}'" >&2
+            exit 1
+          fi
+          echo "$installed"
       - name: build Move packages (the field-cap leg's freshness witness)
         # Also the repo's only Move compile in CI: a package that no longer builds now reds here
         # instead of at the publish ceremony.
