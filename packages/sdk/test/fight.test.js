@@ -25,6 +25,8 @@ import {
   mint_rolled_ptb,
   burn_result_ptb,
   decode_fight,
+  decode_weapon_lines,
+  get_weapon_lines,
   decode_fight_result,
   decode_fight_event,
   fight_event_type,
@@ -1114,5 +1116,98 @@ describe('S-51b static refs — kind-only build with ZERO client', () => {
     expect(fight_event_type(IDS.aresrpg.ENGINE_PACKAGE_ID, 'Moved')).toBe(
       `${IDS.aresrpg.ENGINE_PACKAGE_ID}::fight_events::Moved`,
     )
+  })
+})
+
+// ── #1323 — the seat's AUTHORED weapon lines cross the wire ──────────────────────────────────────────────
+//
+// `cast.move` resolves a weapon strike from the seat's authored item lines and falls back to the participant's
+// single family `Weapon` only when it has none. The engine attaches those lines as per-seat DYNAMIC FIELDS on
+// the Fight (`fight.move WeaponLinesKey`), so they never appear in the object json `decode_fight` reads —
+// `get_weapon_lines` is the only door to them off-chain, and a client without it prices every strike off the
+// family line and previews a number the chain will not settle.
+describe('#1323 — get_weapon_lines reads the per-seat WeaponLinesKey dynamic fields', () => {
+  const FIELD_A = id('wla')
+  const FIELD_B = id('wlb')
+  // The key type carries its DEFINING package (type origin), which an UPGRADE leaves behind while the
+  // deployment pointer moves on — so the filter matches by suffix and this fixture states a stale origin id on
+  // purpose. Matching by the current package id would find nothing on the first upgraded lineage.
+  const KEY_TYPE = `${IDS.aresrpg.ENGINE_PACKAGE_ID}::fight::WeaponLinesKey`
+
+  const fake_client = ({ pages, objects }) => ({
+    core: {
+      listDynamicFields: async ({ cursor = null }) => pages[cursor ?? 'first'],
+      getObjects: async ({ objectIds }) => ({
+        objects: objectIds.map(object_id => objects[object_id]),
+      }),
+    },
+  })
+
+  const line = over => ({
+    element: 0,
+    damage: '10',
+    damage_max: '20',
+    crit_damage: '15',
+    crit_damage_max: '30',
+    ...over,
+  })
+
+  test('seat-keyed lines decode off the Field json, other dynamic fields are ignored', async () => {
+    const grpc_client = fake_client({
+      pages: {
+        first: {
+          dynamicFields: [
+            { name: { type: KEY_TYPE }, fieldId: FIELD_A },
+            // the same Fight carries OTHER first-party DFs (the §387 weapon category, seat turns, …) — a
+            // filter that took every field would decode garbage into seat keys.
+            {
+              name: { type: `${IDS.aresrpg.ENGINE_PACKAGE_ID}::fight::WeaponCategoryKey` },
+              fieldId: id('cat'),
+            },
+          ],
+          hasNextPage: true,
+          cursor: 'page2',
+        },
+        page2: {
+          dynamicFields: [{ name: { type: KEY_TYPE }, fieldId: FIELD_B }],
+          hasNextPage: false,
+          cursor: null,
+        },
+      },
+      objects: {
+        [FIELD_A]: { json: { name: { seat: '0' }, value: [line(), line({ element: 1, damage: '5' })] } },
+        [FIELD_B]: { json: { name: { seat: '2' }, value: [line({ element: 3 })] } },
+      },
+    })
+
+    const by_seat = await get_weapon_lines({ grpc_client })(id('fi0'))
+
+    expect(Object.keys(by_seat).sort()).toEqual(['0', '2'])
+    expect(by_seat[0]).toEqual([
+      { element: 0, damage: 10, damage_max: 20, crit_damage: 15, crit_damage_max: 30 },
+      // an absent `damage_max` degrades to its own floor — the FIXED line, one degradation path
+      { element: 1, damage: 5, damage_max: 20, crit_damage: 15, crit_damage_max: 30 },
+    ])
+    expect(by_seat[2]).toEqual([
+      { element: 3, damage: 10, damage_max: 20, crit_damage: 15, crit_damage_max: 30 },
+    ])
+  })
+
+  test('a fixed line (no maxima on the wire) decodes as max == min, never as a zero band', () => {
+    expect(decode_weapon_lines([{ element: 2, damage: '16' }])).toEqual([
+      { element: 2, damage: 16, damage_max: 16, crit_damage: 16, crit_damage_max: 16 },
+    ])
+  })
+
+  test('no lines / an unreadable node degrade to {} — the family-line fallback, never a fabricated band', async () => {
+    expect(decode_weapon_lines(null)).toEqual([])
+    const dead = {
+      core: {
+        listDynamicFields: async () => {
+          throw new Error('node down')
+        },
+      },
+    }
+    expect(await get_weapon_lines({ grpc_client: dead })(id('fi0'))).toEqual({})
   })
 })

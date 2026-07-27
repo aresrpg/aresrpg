@@ -108,6 +108,92 @@ export function decode_fight(json) {
   }
 }
 
+// ╔════════════════ [ The seat's AUTHORED weapon lines (§17.27 wave-2a) ] ═════ ]
+
+/// The engine's per-seat weapon-line dynamic-field key (`fight.move WeaponLinesKey { seat: u64 }`). Matched by
+/// SUFFIX, never by a package id: the key type carries its DEFINING package (type origin), which an upgrade
+/// leaves behind while the deployment pointer moves on — an id-equality filter would silently find nothing on
+/// the first upgraded lineage.
+const WEAPON_LINES_KEY_SUFFIX = '::fight::WeaponLinesKey'
+
+/**
+ * Decode a flattened `vector<participant::WeaponLine>` into the client's plain per-element bands. `damage_max` /
+ * `crit_damage_max` absent ⇒ their own floor (the FIXED line — `new_weapon_line` sets `damage_max: damage` on
+ * chain), so one degradation path covers every authoring shape. Non-array ⇒ `[]` (the honest "no lines").
+ * @param {any} json
+ */
+export function decode_weapon_lines(json) {
+  if (!Array.isArray(json)) return []
+  return json.map(line => {
+    const damage = Number(line?.damage ?? 0)
+    const crit_damage = Number(line?.crit_damage ?? damage)
+    return {
+      element: Number(line?.element ?? 255),
+      damage,
+      damage_max: Number(line?.damage_max ?? damage),
+      crit_damage,
+      crit_damage_max: Number(line?.crit_damage_max ?? crit_damage),
+    }
+  })
+}
+
+/**
+ * Read a Fight's seat-keyed AUTHORED weapon lines → `{ [seat]: line[] }` (`{}` when the fight has none, which is
+ * every bare-handed / un-authored seat and the honest degradation on an unreadable node).
+ *
+ * The engine seats these at `create`/`join` and attaches them as per-seat DYNAMIC FIELDS on the Fight
+ * (`fight.move attach_weapon_lines`), so they do NOT ride the object json `get_fight` decodes — this is the only
+ * door to them off-chain. They are also IMMUTABLE for a seat's lifetime (attached once, never updated), so a
+ * caller reads them when the roster changes, not on every poll.
+ *
+ * WHY the client needs them at all: `cast.move` resolves a weapon strike from these lines and falls back to the
+ * participant's single family `Weapon` only when a seat has none. A client that cannot see them prices every
+ * strike off the family line and previews a number the chain will not settle (#1323).
+ * @param {import("../types.js").Context} context
+ */
+export function get_weapon_lines(context) {
+  const { grpc_client } = context
+  return async fight_id => {
+    try {
+      /** @type {Record<number, ReturnType<typeof decode_weapon_lines>>} */
+      const by_seat = {}
+      let cursor = null
+      do {
+        const {
+          dynamicFields,
+          hasNextPage,
+          cursor: next,
+        } = await grpc_client.core.listDynamicFields({
+          parentId: fight_id,
+          cursor,
+        })
+        const ids = (dynamicFields ?? [])
+          .filter(field =>
+            String(field?.name?.type ?? '').endsWith(WEAPON_LINES_KEY_SUFFIX),
+          )
+          .map(({ fieldId }) => fieldId)
+        if (ids.length) {
+          const { objects } = await grpc_client.core.getObjects({
+            objectIds: ids,
+            include: { json: true },
+          })
+          for (const entry of objects ?? []) {
+            if (entry instanceof Error) continue
+            // `Field<WeaponLinesKey, vector<WeaponLine>>` flattens to `{ name: { seat }, value: [...] }`.
+            const json = /** @type {any} */ (entry)?.json
+            const seat = Number(json?.name?.seat ?? NaN)
+            if (Number.isInteger(seat)) by_seat[seat] = decode_weapon_lines(json?.value)
+          }
+        }
+        cursor = hasNextPage ? next : null
+      } while (cursor)
+      return by_seat
+    } catch {
+      return {}
+    }
+  }
+}
+
 /**
  * Decode a `json:true`-flattened `results::FightResult` (the soulbound per-seat outcome). `rolled` is a PLAIN
  * `vector<RolledLoot>` → `[{ item_template, qty }]` (empty `[]` on a defeat / no-drop victory). `loot` is the
