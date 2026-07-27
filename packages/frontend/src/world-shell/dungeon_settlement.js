@@ -81,8 +81,10 @@ const mint_and_reduce_inventory = (result_id, templates) =>
     current_address: () => use_auth.getState().address,
   })
 
-/** The pending-mints queue's deps: the chain-direct FightResult read (mint eligibility = chain truth, never a /v1 answer) + the atomic mint+burn edge, rebuilt per call for the memoized SDK's gRPC client. */
-const mint_deps = () => ({
+/** The pending-mints queue's deps: the chain-direct FightResult read (mint eligibility = chain truth, never a /v1 answer) + the atomic mint+burn edge, rebuilt per call for the memoized SDK's gRPC client. EXPORTED (#1212):
+ *  owned_dungeon_settlement.js's companion tail reuses the SAME deps to enqueue a companion's own opened result —
+ *  one home for "how a FightResult owes its mint+burn," never a second composer. */
+export const mint_deps = () => ({
   read_result: async (/** @type {string} */ id) => get_fight_result({ grpc_client: (await get_sdk()).grpc_client })(id),
   mint_and_burn: mint_and_reduce_inventory,
 })

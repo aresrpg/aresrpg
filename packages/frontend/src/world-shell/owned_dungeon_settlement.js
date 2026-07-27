@@ -12,6 +12,8 @@ import { load_roster } from '../roster/load_roster'
 import { settle_owned_dungeon_runs } from './owned_team_actions.js'
 import { receipt_minted_outcomes } from './fight_result_receipt.js'
 import { invalidate_pending_outcomes } from './pending_outcomes.js'
+import { enqueue_mint, drain_pending_mints } from './pending_mints.js'
+import { mint_deps } from './dungeon_settlement.js'
 
 /**
  * @param {{ leader_receipt:any, world_id:string|null, leader_character_id:string|null,
@@ -35,7 +37,15 @@ export async function settle_owned_dungeon_companions({
       run_pass_ids_by_character: pass_ids,
       outcome_ids_by_character,
       on_settled: (character_id, opened) => {
-        if (opened?.result_id) opened_result_ids[character_id] = opened.result_id
+        if (opened?.result_id) {
+          opened_result_ids[character_id] = opened.result_id
+          // LOOT PARITY (#1212 — a companion's loot never landed without a refresh): the leader's own settlement
+          // (dungeon_settlement.js finish_result) enqueues its result_id through the SAME receipt-driven mint
+          // queue; a companion's opened FightResult owes an identical mint+burn and rode NOTHING before this —
+          // it sat unminted until the next boot's stranded-result sweep. One door, every settlement.
+          enqueue_mint(opened.result_id)
+          void drain_pending_mints(mint_deps()).catch(() => {})
+        }
         // M5: same-wallet companion HP/XP write-back as a typed receipt_patch (folded + XP-floored in the reducer).
         context.dispatch('action/sui_data', {
           kind: 'receipt_patch',
