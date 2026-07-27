@@ -16,13 +16,15 @@
 // shim hands the core at init regardless of wallet state. So the assertions are on the CONSUMPTION seam — the
 // level the production surfaces resolve — never on whether some seeding door happened to run.
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
 import fixture from './spell_corpus_l2.fixture.json'
 
-install_browser_globals({ with_document: true, with_element: true })
+const restore_browser_globals = install_browser_globals({ with_document: true, with_element: true })
+
+afterAll(restore_browser_globals)
 
 const { renderToStaticMarkup } = await import('react-dom/server')
 const { I18nextProvider } = await import('react-i18next')

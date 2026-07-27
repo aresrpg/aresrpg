@@ -24,11 +24,13 @@
 //   · the §7 crit clock fields (`world_seed`/`spawn_id`/`turn_deadline_ms`) ARE published here — #1190's
 //     "an earlier clause of the same guard fires first" does not hold, so its fix must not lean on it.
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
-install_browser_globals({ with_document: true, with_element: true })
+const restore_browser_globals = install_browser_globals({ with_document: true, with_element: true })
+
+afterAll(restore_browser_globals)
 
 const { fight_store } = await import('@aresrpg/fight/store')
 const { decode, encode } = await import('@aresrpg/fight/los')

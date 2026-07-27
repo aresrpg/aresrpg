@@ -4,11 +4,13 @@
 // board_view participant rows (`cave_session.js` is shape-sensitive at `.addr`). The seed must stay empty until the
 // fight snapshot crosses the core door; project.board_view is the one owner that then publishes full seat rows.
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
-install_browser_globals({ with_document: true, with_element: true })
+const restore_browser_globals = install_browser_globals({ with_document: true, with_element: true })
+
+afterAll(restore_browser_globals)
 
 const { create_fight_store } = await import('@aresrpg/fight/store')
 const { board_view } = await import('@aresrpg/fight/project')

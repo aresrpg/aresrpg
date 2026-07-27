@@ -15,7 +15,7 @@
 // verbatim from assets.aresrpg.world), not a hand-written approximation: a senshi authors 20 spells, of which
 // exactly 3 unlock at level 1. Reading the fixture is what makes "3 vs 20" a real measurement.
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
@@ -23,7 +23,9 @@ import fixture from './spell_corpus_l2.fixture.json'
 
 // The shim is an effect edge over the page's real stores, so its import graph reaches the browser-only auth
 // seam — the same reason `fight_hud_cast.test.jsx` installs the surface before its dynamic imports.
-install_browser_globals({ with_document: true, with_element: true })
+const restore_browser_globals = install_browser_globals({ with_document: true, with_element: true })
+
+afterAll(restore_browser_globals)
 
 const { xp_progress } = await import('@aresrpg/sdk/experience')
 const { resolve_class_spells } = await import('../game/screens/hud/fight-spells.js')

@@ -14,13 +14,15 @@
 // terminal status under test is published by the shim's own `sync_status`. The last two assertions are the
 // ADAPTER'S reconcile head, verbatim — the same two folds that decided to tear the board down.
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
 import fixture from './spell_corpus_l2.fixture.json'
 
-install_browser_globals({ with_document: true, with_element: true })
+const restore_browser_globals = install_browser_globals({ with_document: true, with_element: true })
+
+afterAll(restore_browser_globals)
 
 const { encode } = await import('@aresrpg/fight/los')
 const { STATUS_WON } = await import('@aresrpg/fight/board_state')

@@ -19,11 +19,13 @@
 // is real, the fight core is the production store, and the cast is committed through the shim's injected door in
 // the same staged-row shape `DungeonBoard.flush_commit` composes.
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
-install_browser_globals({ with_document: true, with_element: true })
+const restore_browser_globals = install_browser_globals({ with_document: true, with_element: true })
+
+afterAll(restore_browser_globals)
 
 const { renderToStaticMarkup } = await import('react-dom/server')
 const { I18nextProvider } = await import('react-i18next')
