@@ -26,6 +26,7 @@
 // republish_window_verdict below for the mode's rules and its master-bound refusal.
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -125,6 +126,15 @@ export function republish_window_verdict({
 // ── Package-size preflight ──────────────────────────────────────────────────────────────────────
 // Predicts the on-chain MovePackage object size from local build artifacts alone — no network round
 // trip, so a TooBig refusal is known before the ceremony ever dry-runs against a live upgrade cap.
+//
+// HERMETIC BY CONSTRUCTION, and that is the load-bearing property. This measurement used to read the
+// package's shared `build/` directory — whatever the last command happened to leave there. A
+// `sui move test` run leaves TEST-MODE bytecode: `#[test_only]` code is compiled INTO each source
+// module, so the same tree measured 107902 (5502 OVER the cap) minutes after a test sweep and 102286
+// (114 under) from a clean build. The gate's verdict flipped on a command that was not part of the
+// gate — in both directions, so it can hide a real TooBig as easily as invent one, at the ceremony
+// as easily as in CI. So the size leg now builds the package ITSELF into a throwaway --install-dir
+// and measures that: no prior state can reach the number.
 // The real check BCS-serializes the MovePackage: module bytecode + a module_map name-key per module +
 // a type_origin_table entry per struct/enum the package DEFINES + a linkage_table entry per
 // transitively-linked dependency package. This mirrors that shape from the build's own artifacts.
@@ -159,9 +169,30 @@ function stripLineComments(src) {
 // over ground truth, inside the ~1% bar. The gap is the residual BCS envelope this proxy doesn't model
 // (the package UID + version fields, a handful of ULEB128 rounding edges) — negligible next to a
 // 102400-byte ceiling and it only ever OVER-estimates, so it never hides a real TooBig risk.
-function measurePackageSize(pkgPath) {
+// Builds `pkgPath` into a fresh throwaway tree and hands the caller its build root. Throws with the
+// compiler's own tail on failure — a build that does not compile has no size, and saying so beats
+// returning a number nobody can trust. NON-test mode by construction (`sui move build`, never
+// `sui move test`), which is the whole point.
+function hermetic_build(pkgPath) {
+  const out_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ares-pkg-size-'))
+  try {
+    execSync(`sui move build --path ${pkgPath} --install-dir ${out_dir}`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    })
+    return out_dir
+  } catch (e) {
+    fs.rmSync(out_dir, { recursive: true, force: true })
+    const output = `${e.stdout ?? ''}${e.stderr ?? ''}`.trim()
+    throw new Error(output.split('\n').slice(-5).join(' | '))
+  }
+}
+
+// Measures the package the caller just built at `buildRoot` (a hermetic_build result). Sources are
+// read from pkgPath — they are the declaration list; the bytecode is read from buildRoot alone.
+function measurePackageSize(pkgPath, buildRoot) {
   const srcDir = path.join(pkgPath, 'sources')
-  const buildDir = path.join(pkgPath, 'build')
+  const buildDir = path.join(buildRoot, 'build')
   if (!fs.existsSync(srcDir) || !fs.existsSync(buildDir)) return null
 
   // `build/<name>` is named after the package's OWN Move.toml `name` field (e.g. "aresrpg_foundation"
@@ -230,20 +261,18 @@ function size_only_run(packages) {
   let any_failed = false
   for (const name of packages) {
     const pkg_path = path.join(MOVE_DIR, name)
+    let size = null
+    let build_root = null
     try {
-      execSync(`sui move build --path ${pkg_path}`, {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-      })
+      build_root = hermetic_build(pkg_path)
+      size = measurePackageSize(pkg_path, build_root)
     } catch (e) {
       any_failed = true
-      const output = `${e.stdout ?? ''}${e.stderr ?? ''}`.trim()
-      console.log(
-        `${name} ERROR  build failed — ${output.split('\n').slice(-5).join(' | ')}`
-      )
+      console.log(`${name} ERROR  build failed — ${e.message}`)
       continue
+    } finally {
+      if (build_root) fs.rmSync(build_root, { recursive: true, force: true })
     }
-    const size = measurePackageSize(pkg_path)
     if (size == null) {
       any_failed = true
       console.log(`${name} ERROR  build produced no bytecode to measure`)
@@ -381,9 +410,20 @@ async function checkPackage(client, release, network, name) {
     if (needsPatch) fs.writeFileSync(pubFile, original)
   }
 
-  // Read from whatever the CLI call just built — compat errors and TooBig risk are independent
-  // verdicts over the SAME build, so both ride one compile instead of two.
-  const size = measurePackageSize(pkgPath)
+  // The size row costs its own compile ON PURPOSE, rather than reading whatever the CLI call left in
+  // build/: the compat verdict is the CLI's, the size verdict is this gate's, and a shared build
+  // directory is exactly how a `sui move test` run silently rewrote the number (see hermetic_build).
+  let size = null
+  let size_build_root = null
+  try {
+    size_build_root = hermetic_build(pkgPath)
+    size = measurePackageSize(pkgPath, size_build_root)
+  } catch {
+    size = null // the compat leg below already reports why this package does not compile
+  } finally {
+    if (size_build_root)
+      fs.rmSync(size_build_root, { recursive: true, force: true })
+  }
 
   const errors = parseCompatErrors(output)
   if (errors.size > 0)
