@@ -50,6 +50,7 @@ const ECastsPerTarget: u64 = 106; // this caster already hit THIS target cell ca
 const ECellAlreadyTrapped: u64 = 107; // placing a trap on a cell that already anchors a LIVE trap (1.29 no-stack)
 const EMissingRequiredState: u64 = 108; // caster lacks one of the level's required named-state rows
 const EForbiddenStatePresent: u64 = 109; // caster holds one of the level's forbidden named-state rows
+const EUnhandledEffectKind: u64 = 110; // an effect kind neither sink implements — refuse rather than pay AP for nothing (see the sink tails)
 
 const PLAYER_SIDE: u8 = 0;
 const MOB_SIDE: u8 = 1;
@@ -300,6 +301,22 @@ public(package) fun note_seat_turn(fight: &mut Fight, seat: u64) {
   } else {
     df::add(fight::uid_mut(fight), k, 1u64);
   };
+}
+
+#[test_only]
+/// Drive ONE effect kind straight at a player seat and at a mob, bypassing the zone/target-filter walk. The
+/// sink-parity suite uses it to walk the whole vocabulary through both tails.
+public fun apply_to_both_for_testing(
+  fight: &mut Fight,
+  caster_stats: &Stats,
+  pc: u64,
+  midx: u64,
+  effect: &Effect,
+  rng: &mut u64,
+) {
+  let (mut d, mut o, mut r, mut b) = (vector[], vector[], vector[], vector[]);
+  let _p = apply_to_player(fight, PLAYER_SIDE, 0, pc, 0, caster_stats, 1, effect.element(), effect, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
+  let _m = apply_to_mob(fight, PLAYER_SIDE, 0, midx, 0, caster_stats, 1, effect.element(), effect, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
 }
 
 #[test_only]
@@ -1151,6 +1168,15 @@ fun apply_to_player(
     );
     heal_caster(fight, caster_side, caster_idx, actual / 2);
     did_damage = dmg > 0;
+  } else if (kind == spell_effect::k_punishment_damage()) {
+    // The `apply_to_mob` twin. Missing here, this fell to the tail and became a STATUS ROW, so a mob casting a
+    // punishment line at a player did no damage at all — while @aresrpg/sim folded it as DAMAGE for both sides.
+    let damage = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    hit_player_from(
+      fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      random_effect_ordinals, random_rolls, random_bounds,
+    );
+    did_damage = damage > 0;
   } else if (kind == spell_effect::k_give_points()) {
     // +n NOW (usable if the recipient is mid-act) + a CREDIT row so a feed landed off-turn survives the
     // recipient's begin_turn (MOB_DEBUFF_HAT P1 #2).
@@ -1202,11 +1228,13 @@ fun apply_to_player(
       effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     )) record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
-  } else if (is_retro_status(kind)) {
+  } else if (is_board_status(kind)) {
     record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
+  } else if (is_unimplemented(kind)) {
+    // NAMED NO-OP, not a silent one. Neither twin implements these; @aresrpg/sim normalizes them to UNSUPPORTED
+    // and folds nothing, so recording a row here would invent a status the sim never predicts.
   } else {
-    // steal_stat / swap / board-status control kinds → persist on the effect board (faithful-port extension).
-    record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
+    abort EUnhandledEffectKind
   };
   did_damage
 }
@@ -1326,10 +1354,14 @@ fun apply_to_mob(
       effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     )) record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
-  } else if (is_retro_status(kind)
-    || kind == spell_effect::k_reduce_damage() || kind == spell_effect::k_reflect_damage()
-    || kind == spell_effect::k_apply_state() || kind == spell_effect::k_return_spell()) {
+  } else if (is_board_status(kind)) {
     record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
+  } else if (is_unimplemented(kind)) {
+    // The `apply_to_player` twin — see there.
+  } else {
+    // The tail this chain LACKED: an unhandled kind was a silent no-op on a mob while the player sink recorded
+    // a row for it. Divergence by omission is exactly what a terminal arm exists to prevent.
+    abort EUnhandledEffectKind
   };
   did_damage
 }
@@ -1432,6 +1464,25 @@ fun is_retro_status(kind: u8): bool {
     || kind == spell_effect::k_reactive_punishment()
     || kind == spell_effect::k_erosion()
     || kind == spell_effect::k_damage_redirect()
+}
+
+/// Kinds whose whole implementation IS a board row: the damage path (or a cast gate) reads them back later.
+/// ONE list, consulted by both sinks — the player tail used to swallow these in an unnamed catch-all while the
+/// mob tail spelled half of them out, which is how the two drifted without anything failing.
+fun is_board_status(kind: u8): bool {
+  is_retro_status(kind)
+    || kind == spell_effect::k_reduce_damage()
+    || kind == spell_effect::k_reflect_damage()
+    || kind == spell_effect::k_apply_state()
+    || kind == spell_effect::k_return_spell()
+    || kind == spell_effect::k_invisibility()
+}
+
+/// Kinds in the vocabulary that NEITHER twin implements. Named here so "does nothing" is a decision with a home
+/// rather than a gap: @aresrpg/sim normalizes both to UNSUPPORTED and folds nothing, so the chain folds nothing
+/// too. Implementing either means deleting it from this list and wiring BOTH sinks in the same commit.
+fun is_unimplemented(kind: u8): bool {
+  kind == spell_effect::k_remove_state() || kind == spell_effect::k_reset_positions()
 }
 
 /// PURGE every board row on a fighter — the ONE death-fold home (fid namespace mapped here). Called by the hit
