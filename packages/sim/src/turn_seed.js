@@ -35,8 +35,13 @@ const DOMAIN_DMG = 0xd1b54a35 // #577 damage stream domain tag (spell_formula::D
  *   turn_ordinal: number|bigint, seat: number|bigint }} fight
  * @returns {number} uint32
  */
-export const turn_seed = ({ world_seed, spawn_id, turn_entropy, turn_ordinal, seat }) =>
-  mix(mix(mix(mix(world_seed, spawn_id), turn_entropy), turn_ordinal), seat)
+export const turn_seed = ({
+  world_seed,
+  spawn_id,
+  turn_entropy,
+  turn_ordinal,
+  seat,
+}) => mix(mix(mix(mix(world_seed, spawn_id), turn_entropy), turn_ordinal), seat)
 
 /**
  * Slot `i`'s CRIT ROLL — a spell/target-INDEPENDENT value in [0, 10000) derived from (turn_seed, slot). Mirrors
