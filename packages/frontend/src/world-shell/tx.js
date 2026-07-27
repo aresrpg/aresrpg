@@ -21,10 +21,12 @@ import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 import i18n from '../i18n'
 import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
+import { push_event_toast } from '../game/core/toast.js'
 
 import { offer_travel_resync } from './travel_recovery.js'
 import { attach_executed_digest } from './tx_digest_error.js'
 import { tx_refusal_input } from './tx_refusal.js'
+import { spend_guard_admit, spend_guard_record_failure, spend_guard_record_success } from './spend_guard.js'
 
 // #23 gRPC: `run_tx` waits on the gRPC Core `waitForTransaction` (jsonRpc is gone) and normalizes the
 // { Transaction | FailedTransaction } receipt back into the jsonRpc-ish { effects, objectChanges, events }
@@ -50,18 +52,61 @@ if (typeof window !== 'undefined') /** @type {any} */ (window).__TX_TIMINGS = ti
 let character_action_tail = Promise.resolve() // eslint-disable-line functional/no-let -- module-owned queue tail
 let pending_character_actions = 0 // eslint-disable-line functional/no-let -- module-owned queued/running count
 
+/** The spend guard's refusal, thrown BEFORE anything is built or signed. Deliberately carries no digest and no
+ *  `SimulationError` marker — nothing executed and nothing simulated, so no burn-law classifier upstream may
+ *  read it as either. @param {any} decision */
+function spend_guard_error(decision) {
+  const key =
+    decision.reason === 'session_frozen' ? 'errors.spend_guard_session_frozen' : 'errors.spend_guard_circuit_open'
+  // Backoff is machinery — it holds an automated retry for a second, and says so only to the log.
+  const message =
+    decision.reason === 'backoff' ? `spend guard: ${decision.intent} held until ${decision.retry_at_ms}` : i18n.t(key)
+  return Object.assign(new Error(message), { name: 'SpendGuardRefusal', guard_reason: decision.reason })
+}
+
+/** Render a guard notice through the ONE toast home. Effects at the edge: the guard itself returns data. */
+function surface_guard_notice(/** @type {{ i18n_key: string } | null} */ notice) {
+  if (!notice) return
+  push_event_toast({ state: 'error', title: i18n.t(notice.i18n_key) })
+}
+
 /**
+ * THE ONE LANE — and therefore (#1262) the one door the mechanical spend guard sits on. Both submission doors
+ * funnel here: this module's `run()` (run_tx / run_tx_self_pay / run_tx_random) and dungeon_actions' `sign()`
+ * (every fight/dungeon PTB, including the permissionless janitors). A submission that names an `intent`
+ * (`<kind>:<target object>`) and declares itself `automated` is the guard's subject; a player-initiated act
+ * passes through untouched, because a player pressing a button is spending their own gas on purpose.
  * @template T
  * @param {() => Promise<T> | T} task
- * @param {{ queued?: boolean }} [options]
+ * @param {{ queued?: boolean, intent?: string|null, automated?: boolean }} [options]
  * @returns {Promise<T>}
  */
-export function run_character_action(task, { queued = false } = {}) {
+export function run_character_action(task, { queued = false, intent = null, automated = false } = {}) {
+  const admission = spend_guard_admit({ intent, automated })
+  if (!admission.allow) {
+    game_log('spend-guard', `refused ${intent} — ${admission.reason}`)
+    return Promise.reject(spend_guard_error(admission))
+  }
   if (!queued && pending_character_actions)
     return Promise.reject(new Error(i18n.t('errors.character_switch_in_progress')))
   pending_character_actions += 1
   const scheduled = character_action_tail.then(task)
-  const completed = scheduled.finally(() => {
+  // Async results re-enter the guard as INPUTS through its ledger door — the reducers themselves stay pure and
+  // the only effect here is the toast the returned notice asks for.
+  const observed = intent
+    ? scheduled.then(
+        (value) => {
+          surface_guard_notice(spend_guard_record_success(value, { intent, automated }).notice)
+          return value
+        },
+        (error) => {
+          if (/** @type {any} */ (error)?.name !== 'SpendGuardRefusal')
+            surface_guard_notice(spend_guard_record_failure(error, { intent, automated }).notice)
+          throw error
+        }
+      )
+    : scheduled
+  const completed = observed.finally(() => {
     pending_character_actions -= 1
   })
   character_action_tail = completed.catch(() => undefined)
@@ -78,7 +123,8 @@ export function run_character_action(task, { queued = false } = {}) {
  * @param {any} [include]  gRPC Core waitForTransaction `include` (defaults to effects+objectTypes+events)
  * @param {{address:string, wallet_name:string}} [signer]  OVERRIDE signer (the admin PUBLISH tab's dedicated
  *   deployer wallet). Defaults to the global player session (use_auth) so every gameplay tx is unchanged.
- * @param {{ queued?: boolean }} [options] system-owned work may wait behind the current character action
+ * @param {{ queued?: boolean, intent?: string|null, automated?: boolean }} [options] system-owned work may wait
+ *   behind the current character action, and names its `intent` + `automated` for the spend guard (#1262)
  * @returns {Promise<{ result: any, timing: TxTiming }>}
  */
 export async function run_tx(klass, tx, include = DEFAULT_INCLUDE, signer, options) {
@@ -209,10 +255,14 @@ async function run(klass, tx, include, signer, submit) {
       raw_error: raw_error instanceof Error ? raw_error.message : String(raw_error),
       ...(digest ? { digest, kind: 'executed-failure' } : { kind: 'preflight-refusal' }),
     })
-    // The digest-positive retry latches (equip's character latch, the loot-box open/claim latches) need the
-    // proof at this boundary: executed failures stay blocked and carry their cause digest, while every
-    // pre-flight refusal (digest absent) stays freely retryable.
-    throw ['equip', 'open_box', 'claim_pet'].includes(klass) ? attach_executed_digest(error, digest) : error
+    // The digest-positive retry latches (equip's character latch, the loot-box open/claim latches, and since
+    // #1262 the spend guard's circuit) need the proof at this boundary: executed failures stay blocked and carry
+    // their cause digest, while every pre-flight refusal (digest absent) stays freely retryable.
+    // #1262 WIDENED THIS FROM AN ALLOWLIST OF THREE CLASSES to every class. A digest is a fact about the
+    // transaction, not about which feature sent it — withholding it from the other classes left every burn-law
+    // classifier downstream guessing from message text, which is exactly how the expired-turn advance looped.
+    // `attach_executed_digest` is a no-op when no digest exists, so a pre-flight refusal is unchanged.
+    throw attach_executed_digest(error, digest)
   }
 }
 

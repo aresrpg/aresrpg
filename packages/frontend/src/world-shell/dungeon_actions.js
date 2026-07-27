@@ -122,12 +122,19 @@ export async function as_one_toast(/** @type {string} */ label, /** @type {() =>
 
 // TOAST COPY LAW: `label` always names the action. SILENT: a background/janitor tx (crank, force_start, the
 // settlement chain) signs with NO toast at all — failure still throws identically (the caller discriminates).
+// SPEND GUARD (#1262): `intent` (`<kind>:<target object>`) + `automated` ride through to the lane, where the
+// circuit / backoff / session breaker decide whether an automated submission may be sent at all. They are
+// declared HERE, on the doors, not at each caller — every crank caller gets the same guarantee from one place.
 export async function sign(
   /** @type {any} */ tx,
   /** @type {string} */ label,
   /** @type {boolean} */ silent = false,
   /** @type {import('../tx').GasPin | null} */ gas_pin = null,
-  /** @type {{ queued?: boolean }} */ { queued = false } = {}
+  /** @type {{ queued?: boolean, intent?: string|null, automated?: boolean }} */ {
+    queued = false,
+    intent = null,
+    automated = false,
+  } = {}
 ) {
   const { address, wallet_name } = use_auth.getState()
   if (!address || !wallet_name) throw new Error('Not signed in')
@@ -183,7 +190,7 @@ export async function sign(
       throw attach_executed_digest(error, digest)
     }
   }
-  const submitted = run_character_action(execute, { queued }).catch((error) => {
+  const submitted = run_character_action(execute, { queued, intent, automated }).catch((error) => {
     // create_world_fight has its own fast receipt choke instead of world-shell/tx.js. Give checkpoint::102
     // the same one-click body resync here; this helper never re-submits an executed transaction.
     offer_travel_resync(error)
@@ -407,20 +414,30 @@ export async function place(
   return sign(tx, i18n.t('dungeons.action_place'))
 }
 
-/** FORCE-START a fight whose placement window expired (`turns::force_start`, permissionless janitor). */
+/** FORCE-START a fight whose placement window expired (`turns::force_start`, permissionless janitor). No human
+ *  ever presses this — it is machinery, so it is `automated` for the spend guard by definition (#1262). */
 export async function force_start(/** @type {string} */ fight_id, /** @type {boolean} */ silent = false) {
   const sdk = await get_sdk()
   const fight_arg = (await ensure_fight_shared_ref(sdk, fight_id)) ?? fight_id
   const tx = force_start_ptb(ctx_of(sdk))({ fight_id: fight_arg })
-  return sign(tx, i18n.t('dungeons.action_start_room_all'), silent)
+  return sign(tx, i18n.t('dungeons.action_start_room_all'), silent, null, {
+    intent: `force_start:${fight_id}`,
+    automated: true,
+  })
 }
 
-/** CRANK a stalled ACTIVE fight past its turn deadline (`turns::crank`, permissionless janitor). */
+/** CRANK a stalled ACTIVE fight past its turn deadline (`turns::crank`, permissionless janitor) — #1262's
+ *  transaction. Every caller (the liquidation poll, the boot-resume heal, the commit path's inner crank) reaches
+ *  the chain through here, so ONE intent key covers them all: an executed failure retires the door for this
+ *  fight, for this session, no matter which of them observes the next expiry. */
 export async function crank(/** @type {string} */ fight_id, /** @type {boolean} */ silent = false) {
   const sdk = await get_sdk()
   const fight_arg = (await ensure_fight_shared_ref(sdk, fight_id)) ?? fight_id
   const tx = crank_ptb(ctx_of(sdk))({ fight_id: fight_arg })
-  return sign(tx, i18n.t('dungeons.action_pass_turn'), silent)
+  return sign(tx, i18n.t('dungeons.action_pass_turn'), silent, null, {
+    intent: `advance_turn:${fight_id}`,
+    automated: true,
+  })
 }
 
 /**
