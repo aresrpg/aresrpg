@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // AresRPG damage / heal / shield / crit math. Rolls use the threaded PRNG; every stored result is integer-only.
 // The value layer mirrors the chain's reference-corpus formula: element characteristic + percent damage amplify
-// the authored base, flat damage lands afterward, target resistance is capped at 50%, and crit odds cap at 1/2.
+// the authored base, flat damage lands afterward, target resistance is capped at 60%, and crit odds cap at 1/2.
 
 import { rng_range, rng_int } from './prng.js'
 
@@ -19,7 +19,7 @@ const ELEMENT_STAT = {
   NONE: 'strength',
 }
 
-const RESISTANCE_CAP = 50
+const RESISTANCE_CAP = 60
 
 const nonnegative = value => Math.max(0, value ?? 0)
 
@@ -87,7 +87,7 @@ export const apply_level_scaling = (damage, caster_level) =>
   Math.floor((damage * (100 + (caster_level - 1))) / 100)
 
 /**
- * Resistance reduction with the chain's 50% applied-resistance cap.
+ * Resistance reduction with the chain's 60% applied-resistance cap (owner ruling 2026-07-23).
  * @param {number} damage
  * @param {import("./fight_state.js").Element} element
  * @param {import("./fight_state.js").Stats} target_stats

@@ -227,10 +227,10 @@
       "expected": { "critical_hit": 6 }
     },
     {
-      "id": "resistance_caps_at_fifty",
+      "id": "resistance_caps_at_sixty",
       "scenario": "resistance",
       "input": { "damage": 100, "element": "FIRE", "resistance": 120 },
-      "expected": { "damage": 50 }
+      "expected": { "damage": 40 }
     }
   ]
 }
