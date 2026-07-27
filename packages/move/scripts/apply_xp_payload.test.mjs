@@ -162,21 +162,24 @@ test('field_histogram splits the two-set headline (xp vs stats)', () => {
   expect(field_histogram(changed)).toMatchObject({ xp_reward: 2, stats: 2, base_hp: 0 })
 })
 
-// ── LAW ④: the 50% resistance cap gate (spell.move:280) ───────────────────────────────────────────
+// ── LAW ④: the resistance cap gate (foundation `spell::apply_resistance`, ruled 60 on 2026-07-23) ──
+// The boundary is pinned as a LITERAL here on purpose: a cap test that reads the cap from the constant it
+// guards proves nothing — the driver drifted to 50 behind exactly that kind of self-referential assert.
 const changed_row = (over) => ({ key: 'm', id: id(1), desired: state({ stats: stats(over) }) })
 
-test('resistance_outliers FLAGS a restored resistance whose decentered magnitude exceeds the cap', () => {
-  const out = resistance_outliers([changed_row({ earth_resistance: RES_SHIFT + 60 })])
-  expect(out).toEqual([{ key: 'm', id: id(1), field: 'earth_resistance', magnitude: 60, cap: MAX_RESIST_MAGNITUDE }])
+test('resistance_outliers FLAGS a restored resistance above the ruled 60 cap (61 > 60)', () => {
+  const out = resistance_outliers([changed_row({ earth_resistance: RES_SHIFT + 61 })])
+  expect(out).toEqual([{ key: 'm', id: id(1), field: 'earth_resistance', magnitude: 61, cap: 60 }])
+  expect(MAX_RESIST_MAGNITUDE).toBe(60)
 })
 
-test('resistance_outliers PASSES a value exactly at the cap and a weakness (floors to 0)', () => {
-  const at_cap = changed_row({ fire_resistance: RES_SHIFT + MAX_RESIST_MAGNITUDE }) // 50 == cap, not > cap
+test('resistance_outliers PASSES the 51–60 band the ruling opened, and a weakness (floors to 0)', () => {
+  const ruled_band = [51, 55, 60].map((m) => changed_row({ fire_resistance: RES_SHIFT + m }))
   const weakness = changed_row({ air_resistance: RES_SHIFT - 25 }) // decenters to 0
-  expect(resistance_outliers([at_cap, weakness])).toEqual([])
+  expect(resistance_outliers([...ruled_band, weakness])).toEqual([])
 })
 
-test('the real corpus surfaces its over-cap authoring outlier (ramrage earthRes 55 > 50 — NEEDS-RULING)', () => {
+test('the real corpus carries NO over-cap resistance under the ruled 60 cap (ramrage earthRes 55 is legal)', () => {
   const dirs = require('node:fs')
     .readdirSync(join(repo_dir, 'seed', 'mainnet'))
     .filter((name) => /^\d\d_/.test(name))
@@ -187,8 +190,8 @@ test('the real corpus surfaces its over-cap authoring outlier (ramrage earthRes 
   const { desired } = desired_state_by_key(rows)
   const corpus_changed = Object.entries(desired).map(([key, d]) => ({ key, id: id(1), desired: d }))
   const out = resistance_outliers(corpus_changed)
-  // The mechanical assert turns "should be clean" into PROOF: exactly one authored value breaks the cap today.
-  expect(out.map(({ key, field, magnitude }) => `${key}:${field}=${magnitude}`)).toEqual(['ramrage:earth_resistance=55'])
+  // The mechanical assert turns "should be clean" into PROOF: no authored value exceeds the cap the ruling set.
+  expect(out.map(({ key, field, magnitude }) => `${key}:${field}=${magnitude}`)).toEqual([])
 })
 
 // ── mode + deployment ─────────────────────────────────────────────────────────────────────────────
