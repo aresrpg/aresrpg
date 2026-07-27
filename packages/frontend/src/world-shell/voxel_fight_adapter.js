@@ -1029,6 +1029,13 @@ export function create_voxel_fight_adapter(
           // Repaint from engine_view.trap_prims at the detonation beat. No renderer-owned list may keep it visible.
           reconcile()
           await play_trap_boom(payload)
+        } else if (spec.kind === 'status') {
+          // ONE standalone-status home: SHIELD/STUN/POISON/GLYPH (and any future named status) announce at the
+          // affected rig instead of disappearing between producer and presenter. Persistent badges/zones remain
+          // projection-owned; this short board float is the ordered "it landed now" beat.
+          const target_id = payload.target_id ?? payload.entity_id
+          if (target_id && payload.status && entity_ids.has(target_id))
+            board.float?.(target_id, { text: String(payload.status), kind: 'info' })
         } else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
         else if (spec.kind === 'status' && payload.status === 'DRAIN')
           // The receipt presenter derived this one fold outcome; every mounted viewer emits its own client-only

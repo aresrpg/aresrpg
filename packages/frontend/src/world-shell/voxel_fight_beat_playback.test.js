@@ -47,6 +47,7 @@ const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import(
 const FIGHT = '0xbeat-fight'
 const CHAR = '0xc1'
 const MOB_HIT_ON_ME = 7
+const STANDALONE_STATUSES = ['SHIELD', 'STUN', 'POISON', 'GLYPH']
 
 /** A decoded-Fight-shaped object the core's snapshot door adopts (fight_board_simdrive.test.js's harness,
  *  ACTIVE status so derive_phase wants a live board). */
@@ -112,7 +113,7 @@ const CASCADE = [
 /** A recording BoardHandle stand-in: every mount surface writes a row; beats resolve like the engine facade
  *  (the returned promise resolves "at impact", `.done` at natural end, `.duration_ms` a real clip length). */
 const make_board = () => {
-  const calls = { beats: [], upserts: [], moves: [] }
+  const calls = { beats: [], upserts: [], moves: [], floats: [] }
   const beat_promise = () => {
     const p = Promise.resolve()
     p.done = Promise.resolve()
@@ -134,6 +135,7 @@ const make_board = () => {
       calls.beats.push({ id, ...opts })
       return beat_promise()
     },
+    float: (id, payload) => calls.floats.push({ id, ...payload }),
     flash_cell: () => {},
     flash_entity: () => {},
     pulse_cells: () => {},
@@ -189,6 +191,27 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
         () => board.calls.upserts.some((u) => u.id === CHAR) && board.calls.upserts.some((u) => u.id === 'mob-0')
       )
       expect(wired, 'the adapter never built/wired the board (no fighter rigs upserted)').toBe(true)
+
+      // ── standalone statuses: feed the exact renderer-neutral specs the real prediction producer emits ──
+      fight_store.getState().input({
+        type: 'predicted',
+        intent_id: 'status-presentation',
+        basis_version: 6,
+        actions: [],
+        beats: STANDALONE_STATUSES.map((status) => ({
+          kind: 'status',
+          at: 0,
+          duration: 0,
+          payload: { target_id: CHAR, status },
+          source_turn: 'status-presentation',
+        })),
+      })
+      await poll(() => board.calls.floats.length === STANDALONE_STATUSES.length)
+      for (const status of STANDALONE_STATUSES)
+        expect(
+          board.calls.floats.some((row) => row.id === CHAR && row.kind === 'info' && row.text === status),
+          `${status} status beat never mounted its board float`
+        ).toBe(true)
 
       // ── the receipt: the mob's whole paced turn (move → cast → hit me for 7) enters the wave ──
       fight_store.getState().input({ type: 'receipt', receipt: { events: CASCADE }, version: 6 })
