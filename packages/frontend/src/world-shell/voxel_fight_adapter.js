@@ -105,6 +105,8 @@ import {
   beats_from_packet,
   tackle_float_payloads,
   split_move_at_traps,
+  movement_gait,
+  presentation_claims,
   reachable_hover_path,
   wash_armed_spell,
   cast_face_target,
@@ -606,7 +608,7 @@ export function create_voxel_fight_adapter(
     // GAIT (D303) is derived from the WHOLE path length ONCE — a trap split into segments must NOT re-classify a
     // 3+ cell run as a series of short walks. [trap-on-mob] split_move_at_traps yields one plain step (no traps)
     // or walk→PAUSE(trigger)→resume steps; each walk segment travels at the shared gait, the trap pauses between.
-    const gait = packet.path.length >= 3 ? 'run' : 'walk'
+    const gait = movement_gait(packet.path)
     const cps = 1000 / (gait === 'run' ? RUN_MS_PER_CELL : WALK_MS_PER_CELL)
     try {
       for (const step of split_move_at_traps(packet.path, packet.trap_hits)) {
@@ -1072,11 +1074,7 @@ export function create_voxel_fight_adapter(
    *  the turn's settle below, never at a mid-turn arrival: the presented fold holds a mob's cell at pre-turn
    *  until its turn acks, and an early release would walk the rig straight back to that masked cell). */
   const prepare_wave_beats = (turn) => {
-    const claimed = new Set()
-    for (const spec of turn.beats) {
-      if (spec.kind === 'move' && spec.payload?.entity_id) claimed.add(spec.payload.entity_id)
-      if (spec.kind === 'displacement' && spec.payload?.target_id) claimed.add(spec.payload.target_id)
-    }
+    const claimed = presentation_claims(turn)
     for (const id of claimed) replay_owned.add(id)
     return { beats: turn.beats, claimed }
   }

@@ -237,6 +237,19 @@ export function split_move_at_traps(path, trap_hits) {
   return steps
 }
 
+/** The shared board locomotion clip for a presented path: short movement walks, 3+ cells runs. */
+export const movement_gait = (path) => ((path?.length ?? 0) >= 3 ? 'run' : 'walk')
+
+/** Fighter rigs whose positions are owned by one queued presentation turn until it settles. */
+export const presentation_claims = (turn) => {
+  const claimed = new Set()
+  for (const beat of turn?.beats ?? []) {
+    if (beat.kind === 'move' && beat.payload?.entity_id) claimed.add(beat.payload.entity_id)
+    if (beat.kind === 'displacement' && beat.payload?.target_id) claimed.add(beat.payload.target_id)
+  }
+  return claimed
+}
+
 /**
  * #950 → #1042 — THE PATH PREVIEW IS A REACH VERDICT ON THE HOVERED CELL. A dark-green path is the answer to
  * "click here and I walk this route", so it may only be drawn for a cell the walk can actually END on: the

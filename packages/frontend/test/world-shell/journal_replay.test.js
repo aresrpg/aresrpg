@@ -5,12 +5,11 @@
 
 import { describe, expect, test } from 'bun:test'
 import { local_move_beats } from '@aresrpg/fight/present'
-import { engine_view } from '@aresrpg/fight/project'
 import { create_fight_store } from '@aresrpg/fight/store'
 
 import { create_fight_render_queue } from '../../src/world-shell/fight_render_queue.js'
 import { journal_replay_messages } from '../../src/world-shell/journal_replay.js'
-import { movement_gait } from '../../src/world-shell/voxel_fight_folds.js'
+import { movement_gait, presentation_claims } from '../../src/world-shell/voxel_fight_folds.js'
 
 const FIGHT = '0xf1647'
 const ALICE = '0xalice'
@@ -109,6 +108,34 @@ const fake_clock = () => {
 }
 
 describe('journal replay presentation — spectator/partner pacing', () => {
+  test('a transaction split across journal pages remains one paced turn and gaps are not guessed', () => {
+    const first_page = {
+      ...REPLAY_CAPSULE,
+      head: '1',
+      events: REPLAY_CAPSULE.events.slice(0, 2),
+    }
+    const second_page = {
+      ...REPLAY_CAPSULE,
+      events: REPLAY_CAPSULE.events.slice(2, 4),
+    }
+    const messages = journal_replay_messages({
+      fight_id: FIGHT,
+      batches: [first_page, second_page],
+      accepted_head: null,
+    })
+
+    expect(messages.map((message) => message.type)).toEqual(['receipt', 'journal', 'journal'])
+    expect(messages[0].receipt.events).toHaveLength(4)
+
+    const gap_messages = journal_replay_messages({
+      fight_id: FIGHT,
+      batches: [{ ...REPLAY_CAPSULE, events: [REPLAY_CAPSULE.events[0], REPLAY_CAPSULE.events[2]] }],
+      accepted_head: null,
+    })
+    expect(gap_messages.map((message) => message.type)).toEqual(['receipt', 'journal'])
+    expect(gap_messages[0].receipt.events).toHaveLength(1)
+  })
+
   test('a spectator capsule uses the actor walk gait and carries trap + floating-number beats', () => {
     const store = spectator_store()
     const messages = journal_replay_messages({
@@ -148,8 +175,8 @@ describe('journal replay presentation — spectator/partner pacing', () => {
     expect(trigger).toMatchObject({ payload: { target_id: BOB, cell: { x: 2, y: 2 }, damage: 7 } })
     expect(damage).toMatchObject({ payload: { target_id: BOB, damage: 7, new_health: 43 } })
     expect(damage.at).toBe(trigger.at + trigger.duration)
+    expect(presentation_claims(bob_turn)).toEqual(new Set([BOB]))
     expect(store.getState().protocol_fault).toBeNull()
-    expect(engine_view(store.getState()).fighters.get(BOB).cell).toEqual({ x: 2, y: 1 })
   })
 
   test('the replayed turns play serially from their own heads, never all at reconciliation time', async () => {

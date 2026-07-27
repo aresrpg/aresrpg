@@ -77,6 +77,7 @@ import { activate_owned_dungeon_runs, join_owned_dungeon_room_fight } from './ow
 import { settle_owned_dungeon_companions } from './owned_dungeon_settlement.js'
 import { derive_team_entry_plan, select_owned_run_pass_ids } from './team_entry.js'
 import { fight_recap_payload } from './fight_recap.js'
+import { journal_replay_messages } from './journal_replay.js'
 import { commit_with_overdue_retry } from './overdue_retry.js'
 import { read_object, decode_pass, load_world_meta, resolve_entry_key, is_gone_error } from './run_reads.js'
 import { read_fight_liveness } from './fight_liveness.js'
@@ -108,7 +109,8 @@ const STALE_BUSY_MS = 45_000
  * adapter. The core's journal input is intentionally one-ingress data, but unlike snapshot it is not independently
  * session-gated; this edge therefore checks currency after the awaited walk and before every accepted batch.
  * @param {{ fight_id:string, from:string|number, is_current?:()=>boolean, current_fight_id:()=>string|null,
- *   paginate?:typeof paginate_fight_journal, input?:(message:any)=>void }} options
+ *   trap_cells?:number[], paginate?:typeof paginate_fight_journal, input?:(message:any)=>void,
+ *   accepted_head?:()=>string|number|bigint|null }} options
  * @returns {Promise<'applied'|'unavailable'|'stale'>}
  */
 export async function walk_current_fight_journal({
@@ -116,16 +118,24 @@ export async function walk_current_fight_journal({
   from,
   is_current = () => true,
   current_fight_id,
+  trap_cells = [],
   paginate = paginate_fight_journal,
   input = (message) => fight_store.getState().input(message),
+  accepted_head = () => fight_store.getState().accept_state?.head ?? null,
 }) {
   const owns_fight = () => is_current() && String(current_fight_id() ?? '') === String(fight_id)
   const walked = await paginate(fight_id, { from }).catch(() => null)
   if (!owns_fight()) return 'stale'
   if (!walked?.ok) return 'unavailable'
-  for (const batch of walked.batches) {
+  const messages = journal_replay_messages({
+    fight_id,
+    batches: walked.batches,
+    accepted_head: accepted_head(),
+    trap_cells,
+  })
+  for (const message of messages) {
     if (!owns_fight()) return 'stale'
-    input({ type: 'journal', fight_id, batch })
+    input(message)
   }
   return 'applied'
 }
@@ -1034,6 +1044,10 @@ export const use_dungeon = create((set, get) => ({
         if (!is_current() || get().fight_id !== live_fight_id) return
         const offset = await resolve_world_offset(sdk, get().world_id ?? fight.world)
         if (!is_current() || get().fight_id !== live_fight_id) return
+        // The post-turn object read may already have removed a sprung trap. Keep the viewer's pre-read cells long
+        // enough for the exact journal movement to produce its trap-trigger presentation beat, then canonical
+        // projection owns the marker removal as usual.
+        const traps_before_sync = fight_view()?.trap_prims ?? []
         sync_dungeon_fight({
           read,
           run,
@@ -1052,6 +1066,7 @@ export const use_dungeon = create((set, get) => ({
             beat_ctx: { grid_width: GRID_W },
           },
         })
+        const replay_trap_cells = [...new Set([...traps_before_sync, ...(fight_view()?.trap_prims ?? [])])]
         // M2b · ONE INGRESS (#291): the object read above is a bootstrap/checkpoint only — canonical events fold
         // from the JOURNAL. Walk the read-layer journal from our ACCEPTED FRONTIER on EVERY live poll — this is the
         // passive-observer LIVE FEED: a force_start (the placement→ACTIVE flip), a peer's turn, or the mob turn
@@ -1073,6 +1088,7 @@ export const use_dungeon = create((set, get) => ({
           from: from.toString(),
           is_current,
           current_fight_id: () => get().fight_id,
+          trap_cells: replay_trap_cells,
         })
         if (result === 'stale') return
       } else if (run) {
