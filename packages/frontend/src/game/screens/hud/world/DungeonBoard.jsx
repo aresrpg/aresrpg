@@ -1190,8 +1190,8 @@ export function DungeonBoard() {
           FightControls itself switches by `fight.placement` (presence-truth): PLACEMENT → the big READY (fires the
           ONE place_at) + FORFEIT; ACTIVE → END TURN + FORFEIT. So the machine mounts it for is_placement OR
           is_active — the internal switch, not a second gate, decides which button shows (that was the D83-cascade
-          fix: ONE canon card, never a double-button / a placement branch with no READY). The commit-urgency cue is
-          ACTIVE-only. Machine-derived so it never renders over a half-init board (mount decision) and the READY
+          fix: ONE canon card, never a double-button / a placement branch with no READY). Machine-derived so it
+          never renders over a half-init board (mount decision) and the READY
           shows the instant the slice is in placement even if `dungeon.status` still lags (D89 presence-truth).
           S-80: FORFEIT (FightControls' own default + confirm, actions::abandon) needs no props here anymore — it
           works identically for a dungeon room fight or a bare world fight (both drive `use_dungeon`). A LIVE
