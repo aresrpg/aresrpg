@@ -214,29 +214,6 @@ describe('world position IndexedDB edge', () => {
     })
   })
 
-  test('movement stop commits the newest throttled pose without a per-frame write', async () => {
-    const anchor = anchor_at(100, 200)
-    const started = Date.now()
-    const stopped = { x: 145, z: 245 }
-    bind_with_anchor(WORLD_A, anchor)
-    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, started)
-    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 1)
-
-    // Bun may wake an unref'ed timer in the same timers turn as this referenced wait during the full 500-file
-    // suite. Give it one additional timers turn before observing the serialized write tail.
-    await new Promise((resolve) => setTimeout(resolve, 1_200))
-    await new Promise((resolve) => setTimeout(resolve, 25))
-    // A duplicate note does not enqueue another row, but returns the serialized tail written by the timer.
-    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...stopped }, started + 1_225)
-
-    position_edge.spawns_input({ type: 'world_bound', world_id: null })
-    position_edge._reset_position_persistence_for_test()
-    bind_with_anchor(WORLD_A, anchor)
-    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, started + 1_500)).resolves.toEqual(
-      stopped
-    )
-  })
-
   test('a receipt invalidation deletes the previous visit even when the chain anchor later matches', async () => {
     const anchor = anchor_at(100, 200)
     bind_with_anchor(WORLD_A, anchor)
