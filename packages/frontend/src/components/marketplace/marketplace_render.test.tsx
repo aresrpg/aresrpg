@@ -13,6 +13,7 @@ import { ItemTypeColumn } from './item_type_column'
 import { LedgerItemCard } from './ledger_item_card'
 import { MarketplaceListingRow } from './marketplace_listing_row'
 import { MyLotsPanel } from './my_lots_panel'
+import { SellItemHeader } from './sell_item_header'
 import { LotPurchaseConfirmation, StackableLotRows } from './stackable_lot_rows'
 import { TemplateUnavailableCard } from './template_unavailable_card'
 
@@ -351,6 +352,40 @@ describe('MyLotsPanel marketplace visibility', () => {
         name_of={(_template_id, fallback) => fallback}
       />
     )
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('0xdeadf00d')
+  })
+})
+
+// #1296 — the SELL tab's "LIST FOR SALE" card fed ItemImage `template_id ?? slug`: the NULLABLE, frequently
+// unresolvable leg BEFORE the always-present item_type slug — the exact inverse of the ruled chain
+// (marketplace_listing_icon_slug). Every item whose template row is missing from templates_item (most
+// non-cosmetic owned items) therefore rendered the placeholder cube on the card while the inventory grid
+// beside it showed the real icon. The header derives its icon through the ONE chain now.
+describe('the SELL card item header', () => {
+  const header = (props: Partial<React.ComponentProps<typeof SellItemHeader>> = {}) => (
+    <SellItemHeader
+      item={{ slug: 'razmoket', template_id: '0xdeadf00d', category: 'RESOURCE' }}
+      display_name="Razmoket"
+      subtitle="RESOURCE · Lv. 1"
+      {...props}
+    />
+  )
+
+  test('an item whose template id is an unresolvable object id resolves its icon off the item slug', () => {
+    const html = render(header())
+    expect(html).toContain('items/razmoket')
+    expect(html).not.toContain('0xdeadf00d')
+  })
+
+  test('an authored catalog slug (a resolved cosmetic) still wins over the item slug', () => {
+    const html = render(header({ catalog_name: 'Lorito Cloak (Sapphire)', catalog_slug: 'cape_lorito_chance' }))
+    expect(html).toContain('cape_lorito-chance')
+  })
+
+  // Control: a genuinely unresolved item keeps degrading to the honest glyph — never a url built from an id.
+  test('an unknown item (no slug, an object-id template) degrades to the placeholder glyph', () => {
+    const html = render(header({ item: { slug: '', template_id: '0xdeadf00d', category: 'RESOURCE' } }))
     expect(html).not.toContain('<img')
     expect(html).not.toContain('0xdeadf00d')
   })

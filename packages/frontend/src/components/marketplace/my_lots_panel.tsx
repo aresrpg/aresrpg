@@ -10,7 +10,7 @@ import { quality_color } from '../../game/screens/hud/quality'
 import { ItemImage } from '../items'
 
 import { visible_marketplace_listings } from './marketplace_model'
-import { marketplace_item_icon } from './marketplace_icon'
+import { marketplace_item_icon, marketplace_listing_icon_slug } from './marketplace_icon'
 
 export function MyLotsPanel({
   listings,
@@ -56,8 +56,10 @@ export function MyLotsPanel({
             // #1227 — the ONE marketplace icon home, off the listing's own item_type slug (the join
             // build_listing_from_view/optimistic_listing now carry) instead of the local resolver that only
             // ever had template_id to fall back to (404s to the placeholder cube for every non-cosmetic row).
+            // #1296 — through the ruled chain function, not a second copy of its precedence (this surface has
+            // no catalog join, so it passes no catalog slug).
             const icon = marketplace_item_icon({
-              slug: listing.item.slug || listing.item.template_id,
+              slug: marketplace_listing_icon_slug(listing.item),
               name: display_name,
               slot_category: listing.item.category,
             })

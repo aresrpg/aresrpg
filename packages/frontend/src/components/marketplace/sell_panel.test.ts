@@ -24,10 +24,14 @@ describe('marketplace sell panel', () => {
     }
   })
 
-  // #491: asset_slug_of used to dead-end at '' whenever template_of()/slugs[name] missed (every non-cosmetic
-  // owned item, since templates_item rarely carries a matching row) — no icon rendered except cosmetics.
-  test('asset_slug_of falls back to the raw identity instead of dead-ending at an empty icon slug', () => {
-    expect(sell_panel_source).toContain('cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? identity')
-    expect(sell_panel_source).not.toContain("cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? ''")
+  // #1296 (was #491): the card's icon slug is NOT this panel's fact. It renders SellItemHeader, which derives
+  // the slug through marketplace_listing_icon_slug — the one ruled chain. The inline `asset_slug_of` this panel
+  // used to carry read that chain backwards (template_id before the item slug) and drew the placeholder cube
+  // for every item the private catalog misses. The behaviour is pinned by the SellItemHeader render tests
+  // (marketplace_render.test.tsx); this row only forbids the chain from growing a home here again.
+  test('the sell card resolves its icon through the shared header, never an inline slug chain', () => {
+    expect(sell_panel_source).toContain('<SellItemHeader')
+    expect(sell_panel_source).not.toContain('asset_slug_of')
+    expect(sell_panel_source).not.toContain('cosmetic_icon_of')
   })
 })

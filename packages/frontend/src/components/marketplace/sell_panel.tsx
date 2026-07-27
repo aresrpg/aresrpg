@@ -11,11 +11,10 @@ import { use_marketplace_chain, type ListableItem, type ListableCharacter } from
 import { parse_2_decimal_sui, format_mist_to_sui } from '../../utils/sui_mist'
 import { get_level } from '../../experience'
 import { class_color } from '../../constants/class_colors'
-import { cosmetic_icon_of } from '../../game/cosmetic_icons.js'
-import { ItemImage } from '../items'
 
 import { InventoryPanel } from './inventory_panel'
 import { MyLotsPanel } from './my_lots_panel'
+import { SellItemHeader } from './sell_item_header'
 import {
   marketplace_lot_sizes_for_owned_quantity,
   marketplace_lot_offers,
@@ -74,17 +73,6 @@ export function SellPanel() {
     return (tmpl ? tt(tmpl, 'name') : '') || fallback
   }
 
-  function asset_slug_of(identity: string): string {
-    const tmpl = template_of(identity)
-    const name = String(tmpl?.name ?? '')
-    const template_slug = name ? slugs[name] : undefined
-    // #491: template_of()/slugs[name] misses most non-cosmetic owned items (no matching templates_item
-    // row), which used to dead-end every SELL-side icon at '' — fall back to the identity itself
-    // (template_id/item_type), the same raw-slug leg shop_item_icon.ts uses for the buy side. Cosmetics
-    // still win first via the name match above.
-    return cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? identity
-  }
-
   // Toggle-select from the inventory grid → populate the middle card (reset the form on every change).
   // Item and character picks are mutually exclusive — the card renders exactly one.
   function on_select(it: ListableItem) {
@@ -101,6 +89,13 @@ export function SellPanel() {
     set_price('')
     set_price_error(false)
   }
+
+  // The only icon fact this panel derives locally: the AUTHORED catalog identity of the picked item (#1296).
+  // The fallback chain itself lives in marketplace_listing_icon_slug — SellItemHeader calls it, this panel
+  // never re-implements it.
+  const selected_template = selected ? template_of(selected.template_id ?? selected.slug) : null
+  const catalog_name = String(selected_template?.name ?? '')
+  const catalog_slug = catalog_name ? slugs[catalog_name] : undefined
 
   const selected_identity = selected ? (selected.template_id ?? selected.id) : null
   const raw_stacks = useMemo(
@@ -265,17 +260,13 @@ export function SellPanel() {
             className="mx-4 mb-3 p-3 border border-border flex flex-col gap-2.5"
             style={{ background: 'rgba(255,255,255,0.02)' }}
           >
-            <div className="flex items-center gap-3">
-              <ItemImage id={asset_slug_of(selected.template_id ?? selected.slug)} className="w-10 h-10 shrink-0" />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-text text-[11px] tracking-[0.12em] uppercase font-semibold truncate">
-                  {name_of(selected.template_id ?? selected.slug, selected.name)}
-                </span>
-                <span className="text-muted text-[8px] tracking-[0.1em] uppercase">
-                  {t('marketplace.lots.inventory_total', { count: selected.quantity })}
-                </span>
-              </div>
-            </div>
+            <SellItemHeader
+              item={selected}
+              catalog_name={catalog_name}
+              catalog_slug={catalog_slug}
+              display_name={name_of(selected.template_id ?? selected.slug, selected.name)}
+              subtitle={t('marketplace.lots.inventory_total', { count: selected.quantity })}
+            />
 
             {available_lot_sizes.length > 1 && (
               <div className="flex flex-col gap-1.5">
@@ -365,18 +356,18 @@ export function SellPanel() {
             className="mx-4 mb-3 p-3 border border-border flex flex-col gap-2.5"
             style={{ background: 'rgba(255,255,255,0.02)' }}
           >
-            <div className="flex items-center gap-3">
-              <ItemImage id={asset_slug_of(selected.template_id ?? selected.slug)} className="w-10 h-10 shrink-0" />
-              <div className="flex flex-col min-w-0">
-                <span className="text-text text-[11px] tracking-[0.12em] uppercase font-semibold truncate">
-                  {name_of(selected.template_id ?? selected.slug, selected.name)}
-                </span>
-                <span className="text-muted text-[8px] tracking-[0.1em] uppercase">
+            <SellItemHeader
+              item={selected}
+              catalog_name={catalog_name}
+              catalog_slug={catalog_slug}
+              display_name={name_of(selected.template_id ?? selected.slug, selected.name)}
+              subtitle={
+                <>
                   {selected.category} &middot; Lv. {selected.level}
                   {selected.quantity > 1 ? ` · ×${selected.quantity}` : ''}
-                </span>
-              </div>
-            </div>
+                </>
+              }
+            />
 
             <div className="flex flex-col gap-1">
               <span className="text-muted text-[8px] tracking-[0.2em] uppercase">{t('marketplace.price_label')}</span>

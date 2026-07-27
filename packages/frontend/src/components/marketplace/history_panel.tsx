@@ -16,9 +16,10 @@ import { use_template_t } from '../../i18n/template_t'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import { truncate_address } from '../../utils/address'
 import { quality_color } from '../../game/screens/hud/quality'
-import { cosmetic_icon_of } from '../../game/cosmetic_icons.js'
 import { ItemImage } from '../items'
 import { AddressName } from '../address_name'
+
+import { marketplace_item_icon, marketplace_listing_icon_slug } from './marketplace_icon'
 
 // HISTORY tab — a seller's REALISED marketplace sales, read keyless off /v1/sales-history?seller=<me>
 // (SPEC §14). The trailing-30d revenue tile leads (house "big number first" law), then a newest-first
@@ -93,15 +94,22 @@ export function HistoryPanel() {
     const candidates = exact || !item_type ? [] : templates_item.filter((tp: any) => tp.id === item_type)
     const tmpl = exact ?? (candidates.length === 1 ? candidates[0] : null)
     const authored_name = String(tmpl?.name ?? '')
-    const template_slug = authored_name ? slugs[authored_name] : undefined
-    // #491: same missing leg as sell_panel's asset_slug_of — fall back to item_type (already documented
-    // above as "the ItemImage id ... convention") instead of dead-ending every non-cosmetic sale row.
-    const icon = cosmetic_icon_of({ slug: template_slug, name: authored_name }) ?? template_slug ?? item_type ?? ''
+    const catalog_slug = authored_name ? slugs[authored_name] : undefined
     const name =
       (tmpl ? tt(tmpl, 'name') : '') || (item_type ? item_type.replace(/_/g, ' ') : truncate_address(item_id))
+    // #1296 — the ruled chain, not a hand-copied one: authored catalog slug → the row's own item_type slug
+    // (the "ItemImage id" convention documented above) → the template id, then the shared cosmetic-aware
+    // resolver. This row used to re-implement that precedence inline (#491's leg), a copy that could not
+    // track the one home when it changed.
+    const icon = marketplace_item_icon({
+      slug: marketplace_listing_icon_slug({ slug: item_type, template_id }, catalog_slug),
+      name: authored_name || name,
+      slot_category: String(tmpl?.category ?? item_type ?? ''),
+    })
     return {
       name,
-      icon,
+      icon: icon.id,
+      image_url: icon.image_url ?? undefined,
       category: tmpl?.category ?? null,
       color: quality_color(tmpl?.quality || tmpl?.rarity || 'common'),
     }
@@ -202,7 +210,7 @@ export function HistoryPanel() {
                 style={{ background: idx % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <ItemImage id={p.icon} category={p.category} className="w-8 h-8 shrink-0" />
+                  <ItemImage id={p.icon} image_url={p.image_url} category={p.category} className="w-8 h-8 shrink-0" />
                   <span className="text-[11px] tracking-[0.06em] truncate" style={{ color: p.color }}>
                     {p.name}
                   </span>

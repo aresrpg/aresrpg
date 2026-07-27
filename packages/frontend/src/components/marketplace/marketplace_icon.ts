@@ -48,10 +48,14 @@ export function marketplace_item_icon(opts: { slug: string; name: string; slot_c
  * kept only so an unknown-template row still renders SOMETHING, degrading honestly to the placeholder glyph
  * rather than crashing). Every marketplace surface that groups/renders a listing icon derives asset_slug
  * through this one function — never re-implement the chain inline.
+ *
+ * `template_id` is nullable on the surfaces that carry an un-minted or character/burned row (the SELL card's
+ * ListableItem, a sales-history row): an all-empty chain degrades to '', which ItemImage renders as the
+ * category glyph — the same honest degradation as an unresolvable slug.
  */
 export function marketplace_listing_icon_slug(
-  item: { slug?: string | null; template_id: string },
+  item: { slug?: string | null; template_id?: string | null },
   catalog_slug?: string | null
 ): string {
-  return catalog_slug || item.slug || item.template_id
+  return catalog_slug || item.slug || item.template_id || ''
 }

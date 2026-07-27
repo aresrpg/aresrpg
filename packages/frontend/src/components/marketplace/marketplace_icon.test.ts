@@ -30,6 +30,14 @@ describe('marketplace_listing_icon_slug — the one asset-slug fallback chain', 
     expect(slug).toBe('0xdeadbeef')
   })
 
+  // #1296 — the SELL card and the sales-history rows carry a NULLABLE template id (an un-minted listable, a
+  // character/burned sale). The item's own slug is the leg that must win there; a fully empty chain degrades
+  // to '' (the category glyph), never a fabricated key.
+  test('a nullable template id never outranks the item slug', () => {
+    expect(marketplace_listing_icon_slug({ slug: 'razmoket', template_id: null })).toBe('razmoket')
+    expect(marketplace_listing_icon_slug({ slug: '', template_id: null })).toBe('')
+  })
+
   test('an empty-string item slug is treated as absent, not a valid key', () => {
     const slug = marketplace_listing_icon_slug({ slug: '', template_id: 'fallback-id' })
     expect(slug).toBe('fallback-id')

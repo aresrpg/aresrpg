@@ -6,15 +6,13 @@ import { describe, expect, test } from 'bun:test'
 
 const history_panel_source = readFileSync(new URL('./history_panel.tsx', import.meta.url), 'utf8')
 
-// #491: present()'s icon computation dead-ended at '' whenever the template_id/slugs[name] hop missed —
-// exactly the same missing template-icon leg as sell_panel's asset_slug_of, on the HISTORY sales rows.
+// #1296 (was #491): present()'s icon computation was a hand-copy of sell_panel's inline chain — a fourth home
+// for one fact, which could not track the ruled chain when it changed. It derives through
+// marketplace_listing_icon_slug + marketplace_item_icon now; the chain's own behaviour is pinned by
+// marketplace_icon.test.ts.
 describe('marketplace history panel', () => {
-  test('the icon resolver falls back to item_type instead of dead-ending at an empty icon slug', () => {
-    expect(history_panel_source).toContain(
-      'cosmetic_icon_of({ slug: template_slug, name: authored_name }) ?? template_slug ?? item_type'
-    )
-    expect(history_panel_source).not.toContain(
-      "cosmetic_icon_of({ slug: template_slug, name: authored_name }) ?? template_slug ?? ''"
-    )
+  test('the sales rows resolve icons through the one slug chain, never a hand-copied one', () => {
+    expect(history_panel_source).toContain('marketplace_listing_icon_slug({ slug: item_type, template_id }')
+    expect(history_panel_source).not.toContain('cosmetic_icon_of')
   })
 })
