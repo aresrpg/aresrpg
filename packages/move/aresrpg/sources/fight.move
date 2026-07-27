@@ -198,7 +198,7 @@ public fun join(
   version.assert_enabled();
   let (joiner, joiner_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, character_id, version); // PvM — unfinished business
-  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, joiner_party, 0, false, engine_version, ctx);
+  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, option::none(), joiner_party, 0, false, engine_version, ctx);
 }
 
 // ╔════════════════ [ Dungeon / protector doors (package-internal — dungeon.move / gathering.move) ] ═ ]
@@ -233,7 +233,7 @@ public(package) fun create_dungeon_fight(
   engine::create(
     FightBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
     false, option::none(), true, &mob_template::to_spec(mob_tmpl), group_size, group_seed,
-    mob_template::template_id(mob_tmpl), creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
+    mob_template::template_id(mob_tmpl), creator, creator_lines, option::none(), dial_snapshot(config), engine_version, clock, ctx,
   );
 }
 
@@ -268,7 +268,7 @@ public(package) fun create_protector_fight(
   engine::create(
     FightBrand {}, registry, world_id, spawn_id, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
     false, option::none(), false, &mob_template::to_spec(protector_tmpl), group_size, group_seed,
-    mob_template::template_id(protector_tmpl), creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
+    mob_template::template_id(protector_tmpl), creator, creator_lines, option::none(), dial_snapshot(config), engine_version, clock, ctx,
   );
 }
 
@@ -293,7 +293,7 @@ public(package) fun join_vouched(
   version.assert_enabled();
   mark_seated(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the unfinished-business mark applies
   let (joiner, joiner_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
-  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, option::none(), 0, true, engine_version, ctx);
+  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, option::none(), option::none(), 0, true, engine_version, ctx);
 }
 
 // ╔════════════════ [ Dungeon brand doors (2026-07-13 split — the aresrpg_dungeon witness gate) ] ═ ]
