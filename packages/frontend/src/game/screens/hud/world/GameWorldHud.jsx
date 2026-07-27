@@ -61,7 +61,8 @@ import { FightOpennessToggle } from './FightOpennessToggle.jsx'
 // (the fold refuses to arm on a bare toggle), and unmounting here is a hard stop (`world_unbound`).
 import { AutoSearchPanel } from '../../../dev/AutoSearchPanel.jsx'
 import { Minimap } from '../Minimap.jsx' // CUBE-WORLD MINIMAP — top-right 3-D relief map (self-gates on pose)
-import { HackRadioPlayer } from './HackRadioPlayer.jsx' // HACK MODE — the album radio (self-gates on hack)
+// HACK MODE'S ALBUM RADIO moved to GameWorldHost.tsx (route-independent mount, owner ruling — the radio must
+// persist across every page while hack mode is armed, which this route-gated HUD cannot do). One home.
 import { CommissionModal } from './commission/CommissionModal.jsx'
 import { Tutorial } from '../Tutorial.jsx'
 import { FightControls } from '../FightControls.jsx'
@@ -205,11 +206,6 @@ export function GameWorldHud() {
             overworld sky keeps cycling behind the board. The VISIBLE indicator is now the DayNightBar
             progress line on the compass strip (mounted by CompassStrip), which hides in fights with it. */}
         <DayNightDriver />
-        {/* HACK MODE'S RADIO (top-right, over the minimap corner): the album streamed from our own asset host
-            replaces our beds while the grid is armed. Self-gates on hack mode — nothing renders (and no
-            manifest loads) off the grid. Mounted BEFORE the toast stack on purpose: same corner, same
-            z-index, so a transient toast still paints over the permanent widget. */}
-        <HackRadioPlayer />
         <Toasts />
         {/* ONBOARDING: the compact quest-ladder objective card (CENTER-RIGHT, design ruling 2026-07-13 — its old top-right
             slot is reserved for the minimap; compact in a fight). Self-hides when every quest is resolved. */}

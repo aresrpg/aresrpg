@@ -84,18 +84,20 @@
   gap: 7px;
   align-items: flex-end;
 }
-/* ── HACK MODE RADIO → the SAME top-right corner, layered above the minimap ─────────────────────────────
+/* ── HACK MODE RADIO → a PAGE-LEVEL floating widget, top-right ─────────────────────────────────────────
    A TEXT-ONLY strip: label + track title + one control. There is no art and no player region — the album
    streams as plain audio off our own asset host, so there is nothing to show.
-   Anchored exactly like the toast stack above (top:14/right:14 + a z-index over `.mm`'s 6) — the house
-   already settled this question: same corner, z-index decides, never a hand-tuned "below the minimap" offset
-   that drifts the next time `--mm-size` changes. It sits UNDER the toast layer (mounted before it, same
-   z-index) so a transient error toast is never hidden by the permanent widget. */
+   FIXED to the VIEWPORT, not this HUD's local `.gw-hud` frame: the widget is mounted by GameWorldHost
+   (route-independent) so it persists across every page while hack mode is armed (owner ruling) — a
+   `.gw-hud`-relative `position: absolute` would vanish the moment the world-tab frame itself hides on another
+   route. z-index 40 matches the other route-independent floating chrome (VersionBadge/WalletBar,
+   version_badge.tsx) — above ordinary page content, below the app-global toast stack (z-50) and any blocking
+   modal. */
 .gw-radio {
-  position: absolute;
+  position: fixed;
   top: 14px;
   right: 14px;
-  z-index: 7; /* above .mm (z-index:6), same plane as .gw-toasts — toasts paint over it while they live */
+  z-index: 40;
   width: 208px;
   padding: 7px;
   display: flex;

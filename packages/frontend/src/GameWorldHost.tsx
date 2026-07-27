@@ -71,6 +71,18 @@ const WorldCharacterCreate = lazy(() =>
   }))
 )
 
+// HACK MODE'S ALBUM RADIO (owner ruling, 07-27): must persist across EVERY page while hack mode is armed —
+// unlike GameWorldHud, mounted here UNGATED by `active`/`show_world` (this host's own `in_app` is enough; the
+// widget self-gates on the session's hack-mode presentation and fight state, see HackRadioPlayer.jsx). Its
+// own CSS is `position: fixed` to the viewport (game-world-hud.css), not this host's bounded canvas frame, so
+// it floats over whichever route is showing. LAZY for the same reason as GameWorldHud — it statically imports
+// the audio registry, which must stay out of the eager app bundle.
+const HackRadioPlayer = lazy(() =>
+  import('./game/screens/hud/world/HackRadioPlayer.jsx').then((m) => ({
+    default: m.HackRadioPlayer,
+  }))
+)
+
 interface SceneControls {
   set_paused: (paused: boolean) => void
   destroy: () => void
@@ -477,6 +489,15 @@ export function GameWorldHost(): ReactElement {
           <span className="w-6 h-6 rounded-full border-2 border-cyan/25 border-t-cyan animate-spin" />
           <div className="text-text text-[11px] tracking-[0.28em] uppercase">{i18n.t('auth.entering_world')}</div>
         </div>
+      )}
+      {/* HACK MODE'S RADIO — deliberately NOT gated on `active`/`show_world` (owner ruling): it must keep
+          playing on every meta page, not just the world tab. Self-gates internally on the session's hack-mode
+          presentation, so this is a no-op render everywhere else. `in_app` alone (not `address` again) keeps
+          it off the logged-out spectate landing, matching every other authenticated-only overlay here. */}
+      {in_app && (
+        <Suspense fallback={null}>
+          <HackRadioPlayer />
+        </Suspense>
       )}
     </>
   )
