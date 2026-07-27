@@ -1025,8 +1025,14 @@
   font-size: 0.74rem;
 }
 
-/* Compact bridge for the shared btn-outline / btn-gold roles. `.hud-root` beats the HUD button reset. */
-.hud-root .stats__step {
+/* Compact bridge for the shared btn-outline / btn-gold roles. Scoped to `.stats` (Stats.jsx's own root
+   div, present on every mount) rather than `.hud-root` — the Characters PAGE variant
+   (pages/characters.tsx → CharactersDrawer variant="page" → Stats) renders `.stats` OUTSIDE any
+   `.hud-root` ancestor, so a `.hud-root`-scoped rule silently never fired there and the buttons fell
+   back to bare browser-default `<button>` sizing (the "cramped 16-18px chip" report). `.stats
+   .stats__step` still out-specifies the `.hud-root button { background:none; border:none }` reset
+   ((0,2,0) beats (0,1,1)) on the drawer mount, so one rule now covers both surfaces. */
+.stats .stats__step {
   width: 32px;
   height: 32px;
   flex: none;
@@ -1046,7 +1052,7 @@
     box-shadow var(--dur-1) var(--ease);
 }
 
-.hud-root .stats__step.btn-outline {
+.stats .stats__step.btn-outline {
   color: var(--color-gold);
   background: transparent;
   border: 1px solid rgba(200, 150, 60, 0.3);
@@ -1058,7 +1064,7 @@
   box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
 }
 
-.hud-root .stats__step--add.btn-gold {
+.stats .stats__step--add.btn-gold {
   color: #0a0a0f;
   background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
   border: none;
