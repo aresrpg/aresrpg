@@ -20,9 +20,14 @@ SNAPSHOTS instead of reading an ordered log.
    contiguous from 0, immutable pages, `journal_head` on snapshots. Nothing client-side ever
    writes canon.
 2. **One pure fold.** Committed fight truth is produced by the headless core fold
-   (`packages/fight/src/core*.js`) and by nothing else — there is no second committed fold and
-   no switch between them. The settlement machinery still feeds PACED PRESENTATION, which is a
-   different question from what is committed. All canonical inputs — tx receipts (an early copy
+   (`packages/fight/src/core_fold.js`) and by nothing else. Every consumer reads it through ONE
+   door — `committed_truth` in `packages/fight/src/store.js`, where its two inputs live
+   (`core`, the fold fed by the write door; `retired`, the append-only death floor) — and
+   `project.js` re-exports that door for the board. The door is TOTAL: there is no second
+   derivation, no switch, and no fallback arm to answer from when the core is absent.
+   PACED PRESENTATION is a different question and still derives from the settlement machinery
+   (`presented_state` / `display_state` / `claimed_budget_state` in `fold.js`), which is why
+   that module holds no committed fold at all. All canonical inputs — tx receipts (an early copy
    of journal content) and journal pages — normalize into ONE batch vocabulary and enter through
    ONE accept door with three laws:
    - **Contiguity**: a gap is resolved by fetching the missing range, never by skipping,
@@ -75,14 +80,53 @@ The deterministic twin (sim ≡ Move, same math, parity fixtures) makes one furt
 possible and sanctioned: pre-simulating the mob turn the moment a commit is signed, retiring
 it against the receipt like any prediction.
 
+## The oracle set: how the one fold is held honest
+
+One fold means the fold cannot be graded against a twin of itself. Every standing oracle below
+puts something OUTSIDE the fold on the right-hand side — chain bytes, a second composition, or a
+coordinate law — and each is a normal-suite check with no network at run time.
+
+- **Chain-anchored committed truth.** `packages/fight/test/parity.test.js` folds a captured REAL
+  testnet receipt through the core and requires it to equal the receipt's own chain ground truth,
+  not merely a second fold of the same events.
+- **Chain-anchored prediction.** `packages/fight/test/predict_chain_parity.test.js` pins
+  `predict_cast` to a cast the deployed package actually resolved — stat blocks, board, spell row
+  and `Hit` all chain bytes — including the branch the chain did NOT take, so a fixture that
+  matched either way fails. `packages/sim/test/zone_chain_parity.test.js` does the same for zone
+  derivation over every row of both streams.
+- **Fixture staleness has an expiry.** Both chain fixtures assert their recorded `_provenance`
+  package id IS `release.json`'s `latest` for the captured network (#1189), so a republish or an
+  upgrade turns a silently-downgraded oracle into a re-capture ticket. A companion row runs the
+  same predicate over the packages' retired ids so the binding cannot go vacuous.
+- **One composition.** The zero-drift gate (`scripts/zero-drift-gate.mjs`, run by
+  `scripts/check-constraints.sh`) resolves the world fight and the simulator fight from their
+  roots and diffs them module by module: the two surfaces are one game or the gate is red (#914).
+- **The coordinate law.** `packages/fight/test/journal_ordinal_law.test.js` pins that a version
+  straddling a page boundary keeps one continuous ordinal run — the ordinal is the chain's `seq`,
+  re-derived over the whole received set, never a row's position in the page that carried it
+  (#866). Its companion `core_shuffle.test.js` pins order-independence: committed truth is a
+  function of the SET of reads, never their order.
+- **The historical corpus.** `packages/fight/test/core_corpus_replay.test.js` replays the recorded
+  capsule corpus through ingress → fold and requires every projection to be a LEGAL board,
+  including the starve state where the eye lags the truth frontier.
+
+What is NOT an oracle, named so nobody mistakes it for one:
+`predict_build_internal_consistency.test.js` drives prediction and resolution through our own two
+modules. That is internal consistency (`docs/CODE_LAW.md` L-D4) and it stayed green through a live
+divergence; it earns its place by catching input drift between the halves, never by proving the
+game is right.
+
 ## Forbidden forever
 
 - Deriving events by diffing snapshots, at any layer, for any reason.
 - A snapshot overwriting live fold state.
 - Purging predictions on unrelated receipts.
-- A second simultaneous runtime truth owner for fight state (parallel entity/death/position
-  caches outside the core committed fold — §2 admits one fold and no switch); a comparison
-  fold is a test artifact only, never a runtime reader (#946).
+- A second committed derivation for fight state, anywhere, for any purpose — parallel
+  entity/death/position caches, a shadow fold kept for comparison, or a fallback arm that folds
+  its own inputs when the core is missing. §2 admits ONE fold and no switch, and a shadow
+  implementation maintained as a permanent oracle re-creates exactly the dual-home cost the one
+  fold removed (#946, #1027). Truth is pinned against the CHAIN, never against a second copy of
+  ourselves — the oracle set above is how.
 - Effect machinery (promises, fetches, timers) inside the fight core — effects are injected
   at the edges; results re-enter as inputs (law L-P4).
 - An effect kind published in content that the sim cannot resolve: the totality gate holds a
