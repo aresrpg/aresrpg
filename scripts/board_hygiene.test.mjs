@@ -13,7 +13,7 @@ import {
   decide_landing,
   decide_ref_gate,
   decide_stale,
-  is_fix_or_feat,
+  is_conventional_subject,
   landing_marker,
   last_human_activity,
   mentions_issue,
@@ -58,6 +58,15 @@ describe('close-keyword parsing (the close chain GitHub does not run for us)', (
   it('drops a cross-repository ref — this pass may only close its own board', () => {
     expect(parse_close_refs('Fixes othervendor/other#42', REPOSITORY)).toEqual([])
   })
+
+  it('closes a row referenced by a breaking refactor subject', () => {
+    const title = 'refactor(move)!: the package layout changes'
+    expect(parse_close_refs(`${title}\n\nFixes #1350`, REPOSITORY)).toEqual([1350])
+    expect(decide_ref_gate({ title, body: 'Fixes #1350' }, [], [])).toEqual({
+      action: 'noop',
+      reason: 'referenced',
+    })
+  })
 })
 
 describe('the ref gate reads mentions, not close-keywords', () => {
@@ -66,11 +75,20 @@ describe('the ref gate reads mentions, not close-keywords', () => {
     expect(mentions_issue('no rows here')).toBe(false)
   })
 
-  it('only judges conventional fix:/feat: subjects', () => {
-    expect(is_fix_or_feat('fix(fight): a thing')).toBe(true)
-    expect(is_fix_or_feat('feat!: a thing')).toBe(true)
-    expect(is_fix_or_feat('ci(board): a thing')).toBe(false)
-    expect(is_fix_or_feat('fixup the thing')).toBe(false)
+  it('judges every supported conventional subject, with optional scope and bang', () => {
+    for (const title of [
+      'fix(fight): a thing',
+      'feat!: a thing',
+      'refactor(move)!: a thing',
+      'perf(world): a thing',
+      'ci: a thing',
+      'test(parser): a thing',
+      'docs!: a thing',
+      'chore(deps)!: a thing',
+    ])
+      expect(is_conventional_subject(title)).toBe(true)
+    expect(is_conventional_subject('style: a thing')).toBe(false)
+    expect(is_conventional_subject('fixup the thing')).toBe(false)
   })
 
   it('warns once, then resolves itself when the ref appears', () => {
@@ -90,8 +108,8 @@ describe('the ref gate reads mentions, not close-keywords', () => {
     })
   })
 
-  it('leaves a non-fix/feat pull request alone', () => {
-    expect(decide_ref_gate({ title: 'chore: bump', body: '' }, [], []).action).toBe('noop')
+  it('leaves a non-conventional pull request alone', () => {
+    expect(decide_ref_gate({ title: 'style: align a table', body: '' }, [], []).action).toBe('noop')
   })
 })
 

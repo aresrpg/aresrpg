@@ -15,8 +15,7 @@
 //              landing PR and commit. The board drains as work lands, not on a calendar.
 //   backstop — the daily schedule replays the same sweep over PRs merged into edge inside the
 //              --since-days window, so a missed, failed, or raced push run self-heals.
-//   ref-gate — a `fix:`/`feat:` PR carrying ZERO issue refs gets ONE warning comment: the close
-//              chain has nothing to close. Warning only, never a merge blocker.
+//   ref-gate — warns once when a conventional PR has no issue refs; never a merge blocker.
 //   stale    — the background backstop for rows nobody ever picked up. 7 days without human
 //              activity earns `stale-warning`; 7 more earn a not-planned close.
 //
@@ -99,12 +98,12 @@ export function parse_close_refs(text, repository) {
   return [...new Set(numbers)].toSorted((left, right) => left - right)
 }
 
-// The ref-gate asks the looser question ("did this PR reference ANY row?") on purpose: it warns about
-// a BROKEN CLOSE CHAIN, and a deliberate `Refs #123` is a contributor who already thought about the
-// board. Warning on that would be noise, and a noisy warning is an ignored warning.
+// The ref-gate asks the looser question ("did this PR reference ANY row?"). A deliberate `Refs #123`
+// means the contributor considered the board; warning on it would be noise.
 export const mentions_issue = (text) => /#\d+\b/.test(String(text ?? ''))
 
-export const is_fix_or_feat = (title) => /^(?:fix|feat)(?:\([^)]*\))?!?:\s/i.test(String(title ?? '').trim())
+const CONVENTIONAL_SUBJECT_RE = /^(?:fix|feat|refactor|perf|ci|test|docs|chore)(?:\([^)\r\n]+\))?!?:\s/i
+export const is_conventional_subject = (title) => CONVENTIONAL_SUBJECT_RE.test(String(title ?? '').trim())
 
 export const landing_marker = (evidence) =>
   evidence?.pr_number
@@ -171,7 +170,8 @@ export function decide_stale(issue, timeline, now_ms) {
 }
 
 export function decide_ref_gate(pull_request, commits, comments) {
-  if (!is_fix_or_feat(pull_request?.title)) return { action: 'noop', reason: 'not a fix:/feat: pull request' }
+  if (!is_conventional_subject(pull_request?.title))
+    return { action: 'noop', reason: 'not a conventional pull request' }
   const referenced =
     mentions_issue(pull_request?.body) ||
     mentions_issue(pull_request?.title) ||
@@ -218,7 +218,7 @@ export const stale_close_comment = () =>
 
 export const ref_gate_comment = () =>
   [
-    '**No issue ref.** This `fix:`/`feat:` pull request references no row, so the close chain is broken:',
+    '**No issue ref.** This conventional pull request references no row, so the close chain is broken:',
     'nothing on the board drains when it lands.',
     '',
     'Add `Fixes #N` (or `Closes #N`) to the body. This repo lands by fast-forward push, where GitHub’s own',

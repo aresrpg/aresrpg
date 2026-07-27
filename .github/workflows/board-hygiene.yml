@@ -14,7 +14,7 @@
 #               landing PR and commit as evidence.
 #   backstop  — the same sweep on a daily schedule over pull requests merged into edge in the last
 #               14 days, so a missed, failed, or raced landing run self-heals.
-#   ref_gate  — a `fix:`/`feat:` pull request with ZERO issue refs gets ONE warning comment: the
+#   ref_gate  — a conventional pull request with ZERO issue refs gets ONE warning comment: the
 #               close chain has nothing to close. A WARNING, never a merge blocker.
 #   stale     — the background backstop for rows nobody ever picked up: 7 days without human
 #               activity earns `stale-warning`, 7 more earn a not-planned close. Exempt by label:
@@ -104,7 +104,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: 'warn when a fix:/feat: pull request references no row'
+      - name: warn when a conventional pull request references no row
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
