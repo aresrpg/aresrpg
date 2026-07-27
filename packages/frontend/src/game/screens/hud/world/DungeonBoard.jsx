@@ -473,7 +473,12 @@ export function DungeonBoard() {
           trap_cells: my_trap_cells,
         }
       )
-      if (lvl?.free_cell === true) for (const c of [...footprint]) if (occupied.get(c)?.alive) footprint.delete(c)
+      // #1210: a cell THIS turn's drafted casts already vacate (`optimistic_vacated`, fed to the move masks two
+      // screens above) must free the SAME trap footprint — one occupancy home, no second candidate-set home (that
+      // asymmetry was the bug: a fresh corpse blocked trap placement in the preview only, #1070's class).
+      if (lvl?.free_cell === true)
+        for (const c of [...footprint])
+          if (occupied.get(c)?.alive && !optimistic_vacated.has(c)) footprint.delete(c)
       // FIX 4 casts_per_target: a cell already at its per-target cap this turn drops out (chain aborts ECastsPerTarget).
       if (cpt_target_cap !== Infinity)
         for (const c of [...footprint])
@@ -507,6 +512,7 @@ export function DungeonBoard() {
     armed_key,
     cast_path,
     occupied,
+    optimistic_vacated,
     obstacles,
     caster_cell,
     cast_params,
