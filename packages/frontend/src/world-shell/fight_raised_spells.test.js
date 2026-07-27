@@ -16,6 +16,8 @@ import * as sdk_fight from '@aresrpg/sdk/fight'
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 
+import { rebind_world_character, reset_world_binding } from './session_gate.js'
+
 // The engage graph pulls in the browser wallet registration at module load, so every one of its modules is
 // imported DYNAMICALLY — after the host surface exists.
 const restore_browser_globals = install_browser_globals()
@@ -32,6 +34,7 @@ const { use_auth } = await import('../auth')
 afterAll(restore_browser_globals)
 
 const CHARACTER = '0xchar'
+const WORLD = '0x704d'
 const WARCLEAVE = `0x${'a'.repeat(64)}`
 const VAULT = `0x${'d'.repeat(64)}`
 const CHICKLET = `0x${'b'.repeat(64)}`
@@ -79,6 +82,7 @@ beforeEach(() => {
   prior_address = use_auth.getState().address ?? null
   prior_characters = context.get_state().sui?.characters ?? null
   use_auth.setState({ address: '0xme' })
+  rebind_world_character(CHARACTER, WORLD) // a world join needs the character's world — it IS the fight's scope
   context.dispatch('action/sui_data', { characters: [{ id: CHARACTER, classe: 'senshi' }] })
   set_spell_corpus_for_test(CORPUS)
   set_expedition_sdk_mock(async () => ({ grpc_client: {} }))

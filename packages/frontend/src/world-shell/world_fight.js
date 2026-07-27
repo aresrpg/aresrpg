@@ -56,6 +56,9 @@ export function enter_world_fight({
     // #609 — WHICH group this fight took, held for the whole session: settlement is the only place it can be
     // given back, and by then the claim is long over. Null once the session ends (reset clears it).
     world_group,
+    // A world fight's own `world` field IS this id, so the session's registry shard follows from it (a dungeon
+    // room seeds this from the CREATOR's pass instead — see dungeon_run_store).
+    fight_scope_id: world_id,
     template_id: world_id,
     character_id,
     run_pass_id: null, // a world fight has no RunPass — refresh()/settle take their world (no-run) branches
@@ -103,6 +106,9 @@ export function spectate_world_fight({ fight_id, world_id = null, public_fight =
     fight_fresh: false,
     dungeon_id: fight_id,
     world_id,
+    // A world fight's own `world` field IS this id, so the session's registry shard follows from it (a dungeon
+    // room seeds this from the CREATOR's pass instead — see dungeon_run_store).
+    fight_scope_id: world_id,
     template_id: world_id,
     character_id: null,
     run_pass_id: null,
