@@ -7,7 +7,7 @@
 
 import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
-import { STATUS_ROOM_CLEARED } from '@aresrpg/fight/board_state'
+import { STATUS_ROOM_CLEARED, STATUS_FAILED } from '@aresrpg/fight/board_state'
 
 import { TERMINAL_HOLD_CAP_MS } from '../fight-engine/overlay_intents.js'
 
@@ -92,6 +92,14 @@ export function hold_until_presented(collapse, cap_ms = TERMINAL_HOLD_CAP_MS) {
  */
 export function route_settlement(store, status, ids = {}, { on_settled } = {}) {
   const fight_id = ids.fight_id ?? store.getState().fight_id
-  const run = () => settle_chain_latched(store, { terminal: status !== STATUS_ROOM_CLEARED, ...ids, on_settled })
+  // #609 — a DEFEAT releases the claimed mob group back into the world in the SAME settle PTB. The status IS
+  // the verdict, and this is the one place it reaches settlement.
+  const run = () =>
+    settle_chain_latched(store, {
+      terminal: status !== STATUS_ROOM_CLEARED,
+      lost: status === STATUS_FAILED,
+      ...ids,
+      on_settled,
+    })
   return status === STATUS_ROOM_CLEARED ? run() : run_signal_settlement(status, fight_id, run)
 }

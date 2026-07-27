@@ -138,7 +138,8 @@ describe('the member claim door is witness-free — and still fails closed on a 
   }
 
   test('a member-roster target takes the derivation door EXPLICITLY, never a composed witness', () => {
-    expect(world_group_door(base)).toEqual({ door: 'derivation', reason: 'member_roster_door' })
+    // The door also NAMES the row it claims (#609): that index is what a lost fight releases the group by.
+    expect(world_group_door(base)).toEqual({ door: 'derivation', reason: 'member_roster_door', index: 2 })
   })
 
   test('a roster the fresh stream disagrees with is a STALE STREAM refusal, not a quieter door', () => {
