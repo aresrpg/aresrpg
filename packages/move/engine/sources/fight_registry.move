@@ -21,11 +21,12 @@
 /// registries and every door takes the one its SCOPE maps to. Nothing else moves: same type, same signatures
 /// plus the scope the callers already hold, and `FightShards` is the directory that resolves scope → shard.
 ///
-/// The shard key is the SCOPE ALONE (never the spawn id), because the latch's uniqueness domain sets the floor:
-/// a character must find its own latch from any fight it tries to enter, and it can only be looked for in one
-/// shard. So intra-scope entry still serialises — the win is that every world, dungeon run and kolizeum match
-/// no longer serialises against each other. Splitting the derivation half onto a finer key is a later move, and
-/// it costs a second shared input per create; it waits for a real scope to hit a real budget.
+/// TWO INDEPENDENT SHARD KEYS, because the two jobs answer questions about different things:
+///   • DERIVATION is keyed by the SCOPE — "does this mob group already have a fight" is a fact about the scope.
+///   • THE LATCH is keyed by the CHARACTER — "is this character already fighting" is a fact about the character,
+///     and an authority chosen by the asking fight's scope is no authority at all (see `assert_latch_authority`).
+/// A create therefore touches two shards, both spread; a join touches only the joiner's latch shard. Intra-key
+/// entry still serialises — the win is that scopes and characters no longer serialise against each other.
 module aresrpg_fight::fight_registry;
 
 use std::type_name::TypeName;
@@ -57,6 +58,15 @@ public fun shard_count(): u64 { SHARD_COUNT }
 /// a state invariant only while scope → shard is a function, so this assert is correctness, not tidiness.
 public fun assert_scope(registry: &FightRegistry, scope: ID) {
   assert!(registry.index == shard_index(scope), EWrongShard);
+}
+
+/// THE LATCH'S OWN DOOR. The latch answers a question about a CHARACTER — "is it in a live fight anywhere" — so
+/// the shard that answers it is derived from the character and from nothing else. Keying it by the asking fight's
+/// scope instead let one character latch twice: two scopes on different shards each saw an empty table, and a
+/// character rostered into both (two kolizeum lobbies is the shipped path — kolizeum takes an immutable character
+/// id and runs no dirty counter) was seated in two live fights at once.
+public fun assert_latch_authority(registry: &FightRegistry, character: ID) {
+  assert!(registry.index == shard_index(character), EWrongShard);
 }
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
@@ -157,8 +167,8 @@ public fun group_fight_address(registry: &FightRegistry, world: ID, spawn_id: u6
 
 /// Latch `character` into `fight` — aborts if it is already seated in a LIVE fight (the multi-fight XP-farm
 /// vector: N concurrent fights off one stale HP snapshot). Every seat path (create/join/doors) runs this.
-public(package) fun latch_character(registry: &mut FightRegistry, scope: ID, brand: TypeName, character: ID, fight: ID) {
-  assert_scope(registry, scope);
+public(package) fun latch_character(registry: &mut FightRegistry, brand: TypeName, character: ID, fight: ID) {
+  assert_latch_authority(registry, character);
   let k = LatchKey { brand, character };
   assert!(!registry.active_fighters.contains(k), ECharacterInFight);
   registry.active_fighters.add(k, fight);
@@ -166,16 +176,16 @@ public(package) fun latch_character(registry: &mut FightRegistry, scope: ID, bra
 
 /// Clear a seat's latch (settlement — every seat, in the same tx that deletes the Fight). Idempotent-tolerant:
 /// a missing entry is a no-op (defensive: test doors seat without latching).
-public(package) fun unlatch_character(registry: &mut FightRegistry, scope: ID, brand: TypeName, character: ID) {
-  assert_scope(registry, scope);
+public(package) fun unlatch_character(registry: &mut FightRegistry, brand: TypeName, character: ID) {
+  assert_latch_authority(registry, character);
   let k = LatchKey { brand, character };
   if (registry.active_fighters.contains(k)) { registry.active_fighters.remove(k); };
 }
 
-/// The live fight `character` is seated in, if any (RPC pre-flight + client teach-don't-reject). Takes the scope
-/// because latches are shard-homed: ask the shard the character's world maps to.
-public fun character_fight(registry: &FightRegistry, scope: ID, brand: TypeName, character: ID): Option<ID> {
-  assert_scope(registry, scope);
+/// The live fight `character` is seated in, if any (RPC pre-flight + client teach-don't-reject). Ask the shard
+/// the CHARACTER maps to — the same one that holds its latch.
+public fun character_fight(registry: &FightRegistry, brand: TypeName, character: ID): Option<ID> {
+  assert_latch_authority(registry, character);
   let k = LatchKey { brand, character };
   if (registry.active_fighters.contains(k)) option::some(*registry.active_fighters.borrow(k)) else option::none()
 }

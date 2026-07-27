@@ -69,15 +69,15 @@ public struct FightOutcome has key {
 /// Settle a TERMINAL fight: one soulbound `FightOutcome` per seat → its owner, then the shared Fight is
 /// deleted. Anyone may call (the storage rebate is the janitor's tip); the caller gets nothing else. XP is
 /// computed HERE (wisdom is a per-seat stat; the multiplier is the create-time snapshot on the Fight).
-entry fun settle_and_destroy(fight: Fight, registry: &mut FightRegistry, version: &Version, ctx: &mut TxContext) {
-  settle_core(fight, registry, version, option::none(), ctx).destroy_none();
+entry fun settle_and_destroy(fight: Fight, version: &Version, ctx: &mut TxContext) {
+  settle_core(fight, version, option::none(), ctx).destroy_none();
 }
 
 /// Permissionless janitor for an abandoned PLACEMENT fight. The three guards are all fight-authenticated and
 /// deliberately conjunctive: exact placement status rejects active/terminal fights, the immutable deadline
 /// supplies expiry, and ANY ready seat rejects the sweep. Successful cleanup is auto-abandon for every seat,
 /// then the ordinary terminal settlement path mints defeat outcomes and releases every registry latch.
-entry fun sweep_fight(mut fight: Fight, registry: &mut FightRegistry, version: &Version, clock: &Clock, ctx: &mut TxContext) {
+entry fun sweep_fight(mut fight: Fight, version: &Version, clock: &Clock, ctx: &mut TxContext) {
   version.assert_enabled();
   assert!(fight::status(&fight) == fight::status_placement(), ENotSweepable);
   assert!(clock.timestamp_ms() >= fight::placement_deadline_ms(&fight), ENotExpired);
@@ -97,7 +97,7 @@ entry fun sweep_fight(mut fight: Fight, registry: &mut FightRegistry, version: &
   };
   turns::finish_defeat(&mut fight);
   fight_events::emit_swept(fid);
-  settle_core(fight, registry, version, option::none(), ctx).destroy_none();
+  settle_core(fight, version, option::none(), ctx).destroy_none();
 }
 
 fun no_ready_seats(fight: &Fight): bool {
@@ -116,8 +116,8 @@ fun no_ready_seats(fight: &Fight): bool {
 /// unreachable for the active player. Every OTHER seat's outcome transfers exactly as `settle_and_destroy`.
 /// The caller MUST own the requested seat: `unpack` is possession-gated — without this assert a stranger could
 /// take a victim's outcome by value and unpack-destroy it (XP/loot burned, fight-marker latched forever).
-public fun settle_and_take(fight: Fight, character: ID, registry: &mut FightRegistry, version: &Version, ctx: &mut TxContext): FightOutcome {
-  let taken = settle_core(fight, registry, version, option::some(character), ctx);
+public fun settle_and_take(fight: Fight, character: ID, version: &Version, ctx: &mut TxContext): FightOutcome {
+  let taken = settle_core(fight, version, option::some(character), ctx);
   assert!(taken.is_some(), ENoSuchSeat);
   taken.destroy_some()
 }
@@ -125,6 +125,17 @@ public fun settle_and_take(fight: Fight, character: ID, registry: &mut FightRegi
 /// The ONE settlement body (entry janitor + take door are thin shells): mints per seat, transfers every seat's
 /// outcome to its owner EXCEPT the `take_character` seat (ownership-asserted, handed back by value), unlatches,
 /// deletes the Fight.
+/// RELEASE the seat's in-fight latch. Settlement cannot do this itself: the latch authority is the CHARACTER's
+/// shard (one per seat, and Move takes no vector of `&mut`), while settlement holds only the fight. The outcome
+/// is the proof — it exists only because `settle_core` ran, and it names the brand and character whose latch it
+/// frees. Possession-gated by being an owned object, so a seat frees its own.
+///
+/// Landing the release at the OPEN rather than the settle is the rule this codebase already runs on the consumer
+/// side: an unopened result keeps its obligation, so a defeated player cannot dodge the landing by walking away.
+public fun release_latch(registry: &mut FightRegistry, outcome: &FightOutcome) {
+  fight_registry::unlatch_character(registry, outcome.brand, outcome.character);
+}
+
 /// Run every owner module's field reclaim before the Fight dies. THE storage-rebate door: `object::delete` does
 /// not track dynamic fields (S-07), so a family missing from this list is orphaned in storage forever and its
 /// deposit is never rebated — the janitor's tip shrinks by exactly that much. One line per module that writes
@@ -136,7 +147,7 @@ fun sweep_fields(fight: &mut Fight) {
   action_envelope::sweep_fields(fight);
 }
 
-fun settle_core(mut fight: Fight, registry: &mut FightRegistry, version: &Version, take_character: Option<ID>, ctx: &mut TxContext): Option<FightOutcome> {
+fun settle_core(mut fight: Fight, version: &Version, take_character: Option<ID>, ctx: &mut TxContext): Option<FightOutcome> {
   version.assert_enabled();
   let status = fight::status(&fight);
   let won = status == fight::status_victory();
@@ -203,7 +214,6 @@ fun settle_core(mut fight: Fight, registry: &mut FightRegistry, version: &Versio
     } else {
       transfer::transfer(o, participant::owner(p));
     };
-    fight_registry::unlatch_character(registry, world, brand, participant::character(p)); // S-12f — the latch dies with the fight
     i = i + 1;
   };
   fight_events::emit_settled(fid, status, party);
