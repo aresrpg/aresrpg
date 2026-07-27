@@ -95,13 +95,23 @@ export const generate = (board_seed, variant) => {
   s = r.state
   const obs_count = r.value
   const obstacles = []
-  s = place_blockers(s, mask, candidates, obstacles, obs_count)
+  s = place_blockers(s, candidates, obs_count, cand => {
+    if (obstacles.includes(cand) || !blocker_placeable(mask, obstacles, cand))
+      return false
+    obstacles.push(cand)
+    return true
+  })
 
   r = rng_range(s, HOLE_MIN, HOLE_MAX)
   s = r.state
   const hole_count = r.value
   const holes_work = [...obstacles] // Move: `let mut holes = obstacles` copies
-  place_blockers(s, mask, candidates, holes_work, hole_count) // final prng state intentionally unused
+  place_blockers(s, candidates, hole_count, cand => {
+    if (holes_work.includes(cand) || !blocker_placeable(mask, holes_work, cand))
+      return false
+    holes_work.push(cand)
+    return true
+  }) // final prng state intentionally unused
   const holes = holes_work.slice(obstacles.length) // tail_after: only the newly-added holes
 
   const blocked = [...obstacles, ...holes]
@@ -178,11 +188,13 @@ const placeable_candidates = mask => {
 }
 
 /**
- * Place `count` king-isolated blockers into `out` (mutated in place), probing candidates from a prng-drawn
- * offset with a bounded linear scan. Returns the advanced prng state. Mirrors board::place_blockers.
- * @param {number} s @param {bigint[]} mask @param {number[]} candidates @param {number[]} out @param {number} count
+ * Place up to `count` blockers through `try_place`, probing candidates from a prng-drawn offset with a bounded
+ * linear scan. The caller owns the board representation and returns true only when it accepted a candidate.
+ * Returns the advanced prng state. This draw/probe loop is the deterministic home for every JS board generator.
+ * @param {number} s @param {number[]} candidates @param {number} count
+ * @param {(candidate: number) => boolean} try_place
  */
-const place_blockers = (s, mask, candidates, out, count) => {
+export const place_blockers = (s, candidates, count, try_place) => {
   const len = candidates.length
   if (len === 0) return s
   let placed = 0
@@ -193,8 +205,7 @@ const place_blockers = (s, mask, candidates, out, count) => {
     let took = false
     for (let j = 0; j < len; j++) {
       const cand = candidates[(idx0 + j) % len]
-      if (!out.includes(cand) && blocker_placeable(mask, out, cand)) {
-        out.push(cand)
+      if (try_place(cand)) {
         took = true
         break
       }

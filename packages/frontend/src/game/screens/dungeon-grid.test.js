@@ -17,6 +17,7 @@ import {
   dungeon_blocked_cells,
 } from './dungeon-grid.js'
 import { encode, bfsPathCost, bfsPath, GRID_W, GRID_CELLS } from '@aresrpg/fight/los'
+import { generate as generate_board } from '@aresrpg/sim/board_gen'
 
 // D75 — cells are CANONICAL stride-20 (fight-los GRID_W) everywhere in the client. The Move determinism
 // contract is pinned MOVE-NATIVE (dungeon_grid_test.move golden vectors); `generateGrid` is a DEV/TEST twin
@@ -36,6 +37,23 @@ describe('dungeon-grid / hashSeed (mirrors dungeon_grid_test.move::hash_seed_mat
 })
 
 describe('dungeon-grid / generateGrid (D75 dev/test twin — determinism + invariants at canonical stride 20)', () => {
+  it('stays byte-equivalent to the deterministic sim home', () => {
+    for (const [seed, variant] of [
+      [0, 0],
+      [0xdeadbeef, 3],
+      [12345, 1],
+      [0xffffffff, 7],
+      [777, 2],
+    ]) {
+      const frontend = generateGrid(seed, variant)
+      const sim = generate_board(seed, variant)
+      expect({
+        ...frontend,
+        shape_mask: maskWords(frontend.shape_mask),
+      }).toEqual(sim)
+    }
+  })
+
   // JS-side determinism pins (captured from THIS twin; the load-bearing determinism gate is Move-native).
   it('generate(0, 0) is stable', () => {
     const g = generateGrid(0, 0)

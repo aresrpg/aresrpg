@@ -110,7 +110,6 @@ const SIM_ONLY = [
   ['packages/fight/src/sim_chain.js', 'MOCK'],
   ['packages/fight/src/sim_chain_events.js', 'MOCK'],
 
-  ['packages/sim/src/board_gen.js', 'MOCK-MATH'],
   ['packages/sim/src/equipment_stats.js', 'MOCK-MATH'],
   ['packages/sim/src/mob_stats.js', 'MOCK-MATH'],
   ['packages/sim/src/recorder.js', 'MOCK-MATH'],

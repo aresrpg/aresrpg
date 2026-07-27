@@ -17,6 +17,7 @@
 // Cells use the CANONICAL stride-20 encoding (`encode(x,y)=y*20+x`, fight-los GRID_W=20).
 
 import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
+import { place_blockers } from '@aresrpg/sim/board_gen'
 
 import { GRID_W, GRID_H, GRID_CELLS, encode, decode, bfsPath } from '@aresrpg/fight/los'
 
@@ -252,34 +253,6 @@ function buildShape(s, shape_code, width, height) {
   return { mask: blobMask(width, height, rTl, rTr, rBl, rBr), state: s }
 }
 
-/**
- * Place up to `count` king-isolated blockers into `out` (already holding priors). Roll a start index, probe the
- * candidate enumeration forward; a full cycle with none → stop (caps are maxima). Returns the next rng state.
- * @param {number} s @param {Set<number>} mask @param {number[]} candidates @param {Set<number>} out @param {number} count
- */
-function placeBlockers(s, mask, candidates, out, count) {
-  const len = candidates.length
-  if (len === 0) return s
-  let placed = 0
-  while (placed < count) {
-    const r = rng_int(s, len)
-    s = r.state
-    const idx0 = r.value
-    let took = false
-    for (let j = 0; j < len; j++) {
-      const cand = candidates[(idx0 + j) % len]
-      if (!out.has(cand) && blockerPlaceable(mask, out, cand)) {
-        out.add(cand)
-        took = true
-        break
-      }
-    }
-    if (!took) break
-    placed++
-  }
-  return s
-}
-
 /** The on-mask unblocked cells (row-major) — the start-cell pool. */
 function openCells(mask, blocked) {
   const out = []
@@ -344,12 +317,20 @@ export function generateGrid(dungeonHash, roomIdx) {
   const candidates = placeableCandidates(mask)
   const obs_count = draw(rng_range, OBS_MIN, OBS_MAX)
   const obsSet = new Set()
-  s = placeBlockers(s, mask, candidates, obsSet, obs_count)
+  s = place_blockers(s, candidates, obs_count, cand => {
+    if (obsSet.has(cand) || !blockerPlaceable(mask, obsSet, cand)) return false
+    obsSet.add(cand)
+    return true
+  })
   const obstacles = [...obsSet]
 
   const hole_count = draw(rng_range, HOLE_MIN, HOLE_MAX)
   const holesBuf = new Set(obsSet) // seed with obstacles so holes stay king-isolated from them…
-  s = placeBlockers(s, mask, candidates, holesBuf, hole_count)
+  s = place_blockers(s, candidates, hole_count, cand => {
+    if (holesBuf.has(cand) || !blockerPlaceable(mask, holesBuf, cand)) return false
+    holesBuf.add(cand)
+    return true
+  })
   const holes = [...holesBuf].filter(c => !obsSet.has(c)) // …then split holes back out (order-preserving)
 
   // 4. start cells — 6/side, on-mask, unblocked, opposite bands
