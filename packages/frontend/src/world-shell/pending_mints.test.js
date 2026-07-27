@@ -20,6 +20,7 @@ import {
   sweep_stranded_results,
   mint_recovery_detail,
   mint_recovery_line,
+  recovery_item_summary,
   pending_mint_status,
   reset_pending_mints_for_test,
 } from './pending_mints.js'
@@ -217,12 +218,9 @@ describe('sweep_stranded_results (leg②) — recover opened-but-un-burned resul
     expect(new Set(minted.map((m) => m.id))).toEqual(new Set(['0xLOOT', '0xHUSK'])) // never 0xUNOPENED (chain-gated)
     expect(minted.find((m) => m.id === '0xLOOT').templates).toEqual(['0xA', '0xB'])
     expect(minted.find((m) => m.id === '0xHUSK').templates).toEqual([]) // bare burn
-    expect(summaries).toEqual([
-      {
-        count: 2,
-        details: 'digest-0xLOOT → loot_0 ×1 (0xLOOT-item-0), loot_1 ×1 (0xLOOT-item-1); digest-0xHUSK → ∅',
-      },
-    ]) // ONE quiet summary — no per-result spam, with digest + collected delta in its rendered message payload
+    expect(summaries).toEqual([{ count: 2, details: 'loot_0 ×1, loot_1 ×1' }])
+    // ONE quiet summary, PLAYER-READABLE: item names/slugs only. No object id, no digest, no `∅` glyph ever
+    // reaches the toast (#1223 rider) — the digest keeps its provenance in the dev log below.
     expect(get_log_buffer().map(({ message }) => message)).toEqual([
       'mint-sweep recovered stranded reward: digest-0xLOOT → loot_0 ×1 (0xLOOT-item-0), loot_1 ×1 (0xLOOT-item-1)',
       'mint-sweep recovered stranded reward: digest-0xHUSK → ∅',
@@ -292,7 +290,7 @@ describe('mint recovery instrumentation', () => {
     expect(detail).toEqual({
       result_id: '0xresult',
       digest: '0xdigest',
-      object_deltas: [{ object_id: '0xitem', item_type: 'razkin_hide', amount: 2 }],
+      object_deltas: [{ object_id: '0xitem', item_type: 'razkin_hide', name: '', amount: 2 }],
       balance_deltas: [{ coin_type: '0x2::sui::SUI', amount: '25' }],
     })
     expect(mint_recovery_line(detail)).toBe('0xdigest → razkin_hide ×2 (0xitem), +25 0x2::sui::SUI')
@@ -310,6 +308,30 @@ describe('mint recovery instrumentation', () => {
     ).toBe('0xhusktx → ∅')
   })
 
+  it('resolves the CATALOG name for a minted template (the toast never has to show a slug)', () => {
+    const templates = new Map([['0xtemplate', { name: 'Razkin Hide', item_type: 'razkin_hide', category: 'RESOURCE' }]])
+    expect(
+      mint_recovery_detail(
+        {
+          verdict: 'minted',
+          result_id: '0xresult',
+          settlement: {
+            receipt: {
+              digest: '0xdigest',
+              events: [
+                {
+                  type: '0xares::item::ItemMinted',
+                  parsedJson: { item: '0xitem', template: '0xtemplate', item_type: 'razkin_hide', amount: '2' },
+                },
+              ],
+            },
+          },
+        },
+        templates
+      ).object_deltas
+    ).toEqual([{ object_id: '0xitem', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 }])
+  })
+
   it('falls back to created objectChanges when an ItemMinted event is unavailable', () => {
     expect(
       mint_recovery_detail({
@@ -322,6 +344,47 @@ describe('mint recovery instrumentation', () => {
           },
         },
       }).object_deltas
-    ).toEqual([{ object_id: '0xitem', item_type: '0xares::item::Item', amount: 1 }])
+    ).toEqual([{ object_id: '0xitem', item_type: '0xares::item::Item', name: '', amount: 1 }])
+  })
+})
+
+// #1223 rider — the legacy collector survives ONLY as the pre-fix sweeper, so its one toast must read like a
+// game message, not a chain dump: item NAMES, merged quantities, a bounded list, and NEVER an object id or a
+// digest (those keep their provenance in the dev log). The toast body is language-neutral by construction —
+// names come from the localized catalog and `×`/`…` are symbols, so no new i18n key is owed.
+describe('recovery_item_summary — the player-facing recovery line (names, never hex)', () => {
+  const delta = (name, item_type, amount, object_id = '0xdeadbeef') => ({ object_id, item_type, name, amount })
+
+  it('renders catalog names with merged quantities, newest-first order preserved', () => {
+    expect(
+      recovery_item_summary([
+        { object_deltas: [delta('Razkin Hide', 'razkin_hide', 2), delta('Iron Ore', 'iron_ore', 1)] },
+        { object_deltas: [delta('Razkin Hide', 'razkin_hide', 3)] },
+      ])
+    ).toBe('Razkin Hide ×5, Iron Ore ×1')
+  })
+
+  it('NEVER emits an object id or a digest — the hex ban is the whole rider', () => {
+    const line = recovery_item_summary([{ digest: '0xabc123', object_deltas: [delta('', '', 1, '0xfeed')] }])
+    expect(line).not.toMatch(/0x/)
+  })
+
+  it('degrades to the item_type slug when the catalog misses, never to the id', () => {
+    expect(recovery_item_summary([{ object_deltas: [delta('', 'razkin_hide', 1)] }])).toBe('razkin_hide ×1')
+  })
+
+  it('drops a row that can only be named by its id (honest silence beats a hex address)', () => {
+    expect(recovery_item_summary([{ object_deltas: [delta('', '', 4)] }])).toBe('')
+  })
+
+  it('bounds a big sweep with an ellipsis instead of a wall of text', () => {
+    const many = Array.from({ length: 9 }, (_, i) => delta(`Item ${i}`, `item_${i}`, 1))
+    expect(recovery_item_summary([{ object_deltas: many }])).toBe(
+      'Item 0 ×1, Item 1 ×1, Item 2 ×1, Item 3 ×1, Item 4 ×1, Item 5 ×1…'
+    )
+  })
+
+  it('an all-husk sweep summarises to NOTHING — the toast title alone is the honest message', () => {
+    expect(recovery_item_summary([{ digest: '0xhusktx', object_deltas: [] }])).toBe('')
   })
 })
