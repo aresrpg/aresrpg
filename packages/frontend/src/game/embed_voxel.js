@@ -36,6 +36,7 @@ import {
   can_persist_world_position,
   flush_world_position,
   note_world_position,
+  read_world_chain_anchor,
   read_world_position,
 } from '../world-shell/spawns_adapter.js'
 import { should_reuse_pending_session } from './voxel_session_identity.js'
@@ -395,7 +396,8 @@ function create_session(
     const session = stored && in_bounds ? stored : null
     // CHAIN TRUTH (§5): use the canonical checkpoint cache populated before mount. The pure boot projection
     // applies the distance guard again, so a local row can never outrank a disagreeing chain anchor.
-    const checkpoint = world_id ? read_checkpoint_spawn(character.id, world_id) : null
+    const checkpoint =
+      world_id && (read_world_chain_anchor(character.id, world_id) ?? read_checkpoint_spawn(character.id, world_id))
     const chosen = resolve_boot_spawn({ checkpoint, session, fallback: WORLD_SPAWN, y_seed: WORLD_SPAWN[1] })
     boot_spawn = chosen.position
     boot_yaw = chosen.yaw
@@ -611,15 +613,15 @@ function create_session(
     mobile: is_mobile(),
   })
   // ONE eligibility predicate for BOTH cadence writes and explicit flushes (pagehide / quality re-boot).
-  // dungeon_id also covers world fights before the board camera activates; cave_sample independently covers
-  // the cave transition. Therefore no fight/dungeon frame — and no unload WHILE in one — writes the cache.
+  // The complete run identity closes optimistic entry (`in_session`), between-room (`run_pass_id`), and
+  // pre-camera world-fight (`fight_id`) windows; cave_sample independently covers the cave transition.
   const can_persist_position = () => {
     const dungeon = use_dungeon.getState()
     return can_persist_world_position({
       character_id: character?.id ?? null,
       world_id: bound_world,
-      in_fight: fight_camera.is_active(),
-      in_dungeon: !!(dungeon.dungeon || dungeon.dungeon_id),
+      in_fight: fight_camera.is_active() || !!dungeon.fight_id,
+      in_dungeon: !!(dungeon.in_session || dungeon.run_pass_id || dungeon.dungeon || dungeon.dungeon_id),
       in_cave: !!cave_sample,
     })
   }

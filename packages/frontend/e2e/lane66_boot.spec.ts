@@ -48,7 +48,7 @@ test('Lane 66: resident feet column grounds and unlocks before focus_ready', asy
         world_id,
         x: 250_008,
         z: 250_000,
-        world_position: { x: 8, z: 0 },
+        world_position: { x: 8, z: 0, time_ms: Date.now() },
         source: 'read',
       })
       await note_world_position({ character_id, world_id, x: 8.5, z: 0.5 })

@@ -19,9 +19,19 @@ import { spawns_input } from './spawns_adapter.js'
 // GameWorldHost awaits `resolve_checkpoint_spawn` right before the resident mount; create_session reads the
 // cached world-position synchronously (`read_checkpoint_spawn`) when it chooses the boot spawn.
 
-/** @type {Map<string, { x: number, z: number } | null>} */
+/** @typedef {{x:number,z:number,time_ms:number|null}} CheckpointAnchor */
+/** @type {Map<string, CheckpointAnchor | {x:number,z:number} | null>} */
 const _cache = new Map()
 const _key = (character_id, world_id) => `${character_id}:${world_id}`
+const with_checkpoint_time = (position, time_ms) => {
+  if (!position) return null
+  const revision = Number(time_ms)
+  return {
+    x: Number(position.x),
+    z: Number(position.z),
+    time_ms: Number.isFinite(revision) && revision > 0 ? revision : null,
+  }
+}
 
 /**
  * Read + CACHE the SIGNED world-space checkpoint `{ x, z }` for (character, world). Null when no checkpoint
@@ -34,7 +44,7 @@ const _key = (character_id, world_id) => `${character_id}:${world_id}`
  * `seed_checkpoint_spawn`. A miss only writes null when the key was never seeded; it never overwrites an
  * existing entry back to null. A confirmed checkpoint always adopts (chain truth wins once it actually answers).
  * @param {string} character_id @param {string} world_id
- * @returns {Promise<{ x: number, z: number } | null>}
+ * @returns {Promise<CheckpointAnchor | null>}
  */
 export async function resolve_checkpoint_spawn(character_id, world_id) {
   if (!character_id || !world_id) return null
@@ -47,7 +57,7 @@ export async function resolve_checkpoint_spawn(character_id, world_id) {
     }
     const sdk = await get_sdk()
     const doc = await get_world({ grpc_client: sdk.grpc_client })(world_id).catch(() => null)
-    const world_pos = checkpoint_to_world(cp, doc)
+    const world_pos = with_checkpoint_time(checkpoint_to_world(cp, doc), cp.time_ms)
     _cache.set(key, world_pos)
     spawns_input({
       type: 'checkpoint_resolved',
@@ -73,8 +83,12 @@ export async function resolve_checkpoint_spawn(character_id, world_id) {
  * wait on — or race — the separate chain-direct re-read above. Idempotent and order-independent with
  * `resolve_checkpoint_spawn`: a later chain read still adopts on confirmation, and a later miss never erases
  * this (the non-regression rule above).
- * @param {string} character_id @param {string} world_id @param {{ x: number, z: number }} chain_pos UNSIGNED chain coords
- * @returns {Promise<{ x: number, z: number } | null>}
+ * @param {string} character_id @param {string} world_id
+ * @param {{x:number,z:number,time_ms?:number|null}} chain_pos UNSIGNED chain coords
+ * Receipt events do not expose checkpoint `time_ms`; their cache entry therefore carries a null revision.
+ * It remains valid boot position truth, but local-position persistence pauses until a direct checkpoint read
+ * supplies a canonical revision.
+ * @returns {Promise<CheckpointAnchor | null>}
  */
 export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
   if (!character_id || !world_id || !chain_pos) return null
@@ -84,7 +98,7 @@ export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
   try {
     const sdk = await get_sdk()
     const doc = await get_world({ grpc_client: sdk.grpc_client })(world_id).catch(() => null)
-    const world_pos = checkpoint_to_world({ x, z }, doc)
+    const world_pos = with_checkpoint_time(checkpoint_to_world({ x, z }, doc), chain_pos.time_ms)
     if (!world_pos) return null
     _cache.set(_key(character_id, world_id), world_pos)
     spawns_input({
@@ -107,7 +121,7 @@ export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
  * The cached SIGNED world-space checkpoint `{ x, z }` for (character, world) — null when unresolved or absent.
  * The synchronous read create_session uses to seed the boot spawn.
  * @param {string} character_id @param {string} world_id
- * @returns {{ x: number, z: number } | null}
+ * @returns {CheckpointAnchor | {x:number,z:number} | null}
  */
 export function read_checkpoint_spawn(character_id, world_id) {
   return _cache.get(_key(character_id, world_id)) ?? null

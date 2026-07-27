@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
+import { publish_dungeon_session } from './dungeon_session.js'
 import { publish_world_binding, reset_world_binding } from './session_gate.js'
 
 const CHARACTER = '0xCHARACTER'
@@ -91,11 +92,13 @@ const bind_with_anchor = (world_id, anchor, character_id = CHARACTER) => {
 beforeEach(() => {
   globalThis.indexedDB = create_fake_idb()
   position_edge._reset_position_persistence_for_test()
+  publish_dungeon_session({})
   reset_world_binding()
   position_edge.spawns_input({ type: 'world_bound', world_id: null })
 })
 
 afterAll(() => {
+  publish_dungeon_session({})
   reset_world_binding()
   position_edge.spawns_input({ type: 'world_bound', world_id: null })
   position_edge._reset_position_persistence_for_test()
@@ -173,6 +176,57 @@ describe('world position IndexedDB edge', () => {
     })
   })
 
+  test('commits the newest pose at the five-second cadence', async () => {
+    const anchor = anchor_at(100, 200)
+    bind_with_anchor(WORLD_A, anchor)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, NOW)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 130, z: 230 }, NOW + 5_000)
+
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, anchor)
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 6_000)).resolves.toEqual({
+      x: 130,
+      z: 230,
+    })
+  })
+
+  test('an explicit lifecycle flush commits the newest throttled pose', async () => {
+    const anchor = anchor_at(100, 200)
+    bind_with_anchor(WORLD_A, anchor)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, NOW)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 140, z: 240 }, NOW + 1_000)
+    await position_edge.flush_world_position(NOW + 1_001)
+
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, anchor)
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 2_000)).resolves.toEqual({
+      x: 140,
+      z: 240,
+    })
+  })
+
+  test('drops a pending movement-stop write when a dungeon phase starts before commit', async () => {
+    const anchor = anchor_at(100, 200)
+    bind_with_anchor(WORLD_A, anchor)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 110, z: 210 }, NOW)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW + 1_000)
+
+    publish_dungeon_session({ in_session: true, character_id: CHARACTER })
+    await position_edge.flush_world_position(NOW + 2_000)
+    expect(position_edge.spawns_store.getState().player).toEqual({ x: 120, z: 220 })
+
+    publish_dungeon_session({})
+    position_edge.spawns_input({ type: 'world_bound', world_id: null })
+    position_edge._reset_position_persistence_for_test()
+    bind_with_anchor(WORLD_A, anchor)
+    await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 3_000)).resolves.toEqual({
+      x: 110,
+      z: 210,
+    })
+  })
+
   test('rejects a snapshot from the character’s previous world when the chain binding moved worlds', async () => {
     bind_with_anchor(WORLD_A, anchor_at(100, 200))
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW)
@@ -240,7 +294,10 @@ describe('world position IndexedDB edge', () => {
     expect(position_edge.spawns_store.getState().checkpoint).toEqual(receipt_anchor)
 
     await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, old_anchor, NOW + 1_000)).resolves.toBeNull()
-    expect(position_edge.spawns_store.getState().player).toBeNull()
+    expect(position_edge.read_world_chain_anchor(CHARACTER, WORLD_A)).toEqual({
+      ...receipt_anchor,
+      time_ms: null,
+    })
   })
 
   test('rejects a late checkpoint result for the previously selected character before reducer entry', () => {
@@ -291,7 +348,7 @@ describe('world position IndexedDB edge', () => {
     expect(chain_at).toBeGreaterThan(-1)
     expect(restore_at).toBeGreaterThan(chain_at)
     expect(embed_source).toContain('const stored = read_world_position(character.id, world_id)')
-    expect(embed_source).toContain('const checkpoint = world_id ? read_checkpoint_spawn(character.id, world_id) : null')
+    expect(embed_source).toContain('read_world_chain_anchor(character.id, world_id) ?? read_checkpoint_spawn')
     expect(embed_source).toContain('void note_world_position({')
   })
 })

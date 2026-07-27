@@ -42,7 +42,7 @@ const CHAR = 'char-fresh-1'
 const WORLD = 'world-1'
 // checkpoint_to_world with a null doc: chain_to_world(v, 250_000) = v - 250_000
 const CHAIN_POS = { x: 100, z: 200 }
-const EXPECTED_WORLD_POS = { x: 100 - 250_000, z: 200 - 250_000 }
+const EXPECTED_WORLD_POS = { x: 100 - 250_000, z: 200 - 250_000, time_ms: null }
 
 let read_checkpoint
 let get_world
@@ -95,10 +95,14 @@ test('a lagging chain-direct read (still "no checkpoint") must NOT erase an alre
 
 test('a chain-direct read that DOES confirm a checkpoint still adopts (chain truth wins when it actually answers)', async () => {
   await seed_checkpoint_spawn(CHAR, WORLD, CHAIN_POS)
-  const moved = { x: 300, z: 400 }
+  const moved = { x: 300, z: 400, time_ms: 1_800_000_000_000 }
   read_checkpoint.mockResolvedValue(moved) // a LATER search moved the checkpoint; the chain read now confirms it
   await resolve_checkpoint_spawn(CHAR, WORLD)
-  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ x: moved.x - 250_000, z: moved.z - 250_000 })
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    x: moved.x - 250_000,
+    z: moved.z - 250_000,
+    time_ms: moved.time_ms,
+  })
 })
 
 test('with nothing ever seeded, a genuine miss still resolves to null (pre-first-join stays honest)', async () => {

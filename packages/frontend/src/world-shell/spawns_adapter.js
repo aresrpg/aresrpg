@@ -10,6 +10,7 @@ import { useStore } from 'zustand'
 import { create_spawns_store } from '@aresrpg/world/spawns_zones'
 import { AGREE_RADIUS_M } from '@aresrpg/world/checkpoint'
 
+import { read_dungeon_session } from './dungeon_session.js'
 import { use_world_binding } from './session_gate.js'
 
 /** THE one spawns/zones atom for the app (the package factory owns its shape + door). */
@@ -17,6 +18,12 @@ export const spawns_store = create_spawns_store()
 
 /** Dispatch one typed spawns input without exposing store plumbing at call sites. */
 export function spawns_input(input, now) {
+  // A checkpoint read can finish after a same-world character switch. Reject it before the world-only reducer
+  // sees it; checking ownership after `.input` is too late because checkpoint/hunt_zone would already be stale.
+  if (input.type === 'checkpoint_resolved') {
+    const binding = use_world_binding.getState()
+    if (input.character_id !== binding.character_id || input.world_id !== binding.world) return
+  }
   const before = spawns_store.getState()
   spawns_store.getState().input(input, now)
   const after = spawns_store.getState()
@@ -63,6 +70,7 @@ const movement_stop_ms = 750
 const max_age_ms = 30 * 60 * 1_000
 
 /** @typedef {{x:number,z:number}} WorldPosition */
+/** @typedef {{x:number,z:number,time_ms:number|null}} ChainAnchor */
 /**
  * @typedef {{
  *   character_id:string,
@@ -70,7 +78,7 @@ const max_age_ms = 30 * 60 * 1_000
  *   x:number,
  *   z:number,
  *   saved_at:number,
- *   chain_anchor:WorldPosition,
+ *   chain_anchor:ChainAnchor,
  * }} PositionSnapshot
  */
 
@@ -79,21 +87,29 @@ const finite_position = (position) =>
   !!position && Number.isFinite(Number(position.x)) && Number.isFinite(Number(position.z))
 const same_position = (a, b) =>
   finite_position(a) && finite_position(b) && Number(a.x) === Number(b.x) && Number(a.z) === Number(b.z)
+const chain_anchor_time = (anchor) => {
+  const time_ms = Number(anchor?.time_ms)
+  return Number.isFinite(time_ms) && time_ms > 0 ? time_ms : null
+}
+const normalize_chain_anchor = (anchor) =>
+  finite_position(anchor) ? { x: Number(anchor.x), z: Number(anchor.z), time_ms: chain_anchor_time(anchor) } : null
+const same_chain_anchor = (a, b) =>
+  same_position(a, b) && chain_anchor_time(a) !== null && chain_anchor_time(a) === chain_anchor_time(b)
+const same_chain_observation = (a, b) =>
+  same_position(a, b) && (chain_anchor_time(a) ?? null) === (chain_anchor_time(b) ?? null)
 
 /**
  * PURE restore guard. A row is usable only for the exact identity, while fresh, and while the chain still
  * reports the SAME committed anchor captured by the writer. The final radius check rejects corrupt or
  * implausible free-walk deltas even when the anchor metadata itself matches.
  * @param {PositionSnapshot | null | undefined} snapshot
- * @param {{character_id:string,world_id:string,chain_anchor:WorldPosition|null,now:number}} current
+ * @param {{character_id:string,world_id:string,chain_anchor:ChainAnchor|null,now:number}} current
  */
 export function position_snapshot_is_current(snapshot, { character_id, world_id, chain_anchor, now }) {
   if (!snapshot || snapshot.character_id !== character_id || snapshot.world_id !== world_id) return false
-  if (!finite_position(snapshot) || !finite_position(snapshot.chain_anchor) || !finite_position(chain_anchor))
-    return false
+  if (!finite_position(snapshot) || !same_chain_anchor(snapshot.chain_anchor, chain_anchor)) return false
   const age = Number(now) - Number(snapshot.saved_at)
   if (!Number.isFinite(age) || age < 0 || age > max_age_ms) return false
-  if (!same_position(snapshot.chain_anchor, chain_anchor)) return false
   const dx = Number(snapshot.x) - Number(chain_anchor.x)
   const dz = Number(snapshot.z) - Number(chain_anchor.z)
   return dx * dx + dz * dz <= AGREE_RADIUS_M * AGREE_RADIUS_M
@@ -160,7 +176,7 @@ let last_noted_position = null
 /** @type {string | null} */
 let last_noted_position_owner = null
 /** Canonical signed chain anchor associated with the current character+world edge identity. */
-/** @type {WorldPosition | null} */
+/** @type {ChainAnchor | null} */
 let position_chain_anchor = null
 /** @type {string | null} */
 let position_chain_anchor_owner = null
@@ -175,16 +191,24 @@ const current_binding_is = (character_id, world_id) => {
 }
 
 const adopt_position_chain_anchor = (character_id, world_id, chain_anchor) => {
+  const normalized = normalize_chain_anchor(chain_anchor)
   if (
     !character_id ||
     !world_id ||
-    !finite_position(chain_anchor) ||
+    !normalized ||
     !current_binding_is(character_id, world_id) ||
     spawns_store.getState().world_id !== world_id
   )
     return null
-  position_chain_anchor_owner = position_key(character_id, world_id)
-  position_chain_anchor = { x: Number(chain_anchor.x), z: Number(chain_anchor.z) }
+  const owner = position_key(character_id, world_id)
+  if (position_chain_anchor_owner !== owner || !same_chain_observation(position_chain_anchor, normalized)) {
+    discard_pending_position()
+    last_noted_position = null
+    last_noted_position_owner = null
+    restore_generation += 1
+  }
+  position_chain_anchor_owner = owner
+  position_chain_anchor = normalized
   return position_chain_anchor
 }
 
@@ -201,6 +225,11 @@ const clear_position_timer = () => {
 const discard_pending_position = () => {
   pending_position = null
   clear_position_timer()
+}
+
+const position_phase_is_blocked = () => {
+  const phase = read_dungeon_session()
+  return phase.in_session || !!phase.dungeon_id
 }
 
 /**
@@ -228,11 +257,12 @@ const commit_pending_position = (now = Date.now()) => {
   const pending = pending_position
   pending_position = null
   if (!pending) return position_write_tail
+  if (position_phase_is_blocked()) return position_write_tail
   const state = spawns_store.getState()
   if (
     !current_binding_is(pending.character_id, pending.world_id) ||
     state.world_id !== pending.world_id ||
-    !same_position(pending.chain_anchor, read_position_chain_anchor(pending.character_id, pending.world_id))
+    !same_chain_anchor(pending.chain_anchor, read_position_chain_anchor(pending.character_id, pending.world_id))
   )
     return position_write_tail
   const snapshot = { ...pending, saved_at: now }
@@ -249,14 +279,23 @@ const commit_pending_position = (now = Date.now()) => {
  * @param {number} [now]
  */
 export function note_world_position({ character_id, world_id, x, z }, now = Date.now()) {
-  if (!character_id || !world_id || !finite_position({ x, z }) || !current_binding_is(character_id, world_id))
+  if (
+    !character_id ||
+    !world_id ||
+    !finite_position({ x, z }) ||
+    !current_binding_is(character_id, world_id) ||
+    position_phase_is_blocked()
+  )
     return position_write_tail
   const before = spawns_store.getState()
-  const chain_anchor = read_position_chain_anchor(character_id, world_id)
-  if (before.world_id !== world_id || !chain_anchor) return position_write_tail
+  if (before.world_id !== world_id) return position_write_tail
   spawns_input({ type: 'player_pos', x, z })
   const owner = position_key(character_id, world_id)
   player_position_owner = owner
+  const chain_anchor = read_position_chain_anchor(character_id, world_id)
+  // Reducer truth still advances while a receipt anchor awaits its canonical chain time. Persistence pauses
+  // until a direct checkpoint read supplies that revision, so an A→B→A chain move cannot resurrect A.
+  if (!chain_anchor || chain_anchor_time(chain_anchor) === null) return position_write_tail
   const noted = { x: Number(x), z: Number(z) }
   if (last_noted_position_owner === owner && same_position(last_noted_position, noted)) return position_write_tail
   last_noted_position_owner = owner
@@ -265,7 +304,7 @@ export function note_world_position({ character_id, world_id, x, z }, now = Date
     character_id,
     world_id,
     ...noted,
-    chain_anchor: { x: Number(chain_anchor.x), z: Number(chain_anchor.z) },
+    chain_anchor: { ...chain_anchor },
   }
   const elapsed = now - (last_position_write.get(owner) ?? 0)
   if (elapsed >= write_interval_ms) return commit_pending_position(now)
@@ -288,12 +327,17 @@ export function flush_world_position(now = Date.now()) {
  * Load and validate the exact character+world row, then re-enter through the existing `player_pos` reducer
  * input. The identity and anchor are checked again after the async read so a travel during IndexedDB I/O
  * cannot land a stale position in the new world.
- * @param {WorldPosition|null} chain_anchor canonical signed position returned by world_checkpoint.js
+ * @param {ChainAnchor|null} chain_anchor canonical signed position + checkpoint time from world_checkpoint.js
  * @returns {Promise<WorldPosition|null>}
  */
 export async function restore_world_position(character_id, world_id, chain_anchor, now = Date.now()) {
   if (!character_id || !world_id || !current_binding_is(character_id, world_id)) return null
-  if (!adopt_position_chain_anchor(character_id, world_id, chain_anchor)) return null
+  const known_anchor = read_position_chain_anchor(character_id, world_id)
+  // A resolver miss may return an older cache entry after a receipt already advanced this edge. Never let that
+  // fallback replace a conflicting receipt-proven observation; ambiguity means the chain-side live fact wins.
+  if (known_anchor && !same_chain_observation(known_anchor, chain_anchor)) return null
+  const current_anchor = known_anchor ?? adopt_position_chain_anchor(character_id, world_id, chain_anchor)
+  if (!current_anchor || chain_anchor_time(current_anchor) === null) return null
   const generation = ++restore_generation
   player_position_owner = null
   const snapshot = await load_position_snapshot(position_key(character_id, world_id))
@@ -316,6 +360,13 @@ export async function restore_world_position(character_id, world_id, chain_ancho
   last_noted_position = { x: Number(snapshot.x), z: Number(snapshot.z) }
   const { player } = spawns_store.getState()
   return player ? { x: player.x, z: player.z } : null
+}
+
+/** The current reducer-edge chain anchor for this exact character+world, including its staleness revision. */
+export function read_world_chain_anchor(character_id, world_id) {
+  if (!character_id || !world_id || !current_binding_is(character_id, world_id)) return null
+  const anchor = read_position_chain_anchor(character_id, world_id)
+  return anchor ? { ...anchor } : null
 }
 
 /** The reducer-owned position only when it belongs to this exact character+world session. */
