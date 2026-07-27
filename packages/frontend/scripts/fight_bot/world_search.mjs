@@ -49,19 +49,36 @@ const read_json = (url) =>
  * whole create ceiling refusing ~550 candidates against an escrow nobody had named. The escrow is a chain fact;
  * asking the chain has no clock in it at all.
  *
- * @returns {Promise<{ fight_id: string, world_id: string, status: string, journal_head: number } | null>}
+ * KEYED ON THE OWNER, NOT ON THE SELECTED CHARACTER. The seat's `character_id` comes from the roster boot, and
+ * an escrowed character is exactly the one the roster may decline to select — so a check keyed on it answers
+ * "no strand" precisely when the strand is worst (measured: with BOTH seats escrowed, both booted with no
+ * selected character and this said `null` while the chain held them). Every character the address owns is
+ * considered, and the selected one only decides which is reported first.
+ *
+ * @returns {Promise<{ fight_id: string, world_id: string, character_id: string, status: string,
+ *   journal_head: number } | null>}
  */
 export const chain_strand = async ({ rpc_url, seat }) => {
   const { characters = [] } = await read_json(`${rpc_url}/v1/characters?owner=${seat.address}`)
-  const world_id = characters.find((row) => row.id === seat.character_id)?.world ?? null
-  if (!world_id) return null // no world binding ⇒ no world fight can hold it
-  const { fights = [] } = await read_json(`${rpc_url}/v1/fights?world=${world_id}`)
-  const held = fights.find((fight) =>
-    (fight.participants ?? []).some((participant) => participant.character === seat.character_id)
-  )
-  return held
-    ? { fight_id: held.fight_id, world_id, status: held.status, journal_head: held.journal_head ?? null }
-    : null
+  // the selected character first, then the rest — a strand is a strand whichever of them is holding it
+  const mine = [...characters].sort((a, b) => Number(b.id === seat.character_id) - Number(a.id === seat.character_id))
+  const worlds = [...new Set(mine.map((row) => row.world).filter(Boolean))]
+  const owned = new Set(mine.map((row) => row.id))
+  for (const world_id of worlds) {
+    const { fights = [] } = await read_json(`${rpc_url}/v1/fights?world=${world_id}`)
+    for (const fight of fights) {
+      const seated = (fight.participants ?? []).find((participant) => owned.has(participant.character))
+      if (seated)
+        return {
+          fight_id: fight.fight_id,
+          world_id,
+          character_id: seated.character,
+          status: fight.status,
+          journal_head: fight.journal_head ?? null,
+        }
+    }
+  }
+  return null
 }
 
 /**

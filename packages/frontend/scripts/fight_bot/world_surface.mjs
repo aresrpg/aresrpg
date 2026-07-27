@@ -214,10 +214,13 @@ export const release_strand = async ({ rpc_url, seat, log, mount_ms = 180_000, c
   // MOUNT THE KNOWN FIGHT rather than wait to be handed it. `__dev_enter_world_fight` is the resume path MINUS
   // the RPC discovery, and the forfeit door reads `use_dungeon`'s live fight — so the seat has to be holding it
   // before it can let it go. This is the whole reason the check is chain-first: we already know the id.
-  await seat.page.evaluate(({ fight_id, world_id }) => window.__dev_enter_world_fight(fight_id, world_id), {
-    fight_id: strand.fight_id,
-    world_id: strand.world_id,
-  })
+  // NAME THE CHARACTER. The resume door defaults to the SELECTED one, and the roster can decline to select a
+  // character that is escrowed — which is every character this branch cares about. The strand read already knows
+  // which one is seated, so it is passed rather than re-derived from a store that may be holding nothing.
+  await seat.page.evaluate(
+    ({ fight_id, world_id, character_id }) => window.__dev_enter_world_fight(fight_id, world_id, character_id),
+    { fight_id: strand.fight_id, world_id: strand.world_id, character_id: strand.character_id }
+  )
   const mounted = await wait_for(seat.client, (read) => !!read.ok, { timeout_ms: mount_ms, poll_ms: 2000 })
   if (!mounted)
     throw new Error(`seat ${seat.name}: ${strand.fight_id} never mounted, so its escrow cannot be released here`)
