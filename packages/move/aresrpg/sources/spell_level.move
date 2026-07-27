@@ -69,6 +69,6 @@ public fun raise_spell_level(
   let cost = current as u64;
   assert!(character_link::unspent_spell_points(chr) >= cost, ENoSpellPoints);
 
-  character_link::add_spell_points_spent(chr, cost, version);
-  character_link::set_spell_level(chr, spell_id, target, version);
+  character_link::z4(chr, cost, version);
+  character_link::z3(chr, spell_id, target, version);
 }

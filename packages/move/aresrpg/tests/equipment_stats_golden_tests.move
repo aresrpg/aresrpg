@@ -24,12 +24,12 @@ fun below_center_malus_subtracts() {
   let (positive, malus) = apply_item(&spell::stats_zero(), &spell::stats_zero(), &item(c + 30, c, c));
   let (positive, malus) = apply_item(&positive, &malus, &item(c - 20, c, c));
   let base = spell::new_stats(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  assert!(spell::stat_strength(&equipment_stats::apply_fold(&base, &positive, &malus)) == 20, 0);
+  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &malus)) == 20, 0);
 
   // The disjoint aggregate is order-independent.
   let (reverse_positive, reverse_malus) = apply_item(&spell::stats_zero(), &spell::stats_zero(), &item(c - 20, c, c));
   let (reverse_positive, reverse_malus) = apply_item(&reverse_positive, &reverse_malus, &item(c + 30, c, c));
-  assert!(spell::stat_strength(&equipment_stats::apply_fold(&base, &reverse_positive, &reverse_malus)) == 20, 1);
+  assert!(spell::stat_strength(&equipment_stats::z18(&base, &reverse_positive, &reverse_malus)) == 20, 1);
 }
 
 #[test]
@@ -40,14 +40,14 @@ fun malus_saturates_without_u64_underflow() {
   let negative = item(0, c, 0);
   let (positive, malus) = apply_item(&spell::stats_zero(), &spell::stats_zero(), &negative);
   let base = spell::new_stats(3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  assert!(spell::stat_strength(&equipment_stats::apply_fold(&base, &positive, &malus)) == 0, 0);
-  assert!(equipment_stats::apply_scalar(3, spell::stat_ap_bonus(&positive), spell::stat_ap_bonus(&malus)) == 0, 1);
+  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &malus)) == 0, 0);
+  assert!(equipment_stats::z19(3, spell::stat_ap_bonus(&positive), spell::stat_ap_bonus(&malus)) == 0, 1);
 
   // A post-upgrade item removes its malus; an unmarked legacy item cannot manufacture a positive line.
-  let restored_malus = equipment_stats::remove_malus(&malus, &malus, true);
-  assert!(spell::stat_strength(&equipment_stats::apply_fold(&base, &positive, &restored_malus)) == 3, 2);
-  let legacy_malus = equipment_stats::remove_malus(&spell::stats_zero(), &malus, false);
-  assert!(spell::stat_strength(&equipment_stats::apply_fold(&base, &positive, &legacy_malus)) == 3, 3);
+  let restored_malus = equipment_stats::z501(&malus, &malus, true);
+  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &restored_malus)) == 3, 2);
+  let legacy_malus = equipment_stats::z501(&spell::stats_zero(), &malus, false);
+  assert!(spell::stat_strength(&equipment_stats::z18(&base, &positive, &legacy_malus)) == 3, 3);
 }
 
 #[test]
@@ -70,5 +70,5 @@ fun invented_critical_keys_are_ignored() {
   assert!(spell::stat_critical_hit(&positive) == 2, 0);
   assert!(spell::stat_critical_hit(&negative) == 0, 1);
   let base = spell::new_stats(0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0);
-  assert!(spell::stat_critical_hit(&equipment_stats::apply_fold(&base, &positive, &negative)) == 6, 2);
+  assert!(spell::stat_critical_hit(&equipment_stats::z18(&base, &positive, &negative)) == 6, 2);
 }

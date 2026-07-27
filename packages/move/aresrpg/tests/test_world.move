@@ -127,7 +127,7 @@ public fun whitelist(sc: &mut Scenario, category: vector<u8>) {
 }
 
 /// Author + share a generic ItemTemplate (no stat ranges) of `category` at `level`; returns its id. `category`
-/// must already be whitelisted. A stackable category (resource/consumable) rides the `mint_stack` door; every
+/// must already be whitelisted. A stackable category (resource/consumable) rides the `z39` door; every
 /// other category is a unique NFT.
 public fun make_template(sc: &mut Scenario, name: vector<u8>, item_type: vector<u8>, category: vector<u8>, level: u16): ID {
   sc.next_tx(OWNER);
@@ -153,7 +153,7 @@ public fun mint_lock_stack(sc: &mut Scenario, who: address, template_id: ID, qua
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let mut k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item_stack(&tmpl, quantity, &ver, sc.ctx());
+  let (it, pledge) = extension::z20(&tmpl, quantity, &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &mkt);
   ts::return_shared(tmpl); ts::return_shared(ver); ts::return_shared(mkt); ts::return_shared(k); sc.return_to_sender(pkcap);
@@ -168,7 +168,7 @@ public fun mint_lock_gear(sc: &mut Scenario, who: address, template_id: ID): ID 
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let mut k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item(&tmpl, &ver, sc.ctx());
+  let (it, pledge) = extension::z502(&tmpl, &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &mkt);
   ts::return_shared(tmpl); ts::return_shared(ver); ts::return_shared(mkt); ts::return_shared(k); sc.return_to_sender(pkcap);

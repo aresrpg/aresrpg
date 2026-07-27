@@ -178,7 +178,7 @@ public fun burn_sale(cap: &AdminCap, sale: Sale, version: &Version, ctx: &TxCont
 // ╔════════════════ [ BUY (single-step: mint → roll → lock, one terminal `&Random` call) ] ══ ]
 
 /// THE single buy — a private `entry` (consumes `&Random`; a PTB calls it as its TERMINAL command). Mints ONE
-/// item. See `buy_internal` for the enforced order.
+/// item. See `z87` for the enforced order.
 entry fun buy(
   sale: &mut Sale,
   template: &ItemTemplate,
@@ -194,7 +194,7 @@ entry fun buy(
 ) {
   config.assert_domain(aresrpg::config::domain_market()); // S-46 kill-switch bit
   let mut generator = random::new_generator(r, ctx);
-  buy_internal(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
+  z87(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
 /// THE pack buy — a private `entry` minting `quantity` items in ONE terminal `&Random` call (the multi-buy law:
@@ -216,9 +216,10 @@ entry fun buy_many(
 ) {
   config.assert_domain(aresrpg::config::domain_market()); // S-46 kill-switch bit
   let mut generator = random::new_generator(r, ctx);
-  buy_internal(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
+  z87(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
 /// The shared buy body, generator-injected so the `entry` paths (real `&Random`) and the test path
 /// (deterministic generator) drive the SAME guarded code. Enforces, ALL before any money moves (refusal costs
 /// only gas): package enabled+latest → quantity in [1, MAX] → not paused → template matches → window open →
@@ -229,7 +230,7 @@ entry fun buy_many(
 /// each into the buyer's personal kiosk. `supply`/`minted` count UNITS, so `minted += quantity` holds for both
 /// shapes. `self_transfer` is deliberate: the only address transfer is the SUI CHANGE; items are forced into the kiosk.
 #[allow(lint(self_transfer))]
-fun buy_internal(
+fun z87(
   sale: &mut Sale,
   template: &ItemTemplate,
   quantity: u64,
@@ -246,7 +247,7 @@ fun buy_internal(
   assert!(quantity >= 1 && quantity <= MAX_BUY_QUANTITY, EInvalidQuantity);
   assert!(!sale.paused, ESalePaused);
   assert!(item::template_id(template) == sale.template, EWrongTemplate);
-  assert_window_open(sale, clock);
+  z88(sale, clock);
 
   let total = sale.price * quantity; // u64 overflow aborts safely — no money has moved yet
   assert!(payment.value() >= total, EInsufficientPayment);
@@ -270,7 +271,7 @@ fun buy_internal(
     // no rolls. Stackables have NO stat ranges; `admin::create_template` rejects ranges on a stackable category at
     // authoring, so this assert is defense-in-depth on the money path (a bad template can never reach here).
     assert!(!item_stats::has_ranges(template), EStackableHasRanges);
-    let (item, pledge) = item::mint_stack(template, quantity, ctx);
+    let (item, pledge) = item::z39(template, quantity, ctx);
     event::emit(SaleBought {
       sale: object::id(sale),
       template: sale.template,
@@ -304,8 +305,9 @@ fun buy_internal(
   };
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
 /// Abort unless `now` is inside the sale window: start INCLUSIVE, end EXCLUSIVE, each `none` side open.
-fun assert_window_open(sale: &Sale, clock: &Clock) {
+fun z88(sale: &Sale, clock: &Clock) {
   let now = clock.timestamp_ms();
   if (sale.start_ms.is_some()) assert!(now >= *sale.start_ms.borrow(), ESaleNotStarted);
   if (sale.end_ms.is_some()) assert!(now < *sale.end_ms.borrow(), ESaleEnded);
@@ -319,7 +321,7 @@ fun assert_window_open(sale: &Sale, clock: &Clock) {
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 
 #[test_only]
-/// Drive `buy_internal` for ONE item through a deterministic generator (the `entry`'s real `&Random` path is
+/// Drive `z87` for ONE item through a deterministic generator (the `entry`'s real `&Random` path is
 /// exercised on-chain in a PTB; unit tests hit the SAME body through this door).
 public fun buy_for_testing(
   sale: &mut Sale,
@@ -333,11 +335,11 @@ public fun buy_for_testing(
   ctx: &mut TxContext,
 ) {
   let mut generator = random::new_generator_for_testing();
-  buy_internal(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
+  z87(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
 #[test_only]
-/// Drive `buy_internal` for `quantity` items through a deterministic generator (the pack path).
+/// Drive `z87` for `quantity` items through a deterministic generator (the pack path).
 public fun buy_many_for_testing(
   sale: &mut Sale,
   template: &ItemTemplate,
@@ -351,7 +353,7 @@ public fun buy_many_for_testing(
   ctx: &mut TxContext,
 ) {
   let mut generator = random::new_generator_for_testing();
-  buy_internal(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
+  z87(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
 }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]

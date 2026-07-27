@@ -211,65 +211,65 @@ public fun create_world(cap: &AdminCap, version: &Version, seed: u64, biome: Str
 
 public fun set_required_level(cap: &AdminCap, w: &mut World, value: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.required_level = clamp_u16(value, LEVEL_MIN as u16, LEVEL_MAX as u16);
-  touched(w);
+  w.required_level = z514(value, LEVEL_MIN as u16, LEVEL_MAX as u16);
+  z908(w);
 }
 
 public fun set_bounds(cap: &AdminCap, w: &mut World, x: u32, z: u32, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.bounds_x = clamp_u32(x, BOUND_MIN, BOUND_MAX);
-  w.bounds_z = clamp_u32(z, BOUND_MIN, BOUND_MAX);
-  touched(w);
+  w.bounds_x = z513(x, BOUND_MIN, BOUND_MAX);
+  w.bounds_z = z513(z, BOUND_MIN, BOUND_MAX);
+  z908(w);
 }
 
 public fun set_zone_size(cap: &AdminCap, w: &mut World, value: u32, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.zone_size = clamp_u32(value, ZONE_SIZE_MIN, ZONE_SIZE_MAX);
-  touched(w);
+  w.zone_size = z513(value, ZONE_SIZE_MIN, ZONE_SIZE_MAX);
+  z908(w);
 }
 
 public fun set_zone_ttl_ms(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.zone_ttl_ms = clamp_u64(value, TTL_MIN, TTL_MAX);
-  touched(w);
+  w.zone_ttl_ms = z512(value, TTL_MIN, TTL_MAX);
+  z908(w);
 }
 
 public fun set_speed_budget(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.speed_budget = clamp_u64(value, SPEED_MIN, SPEED_MAX);
-  touched(w);
+  w.speed_budget = z512(value, SPEED_MIN, SPEED_MAX);
+  z908(w);
 }
 
 public fun set_spawn_zone(cap: &AdminCap, w: &mut World, x: u32, z: u32, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   // the spawn box can never exceed the world bounds (a roll inside it must land in-bounds)
-  w.spawn_zone_x = clamp_u32(x, 1, w.bounds_x);
-  w.spawn_zone_z = clamp_u32(z, 1, w.bounds_z);
-  touched(w);
+  w.spawn_zone_x = z513(x, 1, w.bounds_x);
+  w.spawn_zone_z = z513(z, 1, w.bounds_z);
+  z908(w);
 }
 
 public fun set_protector_bp(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.protector_bp = clamp_u64(value, 0, BP_MAX);
-  touched(w);
+  w.protector_bp = z512(value, 0, BP_MAX);
+  z908(w);
 }
 
 /// Density: how many mob GROUPS and resource NODES a discovered zone tops up toward (§17.18). Each is a [min,max]
 /// band; a search rolls a target within it. Clamped to the hard rail, then `max ≥ min` enforced (`EBadRange`).
 public fun set_density(cap: &AdminCap, w: &mut World, min_groups: u16, max_groups: u16, min_nodes: u16, max_nodes: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  w.min_groups = clamp_u16(min_groups, 0, DENSITY_MAX);
-  w.max_groups = clamp_u16(max_groups, 0, DENSITY_MAX);
-  w.min_nodes = clamp_u16(min_nodes, 0, DENSITY_MAX);
-  w.max_nodes = clamp_u16(max_nodes, 0, DENSITY_MAX);
+  w.min_groups = z514(min_groups, 0, DENSITY_MAX);
+  w.max_groups = z514(max_groups, 0, DENSITY_MAX);
+  w.min_nodes = z514(min_nodes, 0, DENSITY_MAX);
+  w.max_nodes = z514(max_nodes, 0, DENSITY_MAX);
   assert!(w.max_groups >= w.min_groups && w.max_nodes >= w.min_nodes, EBadRange);
-  touched(w);
+  z908(w);
 }
 
 public fun set_dungeon_key(cap: &AdminCap, w: &mut World, template_id: ID, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   w.dungeon_key_template = option::some(template_id);
-  touched(w);
+  z908(w);
 }
 
 // ╔════════════════ [ Golden-gather rare links (cap + version gated; DF on the World UID) ] ═ ]
@@ -283,7 +283,7 @@ public fun set_rare_link(cap: &AdminCap, w: &mut World, template: ID, rare_templ
   if (df::exists(&w.id, key)) { *df::borrow_mut<RareLinkKey, ID>(&mut w.id, key) = rare_template; }
   else { df::add(&mut w.id, key, rare_template); };
   event::emit(RareLinkSet { world: object::id(w), template, rare_template });
-  touched(w);
+  z908(w);
 }
 
 /// UNLINK a base resource's rare variant (no more jackpot for it). Aborts if no link exists (`df::remove`).
@@ -291,7 +291,7 @@ public fun clear_rare_link(cap: &AdminCap, w: &mut World, template: ID, version:
   gate(cap, version, ctx);
   let _: ID = df::remove(&mut w.id, RareLinkKey { template });
   event::emit(RareLinkCleared { world: object::id(w), template });
-  touched(w);
+  z908(w);
 }
 
 /// SET (upsert) the DISTANCE-DIFFICULTY eligibility LEVEL for mob `template` — its `max_level` ceiling, authored
@@ -304,7 +304,7 @@ public fun set_mob_level(cap: &AdminCap, w: &mut World, template: ID, level: u16
   let key = MobLevelKey { template };
   if (df::exists(&w.id, key)) { *df::borrow_mut<MobLevelKey, u16>(&mut w.id, key) = level; }
   else { df::add(&mut w.id, key, level); };
-  touched(w);
+  z908(w);
 }
 
 /// SET the world's BOSS MASK — the mob-table row indexes that are boss rows (#1110). Overwrites wholesale: the
@@ -326,7 +326,7 @@ public fun set_boss_mask(cap: &AdminCap, w: &mut World, rows: vector<u16>, versi
   let key = BossMaskKey {};
   if (df::exists(&w.id, key)) { *df::borrow_mut<BossMaskKey, vector<u16>>(&mut w.id, key) = rows; }
   else { df::add(&mut w.id, key, rows); };
-  touched(w);
+  z908(w);
 }
 
 /// The world's BOSS row indexes — EMPTY when no mask was ever written (the uniform absent ≡ empty rule). Read by
@@ -352,7 +352,7 @@ public fun set_resource_protector(cap: &AdminCap, w: &mut World, template_id: ID
   } else if (df::exists(&w.id, key)) {
     let _: ID = df::remove(&mut w.id, key);
   };
-  touched(w);
+  z908(w);
 }
 
 // ╔════════════════ [ Spawn-table + roster append/clear (cap + version gated) ] ═ ]
@@ -361,40 +361,40 @@ public fun set_resource_protector(cap: &AdminCap, w: &mut World, template_id: ID
 /// well-formed (`max ≥ min`, both ≥ 1: a node yields at least one harvest).
 public fun add_resource_entry(cap: &AdminCap, w: &mut World, template_id: ID, rate_bp: u16, min_qty: u16, max_qty: u16, job: u8, tier: u8, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let lo = clamp_u16(min_qty, 1, DENSITY_MAX);
-  let hi = clamp_u16(max_qty, 1, DENSITY_MAX);
+  let lo = z514(min_qty, 1, DENSITY_MAX);
+  let hi = z514(max_qty, 1, DENSITY_MAX);
   assert!(hi >= lo, EBadRange);
-  w.resources.push_back(ResourceEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_qty: lo, max_qty: hi, job, tier });
-  touched(w);
+  w.resources.push_back(ResourceEntry { template_id, rate_bp: z514(rate_bp, 0, BP_MAX as u16), min_qty: lo, max_qty: hi, job, tier });
+  z908(w);
 }
 
 /// Append a MOB-GROUP spawn row. Group size is sane-clamped for storage; `zones` re-clamps the ROLLED size to the
 /// LIVE `GameConfig.team_size_bound` at spawn (one home for the engine bound).
 public fun add_mob_entry(cap: &AdminCap, w: &mut World, template_id: ID, rate_bp: u16, min_group: u16, max_group: u16, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  let lo = clamp_u16(min_group, GROUP_MIN, GROUP_MAX);
-  let hi = clamp_u16(max_group, GROUP_MIN, GROUP_MAX);
+  let lo = z514(min_group, GROUP_MIN, GROUP_MAX);
+  let hi = z514(max_group, GROUP_MIN, GROUP_MAX);
   assert!(hi >= lo, EBadRange);
-  w.mobs.push_back(MobEntry { template_id, rate_bp: clamp_u16(rate_bp, 0, BP_MAX as u16), min_group: lo, max_group: hi });
-  touched(w);
+  w.mobs.push_back(MobEntry { template_id, rate_bp: z514(rate_bp, 0, BP_MAX as u16), min_group: lo, max_group: hi });
+  z908(w);
 }
 
 /// Append a dungeon room (its mob-template IDs). Rooms are ordered; the roster is `dungeon_rooms` in order (§9).
 public fun add_dungeon_room(cap: &AdminCap, w: &mut World, mob_templates: vector<ID>, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   w.dungeon_rooms.push_back(DungeonRoom { mobs: mob_templates });
-  touched(w);
+  z908(w);
 }
 
 /// REPLACE the dungeon room at `index` in place (its mob-template IDs) — repairs an authored room (e.g. one
 /// referencing a retired mob-template id) without reflowing the rest of the roster order (§9). Aborts
 /// `EBadEntryIndex` past the room count, mirroring the getters' bounds check (`dungeon_room`). `add_dungeon_room`
-/// performs no empty-vector check, so neither does this — same idiom, same event (`touched`).
+/// performs no empty-vector check, so neither does this — same idiom, same event (`z908`).
 public fun set_dungeon_room(cap: &AdminCap, w: &mut World, index: u64, mob_templates: vector<ID>, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
   assert!(index < w.dungeon_rooms.length(), EBadEntryIndex);
   *w.dungeon_rooms.borrow_mut(index) = DungeonRoom { mobs: mob_templates };
-  touched(w);
+  z908(w);
 }
 
 /// Clear the spawn tables + roster for re-authoring (dark-package tuning). Live zone DFs are untouched — only the
@@ -408,7 +408,7 @@ public fun clear_tables(cap: &AdminCap, w: &mut World, version: &Version, ctx: &
   // so retiring the content retires the mask with it (and leaves nothing stranded for `destroy_world`).
   let key = BossMaskKey {};
   if (df::exists(&w.id, key)) { let _: vector<u16> = df::remove(&mut w.id, key); };
-  touched(w);
+  z908(w);
 }
 
 // ╔════════════════ [ Burn / teardown (cap + version gated, unrestricted template deletion) ] ═ ]
@@ -462,7 +462,7 @@ public fun drain_world_links(
     k = k + 1;
   };
   event::emit(WorldLinksDrained { world: object::id(w), rare_removed, levels_removed, protectors_removed });
-  touched(w);
+  z908(w);
 }
 
 /// DESTROY an emptied world shell: delete the shared `World` object. Cap + version gated, MIRRORING `create_world`.
@@ -634,11 +634,15 @@ fun gate(cap: &AdminCap, version: &Version, ctx: &TxContext) {
   version.assert_latest();
 }
 
-fun touched(w: &World) { event::emit(WorldUpdated { world: object::id(w) }); }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+fun z908(w: &World) { event::emit(WorldUpdated { world: object::id(w) }); }
 
-fun clamp_u64(v: u64, lo: u64, hi: u64): u64 { if (v < lo) lo else if (v > hi) hi else v }
-fun clamp_u32(v: u32, lo: u32, hi: u32): u32 { if (v < lo) lo else if (v > hi) hi else v }
-fun clamp_u16(v: u16, lo: u16, hi: u16): u16 { if (v < lo) lo else if (v > hi) hi else v }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+fun z512(v: u64, lo: u64, hi: u64): u64 { if (v < lo) lo else if (v > hi) hi else v }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+fun z513(v: u32, lo: u32, hi: u32): u32 { if (v < lo) lo else if (v > hi) hi else v }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+fun z514(v: u16, lo: u16, hi: u16): u16 { if (v < lo) lo else if (v > hi) hi else v }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 

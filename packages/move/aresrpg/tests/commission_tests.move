@@ -134,7 +134,7 @@ fun mint_ingredient(sc: &mut Scenario, who: address, kid: ID, tid: ID, qty: u64)
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item_stack(&tmpl, qty, &ver, sc.ctx());
+  let (it, pledge) = extension::z20(&tmpl, qty, &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &mkt);
   ts::return_shared(tmpl);

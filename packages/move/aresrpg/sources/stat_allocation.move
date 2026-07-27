@@ -59,7 +59,7 @@ public fun raise_stat(
   // DERIVED unspent = the STAT half of the per-level grant MINUS points already spent (never banked, floors at 0).
   assert!(character_link::unspent_stat_points(chr) >= points, ENoStatPoints);
 
-  character_link::add_stat_points_spent(chr, points, version);
-  let stat_total = character_link::add_stat_allocated(chr, stat, points, version);
+  character_link::z5(chr, points, version);
+  let stat_total = character_link::z6(chr, stat, points, version);
   event::emit(StatRaised { character: character_id, stat, points, stat_total });
 }

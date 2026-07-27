@@ -39,7 +39,8 @@ public struct Checkpoint has store, copy, drop {
   pet_equipped: bool,
 }
 
-public(package) fun new_checkpoint(x: u32, z: u32, time_ms: u64, pet_equipped: bool): Checkpoint {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+public(package) fun z12(x: u32, z: u32, time_ms: u64, pet_equipped: bool): Checkpoint {
   Checkpoint { x, z, time_ms, pet_equipped }
 }
 

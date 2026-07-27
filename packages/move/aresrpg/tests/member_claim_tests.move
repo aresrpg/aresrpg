@@ -151,7 +151,7 @@ fun derived_roster(sc: &mut Scenario, zx: u32, zy: u32, index: u64): (u64, vecto
   sc.next_tx(test_world::owner());
   let w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
-  let (sids, _tpls, members, _xs, _zs, sizes, _gs, _p) = zone_comp::derive_mobs_members(&w, zx, zy, seed, TEAM_BOUND);
+  let (sids, _tpls, members, _xs, _zs, sizes, _gs, _p) = zone_comp::z45(&w, zx, zy, seed, TEAM_BOUND);
   let spawn_id = sids[index];
   let mut roster = members[index];
   while (roster.length() > (sizes[index] as u64)) { roster.pop_back(); };
@@ -249,7 +249,7 @@ fun the_original_claim_door_refuses_a_member_zone() {
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(NOW);
   let ticket = zones::claim_mob_group(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
-  zones::consume_group_ticket(ticket);
+  zones::z47(ticket);
   abort 0
 }
 
@@ -270,7 +270,7 @@ fun the_member_claim_door_refuses_a_legacy_zone() {
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(NOW);
   let ticket = zones::claim_mob_group_members(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
-  zones::consume_member_ticket(ticket);
+  zones::z48(ticket);
   abort 0
 }
 

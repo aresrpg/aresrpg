@@ -26,33 +26,33 @@ public struct DirtyKey has copy, drop, store {}
 /// home; `public(package)` — the fight seat paths call it (they pre-check `is_unmarked`, so today the count is 0→1,
 /// but the counter shape lets other obligations stack).
 public(package) fun mark(character: &mut Character, version: &Version) {
-  let ns = extension::ns_character_progression();
-  if (extension::character_field_exists(character, ns, DirtyKey {})) {
-    let slot: &mut u64 = extension::borrow_character_field_mut(ns, character, DirtyKey {}, version);
+  let ns = extension::z31();
+  if (extension::z29(character, ns, DirtyKey {})) {
+    let slot: &mut u64 = extension::z24(ns, character, DirtyKey {}, version);
     *slot = *slot + 1;
   } else {
-    extension::add_character_field(ns, character, DirtyKey {}, 1u64, version);
+    extension::z23(ns, character, DirtyKey {}, 1u64, version);
   };
 }
 
 /// DECREMENT the counter (a result OPEN — the only discharge: opening lands the XP/HP truth first). Aborts if
 /// already zero (`ENotMarked`, defensive). Removes the slot at zero so a clean character carries no DF.
 public(package) fun clear(character: &mut Character, version: &Version) {
-  let ns = extension::ns_character_progression();
-  assert!(extension::character_field_exists(character, ns, DirtyKey {}), ENotMarked);
+  let ns = extension::z31();
+  assert!(extension::z29(character, ns, DirtyKey {}), ENotMarked);
   let remaining = {
-    let slot: &mut u64 = extension::borrow_character_field_mut(ns, character, DirtyKey {}, version);
+    let slot: &mut u64 = extension::z24(ns, character, DirtyKey {}, version);
     *slot = *slot - 1;
     *slot
   };
-  if (remaining == 0) { let _: u64 = extension::remove_character_field(ns, character, DirtyKey {}, version); };
+  if (remaining == 0) { let _: u64 = extension::z25(ns, character, DirtyKey {}, version); };
 }
 
 /// FREE read: the character's pending-obligations count (0 when clean). Seat pre-flight, the listing rule, RPC.
 public fun pending_obligations(c: &Character): u64 {
-  let ns = extension::ns_character_progression();
-  if (extension::character_field_exists(c, ns, DirtyKey {})) {
-    *extension::borrow_character_field<DirtyKey, u64>(c, ns, DirtyKey {})
+  let ns = extension::z31();
+  if (extension::z29(c, ns, DirtyKey {})) {
+    *extension::z30<DirtyKey, u64>(c, ns, DirtyKey {})
   } else 0
 }
 

@@ -54,9 +54,9 @@ public fun bag_open(): u8 { KIND_BAG_OPEN }
 public fun gacha_roll(): u8 { KIND_GACHA_ROLL }
 
 /// True if `category` is the consumable category (the ONLY category that may carry an effect). The gate calls
-/// this before attaching. The `consumable` slug is single-homed in `item` (`category_consumable`), so it lives in
+/// this before attaching. The `consumable` slug is single-homed in `item` (`z41`), so it lives in
 /// exactly one place across the package (the effect-attach gate and the stackability rule read the same source).
-public fun is_consumable(category: String): bool { category == item::category_consumable() }
+public fun is_consumable(category: String): bool { category == item::z41() }
 
 // ╔════════════════ [ Attach / read on the TEMPLATE ] ════════════════════════ ]
 

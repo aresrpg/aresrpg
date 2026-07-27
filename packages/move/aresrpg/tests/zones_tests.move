@@ -326,7 +326,7 @@ fun research_after_ttl_rerolls_zone_and_resets_consumption() {
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
   let seed_a = zones::zone_seed(&w, zx, zy);
-  zones::consume_resource_node(&mut w, zx, zy, 0);
+  zones::z50(&mut w, zx, zy, 0);
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 1);
   assert_eq!(zones::res_bitmap_bytes(&w, zx, zy), 1); // the consume grew the bitmap by exactly one byte
   ts::return_shared(w);
@@ -568,7 +568,7 @@ fun search_non_gather_entry_single_cell_one_harvest() {
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 1); // NOT clustered — a single cell
   assert_eq!(zones::resource_remaining(&w, zx, zy, 0), 1); // one-bit law: 1 live harvest, NEVER the qty band
   assert_eq!(zones_view::resource_job(&w, zx, zy, 0), 5);
-  zones::consume_resource_node(&mut w, zx, zy, 0); // harvest it once
+  zones::z50(&mut w, zx, zy, 0); // harvest it once
   assert_eq!(zones::resource_remaining(&w, zx, zy, 0), 0); // consumed — the bit, not a counter, went to 0
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 0);
   ts::return_shared(w);
@@ -587,8 +587,8 @@ fun consume_resource_cell_twice_aborts() {
   do_search(&mut sc, test_world::owner(), cid, px, pz, 2000);
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
-  zones::consume_resource_node(&mut w, zx, zy, 0);
-  zones::consume_resource_node(&mut w, zx, zy, 0); // ENodeEmpty
+  zones::z50(&mut w, zx, zy, 0);
+  zones::z50(&mut w, zx, zy, 0); // ENodeEmpty
   abort
 }
 

@@ -177,7 +177,7 @@ fun write_hp(sc: &mut Scenario, who: address, kid: ID, cid: ID, hp: u64, now: u6
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::write_back_hp(chr, hp, now, &ver);
+    character_link::z11(chr, hp, now, &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }

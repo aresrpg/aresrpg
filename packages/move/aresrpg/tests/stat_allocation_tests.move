@@ -3,7 +3,7 @@
 /// STAT-ALLOCATION spend-door tests (§3 rider): `stat_allocation::raise_stat` turns earned STAT points (the half
 /// of `points_for_level_range` that was DISCARDED before this rider) into per-stat allocations, and the allocated
 /// VITALITY flows into the HP formula while the full block flows into `equipment::folded_stats` (the combat
-/// consumer). Drives the REAL door off a kiosk-locked character leveled through `grant_fight_xp`, plus the
+/// consumer). Drives the REAL door off a kiosk-locked character leveled through `z10`, plus the
 /// adversary matrix (spend > available, non-owner, dark, bad index, zero). Level 3 = (3−1)×5 = 10 unspent points.
 #[test_only]
 module aresrpg::stat_allocation_tests;
@@ -33,7 +33,7 @@ fun level_up(sc: &mut Scenario, cid: ID, target_xp: u64) {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
-  { let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid); character_link::grant_fight_xp(&cfg, chr, target_xp, &ver); };
+  { let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid); character_link::z10(&cfg, chr, target_xp, &ver); };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
 }
 

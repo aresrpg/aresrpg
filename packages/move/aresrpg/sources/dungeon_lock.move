@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// DUNGEON LOCK — additive dynamic state that makes a character's `world:dungeon` transition enforceable.
 /// The lock is keyed directly on the kiosk-locked Character, so its layout does not alter the frozen Character
-/// struct. Ordinary world writes consult `assert_unlocked`; only the pinned dungeon witness can add/remove a lock
+/// struct. Ordinary world writes consult `z13`; only the pinned dungeon witness can add/remove a lock
 /// through `character_link`'s branded doors. The pass id is the in-dungeon world token and the stored `world` is
 /// the sole release destination.
 module aresrpg::dungeon_lock;
@@ -21,12 +21,13 @@ public struct DungeonLock has copy, drop, store {
   world: ID,
 }
 
-public(package) fun assert_unlocked(character: &Character) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+public(package) fun z13(character: &Character) {
   assert!(!is_locked(character), EAlreadyLocked);
 }
 
 public(package) fun lock(character: &mut Character, pass: ID, world: ID) {
-  assert_unlocked(character);
+  z13(character);
   df::add(character::uid_mut(character), DungeonLockKey {}, DungeonLock { pass, world });
 }
 

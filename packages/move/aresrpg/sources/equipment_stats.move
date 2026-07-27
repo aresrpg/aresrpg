@@ -11,17 +11,18 @@ module aresrpg::equipment_stats;
 use aresrpg::{item_stats::{Self, ItemStatistics}};
 use aresrpg_foundation::spell::{Self, Stats};
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
 /// Split one centered field into disjoint positive/malus magnitudes. Both subtractions are branch-guarded, so a
 /// below-center value can never underflow `u16`; the widened `u64` magnitude is at most 32768.
-fun centered_parts(v: u16): (u64, u64) {
+fun z69(v: u16): (u64, u64) {
   let center = item_stats::shift();
   if (v > center) (((v - center) as u64), 0)
   else if (v < center) (0, ((center - v) as u64))
   else (0, 0)
 }
 
-fun bonus(v: u16): u64 { let (positive, _) = centered_parts(v); positive }
-fun malus(v: u16): u64 { let (_, negative) = centered_parts(v); negative }
+fun bonus(v: u16): u64 { let (positive, _) = z69(v); positive }
+fun malus(v: u16): u64 { let (_, negative) = z69(v); negative }
 
 /// The exact item-key consumer mapping. `critical_chance` and `critical_outcomes` are deliberately absent; the
 /// reseed must write the combat denominator reduction to canonical `critical`.
@@ -51,20 +52,23 @@ public(package) fun deltas(s: &ItemStatistics): (Stats, Stats) {
   (positive, negative)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
 /// Apply `base + positive - malus`, with the foundation subtraction flooring every unsigned field at zero.
-public(package) fun apply_fold(base: &Stats, positive: &Stats, malus: &Stats): Stats {
+public(package) fun z18(base: &Stats, positive: &Stats, malus: &Stats): Stats {
   spell::stats_sub(&spell::stats_add(base, positive), malus)
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
 /// Apply a positive and negative action/movement line to a class scalar. Addition precedes the checked subtraction,
 /// so an oversized -32768 item line floors at zero without an intermediate `u64` underflow.
-public(package) fun apply_scalar(base: u64, positive: u64, malus: u64): u64 {
+public(package) fun z19(base: u64, positive: u64, malus: u64): u64 {
   let total = base + positive;
   if (total > malus) total - malus else 0
 }
 
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
 /// Remove a malus only when that item was folded by this upgrade. Legacy items had maluses dropped, so removing one
 /// must leave the additive malus cache unchanged; this prevents a pre-upgrade -N line becoming a phantom +N buff.
-public(package) fun remove_malus(cache: &Stats, item_malus: &Stats, signed_folded: bool): Stats {
+public(package) fun z501(cache: &Stats, item_malus: &Stats, signed_folded: bool): Stats {
   if (signed_folded) spell::stats_sub(cache, item_malus) else *cache
 }

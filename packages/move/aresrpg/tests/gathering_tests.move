@@ -149,7 +149,7 @@ fun pin_checkpoint(sc: &mut Scenario, who: address, cid: ID, wid: ID, x: u32, z:
   let ver = sc.take_shared<Version>();
   {
     let chr = k.borrow_mut(personal_kiosk::borrow(&pkcap), cid);
-    character_link::write_checkpoint(chr, wid, checkpoint::new_checkpoint(x, z, time, false), &ver);
+    character_link::z2(chr, wid, checkpoint::z12(x, z, time, false), &ver);
   };
   ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(ver);
 }
@@ -431,7 +431,7 @@ fun gather_depleted_node_aborts() {
   let mut w = sc.take_shared<World>();
   let total = zones_view::resource_node_total(&w, zx, zy);
   let mut i = 0;
-  while (i < total) { zones::consume_resource_node(&mut w, zx, zy, i); i = i + 1; }; // one bit per derived cell
+  while (i < total) { zones::z50(&mut w, zx, zy, i); i = i + 1; }; // one bit per derived cell
   assert_eq!(zones_view::resource_node_count(&w, zx, zy), 0);
   ts::return_shared(w);
   test_world::equip(&mut sc, test_world::owner(), cid, vector[0], false);
