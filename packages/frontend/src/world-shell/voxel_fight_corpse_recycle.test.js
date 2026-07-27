@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// CORPSE PERMANENCE — reconciled to WAVE-A V1 (retirement floor) + V3 (keystone deleted). Seat §5d.
+// CORPSE RECONCILIATION — an ahead complete snapshot replaces the one-pipeline base and its retirement state.
 //
-// THE ORIGINAL TEST (git history) drove alive → poll-only death → corrected-snapshot REVIVE → poll-only death
-// again, and asserted the SECOND death still despawned (the `dying`-flag mirror leak in voxel_fight_adapter.js).
-// Its whole scenario RESTED on two mechanisms Wave A deliberately removes: the "KEYSTONE (register #3)" equal-
-// version compare-adopt it cited to justify the revive (DELETED by V3) and the resurrection itself (a floor-dead
-// mob brought back alive by a later higher-version read — the EXACT resurrection root V1 eliminates, symptom ②).
-//
-// Under the ratified law an authoritative death is a FLOOR: a later read carrying the mob ALIVE again is a parity
-// incident, held DEAD (BLANKPAGE §②/§③). So a mob dies AT MOST ONCE per fight — the corpse-recycle precondition
-// (one id dying twice) is now structurally impossible, and the `dying`-leak it guarded is unreachable dead-weight.
-// This test now LOCKS that new law at the REAL adapter: a floor-dead mob-0, then a "corrected" alive snapshot,
-// must NOT revive — it despawns once and stays gone. It drives the REAL create_voxel_fight_adapter + REAL
-// fight_store/use_dungeon singletons (voxel_fight_beat_playback.test.js's recording-board harness), one fight_id.
+// A behind/equal object cannot alter a receipt-proven death. An object ahead of the event cursor is different: it is
+// the complete new base, so the old retirement state is discarded with the subsumed event tail (#1336). This test
+// pins the REAL adapter side of that law: the first death despawns, then an ahead alive base mounts the entity again.
 
 import { afterAll, describe, expect, test } from 'bun:test'
 
@@ -48,8 +39,8 @@ const event = (kind, fields) => ({
   parsedJson: { fight: FIGHT, ...fields },
 })
 
-/** A decoded-Fight-shaped object (fight_board_simdrive.test.js's harness shape). The first read bootstraps
- *  the live mob; the later positive-HP checkpoint proves an object read cannot resurrect its floored death. */
+/** A decoded-Fight-shaped object. The first read bootstraps the live mob; the later positive-HP read is an ahead,
+ * complete replacement base. */
 const fight_object = (mob_hp) => ({
   id: FIGHT,
   width: 20,
@@ -141,7 +132,7 @@ const poll = async (predicate, { timeout = 8_000, step = 50 } = {}) => {
 }
 
 describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
-  'voxel fight adapter — a corpse despawns even after its id already died once earlier THIS fight',
+  'voxel fight adapter — corpse state follows the one-pipeline snapshot boundary',
   () => {
     const board = make_board()
     const adapter_handle = { current: null }
@@ -155,7 +146,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
       restore_browser_globals()
     })
 
-    test('a floor-dead mob-0 is NOT revived by a corrected alive snapshot — it despawns once and stays gone (V1)', async () => {
+    test('a receipt-dead mob despawns, then an ahead alive base mounts it again (#1336)', async () => {
       fight_store.getState().input({
         type: 'init',
         fight_id: FIGHT,
@@ -195,20 +186,16 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
         'mob-0 is floor-dead at v6'
       ).toBe(true)
 
-      // ── NO REVIVE (V1 · symptom ②) — a later, higher-version read carrying mob-0 ALIVE again is a parity incident,
-      // held DEAD by the retirement floor. The old keystone re-adopt that would have resurrected it is DELETED (V3).
-      // The rig must NOT re-mount, and the core must keep mob-0 dead. ──
+      // ── AHEAD REPLACEMENT (#1336) — v7 is beyond the v6 event cursor, so this complete object becomes the base.
+      // The old retirement row is subsumed with the tail; projection and rig both return to the object's alive fact. ──
       board.calls.upserts.length = 0
       fight_store.getState().input({ type: 'snapshot', fight: fight_object(30), version: 7 })
-      await sleep(400) // the adapter reconciles synchronously on the store change + its tick; a re-mount would be here
-      expect(
-        board.calls.upserts.some((u) => u.id === 'mob-0'),
-        'a floor-dead mob must NOT be revived by a corrected alive snapshot (no resurrection — V1)'
-      ).toBe(false)
+      const remounted = await poll(() => board.calls.upserts.some((u) => u.id === 'mob-0'))
+      expect(remounted, 'the ahead alive base did not remount mob-0').toBe(true)
       expect(
         engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead,
-        'retirement is permanent within the fight — the alive snapshot is discarded as a parity incident'
-      ).toBe(true)
+        'the replacement base discards the subsumed retirement state'
+      ).toBe(false)
     }, 20_000)
   }
 )
