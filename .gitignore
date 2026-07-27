@@ -106,3 +106,6 @@ packages/*/test/oracle/artifacts-local/
 
 # driven-harness run artifacts (boot/encyclopedia smoke, the fight bot sheet) — outputs, never sources
 smoke-out/
+
+# a symlinked node_modules slips past the directory-only rule above and dangles elsewhere
+packages/move/node_modules
