@@ -161,6 +161,22 @@ export function produce_receipt_render_turns(
 
   const damage_of_hit = (event) => hit_damage.get(event.event_index) ?? Math.max(0, Number(event.amount) || 0)
 
+  // WHEN a trap became armed, within THIS receipt (#1219). `my_traps` is written OPTIMISTICALLY at draft time, so
+  // by the time a receipt is narrated the client's trap ledger already holds a cell the turn only takes LATER —
+  // and matching that cell against an EARLIER walk flashed a detonation on a path the player had already left.
+  // A trap's placement is the `Cast` row that targeted its anchor; a walk is only armed by placements before it.
+  const placed_in_receipt = new Map()
+  decoded_events.forEach((candidate, index) => {
+    if (candidate.kind !== 'Cast' || candidate.target_cell == null) return
+    const anchor = Number(candidate.target_cell)
+    if (!placed_in_receipt.has(anchor)) placed_in_receipt.set(anchor, index)
+  })
+  /** Was this cell's trap already armed when the row at `cursor` ran? A placement outside this receipt predates it. */
+  const armed_before = (encoded, cursor) => {
+    const placed = placed_in_receipt.get(Number(encoded))
+    return placed == null || placed < cursor
+  }
+
   // ONE home for "which cells did this walk ENTER". A receipt's Moved/MobMoved carries only the landing cell, so
   // the route is reconstructed (obstacle- and body-aware, through the sim's own find_path_4dir) unless the caller
   // resolves it. Both the trap probe and the rendered beats read it, so they can never disagree.
@@ -192,8 +208,12 @@ export function produce_receipt_render_turns(
     return path.length > 0 ? path : [to]
   }
 
-  const crosses_trap = (event, source_id, from, to) =>
-    path_for(event, source_id, from, to).some((cell) => matches_trap(cell, encoded_cell(cell, grid_width), event))
+  const crosses_trap = (event, source_id, from, to, cursor) =>
+    path_for(event, source_id, from, to).some(
+      (cell) =>
+        matches_trap(cell, encoded_cell(cell, grid_width), event) &&
+        armed_before(encoded_cell(cell, grid_width), cursor)
+    )
 
   const ensure_turn = (source_id, force_new = false, source = null) => {
     if (!force_new && current_turn?.source_id === source_id) return current_turn
@@ -381,7 +401,7 @@ export function produce_receipt_render_turns(
       const probe_from = pushed_to
         ? decoded_cell(pushed_to.to_cell, grid_width)
         : (settled_cells.get(source_id) ?? cells_lookup())
-      const held = crosses_trap(event, source_id, probe_from, to) ? pending.filter(mover_hit) : []
+      const held = crosses_trap(event, source_id, probe_from, to, cursor) ? pending.filter(mover_hit) : []
       pending = pending.filter((candidate) => !held.includes(candidate))
       flush_pending()
       const turn = ensure_turn(
@@ -395,7 +415,10 @@ export function produce_receipt_render_turns(
       // Every trap cell the walk ENTERS, in path order — the chain fires each one and resumes (movement.move:43).
       // The endpoint is simply the last step, so the case the renderer used to special-case falls out of this.
       const trap_steps = rendered_path.flatMap((cell, index) =>
-        matches_trap(cell, encoded_cell(cell, grid_width), event) ? [index] : []
+        matches_trap(cell, encoded_cell(cell, grid_width), event) &&
+        armed_before(encoded_cell(cell, grid_width), cursor)
+          ? [index]
+          : []
       )
       // The claim above ran on the pre-flush route; if the post-flush one disagrees (a pending Displaced moved a
       // body the walk had to route around), give the held Hits back rather than swallow them — a dropped floater

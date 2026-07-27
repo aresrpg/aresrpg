@@ -21,6 +21,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
+import { produce_receipt_render_turns } from '../src/fight_render_events.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -154,5 +155,46 @@ describe('#1219 — a trap outlives the walk that preceded it', () => {
       7
     )
     expect(traps_of(store)).toEqual([])
+  })
+})
+
+// ── THE RENDER TWIN ────────────────────────────────────────────────────────────────────────────────────────
+// The same blindness, one layer up. `my_traps` is written OPTIMISTICALLY at draft time, so by the moment the
+// receipt is narrated the client's trap ledger already holds the cell — and #1213's walk-splitting matched it
+// against a walk that had happened BEFORE the trap was cast. The player watched their own move stop mid-path
+// and flash a detonation that never occurred. A trap whose placing `Cast` row sits LATER in this same receipt
+// was not armed while that walk ran.
+describe('#1219 render twin — a later cast never arms an earlier walk', () => {
+  const enc_r = (x, y) => y * 20 + x
+  const rev = (kind, f) => ({ type: `0xE::fight_events::${kind}`, parsedJson: { fight: FIGHT, ...f } })
+  const render = (events) =>
+    produce_receipt_render_turns(events, {
+      fight_id: FIGHT,
+      trap_cells: new Set([enc_r(8, 5)]),
+      resolve_fighter_id: ({ character, is_mob, idx }) => character ?? (is_mob ? `m${idx}` : CHAR),
+      fighter_cells: new Map([[CHAR, { x: 5, y: 5 }]]),
+    })
+
+  test('walk through X then cast a trap on X: ONE unbroken walk, no phantom boom', () => {
+    const receipt = render([
+      rev('Moved', { character: CHAR, to_cell: String(enc_r(10, 5)) }),
+      rev('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: String(enc_r(8, 5)) }),
+    ])
+    expect(receipt.turns[0].events.map((b) => b.kind)).toEqual(['move', 'arrival', 'cast'])
+  })
+
+  test('cast the trap FIRST, then walk through it: the walk still splits and detonates', () => {
+    const receipt = render([
+      rev('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: String(enc_r(8, 5)) }),
+      rev('Moved', { character: CHAR, to_cell: String(enc_r(10, 5)) }),
+    ])
+    expect(receipt.turns[0].events.map((b) => b.kind)).toEqual([
+      'cast',
+      'move',
+      'arrival',
+      'trap_trigger',
+      'move',
+      'arrival',
+    ])
   })
 })
