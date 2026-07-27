@@ -8,12 +8,15 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import '../test_helpers/env_mock.js'
 import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
 
 const { resolve_worn_cosmetics, worn_model_of } = await import('./cosmetic_glb.js')
+
+configure_assets({ aggregator: 'https://cdn.test', classes: { cosmetic: { published: true } } })
 
 const seed_manifest = JSON.parse(
   readFileSync(new URL('../../../move/scripts/out/seed_manifest.json', import.meta.url), 'utf8')
@@ -48,7 +51,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(calls).toEqual([
       {
         head: null,
-        back: { url: 'https://cdn.test/cosmetics/cape_fuwa.glb', variant: 'black' },
+        back: { url: 'https://cdn.test/models/cosmetics/cape_fuwa.glb', variant: 'black' },
       },
       { head: null, back: null },
     ])
@@ -237,7 +240,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     })
     // The end-to-end worn-slot path resolves the same recolored variant, not the raw seed word.
     expect(resolve_worn_cosmetics({ worn: { hat: { template_id: vitality_id } } }, templates).head).toEqual({
-      url: 'https://cdn.test/cosmetics/capuche_bara.glb',
+      url: 'https://cdn.test/models/cosmetics/capuche_bara.glb',
       variant: 'obsidian',
     })
 

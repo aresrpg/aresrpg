@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { entity_spec_from_fighter } from './voxel_fight_folds.js'
+
+configure_assets({ aggregator: 'https://assets.test', classes: { character: { published: true } } })
 
 describe('voxel fight appearance', () => {
   test('an unrigged female class uses the world avatar female placeholder and roster colors', () => {

@@ -13,11 +13,11 @@
 import { AnimationMixer, Box3 } from 'three'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
-import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
-import { canonical_asset_url, asset_url } from '@aresrpg/sdk/jobs'
+import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
 import { mount_is_flight, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
 import { game_log } from '../core/log.js'
+import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
 
 const SEAT_LIFT = 0.8 // fraction of the mount's height the rider sits at (bbox top of the back ≈ ×0.8)
 const BLEND_RATE = 8 // idle↔move weight ease (per-second lambda)
@@ -27,7 +27,7 @@ const _cache = new Map()
 const load_glb = (/** @type {string} */ url) => {
   let p = _cache.get(url)
   if (!p) {
-    p = get_glb_loader().loadAsync(url)
+    p = load_glb_checked(url)
     _cache.set(url, p)
   }
   return p
@@ -37,14 +37,14 @@ const load_glb = (/** @type {string} */ url) => {
  *  #175 preload below so a preload always warms the EXACT cache key the real mount will ask for.
  *  @param {string} glb_url @returns {string | null} */
 const resolve_source_url = (glb_url) =>
-  canonical_asset_url(glb_url) ?? (glb_url.startsWith('/') && !glb_url.startsWith('//') ? glb_url : null)
+  canonical_model_source_url(glb_url, { allow_dev_models: true })
 
 /** Which dragon skin the fast-travel dragon rides — fire by default; `?ftdragon=frost|void` previews the
  *  others in DEV. ONE home so the mount AND the #175 preload below always resolve the identical URL. */
 export function ft_dragon_glb_url() {
   const pick = (import.meta.env.DEV && new URLSearchParams(location.search).get('ftdragon')) || 'dragon-fire'
   const file = ['dragon-fire', 'dragon-frost', 'dragon-void'].includes(pick) ? `${pick}.glb` : 'dragon-fire.glb'
-  return asset_url('mob', file) ?? `/sprites/mobs/models/${file}`
+  return model_asset_url('mob', file)
 }
 
 /** PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): a cold asset-host dragon GLB fetch

@@ -62,18 +62,6 @@ function extract_asset_refs(contents) {
   return refs
 }
 
-// asset-host-first, local-bundle-OPTIONAL: sky_dragon.js (flag-gated trailer decoration, ?dragon=1)
-// resolves these via asset_url() first and only touches the local /sprites path if that CDN
-// lookup fails. Confirmed via testnet git history (`git ls-tree -r testnet --
-// packages/frontend/public/sprites/mobs/models/`) these 3 were NEVER bundled in this repo on any
-// branch — a pre-existing asset-host-only gap, not a #157 split regression. Filed as a maintenance-pass
-// finding, not fixed here (fabricating placeholder binaries is worse than an honest, CDN-backed gap).
-const REMOTE_FIRST_ALLOWLIST = new Set([
-  '/sprites/mobs/models/dragon-void.glb',
-  '/sprites/mobs/models/dragon-frost.glb',
-  '/sprites/mobs/models/dragon-fire.glb',
-])
-
 const SOURCE_FILES = [...walk_source_files(FRONTEND_SRC), ...walk_source_files(ENGINE_SRC)]
 const read_sources = () => Promise.all(SOURCE_FILES.map(async (file) => [file, await Bun.file(file).text()]))
 
@@ -86,7 +74,7 @@ describe('static asset references resolve on disk (#157 regression tooth)', () =
     const missing = []
     for (const [file, contents] of await read_sources())
       for (const ref of extract_asset_refs(contents))
-        if (!REMOTE_FIRST_ALLOWLIST.has(ref) && !existsSync(path.join(PUBLIC_DIR, ref)))
+        if (!existsSync(path.join(PUBLIC_DIR, ref)))
           missing.push(`${ref} — referenced by ${path.relative(FRONTEND_SRC, file)}`)
     expect(missing).toEqual([])
   })

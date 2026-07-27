@@ -12,13 +12,14 @@
 // full `bun test src` sweep, bisected 2026-07-10 (that pair has since been DELETED from env.ts — the
 // station is server-side-only). Keep this object's keys in lockstep with env.ts's exports.)
 
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
 import { seed_manifest } from '../content/seed_manifest'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
+import { reset_model_asset_errors_for_test } from './model_asset_url.js'
 
 // configure_assets has no test-reset seam (packages/sdk/src/jobs.js overwrites the aggregator with no
 // way to clear it back) — an earlier-run file (asset_manifest.test.ts) leaves a test aggregator configured
@@ -29,7 +30,7 @@ configure_assets({ aggregator: 'https://cdn.aresrpg.world' })
 // (pet_companion_resolver.test.js's own MOB_QUILT convention) — configure it here too rather than depend on
 // another file having configured `classes.mob` first (classes only ever MERGE for the process lifetime, per
 // the header note above, so this file's own pet-fallback tests must not assume load order).
-configure_assets({ classes: { mob: { published: true } } })
+configure_assets({ classes: { mob: { published: true }, cosmetic: { published: true } } })
 
 const {
   is_mount_item,
@@ -78,8 +79,21 @@ describe('models_dev_url — repo ./models GLB resolution (trailer path)', () =>
 })
 
 describe('cosmetic_glb_url — identifier-derived served URL', () => {
-  test('builds ${ASSETS}/cosmetics/<id>.glb', () => {
-    expect(cosmetic_glb_url('mount_suicune')).toBe('https://cdn.test/cosmetics/mount_suicune.glb')
+  test('builds the published asset-host cosmetics/<id>.glb URL', () => {
+    expect(cosmetic_glb_url('mount_suicune')).toBe('https://cdn.aresrpg.world/models/cosmetics/mount_suicune.glb')
+  })
+  test('an unpublished cosmetic class logs and resolves null, never a relative model URL', () => {
+    const error = spyOn(console, 'error').mockImplementation(() => {})
+    configure_assets({ classes: { cosmetic: {} } })
+    reset_model_asset_errors_for_test()
+    try {
+      expect(cosmetic_glb_url('unpublished_probe')).toBeNull()
+      expect(error).toHaveBeenCalledTimes(1)
+    } finally {
+      error.mockRestore()
+      configure_assets({ classes: { cosmetic: { published: true } } })
+      reset_model_asset_errors_for_test()
+    }
   })
   test('empty id → null', () => {
     expect(cosmetic_glb_url('')).toBe(null)
@@ -91,11 +105,17 @@ describe('resolve_mount — availability state machine', () => {
     const r = resolve_mount({ id: 'c1', mount: { id: 'm1', template_id: 'mount_suicune' } }, '')
     expect(r.available).toBe(true)
     expect(r.source).toBe('equip')
-    expect(r.glb_url).toBe('https://cdn.test/cosmetics/mount_suicune.glb')
+    expect(r.glb_url).toBe('https://cdn.aresrpg.world/models/cosmetics/mount_suicune.glb')
   })
-  test("an item's own glb ref wins over the convention", () => {
-    const r = resolve_mount({ id: 'c1', mount: { id: 'm1', glb: '/models/pet/zot.glb' } }, '')
-    expect(r.glb_url).toBe('/models/pet/zot.glb')
+  test("an item's relative glb ref is refused, never fetched through the SPA origin", () => {
+    const error = spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const r = resolve_mount({ id: 'c1', mount: { id: 'm1', glb: '/models/pet/zot.glb' } }, '')
+      expect(r.glb_url).toBeNull()
+      expect(error).toHaveBeenCalledTimes(1)
+    } finally {
+      error.mockRestore()
+    }
   })
   test("an item's asset-host-shaped blob ref is still re-homed onto the CDN (old minted Display data)", () => {
     const r = resolve_mount(
@@ -228,7 +248,9 @@ describe('worn_dev_url — DEV worn-slot override → served /models GLB', () =>
     expect(worn_dev_url(null)).toBe(null)
   })
   test('a full external URL is ALSO re-homed onto the CDN — the host-confinement guard applies here too (#650)', () => {
-    expect(worn_dev_url('https://cdn.test/cosmetics/x.glb')).toBe('https://cdn.aresrpg.world/cosmetics/x.glb')
+    expect(worn_dev_url('https://foreign-origin.example/cosmetics/x.glb')).toBe(
+      'https://cdn.aresrpg.world/cosmetics/x.glb'
+    )
   })
 })
 
@@ -240,17 +262,17 @@ describe('resolve_worn_cosmetics — equipped hat/cloak GLBs (live via the /v1 w
       cloak: { item_id: '0xcloak', template_id: 'cape_kamui', category: 'cloak' },
     })
     expect(r).toEqual({
-      head: { url: 'https://cdn.test/cosmetics/solomonk.glb', variant: null },
-      back: { url: 'https://cdn.test/cosmetics/cape_kamui.glb', variant: null },
+      head: { url: 'https://cdn.aresrpg.world/models/cosmetics/solomonk.glb', variant: null },
+      back: { url: 'https://cdn.aresrpg.world/models/cosmetics/cape_kamui.glb', variant: null },
     })
   })
   test('the cosmetic_* on-chain vocab resolves too (cosmetic_hat / cosmetic_helmet / cosmetic_cloak)', () => {
     expect(resolve_worn_cosmetics({ id: 'c1', cosmetic_helmet: { id: 'drakar' } }).head).toEqual({
-      url: 'https://cdn.test/cosmetics/drakar.glb',
+      url: 'https://cdn.aresrpg.world/models/cosmetics/drakar.glb',
       variant: null,
     })
     expect(resolve_worn_cosmetics({ id: 'c1', cosmetic_cloak: { id: 'cape_kamui' } }).back).toEqual({
-      url: 'https://cdn.test/cosmetics/cape_kamui.glb',
+      url: 'https://cdn.aresrpg.world/models/cosmetics/cape_kamui.glb',
       variant: null,
     })
   })
@@ -295,7 +317,7 @@ describe('resolve_worn_cosmetics — ?equip dev override (js/remote-property-inj
     // Pre-fix, spec['constructor'] = 'pwn' materialized an own property, engaged the override
     // gate, and returned EMPTY cosmetics for a character with a live hat.
     const r = with_dev(() => resolve_worn_cosmetics(live_char, new Map(), '?equip=constructor:pwn'))
-    expect(r.head).toEqual({ url: 'https://cdn.test/cosmetics/solomonk.glb', variant: null })
+    expect(r.head).toEqual({ url: 'https://cdn.aresrpg.world/models/cosmetics/solomonk.glb', variant: null })
   })
 
   test('__proto__ can never pollute Object.prototype through the equip query', () => {
@@ -308,7 +330,7 @@ describe('resolve_worn_cosmetics — ?equip dev override (js/remote-property-inj
 
   test('DEV off: the query is inert and the live equip renders (prod ignores ?equip entirely)', () => {
     const r = resolve_worn_cosmetics(live_char, new Map(), '?equip=head:sui_helmet')
-    expect(r.head).toEqual({ url: 'https://cdn.test/cosmetics/solomonk.glb', variant: null })
+    expect(r.head).toEqual({ url: 'https://cdn.aresrpg.world/models/cosmetics/solomonk.glb', variant: null })
   })
 })
 

@@ -11,27 +11,25 @@
 // the in-game render.
 
 import { AnimationMixer, Color, LoopRepeat, Mesh } from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
-import { asset_url } from '@aresrpg/sdk/jobs'
+import { load_glb_checked } from '@aresrpg/engine3/model'
 
+import { model_asset_url } from '../model_asset_url.js'
 import { create_customizable_texture } from './customizable-texture.js'
 
-// asset-host (boot manifest) first — the decentralized home — else the bundled /sprites/characters copy
-// (progressive migration; the manifest carries `character` only after the upload lane publishes it).
-// Resolved at load time (not at module init) so a manifest fetched after boot still wins. The quilt is
-// keyed by GLB basename, so a `/sprites/characters/senshi_male.glb` local path maps to identifier
+// The manifest-backed asset host is the only model home — geometry has no relative fallback (the SPA rewrite
+// answers a missing GLB with index.html at status 200). Resolved at load time (not at module init) so a
+// manifest fetched after boot still wins. The host is keyed by GLB basename, so a legacy `/sprites/characters/senshi_male.glb` input maps to identifier
 // `senshi_male.glb`. Null-safe: a bald class/gender passes undefined `hair` straight through. Exported so
 // the in-world avatar, remote players, and the fight board (which read CHARACTER_MODELS directly) resolve
 // through the SAME seam as the pedestal — one home for "class GLB → its live URL".
 /** @param {string | null | undefined} local_url @returns {string | null | undefined} */
 export const character_glb_url = (local_url) =>
-  local_url ? (asset_url('character', local_url.split('/').pop() ?? '') ?? local_url) : local_url
+  local_url ? model_asset_url('character', local_url.split('/').pop() ?? '') : local_url
 
-// Class id -> per-gender GLB urls (public/sprites/characters, the same bundled-asset convention as the mob
-// GLBs in /sprites/mobs/models). The 4 RIGGED classes ship a model (senshi/shugo/tomoda/yajin, each male +
+// Class id -> per-gender GLB filenames on the asset host. The 4 RIGGED classes ship a model
+// (senshi/shugo/tomoda/yajin, each male +
 // female); the other classes have none, so `has_character_model` returns false and the caller falls back to
 // the 2D directional sprite (the pedestal shows "model soon"). `hair` is OPTIONAL per gender — the base body
 // is hairless (the head is the helmet slot), so a row with no `hair` simply renders bald (shugo + tomoda-male
@@ -43,20 +41,20 @@ export const character_glb_url = (local_url) =>
 /** @type {Record<string, ClassModels>} */
 export const CHARACTER_MODELS = {
   senshi: {
-    male: { body: '/sprites/characters/senshi_male.glb', hair: '/sprites/characters/senshi_male_hair.glb' },
-    female: { body: '/sprites/characters/senshi_female.glb', hair: '/sprites/characters/senshi_female_hair.glb' },
+    male: { body: 'senshi_male.glb', hair: 'senshi_male_hair.glb' },
+    female: { body: 'senshi_female.glb', hair: 'senshi_female_hair.glb' },
   },
   shugo: {
-    male: { body: '/sprites/characters/shugo_male.glb' },
-    female: { body: '/sprites/characters/shugo_female.glb' },
+    male: { body: 'shugo_male.glb' },
+    female: { body: 'shugo_female.glb' },
   },
   tomoda: {
-    male: { body: '/sprites/characters/tomoda_male.glb' },
-    female: { body: '/sprites/characters/tomoda_female.glb', hair: '/sprites/characters/tomoda_female_hair.glb' },
+    male: { body: 'tomoda_male.glb' },
+    female: { body: 'tomoda_female.glb', hair: 'tomoda_female_hair.glb' },
   },
   yajin: {
-    male: { body: '/sprites/characters/yajin_male.glb', hair: '/sprites/characters/yajin_male_hair.glb' },
-    female: { body: '/sprites/characters/yajin_female.glb', hair: '/sprites/characters/yajin_female_hair.glb' },
+    male: { body: 'yajin_male.glb', hair: 'yajin_male_hair.glb' },
+    female: { body: 'yajin_female.glb', hair: 'yajin_female_hair.glb' },
   },
 }
 
@@ -83,7 +81,7 @@ export const character_rig_of = (class_id, fallback = null) =>
 /**
  * THE ONE HOME for "a class + a gender → the GLB urls that render it" — consumed by the roam avatar
  * (embed_voxel_player), remote players, the world fight board (world-shell/voxel_fight_folds) and the
- * simulator board, so a body on one surface is the same body on every other. Urls are asset-host-first through
+ * simulator board, so a body on one surface is the same body on every other. URLs are asset-host-only through
  * `character_glb_url`; a bald class/gender row resolves `hair: undefined` (bald, never broken).
  *
  * `fallback` is the ONLY thing that differs between surfaces and it is an explicit argument, not a fork: the
@@ -107,17 +105,6 @@ export const character_model_urls = (class_id, male, { fallback = null } = {}) =
   }
 }
 
-// ONE shared GLTFLoader + DRACOLoader (the GLBs are KHR_draco_mesh_compression — without a
-// DRACOLoader the load throws "No DRACOLoader instance provided"). Decoder served from /draco/.
-let _loader = /** @type {GLTFLoader | null} */ (null)
-const get_loader = () => {
-  if (!_loader) {
-    const draco = new DRACOLoader().setDecoderPath('/draco/')
-    _loader = new GLTFLoader().setDRACOLoader(draco)
-  }
-  return _loader
-}
-
 // Parsed-GLTF cache keyed by url so re-selecting a class is instant (parse once). Each consumer
 // clones the parsed scene (SkeletonUtils.clone rebinds the skeleton so the rig animates correctly).
 /** @type {Map<string, Promise<import('three').Group & { animations: import('three').AnimationClip[] }>>} */
@@ -125,17 +112,10 @@ const _cache = new Map()
 const load_glb = (url) => {
   let p = _cache.get(url)
   if (!p) {
-    p = new Promise((resolve, reject) =>
-      get_loader().load(
-        url,
-        (gltf) => {
-          gltf.scene.animations = gltf.animations
-          resolve(/** @type {any} */ (gltf.scene))
-        },
-        undefined,
-        reject
-      )
-    )
+    p = load_glb_checked(url).then((gltf) => {
+      gltf.scene.animations = gltf.animations
+      return /** @type {any} */ (gltf.scene)
+    })
     _cache.set(url, p)
   }
   return p
@@ -147,8 +127,10 @@ export function preload_character_model(class_id, { male = true } = {}) {
   const models = CHARACTER_MODELS[class_id]
   if (!models) return
   const urls = male ? models.male : models.female
-  for (const local_url of [urls.body, urls.hair])
-    if (local_url) load_glb(character_glb_url(local_url)).catch(() => {})
+  for (const local_url of [urls.body, urls.hair]) {
+    const url = character_glb_url(local_url)
+    if (url) load_glb(url).catch(() => {})
+  }
 }
 
 // find_bone — port of models.js: the first bone whose name CONTAINS `name` (case-insensitive), so
@@ -178,7 +160,9 @@ async function attach_class_hair(model, class_id, { male = true } = {}) {
   if (!urls?.hair) return null
   const head = find_bone(model, 'Head')
   if (!head) return null
-  const hair = clone_skinned(await load_glb(character_glb_url(urls.hair)))
+  const hair_url = character_glb_url(urls.hair)
+  if (!hair_url) return null
+  const hair = clone_skinned(await load_glb(hair_url))
   head.clear() // production's atomic no-double-headgear rule
   head.add(hair)
   return hair
@@ -289,8 +273,10 @@ export async function load_character_model(class_id, { male = true } = {}) {
   const models = CHARACTER_MODELS[class_id]
   if (!models) return null
   const urls = male ? models.male : models.female
+  const body_url = character_glb_url(urls.body)
+  if (!body_url) return null
 
-  const body_scene = await load_glb(character_glb_url(urls.body))
+  const body_scene = await load_glb(body_url)
   const model = clone_skinned(body_scene)
   const body_colors = create_custom_colors(model)
 

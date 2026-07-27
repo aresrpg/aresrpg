@@ -31,10 +31,10 @@
 import { AnimationMixer, Box3 } from 'three'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
-import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
-import { canonical_asset_url } from '@aresrpg/sdk/jobs'
+import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
 import { game_log } from '../core/log.js'
+import { canonical_model_source_url } from './model_asset_url.js'
 import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
 import { hover_target_y, is_fish_pet, select_companion_clip } from './pet_hover.js'
 
@@ -47,7 +47,7 @@ const _cache = new Map()
 const load_glb = (/** @type {string} */ url) => {
   let p = _cache.get(url)
   if (!p) {
-    p = get_glb_loader().loadAsync(url)
+    p = load_glb_checked(url)
     _cache.set(url, p)
   }
   return p
@@ -75,8 +75,7 @@ export function create_pet_companion_rig({ engine, glb_url, slug = null }) {
   let want_visible = true
   let elapsed_s = 0 // hover bob accumulator (fish only) — TIME-based, advanced by update()'s own dt
   const is_fish = is_fish_pet(slug)
-  const source_url =
-    canonical_asset_url(glb_url) ?? (glb_url.startsWith('/') && !glb_url.startsWith('//') ? glb_url : null)
+  const source_url = canonical_model_source_url(glb_url, { allow_dev_models: true })
 
   const load = source_url ? load_glb(source_url) : Promise.reject(new Error('refused non-CDN pet asset URL'))
   load

@@ -6,7 +6,7 @@
 //
 // SOURCE OF TRUTH ("extract the exact reference-corpus mobs — no fallback"): every mob renders its
 // OWN reference-corpus model, extracted from the vanilla reference asset archive by the extraction script (which
-// runs the GLB conversion script per model) into public/sprites/mobs/models/hy_*.glb. The mapping key is
+// runs the GLB conversion script per model) and published under the asset host's models/mobs family. The mapping key is
 // the mob's `appearance` (the reference-corpus model id the mob is authored as); the published mob_catalog
 // (mob_catalog.js) resolves the catalog key/variant → { appearance, glb } in one hop (merged at publish).
 //
@@ -18,10 +18,11 @@
 import { mob_icon_url, asset_url } from '@aresrpg/sdk/jobs'
 
 import { catalog_name_of } from '../../content/mob_name_overrides'
+import { model_asset_url } from '../model_asset_url.js'
 import { get_catalog } from './mob_catalog.js'
 
-// GLBs serve from unhashed /sprites URLs (browsers cache across re-extractions). Pin each model to its first
-// resolved source for the page lifetime. A late asset-host manifest refresh therefore cannot make an already-roaming
+// GLBs serve from unhashed asset-host URLs (browsers cache across re-extractions). Pin each model to its
+// first resolved absolute source for the page lifetime. A late manifest refresh cannot make an already-roaming
 // mob and its fight-board twin parse different GLB bytes.
 /** @type {Map<string, string>} */
 const resolved_mob_urls = new Map()
@@ -32,10 +33,10 @@ export const resolve_mob_visual_url = (
 ) => {
   let url = cache.get(glb)
   if (!url) {
-    url = resolve_asset('mob', `${glb}.glb`) ?? `/sprites/mobs/models/${glb}.glb`
-    cache.set(glb, url)
+    url = model_asset_url('mob', `${glb}.glb`, resolve_asset)
+    if (url) cache.set(glb, url)
   }
-  return url
+  return url ?? null
 }
 const mob_visual_url = (/** @type {string} */ glb) => resolve_mob_visual_url(resolved_mob_urls, glb)
 const missing_url = () => mob_visual_url('hy__missing')
@@ -68,7 +69,7 @@ const warned_appearances = new Set()
  * never hit the first key. The appearance then resolves to its extracted reference-corpus GLB. No match → a LOUD
  * console.error (deduped per appearance) + the debug cube — NEVER a silent koshi fallback.
  * @param {{ name?: string, type?: string, variant?: string, size?: number }} mob
- * @returns {{ url: string, variant: string | null, size: number }}
+ * @returns {{ url: string | null, variant: string | null, size: number }}
  */
 export function get_mob_model(mob) {
   const wire = typeof mob.size === 'number' && mob.size > 0 ? mob.size : 1
@@ -78,8 +79,7 @@ export function get_mob_model(mob) {
   const entry = by_variant ?? catalog[catalog_key_of(mob.name) ?? '']
   const appearance = entry?.appearance ?? null
   const glb = entry?.glb ?? null
-  // asset-host (boot manifest) first — the decentralized home — else the bundled /sprites copy (progressive
-  // migration; the manifest carries `mob` only after the census→quilt→upload lane publishes it).
+  // Asset-host only: an unpublished `mob` class returns null and the caller keeps its honest placeholder state.
   if (glb)
     return {
       url: mob_visual_url(glb),

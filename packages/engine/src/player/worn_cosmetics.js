@@ -42,7 +42,7 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 // mount (no registered queue ⇒ immediate resolve — tests/headless unchanged).
 import { warm_pipelines_once } from '../render/pipeline_warm_queue.js'
 
-import { apply_avatar_material, get_glb_loader } from './mob_model.js' // [one-mob-sdk 2026-07-13] moved from character_avatar.js (the single mob-render home)
+import { apply_avatar_material, load_glb_checked } from './mob_model.js' // [one-mob-sdk 2026-07-13] moved from character_avatar.js (the single mob-render home)
 
 /** Worn-cosmetic PBR (approved) — applied to the mounted GLB meshes ONLY (apply_avatar_material stays
  *  the shared skin/mob home, untouched). A modest metalness + lower roughness = the "shiny" cosmetic look. */
@@ -176,7 +176,7 @@ const _cache = new Map()
 const load_glb = (/** @type {string} */ url) => {
   let p = _cache.get(url)
   if (!p) {
-    p = get_glb_loader().loadAsync(url)
+    p = load_glb_checked(url)
     _cache.set(url, p)
   }
   return p

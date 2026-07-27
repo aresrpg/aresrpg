@@ -12,12 +12,12 @@
 // needed (mirrors `?dragon=1` / `?biome=` and the existing `__force_mount` DEV hooks).
 
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
-import { canonical_asset_url, asset_url } from '@aresrpg/sdk/jobs'
+import { canonical_asset_url } from '@aresrpg/sdk/jobs'
 
-import { ASSETS_URL } from '../env'
 import { seed_manifest } from '../content/seed_manifest'
 
 import { cosmetic_icon_of } from './cosmetic_icons.js'
+import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
 import { mount_speed_multiplier } from './mount_speed.js'
 import { resolve_pet_companion } from './pet_companion_resolver.js'
 
@@ -82,7 +82,7 @@ export function pick_mount_clips(clips, { flight = false } = {}) {
 const FLIGHT_MOUNTS = new Set(['dragon-fire', 'dragon-frost', 'dragon-void'])
 
 /** The MOUNT_TABLE key a mount GLB URL resolves to — its file stem, lowercased (`.../pet/corbac.glb` and
- *  `${ASSETS_URL}/cosmetics/corbac.glb?v=2` both resolve 'corbac'). @param {string | null | undefined} glb_url */
+ *  `<asset-host>/models/cosmetics/corbac.glb?v=2` both resolve 'corbac'). @param {string|null|undefined} glb_url */
 export const mount_stem = (glb_url) =>
   String(glb_url ?? '')
     .split(/[?#]/)[0]
@@ -125,12 +125,13 @@ export function models_dev_url(spec) {
 /**
  * The identifier-derived served model URL for a cosmetic / mount item. Worn cosmetics pass their quilt
  * `appearance` slug here; author-linked mounts may still pass a template slug/id by convention.
- * `${ASSETS_URL}/cosmetics/<identifier>.glb`. @param {string} identifier @returns {string | null}
+ * Asset host `cosmetics/<identifier>.glb`. @param {string} identifier @returns {string | null}
  */
 export function cosmetic_glb_url(identifier) {
   if (!identifier) return null
-  // asset-host (boot manifest) first — the decentralized home — else the CDN (progressive migration).
-  return asset_url('cosmetic', `${identifier}.glb`) ?? `${ASSETS_URL}/cosmetics/${identifier}.glb`
+  // Asset-host ONLY — geometry has no relative fallback (the SPA rewrite would answer a missing GLB with
+  // index.html at status 200); an unpublished `cosmetic` class returns null and the caller stays honest.
+  return model_asset_url('cosmetic', `${identifier}.glb`)
 }
 
 /**
@@ -346,11 +347,10 @@ export function resolve_mount(character, search) {
     // address-named file that can never exist.
     const template_id = item?.template_id ?? item?.item_type
     const explicit = item && (item.glb || item.glb_url)
-    const explicit_local =
-      typeof explicit === 'string' && explicit.startsWith('/') && !explicit.startsWith('//') ? explicit : null
-    // Runtime/on-chain refs are untrusted: a asset-host blob path is re-homed onto the manifest CDN, a same-origin
-    // authoring path stays local, and every other absolute host is discarded in favour of the template convention.
-    const glb = canonical_asset_url(explicit) || explicit_local || cosmetic_glb_url(template_id)
+    // Runtime/on-chain refs are untrusted: an absolute URL is re-homed onto the manifest asset host. Relative
+    // paths are refused because the SPA rewrite can answer a missing GLB with index.html-as-200.
+    const explicit_url = explicit ? canonical_model_source_url(explicit) : null
+    const glb = explicit_url || cosmetic_glb_url(template_id)
     return { available: true, glb_url: glb, source: 'equip' }
   }
   // #594 — no dedicated mount: the active pet (if any) IS a valid ride target.

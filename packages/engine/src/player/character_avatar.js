@@ -31,7 +31,7 @@ import { warm_pipelines_once } from '../render/pipeline_warm_queue.js'
 
 // [one-mob-sdk 2026-07-13] the shared mob-render primitives moved to mob_model.js (the single home); the avatar
 // builds its recolour/hair/beat rig ON them, so the dependency flows one way (this → mob_model), no cycle.
-import { apply_avatar_material, get_glb_loader, prepare_mob_render } from './mob_model.js'
+import { apply_avatar_material, load_glb_checked, prepare_mob_render } from './mob_model.js'
 
 /** Crossfade duration between animation states (player-model.js FADE = 0.2 s). */
 const FADE = 0.2
@@ -345,8 +345,7 @@ export function create_character_avatar({
       if (hair_url) {
         const head = find_bone(model, 'Head')
         if (head) {
-          get_glb_loader().load(
-            hair_url,
+          void load_glb_checked(hair_url).then(
             (hair_gltf) => {
               head.clear() // the atomic no-double-headgear rule (no-op on a bare Head bone)
               head.add(hair_gltf.scene)
@@ -362,7 +361,6 @@ export function create_character_avatar({
               for (const g of find_customizable_groups(hair_gltf.scene).values()) group_entries.push(g)
               if (last_colors) apply_colors(last_colors)
             },
-            undefined,
             (err) => console.warn('[character_avatar] hair GLB load failed (bald, not broken):', hair_url, err)
           )
         } else {
@@ -399,7 +397,7 @@ export function create_character_avatar({
   const on_model_error = (/** @type {any} */ err) => console.warn('[character_avatar] GLB load failed:', glb_url, err)
   if (mob_model_factory)
     void mob_model_factory(glb_url, { label: glb_url }).then((model) => on_model_loaded(null, model), on_model_error)
-  else get_glb_loader().load(glb_url, on_model_loaded, undefined, on_model_error)
+  else void load_glb_checked(glb_url).then(on_model_loaded, on_model_error)
 
   /**
    * Resolves a clip name for an anim state (exact-first, then substring) and crossfades to it.

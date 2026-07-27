@@ -8,10 +8,13 @@
 // repaints instead of re-baking its geometry.
 
 import { describe, test, expect } from 'bun:test'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { board_key_of, board_of } from './board'
 import { cell_intent_of, class_body_url, setup_scene_of } from './board_paint'
 import { INITIAL_SIMULATOR_STATE, reduce_simulator, type SimulatorState } from './reducer'
+
+configure_assets({ aggregator: 'https://assets.test', classes: { character: { published: true } } })
 
 const SEED = 0xc81f3a92
 const mob_name_of = (template_id: string) => template_id
