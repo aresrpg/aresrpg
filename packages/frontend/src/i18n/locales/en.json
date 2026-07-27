@@ -1279,6 +1279,8 @@
     "equipment": "EQUIPMENT",
     "pick_item": "PICK {{slot}}",
     "item_level": "LV {{level}}",
+    "max_roll": "MAX ROLL",
+    "gear_bonus_hint": "FROM EQUIPPED GEAR, AT MAX ROLL",
     "spell_level": "LEVEL OF {{name}}",
     "spell_level_option": "LV {{level}} · {{cost}} PTS",
     "mob_spells_auto": "SPELLS LOAD AUTOMATICALLY WITH THE MOB",

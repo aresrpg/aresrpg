@@ -147,9 +147,14 @@ export function use_tooltip_detail(
 export function ItemTooltipCard({
   item,
   max_height = 480,
+  children,
 }: {
   item: Parameters<typeof ItemDetailView>[0]['item']
   max_height?: number
+  /** Passed straight through to ItemDetailView's own footer slot — a caller whose CONTEXT changes what the
+   *  numbers mean says so there (the simulator's MAX ROLL micro-label), inside the one card, rather than
+   *  wrapping a second panel around it. */
+  children?: React.ReactNode
 }) {
   return (
     <div
@@ -163,7 +168,7 @@ export function ItemTooltipCard({
         backdropFilter: 'blur(12px)',
       }}
     >
-      <ItemDetailView item={item} />
+      <ItemDetailView item={item}>{children}</ItemDetailView>
     </div>
   )
 }

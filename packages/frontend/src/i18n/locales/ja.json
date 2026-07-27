@@ -1279,6 +1279,8 @@
     "equipment": "装備",
     "pick_item": "{{slot}} を選ぶ",
     "item_level": "Lv {{level}}",
+    "max_roll": "最大ロール",
+    "gear_bonus_hint": "装備中の装備品による最大ロール値",
     "spell_level": "{{name}} のレベル",
     "spell_level_option": "Lv {{level}} · {{cost}} ポイント",
     "mob_spells_auto": "呪文はモンスターと共に自動で読み込まれます",

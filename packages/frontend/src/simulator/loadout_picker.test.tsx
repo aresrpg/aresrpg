@@ -21,9 +21,8 @@ import en from '../i18n/locales/en.json'
 import { seed_manifest } from '../content/seed_manifest'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
-import { ItemTooltipCard } from '../components/item_hover_tooltip'
 
-import { picker_item_detail, use_slot_picker_content } from './LoadoutSection'
+import { MaxRollItemCard, picker_item_detail, use_slot_picker_content } from './LoadoutSection'
 
 const test_i18n = i18next.createInstance()
 void test_i18n.init({
@@ -137,11 +136,15 @@ describe('the corpus landing populates the picker — the empty→populated tran
 describe('the hover detail a row shows BEFORE the pick', () => {
   const [row] = item_corpus.item_corpus_from_v1([wire(0, 'helmet')])
 
-  test('the projection is the published row itself — authored ranges, art slug, no invented fields', () => {
+  test('the projection is the published row at its MAX ROLL — art slug, no invented fields', () => {
     const detail = picker_item_detail(row)
     expect(detail.name).toBe('Live helmet 0')
     expect(detail.level).toBe(10)
-    expect(detail.stats).toEqual(row.stats)
+    // The SIMULATOR equips ceilings, so the card shows the ceiling: the authored [1, 7] vitality range
+    // reaches it as a flat +7, the roll this build actually gets. Showing the spread would advertise a
+    // roll no simulated character is ever assembled with (test/simulator/gear_hover.test.tsx pins this
+    // against the `(+X)` the stat rows credit for the same item — one arithmetic, two surfaces).
+    expect(detail.stats).toEqual({ vitality: 7 })
     expect(detail.image_url).toContain('art_helmet_0')
     // a TEMPLATE authors its ranges in the open — it is never an instance with a pending roll
     expect('stats_unavailable' in detail).toBe(false)
@@ -150,12 +153,13 @@ describe('the hover detail a row shows BEFORE the pick', () => {
   test('the SHARED card renders it — the same component the encyclopedia and the bag show', () => {
     const html = renderToStaticMarkup(
       <I18nextProvider i18n={test_i18n}>
-        <ItemTooltipCard item={picker_item_detail(row)} />
+        <MaxRollItemCard item={row} />
       </I18nextProvider>
     )
     expect(html).toContain('Live helmet 0')
-    // the authored [1, 7] vitality range reaches the card, decoded off its bias
-    expect(html).toContain('1')
-    expect(html).toContain('7')
+    // the authored [1, 7] vitality range reaches the card decoded off its bias and collapsed to its
+    // ceiling — the simulator's roll, labelled as such
+    expect(html).toContain('+7')
+    expect(html).toContain(en.simulator.max_roll)
   })
 })

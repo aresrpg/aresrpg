@@ -1279,6 +1279,8 @@
     "equipment": "EQUIPO",
     "pick_item": "ELEGIR {{slot}}",
     "item_level": "NV {{level}}",
+    "max_roll": "TIRADA MÁXIMA",
+    "gear_bonus_hint": "DEL EQUIPO EQUIPADO, EN TIRADA MÁXIMA",
     "spell_level": "NIVEL DE {{name}}",
     "spell_level_option": "NV {{level}} · {{cost}} PTS",
     "mob_spells_auto": "LOS HECHIZOS SE CARGAN CON EL MOB",

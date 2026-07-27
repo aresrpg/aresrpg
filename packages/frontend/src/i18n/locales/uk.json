@@ -1279,6 +1279,8 @@
     "equipment": "СПОРЯДЖЕННЯ",
     "pick_item": "ОБРАТИ {{slot}}",
     "item_level": "РІВ {{level}}",
+    "max_roll": "МАКСИМАЛЬНИЙ КИДОК",
+    "gear_bonus_hint": "ВІД ОДЯГНЕНОГО СПОРЯДЖЕННЯ, ЗА МАКСИМАЛЬНИМ КИДКОМ",
     "spell_level": "РІВЕНЬ {{name}}",
     "spell_level_option": "РІВ {{level}} · {{cost}} ОЧ",
     "mob_spells_auto": "ЗАКЛЯТТЯ ЗАВАНТАЖУЮТЬСЯ АВТОМАТИЧНО З МОБОМ",

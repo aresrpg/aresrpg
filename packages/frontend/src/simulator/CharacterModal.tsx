@@ -9,6 +9,7 @@
 //   · spell rows     → SpellRow + spell_copy (hud/spell_row.jsx, extracted from the grimoire's Spellbook)
 //   · spell tooltip  → SpellHoverTip (hud/spell-hover-tip.jsx — the fight hotbar's own hover card)
 //   · equipment      → EquipmentDoll/EquipmentSlot via LoadoutSection (the inventory's paper doll)
+//   · item tooltip   → ItemDetailView via LoadoutSection's MaxRollItemCard (the bag/encyclopedia card)
 //   · the dialog     → ModalFrame (components/modal_frame.tsx, extracted from the maintenance modal)
 // Everything numeric it shows comes from the page reducer's budgets; it computes no balance of its own.
 //
@@ -32,6 +33,7 @@ import { seed_el_label } from '../game/screens/hud/seed-effect-line.js'
 import { SpellHoverTip } from '../game/screens/hud/spell-hover-tip.jsx'
 import { SpellRow, spell_copy } from '../game/screens/hud/spell_row.jsx'
 import { StatIdentity } from '../game/screens/hud/stat_row.jsx'
+import { Tooltip } from '../game/screens/hud/Tooltip.jsx'
 import { use_item_corpus } from '../pages/encyclopedia/item_corpus'
 
 import { character_spell_rows, spell_level_options, type GrimoireRow } from './build_view'
@@ -183,7 +185,15 @@ function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
                   input({ type: 'stat_set', id: character.id, stat, value: Number(event.target.value) })
                 }
               />
-              {bonus !== 0 && <span className="stats__prow-bonus"> ({signed_bonus})</span>}
+              {/* WHAT THE NUMBER IS. The input beside it is an ALLOCATION (points, capped by the level
+                  budget) while this is a GEAR TOTAL in raw stat points — two different scales on one line, so
+                  a four-figure bonus next to a three-figure allocation reads as a bug unless the row says
+                  where it comes from. It names its own source on hover, through the house tooltip. */}
+              {bonus !== 0 && (
+                <Tooltip text={t('simulator.gear_bonus_hint')}>
+                  <span className="stats__prow-bonus"> ({signed_bonus})</span>
+                </Tooltip>
+              )}
             </div>
           )
         })}

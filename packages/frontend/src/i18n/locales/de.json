@@ -1279,6 +1279,8 @@
     "equipment": "AUSRÜSTUNG",
     "pick_item": "{{slot}} WÄHLEN",
     "item_level": "STUFE {{level}}",
+    "max_roll": "MAXIMALWURF",
+    "gear_bonus_hint": "AUS GETRAGENER AUSRÜSTUNG, BEIM MAXIMALWURF",
     "spell_level": "STUFE VON {{name}}",
     "spell_level_option": "STUFE {{level}} · {{cost}} PKT",
     "mob_spells_auto": "ZAUBER LADEN AUTOMATISCH MIT DEM MONSTER",

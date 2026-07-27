@@ -1279,6 +1279,8 @@
     "equipment": "ÉQUIPEMENT",
     "pick_item": "CHOISIR : {{slot}}",
     "item_level": "NIV {{level}}",
+    "max_roll": "JET MAXIMAL",
+    "gear_bonus_hint": "DE L'ÉQUIPEMENT PORTÉ, AU JET MAXIMAL",
     "spell_level": "NIVEAU DE {{name}}",
     "spell_level_option": "NIV {{level}} · {{cost}} PTS",
     "mob_spells_auto": "LES SORTS SE CHARGENT AVEC LE MONSTRE",

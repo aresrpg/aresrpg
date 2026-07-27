@@ -27,6 +27,24 @@ export { EQUIPMENT_SLOTS, SLOT_LABEL }
 export const items_for_slot = (slot, items) => items.filter((item) => equip_slot_accepts(slot, item))
 
 /**
+ * THE MAX-ROLL RULE, alone: an authored `[min, max]` range contributes its CEILING, a flat number is already
+ * its own ceiling, and a zero line is dropped. One home, because two surfaces answer "what is this item worth
+ * here?" and they must never disagree — the stat fold equips through it (`equip_item` below, and from there
+ * the `(+X)` beside every stat row), and the simulator's hover card RENDERS through it. Split, a card could
+ * advertise a roll the build never actually equips.
+ * @param {CorpusItem} item @returns {Record<string, number>}
+ */
+export const max_roll_stats = (item) => {
+  /** @type {Record<string, number>} */
+  const flat = {}
+  for (const [key, range] of Object.entries(item.stats ?? {})) {
+    const max = Array.isArray(range) ? (range[1] ?? range[0] ?? 0) : Number(range)
+    if (max) flat[key] = max
+  }
+  return flat
+}
+
+/**
  * Flatten a live item template into an equipped-slot object: its authored stat RANGES become flat MAX fields
  * keyed exactly as get_total_stat reads them (vitality / ap / critical / *_resistance / ...), plus the
  * identity get_total_stat and the paper doll need. THE max-roll resolver — the simulator never rolls locally.
@@ -37,12 +55,6 @@ export const items_for_slot = (slot, items) => items.filter((item) => equip_slot
  * @param {CorpusItem} item @returns {Record<string, any>}
  */
 export function equip_item(item) {
-  /** @type {Record<string, number>} */
-  const flat = {}
-  for (const [key, range] of Object.entries(item.stats ?? {})) {
-    const max = Array.isArray(range) ? (range[1] ?? range[0] ?? 0) : Number(range)
-    if (max) flat[key] = max
-  }
   return {
     id: item.id,
     name: item.name || item.id,
@@ -52,6 +64,6 @@ export function equip_item(item) {
     damages: item.damages ?? [],
     item_category: item.category,
     is_aresrpg_character: false,
-    ...flat,
+    ...max_roll_stats(item),
   }
 }

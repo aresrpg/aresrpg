@@ -18,10 +18,11 @@ import { useTranslation } from 'react-i18next'
 import { item_icon_url } from '@aresrpg/sdk/jobs'
 
 import { ItemTooltipCard } from '../components/item_hover_tooltip'
+import { use_mouse_tooltip } from '../components/items'
 import { SearchPickerModal, type PickerItem } from '../components/search_picker_modal'
 import { CosmeticSlots, EquipmentDoll } from '../game/screens/hud/EquipmentDoll.jsx'
 import { inventory_item_icon, SLOT_LABEL } from '../game/screens/hud/inventory-equip.js'
-import { items_for_slot } from '../game/screens/hud/simulator-equip.js'
+import { items_for_slot, max_roll_stats } from '../game/screens/hud/simulator-equip.js'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
 import type { CorpusItem } from '../pages/encyclopedia/item_corpus'
 
@@ -36,6 +37,14 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
   const input = use_simulator((state) => state.input)
   const [picking, set_picking] = useState<string | null>(null)
   const { by_id } = item_corpus.use_item_corpus()
+  // WHAT IS ON THE DOLL, without unequipping it to find out. The chain inventory already answers this on its
+  // own paper doll through EquipmentSlot's hover seam and ONE tooltip instance for the whole panel
+  // (Inventory.jsx / use_onchain_item_tooltip); this is the same seam and the same shared card, fed the live
+  // corpus row instead of a chain template — so the equipped tiles and the picker rows that fill them show
+  // the identical detail, at the identical roll.
+  const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = use_mouse_tooltip<CorpusItem>((item) => (
+    <MaxRollItemCard item={item} />
+  ))
 
   const slot_props = (slot: string) => ({
     slot,
@@ -46,6 +55,10 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
     on_activate: () => set_picking(slot),
     // The doll's own clear affordance (double-click a filled slot), wired to the same one door.
     on_unequip: () => input({ type: 'loadout_set', id: character.id, slot, template_id: null }),
+    // EquipmentSlot fires these on FILLED cells only, handing back the row it is rendering.
+    on_hover_enter: on_mouse_enter,
+    on_hover_move: on_mouse_move,
+    on_hover_leave: on_mouse_leave,
   })
 
   // COMPACT: in this dialog the doll is an INDEX of slots, not the drawer's hero art — a cell only has to be
@@ -55,6 +68,7 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
     <div className="flex flex-col gap-2 items-start">
       <EquipmentDoll slot_props={slot_props} flat compact />
       <CosmeticSlots slot_props={slot_props} compact />
+      {tooltip_element}
       {picking && (
         <SlotPicker
           slot={picking}
@@ -108,10 +122,15 @@ export function use_slot_picker_content(slot: string): { items: PickerItem[]; em
 
 /**
  * One published row → the shape the shared item card renders (#883 ⑦). It is the SAME projection the
- * encyclopedia's item pane feeds that component: authored stat ranges and damage lines straight off the /v1
- * row, art through the one icon resolver. Nothing is invented — a template carries no rarity in this game
- * (the quality tiers died with the concept), and `stats_unavailable` belongs to owned instances whose roll is
- * still pending, never to a template that authors its ranges in the open.
+ * encyclopedia's item pane feeds that component: damage lines straight off the /v1 row, art through the one
+ * icon resolver. Nothing is invented — a template carries no rarity in this game (the quality tiers died with
+ * the concept), and `stats_unavailable` belongs to owned instances whose roll is still pending, never to a
+ * template that authors its ranges in the open.
+ *
+ * STATS ARE THE MAX ROLL, not the authored range, because this is the SIMULATOR: every offered item is
+ * equipped at its ceiling, so the range `+2 to +7` describes a roll no build here ever gets. The card reads
+ * through `max_roll_stats` — the same rule the stat fold equips through — so an item's card and the `(+X)` it
+ * adds to a stat row are arithmetically the same fact. Callers label the context (`simulator.max_roll`).
  */
 export const picker_item_detail = (item: CorpusItem) => {
   const slug = inventory_item_icon(item)
@@ -122,10 +141,25 @@ export const picker_item_detail = (item: CorpusItem) => {
     category: item.category,
     rarity: '',
     level: item.level,
-    stats: item.stats,
+    stats: max_roll_stats(item) as Record<string, number>,
     damages: item.damages,
     description: item.description,
   }
+}
+
+/**
+ * THE simulator's item hover card: the shared ItemDetailView chrome, fed the max-roll projection above and
+ * footed with the MAX ROLL micro-label so the ceiling never reads as an ordinary roll.
+ */
+export function MaxRollItemCard({ item }: Readonly<{ item: CorpusItem }>) {
+  const { t } = useTranslation()
+  return (
+    <ItemTooltipCard item={picker_item_detail(item)}>
+      <span className="text-[9px] tracking-[0.22em] uppercase" style={{ color: '#c8963c' }}>
+        {t('simulator.max_roll')}
+      </span>
+    </ItemTooltipCard>
+  )
 }
 
 /** The picker shell — a pass-through over the hook above. */
@@ -157,7 +191,7 @@ function SlotPicker({
       // game's item card, the same one the encyclopedia and the bag render.
       render_tooltip={(id) => {
         const row = by_id.get(id)
-        return row ? <ItemTooltipCard item={picker_item_detail(row)} /> : null
+        return row ? <MaxRollItemCard item={row} /> : null
       }}
     />
   )
