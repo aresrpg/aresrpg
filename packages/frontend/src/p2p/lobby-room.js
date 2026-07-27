@@ -22,7 +22,7 @@
 // position + state (read from the presence ATOM) DIRECTLY to that one peer (SendOptions.target) the moment it
 // appears, so two stationary tabs see each other within one RTT of the handshake completing.
 
-import { joinRoom, getRelaySockets, defaultRelayUrls } from 'trystero'
+import { joinRoom, getRelaySockets } from 'trystero'
 import {
   peer_state_of,
   peer_state_by_address,
@@ -53,6 +53,7 @@ const RELAY_URLS = [
   'wss://relay.snort.social',
 ]
 const RELAY_REDUNDANCY = 3
+const relay_config = { urls: RELAY_URLS, redundancy: RELAY_REDUNDANCY }
 const ROOM_ID = 'world'
 
 // WebRTC ICE — STUN-first (direct P2P when the NAT allows it) + TURN fallback (relayed only when direct fails)
@@ -181,10 +182,7 @@ let watchdogs_started = false
  *  and peers that truly left expire via the tick. */
 function _build_room() {
   link_grace_until = Date.now() + LINK_GRACE_MS // fresh sockets connect async — grace the death judgment
-  room = joinRoom(
-    { appId: APP_ID, rtcConfig: RTC_CONFIG, relayUrls: RELAY_URLS, relayRedundancy: RELAY_REDUNDANCY },
-    ROOM_ID
-  )
+  room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, ROOM_ID)
   pos_action = room.makeAction('pos')
   chat_action = room.makeAction('chat')
   state_action = room.makeAction('state')
@@ -290,11 +288,7 @@ function _build_room() {
     const sockets = Object.values(getRelaySockets?.() ?? {})
     const connected = sockets.filter((/** @type {any} */ s) => s?.readyState === 1)
     const errors = sockets.filter((/** @type {any} */ s) => s?.readyState === 3).map((/** @type {any} */ s) => s?.url)
-    game_log(
-      'p2p',
-      `joinRoom fired · relays connected: ${connected.length}/${defaultRelayUrls?.length ?? sockets.length}`,
-      { errors }
-    )
+    game_log('p2p', `joinRoom fired · relays connected: ${connected.length}/${RELAY_URLS.length}`, { errors })
   }, 4000)
 }
 
@@ -434,10 +428,7 @@ export function sync_party_room(party_id) {
   party_chat_action = null
   party_room_id = party_id ?? null
   if (!party_id) return
-  party_room = joinRoom(
-    { appId: APP_ID, rtcConfig: RTC_CONFIG, relayUrls: RELAY_URLS, relayRedundancy: RELAY_REDUNDANCY },
-    `party-${party_id}`
-  )
+  party_room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, `party-${party_id}`)
   party_chat_action = party_room.makeAction('chat')
   party_chat_action.onMessage = (data) => {
     const { id, message, name, channel, target } = /** @type {any} */ (data ?? {})
