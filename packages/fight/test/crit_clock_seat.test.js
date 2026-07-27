@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+// #1190 — THE §7 CRIT CLOCK'S SEAT. `seat` is a participant INDEX; the two resolving cast paths used to compose
+// it with `escrow.findIndex(...)`, whose miss value is -1. `chain_critical` rejected a MISSING seat and accepted
+// that one, so a roster miss produced a well-formed seed for a seat that does not exist and a CONFIDENT crit
+// branch off it — no shape difference from a right answer. The golden tuple below is the sim parity suite's own
+// Move-extracted vector (packages/sim/test/turn_seed.test.js): (123456789, 42, 1752192000000, seat 0) →
+// turn_seed 4190174188, slot rolls [2816, 4768, 1518].
+
+import { describe, expect, it } from 'bun:test'
+
+import { slot_crit_roll, turn_seed } from '@aresrpg/sim/turn_seed'
+
+import { chain_critical } from '../src/predict_cast.js'
+
+const CLOCK = { world_seed: 123456789n, spawn_id: 42n, turn_deadline_ms: 1752192000000n, slot: 0 }
+
+describe('chain_critical — a NOT-FOUND seat is not a seat (#1190)', () => {
+  it('a findIndex-miss seat (-1) is unknowable, exactly like a missing one', () => {
+    expect(chain_critical({ ...CLOCK, seat: -1 }, 2)).toBeNull()
+    expect(chain_critical({ ...CLOCK, seat: -1 }, 2)).toBe(chain_critical({ ...CLOCK, seat: null }, 2))
+  })
+
+  it('every negative index degrades the same way — the guard is on the sign, not on the literal -1', () => {
+    expect(chain_critical({ ...CLOCK, seat: -2 }, 2)).toBeNull()
+    expect(chain_critical({ ...CLOCK, seat: -1, slot: 2 }, 50)).toBeNull()
+  })
+
+  it('a REAL seat still answers — the guard narrows nothing legitimate', () => {
+    // seat 0's slot-0 roll is 2816: a 1-in-2 spell (threshold 5000) crits, a 1-in-4 (2500) does not.
+    expect(chain_critical({ ...CLOCK, seat: 0 }, 2)).toBe(true)
+    expect(chain_critical({ ...CLOCK, seat: 0 }, 4)).toBe(false)
+  })
+
+  it('the leak was never benign: the -1 seed is a different sequence with a different verdict', () => {
+    expect(turn_seed({ ...CLOCK, seat: -1 })).not.toBe(turn_seed({ ...CLOCK, seat: 0 }))
+    // seat -1's slot-0 roll is 6828 — that same 1-in-2 spell reads as NO crit off the phantom seat.
+    expect(slot_crit_roll(turn_seed({ ...CLOCK, seat: -1 }), 0)).toBe(6828)
+    expect(slot_crit_roll(turn_seed({ ...CLOCK, seat: 0 }), 0)).toBe(2816)
+  })
+})
