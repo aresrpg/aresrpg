@@ -137,6 +137,18 @@ export function spend_decision(ledger, { intent = null, automated = false, now =
   return { allow: true }
 }
 
+/**
+ * PURE — consecutive PRE-EXECUTION refusals recorded for one intent (0 = none, or the last attempt succeeded).
+ * The one honest measure of "this keeps refusing": #1383's auto-resolution loop reads it to decide when a result
+ * is genuinely stuck (and worth a recovery surface) rather than merely lagging.
+ * @param {SpendLedger} ledger @param {string} intent @returns {number}
+ */
+export const backoff_attempts = (ledger, intent) => ledger.backoff[intent]?.attempts ?? 0
+
+/** PURE — is this intent permanently retired (an EXECUTED failure burned gas on it)? @param {SpendLedger} ledger
+ * @param {string} intent @returns {boolean} */
+export const circuit_open = (ledger, intent) => Boolean(ledger.circuits[intent])
+
 const without = (/** @type {Record<string, any>} */ map, /** @type {string} */ key) => {
   const { [key]: _dropped, ...rest } = map
   return rest
@@ -221,6 +233,12 @@ if (typeof window !== 'undefined') /** @type {any} */ (window).__SPEND_GUARD = s
  * @returns {ReturnType<typeof spend_decision>}
  */
 export const spend_guard_admit = (request) => spend_decision(ledger, { ...request, now: Date.now() })
+
+/** Live consecutive pre-execution refusals for `intent`. @param {string} intent @returns {number} */
+export const spend_guard_attempts = (intent) => backoff_attempts(ledger, intent)
+
+/** Live circuit verdict for `intent` — true once an EXECUTED failure retired it. @param {string} intent */
+export const spend_guard_circuit_open = (intent) => circuit_open(ledger, intent)
 
 /**
  * Record a failed submission. Returns the classification plus the notice the EDGE should surface — non-null

@@ -15,7 +15,6 @@ import {
   attempt_state,
   acquire_settlement_flight,
   run_result_auto_open,
-  recover_settled_elsewhere,
   subscribe_attempts,
   should_boot_open,
   reset_attempts_for_test,
@@ -219,22 +218,26 @@ describe('attempt registry (auto-open burn-law rails)', () => {
     expect(attempt_state('0xo')).toBe('latched') // and it re-latches after the manual attempt
   })
 
-  it('a REFUSED auto-open latches one actual effect and falls back to the manual press', async () => {
+  // #1383 RED: a PRE-EXECUTION refusal (no digest ⇒ zero gas — a dry-run refusal while the indexer catches up,
+  // a dropped socket) used to latch exactly like an executed failure, permanently demoting a coop partner's
+  // reward to a manual press for the whole session. Simulation is FREE; only a digest is expensive.
+  it('a REFUSED auto-open (zero gas) stays AUTO-attemptable — the resolver re-simulates it, no manual press needed', async () => {
     const refusal = new Error('wallet refused the open before submission')
     let opens = 0
     const first = await run_result_auto_open('0xo', async () => {
       opens += 1
       throw refusal
     })
+    expect(first).toEqual({ status: 'failed', error: refusal })
+    expect(attempt_state('0xo')).toBe('refused')
+    expect(attempt_error('0xo')).toBe(refusal) // the honest cause survives for the stuck surface
     const second = await run_result_auto_open('0xo', async () => {
       opens += 1
       return { status: 'opened', receipt: null }
     })
-    expect(first).toEqual({ status: 'failed', error: refusal })
-    expect(second).toEqual({ status: 'blocked', error: refusal })
-    expect(opens).toBe(1)
-    expect(attempt_state('0xo')).toBe('latched')
-    expect(begin_attempt('0xo', { manual: true })).toBe(true)
+    expect(second).toEqual({ status: 'opened', receipt: null })
+    expect(opens).toBe(2) // the SECOND automatic attempt actually ran — this is the whole fix
+    expect(attempt_state('0xo')).toBe('opened')
   })
 
   it('a local deferral re-arms an untouched result instead of spending its auto attempt', async () => {
@@ -380,124 +383,5 @@ describe('is_preflight_failure (burn-law classifier: ambiguous ⇒ executed ⇒ 
       MoveAbort: { abortCode: '101', location: { module: 'settlement' } },
     })
     expect(is_preflight_failure(executed)).toBe(false)
-  })
-})
-
-// ── #1223 ruling ③ — THE SETTLE-OBSERVED AUTO-OPEN ────────────────────────────────────────────────────────
-// THE STRAND, reproduced: a terminal fight's `settle_and_open` halts PRE-FLIGHT because the Fight was already
-// gone — a racing janitor (or another seat) settled it and minted MY `FightOutcome`. Zero gas was burned and an
-// unopened outcome now exists, but the boot auto-open pass already fired once for this wallet
-// (`should_boot_open`), so nothing re-detected it: the character stayed fight_marker-MARKED, silently, until a
-// reload or until the next engage ate abort 111. The settlement observes its own halt — that IS the detection
-// signal, and it must drive the open right there.
-describe('recover_settled_elsewhere (#1223 ③ — a pre-flight settle halt auto-opens the outcome it just proved)', () => {
-  const ROW = { outcome_id: OWNER_ROW.outcome_id, character_id: OWNER_ROW.character_id }
-
-  it('RED: a PRE-FLIGHT halt with an outcome waiting composes the open the moment the settle is observed', async () => {
-    const composed = []
-    const verdict = await recover_settled_elsewhere('transient', {
-      find_result: async () => ROW,
-      open_result: async (row) => {
-        composed.push(row.outcome_id)
-        return { status: 'opened', receipt: { digest: '0xopened' } }
-      },
-    })
-    expect(composed).toEqual([ROW.outcome_id]) // before the fix nothing was ever composed — the strand
-    expect(verdict).toEqual({ status: 'opened', receipt: { digest: '0xopened' } })
-  })
-
-  it('BURN LAW: an EXECUTED halt composes NOTHING — the read is not even attempted (a digest = gas burned)', async () => {
-    let read = 0
-    let composed = 0
-    const verdict = await recover_settled_elsewhere('executed_failure', {
-      find_result: async () => {
-        read += 1
-        return ROW
-      },
-      open_result: async () => {
-        composed += 1
-        return { status: 'opened', receipt: null }
-      },
-    })
-    expect(verdict.status).toBe('skipped')
-    expect(read).toBe(0)
-    expect(composed).toBe(0)
-  })
-
-  it('nothing to open (a genuine network halt — the Fight is still live) stays CLEAN and announces nothing', async () => {
-    let announced = 0
-    let composed = 0
-    const verdict = await recover_settled_elsewhere('transient', {
-      find_result: async () => null,
-      open_result: async () => {
-        composed += 1
-        return { status: 'opened', receipt: null }
-      },
-      announce: () => {
-        announced += 1
-      },
-    })
-    expect(verdict.status).toBe('clean')
-    expect(composed).toBe(0)
-    expect(announced).toBe(0) // never announce an open that is not happening
-  })
-
-  it('announces the "opening it now…" beat ONLY once a row is proven, and BEFORE the tx builds', async () => {
-    const order = []
-    await recover_settled_elsewhere('transient', {
-      find_result: async () => {
-        order.push('read')
-        return ROW
-      },
-      open_result: async () => {
-        order.push('open')
-        return { status: 'opened', receipt: null }
-      },
-      announce: () => order.push('announce'),
-    })
-    expect(order).toEqual(['read', 'announce', 'open'])
-  })
-
-  it('a failed open surfaces its honest error as DATA (loud caller, never a silent give-up)', async () => {
-    const cause = new Error('kiosk borrow failed')
-    const verdict = await recover_settled_elsewhere('transient', {
-      find_result: async () => ROW,
-      open_result: async () => ({ status: 'failed', error: cause }),
-    })
-    expect(verdict).toEqual({ status: 'failed', error: cause })
-  })
-
-  it('a blocked open (latched/deferred by the registry rails) is reported failed, never swallowed', async () => {
-    const verdict = await recover_settled_elsewhere('transient', {
-      find_result: async () => ROW,
-      open_result: async () => ({ status: 'blocked', error: null }),
-    })
-    expect(verdict.status).toBe('failed')
-  })
-
-  it('a /v1 read failure degrades to CLEAN — an open is never composed against a blind read', async () => {
-    let composed = 0
-    const verdict = await recover_settled_elsewhere('transient', {
-      find_result: async () => {
-        throw new Error('Failed to fetch')
-      },
-      open_result: async () => {
-        composed += 1
-        return { status: 'opened', receipt: null }
-      },
-    })
-    expect(verdict.status).toBe('clean')
-    expect(composed).toBe(0)
-  })
-
-  it('NEVER throws — it runs fire-and-forget behind an already-returned settle verdict', async () => {
-    const boom = new Error('open exploded')
-    const verdict = await recover_settled_elsewhere('transient', {
-      find_result: async () => ROW,
-      open_result: async () => {
-        throw boom
-      },
-    })
-    expect(verdict).toEqual({ status: 'failed', error: boom })
   })
 })

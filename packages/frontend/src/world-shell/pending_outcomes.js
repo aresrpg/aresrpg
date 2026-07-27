@@ -3,9 +3,10 @@
 // UNOPENED FIGHT RESULTS — the PERMANENT post-settle surface (not a recovery edge case).
 // `settlement::settle_and_destroy` transfers ONE soulbound `FightOutcome` to EVERY seat owner silently, so any
 // non-janitor participant holds unopened results until their own `results::open` lands (which is also the ONLY
-// fight_marker discharge — an unopened outcome blocks every new fight with abort 111). The roster pill reads
-// this surface via `GET /v1/pending-outcomes?owner=` (chain-direct reads are ABOLISHED; the
-// projection is served by the packages/rpc lane) and the press fires the open PTB with the row's own ids.
+// fight_marker discharge — an unopened outcome blocks every new fight with abort 111). The projection is read
+// via `GET /v1/pending-outcomes?owner=` (chain-direct reads are ABOLISHED; the projection is served by the
+// packages/rpc lane), and since #1383 the AUTO-RESOLUTION LOOP (result_resolver.js) is what drives it to empty —
+// the roster badge is only the last-resort press for a result that is genuinely stuck.
 //
 // MEMOIZED per wallet: every roster-row pill shares ONE fetch per signal (mount / post-open invalidation),
 // never polled. A FAILED fetch is never cached (a transient read error must not permanently hide the pill).
@@ -73,14 +74,29 @@ export function invalidate_pending_outcomes() {
 // ── AUTO-OPEN attempt registry (unopened stuff always auto-opens whenever detected,
 // with the burn-law rails) — the ONE session-scoped home, keyed per outcome_id:
 //   'inflight'  → owns the shared Promise (every detector awaits the SAME open; never double-compose);
-//   'latched'   → an EXECUTED failure OR a refused AUTO attempt: auto never re-fires this session, while the
+//   'refused'   → the last attempt failed BEFORE execution (no digest: a dry-run refusal, a sponsor refusal, a
+//                 dropped socket). ZERO gas was spent, so it stays AUTO-ATTEMPTABLE — the resolver loop
+//                 (result_resolver.js) re-simulates it on the spend guard's backoff schedule. The error is kept
+//                 so the last-resort badge can render a genuinely stuck result;
+//   'latched'   → an EXECUTED failure (a digest proves gas burned): auto never re-fires this session, while the
 //                 preserved error gives the engage door its honest surface and the manual press stays available;
 //   'opened'    → receipt landed; a lagging /v1 row cannot auto-compose the consumed outcome a second time;
 //   (absent)    → attemptable. Only callers that explicitly classify their operation as transient (the separate
 //                 terminal-settlement retry engine) clear back to absent.
+//
+// #1383: 'refused' used to be an alias of 'latched' — ONE zero-gas dry-run refusal (an indexer/fullnode lag on a
+// freshly-minted outcome) permanently demoted the flow to a manual press for the rest of the session. Simulation
+// is FREE; only a digest is expensive. The split is the whole fix.
 
-/** @type {Map<string, { state:'inflight'|'latched'|'opened', promise:Promise<any>|null, error:unknown|null }>} */
+/** @type {Map<string, { state:'inflight'|'refused'|'latched'|'opened', promise:Promise<any>|null, error:unknown|null }>} */
 const attempts = new Map()
+
+/**
+ * The ONE spend-guard intent key for a result open (`<kind>:<target object>` — spend_guard.js). One home: the tx
+ * door stamps it on the submission, the resolver reads its backoff, the badge reads its circuit.
+ * @param {string} outcome_id
+ */
+export const result_open_intent = (outcome_id) => `open_outcome:${outcome_id}`
 
 // The pill renders attempt state REACTIVELY (detection no longer lives in its mount — boot plus the awaited
 // engage/join door own the trigger): a plain listener set notified on every begin/end, so a mounted
@@ -104,8 +120,9 @@ export function subscribe_attempts(/** @type {() => void} */ cb) {
 }
 
 /**
- * Claim the single-flight slot for one outcome. AUTO attempts are refused while inflight OR latched; a MANUAL
- * press is refused only while inflight (the user may retry a latched outcome — one attempt per press).
+ * Claim the single-flight slot for one outcome. AUTO attempts are refused while inflight OR latched (an EXECUTED
+ * failure — gas burned); a zero-gas 'refused' record never blocks an auto retry. A MANUAL press is refused only
+ * while inflight (the user may retry a latched outcome — one attempt per press).
  * @param {string} outcome_id @param {{ manual?: boolean }} [opts] @returns {boolean} true = attempt owned
  */
 export function begin_attempt(outcome_id, { manual = false } = {}) {
@@ -120,16 +137,17 @@ export function begin_attempt(outcome_id, { manual = false } = {}) {
 }
 
 /**
- * Release the slot with the attempt's verdict. Opened keeps a result receipt tombstone; executed failure and
- * refused AUTO attempts latch with their honest error; transient/settled fight attempts clear normally.
+ * Release the slot with the attempt's verdict. Opened keeps a result receipt tombstone; an EXECUTED failure
+ * latches (gas burned — never auto again); a pre-execution refusal records its honest error while staying
+ * auto-attemptable; transient/settled fight attempts clear normally.
  * @param {string} outcome_id @param {'opened' | 'settled' | 'transient' | 'refused' | 'executed_failure'} verdict
  * @param {unknown} [error]
  */
 export function end_attempt(outcome_id, verdict, error = null) {
   if (!outcome_id) return
   if (verdict === 'opened') attempts.set(outcome_id, { state: 'opened', promise: null, error: null })
-  else if (verdict === 'executed_failure' || verdict === 'refused')
-    attempts.set(outcome_id, { state: 'latched', promise: null, error })
+  else if (verdict === 'executed_failure') attempts.set(outcome_id, { state: 'latched', promise: null, error })
+  else if (verdict === 'refused') attempts.set(outcome_id, { state: 'refused', promise: null, error })
   else attempts.delete(outcome_id)
   notify_attempts()
 }
@@ -206,7 +224,7 @@ export function run_result_auto_open(outcome_id, open, { manual = false } = {}) 
       if (result?.status === 'deferred') {
         // A manual press may temporarily borrow an executed-failure latch. If no tx was attempted, restore it;
         // otherwise a local busy guard could accidentally re-arm AUTO after gas had already been burned.
-        if (manual && prior?.state === 'latched') {
+        if (manual && (prior?.state === 'latched' || prior?.state === 'refused')) {
           attempts.set(outcome_id, prior)
           notify_attempts()
         } else end_attempt(outcome_id, 'transient')
@@ -247,34 +265,12 @@ export async function recover_marked_fight_entry(refusal, { find_result, open_re
   throw opened?.error ?? refusal
 }
 
-/**
- * THE SETTLE-OBSERVED AUTO-OPEN (#1223 ruling ③). A settlement that halts PRE-FLIGHT is itself the detection
- * signal: the Fight was already gone, so a racing janitor (or another seat) settled it and minted MY
- * `FightOutcome` — it exists RIGHT NOW, unopened, and the character stays fight_marker-MARKED until it opens.
- * Nothing else re-detects that this session (the boot pass fires once per wallet), so the strand used to wait for
- * a reload or for the next engage to eat abort 111. The same shape as `recover_marked_fight_entry` above, on a
- * different signal: find the row, hand it to the injected open action, report the verdict as DATA.
- *
- * BURN LAW: an EXECUTED halt (a digest exists — gas was spent and the whole PTB reverted, so the Fight is still
- * LIVE and there is no outcome to open) composes NOTHING and does not even read. Never throws: it runs
- * fire-and-forget behind an already-returned settle verdict, so a rejection here would be unhandled.
- * @param {'transient'|'executed_failure'} halt the settlement's own classification (is_preflight_failure)
- * @param {{find_result:()=>Promise<any>, open_result:(row:any)=>Promise<any>, announce?:()=>void}} effects
- *   `announce` is the visible "opening it now…" beat — fired ONLY once a row is proven, before the tx builds.
- * @returns {Promise<{status:'skipped'|'clean'|'opened'|'failed', receipt?:any, error?:unknown}>}
- */
-export async function recover_settled_elsewhere(halt, { find_result, open_result, announce }) {
-  if (halt !== 'transient') return { status: 'skipped', error: null }
-  const row = await find_result().catch(() => null) // a blind read never composes an open
-  if (!row?.outcome_id) return { status: 'clean' }
-  announce?.()
-  const opened = await open_result(row).catch((error) => ({ status: 'failed', error }))
-  return opened?.status === 'opened'
-    ? { status: 'opened', receipt: opened.receipt ?? null }
-    : { status: 'failed', error: opened?.error ?? null }
-}
+// #1223 ③'s one-shot `recover_settled_elsewhere` is DELETED (#1383). It took a single look at
+// `/v1/pending-outcomes` milliseconds after the settle it lost, read the indexer's not-yet-ingested answer as
+// "nothing pending," and dropped the strand for the whole session — the exact live coop defect. The settle halt
+// now arms result_resolver.js, which keeps re-reading and re-simulating (free) until the row appears.
 
-/** @param {string} outcome_id @returns {'inflight' | 'latched' | 'opened' | null} */
+/** @param {string} outcome_id @returns {'inflight' | 'refused' | 'latched' | 'opened' | null} */
 export function attempt_state(outcome_id) {
   return attempts.get(outcome_id)?.state ?? null
 }
