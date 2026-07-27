@@ -19,11 +19,12 @@ const SPELL_POINTS_PER_LEVEL: u64 = 1;
 /// ANNEX §4c: `max_hp = class_base + max(0, level−1) × 5 + vitality` (reference corpus `Combat.HEALTH_PER_LEVEL`).
 const HP_PER_LEVEL: u64 = 5;
 
-/// ANNEX §5.4 — natural HP regen rate, reference-corpus `Combat.computeRegenPerSecond` VERBATIM:
-/// `2.0 + (level×0.4 + wisdom/7.5)/5` HP per second. Rearranged to an EXACT integer rational (no floats on
-/// chain): HP/sec = `(REGEN_BASE + level×REGEN_PER_LEVEL + wisdom×REGEN_PER_WIS) / 75`, so HP accrued over an
-/// elapsed span = `elapsed_ms × num / REGEN_DEN_MS`.
-const REGEN_BASE: u64 = 150; // 2.0 HP/s × 75
+/// ANNEX §5.4 — natural HP regen rate, base term owner-ruled to a THIRD of the reference-corpus
+/// `Combat.computeRegenPerSecond` base (2026-07-27: "divide base regen by 3"; the per-level/per-wisdom slopes
+/// stay verbatim): `0.667 + (level×0.4 + wisdom/7.5)/5` HP per second. Rearranged to an EXACT integer rational
+/// (no floats on chain): HP/sec = `(REGEN_BASE + level×REGEN_PER_LEVEL + wisdom×REGEN_PER_WIS) / 75`, so HP
+/// accrued over an elapsed span = `elapsed_ms × num / REGEN_DEN_MS`.
+const REGEN_BASE: u64 = 50; // 0.667 HP/s × 75 (2.0 HP/s reference base ÷ 3)
 const REGEN_PER_LEVEL: u64 = 6; // 0.08 HP/s per level × 75
 const REGEN_PER_WIS: u64 = 2; // (1/37.5) HP/s per wisdom × 75
 const REGEN_DEN_MS: u64 = 75_000; // 75 (the per-second denominator) × 1000 ms/s

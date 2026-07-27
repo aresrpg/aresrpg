@@ -11,8 +11,9 @@
 export { base_hp_for_class, max_hp_from_base } from '@aresrpg/sdk/stats'
 
 // ── ANNEX §5.4 FROZEN constants — VERBATIM from progression_math.move (they ride WITH the immutable XP curve;
-//    they are NOT admin dials): the natural-regen rate as an EXACT integer rational.
-const REGEN_BASE = 150 // §5.4: 2.0 HP/s × 75
+//    they are NOT admin dials): the natural-regen rate as an EXACT integer rational. Base term owner-ruled to a
+//    THIRD of the reference-corpus base (2026-07-27: "divide base regen by 3").
+const REGEN_BASE = 50 // §5.4: 0.667 HP/s × 75 (2.0 HP/s reference base ÷ 3)
 const REGEN_PER_LEVEL = 6 // 0.08 HP/s per level × 75
 const REGEN_PER_WIS = 2 // (1/37.5) HP/s per wisdom × 75
 const REGEN_DEN_MS = 75_000 // 75 (per-second denominator) × 1000 ms/s
