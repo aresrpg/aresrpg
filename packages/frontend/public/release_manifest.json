@@ -234,13 +234,13 @@
     {
       "id": "W2",
       "name": "Item marketplace policy",
-      "desc": "create_item_policy → royalty(1000bp, min 0.01 SUI) + kiosk_lock + personal_kiosk + item_listing_rule (ghost-stack gate) → share, keep cap",
+      "desc": "create_item_policy → royalty(1000bp, min 0.01 SUI) + kiosk_lock + personal_kiosk + item::add_listing_rule (ghost-stack gate) → share, keep cap",
       "targets": [
         "core::item::create_item_policy",
         "rules::royalty_rule::add",
         "rules::kiosk_lock_rule::add",
         "rules::personal_kiosk_rule::add",
-        "core::item_listing_rule::add"
+        "core::item::add_listing_rule"
       ]
     },
     {

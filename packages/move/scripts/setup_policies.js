@@ -83,12 +83,16 @@ for (const T of ['character::Character', 'item::Item']) {
       typeArguments: [type],
       arguments: [policy, cap],
     })
-    // AresRPG per-type listing gate (2026-07-11): character → character_listing_rule (§17.30 level gate); item →
-    // item_listing_rule (blocks amount-0 ghost-stack listings). Type-specific non-generic fns (no typeArguments).
+    // AresRPG per-type listing gate: character → character_listing_rule (§17.30 level gate); item →
+    // item::add_listing_rule (the ghost-stack gate; its module folded into `item` at the republish
+    // restructure). Type-specific non-generic fns (no typeArguments).
     // Matches the LIVE ceremony.mjs policyPTB. NOTE: this standalone ships BARE by default (T93/T98 InvalidLinkage
     // on a fresh publish — see the BARE note); ceremony.mjs is the real publish path.
     tx.moveCall({
-      target: `${PKG}::${T.split('::')[0]}_listing_rule::add`,
+      target:
+        T.split('::')[0] === 'item'
+          ? `${PKG}::item::add_listing_rule`
+          : `${PKG}::${T.split('::')[0]}_listing_rule::add`,
       arguments: [policy, cap],
     })
   }
