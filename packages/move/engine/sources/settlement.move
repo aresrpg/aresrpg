@@ -203,7 +203,7 @@ fun settle_core(mut fight: Fight, registry: &mut FightRegistry, version: &Versio
     } else {
       transfer::transfer(o, participant::owner(p));
     };
-    fight_registry::unlatch_character(registry, brand, participant::character(p)); // S-12f — the latch dies with the fight
+    fight_registry::unlatch_character(registry, world, brand, participant::character(p)); // S-12f — the latch dies with the fight
     i = i + 1;
   };
   fight_events::emit_settled(fid, status, party);

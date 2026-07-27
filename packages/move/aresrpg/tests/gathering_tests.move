@@ -24,13 +24,22 @@ use aresrpg::{
 use aresrpg_fight::{
   admin::{Self as fight_admin, AdminCap as FightAdminCap},
   fight::Fight,
-  fight_registry::{Self, FightRegistry},
+  fight_registry::{Self, FightRegistry, FightShards},
   version::{Self as fight_version, Version as EngineVersion}
 };
 use aresrpg_foundation::spell;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
+
+/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
+/// exactly as a client does.
+fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
 
 // ── mirrored error values ──
 const ETemplateMismatch: u64 = 103; // gathering
@@ -83,7 +92,7 @@ fun do_gather(sc: &mut Scenario, who: address, cid: ID, zx: u32, zy: u32, node_i
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let template = sc.take_shared_by_id<ItemTemplate>(template_id);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&w));
   let ptmpl = sc.take_shared<MobTemplate>();
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
@@ -106,7 +115,7 @@ fun do_gather_with_rare(sc: &mut Scenario, who: address, cid: ID, zx: u32, zy: u
   let template = sc.take_shared_by_id<ItemTemplate>(base_tid);
   let rare = sc.take_shared_by_id<ItemTemplate>(rare_tid);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&w));
   let ptmpl = sc.take_shared<MobTemplate>();
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
@@ -271,7 +280,7 @@ fun gather_random_entry() {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let template = sc.take_shared_by_id<ItemTemplate>(tid);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(&sc, object::id(&w));
   let ptmpl = sc.take_shared<MobTemplate>();
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
@@ -313,7 +322,7 @@ fun do_gather_with_protector(sc: &mut Scenario, who: address, cid: ID, zx: u32, 
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let template = sc.take_shared_by_id<ItemTemplate>(template_id);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id(&w));
   let ptmpl = sc.take_shared_by_id<MobTemplate>(ptmpl_id);
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();

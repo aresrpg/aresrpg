@@ -17,7 +17,7 @@ use aresrpg_fight::{
   turns,
   version::Version
 };
-use aresrpg_fight::fight_scaffold::{bag_spec, combatant, create_fight, create_fight_as, mk_clock, mob_stats, stand_up, tsreg};
+use aresrpg_fight::fight_scaffold::{bag_spec, combatant, create_fight, create_fight_as, mk_clock, mob_stats, stand_up, tsreg, tsreg_for};
 use aresrpg_foundation::spell;
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
@@ -473,7 +473,7 @@ const DUNGEON: address = @0xD07; // a dungeon object id source (the door's deriv
 fun create_dungeon_fixture(sc: &mut Scenario) {
   stand_up(sc);
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let mut registry = tsreg_for(sc, object::id_from_address(DUNGEON));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 5000);
   fight::create_dungeon_fight_for_testing(&mut registry, object::id_from_address(DUNGEON), 1, 999, 40, 40,
@@ -492,7 +492,7 @@ fun dungeon_door_creates_gated_zero_aged_fight() {
   create_dungeon_fixture(&mut sc);
 
   sc.next_tx(OWNER);
-  let reg = tsreg(&sc);
+  let reg = tsreg_for(&sc, object::id_from_address(DUNGEON));
   assert!(fight_registry::fight_exists(&reg, object::id_from_address(DUNGEON), 1));
   ts::return_shared(reg);
   let fight = sc.take_shared<Fight>();
@@ -540,7 +540,7 @@ const KOLI: address = @0x201; // a kolizeum lobby id source (the PvP door's deri
 fun create_pvp_fixture(sc: &mut Scenario) {
   stand_up(sc);
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let mut registry = tsreg_for(sc, object::id_from_address(KOLI));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 5000);
   fight::create_pvp_fight_for_testing(&mut registry, object::id_from_address(KOLI), 1, 999, 40, 40, 1,
@@ -589,7 +589,7 @@ fun pvp_settlement_mints_zero_reward_results() {
   assert!(fight::winning_side(&fight) == option::some(0));
   let ver = sc.take_shared<Version>();
   {
-    let mut reg2 = tsreg(&sc);
+    let mut reg2 = tsreg_for(&sc, object::id_from_address(KOLI));
     results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
     ts::return_shared(reg2);
   };
@@ -638,9 +638,9 @@ fun settle_frees_the_latch() {
   let ver = sc.take_shared<Version>();
   {
     let mut reg2 = tsreg(&sc);
-    assert!(reg2.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some()); // latched while live
+    assert!(reg2.character_fight(object::id_from_address(WORLD), std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_some()); // latched while live
     results::settle_and_destroy(fight, &mut reg2, &ver, sc.ctx());
-    assert!(reg2.character_fight(std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_none()); // freed at settlement
+    assert!(reg2.character_fight(object::id_from_address(WORLD), std::type_name::with_defining_ids<fight::TestBrand>(), object::id_from_address(CHAR)).is_none()); // freed at settlement
     ts::return_shared(reg2);
   };
   ts::return_shared(ver);

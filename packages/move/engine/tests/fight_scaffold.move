@@ -137,7 +137,17 @@ public fun create_fight_group(sc: &mut Scenario, base_hp: u64, spawn_id: u64, no
   ts::return_shared(ver);
 }
 
-public fun tsreg(sc: &Scenario): FightRegistry { sc.take_shared<FightRegistry>() }
+/// The registry SHARD a scope's fights live in — `take_shared<FightRegistry>` is ambiguous now that `init` shares
+/// one per shard, so every suite resolves through the directory exactly as a client does.
+public fun tsreg_for(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<fight_registry::FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
+
+/// The shard for the scaffold's WORLD — what every suite creating through `create_fight*` needs.
+public fun tsreg(sc: &Scenario): FightRegistry { tsreg_for(sc, object::id_from_address(WORLD)) }
 
 // ╔════════════════ [ Board-agnostic cell finders (the procedural board makes exact cells unpredictable) ] ═ ]
 

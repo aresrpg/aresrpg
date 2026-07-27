@@ -18,7 +18,7 @@ use aresrpg_fight::{
   settlement::{Self as results, FightOutcome},
   version::Version
 };
-use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, tsreg, stand_up};
+use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, tsreg, tsreg_for, stand_up};
 use sui::{clock, test_scenario::{Self as ts}};
 
 const OWNER: address = @0xA;
@@ -187,7 +187,7 @@ fun abandon_in_placement_empties_pvp_side_is_walkover() {
   stand_up(&mut sc);
   sc.next_tx(OWNER);
   {
-    let mut registry = tsreg(&sc);
+    let mut registry = tsreg_for(&sc, object::id_from_address(KOLI));
     let ver = sc.take_shared<Version>();
     let clock = mk_clock(&mut sc, 5000);
     fight::create_pvp_fight_for_testing(&mut registry, object::id_from_address(KOLI), 1, 999, 40, 40, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());

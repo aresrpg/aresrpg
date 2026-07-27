@@ -25,13 +25,22 @@ use aresrpg::{
 use aresrpg_fight::{
   admin as eadmin,
   fight::Fight,
-  fight_registry::{Self, FightRegistry},
+  fight_registry::{Self, FightRegistry, FightShards},
   version::{Self as eversion, Version as EVersion}
 };
 use aresrpg_foundation::spell;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
+
+/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
+/// exactly as a client does.
+fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
 
 const OWNER: address = @0xA;
 const EWrongBrand: u64 = 104; // config's brand-gate abort (mirror)
@@ -294,7 +303,7 @@ fun make_mob_template(sc: &mut Scenario): ID {
 /// caller. Fabricated scope/nonce/seed — the door needs no world (the dungeon module verifies the pass upstream).
 fun do_create_dungeon_fight<W: drop>(sc: &mut Scenario, w: W, kid: ID, cid: ID, mob_tid: ID) {
   sc.next_tx(OWNER);
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, object::id_from_address(@0x5C09E));
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -334,7 +343,7 @@ fun dungeon_fight_brand_doors_pass() {
   sc.next_tx(@0xB1);
   {
     let mut f = sc.take_shared<Fight>();
-    let mut reg = sc.take_shared<FightRegistry>();
+    let mut reg = shard_of(&sc, object::id_from_address(@0x5C09E));
     let mut k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -385,7 +394,7 @@ fun join_vouched_brand_wrong_witness_aborts() {
   do_create_dungeon_fight(&mut sc, BrandA {}, creator_kid, creator_cid, mob_tid);
   sc.next_tx(@0xB1);
   let mut f = sc.take_shared<Fight>();
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(&sc, object::id_from_address(@0x5C09E));
   let mut k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();

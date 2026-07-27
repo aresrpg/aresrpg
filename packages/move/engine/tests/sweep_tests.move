@@ -102,14 +102,15 @@ fun placement_boundary_zero_ready_sweeps_every_seat() {
     sc.ctx(),
   );
   let brand = std::type_name::with_defining_ids<fight::TestBrand>();
-  assert!(registry.character_fight(brand, object::id_from_address(CHAR)).is_some());
-  assert!(registry.character_fight(brand, object::id_from_address(CHAR2)).is_some());
+  let scope = fight::world(&fight); // the shard the latches live in (the Fight dies before the post-sweep reads)
+  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR)).is_some());
+  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR2)).is_some());
 
   let clock = mk_clock(&mut sc, 121_000);
   results::sweep_fight(fight, &mut registry, &version, &clock, sc.ctx());
   clock::destroy_for_testing(clock);
-  assert!(registry.character_fight(brand, object::id_from_address(CHAR)).is_none());
-  assert!(registry.character_fight(brand, object::id_from_address(CHAR2)).is_none());
+  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR)).is_none());
+  assert!(registry.character_fight(scope, brand, object::id_from_address(CHAR2)).is_none());
   assert!(event::events_by_type<fight_events::Abandoned>().length() == 2);
   assert!(event::events_by_type<fight_events::Defeat>().length() == 1);
   assert!(event::events_by_type<fight_events::Swept>().length() == 1);

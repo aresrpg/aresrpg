@@ -13,7 +13,7 @@
 module aresrpg_fight::cast_more_tests;
 
 use aresrpg_fight::{cast, fight::{Self, Fight}, fight_events, mob, participant, version::Version};
-use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, mob_stats, stand_up, tsreg};
+use aresrpg_fight::fight_scaffold::{combatant, create_fight, mk_clock, mob_stats, stand_up, tsreg, tsreg_for};
 use aresrpg_foundation::{spell, spell_board, spell_effect};
 use sui::{clock, event, test_scenario::{Self as ts, Scenario}};
 
@@ -47,7 +47,7 @@ fun cell_occupied_and_trigger_on_enter_direct_calls() {
 fun pvp_two_seats(sc: &mut Scenario): (Fight, Version) {
   stand_up(sc);
   sc.next_tx(OWNER);
-  let mut registry = tsreg(sc);
+  let mut registry = tsreg_for(sc, object::id_from_address(KOLI));
   let ver = sc.take_shared<Version>();
   let clock = mk_clock(sc, 5000);
   fight::create_pvp_fight_for_testing(&mut registry, object::id_from_address(KOLI), 1, 999, 40, 40, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
