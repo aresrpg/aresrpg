@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 
-import { _reset_rpc_client_for_test, get_encyclopedia, rpc_get } from './client'
+import { _reset_rpc_client_for_test, get_encyclopedia, get_fights, rpc_get } from './client'
 
 const real_fetch = globalThis.fetch
 const real_set_timeout = globalThis.setTimeout
@@ -408,5 +408,49 @@ describe('rpc GET request control', () => {
       results.every((r) => r.status === 'fulfilled'),
       JSON.stringify(results)
     ).toBe(true)
+  })
+})
+
+// ── #1317: THE JOIN AFFORDANCE'S READ IS TIME-CRITICAL ────────────────────────────────────────────────────
+// A coop fight's placement window is ~60s, and the world-fights read that advertises it shares ONE staggered
+// FIFO with the roam poll's zone neighbourhood (WORLD_POLL_STAGGER_MS apart). Queued behind that burst — and
+// then answerable from another view's 3s-old LRU entry — the JOIN affordance lagged the fight by ~16s. These
+// two pin the read's declared priority: it jumps the backlog, and it never accepts a cached snapshot.
+describe('world-fights discovery read (#1317)', () => {
+  test('a fresh /v1/fights read is served BEFORE a zone backlog already queued ahead of it', async () => {
+    const order: string[] = []
+    const delays: number[] = []
+    immediate_timers(delays)
+    globalThis.fetch = mock(async (input: unknown) => {
+      const url = new URL(String(input))
+      order.push(`${url.pathname}${url.search}`)
+      return json_response({ fights: [], zones: [] })
+    }) as unknown as typeof fetch
+
+    const world = 'world-1317'
+    const zones = [] as Promise<unknown>[]
+    for (let i = 0; i < 4; i += 1) zones.push(rpc_get('/v1/zones', { world, zone: `5:${i}` }))
+    const fights = get_fights({ world }, undefined, true) // the discovery poll's own call shape
+
+    await Promise.all([...zones, fights])
+    expect(order.length).toBe(5)
+    // it takes the head of the FIFO — ahead of every zone read still waiting its stagger turn (before the fix
+    // it was appended last and paid 4 × WORLD_POLL_STAGGER_MS before touching the network).
+    expect(order[0]).toBe(`/v1/fights?world=${world}`)
+    expect(order.slice(1).every((url) => url.startsWith('/v1/zones'))).toBe(true)
+  })
+
+  test('a fresh /v1/fights read never answers from the LRU another view warmed', async () => {
+    let calls = 0
+    globalThis.fetch = mock(async () => {
+      calls += 1
+      return json_response({ fights: [] })
+    }) as unknown as typeof fetch
+
+    await get_fights({ world: 'world-lru' }) // a normal read warms the 3s LRU entry
+    await get_fights({ world: 'world-lru' }) // …which a normal repeat happily serves
+    expect(calls).toBe(1)
+    await get_fights({ world: 'world-lru' }, undefined, true)
+    expect(calls).toBe(2) // the discovery poll reached the network anyway
   })
 })

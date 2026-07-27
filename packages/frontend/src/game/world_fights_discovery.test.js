@@ -48,6 +48,15 @@ test('the old count-card CSS is gone', () => {
   expect(hud_css).not.toContain('.hud-fights-count')
 })
 
+// #1317 — the JOIN affordance lagged the fight it advertises by ~16s: the world-fights read shared the
+// staggered world-poll FIFO with the zone neighbourhood and could still be answered from a 3s-old LRU entry.
+// The behaviour is pinned at the client seam (rpc/client.test.ts); this is the source-shape half — the module
+// itself cannot be imported here (see header (b), the GLB chain), so pin that the poll really declares the read
+// time-critical rather than merely leaving the option available on get_fights.
+test('the world-fights discovery read declares itself fresh (priority lane, no stale LRU)', () => {
+  expect(discovery_source).toContain('get_fights({ world: world_id }, undefined, true)')
+})
+
 test('the [V] prompt registration is wired to fold the count into its own label', () => {
   const arm_at = discovery_source.indexOf('const arm_prompt = ')
   const register_at = discovery_source.indexOf('register_prompt({', arm_at)

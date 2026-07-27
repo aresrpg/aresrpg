@@ -453,11 +453,15 @@ export async function get_dungeon_runs(
   return runs
 }
 
+// `fresh` (#1317) — the world-fights discovery poll is the ONE read racing a fight's ~60s placement window, so
+// it declares itself: no 3s-old LRU snapshot, and the head of the world-poll FIFO instead of a seat behind the
+// 3×3 zone neighbourhood's nine staggered reads (9 × WORLD_POLL_STAGGER_MS is most of the measured lag).
 export async function get_fights(
   query: { id?: string; character?: string; world?: string },
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  fresh = false
 ): Promise<RpcFight[]> {
-  const { fights } = await rpc_get<{ fights: RpcFight[] }>('/v1/fights', query, signal)
+  const { fights } = await rpc_get<{ fights: RpcFight[] }>('/v1/fights', query, signal, fresh)
   return fights
 }
 

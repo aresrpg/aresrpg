@@ -156,7 +156,11 @@ export function create_world_fights_discovery({ get_player_pos, engine = null })
       offset_z = off.z
       offsets_resolved = true
     }
-    const fights = await get_fights({ world: world_id }).catch(() => null)
+    // FRESH (#1317): the JOIN affordance lagged the fight it advertises by ~16s, and the poll interval was the
+    // smallest term — the read sat in the shared world-poll FIFO behind the zone neighbourhood's staggered
+    // reads, then could still be answered from a 3s-old LRU entry another view warmed. A fight's join window is
+    // ~60s of wall clock; this read declares itself time-critical and takes the scheduler's priority lane.
+    const fights = await get_fights({ world: world_id }, undefined, true).catch(() => null)
     if (disposed || !fights) return context.get_state().visible_fights.size
     const my_id = context.get_state().selected_character_id
     const p = get_player_pos()
