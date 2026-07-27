@@ -353,9 +353,7 @@ describe('resolve_worn_cosmetics — ?equip dev override (js/remote-property-inj
   })
 
   test('__proto__ can never pollute Object.prototype through the equip query', () => {
-    const r = with_dev(() =>
-      resolve_worn_cosmetics(live_char, new Map(), '?equip=__proto__:pwn,head:sui_helmet')
-    )
+    const r = with_dev(() => resolve_worn_cosmetics(live_char, new Map(), '?equip=__proto__:pwn,head:sui_helmet'))
     expect(/** @type {any} */ ({}).pwn).toBeUndefined()
     expect(r.head).toEqual({ url: '/models/equipment/sui_helmet.glb', variant: null })
   })
@@ -418,6 +416,26 @@ describe('mount_target_height — per-mount world-size normalisation table', () 
       const ratio = h / OLD_DRAGON_H
       expect(ratio).toBeGreaterThanOrEqual(1.3)
       expect(ratio).toBeLessThanOrEqual(1.5)
+    }
+  })
+})
+
+describe('mount_model_yaw — authored forward-axis metadata', () => {
+  test('ordinary and unknown mounts preserve the controller heading', async () => {
+    const { mount_model_yaw } = await import('./cosmetic_glb.js')
+    expect(mount_model_yaw('/models/pet/corbac.glb', 0.75)).toBe(0.75)
+    expect(mount_model_yaw('/models/pet/unknown.glb', -0.5)).toBe(-0.5)
+  })
+
+  test('each current travel dragon faces along the flight velocity', async () => {
+    const { mount_model_yaw } = await import('./cosmetic_glb.js')
+    const heading = 0.37
+    const travel_forward = [-Math.sin(heading), -Math.cos(heading)]
+    for (const key of ['dragon-fire', 'dragon-frost', 'dragon-void']) {
+      const rendered_yaw = mount_model_yaw(`/sprites/mobs/models/${key}.glb?v=1`, heading)
+      const rendered_forward = [Math.sin(rendered_yaw), Math.cos(rendered_yaw)]
+      const alignment = travel_forward[0] * rendered_forward[0] + travel_forward[1] * rendered_forward[1]
+      expect(alignment).toBeCloseTo(1)
     }
   })
 })

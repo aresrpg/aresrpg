@@ -15,7 +15,7 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
-import { mount_is_flight, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
+import { mount_is_flight, mount_model_yaw, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
 import { create_mount_glb_cache } from './mount_glb_cache.js'
 import { game_log } from '../core/log.js'
 import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
@@ -25,6 +25,7 @@ const BLEND_RATE = 8 // idle↔move weight ease (per-second lambda)
 
 /** Fetch+parse each unique mount GLB once; failed work is evicted, resolved render data stays page-cached. */
 const glb_cache = create_mount_glb_cache((/** @type {string} */ url) => load_glb_checked(url))
+
 
 /** The mount GLB refusal rule (non-CDN URLs rejected) — ONE home, shared by create_mount_rig and the
  *  #175 preload below so a preload always warms the EXACT cache key the real mount will ask for.
@@ -147,7 +148,7 @@ export function create_mount_rig({ engine, glb_url }) {
     update(x, gy, z, yaw, moving, dt) {
       if (!rig) return
       rig.root.position.set(x, gy + rig.ground_off, z)
-      rig.root.rotation.y = yaw
+      rig.root.rotation.y = mount_model_yaw(source_url, yaw)
       if (rig.move) {
         rig.move_w += ((moving ? 1 : 0) - rig.move_w) * Math.min(1, dt * BLEND_RATE)
         rig.move.weight = rig.move_w

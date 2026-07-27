@@ -82,6 +82,15 @@ export function pick_mount_clips(clips, { flight = false } = {}) {
 // where a ground mount keeps preferring the gait. Keyed by the same file stem as MOUNT_TABLE.
 const FLIGHT_MOUNTS = new Set(['dragon-fire', 'dragon-frost', 'dragon-void'])
 
+// Authored model forward axes are model metadata, not a controller-wide correction. The current travel
+// dragons face local +Z while flight heading advances toward -Z, so their root needs a half turn. Keeping
+// each stem explicit lets a replacement model declare a different axis without changing every mount.
+const MOUNT_YAW_OFFSETS = {
+  'dragon-fire': Math.PI,
+  'dragon-frost': Math.PI,
+  'dragon-void': Math.PI,
+}
+
 /** The MOUNT_TABLE key a mount GLB URL resolves to — its file stem, lowercased (`.../pet/corbac.glb` and
  *  `<asset-host>/models/cosmetics/corbac.glb?v=2` both resolve 'corbac'). @param {string|null|undefined} glb_url */
 export const mount_stem = (glb_url) =>
@@ -107,6 +116,15 @@ export function mount_target_height(glb_url) {
  */
 export function mount_is_flight(glb_url) {
   return FLIGHT_MOUNTS.has(mount_stem(glb_url))
+}
+
+/**
+ * Convert travel/controller heading into the root yaw expected by this authored model.
+ * Unknown and ordinary mounts keep the heading unchanged.
+ * @param {string | null | undefined} glb_url @param {number} heading @returns {number}
+ */
+export function mount_model_yaw(glb_url, heading) {
+  return heading + (MOUNT_YAW_OFFSETS[mount_stem(glb_url)] ?? 0)
 }
 
 /**
