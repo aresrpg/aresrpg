@@ -459,6 +459,55 @@ export const assert_status_proof_ran = (status_proofs, why) => [
   ),
 ]
 
+/**
+ * THE FIGHT-START ROW (#1218) — every living fighter opens the fight on its OWN cell.
+ *
+ * A board law, not an action law, so it is checked ONCE against the surface's first read rather than folded
+ * into a turn: the reported defect is a fight that BEGINS with mobs stacked, and by the time a turn commits
+ * somebody has already moved and the evidence is gone. It reads the COMMITTED fold, like every other row here
+ * — at the opening beat the eye is still landing bodies, and the presented cell is an animation clock.
+ *
+ * LIVING only. Mid-fight corpse stacking is legal (the #1214 trace settled it) and a placement roster has no
+ * corpses, so exempting the dead costs nothing and keeps the row from failing on a legal state.
+ *
+ * @param {object} read the surface's `__ARES_DEV_READ()` snapshot, taken as the fight opens
+ * @returns {Array<object>} exactly one row — a rig that cannot read the fight FAILS it, never skips it
+ */
+export const assert_start_cells_distinct = (read) => {
+  if (!read?.ok)
+    return [
+      row(
+        0,
+        null,
+        'the fight is readable at its start',
+        'a readable fight',
+        read?.error ?? 'no read',
+        false,
+        'fight-start occupancy — a sheet that passes because it could not look proves nothing'
+      ),
+    ]
+  const alive = living(read)
+  const by_cell = new Map()
+  for (const f of alive) {
+    const key = fmt(f.cell_committed)
+    by_cell.set(key, [...(by_cell.get(key) ?? []), f.id])
+  }
+  const stacked = [...by_cell.entries()].filter(([, ids]) => ids.length > 1)
+  return [
+    row(
+      0,
+      null,
+      'every living fighter starts on its own cell',
+      `${alive.length} living fighter(s) on ${alive.length} distinct cell(s)`,
+      stacked.length
+        ? stacked.map(([cell, ids]) => `${cell} holds ${ids.join(' AND ')}`).join(' · ')
+        : `${alive.length} living fighter(s) on ${by_cell.size} distinct cell(s)`,
+      stacked.length === 0,
+      'fight-start occupancy — the chain seats group members without excluding a sibling’s cell (#1218)'
+    ),
+  ]
+}
+
 const ACTION_ASSERTIONS = {
   move: assert_move,
   damage: assert_damage,

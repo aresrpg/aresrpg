@@ -14,6 +14,7 @@
 
 import {
   assert_cross_client,
+  assert_start_cells_distinct,
   assert_traps_sprung,
   assert_turn,
   plan_turn,
@@ -156,6 +157,13 @@ export const drive_fight = async ({
    *  game failure); a second is a genuine stall and is recorded as the FAIL it is. */
   let races = 0
 
+  // THE BOARD'S OPENING ROW (#1218) — taken BEFORE the first turn, because that is the only moment the reported
+  // defect is observable: a fight that begins with two mobs on one cell looks legal to every layer once somebody
+  // has moved. One read, one row, every surface.
+  const start_rows = assert_start_cells_distinct(
+    await seats[0].client.read().catch((e) => ({ ok: false, error: String(e) }))
+  )
+
   for (let turn = 1; turn <= max_turns; turn++) {
     const next = await next_actor({ seats, timeout_ms: turn_timeout_ms })
     if (next.kind === 'terminal') {
@@ -252,7 +260,7 @@ export const drive_fight = async ({
         break
       }
     }
-  return { turns, outcome, cross, parity }
+  return { turns, outcome, cross, parity, start_rows }
 }
 
 /** A fresh seat: its page, its seam, whatever its surface knows about it, and the memory a snapshot cannot carry. */

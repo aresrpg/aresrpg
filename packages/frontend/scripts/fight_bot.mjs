@@ -160,6 +160,9 @@ try {
   // sides; this one compares what the client PREDICTED against what the authority resolved. A run that never
   // landed one such comparison has not swept parity, whatever else it proved — so it fails and names why.
   sheet.run_rows.push(...assert_prediction_proofs(played.parity))
+  // THE BOARD'S OPENING ROW (#1218) — living fighters hold pairwise-distinct cells at placement. Taken from the
+  // read the drive took before its first turn; run-level because it is a fact about the fight, not about a turn.
+  sheet.run_rows.push(...(played.start_rows ?? []))
   // THE COOP RULING'S OWN ROW. A coop run that never landed a status across clients has not shown what coop was
   // built to show, so it says so — with the reason, and as a FAIL. A skip dressed as a pass is worse than a gap.
   if (MODE === 'coop')

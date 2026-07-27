@@ -28,16 +28,12 @@ const fighter = (id, team, cell, over = {}) => ({
   ...over,
 })
 
-const read = fighters => ({ ok: true, my_id: '0xme', fighters })
+const read = (fighters) => ({ ok: true, my_id: '0xme', fighters })
 
 describe('assert_start_cells_distinct', () => {
   test('two mobs on ONE cell is a FAIL row naming the cell and both fighters', () => {
     const rows = assert_start_cells_distinct(
-      read([
-        fighter('0xme', 0, { x: 5, y: 5 }),
-        fighter('m0', 1, { x: 9, y: 9 }),
-        fighter('m1', 1, { x: 9, y: 9 }),
-      ]),
+      read([fighter('0xme', 0, { x: 5, y: 5 }), fighter('m0', 1, { x: 9, y: 9 }), fighter('m1', 1, { x: 9, y: 9 })])
     )
     expect(summarise(rows).verdict).toBe('FAIL')
     expect(rows[0].actual).toContain('9,9')
@@ -47,11 +43,7 @@ describe('assert_start_cells_distinct', () => {
 
   test('a legally-placed roster passes, and the row says how many cells it checked', () => {
     const rows = assert_start_cells_distinct(
-      read([
-        fighter('0xme', 0, { x: 5, y: 5 }),
-        fighter('m0', 1, { x: 9, y: 9 }),
-        fighter('m1', 1, { x: 9, y: 10 }),
-      ]),
+      read([fighter('0xme', 0, { x: 5, y: 5 }), fighter('m0', 1, { x: 9, y: 9 }), fighter('m1', 1, { x: 9, y: 10 })])
     )
     expect(summarise(rows)).toMatchObject({ failed: 0, checks: 1 })
     expect(rows[0].actual).toContain('3')
@@ -62,21 +54,23 @@ describe('assert_start_cells_distinct', () => {
       read([
         fighter('0xme', 0, { x: 5, y: 5 }),
         fighter('m0', 1, { x: 9, y: 9 }),
-        fighter('m1', 1, { x: 9, y: 9 }, {
-          hp_committed: 0,
-          alive_committed: false,
-          dead: true,
-        }),
-      ]),
+        fighter(
+          'm1',
+          1,
+          { x: 9, y: 9 },
+          {
+            hp_committed: 0,
+            alive_committed: false,
+            dead: true,
+          }
+        ),
+      ])
     )
     expect(summarise(rows).failed).toBe(0)
   })
 
   test('an unreadable fight FAILS the row rather than passing on nothing', () => {
     // A rig that reports PASS because it could not look is exactly the disease this oracle exists to cure.
-    expect(
-      summarise(assert_start_cells_distinct({ ok: false, error: 'no read' }))
-        .verdict,
-    ).toBe('FAIL')
+    expect(summarise(assert_start_cells_distinct({ ok: false, error: 'no read' })).verdict).toBe('FAIL')
   })
 })

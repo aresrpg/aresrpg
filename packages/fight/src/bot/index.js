@@ -11,6 +11,7 @@ export {
   assert_cross_client,
   assert_status_proof_ran,
   assert_prediction_proofs,
+  assert_start_cells_distinct,
   prediction_tally,
   summarise,
 } from './assert.js'
