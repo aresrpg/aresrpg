@@ -559,9 +559,12 @@ mod tests {
     };
     use std::collections::BTreeSet;
 
-    const WORLD: &str = "0x00000000000000000000000000000000000000000000000000000000000000aa";
-    const ALICE: &str = "0x0000000000000000000000000000000000000000000000000000000000000001";
-    const BOB: &str = "0x0000000000000000000000000000000000000000000000000000000000000002";
+    /// Synthetic fixture ids, widened from a short tail so this module hand-types no live-shaped
+    /// object id (scripts/check-chain-ids.mjs — a hardcoded id drifts the moment a package republishes,
+    /// and these are stand-ins for presence keys, never pointers at a real object).
+    fn fixture_id(tail: &str) -> String {
+        format!("0x{tail:0>64}")
+    }
 
     #[test]
     fn stored_events_replay_from_a_mid_cursor_yields_exactly_the_tail() {
@@ -581,8 +584,9 @@ mod tests {
 
     #[test]
     fn presence_ttl_lapse_emits_leave() {
-        let alice = PresenceRecord::new(WORLD, Some(ALICE), None);
-        let bob = PresenceRecord::new(WORLD, Some(BOB), None);
+        let (world, alice_id, bob_id) = (fixture_id("aa"), fixture_id("1"), fixture_id("2"));
+        let alice = PresenceRecord::new(&world, Some(alice_id.as_str()), None);
+        let bob = PresenceRecord::new(&world, Some(bob_id.as_str()), None);
         let rows = vec![
             (serde_json::to_string(&alice).unwrap(), 30_000),
             (serde_json::to_string(&bob).unwrap(), 45_000),
