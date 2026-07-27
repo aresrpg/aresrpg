@@ -46,8 +46,10 @@ public struct Participant has store, drop {
 /// yet); no weapon is granted at creation (early weapons = easy loot; bare hands = unarmed_line). Repeatable while AP lasts — no per-turn cap.
 public struct Weapon has copy, drop, store {
   element: u8,
-  damage: u64,
-  crit_damage: u64,
+  damage: u64, // #577 — the MIN of the normal-hit range
+  damage_max: u64, // #577 — the MAX (== damage ⇒ the fixed base every constructor here still authors)
+  crit_damage: u64, // #577 — the MIN of the crit range
+  crit_damage_max: u64, // #577 — the MAX (== crit_damage ⇒ fixed)
   crit_rate: u64, // 1-in-X; 0 = never crit
   ap_cost: u64,
   reach: u64,
@@ -57,7 +59,7 @@ public struct Weapon has copy, drop, store {
 /// constructor + a raw-param `create` was the forge-a-god-seat exploit chain. Fight-internal code (and this
 /// package's tests) build weapons; PTBs never do.
 public(package) fun new_weapon(element: u8, damage: u64, crit_damage: u64, crit_rate: u64, ap_cost: u64, reach: u64): Weapon {
-  Weapon { element, damage, crit_damage, crit_rate, ap_cost, reach }
+  Weapon { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage, crit_rate, ap_cost, reach }
 }
 
 /// ONE authored damage LINE of the equipped weapon (§17.27 wave-2a): a flat elemental `damage` (crit swaps to
@@ -69,12 +71,31 @@ public(package) fun new_weapon(element: u8, damage: u64, crit_damage: u64, crit_
 /// — a forged line can only enter a fight the forger self-brands (worthless loot, the F-02 guarantee).
 public struct WeaponLine has copy, drop, store {
   element: u8,
-  damage: u64,
-  crit_damage: u64,
+  damage: u64, // #577 — MIN of the normal-hit range
+  damage_max: u64, // #577 — MAX (== damage ⇒ fixed)
+  crit_damage: u64, // #577 — MIN of the crit range
+  crit_damage_max: u64, // #577 — MAX (== crit_damage ⇒ fixed)
+  // §387 — the AUTHORED cell-set shape OVERRIDE. `spell_effect::shape_no_override()` (255) ⇒ no override, resolve
+  // the category table. Carried on the line so an authored item can drive its strike's cell set.
+  area_shape: u8,
+  area_size: u64,
 }
 
+/// FIXED alias (range == single value), NO shape override (the category table resolves). `new_weapon_line_ranged`
+/// authors a spread; `new_weapon_line_shaped` authors a shape override.
 public fun new_weapon_line(element: u8, damage: u64, crit_damage: u64): WeaponLine {
-  WeaponLine { element, damage, crit_damage }
+  WeaponLine { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage, area_shape: spell_effect::shape_no_override(), area_size: 0 }
+}
+
+/// #577 — RANGE-aware line constructor: `[damage, damage_max]` normal, `[crit_damage, crit_damage_max]` crit. NO shape override.
+public fun new_weapon_line_ranged(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64): WeaponLine {
+  WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max, area_shape: spell_effect::shape_no_override(), area_size: 0 }
+}
+
+/// The shape-OVERRIDE authoring constructor: a ranged line PLUS an explicit `(area_shape, area_size)` that
+/// overrides the category resolver. Pass `shape_no_override()` for no override.
+public fun new_weapon_line_shaped(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64, area_shape: u8, area_size: u64): WeaponLine {
+  WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max, area_shape, area_size }
 }
 
 public(package) fun wl_element(w: &WeaponLine): u8 { w.element }
@@ -114,7 +135,9 @@ public fun weapon_line_of(family: Option<String>, affinity: bool): Weapon {
       return Weapon {
         element: el[i],
         damage: affinity_scale(dmg[i], affinity),
+        damage_max: affinity_scale(dmg[i], affinity), // #577 — the family lines are FIXED (max == min)
         crit_damage: affinity_scale(cdmg[i], affinity),
+        crit_damage_max: affinity_scale(cdmg[i], affinity),
         crit_rate: crate[i], // affinity NEVER touches crit_rate / ap_cost / reach (mechanics, not damage)
         ap_cost: ap[i],
         reach: reach[i],
@@ -131,7 +154,17 @@ fun affinity_scale(base: u64, affinity: bool): u64 { if (affinity) base * 110 / 
 
 /// Bare hands: earth (the guaranteed-resolvable element), low fixed damage, cheap swings, melee reach.
 fun unarmed_line(): Weapon {
-  Weapon { element: 2, damage: 4, crit_damage: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
+  Weapon { element: 2, damage: 4, damage_max: 4, crit_damage: 6, crit_damage_max: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
+}
+
+/// §387 — `weapon_line_of` with an AUTHORABLE per-template AP cost. `ap_override` some(ap) ⇒ that authored AP; none
+/// ⇒ the family constant `WL_AP_COST`. Element / damage / reach / crit stay the family line — only the AP becomes
+/// template-authorable. The game reads the item's authored AP (equipment seam) and threads it here at fight entry;
+/// the chain never trusts a PTB-supplied AP (the Weapon is built fight-side, F-02).
+public fun weapon_line_of_authored(family: Option<String>, affinity: bool, ap_override: Option<u64>): Weapon {
+  let mut w = weapon_line_of(family, affinity);
+  if (ap_override.is_some()) w.ap_cost = *ap_override.borrow();
+  w
 }
 
 // ╔════════════════ [ Combatant — the character combat SNAPSHOT (the game-read seam shape) ] ═ ]

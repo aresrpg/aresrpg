@@ -11,7 +11,7 @@ use aresrpg_fight::{
   version::Version
 };
 use aresrpg_foundation::{board, prng, spell_board::{Self, BoardState}};
-use std::type_name::{Self, TypeName};
+use std::{string::String, type_name::{Self, TypeName}};
 use sui::{clock::Clock, dynamic_field as df};
 
 
@@ -130,12 +130,13 @@ public fun create<W: drop>(
   content_template: ID,
   creator: Combatant,
   creator_lines: vector<WeaponLine>,
+  creator_category: Option<String>, // §387 — the creator's equipped-weapon FINE category (drives the strike shape); none = tool/bare
   dials: Dials,
   version: &Version,
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create_inner(_w, registry, world, spawn_id, 0, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, dials, version, clock, ctx);
+  create_inner(_w, registry, world, spawn_id, 0, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, creator_category, dials, version, clock, ctx);
 }
 
 /// `create` for a RE-ENGAGED group (#609 — a defeat releases the group back into the world at its spot, so it
@@ -166,7 +167,7 @@ public fun create_round<W: drop>(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create_inner(_w, registry, world, spawn_id, round, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, dials, version, clock, ctx);
+  create_inner(_w, registry, world, spawn_id, round, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, option::none(), dials, version, clock, ctx);
 }
 
 fun create_inner<W: drop>(
@@ -188,6 +189,7 @@ fun create_inner<W: drop>(
   content_template: ID,
   creator: Combatant,
   creator_lines: vector<WeaponLine>,
+  creator_category: Option<String>,
   dials: Dials,
   version: &Version,
   clock: &Clock,
@@ -214,7 +216,7 @@ fun create_inner<W: drop>(
     i = i + 1;
   };
 
-  seat_creator(fight, registry, creator_lines);
+  seat_creator(fight, registry, creator_lines, creator_category);
 }
 
 /// The ONE Fight assembler both create paths share: the §17.23 0-HP gate, the board derivation, the first-come
@@ -286,11 +288,12 @@ fun assemble(
   }
 }
 
-/// The shared create TAIL: attach the creator's weapon lines, latch the seat, announce, share.
-fun seat_creator(mut fight: Fight, registry: &mut FightRegistry, creator_lines: vector<WeaponLine>) {
+/// The shared create TAIL: attach the creator's weapon lines + §387 shape category, latch the seat, announce, share.
+fun seat_creator(mut fight: Fight, registry: &mut FightRegistry, creator_lines: vector<WeaponLine>, creator_category: Option<String>) {
   let fid = object::id(&fight);
   let creator_id = participant::character(fight.participants.borrow(0));
   attach_weapon_lines(&mut fight, 0, creator_lines); // §17.27 wave-2a — the creator seats at index 0
+  attach_weapon_category(&mut fight, 0, creator_category); // §387 — the creator's weapon shape category
   fight_registry::latch_character(registry, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
   fight_events::emit_created(fid, fight.world, fight.spawn_id, fight.anchor_x, fight.anchor_z, fight.public_fight, fight.aged_bp, fight.mobs.length());
   fight_events::emit_joined(fid, creator_id, 0);
@@ -420,7 +423,7 @@ public fun create_members(
     i = i + 1;
   };
 
-  seat_creator(fight, registry, creator_lines);
+  seat_creator(fight, registry, creator_lines, option::none()); // format-3 door: no §387 category input exists on GroupBuild
 }
 
 public fun create_pvp<W: drop>(
@@ -503,13 +506,14 @@ public fun join<W: drop>(
   registry: &mut FightRegistry,
   joiner: Combatant,
   joiner_lines: vector<WeaponLine>,
+  joiner_category: Option<String>, // §387 — the joiner's equipped-weapon FINE category
   joiner_party: Option<ID>,
   team: u8,
   vouched: bool,
   version: &Version,
   ctx: &TxContext,
 ) {
-  join_inner(_w, fight, registry, joiner, joiner_lines, joiner_party, team, vouched, version, ctx);
+  join_inner(_w, fight, registry, joiner, joiner_lines, joiner_category, joiner_party, team, vouched, version, ctx);
 }
 
 fun join_inner<W: drop>(
@@ -518,6 +522,7 @@ fun join_inner<W: drop>(
   registry: &mut FightRegistry,
   joiner: Combatant,
   joiner_lines: vector<WeaponLine>,
+  joiner_category: Option<String>,
   joiner_party: Option<ID>,
   team: u8,
   vouched: bool,
@@ -537,6 +542,7 @@ fun join_inner<W: drop>(
   let joiner = if (fight.mode == MODE_PVP) participant::with_full_hp(joiner) else joiner;
   let seat = seat_joiner(fight, joiner, ctx.sender(), team);
   attach_weapon_lines(fight, seat, joiner_lines); // §17.27 wave-2a
+  attach_weapon_category(fight, seat, joiner_category); // §387 — the joiner's weapon shape category
 }
 
 fun seat_joiner(fight: &mut Fight, joiner: Combatant, owner: address, team: u8): u64 {
@@ -733,6 +739,22 @@ public(package) fun weapon_lines_at(fight: &Fight, seat: u64): vector<WeaponLine
   if (df::exists(&fight.id, k)) *df::borrow<WeaponLinesKey, vector<WeaponLine>>(&fight.id, k) else vector[]
 }
 
+// §387 — the seat's equipped-weapon FINE CATEGORY, the key a shape-aware strike derives its cell set from. A
+// per-seat DYNAMIC FIELD, upgrade-safe alongside the frozen `Participant`/`Weapon` layout exactly like the weapon
+// lines above (the family already drives reach/element/AP via `Weapon`; only the SHAPE needs the raw slug).
+// Absent (a tool / bare hands / a pre-§387 seat) ⇒ `none` ⇒ the 1-cell default.
+public struct WeaponCategoryKey has copy, drop, store { seat: u64 }
+
+public(package) fun attach_weapon_category(fight: &mut Fight, seat: u64, category: Option<String>) {
+  if (category.is_none()) return;
+  df::add(&mut fight.id, WeaponCategoryKey { seat }, category.destroy_some());
+}
+
+public(package) fun weapon_category_at(fight: &Fight, seat: u64): Option<String> {
+  let k = WeaponCategoryKey { seat };
+  if (df::exists(&fight.id, k)) option::some(*df::borrow<WeaponCategoryKey, String>(&fight.id, k)) else option::none()
+}
+
 
 #[test_only]
 public struct TestBrand has drop {}
@@ -758,7 +780,7 @@ public fun create_for_testing(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create(TestBrand {}, registry, world, spawn_id, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, false, spec, group_size, 42, world, creator, vector[], test_dials(), version, clock, ctx);
+  create(TestBrand {}, registry, world, spawn_id, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, false, spec, group_size, 42, world, creator, vector[], option::none(), test_dials(), version, clock, ctx);
 }
 
 #[test_only]
@@ -791,7 +813,7 @@ public fun create_dungeon_fight_for_testing(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create(TestBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(), false, option::none(), true, spec, group_size, 42, scope, creator, vector[], test_dials(), version, clock, ctx);
+  create(TestBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(), false, option::none(), true, spec, group_size, 42, scope, creator, vector[], option::none(), test_dials(), version, clock, ctx);
 }
 
 #[test_only]
