@@ -10,14 +10,14 @@
 import { chain_to_world, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
 
 // SPEC §6 "close enough shows press G" — the ONE ENGAGE distance: arms the [G] gather prompt on a resource AND
-// gates the [R] claim LEGALITY on a mob group. Mobs measure from the stable terrain-resolved GROUP HOME the
-// renderer reports; an unplaced group falls back to its row anchor.
+// gates the [R] claim LEGALITY on a mob group. Mobs measure with `engage_d2` — the nearer of the group's two
+// legitimate positions (its derivation anchor and the renderer's terrain-resolved home); see that function.
 export const PROXIMITY_M = 6
 // [R] ATTACK-PROMPT VISIBILITY — the attack button should show at 3-4 blocks from the group, for
 // convenience — the prompt ARMS on this WIDER ring, measured from the NEAREST group member (the mobs you
 // actually see) rather than the invisible centroid. 10 blocks from the nearest member is ~3-4 blocks beyond the
 // 6-block engage ring, so the prompt appears before you're in claim range; engaging still requires closing to
-// PROXIMITY_M of the group home (a press in the visible-but-far band gets the honest "get closer"). Splitting the
+// PROXIMITY_M of an engage origin (a press in the visible-but-far band gets the honest "get closer"). Splitting the
 // two rings is the whole feature: VISIBILITY widened, LEGALITY unchanged.
 export const ATTACK_VISIBLE_M = 10
 // GATHER HYSTERESIS (client rider): K adjacent chain cells sit ~1 block apart — hold the armed target unless
@@ -243,8 +243,8 @@ const nearest_member_d2 = (members, row, p) => {
 }
 
 /** One pass over the rows: nearest in-range resource + mob, and whether the armed [G] target is still live.
- *  The mob VISIBILITY ring is the wider ATTACK_VISIBLE_M measured from the nearest MEMBER; its rendered-HOME
- *  distance rides along so retarget can flag whether that armed target is also within the ENGAGE ring. */
+ *  The mob VISIBILITY ring is the wider ATTACK_VISIBLE_M measured from the nearest MEMBER; its ENGAGE
+ *  distance (`engage_d2`) rides along so retarget can flag whether that armed target is also in engage range. */
 const scan_targets = (state, p) => {
   const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring from its anchor; mob ENGAGE from `engage_d2`
   const visible2 = ATTACK_VISIBLE_M * ATTACK_VISIBLE_M // the wider mob PROMPT ring, from the nearest member
@@ -254,7 +254,7 @@ const scan_targets = (state, p) => {
     armed_d2: null,
     nearest_mob: null,
     nearest_mob_d2: visible2,
-    nearest_mob_home_d2: 0,
+    nearest_mob_engage_d2: 0,
   }
   for (const [zk, zone] of state.zones)
     for (const [rk, row] of zone.rows) {
@@ -271,7 +271,7 @@ const scan_targets = (state, p) => {
         if (member_d2 < hit.nearest_mob_d2) {
           hit.nearest_mob_d2 = member_d2
           hit.nearest_mob = key
-          hit.nearest_mob_home_d2 = engage_d2(state, key, row, p)
+          hit.nearest_mob_engage_d2 = engage_d2(state, key, row, p)
         }
       }
     }
@@ -280,8 +280,8 @@ const scan_targets = (state, p) => {
 
 /** Recompute the [G]/[R] targets off the player position + row/member positions (the fold half of the render
  *  contract). Emits BOTH [R] flags: `attack_target_key` (VISIBLE — arms the prompt) and `attack_engageable`
- *  (that target's rendered home is within the ENGAGE ring → gold; else it shows un-gold and a press gets
- *  "get closer"). */
+ *  (that target is within the ENGAGE ring of either engage origin → gold; else it shows un-gold and a press
+ *  gets "get closer", now with the direction). */
 export const retarget = (state) => {
   const p = state.player
   if (!p)
@@ -297,7 +297,7 @@ export const retarget = (state) => {
     margin_m: GATHER_HYSTERESIS_M,
   })
   const attack_target_key = hit.nearest_mob
-  const attack_engageable = attack_target_key != null && hit.nearest_mob_home_d2 <= PROXIMITY_M * PROXIMITY_M
+  const attack_engageable = attack_target_key != null && hit.nearest_mob_engage_d2 <= PROXIMITY_M * PROXIMITY_M
   if (
     gather_target_key === state.gather_target_key &&
     attack_target_key === state.attack_target_key &&

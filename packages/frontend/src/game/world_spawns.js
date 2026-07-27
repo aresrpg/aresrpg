@@ -519,7 +519,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     const offset = key ? engage_offset(spawns_store.getState(), key) : null
     const title = offset
       ? i18n.t('discovery.engage_too_far_dir', {
-          dist: Math.max(1, Math.round(offset.distance)),
+          dist: Math.max(1, Math.ceil(offset.distance)), // never UNDERSTATE the gap — 6.4m must not read "6m" at a 6m ring
           dir: cardinal_of(offset.dx, offset.dz),
         })
       : i18n.t('discovery.engage_too_far')
@@ -690,7 +690,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       sync_from_core()
       return
     }
-    // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity off the rendered group home + pending state in the
+    // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity with the core's `engage_d2` + pending state in the
     // fold. A refused intent (far click — on_up raycasts placed rigs to the despawn radius) teaches "get
     // closer" instead of firing a doomed claim; an accepted one marks the row pending (the optimistic hide as
     // data) and emits the claim_tx request THIS adapter executes.
