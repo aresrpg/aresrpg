@@ -15,7 +15,7 @@ use aresrpg::{extension, item::{Self, Item, ItemTemplate}};
 use aresrpg_fight::{mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
 use aresrpg_foundation::prng;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random}, transfer_policy::TransferPolicy};
+use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, transfer_policy::TransferPolicy};
 
 // (102 EAlreadyOpened / 103 ENotOpened retired — engine unpack is one-shot; codes stay reserved in the error map)
 const ENoMatching: u64 = 104; // mint_rolled: nothing owed for this template
@@ -70,8 +70,8 @@ entry fun open(
   r: &Random,
   ctx: &mut TxContext,
 ) {
-  let mut rng = prng::rng_seed(random::new_generator(r, ctx).generate_u64());
-  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
+  let mut gen = random::new_generator(r, ctx);
+  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut gen, ctx);
 }
 
 /// PTB-composition twin of `open` (`entry` cannot consume a prior command's result): ONE tx chains
@@ -91,8 +91,8 @@ public fun open_taken(
   r: &Random,
   ctx: &mut TxContext,
 ) {
-  let mut rng = prng::rng_seed(random::new_generator(r, ctx).generate_u64());
-  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut rng, ctx);
+  let mut gen = random::new_generator(r, ctx);
+  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut gen, ctx);
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
@@ -103,7 +103,7 @@ fun y131(
   config: &GameConfig,
   version: &Version,
   now_ms: u64,
-  rng: &mut u64,
+  gen: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
   config.assert_enabled();
@@ -132,7 +132,7 @@ fun y131(
   while (m < mob_count) {
     let mut e = 0;
     while (e < loot.length()) {
-      let one = y135(rng, loot.borrow(e), chance, aged_bp, loot_mult);
+      let one = y135(gen, loot.borrow(e), chance, aged_bp, loot_mult);
       if (one.is_some()) y137(&mut rolled, one.destroy_some()) else one.destroy_none();
       e = e + 1;
     };
@@ -142,7 +142,7 @@ fun y131(
   let mut result = FightResult { id: object::new(ctx), fight, world, character: character_id, outcome: outcome_status, final_hp, xp_share, pvp, team, winner_team, rolled };
   // the stat-roll entropy for whatever gear this ticket owes — drawn HERE, off the same `&Random` stream that
   // rolled the checklist, because `mint_rolled` has none (#758).
-  df::add(&mut result.id, StatSeedKey {}, prng::draw(rng));
+  df::add(&mut result.id, StatSeedKey {}, random::generate_u64(gen));
   event::emit(ResultOpened { result: object::id(&result), character: character_id, xp_share, loot_units: units });
   transfer::transfer(result, ctx.sender());
 }
@@ -238,12 +238,16 @@ fun y134(base: u64, template: ID, index: u64): u64 {
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// One loot entry roll: effective_bp = min(10000, chance_bp × (700+claimer_chance)/700); on a hit, quantity in
 /// [min,max] scaled by aging ×(10000+aged_bp)/10000 and the loot multiplier ×mult/100.
-fun y135(rng: &mut u64, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
+/// Drawn from the FRAMEWORK generator, never the mulberry32 carrier: this is a money decision, nothing in
+/// @aresrpg/sim mirrors it, and the carrier exists only to keep the fight twins byte-identical. `generate_u64_in_range`
+/// is the unbiased primitive — the hand-rolled `draw % n` it replaces skewed both the hit and the quantity, and
+/// the seed it drew from was truncated to 32 bits on the way in.
+fun y135(gen: &mut RandomGenerator, entry: &MobLootEntry, claimer_chance: u64, aged_bp: u64, loot_mult: u64): Option<RolledLoot> {
   let effective_bp = loot_effective_bp(mob::loot_entry_chance_bp(entry) as u64, claimer_chance);
-  if (prng::draw(rng) % BP_ONE >= effective_bp) return option::none();
+  if (random::generate_u64_in_range(gen, 0, BP_ONE - 1) >= effective_bp) return option::none();
   let min_q = mob::loot_entry_min_qty(entry) as u64;
   let max_q = mob::loot_entry_max_qty(entry) as u64;
-  let base = if (max_q > min_q) min_q + prng::draw(rng) % (max_q - min_q + 1) else min_q;
+  let base = if (max_q > min_q) random::generate_u64_in_range(gen, min_q, max_q) else min_q;
   let qty = base * (BP_ONE + aged_bp) / BP_ONE * loot_mult / 100;
   option::some(RolledLoot { item_template: mob::loot_entry_item_template(entry), qty: if (qty < 1) 1 else qty })
 }
@@ -339,6 +343,6 @@ public fun open_for_testing(
   now_ms: u64,
   ctx: &mut TxContext,
 ) {
-  let mut rng = prng::rng_seed(42);
-  y131(outcome, kiosk, pkcap, config, version, now_ms, &mut rng, ctx);
+  let mut gen = random::new_generator_from_seed_for_testing(vector[42u8]);
+  y131(outcome, kiosk, pkcap, config, version, now_ms, &mut gen, ctx);
 }
