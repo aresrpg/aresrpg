@@ -8,7 +8,7 @@
 #[test_only]
 module aresrpg::test_world;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self as character}, character_link, config::{Self as config, GameConfig}, equipment, extension, extract, item::{Self as item, Item, ItemTemplate}, item_stats, pet, scribe, version::{Self, Version}, world::{Self as world, World}};
+use aresrpg::{admin::{Self, AdminCap, Self as catalog, Catalog}, character::Self as character, character_link, config::{Self as config, GameConfig}, equipment, extension, extract, item::{Self as item, Item, ItemTemplate}, item_stats, pet, scribe, version::{Self, Version}, world::{Self as world, World}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
   kiosk::{Self, Kiosk},
@@ -40,7 +40,7 @@ public fun boot(sc: &mut Scenario) {
   pet::test_init(sc.ctx());
   item::test_init(sc.ctx());
   character::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
   scribe::test_init(sc.ctx());
 
   sc.next_tx(OWNER);

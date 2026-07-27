@@ -9,7 +9,7 @@
 #[test_only]
 module aresrpg::merge_door_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{kiosk::{Self, Kiosk}, package::Publisher, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
@@ -29,7 +29,7 @@ fun boot(sc: &mut Scenario): (ID, ID) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let acap = sc.take_from_sender<AdminCap>();

@@ -11,7 +11,7 @@
 #[test_only]
 module aresrpg::sibling_brand_tests;
 
-use aresrpg::{admin::AdminCap, character::{Self as character}, character_link, config::{Self, GameConfig}, fight as fight_doors, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}};
+use aresrpg::{admin::AdminCap, character::Self as character, character_link, config::{Self, GameConfig}, fight as fight_doors, mob_template::{Self, MobTemplate}, test_world, version::Version, world::{Self, World}};
 use aresrpg_fight::{
   admin as eadmin,
   fight::Fight,

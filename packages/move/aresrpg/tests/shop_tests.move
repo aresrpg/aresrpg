@@ -10,7 +10,7 @@
 #[test_only]
 module aresrpg::shop_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, item::{Self as item, Item, ItemTemplate}, item_stats, shop::{Self as shop, Sale}, version::{Self as version, Version}};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, item::{Self as item, Item, ItemTemplate}, item_stats, shop::{Self as shop, Sale}, version::{Self as version, Version}};
 use std::unit_test::{assert_eq, destroy};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
@@ -57,7 +57,7 @@ fun full_setup(
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
@@ -96,7 +96,7 @@ fun stackable_setup(sc: &mut Scenario, supply: Option<u64>, price: u64) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();

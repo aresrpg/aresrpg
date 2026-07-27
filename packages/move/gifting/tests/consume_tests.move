@@ -8,7 +8,7 @@
 #[test_only]
 module aresrpg_gifting::consume_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self as character}, character_link, config::{Self as gconfig, GameConfig}, consumable_effect, extension, extract::{Self, ItemExtractPolicy}, item::{Self as item, Item, ItemTemplate}, version::{Self, Version}};
+use aresrpg::{admin::{Self, AdminCap, Self as catalog, Catalog}, character::Self as character, character_link, config::{Self as gconfig, GameConfig}, consumable_effect, extension, extract::{Self, ItemExtractPolicy}, item::{Self as item, Item, ItemTemplate}, version::{Self, Version}};
 use aresrpg_gifting::{consume, gifting::Gifting};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -39,7 +39,7 @@ fun stand_up(sc: &mut Scenario) {
   gconfig::test_init(sc.ctx());
   item::test_init(sc.ctx());
   character::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   // enable the package + global config, whitelist the consumable category

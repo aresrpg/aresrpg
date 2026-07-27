@@ -10,7 +10,7 @@
 #[test_only]
 module aresrpg_gifting::loot_box_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, config::{Self as gconfig, GameConfig}, consumable_effect, extension, extract::{Self, ItemExtractPolicy}, item::{Self as item, Item, ItemTemplate}, version::{Self, Version}};
+use aresrpg::{admin::{Self, AdminCap, Self as catalog, Catalog}, config::{Self as gconfig, GameConfig}, consumable_effect, extension, extract::{Self, ItemExtractPolicy}, item::{Self as item, Item, ItemTemplate}, version::{Self, Version}};
 use aresrpg_gifting::{loot_box::{Self, LootRegistry, PetBoxClaim}, gifting::Gifting};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
@@ -39,7 +39,7 @@ fun stand_up(sc: &mut Scenario) {
   admin::test_init(sc.ctx());
   gconfig::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
   loot_box::test_init(sc.ctx());
 
   sc.next_tx(OWNER);

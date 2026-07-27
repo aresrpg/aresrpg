@@ -9,7 +9,7 @@
 #[test_only]
 module aresrpg::extension_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, character, extension, item::{Self, Item, ItemTemplate}, item_stats, version::{Self, Version}};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, character, extension, item::{Self, Item, ItemTemplate}, item_stats, version::{Self, Version}};
 use kiosk::personal_kiosk;
 use std::unit_test::{assert_eq, destroy};
 use sui::{kiosk, package::Publisher, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
@@ -28,7 +28,7 @@ fun setup(sc: &mut Scenario, enable: bool) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();

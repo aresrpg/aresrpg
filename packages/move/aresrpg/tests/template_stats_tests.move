@@ -5,7 +5,7 @@
 #[test_only]
 module aresrpg::template_stats_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, item::{Self, ItemTemplate}, item_stats, version::{Self, Version}};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, item::{Self, ItemTemplate}, item_stats, version::{Self, Version}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts, Scenario};
 
@@ -18,7 +18,7 @@ fun init_all(sc: &mut Scenario) {
   version::test_init(sc.ctx());
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();

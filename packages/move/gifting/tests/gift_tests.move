@@ -11,7 +11,7 @@
 #[test_only]
 module aresrpg_gifting::gift_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self, Catalog}, config::{Self, GameConfig}, extension, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, config::{Self, GameConfig}, extension, item::{Self, Item, ItemTemplate}, version::{Self, Version}};
 use aresrpg_gifting::gift;
 use kiosk::{
   kiosk_lock_rule,
@@ -48,7 +48,7 @@ fun boot(sc: &mut Scenario): ID {
   admin::test_init(sc.ctx());
   config::test_init(sc.ctx());
   item::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let acap = sc.take_from_sender<AdminCap>();

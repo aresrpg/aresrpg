@@ -5,7 +5,7 @@
 module aresrpg::pet_tests;
 
 use aresrpg_foundation::spell;
-use aresrpg::{admin::{Self, AdminCap}, catalog::Catalog, character_link, config::GameConfig, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}, pet::{Self, PetFeedConfig}, test_world, version::Version};
+use aresrpg::{admin::{Self, AdminCap, Catalog}, character_link, config::GameConfig, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}, pet::{Self, PetFeedConfig}, test_world, version::Version};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 

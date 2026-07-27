@@ -10,7 +10,7 @@
 #[test_only]
 module aresrpg::character_extract_tests;
 
-use aresrpg::{admin::{Self, AdminCap}, catalog::{Self as catalog, Catalog}, character::{Self, Character}, character_extract::{Self, CharacterExtractPolicy}, character_link, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::{Self, Version}, fight};
+use aresrpg::{admin::{Self, AdminCap, Self as catalog, Catalog}, character::{Self, Character}, character_extract::{Self, CharacterExtractPolicy}, character_link, equipment, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, version::{Self, Version}, fight};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::{assert_eq, destroy};
 use sui::{
@@ -41,7 +41,7 @@ fun setup(sc: &mut Scenario) {
   admin::test_init(sc.ctx());
   item::test_init(sc.ctx());
   character::test_init(sc.ctx());
-  catalog::test_init(sc.ctx());
+  admin::test_init_catalog(sc.ctx());
 
   sc.next_tx(OWNER);
   let cap = sc.take_from_sender<AdminCap>();
