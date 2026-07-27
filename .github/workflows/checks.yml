@@ -22,7 +22,9 @@ permissions:
 jobs:
   ladder:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20, not 15: while a REPUBLISH_WINDOW marker is open this job compiles the Move set twice —
+    # once as the field-cap leg's freshness witness, once inside the size-only preflight below.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
