@@ -2286,7 +2286,8 @@
     "fx_stat": "{{value}} {{stat}}"
   },
   "explorer": {
-    "view": "View on Explorer"
+    "view": "View on Explorer",
+    "view_equipped": "View equipped on Explorer"
   },
   "errors": {
     "party_not_leader": "Only the party leader can do that.",

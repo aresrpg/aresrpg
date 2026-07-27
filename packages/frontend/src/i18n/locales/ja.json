@@ -2286,7 +2286,8 @@
     "fx_stat": "{{stat}}{{value}}"
   },
   "explorer": {
-    "view": "エクスプローラーで表示"
+    "view": "エクスプローラーで表示",
+    "view_equipped": "装備中をエクスプローラーで表示"
   },
   "errors": {
     "party_not_leader": "それはパーティーリーダーだけができます。",

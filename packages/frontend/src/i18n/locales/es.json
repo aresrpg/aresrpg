@@ -2286,7 +2286,8 @@
     "fx_stat": "{{value}} {{stat}}"
   },
   "explorer": {
-    "view": "Ver en el explorador"
+    "view": "Ver en el explorador",
+    "view_equipped": "Ver equipado en el explorador"
   },
   "errors": {
     "party_not_leader": "Solo el líder del grupo puede hacer eso.",
