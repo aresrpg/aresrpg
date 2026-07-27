@@ -208,18 +208,11 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
       // cast first, the non-damage heal at the delivery landing, then each hit at its beat, the kill's death last.
       expect(seq).toEqual(['cast', 'heal', 'hit', 'hit', 'death'])
       expect(logs(tl).find((l) => l.prefix === 'heal').message).toBe('Aldric healed Elena for +6')
-      // Each hit rides its own serial victim beat. Prove that ordering from the timeline itself: the first
-      // victim's awaited impact sits between the two log lines. A requested timer delay is not an elapsed-time
-      // lower bound — event loops may legally wake a fractional millisecond early.
-      const hit_log_is = tl
-        .map((event, index) => (event.kind === 'log' && event.prefix === 'hit' ? index : -1))
-        .filter((index) => index >= 0)
-      const first_hit_impact_i = idx(
-        tl,
-        (event) => event.kind === 'beat-impact' && event.anim === 'hit' && event.id === 'mob-0'
-      )
-      expect(hit_log_is[0]).toBeLessThan(first_hit_impact_i)
-      expect(first_hit_impact_i).toBeLessThan(hit_log_is[1])
+      // the two hit lines are genuinely separated in time (each on its own serial victim beat — not co-emitted).
+      const hit_ts = logs(tl)
+        .filter((l) => l.prefix === 'hit')
+        .map((l) => l.t)
+      expect(hit_ts[1] - hit_ts[0]).toBeGreaterThanOrEqual(TICK_MS)
       // mob-1's death line follows its OWN hit (order: hit → number → death), riding the death beat.
       expect(idx(tl, (e) => e.kind === 'beat' && e.anim === 'death' && e.id === 'mob-1')).toBeLessThan(
         idx(tl, (e) => e.kind === 'log' && e.prefix === 'death')

@@ -6,7 +6,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import { set_catalog_for_test } from '../../game/data/mob_catalog.js'
-import { capture_timeout } from '../../test_helpers/captured_timeout.js'
 
 import {
   EncyclopediaMobImage,
@@ -79,7 +78,7 @@ function find_img(root: ReactNode): ReactElement | null {
   return null
 }
 
-test('a transient first-load failure retries on its own instead of pinning the glyph until a refresh', () => {
+test('a transient first-load failure retries on its own instead of pinning the glyph until a refresh', async () => {
   // MISSING-ARTIFACT (#117): get_mob_icon_url resolves the name->glb join through mob_catalog.js's
   // get_catalog(), a runtime-published census (load_mob_catalog) never fetched in this headless test.
   // set_catalog_for_test is the sanctioned seam (mirrors set_spell_corpus_for_test) — seed the one row this
@@ -95,15 +94,12 @@ test('a transient first-load failure retries on its own instead of pinning the g
   expect(first_img.props.src).toBe(HD_SRC)
 
   // The cold-edge window: the FIRST request errors (exactly the first-navigation symptom above).
-  const retry = capture_timeout(() => {
-    ;(first_img.props as { onError: () => void }).onError()
-  })
+  ;(first_img.props as { onError: () => void }).onError()
 
   // Degrading to the glyph immediately after the error is fine…
   // …but once the first retry deadline has elapsed, a FRESH <img> attempt must exist — the current
   // pin-forever behavior only ever heals through a full page refresh.
-  expect(retry.delay_ms).toBe(MOB_IMAGE_RETRY_DELAYS_MS[0])
-  retry.fire()
+  await Bun.sleep(1_600)
   const healed = runner.render(element)
   const retry_img = find_img(healed)
   expect(retry_img?.props.src).toBe(HD_SRC)

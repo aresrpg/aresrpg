@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join, relative } from 'node:path'
 
@@ -12,13 +12,14 @@ const WORLD_CHAT = new URL('./WorldChat.jsx', import.meta.url)
 const FRIENDS_PANEL = new URL('./OnlinePlayers.jsx', import.meta.url)
 const FRONTEND_SRC = fileURLToPath(new URL('../../../../', import.meta.url))
 
-const source = (url) => readFileSync(url, 'utf8')
+const source = (url) => Bun.file(url).text()
 const source_paths = (dir) =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) return source_paths(path)
     return /\.(?:js|jsx|ts|tsx)$/.test(entry.name) ? [path] : []
   })
+const SOURCE_PATHS = source_paths(FRONTEND_SRC)
 
 describe('aggregate presence count SSOT', () => {
   test('chat selector counts p2p peers plus self', () => {
@@ -26,11 +27,14 @@ describe('aggregate presence count SSOT', () => {
     expect(select_online_count({ visible_characters: new Map([['peer-a', {}], ['peer-b', {}]]) })).toBe(3)
   })
 
-  test('only WorldChat reads and displays an aggregate presence count', () => {
-    const chat = source(WORLD_CHAT)
-    const friends = source(FRIENDS_PANEL)
-    const aggregate_reads = source_paths(FRONTEND_SRC).flatMap((path) =>
-      (source(path).match(/visible_characters\??\.size/g) ?? []).map(() => relative(FRONTEND_SRC, path))
+  test('only WorldChat reads and displays an aggregate presence count', async () => {
+    const [chat, friends, ...sources] = await Promise.all([
+      source(WORLD_CHAT),
+      source(FRIENDS_PANEL),
+      ...SOURCE_PATHS.map(source),
+    ])
+    const aggregate_reads = SOURCE_PATHS.flatMap((path, index) =>
+      (sources[index].match(/visible_characters\??\.size/g) ?? []).map(() => relative(FRONTEND_SRC, path))
     )
 
     expect(aggregate_reads).toEqual(['game/core/presence_count.js'])

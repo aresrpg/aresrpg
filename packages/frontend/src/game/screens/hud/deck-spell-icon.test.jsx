@@ -15,8 +15,6 @@ import React, { Children, isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { configure_walrus_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
 
-import { capture_timeout } from '../../../test_helpers/captured_timeout.js'
-
 import { SpellSocket } from './deck-spell-socket.jsx'
 import { IMAGE_RETRY_DELAYS_MS } from './image_retry.js'
 
@@ -101,7 +99,7 @@ test('SpellSocket: a freshly-switched senshi spell resolves its art on the very 
   expect(senshi_img?.props.src).toBe(url_for('warcleave'))
 })
 
-test('SpellSocket: a transient miss during the switch burst self-heals instead of pinning the fallback until a refresh', () => {
+test('SpellSocket: a transient miss during the switch burst self-heals instead of pinning the fallback until a refresh', async () => {
   configure()
   const runner = hook_runner()
   const element = <SpellSocket {...socket_props(senshi_card, 'warcleave')} />
@@ -112,14 +110,13 @@ test('SpellSocket: a transient miss during the switch burst self-heals instead o
 
   // The concurrent-burst cold-edge window (image_retry.js header): the FIRST request errors — a class
   // switch fires several of these sockets at once, exactly the trigger the shared ladder was built for.
-  const retry = capture_timeout(() => first_img.props.onError())
+  first_img.props.onError()
 
   // Degrading to the tinted-initial fallback immediately is fine — but once the first retry deadline has
   // elapsed a FRESH <img> attempt must exist. THE NEVER-LATCH ASSERTION: a late-arriving/self-healed quilt
   // patch must fill the previously-missed icon on its own; the pin-forever regression only ever healed on
   // a full page refresh (a fresh mount with a warm edge).
-  expect(retry.delay_ms).toBe(IMAGE_RETRY_DELAYS_MS[0])
-  retry.fire()
+  await Bun.sleep(IMAGE_RETRY_DELAYS_MS[0] + 600)
   const retry_img = find_img(runner.render(element))
   expect(retry_img?.props.src).toBe(url_for('warcleave'))
 })

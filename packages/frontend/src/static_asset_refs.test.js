@@ -13,7 +13,7 @@
 // variants, mobs.js mob_visual_url/mob_icon_url) never matches: it builds its filename at runtime and can't be
 // statically resolved here. The audio registry's colocated test compares its complete SFX map to public/sfx/.
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, it } from 'bun:test'
@@ -51,8 +51,8 @@ const QUOTE_PATTERNS = [
 /** Every statically-resolvable /sfx/ or /sprites/ literal in one file, comments stripped first
  *  (both block and line comments — JSDoc routinely wraps illustrative paths in backticks, e.g.
  *  sfx.js's own `/sfx/...` doc comment, which would otherwise misread as a real reference). */
-function extract_asset_refs(file) {
-  const no_block_comments = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+function extract_asset_refs(contents) {
+  const no_block_comments = contents.replace(/\/\*[\s\S]*?\*\//g, '')
   const code_only = no_block_comments
     .split('\n')
     .map((line) => line.split('//')[0])
@@ -75,16 +75,17 @@ const WALRUS_FIRST_ALLOWLIST = new Set([
 ])
 
 const SOURCE_FILES = [...walk_source_files(FRONTEND_SRC), ...walk_source_files(ENGINE_SRC)]
+const read_sources = () => Promise.all(SOURCE_FILES.map(async (file) => [file, await Bun.file(file).text()]))
 
 describe('static asset references resolve on disk (#157 regression tooth)', () => {
   it('scans a non-trivial number of source files (the sweep is actually running)', () => {
     expect(SOURCE_FILES.length).toBeGreaterThan(100)
   })
 
-  it('every /sfx/ or /sprites/ literal referenced from src resolves under public/', () => {
+  it('every /sfx/ or /sprites/ literal referenced from src resolves under public/', async () => {
     const missing = []
-    for (const file of SOURCE_FILES)
-      for (const ref of extract_asset_refs(file))
+    for (const [file, contents] of await read_sources())
+      for (const ref of extract_asset_refs(contents))
         if (!WALRUS_FIRST_ALLOWLIST.has(ref) && !existsSync(path.join(PUBLIC_DIR, ref)))
           missing.push(`${ref} — referenced by ${path.relative(FRONTEND_SRC, file)}`)
     expect(missing).toEqual([])
@@ -105,10 +106,10 @@ describe('mob-icon local sprite directory stays deleted (#353 regression tooth)'
     expect(existsSync(path.join(PUBLIC_DIR, BANNED_LOCAL_MOB_ICON_PATH))).toBe(false)
   })
 
-  it('no source file references the local mob-icon path, in any literal or interpolated form', () => {
-    const hits = SOURCE_FILES.filter((file) => readFileSync(file, 'utf8').includes(BANNED_LOCAL_MOB_ICON_PATH)).map(
-      (file) => path.relative(FRONTEND_SRC, file)
-    )
+  it('no source file references the local mob-icon path, in any literal or interpolated form', async () => {
+    const hits = (await read_sources())
+      .filter(([, contents]) => contents.includes(BANNED_LOCAL_MOB_ICON_PATH))
+      .map(([file]) => path.relative(FRONTEND_SRC, file))
     expect(hits).toEqual([])
   })
 })
