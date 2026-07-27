@@ -7,8 +7,8 @@
 //
 // REQ/RES only (no streaming): the panel polls this store on an interval + on focus; a gift_id in a
 // fresh load that wasn't seen before fires ONE "you received items" toast (never re-toasted, never the whole
-// inbox on first load). The /v1/inbox view is NOT live yet (behavior key post-publish) — a read failure degrades
-// to an honest empty state, never an error storm. `__inject` is a DEV-only fixture seam for the mocked-row proof.
+// inbox on first load). The /v1/inbox view is NOT live yet (behavior key post-publish) — a read failure surfaces
+// as unavailable, never as a dishonest empty inbox. `__inject` is a DEV-only fixture seam for mocked-row proof.
 
 import { create } from 'zustand'
 
@@ -44,6 +44,7 @@ type PendingKind = 'claim' | 'recall'
 
 export type InboxInput =
   | { type: 'snapshot'; incoming: RpcInboxGift[]; outgoing: RpcInboxGift[] } // rpc load result
+  | { type: 'load_failed' } // rpc load failed — keep last-good rows, but surface unavailable
   | { type: 'receipt'; gift_id: string; kind: PendingKind } // own claim/recall succeeded — optimistic hide
   | { type: 'receipt_failed'; gift_id: string; kind: PendingKind } // own claim/recall failed — re-derive
 
@@ -55,6 +56,7 @@ export type InboxState = {
   raw: InboxRaw // last rpc snapshot — the reconcile base (internal)
   pending: Record<string, PendingKind> // gift_id -> the action in flight, not yet proven by a snapshot
   loaded_once: boolean
+  error: 'unavailable' | null
 }
 
 export type InboxDivergence = { gift_id: string; kind: PendingKind; predicted: number; snapshot: number } | null
@@ -65,6 +67,7 @@ export const empty_inbox_state = (): InboxState => ({
   raw: { incoming: [], outgoing: [] },
   pending: {},
   loaded_once: false,
+  error: null,
 })
 
 // Project raw snapshot rows through the pending ledger → render rows: a pending claim hides its row from
@@ -124,8 +127,11 @@ export function reduce(state: InboxState, input: InboxInput): { state: InboxStat
           divergence = { gift_id: id, kind, predicted: prior.items.length, snapshot: snap.items.length }
         pending[id] = kind // still present on-chain — stale snapshot, hold the optimistic hide
       }
-      return { state: { ...state, raw, pending, ...project(raw, pending), loaded_once: true }, divergence }
+      return { state: { ...state, raw, pending, ...project(raw, pending), loaded_once: true, error: null }, divergence }
     }
+
+    case 'load_failed':
+      return { state: { ...state, loaded_once: true, error: 'unavailable' }, divergence: null }
 
     default:
       return { state, divergence: null }
@@ -180,10 +186,10 @@ export const use_inbox = create<InboxStore>((set, get) => ({
         )
       set({ ...state, loading: false })
     } catch (e) {
-      // The /v1/inbox route isn't live yet ⇒ an honest EMPTY state (already empty pre-publish). A transient
-      // failure post-publish now KEEPS last-good data (M1 pattern) instead of flashing to empty.
+      // The /v1/inbox route isn't live yet. Keep last-good data for recovery, but mark the read unavailable so
+      // the UI never misrepresents an absent route or a transient failure as a genuinely empty inbox.
       if (!(e instanceof RpcError)) game_log('inbox', 'load failed', e)
-      set({ loading: false, loaded_once: true })
+      set({ ...reduce(get(), { type: 'load_failed' }).state, loading: false })
     }
   },
 

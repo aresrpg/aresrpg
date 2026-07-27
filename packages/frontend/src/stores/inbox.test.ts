@@ -92,3 +92,16 @@ describe('reduce — divergence: still-pending content mismatch flags it (never 
     expect(has_incoming(out.state, 'X')).toBe(false) // still HELD — divergence is log-only, never resurrects
   })
 })
+
+describe('reduce — read availability is distinct from an empty inbox', () => {
+  test('a failed load marks the inbox unavailable without erasing last-good rows; a snapshot clears it', () => {
+    let st = reduce(empty_inbox_state(), snap([gift({ gift_id: 'X' })])).state
+    st = reduce(st, { type: 'load_failed' }).state
+    expect(st.error).toBe('unavailable')
+    expect(has_incoming(st, 'X')).toBe(true)
+
+    st = reduce(st, snap([])).state
+    expect(st.error).toBeNull()
+    expect(st.incoming).toEqual([])
+  })
+})

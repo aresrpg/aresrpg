@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Loader2, Inbox, Gift, ArrowDownToLine, Undo2 } from 'lucide-react'
+import { Loader2, Inbox, Gift, ArrowDownToLine, Undo2, CircleAlert } from 'lucide-react'
 import { slugs } from 'virtual:item_catalog'
 
 import { use_auth } from '../../auth'
@@ -16,7 +16,17 @@ import { ItemImage } from '../items'
 // are claimed FREE (royalty prepaid by the sender); OUTGOING gifts you sent can be RECALLED (no
 // return-to-sender, but the sender's recall stays). Polls the inbox store on an interval + on window focus (REQ/RES
 // only — no streaming); a fresh incoming gift fires the store's one-shot toast. The /v1/inbox view is NOT live yet,
-// so the honest EMPTY state is the default until the indexer route + a real send land (behavior key post-publish).
+// so a failed read says unavailable rather than pretending the connected wallet has an empty inbox.
+
+export function InboxUnavailable({ className = 'py-20' }: { className?: string }) {
+  const { t } = useTranslation()
+  return (
+    <div className={`flex flex-col items-center justify-center gap-3 text-center text-muted ${className}`}>
+      <CircleAlert size={26} style={{ opacity: 0.25 }} />
+      <span className="text-[10px] tracking-[0.2em] uppercase">{t('rpc.unavailable')}</span>
+    </div>
+  )
+}
 
 // One gift, rendered as a card — shared by the marketplace tab AND the external /inbox page.
 export function GiftCard({
@@ -108,7 +118,7 @@ export function use_inbox_polling() {
 
 export function InboxPanel() {
   const { t } = useTranslation()
-  const { incoming, outgoing, loading, loaded_once, busy_id, claim, recall } = use_inbox()
+  const { incoming, outgoing, loading, loaded_once, error, busy_id, claim, recall } = use_inbox()
   use_inbox_polling()
 
   if (loading && !loaded_once) {
@@ -119,6 +129,8 @@ export function InboxPanel() {
       </div>
     )
   }
+
+  if (error) return <InboxUnavailable />
 
   const nothing = incoming.length === 0 && outgoing.length === 0
 
