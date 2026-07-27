@@ -34,10 +34,6 @@ on:
   workflow_run:
     workflows: [gate, checks]
     types: [completed]
-# Share the landing lock with promote.yml so a queue land and a /promote land never race a push.
-concurrency:
-  group: promotion-landing
-  cancel-in-progress: false
 permissions:
   contents: write
   actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
@@ -45,6 +41,12 @@ permissions:
   statuses: write # stamp the `promoted` commit status on master landings
 jobs:
   land:
+    if: github.event.workflow_run.event == 'pull_request'
+    # Keep the landing lock behind the triggering-run gate above: only PR CI can make a queued
+    # head newly eligible, so base-branch CI must never queue behind or displace a real landing.
+    concurrency:
+      group: promotion-landing
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
