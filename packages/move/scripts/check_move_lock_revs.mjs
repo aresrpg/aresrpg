@@ -45,26 +45,99 @@ const FRAMEWORK_SUBDIRS = {
 }
 const SHA_RE = /^[0-9a-f]{40}$/
 
-// `[pinned.<env>.<name>]` followed by `source = { git = "…", subdir = "…", rev = "…" }`.
-// Only git sources carry a rev; `{ local = … }` and `{ root = true }` entries are skipped by shape.
-export function parse_lock_framework_revs(content) {
-  const rows = []
-  let env = null
-  let name = null
-  for (const line of content.split('\n')) {
-    const header = line.match(/^\[pinned\.([^.\]]+)\.([^\]]+)\]/)
+// ── Structural parsing ──────────────────────────────────────────────────────────────────────────
+// The first version of this gate matched lines with `startsWith`, and a reviewer slipped a real dual
+// past it with nothing more exotic than INDENTATION: an indented `[pinned.testnet.Sui_1]` table and
+// its indented `source` row were both invisible, so a two-revision lock produced one row and no
+// violation — a false green on exactly the condition this file exists to catch. A gate that reads a
+// format by eye is a gate with a blind spot, so the lock and the manifests are parsed as TOML
+// structure: tables are trimmed and matched whole, comments are stripped outside strings, and every
+// key is read from its table rather than from the file's line order.
+export function parse_toml_tables(content) {
+  const tables = []
+  let current = { header: null, keys: {} }
+  tables.push(current)
+  for (const raw of content.split('\n')) {
+    const line = strip_comment(raw).trim()
+    if (!line) continue
+    const header = line.match(/^\[([^\]]+)\]$/)
     if (header) {
-      ;[, env, name] = header
+      current = { header: header[1].trim(), keys: {} }
+      tables.push(current)
       continue
     }
-    if (!env || !line.startsWith('source =')) continue
-    const subdir = line.match(/subdir = "([^"]+)"/)
-    const rev = line.match(/rev = "([^"]+)"/)
-    if (!subdir || !rev) continue
-    const framework = FRAMEWORK_SUBDIRS[subdir[1]]
-    if (framework) rows.push({ env, name, framework, rev: rev[1] })
+    const kv = line.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.*)$/)
+    if (kv) current.keys[kv[1]] = kv[2].trim()
+  }
+  return tables.filter((t) => t.header !== null || Object.keys(t.keys).length)
+}
+
+// `#` inside a quoted string is data, not a comment — strip only unquoted ones.
+function strip_comment(line) {
+  let quoted = false
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') quoted = !quoted
+    else if (line[i] === '#' && !quoted) return line.slice(0, i)
+  }
+  return line
+}
+
+const inline_value = (inline, key) =>
+  inline?.match(new RegExp(`${key}\\s*=\\s*"([^"]*)"`))?.[1] ?? null
+
+// → [{ env, name, framework, rev }] for framework entries only (git sources under the sui repo).
+export function parse_lock_framework_revs(content) {
+  const rows = []
+  for (const table of parse_toml_tables(content)) {
+    const header = table.header?.match(/^pinned\.([^.]+)\.(.+)$/)
+    if (!header) continue
+    const [, env, name] = header
+    const subdir = inline_value(table.keys.source, 'subdir')
+    const rev = inline_value(table.keys.source, 'rev')
+    const framework = subdir ? FRAMEWORK_SUBDIRS[subdir] : null
+    if (framework && rev) rows.push({ env, name, framework, rev })
   }
   return rows
+}
+
+// → { env: { name: rev } } for EVERY pinned git dependency, framework or not (Kiosk included).
+export function parse_lock_git_pins(content) {
+  const pins = {}
+  for (const table of parse_toml_tables(content)) {
+    const header = table.header?.match(/^pinned\.([^.]+)\.(.+)$/)
+    if (!header) continue
+    const [, env, name] = header
+    const rev = inline_value(table.keys.source, 'rev')
+    if (!rev) continue
+    pins[env] ??= {}
+    pins[env][name] = rev
+  }
+  return pins
+}
+
+// → { environments: [...], git_deps: { Sui: rev, MoveStdlib: rev, Kiosk: rev, … } }
+export function parse_manifest(content) {
+  const environments = []
+  const git_deps = {}
+  for (const table of parse_toml_tables(content)) {
+    if (table.header === 'environments')
+      environments.push(...Object.keys(table.keys))
+    const dep = table.header?.match(/^dependencies\.(.+)$/)
+    if (dep && table.keys.git) git_deps[dep[1]] = unquote(table.keys.rev)
+  }
+  return { environments, git_deps }
+}
+
+const unquote = (v) => (v ?? '').replace(/^"|"$/g, '')
+
+// The toolchain commit every framework pin must match, read from the ONE place CI pins the binary
+// (`SUI_VERSION: sui <semver>-<commit>` in checks.yml). One home: bumping CI's sui without
+// re-pinning the manifests — the drift that produced the dual — fails this gate instead of a
+// ceremony.
+export function expected_cli_commit(checks_yml) {
+  return (
+    checks_yml.match(/SUI_VERSION:\s*sui\s+\S+-([0-9a-f]{8,})/)?.[1] ?? null
+  )
 }
 
 // Pure. → one violation row per (env, framework) that resolves to more than one rev.
@@ -85,29 +158,77 @@ export function dual_rev_violations(rows) {
     }))
 }
 
+// Pure. The EXACT matrix, not merely "at most one rev": for every environment the manifest declares,
+// the lock must actually pin BOTH frameworks, at the SAME rev, equal to the manifest's own pin —
+// and every other git dependency (Kiosk) must match its manifest rev too. "At most one" was
+// satisfied by an empty lock, by a missing mainnet environment, by Sui and MoveStdlib at different
+// single revisions, and by any arbitrary rev at all; each of those is a violation here.
+export function matrix_violations({ manifest, rows, pins, expected_commit }) {
+  const out = []
+  const declared = manifest.environments.length
+    ? manifest.environments
+    : Object.keys(pins)
+  const manifest_framework =
+    manifest.git_deps.Sui ?? manifest.git_deps.MoveStdlib
+
+  if (
+    manifest_framework &&
+    expected_commit &&
+    !manifest_framework.startsWith(expected_commit)
+  )
+    out.push(
+      `manifest pins the framework at ${manifest_framework.slice(0, 12)} but CI installs ${expected_commit} — re-pin every manifest when the CLI moves`
+    )
+
+  for (const [dep, rev] of Object.entries(manifest.git_deps))
+    if (!/^[0-9a-f]{40}$/.test(rev ?? ''))
+      out.push(`[dependencies.${dep}] rev = "${rev}" is not a pin`)
+
+  for (const env of declared) {
+    const env_pins = pins[env]
+    if (!env_pins) {
+      out.push(
+        `environment "${env}" is declared but has no pinned entries in the lock`
+      )
+      continue
+    }
+    for (const framework of ['Sui', 'MoveStdlib']) {
+      const wanted = manifest.git_deps[framework]
+      const found = rows.filter(
+        (r) => r.env === env && r.framework === FRAMEWORK_NAMES[framework]
+      )
+      if (!found.length) {
+        out.push(`${env}: no ${framework} entry in the lock`)
+        continue
+      }
+      if (wanted && found.some((r) => r.rev !== wanted))
+        out.push(
+          `${env}/${framework}: lock has ${[...new Set(found.map((r) => r.rev.slice(0, 8)))].join(', ')} but the manifest pins ${wanted.slice(0, 8)}`
+        )
+    }
+    for (const [dep, rev] of Object.entries(manifest.git_deps)) {
+      if (dep === 'Sui' || dep === 'MoveStdlib') continue
+      const found = env_pins[dep]
+      if (!found)
+        out.push(
+          `${env}: manifest depends on ${dep} but the lock pins no such entry`
+        )
+      else if (found !== rev)
+        out.push(
+          `${env}/${dep}: lock pins ${found.slice(0, 8)} but the manifest pins ${rev.slice(0, 8)}`
+        )
+    }
+  }
+  return out
+}
+
+const FRAMEWORK_NAMES = { Sui: 'sui-framework', MoveStdlib: 'move-stdlib' }
+
 // Pure. → one row per git dependency whose `rev` is not a 40-hex commit.
 export function floating_rev_violations(manifest) {
-  const rows = []
-  let dep = null
-  let is_git = false
-  for (const line of manifest.split('\n')) {
-    const header = line.match(/^\[dependencies\.([^\]]+)\]/)
-    if (header) {
-      ;[, dep] = header
-      is_git = false
-      continue
-    }
-    if (line.startsWith('[') && !header) {
-      dep = null
-      is_git = false
-      continue
-    }
-    if (!dep) continue
-    if (/^git\s*=/.test(line)) is_git = true
-    const rev = line.match(/^rev\s*=\s*"([^"]+)"/)
-    if (rev && is_git && !SHA_RE.test(rev[1])) rows.push({ dep, rev: rev[1] })
-  }
-  return rows
+  return Object.entries(parse_manifest(manifest).git_deps)
+    .filter(([, rev]) => !/^[0-9a-f]{40}$/.test(rev ?? ''))
+    .map(([dep, rev]) => ({ dep, rev }))
 }
 
 function move_files(root, filename) {
@@ -124,38 +245,59 @@ function move_files(root, filename) {
 
 export function main(root) {
   const failures = []
+  const checks_yml_path = path.resolve(
+    root,
+    '../../.github/workflows/checks.yml'
+  )
+  const expected_commit = fs.existsSync(checks_yml_path)
+    ? expected_cli_commit(fs.readFileSync(checks_yml_path, 'utf8'))
+    : null
+  if (!expected_commit)
+    failures.push(
+      `could not read SUI_VERSION's commit from ${checks_yml_path} — the toolchain pin is the reference every manifest is checked against`
+    )
 
-  for (const file of move_files(root, 'Move.lock')) {
-    const rows = parse_lock_framework_revs(fs.readFileSync(file, 'utf8'))
+  for (const lock_path of move_files(root, 'Move.lock')) {
+    const pkg_dir = path.dirname(lock_path)
+    const manifest_path = path.join(pkg_dir, 'Move.toml')
+    const label = path.relative(root, lock_path) || 'Move.lock'
+    if (!fs.existsSync(manifest_path)) {
+      failures.push(`${label}: a lock with no Move.toml beside it`)
+      continue
+    }
+    const lock = fs.readFileSync(lock_path, 'utf8')
+    const rows = parse_lock_framework_revs(lock)
+    const pins = parse_lock_git_pins(lock)
+    const manifest = parse_manifest(fs.readFileSync(manifest_path, 'utf8'))
+
     for (const violation of dual_rev_violations(rows)) {
       const detail = violation.revs
         .map(({ rev, names }) => `${rev.slice(0, 8)} (${names.join(', ')})`)
         .join(' vs ')
-      failures.push(`${file}  ${violation.key}: ${detail}`)
+      failures.push(`${label}  ${violation.key}: ${detail}`)
     }
+    for (const row of matrix_violations({
+      manifest,
+      rows,
+      pins,
+      expected_commit,
+    }))
+      failures.push(`${label}  ${row}`)
   }
-
-  for (const file of move_files(root, 'Move.toml'))
-    for (const { dep, rev } of floating_rev_violations(
-      fs.readFileSync(file, 'utf8')
-    ))
-      failures.push(
-        `${file}  [dependencies.${dep}] rev = "${rev}" is not a pin`
-      )
 
   if (!failures.length) {
     console.log(
-      'MOVE LOCK REV GATE PASSED. one sui-framework + one move-stdlib rev per environment, every git dep pinned.'
+      `MOVE LOCK REV GATE PASSED. every environment pins one framework lineage at the CI toolchain's commit (${expected_commit}), and every git dependency matches its manifest.`
     )
     return 0
   }
   console.log('MOVE LOCK REV GATE FAILED.')
   for (const line of failures) console.log(`  ${line}`)
   console.log(
-    '  A dual framework rev is the FeatureNotYetSupported condition (packages/move/Move.toml:14-24); a floating rev is how it gets back in.'
+    '  A dual framework rev is the FeatureNotYetSupported condition (packages/move/Move.toml); a pin that diverges from the build CLI is how it gets back in.'
   )
   console.log(
-    '  Fix: pin every git dependency to a commit, and collapse the lock to the single framework rev the manifests pin.'
+    '  Fix: pin every manifest to the CI toolchain commit, then rebuild BOTH environments (`sui move build` resolves only the active one; `--build-env mainnet` for the other).'
   )
   return 1
 }

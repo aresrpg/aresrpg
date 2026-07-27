@@ -7,8 +7,12 @@ import { expect, test } from 'bun:test'
 
 import {
   dual_rev_violations,
+  expected_cli_commit,
   floating_rev_violations,
+  matrix_violations,
   parse_lock_framework_revs,
+  parse_lock_git_pins,
+  parse_manifest,
 } from './check_move_lock_revs.mjs'
 
 const rev_a = 'a'.repeat(40)
@@ -97,4 +101,102 @@ local = "../foundation"
 testnet = { chain-id = "4c78adac" }
 `
   expect(floating_rev_violations(manifest)).toEqual([])
+})
+
+// ── The exact matrix (#1305 review) ─────────────────────────────────────────────────────────────
+// "At most one rev per environment" was satisfied by an empty lock, a missing environment, the two
+// frameworks at different single revs, any arbitrary rev, and a wrong Kiosk pin. Every row below is
+// one of those false greens; the first is the aligned tree, which must still pass.
+const CLI = '6effb4523834cf2536be21d8ebe577b0cc9e0160'
+const KIOSK = 'a'.repeat(40)
+const framework_src = (sub, rev) =>
+  `source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/${sub}", rev = "${rev}" }`
+const MANIFEST = `[package]
+name = "x"
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "${CLI}"
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "${CLI}"
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+rev = "${KIOSK}"
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+`
+const env_block = (env, sui, std, kiosk) => `[pinned.${env}.Sui]
+${framework_src('sui-framework', sui)}
+[pinned.${env}.MoveStdlib]
+${framework_src('move-stdlib', std)}
+[pinned.${env}.Kiosk]
+source = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "${kiosk}" }
+`
+const verdict = (lock) => {
+  const rows = parse_lock_framework_revs(lock)
+  return [
+    ...dual_rev_violations(rows).map((v) => `${v.key} dual`),
+    ...matrix_violations({
+      manifest: parse_manifest(MANIFEST),
+      rows,
+      pins: parse_lock_git_pins(lock),
+      expected_commit: '6effb4523834',
+    }),
+  ]
+}
+const ALIGNED =
+  env_block('testnet', CLI, CLI, KIOSK) + env_block('mainnet', CLI, CLI, KIOSK)
+
+test('the aligned matrix passes — the gate is satisfiable', () => {
+  expect(verdict(ALIGNED)).toEqual([])
+})
+
+test('an INDENTED dual table is caught — the line parser read past it', () => {
+  const lock =
+    ALIGNED +
+    `  [pinned.testnet.Sui_1]\n  ${framework_src('sui-framework', 'b'.repeat(40))}\n`
+  expect(verdict(lock)[0]).toContain('dual')
+})
+
+test('an empty or environment-missing lock is a violation, not a pass', () => {
+  expect(verdict('')[0]).toContain('testnet')
+  expect(verdict(env_block('testnet', CLI, CLI, KIOSK))[0]).toContain('mainnet')
+})
+
+test('the two frameworks must agree with each other AND with the manifest', () => {
+  expect(
+    verdict(
+      env_block('testnet', CLI, 'c'.repeat(40), KIOSK) +
+        env_block('mainnet', CLI, CLI, KIOSK)
+    )[0]
+  ).toContain('MoveStdlib')
+  const arbitrary = 'd'.repeat(40)
+  expect(
+    verdict(
+      env_block('testnet', arbitrary, arbitrary, KIOSK) +
+        env_block('mainnet', arbitrary, arbitrary, KIOSK)
+    )[0]
+  ).toContain('manifest pins')
+})
+
+test('a non-framework git dependency must match its manifest pin too', () => {
+  expect(
+    verdict(
+      env_block('testnet', CLI, CLI, 'e'.repeat(40)) +
+        env_block('mainnet', CLI, CLI, KIOSK)
+    )[0]
+  ).toContain('Kiosk')
+})
+
+test("the toolchain commit comes from CI's own sui pin", () => {
+  expect(
+    expected_cli_commit('          SUI_VERSION: sui 1.76.0-6effb4523834\n')
+  ).toBe('6effb4523834')
+  expect(expected_cli_commit('nothing here')).toBe(null)
+})
+
+test('comments and quoted hashes do not confuse the parser', () => {
+  const lock = `# a comment with [pinned.testnet.Sui] inside it\n${ALIGNED}`
+  expect(verdict(lock)).toEqual([])
 })
