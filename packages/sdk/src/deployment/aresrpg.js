@@ -22,6 +22,13 @@ export const legacy_cosmetic_variants =
   RELEASE.networks?.testnet?.constants?.legacy_cosmetic_variants ?? {}
 
 /**
+ * One stamped shared object: its id plus the version it was shared at (what a static `SharedObjectRef` needs).
+ * @typedef {Object} SharedPin
+ * @property {string} id
+ * @property {string} initial_shared_version
+ */
+
+/**
  * @typedef {Object} AresrpgIds
  * @property {string} PACKAGE_ID            Type-origin id — every struct identity (event filters, kiosk item types).
  * @property {string} LATEST_PACKAGE_ID     Call target — every moveCall targets this; bumped by each `sui client upgrade`.
@@ -63,8 +70,13 @@ export const legacy_cosmetic_variants =
  * @property {string} GAME_CONFIG           Shared `config::GameConfig` (dials: max level, multipliers, gates).
  * @property {string} CREATION              Shared `creation::Creation` gate (character mint door + name registry).
  * @property {string} CATALOG               Shared `catalog::Catalog` (admin category whitelist).
- * @property {string} FIGHT_REGISTRY        Shared `fight_registry::FightRegistry` (derivation parent + in-fight latch;
- *                                          its cap-custody fields died in the merge).
+ * @property {SharedPin[]} FIGHT_REGISTRY_SHARDS  The `fight_registry::FightRegistry` SHARD LIST, index-ordered
+ *                                          (`init` shares one registry per shard so fight entry and exit stop
+ *                                          contending globally). A scope's shard is `fight_shard_index(scope)`;
+ *                                          pick with `fight_registry_arg`, never by hand. THE CEREMONY HAND-OFF:
+ *                                          the stamp step writes these rows where it used to write the single
+ *                                          `FIGHT_REGISTRY` id — one row per shard, in index order, each with its
+ *                                          own `initial_shared_version`. Length must equal `FIGHT_SHARD_COUNT`.
  * @property {string} POOL_REGISTRY         Shared `pool::PoolRegistry` (pool derivation parent; cap fields died).
  * @property {string} ITEM_POLICY           `TransferPolicy<Item>` — every item mint locks through it.
  * @property {string} CHARACTER_POLICY      `TransferPolicy<Character>` — creation locks the character through it.
@@ -131,7 +143,12 @@ export function sdk_ids_from_release(release) {
     GAME_CONFIG: shared.GAME_CONFIG?.id ?? '',
     CREATION: shared.CREATION?.id ?? '',
     CATALOG: shared.CATALOG?.id ?? '',
-    FIGHT_REGISTRY: shared.FIGHT_REGISTRY?.id ?? '',
+    FIGHT_REGISTRY_SHARDS: (shared.FIGHT_REGISTRY_SHARDS ?? []).map(
+      /** @param {any} row */ row => ({
+        id: row?.id ?? '',
+        initial_shared_version: row?.initial_shared_version ?? '',
+      }),
+    ),
     POOL_REGISTRY: shared.POOL_REGISTRY?.id ?? '',
     ITEM_POLICY: policies.item?.id ?? '',
     CHARACTER_POLICY: policies.character?.id ?? '',
@@ -209,6 +226,8 @@ export function random_shared_ref(network) {
 // The ids no core flow can build without. FOUNDATION_PACKAGE_ID / SCRIBE_CONFIG / PET_FEED_CONFIG /
 // CRUSH_BOARD are intentionally NOT required — only the scribe/feed/crush builders need
 // them, and each guards the specific id it touches (an unset singleton must never block the create/shop/fight/pool core).
+// FIGHT_REGISTRY_SHARDS rides the same rule: it is guarded at the point of use by `fight_registry_arg`, which
+// refuses loudly and by name rather than letting a fight PTB build against a guessed shard.
 const REQUIRED_IDS = [
   'PACKAGE_ID',
   'LATEST_PACKAGE_ID',
@@ -217,7 +236,6 @@ const REQUIRED_IDS = [
   'GAME_CONFIG',
   'CREATION',
   'CATALOG',
-  'FIGHT_REGISTRY',
   'POOL_REGISTRY',
   'ITEM_POLICY',
   'CHARACTER_POLICY',
@@ -267,7 +285,11 @@ export function aresrpg_deployment(network, overrides = {}) {
     )
 
   const ids = { ...base, ...overrides }
-  const missing = REQUIRED_IDS.filter(key => !ids[key])
+  // An id is unset when falsy; a LIST-shaped pin (the registry shards) is unset when it is empty — an empty
+  // array is truthy and would otherwise sail through the gate and fail later, at the call site.
+  const missing = REQUIRED_IDS.filter(key =>
+    Array.isArray(ids[key]) ? !ids[key].length : !ids[key],
+  )
   if (missing.length)
     throw new Error(
       `[aresrpg_deployment] aresrpg is not deployed on "${network}" — unset ids: ${missing.join(
@@ -353,6 +375,61 @@ export function aresrpg_shared_ref(network, key, mutable, overrides = {}) {
 export function shared_object_arg(tx, network, key, mutable, object_id) {
   const ref = aresrpg_shared_ref(network, key, mutable, { objectId: object_id })
   return ref ? tx.sharedObjectRef(ref) : tx.object(object_id)
+}
+
+/**
+ * How many `FightRegistry` shards `fight_registry::init` shares. MUST equal the Move `SHARD_COUNT` — the two
+ * are one fact with two homes by necessity (the client picks the shard, the chain asserts it), and a mismatch
+ * shows up as an `EWrongShard` abort on every create.
+ */
+export const FIGHT_SHARD_COUNT = 16
+
+/**
+ * The registry shard a SCOPE's fights and latches live in — the JS twin of Move's
+ * `fight_registry::shard_index`: the LAST BYTE of the scope id, modulo the shard count. The last two hex
+ * characters of an object id ARE that byte whatever the string's leading-zero form, so this needs no address
+ * normalisation and no hash to keep byte-identical with the chain.
+ *
+ * The scope is whatever the fight derives from: the WORLD id for world fights, the RUN PASS id for a dungeon
+ * room, the LOBBY id for a kolizeum match. Accepts the same two forms every object-taking builder accepts — a
+ * bare id string, or a caller-CACHED `SharedObjectRef` (the S-51a round-trip saver) whose `objectId` is the id.
+ * @param {string | { objectId?: string }} scope
+ * @returns {number}
+ */
+export function fight_shard_index(scope) {
+  const raw =
+    scope && typeof scope === 'object' ? (scope.objectId ?? '') : scope
+  const hex = String(raw).replace(/^0x/i, '')
+  if (!/^[0-9a-f]+$/i.test(hex))
+    throw new Error(
+      `[fight_shard_index] scope must be a hex object id (or a shared ref carrying one), got ${JSON.stringify(scope)} — the shard is derived from its bytes, never guessed.`,
+    )
+  return parseInt(hex.slice(-2), 16) % FIGHT_SHARD_COUNT
+}
+
+/**
+ * Place the `FightRegistry` SHARD a scope maps to as a transaction argument. Every door that used to take the
+ * single registry takes its shard instead, and the chain asserts the mapping — passing the wrong one aborts, so
+ * this is the only correct way to build the argument.
+ * @param {import('@mysten/sui/transactions').Transaction} tx
+ * @param {'testnet' | 'mainnet' | 'devnet' | 'localnet'} network
+ * @param {AresrpgIds} a resolved deployment ids
+ * @param {string | { objectId?: string }} scope the fight's derivation scope (world / run pass / lobby id, or a cached ref)
+ * @param {boolean} mutable whether THIS call site mutates the registry — caller-supplied, never guessed
+ * @returns {ReturnType<import('@mysten/sui/transactions').Transaction['object']>}
+ */
+export function fight_registry_arg(tx, network, a, scope, mutable) {
+  const shards = a.FIGHT_REGISTRY_SHARDS ?? []
+  if (shards.length !== FIGHT_SHARD_COUNT)
+    throw new Error(
+      `[fight_registry_arg] FIGHT_REGISTRY_SHARDS holds ${shards.length} rows, expected ${FIGHT_SHARD_COUNT} — the ceremony stamps one row per shard, in index order. Refusing to guess a shard.`,
+    )
+  const shard = shards[fight_shard_index(scope)]
+  const ref = aresrpg_shared_ref(network, 'FIGHT_REGISTRY_SHARDS', mutable, {
+    objectId: shard.id,
+    initialSharedVersion: shard.initial_shared_version,
+  })
+  return ref ? tx.sharedObjectRef(ref) : tx.object(shard.id)
 }
 
 /**

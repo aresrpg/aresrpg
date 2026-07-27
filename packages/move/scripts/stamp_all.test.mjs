@@ -130,7 +130,10 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
     GAME_CONFIG: shared.GAME_CONFIG.id,
     CREATION: shared.CREATION.id,
     CATALOG: shared.CATALOG.id,
-    FIGHT_REGISTRY: shared.FIGHT_REGISTRY.id,
+    FIGHT_REGISTRY_SHARDS: shared.FIGHT_REGISTRY_SHARDS.map(row => ({
+      id: row.id,
+      initial_shared_version: row.initial_shared_version,
+    })),
     POOL_REGISTRY: shared.POOL_REGISTRY.id,
     ITEM_POLICY: policies.item.id,
     CHARACTER_POLICY: policies.character.id,
@@ -148,6 +151,9 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
 
   for (const [key, pin] of Object.entries(shared)) {
     if (!(key in release_ids)) continue
+    // The shard list resolves through `fight_registry_arg`, which supplies both overrides per index — there is
+    // no single ref to sweep for it.
+    if (Array.isArray(pin)) continue
     expect(aresrpg_shared_ref(network, key, false)).toEqual({
       objectId: pin.id,
       initialSharedVersion: pin.initial_shared_version,
@@ -285,8 +291,24 @@ test('stamp_all no longer preserves or validates a legacy policy block, and rele
     expect(release.networks[network].policies).not.toHaveProperty('legacy')
 })
 
+/**
+ * The recorded ceremony manifest predates the fight-registry sharding, and re-recording a whole publish for a
+ * spec about an unrelated object would be theatre. Give the stamp step a well-formed shard list instead — the
+ * fabricated ids live HERE, in a test, never in a recorded artifact.
+ */
+function with_fight_shards(manifest) {
+  manifest.engine.shared.FightRegistryShards ??= Array.from(
+    { length: 16 },
+    (_, i) => `0x${(i + 1).toString(16).padStart(64, '0')}`
+  )
+  manifest.engine.shared_versions.FightRegistryShards ??= Array.from({ length: 16 }, () => '1')
+  delete manifest.engine.shared.FightRegistry
+  delete manifest.engine.shared_versions.FightRegistry
+  return manifest
+}
+
 test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold localnet ceremony creates and stamps a real CrushBoard', async () => {
-  const manifest = JSON.parse(readFileSync(ceremony_path, 'utf8'))
+  const manifest = with_fight_shards(JSON.parse(readFileSync(ceremony_path, 'utf8')))
   const previous = JSON.parse(readFileSync(release_path, 'utf8')).networks.testnet
   delete manifest.forgemagie.shared.CrushBoard
   delete manifest.forgemagie.shared_versions.CrushBoard
@@ -348,7 +370,10 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold keeps strict release stamping in
     mkdirSync(path.dirname(copied_manifest), { recursive: true })
     mkdirSync(path.dirname(fallback_target), { recursive: true })
     copyFileSync(path.join(here, 'stamp_all.mjs'), copied_stamp)
-    copyFileSync(ceremony_path, copied_manifest)
+    writeFileSync(
+      copied_manifest,
+      JSON.stringify(with_fight_shards(JSON.parse(readFileSync(ceremony_path, 'utf8'))), null, 2)
+    )
     execFileSync('node', [copied_stamp], {
       encoding: 'utf8',
       env: {

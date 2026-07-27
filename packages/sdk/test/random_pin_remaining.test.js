@@ -19,7 +19,17 @@ const { join_world_ptb, search_zone_ptb, gather_ptb } = game_world
 
 const RANDOM_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000008'
-const ctx = { network: 'testnet' } // no ids override — resolves the LIVE stamped testnet deployment (aresrpg.js)
+// The registry shard list is not in the live map until the sharding republish stamps it, and this spec is a
+// RANDOM-pin proof, not a registry one: layer the shards over the live deployment exactly as the forgemagie id
+// is layered below. Every other id — VERSION, policies, the pinned 0x8 Random — still resolves from the map.
+const FIGHT_SHARDS = Array.from({ length: 16 }, (_, i) => ({
+  id: id(`5ard${i.toString(16)}`),
+  initial_shared_version: '1',
+}))
+const ctx = {
+  network: 'testnet',
+  ids: { aresrpg: { FIGHT_REGISTRY_SHARDS: FIGHT_SHARDS } },
+}
 // forgemagie is a not-yet-stamped SIBLING package (package-split 2026-07-12): its id is '' in the live testnet
 // map until the 7-package ceremony re-publishes, so the scribe/crush guard refuses without it. Layer ONLY the
 // sibling id over the live deployment — every other id (VERSION, policies, the pinned 0x8 Random) still resolves

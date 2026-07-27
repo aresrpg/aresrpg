@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Transaction } from '@mysten/sui/transactions'
 
-import { shared_object_arg } from './deployment/aresrpg.js'
+import { fight_registry_arg, shared_object_arg } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
 import { settle_and_take_ptb } from './fight.js'
 import { kolizeum_ids } from './sui/write/kolizeum_lobby.js'
@@ -72,7 +72,7 @@ export function start_ptb(context) {
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::start`,
       arguments: [
         as_object_arg(tx, kolizeum_id), // kolizeum: &mut Kolizeum (a cached ref must be mutable:true)
-        shared_object_arg(tx, network, 'FIGHT_REGISTRY', true, a.FIGHT_REGISTRY), // registry: &mut FightRegistry
+        fight_registry_arg(tx, network, a, kolizeum_id, true), // registry: &mut FightRegistry
         as_object_arg(tx, kiosk_id), // kiosk: &Kiosk (READ-ONLY here — a kiosk ref may be mutable:false)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
@@ -114,7 +114,7 @@ export function seat_ptb(context) {
       arguments: [
         as_object_arg(tx, kolizeum_id), // kolizeum: &Kolizeum (READ-ONLY here — a ref may be mutable:false)
         as_object_arg(tx, fight_id), // fight: &mut Fight (a cached ref must be mutable:true)
-        shared_object_arg(tx, network, 'FIGHT_REGISTRY', true, a.FIGHT_REGISTRY), // fight_registry: &mut FightRegistry
+        fight_registry_arg(tx, network, a, kolizeum_id, true), // fight_registry: &mut FightRegistry
         as_object_arg(tx, kiosk_id), // kiosk: &Kiosk (READ-ONLY post-split — a ref may be mutable:false)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
@@ -203,6 +203,7 @@ export function settle_arena_ptb(context) {
     // 1. settle_and_take (ENGINE) → the caller's own outcome as a chainable RESULT HANDLE (the Fight is consumed here)
     const { tx: chained, outcome } = settle_and_take_ptb(context)({
       fight_id,
+      world_id: kolizeum_id, // the arena fight derived from the LOBBY — that is its registry shard's scope
       character_id,
       tx,
     })

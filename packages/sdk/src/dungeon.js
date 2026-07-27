@@ -4,6 +4,7 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import {
   aresrpg_deployment,
+  fight_registry_arg,
   shared_object_arg,
 } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
@@ -149,13 +150,7 @@ export function next_fight_ptb(context) {
     tx.moveCall({
       target: `${a.DUNGEON_PACKAGE_ID}::dungeon::next_fight`,
       arguments: [
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ),
+        fight_registry_arg(tx, network, a, run_pass_id, true), // fight_registry: &mut FightRegistry (the RUN PASS is the room fight's derivation scope)
         as_object_arg(tx, world_id),
         as_object_arg(tx, run_pass_id),
         as_object_arg(tx, mob_template_id),
@@ -200,13 +195,7 @@ export function join_fight_ptb(context) {
     tx.moveCall({
       target: `${a.DUNGEON_PACKAGE_ID}::dungeon::join_fight`,
       arguments: [
-        shared_object_arg(
-          tx,
-          network,
-          'FIGHT_REGISTRY',
-          true,
-          a.FIGHT_REGISTRY,
-        ),
+        fight_registry_arg(tx, network, a, creator_pass_id, true), // fight_registry: &mut FightRegistry (the CREATOR's pass is the scope the room fight derived from)
         as_object_arg(tx, fight_id),
         as_object_arg(tx, run_pass_id),
         tx.pure.id(creator_pass_id),

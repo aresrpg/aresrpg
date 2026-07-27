@@ -732,8 +732,10 @@ export function classify(pkgName, result, M) {
     // (skips the per-tx client.getObject resolve). Owned objects (caps/publishers/displays) never enter.
     // String() because JSON-RPC shapes waver between number and string — the stamped file always holds strings.
     if (isShared(c.owner))
-      e.shared_versions[simpleStruct(t)] = String(
-        c.owner.Shared.initial_shared_version
+      collect_shared(
+        e.shared_versions,
+        simpleStruct(t),
+        String(c.owner.Shared.initial_shared_version)
       )
     if (t.endsWith('::version::Version')) e.version = id
     else if (t.endsWith('::admin::AdminCap'))
@@ -748,12 +750,57 @@ export function classify(pkgName, result, M) {
           .split('::')
           .pop()
       ] = id
-    else if (isShared(c.owner)) e.shared[simpleStruct(t)] = id
+    else if (isShared(c.owner)) collect_shared(e.shared, simpleStruct(t), id)
   }
   return e
 }
 const isShared = (o) => o && typeof o === 'object' && 'Shared' in o
+
+/**
+ * Record a shared object under its struct name. A struct shared exactly ONCE keeps its scalar shape, so every
+ * existing reader is untouched; a struct shared MORE than once (the fight-registry shards) collects into a LIST.
+ * Creation order is not authoritative — `resolveFightShards` re-sorts the registry list by its on-chain `index`
+ * before anything stamps it.
+ */
+function collect_shared(map, key, value) {
+  if (!(key in map)) map[key] = value
+  else if (Array.isArray(map[key])) map[key].push(value)
+  else map[key] = [map[key], value]
+}
 const simpleStruct = (t) => t.replace(/<.*$/, '').split('::').pop()
+
+/**
+ * Order the fight-registry SHARD list by each registry's own `index` field, and rename it to the key the stamp
+ * step reads (`FightRegistryShards`). `init` shares one registry per shard and the shard a scope maps to is its
+ * INDEX, so a list ordered by anything else (object-change order, address order) would stamp pins that abort
+ * `EWrongShard` on every create. Reads the index off chain rather than trusting creation order.
+ */
+export async function resolveFightShards(client, M) {
+  const ids = M.engine.shared.FightRegistry
+  const versions = M.engine.shared_versions.FightRegistry
+  if (ids == null) return
+  const id_list = Array.isArray(ids) ? ids : [ids]
+  const version_list = Array.isArray(versions) ? versions : [versions]
+  const indexed = []
+  for (const [i, objectId] of id_list.entries()) {
+    const { object } = await client.getObject({ objectId, include: { json: true } })
+    indexed.push({
+      index: Number(object.json.index),
+      id: objectId,
+      version: version_list[i],
+    })
+  }
+  indexed.sort((a, b) => a.index - b.index)
+  for (const [i, row] of indexed.entries())
+    if (row.index !== i)
+      throw new Error(
+        `[ceremony] fight-registry shard list is not contiguous from 0 — got index ${row.index} at position ${i}. The publish shared a wrong number of registries.`
+      )
+  M.engine.shared.FightRegistryShards = indexed.map((row) => row.id)
+  M.engine.shared_versions.FightRegistryShards = indexed.map((row) => row.version)
+  delete M.engine.shared.FightRegistry
+  delete M.engine.shared_versions.FightRegistry
+}
 
 /** Resolve the item vs character Publisher by its `module_name` field (mirrors 02_policies.mjs). */
 export async function resolvePublishers(client, M) {
@@ -814,7 +861,9 @@ export function syntheticManifest() {
   M.gifting.shared.Creation = fresh()
   M.aresrpg.shared.GameConfig = fresh()
   M.gifting.shared.PoolRegistry = fresh()
-  M.engine.shared.FightRegistry = fresh()
+  // one registry per shard, index order (see `resolveFightShards`)
+  M.engine.shared.FightRegistryShards = Array.from({ length: 16 }, () => fresh())
+  M.engine.shared_versions.FightRegistryShards = Array.from({ length: 16 }, () => '1')
   for (const a of LEGACY_ALIASES) M[a] = M.aresrpg // alias keys → the core (downstream scripts)
   M.fight = M.engine // the fight home now points at the ENGINE package
   M._rules = '0xKIOSK_RULES_PKG'

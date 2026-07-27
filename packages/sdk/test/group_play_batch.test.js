@@ -38,6 +38,7 @@ const compose_members =
 
 const fight_member = tag => ({
   fight_id,
+  world_id, // the fight's scope — picks its registry shard
   kiosk_id: id(`${tag}-kiosk`),
   personal_kiosk_cap_id: id(`${tag}-cap`),
   character_id: id(`${tag}-character`),

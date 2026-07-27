@@ -43,7 +43,11 @@ export const IDS = {
     GAME_CONFIG: id('a5c0'),
     CREATION: id('a5cr'),
     CATALOG: id('a5ca'),
-    FIGHT_REGISTRY: id('a5fr'),
+    // One row per registry shard, index order — the ceremony's stamp shape (see `fight_registry_arg`).
+    FIGHT_REGISTRY_SHARDS: Array.from({ length: 16 }, (_, i) => ({
+      id: id(`a5fr${i.toString(16)}`),
+      initial_shared_version: '1',
+    })),
     POOL_REGISTRY: id('a5pr'),
     ITEM_POLICY: id('a5b0'),
     CHARACTER_POLICY: id('a5b1'),
