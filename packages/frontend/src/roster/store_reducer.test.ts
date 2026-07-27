@@ -82,7 +82,7 @@ describe('adopt_paid_mint_if_first — paid onboarding without active-character 
     adopt_paid_mint_if_first(
       NEW_CHAR,
       {
-        characters: [{ id: 'ghost:ReceiptHero', ghost: true }],
+        characters: [null, { id: 'ghost:ReceiptHero', ghost: true }, undefined],
         selected_character_id: null,
       },
       {

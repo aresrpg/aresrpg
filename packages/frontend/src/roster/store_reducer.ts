@@ -121,7 +121,7 @@ export function should_adopt_paid_mint(
   }>
 ): boolean {
   const has_settled_character = prior.characters.some(
-    (character) => character?.ghost !== true && !String(character?.id ?? '').startsWith('ghost:')
+    (character) => !!character?.id && character.ghost !== true && !String(character.id).startsWith('ghost:')
   )
   return !has_settled_character && prior.selected_character_id === null
 }
