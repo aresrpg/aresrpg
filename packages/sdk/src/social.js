@@ -106,6 +106,42 @@ function append_party_member_action({
 }
 
 /**
+ * Build an invited-character response. Accept and decline differ only by the Move action target; argument
+ * resolution, current-owner proof, Version, type, and transaction chaining stay in this one home.
+ * @param {SocialContext} context @param {'accept' | 'decline'} action
+ */
+function party_invitation_response_ptb(context, action) {
+  const { network } = context
+  return ({
+    party_id,
+    kiosk_id,
+    personal_kiosk_cap_id,
+    character_id,
+    tx = new Transaction(),
+  }) => {
+    const a = social_ids(network, context.ids?.aresrpg)
+    append_party_member_action({
+      tx,
+      package_id: a.SOCIAL_LATEST_PACKAGE_ID,
+      action,
+      party: as_object_arg(tx, party_id),
+      kiosk: as_object_arg(tx, kiosk_id),
+      personal_kiosk_cap: as_object_arg(tx, personal_kiosk_cap_id),
+      character: tx.pure.id(character_id),
+      version: shared_object_arg(
+        tx,
+        network,
+        'SOCIAL_VERSION',
+        false,
+        a.SOCIAL_VERSION,
+      ),
+      type: character_type(a),
+    })
+    return tx
+  }
+}
+
+/**
  * CREATE a character-keyed Party. The leader's personal kiosk/cap proves current ownership on-chain.
  * @param {SocialContext} context
  */
@@ -181,34 +217,7 @@ export function party_invite_ptb(context) {
  * @param {SocialContext} context
  */
 export function party_accept_ptb(context) {
-  const { network } = context
-  return ({
-    party_id,
-    kiosk_id,
-    personal_kiosk_cap_id,
-    character_id,
-    tx = new Transaction(),
-  }) => {
-    const a = social_ids(network, context.ids?.aresrpg)
-    append_party_member_action({
-      tx,
-      package_id: a.SOCIAL_LATEST_PACKAGE_ID,
-      action: 'accept',
-      party: as_object_arg(tx, party_id),
-      kiosk: as_object_arg(tx, kiosk_id),
-      personal_kiosk_cap: as_object_arg(tx, personal_kiosk_cap_id),
-      character: tx.pure.id(character_id),
-      version: shared_object_arg(
-        tx,
-        network,
-        'SOCIAL_VERSION',
-        false,
-        a.SOCIAL_VERSION,
-      ),
-      type: character_type(a),
-    })
-    return tx
-  }
+  return party_invitation_response_ptb(context, 'accept')
 }
 
 /**
@@ -216,34 +225,7 @@ export function party_accept_ptb(context) {
  * @param {SocialContext} context
  */
 export function party_decline_ptb(context) {
-  const { network } = context
-  return ({
-    party_id,
-    kiosk_id,
-    personal_kiosk_cap_id,
-    character_id,
-    tx = new Transaction(),
-  }) => {
-    const a = social_ids(network, context.ids?.aresrpg)
-    append_party_member_action({
-      tx,
-      package_id: a.SOCIAL_LATEST_PACKAGE_ID,
-      action: 'decline',
-      party: as_object_arg(tx, party_id),
-      kiosk: as_object_arg(tx, kiosk_id),
-      personal_kiosk_cap: as_object_arg(tx, personal_kiosk_cap_id),
-      character: tx.pure.id(character_id),
-      version: shared_object_arg(
-        tx,
-        network,
-        'SOCIAL_VERSION',
-        false,
-        a.SOCIAL_VERSION,
-      ),
-      type: character_type(a),
-    })
-    return tx
-  }
+  return party_invitation_response_ptb(context, 'decline')
 }
 
 /**
