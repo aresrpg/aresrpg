@@ -314,9 +314,14 @@ public fun apply_to_both_for_testing(
   effect: &Effect,
   rng: &mut u64,
 ) {
-  let (mut d, mut o, mut r, mut b) = (vector[], vector[], vector[], vector[]);
-  let _p = apply_to_player(fight, PLAYER_SIDE, 0, pc, 0, caster_stats, 1, effect.element(), effect, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
-  let _m = apply_to_mob(fight, PLAYER_SIDE, 0, midx, 0, caster_stats, 1, effect.element(), effect, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
+  let mut d = vector<u8>[];
+  let mut o = vector<u64>[];
+  let mut r = vector<u64>[];
+  let mut b = vector<u64>[];
+  // `damage_roll` 0 = the low end of an authored range; the walk is about which BRANCH a kind lands in, never
+  // about the number it produces.
+  let _p = apply_to_player(fight, PLAYER_SIDE, 0, pc, 0, caster_stats, 1, effect.element(), effect, 0, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
+  let _m = apply_to_mob(fight, PLAYER_SIDE, 0, midx, 0, caster_stats, 1, effect.element(), effect, 0, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
 }
 
 #[test_only]

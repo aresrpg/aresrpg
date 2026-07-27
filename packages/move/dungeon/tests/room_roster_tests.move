@@ -16,7 +16,7 @@ use aresrpg_dungeon::{dungeon, run::{Self, RunPass}, dungeon_world as test_world
 use aresrpg_fight::{
   admin as eadmin,
   fight::{Self as engine, Fight},
-  fight_registry::{Self, FightRegistry},
+  fight_registry::{Self, FightRegistry, FightShards},
   version::{Self as eversion, Version as EVersion}
 };
 use aresrpg_foundation::spell;
@@ -83,10 +83,19 @@ fun donor_room(sc: &mut Scenario): (RunPass, ID, ID, ID, ID) {
   (pass, boss, add, kid, cid)
 }
 
+/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
+/// exactly as a client does. A dungeon room fight derives from the RUN PASS.
+fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, scope);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
+
 /// Drive the roster door: open the room's build, add `order` template by template, create.
 fun engage(sc: &mut Scenario, pass: &mut RunPass, kid: ID, cid: ID, order: vector<ID>, boss: ID, add: ID) {
   sc.next_tx(test_world::owner());
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(sc, run::id(pass));
   let world = sc.take_shared<World>();
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
@@ -164,7 +173,7 @@ fun the_template_strict_door_still_refuses_a_donor_room() {
   let mut sc = ts::begin(test_world::owner());
   let (mut pass, boss, _add, kid, cid) = donor_room(&mut sc);
   sc.next_tx(test_world::owner());
-  let mut reg = sc.take_shared<FightRegistry>();
+  let mut reg = shard_of(&sc, run::id(&pass));
   let world = sc.take_shared<World>();
   let mut k = ts::take_shared_by_id<Kiosk>(&sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
