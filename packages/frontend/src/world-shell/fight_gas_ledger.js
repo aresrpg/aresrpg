@@ -22,6 +22,8 @@
 // start, this tab" — never a lifetime/per-character total.
 import { create } from 'zustand'
 
+import { net_gas_mist } from './spend_guard.js'
+
 const MIST_PER_SUI = 1_000_000_000n
 
 export const use_fight_cost = create((set) => ({
@@ -42,9 +44,9 @@ export const use_fight_cost = create((set) => ({
    */
   add(gas_used) {
     if (!gas_used) return
-    const gross = BigInt(gas_used.computationCost ?? 0) + BigInt(gas_used.storageCost ?? 0)
-    const rebate = BigInt(gas_used.storageRebate ?? 0)
-    set((state) => ({ net_mist: state.net_mist + gross - rebate }))
+    // ONE HOME for "what did this receipt cost" (#1262): the spend guard's session breaker reads the same
+    // arithmetic, and a second copy of it here would be a future disagreement about money.
+    set((state) => ({ net_mist: state.net_mist + net_gas_mist(gas_used) }))
   },
 }))
 
