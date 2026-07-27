@@ -12,39 +12,48 @@
 #
 # Runs under bun (node 25 is outside dependency-cruiser's support matrix; bun's node-compat
 # version passes). dependency-cruiser is a root devDep. A missing dependency-cruiser or bun means
-# FAIL: there is no graph verdict. A caller that deliberately accepts that loss may set
-# ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1; the resulting SKIP stays loud.
+# FAIL: there is no graph verdict.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 
 echo "== AresRPG arch gate · dependency-cruiser (fight hermetic / engine quarantine / no new cycles) =="
-depcruise="${DEPCRUISE_BIN:-node_modules/.bin/depcruise}"
-bun_bin="${BUN_BIN:-bun}"
-if [ ! -e "$depcruise" ]; then
-  if [ "${ARESRPG_ALLOW_MISSING_ARCH_TOOLS:-}" = "1" ]; then
-    echo "  SKIP: dependency-cruiser not installed — explicitly allowed by ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
-    exit 0
-  fi
+depcruise="node_modules/.bin/depcruise"
+if [ ! -x "$depcruise" ]; then
   echo "  FAIL: dependency-cruiser not installed (bun install)"
-  echo "  Intentional local skip only: ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
   exit 1
 fi
-if ! command -v "$bun_bin" >/dev/null 2>&1; then
-  if [ "${ARESRPG_ALLOW_MISSING_ARCH_TOOLS:-}" = "1" ]; then
-    echo "  SKIP: bun not available — explicitly allowed by ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
-    exit 0
-  fi
+if ! command -v bun >/dev/null 2>&1; then
   echo "  FAIL: bun not available (this bun-first repo runs depcruise under bun — node 25 is outside its support matrix)"
-  echo "  Intentional local skip only: ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
   exit 1
 fi
 
 if [ "${1:-}" = "--write-baseline" ]; then
-  "$bun_bin" "$depcruise" --config .dependency-cruiser.cjs \
-    --output-type baseline --output-to .dependency-cruiser-known-violations.json \
-    packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src
-  node_modules/.bin/prettier --write --log-level silent .dependency-cruiser-known-violations.json
-  echo "  baseline written: .dependency-cruiser-known-violations.json"
+  baseline=".dependency-cruiser-known-violations.json"
+  if ! baseline_tmp_dir="$(mktemp -d "${baseline}.tmp.XXXXXX")"; then
+    echo "  FAIL: could not create a temporary baseline"
+    exit 1
+  fi
+  baseline_tmp="$baseline_tmp_dir/$baseline"
+  trap 'rm -rf "$baseline_tmp_dir"' EXIT
+  if ! bun "$depcruise" --config .dependency-cruiser.cjs \
+    --output-type baseline --output-to "$baseline_tmp" \
+    packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src; then
+    echo "  FAIL: dependency-cruiser could not generate the baseline"
+    exit 1
+  fi
+  if [ ! -x node_modules/.bin/prettier ]; then
+    echo "  FAIL: prettier not installed (bun install)"
+    exit 1
+  fi
+  if ! node_modules/.bin/prettier --write --log-level silent "$baseline_tmp"; then
+    echo "  FAIL: prettier could not format the baseline"
+    exit 1
+  fi
+  if ! mv "$baseline_tmp" "$baseline"; then
+    echo "  FAIL: could not replace the baseline"
+    exit 1
+  fi
+  echo "  baseline written: $baseline"
   exit 0
 fi
 
@@ -57,5 +66,5 @@ fi
 CRUISE_ARGS=(--config .dependency-cruiser.cjs)
 [ -f .dependency-cruiser-known-violations.json ] && CRUISE_ARGS+=(--ignore-known)
 CRUISE_ARGS+=(--output-type err)
-"$bun_bin" "$depcruise" "${CRUISE_ARGS[@]}" \
+bun "$depcruise" "${CRUISE_ARGS[@]}" \
   packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src

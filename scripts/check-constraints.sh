@@ -630,9 +630,9 @@ fi
 
 # ── arch gates (docs/CODE_LAW.md "Arch gates", 2026-07-17) ──────────────────────────────────────
 # Dataflow (semgrep: laundered store writes / fight effect-freedom / functor purity) + import graph
-# (dependency-cruiser: fight hermetic, engine quarantine, no NEW cycles). Missing tools fail unless
-# a caller explicitly sets ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1. Both ratcheted: census-day debt is
-# baselined, anything new is red.
+# (dependency-cruiser: fight hermetic, engine quarantine, no NEW cycles). Missing tools always fail:
+# an unavailable analyzer has no verdict. Both ratcheted: census-day debt is baselined, anything new
+# is red.
 echo
 if ! bash scripts/semgrep-gate.sh; then
   red "ARCH GATE (semgrep) FAILED."

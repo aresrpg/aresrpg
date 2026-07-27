@@ -31,8 +31,8 @@ fails `bun run lint` as a whole.
 | Move security-pattern gate | hand-rolled `mul_mod`/`div_rem` (hard fail), `u256` narrowing casts (hard fail), deprecated `type_name::get` (warn), divide-before-multiply in value math (warn) | the two hard-fail patterns match a known exploit-family shape — see the script's own comments for the incident class |
 | `scripts/check-move-field-limits.mjs` | struct-field counts over the `LimitsVerifier` cap | a Move struct grew past what the publish pipeline tolerates — FAILS (never skips) when `sui` or fresh `sui move build` output is missing; CI arms it in the `ladder` job |
 | i18n coverage gate (`scripts/i18n_coverage.mjs`) | a used `t()`/`i18nKey` missing from any of the 6 locale files, or a locale's key set drifted from `en.json` | every player-facing string ships in all 6 locales in the same commit — no exceptions |
-| Arch gate — semgrep (`scripts/semgrep-gate.sh`) | dataflow patterns: laundered store writes, fight-package effect purity | FAILS if `semgrep` is absent; `ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1` is the explicit local-only SKIP |
-| Arch gate — dependency-cruiser (`scripts/depcruise-gate.sh`) | fight-core import hermeticity, engine quarantine, any NEW import cycle | FAILS if `depcruise` or `bun` is absent; the same local-only opt-out SKIPs loudly |
+| Arch gate — semgrep (`scripts/semgrep-gate.sh`) | dataflow patterns: laundered store writes, fight-package effect purity | FAILS if `semgrep` is absent — an unavailable analyzer has no verdict |
+| Arch gate — dependency-cruiser (`scripts/depcruise-gate.sh`) | fight-core import hermeticity, engine quarantine, any NEW import cycle | FAILS if `depcruise` or `bun` is absent — an unavailable analyzer has no verdict |
 
 Every gate above is a **ratchet**: a baseline file holds today's known debt, and only a NEW
 finding fails the build. Baselines only shrink — `--write-baseline`/`--rebaseline` flags exist on

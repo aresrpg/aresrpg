@@ -17,31 +17,15 @@
 #
 # semgrep is a system binary, not a devDep. Install: `uv tool install semgrep` (used on the dev Mac,
 # ~/.local/bin) | `brew install semgrep` | `pipx install semgrep`. Missing means FAIL: a machine
-# without the analyzer has no verdict. A caller that deliberately accepts that loss may set
-# ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1; the resulting SKIP stays loud.
+# without the analyzer has no verdict.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 
-SEMGREP="${SEMGREP_BIN:-}"
-if [ -n "$SEMGREP" ]; then
-  command -v "$SEMGREP" >/dev/null 2>&1 || SEMGREP=""
-else
-  for candidate in semgrep "${HOME:-}/.local/bin/semgrep" /opt/homebrew/bin/semgrep; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      SEMGREP="$candidate"
-      break
-    fi
-  done
-fi
+SEMGREP="$(command -v semgrep || true)"
 
 echo "== AresRPG arch gate · semgrep (dataflow: laundered writes, fight effect-freedom, functor purity) =="
 if [ -z "$SEMGREP" ]; then
-  if [ "${ARESRPG_ALLOW_MISSING_ARCH_TOOLS:-}" = "1" ]; then
-    echo "  SKIP: semgrep not installed — explicitly allowed by ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
-    exit 0
-  fi
   echo "  FAIL: semgrep not installed (uv tool install semgrep | brew install semgrep | pipx install semgrep)"
-  echo "  Intentional local skip only: ARESRPG_ALLOW_MISSING_ARCH_TOOLS=1"
   exit 1
 fi
 
