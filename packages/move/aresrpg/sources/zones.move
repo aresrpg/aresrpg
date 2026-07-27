@@ -524,7 +524,7 @@ public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
 /// over a World, and the foundation kernel is pure over scalars. Every in-package reader of a zone's groups goes
 /// through this door, so a zone can never be read with a derivation other than the one it was written with.
 public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
-  if (group_commitment_format(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
+  if (q6(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
     zone_comp::derive_mobs_grid(world, zx, zy, seed, team_bound)
   } else {
     zone_comp::derive_mobs(world, zx, zy, seed, team_bound)
@@ -534,7 +534,7 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
 /// The resource twin of `derive_mobs` — the SAME commitment byte selects both streams, so a zone's mobs and its
 /// resource cells are always derived by one algorithm.
 public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  if (group_commitment_format(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
+  if (q6(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
     zone_comp::derive_res_grid(world, zx, zy, seed)
   } else {
     zone_comp::derive_res(world, zx, zy, seed)
@@ -543,7 +543,8 @@ public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vec
 
 /// The zone's derivation format, read off its stored commitment. A MISSING commitment reports `1` (legacy) —
 /// the zone predates commitments entirely, so its groups were placed by the spaced sampler.
-fun group_commitment_format(world: &World, zx: u32, zy: u32): u8 {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+fun q6(world: &World, zx: u32, zy: u32): u8 {
   let key = ZoneGroupRootKey { zx, zy };
   if (!df::exists(world::uid(world), key)) return 1; // no commitment = a pre-commitment zone = legacy
   let stored: &ZoneGroupCommitment = df::borrow(world::uid(world), key);

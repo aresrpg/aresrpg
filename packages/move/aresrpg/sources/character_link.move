@@ -91,7 +91,7 @@ public struct Progression has store, copy, drop {
 fun set_field<K: copy + drop + store, V: drop + store>(character: &mut Character, key: K, value: V, version: &Version) {
   let ns = extension::ns_character_world();
   if (extension::character_field_exists(character, ns, key)) {
-    let slot: &mut V = extension::borrow_character_field_mut(ns, character, key, version);
+    let slot: &mut V = extension::q3(ns, character, key, version);
     *slot = value;
   } else {
     extension::add_character_field(ns, character, key, value, version);
@@ -102,7 +102,7 @@ fun set_field<K: copy + drop + store, V: drop + store>(character: &mut Character
 fun add_field<K: copy + drop + store>(character: &mut Character, key: K, delta: u64, version: &Version): u64 {
   let ns = extension::ns_character_world();
   if (extension::character_field_exists(character, ns, key)) {
-    let slot: &mut u64 = extension::borrow_character_field_mut(ns, character, key, version);
+    let slot: &mut u64 = extension::q3(ns, character, key, version);
     *slot = *slot + delta;
     *slot
   } else {
@@ -172,7 +172,7 @@ public fun exit_dungeon_brand<W: drop>(
   let character = kiosk.borrow_mut(personal_kiosk::borrow(pkcap), character_id);
   assert!(in_world(character, pass), EWrongDungeonPass);
   dungeon_lock::unlock(character, pass, world);
-  extension::set_character_field_latest(
+  extension::q1(
     extension::ns_character_world(), character, WorldFieldKey {}, world, version,
   );
 }
@@ -225,7 +225,8 @@ public(package) fun add_stat_allocated(character: &mut Character, stat: u8, delt
 /// Mint ONE stackable item of `quantity` units through the MINT door and LOCK it into the gatherer's PERSONAL
 /// kiosk in the SAME call. The `LockPledge` hot potato forces the lock (no address delivery). `mint_item_stack`
 /// asserts the template's category STACKS.
-public(package) fun mint_and_lock_resource(template: &ItemTemplate, quantity: u64, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext) {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+public(package) fun q4(template: &ItemTemplate, quantity: u64, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext) {
   let (item, pledge) = extension::mint_item_stack(template, quantity, version, ctx);
   item::lock_in_kiosk(pledge, item, kiosk, owner_cap, policy);
 }
@@ -303,10 +304,10 @@ public(package) fun grow_pet_power(pet: &mut Item, delta: u64, version: &Version
 /// multiplier + max-level cap-discard + global-freeze gate), then RECOMPUTES + STORES the level (§3). The block is
 /// born (full HP) on the first grant.
 public(package) fun grant_fight_xp(config: &GameConfig, character: &mut Character, xp: u64, version: &Version) {
-  let ns = extension::ns_character_progression();
+  let ns = extension::q5();
   let key = ProgressionKey {};
   if (extension::character_field_exists(character, ns, key)) {
-    let slot: &mut Progression = extension::borrow_character_field_mut(ns, character, key, version);
+    let slot: &mut Progression = extension::q3(ns, character, key, version);
     let new_xp = progression::xp_add_with_cap_discard(config, slot.xp, xp);
     slot.xp = new_xp;
     slot.level = (character_xp::level_from_xp(new_xp) as u16);
@@ -329,10 +330,10 @@ public fun write_back_hp_for_testing(character: &mut Character, hp: u64, now_ms:
 }
 
 public(package) fun write_back_hp(character: &mut Character, hp: u64, now_ms: u64, version: &Version) {
-  let ns = extension::ns_character_progression();
+  let ns = extension::q5();
   let key = ProgressionKey {};
   if (extension::character_field_exists(character, ns, key)) {
-    let slot: &mut Progression = extension::borrow_character_field_mut(ns, character, key, version);
+    let slot: &mut Progression = extension::q3(ns, character, key, version);
     slot.hp = hp;
     slot.hp_updated_ms = now_ms;
   } else {
@@ -349,10 +350,10 @@ public(package) fun write_back_hp(character: &mut Character, hp: u64, now_ms: u6
 /// it has nothing to heal → `EAlreadyFullHp`. `amount` is the per-unit magnitude × used quantity (caller-batched).
 public(package) fun heal_hp(config: &GameConfig, character: &mut Character, amount: u64, now_ms: u64, version: &Version) {
   assert!(has_progression(character), EAlreadyFullHp); // block-less ⇒ full HP ⇒ nothing to heal (no block is created)
-  let ns = extension::ns_character_progression();
+  let ns = extension::q5();
   let level = level(character);
   let max_hp = progression::max_hp(config::class_row(config, resolve_class_id(character)), level, stat_allocated(character, STAT_VITALITY));
-  let slot: &mut Progression = extension::borrow_character_field_mut(ns, character, ProgressionKey {}, version);
+  let slot: &mut Progression = extension::q3(ns, character, ProgressionKey {}, version);
   let (regenerated, stamp) = progression::regen_hp(slot.hp, slot.hp_updated_ms, max_hp, level, 0, now_ms);
   assert!(regenerated < max_hp, EAlreadyFullHp); // regen already topped them off — the heal is pointless
   if (regenerated + amount >= max_hp) { slot.hp = max_hp; slot.hp_updated_ms = now_ms; } // reached full — no remainder to bank
@@ -436,7 +437,7 @@ public fun level(character: &Character): u64 {
 
 /// Does the character have a live progression block yet? (Born on the first fight xp/hp write.)
 public fun has_progression(character: &Character): bool {
-  extension::character_field_exists(character, extension::ns_character_progression(), ProgressionKey {})
+  extension::character_field_exists(character, extension::q5(), ProgressionKey {})
 }
 
 /// Current HP from the live progression block. Aborts if none — guard with `has_progression` (or read via
@@ -546,7 +547,7 @@ public fun stat_count(): u8 { STAT_COUNT }
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
 fun progression_block(character: &Character): Progression {
-  *extension::borrow_character_field<ProgressionKey, Progression>(character, extension::ns_character_progression(), ProgressionKey {})
+  *extension::borrow_character_field<ProgressionKey, Progression>(character, extension::q5(), ProgressionKey {})
 }
 
 /// Resolve the character's class SLUG to its GameConfig class id, aborting `EUnknownClass` if it is not a §3 class.

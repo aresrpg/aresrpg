@@ -310,7 +310,7 @@ fun combatant_of(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, rais
   // midpoint base (spells' flat-base analogue; wave-2b seed-rolls in [from,to]), the same +10% own-class affinity
   // the family line takes, and crit = base × 3/2 (the WL_DAMAGE→WL_CRIT_DAMAGE ≈1.5× ratio). Empty ⇒ the engine
   // falls back to `weapon`'s single family/unarmed line — killing the WL_DAMAGE-as-combat-truth shim.
-  let raw_lines = equipment::equipped_weapon_item_lines(character);
+  let raw_lines = equipment::q2(character);
   let mut weapon_lines = vector[];
   let (m, mut j) = (raw_lines.length(), 0);
   while (j < m) {

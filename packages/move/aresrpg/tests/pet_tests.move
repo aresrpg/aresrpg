@@ -187,7 +187,7 @@ fun equipped_state(sc: &mut Scenario, cid: ID, pet_id: ID): (u64, u64, u64) {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let character = k.borrow(personal_kiosk::borrow(&pkcap), cid);
   let item = extension::borrow_character_field<ID, Item>(
-    character, extension::ns_character_equipment(), pet_id,
+    character, extension::q8(), pet_id,
   );
   let feed_count = pet::feed_count(item);
   let strength = current_strength(item);

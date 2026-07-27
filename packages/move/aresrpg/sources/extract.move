@@ -176,20 +176,20 @@ public fun confirm_equip(
   let template = item::template(&item);
   let amount = item::amount(&item);
   let character_id = object::id(character);
-  extension::add_character_field(extension::ns_character_equipment(), character, item_id, item, version);
+  extension::add_character_field(extension::q8(), character, item_id, item, version);
   event::emit(ItemEquipped { character: character_id, item: item_id, template, amount });
 }
 
 /// Reverse of `confirm_equip`: DETACH the item (stored under `key` = its id) from `character` and return it with a
 /// `LockPledge` that FORCES a personal-kiosk re-lock — the constitution re-imposed the moment the item leaves the
 /// character. Package-gated (S-46 — no cap): the read/remove is `public(package)` under the `NS_CHARACTER_EQUIPMENT` namespace and version-gates
-/// inside `extension::remove_character_field`.
+/// inside `extension::q7`.
 public fun unequip(
   character: &mut Character,
   key: ID,
   version: &Version,
 ): (Item, LockPledge) {
-  let item: Item = extension::remove_character_field(extension::ns_character_equipment(), character, key, version);
+  let item: Item = extension::q7(extension::q8(), character, key, version);
   let item_id = object::id(&item);
   event::emit(ItemUnequipped {
     character: object::id(character),

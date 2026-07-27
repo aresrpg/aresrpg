@@ -400,14 +400,15 @@ public fun equipped_weapon_family(character: &Character): Option<String> {
 /// template authored no lines. The fight seat reads these through the ownership-proven character borrow and threads
 /// them into combat — the SAME unforgeable trust path as gear vitality; the client supplies no numbers. The
 /// `to`/`from` range + string element convert to combat values via `item_damages::midpoint`/`element_id`.
-public(package) fun equipped_weapon_item_lines(character: &Character): vector<ItemDamages> {
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+public(package) fun q2(character: &Character): vector<ItemDamages> {
   if (!has_map(character)) return vector[];
   let wid = {
     let map = map_ref(character);
     if (map.weapon_family.is_none() || map.weapon_item.is_none()) return vector[]; // tool or empty slot ⇒ no lines
     *map.weapon_item.borrow()
   };
-  let item: &Item = extension::borrow_character_field<ID, Item>(character, extension::ns_character_equipment(), wid);
+  let item: &Item = extension::borrow_character_field<ID, Item>(character, extension::q8(), wid);
   if (item_damages::has_item_lines(item)) *item_damages::item_lines(item) else vector[]
 }
 
@@ -468,7 +469,7 @@ fun fold_action_movement(base_ap: u64, base_mp: u64, bonus: &Stats, malus: &Stat
 /// was attached by `extract::confirm_equip` under NS_EQUIPMENT keyed by its own id; a non-equipped id aborts. The
 /// pet-feed lane grows pet power through this borrow; the returned reference borrows `character` for its lifetime.
 public(package) fun borrow_equipped_mut(character: &mut Character, item_id: ID, version: &Version): &mut Item {
-  extension::borrow_character_field_mut<ID, Item>(extension::ns_character_equipment(), character, item_id, version)
+  extension::q3<ID, Item>(extension::q8(), character, item_id, version)
 }
 
 /// Replace an equipped item's effective stats and refresh both signed cache blocks atomically. Pet power uses this
@@ -498,25 +499,25 @@ public(package) fun set_equipped_stats(character: &mut Character, item_id: ID, s
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
 fun has_map(character: &Character): bool {
-  extension::character_field_exists(character, extension::ns_character_equipment(), EquipmentKey {})
+  extension::character_field_exists(character, extension::q8(), EquipmentKey {})
 }
 
 fun map_ref(character: &Character): &EquipmentMap {
-  extension::borrow_character_field<EquipmentKey, EquipmentMap>(character, extension::ns_character_equipment(), EquipmentKey {})
+  extension::borrow_character_field<EquipmentKey, EquipmentMap>(character, extension::q8(), EquipmentKey {})
 }
 
 fun has_malus_cache(character: &Character): bool {
-  extension::character_field_exists(character, extension::ns_character_equipment(), MALUS_CACHE_KEY)
+  extension::character_field_exists(character, extension::q8(), MALUS_CACHE_KEY)
 }
 
 fun malus_ref(character: &Character): &Stats {
-  extension::borrow_character_field<u64, Stats>(character, extension::ns_character_equipment(), MALUS_CACHE_KEY)
+  extension::borrow_character_field<u64, Stats>(character, extension::q8(), MALUS_CACHE_KEY)
 }
 
 fun add_malus(character: &mut Character, delta: &Stats, version: &Version) {
-  let ns = extension::ns_character_equipment();
+  let ns = extension::q8();
   if (extension::character_field_exists(character, ns, MALUS_CACHE_KEY)) {
-    let cache: &mut Stats = extension::borrow_character_field_mut(ns, character, MALUS_CACHE_KEY, version);
+    let cache: &mut Stats = extension::q3(ns, character, MALUS_CACHE_KEY, version);
     *cache = spell::stats_add(cache, delta);
   } else {
     extension::add_character_field(ns, character, MALUS_CACHE_KEY, *delta, version);
@@ -524,9 +525,9 @@ fun add_malus(character: &mut Character, delta: &Stats, version: &Version) {
 }
 
 fun remove_malus(character: &mut Character, delta: &Stats, signed_folded: bool, version: &Version) {
-  let ns = extension::ns_character_equipment();
+  let ns = extension::q8();
   if (extension::character_field_exists(character, ns, MALUS_CACHE_KEY)) {
-    let cache: &mut Stats = extension::borrow_character_field_mut(ns, character, MALUS_CACHE_KEY, version);
+    let cache: &mut Stats = extension::q3(ns, character, MALUS_CACHE_KEY, version);
     *cache = equipment_stats::remove_malus(cache, delta, signed_folded);
   };
 }
@@ -543,12 +544,12 @@ fun mark_signed_fold(item: &mut Item, version: &Version) {
 }
 
 fun borrow_map_mut(character: &mut Character, version: &Version): &mut EquipmentMap {
-  extension::borrow_character_field_mut<EquipmentKey, EquipmentMap>(extension::ns_character_equipment(), character, EquipmentKey {}, version)
+  extension::q3<EquipmentKey, EquipmentMap>(extension::q8(), character, EquipmentKey {}, version)
 }
 
 fun ensure_map(character: &mut Character, version: &Version) {
-  if (!extension::character_field_exists(character, extension::ns_character_equipment(), EquipmentKey {})) {
-    extension::add_character_field(extension::ns_character_equipment(), character, EquipmentKey {}, empty_map(), version);
+  if (!extension::character_field_exists(character, extension::q8(), EquipmentKey {})) {
+    extension::add_character_field(extension::q8(), character, EquipmentKey {}, empty_map(), version);
   };
 }
 
@@ -589,7 +590,7 @@ public fun attach_map_for_testing(character: &mut Character, tool_jobs: vector<u
   let mut map = empty_map();
   if (!tool_jobs.is_empty()) { map.tool_job = option::some(*tool_jobs.borrow(0)); };
   map.pet = pet;
-  extension::add_character_field(extension::ns_character_equipment(), character, EquipmentKey {}, map, version);
+  extension::add_character_field(extension::q8(), character, EquipmentKey {}, map, version);
 }
 
 #[test_only]
@@ -600,5 +601,5 @@ public fun attach_map_for_testing(character: &mut Character, tool_jobs: vector<u
 public fun attach_item_for_testing(character: &mut Character, item: Item, version: &Version) {
   ensure_map(character, version);
   let item_id = object::id(&item);
-  extension::add_character_field(extension::ns_character_equipment(), character, item_id, item, version);
+  extension::add_character_field(extension::q8(), character, item_id, item, version);
 }

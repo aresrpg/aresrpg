@@ -189,7 +189,7 @@ fun geared_combat_stats_reads_base_scalars() {
 
 #[test]
 /// The unforgeable path: equipping a class weapon SNAPSHOTS the template's authored damage lines onto the item
-/// instance, and the fight-seat read (`equipped_weapon_item_lines`) returns them straight off the character — no
+/// instance, and the fight-seat read (`q2`) returns them straight off the character — no
 /// template object, no client input. Two lines (fire + water) round-trip exactly.
 fun equip_weapon_snapshots_authored_lines_for_combat() {
   let mut sc = ts::begin(OWNER);
@@ -203,7 +203,7 @@ fun equip_weapon_snapshots_authored_lines_for_combat() {
 
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  let lines = equipment::equipped_weapon_item_lines(chr);
+  let lines = equipment::q2(chr);
   assert_eq!(lines.length(), 2);
   assert_eq!(item_damages::element_id(lines.borrow(0)), spell::el_fire());
   assert_eq!(item_damages::midpoint(lines.borrow(0)), 20); // (10+30)/2
@@ -229,7 +229,7 @@ fun tool_in_weapon_slot_yields_no_lines() {
 
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  assert!(equipment::equipped_weapon_item_lines(chr).is_empty()); // the tool's damages never reach combat
+  assert!(equipment::q2(chr).is_empty()); // the tool's damages never reach combat
 
   destroy(k);
   destroy(pkcap);
@@ -248,7 +248,7 @@ fun bare_and_unauthored_weapon_yield_no_lines() {
   sc.next_tx(OWNER);
   {
     let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-    assert!(equipment::equipped_weapon_item_lines(chr).is_empty());
+    assert!(equipment::q2(chr).is_empty());
   };
 
   // a real weapon whose template authored NO damage lines ⇒ still empty (family fallback)
@@ -257,7 +257,7 @@ fun bare_and_unauthored_weapon_yield_no_lines() {
   equip_item(&mut sc, &mut k, &pkcap, cid, item_id, tid);
   sc.next_tx(OWNER);
   let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), cid);
-  assert!(equipment::equipped_weapon_item_lines(chr).is_empty());
+  assert!(equipment::q2(chr).is_empty());
 
   destroy(k);
   destroy(pkcap);

@@ -153,11 +153,11 @@ fun character_field_write_read_roundtrip() {
   let cust = character::new_customization(1, 2, 3);
   let (mut chr, pledge) = character::new_for_testing(b"hero".to_string(), b"senshi".to_string(), true, cust, 0, sc.ctx());
 
-  let ns = extension::ns_character_progression();
+  let ns = extension::q5();
   extension::add_character_field(ns, &mut chr, TestKey {}, 7u64, &ver);
   assert!(extension::character_field_exists(&chr, ns, TestKey {}));
   assert_eq!(*extension::borrow_character_field<TestKey, u64>(&chr, ns, TestKey {}), 7);
-  let removed: u64 = extension::remove_character_field(ns, &mut chr, TestKey {}, &ver);
+  let removed: u64 = extension::q7(ns, &mut chr, TestKey {}, &ver);
   assert_eq!(removed, 7);
   assert!(!extension::character_field_exists(&chr, ns, TestKey {}));
 

@@ -123,7 +123,7 @@ fun equip_extract_then_confirm_attaches_item_to_character() {
   assert!(!kiosk.has_item(item_id)); // pulled OUT of the kiosk
   let (mut chr, cpledge) = a_character(&mut sc);
   extract::confirm_equip(epledge, xitem, &mut chr, &ver);
-  assert!(extension::character_field_exists(&chr, extension::ns_character_equipment(), item_id)); // now on the character
+  assert!(extension::character_field_exists(&chr, extension::q8(), item_id)); // now on the character
 
   destroy(chr); destroy(cpledge); destroy(kiosk); destroy(pkcap);
   ts::return_shared(ver); ts::return_shared(xpolicy);

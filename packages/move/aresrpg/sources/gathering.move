@@ -25,7 +25,7 @@
 /// an unpinned node NEVER ambushes, and a pinned ambush ASSERTS the passed template (`EWrongProtector`) — the
 /// client-chosen-defender hole (tier-lattice laundering) is closed. The fight still snapshots BASELINE spell
 /// levels (raised_spell_ids empty) for now.
-/// The yield now mints as ONE stacked `Item` of amount `quantity` through `character_link::mint_and_lock_resource`
+/// The yield now mints as ONE stacked `Item` of amount `quantity` through `character_link::q4`
 /// (`extension::mint_item_stack` — the resource category STACKS), so the `quantity` event value and the minted
 /// stack agree (S-11b items amendment; the old "ONE NFT + amount in the event only" seam is resolved).
 module aresrpg::gathering;
@@ -200,7 +200,7 @@ fun gather_internal(
   };
 
   // 8) mint the whole yield as ONE stacked resource item through the cap-gated door + lock into the gatherer's kiosk
-  character_link::mint_and_lock_resource(template, quantity, version, kiosk, owner_cap, policy, ctx);
+  character_link::q4(template, quantity, version, kiosk, owner_cap, policy, ctx);
 
   // 8b) GOLDEN-GATHER (§6): if this resource has a linked rare variant, ONE extra RARE_BP draw from the SAME rng
   //     mints ONE unit of it IN ADDITION (jackpot-additive — never reduces the normal yield). No link ⇒ no draw.
@@ -272,7 +272,7 @@ fun settle_rare(world: &World, base_tid: ID, rare_template: &ItemTemplate, gen: 
 /// normal yield, then emit `RareGathered`. Identity was asserted in `settle_rare` BEFORE the draw — the hit path
 /// itself never aborts on template identity, so a won jackpot always mints.
 fun mint_rare(rare_template: &ItemTemplate, base_tid: ID, gatherer: address, wid: ID, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext) {
-  character_link::mint_and_lock_resource(rare_template, 1, version, kiosk, owner_cap, policy, ctx);
+  character_link::q4(rare_template, 1, version, kiosk, owner_cap, policy, ctx);
   event::emit(RareGathered { world: wid, gatherer, template: base_tid, rare_template: object::id(rare_template) });
 }
 

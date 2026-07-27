@@ -104,19 +104,19 @@ public(package) fun add_character_field<K: copy + drop + store, V: store>(namesp
   df::add(character::uid_mut(character), NsKey { namespace, key }, value);
 }
 
-public(package) fun borrow_character_field_mut<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): &mut V {
+public(package) fun q3<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): &mut V {
   version.assert_enabled();
   df::borrow_mut(character::uid_mut(character), NsKey { namespace, key })
 }
 
-public(package) fun remove_character_field<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): V {
+public(package) fun q7<K: copy + drop + store, V: store>(namespace: u8, character: &mut Character, key: K, version: &Version): V {
   version.assert_enabled();
   df::remove(character::uid_mut(character), NsKey { namespace, key })
 }
 
 /// Exit-class upsert for the dungeon release path. Unlike ordinary value writes, a live dungeon lock must be
 /// releasable while the package is frozen; upgrade freshness still gates the single executable layout.
-public(package) fun set_character_field_latest<K: copy + drop + store, V: drop + store>(
+public(package) fun q1<K: copy + drop + store, V: drop + store>(
   namespace: u8,
   character: &mut Character,
   key: K,
@@ -153,8 +153,10 @@ public(package) fun borrow_character_field<K: copy + drop + store, V: store>(cha
 
 // ╔════════════════ [ Namespace accessors (package callers name their reserved slots) ] ═ ]
 
-public(package) fun ns_character_progression(): u8 { NS_CHARACTER_PROGRESSION }
-public(package) fun ns_character_equipment(): u8 { NS_CHARACTER_EQUIPMENT }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+public(package) fun q5(): u8 { NS_CHARACTER_PROGRESSION }
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (ceremony leg-2); see the growth row
+public(package) fun q8(): u8 { NS_CHARACTER_EQUIPMENT }
 public(package) fun ns_character_world(): u8 { NS_CHARACTER_WORLD }
 public(package) fun ns_item(): u8 { NS_ITEM }
 
