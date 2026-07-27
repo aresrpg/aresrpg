@@ -56,8 +56,8 @@ const contested_drain = ({ seed, requested, caster_wisdom, target_dodge }) => {
   const spell_id = `drain_${requested}`
   const { board } = derive_board(seed)
   const arena = arena_from_board(board)
-  const player_cell = arena.spawns_a[0]
-  const mob_cell = arena.spawns_b[0]
+  const [player_cell] = arena.spawns_a
+  const [mob_cell] = arena.spawns_b
   const template = {
     id: spell_id,
     levels: [
@@ -80,10 +80,7 @@ const contested_drain = ({ seed, requested, caster_wisdom, target_dodge }) => {
   })
   const out = submit_commands(
     chain,
-    commands_from_staged(
-      [{ kind: 1, target: encode(mob_cell.x, mob_cell.y), spell_template_id: spell_id }],
-      'p0',
-    ),
+    commands_from_staged([{ kind: 1, target: encode(mob_cell.x, mob_cell.y), spell_template_id: spell_id }], 'p0')
   )
   return out.receipt.events.filter((event) => event.type.endsWith('::Drain'))
 }

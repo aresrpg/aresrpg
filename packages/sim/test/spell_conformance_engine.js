@@ -319,7 +319,12 @@ export const conform_effect = (raw, ap_cost) => {
   } else if (kind === K.REMOVE_POINTS || kind === K.STEAL_POINTS) {
     const pool = POINT_NAME[raw.stat]
     const delta = before[pool] - v_after[pool]
-    const dodged = (res.effects ?? []).some(e => e.status === 'POINT_DODGED')
+    const dodged = (res.effects ?? []).some(
+      e =>
+        e.status === 'STAT_DEBUFF' &&
+        e.stat === pool &&
+        Number(e.requested) > Number(e.value),
+    )
     checks.push(
       delta > 0 || dodged
         ? verdict('points', 'PASS')
