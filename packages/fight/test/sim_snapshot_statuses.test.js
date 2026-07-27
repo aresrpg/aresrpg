@@ -17,6 +17,7 @@ import { describe, expect, test } from 'bun:test'
 import * as SE from '../../sim/src/spell_effect.js'
 import { board_state_from_fight } from '../src/board_state.js'
 import { base_from_view } from '../src/fold.js'
+import { MOB_FIGHTER_ID_BASE } from '../src/fight_status_snapshot.js'
 import { encode } from '../src/los.js'
 import {
   commands_from_staged,
@@ -62,6 +63,15 @@ const KIT = [
   },
 ]
 
+// #1211 — an ENEMY-targeted (never self) DoT and stat-alter, cast on the MOB: the target-side twin of KIT's
+// self-cast rows above. `u_poison` proves a K_APPLY_DOT badge reaches a mob row; `u_weaken` is the second
+// control — a non-DAMAGE stat alter targeted at the mob, which already worked before this fix (kind-filtering
+// on mob rows was never the miss; DAMAGE-bookkeeping was).
+const TARGET_KIT = [
+  { id: 'u_poison', levels: [level([{ kind: SE.K_APPLY_DOT, value: 5, element: 'AIR', turns: 2, target_filter: SE.TF_NOT_TEAM }])] },
+  { id: 'u_weaken', levels: [level([{ kind: SE.K_ALTER_STAT, stat: 0, value: 40, turns: 3, target_filter: SE.TF_NOT_TEAM }])] },
+]
+
 const MOB_KIT = [
   {
     id: 'm_hit',
@@ -95,8 +105,15 @@ const build = () =>
     seed: SEED,
     fight_id: 'snapstatus:1',
     group_template: '0xgroup',
-    templates_raw: [...KIT, ...MOB_KIT],
-    team0: [fighter('p0', { x: 0, y: 0 }, true, { health: 200, ap: 12, mp: 6, deck: KIT.map((s) => s.id) })],
+    templates_raw: [...KIT, ...TARGET_KIT, ...MOB_KIT],
+    team0: [
+      fighter('p0', { x: 0, y: 0 }, true, {
+        health: 200,
+        ap: 12,
+        mp: 6,
+        deck: [...KIT.map((s) => s.id), ...TARGET_KIT.map((s) => s.id)],
+      }),
+    ],
     team1: [fighter('mob_0', { x: 4, y: 0 }, false, { health: 200, ap: 6, mp: 3, deck: ['m_hit'], level: 12 })],
   })
 
@@ -106,6 +123,16 @@ const cast_self = (spell_id) => {
   return submit_commands(
     chain,
     commands_from_staged([{ kind: 1, target: encode(0, 0), spell_template_id: spell_id }], 'p0'),
+    { now_ms: NOW }
+  ).chain
+}
+
+const cast_on_mob = (spell_id) => {
+  const chain = build()
+  expect(current_actor(chain)).toBe('p0')
+  return submit_commands(
+    chain,
+    commands_from_staged([{ kind: 1, target: encode(4, 0), spell_template_id: spell_id }], 'p0'),
     { now_ms: NOW }
   ).chain
 }
@@ -142,5 +169,44 @@ describe('snapshot_from_sim · the read states the statuses the sim holds (#952)
     const chain = cast_self('u_str_buff')
     const rows = snapshot_from_sim(chain).invisibility_statuses
     expect(rows.some((r) => Number(r.kind) === SE.K_ALTER_STAT)).toBe(true)
+  })
+})
+
+// #1211 — a poison (DoT) cast on a MOB showed no status chip on the mob's turn card or hover tooltip. The sim
+// DID fold the DoT (the tick works — the mob takes damage every turn), but its persisted effect row rode
+// `type: 'DAMAGE'` (the tick's own bookkeeping shape, reused from apply_incoming_damage) with no discriminant
+// tying it back to POISON/K_APPLY_DOT, so `statuses.status_kind_of` — which correctly refuses to badge a
+// bare DAMAGE/HEAL tick row — refused this one too. Not a target-type (mob vs player) or kind-filtering miss:
+// a DAMAGE-typed DoT row is invisible to the badge projection for EITHER target; mobs merely reported it first.
+describe('POISON DoT reaches the mob turn-card/tooltip status projection — #1211', () => {
+  test('the sim folds the DoT tick on the mob (ground truth: the mob is worse off next turn)', () => {
+    const chain = cast_on_mob('u_poison')
+    const mob = chain.sim_state.team1.find((e) => e.id === 'mob_0')
+    expect(mob.effects.length).toBeGreaterThan(0)
+  })
+
+  test('the snapshot states a K_APPLY_DOT row for the mob fighter id (MOB_FIGHTER_ID_BASE + idx)', () => {
+    const chain = cast_on_mob('u_poison')
+    const rows = snapshot_from_sim(chain).invisibility_statuses
+    const dot = rows.find((r) => Number(r.kind) === SE.K_APPLY_DOT && Number(r.fighter) === MOB_FIGHTER_ID_BASE)
+    expect(dot).toBeDefined()
+    expect(Number(dot.remaining_turns)).toBeGreaterThan(0)
+  })
+
+  test('the whole production read path shows mob_0 poisoned — engine_view.effects (turn card + tooltip source)', () => {
+    const chain = cast_on_mob('u_poison')
+    const snapshot = snapshot_from_sim(chain)
+    const view = board_state_from_fight({ fight: snapshot, version: 1 })
+    const base = base_from_view(view, snapshot.id)
+    const dot = base.fighters.m0?.statuses?.find((r) => r.kind === SE.K_APPLY_DOT)
+    expect(dot).toBeDefined()
+    expect(dot.remaining_turns).toBeGreaterThan(0)
+  })
+
+  test('control — a stat alter targeted at the mob already badges correctly (not a mob-row filtering bug)', () => {
+    const chain = cast_on_mob('u_weaken')
+    const rows = snapshot_from_sim(chain).invisibility_statuses
+    const alter = rows.find((r) => Number(r.kind) === SE.K_ALTER_STAT && Number(r.fighter) === MOB_FIGHTER_ID_BASE)
+    expect(alter).toBeDefined()
   })
 })
