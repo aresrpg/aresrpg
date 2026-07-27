@@ -99,6 +99,7 @@ import {
   init_dungeon_fight,
   sync_dungeon_fight,
   resolve_world_offset,
+  resolve_weapon_lines,
   hold_until_presented,
   route_settlement,
 } from './dungeon_fight_shim.js'
@@ -1075,8 +1076,13 @@ export const use_dungeon = create((set, get) => ({
         if (!is_current() || get().fight_id !== live_fight_id) return
         const offset = await resolve_world_offset(sdk, get().world_id ?? fight.world)
         if (!is_current() || get().fight_id !== live_fight_id) return
+        // #1323 — the seat-keyed AUTHORED weapon lines ride per-seat dynamic fields, not the object json above.
+        // Cached per fight and re-read only when the roster grows, so this is one extra read per fight, not per poll.
+        const weapon_lines = await resolve_weapon_lines(sdk, live_fight_id, fight.participant_count)
+        if (!is_current() || get().fight_id !== live_fight_id) return
         sync_dungeon_fight({
           read,
+          weapon_lines,
           run,
           rooms_total: get().rooms.length,
           ctx: {
