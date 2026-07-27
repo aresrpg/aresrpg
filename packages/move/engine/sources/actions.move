@@ -47,7 +47,10 @@ fun apply_move(fight: &mut Fight, seat: u64, cell: u64) {
   // TACKLE (sim twin fight_actions.js:63-100): leaving a living adjacent enemy's zone contests FIRST. The roll
   // is `&Random`-free (single-PTB law) — it derives from the public turn-seed stream folded with the action
   // slot + live MP (spell_formula::tackle_seed; previewable like a crit, repriced by every failed attempt since
-  // a failure always costs ≥1 MP). Path legality is pre-checked so an ILLEGAL move aborts instead of rolling —
+  // a failure always costs ≥1 MP). The turn seed itself is re-stamped at every player landing from the turn's
+  // own entropy row (fight::note_turn_entropy, published on TurnStarted), so each turn's contest is its own
+  // draw — sealed by tackle_tests::contest_verdict_moves_with_the_turn. Path legality is pre-checked so an
+  // ILLEGAL move aborts instead of rolling —
   // sim order: insufficient-MP/invalid-path rejection precedes the contest. A failed escape COMMITS (return,
   // never abort): the pool loss + Tackled event must survive — an abort would refund the penalty.
   let lockers = tackle::locker_agilities(fight, false, seat);

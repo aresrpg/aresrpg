@@ -7,6 +7,9 @@
 /// mirror (packages/sim/src/prng.js — scratch generator, cross-oracle law): scaffold turn seed
 /// mix(mix(mix(mix(12345, 1), 42), 1), 0) = 3114863173 — the scaffold's turn entropy is 42 (the test crank's
 /// fixed draw) at ordinal 1. Raw draws per (slot, mp): (0,3)→582013873 · (0,2)→1529003476 · (0,1)→3234605891.
+/// The entropy row is an INPUT, not a constant: `contest_verdict_moves_with_the_turn` (+ the
+/// `turn_entropy_0`/`turn_entropy_2` pair) drive the same contest across turns and assert the verdict follows
+/// the turn's stamped entropy, so pinning the roll to any static value fails here.
 /// Verdicts follow: at the even contest (num 2 / den 4) mp 3 and mp 2 ESCAPE and mp 1 is TACKLED; at the
 /// two-locker product (num 4 / den 16) mp 2 is TACKLED. Every case below drives the MP its stated outcome
 /// lives at. Sim golden twin: packages/sim/test/tackle_golden.test.js over test/vectors/tackle_golden.json
@@ -227,6 +230,85 @@ fun unreachable_destination_aborts_before_the_contest() {
   participant::spend_mp(fight::participants_mut(&mut fight).borrow_mut(0), 1); // MP 3→2
   move_p0(&mut fight, &ver, 168); // 3 steps east > 2 MP
   abort 9999
+}
+
+// ╔════════════════ [ The contest draws from the TURN'S ENTROPY ] ════════════ ]
+
+/// Re-open seat 0 for a FRESH turn: stamp the turn's entropy row (`fight::note_turn_entropy` — the one writer,
+/// called at every player landing in `turns::resolve_from` and published on TurnStarted), refill the pools to
+/// base (which also resets the cast slot to 0) and put the runner back on its start cell. Every input the
+/// tackle roll folds — agility, lockers, slot, MP — is restored identically, so two turns opened this way
+/// differ in exactly one thing: the turn's own entropy.
+fun reopen_turn(fight: &mut Fight, entropy: u64) {
+  fight::note_turn_entropy(fight, entropy);
+  let p = fight::participants_mut(fight).borrow_mut(0);
+  participant::begin_turn(p, 0, 0, 0, 0);
+  participant::set_cell(p, 165);
+}
+
+#[test]
+/// THE VERDICT IS A PROPERTY OF THE TURN. One fight, one runner, one locker, the even contest (num 2 / den 4),
+/// both attempts at MP 3 and slot 0 — only the turn advances between them (`note_turn_entropy` re-stamps the
+/// row and bumps the ordinal, exactly as a player landing does):
+///   turn 1 (entropy 42, ordinal 1): draw 582013873 % 4 = 1 < 2 → ESCAPES, the move completes 165→167
+///   turn 2 (entropy 42, ordinal 2): draw 2439861210 % 4 = 2 ≥ 2 → TACKLED, cell held, AP 6→3, MP 3→1
+/// Two identical contests, two verdicts. Pin the tackle roll to anything that does NOT move per turn and these
+/// two turns collapse to one answer — which is what this case exists to keep impossible.
+fun contest_verdict_moves_with_the_turn() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = active_adjacent_fight(&mut sc);
+  move_p0(&mut fight, &ver, 167); // turn 1 — this turn's roll escapes
+  let (cell1, ap1, mp1) = p_state(&fight);
+  assert!(cell1 == 167 && ap1 == 6 && mp1 == 1, 0);
+  assert!(event::events_by_type<fight_events::Tackled>().is_empty(), 1);
+
+  reopen_turn(&mut fight, 42); // the SAME entropy carrier, the NEXT turn
+  move_p0(&mut fight, &ver, 167); // turn 2 — the same contest, the other verdict
+  let (cell2, ap2, mp2) = p_state(&fight);
+  assert!(cell2 == 165, 2); // move denied — this turn's roll lost the contest
+  assert!(ap2 == 3 && mp2 == 1, 3); // ceil(6·2/4)=3 AP, ceil(3·2/4)=2 MP
+  assert!(event::events_by_type<fight_events::Moved>().length() == 1, 4); // only turn 1 ever moved
+  let tackled = event::events_by_type<fight_events::Tackled>();
+  assert!(tackled.length() == 1, 5);
+  let (_fid, _rim, _ri, ap_lost, mp_lost, num, den) = fight_events::tackled_for_testing(tackled.borrow(0));
+  assert!(ap_lost == 3 && mp_lost == 2 && num == 2 && den == 4, 6);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The ORDINAL is not the whole story — the entropy CARRIER decides too. Twin of the case below: same fight
+/// shape, same ordinal (2), same MP 3 / slot 0 contest, entropy state 0 → draw 1561039407 % 4 = 3 ≥ 2 →
+/// TACKLED (cell held, AP 6→3, MP 3→1).
+fun turn_entropy_0_loses_this_contest() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = active_adjacent_fight(&mut sc);
+  reopen_turn(&mut fight, 0);
+  move_p0(&mut fight, &ver, 167);
+  let (cell, ap, mp) = p_state(&fight);
+  assert!(cell == 165 && ap == 3 && mp == 1, 0);
+  assert!(event::events_by_type<fight_events::Tackled>().length() == 1, 1);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// …and the SAME turn ordinal with entropy state 2 → draw 1205601081 % 4 = 1 < 2 → ESCAPES, move completes
+/// 165→167 with the pools clean. The pair isolates the carrier from the ordinal: one input moved, the verdict
+/// followed it.
+fun turn_entropy_2_wins_this_contest() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = active_adjacent_fight(&mut sc);
+  reopen_turn(&mut fight, 2);
+  move_p0(&mut fight, &ver, 167);
+  let (cell, ap, mp) = p_state(&fight);
+  assert!(cell == 167 && ap == 6 && mp == 1, 0);
+  assert!(event::events_by_type<fight_events::Tackled>().is_empty(), 1);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
 }
 
 // ╔════════════════ [ Multiple tacklers — the product contest ] ══════════════ ]
