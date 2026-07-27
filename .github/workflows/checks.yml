@@ -27,6 +27,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # #1101's fixture-adjudication row judges every commit in the PR, not only the aggregate
+          # tree diff. The event supplies exact base/head SHAs; their commit objects must be present.
+          fetch-depth: 0
       - name: setup Bun
         id: setup_bun
         continue-on-error: true

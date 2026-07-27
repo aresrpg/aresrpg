@@ -190,6 +190,10 @@ WARN where the census found mass — a cleaned domain gets promoted, never the r
 
 ## Operating the law
 
+- Fixture adjudication (#1101): every PR commit that mutates an existing
+  `packages/*/test/fixtures/**` file or `packages/*/test/**/*_golden.json` carries a non-author
+  `Adjudicated-by: Name <email>` trailer; new fixtures are exempt — a fixture mutation can let a
+  wrong fix hide its own evidence, the lying-green class at its root (`scripts/check-constraints.sh`).
 - Escape hatches: rule option `allow: ['path-fragment']` (repo-relative) per module class;
   `// eslint-disable-next-line <rule> -- reason` per line. Every disable carries its reason.
 - The deep tier (CodeQL): eslint is the keystroke tripwire; `scripts/codeql/gate.sh` is the
