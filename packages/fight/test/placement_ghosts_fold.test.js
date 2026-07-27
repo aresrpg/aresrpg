@@ -9,7 +9,8 @@
 import { describe, expect, test } from 'bun:test'
 
 import { create_fight_store } from '../src/store.js'
-import { engine_view } from '../src/project.js'
+import { engine_view, placement_click } from '../src/project.js'
+import { project_board } from '../src/core.js'
 import { GHOST_STALE_MS } from '../src/fold.js'
 
 const FIGHT = '0xghostfight'
@@ -79,10 +80,23 @@ describe("placement_ghosts — the fold-state home for a peer's uncommitted plac
     expect(engine_view(store.getState()).placement_ghosts).toEqual([{ character: BOB, cell: PICK }])
   })
 
+  test("a peer's new pick moves their rendered fighter without authoring board truth or legality", () => {
+    const store = boot()
+    expect(engine_view(store.getState()).fighters.get(BOB).cell).toEqual({ x: 3, y: 2 })
+
+    store.getState().input({ type: 'placement_ghost', fight_id: FIGHT, character: BOB, cell: PICK }, 1_100)
+
+    expect(engine_view(store.getState()).fighters.get(BOB).cell).toEqual({ x: 9, y: 9 })
+    expect(project_board(store.getState().core).fighters.p1.cell).toBe(B_CELL)
+    expect(placement_click(store.getState(), { x: 9, y: 9 })).toBe('pick')
+    expect(placement_click(store.getState(), { x: 2, y: 2 })).toBe('pick')
+  })
+
   test('a committed Placed for that character SUPERSEDES (clears) its ghost', () => {
     const store = boot()
     store.getState().input({ type: 'placement_ghost', fight_id: FIGHT, character: BOB, cell: PICK }, 1_100)
     expect(engine_view(store.getState()).placement_ghosts.length).toBe(1)
+    expect(engine_view(store.getState()).fighters.get(BOB).cell).toEqual({ x: 9, y: 9 })
     store
       .getState()
       .input(
@@ -90,6 +104,7 @@ describe("placement_ghosts — the fold-state home for a peer's uncommitted plac
         1_200
       )
     expect(engine_view(store.getState()).placement_ghosts).toEqual([])
+    expect(engine_view(store.getState()).fighters.get(BOB).cell).toEqual({ x: 9, y: 9 })
   })
 
   test('a ghost past GHOST_STALE_MS expires', () => {
@@ -120,6 +135,7 @@ describe("placement_ghosts — the fold-state home for a peer's uncommitted plac
       1_200
     )
     expect(engine_view(store.getState()).placement_ghosts).toEqual([])
+    expect(engine_view(store.getState()).fighters.get(BOB).cell).toEqual({ x: 3, y: 2 })
   })
 
   test('a mismatched fight_id is refused at the identity gate (never adopted)', () => {

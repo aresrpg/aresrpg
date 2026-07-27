@@ -412,6 +412,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   const placement_ghosts = placement
     ? Object.entries(s.placement_ghosts ?? {}).map(([character, g]) => ({ character, cell: g.cell }))
     : []
+  // A peer pick is an uncommitted p2p cosmetic hint. Overlay it only on the render-facing fighter Map: canonical,
+  // presented and board projections keep the chain cell, so the hint cannot reserve a cell or affect simulation.
+  for (const { character, cell } of placement_ghosts) {
+    const fighter = map.get(character)
+    if (fighter) map.set(character, { ...fighter, cell: decode_xy(cell) })
+  }
   return {
     fight_id: view.id,
     my_traps: my_trap_cells,

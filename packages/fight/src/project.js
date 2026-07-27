@@ -8,9 +8,9 @@ import { tackle_seed, turn_seed } from '@aresrpg/sim/turn_seed'
 import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
-import { fight_store, presented_state } from './store.js'
+import { committed_truth, fight_store, presented_state } from './store.js'
 import { cast_presenting, is_my_turn, is_over, presenting } from './project_state.js'
-import { engine_view, project_board_cells } from './project_views.js'
+import { engine_view, entity_id_of_key, project_board_cells } from './project_views.js'
 
 export * from './project_state.js'
 export { board_view, committed_mob_hp, engine_view, entity_id_of_key } from './project_views.js'
@@ -263,9 +263,10 @@ export const placement_click = (s, cell) => {
   if (!me) return null
   const on_zone = (view.placement_cells?.[me.team] ?? []).some((c) => c.x === cell.x && c.y === cell.y)
   if (!on_zone) return 'deny'
-  for (const f of view.fighters.values()) {
-    if (f.dead || f.id === me.id || !f.cell) continue
-    if (f.cell.x === cell.x && f.cell.y === cell.y) return 'deny'
+  for (const [key, fighter] of Object.entries(committed_truth(s).fighters ?? {})) {
+    if (fighter.alive === false || entity_id_of_key(s.view, key) === me.id || fighter.cell == null) continue
+    const occupied = decode_xy(fighter.cell)
+    if (occupied.x === cell.x && occupied.y === cell.y) return 'deny'
   }
   return 'pick'
 }
