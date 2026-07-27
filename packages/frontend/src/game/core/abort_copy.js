@@ -88,6 +88,10 @@ const TABLE = {
     // caster's OWN trap cells pre-flight (DungeonBoard castable + cast_range_set_dungeon trap_cells), so a live
     // 107 means an ENEMY's INVISIBLE trap sits there — the abort honestly reveals it (accepted leak, cast.move).
     107: 'errors.cast_cell_trapped',
+    // 110 EUnhandledEffectKind — the spell level names an effect kind neither sink implements, so the door
+    // refuses rather than charge AP for nothing (cast.move sink tails). Not player-actionable, but silence
+    // would read as a dead button: the honest line says the cast did not happen and cost nothing.
+    110: 'errors.cast_effect_unsupported',
   },
   // #55 spell LEVEL-UP gates — the aborts fire in aresrpg_foundation::spell_book::upgrade (the MoveLocation
   // names the module `spell_book`), reached through character_spells::character_upgrade_spell.
@@ -150,10 +154,17 @@ const TABLE = {
     108: 'errors.fight_already_seated', // EAlreadySeated — join: this character already holds a seat in this exact fight (F-01)
     111: 'errors.fight_unclaimed_result', // ECharacterMarked — seat: an unopened FightResult sits on the character — open it first (F4, P1)
   },
-  // S-12f in-fight latch (fight_registry, a DIFFERENT module than `fight` — no collision risk). Every
-  // create/join door runs this: one character, one live fight at a time.
+  // The two sharded fight books, both DIFFERENT modules than `fight` — no collision risk. `fight_registry` is
+  // scope-keyed (it parents what a create derives); `fight_latch` is CHARACTER-keyed and answers the one
+  // question every create/join asks: is this character already fighting. Both families assert on chain that the
+  // PTB took the shard its key maps to, so a client that picked wrong aborts on 104 rather than touching a
+  // stranger's book — a stale bundle, not a player mistake, hence the plain refresh line.
   fight_registry: {
+    104: 'errors.fight_wrong_shard', // EWrongShard — this registry is not the shard the fight's scope maps to
+  },
+  fight_latch: {
     103: 'errors.fight_character_busy', // ECharacterInFight — create/join: this character is seated in ANOTHER live fight — settle/leave it first
+    104: 'errors.fight_wrong_shard', // EWrongShard — this latch is not the shard the character maps to (same fact, same copy)
   },
   // S-57 SETTLE→OPEN — the composed ONE-TX settlement door (`aresrpg_fight::settlement::settle_and_take`, ENGINE;
   // the MoveLocation module is `settlement`, colliding with nothing else mapped here). Only the two POSSESSION

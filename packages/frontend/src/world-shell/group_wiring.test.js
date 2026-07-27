@@ -420,11 +420,11 @@ describe('#614 — alt fight-entry refusals name the acting character, never col
     tx_error({ MoveAbort: { abortCode: code, location: { module } } }, { preflight: true })
 
   // Every one of these is a REAL, reachable refusal for an owned-alt join (engine::join's own asserts +
-  // the shared fight_registry latch) — each already has its own honest line in abort_copy.js's table.
+  // the character's fight_latch shard) — each already has its own honest line in abort_copy.js's table.
   const REASONS = [
     {
       label: 'already seated in another live fight',
-      refusal: abort('fight_registry', 103),
+      refusal: abort('fight_latch', 103),
       key: 'errors.fight_character_busy',
     },
     { label: 'the fight side is already full', refusal: abort('fight', 102), key: 'errors.fight_team_full' },
@@ -453,7 +453,7 @@ describe('#614 — alt fight-entry refusals name the acting character, never col
   })
 
   test('no resolved character name degrades honestly to the plain reason (never "undefined")', () => {
-    const named = name_alt_fight_refusal(abort('fight_registry', 103), null)
+    const named = name_alt_fight_refusal(abort('fight_latch', 103), null)
     expect(named.message).toBe(i18n.t('errors.fight_character_busy'))
     expect(named.message).not.toContain('undefined')
   })

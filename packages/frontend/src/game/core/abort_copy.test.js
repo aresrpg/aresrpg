@@ -171,8 +171,14 @@ describe('humanize_abort — fight create/join refusals (F4/F5)', () => {
     expect(humanize_abort(grpc_abort('fight', 112))).toBe(i18n.t('errors.tx_failed'))
   })
 
-  test('fight_registry 103 ECharacterInFight — a DIFFERENT module than "fight", no collision', () => {
-    expect(humanize_abort(grpc_abort('fight_registry', 103))).toBe(i18n.t('errors.fight_character_busy'))
+  test('fight_latch 103 ECharacterInFight — a DIFFERENT module than "fight", no collision', () => {
+    // "already fighting" is the CHARACTER-keyed latch's fact; it left fight_registry when the two books split.
+    expect(humanize_abort(grpc_abort('fight_latch', 103))).toBe(i18n.t('errors.fight_character_busy'))
+  })
+
+  test('either sharded book\'s 104 EWrongShard reads as a stale client, never as a player mistake', () => {
+    expect(humanize_abort(grpc_abort('fight_registry', 104))).toBe(i18n.t('errors.fight_wrong_shard'))
+    expect(humanize_abort(grpc_abort('fight_latch', 104))).toBe(i18n.t('errors.fight_wrong_shard'))
   })
 
   test("zones 108 ESpawnNotFound — the [R] engage door raced another player's claim on the same spawn", () => {
@@ -252,6 +258,12 @@ describe('humanize_abort — fight-cast door (aresrpg_fight::cast, act_cast)', (
   test('106 ECastsPerTarget — already hit this target casts_per_target times this turn (NEW)', () => {
     const out = humanize_abort(grpc_abort('cast', 106))
     expect(out).toBe(i18n.t('errors.cast_per_target_limit'))
+    expect(out).not.toBe(i18n.t('errors.tx_failed'))
+  })
+
+  test('110 EUnhandledEffectKind — an effect neither sink implements: refused, and nothing was spent', () => {
+    const out = humanize_abort(grpc_abort('cast', 110))
+    expect(out).toBe(i18n.t('errors.cast_effect_unsupported'))
     expect(out).not.toBe(i18n.t('errors.tx_failed'))
   })
 
@@ -579,7 +591,7 @@ describe('tx_error — the abort-111 marker-refusal hook (detection must not dep
       throw new Error('handler boom')
     })
     tx_error(grpc_abort('fight', 101)) // different code
-    tx_error(grpc_abort('fight_registry', 103)) // different module
+    tx_error(grpc_abort('fight_latch', 103)) // different module
     tx_error('a plain human message')
     tx_error(null)
     await flush()

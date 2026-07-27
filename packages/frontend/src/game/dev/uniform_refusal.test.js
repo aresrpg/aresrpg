@@ -6,7 +6,7 @@ import { describe, expect, test } from 'bun:test'
 import { first_uniform_refusal, uniform_refusal_sample_size } from './uniform_refusal.js'
 
 describe('first_uniform_refusal', () => {
-  const reason = 'SimulationError: fight_registry::ECharacterInFight (full refusal fingerprint)'
+  const reason = 'SimulationError: fight_latch::ECharacterInFight (full refusal fingerprint)'
 
   test('waits for the complete initial sample', () => {
     expect(first_uniform_refusal(Array(uniform_refusal_sample_size - 1).fill(reason))).toBeNull()
