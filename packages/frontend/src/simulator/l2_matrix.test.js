@@ -263,7 +263,13 @@ for (const row of CORPUS) {
         const stray = result.hits.filter(
           (amount) => amount < expectation.damage.per_effect_min || amount > expectation.damage.per_effect_max
         )
-        if (stray.length === 0) record(row, 'damage_bounds', 'passed')
+        // #965 — the band and the hits ride along on a PASS, because the bounds predicate alone cannot see a
+        // corpus folded flat at its floor (a floor is inside its own band). The variance assertion reads these.
+        if (stray.length === 0)
+          record(row, 'damage_bounds', 'passed', null, {
+            roll_band: expectation.damage.roll_band,
+            hits: result.hits,
+          })
         else
           disagree(
             row,
@@ -406,6 +412,26 @@ describe('L2 — the corpus-derived scenario matrix', () => {
     const impostor = cast_turn(opened, { ...row, object_id: String(row.id) }, lane_cell(opened.geometry, 2))
     expect(impostor.casts).toBe(0)
     expect(impostor.hp_after).toBe(impostor.hp_before)
+  })
+
+  test('VARIANCE — a published band rolls INSIDE itself, never folded to its floor (#965)', () => {
+    // #965's face: `normalize_effect` read `value` and dropped `value_max`, so every banded effect in the
+    // corpus resolved at its MINIMUM — the chain rolled 21–40 while the sim landed 21, every cast, forever.
+    // The `damage_bounds` template above is structurally blind to it: a floor is inside its own band, so the
+    // matrix stayed green through the whole defect. This is the assertion that was missing.
+    //
+    // Corpus-level and seed-fixed ON PURPOSE. One band is perfectly entitled to roll its own floor, so a
+    // per-row "must differ from min" check would be flaky — and a non-deterministic gate is theater. The real
+    // defect is categorical ("EVERY banded row lands exactly on its floor"), and that is what this measures.
+    const banded = ledger.filter(
+      (entry) => entry.template === 'damage_bounds' && entry.status === 'passed' && entry.detail?.roll_band
+    )
+    // Guard the guard: with no genuine roll band driven, the assertion below would pass vacuously.
+    expect(banded.length).toBeGreaterThan(0)
+    const off_floor = banded.filter((entry) =>
+      entry.detail.hits.some((amount) => amount > entry.detail.roll_band[0])
+    )
+    expect(off_floor.length).toBeGreaterThan(0)
   })
 
   test('COVERAGE TABLE', () => {
