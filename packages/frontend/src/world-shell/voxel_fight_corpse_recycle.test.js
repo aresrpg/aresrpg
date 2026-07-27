@@ -44,10 +44,13 @@ const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import(
 
 const FIGHT = '0xcorpse-recycle-fight'
 const CHAR = '0xc1'
+const event = (kind, fields) => ({
+  type: `0x0::fight_events::${kind}`,
+  parsedJson: { fight: FIGHT, ...fields },
+})
 
-/** A decoded-Fight-shaped object (fight_board_simdrive.test.js's harness shape) — `mob_hp` drives the
- *  poll-only death/revive: board_state.js derives `alive: Number(m.hp ?? 0) > 0` straight off this hp, no
- *  receipt/wave beat involved either way. */
+/** A decoded-Fight-shaped object (fight_board_simdrive.test.js's harness shape). The first read bootstraps
+ *  the live mob; the later positive-HP checkpoint proves an object read cannot resurrect its floored death. */
 const fight_object = (mob_hp) => ({
   id: FIGHT,
   width: 20,
@@ -94,7 +97,7 @@ const fight_object = (mob_hp) => ({
 })
 
 /** A recording BoardHandle stand-in — mirrors voxel_fight_beat_playback.test.js's make_board, plus a
- *  `removes` tap (that suite never needed it; this one's whole point is proving entity_remove fires TWICE). */
+ *  `removes` tap (that suite never needed it; this one's whole point is proving entity_remove fires once). */
 const make_board = () => {
   const calls = { beats: [], upserts: [], removes: [] }
   const beat_promise = () => {
@@ -167,8 +170,23 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
       const wired = await poll(() => board.calls.upserts.some((u) => u.id === 'mob-0'))
       expect(wired, 'the adapter never mounted mob-0').toBe(true)
 
-      // ── DEATH — poll-only (no receipt/wave beat behind it): sync_entities' fold discovers it, and V1 FLOORS it. ──
-      fight_store.getState().input({ type: 'snapshot', fight: fight_object(0), version: 6 })
+      // ── DEATH — poll early-copy (no presentation wave): sync_entities discovers the canonical Hit, and V1
+      // floors it. A second object snapshot is checkpoint-only, so it cannot be used to synthesize this edge. ──
+      fight_store.getState().input({
+        type: 'poll',
+        fight_id: FIGHT,
+        version: 6,
+        receipt: {
+          events: [
+            event('Hit', {
+              victim_is_mob: true,
+              victim_idx: 0,
+              amount: 30,
+              remaining_hp: 0,
+            }),
+          ],
+        },
+      })
       const died = await poll(() => board.calls.beats.some((b) => b.id === 'mob-0' && b.anim === 'death'))
       expect(died, 'the poll-only death was never folded into a death beat').toBe(true)
       const removed = await poll(() => board.calls.removes.includes('mob-0'))

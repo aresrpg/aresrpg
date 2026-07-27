@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "bun test src",
+    "test": "bun test src ./test",
     "prebuild": "test ! -f ../../scripts/check-constraints.sh || bash ../../scripts/check-constraints.sh",
     "build": "vite build",
     "postbuild": "node scripts/assert_clean_bundle.mjs",
