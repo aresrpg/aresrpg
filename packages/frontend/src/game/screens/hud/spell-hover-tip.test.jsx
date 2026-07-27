@@ -24,7 +24,7 @@ globalThis.localStorage ??= /** @type {any} */ ({ getItem: () => null, setItem()
 globalThis.requestAnimationFrame ??= () => 0
 globalThis.cancelAnimationFrame ??= () => {}
 
-const { DeckCluster } = await import('./DeckCluster.jsx')
+const { DeckCluster, deck_socket_key } = await import('./DeckCluster.jsx')
 const { seed_fight_core, reset_fight_core } = await import('../../../test_helpers/fight_core_harness.js')
 const { set_spell_corpus_for_test } = await import('../../data/spell_corpus.js')
 
@@ -190,4 +190,8 @@ test('pointer hover alone mounts the card until leave, including while the spell
   const left_while_selected = render_spell_bar()
   expect(left_while_selected).not.toContain('role="tooltip"')
   expect(left_while_selected).not.toContain('tt-spell-card')
+})
+
+test('duplicate spells derive distinct React keys from their ordered slots', () => {
+  expect(deck_socket_key('ember_ward', 0)).not.toBe(deck_socket_key('ember_ward', 1))
 })

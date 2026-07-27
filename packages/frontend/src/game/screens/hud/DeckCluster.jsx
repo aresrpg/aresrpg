@@ -63,6 +63,8 @@ const is_bare_hands = (w) => !!w && w.element === 2 && w.damage === 4 && w.ap_co
 const card_color = (spell_id, spell, seat) =>
   spell ? spell_category(seat_spell_row(seat, spell)).color : element_color(spell_element(spell_id))
 
+export const deck_socket_key = (spell_id, slot_index) => `${spell_id}-${slot_index}`
+
 // True while a text field owns focus — the number-key selection must stay inert while the player types in
 // chat / any input (typing law). Same guard the world keys use (embed_voxel / NpcPrompt).
 const is_typing = () => {
@@ -299,7 +301,7 @@ export function DeckCluster() {
             const affordable = my_turn && card.cost <= ap && !gate.on_cd && !gate.exhausted
             return (
               <SpellSocket
-                key={spell_id}
+                key={deck_socket_key(spell_id, i)}
                 keyCap={key_cap}
                 card={card}
                 color={color}
