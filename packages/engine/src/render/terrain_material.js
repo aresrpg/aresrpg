@@ -275,13 +275,12 @@ function build_terrain_material({
     // alphaTest cuts the transparent background: the cross-quad billboards (foliage) AND the cutout-leaf
     // holes (cutout — the D164 lacework) both carry per-texel alpha the material clips against. The opaque
     // canopy cubes deliberately skip this (they fill the leaf-texture holes with the flat leaf tone below).
+    // An alpha-CLIPPED fragment is fully opaque, so both classes keep the default depthWrite:true and the
+    // depth buffer arbitrates them per fragment. #1388: foliage alone once ran depthWrite:false, which left
+    // its own pass unarbitrated — one pool mesh draws every chunk's blades in SLOT order (chunk streaming
+    // order, unrelated to camera distance), so whichever blade rasterized LAST won and distant grass painted
+    // over near grass. Writing depth makes the pass order-invariant — pinned in pool_renderer.test.js.
     material.alphaTest = 0.5
-  }
-  if (variant === 'foliage') {
-    // Water reads viewport depth while its later transparent pass draws. Cross flora is non-solid, so it
-    // tests against terrain here without replacing the solid bed; pool_renderer restores its silhouette
-    // to the completed scene depth with a colorless pass after water for depth-composited post effects.
-    material.depthWrite = false
   }
   if (variant === 'liquid') {
     material.transparent = true
