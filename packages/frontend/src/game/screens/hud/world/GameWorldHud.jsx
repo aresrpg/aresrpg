@@ -253,13 +253,13 @@ export function GameWorldHud() {
         {/* S-67 — the shared player-action menu (chat name click / in-world nameplate click). Renders null
             until a seam sets a target; portals to <body>, so mounting it here just keeps it in the HUD tree. */}
         <PlayerActionMenu />
-        {/* PENDING-OUTCOME CHIP — REMOVED: the world HUD never surfaces internal settle state. The characters-panel
-            PendingOutcomeBadge (CharactersDrawer.jsx) remains the ONE manual-fallback surface for a genuinely
-            latched/dungeon-bound outcome (a stop-rule, tested — auto never improvises the settle_run leg);
-            the toast copy ("open it from your character panel") already points there. The common-case race that
-            used to flash this chip after a fight (a transient pre-flight settle failure whose retry stalled once
-            claim() stopped the ambient poll) is fixed at the root in fight_claim_latch.js's run_signal_settlement
-            (bounded self-driving liveness retry — no UI needed to observe it). */}
+        {/* PENDING-OUTCOME CHIP — REMOVED: the world HUD never surfaces internal settle state. Since #1383 a
+            settled fight resolves ITSELF (result_resolver.js re-simulates the open for free until it lands), so
+            there is nothing to surface in the normal case at all — no chip, and no toast either. The
+            characters-panel PendingOutcomeBadge (CharactersDrawer.jsx) is the last-resort press for a genuinely
+            STUCK result (circuit tripped / persistently refusing). The common-case race that used to flash this
+            chip after a fight is fixed at the root in fight_claim_latch.js's run_signal_settlement (bounded
+            self-driving liveness retry — no UI needed to observe it). */}
         {!fight_mode && <SelfPlate />}
         {/* PICK #3 (07-08, built 07-09 riders): the 3A TOP-STRIP COMPASS — cardinal ruler + camera-relative
             mob/resource pips off the chain-direct zone read, the zone discovered/REROLL-TTL line, and the
