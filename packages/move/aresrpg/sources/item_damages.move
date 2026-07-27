@@ -45,6 +45,22 @@ public fun has_damages(template: &ItemTemplate): bool {
   df::exists(item::template_uid(template), DamagesKey {})
 }
 
+/// REPLACE `template`'s damage lines wholesale (package-private — `admin::set_template_damages` calls it). Mirrors
+/// `item_stats::set_ranges`: overwrite in place when the DF exists, attach when it does not — so a weapon authored
+/// WITHOUT lines heals through the same door. An EMPTY `lines` NORMALIZES to detached, leaving exactly the state
+/// `create_template` produces for an empty `damages` argument — one home for "this template carries no lines", so
+/// `has_damages` can never answer `true` for a template with nothing in it.
+public(package) fun set_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
+  if (lines.is_empty()) {
+    lines.destroy_empty();
+    drop_damages(template);
+  } else if (has_damages(template)) {
+    *df::borrow_mut(item::template_uid_mut(template), DamagesKey {}) = lines;
+  } else {
+    attach(template, lines);
+  };
+}
+
 public fun damages(template: &ItemTemplate): &vector<ItemDamages> {
   df::borrow(item::template_uid(template), DamagesKey {})
 }
