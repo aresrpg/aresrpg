@@ -9,7 +9,6 @@
 // it drifts from canon, instead of silently shipping a mis-previewed ally spell.
 import { describe, expect, test } from 'bun:test'
 import i18next from 'i18next'
-
 import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
 import { effect_hits } from '@aresrpg/sim/spell_targeting'
 
