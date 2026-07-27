@@ -14,9 +14,8 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store } from '../src/store.js'
+import { committed_truth, create_fight_store } from '../src/store.js'
 import { board_view, engine_view } from '../src/project.js'
-import { committed_state } from '../src/fold.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -82,7 +81,7 @@ describe('#1210 — a committed corpse frees its cell for a trap', () => {
       1_200
     )
     for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, 1_300)
-    expect(committed_state(store.getState()).fighters.m0.alive).toBe(false)
+    expect(committed_truth(store.getState()).fighters.m0.alive).toBe(false)
     expect(engine_view(store.getState()).fighters.get('mob-0').committed_dead).toBe(true)
     expect(holds_the_cell(store.getState())).toBe(false)
   })
@@ -110,7 +109,7 @@ describe('#1210 — a committed corpse frees its cell for a trap', () => {
       1_100
     )
     // The intent is NOT committed truth, so the occupancy map the footprint filter reads still holds the cell.
-    expect(committed_state(store.getState()).fighters.m0.alive).toBe(true)
+    expect(committed_truth(store.getState()).fighters.m0.alive).toBe(true)
     expect(holds_the_cell(store.getState())).toBe(true)
   })
 
