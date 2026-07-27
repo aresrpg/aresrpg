@@ -101,6 +101,7 @@ entry fun gather(
   rare_template: &ItemTemplate,
   policy: &TransferPolicy<Item>,
   registry: &mut FightRegistry,
+  latch: &mut FightRegistry,
   protector_template: &MobTemplate,
   engine_version: &EngineVersion,
   config: &GameConfig,
@@ -110,7 +111,7 @@ entry fun gather(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator(r, ctx);
-  y119(world, kiosk, pkcap, character_id, zx, zy, node_index, template, rare_template, policy, registry, protector_template, engine_version, config, version, clock, &mut gen, ctx);
+  y119(world, kiosk, pkcap, character_id, zx, zy, node_index, template, rare_template, policy, registry, latch, protector_template, engine_version, config, version, clock, &mut gen, ctx);
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
@@ -126,6 +127,7 @@ fun y119(
   rare_template: &ItemTemplate,
   policy: &TransferPolicy<Item>,
   registry: &mut FightRegistry,
+  latch: &mut FightRegistry,
   protector_template: &MobTemplate,
   engine_version: &EngineVersion,
   config: &GameConfig,
@@ -206,7 +208,7 @@ fun y119(
     assert!(object::id(protector_template) == *pinned_protector.borrow(), EWrongProtector);
     let spawn_id = random::generate_u64(gen); // the ambush fight's per-world handle (identity)
     let group_seed = random::generate_u64(gen); // its mob-composition seed
-    fight::y47(registry, wid, spawn_id, world::seed(world), nx, nz, group_seed, kiosk, pkcap, character_id, protector_template, 1, config, version, engine_version, clock, ctx);
+    fight::y47(registry, latch, wid, spawn_id, world::seed(world), nx, nz, group_seed, kiosk, pkcap, character_id, protector_template, 1, config, version, engine_version, clock, ctx);
     spawn_id
   } else 0;
 
@@ -287,6 +289,7 @@ public fun gather_for_testing(
   rare_template: &ItemTemplate,
   policy: &TransferPolicy<Item>,
   registry: &mut FightRegistry,
+  latch: &mut FightRegistry,
   protector_template: &MobTemplate,
   engine_version: &EngineVersion,
   config: &GameConfig,
@@ -295,7 +298,7 @@ public fun gather_for_testing(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator_for_testing();
-  y119(world, kiosk, pkcap, character_id, zx, zy, node_index, template, rare_template, policy, registry, protector_template, engine_version, config, version, clock, &mut gen, ctx);
+  y119(world, kiosk, pkcap, character_id, zx, zy, node_index, template, rare_template, policy, registry, latch, protector_template, engine_version, config, version, clock, &mut gen, ctx);
 }
 
 #[test_only]

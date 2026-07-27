@@ -19,13 +19,15 @@ use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
 
-/// The registry SHARD a scope maps to — `init` shares one per shard, so a suite resolves through the directory
-/// exactly as a client does.
-fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightRegistry) {
   let book = sc.take_shared<FightShards>();
-  let shard = fight_registry::shard_for(&book, scope);
+  let scope_shard = fight_registry::shard_for(&book, scope);
+  let latch_shard = fight_registry::shard_for(&book, character);
   ts::return_shared(book);
-  ts::take_shared_by_id<FightRegistry>(sc, shard)
+  (
+    ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
+    ts::take_shared_by_id<FightRegistry>(sc, latch_shard),
+  )
 }
 
 // ── mirrored error values ──
@@ -79,7 +81,7 @@ fun do_gather(sc: &mut Scenario, who: address, cid: ID, zx: u32, zy: u32, node_i
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let template = sc.take_shared_by_id<ItemTemplate>(template_id);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = shard_of(sc, object::id(&w));
+  let (mut reg, mut latch) = shards_for(sc, object::id(&w), cid);
   let ptmpl = sc.take_shared<MobTemplate>();
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
@@ -87,10 +89,10 @@ fun do_gather(sc: &mut Scenario, who: address, cid: ID, zx: u32, zy: u32, node_i
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
   // default test worlds carry NO rare link → settle_rare returns early; the base template is a harmless rare dummy
-  gathering::gather_for_testing(&mut w, &mut k, &pkcap, cid, zx, zy, node_index, &template, &template, &policy, &mut reg, &ptmpl, &eng_ver, &cfg, &ver, &clk, sc.ctx());
+  gathering::gather_for_testing(&mut w, &mut k, &pkcap, cid, zx, zy, node_index, &template, &template, &policy, &mut reg, &mut latch, &ptmpl, &eng_ver, &cfg, &ver, &clk, sc.ctx());
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
-  ts::return_shared(template); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver);
+  ts::return_shared(template); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver);
 }
 
 /// Gather passing a DISTINCT rare template (linked-resource path — the real `settle_rare` draw runs).
@@ -102,17 +104,17 @@ fun do_gather_with_rare(sc: &mut Scenario, who: address, cid: ID, zx: u32, zy: u
   let template = sc.take_shared_by_id<ItemTemplate>(base_tid);
   let rare = sc.take_shared_by_id<ItemTemplate>(rare_tid);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = shard_of(sc, object::id(&w));
+  let (mut reg, mut latch) = shards_for(sc, object::id(&w), cid);
   let ptmpl = sc.take_shared<MobTemplate>();
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
-  gathering::gather_for_testing(&mut w, &mut k, &pkcap, cid, zx, zy, node_index, &template, &rare, &policy, &mut reg, &ptmpl, &eng_ver, &cfg, &ver, &clk, sc.ctx());
+  gathering::gather_for_testing(&mut w, &mut k, &pkcap, cid, zx, zy, node_index, &template, &rare, &policy, &mut reg, &mut latch, &ptmpl, &eng_ver, &cfg, &ver, &clk, sc.ctx());
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
-  ts::return_shared(template); ts::return_shared(rare); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver);
+  ts::return_shared(template); ts::return_shared(rare); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver);
 }
 
 /// Count items locked in `who`'s personal kiosk (character + minted resource stacks).
@@ -267,7 +269,7 @@ fun gather_random_entry() {
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let template = sc.take_shared_by_id<ItemTemplate>(tid);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = shard_of(&sc, object::id(&w));
+  let (mut reg, mut latch) = shards_for(&sc, object::id(&w), cid);
   let ptmpl = sc.take_shared<MobTemplate>();
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
@@ -275,10 +277,10 @@ fun gather_random_entry() {
   let rr = sc.take_shared<Random>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(2000 + HUGE_ELAPSED);
-  gathering::gather(&mut w, &mut k, &pkcap, cid, zx, zy, 0, &template, &template, &policy, &mut reg, &ptmpl, &eng_ver, &cfg, &ver, &clk, &rr, sc.ctx());
+  gathering::gather(&mut w, &mut k, &pkcap, cid, zx, zy, 0, &template, &template, &policy, &mut reg, &mut latch, &ptmpl, &eng_ver, &cfg, &ver, &clk, &rr, sc.ctx());
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
-  ts::return_shared(template); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
+  ts::return_shared(template); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
   sc.end();
 }
 
@@ -309,17 +311,17 @@ fun do_gather_with_protector(sc: &mut Scenario, who: address, cid: ID, zx: u32, 
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let template = sc.take_shared_by_id<ItemTemplate>(template_id);
   let policy = sc.take_shared<TransferPolicy<Item>>();
-  let mut reg = shard_of(sc, object::id(&w));
+  let (mut reg, mut latch) = shards_for(sc, object::id(&w), cid);
   let ptmpl = sc.take_shared_by_id<MobTemplate>(ptmpl_id);
   let eng_ver = sc.take_shared<EngineVersion>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
-  gathering::gather_for_testing(&mut w, &mut k, &pkcap, cid, zx, zy, node_index, &template, &template, &policy, &mut reg, &ptmpl, &eng_ver, &cfg, &ver, &clk, sc.ctx());
+  gathering::gather_for_testing(&mut w, &mut k, &pkcap, cid, zx, zy, node_index, &template, &template, &policy, &mut reg, &mut latch, &ptmpl, &eng_ver, &cfg, &ver, &clk, sc.ctx());
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
-  ts::return_shared(template); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver);
+  ts::return_shared(template); ts::return_shared(policy); ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(ptmpl); ts::return_shared(eng_ver); ts::return_shared(cfg); ts::return_shared(ver);
 }
 
 /// Set the world's protector-ambush rate (admin + version gated) — 10_000 bp = always fires.

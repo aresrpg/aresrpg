@@ -10,7 +10,7 @@
 module aresrpg::results_tests;
 
 use aresrpg::{config::GameConfig, fight, item::{Item, ItemTemplate}, results::{Self, FightResult}, test_world, version::Version};
-use aresrpg_fight::{mob, settlement};
+use aresrpg_fight::{fight_registry::{Self, FightRegistry, FightShards}, mob, settlement};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
 use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}, transfer_policy::TransferPolicy};
@@ -18,8 +18,16 @@ use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as t
 fun fid(): ID { object::id_from_address(@0xF16) }
 fun wid(): ID { object::id_from_address(@0x301D) }
 
+fun latch_for(sc: &Scenario, character: ID): FightRegistry {
+  let book = sc.take_shared<FightShards>();
+  let shard = fight_registry::shard_for(&book, character);
+  ts::return_shared(book);
+  ts::take_shared_by_id<FightRegistry>(sc, shard)
+}
+
 /// Boot the world, mint a character, and author a resource loot template. Returns (cid, loot_template_id).
 fun stage(sc: &mut Scenario): (ID, ID) {
+  fight_registry::test_init(sc.ctx());
   test_world::boot(sc);
   let cid = test_world::mint_character(sc, test_world::owner());
   let loot_tid = test_world::make_resource_template(sc);
@@ -57,6 +65,7 @@ fun open_settles_reads_mints_and_burns() {
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
     let ver = sc.take_shared<Version>();
+    let mut latch = latch_for(&sc, cid);
     // one loot line at 100% (chance_bp 10000), exactly 1 unit; mob_count 1 → rolled once
     let loot = vector[mob::new_loot_entry(loot_tid, 10_000, 1, 1)];
     let outcome = settlement::outcome_for_testing(
@@ -64,8 +73,8 @@ fun open_settles_reads_mints_and_burns() {
       1 /*outcome*/, 100 /*final_hp*/, 50 /*xp_share*/, 0 /*aged_bp*/, 0 /*chance*/, 1 /*mob_count*/,
       loot, false /*pvp*/, 0 /*team*/, option::none() /*winner_team*/, 100 /*loot_mult*/, sc.ctx(),
     );
-    results::open_for_testing(outcome, &mut k, &pkcap, &cfg, &ver, 2000, sc.ctx());
-    ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
+    results::open_for_testing(outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, 2000, sc.ctx());
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
   };
 
   // CLAIM: read every getter, mint the rolled loot, then burn the emptied ticket
@@ -116,12 +125,13 @@ fun loot_minted_gear_carries_rolled_stats() {
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
     let ver = sc.take_shared<Version>();
+    let mut latch = latch_for(&sc, cid);
     let loot = vector[mob::new_loot_entry(gear_tid, 10_000, 1, 1)];
     let outcome = settlement::outcome_for_testing(
       fight::y45(), fid(), wid(), cid, 1, 100, 50, 0, 0, 2 /*mob_count*/, loot, false, 0, option::none(), 100, sc.ctx(),
     );
-    results::open_for_testing(outcome, &mut k, &pkcap, &cfg, &ver, 2000, sc.ctx());
-    ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
+    results::open_for_testing(outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, 2000, sc.ctx());
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
   };
 
   // CLAIM both units
@@ -177,15 +187,16 @@ fun random_open_doors() {
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
     let ver = sc.take_shared<Version>();
+    let mut latch = latch_for(&sc, cid);
     let rr = sc.take_shared<Random>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(3000);
     let o = settlement::outcome_for_testing(
       fight::y45(), fid(), wid(), cid, 2, 0, 0, 0, 0, 0, vector[], true, 0, option::some(1), 100, sc.ctx(),
     );
-    results::open(o, &mut k, &pkcap, &cfg, &ver, &clk, &rr, sc.ctx());
+    results::open(o, &mut latch, &mut k, &pkcap, &cfg, &ver, &clk, &rr, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
   };
 
   // open_taken (public PTB-composition twin) — a second pvp outcome
@@ -195,15 +206,16 @@ fun random_open_doors() {
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
     let ver = sc.take_shared<Version>();
+    let mut latch = latch_for(&sc, cid);
     let rr = sc.take_shared<Random>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(4000);
     let o = settlement::outcome_for_testing(
       fight::y45(), fid(), wid(), cid, 2, 0, 0, 0, 0, 0, vector[], true, 1, option::some(1), 100, sc.ctx(),
     );
-    results::open_taken(o, &mut k, &pkcap, &cfg, &ver, &clk, &rr, sc.ctx());
+    results::open_taken(o, &mut latch, &mut k, &pkcap, &cfg, &ver, &clk, &rr, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
+    ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(rr);
   };
   sc.end();
 }

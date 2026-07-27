@@ -90,6 +90,7 @@ fun placement_boundary_zero_ready_sweeps_every_seat() {
   let version = sc.take_shared<Version>();
   let creator_id = object::id_from_address(CHAR);
   let joiner_id = object::id_from_address(CHAR2);
+  assert!(aresrpg_fight::fight_registry::shard_index(creator_id) != aresrpg_fight::fight_registry::shard_index(joiner_id));
   let (mut creator_latch, mut joiner_latch) = tsregs_for(&sc, creator_id, joiner_id);
   fight::join_latched_for_testing(
     &mut fight,

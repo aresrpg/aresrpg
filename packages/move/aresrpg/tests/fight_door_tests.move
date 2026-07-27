@@ -39,6 +39,17 @@ fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
   ts::take_shared_by_id<FightRegistry>(sc, shard)
 }
 
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightRegistry) {
+  let book = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&book, scope);
+  let latch_shard = fight_registry::shard_for(&book, character);
+  ts::return_shared(book);
+  (
+    ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
+    ts::take_shared_by_id<FightRegistry>(sc, latch_shard),
+  )
+}
+
 // ── mirrored error values (location disambiguates the aborting module) ──
 const ENGINE_EZeroHp: u64 = 101; // aresrpg_fight::fight — §17.23 (create/join refuse a 0-HP snapshot)
 const ENotDefeat: u64 = 113; // aresrpg::fight — release_group: the seat WON (only defeat releases)
@@ -202,24 +213,23 @@ fun do_create(sc: &mut Scenario, who: address, cid: ID, spawn_id: u64, mob_tid: 
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
   let ever = sc.take_shared<EVersion>();
-  let mut reg = shard_of(sc, object::id(&w));
+  let (mut reg, mut latch) = shards_for(sc, object::id(&w), cid);
   let tmpl = ts::take_shared_by_id<MobTemplate>(sc, mob_tid);
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
   let ticket = zones::claim_mob_group(&mut w, &mut k, &pkcap, cid, spawn_id, &cfg, &ver, &clk);
-  fight_doors::create(&mut reg, ticket, &w, &mut k, &pkcap, &tmpl, true, option::none(), vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+  fight_doors::create(&mut reg, &mut latch, ticket, &w, &mut k, &pkcap, &tmpl, true, option::none(), vector[], &cfg, &ver, &ever, &clk, sc.ctx());
   clk.destroy_for_testing();
   ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
-  ts::return_shared(reg); ts::return_shared(tmpl);
+  ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(tmpl);
 }
 
 /// Join the (single) shared Fight through the REAL `join` door as `who` (own kiosk `kid`).
 fun do_join(sc: &mut Scenario, who: address, kid: ID, cid: ID, now: u64) {
   sc.next_tx(who);
   let mut f = sc.take_shared<Fight>();
-  let world_id = { let w = sc.take_shared<World>(); let id = object::id(&w); ts::return_shared(w); id };
-  let mut reg = shard_of(sc, world_id);
+  let mut latch = shard_of(sc, cid);
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -227,9 +237,9 @@ fun do_join(sc: &mut Scenario, who: address, kid: ID, cid: ID, now: u64) {
   let ever = sc.take_shared<EVersion>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
-  fight_doors::join(&mut f, &mut reg, &mut k, &pkcap, cid, option::none(), vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+  fight_doors::join(&mut f, &mut latch, &mut k, &pkcap, cid, option::none(), vector[], &cfg, &ver, &ever, &clk, sc.ctx());
   clk.destroy_for_testing();
-  ts::return_shared(f); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+  ts::return_shared(f); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
 }
 
@@ -249,19 +259,19 @@ fun world_id(sc: &mut Scenario): ID {
 fun lose_and_settle(sc: &mut Scenario, cid: ID, zx: u32, zy: u32, index: u64, release: bool, now: u64) {
   sc.next_tx(test_world::owner());
   let mut f = sc.take_shared<Fight>();
-  let mut reg = sc.take_shared<FightRegistry>();
   let mut w = sc.take_shared<World>();
+  let (reg, mut latch) = shards_for(sc, object::id(&w), cid);
   let mut k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
   let ever = sc.take_shared<EVersion>();
   actions::abandon_for_testing(&mut f, cid, &ever, now, test_world::owner());
-  let outcome = settlement::settle_and_take(f, cid, &mut reg, &ever, sc.ctx());
+  let outcome = settlement::settle_and_take(f, cid, &ever, sc.ctx());
   assert_eq!(settlement::outcome(&outcome), engine::status_defeat()); // the mobs won
   if (release) fight_doors::release_group(&mut w, &reg, &outcome, zx, zy, index, &cfg, &ver);
-  results::open_for_testing(outcome, &mut k, &pkcap, &cfg, &ver, now, sc.ctx());
-  ts::return_shared(reg); ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
+  results::open_for_testing(outcome, &mut latch, &mut k, &pkcap, &cfg, &ver, now, sc.ctx());
+  ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(w); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
 }
 

@@ -32,6 +32,17 @@ fun shard_of(sc: &Scenario, scope: ID): FightRegistry {
   ts::take_shared_by_id<FightRegistry>(sc, shard)
 }
 
+fun shards_for(sc: &Scenario, scope: ID, character: ID): (FightRegistry, FightRegistry) {
+  let book = sc.take_shared<FightShards>();
+  let scope_shard = fight_registry::shard_for(&book, scope);
+  let latch_shard = fight_registry::shard_for(&book, character);
+  ts::return_shared(book);
+  (
+    ts::take_shared_by_id<FightRegistry>(sc, scope_shard),
+    ts::take_shared_by_id<FightRegistry>(sc, latch_shard),
+  )
+}
+
 const OWNER: address = @0xA;
 const EWrongBrand: u64 = 104; // config's brand-gate abort (mirror)
 
@@ -293,7 +304,7 @@ fun make_mob_template(sc: &mut Scenario): ID {
 /// caller. Fabricated scope/nonce/seed — the door needs no world (the dungeon module verifies the pass upstream).
 fun do_create_dungeon_fight<W: drop>(sc: &mut Scenario, w: W, kid: ID, cid: ID, mob_tid: ID) {
   sc.next_tx(OWNER);
-  let mut reg = shard_of(sc, object::id_from_address(@0x5C09E));
+  let (mut reg, mut latch) = shards_for(sc, object::id_from_address(@0x5C09E), cid);
   let mut k = ts::take_shared_by_id<Kiosk>(sc, kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -302,9 +313,9 @@ fun do_create_dungeon_fight<W: drop>(sc: &mut Scenario, w: W, kid: ID, cid: ID, 
   let tmpl = ts::take_shared_by_id<MobTemplate>(sc, mob_tid);
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(1000);
-  fight_doors::create_dungeon_fight_brand(w, &mut reg, object::id_from_address(@0x5C09E), 0, 7, 0, 0, &mut k, &pkcap, cid, vector[], &tmpl, 1, &cfg, &ver, &ever, &clk, sc.ctx());
+  fight_doors::create_dungeon_fight_brand(w, &mut reg, &mut latch, object::id_from_address(@0x5C09E), 0, 7, 0, 0, &mut k, &pkcap, cid, vector[], &tmpl, 1, &cfg, &ver, &ever, &clk, sc.ctx());
   clk.destroy_for_testing();
-  ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+  ts::return_shared(reg); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
   ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever); ts::return_shared(tmpl);
 }
 
@@ -333,7 +344,7 @@ fun dungeon_fight_brand_doors_pass() {
   sc.next_tx(@0xB1);
   {
     let mut f = sc.take_shared<Fight>();
-    let mut reg = shard_of(&sc, object::id_from_address(@0x5C09E));
+    let mut latch = shard_of(&sc, joiner_cid);
     let mut k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
     let pkcap = sc.take_from_sender<PersonalKioskCap>();
     let cfg = sc.take_shared<GameConfig>();
@@ -341,9 +352,9 @@ fun dungeon_fight_brand_doors_pass() {
     let ever = sc.take_shared<EVersion>();
     let mut clk = clock::create_for_testing(sc.ctx());
     clk.set_for_testing(1000);
-    fight_doors::join_vouched_brand(BrandA {}, &mut f, &mut reg, &mut k, &pkcap, joiner_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+    fight_doors::join_vouched_brand(BrandA {}, &mut f, &mut latch, &mut k, &pkcap, joiner_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
     clk.destroy_for_testing();
-    ts::return_shared(f); ts::return_shared(reg); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(f); ts::return_shared(latch); ts::return_shared(k); sc.return_to_sender(pkcap);
     ts::return_shared(cfg); ts::return_shared(ver); ts::return_shared(ever);
   };
   sc.end();
@@ -384,7 +395,7 @@ fun join_vouched_brand_wrong_witness_aborts() {
   do_create_dungeon_fight(&mut sc, BrandA {}, creator_kid, creator_cid, mob_tid);
   sc.next_tx(@0xB1);
   let mut f = sc.take_shared<Fight>();
-  let mut reg = shard_of(&sc, object::id_from_address(@0x5C09E));
+  let mut latch = shard_of(&sc, joiner_cid);
   let mut k = ts::take_shared_by_id<Kiosk>(&sc, joiner_kid);
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
   let cfg = sc.take_shared<GameConfig>();
@@ -392,7 +403,7 @@ fun join_vouched_brand_wrong_witness_aborts() {
   let ever = sc.take_shared<EVersion>();
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(1000);
-  fight_doors::join_vouched_brand(BrandB {}, &mut f, &mut reg, &mut k, &pkcap, joiner_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
+  fight_doors::join_vouched_brand(BrandB {}, &mut f, &mut latch, &mut k, &pkcap, joiner_cid, vector[], &cfg, &ver, &ever, &clk, sc.ctx());
   abort 0
 }
 

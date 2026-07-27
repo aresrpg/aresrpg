@@ -60,6 +60,7 @@ public fun dial_snapshot(config: &GameConfig): Dials {
 /// derived-address claim on `(world, spawn_id)`.
 public fun create(
   registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   ticket: zones::GroupTicket,
   world: &World,
   kiosk: &mut Kiosk,
@@ -88,7 +89,7 @@ public fun create(
   let (zx, zy) = game_world::zone_of(world, anchor_x, anchor_z);
   let round = zones::group_round(world, zx, zy, spawn_id);
   engine::create_round(
-    FightBrand {}, registry, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
+    FightBrand {}, registry, latch, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
     is_public, party_id, false, &mob_template::y69(mob_tmpl), group_size, group_seed,
     t_template, creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
   );
@@ -183,7 +184,7 @@ public fun release_group(
 /// public/party gate.
 public fun join(
   fight: &mut Fight,
-  registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -200,7 +201,7 @@ public fun join(
   version.assert_enabled();
   let (joiner, joiner_lines) = y117(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
   y116(kiosk, pkcap, character_id, version); // PvM — unfinished business
-  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, option::none(), joiner_party, 0, false, engine_version, ctx);
+  engine::join(FightBrand {}, fight, latch, joiner, joiner_lines, option::none(), joiner_party, 0, false, engine_version, ctx);
 }
 
 // ╔════════════════ [ Dungeon / protector doors (package-internal — dungeon.move / gathering.move) ] ═ ]
@@ -211,6 +212,7 @@ public fun join(
 /// dirty-counter + builds the snapshot + calls the engine branded.
 public(package) fun y46(
   registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -234,7 +236,7 @@ public(package) fun y46(
   // content; re-rolling means re-running, which costs KEYS — the gate is the key burn).
   let group_seed = y118(scope) ^ nonce;
   engine::create(
-    FightBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
+    FightBrand {}, registry, latch, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
     false, option::none(), true, &mob_template::y69(mob_tmpl), group_size, group_seed,
     mob_template::template_id(mob_tmpl), creator, creator_lines, option::none(), dial_snapshot(config), engine_version, clock, ctx,
   );
@@ -250,6 +252,7 @@ public(package) fun y46(
 /// gatherer, so a player already in a fight never reverts their harvest here.
 public(package) fun y47(
   registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   world_id: ID,
   spawn_id: u64,
   world_seed: u64,
@@ -270,7 +273,7 @@ public(package) fun y47(
   let (creator, creator_lines) = y117(kiosk, pkcap, character_id, vector[], config, clock.timestamp_ms());
   y116(kiosk, pkcap, character_id, version); // PvM ambush — the unfinished-business mark applies
   engine::create(
-    FightBrand {}, registry, world_id, spawn_id, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
+    FightBrand {}, registry, latch, world_id, spawn_id, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
     false, option::none(), false, &mob_template::y69(protector_tmpl), group_size, group_seed,
     mob_template::template_id(protector_tmpl), creator, creator_lines, option::none(), dial_snapshot(config), engine_version, clock, ctx,
   );
@@ -283,7 +286,7 @@ public(package) fun y47(
 /// its own seats — this door serves the in-package dungeon only.)
 public(package) fun y48(
   fight: &mut Fight,
-  registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -298,7 +301,7 @@ public(package) fun y48(
   version.assert_enabled();
   y116(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the unfinished-business mark applies
   let (joiner, joiner_lines) = y117(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
-  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, option::none(), option::none(), 0, true, engine_version, ctx);
+  engine::join(FightBrand {}, fight, latch, joiner, joiner_lines, option::none(), option::none(), 0, true, engine_version, ctx);
 }
 
 // ╔════════════════ [ Dungeon brand doors (2026-07-13 split — the aresrpg_dungeon witness gate) ] ═ ]
@@ -309,6 +312,7 @@ public(package) fun y48(
 public fun create_dungeon_fight_brand<W: drop>(
   _: W,
   registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   scope: ID,
   nonce: u64,
   world_seed: u64,
@@ -327,7 +331,7 @@ public fun create_dungeon_fight_brand<W: drop>(
   ctx: &TxContext,
 ) {
   config.assert_dungeon_brand<W>();
-  y46(registry, scope, nonce, world_seed, anchor_x, anchor_z, kiosk, pkcap, character_id, raised_spell_ids, mob_tmpl, group_size, config, version, engine_version, clock, ctx);
+  y46(registry, latch, scope, nonce, world_seed, anchor_x, anchor_z, kiosk, pkcap, character_id, raised_spell_ids, mob_tmpl, group_size, config, version, engine_version, clock, ctx);
 }
 
 /// BRAND TWIN (2026-07-13 dungeon split): the ROSTER room-fight door for the PINNED dungeon sibling (#1110 ⑤).
@@ -370,7 +374,7 @@ public fun open_room_group_brand<W: drop>(
 public fun join_vouched_brand<W: drop>(
   _: W,
   fight: &mut Fight,
-  registry: &mut fight_registry::FightRegistry,
+  latch: &mut fight_registry::FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   character_id: ID,
@@ -382,7 +386,7 @@ public fun join_vouched_brand<W: drop>(
   ctx: &TxContext,
 ) {
   config.assert_dungeon_brand<W>();
-  y48(fight, registry, kiosk, pkcap, character_id, raised_spell_ids, config, version, engine_version, clock, ctx);
+  y48(fight, latch, kiosk, pkcap, character_id, raised_spell_ids, config, version, engine_version, clock, ctx);
 }
 
 // ╔════════════════ [ Snapshot assembly + dirty mark (the game-authentic inputs) ] ═ ]

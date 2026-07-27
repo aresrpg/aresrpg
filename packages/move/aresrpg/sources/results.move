@@ -12,7 +12,7 @@ module aresrpg::results;
 
 use aresrpg::{character_link, config::GameConfig, version::Version, fight};
 use aresrpg::{extension, item::{Self, Item, ItemTemplate}};
-use aresrpg_fight::{mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
+use aresrpg_fight::{fight_registry::FightRegistry, mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
 use aresrpg_foundation::prng;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, transfer_policy::TransferPolicy};
@@ -62,6 +62,7 @@ public struct ResultBurned has copy, drop { result: ID }
 /// checklist, and mint the `FightResult` claim ticket to yourself. Once, anytime, no deadline. Terminal `&Random`.
 entry fun open(
   outcome: FightOutcome,
+  latch: &mut FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -71,7 +72,7 @@ entry fun open(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator(r, ctx);
-  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut gen, ctx);
+  y131(outcome, latch, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut gen, ctx);
 }
 
 /// PTB-composition twin of `open` (`entry` cannot consume a prior command's result): ONE tx chains
@@ -83,6 +84,7 @@ entry fun open(
 #[allow(lint(public_random))]
 public fun open_taken(
   outcome: FightOutcome,
+  latch: &mut FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -92,12 +94,13 @@ public fun open_taken(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator(r, ctx);
-  y131(outcome, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut gen, ctx);
+  y131(outcome, latch, kiosk, pkcap, config, version, clock.timestamp_ms(), &mut gen, ctx);
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y131(
   outcome: FightOutcome,
+  latch: &mut FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -108,6 +111,8 @@ fun y131(
 ) {
   config.assert_enabled();
   version.assert_enabled();
+  assert!(settlement::brand(&outcome) == aresrpg::fight::y45(), EWrongBrand);
+  settlement::release_latch(latch, &outcome);
   // THE BRAND ASSERT — the whole trust mechanism: only outcomes of fights created through core's own doors
   // (aresrpg::fight's private FightBrand witness) are honored. A foreign consumer's outcome is refused here.
   let (brand, fight, world, character_id, outcome_status, final_hp, xp_share, aged_bp, chance, mob_count, loot, pvp, team, winner_team, loot_mult) =
@@ -336,6 +341,7 @@ public fun mint_rolled_for_testing(
 #[test_only]
 public fun open_for_testing(
   outcome: FightOutcome,
+  latch: &mut FightRegistry,
   kiosk: &mut Kiosk,
   pkcap: &PersonalKioskCap,
   config: &GameConfig,
@@ -344,5 +350,5 @@ public fun open_for_testing(
   ctx: &mut TxContext,
 ) {
   let mut gen = random::new_generator_from_seed_for_testing(vector[42u8]);
-  y131(outcome, kiosk, pkcap, config, version, now_ms, &mut gen, ctx);
+  y131(outcome, latch, kiosk, pkcap, config, version, now_ms, &mut gen, ctx);
 }
