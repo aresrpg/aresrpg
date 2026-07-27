@@ -146,3 +146,40 @@ describe('#1248 — the placement selector', () => {
     expect(armed_at(placements, 42, 0)).toBe(true)
   })
 })
+
+// AN AoE TRAP carries its whole zone in `cells`, but only its ANCHOR was ever a cast target. If every zone cell
+// got a vote, the cells with no placement would each return the permissive default and the sequencing rule would
+// be defeated for every AoE trap — #1219, back again, for exactly the shape #1047 reports.
+describe('#1248 — an AoE trap is sequenced by its ANCHOR, not by its zone', () => {
+  const ZONE = [X, enc(8, 4), enc(8, 6), enc(7, 5), enc(9, 5)]
+
+  const fold_zone_armed = (rows) => {
+    const store = create_fight_store()
+    store
+      .getState()
+      .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: W } } })
+    store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 }, 1_000)
+    store.getState().input(
+      {
+        type: 'predicted',
+        basis_version: 6,
+        intent_id: 'aoe1',
+        actions: [{ kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: X, ap_cost: 2 }],
+        beats: [{ kind: 'cast', at: 0, duration: 100, payload: {} }],
+        place_traps: ZONE,
+      },
+      1_100
+    )
+    store.getState().input({ type: 'receipt', version: 7, receipt: { events: rows } }, 1_200)
+    for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, 1_300)
+    return !engine_view(store.getState()).my_traps.includes(X)
+  }
+
+  test('a walk BEFORE the anchor cast leaves the whole zone armed', () => {
+    expect(fold_zone_armed([walk_past_x(), cast_x()])).toBe(false)
+  })
+
+  test('a walk AFTER the anchor cast still retires it', () => {
+    expect(fold_zone_armed([cast_x(), walk_past_x()])).toBe(true)
+  })
+})

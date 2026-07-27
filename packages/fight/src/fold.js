@@ -364,7 +364,13 @@ export const recompute = (draft, now) => {
   const placements = placements_by_anchor(authoritative_tail, (entry) =>
     entry.kind === 'Cast' ? entry.target_cell : null
   )
-  const after_placement = (entry, trap) => trap.cells.some((cell) => armed_at(placements, cell, entry.at))
+  // A trap row carries its WHOLE zone in `cells`, but only its ANCHOR was ever a cast target — so the anchor is
+  // the one cell that can carry a placement, and the zone's other cells must not each vote (they have no
+  // placement, so they would each return the permissive default and defeat the rule for every AoE trap).
+  const after_placement = (entry, trap) => {
+    const anchor = (trap.cells ?? []).find((cell) => placements.has(Number(cell)))
+    return anchor == null || armed_at(placements, anchor, entry.at)
+  }
   const occupied_cells = new Set(
     Object.values(chain_committed.fighters ?? {})
       .filter((fighter) => fighter.cell != null)
