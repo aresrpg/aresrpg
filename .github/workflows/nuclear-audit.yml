@@ -12,7 +12,7 @@ on:
       - 'api/**'
       - 'scripts/nuclear_audit.mjs'
       - 'scripts/fixtures/nuclear_audit_baseline.json'
-      - 'scripts/fixtures/nuclear_audit.test.mjs'
+      - 'scripts/fixtures/nuclear_audit_tests.mjs'
       - 'scripts/fixtures/nuclear_audit/**'
       - '.github/workflows/nuclear-audit.yml'
   schedule:
@@ -33,6 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: prove the three scanners and ratchet semantics
-        run: node --test scripts/fixtures/nuclear_audit.test.mjs
+        run: node --test scripts/fixtures/nuclear_audit_tests.mjs
       - name: census clones, import fan-out, and repeated literals
         run: node scripts/nuclear_audit.mjs
