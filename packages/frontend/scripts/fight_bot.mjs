@@ -148,6 +148,7 @@ try {
           base: BASE,
           keys_path: KEYS_PATH,
           seat_names: SEAT_NAMES,
+          rpc_url: RPC_URL,
           log,
           on_seat,
           on_evidence,

@@ -25,7 +25,7 @@ import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 
 import { await_seams, open_page, wait_for } from './seam.mjs'
 import { make_seat } from './drive.mjs'
-import { provision_fight, tx_digests } from './world_search.mjs'
+import { chain_strand, provision_fight, tx_digests } from './world_search.mjs'
 
 /**
  * Read ONE seat's secret from the local key file. The value never leaves this function's caller as text.
@@ -201,18 +201,43 @@ const place_all = async ({ seats, log, on_evidence }) => {
  * So the seat is freed BEFORE the scan, and the read is the signal: a seat holding nothing answers `no active
  * fight` and this costs one read. The rig wants a free seat, never that fight's rewards.
  */
-export const release_strand = async ({ seat, log, settle_ms = 60_000 }) => {
-  // Polled slowly on purpose: on a CLEAN seat this wait ends in a timeout, and the whole cost of proving the
-  // seat is free should be a handful of reads rather than a hundred and fifty.
-  const held = await wait_for(seat.client, (read) => !!read.ok, { timeout_ms: settle_ms, poll_ms: 2000 })
-  if (!held) return { ok: true, released: false }
-  log(`[bot] seat ${seat.name}: inherited a live fight ${held.fight_id} — releasing it before claiming`)
+export const release_strand = async ({ rpc_url, seat, log, mount_ms = 180_000, clear_ms = 120_000 }) => {
+  const strand = await chain_strand({ rpc_url, seat }).catch((error) => {
+    // A read that failed is NOT "no strand" — never cache absence. Say so and let the caller stop.
+    throw new Error(`seat ${seat.name}: could not read its live-fight state (${String(error?.message ?? error)})`)
+  })
+  if (!strand) return { seat: seat.name, ok: true, released: false }
+  log(
+    `[bot] seat ${seat.name}: escrowed in ${strand.fight_id} (${strand.status}, journal ${strand.journal_head}) — forfeiting it before claiming`
+  )
+  const mark = (await tx_digests(seat)).length
+  // MOUNT THE KNOWN FIGHT rather than wait to be handed it. `__dev_enter_world_fight` is the resume path MINUS
+  // the RPC discovery, and the forfeit door reads `use_dungeon`'s live fight — so the seat has to be holding it
+  // before it can let it go. This is the whole reason the check is chain-first: we already know the id.
+  await seat.page.evaluate(({ fight_id, world_id }) => window.__dev_enter_world_fight(fight_id, world_id), {
+    fight_id: strand.fight_id,
+    world_id: strand.world_id,
+  })
+  const mounted = await wait_for(seat.client, (read) => !!read.ok, { timeout_ms: mount_ms, poll_ms: 2000 })
+  if (!mounted)
+    throw new Error(`seat ${seat.name}: ${strand.fight_id} never mounted, so its escrow cannot be released here`)
+  // ONE deliberate forfeit. This is not a retry of anything — no transaction failed; the seat is choosing to
+  // give up a stale fight's rewards to get its character back, which is the rig's standing trade.
   const result = await abandon_fight({ seat, log })
+  const digests = (await tx_digests(seat)).slice(mark)
   if (!result.ok)
     throw new Error(
-      `seat ${seat.name} is escrowed in ${held.fight_id} and could not forfeit it (${result.error}) — no create can succeed while that escrow stands`
+      `seat ${seat.name} is escrowed in ${strand.fight_id} and could not forfeit it (${result.error}) — no create can succeed while that escrow stands`
     )
-  return { ok: true, released: true, fight_id: held.fight_id }
+  // WAIT FOR THE READ LAYER TO AGREE. `create_world_fight` gates on the same `/v1` fight truth, so claiming
+  // while the indexer still lists the forfeited fight would refuse for a reason that is already untrue.
+  const deadline = Date.now() + clear_ms
+  while (Date.now() < deadline && (await chain_strand({ rpc_url, seat }).catch(() => null)))
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+  log(
+    `[bot] seat ${seat.name}: released ${strand.fight_id}${digests.length ? ` · ${digests.map((d) => `${d.klass} ${d.digest}`).join(', ')}` : ''}`
+  )
+  return { seat: seat.name, ok: true, released: true, fight_id: strand.fight_id, digests }
 }
 
 /** RELEASE a fight this run opened and did not finish, so the seat is free for the next one. */
@@ -237,6 +262,7 @@ export const open_world_fight = async ({
   base,
   keys_path,
   seat_names,
+  rpc_url,
   log,
   on_seat = () => {},
   on_evidence = () => {},
@@ -261,7 +287,7 @@ export const open_world_fight = async ({
   // either. Done for all of them up front so one strand does not surface three steps later as a refusal that
   // names the wrong thing.
   const strands = []
-  for (const seat of booted) strands.push({ seat: seat.name, ...(await release_strand({ seat, log })) })
+  for (const seat of booted) strands.push(await release_strand({ rpc_url, seat, log }))
   on_evidence({ strands })
   // THE SEARCH LEG (#1184) — the dry-scan first (its refusals are free), and only when it finds nothing does
   // the seat pay to provision a zone. A drive that cannot do this dead-ends on any world that has been played.

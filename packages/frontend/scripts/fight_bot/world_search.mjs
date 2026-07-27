@@ -34,6 +34,36 @@ const digests_since = async (seat, mark) => (await tx_digests(seat)).slice(mark)
 
 const scout_of = (seat) => seat.page.evaluate(() => window.__ARES_DEV_WORLD_SCOUT())
 
+const read_json = (url) =>
+  fetch(url).then((response) =>
+    response.ok ? response.json() : Promise.reject(new Error(`${response.status} ${url}`))
+  )
+
+/**
+ * THE STRAND, ASKED OF THE CHAIN (#1184 / #1263) — is this seat's character already escrowed in a live fight?
+ *
+ * Read node-side, off the keyless `/v1` layer, BEFORE anything touches a page. The first version of this check
+ * watched the CLIENT instead — it waited for the world session to reconnect the seat and forfeit whatever
+ * mounted — and it lost the race every time: the session reaches playable in ~37s and then replays the fight's
+ * journal, so the board mounted only after the wait had already given up, and the run went on to spend its
+ * whole create ceiling refusing ~550 candidates against an escrow nobody had named. The escrow is a chain fact;
+ * asking the chain has no clock in it at all.
+ *
+ * @returns {Promise<{ fight_id: string, world_id: string, status: string, journal_head: number } | null>}
+ */
+export const chain_strand = async ({ rpc_url, seat }) => {
+  const { characters = [] } = await read_json(`${rpc_url}/v1/characters?owner=${seat.address}`)
+  const world_id = characters.find((row) => row.id === seat.character_id)?.world ?? null
+  if (!world_id) return null // no world binding ⇒ no world fight can hold it
+  const { fights = [] } = await read_json(`${rpc_url}/v1/fights?world=${world_id}`)
+  const held = fights.find((fight) =>
+    (fight.participants ?? []).some((participant) => participant.character === seat.character_id)
+  )
+  return held
+    ? { fight_id: held.fight_id, world_id, status: held.status, journal_head: held.journal_head ?? null }
+    : null
+}
+
 /**
  * Walk to a zone and wait to be standing in it. Arrival is the STANDING ZONE, not the centre — crossing the
  * boundary is what re-arms [F], and holding out for the exact centre would fail a leg that already succeeded.
