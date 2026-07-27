@@ -349,4 +349,21 @@ describe('SELF-HEAL ②③④ connection death → bounded rejoin → re-announc
     input({ type: 'reset' })
     expect(store.getState().rejoin_attempt).toBe(0)
   })
+  it('stops automatic rejoins after a finite budget and exposes an honest terminal error', () => {
+    const { store, input } = boot()
+    const rejoins = []
+    subscribe_rejoin(store, (r) => rejoins.push(r))
+
+    for (let n = 0; n < 7; n++) input({ type: 'room_lost' })
+
+    expect(rejoins).toHaveLength(6)
+    expect(store.getState()).toMatchObject({
+      rejoin_attempt: 6,
+      link_status: 'failed',
+    })
+    expect(store.getState().link_error).toContain('6 attempts')
+    const terminal = store.getState()
+    input({ type: 'network_recover' })
+    expect(store.getState()).toBe(terminal)
+  })
 })

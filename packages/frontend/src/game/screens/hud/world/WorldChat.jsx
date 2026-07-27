@@ -11,8 +11,8 @@
 //
 // SPEAK selector: the START of the input row carries a compact GENERAL | PARTY toggle — the ONLY
 // two postable channels. COMMERCE and COMBAT stay VIEW-ONLY read filters (their lines arrive from other
-// players/screens). GENERAL posts → the shared `world` lobby room; PARTY posts → the dedicated party p2p room
-// (members only) — chat.js branches broadcast_chat vs broadcast_party_chat on the selected speak channel.
+// players/screens). GENERAL and PARTY both use the shared `world` RTCDataChannel; PARTY carries its exact party id
+// and is receiver-filtered — chat.js branches broadcast_chat vs broadcast_party_chat on the selected speak channel.
 // Dropped from the full vendored Chat for the roam HUD: private DMs, the social menu, slash-commands (all live
 // in the full game HUD, not P2).
 //
@@ -22,8 +22,8 @@
 // visible_characters is a Map mutated in place (its ref never changes) — subscribe to a stable digest
 // primitive so React observes spawn/despawn notifications from the presence module.
 //
-// PURE P2P chat: serverless Trystero lobby (chat.js broadcast_chat + lobby-room bridge) —
-// no WS server, no handshake, no "Connecting…" state. The box is always live; the input is never disabled.
+// PURE P2P chat: serverless Trystero lobby (chat.js broadcast_chat + lobby-room bridge). The presence atom exposes
+// the direct-link lifecycle in this header, including finite-retry exhaustion; chat input remains locally usable.
 
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -33,6 +33,7 @@ import { select_online_count } from '../../../core/presence_count.js'
 import { send_chat_message } from '../../../core/chat_send.js'
 import { CHANNEL } from '../../../core/modules/chat.js'
 import { get_peer_state } from '../../../../p2p/lobby-room.js'
+import { use_presence } from '../../../../world-shell/presence_adapter.js'
 import { use_address_names } from '../../../../rpc/use_address_names'
 import { AddressName } from '../../../../components/address_name'
 import { open_player_menu } from './player_menu_store.js'
@@ -98,6 +99,8 @@ export function WorldChat({ readonly = false } = {}) {
   // a NEW Map only per core fold (memoized view identity), so this stays a stable read between fight ticks.
   const fighters = use_fight_view()?.fighters
   const online_count = use_game_state(select_online_count)
+  const link_status = use_presence((state) => state.link_status)
+  const link_error = use_presence((state) => state.link_error)
 
   // Checked = visible in the merged log. All channels checked by default.
   const [enabled, set_enabled] = useState(() => new Set(CHANNELS.map((c) => c.channel)))
@@ -184,7 +187,14 @@ export function WorldChat({ readonly = false } = {}) {
     <div className="gw-chat gw-panel" ref={root_ref}>
       <div className="gw-chat__hdr">
         <span className="gw-chat__title">
-          {t('world_chat.header')} · <b>{online_count}</b> {t('world_chat.online')}
+          {t('world_chat.header')} · <b>{online_count}</b> {t('world_chat.online')} ·{' '}
+          <span
+            className={`gw-chat__link gw-chat__link--${link_status}`}
+            role="status"
+            title={link_error ?? undefined}
+          >
+            {t(`world_chat.link_${link_status}`)}
+          </span>
         </span>
         <div className="gw-chat__channels">
           {CHANNELS.map((c) => (

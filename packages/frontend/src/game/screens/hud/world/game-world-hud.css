@@ -781,6 +781,15 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.gw-chat__link {
+  color: #d7a84b;
+}
+.gw-chat__link--connected {
+  color: #4ade80;
+}
+.gw-chat__link--failed {
+  color: #f87171;
+}
 .gw-chat__log {
   flex: 1;
   overflow-y: auto;

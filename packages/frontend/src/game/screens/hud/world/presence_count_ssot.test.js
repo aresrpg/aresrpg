@@ -39,6 +39,8 @@ describe('aggregate presence count SSOT', () => {
 
     expect(aggregate_reads).toEqual(['game/core/presence_count.js'])
     expect(chat).toContain('use_game_state(select_online_count)')
+    expect(chat).toContain('use_presence((state) => state.link_status)')
+    expect(chat).toContain('world_chat.link_${link_status}')
     expect(chat).toContain('<b>{online_count}</b>')
     expect(friends).not.toContain('party.online_here')
     expect(friends).not.toContain('gw-players__fcount')

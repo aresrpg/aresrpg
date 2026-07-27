@@ -57,6 +57,7 @@ export const PEER_EXPIRY_MS = 90_000 // silent this long ⇒ the peer folds out 
 export const LINK_HEALTH_POLL_MS = 5_000 // the edge samples relay-socket health this often
 export const LINK_GRACE_MS = 12_000 // after each (re)join, suppress death judgment this long (sockets connect async)
 export const REJOIN_JITTER_MS = 600 // the edge adds up to this much random jitter per retry (thundering-herd guard)
+export const REJOIN_MAX_ATTEMPTS = 6 // 1+2+4+8+16+30s (+ jitter): finite automatic recovery, then an honest UI error
 const REJOIN_BASE_MS = 1_000 // backoff base: attempt 1 waits ~1s
 const REJOIN_MAX_MS = 30_000 // backoff ceiling — bounded, never an unbounded grow
 
@@ -117,6 +118,8 @@ const blank_peer = (id) => ({
  *   commission: { seq:number, row:any }|null, commission_seq: number,
  *   fight_markers: Map<string, any>,
  *   dungeon_fight_rows: Map<string, any>,
+ *   link_status: 'idle'|'connecting'|'connected'|'reconnecting'|'failed',
+ *   link_error: string|null,
  *   rejoin_attempt: number,
  *   rejoin: { seq:number, attempt:number, delay:number }|null, rejoin_seq: number,
  *   reannounce: { seq:number }|null, reannounce_seq: number,
@@ -227,6 +230,8 @@ const fold_runs_snapshot = (state, input) => {
 // tiny helpers are the single home for bumping each request's seq (derive, don't copy).
 const request_rejoin = (state, attempt, delay) => ({
   ...state,
+  link_status: 'reconnecting',
+  link_error: null,
   rejoin_attempt: attempt,
   rejoin_seq: state.rejoin_seq + 1,
   rejoin: { seq: state.rejoin_seq + 1, attempt, delay },
@@ -256,13 +261,34 @@ const fold_link = (state, input, now) => {
     }
     case 'room_lost': {
       // CONNECTION DEATH (relays gone / channel closed) — request a rejoin at the next bounded, escalating step.
+      // A capped delay with an UNCAPPED attempt count is not bounded recovery: it is an immortal relay-note loop.
+      // Once the finite budget is spent, stop automatically and tell the UI the truth.
+      if (state.link_status === 'failed') return state
+      if (state.rejoin_attempt >= REJOIN_MAX_ATTEMPTS)
+        return {
+          ...state,
+          link_status: 'failed',
+          link_error: `Peer connection unavailable after ${REJOIN_MAX_ATTEMPTS} attempts`,
+        }
       const attempt = state.rejoin_attempt + 1
       return request_rejoin(state, attempt, rejoin_backoff_ms(attempt))
     }
     case 'rejoin_ok': // live again — reset the backoff AND re-announce so both sides reconverge with no refresh
-      return { ...request_reannounce(state), rejoin_attempt: 0 }
+      return {
+        ...request_reannounce(state),
+        link_status: state.peers.size > 0 ? 'connected' : 'connecting',
+        link_error: null,
+        rejoin_attempt: 0,
+      }
     case 'network_recover': // mid-backoff ⇒ kick to an IMMEDIATE rejoin; healthy ⇒ just re-announce
+      if (state.link_status === 'failed') return state
       return state.rejoin_attempt > 0 ? request_rejoin(state, state.rejoin_attempt, 0) : request_reannounce(state)
+    case 'link_start':
+      return { ...state, link_status: 'connecting', link_error: null, rejoin_attempt: 0 }
+    case 'peer_connected':
+      return { ...state, link_status: 'connected', link_error: null, rejoin_attempt: 0 }
+    case 'peer_disconnected':
+      return state.link_status === 'failed' ? state : { ...state, link_status: 'connecting' }
     default:
       return state
   }
@@ -337,6 +363,8 @@ export function reduce_presence(state, input, now) {
         fight_markers: new Map(),
         dungeon_fight_rows: new Map(),
         roster_seq: state.roster_seq + 1,
+        link_status: 'idle',
+        link_error: null,
         rejoin_attempt: 0, // a deliberate teardown starts the next join with a clean backoff
       }
     default:
@@ -371,6 +399,8 @@ export function create_presence_store() {
     commission_seq: 0,
     fight_markers: new Map(),
     dungeon_fight_rows: new Map(),
+    link_status: 'idle',
+    link_error: null,
     rejoin_attempt: 0,
     rejoin: null,
     rejoin_seq: 0,
