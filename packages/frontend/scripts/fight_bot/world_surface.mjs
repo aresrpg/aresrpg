@@ -221,12 +221,27 @@ export const release_strand = async ({ rpc_url, seat, log, mount_ms = 180_000, c
     ({ fight_id, world_id, character_id }) => window.__dev_enter_world_fight(fight_id, world_id, character_id),
     { fight_id: strand.fight_id, world_id: strand.world_id, character_id: strand.character_id }
   )
-  const mounted = await wait_for(seat.client, (read) => !!read.ok, { timeout_ms: mount_ms, poll_ms: 2000 })
+  // SETTLED, not merely mounted. The mount fires its own refresh, and asking to forfeit under it is refused by
+  // the character-action lock ("Another character action is still in progress") — measured on the first clear.
+  const mounted = await wait_for(seat.client, (read) => !!read.ok && !read.busy, {
+    timeout_ms: mount_ms,
+    poll_ms: 2000,
+  })
   if (!mounted)
     throw new Error(`seat ${seat.name}: ${strand.fight_id} never mounted, so its escrow cannot be released here`)
-  // ONE deliberate forfeit. This is not a retry of anything — no transaction failed; the seat is choosing to
-  // give up a stale fight's rewards to get its character back, which is the rig's standing trade.
-  const result = await abandon_fight({ seat, log })
+  // The forfeit is a deliberate trade — this fight's rewards for the character back — and never a retry of a
+  // transaction. The ONE refusal re-offered here is the PRE-SIGN character-action lock: it is a client guard
+  // that runs before anything is composed, so no digest exists and no gas was spent (tx.js's own rule — a
+  // pre-flight refusal stays freely retryable, an EXECUTED failure never does). Every other refusal stops here.
+  const preflight_lock = /still in progress|store was still busy|wait a moment/i
+  const attempt = async (left) => {
+    const outcome = await abandon_fight({ seat, log })
+    if (outcome.ok || left <= 0 || !preflight_lock.test(String(outcome.error ?? ''))) return outcome
+    log(`[bot] seat ${seat.name}: the forfeit door was locked pre-sign (nothing signed) — settling, ${left} left`)
+    await new Promise((resolve) => setTimeout(resolve, 10_000))
+    return attempt(left - 1)
+  }
+  const result = await attempt(5)
   const digests = (await tx_digests(seat)).slice(mark)
   if (!result.ok)
     throw new Error(
