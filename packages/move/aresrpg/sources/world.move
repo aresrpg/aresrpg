@@ -675,8 +675,8 @@ public fun set_spawn_nonce_for_testing(w: &mut World, n: u64) { y142(w).spawn_no
 // ╔════════════════ [ merged from `checkpoint` — republish restructure #1287 ] ══════ ]
 // ╔════════════════ [ Errors (documented for the frontend in the module header) ] ═ ]
 
-const ECheckpointFuture: u64 = 101;
-const ETravelTooFar: u64 = 102;
+const ECheckpointFuture: u64 = 120; // from `checkpoint` — merged-in codes get their own block so module+code stays unambiguous
+const ETravelTooFar: u64 = 121; // from `checkpoint` — merged-in codes get their own block so module+code stays unambiguous
 
 // ╔════════════════ [ Type ] ═════════════════════════════════════════════════ ]
 

@@ -18,7 +18,7 @@ use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as t
 
 // ── mirrored error values ──
 const ELevelTooLow: u64 = 101; // zones
-const ETravelTooFar: u64 = 102; // checkpoint (search travel-verifies the claimed position)
+const ETravelTooFar: u64 = 121; // checkpoint (search travel-verifies the claimed position)
 const EZoneFresh: u64 = 105; // zones
 const ENodeEmpty: u64 = 107; // zones (double-harvest of one derived cell)
 const EBadDrainInput: u64 = 109; // zones (drain_zones: mismatched zx/zy list lengths)

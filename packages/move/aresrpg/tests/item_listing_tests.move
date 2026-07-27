@@ -21,8 +21,8 @@ const OWNER: address = @0xA;
 const DUMMY_KIOSK: address = @0xCAFE; // a stand-in `from` kiosk id for the request
 
 // ── mirrored error consts (the `location` in #[expected_failure] disambiguates the aborting module) ──
-const EZeroAmount: u64 = 101; // item_listing_rule
-const EWrongItem: u64 = 102; // item_listing_rule
+const EZeroAmount: u64 = 130; // item::EListingZeroAmount // item_listing_rule
+const EWrongItem: u64 = 131; // item::EListingWrongItem // item_listing_rule
 
 // ╔════════════════ [ Harness ] ══════════════════════════════════════════════ ]
 

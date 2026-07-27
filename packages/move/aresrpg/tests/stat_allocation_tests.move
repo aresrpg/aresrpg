@@ -19,9 +19,9 @@ const OTHER: address = @0xB; // a non-owner attacker
 // ── mirrored error codes (location disambiguates the aborting module) ──
 const K_ENotOwner: u64 = 0; // sui::kiosk (ownership check)
 const V_ENotEnabled: u64 = 102; // aresrpg::version
-const EBadStat: u64 = 101; // aresrpg::character_link
-const EZeroPoints: u64 = 102; // aresrpg::character_link
-const ENoStatPoints: u64 = 103; // aresrpg::character_link
+const EBadStat: u64 = 130; // aresrpg::character_link
+const EZeroPoints: u64 = 131; // aresrpg::character_link
+const ENoStatPoints: u64 = 132; // aresrpg::character_link
 
 // ╔════════════════ [ Drivers ] ══════════════════════════════════════════════ ]
 

@@ -463,8 +463,8 @@ public fun mint_zero_stack_for_testing(template: &ItemTemplate, ctx: &mut TxCont
 }
 
 // ╔════════════════ [ merged from `lot_rule` — republish restructure #1287 ] ════ ]
-const ELotInvalid: u64 = 101;
-const ELotWrongItem: u64 = 102;
+const ELotInvalid: u64 = 120; // from `lot_rule` — merged-in codes get their own block so module+code stays unambiguous
+const ELotWrongItem: u64 = 121; // from `lot_rule` — merged-in codes get their own block so module+code stays unambiguous
 
 /// Witness identifying the rule in a `TransferPolicy<Item>` and its purchase receipts.
 public struct LotRule has drop {}
@@ -492,8 +492,8 @@ public fun prove_lot(item: &Item, request: &mut TransferRequest<Item>) {
 // ╔════════════════ [ merged from `item_listing_rule` — republish restructure ] ═ ]
 // ╔════════════════ [ Errors (teach, don't reject) ] ═════════════════════════ ]
 
-const EListingZeroAmount: u64 = 101; // prove_amount: the item being purchased carries 0 units (a ghost instance)
-const EListingWrongItem: u64 = 102; // prove_amount: the proven item is not the one being purchased (evasion guard)
+const EListingZeroAmount: u64 = 130; // from `item_listing_rule` — merged-in codes get their own block so module+code stays unambiguous // prove_amount: the item being purchased carries 0 units (a ghost instance)
+const EListingWrongItem: u64 = 131; // from `item_listing_rule` — merged-in codes get their own block so module+code stays unambiguous // prove_amount: the proven item is not the one being purchased (evasion guard)
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 

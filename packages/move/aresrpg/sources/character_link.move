@@ -573,9 +573,9 @@ fun y83(character: &Character): u64 {
 }
 
 // ╔════════════════ [ merged from `dungeon_lock` — republish restructure #1287 ] ══════ ]
-const EAlreadyLocked: u64 = 101;
-const ENotLocked: u64 = 102;
-const EWrongLock: u64 = 103;
+const EAlreadyLocked: u64 = 120; // from `dungeon_lock` — merged-in codes get their own block so module+code stays unambiguous
+const ENotLocked: u64 = 121; // from `dungeon_lock` — merged-in codes get their own block so module+code stays unambiguous
+const EWrongLock: u64 = 122; // from `dungeon_lock` — merged-in codes get their own block so module+code stays unambiguous
 
 public struct DungeonLockKey has copy, drop, store {}
 
@@ -620,9 +620,9 @@ public fun world(character: &Character): Option<ID> {
 // ╔════════════════ [ merged from `stat_allocation` — republish restructure #1287 ] ══════ ]
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
-const EBadStat: u64 = 101; // the stat index is out of range (>= stat_count())
-const EZeroPoints: u64 = 102; // a raise must allocate at least 1 point
-const ENoStatPoints: u64 = 103; // fewer unspent stat points than the requested allocation
+const EBadStat: u64 = 130; // from `stat_allocation` — merged-in codes get their own block so module+code stays unambiguous // the stat index is out of range (>= stat_count())
+const EZeroPoints: u64 = 131; // from `stat_allocation` — merged-in codes get their own block so module+code stays unambiguous // a raise must allocate at least 1 point
+const ENoStatPoints: u64 = 132; // from `stat_allocation` — merged-in codes get their own block so module+code stays unambiguous // fewer unspent stat points than the requested allocation
 
 // ╔════════════════ [ Event ] ════════════════════════════════════════════════ ]
 

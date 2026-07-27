@@ -45,9 +45,9 @@ const GENERIC_BY_DESIGN = new Map([
   ['admin', 'owner/admin-only doors — never a player-signed tx'],
   ['pool', 'gifting reward-pool leaf — admin-seeded, no direct player door'],
   ['character_listing_rule', 'kiosk TransferPolicy rule — framework-internal (the `kiosk` arm surfaces kiosk aborts)'],
-  ['item_listing_rule', 'kiosk TransferPolicy rule — framework-internal'],
-  ['lot_rule', 'kiosk lot rule — framework-internal'],
-  ['dungeon_lock', 'kiosk lock rule — framework-internal'],
+  // `item_listing_rule` / `lot_rule` merged into `item`, `dungeon_lock` + `stat_allocation` into
+  // `character_link`, `checkpoint` into `world` (republish restructure) — their codes are classified under the
+  // host module now, so the retired names are gone from this map rather than lingering as dead rows.
   ['character_xp', 'internal XP-math leaf — no direct player door'],
   ['consumable_effect', 'effect-vocabulary authoring invariant (admin/seed)'],
   ['mob_template', 'admin mint invariants (MAX_SPELLS / MAX_LOOT)'],
@@ -56,12 +56,10 @@ const GENERIC_BY_DESIGN = new Map([
   ['rune_catalog', 'foundation rune-catalog authoring leaf (admin/seed)'],
   ['taux', 'foundation rate-table math leaf — internal'],
   ['zone_gen', 'foundation zone-generation leaf — internal'],
-  ['world', 'world authoring / zone-math / destroy_world — admin/internal invariants'],
   ['mob', 'engine mob-state leaf — internal'],
   ['mob_ai', 'engine AI leaf — internal'],
   ['movement', 'engine movement leaf (the `actions` arm surfaces the player move abort)'],
   ['displacement', 'engine displacement-math leaf — internal'],
-  ['fight_marker', 'internal marker type (the `fight` 111 arm surfaces the marked-character case)'],
   ['friends', 'social friends-list refusals not yet surfaced in a client tx path — map when wired'],
   ['forgemagie', 'rune scribe/crush — client wiring unconfirmed this pass; map when a live door is proven to render generic'],
   ['commission', 'artisan-commission marketplace — client wiring unconfirmed this pass; map when a live door is proven'],

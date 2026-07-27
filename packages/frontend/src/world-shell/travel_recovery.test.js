@@ -4,7 +4,7 @@ import { describe, expect, it, mock } from 'bun:test'
 
 import { create_travel_recovery, is_travel_too_far } from './travel_recovery.js'
 
-const TOO_FAR = { module: 'checkpoint', code: 102 }
+const TOO_FAR = { module: 'world', code: 121 } // ETravelTooFar — `checkpoint` merged into `world`
 
 function harness() {
   let next_id = 40
@@ -25,10 +25,11 @@ function harness() {
   return { recovery, added, removed, failures }
 }
 
-describe('travel recovery — checkpoint::102 one-click resync', () => {
-  it('classifies only the exact checkpoint abort', () => {
+describe('travel recovery — world::121 one-click resync', () => {
+  it('classifies only the exact travel abort', () => {
     expect(is_travel_too_far(TOO_FAR, (error) => error)).toBe(true)
-    expect(is_travel_too_far({ module: 'checkpoint', code: 101 }, (error) => error)).toBe(false)
+    expect(is_travel_too_far({ module: 'world', code: 120 }, (error) => error)).toBe(false) // clock desync, not too-far
+    expect(is_travel_too_far({ module: 'world', code: 102 }, (error) => error)).toBe(false) // EBadEntryIndex — the old shared value
     expect(is_travel_too_far({ module: 'fight', code: 102 }, (error) => error)).toBe(false)
   })
 

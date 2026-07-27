@@ -15,8 +15,8 @@ use sui::{
 const OWNER: address = @0xA;
 const DUMMY_KIOSK: address = @0xCAFE;
 
-const EInvalidLot: u64 = 101;
-const EWrongItem: u64 = 102;
+const EInvalidLot: u64 = 120; // item::ELotInvalid
+const EWrongItem: u64 = 121; // item::ELotWrongItem
 
 /// Build one isolated policy + item, then drive the sole prove/confirm seam used by every case below.
 fun prove_and_confirm(category: String, amount: u64, wrong_item: bool) {

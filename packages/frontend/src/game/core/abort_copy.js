@@ -212,11 +212,11 @@ const TABLE = {
     103: 'errors.craft_oversupply', // EIngredientOverSupply — more units of an ingredient supplied than the recipe needs
     104: 'errors.craft_missing_ingredient', // EMissingIngredient — an ingredient is missing/short after all inputs burned
   },
-  // D54b checkpoint arm — the anti-teleport TRAVEL-VERIFICATION leaf (checkpoint.move): a pure leaf module
-  // (owns only the Checkpoint type + the math, never a Character ref) that `zones::search_zone` AND
-  // `gathering::gather` both call via `checkpoint::verify_travel` — the abort fires INSIDE checkpoint.move's
-  // own function body, so its MoveLocation module is "checkpoint", never the caller (the same leaf-module
-  // pattern as `settlement`/`run` elsewhere in this table). TEACH, DON'T REJECT (the module's own header):
+  // D54b checkpoint arm — the anti-teleport TRAVEL-VERIFICATION code, now inside `world`. The `checkpoint`
+  // leaf module merged into `world` at the republish restructure, so the abort's MoveLocation module is
+  // "world" and its codes moved to a 120 block: merged-in codes get their own range, because `world` already
+  // used 101/102 for EOutOfBounds/EBadEntryIndex and a shared value made module+code ambiguous — the travel
+  // recovery below keys on exactly this pair. TEACH, DON'T REJECT (the module's own header):
   // 102 is the one players actually hit — moved farther than the elapsed time supports at the world's speed
   // budget (e.g. rode with a pet then unequipped it) — non-punitive, elapsed only grows so a wait+retry always
   // clears it. 101 is a clock-desync transient that should never fire on a healthy chain. `wait_seconds()` is
@@ -225,9 +225,9 @@ const TABLE = {
   // confirmed), and the indexer projects only the character's last-anchored POSITION event, never the
   // Checkpoint DF's `time_ms`/`pet_equipped` — so no exact countdown can be computed client-side without new
   // SDK/RPC plumbing (out of this leaf's scope). Both codes stay the honest generic teach line.
-  checkpoint: {
-    101: 'errors.checkpoint_clock_desync', // ECheckpointFuture — the clock landed before the last checkpoint (transient desync — retry)
-    102: 'errors.travel_too_far', // ETravelTooFar — moved farther than the elapsed time supports — wait a moment, then retry
+  world: {
+    120: 'errors.checkpoint_clock_desync', // ECheckpointFuture — the clock landed before the last checkpoint (transient desync — retry)
+    121: 'errors.travel_too_far', // ETravelTooFar — moved farther than the elapsed time supports — wait a moment, then retry
   },
   // `claim_mob_group` (the [R] engage door's first call, inside create_world_fight). ESpawnNotFound/108 fires
   // for BOTH real cases behind ONE code: "the group's zone isn't the caller's CHECKPOINT zone" (the FIRST

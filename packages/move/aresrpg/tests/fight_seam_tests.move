@@ -15,7 +15,7 @@ use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
 
 // ── mirrored error values (location disambiguates which module aborted) ──
 const EWrongCapNamespace: u64 = 101; // character_link
-const ETravelTooFar: u64 = 102; // checkpoint
+const ETravelTooFar: u64 = 121; // checkpoint
 const ESpawnNotFound: u64 = 108; // zones
 const EAlreadyFullHp: u64 = 105; // character_link (y14 — blocked when pointless)
 

@@ -25,7 +25,7 @@ const ENoTool: u64 = 105; // gathering
 const ETierLocked: u64 = 106; // gathering
 const ERareTemplateMismatch: u64 = 107; // gathering
 const EWrongProtector: u64 = 108; // gathering (P1-1)
-const ETravelTooFar: u64 = 102; // checkpoint
+const ETravelTooFar: u64 = 121; // checkpoint
 const EBadNode: u64 = 106; // zones (kept: undiscovered-zone / out-of-derived-range gathers)
 const ENodeEmpty: u64 = 107; // zones (double-harvest — the cell's consumed bit is already set)
 

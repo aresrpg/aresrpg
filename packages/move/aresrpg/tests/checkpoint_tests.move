@@ -15,8 +15,8 @@ use sui::test_scenario::{Self as ts, Scenario};
 const OWNER: address = @0xA;
 
 // ── mirrored error values ──
-const ECheckpointFuture: u64 = 101; // checkpoint
-const ETravelTooFar: u64 = 102; // checkpoint
+const ECheckpointFuture: u64 = 120; // checkpoint
+const ETravelTooFar: u64 = 121; // checkpoint
 
 /// A world with speed_budget = 1000 (×100 fixed-point → 10 blocks/s), taken shared and ready.
 fun world_at_speed_1000(sc: &mut Scenario): World {
