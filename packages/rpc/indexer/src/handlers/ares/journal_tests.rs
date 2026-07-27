@@ -138,11 +138,14 @@ fn deferred_and_foreign_events_are_not_journalled() {
 #[test]
 fn journal_writes_build_the_ordered_member_score_and_ttl() {
     let (_, kind, data) = decode_journal_event("fight_events", "Hit", HIT_WIRE).unwrap();
-    let cursor = JournalCursor { checkpoint: 4_200, tx_index: 3, event_index: 7 };
+    let cursor =
+        JournalCursor { checkpoint: 4_200, intra_checkpoint_event_index: 19, tx_index: 3, event_index: 7 };
     let w = journal_writes(FIGHT, cursor, kind, data.clone(), "TxDigestBase58", Some(88));
     let key = k_fight_journal(FIGHT);
-    let expected_payload =
-        json!({ "kind": "Hit", "data": data, "digest": "TxDigestBase58", "version": "88" });
+    let expected_payload = json!({
+        "id": "4200:19", "kind": "Hit", "data": data,
+        "digest": "TxDigestBase58", "version": "88"
+    });
     let expected_member = format!("000003:0007|{expected_payload}");
     assert_eq!(
         w,
@@ -156,7 +159,8 @@ fn journal_writes_build_the_ordered_member_score_and_ttl() {
 #[test]
 fn a_terminal_that_destroyed_the_object_journals_a_null_version() {
     let (_, kind, data) = decode_journal_event("fight_events", "Defeat", &FIGHTCREATED_WIRE[..32]).unwrap();
-    let cursor = JournalCursor { checkpoint: 9, tx_index: 0, event_index: 0 };
+    let cursor =
+        JournalCursor { checkpoint: 9, intra_checkpoint_event_index: 2, tx_index: 0, event_index: 0 };
     let w = journal_writes(FIGHT, cursor, kind, data, "D", None);
     let RedisWrite::ZAdd { member, .. } = &w[0] else { panic!("expected ZAdd") };
     // version is JSON null (the fight object was deleted → no post-tx output version).
@@ -170,7 +174,12 @@ fn member_prefixes_sort_in_checkpoint_tx_event_order() {
     // rank (client seq) rides on. Same score (checkpoint), so member order alone decides.
     let member = |tx, evt| {
         let (_, kind, data) = decode_journal_event("fight_events", "Hit", HIT_WIRE).unwrap();
-        let cursor = JournalCursor { checkpoint: 1, tx_index: tx, event_index: evt };
+        let cursor = JournalCursor {
+            checkpoint: 1,
+            intra_checkpoint_event_index: (tx * 100 + evt) as u64,
+            tx_index: tx,
+            event_index: evt,
+        };
         let RedisWrite::ZAdd { member, .. } = journal_writes(FIGHT, cursor, kind, data, "d", Some(1)).remove(0)
         else {
             panic!()

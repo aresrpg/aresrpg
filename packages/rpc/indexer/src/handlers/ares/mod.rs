@@ -119,6 +119,11 @@ impl Processor for AresHandler {
 
     async fn process(&self, checkpoint: &Arc<Checkpoint>) -> Result<Vec<Self::Value>> {
         let mut writes = Vec::new();
+        // Chain-derived event ordinal: count EVERY emitted event in checkpoint order,
+        // including foreign/deferred events. This is the second component of the SSE
+        // Last-Event-ID; it can always be re-derived from the checkpoint and never
+        // depends on Redis or on which events this handler happens to admit.
+        let mut intra_checkpoint_event_index = 0_u64;
         // The sale "when": no event carries its own timestamp, so the enclosing
         // checkpoint's time stamps every sale row (same for every event in it).
         let ts_ms = checkpoint.summary.timestamp_ms;
@@ -165,6 +170,8 @@ impl Processor for AresHandler {
                 .collect::<HashSet<_>>();
             let royalty_receipt = has_royalty_receipt(&tx.transaction);
             for (event_index, event) in events.data.iter().enumerate() {
+                let chain_event_index = intra_checkpoint_event_index;
+                intra_checkpoint_event_index += 1;
                 let module = event.type_.module.as_str();
                 let name = event.type_.name.as_str();
                 let pkg = event.type_.address.to_canonical_string(/* with_prefix */ true);
@@ -232,6 +239,7 @@ impl Processor for AresHandler {
                         &fight_oid.to_canonical_string(true),
                         journal::JournalCursor {
                             checkpoint: checkpoint.summary.sequence_number,
+                            intra_checkpoint_event_index: chain_event_index,
                             tx_index,
                             event_index,
                         },

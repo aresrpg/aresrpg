@@ -40,6 +40,7 @@ use url::Url;
 
 use std::collections::HashSet;
 use std::fs::OpenOptions;
+use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Mutex;
 
@@ -76,6 +77,10 @@ struct Args {
     /// Redis connection URL (the read-model store).
     #[arg(long, env = "REDIS_URL", default_value = "redis://127.0.0.1:6379")]
     redis_url: String,
+
+    /// Bind address for the topic-keyed SSE read surface.
+    #[arg(long, env = "STREAM_BIND", default_value = "0.0.0.0:3001")]
+    stream_bind: SocketAddr,
 
     /// Start checkpoint for a fresh pipeline (one with no watermark yet).
     /// `IndexerArgs::first_checkpoint` has no env binding, so this env-backed flag
@@ -252,6 +257,7 @@ async fn run_indexer() -> Result<()> {
     };
     info!(
         redis_url = %args.redis_url,
+        stream_bind = %args.stream_bind,
         remote_store_url = %args.remote_store_url,
         network = %args.network,
         streaming_mode = %streaming_mode,
@@ -265,6 +271,10 @@ async fn run_indexer() -> Result<()> {
     let store = RedisStore::new(&args.redis_url)
         .await
         .context("connecting indexer store")?;
+    let stream_router = stream::router(&args.redis_url).context("creating SSE router")?;
+    let stream_listener = tokio::net::TcpListener::bind(args.stream_bind)
+        .await
+        .with_context(|| format!("binding SSE listener {}", args.stream_bind))?;
 
     let client_args = ClientArgs {
         ingestion: IngestionClientArgs {
@@ -339,9 +349,23 @@ async fn run_indexer() -> Result<()> {
         .await
         .context("registering Ares snapshot pipeline")?;
 
-    info!("pipelines registered; running");
+    info!(stream_bind = %args.stream_bind, "pipelines registered; running");
     let mut service = indexer.run().await.context("starting indexer service")?;
-    service.join().await.context("joining indexer service")?;
+    let mut stream_server = tokio::spawn(async move {
+        axum::serve(stream_listener, stream_router)
+            .await
+            .context("serving SSE routes")
+    });
+    tokio::select! {
+        indexer_result = service.join() => {
+            stream_server.abort();
+            indexer_result.context("joining indexer service")?;
+        }
+        stream_result = &mut stream_server => {
+            stream_result.context("joining SSE server task")??;
+            anyhow::bail!("SSE server stopped unexpectedly");
+        }
+    }
     info!("indexer stopped");
     Ok(())
 }

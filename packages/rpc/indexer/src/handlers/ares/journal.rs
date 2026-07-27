@@ -237,12 +237,17 @@ pub(super) fn decode_journal_event(
 /// (see the module header). Bundled so `journal_writes` stays a small, one-concept call.
 pub(super) struct JournalCursor {
     pub checkpoint: u64,
+    /// Zero-based ordinal among ALL events in the checkpoint, walking transactions
+    /// and each transaction's events in chain order. SSE encodes this with the
+    /// checkpoint as `<checkpoint>:<intra_checkpoint_event_index>`.
+    pub intra_checkpoint_event_index: u64,
     pub tx_index: usize,
     pub event_index: usize,
 }
 
 /// Assemble the Redis writes that append one decoded event to its fight's journal. The
-/// stored `payload` is `{kind, data, digest, version}` — `version` is the fight object's
+/// stored `payload` is `{id, kind, data, digest, version}` — `id` is the chain-derived
+/// SSE cursor and `version` is the fight object's
 /// post-tx Sui version as a STRING (u64, the 2^53 law + M2's "u64 versions stop being
 /// Number-coerced"), `null` for a terminal that DELETED the object (no output version).
 /// See the module header for the score/member ordering + idempotence contract.
@@ -255,6 +260,9 @@ pub(super) fn journal_writes(
     version: Option<u64>,
 ) -> Vec<RedisWrite> {
     let payload = json!({
+        // Binding cursor law (#1382 topology ruling): the SSE id contains chain
+        // coordinates only. It is NEVER a Redis sequence/rank/counter.
+        "id": format!("{}:{}", cursor.checkpoint, cursor.intra_checkpoint_event_index),
         "kind": kind,
         "data": data,
         "digest": digest,

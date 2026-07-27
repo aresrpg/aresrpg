@@ -26,8 +26,10 @@ redis = { version = "0.28", features = ["tokio-comp"] }
 
 # --- Async runtime + framework trait glue ------------------------------------
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
 async-trait = "0.1"
 scoped-futures = "0.1"
+axum = "0.8"
 
 # --- Metrics -----------------------------------------------------------------
 # MUST match the framework's prometheus (0.14) so the `Registry` handed to
