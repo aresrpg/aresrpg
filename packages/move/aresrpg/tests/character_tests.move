@@ -262,7 +262,8 @@ fun display_has_expected_fields() {
   assert!(vec_map::contains(fields, &b"project_url".to_string()));
   assert_eq!(
     *vec_map::get(fields, &b"image_url".to_string()),
-    b"/assets/characters/{class}_{male}.png".to_string(), // host-free relative form
+    // ABSOLUTE: explorers/wallets render Display standalone, with no origin for a relative path (#592).
+    b"https://assets.aresrpg.world/characters/{class}_{male}.png".to_string(),
   );
   sc.return_to_sender(disp);
   sc.end();

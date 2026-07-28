@@ -122,7 +122,11 @@ fun init(otw: CHARACTER, ctx: &mut TxContext) {
   let keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/characters/{class}_{male}.png"), // host-free relative form (jobs.js ASSET_BASE fallback)
+    // ABSOLUTE on purpose (same law as `item::image_url`): a Display value is rendered STANDALONE by wallets
+    // and explorers, which have no AresRPG origin to resolve a relative path against — a host-free form renders
+    // a broken image everywhere outside the game client. The in-client `/assets` fallback (jobs.js ASSET_BASE)
+    // is the CLIENT's concern and never the Display's.
+    utf8(b"https://assets.aresrpg.world/characters/{class}_{male}.png"),
     utf8(b"An on-chain character."),
     utf8(b"https://aresrpg.world"),
   ];
