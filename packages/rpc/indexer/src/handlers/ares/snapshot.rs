@@ -87,17 +87,18 @@ const MOB_TEMPLATE_TYPE: &str = "MobTemplate";
 /// Optional deploy-owned custody manifest. Unset/unreadable deliberately fails open so a missing
 /// mount can reintroduce duplicates but can never blank the bestiary.
 const MOB_CANONICAL_IDS_PATH_ENV: &str = "ARES_MOB_CANONICAL_IDS_PATH";
-/// The 2026-07-23 fresh-publish `aresrpg` origin (a NEW package, not an in-place upgrade —
+/// The fresh-publish `aresrpg` origin (a NEW package, not an in-place upgrade —
 /// `Published.toml`'s `original-id`/`version = 1` for this ceremony), verified against the
-/// ceremony's own stamp. RE-KEYED to ceremony #3 (the mob-range + spells serializer cures
-/// republished the whole universe again — ceremony #2's origin, 0x8781c9c8…d0da98, is
-/// superseded, not additive; ceremony #1's origin, 0xc05c8d9f…6842e1, never went live either).
+/// ceremony's own stamp. RE-KEYED to ceremony #4 — the origin `release.json` currently stamps
+/// (`networks.testnet.packages.aresrpg.origin`), so the lineage tests below exercise the universe
+/// production actually serves (issue #1409); ceremony #3's origin, 0x045fdf6f…80adc9, and every
+/// earlier one are superseded, not additive.
 /// A MobTemplate's BCS layout is fixed at the checkpoint it was CREATED, by whichever
 /// `aresrpg_foundation::spell_effect::Effect` shape that MobTemplate's own `aresrpg` package
 /// was built against — so the MINTING object's package address (never the bytes, which give
 /// no reliable shape signal once every field is variable-length) is the one durable signal for
 /// which width `skip_effect_vec` needs (issue #629 round-2, `effect_byte_width`).
-const FRESH_ARESRPG_ORIGIN: &str = "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9";
+const FRESH_ARESRPG_ORIGIN: &str = "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb";
 /// EVERY `aresrpg` origin whose MobTemplate bodies this indexer can walk, represented by a
 /// non-reversible fingerprint and paired with the `spell_effect::Effect` width that origin's
 /// templates embed. The lineage — not a boundary constant with an open-ended default (issue #1315
