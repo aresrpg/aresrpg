@@ -79,6 +79,9 @@ describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwit
     await select_in_real_store(CHAR_A)
     // Char A mid-fight, exactly the shape rebind_fight_session's guard reads (dungeon_id + character_id).
     use_dungeon.setState({ dungeon_id: FIGHT_A, character_id: CHAR_A })
+    // Full-suite setup can drive unrelated work through the process-global fetch mock. Count only the switch
+    // below: its refused first fight read proves the rebind fired, and makes a second read unreachable.
+    refused_fetch.mockClear()
 
     const failures = []
     const switched = await switch_active_character({ id: CHAR_B, world_id: B_WORLD }, (error) => failures.push(error))
@@ -100,6 +103,7 @@ describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwit
   test('same-character reselect is a no-op teardown (active char never tears down its own board)', async () => {
     await select_in_real_store(CHAR_B)
     use_dungeon.setState({ dungeon_id: FIGHT_A, character_id: CHAR_B }) // B already owns the live board
+    refused_fetch.mockClear()
 
     const switched = await switch_active_character({ id: CHAR_B, world_id: B_WORLD }, () => {})
 
