@@ -36,6 +36,7 @@ import {
   planFixedKeyAdds,
   existingTableKeys,
   getReceipt,
+  runPreflightedBatches,
 } from './ceremony_lib.mjs'
 import {
   sui_to_sale_mist,
@@ -276,6 +277,28 @@ const fitByInputs = (rows, buildInto) => {
     n = Math.max(1, Math.floor(n * 0.8))
   return n
 }
+// REFUSE-THEN-MINT PHASE GUARD: the initial richest-row probe chooses a target size; this second pass simulates
+// every exact, input-fitted batch before runPreflightedBatches permits the first signature. Census: all three
+// probed phases in this file (2 items, 5 mobs, 8 spells) use this same guard.
+const preflightExactBatch = (rows, buildInto, opts = BATCH_PROBE) =>
+  probeBatchSize(
+    sui_client,
+    ME,
+    rows,
+    (batch) => {
+      const tx = new Transaction()
+      const skippedLen = OUT.skipped.length
+      try {
+        buildInto(tx, batch)
+        return tx
+      } finally {
+        // Probe builds are disposable. Mob builders record unresolved loot while composing; only the real mint
+        // may persist that accounting, never a read-only simulation.
+        OUT.skipped.length = skippedLen
+      }
+    },
+    { ...opts, start: rows.length, cap: rows.length, step: 1 }
+  )
 
 // BACKFILL (train #3): a batch EXECUTED but resolution crashed (publicnode 50-id read cap) → live templates,
 // zero manifest rows → naive resume double-mints. Re-fetch the tx, resolve created→rows, land, clear.
@@ -691,13 +714,16 @@ export async function seed_full_corpus() {
   })
   const pendingItems = itemRows.filter((it) => !OUT.items[it.slug])
   if (pendingItems.length) {
+    const buildItemsInto = (tx, rows) => {
+      for (const it of rows) buildItemCreate(tx, it)
+    }
     const { size } = await probeBatchSize(
       sui_client,
       ME,
       richest(pendingItems, BATCH_PROBE.cap),
       (rows) => {
         const tx = new Transaction()
-        for (const it of rows) buildItemCreate(tx, it)
+        buildItemsInto(tx, rows)
         return tx
       },
       BATCH_PROBE
@@ -705,27 +731,26 @@ export async function seed_full_corpus() {
     console.log(
       `  items: batch size ${size} (${pendingItems.length} pending → ${Math.ceil(pendingItems.length / size)} txs)`
     )
-    const buildItemsInto = (tx, rows) => {
-      for (const it of rows) buildItemCreate(tx, it)
-    }
-    for (let i = 0; i < pendingItems.length;) {
-      const batch = pendingItems.slice(
-        i,
-        i + fitByInputs(pendingItems.slice(i, i + size), buildItemsInto)
-      )
-      const r = await execBatch(`items:${i}`, batch.length, (tx) =>
-        buildItemsInto(tx, batch)
-      )
-      for (const { row, id } of resolveBatch(
-        batch,
-        itemRowKey,
-        await itemCreatedOf(r)
-      ))
-        OUT.items[row.slug] = id
-      delete OUT.pendingDigests[`items:${i}`]
-      persist()
-      i += batch.length
-    }
+    await runPreflightedBatches(
+      pendingItems,
+      size,
+      (candidate) => fitByInputs(candidate, buildItemsInto),
+      (batch) => preflightExactBatch(batch, buildItemsInto),
+      async (batch, offset) => {
+        const label = `items:${offset}`
+        const r = await execBatch(label, batch.length, (tx) =>
+          buildItemsInto(tx, batch)
+        )
+        for (const { row, id } of resolveBatch(
+          batch,
+          itemRowKey,
+          await itemCreatedOf(r)
+        ))
+          OUT.items[row.slug] = id
+        delete OUT.pendingDigests[label]
+        persist()
+      }
+    )
   }
 
   // ── PHASE 3 · creation gate — whitelist the CORE class floor (bot slice creates a senshi). IDEMPOTENT
@@ -993,19 +1018,21 @@ export async function seed_full_corpus() {
     console.log(
       `  mobs: batch size ${size} (${pendingMobs.length} pending → ${Math.ceil(pendingMobs.length / size)} txs)`
     )
-    for (let i = 0; i < pendingMobs.length;) {
-      const batch = pendingMobs.slice(
-        i,
-        i + fitByInputs(pendingMobs.slice(i, i + size), buildMobsInto)
-      )
-      const r = await execBatch(`mobs:${i}`, batch.length, (tx) =>
-        buildMobsInto(tx, batch)
-      )
-      resolveBatch(batch, mobRowKey, await mobCreatedOf(r)).forEach(landMob)
-      delete OUT.pendingDigests[`mobs:${i}`]
-      persist()
-      i += batch.length
-    }
+    await runPreflightedBatches(
+      pendingMobs,
+      size,
+      (candidate) => fitByInputs(candidate, buildMobsInto),
+      (batch) => preflightExactBatch(batch, buildMobsInto),
+      async (batch, offset) => {
+        const label = `mobs:${offset}`
+        const r = await execBatch(label, batch.length, (tx) =>
+          buildMobsInto(tx, batch)
+        )
+        resolveBatch(batch, mobRowKey, await mobCreatedOf(r)).forEach(landMob)
+        delete OUT.pendingDigests[label]
+        persist()
+      }
+    )
   }
 
   // ── PHASE 6 · worlds (create + author: required_level, resource/mob spawn tables, dungeon key + rooms) ──
@@ -1380,6 +1407,7 @@ export async function seed_full_corpus() {
   )
   const pendingSpells = spellRows.filter((sp) => !OUT.spells[spellRowKey(sp)])
   if (pendingSpells.length) {
+    const spellProbe = { ...BATCH_PROBE, start: 6, step: 1 }
     const { size } = await probeBatchSize(
       sui_client,
       ME,
@@ -1392,24 +1420,26 @@ export async function seed_full_corpus() {
       // 2026-07-15: the kit sweep's zone-rich effects fattened spell rows to ~600 PTB inputs each
       // (10 rows = 6,035 inputs > the 2,048 cap) — BATCH_PROBE's floor (step 10) never probed lower
       // and the phase refused. Spells probe small: 3 rows ≈ 1,800 inputs clears both caps.
-      { ...BATCH_PROBE, start: 6, step: 1 }
+      spellProbe
     )
     console.log(
       `  spells: batch size ${size} (${pendingSpells.length} pending → ${Math.ceil(pendingSpells.length / size)} txs)`
     )
-    for (let i = 0; i < pendingSpells.length;) {
-      const batch = pendingSpells.slice(
-        i,
-        i + fitByInputs(pendingSpells.slice(i, i + size), buildSpellsInto)
-      )
-      const r = await execBatch(`spells:${i}`, batch.length, (tx) =>
-        buildSpellsInto(tx, batch)
-      )
-      resolveBatch(batch, spellRowKey, spellCreatedOf(r)).forEach(landSpell)
-      delete OUT.pendingDigests[`spells:${i}`]
-      persist()
-      i += batch.length
-    }
+    await runPreflightedBatches(
+      pendingSpells,
+      size,
+      (candidate) => fitByInputs(candidate, buildSpellsInto),
+      (batch) => preflightExactBatch(batch, buildSpellsInto, spellProbe),
+      async (batch, offset) => {
+        const label = `spells:${offset}`
+        const r = await execBatch(label, batch.length, (tx) =>
+          buildSpellsInto(tx, batch)
+        )
+        resolveBatch(batch, spellRowKey, spellCreatedOf(r)).forEach(landSpell)
+        delete OUT.pendingDigests[label]
+        persist()
+      }
+    )
   }
 
   // ── Summary ──

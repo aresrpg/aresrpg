@@ -409,6 +409,42 @@ export async function probeBatchSize(
   )
 }
 
+/**
+ * Plan a phase's exact input-capped batches, preflight ALL of them, then execute any of them.
+ * A refusal therefore leaves the phase untouched instead of stranding a prefix of already-minted rows.
+ *
+ * `fitBatch(candidate)` returns the usable prefix length (for example, after a local PTB input-cap check).
+ * `preflight` and `execute` receive `(batch, offset)`; offsets remain stable for manifest/digest labels.
+ */
+export async function runPreflightedBatches(
+  rows,
+  maxBatchSize,
+  fitBatch,
+  preflight,
+  execute
+) {
+  if (!Number.isInteger(maxBatchSize) || maxBatchSize < 1)
+    throw new Error(
+      `runPreflightedBatches: invalid max batch size ${maxBatchSize}`
+    )
+
+  const batches = []
+  for (let offset = 0; offset < rows.length;) {
+    const candidate = rows.slice(offset, offset + maxBatchSize)
+    const fit = fitBatch(candidate)
+    if (!Number.isInteger(fit) || fit < 1 || fit > candidate.length)
+      throw new Error(
+        `runPreflightedBatches: fitBatch returned ${fit} for ${candidate.length} candidate rows`
+      )
+    const batch = candidate.slice(0, fit)
+    batches.push({ batch, offset })
+    offset += batch.length
+  }
+
+  for (const { batch, offset } of batches) await preflight(batch, offset)
+  for (const { batch, offset } of batches) await execute(batch, offset)
+}
+
 // Page every id-array read (50/page, order preserved) — belt-and-braces against per-request node caps. gRPC Core
 // `getObjects` returns { objects:[obj|Error] }; re-projected to the jsonRpc-ish { data:{ objectId, content:{ fields }}}
 // shape consumers read (o.data.objectId, o.data.content.fields.*). `options.showContent` → the core `json` include.

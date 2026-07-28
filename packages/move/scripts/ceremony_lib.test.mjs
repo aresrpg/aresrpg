@@ -20,7 +20,45 @@ import {
   parsePublishedToml,
   bumpPublishedToml,
   resolveUpgradeTarget,
+  runPreflightedBatches,
 } from './ceremony_lib.mjs'
+
+describe('runPreflightedBatches — refuse every batch before the phase mints anything', () => {
+  test('all exact, input-fitted batches preflight before the first execute', async () => {
+    const order = []
+    await runPreflightedBatches(
+      ['a', 'b', 'c', 'd', 'e'],
+      3,
+      (candidate) => Math.min(candidate.length, 2),
+      async (batch, offset) => order.push(`probe:${offset}:${batch.join('')}`),
+      async (batch, offset) => order.push(`mint:${offset}:${batch.join('')}`)
+    )
+    expect(order).toEqual([
+      'probe:0:ab',
+      'probe:2:cd',
+      'probe:4:e',
+      'mint:0:ab',
+      'mint:2:cd',
+      'mint:4:e',
+    ])
+  })
+
+  test('a later-batch refusal executes zero mints for the phase', async () => {
+    const minted = []
+    await expect(
+      runPreflightedBatches(
+        ['a', 'b', 'c', 'd'],
+        2,
+        (candidate) => candidate.length,
+        async (_batch, offset) => {
+          if (offset === 2) throw new Error('refusing batch at offset 2')
+        },
+        async (batch) => minted.push(...batch)
+      )
+    ).rejects.toThrow(/refusing batch at offset 2/)
+    expect(minted).toEqual([])
+  })
+})
 
 describe('resolveBatch — order-INDEPENDENT batch resolution (never an objectChanges/event order assumption)', () => {
   test('order-scrambled created ids resolve correctly by composite key (mirrors the item/mob content-key path)', () => {
