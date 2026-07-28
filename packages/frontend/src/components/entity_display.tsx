@@ -18,7 +18,7 @@ export {
   sort_stat_entries,
 } from './entity_colors'
 
-export { is_new_template, NewBadge } from './entity_new_badge'
+export { is_new_template, EntityBadge, NewBadge, ArchiBadge } from './entity_new_badge'
 
 export { SectionDivider, SectionTitle } from './entity_section'
 

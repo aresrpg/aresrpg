@@ -61,7 +61,7 @@ function paint_xp(/** @type {HTMLElement} */ span, /** @type {number} */ spawned
  * as a header band + one text-node row per member — never innerHTML (mob names are on-chain strings). The
  * CONTENT is composed purely upstream (spawn_compose.js `compose_group_card`); this function only paints it,
  * so a mixed pack's rows carry each unit's own species and its own distance-graded level by construction.
- * @param {HTMLElement} chip @param {{ roster: Array<{name:string, min_level:number, max_level:number}>,
+ * @param {HTMLElement} chip @param {{ roster: Array<{name:string, min_level:number, max_level:number,tier?:string|null}>,
  *   graded?:boolean, progress?:number, size:number, spawned_at_ms:number, group_seed?:string|null,
  *   archimob_bp?:number|null, team_bound?:number|null }} facts
  */
@@ -107,9 +107,8 @@ export function render_group_card(
     }`
     if (member.archi) {
       const badge = document.createElement('span')
-      badge.style.cssText =
-        'margin-left:6px;padding:0 4px;color:#f5d0a9;border:1px solid rgba(200,150,60,.6);' +
-        'font-size:8px;font-weight:600;letter-spacing:.18em;text-shadow:0 0 6px rgba(200,150,60,.8)'
+      badge.className = 'entity-badge entity-badge--world'
+      badge.dataset.mobTier = 'archi'
       badge.textContent = i18n.t('encyclopedia.archi_badge')
       line.appendChild(badge)
     }

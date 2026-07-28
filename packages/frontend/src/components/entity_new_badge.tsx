@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // --- Helpers: New badge ---
@@ -26,19 +27,28 @@ export function is_new_template(created_at: number | string | undefined): boolea
   return now - ts < ONE_DAY_MS && ts > last_visit
 }
 
-export function NewBadge() {
-  const { t } = useTranslation()
+export function EntityBadge({
+  children,
+  pulse = false,
+  mob_tier,
+}: Readonly<{
+  children: ReactNode
+  pulse?: boolean
+  mob_tier?: string
+}>) {
   return (
-    <span
-      className="px-1.5 py-0.5 text-[7px] tracking-[0.2em] uppercase font-semibold shrink-0 animate-pulse"
-      style={{
-        color: '#c8963c',
-        background: 'rgba(200,150,60,0.12)',
-        border: '1px solid rgba(200,150,60,0.35)',
-        textShadow: '0 0 8px rgba(200,150,60,0.4)',
-      }}
-    >
-      {t('entity.new')}
+    <span className={`entity-badge${pulse ? ' animate-pulse' : ''}`} data-mob-tier={mob_tier}>
+      {children}
     </span>
   )
+}
+
+export function NewBadge() {
+  const { t } = useTranslation()
+  return <EntityBadge pulse>{t('entity.new')}</EntityBadge>
+}
+
+export function ArchiBadge() {
+  const { t } = useTranslation()
+  return <EntityBadge mob_tier="archi">{t('encyclopedia.archi_badge')}</EntityBadge>
 }

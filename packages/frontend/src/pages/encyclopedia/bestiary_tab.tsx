@@ -23,7 +23,9 @@ import { Search, Shield, ArrowLeft, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { normalize_search } from '../../utils/search'
-import { ELEMENT_COLORS, MobDetailView, is_new_template, NewBadge } from '../../components/entity_display'
+import { ArchiBadge, ELEMENT_COLORS, MobDetailView, is_new_template, NewBadge } from '../../components/entity_display'
+import { is_archi_tier } from '../../content/mob_tier'
+import { mob_tier_of } from '../../content/seed_manifest'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 import { ELEMENTS, MOB_LEVEL_BRACKETS } from '../../constants/encyclopedia'
 import { display_mob_name } from '../../content/mob_name_overrides'
@@ -85,10 +87,61 @@ export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null
       fireResistance: decode_mob_resist(m.fire_resistance),
       waterResistance: decode_mob_resist(m.water_resistance),
       airResistance: decode_mob_resist(m.air_resistance),
+      tier: mob_tier_of(m.template_id),
       drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
       found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
       createdAt: undefined as number | undefined,
     }))
+
+export function BestiaryMobRow({
+  mob,
+  idx,
+  is_selected,
+  on_select,
+}: Readonly<{
+  mob: any
+  idx: number
+  is_selected: boolean
+  on_select: (id: string) => void
+}>) {
+  const { t } = useTranslation()
+  const tt = use_template_t()
+  const el_color = ELEMENT_COLORS[(mob.element || '').toLowerCase()] || 'var(--color-muted)'
+  return (
+    <div
+      className="flex flex-col gap-0.5 px-3 py-2 cursor-pointer"
+      style={{
+        borderLeft: is_selected ? '2px solid #c8963c' : `2px solid ${el_color}40`,
+        background: is_selected ? 'rgba(200,150,60,0.08)' : idx % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent',
+      }}
+      onClick={() => on_select(mob.id)}
+      onMouseEnter={(e) => {
+        if (!is_selected) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
+      }}
+      onMouseLeave={(e) => {
+        if (!is_selected)
+          (e.currentTarget as HTMLElement).style.background = idx % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent'
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <EncyclopediaMobImage mob={{ name: mob.icon_name }} className="w-8 h-8 shrink-0 object-contain" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[10px] tracking-[0.1em] uppercase truncate" style={{ color: el_color }}>
+              {tt(mob, 'name')}
+            </span>
+            {is_archi_tier(mob.tier) && <ArchiBadge />}
+            {is_new_template(mob.createdAt) && <NewBadge />}
+            <span className="text-[9px] shrink-0 text-muted">
+              {t('encyclopedia.level_range', { min: mob.minLevel, max: mob.maxLevel })}
+            </span>
+          </div>
+          <span className="text-[8px] tracking-[0.1em] uppercase text-muted/50">{mob.element || ''}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type ViewMode = 'all' | 'by_level'
 type SortOption = 'level_asc' | 'level_desc' | 'name_asc'
@@ -239,42 +292,8 @@ function BestiaryTab({
     active_chips.push({ label: sort.replace('_', ' ').toUpperCase(), clear: () => update_param('sort', null) })
 
   const render_mob_row = (mob: any, idx: number) => {
-    const el_color = ELEMENT_COLORS[(mob.element || '').toLowerCase()] || 'var(--color-muted)'
     const is_selected = selected_mob_id === mob.id
-    return (
-      <div
-        key={mob.id}
-        className="flex flex-col gap-0.5 px-3 py-2 cursor-pointer"
-        style={{
-          borderLeft: is_selected ? '2px solid #c8963c' : `2px solid ${el_color}40`,
-          background: is_selected ? 'rgba(200,150,60,0.08)' : idx % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent',
-        }}
-        onClick={() => on_select_mob(mob.id)}
-        onMouseEnter={(e) => {
-          if (!is_selected) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
-        }}
-        onMouseLeave={(e) => {
-          if (!is_selected)
-            (e.currentTarget as HTMLElement).style.background = idx % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent'
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <EncyclopediaMobImage mob={{ name: mob.icon_name }} className="w-8 h-8 shrink-0 object-contain" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[10px] tracking-[0.1em] uppercase truncate" style={{ color: el_color }}>
-                {tt(mob, 'name')}
-              </span>
-              {is_new_template(mob.createdAt) && <NewBadge />}
-              <span className="text-[9px] shrink-0 text-muted">
-                {t('encyclopedia.level_range', { min: mob.minLevel, max: mob.maxLevel })}
-              </span>
-            </div>
-            <span className="text-[8px] tracking-[0.1em] uppercase text-muted/50">{mob.element || ''}</span>
-          </div>
-        </div>
-      </div>
-    )
+    return <BestiaryMobRow key={mob.id} mob={mob} idx={idx} is_selected={is_selected} on_select={on_select_mob} />
   }
 
   const render_grid_content = () => {
@@ -462,6 +481,7 @@ function BestiaryTab({
             health: selected_mob.health || 0,
             xpReward: corpus_facts?.xp ?? null,
             isBoss: false,
+            tier: selected_mob.tier,
             createdAt: selected_mob.createdAt,
             stats: {},
             resistances,

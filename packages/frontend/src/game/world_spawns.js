@@ -46,6 +46,7 @@ import i18n from '../i18n'
 import { cancel_engage_timing, start_engage_timing } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 import { display_mob_name } from '../content/mob_name_overrides'
+import { mob_tier_of } from '../content/seed_manifest'
 import { report_error } from '../core/report.js'
 import { get_config } from '../rpc/client'
 import { subscribe_zones } from '../rpc/zones_poll'
@@ -189,9 +190,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     })
     .catch(() => {}) // defaults hold — the card mirrors config.move's own DEFAULT_* constants
 
-  // template_id (Sui object ID) → { name, min_level, max_level } roster facts, resolved once per template on chain
-  // (min/max = the template BAND the per-member level roll draws within — spawn_compose derives the exact levels).
-  /** @type {Map<string, { name: string, min_level: number, max_level: number, element: number } | null>} */
+  // template_id (Sui object ID) → name + authored level band + tier, resolved once per template. The band comes
+  // from the chain object; the tier comes from the matching ruled deployment receipt (mob_tier_of).
+  /** @type {Map<string, { name: string, min_level: number, max_level: number, element: number, tier: string | null } | null>} */
   const tmpl_cache = new Map()
   const tmpl_pending = new Set()
   const short_id = (/** @type {string} */ id) => String(id).slice(0, 8) // transient placeholder until the read lands
@@ -211,6 +212,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
                 min_level: tpl.min_level,
                 max_level: tpl.max_level ?? tpl.min_level,
                 element: tpl.element ?? 255, // carried into note_group_identity so the fight board resolves the mob's cast element
+                tier: mob_tier_of(id),
               }
             : null
           tmpl_cache.set(id, facts)
@@ -473,6 +475,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
         name: tpl?.name ?? short_id(id),
         min_level: tpl?.min_level ?? 0,
         max_level: tpl?.max_level ?? tpl?.min_level ?? 0,
+        tier: tpl?.tier ?? null,
       }
     })
     render_group_card(e.chip, {
@@ -492,8 +495,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   }
   const refresh_mob_card = (/** @type {string} */ template_id) => {
     for (const e of entries.values())
-      if (e.kind === 'mob' && e.chip && (e.roster ?? [e.row.template_id]).includes(template_id))
-        render_mob_card(e)
+      if (e.kind === 'mob' && e.chip && (e.roster ?? [e.row.template_id]).includes(template_id)) render_mob_card(e)
     // the minimap markers pick up the name/level band from the store's template_resolved fold (resolve_template)
   }
 

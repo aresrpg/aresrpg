@@ -800,6 +800,31 @@ body::after {
   gap: 6px;
 }
 
+/* Shared uppercase micro-label used by entity metadata badges in the companion UI and world nameplates. */
+.entity-badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  color: #c8963c;
+  background: rgba(200, 150, 60, 0.12);
+  border: 1px solid rgba(200, 150, 60, 0.35);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(200, 150, 60, 0.4);
+}
+
+.entity-badge--world {
+  margin-left: 6px;
+  padding: 0 4px;
+  color: #f5d0a9;
+  border-color: rgba(200, 150, 60, 0.6);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 6px rgba(200, 150, 60, 0.8);
+}
+
 .alert-row {
   padding: 10px 14px;
   border-left: 2px solid #ef4444;

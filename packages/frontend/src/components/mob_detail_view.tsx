@@ -4,6 +4,7 @@ import { Heart, Sparkles, MapPin } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { is_archi_tier } from '../content/mob_tier'
 import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 
 import {
@@ -14,7 +15,7 @@ import {
   format_stat_name,
   stat_color_key,
 } from './entity_colors'
-import { is_new_template, NewBadge } from './entity_new_badge'
+import { ArchiBadge, is_new_template, NewBadge } from './entity_new_badge'
 import { SectionDivider, SectionTitle } from './entity_section'
 
 // --- FoundInWorldsSection ---
@@ -95,6 +96,7 @@ export function MobDetailView({
     // than showing a false "0" for a value that's simply unknown, not zero.
     xpReward: number | null
     isBoss: boolean
+    tier?: string | null
     createdAt?: number | string
     zone?: string
     stats: Record<string, number>
@@ -165,6 +167,7 @@ export function MobDetailView({
                 {mob.element}
               </span>
             )}
+            {is_archi_tier(mob.tier) && <ArchiBadge />}
             {is_new_template(mob.createdAt) && <NewBadge />}
             <span className="text-[10px] tracking-wide ml-auto" style={{ color: '#6b7280' }}>
               Lv. {mob.minLevel}&ndash;{mob.maxLevel}

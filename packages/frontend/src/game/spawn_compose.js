@@ -13,6 +13,8 @@
 
 import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
 
+import { is_archi_tier } from '../content/mob_tier'
+
 // GameConfig dial fallbacks (config.move:90/97 DEFAULT_ARCHIMOB_BP / DEFAULT_TEAM_SIZE) — the live dials ride
 // /v1/config `dials{}` but only exist there once a DialChanged event ever fired; absent = the chain defaults.
 export const DEFAULT_ARCHIMOB_BP = 50 // 0.50% (§17.26)
@@ -83,12 +85,20 @@ export const seated_roster = ({ template_id, members, size }, team_bound) => {
  * 3) seats every unit from its own spec at `graded_band(min, max, progress)`, a format-1/2 zone still replays the
  * flat authored band, and painting either with the other's math advertises a pack the fight will never seat.
  * A row with no `group_seed` (stale SDK read) carries `level: null` — the caller prints the honest band instead.
- * @param {{ roster: Array<{name:string, min_level:number, max_level:number}>, graded?:boolean,
+ * @param {{ roster: Array<{name:string, min_level:number, max_level:number,tier?:string|null}>, graded?:boolean,
  *   progress?:number, size?:number|null, group_seed?:string|number|bigint|null, archimob_bp?:number|null,
  *   team_bound?:number|null }} facts
  * @returns {{ span_lo:number, span_hi:number, rows:Array<{name:string, level:number|null, archi:boolean}> }}
  */
-export function compose_group_card({ roster, graded = false, progress = 0, size, group_seed, archimob_bp, team_bound }) {
+export function compose_group_card({
+  roster,
+  graded = false,
+  progress = 0,
+  size,
+  group_seed,
+  archimob_bp,
+  team_bound,
+}) {
   const specs = roster.slice(0, seated_count(roster.length, size, team_bound))
   const dials = { size: specs.length, archimob_bp, team_bound }
   const derived =
@@ -100,7 +110,9 @@ export function compose_group_card({ roster, graded = false, progress = 0, size,
   const rows = specs.map((spec, i) => ({
     name: spec.name,
     level: derived ? derived.members[i].level : null,
-    archi: !!derived?.members[i]?.archi,
+    // An authored archi template wears the marker unconditionally; the discovery-time rarity roll remains
+    // additive for an ordinary template that rolled as an archimob.
+    archi: is_archi_tier(spec.tier) || !!derived?.members[i]?.archi,
   }))
   if (!derived)
     return {
