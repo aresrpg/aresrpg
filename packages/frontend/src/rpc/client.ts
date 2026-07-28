@@ -430,13 +430,25 @@ export async function get_rare_links(world?: string, signal?: AbortSignal): Prom
   return rare_links
 }
 
+// The `/v1/encyclopedia` catalog read. `kind` SCOPES both the request and its cache key: the all-kinds
+// envelope is 3.0 MB on the live testnet corpus while `?kind=worlds` is 2.9 KB, so a boot-path caller that
+// wants the small worlds view can actually ask for one (issue #1510 §4 — the argument used to be accepted
+// and discarded, which is why three chain-derived facts were pinned to the build-time seed receipt instead).
+// A scoped response still carries all four keys (the unrequested ones come back empty), so the envelope type
+// holds; callers read the key they asked for. Omitting `kind` stays the supported batch form and keeps its
+// own `encyclopedia:all` entry — the encyclopedia page reads items+mobs+recipes in one request.
 export function get_encyclopedia(
-  _kind?: 'items' | 'mobs' | 'worlds' | 'recipes',
+  kind?: 'items' | 'mobs' | 'worlds' | 'recipes',
   signal?: AbortSignal
 ): Promise<RpcEncyclopedia> {
   if (signal?.aborted) return Promise.reject(new DOMException('get_encyclopedia aborted before start', 'AbortError'))
-  // Omitting `kind` is the API's supported batch form: items+mobs+worlds+recipes in one envelope.
-  return content_get('encyclopedia:all', () => rpc_get<RpcEncyclopedia>('/v1/encyclopedia', undefined, signal))
+  // A resident all-kinds envelope already answers every scoped caller, so opening the wiki does not re-fetch
+  // per tab. The reverse never holds: a worlds-scoped entry cannot serve an items read.
+  const resident_all = content_cache.get(`${CONTENT_CACHE_VERSION}:encyclopedia:all`)
+  if (kind && resident_all) return resident_all as Promise<RpcEncyclopedia>
+  return content_get(`encyclopedia:${kind ?? 'all'}`, () =>
+    rpc_get<RpcEncyclopedia>('/v1/encyclopedia', kind ? { kind } : undefined, signal)
+  )
 }
 
 export const get_config = (signal?: AbortSignal) => rpc_get<RpcConfig>('/v1/config', undefined, signal)

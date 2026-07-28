@@ -327,20 +327,37 @@ describe('rpc GET request control', () => {
     }
   })
 
-  test('serves every encyclopedia kind from one app-lifetime all-kinds request', async () => {
-    const catalog = {
+  // ISSUE #1510 §4 — `kind` was accepted and DISCARDED: every scoped caller paid for the 3.0 MB all-kinds
+  // envelope (live testnet measurement 2026-07-28; `?kind=worlds` is 2.9 KB), so "the boot path cannot
+  // afford a live worlds read" became the argument for pinning chain-enforced values to the build-time
+  // seed receipt. A scoped read must be a scoped REQUEST under its own cache key.
+  test('a scoped encyclopedia read requests that kind and caches it separately', async () => {
+    const worlds = { items: [], mobs: [], worlds: [{ world_id: 'world' }], recipes: [] }
+    const all = {
       items: [{ template_id: 'item' }],
       mobs: [{ template_id: 'mob' }],
       worlds: [{ world_id: 'world' }],
       recipes: [{ recipe_id: 'recipe' }],
     }
-    const fetch_mock = mock(async () => json_response(catalog))
+    const fetch_mock = mock(async (url: string | URL) =>
+      json_response(new URL(String(url)).searchParams.get('kind') === 'worlds' ? worlds : all)
+    )
     globalThis.fetch = fetch_mock as unknown as typeof fetch
 
-    expect((await get_encyclopedia('items')).items).toEqual(catalog.items)
-    expect((await get_encyclopedia('mobs')).mobs).toEqual(catalog.mobs)
+    expect((await get_encyclopedia('worlds')).worlds).toEqual(worlds.worlds)
+    expect(new URL(String(fetch_mock.mock.calls[0][0])).searchParams.get('kind')).toBe('worlds')
+
+    // A second scoped read of the same kind rides the cache; the all-kinds form is a DIFFERENT read.
+    await get_encyclopedia('worlds')
     expect(fetch_mock).toHaveBeenCalledTimes(1)
-    expect(new URL(String(fetch_mock.mock.calls[0][0])).searchParams.has('kind')).toBe(false)
+    expect((await get_encyclopedia()).items).toEqual(all.items)
+    expect(fetch_mock).toHaveBeenCalledTimes(2)
+    expect(new URL(String(fetch_mock.mock.calls[1][0])).searchParams.has('kind')).toBe(false)
+
+    // …and once the all-kinds envelope is resident it answers every scoped caller — opening the wiki does
+    // not re-fetch per tab.
+    expect((await get_encyclopedia('mobs')).mobs).toEqual(all.mobs)
+    expect(fetch_mock).toHaveBeenCalledTimes(2)
   })
 
   // ZONE-POLLER 429 REGRESSION (live-prod report 2026-07-19: `/v1/zones?world=…&zone=487:488` 429
