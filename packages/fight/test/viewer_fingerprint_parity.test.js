@@ -4,29 +4,38 @@
 // Permanent class gate for #1336: a recorded cooperative fight is one canonical fold. Viewer identity may select
 // controls, never truth, so actor / partner / spectator must publish the exact same per-turn fingerprints.
 
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'bun:test'
 
+import { participant_entity_id } from '../src/fight_control.js'
 import { empty_core_state, fight_fingerprint, ingest } from '../src/core.js'
 
-const FIXTURE = '0x9a062c08605fea9cf663edc1617643496c09f6c07d919c16e67edbf9ae0adaa6-1784658245869.capsule.json'
-const capsule = JSON.parse(
-  readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'capsules', FIXTURE), 'utf8')
-)
+// The recorded cooperative capsule, addressed by its CAPTURE STAMP: the fight id its filename carries is
+// evidence inside the sanctioned capsule corpus, so this file reads it rather than transcribing it (the
+// chain-id gate's rule — a test that CAN read its evidence never hardcodes an id out of it).
+const CAPTURED_AT = 1_784_658_245_869
+const CAPSULES_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'capsules')
+const FIXTURE = readdirSync(CAPSULES_DIR).find((name) => name.endsWith(`-${CAPTURED_AT}.capsule.json`))
+const capsule = JSON.parse(readFileSync(join(CAPSULES_DIR, FIXTURE), 'utf8'))
 
-const participant_ids = [
-  '0x409b0967dcc218d2e84525e3a8ffb0ece61d7ffd9ce3b85352f72a840e529fba',
-  '0xc00f5791c883c391b704088a25ccd61cccb77ac805761d1762d4e7543a8adc79',
-]
+/** The fight's seated participants, read off the capsule's own adopted view — never a transcribed roster. */
+const participant_ids = () => {
+  let state = empty_core_state(capsule.session_id ?? null)
+  for (const envelope of capsule.capsules) state = ingest(state, envelope)
+  return (state.inbox?.base_view?.escrow ?? []).map((row) => participant_entity_id(row)).filter(Boolean)
+}
 
-const contexts = [
-  { label: 'actor', my_entity_id: participant_ids[0], spectator: false },
-  { label: 'partner', my_entity_id: participant_ids[1], spectator: false },
-  { label: 'spectator', my_entity_id: null, spectator: true },
-]
+const viewer_contexts = () => {
+  const [actor, partner] = participant_ids()
+  return [
+    { label: 'actor', my_entity_id: actor, spectator: false },
+    { label: 'partner', my_entity_id: partner, spectator: false },
+    { label: 'spectator', my_entity_id: null, spectator: true },
+  ]
+}
 
 const replay_as = (viewer) => {
   let state = empty_core_state(capsule.session_id ?? null)
@@ -56,6 +65,11 @@ const replay_as = (viewer) => {
 
 describe('multi-viewer fingerprint class gate — recorded cooperative capsule', () => {
   test('actor, partner and spectator fold identical canonical fingerprints', () => {
+    const contexts = viewer_contexts()
+    // The capsule must actually seat two DISTINCT players, or "identical across viewers" is vacuously true.
+    expect(contexts[0].my_entity_id).toBeTruthy()
+    expect(contexts[1].my_entity_id).toBeTruthy()
+    expect(contexts[1].my_entity_id).not.toBe(contexts[0].my_entity_id)
     const sequences = contexts.map(({ label, ...viewer }) => ({ label, sequence: replay_as(viewer) }))
     expect(sequences[1].sequence).toEqual(sequences[0].sequence)
     expect(sequences[2].sequence).toEqual(sequences[0].sequence)
