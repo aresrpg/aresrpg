@@ -33,6 +33,7 @@ import { push_event_toast } from '../toast.js'
  * @property {string} [template_id] exact ItemTemplate id when the FightResult object read has landed;
  *   event-floor rows lack one
  * @property {string} item_type   dropped item's on-chain class/legacy slug (exact identity is template_id)
+ * @property {string} [icon_slug] authored render slug snapshotted from the session's live template map
  * @property {string} name        display name (from the item template row)
  * @property {number} amount      quantity the chain rolled this fight
  */

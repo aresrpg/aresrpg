@@ -213,8 +213,20 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
         templates
       )
     ).toEqual([
-      { template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 },
-      { template_id: '0xT_FANG', item_type: 'razkin_fang', name: 'Razkin Fang', amount: 1 },
+      {
+        template_id: '0xT_HIDE',
+        item_type: 'razkin_hide',
+        icon_slug: 'razkin_hide',
+        name: 'Razkin Hide',
+        amount: 2,
+      },
+      {
+        template_id: '0xT_FANG',
+        item_type: 'razkin_fang',
+        icon_slug: 'razkin_fang',
+        name: 'Razkin Fang',
+        amount: 1,
+      },
     ])
   })
 
@@ -227,7 +239,15 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
         ],
         templates
       )
-    ).toEqual([{ template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }])
+    ).toEqual([
+      {
+        template_id: '0xT_HIDE',
+        item_type: 'razkin_hide',
+        icon_slug: 'razkin_hide',
+        name: 'Razkin Hide',
+        amount: 3,
+      },
+    ])
   })
 
   it('distinct RESOURCE templates stay distinct even when their item_type class is identical', () => {
@@ -244,8 +264,8 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
         resources
       )
     ).toEqual([
-      { template_id: '0xCORE', item_type: 'resource', name: 'Obsidian Core', amount: 2 },
-      { template_id: '0xFIBER', item_type: 'resource', name: 'Ancient Fiber', amount: 1 },
+      { template_id: '0xCORE', item_type: 'resource', icon_slug: 'resource', name: 'Obsidian Core', amount: 2 },
+      { template_id: '0xFIBER', item_type: 'resource', icon_slug: 'resource', name: 'Ancient Fiber', amount: 1 },
     ])
   })
 
@@ -270,7 +290,13 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
       loot: loot_from_rolled([{ item_template: '0xT_HIDE', qty: 2 }], templates),
     })
     expect(slice.loot).toEqual([
-      { template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 },
+      {
+        template_id: '0xT_HIDE',
+        item_type: 'razkin_hide',
+        icon_slug: 'razkin_hide',
+        name: 'Razkin Hide',
+        amount: 2,
+      },
     ]) // X, exactly
     expect(JSON.stringify(slice)).not.toContain('modny') // the bag pet has NO path into the slice
   })

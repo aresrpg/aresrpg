@@ -170,17 +170,15 @@ module.exports = {
         'The allowlist below is the boot-paint set — three modules that project the receipt WITHOUT ever ' +
         'letting it filter a live row: chain/deployment.ts (the seeded world id enumeration + display label), ' +
         'pages/encyclopedia/world_corpus.ts and game/screens/hud/Inventory.jsx (authored-slug → minted-id ' +
-        'projections over the authored catalog). The fourth, game/screens/hud/FightReport.jsx, is a KNOWN ' +
-        'instance of the class (#1522): its loot-tile icon slugs want the live row → name → authored-slug ' +
-        'join, but that catalog is a Vite virtual module and the zero-drift gate refuses an unresolvable ' +
-        'import on a fight path, so the map has to arrive from the composition root — a separate change. ' +
-        'A FIFTH importer is a deliberate, reviewed act: add it here with its reason, or read /v1 like ' +
+        'projections over the authored catalog). FightReport was removed from this set by #1522: settlement ' +
+        'snapshots the live /v1 item_type slug onto each loot projection before the fight card renders. ' +
+        'A FOURTH importer is a deliberate, reviewed act: add it here with its reason, or read /v1 like ' +
         'everything else.',
       severity: 'error',
       from: {
         path: '^packages/frontend/src/',
         pathNot:
-          '^packages/frontend/src/(chain/deployment\\.ts|pages/encyclopedia/world_corpus\\.ts|game/screens/hud/(Inventory|FightReport)\\.jsx)$',
+          '^packages/frontend/src/(chain/deployment\\.ts|pages/encyclopedia/world_corpus\\.ts|game/screens/hud/Inventory\\.jsx)$',
       },
       to: {
         path: '^packages/frontend/src/content/seed_manifest\\.ts$|^packages/move/scripts/out/seed_manifest\\.json$',

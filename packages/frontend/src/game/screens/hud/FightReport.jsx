@@ -42,7 +42,6 @@ import { use_template_t } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
-import { seed_manifest } from '../../../content/seed_manifest'
 import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
 import './result.css'
 
@@ -50,19 +49,6 @@ import './result.css'
 const ZONE = 'Whisperwood'
 // the receipt fits a single tidy row of loot tiles; beyond this we'd wrap (rare — a fight drops few types).
 const MAX_TILES = 8
-// The deployment receipt publishes slug → ItemTemplate id; invert it once so a rolled template can recover
-// its real render even when its on-chain item_type is only the generic class word (for example "resource").
-//
-// STILL THE RECEIPT, deliberately (#1522). This is the #1467 class — the receipt freezes into the deployed
-// bundle, so a republish that outruns a redeploy drops every loot tile to its category glyph — and the live
-// fix is the join the encyclopedia uses: live row template_id → name → `slugs[name]` from the authored
-// catalog. That import is REFUSED here: FightReport is on a fight path, and the zero-drift gate
-// (scripts/, issue #914) fails any fight-path module whose imports do not resolve — `virtual:item_catalog`
-// is a Vite virtual module. The slug map has to arrive from the composition root instead of being bound at
-// module scope, which is a separate change; it is boarded rather than smuggled in here.
-const icon_slug_by_template_id = Object.fromEntries(
-  Object.entries(seed_manifest.items).map(([slug, template_id]) => [template_id, slug]),
-)
 
 /** First letter of a name, for the glyph tile. @param {string | null | undefined} name */
 const initial = (name) => (String(name ?? '').trim()[0] ?? '?').toUpperCase()
@@ -95,17 +81,10 @@ function Skel({ w = '3.5em' }) {
  * orphaned drop (missing from BOTH the bag snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot
  * template) renders the D53 bold-letter fallback instead of <ItemIcon> — a loot slot must never read as an
  * empty un-hoverable box.
- * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
+ * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
  */
 function LootTile({ entry, items, template_map, tt, t }) {
-  const base_tile = resolve_loot_tile(
-    entry,
-    items,
-    template_map,
-    tt,
-    t,
-    icon_slug_by_template_id,
-  )
+  const base_tile = resolve_loot_tile(entry, items, template_map, tt, t)
   const item_id = base_tile.item_id
   const [rolled_state, set_rolled_state] = useState({ item_id: null, rolled_stats: null })
   useEffect(() => {
@@ -125,7 +104,7 @@ function LootTile({ entry, items, template_map, tt, t }) {
   }, [item_id])
   const rolled_stats = rolled_state.item_id === item_id ? rolled_state.rolled_stats : null
   const resolved_tile = rolled_stats
-    ? resolve_loot_tile(entry, items, template_map, tt, t, icon_slug_by_template_id, rolled_stats)
+    ? resolve_loot_tile(entry, items, template_map, tt, t, rolled_stats)
     : base_tile
   const { resolved, name, tint, category, icon, detail } = resolved_tile
   return (
@@ -217,7 +196,7 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
  * teammate's honest "not visible to you" used to be its own italic text LINE (roughly doubling that row's
  * height across a whole roster) — it is now a single dim glyph living in the row's own trailing cell, with
  * the full sentence carried on `aria-label` instead of always-visible text.
- * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
+ * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
 function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units, t }) {
   if (!mine)
@@ -268,7 +247,7 @@ function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units,
  *   verdict: 'Victory' | 'Defeat',
  *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }>,
  *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number, template_id?: string | null }>,
- *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }> } | null,
+ *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> } | null,
  *   items: any[],
  *   cost: { sui: string, is_refund: boolean } | null,
  *   pending?: boolean,      // true while the xp/level is still resolving on-chain → render a skeleton, not a 0

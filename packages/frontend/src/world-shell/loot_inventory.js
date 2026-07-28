@@ -27,6 +27,7 @@ export function settled_loot_rows(settlement, template_by_id = new Map()) {
     const template_id = String(minted.template ?? '')
     const template = template_by_id.get(template_id) ?? null
     const item_category = chain_category(template?.category)
+    const icon_slug = String(template?.item_type ?? '')
     const parsed_amount = Number(minted.amount ?? 1)
     return [
       {
@@ -36,6 +37,7 @@ export function settled_loot_rows(settlement, template_by_id = new Map()) {
         item_category,
         item_set: '',
         item_type: String(minted.item_type ?? template?.item_type ?? ''),
+        ...(icon_slug ? { icon_slug } : {}),
         level: 0,
         amount: Number.isFinite(parsed_amount) && parsed_amount > 0 ? parsed_amount : 1,
         kiosk_id: settlement?.kiosk_id ?? null,
