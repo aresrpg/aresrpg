@@ -26,6 +26,9 @@ const nonnegative = value => Math.max(0, value ?? 0)
 
 const is_physical_element = element => element === 'EARTH' || element === 'NONE'
 
+/** Does this element NAME one element (rather than "neutral / unstated")? `NONE` is neutral, never a name. */
+const is_elemental = element => !!element && element !== 'NONE'
+
 /**
  * @typedef {{ min: number, max: number }} DamageRange
  */
@@ -83,6 +86,25 @@ export const amplify_damage = (base, element, caster_stats) => {
 }
 
 /**
+ * K_PUNISHMENT_DAMAGE's rolled base, scaled by the caster's MISSING life: `base × (2·max − hp) / max` — identity
+ * at full HP, double at zero, linear between. The kind is declared "damage scaling UP as caster HP drops"
+ * (spell_effect.move:30) and BOTH twins used to resolve it as a plain damage line, so the scaling half of the
+ * kind existed only in its own comment. Mirrors spell_formula::punishment_base — the scale lands on the ROLLED
+ * base, before amplification and before any named-damage bonus, so both twins pick the same integer.
+ * @param {number} base the already-rolled authored base
+ * @param {{ health: number, health_max: number }} caster
+ * @returns {number}
+ */
+export const punishment_base = (base, caster) => {
+  const maximum = Math.floor(caster?.health_max ?? 0)
+  // A fighter with no max HP has no missing fraction to read — the base passes through, exactly as the chain's
+  // `if (max_hp == 0) return base` does. Anything else would divide by zero on one twin and not the other.
+  if (!(maximum > 0)) return base
+  const health = Math.min(maximum, Math.max(0, Math.floor(caster?.health ?? 0)))
+  return Math.floor((base * (2 * maximum - health)) / maximum)
+}
+
+/**
  * Legacy compatibility helper: +1% damage per level, integer-floored. The live chain-parity pipeline does not
  * call this function.
  * @param {number} damage
@@ -125,7 +147,12 @@ export const apply_shields = (damage, element, effects) => {
   const shields_consumed = []
   for (const shield of effects) {
     if (shield.type !== 'SHIELD') continue
-    if (shield.element && shield.element !== element) continue
+    // NEUTRAL absorbs every element — and `'NONE'` IS the sim's spelling of neutral (the same word
+    // `apply_resistance` reads as `neutral_resistance`), so it must not be filtered as if it named an element.
+    // A K_REDUCE_DAMAGE row normalizes to exactly `element: 'NONE'` (spell_templates.js), so the truthiness
+    // guard alone made every "flat incoming-damage reduction" (spell_effect.move:61) inert against any
+    // elemental hit — it only ever absorbed NONE-element damage. Missing and NONE are now one case.
+    if (is_elemental(shield.element) && shield.element !== element) continue
     const absorbed = Math.min(shield.value, remaining)
     remaining -= absorbed
     shields_consumed.push({ id: shield.id, absorbed })

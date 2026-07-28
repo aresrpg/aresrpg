@@ -32,6 +32,7 @@ import {
   calculate_heal,
   effect_triggers,
   is_critical,
+  punishment_base,
 } from './spell_calculator.js'
 import {
   crit_at,
@@ -39,6 +40,7 @@ import {
   slot_crit_roll,
   slot_damage_roll,
   crank_damage_roll,
+  roll_in_range,
   turn_seed,
 } from './turn_seed.js'
 import {
@@ -56,6 +58,7 @@ import {
   has_flag,
   K_CASTER_DAMAGE,
   K_DAMAGE,
+  K_PUNISHMENT_DAMAGE,
   row_flags,
   SHAPE_POINT,
   TF_NONE,
@@ -272,13 +275,19 @@ export const apply_spell_effect = (
       caster.id,
       retro_context.spell_id,
     )
-    const damage_effect = named_bonus
-      ? {
-          ...effect,
-          min: (effect.min ?? 0) + named_bonus,
-          max: (effect.max ?? 0) + named_bonus,
-        }
-      : effect
+    // ROLL, then adjust, then amplify — the chain's own order (`final_damage(rolled + damage_bonus, …)`), so a
+    // MULTIPLICATIVE adjustment lands on the same integer the chain rolled. A punishment line scales with the
+    // caster's missing life here; every other damage line passes its rolled base through untouched.
+    const rolled = roll_in_range(
+      effect.min ?? 0,
+      effect.max ?? effect.min ?? 0,
+      damage_roll,
+    )
+    const base =
+      (effect.kind === K_PUNISHMENT_DAMAGE
+        ? punishment_base(rolled, caster)
+        : rolled) + named_bonus
+    const damage_effect = { ...effect, min: base, max: base }
     const shields = target.effects.filter(e => e.type === 'SHIELD')
     const dmg = calculate_final_damage(
       /** @type {any} */ (damage_effect),

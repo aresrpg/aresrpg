@@ -56,6 +56,26 @@ export const reflect_percent = target =>
     ),
   )
 
+/**
+ * FLAT reflect (K_REFLECT_DAMAGE): the sum of the victim's live reflect rows, capped at the incoming line —
+ * `capped_effect_sum(&reflect_rows, damage)` in retro_effects.move `hit_after_inversion`, the twin this mirrors.
+ * The chain caps against the INCOMING damage, not the actual HP loss (the percent leg above is the one that
+ * reads the loss), so an overkill hit still reflects only what was thrown.
+ * @param {import('./fight_state.js').FightEntity} target
+ * @param {number} incoming
+ * @returns {number}
+ */
+export const flat_reflect = (target, incoming) =>
+  Math.min(
+    Math.max(0, Math.floor(incoming)),
+    target.effects.reduce(
+      (sum, effect) =>
+        sum +
+        (effect.type === 'REFLECT_DAMAGE' ? Math.max(0, effect.value ?? 0) : 0),
+      0,
+    ),
+  )
+
 /** Erosion is the sum of live percentages, capped at 100% of actual HP loss. */
 export const erosion_amount = (target, actual_damage) => {
   const percent = Math.min(
