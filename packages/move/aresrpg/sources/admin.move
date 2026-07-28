@@ -222,6 +222,44 @@ public fun set_template_damages(
   item_damages::y59(template, damages);
 }
 
+/// SET (or replace) a live consumable template's typed effect IN PLACE — the door that CURES a consumable minted
+/// effect-less (eating it does nothing because no `EffectKey` DF ever existed). `consumable_effect::attach` is
+/// create-time only, so an already-shared effect-less template had NO path to an effect; this is that path.
+/// Version-gated + AdminCap-gated exactly like the other authoring doors, and it patches the SHARED template in
+/// place so its object ID is preserved — every minted stack, kiosk lock and drop-table ref that points at it stays
+/// valid.
+///
+/// REPLACE, never append, spelled as `y17` (detach if present) then `attach`: a template carries exactly one effect
+/// before and after, so re-running the cure driver is a no-op rather than a double-add abort. Composed from the two
+/// package-private calls this module ALREADY makes (burn / create) rather than a third setter inside
+/// `consumable_effect`, because the package builds to 102382 of the chain's 102400-byte object-size ceiling: the
+/// sibling `item_stats::y63` shape MEASURED 57 bytes OVER (ceremony_preflight_compat size leg), so it does not fit.
+///
+/// SCALARS, not `Option<ConsumableEffect>`: `consumable_effect::new` is the sole constructor and already validates
+/// the discriminant against the frozen §17.15 vocabulary (`EInvalidEffectKind` above `KIND_MAX`), so passing
+/// `kind`/`amount` keeps the identical validation at ONE PTB command per template instead of four. Only the
+/// `consumable` category may carry an effect (`EEffectNotConsumable`) — the same assertion `create_template`
+/// makes, through the same single-homed `consumable_effect::is_consumable`.
+///
+/// SCOPE: the TEMPLATE's authored truth only — no base field, stat range or damage line is touched. Minted items
+/// snapshot no effect (the consume path reads the template), so one write cures every existing stack.
+///
+/// UPGRADE-COMPAT: additive public function only; no existing type or signature changes.
+public fun set_template_effect(
+  cap: &AdminCap,
+  template: &mut item::ItemTemplate,
+  kind: u8,
+  amount: u64,
+  version: &Version,
+  ctx: &TxContext,
+) {
+  cap.verify(ctx);
+  version.assert_latest();
+  assert!(consumable_effect::is_consumable(item::template_category(template)), EEffectNotConsumable);
+  consumable_effect::y17(template);
+  consumable_effect::attach(template, consumable_effect::new(kind, amount));
+}
+
 // ╔════════════════ [ Catalog control (AdminCap + version gated — authoring runs while dark) ] ═ ]
 
 /// Whitelist an item category (`sword`, `ring`, `consumable`, `tool_farmer`, …). The category set is OPEN-ENDED
