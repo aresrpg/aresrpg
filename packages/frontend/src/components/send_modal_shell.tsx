@@ -2,9 +2,69 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared presentation/locking shell for asset-send flows; each modal keeps its own state machine and content.
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { X, ExternalLink, Copy, Check } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { explorer_tx_url } from './explorer_link'
+
+export function truncate_digest(digest: string): string {
+  return digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
+}
+
+export function format_sui_exact(mist: bigint): string {
+  return (Number(mist) / 1e9).toString()
+}
+
+export function DigestLink({ digest }: { digest: string }) {
+  const { t } = useTranslation()
+  const [copied, set_copied] = useState(false)
+  const url = explorer_tx_url(digest)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(digest)
+      set_copied(true)
+      setTimeout(() => set_copied(false), 2000)
+    } catch {
+      /* ignore */
+    }
+  }
+  return (
+    <div className="w-full flex flex-col gap-1.5">
+      <span className="text-muted text-[9px] tracking-[0.2em] uppercase">{t('purchase.transaction')}</span>
+      <div className="flex items-center gap-2">
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan text-[10px] tracking-wide hover:underline flex items-center gap-1.5 transition-colors font-mono"
+          >
+            {truncate_digest(digest)}
+            <ExternalLink size={10} className="opacity-50" />
+          </a>
+        ) : (
+          <span className="text-cyan text-[10px] tracking-wide font-mono">{truncate_digest(digest)}</span>
+        )}
+        <button
+          type="button"
+          onClick={copy}
+          className="text-muted hover:text-gold transition-colors cursor-pointer flex items-center gap-1"
+          aria-label="Copy digest"
+        >
+          {copied ? (
+            <>
+              <Check size={12} className="text-emerald-400" />
+              <span className="text-emerald-400 text-[9px] tracking-[0.15em] uppercase">{t('common.copied')}</span>
+            </>
+          ) : (
+            <Copy size={12} className="opacity-50" />
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 type SendModalShellProps = {
   children: React.ReactNode

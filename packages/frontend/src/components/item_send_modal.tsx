@@ -25,17 +25,9 @@ import { use_item_send, type SendItem, type ItemSendState } from '../stores/item
 
 import { ItemImage } from './items'
 import { validate_item_send_dialog } from './item_send_validation'
-import { SendModalShell as Shell } from './send_modal_shell'
+import { SendModalShell as Shell, DigestLink } from './send_modal_shell'
 
 const address_full_re = /^0x[a-f0-9]{64}$/i
-
-function truncate_digest(digest: string): string {
-  return digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
-}
-
-function format_sui_exact(mist: bigint): string {
-  return format_mist_to_sui(mist, 9).replace(/0+$/, '').replace(/\.$/, '')
-}
 
 function ItemsStrip({ items, selected_amount = null }: { items: SendItem[]; selected_amount?: bigint | null }) {
   const { t } = useTranslation()
@@ -63,43 +55,6 @@ function ItemsStrip({ items, selected_amount = null }: { items: SendItem[]; sele
             </span>
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-function DigestLink({ digest }: { digest: string }) {
-  const { t } = useTranslation()
-  const [copied, set_copied] = useState(false)
-  return (
-    <div className="w-full flex flex-col gap-1.5">
-      <span className="text-muted text-[9px] tracking-[0.2em] uppercase">{t('purchase.transaction')}</span>
-      <div className="flex items-center gap-2">
-        <a
-          href={`https://suiscan.xyz/testnet/tx/${digest}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyan text-[10px] tracking-wide hover:underline flex items-center gap-1.5 transition-colors font-mono"
-        >
-          {truncate_digest(digest)}
-          <ExternalLink size={10} className="opacity-50" />
-        </a>
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(digest)
-              set_copied(true)
-              setTimeout(() => set_copied(false), 2000)
-            } catch {
-              /* ignore */
-            }
-          }}
-          className="text-muted hover:text-gold transition-colors cursor-pointer flex items-center gap-1"
-          aria-label="Copy digest"
-        >
-          {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} className="opacity-50" />}
-        </button>
       </div>
     </div>
   )
