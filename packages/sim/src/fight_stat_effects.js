@@ -52,14 +52,21 @@ export const apply_stat_effect = (state, effect, caster, target) => {
     const target_stats = effective_stats(target)
     const dodge_stat =
       effect.stat === 'ap' ? target_stats.ap_dodge : target_stats.mp_dodge
+    // THE CONTEST POOL IS THE REFILL BASE, never the live residual (cast.move:1880-1895 feeds
+    // `remove_points_with_rolls(.., current: base, max: base)` — `participant::base_mp` for a seat,
+    // `mob::kit_base_mp` for a mob, which is this entity's `*_max`): `removed` is what the drain denies the
+    // target's NEXT refill, independent of how spent the pool happens to be right now. Reading the live pool
+    // here under-removed on every already-spent target — the ordinary mid-fight case, since a mob refills only
+    // on its own turn — so the client predicted a debt (and a steal's caster credit) the chain never resolved.
+    const refill_base = effect.stat === 'ap' ? target.ap_max : target.mp_max
     const result = remove_points(
       turn_rng_of(state),
       requested,
       ((effect.flags ?? 0) & FLAG_DODGE) !== 0,
       effective_stats(caster).wisdom ?? 0,
       (target_stats.agility ?? 0) + Math.max(0, dodge_stat ?? 0),
-      target[effect.stat],
-      effect.stat === 'ap' ? target.ap_max : target.mp_max,
+      refill_base,
+      refill_base,
     )
     const with_rng = with_turn_rng(state, result.state)
     // The chain stores debt only when something landed, but emits Drain for EVERY contested outcome — including
@@ -96,6 +103,22 @@ export const apply_stat_effect = (state, effect, caster, target) => {
           value: result.removed,
           requested,
         },
+        // STEAL's SECOND HALF, STATED (#1477). The credit above moves the caster's POOL, and on chain it moves it
+        // silently (give_caster_points → participant::give_points, no event), so a client that folds events had no
+        // channel for it at all: no +MP chip on the caster's row, and a stolen point that EVAPORATED the moment
+        // prediction rebased onto canonical truth — taking the base+1 walk it funded with it. The receipt is the
+        // only channel, exactly as the GIVE_POINTS twin already rides it (#952): a pool STAT_BUFF row, which
+        // `sim_chain_events.js` mints as the fold's `Granted` and `inputs.js` folds onto the caster's pool.
+        ...(effect.kind === K_STEAL_POINTS && result.removed > 0
+          ? [
+              {
+                target_id: caster.id,
+                status: 'STAT_BUFF',
+                stat: effect.stat,
+                value: result.removed,
+              },
+            ]
+          : []),
       ],
     }
   }
