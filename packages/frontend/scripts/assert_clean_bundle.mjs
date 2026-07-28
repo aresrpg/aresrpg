@@ -30,6 +30,10 @@ const FORBIDDEN = [
     re: /__ARES_DEV_[A-Z_]+/,
     why: 'a QA DRIVE SEAM reached the shipped bundle (issue #1025). The __ARES_DEV_* window hooks let a headless driver commit turns, land casts and name board cells; they are DEV-only by adjudication (#1006) and every registration path is gated on import.meta.env.DEV behind a dynamic import so the tree drops. A hit here means a gate was removed or a seam module was statically imported from a production path — restore the gate, never allowlist the name',
   },
+  {
+    re: /w[a]lrus/i,
+    why: 'the retired asset-system codename reached the shipped bundle — all asset resolution and configuration must use the neutral asset vocabulary',
+  },
 ]
 
 function walk(dir) {
@@ -118,5 +122,5 @@ if (hits.length || manifest_error) {
 }
 
 console.log(
-  `✓ bundle-cleanliness gate OK (${files.length} dist files scanned — no leaked keys, no dead hosts; seed manifest resolved into the bundle; SPA rewrite configured)`
+  `✓ bundle-cleanliness gate OK (${files.length} dist files scanned — no leaked keys, no dead hosts, no retired asset codenames; seed manifest resolved into the bundle; SPA rewrite configured)`
 )

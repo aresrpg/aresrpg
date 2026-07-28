@@ -253,6 +253,36 @@ app_identifier_gate() {
   grn "  ✓ no _v2-versioned identifiers in packages/*/src ($scanned files scanned)"
 }
 
+asset_codename_gate() {
+  echo "== AresRPG retired asset-codename gate =="
+  local content_hits
+  local path_hits
+  local hits
+  local scan_status
+  if ! collect_files; then
+    red "  ✗ FAIL: no repository files collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local scanned="${#COLLECTED_FILES[@]}"
+  content_hits="$(grep_collected 'w[a]lrus' -IilE)"
+  scan_status=$?
+  if [ "$scan_status" -ne 0 ]; then
+    red "  ✗ FAIL: retired asset-codename scan could not complete (exit=$scan_status)"
+    return 1
+  fi
+  path_hits="$(printf '%s\n' "${COLLECTED_FILES[@]}" | awk 'tolower($0) ~ /w[a]lrus/')"
+  hits="$(printf '%s\n%s\n' "$content_hits" "$path_hits" | awk 'NF && !seen[$0]++')"
+  if [ -n "$hits" ]; then
+    local hit_count
+    hit_count="$(printf '%s\n' "$hits" | awk 'NF { count++ } END { print count + 0 }')"
+    red "  ✗ FAIL: retired asset codename remains in $hit_count file(s):"
+    echo "$hits" | sed 's/^/      /'
+    red "ASSET-CODENAME GATE FAILED. Remove every occurrence; this gate has no allowlist."
+    return 1
+  fi
+  grn "  ✓ retired asset codename absent from contents and paths ($scanned files scanned; zero allowlist)"
+}
+
 if [ "${1:-}" = "--hardcoded-ids" ]; then
   shift
   node scripts/check-chain-ids.mjs "$@"
@@ -269,6 +299,10 @@ if [ "${1:-}" = "--move-public-surfaces" ]; then
 fi
 if [ "${1:-}" = "--app-clean-names" ]; then
   app_identifier_gate
+  exit $?
+fi
+if [ "${1:-}" = "--asset-codename" ]; then
+  asset_codename_gate
   exit $?
 fi
 
@@ -408,7 +442,7 @@ if [ "${1:-}" = "--test-reachability" ]; then
   exit $?
 fi
 if [ "$#" -ne 0 ]; then
-  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --test-reachability | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
+  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --test-reachability | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
   exit 2
 fi
 
@@ -431,6 +465,11 @@ fi
 
 echo
 if ! app_identifier_gate; then
+  FAIL=1
+fi
+
+echo
+if ! asset_codename_gate; then
   FAIL=1
 fi
 
