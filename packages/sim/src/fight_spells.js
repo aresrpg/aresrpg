@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { rng_range } from './prng.js'
+import { rng_int, rng_range } from './prng.js'
 import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import {
   next_id,
@@ -12,6 +12,7 @@ import {
 } from './fight_state.js'
 import {
   deduct_ap,
+  apply_damage,
   apply_incoming_damage,
   apply_heal,
   add_effect,
@@ -46,6 +47,7 @@ import {
   fighter_has_state,
   invisible_enemy_at,
   is_direct_effect_list,
+  returning_enemy_at,
   reveal,
 } from './fight_statuses.js'
 import {
@@ -53,7 +55,9 @@ import {
   FLAG_LIFE_LOST,
   has_flag,
   K_CASTER_DAMAGE,
+  K_DAMAGE,
   row_flags,
+  SHAPE_POINT,
   TF_NONE,
 } from './spell_effect.js'
 import {
@@ -114,6 +118,69 @@ const hit_result_effects = (final_state, hit, target_id) => {
         },
     ...hit.effects,
   ]
+}
+
+/**
+ * THE SPELL-RETURN RESOLUTION — the twin of `cast::try_return_spell` (cast.move:905-970). Returns null when the
+ * cast passes through the door untouched, else the redirected outcome. Only the cast's K_DAMAGE lines resolve,
+ * onto the CASTER, priced with the caster's own stats on BOTH sides (attacker and defender) exactly as the chain
+ * prices them, and written through the RAW hp sink so no reaction fires on a returned hit (depth one). The roll
+ * is the cast's own per-cast `damage_roll` rather than the chain's dedicated return stream — the resolved value
+ * lands in the same authored band; the stream identity itself is a separate parity axis.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {import('./fight_state.js').FightEntity} caster
+ * @param {import('./spell_templates.js').SpellEffect[]} effect_list
+ * @param {import('./cell.js').Cell} target
+ * @param {number} damage_roll
+ * @returns {{ state: import('./fight_state.js').FightState, effects: SpellCastEffect[] } | null}
+ */
+const try_return_spell = (state, caster, effect_list, target, damage_roll) => {
+  if (effect_list.some(e => (e.area_shape ?? SHAPE_POINT) !== SHAPE_POINT))
+    return null
+  const row = returning_enemy_at(state, caster.id, target)
+  if (!row) return null
+  // The row's own redirect chance, drawn at the door — the DAMAGE_TO_HEAL idiom (fight_reactions.js).
+  const chance = Math.max(0, Math.min(100, Math.floor(row.chance ?? 100)))
+  if (chance < 100) {
+    const draw = rng_int(turn_rng_of(state), 100)
+    state = with_turn_rng(state, draw.state)
+    if (draw.value >= chance) return null
+  }
+
+  const stats = effective_stats(caster)
+  return effect_list
+    .filter(effect => effect.kind === K_DAMAGE)
+    .reduce(
+      (acc, effect) => {
+        const victim = find_entity(acc.state, caster.id)
+        if (!victim || victim.health <= 0) return acc
+        const { damage } = calculate_final_damage(
+          /** @type {any} */ (effect),
+          stats,
+          stats,
+          damage_roll,
+        )
+        const hit = apply_damage(acc.state, caster.id, damage)
+        return {
+          state: hit.state,
+          effects: [
+            ...acc.effects,
+            {
+              target_id: caster.id,
+              damage: hit.damage_dealt,
+              new_health: find_entity(hit.state, caster.id)?.health ?? 0,
+              killed: hit.killed,
+            },
+          ],
+        }
+      },
+      {
+        state,
+        effects: /** @type {SpellCastEffect[]} */ ([
+          { target_id: caster.id, status: 'RETURN_SPELL_REDIRECT' },
+        ]),
+      },
+    )
 }
 
 /**
@@ -406,6 +473,9 @@ export const apply_spell_effect = (
       timing: 'TURN_START',
       source_id: caster.id,
       value: effect.value ?? 0,
+      // The row carries the REDIRECT probability the chain rolls at the door (`effect_proc(row)`,
+      // cast.move:930) — the same idiom the DAMAGE_TO_HEAL row uses for its own consumption-time draw.
+      chance: Math.max(0, Math.min(100, Math.floor(effect.chance ?? 100))),
       ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
@@ -679,6 +749,30 @@ export const process_spell_cast = (
       caster_ap_remaining: find_entity(state, caster_id)?.ap ?? 0,
       is_critical: false,
       fumbled: true,
+    }
+
+  // THE RETURN DOOR (spell_effect.move:61-64, resolved at cast.move:905-970). A wholly point-shaped cast aimed
+  // at a living enemy holding a RETURN_SPELL row is turned around: normal target resolution is SKIPPED and the
+  // cast's own damage lines land on its caster instead. AP is already spent and the cast already recorded — the
+  // chain charges a returned cast in full too. DEPTH ONE, exactly as on chain: the returned hits go through the
+  // raw HP sink, so they can never themselves be reflected, redirected, inverted or returned again.
+  const returned = try_return_spell(
+    state,
+    caster,
+    effect_list,
+    target,
+    damage_roll,
+  )
+  if (returned)
+    return {
+      success: true,
+      state: clocked
+        ? with_turn_rng(returned.state, combat_rng)
+        : returned.state,
+      effects: returned.effects,
+      caster_ap_remaining: find_entity(returned.state, caster_id)?.ap ?? 0,
+      is_critical: crit.value,
+      fumbled: false,
     }
 
   const result = effect_list.reduce(
