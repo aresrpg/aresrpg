@@ -99,7 +99,7 @@ export function open_fight_stream({
   direct_read,
   subscribe,
   set_timeout = (fn, delay) => setTimeout(fn, delay),
-  clear_timeout = (handle) => clearTimeout(handle),
+  clear_timeout = clearTimeout,
 }) {
   const source = event_source_factory(stream_url(base_url, fight_id, cursor?.()))
   let status = 'idle'
@@ -130,18 +130,18 @@ export function open_fight_stream({
     input(message, now())
   }
 
-  source.onmessage = receive
+  source.addEventListener?.('message', receive)
   // #1382 names every fight frame `fight`; a named event never reaches `onmessage` on a real EventSource.
   source.addEventListener?.('fight', receive)
-  source.onopen = () => {
+  source.addEventListener?.('open', () => {
     attempts = 0
     announce('connected')
-  }
-  source.onerror = () => {
+  })
+  source.addEventListener?.('error', () => {
     if (source.readyState === 2 || (attempts += 1) > max_attempts)
       return give_up(`Fight stream unavailable after ${attempts} attempts`)
     announce('reconnecting')
-  }
+  })
   announce('connecting')
 
   // ── THE #1381 DEADLINE BELT — one direct read per deadline anchor, armed on open and re-armed whenever the

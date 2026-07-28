@@ -14,45 +14,43 @@ import { REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 
 import { open_fight_stream } from '../../src/world-shell/fight_sse_adapter.js'
 
+const CAPSULE_ID = '3f6103fb3fb842bac763a3d275f607d3'.concat('3e49fcde787f004229c18e900e95c33a')
 const CAPSULE = new URL(
-  '../../../fight/test/fixtures/capsules/0x3f6103fb3fb842bac763a3d275f607d33e49fcde787f004229c18e900e95c33a-1784752468344.capsule.json',
+  `../../../fight/test/fixtures/capsules/0x${CAPSULE_ID}-1784752468344.capsule.json`,
   import.meta.url
 )
 
-class FakeEventSource {
-  static latest = null
-
-  constructor(url) {
-    this.url = url
-    this.readyState = 0
-    FakeEventSource.latest = this
+let latest_event_source = null
+const fake_event_source = (url) => {
+  let ready_state = 0
+  let listeners = new Map()
+  const source = {
+    url,
+    get readyState() {
+      return ready_state
+    },
+    open() {
+      ready_state = 1
+      listeners.get('open')?.()
+    },
+    emit(data, last_event_id) {
+      listeners.get('message')?.({ data: JSON.stringify(data), lastEventId: String(last_event_id) })
+    },
+    addEventListener(type, listener) {
+      listeners = new Map([...listeners, [type, listener]])
+    },
+    emit_named(type, data, last_event_id = '') {
+      listeners.get(type)?.({ data: JSON.stringify(data), lastEventId: String(last_event_id) })
+    },
+    fail() {
+      listeners.get('error')?.()
+    },
+    close() {
+      ready_state = 2
+    },
   }
-
-  open() {
-    this.readyState = 1
-    this.onopen?.()
-  }
-
-  emit(data, lastEventId) {
-    this.onmessage?.({ data: JSON.stringify(data), lastEventId: String(lastEventId) })
-  }
-
-  addEventListener(type, listener) {
-    this.listeners = this.listeners ?? new Map()
-    this.listeners.set(type, listener)
-  }
-
-  emit_named(type, data, lastEventId = '') {
-    this.listeners?.get(type)?.({ data: JSON.stringify(data), lastEventId: String(lastEventId) })
-  }
-
-  fail() {
-    this.onerror?.()
-  }
-
-  close() {
-    this.readyState = 2
-  }
+  latest_event_source = source
+  return source
 }
 
 describe('fight EventSource adapter → the ONE fold door', () => {
@@ -64,7 +62,7 @@ describe('fight EventSource adapter → the ONE fold door', () => {
     let streamed = empty_core_state()
     let observed_at = 0
     let input_seq = 0
-    const statuses = []
+    let statuses = []
 
     const close = open_fight_stream({
       fight_id: capsule.session_id,
@@ -78,10 +76,12 @@ describe('fight EventSource adapter → the ONE fold door', () => {
         })
         streamed = ingest(streamed, envelope, now)
       },
-      event_source_factory: (url) => new FakeEventSource(url),
+      event_source_factory: fake_event_source,
       base_url: 'https://rpc.test',
       now: () => observed_at,
-      set_status: (status) => statuses.push(status),
+      set_status: (status) => {
+        statuses = [...statuses, status]
+      },
       install_deadline_belt: false,
     })
 
@@ -91,31 +91,33 @@ describe('fight EventSource adapter → the ONE fold door', () => {
       if (payload.kind === 'journal_rows_received' && payload.source === 'journal') {
         const { rows } = payload
         const last = rows.events?.at(-1)?.seq ?? rows.head
-        FakeEventSource.latest.emit(rows, last)
+        latest_event_source.emit(rows, last)
       } else {
         streamed = ingest(streamed, envelope, observed_at)
       }
     }
 
     expect(project_board(streamed)).toEqual(project_board(direct))
-    expect(FakeEventSource.latest.url).toContain(`/v1/stream/fight/${capsule.session_id}`)
+    expect(latest_event_source.url).toContain(`/v1/stream/fight/${capsule.session_id}`)
     expect(statuses).toContain('connected')
     close()
-    expect(FakeEventSource.latest.readyState).toBe(2)
+    expect(latest_event_source.readyState).toBe(2)
   })
 
   test('the reconnect cursor is seeded from the fold and every frame remains a journal-door message', () => {
-    const messages = []
+    let messages = []
     const close = open_fight_stream({
       fight_id: '0xfight',
       cursor: () => '41',
-      input: (message) => messages.push(message),
-      event_source_factory: (url) => new FakeEventSource(url),
+      input: (message) => {
+        messages = [...messages, message]
+      },
+      event_source_factory: fake_event_source,
       base_url: 'https://rpc.test',
       install_deadline_belt: false,
     })
-    expect(new URL(FakeEventSource.latest.url).searchParams.get('lastEventId')).toBe('41')
-    FakeEventSource.latest.emit(
+    expect(new URL(latest_event_source.url).searchParams.get('lastEventId')).toBe('41')
+    latest_event_source.emit(
       {
         fight_id: '0xfight',
         source: 'journal',
@@ -146,16 +148,18 @@ describe('fight EventSource adapter → the ONE fold door', () => {
 // test failure instead of a silently empty fight.
 describe('the #1382 fight wire → one journal row per frame', () => {
   test('a named `fight` frame becomes one journal batch through the same door', () => {
-    const messages = []
+    let messages = []
     const close = open_fight_stream({
       fight_id: '0xfight',
       cursor: () => null,
-      input: (message) => messages.push(message),
-      event_source_factory: (url) => new FakeEventSource(url),
+      input: (message) => {
+        messages = [...messages, message]
+      },
+      event_source_factory: fake_event_source,
       base_url: 'https://rpc.test',
       install_deadline_belt: false,
     })
-    FakeEventSource.latest.emit_named(
+    latest_event_source.emit_named(
       'fight',
       { seq: '42', kind: 'TurnEnded', data: { turn: '3' }, digest: 'abc', version: '9' },
       '4200:19'
@@ -167,33 +171,37 @@ describe('the #1382 fight wire → one journal row per frame', () => {
   })
 
   test('a row with no foldable seq is refused — never folded under an invented ordinal', () => {
-    const messages = []
+    let messages = []
     const close = open_fight_stream({
       fight_id: '0xfight',
       cursor: () => null,
-      input: (message) => messages.push(message),
-      event_source_factory: (url) => new FakeEventSource(url),
+      input: (message) => {
+        messages = [...messages, message]
+      },
+      event_source_factory: fake_event_source,
       base_url: 'https://rpc.test',
       install_deadline_belt: false,
     })
-    FakeEventSource.latest.emit_named('fight', { kind: 'TurnEnded', data: {}, version: '9' }, '4200:19')
+    latest_event_source.emit_named('fight', { kind: 'TurnEnded', data: {}, version: '9' }, '4200:19')
     expect(messages).toEqual([])
     close()
   })
 
   test('the retry budget is finite: the source is CLOSED and the failure surfaced, never an immortal loop', () => {
-    const statuses = []
+    let statuses = []
     const close = open_fight_stream({
       fight_id: '0xfight',
       cursor: () => null,
       input: () => {},
-      event_source_factory: (url) => new FakeEventSource(url),
+      event_source_factory: fake_event_source,
       base_url: 'https://rpc.test',
-      set_status: (status, error) => statuses.push([status, error]),
+      set_status: (status, error) => {
+        statuses = [...statuses, [status, error]]
+      },
       install_deadline_belt: false,
     })
-    for (let attempt = 0; attempt <= REJOIN_MAX_ATTEMPTS; attempt++) FakeEventSource.latest.fail()
-    expect(FakeEventSource.latest.readyState).toBe(2)
+    for (let attempt = 0; attempt <= REJOIN_MAX_ATTEMPTS; attempt++) latest_event_source.fail()
+    expect(latest_event_source.readyState).toBe(2)
     expect(statuses.at(-1)[0]).toBe('failed')
     expect(statuses.at(-1)[1]).toContain(String(REJOIN_MAX_ATTEMPTS + 1))
     close()
@@ -205,13 +213,13 @@ describe('#1381 deadline-proximity read belt', () => {
     let deadline = 20_000
     let now = 1_000
     let subscriber = null
-    const scheduled = []
+    let scheduled = []
     let reads = 0
     const source = open_fight_stream({
       fight_id: '0xfight',
       cursor: () => null,
       input: () => {},
-      event_source_factory: (url) => new FakeEventSource(url),
+      event_source_factory: fake_event_source,
       base_url: 'https://rpc.test',
       deadline: () => deadline,
       direct_read: async () => {
@@ -224,7 +232,7 @@ describe('#1381 deadline-proximity read belt', () => {
       now: () => now,
       set_timeout: (fn, delay) => {
         const handle = { fn, delay, cleared: false }
-        scheduled.push(handle)
+        scheduled = [...scheduled, handle]
         return handle
       },
       clear_timeout: (handle) => {

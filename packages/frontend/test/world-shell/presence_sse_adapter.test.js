@@ -16,47 +16,48 @@ const WORLD = '0xworld'
 const ALICE = { world: WORLD, address: '0xalice', character: '0xa' }
 const BOB = { world: WORLD, address: '0xbob', character: '0xb' }
 
-class FakeEventSource {
-  static latest = null
-
-  constructor(url) {
-    this.url = url
-    this.readyState = 0
-    this.listeners = new Map()
-    FakeEventSource.latest = this
+let latest_event_source = null
+const fake_event_source = (url) => {
+  let ready_state = 0
+  let listeners = new Map()
+  const source = {
+    url,
+    get readyState() {
+      return ready_state
+    },
+    addEventListener(type, listener) {
+      listeners = new Map([...listeners, [type, listener]])
+    },
+    emit(type, data) {
+      listeners.get(type)?.({ data: JSON.stringify(data) })
+    },
+    fail() {
+      listeners.get('error')?.()
+    },
+    close() {
+      ready_state = 2
+    },
   }
-
-  addEventListener(type, listener) {
-    this.listeners.set(type, listener)
-  }
-
-  emit(type, data) {
-    this.listeners.get(type)?.({ data: JSON.stringify(data) })
-  }
-
-  fail() {
-    this.onerror?.()
-  }
-
-  close() {
-    this.readyState = 2
-  }
+  latest_event_source = source
+  return source
 }
 
 const boot = (options = {}) => {
   const store = create_presence_store()
-  const statuses = []
+  let statuses = []
   const close = open_presence_stream({
     world: WORLD,
     address: ALICE.address,
     character: ALICE.character,
     input: (message, now) => store.getState().input(message, now),
-    event_source_factory: (url) => new FakeEventSource(url),
+    event_source_factory: fake_event_source,
     base_url: 'https://rpc.test',
-    set_status: (status, error) => statuses.push([status, error]),
+    set_status: (status, error) => {
+      statuses = [...statuses, [status, error]]
+    },
     ...options,
   })
-  return { store, statuses, close, source: () => FakeEventSource.latest }
+  return { store, statuses: () => statuses, close, source: () => latest_event_source }
 }
 
 describe('presence EventSource adapter → the presence door', () => {
@@ -100,7 +101,7 @@ describe('presence EventSource adapter → the presence door', () => {
     const { statuses, source, close } = boot()
     for (let attempt = 0; attempt <= REJOIN_MAX_ATTEMPTS; attempt++) source().fail()
     expect(source().readyState).toBe(2)
-    const [status, error] = statuses.at(-1)
+    const [status, error] = statuses().at(-1)
     expect(status).toBe('failed')
     expect(error).toContain(String(REJOIN_MAX_ATTEMPTS + 1))
     close()

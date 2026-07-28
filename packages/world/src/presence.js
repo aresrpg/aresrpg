@@ -325,12 +325,24 @@ const fold_link = (state, input, now) => {
   }
 }
 
+const FOLD_BY_INPUT_TYPE = new Map([
+  ['peer_pos', fold_peer_pos],
+  ['peer_state', fold_peer_state],
+  ['stream_current', fold_online],
+  ['stream_join', fold_online],
+  ['stream_leave', fold_online],
+  ['fights_snapshot', fold_fights_snapshot],
+  ['runs_snapshot', fold_runs_snapshot],
+])
+
 /**
  * THE pure presence fold — realtime ticks in, freshness-law'd facts out. `now` is the only clock.
  * @param {PresenceState} state @param {any} input @param {number} now
  * @returns {PresenceState}
  */
 export function reduce_presence(state, input, now) {
+  const input_fold = FOLD_BY_INPUT_TYPE.get(input.type)
+  if (input_fold) return input_fold(state, input, now)
   switch (input.type) {
     case 'session': {
       const character_id = input.character_id ?? null
@@ -341,10 +353,6 @@ export function reduce_presence(state, input, now) {
         return { ...state, character_id, peers, roster_seq: state.roster_seq + 1 }
       return { ...state, character_id }
     }
-    case 'peer_pos':
-      return fold_peer_pos(state, input, now)
-    case 'peer_state':
-      return fold_peer_state(state, input, now)
     case 'peer_leave': {
       const { id } = input
       if (!id || !state.peers.has(id)) return state
@@ -360,10 +368,6 @@ export function reduce_presence(state, input, now) {
       peers.set(id, { ...prev, chain: record ?? null })
       return { ...state, peers, roster_seq: state.roster_seq + 1 }
     }
-    case 'stream_current':
-    case 'stream_join':
-    case 'stream_leave':
-      return fold_online(state, input)
     case 'my_cell':
       return {
         ...state,
@@ -383,10 +387,6 @@ export function reduce_presence(state, input, now) {
       const seq = state.commission_seq + 1
       return { ...state, commission_seq: seq, commission: { seq, row: input.row } }
     }
-    case 'fights_snapshot':
-      return fold_fights_snapshot(state, input)
-    case 'runs_snapshot':
-      return fold_runs_snapshot(state, input)
     case 'reset':
       return {
         ...state,

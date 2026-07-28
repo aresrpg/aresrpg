@@ -93,17 +93,17 @@ export function open_presence_stream({
   }
 
   for (const type of ['current-set', 'join', 'leave']) source.addEventListener?.(type, receive(type))
-  source.onopen = () => {
+  source.addEventListener?.('open', () => {
     attempts = 0
     announce('connected')
-  }
-  source.onerror = () => {
+  })
+  source.addEventListener?.('error', () => {
     if (source.readyState === 2 || (attempts += 1) > max_attempts) {
       source.close()
       return announce('failed', `Presence stream unavailable after ${attempts} attempts`)
     }
     announce('reconnecting')
-  }
+  })
   announce('connecting')
 
   return () => {
