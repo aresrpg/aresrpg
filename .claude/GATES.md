@@ -62,6 +62,22 @@ the relevant scripts and are an explicit, reviewed act, never a silent debt-abso
 | `.github/workflows/checks.yml` | `smoke` | PR + push to `edge`/`master` | builds the frontend and drives the logged-out landing headless — fails on any uncaught page error or non-allowlisted `console.error` at boot |
 | `.github/workflows/checks.yml` | `fp-codeql` | PR + push to `edge`/`master` | the CodeQL deep tier as native code scanning (above) |
 
+## Ceremony tier — after every publish / republish, before the ceremony is called done
+
+Source gates prove what the NEXT `init()` will write; they say nothing about what the live objects
+already hold. #592 lived in that exact gap twice: a Display was corrected in place with a runtime
+`display::edit` and never mirrored into source (the republish re-ran `init()` from stale source and
+resurrected the bug), and — the other direction — `item.move`'s source was corrected to an absolute
+URL while the LIVE `Display<Item>` kept serving the relative one, so every explorer rendered a broken
+item image against perfectly green source. Both directions are the same missing check.
+
+- **Live-vs-source Display parity** — after any publish or republish, diff the LIVE `Display` object
+  fields (fetch each Display id pinned in `packages/sdk/src/deployment/release.json` →
+  `packages/<pkg>.displays`) against the templates the module's `init()` sets in source. **Any
+  mismatch, in either direction, means the ceremony FAILS** — it is not a cosmetic follow-up. Repair
+  is `display::edit` + `display::update_version` signed by the Display's `AddressOwner`, AND the same
+  value written into source, in the same wave. A runtime-only fix is how this bug returns.
+
 All four are **fork-safe by construction** — no secrets in any of these workflows (`FROZEN.md`
 rule 8). A red on any of them blocks the merge; nothing in this ladder is advisory.
 
