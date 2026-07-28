@@ -33,6 +33,7 @@ import { set_local_beat } from './core/local_beat.js'
 import { walk_fov_pulse } from './core/camera_juice.js'
 import { MOUNT_SPEED_MULTIPLIER } from './mount_speed.js'
 import {
+  has_veteran_title,
   read_worn_templates,
   resolve_mount,
   resolve_worn_cosmetics,
@@ -49,17 +50,6 @@ import { context } from './store.js'
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
 import { create_mobile_session_input } from './touch/mobile_session_input.js'
-
-/** TR-5 — does the character's equipped `title` slot hold the VETERAN title? (the aura gate). The title
- *  item is minted by the crowdfund LATER (today only the `veteran_scroll` consumable that grants it
- *  exists), so this stays forward-compatible: it lights up the moment a title item whose identity reads
- *  "veteran"/"unbroken" (the Mark of the Unbroken line) lands in the slot. The tested path today is the
- *  DEV `__force_aura` override in the frame loop. @param {any} character */
-const has_veteran_title = (character) => {
-  const item = character?.title
-  if (!item) return false
-  return /veteran|unbroken/i.test(String(item.id ?? item.item_type ?? item.type ?? item.name ?? ''))
-}
 
 /** D154 — the ONE focus gate: any focused text surface makes game input inert. */
 const text_focused = () => {

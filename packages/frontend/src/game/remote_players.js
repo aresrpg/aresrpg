@@ -4,12 +4,12 @@
 // foreign-player sprites). ONE home for BOTH modes: the walk session AND the logged-out spectate
 // diorama create this layer; it renders every presence entry (visible_characters — fed by the courier
 // presence fold plus locally-driven owned followers; the active id is never inserted) as a real engine avatar
-// (class rig + hair + equipped pet companion), eases position → target_position (presence retargets, we
+// (class rig + hair + equipped pet companion + veteran-title aura), eases position → target_position (presence retargets, we
 // lerp — roam's contract), stands the body on the terrain via ground_surface_y (presence packets
 // carry CELLS, no y), derives yaw/anim from motion, and cleans up on despawn. Self-contained rAF;
 // dispose() tears everything down. NO game logic here.
 
-import { create_character_avatar, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
+import { create_character_avatar, create_title_aura, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
 import { fight_store } from '@aresrpg/fight/store'
 
 import { use_dungeon } from '../world-shell/dungeon_store.js'
@@ -47,7 +47,7 @@ const PLATE_FADE_M = 28 // …and fades in over the last few blocks approaching 
 // FIGHT-VIEW CULL (a screenshot showed the other player model still appearing in the middle of the
 // board, as if in the world and not removed properly — a peer's WORLD rig stood mid-board
 // like a ghost). Keys on VIEW MODE, not on who's fighting: ANY live fight/dungeon session hides EVERY remote
-// rig's RENDER (body + nameplate) — the frame loop's presence/position bookkeeping keeps
+// rig's RENDER (body + pet + aura + nameplate) — the frame loop's presence/position bookkeeping keeps
 // folding regardless (so a post-fight rig is instantly correct, no pop-in); this is the ONLY thing that
 // decides what actually gets DRAWN. Reuses the scoped WORLD fight predicate that veils world spawns, so the
 // simulator's `sim:` session never culls the resident world's remote rigs.
@@ -69,8 +69,8 @@ export function create_remote_players(engine, world_canvas = null) {
   // equipped pet resolve from /v1 (chain truth, unspoofable). `worn_templates` is the SAME
   // /v1/encyclopedia join catalog embed_voxel_player.js loads for the LOCAL player's own cosmetics
   // (read_worn_templates — one fetch home, two consumers); `peer_cache` batches every stale peer id into ONE
-  // /v1/characters read per refresh wave and derives BOTH worn cosmetics and pet companion from it (#553 —
-  // never a second batched-fetch cache for the same doc).
+  // /v1/characters read per refresh wave and derives worn cosmetics, pet companion AND the veteran-title aura
+  // gate from it (#553 — never a second batched-fetch cache for the same doc).
   let worn_templates = new Map()
   void read_worn_templates()
     .then((templates) => {
@@ -193,6 +193,18 @@ export function create_remote_players(engine, world_canvas = null) {
     r.pet?.dispose() // #553 — the remote pet companion dies with the player (REMOVE-ONLY; cache owns the GLB)
     r.worn?.dispose() // worn hat/cloak GLBs die with the player (REMOVE-ONLY — the cache owns the GPU buffers)
     peer_cache.drop(id) // forget the /v1 resolution too — bounds cache growth across a long session's peer churn
+    if (r.aura) {
+      try {
+        engine.remove_from_scene(r.aura.object3d)
+      } catch {
+        /* already gone */
+      }
+      try {
+        r.aura.dispose() // TR-97 — free the remote veteran-aura geometries + material
+      } catch {
+        /* best-effort */
+      }
+    }
     r.chip?.remove()
     rigs.delete(id)
   }
@@ -446,6 +458,26 @@ export function create_remote_players(engine, world_canvas = null) {
           // D222 (distance must not affect rotation): the cull freezes the MIXER only —
           // facing is a single rotation write, applied at ANY range (update() owns it when near).
           r.avatar.object3d.rotation.y = r.yaw
+        }
+        // TR-5 — remote VETERAN AURA: the title slot is CHAIN truth, so it resolves off the same /v1 doc as
+        // this rig's worn cosmetics and pet (peer_cache.veteran_of — one fetch, three derived views), never a
+        // self-declared claim a peer could fake. Created on demand, torn down when the title clears (or on
+        // drop_rig). Billboards to the live camera; its own guarded block so a cosmetic failure never poisons
+        // the rig loop.
+        if (peer_cache.veteran_of(id)) {
+          if (!r.aura) r.aura = create_title_aura()
+          if (!r.aura.object3d.parent) engine.add_to_scene(r.aura.object3d)
+          r.aura.set_active(remote_rig_visible(fight_active))
+          r.aura.object3d.position.set(r.x, r.gy, r.z)
+          r.aura.update(cam)
+        } else if (r.aura) {
+          try {
+            engine.remove_from_scene(r.aura.object3d)
+          } catch {
+            /* already gone */
+          }
+          r.aura.dispose()
+          r.aura = null
         }
         // nameplate: project head-height world → screen through the ONE shared plate projector (null pre-boot
         // → hidden). project_plate owns the world-lock (head-bob cancelled at source, fixed 2026-07-10 —
