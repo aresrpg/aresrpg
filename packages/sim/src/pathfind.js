@@ -16,7 +16,14 @@
 // hard-wired to the 20x19 dungeon board would silently clip world-mode routes on tall boards.
 
 import { cell_key, neighbors_4dir, neighbors_8dir } from './cell.js'
-import { GRID_CELLS, GRID_H, GRID_W, decode, encode, in_grid } from './combat_grid.js'
+import {
+  GRID_CELLS,
+  GRID_H,
+  GRID_W,
+  decode,
+  encode,
+  in_grid,
+} from './combat_grid.js'
 
 /**
  * Terrain walkability predicate.
@@ -145,11 +152,7 @@ const encoded_enterable = blocked => {
   const is_blocked =
     blocked instanceof Set ? c => blocked.has(c) : c => blocked.includes(c)
   return ({ x, y }) =>
-    x >= 0 &&
-    y >= 0 &&
-    x < GRID_W &&
-    y < GRID_H &&
-    !is_blocked(encode(x, y))
+    x >= 0 && y >= 0 && x < GRID_W && y < GRID_H && !is_blocked(encode(x, y))
 }
 
 /**

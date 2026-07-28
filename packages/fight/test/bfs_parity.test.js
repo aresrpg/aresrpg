@@ -70,7 +70,10 @@ describe('BFS parity — sim find_path_4dir/get_reachable_cells ≡ fight bfsPat
             disagreements.push({ kind: 'cost', seed, start, target, mp, fight: cost_fight, sim: cost_sim })
 
           const route_fight = bfsPath(start, target, blocked, mp).join()
-          const route_sim = (sim_route ?? []).slice(1).map((c) => encode(c.x, c.y)).join()
+          const route_sim = (sim_route ?? [])
+            .slice(1)
+            .map((c) => encode(c.x, c.y))
+            .join()
           if (route_fight !== route_sim)
             disagreements.push({ kind: 'route', seed, start, target, mp, fight: route_fight, sim: route_sim })
         }
