@@ -125,6 +125,8 @@ const SIGNED_SHIFT = 32_768
  * @property {boolean} line_of_sight
  * @property {boolean} linear
  * @property {boolean} free_cell
+ * @property {number[]} [required_states]   state contract (issue 69) — every id the caster must HOLD to cast
+ * @property {number[]} [forbidden_states]  state contract (issue 69) — any id held REFUSES the cast
  * @property {SpellEffect[]} base_effects
  * @property {SpellEffect[]} [crit_effects]
  */
@@ -599,6 +601,10 @@ const normalize_effect_list = (effects, fallback_area, spell_id) => {
   }))
 }
 
+/** A `vector<u16>` state list off the wire, normalized to plain integers (absent ⇒ no contract). */
+const state_ids = raw =>
+  Array.isArray(raw) ? raw.map(Number).filter(Number.isFinite) : []
+
 /**
  * Normalize one AresRPG spell level.
  * @param {Record<string, unknown>} lvl
@@ -638,6 +644,11 @@ const normalize_level = (lvl, spell_id) => {
     line_of_sight: Boolean(lvl['line_of_sight']),
     linear: Boolean(lvl['line_launch'] ?? lvl['linear']),
     free_cell: Boolean(lvl['free_cell']),
+    // The STATE CONTRACT the cast gate reads (Move: SpellLevel.required_states / forbidden_states, asserted at
+    // cast.move:363-372 against `spell_board::fighter_has_state`). Carried through so a K_APPLY_STATE row is not
+    // merely recorded but CONSUMED: the sim refuses exactly the casts the chain aborts.
+    required_states: state_ids(lvl['required_states']),
+    forbidden_states: state_ids(lvl['forbidden_states']),
     base_effects: normalize_effect_list(
       effects,
       current_effects ? undefined : legacy_area,

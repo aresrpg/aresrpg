@@ -35,6 +35,22 @@ export const fighter_is_invisible = (state, entity_id) => {
   return entity !== null && is_invisible(entity)
 }
 
+/**
+ * Does `entity_id` currently HOLD the named state `state_id`? A named state lives as an APPLY_STATE row whose
+ * `value` is the state id — the sim twin of `spell_board::fighter_has_state` (kind == k_apply_state &&
+ * effect.value == state_id). ONE home: both the required/forbidden cast gate and REMOVE_STATE read states here.
+ * @param {import('./fight_state.js').FightState} state @param {string} entity_id @param {number} state_id
+ */
+export const fighter_has_state = (state, entity_id, state_id) => {
+  const entity = find_entity(state, entity_id)
+  return (
+    entity !== null &&
+    entity.effects.some(
+      effect => effect.type === 'APPLY_STATE' && effect.value === state_id,
+    )
+  )
+}
+
 /** Remove every invisibility row from one fighter and nothing else. */
 export const reveal = (state, entity_id) =>
   update_entity(state, entity_id, entity => ({

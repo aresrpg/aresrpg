@@ -42,6 +42,7 @@ import {
 } from './turn_seed.js'
 import {
   apply_invisibility,
+  fighter_has_state,
   invisible_enemy_at,
   is_direct_effect_list,
   reveal,
@@ -132,6 +133,21 @@ const validate_cast = (state, caster_id, spell, level, target, context) => {
   if (!spell_level) return { valid: false, error: 'INVALID_SPELL_LEVEL' }
   if (caster.ap < spell_level.cost)
     return { valid: false, error: 'INSUFFICIENT_AP' }
+  // THE STATE GATE — the twin of cast.move:363-372. A K_APPLY_STATE row is not decoration: a level may REQUIRE
+  // states the caster must hold and FORBID states that lock the spell out. Same order as the chain (required
+  // first), same verdict, so a prediction can never offer a cast the chain will abort.
+  if (
+    (spell_level.required_states ?? []).some(
+      state_id => !fighter_has_state(state, caster_id, state_id),
+    )
+  )
+    return { valid: false, error: 'MISSING_REQUIRED_STATE' }
+  if (
+    (spell_level.forbidden_states ?? []).some(state_id =>
+      fighter_has_state(state, caster_id, state_id),
+    )
+  )
+    return { valid: false, error: 'FORBIDDEN_STATE_PRESENT' }
   const range_bonus = effective_stats(caster).range ?? 0
   if (!can_target(spell_level, caster.cell, target, context, range_bonus))
     return { valid: false, error: 'INVALID_TARGET' }
