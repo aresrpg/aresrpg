@@ -14,7 +14,8 @@
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
 import { canonical_asset_url } from '@aresrpg/sdk/jobs'
 
-import { seed_manifest } from '../content/seed_manifest'
+import { ASSETS_URL } from '../env'
+import { get_encyclopedia } from '../rpc/client'
 
 import { cosmetic_icon_of } from './cosmetic_icons.js'
 import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
@@ -192,15 +193,21 @@ export function index_worn_templates(items) {
   return new Map((items ?? []).map((item) => [String(item.template_id ?? ''), item]).filter(([id]) => id))
 }
 
-/** Load the template side of the worn join from the boot-resident seed receipt. Only cosmetic slugs enter
- * the map; their ids are the exact deployed template ids and `cosmetic_icon_of` already owns slug → appearance.
- * This keeps the world renderer off the 2.77 MB all-kinds encyclopedia payload.
+/** Load the template side of the worn join through the keyless `/v1` read layer — the SAME door every other
+ * item-template reader uses (read_findables / read_listings / read_shop_sales / marketplace_chain). It was
+ * briefly derived from the build-time seed receipt instead (#1510 §3): that receipt is frozen into the
+ * deployed bundle, so a republish left every worn cosmetic unresolved, and a build without a receipt at all
+ * rendered none. `get_encyclopedia` owns the app-lifetime catalog cache, honours the scoped `items` kind and
+ * evicts rejected loads; one bounded second read heals a transient rejection without a parallel cache or a
+ * permanent retry loop.
  * @returns {Promise<Map<string, any>>} */
 export async function read_worn_templates() {
-  const rows = Object.entries(seed_manifest.items).flatMap(([slug, template_id]) =>
-    cosmetic_icon_of({ slug }) ? [{ template_id, slug }] : []
-  )
-  return index_worn_templates(rows)
+  const read = async () => index_worn_templates((await get_encyclopedia('items')).items)
+  try {
+    return await read()
+  } catch {
+    return read()
+  }
 }
 
 /** Resolve one equipped item to the cosmetic quilt's base appearance + optional KHR material variant. The

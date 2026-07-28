@@ -157,6 +157,32 @@ module.exports = {
       to: { path: '^packages/frontend/src/simulator/' },
     },
     {
+      name: 'seed-receipt-boot-paint-only',
+      comment:
+        'Issues #1467/#1510: the seed receipt (content/seed_manifest → move/scripts/out/seed_manifest.json) ' +
+        'is a BUILD-TIME artifact frozen into the deployed bundle. It may seed initial paint; it may NEVER ' +
+        'be the truth an id-join or a chain-derived value resolves against — one republish outrunning one ' +
+        'redeploy and every consumer of that join goes to zero. Measured on the live testnet 2026-07-28: the ' +
+        "bundled receipt's 374 mob ids matched ZERO of the 383 rows /v1 was serving, so the encyclopedia's " +
+        'DROPPED BY was empty for every item while the bestiary next door listed the droppers. Six sites ' +
+        'joined it that way; the shop catalog (nothing buyable) and the equip pre-flight (nothing equippable) ' +
+        'were the sharp ones. THE LAW: anything that must agree with live chain state reads /v1. ' +
+        'The allowlist below is the boot-paint set — three modules that project the receipt WITHOUT ever ' +
+        'letting it filter a live row: chain/deployment.ts (the seeded world id enumeration + display label), ' +
+        'pages/encyclopedia/world_corpus.ts and game/screens/hud/Inventory.jsx (authored-slug → minted-id ' +
+        'projections over the authored catalog). A fourth importer is a deliberate, reviewed act — add it ' +
+        'here with its reason, or read /v1 like everything else.',
+      severity: 'error',
+      from: {
+        path: '^packages/frontend/src/',
+        pathNot:
+          '^packages/frontend/src/(chain/deployment\\.ts|pages/encyclopedia/world_corpus\\.ts|game/screens/hud/Inventory\\.jsx)$',
+      },
+      to: {
+        path: '^packages/frontend/src/content/seed_manifest\\.ts$|^packages/move/scripts/out/seed_manifest\\.json$',
+      },
+    },
+    {
       name: 'no-circular',
       comment:
         'L-C1 (composition is associative only on a DAG): no module-level import cycles inside ' +

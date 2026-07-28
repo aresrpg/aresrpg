@@ -67,7 +67,3 @@ export function resolve_seed_manifest(modules: Readonly<Record<string, unknown>>
 }
 
 export const seed_manifest = resolve_seed_manifest(manifest_modules)
-
-export function is_object_id(value: unknown): value is string {
-  return typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)
-}

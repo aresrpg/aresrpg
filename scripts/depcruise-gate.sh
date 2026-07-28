@@ -4,7 +4,9 @@
 # depcruise-gate.sh — the IMPORT-GRAPH half of the arch gate (docs/CODE_LAW.md "Arch gates").
 # Rules live in .dependency-cruiser.cjs: fight-core-hermetic (generalizes `ares test fightcore`
 # gate a to a resolved allowlist) · engine-quarantine (engine3 only under game/ + world-shell/) ·
-# no-circular (hard-zero after issue #95 burned the census debt down; any cycle is red).
+# seed-receipt-boot-paint-only (#1467/#1510: the build-time seed receipt may seed paint, never be the
+# truth an id-join resolves against — a fourth importer is red) · no-circular (hard-zero after issue #95
+# burned the census debt down; any cycle is red).
 #
 # Ratchet: no baseline file means zero known violations after issue #95's burn-down; both boundary
 # rules were already clean. The write-baseline mode exists for deliberate ratchet maintenance,
