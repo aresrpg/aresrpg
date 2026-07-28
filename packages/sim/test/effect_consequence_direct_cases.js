@@ -141,10 +141,7 @@ export const direct_consequence_entries = [
       const full = fight([punishment], { p0: 200 })
       const wounded = fight([punishment], { p0: 100 })
       expect(
-        damage_taken(
-          wounded,
-          cast(wounded, 'punishment', ENEMY_CELL),
-        ),
+        damage_taken(wounded, cast(wounded, 'punishment', ENEMY_CELL)),
       ).toBeGreaterThan(
         damage_taken(full, cast(full, 'punishment', ENEMY_CELL)),
       )
@@ -233,42 +230,45 @@ export const direct_consequence_entries = [
   ],
   [
     spell_effect.K_STEAL_POINTS,
-    consequence('stolen AP and MP debit victim and credit caster budgets', () => {
-      const initial = fight([
-        {
-          id: 'siphon',
-          effects: [
-            on_enemy(spell_effect.K_STEAL_POINTS, {
-              value: 3,
-              stat: spell_effect.POINT_MP,
-            }),
-            on_enemy(spell_effect.K_STEAL_POINTS, {
-              value: 3,
-              stat: spell_effect.POINT_AP,
-            }),
-          ],
-        },
-        {
-          id: 'costly',
-          ap_cost: 12,
-          effects: [
-            raw_effect(spell_effect.K_DAMAGE, {
-              value: 5,
-              element: EARTH,
-            }),
-          ],
-        },
-      ])
-      const stolen = cast(initial, 'siphon', ENEMY_CELL)
-      expect([pool(stolen, CASTER, 'mp'), pool(stolen, ENEMY, 'mp')]).toEqual([
-        9, 3,
-      ])
-      expect([pool(stolen, CASTER, 'ap'), pool(stolen, ENEMY, 'ap')]).toEqual([
-        13, 7,
-      ])
-      expect(walk(stolen, { x: 1, y: 8 }).accepted).toBe(true)
-      expect(cast(stolen, 'costly', ENEMY_CELL).accepted).toBe(true)
-    }),
+    consequence(
+      'stolen AP and MP debit victim and credit caster budgets',
+      () => {
+        const initial = fight([
+          {
+            id: 'siphon',
+            effects: [
+              on_enemy(spell_effect.K_STEAL_POINTS, {
+                value: 3,
+                stat: spell_effect.POINT_MP,
+              }),
+              on_enemy(spell_effect.K_STEAL_POINTS, {
+                value: 3,
+                stat: spell_effect.POINT_AP,
+              }),
+            ],
+          },
+          {
+            id: 'costly',
+            ap_cost: 12,
+            effects: [
+              raw_effect(spell_effect.K_DAMAGE, {
+                value: 5,
+                element: EARTH,
+              }),
+            ],
+          },
+        ])
+        const stolen = cast(initial, 'siphon', ENEMY_CELL)
+        expect([pool(stolen, CASTER, 'mp'), pool(stolen, ENEMY, 'mp')]).toEqual(
+          [9, 3],
+        )
+        expect([pool(stolen, CASTER, 'ap'), pool(stolen, ENEMY, 'ap')]).toEqual(
+          [13, 7],
+        )
+        expect(walk(stolen, { x: 1, y: 8 }).accepted).toBe(true)
+        expect(cast(stolen, 'costly', ENEMY_CELL).accepted).toBe(true)
+      },
+    ),
   ],
   [
     spell_effect.K_ALTER_STAT,
@@ -282,53 +282,56 @@ export const direct_consequence_entries = [
       ])
       const plain = damage_taken(initial, cast(initial, 'strike', ENEMY_CELL))
       const buffed = cast(initial, 'rage', CASTER_CELL)
-      expect(
-        damage_taken(buffed, cast(buffed, 'strike', ENEMY_CELL)),
-      ).toBe(plain * 2)
+      expect(damage_taken(buffed, cast(buffed, 'strike', ENEMY_CELL))).toBe(
+        plain * 2,
+      )
     }),
   ],
   [
     spell_effect.K_STEAL_STAT,
-    consequence('stat steal strengthens caster and weakens victim casts', () => {
-      const initial = fight(
-        [
-          strike,
-          {
-            id: 'rob',
-            effects: [
-              on_enemy(spell_effect.K_STEAL_STAT, {
-                value: 50,
-                stat: spell_effect.STAT_STRENGTH,
-                turns: 3,
-              }),
-            ],
-          },
-        ],
-        { m0_stats: { strength: 100 } },
-      )
-      const plain_caster = damage_taken(
-        initial,
-        cast(initial, 'strike', ENEMY_CELL),
-      )
-      const enemy_turn = turn_to(initial, ENEMY)
-      const plain_enemy = damage_taken(
-        enemy_turn,
-        cast(enemy_turn, 'strike', CASTER_CELL, ENEMY),
-        CASTER,
-      )
-      const robbed = cast(initial, 'rob', ENEMY_CELL)
-      expect(
-        damage_taken(robbed, cast(robbed, 'strike', ENEMY_CELL)),
-      ).toBeGreaterThan(plain_caster)
-      const weakened = turn_to(robbed, ENEMY)
-      expect(
-        damage_taken(
-          weakened,
-          cast(weakened, 'strike', CASTER_CELL, ENEMY),
+    consequence(
+      'stat steal strengthens caster and weakens victim casts',
+      () => {
+        const initial = fight(
+          [
+            strike,
+            {
+              id: 'rob',
+              effects: [
+                on_enemy(spell_effect.K_STEAL_STAT, {
+                  value: 50,
+                  stat: spell_effect.STAT_STRENGTH,
+                  turns: 3,
+                }),
+              ],
+            },
+          ],
+          { m0_stats: { strength: 100 } },
+        )
+        const plain_caster = damage_taken(
+          initial,
+          cast(initial, 'strike', ENEMY_CELL),
+        )
+        const enemy_turn = turn_to(initial, ENEMY)
+        const plain_enemy = damage_taken(
+          enemy_turn,
+          cast(enemy_turn, 'strike', CASTER_CELL, ENEMY),
           CASTER,
-        ),
-      ).toBeLessThan(plain_enemy)
-    }),
+        )
+        const robbed = cast(initial, 'rob', ENEMY_CELL)
+        expect(
+          damage_taken(robbed, cast(robbed, 'strike', ENEMY_CELL)),
+        ).toBeGreaterThan(plain_caster)
+        const weakened = turn_to(robbed, ENEMY)
+        expect(
+          damage_taken(
+            weakened,
+            cast(weakened, 'strike', CASTER_CELL, ENEMY),
+            CASTER,
+          ),
+        ).toBeLessThan(plain_enemy)
+      },
+    ),
   ],
   [
     spell_effect.K_ALTER_RESIST,
@@ -349,9 +352,9 @@ export const direct_consequence_entries = [
       ])
       const plain = damage_taken(initial, cast(initial, 'strike', ENEMY_CELL))
       const warded = cast(initial, 'ward', ENEMY_CELL)
-      expect(
-        damage_taken(warded, cast(warded, 'strike', ENEMY_CELL)),
-      ).toBe(Math.floor(plain / 2))
+      expect(damage_taken(warded, cast(warded, 'strike', ENEMY_CELL))).toBe(
+        Math.floor(plain / 2),
+      )
     }),
   ],
   [
@@ -396,38 +399,44 @@ export const direct_consequence_entries = [
   ],
   [
     spell_effect.K_SWAP_POSITIONS,
-    consequence('swap changes the origin used by the next movement spend', () => {
-      const initial = fight([
-        {
-          id: 'swap',
-          effects: [on_enemy(spell_effect.K_SWAP_POSITIONS, { value: 1 })],
-        },
-      ])
-      const destination = { x: 8, y: 1 }
-      expect(walk(initial, destination).accepted).toBe(false)
-      expect(walk(cast(initial, 'swap', ENEMY_CELL), destination).accepted).toBe(
-        true,
-      )
-    }),
+    consequence(
+      'swap changes the origin used by the next movement spend',
+      () => {
+        const initial = fight([
+          {
+            id: 'swap',
+            effects: [on_enemy(spell_effect.K_SWAP_POSITIONS, { value: 1 })],
+          },
+        ])
+        const destination = { x: 8, y: 1 }
+        expect(walk(initial, destination).accepted).toBe(false)
+        expect(
+          walk(cast(initial, 'swap', ENEMY_CELL), destination).accepted,
+        ).toBe(true)
+      },
+    ),
   ],
   [
     spell_effect.K_CARRY,
-    consequence('carry brings the victim into a point-blank follow-up hit', () => {
-      const initial = fight([
-        {
-          id: 'carry',
-          effects: [on_enemy(spell_effect.K_CARRY, { value: 1 })],
-        },
-        { ...strike, range_max: 0 },
-      ])
-      expect(
-        damage_taken(initial, cast(initial, 'strike', CASTER_CELL)),
-      ).toBe(0)
-      const carried = cast(initial, 'carry', ENEMY_CELL)
-      expect(
-        damage_taken(carried, cast(carried, 'strike', CASTER_CELL)),
-      ).toBe(20)
-    }),
+    consequence(
+      'carry brings the victim into a point-blank follow-up hit',
+      () => {
+        const initial = fight([
+          {
+            id: 'carry',
+            effects: [on_enemy(spell_effect.K_CARRY, { value: 1 })],
+          },
+          { ...strike, range_max: 0 },
+        ])
+        expect(
+          damage_taken(initial, cast(initial, 'strike', CASTER_CELL)),
+        ).toBe(0)
+        const carried = cast(initial, 'carry', ENEMY_CELL)
+        expect(
+          damage_taken(carried, cast(carried, 'strike', CASTER_CELL)),
+        ).toBe(20)
+      },
+    ),
   ],
   [
     spell_effect.K_THROW,
