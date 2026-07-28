@@ -9,11 +9,11 @@
 // (red: char A's board + binding both survive the switch to B).
 //
 // Real stores throughout (not injected fakes) — this leaf hardcodes them exactly like CharacterSwitcher's
-// own closure does, so the test proves the ACTUAL wiring, not a stand-in. resume_world_fight's real fetch
-// targets localhost:3000 (no server here) — it fails fast (connection refused) and is swallowed by the
-// function's own try/catch (world_fight.js), so it never throws into this test.
+// own closure does, so the test proves the ACTUAL wiring, not a stand-in. resume_world_fight's fetch is
+// stubbed at the socket boundary to reject immediately with ECONNREFUSED, the no-server condition this test
+// intends to exercise; world_fight.js swallows that read failure, so it never throws into this test.
 
-import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 
 import { install_browser_globals } from '../../../test_helpers/browser_globals.js'
 
@@ -30,6 +30,12 @@ const FIGHT_A = `0x${'f'.repeat(64)}`
 const B_WORLD = `0x${'e'.repeat(64)}`
 
 const initial_dungeon = use_dungeon.getInitialState()
+const real_fetch = globalThis.fetch
+const refused_fetch = mock(async () => {
+  const error = new Error('connect ECONNREFUSED 127.0.0.1:3000')
+  error.code = 'ECONNREFUSED'
+  throw error
+})
 let prior_selected_character_id = null
 
 async function wait_for_selected_character(expected_id, attempts = 100) {
@@ -47,17 +53,26 @@ async function select_in_real_store(character_id) {
 
 beforeEach(() => {
   prior_selected_character_id = context.get_state().selected_character_id
+  refused_fetch.mockClear()
+  globalThis.fetch = refused_fetch
   reset_world_binding()
   use_dungeon.setState(initial_dungeon)
 })
 
 afterEach(async () => {
-  await select_in_real_store(prior_selected_character_id)
-  reset_world_binding()
-  use_dungeon.setState(initial_dungeon)
+  try {
+    await select_in_real_store(prior_selected_character_id)
+    reset_world_binding()
+    use_dungeon.setState(initial_dungeon)
+  } finally {
+    globalThis.fetch = real_fetch
+  }
 })
 
-afterAll(() => restore_browser_globals())
+afterAll(() => {
+  globalThis.fetch = real_fetch
+  restore_browser_globals()
+})
 
 describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwitcher seam', () => {
   test('rebinds BOTH the world session and the fight target (red before LEG ①: neither fired)', async () => {
@@ -75,6 +90,7 @@ describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwit
 
     const { character_id, world } = use_world_binding.getState()
     expect({ character_id, world }).toEqual({ character_id: CHAR_B, world: B_WORLD }) // world session rebound
+    expect(refused_fetch).toHaveBeenCalledTimes(1)
 
     // FIGHT half: A's LOCAL board is torn down (reset_local ran for real) — dungeon_id clears. This is the
     // exact field rebind_fight_session's own guard reads, so a clear proves rebind_fight actually fired.
@@ -88,6 +104,7 @@ describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwit
     const switched = await switch_active_character({ id: CHAR_B, world_id: B_WORLD }, () => {})
 
     expect(switched).toBe(true)
+    expect(refused_fetch).toHaveBeenCalledTimes(1)
     // B's own board must survive a reselect of itself — only a DIFFERENT incoming character tears one down.
     expect(use_dungeon.getState().dungeon_id).toBe(FIGHT_A)
   })
