@@ -1,7 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "rewrites": [{ "source": "/((?!(assets/|sw\\.js|workbox-.*\\.js|discord-callback\\.html)).*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/((?!(assets/|sw\\.js|workbox-.*\\.js|discord-callback\\.html)).*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
