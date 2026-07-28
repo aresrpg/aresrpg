@@ -81,8 +81,9 @@ describe('BFS parity — sim find_path_4dir/get_reachable_cells ≡ fight bfsPat
     }
 
     // The count is the headline: a non-zero here is a class of "the path you were shown is not the path you paid for".
-    expect({ compared_at_least: compared > 4000, disagreements: disagreements.slice(0, 8) }).toEqual({
-      compared_at_least: true,
+    // `compared` is pinned to a literal, never to itself — a self-compared count is green even when the sweep dies.
+    expect({ compared, disagreements: disagreements.slice(0, 8) }).toEqual({
+      compared: 4 * 3 * GRID_CELLS,
       disagreements: [],
     })
   })
