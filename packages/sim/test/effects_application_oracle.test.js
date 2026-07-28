@@ -31,12 +31,9 @@ describe('effects-application oracle', () => {
 
   for (const [, kind] of source_kinds) {
     const row = expected_consequences.get(kind)
-    test(
-      `${kind_name(kind)} — ${row?.description ?? 'MISSING CONSEQUENCE'}`,
-      () => {
-        expect(row, `${kind_name(kind)} has no consequence oracle`).toBeDefined()
-        row.probe()
-      },
-    )
+    test(`${kind_name(kind)} — ${row?.description ?? 'MISSING CONSEQUENCE'}`, () => {
+      expect(row, `${kind_name(kind)} has no consequence oracle`).toBeDefined()
+      row.probe()
+    })
   }
 })
