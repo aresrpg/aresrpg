@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect } from 'bun:test'
 
-import { canonical_state, fold_log, state_hash } from '../src/inputs.js'
+import { admit_events, empty_core_state, fingerprint_state } from '../src/core.js'
 import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
-import { committed_truth, create_fight_store } from '../src/store.js'
+import { create_fight_store } from '../src/store.js'
 
 // PARITY PROOF — S0's definition of done (FIGHT_REWRITE_DESIGN §1/§5). The FIGHTREAL-captured REAL testnet receipt
 // (digest 5wdRBuZzjp: TurnEnded→MobMoved→Hit→Cast→TurnStarted) folded through the dark core must (1) byte-match a
@@ -33,12 +33,21 @@ const via_store = (order = null) => {
   return store.getState()
 }
 
+const direct_core = (actions) => {
+  const core = empty_core_state(FIGHT_ID)
+  const admitted = admit_events(core.inbox, actions, 0)
+  return { ...core, inbox: admitted.inbox }
+}
+
 describe('fight-core parity — real receipt → sim-shaped state (byte parity)', () => {
   test('core fold byte-matches a direct fold of the same events', () => {
     const store_state = via_store()
-    const direct = fold_log(normalize_events(receipt, { version: 1, fight_id: FIGHT_ID }), FIGHT_ID)
-    expect(JSON.stringify(canonical_state(store_state))).toBe(JSON.stringify(canonical_state(direct)))
-    expect(state_hash(store_state)).toBe(state_hash(direct))
+    const direct = direct_core(normalize_events(receipt, { version: 1, fight_id: FIGHT_ID }))
+    expect(JSON.stringify(fingerprint_state(store_state.core))).toBe(JSON.stringify(fingerprint_state(direct)))
+    // These are viewer-local store facts, so they stay out of the parity image and retain direct coverage.
+    expect(store_state.wave).toEqual([])
+    expect(store_state.presented_seq).toBe(0)
+    expect(store_state.settlement.chain_terminal).toBeNull()
   })
 
   test('folded state equals the receipt chain ground truth', () => {
@@ -54,14 +63,14 @@ describe('fight-core parity — real receipt → sim-shaped state (byte parity)'
   })
 
   test('convergence — dup poll, stale subset, and out-of-order versions fold to one state', () => {
-    const canonical = state_hash(via_store())
+    const canonical = fingerprint_state(via_store().core)
     // dup + stale re-delivery through the store: same (version, event_idx) keys ⇒ idempotent
     const store = create_fight_store()
     store.getState().input({ type: 'init', fight_id: FIGHT_ID, my_key: 'p0' })
     store.getState().input({ type: 'receipt', receipt, version: 1 }, 1_000)
     store.getState().input({ type: 'poll', receipt, version: 1 }, 1_000) // exact dup
     store.getState().input({ type: 'poll', receipt: { events: receipt.events.slice(0, 2) }, version: 1 }, 1_000) // stale subset
-    expect(state_hash(store.getState())).toBe(canonical)
+    expect(fingerprint_state(store.getState().core)).toEqual(canonical)
 
     // out-of-order canonical delivery converges — M2b (156b27ad, the one-ingress rewrite) keys the accept log by
     // per-fight SEQ and re-folds by (version, event_idx); arrival order never decides. A receipt's own seqs are
@@ -87,10 +96,10 @@ describe('fight-core parity — real receipt → sim-shaped state (byte parity)'
       const s = create_fight_store()
       s.getState().input({ type: 'init', fight_id: FIGHT_ID, my_key: 'p0' })
       for (const p of pages) s.getState().input(p, 0)
-      return state_hash(committed_truth(s.getState()))
+      return fingerprint_state(s.getState().core)
     }
     // in-order (head + tail in one page) vs out-of-order (the tail page waits on the gap, the head page fills it):
     // both fold to active=p0, deadline=5, p0.hp=30 — the same committed state.
-    expect(drive([page([hit]), page([started, hit])])).toBe(drive([page([started, hit])]))
+    expect(drive([page([hit]), page([started, hit])])).toEqual(drive([page([started, hit])]))
   })
 })

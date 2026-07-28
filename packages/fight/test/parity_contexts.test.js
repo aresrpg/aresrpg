@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// GATE D — cross-context state-hash parity (FIGHT_REWRITE_DESIGN enforcement §2): the SAME
+// GATE D — cross-context fingerprint parity (FIGHT_REWRITE_DESIGN enforcement §2): the SAME
 // scripted fight driven through all three contexts (world · dungeon · kolizeum) must produce IDENTICAL
 // fight-core state-transition hashes — context cannot alter fight semantics BY CONSTRUCTION. The contexts
 // differ ONLY in the ctx a shim supplies (run / rooms / wager routing); the canonical fight state (fighters,
@@ -10,7 +10,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { create_fight_store } from '../src/store.js'
-import { state_hash } from '../src/inputs.js'
+import { fingerprint_state } from '../src/core.js'
 
 const FIGHT = '0xf1'
 const ev = (suffix, parsedJson) => ({
@@ -58,21 +58,21 @@ const CONTEXTS = {
 }
 
 describe('gate d — cross-context fight-core parity', () => {
-  test('identical scripted fight → identical hash sequence in all three contexts', () => {
+  test('identical scripted fight → identical fingerprint sequence in all three contexts', () => {
     const sequences = Object.entries(CONTEXTS).map(([name, ctx]) => {
       const store = create_fight_store()
       store.getState().input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx })
-      const hashes = SCRIPT.map((msg) => {
+      const fingerprints = SCRIPT.map((msg) => {
         store.getState().input(msg, 1_000)
-        return state_hash(store.getState())
+        return fingerprint_state(store.getState().core)
       })
-      return { name, hashes }
+      return { name, fingerprints }
     })
     const [world, dungeon, kolizeum] = sequences
-    expect(dungeon.hashes).toEqual(world.hashes)
-    expect(kolizeum.hashes).toEqual(world.hashes)
-    // And the script actually progressed: distinct hashes per step, terminal victory folded.
-    expect(new Set(world.hashes).size).toBe(SCRIPT.length)
+    expect(dungeon.fingerprints).toEqual(world.fingerprints)
+    expect(kolizeum.fingerprints).toEqual(world.fingerprints)
+    // And the script actually progressed: distinct images per step, terminal victory folded.
+    expect(new Set(world.fingerprints.map((image) => JSON.stringify(image))).size).toBe(SCRIPT.length)
   })
 
   test('terminal state is context-invariant: p0 alive at 37hp, m0 dead, winner 0', () => {

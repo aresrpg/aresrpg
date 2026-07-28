@@ -7,7 +7,7 @@
 import { describe, test, expect } from 'bun:test'
 
 import { create_fight_store } from '../src/store.js'
-import { canonical_state, state_hash } from '../src/inputs.js'
+import { fingerprint_state } from '../src/core.js'
 import { engine_view, board_view } from '../src/project.js'
 
 const FIGHT = '0xf1647'
@@ -97,6 +97,8 @@ const active_store = () => {
   return store
 }
 
+const image_of = (store) => fingerprint_state(store.getState().core)
+
 /** A single-PTB turn receipt: my turn ends → a mob turn (paced into a draining wave) → my next turn. */
 const turn_receipt = () => ({
   events: [
@@ -124,13 +126,22 @@ describe('INC-0 · provider token (NORTH_STAR C2/C3 — the mechanical floor)', 
   test('an intent during a draining mob wave is REFUSED + logged, never applied (provider = chain_replay)', () => {
     const store = active_store()
     store.getState().input({ type: 'receipt', receipt: turn_receipt(), version: 4 }, T0 + 6_000)
-    const before = state_hash(store.getState())
+    const before = {
+      ap: board_view(store.getState()).escrow[0].ap,
+      entries: store.getState().entries,
+    }
     expect(store.getState().provider).toBe('chain_replay')
     // A HUD click that would push predicted state while the chain holds the mic (C3: "HUD triggers NOTHING").
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'cast', ap_cost: 5, damaging: true, target_cell: 45 } }, T0 + 6_100)
-    expect(state_hash(store.getState())).toBe(before) // never applied — a logged non-event
+    expect(
+      {
+        ap: board_view(store.getState()).escrow[0].ap,
+        entries: store.getState().entries,
+      },
+      'the refused intent changed no prediction state'
+    ).toEqual(before)
     expect(store.getState().refused).toMatchObject({ type: 'intent', reason: 'provider', provider: 'chain_replay' })
   })
 })
@@ -138,7 +149,7 @@ describe('INC-0 · provider token (NORTH_STAR C2/C3 — the mechanical floor)', 
 describe('INC-0 · session identity (B-F02/F06 — A→B crossings drop, id-less resume HELD)', () => {
   test('a snapshot for a DIFFERENT fight is dropped + logged, never adopted', () => {
     const store = active_store()
-    const before = state_hash(store.getState())
+    const before = image_of(store)
     store.getState().input(
       {
         type: 'snapshot',
@@ -149,7 +160,7 @@ describe('INC-0 · session identity (B-F02/F06 — A→B crossings drop, id-less
       T0 + 2_000
     )
     expect(store.getState().view_version).not.toBe(99) // fight B never adopted into fight A
-    expect(state_hash(store.getState())).toBe(before)
+    expect(image_of(store)).toEqual(before)
     expect(store.getState().refused).toMatchObject({ type: 'snapshot', reason: 'fight_id' })
   })
 
@@ -276,9 +287,20 @@ describe('INC-0 · composite prediction (rider #1 — a whole cast folds atomica
   test('a composite prediction is refused during chain_replay (same local-push law as a bare intent)', () => {
     const store = active_store()
     store.getState().input({ type: 'receipt', receipt: turn_receipt(), version: 4 }, T0 + 6_000)
-    const before = state_hash(store.getState())
+    const before = {
+      ap: board_view(store.getState()).escrow[0].ap,
+      mob_hp: engine_view(store.getState()).fighters.get('mob-0').health,
+      entries: store.getState().entries,
+    }
     store.getState().input(cast_batch(), T0 + 6_100)
-    expect(state_hash(store.getState())).toBe(before)
+    expect(
+      {
+        ap: board_view(store.getState()).escrow[0].ap,
+        mob_hp: engine_view(store.getState()).fighters.get('mob-0').health,
+        entries: store.getState().entries,
+      },
+      'the refused composite changed no prediction state'
+    ).toEqual(before)
     expect(store.getState().refused).toMatchObject({ type: 'predicted', reason: 'provider' })
   })
 })
@@ -289,29 +311,59 @@ describe('INC-0 · honest oracle (B-F18 — the load-bearing widening)', () => {
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'cast', ap_cost: 5, damaging: true, target_cell: 45 } }, T0 + 1_100)
-    return store.getState()
+    return store.getState().core
   }
 
   test('the parity hash DIVERGES on an AP-only corruption (was blind at HEAD)', () => {
     const clean = folded()
-    const clean_hash = state_hash(clean)
-    // plant an AP-only corruption — nothing else changes
+    const clean_image = fingerprint_state(clean)
+    // Plant an AP-only corruption in the canonical snapshot budget. TurnStarted re-folds it into committed AP.
     const corrupt = {
       ...clean,
-      fighters: { ...clean.fighters, p0: { ...clean.fighters.p0, ap: clean.fighters.p0.ap - 1 } },
+      inbox: {
+        ...clean.inbox,
+        base_view: {
+          ...clean.inbox.base_view,
+          escrow: clean.inbox.base_view.escrow.map((fighter, idx) =>
+            idx === 0 ? { ...fighter, base_ap: fighter.base_ap - 1 } : fighter
+          ),
+        },
+      },
     }
-    expect(canonical_state(corrupt).fighters.find((f) => f.key === 'p0').ap).not.toBe(
-      canonical_state(clean).fighters.find((f) => f.key === 'p0').ap
+    expect(fingerprint_state(corrupt).roster.find((fighter) => fighter.id === ME).ap).not.toBe(
+      clean_image.roster.find((fighter) => fighter.id === ME).ap
     )
-    expect(state_hash(corrupt)).not.toBe(clean_hash) // an oracle that stays green on a known corruption is no oracle
+    expect(fingerprint_state(corrupt)).not.toEqual(clean_image) // a green oracle on known corruption is no oracle
   })
 
   test('MP and ready corruptions also diverge (the reconcile-corrupted fields are all watched)', () => {
     const clean = folded()
-    const mp_corrupt = { ...clean, fighters: { ...clean.fighters, p0: { ...clean.fighters.p0, mp: 99 } } }
-    // p0 was Placed+Ready in active_store (ready === true), so flip it to prove `ready` is in the image.
-    const ready_corrupt = { ...clean, fighters: { ...clean.fighters, p0: { ...clean.fighters.p0, ready: false } } }
-    expect(state_hash(mp_corrupt)).not.toBe(state_hash(clean))
-    expect(state_hash(ready_corrupt)).not.toBe(state_hash(clean))
+    const mp_corrupt = {
+      ...clean,
+      inbox: {
+        ...clean.inbox,
+        base_view: {
+          ...clean.inbox.base_view,
+          escrow: clean.inbox.base_view.escrow.map((fighter, idx) =>
+            idx === 0 ? { ...fighter, base_mp: 99 } : fighter
+          ),
+        },
+      },
+    }
+    // Remove the authoritative Ready fact at its canonical coordinate; the rest of the fold stays identical.
+    const ready_corrupt = {
+      ...clean,
+      inbox: {
+        ...clean.inbox,
+        log: Object.fromEntries(
+          Object.entries(clean.inbox.log).map(([coord, action]) => [
+            coord,
+            action.kind === 'Ready' ? { ...action, kind: 'CorruptReady' } : action,
+          ])
+        ),
+      },
+    }
+    expect(fingerprint_state(mp_corrupt)).not.toEqual(fingerprint_state(clean))
+    expect(fingerprint_state(ready_corrupt)).not.toEqual(fingerprint_state(clean))
   })
 })

@@ -617,5 +617,3 @@ export const normalize_intent = (intent, { version, event_idx = 0, actor = null,
       return { ...base, ...intent } // already-canonical action passthrough
   }
 }
-
-export { canonical_state, state_hash } from './legacy_hash.js'
