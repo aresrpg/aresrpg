@@ -182,23 +182,23 @@ export const transition_colors = ({ kind, class_id, current }) =>
  */
 export function character_create(opts) {
   const {
-  on_created,
-  on_cancel,
-  character_count = 0,
-  claimed_free = false,
-  zklogin_session = true,
-  price_sui = ADDITIONAL_CHARACTER_PRICE_SUI,
-  get_balance_sui,
-  placement = 'overlay',
-  allowed_classes,
-  // The cancel button text — defaults to "Cancel". The forced FIRST create (confirmed-empty roster) has
-  // nowhere to cancel back TO and covers the companion chrome, so the host passes "Log out" + wires
-  // on_cancel to a full logout (the always-escapable invariant).
-  cancel_label = 'Cancel',
-  // Calm "new era" context line — shown ONLY when the wallet owns characters from an EARLIER package generation
-  // (they don't appear in the current roster because they live on an older on-chain era). Reassurance, not a block.
-  show_new_era_notice = false,
-} = opts
+    on_created,
+    on_cancel,
+    character_count = 0,
+    claimed_free = false,
+    zklogin_session = true,
+    price_sui = ADDITIONAL_CHARACTER_PRICE_SUI,
+    get_balance_sui,
+    placement = 'overlay',
+    allowed_classes,
+    // The cancel button text — defaults to "Cancel". The forced FIRST create (confirmed-empty roster) has
+    // nowhere to cancel back TO and covers the companion chrome, so the host passes "Log out" + wires
+    // on_cancel to a full logout (the always-escapable invariant).
+    cancel_label = 'Cancel',
+    // Calm "new era" context line — shown ONLY when the wallet owns characters from an EARLIER package generation
+    // (they don't appear in the current roster because they live on an older on-chain era). Reassurance, not a block.
+    show_new_era_notice = false,
+  } = opts
   // No allowlist → every class pickable (prod hosts pass nothing). With one, only listed ids are pickable.
   const is_allowed = (/** @type {string} */ id) => !allowed_classes || allowed_classes.includes(id)
   const coming_soon_label = i18n.t('characters.create.coming_soon')
@@ -206,7 +206,7 @@ export function character_create(opts) {
   // pick. findIndex falls back to 0 if (mis-config) nothing is allowed.
   const initial = Math.max(
     0,
-    CLASSES.findIndex((c) => is_allowed(c.id)),
+    CLASSES.findIndex((c) => is_allowed(c.id))
   )
 
   let selected = initial
@@ -302,7 +302,9 @@ export function character_create(opts) {
     const c = CLASSES[selected]
     hname.textContent = c.name
     hrole.textContent = c.role
-    htags.innerHTML = `<span class="cc__tag">15-card deck</span><span class="cc__tag">7-card hand</span>`
+    htags.innerHTML =
+      `<span class="cc__tag">${i18n.t('characters.create.casting_ap')}</span>` +
+      `<span class="cc__tag">${i18n.t('characters.create.casting_limits')}</span>`
   }
 
   // Re-rig the pedestal for the CURRENT selection + gender. Colors are re-APPLIED (never re-derived) — the
@@ -351,7 +353,9 @@ export function character_create(opts) {
     b.addEventListener('click', () => {
       if (b.disabled || male === is_male) return
       male = is_male
-      gender_row.querySelectorAll('.cc__gender-opt').forEach((el, idx) => el.classList.toggle('is-sel', (idx === 0) === male))
+      gender_row
+        .querySelectorAll('.cc__gender-opt')
+        .forEach((el, idx) => el.classList.toggle('is-sel', (idx === 0) === male))
       // Re-rig with the chosen gender ONLY — never via select_class, whose class-arm derives fresh default
       // colors and so WIPED the player's picks. transition_colors 'sex' arm = preserve.
       colors = transition_colors({ kind: 'sex', class_id: CLASSES[selected].id, current: colors })

@@ -319,6 +319,8 @@
       "male": "Hombre",
       "female": "Mujer",
       "female_unavailable": "Modelo femenino no disponible temporalmente para esta clase",
+      "casting_ap": "Los hechizos usan PA",
+      "casting_limits": "Recargas y límites de lanzamiento",
       "create_paid": "Crear · {{price}} SUI →",
       "additional_price": "Personaje adicional · {{price}} SUI",
       "wallet_price": "Personaje · {{price}} SUI",

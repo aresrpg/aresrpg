@@ -319,6 +319,8 @@
       "male": "Homme",
       "female": "Femme",
       "female_unavailable": "Modèle féminin temporairement indisponible pour cette classe",
+      "casting_ap": "Les sorts utilisent les PA",
+      "casting_limits": "Relances et limites de lancer",
       "create_paid": "Créer · {{price}} SUI →",
       "additional_price": "Personnage supplémentaire · {{price}} SUI",
       "wallet_price": "Personnage · {{price}} SUI",

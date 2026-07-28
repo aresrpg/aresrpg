@@ -319,6 +319,8 @@
       "male": "Чоловік",
       "female": "Жінка",
       "female_unavailable": "Жіноча модель тимчасово недоступна для цього класу",
+      "casting_ap": "Закляття витрачають ОД",
+      "casting_limits": "Перезарядка й ліміти застосувань",
       "create_paid": "Створити · {{price}} SUI →",
       "additional_price": "Додатковий персонаж · {{price}} SUI",
       "wallet_price": "Персонаж · {{price}} SUI",

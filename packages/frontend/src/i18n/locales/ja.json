@@ -319,6 +319,8 @@
       "male": "男性",
       "female": "女性",
       "female_unavailable": "このクラスの女性モデルは一時的にご利用いただけません",
+      "casting_ap": "詠唱にはAPを使用",
+      "casting_limits": "クールダウン・使用回数制限",
       "create_paid": "作成 · {{price}} SUI →",
       "additional_price": "追加キャラクター · {{price}} SUI",
       "wallet_price": "キャラクター · {{price}} SUI",

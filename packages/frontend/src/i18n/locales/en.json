@@ -319,6 +319,8 @@
       "male": "Male",
       "female": "Female",
       "female_unavailable": "Female model temporarily unavailable for this class",
+      "casting_ap": "Casting uses AP",
+      "casting_limits": "Cooldowns & cast limits",
       "create_paid": "Create · {{price}} SUI →",
       "additional_price": "Additional character · {{price}} SUI",
       "wallet_price": "Character · {{price}} SUI",

@@ -319,6 +319,8 @@
       "male": "Männlich",
       "female": "Weiblich",
       "female_unavailable": "Weibliches Modell für diese Klasse vorübergehend nicht verfügbar",
+      "casting_ap": "Zauber kosten AP",
+      "casting_limits": "Abklingzeiten & Einsatzlimits",
       "create_paid": "Erstellen · {{price}} SUI →",
       "additional_price": "Zusätzlicher Charakter · {{price}} SUI",
       "wallet_price": "Charakter · {{price}} SUI",

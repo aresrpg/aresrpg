@@ -60,6 +60,19 @@ describe('the price is WRITTEN ON THE BUTTON (characters.create.create_paid) —
   })
 })
 
+test('class tags describe AP, cooldowns, and cast limits in all six locales — never the retired deck rules', () => {
+  for (const locale of [en, fr, de, es, ja, uk]) {
+    expect(locale.characters.create.casting_ap).toBeTruthy()
+    expect(locale.characters.create.casting_limits).toBeTruthy()
+  }
+
+  const source = read_fixture('./character-create.js')
+  expect(source).toContain("i18n.t('characters.create.casting_ap')")
+  expect(source).toContain("i18n.t('characters.create.casting_limits')")
+  expect(source).not.toContain('15-card deck')
+  expect(source).not.toContain('7-card hand')
+})
+
 describe('insufficient_funds_copy — the honest broke line (price + live balance, never a raw throw)', () => {
   test('renders price + 3-decimal balance through the REAL app i18n instance (en)', async () => {
     await app_i18n.changeLanguage('en')
