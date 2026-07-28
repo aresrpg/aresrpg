@@ -182,14 +182,25 @@ export const recompute = (draft, now) => {
     view: draft.view,
   })
   // GLYPH EXPIRY (persistent, NOT detonated): unlike a trap, a glyph is never sprung by a fighter standing on it
-  // (check_glyphs ticks + persists). It dies only by decay_glyphs — so decrement turns_remaining on each of MY
-  // turn-advances (the my_turn_no rising edge = the ONE clean client turn signal; the client has no chain glyph
-  // read, so this errs toward persistence — "it stays"). At 0 it's gone forever. Already-gone kept.
-  const glyph_turn_advanced = my_turn_no > (draft.my_turn_no ?? 0)
+  // (check_glyphs ticks + persists). It dies only by EXPIRY, and expiry runs on THE CHAIN'S clock: a glyph's
+  // duration ticks once per PLAYER turn-end (cast.move:1708, inside tick_turn_end's non-mob arm), so the ordinal
+  // Move stamps at every player turn START — `TurnEntropy.ordinal` (fight.move:646-655), published on TurnStarted
+  // and surfaced onto `view.turn_ordinal` just above — counts exactly the glyph's turns, identically for EVERY
+  // viewer. #1535: this used to ride `my_turn_no`, the VIEWER's own playable rising edge — one tick per ROUND in
+  // coop where the chain ticks once per teammate turn, and a spectator (pinned at 0) watched glyphs live forever.
+  // DERIVED, never accumulated: the authored budget + the ordinal the glyph was placed at are the facts and
+  // `turns_remaining` is their projection, so a re-fold can never double-tick. The clock is monotone — an absent
+  // or stale ordinal HOLDS it rather than reviving a glyph, and a clock that never advances errs toward
+  // persistence ("it stays"). At 0 it's gone forever. Already-gone kept.
+  const glyph_clock = Math.max(Number(view?.turn_ordinal ?? 0), Number(draft.glyph_clock ?? 0))
   const my_glyphs = (draft.my_glyphs ?? []).map((g) => {
     if (g.gone) return g
-    const turns_remaining = glyph_turn_advanced ? g.turns_remaining - 1 : g.turns_remaining
-    return turns_remaining <= 0 ? { ...g, turns_remaining: 0, gone: true } : { ...g, turns_remaining }
+    const placed_at = g.placed_at ?? glyph_clock // stamped the first fold that sees the record (its own cast)
+    const turns = g.turns ?? g.turns_remaining
+    const turns_remaining = turns - Math.max(0, glyph_clock - placed_at)
+    return turns_remaining <= 0
+      ? { ...g, turns, placed_at, turns_remaining: 0, gone: true }
+      : { ...g, turns, placed_at, turns_remaining }
   })
   // PLACEMENT GHOSTS GC (durable accumulator, same class as my_traps/my_glyphs above): a committed Placed for a
   // character SUPERSEDES (drops) any ghost recorded for them FOREVER — the chain truth is now real, the hint's
@@ -240,6 +251,7 @@ export const recompute = (draft, now) => {
     provider,
     my_traps,
     my_glyphs,
+    glyph_clock,
     placement_ghosts,
   }
 }

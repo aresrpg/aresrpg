@@ -55,14 +55,31 @@ const FIGHT_OBJECT = {
   turn_ordinal: 1,
 }
 
-const boot = () => {
+// The same fight with a SECOND seat — the coop shape where the chain's clock and a viewer's own turn counter
+// visibly disagree (#1535).
+const COOP_FIGHT_OBJECT = {
+  ...FIGHT_OBJECT,
+  participants: [
+    ...FIGHT_OBJECT.participants,
+    { ...FIGHT_OBJECT.participants[0], owner: '0xbbb', character: '0xc2', cell: enc(5, 6) },
+  ],
+  queue: [
+    { is_mob: false, idx: 0 },
+    { is_mob: true, idx: 0 },
+    { is_mob: false, idx: 1 },
+  ],
+}
+
+const boot = (fight = FIGHT_OBJECT) => {
   const store = create_fight_store()
   store
     .getState()
     .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: W } } })
-  store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 }, 1_000)
+  store.getState().input({ type: 'snapshot', fight, version: 5 }, 1_000)
   return store
 }
+
+const coop_boot = () => boot(COOP_FIGHT_OBJECT)
 
 // place a glyph covering a 3-cell zone for `turns` turns (the predicted-cast fold entry — predict_cast.placed_glyphs).
 const place_glyph = (store, turns = 2) =>
@@ -78,15 +95,69 @@ const place_glyph = (store, turns = 2) =>
     1_100
   )
 
-// bump my_turn_no (one round): a mob receipt presents a non-local wave; draining it re-raises the playable edge.
-const advance_one_turn = (store, base_ms) => {
+const drain = (store, at) => {
+  for (const turn of store.getState().wave) store.getState().input({ type: 'presented', seq: turn.seq }, at)
+}
+
+// ONE PLAYER TURN on the CHAIN's clock: a TurnStarted carrying the fight's turn ordinal (fight.move stamps it at
+// every player landing, cast.move ticks glyph durations at every player turn-end). WHOSE seat it is never enters
+// the count — that is the whole point of #1535: one canonical clock, not one per viewer.
+const advance_player_turn = (store, base_ms, ordinal) => {
+  store.getState().input(
+    {
+      type: 'receipt',
+      version: base_ms,
+      receipt: {
+        events: [
+          ev('TurnStarted', {
+            is_mob: false,
+            idx: 0,
+            deadline_ms: base_ms + 90_000,
+            turn_entropy: '77',
+            turn_ordinal: String(ordinal),
+          }),
+        ],
+      },
+    },
+    base_ms
+  )
+  drain(store, base_ms + 10)
+}
+
+// The same chain turn, but it lands on a TEAMMATE's seat: my own playable edge never rises, the canonical
+// ordinal still does.
+const teammate_turn = (store, base_ms, ordinal) => {
+  store.getState().input(
+    {
+      type: 'receipt',
+      version: base_ms,
+      receipt: {
+        events: [
+          ev('TurnStarted', {
+            is_mob: false,
+            idx: 1,
+            deadline_ms: base_ms + 90_000,
+            turn_entropy: '77',
+            turn_ordinal: String(ordinal),
+          }),
+        ],
+      },
+    },
+    base_ms
+  )
+  drain(store, base_ms + 10)
+}
+
+// A MOB turn: a non-local wave with no turn-seed stamp of its own (a mob turn-end takes cast.move's is_mob arm
+// and never touches glyph durations).
+const advance_mob_turn = (store, base_ms) => {
   store
     .getState()
     .input(
       { type: 'receipt', version: base_ms, receipt: { events: [ev('MobMoved', { idx: 0, to_cell: OFF })] } },
       base_ms
     )
-  for (const turn of store.getState().wave) store.getState().input({ type: 'presented', seq: turn.seq }, base_ms + 10)
+  drain(store, base_ms + 10)
 }
 
 describe('my_glyphs — the fold-state home for the persistent orange zone', () => {
@@ -112,12 +183,35 @@ describe('my_glyphs — the fold-state home for the persistent orange zone', () 
     )
   })
 
-  test('it EXPIRES after `turns` turn-advances (decay_glyphs semantics), then is gone forever', () => {
-    const store = boot()
+  test('it EXPIRES after `turns` PLAYER turns on the chain clock, then is gone forever (#1535)', () => {
+    const store = boot() // the adopted view opens at turn_ordinal 1
     place_glyph(store, 2) // survives the placing turn + one more
-    advance_one_turn(store, 1_200) // turns_remaining 2 → 1 (still lit)
+    advance_player_turn(store, 1_200, 2) // turns_remaining 2 → 1 (still lit)
     expect(engine_view(store.getState()).my_glyphs.length).toBe(3)
-    advance_one_turn(store, 1_400) // 1 → 0 → expired
+    advance_player_turn(store, 1_400, 3) // 1 → 0 → expired
+    expect(engine_view(store.getState()).my_glyphs).toEqual([])
+  })
+
+  test('MOB turns never spend a glyph turn — the chain ticks durations on player turn-ends only (#1540)', () => {
+    const store = boot()
+    place_glyph(store, 2)
+    // A whole PvM round of mob activity: the chain's `tick_turn_end(is_mob = true)` arm decrements nothing.
+    advance_mob_turn(store, 1_200)
+    advance_mob_turn(store, 1_300)
+    advance_mob_turn(store, 1_400)
+    expect(engine_view(store.getState()).my_glyphs.length).toBe(3)
+    expect(store.getState().my_glyphs[0].turns_remaining).toBe(2)
+  })
+
+  test("a TEAMMATE's turns spend the glyph — the clock is canonical, not viewer-local (#1535)", () => {
+    // THE COOP HALF. My own playable edge never rises here: every turn belongs to seat 1. The old fold keyed
+    // expiry on `my_turn_no` (MY rising edge only), so this glyph outlived the chain's kill by a full round per
+    // teammate — the report's exact symptom. The chain ordinal counts EVERY player's turn, so it dies on time.
+    const store = coop_boot()
+    place_glyph(store, 2)
+    teammate_turn(store, 1_200, 2)
+    expect(engine_view(store.getState()).my_glyphs.length).toBe(3)
+    teammate_turn(store, 1_400, 3)
     expect(engine_view(store.getState()).my_glyphs).toEqual([])
   })
 
