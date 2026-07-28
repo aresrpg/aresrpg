@@ -455,11 +455,22 @@ const state_from_view = (view, caster_id, stats_of) => {
 export const crit_clock_of = ({ fight, seat_row, draft_len = 0 }) => {
   const world_seed = fight?.world_seed ?? null
   const spawn_id = fight?.spawn_id ?? null
-  // 0 = no turn has opened yet (placement) — never a seed input, the same rule the deadline carried before it.
-  const turn_ordinal = fight?.turn_ordinal || null
-  const turn_entropy = turn_ordinal == null ? null : (fight?.turn_entropy ?? 0) // pass-through: u64 off the decode may be BigInt
+  // The u64 seed bytes as decoded (BigInt/string) — passed through verbatim, NEVER `?? 0` (a fake-0 entropy previews
+  // the wrong roll; absent must refuse). Entropy 0 is a legal draw, so only null rejects it; a turn ordinal of 0 is
+  // "no turn has opened yet" (placement) — never a seed input, the same rule the deadline carried before.
+  const turn_entropy = fight?.turn_entropy ?? null
+  const turn_ordinal = fight?.turn_ordinal ?? null
   const seat = seat_row?.seat ?? null
-  if (world_seed == null || spawn_id == null || turn_ordinal == null || seat == null || !(seat >= 0)) return null
+  if (
+    world_seed == null ||
+    spawn_id == null ||
+    turn_entropy == null ||
+    turn_ordinal == null ||
+    Number(turn_ordinal) <= 0 ||
+    seat == null ||
+    !(seat >= 0)
+  )
+    return null
   return {
     world_seed,
     spawn_id,

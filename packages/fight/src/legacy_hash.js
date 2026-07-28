@@ -9,6 +9,9 @@ export const canonical_state = (state) => ({
   phase: state.phase,
   active: state.active,
   turn_deadline_ms: state.turn_deadline_ms,
+  // The chain turn-seed inputs join the parity image: two viewers of one fight fold the SAME TurnStarted, so a
+  // seed divergence (a preview rolling a different crit/damage than the chain) now shows up as a hash split.
+  turn_seed_inputs: state.turn_seed_inputs ?? null,
   winner: state.winner,
   fighters: Object.keys(state.fighters)
     .sort()

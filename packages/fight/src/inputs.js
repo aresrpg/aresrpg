@@ -73,6 +73,11 @@ export const empty_state = (fight_id = null) => ({
   // zero-deadline turns fall back to the event coordinate. Never incremented from local receipt order.
   turn_ordinal: null,
   turn_deadline_ms: null,
+  // The CHAIN turn-seed inputs (fight.move::turn_seed), stamped ONLY by a folded TurnStarted (they are a Move
+  // dynamic field the decoded Fight object never carries). A nested pair so the two are atomically present-or-null
+  // and never collide with the `turn_ordinal` ANCHOR token above — a different fact under a colliding name. Kept
+  // in their decoded u64 form (BigInt/decimal string), never narrowed through Number before the 32-bit mix.
+  turn_seed_inputs: null,
   // Provenance bit folded with the current turn. The numeric clock may be held monotonically by store.js across
   // a torn read, but only a positive deadline observed on THIS folded TurnStarted/snapshot may drive an action.
   turn_deadline_fresh: false,
@@ -385,6 +390,14 @@ export const apply_action = (state, action) => {
             : `${Number(action.version ?? 0)}:${Number(action.event_idx ?? 0)}`,
         turn_deadline_ms: observed_deadline,
         turn_deadline_fresh: observed_deadline != null,
+        // The authoritative turn-seed boundary. Both inputs travel on THIS wire (fight_events.move) as decoded
+        // u64 (BigInt/string) — kept verbatim, never narrowed. An older/partial TurnStarted that omits either
+        // must CLEAR the seed (null) rather than reuse the preceding turn's entropy — a stale seed previews the
+        // wrong roll; a null one previews nothing (the honest refusal `crit_clock_of` already enforces).
+        turn_seed_inputs:
+          action.turn_entropy != null && action.turn_ordinal != null
+            ? { turn_entropy: action.turn_entropy, turn_ordinal: action.turn_ordinal }
+            : null,
       }
       // CLIENT-INDEPENDENCE turn-start budget: the TurnStarted event carries NO ap/mp (fight_events.move:24), so
       // predict the deterministic begin_turn refill — base_ap/base_mp injected at the normalize door below. Without

@@ -231,8 +231,8 @@ export function board_state_from_fight({
       turn_ptr: 0,
       turn_queue: [],
       turn_deadline_ms: 0,
-      turn_entropy: 0,
-      turn_ordinal: 0,
+      turn_entropy: null,
+      turn_ordinal: null,
       placement_deadline_ms: 0,
       world_seed: null,
       spawn_id: null,
@@ -362,10 +362,12 @@ export function board_state_from_fight({
     turn_queue: fight.queue?.length ? fight.queue : interleave_order(escrow.length, mobs.length),
     turn_ms: Number(fight.turn_ms ?? 0),
     turn_deadline_ms: Number(fight.turn_deadline_ms ?? 0),
-    // The turn-seed inputs (fight.move::turn_seed). 0/0 = no turn has opened yet — `crit_clock_of` refuses to
-    // build a clock from that, exactly as it refused an unstamped deadline before.
-    turn_entropy: Number(fight.turn_entropy ?? 0),
-    turn_ordinal: Number(fight.turn_ordinal ?? 0),
+    // The turn-seed inputs (fight.move::turn_seed) are a Move DYNAMIC FIELD published only on TurnStarted — the
+    // decoded Fight object never carries them, so this is null in the common path and the FOLDED TurnStarted seed
+    // (recompute → s.view) is what reaches every preview. Absent ⇒ null (u64 preserved, never Number-narrowed);
+    // `crit_clock_of` refuses a clock from a null seed, exactly as it refused an unstamped deadline before.
+    turn_entropy: fight.turn_entropy ?? null,
+    turn_ordinal: fight.turn_ordinal ?? null,
     last_action_ms: Number(fight.last_action_ms ?? 0),
     placement_deadline_ms: Number(fight.placement_deadline_ms ?? 0),
     world_seed: fight.world_seed ?? null,

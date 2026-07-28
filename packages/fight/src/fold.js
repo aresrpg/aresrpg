@@ -165,6 +165,15 @@ export const recompute = (draft, now) => {
   // Chain timestamps are monotonic within one Fight. A version-inflated but semantically stale object may prune a
   // fresher TurnStarted tail; preserve the greatest observed chain deadline without synthesising a client deadline.
   const turn_deadline_ms = Math.max(observed_deadline, Number(committed.turn_deadline_ms ?? 0)) || null
+  // THE FOLDED TURN-SEED reaches the view, the same way the deadline does. The chain-only fold stamps it from the
+  // TurnStarted wire (a dynamic field the decoded snapshot never carries); we surface it onto `view.turn_entropy`
+  // /`view.turn_ordinal` so every preview reads the SEED off `s.view` (project.js / board_view), never the
+  // store-root `turn_ordinal` — that is the fold's ANCHOR token, a different fact under a colliding name. Absent ⇒
+  // the decoded view's own null stands, and `crit_clock_of` refuses the clock (honest refusal, never a fake-0 seed).
+  const turn_seed_inputs = chain_committed.turn_seed_inputs ?? null
+  const view = turn_seed_inputs
+    ? { ...draft.view, turn_entropy: turn_seed_inputs.turn_entropy, turn_ordinal: turn_seed_inputs.turn_ordinal }
+    : draft.view
   const provider = provider_of({ presenting, playable, view: draft.view, spectator })
   const my_traps = fold_trap_ledger({
     authoritative_tail,
@@ -217,6 +226,7 @@ export const recompute = (draft, now) => {
   return {
     ...draft,
     ...committed,
+    view,
     fighters: apply_retirement(committed.fighters, retired),
     retired,
     optimistic_dead,

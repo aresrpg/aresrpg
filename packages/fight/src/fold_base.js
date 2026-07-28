@@ -103,6 +103,9 @@ export const base_from_view = (view, fight_id) => {
           ? String(observed_deadline)
           : `${Number(view.version ?? 0)}:${Number(view.turn_ptr ?? 0)}`,
     turn_deadline_ms: observed_deadline > 0 ? observed_deadline : null,
+    // The seed is a TurnStarted-only fact (a Move dynamic field the snapshot cannot carry): the base opens null and
+    // the folded TurnStarted (apply_action) stamps it. Never derived from the decoded view.
+    turn_seed_inputs: null,
     turn_deadline_fresh: actor != null && observed_deadline > 0,
     phase: view.status === STATUS_WON ? 'victory' : view.status === STATUS_FAILED ? 'defeat' : 'active',
     winner: view.status === STATUS_WON ? 0 : view.status === STATUS_FAILED ? 1 : -1,
