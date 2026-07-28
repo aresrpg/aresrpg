@@ -155,6 +155,10 @@ export async function get_owned_items(sdk, owner, package_id, fetch_v1 = get_own
     if (!f) return null
     return {
       id: ref.objectId,
+      // The canonical ItemTemplate id (`Item.template` on chain, `template_id` on the /v1 row) — the ONLY
+      // proof two stackables are the same template, so the duplicate-stack sweep (#1495) can plan on this
+      // path too. Without it the fallback bag was shape-DIVERGENT from /v1 despite the claim below.
+      template_id: f.template ?? null,
       name: f.name ?? '',
       // On-chain the field is `category` (item.move: Item.category); the whole client bag keys off
       // `item_category` (Inventory / DungeonsModal / inventory-equip) — this is the SINGLE rename home.

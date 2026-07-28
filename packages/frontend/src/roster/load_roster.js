@@ -39,6 +39,7 @@
 // returning owner with ONLY prior-era characters just won't see the notice) — flagged, not silently dropped.
 
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
+import { fight_store } from '@aresrpg/fight/store'
 
 import { context } from '../game/core/game.js'
 import { use_auth } from '../auth'
@@ -56,6 +57,12 @@ import { merge_character_enrichment } from '../chain/fight_character_reconcile.j
 // a box still present in a read that STARTED after its open promise settled is proven unconsumed, so the
 // session latch releases (pure predicate in the guard; no timer, no poll). One-way import (guard is a leaf).
 import { release_settled_box_latches } from '../game/screens/hud/lootbox-retry-guard.js'
+// #1495 duplicate-stack sweep — the orchestrator is dependency-injected (it reads and writes nothing itself),
+// so this loader, the edge that already owns the bag read, wires its fight predicate / submit / fold doors.
+import { sweep_duplicate_stacks } from '../world-shell/auto_merge_stacks.js'
+import { world_fight_active } from '../world-shell/fight_session_scope.js'
+import { apply_stack_merge_receipt } from '../world-shell/store_patch.js'
+import { submit_stack_merges } from '../chain/write/write_stack_merge.js'
 
 import { rpc_to_card } from './roster_projection.js'
 
@@ -195,6 +202,18 @@ export async function load_roster() {
       loaded: true,
       load_error: null,
     })
+
+    // #1495 — the DUPLICATE-STACK SWEEP. Every stackable acquisition mints a NEW Item of amount 1, so a bag
+    // silently accumulates same-template singletons. Fire ONCE per session, right after the bag has been
+    // dispatched: the sweep owns its own laws (never mid-fight, never retried, receipt-folded — see
+    // world-shell/auto_merge_stacks.js), and this call site owns only the WIRING of its three doors.
+    // Fire-and-forget by design: a tidy-up must never delay, block or fail the roster load.
+    sweep_duplicate_stacks({
+      items: owned_items,
+      fight_active: () => world_fight_active(fight_store.getState()),
+      submit: submit_stack_merges,
+      fold: apply_stack_merge_receipt,
+    }).catch((error) => game_log('load_roster', 'stack sweep threw (never fatal)', error))
 
     // auto-select the first character if none is selected (chat/HUD need a valid id)
     if (!context.get_state().selected_character_id && characters[0]?.id)
