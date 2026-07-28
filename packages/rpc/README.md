@@ -225,8 +225,10 @@ The indexer also binds a topic-keyed SSE surface on `STREAM_BIND`
   `current-set`/`join`/`leave` events over a ~30-second TTL registry. At least one
   identity query field is required.
 
-Both routes emit heartbeat comments about every 15 seconds. Presence is
-location-local by design; neither route introduces Redis-to-Redis replication.
+Both routes open with a `: ok` comment — the byte that makes a fronting proxy flush
+the response instead of holding an idle subscription as a hang — and re-send a `: ka`
+comment after each 20 seconds of silence. Presence is location-local by design;
+neither route introduces Redis-to-Redis replication.
 
 ### Valkey swap
 

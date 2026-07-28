@@ -27,7 +27,7 @@ use axum::http::{
     header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONNECTION},
     HeaderMap, HeaderName, HeaderValue, StatusCode,
 };
-use axum::response::sse::Event;
+use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Response, Sse};
 use axum::routing::get;
 use axum::Router;
@@ -36,13 +36,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
 use tokio::sync::mpsc;
-use tokio::time::{interval_at, Instant, MissedTickBehavior};
+use tokio::time::{interval, interval_at, Instant, MissedTickBehavior};
 use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt as _;
 use tracing::warn;
 
 const FIGHT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const PRESENCE_POLL_INTERVAL: Duration = Duration::from_secs(1);
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(20);
+const PRESENCE_REFRESH_INTERVAL: Duration = Duration::from_secs(15);
 const PRESENCE_TTL_MS: i64 = 30_000;
 const PRESENCE_KEY_IDLE_MS: i64 = 45_000;
 const ARES_WATERMARK_KEY: &str = "rpc:watermark:ares";
@@ -187,8 +189,25 @@ pub(crate) fn router(redis_url: &str) -> Result<Router> {
         .with_state(StreamState { redis }))
 }
 
+/// Wrap a pump's channel as the SSE body.
+///
+/// The correct no-buffering headers are not enough: an intermediary (Cloudflare
+/// fronts `rpc.aresrpg.world`) forwards nothing to the client until the body has
+/// a first byte, so a subscription that is merely *waiting* — an unjournalled
+/// fight, a replica still catching up — reaches a public client as a hang rather
+/// than as an open stream. The greeting comment is that first byte, emitted
+/// before the pump has even reached Redis, and `KeepAlive` re-supplies one after
+/// every `KEEPALIVE_INTERVAL` of silence (its timer resets on each real event,
+/// so an active stream never pays for it).
+///
+/// Both frames are SSE comments: they carry no event name, no data and no `id`,
+/// so `EventSource` consumers never observe them and the cursor a client would
+/// resume from is untouched.
 fn stream_response(receiver: mpsc::Receiver<SseItem>) -> Response {
-    let mut response = Sse::new(ReceiverStream::new(receiver)).into_response();
+    let greeting = tokio_stream::once(Ok(Event::default().comment("ok")));
+    let mut response = Sse::new(greeting.chain(ReceiverStream::new(receiver)))
+        .keep_alive(KeepAlive::new().interval(KEEPALIVE_INTERVAL).text("ka"))
+        .into_response();
     let headers = response.headers_mut();
     headers.insert(ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
     headers.insert(
@@ -287,13 +306,10 @@ async fn pump_fight(
         wait_until_caught_up(&mut conn, cursor, &sender).await?;
     }
 
-    // Heartbeats begin only AFTER cursor catch-up. A replica behind a presented
-    // cursor therefore holds the response completely silent as required.
-    let now = Instant::now();
-    let mut poll = interval_at(now, FIGHT_POLL_INTERVAL);
-    let mut heartbeat = interval_at(now + HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL);
+    // A replica behind a presented cursor emits no FRAME until it catches up —
+    // only the transport's comments, which carry no id and resume nothing.
+    let mut poll = interval(FIGHT_POLL_INTERVAL);
     poll.set_missed_tick_behavior(MissedTickBehavior::Skip);
-    heartbeat.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut last_sent = after;
 
     loop {
@@ -312,11 +328,6 @@ async fn pump_fight(
                         return Ok(());
                     }
                     last_sent = Some(id);
-                }
-            }
-            _ = heartbeat.tick() => {
-                if sender.send(Ok(Event::default().comment("heartbeat"))).await.is_err() {
-                    return Ok(());
                 }
             }
         }
@@ -505,9 +516,11 @@ async fn pump_presence(
 
     let now = Instant::now();
     let mut poll = interval_at(now + PRESENCE_POLL_INTERVAL, PRESENCE_POLL_INTERVAL);
-    let mut heartbeat = interval_at(now + HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL);
+    // Half the score TTL: this socket's own registry row must never lapse while
+    // the connection is open. It is a liveness write, not a transport keepalive.
+    let mut refresh = interval_at(now + PRESENCE_REFRESH_INTERVAL, PRESENCE_REFRESH_INTERVAL);
     poll.set_missed_tick_behavior(MissedTickBehavior::Skip);
-    heartbeat.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    refresh.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
@@ -529,12 +542,7 @@ async fn pump_presence(
                 }
                 current = next;
             }
-            _ = heartbeat.tick() => {
-                refresh_presence(&mut conn, &presence).await?;
-                if sender.send(Ok(Event::default().comment("heartbeat"))).await.is_err() {
-                    return Ok(());
-                }
-            }
+            _ = refresh.tick() => refresh_presence(&mut conn, &presence).await?,
         }
     }
 }
@@ -599,12 +607,35 @@ fn unix_ms() -> i64 {
 mod tests {
     use super::{
         active_presence_rows, fight_frame_payload, last_event_id, presence_changes, replay_tail,
-        FightCursor, FightStreamQuery, PresenceChange, PresenceRecord,
+        stream_response, FightCursor, FightStreamQuery, PresenceChange, PresenceRecord, SseItem,
     };
+    use axum::body::to_bytes;
     use axum::extract::Query;
     use axum::http::{HeaderMap, HeaderValue, Uri};
+    use axum::response::sse::Event;
     use serde_json::json;
     use std::collections::BTreeSet;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn a_fresh_subscription_greets_before_any_event() {
+        let (sender, receiver) = mpsc::channel::<SseItem>(2);
+        let response = stream_response(receiver);
+        sender
+            .send(Ok(Event::default().event("fight").id("90:7").data("{}")))
+            .await
+            .unwrap();
+        drop(sender);
+
+        let body = to_bytes(response.into_body(), 4096).await.unwrap();
+        let body = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(
+            body.starts_with(": ok\n\n"),
+            "a proxy only flushes once a body byte exists, so the greeting must lead: {body:?}"
+        );
+        assert!(body.contains("event: fight"), "{body:?}");
+    }
 
     /// Synthetic fixture ids, widened from a short tail so this module hand-types no live-shaped
     /// object id (scripts/check-chain-ids.mjs — a hardcoded id drifts the moment a package republishes,
