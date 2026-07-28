@@ -5,7 +5,8 @@
 // equippables) and RESOURCES (stackable). The gear/resource split comes from each template's
 // `item_category` (item.move's verify_category domain), read from the /v1 template projection.
 // Memoized module-side (templates change rarely; every card reuses one fetch) — HONEST: on error it
-// resolves to an empty map, so a card degrades to "no findables" rather than fabricating drops.
+// resolves to an empty map, so a card degrades to "no findables" rather than fabricating drops. That empty
+// map is NEVER memoized (#1488, never-cache-absence): only a successful read earns the session-long cache.
 
 import { get_encyclopedia } from '../rpc/client'
 
@@ -58,38 +59,46 @@ export function item_damages_from_v1(v1_damages) {
 /**
  * id → the legacy template-row shape, adapted from the `/v1/encyclopedia` item projection. The projection
  * carries exact identity/name/category/level plus the authored stat ranges (issue #219, decoded below);
- * fields it still does not index (Display image data) keep explicit empty defaults. Memoized; empty map on error.
+ * fields it still does not index (Display image data) keep explicit empty defaults. Memoized on SUCCESS only;
+ * a failed read degrades that one caller to an empty map and leaves the memo cold for the next.
  */
+async function read_template_map() {
+  const { items } = await get_encyclopedia('items')
+  const map = new Map()
+  for (const t of items ?? []) {
+    const id = String(t.template_id ?? '')
+    if (!id) continue
+    map.set(id, {
+      id,
+      item_type: String(t.item_type ?? ''),
+      name: String(t.name ?? ''),
+      category: String(t.category ?? '').toUpperCase(),
+      level: Number(t.level ?? 0),
+      // Authored [min,max] characteristics from the /v1 stat projection (issue #219), decoded through
+      // the single stat_bias home. The indexer projection still has no Display image data.
+      statsJson: stats_json_from_v1(t.stats),
+      // Authored weapon damage lines from the same projection (issue #619) — every owned/template item
+      // surface resolves its template through this map, so dropping them here blanked the damage block
+      // on all of them at once.
+      damages: item_damages_from_v1(t.damages),
+      display: null,
+    })
+  }
+  return map
+}
+
 export function get_template_map() {
-  if (!_templates_promise)
-    _templates_promise = (async () => {
-      try {
-        const { items } = await get_encyclopedia('items')
-        const map = new Map()
-        for (const t of items ?? []) {
-          const id = String(t.template_id ?? '')
-          if (!id) continue
-          map.set(id, {
-            id,
-            item_type: String(t.item_type ?? ''),
-            name: String(t.name ?? ''),
-            category: String(t.category ?? '').toUpperCase(),
-            level: Number(t.level ?? 0),
-            // Authored [min,max] characteristics from the /v1 stat projection (issue #219), decoded through
-            // the single stat_bias home. The indexer projection still has no Display image data.
-            statsJson: stats_json_from_v1(t.stats),
-            // Authored weapon damage lines from the same projection (issue #619) — every owned/template item
-            // surface resolves its template through this map, so dropping them here blanked the damage block
-            // on all of them at once.
-            damages: item_damages_from_v1(t.damages),
-            display: null,
-          })
-        }
-        return map
-      } catch {
-        return new Map()
-      }
-    })()
+  if (!_templates_promise) {
+    // NEVER CACHE ABSENCE (#1488): a failed read is not an answer. The rejection still degrades THIS caller to
+    // an empty map (honest — the card shows "no findables"), but it DROPS the memo, so the next caller re-reads.
+    // The `.catch` handler is always a microtask, so `attempt` is bound by the time it runs; the identity check
+    // means a retry already in flight is never cleared out from under its own callers.
+    const attempt = read_template_map().catch(() => {
+      if (_templates_promise === attempt) _templates_promise = null
+      return new Map()
+    })
+    _templates_promise = attempt
+  }
   return _templates_promise
 }
 
@@ -100,6 +109,11 @@ export function get_template_map() {
  * template read the N+1 audit found. Empty array on error (map degrades to empty).
  * @returns {Promise<Array<any>>}
  */
+/** Test-only: drop the memoized catalog (the bun test process is long-lived and this module holds session state). */
+export function reset_template_cache_for_test() {
+  _templates_promise = null
+}
+
 export async function get_item_templates_cached() {
   const map = await get_template_map()
   return [...map.values()]
