@@ -13,15 +13,32 @@ with `503`; neither hard gate fails open.
 
 ## Presence wire
 
-Both event types use the simpler existing wire:
+Delivery is not this process. It is the RPC read layer's presence route — `stream.rs` in
+`packages/rpc/indexer`, served by the `aresrpg-rpc-indexer` binary — which reads what the routes above wrote:
 
-`GET /v1/stream/presence/:world`
+`GET /v1/stream/presence/:world?address=…&character=…`
 
-The stream service subscribes to `courier:presence:<world>`. On connection it reads
-`courier:positions:<world>`, removes expired scores, and loads each live
-`courier:position:<world>:<character>` JSON value. The initial SSE row is
-`{ "type": "positions", "positions": [...] }`; live pub/sub rows are either `type: "position"` or
-`type: "chat"`. Position values expire after approximately 10 seconds.
+The route refuses a link that names neither identity: the query is how a connection registers itself in the
+world's presence registry. One connection carries both vocabularies. The read layer's own frames are named
+`current-set`, `join` and `leave`; the courier's three are:
+
+| Frame       | When                | Body                                                  |
+| ----------- | ------------------- | ----------------------------------------------------- |
+| `positions` | once, on connection | `{ type, world, positions: [...] }` — every live pose |
+| `position`  | per accepted POST   | the stored pose row, forwarded verbatim               |
+| `chat`      | per accepted POST   | the published chat row, forwarded verbatim            |
+
+The stream subscribes to `courier:presence:<world>` before it assembles the join frames, so a row published
+mid-join waits in the channel instead of falling into the gap. The snapshot prunes `courier:positions:<world>`
+by expiry score and loads each live `courier:position:<world>:<character>` value in one local step; those
+values expire after approximately 10 seconds. Courier frames deliberately carry no SSE id — they are
+ephemeral, so a reconnect gets the live snapshot and never a replay, and the fight stream's Last-Event-ID law
+is untouched by this half.
+
+The browser edge is `packages/frontend/src/courier/world.js`: it opens that one link through
+`world-shell/presence_sse_adapter.js` and folds every frame — courier and read-layer alike — through the
+single presence door. A sender's own accepted line returns down this same wire, and that round trip IS the
+local echo: there is no optimistic second path that could disagree with what the world actually received.
 
 Chat moderation is deliberately out of scope for this pass. The abuse floor is zkLogin authentication, the
 shared per-address rate gate, and the 280-code-point cap. Optional `channel`, `target`, and `party` fields retain
