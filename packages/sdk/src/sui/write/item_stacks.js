@@ -136,3 +136,20 @@ export function merge_stack_ptb(context) {
     return tx
   }
 }
+
+/**
+ * The BATCH shape of the merge above: fold N (target, source) pairs into ONE transaction. Every stackable
+ * acquisition mints a NEW Item of amount 1, so a bag accumulates same-template singletons and the client's
+ * sweep (#1495) has N-1 pairs per template to discharge — one transaction, one signature, one gas payment.
+ * Each pair carries its own kiosk + cap (a wallet may hold several personal kiosks), and every guard of the
+ * singular composer applies unchanged: this is a loop over it, never a second PTB shape.
+ * @param {import("../../../types.js").Context} context
+ * @returns {(args: { merges: Omit<MergeStackArgs, 'tx'>[], tx?: Transaction }) => Transaction}
+ */
+export function merge_stacks_ptb(context) {
+  const merge_one = merge_stack_ptb(context)
+  return ({ merges, tx = new Transaction() }) => {
+    for (const merge of merges ?? []) merge_one({ ...merge, tx })
+    return tx
+  }
+}

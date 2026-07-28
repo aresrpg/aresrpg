@@ -119,7 +119,11 @@ import {
   marketplace_buy_character_ptb,
   marketplace_purchase_total_mist,
 } from './sui/write/items_marketplace.js'
-import { split_stack_ptb, merge_stack_ptb } from './sui/write/item_stacks.js'
+import {
+  split_stack_ptb,
+  merge_stack_ptb,
+  merge_stacks_ptb,
+} from './sui/write/item_stacks.js'
 // gift (sui/write/gift.js): escrow-recoverable item send — send lists N items + pre-funded royalty into a shared
 // Gift; claim buys each out for 0 and resolves the FULL policy receipt INSIDE Move (ONE moveCall, no offline rule
 // resolution); recall delists back (ownership-only). Reads via sui/read/gift.js.
@@ -325,6 +329,7 @@ export async function SDK({ network = 'testnet' } = {}) {
     // Free stack shaping: both doors extract and re-lock all survivors into the same personal kiosk.
     split_stack_ptb: split_stack_ptb(context),
     merge_stack_ptb: merge_stack_ptb(context),
+    merge_stacks_ptb: merge_stacks_ptb(context),
     // gift — escrow-recoverable item send (send/claim/recall) + pre-flight read.
     gift_send_ptb: gift_send_ptb(context),
     gift_claim_ptb: gift_claim_ptb(context),
