@@ -683,10 +683,17 @@ data during the existing `ares` decode; a Redis rank/counter is never an event i
 
 `Last-Event-ID` is exclusive: the endpoint replays every stored event strictly after
 that cursor, then tip-polls the same local Redis journal for live additions. A replica
-whose `ares` watermark is behind the presented checkpoint holds the stream without
-frames or heartbeat comments until caught up. Once eligible, `: heartbeat` comments
-are emitted every 15 seconds. Rows written before the cursor field existed remain
-available to the ordinal JSON route but are not assigned invented SSE ids.
+whose `ares` watermark is behind the presented checkpoint emits no *frames* until it
+has caught up. Rows written before the cursor field existed remain available to the
+ordinal JSON route but are not assigned invented SSE ids.
+
+Every subscription — both routes — opens with a `: ok` comment and, after each 20
+seconds of silence, a `: ka` comment. These are transport concerns, owned once by
+`stream_response`, not by either pump. The greeting exists because an intermediary
+(Cloudflare fronts `rpc.aresrpg.world`) forwards no bytes to the client until the
+body has its first one, so an idle subscription otherwise arrives as a hang despite
+a correct `200` and `x-accel-buffering: no`. Comments carry no `id`, so neither frame
+disturbs the cursor a client resumes from.
 
 This is one ingestion with two consumers: the existing projection/journal write and
 the SSE journal reader. The SSE route never BCS-decodes an event. Fan-out is a
@@ -696,8 +703,10 @@ location-local Redis tip-poll; there is no Redis-to-Redis transport.
 
 The same Rust surface accepts `?address=<sui-address>`, `?character=<object-id>`, or
 both. An open socket upserts `{ address?, character?, world }` into
-`rpc:presence:{world}` with a 30-second score TTL and refreshes it on the stream's
-15-second heartbeat. Each connection receives `current-set`, then `join`/`leave`
+`rpc:presence:{world}` with a 30-second score TTL and rewrites it every 15 seconds —
+a registry liveness write, unrelated to the transport keepalive above, which is why
+it survived that comment's move into `stream_response`. Each connection receives
+`current-set`, then `join`/`leave`
 events by tip-polling and diffing that registry. Closing a tab stops refresh; expiry
 therefore produces `leave` without a server session or disconnect hook.
 
