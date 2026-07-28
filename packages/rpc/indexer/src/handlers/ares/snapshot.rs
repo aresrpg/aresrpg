@@ -1087,25 +1087,17 @@ fn effect_byte_width(package: &str) -> Option<usize> {
         .map(|(_, width)| *width)
 }
 
-/// Snapshot one `aresrpg::mob_template::MobTemplate` object into its encyclopedia doc
-/// `rpc:mob_template:{id}` (+ the `idx:mob_templates` index the view reads). `None` = a
-/// truncated/foreign body that did not parse as the prefix (defensive — never fails the
-/// batch). `element` is the raw `spell` discriminant (0=fire,1=water,2=earth,3=air,255=none);
-/// the frontend maps it to a name, exactly as the legacy reader did. The four resistances
-/// (issue #629) are RAW WIRE, `null` until this snapshot lands — same honest-gap convention
-/// as every other field here; the bestiary's `decode_mob_resist` already handles the null case.
+/// DECODE step of the `aresrpg::mob_template::MobTemplate` snapshot: the object's BCS body as its
+/// scalar prefix, `None` for a truncated/foreign body that did not parse (defensive — never fails
+/// the batch). Split from [`mob_template_doc`] so the canonical-census gate can read the template's
+/// own DISPLAY NAME — its twin-family identity — without decoding the body a second time; the decode
+/// has exactly one home either way.
+///
 /// `package` is the object's OWN type-tag address — resolves the embedded `spells` vector's
 /// per-`Effect` width (issue #629 round-2: the fresh publish widens `Effect` 25→33 bytes; an
 /// unwidened skip would misalign `loot` for every mob minted after that republish). An origin
 /// missing from [`ARES_ORIGIN_EFFECT_BYTES`] projects the doc WITHOUT loot (`drops: null`) and
 /// says so loudly — the ceremony hand-off that table documents is what clears the warning.
-pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Option<Vec<RedisWrite>> {
-    Some(mob_template_doc(id, &mob_template_prefix(id, contents, package)?))
-}
-
-/// Decode step of [`map_mob_template_object`], split out so the canonical-census gate can read the
-/// template's own DISPLAY NAME (its twin-family identity) without decoding the body a second time —
-/// the decode has exactly one home either way.
 fn mob_template_prefix(id: &str, contents: &[u8], package: &str) -> Option<MobTemplatePrefix> {
     let effect_bytes = effect_byte_width(package);
     if effect_bytes.is_none() {
@@ -1118,7 +1110,12 @@ fn mob_template_prefix(id: &str, contents: &[u8], package: &str) -> Option<MobTe
     MobTemplatePrefix::parse(contents, effect_bytes)
 }
 
-/// Projection step of [`map_mob_template_object`] — the decoded prefix as its redis doc.
+/// PROJECT step: the decoded prefix as its encyclopedia doc `rpc:mob_template:{id}` (+ the
+/// `idx:mob_templates` index the view reads). `element` is the raw `spell` discriminant
+/// (0=fire,1=water,2=earth,3=air,255=none); the frontend maps it to a name, exactly as the legacy
+/// reader did. The four resistances (issue #629) are RAW WIRE, `null` until this snapshot lands —
+/// same honest-gap convention as every other field here; the bestiary's `decode_mob_resist`
+/// already handles the null case.
 fn mob_template_doc(id: &str, p: &MobTemplatePrefix) -> Vec<RedisWrite> {
     let key = k_mob_template(id);
     vec![
@@ -1144,6 +1141,14 @@ fn mob_template_doc(id: &str, p: &MobTemplatePrefix) -> Vec<RedisWrite> {
         ),
         sadd(K_MOB_TEMPLATES.into(), id.to_string()),
     ]
+}
+
+/// Decode-then-project — the pair above, composed exactly as
+/// [`AresSnapshotHandler::project_mob_template`] composes it. TEST-ONLY: production reaches the two
+/// halves through the census gate, which must read the decoded display name before it can project.
+#[cfg(test)]
+fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Option<Vec<RedisWrite>> {
+    Some(mob_template_doc(id, &mob_template_prefix(id, contents, package)?))
 }
 
 /// Snapshot one `aresrpg_game::world::World` object's join gate into its world doc
