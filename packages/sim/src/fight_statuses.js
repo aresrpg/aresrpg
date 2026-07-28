@@ -123,3 +123,18 @@ export const invisible_enemy_at = (state, caster_id, target_cell) => {
   if (!target || !is_invisible(target)) return false
   return team_of(state, target.id) !== team_of(state, caster_id)
 }
+
+/**
+ * The RETURN_SPELL row shielding a living ENEMY standing on `target_cell`, or null. The twin of the chain's
+ * `return_target` + `fighter_status_of(k_return_spell)` pair (cast.move:905-931): only an ENEMY's row can turn a
+ * cast around — a self- or ally-aimed cast never traverses the door, so a fighter can never return a spell onto
+ * itself. The pure DECISION only; the caller owns the redirect.
+ * @param {import('./fight_state.js').FightState} state @param {string} caster_id
+ * @param {import('./cell.js').Cell} target_cell
+ */
+export const returning_enemy_at = (state, caster_id, target_cell) => {
+  const target = find_entity_at(state, target_cell)
+  if (!target || target.health <= 0) return null
+  if (team_of(state, target.id) === team_of(state, caster_id)) return null
+  return target.effects.find(effect => effect.type === 'RETURN_SPELL') ?? null
+}

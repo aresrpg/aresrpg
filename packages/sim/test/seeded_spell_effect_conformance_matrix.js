@@ -362,7 +362,11 @@ export const matrix_rows = [
     {
       fighters: {
         [CASTER_ID]: {
-          effects: [status('RETURN_SPELL', 12, { turns_remaining: 2 })],
+          // `chance` rides the row because the REDIRECT is decided at the door, not at application: the chain
+          // rolls `effect_proc(row)` when an enemy's cast arrives (cast.move:930), so the row must carry it.
+          effects: [
+            status('RETURN_SPELL', 12, { chance: 100, turns_remaining: 2 }),
+          ],
         },
       },
     },
