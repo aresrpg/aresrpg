@@ -320,14 +320,9 @@ const matrix = [
     effects: true,
   },
   { kind: SE.K_APPLY_STATE, on: ['point_blank'], eff: { value: 1, turns: 2 } },
-  // INERT TODAY (#1039) — same story as K_RESET_POSITIONS above: no normalizer arm for kind 23, so it mints
-  // UNSUPPORTED and folds nothing; the retired discard was the only reason this row ever looked alive.
-  {
-    kind: SE.K_REMOVE_STATE,
-    on: ['point_blank'],
-    eff: { value: 1 },
-    unsupported: true,
-  },
+  // WIRED (#1039) — kind 23 clears the named state it carries on both twins; the cast records a REMOVE_STATE
+  // row whether or not the target held it, exactly as DISPEL reports a sweep that found nothing.
+  { kind: SE.K_REMOVE_STATE, on: ['point_blank'], eff: { value: 1 } },
   {
     kind: SE.K_REDUCE_DAMAGE,
     on: ['wounded_ally'],
