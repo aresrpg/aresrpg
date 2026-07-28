@@ -228,10 +228,11 @@ export async function select_character_session(character, deps) {
  * @param {{ id?: string, world_id?: string | null }} character
  * @param {Parameters<typeof select_character_session>[1]} deps
  * @param {(error: unknown) => void} on_failure
+ * @param {ReturnType<typeof create_character_switch_store>} [store]
  * @returns {Promise<boolean>}
  */
-export async function handle_character_click(character, deps, on_failure) {
-  const outcome = await run_character_switch(character_switch_store, {
+export async function handle_character_click(character, deps, on_failure, store = character_switch_store) {
+  const outcome = await run_character_switch(store, {
     character,
     is_session_current: deps.is_session_current,
     perform_switch: async (target, request) => {

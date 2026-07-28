@@ -6,6 +6,7 @@ import {
   CHARACTER_SWITCH_IN_PROGRESS,
   CHARACTER_SWITCH_SESSION_CHANGED,
   create_character_switch_store,
+  handle_character_click,
   initial_character_switch_state,
   reduce_character_switch,
   run_character_switch,
@@ -155,5 +156,43 @@ describe('character switch runner', () => {
 
     expect(await stale_switch).toMatchObject({ status: 'refused', reason: CHARACTER_SWITCH_SESSION_CHANGED })
     expect(store.getState()).toMatchObject({ phase: 'idle', last_result: { status: 'refused' } })
+  })
+})
+
+describe('character switch click boundary', () => {
+  test('a click abandoned mid-switch cannot poison the next isolated store', async () => {
+    const abandoned_store = create_character_switch_store()
+    const next_store = create_character_switch_store()
+    const held_persist = Promise.withResolvers()
+    const failures = []
+    const deps = {
+      select_character: () => {},
+      persist_character: () => held_persist.promise,
+      stop_follow: () => {},
+      rebind_session: () => {},
+    }
+
+    const abandoned_click = handle_character_click(
+      { id: CHAR_B },
+      deps,
+      (error) => failures.push(error),
+      abandoned_store
+    )
+    await Promise.resolve()
+
+    const next_click = await handle_character_click(
+      { id: CHAR_C },
+      { ...deps, persist_character: async () => {} },
+      (error) => failures.push(error),
+      next_store
+    )
+
+    expect(next_click).toBe(true)
+    expect(abandoned_store.getState()).toMatchObject({ phase: 'switching', target_id: CHAR_B })
+    expect(next_store.getState()).toMatchObject({ phase: 'idle', last_result: { status: 'done', target_id: CHAR_C } })
+    expect(failures).toEqual([])
+
+    held_persist.resolve()
+    expect(await abandoned_click).toBe(true)
   })
 })
