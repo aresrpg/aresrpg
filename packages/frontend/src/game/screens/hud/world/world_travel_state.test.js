@@ -7,7 +7,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 
 import characters_fx from '../../../../rpc/fixtures/characters.json'
-import { T62_WORLDS } from '../../../../chain/deployment'
 import {
   derive_discovery_join,
   derive_world_panel,
@@ -15,11 +14,22 @@ import {
   filter_world_cards,
 } from './world_travel_state.js'
 
+// The authoritative roster these cases need is "the worlds this fixture's characters are bound to" — derived
+// from the fixture itself, never from the seeded manifest (chain/deployment's T62_WORLDS). Reading the live
+// corpus made the fixture's own bound world vanish at every republish (a fresh world lineage), turning a
+// JOINED character into a phantom 'migration'; it also warmed a module-global at import, the exact class
+// scripts/order-independence-gate.sh guards. Migration against a foreign roster is covered below, explicitly.
+const fixture_live_world_ids = new Set(
+  characters_fx.characters.map(({ world }) => world).filter((world) => typeof world === 'string' && world)
+)
+
 describe('derive_discovery_join (refresh auto-join door)', () => {
   test('a joined /v1 character followed by an ambiguous empty read never fires join_world', () => {
     const joined = characters_fx.characters[0]
     const join_world = mock(() => {})
-    const live_world_ids = new Set(T62_WORLDS.map((world) => world.id))
+    const live_world_ids = fixture_live_world_ids
+    // The premise, not the subject: an empty roster proves nothing, so every reason would be null for free.
+    expect(live_world_ids.has(joined.world)).toBe(true)
 
     for (const documents of [characters_fx.characters, []]) {
       const decision = derive_discovery_join({
@@ -36,7 +46,7 @@ describe('derive_discovery_join (refresh auto-join door)', () => {
 
   test('only the selected row with an explicit null world proves unjoined; only this-session creation is silent', () => {
     const character_id = characters_fx.characters[0].id
-    const live_world_ids = new Set(T62_WORLDS.map((world) => world.id))
+    const live_world_ids = fixture_live_world_ids
     const decide = (documents, created_this_session = false) =>
       derive_discovery_join({ character_id, documents, live_world_ids, created_this_session })
 
