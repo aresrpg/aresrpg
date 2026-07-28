@@ -102,9 +102,20 @@ const is_record = (value) => value !== null && typeof value === 'object' && !Arr
 // deliberately not matched here — see mentions_issue for the ref-gate's looser reading.
 const CLOSE_REF_RE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*(?:([\w.-]+\/[\w.-]+))?#(\d+)\b/gi
 
+// A fenced block is QUOTED EVIDENCE, never an instruction. Pull request bodies in this repo paste gate
+// transcripts and logs, and a pasted `closes #1495 on landing` line is a report ABOUT a close, not a
+// request for one — left unstripped it silently links the quoting pull request to a stranger's row.
+// Measured on #1547, whose own driven-proof transcript made it claim to close #1495.
+const FENCED_BLOCK_RE = /(`{3,}|~{3,})[^\n]*\n[\s\S]*?\1/g
+const INLINE_CODE_RE = /`[^`\n]*`/g
+const without_quoted_blocks = (text) =>
+  String(text ?? '')
+    .replace(FENCED_BLOCK_RE, '\n')
+    .replace(INLINE_CODE_RE, ' ')
+
 export function parse_close_refs(text, repository) {
   const owned = String(repository ?? '').toLowerCase()
-  const numbers = [...String(text ?? '').matchAll(CLOSE_REF_RE)]
+  const numbers = [...without_quoted_blocks(text).matchAll(CLOSE_REF_RE)]
     .filter(([, repo]) => !repo || repo.toLowerCase() === owned)
     .map(([, , number]) => Number(number))
     .filter((number) => Number.isSafeInteger(number) && number > 0)
@@ -200,16 +211,26 @@ const label_names = (item) => (item?.labels ?? []).map((label) => label?.name ??
 // A pull request that passes on this arm alone therefore drains NOTHING on landing; the gate says so
 // out loud in its message rather than letting a green check imply a close that will not happen.
 // Precedence is deliberate: the parser first, so the arm that actually closes is the one reported.
-export function decide_link_gate(pull_request, commits, repository, registered_total = 0) {
-  const text = [...(commits ?? []).map((commit) => commit?.commit?.message), pull_request?.title, pull_request?.body]
-    .filter(Boolean)
-    .join('\n')
-  const refs = parse_close_refs(text, repository)
+export const link_candidates = (pull_request, commits, repository) =>
+  parse_close_refs(
+    [...(commits ?? []).map((commit) => commit?.commit?.message), pull_request?.title, pull_request?.body]
+      .filter(Boolean)
+      .join('\n'),
+    repository
+  )
+
+export function decide_link_gate(pull_request, commits, repository, options = {}) {
+  const { registered_total = 0, closable_refs = null, rejected_refs = [] } = options
+  const candidates = link_candidates(pull_request, commits, repository)
+  // `closable_refs: null` means NO target verification was performed — the offline reading, where the
+  // parse is the whole answer. The driven gate always supplies the verified list, so a ref pointing at
+  // a pull request or an already-closed row can never buy a pass there.
+  const refs = closable_refs === null ? candidates : candidates.filter((number) => closable_refs.includes(number))
   if (refs.length > 0) return { ok: true, refs, via: 'close-ref' }
   if (label_names(pull_request).includes(NO_ISSUE_LABEL)) return { ok: true, refs: [], via: 'no-issue' }
   if (Number(registered_total) > 0)
     return { ok: true, refs: [], via: 'registered-link', registered: Number(registered_total) }
-  return { ok: false, refs: [], via: 'none' }
+  return { ok: false, refs: [], via: 'none', rejected: rejected_refs }
 }
 
 export const link_gate_message = (decision) => {
@@ -217,7 +238,11 @@ export const link_gate_message = (decision) => {
   if (decision.ok && decision.via === 'registered-link')
     return `${decision.registered} row(s) linked by hand through the Development panel — accepted as proof. NOTE: the landing pass closes from TEXT only, so nothing drains automatically; add \`Fixes #N\` to the body if you want the row closed on landing.`
   if (decision.ok) return `closes ${decision.refs.map((number) => `#${number}`).join(', ')} on landing`
-  return `nothing drains when this lands — add \`Fixes #N\` to the body (a SPACE after the keyword, never \`Fixes-#N\`), link the row by hand in the Development panel, or apply the \`${NO_ISSUE_LABEL}\` label if this pull request deliberately closes no row.`
+  // A ref that named something unclosable is the confusing failure — the body LOOKS linked. Say which
+  // ref and why before teaching the syntax, or the author reads "add Fixes #N" and swears they did.
+  const why = (decision.rejected ?? []).map((row) => `#${row.number} is ${row.why}`).join('; ')
+  const preamble = why ? `the refs in this body close nothing — ${why}. ` : ''
+  return `${preamble}nothing drains when this lands — add \`Fixes #N\` pointing at an OPEN ISSUE (a SPACE after the keyword, never \`Fixes-#N\`), link the row by hand in the Development panel, or apply the \`${NO_ISSUE_LABEL}\` label if this pull request deliberately closes no row.`
 }
 
 export function decide_ref_gate(pull_request, commits, comments) {
@@ -597,16 +622,47 @@ export async function registered_link_total(config) {
   return Number(data?.data?.repository?.pullRequest?.closingIssuesReferences?.totalCount ?? 0)
 }
 
+// A ref only counts as linkage if it names something the landing pass could actually close: an OPEN
+// ISSUE. `#1399` naming a merged pull request, or `#1168` naming an already-closed row, reads as
+// linked and drains nothing — both were live on this board. LAZY on purpose: candidates are resolved
+// one at a time and the walk STOPS at the first closable row, so the ordinary one-ref pull request
+// costs exactly one request and only a body full of dead refs ever costs more.
+export async function closable_link_refs(config, candidates) {
+  return candidates.reduce(
+    async (state_promise, number) => {
+      const state = await state_promise
+      if (state.closable.length > 0) return state
+      const target = await get_json(config, `/issues/${number}`)
+      if (target?.pull_request)
+        return { ...state, rejected: [...state.rejected, { number, why: 'a pull request, not an issue' }] }
+      if (target?.state !== 'open')
+        return { ...state, rejected: [...state.rejected, { number, why: 'an already-closed row' }] }
+      return { ...state, closable: [...state.closable, number] }
+    },
+    Promise.resolve({ closable: [], rejected: [] })
+  )
+}
+
 export async function run_link_gate(config) {
   const pull_request = await get_json(config, `/pulls/${config.pull_number}`)
   const commits = await collect_pages(
     config,
     api_url(config, `/pulls/${config.pull_number}/commits`, { per_page: '100' })
   )
-  const from_text = decide_link_gate(pull_request, commits, config.repository)
+  const candidates = link_candidates(pull_request, commits, config.repository)
+  const { closable, rejected } =
+    candidates.length > 0 ? await closable_link_refs(config, candidates) : { closable: [], rejected: [] }
+  const from_text = decide_link_gate(pull_request, commits, config.repository, {
+    closable_refs: closable,
+    rejected_refs: rejected,
+  })
   const decision = from_text.ok
     ? from_text
-    : decide_link_gate(pull_request, commits, config.repository, await registered_link_total(config))
+    : decide_link_gate(pull_request, commits, config.repository, {
+        closable_refs: closable,
+        rejected_refs: rejected,
+        registered_total: await registered_link_total(config),
+      })
   config.log(`link-gate: #${config.pull_number} ${decision.ok ? 'PASS' : 'FAIL'} — ${link_gate_message(decision)}`)
   return decision
 }
