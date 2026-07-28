@@ -9,18 +9,22 @@ import { describe, expect, it } from 'bun:test'
 import {
   BOT_LOGIN,
   EXEMPT_LABELS,
+  NO_ISSUE_LABEL,
   STALE_WARNING_LABEL,
   decide_landing,
+  decide_link_gate,
   decide_ref_gate,
   decide_stale,
   is_conventional_subject,
   landing_marker,
   last_human_activity,
+  link_gate_message,
   mentions_issue,
   parse_args,
   parse_close_refs,
   resolve_now,
   run_landing,
+  run_link_gate,
 } from './board_hygiene.mjs'
 
 const REPOSITORY = 'aresrpg/aresrpg'
@@ -122,6 +126,14 @@ describe('the landing sweep never fights a human', () => {
 
   it('skips a row that is already closed', () => {
     expect(decide_landing({ state: 'closed' }, [], evidence).action).toBe('noop')
+  })
+
+  // `/issues/N` answers for pull requests too, and a body may name one ("Fixes #1502" where 1502 is
+  // the oracle PR, not a row). Closing a peer pull request is the one mutation this pass must never
+  // make — the `pull_request` key is the only field that tells them apart.
+  it('refuses to close a referenced number that is a pull request, not a board row', () => {
+    const pull = { state: 'open', pull_request: { url: 'https://api.github.com/repos/a/b/pulls/1502' } }
+    expect(decide_landing(pull, [], evidence).action).toBe('noop')
   })
 
   it('skips a row it already swept for this landing — the reopen was deliberate', () => {
@@ -269,6 +281,163 @@ describe('run_landing drives a landing sweep end to end', () => {
     const summary = await run_landing(config_for(fetch_fn, { dry_run: true }))
     expect(summary).toEqual({ closed: 1, skipped: 2 })
     expect(sent).toEqual([])
+  })
+})
+
+describe('the link gate — the blocking half of the close chain', () => {
+  const linked = (body, labels = []) => ({ title: 'fix(sim): a thing', body, labels: labels.map((name) => ({ name })) })
+
+  it('passes a pull request whose body carries a close-keyword the landing sweep will read', () => {
+    expect(decide_link_gate(linked('Fixes #1495'), [], REPOSITORY)).toEqual({
+      ok: true,
+      refs: [1495],
+      via: 'close-ref',
+    })
+  })
+
+  it('passes on a close-keyword that only a commit message carries', () => {
+    const commits = [{ commit: { message: 'fix(sim): a thing\n\nCloses #1234' } }]
+    expect(decide_link_gate(linked('no row here'), commits, REPOSITORY)).toEqual({
+      ok: true,
+      refs: [1234],
+      via: 'close-ref',
+    })
+  })
+
+  it('passes a deliberately unlinkable pull request carrying the no-issue label', () => {
+    expect(decide_link_gate(linked('a live-diagnosed fix', [NO_ISSUE_LABEL]), [], REPOSITORY)).toEqual({
+      ok: true,
+      refs: [],
+      via: 'no-issue',
+    })
+  })
+
+  // The old warning-only ref gate accepted ANY `#N` mention. That is exactly the hole: a PR that only
+  // advances a tracker reads as linked and drains nothing when it lands.
+  it('fails a bare mention — a tracker reference closes no row', () => {
+    expect(decide_link_gate(linked('Part of #1536 — the tracker stays open'), [], REPOSITORY).ok).toBe(false)
+  })
+
+  it('fails the hyphen form, which no parser in this repo or on GitHub reads', () => {
+    expect(decide_link_gate(linked('Fixes-#1495'), [], REPOSITORY).ok).toBe(false)
+  })
+
+  it('fails a cross-repository ref — this board is the only one it may drain', () => {
+    expect(decide_link_gate(linked('Fixes othervendor/other#42'), [], REPOSITORY).ok).toBe(false)
+  })
+
+  it('fails an empty pull request and teaches the syntax in one line', () => {
+    const decision = decide_link_gate(linked(''), [], REPOSITORY)
+    expect(decision.ok).toBe(false)
+    expect(link_gate_message(decision)).toContain('Fixes #N')
+    expect(link_gate_message(decision)).toContain(NO_ISSUE_LABEL)
+  })
+
+  // The second accepted PROOF: a maintainer linked the row by hand in the Development panel. Accepted
+  // as compliance, never as a close instruction — the landing pass reads text and only text.
+  it('passes on a hand-registered link when no keyword exists', () => {
+    expect(decide_link_gate(linked('no keyword here'), [], REPOSITORY, 1)).toEqual({
+      ok: true,
+      refs: [],
+      via: 'registered-link',
+      registered: 1,
+    })
+  })
+
+  it('still fails when the registered count is zero', () => {
+    expect(decide_link_gate(linked('no keyword here'), [], REPOSITORY, 0).ok).toBe(false)
+  })
+
+  it('reports the parser arm first — the one that actually closes outranks the one that only proves', () => {
+    expect(decide_link_gate(linked('Fixes #1495'), [], REPOSITORY, 3).via).toBe('close-ref')
+  })
+
+  it('says out loud that a hand-linked row does NOT drain on landing', () => {
+    const message = link_gate_message(decide_link_gate(linked('nothing'), [], REPOSITORY, 2))
+    expect(message).toContain('TEXT only')
+    expect(message).toContain('nothing drains automatically')
+  })
+
+  it('teaches the panel as a third answer when it fails', () => {
+    expect(link_gate_message(decide_link_gate(linked(''), [], REPOSITORY, 0))).toContain('Development panel')
+  })
+
+  it('reads the same sources the landing sweep reads, so gate-green means the row actually drains', () => {
+    const body = 'Fixes #77'
+    const commits = [{ commit: { message: 'fix(x): y\n\nCloses #88' } }]
+    const gate = decide_link_gate({ title: 'fix(x): y', body, labels: [] }, commits, REPOSITORY)
+    const swept = parse_close_refs([commits[0].commit.message, 'fix(x): y', body].join('\n'), REPOSITORY)
+    expect(gate.refs).toEqual(swept)
+  })
+})
+
+describe('run_link_gate drives the blocking gate end to end', () => {
+  const drive = async (pull_request, commits, registered_total = 0) => {
+    const json_response = (data) => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => data,
+      text: async () => JSON.stringify(data),
+    })
+    const graphql_calls = []
+    const fetch_fn = async (url, options = {}) => {
+      const { pathname } = new URL(url)
+      if (pathname === '/graphql') {
+        graphql_calls.push(JSON.parse(options.body))
+        return json_response({
+          data: { repository: { pullRequest: { closingIssuesReferences: { totalCount: registered_total } } } },
+        })
+      }
+      if (pathname === '/repos/aresrpg/aresrpg/pulls/42') return json_response(pull_request)
+      if (pathname === '/repos/aresrpg/aresrpg/pulls/42/commits') return json_response(commits)
+      throw new Error(`unexpected GET ${pathname}`)
+    }
+    const logged = []
+    return {
+      logged,
+      graphql_calls,
+      summary: await run_link_gate({
+        mode: 'link-gate',
+        repository: REPOSITORY,
+        github_token: 'test',
+        pull_number: 42,
+        fetch_fn,
+        sleep: async () => {},
+        log: (line) => logged.push(line),
+      }),
+    }
+  }
+
+  it('reports ok for a linked pull request', async () => {
+    const { summary } = await drive({ title: 'fix(a): b', body: 'Fixes #1495', labels: [] }, [])
+    expect(summary).toMatchObject({ ok: true, refs: [1495] })
+  })
+
+  it('reports NOT ok for a pull request that closes nothing — the run must fail', async () => {
+    const { summary, logged } = await drive({ title: 'fix(a): b', body: 'Part of #1536', labels: [] }, [])
+    expect(summary.ok).toBe(false)
+    expect(logged.join('\n')).toContain('Fixes #N')
+  })
+
+  it('accepts a hand-registered link when the text carries nothing', async () => {
+    const { summary, graphql_calls } = await drive({ title: 'fix(a): b', body: 'Part of #1536', labels: [] }, [], 2)
+    expect(summary).toMatchObject({ ok: true, via: 'registered-link', registered: 2 })
+    expect(graphql_calls).toHaveLength(1)
+  })
+
+  // The field is a fallback proof, so the common path must not pay for it — and a GraphQL outage can
+  // never red a pull request that carried a keyword all along.
+  it('never spends the GraphQL read when the text already answered', async () => {
+    const { summary, graphql_calls } = await drive({ title: 'fix(a): b', body: 'Fixes #1495', labels: [] }, [], 5)
+    expect(summary.via).toBe('close-ref')
+    expect(graphql_calls).toEqual([])
+  })
+
+  it('never spends it for a no-issue pull request either', async () => {
+    const { graphql_calls, summary } = await drive({ title: 'fix(a): b', body: '', labels: [{ name: 'no-issue' }] }, [])
+    expect(summary.via).toBe('no-issue')
+    expect(graphql_calls).toEqual([])
   })
 })
 

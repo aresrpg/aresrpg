@@ -15,6 +15,10 @@
 #               the landing PR and commit as evidence. The push trigger remains for human pushes.
 #   backstop  — the same sweep on a daily schedule over pull requests merged into edge in the last
 #               14 days, so a missed, failed, or raced landing run self-heals.
+#   link_gate — BLOCKING. A pull request into `edge` must carry a close-keyword the `landing` job
+#               will actually read (`Fixes #N` — a SPACE, never `Fixes-#N`), or the `no-issue` label
+#               declaring it closes no row on purpose. Same parser, same sources as `landing`, so a
+#               green gate MEANS the board drains on landing rather than hoping it does. Read-only.
 #   ref_gate  — a conventional pull request with ZERO issue refs gets ONE warning comment: the
 #               close chain has nothing to close. A WARNING, never a merge blocker.
 #   stale     — the background backstop for rows nobody ever picked up: 7 days without human
@@ -39,7 +43,10 @@ on:
   push:
     branches: [edge]
   pull_request:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+    # `labeled`/`unlabeled` are here for link_gate: applying `no-issue` is how a red gate is answered,
+    # so the label has to re-run it. Every other pull_request job in this file is marker-idempotent
+    # and simply reports the same verdict again.
+    types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
     branches: [edge, master]
   schedule:
     - cron: '23 4 * * *'
@@ -117,6 +124,25 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/board_hygiene.mjs stale
+
+  link_gate:
+    name: issue-link gate
+    # Scoped to pull requests into `edge`, where every unit of work enters. The edge->master promotion
+    # is a train artifact carrying already-gated work and a version bump — it closes no row of its own.
+    # Read-only and secret-free, so it runs for fork pull requests exactly as it does for ours.
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'edge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: a landing must drain a row, or say it drains none
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/board_hygiene.mjs link-gate --pr ${{ github.event.pull_request.number }}
 
   ref_gate:
     name: issue-ref gate (warning only)
