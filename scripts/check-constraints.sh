@@ -393,9 +393,85 @@ spatial_vocabulary_gate() {
   grn "  ✓ spatial vocabulary has one home ($scanned fight-path sources scanned)"
 }
 
+# ── MOVE DISPLAY GATE (#592 — a Display is rendered STANDALONE, outside the game client) ────────
+# Object Display values are read by SuiVision, Suiscan and every wallet, which fetch the object and
+# render `image_url` with NO AresRPG origin to resolve a relative path against. A host-free template
+# like `/assets/items/{item_type}.png` therefore renders a BROKEN image everywhere except our own
+# client. That is #592, and it shipped TWICE: the first fix was applied as a runtime `display::edit`
+# on the live object and never mirrored into source, so the next republish re-ran init() from the
+# stale source and resurrected it. Source is the only home a republish can read — so source is gated.
+#
+# Two teeth over packages/move/*/sources:
+#   1. ABSOLUTE — every media template literal (.png/.webp/.jpg/.glb, or any `/assets` path) starts
+#      with https://. That is the bug's exact shape.
+#   2. image_url KEY — a module registering a Display must set the `image_url` key. Explorers key on
+#      that precise name; a Display carrying only `url` shows no image with a perfectly absolute
+#      template, which fails as silently as the relative form.
+# Both carry a POSITIVE CONTROL: the scan must still match something. A clean scan whose pattern
+# quietly stopped matching reads exactly like a clean tree, and is a lie (the spatial gate's law).
+MOVE_DISPLAY_PATHSPEC=':(glob)packages/move/*/sources/*.move'
+
+move_display_gate() {
+  echo "== AresRPG Move Display gate (#592: rendered standalone — absolute media, image_url key) =="
+  if ! collect_files "$MOVE_DISPLAY_PATHSPEC"; then
+    red "  ✗ FAIL: no Move sources collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local scanned="${#COLLECTED_FILES[@]}"
+  local failed=0
+
+  # 1 — media templates must be absolute
+  local media relative
+  if ! media="$(grep_collected 'b"[^"]*(\.png|\.webp|\.jpe?g|\.glb|/assets/)' -InE)"; then
+    red "  ✗ FAIL: the Display media scan did not run to completion — an unproven pattern is not an absent one."
+    return 1
+  fi
+  media="$(printf '%s\n' "$media" | awk 'NF')"
+  if [ -z "$media" ]; then
+    red "  ✗ FAIL: no Display media template matched in packages/move/*/sources — the check has gone blind."
+    return 1
+  fi
+  relative="$(printf '%s\n' "$media" | grep -vE 'b"https://' | awk 'NF')"
+  if [ -n "$relative" ]; then
+    red "  ✗ FAIL: host-relative Display media template(s) — a wallet or explorer has no origin to resolve these:"
+    echo "$relative" | cut -c1-160 | sed 's/^/      /' | head -40
+    red "DISPLAY GATE FAILED (#592). Display media is ABSOLUTE (https://assets.aresrpg.world/...); the in-client /assets fallback is jobs.js ASSET_BASE's job, never the Display's."
+    failed=1
+  else
+    grn "  ✓ every Display media template is absolute ($(printf '%s\n' "$media" | wc -l | tr -d ' ') literal(s))"
+  fi
+
+  # 2 — a module that registers a Display must set the image_url key
+  local registrars file
+  registrars="$(printf '%s\0' "${COLLECTED_FILES[@]}" | xargs -0 grep -lE 'display::new(_with_fields)?<' 2>/dev/null || true)"
+  registrars="$(printf '%s\n' "$registrars" | awk 'NF')"
+  if [ -z "$registrars" ]; then
+    red "  ✗ FAIL: no display::new call site found in packages/move/*/sources — the image_url check has gone blind."
+    return 1
+  fi
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    if ! grep -qE 'b"image_url"' "$file"; then
+      red "  ✗ FAIL: $file registers a Display but never sets the \`image_url\` key — explorers key on that exact name."
+      failed=1
+    fi
+  done <<EOF
+$registrars
+EOF
+  if [ "$failed" -eq 0 ]; then
+    grn "  ✓ every Display registrar sets image_url ($(printf '%s\n' "$registrars" | wc -l | tr -d ' ') module(s))"
+    grn "  ✓ Move Display gate clean ($scanned Move source(s) scanned)"
+  fi
+  [ "$failed" -eq 0 ]
+}
+
 if [ "${1:-}" = "--hardcoded-ids" ]; then
   shift
   node scripts/check-chain-ids.mjs "$@"
+  exit $?
+fi
+if [ "${1:-}" = "--move-display" ]; then
+  move_display_gate
   exit $?
 fi
 if [ "${1:-}" = "--manifest-lineage" ]; then
@@ -1115,6 +1191,12 @@ fi
 # sui-framework + ONE move-stdlib rev per environment, and no floating git revs. It was broken anyway,
 # for a year, because nothing read the lock — the graduation trigger. Pure repo bytes: no chain, no
 # CLI, no network, so it costs nothing and cannot flake.
+echo
+if ! move_display_gate; then
+  red "MOVE DISPLAY GATE FAILED."
+  FAIL=1
+fi
+
 echo
 echo "== AresRPG Move framework-rev gate (one framework lineage per environment) =="
 if node packages/move/scripts/check_move_lock_revs.mjs; then
