@@ -1221,6 +1221,10 @@ fun apply_to_player(
     carry_fighter(fight, caster_side == MOB_SIDE, caster_idx, false, pc);
   } else if (kind == spell_effect::k_dispel()) {
     dispel_target(fight, false, pc);
+  } else if (kind == spell_effect::k_remove_state()) {
+    // The k_apply_state eraser: drop exactly the rows naming `value`, leaving every unrelated row. A named
+    // state carries no delta, so there is no stat block to refresh — the board clear IS the whole arm.
+    spell_board::clear_fighter_state(fight::fx_mut(fight), pc, effect.value() as u16);
   } else if (kind == spell_effect::k_reveal()) {
     statuses::reveal(fight, false, pc);
   } else if (kind == spell_effect::k_forced_death()) {
@@ -1345,6 +1349,9 @@ fun apply_to_mob(
     carry_fighter(fight, caster_side == MOB_SIDE, caster_idx, true, midx);
   } else if (kind == spell_effect::k_dispel()) {
     dispel_target(fight, true, midx);
+  } else if (kind == spell_effect::k_remove_state()) {
+    // The `apply_to_player` twin — see there.
+    spell_board::clear_fighter_state(fight::fx_mut(fight), mob_fid(midx), effect.value() as u16);
   } else if (kind == spell_effect::k_invisibility()) {
     record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
   } else if (kind == spell_effect::k_reveal()) {
@@ -1483,10 +1490,11 @@ fun is_board_status(kind: u8): bool {
 }
 
 /// Kinds in the vocabulary that NEITHER twin implements. Named here so "does nothing" is a decision with a home
-/// rather than a gap: @aresrpg/sim normalizes both to UNSUPPORTED and folds nothing, so the chain folds nothing
-/// too. Implementing either means deleting it from this list and wiring BOTH sinks in the same commit.
+/// rather than a gap: @aresrpg/sim normalizes it to UNSUPPORTED and folds nothing, so the chain folds nothing
+/// too. Implementing it means deleting it from this list and wiring BOTH sinks in the same commit — which is
+/// exactly how `k_remove_state` left this list.
 fun is_unimplemented(kind: u8): bool {
-  kind == spell_effect::k_remove_state() || kind == spell_effect::k_reset_positions()
+  kind == spell_effect::k_reset_positions()
 }
 
 /// PURGE every board row on a fighter — the ONE death-fold home (fid namespace mapped here). Called by the hit

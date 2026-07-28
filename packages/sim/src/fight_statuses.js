@@ -51,6 +51,15 @@ export const fighter_has_state = (state, entity_id, state_id) => {
   )
 }
 
+/** Drop every APPLY_STATE row naming `state_id`, preserving unrelated rows. Twin of the Move board's state clear. */
+export const clear_fighter_state = (state, entity_id, state_id) =>
+  update_entity(state, entity_id, entity => ({
+    ...entity,
+    effects: entity.effects.filter(
+      effect => !(effect.type === 'APPLY_STATE' && effect.value === state_id),
+    ),
+  }))
+
 /** Remove every invisibility row from one fighter and nothing else. */
 export const reveal = (state, entity_id) =>
   update_entity(state, entity_id, entity => ({

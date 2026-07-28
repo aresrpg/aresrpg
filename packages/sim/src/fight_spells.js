@@ -42,6 +42,7 @@ import {
 } from './turn_seed.js'
 import {
   apply_invisibility,
+  clear_fighter_state,
   fighter_has_state,
   invisible_enemy_at,
   is_direct_effect_list,
@@ -364,6 +365,13 @@ export const apply_spell_effect = (
       turns_remaining: effect.turns ?? 1,
     })
     return { state: stated, effects: [{ target_id, status: 'APPLY_STATE' }] }
+  }
+  if (effect.type === 'REMOVE_STATE') {
+    // The APPLY_STATE eraser (spell_effect.move:52) — drop exactly the rows naming `effect.value`, leaving every
+    // unrelated row intact. Twin of `spell_board::clear_fighter_state`, wired on the chain in the same commit.
+    // The status row is emitted whether or not the target held the state, exactly as DISPEL reports its sweep.
+    const cleared = clear_fighter_state(state, target_id, effect.value ?? 0)
+    return { state: cleared, effects: [{ target_id, status: 'REMOVE_STATE' }] }
   }
   if (effect.type === 'REFLECT_DAMAGE') {
     // A FLAT damage-reflect (spell_effect.move:57, value = flat) — a TIMED defensive row on the protected fighter

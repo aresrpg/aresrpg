@@ -288,12 +288,7 @@ export const matrix_rows = [
         },
       },
     },
-    {
-      setup: 'remove_state',
-      effect: { value: 7 },
-      skip_reason:
-        'conformance bug #1039: K_REMOVE_STATE normalizes to UNSUPPORTED and cannot remove an active named state',
-    },
+    { setup: 'remove_state', effect: { value: 7 } },
   ),
   effect_row(
     spell_effect.K_REDUCE_DAMAGE,

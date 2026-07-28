@@ -253,6 +253,22 @@ public fun clear_fighter_status_kind(board: &mut BoardState, fighter_id: u64, ki
   board.statuses = kept;
 }
 
+/// REMOVE-STATE: drop exactly the `k_apply_state` rows on `fighter_id` naming `state_id`. The precise
+/// counterpart of `fighter_has_state` — a cleanse of ONE named state, never a dispel: unrelated rows (other
+/// states, stuns, alters, DoT) survive untouched. `clear_fighter_status_kind`'s idiom, narrowed by value, so the
+/// surviving rows land in the same order the kind-wide clear produces. No-op when the state is not held.
+public fun clear_fighter_state(board: &mut BoardState, fighter_id: u64, state_id: u16) {
+  let mut kept = vector[];
+  while (!board.statuses.is_empty()) {
+    let s = board.statuses.pop_back();
+    if (!(s.fighter == fighter_id
+      && s.kind == spell_effect::k_apply_state()
+      && s.effect.value() == (state_id as u64))) kept.push_back(s);
+  };
+  kept.reverse();
+  board.statuses = kept;
+}
+
 /// DISPEL: strip exactly `fighter_id`'s `FLAG_DISPELLABLE` status rows NOW. Unflagged rows survive unchanged.
 /// Return removed rows whose applied delta the fight must REVERT (the same `status_needs_revert` set
 /// `decrement_fighter_statuses` returns at natural expiry — single home, no parallel bookkeeping). A flagged
