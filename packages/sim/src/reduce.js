@@ -7,7 +7,8 @@
 // become this pure reducer; the *animation timing + network I/O* become the server's orchestration layer.
 // Only the donor's RULES survive (imported from fight_actions/fight_spells/fight_ai); its shape is gone.
 //
-// PURE: no I/O, no logging, no Date.now, no Math.random (the rng lives in state). Same (state, command, ctx)
+// PURE: no I/O, no logging, no Date.now, no Math.random (combat entropy is explicit in turn_context/turn_rng).
+// Same (state, command, ctx)
 // -> byte-identical {state, events} every time. The walkability + LoS + occupancy predicates are rebuilt
 // here from the arena terrain AND a fresh occupancy scan — occupancy is NEVER baked into the arena cells.
 
@@ -61,9 +62,12 @@ const total_health = state =>
  * @typedef {object} ReduceContext
  * @property {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
  * @property {import('./arena.js').Arena} arena
- * #577: `turn_context` is the public turn-seed clock {world_seed, spawn_id, turn_deadline_ms, seat, slot}; when
+ * #577: `turn_context` is the public turn-seed clock
+ * {world_seed, spawn_id, turn_entropy, turn_ordinal, seat, slot}; when
  * present, a PLAYER cast rolls its damage off it (previewable), mirroring the chain. Absent/mob -> crank roll.
- * @property {{ world_seed:number|bigint, spawn_id:number|bigint, turn_deadline_ms:number|bigint, seat:number|bigint, slot:number }} [turn_context]
+ * @property {{ world_seed:number|bigint|string, spawn_id:number|bigint|string,
+ *   turn_entropy:number|bigint|string, turn_ordinal:number|bigint|string,
+ *   seat:number|bigint, slot:number }} [turn_context]
  */
 
 /**
@@ -72,7 +76,8 @@ const total_health = state =>
  * @typedef {{ type: 'ready', entity_id: string }} CmdReady
  * @typedef {{ type: 'start' }} CmdStart
  * @typedef {{ type: 'move', entity_id: string, path: import('./cell.js').Cell[] }} CmdMove
- * @typedef {{ type: 'cast', entity_id: string, spell_id: string, target: import('./cell.js').Cell }} CmdCast
+ * @typedef {{ type: 'cast', entity_id: string, spell_id: string, target: import('./cell.js').Cell,
+ *   turn_context?: ReduceContext['turn_context'] }} CmdCast
  * @typedef {{ type: 'end_turn', entity_id: string }} CmdEndTurn
  * @typedef {{ type: 'use_ap_reserve', entity_id: string }} CmdUseApReserve
  * @typedef {{ type: 'abandon', entity_id: string }} CmdAbandon
@@ -510,7 +515,7 @@ const handle_cast = (state, cmd, ctx) => {
     cmd.target,
     context,
     is_terrain_walkable,
-    ctx.turn_context ?? null, // #577 — a PLAYER cast rolls damage off the turn seed when the client supplies the clock
+    cmd.turn_context ?? ctx.turn_context ?? null, // recorded capsules carry the exact public clock used live
   )
   if (!res.success) return { state, events: [] }
 
@@ -847,8 +852,9 @@ export const reduce = (state, command, ctx) => {
 
 /**
  * Build an initial placement-phase FightState from a carved arena + pre-built entities. A convenience the
- * caller (server) uses to construct state; the rng + next_id are seeded from `arena_seed` (the determinism
- * root that ALSO seeds carve_world_arena, so the client replays the identical fight from FightStarted.seed).
+ * caller (server) uses to construct state; the legacy rng, explicit turn_rng, and next_id are seeded from
+ * `arena_seed` (the determinism root that ALSO seeds carve_world_arena, so the client replays the identical
+ * fight from FightStarted.seed).
  * @param {object} params
  * @param {string} params.fight_id
  * @param {number} params.arena_seed
@@ -872,6 +878,7 @@ export const create_fight_state = ({
   started: false,
   ready: [],
   rng: arena_seed >>> 0,
+  turn_rng: arena_seed >>> 0,
   next_id: 1,
   team0,
   team1,

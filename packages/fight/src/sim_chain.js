@@ -21,7 +21,7 @@
 // determinism — replay rides the sim capsule's command list (spec §10, divergence 2).
 
 import { WORLD_SEED } from '@aresrpg/sim/world'
-import { rng_int, rng_seed } from '@aresrpg/sim/prng'
+import { mix, rng_int, rng_seed } from '@aresrpg/sim/prng'
 import { board_seed_from_anchor, generate } from '@aresrpg/sim/board_gen'
 import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
 import { effective_stats } from '@aresrpg/sim/fight_state'
@@ -164,6 +164,8 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
     turn_ptr: sim_state.current_turn_idx,
     turn_ms,
     turn_deadline_ms: now_ms + turn_ms,
+    turn_entropy: chain.ctx.turn_context.turn_entropy,
+    turn_ordinal: chain.ctx.turn_context.turn_ordinal,
     placement_deadline_ms: 0,
     world_seed: BigInt(WORLD_SEED >>> 0),
     spawn_id: seed,
@@ -212,7 +214,21 @@ export const create_sim_chain = ({
 }) => {
   const { board, anchor_x, anchor_z } = derive_board(seed, anchor)
   const arena = arena_from_board(board)
-  const ctx = { spell_templates: normalize_spell_templates(templates_raw), arena }
+  // The mock chain has no framework `&Random`, so it derives a deterministic local entropy carrier from the
+  // fight seed and turn ordinal. The shape and seed fold are the production wire's; only the entropy source is
+  // simulator-local. `fold_command` refreshes seat/slot/ordinal before every player cast.
+  const ctx = {
+    spell_templates: normalize_spell_templates(templates_raw),
+    arena,
+    turn_context: {
+      world_seed: BigInt(WORLD_SEED >>> 0),
+      spawn_id: seed >>> 0,
+      turn_entropy: mix(seed, 0),
+      turn_ordinal: 0,
+      seat: 0,
+      slot: 0,
+    },
+  }
   const initial = create_fight_state({
     fight_id,
     arena_seed: seed >>> 0,
@@ -263,11 +279,62 @@ const open_recorder = ({ fight_id, arena, templates_raw, initial, capacity }) =>
   })
 
 /** Fold ONE command: reduce, tap the recorder (physics tripwires live), bank the events. Pure. */
-const fold_command = (chain, command) => {
-  const { state, events } = reduce(chain.sim_state, command, chain.ctx)
+const active_turn_context = (
+  chain,
+  state,
+  actions = chain.actions ?? {},
+  turn_ordinal = chain.ctx.turn_context.turn_ordinal
+) => {
+  const order = state.turn_order ?? []
+  const entity_id = order[state.current_turn_idx % Math.max(1, order.length)]
+  const seat = state.team0.findIndex((entity) => entity.id === entity_id)
+  return {
+    world_seed: BigInt(WORLD_SEED >>> 0),
+    spawn_id: chain.seed,
+    turn_entropy: mix(chain.seed, turn_ordinal),
+    turn_ordinal,
+    // A mob has no player turn-seed seat/slot. The local encoder may surface its TurnStarted with the last
+    // player-published entropy/ordinal; zeroes keep this context total and the mob cast arm ignores them.
+    seat: Math.max(0, seat),
+    slot: seat < 0 ? 0 : Number(actions[`${entity_id}:${state.turn_number ?? 0}`] ?? 0),
+  }
+}
+
+/** A capsule command must be JSON-safe while preserving every u64-ish clock byte exactly. */
+const recorded_command = (chain, command, turn_context) => {
+  if (command.type !== 'cast' || !chain.sim_state.team0.some((entity) => entity.id === command.entity_id))
+    return command
+  return {
+    ...command,
+    turn_context: {
+      ...turn_context,
+      world_seed: String(turn_context.world_seed),
+      spawn_id: String(turn_context.spawn_id),
+      turn_entropy: String(turn_context.turn_entropy),
+      turn_ordinal: String(turn_context.turn_ordinal),
+      seat: String(turn_context.seat),
+    },
+  }
+}
+
+const fold_command = (chain, command, actions = chain.actions ?? {}) => {
+  const turn_context =
+    command.type === 'cast' ? active_turn_context(chain, chain.sim_state, actions) : chain.ctx.turn_context
+  const { state, events } = reduce(chain.sim_state, command, { ...chain.ctx, turn_context })
+  // Production stamps fresh entropy only when `turns::resolve_from` lands on a PLAYER; mobs resolve inside the
+  // crank wave. Count those landings directly instead of borrowing sim `turn_number`, which counts rounds and
+  // therefore cannot distinguish two co-op seats in the same round.
+  const player_starts = events.filter(
+    (event) => event.type === 'fight_turn_start' && state.team0.some((entity) => entity.id === event.entity_id)
+  ).length
+  const next_ordinal = Number(chain.ctx.turn_context.turn_ordinal) + player_starts
+  const next_ctx = {
+    ...chain.ctx,
+    turn_context: active_turn_context(chain, state, actions, next_ordinal),
+  }
   const tapped = observe_reduce_checked(chain.recorder, {
     fight_id: chain.fight_id,
-    command,
+    command: recorded_command(chain, command, turn_context),
     pre_state: chain.sim_state,
     post_state: state,
     events,
@@ -276,6 +343,7 @@ const fold_command = (chain, command) => {
     chain: {
       ...chain,
       sim_state: state,
+      ctx: next_ctx,
       recorder: tapped.rec,
       violations: [...chain.violations, ...tapped.violations],
     },
@@ -295,7 +363,7 @@ const fold_command = (chain, command) => {
 export const submit_commands = (chain, commands, { now_ms = 0, turn_ms = DEFAULT_TURN_MS } = {}) => {
   const folded = commands.reduce(
     (acc, command) => {
-      const step = fold_command(acc.chain, command)
+      const step = fold_command(acc.chain, command, acc.actions)
       const encoded = encode_sim_step({
         pre_state: step.pre_state,
         post_state: step.chain.sim_state,
@@ -308,6 +376,7 @@ export const submit_commands = (chain, commands, { now_ms = 0, turn_ms = DEFAULT
         // step and lives on the chain (the chain's own `casts_this_turn` / `next_mob_action` twin).
         spell_templates: acc.chain.ctx.spell_templates,
         actions: acc.actions,
+        turn_context: step.chain.ctx.turn_context,
       })
       return {
         chain: step.chain,
@@ -319,7 +388,15 @@ export const submit_commands = (chain, commands, { now_ms = 0, turn_ms = DEFAULT
   )
   const version = chain.version + 1
   return {
-    chain: { ...folded.chain, version, actions: folded.actions },
+    chain: {
+      ...folded.chain,
+      version,
+      actions: folded.actions,
+      ctx: {
+        ...folded.chain.ctx,
+        turn_context: active_turn_context(folded.chain, folded.chain.sim_state, folded.actions),
+      },
+    },
     version,
     receipt: { events: folded.rows },
   }

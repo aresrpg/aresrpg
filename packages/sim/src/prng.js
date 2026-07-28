@@ -60,7 +60,7 @@ export const rng_range = (state, min, max) => {
  * Reduce any u64-ish value (Number or BigInt) to a uint32 Number — the `& MASK32` wrapping boundary each fold
  * applies in the Move port. World seed / spawn id can be a full 64-bit value (BigInt from the SDK), so the mask
  * runs in BigInt space to avoid float-precision loss above 2^53; the result (< 2^32) is an exact Number.
- * @param {number | bigint} v
+ * @param {number | bigint | string} v
  * @returns {number}
  */
 const to_u32 = v => Number(BigInt(v) & 0xffffffffn)
@@ -69,7 +69,7 @@ const to_u32 = v => Number(BigInt(v) & 0xffffffffn)
  * One-shot 32-bit avalanche of `seed` — mulberry32's scrambler used as a HASH, not a stream (prng.move
  * `scramble`). Byte-identical to `rng_next(seed >>> 0).value`. The building block for deriving DECORRELATED
  * sub-seeds (per-turn crit/damage stream picks) from combined inputs.
- * @param {number | bigint} seed
+ * @param {number | bigint | string} seed
  * @returns {number}  uint32
  */
 export const scramble = seed => rng_next(to_u32(seed)).value
@@ -79,8 +79,8 @@ export const scramble = seed => rng_next(to_u32(seed)).value
  * combiner — build a seed from several values with `mix(mix(a, b), c)`. Byte-identical to Move's
  * `scramble(((acc & MASK32) + (x & MASK32)) & MASK32)`; each fold avalanches so distinct input tuples collide
  * only at the scrambler's 1-in-2^32 rate (no additive cancellation).
- * @param {number | bigint} acc
- * @param {number | bigint} x
+ * @param {number | bigint | string} acc
+ * @param {number | bigint | string} x
  * @returns {number}  uint32
  */
 export const mix = (acc, x) => scramble((to_u32(acc) + to_u32(x)) >>> 0)

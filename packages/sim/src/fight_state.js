@@ -5,7 +5,7 @@
 // Ported from koshi-2d/.../shared/src/fight/types.ts (FightState / FightEntity / generate_turn_order /
 // find_entity / get_current_turn_entity). The donor's TS interfaces become JSDoc typedefs; the SHAPE is
 // faithful with TWO determinism additions the donor lacked:
-//   - `rng`     — the single uint32 PRNG thread (prng.js Rng); replaces every donor Math.random.
+//   - `turn_rng` — the explicit crank/board combat thread; player casts use a temporary public turn clock.
 //   - `next_id` — a monotonic int counter; replaces every donor globalThis.crypto.randomUUID().
 // Both live in state and are returned in every `{state}` so callers never see hidden mutation.
 //
@@ -132,11 +132,12 @@
  * The full fight state — the value `reduce` threads. Immutable: every transition returns a fresh object.
  * @typedef {object} FightState
  * @property {string} fight_id
- * @property {number} arena_seed     seeds BOTH carve_world_arena and the rng (the determinism root)
+ * @property {number} arena_seed     seeds carve_world_arena and the initial entropy fields (the determinism root)
  * @property {number} arena_radius
  * @property {boolean} started       false = placement phase, true = combat
  * @property {string[]} ready        entity ids that pressed READY during placement (force-start when every player is ready)
- * @property {import('./prng.js').Rng} rng   the single PRNG thread (NEW vs donor)
+ * @property {import('./prng.js').Rng} rng   legacy capsule field; combat resolution never reads it
+ * @property {import('./prng.js').Rng} turn_rng   explicit mob/board combat thread; player casts preserve it
  * @property {number} next_id        monotonic id counter (NEW vs donor, replaces crypto.randomUUID)
  * @property {FightEntity[]} team0   side A of the §17.28 interleave — players in join/seat order
  * @property {FightEntity[]} team1   side B of the §17.28 interleave — mobs in spawn order (or PvP opposing team)

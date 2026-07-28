@@ -82,6 +82,7 @@ export const roll_in_range = (min, max, roll) =>
 // AP/MP-removal DODGE stream: the point-removal contest draws off the SAME public turn-seed as
 // crit — a NEW domain tag, zero new RNG — so a client previews a drain's dodge before commit exactly like a crit.
 const DOMAIN_DODGE = 0xd0d6e // dodge stream domain tag (spell_formula::DOMAIN_DODGE); ≠ DOMAIN_CRIT (0)
+const DOMAIN_FAILURE = 0xfa117 // critical-failure stream; mirrors spell_formula::DOMAIN_FAILURE
 
 /**
  * The prng STATE a player cast's point-removal dodge threads from — mix(mix(turn_seed, slot), DOMAIN_DODGE).
@@ -90,6 +91,10 @@ const DOMAIN_DODGE = 0xd0d6e // dodge stream domain tag (spell_formula::DOMAIN_D
  * @param {number} seed the turn_seed @param {number} slot the action index this turn @returns {number} uint32
  */
 export const dodge_seed = (seed, slot) => mix(mix(seed, slot), DOMAIN_DODGE)
+
+/** The deterministic critical-failure roll for one action slot. Mirrors spell_formula::critical_failure_roll. */
+export const critical_failure_roll = (seed, slot, denominator) =>
+  denominator > 0 ? mix(mix(seed, slot), DOMAIN_FAILURE) % denominator : 0
 
 /**
  * Does `crit_roll` crit at `crit_rate` (1-in-X; 0 = never; `crit_bonus` lowers X, floored at 2 = the 50% cap)?

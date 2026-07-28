@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { rng_range } from './prng.js'
+import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import {
   next_id,
   find_entity,
@@ -31,7 +32,14 @@ import {
   effect_triggers,
   is_critical,
 } from './spell_calculator.js'
-import { slot_damage_roll, crank_damage_roll, turn_seed } from './turn_seed.js'
+import {
+  crit_at,
+  dodge_seed,
+  slot_crit_roll,
+  slot_damage_roll,
+  crank_damage_roll,
+  turn_seed,
+} from './turn_seed.js'
 import {
   apply_invisibility,
   invisible_enemy_at,
@@ -157,8 +165,8 @@ export const apply_spell_effect = (
   retro_context,
   damage_roll = 0, // #577 — the per-cast turn-seed (player) / crank (mob) roll fraction; each damage/heal effect maps it onto its [min,max]
 ) => {
-  const trigger = effect_triggers(state.rng, effect)
-  state = { ...state, rng: trigger.rng }
+  const trigger = effect_triggers(turn_rng_of(state), effect)
+  state = with_turn_rng(state, trigger.rng)
   if (!trigger.value) return { state, effects: [] }
 
   const target = find_entity(state, target_id)
@@ -297,8 +305,8 @@ export const apply_spell_effect = (
     if (effect.min === undefined || effect.max === undefined)
       return { state, effects: [] }
     const { state: s2, id } = next_id(state)
-    const draw = rng_range(s2.rng, effect.min, effect.max)
-    const shielded = add_effect({ ...s2, rng: draw.state }, target_id, {
+    const draw = rng_range(turn_rng_of(s2), effect.min, effect.max)
+    const shielded = add_effect(with_turn_rng(s2, draw.state), target_id, {
       id,
       type: 'SHIELD',
       timing: 'TURN_START',
@@ -388,8 +396,8 @@ export const apply_spell_effect = (
     if (effect.min === undefined || effect.max === undefined)
       return { state, effects: [] }
     const { state: s2, id } = next_id(state)
-    const draw = rng_range(s2.rng, effect.min, effect.max)
-    const poisoned = add_effect({ ...s2, rng: draw.state }, target_id, {
+    const draw = rng_range(turn_rng_of(s2), effect.min, effect.max)
+    const poisoned = add_effect(with_turn_rng(s2, draw.state), target_id, {
       id,
       // `type: 'DAMAGE'` is deliberate — it rides the SAME tick machinery a plain damage-over-time row uses
       // (process_turn_effects only special-cases `type === 'DAMAGE'`), so the reducer never needs a parallel
@@ -533,7 +541,7 @@ export const process_spell_cast = (
   target,
   context,
   terrain_walkable = () => true,
-  turn_context = null, // #577 — {world_seed,spawn_id,turn_deadline_ms,seat,slot}: a PLAYER cast rolls damage off the turn seed (previewable). Absent / mob ⇒ crank roll.
+  turn_context = null, // #577 — {world_seed,spawn_id,turn_entropy,turn_ordinal,seat,slot}: the public player-cast clock.
 ) => {
   const validation = validate_cast(
     state,
@@ -557,13 +565,22 @@ export const process_spell_cast = (
   const { spell_level, caster } = validation
   const stack_target_id = find_entity_at(state, target)?.id
   const crit_bonus = effective_stats(caster).critical_hit ?? 0
-  const crit = is_critical(state.rng, spell_level.critical_chance, crit_bonus)
-  // #577 — ONE per-cast damage roll: a PLAYER cast derives it from the public turn seed (the client mirrors it to
-  // preview this turn's exact damage); a mob / turn-context-less cast derives a non-advancing roll off state.rng.
-  const damage_roll =
-    turn_context && caster.is_player && turn_context.slot != null
-      ? slot_damage_roll(turn_seed(turn_context), turn_context.slot)
-      : crank_damage_roll(state.rng)
+  const clocked = !!(
+    turn_context &&
+    caster.is_player &&
+    turn_context.slot != null
+  )
+  const tseed = clocked ? turn_seed(turn_context) : null
+  const crit = clocked
+    ? {
+        value: crit_at(
+          slot_crit_roll(tseed, turn_context.slot),
+          spell_level.critical_chance,
+          crit_bonus,
+        ),
+        rng: turn_rng_of(state),
+      }
+    : is_critical(turn_rng_of(state), spell_level.critical_chance, crit_bonus)
   const effect_list =
     crit.value &&
     spell_level.crit_effects &&
@@ -603,13 +620,29 @@ export const process_spell_cast = (
       fumbled: false,
     }
   }
-  const fumble = roll_fumble({ ...state, rng: crit.rng }, caster)
+  // Player casts use a temporary stream derived from their public turn slot. Move's player arm never touches
+  // the crank, so restore this independent combat thread before returning; mobs and board ticks continue from
+  // exactly the state they would have seen had the player payload contained no random branches.
+  const combat_rng = turn_rng_of(state)
+  state = clocked
+    ? with_turn_rng(state, dodge_seed(tseed, turn_context.slot))
+    : with_turn_rng(state, crit.rng)
+  // #577 — ONE per-cast damage roll: a PLAYER cast derives it from the public turn seed (the client mirrors it to
+  // preview this turn's exact damage); a mob / turn-context-less cast reads the explicit combat thread.
+  const damage_roll = clocked
+    ? slot_damage_roll(tseed, turn_context.slot)
+    : crank_damage_roll(turn_rng_of(state))
+  const fumble = roll_fumble(
+    state,
+    caster,
+    clocked ? { seed: tseed, slot: turn_context.slot } : null,
+  )
   state = record_cast(fumble.state, caster_id, spell.id, spell_level, target)
   state = deduct_ap(state, caster_id, spell_level.cost)
   if (fumble.fumbled)
     return {
       success: true,
-      state,
+      state: clocked ? with_turn_rng(state, combat_rng) : state,
       effects: [{ target_id: caster_id, status: 'CRITICAL_FAILURE_FUMBLE' }],
       caster_ap_remaining: find_entity(state, caster_id)?.ap ?? 0,
       is_critical: false,
@@ -725,9 +758,10 @@ export const process_spell_cast = (
     },
   )
 
-  const final_state = result.direct_damage
+  let final_state = result.direct_damage
     ? reveal(result.state, caster_id)
     : result.state
+  if (clocked) final_state = with_turn_rng(final_state, combat_rng)
 
   return {
     success: true,

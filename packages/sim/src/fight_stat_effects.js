@@ -4,6 +4,7 @@
 // defender's agility term; physical damage remains an ordinary timed stat consumed only by EARTH/NONE damage.
 
 import { rng_range } from './prng.js'
+import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import { add_effect } from './fight_actions.js'
 import { effective_stats, next_id, update_entity } from './fight_state.js'
 import {
@@ -52,7 +53,7 @@ export const apply_stat_effect = (state, effect, caster, target) => {
     const dodge_stat =
       effect.stat === 'ap' ? target_stats.ap_dodge : target_stats.mp_dodge
     const result = remove_points(
-      state.rng,
+      turn_rng_of(state),
       requested,
       ((effect.flags ?? 0) & FLAG_DODGE) !== 0,
       effective_stats(caster).wisdom ?? 0,
@@ -60,7 +61,7 @@ export const apply_stat_effect = (state, effect, caster, target) => {
       target[effect.stat],
       effect.stat === 'ap' ? target.ap_max : target.mp_max,
     )
-    const with_rng = { ...state, rng: result.state }
+    const with_rng = with_turn_rng(state, result.state)
     if (result.removed === 0)
       return {
         handled: true,
@@ -107,8 +108,8 @@ export const apply_stat_effect = (state, effect, caster, target) => {
 
   if (effect.min === undefined || effect.max === undefined)
     return { handled: true, state, effects: [] }
-  const draw = rng_range(state.rng, effect.min, effect.max)
-  const with_rng = { ...state, rng: draw.state }
+  const draw = rng_range(turn_rng_of(state), effect.min, effect.max)
+  const with_rng = with_turn_rng(state, draw.state)
   const stored = add_row(with_rng, target.id, caster.id, effect, draw.value)
   const delta = effect.type === 'ADD' ? draw.value : -draw.value
   const after =

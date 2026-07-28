@@ -217,7 +217,15 @@ describe('captured wire bytes — the encoder speaks the chain dialect, not a se
   for (const [kind, captured] of CAPTURED)
     if (EMITTED.has(kind))
       test(`${kind} — key set + JSON scalar types match the captured row`, () => {
-        expect(shape_of(EMITTED.get(kind).parsedJson)).toEqual(without_dropped(kind, shape_of(captured.parsedJson)))
+        // Union of two evolutions: `without_dropped` still strips the double-serialized ActionResolved.effects
+        // the capture predates, AND TurnStarted now publishes the two u64 turn-seed inputs (e4558974) — pin that
+        // additive wire evolution while retaining every captured field as the old package emitted it.
+        const captured_shape = without_dropped(kind, shape_of(captured.parsedJson))
+        const expected =
+          kind === 'TurnStarted'
+            ? { ...captured_shape, turn_entropy: 'string', turn_ordinal: 'string' }
+            : captured_shape
+        expect(shape_of(EMITTED.get(kind).parsedJson)).toEqual(expected)
       })
 
   test('every emitted kind is pinned by the captured corpus, or explicitly justified', () => {

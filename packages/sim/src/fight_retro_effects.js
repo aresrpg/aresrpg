@@ -6,6 +6,8 @@
 // emits presentation data but never mutates durable character appearance. All rows live only inside FightState.
 
 import { rng_int, rng_range } from './prng.js'
+import { turn_rng_of, with_turn_rng } from './combat_clock.js'
+import { critical_failure_roll } from './turn_seed.js'
 import { add_effect, apply_damage } from './fight_actions.js'
 import { find_entity, next_id, update_entity } from './fight_state.js'
 import { FLAG_NEGATIVE } from './spell_effect.js'
@@ -15,8 +17,12 @@ const duration_of = effect => Math.max(1, Math.floor(effect.turns ?? 1))
 const rolled_value = (state, effect) => {
   const min = Math.floor(effect.min ?? effect.value ?? 0)
   const max = Math.floor(effect.max ?? effect.value ?? min)
-  const draw = rng_range(state.rng, Math.min(min, max), Math.max(min, max))
-  return { state: { ...state, rng: draw.state }, value: draw.value }
+  const draw = rng_range(
+    turn_rng_of(state),
+    Math.min(min, max),
+    Math.max(min, max),
+  )
+  return { state: with_turn_rng(state, draw.state), value: draw.value }
 }
 
 const append_status = (state, target_id, status) => {
@@ -29,16 +35,24 @@ const append_status = (state, target_id, status) => {
 }
 
 /** Roll the active 1-in-X fumble stat. No live row means no draw and no failure. */
-export const roll_fumble = (state, caster) => {
+export const roll_fumble = (state, caster, turn_clock = null) => {
   const denominators = caster.effects
     .filter(effect => effect.type === 'CRITICAL_FAILURE' && effect.value > 0)
     .map(effect => Math.max(1, Math.floor(effect.value)))
   if (denominators.length === 0)
     return { state, fumbled: false, denominator: 0 }
   const denominator = Math.min(...denominators)
-  const draw = rng_int(state.rng, denominator)
+  if (turn_clock)
+    return {
+      state,
+      fumbled:
+        critical_failure_roll(turn_clock.seed, turn_clock.slot, denominator) ===
+        0,
+      denominator,
+    }
+  const draw = rng_int(turn_rng_of(state), denominator)
   return {
-    state: { ...state, rng: draw.state },
+    state: with_turn_rng(state, draw.state),
     fumbled: draw.value === 0,
     denominator,
   }

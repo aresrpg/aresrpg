@@ -6,14 +6,15 @@
 // a percentage to the attacker without recursively evaluating any reaction on that reflected hit.
 
 import { rng_int } from './prng.js'
+import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 
 /** Resolve the first live damage-to-heal row against one already-calculated incoming hit. */
 export const incoming_branch = (state, target, incoming) => {
   const status = target.effects.find(effect => effect.type === 'DAMAGE_TO_HEAL')
   if (!status) return { state, mode: 'DAMAGE', amount: incoming }
   const chance = Math.max(0, Math.min(100, Math.floor(status.chance ?? 100)))
-  const draw = rng_int(state.rng, 100)
-  const next = { ...state, rng: draw.state }
+  const draw = rng_int(turn_rng_of(state), 100)
+  const next = with_turn_rng(state, draw.state)
   if (draw.value < chance)
     return {
       state: next,

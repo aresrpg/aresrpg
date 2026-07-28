@@ -125,6 +125,7 @@ describe('tackle golden — reduce-level behavior (the sim rng thread)', () => {
     fight_id: 'tackle-golden',
     started: true,
     rng: rng_seed(seed),
+    turn_rng: rng_seed(seed),
     next_id: 1,
     team0: [entity('mover', { x: 5, y: 5 }, mover_agi, true)],
     team1: [entity('locker', { x: 4, y: 5 }, enemy_agi, false)],

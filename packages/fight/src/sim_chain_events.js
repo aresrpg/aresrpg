@@ -457,7 +457,7 @@ const cast_envelope = (state, event, ctx) => {
  * @returns {{ rows: object[] }}
  */
 const encode_event = (event, ctx) => {
-  const { fight_id, post_state, pre_state, now_ms, turn_ms } = ctx
+  const { fight_id, post_state, pre_state, now_ms, turn_ms, turn_context } = ctx
   const fight = fight_id
   const effects_of = (list) => (list ?? []).flatMap((effect) => encode_effect(post_state, effect, ctx))
   switch (event.type) {
@@ -471,7 +471,18 @@ const encode_event = (event, ctx) => {
       return { rows: [row('Ready', { fight, character: event.entity_id })] }
     case 'fight_turn_start': {
       const { is_mob, idx } = side_of(post_state, event.entity_id)
-      return { rows: [row('TurnStarted', { fight, is_mob, idx: u64(idx), deadline_ms: u64(now_ms + turn_ms) })] }
+      return {
+        rows: [
+          row('TurnStarted', {
+            fight,
+            is_mob,
+            idx: u64(idx),
+            deadline_ms: u64(now_ms + turn_ms),
+            turn_entropy: u64(turn_context?.turn_entropy ?? 0),
+            turn_ordinal: u64(turn_context?.turn_ordinal ?? 0),
+          }),
+        ],
+      }
     }
     case 'fight_turn_end':
     case 'fight_turn_skipped': {
@@ -574,7 +585,7 @@ const encode_event = (event, ctx) => {
  * rides in and out so this stays a pure function of its inputs, exactly like `Displaced`'s cell map.
  * @param {{ pre_state: object, post_state: object, events: object[], fight_id: string,
  *   now_ms?: number, turn_ms?: number, spell_templates?: Map<string, object>,
- *   actions?: Record<string, number> }} params
+ *   actions?: Record<string, number>, turn_context?: object }} params
  * @returns {{ rows: object[], actions: Record<string, number> }}
  */
 export const encode_sim_step = ({
@@ -586,6 +597,7 @@ export const encode_sim_step = ({
   turn_ms = DEFAULT_TURN_MS,
   spell_templates = null,
   actions = {},
+  turn_context = null,
 }) => {
   if (post_state.team0.length !== pre_state.team0.length || post_state.team1.length !== pre_state.team1.length)
     // A SUMMON grew a team. Participant/mob indices are POSITIONAL in the snapshot and the chain has no event
@@ -600,6 +612,7 @@ export const encode_sim_step = ({
     now_ms,
     turn_ms,
     spell_templates,
+    turn_context,
     cells: new Map([...pre_state.team0, ...pre_state.team1].map((e) => [e.id, encode(e.cell.x, e.cell.y)])),
     next_action: (entity_id, turn) => {
       const key = `${entity_id}:${turn}`

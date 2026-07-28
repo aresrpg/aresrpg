@@ -101,6 +101,7 @@ const lock_state = (
   fight_id: 'lock',
   started: true,
   rng: rng_seed(seed),
+  turn_rng: rng_seed(seed),
   next_id: 1,
   team0: [make_entity('mover', mover_cell, { agility: mover_agi })],
   team1: enemy_cells_agi.map(([cell, agi], i) =>

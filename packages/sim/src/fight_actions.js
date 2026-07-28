@@ -3,6 +3,7 @@
 // Immutable fight transitions. Shuffle and tackle use the single deterministic integer PRNG thread.
 
 import { rng_int } from './prng.js'
+import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import {
   find_entity,
   next_id,
@@ -26,13 +27,13 @@ import {
 
 // ── Movement + tackle ───────────────────────────────────────────────────────────
 // The contest math lives in fight_tackle.js (the Move-parity formula home, golden-pinned by
-// test/tackle_golden.test.js); this path owns only the roll draw off the sim rng thread + the state writes.
+// test/tackle_golden.test.js); this path owns only the roll draw off the explicit turn_rng thread + state writes.
 
 /**
  * Contest the start-cell tackle ONCE: every living enemy adjacent to `entity_id`'s current cell locks the exit
- * as one exact product fraction (fight_tackle.js — the Move-parity math home). Returns the rng-advanced state
+ * as one exact product fraction (fight_tackle.js — the Move-parity math home). Returns the turn_rng-advanced state
  * plus whether the mover ESCAPED; a failed escape applies the AP/MP penalty and denies the move. No adjacent
- * enemy ⇒ a free escape with NO roll (rng untouched). The single home shared by apply_move and the ordinary-move
+ * enemy ⇒ a free escape with NO roll (turn_rng untouched). The single home shared by apply_move and the ordinary-move
  * trap walk (reduce.js) — both contest exactly once, before any cell is entered.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
@@ -48,9 +49,9 @@ export const contest_tackle = (state, entity_id) => {
     effective_stats(entity).agility ?? 0,
     adjacent_enemies.map(e => effective_stats(e).agility ?? 0),
   )
-  const roll = rng_int(state.rng, escape.den)
+  const roll = rng_int(turn_rng_of(state), escape.den)
   if (roll.value < escape.num)
-    return { state: { ...state, rng: roll.state }, escaped: true }
+    return { state: with_turn_rng(state, roll.state), escaped: true }
   // A failed escape loses the failed fraction of both pools and denies movement.
   const { ap_lost, mp_lost } = tackle_losses(
     entity.ap,
@@ -59,7 +60,7 @@ export const contest_tackle = (state, entity_id) => {
     escape.den,
   )
   const tackled_state = update_entity(
-    { ...state, rng: roll.state },
+    with_turn_rng(state, roll.state),
     entity_id,
     e => ({
       ...e,

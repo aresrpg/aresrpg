@@ -4,7 +4,7 @@
 //
 // PORTED from koshi-2d/.../shared/src/fight/spell_processing/placement.ts. Determinism fixes vs the donor:
 //   - ids: globalThis.crypto.randomUUID() -> the state's monotonic next_id counter.
-//   - damage: calculate_final_damage returns {rng, damage} here (rng threaded) — never Math.random. Board damage
+//   - damage: calculate_final_damage returns {rng, damage} here (turn_rng threaded) — never Math.random. Board damage
 //     is ZERO-CASTER (chain parity, cast.move::apply_board_batch &ZERO): the target resists, the placer never amplifies.
 // A trap is placed on a CASTER-only-visible cell set; it triggers on the FIRST entity to step onto a covered
 // cell (during a move OR a push), is removed, and deals the trap's element damage. A glyph persists for N
@@ -20,6 +20,7 @@ import { apply_heal, apply_incoming_damage } from './fight_actions.js'
 import { add_row } from './fight_stat_effects.js'
 import { calculate_final_damage } from './spell_calculator.js'
 import { crank_damage_roll } from './turn_seed.js'
+import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import { get_direction, handle_displacement } from './fight_displacement.js'
 
 /** A board payload's FLAT magnitude. The chain's board batch is deterministic — it reads `effect.value()` and
@@ -112,10 +113,10 @@ const hazard_damage = (state, hazard, entity) => {
     effective_stats(entity),
     // #577 — a trap tick is board-driven (non-previewable): roll off the threaded rng WITHOUT advancing it
     // (fixed hazards, min==max, stay byte-identical; a range varies deterministically). rng is returned unchanged.
-    crank_damage_roll(state.rng),
+    crank_damage_roll(turn_rng_of(state)),
     entity.effects.filter(e => e.type === 'SHIELD'),
   )
-  return { rng: state.rng, damage: res.damage }
+  return { rng: turn_rng_of(state), damage: res.damage }
 }
 
 const hazard_hit = (state, target_id, damage, source_id) => {
@@ -187,7 +188,7 @@ const apply_payload = (
           target,
         )
         const after = hazard_hit(
-          { ...acc.state, rng },
+          with_turn_rng(acc.state, rng),
           entity_id,
           damage,
           source_id,
@@ -393,7 +394,7 @@ export const check_glyphs = (state, entity_id) => {
         here,
       )
       const after = hazard_hit(
-        { ...acc.state, rng },
+        with_turn_rng(acc.state, rng),
         entity_id,
         damage,
         glyph.source_id,
