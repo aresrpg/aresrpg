@@ -88,7 +88,7 @@ const fold_says_armed = (rows) => {
     1_100
   )
   store.getState().input({ type: 'receipt', version: 7, receipt: { events: rows } }, 1_200)
-  for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, 1_300)
+  present_trap_beats(store)
   return !engine_view(store.getState()).my_traps.includes(X)
 }
 
@@ -100,6 +100,20 @@ const renderer_says_armed = (rows) =>
     resolve_fighter_id: ({ character, is_mob, idx }) => character ?? (is_mob ? `m${idx}` : CHAR),
     fighter_cells: new Map([[CHAR, { x: 5, y: 5 }]]),
   }).turns.some((turn) => turn.events.some((beat) => beat.kind === 'trap_trigger'))
+
+const present_trap_beats = (store) => {
+  for (const turn of store.getState().wave) {
+    for (const [index, beat] of turn.beats.entries())
+      if (beat.kind === 'trap_trigger')
+        store.getState().input({
+          type: 'trap_triggered',
+          anchor: beat.payload.trap_anchor,
+          cell: beat.payload.trap_cell,
+          trigger_id: `wave:${turn.seq}:${index}`,
+        })
+    store.getState().input({ type: 'presented', seq: turn.seq }, 1_300)
+  }
+}
 
 describe('#1248 — the fold and the renderer answer "was it armed?" the same way', () => {
   // THE DIVERGENCE, exactly as filed: cast on X, walk over X, cast on X again — all in one receipt (legal only
@@ -209,15 +223,15 @@ describe('#1047 — a stationary fighter inside a newly placed AoE does not cons
     expect(Object.values(view.my_trap_payloads).every((payload) => payload === PAYLOAD)).toBe(true)
   })
 
-  test('moving onto another zone cell after placement still springs the whole footprint optimistically', () => {
+  test('moving onto another zone cell optimistically cannot consume the footprint', () => {
     const store = place_occupied_zone()
     store.getState().input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: X, mp_left: 2 } }, 1_200)
 
     expect(store.getState().my_traps).toMatchObject([{ cells: ZONE, gone: false }])
-    expect(engine_view(store.getState()).my_traps).toEqual([])
+    expect(engine_view(store.getState()).my_traps).toEqual(ZONE)
   })
 
-  test('leaving and entering the original occupied cell anew springs the trap', () => {
+  test('leaving and entering the original occupied cell still waits for an authoritative entry event', () => {
     const store = place_occupied_zone()
     store
       .getState()
@@ -227,7 +241,7 @@ describe('#1047 — a stationary fighter inside a newly placed AoE does not cons
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START, mp_left: 1 } }, 1_300)
-    expect(engine_view(store.getState()).my_traps).toEqual([])
+    expect(engine_view(store.getState()).my_traps).toEqual(ZONE)
   })
 
   test('the full footprint survives confirmation when nobody entered after placement', () => {
@@ -278,7 +292,7 @@ describe('#1248 — an AoE trap is sequenced by its ANCHOR, not by its zone', ()
       1_100
     )
     store.getState().input({ type: 'receipt', version: 7, receipt: { events: rows } }, 1_200)
-    for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, 1_300)
+    present_trap_beats(store)
     return !engine_view(store.getState()).my_traps.includes(X)
   }
 

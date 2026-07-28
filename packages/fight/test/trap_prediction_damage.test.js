@@ -200,6 +200,7 @@ describe('④ an untriggered trap survives an unobserved snapshot advance (v1.12
     snapshot_with_mob_at(store, OFF, 8, 1_200) // an unrelated poll first — the trap must still be retirable after it
     // the chain lands the mob ON the trap (on_enter) via a receipt → gone forever.
     store.getState().input({ type: 'receipt', version: 9, receipt: { events: [mob_moved(TRAP)] } }, 1_300)
+    store.getState().input({ type: 'trap_triggered', anchor: TRAP, cell: TRAP, trigger_id: 'wave:trap' }, 1_350)
     for (const t of store.getState().wave) store.getState().input({ type: 'presented', seq: t.seq }, 1_400)
     expect(engine_view(store.getState()).my_traps).toEqual([])
   })

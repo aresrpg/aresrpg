@@ -56,6 +56,12 @@ export const classify_input = (msg = {}) => {
       return lifecycle({ phase: 'ctx', ctx: msg.ctx })
     case 'presented':
       return lifecycle({ phase: 'presented', seq: msg.seq })
+    case 'trap_triggered':
+      return lifecycle({
+        phase: 'trap_triggered',
+        key: msg.trigger_id,
+        action: { anchor: msg.anchor, cell: msg.cell },
+      })
     case 'error':
       return lifecycle({ phase: 'error', message: msg.message })
     case 'turn_lost_shown':
@@ -180,6 +186,7 @@ export const KNOWN_INPUT_TYPES = new Set([
   'init',
   'ctx',
   'presented',
+  'trap_triggered',
   'error',
   'turn_lost_shown',
   'divergence_shown',

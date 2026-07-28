@@ -147,10 +147,6 @@ export function DungeonBoard() {
   const [leave_confirm, set_leave_confirm] = useState(false)
   // The single tx edge keeps the latest flush closure without re-subscribing on every render.
   const auto_submit_ref = useRef(null)
-  // TRAP PAINT AT CAST: cells whose trap marker was painted OPTIMISTICALLY at the
-  // draft click and is not yet chain-committed. Flush moves survivors to chain truth (they leave this set,
-  // marker stays) and rolls back drops/failures; a turn boundary rolls back whatever never committed.
-  const pending_trap_cells = useRef(/** @type {Set<number>} */ (new Set()))
   // FIX 4 (cooldown gate) — the CLIENT mirror of cast.move's per-seat turn clock + per-spell last-cast record.
   // `my_turn_no` is the FOLD-derived seat-turn counter (fight core): bumped once per MY PLAYABLE turn-start,
   // DEADLINE-INDEPENDENT, so lag/starvation can no longer freeze it (register #34 — it used to live here as a
@@ -858,7 +854,6 @@ export function DungeonBoard() {
     const store_dropped = ok ? trap_dropped : [...trap_placed, ...trap_dropped]
     if (fight?.fight_id && store_dropped.length)
       fight_store.getState().input({ type: 'drop_traps', cells: store_dropped })
-    if (fight?.fight_id) for (const cell of [...trap_placed, ...trap_dropped]) pending_trap_cells.current.delete(cell)
     fight_state_trace('flush_finished', { background, ok })
     // NO SILENT FAILURE (#922): a refused commit throws the whole drafted turn away, and until now the ONLY tell
     // was this trace line's `ok:false` — which is off unless fight-state tracing is armed. The simulator's silent
@@ -988,16 +983,6 @@ export function DungeonBoard() {
         },
       })
       optimistic_cast(cell)
-      // TRAP PAINT AT CAST: casting a trap paints its marker optimistically at cast —
-      // optimistic_cast above already folded the trap into the durable my_traps (place_traps) — the gold marker
-      // paints NOW from engine_view.my_traps (the ONE home). The local pending set only tracks it for the
-      // flush (drop/fail) and turn-boundary rollback below; commit turns the same fold record into chain truth.
-      if (
-        fight?.fight_id &&
-        armed !== WEAPON_ATTACK_ID &&
-        (active_level?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP')
-      )
-        pending_trap_cells.current.add(cell)
       return
     }
     if (cast_only) return
@@ -1071,17 +1056,6 @@ export function DungeonBoard() {
   // on-chain abort 104. The fresh deadline the chain stamps on every landing is the one signal that flips on a
   // same-player new turn.
   useEffect(() => {
-    // a turn boundary rolls back any trap marker whose draft never committed (trap paint at cast).
-    if (pending_trap_cells.current.size && fight?.fight_id) {
-      // A (register hygiene): only reclaim cells NO LONGER live in the fold. A cell still present in
-      // engine_view.my_traps at the boundary is a COMMITTED trap the flush already kept — the boundary net must not
-      // target it. This closes the race window (the flush's own pending-clear runs AFTER the awaited commit, while
-      // the commit receipt fires this effect); B (version-gated drop_traps) is the structural backstop regardless.
-      const live = new Set(fight?.my_traps ?? [])
-      const drop = [...pending_trap_cells.current].filter((cell) => !live.has(cell))
-      if (drop.length) fight_store.getState().input({ type: 'drop_traps', cells: drop })
-      pending_trap_cells.current.clear()
-    }
     clear_picks()
   }, [fight?.active_entity_id, fight?.turn_deadline_ms])
 

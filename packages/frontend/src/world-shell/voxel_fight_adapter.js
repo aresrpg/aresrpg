@@ -1026,6 +1026,17 @@ export function create_voxel_fight_adapter(
         } else if (spec.kind === 'trap_place')
           reconcile() // repaint the viewer-scoped trap prims (including the caster's optimistic place_traps row)
         else if (spec.kind === 'trap_trigger') {
+          // Canonical lifecycle was receipt-folded already. Advance exactly this row's presentation cursor before
+          // repainting; a replayed beat is idempotent by trigger_id and cannot hide an overlapping neighbour.
+          if (payload.authoritative === true)
+            fight_store.getState().input({
+              type: 'trap_triggered',
+              fight_id: payload.fight_id,
+              session_generation: payload.session_generation,
+              anchor: payload.trap_anchor,
+              cell: payload.trap_cell ?? (payload.cell ? encode_cell(payload.cell.x, payload.cell.y) : null),
+              trigger_id: payload.trigger_id,
+            })
           // Repaint from engine_view.trap_prims at the detonation beat. No renderer-owned list may keep it visible.
           reconcile()
           await play_trap_boom(payload)
@@ -1080,14 +1091,28 @@ export function create_voxel_fight_adapter(
   /** Claim every id this turn's beats will drive — the replay owns their rigs for the WHOLE turn (release at
    *  the turn's settle below, never at a mid-turn arrival: the presented fold holds a mob's cell at pre-turn
    *  until its turn acks, and an early release would walk the rig straight back to that masked cell). */
-  const prepare_wave_beats = (turn) => {
+  const prepare_wave_beats = (turn, { fight_id, session_generation }) => {
     const claimed = new Set()
-    for (const spec of turn.beats) {
+    const beats = turn.beats.map((spec, index) =>
+      spec.kind === 'trap_trigger'
+        ? {
+            ...spec,
+            payload: {
+              ...spec.payload,
+              authoritative: turn.authoritative === true,
+              fight_id,
+              session_generation,
+              trigger_id: `wave:${turn.seq}:${index}`,
+            },
+          }
+        : spec
+    )
+    for (const spec of beats) {
       if (spec.kind === 'move' && spec.payload?.entity_id) claimed.add(spec.payload.entity_id)
       if (spec.kind === 'displacement' && spec.payload?.target_id) claimed.add(spec.payload.target_id)
     }
     for (const id of claimed) replay_owned.add(id)
-    return { beats: turn.beats, claimed }
+    return { beats, claimed }
   }
   const drain_wave = () => {
     const fight_state = fight_store.getState()
@@ -1096,7 +1121,7 @@ export function create_voxel_fight_adapter(
     for (const turn of wave) {
       if (turn.seq <= last_enqueued_seq) continue
       last_enqueued_seq = turn.seq
-      const { beats, claimed } = prepare_wave_beats(turn)
+      const { beats, claimed } = prepare_wave_beats(turn, { fight_id, session_generation })
       const events = bind_render_turn(beats, `${session_generation}:${fight_id}:${turn.seq}`)
       const played = render_queue
         ?.enqueue_turn({ source_turn: `wave:${turn.seq}`, events })

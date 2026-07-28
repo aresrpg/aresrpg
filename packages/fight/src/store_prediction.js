@@ -197,8 +197,7 @@ export const reduce_predicted = (state, msg, now) => {
   const base_version = Math.max(1, Number(msg.basis_version ?? state.applied_version + 1))
   const actor = actor_from_key(state.my_key)
   const resolve_seat = msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view)
-  const before_prediction = presented_state(state)
-  let projected = before_prediction
+  let projected = presented_state(state)
   const actions = (msg.actions ?? []).map((raw, index) => {
     const action = normalize_intent(raw, {
       version: raw.version ?? base_version,
@@ -269,20 +268,6 @@ export const reduce_predicted = (state, msg, now) => {
     version: Number(placed_at_input?.version ?? base_version),
     event_idx: Number(placed_at_input?.event_idx ?? Number.MAX_SAFE_INTEGER),
   }
-  // #1047: an AoE may be placed around fighters who are already inside it. Remember their exact fighter+cell
-  // pairs at the reducer door so projection paints the whole footprint without mistaking occupancy for entry.
-  const occupant_rows = Array.isArray(msg.placement_occupants)
-    ? msg.placement_occupants
-    : Object.entries(before_prediction.fighters ?? {})
-        .filter(([, fighter]) => fighter.alive !== false && trap_cell_set.has(Number(fighter.cell)))
-        .map(([key, fighter]) => ({ key, cell: Number(fighter.cell) }))
-  const placement_occupants = [
-    ...new Map(
-      occupant_rows
-        .filter(({ key, cell }) => key != null && Number.isFinite(Number(cell)))
-        .map(({ key, cell }) => [`${String(key)}:${Number(cell)}`, { key: String(key), cell: Number(cell) }])
-    ).values(),
-  ]
   const my_traps = trap_cells.length
     ? [
         ...state.my_traps,
@@ -294,7 +279,6 @@ export const reduce_predicted = (state, msg, now) => {
           payload: trap_payload,
           anchor,
           placed_at,
-          placement_occupants,
         },
       ]
     : state.my_traps

@@ -72,7 +72,17 @@ const place_trap = (store) =>
   )
 
 const drain = (store, now) => {
-  for (const t of [...store.getState().wave]) store.getState().input({ type: 'presented', seq: t.seq }, now)
+  for (const turn of [...store.getState().wave]) {
+    for (const [index, beat] of turn.beats.entries())
+      if (beat.kind === 'trap_trigger')
+        store.getState().input({
+          type: 'trap_triggered',
+          anchor: beat.payload.trap_anchor,
+          cell: beat.payload.trap_cell,
+          trigger_id: `wave:${turn.seq}:${index}`,
+        })
+    store.getState().input({ type: 'presented', seq: turn.seq }, now)
+  }
 }
 
 describe('LEG E — a trap that kills the pushed mob stays consumed on adoption', () => {
