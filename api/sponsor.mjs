@@ -54,6 +54,16 @@ const CORS = {
 }
 const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
 const CHALLENGE_TTL_MS = Number(process.env.SPONSOR_CHALLENGE_TTL_MS || 5 * 60_000)
+// A hung simulate must REFUSE, never park a sponsored request forever holding an inbound connection.
+const SIMULATE_TIMEOUT_MS = Number(process.env.SPONSOR_SIMULATE_TIMEOUT_MS || 15_000)
+// Request-size rails. The sponsor parses, authenticates and SIMULATES whatever arrives, so an unbounded body is
+// unbounded work per request; the per-IP/per-address throttles bound the RATE, never the SIZE. Both are base64 /
+// JSON character bounds — generous multiples of a real PTB (a fat create-character kind is ~2 KB).
+const MAX_BODY_CHARS = Number(process.env.SPONSOR_MAX_BODY_CHARS || 256 * 1024)
+const MAX_TX_KIND_CHARS = Number(process.env.SPONSOR_MAX_TX_KIND_CHARS || 64 * 1024)
+const OVERSIZE_BODY_ERROR = `sponsor-oversize: request body exceeds the ${MAX_BODY_CHARS}-character limit — refusing`
+/** true when a declared or measured body length is over the bound (a missing/unparseable length is not). */
+const oversized = (length) => Number(length) > MAX_BODY_CHARS
 const normalize_set = (csv) =>
   new Set(
     String(csv)
@@ -104,23 +114,60 @@ function resolve_aresrpg_packages() {
 const ARESRPG_PACKAGES = resolve_aresrpg_packages()
 const OUTDATED_PACKAGES = normalize_set(outdated_package_ids.join(','))
 const FRAMEWORK_PACKAGES = normalize_set((network_release?.system.sponsor_framework_packages ?? []).join(','))
-const OUTDATED_PACKAGE_REASON = 'outdated-package'
+export const OUTDATED_PACKAGE_REASON = 'outdated-package'
 const OUTDATED_PACKAGE_ERROR_PREFIX = `sponsor-scope: ${OUTDATED_PACKAGE_REASON}`
 export const WOULD_ABORT_REASON = 'would-abort'
 export const WOULD_ABORT_ERROR_PREFIX = `sponsor-${WOULD_ABORT_REASON}:`
+// A simulation we cannot READ is not a simulation that said "this aborts" — and neither is an RPC that never
+// answered. Three distinct machine classes, because the client's honest copy differs for each and conflating
+// them once let an unreadable result be priced as a clean success.
+export const SIMULATION_UNREADABLE_REASON = 'simulation-unreadable'
+export const SIMULATION_INFRASTRUCTURE_REASON = 'simulation-infrastructure'
 
-// The refusal prefixes that ride back to the client as a MACHINE reason (never string-matched localized copy):
-// the caller branches on `reason`, so a blocking refusal blocks instead of silently re-routing to self-pay.
-const REASON_BY_PREFIX = [
-  [OUTDATED_PACKAGE_ERROR_PREFIX, OUTDATED_PACKAGE_REASON],
-  [WOULD_ABORT_ERROR_PREFIX, WOULD_ABORT_REASON],
-]
+/**
+ * Build a refusal that carries its MACHINE reason ON THE ERROR — never re-derived by matching the message text
+ * (a copy edit must not be able to silently un-tag a money refusal). `sponsor_chain_error` carries the chain's
+ * own failure string as a STRUCTURAL field so the client never has to strip a prefix back off the message.
+ */
+function sponsor_refusal(reason, message, chain_error = null) {
+  const error = new Error(message)
+  error.sponsor_reason = reason
+  if (chain_error != null) error.sponsor_chain_error = chain_error
+  return error
+}
 
 export function sponsor_error_response(error) {
   const error_message = String(error?.message ?? error)
-  const matched = REASON_BY_PREFIX.find(([prefix]) => error_message.startsWith(prefix))
-  return matched ? { error: error_message, reason: matched[1] } : { error: error_message }
+  const reason = typeof error?.sponsor_reason === 'string' ? error.sponsor_reason : null
+  if (!reason) return { error: error_message }
+  const chain_error = typeof error?.sponsor_chain_error === 'string' ? error.sponsor_chain_error : null
+  return chain_error ? { error: error_message, reason, chain_error } : { error: error_message, reason }
 }
+
+// ── BOOT REFUSAL: a dev bypass may never share a process with the gas-station credentials ──────────────
+// api/server.mjs runs the sponsor and the courier in ONE process, and every `*_DEV_BYPASS_*` switch disarms an
+// identity check on the container that also holds the station bearer. Off localnet the two must never coexist:
+// the process refuses to boot instead of serving money with an auth rail switched off. Localnet is exempt by
+// construction — a throwaway chain and a throwaway pool (test/gold/compose.gold.yml drives exactly that).
+const DEV_BYPASS_KEY_RE = /_DEV_BYPASS_/
+const FALSEY_ENV = new Set(['', '0', 'false', 'off', 'no'])
+export const armed_dev_bypasses = (env = process.env) =>
+  Object.keys(env)
+    .filter((key) => DEV_BYPASS_KEY_RE.test(key) && !FALSEY_ENV.has(String(env[key] ?? '').trim().toLowerCase()))
+    .sort()
+
+export function assert_no_dev_bypass_with_station_credentials(env = process.env) {
+  if (!env.GAS_STATION_URL?.trim() || !env.GAS_STATION_AUTH?.trim()) return
+  const network = env.VITE_NETWORK || 'testnet'
+  if (network === 'localnet') return
+  const armed = armed_dev_bypasses(env)
+  if (armed.length)
+    throw new Error(
+      `sponsor-misconfig: development bypass switch(es) [${armed.join(', ')}] are set on a process that holds ` +
+        `gas-station credentials (network=${network}) — refusing to boot (fail-closed). Unset them, or run localnet.`
+    )
+}
+assert_no_dev_bypass_with_station_credentials()
 
 export function require_station_config() {
   if (!process.env.GAS_STATION_URL?.trim() || !process.env.GAS_STATION_AUTH?.trim())
@@ -140,16 +187,26 @@ export function assert_ptb_scope(txKindBytes) {
       throw new Error('sponsor-scope: PTB publishes/upgrades a package — never sponsored')
     if (command.$kind !== 'MoveCall') continue
     const package_id = normalizeSuiAddress(command.MoveCall.package)
-    const is_aresrpg = ARESRPG_PACKAGES.has(package_id)
-    if (!is_aresrpg && OUTDATED_PACKAGES.has(package_id))
-      throw new Error(
+    // RETIRED FIRST, unconditionally. The allowlist answers "may this be called"; release.json answers "is this
+    // id retired" — and the retired answer is the upgrade tooth, so allowlist membership may never short-circuit
+    // it. It could before: SPONSOR_ARESRPG_PACKAGES is pasted by a human at ceremony time, and a paste one id
+    // wider than the release derivation silently re-opened a retired package (the two homes disagreed, the
+    // wider one won). Now they cannot disagree in the permissive direction.
+    if (OUTDATED_PACKAGES.has(package_id))
+      throw sponsor_refusal(
+        OUTDATED_PACKAGE_REASON,
         `${OUTDATED_PACKAGE_ERROR_PREFIX}: MoveCall targets retired package ${package_id}::${command.MoveCall.module} — refresh to upgrade`
       )
-    if (!is_aresrpg && !FRAMEWORK_PACKAGES.has(package_id))
+    const is_framework = FRAMEWORK_PACKAGES.has(package_id)
+    const is_allowlisted = ARESRPG_PACKAGES.has(package_id)
+    if (!is_allowlisted && !is_framework)
       throw new Error(
         `sponsor-scope: MoveCall targets non-allowlisted package ${package_id}::${command.MoveCall.module} — only aresrpg + composed framework packages are sponsored`
       )
-    if (is_aresrpg) aresrpg_calls += 1
+    // A framework id is NEVER an aresrpg call, even when the deployed allowlist happens to list it too — the
+    // ≥1-aresrpg-call rule is what stops a bare framework PTB (kiosk/transfer only) from being sponsored, and a
+    // wide paste must not be able to satisfy it.
+    if (is_allowlisted && !is_framework) aresrpg_calls += 1
   }
   if (!aresrpg_calls)
     throw new Error(
@@ -184,18 +241,69 @@ async function assert_sponsor_zklogin_challenge(sender, challenge, signature) {
  * (packages/frontend/src/game/core/gas_guard.js) — the sponsor image ships as three standalone files (api/Dockerfile)
  * so it cannot import it; `api/sponsor.simulate_gate.test.js` runs BOTH over one fixture corpus and fails on any
  * divergence, which is what keeps the two honest.
- * @returns {string | null} the chain's own error string when the PTB would fail, else null
+ *
+ * ALLOW-BY-EXCEPTION (the floor-2 review finding): the gate's ACCEPT arm is the narrow one. Only an explicitly
+ * clean success — union tag `Transaction` AND `effects.status.success === true` — is priceable. Everything else
+ * refuses, in one of two DISTINCT classes, because they are not the same fact and must not share copy or a
+ * counter: `would-abort` is the chain telling us this PTB fails, `simulation-unreadable` is us not knowing.
+ * The earlier shape ("refuse when it looks failed, otherwise price it") accepted a missing status, an unknown
+ * union tag and a non-boolean `success` — shapes carrying no success verdict at all — and read `gasUsed` off them.
+ * @param {any} simulation grpc simulateTransaction result
+ * @returns {{ ok: true, effects: any }
+ *   | { ok: false, reason: 'would-abort', chain_error: string }
+ *   | { ok: false, reason: 'simulation-unreadable', detail: string }}
  */
-export function simulation_abort_error(simulation) {
+export function classify_simulation(simulation) {
   const effects = (simulation?.Transaction ?? simulation?.FailedTransaction)?.effects
-  if (!effects) return 'simulation returned no effects'
-  if (simulation?.$kind === 'FailedTransaction' || effects?.status?.success === false)
-    return String(effects?.status?.error ?? 'simulation reported failure')
-  return null
+  if (effects && (simulation?.$kind === 'FailedTransaction' || effects?.status?.success === false))
+    return {
+      ok: false,
+      reason: WOULD_ABORT_REASON,
+      chain_error: String(effects?.status?.error ?? 'simulation reported failure'),
+    }
+  if (simulation?.$kind === 'Transaction' && effects?.status?.success === true) return { ok: true, effects }
+  return {
+    ok: false,
+    reason: SIMULATION_UNREADABLE_REASON,
+    detail: effects
+      ? `simulation returned no clean success verdict (kind=${String(simulation?.$kind ?? 'none')})`
+      : 'simulation returned no effects',
+  }
+}
+
+/**
+ * Bound an in-flight RPC. Nothing is reserved or signed at this point, so a deadline is pure upside: a fullnode
+ * that stops answering becomes a fast, classified refusal instead of a request parked until the client gives up.
+ */
+async function with_deadline(promise, timeout_ms, label) {
+  let timer
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} exceeded the ${timeout_ms}ms deadline`)), timeout_ms)
+  })
+  try {
+    return await Promise.race([promise, deadline])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** A gas field the chain sends as a decimal string → MIST, or null when it is not a number at all. */
+function mist_or_null(value) {
+  try {
+    return BigInt(value ?? 0)
+  } catch {
+    return null
+  }
 }
 
 export function derive_budget_mist(gas_used) {
-  const gross = BigInt(gas_used?.computationCost ?? 0) + BigInt(gas_used?.storageCost ?? 0)
+  const computation = mist_or_null(gas_used?.computationCost)
+  const storage = mist_or_null(gas_used?.storageCost)
+  // Unreadable gas numbers are an UNPRICED budget, not a zero one — refuse with the same honest reason rather
+  // than letting a raw BigInt conversion error escape as an unclassified 400.
+  if (computation == null || storage == null)
+    throw new Error('sponsor-unpriceable: simulation returned unreadable gas numbers — refusing')
+  const gross = computation + storage
   if (gross <= 0n)
     throw new Error('sponsor-unpriceable: simulation returned no gas — refusing (never sign an unpriced budget)')
   const budget = (gross * 3n) / 2n
@@ -206,9 +314,14 @@ export function derive_budget_mist(gas_used) {
     )
   return budget
 }
+// Never THROWS: this runs on POST-EXECUTION effects, where a throw would lose the receipt of a transaction whose
+// gas is already burned. An unreadable field counts as 0 — for the rebate that charges the full gross (never less
+// than reality), and the ledger stays honest rather than the call failing on a cosmetic field.
 export function real_charge_mist(gas_used) {
-  const computation = BigInt(gas_used?.computationCost ?? 0)
-  const net = computation + BigInt(gas_used?.storageCost ?? 0) - BigInt(gas_used?.storageRebate ?? 0)
+  const computation = mist_or_null(gas_used?.computationCost) ?? 0n
+  const storage = mist_or_null(gas_used?.storageCost) ?? 0n
+  const rebate = mist_or_null(gas_used?.storageRebate) ?? 0n
+  const net = computation + storage - rebate
   return net < computation ? computation : net
 }
 
@@ -220,6 +333,8 @@ const initial_refusals = () => ({
   daily: 0,
   ceiling: 0,
   abort: 0,
+  sim_unreadable: 0,
+  sim_infra: 0,
   station: 0,
   mismatch: 0,
   execreject: 0,
@@ -332,6 +447,10 @@ export function assert_tx_matches_reservation(tx_bytes, reservation) {
 export async function reserveSponsored({ txKindBytes, sender, challenge, signature }) {
   require_station_config()
   if (!txKindBytes || !sender) throw new Error('txKindBytes + sender required')
+  // SIZE BEFORE WORK: parsing, zkLogin verification and simulation all scale with the PTB, and the throttles
+  // bound the request RATE, never its size. One home for the bound — both transports route through here.
+  if (typeof txKindBytes !== 'string' || txKindBytes.length > MAX_TX_KIND_CHARS)
+    throw new Error(`sponsor-oversize: PTB kind exceeds the ${MAX_TX_KIND_CHARS}-character limit — refusing`)
   roll_stats()
   try {
     await assert_sponsor_zklogin_challenge(sender, challenge, signature)
@@ -359,19 +478,36 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     const transaction = Transaction.fromKind(fromBase64(txKindBytes))
     transaction.setSender(sender)
     transaction.setGasBudget(Number(PER_TX_BUDGET_CEILING_MIST))
-    simulation = await client.core.simulateTransaction({ transaction, include: { effects: true } })
+    simulation = await with_deadline(
+      client.core.simulateTransaction({ transaction, include: { effects: true } }),
+      SIMULATE_TIMEOUT_MS,
+      'simulateTransaction'
+    )
   } catch (error) {
-    stats.refused.ceiling += 1
-    throw new Error(`sponsor-unpriceable: simulation failed (${error?.message ?? error}) — refusing`)
+    // INFRASTRUCTURE, not a verdict: the RPC threw or never answered, so the chain said nothing about this PTB.
+    stats.refused.sim_infra += 1
+    throw sponsor_refusal(
+      SIMULATION_INFRASTRUCTURE_REASON,
+      `sponsor-unpriceable: simulation failed (${error?.message ?? error}) — refusing`
+    )
   }
-  // THE GATE — refuse a would-abort PTB HERE: nothing reserved, nothing co-signed, nothing executed, zero gas
-  // anywhere. The chain's own error rides back so the client decodes it through its ONE abort-copy table.
-  const would_abort = simulation_abort_error(simulation)
-  if (would_abort) {
-    stats.refused.abort += 1
-    throw new Error(`${WOULD_ABORT_ERROR_PREFIX} ${would_abort}`)
+  // THE GATE — refuse HERE: nothing reserved, nothing co-signed, nothing executed, zero gas anywhere. A
+  // would-abort sends the chain's own error back (the client decodes it through its ONE abort-copy table); an
+  // unreadable result sends its own reason, because "this will fail" and "we could not tell" are different facts.
+  const verdict = classify_simulation(simulation)
+  if (!verdict.ok) {
+    if (verdict.reason === WOULD_ABORT_REASON) {
+      stats.refused.abort += 1
+      throw sponsor_refusal(
+        WOULD_ABORT_REASON,
+        `${WOULD_ABORT_ERROR_PREFIX} ${verdict.chain_error}`,
+        verdict.chain_error
+      )
+    }
+    stats.refused.sim_unreadable += 1
+    throw sponsor_refusal(SIMULATION_UNREADABLE_REASON, `sponsor-unpriceable: ${verdict.detail} — refusing`)
   }
-  const gas_used = simulation.Transaction.effects.gasUsed
+  const gas_used = verdict.effects.gasUsed
   let budget
   try {
     budget = derive_budget_mist(gas_used)
@@ -468,6 +604,9 @@ export default async function handler(request, response) {
     request.socket?.remoteAddress ||
     'unknown'
   if (await rate_limited(ip)) return response.status(429).json({ error: 'rate limited — retry shortly' })
+  if (oversized(request.headers['content-length'])) return response.status(413).json({ error: OVERSIZE_BODY_ERROR })
+  if (typeof request.body === 'string' && oversized(request.body.length))
+    return response.status(413).json({ error: OVERSIZE_BODY_ERROR })
   try {
     const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body
     const [pathname] = String(request.url || '/api/sponsor').split('?')
@@ -491,8 +630,15 @@ export async function sponsor_fetch(request) {
   ) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
     if (await rate_limited(ip)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
+    // Declared size first (refuse before reading a byte), then the real body — a lying/absent content-length
+    // must not buy an unbounded read.
+    if (oversized(request.headers.get('content-length')))
+      return Response.json({ error: OVERSIZE_BODY_ERROR }, { status: 413, headers: CORS })
+    const body_text = await request.text()
+    if (oversized(body_text.length))
+      return Response.json({ error: OVERSIZE_BODY_ERROR }, { status: 413, headers: CORS })
     try {
-      const result = await handle_sponsor_post(url.pathname, await request.json())
+      const result = await handle_sponsor_post(url.pathname, JSON.parse(body_text))
       return Response.json(result.json, { status: result.status, headers: CORS })
     } catch (error) {
       report_error(error, { area: 'sponsor', action: 'handle_post' })
