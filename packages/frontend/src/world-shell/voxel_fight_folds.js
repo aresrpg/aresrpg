@@ -110,12 +110,14 @@ const is_male_fighter = (fighter) => !(fighter.male === false || fighter.sex ===
  * the escrowed character's CLASS body GLB; a class with no rig uses the same gender-matched Senshi placeholder
  * as the roam avatar, never the engine avatar's implicit male default.
  * Mob: get_mob_model keyed on fighter.variant (= the chain mob template id). Pure.
- * @param {{ is_player?: boolean, class_id?: string, variant?: string, sex?: string, male?: boolean, name?: string }} fighter
+ * @param {{ is_player?: boolean, class_id?: string, variant?: string, sex?: string, male?: boolean, name?: string,
+ *   identity_resolved?: boolean }} fighter
  * @returns {string | undefined} a public GLB url
  */
 export function glb_variant_of(fighter) {
   if (fighter.is_player)
     return character_model_urls(fighter.class_id, is_male_fighter(fighter), { fallback: PLACEHOLDER_RIG_CLASS }).body
+  if (fighter.identity_resolved === false) return undefined
   return get_mob_model({ variant: fighter.variant, name: fighter.name }).url
 }
 

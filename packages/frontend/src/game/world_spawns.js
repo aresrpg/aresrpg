@@ -778,16 +778,27 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       // MOUNT the tactical board on the minted fight — the create receipt carries its id. Same run-pass-less
       // session the reconnect leg enters; the shared dungeon store's refresh/sync_engine paints the board+HUD.
       if (fight_id) {
-        // CARRY THE CLAIMED GROUP'S IDENTITY across the claim into the fight escrow's ONE home (the store's
-        // mob_names/mob_levels — exactly what a dungeon fight gets from load_world_meta). The group card already
-        // resolved this template's name/level (placement gated on it), and the Fight's group_template equals this
-        // spawn's template_id (the claim PTB asserts EWrongTemplate), so the board renders the real skin+nameplate
-        // from the first frame instead of the 'Mob'/hash fallback while _resolve_mob_identities backfills.
-        const tpl = resolve_template(e.row.template_id)
-        if (tpl?.name)
-          use_dungeon.getState().note_group_identity(e.row.template_id, tpl.name, tpl.min_level, tpl.element)
+        // CARRY the exact roster the world ALREADY composed and rendered. `e.roster` is seated_roster's output;
+        // every template lookup below is the settled world cache that gated placement. The fight receives this
+        // data through its init input — no second roster derivation, template decode or identity catalog.
+        const mob_roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ template_id) => {
+          const tpl = resolve_template(template_id)
+          return {
+            template_id,
+            name: tpl?.name ?? null,
+            min_level: tpl?.min_level ?? null,
+            element: tpl?.element ?? null,
+          }
+        })
         // The claimed group rides into the session as a FACT (#609): a defeat gives exactly this group back.
-        enter_world_fight({ fight_id, world_id, character_id, is_public, world_group: group ?? null })
+        enter_world_fight({
+          fight_id,
+          world_id,
+          character_id,
+          is_public,
+          world_group: group ?? null,
+          mob_roster,
+        })
       }
       // THE CLAIM RECEIPT through the door: removes the row (tombstoned against the lagging poll), advances
       // checkpoint+hunt_zone to the group, emits the fight_entry handoff. The re-poll stays for freshness.

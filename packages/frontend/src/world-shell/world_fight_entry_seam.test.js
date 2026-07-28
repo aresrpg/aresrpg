@@ -33,6 +33,7 @@ const CHARACTER_ID = '0xcharacter'
 const FIGHT_ID = '0xworldfight'
 const WORLD_ID = '0xworld'
 const TEMPLATE_ID = '0xmobtemplate'
+const SECONDARY_TEMPLATE_ID = '0xmobtemplate-secondary'
 const STATUS_PLACEMENT = 5
 // A 100×100-zone world, bounds 1000 → offset 500: chain (520, 540) = world (20, 40) — the W4 journey's own doc.
 const WORLD_DOC = { zone_size: 100, bounds_x: 1000, bounds_z: 1000, zone_ttl_ms: 60_000 }
@@ -62,7 +63,7 @@ const real_fetch = globalThis.fetch
 /** A `json:true`-flattened `fight::Fight` read, minimal but decode_fight-complete — including the REAL
  *  `board: BoardGeom` a whole chain read always carries (13×12, ≠ the 20×19 fallback frame, so a degraded
  *  present is distinguishable from the true one by dimensions alone). */
-const fight_object = () => ({
+const fight_object = ({ mobs = [], group = {} } = {}) => ({
   object: {
     json: {
       id: FIGHT_ID,
@@ -72,7 +73,7 @@ const fight_object = () => ({
       turn_deadline_ms: '0',
       last_action_ms: '0',
       participants: [{ addr: OWNER, character: CHARACTER_ID, cell: 0, ready: false, hp: 30, alive: true }],
-      mobs: [],
+      mobs,
       queue: [],
       turn_ptr: 0,
       board: {
@@ -84,7 +85,7 @@ const fight_object = () => ({
         start_cells_a: [5, 6, 7],
         start_cells_b: [230, 231],
       },
-      group: {},
+      group,
     },
     version: '9',
   },
@@ -212,6 +213,46 @@ describe('the world→fight handoff seam (composition root)', () => {
     expect([...view.fighters.keys()]).toContain(CHARACTER_ID) // my seat decoded from the read
     expect(fight_reads).toBeGreaterThanOrEqual(2) // the hold+retry actually happened (never a drop)
     expect(await until(() => use_dungeon.getState().fight_syncing === false)).toBe(true) // hydrated, chip off
+  })
+
+  test('the claimed world roster crosses init and projects each mob without a second template read', async () => {
+    const mob_roster = [
+      { template_id: TEMPLATE_ID, name: 'Chicklet', min_level: 1, element: 3 },
+      { template_id: SECONDARY_TEMPLATE_ID, name: 'Draugr', min_level: 8, element: 2 },
+    ]
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`object not found: ${object_id}`)
+      return fight_object({
+        mobs: [
+          { template: '0x0', level: 2, hp: 20, max_hp: 20, cell: 90, ap: 6, mp: 3 },
+          { template: '0x0', level: 9, hp: 30, max_hp: 30, cell: 91, ap: 6, mp: 3 },
+        ],
+        group: { template: TEMPLATE_ID, kit: { base_ap: 6, base_mp: 3 } },
+      })
+    }
+
+    enter_world_fight({
+      fight_id: FIGHT_ID,
+      world_id: WORLD_ID,
+      character_id: CHARACTER_ID,
+      mob_roster,
+    })
+
+    expect(fight_store.getState().ctx.mob_roster).toEqual(mob_roster)
+    expect(await until(() => fight_view()?.fighters?.has('mob-1'))).toBe(true)
+    expect(fight_view().fighters.get('mob-0')).toMatchObject({
+      variant: TEMPLATE_ID,
+      name: 'Chicklet',
+      identity_resolved: true,
+    })
+    expect(fight_view().fighters.get('mob-1')).toMatchObject({
+      variant: SECONDARY_TEMPLATE_ID,
+      name: 'Draugr',
+      identity_resolved: true,
+    })
+    const object_ids = get_object.mock.calls.map(([args]) => args.objectId)
+    expect(object_ids).not.toContain(TEMPLATE_ID)
+    expect(object_ids).not.toContain(SECONDARY_TEMPLATE_ID)
   })
 
   test('the DEGRADED window: a torn read (BoardGeom missing) presents NOTHING and heals to the exact frame', async () => {

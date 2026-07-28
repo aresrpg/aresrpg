@@ -22,4 +22,18 @@ describe('voxel fight appearance', () => {
     expect(spec.hair_url).toMatch(/senshi_female_hair\.glb$/)
     expect(spec.colors).toEqual(colors)
   })
+
+  test('an unresolved mob keeps its real id label on the built-in capsule without a fake GLB request', () => {
+    const spec = entity_spec_from_fighter({
+      id: 'mob-0',
+      is_player: false,
+      variant: '0xreal_mob_template',
+      name: '0xreal_mob_template',
+      identity_resolved: false,
+      cell: { x: 4, y: 5 },
+      team: 1,
+    })
+
+    expect(spec.glb_variant).toBeUndefined()
+  })
 })

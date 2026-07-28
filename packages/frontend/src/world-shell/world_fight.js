@@ -27,7 +27,9 @@ const is_live = (f) => !!f && (f.status === 'placement' || f.status === 'active'
  *  non-engage entry that stays on today's behavior). `world_group` is the claimed group's identity
  *  ({world_id,zx,zy,index}) carried straight out of the claim — the session FACT a lost fight gives back (#609);
  *  a resume has no claim to carry one, and releases nothing.
- *  @param {{fight_id,world_id?,character_id,resumed?,is_public?,world_group?}} */
+ *  `mob_roster` is the claimed group's already-composed world identity, carried positionally into the fight
+ *  reducer; a reconnect/join without that local fact keeps the normal adoption fallback.
+ *  @param {{fight_id,world_id?,character_id,resumed?,is_public?,world_group?,mob_roster?}} */
 export function enter_world_fight({
   fight_id,
   world_id = null,
@@ -35,6 +37,7 @@ export function enter_world_fight({
   resumed = false,
   is_public = false,
   world_group = null,
+  mob_roster = [],
 }) {
   const store = getState()
   const decision = receipt_entry_decision({
@@ -68,7 +71,7 @@ export function enter_world_fight({
     spectating: false,
     session_address: address,
   })
-  init_dungeon_fight({ fight_id, character_id, address }) // OPEN it in the core (refresh feeds the snapshot)
+  init_dungeon_fight({ fight_id, character_id, address, mob_roster }) // OPEN it in the core (refresh feeds snapshot)
   fight_state_trace('fight_create_published', { fight_id, character_id, resumed, fight_syncing: !resumed })
   getState()._start_polling()
   if (resumed) return void getState().refresh()
