@@ -21,6 +21,10 @@ History is linear by law; nothing ever rewrites what landed.
    ancestor of its base. If your branch is behind, the bot posts the exact one-line rebase
    command; rebase locally (your commits stay signed) and force-push, and it lands automatically
    on the next green run — you never `/promote` twice.
+   **To HOLD an armed PR, convert it to a draft** (`gh pr ready --undo`) — removing the
+   `promote-requested` label does NOT stop a landing already in the queue's flight (measured
+   2026-07-28: a label-stripped green ancestor landed anyway). Draft state is the only hold the
+   queue cannot race.
 3. Landings on BOTH hops are `/promote` — the repository owner's explicit word (on his own
    PRs the comment itself is the approval, since GitHub forbids self-review; on contributor
    PRs his approving review is required first). The **master hop is deploy-class**; the edge
