@@ -45,6 +45,7 @@ import {
 } from './seed_economy.mjs'
 import { seed_mob_stat_values } from './seed_mob_stats.mjs'
 import { encode_effect_value } from './spell_wire.mjs'
+import { mobEffect } from './mob_effect.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 
@@ -408,26 +409,6 @@ const effectFx = (tx, e) => {
     ],
   })
 }
-// Mob spell effects: `op` + string `element` + magnitude in `base` (dmg/dot/life-steal) or `value`
-// (points/stat), no target_filter. Normalize to the effectFx envelope (numeric element, magnitude in
-// `value`, offensive → TF_NOT_TEAM = spell_effect::damage's own default).
-const EL_ID = { fire: 0, water: 1, earth: 2, air: 3, neutral: 255, none: 255 }
-const MOB_OFFENSIVE = new Set([0, 1, 2, 3, 4, 7, 8, 12, 13, 17, 21])
-const mobEffect = (e) => ({
-  kind: e.kind,
-  element:
-    typeof e.element === 'string'
-      ? (EL_ID[e.element] ?? 255)
-      : (e.element ?? 255),
-  value: e.base ?? e.value ?? 0,
-  area_shape: e.area_shape,
-  area_size: e.area_size,
-  target_filter: e.target_filter ?? (MOB_OFFENSIVE.has(e.kind) ? 1 : 0),
-  chance: e.chance,
-  turns: e.turns,
-  stat: e.stat,
-  flags: e.flags,
-})
 // new_spell_level(min_cl,ap,rmin,rmax,mod,line,los,free,cpt,cpta,cd,crit_rate,ends,req[],forb[],fx[],crit_fx[])
 const spellLevel = (tx, o, fx, crit) =>
   tx.moveCall({
@@ -910,8 +891,8 @@ export async function seed_full_corpus() {
               cd: sp.cd,
               crit: sp.crit,
             },
-            (sp.effects ?? []).map((e) => effectFx(tx, mobEffect(e))),
-            (sp.crit_effects ?? []).map((e) => effectFx(tx, mobEffect(e)))
+            (sp.effects ?? []).map((e) => mobEffect(tx, CFND, e)),
+            (sp.crit_effects ?? []).map((e) => mobEffect(tx, CFND, e))
           )
         )
       )
