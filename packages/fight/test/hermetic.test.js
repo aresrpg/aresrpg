@@ -21,6 +21,8 @@ const src_files = fs
 const ALLOWED = /^(\.\/|@aresrpg\/(sim|sdk)(\/|$)|zustand\/vanilla$|node:)/
 const import_specifiers = (text) =>
   [...text.matchAll(/(?:import|export)[^'"]*from\s*['"]([^'"]+)['"]/g)].map((m) => m[1])
+const exported_functions = (text) =>
+  [...text.matchAll(/export\s+(?:const|function)\s+([A-Za-z_$][\w$]*)/g)].map((match) => match[1])
 
 describe('@aresrpg/fight hermeticity (D769 MODULE LAW)', () => {
   test('every src import specifier is inside the fence — zero exemptions', () => {
@@ -65,5 +67,21 @@ describe('@aresrpg/fight hermeticity (D769 MODULE LAW)', () => {
       .map((file) => path.basename(file))
       .sort()
     expect(importers).toEqual(['core_inbox.js'])
+  })
+
+  test('fingerprint.js is the only parity-image function owner', () => {
+    const parity_export = /fingerprint|canonical_state|state_hash|parity.*image|image.*parity/i
+    const owners = src_files
+      .map((file) => ({
+        file: path.basename(file),
+        exports: exported_functions(fs.readFileSync(file, 'utf8')).filter((name) => parity_export.test(name)),
+      }))
+      .filter(({ exports }) => exports.length)
+    expect(owners).toEqual([
+      {
+        file: 'fingerprint.js',
+        exports: ['fingerprint_state', 'fight_fingerprint'],
+      },
+    ])
   })
 })
