@@ -52,6 +52,67 @@ export const graded_band = (min_level, max_level, progress) => {
 }
 
 /**
+ * How many of a rolled pack actually SEAT — `fight.move clamp_group` against the LIVE team bound, floored at one
+ * and never past the roster the stream derived (the roster derives at the RAW rolled size; the bound only decides
+ * how many of it sit down). The ONE home every consumer counts with: the card, the rigs, and the claim roster.
+ */
+const seated_count = (rolled, size, team_bound) => {
+  const bound = Number(team_bound ?? DEFAULT_TEAM_BOUND) || DEFAULT_TEAM_BOUND
+  return Math.min(rolled, Math.max(1, Math.min(bound, Number(size) || rolled)))
+}
+
+/**
+ * The pack's SEATED roster of TEMPLATE IDS — one per unit, in the chain's committed draw order: the rig each
+ * member wears and the authored band its level is drawn from. A format-3 row carries `members` (already trimmed
+ * to the rolled size by the derivation); a format-1/2 row carries none, and the primary repeated is exactly what
+ * those zones commit — one shape feeds every consumer, no second branch downstream.
+ * @param {{ template_id:string, members?:string[]|null, size?:number|null }} row a `derive_zone` mob row
+ * @param {number|null} [team_bound] GameConfig team_size_bound
+ * @returns {string[]}
+ */
+export const seated_roster = ({ template_id, members, size }, team_bound) => {
+  const rolled = Array.isArray(members) && members.length ? members : null
+  const n = seated_count(rolled?.length ?? Math.max(1, Number(size) || 1), size, team_bound)
+  return rolled ? rolled.slice(0, n) : Array.from({ length: n }, () => template_id)
+}
+
+/**
+ * THE CARD'S CONTENT, composed — the pure half of the group card (spawn_card.js only paints it). One row per
+ * SEATED unit: its species name, its exact rolled level and its archi flag, plus the group's TRUE level span for
+ * the header. `graded` is the zone's own committed format, never a caller preference: a member-list zone (format
+ * 3) seats every unit from its own spec at `graded_band(min, max, progress)`, a format-1/2 zone still replays the
+ * flat authored band, and painting either with the other's math advertises a pack the fight will never seat.
+ * A row with no `group_seed` (stale SDK read) carries `level: null` — the caller prints the honest band instead.
+ * @param {{ roster: Array<{name:string, min_level:number, max_level:number}>, graded?:boolean,
+ *   progress?:number, size?:number|null, group_seed?:string|number|bigint|null, archimob_bp?:number|null,
+ *   team_bound?:number|null }} facts
+ * @returns {{ span_lo:number, span_hi:number, rows:Array<{name:string, level:number|null, archi:boolean}> }}
+ */
+export function compose_group_card({ roster, graded = false, progress = 0, size, group_seed, archimob_bp, team_bound }) {
+  const specs = roster.slice(0, seated_count(roster.length, size, team_bound))
+  const dials = { size: specs.length, archimob_bp, team_bound }
+  const derived =
+    group_seed == null
+      ? null
+      : graded
+        ? derive_group_members_graded(group_seed, { members: specs, progress, ...dials })
+        : derive_group_members(group_seed, { min_level: specs[0].min_level, max_level: specs[0].max_level, ...dials })
+  const rows = specs.map((spec, i) => ({
+    name: spec.name,
+    level: derived ? derived.members[i].level : null,
+    archi: !!derived?.members[i]?.archi,
+  }))
+  if (!derived)
+    return {
+      span_lo: Math.min(...specs.map((s) => s.min_level)),
+      span_hi: Math.max(...specs.map((s) => s.max_level)),
+      rows,
+    }
+  const levels = rows.map((r) => Number(r.level))
+  return { span_lo: Math.min(...levels), span_hi: Math.max(...levels), rows }
+}
+
+/**
  * MIXED-PACK + DISTANCE-GRADED mirror (#1110/#1111) — twin of the engine's member-list create path over
  * `mob.move::spawn_seeded_graded`. Two things separate it from `derive_group_members`:
  *   · every member has its OWN spec (a pack holds several species now), taken positionally from `members`
@@ -66,11 +127,7 @@ export const graded_band = (min_level, max_level, progress) => {
  */
 export function derive_group_members_graded(group_seed, { members: roster, progress, size, archimob_bp, team_bound }) {
   const bp = Number(archimob_bp ?? DEFAULT_ARCHIMOB_BP)
-  const bound = Number(team_bound ?? DEFAULT_TEAM_BOUND) || DEFAULT_TEAM_BOUND
-  // the engine spawns `min(clamp(size, bound), roster.length)` — a roster is derived at the RAW rolled size and
-  // the live bound only clamps how many of it actually seat
-  const want = Math.max(1, Math.min(bound, Number(size) || roster.length))
-  const n = Math.min(want, roster.length)
+  const n = seated_count(roster.length, size, team_bound)
   const prog = Number(progress) || 0
   let state = rng_seed(Number(BigInt(group_seed ?? 0) & MASK32))
   const out = []

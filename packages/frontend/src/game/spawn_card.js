@@ -22,7 +22,7 @@
 
 import i18n from '../i18n'
 
-import { derive_group_members, DEFAULT_TEAM_BOUND } from './spawn_compose.js'
+import { compose_group_card } from './spawn_compose.js'
 
 const HOUR_MS = 3_600_000 // fight.move:44 HOUR_MS — whole-hour granularity (integer floor, matches the chain)
 const AGING_BP_PER_HOUR = 100 // config.move:91 DEFAULT_AGING_BP_PER_HOUR (+1.00%/h)
@@ -58,22 +58,27 @@ function paint_xp(/** @type {HTMLElement} */ span, /** @type {number} */ spawned
 
 /**
  * Render the full group card into `chip` (its border/bg/font are owned by the caller's chip style). Rebuilds
- * as a header band + one text-node row per member — never innerHTML (mob names are on-chain strings).
- * @param {HTMLElement} chip @param {{ name:string, min_level:number, max_level:number, size:number,
- *   spawned_at_ms:number, group_seed?:string|null, archimob_bp?:number|null, team_bound?:number|null }} facts
+ * as a header band + one text-node row per member — never innerHTML (mob names are on-chain strings). The
+ * CONTENT is composed purely upstream (spawn_compose.js `compose_group_card`); this function only paints it,
+ * so a mixed pack's rows carry each unit's own species and its own distance-graded level by construction.
+ * @param {HTMLElement} chip @param {{ roster: Array<{name:string, min_level:number, max_level:number}>,
+ *   graded?:boolean, progress?:number, size:number, spawned_at_ms:number, group_seed?:string|null,
+ *   archimob_bp?:number|null, team_bound?:number|null }} facts
  */
 export function render_group_card(
   chip,
-  { name, min_level, max_level, size, spawned_at_ms, group_seed, archimob_bp, team_bound }
+  { roster, graded, progress, size, spawned_at_ms, group_seed, archimob_bp, team_bound }
 ) {
   chip.textContent = ''
-  const derived =
-    group_seed != null
-      ? derive_group_members(group_seed, { min_level, max_level, size, archimob_bp, team_bound })
-      : null
-  const levels = derived ? derived.members.map((m) => m.level) : []
-  const span_lo = derived ? Math.min(...levels) : min_level
-  const span_hi = derived ? Math.max(...levels) : max_level
+  const { span_lo, span_hi, rows } = compose_group_card({
+    roster,
+    graded,
+    progress,
+    size,
+    group_seed,
+    archimob_bp,
+    team_bound,
+  })
 
   // ── HEADER band: the group's TRUE rolled span (left) + the aging XP bonus (right), a thin gold divider
   // under it. This band + the member table below is what makes a group read as a UNIT, unlike a player pill. ──
@@ -91,15 +96,16 @@ export function render_group_card(
   header.append(lvl, xp)
   chip.appendChild(header)
 
-  // ── member rows: one line per mob (no ×N collapse), each `name · LV n` with its EXACT
-  // rolled level; an archimob row carries the gold ARCHI badge (the encyclopedia's existing marker language). ──
-  const n = derived ? derived.members.length : Math.max(1, Math.min(DEFAULT_TEAM_BOUND, size || 1))
-  for (let i = 0; i < n; i += 1) {
-    const member = derived ? derived.members[i] : null
+  // ── member rows: one line per SEATED mob (no ×N collapse), each `species · LV n` with its EXACT rolled level;
+  // an archimob row carries the gold ARCHI badge (the encyclopedia's existing marker language). A seedless row
+  // prints the group's honest band instead of a fabricated number. ──
+  for (const member of rows) {
     const line = document.createElement('div')
     line.style.cssText = 'color:#e8e4dc;opacity:.92;line-height:1.55'
-    line.textContent = `${name} · ${member ? `LV ${member.level}` : group_level_text(min_level, max_level)}`
-    if (member?.archi) {
+    line.textContent = `${member.name} · ${
+      member.level != null ? `LV ${member.level}` : group_level_text(span_lo, span_hi)
+    }`
+    if (member.archi) {
       const badge = document.createElement('span')
       badge.style.cssText =
         'margin-left:6px;padding:0 4px;color:#f5d0a9;border:1px solid rgba(200,150,60,.6);' +

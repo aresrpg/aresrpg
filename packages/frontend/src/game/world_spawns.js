@@ -72,6 +72,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { parse_move_abort } from './core/abort_copy.js'
 import { plate_occluded, project_plate } from './nameplate_occlusion.js'
 import { render_group_card, update_group_aging } from './spawn_card.js'
+import { seated_roster } from './spawn_compose.js'
 import {
   create_rig_layer,
   create_gather_layer,
@@ -416,8 +417,12 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // MobTemplate carries no visual field — the model resolves off its NAME (get_mob_model), not the raw
     // template_id, so the rig layer needs the read resolve_template already fetches for the card. Block mob
     // placement until it settles (success or a definitive miss) so a rig never spawns on a wrong archetype it
-    // can't self-correct — same "retry next scan" shape as the unstreamed-column guard below.
-    if (e.kind === 'mob' && resolve_template(e.row.template_id) === undefined) return false
+    // can't self-correct — same "retry next scan" shape as the unstreamed-column guard below. A format-3 pack
+    // holds SEVERAL species (#1110), so the gate is every seated member's template, not just the primary's.
+    if (e.kind === 'mob') {
+      e.roster = seated_roster(e.row, dials.team_bound)
+      if (e.roster.some((id) => resolve_template(id) === undefined)) return false
+    }
     // ONE seat resolver (spawn_rigs.js): a clean walkable column when there is one (mobs nudge off tree/cliff/
     // water; a resource takes its exact point), else FLOAT on the surface so a group over WATER or steep terrain
     // still RENDERS instead of silently vanishing while its compass pip shows it. null =
@@ -461,11 +466,21 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // ── the group card: ONE plate, ONE LINE PER MOB (no ×N collapse) ────────────────────────
   const render_mob_card = (/** @type {any} */ e) => {
     if (!e.chip) return
-    const tpl = resolve_template(e.row.template_id) // place() gated placement on this settling → resolved here
+    // place() gated placement on EVERY seated member's template settling → all resolved here.
+    const roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ id) => {
+      const tpl = resolve_template(id)
+      return {
+        name: tpl?.name ?? short_id(id),
+        min_level: tpl?.min_level ?? 0,
+        max_level: tpl?.max_level ?? tpl?.min_level ?? 0,
+      }
+    })
     render_group_card(e.chip, {
-      name: tpl?.name ?? short_id(e.row.template_id),
-      min_level: tpl?.min_level ?? 0,
-      max_level: tpl?.max_level ?? tpl?.min_level ?? 0,
+      roster,
+      // PRESENCE of the committed roster IS the zone's format signal (the claim door reads it the same way) —
+      // a format-3 pack draws each level from a window sliding up its own band at the zone's distance.
+      graded: Array.isArray(e.row.members) && e.row.members.length > 0,
+      progress: Number(e.row.progress) || 0,
       size: Number(e.row.size) || 1,
       spawned_at_ms: Number(e.row.spawned_at_ms) || 0,
       // the DISCOVERY-time composition seed + the config dials → exact per-member levels + archi rows
@@ -477,7 +492,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   }
   const refresh_mob_card = (/** @type {string} */ template_id) => {
     for (const e of entries.values())
-      if (e.kind === 'mob' && e.chip && e.row.template_id === template_id) render_mob_card(e)
+      if (e.kind === 'mob' && e.chip && (e.roster ?? [e.row.template_id]).includes(template_id))
+        render_mob_card(e)
     // the minimap markers pick up the name/level band from the store's template_resolved fold (resolve_template)
   }
 

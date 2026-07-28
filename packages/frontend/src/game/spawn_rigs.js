@@ -121,9 +121,11 @@ export function resolve_group_seat({ sample, x, z, scan_from_y, nudge }) {
  */
 export function create_rig_layer({ engine, sample, resolve_template, is_disposed, is_veiled = () => false }) {
   const spawn_rig = (/** @type {any} */ e, /** @type {any} */ mem) => {
-    const tpl = resolve_template(e.row.template_id) // gated in place() — already settled (success or null) here
-    const { url } = get_mob_model({ variant: e.row.template_id, name: tpl?.name })
-    create_mob_model(url, { label: tpl?.name ?? e.row.template_id })
+    // THIS member's species (#1110): a format-3 pack holds several, so the rig resolves off the member's own
+    // committed template, never the group's primary. place() gated placement on every one of them settling.
+    const tpl = resolve_template(mem.template_id)
+    const { url } = get_mob_model({ variant: mem.template_id, name: tpl?.name })
+    create_mob_model(url, { label: tpl?.name ?? mem.template_id })
       .then((/** @type {any} */ { root, clips, measured, dispose }) => {
         // Orphan guard (P0 leak fix 2026-07-11): a member torn down MID-LOAD (rig still null ⇒ teardown had
         // nothing to remove) whose entry then RE-PLACES flips e.placed back to true — a bare `!e.placed` check
@@ -170,7 +172,10 @@ export function create_rig_layer({ engine, sample, resolve_template, is_disposed
   // Seed the group's members on a snug ring around the anchor (e.cx/e.cz/e.cy) and mount each rig. Every member
   // carries its OWN wander state seeded off (spawn_id, index) so refreshes replay the same amble (no teleport).
   const place_members = (/** @type {any} */ e) => {
-    const n = Math.max(1, Math.min(6, Number(e.row.size) || 1)) // SPEC §8 groups of 1–6
+    // The pack's SEATED roster — one template id per unit, resolved by the caller (world_spawns place()) so the
+    // count and the species agree with the card and the claim roster. SPEC §8 groups of 1–6.
+    const roster = e.roster?.length ? e.roster : [e.row.template_id]
+    const n = roster.length
     const radius = n === 1 ? 0 : Math.min(2.6, RING_BASE + 0.22 * n)
     const spawn_id = Number(e.row.spawn_id) || 0
     e.members = []
@@ -181,6 +186,7 @@ export function create_rig_layer({ engine, sample, resolve_template, is_disposed
       const cy = feet_of(ground_surface_y(sample, Math.floor(ax), Math.floor(az))) ?? e.cy
       const mrng = make_rng((Math.imul(spawn_id + 1, 2654435761) ^ Math.imul(m + 1, 2246822519)) >>> 0)
       const mem = {
+        template_id: roster[m],
         ax,
         az,
         mx: ax,
