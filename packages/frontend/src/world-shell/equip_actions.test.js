@@ -2,43 +2,40 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { is_object_id, seed_manifest } from '../content/seed_manifest'
-
 import { resolve_equip_templates } from './equip_version_gate.js'
 
 /** MIRROR of equip_actions.js `refusal_copy` — keep 1:1. */
 const refusal_copy = (unresolved) =>
   `Couldn't equip ${unresolved.map((r) => r.item_type || 'unknown item').join(', ')} — its item template wasn't found on-chain. Unstage it and try again.`
 
-// The passing pair is DERIVED from the same living corpus the gate reads (one home per fact): the test only
-// needs two DIFFERENT ids of the CURRENT generation, and every republish mints a fresh set — literals copied
-// out of the manifest reddened this test at each ceremony (the d034e13a → ceremony-#3 repin treadmill).
-// retired_generation_id is a real previous-generation id, stamped by no live manifest: it must stay absent,
-// which the `stale` assertion below proves at run time.
-const [living_id_a, living_id_b] = Object.values(seed_manifest.items).filter(is_object_id)
-const retired_generation_id = '0xa6a4b12ab46d2dd1518f823aeeaac5d48d5e47debd51192606bcd0fc10f63425'
+const id_a = '0x2c6de4980000000000000000000000000000000000000000000000000000beef'
+const id_b = '0x31f64c010000000000000000000000000000000000000000000000000000beef'
 
 describe('resolve_equip_templates (exact template-identity gate)', () => {
-  test('fresh-universe items pass their own stamped ids even when both share generic item_type cloak', () => {
-    // The premise, not the subject: a corpus that shipped fewer than two items would make this vacuous.
-    expect(living_id_b).toBeTruthy()
-    expect(living_id_a).not.toBe(living_id_b)
+  test('items pass their own stamped ids even when both share generic item_type cloak', () => {
     const rows = [
-      { item_id: '0x1', slot: 'cloak', item_type: 'cloak', item_template_id: living_id_a },
-      { item_id: '0x2', slot: 'cloak', item_type: 'cloak', item_template_id: living_id_b },
+      { item_id: '0x1', slot: 'cloak', item_type: 'cloak', item_template_id: id_a },
+      { item_id: '0x2', slot: 'cloak', item_type: 'cloak', item_template_id: id_b },
     ]
-    const { resolved, unresolved, stale } = resolve_equip_templates(rows)
+    const { resolved, unresolved } = resolve_equip_templates(rows)
     expect(unresolved).toEqual([])
-    expect(stale).toEqual([])
-    expect(resolved.map((r) => r.item_template_id)).toEqual([living_id_a, living_id_b])
+    expect(resolved.map((r) => r.item_template_id)).toEqual([id_a, id_b])
   })
 
-  test('a genuinely previous-generation item remains refused', () => {
-    const row = { item_id: '0xold', slot: 'cloak', item_type: 'cloak', item_template_id: retired_generation_id }
-    const { resolved, unresolved, stale } = resolve_equip_templates([row])
-    expect(resolved).toEqual([])
+  // ISSUE #1467 — the gate used to also refuse any id absent from the BUILD-TIME seed receipt. That receipt
+  // is frozen into the deployed bundle, so a republish that outran a redeploy made EVERY equip refuse. Which
+  // templates are alive is the chain's call: `equipment::equip` aborts ETemplateMismatch (abort_copy 110) and
+  // run_tx dry-runs first, so a retired template costs zero gas.
+  test('a template the deployed bundle never heard of still reaches the chain', () => {
+    const row = {
+      item_id: '0xold',
+      slot: 'cloak',
+      item_type: 'cloak',
+      item_template_id: '0xa6a4b12ab46d2dd1518f823aeeaac5d48d5e47debd51192606bcd0fc10f63425',
+    }
+    const { resolved, unresolved } = resolve_equip_templates([row])
     expect(unresolved).toEqual([])
-    expect(stale).toEqual([row])
+    expect(resolved).toHaveLength(1)
   })
 
   test('missing canonical provenance refuses before building a transaction', () => {

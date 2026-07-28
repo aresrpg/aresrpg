@@ -16,8 +16,8 @@ import { items_for_slot } from '../../game/screens/hud/simulator-equip.js'
 
 import { item_corpus_from_v1 } from './item_corpus'
 
-// The living-item whitelist is keyed by the seed manifest's template ids, so a fixture has to speak real ids
-// (a made-up id is an old-generation ghost and is correctly dropped). Borrow the first few the manifest pins.
+// Fixtures speak REAL seeded template ids so the rows match the shapes /v1 actually serves (no id whitelist
+// gates them any more — #1467). Borrow the first few the receipt pins.
 const LIVING_IDS = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
 
 // The /v1 stat projection serves the on-chain StatsMin/MaxKey ranges BIASED at 32768 (a stat is signed, the
@@ -77,8 +77,12 @@ describe('the corpus comes from /v1, and an empty one is a STATE, never the ceil
     expect(item.id).toBe(LIVING_IDS[0])
   })
 
-  test('an old-generation ghost template is not offerable gear', () => {
-    expect(item_corpus_from_v1([row(0, 'helmet', { template_id: '0xdeadbeefghost' })])).toEqual([])
+  // ISSUE #1467 — the corpus used to also drop every row whose template id was absent from the BUILD-TIME
+  // seed receipt. The receipt is frozen into the deployed bundle, so a republish that outran a redeploy
+  // emptied the corpus wholesale; the live view IS the catalog, and only the developer class is filtered.
+  test('a row the deployed bundle never heard of is still live catalog', () => {
+    const [item] = item_corpus_from_v1([row(0, 'helmet', { template_id: '0xnot-in-the-bundled-receipt' })])
+    expect(item.id).toBe('0xnot-in-the-bundled-receipt')
   })
 
   test('a developer/cheat template never reaches a build', () => {

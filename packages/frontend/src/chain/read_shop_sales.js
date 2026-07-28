@@ -4,7 +4,8 @@
 // the retired GraphQL `SaleCreated` event-replay (read_items_sales.js). The indexer serves each Sale's FACTS
 // (price / supply_remaining / paused / window) off the shared `shop::Sale` — one keyless GET, no per-sale gRPC
 // fan-out. The on-chain item NAME + category are DISPLAY enrichment resolved through a SECOND keyless GET — the
-// `/v1/encyclopedia` items view (SPEC §14 read layer) — keyed by template_id. This REPLACES the per-template
+// `/v1/encyclopedia` items view (SPEC §14 read layer) — keyed by template_id, which is ALSO what fences dead
+// orphan sales: the live catalog decides which sales exist, never a build-time id set (#1467). This REPLACES the per-template
 // chain-direct `sdk.get_item_template` fan-out that fired 5 gRPC `BatchGetObjects` PER template against
 // fullnode.testnet.sui.io (60 on a 6-sale /shop — CORS-blocked + 429-throttled, the display-read-law violation
 // the read layer exists to kill). Art rides the on-chain Display pattern. Empty (honest) on any failure.
@@ -13,7 +14,6 @@
 // is READ-ONLY. `to_shop_row` is PURE (unit-testable without a chain) — the IO lives in `get_shop_sales`.
 
 import { get_encyclopedia, get_shop } from '../rpc/client'
-import { is_living_item } from '../pages/encyclopedia/living_corpus'
 
 /**
  * Map one `/v1/shop` RpcSale (+ its resolved item template) to the `Sale` view row (items_shop_chain's `Sale`
@@ -83,28 +83,30 @@ export async function get_shop_sales() {
   } catch {
     return [] // read-API unreachable — honest empty, never a fabricated catalog
   }
-  // LIVING-generation fence (burial-reseed ghost kill, 2026-07-13): a Sale whose item template is NOT in the
-  // curated living whitelist (living_ids.json) sells a DEAD pre-purge orphan. Those 41 ghost Sales were
-  // `shop::set_paused` on-chain (buy aborts ESalePaused — UNBUYABLE), so dropping them here is honest, not a lie
-  // about what a buyer can buy (living_corpus.ts). Sales that were intentionally paused still flow through
-  // and render greyed below — this drops NON-LIVING ghosts only, never legitimate paused sales.
-  raw = raw.filter((s) => is_living_item({ template_id: String(s.template_id) }))
   if (!raw.length) return []
 
   // DISPLAY enrichment via the keyless /v1/encyclopedia items view (template_id → { name, item_type, category }).
   // A single GET (through the rpc client's LRU) replaces the old N×5 BatchGetObjects storm; a miss/failure just
   // leaves `template` undefined so to_shop_row renders the id/slug fallbacks — never a fabricated catalog.
-  let tpl_by_id = new Map()
+  let tpl_by_id = null
   try {
     const { items } = await get_encyclopedia('items')
-    tpl_by_id = new Map(items.map((it) => [String(it.template_id), it]))
+    if (items?.length) tpl_by_id = new Map(items.map((it) => [String(it.template_id), it]))
   } catch {
     /* encyclopedia unreachable — cards render on slug/id fallbacks (honest, no chain fan-out fallback) */
   }
 
   const rows = []
   for (const s of raw) {
-    const row = to_shop_row(s, tpl_by_id.get(String(s.template_id)))
+    // ORPHAN-SALE fence, resolved against LIVE truth (#1467). A Sale whose item template is absent from the
+    // live item catalog sells a dead pre-purge orphan (the 41 burial-reseed ghosts were `shop::set_paused`
+    // on-chain — buy aborts ESalePaused, UNBUYABLE — so hiding them is honest, not a lie about what a buyer
+    // can buy). This used to be fenced through the BUILD-TIME seed receipt, which is frozen into the deployed
+    // bundle: one republish outrunning one redeploy emptied the whole catalog and nothing was buyable.
+    // ABSENCE IS NOT EMPTINESS: a failed or empty enrichment read leaves tpl_by_id null and EVERY sale flows
+    // through un-fenced — a read we could not make is never evidence that a sale is dead.
+    if (tpl_by_id && !tpl_by_id.has(String(s.template_id))) continue
+    const row = to_shop_row(s, tpl_by_id?.get(String(s.template_id)))
     // Hide cold sold-out finite sales (nothing to buy); KEEP paused (greyed card). Infinite sales always show.
     if (!row.infinite && row.supply <= 0 && !row.paused) continue
     rows.push(row)

@@ -42,10 +42,10 @@ export async function equip_items({ character_id, to_equip, to_unequip }) {
 
   // equipment::equip compares the Item's stamped template id with this &ItemTemplate id exactly. Inventory
   // threads the canonical id from its Accept-time /v1 owner-items preflight; never re-resolve through non-unique
-  // item_type (all Lorito variants use `cloak`). The living ledger keeps previous-generation items refused.
+  // item_type (all Lorito variants use `cloak`). A retired template is refused by the CHAIN at simulate (#1467),
+  // never pre-refused here against a build-time id set the deployed bundle froze.
   const equips = to_equip ?? []
-  const { resolved, unresolved, stale } = resolve_equip_templates(equips)
-  if (stale.length) throw new Error(i18n.t('errors.equip_template_mismatch'))
+  const { resolved, unresolved } = resolve_equip_templates(equips)
   // HONEST refusal BEFORE any tx is built (zero gas): the batch is ONE atomic PTB, so an unresolvable item
   // refuses the accept NAMING that item — the decoder passes this human line through untouched, and the
   // caller's catch rolls back the optimistic stage. Never a raw throw, never a silent skip.
