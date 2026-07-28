@@ -123,6 +123,13 @@ export const WOULD_ABORT_ERROR_PREFIX = `sponsor-${WOULD_ABORT_REASON}:`
 // them once let an unreadable result be priced as a clean success.
 export const SIMULATION_UNREADABLE_REASON = 'simulation-unreadable'
 export const SIMULATION_INFRASTRUCTURE_REASON = 'simulation-infrastructure'
+// The two refusals that gate the PLAYER'S OWN money, and the two the client must branch on without reading a
+// word of English: SELF_PAY is the funded-wallet balance rule (the client silently self-pays the same PTB),
+// DAILY_CAP is the free-tier ceiling (the client blocks rather than spend a ≤0.2-SUI wallet's dust). Both carry
+// their reason for the same rule as every other machine reason here: a copy edit must never be able to un-tag a
+// money refusal. The strings below stay the human diagnostic, nothing more.
+export const SELF_PAY_REASON = 'self-pay-required'
+export const DAILY_CAP_REASON = 'daily-cap'
 
 /**
  * Build a refusal that carries its MACHINE reason ON THE ERROR — never re-derived by matching the message text
@@ -469,7 +476,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   const { balance } = await client.core.getBalance({ owner: sender })
   if (BigInt(balance.balance) > SELF_PAY_MIST) {
     stats.refused.balance += 1
-    throw new Error('self-pay-required: balance exceeds 0.2 SUI — sign with your own gas')
+    throw sponsor_refusal(SELF_PAY_REASON, 'self-pay-required: balance exceeds 0.2 SUI — sign with your own gas')
   }
   try {
     assert_ptb_scope(txKindBytes)
@@ -525,7 +532,10 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   }
   if (await addr_daily_would_exceed(sender, real_charge_mist(gas_used))) {
     stats.refused.daily += 1
-    throw new Error('daily free gameplay limit reached — transactions now require your own gas until tomorrow')
+    throw sponsor_refusal(
+      DAILY_CAP_REASON,
+      'daily free gameplay limit reached — transactions now require your own gas until tomorrow'
+    )
   }
   let reservation
   try {

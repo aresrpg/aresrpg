@@ -467,6 +467,22 @@ export async function build_sponsored_kind(transaction: Transaction, sender: str
   }
 }
 
+/**
+ * Did the @server refuse for `refusal`? The machine `reason` on the wire is THE contract — the two money
+ * refusals below decide whether the player's own SUI gets spent, so a copy edit on the @server (or a locale
+ * pass over its diagnostics) must not be able to un-tag them. The text match survives only as the
+ * un-rolled-@server fallback: a client refresh reaches players before the sponsor image rolls, so a body that
+ * carries NO reason at all is still decoded — and every such hit is logged as the drift it is. When a reason IS
+ * present it is authoritative: a rolled @server that says something else is never overridden by its own prose.
+ * REMOVAL TRIGGER: delete the `legacy` arm once the rolled @server (this commit's api/sponsor.mjs) is the floor.
+ */
+function refused_for(refusal: string, reason: string | null, detail: string, legacy: RegExp): boolean {
+  if (reason === refusal) return true
+  if (reason != null || !legacy.test(detail)) return false
+  game_log('tx', `sponsor refusal "${refusal}" recovered from server TEXT — @server predates the machine reason`)
+  return true
+}
+
 // THE single sponsor error humanizer (docs/SPONSOR_TWO_CALL_CONTRACT.md §"Error decoder keys") — maps the
 // station sponsor's `error` string prefix / HTTP status to ONE decoder key via the shared choke. Every throw
 // path here is PRE-execution (reserve refuses before any gas; an execute 400 is a station pre-exec rejection /
@@ -511,14 +527,14 @@ function map_sponsor_error(
   }
   // BALANCE RULE (funded > 0.2 SUI): the player ALREADY holds their own gas, so self-pay is the INTENDED route
   // (money policy, not a spend past any "free" promise). TAG it so the caller SILENTLY self-pays the SAME tx.
-  if (/self-pay-required|balance exceeds/i.test(detail)) {
+  if (refused_for(SPONSOR_REFUSAL_SELF_PAY, reason, detail, /self-pay-required|balance exceeds/i)) {
     const refusal = new Error(i18n.t('errors.sponsor_self_pay')) as Error & { sponsor_refusal?: string }
     refusal.sponsor_refusal = SPONSOR_REFUSAL_SELF_PAY
     return refusal
   }
   // DAILY FREE-TIER CAP (NEVER auto-spend past the free promise): TAG it so the sponsor-FIRST route
   // blocks honestly instead of self-paying the ≤0.2 wallet's dust; the shared decoder shows the clean cap copy.
-  if (/daily free gameplay/i.test(detail)) {
+  if (refused_for(SPONSOR_REFUSAL_DAILY_CAP, reason, detail, /daily free gameplay/i)) {
     const capped = new Error(i18n.t('errors.sponsor_daily_limit')) as Error & { sponsor_refusal?: string }
     capped.sponsor_refusal = SPONSOR_REFUSAL_DAILY_CAP
     return capped

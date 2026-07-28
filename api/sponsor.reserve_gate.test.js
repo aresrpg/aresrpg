@@ -194,3 +194,29 @@ describe('the pre-simulation rails also return before the station', () => {
     expect(station_calls).toEqual([])
   })
 })
+
+// The two refusals that decide whether the PLAYER'S OWN SUI gets spent — the funded-wallet re-route and the
+// free-tier cap — must be recognisable without reading a word of the diagnostic. Before this, both arrived
+// untagged and the client recovered them by matching server-authored English, so a copy edit here would have
+// silently handed a cap refusal to the client's generic arm (which self-pays).
+describe('the MONEY refusals carry machine reasons on the wire, not just English', () => {
+  test('funded wallet → reason "self-pay-required", station NEVER called', async () => {
+    next_balance = '300000000'
+    next_simulation = clean
+    const { error } = await reserve()
+    expect(error.sponsor_reason).toBe(S.SELF_PAY_REASON)
+    expect(S.sponsor_error_response(error)).toEqual({ error: error.message, reason: 'self-pay-required' })
+    expect(station_calls).toEqual([])
+  })
+
+  test('a spent-out day → reason "daily-cap", station NEVER called', async () => {
+    const capped = `0x${'c9'.repeat(32)}`
+    next_simulation = clean
+    await S.addr_daily_record(capped, S.ADDR_DAILY_CAP_MIST) // the whole free budget, already booked
+    const { value, error } = await reserve({ sender: capped })
+    expect(value).toBeNull()
+    expect(error.sponsor_reason).toBe(S.DAILY_CAP_REASON)
+    expect(S.sponsor_error_response(error)).toEqual({ error: error.message, reason: 'daily-cap' })
+    expect(station_calls).toEqual([])
+  })
+})
