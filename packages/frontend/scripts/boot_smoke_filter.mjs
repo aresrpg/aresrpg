@@ -26,5 +26,4 @@ export const CONSOLE_ERROR_ALLOWLIST = [
   'Failed to load resource',
 ]
 
-export const is_blocking_console_error = (text) =>
-  !CONSOLE_ERROR_ALLOWLIST.some((fragment) => text.includes(fragment))
+export const is_blocking_console_error = (text) => !CONSOLE_ERROR_ALLOWLIST.some((fragment) => text.includes(fragment))

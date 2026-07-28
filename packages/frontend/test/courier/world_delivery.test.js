@@ -15,12 +15,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import '../../src/test_helpers/env_mock.js'
 import '../../src/test_helpers/expedition_sdk_mock.js'
-import {
-  join_courier,
-  leave_courier,
-  subscribe_fight_stream,
-  sync_party_room,
-} from '../../src/courier/world.js'
+import { join_courier, leave_courier, subscribe_fight_stream, sync_party_room } from '../../src/courier/world.js'
 import { presence_store } from '../../src/world-shell/presence_adapter.js'
 
 const WORLD = '0xworld'

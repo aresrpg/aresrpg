@@ -47,10 +47,8 @@ export function presence_character(character_id) {
 export function presence_character_by_address(address) {
   if (!address) return null
   const state = presence_store.getState()
-  for (const row of state.online.values())
-    if (row.address === address) return presence_character(row.id)
-  for (const peer of state.peers.values())
-    if (peer.address === address) return presence_character(peer.id)
+  for (const row of state.online.values()) if (row.address === address) return presence_character(row.id)
+  for (const peer of state.peers.values()) if (peer.address === address) return presence_character(peer.id)
   return null
 }
 
