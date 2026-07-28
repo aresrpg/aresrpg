@@ -4,7 +4,7 @@ import { Heart, Sparkles, MapPin } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { is_archi_tier } from '../content/mob_tier'
+import { is_archi_tier } from '../game/data/mobs.js'
 import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 
 import {

@@ -13,7 +13,7 @@
 
 import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
 
-import { is_archi_tier } from '../content/mob_tier'
+import { is_archi_tier } from './data/mobs.js'
 
 // GameConfig dial fallbacks (config.move:90/97 DEFAULT_ARCHIMOB_BP / DEFAULT_TEAM_SIZE) — the live dials ride
 // /v1/config `dials{}` but only exist there once a DialChanged event ever fired; absent = the chain defaults.

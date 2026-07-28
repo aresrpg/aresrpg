@@ -21,6 +21,9 @@ import { catalog_name_of } from '../../content/mob_name_overrides'
 import { model_asset_url } from '../model_asset_url.js'
 import { get_catalog } from './mob_catalog.js'
 
+/** The single display predicate for authored archi-tier MobTemplates. */
+export const is_archi_tier = (/** @type {string | null | undefined} */ tier) => tier?.toLowerCase() === 'archi'
+
 // GLBs serve from unhashed asset-host URLs (browsers cache across re-extractions). Pin each model to its
 // first resolved absolute source for the page lifetime. A late manifest refresh cannot make an already-roaming
 // mob and its fight-board twin parse different GLB bytes.
