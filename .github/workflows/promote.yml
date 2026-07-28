@@ -37,7 +37,9 @@ permissions:
   statuses: write # stamp the `promoted` commit status (F1a — closes the direct-push-to-master hole)
 jobs:
   request:
-    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote'))
     # Keep the landing lock behind the event-shape/command gate above: an ordinary issue comment
     # must never enter this concurrency group and queue behind or displace a real promotion.
     concurrency:
