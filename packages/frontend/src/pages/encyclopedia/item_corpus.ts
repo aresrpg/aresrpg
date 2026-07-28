@@ -22,8 +22,6 @@ import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 import type { RpcEncyclopediaItem } from '../../rpc/views'
 
-import { is_living_item } from './living_corpus'
-
 /** One published item template. `item_type` is the authored art slug (the icon key every item surface
  *  resolves through); `category` is the raw Move category, which is what slot legality is decided on. */
 export type CorpusItem = {
@@ -57,13 +55,13 @@ const is_developer_row = (row: RpcEncyclopediaItem): boolean => (row.category ??
  * The `/v1/encyclopedia` item rows → the browsable corpus, sorted by level then name (the order every item
  * list in the game already uses).
  *
- * `is_living_item` is the SAME whitelist the items tab applies: an old-generation chain ghost must not be
- * offerable. It goes inert (and logs) when the seed manifest is absent — see living_corpus.ts — so a
- * manifest-less build degrades to an honestly empty corpus, never to fabricated rows.
+ * The rows ARE the corpus: `/v1` is the live catalog, so no second id set gets a vote on which of its rows
+ * count (#1467 — the build-time seed receipt used to fence this, and a republish that outran a redeploy
+ * emptied every consumer). Only the developer/cheat class is dropped, off the row's own category.
  */
 export const item_corpus_from_v1 = (rows: readonly RpcEncyclopediaItem[] | null | undefined): CorpusItem[] =>
   (rows ?? [])
-    .filter((row) => is_living_item(row) && !is_developer_row(row))
+    .filter((row) => !is_developer_row(row))
     .map((row) => ({
       id: row.template_id,
       name: row.name ?? '',

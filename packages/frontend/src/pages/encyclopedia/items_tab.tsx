@@ -38,7 +38,7 @@ import { item_type_of, item_type_label_key, item_type_buckets } from './item_typ
 import { ItemTypeRail } from './ItemTypeRail'
 // Both maps are derived at build time by virtual:item_catalog; no checked-in seed projection can go stale.
 import { make_catalog_lookup, selected_item_for_route } from './item_catalog'
-import { is_living_item, is_living_mob } from './living_corpus'
+import { invert_mob_drops } from './dropped_by'
 import { world_corpus_for_resource } from './world_corpus'
 
 const catalog_for_name = make_catalog_lookup({ catalog, slugs })
@@ -83,38 +83,15 @@ export function ItemsTab({
   const recipes = enc?.recipes
   // Golden-gather links are existence-only; the rate is the published constant above.
   const { data: rare_links } = use_rpc_view((signal) => get_rare_links(undefined, signal), { deps: [] })
-  // Invert the same authoritative on-chain mob loot projection the bestiary renders; there is no seed fallback.
-  // Carry exact basis-point-derived percentages and sort each item's sources best-chance-first.
-  const live_dropped_by_index = useMemo(() => {
-    const idx = new Map<
-      string,
-      { id: string; name: string; minLevel: number; maxLevel: number; chance_percent: number }[]
-    >()
-    for (const mob of enc?.mobs ?? []) {
-      if (!is_living_mob(mob)) continue // old-generation ghost (living_corpus.ts) — never a dropper row
-      if (!mob.drops) continue
-      for (const drop of mob.drops) {
-        const rows = idx.get(drop.template_id) ?? []
-        rows.push({
-          id: mob.template_id,
-          name: display_mob_name(mob.name) || '',
-          minLevel: mob.min_level ?? 0,
-          maxLevel: mob.max_level ?? 0,
-          chance_percent: drop.chance_percent,
-        })
-        idx.set(drop.template_id, rows)
-      }
-    }
-    for (const rows of idx.values()) rows.sort((a, b) => b.chance_percent - a.chance_percent)
-    return idx
-  }, [enc])
-  // Join each living /v1 row to authored characteristics by slug; unmatched rows stay honestly empty. The
+  // Invert the same authoritative on-chain mob loot projection the bestiary renders forward (dropped_by.ts —
+  // the one home). Live rows in, live droppers out: no build-time id set fences this join (#1467).
+  const live_dropped_by_index = useMemo(() => invert_mob_drops(enc?.mobs, display_mob_name), [enc])
+  // Join each live /v1 row to authored characteristics by slug; unmatched rows stay honestly empty. The
   // row → detail-view projection itself lives in item_view_model.ts — the ONE home the in-game Jobs drawer
   // reads too, so a crafting surface can never disagree with the encyclopedia about what an item IS.
   const items = useMemo(
     () =>
-      // The id whitelist removes old-generation chain ghosts before any catalog join.
-      (enc?.items ?? []).filter(is_living_item).map((it) => {
+      (enc?.items ?? []).map((it) => {
         const name = it.name ?? ''
         return encyclopedia_item_view(it, { slug: slugs[name] || undefined, catalog_row: catalog_for_name(name) })
       }),

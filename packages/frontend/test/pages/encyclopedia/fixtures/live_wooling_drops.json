@@ -1,0 +1,219 @@
+{
+  "_provenance": {
+    "source": "GET https://rpc.aresrpg.world/v1/encyclopedia?kind=mobs (the VITE_RPC_URL of the deployed testnet build)",
+    "captured": "2026-07-28",
+    "slice": "every live mob row whose drops table contains Wooling Fleece — the owner-reported symptom of #1467",
+    "bundled_manifest_mob_ids_matching_these_rows": 0,
+    "live_mob_rows_total": 383,
+    "bundled_manifest_mob_ids_total": 374
+  },
+  "wooling_fleece_template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+  "mobs": [
+    {
+      "template_id": "0xafe3f2c97ad3fc0520bb23bfe50481acd4c5cfc78da2e8ba4501e6c34a5682de",
+      "name": "Hornhead",
+      "min_level": 8,
+      "max_level": 14,
+      "drops": [
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 45.1
+        },
+        {
+          "template_id": "0x8d7d442d60d50aa4a38ed0e3e4d758ce12a04e60f83374bf7bfb32bdb6670957",
+          "name": "Hornhead Horn",
+          "chance_percent": 68.9
+        },
+        {
+          "template_id": "0xd2f4828af61c0083ed90e70371ef6d8e0abee90b22c057598046af5e3d89db14",
+          "name": "Apprentice Blade",
+          "chance_percent": 0.99
+        },
+        {
+          "template_id": "0x4d9461b7dfb8ec0efa4b1c86f7bdc8023036a499aa9e81b7447b55dcd036ca24",
+          "name": "Scaled Hide",
+          "chance_percent": 45.3
+        }
+      ]
+    },
+    {
+      "template_id": "0xeeac6b08c541e970d9c278c05c0a2465fe0541103c69151f545d27eaa1aa6dd0",
+      "name": "Wooling",
+      "min_level": 1,
+      "max_level": 5,
+      "drops": [
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 60
+        },
+        {
+          "template_id": "0xe8a2ada272d3e46ddf39bdf4f6a084e66721682d72027492318d255dc378c7f2",
+          "name": "Crude Branch",
+          "chance_percent": 34.9
+        },
+        {
+          "template_id": "0xc3dc4953996ad35c77ac40fc2e162de2d314f5e39ecad8c98aef48520282fb0a",
+          "name": "Wooligan's eye",
+          "chance_percent": 5
+        }
+      ]
+    },
+    {
+      "template_id": "0x56770d57a826551d0f479292c5c09e00388ca50c469373a074a61b3c93bc047d",
+      "name": "Wooligan",
+      "min_level": 3,
+      "max_level": 6,
+      "drops": [
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 66.2
+        },
+        {
+          "template_id": "0xc3dc4953996ad35c77ac40fc2e162de2d314f5e39ecad8c98aef48520282fb0a",
+          "name": "Wooligan's eye",
+          "chance_percent": 5
+        },
+        {
+          "template_id": "0x41b12b679625e8f7b9d9778a954ecce79b22068f4b88438f31ed76d74af5edf5",
+          "name": "Woolano",
+          "chance_percent": 0.99
+        }
+      ]
+    },
+    {
+      "template_id": "0xbd86da8254cea385b3ab1b9dd4bb50b01426af710efa358246df073925b11993",
+      "name": "Woolkin Celestial",
+      "min_level": 98,
+      "max_level": 108,
+      "drops": [
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 32.6
+        },
+        {
+          "template_id": "0x0b450f2b3e0da9b47c5ed0876eb575af5b6591adf5c5616c57fffef7054d195b",
+          "name": "Ancient Hermit Robe Fragment",
+          "chance_percent": 21.2
+        },
+        {
+          "template_id": "0x05139298e627c22d997195498a5d43f602c46361d92cefb1611fd2dbc99be138",
+          "name": "Golden Fleece",
+          "chance_percent": 4
+        },
+        {
+          "template_id": "0x8d7d442d60d50aa4a38ed0e3e4d758ce12a04e60f83374bf7bfb32bdb6670957",
+          "name": "Hornhead Horn",
+          "chance_percent": 53.9
+        }
+      ]
+    },
+    {
+      "template_id": "0xada31dd636f61ea545b57b5b5685cbfdd42889135c7974711aa000b3db165794",
+      "name": "Eternwool",
+      "min_level": 80,
+      "max_level": 90,
+      "drops": [
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 56.3
+        },
+        {
+          "template_id": "0x05139298e627c22d997195498a5d43f602c46361d92cefb1611fd2dbc99be138",
+          "name": "Golden Fleece",
+          "chance_percent": 0.4
+        },
+        {
+          "template_id": "0x042c907d89ddf55fd90ef7fdef349442d7981698e1e474d5e234c6c957328001",
+          "name": "Frost Shard",
+          "chance_percent": 9.56
+        },
+        {
+          "template_id": "0xe8e56222860ec2511f6878144774586c7b632ec03e782f209f3c7ca055531b02",
+          "name": "Frosthewn Axe",
+          "chance_percent": 0.96
+        },
+        {
+          "template_id": "0x8d7d442d60d50aa4a38ed0e3e4d758ce12a04e60f83374bf7bfb32bdb6670957",
+          "name": "Hornhead Horn",
+          "chance_percent": 39.4
+        }
+      ]
+    },
+    {
+      "template_id": "0x9851d865c3e0fb7feb930e85fbe5728a94d794d6b636cb124839c63709c72465",
+      "name": "Woolly Doom",
+      "min_level": 16,
+      "max_level": 20,
+      "drops": [
+        {
+          "template_id": "0x8d7d442d60d50aa4a38ed0e3e4d758ce12a04e60f83374bf7bfb32bdb6670957",
+          "name": "Hornhead Horn",
+          "chance_percent": 61.6
+        },
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 45.1
+        },
+        {
+          "template_id": "0x54a5277dfa0613225410a66b88a4ba3177a706f40074ec0371abd6b0932da580",
+          "name": "Wooliboots",
+          "chance_percent": 0.96
+        },
+        {
+          "template_id": "0xa41133d15a0923ef45c354a3232569ad2d635760e10c469242e613916c3e138b",
+          "name": "Warped Staff",
+          "chance_percent": 1.04
+        },
+        {
+          "template_id": "0x28e058cf9164199d547e3ea66e0e2f65490ee3c235c021ffd3ae56605ee76b9b",
+          "name": "Silk Gloves",
+          "chance_percent": 1.04
+        }
+      ]
+    },
+    {
+      "template_id": "0xb1aee088afecc68e40c28b49e9cb77d34b4fabf650109fd98c749b927a04e78d",
+      "name": "Woolice",
+      "min_level": 45,
+      "max_level": 55,
+      "drops": [
+        {
+          "template_id": "0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee",
+          "name": "Wooling Fleece",
+          "chance_percent": 41.7
+        },
+        {
+          "template_id": "0x05139298e627c22d997195498a5d43f602c46361d92cefb1611fd2dbc99be138",
+          "name": "Golden Fleece",
+          "chance_percent": 0.6
+        },
+        {
+          "template_id": "0x9592c7159cdc56939ecb1c9d249a21c72607bc0bb38419653a9da8cfd478b85d",
+          "name": "Duke's Signet",
+          "chance_percent": 5.6
+        },
+        {
+          "template_id": "0x7598c89f6b1f52862d3832b5bbbec66b413daa4e3498b12793d746efc934ad80",
+          "name": "Sparkweave Sandals",
+          "chance_percent": 1
+        },
+        {
+          "template_id": "0xa76f2ca6b78ca43e6ef8acac5f01830ddf46a4c2a218e323b859bea90a7cc921",
+          "name": "Ensablé Crystal",
+          "chance_percent": 11.27
+        },
+        {
+          "template_id": "0x4301ef00d391ca9f4862925a9b9565797bf94d84111e83970fba16671b779b9e",
+          "name": "Water",
+          "chance_percent": 29.37
+        }
+      ]
+    }
+  ]
+}

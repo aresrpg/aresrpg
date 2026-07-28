@@ -39,7 +39,6 @@ import { use_world_binding } from '../../world-shell/session_gate.js'
 import { use_zones_view } from '../../rpc/zones_poll'
 import { use_rpc_view } from '../../rpc/use_view'
 import { get_encyclopedia } from '../../rpc/client'
-import { is_living_mob } from '../../pages/encyclopedia/living_corpus'
 import { display_mob_name } from '../../content/mob_name_overrides'
 
 import { zone_world_doc } from '../zone_rows.js'
@@ -99,8 +98,8 @@ export function use_world_mob_ids() {
 
 /**
  * The live mob roster the config modal picks from: the bestiary's own /v1 door
- * (`get_encyclopedia('mobs')` behind the living-generation fence — never a second corpus copy), SCOPED to
- * the current world's spawn table. An unknown table serves NO rows (still `loading`) rather than the whole
+ * (`get_encyclopedia('mobs')` — the live rows themselves, never a build-time id set and never a second
+ * corpus copy, #1467), SCOPED to the current world's spawn table. An unknown table serves NO rows (still `loading`) rather than the whole
  * global bestiary — the picker only ever offers mobs this world can actually spawn.
  * @param {boolean} enabled
  * @param {Set<string> | null} world_mob_ids the current world's table (`null` = not known yet)
@@ -110,7 +109,6 @@ export function use_mob_templates(enabled, world_mob_ids) {
   const view = use_rpc_view((signal) => get_encyclopedia('mobs', signal), { deps: [], enabled })
   const rows = world_mob_ids
     ? (view.data?.mobs ?? [])
-        .filter(is_living_mob)
         .filter((mob) => world_mob_ids.has(String(mob.template_id)))
         .map((mob) => ({ template_id: mob.template_id, name: display_mob_name(mob.name) || mob.template_id }))
         .sort((a, b) => a.name.localeCompare(b.name))

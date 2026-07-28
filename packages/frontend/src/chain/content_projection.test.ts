@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 
-import { is_living_item, is_living_mob, is_living_world } from '../pages/encyclopedia/living_corpus'
 import { has_world_corpus } from '../pages/encyclopedia/world_corpus'
 import seed_manifest from '../../../move/scripts/out/seed_manifest.json'
 
@@ -14,17 +13,17 @@ const source = (relative_path: string) => readFileSync(new URL(relative_path, im
 
 describe('seed-receipt content projections', () => {
   test('derive in code and never import copied ID artifacts', () => {
-    expect(source('../pages/encyclopedia/living_corpus.ts')).not.toContain("from './living_ids.json'")
     expect(source('../pages/encyclopedia/world_corpus.ts')).not.toContain("from './world_corpus.json'")
     expect(source('../game/screens/hud/fight-spells.js')).not.toContain("from './fight-spells.json'")
   })
 
-  test('preserve every public content id from the current seed receipt', () => {
+  // The receipt projects the seeded world ENUMERATION + its display label and nothing else (#1510): a
+  // chain-derived VALUE (required_level, biome) or an id-JOIN read off this bundled artifact is frozen into
+  // the deployed bundle and goes stale the moment a republish outruns a redeploy — measured 2026-07-28, the
+  // receipt's 374 mob ids matched ZERO of the 383 rows the live read API was serving.
+  test('projects the seeded world enumeration from the current seed receipt', () => {
     expect(T62_WORLDS.map(({ id }) => id)).toEqual(seed_manifest.worlds.map(({ id }) => id))
-
-    for (const id of Object.values(seed_manifest.items)) expect(is_living_item({ template_id: id })).toBe(true)
-    for (const { id } of Object.values(seed_manifest.mobs)) expect(is_living_mob({ template_id: id })).toBe(true)
-    for (const { id } of seed_manifest.worlds) expect(is_living_world({ world_id: id })).toBe(true)
+    expect(T62_WORLDS.every(({ label }) => !!label)).toBe(true)
   })
 
   // RUNTIME BLOBS (#196 / #106): WORLD_CORPUS loads from the asset-host world_corpus blob (load_world_corpus)

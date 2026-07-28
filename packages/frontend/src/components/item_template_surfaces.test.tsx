@@ -39,8 +39,8 @@ void test_i18n.init({
   interpolation: { escapeValue: false },
 })
 
-// The living-item whitelist is keyed by the seed manifest's template ids, so a fixture has to speak real
-// ids — a made-up id is an old-generation ghost and is correctly dropped (living_corpus.ts).
+// The fixtures speak REAL seeded template ids so the surfaces are exercised on the shapes they actually
+// render (no id whitelist gates them any more — #1467: the live rows are the corpus).
 const LIVING_IDS = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
 
 // The /v1 stat projection serves the on-chain StatsMin/MaxKey ranges BIASED at 32768 (a stat is signed, the

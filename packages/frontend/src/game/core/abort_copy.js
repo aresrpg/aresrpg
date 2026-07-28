@@ -475,8 +475,8 @@ export function is_preflight_refusal(error) {
 // EQUIP/UNEQUIP LOCAL-READ STALENESS family (issue #15 — "stale-version equipment"): the exact abort codes that
 // mean "the item's ACTUAL on-chain template/state differs from what this client's stale /v1 read believed" —
 // a specific OBJECT drifted under the player (another tab equipped it, a scribe re-rolled it, a stack merged),
-// never a permanently-dead template (that's the CLIENT-SIDE is_living_item gate in equip_version_gate.js, whose
-// build-time seed-manifest pin has no live fix — offering "refresh" there would be a LIE). Every code here is
+// never a permanently-dead template — a retired template aborts ETemplateMismatch (110) at simulate, which is
+// the CHAIN's own verdict and not refresh-fixable (#1467 deleted the client-side build-time pin). Every code here is
 // honestly refresh-fixable: a fresh /v1 read (equip_state_refresh.js's reconcile_equip_state) resolves it before
 // the next attempt. STRUCTURAL only (module+code, never message text), mirroring is_preflight_refusal/
 // error_preflight_marked's own "never message text" law.

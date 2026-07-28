@@ -10,7 +10,6 @@ import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 
 import { use_content } from './content'
-import { is_living_world } from './living_corpus'
 import { world_corpus_of } from './world_corpus'
 import { ItemsTab } from './items_tab'
 import { BestiaryTab } from './bestiary_tab'
@@ -118,12 +117,11 @@ function WorldsTabRoute({ is_mobile }: { is_mobile: boolean }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia('worlds', signal), { deps: [] })
-  // Living-generation fence (living_corpus.ts): /v1 lists every World object ever minted on this lineage;
-  // rows outside the current seed manifest's world set are old-generation ghosts — hidden.
-  const worlds: WorldRow[] = (enc?.worlds ?? []).filter(is_living_world).map((w) => {
+  // The live worlds view IS the list (#1467): no build-time id set fences it — that join is frozen into the
+  // deployed bundle, so a republish that outran a redeploy blanked the whole tab.
+  const worlds: WorldRow[] = (enc?.worlds ?? []).map((w) => {
     const corpus = world_corpus_of(w.world_id)
-    // Unreachable by construction (living_ids and world_corpus are generated from the SAME manifest), but
-    // a world we have no authored knowledge of degrades honestly instead of inventing a name or a band.
+    // A world we have no authored knowledge of degrades honestly instead of inventing a name or a band.
     if (!corpus) return { id: w.world_id, name: short_world_id(w.world_id), band: null, biome: w.biome || '' }
     return {
       id: w.world_id,
