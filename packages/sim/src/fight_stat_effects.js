@@ -62,19 +62,13 @@ export const apply_stat_effect = (state, effect, caster, target) => {
       effect.stat === 'ap' ? target.ap_max : target.mp_max,
     )
     const with_rng = with_turn_rng(state, result.state)
-    if (result.removed === 0)
-      return {
-        handled: true,
-        state: with_rng,
-        effects: [{ target_id: target.id, status: 'POINT_DODGED' }],
-      }
-    const stored = add_row(
-      with_rng,
-      target.id,
-      caster.id,
-      effect,
-      result.removed,
-    )
+    // The chain stores debt only when something landed, but emits Drain for EVERY contested outcome — including
+    // removed=0. Keep the durable-row guard and let the same STAT_DEBUFF wire row below carry both full and
+    // partial dodges through the ordinary pool fold.
+    const stored =
+      result.removed > 0
+        ? add_row(with_rng, target.id, caster.id, effect, result.removed)
+        : with_rng
     const drained = update_entity(stored, target.id, entity => ({
       ...entity,
       [effect.stat]: Math.max(0, entity[effect.stat] - result.removed),

@@ -340,7 +340,7 @@ export const drive_effect = (
     case 'points_loss':
       if (
         v.ap + v.mp < b.ap + b.mp ||
-        tags.includes('POINT_DODGED') ||
+        tags.includes('STAT_DEBUFF') ||
         v.effects.some(e => e.type === 'STAT_DEBUFF')
       )
         return null

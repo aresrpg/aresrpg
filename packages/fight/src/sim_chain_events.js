@@ -167,7 +167,6 @@ const INERT_STATUSES = new Set([
   'FORCED_DEATH_IMMUNE',
   'GLYPH',
   'NAMED_DAMAGE_STACK',
-  'POINT_DODGED',
   'POISON',
   'PUNISHMENT_TRIGGER',
   'REACTIVE_PUNISHMENT',
@@ -256,7 +255,7 @@ const encode_effect = (state, effect, ctx) => {
   const pool_kind = POOL_POINT_KIND[effect.stat]
   if (pool_kind !== undefined && (effect.status === 'STAT_BUFF' || effect.status === 'STAT_DEBUFF')) {
     const amount = Math.max(0, Math.trunc(Number(effect.value) || 0))
-    if (amount === 0) return [] // a fully-dodged drain moved no pool — POINT_DODGED already carries the miss
+    if (effect.status === 'STAT_BUFF' && amount === 0) return [] // a zero grant still moved no pool
     const target = { fight, target_is_mob: is_mob, target_idx: u64(idx), point_kind: pool_kind }
     return [
       effect.status === 'STAT_BUFF'
