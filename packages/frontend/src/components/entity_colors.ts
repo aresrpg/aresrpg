@@ -72,7 +72,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   PET: '#4ade80',
   RELIC: '#fbbf24',
   TOOL_HERBALIST: '#22c55e',
-  TOOL_PAYSAN: '#22c55e',
+  TOOL_FARMER: '#22c55e',
   TOOL_MINER: '#22c55e',
   CONSUMABLE: '#6b7280',
   RESOURCE: '#6b7280',
