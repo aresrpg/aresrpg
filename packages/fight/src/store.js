@@ -28,7 +28,7 @@ import { createStore } from 'zustand/vanilla'
 import { classify_input } from './classify_input.js'
 import { input_envelope } from './envelope.js'
 import { empty_core_state, ingest } from './core.js'
-import { apply_action, empty_state, normalize_intent, seat_resolver } from './inputs.js'
+import { normalize_intent, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { peer_batch_legality } from './peer_legality.js'
 import { reduce_chain_input, reduce_snapshot_input } from './store_chain.js'
@@ -437,8 +437,6 @@ export const create_fight_store = () => {
     // reset would wipe the session the very same message just opened. One home for "a new fight clears the fold".
     core: empty_core_state(null),
     input: with_core_fold(make_input(set, get, trace_tap), set, get),
-    // A raw fold helper for tests/tools that want a committed state from a log without the store plumbing.
-    fold: (log) => log.reduce(apply_action, empty_state(get().fight_id)),
   }))
   return { ...store, trace_tap }
 }
