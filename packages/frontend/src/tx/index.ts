@@ -488,10 +488,7 @@ function map_sponsor_error(
   // node at all. Machine-marked so this branches on a REASON instead of matching `/unpriceable/` against a
   // server-authored diagnostic — and marked so a caller can tell "we could not tell" apart from "you would
   // fail". Nothing was reserved on either path, so the copy is the same honest retry-later line.
-  if (
-    reason === SPONSOR_REFUSAL_SIMULATION_UNREADABLE ||
-    reason === SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE
-  ) {
+  if (reason === SPONSOR_REFUSAL_SIMULATION_UNREADABLE || reason === SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE) {
     const unpriceable = new Error(i18n.t('errors.sponsor_unpriceable')) as Error & { sponsor_refusal?: string }
     unpriceable.sponsor_refusal = reason
     return unpriceable

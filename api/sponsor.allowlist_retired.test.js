@@ -56,7 +56,9 @@ describe('a widened allowlist cannot re-open a RETIRED package', () => {
   })
 
   test('a retired id in the env allowlist STILL refuses with the outdated-package reason', async () => {
-    const k = await kind((tx) => tx.moveCall({ target: `${RETIRED}::actions::act_pass`, arguments: [tx.objectRef(OBJ)] }))
+    const k = await kind((tx) =>
+      tx.moveCall({ target: `${RETIRED}::actions::act_pass`, arguments: [tx.objectRef(OBJ)] })
+    )
     const error = refusal(k)
     expect(error?.message).toMatch(/sponsor-scope.*outdated-package/)
     expect(S.sponsor_error_response(error).reason).toBe(S.OUTDATED_PACKAGE_REASON)

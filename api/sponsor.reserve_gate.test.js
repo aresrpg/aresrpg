@@ -51,7 +51,9 @@ const RESERVATION = {
   result: {
     sponsor_address: `0x${'5b'.repeat(32)}`,
     reservation_id: 4242,
-    gas_coins: [{ objectId: `0x${'77'.repeat(32)}`, version: '7', digest: 'ES6c9UyVEbXAZWQXUtzvyxvcCQ2FZ9BVgKPnjLXFto1p' }],
+    gas_coins: [
+      { objectId: `0x${'77'.repeat(32)}`, version: '7', digest: 'ES6c9UyVEbXAZWQXUtzvyxvcCQ2FZ9BVgKPnjLXFto1p' },
+    ],
   },
 }
 beforeEach(() => {

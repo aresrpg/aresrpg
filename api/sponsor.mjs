@@ -153,7 +153,15 @@ const DEV_BYPASS_KEY_RE = /_DEV_BYPASS_/
 const FALSEY_ENV = new Set(['', '0', 'false', 'off', 'no'])
 export const armed_dev_bypasses = (env = process.env) =>
   Object.keys(env)
-    .filter((key) => DEV_BYPASS_KEY_RE.test(key) && !FALSEY_ENV.has(String(env[key] ?? '').trim().toLowerCase()))
+    .filter(
+      (key) =>
+        DEV_BYPASS_KEY_RE.test(key) &&
+        !FALSEY_ENV.has(
+          String(env[key] ?? '')
+            .trim()
+            .toLowerCase()
+        )
+    )
     .sort()
 
 export function assert_no_dev_bypass_with_station_credentials(env = process.env) {
