@@ -189,7 +189,8 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  * @property {number} frame_ms_p99
  * @property {number} draw_calls
  * @property {number} quad_count total live quads across uploaded chunks
- * @property {TierName} tier current active tier (post-governor)
+ * @property {TierName} tier current active tier (post-governor); before the governor exists it is the
+ *   ADAPTER-FITTED boot tier — the tier this device could actually bind, not the one requested (#1434)
  * @property {number} render_scale current dynamic render-resolution scale
  * @property {number} [time_of_day] DAY-NIGHT: the sky's live cycle phase in [0,1) (omitted on the minimal fallback) — the
  *   §7 HUD feed for the day-night dial; also the ENGINE→UI readback a GUI panel polls to resync a local
@@ -539,6 +540,11 @@ export function create_engine({
   /** Full-ring chunk count for progress totals ((2r+1)² columns × vertical). Tracks the RESOLVED
    *  load_radius (tier-driven, S-85) so boot 'done' fires at the real ring size, not the stale constant. */
   let ring_total = (2 * load_radius + 1) ** 2 * VERTICAL_CHUNKS
+  /** [#1434] THE tier this engine booted at — the `tier` arg (or AUTO detection) after the renderer's
+   *  adapter fit stepped it down to one this device can actually bind. ONE home: init() resolves it and
+   *  every tier-driven subsystem reads it, and `get_stats().tier` falls back to it before the governor
+   *  exists (it used to fall back to the `tier` ARG, reporting a tier the device had refused to boot). */
+  let tier_name = tier ?? 'medium'
   /** Defer `fn` if the renderer isn't up yet (returns true when deferred). @param {() => void} fn */
   function defer_until_boot(fn) {
     if (disposed) return true
@@ -646,7 +652,10 @@ export function create_engine({
   }
 
   async function init() {
-    const { tier_name } = tier ? { tier_name: tier } : await detect_starting_tier()
+    // Assigns the CLOSURE `tier_name` (declared above): the renderer's adapter-fit may step this down
+    // below (#1434) — everything tier-driven (ring radius, terrain pool, mana barrier, waterfalls, the
+    // governor, per-tier dressing) and get_stats().tier must read the FITTED value, not this guess.
+    tier_name = tier ?? (await detect_starting_tier()).tier_name
     // dispose() may win while AUTO tier detection is pending. Do not begin GPU allocation for a dead scene.
     if (disposed) return
     // [TTP-init] boot breakdown — every init step below runs BEFORE frame_loop.start(), so ALL of it is on
@@ -655,15 +664,6 @@ export function create_engine({
     const __t0 = performance.now()
     let __tr = __t0
     let __tg = __t0
-
-    // [S-85] Now the boot tier is known (it was async for AUTO detect), size the streaming ring to it —
-    // unless an explicit load_radius arg pinned it (bench / spectate diorama). Rewrites ring_total so the
-    // load-progress bar totals the real ring. The ring manager (built below) reads this radius at construct;
-    // a mid-session tier swap keeps the boot radius (no live re-stream) — render_scale still switches live.
-    if (load_radius_arg === undefined) {
-      load_radius = TIER_LOAD_RADIUS[tier_name] ?? load_radius
-      ring_total = (2 * load_radius + 1) ** 2 * VERTICAL_CHUNKS
-    }
 
     /** [D181 P0] Routes to the ENG-20 heightmap fallback to avoid a fully dark screen when disconnected.
      * Shared by BOTH failure shapes: (a) init SUCCEEDS on webgl2 (D155 — probe passed, backend floored),
@@ -758,6 +758,23 @@ export function create_engine({
     if (renderer_handle.backend !== 'webgpu') {
       route_to_webgl_floor(`WebGPU probe passed but the renderer initialized on '${renderer_handle.backend}'`)
       return
+    }
+    // [#1434] ADOPT THE ADAPTER-FITTED TIER. create_renderer steps the boot tier down until the terrain
+    // pool binds within this adapter's storage-binding limit and requests the device limit for THAT tier;
+    // everything tier-driven below (the streaming ring radius, create_terrain_renderer's pool sizing, the
+    // governor, the per-tier dressing) must read the same answer. While the fit lived only inside
+    // renderer.js, a spec-minimum adapter granted a 128 MiB binding and then had a 138 MiB HIGH pool
+    // allocated against it — an invalid storage bind group, GPUValidationError on every terrain draw, a
+    // crashed tab. Boot-time only: the pool never regrows mid-session (pool_renderer.js).
+    tier_name = renderer_handle.tier ?? tier_name
+    // [S-85] The boot tier is now FINAL (AUTO detection + the adapter fit above), so size the streaming
+    // ring to it — unless an explicit load_radius arg pinned it (bench / spectate diorama). Rewrites
+    // ring_total so the load-progress bar totals the real ring. The ring manager (built below) reads this
+    // radius at construct; a mid-session tier swap keeps the boot radius (no live re-stream) —
+    // render_scale still switches live.
+    if (load_radius_arg === undefined) {
+      load_radius = TIER_LOAD_RADIUS[tier_name] ?? load_radius
+      ring_total = (2 * load_radius + 1) ** 2 * VERTICAL_CHUNKS
     }
     hitch_probe.watch_renderer(renderer_handle.renderer)
     // [C1] arm the sliced-compile warm queue on the live scene; the module registry hands it to the
@@ -1669,7 +1686,9 @@ export function create_engine({
         frame_ms_p99: frame_stats.p99,
         draw_calls: render_stats.draw_calls,
         quad_count: render_stats.quads,
-        tier: governor?.get_current_tier() ?? tier ?? 'medium',
+        // [#1434] pre-governor fallback is the ADAPTER-FITTED boot tier, never the requested `tier` arg —
+        // on a device that fitted down, the arg is a tier this engine explicitly refused to boot.
+        tier: governor?.get_current_tier() ?? tier_name,
         render_scale,
         // DAY-NIGHT: the sky's live cycle phase in [0,1) — the §7 HUD feed for the day-night dial. The sky
         // node owns the clock uniform; the frontend cycle driver advances it via set_time_of_day. 0 pre-boot.

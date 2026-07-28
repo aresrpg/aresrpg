@@ -27,7 +27,7 @@ import * as THREE from 'three'
 
 import { BLOCK_REGISTRY, is_leaf_sprite_block } from '../config/block_registry.js'
 import { CHUNK_SIZE, TIER_LOAD_RADIUS } from '../config/world_config.js'
-import { get_tier } from '../core/quality/tiers.js'
+import { get_tier, TIER_ORDER } from '../core/quality/tiers.js'
 
 import { create_gpu_cull } from './gpu_cull.js'
 import { create_quad_pool } from './quad_pool.js'
@@ -336,6 +336,27 @@ export function max_pool_storage_bytes(tier = 'medium') {
     if (bytes > max_bytes) max_bytes = bytes
   }
   return max_bytes
+}
+
+/**
+ * The highest tier at or below `tier` whose terrain pool can BIND on an adapter with this
+ * `max_storage_binding_bytes` — the ONE home for "which tier does this device actually boot at" (#1434).
+ * A pool buffer larger than the granted binding limit is an invalid storage bind group, i.e. a
+ * GPUValidationError on every terrain draw and a crashed tab, so the fit must be the SAME answer the
+ * device-limit request (core/renderer.js) and the pool sizing (engine.js → create_terrain_renderer) both
+ * read. It was two answers: renderer.js stepped a LOCAL copy down while the pool kept the unfitted tier,
+ * which is precisely the crash the step-down was written to prevent. Only ever degrades — never promotes a
+ * tier the caller did not ask for — and floors at the lowest rung (a device below even LOW degrades
+ * loudly at the call site rather than silently booting an unbindable pool).
+ * @param {TierName} tier the requested boot tier
+ * @param {number} max_storage_binding_bytes adapter.limits.maxStorageBufferBindingSize
+ * @returns {TierName}
+ */
+export function fit_tier_to_adapter(tier, max_storage_binding_bytes) {
+  let i = TIER_ORDER.indexOf(tier)
+  if (i === -1) return tier
+  while (i > 0 && max_pool_storage_bytes(TIER_ORDER[i]) > max_storage_binding_bytes) i -= 1
+  return TIER_ORDER[i]
 }
 
 /** @param {number} cx @param {number} cy @param {number} cz */
