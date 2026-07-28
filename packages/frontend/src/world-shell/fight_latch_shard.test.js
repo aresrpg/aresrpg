@@ -16,8 +16,8 @@
 // builder run for real, then read the shard ids back out of the transaction's own inputs.
 //
 // The load-bearing case is the DUNGEON one: a room fight derives from the CREATOR's RunPass and runs inside a
-// world, so `fight_scope_id` and `world_id` are both sitting right there — either is exactly what a pattern-match
-// would reach for, and neither picks the latch.
+// world, so the creator's pass and the run's `world_id` are both sitting right there — either is exactly what a
+// pattern-match would reach for, and neither picks the latch.
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { Transaction } from '@mysten/sui/transactions'
 import { fight_latch_arg, fight_registry_arg, fight_shard_index } from '@aresrpg/sdk/deployment/aresrpg'
@@ -25,7 +25,8 @@ import { fight_latch_arg, fight_registry_arg, fight_shard_index } from '@aresrpg
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 
-import { rebind_world_character, reset_world_binding } from './session_gate.js'
+// Cross-suite hygiene only: no door below READS the binding — a join derives nothing, so it needs no world.
+import { reset_world_binding } from './session_gate.js'
 // `get_sdk` is mocked PROCESS-WIDE by this seam (bun has no unmock API), so every file must arm it in
 // beforeEach and clear it after — an unarmed file inherits whatever the previous one left behind.
 
@@ -108,7 +109,6 @@ beforeEach(() => {
   signed = null
   set_expedition_sdk_mock(async () => ({ grpc_client: {} }))
   use_auth.setState({ address: pad('ee') })
-  rebind_world_character(CHARACTER, WORLD)
   spies = [
     spyOn(dungeon_actions, 'ctx_of').mockReturnValue({
       // localnet has no baked shared-version map, so refs fall back to unresolved inputs — the shard PICK is
@@ -155,19 +155,10 @@ describe('the latch shard a CHARACTER maps to reaches the built transaction', ()
     expect(registry_shards_in(signed)).toEqual([])
   })
 
-  test('a world join with NO world binding refuses before signing, by name', async () => {
-    reset_world_binding()
-    await expect(dungeon_actions.join_world_fight({ fight_id: FIGHT, character_id: CHARACTER })).rejects.toThrow(
-      /fight_scope_id/
-    )
-    expect(signed).toBeNull()
-  })
-
   test('a DUNGEON settle carries the settling character latch shard, never the pass or world one', async () => {
     await dungeon_actions.settle_and_open({
       fight_id: FIGHT,
-      fight_scope_id: CREATOR_PASS, // the Fight's own scope — the room derived from it, the latch never does
-      run_pass_id: pad('b9'),
+      run_pass_id: CREATOR_PASS, // the run's pass — settle_run reads it, the latch never does
       world_id: WORLD, // still needed by settle_run, and still not a latch key
       character_id: CHARACTER,
     })
@@ -181,7 +172,6 @@ describe('the latch shard a CHARACTER maps to reaches the built transaction', ()
   test('a WORLD settle carries the settling character latch shard, never the world one', async () => {
     await dungeon_actions.settle_and_open({
       fight_id: FIGHT,
-      fight_scope_id: WORLD,
       run_pass_id: null,
       world_id: WORLD,
       character_id: CHARACTER,
@@ -192,25 +182,12 @@ describe('the latch shard a CHARACTER maps to reaches the built transaction', ()
     expect(registry_shards_in(signed)).toEqual([])
   })
 
-  test('a settle with no scope refuses before signing, by name', async () => {
-    await expect(
-      dungeon_actions.settle_and_open({
-        fight_id: FIGHT,
-        fight_scope_id: null,
-        world_id: WORLD,
-        character_id: CHARACTER,
-      })
-    ).rejects.toThrow(/fight_scope_id/)
-    expect(signed).toBeNull()
-  })
-
   test('two characters in the SAME world settle onto different latch shards', async () => {
     // The index follows the character id and nothing else: hold the world and the fight fixed, change only who
     // settles, and the picked shard must move. A scope-derived latch would hand both the same object.
     const settle_as = async (character_id) => {
       await dungeon_actions.settle_and_open({
         fight_id: FIGHT,
-        fight_scope_id: WORLD,
         run_pass_id: null,
         world_id: WORLD,
         character_id,
