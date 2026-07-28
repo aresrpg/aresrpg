@@ -60,8 +60,12 @@ export const matrix_rows = [
     { fighters: { [CASTER_ID]: { health: 88 } } },
     { target: 'self', effect: { target_filter: spell_effect.TF_ONLY_CASTER } },
   ),
+  // A punishment line SCALES with the caster's missing life (spell_effect.move:30, `spell_formula::
+  // punishment_base`): this fixture's caster sits at 100/200, so `base × (2·200 − 100)/200` = ×1.5 and the
+  // shared 12-damage line lands 18 — where a plain K_DAMAGE row lands 12. The old contract pinned 88 (the
+  // unscaled number), which is what the kind resolving as a plain damage line looked like.
   effect_row(spell_effect.K_PUNISHMENT_DAMAGE, {
-    fighters: { [ENEMY_ID]: { health: 88 } },
+    fighters: { [ENEMY_ID]: { health: 82 } },
   }),
   effect_row(
     spell_effect.K_HEAL,

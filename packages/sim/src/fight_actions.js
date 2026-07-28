@@ -15,6 +15,7 @@ import {
 } from './fight_state.js'
 import {
   erosion_amount,
+  flat_reflect,
   incoming_branch,
   punishment_bonuses,
   redirect_target,
@@ -316,23 +317,30 @@ export const apply_incoming_damage = (
     })
   }
 
-  const reflected =
-    attacker_id && attacker_id !== target_id
-      ? Math.floor((hit.damage_dealt * reflect_percent(original)) / 100)
-      : 0
-  if (attacker_id && reflected > 0) {
+  // The two reflect legs, in the chain's order (retro_effects.move `hit_after_inversion`): the FLAT
+  // K_REFLECT_DAMAGE rows return min(their sum, the incoming line), then every positive DAMAGE_REDIRECT row
+  // returns its percentage of the ACTUAL HP loss. Both fire only when a distinct attacker is known and the
+  // victim really lost HP, and both ride the raw sink so a reflect can never recurse into another reaction.
+  // The flat leg used to be missing entirely — the row landed, was rendered, and reflected nothing.
+  const reflected_amounts =
+    attacker_id && attacker_id !== target_id && hit.damage_dealt > 0
+      ? [
+          flat_reflect(original, branch.amount),
+          Math.floor((hit.damage_dealt * reflect_percent(original)) / 100),
+        ].filter(amount => amount > 0)
+      : []
+  for (const reflected of reflected_amounts) {
     const attacker = find_entity(next, attacker_id)
-    if (attacker?.health) {
-      const reflected_hit = apply_damage(next, attacker_id, reflected)
-      next = reflected_hit.state
-      extra_effects.push({
-        target_id: attacker_id,
-        damage: reflected_hit.damage_dealt,
-        new_health: Math.max(0, attacker.health - reflected_hit.damage_dealt),
-        killed: reflected_hit.killed,
-        status: 'DAMAGE_REFLECT',
-      })
-    }
+    if (!attacker?.health) break
+    const reflected_hit = apply_damage(next, attacker_id, reflected)
+    next = reflected_hit.state
+    extra_effects.push({
+      target_id: attacker_id,
+      damage: reflected_hit.damage_dealt,
+      new_health: Math.max(0, attacker.health - reflected_hit.damage_dealt),
+      killed: reflected_hit.killed,
+      status: 'DAMAGE_REFLECT',
+    })
   }
 
   return {
