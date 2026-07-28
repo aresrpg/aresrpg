@@ -4,6 +4,8 @@ import type { MarketplaceListing } from '../../types/chain'
 import { is_cosmetic_item } from '../../game/item_classification'
 import { EQUIPMENT_CATEGORIES, PET_CATEGORIES, RUNE_CATEGORIES } from '../../constants/item_categories'
 
+export { marketplace_purchase_total_mist } from '../../utils/marketplace_purchase'
+
 export const MARKETPLACE_LOT_SIZES = [1, 10, 100, 1000] as const
 export type MarketplaceLotSize = (typeof MARKETPLACE_LOT_SIZES)[number]
 
@@ -71,18 +73,6 @@ export function confirm_marketplace_lot_ask(
   const ask = marketplace_available_lot_ask(asks, address)
   if (ask) on_buy(ask)
   return ask
-}
-
-// The live universal Item policy is 1000bp with a stamped floor. royalty_rule::fee_amount takes the higher of
-// percentage and floor; the confirmation displays ask + this fee, which is the exact value split before signing.
-export function marketplace_purchase_total_mist(
-  ask_mist: bigint,
-  royalty_min_mist: bigint,
-  royalty_bp = 1000n
-): { royalty_mist: bigint; total_mist: bigint } {
-  const percentage = (ask_mist * royalty_bp) / 10_000n
-  const royalty_mist = percentage > royalty_min_mist ? percentage : royalty_min_mist
-  return { royalty_mist, total_mist: ask_mist + royalty_mist }
 }
 
 export type MarketplaceCategory =

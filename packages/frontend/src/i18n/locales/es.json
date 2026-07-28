@@ -605,6 +605,7 @@
       "gas_estimated": "Gas est.",
       "your_balance": "Tu saldo",
       "not_enough": "Insuficiente",
+      "insufficient_balance": "Saldo insuficiente",
       "reserved_for_you": "Reservado para ti",
       "signing": "Firmando...",
       "sign_in_wallet": "Firmar en la wallet",

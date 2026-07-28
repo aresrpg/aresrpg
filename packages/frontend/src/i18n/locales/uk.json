@@ -605,6 +605,7 @@
       "gas_estimated": "Газ (прибл.)",
       "your_balance": "Ваш баланс",
       "not_enough": "Недостатньо",
+      "insufficient_balance": "Недостатньо коштів",
       "reserved_for_you": "Зарезервовано для вас",
       "signing": "Підписування...",
       "sign_in_wallet": "Підписати у гаманці",

@@ -6,6 +6,10 @@ import { Loader2 } from 'lucide-react'
 
 import type { MarketplaceListing } from '../../types/chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
+import {
+  marketplace_purchase_balance_state,
+  type MarketplacePurchaseBalanceState,
+} from '../../utils/marketplace_purchase'
 
 import {
   confirm_marketplace_lot_ask,
@@ -19,6 +23,7 @@ export function LotPurchaseConfirmation({
   listing,
   size,
   royalty_min_mist,
+  purchase_state,
   busy,
   on_confirm,
   on_cancel,
@@ -26,6 +31,7 @@ export function LotPurchaseConfirmation({
   listing: MarketplaceListing
   size: MarketplaceLotSize
   royalty_min_mist: bigint
+  purchase_state: MarketplacePurchaseBalanceState
   busy: boolean
   on_confirm: () => void
   on_cancel: () => void
@@ -53,12 +59,16 @@ export function LotPurchaseConfirmation({
       <span className="flex-1 min-w-2" />
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || purchase_state !== 'ready'}
         onClick={on_confirm}
         className="btn-gold inline-flex items-center gap-1.5 px-3 py-1.5 text-[9px] tracking-[0.16em] uppercase disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 size={10} className="animate-spin" /> : null}
-        {t('marketplace.lots.confirm_buy')}
+        {t(
+          purchase_state === 'insufficient_balance'
+            ? 'marketplace.purchase.insufficient_balance'
+            : 'marketplace.lots.confirm_buy'
+        )}
       </button>
       <button
         type="button"
@@ -74,12 +84,14 @@ export function LotPurchaseConfirmation({
 export function StackableLotRows({
   listings,
   address,
+  balance_mist,
   busy,
   royalty_min_mist,
   on_buy,
 }: {
   listings: MarketplaceListing[]
   address: string | null
+  balance_mist: bigint | null
   busy: boolean
   royalty_min_mist: bigint | null
   on_buy: (listing: MarketplaceListing) => void
@@ -96,6 +108,9 @@ export function StackableLotRows({
         {offers.map((offer) => {
           const ask = marketplace_available_lot_ask(offer.asks, address)
           const is_armed = armed_size === offer.size
+          const purchase_state = ask
+            ? marketplace_purchase_balance_state(balance_mist, BigInt(ask.price_mist), royalty_min_mist)
+            : 'unknown'
           return (
             <div
               key={offer.size}
@@ -106,17 +121,21 @@ export function StackableLotRows({
               <button
                 data-marketplace-buy-button
                 type="button"
-                disabled={!ask || busy || royalty_min_mist == null}
+                disabled={!ask || busy || purchase_state !== 'ready'}
                 aria-expanded={is_armed}
-                onClick={() => set_armed_size(offer.size)}
+                onClick={() => {
+                  if (purchase_state === 'ready') set_armed_size(offer.size)
+                }}
                 className="btn-gold flex flex-col items-center justify-center gap-1 min-h-16 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <span className="text-[11px] tracking-[0.18em] uppercase">×{offer.size}</span>
                 <span className="text-[9px] tracking-[0.08em] tabular-nums">
                   {ask
-                    ? t('marketplace.lots.cheapest_price', {
-                        price: format_mist_to_sui(BigInt(ask.price_mist), 2),
-                      })
+                    ? purchase_state === 'insufficient_balance'
+                      ? t('marketplace.purchase.insufficient_balance')
+                      : t('marketplace.lots.cheapest_price', {
+                          price: format_mist_to_sui(BigInt(ask.price_mist), 2),
+                        })
                     : t('marketplace.lots.none_listed')}
                 </span>
               </button>
@@ -130,6 +149,11 @@ export function StackableLotRows({
           listing={armed_ask}
           size={armed.size}
           royalty_min_mist={royalty_min_mist}
+          purchase_state={marketplace_purchase_balance_state(
+            balance_mist,
+            BigInt(armed_ask.price_mist),
+            royalty_min_mist
+          )}
           busy={busy}
           on_confirm={() => confirm_marketplace_lot_ask(armed.asks, address, on_buy)}
           on_cancel={() => set_armed_size(null)}

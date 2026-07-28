@@ -15,7 +15,8 @@ import type { MarketState } from './marketplace_chain'
 // unconditionally touches `window.location` — stub the DOM surface FIRST (house pattern: browser_globals.js,
 // the same idiom embed_voxel_fight_camera.test.js uses for its own window-touching module under bun test).
 const restore_browser_globals = install_browser_globals()
-const { reduce, empty_market_state } = await import('./marketplace_chain')
+const { use_auth } = await import('../auth')
+const { reduce, empty_market_state, use_marketplace_chain } = await import('./marketplace_chain')
 afterAll(restore_browser_globals)
 
 const listing = (over: Partial<MarketplaceListing> & { id: string; price_mist: string }): MarketplaceListing =>
@@ -153,5 +154,34 @@ describe('reduce — non-pending rows and empty state', () => {
     const st = empty_market_state()
     expect(st.listings).toEqual([])
     expect(st.loaded_once).toBe(false)
+  })
+})
+
+describe('marketplace purchase balance precheck', () => {
+  test('an insufficient cached balance returns before item or character purchase work starts', () => {
+    const previous_auth = use_auth.getState()
+    const ask = listing({ id: 'priced', kiosk_id: 'kiosk', price_mist: '1000000000' })
+    use_auth.setState({ address: '0xbuyer', sui_balance_mist: 0n })
+    use_marketplace_chain.setState({
+      ...empty_market_state(),
+      raw: [ask],
+      listings: [ask],
+      busy: false,
+    })
+
+    use_marketplace_chain.getState().submit_buy(ask)
+    expect(use_marketplace_chain.getState().busy).toBe(false)
+    expect(use_marketplace_chain.getState().pending).toEqual({})
+    expect(ids(use_marketplace_chain.getState())).toEqual(['priced'])
+
+    use_marketplace_chain
+      .getState()
+      .submit_buy_character({ item_id: 'character', kiosk_id: 'kiosk', price_mist: '1000000000' })
+    expect(use_marketplace_chain.getState().busy).toBe(false)
+
+    use_auth.setState({
+      address: previous_auth.address,
+      sui_balance_mist: previous_auth.sui_balance_mist,
+    })
   })
 })
