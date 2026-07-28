@@ -183,7 +183,8 @@ describe('glyph duration ticks on the CHAIN cadence: player turn-ends only (#154
     for (const row of mob_ends)
       expect(row.turns_remaining).toBe(
         // the reading at the previous PLAYER turn-end: 3 minus the player turn-ends seen so far
-        3 - ledger.slice(0, ledger.indexOf(row)).filter(r => r.is_player).length,
+        3 -
+          ledger.slice(0, ledger.indexOf(row)).filter(r => r.is_player).length,
       )
 
     // Each PLAYER turn-end spends exactly one turn of the budget (cast.move:1708 via turns.move:167).
