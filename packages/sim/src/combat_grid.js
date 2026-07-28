@@ -39,6 +39,8 @@ const abs_diff = (a, b) => (a > b ? a - b : b - a)
 export const cell_x = cell => cell % GRID_W
 export const cell_y = cell => Math.floor(cell / GRID_W)
 export const encode = (x, y) => y * GRID_W + x
+/** Encoded cell → `{x, y}` — the exact inverse of `encode`. */
+export const decode = cell => ({ x: cell_x(cell), y: cell_y(cell) })
 export const in_grid = cell => cell < GRID_CELLS
 export const grid_cells = () => GRID_CELLS
 
