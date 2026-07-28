@@ -2,7 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
-import { receipt_final_hp, receipt_minted_outcomes } from './fight_result_receipt.js'
+import {
+  loot_from_minted_rows,
+  loot_from_rolled,
+  receipt_final_hp,
+  receipt_minted_outcomes,
+} from './fight_result_receipt.js'
 
 const event = (name, parsedJson) => ({ type: `0xengine::fight_events::${name}`, parsedJson })
 const decode = (row) => row?.parsedJson ?? null
@@ -42,6 +47,55 @@ describe('receipt_minted_outcomes — every same-wallet dungeon seat keeps its e
       ['leader', 'outcome-leader'],
       ['alt-a', 'outcome-a'],
       ['alt-b', 'outcome-b'],
+    ])
+  })
+})
+
+describe('fight loot projection — live icon slugs are captured before FightReport renders (#1522)', () => {
+  const template_id = `0x${'1522'.repeat(16)}`
+  const live_templates = new Map([
+    [
+      template_id,
+      {
+        item_type: 'post_receipt_starfell_shard',
+        name: 'Starfell Shard',
+      },
+    ],
+  ])
+
+  it('snapshots the live id → slug pair on an aggregate FightResult row', () => {
+    expect(loot_from_rolled([{ item_template: template_id, qty: 2 }], live_templates)).toEqual([
+      {
+        template_id,
+        item_type: 'post_receipt_starfell_shard',
+        icon_slug: 'post_receipt_starfell_shard',
+        name: 'Starfell Shard',
+        amount: 2,
+      },
+    ])
+  })
+
+  it('keeps the live slug when exact ItemMinted rows replace the aggregate projection', () => {
+    expect(
+      loot_from_minted_rows([
+        {
+          id: '0xminted-item',
+          template_id,
+          item_type: 'resource',
+          icon_slug: live_templates.get(template_id).item_type,
+          name: 'Starfell Shard',
+          amount: 1,
+        },
+      ])
+    ).toEqual([
+      {
+        item_id: '0xminted-item',
+        template_id,
+        item_type: 'resource',
+        icon_slug: 'post_receipt_starfell_shard',
+        name: 'Starfell Shard',
+        amount: 1,
+      },
     ])
   })
 })

@@ -79,7 +79,13 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
   const template_id = `0x${'e13d'.repeat(16)}`
   // Chain-truth shape (live /v1, 2026-07-25): `item_type` is the AUTHORED art slug `obsidian_core`;
   // the generic family word 'resource' is the row's `category`. The two are never the same field.
-  const entry = { template_id, item_type: 'obsidian_core', name: 'Obsidian Core', amount: 2 }
+  const entry = {
+    template_id,
+    item_type: 'obsidian_core',
+    icon_slug: 'obsidian_core',
+    name: 'Obsidian Core',
+    amount: 2,
+  }
   const items = [
     {
       id: '0xitem',
@@ -102,10 +108,8 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
     ],
   ])
 
-  test('a published RESOURCE uses its exact render slug, never the generic resource box', () => {
-    const out = resolve_loot_tile(entry, items, template_map, undefined, t, {
-      [template_id]: 'obsidian_core',
-    })
+  test('a live-snapshotted RESOURCE uses its exact render slug, never the generic resource box', () => {
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t)
 
     expect(out.icon).toBe('obsidian_core')
     expect(out.icon).not.toBe('resource')
@@ -116,9 +120,7 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
   // onchain_template_to_detail_props seam. A genuine template RANGE describes what the drop COULD have
   // rolled, not what it did, so it must never render on this surface.
   test('a genuine template range is suppressed on the victory tile — a fresh drop is an owned instance (#437)', () => {
-    const out = resolve_loot_tile(entry, items, template_map, undefined, t, {
-      [template_id]: 'obsidian_core',
-    })
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t)
 
     expect(out.detail.stats).toEqual({})
   })
@@ -136,9 +138,7 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
         },
       ],
     ])
-    const out = resolve_loot_tile(entry, items, fixed_template_map, undefined, t, {
-      [template_id]: 'obsidian_core',
-    })
+    const out = resolve_loot_tile(entry, items, fixed_template_map, undefined, t)
 
     expect(out.detail.stats).toEqual({})
   })
@@ -154,7 +154,6 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
       template_map,
       undefined,
       t,
-      { [template_id]: 'obsidian_core' },
       { vitality: 32775 },
     )
 
@@ -164,15 +163,15 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
   })
 
   test('an aggregate receipt row without a concrete item id never guesses a sibling roll', () => {
-    const out = resolve_loot_tile(entry, items, template_map, undefined, t, { [template_id]: 'obsidian_core' })
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t)
 
     expect(out.item_id).toBeNull()
   })
 
-  test('a RESOURCE with no published-slug mapping still resolves its itemType (render layer glyphs on 404)', () => {
+  test('a RESOURCE with no snapshot slug still resolves its itemType (render layer glyphs on 404)', () => {
     // chain_icon_slug is the itemType itself, so a missing catalog mapping costs nothing; ItemImage's
     // 404 fallback owns the unpublished-art glyph (obsidian_core.png is genuinely not uploaded yet).
-    const out = resolve_loot_tile(entry, items, template_map, undefined, t, {})
+    const out = resolve_loot_tile({ ...entry, icon_slug: undefined }, items, template_map, undefined, t)
     expect(out.icon).toBe('obsidian_core')
     expect(out.category).toBe('resource')
   })

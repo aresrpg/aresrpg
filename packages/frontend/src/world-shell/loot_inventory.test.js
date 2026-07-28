@@ -49,6 +49,7 @@ describe('settle → inventory reducer seam', () => {
         item_category: 'resource',
         item_set: '',
         item_type: 'razkin_hide',
+        icon_slug: 'razkin_hide',
         level: 0,
         amount: 2,
         kiosk_id: '0xkiosk',
