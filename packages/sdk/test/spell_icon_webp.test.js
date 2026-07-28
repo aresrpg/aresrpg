@@ -13,18 +13,18 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { ASSET_BASE, configure_walrus_assets, item_icon_url, spell_icon_url } from '../src/jobs.js'
+import { ASSET_BASE, configure_assets, item_icon_url, spell_icon_url } from '../src/jobs.js'
 
 const HOST = 'https://assets.aresrpg.world'
 
 afterEach(() => {
   // bun shares this module across the whole run — explicitly unpublish, never leak `spell` forward.
-  configure_walrus_assets({ aggregator: HOST, classes: { spell: {}, item: {} } })
+  configure_assets({ aggregator: HOST, classes: { spell: {}, item: {} } })
 })
 
 describe('#884 — spell icons resolve to the served .webp', () => {
   test('the asset host serves {host}/spells/{icon}.webp — the 404-ing .png shape is gone', () => {
-    configure_walrus_assets({ aggregator: HOST, classes: { spell: { published: true } } })
+    configure_assets({ aggregator: HOST, classes: { spell: { published: true } } })
     expect(spell_icon_url('tomoda_lashline')).toBe(`${HOST}/spells/tomoda_lashline.webp`)
     expect(spell_icon_url('senshi_warcleave')).toBe(`${HOST}/spells/senshi_warcleave.webp`)
     expect(spell_icon_url({ icon: 'rojin_greed' })).toBe(`${HOST}/spells/rojin_greed.webp`)
@@ -32,12 +32,12 @@ describe('#884 — spell icons resolve to the served .webp', () => {
 
   test('the host-free fallback keeps the SAME extension — one home for the spell file shape', () => {
     // Explicit, never ambient: an earlier FILE in the same bun process may have published `spell`.
-    configure_walrus_assets({ aggregator: HOST, classes: { spell: {} } })
+    configure_assets({ aggregator: HOST, classes: { spell: {} } })
     expect(spell_icon_url('tomoda_lashline')).toBe(`${ASSET_BASE}/spells/tomoda_lashline.webp`)
   })
 
   test('no `_hd` variant can be minted — spells are 128px single-size by contract', () => {
-    configure_walrus_assets({ aggregator: HOST, classes: { spell: { published: true } } })
+    configure_assets({ aggregator: HOST, classes: { spell: { published: true } } })
     // The old `{ hd: true }` option is DELETED: a stale caller passing it gets the base icon, never a
     // `_hd` URL the store has never served.
     // @ts-expect-error — the option no longer exists; this is the regression, pinned.
@@ -45,7 +45,7 @@ describe('#884 — spell icons resolve to the served .webp', () => {
   })
 
   test('items are untouched — item art is still .png, hd variant included', () => {
-    configure_walrus_assets({ aggregator: HOST, classes: { item: { published: true } } })
+    configure_assets({ aggregator: HOST, classes: { item: { published: true } } })
     expect(item_icon_url('longsword')).toBe(`${HOST}/items/longsword.png`)
     expect(item_icon_url('longsword', { hd: true })).toBe(`${HOST}/items/longsword_hd.png`)
   })

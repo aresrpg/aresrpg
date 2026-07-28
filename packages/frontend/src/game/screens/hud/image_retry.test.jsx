@@ -9,7 +9,7 @@
 
 import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'
-import { configure_walrus_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { SpellArt } from './SpellDetail.jsx'
 import { ItemIcon } from './ItemIcon.jsx'
@@ -24,7 +24,7 @@ const ITEM_SRC = `${AGGREGATOR}/items/aberrant_faceguard.png`
 const ITEM_HD_SRC = `${AGGREGATOR}/items/aberrant_faceguard_hd.png`
 
 const configure = () =>
-  configure_walrus_assets({
+  configure_assets({
     aggregator: AGGREGATOR,
     classes: { spell: { published: true }, item: { published: true } },
   })

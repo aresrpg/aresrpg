@@ -15,7 +15,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { create_customizable_texture } from './customizable-texture.js'
 
@@ -28,7 +28,7 @@ import { create_customizable_texture } from './customizable-texture.js'
 // through the SAME seam as the pedestal — one home for "class GLB → its live URL".
 /** @param {string | null | undefined} local_url @returns {string | null | undefined} */
 export const character_glb_url = (local_url) =>
-  local_url ? (walrus_asset_url('character', local_url.split('/').pop() ?? '') ?? local_url) : local_url
+  local_url ? (asset_url('character', local_url.split('/').pop() ?? '') ?? local_url) : local_url
 
 // Class id -> per-gender GLB urls (public/sprites/characters, the same bundled-asset convention as the mob
 // GLBs in /sprites/mobs/models). The 4 RIGGED classes ship a model (senshi/shugo/tomoda/yajin, each male +

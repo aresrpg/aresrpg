@@ -14,7 +14,7 @@
 // each honestly and a remount re-asks. An empty airdrop is a fact the host must state, never one we infer
 // from a failure (the cache law).
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 /** The published asset class carrying the airdrop showcase manifest. */
 export const AIRDROP_SET_CLASS = 'airdrop'
@@ -122,7 +122,7 @@ export function parse_airdrop_set(body: unknown, manifest_url: string): AirdropS
 export async function load_airdrop_set({
   fetch_impl = globalThis.fetch,
 }: { fetch_impl?: typeof fetch } = {}): Promise<AirdropSetLoad> {
-  const url = walrus_asset_url(AIRDROP_SET_CLASS, `${AIRDROP_SET_CLASS}.json`)
+  const url = asset_url(AIRDROP_SET_CLASS, `${AIRDROP_SET_CLASS}.json`)
   if (!url) return { status: 'error', set: EMPTY_SET }
   try {
     const response = await fetch_impl(url)

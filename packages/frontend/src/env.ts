@@ -8,7 +8,7 @@ const env = (import.meta as unknown as { env: Record<string, string> }).env ?? {
 // Assets resolve against the app's own origin under public/assets/
 // (e.g. /assets/items/<id>.png). Classes published on the MinIO asset host (item/spell/music/mob/character/
 // cosmetic — the asset_manifest.json classes, #650) resolve THROUGH the SDK builders (item_icon_url /
-// spell_icon_url / walrus_asset_url) to that host FIRST; this base is only the fallback for a class/file
+// spell_icon_url / asset_url) to that host FIRST; this base is only the fallback for a class/file
 // absent from the manifest (today: vanilla), whose files must live in public/assets/ or degrade honestly to
 // a glyph. No environment override can reintroduce a retired/dead remote host; the asset manifest is the
 // single remote-base source.

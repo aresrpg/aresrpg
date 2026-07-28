@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { beforeEach, expect, test } from 'bun:test'
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { load_asset_manifest, reset_asset_manifest_for_test, subscribe } from './asset_manifest'
 
@@ -56,12 +56,12 @@ test('a failed boot fetch never caches absence: the manifest recovers WITHOUT a 
     schedule: scheduler.schedule,
   })
 
-  const poisoned = walrus_asset_url(CLASS, FILE) // right after the failed boot — the resulting blank tile
-  const after_remount = walrus_asset_url(CLASS, FILE) // "switch page" re-consults the resolver — still empty
+  const poisoned = asset_url(CLASS, FILE) // right after the failed boot — the resulting blank tile
+  const after_remount = asset_url(CLASS, FILE) // "switch page" re-consults the resolver — still empty
 
   await scheduler.drain() // the background retry fires (time passes, NOT a refresh) and the edge is warm
 
-  const recovered = walrus_asset_url(CLASS, FILE)
+  const recovered = asset_url(CLASS, FILE)
   unsubscribe()
 
   expect({ ok, poisoned, after_remount, recovered, fired: fired.length, calls }).toEqual({

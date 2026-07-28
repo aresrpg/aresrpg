@@ -8,7 +8,7 @@
 // in this seam (#553's owner ruling: OWNERSHIP facts come from chain state, never a peer hint).
 
 import { afterEach, describe, expect, it } from 'bun:test'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
 
@@ -28,9 +28,9 @@ const TEMPLATES = new Map([
 ])
 
 // mob class config for pet_of — SAME registration pet_companion_resolver.test.js already makes (merge-only,
-// process-shared per jobs.js's reset_walrus_assets_for_test doc — the identical values keep this idempotent
+// process-shared per jobs.js's reset_assets_for_test doc — the identical values keep this idempotent
 // regardless of bun test's file load order).
-configure_walrus_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
+configure_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
 const mob_url = (glb) => `https://cdn.test/walrus/models/mobs/${glb}.glb`
 
 // A captured/real `/v1/characters` row shape (views.js handle_characters): `worn` is keyed by CATEGORY, each

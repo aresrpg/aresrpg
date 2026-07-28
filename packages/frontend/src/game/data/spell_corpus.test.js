@@ -4,7 +4,7 @@
 // blob must DEGRADE LOUDLY — one console.error naming the missing asset, the cache left empty AND retryable —
 // never a throw. Mirrors game/data/mob_catalog.js and resolve_seed_manifest (#94).
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
-import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
+import { reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { get_spell_corpus, load_spell_corpus, set_spell_corpus_for_test } from './spell_corpus.js'
 
@@ -12,11 +12,11 @@ import { get_spell_corpus, load_spell_corpus, set_spell_corpus_for_test } from '
 // shares that module process-wide, sorted by path. Reset it before every test so an earlier-sorted file
 // that configured the real manifest (e.g. components/item_hover_tooltip.test.tsx) can never make
 // 'spell_corpus' look published here.
-beforeEach(() => reset_walrus_assets_for_test())
+beforeEach(() => reset_assets_for_test())
 afterEach(() => set_spell_corpus_for_test()) // reset module state between tests
 
 describe('spell corpus runtime loader (issue #106)', () => {
-  test('absent blob (unpublished — walrus_asset_url → null) → ONE console.error, cache stays [], never throws', async () => {
+  test('absent blob (unpublished — asset_url → null) → ONE console.error, cache stays [], never throws', async () => {
     set_spell_corpus_for_test() // empty + resets the once-per-session warn latch
     const spy = spyOn(console, 'error').mockImplementation(() => {})
     // 'spell_corpus' is not a configured asset class in the offline test manifest, so the URL resolves null —

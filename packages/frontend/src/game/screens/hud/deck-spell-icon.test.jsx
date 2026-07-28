@@ -13,7 +13,7 @@
 import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { configure_walrus_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { SpellSocket } from './deck-spell-socket.jsx'
 import { IMAGE_RETRY_DELAYS_MS } from './image_retry.js'
@@ -24,7 +24,7 @@ const AGGREGATOR = 'https://hud-retry.example'
 // renders the RESOLVED url and the retry ladder re-attempts it.
 const url_for = (icon) => spell_icon_url(icon)
 
-const configure = () => configure_walrus_assets({ aggregator: AGGREGATOR, classes: { spell: { published: true } } })
+const configure = () => configure_assets({ aggregator: AGGREGATOR, classes: { spell: { published: true } } })
 
 // class-A's starter (whatever class was active first) vs a senshi level-1 spell (Warcleave — one of the
 // THREE level-1 senshi starters that match the "slots 1-3" report; name_key = 'warcleave').

@@ -17,7 +17,7 @@ import { AnimationMixer, Box3, Group, Vector3 } from 'three'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 import { game_log } from '../core/log.js'
 
 const VARIANTS = /** @type {Record<string, string>} */ ({
@@ -46,7 +46,7 @@ export function create_sky_dragon({ engine, center, variant }) {
   ).toLowerCase()
   const local = VARIANTS[key] ?? VARIANTS.void
   // Walrus-first (the dragon GLBs live in the `mob` quilt), bundled /sprites fallback — progressive migration.
-  const url = walrus_asset_url('mob', local.split('/').pop() ?? '') ?? local
+  const url = asset_url('mob', local.split('/').pop() ?? '') ?? local
   const [cx, cyBase, cz] = center
   const cy = cyBase + ALTITUDE
 

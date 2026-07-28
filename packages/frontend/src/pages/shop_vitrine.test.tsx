@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
 
@@ -19,7 +19,7 @@ import {
 } from './shop_vitrine'
 
 const CDN = 'https://cdn.aresrpg.world'
-configure_walrus_assets({ aggregator: CDN, classes: { shop_render: { published: true } } })
+configure_assets({ aggregator: CDN, classes: { shop_render: { published: true } } })
 const shop_url = (file: string) => `${CDN}/shop/${file}`
 
 const test_i18n = i18next.createInstance()

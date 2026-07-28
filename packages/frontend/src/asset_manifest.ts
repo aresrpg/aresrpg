@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 // ── THE ONE HOME for loading the Walrus asset manifest (regression: icons intermittently required a
 // full refresh to appear, or vanished on page switch). ──────────────────────────
-// The resolver config (@aresrpg/sdk/jobs walrus_assets.classes) is process-wide MODULE STATE seeded from
+// The resolver config (@aresrpg/sdk/jobs assets_config.classes) is process-wide MODULE STATE seeded from
 // /asset_manifest.json. A single failed/partial boot fetch used to leave that state EMPTY forever: every
 // icon resolved to null → the /assets fallback 404'd → blank tiles app-wide, and ONLY a full page reload
 // (a fresh boot = a fresh fetch) recovered. That is a CACHED ABSENCE — banned by the house law (empty /
@@ -49,7 +49,7 @@ export function asset_manifest_status(): AssetManifestStatus {
 }
 
 function apply_manifest(manifest: unknown): void {
-  configure_walrus_assets(manifest as Parameters<typeof configure_walrus_assets>[0])
+  configure_assets(manifest as Parameters<typeof configure_assets>[0])
   state.status = 'ready'
   state.version += 1
   notify()

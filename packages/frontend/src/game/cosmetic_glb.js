@@ -12,7 +12,7 @@
 // needed (mirrors `?dragon=1` / `?biome=` and the existing `__force_mount` DEV hooks).
 
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
-import { canonical_walrus_asset_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { canonical_asset_url, asset_url } from '@aresrpg/sdk/jobs'
 
 import { ASSETS_URL } from '../env'
 import { get_encyclopedia } from '../rpc/client'
@@ -130,7 +130,7 @@ export function models_dev_url(spec) {
 export function cosmetic_glb_url(identifier) {
   if (!identifier) return null
   // Walrus (boot manifest) first — the decentralized home — else the CDN (progressive migration).
-  return walrus_asset_url('cosmetic', `${identifier}.glb`) ?? `${ASSETS_URL}/cosmetics/${identifier}.glb`
+  return asset_url('cosmetic', `${identifier}.glb`) ?? `${ASSETS_URL}/cosmetics/${identifier}.glb`
 }
 
 /**
@@ -143,7 +143,7 @@ export function worn_dev_url(spec) {
   if (!spec) return null
   const raw = String(spec).trim()
   if (!raw) return null
-  const walrus_url = canonical_walrus_asset_url(raw)
+  const walrus_url = canonical_asset_url(raw)
   if (walrus_url) return walrus_url
   if (/^(https?:)?\//i.test(raw)) return raw // already a URL / absolute served path
   const rel = raw.replace(/^\/+/, '')
@@ -352,7 +352,7 @@ export function resolve_mount(character, search) {
       typeof explicit === 'string' && explicit.startsWith('/') && !explicit.startsWith('//') ? explicit : null
     // Runtime/on-chain refs are untrusted: a Walrus blob path is re-homed onto the manifest CDN, a same-origin
     // authoring path stays local, and every other absolute host is discarded in favour of the template convention.
-    const glb = canonical_walrus_asset_url(explicit) || explicit_local || cosmetic_glb_url(template_id)
+    const glb = canonical_asset_url(explicit) || explicit_local || cosmetic_glb_url(template_id)
     return { available: true, glb_url: glb, source: 'equip' }
   }
   // #594 — no dedicated mount: the active pet (if any) IS a valid ride target.

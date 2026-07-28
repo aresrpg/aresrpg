@@ -5,7 +5,7 @@
 // confirmed via git ls-tree on edge/master) and is deleted.
 
 import { afterAll, expect, test } from 'bun:test'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { set_catalog_for_test } from './mob_catalog.js'
 import { get_mob_icon_url } from './mobs.js'
@@ -16,13 +16,13 @@ const mob = { name: 'Alley Bunny' }
 
 test('mob icons resolve directly through the asset host without a manifest class', () => {
   set_catalog_for_test({ alley_bunny: { appearance: null, glb: 'hy_bunny' } })
-  configure_walrus_assets({ aggregator: 'https://agg.example' })
+  configure_assets({ aggregator: 'https://agg.example' })
   expect(get_mob_icon_url(mob)).toBe('https://agg.example/mobs/alley_bunny.png')
 })
 
 test('the asset host serves thumb + hd mob icons', () => {
   set_catalog_for_test({ alley_bunny: { appearance: null, glb: 'hy_bunny' } })
-  configure_walrus_assets({ aggregator: 'https://agg.example' })
+  configure_assets({ aggregator: 'https://agg.example' })
   expect(get_mob_icon_url(mob)).toBe('https://agg.example/mobs/alley_bunny.png')
   expect(get_mob_icon_url(mob, { hd: true })).toBe('https://agg.example/mobs/alley_bunny_hd.png')
 })
@@ -37,7 +37,7 @@ test('the mob icon resolves by CATALOG KEY, never the GLB basename (#1013)', () 
   set_catalog_for_test({
     broodfather: { appearance: 'Scarak_Broodmother', glb: 'hy_scarak_broodmother_model_default' },
   })
-  configure_walrus_assets({ aggregator: 'https://agg.example' })
+  configure_assets({ aggregator: 'https://agg.example' })
   expect(get_mob_icon_url({ name: 'Broodfather' })).toBe('https://agg.example/mobs/broodfather.png')
   expect(get_mob_icon_url({ name: 'Broodfather' }, { hd: true })).toBe('https://agg.example/mobs/broodfather_hd.png')
   // the variant branch (a legacy roster id that keys the catalog directly) resolves by that same key
@@ -46,6 +46,6 @@ test('the mob icon resolves by CATALOG KEY, never the GLB basename (#1013)', () 
 
 test('no catalog match resolves to null', () => {
   set_catalog_for_test({})
-  configure_walrus_assets({ aggregator: 'https://agg.example' })
+  configure_assets({ aggregator: 'https://agg.example' })
   expect(get_mob_icon_url({ name: 'Nonexistent Thing' })).toBeNull()
 })

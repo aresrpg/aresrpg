@@ -33,7 +33,7 @@ import fixture from './world_corpus.fixture.json'
 afterEach(() => set_world_corpus_for_test()) // reset module state (pristine, retryable) between tests
 
 describe('world corpus runtime loader (#196)', () => {
-  test('absent class (unpublished — walrus_asset_url → null) → ONE console.error, zero worlds, never throws', async () => {
+  test('absent class (unpublished — asset_url → null) → ONE console.error, zero worlds, never throws', async () => {
     set_world_corpus_for_test() // pristine + resets the once-per-session degrade latch
     const spy = spyOn(console, 'error').mockImplementation(() => {})
     // 'world_corpus' is not a configured asset class in the offline test manifest, so the URL resolves null —

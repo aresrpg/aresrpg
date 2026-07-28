@@ -8,7 +8,7 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { ASSET_BASE, configure_walrus_assets, item_icon_url, spell_icon_url } from '../src/jobs.js'
+import { ASSET_BASE, configure_assets, item_icon_url, spell_icon_url } from '../src/jobs.js'
 
 // Host-free origin-relative fallback (the external asset CDN host is DELETED). `item`
 // resolves here whenever its class isn't published — every item resolves to this /assets public path.
@@ -19,11 +19,11 @@ const AGG = 'https://cdn.aresrpg.world'
 // shares ONE process, and components/item_hover_tooltip.test.tsx loads the REAL public/asset_manifest.json
 // elsewhere in that run, which publishes `item` — this file's baseline is the unpublished CDN-fallback state
 // regardless of what ran before it (order-independence-gate.sh is the tooth for this exact class of leak).
-configure_walrus_assets({ aggregator: AGG, classes: { item: {}, cosmetic_icon: {} } })
+configure_assets({ aggregator: AGG, classes: { item: {}, cosmetic_icon: {} } })
 
 // Reset the module-global resolver config to the shipped default after every test (no leakage across tests).
 afterEach(() => {
-  configure_walrus_assets({ aggregator: AGG, classes: { item: {}, cosmetic_icon: {} } })
+  configure_assets({ aggregator: AGG, classes: { item: {}, cosmetic_icon: {} } })
 })
 
 describe('item_icon_url — CDN fallback (no class published)', () => {
@@ -48,7 +48,7 @@ describe('item_icon_url — CDN fallback (no class published)', () => {
   })
 
   test('an authored cosmetic identifier uses the cosmetic_icon class through the same resolver', () => {
-    configure_walrus_assets({ aggregator: AGG, classes: { cosmetic_icon: { published: true } } })
+    configure_assets({ aggregator: AGG, classes: { cosmetic_icon: { published: true } } })
     // cosmetic_icon shares the `items` family with `item` (#650 — a cosmetic's 2D icon IS an item icon;
     // only its AUTHORED slug differs from the chain's generic item_type).
     expect(item_icon_url('cape_lorito-agility', { asset_class: 'cosmetic_icon' })).toBe(
@@ -66,55 +66,55 @@ describe('item_icon_url — CDN fallback (no class published)', () => {
 
 describe('item_icon_url — the asset host (#650)', () => {
   test('a published item class switches to the asset-host shape', () => {
-    configure_walrus_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
     expect(item_icon_url('longsword')).toBe(`${AGG}/items/longsword.png`)
   })
 
   test('hd keeps the _hd identifier under the asset host', () => {
-    configure_walrus_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
     expect(item_icon_url('mace', { hd: true })).toBe(`${AGG}/items/mace_hd.png`)
   })
 
   test('the asset-host identifier matches the on-chain Item Display pattern items/<item_type>.png', () => {
     // item.move Display image_url = ${host}/items/{item_type}.png — app + wallet identical (#650).
-    configure_walrus_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
     const url = item_icon_url({ icon: 'spellbook' })
     expect(url.endsWith('/spellbook.png')).toBe(true)
     expect(url).toContain('/items/')
   })
 
   test('aggregator override strips a trailing slash', () => {
-    configure_walrus_assets({ aggregator: 'https://agg.example/', classes: { item: { published: true } } })
+    configure_assets({ aggregator: 'https://agg.example/', classes: { item: { published: true } } })
     expect(item_icon_url('axe')).toBe('https://agg.example/items/axe.png')
   })
 
   test('un-publishing the class (empty object) falls back to the CDN — progressive migration', () => {
-    configure_walrus_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
     expect(item_icon_url('club')).toContain(AGG)
-    configure_walrus_assets({ aggregator: AGG, classes: { item: {} } })
+    configure_assets({ aggregator: AGG, classes: { item: {} } })
     expect(item_icon_url('club')).toBe(`${CDN}/club.png`)
   })
 
   test('null key still short-circuits to null under a published class', () => {
-    configure_walrus_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
     expect(item_icon_url(null)).toBeNull()
   })
 })
 
 describe('aggregator trailing-slash strip — linear time (js/polynomial-redos)', () => {
-  // CodeQL flagged /\/+$/ on the caller/manifest-supplied aggregator in configure_walrus_assets: that regex
+  // CodeQL flagged /\/+$/ on the caller/manifest-supplied aggregator in configure_assets: that regex
   // backtracks quadratically on adversarial slash runs (measured ~3.1s at n=100k under Bun/JSC). The strip
   // must be linear — microseconds at any n.
   const HOSTILE = `https://agg.example${'/'.repeat(100_000)}x`
 
-  test('configure_walrus_assets on a 100k-slash-run aggregator stays under 500ms', () => {
+  test('configure_assets on a 100k-slash-run aggregator stays under 500ms', () => {
     const t0 = performance.now()
-    configure_walrus_assets({ aggregator: HOSTILE })
+    configure_assets({ aggregator: HOSTILE })
     expect(performance.now() - t0).toBeLessThan(500)
   })
 
   test('the strip keeps the old /\\/+$/ semantics — one trailing slash-run removed, nothing else', () => {
-    configure_walrus_assets({ classes: { item: { published: true } } })
+    configure_assets({ classes: { item: { published: true } } })
     for (const input of [
       'https://agg.example/',
       'https://agg.example///',
@@ -123,7 +123,7 @@ describe('aggregator trailing-slash strip — linear time (js/polynomial-redos)'
       'https://agg.example//x/',
       '///',
     ]) {
-      configure_walrus_assets({ aggregator: input })
+      configure_assets({ aggregator: input })
       // the retired regex is the oracle — safe here, these inputs are tiny
       const expected = input.replace(/\/+$/, '')
       expect(item_icon_url('axe')).toBe(`${expected}/items/axe.png`)
@@ -142,7 +142,7 @@ describe('ASSET_BASE — host-free fallback (the external asset CDN host is DELE
   test('item AND spell fallback urls are host-free and derive from ASSET_BASE', () => {
     // No class published here ⇒ both fall back to the relative base (item has no published class in prod
     // until the manifest lands either).
-    configure_walrus_assets({ classes: { item: {}, spell: {} } })
+    configure_assets({ classes: { item: {}, spell: {} } })
     expect(item_icon_url('longsword')).toBe(`${ASSET_BASE}/items/longsword.png`)
     // Spells are .webp and single-size (#884) — the fallback keeps the family's own file shape.
     expect(spell_icon_url('ikari_haki')).toBe(`${ASSET_BASE}/spells/ikari_haki.webp`)

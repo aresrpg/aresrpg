@@ -28,7 +28,7 @@
 // The chain stays the source of truth for WHICH worlds are live: the worlds tab lists /v1's rows and
 // joins THIS for their display knowledge (a /v1 world absent here still renders, honestly degraded).
 import { create } from 'zustand'
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { is_object_id, seed_manifest } from '../../content/seed_manifest'
 import jobs_data from '../../data/jobs.json'
@@ -412,13 +412,13 @@ const degrade = (why: string): void => {
 /**
  * Fetch the published blob once and cache its derivation. Non-blocking at boot (the app mounts while it
  * resolves; the encyclopedia fills in on arrival — the worlds tab re-renders when its /v1 list settles).
- * Loud no-op when the manifest has no `world_corpus` row yet (walrus_asset_url → null), the fetch fails, or
+ * Loud no-op when the manifest has no `world_corpus` row yet (asset_url → null), the fetch fails, or
  * the blob joins to nothing — leaving the cache empty and RETRYABLE (never a frozen absence), never a throw.
  * Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  */
 export async function load_world_corpus(): Promise<void> {
   if (corpus().status === 'ready') return
-  const url = walrus_asset_url('world_corpus', 'world_corpus.json')
+  const url = asset_url('world_corpus', 'world_corpus.json')
   if (!url) return degrade('unpublished — not in the asset manifest')
   try {
     const response = await fetch(url)

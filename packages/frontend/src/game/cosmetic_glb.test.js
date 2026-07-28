@@ -13,22 +13,22 @@
 // station is server-side-only). Keep this object's keys in lockstep with env.ts's exports.)
 
 import { afterEach, describe, expect, test, spyOn } from 'bun:test'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 
-// configure_walrus_assets has no test-reset seam (packages/sdk/src/jobs.js overwrites the aggregator with no
+// configure_assets has no test-reset seam (packages/sdk/src/jobs.js overwrites the aggregator with no
 // way to clear it back) — an earlier-run file (asset_manifest.test.ts) leaves a test aggregator configured
 // for the rest of the process (bun test runs every file in ONE process). The "re-homed onto the CDN" tests
 // below expect the real default aggregator, so force it back before this file's tests run.
-configure_walrus_assets({ aggregator: 'https://cdn.aresrpg.world' })
-// #594's pet fallback resolves through the SAME mob-quilt walrus_asset_url join resolve_pet_model_url uses
+configure_assets({ aggregator: 'https://cdn.aresrpg.world' })
+// #594's pet fallback resolves through the SAME mob-quilt asset_url join resolve_pet_model_url uses
 // (pet_companion_resolver.test.js's own MOB_QUILT convention) — configure it here too rather than depend on
 // another file having configured `classes.mob` first (classes only ever MERGE for the process lifetime, per
 // the header note above, so this file's own pet-fallback tests must not assume load order).
-configure_walrus_assets({ classes: { mob: { published: true } } })
+configure_assets({ classes: { mob: { published: true } } })
 
 const {
   is_mount_item,

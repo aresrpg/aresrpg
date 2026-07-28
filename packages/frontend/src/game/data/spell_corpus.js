@@ -11,7 +11,7 @@
 // inert while the scene still renders. Absence is NEVER cached as truth: a failed load leaves the cache empty
 // AND `loaded` false, so a later call still populates it.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 /** @type {Array<Record<string, any>>} */
 let corpus = []
@@ -37,13 +37,13 @@ const warn_absent = (why) => {
 /**
  * Fetch the published corpus once and cache it. Non-blocking at boot (the scene mounts while it resolves; the
  * spell surfaces fill in on arrival). No-op-with-a-shout when the manifest has no `spell_corpus` row yet
- * (walrus_asset_url → null) or the fetch fails — leaving the cache empty and RETRYABLE (never a frozen
+ * (asset_url → null) or the fetch fails — leaving the cache empty and RETRYABLE (never a frozen
  * absence). Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  * @returns {Promise<void>}
  */
 export async function load_spell_corpus() {
   if (loaded) return
-  const url = walrus_asset_url('spell_corpus', 'spell_corpus.json')
+  const url = asset_url('spell_corpus', 'spell_corpus.json')
   if (!url) return warn_absent('not in the asset manifest — unpublished')
   try {
     const response = await fetch(url)

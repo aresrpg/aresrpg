@@ -245,7 +245,7 @@ export function recipe_ingredients(item_id) {
 // ── Asset resolution (MinIO — issue #650: full pivot off Walrus for SERVING; quilts are gone) ──
 // Every rendered asset class (items, spells, mobs, cosmetics, characters, music, shop renders) AND every
 // runtime content blob (mob_catalog, pet_catalog, spell_corpus, world_corpus, icon_slug_map) resolves
-// through walrus_asset_url below, seeded once at boot from the published manifest
+// through asset_url below, seeded once at boot from the published manifest
 // (packages/frontend/public/asset_manifest.json). The name is historical (this resolver predates the
 // MinIO pivot); every caller and class is unchanged — only the URL SHAPE is.
 //
@@ -262,7 +262,7 @@ export function recipe_ingredients(item_id) {
 const ASSETS_HOST_DEFAULT = 'https://assets.aresrpg.world'
 
 /** @type {{ aggregator: string, classes: Record<string, { published?: boolean } | undefined> }} */
-const walrus_assets = { aggregator: ASSETS_HOST_DEFAULT, classes: {} }
+const assets_config = { aggregator: ASSETS_HOST_DEFAULT, classes: {} }
 
 // Strip one trailing run of '/' in O(n). The obvious regex (/\/+$/) backtracks quadratically on
 // adversarial slash runs (js/polynomial-redos) — and the aggregator string is caller/manifest input.
@@ -308,19 +308,19 @@ const GEOMETRY_FOLDER = {
  * Seed the app-wide asset resolver once at client boot from the published manifest
  * (packages/frontend/public/asset_manifest.json). `classes[url_class].published` gates whether that class
  * resolves through the asset host at all — an absent/unpublished class (today: `vanilla`, and any class
- * not yet migrated) returns null from walrus_asset_url so the caller falls back to its own host-free
- * ASSET_BASE copy. Merge-only (Object.assign onto `classes`) — see reset_walrus_assets_for_test.
+ * not yet migrated) returns null from asset_url so the caller falls back to its own host-free
+ * ASSET_BASE copy. Merge-only (Object.assign onto `classes`) — see reset_assets_for_test.
  * @param {{ aggregator?: string | null, classes?: Record<string, { published?: boolean } | undefined> | null }} [manifest]
  * @returns {void}
  */
-export function configure_walrus_assets({ aggregator, classes } = {}) {
+export function configure_assets({ aggregator, classes } = {}) {
   if (aggregator)
-    walrus_assets.aggregator = strip_trailing_slashes(String(aggregator))
-  if (classes) Object.assign(walrus_assets.classes, classes)
+    assets_config.aggregator = strip_trailing_slashes(String(aggregator))
+  if (classes) Object.assign(assets_config.classes, classes)
 }
 
 /**
- * Test isolation seam for the resolver `configure_walrus_assets` seeds: it only ever MERGES
+ * Test isolation seam for the resolver `configure_assets` seeds: it only ever MERGES
  * (Object.assign onto `classes`) and can never clear a class or the aggregator once set. bun test runs
  * every file in ONE process sharing this module, sorted by path, not by directory-argument order — a
  * test file that configures a real class (or the whole published manifest, e.g. item_hover_tooltip.test.tsx)
@@ -328,9 +328,9 @@ export function configure_walrus_assets({ aggregator, classes } = {}) {
  * boots once and never resets mid-session.
  * @returns {void}
  */
-export function reset_walrus_assets_for_test() {
-  walrus_assets.aggregator = ASSETS_HOST_DEFAULT
-  walrus_assets.classes = {}
+export function reset_assets_for_test() {
+  assets_config.aggregator = ASSETS_HOST_DEFAULT
+  assets_config.classes = {}
 }
 
 /**
@@ -341,14 +341,14 @@ export function reset_walrus_assets_for_test() {
  * @param {string} filename   the file key, e.g. 'longsword.png' | 'arctic.mp3' | 'spell_corpus.json'
  * @returns {string | null}
  */
-export function walrus_asset_url(url_class, filename) {
-  if (!walrus_assets.classes[url_class]?.published || !filename) return null
+export function asset_url(url_class, filename) {
+  if (!assets_config.classes[url_class]?.published || !filename) return null
   if (filename.endsWith('.json'))
-    return `${walrus_assets.aggregator}/data/${url_class}.json`
+    return `${assets_config.aggregator}/data/${url_class}.json`
   const family = ASSET_FAMILY[url_class] ?? url_class
   return filename.endsWith('.glb')
-    ? `${walrus_assets.aggregator}/${GEOMETRY_FOLDER[url_class] ?? `models/${family}`}/${filename}`
-    : `${walrus_assets.aggregator}/${family}/${filename}`
+    ? `${assets_config.aggregator}/${GEOMETRY_FOLDER[url_class] ?? `models/${family}`}/${filename}`
+    : `${assets_config.aggregator}/${family}/${filename}`
 }
 
 /**
@@ -363,18 +363,18 @@ export function walrus_asset_url(url_class, filename) {
  * @param {string | null | undefined} url
  * @returns {string | null}
  */
-export function canonical_walrus_asset_url(url) {
+export function canonical_asset_url(url) {
   if (!url) return null
   try {
     const { pathname, search } = new URL(String(url))
-    return `${walrus_assets.aggregator}${pathname}${search}`
+    return `${assets_config.aggregator}${pathname}${search}`
   } catch {
     return null
   }
 }
 
 // ── The ONE asset-fallback home (the external asset CDN host is DELETED) ──
-// The asset host (walrus_asset_url) is the origin for every class published in the manifest (item / spell /
+// The asset host (asset_url) is the origin for every class published in the manifest (item / spell /
 // mob / character / cosmetic …). A class with NO manifest entry (today: `vanilla`) resolves to this host-free,
 // origin-relative public path — `/assets/items/<id>.png` served from the frontend's public/ dir. Absent files
 // degrade honestly to a category glyph rather than resurrecting a dead host. To bring a
@@ -411,7 +411,7 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
     )
   const name = `${key}${hd ? '_hd' : ''}.png`
   // Asset host (manifest) first — else the host-free relative /assets public path.
-  return walrus_asset_url(asset_class, name) ?? `${ASSET_BASE}/items/${name}`
+  return asset_url(asset_class, name) ?? `${ASSET_BASE}/items/${name}`
 }
 
 /**
@@ -421,7 +421,7 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
  * @returns {string | null}
  */
 export function mob_icon_url(filename) {
-  return filename ? `${walrus_assets.aggregator}/mobs/${filename}` : null
+  return filename ? `${assets_config.aggregator}/mobs/${filename}` : null
 }
 
 /**
@@ -443,7 +443,7 @@ export function spell_icon_url(spell) {
   const key = typeof spell === 'string' ? spell : (spell?.icon ?? null)
   if (!key) return null
   const name = `${key}.webp`
-  return walrus_asset_url('spell', name) ?? `${ASSET_BASE}/spells/${name}`
+  return asset_url('spell', name) ?? `${ASSET_BASE}/spells/${name}`
 }
 
 /**

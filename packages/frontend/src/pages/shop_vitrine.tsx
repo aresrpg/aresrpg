@@ -8,7 +8,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, ShoppingBag } from 'lucide-react'
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { ItemImage } from '../components/items'
 import { format_mist_to_sui } from '../utils/sui_mist'
@@ -63,7 +63,7 @@ export function shop_render_entry(...identities: (string | null | undefined)[]):
 
 /** Resolve a manifest-relative still/video through its published Walrus class. */
 export function shop_asset_url(rel_path: string | null | undefined): string | null {
-  return resolve_shop_render_url(rel_path, walrus_asset_url)
+  return resolve_shop_render_url(rel_path, asset_url)
 }
 
 /** The structural slice of a shop.tsx catalog row the cards render. */

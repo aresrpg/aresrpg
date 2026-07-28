@@ -5,12 +5,12 @@
 
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 
-import { configure_walrus_assets, reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
+import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { create_radio, load_radio_tracks, next_index, parse_radio_manifest, radio_manifest_url } from './hack_radio.js'
 
 const HOST = 'https://assets.aresrpg.world'
-const publish = () => configure_walrus_assets({ aggregator: HOST, classes: { hack_radio: { published: true } } })
+const publish = () => configure_assets({ aggregator: HOST, classes: { hack_radio: { published: true } } })
 
 /**
  * A stand-in HTMLAudioElement: records listeners so a test can fire the real events the engine listens for.
@@ -70,7 +70,7 @@ const MANIFEST = {
   ],
 }
 
-afterEach(() => reset_walrus_assets_for_test())
+afterEach(() => reset_assets_for_test())
 
 describe('the radio manifest', () => {
   test('resolves off the asset host as a data blob — never a hardcoded origin in our code', () => {

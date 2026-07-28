@@ -17,7 +17,7 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { configure_walrus_assets, walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, asset_url } from '@aresrpg/sdk/jobs'
 
 import { CHARACTER_MODELS, character_glb_url } from './character-glb.js'
 
@@ -51,13 +51,13 @@ const every_rig_local_url = () =>
 
 afterEach(() => {
   // Explicit unpublish — bun shares the resolver's module state across the whole run; never leak a
-  // published class forward to a later file (see reset_walrus_assets_for_test's doc).
-  configure_walrus_assets({ aggregator: HOST, classes: { character: {} } })
+  // published class forward to a later file (see reset_assets_for_test's doc).
+  configure_assets({ aggregator: HOST, classes: { character: {} } })
 })
 
 describe('character rigs resolve to URLs the asset host actually serves', () => {
   test('every class × gender × (body, hair) resolves under the probed 206 prefix', () => {
-    configure_walrus_assets({ aggregator: HOST, classes: { character: { published: true } } })
+    configure_assets({ aggregator: HOST, classes: { character: { published: true } } })
 
     const resolved = every_rig_local_url().map(character_glb_url)
 
@@ -66,8 +66,8 @@ describe('character rigs resolve to URLs the asset host actually serves', () => 
   })
 
   test('the resolver seam itself maps a character .glb onto the served prefix', () => {
-    configure_walrus_assets({ aggregator: HOST, classes: { character: { published: true } } })
-    expect(walrus_asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/sprites/characters/senshi_male.glb`)
+    configure_assets({ aggregator: HOST, classes: { character: { published: true } } })
+    expect(asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/sprites/characters/senshi_male.glb`)
   })
 
   test('an unpublished character class still falls back to the bundled local copy', () => {

@@ -4,13 +4,13 @@
 // sibling spell_corpus.test.js pattern: absence stays retryable, a load caches the published rows, the test
 // seam resets cleanly between cases.
 import { afterEach, describe, expect, test } from 'bun:test'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { get_pet_catalog, load_pet_catalog, set_pet_catalog_for_test } from './pet_catalog.js'
 
 afterEach(() => {
   set_pet_catalog_for_test() // reset module state between tests
-  configure_walrus_assets({ classes: { pet_catalog: {} } }) // clear so the next test's manifest state is honest
+  configure_assets({ classes: { pet_catalog: {} } }) // clear so the next test's manifest state is honest
 })
 
 describe('pet catalog runtime loader', () => {
@@ -20,7 +20,7 @@ describe('pet catalog runtime loader', () => {
   })
 
   test('fetches pet_catalog.json once and caches the published rows', async () => {
-    configure_walrus_assets({ classes: { pet_catalog: { published: true } } })
+    configure_assets({ classes: { pet_catalog: { published: true } } })
     const rows = { pet_aloe_gaia: { appearance: 'Armadillo_Aloe', glb: 'hy_armadillo_aloe' } }
     const original_fetch = globalThis.fetch
     let calls = 0
@@ -40,7 +40,7 @@ describe('pet catalog runtime loader', () => {
   })
 
   test('a failed fetch leaves the cache empty and retryable (never cached as truth)', async () => {
-    configure_walrus_assets({ classes: { pet_catalog: { published: true } } })
+    configure_assets({ classes: { pet_catalog: { published: true } } })
     const original_fetch = globalThis.fetch
     globalThis.fetch = () => Promise.resolve(new Response('', { status: 500 }))
     try {

@@ -6,7 +6,7 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
-import { configure_walrus_assets, item_icon_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, item_icon_url } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
 import { SHOP_AVAILABLE } from '../test_helpers/shop_fixture.js'
@@ -55,7 +55,7 @@ function card_item(row: Record<string, string>): CardItem {
 
 describe.skipIf(!SHOP_AVAILABLE)('live shop icon resolution', () => {
   test('all 37 sale templates render their exact published icon URL', () => {
-    configure_walrus_assets(asset_manifest)
+    configure_assets(asset_manifest)
     expect(rows).toHaveLength(37)
 
     for (const row of rows) {

@@ -12,7 +12,7 @@
 // track's manifest-relative path is re-homed onto that same origin. A manifest row therefore cannot point
 // the browser anywhere but our own host, whatever it says: the manifest is untrusted DATA.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { MUSIC_VOLUME, create_audio } from '../../../core/audio/audio_registry.js'
 
@@ -24,7 +24,7 @@ export const HACK_RADIO_CLASS = 'hack_radio'
  * than inventing a host.
  * @returns {string | null}
  */
-export const radio_manifest_url = () => walrus_asset_url(HACK_RADIO_CLASS, `${HACK_RADIO_CLASS}.json`)
+export const radio_manifest_url = () => asset_url(HACK_RADIO_CLASS, `${HACK_RADIO_CLASS}.json`)
 
 /**
  * The manifest body → the ordered track list. PURE, and total: every malformed shape folds to `[]` and a

@@ -11,7 +11,7 @@
 // Corroborated by the content house's own upload manifest: all 240 icons resident, every key in the id shape.
 
 import { afterEach, describe, expect, test } from 'bun:test'
-import { configure_walrus_assets, reset_walrus_assets_for_test, spell_icon_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, reset_assets_for_test, spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { spell_card } from '../../core/modules/fight.js'
 import { set_spell_corpus_for_test } from '../../data/spell_corpus.js'
@@ -36,12 +36,12 @@ describe('spell art resolves by the corpus id, not the display name key (#884)',
   })
 
   test('the resolved URL is the one that answers 200 on the asset host', () => {
-    reset_walrus_assets_for_test()
-    configure_walrus_assets({ aggregator: HOST, classes: { spell: { published: true } } })
+    reset_assets_for_test()
+    configure_assets({ aggregator: HOST, classes: { spell: { published: true } } })
     const [spell] = build_fight_spells([corpus_row()]).spells
 
     expect(spell_icon_url(spell.icon_key)).toBe(`${HOST}/spells/rojin_greed.webp`)
-    reset_walrus_assets_for_test()
+    reset_assets_for_test()
   })
 })
 
@@ -58,7 +58,7 @@ const OBJECT_ID = '0xc4b8e1d6a3057c9e'
 
 afterEach(() => {
   set_spell_corpus_for_test()
-  reset_walrus_assets_for_test()
+  reset_assets_for_test()
 })
 
 describe('a hand card named by its SpellTemplate object id resolves the same art (#1041)', () => {
@@ -75,7 +75,7 @@ describe('a hand card named by its SpellTemplate object id resolves the same art
   })
 
   test('the socket therefore requests the URL that answers 200, not `spells/<object id>.webp`', () => {
-    configure_walrus_assets({ aggregator: HOST, classes: { spell: { published: true } } })
+    configure_assets({ aggregator: HOST, classes: { spell: { published: true } } })
     set_spell_corpus_for_test([{ ...corpus_row(), object_id: OBJECT_ID }])
 
     expect(spell_icon_url(spell_card(OBJECT_ID).icon)).toBe(`${HOST}/spells/rojin_greed.webp`)

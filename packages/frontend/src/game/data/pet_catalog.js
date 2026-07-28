@@ -10,7 +10,7 @@
 // first, before this catalog existed (#526). Absence (the manifest carries no `pet_catalog` row yet, or the
 // fetch fails) resolves to {} and stays RETRYABLE, never cached as truth — mirrors mob_catalog.js's contract.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 /** @typedef {{ appearance: string | null, glb: string | null }} PetCatalogEntry */
 
@@ -21,13 +21,13 @@ let loaded = false
 /**
  * Fetch the published catalog once and cache it. Non-blocking at boot (the world mounts while it resolves;
  * equipped pets pop in on arrival). Resolves to a no-op when the manifest has no `pet_catalog` row yet
- * (walrus_asset_url → null) or the fetch fails — leaving the cache empty and RETRYABLE (never a frozen
+ * (asset_url → null) or the fetch fails — leaving the cache empty and RETRYABLE (never a frozen
  * absence). Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  * @returns {Promise<void>}
  */
 export async function load_pet_catalog() {
   if (loaded) return
-  const url = walrus_asset_url('pet_catalog', 'pet_catalog.json')
+  const url = asset_url('pet_catalog', 'pet_catalog.json')
   if (!url) return
   try {
     const response = await fetch(url)

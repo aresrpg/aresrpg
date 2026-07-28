@@ -52,7 +52,7 @@ describe('pick_mount_clips — idle/move naming convention', () => {
 // GROUND TRUTH (#370 — "kill the regex guessing, pin the real name in a test with the clip list cited as
 // fixture data"). Every test above uses INVENTED clip names ("Flap", "Wing", "TPose"…) never verified against a
 // real GLB — exactly the gap #370 calls out. This fixture is the ACTUAL clip list of the fast-travel dragon's
-// GLBs, fetched from the production CDN URL ft_dragon_glb_url() derives (walrus_asset_url('mob', file) →
+// GLBs, fetched from the production CDN URL ft_dragon_glb_url() derives (asset_url('mob', file) →
 // `https://assets.aresrpg.world/models/mobs/<file>`) and enumerated from each GLB's own JSON chunk
 // (`animations[].name` — a raw glTF-binary chunk read, not three.js's GLTFLoader, which needs a DOM):
 //   dragon-fire.glb  (production default skin, SADDLED variant) — https://assets.aresrpg.world/models/mobs/

@@ -63,7 +63,7 @@ function extract_asset_refs(contents) {
 }
 
 // Walrus-first, local-bundle-OPTIONAL: sky_dragon.js (flag-gated trailer decoration, ?dragon=1)
-// resolves these via walrus_asset_url() first and only touches the local /sprites path if that CDN
+// resolves these via asset_url() first and only touches the local /sprites path if that CDN
 // lookup fails. Confirmed via testnet git history (`git ls-tree -r testnet --
 // packages/frontend/public/sprites/mobs/models/`) these 3 were NEVER bundled in this repo on any
 // branch — a pre-existing Walrus-only gap, not a #157 split regression. Filed as a maintenance-pass

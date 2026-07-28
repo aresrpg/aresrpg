@@ -11,7 +11,7 @@
 // already exhibits. Absence is NEVER cached as truth: a failed load leaves the cache empty AND `loaded` false,
 // so a later call still populates it.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 /** @typedef {{ appearance: string | null, glb: string | null }} CatalogEntry */
 
@@ -41,13 +41,13 @@ export function merge_mob_catalog(mob_models, hytale_appearances) {
 /**
  * Fetch the published catalog once and cache it. Non-blocking at boot (the world mounts while it resolves;
  * mobs pop from debug-cube to model on arrival). Resolves to a no-op when the manifest has no `mob_catalog`
- * row yet (walrus_asset_url → null) or the fetch fails — leaving the cache empty and RETRYABLE (never a frozen
+ * row yet (asset_url → null) or the fetch fails — leaving the cache empty and RETRYABLE (never a frozen
  * absence). Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  * @returns {Promise<void>}
  */
 export async function load_mob_catalog() {
   if (loaded) return
-  const url = walrus_asset_url('mob_catalog', 'mob_catalog.json')
+  const url = asset_url('mob_catalog', 'mob_catalog.json')
   if (!url) return
   try {
     const response = await fetch(url)

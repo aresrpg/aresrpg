@@ -32,11 +32,11 @@ run_combo() {
   fi
 }
 
-# ①-④ The Walrus asset resolver (packages/sdk/src/jobs.js `walrus_assets`). components/item_hover_tooltip
+# ①-④ The asset resolver (packages/sdk/src/jobs.js `assets_config`). components/item_hover_tooltip
 # loads the REAL public/asset_manifest.json, warming the `spell_corpus` + `icon_slug_map` classes for the
 # rest of the process; the game/data loaders' "absent blob → null → loud degrade" fixtures must stay cold.
-# Guards reset_walrus_assets_for_test() staying wired into spell_corpus / icon_slug_map / pet_catalog.
-run_combo "walrus asset resolver — absent-blob loaders vs the warmed manifest" \
+# Guards reset_assets_for_test() staying wired into spell_corpus / icon_slug_map / pet_catalog.
+run_combo "asset resolver — absent-blob loaders vs the warmed manifest" \
   packages/fight/ "$FE/game/data/" "$FE/components/"
 
 # ⑥ The lootbox executed-failure durability probe reads globalThis.localStorage; an earlier file's inert

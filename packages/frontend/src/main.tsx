@@ -24,7 +24,7 @@ import { install_wallet_session_reset } from './auth/session_reset_subscription'
 
 // Full asset manifest (ALL classes — item/spell/vanilla/mob/cosmetic/music) served at the web root
 // (VITE_WALRUS_MANIFEST_URL overrides). Each class resolves the MinIO asset host FIRST (#650 — Walrus
-// retired for serving), with the CDN/local copy as the FALLBACK (walrus_asset_url returns null for an
+// retired for serving), with the CDN/local copy as the FALLBACK (asset_url returns null for an
 // unpublished class). ALWAYS ON — the asset host is THE asset store, unconditionally. Resolver config is
 // module state, so this critical manifest settles before React mounts. The load is retry-with-backoff (the
 // ONE home, src/asset_manifest.ts): a transient boot failure is NO LONGER cached as an empty manifest —

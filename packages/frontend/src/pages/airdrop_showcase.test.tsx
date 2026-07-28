@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
-import { configure_walrus_assets, reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
+import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
 import fr from '../i18n/locales/fr.json'
@@ -30,7 +30,7 @@ import LIVE from './airdrop_set.fixture.json'
 
 const HOST = 'https://assets.aresrpg.world'
 const MANIFEST_URL = `${HOST}/data/airdrop.json`
-const publish = () => configure_walrus_assets({ aggregator: HOST, classes: { airdrop: { published: true } } })
+const publish = () => configure_assets({ aggregator: HOST, classes: { airdrop: { published: true } } })
 
 /** A fetch stand-in: `body` is served with 200, `ok: false` or a throw reproduces the failure paths. */
 const serving = (body: unknown, { ok = true }: { ok?: boolean } = {}) =>
@@ -53,8 +53,8 @@ const occurrences = (haystack: string, needle: string) => haystack.split(needle)
 // The resolver only ever MERGES, and the whole suite shares one process: a file that ran earlier and
 // configured the real published manifest would otherwise leave `airdrop` published here. Reset on BOTH
 // edges so "the class is unpublished" is a state this file actually owns.
-beforeEach(() => reset_walrus_assets_for_test())
-afterEach(() => reset_walrus_assets_for_test())
+beforeEach(() => reset_assets_for_test())
+afterEach(() => reset_assets_for_test())
 
 describe('the door — the host is resolved, never hardcoded, and absence is never inferred', () => {
   test('an unpublished class is an ERROR, not an empty airdrop', async () => {

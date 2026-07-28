@@ -32,7 +32,7 @@ import { AnimationMixer, Box3 } from 'three'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
-import { canonical_walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { canonical_asset_url } from '@aresrpg/sdk/jobs'
 
 import { game_log } from '../core/log.js'
 import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
@@ -76,7 +76,7 @@ export function create_pet_companion_rig({ engine, glb_url, slug = null }) {
   let elapsed_s = 0 // hover bob accumulator (fish only) — TIME-based, advanced by update()'s own dt
   const is_fish = is_fish_pet(slug)
   const source_url =
-    canonical_walrus_asset_url(glb_url) ?? (glb_url.startsWith('/') && !glb_url.startsWith('//') ? glb_url : null)
+    canonical_asset_url(glb_url) ?? (glb_url.startsWith('/') && !glb_url.startsWith('//') ? glb_url : null)
 
   const load = source_url ? load_glb(source_url) : Promise.reject(new Error('refused non-CDN pet asset URL'))
   load

@@ -3,7 +3,7 @@
 // File-backed audio registry. Asset identity, path construction, HTMLAudioElement construction, and the
 // actual media play call live here; feature modules keep only their timing, mute, and mix policy.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { ASSETS_URL } from '../../../env'
 
@@ -108,7 +108,7 @@ export function audio_asset_src(key) {
   const fallback = AUDIO_ASSETS[key]
   if (!fallback) return null
   if (!is_music_key(key)) return fallback
-  return walrus_asset_url('music', filename_of(fallback)) ?? fallback
+  return asset_url('music', filename_of(fallback)) ?? fallback
 }
 
 /** @param {string} family @param {string} layer @param {number} [variant] @returns {string | null} */
@@ -121,7 +121,7 @@ export const music_audio_src = (name, bed) => audio_asset_src(music_audio_key(na
 /** Whether a registered music asset currently resolves through the Walrus manifest. */
 export function is_music_asset_resolved(key) {
   const fallback = AUDIO_ASSETS[key]
-  return !!fallback && is_music_key(key) && walrus_asset_url('music', filename_of(fallback)) != null
+  return !!fallback && is_music_key(key) && asset_url('music', filename_of(fallback)) != null
 }
 
 /**

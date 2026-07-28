@@ -10,7 +10,7 @@
 // including this public one where the private character GLB (issue #117) is absent — the resolver split's
 // whole point.
 import { afterEach, describe, expect, test } from 'bun:test'
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
@@ -19,7 +19,7 @@ import { resolve_pet_companion, resolve_pet_model_url } from './pet_companion_re
 
 const mob_url = (glb) => `https://cdn.test/walrus/models/mobs/${glb}.glb`
 
-configure_walrus_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
+configure_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
 
 afterEach(() => {
   set_pet_catalog_for_test()

@@ -4,7 +4,7 @@
 // same image without importing one another.
 
 import { useState } from 'react'
-import { canonical_walrus_asset_url, item_icon_url, walrus_asset_url, ASSET_BASE } from '@aresrpg/sdk/jobs'
+import { canonical_asset_url, item_icon_url, asset_url, ASSET_BASE } from '@aresrpg/sdk/jobs'
 
 import { use_image_version } from '../stores/image_version'
 // D133: the terminal fallback glyph family — ONE home (ItemIcon.jsx owns the category→icon map). The bag
@@ -51,7 +51,7 @@ export function ItemImage({
   // published must still show its own icon. The onLoad hook below re-pixelates when a base png actually lands.
   const icon_url_base = hd ? resolve_icon(false) : null
   const vanilla_url = appearance
-    ? (walrus_asset_url('vanilla', `${appearance}.png`) ?? `${ASSET_BASE}/vanilla/${appearance}.png`)
+    ? (asset_url('vanilla', `${appearance}.png`) ?? `${ASSET_BASE}/vanilla/${appearance}.png`)
     : null
   // HD DETAIL ("the detail page still points to /items/<slug>.png, not the _hd variant"): a
   // Display `image_url` is the BASE `.png`, so when it's present it used to win the whole race and the _hd
@@ -62,7 +62,7 @@ export function ItemImage({
   // a Display published with a raw origin cannot bypass the app CDN. Host-free/data URLs stay local; any other
   // absolute host is discarded and the manifest-backed slug builder below wins.
   const display_url =
-    image_url?.startsWith('/') || image_url?.startsWith('data:') ? image_url : canonical_walrus_asset_url(image_url)
+    image_url?.startsWith('/') || image_url?.startsWith('data:') ? image_url : canonical_asset_url(image_url)
   const image_url_hd =
     hd && display_url && /\.png(\?|$)/i.test(display_url) && !/_hd\.png/i.test(display_url)
       ? display_url.replace(/\.png(\?|$)/i, '_hd.png$1')

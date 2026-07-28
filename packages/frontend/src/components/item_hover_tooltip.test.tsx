@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
-import { configure_walrus_assets, item_icon_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, item_icon_url } from '@aresrpg/sdk/jobs'
 
 import { to_detail_item } from './item_hover_tooltip'
 
@@ -38,7 +38,7 @@ const tt = ((_: unknown, __: unknown) => '') as never
 
 describe('to_detail_item — cosmetic icon resolution', () => {
   test('a cosmetic cloak resolves its published cosmetic_icon URL, not the raw on-chain object id', () => {
-    configure_walrus_assets(asset_manifest)
+    configure_assets(asset_manifest)
     const detail = to_detail_item(cloak, null, tt)
     // the icon identity is the authored cosmetic slug (resolved by name), never the 0x object id
     expect(detail.id).toBe('cape_lorito-chance')

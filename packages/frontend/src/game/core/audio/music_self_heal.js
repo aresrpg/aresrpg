@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { MUSIC_MANIFEST_PROBE_KEY, is_music_asset_resolved, play_audio } from './audio_registry.js'
 
@@ -27,7 +27,7 @@ export async function reload_music_manifest(fetch_fn = globalThis.fetch) {
     const url = import.meta.env?.VITE_WALRUS_MANIFEST_URL || '/asset_manifest.json'
     const response = await fetch_fn(url, { cache: 'no-store' })
     if (!response.ok) return false
-    configure_walrus_assets(await response.json())
+    configure_assets(await response.json())
     return is_music_manifest_ready()
   } catch {
     return false

@@ -15,7 +15,7 @@
 // appearance + an obvious magenta debug cube (hy__missing.glb), so a content gap is impossible to miss —
 // never a silent koshi swap. Re-run the extractor to add a model the moment a reference-corpus source exists for it.
 
-import { mob_icon_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { mob_icon_url, asset_url } from '@aresrpg/sdk/jobs'
 
 import { catalog_name_of } from '../../content/mob_name_overrides'
 import { get_catalog } from './mob_catalog.js'
@@ -28,7 +28,7 @@ const resolved_mob_urls = new Map()
 export const resolve_mob_visual_url = (
   /** @type {Map<string, string>} */ cache,
   /** @type {string} */ glb,
-  /** @type {(url_class:string, filename:string) => string | null} */ resolve_asset = walrus_asset_url
+  /** @type {(url_class:string, filename:string) => string | null} */ resolve_asset = asset_url
 ) => {
   let url = cache.get(glb)
   if (!url) {

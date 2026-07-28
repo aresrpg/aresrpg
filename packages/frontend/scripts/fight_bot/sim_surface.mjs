@@ -16,7 +16,7 @@ import { make_seat } from './drive.mjs'
 /**
  * A mob the page is guaranteed to be able to resolve: it must exist in the published world corpus (which is
  * what the simulator's mob index is built from) AND carry a minted template id in the deployment pin. The
- * URL shape is `walrus_asset_url`'s own (`<aggregator>/data/<class>.json`), read off the manifest the app
+ * URL shape is `asset_url`'s own (`<aggregator>/data/<class>.json`), read off the manifest the app
  * boots from — never a second hardcoded host.
  */
 export const pick_mob = async ({ frontend, repo, scenario }) => {
