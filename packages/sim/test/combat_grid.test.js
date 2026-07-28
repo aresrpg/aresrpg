@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { encode, in_zone } from '../src/combat_grid.js'
+import { decode, encode, in_grid, in_zone } from '../src/combat_grid.js'
 import {
   shape_point,
   shape_circle,
@@ -37,5 +37,29 @@ describe('combat grid in_zone — parity with combat_grid.move', () => {
     expect(in_zone(shape_ring(), 2, a, encode(7, 5))).toBe(true) // manhattan 2 → on the ring
     expect(in_zone(shape_ring(), 2, a, encode(6, 5))).toBe(false) // manhattan 1 → inside, not on ring
     expect(in_zone(shape_ring(), 2, a, a)).toBe(false) // centre not on ring
+  })
+})
+
+// #1536 row 3 — ONE grid geometry. `in_grid` is the board-membership predicate BOTH packages gate on; a negative
+// cell is a decode/encode accident (a caller subtracting GRID_W off row 0), never a board cell. The fight side
+// (los.js, the Move-proven twin) has always rejected it; this pins the sim side to the same verdict so the two
+// can never answer differently again.
+describe('combat grid membership — one home for in_grid/encode/decode', () => {
+  test('a negative cell is OUT of the grid (no board cell has a negative index)', () => {
+    expect(in_grid(-1)).toBe(false)
+    expect(in_grid(-20)).toBe(false)
+  })
+
+  test('the grid is exactly [0, GRID_CELLS)', () => {
+    expect(in_grid(0)).toBe(true)
+    expect(in_grid(379)).toBe(true)
+    expect(in_grid(380)).toBe(false)
+  })
+
+  test('decode is the exact inverse of encode across the whole board', () => {
+    for (let cell = 0; cell < 380; cell++) {
+      const { x, y } = decode(cell)
+      expect(encode(x, y)).toBe(cell)
+    }
   })
 })
