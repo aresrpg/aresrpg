@@ -187,6 +187,16 @@ export const flags = e => e.flags
 export const phase = e => e.phase
 export const has_flag = (e, flag) => (e.flags & flag) === flag
 
+/**
+ * The flag word a minted status row inherits from the effect that authored it. On chain `record_timed` stores
+ * the WHOLE `Effect` on the board, so `spell_board::dispel_fighter` can read `FLAG_DISPELLABLE` back off the
+ * row; the sim's row is a projection, and dropping `flags` made that bit unreadable — every dispellable buff
+ * survived a Dispel. ONE home for "a row carries its author's flags"; an all-zero word is omitted so a flagless
+ * row stays byte-identical to what it has always been.
+ * @param {{ flags?: number }} [e]
+ */
+export const row_flags = e => (e?.flags ? { flags: e.flags } : {})
+
 // ╔════════════════ [ Structural legality — mirrors spell_effect::is_legal ] ════════ ]
 const TF_ALL_MASK = 39 // NOT_TEAM|NOT_SELF|NOT_ENEMY|ONLY_CASTER
 const FLAG_ALL_MASK = 31 // all five FLAG_* bits; bit 32 is dead vocabulary, matching Move

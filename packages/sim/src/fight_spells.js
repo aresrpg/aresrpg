@@ -51,6 +51,7 @@ import {
   FLAG_LIFE_LOST,
   has_flag,
   K_CASTER_DAMAGE,
+  row_flags,
   TF_NONE,
 } from './spell_effect.js'
 import {
@@ -313,6 +314,7 @@ export const apply_spell_effect = (
       source_id: caster.id,
       element: effect.element,
       value: draw.value,
+      ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
     return { state: shielded, effects: [{ target_id, status: 'SHIELD' }] }
@@ -325,6 +327,7 @@ export const apply_spell_effect = (
       timing: 'TURN_START',
       source_id: caster.id,
       value: 0,
+      ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
     return { state: stunned, effects: [{ target_id, status: 'STUN' }] }
@@ -341,6 +344,7 @@ export const apply_spell_effect = (
       timing: 'TURN_START',
       source_id: caster.id,
       value: effect.value ?? 0,
+      ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
     return { state: stated, effects: [{ target_id, status: 'APPLY_STATE' }] }
@@ -358,6 +362,7 @@ export const apply_spell_effect = (
       timing: 'TURN_START',
       source_id: caster.id,
       value: effect.value ?? 0,
+      ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
     return {
@@ -377,6 +382,7 @@ export const apply_spell_effect = (
       timing: 'TURN_START',
       source_id: caster.id,
       value: effect.value ?? 0,
+      ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
     return { state: returned, effects: [{ target_id, status: 'RETURN_SPELL' }] }
@@ -410,6 +416,7 @@ export const apply_spell_effect = (
       source_id: caster.id,
       element: effect.element,
       value: draw.value,
+      ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
     return { state: poisoned, effects: [{ target_id, status: 'POISON' }] }
@@ -508,6 +515,7 @@ export const apply_spell_effect = (
       target_id,
       caster.id,
       effect.turns ?? 0,
+      effect.flags ?? 0,
     )
     return {
       state: hidden,
