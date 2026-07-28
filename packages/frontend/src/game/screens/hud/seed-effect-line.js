@@ -183,13 +183,20 @@ const meta_of = (t, fx) => {
   return pieces.length ? pieces.join(' · ') : null
 }
 
-/** A damage-class line: element dot + element-coloured value. */
-const damage_parts = (t, fx, key) => ({
-  icon: null,
-  dot: element_color(fx.element),
-  tone: element_color(fx.element),
-  ...split_value(t, key, { element: seed_el_label(t, fx.element) }, seed_effect_value(t, fx)),
-})
+/** A damage-class line: element dot + element-coloured value. A status snapshot can genuinely lack the
+ * originating damage element; callers with a source-less locale key omit that clause instead of asking i18n
+ * for `spells.null`/`spells.undefined`. */
+const damage_parts = (t, fx, key, source_less_key = null) => {
+  const has_source = ELEMENT_KEYS.includes(fx.element) || fx.element === 'neutral'
+  const translation_key = has_source || !source_less_key ? key : source_less_key
+  const params = has_source ? { element: seed_el_label(t, fx.element) } : {}
+  return {
+    icon: null,
+    dot: element_color(fx.element),
+    tone: element_color(fx.element),
+    ...split_value(t, translation_key, params, seed_effect_value(t, fx)),
+  }
+}
 
 /** A signed STAT line (ALTER_STAT): stat icon, the GREY sign injected into `pre`, |value| green (buff) /
  * red (debuff). One composite key (`fx_stat: "{{value}} {{stat}}"`) + the `stat.*` names covers every
@@ -227,7 +234,7 @@ const core_parts = (t, fx) => {
     case 'PERCENT_LIFE':
       return damage_parts(t, { ...fx, damageMin: fx.base ?? 0, damageMax: fx.base ?? 0 }, 'spells.fx_percent_life')
     case 'APPLY_DOT':
-      return damage_parts(t, fx, 'spells.fx_apply_dot')
+      return damage_parts(t, fx, 'spells.fx_apply_dot', 'spells.fx_apply_dot_no_element')
     case 'LIFE_STEAL':
       return damage_parts(t, fx, 'spells.fx_life_steal')
     case 'PUNISHMENT':

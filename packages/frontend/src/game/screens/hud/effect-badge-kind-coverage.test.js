@@ -71,4 +71,22 @@ describe('#1049 every status kind the fold can hold owns a badge arm', () => {
         expect(`${locale}:${kind}:${label}`).not.toContain('? ')
       }
   })
+
+  test('a source-less damage-over-time row stays translated in all six locales', async () => {
+    const bundles = Object.fromEntries(
+      await Promise.all(
+        LOCALES.map(async (locale) => [locale, (await import(`../../../i18n/locales/${locale}.json`)).default])
+      )
+    )
+    for (const locale of LOCALES) {
+      const label = effect_badge_view(translator(bundles[locale]), {
+        kind: 21,
+        remaining_turns: 2,
+        value: 2,
+      }).label
+      expect(`${locale}:${label}`).not.toContain('spells.')
+      expect(`${locale}:${label}`).not.toContain('null')
+      expect(`${locale}:${label}`).not.toContain('undefined')
+    }
+  })
 })

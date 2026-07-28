@@ -37,6 +37,7 @@ const text_of = (html) => html.replace(/<[^>]*>/g, '')
 // is the numeric spell_effect.move id (27 = INVISIBILITY, 9 = ALTER_STAT), never pre-decoded to a string.
 const invisibility_2t = { id: 'st-1', kind: 27, remaining_turns: 2 }
 const vitality_ward_3t = { id: 'st-2', kind: 9, stat: 5, value: 10, remaining_turns: 3 }
+const poison_2t = { id: 'st-3', kind: 21, value: 2, remaining_turns: 2 }
 
 describe('EffectBadges — compact persistent-effect rows on the turn card', () => {
   test('2 active effects render 2 visible localized rows with their values and remaining turns', () => {
@@ -75,5 +76,11 @@ describe('EffectBadges — compact persistent-effect rows on the turn card', () 
   test('effect_badge_view exposes the shared structured line view for the renderer', () => {
     const view = effect_badge_view(t, vitality_ward_3t)
     expect(view.view).toMatchObject({ pre: '+', value: '10', post: ' Vitality', meta: '3 turns' })
+  })
+
+  test('damage-over-time uses its projected element when present and omits a genuinely absent source', () => {
+    expect(effect_badge_view(t, { ...poison_2t, element: 3 }).label).toBe('2 Air damage per turn · 2 turns')
+    expect(effect_badge_view(t, poison_2t).label).toBe('2 damage per turn · 2 turns')
+    expect(effect_badge_view(t, poison_2t).label).not.toContain('spells.')
   })
 })
