@@ -5,8 +5,8 @@
 // (price / supply_remaining / paused / window) off the shared `shop::Sale` — one keyless GET, no per-sale gRPC
 // fan-out. The on-chain item NAME + category are DISPLAY enrichment resolved through a SECOND keyless GET — the
 // `/v1/encyclopedia` items view (SPEC §14 read layer) — keyed by template_id, which is ALSO what fences dead
-// orphan sales: the live catalog decides which sales exist, never a build-time id set (#1467). This REPLACES the per-template
-// chain-direct `sdk.get_item_template` fan-out that fired 5 gRPC `BatchGetObjects` PER template against
+// orphan sales: the live catalog decides which sales exist, never a build-time id set (#1467). This REPLACES
+// the per-template chain-direct `sdk.get_item_template` fan-out that fired 5 gRPC `BatchGetObjects` PER template against
 // fullnode.testnet.sui.io (60 on a 6-sale /shop — CORS-blocked + 429-throttled, the display-read-law violation
 // the read layer exists to kill). Art rides the on-chain Display pattern. Empty (honest) on any failure.
 //
