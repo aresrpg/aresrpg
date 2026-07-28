@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { rng_seed } from '../src/prng.js'
+import { rng_seed, rng_int, rng_range } from '../src/prng.js'
 import {
   grid_cells,
   mask_get,
@@ -46,6 +46,43 @@ const naive_place = ({
     cells.push(cell)
   }
   return cells
+}
+
+// Exact cell-draw schedules of the two Move group loops. `create`'s point-band spec spends archimob + cell;
+// `create_members` always spends graded-level + archimob + cell. `accumulate=false` reproduces issue #1260;
+// `true` mirrors the corrected loop without changing how many PRNG draws are spent.
+const chain_place = ({
+  mask,
+  obstacles = [],
+  holes = [],
+  starts = [],
+  group_seed,
+  count,
+  graded,
+  accumulate,
+}) => {
+  let state = rng_seed(Number(BigInt(group_seed) & 0xffff_ffffn))
+  const excluded = [...starts]
+  const cells = []
+  for (let i = 0; i < count; i++) {
+    if (graded) {
+      const { state: graded_state } = rng_range(state, 1, 1)
+      state = graded_state
+    }
+    const { state: archimob_state } = rng_int(state, 10_000)
+    state = archimob_state
+    const { cell, state: cell_state } = seeded_spawn_cell(
+      mask,
+      obstacles,
+      holes,
+      accumulate ? excluded : starts,
+      state,
+    )
+    state = cell_state
+    cells.push(cell)
+    if (accumulate) excluded.push(cell)
+  }
+  return { cells, state }
 }
 
 describe('mob placement — collision-free distinct-cell guarantee (the "both mobs on the same cell" fix)', () => {
@@ -134,5 +171,48 @@ describe('mob placement — collision-free distinct-cell guarantee (the "both mo
     }
     expect(naive_collisions).toBeGreaterThan(0) // the bug is real and reproducible
     expect(fixed_collisions).toBe(0) // the fix eliminates it entirely
+  })
+
+  test('Move create/create_members collision seeds keep draw parity while probing past occupied cells', () => {
+    const board = generate_for_anchor(12345, 100, 200)
+    const common = {
+      mask: board.shape_mask,
+      obstacles: board.obstacles,
+      holes: board.holes,
+      starts: [...board.start_cells_a, ...board.start_cells_b],
+      count: 2,
+    }
+
+    const create_old = chain_place({
+      ...common,
+      group_seed: 21,
+      graded: false,
+      accumulate: false,
+    })
+    const create_fixed = chain_place({
+      ...common,
+      group_seed: 21,
+      graded: false,
+      accumulate: true,
+    })
+    expect(create_old.cells).toEqual([49, 49])
+    expect(create_fixed.cells).toEqual([49, 50])
+    expect(create_fixed.state).toBe(create_old.state)
+
+    const members_old = chain_place({
+      ...common,
+      group_seed: 38,
+      graded: true,
+      accumulate: false,
+    })
+    const members_fixed = chain_place({
+      ...common,
+      group_seed: 38,
+      graded: true,
+      accumulate: true,
+    })
+    expect(members_old.cells).toEqual([29, 29])
+    expect(members_fixed.cells).toEqual([29, 30])
+    expect(members_fixed.state).toBe(members_old.state)
   })
 })

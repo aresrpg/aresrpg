@@ -6,18 +6,18 @@
 // board_gen.js is to board.move and packages/frontend/src/game/spawn_compose.js is to mob::spawn_seeded.
 //
 // THE BUG THIS ENCODES THE FIX FOR: entering a fight could spawn two mobs on the same
-// cell. On-chain, `create_inner` computes `all_starts = start_cells_a ∪ start_cells_b` ONCE, then loops
-// `mob::spawn_seeded(…, &all_starts, …)` per mob threading only the prng STATE — it never feeds a spawned mob's
-// cell back into the exclusion set (fight.move:280-289). `seeded_spawn_cell` excludes obstacles/holes/starts but
-// NOTHING already taken by a sibling mob, so two mobs whose draws resolve to the same open cell collide. The
+// cell. Before #1260, both `create_inner` and `create_members` computed
+// `all_starts = start_cells_a ∪ start_cells_b` ONCE, then looped their seeded spawn helper while threading only
+// the prng STATE — neither fed a spawned mob's cell back into the exclusion set. `seeded_spawn_cell` excludes
+// obstacles/holes/starts but NOTHING already taken by a sibling mob, so two mobs whose draws resolve to the same
+// open cell collide. The
 // client is a faithful renderer of that chain truth (fight_bridge.js reads `m.cell` verbatim; spawn_compose.js
-// deliberately does NOT derive the cell), so there is no honest client-only cure — the fix is chain-side.
+// deliberately does NOT derive the cell), so there is no honest client-only cure.
 //
-// THE FIX (wave-2b, one line in fight.move's loop): ACCUMULATE each placed cell into the exclusion set — i.e.
-// `all_starts.push_back(mob::cell(&m));` after each `spawn_seeded`, so the next mob's `seeded_spawn_cell` sees
-// prior mobs as occupied. `place_mob_cells` below IS that corrected loop; `seeded_spawn_cell` is the unchanged
-// per-mob draw it calls. Determinism is preserved (still a pure fold over group_seed) — so if world-fight mob
-// placement is ever client-predicted, this mirror stays in parity with the fixed chain.
+// THE FIX: ACCUMULATE each placed cell into the exclusion set — both Move loops now append
+// `mob::cell(&m)` after every spawn, so the next mob's `seeded_spawn_cell` sees prior mobs as occupied.
+// `place_mob_cells` below is the sim twin of that corrected fold; `seeded_spawn_cell` is the unchanged per-mob
+// draw it calls. Determinism is preserved (still a pure fold over group_seed).
 
 import { rng_seed, rng_int } from './prng.js'
 import { grid_cells, mask_get } from './combat_grid.js'
@@ -79,7 +79,7 @@ export function place_mob_cells({
   count,
 }) {
   let state = rng_seed(Number(BigInt(group_seed ?? 0) & MASK32))
-  const excluded = [...starts] // grows with each placed cell — THE fix (the chain's `all_starts` never grew)
+  const excluded = [...starts] // grows in lockstep with both corrected Move spawn loops
   const cells = []
   const n = Math.max(0, Number(count) || 0)
   for (let i = 0; i < n; i++) {

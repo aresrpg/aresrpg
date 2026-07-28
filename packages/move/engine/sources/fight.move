@@ -209,13 +209,14 @@ fun create_inner<W: drop>(
     creator, dials, now, ctx,
   );
 
-  let all_starts = union_starts_stored(&fight);
+  let mut all_starts = union_starts_stored(&fight);
   let n_mobs = clamp_group(group_size as u64, dials.team_bound);
   let mut state = aresrpg_foundation::prng::rng_seed(group_seed);
   let mut i = 0;
   while (i < n_mobs) {
     let (m, st) = mob::spawn_seeded(spec, &fight.board.shape_mask, &fight.board.obstacles, &fight.board.holes, &all_starts, dials.archimob_bp, state);
     state = st;
+    all_starts.push_back(mob::cell(&m));
     fight.mobs.push_back(m);
     i = i + 1;
   };
@@ -413,7 +414,7 @@ public fun create_members(
     creator, dials, now, ctx,
   );
 
-  let all_starts = union_starts_stored(&fight);
+  let mut all_starts = union_starts_stored(&fight);
   let n_mobs = clamp_group(landed.length(), dials.team_bound);
   let mut state = aresrpg_foundation::prng::rng_seed(group_seed);
   let mut i = 0;
@@ -421,6 +422,7 @@ public fun create_members(
     let spec = &landed[i];
     let (m, st) = mob::spawn_seeded_graded(spec, &fight.board.shape_mask, &fight.board.obstacles, &fight.board.holes, &all_starts, dials.archimob_bp, progress, state);
     state = st;
+    all_starts.push_back(mob::cell(&m));
     fight.mobs.push_back(m);
     df::add(&mut fight.id, MemberContentKey { index: i }, GroupContent {
       template: committed[i], xp: mob::spec_xp(spec), loot: mob::spec_loot(spec), kit: mob::kit_of(spec),
