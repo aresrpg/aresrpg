@@ -13,8 +13,10 @@ import { I18nextProvider } from 'react-i18next'
 
 import en from '../../i18n/locales/en.json'
 import { MobDetailView } from '../../components/mob_detail_view'
+import type { RpcEncyclopediaMob } from '../../rpc/views'
+import encyclopedia_fixture from '../../rpc/fixtures/encyclopedia.json'
 
-import { decode_mob_resist } from './bestiary_tab'
+import { bestiary_mobs_from_v1, decode_mob_resist } from './bestiary_tab'
 
 const test_i18n = i18next.createInstance()
 test_i18n.init({
@@ -25,6 +27,24 @@ test_i18n.init({
 
 // The live boar's actual on-chain wire values (content house, verified against live testnet).
 const WIRE_BOAR = { earth: 32808, water: 32768, air: 32748, fire: 32768 }
+
+test('the bestiary reads the captured /v1 mob projection shape as a populated corpus', () => {
+  // Captured GET /v1/encyclopedia payload: the full fixture contains the same 374 mob rows observed by
+  // the post-enable smoke. One real row is enough to pin the serializer's template_id/min_level/base_hp
+  // vocabulary and the reader's non-empty decision.
+  const [captured_mob] = encyclopedia_fixture.mobs as RpcEncyclopediaMob[]
+  const mobs = bestiary_mobs_from_v1([captured_mob])
+
+  expect(mobs).toHaveLength(1)
+  expect(mobs[0]).toMatchObject({
+    id: captured_mob.template_id,
+    name: captured_mob.name,
+    minLevel: captured_mob.min_level,
+    maxLevel: captured_mob.max_level,
+    health: captured_mob.base_hp,
+    element: 'EARTH',
+  })
+})
 
 test('decode_mob_resist turns the live boar wire ints into real signed deltas', () => {
   expect(decode_mob_resist(WIRE_BOAR.earth)).toBe(40)

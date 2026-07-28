@@ -30,10 +30,10 @@ import { display_mob_name } from '../../content/mob_name_overrides'
 import { use_template_t } from '../../i18n/template_t'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
+import type { RpcEncyclopediaMob } from '../../rpc/views'
 import { decode_stat } from '../../chain/stat_bias'
 
 import { DetailLoading } from './shared'
-import { is_living_mob } from './living_corpus'
 import { v1_drops_to_display } from './loot'
 import { EncyclopediaMobImage } from './mob_image'
 import { mob_spell_views } from './mob_spells'
@@ -62,6 +62,34 @@ const ELEMENT_NAMES = ['FIRE', 'WATER', 'EARTH', 'AIR']
 // Exported for bestiary_tab.test.tsx — the pure decode is the exact unit the RED-FIRST regression pins.
 export const decode_mob_resist = (v: number | null | undefined): number | null => (v == null ? null : decode_stat(v))
 
+// Pure /v1 projection reader. Kept outside the component so the captured RPC contract can exercise the
+// exact empty/non-empty decision without mocking React or the request hook.
+export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null | undefined) =>
+  (rows ?? [])
+    // /v1 is the mob-template projection this surface promises to render. Do not fence it through the
+    // separately republished seed-manifest ids: a republish gives every MobTemplate a new object id, and
+    // that cross-artifact equality check turned a populated 374-row response into the honest-empty screen.
+    // The authored corpus remains optional enrichment (role/world/xp/spells), keyed when the ids converge.
+    .filter((m) => is_listed_mob_role(mob_corpus_of(m.template_id)?.role))
+    .map((m) => ({
+      id: m.template_id,
+      name: display_mob_name(m.name) || '',
+      // icon lookup stays the RAW chain/seed name (the asset catalog is keyed by it) — only the
+      // display string above goes through the override.
+      icon_name: m.name ?? '',
+      minLevel: m.min_level ?? 0,
+      maxLevel: m.max_level ?? 0,
+      health: m.base_hp ?? 0,
+      element: ELEMENT_NAMES[m.element ?? -1] ?? '',
+      earthResistance: decode_mob_resist(m.earth_resistance),
+      fireResistance: decode_mob_resist(m.fire_resistance),
+      waterResistance: decode_mob_resist(m.water_resistance),
+      airResistance: decode_mob_resist(m.air_resistance),
+      drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
+      found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
+      createdAt: undefined as number | undefined,
+    }))
+
 type ViewMode = 'all' | 'by_level'
 type SortOption = 'level_asc' | 'level_desc' | 'name_asc'
 
@@ -83,34 +111,7 @@ function BestiaryTab({
 
   const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia('mobs', signal), { deps: [] })
   // Map §14 liveness + projected loot into display shape; unprojected resistances stay honestly empty.
-  const mobs = useMemo(
-    () =>
-      // Living-generation fence FIRST (living_corpus.ts): /v1 lists every template ever minted on this
-      // lineage; rows whose name is absent from the pruned seed corpus are old-generation ghosts — hidden.
-      // Then the protector fence: a resource protector is not a bestiary mob (ambrine precedent).
-      (enc?.mobs ?? [])
-        .filter(is_living_mob)
-        .filter((m) => is_listed_mob_role(mob_corpus_of(m.template_id)?.role))
-        .map((m) => ({
-          id: m.template_id,
-          name: display_mob_name(m.name) || '',
-          // icon lookup stays the RAW chain/seed name (the asset catalog is keyed by it) — only the
-          // display string above goes through the override.
-          icon_name: m.name ?? '',
-          minLevel: m.min_level ?? 0,
-          maxLevel: m.max_level ?? 0,
-          health: m.base_hp ?? 0,
-          element: ELEMENT_NAMES[m.element ?? -1] ?? '',
-          earthResistance: decode_mob_resist(m.earth_resistance),
-          fireResistance: decode_mob_resist(m.fire_resistance),
-          waterResistance: decode_mob_resist(m.water_resistance),
-          airResistance: decode_mob_resist(m.air_resistance),
-          drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
-          found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
-          createdAt: undefined as number | undefined,
-        })),
-    [enc]
-  )
+  const mobs = useMemo(() => bestiary_mobs_from_v1(enc?.mobs), [enc])
 
   const [params, set_params] = useSearchParams()
   // Search: instant input + deferred filter term + debounced ?q= (shared home) — see use_deferred_search.
