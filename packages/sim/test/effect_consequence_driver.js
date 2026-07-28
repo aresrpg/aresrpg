@@ -57,10 +57,7 @@ export const fight = (definitions, health = {}) => {
             range_max: definition.range_max ?? 8,
             modifiable_range: definition.modifiable_range ?? false,
           })
-          return [
-            definition.id,
-            with_level_contract(template, definition),
-          ]
+          return [definition.id, with_level_contract(template, definition)]
         }),
       ),
       arena,
@@ -68,12 +65,7 @@ export const fight = (definitions, health = {}) => {
   }
 }
 
-export const cast = (
-  { state, ctx },
-  spell_id,
-  target,
-  entity_id = CASTER,
-) => {
+export const cast = ({ state, ctx }, spell_id, target, entity_id = CASTER) => {
   const result = reduce(
     state,
     { type: 'cast', entity_id, spell_id, target },
@@ -87,11 +79,7 @@ export const cast = (
   }
 }
 
-export const walk = (
-  { state, ctx },
-  destination,
-  entity_id = CASTER,
-) => {
+export const walk = ({ state, ctx }, destination, entity_id = CASTER) => {
   const result = reduce(
     state,
     { type: 'move', entity_id, path: [destination] },
@@ -137,8 +125,7 @@ export const entity = ({ state }, id) => find_entity(state, id)
 export const hp = (fight_state, id) => entity(fight_state, id)?.health ?? 0
 export const pool = (fight_state, id, key) =>
   entity(fight_state, id)?.[key] ?? 0
-export const rows = (fight_state, id) =>
-  entity(fight_state, id)?.effects ?? []
+export const rows = (fight_state, id) => entity(fight_state, id)?.effects ?? []
 export const cell = (fight_state, id) => entity(fight_state, id)?.cell
 
 export const damage_taken = (before, after, id = ENEMY) =>

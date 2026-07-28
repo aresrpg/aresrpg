@@ -46,38 +46,34 @@ const on_self = (kind, overrides = {}) =>
     ...overrides,
   })
 
-const self_buff = (stat, amount, turns = 5) =>
-  on_self(spell_effect.K_ALTER_STAT, {
-    value: SIGNED_SHIFT + amount,
-    stat,
-    turns,
-  })
-
 const consequence = (description, probe) => ({ description, probe })
 
 export const status_consequence_entries = [
   [
     spell_effect.K_PLACE_TRAP,
-    consequence('trap payload damages a later fighter entering its cell', () => {
-      const trap_cell = { x: 4, y: 3 }
-      const initial = fight([
-        {
-          id: 'trap',
-          effects: [
-            raw_effect(spell_effect.K_PLACE_TRAP, {
-              element: NONE,
-              target_filter: spell_effect.TF_NONE,
-            }),
-            raw_effect(spell_effect.K_DAMAGE, { value: 12, element: EARTH }),
-          ],
-        },
-      ])
-      const placed = cast(initial, 'trap', trap_cell)
-      const enemy_turn = turn_to(placed, ENEMY)
-      const stepped = walk(enemy_turn, trap_cell, ENEMY)
-      expect(stepped.accepted).toBe(true)
-      expect(hp(stepped, ENEMY)).toBeLessThan(hp(enemy_turn, ENEMY))
-    }),
+    consequence(
+      'trap payload damages a later fighter entering its cell',
+      () => {
+        const trap_cell = { x: 4, y: 3 }
+        const initial = fight([
+          {
+            id: 'trap',
+            effects: [
+              raw_effect(spell_effect.K_PLACE_TRAP, {
+                element: NONE,
+                target_filter: spell_effect.TF_NONE,
+              }),
+              raw_effect(spell_effect.K_DAMAGE, { value: 12, element: EARTH }),
+            ],
+          },
+        ])
+        const placed = cast(initial, 'trap', trap_cell)
+        const enemy_turn = turn_to(placed, ENEMY)
+        const stepped = walk(enemy_turn, trap_cell, ENEMY)
+        expect(stepped.accepted).toBe(true)
+        expect(hp(stepped, ENEMY)).toBeLessThan(hp(enemy_turn, ENEMY))
+      },
+    ),
   ],
   [
     spell_effect.K_PLACE_GLYPH,
@@ -98,9 +94,7 @@ export const status_consequence_entries = [
         },
       ])
       const placed = cast(initial, 'glyph', ENEMY_CELL)
-      expect(hp(turn_to(placed, ENEMY), ENEMY)).toBeLessThan(
-        hp(placed, ENEMY),
-      )
+      expect(hp(turn_to(placed, ENEMY), ENEMY)).toBeLessThan(hp(placed, ENEMY))
     }),
   ],
   [
@@ -119,9 +113,7 @@ export const status_consequence_entries = [
         },
       ])
       const poisoned = cast(initial, 'poison', ENEMY_CELL)
-      expect(hp(turn_to(poisoned, ENEMY), ENEMY)).toBe(
-        hp(poisoned, ENEMY) - 8,
-      )
+      expect(hp(turn_to(poisoned, ENEMY), ENEMY)).toBe(hp(poisoned, ENEMY) - 8)
     }),
   ],
   [
@@ -130,7 +122,9 @@ export const status_consequence_entries = [
       const initial = fight([
         {
           id: 'state',
-          effects: [on_self(spell_effect.K_APPLY_STATE, { value: 42, turns: 3 })],
+          effects: [
+            on_self(spell_effect.K_APPLY_STATE, { value: 42, turns: 3 }),
+          ],
         },
         { ...strike, forbidden_states: [42] },
       ])
@@ -141,27 +135,32 @@ export const status_consequence_entries = [
   ],
   [
     spell_effect.K_REMOVE_STATE,
-    consequence('remove-state clears the named state before the next cast', () => {
-      const initial = fight([
-        {
-          id: 'state',
-          effects: [on_self(spell_effect.K_APPLY_STATE, { value: 42, turns: 3 })],
-        },
-        {
-          id: 'clear',
-          effects: [
-            on_self(spell_effect.K_REMOVE_STATE, { value: 42, turns: 0 }),
-          ],
-        },
-      ])
-      const stated = cast(initial, 'state', CASTER_CELL)
-      const cleared = cast(stated, 'clear', CASTER_CELL)
-      expect(
-        rows(cleared, CASTER).some(
-          row => row.type === 'APPLY_STATE' && row.value === 42,
-        ),
-      ).toBe(false)
-    }),
+    consequence(
+      'remove-state clears the named state before the next cast',
+      () => {
+        const initial = fight([
+          {
+            id: 'state',
+            effects: [
+              on_self(spell_effect.K_APPLY_STATE, { value: 42, turns: 3 }),
+            ],
+          },
+          {
+            id: 'clear',
+            effects: [
+              on_self(spell_effect.K_REMOVE_STATE, { value: 42, turns: 0 }),
+            ],
+          },
+        ])
+        const stated = cast(initial, 'state', CASTER_CELL)
+        const cleared = cast(stated, 'clear', CASTER_CELL)
+        expect(
+          rows(cleared, CASTER).some(
+            row => row.type === 'APPLY_STATE' && row.value === 42,
+          ),
+        ).toBe(false)
+      },
+    ),
   ],
   [
     spell_effect.K_REDUCE_DAMAGE,
@@ -210,37 +209,40 @@ export const status_consequence_entries = [
   ],
   [
     spell_effect.K_DISPEL,
-    consequence('dispel removes a buff from the next damage calculation', () => {
-      const initial = fight([
-        strike,
-        {
-          id: 'rage',
-          effects: [
-            raw_effect(spell_effect.K_ALTER_STAT, {
-              value: SIGNED_SHIFT + 100,
-              stat: spell_effect.STAT_PERCENT_DAMAGE,
-              turns: 5,
-              element: NONE,
-              target_filter: spell_effect.TF_ONLY_CASTER,
-              flags: spell_effect.FLAG_DISPELLABLE,
-            }),
-          ],
-        },
-        {
-          id: 'dispel',
-          effects: [on_self(spell_effect.K_DISPEL)],
-        },
-      ])
-      const plain = damage_taken(initial, cast(initial, 'strike', ENEMY_CELL))
-      const buffed = cast(initial, 'rage', CASTER_CELL)
-      expect(
-        damage_taken(buffed, cast(buffed, 'strike', ENEMY_CELL)),
-      ).toBe(plain * 2)
-      const dispelled = cast(buffed, 'dispel', CASTER_CELL)
-      expect(
-        damage_taken(dispelled, cast(dispelled, 'strike', ENEMY_CELL)),
-      ).toBe(plain)
-    }),
+    consequence(
+      'dispel removes a buff from the next damage calculation',
+      () => {
+        const initial = fight([
+          strike,
+          {
+            id: 'rage',
+            effects: [
+              raw_effect(spell_effect.K_ALTER_STAT, {
+                value: SIGNED_SHIFT + 100,
+                stat: spell_effect.STAT_PERCENT_DAMAGE,
+                turns: 5,
+                element: NONE,
+                target_filter: spell_effect.TF_ONLY_CASTER,
+                flags: spell_effect.FLAG_DISPELLABLE,
+              }),
+            ],
+          },
+          {
+            id: 'dispel',
+            effects: [on_self(spell_effect.K_DISPEL)],
+          },
+        ])
+        const plain = damage_taken(initial, cast(initial, 'strike', ENEMY_CELL))
+        const buffed = cast(initial, 'rage', CASTER_CELL)
+        expect(damage_taken(buffed, cast(buffed, 'strike', ENEMY_CELL))).toBe(
+          plain * 2,
+        )
+        const dispelled = cast(buffed, 'dispel', CASTER_CELL)
+        expect(
+          damage_taken(dispelled, cast(dispelled, 'strike', ENEMY_CELL)),
+        ).toBe(plain)
+      },
+    ),
   ],
   [
     spell_effect.K_INVISIBILITY,
@@ -284,28 +286,31 @@ export const status_consequence_entries = [
       const hidden = cast(initial, 'fade', ENEMY_CELL)
       expect(damage_taken(hidden, cast(hidden, 'strike', ENEMY_CELL))).toBe(0)
       const revealed = cast(hidden, 'reveal', ENEMY_CELL)
-      expect(
-        damage_taken(revealed, cast(revealed, 'strike', ENEMY_CELL)),
-      ).toBe(20)
+      expect(damage_taken(revealed, cast(revealed, 'strike', ENEMY_CELL))).toBe(
+        20,
+      )
     }),
   ],
   [
     spell_effect.K_RETURN_SPELL,
-    consequence('spell return sends a subsequent hit back to its caster', () => {
-      const initial = fight([
-        strike,
-        {
-          id: 'mirror',
-          effects: [
-            on_self(spell_effect.K_RETURN_SPELL, { value: 0, turns: 3 }),
-          ],
-        },
-      ])
-      const mirrored = turn_to(cast(initial, 'mirror', CASTER_CELL), ENEMY)
-      const returned = cast(mirrored, 'strike', CASTER_CELL, ENEMY)
-      expect(damage_taken(mirrored, returned, CASTER)).toBe(0)
-      expect(damage_taken(mirrored, returned, ENEMY)).toBe(20)
-    }),
+    consequence(
+      'spell return sends a subsequent hit back to its caster',
+      () => {
+        const initial = fight([
+          strike,
+          {
+            id: 'mirror',
+            effects: [
+              on_self(spell_effect.K_RETURN_SPELL, { value: 0, turns: 3 }),
+            ],
+          },
+        ])
+        const mirrored = turn_to(cast(initial, 'mirror', CASTER_CELL), ENEMY)
+        const returned = cast(mirrored, 'strike', CASTER_CELL, ENEMY)
+        expect(damage_taken(mirrored, returned, CASTER)).toBe(0)
+        expect(damage_taken(mirrored, returned, ENEMY)).toBe(20)
+      },
+    ),
   ],
   [
     spell_effect.K_GEOMETRIC_PUSH,
@@ -475,10 +480,7 @@ export const status_consequence_entries = [
       const hit = cast(enemy_turn, 'strike', CASTER_CELL, ENEMY)
       const retaliating = turn_to(hit, CASTER)
       expect(
-        damage_taken(
-          retaliating,
-          cast(retaliating, 'strike', ENEMY_CELL),
-        ),
+        damage_taken(retaliating, cast(retaliating, 'strike', ENEMY_CELL)),
       ).toBeGreaterThan(plain)
     }),
   ],
