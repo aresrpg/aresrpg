@@ -155,6 +155,7 @@ function row(overrides: Partial<React.ComponentProps<typeof MarketplaceListingRo
       price_label="4.10 SUI"
       own={false}
       armed={false}
+      purchase_state="ready"
       on_arm={() => {}}
       on_confirm={() => {}}
       on_cancel={() => {}}
@@ -216,6 +217,7 @@ describe('StackableLotRows', () => {
           lot_listing('invalid-seven', 7, '10000000'),
         ]}
         address={null}
+        balance_mist={10_000_000_000n}
         busy={false}
         royalty_min_mist={10_000_000n}
         on_buy={() => {}}
@@ -237,6 +239,7 @@ describe('StackableLotRows', () => {
       <StackableLotRows
         listings={[lot_listing('own', 10, '1000000000'), lot_listing('external', 10, '2000000000')]}
         address="seller-own"
+        balance_mist={10_000_000_000n}
         busy={false}
         royalty_min_mist={10_000_000n}
         on_buy={() => {}}
@@ -257,6 +260,7 @@ describe('StackableLotRows', () => {
           lot_listing('rune-seven', 7, '10000000', 'legacy-seller', 'Rune'),
         ]}
         address={null}
+        balance_mist={10_000_000_000n}
         busy={false}
         royalty_min_mist={10_000_000n}
         on_buy={() => {}}
@@ -276,6 +280,7 @@ describe('StackableLotRows', () => {
         listing={lot_listing('four-sui', 10, '4000000000')}
         size={10}
         royalty_min_mist={10_000_000n}
+        purchase_state="ready"
         busy={false}
         on_confirm={() => {}}
         on_cancel={() => {}}
@@ -413,6 +418,12 @@ describe('MarketplaceListingRow', () => {
   test('disarms the BUY button while a purchase is in flight', () => {
     const html = render(row({ busy: true }))
     expect(html).toMatch(/<button[^>]*data-marketplace-buy-button[^>]*disabled/)
+  })
+
+  test('renders a translated disabled state when the wallet cannot cover the purchase', () => {
+    const html = render(row({ purchase_state: 'insufficient_balance' }))
+    expect(html).toMatch(/<button[^>]*data-marketplace-buy-button[^>]*disabled/)
+    expect(html).toContain('Insufficient balance')
   })
 
   // Design ruling 2026-07-18: clicking BUY opens the shared confirm MODAL ("are you sure you want to buy X for X SUI"),

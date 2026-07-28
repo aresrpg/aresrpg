@@ -8,6 +8,10 @@ import es from '../../i18n/locales/es.json'
 import fr from '../../i18n/locales/fr.json'
 import ja from '../../i18n/locales/ja.json'
 import uk from '../../i18n/locales/uk.json'
+import {
+  marketplace_purchase_balance_state,
+  marketplace_purchase_required_mist,
+} from '../../utils/marketplace_purchase'
 
 import {
   MARKETPLACE_CATEGORIES,
@@ -273,5 +277,17 @@ describe('native kiosk lot view model', () => {
       royalty_mist: 10_000_000n,
       total_mist: 20_000_000n,
     })
+  })
+
+  test('prechecks the exact marketplace debit plus fixed gas headroom', () => {
+    const required = marketplace_purchase_required_mist(4_000_000_000n, 10_000_000n)
+    expect(required).toBe(4_600_000_000n)
+    expect(marketplace_purchase_balance_state(null, 4_000_000_000n, 10_000_000n)).toBe('unknown')
+    expect(marketplace_purchase_balance_state(required! - 1n, 4_000_000_000n, 10_000_000n)).toBe('insufficient_balance')
+    expect(marketplace_purchase_balance_state(required!, 4_000_000_000n, 10_000_000n)).toBe('ready')
+  })
+
+  test('the insufficient-balance button copy exists in all six locales', () => {
+    for (const locale of LOCALES) expect(value_at(locale, 'marketplace.purchase.insufficient_balance')).toBeString()
   })
 })

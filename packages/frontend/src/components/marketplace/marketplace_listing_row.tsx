@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { AddressName } from '../address_name'
 import { ConfirmDialog } from '../../game/screens/hud/world/ConfirmDialog'
+import type { MarketplacePurchaseBalanceState } from '../../utils/marketplace_purchase'
 
 export function MarketplaceListingRow({
   seller_address,
@@ -15,6 +16,7 @@ export function MarketplaceListingRow({
   visual,
   own,
   armed,
+  purchase_state,
   busy = false,
   alternate = false,
   on_arm,
@@ -31,6 +33,7 @@ export function MarketplaceListingRow({
   visual?: ReactNode
   own: boolean
   armed: boolean
+  purchase_state: MarketplacePurchaseBalanceState
   busy?: boolean
   alternate?: boolean
   on_arm: () => void
@@ -40,6 +43,8 @@ export function MarketplaceListingRow({
   on_mouse_leave?: MouseEventHandler<HTMLDivElement>
 }) {
   const { t } = useTranslation()
+  const purchasable = !own && !busy && purchase_state === 'ready'
+  const insufficient_balance = purchase_state === 'insufficient_balance'
 
   return (
     <div
@@ -51,9 +56,9 @@ export function MarketplaceListingRow({
     >
       <div
         className="flex items-center gap-3 px-4 py-2.5"
-        style={{ cursor: own ? 'default' : 'pointer' }}
+        style={{ cursor: purchasable ? 'pointer' : 'default' }}
         onClick={() => {
-          if (!own) on_arm()
+          if (purchasable) on_arm()
         }}
       >
         {visual}
@@ -78,16 +83,22 @@ export function MarketplaceListingRow({
         <button
           data-marketplace-buy-button
           type="button"
-          disabled={own || busy}
+          disabled={!purchasable}
           aria-expanded={armed}
-          title={own ? (t('marketplace_sui.purchase.own_listing') as string) : undefined}
+          title={
+            own
+              ? (t('marketplace_sui.purchase.own_listing') as string)
+              : insufficient_balance
+                ? t('marketplace.purchase.insufficient_balance')
+                : undefined
+          }
           onClick={(event) => {
             event.stopPropagation()
-            if (!own) on_arm()
+            if (purchasable) on_arm()
           }}
           className="btn-gold min-w-20 px-3 py-1.5 text-[9px] tracking-[0.18em] uppercase disabled:cursor-not-allowed disabled:opacity-35 shrink-0"
         >
-          {t('marketplace.sui.buy')}
+          {t(insufficient_balance ? 'marketplace.purchase.insufficient_balance' : 'marketplace.sui.buy')}
         </button>
       </div>
 
@@ -95,7 +106,7 @@ export function MarketplaceListingRow({
           never an inline strip. Reuses the shared ConfirmDialog — one modal system, gothic-terminal DNA. The
           tx target is untouched: on_confirm still fires the SAME buy handler the caller wired. */}
       <ConfirmDialog
-        open={armed && !own}
+        open={armed && purchasable}
         title={t('marketplace.purchase.confirm_title')}
         message={t('marketplace.purchase.confirm_message', { name: item_name, price: price_label })}
         confirm_label={`${t('marketplace.sui.buy')} · ${price_label}`}

@@ -3,15 +3,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Store } from 'lucide-react'
-import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { catalog, slugs } from 'virtual:item_catalog'
 
 import type { MarketplaceListing } from '../../types/chain'
 import { use_auth } from '../../auth'
 import { use_template_t } from '../../i18n/template_t'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
-import { DEMO_NETWORK } from '../../chain/deployment'
 import { format_mist_to_sui } from '../../utils/sui_mist'
+import { MARKETPLACE_ROYALTY_MIN_MIST, marketplace_purchase_balance_state } from '../../utils/marketplace_purchase'
 import { app_mobile_classes, use_mobile_mode } from '../../game/screens/hud/mobile_layout.js'
 import { ItemImage } from '../items'
 import { ItemHoverTooltip } from '../item_hover_tooltip'
@@ -43,15 +42,13 @@ import {
 // then live native-kiosk listing rows below. No template detail card owns a purchase control.
 
 const catalog_for_name = make_catalog_lookup({ catalog, slugs })
-const royalty_min_stamp = aresrpg_id(DEMO_NETWORK, 'ITEM_ROYALTY_MIN_MIST')
-const ITEM_ROYALTY_MIN_MIST = royalty_min_stamp ? BigInt(royalty_min_stamp) : null
-
 export function BrowsePanel() {
   const { t } = useTranslation()
   const tt = use_template_t()
   const is_mobile = use_mobile_mode()
   const classes = app_mobile_classes(is_mobile)
   const address = use_auth((state) => state.address)
+  const balance_mist = use_auth((state) => state.sui_balance_mist)
   const { listings, templates_item, submit_buy, busy } = use_marketplace_chain()
   const [active, set_active] = useState<MarketplaceCategory>('EQUIPMENT')
   const [active_item_type, set_active_item_type] = useState<string | null>(null)
@@ -300,15 +297,18 @@ export function BrowsePanel() {
                     <StackableLotRows
                       listings={listing_rows}
                       address={address}
+                      balance_mist={balance_mist}
                       busy={busy}
-                      royalty_min_mist={ITEM_ROYALTY_MIN_MIST}
+                      royalty_min_mist={MARKETPLACE_ROYALTY_MIN_MIST}
                       on_buy={buy}
                     />
                   ) : (
                     listing_rows.map((listing, index) => {
                       const is_own = !!address && listing.seller_sui_address === address
                       const armed = confirm_id === listing.id
-                      const price_label = `${format_mist_to_sui(BigInt(listing.price_mist), 2)} SUI`
+                      const price_mist = BigInt(listing.price_mist)
+                      const price_label = `${format_mist_to_sui(price_mist, 2)} SUI`
+                      const purchase_state = marketplace_purchase_balance_state(balance_mist, price_mist)
                       return (
                         <ItemHoverTooltip
                           key={listing.id}
@@ -333,6 +333,7 @@ export function BrowsePanel() {
                               }
                               own={is_own}
                               armed={armed}
+                              purchase_state={purchase_state}
                               busy={busy}
                               alternate={index % 2 === 0}
                               on_arm={() => set_confirm_id(listing.id)}

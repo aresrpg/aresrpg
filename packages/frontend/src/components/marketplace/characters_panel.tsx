@@ -10,6 +10,7 @@ import { RpcStale } from '../../rpc/RpcStale'
 import { use_auth } from '../../auth'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
+import { marketplace_purchase_balance_state } from '../../utils/marketplace_purchase'
 import { class_color, CLASS_COLORS } from '../../constants/class_colors'
 import { ChipRow } from '../chip_row'
 import { use_address_names } from '../../rpc/use_address_names'
@@ -44,6 +45,7 @@ type CharacterRow = {
 export function CharactersPanel() {
   const { t } = useTranslation()
   const address = use_auth((s) => s.address)
+  const balance_mist = use_auth((s) => s.sui_balance_mist)
   const submit_buy_character = use_marketplace_chain((s) => s.submit_buy_character)
   const busy = use_marketplace_chain((s) => s.busy)
   // Owner standing ask (DECISIONS 07-10): LEVEL filter = min/max INPUTS, not band chips. Empty = unbounded
@@ -135,7 +137,9 @@ export function CharactersPanel() {
           const color = class_color(row.class)
           const is_own = !!address && row.seller === address
           const armed = confirm_id === row.item_id
-          const price_label = `${format_mist_to_sui(BigInt(row.price_mist), 2)} SUI`
+          const price_mist = BigInt(row.price_mist)
+          const price_label = `${format_mist_to_sui(price_mist, 2)} SUI`
+          const purchase_state = marketplace_purchase_balance_state(balance_mist, price_mist)
           return (
             <MarketplaceListingRow
               key={row.item_id}
@@ -145,6 +149,7 @@ export function CharactersPanel() {
               price_label={price_label}
               own={is_own}
               armed={armed}
+              purchase_state={purchase_state}
               busy={busy}
               alternate={idx % 2 === 0}
               visual={
