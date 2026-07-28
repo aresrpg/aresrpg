@@ -62,11 +62,25 @@ export const apply_stat_effect = (state, effect, caster, target) => {
       effect.stat === 'ap' ? target.ap_max : target.mp_max,
     )
     const with_rng = with_turn_rng(state, result.state)
+    // A LOST CONTEST IS AN OUTCOME, NOT A NO-OP. The row states the same three facts the landed row below
+    // states — pool, moved, attempted — so one consumer shape reads both endings. The chain has always done it
+    // this way: `emit_drain(point_kind, removed, requested)` fires UNCONDITIONALLY (cast.move:1832), dodge
+    // included. A bare `{ status: 'POINT_DODGED' }` named no pool and no attempt, so nothing downstream could
+    // state what was resisted — a partial dodge spoke (it rides the landed row) while a FULL one reached the
+    // player as complete silence, indistinguishable from an unimplemented mechanic (#1168).
     if (result.removed === 0)
       return {
         handled: true,
         state: with_rng,
-        effects: [{ target_id: target.id, status: 'POINT_DODGED' }],
+        effects: [
+          {
+            target_id: target.id,
+            status: 'POINT_DODGED',
+            stat: effect.stat,
+            value: 0,
+            requested,
+          },
+        ],
       }
     const stored = add_row(
       with_rng,

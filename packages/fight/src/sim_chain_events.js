@@ -167,7 +167,6 @@ const INERT_STATUSES = new Set([
   'FORCED_DEATH_IMMUNE',
   'GLYPH',
   'NAMED_DAMAGE_STACK',
-  'POINT_DODGED',
   'POISON',
   'PUNISHMENT_TRIGGER',
   'REACTIVE_PUNISHMENT',
@@ -253,15 +252,24 @@ const encode_effect = (state, effect, ctx) => {
   // would be a fact the client can only ever roll back (#952: the owner lost the bonus MP the instant the
   // receipt landed). `Granted` is the fold's own grant kind and THE one home both grant doors ride (inputs.js),
   // so the pool move is stated there. A non-pool stat row carries no chain event and stays inert below.
+  // A FULLY-DODGED DRAIN IS A CHAIN EVENT, not an absence: `emit_drain` sits AFTER cast.move's
+  // `if (removed > 0)` block (cast.move:1832), so the chain states it as `Drain{ removed: 0, requested: n }`.
+  // `POINT_DODGED` is the sim's name for that same row, so it rides this arm — the ATTEMPT is what makes a pool
+  // row stateable, not the magnitude. Keying the skip on `amount` instead made the one contest loud when it ate
+  // 1 of 2 points and silent when it ate both (#1168: a resisted drain read as an unimplemented mechanic).
   const pool_kind = POOL_POINT_KIND[effect.stat]
-  if (pool_kind !== undefined && (effect.status === 'STAT_BUFF' || effect.status === 'STAT_DEBUFF')) {
+  if (
+    pool_kind !== undefined &&
+    (effect.status === 'STAT_BUFF' || effect.status === 'STAT_DEBUFF' || effect.status === 'POINT_DODGED')
+  ) {
     const amount = Math.max(0, Math.trunc(Number(effect.value) || 0))
-    if (amount === 0) return [] // a fully-dodged drain moved no pool — POINT_DODGED already carries the miss
+    const requested = Math.max(amount, Math.trunc(Number(effect.requested) || 0))
+    if (requested === 0) return [] // moved nothing and attempted nothing — there is no pool move to state
     const target = { fight, target_is_mob: is_mob, target_idx: u64(idx), point_kind: pool_kind }
     return [
       effect.status === 'STAT_BUFF'
         ? row('Granted', { ...target, granted: u64(amount) })
-        : row('Drain', { ...target, removed: u64(amount), requested: u64(effect.requested ?? amount) }),
+        : row('Drain', { ...target, removed: u64(amount), requested: u64(requested) }),
     ]
   }
   if (effect.status === 'CRITICAL_FAILURE_FUMBLE')
