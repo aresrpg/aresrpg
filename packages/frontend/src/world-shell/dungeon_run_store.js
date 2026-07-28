@@ -62,6 +62,7 @@ import { set_zone_music, stop_zone_music } from '../game/core/audio/ambient_musi
 import { game_log } from '../core/log.js'
 
 import { install_fight_trace_tee } from './fight_trace_tee.js'
+import { bind_fight_stream } from './fight_stream_link.js'
 import {
   as_one_toast,
   next_room_fight,
@@ -128,6 +129,22 @@ export async function walk_current_fight_journal({
     input({ type: 'journal', fight_id, batch })
   }
   return 'applied'
+}
+
+/**
+ * THE ONE RESUME CURSOR (#1384): the journal `seq` both transports resume from — our ACCEPTED frontier, lowered
+ * by a still-open contiguity gap. It is DERIVED from the fold, never bookkept per transport, so the stream's
+ * catch-up and the poll's walk can never drift apart.
+ * @param {any} core_state `fight_store.getState()`
+ * @param {string} fight_id
+ * @returns {string} the u64 decimal seq to page from
+ */
+export function fight_journal_from(core_state, fight_id) {
+  const accepted = u64(core_state?.accept_state?.head)
+  const frontier = accepted == null ? 0n : accepted + 1n
+  const gap = core_state?.journal_gap
+  const gap_from = gap && String(gap.fight_id ?? fight_id) === String(fight_id) ? u64(gap.from) : null
+  return (gap_from != null && gap_from < frontier ? gap_from : frontier).toString()
 }
 
 const key_units = (items) => items.reduce((total, item) => total + Math.max(1, Math.floor(Number(item.amount ?? 1))), 0)
@@ -345,6 +362,8 @@ export const use_dungeon = create((set, get) => ({
   busy_since: null,
   /** @type {ReturnType<typeof setInterval> | null} */
   _poll_timer: null,
+  /** @type {ReturnType<typeof bind_fight_stream> | null} the live fight's SSE link (#1384) */
+  _fight_stream: null,
 
   /**
    * ENTER (§9): burn ONE dungeon key → a bound RunPass at room 1. SOLO and co-op both enter here (each member
@@ -974,6 +993,9 @@ export const use_dungeon = create((set, get) => ({
         }
       }
       const live_fight_id = get().fight_id
+      // #1384 — the live fight's SSE link follows the latched id (and closes with it); the walk below is what
+      // still runs whenever that wire is not carrying the rows.
+      get()._ensure_fight_stream(live_fight_id)
       if (live_fight_id) {
         let read = null
         let definitively_gone = false
@@ -1043,28 +1065,18 @@ export const use_dungeon = create((set, get) => ({
           },
         })
         // M2b · ONE INGRESS (#291): the object read above is a bootstrap/checkpoint only — canonical events fold
-        // from the JOURNAL. Walk the read-layer journal from our ACCEPTED FRONTIER on EVERY live poll — this is the
-        // passive-observer LIVE FEED: a force_start (the placement→ACTIVE flip), a peer's turn, or the mob turn
-        // advances the journal with NO receipt of OURS to fold it, so the POLL (not a receipt) is what catches us
-        // up. The chain object read carries no journalHead (that is a /v1-derived ZCARD, not an on-chain field), so
-        // the checkpoint can never flag the gap — the frontier walk is the trigger. The accept machine dedupes
-        // re-delivery (idempotent) and the fold version-excludes whatever the bootstrap base already covers; a
-        // still-open contiguity gap only LOWERS the cursor; a pre-deploy 404 degrades to a no-op.
-        const { accept_state, journal_gap } = fight_store.getState()
-        const accepted = u64(accept_state?.head)
-        const frontier = accepted == null ? 0n : accepted + 1n
-        const gap_from =
-          journal_gap && String(journal_gap.fight_id ?? live_fight_id) === String(live_fight_id)
-            ? u64(journal_gap.from)
-            : null
-        const from = gap_from != null && gap_from < frontier ? gap_from : frontier
-        const result = await walk_current_fight_journal({
-          fight_id: live_fight_id,
-          from: from.toString(),
-          is_current,
-          current_fight_id: () => get().fight_id,
-        })
-        if (result === 'stale') return
+        // from the JOURNAL. #1384 made the SSE stream the live carrier of those rows (one frame per event, ~250ms
+        // behind chain); this binds it to the latched fight. The chain object read carries no journalHead (that is
+        // a /v1-derived ZCARD, not an on-chain field), so the checkpoint can never flag a gap — the frontier walk
+        // is still the trigger, and it runs on every poll where the WIRE IS NOT CARRYING the fight (not deployed
+        // yet → 404, no EventSource, a spent retry budget, or between reconnects). While the stream is live the
+        // pager is the catch-up path only: it walks on every connect and before every turn deadline. Both
+        // transports resume from ONE cursor (fight_journal_from) into ONE door; the accept machine dedupes
+        // re-delivery, so a row arriving twice is a no-op rather than a divergence.
+        if (!get()._fight_stream?.is_live()) {
+          const result = await get()._walk_fight_journal(live_fight_id, is_current)
+          if (result === 'stale') return
+        }
       } else if (run) {
         // roam: a live run with no room fight — feed the OPEN view (versioned by the pass so a room advance
         // re-adopts) so the mirror keeps showing the plane and the next cluster stays clickable.
@@ -1170,7 +1182,56 @@ export const use_dungeon = create((set, get) => ({
   _stop_polling() {
     const timer = get()._poll_timer
     if (timer) clearInterval(timer)
+    get()._ensure_fight_stream(null)
     set({ _poll_timer: null })
+  },
+
+  /** Page the journal from THE one resume cursor into the ONE fold door. Both transports call exactly this. */
+  _walk_fight_journal(/** @type {string} */ fight_id, /** @type {() => boolean} */ is_current) {
+    return walk_current_fight_journal({
+      fight_id,
+      from: fight_journal_from(fight_store.getState(), fight_id),
+      is_current,
+      current_fight_id: () => get().fight_id,
+    })
+  },
+
+  /**
+   * THE CUTOVER (#1384): keep exactly ONE stream bound to the latched fight — opened when a fight binds, closed
+   * when it unbinds or the session stops. The link owns reconnects and the pre-deploy 404 ladder; the poll below
+   * reads `is_live()` to decide whether the wire or the pager is carrying this fight's rows.
+   * @param {string | null} fight_id
+   */
+  _ensure_fight_stream(fight_id) {
+    const link = get()._fight_stream
+    if (link && link.fight_id === fight_id) return link
+    link?.close()
+    if (!fight_id) {
+      if (link) set({ _fight_stream: null })
+      return null
+    }
+    const owns = () => get().fight_id === fight_id
+    const walk = () => get()._walk_fight_journal(fight_id, owns)
+    const next = bind_fight_stream({
+      fight_id,
+      catch_up: walk,
+      // The frame re-enters as an INPUT through the same door the pager uses — no callback writes a store.
+      input: (message, now) => {
+        if (owns()) fight_store.getState().input(message, now)
+      },
+      // The #1381 belt: one direct read before the deadline the fight is actually running against, so a silent
+      // wire can never cost the window it is about to end — the TURN clock while a turn runs, the PLACEMENT
+      // clock before the force_start (the transition a dead live feed stranded on "POSITION YOUR TEAM 0:00").
+      // Read off the MEMOIZED projection — one computation per folded state, never re-derived here.
+      deadline: () => {
+        const view = fight_view()
+        return view?.turn_deadline_ms || view?.placement_deadline_ms || null
+      },
+      direct_read: walk,
+      subscribe: (listener) => fight_store.subscribe(listener),
+    })
+    set({ _fight_stream: next })
+    return next
   },
 
   /** Dismiss the room-clear recap (RewardRecap.jsx timer / close). */

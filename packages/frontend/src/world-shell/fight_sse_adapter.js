@@ -15,12 +15,13 @@
 // into a one-row page by the SAME normalizer the walker uses. A frame that is neither is not dropped in
 // silence forever: it spends the finite budget below and then gives up honestly.
 //
-// TWO OPEN CONTRACT DELTAS vs the server half (#1398 — reported, not worked around):
-//  · a browser cannot set headers on an EventSource, so the FIRST connect seeds its resume point as
-//    `?lastEventId=` (the browser sends the header itself on its own reconnects); the route reads the header
-//    only, so the seed is ignored until it also reads the query.
-//  · the frame carries no journal `seq`, and the SSE id is a chain cursor, not the u64 ordinal the fold keys
-//    on — so a live row is unfoldable until the frame carries its `seq`.
+// THE CONTRACT DELTAS ARE CLOSED (#1398): the route now reads `?lastEventId=` as well as the header (a browser
+// cannot set headers on an EventSource, so the FIRST connect can only seed through the query), and every frame
+// carries its journal `seq`, so a live row is foldable. ONE truth survives that: the resume id is a CHAIN cursor
+// (`<checkpoint>:<event-index>`), NOT the u64 ordinal the fold keys on — so `cursor` is whatever the caller can
+// honestly produce, and the cutover (fight_stream_link.js) produces none. A cursorless connect replays the
+// fight's journal from its start and the accept machine drops everything at or below the fold's frontier:
+// idempotence is the resume, and no second cursor is bookkept anywhere.
 //
 // GIVING UP HONESTLY: an EventSource retries FOREVER by default (a dead endpoint = an immortal silent retry
 // loop). Attempts are counted against REJOIN_MAX_ATTEMPTS — the presence link's budget, imported so the number
