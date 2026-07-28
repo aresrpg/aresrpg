@@ -24,9 +24,11 @@
 //! offline), thin I/O (reuses `project::execute`).
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
+use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -82,6 +84,9 @@ const PERSONAL_KIOSK_MODULE: &str = "personal_kiosk";
 const PERSONAL_KIOSK_CAP_TYPE: &str = "PersonalKioskCap";
 const MOB_TEMPLATE_MODULE: &str = "mob_template";
 const MOB_TEMPLATE_TYPE: &str = "MobTemplate";
+/// Optional deploy-owned custody manifest. Unset/unreadable deliberately fails open so a missing
+/// mount can reintroduce duplicates but can never blank the bestiary.
+const MOB_CANONICAL_IDS_PATH_ENV: &str = "ARES_MOB_CANONICAL_IDS_PATH";
 /// The 2026-07-23 fresh-publish `aresrpg` origin (a NEW package, not an in-place upgrade —
 /// `Published.toml`'s `original-id`/`version = 1` for this ceremony), verified against the
 /// ceremony's own stamp. RE-KEYED to ceremony #3 (the mob-range + spells serializer cures
@@ -128,6 +133,38 @@ const ARES_ORIGIN_EFFECT_BYTES: &[(&str, usize)] = &[
     ("6XD9S2etC5Y7Jvj7sTjGSiz8ousCyJ8EVwXodh2nMXYd", 33),
     ("9qxy69fWNHZGUgYTr9oJStEYXk9TDMgwetkES4YSW1tH", 33),
 ];
+
+#[derive(Deserialize)]
+struct MobCanonicalManifestRow {
+    #[serde(rename = "key")]
+    _key: String,
+    #[serde(rename = "name")]
+    _name: String,
+    id: String,
+}
+
+fn parse_mob_canonical_ids(contents: &[u8]) -> Result<HashSet<String>> {
+    let rows: Vec<MobCanonicalManifestRow> =
+        serde_json::from_slice(contents).context("parsing mob canonical allowlist JSON")?;
+    rows.into_iter()
+        .map(|row| {
+            let hex = row.id.strip_prefix("0x").unwrap_or_default();
+            if hex.len() != 64 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+                bail!("mob canonical id must be a 0x-prefixed 64-hex Sui object id");
+            }
+            Ok(ObjectID::from_hex_literal(&row.id)
+                .context("parsing mob canonical id")?
+                .to_canonical_string(true))
+        })
+        .collect()
+}
+
+fn read_mob_canonical_ids(path: &Path) -> Result<HashSet<String>> {
+    let contents = std::fs::read(path)
+        .with_context(|| format!("reading mob canonical allowlist {}", path.display()))?;
+    parse_mob_canonical_ids(&contents)
+}
+
 /// `aresrpg::crafting::Recipe` — the §14 encyclopedia crafting blueprint. The shared object
 /// carries the FULL recipe truth (ingredient list + output + job/level/xp); the `RecipeCreated`
 /// EVENT carries only counts, so the encyclopedia's recipe view snapshots the object, exactly
@@ -1513,11 +1550,53 @@ pub fn kiosk_purchase_per_unit(price_mist: u64, amount: u64) -> Option<u64> {
 /// [`is_versioned_payload_key`]) and primitives carry no address to gate on.
 pub struct AresSnapshotHandler {
     packages: Option<HashSet<String>>,
+    // Retires when the chain-prune ceremony deletes the superseded flat docs on chain — after that this list excludes nothing.
+    mob_canonical_ids: Option<HashSet<String>>,
+}
+
+enum MobTemplateProjection {
+    Writes(Vec<RedisWrite>),
+    SkippedNonCanonical,
+    Malformed,
 }
 
 impl AresSnapshotHandler {
     pub fn new(packages: Option<HashSet<String>>) -> Self {
-        Self { packages }
+        let path = std::env::var_os(MOB_CANONICAL_IDS_PATH_ENV);
+        Self::from_path(packages, path.as_deref())
+    }
+
+    fn from_path(packages: Option<HashSet<String>>, path: Option<&OsStr>) -> Self {
+        let Some(path) = path else {
+            return Self::from_parts(packages, None);
+        };
+        match read_mob_canonical_ids(Path::new(path)) {
+            Ok(ids) => Self::from_parts(packages, Some(ids)),
+            Err(error) => {
+                warn!(
+                    path = ?path,
+                    error = %error,
+                    "mob canonical allowlist not configured — projecting all templates, duplicates possible"
+                );
+                Self {
+                    packages,
+                    mob_canonical_ids: None,
+                }
+            }
+        }
+    }
+
+    fn from_parts(
+        packages: Option<HashSet<String>>,
+        mob_canonical_ids: Option<HashSet<String>>,
+    ) -> Self {
+        if mob_canonical_ids.is_none() {
+            warn!("mob canonical allowlist not configured — projecting all templates, duplicates possible");
+        }
+        Self {
+            packages,
+            mob_canonical_ids,
+        }
     }
 
     fn admits(&self, pkg: &str) -> bool {
@@ -1557,6 +1636,31 @@ impl AresSnapshotHandler {
             _ => false,
         }
     }
+
+    fn project_mob_template(
+        &self,
+        id: &str,
+        contents: &[u8],
+        package: &str,
+    ) -> MobTemplateProjection {
+        if self
+            .mob_canonical_ids
+            .as_ref()
+            .is_some_and(|canonical| !canonical.contains(id))
+        {
+            return MobTemplateProjection::SkippedNonCanonical;
+        }
+        match map_mob_template_object(id, contents, package) {
+            Some(writes) => MobTemplateProjection::Writes(writes),
+            None => MobTemplateProjection::Malformed,
+        }
+    }
+
+    fn log_mob_template_skips(&self, skipped: usize, checkpoint: u64) {
+        if skipped > 0 {
+            debug!(skipped, checkpoint, "skipped non-canonical mob templates");
+        }
+    }
 }
 
 #[async_trait]
@@ -1567,6 +1671,7 @@ impl Processor for AresSnapshotHandler {
 
     async fn process(&self, checkpoint: &Arc<Checkpoint>) -> Result<Vec<Self::Value>> {
         let mut writes = Vec::new();
+        let mut skipped_mob_templates = 0;
         // Applied after Phase 2: a fight can output both the stale-base Character object and its
         // live Progression DF, so progression must win the same-checkpoint JSON.SET ordering.
         let mut progression_writes = Vec::new();
@@ -1917,9 +2022,18 @@ impl Processor for AresSnapshotHandler {
                         map_item_object(&id, mv.contents(), kiosk.as_deref(), &package)
                     }
                     (ITEM_MODULE, ITEM_TEMPLATE_TYPE) => map_item_template_object(&id, mv.contents()),
-                    (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => {
-                        map_mob_template_object(&id, mv.contents(), &ty.address().to_canonical_string(true))
-                    }
+                    (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => match self.project_mob_template(
+                        &id,
+                        mv.contents(),
+                        &ty.address().to_canonical_string(true),
+                    ) {
+                        MobTemplateProjection::Writes(writes) => Some(writes),
+                        MobTemplateProjection::SkippedNonCanonical => {
+                            skipped_mob_templates += 1;
+                            None
+                        }
+                        MobTemplateProjection::Malformed => None,
+                    },
                     (WORLD_MODULE, WORLD_TYPE) => map_world_object(&id, mv.contents()),
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
@@ -1933,6 +2047,7 @@ impl Processor for AresSnapshotHandler {
                 }
             }
         }
+        self.log_mob_template_skips(skipped_mob_templates, checkpoint.summary.sequence_number);
         writes.append(&mut progression_writes);
         if !writes.is_empty() {
             debug!(count = writes.len(), checkpoint = checkpoint.summary.sequence_number, "projected ares snapshot writes");

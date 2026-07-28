@@ -10,8 +10,30 @@ use super::super::model::{
     Customization, ItemDamagesLine, ItemTemplateObject, PositionAnchor, RecipeIngredient,
 };
 use std::collections::HashMap;
+use std::io::{self, Write};
+use std::sync::{Arc, Mutex};
 use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
 use sui_indexer_alt_framework::types::object::Owner;
+
+#[derive(Clone, Default)]
+struct SharedLog(Arc<Mutex<Vec<u8>>>);
+
+impl SharedLog {
+    fn contents(&self) -> String {
+        String::from_utf8(self.0.lock().unwrap().clone()).unwrap()
+    }
+}
+
+impl Write for SharedLog {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
 
 /// The pre-#577 origin — the last universe live before the 2026-07-23 fresh publish, and the one
 /// registered 25-byte lineage. This is the file's one pre-existing chain-capture reference; every
@@ -1282,6 +1304,140 @@ fn mob_template_bytes(name: &str, min: u16, max: u16, hp: u64, element: u8, trai
     b.push(element);
     b.extend_from_slice(trailing); // stats/spells/loot/xp — never decoded
     b
+}
+
+/// Deploy config owns the real 374-row custody manifest. This deliberately invented three-row
+/// fixture preserves its exact `{key,name,id}` shape — including the full-width 64-hex Sui object
+/// id, built at runtime by [`synthetic_object_id`] so source carries no live-shaped literal —
+/// without copying any live custody truth into the repository.
+fn synthetic_mob_canonical_manifest() -> String {
+    let rows = [
+        ("alley_bunny", "Alley Bunny", "0xb1"),
+        ("clockwork_heron", "Clockwork Heron", "0xb2"),
+        ("velvet_slime", "Velvet Slime", "0xb3"),
+    ]
+    .map(|(key, name, short)| {
+        format!(r#"  {{"key":"{key}","name":"{name}","id":"{}"}}"#, synthetic_object_id(short))
+    })
+    .join(",\n");
+    format!("[\n{rows}\n]")
+}
+
+#[test]
+fn mob_canonical_allowlist_filters_a_projection_walk_and_unset_warns_fail_open() {
+    fn walk(handler: &AresSnapshotHandler, rows: &[(&str, &[u8])]) -> Vec<RedisWrite> {
+        let mut writes = Vec::new();
+        let mut skipped = 0;
+        for (id, bytes) in rows {
+            match handler.project_mob_template(id, bytes, NARROW_EFFECT_ARESRPG_ORIGIN) {
+                MobTemplateProjection::Writes(mut mapped) => writes.append(&mut mapped),
+                MobTemplateProjection::SkippedNonCanonical => skipped += 1,
+                MobTemplateProjection::Malformed => {}
+            }
+        }
+        handler.log_mob_template_skips(skipped, 42);
+        writes
+    }
+
+    let manifest = synthetic_mob_canonical_manifest();
+    let canonical =
+        parse_mob_canonical_ids(manifest.as_bytes()).expect("synthetic custody-manifest shape must parse");
+    assert_eq!(canonical.len(), 3);
+
+    let included_id = synthetic_object_id("0xb1");
+    let excluded_id = synthetic_object_id("0xbad");
+    let included = included_id.as_str();
+    let excluded = excluded_id.as_str();
+    let included_bytes = mob_template_bytes("Alley Bunny", 1, 2, 12, 3, &[]);
+    let excluded_bytes = mob_template_bytes("Flat Twin", 1, 2, 12, 3, &[]);
+    let rows = [
+        (included, included_bytes.as_slice()),
+        (excluded, excluded_bytes.as_slice()),
+    ];
+
+    let configured_path = std::env::temp_dir().join(format!(
+        "ares-mob-canonical-allowlist-configured-{}.json",
+        std::process::id()
+    ));
+    std::fs::write(&configured_path, &manifest).unwrap();
+    let configured_log = SharedLog::default();
+    let configured_writer = configured_log.clone();
+    let configured_subscriber = tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_max_level(tracing::Level::DEBUG)
+        .without_time()
+        .with_writer(move || configured_writer.clone())
+        .finish();
+    let configured_writes = tracing::subscriber::with_default(configured_subscriber, || {
+        let handler = AresSnapshotHandler::from_path(None, Some(configured_path.as_os_str()));
+        walk(&handler, &rows)
+    });
+    std::fs::remove_file(&configured_path).unwrap();
+    assert!(has_sadd(&configured_writes, K_MOB_TEMPLATES, included));
+    assert!(!has_sadd(&configured_writes, K_MOB_TEMPLATES, excluded));
+    let configured_log = configured_log.contents();
+    assert_eq!(
+        configured_log
+            .matches("skipped non-canonical mob templates")
+            .count(),
+        1
+    );
+    assert!(
+        configured_log.contains("skipped=1"),
+        "log: {configured_log}"
+    );
+    assert!(!configured_log.contains("mob canonical allowlist not configured"));
+
+    let fail_open_log = SharedLog::default();
+    let fail_open_writer = fail_open_log.clone();
+    let fail_open_subscriber = tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_max_level(tracing::Level::DEBUG)
+        .without_time()
+        .with_writer(move || fail_open_writer.clone())
+        .finish();
+    let fail_open_writes = tracing::subscriber::with_default(fail_open_subscriber, || {
+        let handler = AresSnapshotHandler::from_parts(None, None);
+        walk(&handler, &rows)
+    });
+    assert!(has_sadd(&fail_open_writes, K_MOB_TEMPLATES, included));
+    assert!(has_sadd(&fail_open_writes, K_MOB_TEMPLATES, excluded));
+    let fail_open_log = fail_open_log.contents();
+    assert_eq!(
+        fail_open_log
+            .matches("mob canonical allowlist not configured — projecting all templates, duplicates possible")
+            .count(),
+        1,
+        "log: {fail_open_log}"
+    );
+
+    let unreadable_log = SharedLog::default();
+    let unreadable_writer = unreadable_log.clone();
+    let unreadable_subscriber = tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_max_level(tracing::Level::DEBUG)
+        .without_time()
+        .with_writer(move || unreadable_writer.clone())
+        .finish();
+    let missing_path = std::env::temp_dir().join(format!(
+        "ares-mob-canonical-allowlist-missing-{}.json",
+        std::process::id()
+    ));
+    assert!(!missing_path.exists(), "test requires an unreadable path");
+    let unreadable_writes = tracing::subscriber::with_default(unreadable_subscriber, || {
+        let handler = AresSnapshotHandler::from_path(None, Some(missing_path.as_os_str()));
+        walk(&handler, &rows)
+    });
+    assert!(has_sadd(&unreadable_writes, K_MOB_TEMPLATES, included));
+    assert!(has_sadd(&unreadable_writes, K_MOB_TEMPLATES, excluded));
+    let unreadable_log = unreadable_log.contents();
+    assert_eq!(
+        unreadable_log
+            .matches("mob canonical allowlist not configured — projecting all templates, duplicates possible")
+            .count(),
+        1,
+        "log: {unreadable_log}"
+    );
 }
 
 #[test]
