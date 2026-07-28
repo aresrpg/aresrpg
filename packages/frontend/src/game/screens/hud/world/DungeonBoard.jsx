@@ -34,7 +34,6 @@ import { fight_spell_template, resolve_class_spells, seat_spell_level, seat_spel
 import { push_event_toast } from '../../../core/toast.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '../../../core/modules/fight.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
-import { damage_of } from '@aresrpg/fight/predict_cast'
 import {
   compose_staged_turn,
   subscribe_commit_due,
@@ -58,6 +57,7 @@ import {
   weapon_spell_template,
   evolve_flush_casts,
   evolve_caster_cell,
+  evolve_draft_health,
 } from '@aresrpg/fight/predict_cast'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon, move_plan_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
@@ -280,13 +280,6 @@ export function DungeonBoard() {
   //    beat can NEVER play for an unaffordable action, and the excess phantom beats that read as "mobs regaining
   //    health" (uncommitted casts folding back) are gone: every beat is now 1:1 with a committable action. ──
   const CASTS_UNLIMITED = 255 // spell_bands::CASTS_UNLIMITED — a 255/0 cap means no per-turn limit
-  // The deterministic optimistic damage a single queued action deals (crit reconciles at commit): weapon → the
-  // seat's fixed Weapon.damage; spell → its seeded level-1 DAMAGE base. Fed the CUMULATIVE per-target HP drop.
-  const dmg_of = (/** @type {string | null} */ spell_key) => {
-    if (spell_key === WEAPON_ATTACK_ID) return me?.weapon?.damage ?? 0
-    const lvl = level_row(my_spells.find((sp) => sp.name_key === spell_key))
-    return damage_of(lvl?.effects)
-  }
   // Like MP, presented AP has already folded every earlier cast and deterministic tackle forfeit in draft order.
   const remaining_ap = Math.max(0, me?.ap ?? my_ap)
   // casts_per_turn gate for the ARMED spell (the weapon has none). Count how many of it are already queued; at the
@@ -353,15 +346,25 @@ export function DungeonBoard() {
   // reaches forward to a cast that has not been drafted yet.
   const optimistic_vacated = useMemo(() => {
     const vacated = new Set()
-    if (!dungeon) return vacated
+    if (!dungeon || !entity_id) return vacated
+    // #1480 — the draft's kills come from the SAME prediction that draws the damage, never from a sum of
+    // AUTHORED spell bases: that sum never saw the caster, so a +110% damage buff (or a resistance, or a
+    // shield) left this forecasting the unbuffed number and a cell the turn really clears stayed blocked.
+    const predicted = evolve_draft_health({
+      view: fight_view(),
+      committed: committed_truth(fight_store.getState()),
+      caster_id: entity_id,
+      actions: evolution_actions_of(staged_turn_paths(fight_store).draft_actions, my_spells, me?.weapon),
+      resolve_ref,
+    })
     for (const [idx, m] of dungeon.mobs.entries()) {
       const committed_hp = committed_mob_hp(fight_store.getState(), idx)
       if (!(committed_hp > 0)) continue
-      const drop = cast_path.reduce((s, e) => (e.cell === m.cell ? s + dmg_of(e.spell_key) : s), 0)
-      if (drop >= committed_hp) vacated.add(m.cell) // this turn's casts already kill it → its cell opens for the move
+      // this turn's casts already kill it → its cell opens for the move
+      if ((predicted.get(`mob-${idx}`) ?? committed_hp) <= 0) vacated.add(m.cell)
     }
     return vacated
-  }, [cast_path, dungeon])
+  }, [cast_path, dungeon, entity_id, my_spells, me?.weapon])
 
   // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the move-cost anchor evolution, the
   // optimistic cast, AND the flush's ⑭ evolved-sequence validation all resolve fighter refs the same way — a

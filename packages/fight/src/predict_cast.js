@@ -42,8 +42,10 @@ export const CHAIN_PENDING_ENGINE_VERSION = '0xe8c6c46893799e85e697ef0e524626c63
 // membership change is adjudicated where the corpus lives — never by reading Move sources, and never here.
 export const CHAIN_PENDING = new Set([10, 15, 16, 17, 22, 25, 26, 29])
 
-/** The UI projection's first direct-damage base. Pricing only; prediction itself never reads this projection. */
-export const damage_of = (effects) => (effects ?? []).find((effect) => effect.kind === 'DAMAGE')?.base ?? 0
+// `damage_of(effects)` — the authored-base read that used to live here — is DELETED (#1480). It answered "the
+// damage this cast deals" off the spell row alone, so it could not see the caster: a +110% damage buff (or any
+// stat, any resistance, any shield) left it at the authored number while the resolution landed 2x. Its one
+// consumer now reads `evolve_draft_health` below, which is the prediction itself. There is no preview math.
 
 const entity_ref = (entity_id) => {
   const match = /^(p|m)(\d+)$/.exec(String(entity_id)) ?? /^mob-(\d+)$/.exec(String(entity_id))
@@ -633,23 +635,25 @@ const evolve_move = (state, caster_id, action, arena) => {
   return sim
 }
 
-/** Caster's encoded cell after exact draft-order evolution; `casts` is the compatibility input. */
-export const evolve_caster_cell = ({
-  view,
-  committed,
-  caster_id,
-  actions = null,
-  casts = null,
-  resolve_ref = entity_ref,
-}) => {
-  if (!view || !caster_id) return null
-  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
+/**
+ * THE ONE DRAFT EVOLUTION — fold the exact ordered draft (moves walk, casts predict) through the sim once and
+ * hand back the final state plus, optionally, a snapshot taken immediately BEFORE each cast fires. Every
+ * "what will my queued turn have done" question is a read of this fold: the caster's landing cell, the pre-fire
+ * occupancy the PTB sees, and each fighter's predicted HP. A second fold — or worse, an authored-base sum
+ * standing in for one — is a number that cannot move with the caster's build (#1480).
+ * @param {{ state: any, arena: any, caster_id: string, sequence: any[], resolve_ref: (id:string)=>any,
+ *   snapshot?: ((sim:any) => any) | null }} args
+ * @returns {{ state: any, snapshots: any[] }}
+ */
+const fold_draft = ({ state, arena, caster_id, sequence, resolve_ref, snapshot = null }) => {
   let sim = state
-  for (const action of actions ?? casts ?? []) {
+  const snapshots = []
+  for (const action of sequence) {
     if (is_move_action(action)) {
       sim = evolve_move(sim, caster_id, action, arena)
       continue
     }
+    if (snapshot) snapshots.push(snapshot(sim))
     if (!action?.spell) continue
     const pred = predict_sim_cast({
       state: sim,
@@ -662,8 +666,59 @@ export const evolve_caster_cell = ({
     })
     if (pred?.result?.success) sim = pred.result.state
   }
-  const caster = find_entity(sim, caster_id)
+  return { state: sim, snapshots }
+}
+
+/** Caster's encoded cell after exact draft-order evolution; `casts` is the compatibility input. */
+export const evolve_caster_cell = ({
+  view,
+  committed,
+  caster_id,
+  actions = null,
+  casts = null,
+  resolve_ref = entity_ref,
+}) => {
+  if (!view || !caster_id) return null
+  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
+  const evolved = fold_draft({
+    state,
+    arena,
+    caster_id,
+    sequence: actions ?? casts ?? [],
+    resolve_ref,
+  })
+  const caster = find_entity(evolved.state, caster_id)
   return caster?.cell ? encode(caster.cell.x, caster.cell.y) : null
+}
+
+/**
+ * Each fighter's PREDICTED health once the whole ordered draft has resolved, keyed by fighter id — the ONE
+ * answer to "does my queued turn already kill this mob", derived from the same prediction that draws the
+ * damage. It replaced a per-cast sum of AUTHORED spell bases: that sum ignored the caster entirely, so a
+ * +110% damage buff (or any stat at all) left it forecasting the unbuffed number (#1480).
+ * @returns {Map<string, number>}
+ */
+export const evolve_draft_health = ({
+  view,
+  committed,
+  caster_id,
+  actions = null,
+  casts = null,
+  resolve_ref = entity_ref,
+}) => {
+  const health = new Map()
+  if (!view || !caster_id) return health
+  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
+  const evolved = fold_draft({
+    state,
+    arena,
+    caster_id,
+    sequence: actions ?? casts ?? [],
+    resolve_ref,
+  })
+  for (const fighter of [...(evolved.state.team0 ?? []), ...(evolved.state.team1 ?? [])])
+    health.set(fighter.id, Number(fighter.health ?? 0))
+  return health
 }
 
 /** Exact draft-order evolution, returning one pre-fire occupancy/caster snapshot per cast. */
@@ -679,43 +734,26 @@ export const evolve_flush_casts = ({
   const sequence = actions ?? casts ?? []
   if (!view || !caster_id || !sequence.length) return []
   const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref, caster_seed_cell })
-  let sim = state
-  const occupancy = () => {
-    const occ = new Map()
-    for (const fighter of [...(sim.team0 ?? []), ...(sim.team1 ?? [])]) {
-      const ref = resolve_ref(fighter.id)
-      if (!ref || !fighter.cell) continue
-      occ.set(encode(fighter.cell.x, fighter.cell.y), {
-        kind: ref.is_mob ? 'mob' : 'player',
-        idx: ref.idx,
-        alive: fighter.health > 0,
-      })
-    }
-    return occ
-  }
-  const caster_cell_of = () => {
-    const caster = find_entity(sim, caster_id)
-    return caster?.cell ? encode(caster.cell.x, caster.cell.y) : null
-  }
-  const out = []
-  for (const action of sequence) {
-    if (is_move_action(action)) {
-      sim = evolve_move(sim, caster_id, action, arena)
-      continue
-    }
-    // the board AND the caster's own footprint origin the chain sees BEFORE this cast — snapshot, THEN evolve both.
-    out.push({ occupied: occupancy(), caster_cell: caster_cell_of() })
-    if (!action?.spell) continue
-    const pred = predict_sim_cast({
-      state: sim,
-      caster_id,
-      spell: action.spell,
-      spell_level: action.spell_level ?? 1,
-      target: decode(action.target),
-      arena,
-      resolve_ref,
-    })
-    if (pred?.result?.success) sim = pred.result.state
-  }
-  return out
+  // the board AND the caster's own footprint origin the chain sees BEFORE this cast — snapshot, THEN evolve both.
+  return fold_draft({
+    state,
+    arena,
+    caster_id,
+    sequence,
+    resolve_ref,
+    snapshot: (sim) => {
+      const occupied = new Map()
+      for (const fighter of [...(sim.team0 ?? []), ...(sim.team1 ?? [])]) {
+        const ref = resolve_ref(fighter.id)
+        if (!ref || !fighter.cell) continue
+        occupied.set(encode(fighter.cell.x, fighter.cell.y), {
+          kind: ref.is_mob ? 'mob' : 'player',
+          idx: ref.idx,
+          alive: fighter.health > 0,
+        })
+      }
+      const caster = find_entity(sim, caster_id)
+      return { occupied, caster_cell: caster?.cell ? encode(caster.cell.x, caster.cell.y) : null }
+    },
+  }).snapshots
 }
