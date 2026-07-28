@@ -55,9 +55,9 @@ import { create_underwater_pass } from '../render/lighting/underwater.js'
 import { create_camera_rotation_blur } from '../render/lighting/motion_blur.js'
 import { set_water_depth_texture_type } from '../render/water_material.js'
 import { atlas_layer_count, MAX_ATLAS_LAYERS } from '../render/texture_baker.js'
-import { max_pool_storage_bytes } from '../render/pool_renderer.js'
+import { fit_tier_to_adapter, max_pool_storage_bytes } from '../render/pool_renderer.js'
 
-import { QUALITY_TIERS, TIER_ORDER } from './quality/tiers.js'
+import { QUALITY_TIERS } from './quality/tiers.js'
 
 /**
  * The ONE cinematic deep-blue haze tilt — a DARKENING multiply (R/G cut, B ≤ 1). SINGLE SOURCE shared by
@@ -72,6 +72,10 @@ export const FOG_COOL_TILT = [0.62, 0.75, 1.0]
 /**
  * @typedef {object} RendererHandle
  * @property {import('three/webgpu').WebGPURenderer} renderer
+ * @property {import('./quality/tiers.js').TierName} tier [#1434] the tier this device actually BOOTED at
+ *   — the requested tier stepped down (`fit_tier_to_adapter`) until its terrain pool binds within the
+ *   adapter's storage-binding limit. The caller MUST adopt this for the ring radius and the terrain pool:
+ *   sizing the pool from the unfitted tier allocates a buffer the granted binding cannot hold.
  * @property {Scene} scene
  * @property {PerspectiveCamera | OrthographicCamera} camera the render camera — ORTHOGRAPHIC on a
  *   `void_scene` renderer (a true isometric board), perspective everywhere else.
@@ -290,19 +294,17 @@ export async function create_renderer({
       const lim = probe_adapter.limits
       required_limits = {}
 
-      // [S5 PERF_MOBILE_PLAN 2026-07-14] ADAPTER-FIT TIER: never boot a tier whose terrain pool cannot
+      // [S5 2026-07-14] ADAPTER-FIT TIER: never boot a tier whose terrain pool cannot
       // BIND on this adapter — the old path logged the shortfall LOUDLY then hit the invalid bind group
       // anyway (the Safari page-crash / user-BSOD class). Step the tier down until the pool fits; a
       // spec-minimum adapter lands on 'low' and RENDERS. (The atlas already degrades this way below.)
+      // [#1434] The fit is `fit_tier_to_adapter` (pool_renderer.js — ONE home) and it is REPORTED back on
+      // the handle: this used to reassign a LOCAL `tier` only, so engine.js kept the unfitted tier and
+      // built the terrain pool at it — the requested limit and the allocated pool came from DIFFERENT
+      // tiers, which is the invalid bind group / crashed tab this guard exists to prevent.
       {
-        const fits = (/** @type {import('./quality/tiers.js').TierName} */ t) =>
-          max_pool_storage_bytes(t) <= lim.maxStorageBufferBindingSize
         const requested_tier = tier
-        let i = TIER_ORDER.indexOf(tier)
-        if (i !== -1) {
-          while (i > 0 && !fits(TIER_ORDER[i])) i -= 1
-          tier = TIER_ORDER[i]
-        }
+        tier = fit_tier_to_adapter(tier, lim.maxStorageBufferBindingSize)
         if (tier !== requested_tier)
           console.warn(
             `[renderer] tier '${requested_tier}' terrain pool exceeds this adapter's storage-binding ` +
@@ -1303,6 +1305,10 @@ export async function create_renderer({
 
   return {
     renderer,
+    // [#1434] THE TIER THIS DEVICE ACTUALLY BOOTED AT — the adapter-fit answer above, not the requested
+    // one. engine.js adopts it before sizing the streaming ring and the terrain pool, so the pool can
+    // never be larger than the storage binding this device was granted for it.
+    tier,
     scene,
     camera,
     set_view_size,
