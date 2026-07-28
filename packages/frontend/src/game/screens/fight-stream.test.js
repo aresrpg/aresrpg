@@ -7,12 +7,11 @@
 // placement_ghost input), same-event dedupe, multi-peer fan-out, and the error path a throwing local-state read
 // takes (a FINDING, pinned not fixed — see the last describe block's header).
 //
-// REAL PATH: the real context.events bus (Node EventEmitter), the real use_dungeon_turn store (zustand — picks
-// are drafted through it exactly as DungeonBoard/voxel_fight_adapter do), the real fight_store singleton (seeded
+// REAL PATH: the real courier delivery subscription, the real use_dungeon_turn store (zustand — picks are
+// drafted through it exactly as DungeonBoard/voxel_fight_adapter do), the real fight_store singleton (seeded
 // through the house test door, test_helpers/fight_core_harness.js) and the real board_view projection mirrored
 // into use_dungeon.dungeon by hand (production wiring a poll loop performs; nothing polls in a unit test). The
-// ONLY fake is the transport edge — p2p/lobby-room.js's broadcast_fight_stream — spied exactly like
-// world_fight_party_public.test.js spies broadcast_state: a named-export spy that mockRestore()s in afterAll,
+// ONLY fake is the courier transport edge — broadcast_fight_stream is spied as a named export that restores,
 // never a mock.module (a process-global registry entry that would outlive this file — the #123 pollution class).
 
 import { afterAll, afterEach, describe, expect, spyOn, test } from 'bun:test'
@@ -23,15 +22,12 @@ import { install_browser_globals } from '../../test_helpers/browser_globals.js'
 import { seed_fight_core, reset_fight_core } from '../../test_helpers/fight_core_harness.js'
 import { use_dungeon_turn } from './dungeon-turn.js'
 
-// fight-stream.js pulls in dungeon_store.js + p2p/lobby-room.js, whose import chain reaches auth/index.ts
-// (registerEnokiWallets touches `window` at MODULE-LOAD time — a browser-only side effect, not lazy). The house
-// fix (world_fight_party_public.test.js) is the same here: install a fake window/document/localStorage BEFORE
-// dynamically importing that chain, so the eager read resolves instead of throwing under bun's Node-like runner.
+// dungeon_store.js reaches auth/index.ts (registerEnokiWallets touches `window` at module load). Install the
+// browser globals before dynamically importing that chain.
 const restore_browser_globals = install_browser_globals({ with_document: true })
 
-const [{ context }, lobby_room, { use_dungeon }, { init_fight_stream }] = await Promise.all([
-  import('../store.js'),
-  import('../../p2p/lobby-room.js'),
+const [courier, { use_dungeon }, { init_fight_stream }] = await Promise.all([
+  import('../../courier/world.js'),
   import('../../world-shell/dungeon_store.js'),
   import('./fight-stream.js'),
 ])
@@ -48,8 +44,8 @@ const CELL_C = 42
 // as the dungeon bridge does on the app's first sync.
 init_fight_stream()
 
-const broadcast_spy = spyOn(lobby_room, 'broadcast_fight_stream').mockImplementation(() => {})
-const fire = (payload) => context.events.emit('packet/fightStream', payload)
+const broadcast_spy = spyOn(courier, 'broadcast_fight_stream').mockImplementation(() => {})
+const fire = (payload) => courier.deliver_fight_stream(payload)
 const sent_to = (kind) => broadcast_spy.mock.calls.map(([p]) => p).filter(p => p.kind === kind)
 
 /** Seed BOTH halves fight-stream.js reads: the fight core (the house test door) + its board_view mirror into
@@ -75,10 +71,11 @@ afterAll(() => {
 
 describe('#37 init_fight_stream — idempotent install (no teardown by design)', () => {
   test('calling init twice never double-registers the packet/fightStream listener', () => {
-    const before = context.events.listenerCount('packet/fightStream')
     init_fight_stream()
     init_fight_stream()
-    expect(context.events.listenerCount('packet/fightStream')).toBe(before)
+    seed({ seats: [{ character: ME }, { character: PEER }], placement: true })
+    fire({ dungeon_id: FIGHT_ID, address: PEER, kind: 'placement', target: CELL_A })
+    expect(fight_view().placement_ghosts).toEqual([{ character: PEER, cell: CELL_A }])
   })
 })
 
@@ -216,9 +213,8 @@ describe('#37 fan-out — multiple distinct peers project independently, in stab
 // FINDING (partially resolved by #334): on_peer_stream still has NO try/catch, and the PLACEMENT branch calls
 // dungeon.escrow.some(...) with no presence guard — a torn/mid-transition local record (missing escrow — a class
 // board_state.js's own fight_geometry_complete / HOLD-NOT-DEGRADE handling treats as real) makes an arriving
-// placement packet throw SYNCHRONOUSLY out of context.events.emit (Node's EventEmitter propagates a listener's
-// throw to the emit() caller — lobby-room.js's onMessage, invoked directly by Trystero's WebRTC dispatch, which
-// has no try/catch either). The listener registration survives, so the next valid packet still folds. #334 REMOVED
+// placement signal throw synchronously out of the courier subscriber callback. The listener registration
+// survives, so the next valid signal still folds. #334 removed
 // the old turn_queue read (active_character_id): the COURTESY batch path reads only dungeon.id/status, so that
 // torn-record class no longer throws — proven below.
 // TODO(#37 follow-up): guard the placement escrow read too, so a torn record degrades to a dropped packet.

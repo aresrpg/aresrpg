@@ -42,7 +42,6 @@
     "react-i18next": "^16.6.6",
     "react-router-dom": "^7.18.1",
     "three": "0.185.1",
-    "trystero": "^0.25.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

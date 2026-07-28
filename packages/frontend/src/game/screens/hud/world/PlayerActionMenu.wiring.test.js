@@ -39,7 +39,7 @@ describe('friend-list fast travel (#327)', () => {
   })
 
   it('the menu samples live presence at action time and dispatches through the one fast-travel door', () => {
-    expect(source).toContain('get_peer_states_by_address(address)')
+    expect(source).toContain('presence_characters_by_address(address)')
     // still the ONE door (dispatch_fast_travel → ft_dispatch), now keyed by traveler (tranche F): the manual
     // flight flies the character being DRIVEN, so the dispatch stamps traveler_id: selected_character_id.
     expect(source).toContain('dispatch_fast_travel(')

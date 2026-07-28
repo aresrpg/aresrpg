@@ -368,7 +368,7 @@ describe('resolve_worn_cosmetics — ?equip dev override (js/remote-property-inj
 
 // The rig reads "is this mount ridden airborne" from the MODEL (here, one home with the world-height table),
 // not from live flight state — so BOTH rider paths get it: the local pilot's dragon (embed_voxel_player's
-// mount_dragon) and a peer's dragon rebuilt from the p2p `mount_glb` broadcast (remote_players), which
+// mount_dragon) and other authored cosmetic paths, which
 // carries no flight flag at all. mount_rig.js turns it into the fly-clip preference (see its #370 fixture).
 describe('mount_is_flight — which mounts are ridden in the air', () => {
   test('every fast-travel dragon skin is a flight mount, whatever URL shape it arrives in', async () => {

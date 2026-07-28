@@ -3,7 +3,7 @@
 // The LOCAL PLAYER — split from embed_voxel.js at the 600-LoC law. Everything about the player's own body and
 // its control: the engine shoulder camera + input (WASD/arrows, the mouse-or-keys law), the on-chain avatar
 // (+ hair, #20 recolor, senshi fallback), the veteran-title aura, the local nameplate, the TR-97 mount ride,
-// the TR-1 cinematic/creative-fly modes, the per-frame controller feed, the p2p presence broadcast, and the
+// the TR-1 cinematic/creative-fly modes, the per-frame controller feed, the courier presence broadcast, and the
 // walk follow-camera. The host owns the session/engine/board; this owns the man in it.
 //
 // D154: ONE input gate — a focused text field makes ALL game keys inert (text_focused below).
@@ -26,7 +26,6 @@ import { create_cursor_lock_toggle } from './embed_voxel_cursor_lock.js'
 import { resolve_cosmetic_aura } from './cosmetic_aura.js'
 import { tick_environment_audio, dispose_environment_audio } from './core/audio/environment_audio.js'
 import { broadcast_position } from '../courier/world.js'
-import { set_local_cosmetic } from '../p2p/lobby-room.js'
 import { create_local_nameplate } from './local_nameplate.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from './screens/character-glb.js'
 import { push_event_toast } from './core/toast.js'
@@ -134,8 +133,7 @@ export function create_player({
       )
     // DEV SCREENSHOT TOOL: `?avatar=<key>` (e.g. `primemachin`) replaces ONLY this
     // local body — read once at boot, resolve_avatar_override (cosmetic_glb.js) is the guarded allowlist
-    // (unknown key → null + one console.warn, never a crash). Remote peers / p2p broadcast are untouched:
-    // this never reaches set_local_cosmetic, so other players keep seeing the real on-chain character.
+    // (unknown key → null + one console.warn, never a crash). Other players keep seeing chain state.
     const avatar_override = resolve_avatar_override()
     avatar = create_character_avatar({
       glb_url: avatar_override ?? urls.body, // asset-host-first, bundled /sprites fallback (character_model_urls)
@@ -255,8 +253,8 @@ export function create_player({
   // in multiplayer): press X to TOGGLE riding. On mount-on we resolve the character's ride (dev `?mount=<glb>`
   // trailer override, else the equipped `.mount` slot post-republish, else — #594 — the active PET: the pet
   // is BOTH a walking companion AND a mountable ride), spawn the GLB under the body, ride it (×1.5 roam via
-  // the speed_scale knob below), and BROADCAST the mount so peers render it. Roam only — a fight ignores the
-  // key. The rig-load discipline lives in mount_rig.js.
+  // the speed_scale knob below). Roam only — a fight ignores the key. The rig-load discipline lives in
+  // mount_rig.js; this local ride state is never propagated as a cosmetic fast path.
   let riding = false
   /** @type {ReturnType<typeof create_mount_rig> | null} */ let mount_ctl = null
   /** @type {'dev' | 'equip' | 'pet' | 'dragon' | null} */ let mount_source = null // what riding=true IS right now
@@ -278,7 +276,6 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = source
-    set_local_cosmetic({ mounted: true, mount_glb: glb_url }) // peers render my mount + whitelist my ×1.5
     push_event_toast({
       state: 'success',
       title: i18n.t(mobile_input.mobile() ? 'world.mount_on_touch' : 'world.mount_on'),
@@ -288,7 +285,6 @@ export function create_player({
     if (!riding) return
     riding = false
     mount_source = null
-    set_local_cosmetic({ mounted: false, mount_glb: null })
     mount_ctl?.dispose()
     mount_ctl = null
     push_event_toast({ state: 'info', title: i18n.t('world.mount_off') })
@@ -302,7 +298,7 @@ export function create_player({
     return riding ? mount_down() : mount_up()
   }
   // FAST-TRAVEL DRAGON — a rideable dragon flown by the autopilot at RUN speed, seen by peers like any mount
-  // (§5). Reuses the SAME riding/mount_ctl rig + pose + p2p broadcast as the equipped mount, MINUS the
+  // (§5). Reuses the SAME local riding/mount_ctl rig + pose as the equipped mount, MINUS the
   // equipped-slot gate (the pilot spawns it programmatically). Skin resolution (fire by default; `?ftdragon=`
   // DEV preview) lives in mount_rig.js's ft_dragon_glb_url — ONE home shared with the #175 preload
   // (PlayerActionMenu.jsx warms the same URL the moment the travel menu opens). Its own unmount (no
@@ -313,13 +309,11 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = 'dragon'
-    set_local_cosmetic({ mounted: true, mount_glb: glb_url }) // peers render the dragon + whitelist the ride (§5/§7)
   }
   const unmount_dragon = () => {
     if (!riding) return
     riding = false
     mount_source = null
-    set_local_cosmetic({ mounted: false, mount_glb: null })
     mount_ctl?.dispose()
     mount_ctl = null
   }
@@ -410,7 +404,6 @@ export function create_player({
   let desired_worn = { head: null, back: null } // equipped hat/cloak GLBs (set in feed, consumed in frame2)
   /** @type {{ spawn: boolean, glb_url: string | null, key: string | null }} */
   let desired_pet = { spawn: false, glb_url: null, key: null } // equipped-pet companion (set in feed, consumed in frame2)
-  let last_veteran_bcast = false // TR-97 — last broadcast veteran-aura state (edge-trigger the p2p re-publish)
   let frame_n = 0
   let last_bcast_x = NaN // D206 — last announced cell (broadcast only on change)
   let last_bcast_z = NaN
@@ -490,8 +483,8 @@ export function create_player({
       (import.meta.env.DEV ? /** @type {any} */ (window).__force_cosmetic_aura || null : null)
     // WORN COSMETICS — live /v1 worn slots joined to the cosmetic quilt appearance through the template catalog;
     // nested character.worn is authoritative, rpc_to_card's flat hat/cloak spread remains compatible. LOCAL
-    // rendering only (worn.set_slots below): COSMETICS TRANSPORT RULING — peers resolve MY worn
-    // cosmetics off /v1 themselves (remote_players.js), never a p2p broadcast, so nothing here sends this.
+    // rendering only (worn.set_slots below): peers resolve MY worn cosmetics off /v1 themselves
+    // (remote_players.js), so nothing here sends this.
     desired_worn = resolve_worn_cosmetics(live, worn_templates)
     // PET COMPANION — same receipt-driven shape as desired_worn: character.pet/pet_equipped decides
     // spawn/despawn + appearance; frame2 reconciles the rig against this verdict. LOCAL rendering only
@@ -514,11 +507,6 @@ export function create_player({
           on_trigger: toggle_mount,
         })
       else use_prompt_stack.getState().clear_prompt('mount')
-    }
-    // TR-97 — broadcast the aura state (edge-triggered) so remote players render my veteran aura too.
-    if (aura_active !== last_veteran_bcast) {
-      last_veteran_bcast = aura_active
-      set_local_cosmetic({ veteran: aura_active })
     }
     // FAST-TRAVEL flight — the dragon autopilot owns the transform while flying/landing (teleport per frame,
     // exactly like creative fly below). The store is a module singleton, so a PENDING intent survives the
@@ -610,7 +598,7 @@ export function create_player({
         facing_yaw: t.facing_yaw,
         fps: Math.round(engine.get_stats?.().fps ?? 0),
       })
-      // D206: announce our cell to the p2p room on ACTUAL change only (lobby-room's own throttle contract).
+      // D206: announce our cell to the courier on ACTUAL change only; its edge coalesces to the hard rate cap.
       // D217: the payload carries the WORLD height too — a VERTICAL cell change (hills/jumps/falls) also
       // broadcasts, so peers track y exactly instead of inferring ground.
       if (character?.id) {

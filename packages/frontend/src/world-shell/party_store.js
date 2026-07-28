@@ -2,11 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Party driver EDGE (composition root): the pure state machine lives in @aresrpg/party; this shell reads ambient
 // identity (selected character, wallet address, owned roster), builds inputs, DISPATCHES them into the ONE reducer,
-// and executes the reducer's effect requests — self-paid party PTBs (party_actions), the p2p broadcast, the /v1
+// and executes the reducer's effect requests — self-paid party PTBs (party_actions), courier chat scope, the /v1
 // poll, join toasts, divergence logs. No async result ever set()s domain state directly (ONE-PIPELINE law); the
 // edge-local tx-phase flags (busy/error — not reconcile state) re-enter through the ONE `_tx_phase` door, and the
 // timer handle stays inside the polling doors, so every await continuation writes via a store action. Accepted rosters
-// stay exact character-keyed Member[] (never an address slot); signed on-chain accept/decline owns consent, p2p only nudges.
+// stay exact character-keyed Member[] (never an address slot); signed on-chain accept/decline owns consent.
 
 import { useStore } from 'zustand'
 import { create_party_store } from '@aresrpg/party/store'
@@ -17,12 +17,11 @@ import { context } from '../game/store.js'
 import { use_auth } from '../auth'
 import { use_toast } from '../toast'
 import { get_party } from '../chain/read_party'
-import { broadcast_state, nudge_party_invite, sync_party_room } from '../p2p/lobby-room'
+import { sync_party_room } from '../courier/world.js'
 import { push_event_toast } from '../game/core/toast.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
 import { game_log } from '../core/log.js'
 
-import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
 import {
   create_party as tx_create_party,
   join_owned_alts_to_party,
@@ -302,12 +301,10 @@ party_store.setState({
       get()._tx_phase({ error: i18n.t('errors.party_full') })
       return
     }
-    const me = selected_character()
     get()._tx_phase({ busy: true, error: null })
     try {
       const resolved_name = invited_name || (await resolve_invitee_name(invited_character_id))
       await invite_to_party(party_id, leader_character_id, invited_character_id, invited_owner, resolved_name)
-      nudge_party_invite(invited_owner, party_id, invited_character_id, me?.name ?? '')
       get()._dispatch({
         kind: 'intent',
         action: 'invite_sent',
@@ -519,7 +516,7 @@ party_store.setState({
     if (wired) get()._start_polling()
   },
 
-  /** Publish the selected character's low-frequency identity + exact party id. */
+  /** Publish the selected character's exact party id to the courier chat scope. */
   _publish_state(character_override = null) {
     const character = character_override ?? selected_character()
     const character_id = character?.id ?? selected_character_id()
@@ -531,24 +528,6 @@ party_store.setState({
     const published_party_id =
       character_id && (is_bound_member(get(), character_id) || awaiting_this_character) ? get().party_id : null
     sync_party_room(published_party_id)
-    const { address } = use_auth.getState()
-    if (!address) return
-    if (!character?.classe)
-      game_log(
-        'p2p',
-        'state published WITHOUT identity (roster/selection not ready) — peers will see the fallback rig until the next publish (D222)'
-      )
-    broadcast_state({
-      address,
-      color_1: character?.color_1 ?? 0,
-      color_2: character?.color_2 ?? 0,
-      color_3: character?.color_3 ?? 0,
-      party_id: published_party_id,
-      dungeon_id: read_dungeon_session().dungeon_id,
-      classe: character?.classe ?? null,
-      male: character?.male ?? true,
-      name: character?.name ?? null,
-    })
   },
 })
 
@@ -560,44 +539,15 @@ export const use_party = Object.assign(
 
 let wired = false
 
-/** Wire exact-character invite nudges and dungeon hand-offs once per session. */
-export function wire_party_p2p() {
+/** Start the character-keyed party projection reads once per session. */
+export function wire_party_reads() {
   if (wired) {
     use_party.getState()._start_polling()
     void use_party.getState().refresh()
     return
   }
   wired = true
-  context.events.on(
-    'packet/partyInviteNudge',
-    (/** @type {any} */ { to_address, party_id, invited_character_id, from_name }) => {
-      const { address } = use_auth.getState()
-      if (
-        !address ||
-        to_address !== address ||
-        !invited_character_id ||
-        invited_character_id !== selected_character_id()
-      )
-        return
-      game_log('party', `invite received for ${invited_character_id.slice(0, 10)} — awaiting signed consent`)
-      use_party.getState()._dispatch({ kind: 'event', event: 'invite', party_id, invited_character_id, from_name })
-    }
-  )
-  context.events.on('packet/dungeonShare', ({ to_address, dungeon_id, template_id }) => {
-    const { address } = use_auth.getState()
-    if (!address || to_address !== address) return
-    use_party.getState().set_incoming_dungeon(dungeon_id, template_id)
-  })
-
   // Character-keyed projection makes accepted membership recoverable after reload; poll even while solo.
   use_party.getState()._start_polling()
   void use_party.getState().refresh()
-
-  let last_scope = read_dungeon_session().dungeon_id
-  subscribe_dungeon_session((state) => {
-    const scope = state.dungeon_id
-    if (scope === last_scope) return
-    last_scope = scope
-    use_party.getState()._publish_state()
-  })
 }

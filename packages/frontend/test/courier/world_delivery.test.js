@@ -15,7 +15,12 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import '../../src/test_helpers/env_mock.js'
 import '../../src/test_helpers/expedition_sdk_mock.js'
-import { join_courier, leave_courier, sync_party_room } from '../../src/courier/world.js'
+import {
+  join_courier,
+  leave_courier,
+  subscribe_fight_stream,
+  sync_party_room,
+} from '../../src/courier/world.js'
 import { presence_store } from '../../src/world-shell/presence_adapter.js'
 
 const WORLD = '0xworld'
@@ -123,6 +128,20 @@ describe('the courier delivery half — the shipped world link', () => {
     expect(state().chat_seq).toBe(before)
     opened.emit('chat', chat_row(PEER, 'ours', { channel: 'CHAT_GROUP', party: '0xparty' }))
     expect(state().chat?.row.message).toBe('ours')
+  })
+
+  test('a fight courtesy row reaches its live fold without entering visible chat', () => {
+    join_courier(WORLD, ME)
+    let received = null
+    const unsubscribe = subscribe_fight_stream((signal) => {
+      received = signal
+    })
+    const before = state().chat_seq
+    const signal = { dungeon_id: '0xdungeon', address: PEER, kind: 'placement', target: 42 }
+    opened.emit('chat', chat_row(PEER, JSON.stringify(signal), { channel: 'CHAT_FIGHT' }))
+    unsubscribe()
+    expect(received).toEqual(signal)
+    expect(state().chat_seq).toBe(before)
   })
 
   test('the read layer presence vocabulary rides the SAME link — one world, one connection', () => {

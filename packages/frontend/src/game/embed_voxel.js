@@ -21,15 +21,13 @@ import { create_tactical_board } from '@aresrpg/engine3/tactical'
 
 import { create_voxel_fight_adapter, VOXEL_BOARD_ORIGIN } from '../world-shell/voxel_fight_adapter.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
-import { use_party, wire_party_p2p } from '../world-shell/party_store.js'
+import { use_party, wire_party_reads } from '../world-shell/party_store.js'
 import { wire_group_loop } from '../world-shell/group_wiring.js'
 import { wire_fast_travel_effects } from '../world-shell/fast_travel_effects.js'
 import { wire_join_request_effect } from '../world-shell/join_request_effect.js'
-import { wire_commission_p2p } from '../world-shell/commission_inbox.js'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { read_world_biome } from '../world-shell/world_biome.js'
 import { resolve_engine_recipe } from '../chain/deployment'
-import { join_lobby } from '../p2p/lobby-room.js'
 import { join_courier } from '../courier/world.js'
 import { get_saved_quality } from './screens/hud/world/quality_pref.js'
 import { apply_saved_engine_flags, resolve_hack_mode } from './screens/hud/world/engine_flags_pref.js'
@@ -328,11 +326,9 @@ function create_session(
     // D183+D184+D201 SPECTATE BACKDROP: NO controller, NO game input — the hands-on iso camera lives in
     // embed_voxel_spectate.js (pan clamped in-zone, yaw, pitch LOCKED; the APP deliberately drives it —
     // one writer: the first set trips the engine's D185 standdown, the designed interplay).
-    // D206 (the spectate view must show other players too): join the p2p lobby as the #19 SILENT
-    // OBSERVER (null id — lobby-room's documented read-only spectator: receives pos/chat/state, sends
-    // nothing; on login the SAME room re-identifies, no reconnect) + render every presence entry as a
-    // live avatar. Chat flows into message_history for the D207 read-only overlay for free.
-    join_lobby(null)
+    // D206 (the spectate view must show other players too): the shared courier link was opened before this
+    // session was created. Render every delivered presence entry as a live avatar; chat reaches the D207
+    // read-only overlay through the same stream.
     const remotes = create_remote_players(engine, canvas) // D232 — plates project through THIS canvas's rect
     // INTERACTION GATE: the backdrop is DISPLAY-ONLY until the visitor chose "watch the
     // live world" (use_spectate_gate.chosen) OR is logged in (use_auth.address — the S-57 confirmed-unbound
@@ -530,13 +526,10 @@ function create_session(
     })
   }
 
-  // D206 (session half): the walker must be SEEN — roam's cell-change broadcast died with D139 and nobody
-  // has announced a position since (every walker was invisible to every peer). The frame loop below
-  // broadcasts on cell change; state (colors → remote rigs, party id) publishes once at mount through the
-  // party store's single chokepoint; the p2p party signals re-wire here too (their roam-mount call died with
-  // roam). Remote players render via the same one-home layer spectate uses.
+  // D206 (session half): the frame loop below publishes cell changes through the courier. Party reads and the
+  // courier's party-chat scope arm once here; remote players render from the same presence fold spectate uses.
   if (character?.id) {
-    wire_party_p2p()
+    wire_party_reads()
     // MULTICHAR group loop (flagship system): the pure @aresrpg/party group_loop reducer + its edges —
     // owned-alt world alignment, formation follow, placement-window fight joins, HUD seat focus.
     wire_group_loop()
@@ -546,10 +539,7 @@ function create_session(
     // CREATE→PLAY JOIN (v33): arm the join-request edge — the create receipt's join_request drives the
     // actual world join off the SAME join/boot seam. Idempotent, one subscription for the app lifetime.
     wire_join_request_effect()
-    // Commission Flow v2: surface incoming artisan-commission requests (toast + chime + inbox) — idempotent,
-    // filtered by my wallet, off the SAME lobby room. Beside wire_party_p2p so both p2p consumers arm together.
-    wire_commission_p2p()
-    // D222-reopen: pass the IN-HAND character — the store read races the mount (see _publish_state).
+    // Pass the IN-HAND character — the store read races the mount (see _publish_state).
     use_party.getState()._publish_state(character)
   }
   const remotes = create_remote_players(engine, canvas) // D232 — plates project through THIS canvas's rect
@@ -1140,7 +1130,12 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
     character_id: incoming_character_id,
     follow: !!follow,
   }
-  if (!follow) join_courier(incoming_world_id, mode === 'session' ? incoming_character_id : null)
+  if (!follow)
+    join_courier(
+      incoming_world_id,
+      mode === 'session' ? incoming_character_id : null,
+      use_auth.getState().address ?? null
+    )
   if (session?.dispose_timer) {
     clearTimeout(session.dispose_timer)
     session.dispose_timer = null
@@ -1163,9 +1158,6 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
     session.flush_position?.()
     dispose_session()
   }
-  // Re-key presence only AFTER A's cleanup, but BEFORE create_session publishes B's colors/state. A follow
-  // scene observes another character without replacing the resident player's lobby identity.
-  if (mode === 'session' && !follow && incoming_character_id) join_lobby(incoming_character_id)
   if (!session)
     session = create_session(boot_tier, character, host, spectate, follow) // D176: attaches INSIDE create (in-DOM before engine)
   else host.appendChild(session.container) // later mounts reparent the live session

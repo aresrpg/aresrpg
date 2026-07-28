@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure WASD/arrow movement-key resolver — split out of embed_voxel_player.js's on_key SPECIFICALLY so the
 // "arrows alias WASD" contract is unit-testable without mounting the player (embed_voxel_player.js pulls in
-// the engine + p2p/lobby-room + store.js, which touch `window`/zkLogin at import time — the same bun:test
+// the engine + store.js, which touch `window`/zkLogin at import time — the same bun:test
 // wall deck-key-arm.js's header documents for the HUD side).
 //
 // witness-r4 (2026-07-11): "arrow keys don't move (WASD works)". The switch in embed_voxel_player.js already

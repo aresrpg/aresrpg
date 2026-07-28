@@ -7,11 +7,10 @@
 // resolve_pet_companion reads the SAME doc's `pet`/`pet_equipped` — the identical catalog-backed resolution the
 // LOCAL player's own companion already uses, embed_voxel_player.js's `desired_pet`).
 //
-// TRANSPORT RULING (worn cosmetics AND pets both fall under it): neither trusts the webrtc payload — both load
-// from the rpc directly. A peer's worn hat/cloak or equipped pet is chain truth a player can't fake, so both
-// resolve from /v1 (character_name_resolve.js's resolve_character_docs — the SAME batched-fetch home the fight
-// roster already uses for co-fighter names), never from the p2p presence payload (presence.js carries identity
-// only; WebRTC carries at most a COSMETIC mounted-vs-trotting hint, never pet existence — #553).
+// TRANSPORT RULING (worn cosmetics AND pets both fall under it): both load from the rpc directly. A peer's worn
+// hat/cloak or equipped pet is chain truth a player can't fake, so both resolve from /v1
+// (character_name_resolve.js's resolve_character_docs — the SAME batched-fetch home the fight roster already
+// uses for co-fighter names).
 //
 // ONE fetch drives BOTH derived views — this is deliberate, not an accident of file history: the two facts live
 // on the identical doc, so a second batched-fetch cache alongside this one would double the peer /v1 read load

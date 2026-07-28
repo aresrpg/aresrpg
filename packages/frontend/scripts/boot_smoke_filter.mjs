@@ -4,7 +4,6 @@
 // THE boot-smoke blocking decision, as one pure function. It lives apart from boot_smoke.mjs because that
 // script spawns a preview server and a browser the moment it is imported — this module imports clean, so
 // the decision is testable without driving a browser.
-import { RELAY_URLS } from '../src/p2p/relays.js'
 
 // ALLOWLIST — console.error substrings tolerated at boot. Each entry names its cause. The PRIMARY signal is
 // pageerror === 0 (the uncaught migration-stub throw class); console.error catches loud degrades + regressions.
@@ -27,30 +26,5 @@ export const CONSOLE_ERROR_ALLOWLIST = [
   'Failed to load resource',
 ]
 
-// The app's own rendezvous relays, by host — DERIVED from the frontend's one list, never a second copy.
-export const RELAY_HOSTS = RELAY_URLS.map((url) => new URL(url).host)
-
-// Chrome's NATIVE WebSocket failure line: `WebSocket connection to '<url>' failed: <reason>`. The browser
-// emits it itself, so no app code can suppress or downgrade it. Anchored at the start and the target URL
-// parsed back out — never a broad /websocket/i sweep, so only the line's actual DESTINATION grants exemption.
-const NATIVE_WS_FAILURE = /^WebSocket connection to '([^']+)' failed(?::|$)/
-
-const failed_ws_host = (text) => {
-  const match = NATIVE_WS_FAILURE.exec(text)
-  if (!match) return null
-  try {
-    return new URL(match[1]).host
-  } catch {
-    return null
-  }
-}
-
-// #1361 — a public nostr relay flapping is third-party weather, not a defect: the p2p layer dials 5 relays at
-// redundancy 3 precisely so one can die, yet damus 503s reddened two consecutive landing queues on 2026-07-28.
-// EXACTLY that class is exempt: the browser-native failure line whose target host is one of ours. Every other
-// console.error — including a WebSocket failure to any other host — still blocks.
-export const is_blocking_console_error = (text, relay_hosts = RELAY_HOSTS) => {
-  if (CONSOLE_ERROR_ALLOWLIST.some((frag) => text.includes(frag))) return false
-  const host = failed_ws_host(text)
-  return !(host !== null && relay_hosts.includes(host))
-}
+export const is_blocking_console_error = (text) =>
+  !CONSOLE_ERROR_ALLOWLIST.some((fragment) => text.includes(fragment))
