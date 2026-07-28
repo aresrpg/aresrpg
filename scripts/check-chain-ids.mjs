@@ -171,6 +171,12 @@ const sanctioned_fixture_prefixes = [
   // transcribed from it, with the capture's provenance in the file header. Same evidence, same zone 487:487,
   // same `zones_view` reading; nothing here is a pointer any shipped code follows. Exact file, not a directory.
   'packages/move/foundation/tests/zone_gen_grid_tests.move',
+  // issue #1467's captured DROPPED-BY payload (dropped_by.test.ts): the live `/v1/encyclopedia?kind=mobs`
+  // rows that drop Wooling Fleece, byte-for-byte from the deployed read API with a provenance header — the
+  // evidence that the bundled seed receipt had drifted to ZERO matches. Inverting these rows with the same
+  // model that built them would prove nothing; every id is a captured reading, not a pointer code follows.
+  // Exact file, not a directory: a future fixture beside it must face the gate on its own provenance.
+  'packages/frontend/test/pages/encyclopedia/fixtures/live_wooling_drops.json',
 ]
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)

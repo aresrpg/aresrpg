@@ -21,8 +21,10 @@ const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia')
 
 const { get_shop_sales } = await import('../../src/chain/read_shop_sales.js')
 
-const LIVE_TEMPLATE = '0x4d03aa2ec42f016cd8f34af0231e960bce37e40fdb9b5eb1942a83a1744aa4ee'
-const ORPHAN_TEMPLATE = '0xa6a4b12ab46d2dd1518f823aeeaac5d48d5e47debd51192606bcd0fc10f63425'
+// Template identities the fence only ever looks UP; deliberately not address-shaped, since a hardcoded
+// 0x… in a test reads as a live chain pointer (the repo's chain-id gate says so).
+const LIVE_TEMPLATE = 'template-served-by-the-live-catalog'
+const ORPHAN_TEMPLATE = 'template-absent-from-the-live-catalog'
 
 const sale = (template_id, over = {}) => ({
   sale_id: `sale:${template_id}`,
