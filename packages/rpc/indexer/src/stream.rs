@@ -7,13 +7,16 @@
 //! * `GET /v1/stream/fight/{fight_id}` replays the already-decoded per-fight
 //!   journal and then tip-polls it for live events.
 //! * `GET /v1/stream/presence/{world_id}?address=…&character=…` maintains and
-//!   observes an ephemeral presence registry.
+//!   observes an ephemeral presence registry, and delivers the courier's world
+//!   traffic — live poses and chat lines — on the same connection.
 //!
 //! Both fan-out paths use only the location's Redis. There is intentionally no
 //! Redis-to-Redis transport. Fight SSE is a second consumer of the journal
 //! produced by the existing `ares` decode; it never BCS-decodes chain events.
 //! Presence is connection-observed and location-local: cross-location users do
-//! not appear in this registry.
+//! not appear in this registry. The courier half is a second consumer of what
+//! `api/courier.mjs` already authenticated and wrote; this route never accepts
+//! player input and never authors a courier row.
 
 use std::collections::BTreeSet;
 use std::convert::Infallible;
@@ -38,7 +41,7 @@ use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
 use tokio::sync::mpsc;
 use tokio::time::{interval, interval_at, Instant, MissedTickBehavior};
 use tokio_stream::wrappers::ReceiverStream;
-use tokio_stream::StreamExt as _;
+use tokio_stream::{Stream, StreamExt as _};
 use tracing::warn;
 
 const FIGHT_POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -503,6 +506,9 @@ async fn pump_presence(
         .get_multiplexed_async_connection()
         .await
         .context("connecting presence SSE to Redis")?;
+    // Subscribe BEFORE reading either snapshot: a row published while we are still assembling the join
+    // frames waits in the channel instead of vanishing into the gap.
+    let courier_rows = subscribe_courier(&state.redis, &presence.world).await?;
     refresh_presence(&mut conn, &presence).await?;
     let mut current = read_presence(&mut conn, &presence.world).await?;
     let initial = json!({ "world": presence.world, "presence": current }).to_string();
@@ -513,6 +519,19 @@ async fn pump_presence(
     {
         return Ok(());
     }
+
+    let live_poses = read_courier_positions(&mut conn, &presence.world).await?;
+    let snapshot = courier_positions_frame(&presence.world, &live_poses);
+    if sender
+        .send(Ok(Event::default().event("positions").data(snapshot)))
+        .await
+        .is_err()
+    {
+        return Ok(());
+    }
+    // The courier's deltas ride the SAME connection from here on. The task ends with the socket: its sends
+    // fail the moment this receiver is dropped.
+    tokio::spawn(pump_courier(Box::pin(courier_rows), sender.clone()));
 
     let now = Instant::now();
     let mut poll = interval_at(now + PRESENCE_POLL_INTERVAL, PRESENCE_POLL_INTERVAL);
@@ -594,6 +613,118 @@ fn presence_key(world: &str) -> String {
     format!("rpc:presence:{world}")
 }
 
+// ── THE COURIER'S DELIVERY HALF (#1508)
+//
+// `api/courier.mjs` authenticates a pose or a chat line and writes it to this location's Redis: the latest
+// pose under `courier:position:<world>:<character>` (indexed with its expiry score in
+// `courier:positions:<world>`), and EVERY accepted row published on `courier:presence:<world>`. This route is
+// that channel's only reader — the write half had no reader at all, so a world client had no delivery path
+// for peer positions or for any chat line.
+//
+// Courier rows are EPHEMERAL: no journal, therefore no cursor and deliberately no SSE id. A reconnect gets the
+// live snapshot, never a replay — the fight stream's Last-Event-ID law is untouched by this half.
+
+fn courier_channel(world: &str) -> String {
+    format!("courier:presence:{world}")
+}
+
+fn courier_index_key(world: &str) -> String {
+    format!("courier:positions:{world}")
+}
+
+fn courier_position_key(world: &str, character: &str) -> String {
+    format!("courier:position:{world}:{character}")
+}
+
+/// One published courier row → the NAMED frame it is delivered as. The courier owns the row vocabulary, so
+/// the bytes it authored are forwarded verbatim; a row this route cannot name is dropped, never guessed at.
+pub(crate) fn courier_frame(payload: &str) -> Option<(&'static str, String)> {
+    let row: Value = serde_json::from_str(payload).ok()?;
+    let kind = match row.get("type").and_then(Value::as_str)? {
+        "position" => "position",
+        "chat" => "chat",
+        _ => return None,
+    };
+    Some((kind, payload.to_owned()))
+}
+
+/// The live-pose snapshot a joining connection needs before any delta means anything.
+pub(crate) fn courier_positions_frame(world: &str, payloads: &[Option<String>]) -> String {
+    let positions: Vec<Value> = payloads
+        .iter()
+        .flatten()
+        .filter_map(|raw| serde_json::from_str(raw).ok())
+        .collect();
+    json!({ "type": "positions", "world": world, "positions": positions }).to_string()
+}
+
+/// Forward one world's courier channel onto an open presence connection until either end goes away. The
+/// row source is a parameter so this delivery path is exercised by a test instead of only in production.
+pub(crate) async fn pump_courier<S>(mut rows: S, sender: SseSender)
+where
+    S: Stream<Item = String> + Unpin,
+{
+    while let Some(payload) = rows.next().await {
+        let Some((kind, data)) = courier_frame(&payload) else {
+            continue;
+        };
+        if sender
+            .send(Ok(Event::default().event(kind).data(data)))
+            .await
+            .is_err()
+        {
+            return;
+        }
+    }
+}
+
+async fn subscribe_courier(client: &redis::Client, world: &str) -> Result<impl Stream<Item = String>> {
+    let mut pubsub = client
+        .get_async_pubsub()
+        .await
+        .context("connecting the courier channel")?;
+    pubsub
+        .subscribe(courier_channel(world))
+        .await
+        .context("subscribing to the courier channel")?;
+    Ok(pubsub
+        .into_on_message()
+        .filter_map(|message| message.get_payload::<String>().ok()))
+}
+
+/// Prune the lapsed scores and read every live pose in one local step — the same expiry semantics the writer
+/// applies, kept atomic so a snapshot can never carry a pose the index has already dropped.
+async fn read_courier_positions(
+    conn: &mut MultiplexedConnection,
+    world: &str,
+) -> Result<Vec<Option<String>>> {
+    let index = courier_index_key(world);
+    let now = unix_ms();
+    let characters: Vec<String> = redis::cmd("EVAL")
+        .arg(
+            "redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1]); \
+             return redis.call('ZRANGEBYSCORE', KEYS[1], ARGV[1], '+inf')",
+        )
+        .arg(1)
+        .arg(&index)
+        .arg(now)
+        .query_async(conn)
+        .await
+        .context("reading the courier position index")?;
+    if characters.is_empty() {
+        return Ok(Vec::new());
+    }
+    let keys: Vec<String> = characters
+        .iter()
+        .map(|character| courier_position_key(world, character))
+        .collect();
+    redis::cmd("MGET")
+        .arg(keys)
+        .query_async(conn)
+        .await
+        .context("reading the live courier positions")
+}
+
 fn unix_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -606,8 +737,9 @@ fn unix_ms() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        active_presence_rows, fight_frame_payload, last_event_id, presence_changes, replay_tail,
-        stream_response, FightCursor, FightStreamQuery, PresenceChange, PresenceRecord, SseItem,
+        active_presence_rows, courier_positions_frame, fight_frame_payload, last_event_id,
+        presence_changes, pump_courier, replay_tail, stream_response, FightCursor,
+        FightStreamQuery, PresenceChange, PresenceRecord, SseItem,
     };
     use axum::body::to_bytes;
     use axum::extract::Query;
@@ -693,6 +825,59 @@ mod tests {
                 "data": { "cell": "4" },
                 "digest": "a",
                 "version": "1",
+            })
+        );
+    }
+
+    /// THE DELIVERY GATE (#1508): a row the courier published reaches a connection subscribed to that
+    /// world — named by its own `type`, carrying the courier's bytes, and nothing else invented.
+    #[tokio::test]
+    async fn published_courier_rows_reach_a_subscribed_connection() {
+        let world = fixture_id("aa");
+        let character = fixture_id("1");
+        let pose =
+            format!(r#"{{"type":"position","world":"{world}","character":"{character}","x":4.0,"z":6.0}}"#);
+        let line = format!(r#"{{"type":"chat","world":"{world}","character":"{character}","text":"hi"}}"#);
+        let (sender, mut receiver) = mpsc::channel::<SseItem>(8);
+
+        pump_courier(
+            tokio_stream::iter([
+                pose.clone(),
+                r#"{"type":"weather"}"#.to_owned(), // a vocabulary this route does not speak
+                "not json at all".to_owned(),
+                line.clone(),
+            ]),
+            sender,
+        )
+        .await;
+
+        // `Event` exposes no reader, so the wire bytes are read off its Debug buffer; the quote-unescape
+        // undoes only Debug's own rendering, leaving the exact bytes the connection would receive.
+        let mut frames = Vec::new();
+        while let Ok(frame) = receiver.try_recv() {
+            frames.push(format!("{:?}", frame.unwrap()).replace("\\\"", "\""));
+        }
+
+        assert_eq!(frames.len(), 2, "only nameable courier rows are delivered");
+        assert!(frames[0].contains("event: position") && frames[0].contains(&pose));
+        assert!(frames[1].contains("event: chat") && frames[1].contains(&line));
+    }
+
+    #[test]
+    fn the_join_snapshot_carries_every_live_pose_and_no_debris() {
+        let world = fixture_id("aa");
+        let pose = format!(r#"{{"type":"position","character":"{}","x":1.0,"z":2.0}}"#, fixture_id("1"));
+        let frame = courier_positions_frame(
+            &world,
+            &[Some(pose.clone()), None, Some("expired debris".to_owned())],
+        );
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&frame).unwrap(),
+            json!({
+                "type": "positions",
+                "world": world,
+                "positions": [serde_json::from_str::<serde_json::Value>(&pose).unwrap()],
             })
         );
     }

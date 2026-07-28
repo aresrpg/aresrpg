@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Stateless authenticated position/chat ingress. Redis is the only shared state: short-lived latest positions,
-// shared hard rate gates, and one pub/sub channel consumed by /v1/stream/presence/:world.
+// Stateless authenticated position/chat ingress — the WRITE half only. Redis is the only shared state:
+// short-lived latest positions, shared hard rate gates, and one pub/sub channel. The reader is the RPC read
+// layer's /v1/stream/presence/:world route (packages/rpc/indexer/src/stream.rs), which owns the snapshot read
+// so that expiry semantics have exactly one home.
 
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 
@@ -82,26 +84,6 @@ export function create_redis_courier_registry(redis, now = Date.now) {
     async publish_chat(row) {
       await redis.send('PUBLISH', [presence_channel(row.world), JSON.stringify(row)])
     },
-
-    async read_positions(world) {
-      const index = position_index_key(world)
-      const timestamp = now()
-      await redis.send('ZREMRANGEBYSCORE', [index, '-inf', String(timestamp)])
-      const characters = (await redis.send('ZRANGEBYSCORE', [index, String(timestamp), '+inf'])) ?? []
-      if (!characters.length) return []
-      const payloads = await redis.send(
-        'MGET',
-        characters.map((character) => position_key(world, character))
-      )
-      return (payloads ?? []).flatMap((payload) => {
-        if (!payload) return []
-        try {
-          return [JSON.parse(payload)]
-        } catch {
-          return []
-        }
-      })
-    },
   }
 }
 
@@ -125,7 +107,6 @@ const production_registry_proxy = {
   take_rate_slot: async (...args) => (await get_production_registry()).take_rate_slot(...args),
   put_position: async (...args) => (await get_production_registry()).put_position(...args),
   publish_chat: async (...args) => (await get_production_registry()).publish_chat(...args),
-  read_positions: async (...args) => (await get_production_registry()).read_positions(...args),
 }
 
 let grpc_client

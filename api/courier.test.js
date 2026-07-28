@@ -18,8 +18,14 @@ if (!redis_url && !redis_socket && !memory_protocol)
   )
 
 process.env.COURIER_POSITION_TTL_MS = '60'
-const { CHAT_MAX_LENGTH, create_courier_service, create_redis_courier_registry, route_courier_post } =
-  await import('./courier.mjs')
+const {
+  CHAT_MAX_LENGTH,
+  create_courier_service,
+  create_redis_courier_registry,
+  position_index_key,
+  position_key,
+  route_courier_post,
+} = await import('./courier.mjs')
 
 const ADDRESS = `0x${'a1'.repeat(32)}`
 const WORLD = `0x${'b2'.repeat(32)}`
@@ -144,24 +150,26 @@ describe('POST /v1/courier/position', () => {
     expect(refused.json.error).toMatch(/rate limited/i)
   })
 
-  test('stores the latest pose in the world registry, then the Redis TTL lapses it', async () => {
+  test('stores the latest pose under its own world key, then the Redis TTL lapses it', async () => {
     const sender = `0x${'e5'.repeat(32)}`
     await service.post_position(position(sender))
+    // Read the written KEYS, not a sibling reader: the snapshot read belongs to the delivery half
+    // (packages/rpc/indexer/src/stream.rs) and this file gates exactly what the writer wrote.
+    const stored = async () => JSON.parse((await redis.send('MGET', [position_key(WORLD, CHARACTER)]))?.[0] ?? 'null')
 
-    expect(await registry.read_positions(WORLD)).toEqual([
-      expect.objectContaining({
-        type: 'position',
-        world: WORLD,
-        character: CHARACTER,
-        address: sender,
-        x: -145,
-        z: 42,
-        heading: 1.25,
-      }),
-    ])
+    expect(await stored()).toMatchObject({
+      type: 'position',
+      world: WORLD,
+      character: CHARACTER,
+      address: sender,
+      x: -145,
+      z: 42,
+      heading: 1.25,
+    })
+    expect(await redis.send('ZRANGEBYSCORE', [position_index_key(WORLD), '0', '+inf'])).toEqual([CHARACTER])
 
     await Bun.sleep(90)
-    expect(await registry.read_positions(WORLD)).toEqual([])
+    expect(await stored()).toBeNull()
   })
 })
 
@@ -183,7 +191,6 @@ describe('POST /v1/courier/chat', () => {
       registry: {
         take_rate_slot: (...args) => registry.take_rate_slot(...args),
         put_position: (...args) => registry.put_position(...args),
-        read_positions: (...args) => registry.read_positions(...args),
         publish_chat: async (row) => published.push(row),
       },
     })
