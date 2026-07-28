@@ -19,14 +19,46 @@ census, second importers, repeated literals, tree-wide and ratcheted. This loop'
 half a grep cannot see: **semantic twins in fresh landings**. Never re-do the workflow's sweep.
 
 ## Inputs (artifacts only — never chat memory)
-- The diff since the last pass's recorded commit anchor (`git diff <anchor>..edge`); record the
-  new tip at the end of every pass.
+- The frozen window from the board-derived cursor through the checked-out edge tip
+  (`git diff "$ANCHOR..$AUDITED_HEAD"`); derive both names exactly as specified below.
 - `docs/CODE_LAW.md` + `FROZEN.md` + the ADR set (`docs/adr/`).
 - The standing loop issues (coverage/meaning/drift) for context on known debt.
 
+## Window cursor — one home, fail closed
+
+The cursor's only home is the newest architecture-audit pass comment on standing anchor row
+#1357 that contains the machine line `architecture-audit-anchor: <full 40-character commit SHA>`.
+The comment's GitHub `created_at` selects the newest record. Never copy the cursor into this
+rubric, a `.claude` state file, or chat memory.
+
+With `edge` checked out, read and freeze the window exactly once at pass start:
+
+```sh
+ANCHOR="$(
+  gh api --paginate --slurp \
+    'repos/aresrpg/aresrpg/issues/1357/comments?per_page=100' \
+    --jq '
+      add
+      | map(select(.body | test("(?m)^architecture-audit-anchor: [0-9a-f]{40}$")))
+      | max_by(.created_at)
+      | .body
+      | capture("(?m)^architecture-audit-anchor: (?<sha>[0-9a-f]{40})$")
+      | .sha
+    '
+)"
+test -n "$ANCHOR" || { echo >&2 'FATAL: architecture-audit cursor missing'; exit 1; }
+git merge-base --is-ancestor "$ANCHOR" HEAD ||
+  { echo >&2 "FATAL: architecture-audit cursor $ANCHOR is not an ancestor of HEAD"; exit 1; }
+AUDITED_HEAD="$(git rev-parse HEAD)"
+```
+
+Any read, parse, or ancestry failure invalidates the pass; do not guess or substitute an anchor.
+Use the frozen `AUDITED_HEAD` for the diff and for the cursor written at completion, even if edge
+moves while the pass runs.
+
 ## The hourly light pass — dual-homes in the landing window
-Window: commits landed on edge since the last pass's anchor. For every landing in the window,
-hunt the dual-home classes:
+Window: commits in `"$ANCHOR..$AUDITED_HEAD"`. For every landing in the window, hunt the
+dual-home classes:
 
 - **Re-implementation**: a new function/module whose behavior already exists elsewhere (grep the
   new symbols' semantics, not just names — a `normalize_x` twin under a different name counts).
@@ -39,7 +71,8 @@ hunt the dual-home classes:
 - **Derived-data forks**: the same fact computed two ways (a projection re-deriving what a
   reducer already holds; a second cache of an existing store).
 
-A pass with no findings posts the anchor-advance comment only (window swept, clean).
+A pass with no findings posts the anchor-advance comment only (window swept, clean), including
+the same machine cursor line required below.
 
 ## The full pass — the rubric, answer each with evidence
 1. **Smallest architecture:** for each new module/abstraction in the diff — does it have a second
@@ -63,7 +96,9 @@ A pass with no findings posts the anchor-advance comment only (window swept, cle
 - **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's
   checklist directly (epic #1367), never as new issues.
 - One pass comment on the standing anchor row (#1357) — verdict per rubric item, `file:line`
-  cites, severity-ordered, and the new commit anchor.
+  cites, severity-ordered, ending with exactly
+  `architecture-audit-anchor: <AUDITED_HEAD's full 40-character SHA>`. This completed-pass
+  comment is the cursor's only writer.
 - Concrete violations → their own issues, label `loop:architecture-audit` + `tech-debt` (`bug` +
   priority when the two homes are already diverging in behavior), plus `area:*`. Every dual-home
   finding cites BOTH homes file:line, states the divergence risk, and names the DELETION direction
