@@ -92,8 +92,8 @@ export const spell_of = (id, effects, overrides = {}) =>
         {
           ap_cost: overrides.ap_cost ?? 0,
           range_min: 0,
-          range_max: 8,
-          modifiable_range: false,
+          range_max: overrides.range_max ?? 8,
+          modifiable_range: overrides.modifiable_range ?? false,
           line_launch: false,
           line_of_sight: false,
           free_cell: false,
