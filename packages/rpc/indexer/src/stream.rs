@@ -30,6 +30,7 @@ use axum::http::{
     header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONNECTION},
     HeaderMap, HeaderName, HeaderValue, StatusCode,
 };
+use axum::middleware;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Response, Sse};
 use axum::routing::get;
@@ -189,7 +190,15 @@ pub(crate) fn router(redis_url: &str) -> Result<Router> {
     Ok(Router::new()
         .route("/v1/stream/fight/{fight_id}", get(fight_stream))
         .route("/v1/stream/presence/{world_id}", get(presence_stream))
-        .with_state(StreamState { redis }))
+        .with_state(StreamState { redis })
+        .layer(middleware::map_response(public_read_cors)))
+}
+
+async fn public_read_cors(mut response: Response) -> Response {
+    response
+        .headers_mut()
+        .insert(ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
+    response
 }
 
 /// Wrap a pump's channel as the SSE body.
@@ -212,7 +221,6 @@ fn stream_response(receiver: mpsc::Receiver<SseItem>) -> Response {
         .keep_alive(KeepAlive::new().interval(KEEPALIVE_INTERVAL).text("ka"))
         .into_response();
     let headers = response.headers_mut();
-    headers.insert(ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
     headers.insert(
         CACHE_CONTROL,
         HeaderValue::from_static("no-cache, no-transform"),
@@ -737,14 +745,17 @@ fn unix_ms() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        active_presence_rows, courier_positions_frame, fight_frame_payload, last_event_id,
-        presence_changes, pump_courier, replay_tail, stream_response, FightCursor,
-        FightStreamQuery, PresenceChange, PresenceRecord, SseItem,
+        active_presence_rows, bad_request, courier_positions_frame, fight_frame_payload,
+        last_event_id, presence_changes, public_read_cors, pump_courier, replay_tail,
+        stream_response, FightCursor, FightStreamQuery, PresenceChange, PresenceRecord, SseItem,
     };
     use axum::body::to_bytes;
     use axum::extract::Query;
-    use axum::http::{HeaderMap, HeaderValue, Uri};
+    use axum::http::{
+        header::ACCESS_CONTROL_ALLOW_ORIGIN, HeaderMap, HeaderValue, StatusCode, Uri,
+    };
     use axum::response::sse::Event;
+    use axum::response::IntoResponse;
     use serde_json::json;
     use std::collections::BTreeSet;
     use tokio::sync::mpsc;
@@ -767,6 +778,17 @@ mod tests {
             "a proxy only flushes once a body byte exists, so the greeting must lead: {body:?}"
         );
         assert!(body.contains("event: fight"), "{body:?}");
+    }
+
+    #[tokio::test]
+    async fn handler_error_response_allows_public_read_cors() {
+        let response = public_read_cors(bad_request("invalid cursor").into_response()).await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
+            Some(&HeaderValue::from_static("*"))
+        );
     }
 
     /// Synthetic fixture ids, widened from a short tail so this module hand-types no live-shaped
