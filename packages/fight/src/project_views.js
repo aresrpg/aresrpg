@@ -209,10 +209,11 @@ export const board_view = (s) => {
     settlement_request: settlement_request(s),
     turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms,
     // The CHAIN turn-seed inputs travel with the view, the same way the deadline does — every crit/tackle
-    // preview surface composes its clock from this projection. Distinct from `engine_view.turn_ordinal`, which
-    // is the core fold's turn ANCHOR token (a string): this pair is `fight.move::turn_seed`'s numeric input.
-    turn_entropy: s.turn_entropy ?? view.turn_entropy,
-    turn_ordinal: s.turn_ordinal ?? view.turn_ordinal,
+    // preview surface composes its clock from this projection. Read off the VIEW only: `s.turn_ordinal` is a
+    // different fact under the same name — the core fold's turn ANCHOR token (a string) — and seeding a
+    // preview with it would diverge from the chain. `engine_view.turn_ordinal` is that anchor; this is the seed.
+    turn_entropy: view.turn_entropy,
+    turn_ordinal: view.turn_ordinal,
   }
 }
 

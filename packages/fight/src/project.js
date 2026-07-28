@@ -175,8 +175,10 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   const ap = Math.max(0, Math.floor(me.ap ?? 0))
   const free = { armed, tackled: false, reach: reach_full, tackle_lost: [] }
   const { world_seed, spawn_id } = s.view
-  const turn_ordinal = s.turn_ordinal ?? s.view.turn_ordinal
-  const turn_entropy = s.turn_entropy ?? s.view.turn_entropy
+  // THE CHAIN turn-seed inputs, read off the VIEW only. `s.turn_ordinal` is a different fact under the same
+  // name — the core fold's turn ANCHOR token (a string) — so the old `s.X ?? view.X` fallback would seed the
+  // preview with the anchor and diverge from the chain. One home for the seed inputs: the decoded Fight.
+  const { turn_ordinal, turn_entropy } = s.view
   if (world_seed != null && spawn_id != null && turn_ordinal) {
     // EXACT PREVIEW (the chain twin, byte-for-byte): fold the deterministic failure chain via the shared roll —
     // moves never advance the slot; every denial strips ≥1 MP and reprices the next roll at the lower MP. Only
@@ -234,8 +236,10 @@ export const next_move_tackle = (s) => {
   const lockers = tackle_lockers(s, me, Number(row.team ?? 0))
   if (!lockers.length) return null // not tackled ⇒ the move walks free
   const { world_seed, spawn_id } = s.view
-  const turn_ordinal = s.turn_ordinal ?? s.view.turn_ordinal
-  const turn_entropy = s.turn_entropy ?? s.view.turn_entropy
+  // THE CHAIN turn-seed inputs, read off the VIEW only. `s.turn_ordinal` is a different fact under the same
+  // name — the core fold's turn ANCHOR token (a string) — so the old `s.X ?? view.X` fallback would seed the
+  // preview with the anchor and diverge from the chain. One home for the seed inputs: the decoded Fight.
+  const { turn_ordinal, turn_entropy } = s.view
   if (world_seed == null || spawn_id == null || !turn_ordinal) return null // seed-less ⇒ the receipt rules
   const { num, den } = tackle_contest(Number(row.agility ?? 0), lockers)
   const ap = Math.max(0, Math.floor(me.ap ?? 0))
