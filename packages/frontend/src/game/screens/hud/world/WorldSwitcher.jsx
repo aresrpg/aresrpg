@@ -60,7 +60,9 @@ export function WorldSwitcher() {
   // the level-up card read too, #1510). A scoped 2.9 KB read, not the all-kinds envelope, so the
   // always-mounted world HUD can afford chain truth; a checked-in copy of `required_level` would let a
   // republish silently erase the gates this modal renders. An unresolved catalog yields NO cards — the
-  // derivation never pre-locks off an unknown, and it must never pre-UNLOCK off one either.
+  // derivation never pre-locks off an unknown, and it must never pre-UNLOCK off one either. The poll costs
+  // nothing once resolved (the catalog memoizes its answer) and self-heals a failed first read, which
+  // memoizes nothing.
   const catalog = use_rpc_view((signal) => load_world_catalog(signal), { deps: [] })
   const worlds = catalog.data ?? []
   const required_level_by_world = new Map(worlds.map((world) => [world.id, world.required_level]))
