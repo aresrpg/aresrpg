@@ -22,3 +22,22 @@ fun t_dodge_seed_deterministic_and_input_bound() {
   // turn-seed-bound (the seat feeds turn_seed): a different turn_seed → a different seed (per-seat sequence).
   assert!(formula::dodge_seed(ts, 0) != formula::dodge_seed(ts + 1, 0), 2);
 }
+
+#[test]
+/// `punishment_base` — K_PUNISHMENT_DAMAGE's declared "damage scaling UP as caster HP drops", pinned at the three
+/// points that define the line. The identical numbers are asserted against `@aresrpg/sim`'s
+/// `spell_calculator::punishment_base` (the twin), so a drift on either side is a red test on both.
+fun t_punishment_base_scales_with_missing_life() {
+  // full life → IDENTITY (a healthy caster's punishment line is an ordinary damage line).
+  assert!(formula::punishment_base(100, 200, 200) == 100, 0);
+  // half life → ×1.5.
+  assert!(formula::punishment_base(100, 100, 200) == 150, 1);
+  // at death's door → ×2 (the ceiling; the scale is linear in the MISSING fraction, never unbounded).
+  assert!(formula::punishment_base(100, 0, 200) == 200, 2);
+  // integer floor, not rounding — the twin floors identically.
+  assert!(formula::punishment_base(12, 100, 200) == 18, 3);
+  assert!(formula::punishment_base(7, 150, 200) == 8, 4);
+  // degenerate max_hp never divides by zero; hp above max cannot manufacture a discount.
+  assert!(formula::punishment_base(50, 0, 0) == 50, 5);
+  assert!(formula::punishment_base(50, 999, 200) == 50, 6);
+}

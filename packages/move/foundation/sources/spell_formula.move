@@ -39,6 +39,18 @@ public fun amplify_damage(base: u64, element: u8, caster: &Stats): u64 {
   base * (100 + primary + percent) / 100 + spell::stat_raw_damage(caster) + physical
 }
 
+/// K_PUNISHMENT_DAMAGE's rolled base, scaled by the caster's MISSING life: `base × (2·max − hp)/max` — identity
+/// at full HP, DOUBLE at zero, linear between. The kind is declared "damage scaling UP as caster HP drops"
+/// (spell_effect.move) and both resolvers used to hand its base straight to `final_damage`, so the scaling half
+/// of the kind lived only in that comment: a punishment line was a plain damage line on chain and in the sim.
+/// Applied to the ROLLED base, ahead of amplification and any named-damage bonus — the SAME order and the same
+/// integer floor as `@aresrpg/sim`'s `spell_calculator::punishment_base`, so the twins stay byte-identical.
+public fun punishment_base(base: u64, hp: u64, max_hp: u64): u64 {
+  if (max_hp == 0) return base;
+  let health = if (hp > max_hp) max_hp else hp;
+  base * (2 * max_hp - health) / max_hp
+}
+
 /// Full damage = §5h amplification then target-side %resist (reusing `spell::apply_resistance`; NONE element now
 /// reads `neutral_resistance` — #55 GAP CLOSED). Floored at 0 by the reducer.
 public fun final_damage(base: u64, element: u8, caster: &Stats, target: &Stats): u64 {

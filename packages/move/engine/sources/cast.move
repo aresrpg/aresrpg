@@ -104,9 +104,10 @@ public fun apply_effect_for_testing(fight: &mut Fight, caster_side: u8, caster_i
   let mut ordinals = vector[];
   let mut rolls = vector[];
   let mut bounds = vector[];
+  let (caster_hp, caster_max_hp) = caster_life(fight, caster_side, caster_idx);
   let _did_damage = apply_effect(
-    fight, caster_side, caster_idx, caster_cell, caster_stats, caster_level, target_cell, effect, 0,
-    0, option::none(), 0, rng, &mut domains, &mut ordinals, &mut rolls, &mut bounds,
+    fight, caster_side, caster_idx, caster_cell, caster_stats, caster_level, caster_hp, caster_max_hp,
+    target_cell, effect, 0, 0, option::none(), 0, rng, &mut domains, &mut ordinals, &mut rolls, &mut bounds,
   );
 }
 
@@ -119,11 +120,17 @@ public fun apply_effect_for_testing(fight: &mut Fight, caster_side: u8, caster_i
 public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &SpellTemplate, target_cell: u64) {
   // read caster data up front (copy the stats out so no &fight borrow is held across the &mut writes).
   let caster_cell; let caster_level; let caster_stats; let ap; let casts; let caster_class;
+  // The caster's LIFE at cast time, snapshotted with the stats and for the same reason: a punishment line scales
+  // with the caster's missing HP, and a cast that wounds its own caster (recoil, a self-hit zone) must not make
+  // its later effects — or its later TARGETS — hit harder than its first. One cast, one caster snapshot.
+  let caster_hp; let caster_max_hp;
   {
     let p = fight::participants(fight).borrow(seat);
     caster_cell = participant::cell(p);
     caster_level = participant::level(p);
     caster_stats = *participant::stats(p);
+    caster_hp = participant::hp(p);
+    caster_max_hp = participant::max_hp(p);
     ap = participant::ap(p);
     casts = participant::casts_this_turn(p);
     caster_class = participant::class(p);
@@ -261,7 +268,7 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
           retro_effects::record_named_stack(fight, seat, spell_id, *named_target.borrow(), cast_turn, effect.value(), effect.turns());
         };
       } else if (apply_effect(
-        fight, PLAYER_SIDE, seat, caster_cell, &caster_stats, caster_level, target_cell, effect,
+        fight, PLAYER_SIDE, seat, caster_cell, &caster_stats, caster_level, caster_hp, caster_max_hp, target_cell, effect,
         named_bonus, damage_roll, named_target, e, &mut drain_rng, &mut random_domains,
         &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
       )) {
@@ -320,8 +327,11 @@ public fun apply_to_both_for_testing(
   let mut b = vector<u64>[];
   // `damage_roll` 0 = the low end of an authored range; the walk is about which BRANCH a kind lands in, never
   // about the number it produces.
-  let _p = apply_to_player(fight, PLAYER_SIDE, 0, pc, 0, caster_stats, 1, effect.element(), effect, 0, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
-  let _m = apply_to_mob(fight, PLAYER_SIDE, 0, midx, 0, caster_stats, 1, effect.element(), effect, 0, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
+  // ONE caster snapshot for BOTH sinks — the symmetry this door exists to prove. Re-reading the caster between
+  // the two calls would make a self-wounding cast hit the second sink harder purely by dispatch order.
+  let (chp, cmax) = caster_life(fight, PLAYER_SIDE, 0);
+  let _p = apply_to_player(fight, PLAYER_SIDE, 0, pc, 0, caster_stats, 1, chp, cmax, effect.element(), effect, 0, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
+  let _m = apply_to_mob(fight, PLAYER_SIDE, 0, midx, 0, caster_stats, 1, chp, cmax, effect.element(), effect, 0, 0, 0, rng, &mut d, &mut o, &mut r, &mut b);
 }
 
 #[test_only]
@@ -530,11 +540,14 @@ fun record_mob_cast(fight: &mut Fight, midx: u64, spell_index: u64, casts_per_tu
 /// from the crank seed, never previewable — unlike a player cast's turn-seed derivation).
 public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: u64, target_cell: u64, rng: &mut u64) {
   let caster_cell; let caster_level; let caster_stats; let ap_cost; let effects; let ends_turn_on_fail; let sl;
+  let caster_hp; let caster_max_hp; // cast-time life — the punishment scale's input (see resolve_player_cast)
   {
     let m = fight::mobs(fight).borrow(midx);
     caster_cell = mob::cell(m);
     caster_level = mob::level(m);
     caster_stats = *mob::stats(m); // per-mob LIVE block (was the shared kit) — alters on THIS mob change its damage
+    caster_hp = mob::hp(m);
+    caster_max_hp = mob::max_hp(m);
     sl = *mob::kit_spell_at(fight::content_kit(fight::member_content(fight, midx)), spell_index); // THIS mob's kit (mixed packs: one kit per member)
     ap_cost = sl.sl_ap_cost();
     effects = *sl.sl_effects();
@@ -624,7 +637,7 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
           e = e + p;
         } else if (effect.kind() != spell_effect::k_named_damage_stack()
           && apply_effect(
-            fight, MOB_SIDE, midx, caster_cell, &caster_stats, caster_level, target_cell, effect, 0,
+            fight, MOB_SIDE, midx, caster_cell, &caster_stats, caster_level, caster_hp, caster_max_hp, target_cell, effect, 0,
             mob_damage_roll, option::none(), e, rng, &mut random_domains, &mut random_effect_ordinals,
             &mut random_rolls, &mut random_bounds,
           )) {
@@ -1022,6 +1035,8 @@ fun apply_effect(
   caster_cell: u64,
   caster_stats: &Stats,
   caster_level: u64,
+  caster_hp: u64, // the caster's CAST-TIME life — a punishment line's scale, fixed for every target of the cast
+  caster_max_hp: u64,
   target_cell: u64,
   effect: &Effect,
   damage_bonus: u64,
@@ -1082,7 +1097,7 @@ fun apply_effect(
         } else {
           let target_bonus = if (bonus_target.is_some() && *bonus_target.borrow() == i) damage_bonus else 0;
           if (apply_to_player(
-            fight, caster_side, caster_idx, i, caster_cell, caster_stats, caster_level, element,
+            fight, caster_side, caster_idx, i, caster_cell, caster_stats, caster_level, caster_hp, caster_max_hp, element,
             effect, target_bonus, damage_roll, effect_ordinal, rng, random_domains, random_effect_ordinals,
             random_rolls, random_bounds,
           )) did_damage = true;
@@ -1107,7 +1122,7 @@ fun apply_effect(
         } else {
           let target_bonus = if (bonus_target.is_some() && *bonus_target.borrow() == mob_fid(j)) damage_bonus else 0;
           if (apply_to_mob(
-            fight, caster_side, caster_idx, j, caster_cell, caster_stats, caster_level, element,
+            fight, caster_side, caster_idx, j, caster_cell, caster_stats, caster_level, caster_hp, caster_max_hp, element,
             effect, target_bonus, damage_roll, effect_ordinal, rng, random_domains, random_effect_ordinals,
             random_rolls, random_bounds,
           )) did_damage = true;
@@ -1128,6 +1143,8 @@ fun apply_to_player(
   caster_cell: u64,
   caster_stats: &Stats,
   caster_level: u64,
+  caster_hp: u64,
+  caster_max_hp: u64,
   element: u8,
   effect: &Effect,
   damage_bonus: u64,
@@ -1175,7 +1192,9 @@ fun apply_to_player(
   } else if (kind == spell_effect::k_punishment_damage()) {
     // The `apply_to_mob` twin. Missing here, this fell to the tail and became a STATUS ROW, so a mob casting a
     // punishment line at a player did no damage at all — while @aresrpg/sim folded it as DAMAGE for both sides.
-    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
+    // The base then SCALES with the caster's missing life (the half of this kind that both twins used to drop).
+    let punished = spell_formula::punishment_base(rolled, caster_hp, caster_max_hp);
+    let damage = spell_formula::final_damage(punished + damage_bonus, element, caster_stats, &target_stats);
     hit_player_from(
       fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
@@ -1259,6 +1278,8 @@ fun apply_to_mob(
   caster_cell: u64,
   caster_stats: &Stats,
   caster_level: u64,
+  caster_hp: u64,
+  caster_max_hp: u64,
   element: u8,
   effect: &Effect,
   damage_bonus: u64,
@@ -1301,7 +1322,9 @@ fun apply_to_mob(
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_punishment_damage()) {
-    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
+    // Scales with the CASTER's missing life — the `apply_to_player` twin, same helper, same order.
+    let punished = spell_formula::punishment_base(rolled, caster_hp, caster_max_hp);
+    let damage = spell_formula::final_damage(punished + damage_bonus, element, caster_stats, &target_stats);
     hit_mob_from(
       fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
@@ -1501,6 +1524,18 @@ fun is_unimplemented(kind: u8): bool {
 /// sinks on any kill and by `actions::mark_abandoned` (abandon = death by the same law).
 public(package) fun purge_fighter_rows(fight: &mut Fight, is_mob: bool, idx: u64) {
   spell_board::clear_fighter(fight::fx_mut(fight), if (is_mob) mob_fid(idx) else idx);
+}
+
+/// The CASTER's own life as `(hp, max_hp)` — the input a punishment line scales its base by. Both sinks read it
+/// here so "how wounded is the caster" has one home, whichever side of the board the caster sits on.
+fun caster_life(fight: &Fight, caster_side: u8, caster_idx: u64): (u64, u64) {
+  if (caster_side == PLAYER_SIDE) {
+    let p = fight::participants(fight).borrow(caster_idx);
+    (participant::hp(p), participant::max_hp(p))
+  } else {
+    let m = fight::mobs(fight).borrow(caster_idx);
+    (mob::hp(m), mob::max_hp(m))
+  }
 }
 
 fun heal_caster(fight: &mut Fight, caster_side: u8, caster_idx: u64, amount: u64) {
