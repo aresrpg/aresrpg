@@ -237,7 +237,15 @@ describe('finish_result loot-item dispatch — the event floor renders INSTANTLY
     expect(dispatched).toEqual([
       { loot: [{ item_type: '', name: '', amount: 2 }], resolved: false }, // the instant floor
       {
-        loot: [{ template_id: '0xA', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 }],
+        loot: [
+          {
+            template_id: '0xA',
+            item_type: 'razkin_hide',
+            icon_slug: 'razkin_hide',
+            name: 'Razkin Hide',
+            amount: 2,
+          },
+        ],
         resolved: true,
       }, // reconciled behind
     ])
@@ -256,7 +264,15 @@ describe('finish_result loot-item dispatch — the event floor renders INSTANTLY
     )
     expect(dispatched).toEqual([
       {
-        loot: [{ template_id: '0xA', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 1 }],
+        loot: [
+          {
+            template_id: '0xA',
+            item_type: 'razkin_hide',
+            icon_slug: 'razkin_hide',
+            name: 'Razkin Hide',
+            amount: 1,
+          },
+        ],
         resolved: true,
       },
     ])
@@ -318,8 +334,20 @@ describe('finish_result loot tail — ATOMIC mint+burn, never a burn on a blind 
     expect(item_qty).toBe(3)
     // The card lines ARE the receipt's rolled — this mirror holds no bag anywhere
     expect(loot_dispatched).toEqual([
-      { template_id: '0xA', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 },
-      { template_id: '0xB', item_type: 'razkin_fang', name: 'Razkin Fang', amount: 1 },
+      {
+        template_id: '0xA',
+        item_type: 'razkin_hide',
+        icon_slug: 'razkin_hide',
+        name: 'Razkin Hide',
+        amount: 2,
+      },
+      {
+        template_id: '0xB',
+        item_type: 'razkin_fang',
+        icon_slug: 'razkin_fang',
+        name: 'Razkin Fang',
+        amount: 1,
+      },
     ])
   })
 
