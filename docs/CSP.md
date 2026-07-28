@@ -24,7 +24,6 @@ its row's origin is gone.
 | `connect-src`           | `https://fullnode.{testnet,mainnet}.sui.io`, `sui-mainnet.mystenlabs.com` | `packages/sdk/src/sui.js` — both network branches                                              |
 | `connect-src`           | `https://{testnet,mainnet}.mvr.mystenlabs.com`                            | `@mysten/sui` MVR name resolution (present in the built bundle)                                |
 | `connect-src`           | `https://o4508074408214528.ingest.de.sentry.io`                           | the `VITE_SENTRY_DSN` host, read off the **served production bundle** (`assets/env-*.js`)      |
-| `connect-src`           | `wss:`                                                                    | nostr rendezvous relays — see "Deliberately loose" below                                       |
 | `img-src` / `media-src` | `https://assets.aresrpg.world`, `data:`, `blob:`                          | item/spell/mob art, the hack-mode radio, canvas and object-URL sources                         |
 | `style-src`             | `'unsafe-inline'`, `https://fonts.googleapis.com`                         | React `style={{…}}` props are style _attributes_ (CSP3 requires it); the JetBrains Mono sheet  |
 | `font-src`              | `https://fonts.gstatic.com`, `data:`                                      | `index.html` font link                                                                         |
@@ -34,13 +33,6 @@ its row's origin is gone.
 
 ## Deliberately loose, with the reason
 
-- **`connect-src wss:`** — not a shortcut. `src/p2p/lobby-room.js` passes `relayUrls` /
-  `relayRedundancy` to Trystero, but **trystero 0.25.3 reads `relayConfig.urls` /
-  `relayConfig.redundancy`** (`@trystero-p2p/core` `getRelays`). The app's explicit five-relay list is
-  therefore inert, and the runtime set is five relays shuffled out of trystero's own 47-relay default
-  pool, seeded by `appId` — so it changes on a trystero bump _and_ on `VITE_NETWORK=mainnet` (the
-  appId is network-suffixed). Pinning the five observed hosts would brick p2p presence on either
-  event. Once the option name is fixed the relays become ours again and this tightens to five hosts.
 - **`style-src 'unsafe-inline'`** — required by React inline styles; removing it means eliminating
   every `style={{…}}` prop, not a header change.
 
@@ -60,7 +52,6 @@ Rename the header to `Content-Security-Policy` only when all of these hold:
 - [ ] The two `script-src` hashes are re-derived from the **built** `dist/index.html`, and something
       mechanical keeps them honest — a stale hash after an `index.html` edit is a white screen under
       enforcement. Prefer moving both inline scripts to files under `public/` and dropping the hashes.
-- [ ] `wss:` is narrowed (needs the trystero `relayConfig` fix first).
 
 Re-derive the hashes with:
 
