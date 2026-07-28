@@ -8,8 +8,10 @@ import { resolve_equip_templates } from './equip_version_gate.js'
 const refusal_copy = (unresolved) =>
   `Couldn't equip ${unresolved.map((r) => r.item_type || 'unknown item').join(', ')} — its item template wasn't found on-chain. Unstage it and try again.`
 
-const id_a = '0x2c6de4980000000000000000000000000000000000000000000000000000beef'
-const id_b = '0x31f64c010000000000000000000000000000000000000000000000000000beef'
+// Two DISTINCT template identities; the gate only ever compares them for presence and equality, so these
+// are deliberately NOT address-shaped — a hardcoded 0x… in a test reads as a live chain pointer.
+const id_a = 'template-identity-a'
+const id_b = 'template-identity-b'
 
 describe('resolve_equip_templates (exact template-identity gate)', () => {
   test('items pass their own stamped ids even when both share generic item_type cloak', () => {
