@@ -57,8 +57,13 @@ export function sim_gas(sim) {
  */
 export function gas_guard_decision(sim, balance_mist = null) {
   const effects = (sim?.Transaction ?? sim?.FailedTransaction)?.effects
-  if (!effects || sim?.$kind === 'FailedTransaction' || effects?.status?.success === false)
-    return { ok: false, reason: 'sim_failed' }
+  // ALLOW-BY-EXCEPTION (money-path hardening #796): only an explicitly clean success is priceable — union tag
+  // `Transaction` AND `status.success === true`. The old shape refused what LOOKED failed and priced everything
+  // else, so a missing status, an unknown union tag or a non-boolean `success` read as "fine" and had `gasUsed`
+  // taken off it (an absent gasUsed yields budget 0 — a guaranteed InsufficientGas burn, the very drain this
+  // guard exists to prevent). The @server's simulate gate makes the identical call; their parity is a test
+  // (api/sponsor.simulate_gate.test.js), so this condition and classify_simulation move together or go red.
+  if (sim?.$kind !== 'Transaction' || effects?.status?.success !== true) return { ok: false, reason: 'sim_failed' }
 
   const { net, computation, storage } = sim_gas(sim)
   if (net > GAS_CEILING_MIST) return { ok: false, reason: 'over_ceiling', cost_sui: mist_to_sui_str(net) }

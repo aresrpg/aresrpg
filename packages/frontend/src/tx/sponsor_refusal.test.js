@@ -14,8 +14,13 @@ import {
   execute_sponsored_tx,
   is_sponsor_outdated_package_refusal,
   is_sponsor_self_pay_refusal,
+  is_sponsor_unpriceable_refusal,
+  is_sponsor_would_abort_refusal,
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
   SPONSOR_REFUSAL_SELF_PAY,
+  SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE,
+  SPONSOR_REFUSAL_SIMULATION_UNREADABLE,
+  SPONSOR_REFUSAL_WOULD_ABORT,
 } from './index'
 
 // Minimal doors execute_sponsored_tx touches BEFORE the 400 throw: an offline kind-only build + the zkLogin
@@ -88,6 +93,58 @@ describe('execute_sponsored_tx — strict retired-package refusal reason', () =>
 
     expect(error.message).toBe(i18n.t('errors.sponsor_scope'))
     expect(is_sponsor_outdated_package_refusal(error)).toBe(false)
+  })
+})
+
+// ── #796: the @server's "I could not price this" answers arrive as MACHINE reasons, not as prose the client
+// pattern-matches. The old branch was `/sponsor-unpriceable|unpriceable/i.test(detail)` over a server-authored
+// diagnostic — a sentence no test pinned on either side, so a wording change would have silently dropped these
+// into the generic "Sponsor request failed (400)" fallback.
+describe('execute_sponsored_tx — the UNPRICEABLE reasons branch on the marker, never on the message', () => {
+  for (const reason of [SPONSOR_REFUSAL_SIMULATION_UNREADABLE, SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE])
+    test(`reason=${reason} → honest unpriceable copy, tagged, never self-pay`, async () => {
+      // The `error` string is deliberately UNRECOGNISABLE to every legacy regex in the mapper: only the
+      // machine reason can produce the right copy here.
+      const error = await drive_refusal(JSON.stringify({ error: 'a diagnostic nobody parses', reason }))
+      expect(error).not.toBeNull()
+      expect(error.message).toBe(i18n.t('errors.sponsor_unpriceable'))
+      expect(is_sponsor_unpriceable_refusal(error)).toBe(true)
+      expect(is_sponsor_self_pay_refusal(error)).toBe(false) // never auto-spend on a server-side unknown
+      expect(is_sponsor_would_abort_refusal(error)).toBe(false) // and never blamed on the player's action
+    })
+})
+
+// ── #796: the chain's own failure string rides in its OWN field. The prefix strip stays as a FALLBACK because a
+// refreshed client meets an un-rolled @server — both body shapes must decode to the same player-facing cause.
+describe('execute_sponsored_tx — would-abort reads the chain error structurally, with a legacy fallback', () => {
+  const MOVE_ABORT =
+    'MoveAbort(MoveLocation { module: ModuleId { address: e8c6, name: Identifier("turns") }, function: 6, ' +
+    'instruction: 36, function_name: Some("crank") }, 107) in command 0'
+
+  test('the structural chain_error field is used when present', async () => {
+    const error = await drive_refusal(
+      JSON.stringify({
+        error: 'sponsor-would-abort: a HUMANISED sentence that is not the chain error at all',
+        reason: SPONSOR_REFUSAL_WOULD_ABORT,
+        chain_error: MOVE_ABORT,
+      })
+    )
+    expect(is_sponsor_would_abort_refusal(error)).toBe(true)
+    // proof the STRUCTURAL field won: the decoded copy comes from the abort table keyed on the real MoveAbort,
+    // which the humanised `error` string could never have produced.
+    expect(error.message).toBe(
+      (await import('../game/core/abort_copy.js')).tx_error(MOVE_ABORT, { preflight: true }).message
+    )
+  })
+
+  test('an OLD body with the cause only in the prefixed message still decodes identically', async () => {
+    const error = await drive_refusal(
+      JSON.stringify({ error: `sponsor-would-abort: ${MOVE_ABORT}`, reason: SPONSOR_REFUSAL_WOULD_ABORT })
+    )
+    expect(is_sponsor_would_abort_refusal(error)).toBe(true)
+    expect(error.message).toBe(
+      (await import('../game/core/abort_copy.js')).tx_error(MOVE_ABORT, { preflight: true }).message
+    )
   })
 })
 

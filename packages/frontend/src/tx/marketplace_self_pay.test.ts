@@ -7,7 +7,11 @@ import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_help
 
 const grpc = {
   core: {
+    // `$kind` is part of the shape SuiGrpcClient.core.simulateTransaction ALWAYS returns (it union-tags every
+    // result `Transaction` or `FailedTransaction` — @mysten/sui dist/grpc/core.mjs). Omitting it here modelled a
+    // result the node cannot produce, and the gas guard now refuses verdict-less shapes outright (#796).
     simulateTransaction: mock(async () => ({
+      $kind: 'Transaction',
       Transaction: {
         effects: {
           status: { success: true },

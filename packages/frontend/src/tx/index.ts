@@ -37,14 +37,20 @@ import { decide_sponsor_route, sponsor_route_log } from './sponsor_route'
 import type { SponsoredReceipt, TxReceipt } from './receipts'
 import {
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+  SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE,
+  SPONSOR_REFUSAL_SIMULATION_UNREADABLE,
   SPONSOR_REFUSAL_WOULD_ABORT,
   is_sponsor_outdated_package_refusal,
+  is_sponsor_unpriceable_refusal,
   is_sponsor_would_abort_refusal,
 } from './sponsor_refusal'
 
 export {
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+  SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE,
+  SPONSOR_REFUSAL_SIMULATION_UNREADABLE,
   SPONSOR_REFUSAL_WOULD_ABORT,
+  is_sponsor_unpriceable_refusal,
   is_sponsor_outdated_package_refusal,
   is_sponsor_would_abort_refusal,
 } from './sponsor_refusal'
@@ -460,16 +466,35 @@ export async function build_sponsored_kind(transaction: Transaction, sender: str
 // markers ride on `sponsor_refusal` so a caller can branch WITHOUT string-parsing localized copy: SELF_PAY
 // (funded > 0.2 SUI — the ONLY silent self-pay re-route), DAILY_CAP (never auto-spend past the free promise),
 // and OUTDATED_PACKAGE (block and refresh onto the latest release).
-function map_sponsor_error(detail: string, status: number, reason: string | null): Error {
+function map_sponsor_error(
+  detail: string,
+  status: number,
+  reason: string | null,
+  chain_error_field: string | null = null
+): Error {
   // WOULD-ABORT (#1385): the sponsor's dry-run proved this PTB aborts, so it refused BEFORE reserving gas —
-  // nothing signed, nothing executed, zero spend anywhere. The chain's own error rides in `detail`; decode it
-  // through the ONE abort-copy table with `preflight: true` so the player reads the real cause ("not your turn",
-  // "already listed") with its zero-gas provenance, never the burn-law "gas was spent, don't retry" copy.
+  // nothing signed, nothing executed, zero spend anywhere. The chain's own error arrives in its OWN field
+  // (#796); decode it through the ONE abort-copy table with `preflight: true` so the player reads the real cause
+  // ("not your turn", "already listed") with its zero-gas provenance, never the burn-law "gas was spent" copy.
+  // The prefix-strip stays as the FALLBACK, not as the contract: a client refresh reaches players before the
+  // @server image rolls, so this must keep decoding the older body shape that carried the cause in `error` only.
   if (reason === SPONSOR_REFUSAL_WOULD_ABORT) {
-    const chain_error = detail.replace(/^sponsor-would-abort:\s*/, '')
+    const chain_error = chain_error_field ?? detail.replace(/^sponsor-would-abort:\s*/, '')
     const would_abort = tx_error(chain_error, { preflight: true }) as Error & { sponsor_refusal?: string }
     would_abort.sponsor_refusal = SPONSOR_REFUSAL_WOULD_ABORT
     return would_abort
+  }
+  // UNPRICEABLE (#796): the @server could not read a verdict out of its own simulation, or could not reach the
+  // node at all. Machine-marked so this branches on a REASON instead of matching `/unpriceable/` against a
+  // server-authored diagnostic — and marked so a caller can tell "we could not tell" apart from "you would
+  // fail". Nothing was reserved on either path, so the copy is the same honest retry-later line.
+  if (
+    reason === SPONSOR_REFUSAL_SIMULATION_UNREADABLE ||
+    reason === SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE
+  ) {
+    const unpriceable = new Error(i18n.t('errors.sponsor_unpriceable')) as Error & { sponsor_refusal?: string }
+    unpriceable.sponsor_refusal = reason
+    return unpriceable
   }
   // STRICT PACKAGE UPGRADE: the @server structurally identifies a retired aresrpg package. Keep the marker on
   // the humanized error so routing refuses immediately and the transaction edge can open the blocking modal.
@@ -520,16 +545,19 @@ function map_sponsor_error(detail: string, status: number, reason: string | null
   return new Error(`Sponsor request failed (${status})${detail ? `: ${detail}` : ''}`)
 }
 
-function decode_sponsor_error(body: string): { detail: string; reason: string | null } {
+function decode_sponsor_error(body: string): { detail: string; reason: string | null; chain_error: string | null } {
   try {
-    const decoded = JSON.parse(body) as { error?: unknown; reason?: unknown }
+    const decoded = JSON.parse(body) as { error?: unknown; reason?: unknown; chain_error?: unknown }
     return {
       detail: typeof decoded.error === 'string' ? decoded.error : body,
       reason: typeof decoded.reason === 'string' ? decoded.reason : null,
+      // #796 — the chain's own failure string in its OWN field, so the would-abort path never has to strip a
+      // prefix back off a human-readable message to recover the machine-readable half it needs.
+      chain_error: typeof decoded.chain_error === 'string' ? decoded.chain_error : null,
     }
   } catch {
     // Compatibility with station/test doubles that return a plain-text diagnostic.
-    return { detail: body, reason: null }
+    return { detail: body, reason: null, chain_error: null }
   }
 }
 
@@ -549,8 +577,8 @@ async function sponsor_fetch(url: string, body: unknown): Promise<any> {
   }
   if (response.ok) return response.json()
   const response_body = await response.text().catch(() => '')
-  const { detail, reason } = decode_sponsor_error(response_body)
-  throw map_sponsor_error(detail, response.status, reason)
+  const { detail, reason, chain_error } = decode_sponsor_error(response_body)
+  throw map_sponsor_error(detail, response.status, reason, chain_error)
 }
 
 /**
