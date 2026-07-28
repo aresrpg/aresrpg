@@ -1349,7 +1349,11 @@ fn mob_canonical_allowlist_filters_a_projection_walk_and_unset_warns_fail_open()
     let included = included_id.as_str();
     let excluded = excluded_id.as_str();
     let included_bytes = mob_template_bytes("Alley Bunny", 1, 2, 12, 3, &[]);
-    let excluded_bytes = mob_template_bytes("Flat Twin", 1, 2, 12, 3, &[]);
+    // The real exclusion shape: a SUPERSEDED TWIN — the census awards "Alley Bunny" to the id
+    // above, so this second object carrying the same display name is the flat orphan the
+    // adjudication ruled against. (A body whose name the census never adjudicated is a different
+    // case entirely — `a_mob_minted_after_the_census_still_projects` below owns it.)
+    let excluded_bytes = mob_template_bytes("Alley Bunny", 1, 2, 12, 3, &[]);
     let rows = [
         (included, included_bytes.as_slice()),
         (excluded, excluded_bytes.as_slice()),
@@ -1437,6 +1441,48 @@ fn mob_canonical_allowlist_filters_a_projection_walk_and_unset_warns_fail_open()
             .count(),
         1,
         "log: {unreadable_log}"
+    );
+}
+
+/// RED-FIRST (2026-07-28): nine dungeon bosses were minted on the live lineage and never entered the
+/// index — `rpc:mob_template:*` held exactly the census's own row count and not one id more. The gate
+/// was reading the twin-adjudication census as an id ALLOWLIST, so EVERY template minted after that
+/// file was written was "non-canonical" by construction: a new mob's id cannot appear in a list that
+/// predates its mint, and no amount of replay changes that — only a manifest edit, a restart, and a
+/// full re-anchor. The census can only refuse a DISPLAY NAME it adjudicated (see `MobCanonicalCensus`);
+/// a name it never contested belongs to a mob only the chain knows about.
+#[test]
+fn a_mob_minted_after_the_census_still_projects() {
+    let manifest = synthetic_mob_canonical_manifest();
+    let census =
+        parse_mob_canonical_ids(manifest.as_bytes()).expect("synthetic custody-manifest shape must parse");
+    let handler = AresSnapshotHandler::from_parts(None, Some(census));
+
+    // A mob minted AFTER the census was written: an id no row can carry, and a display name no row
+    // ever adjudicated. Nothing about it is contested — it must reach the bestiary.
+    let fresh_id = synthetic_object_id("0xf5e5");
+    let fresh_bytes = mob_template_bytes("Voltstripe the Stormfang", 40, 40, 4200, 3 /* AIR */, &[]);
+    let writes = match handler.project_mob_template(&fresh_id, &fresh_bytes, NARROW_EFFECT_ARESRPG_ORIGIN) {
+        MobTemplateProjection::Writes(writes) => writes,
+        MobTemplateProjection::SkippedNonCanonical => {
+            panic!("a mob the census never adjudicated must not be refused as a superseded twin")
+        }
+        MobTemplateProjection::Malformed => panic!("fresh mob prefix must parse"),
+    };
+    assert!(has_sadd(&writes, K_MOB_TEMPLATES, &fresh_id));
+    let doc = set_json(&writes, "$").expect("fresh mob writes its whole doc");
+    assert!(doc.contains(r#""name":"Voltstripe the Stormfang""#), "doc: {doc}");
+
+    // The tooth the census exists for is UNCHANGED: an unlisted id whose display name the census
+    // awards to another id is the superseded twin, still refused.
+    let twin_id = synthetic_object_id("0x7213");
+    let twin_bytes = mob_template_bytes("Velvet Slime", 1, 2, 12, 1, &[]);
+    assert!(
+        matches!(
+            handler.project_mob_template(&twin_id, &twin_bytes, NARROW_EFFECT_ARESRPG_ORIGIN),
+            MobTemplateProjection::SkippedNonCanonical
+        ),
+        "a second id claiming an adjudicated display name is the twin the census rules against"
     );
 }
 

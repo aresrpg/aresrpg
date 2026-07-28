@@ -139,28 +139,66 @@ const ARES_ORIGIN_EFFECT_BYTES: &[(&str, usize)] = &[
 struct MobCanonicalManifestRow {
     #[serde(rename = "key")]
     _key: String,
-    #[serde(rename = "name")]
-    _name: String,
+    name: String,
     id: String,
 }
 
-fn parse_mob_canonical_ids(contents: &[u8]) -> Result<HashSet<String>> {
-    let rows: Vec<MobCanonicalManifestRow> =
-        serde_json::from_slice(contents).context("parsing mob canonical allowlist JSON")?;
-    rows.into_iter()
-        .map(|row| {
-            let hex = row.id.strip_prefix("0x").unwrap_or_default();
-            if hex.len() != 64 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-                bail!("mob canonical id must be a 0x-prefixed 64-hex Sui object id");
-            }
-            Ok(ObjectID::from_hex_literal(&row.id)
-                .context("parsing mob canonical id")?
-                .to_canonical_string(true))
-        })
-        .collect()
+/// The deploy-owned twin adjudication: for each mob DISPLAY NAME the seed corpus minted more than
+/// once on the fresh lineage, which of that name family's ids is the canonical one. It is a census of
+/// the names it adjudicated — NOT a registry of every mob that exists — so it carries exactly two
+/// facts and no more: the winning ids, and the names it has an opinion about.
+///
+/// That distinction is the whole gate (issue: nine dungeon bosses minted 2026-07-28 never reached the
+/// index). Read as an id ALLOWLIST, this census silently drops every template minted after the file
+/// was written — a brand-new mob is "not canonical" purely because a list about OTHER mobs' twins
+/// predates it, and recovering it costs a manifest edit, a restart, and a full re-anchor replay. Read
+/// as what it is, an unknown id is refused only when the census already awards that DISPLAY NAME to a
+/// different id (precisely the superseded twin it exists to exclude); an unknown id carrying a name no
+/// row claims is a mob the chain minted and the census never spoke about, and the chain is the only
+/// source of truth there is for it.
+struct MobCanonicalCensus {
+    /// The adjudicated winner ids — the whole file's `id` column.
+    ids: HashSet<String>,
+    /// The display names those winners were adjudicated FOR — the names this census can refuse for.
+    names: HashSet<String>,
 }
 
-fn read_mob_canonical_ids(path: &Path) -> Result<HashSet<String>> {
+impl MobCanonicalCensus {
+    /// `true` when `id` is a superseded twin: the census awards this template's display name to some
+    /// OTHER id. A name the census never adjudicated is never refused (see the type doc).
+    fn refuses(&self, id: &str, name: &str) -> bool {
+        !self.ids.contains(id) && self.names.contains(name)
+    }
+
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.ids.len()
+    }
+}
+
+fn parse_mob_canonical_ids(contents: &[u8]) -> Result<MobCanonicalCensus> {
+    let rows: Vec<MobCanonicalManifestRow> =
+        serde_json::from_slice(contents).context("parsing mob canonical allowlist JSON")?;
+    let mut census = MobCanonicalCensus {
+        ids: HashSet::new(),
+        names: HashSet::new(),
+    };
+    for row in rows {
+        let hex = row.id.strip_prefix("0x").unwrap_or_default();
+        if hex.len() != 64 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+            bail!("mob canonical id must be a 0x-prefixed 64-hex Sui object id");
+        }
+        census.ids.insert(
+            ObjectID::from_hex_literal(&row.id)
+                .context("parsing mob canonical id")?
+                .to_canonical_string(true),
+        );
+        census.names.insert(row.name);
+    }
+    Ok(census)
+}
+
+fn read_mob_canonical_ids(path: &Path) -> Result<MobCanonicalCensus> {
     let contents = std::fs::read(path)
         .with_context(|| format!("reading mob canonical allowlist {}", path.display()))?;
     parse_mob_canonical_ids(&contents)
@@ -1062,6 +1100,13 @@ fn effect_byte_width(package: &str) -> Option<usize> {
 /// missing from [`ARES_ORIGIN_EFFECT_BYTES`] projects the doc WITHOUT loot (`drops: null`) and
 /// says so loudly — the ceremony hand-off that table documents is what clears the warning.
 pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Option<Vec<RedisWrite>> {
+    Some(mob_template_doc(id, &mob_template_prefix(id, contents, package)?))
+}
+
+/// Decode step of [`map_mob_template_object`], split out so the canonical-census gate can read the
+/// template's own DISPLAY NAME (its twin-family identity) without decoding the body a second time —
+/// the decode has exactly one home either way.
+fn mob_template_prefix(id: &str, contents: &[u8], package: &str) -> Option<MobTemplatePrefix> {
     let effect_bytes = effect_byte_width(package);
     if effect_bytes.is_none() {
         warn!(
@@ -1070,9 +1115,13 @@ pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Opti
             "unregistered aresrpg origin — MobTemplate loot dropped (add the origin's Effect width to ARES_ORIGIN_EFFECT_BYTES)"
         );
     }
-    let p = MobTemplatePrefix::parse(contents, effect_bytes)?;
+    MobTemplatePrefix::parse(contents, effect_bytes)
+}
+
+/// Projection step of [`map_mob_template_object`] — the decoded prefix as its redis doc.
+fn mob_template_doc(id: &str, p: &MobTemplatePrefix) -> Vec<RedisWrite> {
     let key = k_mob_template(id);
-    Some(vec![
+    vec![
         set(
             key,
             "$",
@@ -1094,7 +1143,7 @@ pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Opti
             }),
         ),
         sadd(K_MOB_TEMPLATES.into(), id.to_string()),
-    ])
+    ]
 }
 
 /// Snapshot one `aresrpg_game::world::World` object's join gate into its world doc
@@ -1551,8 +1600,8 @@ pub fn kiosk_purchase_per_unit(price_mist: u64, amount: u64) -> Option<u64> {
 /// [`is_versioned_payload_key`]) and primitives carry no address to gate on.
 pub struct AresSnapshotHandler {
     packages: Option<HashSet<String>>,
-    // Retires when the chain-prune ceremony deletes the superseded flat docs on chain — after that this list excludes nothing.
-    mob_canonical_ids: Option<HashSet<String>>,
+    // Retires when the chain-prune ceremony deletes the superseded flat docs on chain — after that this census excludes nothing.
+    mob_census: Option<MobCanonicalCensus>,
 }
 
 enum MobTemplateProjection {
@@ -1581,22 +1630,19 @@ impl AresSnapshotHandler {
                 );
                 Self {
                     packages,
-                    mob_canonical_ids: None,
+                    mob_census: None,
                 }
             }
         }
     }
 
-    fn from_parts(
-        packages: Option<HashSet<String>>,
-        mob_canonical_ids: Option<HashSet<String>>,
-    ) -> Self {
-        if mob_canonical_ids.is_none() {
+    fn from_parts(packages: Option<HashSet<String>>, mob_census: Option<MobCanonicalCensus>) -> Self {
+        if mob_census.is_none() {
             warn!("mob canonical allowlist not configured — projecting all templates, duplicates possible");
         }
         Self {
             packages,
-            mob_canonical_ids,
+            mob_census,
         }
     }
 
@@ -1638,23 +1684,27 @@ impl AresSnapshotHandler {
         }
     }
 
+    /// Project one MobTemplate unless the canonical census refuses it as a superseded twin. The body
+    /// is decoded FIRST because the census's verdict is per DISPLAY NAME, not per id — see
+    /// [`MobCanonicalCensus`] for why an unknown id alone can never be a refusal (a mob minted after
+    /// the census was written has an id no file could have listed and a name no twin ever contested).
     fn project_mob_template(
         &self,
         id: &str,
         contents: &[u8],
         package: &str,
     ) -> MobTemplateProjection {
+        let Some(p) = mob_template_prefix(id, contents, package) else {
+            return MobTemplateProjection::Malformed;
+        };
         if self
-            .mob_canonical_ids
+            .mob_census
             .as_ref()
-            .is_some_and(|canonical| !canonical.contains(id))
+            .is_some_and(|census| census.refuses(id, &p.name))
         {
             return MobTemplateProjection::SkippedNonCanonical;
         }
-        match map_mob_template_object(id, contents, package) {
-            Some(writes) => MobTemplateProjection::Writes(writes),
-            None => MobTemplateProjection::Malformed,
-        }
+        MobTemplateProjection::Writes(mob_template_doc(id, &p))
     }
 
     fn log_mob_template_skips(&self, skipped: usize, checkpoint: u64) {
