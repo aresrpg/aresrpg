@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect, type Page, type Locator } from '@playwright/test'
+import { SDK } from '@aresrpg/sdk/sui'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // T62 idle-explore golden path — headless END-TO-END PROOF, REAL app, ON-CHAIN.
@@ -27,7 +28,6 @@ import { test, expect, type Page, type Locator } from '@playwright/test'
 // QA-User Identity B (testnet only, isolated — see workspace keys.local.md). Overridable via env.
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 
-const FULLNODE = 'https://fullnode.testnet.sui.io:443'
 // Real exploration time before recall. item_rate 50 + chance≈0 → mean loot ≈ 50 × hours. 280s ≈ 0.078h →
 // mean ≈ 3.9 items, so ≥1 is near-certain against roll_around variance.
 const ACCRUE_MS = 280_000
@@ -48,23 +48,24 @@ async function waitNewDigest(page: Page, before: number, label: string, timeout 
   return d
 }
 
-// Read a tx's objectChanges from the fullnode and count CREATED `::item::Item` objects (the loot).
+let sdk_p: Promise<any> | null = null
+
+// Read a tx's object changes through the same gRPC-backed SDK as sibling live E2Es and count
+// CREATED `::item::Item` objects (the loot).
 async function createdLootItems(digest: string): Promise<string[]> {
-  const res = await fetch(FULLNODE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'sui_getTransactionBlock',
-      params: [digest, { showObjectChanges: true }],
-    }),
+  sdk_p = sdk_p ?? SDK({ network: 'testnet' })
+  const sdk = await sdk_p
+  const result = await sdk.grpc_client.core.getTransaction({
+    digest,
+    include: { effects: true, objectTypes: true },
   })
-  const j: any = await res.json()
-  const changes: any[] = j?.result?.objectChanges ?? []
-  return changes
-    .filter((c) => c.type === 'created' && typeof c.objectType === 'string' && /::item::Item\b/.test(c.objectType))
-    .map((c) => c.objectId)
+  const transaction = result.Transaction ?? result.FailedTransaction
+  const object_types: Record<string, string> = transaction?.objectTypes ?? {}
+  return (transaction?.effects?.changedObjects ?? [])
+    .filter(
+      (change: any) => change.idOperation === 'Created' && /::item::Item\b/.test(object_types[change.objectId] ?? '')
+    )
+    .map((change: any) => change.objectId)
 }
 
 test('T62 idle-explore loop: explore → accrue → recall → loot minted on-chain', async ({ page }, testInfo) => {
