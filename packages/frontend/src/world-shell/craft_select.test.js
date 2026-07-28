@@ -3,7 +3,7 @@
 // Burn-tally regression for the craft ingredient selector. crafting::craft burns WHOLE stacks and requires the
 // tally to land EXACT (EIngredientOverSupply on any over-large stack, EMissingIngredient on a shortfall), and
 // item::split is public(package) — the client cannot split. So the selector MUST pick a subset summing exactly
-// to each ingredient's need, all within ONE kiosk, or refuse. Pure functions, zero mocks.
+// to each ingredient's need and preserve each selected row's own kiosk custody. Pure functions, zero mocks.
 
 import { describe, expect, it } from 'bun:test'
 
@@ -56,14 +56,13 @@ describe('select_ingredients', () => {
     const items = [row('i1', 'crude_branch', 1), row('i2', 'crude_branch', 1)]
     const sel = select_ingredients(items, [{ id: 'crude_branch', qty: 2 }])
     expect(sel).not.toBeNull()
-    expect(sel.kiosk_id).toBe('K1')
-    expect(sel.personal_kiosk_cap_id).toBe('C1')
-    expect([...sel.input_item_ids].sort()).toEqual(['i1', 'i2'])
+    expect(sel.input_items.map((item) => item.id).sort()).toEqual(['i1', 'i2'])
+    expect(sel.input_items.every((item) => item.kiosk_id === 'K1' && item.kiosk_cap_id === 'C1')).toBe(true)
   })
 
   it('a single stack of exactly the needed amount', () => {
     const sel = select_ingredients([row('x', 'crude_branch', 2)], [{ id: 'crude_branch', qty: 2 }])
-    expect(sel.input_item_ids).toEqual(['x'])
+    expect(sel.input_items.map((item) => item.id)).toEqual(['x'])
   })
 
   it('multi-ingredient recipe, all satisfiable in the same kiosk', () => {
@@ -72,26 +71,23 @@ describe('select_ingredients', () => {
       { id: 'iron_ore', qty: 2 },
       { id: 'oak_wood', qty: 1 },
     ])
-    expect([...sel.input_item_ids].sort()).toEqual(['o1', 'w1'])
+    expect(sel.input_items.map((item) => item.id).sort()).toEqual(['o1', 'w1'])
   })
 
-  it('picks the kiosk that CAN satisfy exactly (skips the one that cannot)', () => {
-    // K1 holds only a 1-stack (short), K2 holds an exact 2-stack → must select from K2.
+  it('picks an exact subset across the whole owned bag', () => {
+    // K1 holds only a 1-stack, K2 holds an exact 2-stack → the exact K2 stack wins.
     const items = [row('a', 'crude_branch', 1, 'K1', 'C1'), row('b', 'crude_branch', 2, 'K2', 'C2')]
     const sel = select_ingredients(items, [{ id: 'crude_branch', qty: 2 }])
-    expect(sel.kiosk_id).toBe('K2')
-    expect(sel.input_item_ids).toEqual(['b'])
+    expect(sel.input_items).toEqual([items[1]])
   })
 
-  it('refuses when no single kiosk can satisfy every ingredient exactly', () => {
-    // iron_ore in K1, oak_wood in K2 — no single kiosk has both (the craft borrows ONE kiosk).
+  it('preserves each ingredient own kiosk when a recipe spans two kiosks', () => {
     const items = [row('o', 'iron_ore', 2, 'K1', 'C1'), row('w', 'oak_wood', 1, 'K2', 'C2')]
-    expect(
-      select_ingredients(items, [
-        { id: 'iron_ore', qty: 2 },
-        { id: 'oak_wood', qty: 1 },
-      ])
-    ).toBeNull()
+    const sel = select_ingredients(items, [
+      { id: 'iron_ore', qty: 2 },
+      { id: 'oak_wood', qty: 1 },
+    ])
+    expect(sel.input_items).toEqual(items)
   })
 
   it('refuses when the ingredient is missing entirely', () => {

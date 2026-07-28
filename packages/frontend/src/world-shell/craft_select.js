@@ -36,40 +36,24 @@ export function exact_subset(stacks, target) {
 }
 
 /**
- * Pick exact ingredient stacks for `ingredients` (`[{ id (slug), qty }]`) from ONE kiosk in `items`
- * (s.sui.items rows: `{ id, item_type, amount, kiosk_id, kiosk_cap_id }`). The craft borrows a SINGLE kiosk for
- * both the burns and the output lock, so every ingredient must resolve within the SAME kiosk. Returns the
- * craft PTB kiosk args + the flat input item ids, or null when no single kiosk can satisfy every ingredient
- * exactly.
+ * Pick exact ingredient stacks for `ingredients` (`[{ id (slug), qty }]`) across the owned-items bag
+ * (s.sui.items rows: `{ id, item_type, amount, kiosk_id, kiosk_cap_id }`). Each selected row is returned intact
+ * as the craft PTB's custody input, so the SDK extracts that item from the kiosk which actually holds it. There
+ * is deliberately no item-id→kiosk lookup alongside this function: the owned row is the custody record.
  * @param {any[]} items
  * @param {{ id: string, qty: number }[]} ingredients
- * @returns {{ input_item_ids: string[], kiosk_id: string, personal_kiosk_cap_id: string } | null}
+ * @returns {{ input_items: any[] } | null}
  */
 export function select_ingredients(items, ingredients) {
-  /** @type {Map<string, { cap: string, rows: any[] }>} */
-  const by_kiosk = new Map()
-  for (const it of items ?? []) {
-    if (!it?.kiosk_id || !it?.id) continue
-    if (!by_kiosk.has(it.kiosk_id)) by_kiosk.set(it.kiosk_id, { cap: it.kiosk_cap_id, rows: [] })
-    by_kiosk.get(it.kiosk_id).rows.push(it)
-  }
-  for (const [kiosk_id, { cap, rows }] of by_kiosk) {
-    if (!cap) continue
-    /** @type {string[]} */
-    const input_item_ids = []
-    let ok = true
-    for (const ing of ingredients) {
-      const stacks = rows
-        .filter((r) => r.item_type === ing.id)
-        .map((r) => ({ id: r.id, amount: Number(r.amount) || 1 }))
-      const picked = exact_subset(stacks, ing.qty)
-      if (!picked) {
-        ok = false
-        break
-      }
-      input_item_ids.push(...picked)
-    }
-    if (ok && input_item_ids.length) return { input_item_ids, kiosk_id, personal_kiosk_cap_id: cap }
-  }
-  return null
+  const usable = (items ?? []).filter((item) => item?.id && item?.kiosk_id && item?.kiosk_cap_id)
+  const by_id = new Map(usable.map((item) => [item.id, item]))
+  const selected = ingredients.map((ing) => {
+    const stacks = usable
+      .filter((item) => item.item_type === ing.id)
+      .map((item) => ({ id: item.id, amount: Number(item.amount) || 1 }))
+    return exact_subset(stacks, ing.qty)
+  })
+  if (selected.some((picked) => !picked)) return null
+  const input_items = selected.flatMap((picked) => picked.map((id) => by_id.get(id)))
+  return input_items.length ? { input_items } : null
 }
