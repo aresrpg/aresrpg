@@ -30,3 +30,15 @@ counter is rule 3 below: every ADR must be checked against the CODE, not against
 - One comment on the standing ADR-review issue: per-rubric verdicts with cites.
 - Drift findings → issues labeled `adr` + `tech-debt`.
 - Contradictions/dead ADRs → draft superseding ADRs as PRs (status: proposed — a human accepts).
+
+## Filing valve (binding, every pass)
+
+Only P0/P1 findings may file individual issue rows. Every other finding APPENDS to this loop's
+standing epic row as a checkbox (one line: `- [ ] <claim> · <file:line or evidence link>`), in the
+same pass, never a new row. If the loop has no standing epic yet, the pass's FIRST non-P0/P1
+finding creates it (one epic per loop, labeled with the loop's own label + `epic`) and every
+later finding appends there. Board intake is a budget; the drain must outrun it.
+
+Before filing ANY row or checkbox: search open rows for the same finding (title keywords +
+surface) — "before creating an issue you should double check what we have." A match means a
+comment or checkbox on the EXISTING row, never a new one.
