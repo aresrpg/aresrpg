@@ -11,12 +11,12 @@ import { ItemImage } from '../../components/items'
 import jobs_data from '../../data/jobs.json'
 import { use_template_t } from '../../i18n/template_t'
 import { normalize_search } from '../../utils/search'
-import { get_encyclopedia } from '../../rpc/client'
+import { get_encyclopedia, get_rare_links } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 
 import { gather_ladder_of } from './world_corpus'
-import { craftable_items_for_job } from './recipes'
 import { encyclopedia_item_asset } from './encyclopedia_assets'
+import { related_items_for_job } from './item_catalog'
 
 const { JOB_MASTER_JOBS, CRAFT_XP_TABLE } = jobs_data
 // widened view: job ids index a plain string map (the JSON's exact shape would reject j.id)
@@ -60,26 +60,36 @@ function JobsTab({
     return npcs.find((npc: any) => npc.type === 'JOB_MASTER' && npc.dialogText === selected_job_id)
   }, [selected_job_id, npcs])
 
-  // Craftable items for the selected job — the /v1 on-chain recipe + item projection (the SAME live
-  // source items_tab.tsx's RecipeSections reads), never the old bundled seed snapshot. That snapshot
-  // (packages/sdk/src/{items,recipes}.json) is a legacy-ported catalog generated only up to level 110 —
-  // it structurally could not carry a higher-level recipe on ANY job. The chain has no such cap.
   const { data: enc } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const { data: rare_links } = use_rpc_view((signal) => get_rare_links(undefined, signal), { deps: [] })
   const job_index = selected_job_id ? JOBS.findIndex((j) => j.id === selected_job_id.toLowerCase()) : -1
-  const craftable_items = useMemo(
-    () =>
-      craftable_items_for_job(enc?.recipes, enc?.items, job_index).map((row) => ({
-        ...row,
-        asset: encyclopedia_item_asset({ id: row.id, slug: slugs[row.name], item_type: row.item_type, name: row.name }),
-      })),
-    [enc, job_index]
-  )
 
   // Gathering progression = the AUTHORED corpus ladder (world_corpus.ts), the ONE home shared with the
   // worlds tab: each resource at its re-tiered tier/level, XP from the on-chain gather_xp curve. Replaces
   // the old join over bundled content.ts items, whose pre-re-tier tiers/levels drifted (diamond showed at
   // T1) — the literal source of truth now lives in the seed, derived, never hardcoded.
   const gather_ladder = gather_ladder_of(selected_job_id)
+
+  // The related panel is the job's own economy: authored gather rows by job, their /v1 rare-link twins,
+  // and /v1 recipe outputs by required job. Every leg follows projection linkage, so seed-side re-jobbing
+  // changes membership without a frontend list or slug edit.
+  const related_items = useMemo(
+    () =>
+      related_items_for_job(enc?.items, gather_ladder, rare_links, enc?.recipes, job_index).map((row) => ({
+        id: row.template_id,
+        item_type: row.item_type ?? '',
+        name: row.name ?? '',
+        level: row.level ?? 0,
+        category: row.category ?? '',
+        asset: encyclopedia_item_asset({
+          id: row.template_id,
+          slug: slugs[row.name ?? ''],
+          item_type: row.item_type,
+          name: row.name,
+        }),
+      })),
+    [enc, gather_ladder, job_index, rare_links]
+  )
 
   const is_gathering = selected_job?.category === 'Gathering'
 
@@ -291,12 +301,12 @@ function JobsTab({
           )}
 
           {/* Craftable Items */}
-          {craftable_items.length > 0 && (
+          {related_items.length > 0 && (
             <div className="flex flex-col gap-2">
               <SectionDivider />
-              <SectionTitle title={`${t('encyclopedia.craftable_items')} (${craftable_items.length})`} />
+              <SectionTitle title={`${t('encyclopedia.craftable_items')} (${related_items.length})`} />
               <div className="flex flex-col gap-0">
-                {craftable_items.map((item: any) => {
+                {related_items.map((item: any) => {
                   // NO quality tiers — neutral body tone, no rarity tint.
                   const color = '#e8e4dc'
                   return (

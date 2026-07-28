@@ -68,3 +68,24 @@ export function selected_item_for_route<T extends { id: string; slug?: string }>
   if (!route_id) return null
   return items.find((item) => item.id === route_id || item.slug === route_id) ?? null
 }
+
+export function related_items_for_job<T extends { template_id: string }>(
+  items: readonly T[] | null | undefined,
+  gatherables: readonly { id: string; job: number; tier: number }[],
+  rare_links: readonly { template_id: string; rare_template_id: string }[] | null | undefined,
+  recipes: readonly { output_template_id: string; required_job: number }[] | null | undefined,
+  job_index: number
+): T[] {
+  if (!items || job_index < 0) return []
+  const gatherable_ids = new Set(
+    gatherables.filter((gatherable) => gatherable.job === job_index).map((gatherable) => gatherable.id)
+  )
+  const related_ids = new Set(gatherable_ids)
+  for (const link of rare_links ?? []) {
+    if (gatherable_ids.has(link.template_id)) related_ids.add(link.rare_template_id)
+  }
+  for (const recipe of recipes ?? []) {
+    if (recipe.required_job === job_index) related_ids.add(recipe.output_template_id)
+  }
+  return items.filter((item) => related_ids.has(item.template_id))
+}
