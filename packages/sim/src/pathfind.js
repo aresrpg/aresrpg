@@ -8,7 +8,15 @@
 // first shortest route as `movement::next_shortest_step`. Terrain and live occupancy are separate inputs: Move's
 // frozen wall mask is their union, and keeping both explicit prevents a caller from silently dropping body-blocking.
 
+// THE ONE 4-DIRECTIONAL BFS (#1536 row 2). `bfs_4dir` below is the only 4-dir search in the tree: the {x,y}
+// reducer/AI surface (`find_path_4dir` / `get_reachable_cells`) and the ENCODED board surface the client draws
+// with (`bfs_path_cost` / `bfs_path` / `bfs_reachable`, re-exported by `@aresrpg/fight/los`) are both thin
+// adapters over it. The board bounds enter through the walkability predicate rather than being baked into the
+// core: a fight arena's dimensions are ROLLED per encounter (width 10..18, height 7..24 — arena.js), so a core
+// hard-wired to the 20x19 dungeon board would silently clip world-mode routes on tall boards.
+
 import { cell_key, neighbors_4dir, neighbors_8dir } from './cell.js'
+import { GRID_CELLS, GRID_H, GRID_W, decode, encode, in_grid } from './combat_grid.js'
 
 /**
  * Terrain walkability predicate.
@@ -44,6 +52,46 @@ const reconstruct = (came_from, goal) => {
 }
 
 /**
+ * THE 4-directional BFS. Complete layer-FIFO frontiers, visited-on-enqueue, `neighbors_4dir` order — the
+ * `combat_grid::bfs_path_cost` queue discipline, so parent reconstruction picks the same lexicographically first
+ * shortest route as `movement::next_shortest_step`. Explores at most `max_mp` layers out of `start` and stops the
+ * instant `goal_key` is enqueued. `start` itself is never tested for enterability (a mover always stands legally).
+ * @param {import('./cell.js').Cell} start
+ * @param {number} max_mp
+ * @param {(cell: import('./cell.js').Cell) => boolean} can_enter
+ * @param {string | null} goal_key stop as soon as this cell is reached
+ * @returns {{ reached: boolean, came_from: Map<string, import('./cell.js').Cell>, order: Reachable[] }}
+ */
+const bfs_4dir = (start, max_mp, can_enter, goal_key = null) => {
+  /** @type {Reachable[]} */
+  const order = []
+  const came_from = new Map()
+  const visited = new Set([cell_key(start.x, start.y)])
+  let frontier = [start]
+
+  for (let cost = 1; cost <= max_mp && frontier.length > 0; cost++) {
+    const next = []
+    for (const cell of frontier) {
+      for (const neighbor of neighbors_4dir(cell)) {
+        const key = cell_key(neighbor.x, neighbor.y)
+        if (visited.has(key) || !can_enter(neighbor)) continue
+        visited.add(key)
+        came_from.set(key, cell)
+        order.push({ cell: neighbor, cost })
+        if (key === goal_key) return { reached: true, came_from, order }
+        next.push(neighbor)
+      }
+    }
+    frontier = next
+  }
+  return { reached: false, came_from, order }
+}
+
+/** Terrain AND body: the one enterability predicate every 4-dir caller pairs its two masks into. */
+const enterable = (is_walkable, is_occupied) => cell =>
+  is_walkable(cell) && !is_occupied(cell)
+
+/**
  * Shortest 4-directional path from `start` to `goal` within `max_mp` steps (BFS, unit cost).
  * Returns the path inclusive of start and goal, or `null` if unreachable within budget.
  * @param {import('./cell.js').Cell} start
@@ -61,29 +109,12 @@ export const find_path_4dir = (
   is_occupied,
 ) => {
   if (start.x === goal.x && start.y === goal.y) return [start]
-  const can_enter = cell => is_walkable(cell) && !is_occupied(cell)
+  const can_enter = enterable(is_walkable, is_occupied)
   if (!can_enter(goal)) return null
 
   const goal_key = cell_key(goal.x, goal.y)
-  const came_from = new Map()
-  const visited = new Set([cell_key(start.x, start.y)])
-  let frontier = [start]
-
-  for (let cost = 0; cost < max_mp && frontier.length > 0; cost++) {
-    const next = []
-    for (const cell of frontier) {
-      for (const neighbor of neighbors_4dir(cell)) {
-        const key = cell_key(neighbor.x, neighbor.y)
-        if (visited.has(key) || !can_enter(neighbor)) continue
-        visited.add(key)
-        came_from.set(key, cell)
-        if (key === goal_key) return reconstruct(came_from, goal)
-        next.push(neighbor)
-      }
-    }
-    frontier = next
-  }
-  return null
+  const { reached, came_from } = bfs_4dir(start, max_mp, can_enter, goal_key)
+  return reached ? reconstruct(came_from, goal) : null
 }
 
 /**
@@ -99,26 +130,84 @@ export const get_reachable_cells = (
   max_mp,
   is_walkable,
   is_occupied,
-) => {
-  const result = [{ cell: start, cost: 0 }]
-  const visited = new Set([cell_key(start.x, start.y)])
-  let frontier = [start]
-  const can_enter = cell => is_walkable(cell) && !is_occupied(cell)
+) => [
+  { cell: start, cost: 0 },
+  ...bfs_4dir(start, max_mp, enterable(is_walkable, is_occupied)).order,
+]
 
-  for (let cost = 1; cost <= max_mp && frontier.length > 0; cost++) {
-    const next = []
-    for (const cell of frontier) {
-      for (const neighbor of neighbors_4dir(cell)) {
-        const key = cell_key(neighbor.x, neighbor.y)
-        if (visited.has(key) || !can_enter(neighbor)) continue
-        visited.add(key)
-        result.push({ cell: neighbor, cost })
-        next.push(neighbor)
-      }
-    }
-    frontier = next
-  }
-  return result
+// ── the ENCODED board surface (the canonical GRID_W x GRID_H dungeon board) ──────────────────────
+// The client draws and gates on encoded cells (`cell = y*GRID_W + x`) with a blocked SET rather than predicates.
+// These three are the same `bfs_4dir` under an encode/decode skin — NOT a second search. `@aresrpg/fight/los`
+// re-exports them under the camelCase names its call sites already use.
+
+/** `blocked` may be a Set or an array of encoded cells; on-board and unblocked is the enterability rule. */
+const encoded_enterable = blocked => {
+  const is_blocked =
+    blocked instanceof Set ? c => blocked.has(c) : c => blocked.includes(c)
+  return ({ x, y }) =>
+    x >= 0 &&
+    y >= 0 &&
+    x < GRID_W &&
+    y < GRID_H &&
+    !is_blocked(encode(x, y))
+}
+
+/**
+ * The route as encoded cells excluding start, or `null` when there is none within budget — the one place the
+ * encoded cost and the encoded path agree, so a sentinel can never drift from an empty route.
+ * @param {number} start @param {number} target @param {Set<number>|number[]} blocked @param {number} max_steps
+ * @returns {number[] | null}
+ */
+const bfs_encoded = (start, target, blocked, max_steps) => {
+  if (start === target) return []
+  if (!in_grid(start) || !in_grid(target)) return null
+  const can_enter = encoded_enterable(blocked)
+  if (!can_enter(decode(target))) return null
+  const path = find_path_4dir(
+    decode(start),
+    decode(target),
+    max_steps,
+    can_enter,
+    () => false,
+  )
+  return path && path.slice(1).map(({ x, y }) => encode(x, y))
+}
+
+/**
+ * Shortest 4-connected step count from `start` to `target` around `blocked`, capped at `max_steps` — the exact
+ * MP the contract charges, or `GRID_CELLS` (380, the unreachable sentinel, larger than any real cost).
+ * @param {number} start @param {number} target @param {Set<number>|number[]} blocked @param {number} max_steps
+ * @returns {number}
+ */
+export const bfs_path_cost = (start, target, blocked, max_steps) => {
+  const route = bfs_encoded(start, target, blocked, max_steps)
+  return route === null ? GRID_CELLS : route.length
+}
+
+/**
+ * The concrete shortest route from `start` to `target` (encoded cells, EXCLUDING start); `[]` when start ==
+ * target, blocked, or unreachable within budget. Its length is exactly `bfs_path_cost`.
+ * @param {number} start @param {number} target @param {Set<number>|number[]} blocked @param {number} max_steps
+ * @returns {number[]}
+ */
+export const bfs_path = (start, target, blocked, max_steps) =>
+  bfs_encoded(start, target, blocked, max_steps) ?? []
+
+/**
+ * Every cell reachable from `start` within `max_steps` 4-connected steps around `blocked`, EXCLUDING start — the
+ * move-range set the wash paints and the click gate accepts.
+ * @param {number} start @param {number} max_steps @param {Set<number>|number[]} blocked @returns {number[]}
+ */
+export const bfs_reachable = (start, max_steps, blocked) => {
+  if (!in_grid(start)) return []
+  return get_reachable_cells(
+    decode(start),
+    max_steps,
+    encoded_enterable(blocked),
+    () => false,
+  )
+    .filter(({ cost }) => cost > 0)
+    .map(({ cell }) => encode(cell.x, cell.y))
 }
 
 // ── 8-directional roam pathfinding (A*, octile cost) ─────────────────────────────

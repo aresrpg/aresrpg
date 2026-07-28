@@ -26,6 +26,10 @@
       "types": "./types/cell.d.ts",
       "import": "./src/cell.js"
     },
+    "./combat_grid": {
+      "types": "./types/combat_grid.d.ts",
+      "import": "./src/combat_grid.js"
+    },
     "./spell_effect": {
       "types": "./types/spell_effect.d.ts",
       "import": "./src/spell_effect.js"
