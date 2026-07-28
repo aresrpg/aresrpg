@@ -197,8 +197,7 @@ const min2 = (a, b) => (a < b ? a : b)
  */
 function blockerPlaceable(mask, blocked, cand) {
   if (!mask.has(cand)) return false
-  const x = cand % GRID_W
-  const y = (cand / GRID_W) | 0
+  const { x, y } = decode(cand)
   if (x === 0 || y === 0 || x + 1 >= GRID_W || y + 1 >= GRID_H) return false
   for (let dy = 0; dy < 3; dy++)
     for (let dx = 0; dx < 3; dx++) {
@@ -445,7 +444,7 @@ function legacy_rect_grid(dungeon) {
     const walls = new Set([...(dungeon.obstacles ?? []), ...(dungeon.holes ?? [])])
     const cx = (width - 1) / 2
     start_cells_a = [...mask]
-      .map(cell => ({ cell, x: cell % GRID_W, y: (cell / GRID_W) | 0 }))
+      .map(cell => ({ cell, ...decode(cell) }))
       .filter(({ cell, y }) => y < 2 && !walls.has(cell))
       .sort((a, b) => Math.abs(a.x - cx) - Math.abs(b.x - cx) || a.y - b.y || a.x - b.x)
       .slice(0, 6)

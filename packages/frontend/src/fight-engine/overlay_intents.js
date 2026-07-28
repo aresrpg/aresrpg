@@ -18,9 +18,9 @@
 //   • WORLD (legacy WS fight): reach = @aresrpg/sim `get_reachable_cells`; cast = `get_targetable_cells` — the sim's
 //     own range/linear/LOS/free-cell gate. The caller injects walkability/occupancy predicates.
 
+import { cell_key, manhattan_distance } from '@aresrpg/sim/cell'
 import { get_reachable_cells } from '@aresrpg/sim/pathfind'
 import { get_targetable_cells } from '@aresrpg/sim/spell_targeting'
-import { cell_key } from '@aresrpg/sim/cell'
 import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 
@@ -208,7 +208,7 @@ export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {
       if (blocked && blocked.has(enc)) continue
       // trap-placing spell: never a cell already anchoring MY live trap (1.29 no-stack — the chain aborts it).
       if (trapped && trapped.has(enc)) continue
-      const d = Math.abs(x - caster.cell.x) + Math.abs(y - caster.cell.y)
+      const d = manhattan_distance({ x, y }, caster.cell)
       if (d < rmin || d > rmax) continue
       // line-launch (spell_target twin): only orthogonally aligned cells are aimable.
       if (linear && x !== caster.cell.x && y !== caster.cell.y) continue
@@ -242,7 +242,7 @@ export function manhattan_range_cells(range, caster, grid, flags = {}) {
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
       if (mask && !mask.has(encode(x, y))) continue
-      const d = Math.abs(x - caster.cell.x) + Math.abs(y - caster.cell.y)
+      const d = manhattan_distance({ x, y }, caster.cell)
       if (d < rmin || d > rmax) continue
       out.add(encode(x, y))
     }

@@ -62,7 +62,7 @@ import {
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon, move_plan_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
-import { GRID_W, encode, decode, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
+import { encode, decode, manhattan, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
 import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
@@ -95,13 +95,6 @@ const FIRE_STRIKE_BASE = 15
 const STATUS_ACTIVE = 1 // live fire-time guard for the reducer-derived commit edge
 // (STATUS_PLACEMENT removed — the placement chrome gate is now the phase machine's is_placement, not a raw read)
 
-const manhattan = (a, b) => {
-  const ax = a % GRID_W
-  const ay = (a / GRID_W) | 0
-  const bx = b % GRID_W
-  const by = (b / GRID_W) | 0
-  return Math.abs(ax - bx) + Math.abs(ay - by)
-}
 
 const evolution_actions_of = (draft_actions, spells, weapon) =>
   (draft_actions ?? []).map((entry) => {
