@@ -7,12 +7,12 @@
 import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
-
 import { classify_input } from '@aresrpg/fight/classify_input'
 import { input_envelope } from '@aresrpg/fight/envelope'
-import { ingest, project_board, replay } from '@aresrpg/fight/core'
+import { empty_core_state, ingest, project_board, replay } from '@aresrpg/fight/core'
+import { REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 
-import { open_fight_stream } from './fight_sse_adapter.js'
+import { open_fight_stream } from '../../src/world-shell/fight_sse_adapter.js'
 
 const CAPSULE = new URL(
   '../../../fight/test/fixtures/capsules/0x3f6103fb3fb842bac763a3d275f607d33e49fcde787f004229c18e900e95c33a-1784752468344.capsule.json',
@@ -37,6 +37,19 @@ class FakeEventSource {
     this.onmessage?.({ data: JSON.stringify(data), lastEventId: String(lastEventId) })
   }
 
+  addEventListener(type, listener) {
+    this.listeners = this.listeners ?? new Map()
+    this.listeners.set(type, listener)
+  }
+
+  emit_named(type, data, lastEventId = '') {
+    this.listeners?.get(type)?.({ data: JSON.stringify(data), lastEventId: String(lastEventId) })
+  }
+
+  fail() {
+    this.onerror?.()
+  }
+
   close() {
     this.readyState = 2
   }
@@ -46,7 +59,9 @@ describe('fight EventSource adapter → the ONE fold door', () => {
   test('a recorded capsule has the same committed fingerprint through direct journal and SSE paths', () => {
     const capsule = JSON.parse(readFileSync(CAPSULE, 'utf8'))
     const direct = replay(capsule)
-    let streamed = undefined
+    // The streamed fold starts from the SAME seed `replay` uses — `ingest` takes a CoreState by contract, so
+    // comparing the two paths means comparing them from one seed.
+    let streamed = empty_core_state()
     let observed_at = 0
     let input_seq = 0
     const statuses = []
@@ -72,9 +87,9 @@ describe('fight EventSource adapter → the ONE fold door', () => {
 
     for (const envelope of capsule.capsules) {
       observed_at = envelope.observed_at_ms
-      const payload = envelope.payload
+      const { payload } = envelope
       if (payload.kind === 'journal_rows_received' && payload.source === 'journal') {
-        const rows = payload.rows
+        const { rows } = payload
         const last = rows.events?.at(-1)?.seq ?? rows.head
         FakeEventSource.latest.emit(rows, last)
       } else {
@@ -121,6 +136,66 @@ describe('fight EventSource adapter → the ONE fold door', () => {
         },
       },
     ])
+    close()
+  })
+})
+
+// THE SERVER WIRE — packages/rpc/indexer/src/stream.rs emits ONE journal row per frame, named `fight`
+// (`:276`), `data` = `{ kind, data, digest, version }` (`:267-272`). A named event never reaches `onmessage`,
+// and a row with no foldable `seq` is not a journal row at all: both are pinned here so a wire change is a
+// test failure instead of a silently empty fight.
+describe('the #1382 fight wire → one journal row per frame', () => {
+  test('a named `fight` frame becomes one journal batch through the same door', () => {
+    const messages = []
+    const close = open_fight_stream({
+      fight_id: '0xfight',
+      cursor: () => null,
+      input: (message) => messages.push(message),
+      event_source_factory: (url) => new FakeEventSource(url),
+      base_url: 'https://rpc.test',
+      install_deadline_belt: false,
+    })
+    FakeEventSource.latest.emit_named(
+      'fight',
+      { seq: '42', kind: 'TurnEnded', data: { turn: '3' }, digest: 'abc', version: '9' },
+      '4200:19'
+    )
+    expect(messages).toHaveLength(1)
+    expect(messages[0].batch).toMatchObject({ fight_id: '0xfight', source: 'journal', head: '42' })
+    expect(messages[0].batch.events[0]).toMatchObject({ seq: '42', kind: 'TurnEnded', digest: 'abc', version: '9' })
+    close()
+  })
+
+  test('a row with no foldable seq is refused — never folded under an invented ordinal', () => {
+    const messages = []
+    const close = open_fight_stream({
+      fight_id: '0xfight',
+      cursor: () => null,
+      input: (message) => messages.push(message),
+      event_source_factory: (url) => new FakeEventSource(url),
+      base_url: 'https://rpc.test',
+      install_deadline_belt: false,
+    })
+    FakeEventSource.latest.emit_named('fight', { kind: 'TurnEnded', data: {}, version: '9' }, '4200:19')
+    expect(messages).toEqual([])
+    close()
+  })
+
+  test('the retry budget is finite: the source is CLOSED and the failure surfaced, never an immortal loop', () => {
+    const statuses = []
+    const close = open_fight_stream({
+      fight_id: '0xfight',
+      cursor: () => null,
+      input: () => {},
+      event_source_factory: (url) => new FakeEventSource(url),
+      base_url: 'https://rpc.test',
+      set_status: (status, error) => statuses.push([status, error]),
+      install_deadline_belt: false,
+    })
+    for (let attempt = 0; attempt <= REJOIN_MAX_ATTEMPTS; attempt++) FakeEventSource.latest.fail()
+    expect(FakeEventSource.latest.readyState).toBe(2)
+    expect(statuses.at(-1)[0]).toBe('failed')
+    expect(statuses.at(-1)[1]).toContain(String(REJOIN_MAX_ATTEMPTS + 1))
     close()
   })
 })

@@ -112,6 +112,7 @@ const blank_peer = (id) => ({
  *   my_state: { address:string, color_1:number, color_2:number, color_3:number, party_id:string|null, dungeon_id:string|null, classe?:string|null, male?:boolean|null, name?:string|null }|null,
  *   my_cosmetic: { mounted:boolean, mount_glb:string|null, veteran:boolean },
  *   peers: Map<string, PeerEntry>,
+ *   online: Map<string, { id:string, address:string, world:string|null, name?:string|null }>,
  *   roster_seq: number,
  *   identity_requests: { seq:number, ids:string[] }|null, identity_seq: number,
  *   chat: { seq:number, row:any }|null, chat_seq: number,
@@ -226,6 +227,36 @@ const fold_runs_snapshot = (state, input) => {
   return { ...state, dungeon_fight_rows }
 }
 
+// ── SERVER-OBSERVED PRESENCE (#1384) — the read layer terminates every stream, so an open connection IS
+// presence: the world stream sends the full current set on connect and join/leave deltas after. It folds into
+// its OWN map, never the peer table: a peer row is a POSITION sighting (realtime ticks, freshness-law'd, in
+// sight) while an online row is server truth about a player who may be nowhere near me. A snapshot REPLACES
+// the set — the server owns it whole, so a stale local row can never linger.
+const online_row = (raw) => {
+  const id = raw?.id ?? raw?.character_id
+  return id ? { ...raw, id: String(id) } : null
+}
+const fold_online = (state, input) => {
+  if (input.type === 'stream_current') {
+    const online = new Map()
+    for (const raw of input.rows ?? []) {
+      const row = online_row(raw)
+      if (row) online.set(row.id, row)
+    }
+    return { ...state, online }
+  }
+  if (input.type === 'stream_join') {
+    const row = online_row(input.row)
+    if (!row) return state
+    return { ...state, online: new Map(state.online).set(row.id, row) }
+  }
+  const id = input.id == null ? null : String(input.id)
+  if (!id || !state.online.has(id)) return state
+  const online = new Map(state.online)
+  online.delete(id)
+  return { ...state, online }
+}
+
 // A rejoin / re-announce is an EFFECT REQUEST — a versioned ref the transport edge subscribes to. These two
 // tiny helpers are the single home for bumping each request's seq (derive, don't copy).
 const request_rejoin = (state, attempt, delay) => ({
@@ -329,6 +360,10 @@ export function reduce_presence(state, input, now) {
       peers.set(id, { ...prev, chain: record ?? null })
       return { ...state, peers, roster_seq: state.roster_seq + 1 }
     }
+    case 'stream_current':
+    case 'stream_join':
+    case 'stream_leave':
+      return fold_online(state, input)
     case 'my_cell':
       return {
         ...state,
@@ -360,6 +395,7 @@ export function reduce_presence(state, input, now) {
         my_state: null,
         my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
         peers: new Map(),
+        online: new Map(),
         fight_markers: new Map(),
         dungeon_fight_rows: new Map(),
         roster_seq: state.roster_seq + 1,
@@ -390,6 +426,7 @@ export function create_presence_store() {
     my_state: null,
     my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
     peers: new Map(),
+    online: new Map(),
     roster_seq: 0,
     identity_requests: null,
     identity_seq: 0,
@@ -489,6 +526,14 @@ export function peer_states_by_address(state, address) {
 export function peer_state_by_address(state, address) {
   if (!address) return null
   for (const p of state.peers.values()) if (p.address === address) return peer_state_of(state, p.id)
+  return null
+}
+
+/** Server-authored online presence by wallet address (the #1384 stream's current set). Position peers are
+ *  deliberately NOT consulted: "online" is the server's connection truth, never p2p visibility. */
+export function online_state_by_address(state, address) {
+  if (!address) return null
+  for (const row of state.online.values()) if (row.address === address) return row
   return null
 }
 
