@@ -8,7 +8,8 @@
 //
 // Inputs (`payload.kind`):
 //   'snapshot'      — chain-truth roster/items/flags from /v1 (roster/load_roster). Never regresses a
-//                     receipt-proven XP floor; owned items pass through the consumable/bought pending
+//                     receipt-proven XP floor, nor a settled HP block to an OLDER `hp_updated_ms` anchor
+//                     (#1485 — the post-loss full-restore blip); owned items pass through the consumable/bought pending
 //                     ledgers. KEEP-on-omit for owned-item feeds: an indexer-lagging read that OMITS a
 //                     just-bought/owned item must never vanish it (merge_pending_buys re-adds the pending
 //                     row until the id appears) — ONLY an explicit receipt delta removes an item.
@@ -42,6 +43,32 @@ function floor_characters(characters, xp_floor) {
     if (floor == null || Number(c?.experience ?? 0) >= floor) return c
     changed = true
     return { ...c, experience: floor, level: experience_to_level(floor) }
+  })
+  return changed ? next : characters
+}
+
+/**
+ * Never let a snapshot REGRESS the HP block to an OLDER anchor (#1485). `hp_updated_ms` is the chain's own
+ * monotone settle stamp (progression_math::regen_hp only ever advances it), so a snapshot row carrying an
+ * anchor older than the one we already hold is BY CONSTRUCTION an indexer projection that predates a
+ * receipt-proven write-back — its `current_hp` is the pre-fight value and must not replace the settled one.
+ * This is the HP twin of the XP floor above, and it needs no ledger: the anchor rides on the row itself.
+ * An equal-or-newer anchor hands authority straight back to the snapshot (an out-of-band heal is chain
+ * truth, not a regression), exactly like `floor_settled_items`' presence rule.
+ * @param {any[]} characters the incoming snapshot rows @param {any[]} held the rows already in the store
+ */
+function keep_settled_hp(characters, held) {
+  if (!Array.isArray(characters) || !Array.isArray(held) || held.length === 0) return characters
+  const by_id = new Map(held.map((c) => [c?.id, c]))
+  let changed = false
+  const next = characters.map((c) => {
+    const prior = by_id.get(c?.id)
+    const prior_anchor = Number(prior?.hp_updated_ms ?? NaN)
+    if (!Number.isFinite(prior_anchor) || prior?.current_hp == null) return c
+    const anchor = Number(c?.hp_updated_ms ?? NaN)
+    if (Number.isFinite(anchor) && c?.current_hp != null && anchor >= prior_anchor) return c
+    changed = true
+    return { ...c, current_hp: prior.current_hp, hp_updated_ms: prior_anchor }
   })
   return changed ? next : characters
 }
@@ -107,15 +134,25 @@ function floor_minted_characters(characters, minted_character_floor, deleted_ids
   }
 }
 
+/**
+ * The ONE roster-adoption law every non-receipt feed passes through: drop receipt-proven burns, never regress
+ * a receipt-proven XP floor or a settled HP anchor, then hold receipt-proven mints the feed has not projected
+ * yet. Both snapshot doors below share it — the law lives here once, never once per door.
+ * @param {any} sui @param {any[]} characters
+ */
+function adopt_roster(sui, characters) {
+  return floor_minted_characters(
+    keep_settled_hp(floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor), sui.characters),
+    sui.minted_character_floor,
+    sui.deleted_ids
+  )
+}
+
 /** Snapshot: floor characters/items, run items through the pending ledgers, spread flags. */
 function merge_snapshot(sui, { kind, characters, items, ...flags }) {
   const next = { ...sui, ...flags }
   if (characters) {
-    const roster = floor_minted_characters(
-      floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor),
-      sui.minted_character_floor,
-      sui.deleted_ids
-    )
+    const roster = adopt_roster(sui, characters)
     next.characters = roster.characters
     next.minted_character_floor = roster.minted_character_floor
   }
@@ -132,11 +169,7 @@ function merge_snapshot(sui, { kind, characters, items, ...flags }) {
 function merge_default(sui, payload) {
   const next = { ...sui, ...payload }
   if (payload.characters) {
-    const roster = floor_minted_characters(
-      floor_characters(drop_deleted(payload.characters, sui.deleted_ids), sui.xp_floor),
-      sui.minted_character_floor,
-      sui.deleted_ids
-    )
+    const roster = adopt_roster(sui, payload.characters)
     next.characters = roster.characters
     next.minted_character_floor = roster.minted_character_floor
   }
@@ -263,6 +296,10 @@ function apply_receipt_patch(sui, payload) {
         character_id: payload.character_id,
         xp_share: payload.xp_share,
         final_hp: payload.final_hp,
+        // The settle instant is an INPUT, not something the fold reads off the wall clock — the anchor it
+        // stamps is what `keep_settled_hp` compares later, so it has to be reproducible. Dispatchers that
+        // omit it keep the helper's Date.now() default.
+        ...(payload.now == null ? {} : { now: payload.now }),
       })
       const xp_floor = raise_floor(sui.xp_floor, characters, payload.character_id)
       if (characters === sui.characters && xp_floor === sui.xp_floor) return sui
