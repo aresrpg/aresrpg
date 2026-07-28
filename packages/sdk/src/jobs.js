@@ -276,9 +276,9 @@ function strip_trailing_slashes(s) {
 // The MinIO family (top-level folder) each url_class serves flat art / geometry under. `item` and
 // `cosmetic_icon` share `items` — a cosmetic's 2D icon IS an item icon (item.move's shared Display
 // already resolves every Item there; a cosmetic just needs its AUTHORED slug instead of the generic
-// item_type slot word — see cosmetic_icons.js / item_display_census.mjs). `mob` and `mob_icon` share
-// `mobs` (creature geometry + bestiary icon; distinct namespaces — `/models/mobs/` vs `/mobs/` — so no
-// collision). A class absent here falls back to its own name as the family (identity — a class the
+// item_type slot word — see cosmetic_icons.js / item_display_census.mjs). Mob icons bypass this class
+// resolver and use mob_icon_url below; creature geometry remains under `/models/mobs/`. A class absent
+// here falls back to its own name as the family (identity — a class the
 // manifest publishes tomorrow needs no code change here to resolve correctly).
 /** @type {Record<string, string>} */
 const ASSET_FAMILY = {
@@ -286,7 +286,6 @@ const ASSET_FAMILY = {
   cosmetic_icon: 'items',
   spell: 'spells',
   mob: 'mobs',
-  mob_icon: 'mobs',
   cosmetic: 'cosmetics',
   character: 'characters',
   music: 'music',
@@ -413,6 +412,16 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
   const name = `${key}${hd ? '_hd' : ''}.png`
   // Asset host (manifest) first — else the host-free relative /assets public path.
   return walrus_asset_url(asset_class, name) ?? `${ASSET_BASE}/items/${name}`
+}
+
+/**
+ * The URL for a rendered mob icon. Mob art is served directly from the asset host's `mobs` family;
+ * it is not a Walrus class and does not depend on a manifest publication gate.
+ * @param {string | null | undefined} filename
+ * @returns {string | null}
+ */
+export function mob_icon_url(filename) {
+  return filename ? `${walrus_assets.aggregator}/mobs/${filename}` : null
 }
 
 /**

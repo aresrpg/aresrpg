@@ -26,8 +26,8 @@ import { use_template_t } from '../../i18n/template_t'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 
 import { DetailLoading } from './shared'
-// The ONE encyclopedia mob-icon home (walrus `mob_icon` quilt, the bestiary's own resolver). #353
-// deleted the legacy local-fallback component and code path (get_mob_icon_url is CDN-only now) —
+// The ONE encyclopedia mob-icon home (the MinIO `mobs/` family, through the bestiary's own resolver). #353
+// deleted the legacy local-fallback component and code path (get_mob_icon_url is asset-host-only now) —
 // this stays the one home so the roster icon can never drift from the bestiary's.
 import { EncyclopediaMobImage } from './mob_image'
 

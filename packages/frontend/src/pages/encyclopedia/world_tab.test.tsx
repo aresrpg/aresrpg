@@ -29,20 +29,19 @@ const render = () =>
   )
 
 test('the world roster mob icon uses the encyclopedia asset-host home — never the forbidden /sprites fallback', () => {
-  // Encyclopedia law (encyclopedia_assets.ts): the `mob_icon` class is the ONLY permitted origin.
+  // Encyclopedia law (encyclopedia_assets.ts): the MinIO `mobs/` family is the ONLY permitted origin.
   // Historical leak (#117): the old generic mob-image component (deleted, #353) fell back to a local
-  // /sprites/… path when the class was unpublished. Kept as the regression tooth — with the class
-  // unpublished the ency home degrades to a shield, never a /sprites <img> (HEAD).
-  configure_walrus_assets({ aggregator: 'https://agg.example', classes: {} })
+  // /sprites/… path. Kept as the regression tooth: the roster never emits that deleted local path.
+  configure_walrus_assets({ aggregator: 'https://agg.example' })
   expect(render()).not.toContain('/sprites/')
 })
 
-test('with the mob_icon class published, the roster shows the resolved asset-host icon (one home with the bestiary)', () => {
+test('the roster shows the resolved asset-host icon (one home with the bestiary)', () => {
   // MISSING-ARTIFACT (#117): EncyclopediaMobImage resolves the name->glb join through mob_catalog.js's
   // get_catalog(), a runtime-published census never fetched in this headless test — set_catalog_for_test
   // is the sanctioned seam (mirrors set_spell_corpus_for_test); seed the row this mob needs.
   set_catalog_for_test({ alley_bunny: { appearance: null, glb: 'hy_bunny' } })
-  configure_walrus_assets({ aggregator: 'https://agg.example', classes: { mob_icon: { published: true } } })
+  configure_walrus_assets({ aggregator: 'https://agg.example' })
   const html = render()
   expect(html).toContain('<img')
   expect(html).toContain('agg.example/mobs/')

@@ -84,13 +84,13 @@ test('a transient first-load failure retries on its own instead of pinning the g
   // set_catalog_for_test is the sanctioned seam (mirrors set_spell_corpus_for_test) — seed the one row this
   // test's mob needs so it exercises the REAL resolution path, not a skip (the fact IS testable).
   set_catalog_for_test({ alley_bunny: { appearance: null, glb: 'hy_bunny' } })
-  configure_walrus_assets({ aggregator: AGGREGATOR, classes: { mob_icon: { published: true } } })
+  configure_walrus_assets({ aggregator: AGGREGATOR })
   const runner = hook_runner()
   const element = <EncyclopediaMobImage mob={{ name: 'Alley Bunny' }} hd />
 
   const first = runner.render(element)
   const first_img = find_img(first)
-  if (!first_img) throw new Error('expected the first render to attempt the resolved Walrus icon')
+  if (!first_img) throw new Error('expected the first render to attempt the resolved asset-host icon')
   expect(first_img.props.src).toBe(HD_SRC)
 
   // The cold-edge window: the FIRST request errors (exactly the first-navigation symptom above).

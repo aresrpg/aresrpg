@@ -92,9 +92,9 @@ describe('static asset references resolve on disk (#157 regression tooth)', () =
   })
 })
 
-// #353 — the local mob-icon sprite set predates the `mob_icon` Walrus quilt going live and was pure
+// #353 — the local mob-icon sprite set predates the asset-host `mobs/` family going live and was pure
 // migration residue: gitignored, never tracked by git, never shipped past a dev's own disk. Deleted;
-// get_mob_icon_url (mobs.js) is Walrus-only now. This gate is the tripwire against reintroduction —
+// get_mob_icon_url (mobs.js) is asset-host-only now. This gate is the tripwire against reintroduction —
 // of the directory (force-added back) or of code resolving it again (a template-literal path build,
 // which extract_asset_refs' static-quote regex above can't see since it's interpolated, not a plain
 // literal — exactly how the deleted fallback slipped past that sweep originally).

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { item_icon_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { item_icon_url, mob_icon_url } from '@aresrpg/sdk/jobs'
 
 import { cosmetic_icon_of } from '../../game/cosmetic_icons'
 import { get_mob_icon_url } from '../../game/data/mobs.js'
 import { chain_icon_slug, icon_asset_class } from '../../game/item_classification'
 
-type AssetResolver = (asset_class: string, filename: string) => string | null
 type ItemIconResolver = (slug: string, options?: { asset_class?: 'item' | 'cosmetic_icon' }) => string | null
+type MobIconResolver = (filename: string) => string | null
 
 interface EncyclopediaItemAssetInput {
   id: string
@@ -52,12 +52,12 @@ export function mob_icon_filename(mob: { name?: string; variant?: string }, hd =
   return filename || null
 }
 
-/** Encyclopedia mob art has one permitted origin: the boot-configured `mob_icon` Walrus quilt. */
+/** Encyclopedia mob art has one permitted origin: the MinIO asset host's `mobs` family. */
 export function encyclopedia_mob_icon_url(
   mob: { name?: string; variant?: string },
   hd = false,
-  resolve_asset: AssetResolver = walrus_asset_url
+  resolve_icon: MobIconResolver = mob_icon_url
 ): string | null {
   const filename = mob_icon_filename(mob, hd)
-  return filename ? resolve_asset('mob_icon', filename) : null
+  return filename ? resolve_icon(filename) : null
 }

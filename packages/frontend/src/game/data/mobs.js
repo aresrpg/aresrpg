@@ -15,7 +15,7 @@
 // appearance + an obvious magenta debug cube (hy__missing.glb), so a content gap is impossible to miss —
 // never a silent koshi swap. Re-run the extractor to add a model the moment a reference-corpus source exists for it.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { mob_icon_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
 
 import { catalog_name_of } from '../../content/mob_name_overrides'
 import { get_catalog } from './mob_catalog.js'
@@ -111,12 +111,12 @@ export function get_mob_model(mob) {
  * rendered icon exists to ask for.
  * scripts/render_mob_icons.mjs renders the icons offline under GLB basenames (`{glb}.png` /
  * `{glb}_hd.png`); any publish preparation feeding this resolver must re-key or alias those renders to
- * the catalog filenames requested above. The `mob_icon` class uses the SAME thumb/_hd two-tier system
- * item_icon_url uses (spells are single-size .webp — #884).
- * Walrus (boot manifest, `mob_icon` class) is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was migration
- * residue, gitignored and never shipped past a dev's own disk). No catalog match / quilt not yet
- * configured → null, NEVER the GLB debug-cube swapped in as a 2D image (caller degrades to its own
- * glyph, mirroring ItemImage's category-glyph fallback).
+ * the catalog filenames requested above. Mob icons use the SAME thumb/_hd two-tier system item_icon_url
+ * uses (spells are single-size .webp — #884).
+ * The MinIO asset host is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was
+ * migration residue, gitignored and never shipped past a dev's own disk). No catalog match → null, NEVER
+ * the GLB debug-cube swapped in as a 2D image (caller degrades to its own glyph, mirroring ItemImage's
+ * category-glyph fallback).
  * @param {{ name?: string, variant?: string }} mob
  * @param {{ hd?: boolean }} [opts]
  * @returns {string | null}
@@ -126,5 +126,5 @@ export function get_mob_icon_url(mob, { hd = false } = {}) {
   const key =
     mob.variant != null && catalog[mob.variant] ? mob.variant : (catalog_key_of(mob.name) ?? '')
   if (!catalog[key]?.glb) return null
-  return walrus_asset_url('mob_icon', `${key}${hd ? '_hd' : ''}.png`)
+  return mob_icon_url(`${key}${hd ? '_hd' : ''}.png`)
 }
