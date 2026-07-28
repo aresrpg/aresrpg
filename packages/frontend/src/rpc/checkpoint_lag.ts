@@ -3,7 +3,9 @@
 // Global indexer-lag decision. The chain tip comes from Mysten gRPC while the committed tip comes from
 // `/v1/status`; keeping the comparison pure makes the exact alert boundary independently testable.
 
-export const CHECKPOINT_LAG_THRESHOLD = 5
+// A few checkpoints of projection delay are normal. Thirty checkpoints is the existing checkpoint metric's
+// approximate 30-second staleness budget; this is the single alert threshold consumed by every caller.
+export const CHECKPOINT_LAG_THRESHOLD = 30
 
 type CheckpointValue = bigint | number | string | null | undefined
 
