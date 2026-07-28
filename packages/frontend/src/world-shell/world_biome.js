@@ -2,10 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD BIOME — resolve + cache the bound world's on-chain `biome` (world.move's `biome: String` field,
 // WorldCreated.biome) for create_session's SYNCHRONOUS engine-recipe pick (embed_voxel.js, DECISIONS
-// 2026-07-12 frontend wiring lane). Mirrors world_checkpoint.js's async-resolve-before-mount + sync-cache-
-// read idiom: GameWorldHost awaits `resolve_world_biome` alongside the checkpoint resolve, right after the
-// world binding confirms bound; create_session reads the cache synchronously (`read_world_biome`) when it
-// picks the engine recipe via chain/deployment.ts's `resolve_engine_recipe`.
+// 2026-07-12 frontend wiring lane): async resolve, then a sync cache read (`read_world_biome`) when
+// create_session picks the recipe via chain/deployment.ts's `resolve_engine_recipe`.
+//
+// DRIFT, recorded not fixed (#1523): this header used to claim "GameWorldHost awaits resolve_world_biome
+// alongside the checkpoint resolve, right after the world binding confirms bound". No such call site exists,
+// and none has since before #1449 — `follow.ts` is the ONLY caller of `resolve_world_biome`, so on an
+// ordinary mount `read_world_biome` finds an empty cache and the engine takes its default recipe.
 //
 // The biome is the World object's own chain field, so it is read from the LIVE worlds catalog
 // (world_catalog.js — one home) and never from the build-time seed receipt, which freezes into the deployed
