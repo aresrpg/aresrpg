@@ -1999,6 +1999,7 @@
     "fx_carry": "Porte la cible",
     "fx_throw": "Lance la cible portée",
     "fx_apply_dot": "{{value}} dégâts {{element}} par tour",
+    "fx_apply_dot_no_element": "{{value}} dégâts par tour",
     "fx_reflect_damage": "Renvoie {{value}}% des dégâts",
     "fx_damage_to_heal": "Les dégâts subis peuvent soigner",
     "fx_named_damage_stack": "+{{value}} dégâts en répétant",

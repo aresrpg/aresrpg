@@ -1999,6 +1999,7 @@
     "fx_carry": "Carga al objetivo",
     "fx_throw": "Lanza al objetivo cargado",
     "fx_apply_dot": "{{value}} daño de {{element}} por turno",
+    "fx_apply_dot_no_element": "{{value}} daño por turno",
     "fx_reflect_damage": "Refleja {{value}}% del daño",
     "fx_damage_to_heal": "El daño recibido puede curar",
     "fx_named_damage_stack": "+{{value}} de daño al repetir",

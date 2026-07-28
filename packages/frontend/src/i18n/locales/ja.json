@@ -1999,6 +1999,7 @@
     "fx_carry": "対象を持ち上げる",
     "fx_throw": "持ち上げた対象を投げる",
     "fx_apply_dot": "毎ターン{{element}}ダメージ {{value}}",
+    "fx_apply_dot_no_element": "毎ターン{{value}}ダメージ",
     "fx_reflect_damage": "ダメージの{{value}}%を反射",
     "fx_damage_to_heal": "受けたダメージが回復に変わることがある",
     "fx_named_damage_stack": "繰り返しで+{{value}}ダメージ",

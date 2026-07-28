@@ -1999,6 +1999,7 @@
     "fx_carry": "Carries the target",
     "fx_throw": "Throws the carried target",
     "fx_apply_dot": "{{value}} {{element}} damage per turn",
+    "fx_apply_dot_no_element": "{{value}} damage per turn",
     "fx_reflect_damage": "Reflects {{value}}% damage",
     "fx_damage_to_heal": "Incoming damage may heal",
     "fx_named_damage_stack": "+{{value}} damage when repeated",

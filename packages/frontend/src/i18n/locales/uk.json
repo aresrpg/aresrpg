@@ -1999,6 +1999,7 @@
     "fx_carry": "Підіймає ціль",
     "fx_throw": "Кидає підняту ціль",
     "fx_apply_dot": "{{value}} шкоди ({{element}}) за хід",
+    "fx_apply_dot_no_element": "{{value}} шкоди за хід",
     "fx_reflect_damage": "Відбиває {{value}}% шкоди",
     "fx_damage_to_heal": "Отримана шкода може лікувати",
     "fx_named_damage_stack": "+{{value}} шкоди за повтор",

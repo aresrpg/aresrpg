@@ -1999,6 +1999,7 @@
     "fx_carry": "Trägt das Ziel",
     "fx_throw": "Wirft das getragene Ziel",
     "fx_apply_dot": "{{value}} {{element}}-Schaden pro Runde",
+    "fx_apply_dot_no_element": "{{value}} Schaden pro Runde",
     "fx_reflect_damage": "Reflektiert {{value}}% Schaden",
     "fx_damage_to_heal": "Erlittener Schaden kann heilen",
     "fx_named_damage_stack": "+{{value}} Schaden bei Wiederholung",
