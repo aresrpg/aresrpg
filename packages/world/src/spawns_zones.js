@@ -113,8 +113,8 @@ const fold_zone_searched = (state, input, now) => {
   const zk = zone_key(zx, zy)
   const prev = state.zones.get(zk)
   // A known zone can only pass search_internal after its TTL, and that on-chain path writes a fresh seed +
-  // resets both consumption bitmaps. Make that one-zone generation swap explicit on the RECEIPT beat; ordinary
-  // reads remain merge-only and can never silently infer deletion from an omitted row.
+  // resets both consumption bitmaps. Make that one-zone generation swap explicit on the RECEIPT beat; no
+  // search result can infer deletion from an omitted OTHER zone.
   const rerolled = prev?.discovered_at_ms != null
   const zones = new Map(state.zones)
   zones.set(zk, {
