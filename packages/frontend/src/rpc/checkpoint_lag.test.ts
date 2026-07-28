@@ -5,10 +5,14 @@ import { describe, expect, test } from 'bun:test'
 import { CHECKPOINT_LAG_THRESHOLD, resolve_checkpoint_lag } from './checkpoint_lag'
 
 describe('checkpoint lag threshold', () => {
-  test('does not alert at the threshold and alerts one checkpoint above it', () => {
-    expect(resolve_checkpoint_lag(105n, 100)?.lagging).toBe(false)
-    expect(resolve_checkpoint_lag(106n, 100)).toEqual({
-      chain_checkpoint: 106,
+  test('normal checkpoint drift stays quiet through the staleness threshold', () => {
+    const committer_checkpoint = 100
+    expect(CHECKPOINT_LAG_THRESHOLD).toBeGreaterThan(5)
+    expect(resolve_checkpoint_lag(committer_checkpoint + CHECKPOINT_LAG_THRESHOLD, committer_checkpoint)?.lagging).toBe(
+      false
+    )
+    expect(resolve_checkpoint_lag(committer_checkpoint + CHECKPOINT_LAG_THRESHOLD + 1, committer_checkpoint)).toEqual({
+      chain_checkpoint: committer_checkpoint + CHECKPOINT_LAG_THRESHOLD + 1,
       committer_checkpoint: 100,
       remaining_checkpoints: CHECKPOINT_LAG_THRESHOLD + 1,
       lagging: true,

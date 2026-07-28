@@ -4,9 +4,9 @@
 // cannot learn the real chain tip from the lagging projection it is measuring. Fight deadline starvation rides
 // the existing fight projection, so it adds no poller/store. A failed sample never falsely declares recovery.
 //
-// Owner redesign (#208): the syncing state is a one-line, full-width red header at the viewport top. It
-// keeps the current numeric checkpoint count and locally predicted status while leaving the minimap corner
-// to the overlaid toast stack.
+// The syncing state is a quiet one-line header at the viewport top. Normal checkpoint drift stays below the
+// checkpoint-lag threshold and renders nothing; real staleness keeps the numeric count and locally predicted
+// status while leaving the minimap corner to the overlaid toast stack.
 //
 // The ETA is a pure fold over the SAME polled samples this component already reads (see ./sync_eta) — no
 // new poller, no store: one local `useState` derived by one `useEffect` edge that feeds the pure reducer.
@@ -86,7 +86,6 @@ export function RpcLagBanner() {
 
   return rpc_sync_header({
     syncing: lagging || fight_deadline_starved,
-    stalled,
     sync_label: t('rpc.sync_label'),
     status_label,
     remaining: lagging ? remaining : undefined,
