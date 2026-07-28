@@ -14,7 +14,10 @@ import { useTranslation } from 'react-i18next'
 import { use_auth } from '../../../../auth'
 import { use_party } from '../../../../world-shell/party_store.js'
 import { add_friend_flow } from '../../../../world-shell/friends_actions'
-import { get_peer_state, get_peer_states_by_address } from '../../../../p2p/lobby-room.js'
+import {
+  presence_character,
+  presence_characters_by_address,
+} from '../../../../world-shell/presence_adapter.js'
 import { use_game_state } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
 import { dispatch_fast_travel } from '../../../../world-shell/fast_travel_intent.js'
@@ -43,10 +46,10 @@ export function PlayerActionMenu() {
     return () => window.removeEventListener('keydown', on_key)
   }, [target, close])
 
-  // Chat carries only the character id; the nameplate carries the address directly. Resolve the wallet live
-  // from the peer's self-declared p2p state (the SAME D222 identity home every surface reads) when absent.
+  // Chat and nameplates normally carry the signed courier address directly. Resolve it from the live
+  // server-observed presence row when a caller only supplied the character id.
   // Hoisted above the early return (below) so BOTH the render and the preload effect share one derivation.
-  const address = target?.address || get_peer_state(target?.id ?? '')?.address || null
+  const address = target?.address || presence_character(target?.id ?? '')?.address || null
   // Fast travel (the third menu option): needs MY selected character to ride, a resolvable target (character id
   // OR owner address), and never my OWN character on another seat (address === my_address hides it — B10).
   const is_self = !!address && !!my_address && address === my_address
@@ -88,7 +91,7 @@ export function PlayerActionMenu() {
     if (!can_fast_travel) return
     // Friend + in-world targets share this shaping seam and the ONE reducer door. Everything after the input —
     // route gates, cross-world join, dragon flight, and notices — remains owned by the existing travel pipeline.
-    const friend_peers = target.kind === 'friend' ? get_peer_states_by_address(address) : []
+    const friend_peers = target.kind === 'friend' ? presence_characters_by_address(address) : []
     // The store is keyed by traveler (tranche F): a manual fast-travel flies the character I'm driving.
     dispatch_fast_travel(
       { ...target, address },

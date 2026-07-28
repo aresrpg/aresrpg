@@ -18,7 +18,7 @@ import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
 import { use_toast } from './toast'
 import i18n from './i18n'
-import { destroy_scene_and_leave_lobby } from './world-shell/scene_lifecycle.js'
+import { destroy_scene_and_leave_courier } from './world-shell/scene_lifecycle.js'
 
 // The PERSISTENT, always-on game-world canvas host (drift-#4 boot-routing law). It is mounted once,
 // BEHIND the companion's routed meta pages, and it never mounts/unmounts on navigation. On the FIRST
@@ -347,14 +347,6 @@ export function GameWorldHost(): ReactElement {
         // A terminal scene is up — release the create→play loading hold (idempotent no-op for normal boots,
         // where `joining` was never set). The engine's own first-load reveal covers the mount pop-in.
         end_join()
-        // P2P JOIN BACKSTOP (P0 item 25 — qa root-caused): roam's mount-time `if (own_id) join_lobby()`
-        // reads selected_character_id from the STORE, which is null at the synchronous mount read (the
-        // select_character dispatch hasn't committed yet) → join_lobby is skipped AND never retried → p2p
-        // presence is dead (OnlinePlayers always empty → the whole multiplayer loop can't start). Join here
-        // off the RELIABLE already-resolved `character` (idempotent: lobby-room's `if (room) return` makes it
-        // a no-op when roam's own call did fire). Lobby scene only — never on spectate/follow.
-        if (!mount_spectate && !follow && character && (character as { id?: string }).id)
-          void import('./p2p/lobby-room').then(({ join_lobby }) => join_lobby((character as { id: string }).id))
       }
     })()
   }, [show_world, scene_key, action, following, bound_world])
@@ -377,7 +369,7 @@ export function GameWorldHost(): ReactElement {
       scene.current = null
       mounted_key.current = null
       if (released_scene) {
-        destroy_scene_and_leave_lobby(
+        destroy_scene_and_leave_courier(
           released_scene,
           () => !scene.current,
           (error) => report_error(error, { area: 'game-world', action: 'leave_unmounted_lobby' })

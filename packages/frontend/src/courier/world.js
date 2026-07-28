@@ -13,6 +13,7 @@ import { open_presence_stream, presence_frames } from '../world-shell/presence_s
 const POSITION_MIN_INTERVAL_MS = 500
 const AUTH_REUSE_MS = 4 * 60_000
 const GROUP_CHANNEL = 'CHAT_GROUP'
+const FIGHT_CHANNEL = 'CHAT_FIGHT'
 
 let close_stream = null
 let active_world = null
@@ -24,6 +25,7 @@ let pending_position = null
 let position_timer = null
 let position_in_flight = false
 let last_position_post_at = Number.NEGATIVE_INFINITY
+const fight_stream_listeners = new Set()
 
 async function courier_auth() {
   // Auth owns browser-only Enoki registration, so keep it behind the actual POST edge. Stream decode and every
@@ -73,6 +75,7 @@ export function courier_inputs(row, party_id = null) {
     return [{ type: 'peer_pos', id, x, y: z, yw: Number.isFinite(heading) ? heading : undefined }]
   }
   if (row?.type !== 'chat') return []
+  if (row.channel === FIGHT_CHANNEL) return []
   if (row.channel === GROUP_CHANNEL && (!row.party || row.party !== party_id)) return []
   return [
     {
@@ -89,9 +92,40 @@ export function courier_inputs(row, party_id = null) {
   ]
 }
 
+/** Deliver one validated courtesy signal to every app-lifetime fight consumer. */
+export function deliver_fight_stream(signal) {
+  for (const listener of fight_stream_listeners) listener(signal)
+}
+
+/** Subscribe the live fight courtesy fold to the courier edge. */
+export function subscribe_fight_stream(listener) {
+  fight_stream_listeners.add(listener)
+  return () => fight_stream_listeners.delete(listener)
+}
+
+const decode_fight_stream = (row) => {
+  if (row?.type !== 'chat' || row.channel !== FIGHT_CHANNEL) return
+  if (row.party && row.party !== active_party) return
+  try {
+    const signal = JSON.parse(row.text)
+    if (
+      !signal?.dungeon_id ||
+      !signal?.address ||
+      signal.address !== row.character ||
+      !['placement', 'batch'].includes(signal.kind)
+    )
+      return
+    deliver_fight_stream(signal)
+  } catch (error) {
+    game_log('courier', 'fight courtesy decode failed', error)
+  }
+}
+
 const decode_courier_frame = (event) => {
   try {
-    return courier_inputs(JSON.parse(event.data), active_party)
+    const row = JSON.parse(event.data)
+    decode_fight_stream(row)
+    return courier_inputs(row, active_party)
   } catch (error) {
     game_log('courier', 'presence event decode failed', error)
     return []
@@ -110,13 +144,17 @@ const courier_frames = {
  * read layer's presence vocabulary and the courier's. The route registers this connection by identity, so a
  * link that can name neither a character nor a wallet is refused before framing and is never opened.
  */
-export function join_courier(world, character = null) {
+export function join_courier(world, character = null, address = null) {
   if (!world || typeof EventSource === 'undefined') return
-  const address = presence_store.getState().my_state?.address || null
   const identity = `${character ?? ''}:${address ?? ''}`
-  if (close_stream && active_world === world && active_identity === identity) return
+  if (close_stream && active_world === world && active_identity === identity) {
+    presence_input({ type: 'session', character_id: character })
+    return
+  }
   close_stream?.()
   close_stream = null
+  presence_input({ type: 'reset' })
+  presence_input({ type: 'session', character_id: character })
   active_world = world
   active_identity = identity
   if (!character && !address)
@@ -141,6 +179,7 @@ export function leave_courier() {
   pending_position = null
   if (position_timer) clearTimeout(position_timer)
   position_timer = null
+  presence_input({ type: 'reset' })
 }
 
 export function sync_party_room(party_id) {
@@ -204,4 +243,10 @@ export function broadcast_chat(character, _name, message, channel, target = '') 
 export function broadcast_party_chat(character, _name, message, channel, target = '') {
   if (!active_party) return
   void post_chat(character, message, channel, target, active_party)
+}
+
+/** Best-effort fight previews share the authenticated chat ingress but never enter visible chat history. */
+export function broadcast_fight_stream(signal) {
+  if (!signal?.address) return
+  void post_chat(signal.address, JSON.stringify(signal), FIGHT_CHANNEL, '', active_party)
 }

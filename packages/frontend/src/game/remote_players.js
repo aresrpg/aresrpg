@@ -2,29 +2,26 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // D206 — REMOTE PLAYERS in the voxel world (feature #19's render half; replaces roam.js's dead
 // foreign-player sprites). ONE home for BOTH modes: the walk session AND the logged-out spectate
-// diorama create this layer; it renders every presence entry (visible_characters — fed by p2p
-// lobby-room.js → presence.js plus locally-driven owned followers; the active id is never inserted) as a real
-// engine avatar (class rig + hair + mount + equipped pet companion (#553 — public pets, same rig factory the
-// local player's own companion uses) +
-// p2p-state colors via get_peer_state), eases position → target_position (presence retargets, we
+// diorama create this layer; it renders every presence entry (visible_characters — fed by the courier
+// presence fold plus locally-driven owned followers; the active id is never inserted) as a real engine avatar
+// (class rig + hair + equipped pet companion), eases position → target_position (presence retargets, we
 // lerp — roam's contract), stands the body on the terrain via ground_surface_y (presence packets
 // carry CELLS, no y), derives yaw/anim from motion, and cleans up on despawn. Self-contained rAF;
 // dispose() tears everything down. NO game logic here.
 
-import { create_character_avatar, create_title_aura, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
+import { create_character_avatar, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
 import { fight_store } from '@aresrpg/fight/store'
 
-import { get_peer_state } from '../p2p/lobby-room.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
 import { world_fight_active } from '../world-shell/fight_session_scope.js'
+import { presence_character } from '../world-shell/presence_adapter.js'
 
 import { feet_of } from './ambient_placement.js'
 import { same_render_instance } from './remote_visibility_scope.js'
 import { plate_occluded, project_plate } from './nameplate_occlusion.js'
 import { peer_display_name } from './remote_player_name.js'
 import { open_player_menu } from './screens/hud/world/player_menu_store.js'
-import { create_mount_rig } from './mount_rig.js'
 import { create_pet_companion_rig } from './pet_companion.js'
 import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls, character_rig_of } from './screens/character-glb.js'
@@ -50,7 +47,7 @@ const PLATE_FADE_M = 28 // …and fades in over the last few blocks approaching 
 // FIGHT-VIEW CULL (a screenshot showed the other player model still appearing in the middle of the
 // board, as if in the world and not removed properly — a peer's WORLD rig stood mid-board
 // like a ghost). Keys on VIEW MODE, not on who's fighting: ANY live fight/dungeon session hides EVERY remote
-// rig's RENDER (body + mount + aura + nameplate) — the frame loop's presence/position bookkeeping keeps
+// rig's RENDER (body + nameplate) — the frame loop's presence/position bookkeeping keeps
 // folding regardless (so a post-fight rig is instantly correct, no pop-in); this is the ONLY thing that
 // decides what actually gets DRAWN. Reuses the scoped WORLD fight predicate that veils world spawns, so the
 // simulator's `sim:` session never culls the resident world's remote rigs.
@@ -68,10 +65,8 @@ export function create_remote_players(engine, world_canvas = null) {
     engine.sample_block?.(x, y, z) ?? 0
   /** @type {Map<string, any>} id → { avatar, x, z, gy, yaw, cell_key } */
   const rigs = new Map()
-  // TRANSPORT RULING: neither worn cosmetics nor an equipped pet trust the webrtc payload — both load from the
-  // rpc directly. A peer's worn hat/cloak AND equipped pet resolve from /v1 (chain truth, unspoofable), never
-  // the p2p presence payload (presence.js carries identity only; WebRTC carries at most a cosmetic
-  // mounted-vs-trotting hint, never pet existence — #553's owner ruling). `worn_templates` is the SAME
+  // TRANSPORT RULING: worn cosmetics and equipped pets load from the rpc directly. A peer's worn hat/cloak AND
+  // equipped pet resolve from /v1 (chain truth, unspoofable). `worn_templates` is the SAME
   // /v1/encyclopedia join catalog embed_voxel_player.js loads for the LOCAL player's own cosmetics
   // (read_worn_templates — one fetch home, two consumers); `peer_cache` batches every stale peer id into ONE
   // /v1/characters read per refresh wave and derives BOTH worn cosmetics and pet companion from it (#553 —
@@ -102,17 +97,13 @@ export function create_remote_players(engine, world_canvas = null) {
   chip_layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:11'
   document.body.appendChild(chip_layer)
 
-  // D222: identity SOURCE order — the peer's SELF-DECLARED state action first (works for logged-out
-  // spectators: sui_get_character REJECTS without a session by design), read-model entry second,
-  // senshi-male last (and LOUD when it stays the fallback).
-  const identity_of = (/** @type {string} */ id, /** @type {any} */ entry) => {
-    const st = get_peer_state(id)
-    const classe_raw = st?.classe ?? entry.classe
-    const classe = character_rig_of(classe_raw, PLACEHOLDER_RIG_CLASS)
-    const male = (st?.male ?? entry.male) !== false
+  // Identity comes from the normal chain read requested by the courier presence fold.
+  const identity_of = (/** @type {string} */ _id, /** @type {any} */ entry) => {
+    const classe = character_rig_of(entry.classe, PLACEHOLDER_RIG_CLASS)
+    const male = entry.male !== false
     identity_scratch.classe = classe
     identity_scratch.male = male
-    identity_scratch.declared = !!st?.classe
+    identity_scratch.declared = !!entry.classe
     return identity_scratch
   }
 
@@ -121,12 +112,11 @@ export function create_remote_players(engine, world_canvas = null) {
     if (!declared && classe === 'senshi')
       game_log(
         'remote',
-        `identity UNRESOLVED for ${id.slice(0, 10)} — senshi fallback until the peer's state lands (D222)`
+        `identity UNRESOLVED for ${id.slice(0, 10)} — senshi fallback until the chain read lands`
       )
     // ONE home for the rig rule — the same door the roam avatar, the fight board and the simulator read.
     const urls = character_model_urls(classe, male)
-    const st = get_peer_state(id)
-    const colors = st ?? entry
+    const colors = entry
     const avatar = create_character_avatar({
       glb_url: urls.body, // asset-host-first, bundled /sprites fallback (character_model_urls)
       hair_url: urls.hair,
@@ -149,20 +139,20 @@ export function create_remote_players(engine, world_canvas = null) {
       'color:#f5d0a9;background:rgba(10,10,15,.85);border:1.5px solid #c8963c;' +
       'text-shadow:0 0 8px rgba(200,150,60,.8),0 1px 2px rgba(0,0,0,.9);box-shadow:0 0 16px rgba(200,150,60,.35);' +
       'display:none;transition:opacity .18s ease' // + occlusion/range fade
-    chip.textContent = peer_display_name({ resolved_name: entry.name, peer_name: st?.name, address: id })
+    chip.textContent = peer_display_name({ resolved_name: entry.name, address: id })
     // S-67 — the nameplate IS the in-world "click a player" seam (additive; the render/grounding loop is
     // untouched). Only THIS chip becomes interactive (chip_layer itself stays pointer-events:none); a click
-    // opens the shared PlayerActionMenu with the peer's live self-declared identity (add friend / invite).
+    // opens the shared PlayerActionMenu with the server-observed wallet identity (add friend / invite).
     chip.className = 'gw-nameplate'
     chip.style.pointerEvents = 'auto'
     chip.style.cursor = 'pointer'
     chip.addEventListener('click', (event) => {
       event.stopPropagation()
-      const st = get_peer_state(id)
+      const presence = presence_character(id)
       open_player_menu({
         id,
-        address: st?.address ?? null,
-        name: peer_display_name({ resolved_name: entry.name, peer_name: st?.name, address: id }),
+        address: presence?.address ?? null,
+        name: peer_display_name({ resolved_name: entry.name, address: id }),
         x: event.clientX,
         y: event.clientY,
       })
@@ -170,7 +160,7 @@ export function create_remote_players(engine, world_canvas = null) {
     chip_layer.appendChild(chip)
     // WORN COSMETICS (other players weren't seeing worn cosmetics) — the SAME rig create_worn_cosmetics
     // mounts on the LOCAL player's Head/cape bones (embed_voxel_player.js), keyed off the peer's /v1-resolved
-    // worn set (peer_cache — see the reconcile call below; COSMETICS TRANSPORT RULING, not the p2p payload).
+    // worn set (peer_cache — see the reconcile call below).
     // Safe to create before avatar.ready: it only sets up closures until set_slots() first fires (the
     // board_entities.js precedent).
     rigs.set(id, {
@@ -200,22 +190,9 @@ export function create_remote_players(engine, world_canvas = null) {
     } catch {
       /* best-effort */
     }
-    r.mount?.dispose() // TR-97 — the remote mount rig dies with the player (REMOVE-ONLY; cache owns the GLB)
     r.pet?.dispose() // #553 — the remote pet companion dies with the player (REMOVE-ONLY; cache owns the GLB)
     r.worn?.dispose() // worn hat/cloak GLBs die with the player (REMOVE-ONLY — the cache owns the GPU buffers)
     peer_cache.drop(id) // forget the /v1 resolution too — bounds cache growth across a long session's peer churn
-    if (r.aura) {
-      try {
-        engine.remove_from_scene(r.aura.object3d)
-      } catch {
-        /* already gone */
-      }
-      try {
-        r.aura.dispose() // TR-97 — free the remote veteran-aura geometries + material
-      } catch {
-        /* best-effort */
-      }
-    }
     r.chip?.remove()
     rigs.delete(id)
   }
@@ -229,34 +206,30 @@ export function create_remote_players(engine, world_canvas = null) {
   // (dungeon_run_store.js "session identity") — never equal between two different players, not even two co-op
   // partners standing in the exact same room, so co-op players never rendered for each other inside a shared
   // dungeon (#333 — same disease PR #330 cured in the chat scope, world_chat_scope.js). same_render_instance
-  // compares the genuinely SHARED identity instead: the on-chain party id both sides broadcast in their
-  // low-frequency p2p `state` (lobby-room.js broadcast_state's party_id, party_store.js _publish_state) — while
-  // still refusing a stranger running the identical dungeon TEMPLATE who isn't in my party (D237's original
-  // invariant, preserved on a value that actually distinguishes instances).
+  // compares the genuinely SHARED identity instead: accepted on-chain party membership from party_store,
+  // while still refusing a stranger running the identical dungeon template who isn't in my party.
   //
   // D237 AMENDMENT (players shouldn't announce themselves to far-away peers — drop players not in range): for
   // TWO OVERWORLD peers (scope null == null) add a receiver-side RANGE bound off the camera (the viewer's eye) —
   // a peer beyond OVERWORLD_RANGE_M gets no rig/chip. SAME-DUNGEON peers ALWAYS render regardless of range (the
   // cave room is small, co-op must see each other). The whole gate is RECEIVER-side + topology-independent.
   //
-  // GUARDRAIL (do-NOT-implement alternative): the invariant is delivered here, on the receiver. Do NOT replace this
-  // with per-dungeon Trystero rooms or a sender-side selective announce (each dungeon transition would churn a
-  // room join/leave). A post-release NOISE-REDUCTION optimization COULD scope the p2p `state`/`pos` fan-out per
-  // instance to cut wire traffic — but that is an optional bandwidth tweak layered ON TOP of this filter, never a
-  // replacement for it (the receiver filter must stay the source of truth for what renders).
   const OVERWORLD_RANGE_M = 100 // generous ~streaming-ring radius; comfortably past ANIM_CULL_M (50) so a merely
   //                               anim-culled (frozen-pose) rig is never also range-dropped.
   const logged_drops = new Set()
   /** The instance-scope inputs for one peer, read fresh every call — the ONE place should_show and drop_reason
    * source them from (never a second, competing read). @param {string} id */
   const peer_scope = (/** @type {string} */ id) => {
-    const peer = get_peer_state(id)
     const dungeon = use_dungeon.getState()
+    const party = use_party.getState()
+    const mine_dungeon_id = dungeon.in_session ? (dungeon.dungeon_id ?? null) : null
+    const mine_party_id = party.party_id ?? null
+    const accepted_member = !!party.party?.members?.some((member) => member.character === id)
     return {
-      mine_dungeon_id: dungeon.in_session ? (dungeon.dungeon_id ?? null) : null,
-      peer_dungeon_id: peer?.dungeon_id ?? null,
-      mine_party_id: use_party.getState().party_id ?? null,
-      peer_party_id: peer?.party_id ?? null,
+      mine_dungeon_id,
+      peer_dungeon_id: mine_dungeon_id && accepted_member ? mine_dungeon_id : null,
+      mine_party_id,
+      peer_party_id: accepted_member ? mine_party_id : null,
     }
   }
   /** Should this peer have a rig THIS frame? instance scope must match; two overworld peers additionally
@@ -365,10 +338,9 @@ export function create_remote_players(engine, world_canvas = null) {
           engine.add_to_scene(r.avatar.object3d)
           if (r.avatar.object3d.parent) game_log('remote', `rig in scene: ${id.slice(0, 10)} (D206)`)
         }
-        // D219: peer colors usually ride the LOW-FREQUENCY state action AFTER spawn; owned followers carry the
-        // same chain-backed colors on their local presence entry. Apply either once (set_colors queues pre-ready).
+        // Chain-backed colors land asynchronously on the presence entry. Apply once (set_colors queues pre-ready).
         if (!r.colored) {
-          const colors = get_peer_state(id) ?? entry
+          const colors = entry
           if (colors && (colors.color_1 || colors.color_2 || colors.color_3)) {
             r.avatar.set_colors?.([colors.color_1, colors.color_2, colors.color_3])
             r.colored = true
@@ -434,27 +406,8 @@ export function create_remote_players(engine, world_canvas = null) {
           if (dyaw < -Math.PI) dyaw += 2 * Math.PI
           r.yaw += dyaw * k
         } else if (speed > SPEED_EPS) r.yaw = Math.atan2(dx, dz)
-        // TR-97 — remote MOUNT: the peer broadcasts `mounted` + `mount_glb`; spawn/despawn a mount rig to
-        // match, pose it at the feet, and SEAT this rider on its back (lift by the mount's seat height). One
-        // load per unique glb (mount_rig's module cache); REMOVE-ONLY teardown (shared-clone freeze law).
-        const pst = get_peer_state(id)
-        let seat = 0
-        if (pst?.mounted && pst.mount_glb) {
-          if (!r.mount || r.mount_glb !== pst.mount_glb) {
-            r.mount?.dispose()
-            r.mount = create_mount_rig({ engine, glb_url: pst.mount_glb })
-            r.mount_glb = pst.mount_glb
-          }
-          r.mount.set_visible(remote_rig_visible(fight_active))
-          r.mount.update(r.x, r.gy, r.z, r.yaw, speed > SPEED_EPS, dt)
-          seat = r.mount.seat_height
-        } else if (r.mount) {
-          r.mount.dispose()
-          r.mount = null
-          r.mount_glb = null
-        }
         // #553 — PUBLIC PETS: a peer's equipped pet resolves from /v1 chain truth (peer_cache.pet_of, the SAME
-        // batched read + resolver worn cosmetics above joins — TRANSPORT RULING again, never the p2p payload),
+        // batched read + resolver worn cosmetics above joins),
         // through the SAME rig factory (pet_companion.js) and reconcile shape embed_voxel_player.js's own
         // desired_pet uses: recreate only when the glb identity actually changes, steer it toward the peer rig
         // every frame (#593 — its own dead-zone follow, not welded), hide it with the fight-view cull like
@@ -475,43 +428,24 @@ export function create_remote_players(engine, world_canvas = null) {
           r.pet_glb = null
         }
         // WORN COSMETICS (other players weren't seeing worn cosmetics; COSMETICS TRANSPORT RULING —
-        // cosmetics don't trust the webrtc payload, they load from the rpc directly) — the peer's hat/cloak resolves from
-        // /v1 chain truth (peer_cache, refreshed in the batch above), never the p2p payload: a player can't
+        // cosmetics load from the rpc directly) — the peer's hat/cloak resolves from
+        // /v1 chain truth (peer_cache, refreshed in the batch above): a player can't
         // spoof cosmetics they don't own. Reconcile is idempotent (set_slots diffs internally, mount.js), so
         // calling it every frame is cheap; gated on avatar.ready (a bone lookup needs the skeleton parsed —
         // the same gate embed_voxel_player.js applies locally).
         if (r.avatar.ready) r.worn?.set_slots(peer_cache.worn_of(id))
-        r.avatar.object3d.position.set(r.x, r.gy + seat, r.z)
+        r.avatar.object3d.position.set(r.x, r.gy, r.z)
         r.avatar.object3d.visible = remote_rig_visible(fight_active)
         // D218 v1 (heavy concurrency): beyond ANIM_CULL_M from the CAMERA the mixer never ticks —
         // frozen pose (frustum culling already skips off-screen draw); position/chip still track.
         const far = cam && (cam.position.x - r.x) ** 2 + (cam.position.z - r.z) ** 2 > ANIM_CULL_M * ANIM_CULL_M
         if (!far) {
-          // TR-97 — a mounted rider plays the looped SIT clip (avatar-side IDLE fallback), never running legs.
-          r.avatar.update(r.mount ? 'SIT' : speed > SPEED_EPS ? 'RUN' : 'IDLE', r.yaw, dt)
+          r.avatar.update(speed > SPEED_EPS ? 'RUN' : 'IDLE', r.yaw, dt)
           anim_ticks += 1
         } else {
           // D222 (distance must not affect rotation): the cull freezes the MIXER only —
           // facing is a single rotation write, applied at ANY range (update() owns it when near).
           r.avatar.object3d.rotation.y = r.yaw
-        }
-        // TR-97 — remote VETERAN AURA: the peer broadcasts `veteran` → ring this rig with the flame aura at
-        // the seated feet. Created on demand, torn down when the flag clears (or on drop_rig). Billboards to
-        // the live camera; its own guarded block so a cosmetic failure never poisons the rig loop.
-        if (pst?.veteran) {
-          if (!r.aura) r.aura = create_title_aura()
-          if (!r.aura.object3d.parent) engine.add_to_scene(r.aura.object3d)
-          r.aura.set_active(remote_rig_visible(fight_active))
-          r.aura.object3d.position.set(r.x, r.gy + seat, r.z)
-          r.aura.update(cam)
-        } else if (r.aura) {
-          try {
-            engine.remove_from_scene(r.aura.object3d)
-          } catch {
-            /* already gone */
-          }
-          r.aura.dispose()
-          r.aura = null
         }
         // nameplate: project head-height world → screen through the ONE shared plate projector (null pre-boot
         // → hidden). project_plate owns the world-lock (head-bob cancelled at source, fixed 2026-07-10 —
@@ -533,7 +467,7 @@ export function create_remote_players(engine, world_canvas = null) {
           }
         }
         // presence name resolves async (read-model) — keep the chip label fresh
-        const live_name = peer_display_name({ resolved_name: entry.name, peer_name: pst?.name, address: id })
+        const live_name = peer_display_name({ resolved_name: entry.name, address: id })
         if (live_name && r.chip.textContent !== live_name) r.chip.textContent = live_name
       } catch (error) {
         // a rotten remote rig never poisons the layer — drop it, presence will respawn it clean.

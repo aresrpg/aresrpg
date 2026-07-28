@@ -6,11 +6,10 @@
 // Accepting goes through the stub (commission_actions.accept_craft) so the view is complete + demoable now;
 // when the Move v2 commission lane lands, only commission_actions.js changes.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { use_toast } from '../../../../../toast'
-import { use_commission_inbox } from '../../../../../world-shell/commission_inbox.js'
 import { ItemIcon } from '../../ItemIcon.jsx'
 import { artisan_net_mist } from './commission_logic.js'
 import { list_commissions, accept_craft, from_mist } from './commission_actions.js'
@@ -21,10 +20,6 @@ export function CommissionArtisanView() {
   const [requests, set_requests] = useState(/** @type {import('./commission_actions.js').Commission[]} */ ([]))
   const [loading, set_loading] = useState(true)
   const [pending_id, set_pending_id] = useState(/** @type {string | null} */ (null))
-  // Live p2p-delivered requests (Commission Flow v2) — merged AHEAD of the /v1 stub so a just-received commission
-  // shows on top the moment the artisan opens this view. accept drops it from BOTH the local list and the inbox.
-  const inbox = use_commission_inbox(s => s.requests)
-
   useEffect(() => {
     let alive = true
     list_commissions().then(({ as_artisan }) => {
@@ -37,8 +32,6 @@ export function CommissionArtisanView() {
     }
   }, [])
 
-  const all = useMemo(() => [...inbox, ...requests], [inbox, requests])
-
   const on_accept = async (/** @type {import('./commission_actions.js').Commission} */ commission) => {
     if (pending_id) return
     set_pending_id(commission.id)
@@ -47,7 +40,6 @@ export function CommissionArtisanView() {
       use_toast.getState().add(t('commission.accepted', { recipe: commission.recipe_name }), 'info')
       // Optimistic: the accepted request leaves the queue (the real read would repaint from /v1 on the next poll).
       set_requests(prev => prev.filter(r => r.id !== commission.id))
-      use_commission_inbox.getState().remove(commission.id) // drop it from the live p2p inbox too (if it came that way)
     } catch (error) {
       // no-silent-failure law: humanized copy to the player, raw error to the console.
       use_toast.getState().add(error?.message || t('commission.accept_failed'), 'error')
@@ -63,7 +55,7 @@ export function CommissionArtisanView() {
       </div>
     )
   }
-  if (all.length === 0) {
+  if (requests.length === 0) {
     return (
       <div className="gw-cm__view">
         <div className="gw-cm__empty">{t('commission.no_requests')}</div>
@@ -76,7 +68,7 @@ export function CommissionArtisanView() {
       <div className="gw-cm__body">
         <div className="gw-cm__section-h">{t('commission.incoming_head')}</div>
         <div className="gw-cm__reqs">
-          {all.map(commission => {
+          {requests.map(commission => {
             const sui = from_mist(commission.payment_mist)
             const free = sui <= 0
             // Honest money split (PLATFORM CUTS): the artisan nets 90% of the escrow,

@@ -97,11 +97,10 @@ let active_character_id = ME
 let projected_party = null
 
 reset_auth_mock({ address: '0xwallet' })
-const [{ context }, read_party, lobby_room, { use_dungeon }, party_actions] = await Promise.all([
+const [{ context }, read_party, courier, party_actions] = await Promise.all([
   import('../game/store.js'),
   import('../chain/read_party'),
-  import('../p2p/lobby-room'),
-  import('./dungeon_store.js'),
+  import('../courier/world.js'),
   import('./party_actions'),
 ])
 const spies = [
@@ -114,12 +113,7 @@ const spies = [
     read_calls.push(character_id)
     return projected_party
   }),
-  spyOn(lobby_room, 'broadcast_state').mockImplementation(() => {}),
-  spyOn(lobby_room, 'nudge_party_invite').mockImplementation(() => {}),
-  spyOn(lobby_room, 'get_peer_state').mockImplementation(() => null),
-  spyOn(lobby_room, 'sync_party_room').mockImplementation(() => {}),
-  spyOn(use_dungeon, 'getState').mockImplementation(() => ({ dungeon_id: null })),
-  spyOn(use_dungeon, 'subscribe').mockImplementation(() => () => {}),
+  spyOn(courier, 'sync_party_room').mockImplementation(() => {}),
   spyOn(party_actions, 'create_party').mockImplementation(async (...args) => {
     action_calls.push(['create', ...args])
     return { party_id: '0xfresh-v2-party', receipt: {} }

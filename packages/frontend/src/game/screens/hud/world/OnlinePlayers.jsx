@@ -7,9 +7,9 @@
 //               clicking a player in the world or a name in chat → PlayerActionMenu)
 //
 // DATA (all honest, no fakes): the friend list = read_roster (chain-direct FriendList + /v1 enrichment,
-// use_rpc_view short-poll + focus-heal per the UI-DATA LAW). ONLINE status = the P2P LOBBY:
-// a friend is "online" iff their wallet is in my live peer set — get_peer_state_by_address), NOT the RPC's
-// last-position freshness. Names = friend_display_name below: the peer's self-declared p2p name (D222), else
+// use_rpc_view short-poll + focus-heal per the UI-DATA LAW). ONLINE status = the server-observed courier stream:
+// a friend is "online" iff their wallet is in the live presence set, NOT the RPC's last-position freshness.
+// Names = friend_display_name below: the stream name when present, else
 // the indexer character name, else character_name_resolve.js's ONE HOME fallback — never a raw address slice.
 //
 // The per-row "invite to party" that used to live here moved to PlayerActionMenu (clicking the player) so the
@@ -19,8 +19,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 
-import { use_game_state } from '../../../store.js'
-import { get_peer_state_by_address } from '../../../../p2p/lobby-room.js'
+import { presence_character_by_address, use_presence } from '../../../../world-shell/presence_adapter.js'
 import { use_auth } from '../../../../auth'
 import { use_rpc_view } from '../../../../rpc/use_view'
 import { friend_display_name } from '../../../../world-shell/friends_display.js'
@@ -29,15 +28,10 @@ import { add_friend_flow, remove_friend_flow, on_friends_changed } from '../../.
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { open_player_menu } from './player_menu_store.js'
 
-/** Re-render when the peer roster identity changes so per-friend p2p dots stay live without deriving the
- *  aggregate online count owned by WorldChat. Self-heals further on the 8 s roster poll + focus. */
-const roster_signal = (/** @type {import('../../../core/game.js').State} */ s) =>
-  [...s.visible_characters.keys()].sort().join('|')
-
 /** @returns {import('react').ReactElement | null} */
 export function OnlinePlayers() {
   const { t } = useTranslation()
-  use_game_state(roster_signal)
+  use_presence((state) => state.online)
   const address = use_auth((s) => s.address)
   const [expanded, set_expanded] = useState(false)
   const [input, set_input] = useState('')
@@ -57,10 +51,10 @@ export function OnlinePlayers() {
   // Refetch the instant an add/remove lands from ANY surface (this bar, the world click, the chat click).
   useEffect(() => on_friends_changed(() => view.refetch()), [view])
 
-  // ONLINE = present in my p2p lobby peer set. name = friend_display_name's ONE derivation, always
+  // ONLINE = present in the server-observed world stream. name = friend_display_name's ONE derivation, always
   // a truthy display string — never empty, never a raw address needing a per-row fallback below.
   const decorated = rows.map((r) => {
-    const peer = get_peer_state_by_address(r.address)
+    const peer = presence_character_by_address(r.address)
     return { ...r, online: !!peer, name: friend_display_name(r, peer) }
   })
   const online = decorated.filter((r) => r.online)

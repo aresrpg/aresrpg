@@ -17,7 +17,7 @@
 // in the full game HUD, not P2).
 //
 // Option B "Minimal Float": the standalone OnlinePlayers sidebar mount is gone (minimal chrome),
-// so its count folds into the chat header ("CHAT · N ONLINE"). N = the p2p presence roster
+// so its count folds into the chat header ("CHAT · N ONLINE"). N = the courier presence roster
 // (core/modules/presence.js) + 1 for self. This is the sole aggregate presence-count read.
 // visible_characters is a Map mutated in place (its ref never changes) — subscribe to a stable digest
 // primitive so React observes spawn/despawn notifications from the presence module.
@@ -32,7 +32,6 @@ import { use_fight, use_game_state } from '../../../store.js'
 import { select_online_count } from '../../../core/presence_count.js'
 import { send_chat_message } from '../../../core/chat_send.js'
 import { CHANNEL } from '../../../core/modules/chat.js'
-import { get_peer_state } from '../../../../p2p/lobby-room.js'
 import { use_presence } from '../../../../world-shell/presence_adapter.js'
 import { use_address_names } from '../../../../rpc/use_address_names'
 import { AddressName } from '../../../../components/address_name'
@@ -83,7 +82,7 @@ const open_chat_menu = (/** @type {any} */ e, /** @type {any} */ line, /** @type
   const r = e.currentTarget.getBoundingClientRect()
   open_player_menu({
     id: line.id,
-    address: get_peer_state(line.id)?.address ?? null,
+    address: line.address ?? null,
     name: line.name || t('party.adventurer'),
     x: r.left,
     y: r.bottom + 4,
@@ -91,8 +90,8 @@ const open_chat_menu = (/** @type {any} */ e, /** @type {any} */ line, /** @type
 }
 
 /** D207: `readonly` = the logged-out SPECTATE overlay variant — the merged log + filters render, the
- *  speak selector + input do NOT (a spectator has no character to post as; receiving rides the #19
- *  silent p2p join). @param {{ readonly?: boolean }} [props] @returns {import('react').ReactElement} */
+ *  speak selector + input do NOT (a spectator has no character to post as).
+ *  @param {{ readonly?: boolean }} [props] @returns {import('react').ReactElement} */
 export function WorldChat({ readonly = false } = {}) {
   const { t } = useTranslation()
   const history = use_game_state((s) => s.message_history)
@@ -234,7 +233,7 @@ export function WorldChat({ readonly = false } = {}) {
                 <span className="gw-chat__name me">{t('world_chat.you')}</span>
               ) : (
                 // S-67: another player's name is a click target — opens PlayerActionMenu (add friend / invite).
-                // The wallet resolves from the character id (line.id) via the peer's self-declared p2p state.
+                // The courier row already carries the wallet verified by its signed ingress.
                 <button
                   type="button"
                   className="gw-chat__name gw-chat__name--btn"

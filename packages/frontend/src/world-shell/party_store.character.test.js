@@ -11,9 +11,7 @@ import { attach_executed_digest } from './tx_digest_error.js'
 
 const action_calls = []
 const read_calls = []
-const published = []
 const synced = []
-const event_names = []
 const selected = { id: '0xinvited', name: 'Invited', classe: 'senshi', world_id: 'world-a' }
 const owned_alt = { id: '0xowned-alt', name: 'Alt', classe: 'shugo', world_id: 'world-a' }
 let active_character_id = selected.id
@@ -31,11 +29,11 @@ const party = {
 }
 
 reset_auth_mock({ address: '0xwallet' })
-const [{ context }, read_party, lobby_room, core_toast, { use_dungeon }, party_actions, character_name_resolve] =
+const [{ context }, read_party, courier, core_toast, { use_dungeon }, party_actions, character_name_resolve] =
   await Promise.all([
     import('../game/store.js'),
     import('../chain/read_party'),
-    import('../p2p/lobby-room'),
+    import('../courier/world.js'),
     import('../game/core/toast.js'),
     import('./dungeon_store.js'),
     import('./party_actions'),
@@ -46,18 +44,11 @@ const spies = [
     selected_character_id: active_character_id,
     sui: { characters: roster },
   })),
-  spyOn(context.events, 'on').mockImplementation((name) => {
-    event_names.push(name)
-    return context.events
-  }),
   spyOn(read_party, 'get_party').mockImplementation(async (character_id) => {
     read_calls.push(character_id)
     return read_party_impl(character_id)
   }),
-  spyOn(lobby_room, 'broadcast_state').mockImplementation((state) => published.push(state)),
-  spyOn(lobby_room, 'nudge_party_invite').mockImplementation(() => {}),
-  spyOn(lobby_room, 'get_peer_state').mockImplementation(() => null),
-  spyOn(lobby_room, 'sync_party_room').mockImplementation((party_id) => synced.push(party_id)),
+  spyOn(courier, 'sync_party_room').mockImplementation((party_id) => synced.push(party_id)),
   spyOn(core_toast, 'push_event_toast').mockImplementation(() => {}),
   spyOn(use_dungeon, 'getState').mockImplementation(() => ({ dungeon_id: null })),
   spyOn(use_dungeon, 'subscribe').mockImplementation(() => () => {}),
@@ -79,7 +70,7 @@ const spies = [
   spyOn(character_name_resolve, 'resolve_character_docs').mockImplementation((ids) => resolve_docs_impl(ids)),
 ]
 
-const { use_party, wire_party_p2p } = await import('./party_store.js')
+const { use_party, wire_party_reads } = await import('./party_store.js')
 
 afterAll(() => {
   use_party.getState()._stop_polling()
@@ -92,7 +83,6 @@ beforeEach(() => {
   use_party.getState()._stop_polling()
   action_calls.length = 0
   read_calls.length = 0
-  published.length = 0
   synced.length = 0
   active_character_id = selected.id
   roster = [selected]
@@ -340,7 +330,6 @@ test('character switch clears A binding, publishes null, and denies every A muta
   stale()
   use_party.getState()._publish_state({ id: active_character_id, name: 'B', classe: 'senshi' })
   expect(synced.at(-1)).toBe(null)
-  expect(published.at(-1)?.party_id).toBe(null)
   expect(use_party.getState().party_id).toBe(null)
 
   for (const [action, args] of [
@@ -355,19 +344,16 @@ test('character switch clears A binding, publishes null, and denies every A muta
   expect(action_calls).toEqual([])
 })
 
-test('an already-wired remount restarts projection polling without duplicate listeners', async () => {
-  event_names.length = 0
-  wire_party_p2p()
+test('an already-wired remount restarts projection polling', async () => {
+  wire_party_reads()
   await Promise.resolve()
   use_party.getState()._stop_polling()
-  const listeners_after_first_wire = [...event_names]
   const reads_after_first_wire = read_calls.length
 
-  wire_party_p2p()
+  wire_party_reads()
   await Promise.resolve()
   use_party.getState()._stop_polling()
 
-  expect(event_names).toEqual(listeners_after_first_wire)
   expect(read_calls.length).toBeGreaterThan(reads_after_first_wire)
 })
 

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Party frame — the roster is an exact character-keyed Member[] (maximum six). Every display read resolves
 // `member.character` directly through `/v1/characters?ids=`, so a wallet's sibling characters can never stand in
-// for the character that actually joined. P2P identity uses that same exact Character ID.
+// for the character that actually joined.
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +12,6 @@ import { v1_character_to_party_row } from '../../../../chain/read_staking.js'
 
 import './game-world-hud.css'
 import { context, use_game_state } from '../../../store.js'
-import { get_peer_state } from '../../../../p2p/lobby-room.js'
 import { project_party_view } from '@aresrpg/party/reduce'
 
 import { use_party } from '../../../../world-shell/party_store.js'
@@ -203,14 +202,14 @@ export function PartyFrame() {
           const transit = follow.followers[character_id] ?? null
           const arriving = transit?.status === 'joining' || transit?.status === 'in_transit'
           const self_name = character_id === selected_character_id ? my_char_name : null
-          const name = self_name || get_peer_state(character_id)?.name || row?.name || t('party.adventurer')
+          const name = self_name || row?.name || member.name || t('party.adventurer')
           const open_member_menu = (/** @type {any} */ e) => {
             if (character_id === selected_character_id) return // never target my own character (B10)
             e.preventDefault()
             const r = e.currentTarget.getBoundingClientRect()
             open_player_menu({
               id: character_id,
-              address: get_peer_state(character_id)?.address ?? null,
+              address: member.owner ?? null,
               name,
               x: r.left,
               y: r.bottom + 4,
