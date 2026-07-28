@@ -4,7 +4,7 @@
 // the fold (impossible speed dropped; a broadcast-declared mount earns exactly its headroom); (2) the
 // JOIN-REPLAY facts (my cell/state) live in the atom, not transport module scope; (3) MARKER CONVERGENCE —
 // one fights snapshot folds to the in-range, own-fight-excluded rows and an identical snapshot converges.
-// All on plain objects; the trystero transport never appears.
+// All on plain objects; no transport appears — the fold is pure.
 
 import { describe, expect, it } from 'bun:test'
 
@@ -307,7 +307,7 @@ describe('SELF-HEAL ① liveness — silence expires a peer; a heartbeat keeps a
   })
   // #305 (red-first): a BACKGROUNDED tab's heartbeat setInterval is browser-throttled (Chrome clamps a
   // hidden tab's timers to ~1/min once intensively throttled) — its renewals land at a >60s cadence even
-  // though the WebRTC link is fully alive. The FOCUSED tab's own tick keeps running on schedule (it is not
+  // though the presence link is fully alive. The FOCUSED tab's own tick keeps running on schedule (it is not
   // the one throttled) and must NOT mistake the other side's slow send cadence for a dead peer.
   it('a peer renewing at a 65s throttled cadence (>60s gap) stays online — red @22s TTL, green @90s', () => {
     const { input, state } = boot()

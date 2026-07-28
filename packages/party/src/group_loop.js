@@ -344,7 +344,7 @@ const settle_same_world = (row, position, leader_pose, now) =>
  * Deterministic projection of a follower's LIVE position from the proof-of-time timer — the pure function
  * any client can run off the SAME RPC-visible facts (the join checkpoint + the timer's progress + the leader
  * pose), never peer-channel presence (owner ruling 2026-07-23: public follower positions are RPC-derived
- * truth; WebRTC is at most a cosmetic hint). This is the FLIGHT leg only: while in transit the follower runs a
+ * truth; a peer's own stream is at most a cosmetic hint). This is the FLIGHT leg only: while in transit the follower runs a
  * straight line from its join checkpoint toward its formation slot at running speed (progress is time/eta, so it
  * advances at ~run pace — it RIDES the flight, never teleports). Returns null for any other status — a `with_you`
  * follower is a free-run companion steered at the edge by pet_follow, not a slot-pinned projection (#613).
