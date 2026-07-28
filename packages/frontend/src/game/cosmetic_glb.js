@@ -15,7 +15,7 @@ import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
 import { canonical_asset_url, asset_url } from '@aresrpg/sdk/jobs'
 
 import { ASSETS_URL } from '../env'
-import { get_encyclopedia } from '../rpc/client'
+import { seed_manifest } from '../content/seed_manifest'
 
 import { cosmetic_icon_of } from './cosmetic_icons.js'
 import { mount_speed_multiplier } from './mount_speed.js'
@@ -191,17 +191,15 @@ export function index_worn_templates(items) {
   return new Map((items ?? []).map((item) => [String(item.template_id ?? ''), item]).filter(([id]) => id))
 }
 
-/** Load the template side of the worn join through the keyless `/v1` read layer. `get_encyclopedia` already
- * owns the app-lifetime catalog cache and evicts rejected loads; one bounded second read heals a transient
- * rejection without introducing a parallel cache or a permanent retry loop.
+/** Load the template side of the worn join from the boot-resident seed receipt. Only cosmetic slugs enter
+ * the map; their ids are the exact deployed template ids and `cosmetic_icon_of` already owns slug → appearance.
+ * This keeps the world renderer off the 2.77 MB all-kinds encyclopedia payload.
  * @returns {Promise<Map<string, any>>} */
 export async function read_worn_templates() {
-  const read = async () => index_worn_templates((await get_encyclopedia('items')).items)
-  try {
-    return await read()
-  } catch {
-    return read()
-  }
+  const rows = Object.entries(seed_manifest.items).flatMap(([slug, template_id]) =>
+    cosmetic_icon_of({ slug }) ? [{ template_id, slug }] : []
+  )
+  return index_worn_templates(rows)
 }
 
 /** Resolve one equipped item to the cosmetic quilt's base appearance + optional KHR material variant. The

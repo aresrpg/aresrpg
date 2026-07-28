@@ -52,12 +52,17 @@ export const T62_WORLDS = seeded_worlds.map((world) => {
   if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)
   const label = world.name ?? world.label ?? label_from_wid(world.wid)
   if (!label) throw new Error(`seed world ${world.wid} has no display label`)
-  return { id: world.id, label }
+  return {
+    id: world.id,
+    label,
+    biome: world.biome ?? null,
+    required_level: world.requiredLevel == null ? null : Number(world.requiredLevel),
+  }
 })
 
 // ───────────────────────────────────────────────────────────────────────────────────────────────────────
 // BIOME → ENGINE RECIPE (frontend wiring lane, DECISIONS 2026-07-12): translates a world's on-chain `biome`
-// field (world.move's `biome: String` / WorldCreated.biome, read via the /v1 encyclopedia worlds view —
+// field (world.move's `biome: String` / WorldCreated.biome, projected from the seed receipt by
 // world_biome.js's `resolve_world_biome`; seed/mainnet/*/world.json mirrors the same string) to the engine's
 // `?biome=` recipe key (packages/engine/src/config/worlds/index.js WORLD_CONFIGS). ONE pinned table + a
 // DEFAULT fallback so an unmapped chain biome — an unseeded world, or Testlands' own "testlands" (no

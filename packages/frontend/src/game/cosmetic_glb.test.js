@@ -12,10 +12,11 @@
 // full `bun test src` sweep, bisected 2026-07-10 (that pair has since been DELETED from env.ts — the
 // station is server-side-only). Keep this object's keys in lockstep with env.ts's exports.)
 
-import { afterEach, describe, expect, test, spyOn } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
+import { seed_manifest } from '../content/seed_manifest'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 
@@ -41,22 +42,9 @@ const {
   resolve_worn_cosmetics,
 } = await import('./cosmetic_glb.js')
 
-test('read_worn_templates retries one transient catalog failure', async () => {
-  const client = await import('../rpc/client')
-  let calls = 0
-  const read = spyOn(client, 'get_encyclopedia').mockImplementation(async () => {
-    calls += 1
-    if (calls === 1) throw new Error('transient catalog read')
-    return { items: [{ template_id: '0xtemplate', name: 'Berserker Helm' }] }
-  })
-  try {
-    expect(await read_worn_templates()).toEqual(
-      new Map([['0xtemplate', { template_id: '0xtemplate', name: 'Berserker Helm' }]])
-    )
-    expect(read).toHaveBeenCalledTimes(2)
-  } finally {
-    read.mockRestore()
-  }
+test('read_worn_templates projects cosmetic ids from the boot-resident seed receipt', async () => {
+  const template_id = seed_manifest.items.solomonk
+  expect((await read_worn_templates()).get(template_id)).toEqual({ template_id, slug: 'solomonk' })
 })
 
 describe('is_mount_item — category vocab', () => {

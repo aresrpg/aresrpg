@@ -11,8 +11,8 @@
 //     doc in hand can belong to a DIFFERENT character. A doc whose id does not match the selected character
 //     is DISCARDED (status 'unknown', renders as loading) — the 07-17 "HERE in First Shore for the first
 //     roster character" lie is structurally impossible at this seam, whatever the hook serves.
-//   • derive_world_cards — the modal's card rows: the seeded catalog (T62_WORLDS) joined with the LIVE
-//     /v1 required_level (chain gate — zones::join_world asserts it) and the AUTHORED corpus knowledge
+//   • derive_world_cards — the modal's card rows: the seeded catalog (T62_WORLDS) joined with its stamped
+//     required_level (chain gate — zones::join_world asserts the same seed value) and the AUTHORED knowledge
 //     (band/biome/mob roster/resources — world_corpus.ts, the same join the encyclopedia renders). DERIVED,
 //     never invented: a world absent from a source renders that gap honestly (null), exactly like the
 //     encyclopedia's world tab.
@@ -97,7 +97,7 @@ export function derive_world_panel({ selected_character_id, doc }) {
 
 /**
  * The travel modal's card rows, sorted by the REAL join gate (then band floor) so progression reads
- * top-to-bottom. Lock law mirrors the chain + the old switcher exactly: locked ONLY once the live
+ * top-to-bottom. Lock law mirrors the chain + the old switcher exactly: locked ONLY once the stamped
  * required_level AND the character's level are both known and level < gate — an unknown never
  * pre-locks (no fabricated locks while /v1 lags).
  * @param {{

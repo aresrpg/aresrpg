@@ -7,13 +7,10 @@
 // world binding confirms bound; create_session reads the cache synchronously (`read_world_biome`) when it
 // picks the engine recipe via chain/deployment.ts's `resolve_engine_recipe`.
 //
-// /v1 is the read layer (CLAUDE.md "Reads through /v1" — chain-direct is for tx pre-flight only):
-// get_encyclopedia('worlds') serves exactly `{ world_id, seed, biome }` per seeded world (world_levels.js)
-// and is cheap — `?kind=worlds` skips the items/mobs/recipes reads server-side (packages/rpc/api/views.js
-// handle_encyclopedia) — so this never fetches more than the small seeded-worlds set (1 today, ≤20 live).
+// The seed receipt already pins every live world id + biome synchronously. Reading that boot-resident
+// projection avoids pulling the all-kinds /v1 encyclopedia payload before the player visits its route.
 
-import { get_encyclopedia } from '../rpc/client'
-import { game_log } from '../core/log.js'
+import { T62_WORLDS } from '../chain/deployment'
 
 /** @type {Map<string, string | null>} */
 const _cache = new Map()
@@ -27,16 +24,9 @@ const _cache = new Map()
  */
 export async function resolve_world_biome(world_id) {
   if (!world_id) return null
-  try {
-    const { worlds } = await get_encyclopedia('worlds')
-    const biome = worlds.find((w) => w.world_id === world_id)?.biome ?? null
-    _cache.set(world_id, biome)
-    return biome
-  } catch (error) {
-    game_log('world-biome', 'biome resolve failed — the boot recipe falls back to default', error)
-    _cache.set(world_id, null)
-    return null
-  }
+  const biome = T62_WORLDS.find((world) => world.id === world_id)?.biome ?? null
+  _cache.set(world_id, biome)
+  return biome
 }
 
 /**

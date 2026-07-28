@@ -15,7 +15,6 @@ import { app_mobile_classes, mobile_shell_visibility, use_mobile_mode } from './
 import { ShopPage } from './pages/shop'
 import { SpectateLanding } from './pages/auth'
 import { CharactersPage } from './pages/characters'
-import { EncyclopediaPage } from './pages/encyclopedia'
 import { MarketplacePage } from './pages/marketplace'
 import { KolizeumPage } from './pages/kolizeum'
 import { AirdropPage } from './pages/airdrop'
@@ -29,8 +28,12 @@ import { SponsorUpgradeModalHost } from './components/sponsor_upgrade_modal'
 import { RpcLagBanner } from './components/RpcLagBanner'
 import { VersionBadge } from './version_badge'
 
-// Lazy-routed: the build simulator bundles the seeded items cast (~2.3 MB), so it loads in its
-// own chunk on demand rather than weighing down the main bundle for every visitor.
+// Lazy-routed: neither encyclopedia code nor its 2.77 MB /v1 catalog belongs on the world boot path.
+const EncyclopediaPage = lazy(() =>
+  import('./pages/encyclopedia').then((module) => ({ default: module.EncyclopediaPage }))
+)
+
+// The build simulator bundles the seeded items cast (~2.3 MB), so it loads in its own chunk on demand.
 const SimulatorPage = lazy(() => import('./pages/simulator').then((m) => ({ default: m.SimulatorPage })))
 
 class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, { error: Error | null }> {
@@ -192,7 +195,14 @@ function Layout() {
           switcher (S-67) now. Old deep links land on the live world instead of a blank/missing route. */}
       <Route path="/exploration" element={<Navigate to="/" replace />} />
       <Route path="/characters" element={<CharactersPage />} />
-      <Route path="/encyclopedia/*" element={<EncyclopediaPage />} />
+      <Route
+        path="/encyclopedia/*"
+        element={
+          <Suspense fallback={null}>
+            <EncyclopediaPage />
+          </Suspense>
+        }
+      />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/airdrop" element={<AirdropPage />} />
       <Route path="/kolizeum" element={<KolizeumPage />} />

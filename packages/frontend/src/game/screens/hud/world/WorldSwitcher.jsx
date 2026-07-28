@@ -12,9 +12,9 @@
 //     last-landed data across a selection switch, so the doc in hand can belong to a DIFFERENT character;
 //     a doc whose id mismatches is discarded (the 07-17 "HERE in First Shore" lie died at this seam). A
 //     selected character in NO world renders the honest empty state with the travel button as the CTA.
-//   • derive_world_cards — the modal rows: seeded catalog (T62_WORLDS) ⋈ LIVE /v1 required_level (the
-//     zones::join_world gate) ⋈ authored corpus knowledge (band/biome/mobs/resources — the encyclopedia's
-//     own join). Locks mirror the chain gate exactly; an unknown never pre-locks.
+//   • derive_world_cards — the modal rows: seed-receipt catalog + required_level (the zones::join_world gate)
+//     ⋈ authored corpus knowledge (band/biome/mobs/resources — the encyclopedia's own join). Locks mirror
+//     the chain gate exactly; an unknown never pre-locks.
 //
 // TRAVEL rides the EXISTING flow untouched: card → house ConfirmDialog → join_world_action (self-pay
 // through the ONE run_tx choke, simulate-first, kiosk pair resolved inside; an executed failure is never
@@ -26,7 +26,7 @@ import { Globe } from 'lucide-react'
 
 import { use_game_state } from '../../../store.js'
 import { use_rpc_view } from '../../../../rpc/use_view'
-import { get_characters, get_encyclopedia } from '../../../../rpc/client'
+import { get_characters } from '../../../../rpc/client'
 import { T62_WORLDS } from '../../../../chain/deployment'
 import { world_corpus_of } from '../../../../pages/encyclopedia/world_corpus'
 import { join_world_action } from '../../../../world-shell/world_join.js'
@@ -55,11 +55,10 @@ export function WorldSwitcher() {
     { deps: [selected_character_id], enabled: !!selected_character_id, interval_ms: 15000 }
   )
 
-  // The live worlds catalog carries the exact on-chain gate. IDs select the row only; no checked-in
-  // chain-id map owns a second copy of required_level, so a republish cannot silently erase the gates.
-  const worlds_view = use_rpc_view((signal) => get_encyclopedia('worlds', signal), { deps: [] })
+  // The seed receipt is the deployment pin for both ids and join gates; it is already resident at boot,
+  // so the always-mounted world HUD never pulls the all-kinds encyclopedia payload.
   const required_level_by_world = new Map(
-    (worlds_view.data?.worlds ?? []).map((world) => [world.world_id, Number(world.required_level ?? 1)])
+    T62_WORLDS.flatMap((world) => (world.required_level == null ? [] : [[world.id, world.required_level]]))
   )
 
   const panel = derive_world_panel({ selected_character_id, doc: view.data })
