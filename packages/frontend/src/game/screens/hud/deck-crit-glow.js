@@ -19,8 +19,8 @@ import { turn_seed, slot_crit_roll, crit_at } from '@aresrpg/sim/turn_seed'
  * `crit_clock_of` (@aresrpg/fight/predict_cast), the ONE composer of the §7 tuple (#1190) — which seat, which
  * slot, and every "unknowable ⇒ null" rule live there, so the preview and the cast it previews can never read
  * different sequences. Callers gate turn ownership themselves (off-turn ⇒ hand null ⇒ no preview).
- * @param {{ world_seed: number|bigint, spawn_id: number|bigint, turn_deadline_ms: number|bigint,
- *   seat: number, slot: number } | null} clock
+ * @param {{ world_seed: number|bigint, spawn_id: number|bigint, turn_entropy: number|bigint,
+ *   turn_ordinal: number|bigint, seat: number, slot: number } | null} clock
  * @returns {{ slot: number, crit_roll: number } | null}
  */
 export function next_slot_crit(clock) {

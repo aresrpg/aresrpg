@@ -4,9 +4,11 @@
 // imports only @aresrpg/sim). Composing the clock is NOT this module's job any more (#1190 — crit_clock_of in
 // @aresrpg/fight owns it, tested in packages/fight/test/crit_clock_seat.test.js); these pin the ROLL.
 // The clock tuple below is the SAME golden vector pinned by the sim's parity suite
-// (packages/sim/test/turn_seed.test.js), extracted from the REAL Move packages via a `sui move test` debug
-// probe: (world_seed 123456789, spawn_id 42, deadline 1752192000000, seat 0) → turn_seed 4190174188, slot crit
-// rolls [1089, 3920, 5988] — so these tests bind the UI predicate to on-chain truth, not to itself.
+// (packages/sim/test/turn_seed.test.js, tuple A), extracted from the REAL Move packages via a `sui move test`
+// debug probe: (world_seed 123456789, spawn_id 42, turn_entropy 3141592653, turn_ordinal 7, seat 0) →
+// turn_seed 2347341858, slot crit rolls [1089, 3920, 5988] — so these tests bind the UI predicate to on-chain
+// truth, not to itself. The tuple moved when the turn seed stopped folding the wall-clock deadline and started
+// folding the turn's own published entropy + ordinal (TurnStarted); the goldens moved with the Move fold.
 
 import { describe, expect, it } from 'bun:test'
 

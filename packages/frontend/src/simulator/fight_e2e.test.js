@@ -252,6 +252,12 @@ describe('L4 · determinism — the seed is the whole fight', () => {
     //      bands roll a different (still in-range) value AND the rng thread no longer advances per hit, so
     //      every downstream draw shifts. Determinism itself is untouched — the two-run equality above still
     //      holds byte-for-byte; only the pinned number moved.
+    //   4. turn entropy (this branch), when the turn seed stopped folding the wall-clock deadline and started
+    //      folding the turn's OWN published entropy + ordinal (TurnStarted) — the fold the chain actually runs,
+    //      so a prediction and the settlement it predicts finally read one sequence. Every turn re-seeds off a
+    //      different tuple, so each turn's crit/damage/dodge slots land elsewhere and the trace shifts. Again
+    //      only the number: the two-run equality, the different-seed divergence, and the replay-to-terminal
+    //      check in this same file all still pass untouched.
     // The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved — it seats no characters.
     expect(digest_of(a)).toMatchSnapshot()
   })
