@@ -5,14 +5,18 @@
 // modules observing the real context), NOT a hand-rolled context (presence.spectate.test.js bypasses game.js).
 // This is the exact production path the "1 player both sides, chat never crosses" symptom lives on.
 
-import { expect, test } from 'bun:test'
+import { afterEach, beforeEach, expect, test } from 'bun:test'
 
-// Mock the remaining low-frequency presence transport before the real graph loads, and keep chain identity
-// reads offline. Position and chat enter through the production courier SSE decoder.
+// Keep chain identity reads offline: the presence edge REQUESTS an identity for every fresh peer, and this
+// repro is about the transport, not the chain. Armed in beforeEach / cleared in afterEach per the helper's own
+// convention — `get_sdk_implementation` is PROCESS-WIDE, so a module-scope arm would answer for every file that
+// runs after this one in the same `bun test src` process (it silently rejected chain/read_templates and
+// chain/live_reads, which own their own SDK expectations).
 import '../test_helpers/expedition_sdk_mock.js'
-import { set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
+import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 
-set_expedition_sdk_mock(() => Promise.reject(new Error('no SDK session in headless repro')))
+beforeEach(() => set_expedition_sdk_mock(() => Promise.reject(new Error('no SDK session in headless repro'))))
+afterEach(() => reset_expedition_sdk_mock())
 
 // The REAL production graph: game.js boots the module pipeline (presence + chat observe the real context);
 // presence_adapter owns the ONE presence atom; courier_inputs is the transport decoder the peer drives.
