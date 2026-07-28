@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COURTESY CHANNEL (#334) — the SECOND of two channels (docs/FIGHT_PIPELINE.md). A peer's committed draft,
-// relayed real-time over the party's webrtc transport, enters the ONE fight door as a legality-gated PREDICTION:
-// it PAINTS for the eye (source 'intent' → the overlay) but NEVER touches committed truth (p2p costs LATENCY, not
+// relayed real-time over the party's courier courtesy row, enters the ONE fight door as a legality-gated PREDICTION:
+// it PAINTS for the eye (source 'intent' → the overlay) but NEVER touches committed truth (courtesy costs LATENCY, not
 // correctness); an ILLEGAL injected batch never displays and raises ONE neutral flag; and the canonical receipt/
 // journal retires a matched prediction by its CLAIM (byte-match ⇒ silent, mismatch ⇒ ONE forward correction) —
 // the SAME claim engine my own predictions ride, never a purge. These are the RED-FIRST proofs.

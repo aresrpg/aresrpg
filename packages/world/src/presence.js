@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // PRESENCE — the core: who/what is around me NOW. Ephemera under the freshness law — peer facts
-// arrive as realtime p2p ticks, expire on peer_leave, and NOTHING here feeds claimability (claimability =
+// arrive as realtime courier ticks, expire on peer_leave, and NOTHING here feeds claimability (claimability =
 // checkpoint zone + proximity + row liveness, spawns-internal — the seams law). ONE atom behind ONE
 // `input(msg, now)` door: the peer table (position + self-declared identity/state + chain-resolved identity),
 // MY broadcastable facts (cell / state / cosmetic — dissolved out of the transport's module-scope side
@@ -11,14 +11,17 @@
 // The CHEATER-PLAUSIBILITY DROP — formerly buried in the transport's receive callbacks — is a pure rule in
 // the fold now (headless-testable): a peer update implying an impossible speed (teleport / speed-hack) is
 // silently DROPPED, never applied; a broadcast-declared MOUNT earns exactly its legit speed headroom.
-// Effects live at the edges: the trystero transport dispatches typed inputs and reads the atom to send;
-// identity resolution is an effect REQUEST (the adapter reads the chain and answers through the door).
+// Effects live at the edges: the courier transport (frontend `src/courier/world.js`) dispatches typed inputs
+// and reads the atom to send; identity resolution is an effect REQUEST (the adapter reads the chain and answers
+// through the door). NOTE (#1399): the `peer_state` fold below — and its `peer_state_of` / `peer_states_by_address`
+// / `peer_state_by_address` readers — lost their only producer when the p2p transport was deleted; identity now
+// arrives server-observed. They are kept for the fold's own tests until the vestigial branch is removed.
 
 import { createStore } from 'zustand/vanilla'
 
 import { to_fight_marker, to_dungeon_fight, participant_ids, in_range } from './nearby_fights.js'
 
-// Normal roam SPEED is 4 tiles/sec. A throttled p2p update can legitimately batch several cells if the
+// Normal roam SPEED is 4 tiles/sec. A throttled position update can legitimately batch several cells if the
 // network stalls (the sender fell behind, not sped up) — this cap only trips on a REAL speed/teleport
 // violation, generous enough to absorb jitter.
 export const MAX_PLAUSIBLE_TILES_PER_SEC = 15
@@ -34,9 +37,8 @@ export const MOUNTED_SPEED_HEADROOM = 1.8
 export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 
 // ── SELF-HEAL timing — the ONE home for the presence link's liveness + recovery constants ──────────────────────
-// The p2p link (trystero over public nostr relays → WebRTC) can silently die — a relay outage or a frozen data
-// channel that never fires a clean onPeerLeave — and NOTHING detected it, so peer lists froze until a full page
-// refresh on BOTH ends. These constants make the link self-heal, all as INPUTS
+// The presence link can silently die — a dropped stream that never fires a clean peer_leave — and NOTHING
+// detected it, so peer lists froze until a full page refresh on BOTH ends. These constants make the link self-heal, all as INPUTS
 // to the pure fold (never a timer that set()s state):
 //  · every client re-emits its cell as a low-frequency HEARTBEAT (the edge reuses the `pos` send), so a peer that
 //    stands still is still PROVABLY alive; a peer silent past PEER_EXPIRY_MS folds out on the next `tick` — an

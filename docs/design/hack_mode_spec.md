@@ -231,17 +231,19 @@ asserted by the e2e slice):
 
 ### 4.1 The one broadcast home for the mode bit
 
-The low-frequency p2p `state` payload is the ONE home (never `pos`, never a second channel):
-`party_store.js _publish_state` (`world-shell/party_store.js:523-551`) composes it →
-`broadcast_state` (`p2p/lobby-room.js:459-464`) → the presence atom's whitelisting fold
-`fold_peer_state` (`packages/world/src/presence.js:173-196`). Three touches:
+> **SUPERSEDED (#1399 — trystero left the tree).** This section described the mode bit riding the
+> low-frequency p2p `state` payload. That transport no longer exists: presence, positions and chat
+> all ride the courier (`src/courier/world.js` → `courier_inputs` → the presence atom). §4 is still
+> UNBUILT, so nothing regressed — but when it is built, the bit's one home is a courier presence
+> field, never a second channel, and it is a SERVER-OBSERVED row rather than a self-declared claim.
+> §4.2's receiver-side filter and §4.3's mode-blind presence hold unchanged; only the wire the bit
+> arrives on changed. Two touches remain:
 
-- `_publish_state` adds `hack: get_saved_hack_mode()` (the pref module is the SSOT; a toggle
-  flip reboots the session and `create_session` re-publishes at `embed_voxel.js:535`, so the bit
-  re-broadcasts automatically — no extra wiring).
-- `fold_peer_state` whitelists it: `hack: !!input.hack` (one line beside `veteran`).
-- Positions keep broadcasting **universally and unchanged** (`broadcast_position`,
-  `lobby-room.js:412-415` — it is also the liveness heartbeat; forking it would fork presence).
+- the mode bit joins the courier presence row for the session (the pref module stays the SSOT; a
+  toggle flip reboots the session, so the bit re-publishes automatically — no extra wiring).
+- the presence fold whitelists it: `hack: !!input.hack` (`packages/world/src/presence.js`).
+- Positions keep flowing **universally and unchanged** (`broadcast_position`, `courier/world.js` —
+  it is also the liveness heartbeat; forking it would fork presence).
 
 ### 4.2 Visibility is a RECEIVER-SIDE render filter (the smaller design, per the rider)
 
@@ -257,10 +259,10 @@ same_render_instance({ …, mine_hack, peer_hack }):
   dungeon branch  → unchanged (the cave room is its own presentation; party co-op law holds)
 ```
 
-`peer_scope` reads `mine_hack` from the pref module and `peer_hack` from `get_peer_state(id)`.
-An unknown/legacy peer (`hack` absent) folds to `false` = terrain — old clients degrade to
-exactly today's behavior. The GUARDRAIL at `remote_players.js:241-245` binds: no per-mode
-Trystero rooms, no sender-side selective announce — receiver filter only.
+`peer_scope` reads `mine_hack` from the pref module and `peer_hack` from the peer's presence row
+(`presence_character(id)`, `world-shell/presence_adapter.js`). An unknown peer (`hack` absent) folds
+to `false` = terrain — an un-upgraded client degrades to exactly today's behavior. The GUARDRAIL
+binds: no per-mode courier rooms, no sender-side selective announce — receiver filter only.
 
 Cross-mode spatial non-interaction follows: a terrain player's model (with terrain-height `h` in
 its pos packets) never renders in the grid view, and a grid player (h=138) never renders on
