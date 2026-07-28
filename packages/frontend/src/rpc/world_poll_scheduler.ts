@@ -130,7 +130,7 @@ export function create_world_poll_scheduler({
     started_kinds.add(kind)
     const job: PollJob<T> = { key, run, promise, resolve, reject, generation, bypass_stagger }
     pending.set(key, job as PollJob)
-    if (bypass_stagger && !is_paused()) start(job)
+    if (bypass_stagger && !is_paused()) start(job as PollJob)
     else {
       queue = priority ? [job as PollJob, ...queue] : [...queue, job as PollJob]
       arm(bypass_stagger ? PAUSED_RECHECK_MS : undefined)
