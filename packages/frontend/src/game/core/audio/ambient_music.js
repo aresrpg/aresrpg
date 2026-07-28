@@ -94,6 +94,7 @@ let raf = null // running ramp-loop handle (null when settled)
 let last_tick = 0 // perf clock of the previous ramp frame (0 = first frame this run)
 
 let started = false
+let music_loads_deferred = false // resident boot holds media construction until controls/physics are live
 let user_muted = read_pref() // HUD mute preference — gates whether the armed zone sounds
 let fight_music_muted = read_fight_music_pref() // separate pref — gates ONLY the battle-bed handoff
 let volume = DEFAULT_VOLUME
@@ -366,11 +367,33 @@ function engine_stop() {
 }
 export const suspend_zone_music = engine_stop
 export function resume_zone_music() {
-  if (!current_biome || music_off()) return
+  if (!current_biome || music_off() || music_loads_deferred) return
   teardown_gen++
   engine_start(resolve_tracks(current_biome))
   document.addEventListener('visibilitychange', on_visibility)
 }
+
+/** Hold music element construction while the character GLB and resident terrain own the boot network lane. */
+export function defer_music_loads() {
+  music_loads_deferred = true
+}
+
+/** Cancel a held boot without constructing media (session teardown before controls became live). */
+export function cancel_deferred_music_loads() {
+  music_loads_deferred = false
+}
+
+/** Release the boot hold once controls are live; the latest armed biome starts through the normal engine. */
+export function release_music_loads() {
+  if (!music_loads_deferred) return
+  music_loads_deferred = false
+  if (!current_biome || music_off()) return
+  const tracks = resolve_tracks(current_biome)
+  if (!tracks) return
+  teardown_gen++
+  engine_start(tracks)
+}
+
 // Follow-cam zone API — the follow-cam workstream calls these to turn biome music ON/OFF.
 /**
  * Turn the world/biome music ON for `biome` — the FOLLOW-CAM trigger. Arms the zone, (re)builds the
@@ -398,7 +421,7 @@ export function set_zone_music(biome) {
   if (current_biome !== biome) game_log('music', `zone ${current_biome ?? 'none'} → ${biome} (D226 single-switch)`)
   current_biome = biome
   self_armed = false // a REAL external arm (dungeon/follow-cam) owns this zone now — combat-exit must never touch it
-  if (music_off()) return // zone armed, but the player opted out (or the stream owns the channel) — stay silent
+  if (music_off() || music_loads_deferred) return // armed, but muted/externally owned/boot-deferred — stay silent
   teardown_gen++ // cancel any pending engine_stop teardown
   if (switching && started)
     engine_retune(tracks) // live zone change → fade-out/swap/fade-in, never two simultaneous streams
@@ -435,7 +458,7 @@ export function start() {
   user_muted = false
   write_pref(false)
   teardown_gen++ // cancel any pending engine_stop teardown
-  if (!current_biome || music_off()) return // no armed zone, or the stream owns the channel — nothing to play
+  if (!current_biome || music_off() || music_loads_deferred) return
   const tracks = resolve_tracks(current_biome)
   if (!tracks) return
   engine_start(tracks)
@@ -632,6 +655,7 @@ export function reset_ambient_music_for_test() {
   raf = null
   last_tick = 0
   started = false
+  music_loads_deferred = false
   user_muted = false
   fight_music_muted = false
   volume = DEFAULT_VOLUME

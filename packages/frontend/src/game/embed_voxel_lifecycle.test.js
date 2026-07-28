@@ -108,14 +108,17 @@ describe('issue #17 — zone-music channel ownership wiring (source-verified, GL
   })
 
   test('the region-follower creation gates on owns_ambient_music, not a raw follow-blind condition', () => {
-    const region_follower_decl = source.slice(source.indexOf('const region_follower ='), source.indexOf('const region_base_biome ='))
-    expect(region_follower_decl).toContain('owns_ambient_music(')
+    const region_follower_decl = source.slice(
+      source.indexOf('const owns_music ='),
+      source.indexOf('const region_base_biome =')
+    )
+    expect(region_follower_decl).toContain('const owns_music = owns_ambient_music(')
+    expect(region_follower_decl).toContain('const region_follower = owns_music')
   })
 
   test('the boot-time zone-music arm gates on owns_ambient_music, not a raw follow-blind condition', () => {
     const boot_arm = source.slice(source.indexOf('const engine = spectate'), source.indexOf('engine.set_zone_bounds'))
-    expect(boot_arm).toContain('owns_ambient_music(')
-    expect(boot_arm).toContain('set_zone_music(region_base_biome)')
+    expect(boot_arm).toContain('if (owns_music) set_zone_music(region_base_biome)')
   })
 
   test('mount_voxel_scene threads follow into create_session instead of voiding it', () => {

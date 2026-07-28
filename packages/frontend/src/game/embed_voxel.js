@@ -40,7 +40,15 @@ import {
   read_world_position,
 } from '../world-shell/spawns_adapter.js'
 import { should_reuse_pending_session } from './voxel_session_identity.js'
-import { resume_zone_music, set_zone_music, stop_zone_music, suspend_zone_music } from './core/audio/ambient_music.js'
+import {
+  cancel_deferred_music_loads,
+  defer_music_loads,
+  release_music_loads,
+  resume_zone_music,
+  set_zone_music,
+  stop_zone_music,
+  suspend_zone_music,
+} from './core/audio/ambient_music.js'
 import { create_region_follower, region_zone_key } from './core/audio/region_music.js'
 import { resolve_boot_spawn } from '@aresrpg/world/checkpoint'
 
@@ -206,14 +214,16 @@ function create_session(
   // singleton. owns_ambient_music is the one pure gate for both call sites below. The base biome mirrors
   // follow.ts world_to_biome exactly (chain biome, 'arctic' fallback) so a non-region world's key equals
   // what this session armed — the follower then never fires a switch there.
-  const region_follower = owns_ambient_music(spectate, follow, bound_world)
+  const owns_music = owns_ambient_music(spectate, follow, bound_world)
+  if (owns_music) defer_music_loads()
+  const region_follower = owns_music
     ? create_region_follower({ arm: (key) => set_zone_music(key) })
     : null
   const region_base_biome = (bound_world ? read_world_biome(bound_world) : null) ?? 'arctic'
   const engine = spectate
     ? create_engine({ canvas, tier, zone_origin: [0, 0], load_radius: 4, world_config, presentation })
     : create_engine({ canvas, tier, zone_origin: [0, 0], world_config, presentation })
-  if (owns_ambient_music(spectate, follow, bound_world)) set_zone_music(region_base_biome)
+  if (owns_music) set_zone_music(region_base_biome)
   // BOUNDLESS WORLD + COORD CODEC: world space is SIGNED and centred on the origin,
   // so the finite fence is symmetric — ±(bounds/2) on each axis. That half-extent is exactly the world↔chain
   // offset (DEFAULT_WORLD_OFFSET = the default world's bounds/2 = 250 000), so the fence and the coord codec
@@ -629,6 +639,12 @@ function create_session(
     if (can_persist_position()) void flush_world_position()
   }
   let physics_live = false // Lane 66: ONE readiness bit gates both input and controller ticks.
+  let music_released = false
+  const release_music_after_controls = () => {
+    if (!owns_music || music_released) return
+    music_released = true
+    release_music_loads()
+  }
   const player = create_player({
     engine,
     canvas,
@@ -679,6 +695,7 @@ function create_session(
       if (column_gate.ready) {
         if (column_gate.ground_y !== null) ctl.teleport([boot_spawn[0], column_gate.ground_y + 1, boot_spawn[2]])
         physics_live = true
+        release_music_after_controls()
         const t_play = performance.now()
         const stats = engine.get_stats?.() ?? {}
         game_log(
@@ -704,6 +721,7 @@ function create_session(
         // condition can NEVER pass — a safety gate that can hang its player is worse than the fall it
         // prevents. Engage anyway, loudly; the under-map rescue below + the floor net self-heal the void fall.
         physics_live = true
+        release_music_after_controls()
         gate_timed_out = true
         game_log(
           'voxel',
@@ -937,6 +955,7 @@ function create_session(
     : setTimeout(run_boot_prewarm, 1500)
 
   const cleanup = () => {
+    cancel_deferred_music_loads()
     stop_zone_music()
     travel_resync_live = false
     dispose_travel_resync()

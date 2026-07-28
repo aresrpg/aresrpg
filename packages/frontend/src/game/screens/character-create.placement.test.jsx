@@ -51,7 +51,9 @@ describe('confirmed-empty world-slot placement', () => {
 
     const app = read_fixture('../../app.tsx')
     expect(app).toContain('<Route path="/marketplace" element={<MarketplacePage />} />')
-    expect(app).toContain('<Route path="/encyclopedia/*" element={<EncyclopediaPage />} />')
+    expect(app).toContain("const EncyclopediaPage = lazy(() =>")
+    expect(app).toContain('path="/encyclopedia/*"')
+    expect(app).toContain('<EncyclopediaPage />')
   })
 })
 

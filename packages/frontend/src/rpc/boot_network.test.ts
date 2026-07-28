@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 
 import { world_to_biome } from '../follow'
 import { _reset_for_test as reset_world_biome_for_test } from '../world-shell/world_biome.js'
+
 import { _reset_rpc_client_for_test, get_characters, get_config, get_sponsor_remaining, get_status } from './client'
 
 const real_fetch = globalThis.fetch

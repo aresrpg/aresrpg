@@ -59,6 +59,20 @@ afterAll(() => {
 })
 
 describe('ambient music stream lifecycle', () => {
+  test('a resident boot constructs no media until controls release the load gate', async () => {
+    const before = players.length
+    music.defer_music_loads()
+    music.set_zone_music('arctic')
+    await flush()
+    expect(players).toHaveLength(before)
+
+    music.release_music_loads()
+    await flush()
+    expect(players).toHaveLength(before + 2)
+    expect(players.filter((player) => !player.paused)).toHaveLength(1)
+    music.stop_zone_music()
+  })
+
   test('same-zone starts are idempotent, combat replaces roam, and stop leaves one-or-zero streams', async () => {
     music.set_zone_music('arctic')
     await flush()
