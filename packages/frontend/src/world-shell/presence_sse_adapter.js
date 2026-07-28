@@ -7,6 +7,10 @@
 // `stream_current` / `stream_join` / `stream_leave` inputs and hands them to the caller's `input`; set
 // ownership, identity and every projection stay in @aresrpg/world's presence fold.
 //
+// It is also the world's ONE inbound link (#1508): `src/courier/world.js` opens it with the courier's frame
+// table merged into the presence one, so peer poses and chat lines arrive on the same connection and fold
+// through the same door. Adding a vocabulary means adding rows to `frames`, never a second EventSource.
+//
 // THE WIRE (packages/rpc/indexer/src/stream.rs, #1382): `GET /v1/stream/presence/{world_id}` with
 // `?address=` and/or `?character=` — the route 400s when BOTH are missing (`:422-426`), because the query is
 // how this connection registers itself in the world's registry (`:427-431`). Frames are named: `current-set`
@@ -19,15 +23,9 @@
 // the SAME `link_status` / `link_error` vocabulary the world chat's link chip already renders.
 
 import { REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
+import { courier_presence_url } from '@aresrpg/sdk/courier'
 
 import { RPC_URL } from '../env'
-
-const stream_url = (base_url, world, address, character) => {
-  const url = new URL(`${base_url}/v1/stream/presence/${encodeURIComponent(world)}`)
-  if (address) url.searchParams.set('address', String(address))
-  if (character) url.searchParams.set('character', String(character))
-  return url.toString()
-}
 
 /** One server presence record → the row the fold keys. `id` is the character, else the bare wallet. */
 const to_row = (record) => {
@@ -55,10 +53,23 @@ export function presence_stream_message(event, type) {
 }
 
 /**
+ * THE presence vocabulary as a frame table — one SSE event name → the typed inputs that frame delivers.
+ * The courier's own vocabulary (`positions` / `position` / `chat`) rides the SAME connection and joins this
+ * table at the call site, so a world has exactly one link and one fold, never a second transport.
+ */
+export const presence_frames = Object.fromEntries(
+  ['current-set', 'join', 'leave'].map((type) => [
+    type,
+    (event) => [presence_stream_message(event, type)].filter(Boolean),
+  ])
+)
+
+/**
  * Open ONE world-presence stream. Returns the closer.
  * @param {{
  *   world: string, address?: string|null, character?: string|null,
  *   input: (message:any, now:number) => void, base_url?: string,
+ *   frames?: Record<string, (event:{ data?: string }) => any[]>,
  *   event_source_factory?: (url:string) => any, now?: () => number,
  *   set_status?: (status:string, error?:string|null) => void, max_attempts?: number,
  * }} options
@@ -69,12 +80,13 @@ export function open_presence_stream({
   character = null,
   input,
   base_url = RPC_URL,
+  frames = presence_frames,
   event_source_factory = (url) => new EventSource(url),
   now = Date.now,
   set_status = () => {},
   max_attempts = REJOIN_MAX_ATTEMPTS,
 }) {
-  const source = event_source_factory(stream_url(base_url, world, address, character))
+  const source = event_source_factory(courier_presence_url(base_url, world, { address, character }))
   let status = 'idle'
   let attempts = 0
   let closed = false
@@ -85,14 +97,13 @@ export function open_presence_stream({
     set_status(next, error)
   }
 
-  const receive = (type) => (event) => {
-    const message = presence_stream_message(event, type)
+  const receive = (decode) => (event) => {
     attempts = 0
     announce('connected')
-    if (message) input(message, now())
+    for (const message of decode(event)) input(message, now())
   }
 
-  for (const type of ['current-set', 'join', 'leave']) source.addEventListener?.(type, receive(type))
+  for (const [type, decode] of Object.entries(frames)) source.addEventListener?.(type, receive(decode))
   source.addEventListener?.('open', () => {
     attempts = 0
     announce('connected')

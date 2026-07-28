@@ -13,8 +13,8 @@ import { test, expect } from 'bun:test'
 // executor, and the stubbed (unconfigured → rejecting) get_sdk keeps it answering null instead of opening a
 // REAL memoized SDK client from inside a unit test.
 import '../test_helpers/expedition_sdk_mock.js'
-import { presence_store } from '../world-shell/presence_adapter.js'
-import { ingest_courier_event } from '../courier/world.js'
+import { presence_input, presence_store } from '../world-shell/presence_adapter.js'
+import { courier_inputs } from '../courier/world.js'
 import {
   reset_trystero_mock,
   trystero_actions as actions,
@@ -29,8 +29,9 @@ const { broadcast_state, join_lobby, leave_lobby, nudge_party_invite, set_local_
 const { trystero_room_topic } = await import('./relay-signaling.js')
 
 const fire_state = (/** @type {any} */ p) => actions.get('state').onMessage(p, { peerId: `peer-${p.id}` })
-const fire_pos = (/** @type {any} */ p) =>
-  ingest_courier_event({ type: 'position', character: p.id, x: p.x, z: p.y, heading: p.yw })
+/** One delivered courier frame, folded exactly as the world link folds it. */
+const deliver = (/** @type {any} */ row) => courier_inputs(row).forEach((input) => presence_input(input))
+const fire_pos = (/** @type {any} */ p) => deliver({ type: 'position', character: p.id, x: p.x, z: p.y, heading: p.yw })
 /** The peer's last ACCEPTED cell in the presence atom — a dropped position never advances it. */
 const peer_cell = (/** @type {string} */ id) => presence_store.getState().peers.get(id)?.cell
 

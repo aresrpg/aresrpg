@@ -77,7 +77,17 @@ export async function post_courier_chat(
   )
 }
 
-/** @param {string} base_url @param {string} world */
-export const courier_presence_url = (base_url, world) =>
-  endpoint(base_url, `${COURIER_PRESENCE_PATH}/${encodeURIComponent(world)}`)
+/**
+ * THE presence-link URL — one home for the route contract both halves speak. The world is the path; the
+ * connection's own identity is the query, and the read layer REFUSES a link that names neither (it is how the
+ * socket registers itself in the world's presence registry).
+ * @param {string} base_url @param {string} world
+ * @param {{ address?: string | null, character?: string | null }} [identity]
+ */
+export const courier_presence_url = (base_url, world, { address = null, character = null } = {}) => {
+  const url = new URL(endpoint(base_url, `${COURIER_PRESENCE_PATH}/${encodeURIComponent(world)}`))
+  if (address) url.searchParams.set('address', String(address))
+  if (character) url.searchParams.set('character', String(character))
+  return url.toString()
+}
 

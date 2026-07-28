@@ -10,20 +10,16 @@
 import { test, expect } from 'bun:test'
 
 import '../test_helpers/expedition_sdk_mock.js'
-import { ingest_courier_event } from '../courier/world.js'
-import { presence_store } from '../world-shell/presence_adapter.js'
+import { courier_inputs } from '../courier/world.js'
+import { presence_input, presence_store } from '../world-shell/presence_adapter.js'
 import { reset_trystero_mock, trystero_actions as actions } from '../test_helpers/trystero_mock.js'
 
 const { join_lobby, leave_lobby } = await import('./lobby-room.js')
 
-const fire_pos = (/** @type {any} */ p, /** @type {string} */ _connection = `courier-${p.id}`) =>
-  ingest_courier_event({
-    type: 'position',
-    character: p.id,
-    x: p.x,
-    z: p.y,
-    heading: p.yw,
-  })
+/** One delivered courier frame, folded exactly as the world link folds it. */
+const deliver = (/** @type {any} */ row) => courier_inputs(row).forEach((input) => presence_input(input))
+const fire_pos = (/** @type {any} */ p) =>
+  deliver({ type: 'position', character: p.id, x: p.x, z: p.y, heading: p.yw })
 const fire_state = (/** @type {any} */ p, /** @type {string} */ peer_id = `peer-${p.id}`) =>
   actions.get('state').onMessage(p, { peerId: peer_id })
 const peer = (/** @type {string} */ id) => presence_store.getState().peers.get(id)
