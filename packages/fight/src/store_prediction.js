@@ -289,10 +289,12 @@ export const reduce_predicted = (state, msg, now) => {
   const my_glyphs = place_glyphs.length
     ? [
         ...state.my_glyphs,
+        // `turns` is the AUTHORED budget and stays put; `turns_remaining` is the fold's projection of it against
+        // the chain's player-turn ordinal (fold.js), stamped on the record the first recompute that sees it.
         ...place_glyphs.map((glyph) => ({
           draft_id: msg.intent_id ?? null,
           cells: Array.isArray(glyph?.cells) ? glyph.cells : [],
-          turns_remaining: Number(glyph?.turns ?? glyph?.turns_remaining ?? 1),
+          turns: Number(glyph?.turns ?? glyph?.turns_remaining ?? 1),
           gone: false,
         })),
       ]

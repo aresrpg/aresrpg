@@ -103,6 +103,9 @@ export const empty_fight = () => ({
   // Renderer/prediction accumulators. They are never an alternate canonical chain fold.
   my_traps: [],
   my_glyphs: [],
+  // The greatest CHAIN player-turn ordinal this fold has observed — the glyph ledger's clock (fold.js). Monotone
+  // within one fight, reset here with the rest of the accumulators.
+  glyph_clock: 0,
   placement_ghosts: {},
   courtesy_seen: {},
   flagged: null,
