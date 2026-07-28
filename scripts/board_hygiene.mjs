@@ -51,8 +51,7 @@ export const CLOSE_AFTER_WARNING_DAYS = 7
 // every loop-labelled open issue today is either an ordinary finding or a numbered pass ledger, both
 // of which are work rows like any other. `epic` already exempts the standing family parents. When a
 // genuinely standing ledger earns its own label, it joins this array — one line, reviewed.
-// Deferral labels (`blocked`, `icebox`, `roadmap`, `mainnet`, `deferred-post-release`) are
-// deliberately absent: deferred is not immortal.
+// `blocked` is deliberately absent: waiting is not immortal either.
 export const EXEMPT_LABELS = ['P0', 'P1', 'security', 'owner-gated', 'epic']
 // Secondary rate limits punish a 200-mutation burst, and a wall of 200 comments is noise nobody
 // reads. Each pass spends at most this many mutations per run, oldest row first — the queue drains
