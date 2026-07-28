@@ -206,24 +206,42 @@ fn address(raw: &str) -> std::result::Result<String, HttpError> {
         .map_err(|error| bad_request(format!("address is not a Sui address: {error}")))
 }
 
-fn last_event_id(headers: &HeaderMap) -> std::result::Result<Option<FightCursor>, HttpError> {
-    let Some(value) = headers.get(&LAST_EVENT_ID) else {
+#[derive(Debug, Deserialize)]
+struct FightStreamQuery {
+    #[serde(rename = "lastEventId")]
+    last_event_id: Option<String>,
+}
+
+fn parse_last_event_id(raw: Option<&str>) -> std::result::Result<Option<FightCursor>, HttpError> {
+    let Some(raw) = raw else {
         return Ok(None);
     };
-    let raw = value.to_str().map_err(bad_request)?;
     if raw.is_empty() {
         return Ok(None);
     }
     raw.parse().map(Some).map_err(bad_request)
 }
 
+fn last_event_id(
+    headers: &HeaderMap,
+    query: &FightStreamQuery,
+) -> std::result::Result<Option<FightCursor>, HttpError> {
+    let raw = headers
+        .get(&LAST_EVENT_ID)
+        .map(|value| value.to_str().map_err(bad_request))
+        .transpose()?
+        .or(query.last_event_id.as_deref());
+    parse_last_event_id(raw)
+}
+
 async fn fight_stream(
     State(state): State<StreamState>,
     Path(fight_id): Path<String>,
+    Query(query): Query<FightStreamQuery>,
     headers: HeaderMap,
 ) -> std::result::Result<Response, HttpError> {
     let fight_id = object_id(&fight_id, "fight_id")?;
-    let after = last_event_id(&headers)?;
+    let after = last_event_id(&headers, &query)?;
     let (sender, receiver) = mpsc::channel::<SseItem>(128);
     tokio::spawn(async move {
         if let Err(error) = pump_fight(state, fight_id.clone(), after, sender).await {
@@ -554,9 +572,11 @@ fn unix_ms() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        active_presence_rows, presence_changes, replay_tail, FightCursor, PresenceChange,
-        PresenceRecord,
+        active_presence_rows, last_event_id, presence_changes, replay_tail, FightCursor,
+        FightStreamQuery, PresenceChange, PresenceRecord,
     };
+    use axum::extract::Query;
+    use axum::http::{HeaderMap, HeaderValue, Uri};
     use std::collections::BTreeSet;
 
     /// Synthetic fixture ids, widened from a short tail so this module hand-types no live-shaped
@@ -579,6 +599,24 @@ mod tests {
         assert_eq!(
             tail.into_iter().map(|event| event.id).collect::<Vec<_>>(),
             [FightCursor::new(90, 11), FightCursor::new(91, 0)]
+        );
+    }
+
+    #[test]
+    fn query_param_resume_is_honored_when_header_is_absent() {
+        let uri: Uri = "/v1/stream/fight/0x1?lastEventId=90%3A7".parse().unwrap();
+        let Query(query) = Query::<FightStreamQuery>::try_from_uri(&uri).unwrap();
+
+        let mut headers = HeaderMap::new();
+        assert_eq!(
+            last_event_id(&headers, &query).unwrap(),
+            Some(FightCursor::new(90, 7))
+        );
+
+        headers.insert("last-event-id", HeaderValue::from_static("91:2"));
+        assert_eq!(
+            last_event_id(&headers, &query).unwrap(),
+            Some(FightCursor::new(91, 2))
         );
     }
 
