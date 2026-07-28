@@ -192,7 +192,10 @@ services:
       # sponsor key is required here; NEVER SUI_MASTER_KEY.
       GAS_POOL_KEYPAIR: ${GAS_POOL_KEYPAIR:-}
       GAS_POOL_REDIS_URL: redis://redis:6379
-      SUI_FULLNODE_URL: ${SUI_FULLNODE_URL:-https://fullnode.testnet.sui.io:443}
+      # DEBT(2026-07-28, provider-law): JSON-RPC-only binary — migrate to gRPC or replace; endpoint
+      # must be set at deploy time, never defaulted (#1421). Empty here on purpose: the container's
+      # generate-config.mjs refuses at boot with the reason, exactly like a missing sponsor key.
+      SUI_FULLNODE_URL: ${SUI_FULLNODE_URL:-}
       GAS_STATION_AUTH: ${GAS_STATION_AUTH:-}
       # ANTI-DRAIN (constitution, ledgered 07-10 — the old 1500 SUI/day default was a 7500×
       # landmine): 0.2 SUI/UTC-day global spend + 0.1 SUI per reserve_gas request (= the app's

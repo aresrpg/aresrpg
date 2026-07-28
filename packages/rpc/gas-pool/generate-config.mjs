@@ -143,7 +143,13 @@ export function render_config(env) {
   const keypair = resolve_keypair_base64(keypair_raw)
 
   const redis_url = env.GAS_POOL_REDIS_URL ?? 'redis://127.0.0.1:6379'
-  const fullnode = env.SUI_FULLNODE_URL ?? 'https://fullnode.testnet.sui.io:443'
+  // DEBT(2026-07-28, provider-law): JSON-RPC-only binary — migrate to gRPC or replace; endpoint
+  // must be set at deploy time, never defaulted (#1421).
+  const fullnode = env.SUI_FULLNODE_URL
+  if (!fullnode)
+    throw new Error(
+      'SUI_FULLNODE_URL missing — the upstream gas-pool binary speaks JSON-RPC only, and no official Mysten JSON-RPC endpoint exists to default to; set it explicitly at deploy time (see #1421)'
+    )
   const rpc_port = Number(env.GAS_POOL_PORT ?? 9527)
   // 0.2 SUI/UTC-day global ceiling — the "can't be drained endlessly" number (same figure
   // api/sponsor.mjs enforces as SPONSOR_DAILY_CAP_MIST). Env-raise deliberately at scale.

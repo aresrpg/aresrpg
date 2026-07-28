@@ -21,7 +21,12 @@ import { describe, expect, test } from 'bun:test'
 
 import { render_config } from './generate-config.mjs'
 
-const BASE = { GAS_POOL_KEYPAIR: 'dGVzdC1rZXktbmV2ZXItcmVhbA==' }
+// SUI_FULLNODE_URL has NO default (provider law — see generate-config.mjs and #1421), so every
+// render fixture must carry one; this value is a test string, never an endpoint anyone dials.
+const BASE = {
+  GAS_POOL_KEYPAIR: 'dGVzdC1rZXktbmV2ZXItcmVhbA==',
+  SUI_FULLNODE_URL: 'https://json-rpc.example.invalid',
+}
 
 /** Mint a fresh throwaway keypair via `sui keytool` and return its base64 + bech32 twins. */
 function mint_suiprivkey(scheme) {
@@ -59,12 +64,18 @@ describe('render_config — anti-drain caps (the constitution)', () => {
     expect(() => render_config({})).toThrow(/GAS_POOL_KEYPAIR/)
   })
 
-  test('infra defaults survive untouched (redis, fullnode, port, coin-init)', () => {
+  test('infra defaults survive untouched (redis, port, coin-init)', () => {
     const yaml = render_config(BASE)
     expect(yaml).toContain('redis_url: "redis://127.0.0.1:6379"')
-    expect(yaml).toContain('fullnode-url: "https://fullnode.testnet.sui.io:443"')
     expect(yaml).toContain('rpc-port: 9527')
     expect(yaml).toContain('target-init-balance: 100000000')
+  })
+
+  // PROVIDER LAW (#1421): the fullnode endpoint is deploy-time input, never a baked default — a
+  // default here is either a forbidden provider or the official host's dead JSON-RPC route.
+  test('the fullnode endpoint rides env and a missing one REFUSES (no defaulted provider)', () => {
+    expect(render_config(BASE)).toContain('fullnode-url: "https://json-rpc.example.invalid"')
+    expect(() => render_config({ GAS_POOL_KEYPAIR: BASE.GAS_POOL_KEYPAIR })).toThrow(/SUI_FULLNODE_URL/)
   })
 })
 

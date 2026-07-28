@@ -142,11 +142,14 @@ All env-driven; see [`.env.example`](./.env.example). Highlights:
 | `FIRST_CHECKPOINT`      | — (genesis if unset)                 | indexer   |
 | `RATE_LIMIT_MAX`        | `120`                                | api       |
 | `RATE_LIMIT_WINDOW_SEC` | `60`                                 | api       |
+| `SUI_FULLNODE_URL`      | — (required)                         | gas-pool  |
 
 The gas pool is a separate, **opt-in** sponsor (`docker compose --profile gas
 up`) — see [`gas-pool/README.md`](./gas-pool/README.md). It is the only component
 that holds a key, and that key is a fresh, dedicated sponsor key — never a
-production key.
+production key. Its upstream binary speaks JSON-RPC only — a transport no
+official endpoint still serves — so `SUI_FULLNODE_URL` has no default at all and
+the component refuses to boot until a deploy supplies one ([#1421](https://github.com/aresrpg/aresrpg/issues/1421)).
 
 Redis itself carries **no authentication**. `docker-compose.yml` publishes it to
 `127.0.0.1` only by default, so it's reachable from the host but not the network.

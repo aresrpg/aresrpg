@@ -26,7 +26,7 @@ Put the printed `GAS_POOL_KEYPAIR=…` line in the project `.env` (gitignored).
 ## Run with Docker (opt-in profile)
 
 ```bash
-# From packages/rpc, with GAS_POOL_KEYPAIR + GAS_STATION_AUTH set in .env:
+# From packages/rpc, with GAS_POOL_KEYPAIR + GAS_STATION_AUTH + SUI_FULLNODE_URL set in .env:
 docker compose --profile gas up gas-pool
 curl -s localhost:9527/    # -> ok
 ```
@@ -48,7 +48,8 @@ git clone --depth 1 https://github.com/MystenLabs/sui-gas-pool.git
 cd sui-gas-pool && cargo build --release --bin sui-gas-station && cd -
 
 # 2. Render the config from env (writes gitignored config.local.yaml):
-GAS_POOL_KEYPAIR=… GAS_POOL_REDIS_URL=redis://127.0.0.1:6379 bun generate-config.mjs
+GAS_POOL_KEYPAIR=… GAS_POOL_REDIS_URL=redis://127.0.0.1:6379 \
+  SUI_FULLNODE_URL=<the JSON-RPC endpoint this deploy uses> bun generate-config.mjs
 
 # 3. Start it (auto-splits the sponsor's coins to target-init-balance):
 GAS_STATION_AUTH=<bearer-token> \
@@ -60,16 +61,16 @@ curl -s localhost:9527/    # -> ok
 
 ## Config knobs (env)
 
-| Var                            | Default                               | Meaning                                                                                                                           |
-| ------------------------------ | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `GAS_POOL_KEYPAIR`             | — (required)                          | `suiprivkey1…` bech32 wallet export (preferred — what a prod wallet gives you) or legacy base64 `flag\|\|secret` (fresh + funded) |
-| `GAS_STATION_AUTH`             | — (required)                          | bearer token (server-side callers ONLY — never a browser)                                                                         |
-| `GAS_POOL_REDIS_URL`           | `redis://127.0.0.1:6379`              | coin-state store                                                                                                                  |
-| `SUI_FULLNODE_URL`             | `https://fullnode.testnet.sui.io:443` | fullnode the pool talks to                                                                                                        |
-| `GAS_POOL_PORT`                | `9527`                                | station RPC port                                                                                                                  |
-| `GAS_POOL_DAILY_CAP`           | `200000000`                           | global daily spend cap (MIST) — 0.2 SUI/day, owner anti-drain constitution                                                        |
-| `GAS_POOL_MAX_PER_REQUEST`     | `100000000`                           | per-`reserve_gas` budget ceiling (MIST) — 0.1 SUI = the app's `GAS_CEILING_SUI`                                                   |
-| `GAS_POOL_TARGET_INIT_BALANCE` | `100000000`                           | per-coin target balance (MIST)                                                                                                    |
+| Var                            | Default                  | Meaning                                                                                                                            |
+| ------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `GAS_POOL_KEYPAIR`             | — (required)             | `suiprivkey1…` bech32 wallet export (preferred — what a prod wallet gives you) or legacy base64 `flag\|\|secret` (fresh + funded)  |
+| `GAS_STATION_AUTH`             | — (required)             | bearer token (server-side callers ONLY — never a browser)                                                                          |
+| `GAS_POOL_REDIS_URL`           | `redis://127.0.0.1:6379` | coin-state store                                                                                                                   |
+| `SUI_FULLNODE_URL`             | — (required)             | JSON-RPC endpoint the pool talks to — deploy-time input, never defaulted ([#1421](https://github.com/aresrpg/aresrpg/issues/1421)) |
+| `GAS_POOL_PORT`                | `9527`                   | station RPC port                                                                                                                   |
+| `GAS_POOL_DAILY_CAP`           | `200000000`              | global daily spend cap (MIST) — 0.2 SUI/day, owner anti-drain constitution                                                         |
+| `GAS_POOL_MAX_PER_REQUEST`     | `100000000`              | per-`reserve_gas` budget ceiling (MIST) — 0.1 SUI = the app's `GAS_CEILING_SUI`                                                    |
+| `GAS_POOL_TARGET_INIT_BALANCE` | `100000000`              | per-coin target balance (MIST)                                                                                                     |
 
 ## Access model (ruling 2026-07-10) — internal primitive, ONE public door
 

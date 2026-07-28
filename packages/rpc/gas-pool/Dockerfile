@@ -41,7 +41,8 @@ COPY generate-config.mjs entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
 # Config (env): GAS_POOL_KEYPAIR (required, fresh+funded), GAS_POOL_REDIS_URL,
-# SUI_FULLNODE_URL, GAS_POOL_PORT, GAS_POOL_DAILY_CAP (0.2 SUI/day default),
+# SUI_FULLNODE_URL (required — no default, provider law #1421), GAS_POOL_PORT,
+# GAS_POOL_DAILY_CAP (0.2 SUI/day default),
 # GAS_POOL_MAX_PER_REQUEST (0.1 SUI/request default — anti-drain constitution),
 # GAS_STATION_AUTH.
 EXPOSE 9527
