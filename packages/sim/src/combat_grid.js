@@ -18,6 +18,9 @@ import {
 } from './spell_effect.js'
 
 // D75 encoding STRIDE + bounds — cell = y*GRID_W + x. GRID_W=20 is the SSOT stride every reader encodes against.
+// THE ONE HOME (#1536 row 3): this block — the dims, `encode`/`decode`/`cell_x`/`cell_y`, `in_grid`, `manhattan` —
+// is the board's whole spatial vocabulary. `packages/fight/src/los.js` IMPORTS it (and re-exports it under the
+// `@aresrpg/fight/los` surface its 20 consumers already use); nothing anywhere re-declares these names.
 export const GRID_W = 20
 export const GRID_H = 19
 export const GRID_CELLS = GRID_W * GRID_H // 380
@@ -41,7 +44,8 @@ export const cell_y = cell => Math.floor(cell / GRID_W)
 export const encode = (x, y) => y * GRID_W + x
 /** Encoded cell → `{x, y}` — the exact inverse of `encode`. */
 export const decode = cell => ({ x: cell_x(cell), y: cell_y(cell) })
-export const in_grid = cell => cell < GRID_CELLS
+/** Board membership. A negative index is an encode/decode accident, never a cell — out of grid (#1536 row 3). */
+export const in_grid = cell => cell >= 0 && cell < GRID_CELLS
 export const grid_cells = () => GRID_CELLS
 
 /** MANHATTAN distance (4-directional, no diagonals) — |Δx| + |Δy|. */

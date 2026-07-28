@@ -13,24 +13,17 @@
 // inbound chain cell to encode(x,y)=y*20+x (train-3 stride-10 records re-encoded at the boundary), and the
 // outbound tx sites translate back. These dims MUST match combat_grid.move's GRID_W=20/GRID_H=19 (its own
 // doc: "fight-los.js GRID_W must match"). At 10 every canonical decode y-doubles = a scrambled board.
-export const GRID_W = 20
-export const GRID_H = 19
-export const GRID_CELLS = GRID_W * GRID_H
+//
+// #1536 row 3 — the dims + encode/decode/in_grid are NOT declared here: their ONE HOME is
+// `@aresrpg/sim/combat_grid` (the deterministic core both packages already ride on). This module re-exports them
+// so `@aresrpg/fight/los` stays the client's single import surface for board math.
+import { GRID_CELLS, GRID_H, GRID_W, cell_x, cell_y, decode, encode } from '@aresrpg/sim/combat_grid'
 
-const cx_ = (c) => c % GRID_W
-const cy_ = (c) => (c / GRID_W) | 0
+export { GRID_W, GRID_H, GRID_CELLS, encode, decode }
+
+const cx_ = cell_x
+const cy_ = cell_y
 const absd = (a, b) => (a > b ? a - b : b - a)
-
-/** cell index for a given (x,y) — inverse of cx_/cy_. */
-export function encode(x, y) {
-  return y * GRID_W + x
-}
-
-/** encoded cell (y*GRID_W+x) → arena-local {x,y} — the inverse of `encode`. The ONE decode, imported by every
- *  consumer (fight-overlay / dungeon_store / DungeonBoard) so the index↔(x,y) math never drifts across files. */
-export function decode(cell) {
-  return { x: cell % GRID_W, y: (cell / GRID_W) | 0 }
-}
 
 /** The ONE board cell→world mapper: arena-local (x,y) → roam world XZ, offset by the board origin, TILE units per
  *  cell. Every world placement (board floor stamp, fighter sprites, start rings, picks, VFX anchors) goes through
@@ -70,7 +63,7 @@ export function lineOfSight(from, to, obstacles) {
 
 /**
  * Every cell within Chebyshev `range` of `viewer` that has line-of-sight to it — for a range/LOS highlight
- * overlay. O(range²), trivial at MVP board size (10x10). Excludes the viewer's own cell.
+ * overlay. O(range²), trivial at board size (20x19). Excludes the viewer's own cell.
  */
 export function visibleCellsInRange(viewer, range, obstacles) {
   const vx = cx_(viewer),
@@ -88,117 +81,15 @@ export function visibleCellsInRange(viewer, range, obstacles) {
 }
 
 // ╔════════════════ [ D41 PATHFINDING — the byte-identical twin of combat_grid::bfs_path_cost ] ═══════════════ ]
-// 4-connected BFS over the 10×10 grid, treating every cell in `blocked` (obstacles ∪ holes ∪ out-of-bounds ∪
+// 4-connected BFS over the 20×19 grid, treating every cell in `blocked` (obstacles ∪ holes ∪ out-of-bounds ∪
 // occupied fighters — body-blocking) as a WALL. The client MUST match the contract cell-for-cell so the drawn
 // path length == the MP the commit spends. `blocked` is a Set OR array of encoded cells.
-
-const in_grid = (c) => c >= 0 && c < GRID_CELLS
-const blocked_pred = (blocked) => (blocked instanceof Set ? (c) => blocked.has(c) : (c) => blocked.includes(c))
-
-/** The 4-connected in-grid neighbours of `c` in Move's draw order (x-1, x+1, y-1, y+1). */
-const neighbors4 = (c) => {
-  const x = cx_(c),
-    y = cy_(c)
-  const out = []
-  if (x > 0) out.push(c - 1)
-  if (x + 1 < GRID_W) out.push(c + 1)
-  if (y > 0) out.push(c - GRID_W)
-  if (y + 1 < GRID_H) out.push(c + GRID_W)
-  return out
-}
-
-/**
- * Shortest 4-connected step count from `start` to `target` around `blocked`, capped at `maxSteps`. Verbatim
- * port of `combat_grid::bfs_path_cost`: returns the exact MP cost if reachable within budget, else `GRID_CELLS`
- * (100 — the unreachable sentinel, larger than any real cost). start==target -> 0.
- * @param {number} start @param {number} target @param {Set<number>|number[]} blocked @param {number} maxSteps
- * @returns {number}
- */
-export function bfsPathCost(start, target, blocked, maxSteps) {
-  if (start === target) return 0
-  const is_blocked = blocked_pred(blocked)
-  if (!in_grid(start) || !in_grid(target) || is_blocked(target)) return GRID_CELLS
-  const visited = new Array(GRID_CELLS).fill(false)
-  visited[start] = true
-  let frontier = [start]
-  let steps = 0
-  while (steps < maxSteps && frontier.length) {
-    steps++
-    const next = []
-    for (const c of frontier)
-      for (const n of neighbors4(c)) {
-        if (!visited[n] && !is_blocked(n)) {
-          if (n === target) return steps
-          visited[n] = true
-          next.push(n)
-        }
-      }
-    frontier = next
-  }
-  return GRID_CELLS
-}
-
-/**
- * The concrete shortest route from `start` to `target` (encoded cells, EXCLUDING start) — a BFS with parent
- * pointers whose length is exactly `bfsPathCost(start, target, blocked, maxSteps)`. `[]` when start==target,
- * blocked, or unreachable within budget. This is the drawn path; its length == the contract's MP charge.
- * @param {number} start @param {number} target @param {Set<number>|number[]} blocked @param {number} maxSteps
- * @returns {number[]}
- */
-export function bfsPath(start, target, blocked, maxSteps) {
-  if (start === target) return []
-  const is_blocked = blocked_pred(blocked)
-  if (!in_grid(start) || !in_grid(target) || is_blocked(target)) return []
-  const parent = new Array(GRID_CELLS).fill(-1)
-  const visited = new Array(GRID_CELLS).fill(false)
-  visited[start] = true
-  let frontier = [start]
-  let steps = 0
-  while (steps < maxSteps && frontier.length) {
-    steps++
-    const next = []
-    for (const c of frontier)
-      for (const n of neighbors4(c)) {
-        if (visited[n] || is_blocked(n)) continue
-        visited[n] = true
-        parent[n] = c
-        if (n === target) {
-          const path = []
-          for (let cur = target; cur !== start; cur = parent[cur]) path.push(cur)
-          return path.reverse()
-        }
-        next.push(n)
-      }
-    frontier = next
-  }
-  return []
-}
-
-/**
- * Every cell reachable from `start` within `maxSteps` 4-connected steps around `blocked`, EXCLUDING start — the
- * move-range set. A cell is in the result iff `bfsPathCost(start, cell, blocked, maxSteps)` ∈ [1, maxSteps], so
- * the reach wash == the click-gate == the contract's legal-move set.
- * @param {number} start @param {number} maxSteps @param {Set<number>|number[]} blocked @returns {number[]}
- */
-export function bfsReachable(start, maxSteps, blocked) {
-  const out = []
-  if (!in_grid(start)) return out
-  const is_blocked = blocked_pred(blocked)
-  const visited = new Array(GRID_CELLS).fill(false)
-  visited[start] = true
-  let frontier = [start]
-  let steps = 0
-  while (steps < maxSteps && frontier.length) {
-    steps++
-    const next = []
-    for (const c of frontier)
-      for (const n of neighbors4(c)) {
-        if (visited[n] || is_blocked(n)) continue
-        visited[n] = true
-        out.push(n)
-        next.push(n)
-      }
-    frontier = next
-  }
-  return out
-}
+//
+// #1536 row 2 — there is exactly ONE such BFS in the tree and it lives in `@aresrpg/sim/pathfind` (the sim also
+// pathfinds, on rolled arenas, and a package cannot import its own dependent). These three names are the client's
+// long-standing import surface, kept as aliases so no call site had to churn.
+export {
+  bfs_path_cost as bfsPathCost,
+  bfs_path as bfsPath,
+  bfs_reachable as bfsReachable,
+} from '@aresrpg/sim/pathfind'
