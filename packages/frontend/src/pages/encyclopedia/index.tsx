@@ -235,6 +235,7 @@ export function EncyclopediaPage() {
       <Routes>
         <Route path="items" element={<ItemsTabRoute is_mobile={is_mobile} />} />
         <Route path="items/:id" element={<ItemsTabRoute is_mobile={is_mobile} />} />
+        <Route path="mobs" element={<Navigate to="/encyclopedia/bestiary" replace />} />
         <Route path="bestiary" element={<BestiaryTabRoute is_mobile={is_mobile} />} />
         <Route path="bestiary/:id" element={<BestiaryTabRoute is_mobile={is_mobile} />} />
         <Route path="classes" element={<ClassesTabRoute classes={classes} is_mobile={is_mobile} />} />

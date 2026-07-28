@@ -4,9 +4,13 @@
 // counts — become clickable links INTO the encyclopedia. encyclopedia_path is the ONE link idiom (a single
 // home, never two link systems): it builds the exact deep-link URL the EncyclopediaPage routes on
 // (/encyclopedia/<tab>/:id), or the tab root when the id is absent (an honest link, never /.../undefined).
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, test } from 'bun:test'
 
 import { encyclopedia_path } from './links'
+
+const read_fixture = (relative_path: string) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
 
 describe('encyclopedia_path — the ONE entity-link idiom', () => {
   test('item id → the items detail deep-link (the dungeon key)', () => {
@@ -22,4 +26,14 @@ describe('encyclopedia_path — the ONE entity-link idiom', () => {
     expect(encyclopedia_path('item', null)).toBe('/encyclopedia/items')
     expect(encyclopedia_path('world', undefined)).toBe('/encyclopedia/worlds')
   })
+})
+
+test('the legacy /encyclopedia/mobs URL redirects to the bestiary before the items fallback', () => {
+  const source = read_fixture('./index.tsx')
+  const mobs_alias = '<Route path="mobs" element={<Navigate to="/encyclopedia/bestiary" replace />} />'
+  const alias_index = source.indexOf(mobs_alias)
+  const fallback_index = source.indexOf('<Route path="*" element={<Navigate to="/encyclopedia/items" replace />} />')
+
+  expect(alias_index).toBeGreaterThan(-1)
+  expect(alias_index).toBeLessThan(fallback_index)
 })
