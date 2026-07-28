@@ -42,7 +42,14 @@ import { present_trap } from './trap_ledger.js'
 // The PRESENTATION projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
 // names so project.js and tools keep importing them from the store's door.
 export { claimed_budget_state, presented_state, display_state } from './fold.js'
-export { committed_truth, MIN_ACTION_MS, PLAYER_TURN_FLOOR_MS, WAVE_ACK_GRACE_MS } from './store_state.js'
+export {
+  committed_truth,
+  MIN_ACTION_MS,
+  min_turn_ready_at,
+  PLAYER_TURN_FLOOR_MS,
+  submit_wait_ms,
+  WAVE_ACK_GRACE_MS,
+} from './store_state.js'
 
 // ── THE TRUTH SOURCE ──────────────────────────────────────────────────────────────────────────────────────────
 // The COMMITTED board every projection reads (project.js) is folded by the HEADLESS CORE that lives in this atom

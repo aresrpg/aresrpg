@@ -3,6 +3,7 @@
 // fight/store_state.js — state shape and projections shared by the single fight-store write door.
 
 import { project_board } from './core_project.js'
+import { CHAIN_MIN_TURN_MS, chain_min_turn_at } from './draft_budget.js'
 import { entity_fold_key } from './fold.js'
 import { empty_state } from './inputs.js'
 import * as settle_input from './inputs.js'
@@ -29,8 +30,45 @@ export const committed_health = (state) => {
   }
 }
 
-export const PLAYER_TURN_FLOOR_MS = 3000
+/** The player's per-turn floor IS the chain's `actions.move` MIN_TURN_MS — derived, never re-typed. */
+export const PLAYER_TURN_FLOOR_MS = CHAIN_MIN_TURN_MS
 export const MIN_ACTION_MS = 5000
+
+/**
+ * MY turn's min-turn floor as an ABSOLUTE instant — the ONE anchor the End Turn button, the intent door and the
+ * kill auto-commit all read (#1484). Two clocks measure this turn and only one of them can refuse a transaction:
+ * `actions::assert_min_turn` gates on the CHAIN's turn start (its 3s-per-replayed-mob widening already folded
+ * into `turn_deadline_ms`) plus the floor, while `turn_started_at` is only the client's local GUESS at that same
+ * instant — the moment its own mob replay drained. When the guess runs early the chain aborts ETurnTooFast and
+ * the player loses a turn they legitimately spent 3+ seconds on. Take the LATER of the two: never submit before
+ * BOTH clocks allow. Null when it is not my playable turn.
+ * @param {any} state @returns {number | null}
+ */
+export const min_turn_ready_at = (state) => {
+  if (state.turn_started_at == null) return null
+  const { active } = committed_truth(state)
+  if (active == null || active !== state.my_key) return null
+  return Math.max(
+    state.turn_started_at + PLAYER_TURN_FLOOR_MS,
+    chain_min_turn_at(state.turn_deadline_ms, state.view?.turn_ms)
+  )
+}
+
+/**
+ * How long an end-turn SUBMIT must wait before the chain will accept its terminal pass — 0 when it may go now.
+ * The ONE answer both submit doors read (the optimistic intent door and the PTB door), so neither re-derives it:
+ * the min-turn remainder above, MINUS the deadline escape hatch. A turn about to expire submits immediately —
+ * losing it to the timer is strictly worse than an ETurnTooFast refusal, and the chain grants the late press
+ * its own grace. Waiting this out PRE-SIGN costs zero gas and leaves no digest, which is the whole point: an
+ * executed abort is never auto-retried (the burn law), so the turn must simply never be submitted early.
+ * @param {any} state @param {number} [now] @returns {number}
+ */
+export const submit_wait_ms = (state, now = Date.now()) => {
+  const deadline = Number(state.turn_deadline_ms ?? 0)
+  if (deadline > 0 && deadline - now <= PLAYER_TURN_FLOOR_MS) return 0
+  const ready_at = min_turn_ready_at(state)
+  return ready_at == null ? 0 : Math.max(0, ready_at - now)
+}
 
 // COURTESY event_idx lane (#334): a peer's relayed prediction retires by CLAIM, never by key, so it may sit
 // pending across unrelated canonical events. Keeping courtesy keys far above the contiguous canonical sequence

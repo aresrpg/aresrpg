@@ -7,7 +7,7 @@ import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { merge_entries, presented_state, recompute } from './fold.js'
 import { actor_from_key, apply_action, fighter_key, normalize_intent, seat_resolver } from './inputs.js'
 import { reconcile_predictions } from './reconcile_action.js'
-import { PLAYER_TURN_FLOOR_MS } from './store_state.js'
+import { submit_wait_ms } from './store_state.js'
 
 const actor_key = (is_mob, idx) => `${is_mob ? 'm' : 'p'}${Number(idx)}`
 
@@ -138,11 +138,13 @@ export const claim_predictions = (state, authoritative, now) => {
 
 /** Reduce one local intent. The function is pure; store.js remains the sole state-write door. */
 export const reduce_intent = (state, msg, now) => {
-  if (msg.intent?.kind === 'end_turn' && state.turn_started_at != null) {
-    const ready_at = state.turn_started_at + PLAYER_TURN_FLOOR_MS
-    const deadline = Number(state.turn_deadline_ms ?? 0)
-    if (now < ready_at && !(deadline > 0 && deadline - now <= PLAYER_TURN_FLOOR_MS))
-      return { ...state, pending_end_turn: { ready_at, intent: msg } }
+  if (msg.intent?.kind === 'end_turn') {
+    // ONE anchor with the button and the kill auto-commit (#1484) — the LATER of the local playable edge and
+    // the chain's own `assert_min_turn` floor, so an early press is HELD here for zero gas instead of reaching
+    // the chain and coming back as an ETurnTooFast rollback. The deadline escape hatch stands: a turn about to
+    // expire is worth attempting, since losing it to the timer is strictly worse.
+    const wait_ms = submit_wait_ms(state, now)
+    if (wait_ms > 0) return { ...state, pending_end_turn: { ready_at: now + wait_ms, intent: msg } }
   }
 
   const action = with_move_budget_delta(

@@ -21,13 +21,22 @@ export const POINT_MP = 1
 export const COMMIT_BUFFER_MS = 5_000
 export const CHAIN_MIN_TURN_MS = 3_000
 
-/** Absolute auto-submit instant. The chain stamps `deadline = start + turn_ms + 3s * resolved_mobs`; because the
- *  per-mob extension is already inside `deadline`, never re-anchor it to receipt/presentation time here. A short
- *  admin dial cannot fire before actions.move::assert_min_turn permits its terminal pass. */
+/** THE CHAIN'S OWN earliest legal end-turn instant — the single home for `actions.move::assert_min_turn`
+ *  (`now + turn_ms >= turn_deadline_ms + MIN_TURN_MS`) read as an absolute ms. The chain stamps
+ *  `deadline = start + turn_ms + 3s * resolved_mobs`, so this already carries the per-mob widening; never
+ *  re-anchor it to receipt/presentation time. 0 when the dial or the deadline is unknown — a starved read
+ *  must never fabricate a floor. */
+export function chain_min_turn_at(deadline, turn_ms, min_turn_ms = CHAIN_MIN_TURN_MS) {
+  return Number(deadline) > 0 && Number(turn_ms) > 0 ? Number(deadline) - Number(turn_ms) + min_turn_ms : 0
+}
+
+/** Absolute auto-submit instant. A short admin dial cannot fire before the chain floor above permits its
+ *  terminal pass. */
 export function auto_commit_fire_at(deadline, turn_ms, buffer = COMMIT_BUFFER_MS, min_turn_ms = CHAIN_MIN_TURN_MS) {
   if (!(Number(deadline) > 0)) return Number(deadline) || 0
   const desired = Number(deadline) - buffer
-  return Number(turn_ms) > 0 ? Math.max(desired, Number(deadline) - Number(turn_ms) + min_turn_ms) : desired
+  const chain_floor = chain_min_turn_at(deadline, turn_ms, min_turn_ms)
+  return chain_floor > 0 ? Math.max(desired, chain_floor) : desired
 }
 
 /** MP granted by ONE spell's level-1 give_points(MP) effects — e.g. Vanish's +MP (seed kind:6 / stat:1). 0 for

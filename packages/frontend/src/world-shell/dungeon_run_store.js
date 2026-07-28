@@ -22,7 +22,7 @@ import { get_mob_template } from '@aresrpg/sdk/game'
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
-import { fight_view } from '@aresrpg/fight/project'
+import { fight_view, submit_wait_ms } from '@aresrpg/fight/project'
 import { u64 } from '@aresrpg/fight/journal_u64'
 import {
   STATUS_OPEN,
@@ -1345,6 +1345,16 @@ export const use_dungeon = create((set, get) => ({
       return false
     }
     set({ busy: true, error: null })
+    // #1484 — NEVER hand the chain a turn it will refuse. `actions::assert_min_turn` aborts ETurnTooFast on a
+    // pass submitted before the chain's own floor, and the catch below turns that into a full turn ROLLBACK —
+    // the player loses a turn they legitimately spent 3+ seconds on. The core owns the one answer (chain floor
+    // vs local edge, with the about-to-expire escape hatch); wait it out ONCE here, PRE-SIGN, so the refusal
+    // costs zero gas and leaves no digest. Never a retry: an executed abort is never auto-fired again (burn law).
+    const wait_ms = submit_wait_ms(fight_store.getState())
+    if (wait_ms > 0) {
+      fight_state_trace('commit_min_turn_wait', { turn_key, background, wait_ms })
+      await new Promise((resolve) => setTimeout(resolve, wait_ms))
+    }
     let ok = false
     const width = dungeon?.width ?? 0
     // SOLO = one player seat. A solo commit can NEVER abort turns::ESomeoneOverdue (needs a second seat), so it

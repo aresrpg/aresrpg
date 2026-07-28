@@ -4,9 +4,9 @@
 
 import { GRID_W } from './los.js'
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
-import { committed_truth, PLAYER_TURN_FLOOR_MS } from './store.js'
+import { committed_truth, min_turn_ready_at } from './store.js'
 
-export { committed_truth } from './store.js'
+export { committed_truth, submit_wait_ms } from './store.js'
 
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
 
@@ -135,8 +135,8 @@ export const commit_due = (state) => !!state.commit_due && !state.busy
  * turn). The button greys out ONLY for this remainder — one floor per turn, NOT per cast.
  */
 export const min_turn_left = (state, now = Date.now()) => {
-  if (!is_my_turn(state) || state.turn_started_at == null) return 0
-  return Math.max(0, state.turn_started_at + PLAYER_TURN_FLOOR_MS - now)
+  const ready_at = min_turn_ready_at(state)
+  return ready_at == null ? 0 : Math.max(0, ready_at - now)
 }
 
 /** Can I commit / end my turn right now — my turn, fight live, and the min-turn floor elapsed. */

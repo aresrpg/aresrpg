@@ -5,7 +5,7 @@
 import { project_board } from './core_project.js'
 import { auto_commit_fire_at } from './draft_budget.js'
 import { presented_state } from './fold.js'
-import { MIN_ACTION_MS, PLAYER_TURN_FLOOR_MS, WAVE_ACK_GRACE_MS } from './store_state.js'
+import { MIN_ACTION_MS, min_turn_ready_at, WAVE_ACK_GRACE_MS } from './store_state.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 
 export const reduce_tick_state = (state, msg, next_core, now) => {
@@ -42,13 +42,16 @@ export const reduce_tick_state = (state, msg, next_core, now) => {
 
   const deadline_due = deadline_fresh && now >= auto_commit_fire_at(deadline, state.view?.turn_ms)
   const local_mobs = Object.values(presented_state(state).fighters ?? {}).filter((fighter) => fighter.is_mob)
+  // The SAME min-turn anchor the button and the intent door read (#1484): the kill auto-commit fires a real
+  // act_pass, so it is subject to `actions::assert_min_turn` exactly like a manual press.
+  const min_turn_at = min_turn_ready_at(state)
   const kill_due =
     deadline_fresh &&
     local_mobs.length > 0 &&
     local_mobs.every((fighter) => !fighter.alive) &&
     (state.wave ?? []).length === 0 &&
-    state.turn_started_at != null &&
-    now >= state.turn_started_at + PLAYER_TURN_FLOOR_MS &&
+    min_turn_at != null &&
+    now >= min_turn_at &&
     now >= last_action_ms + MIN_ACTION_MS
   const epoch_burned = submit_epoch != null && submit_epoch === state.commit_attempt_epoch && !state.busy
   const expired = deadline_fresh && now >= deadline
