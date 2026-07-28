@@ -69,6 +69,7 @@ test('manifest carries the move-sources staleness hash (64-hex sha256)', () => {
   expect(m.moveSourcesHash).toMatch(/^[0-9a-f]{64}$/)
 })
 
+// Cold node spawn over the @mysten/sui ESM graph can stall under contention; the dry-run itself is ~0.13s.
 test('DRIFT GUARD — every catalog policy/enable target is a real ceremony PTB call (module::fn)', () => {
   // ceremony.mjs --dry-run prints every wiring/enable moveCall target as `→ pkg::module::fn` (zero chain calls,
   // no key needed). Parse them and prove the page's step catalog is a subset — no invented/drifted targets.
@@ -84,4 +85,4 @@ test('DRIFT GUARD — every catalog policy/enable target is a real ceremony PTB 
   const catalog = [...POLICY_STEPS.flatMap((s) => s.targets), ...ENABLE_STEPS.flatMap((s) => s.targets)]
   const missing = catalog.filter((t) => !ceremony_targets.has(mod_fn(t)))
   expect(missing).toEqual([])
-})
+}, 30_000)
