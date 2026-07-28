@@ -7,14 +7,14 @@
 // (the lifecycle toasts). No async callback ever set()s the store — each edge dispatches an INPUT folded by the
 // reducer (FP constitution). The boot pickup (awaiting_boot → boot_ready) + the flight live in the player edge.
 
-import { get_characters, get_encyclopedia } from '../rpc/client'
-import { T62_WORLDS } from '../chain/deployment'
+import { get_characters } from '../rpc/client'
 import { context } from '../game/store.js'
 import { push_event_toast } from '../game/core/toast.js'
 import { game_log } from '../core/log.js'
 import i18n from '../i18n'
 
 import { fast_travel_store, initial_ft_state } from './fast_travel_store.js'
+import { load_world_catalog } from './world_catalog.js'
 import { resolve_route } from './fast_travel_target.js'
 import { join_world_action } from './world_join.js'
 
@@ -45,9 +45,12 @@ async function run_resolve(traveler_id, target) {
         ? primary_of(await get_characters({ owner: target.address }))
         : null
     const my_doc = my_id ? ((await get_characters({ id: my_id }))[0] ?? null) : null
-    const worlds = (await get_encyclopedia('worlds'))?.worlds ?? []
-    const required_level_by_world = new Map(worlds.map((w) => [w.world_id, Number(w.required_level ?? 1)]))
-    const catalog_ids = new Set(T62_WORLDS.map((w) => w.id))
+    // Both world facts come from ONE live home (world_catalog.js): the census a route is checked against and
+    // the gate it is refused on. Reading the census off the build-time receipt while the gate came from /v1
+    // is exactly the split #1510 filed — a throw here lands on the catch below, never a silent refusal.
+    const worlds = await load_world_catalog()
+    const required_level_by_world = new Map(worlds.map((w) => [w.id, w.required_level]))
+    const catalog_ids = new Set(worlds.map((w) => w.id))
     const cid = target_doc?.id ?? target.character_id ?? null
     const out = resolve_route({
       target_doc,

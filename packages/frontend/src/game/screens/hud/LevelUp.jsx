@@ -24,7 +24,7 @@ import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { resolve_class_spells } from './fight-spells.js'
 import { newly_unlocked } from './spell-unlock-select.js'
 import { worlds_unlocked_between } from './level_unlocks.js'
-import { load_world_gates } from './world_levels.js'
+import { load_world_catalog } from '../../../world-shell/world_catalog.js'
 import './result.css'
 import './levelup-radiant.css'
 
@@ -79,7 +79,7 @@ export function LevelUp({ on_allocate }) {
   // Every seeded world + its on-chain join gate (world.move `required_level`), read chain-direct + cached
   // (the /v1 worlds view omits the gate). Loaded lazily on the card's first paint; until it resolves the
   // world row is simply absent (honest — never a fabricated unlock). [] on a read failure.
-  const [world_gates, set_world_gates] = useState(/** @type {import('./world_levels.js').WorldGate[]} */ ([]))
+  const [world_gates, set_world_gates] = useState(/** @type {import('../../../world-shell/world_catalog.js').SeededWorld[]} */ ([]))
   // ONE cohesive flow, never card-over-card (canon/12+13): the end-fight RESULT panel
   // shows first; this level-up card WAITS its turn and fires only after the player hits Continue (which
   // clears `fight_result`). A level-up from outside a fight (quests/admin grants) has no result panel
@@ -96,13 +96,17 @@ export function LevelUp({ on_allocate }) {
   }, [visible])
 
   // Load the world join-gates on first paint so the "you now have access to X and Y worlds" row can compute
-  // (world_gates → worlds_unlocked_between below). Async + cached; the card re-renders when it resolves.
+  // (world_gates → worlds_unlocked_between below) off the LIVE gates the chain enforces (world_catalog.js —
+  // the one home fast travel and the travel modal read too). Async + cached; the card re-renders when it
+  // resolves. A failed read omits the world row rather than blocking the celebration or faking an unlock.
   useEffect(() => {
     if (!visible) return undefined
     let alive = true
-    load_world_gates().then(gates => {
-      if (alive) set_world_gates(gates)
-    })
+    load_world_catalog()
+      .catch(() => [])
+      .then(worlds => {
+        if (alive) set_world_gates(worlds)
+      })
     return () => {
       alive = false
     }

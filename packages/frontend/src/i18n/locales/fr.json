@@ -55,7 +55,8 @@
     "filter_empty": "Aucun monde à portée — montez de niveau",
     "mob_count": "{{count}} monstres",
     "boss_count": "{{count}} boss",
-    "resource_count": "{{count}} ressources"
+    "resource_count": "{{count}} ressources",
+    "worlds_unavailable": "Mondes indisponibles — la couche de lecture est injoignable"
   },
   "rpc": {
     "reconnecting": "Reconnexion…",

@@ -48,16 +48,16 @@ if (!seeded_worlds.length)
       'inert until the seed manifest ships (issue #106).'
   )
 
+// ID + LABEL ONLY (issue #1510). The receipt legitimately owns the seeded world ENUMERATION and the display
+// label — the chain carries no world name. It must never own a chain-derived VALUE: `required_level` is what
+// `zones::join_world` asserts and `biome` is the World object's own field, and both are frozen into the
+// deployed bundle here, so a republish that outran a redeploy left the travel modal offering a world fast
+// travel refused. Both now come from the LIVE worlds view — world-shell/world_catalog.js, one home.
 export const T62_WORLDS = seeded_worlds.map((world) => {
   if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)
   const label = world.name ?? world.label ?? label_from_wid(world.wid)
   if (!label) throw new Error(`seed world ${world.wid} has no display label`)
-  return {
-    id: world.id,
-    label,
-    biome: world.biome ?? null,
-    required_level: world.requiredLevel == null ? null : Number(world.requiredLevel),
-  }
+  return { id: world.id, label }
 })
 
 // ───────────────────────────────────────────────────────────────────────────────────────────────────────

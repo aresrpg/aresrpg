@@ -25,10 +25,20 @@ import { EncyclopediaLink } from '../../../../pages/encyclopedia/EncyclopediaLin
  *   on_filter: (accessible_only: boolean) => void,
  *   can_travel: boolean,
  *   on_travel: (card: import('./world_travel_state.js').WorldCard) => void,
+ *   catalog_state?: 'loading' | 'unavailable' | 'ready',
  * }} props
  * @returns {import('react').ReactElement | null}
  */
-export function WorldTravelModal({ open, on_close, cards, accessible_only, on_filter, can_travel, on_travel }) {
+export function WorldTravelModal({
+  open,
+  on_close,
+  cards,
+  accessible_only,
+  on_filter,
+  can_travel,
+  on_travel,
+  catalog_state = 'ready',
+}) {
   // Esc closes, matching every other companion overlay (bound only while open).
   useEffect(() => {
     if (!open) return
@@ -49,6 +59,7 @@ export function WorldTravelModal({ open, on_close, cards, accessible_only, on_fi
       on_filter={on_filter}
       can_travel={can_travel}
       on_travel={on_travel}
+      catalog_state={catalog_state}
     />,
     document.body
   )
@@ -61,7 +72,15 @@ export function WorldTravelModal({ open, on_close, cards, accessible_only, on_fi
  * resolve a createPortal target — WorldTravelModal.test.jsx renders THIS export instead.
  * @param {Omit<Parameters<typeof WorldTravelModal>[0], 'open'>} props
  */
-export function WorldTravelModalContent({ on_close, cards, accessible_only, on_filter, can_travel, on_travel }) {
+export function WorldTravelModalContent({
+  on_close,
+  cards,
+  accessible_only,
+  on_filter,
+  can_travel,
+  on_travel,
+  catalog_state = 'ready',
+}) {
   const { t } = useTranslation()
 
   return (
@@ -150,7 +169,18 @@ export function WorldTravelModalContent({ on_close, cards, accessible_only, on_f
               </button>
             </article>
           ))}
-          {cards.length === 0 && <p className="gw-travel__none">{t('world_switcher.filter_empty')}</p>}
+          {/* An empty grid has three different truths and must never render the wrong one: the live gates are
+              still arriving, the read failed, or the filter genuinely excluded every world. "Level up" is a
+              LIE in the first two (#1510 — the gates used to be a build-time constant that could not fail). */}
+          {cards.length === 0 && (
+            <p className="gw-travel__none">
+              {catalog_state === 'loading'
+                ? t('common.loading')
+                : catalog_state === 'unavailable'
+                  ? t('world_switcher.worlds_unavailable')
+                  : t('world_switcher.filter_empty')}
+            </p>
+          )}
         </div>
       </div>
     </div>

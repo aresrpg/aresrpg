@@ -74,4 +74,4 @@ export function use_onchain_templates(
 // zero live callers (confirmed via built-bundle tree-shaking; its only sibling consumer here, the
 // items/mobs hooks above, are themselves unreached by any mounted route today). A future world-editing
 // admin surface should read `/v1/encyclopedia?kind=worlds` (rpc/client.ts get_encyclopedia) instead of
-// reintroducing the fullnode fan-out — see world_levels.js's load_world_gates for the pattern.
+// reintroducing the fullnode fan-out — see world-shell/world_catalog.js's load_world_catalog for the pattern.

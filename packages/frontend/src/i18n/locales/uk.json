@@ -55,7 +55,8 @@
     "filter_empty": "Жодного світу в межах досяжності — підвищуйте рівень",
     "mob_count": "Монстрів: {{count}}",
     "boss_count": "Босів: {{count}}",
-    "resource_count": "Ресурсів: {{count}}"
+    "resource_count": "Ресурсів: {{count}}",
+    "worlds_unavailable": "Світи недоступні — рівень читання не відповідає"
   },
   "rpc": {
     "reconnecting": "Повторне з’єднання…",

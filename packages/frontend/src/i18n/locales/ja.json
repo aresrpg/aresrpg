@@ -55,7 +55,8 @@
     "filter_empty": "到達できるワールドがありません — レベルを上げましょう",
     "mob_count": "モブ{{count}}体",
     "boss_count": "ボス{{count}}体",
-    "resource_count": "資源{{count}}種"
+    "resource_count": "資源{{count}}種",
+    "worlds_unavailable": "ワールドを取得できません — 読み取りレイヤーに接続できません"
   },
   "rpc": {
     "reconnecting": "再接続中…",

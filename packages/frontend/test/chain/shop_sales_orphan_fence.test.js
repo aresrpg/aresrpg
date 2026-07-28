@@ -10,7 +10,7 @@
 // ABSENCE IS NOT EMPTINESS — a failed or empty catalog read is not evidence that a sale is dead, so every
 // sale flows through un-fenced rather than the session cacheing a blank shop.
 //
-// spyOn over the rpc/client namespace (world_levels.test.js's idiom) — never mock.module, which is
+// spyOn over the rpc/client namespace (the read_findables.test.js idiom) — never mock.module, which is
 // process-global in bun and would leak into every sibling test file.
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 

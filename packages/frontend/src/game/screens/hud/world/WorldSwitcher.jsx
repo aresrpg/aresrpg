@@ -12,9 +12,10 @@
 //     last-landed data across a selection switch, so the doc in hand can belong to a DIFFERENT character;
 //     a doc whose id mismatches is discarded (the 07-17 "HERE in First Shore" lie died at this seam). A
 //     selected character in NO world renders the honest empty state with the travel button as the CTA.
-//   • derive_world_cards — the modal rows: seed-receipt catalog + required_level (the zones::join_world gate)
-//     ⋈ authored corpus knowledge (band/biome/mobs/resources — the encyclopedia's own join). Locks mirror
-//     the chain gate exactly; an unknown never pre-locks.
+//   • derive_world_cards — the modal rows: the LIVE worlds catalog + its required_level (the exact
+//     zones::join_world gate) ⋈ authored corpus knowledge (band/biome/mobs/resources — the encyclopedia's
+//     own join). Locks mirror the chain gate exactly; an unknown never pre-locks. No checked-in chain-id map
+//     owns a second copy of `required_level`, so a republish cannot silently erase the gates (#1510).
 //
 // TRAVEL rides the EXISTING flow untouched: card → house ConfirmDialog → join_world_action (self-pay
 // through the ONE run_tx choke, simulate-first, kiosk pair resolved inside; an executed failure is never
@@ -27,7 +28,7 @@ import { Globe } from 'lucide-react'
 import { use_game_state } from '../../../store.js'
 import { use_rpc_view } from '../../../../rpc/use_view'
 import { get_characters } from '../../../../rpc/client'
-import { T62_WORLDS } from '../../../../chain/deployment'
+import { load_world_catalog } from '../../../../world-shell/world_catalog.js'
 import { world_corpus_of } from '../../../../pages/encyclopedia/world_corpus'
 import { join_world_action } from '../../../../world-shell/world_join.js'
 import { use_toast } from '../../../../toast'
@@ -55,19 +56,22 @@ export function WorldSwitcher() {
     { deps: [selected_character_id], enabled: !!selected_character_id, interval_ms: 15000 }
   )
 
-  // The seed receipt is the deployment pin for both ids and join gates; it is already resident at boot,
-  // so the always-mounted world HUD never pulls the all-kinds encyclopedia payload.
-  const required_level_by_world = new Map(
-    T62_WORLDS.flatMap((world) => (world.required_level == null ? [] : [[world.id, world.required_level]]))
-  )
+  // The LIVE worlds catalog carries the exact on-chain gate (world_catalog.js — the one home fast travel and
+  // the level-up card read too, #1510). A scoped 2.9 KB read, not the all-kinds envelope, so the
+  // always-mounted world HUD can afford chain truth; a checked-in copy of `required_level` would let a
+  // republish silently erase the gates this modal renders. An unresolved catalog yields NO cards — the
+  // derivation never pre-locks off an unknown, and it must never pre-UNLOCK off one either.
+  const catalog = use_rpc_view((signal) => load_world_catalog(signal), { deps: [] })
+  const worlds = catalog.data ?? []
+  const required_level_by_world = new Map(worlds.map((world) => [world.id, world.required_level]))
 
   const panel = derive_world_panel({ selected_character_id, doc: view.data })
   const current_label = panel.world_id
-    ? (T62_WORLDS.find((w) => w.id === panel.world_id)?.label ?? panel.world_id)
+    ? (worlds.find((w) => w.id === panel.world_id)?.label ?? panel.world_id)
     : null
   const cards = filter_world_cards(
     derive_world_cards({
-      worlds: T62_WORLDS,
+      worlds,
       required_level_by_world,
       corpus_of: world_corpus_of,
       my_level: panel.level,
@@ -129,6 +133,7 @@ export function WorldSwitcher() {
         open={travel_open}
         on_close={() => set_travel_open(false)}
         cards={cards}
+        catalog_state={catalog.loading ? 'loading' : catalog.error ? 'unavailable' : 'ready'}
         accessible_only={accessible_only}
         on_filter={set_accessible_only}
         can_travel={!!selected_character_id}
