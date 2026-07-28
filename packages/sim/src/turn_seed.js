@@ -30,9 +30,11 @@ const DOMAIN_DMG = 0xd1b54a35 // #577 damage stream domain tag (spell_formula::D
 /**
  * The turn's seed — derived from public turn state. Mirrors fight.move::turn_seed. Each seat gets its own
  * sequence; the turn's own entropy and ordinal (both stamped on the Fight and published in TurnStarted) re-seed
- * it every turn. Inputs may be Number or BigInt (all four are u64 off the SDK decode — BigInt-safe).
- * @param {{ world_seed: number|bigint, spawn_id: number|bigint, turn_entropy: number|bigint,
- *   turn_ordinal: number|bigint, seat: number|bigint }} fight
+ * it every turn. Inputs may be Number, BigInt, or the decimal STRING a JSON capsule stores a u64 as (all four
+ * are u64 off the SDK decode — `prng.mix` folds every form through the same BigInt mask, so they agree).
+ * @param {{ world_seed: number|bigint|string, spawn_id: number|bigint|string,
+ *   turn_entropy: number|bigint|string, turn_ordinal: number|bigint|string,
+ *   seat: number|bigint|string }} fight
  * @returns {number} uint32
  */
 export const turn_seed = ({
