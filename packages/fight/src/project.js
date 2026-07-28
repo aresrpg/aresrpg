@@ -11,6 +11,7 @@ import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable 
 import { committed_truth, fight_store, presented_state } from './store.js'
 import { cast_presenting, is_my_turn, is_over, presenting } from './project_state.js'
 import { engine_view, entity_id_of_key, project_board_cells } from './project_views.js'
+import { casts_this_turn_from_events } from './turn_action_slot.js'
 
 export * from './project_state.js'
 export { board_view, committed_mob_hp, engine_view, entity_id_of_key } from './project_views.js'
@@ -96,15 +97,12 @@ const tackle_lockers = (s, me, my_team) => {
  *  own TurnStarted rides the post-view tail (fresh turn ⇒ 0); every Cast in the ordered tail for my seat counts on
  *  top. Receipt and intent casts both precede the NEXT appended move; weapon strikes are Casts in this log too. */
 const my_next_move_slot = (s, seat, row) => {
-  let base = Number(row.casts_this_turn ?? 0)
-  let count = 0
-  for (const e of s.log ?? []) {
-    if (e.kind === 'TurnStarted' && !e.is_mob && Number(e.idx) === seat) {
-      base = 0
-      count = 0
-    } else if (e.kind === 'Cast' && !e.caster_is_mob && Number(e.caster_idx) === seat) count++
-  }
-  return base + count
+  return casts_this_turn_from_events({
+    base: row.casts_this_turn,
+    events: s.log,
+    turn_started: (event) => event.kind === 'TurnStarted' && !event.is_mob && Number(event.idx) === seat,
+    cast: (event) => event.kind === 'Cast' && !event.caster_is_mob && Number(event.caster_idx) === seat,
+  })
 }
 
 /** The presentation-truth blocked set for movement: board terrain (obstacles ∪ holes ∪ out-of-shape) plus every
