@@ -454,27 +454,54 @@ export const direct_consequence_entries = [
     }),
   ],
   [
+    // OUT OF THE GAME (#1538, closed by scope ruling) — reset-positions has no carrier and will never get one:
+    // its only donor is the special learned-spell family this game does not port, so no spell can author the
+    // kind and no per-fighter anchor cell will ever be stored. Its consequence is therefore not a behaviour but
+    // a REFUSAL, and the refusal is what both twins must hold identically: the sim normalizes the kind to
+    // UNSUPPORTED and folds nothing, exactly as `retro_effects::is_unimplemented` names it on chain.
+    //
+    // The tooth is the last pair of assertions. A sim-only implementation appearing here — the divergence class
+    // this oracle exists to kill — restores the home cells and turns this arm RED. "Does nothing" is a decision
+    // with a home, and this is the home.
     spell_effect.K_RESET_POSITIONS,
-    consequence('reset restores both displaced fighters to home cells', () => {
-      const initial = fight([
-        {
-          id: 'reset',
-          effects: [
-            raw_effect(spell_effect.K_RESET_POSITIONS, {
-              element: NONE,
-              target_filter: spell_effect.TF_NONE,
-            }),
-          ],
-        },
-      ])
-      const displaced = with_cell(
-        with_cell(initial, CASTER, { x: 2, y: 2 }),
-        ENEMY,
-        { x: 6, y: 2 },
-      )
-      const reset = cast(displaced, 'reset', cell(displaced, CASTER))
-      expect(cell(reset, CASTER)).toEqual(CASTER_CELL)
-      expect(cell(reset, ENEMY)).toEqual(ENEMY_CELL)
-    }),
+    consequence(
+      'reset-positions is refused identically on both twins: UNSUPPORTED, folding nothing',
+      () => {
+        const initial = fight([
+          {
+            id: 'reset',
+            effects: [
+              raw_effect(spell_effect.K_RESET_POSITIONS, {
+                element: NONE,
+                target_filter: spell_effect.TF_NONE,
+              }),
+            ],
+          },
+        ])
+        // The normalizer states the refusal out loud, before any fold can act on it.
+        expect(
+          initial.ctx.spell_templates
+            .get('reset')
+            .levels[0].base_effects.map(effect => effect.type),
+        ).toEqual(['UNSUPPORTED'])
+
+        const displaced = with_cell(
+          with_cell(initial, CASTER, { x: 2, y: 2 }),
+          ENEMY,
+          { x: 6, y: 2 },
+        )
+        const reset = cast(displaced, 'reset', cell(displaced, CASTER))
+        // The cast is legal — an unsupported EFFECT is not an unsupported SPELL — and resolves to no effect at all.
+        expect(reset.accepted).toBe(true)
+        expect(
+          reset.events.find(event => event.type === 'fight_cast').effects,
+        ).toEqual([])
+        // Nobody moved: both fighters hold the cells they were displaced to, and neither went home.
+        expect(cell(reset, CASTER)).toEqual({ x: 2, y: 2 })
+        expect(cell(reset, ENEMY)).toEqual({ x: 6, y: 2 })
+        expect(cell(reset, CASTER)).not.toEqual(CASTER_CELL)
+        expect(cell(reset, ENEMY)).not.toEqual(ENEMY_CELL)
+      },
+    ),
   ],
 ]
