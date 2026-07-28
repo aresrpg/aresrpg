@@ -119,10 +119,6 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
   const fight_id = ids.fight_id ?? state.fight_id
   const run_pass_id = ids.run_pass_id ?? state.run_pass_id
   const world_id = ids.world_id ?? state.world_id
-  // The fight's DERIVATION SCOPE — its own `world` field, which picks the registry shard. Never falls back to
-  // `world_id`: for a dungeon room those differ (the fight derived from the CREATOR's pass), and a silent
-  // fallback would address the wrong shard for every member of a party.
-  const fight_scope_id = ids.fight_scope_id ?? state.fight_scope_id
   // open kiosk-borrows THIS character (XP/HP write-back + fight_marker::clear), so the open leg must resolve the
   // kiosk that HOLDS it — never kiosk[0]. Snapshot beats live state: recovery has no live session and the terminal
   // collapse tears the store down while this runs in the background.
@@ -138,7 +134,6 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
     try {
       const opened = await settle_and_open({
         fight_id,
-        fight_scope_id,
         run_pass_id,
         world_id,
         character_id,
@@ -722,7 +717,6 @@ async function auto_settle_terminal_fights(store, address, announce) {
     await settle_chain_latched(store, {
       terminal: true,
       fight_id,
-      fight_scope_id: terminal.world ?? null, // the Fight's OWN world field — the shard it lives in
       world_id: terminal.world ?? null,
       character_id,
     })
@@ -769,10 +763,9 @@ export async function recover_character(store, character_id) {
     return res.status === 'opened' ? 'recovered' : 'failed'
   }
   const fight_id = pending.fight_id ?? pending.fight
+  // A row that came back WITHOUT a world still settles (#1396): the settle carries the character's latch and
+  // derives nothing, so a null here costs only the settle_run leg's world — never the un-brick itself.
   const world_id = pending.world ?? null
-  // Recovery reads the Fight itself, so its reported `world` IS the derivation scope — no store to consult and
-  // no creator/member ambiguity to resolve.
-  const fight_scope_id = world_id
   // Resolve the RunPass if this was a dungeon room fight (so settle_run consumes the defeated pass too); a world
   // fight has none → settle_chain takes the open_outcome branch. A missing run still un-bricks (open clears the
   // marker) — the pass is then just an orphan the player leaves from the dungeons gate. Field names read both
@@ -789,7 +782,6 @@ export async function recover_character(store, character_id) {
   const ok = await settle_chain(store, {
     terminal: true,
     fight_id,
-    fight_scope_id,
     run_pass_id,
     world_id,
     character_id,
