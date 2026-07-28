@@ -79,7 +79,17 @@ const commit = (store, to_cell, version) => {
   store
     .getState()
     .input({ type: 'receipt', version, receipt: { events: [ev('MobMoved', { idx: 0, to_cell })] } }, 1_200)
-  for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, 1_300)
+  for (const turn of store.getState().wave) {
+    for (const [index, beat] of turn.beats.entries())
+      if (beat.kind === 'trap_trigger')
+        store.getState().input({
+          type: 'trap_triggered',
+          anchor: beat.payload.trap_anchor,
+          cell: beat.payload.trap_cell,
+          trigger_id: `wave:${turn.seq}:${index}`,
+        })
+    store.getState().input({ type: 'presented', seq: turn.seq }, 1_300)
+  }
 }
 
 describe('my_traps retires on a MID-PATH crossing, not only on the landing cell (#954)', () => {

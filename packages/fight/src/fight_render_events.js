@@ -102,6 +102,7 @@ export function produce_receipt_render_turns(
     fight_id = null,
     grid_width = GRID_W,
     trap_cells = [],
+    trap_rows = [],
     is_trap_cell = null,
     resolve_trap_owner = null,
     resolve_fighter_id = default_fighter_id,
@@ -127,6 +128,7 @@ export function produce_receipt_render_turns(
   const turn_writers = new Map()
   const turn_counts = new Map()
   const matches_trap = trap_matcher(trap_cells, is_trap_cell, grid_width)
+  const available_traps = (trap_rows ?? []).filter((trap) => !trap.gone).map((trap) => ({ trap, consumed: false }))
   const hit_damage = new Map()
   const remaining_health = new Map()
   const dead_fighters = new Set()
@@ -172,6 +174,19 @@ export function produce_receipt_render_turns(
     candidate.kind === 'Cast' ? candidate.target_cell : null
   )
   const armed_before = (encoded, cursor) => armed_at(placements, encoded, cursor)
+  const matching_trap = (encoded, cursor, consume = false) => {
+    const trap_index = available_traps.findIndex(
+      ({ trap, consumed }) =>
+        !consumed &&
+        (trap.cells ?? []).some((cell) => Number(cell) === Number(encoded)) &&
+        armed_before(trap.anchor ?? encoded, cursor)
+    )
+    if (trap_index === -1) return null
+    if (consume) available_traps[trap_index] = { ...available_traps[trap_index], consumed: true }
+    return available_traps[trap_index].trap
+  }
+  const trap_at = (cell, encoded, event, cursor) =>
+    available_traps.length > 0 ? matching_trap(encoded, cursor) : matches_trap(cell, encoded, event)
 
   // ONE home for "which cells did this walk ENTER". A receipt's Moved/MobMoved carries only the landing cell, so
   // the route is reconstructed (obstacle- and body-aware, through the sim's own find_path_4dir) unless the caller
@@ -205,11 +220,10 @@ export function produce_receipt_render_turns(
   }
 
   const crosses_trap = (event, source_id, from, to, cursor) =>
-    path_for(event, source_id, from, to).some(
-      (cell) =>
-        matches_trap(cell, encoded_cell(cell, grid_width), event) &&
-        armed_before(encoded_cell(cell, grid_width), cursor)
-    )
+    path_for(event, source_id, from, to).some((cell) => {
+      const encoded = encoded_cell(cell, grid_width)
+      return !!trap_at(cell, encoded, event, cursor) && armed_before(encoded, cursor)
+    })
 
   const ensure_turn = (source_id, force_new = false, source = null) => {
     if (!force_new && current_turn?.source_id === source_id) return current_turn
@@ -253,12 +267,14 @@ export function produce_receipt_render_turns(
       // render once both have. Anchored at the landing cell; push/pull never get one (they slide, they don't blink).
       if (teleport)
         append_to(turn, 'teleport_arrival', TELEPORT_ARRIVAL_MS, { target_id, cell: movement.to, source_event: event })
-      return matches_trap(movement.to, event.to_cell, event)
+      const trap = matching_trap(event.to_cell, event.event_index, true)
+      return (available_traps.length > 0 ? trap : matches_trap(movement.to, event.to_cell, event))
         ? [
             {
               event,
               target_id,
               movement,
+              trap_anchor: trap?.anchor ?? null,
               trap_owner_id: resolve_trap_owner?.(movement.to, event.to_cell, event) ?? null,
             },
           ]
@@ -278,11 +294,13 @@ export function produce_receipt_render_turns(
       }))
     )
     const trap_hits = [...attributed_trap_hits, ...detected_trap_hits]
-    for (const { event, target_id, movement, trap_owner_id } of trap_displacements)
+    for (const { event, target_id, movement, trap_anchor, trap_owner_id } of trap_displacements)
       append_to(turn, 'trap_trigger', TRAP_BEAT_MS, {
         entity_id: target_id,
         target_id,
         cell: movement.to,
+        trap_cell: Number(event.to_cell),
+        trap_anchor,
         damage: hits_after_trap({ event, target_id }).reduce((sum, candidate) => sum + damage_of_hit(candidate), 0),
         trap_owner_id,
         source_event: event,
@@ -420,12 +438,13 @@ export function produce_receipt_render_turns(
       if (!dead_fighters.has(source_id)) settled_cells.set(source_id, to)
       // Every trap cell the walk ENTERS, in path order — the chain fires each one and resumes (movement.move:43).
       // The endpoint is simply the last step, so the case the renderer used to special-case falls out of this.
-      const trap_steps = rendered_path.flatMap((cell, index) =>
-        matches_trap(cell, encoded_cell(cell, grid_width), event) &&
-        armed_before(encoded_cell(cell, grid_width), cursor)
-          ? [index]
-          : []
-      )
+      const trap_steps = rendered_path.flatMap((cell, index) => {
+        const encoded = encoded_cell(cell, grid_width)
+        const trap = matching_trap(encoded, cursor, true)
+        const triggered =
+          available_traps.length > 0 ? trap : matches_trap(cell, encoded, event) && armed_before(encoded, cursor)
+        return triggered ? [{ index, trap }] : []
+      })
       // The claim above ran on the pre-flush route; if the post-flush one disagrees (a pending Displaced moved a
       // body the walk had to route around), give the held Hits back rather than swallow them — a dropped floater
       // is a worse bug than the one this fixes.
@@ -458,7 +477,8 @@ export function produce_receipt_render_turns(
         append_to(turn, 'arrival', 0, { entity_id: source_id, cell: landing, source_event: event })
       }
       let walked = 0
-      for (const [ordinal, step] of trap_steps.entries()) {
+      for (const [ordinal, trigger] of trap_steps.entries()) {
+        const { index: step, trap } = trigger
         const leg = rendered_path.slice(walked, step + 1)
         const cell = rendered_path[step]
         const encoded = encoded_cell(cell, grid_width)
@@ -471,6 +491,8 @@ export function produce_receipt_render_turns(
           entity_id: source_id,
           target_id: source_id,
           cell,
+          trap_cell: encoded,
+          trap_anchor: trap?.anchor ?? null,
           damage: hits.reduce((sum, hit) => sum + damage_of_hit(hit), 0),
           trap_owner_id,
           source_event: hits[0] ?? event,

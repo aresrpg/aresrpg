@@ -87,7 +87,17 @@ const draft_trap = (store, cell, intent_id = 'trap1', at = 1_100) =>
 
 const commit = (store, events, version, at = 1_200) => {
   store.getState().input({ type: 'receipt', version, receipt: { events } }, at)
-  for (const beat of store.getState().wave) store.getState().input({ type: 'presented', seq: beat.seq }, at + 100)
+  for (const turn of store.getState().wave) {
+    for (const [index, beat] of turn.beats.entries())
+      if (beat.kind === 'trap_trigger')
+        store.getState().input({
+          type: 'trap_triggered',
+          anchor: beat.payload.trap_anchor,
+          cell: beat.payload.trap_cell,
+          trigger_id: `wave:${turn.seq}:${index}`,
+        })
+    store.getState().input({ type: 'presented', seq: turn.seq }, at + 100)
+  }
 }
 
 const traps_of = (store) => engine_view(store.getState()).my_traps

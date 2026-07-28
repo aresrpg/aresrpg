@@ -37,6 +37,7 @@ import { committed_truth, COURTESY_EVENT_BASE, empty_fight, observer_ctx } from 
 import { expired_wave_seq, reduce_tick_state, reduce_wave_head } from './store_tick.js'
 import { create_trace_tap } from './trace_tap.js'
 import { merge_entries, recompute } from './fold.js'
+import { present_trap } from './trap_ledger.js'
 
 // The PRESENTATION projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
 // names so project.js and tools keep importing them from the store's door.
@@ -104,7 +105,16 @@ const with_core_fold = (door, set, get) => {
 // non-event: the reducer records it in `state.refused` (the turn_lost idiom — the fight core is hermetic, so it
 // cannot call the frontend fight_state_trace; an edge subscriber surfaces `refused`, as subscribe_turn_lost does).
 const LOCAL_PUSH = new Set(['intent', 'predicted'])
-const IDENTITY_SCOPED = new Set(['receipt', 'poll', 'p2p', 'snapshot', 'presented', 'placement_ghost', 'courtesy'])
+const IDENTITY_SCOPED = new Set([
+  'receipt',
+  'poll',
+  'p2p',
+  'snapshot',
+  'presented',
+  'trap_triggered',
+  'placement_ghost',
+  'courtesy',
+])
 const refuse_reason = (state, msg) => {
   if (LOCAL_PUSH.has(msg.type) && state.provider !== 'local_turn')
     return { type: msg.type, reason: 'provider', provider: state.provider }
@@ -121,6 +131,21 @@ const refuse_reason = (state, msg) => {
   }
   return null
 }
+
+// A turn-level ack is the headless/watchdog fallback for presentation only. In the mounted renderer each trigger
+// already advanced at its own beat; folding the same stable ids here is therefore an idempotent no-op.
+const present_turn_traps = (traps, turn) =>
+  (turn.beats ?? []).reduce(
+    (next_traps, beat, index) =>
+      beat.kind === 'trap_trigger'
+        ? present_trap(next_traps, {
+            anchor: beat.payload?.trap_anchor,
+            cell: beat.payload?.trap_cell,
+            trigger_id: `wave:${turn.seq}:${index}`,
+          })
+        : next_traps,
+    traps
+  )
 
 /** THE ONE DOOR: chain inputs (snapshot/receipt/poll/p2p/terminal confirmation/outcome), local prediction,
  * presentation acks, and UI/tx signals all reduce here; nothing else writes fight state.
@@ -198,6 +223,23 @@ const make_input =
         return
       case 'predicted':
         set((s) => reduce_predicted(s, msg, now))
+        return
+      case 'trap_triggered':
+        // Canonical lifecycle was already receipt-folded. This event advances only the overlay presentation cursor:
+        // the concrete anchor selects one consumed row; position projection and turn advancement infer nothing.
+        set((s) =>
+          recompute(
+            {
+              ...s,
+              my_traps: present_trap(s.my_traps, {
+                anchor: msg.anchor,
+                cell: msg.cell,
+                trigger_id: msg.trigger_id,
+              }),
+            },
+            now
+          )
+        )
         return
       case 'drop_traps': {
         // The flush-drop / turn-boundary rollback: a trap-cast that never reaches the chain takes its optimistic
@@ -334,6 +376,9 @@ const make_input =
             {
               ...s,
               commit_due: false,
+              my_traps: s.wave
+                .filter((turn) => turn.seq <= seq)
+                .reduce((traps, turn) => present_turn_traps(traps, turn), s.my_traps),
               presented_seq: Math.max(s.presented_seq, seq),
               wave: s.wave.filter((t) => t.seq > seq),
             },

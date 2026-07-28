@@ -4,7 +4,7 @@
 // Mirrors my_traps_fold.js structurally, but the glyph LIFECYCLE differs (sim/fight_traps.js is the truth):
 // a glyph is PERSISTENT — check_glyphs ticks anyone standing on it at TURN_START and NEVER removes it; it dies
 // only by EXPIRY (decay_glyphs decrements turns_remaining, drops at 0). So `gone` = expiry, not detonation:
-// a fighter standing on a glyph does NOT clear it (the trap's presented-occupied exclusion has no glyph twin).
+// a fighter standing on a glyph does NOT clear it (only an explicit trap entry consumes the trap twin).
 
 import { describe, expect, test } from 'bun:test'
 

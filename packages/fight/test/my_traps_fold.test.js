@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // ④+⑦b MY_TRAPS — the ONE fold-state home (ruled 07-19): the store's durable `my_traps`, populated by the
-// trap-cast fold, sprung by the COMMITTED (receipt-proven) fold, projected LIVE by engine_view, read by the sim
+// trap-cast fold, sprung by the receipt-derived trigger beat, projected LIVE by engine_view, read by the sim
 // door. trap_overlay is render-only — ZERO sim reads from it. This drives the whole lifecycle end to end.
 
 import { describe, expect, test } from 'bun:test'
@@ -98,13 +98,14 @@ describe('④+⑦b my_traps — the fold-state home drives the sim-door force-st
     expect(predicted_push_landing(store)).toBe(TRAP)
   })
 
-  test('the spring is durable & receipt-proven: a committed landing marks it gone FOREVER (mob moves off, still gone)', () => {
+  test('the spring is durable: its receipt-derived trigger marks it gone FOREVER (mob moves off, still gone)', () => {
     const store = boot()
     place_trap(store)
     // a RECEIPT lands the mob ON the trap (chain detonation) → gone.
     store
       .getState()
       .input({ type: 'receipt', version: 7, receipt: { events: [ev('MobMoved', { idx: 0, to_cell: TRAP })] } }, 1_200)
+    store.getState().input({ type: 'trap_triggered', anchor: TRAP, cell: TRAP, trigger_id: 'wave:trap1' }, 1_250)
     // present the masking wave so the committed fold is what engine_view reads.
     for (const t of store.getState().wave) store.getState().input({ type: 'presented', seq: t.seq }, 1_300)
     expect(engine_view(store.getState()).my_traps).toEqual([]) // sprung
@@ -116,10 +117,10 @@ describe('④+⑦b my_traps — the fold-state home drives the sim-door force-st
     expect(engine_view(store.getState()).my_traps).toEqual([]) // still gone — durable
   })
 
-  test('a presented (optimistic) fighter on the cell excludes it, but reversibly (no gone until receipt-proven)', () => {
+  test('a presented (optimistic) fighter on the cell cannot consume it without a receipt event', () => {
     const store = boot()
     place_trap(store)
-    // MY optimistic push lands the mob on the trap (presented-occupied) → excluded immediately…
+    // MY optimistic push lands the mob on the trap, but position is not a lifecycle event.
     store.getState().input(
       {
         type: 'predicted',
@@ -136,8 +137,8 @@ describe('④+⑦b my_traps — the fold-state home drives the sim-door force-st
       },
       1_150
     )
-    expect(engine_view(store.getState()).my_traps).toEqual([]) // presented-occupied exclusion
-    // …but it is NOT gone: rolling the push back re-shows the trap (optimistic spring is reversible).
+    expect(engine_view(store.getState()).my_traps).toEqual([TRAP])
+    // Rolling the push back leaves the same fold-projected trap unchanged.
     store.getState().input({ type: 'rollback', intent_id: 'push1' }, 1_160)
     expect(engine_view(store.getState()).my_traps).toEqual([TRAP])
   })
@@ -183,7 +184,7 @@ describe('④+⑦b my_traps — the fold-state home drives the sim-door force-st
     expect(predicted_push_landing(store)).toBe(TRAP)
   })
 
-  test('a real detonation still retires the trap after a version bump (detonated, not superseded)', () => {
+  test('a real detonation trigger still retires the trap after a version bump (detonated, not superseded)', () => {
     const store = boot()
     place_trap(store)
     store.getState().input({ type: 'snapshot', fight: { ...FIGHT_OBJECT }, version: 6 }, 1_200)
@@ -191,6 +192,7 @@ describe('④+⑦b my_traps — the fold-state home drives the sim-door force-st
     store
       .getState()
       .input({ type: 'receipt', version: 7, receipt: { events: [ev('MobMoved', { idx: 0, to_cell: TRAP })] } }, 1_300)
+    store.getState().input({ type: 'trap_triggered', anchor: TRAP, cell: TRAP, trigger_id: 'wave:trap2' }, 1_350)
     for (const t of store.getState().wave) store.getState().input({ type: 'presented', seq: t.seq }, 1_400)
     expect(engine_view(store.getState()).my_traps).toEqual([]) // detonated by a proven ENTER
   })

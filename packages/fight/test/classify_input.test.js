@@ -126,5 +126,11 @@ describe('classify_input — totality', () => {
     // ctx/presented ARE lifecycle, but a NAMED phase — not the unknown fallback.
     expect(classify_input({ type: 'ctx', ctx: {} })).toEqual({ kind: 'lifecycle', phase: 'ctx', ctx: {} })
     expect(classify_input({ type: 'presented', seq: 1 })).toEqual({ kind: 'lifecycle', phase: 'presented', seq: 1 })
+    expect(classify_input({ type: 'trap_triggered', anchor: 3, cell: 4, trigger_id: 'wave:1:2' })).toEqual({
+      kind: 'lifecycle',
+      phase: 'trap_triggered',
+      key: 'wave:1:2',
+      action: { anchor: 3, cell: 4 },
+    })
   })
 })

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// fight/trap_ledger.js — pure, receipt-proven retirement of the local trap ledger.
+// fight/trap_ledger.js — pure canonical retirement + presentation of the local trap ledger.
 
 import { K_PLACE_TRAP } from '@aresrpg/sim/spell_effect'
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
@@ -33,10 +33,8 @@ export function read_fight_traps(json) {
   })
 }
 
-// A trap fires ON-CHAIN only when a fighter ENTERS its cell (spell_board::on_enter), so consume it from the
-// COMMITTED transition log, not from the batch's final fighter positions. A pushed fighter may land on the trap
-// and then take its mob turn away in the SAME receipt; final-position sampling loses that entry. Re-derive walks
-// through the renderer's shared path machinery so "which cells did this walk enter" has ONE answer client-wide.
+// A trap fires ON-CHAIN only when a fighter ENTERS its cell. Reconstruct every entered cell in canonical row
+// order, including intermediate walk cells; `step` keeps two triggers in one collapsed move individually keyed.
 const committed_entries_of = ({ authoritative_tail, base, view }) => {
   const board_facts = {
     obstacles: view?.obstacles,
@@ -71,47 +69,12 @@ const committed_entries_of = ({ authoritative_tail, base, view }) => {
             occupied_cells,
           }).map((cell) => encoded_cell(cell, GRID_W))
 
-    for (const cell of entered.length > 0 ? entered : [to]) committed_entries.push({ cell, version, at })
+    for (const [step, cell] of (entered.length > 0 ? entered : [to]).entries())
+      committed_entries.push({ cell, version, at, step })
     cell_at.set(key, to)
   })
 
   return committed_entries
-}
-
-const movement_fighter_key = (entry) => {
-  if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind)) return null
-  if (entry.kind === 'Displaced')
-    return fighter_key({
-      is_mob: entry.target_is_mob,
-      idx: entry.target_idx,
-      resolve_seat: entry.resolve_seat,
-    })
-  return fighter_key({
-    is_mob: entry.kind === 'MobMoved',
-    idx: entry.idx,
-    character: entry.character,
-    resolve_seat: entry.resolve_seat,
-  })
-}
-
-const after_placement = (entry, placed_at) =>
-  Number(entry.version) > Number(placed_at.version) ||
-  (Number(entry.version) === Number(placed_at.version) && Number(entry.event_idx) > Number(placed_at.event_idx))
-
-/**
- * Placement occupants are exempt only while they have no later optimistic movement row. Deriving that fact from
- * the live log keeps it reversible: rolling a prediction back removes the row and restores the exemption.
- */
-export const stationary_placement_occupants = (trap, entries) => {
-  const occupants = trap?.placement_occupants ?? []
-  if (!occupants.length || !trap?.placed_at) return occupants
-  const moved = new Set(
-    Object.values(entries ?? {})
-      .filter((entry) => entry.source === 'intent' && after_placement(entry, trap.placed_at))
-      .map(movement_fighter_key)
-      .filter(Boolean)
-  )
-  return occupants.filter(({ key }) => !moved.has(String(key)))
 }
 
 const trap_anchor = (placements, trap) => {
@@ -120,32 +83,58 @@ const trap_anchor = (placements, trap) => {
   return anchor == null ? null : Number(anchor)
 }
 
-// The standing-position proof is deliberately anchor-only. The cast anchor must be empty when the trap is placed,
-// so a later committed occupant proves entry. Other AoE cells may already contain the caster or another fighter at
-// placement time; treating those cells as entry proof retires a newly placed AoE before it can ever be painted.
-export const fold_trap_ledger = ({ authoritative_tail, base, chain_committed, traps, view }) => {
-  const committed_entries = committed_entries_of({ authoritative_tail, base, view })
+/**
+ * Canonically consume one first-live trap per ordered entered cell. This is the sole `gone` writer: no final
+ * position, turn edge, or renderer state participates. A collapsed walk crossing N traps produces N sequential
+ * rows here, matching sim `check_traps` and its one `fight_trap_triggered` event per entered trap.
+ */
+export const fold_trap_ledger = ({ authoritative_tail, base, traps, view }) => {
   const placements = placements_by_anchor(authoritative_tail, (entry) =>
     entry.kind === 'Cast' ? entry.target_cell : null
   )
-  const occupied_cells = new Set(
-    Object.values(chain_committed.fighters ?? {})
-      .filter((fighter) => fighter.cell != null)
-      .map((fighter) => fighter.cell)
-  )
+  const committed_entries = committed_entries_of({ authoritative_tail, base, view })
 
-  return (traps ?? []).map((trap) => {
-    if (trap.gone) return trap
-    const anchor = trap_anchor(placements, trap)
-    const occupied_anchor = anchor !== null && occupied_cells.has(anchor)
-    const crossed = (trap.cells ?? []).some((cell) =>
-      committed_entries.some(
-        (entry) =>
-          entry.cell === Number(cell) &&
-          entry.version >= Number(trap.basis_version ?? entry.version) &&
+  return committed_entries.reduce(
+    (next_traps, entry) => {
+      const trap_index = next_traps.findIndex((trap) => {
+        if (trap.gone || entry.version < Number(trap.basis_version ?? entry.version)) return false
+        const anchor = trap_anchor(placements, trap)
+        return (
+          (trap.cells ?? []).some((cell) => Number(cell) === entry.cell) &&
           (anchor === null || armed_at(placements, anchor, entry.at))
-      )
-    )
-    return occupied_anchor || crossed ? { ...trap, gone: true } : trap
-  })
+        )
+      })
+      if (trap_index === -1) return next_traps
+      return next_traps.with(trap_index, {
+        ...next_traps[trap_index],
+        gone: true,
+        triggered_at: `${entry.version}:${entry.at}:${entry.step}`,
+      })
+    },
+    [...(traps ?? [])]
+  )
+}
+
+/**
+ * Present exactly one already-canonical trigger. This never writes lifecycle (`gone`); it advances only the
+ * overlay's event cursor so the ordered boom removes its own marker. Trigger ids make replay/ack idempotent.
+ */
+export const present_trap = (traps, { anchor = null, cell = null, trigger_id = null }) => {
+  const next_traps = [...(traps ?? [])]
+  if (trigger_id != null && next_traps.some((trap) => trap.presented_trigger_id === trigger_id)) return next_traps
+  const trap_index = next_traps.findIndex(
+    (trap) =>
+      trap.gone &&
+      !trap.presented &&
+      (anchor != null
+        ? Number(trap.anchor) === Number(anchor)
+        : (trap.cells ?? []).some((candidate) => Number(candidate) === Number(cell)))
+  )
+  if (trap_index !== -1)
+    next_traps[trap_index] = {
+      ...next_traps[trap_index],
+      presented: true,
+      ...(trigger_id != null ? { presented_trigger_id: trigger_id } : {}),
+    }
+  return next_traps
 }

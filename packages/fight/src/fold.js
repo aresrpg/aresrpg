@@ -178,7 +178,6 @@ export const recompute = (draft, now) => {
   const my_traps = fold_trap_ledger({
     authoritative_tail,
     base,
-    chain_committed,
     traps: draft.my_traps,
     view: draft.view,
   })
@@ -399,6 +398,7 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
       fight_id: draft.fight_id,
       ...ctx.beat_ctx,
       trap_cells,
+      trap_rows: (draft.my_traps ?? []).filter((trap) => !trap.gone),
       resolve_trap_owner,
       resolve_fighter_id,
       fighter_cells,
@@ -453,6 +453,7 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
       version,
       source_id: t.source_id,
       is_local: !!t.is_local,
+      authoritative: true,
       duration: t.duration,
       beats: t.beats,
       ...idx_window(t),

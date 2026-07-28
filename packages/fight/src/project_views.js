@@ -10,7 +10,6 @@ import { claimed_budget_state, committed_truth, display_state, presented_state }
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
 import { trap_render_prims } from './fight_render_prims.js'
-import { stationary_placement_occupants } from './trap_ledger.js'
 import {
   DUNGEON_BOARD_ORIGIN,
   cast_presenting,
@@ -359,25 +358,11 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     ? null
     : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
   const active_entity_id = entity_id_of_key(view, c.active)
-  // ④+⑦b THE LIVE trap projection (ruled 07-19) — the sim door reads THIS (state_from_view/evolve_flush_casts),
-  // never trap_overlay. A durable trap is LIVE unless it's `gone` (a committed entry detonated it permanently)
-  // or a living PRESENTED fighter entered its zone after placement (the optimistic spring — reversible if the
-  // prediction rolls back). Fighters already inside an AoE when it is placed are stationary occupants, not entries.
-  const projected_fighters = Object.entries(p.fighters ?? {})
-  const live_traps = (s.my_traps ?? []).filter((trap) => {
-    if (trap.gone) return false
-    const cells = new Set((trap.cells ?? []).map(Number).filter(Number.isFinite))
-    const placement_occupants = new Set(
-      stationary_placement_occupants(trap, s.entries).map(({ key, cell }) => `${String(key)}:${Number(cell)}`)
-    )
-    return !projected_fighters.some(
-      ([key, fighter]) =>
-        fighter.alive &&
-        fighter.cell != null &&
-        cells.has(Number(fighter.cell)) &&
-        !placement_occupants.has(`${String(key)}:${Number(fighter.cell)}`)
-    )
-  })
+  // ④+⑦b THE LIVE trap projection — the sim door reads canonical lifecycle immediately. The render overlay may
+  // keep a canonically-consumed row visible only until its own ordered trigger beat presents; neither position nor
+  // turn advancement participates.
+  const live_traps = (s.my_traps ?? []).filter((trap) => !trap.gone)
+  const visible_traps = (s.my_traps ?? []).filter((trap) => !trap.gone || !trap.presented)
   const my_trap_cells = [
     ...new Set(
       live_traps
@@ -390,10 +375,10 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   // this viewer's team by construction; every row still crosses the one visibility predicate before becoming a prim.
   const trap_prims = trap_render_prims(viewer_context, [
     ...(ctx.chain_traps ?? []),
-    ...live_traps.map((trap) => ({ ...trap, owner_team: viewer_context.team })),
+    ...visible_traps.map((trap) => ({ ...trap, owner_team: viewer_context.team })),
   ])
   // ① each LIVE trap cell → its detonation payload, so the sim door rebuilds the trap WITH damage (not payload:[]).
-  // Same live-cell predicate as my_trap_cells (non-gone, not presented-occupied); first record wins a shared cell.
+  // Same canonical live-cell predicate as my_trap_cells (non-gone); first record wins a shared cell.
   // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.
   const my_trap_payloads = {}
   for (const trap of live_traps) {

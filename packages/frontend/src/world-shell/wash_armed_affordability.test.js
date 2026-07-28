@@ -203,19 +203,23 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     expect(source).toMatch(/intent: \{ kind: 'Tackled'/) // …folding the SAME action the receipt folds
   })
 
-  test('CONTRACT: DungeonBoard folds the click-time trap into my_traps and rolls back through drop_traps', async () => {
+  test('CONTRACT: DungeonBoard has one trap ledger and rolls back only the flush result', async () => {
     const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
-    // the draft click folds the trap optimistically (at cast, not at commit) — place_traps into my_traps …
+    // The draft click folds the trap optimistically (at cast, not at commit) through the fight reducer.
     expect(source).toContain('place_traps: prediction.placed_traps ?? []')
-    expect(source).toContain('pending_trap_cells.current.add(cell)')
-    // … a DROPPED trap draft is collected for rollback at flush …
+    // A dropped trap draft is collected for rollback at flush.
     expect(source).toContain('trap_dropped.push(entry.cell)')
-    // … a failed commit rolls every drafted cell back through the fold …
+    // A failed commit rolls every drafted cell back through that same fold.
     expect(source).toContain("input({ type: 'drop_traps', cells: store_dropped })")
-    // … and a turn boundary rolls back whatever never committed, through the same fold home — filtered to
-    // cells NO LONGER live (register hygiene: a cell the flush already committed must not be re-dropped by
-    // the boundary net; the version-gated drop_traps input is the structural backstop regardless).
-    expect(source).toContain('const drop = [...pending_trap_cells.current].filter((cell) => !live.has(cell))')
-    expect(source).toContain("input({ type: 'drop_traps', cells: drop })")
+    // There is no component-local trap writer and no end-turn trap clear.
+    expect(source).not.toContain('pending_trap_cells')
+    expect(source).not.toContain("input({ type: 'drop_traps', cells: drop })")
+  })
+
+  test('CONTRACT: each authoritative trap beat retires its identified fold row', async () => {
+    const source = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
+    expect(source).toContain("type: 'trap_triggered'")
+    expect(source).toContain('anchor: payload.trap_anchor')
+    expect(source).toContain('trigger_id: payload.trigger_id')
   })
 })
