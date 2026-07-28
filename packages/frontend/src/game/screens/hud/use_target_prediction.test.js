@@ -125,13 +125,24 @@ describe('compute_target_prediction — the CASTABLE-NOW gate (crit-display bug)
 describe('compute_target_prediction — the deterministic crit IS the resolved damage (no probability theater)', () => {
   const DEADLINE = 5_000_000 // FIXED clock (the harness default is Date.now()+90s — turn_seed must be deterministic)
   const WORLD_SEED = 42
+  // The turn seed folds the turn's OWN published entropy + ordinal (TurnStarted), not the wall-clock deadline —
+  // fixed here for the same reason the deadline is: the twin below and the forecast must read one sequence.
+  const TURN_ENTROPY = 3_141_592_653
+  const TURN_ORDINAL = 7 // crit_clock_of refuses ordinal 0 (a turn that never opened has no sequence)
   const CRIT_RATE = 2 // 50% — the MAX effective rate, so a small spawn scan is guaranteed to split crit/non-crit
   const WEAPON = { ap_cost: 2, damage: 5, crit_damage: 9, crit_rate: CRIT_RATE, reach: 2 } // DISTINCT 5 vs 9
 
   // slot 0 = the pending cast's rng position (casts_this_turn 0, no draft), seat 0 — does it crit? Straight from
   // the chain twin: crit_at(slot_crit_roll(turn_seed(clock), slot), rate, 0). The forecast MUST agree with this.
   const slot0_crits = (spawn_id) =>
-    crit_at(slot_crit_roll(turn_seed({ world_seed: WORLD_SEED, spawn_id, turn_entropy: DEADLINE, turn_ordinal: 1, seat: 0 }), 0), CRIT_RATE, 0)
+    crit_at(
+      slot_crit_roll(
+        turn_seed({ world_seed: WORLD_SEED, spawn_id, turn_entropy: TURN_ENTROPY, turn_ordinal: TURN_ORDINAL, seat: 0 }),
+        0,
+      ),
+      CRIT_RATE,
+      0,
+    )
   const CRIT_SPAWN = [...Array(64).keys()].find(slot0_crits)
   const NOCRIT_SPAWN = [...Array(64).keys()].find((s) => !slot0_crits(s))
 
@@ -140,13 +151,20 @@ describe('compute_target_prediction — the deterministic crit IS the resolved d
       seats: [{ character: '0xme', cell: CASTER_CELL, ap: 6, mp: 3, weapon: WEAPON }],
       mobs: [{ template: '0xabc', hp: 30, max_hp: 30, cell: MOB_CELL, ap: 4, mp: 3, level: 1 }],
       turn_deadline_ms: DEADLINE,
-      turn_entropy: DEADLINE,
-      turn_ordinal: 1,
+      turn_entropy: TURN_ENTROPY,
+      turn_ordinal: TURN_ORDINAL,
     })
     fight_store.getState().input({ type: 'arm', spell_id: WEAPON_ATTACK_ID })
     const state = fight_store.getState()
-    // the live read carries world_seed/spawn_id on the dungeon; the harness snapshot omits them, so inject the clock.
-    const dungeon = { ...board_view(state), world_seed: WORLD_SEED, spawn_id }
+    // the live read carries the whole clock on the dungeon; the harness snapshot omits it, so inject it here —
+    // the SAME entropy/ordinal the twin above folded, or the forecast and its oracle read different sequences.
+    const dungeon = {
+      ...board_view(state),
+      world_seed: WORLD_SEED,
+      spawn_id,
+      turn_entropy: TURN_ENTROPY,
+      turn_ordinal: TURN_ORDINAL,
+    }
     const p = compute_target_prediction({ fight: engine_view(state), hover: { entity_id: 'mob-0' }, dungeon })
     return { ...p, outcome: predicted_target_outcome(p.prediction, p.target_ref, 30) }
   }

@@ -115,26 +115,20 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   // the ONE composer of that clock and next_slot_crit / socket_glows (deck-crit-glow.js → @aresrpg/sim) roll it,
   // so the tooltip, the glow and the cast that follows can never disagree and all mirror what the chain settles.
   // Seed-less / seat-less ⇒ null clock ⇒ the roll is unknown ⇒ the honest non-crit branch. (Past the turn gate.)
-  const crit_slot = next_slot_crit(crit_clock_of({ fight: dungeon, seat_row: me, draft_len }))
+  const crit_clock = crit_clock_of({ fight: dungeon, seat_row: me, draft_len })
+  const crit_slot = next_slot_crit(crit_clock)
   const is_crit = !!crit_slot && socket_glows(crit_slot.crit_roll, crit_rate)
 
   // engine_view fighter cells are DECODED {x,y}; predict_cast's target_cell is an ENCODED int (it decode()s it),
   // so encode here — passing the raw {x,y} decode()s to NaN → an off-board target → no Hit (the live-silence bug).
   const target_cell = encode(target.cell.x, target.cell.y)
   // #577 — the SAME resolved turn-seed slot that decides crit also rolls this cast's DAMAGE, so the previewed
-  // number is exactly what the chain lands (not the range). `critical` stays the explicit resolved boolean;
-  // `critical_clock` feeds only the damage roll. Seed-less / off-turn (crit_slot null) ⇒ no clock ⇒ an in-range
-  // estimate (the honest unknown, mirroring the non-crit branch above).
-  const critical_clock = crit_slot
-    ? {
-        world_seed: dungeon.world_seed,
-        spawn_id: dungeon.spawn_id,
-        turn_entropy: dungeon.turn_entropy ?? 0,
-        turn_ordinal: dungeon.turn_ordinal || null,
-        seat: me?.seat ?? null,
-        slot: crit_slot.slot,
-      }
-    : null
+  // number is exactly what the chain lands (not the range). `critical` stays the explicit resolved boolean; the
+  // clock feeds only the damage roll. Seed-less / off-turn ⇒ crit_clock_of already answered null ⇒ an in-range
+  // estimate (the honest unknown, mirroring the non-crit branch above). It is the composer's OWN clock, never a
+  // second one assembled here: a hand-rebuilt copy silently went stale when the seed stopped folding the
+  // wall-clock deadline, and fed the damage roll a clock with no entropy at all (`?? 0` → a fake seed).
+  const critical_clock = crit_clock
   // Run the ONE damage home ONCE, on the RESOLVED branch — the exact number the chain lands, never a base+crit pair.
   return {
     prediction: predict_cast({ view: fight, caster_id, spell: template, spell_level, target_cell, critical: is_crit, critical_clock, resolve_ref }),
