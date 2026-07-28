@@ -39,9 +39,10 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 
 import { world_minimap_column } from '@aresrpg/engine3'
-import { spawn_markers } from '@aresrpg/world/spawns_zones'
+import { spawn_markers, zone_map_rects } from '@aresrpg/world/spawns_zones'
 
 import { use_game_state, context } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
@@ -52,6 +53,7 @@ import {
   render_hack_grid_map,
   render_flat_terrain,
   render_flat_overlay,
+  flat_map_point,
   grid_index_at,
   setup_dpr_canvas,
   MAP_YAW_SIGN,
@@ -89,12 +91,16 @@ function use_viewport_size() {
  * @returns {import('react').ReactElement | null}
  */
 export function MinimapModal({ onClose }) {
+  const { t } = useTranslation()
   const pose = use_game_state((s) => s.player_pose)
   // The ONE spawns store, projected (spawn_markers) — never a render-published copy. Stable slices → the memo
   // survives the per-frame player_pos fold, so the marker overlay only recomputes on real spawn changes.
   const zones = use_spawns((s) => s.zones)
   const templates = use_spawns((s) => s.templates)
   const pending = use_spawns((s) => s.pending)
+  const zone_size = use_spawns((s) => s.zone_size)
+  const offset_x = use_spawns((s) => s.offset_x)
+  const offset_z = use_spawns((s) => s.offset_z)
   const spawns = useMemo(() => spawn_markers({ zones, templates, pending }), [zones, templates, pending])
   const terrain_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const overlay_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
@@ -187,6 +193,16 @@ export function MinimapModal({ onClose }) {
     if (!ctx) return
     const origin = origin_ref.current
     const heading = MAP_YAW_SIGN * (pose.yaw ?? 0) + MAP_YAW_OFFSET
+    const half = grid.span / 2
+    const map_zones = zone_map_rects(
+      { zone_size, offset_x, offset_z },
+      {
+        min_x: origin.x - half,
+        min_z: origin.z - half,
+        max_x: origin.x + half,
+        max_z: origin.z + half,
+      }
+    ).map((zone) => ({ ...zone, label: t('discovery.zone_coords', { zx: zone.zx, zy: zone.zy }) }))
     render_flat_overlay(ctx, grid, {
       size: SIZE,
       ppb,
@@ -195,10 +211,11 @@ export function MinimapModal({ onClose }) {
       player_z: origin.z,
       arrow_x: pose.x,
       arrow_z: pose.z,
+      zones: map_zones,
       markers,
       heading,
     })
-  }, [pose, markers, grid_ver, SIZE, ppb])
+  }, [pose, markers, grid_ver, SIZE, ppb, zone_size, offset_x, offset_z, t])
 
   const spawn_of = (/** @type {string} */ key) => spawns.find((s) => s.key === key) ?? null
 
@@ -208,15 +225,14 @@ export function MinimapModal({ onClose }) {
     const grid = grid_ref.current
     if (!grid) return null
     const origin = origin_ref.current
-    const c = SIZE / 2
+    const projection = { size: SIZE, ppb, theta: 0, player_x: origin.x, player_z: origin.z }
     let best = null
     let best_d2 = HIT_R * HIT_R
     for (const m of markers) {
       const gi = grid_index_at(grid, m.x, m.z)
       if (gi < 0) continue
-      const sx = c + (m.x - origin.x) * ppb
-      const sy = c + (m.z - origin.z) * ppb
-      const d2 = (sx - lpx) ** 2 + (sy - lpy) ** 2
+      const point = flat_map_point(m.x, m.z, projection)
+      const d2 = (point.x - lpx) ** 2 + (point.y - lpy) ** 2
       if (d2 <= best_d2) {
         best_d2 = d2
         best = m

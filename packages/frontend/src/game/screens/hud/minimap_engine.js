@@ -29,6 +29,8 @@
 
 import { HACK_LATTICE, HACK_PALETTE, hack_css_hex, hack_css_rgba } from '@aresrpg/engine3/hack'
 
+import { draw_zone_map_overlay } from './zone_map_overlay.js'
+
 /** Oblique ground-plane squash (screen-fixed tilt) — lower = more tilted/3-D, higher = more top-down. Tuned
  *  to the Cube-World reference (a strongly tilted slab). */
 export const MAP_TILT = 0.48
@@ -241,6 +243,21 @@ export function project_offset(dx, dz, theta, tilt) {
 }
 
 /**
+ * World position -> CSS canvas px for the expanded map's flat projection. Zone delimiters, markers,
+ * hit-testing, and the live player arrow all use this one transform so no overlay can drift from the map.
+ * @param {number} world_x @param {number} world_z
+ * @param {{ size:number, ppb:number, player_x:number, player_z:number, theta?:number }} o
+ * @returns {{ x:number, y:number }}
+ */
+export function flat_map_point(world_x, world_z, o) {
+  const projected = project_offset(world_x - o.player_x, world_z - o.player_z, o.theta ?? 0, 1)
+  return {
+    x: o.size / 2 + projected.x * o.ppb,
+    y: o.size / 2 + projected.z * o.ppb,
+  }
+}
+
+/**
  * Paints ONE oblique 2.5-D relief frame into `ctx` (square viewport `size`). NO outer mask — the terrain's own
  * silhouette (hill skyline + the forced boundary cliff) is the widget edge, a free-floating isometric slab, not
  * a circular lens (round-3 fix). Rotates the grid to the live heading, projects every column to a lifted tile +
@@ -415,7 +432,8 @@ export function render_flat_terrain(ctx, grid, o) {
 }
 
 /**
- * Paints the OVERLAY (markers + player arrow + north tick) of the flat expanded map — cheap (O(#markers)),
+ * Paints the OVERLAY (zone delimiters/names + markers + player arrow + north tick) of the flat expanded map —
+ * cheap (O(#zones + #markers)),
  * meant to redraw on every pose/hover change without touching the (expensive, painted-once) terrain layer
  * underneath it (a separate canvas — see render_flat_terrain). NORTH-UP fixed (`theta` stays 0 by default,
  * same as the terrain, so marker positions agree with it): unlike the small map, the TERRAIN never rotates
@@ -428,6 +446,7 @@ export function render_flat_terrain(ctx, grid, o) {
  * @param {number} o.player_x terrain/marker projection anchor world-x (the frozen paint-once origin at region
  * scale — must match render_flat_terrain's anchor or markers drift off the terrain)
  * @param {number} o.player_z terrain/marker projection anchor world-z
+ * @param {Array<{id:string,label?:string,bounds:{min_x:number,min_z:number,max_x:number,max_z:number}}>} [o.zones]
  * @param {Array<{x:number,z:number,kind:string,hot?:boolean}>} [o.markers]
  * @param {boolean} [o.arrow] draw the player arrow (default true) @param {number} [o.heading] arrow rotation (rad, default 0)
  * @param {number} [o.arrow_x] LIVE player world-x for the arrow's screen offset (defaults to `player_x` — draws
@@ -443,29 +462,23 @@ export function render_flat_overlay(ctx, grid, o) {
   const theta = o.theta ?? 0
   const c = size / 2
   const r = c - 1
-  const cos = Math.cos(theta)
-  const sin = Math.sin(theta)
+  const projection = { size, ppb, theta, player_x, player_z }
 
   ctx.clearRect(0, 0, size, size)
+  draw_zone_map_overlay(ctx, o.zones, (world_x, world_z) => flat_map_point(world_x, world_z, projection), projection)
 
   if (o.markers) {
     for (const m of o.markers) {
       const gi = grid_index_at(grid, m.x, m.z)
       if (gi < 0) continue
-      const dx = m.x - player_x
-      const dz = m.z - player_z
-      const sx = c + (dx * cos - dz * sin) * ppb
-      const sy = c + (dx * sin + dz * cos) * ppb
-      draw_marker(ctx, sx, sy, m.kind, !!m.hot)
+      const point = flat_map_point(m.x, m.z, projection)
+      draw_marker(ctx, point.x, point.y, m.kind, !!m.hot)
     }
   }
 
   if (o.arrow !== false) {
-    const adx = (o.arrow_x ?? player_x) - player_x
-    const adz = (o.arrow_z ?? player_z) - player_z
-    const ax = c + (adx * cos - adz * sin) * ppb
-    const ay = c + (adx * sin + adz * cos) * ppb
-    draw_player_arrow(ctx, ax, ay, o.heading ?? 0)
+    const point = flat_map_point(o.arrow_x ?? player_x, o.arrow_z ?? player_z, projection)
+    draw_player_arrow(ctx, point.x, point.y, o.heading ?? 0)
   }
   const np = project_offset(0, -1, theta, 1)
   const nlen = Math.hypot(np.x, np.z) || 1

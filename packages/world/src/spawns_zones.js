@@ -407,6 +407,55 @@ export function spawn_rows(state) {
   return out
 }
 
+/**
+ * The canonical zone rectangles intersecting a world-space map viewport. Zone ids stay in CHAIN grid space
+ * (`zx:zy`), while bounds are translated once into signed WORLD space for renderers. This is the one
+ * zone-grid projection shared by map surfaces: callers choose a viewport, never repeat zone-size/offset math.
+ * Max edges are exclusive, matching the chain's `pos / zone_size` ownership rule.
+ * @param {Pick<SpawnsState, 'zone_size'|'offset_x'|'offset_z'>} state
+ * @param {{ min_x:number, min_z:number, max_x:number, max_z:number }} viewport
+ * @returns {{ id:string, zx:number, zy:number,
+ *   bounds:{ min_x:number, min_z:number, max_x:number, max_z:number } }[]}
+ */
+export function zone_map_rects(state, viewport) {
+  const zone_size = Number(state?.zone_size)
+  const offset_x = Number(state?.offset_x)
+  const offset_z = Number(state?.offset_z)
+  const min_x = Number(viewport?.min_x)
+  const min_z = Number(viewport?.min_z)
+  const max_x = Number(viewport?.max_x)
+  const max_z = Number(viewport?.max_z)
+  if (
+    !Number.isFinite(zone_size) ||
+    zone_size <= 0 ||
+    ![offset_x, offset_z, min_x, min_z, max_x, max_z].every(Number.isFinite) ||
+    min_x >= max_x ||
+    min_z >= max_z
+  )
+    return []
+
+  const axis_cells = (low, high, offset) => {
+    const first = Math.max(0, Math.floor((low + offset) / zone_size))
+    const last = Math.ceil((high + offset) / zone_size) - 1
+    return Array.from({ length: Math.max(0, last - first + 1) }, (_, index) => first + index)
+  }
+  const x_cells = axis_cells(min_x, max_x, offset_x)
+  const z_cells = axis_cells(min_z, max_z, offset_z)
+  return z_cells.flatMap((zy) =>
+    x_cells.map((zx) => ({
+      id: zone_key(zx, zy),
+      zx,
+      zy,
+      bounds: {
+        min_x: zx * zone_size - offset_x,
+        min_z: zy * zone_size - offset_z,
+        max_x: (zx + 1) * zone_size - offset_x,
+        max_z: (zy + 1) * zone_size - offset_z,
+      },
+    }))
+  )
+}
+
 // A resource's (job, tier) → its gatherable display NAME, via @aresrpg/sdk/jobs' gather_resource_for — the ONE
 // home shared with the 3-D node prop (spawn_rigs resource_visual) and the compass — the pip/marker label, never
 // a charge counter.
