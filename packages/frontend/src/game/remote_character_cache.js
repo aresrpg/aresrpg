@@ -23,7 +23,7 @@
 
 import { resolve_character_docs } from '../world-shell/character_name_resolve.js'
 
-import { resolve_worn_cosmetics } from './cosmetic_glb.js'
+import { has_veteran_title, resolve_worn_cosmetics } from './cosmetic_glb.js'
 // pet_companion_resolver.js, never pet_companion.js — the resolver split carries NO @aresrpg/engine3 import
 // (issue #117), so this cache (and its test) stays runnable in every checkout, including the public one where
 // the private character GLB is absent.
@@ -44,7 +44,7 @@ const NO_PET = { spawn: false, glb_url: null, key: null }
 export function create_remote_character_cache(deps = {}) {
   const templates = deps.templates ?? (() => new Map())
   const now = deps.now ?? (() => Date.now())
-  /** @type {Map<string, { worn: {head:any, back:any}, pet: {spawn:boolean, glb_url:string|null, key:string|null}, resolved_at: number }>} */
+  /** @type {Map<string, { worn: {head:any, back:any}, pet: {spawn:boolean, glb_url:string|null, key:string|null}, veteran: boolean, resolved_at: number }>} */
   const cache = new Map()
   const pending = new Set()
 
@@ -53,6 +53,9 @@ export function create_remote_character_cache(deps = {}) {
 
   /** The last-resolved pet-companion verdict for a peer — synchronous, never blocks the frame loop. #553. */
   const pet_of = (id) => cache.get(id)?.pet ?? NO_PET
+
+  /** TR-5 — does this peer wear the veteran title? Same doc, same gate the local player reads. */
+  const veteran_of = (id) => cache.get(id)?.veteran ?? false
 
   /**
    * Batch-refresh every id in `ids` whose cache row is missing/stale/not already in flight. Fire-and-forget —
@@ -77,6 +80,7 @@ export function create_remote_character_cache(deps = {}) {
           cache.set(id, {
             worn: character ? resolve_worn_cosmetics(character, catalog) : BLANK_WORN,
             pet: character ? resolve_pet_companion(character) : NO_PET,
+            veteran: character ? has_veteran_title(character) : false,
             resolved_at: at,
           })
         }
@@ -92,5 +96,5 @@ export function create_remote_character_cache(deps = {}) {
     pending.delete(id)
   }
 
-  return { worn_of, pet_of, refresh, drop }
+  return { worn_of, pet_of, veteran_of, refresh, drop }
 }

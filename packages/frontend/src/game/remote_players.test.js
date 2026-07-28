@@ -9,12 +9,12 @@
 // one home for "is a WORLD fight active", and never a simulator-session cull.
 //
 // remote_players.js owns a browser+network dependency graph (a DOM chip layer, a self-contained rAF render
-// loop, a real /v1 fetch at construction, THREE avatar/mount/aura creation via @aresrpg/engine3) that a unit
+// loop, a real /v1 fetch at construction, THREE avatar/aura creation via @aresrpg/engine3) that a unit
 // test has no business booting — house law is pure injection over mock.module (world_checkpoint.test.js's own
 // header; kiosk_cap_cache.test.js's "own bun mock.module law"). So this proves the fix at the SAME grain
 // embed_voxel_lifecycle.test.js already established one file over: (1) the exported pure predicate behaves
 // correctly in isolation, and (2) SOURCE-TEXT assertions pin that the predicate is actually the ONE thing
-// wired at every render-output site (avatar body / mount / aura / nameplate) inside the SHARED per-rig loop —
+// wired at every render-output site (avatar body / pet / aura / nameplate) inside the SHARED per-rig loop —
 // so a peer who joins mid-fight is caught by the same gate on its very first render pass, never a
 // spawn-time-only special case a fresh join could slip through, and there is no second, competing hide path.
 
@@ -25,7 +25,7 @@ import { install_browser_globals } from '../test_helpers/browser_globals.js'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
 const restore_browser_globals = install_browser_globals()
-// MISSING-ARTIFACT (#117): remote_players.js's engine3 avatar/mount/aura graph unconditionally imports
+// MISSING-ARTIFACT (#117): remote_players.js's engine3 avatar/aura graph unconditionally imports
 // character_avatar.js — a static import of the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
 const { remote_rig_visible } = SENSHI_MALE_GLB_AVAILABLE ? await import('./remote_players.js') : {}
 restore_browser_globals()
@@ -45,9 +45,8 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('remote_rig_visible — fight view o
     expect(source).toContain('world_fight_active(fight_store.getState())')
   })
 
-  it('wired at every render-output site — avatar body, mount, pet, aura, and nameplate all gate on it', () => {
+  it('wired at every render-output site — avatar body, pet, aura, and nameplate all gate on it', () => {
     expect(source).toContain('r.avatar.object3d.visible = remote_rig_visible(fight_active)')
-    expect(source).toContain('r.mount.set_visible(remote_rig_visible(fight_active))')
     expect(source).toContain('r.pet.set_visible(remote_rig_visible(fight_active))') // #553 — public pets
     expect(source).toContain('r.aura.set_active(remote_rig_visible(fight_active))')
     expect(source).toContain('remote_rig_visible(fight_active) && px')

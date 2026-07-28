@@ -250,6 +250,19 @@ export function worn_model_of(item, templates = new Map()) {
   )
 }
 
+/** TR-5 — does the character's equipped `title` slot hold the VETERAN title? (the aura gate). The title
+ *  item is minted by the crowdfund LATER (today only the `veteran_scroll` consumable that grants it
+ *  exists), so this stays forward-compatible: it lights up the moment a title item whose identity reads
+ *  "veteran"/"unbroken" (the Mark of the Unbroken line) lands in the slot. ONE home for the gate: the local
+ *  player reads it off its live character (embed_voxel_player.js), a REMOTE peer off the same field of the
+ *  /v1 character doc (remote_character_cache.js) — the aura is chain truth, never a self-declared claim.
+ *  @param {any} character */
+export function has_veteran_title(character) {
+  const item = character?.title
+  if (!item) return false
+  return /veteran|unbroken/i.test(String(item.id ?? item.item_type ?? item.type ?? item.name ?? ''))
+}
+
 /**
  * The worn hat/cloak model specs for a character's equipped cosmetics — `{ head, back }`, each
  * `{ url, variant }` or null (the legacy player_equipment pair, nothing more). LIVE: `/v1/characters` resolves
