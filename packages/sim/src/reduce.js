@@ -617,9 +617,24 @@ const run_turn_start_hazards = (state, entity_id) => {
 }
 
 /**
+ * THE GLYPH CLOCK (#1540 — the chain's cadence, one home). A glyph's duration ticks on PLAYER turn-ends only:
+ * Move's `cast::tick_turn_end` decrements glyphs inside its NON-MOB arm (cast.move:1708, declared at
+ * :1691-1692), reached from `turns::forfeit_current` (turns.move:167) — the single door every player turn end
+ * goes through. A mob turn-end takes the `is_mob` arm (turns.move:280/:321) and never decrements, and a seat
+ * the walk steps over (dead, or killed by its turn-START tick) never reaches a turn end at all. So this is
+ * keyed on the ACTOR WHOSE TURN IS ENDING, never on the global turn ordinal — that one advances on mob turns
+ * and would price a 3-turn glyph as dead after a single PvM round.
+ * @param {import('./fight_state.js').FightState} state  the state BEFORE the turn pointer steps
+ * @returns {import('./fight_state.js').FightState}
+ */
+const tick_turn_end_glyphs = state =>
+  get_current_turn_entity(state)?.is_player ? decay_glyphs(state) : state
+
+/**
  * Advance the turn to the next ACTABLE entity: step the index, reset AP/MP, run turn-start hazards, and skip
  * any entity that is dead OR stunned (a stunned actor loses its whole turn — its STUN is consumed by the
- * turn-start decrement; emit `fight_turn_skipped` so the client shows it). Glyphs decay once per advance.
+ * turn-start decrement; emit `fight_turn_skipped` so the client shows it). Glyph durations tick on the ending
+ * PLAYER's turn end (`tick_turn_end_glyphs` — never on a mob's, never on a stepped-over corpse's).
  * Bounded by turn_order length so an all-skipped order can't loop forever. Returns the collected events.
  * @param {import('./fight_state.js').FightState} state
  * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
@@ -627,13 +642,16 @@ const run_turn_start_hazards = (state, entity_id) => {
 const advance_to_actor = state => {
   /** @type {import('./reduce.js').FightEvent[]} */
   let events = []
-  let next = decay_glyphs(advance_turn(state))
+  // The actor here just ENDED its turn — including a player who self-killed mid-turn, whose own pass still runs
+  // the end-phase work on chain (turns.move:181-184, `forfeit_current` tolerates a dead current seat).
+  let next = advance_turn(tick_turn_end_glyphs(state))
   for (let i = 0; i <= next.turn_order.length; i++) {
     const entity = get_current_turn_entity(next)
     if (!entity) break
-    // Dead -> step over (no hazards; it has no turn). Glyphs/DoT already decayed for the prior step.
+    // Dead -> step over (no hazards; it has no turn, so no turn-END either: `resolve_from` skips the seat
+    // outright, turns.move:213-216 — nothing of its would-be turn ticks).
     if (entity.health <= 0) {
-      next = decay_glyphs(advance_turn(next))
+      next = advance_turn(next)
       continue
     }
     // Was this actor stunned at the START of its turn? Decide BEFORE the turn-start decrement consumes it.
@@ -642,12 +660,15 @@ const advance_to_actor = state => {
     next = hazards.state
     events = [...events, ...hazards.events]
     const after = get_current_turn_entity(next)
-    // Died to its own DoT/glyph -> step over to the next actor.
+    // Died to its own DoT/glyph -> step over to the next actor. Its turn never ENDED (Move: `tick_turn_start`
+    // returned false and the walk moves on WITHOUT `tick_turn_end` — turns.move:237-246), so nothing ticks.
     if (!after || after.health <= 0) {
-      next = decay_glyphs(advance_turn(next))
+      next = advance_turn(next)
       continue
     }
-    // Stunned -> turn is skipped (STUN consumed by the decrement above); announce + step over.
+    // Stunned -> turn is skipped (STUN consumed by the decrement above); announce + step over. The turn DID
+    // begin (its start hazards just ran) and now ends without an action — the sim's own analogue of a forfeited
+    // player turn, so a stunned PLAYER still spends one glyph turn; a stunned mob still spends none.
     if (stunned) {
       events = [
         ...events,
@@ -657,7 +678,7 @@ const advance_to_actor = state => {
           entity_id: entity.id,
         },
       ]
-      next = decay_glyphs(advance_turn(next))
+      next = advance_turn(tick_turn_end_glyphs(next))
       continue
     }
     break

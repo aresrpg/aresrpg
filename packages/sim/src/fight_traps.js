@@ -413,7 +413,9 @@ export const check_glyphs = (state, entity_id) => {
 }
 
 /**
- * Decrement every glyph's turn counter and drop the expired ones. Called once per turn advance.
+ * Decrement every glyph's turn counter and drop the expired ones. Called once per PLAYER turn-END — the chain's
+ * cadence (`cast::tick_turn_end` decrements glyphs in its non-mob arm, cast.move:1708; a mob turn-end and a
+ * stepped-over seat never do). `reduce.js`'s `tick_turn_end_glyphs` owns that clock; this is the raw decrement.
  * @param {import('./fight_state.js').FightState} state
  * @returns {import('./fight_state.js').FightState}
  */
