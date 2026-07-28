@@ -96,6 +96,10 @@ async function get_production_registry() {
   try {
     const { RedisClient } = await import('bun')
     production_redis = new RedisClient(REDIS_URL, { connectionTimeout: 2000, enableOfflineQueue: false })
+    // The offline queue is off (a courier write must never be buffered into a lie), so the very FIRST
+    // request after boot would be refused while the socket was still opening. Wait for it here instead:
+    // an unreachable Redis still fails closed below, it just fails for the real reason.
+    await production_redis.connect()
     production_registry = create_redis_courier_registry(production_redis)
     return production_registry
   } catch (error) {
@@ -267,5 +271,7 @@ export default async function handler(request, response) {
 if (typeof Bun !== 'undefined' && import.meta.main) {
   const port = Number(process.env.COURIER_PORT || 9529)
   console.log(`[courier] zkLogin-only position/chat ingress net=${NETWORK} :${port}`)
-  Bun.serve({ port, fetch: courier_fetch })
+  // Bun hands its Server as the handler's SECOND argument, which would land in `courier_fetch`'s injected
+  // `service` slot and 500 every request — the standalone server passes the request alone, on purpose.
+  Bun.serve({ port, fetch: (request) => courier_fetch(request) })
 }
