@@ -3,18 +3,20 @@
 // One browser edge for the stateless courier: a public world presence SSE inbound, zkLogin-authenticated
 // position/chat POSTs outbound, and a trailing position coalescer that stays under the shared 2/s hard gate.
 
-import { courier_challenge, courier_presence_url, post_courier_chat, post_courier_position } from '@aresrpg/sdk/courier'
+import { courier_challenge, post_courier_chat, post_courier_position } from '@aresrpg/sdk/courier'
 
 import { COURIER_URL, RPC_URL } from '../env'
 import { game_log } from '../core/log.js'
-import { presence_input } from '../world-shell/presence_adapter.js'
+import { presence_input, presence_store } from '../world-shell/presence_adapter.js'
+import { open_presence_stream, presence_frames } from '../world-shell/presence_sse_adapter.js'
 
 const POSITION_MIN_INTERVAL_MS = 500
 const AUTH_REUSE_MS = 4 * 60_000
 const GROUP_CHANNEL = 'CHAT_GROUP'
 
-let stream = null
+let close_stream = null
 let active_world = null
+let active_identity = null
 let active_party = null
 let auth_cache = null
 let auth_in_flight = null
@@ -57,60 +59,84 @@ async function courier_auth() {
   }
 }
 
-/** Fold one courier row through the existing presence door. Exported for the wire-contract unit test. */
-export function ingest_courier_event(row, input = presence_input, party_id) {
-  const current_party = party_id === undefined ? active_party : party_id
-  if (Array.isArray(row?.positions)) {
-    row.positions.forEach((position) => ingest_courier_event(position, input, current_party))
-    return
-  }
+/**
+ * ONE courier row → the typed presence inputs it delivers. Pure by design: the transport folds, this decides.
+ * A `positions` snapshot is just the many-row case of the same decode. Our OWN chat line comes back down this
+ * same wire (the courier publishes to the world channel we are subscribed to) — that round trip IS the sender
+ * echo, so there is no second optimistic path to disagree with it.
+ */
+export function courier_inputs(row, party_id = null) {
+  if (Array.isArray(row?.positions)) return row.positions.flatMap((position) => courier_inputs(position, party_id))
   if (row?.type === 'position') {
     const { character: id, x, z, heading } = row
-    if (!id || !Number.isFinite(x) || !Number.isFinite(z)) return
-    input({ type: 'peer_pos', id, x, y: z, yw: Number.isFinite(heading) ? heading : undefined })
-    return
+    if (!id || !Number.isFinite(x) || !Number.isFinite(z)) return []
+    return [{ type: 'peer_pos', id, x, y: z, yw: Number.isFinite(heading) ? heading : undefined }]
   }
-  if (row?.type !== 'chat') return
-  if (row.channel === GROUP_CHANNEL && (!row.party || row.party !== current_party)) return
-  input({
-    type: 'chat_received',
-    row: {
-      id: row.character,
-      message: row.text,
-      address: row.address,
-      name: '',
-      channel: row.channel,
-      target: row.target ?? '',
+  if (row?.type !== 'chat') return []
+  if (row.channel === GROUP_CHANNEL && (!row.party || row.party !== party_id)) return []
+  return [
+    {
+      type: 'chat_received',
+      row: {
+        id: row.character,
+        message: row.text,
+        address: row.address,
+        name: '',
+        channel: row.channel,
+        target: row.target ?? '',
+      },
     },
+  ]
+}
+
+const decode_courier_frame = (event) => {
+  try {
+    return courier_inputs(JSON.parse(event.data), active_party)
+  } catch (error) {
+    game_log('courier', 'presence event decode failed', error)
+    return []
+  }
+}
+
+/** The courier's vocabulary on the shared world link: the join snapshot, live poses, and chat lines. */
+const courier_frames = {
+  positions: decode_courier_frame,
+  position: decode_courier_frame,
+  chat: decode_courier_frame,
+}
+
+/**
+ * Join (or re-identify on) one world's public presence stream — the ONE inbound link, carrying both the
+ * read layer's presence vocabulary and the courier's. The route registers this connection by identity, so a
+ * link that can name neither a character nor a wallet is refused before framing and is never opened.
+ */
+export function join_courier(world, character = null) {
+  if (!world || typeof EventSource === 'undefined') return
+  const address = presence_store.getState().my_state?.address || null
+  const identity = `${character ?? ''}:${address ?? ''}`
+  if (close_stream && active_world === world && active_identity === identity) return
+  close_stream?.()
+  close_stream = null
+  active_world = world
+  active_identity = identity
+  if (!character && !address)
+    return game_log('courier', 'presence link not opened — this session names neither a character nor a wallet')
+  close_stream = open_presence_stream({
+    world,
+    address,
+    character,
+    input: presence_input,
+    base_url: RPC_URL,
+    frames: { ...presence_frames, ...courier_frames },
+    set_status: (status, error) => game_log('courier', `presence link ${status}`, error),
   })
 }
 
-function receive(event) {
-  try {
-    ingest_courier_event(JSON.parse(event.data))
-  } catch (error) {
-    game_log('courier', 'presence event decode failed', error)
-  }
-}
-
-/** Join (or re-identify on) one world's public presence stream. */
-export function join_courier(world) {
-  if (!world || typeof EventSource === 'undefined') return
-  if (stream && active_world === world) return
-  stream?.close()
-  active_world = world
-  stream = new EventSource(courier_presence_url(RPC_URL, world))
-  stream.onmessage = receive
-  stream.addEventListener('position', receive)
-  stream.addEventListener('chat', receive)
-  stream.addEventListener('positions', receive)
-  stream.onerror = (error) => game_log('courier', 'presence stream interrupted — EventSource will retry', error)
-}
-
 export function leave_courier() {
-  stream?.close()
-  stream = null
+  close_stream?.()
+  close_stream = null
   active_world = null
+  active_identity = null
   active_party = null
   pending_position = null
   if (position_timer) clearTimeout(position_timer)

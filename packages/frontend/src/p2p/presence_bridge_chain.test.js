@@ -18,15 +18,17 @@ set_expedition_sdk_mock(() => Promise.reject(new Error('no SDK session in headle
 // The REAL production graph: game.js boots the module pipeline (presence + chat observe the real context);
 // presence_adapter owns the ONE presence atom; lobby-room is the transport whose onMessage the peer drives.
 const { context } = await import('../game/core/game.js')
-const { ingest_courier_event } = await import('../courier/world.js')
+const { courier_inputs } = await import('../courier/world.js')
 const { presence_store, presence_input } = await import('../world-shell/presence_adapter.js')
 const { join_lobby, leave_lobby } = await import('./lobby-room.js')
 const { select_online_count } = await import('../game/core/presence_count.js')
 
-const fire_pos = (/** @type {any} */ p) => ingest_courier_event({ type: 'position', character: p.id, x: p.x, z: p.y })
+/** One delivered courier frame, folded exactly as the world link folds it. */
+const deliver = (/** @type {any} */ row) => courier_inputs(row).forEach((input) => presence_input(input))
+const fire_pos = (/** @type {any} */ p) => deliver({ type: 'position', character: p.id, x: p.x, z: p.y })
 const fire_state = (/** @type {any} */ p) => actions.get('state').onMessage(p, { peerId: `peer-${p.id}` })
 const fire_chat = (/** @type {any} */ p) =>
-  ingest_courier_event({
+  deliver({
     type: 'chat',
     character: p.id,
     address: p.address ?? p.id,
