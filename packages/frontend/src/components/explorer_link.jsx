@@ -25,6 +25,16 @@ export function explorer_object_url(object_id) {
 }
 
 /**
+ * The explorer transaction URL for a transaction digest, or null when there is none.
+ * @param {string | null | undefined} digest
+ * @returns {string | null}
+ */
+export function explorer_tx_url(digest) {
+  if (!digest || typeof digest !== 'string') return null
+  return `https://${SUIVISION_HOST}/txblock/${digest}`
+}
+
+/**
  * CUSTODY-AWARE explorer target for an ITEM (#1226). Equipping WRAPS the item into its character, so the
  * item id leaves Sui global storage and its object page 404s — the character is the top-level object that
  * still resolves (the equipped item shows there as a nested field). Kiosk-held (unequipped) items are real

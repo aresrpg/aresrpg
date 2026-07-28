@@ -24,7 +24,7 @@ import { is_suins_name, resolve_suins_address } from '../utils/suins'
 import { use_sui_send, GAS_ESTIMATE_FALLBACK_MIST, type SendState } from '../stores/sui_send'
 
 import { AddFundsModal } from './add_funds_modal'
-import { SendModalShell as Shell } from './send_modal_shell'
+import { SendModalShell as Shell, DigestLink } from './send_modal_shell'
 
 // ─── Regex + helpers ──────────────────────────────────────────────────────
 
@@ -90,58 +90,6 @@ function is_valid_full_address(value: string): boolean {
 // (full-precision) floor's trailing zeros instead so the actual dry-run number stays visible.
 function format_gas_sui(mist: bigint): string {
   return format_mist_to_sui(mist, 9).replace(/0+$/, '').replace(/\.$/, '')
-}
-
-function truncate_digest(digest: string): string {
-  if (digest.length <= 16) return digest
-  return `${digest.slice(0, 10)}...${digest.slice(-6)}`
-}
-
-// ─── Digest link ──────────────────────────────────────────────────────────
-
-function DigestLink({ digest }: { digest: string }) {
-  const { t } = useTranslation()
-  const [copied, set_copied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(digest)
-      set_copied(true)
-      setTimeout(() => set_copied(false), 2000)
-    } catch {
-      /* ignore */
-    }
-  }
-  return (
-    <div className="w-full flex flex-col gap-1.5">
-      <span className="text-muted text-[9px] tracking-[0.2em] uppercase">{t('purchase.transaction')}</span>
-      <div className="flex items-center gap-2">
-        <a
-          href={`https://suiscan.xyz/testnet/tx/${digest}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyan text-[10px] tracking-wide hover:underline flex items-center gap-1.5 transition-colors font-mono"
-        >
-          {truncate_digest(digest)}
-          <ExternalLink size={10} className="opacity-50" />
-        </a>
-        <button
-          type="button"
-          onClick={copy}
-          className="text-muted hover:text-gold transition-colors cursor-pointer flex items-center gap-1"
-          aria-label="Copy digest"
-        >
-          {copied ? (
-            <>
-              <Check size={12} className="text-emerald-400" />
-              <span className="text-emerald-400 text-[9px] tracking-[0.15em] uppercase">{t('common.copied')}</span>
-            </>
-          ) : (
-            <Copy size={12} className="opacity-50" />
-          )}
-        </button>
-      </div>
-    </div>
-  )
 }
 
 // ─── Main modal ───────────────────────────────────────────────────────────
