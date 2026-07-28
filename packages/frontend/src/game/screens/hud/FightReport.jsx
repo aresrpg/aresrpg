@@ -37,13 +37,12 @@ import { resolve_loot_tile } from './loot-tile-resolve.js'
 import { resolvable_row_ids, apply_resolved_names } from './fight_report_names.js'
 import { format_mmss } from './world/compass_math.js'
 import { ItemDetailView } from '../../../components/item_detail_view'
-import { slugs } from 'virtual:item_catalog'
-
 import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { use_template_t } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
+import { seed_manifest } from '../../../content/seed_manifest'
 import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
 import './result.css'
 
@@ -51,19 +50,19 @@ import './result.css'
 const ZONE = 'Whisperwood'
 // the receipt fits a single tidy row of loot tiles; beyond this we'd wrap (rare — a fight drops few types).
 const MAX_TILES = 8
-/** template id → authored render slug, so a rolled template recovers its real icon even when its on-chain
- * item_type is only the generic class word (for example "resource"). Derived from the LIVE template rows
- * this report already read, joined to the authored catalog by NAME — the same `slugs[name]` join the
- * encyclopedia's item rows use. It used to invert the build-time seed receipt, which freezes into the
- * deployed bundle: one republish and every loot tile fell back to a category glyph (#1467).
- * @param {Map<string, any>} template_map @returns {Record<string, string>} */
-const icon_slugs_of = (template_map) =>
-  Object.fromEntries(
-    [...template_map].flatMap(([template_id, row]) => {
-      const slug = row?.name ? slugs[row.name] : undefined
-      return slug ? [[String(template_id), slug]] : []
-    }),
-  )
+// The deployment receipt publishes slug → ItemTemplate id; invert it once so a rolled template can recover
+// its real render even when its on-chain item_type is only the generic class word (for example "resource").
+//
+// STILL THE RECEIPT, deliberately (#1522). This is the #1467 class — the receipt freezes into the deployed
+// bundle, so a republish that outruns a redeploy drops every loot tile to its category glyph — and the live
+// fix is the join the encyclopedia uses: live row template_id → name → `slugs[name]` from the authored
+// catalog. That import is REFUSED here: FightReport is on a fight path, and the zero-drift gate
+// (scripts/, issue #914) fails any fight-path module whose imports do not resolve — `virtual:item_catalog`
+// is a Vite virtual module. The slug map has to arrive from the composition root instead of being bound at
+// module scope, which is a separate change; it is boarded rather than smuggled in here.
+const icon_slug_by_template_id = Object.fromEntries(
+  Object.entries(seed_manifest.items).map(([slug, template_id]) => [template_id, slug]),
+)
 
 /** First letter of a name, for the glyph tile. @param {string | null | undefined} name */
 const initial = (name) => (String(name ?? '').trim()[0] ?? '?').toUpperCase()
@@ -96,10 +95,17 @@ function Skel({ w = '3.5em' }) {
  * orphaned drop (missing from BOTH the bag snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot
  * template) renders the D53 bold-letter fallback instead of <ItemIcon> — a loot slot must never read as an
  * empty un-hoverable box.
- * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, icon_slugs: Record<string, string>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
+ * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
  */
-function LootTile({ entry, items, template_map, icon_slugs, tt, t }) {
-  const base_tile = resolve_loot_tile(entry, items, template_map, tt, t, icon_slugs)
+function LootTile({ entry, items, template_map, tt, t }) {
+  const base_tile = resolve_loot_tile(
+    entry,
+    items,
+    template_map,
+    tt,
+    t,
+    icon_slug_by_template_id,
+  )
   const item_id = base_tile.item_id
   const [rolled_state, set_rolled_state] = useState({ item_id: null, rolled_stats: null })
   useEffect(() => {
@@ -119,7 +125,7 @@ function LootTile({ entry, items, template_map, icon_slugs, tt, t }) {
   }, [item_id])
   const rolled_stats = rolled_state.item_id === item_id ? rolled_state.rolled_stats : null
   const resolved_tile = rolled_stats
-    ? resolve_loot_tile(entry, items, template_map, tt, t, icon_slugs, rolled_stats)
+    ? resolve_loot_tile(entry, items, template_map, tt, t, icon_slug_by_template_id, rolled_stats)
     : base_tile
   const { resolved, name, tint, category, icon, detail } = resolved_tile
   return (
@@ -214,9 +220,6 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
  * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
 function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units, t }) {
-  // The icon-slug join, off the LIVE template rows this report already read (icon_slugs_of). Before the
-  // early return: a hook is never conditional.
-  const icon_slugs = useMemo(() => icon_slugs_of(template_map), [template_map])
   if (!mine)
     return (
       <div className="fe-row__spoils fe-row__spoils--hidden" aria-label={t('fight_end.spoils_hidden')}>
@@ -243,7 +246,6 @@ function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units,
               entry={e}
               items={items}
               template_map={template_map}
-              icon_slugs={icon_slugs}
               tt={tt}
               t={t}
             />
