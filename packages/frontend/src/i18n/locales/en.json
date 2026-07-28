@@ -55,7 +55,8 @@
     "filter_empty": "No world within reach — level up",
     "mob_count": "{{count}} mobs",
     "boss_count": "{{count}} bosses",
-    "resource_count": "{{count}} resources"
+    "resource_count": "{{count}} resources",
+    "worlds_unavailable": "Worlds unavailable — the read layer is unreachable"
   },
   "rpc": {
     "reconnecting": "Reconnecting…",

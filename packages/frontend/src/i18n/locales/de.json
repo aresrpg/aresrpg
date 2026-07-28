@@ -55,7 +55,8 @@
     "filter_empty": "Keine Welt in Reichweite — steig im Level auf",
     "mob_count": "{{count}} Monster",
     "boss_count": "{{count}} Bosse",
-    "resource_count": "{{count}} Ressourcen"
+    "resource_count": "{{count}} Ressourcen",
+    "worlds_unavailable": "Welten nicht verfügbar — die Leseebene ist nicht erreichbar"
   },
   "rpc": {
     "reconnecting": "Neuverbindung…",

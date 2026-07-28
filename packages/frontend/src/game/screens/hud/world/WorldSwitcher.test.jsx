@@ -36,8 +36,9 @@ const spies = [
   spyOn(rpc_view, 'use_rpc_view').mockImplementation((_fetcher, options) =>
     options?.interval_ms === 15000
       ? { data: doc, refetch: () => {} }
-      : {
-          data: { worlds: [{ world_id: world.id, seed: 7, biome: 'archipelago', required_level: 1 }] },
+      : // the LIVE world catalog (world_catalog.js rows: chain gate + biome, receipt label)
+        {
+          data: [{ id: world.id, label: world.label, biome: 'archipelago', required_level: 1 }],
           refetch: () => {},
         }
   ),

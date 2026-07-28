@@ -4,19 +4,40 @@
 // 'arctic' every non-dungeon caller got before tonight's fix), and that those biome strings fan out across
 // ambient_music's owned tracks — different worlds must SOUND different.
 //
-// world_to_biome delegates to world-shell/world_biome.js's seed-receipt projection — the SAME synchronous
-// resolver embed_voxel.js's engine-recipe pick uses, without pulling the all-kinds encyclopedia at boot.
+// world_to_biome delegates to world-shell/world_biome.js, which resolves the World object's own chain biome
+// off the LIVE worlds catalog (#1510 — the value was briefly pinned to the build-time seed receipt, a second
+// home for a chain field). The catalog read is spied here; the biomes it serves are the receipt's own, so
+// this stays a test of the biome -> track fan-out and never of the network.
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
+import * as rpc_client from './rpc/client'
+import { seed_manifest } from './content/seed_manifest'
 import { T62_WORLDS } from './chain/deployment'
 import { track_for_biome } from './game/core/audio/ambient_music.js'
 import { _reset_for_test } from './world-shell/world_biome.js'
+import { _reset_for_test as _reset_catalog } from './world-shell/world_catalog.js'
 import { use_follow, world_to_biome } from './follow'
 
-const REAL_WORLDS = T62_WORLDS.filter(
-  (world): world is (typeof T62_WORLDS)[number] & { biome: string } => world.biome != null
+const biome_by_id = new Map(seed_manifest.worlds.map((world) => [world.id, world.biome ?? null]))
+const REAL_WORLDS = T62_WORLDS.flatMap((world) => {
+  const biome = biome_by_id.get(world.id)
+  return biome ? [{ ...world, biome }] : []
+})
+
+const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia')
+get_encyclopedia.mockImplementation(
+  async () =>
+    ({
+      items: [],
+      mobs: [],
+      recipes: [],
+      worlds: REAL_WORLDS.map((world) => ({ world_id: world.id, seed: '1', biome: world.biome, required_level: 1 })),
+    }) as never
 )
+afterAll(() => {
+  get_encyclopedia.mockRestore()
+})
 
 /** Poll a predicate until true (or give up) — used to await follow()'s fire-and-forget async biome resolve
  *  without a brittle fixed setTimeout. Every step is a cheap macrotask; the loop exits the instant state lands. */
@@ -26,6 +47,7 @@ async function wait_for(predicate: () => boolean, tries = 200) {
 
 beforeEach(() => {
   _reset_for_test()
+  _reset_catalog()
 })
 
 describe('world_to_biome — real per-world chain biome (not the flat arctic default)', () => {

@@ -7,10 +7,11 @@
 // world binding confirms bound; create_session reads the cache synchronously (`read_world_biome`) when it
 // picks the engine recipe via chain/deployment.ts's `resolve_engine_recipe`.
 //
-// The seed receipt already pins every live world id + biome synchronously. Reading that boot-resident
-// projection avoids pulling the all-kinds /v1 encyclopedia payload before the player visits its route.
+// The biome is the World object's own chain field, so it is read from the LIVE worlds catalog
+// (world_catalog.js — one home) and never from the build-time seed receipt, which freezes into the deployed
+// bundle. The scoped `?kind=worlds` read is 2.9 KB, not the all-kinds envelope (#1510).
 
-import { T62_WORLDS } from '../chain/deployment'
+import { load_world_catalog } from './world_catalog.js'
 
 /** @type {Map<string, string | null>} */
 const _cache = new Map()
@@ -24,9 +25,16 @@ const _cache = new Map()
  */
 export async function resolve_world_biome(world_id) {
   if (!world_id) return null
-  const biome = T62_WORLDS.find((world) => world.id === world_id)?.biome ?? null
-  _cache.set(world_id, biome)
-  return biome
+  try {
+    const worlds = await load_world_catalog()
+    // A successful read that carries no biome for this world IS a resolved null (unseeded / Testlands).
+    const biome = worlds.find((world) => world.id === world_id)?.biome ?? null
+    _cache.set(world_id, biome)
+    return biome
+  } catch {
+    // A read we could not make is not an answer — never cached, so the next resident mount retries.
+    return _cache.get(world_id) ?? null
+  }
 }
 
 /**

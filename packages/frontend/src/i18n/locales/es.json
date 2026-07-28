@@ -55,7 +55,8 @@
     "filter_empty": "Ningún mundo a tu alcance — sube de nivel",
     "mob_count": "{{count}} criaturas",
     "boss_count": "{{count}} jefes",
-    "resource_count": "{{count}} recursos"
+    "resource_count": "{{count}} recursos",
+    "worlds_unavailable": "Mundos no disponibles: la capa de lectura no responde"
   },
   "rpc": {
     "reconnecting": "Reconectando…",
