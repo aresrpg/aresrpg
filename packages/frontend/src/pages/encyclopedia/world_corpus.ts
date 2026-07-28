@@ -30,7 +30,8 @@
 import { create } from 'zustand'
 import { asset_url } from '@aresrpg/sdk/jobs'
 
-import { is_object_id, seed_manifest } from '../../content/seed_manifest'
+import { is_object_id } from '../../content/object_id'
+import { seed_manifest } from '../../content/seed_manifest'
 import jobs_data from '../../data/jobs.json'
 
 const { JOB_MASTER_JOBS } = jobs_data

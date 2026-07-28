@@ -12,7 +12,7 @@
 // build/serve time by `build_pet_food_slugs` (scripts/lib/item_catalog_transform.mjs) and embedded as
 // `pet_food_slugs` on `virtual:item_catalog` — callers bind it at the call site (the same injection
 // idiom as item_catalog.ts CatalogData), so bun tests recompute live from seed with zero Vite.
-import { is_object_id } from '../../content/seed_manifest'
+import { is_object_id } from '../../content/object_id'
 
 /** The row shape both surfaces already hold: the encyclopedia's living /v1 items (items_tab joins the
  * seed slug on each row). Extra fields pass through untouched. */

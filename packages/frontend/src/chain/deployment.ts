@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { is_object_id, seed_manifest } from '../content/seed_manifest'
+import { is_object_id } from '../content/object_id'
+import { seed_manifest } from '../content/seed_manifest'
 
 const selected_network = (
   (import.meta as unknown as { env: Record<string, string> }).env?.VITE_NETWORK || 'testnet'

@@ -12,7 +12,7 @@
 // full `bun test src` sweep, bisected 2026-07-10 (that pair has since been DELETED from env.ts — the
 // station is server-side-only). Keep this object's keys in lockstep with env.ts's exports.)
 
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
@@ -31,6 +31,11 @@ configure_assets({ aggregator: 'https://cdn.aresrpg.world' })
 // the header note above, so this file's own pet-fallback tests must not assume load order).
 configure_assets({ classes: { mob: { published: true } } })
 
+// Loaded AFTER env_mock's mock.module lands (same reason cosmetic_glb.js itself is): a static import here
+// pulls src/env in through the rpc client's graph before the mock is registered, and every asset URL in this
+// file then resolves against the real base.
+const rpc_client = await import('../rpc/client')
+
 const {
   is_mount_item,
   models_dev_url,
@@ -42,9 +47,36 @@ const {
   resolve_worn_cosmetics,
 } = await import('./cosmetic_glb.js')
 
-test('read_worn_templates projects cosmetic ids from the boot-resident seed receipt', async () => {
+// ISSUE #1510 §3 — the worn join briefly derived its template map from the BUILD-TIME seed receipt, which
+// freezes into the deployed bundle: a republish left every worn cosmetic unresolved and a receipt-less build
+// rendered none. It reads the live /v1 item view again, the same door every other item-template reader uses.
+test('read_worn_templates indexes the LIVE /v1 item rows, never the bundled seed receipt', async () => {
   const template_id = seed_manifest.items.solomonk
-  expect((await read_worn_templates()).get(template_id)).toEqual({ template_id, slug: 'solomonk' })
+  const rows = [{ template_id, name: 'Solomonk' }]
+  const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia').mockImplementation(async (kind) => {
+    expect(kind).toBe('items')
+    return { items: rows }
+  })
+  try {
+    expect((await read_worn_templates()).get(template_id)).toEqual(rows[0])
+  } finally {
+    get_encyclopedia.mockRestore()
+  }
+})
+
+test('a transient read rejection is retried once before the map degrades to empty', async () => {
+  let attempts = 0
+  const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia').mockImplementation(async () => {
+    attempts += 1
+    if (attempts === 1) throw new Error('read API unreachable')
+    return { items: [{ template_id: '0xsecond', name: 'Second Try' }] }
+  })
+  try {
+    expect((await read_worn_templates()).get('0xsecond')).toEqual({ template_id: '0xsecond', name: 'Second Try' })
+    expect(attempts).toBe(2)
+  } finally {
+    get_encyclopedia.mockRestore()
+  }
 })
 
 describe('is_mount_item — category vocab', () => {
