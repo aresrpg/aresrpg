@@ -53,6 +53,17 @@ export function decrement_bag_items(/** @type {string} */ id, units = 1) {
 }
 
 /**
+ * #1495 — fold the boot sweep's PROVEN stack merges: each `from` was deleted on chain, the surviving `into`
+ * carries the summed `total`. Receipt-only by construction (chain/stack_merge.js reads the ItemMerged events),
+ * so a failed or partial merge paints nothing.
+ * @param {{ into: string, from: string, total: number }[]} merges
+ */
+export function apply_stack_merge_receipt(merges) {
+  if (!merges?.length) return
+  context.dispatch('action/sui_data', { kind: 'receipt_patch', op: 'merge_stacks', merges })
+}
+
+/**
  * Project a SIGNED equip tx's cosmetic-slot transition onto the character row now (the world rig re-dresses
  * this frame — client-independence §1; the rig projects `characters[i].worn` per frame and had no writer
  * besides the laggy /v1 reconcile). reconcile_equip_state's confirmed row adopts chain truth right after.
