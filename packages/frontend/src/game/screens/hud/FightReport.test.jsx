@@ -250,6 +250,32 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
 // `coiffe_fuwa-white.png` → quilt `GFwmQjUVLPrqanmZV1m2qVW7fEqqE_Utn7wvNawNPx0` → HTTP 200). The loot
 // card was never wired to the fix that already ships on every other icon surface.
 describe('FightReport — loot tile icon resolution routes through the SAME shared resolver as the inventory (never a raw item_type bypass)', () => {
+  test('a post-receipt template renders the slug snapshotted from the live map, never its generic chain class', () => {
+    // Fabricate an id that cannot have existed in the bundled seed receipt. The settlement fold has already
+    // joined this id to the session's live /v1 template map and snapshots only the render slug onto the loot row;
+    // FightReport must consume that projection without importing the receipt or fetching the catalog mid-render.
+    const template_id = `0x${'1522'.repeat(16)}`
+    const live_slug_by_template_id = new Map([[template_id, 'post_receipt_starfell_shard']])
+    const spoils = {
+      xp: 10,
+      tokens: 0,
+      loot: [
+        {
+          template_id,
+          item_type: 'resource',
+          icon_slug: live_slug_by_template_id.get(template_id),
+          name: 'Starfell Shard',
+          amount: 1,
+        },
+      ],
+    }
+
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} cost={null} />)
+
+    expect(html).toContain('/assets/items/post_receipt_starfell_shard.png')
+    expect(html).not.toContain('/assets/items/resource.png')
+  })
+
   test('a published RESOURCE renders its exact manifest art, never the generic resource package', () => {
     const template_id = `0x${'e13d'.repeat(16)}` // synthetic runtime id — a source literal trips the chain-id gate
     // Chain-truth shape (live /v1): `item_type` is the authored art slug; 'resource' is the CATEGORY.
