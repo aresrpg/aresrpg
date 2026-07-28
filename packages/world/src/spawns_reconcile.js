@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWNS RECONCILE — the pure machinery under the spawns_zones door (D770a W2): the moved rule homes
 // (searchable / claimable / hysteresis), the chain→world row ingest, the [G]/[R] retargeting fold, and the
-// two reconcile folds (versioned snapshot + chain-direct top-up) that make the atom order-independent —
+// two reconcile folds (versioned snapshot + chain-direct zone result) that make the atom order-independent —
 // a poll never regresses a receipt-proven fact (grace-shielded adds/values, tombstoned removals) and an
 // agreeing poll converges as a no-op. Everything here is a pure transform over plain data; the door
 // (spawns_zones.js) is the only caller.
@@ -380,8 +380,8 @@ export const fold_snapshot = (state, input, now) => {
   return retarget({ ...state, snapshot_version: version, zones, tombstones })
 }
 
-/** A single-zone chain-direct top-up (the search fast-path / ghost resync): merge-ADD only — removals stay
- *  the snapshot's job; `proven` rows get the receipt shield. */
+/** A single-zone chain-direct search result: replace that zone's rows while every other keyed zone stands;
+ *  `proven` rows get the receipt shield. */
 export const fold_zone_rows = (state, input, now) => {
   const zk = zone_key(input.zx, input.zy)
   const zone = state.zones.get(zk) ?? {
@@ -390,8 +390,10 @@ export const fold_zone_rows = (state, input, now) => {
     rows: new Map(),
     row_proven: new Map(),
   }
-  const rows = new Map(zone.rows)
-  const row_proven = new Map(zone.row_proven)
+  /** @type {Map<string, SpawnRow>} */
+  const rows = new Map()
+  /** @type {Map<string, number>} */
+  const row_proven = new Map()
   const fresh = ingest_rows(state, input.rows)
   for (const [rk, row] of fresh) {
     const flat = `${zk}:${rk}`
