@@ -283,6 +283,116 @@ asset_codename_gate() {
   grn "  ✓ retired asset codename absent from contents and paths ($scanned files scanned; zero allowlist)"
 }
 
+# ── SPATIAL-VOCABULARY GATE (#1536 — the fight path's SSOT knot) ────────────────────────────────
+# The board's spatial vocabulary has exactly ONE home: packages/sim/src/{combat_grid,cell,pathfind,
+# visibility}.js — grid dims, encode/decode, in_grid, the manhattan metric, the 4-dir BFS, the LOS
+# predicate. `sim` and `fight` each grew a COMPLETE independent copy of it, and the copies had already
+# drifted in production: `in_grid` disagreed on negative cells, and an unproven float-slope LOS gated
+# every world-mode cast while the Move-proven integer twin sat unused beside it (a client that offers a
+# cast the chain aborts burns the player's gas). Comments asked for one home for a year; this enforces it.
+#
+# Three checks over packages/{sim,fight,frontend}/src — the production fight path (the test-side literal
+# copies are #1536 row 6 and burn down separately):
+#   1. DECLARATION — GRID_W/GRID_H/GRID_CELLS may be BOUND only in the home. Everyone else imports.
+#   2. DERIVATION  — no re-derived decode (`% GRID_W` / `/ GRID_W`) and no re-inlined manhattan
+#      (`Math.abs(a.x - b.x) + Math.abs(a.y - b.y)`) outside their homes. Those two shapes are exactly
+#      how the five manhattan copies and the second encode/decode were born.
+#   3. ENGINE MIRROR — packages/engine ships NO @aresrpg/sim dependency by design (three + noise only),
+#      so board_anchor.js vendors the stride. That copy may exist; it may not DRIFT — its values are
+#      compared against the home's, and a mismatch is fatal.
+#
+# Every check carries a POSITIVE CONTROL: the home's own line must match the pattern. A clean scan whose
+# pattern silently stopped matching anything reads exactly like a clean tree, and is a lie.
+SPATIAL_HOME='packages/sim/src/combat_grid.js'
+SPATIAL_METRIC_HOME='packages/sim/src/cell.js'
+SPATIAL_ENGINE_MIRROR='packages/engine/src/binding/board_anchor.js'
+SPATIAL_SOURCE_PATHSPEC=(
+  ':(glob)packages/sim/src/**/*.js' ':(glob)packages/fight/src/**/*.js'
+  ':(glob)packages/frontend/src/**/*.js' ':(glob)packages/frontend/src/**/*.jsx'
+)
+
+# scan <pattern> <home-file> <what> <remedy> — hits outside <home-file> fail; zero hits INSIDE it fail too
+# (the pattern went blind). Echoes nothing on success but the one green line.
+spatial_scan() {
+  local pattern="$1" home="$2" what="$3" remedy="$4"
+  local all outside inside
+  if ! all="$(grep_collected "$pattern" -InE)"; then
+    red "  ✗ FAIL: the $what scan did not run to completion — an unproven pattern is not an absent one."
+    return 1
+  fi
+  inside="$(printf '%s\n' "$all" | grep -c "^$home:")"
+  if [ "$inside" -eq 0 ]; then
+    red "  ✗ FAIL: the $what pattern no longer matches its own home ($home) — the check has gone blind."
+    return 1
+  fi
+  outside="$(printf '%s\n' "$all" | grep -v "^$home:" | awk 'NF')"
+  if [ -n "$outside" ]; then
+    red "  ✗ FAIL: $what outside $home:"
+    echo "$outside" | cut -c1-160 | sed 's/^/      /' | head -40
+    red "$remedy"
+    return 1
+  fi
+  grn "  ✓ $what: $home only ($inside line(s) there, zero elsewhere)"
+}
+
+spatial_vocabulary_gate() {
+  echo "== AresRPG spatial-vocabulary gate (#1536: ONE home for the grid dims, decode, and the manhattan metric) =="
+  if ! collect_files "${SPATIAL_SOURCE_PATHSPEC[@]}"; then
+    red "  ✗ FAIL: no fight-path sources collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  # in-src test files are #1536 row 6 (their own literal copies, burning down separately) — drop them here
+  # rather than by pathspec: git's :(exclude) magic silently stops applying once several :(glob) positives are
+  # in the same pathspec list, and a filter that quietly matches nothing is the failure mode this gate is about.
+  local kept=()
+  local file
+  for file in "${COLLECTED_FILES[@]}"; do
+    case "$file" in *.test.js | *.test.jsx) continue ;; esac
+    kept+=("$file")
+  done
+  if [ "${#kept[@]}" -eq 0 ]; then
+    red "  ✗ FAIL: every collected fight-path source was a test file — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  COLLECTED_FILES=("${kept[@]}")
+  local scanned="${#COLLECTED_FILES[@]}"
+  local failed=0
+
+  spatial_scan '(const|let|var)[[:space:]]+(GRID_W|GRID_H|GRID_CELLS)[[:space:]]*=' "$SPATIAL_HOME" \
+    'grid-dimension declaration' \
+    "GRID GATE FAILED. Import GRID_W/GRID_H/GRID_CELLS from $SPATIAL_HOME (re-exported by @aresrpg/fight/los) — never re-declare the board." || failed=1
+
+  spatial_scan '%[[:space:]]*GRID_W|/[[:space:]]*GRID_W[[:space:]]*\)' "$SPATIAL_HOME" \
+    'hand-rolled cell decode' \
+    "DECODE GATE FAILED. Use decode()/cell_x()/cell_y() from $SPATIAL_HOME — a second decode is a second board." || failed=1
+
+  spatial_scan 'Math\.abs\([^()]*\.x[^()]*\)[[:space:]]*\+[[:space:]]*Math\.abs\([^()]*\.y[^()]*\)' \
+    "$SPATIAL_METRIC_HOME" 'inlined manhattan distance' \
+    "MANHATTAN GATE FAILED. Use manhattan_distance() from $SPATIAL_METRIC_HOME (or manhattan() from $SPATIAL_HOME for encoded cells) — this is the spell-range metric, it gets ONE definition." || failed=1
+
+  # 3 — the engine's deliberate vendored copy may not drift from the home
+  local home_dims mirror_dims
+  home_dims="$(sed -n -E 's/^export const (GRID_W|GRID_H) = ([0-9]+).*/\1=\2/p' "$SPATIAL_HOME" | sort | tr '\n' ' ')"
+  mirror_dims="$(sed -n -E 's/^const (GRID_W|GRID_H) = ([0-9]+).*/\1=\2/p' "$SPATIAL_ENGINE_MIRROR" | sort | tr '\n' ' ')"
+  if [ -z "$home_dims" ] || [ -z "$mirror_dims" ]; then
+    red "  ✗ FAIL: could not read the grid dims from $SPATIAL_HOME and/or $SPATIAL_ENGINE_MIRROR — the mirror check has gone blind."
+    failed=1
+  elif [ "$home_dims" != "$mirror_dims" ]; then
+    red "  ✗ FAIL: the engine's vendored board dims drifted from the home:"
+    echo "      $SPATIAL_HOME:           $home_dims" >&2
+    echo "      $SPATIAL_ENGINE_MIRROR:  $mirror_dims" >&2
+    red "ENGINE MIRROR GATE FAILED. packages/engine ships no @aresrpg/sim dependency by design, so its copy must track the home byte for byte."
+    failed=1
+  else
+    grn "  ✓ engine's vendored board dims match the home ($home_dims)"
+  fi
+
+  if [ "$failed" -ne 0 ]; then
+    return 1
+  fi
+  grn "  ✓ spatial vocabulary has one home ($scanned fight-path sources scanned)"
+}
+
 if [ "${1:-}" = "--hardcoded-ids" ]; then
   shift
   node scripts/check-chain-ids.mjs "$@"
@@ -303,6 +413,10 @@ if [ "${1:-}" = "--app-clean-names" ]; then
 fi
 if [ "${1:-}" = "--asset-codename" ]; then
   asset_codename_gate
+  exit $?
+fi
+if [ "${1:-}" = "--spatial-vocabulary" ]; then
+  spatial_vocabulary_gate
   exit $?
 fi
 
@@ -690,7 +804,7 @@ if [ "${1:-}" = "--fixture-adjudication" ]; then
   exit $?
 fi
 if [ "$#" -ne 0 ]; then
-  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --test-reachability | --fixture-adjudication | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
+  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --spatial-vocabulary | --test-reachability | --fixture-adjudication | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
   exit 2
 fi
 
@@ -718,6 +832,11 @@ fi
 
 echo
 if ! asset_codename_gate; then
+  FAIL=1
+fi
+
+echo
+if ! spatial_vocabulary_gate; then
   FAIL=1
 fi
 
