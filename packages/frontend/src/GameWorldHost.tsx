@@ -6,9 +6,10 @@ import { plan_scene } from '@aresrpg/world/session_gate'
 
 import { use_auth, type AuthState } from './auth'
 import { use_spectate_gate } from './stores/spectate_gate'
-import { use_follow, world_to_biome } from './follow'
+import { use_follow } from './follow'
 import { use_mobile_mode } from './game/screens/hud/mobile_layout.js'
 import { use_world_binding, reset_world_binding, fetch_world_binding, end_join } from './world-shell/session_gate.js'
+import { resolve_world_biome } from './world-shell/world_biome.js'
 import { resolve_checkpoint_spawn } from './world-shell/world_checkpoint.js'
 import { restore_world_position } from './world-shell/spawns_adapter.js'
 import { TouchControlsLayer } from './game/touch/TouchControls.jsx'
@@ -298,14 +299,14 @@ export function GameWorldHost(): ReactElement {
             } else if (world) {
               mounted_world = world // carry into the mount-identity key so a travel re-boots the scene
 
-              // Resolve the on-chain CHECKPOINT before consulting IndexedDB: the chain anchor is the staleness
-              // witness for the local free-walk row. Only after both chain reads settle may the accepted local
-              // position re-enter through the spawns reducer's `player_pos` input; the resident mount then reads
-              // that reduced state synchronously. A token check on each async boundary prevents an abandoned
+              // Resolve the on-chain CHECKPOINT and BIOME before consulting their synchronous mount-time caches:
+              // the checkpoint anchors the local free-walk row, while the biome selects the engine recipe.
+              // Only after both chain reads settle may the accepted local position re-enter through the spawns
+              // reducer's `player_pos` input. A token check on each async boundary prevents an abandoned
               // character/world boot from hydrating the next one.
               const [chain_anchor] = await Promise.all([
                 resolve_checkpoint_spawn(char_id, world),
-                world_to_biome(world),
+                resolve_world_biome(world),
               ])
               if (token !== boot_token.current) return
               await restore_world_position(char_id, world, chain_anchor)
