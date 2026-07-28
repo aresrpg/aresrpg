@@ -30,6 +30,7 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { decode, encode } from './los.js'
 import { DEFAULT_TURN_MS, encode_sim_step, side_of, status_rows_from_sim } from './sim_chain_events.js'
+import { casts_this_turn_from_events } from './turn_action_slot.js'
 
 export * from './sim_chain_events.js'
 
@@ -116,6 +117,7 @@ const vec_map = (entries) => ({
  */
 export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS } = {}) => {
   const { sim_state, board, anchor_x, anchor_z, fight_id, seed } = chain
+  const events = (chain.recorder?.entries ?? []).flatMap((entry) => (entry.kind === 'step' ? entry.events : []))
   return {
     id: fight_id,
     status: ENGINE_STATUS_ACTIVE,
@@ -134,7 +136,11 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
       base_mp: e.mp_max,
       cell: encode(e.cell.x, e.cell.y),
       ready: true,
-      casts_this_turn: 0,
+      casts_this_turn: casts_this_turn_from_events({
+        events,
+        turn_started: (event) => event.type === 'fight_turn_start' && event.entity_id === e.id,
+        cast: (event) => event.type === 'fight_cast' && event.entity_id === e.id,
+      }),
       weapon: null,
       // THE WHOLE BLOCK, both halves (#1077) — the mock chain speaks `participant.move`'s own dialect, and that
       // struct carries `stats` LIVE (base + the timed alter rows) next to the `base_stats` join snapshot. A
