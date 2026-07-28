@@ -2393,6 +2393,7 @@
     "sponsor_over_ceiling": "This action needs too much gas to sponsor — you'll need your own SUI for it.",
     "sponsor_reserve_failed": "Couldn't reserve sponsored gas right now. Top up to pay it yourself, or try again in a moment.",
     "sponsor_retry": "That sponsored transaction didn't go through — nothing was charged. Please try again.",
+    "sponsor_outcome_unknown": "We lost the answer for that sponsored transaction — it may already have gone through. Check the result before doing it again.",
     "sponsor_stale_client": "The app is out of date. Please refresh the page to keep playing.",
     "tx_simulation_failed": "Couldn't simulate the transaction — nothing was sent. Try again.",
     "sale_paused": "This sale is paused right now. Check back soon.",

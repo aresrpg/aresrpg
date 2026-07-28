@@ -2393,6 +2393,7 @@
     "sponsor_over_ceiling": "Cette action demande trop de gas pour être sponsorisée — il te faudra tes propres SUI.",
     "sponsor_reserve_failed": "Impossible de réserver du gas sponsorisé pour l'instant. Recharge pour payer toi-même, ou réessaie dans un instant.",
     "sponsor_retry": "Cette transaction sponsorisée n'a pas abouti — rien n'a été débité. Réessaie.",
+    "sponsor_outcome_unknown": "La réponse de cette transaction sponsorisée s'est perdue — elle est peut-être déjà passée. Vérifie le résultat avant de recommencer.",
     "sponsor_stale_client": "L'application n'est pas à jour. Actualise la page pour continuer à jouer.",
     "tx_simulation_failed": "Impossible de simuler la transaction — rien n'a été envoyé. Réessaie.",
     "sale_paused": "Cette vente est en pause pour le moment. Reviens bientôt.",

@@ -32,3 +32,14 @@ export function is_sponsor_unpriceable_refusal(error: unknown): boolean {
   const marker = (error as { sponsor_refusal?: string } | null | undefined)?.sponsor_refusal
   return marker === SPONSOR_REFUSAL_SIMULATION_UNREADABLE || marker === SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE
 }
+
+// THE LOST RECEIPT — the ONLY marker the client mints for itself. The station SUBMITS the sponsored tx and waits
+// for finality before it answers /execute, so a failure that loses that answer (the fetch rejects, an ingress
+// answers 5xx, the body is unreadable) does NOT mean "it did not happen": the digest may exist on chain with the
+// gas already burned. BLOCKING by construction — a possibly-executed transaction is never re-signed on any path,
+// so this never falls through to the self-pay door; the player is told the outcome is unknown instead.
+export const SPONSOR_REFUSAL_OUTCOME_UNKNOWN = 'outcome-unknown'
+
+export function is_sponsor_outcome_unknown_refusal(error: unknown): boolean {
+  return (error as { sponsor_refusal?: string } | null | undefined)?.sponsor_refusal === SPONSOR_REFUSAL_OUTCOME_UNKNOWN
+}

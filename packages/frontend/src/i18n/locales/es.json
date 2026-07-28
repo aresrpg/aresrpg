@@ -2393,6 +2393,7 @@
     "sponsor_over_ceiling": "Esta acción necesita demasiado gas para patrocinarse — necesitarás tus propios SUI.",
     "sponsor_reserve_failed": "No se pudo reservar gas patrocinado ahora mismo. Recarga para pagarlo tú, o inténtalo de nuevo en un momento.",
     "sponsor_retry": "Esa transacción patrocinada no se completó — no se cobró nada. Inténtalo de nuevo.",
+    "sponsor_outcome_unknown": "Se perdió la respuesta de esa transacción patrocinada — puede que ya se haya completado. Comprueba el resultado antes de repetirla.",
     "sponsor_stale_client": "La aplicación está desactualizada. Actualiza la página para seguir jugando.",
     "tx_simulation_failed": "No se pudo simular la transacción — no se envió nada. Inténtalo de nuevo.",
     "sale_paused": "Esta venta está en pausa ahora mismo. Vuelve pronto.",

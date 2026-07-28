@@ -36,21 +36,25 @@ import { now, stamp_preflight } from './latency.js'
 import { decide_sponsor_route, sponsor_route_log } from './sponsor_route'
 import type { SponsoredReceipt, TxReceipt } from './receipts'
 import {
+  SPONSOR_REFUSAL_OUTCOME_UNKNOWN,
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
   SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE,
   SPONSOR_REFUSAL_SIMULATION_UNREADABLE,
   SPONSOR_REFUSAL_WOULD_ABORT,
+  is_sponsor_outcome_unknown_refusal,
   is_sponsor_outdated_package_refusal,
   is_sponsor_unpriceable_refusal,
   is_sponsor_would_abort_refusal,
 } from './sponsor_refusal'
 
 export {
+  SPONSOR_REFUSAL_OUTCOME_UNKNOWN,
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
   SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE,
   SPONSOR_REFUSAL_SIMULATION_UNREADABLE,
   SPONSOR_REFUSAL_WOULD_ABORT,
   is_sponsor_unpriceable_refusal,
+  is_sponsor_outcome_unknown_refusal,
   is_sponsor_outdated_package_refusal,
   is_sponsor_would_abort_refusal,
 } from './sponsor_refusal'
@@ -289,9 +293,13 @@ export async function execute_tx({
       // blocking: never spend past the free promise, never execute a retired PTB, and never self-pay-retry a PTB
       // the sponsor's dry-run already proved aborts (#1385 — it would abort self-paid too, and the fallback's
       // gas-selection catch would replace the honest decoded cause with a balance error on a zero-SUI wallet).
+      // Outcome-unknown is the fourth and the strictest: it is the ONE refusal that is NOT proven pre-execution —
+      // the /execute answer was lost, so the transaction may be on chain with its gas burned. Self-paying it would
+      // sign and submit it a SECOND time; the ambiguity is surfaced instead ("do not retry"), never re-signed.
       // Every other refusal (funded self-pay-required / drained pool / generic 400 / network) may self-pay below.
       if (
         is_sponsor_daily_cap_refusal(sponsor_error) ||
+        is_sponsor_outcome_unknown_refusal(sponsor_error) ||
         is_sponsor_outdated_package_refusal(sponsor_error) ||
         is_sponsor_would_abort_refusal(sponsor_error)
       )
@@ -558,10 +566,25 @@ function decode_sponsor_error(body: string): { detail: string; reason: string | 
   }
 }
 
+/** The LOST-RECEIPT refusal (client-minted, blocking). Its only job is to keep a possibly-executed transaction
+ * out of every re-signing path — see SPONSOR_REFUSAL_OUTCOME_UNKNOWN. */
+function sponsor_outcome_unknown_error(): Error & { sponsor_refusal?: string } {
+  const unknown = new Error(i18n.t('errors.sponsor_outcome_unknown')) as Error & { sponsor_refusal?: string }
+  unknown.sponsor_refusal = SPONSOR_REFUSAL_OUTCOME_UNKNOWN
+  return unknown
+}
+
 /** POST a JSON body to a sponsor endpoint and return the parsed JSON, or throw a HUMANIZED (decoder-mapped,
  * machine-tagged where policy needs branching) error on any non-2xx. An UNREACHABLE door (fetch rejects before
- * an HTTP status) is a network fault — honest, retry-able, zero gas — never a drained pool. */
-async function sponsor_fetch(url: string, body: unknown): Promise<any> {
+ * an HTTP status) is a network fault — honest, retry-able, zero gas — never a drained pool.
+ * @param post_submit true for the /execute leg ONLY. That leg is answered AFTER the station submitted and waited
+ *   for finality, so "no answer" is not "nothing happened": a transport fault, a 5xx from anything in the path,
+ *   or an unreadable success body all leave the outcome UNKNOWN (the digest may exist, the gas may be burned).
+ *   Those become the blocking outcome-unknown refusal instead of a retry-able network error — the tx-retry-burn
+ *   law applies to every wrapper, not just the self-pay branch. A DECODED 4xx keeps its ordinary mapping: the
+ *   station rejects pre-execution (unknown/expired reservation, tx mismatch, its own pre-exec rejection) and
+ *   charges nothing. */
+async function sponsor_fetch(url: string, body: unknown, post_submit = false): Promise<any> {
   let response: Response
   try {
     response = await fetch(url, {
@@ -570,9 +593,18 @@ async function sponsor_fetch(url: string, body: unknown): Promise<any> {
       body: JSON.stringify(body),
     })
   } catch {
+    if (post_submit) throw sponsor_outcome_unknown_error()
     throw new Error(i18n.t('errors.sponsor_unreachable'))
   }
-  if (response.ok) return response.json()
+  if (response.ok) {
+    try {
+      return await response.json()
+    } catch (error) {
+      if (post_submit) throw sponsor_outcome_unknown_error() // answered, but the receipt did not survive the wire
+      throw error
+    }
+  }
+  if (post_submit && response.status >= 500) throw sponsor_outcome_unknown_error()
   const response_body = await response.text().catch(() => '')
   const { detail, reason, chain_error } = decode_sponsor_error(response_body)
   throw map_sponsor_error(detail, response.status, reason, chain_error)
@@ -677,8 +709,10 @@ export async function execute_sponsored_tx({
   // ── EXECUTE (endpoint 2) ── the station co-signs the gas half + submits + returns the CERTIFIED effects. A
   // present `effects` ⇒ the tx EXECUTED (gas burned) — NEVER retried (tx-retry-burn law); an execute 400 is a
   // PRE-execution rejection decoder-mapped by sponsor_fetch (nothing charged). Consume the effects DIRECTLY (this
-  // is faster than any client-side wait — the station already waited for finality).
-  const { effects, digest } = await sponsor_fetch(`${sponsor_url}/execute`, { reservationId, txBytes, userSig })
+  // is faster than any client-side wait — the station already waited for finality). `post_submit` marks the leg
+  // as unanswerable-by-silence: every failure shape that cannot PROVE non-execution refuses BLOCKING instead of
+  // falling through to a self-pay re-sign of a transaction that may already be on chain.
+  const { effects, digest } = await sponsor_fetch(`${sponsor_url}/execute`, { reservationId, txBytes, userSig }, true)
   mark_engage_execution_finished(transaction)
   const ok = effects?.status?.status === 'success'
   return {

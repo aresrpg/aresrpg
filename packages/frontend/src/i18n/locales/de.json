@@ -2393,6 +2393,7 @@
     "sponsor_over_ceiling": "Diese Aktion braucht zu viel Gas, um gesponsert zu werden — du benötigst dafür eigene SUI.",
     "sponsor_reserve_failed": "Gesponsertes Gas konnte gerade nicht reserviert werden. Lade auf, um selbst zu zahlen, oder versuch es gleich noch einmal.",
     "sponsor_retry": "Diese gesponserte Transaktion ist nicht durchgegangen — es wurde nichts berechnet. Bitte versuch es noch einmal.",
+    "sponsor_outcome_unknown": "Die Antwort auf diese gesponserte Transaktion ist verloren gegangen — sie könnte bereits durchgegangen sein. Prüfe das Ergebnis, bevor du es erneut versuchst.",
     "sponsor_stale_client": "Die App ist veraltet. Bitte lade die Seite neu, um weiterzuspielen.",
     "tx_simulation_failed": "Transaktion konnte nicht simuliert werden — nichts wurde gesendet. Versuch es erneut.",
     "sale_paused": "Dieser Verkauf ist derzeit pausiert. Schau bald wieder vorbei.",
