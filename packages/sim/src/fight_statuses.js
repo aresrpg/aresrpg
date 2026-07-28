@@ -21,6 +21,7 @@ import {
   K_PLACE_GLYPH,
   K_PLACE_TRAP,
   K_TELEPORT,
+  row_flags,
   SHAPE_POINT,
 } from './spell_effect.js'
 
@@ -41,8 +42,15 @@ export const reveal = (state, entity_id) =>
     effects: entity.effects.filter(effect => effect.type !== 'INVISIBILITY'),
   }))
 
-/** Attach a timed invisibility row to either a participant or mob. */
-export const apply_invisibility = (state, target_id, source_id, turns) => {
+/** Attach a timed invisibility row to either a participant or mob. `flags` is the authoring effect's word — an
+ *  invisibility row is `record_timed`-stored whole on chain, so a dispellable one must stay dispellable here. */
+export const apply_invisibility = (
+  state,
+  target_id,
+  source_id,
+  turns,
+  flags = 0,
+) => {
   const duration = Math.max(0, Math.floor(turns))
   if (duration === 0) return state
   const allocated = next_id(state)
@@ -56,6 +64,7 @@ export const apply_invisibility = (state, target_id, source_id, turns) => {
         timing: /** @type {const} */ ('TURN_START'),
         source_id,
         value: 0,
+        ...row_flags({ flags }),
         turns_remaining: duration,
       },
     ],

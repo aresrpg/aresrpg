@@ -12,6 +12,7 @@ import {
   K_REMOVE_POINTS,
   K_STEAL_POINTS,
   K_STEAL_STAT,
+  row_flags,
 } from './spell_effect.js'
 import { remove_points } from './spell_formula.js'
 
@@ -33,6 +34,7 @@ export const add_row = (
     source_id: caster_id,
     stat: effect.stat,
     value,
+    ...row_flags(effect),
     turns_remaining: Math.max(1, effect.turns ?? 1),
   })
 }

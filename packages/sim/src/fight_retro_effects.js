@@ -10,7 +10,7 @@ import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import { critical_failure_roll } from './turn_seed.js'
 import { add_effect, apply_damage } from './fight_actions.js'
 import { find_entity, next_id, update_entity } from './fight_state.js'
-import { FLAG_NEGATIVE } from './spell_effect.js'
+import { FLAG_NEGATIVE, row_flags } from './spell_effect.js'
 
 const duration_of = effect => Math.max(1, Math.floor(effect.turns ?? 1))
 
@@ -25,11 +25,12 @@ const rolled_value = (state, effect) => {
   return { state: with_turn_rng(state, draw.state), value: draw.value }
 }
 
-const append_status = (state, target_id, status) => {
+const append_status = (state, target_id, effect, status) => {
   const allocated = next_id(state)
   return add_effect(allocated.state, target_id, {
     id: allocated.id,
     timing: /** @type {const} */ ('TURN_START'),
+    ...row_flags(effect),
     ...status,
   })
 }
@@ -120,7 +121,7 @@ export const apply_retro_effect = (
 
   if (effect.type === 'CRITICAL_FAILURE') {
     const rolled = rolled_value(state, effect)
-    const applied = append_status(rolled.state, target_id, {
+    const applied = append_status(rolled.state, target_id, effect, {
       type: /** @type {const} */ ('CRITICAL_FAILURE'),
       source_id: caster.id,
       value: Math.max(1, rolled.value),
@@ -134,7 +135,7 @@ export const apply_retro_effect = (
   }
 
   if (effect.type === 'DAMAGE_TO_HEAL') {
-    const applied = append_status(state, target_id, {
+    const applied = append_status(state, target_id, effect, {
       type: /** @type {const} */ ('DAMAGE_TO_HEAL'),
       source_id: caster.id,
       value: Math.max(0, Math.floor(effect.value ?? 1)),
@@ -150,7 +151,7 @@ export const apply_retro_effect = (
   }
 
   if (effect.type === 'TIMED_PAYLOAD') {
-    const applied = append_status(state, target_id, {
+    const applied = append_status(state, target_id, effect, {
       type: /** @type {const} */ ('TIMED_PAYLOAD'),
       source_id: caster.id,
       spell_id: context.spell_id,
@@ -171,7 +172,7 @@ export const apply_retro_effect = (
       return { handled: true, state, effects: [] }
     const stack_target = find_entity(state, stack_target_id)
     if (!stack_target) return { handled: true, state, effects: [] }
-    const applied = append_status(state, stack_target_id, {
+    const applied = append_status(state, stack_target_id, effect, {
       type: /** @type {const} */ ('NAMED_DAMAGE_STACK'),
       source_id: caster.id,
       spell_id: context.spell_id,
@@ -196,7 +197,7 @@ export const apply_retro_effect = (
         state: cleared,
         effects: [{ target_id, status: 'STANCE_END' }],
       }
-    const applied = append_status(cleared, target_id, {
+    const applied = append_status(cleared, target_id, effect, {
       type: /** @type {const} */ ('STANCE'),
       source_id: caster.id,
       value: Math.max(0, Math.floor(effect.value ?? 0)),
@@ -213,7 +214,7 @@ export const apply_retro_effect = (
 
   if (effect.type === 'REACTIVE_PUNISHMENT') {
     if (!effect.stat) return { handled: true, state, effects: [] }
-    const applied = append_status(state, target_id, {
+    const applied = append_status(state, target_id, effect, {
       type: /** @type {const} */ ('REACTIVE_PUNISHMENT'),
       source_id: caster.id,
       stat: effect.stat,
@@ -229,7 +230,7 @@ export const apply_retro_effect = (
   }
 
   if (effect.type === 'EROSION' || effect.type === 'DAMAGE_REDIRECT') {
-    const applied = append_status(state, target_id, {
+    const applied = append_status(state, target_id, effect, {
       type: effect.type,
       source_id: caster.id,
       value: Math.max(0, Math.floor(effect.value ?? 0)),
