@@ -42,7 +42,7 @@ function fake_clock() {
 }
 
 describe('world poll scheduler', () => {
-  test('coalesces duplicate keys and starts unique reads on one staggered ticker', async () => {
+  test('coalesces duplicate keys and starts each cold request kind immediately', async () => {
     const clock = fake_clock()
     const scheduler = create_world_poll_scheduler({
       now: clock.now,
@@ -62,11 +62,36 @@ describe('world poll scheduler', () => {
     const party = scheduler.schedule('party:character-a', run('party:character-a'))
 
     expect(duplicate).toBe(zones)
-    await clock.advance_to(WORLD_POLL_STAGGER_MS * 3)
+    await clock.advance_to(0)
     await Promise.all([zones, duplicate, fights, party])
 
     expect(starts.map(({ key }) => key)).toEqual(['zones:world-a', 'fights:world-a', 'party:character-a'])
-    expect(starts.map(({ at }) => at)).toEqual([0, WORLD_POLL_STAGGER_MS, WORLD_POLL_STAGGER_MS * 2])
+    expect(starts.map(({ at }) => at)).toEqual([0, 0, 0])
+    expect(clock.max_live_timers()).toBe(0)
+  })
+
+  test('keeps repeat reads of one kind on the staggered ticker', async () => {
+    const clock = fake_clock()
+    const scheduler = create_world_poll_scheduler({
+      now: clock.now,
+      set_timeout: clock.set_timeout,
+      clear_timeout: clock.clear_timeout,
+      is_paused: () => false,
+    })
+    const starts: number[] = []
+    const run = async () => {
+      starts.push(clock.now())
+      return null
+    }
+
+    const list = scheduler.schedule('https://rpc.test/v1/zones?world=a', run)
+    const first_cell = scheduler.schedule('https://rpc.test/v1/zones?world=a&zone=1:1', run)
+    const second_cell = scheduler.schedule('https://rpc.test/v1/zones?world=a&zone=1:2', run)
+
+    await clock.advance_to(WORLD_POLL_STAGGER_MS * 2)
+    await Promise.all([list, first_cell, second_cell])
+
+    expect(starts).toEqual([0, WORLD_POLL_STAGGER_MS, WORLD_POLL_STAGGER_MS * 2])
     expect(clock.max_live_timers()).toBe(1)
   })
 
@@ -84,16 +109,16 @@ describe('world poll scheduler', () => {
       return key
     }
 
-    const first = scheduler.schedule('zones:world-a', run('zones:world-a'))
-    const blocker = scheduler.schedule('fights:world-a', run('fights:world-a'))
-    const old = scheduler.schedule('zone:world-a:old', run('zone:world-a:old'))
+    const first = scheduler.schedule('https://rpc.test/v1/zones?world=a', run('zones:world-a'))
+    const blocker = scheduler.schedule('https://rpc.test/v1/zones?world=a&zone=1:1', run('zone:world-a:blocker'))
+    const old = scheduler.schedule('https://rpc.test/v1/zones?world=a&zone=1:2', run('zone:world-a:old'))
     await clock.advance_to(0)
-    const fresh = scheduler.schedule('zone:world-a:old', run('duplicate-must-not-run'), true)
+    const fresh = scheduler.schedule('https://rpc.test/v1/zones?world=a&zone=1:2', run('duplicate-must-not-run'), true)
     await clock.advance_to(WORLD_POLL_STAGGER_MS * 3)
     await Promise.all([first, blocker, old, fresh])
 
     expect(fresh).toBe(old)
-    expect(starts).toEqual(['zones:world-a', 'zone:world-a:old', 'fights:world-a'])
+    expect(starts).toEqual(['zones:world-a', 'zone:world-a:old', 'zone:world-a:blocker'])
     expect(clock.max_live_timers()).toBe(1)
   })
 
@@ -124,8 +149,9 @@ describe('world poll scheduler', () => {
     }
     await clock.advance_to(59_999)
 
-    expect(starts.length).toBeLessThanOrEqual(80)
-    expect(new Set(starts).size).toBe(starts.length)
+    const steady_starts = starts.filter((started_at) => started_at > 0)
+    expect(steady_starts.length).toBeLessThanOrEqual(80)
+    expect(new Set(steady_starts).size).toBe(steady_starts.length)
     expect(clock.max_live_timers()).toBe(1)
   })
 })

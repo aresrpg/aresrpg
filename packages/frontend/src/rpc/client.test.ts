@@ -434,10 +434,11 @@ describe('world-fights discovery read (#1317)', () => {
 
     await Promise.all([...zones, fights])
     expect(order.length).toBe(5)
-    // it takes the head of the FIFO — ahead of every zone read still waiting its stagger turn (before the fix
-    // it was appended last and paid 4 × WORLD_POLL_STAGGER_MS before touching the network).
-    expect(order[0]).toBe(`/v1/fights?world=${world}`)
-    expect(order.slice(1).every((url) => url.startsWith('/v1/zones'))).toBe(true)
+    // One cold zone read already bypassed the FIFO; fights is itself a first-kind boot read, so it starts
+    // beside that read and ahead of every repeat-zone request still waiting its stagger turn.
+    expect(order[0]).toBe(`/v1/zones?world=${world}&zone=5%3A0`)
+    expect(order[1]).toBe(`/v1/fights?world=${world}`)
+    expect(order.slice(2).every((url) => url.startsWith('/v1/zones'))).toBe(true)
   })
 
   test('a fresh /v1/fights read never answers from the LRU another view warmed', async () => {

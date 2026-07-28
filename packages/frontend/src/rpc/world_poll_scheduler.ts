@@ -24,6 +24,7 @@ type PollJob<T = unknown> = {
   readonly resolve: (value: T) => void
   readonly reject: (error: unknown) => void
   readonly generation: number
+  readonly bypass_stagger: boolean
 }
 
 export type WorldPollScheduler = {
@@ -49,6 +50,7 @@ export function create_world_poll_scheduler({
   let timer: TimerHandle | null = null
   let last_started_at = Number.NEGATIVE_INFINITY
   let generation = 0
+  const started_kinds = new Set<string>()
 
   const arm = (delay_override?: number) => {
     if (timer != null || queue.length === 0) return
@@ -65,6 +67,18 @@ export function create_world_poll_scheduler({
     else job.resolve(result.data)
   }
 
+  const start = (job: Readonly<PollJob>) => {
+    last_started_at = now()
+    try {
+      void job.run().then(
+        (data) => finish(job, { data }),
+        (error) => finish(job, { error })
+      )
+    } catch (error) {
+      finish(job, { error })
+    }
+  }
+
   const run_next = () => {
     timer = null
     if (is_paused()) {
@@ -74,13 +88,11 @@ export function create_world_poll_scheduler({
     const [job, ...remaining] = queue
     if (!job) return
     queue = remaining
-    last_started_at = now()
-    void Promise.resolve()
-      .then(job.run)
-      .then(
-        (data) => finish(job, { data }),
-        (error) => finish(job, { error })
-      )
+    start(job)
+    if (queue[0]?.bypass_stagger) {
+      run_next()
+      return
+    }
     arm()
   }
 
@@ -106,10 +118,23 @@ export function create_world_poll_scheduler({
     // reset() may reject a queued request after its caller has unmounted. Mark it handled internally while
     // preserving the original rejecting promise for live callers.
     void promise.catch(() => undefined)
-    const job: PollJob<T> = { key, run, promise, resolve, reject, generation }
+    const kind = (() => {
+      if (!/^https?:\/\//.test(key)) return key.split(':')[0]
+      try {
+        return new URL(key).pathname
+      } catch {
+        return key.split(':')[0]
+      }
+    })()
+    const bypass_stagger = !started_kinds.has(kind)
+    started_kinds.add(kind)
+    const job: PollJob<T> = { key, run, promise, resolve, reject, generation, bypass_stagger }
     pending.set(key, job as PollJob)
-    queue = priority ? [job as PollJob, ...queue] : [...queue, job as PollJob]
-    arm()
+    if (bypass_stagger && !is_paused()) start(job)
+    else {
+      queue = priority ? [job as PollJob, ...queue] : [...queue, job as PollJob]
+      arm(bypass_stagger ? PAUSED_RECHECK_MS : undefined)
+    }
     return promise
   }
 
@@ -120,6 +145,7 @@ export function create_world_poll_scheduler({
     timer = null
     last_started_at = Number.NEGATIVE_INFINITY
     queue = []
+    started_kinds.clear()
     for (const job of abandoned) job.reject(new DOMException('world poll scheduler reset', 'AbortError'))
     pending.clear()
   }

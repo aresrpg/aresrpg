@@ -73,9 +73,13 @@ function build_url(path: string, params?: Params): string {
 // use_rpc_view interval (4s, kolizeum.tsx), so every poll tick still reaches the network. `in_flight` dedupes
 // concurrent identical GETs into ONE fetch. Errors are never cached.
 const CACHE_TTL_MS = 3000
+const CONFIG_BOOT_CACHE_TTL_MS = 10_000
 const CACHE_MAX = 100
 const cache = new Map<string, { at: number; data: unknown }>() // insertion-ordered → oldest-first eviction
 const in_flight = new Map<string, Promise<unknown>>()
+
+const cache_ttl_ms = (url: string): number =>
+  new URL(url).pathname === '/v1/config' ? CONFIG_BOOT_CACHE_TTL_MS : CACHE_TTL_MS
 
 // Seed/catalog views change on a reseed or client schema revision, not during ordinary navigation. Keep their
 // promises for this JS app lifetime under an explicit version key: every encyclopedia kind shares the API's
@@ -198,7 +202,7 @@ export async function rpc_get<T>(path: string, params?: Params, signal?: AbortSi
   const key = build_url(path, params)
   if (!fresh) {
     const hit = cache.get(key)
-    if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data as T
+    if (hit && Date.now() - hit.at < cache_ttl_ms(key)) return hit.data as T
   }
 
   let pending = in_flight.get(key)
