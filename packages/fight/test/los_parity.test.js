@@ -39,9 +39,14 @@ const rect_between = (a, b) => {
   return out
 }
 
+/** The exact size of the sweep below — PINNED, never derived from the loop that produces it: a count compared
+ *  against itself is always green and would hide a sweep that quietly stopped sweeping. */
+const EXPECTED_TRIPLES = 216_506
+
 describe('LOS parity — sim has_line_of_sight ≡ the Move-proven integer lineOfSight', () => {
   test('identical verdict on every (origin, target, obstacle) triple that can matter', () => {
     const disagreements = []
+    const asymmetric = []
     let triples = 0
 
     for (const origin of ORIGINS) {
@@ -54,16 +59,21 @@ describe('LOS parity — sim has_line_of_sight ≡ the Move-proven integer lineO
           const sim = has_line_of_sight(origin, to, blocks_los)
           const chain_twin = lineOfSight(from, target, [encode(obstacle.x, obstacle.y)])
           if (sim !== chain_twin) disagreements.push({ origin, target: to, obstacle, sim, chain_twin })
+          // sight is mutual: the contract's own `blocks` is symmetric, and a fight where A can shoot B but B
+          // cannot shoot back is the bug this pins (verified exhaustively over all 8,081,080 board triples).
+          if (has_line_of_sight(to, origin, blocks_los) !== sim)
+            asymmetric.push({ origin, target: to, obstacle, forward: sim })
         }
       }
     }
 
     // The COUNT is the headline: every disagreeing triple is one castable-looking cell the contract would refuse.
-    expect({ triples_swept: triples, disagreeing: disagreements.length, sample: disagreements.slice(0, 5) }).toEqual({
+    expect({
       triples_swept: triples,
-      disagreeing: 0,
-      sample: [],
-    })
+      disagreeing: disagreements.length,
+      asymmetric: asymmetric.length,
+      sample: disagreements.slice(0, 5),
+    }).toEqual({ triples_swept: EXPECTED_TRIPLES, disagreeing: 0, asymmetric: 0, sample: [] })
   })
 
   test('an unobstructed line is visible and a body on the line is not (both surfaces)', () => {
