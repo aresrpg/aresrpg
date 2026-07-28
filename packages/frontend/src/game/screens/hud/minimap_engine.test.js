@@ -14,6 +14,7 @@ import {
   render_flat_overlay,
   grid_index_at,
   project_offset,
+  flat_map_point,
   day_remap,
   lift_px,
   angle_lerp,
@@ -130,6 +131,13 @@ describe('project_offset — the heading-up + oblique projection', () => {
 
   test('a pure-north offset maps up the screen (negative z) at theta=0', () => {
     expect(project_offset(0, -8, 0, MAP_TILT).z).toBeLessThan(0)
+  })
+
+  test('flat_map_point is the shared expanded-map world-to-canvas transform', () => {
+    expect(flat_map_point(10, -5, { size: 200, ppb: 2, theta: 0, player_x: 0, player_z: 0 })).toEqual({
+      x: 120,
+      y: 90,
+    })
   })
 })
 
@@ -249,6 +257,48 @@ describe('render_flat_overlay — the expanded map arrow (#1205)', () => {
   })
 })
 
+describe('render_flat_overlay — zone delimiters and names (#1498)', () => {
+  const zones = [
+    { id: '4:5', label: 'Sector 4 · 5', bounds: { min_x: -100, min_z: -50, max_x: 0, max_z: 50 } },
+    { id: '5:5', label: 'Sector 5 · 5', bounds: { min_x: 0, min_z: -50, max_x: 100, max_z: 50 } },
+  ]
+
+  test('draws each shared boundary once and centers uppercase, occlusion-backed labels', () => {
+    const calls = []
+    render_flat_overlay(fake_ctx(calls), null, {
+      size: 400,
+      ppb: 2,
+      theta: 0,
+      player_x: 0,
+      player_z: 0,
+      zones,
+      arrow: false,
+    })
+    expect(calls.filter((call) => call.op === 'moveTo')).toHaveLength(7)
+    expect(calls.filter((call) => call.op === 'lineTo')).toHaveLength(7)
+    expect(calls.find((call) => call.op === 'strokeStyle')?.args[0]).toBe('rgba(200, 150, 60, 0.38)')
+    expect(calls.filter((call) => call.op === 'fillText').map((call) => call.args[0])).toEqual([
+      'SECTOR 4 · 5',
+      'SECTOR 5 · 5',
+    ])
+    expect(calls.filter((call) => call.op === 'fillRect')).toHaveLength(2)
+  })
+
+  test('hides labels when the projected zone is too narrow to stay legible', () => {
+    const calls = []
+    render_flat_overlay(fake_ctx(calls), null, {
+      size: 120,
+      ppb: 0.2,
+      theta: 0,
+      player_x: 0,
+      player_z: 0,
+      zones,
+      arrow: false,
+    })
+    expect(calls.filter((call) => call.op === 'fillText')).toHaveLength(0)
+  })
+})
+
 /** A recording 2-D context double — the render fns are imperative, so the test asserts the CALLS. */
 function fake_ctx(calls) {
   const rec =
@@ -264,11 +314,13 @@ function fake_ctx(calls) {
     fill: rec('fill'),
     stroke: rec('stroke'),
     fillRect: rec('fillRect'),
+    fillText: rec('fillText'),
     save: rec('save'),
     restore: rec('restore'),
     translate: rec('translate'),
     rotate: rec('rotate'),
     arc: rec('arc'),
+    measureText: (value) => ({ width: String(value).length * 6 }),
     set fillStyle(v) {
       calls.push({ op: 'fillStyle', args: [v] })
     },
@@ -277,6 +329,15 @@ function fake_ctx(calls) {
     },
     set lineWidth(v) {
       calls.push({ op: 'lineWidth', args: [v] })
+    },
+    set font(v) {
+      calls.push({ op: 'font', args: [v] })
+    },
+    set textAlign(v) {
+      calls.push({ op: 'textAlign', args: [v] })
+    },
+    set textBaseline(v) {
+      calls.push({ op: 'textBaseline', args: [v] })
     },
   }
 }

@@ -13,6 +13,7 @@ import {
   reduce_spawns,
   spawn_rows,
   spawn_markers,
+  zone_map_rects,
   engage_candidates,
   gather_target,
   attack_target,
@@ -62,6 +63,32 @@ const boot = (now = 1_000) => {
   input({ type: 'world_doc', doc: DOC })
   return { store, input, state: () => store.getState() }
 }
+
+describe('zone map rectangles — canonical ids and signed-world bounds', () => {
+  it('derives the nine zones intersecting the default 768-block big-map view at world origin', () => {
+    const rects = zone_map_rects(
+      { zone_size: 512, offset_x: 250_000, offset_z: 250_000 },
+      { min_x: -384, min_z: -384, max_x: 384, max_z: 384 }
+    )
+    expect(rects.map((rect) => rect.id)).toEqual([
+      '487:487',
+      '488:487',
+      '489:487',
+      '487:488',
+      '488:488',
+      '489:488',
+      '487:489',
+      '488:489',
+      '489:489',
+    ])
+    expect(rects.find((rect) => rect.id === '488:488')?.bounds).toEqual({
+      min_x: -144,
+      min_z: -144,
+      max_x: 368,
+      max_z: 368,
+    })
+  })
+})
 
 describe('boot facts — world binding, dims, checkpoint seeding', () => {
   it('world_bound + world_doc resolve the codec (zone_size, offsets, ttl)', () => {
