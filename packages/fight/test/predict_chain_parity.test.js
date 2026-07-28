@@ -29,16 +29,19 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { predict_cast } from '../src/predict_cast.js'
 import { GRID_W, decode } from '../src/los.js'
+import release from '../../sdk/src/deployment/release.json'
 
 import truth from './fixtures/parity/chain_cast_outcome.json'
 
 const CASTER = truth.cast.caster_id
 const num = (value) => Number(value)
 
-/** The lineage that PRODUCED these bytes, as the fixture itself recorded it — this binding's only authority. */
+/** The lineage that PRODUCED these bytes, as the fixture itself recorded it. */
 const capture = truth._provenance
+/** The lineage we CALL today — read from release.json at test time, never from the capture. */
+const pins = release.networks[capture.network].packages
 const CAPTURED = { engine: capture.engine_package, spells: capture.spell_package }
-const is_capture_lineage = (name, package_id) => CAPTURED[name] === package_id
+const is_current = (name, package_id) => pins[name].latest === package_id
 const ID_RE = /^0x[0-9a-f]{64}$/
 
 /** Chain stat blocks are u64 strings; the sim reads numbers. A cast, never a computation. */
@@ -173,15 +176,6 @@ describe('predict_cast ↔ LIVE chain parity (a cast the deployed package resolv
     expect(predicted(!truth.cast.chain_took_critical)?.remaining_hp).not.toBe(truth.chain_after.target_hp_committed)
   })
 
-  // PROVENANCE BINDING (#1189, re-cut). A chain-truth fixture is chain truth about the bytecode that PRODUCED it,
-  // so the lineage the fixture recorded is what these bytes must be read against — never whatever release.json
-  // points at today. This binding used to compare the recording to the CURRENT pins, which coupled a capture to an
-  // unrelated event: a republish moves the pins, but it does not retroactively change which package resolved this
-  // cast, so the fixture went red for a reason that was not about its own correctness. Re-capturing on a fresh
-  // lineage is a POST-ENABLE CEREMONY LEG (the new packages are dark until `--enable`, and this capture needs a
-  // seeded world and a real driven fight); that leg rewrites `_provenance` — `superseded` included — and this
-  // binding keeps working unchanged. What still guards the damage math is the parity assert above: it is read
-  // against the recorded lineage, and the re-capture leg is what re-proves it on the lineage we actually call.
   test('the fixture records the lineage that produced these bytes', () => {
     expect(capture.network).toBeTruthy()
     expect(capture.engine_package).toMatch(ID_RE)
@@ -189,15 +183,26 @@ describe('predict_cast ↔ LIVE chain parity (a cast the deployed package resolv
     expect(capture.captured).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  test('the binding discriminates — every id outside the capture lineage is REJECTED', () => {
-    // REAL dead ids, recorded beside the capture: what each package had already retired when these bytes were read.
-    // A predicate that said `true` here would be a green light with nothing behind it — the failure #1189 was filed
-    // about. Each set is asserted NON-EMPTY before it is walked: sourcing these from a live artifact is exactly how
-    // this loop silently went vacuous the day a republish emptied that artifact's retired lists.
+  // STALENESS BINDING (#1189, restored — #1427). A chain-truth fixture is chain truth only while the bytecode that
+  // produced it is still the bytecode we call. Binding the capture to ITSELF (`CAPTURED[name] === CAPTURED[name]`)
+  // is a tautology that leaves the damage math certified against a cast an older package resolved — parity with a
+  // chain we used to have. The pin is `latest` for each package whose bytecode produced these bytes: `latest` is
+  // the CALL TARGET every SDK moveCall resolves through (`packages/move/scripts/check_release_pins.mjs`, itself
+  // gated against the live fullnode in CI), so the day a republish or an upgrade lands, this goes red and the
+  // fixture owes a re-capture.
+  test('the fixture has not gone stale: its provenance names the CURRENT release pins', () => {
+    expect(is_current('engine', CAPTURED.engine)).toBe(true)
+    expect(is_current('spells', CAPTURED.spells)).toBe(true)
+  })
+
+  test('the binding discriminates — every superseded id of those packages is REJECTED', () => {
+    // The same predicate over REAL dead ids, taken from the packages' own retired-lineage lists. A binding that
+    // said `true` here would be a green light with nothing behind it — the failure #1189 was filed about. Each set
+    // is asserted NON-EMPTY before it is walked: a republish that empties those lists is how this goes vacuous.
     for (const name of ['engine', 'spells']) {
-      const superseded = capture.superseded?.[name] ?? []
+      const superseded = pins[name].previous ?? []
       expect(superseded.length, name).toBeGreaterThan(0)
-      for (const dead of superseded) expect(is_capture_lineage(name, dead), `${name} ${dead}`).toBe(false)
+      for (const dead of superseded) expect(is_current(name, dead), `${name} ${dead}`).toBe(false)
     }
   })
 
