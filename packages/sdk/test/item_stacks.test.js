@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   merge_stack_ptb,
+  merge_stacks_ptb,
   split_stack_ptb,
 } from '../src/sui/write/item_stacks.js'
 
@@ -79,5 +80,61 @@ describe('locked stack shaping composers', () => {
         source_item_id: id('merge-source'),
       }),
     ).toThrow(/not deployed/)
+  })
+})
+
+describe('merge_stacks_ptb — the acquisition sweep batch (#1495)', () => {
+  const canonical = id('canonical-stack')
+  const plan = [
+    { ...stack_context, target_item_id: canonical, source_item_id: id('dup-1') },
+    { ...stack_context, target_item_id: canonical, source_item_id: id('dup-2') },
+  ]
+
+  test('N pairs compose N merge calls in ONE transaction, every one on the same canonical target', () => {
+    const tx = merge_stacks_ptb(deployed_context)({ merges: plan })
+    expect(targets(tx)).toEqual([
+      'extract::merge_locked_stacks_and_relock',
+      'extract::merge_locked_stacks_and_relock',
+    ])
+    // arg #2 is `target_id` (kiosk, cap, target, source, …) — both calls must resolve to the SAME pure input
+    const { commands, inputs } = tx.getData()
+    const target_bytes = commands.map(
+      c => inputs[c.MoveCall.arguments[2].Input].Pure.bytes,
+    )
+    expect(target_bytes[0]).toBe(target_bytes[1])
+    const source_bytes = commands.map(
+      c => inputs[c.MoveCall.arguments[3].Input].Pure.bytes,
+    )
+    expect(source_bytes[0]).not.toBe(source_bytes[1])
+    // the canonical target is the id the caller planned, not a source
+    const reference = merge_stack_ptb(deployed_context)({
+      ...stack_context,
+      target_item_id: canonical,
+      source_item_id: id('dup-1'),
+    }).getData()
+    expect(target_bytes[0]).toBe(
+      reference.inputs[reference.commands[0].MoveCall.arguments[2].Input].Pure
+        .bytes,
+    )
+  })
+
+  test('an empty plan composes an empty transaction (the sweep never signs a no-op)', () => {
+    expect(targets(merge_stacks_ptb(deployed_context)({ merges: [] }))).toEqual(
+      [],
+    )
+  })
+
+  test('the batch inherits the singular guards — a self-merge still refuses', () => {
+    expect(() =>
+      merge_stacks_ptb(deployed_context)({
+        merges: [
+          {
+            ...stack_context,
+            target_item_id: canonical,
+            source_item_id: canonical,
+          },
+        ],
+      }),
+    ).toThrow(/cannot merge a stack with itself/)
   })
 })

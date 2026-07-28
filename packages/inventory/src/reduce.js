@@ -252,6 +252,31 @@ function decrement_receipt_item(sui, { id, units = 1 }) {
   return { ...sui, items, settled_item_floor }
 }
 
+/**
+ * Fold a receipt-proven stack merge (#1495): every `from` was DELETED on chain by `item::merge`, and the
+ * surviving `into` carries the run's final `total`. Both facts mirror into the settled-loot floor, so a
+ * lagging snapshot can neither resurrect a merged source nor regress the survivor's amount.
+ * @param {any} sui @param {{ into: string, from: string, total: number }[]} merges
+ */
+function apply_stack_merges(sui, merges) {
+  const rows = (merges ?? []).filter((/** @type {any} */ row) => row?.into && row?.from)
+  if (!rows.length) return sui
+  const drop = new Set(rows.map((row) => row.from))
+  // Last event per survivor wins — a 3-into-1 run emits total 2 then 3; the final one is the true amount.
+  const totals = new Map(rows.map((row) => [row.into, Number(row.total)]))
+  const retotal = (/** @type {any} */ item) => {
+    const total = totals.get(item?.id)
+    return total > 0 && total !== item?.amount ? { ...item, amount: total } : item
+  }
+  const items = sui.items.filter((/** @type {any} */ item) => !drop.has(item?.id)).map(retotal)
+  const settled_item_floor = Object.fromEntries(
+    Object.entries(sui.settled_item_floor ?? {})
+      .filter(([id]) => !drop.has(id))
+      .map(([id, row]) => [id, retotal(row)])
+  )
+  return { ...sui, items, settled_item_floor }
+}
+
 /** A receipt-proven delta from the client's OWN tx — folds against the latest state, raises the XP floor. */
 function apply_receipt_patch(sui, payload) {
   switch (payload.op) {
@@ -290,6 +315,10 @@ function apply_receipt_patch(sui, payload) {
     }
     case 'decrement_item': {
       return decrement_receipt_item(sui, payload)
+    }
+    case 'merge_stacks': {
+      // The boot sweep's ItemMerged events: sources gone, the survivor at its summed total.
+      return apply_stack_merges(sui, payload.merges)
     }
     case 'equip_worn':
       return apply_equip_worn(sui, payload)

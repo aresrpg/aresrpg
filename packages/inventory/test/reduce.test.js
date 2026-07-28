@@ -368,3 +368,44 @@ describe('#1127 — a Character mint receipt seeds the roster through the reduce
     expect(lagged.minted_character_floor).toEqual({})
   })
 })
+
+// --- #1495: the acquisition sweep's merge receipt ------------------------------------------------------------
+describe('merge_stacks — a chain-proven stack merge folds against the LATEST bag', () => {
+  const stack = (id, amount) => ({ id, template_id: 't', item_category: 'consumable', amount, stackable: true })
+
+  test('sources are deleted on-chain: they leave the bag and the target carries the summed total', () => {
+    const start = base({ items: [stack('0xa', 1), stack('0xb', 1), stack('0xc', 1), stack('0xother', 5)] })
+    const merged = reduce_sui_data(start, {
+      kind: 'receipt_patch',
+      op: 'merge_stacks',
+      merges: [
+        { into: '0xa', from: '0xb', total: 2 },
+        { into: '0xa', from: '0xc', total: 3 },
+      ],
+    })
+    expect(ids(merged.items)).toEqual(['0xa', '0xother'])
+    expect(merged.items[0].amount).toBe(3)
+    expect(merged.items[1]).toBe(start.items[3]) // untouched rows keep their reference
+  })
+
+  test('the settled-loot floor mirrors the same fact — a lagging snapshot cannot resurrect a merged source', () => {
+    const start = base({
+      items: [stack('0xa', 1), stack('0xb', 1)],
+      settled_item_floor: { '0xa': stack('0xa', 1), '0xb': stack('0xb', 1) },
+    })
+    const merged = reduce_sui_data(start, {
+      kind: 'receipt_patch',
+      op: 'merge_stacks',
+      merges: [{ into: '0xa', from: '0xb', total: 2 }],
+    })
+    expect(Object.keys(merged.settled_item_floor)).toEqual(['0xa'])
+    expect(merged.settled_item_floor['0xa'].amount).toBe(2)
+    const lagged = reduce_sui_data(merged, { kind: 'snapshot', items: [stack('0xa', 1)] })
+    expect(ids(lagged.items)).toEqual(['0xa'])
+  })
+
+  test('an empty or unknown merge set is a no-op by reference', () => {
+    const start = base({ items: [stack('0xa', 1)] })
+    expect(reduce_sui_data(start, { kind: 'receipt_patch', op: 'merge_stacks', merges: [] })).toBe(start)
+  })
+})
