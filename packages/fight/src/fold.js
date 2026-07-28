@@ -195,12 +195,14 @@ export const recompute = (draft, now) => {
   const glyph_clock = Math.max(Number(view?.turn_ordinal ?? 0), Number(draft.glyph_clock ?? 0))
   const my_glyphs = (draft.my_glyphs ?? []).map((g) => {
     if (g.gone) return g
-    const placed_at = g.placed_at ?? glyph_clock // stamped the first fold that sees the record (its own cast)
+    // `placed_at_ordinal`, not `placed_at`: my_traps' `placed_at` is a chain POSITION ({version, event_idx});
+    // this is a player-turn COUNT. Stamped the first fold that sees the record — its own cast.
+    const placed_at_ordinal = g.placed_at_ordinal ?? glyph_clock
     const turns = g.turns ?? g.turns_remaining
-    const turns_remaining = turns - Math.max(0, glyph_clock - placed_at)
+    const turns_remaining = turns - Math.max(0, glyph_clock - placed_at_ordinal)
     return turns_remaining <= 0
-      ? { ...g, turns, placed_at, turns_remaining: 0, gone: true }
-      : { ...g, turns, placed_at, turns_remaining }
+      ? { ...g, turns, placed_at_ordinal, turns_remaining: 0, gone: true }
+      : { ...g, turns, placed_at_ordinal, turns_remaining }
   })
   // PLACEMENT GHOSTS GC (durable accumulator, same class as my_traps/my_glyphs above): a committed Placed for a
   // character SUPERSEDES (drops) any ghost recorded for them FOREVER — the chain truth is now real, the hint's
