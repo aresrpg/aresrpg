@@ -117,6 +117,7 @@ struct StoredFightPayload {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct StoredFightEvent {
+    pub(crate) seq: u64,
     pub(crate) id: FightCursor,
     kind: String,
     data: Value,
@@ -124,7 +125,7 @@ pub(crate) struct StoredFightEvent {
     version: Option<String>,
 }
 
-fn decode_stored_fight_event(member: &str) -> Result<Option<StoredFightEvent>> {
+fn decode_stored_fight_event(member: &str, seq: u64) -> Result<Option<StoredFightEvent>> {
     let (_, payload) = member
         .split_once('|')
         .ok_or_else(|| anyhow!("fight journal member is missing its ordering prefix"))?;
@@ -134,6 +135,7 @@ fn decode_stored_fight_event(member: &str) -> Result<Option<StoredFightEvent>> {
         return Ok(None);
     };
     Ok(Some(StoredFightEvent {
+        seq,
         id: id.parse().context("decoding stored fight cursor")?,
         kind: payload.kind,
         data: payload.data,
@@ -147,6 +149,7 @@ fn decode_stored_fight_event(member: &str) -> Result<Option<StoredFightEvent>> {
 /// returned in the journal's chain order.
 pub(crate) fn replay_tail<I, S>(
     members: I,
+    first_seq: u64,
     after: Option<FightCursor>,
 ) -> Result<Vec<StoredFightEvent>>
 where
@@ -155,7 +158,14 @@ where
 {
     members
         .into_iter()
-        .map(|member| decode_stored_fight_event(member.as_ref()))
+        .enumerate()
+        .map(|(offset, member)| {
+            let offset = u64::try_from(offset).context("fight journal rank offset exceeds u64")?;
+            let seq = first_seq
+                .checked_add(offset)
+                .context("fight journal rank exceeds u64")?;
+            decode_stored_fight_event(member.as_ref(), seq)
+        })
         .filter_map(|decoded| match decoded {
             Ok(Some(event)) if after.is_none_or(|cursor| event.id > cursor) => Some(Ok(event)),
             Ok(_) => None,
@@ -251,6 +261,16 @@ async fn fight_stream(
     Ok(stream_response(receiver))
 }
 
+fn fight_frame_payload(event: &StoredFightEvent) -> Value {
+    json!({
+        "seq": event.seq,
+        "kind": event.kind,
+        "data": event.data,
+        "digest": event.digest,
+        "version": event.version,
+    })
+}
+
 async fn pump_fight(
     state: StreamState,
     fight_id: String,
@@ -282,13 +302,7 @@ async fn pump_fight(
             _ = poll.tick() => {
                 let events = read_fight_events(&mut conn, &fight_id, last_sent).await?;
                 for event in events {
-                    let data = json!({
-                        "kind": event.kind,
-                        "data": event.data,
-                        "digest": event.digest,
-                        "version": event.version,
-                    })
-                    .to_string();
+                    let data = fight_frame_payload(&event).to_string();
                     let id = event.id;
                     if sender
                         .send(Ok(Event::default().event("fight").id(id.to_string()).data(data)))
@@ -354,13 +368,25 @@ async fn read_fight_events(
         .map(|cursor| cursor.checkpoint.to_string())
         .unwrap_or_else(|| "-inf".to_owned());
     let members: Vec<String> = redis::cmd("ZRANGEBYSCORE")
-        .arg(key)
+        .arg(&key)
         .arg(minimum)
         .arg("+inf")
         .query_async(conn)
         .await
         .context("reading stored fight events")?;
-    replay_tail(members, after)
+    let Some(first_member) = members.first() else {
+        return Ok(Vec::new());
+    };
+    let Some(first_seq): Option<u64> = redis::cmd("ZRANK")
+        .arg(key)
+        .arg(first_member)
+        .query_async(conn)
+        .await
+        .context("reading first stored fight event rank")?
+    else {
+        return Ok(Vec::new());
+    };
+    replay_tail(members, first_seq, after)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -572,11 +598,12 @@ fn unix_ms() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        active_presence_rows, last_event_id, presence_changes, replay_tail, FightCursor,
-        FightStreamQuery, PresenceChange, PresenceRecord,
+        active_presence_rows, fight_frame_payload, last_event_id, presence_changes, replay_tail,
+        FightCursor, FightStreamQuery, PresenceChange, PresenceRecord,
     };
     use axum::extract::Query;
     use axum::http::{HeaderMap, HeaderValue, Uri};
+    use serde_json::json;
     use std::collections::BTreeSet;
 
     /// Synthetic fixture ids, widened from a short tail so this module hand-types no live-shaped
@@ -594,7 +621,7 @@ mod tests {
             r#"000000:0000|{"id":"91:0","kind":"TurnStarted","data":{"turn":"1"},"digest":"c","version":"3"}"#,
         ];
 
-        let tail = replay_tail(stored, Some(FightCursor::new(90, 7))).unwrap();
+        let tail = replay_tail(stored, 0, Some(FightCursor::new(90, 7))).unwrap();
 
         assert_eq!(
             tail.into_iter().map(|event| event.id).collect::<Vec<_>>(),
@@ -617,6 +644,25 @@ mod tests {
         assert_eq!(
             last_event_id(&headers, &query).unwrap(),
             Some(FightCursor::new(91, 2))
+        );
+    }
+
+    #[test]
+    fn fight_frame_carries_the_journal_sequence() {
+        let stored = [
+            r#"000002:0004|{"id":"90:7","kind":"Placed","data":{"cell":"4"},"digest":"a","version":"1"}"#,
+        ];
+        let event = replay_tail(stored, 12, None).unwrap().remove(0);
+
+        assert_eq!(
+            fight_frame_payload(&event),
+            json!({
+                "seq": 12,
+                "kind": "Placed",
+                "data": { "cell": "4" },
+                "digest": "a",
+                "version": "1",
+            })
         );
     }
 
