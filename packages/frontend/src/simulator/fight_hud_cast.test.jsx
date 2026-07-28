@@ -41,7 +41,7 @@ const { reset_assets_for_test } = await import('@aresrpg/sdk/jobs')
 // The pinned markup now holds FILLED sockets (#949 — a fight's dealt hand reaches the bar), and a filled
 // socket carries its spell-art URL. That URL is resolved off the process-wide asset manifest, which any
 // earlier test file in the run may have configured — so the snapshot would say `/assets/…` alone and
-// `https://cdn…/walrus/…` inside the suite. Reset to the unpublished default: one URL shape, either way.
+// `https://cdn…/asset-host/…` inside the suite. Reset to the unpublished default: one URL shape, either way.
 reset_assets_for_test()
 
 const SEED = 0xc81f3a92

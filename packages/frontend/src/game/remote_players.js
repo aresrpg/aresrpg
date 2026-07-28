@@ -128,7 +128,7 @@ export function create_remote_players(engine, world_canvas = null) {
     const st = get_peer_state(id)
     const colors = st ?? entry
     const avatar = create_character_avatar({
-      glb_url: urls.body, // Walrus-first, bundled /sprites fallback (character_model_urls)
+      glb_url: urls.body, // asset-host-first, bundled /sprites fallback (character_model_urls)
       hair_url: urls.hair,
       colors:
         colors && (colors.color_1 || colors.color_2 || colors.color_3)

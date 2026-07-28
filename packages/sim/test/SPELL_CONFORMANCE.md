@@ -15,7 +15,7 @@ reducer (`process_spell_cast`) on a zero-stat deterministic board; each authored
 its authored definition — AP debit, damage magnitude + element, stat/resist SIGN + magnitude, timed-row
 duration, and self/enemy targeting. No sampling: every level variant, every effect, every applicable axis.
 
-The authored corpus is content (private seed repo, published as a Walrus blob); it is ABSENT from this repo
+The authored corpus is content (private seed repo, published as a asset-host blob); it is ABSENT from this repo
 by design (issue #96). This sweep runs where the corpus is materialized locally at `seed/mainnet/spells/`
 (gitignored) — the same seam `spell_effect_conformance_matrix.js` uses; in CI (corpus absent) the gate skips.
 

@@ -8,7 +8,7 @@ import { reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { get_spell_corpus, load_spell_corpus, set_spell_corpus_for_test } from './spell_corpus.js'
 
-// The shared Walrus resolver (packages/sdk/src/jobs.js) has no per-file isolation of its own — bun test
+// The shared asset-host resolver (packages/sdk/src/jobs.js) has no per-file isolation of its own — bun test
 // shares that module process-wide, sorted by path. Reset it before every test so an earlier-sorted file
 // that configured the real manifest (e.g. components/item_hover_tooltip.test.tsx) can never make
 // 'spell_corpus' look published here.

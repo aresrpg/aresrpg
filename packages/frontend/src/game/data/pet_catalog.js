@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The pet look-up catalog — ONE published Walrus blob (pet_catalog.json), fetched at boot like every other
+// The pet look-up catalog — ONE published asset-host blob (pet_catalog.json), fetched at boot like every other
 // runtime-content asset (mirrors game/data/mob_catalog.js — one pattern, two catalogs). Rows are keyed by the
 // locked, authored pet roster's slug (seed-side membership, out of this repo's content boundary — see
 // CLAUDE.md) and carry `{ appearance, glb }`; `glb` resolves through the SAME published `mob` quilt mob

@@ -1,17 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
 import { expect, test } from '@playwright/test'
 
-const HERE = path.dirname(fileURLToPath(import.meta.url))
-const WORN_VIDEO = path.resolve(HERE, '../../../scripts/walrus/out/shop_assets/video/capuche_bara_worn.webm')
-
 test('shop cosmetic PREVIEW plays and pauses its worn render', async ({ page }) => {
-  await page.route('**/capuche_bara_worn.webm', (route) =>
-    route.fulfill({ path: WORN_VIDEO, contentType: 'video/webm' })
-  )
   await page.goto('/shop?dev', { waitUntil: 'domcontentloaded' })
 
   // Keep this interaction proof keyless and independent of RPC/chain state: inject one real-catalog alias

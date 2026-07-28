@@ -3,7 +3,7 @@
 // Shared item-icon — the single home for rendering an item's art across every HUD surface (inventory
 // slots/grid, encyclopedia rows/cards/detail, market buckets/rows/confirm/sell, fast-slots, recipe
 // ingredient rows). Resolves the URL via the SDK SSOT helper item_icon_url (host-free
-// `/assets/items/<template-or-icon-slug>.png`, or the Walrus item quilt once published; `_hd` for large detail) and
+// `/assets/items/<template-or-icon-slug>.png`, or the asset-host item quilt once published; `_hd` for large detail) and
 // degrades GRACEFULLY: on a failed/blocked <img> it swaps to the item's CATEGORY glyph (a ring, a sword,
 // a potion…), with the generic package only when category is absent, so a missing sprite never leaves a blank.
 //
@@ -14,7 +14,7 @@
 // thumb-only slugs, e.g. every Fuwa cosmetic) gets ONE immediate retry at the base (non-hd) icon before
 // the category-glyph fallback — the item's real art beats a generic glyph. Mirrors ItemImage's own
 // `icon_url_base` degrade (components/items.tsx), already proven for the shop vitrines/encyclopedia.
-// [design ruling 2026-07-17: pictures must not go missing until refresh] a TRANSIENT failure (cold Walrus edge) no longer
+// [design ruling 2026-07-17: pictures must not go missing until refresh] a TRANSIENT failure (cold asset-host edge) no longer
 // pins the glyph for the session: the load lifecycle runs through the shared reducer + bounded retry
 // ladder (image_retry.js) — the glyph pins only once the ladder exhausts.
 import {

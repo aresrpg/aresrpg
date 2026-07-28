@@ -242,7 +242,7 @@ export function recipe_ingredients(item_id) {
   })
 }
 
-// ── Asset resolution (MinIO — issue #650: full pivot off Walrus for SERVING; quilts are gone) ──
+// ── Asset resolution (MinIO — issue #650: full pivot off asset-host for SERVING; quilts are gone) ──
 // Every rendered asset class (items, spells, mobs, cosmetics, characters, music, shop renders) AND every
 // runtime content blob (mob_catalog, pet_catalog, spell_corpus, world_corpus, icon_slug_map) resolves
 // through asset_url below, seeded once at boot from the published manifest
@@ -355,7 +355,7 @@ export function asset_url(url_class, filename) {
  * Re-home an asset URL supplied by untrusted/runtime data (for example a Sui Display field) onto the
  * app-configured asset host. ANY absolute URL re-homes — only its path (+ query) survives — so a Display
  * baked with a stale/foreign/malicious origin can never make the browser fetch from anywhere but our own
- * canonical host (#650: this used to only recognize a Walrus-shaped `/v1/blobs/` path; a Display now
+ * canonical host (#650: this used to only recognize a asset-host-shaped `/v1/blobs/` path; a Display now
  * serving straight off assets.aresrpg.world needs the SAME guard, not a narrower one — keeping the
  * host-confinement property is the point, not the exact old shape). A non-absolute string (already
  * host-free, or plain garbage) returns null — callers already special-case `/`- and `data:`-prefixed
@@ -416,7 +416,7 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
 
 /**
  * The URL for a rendered mob icon. Mob art is served directly from the asset host's `mobs` family;
- * it is not a Walrus class and does not depend on a manifest publication gate.
+ * it is not a manifest-gated class and does not depend on a publication gate.
  * @param {string | null | undefined} filename
  * @returns {string | null}
  */

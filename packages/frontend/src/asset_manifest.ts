@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
-// ── THE ONE HOME for loading the Walrus asset manifest (regression: icons intermittently required a
+// ── THE ONE HOME for loading the asset manifest (regression: icons intermittently required a
 // full refresh to appear, or vanished on page switch). ──────────────────────────
 // The resolver config (@aresrpg/sdk/jobs assets_config.classes) is process-wide MODULE STATE seeded from
 // /asset_manifest.json. A single failed/partial boot fetch used to leave that state EMPTY forever: every
@@ -67,7 +67,7 @@ async function try_fetch(fetch_impl: typeof fetch, url: string): Promise<boolean
 }
 
 const default_url = (): string =>
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_WALRUS_MANIFEST_URL || '/asset_manifest.json'
+  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_ASSETS_MANIFEST_URL || '/asset_manifest.json'
 
 const default_sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 const default_schedule = (fn: () => void | Promise<void>, ms: number): void => {

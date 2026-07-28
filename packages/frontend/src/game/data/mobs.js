@@ -21,7 +21,7 @@ import { catalog_name_of } from '../../content/mob_name_overrides'
 import { get_catalog } from './mob_catalog.js'
 
 // GLBs serve from unhashed /sprites URLs (browsers cache across re-extractions). Pin each model to its first
-// resolved source for the page lifetime. A late Walrus manifest refresh therefore cannot make an already-roaming
+// resolved source for the page lifetime. A late asset-host manifest refresh therefore cannot make an already-roaming
 // mob and its fight-board twin parse different GLB bytes.
 /** @type {Map<string, string>} */
 const resolved_mob_urls = new Map()
@@ -78,7 +78,7 @@ export function get_mob_model(mob) {
   const entry = by_variant ?? catalog[catalog_key_of(mob.name) ?? '']
   const appearance = entry?.appearance ?? null
   const glb = entry?.glb ?? null
-  // Walrus (boot manifest) first — the decentralized home — else the bundled /sprites copy (progressive
+  // asset-host (boot manifest) first — the decentralized home — else the bundled /sprites copy (progressive
   // migration; the manifest carries `mob` only after the census→quilt→upload lane publishes it).
   if (glb)
     return {

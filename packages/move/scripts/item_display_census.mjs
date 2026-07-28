@@ -21,7 +21,7 @@
 //
 // This tool DIAGNOSES; it does not (and cannot) apply. The remediation needs a manual decision (see the printed
 // WALLS block). Leg B for the UNIQUE-item_type classes is the Display-swap ceremony (DRY, fail-closed
-// on the display-url law) that now lives in the seed repo alongside the rest of the Walrus publish
+// on the display-url law) that now lives in the seed repo alongside the rest of the asset-host publish
 // pipeline (publish-boundary sweep, 2026-07-23) — this census never rebuilds it.
 import { readFileSync as read_file, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'

@@ -16,7 +16,7 @@ import {
 
 afterAll(() => set_catalog_for_test())
 
-test('EncyclopediaMobImage uses the shield glyph when no Walrus icon can be resolved', () => {
+test('EncyclopediaMobImage uses the shield glyph when no asset-host icon can be resolved', () => {
   const html = renderToStaticMarkup(<EncyclopediaMobImage mob={{ name: 'Definitely Not A Mob' }} />)
   expect(html).toContain('<svg')
   expect(html).not.toContain('<img')

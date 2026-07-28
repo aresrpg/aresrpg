@@ -27,4 +27,3 @@ node_modules/
 test/gold/.build/
 test/gold/out/
 test/gold/.gold-*.json
-scripts/walrus/out/quilt_receipt_*.json

@@ -4,7 +4,7 @@
 // mirroring item_detail_view.test.tsx). The external asset CDN host is DELETED, and an on-chain Display
 // `image_url` pointing at ANY absolute host — stale, foreign, or the canonical asset host itself — is
 // RE-HOMED onto the configured asset host, keeping only its path (#650: host-confinement, not a
-// Walrus-specific shape). (The fake `legacy-cdn.example` host below stands in for a foreign origin so this
+// asset-host-specific shape). (The fake `legacy-cdn.example` host below stands in for a foreign origin so this
 // file itself stays free of the banned literal.)
 
 import { describe, test, expect } from 'bun:test'
@@ -25,7 +25,7 @@ import { ItemImage, ItemTooltipContent, onchain_template_to_detail_props } from 
 // This suite's whole point is the host-FREE / unconfigured-fallback path, so force it back to that state
 // (item/cosmetic undefined ⇒ asset_url returns null, falling through to the /assets local slug).
 configure_assets({
-  aggregator: 'https://cdn.aresrpg.world/walrus',
+  aggregator: 'https://fake-assets',
   classes: { item: undefined, cosmetic: undefined },
 })
 
@@ -43,7 +43,7 @@ describe('ItemImage — Display re-homing guard + HD', () => {
       />
     )
     expect(src.startsWith('https://legacy-cdn.example')).toBe(false) // the foreign origin never survives
-    expect(src).toBe('https://cdn.aresrpg.world/walrus/items/tool_herbalist_hd.png') // re-homed, HD variant requested
+    expect(src).toBe('https://fake-assets/items/tool_herbalist_hd.png') // re-homed, HD variant requested
   })
 
   test('hd derives the _hd variant of a host-free (relative) Display url first', () => {
@@ -51,17 +51,17 @@ describe('ItemImage — Display re-homing guard + HD', () => {
     expect(src).toBe('/assets/items/wooden_sword_hd.png')
   })
 
-  test('a Walrus-shaped Display path is re-homed onto the configured CDN base', () => {
+  test('a asset-host-shaped Display path is re-homed onto the configured CDN base', () => {
     const raw = 'https://raw-origin.example/v1/blobs/by-quilt-id/Q/tool_herbalist.png'
     const src = src_of(<ItemImage id="tool_herbalist" image_url={raw} category="sword" />)
-    expect(src).toBe('https://cdn.aresrpg.world/walrus/v1/blobs/by-quilt-id/Q/tool_herbalist.png')
+    expect(src).toBe('https://fake-assets/v1/blobs/by-quilt-id/Q/tool_herbalist.png')
   })
 
   test('non-hd (list/grid) keeps the BASE slug — the _hd request is detail-only', () => {
     const src = src_of(
       <ItemImage id="tool_herbalist" image_url="https://legacy-cdn.example/items/tool_herbalist.png" category="sword" />
     )
-    expect(src).toBe('https://cdn.aresrpg.world/walrus/items/tool_herbalist.png')
+    expect(src).toBe('https://fake-assets/items/tool_herbalist.png')
   })
 
   test('a template object address is refused before <img> and renders the shared placeholder', () => {

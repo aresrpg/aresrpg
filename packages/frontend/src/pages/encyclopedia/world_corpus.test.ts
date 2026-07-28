@@ -20,7 +20,7 @@ const manifest = JSON.parse(
 )
 
 describe('world_corpus_for_mob', () => {
-  // RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+  // RUNTIME BLOB (#196): the world corpus loads from a published asset-host blob at boot (load_world_corpus),
   // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106). This
   // full-corpus case runs only where the blob is seeded (set_world_corpus_for_test / a content-bearing CI).
   test.skipIf(!has_world_corpus())(
@@ -59,7 +59,7 @@ describe('world_corpus_for_mob', () => {
 // FEATURE: the encyclopedia gatherable pages get a clickable "FOUND IN" world list —
 // the exact mob-page idiom, inverted over the SAME authored corpus rows the worlds tab renders.
 describe('world_corpus_for_resource', () => {
-  // RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+  // RUNTIME BLOB (#196): the world corpus loads from a published asset-host blob at boot (load_world_corpus),
   // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106). This
   // full-corpus case runs only where the blob is seeded (set_world_corpus_for_test / a content-bearing CI).
   test.skipIf(!has_world_corpus())('EVERY authored gatherable inverts to each world that places it', () => {

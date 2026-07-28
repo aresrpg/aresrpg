@@ -10,7 +10,7 @@
 //   3. FAILS on any mismatch outside the documented BASELINE — the tooth. The baseline only ever SHRINKS
 //      (a fix removes its rows; a new divergence has nowhere to hide).
 //
-// MISSING-ARTIFACT (#96): the authored corpus is content (private seed repo → Walrus blob), absent by design in
+// MISSING-ARTIFACT (#96): the authored corpus is content (private seed repo → asset-host blob), absent by design in
 // this repo. The tooth runs where the corpus is materialized at `seed/mainnet/spells/` (gitignored) — locally
 // and in the seed-side parity gate; here in the public CI it SKIPS LOUDLY (never silently green).
 

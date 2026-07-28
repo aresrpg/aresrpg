@@ -25,7 +25,7 @@ const input_object_id = (inp) =>
 // MISSING-ARTIFACT (#117): seed/mainnet/spells is content-pipeline output, absent by design in this public
 // repo — TWO consequences. (1) senshi.json itself (guarded dynamic import below) feeds the raw-corpus
 // expectation helpers (senshi_upto/senshi_sorted). (2) resolve_class_spells/fight_spell/spell_object_id
-// (the module under test) resolve through fight-spells.js's get_spell_corpus(), a runtime-fetched Walrus
+// (the module under test) resolve through fight-spells.js's get_spell_corpus(), a runtime-fetched asset-host
 // blob (data/spell_corpus.js) that only a boot sequence or the set_spell_corpus_for_test() seam populates —
 // neither runs here, so it stays permanently [] and every real-content assertion below is gated the same way.
 const SPELLS_DIR = fileURLToPath(new URL('../../../../../../seed/mainnet/spells', import.meta.url))

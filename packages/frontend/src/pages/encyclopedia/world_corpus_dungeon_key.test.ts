@@ -9,7 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import { WORLD_CORPUS, has_world_corpus } from './world_corpus'
 
 describe('world_corpus resolves each world dungeon-key template id (no fetch, no chain read)', () => {
-  // RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+  // RUNTIME BLOB (#196): the world corpus loads from a published asset-host blob at boot (load_world_corpus),
   // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106).
   test.skipIf(!has_world_corpus())('there is authored world corpus to resolve', () => {
     expect(WORLD_CORPUS.worlds.length).toBeGreaterThan(0)

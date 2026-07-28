@@ -5,7 +5,7 @@
 // corpus facts, not live chain state.
 //
 // RUNTIME BLOB, NOT A BUILD-TIME GLOB (#196): the authored trio (world/mobs/resources per wid) is ONE
-// published Walrus blob (world_corpus.json), fetched at boot exactly like game/data/spell_corpus.js and
+// published asset-host blob (world_corpus.json), fetched at boot exactly like game/data/spell_corpus.js and
 // mob_catalog.js — one runtime-content pattern, now three consumers. Gameplay content NEVER ships inside
 // this repo; it reaches the game only as published chain state + CDN blobs. Until the blob publishes (or
 // on a fetch failure) the corpus DEGRADES LOUDLY to inert (zero worlds + ONE console.error) and the app

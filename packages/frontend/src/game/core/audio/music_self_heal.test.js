@@ -43,7 +43,7 @@ function harness(overrides = {}) {
   const listeners = new Map()
   let ready = overrides.ready ?? true
   const players = ready
-    ? { roam: fake_player('https://walrus/roam.mp3'), battle: fake_player('https://walrus/battle.mp3') }
+    ? { roam: fake_player('https://fake-assets/roam.mp3'), battle: fake_player('https://fake-assets/battle.mp3') }
     : { roam: fake_player('/roam.mp3'), battle: fake_player('/battle.mp3') }
   let selected_players = players
   const target = {
@@ -55,7 +55,7 @@ function harness(overrides = {}) {
     get_active_players: () => selected_players,
     get_tracks: () =>
       ready
-        ? { roam: 'https://walrus/roam.mp3', battle: 'https://walrus/battle.mp3' }
+        ? { roam: 'https://fake-assets/roam.mp3', battle: 'https://fake-assets/battle.mp3' }
         : { roam: '/roam.mp3', battle: '/battle.mp3' },
     is_active: () => true,
     manifest_ready: () => ready,
@@ -185,15 +185,15 @@ describe('music self-heal policy', () => {
     expect(h.logs).toEqual(['[music] self-heal: failed stream reloaded'])
   })
 
-  it('re-resolves and plays Walrus URLs when the manifest arrives late', async () => {
+  it('re-resolves and plays asset-host URLs when the manifest arrives late', async () => {
     const h = harness({ ready: false })
     h.heal.start()
     expect(h.timers[0].delay).toBe(750)
 
     await h.timers[0].fn()
     await flush()
-    expect(h.players.roam.src).toBe('https://walrus/roam.mp3')
-    expect(h.players.battle.src).toBe('https://walrus/battle.mp3')
+    expect(h.players.roam.src).toBe('https://fake-assets/roam.mp3')
+    expect(h.players.battle.src).toBe('https://fake-assets/battle.mp3')
     expect(h.logs).toEqual(['[music] self-heal: late asset manifest applied'])
   })
 })

@@ -27,7 +27,7 @@ describe('seed-receipt content projections', () => {
     for (const { id } of seed_manifest.worlds) expect(is_living_world({ world_id: id })).toBe(true)
   })
 
-  // RUNTIME BLOBS (#196 / #106): WORLD_CORPUS loads from the Walrus world_corpus blob (load_world_corpus)
+  // RUNTIME BLOBS (#196 / #106): WORLD_CORPUS loads from the asset-host world_corpus blob (load_world_corpus)
   // and fight_spells_data from the spell_corpus blob (load_spell_corpus) — both async at boot in main.tsx,
   // neither fetched by this headless test, so both legitimately degrade to empty. Neither blob ships in this
   // public repo; this full-corpus case runs only where the content is seeded.

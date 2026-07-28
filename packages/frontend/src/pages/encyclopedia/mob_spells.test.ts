@@ -38,7 +38,7 @@ const OP_TO_KIND: Record<string, string> = {
 
 const living_template_ids = Object.values(seed_manifest.mobs).map(({ id }) => id)
 
-// RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+// RUNTIME BLOB (#196): the world corpus loads from a published asset-host blob at boot (load_world_corpus),
 // never fetched in a headless unit test — world_corpus's mob facts degrade to empty here (issue #106).
 describe('mob corpus facts (xp + spell kit)', () => {
   test.skipIf(!has_world_corpus())(

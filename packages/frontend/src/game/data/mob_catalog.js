@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The mob look-up catalog — ONE published Walrus blob (mob_catalog.json), fetched at boot like every other
+// The mob look-up catalog — ONE published asset-host blob (mob_catalog.json), fetched at boot like every other
 // asset. It is the merged projection of the two heritage tables (mob_models: catalog-key/variant → {appearance};
 // hytale_appearances: appearance → extracted-GLB basename), COLLAPSED to one hop at PUBLISH time (the seed
 // ceremony's mob_catalog leg). The client never merges in prod — it fetches the already-merged blob and caches
 // it; get_catalog() reads that cache synchronously (get_mob_model re-derives every fight frame, so the read
 // must be O(1), never a promise). Absence (the manifest carries no `mob_catalog` row yet, or the fetch fails)
 // resolves to {} — every consumer has a LOUD miss-path (mobs.js debug cube + deduped console.error), so mobs
-// render the debug cube loudly until the blob publishes, the same progressive behavior the Walrus asset move
+// render the debug cube loudly until the blob publishes, the same progressive behavior the asset-host asset move
 // already exhibits. Absence is NEVER cached as truth: a failed load leaves the cache empty AND `loaded` false,
 // so a later call still populates it.
 

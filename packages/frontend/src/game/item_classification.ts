@@ -52,13 +52,13 @@ export function is_cosmetic_item(item: ItemClassificationInput | null | undefine
   return item_type_classification(item) !== null
 }
 
-/** Categories rendered as a worn mannequin preview — the `cosmetic_icon` Walrus quilt. TITLE is deliberately
+/** Categories rendered as a worn mannequin preview — the `cosmetic_icon` asset-host quilt. TITLE is deliberately
  *  excluded: title cosmetics (e.g. the veteran scroll) render as an ordinary item icon, never a worn preview,
  *  so they resolve through the `item` quilt like any other inventory icon. */
 const WEARABLE_ICON_CATEGORIES = new Set([ITEM_CATEGORY.HAT.toUpperCase(), ITEM_CATEGORY.CLOAK.toUpperCase()])
 
 /**
- * The published Walrus quilt class for an item's icon art, derived from its raw category/itemType. Shared by
+ * The published asset-host quilt class for an item's icon art, derived from its raw category/itemType. Shared by
  * the shop vitrine and the encyclopedia so the wearable-vs-item split has one home instead of two copies that
  * can drift (the encyclopedia previously hardcoded cosmetic_icon for every cosmetic and 404'd title art).
  */

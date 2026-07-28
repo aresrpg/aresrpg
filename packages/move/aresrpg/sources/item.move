@@ -138,7 +138,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
   let item_keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let item_values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback); the walrus_display_step ceremony swaps this to the walrus by-quilt-id URL post-upload
+    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback)
     utf8(b"{description}"),
     utf8(b"https://aresrpg.world"),
   ];
@@ -148,7 +148,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
   let tmpl_keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let tmpl_values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback); the walrus_display_step ceremony swaps this to the walrus by-quilt-id URL post-upload
+    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback)
     utf8(b"{description}"),
     utf8(b"https://aresrpg.world"),
   ];

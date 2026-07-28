@@ -47,7 +47,7 @@ export function ft_dragon_glb_url() {
   return asset_url('mob', file) ?? `/sprites/mobs/models/${file}`
 }
 
-/** PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): a cold Walrus dragon GLB fetch
+/** PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): a cold asset-host dragon GLB fetch
  *  (multi-MB, first request this session) currently sits entirely on the travel critical path — create_mount_rig
  *  only ever asks for it once the resolve/join phases finish. Kick the SAME cache entry the moment the travel
  *  UI shows the option (PlayerActionMenu), not on confirm, so the fetch runs IN PARALLEL with resolve/join

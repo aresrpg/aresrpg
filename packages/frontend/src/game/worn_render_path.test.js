@@ -4,8 +4,7 @@
 // `worn.<slot>.template_id`; the cosmetic quilt is keyed by the seed appearance slug. Prove the complete
 // consumer seam as state in -> rig.set_slots out, including the clearing call on unequip.
 
-import { existsSync, readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
@@ -19,15 +18,6 @@ const { resolve_worn_cosmetics, worn_model_of } = await import('./cosmetic_glb.j
 const seed_manifest = JSON.parse(
   readFileSync(new URL('../../../move/scripts/out/seed_manifest.json', import.meta.url), 'utf8')
 )
-// MISSING-ARTIFACT (#117): scripts/walrus/out/quilt_receipt_cosmetic_glb_quilt.json is a Walrus-publish
-// receipt (content-pipeline output), absent by design in this public repo — mirrors shop_fixture.js's
-// SHOP_AVAILABLE guard so only the quilt-dependent assertions below skip.
-const QUILT_PATH = fileURLToPath(
-  new URL('../../../../scripts/walrus/out/quilt_receipt_cosmetic_glb_quilt.json', import.meta.url)
-)
-const QUILT_AVAILABLE = existsSync(QUILT_PATH)
-const quilt = QUILT_AVAILABLE ? JSON.parse(readFileSync(QUILT_PATH, 'utf8')) : { storedQuiltBlobs: [] }
-const quilt_files = new Set(quilt.storedQuiltBlobs.map((row) => row.identifier))
 const live_sale_templates = new Set(seed_manifest.shop.map((row) => row.template))
 
 describe('world worn-cosmetic state -> rig slots', () => {
@@ -64,8 +54,8 @@ describe('world worn-cosmetic state -> rig slots', () => {
     ])
   })
 
-  test.skipIf(!SHOP_AVAILABLE || !QUILT_AVAILABLE)(
-    'every seeded wearable maps to a shipped base GLB and a world rig slot; title stays display-only',
+  test.skipIf(!SHOP_AVAILABLE)(
+    'every seeded wearable maps to a world rig slot; title stays display-only',
     () => {
     const counts = shop.cosmetics.reduce((out, row) => {
       out[row.itemType] = (out[row.itemType] ?? 0) + 1
@@ -87,14 +77,12 @@ describe('world worn-cosmetic state -> rig slots', () => {
       const item = { item_id: `0xitem${index}`, template_id, category: row.category }
       const templates = new Map([[template_id, { template_id, item_type: row.itemType, name: row.name }]])
       if (row.itemType === 'title') {
-        expect(quilt_files.has(`${row.appearance}.glb`)).toBe(false)
         expect(resolve_worn_cosmetics({ worn: { title: item } }, templates)).toEqual({ head: null, back: null })
         continue
       }
 
       const model = worn_model_of(item, templates)
       expect(model).toEqual({ appearance: row.appearance, variant: row.skin ?? null })
-      expect(quilt_files.has(`${model.appearance}.glb`)).toBe(true)
       appearances.add(model.appearance)
       const slot = row.itemType === 'hat' ? 'head' : 'back'
       const resolved = resolve_worn_cosmetics({ worn: { [row.category]: item } }, templates)
@@ -106,7 +94,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(appearances.size).toBe(20)
   })
 
-  test.skipIf(!SHOP_AVAILABLE || !QUILT_AVAILABLE)(
+  test.skipIf(!SHOP_AVAILABLE)(
     'corbac is ONE instance: corbac_head owns the art; the helmet duplicate resolves nothing',
     () => {
     // Owner reconciliation 2026-07-17: corbac_helmet was a duplicate of corbac_head — same crow hat under a
@@ -123,9 +111,6 @@ describe('world worn-cosmetic state -> rig slots', () => {
       new Map([[template_id, { template_id, name: 'Corbac Headdress', item_type: 'hat' }]])
     )
     expect(model).toEqual({ appearance: 'corbac_head', variant: null })
-    expect(quilt_files.has('corbac_head.glb')).toBe(true)
-    expect(quilt_files.has('corbac_helmet.glb')).toBe(false)
-
     // The duplicate's Display name must resolve NO model until the rider purges it on-chain — a loud
     // nothing-render, never a silent alias back to life (no-silent-substitute law).
     const helmet_id = seed_manifest.items.corbac_helmet

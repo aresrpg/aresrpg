@@ -109,7 +109,7 @@ describe('resolve_mount — availability state machine', () => {
     const r = resolve_mount({ id: 'c1', mount: { id: 'm1', glb: '/models/pet/zot.glb' } }, '')
     expect(r.glb_url).toBe('/models/pet/zot.glb')
   })
-  test("an item's Walrus-shaped blob ref is still re-homed onto the CDN (old minted Display data)", () => {
+  test("an item's asset-host-shaped blob ref is still re-homed onto the CDN (old minted Display data)", () => {
     const r = resolve_mount(
       {
         id: 'c1',
@@ -122,11 +122,11 @@ describe('resolve_mount — availability state machine', () => {
     )
     expect(r.glb_url).toBe('https://cdn.aresrpg.world/v1/blobs/by-quilt-id/MOUNT_Q/zot.glb')
   })
-  test("an item's arbitrary absolute glb ref is ALSO re-homed onto the CDN — any host, not just Walrus (#650)", () => {
+  test("an item's arbitrary absolute glb ref is ALSO re-homed onto the CDN — any host, not just asset-host (#650)", () => {
     // The old guard only recognized a `/v1/blobs/` marker and discarded anything else, falling through to
     // the template convention. The new guard re-homes ANY absolute origin (host-confinement, not a
-    // Walrus-specific shape) — an attacker-hosted origin can never survive, but it no longer needs to BE
-    // Walrus-shaped for that property to hold.
+    // asset-host-specific shape) — an attacker-hosted origin can never survive, but it no longer needs to BE
+    // asset-host-shaped for that property to hold.
     const r = resolve_mount(
       { id: 'c1', mount: { id: 'm1', template_id: 'mount_zot', glb: 'https://legacy-origin.example/zot.glb' } },
       ''

@@ -47,7 +47,7 @@
 
       const q = new URLSearchParams(location.search)
       // [issue #74 triage] '/sui_helmet.glb' (engine/public) was removed — cosmetics serve off the
-      // Walrus CDN at runtime via a manifest fetch this standalone demo doesn't wire (no @aresrpg/sdk
+      // asset-host CDN at runtime via a manifest fetch this standalone demo doesn't wire (no @aresrpg/sdk
       // dependency here). No safe default URL to hardcode, so the head slot is opt-in via ?head=<url>
       // and empty otherwise (HEAD || null below already treats '' as "no head cosmetic requested").
       const HEAD = q.get('head') || ''

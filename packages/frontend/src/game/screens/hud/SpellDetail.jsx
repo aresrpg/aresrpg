@@ -19,7 +19,7 @@ import './spell-detail.css'
 /**
  * Spell art tile with a graceful fallback: only ~24 seeded spells carry CDN art, so a missing/404 asset
  * falls back to an element-tinted initial (never a blank dark square). An `<img>` is used so the load
- * error is detectable. A transient failure (cold Walrus edge) self-heals through the shared retry
+ * error is detectable. A transient failure (cold asset-host edge) self-heals through the shared retry
  * ladder (image_retry.js) instead of pinning the initial until a refresh; the tint pins only once the
  * ladder exhausts. Shared by the detail header + the deck-builder cards.
  * @param {{ icon: string, color: string, name: string, className?: string }} props

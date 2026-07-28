@@ -137,7 +137,7 @@ export function create_player({
     // this never reaches set_local_cosmetic, so other players keep seeing the real on-chain character.
     const avatar_override = resolve_avatar_override()
     avatar = create_character_avatar({
-      glb_url: avatar_override ?? urls.body, // Walrus-first, bundled /sprites fallback (character_model_urls)
+      glb_url: avatar_override ?? urls.body, // asset-host-first, bundled /sprites fallback (character_model_urls)
       // hair/recolor are keyed to the CLASS rig's own texture atlas — skip both under an override (a
       // foreign preview GLB has no matching Head bone convention or _base/_colorN mask layers to wear them).
       hair_url: avatar_override ? undefined : urls.hair,

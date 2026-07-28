@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Ambient music — two preloaded looping beds with exactly ONE active HTMLAudioElement at a time. The calm
-// roam bed and tenser fight bed are served from Walrus (the `music` quilt, T-59). Transitions pause the prior
+// roam bed and tenser fight bed are served from asset-host (the `music` quilt, T-59). Transitions pause the prior
 // stream before playing the next; duck + master volume share one ramp. Element construction is gesture-deferred,
 // so importing this module is side-effect-free and safe at boot.
 //
@@ -27,7 +27,7 @@ const FADE = 1.4 // seconds for visibility ducking and one-stream track handoff 
 
 /**
  * The owned non-battle track names — the ONLY music we ship (the prior YouTube-ripped
- * lobby placeholder is deleted outright, never replaced). Each name has a roam/fight pair on the Walrus
+ * lobby placeholder is deleted outright, never replaced). Each name has a roam/fight pair on the asset-host
  * `music` quilt. Paths and lazy manifest resolution live in audio_registry; these are not local imports.
  * @type {readonly string[]}
  */

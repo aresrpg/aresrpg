@@ -262,7 +262,7 @@ fun display_has_expected_fields() {
   assert!(vec_map::contains(fields, &b"project_url".to_string()));
   assert_eq!(
     *vec_map::get(fields, &b"image_url".to_string()),
-    b"/assets/characters/{class}_{male}.png".to_string(), // host-free relative form (assets.aresrpg.world purged 2026-07-13; walrus_display_step swaps at ceremony)
+    b"/assets/characters/{class}_{male}.png".to_string(), // host-free relative form
   );
   sc.return_to_sender(disp);
   sc.end();

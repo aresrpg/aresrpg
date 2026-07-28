@@ -45,7 +45,7 @@ export function create_sky_dragon({ engine, center, variant }) {
     variant ?? new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('dragon') ?? ''
   ).toLowerCase()
   const local = VARIANTS[key] ?? VARIANTS.void
-  // Walrus-first (the dragon GLBs live in the `mob` quilt), bundled /sprites fallback — progressive migration.
+  // asset-host-first (the dragon GLBs live in the `mob` quilt), bundled /sprites fallback — progressive migration.
   const url = asset_url('mob', local.split('/').pop() ?? '') ?? local
   const [cx, cyBase, cz] = center
   const cy = cyBase + ALTITUDE

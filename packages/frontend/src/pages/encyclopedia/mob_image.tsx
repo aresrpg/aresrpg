@@ -7,7 +7,7 @@ import { encyclopedia_mob_icon_url } from './encyclopedia_assets'
 
 // ── first-fetch resilience (pictures missing unless the page is refreshed) ──────────────────────
 // The resolver is correct post-boot (asset_manifest_boot.test.tsx) and the quilt URLs serve 200 — the
-// broken window is the FIRST fetch: a cold Walrus edge reconstructs each quilt patch in ~2-3s
+// broken window is the FIRST fetch: a cold asset-host edge reconstructs each quilt patch in ~2-3s
 // (curl-measured) and can fail under the bestiary's concurrent burst. The old component pinned that very
 // first error into the glyph for the whole session (only a full page refresh re-attempted). A failed
 // fetch is transient by default: retry on this short ladder, and only when it exhausts pin the honest
@@ -44,7 +44,7 @@ export const reduce_mob_image_load = (state: MobImageLoadState, event: MobImageL
   }
 }
 
-/** Walrus-only encyclopedia mob image. A transient fetch failure self-heals through the retry ladder;
+/** asset-host-only encyclopedia mob image. A transient fetch failure self-heals through the retry ladder;
  * missing/unpublished art degrades to the established shield glyph only once the ladder exhausts. */
 export function EncyclopediaMobImage({
   mob,

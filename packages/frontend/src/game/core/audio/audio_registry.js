@@ -102,7 +102,7 @@ export const AUDIO_ASSETS = Object.freeze({
 const is_music_key = (key) => key.startsWith('music_')
 const filename_of = (src) => src.split('/').pop() ?? ''
 
-/** Resolve a registered key. Music checks the boot manifest lazily so a late Walrus manifest can still win.
+/** Resolve a registered key. Music checks the boot manifest lazily so a late asset-host manifest can still win.
  * @param {string} key @returns {string | null} */
 export function audio_asset_src(key) {
   const fallback = AUDIO_ASSETS[key]
@@ -118,7 +118,7 @@ export const element_audio_src = (family, layer, variant = 1) =>
 /** @param {string} name @param {'roam' | 'battle'} bed @returns {string | null} */
 export const music_audio_src = (name, bed) => audio_asset_src(music_audio_key(name, bed))
 
-/** Whether a registered music asset currently resolves through the Walrus manifest. */
+/** Whether a registered music asset currently resolves through the asset-host manifest. */
 export function is_music_asset_resolved(key) {
   const fallback = AUDIO_ASSETS[key]
   return !!fallback && is_music_key(key) && asset_url('music', filename_of(fallback)) != null

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The authored spell corpus — ONE published Walrus blob (spell_corpus.json), fetched at boot like every other
+// The authored spell corpus — ONE published asset-host blob (spell_corpus.json), fetched at boot like every other
 // asset (mirrors game/data/mob_catalog.js — one runtime-content pattern, two consumers). It is the merged
 // projection the seed ceremony emits at PUBLISH time: the authored spell rows joined to the deployment's
 // on-chain object ids. The client never merges in prod — it fetches the already-merged blob and caches it;

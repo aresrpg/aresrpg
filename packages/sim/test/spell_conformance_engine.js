@@ -587,7 +587,7 @@ export const format_report = ({ stats, findings, gaps }) => {
   )
   L.push('')
   L.push(
-    'The authored corpus is content (private seed repo, published as a Walrus blob); it is ABSENT from this repo',
+    'The authored corpus is content (private seed repo, published as a asset-host blob); it is ABSENT from this repo',
   )
   L.push(
     'by design (issue #96). This sweep runs where the corpus is materialized locally at `seed/mainnet/spells/`',

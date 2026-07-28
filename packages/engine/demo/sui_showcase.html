@@ -52,7 +52,7 @@
       // resolves to the STATUS shelf's "ice" entry, the closest blue/water-toned worn aura).
       const PRESET = q.get('preset') || 'status_ice'
       // [issue #74 triage] '/sui_helmet.glb' (engine/public) was removed — cosmetics serve off the
-      // Walrus CDN at runtime, resolved via a manifest fetch this standalone demo doesn't wire (no
+      // asset-host CDN at runtime, resolved via a manifest fetch this standalone demo doesn't wire (no
       // @aresrpg/sdk dependency here). No safe default URL to hardcode without one, so the helmet
       // load is now opt-in via ?helmet=<url> (any reachable GLB) and skipped entirely otherwise —
       // the avatar + aura still render and drive __ready (helmet was always best-effort, see __info).

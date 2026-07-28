@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT SPELL RESOLVER — the ONE home mapping a character's (class, level) to the on-chain spells it can cast.
 //
-// Rows derive from the authored spell corpus, fetched at RUNTIME as ONE published Walrus blob
+// Rows derive from the authored spell corpus, fetched at RUNTIME as ONE published asset-host blob
 // (game/data/spell_corpus.js — the same asset-url pattern the mob catalog uses). Each row carries the spell's
 // `object_id` — the `aresrpg_spells::spell_template::SpellTemplate` SHARED object the `act_cast` PTB references
 // (§7) — plus display facts and every authored SpellLevel. The blob is the seed ceremony's merged projection

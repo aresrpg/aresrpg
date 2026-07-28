@@ -4,7 +4,7 @@
 // every mechanic (buy flow, supply math, pool math, catalog mapping) stays in shop.tsx and arrives as props.
 //
 // WORN-RENDER SLOT: census projects exact shop aliases + published patches into shop_render_catalog.json. Cards
-// resolve that small build artifact synchronously, then route every proven still through Walrus shop_render.
+// resolve that small build artifact synchronously, then route every proven still through asset-host shop_render.
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, ShoppingBag } from 'lucide-react'
@@ -61,7 +61,7 @@ export function shop_render_entry(...identities: (string | null | undefined)[]):
   return resolve_shop_render(...identities)?.entry ?? null
 }
 
-/** Resolve a manifest-relative still/video through its published Walrus class. */
+/** Resolve a manifest-relative still/video through its published asset-host class. */
 export function shop_asset_url(rel_path: string | null | undefined): string | null {
   return resolve_shop_render_url(rel_path, asset_url)
 }

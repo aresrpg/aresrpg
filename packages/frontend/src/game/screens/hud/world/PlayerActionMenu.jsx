@@ -53,7 +53,7 @@ export function PlayerActionMenu() {
   const can_fast_travel = !!target && !!selected_character_id && !is_self && (!!target.id || !!address)
 
   // PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): the moment this menu shows the
-  // Fast Travel option, warm the dragon GLB cache — NOT on confirm. A cold Walrus fetch (multi-MB, first
+  // Fast Travel option, warm the dragon GLB cache — NOT on confirm. A cold asset-host fetch (multi-MB, first
   // request this session) otherwise sits entirely on the travel critical path (mount_rig.js only asks for it
   // once resolve/join finish); kicking it here runs it in PARALLEL with that wait instead. Idempotent
   // (module-cached by URL in mount_rig.js) — reopening the menu on other targets just no-ops after the first.

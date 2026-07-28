@@ -487,8 +487,6 @@ fi
 #      records the publishing signer's ADDRESS (not a secret) and is regenerated fresh every ceremony
 #      run; a real code leak never lands here. If it ever contains a `suiprivkey1` literal, the first
 #      OR-branch below still catches it — only the address-reappearance check is scoped out.
-# (A former #3, scripts/walrus/out/display_swap_report.json, is gone with its only producer —
-# publish-boundary sweep 2026-07-23: walrus_display_step.mjs moved to the seed repo.)
 echo
 echo "== AresRPG secret-leak gate (no hardcoded suiprivkey1 literals) =="
 LEAKED_ADDR_RE='0xe2a45ca2df4efba794060847c157964cef4029084728ecfca004510a82d9c803|0xf3e422622a6713a7b7ec76309ff2734483f1d62845f27f2b6aaa4461ddc6872f|0xac3e6e4373708e69f29073ccb778afc8c2e16aa336c5e6d5513a2dedb8cb5db2|0xcbc75cafc71f3404f5a0ddde4fbe0990ec31feb9b5c5ee023392252bf9ed065c|0x75c0c5bfe253f86f664f0e41125c057020e505aa13b18261693a0362b917730e'

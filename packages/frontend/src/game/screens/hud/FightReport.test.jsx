@@ -15,7 +15,7 @@ import { FightReport } from './FightReport.jsx'
 const t = (key, opts) => (opts?.sui != null ? `${key}:${opts.sui}` : key) // stub — no i18n init needed
 
 // Cold-state pin: these suites assert the resolver's manifest-less fallbacks; a sibling file's real-manifest
-// configure (the process-wide walrus singleton) would reroute icons to walrus URLs and fail them in combined runs.
+// configure (the process-wide asset-host singleton) would reroute icons to asset-host URLs and fail them in combined runs.
 beforeEach(() => reset_assets_for_test())
 
 const base = {
@@ -245,7 +245,7 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
 // consults `cosmetic_icon_of` (packages/frontend/src/game/cosmetic_icons.js). That map exists precisely
 // because on-chain `item_type` for a shop cosmetic is the generic EQUIP SLOT WORD ("hat"/"cloak"), never
 // the unique art slug — item_icon_url then builds the SAME non-existent `items/hat.png` for every
-// hat-slot cosmetic (curl-verified live: /assets/items/hat.png resolves to the Walrus quilt shard
+// hat-slot cosmetic (curl-verified live: /assets/items/hat.png resolves to the asset-host quilt shard
 // `-TEi2iUTk50pyc3zpfNukt-K8xNRDEZeI0n2NTokKfg/hat.png` → HTTP 404; the correct alias
 // `coiffe_fuwa-white.png` → quilt `GFwmQjUVLPrqanmZV1m2qVW7fEqqE_Utn7wvNawNPx0` → HTTP 200). The loot
 // card was never wired to the fix that already ships on every other icon surface.

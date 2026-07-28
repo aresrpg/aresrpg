@@ -35,7 +35,7 @@ seed/.pre-migration-*/
 # `git add -A` must never be able to commit one (S-22 audit preventive note, 2026-07-09).
 .mcp.json
 
-# Real asset library (69 GLBs ~30M) — private seed-repo content, hosted in object storage (Walrus),
+# Real asset library (69 GLBs ~30M) — private seed-repo content, hosted in object storage,
 # never committed here. Publishing and the model corpus are the seed repo's act (owner ruling,
 # 2026-07-23) — the one sanctioned exception is the fight-start ceremony sword, tracked at
 # packages/frontend/public/sprites/misc/fight_sword.glb (D280).
@@ -48,14 +48,8 @@ music/
 vfx/
 
 # Rendered mob encyclopedia icons (thumb + _hd pair per GLB, scripts/render_mob_icons.mjs) — regenerable
-# from public/sprites/mobs/models; ships via Walrus/CDN (the seed repo's publish pipeline), not git.
+# from public/sprites/mobs/models; ships via the asset host (the seed repo's publish pipeline), not git.
 packages/frontend/public/sprites/mobs/icons/
-
-# The Walrus publish pipeline — upload staging, the quilt registry, render inputs/outputs — is the
-# seed repo's territory, not this repo's (owner ruling, 2026-07-23: game-side never grows publish
-# code). This directory is local-only scratch space; as of the publish-boundary sweep no game-side
-# tool reads or writes it anymore. Nothing under it is ever committed here.
-scripts/walrus/
 
 # Playwright/test artifacts + scratch scripts — staged-junk guard (qa-code audit 2026-07-02).
 # These leaked into the index once (test-results/**/trace.zip, scratch_b7_settle.mjs); ignore them

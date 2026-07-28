@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // `ares status` — the testnet liveness/drift board: release pins vs chain objects, /v1 read-API
-// health, the deployed prod bundle's package pins, and the sponsor station. Walrus publish-registry
+// health, the deployed prod bundle's package pins, and the sponsor station. Asset publication
 // health moved with the pipeline to the seed repo (2026-07-23 publish-boundary sweep) — this board
 // no longer probes it. Pure summary helpers are exported for scripts/ares.test.mjs (via the ares.mjs
 // re-export).

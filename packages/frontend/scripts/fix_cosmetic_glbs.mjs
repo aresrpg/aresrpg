@@ -18,7 +18,7 @@
 // Fix = for every primitive, drop each variant index from any mapping whose material name does NOT match the
 // variant's own name, leaving it only in its name-matched mapping. Pure JSON-chunk edit; the BIN buffer (geometry
 // + textures) is byte-for-byte untouched. These GLBs under models/equipment/ are the single source both the
-// render pipeline and the walrus `cosmetic` quilt (scripts/walrus/census.mjs walks models/) read.
+// render pipeline and the published `cosmetic` asset class read.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'

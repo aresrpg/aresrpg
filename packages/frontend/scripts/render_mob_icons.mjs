@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Batch-render the encyclopedia mob icons (MinIO `mobs/`: {glb}.png + {glb}_hd.png). Recreates the
-// pipeline census.mjs / WALRUS_ASSETS.md already reference. Each creature GLB is loaded through the REAL
+// asset-publishing pipeline already references. Each creature GLB is loaded through the REAL
 // game render SDK (packages/engine/src/player/mob_model.js → create_mob_model: the shared DRACO/GLTF loader,
 // the metalness gold-kill, the S-82 pixel-art sampler, the mob-shade emissive floor), so an icon matches the
 // FIXED fight/roam look — the old quilt was rendered before those fixes ("buggy texture"). The camera
@@ -179,7 +179,7 @@ async function main() {
   if (args.list) glbs = readFileSync(String(args.list), 'utf8').split(/\s+/).filter(Boolean)
   else if (args.only) glbs = String(args.only).split(',').filter(Boolean)
   else if (args.missing) {
-    const wp = resolve(scratch_dir, 'walrus_probe.json')
+    const wp = resolve(scratch_dir, 'asset_probe.json')
     glbs = JSON.parse(readFileSync(wp, 'utf8')).missing.map((f) => f.replace(/\.png$/, ''))
   } else glbs = default_glbs()
   glbs = glbs.map((g) => g.replace(/\.(glb|png)$/, ''))

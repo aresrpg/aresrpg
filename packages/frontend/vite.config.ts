@@ -151,7 +151,7 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
-          // MinIO asset host (#650 — full pivot off Walrus for serving): item/spell/mob/cosmetic/character
+          // MinIO asset host (#650 — full pivot off asset-host for serving): item/spell/mob/cosmetic/character
           // PNGs, GLBs, music mp3s, and the runtime /data/*.json content blobs all serve from this one origin
           // now (packages/sdk/src/jobs.js asset_url). It's already Cloudflare-tunnel-fronted, so SWR
           // mirrors that edge TTL client-side rather than fighting it — the SW never revalidates faster.

@@ -37,7 +37,7 @@ export function ItemImage({
 }) {
   const v = use_image_version((s) => s.image_versions[id])
   const [exhausted, set_exhausted] = useState(false)
-  // ONE item-URL home: the SDK resolver owns Walrus shard selection, host-free fallback, HD naming, and the
+  // ONE item-URL home: the SDK resolver owns asset-host shard selection, host-free fallback, HD naming, and the
   // object-address guard. A bad runtime key is an honest missing candidate here, never a render-time crash.
   const resolve_icon = (high_definition: boolean) => {
     try {
@@ -58,7 +58,7 @@ export function ItemImage({
   // variant was never requested. In hd mode, derive the `_hd.png` twin of the Display url and try it FIRST; the
   // base Display url stays right behind it, so a missing _hd object (server-side 404 — most items today) flips
   // straight back to the base render. Skipped when the url isn't a `.png` or is already an _hd url.
-  // A chain Display may already carry a Walrus blob path. Re-home it through the configured manifest base so
+  // A chain Display may already carry a asset-host blob path. Re-home it through the configured manifest base so
   // a Display published with a raw origin cannot bypass the app CDN. Host-free/data URLs stay local; any other
   // absolute host is discarded and the manifest-backed slug builder below wins.
   const display_url =

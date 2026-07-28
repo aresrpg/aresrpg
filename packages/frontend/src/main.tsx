@@ -23,8 +23,8 @@ import { use_auth } from './auth'
 import { install_wallet_session_reset } from './auth/session_reset_subscription'
 
 // Full asset manifest (ALL classes — item/spell/vanilla/mob/cosmetic/music) served at the web root
-// (VITE_WALRUS_MANIFEST_URL overrides). Each class resolves the MinIO asset host FIRST (#650 — Walrus
-// retired for serving), with the CDN/local copy as the FALLBACK (asset_url returns null for an
+// (VITE_ASSETS_MANIFEST_URL overrides). Each class resolves the MinIO asset host first, with the
+// CDN/local copy as the FALLBACK (asset_url returns null for an
 // unpublished class). ALWAYS ON — the asset host is THE asset store, unconditionally. Resolver config is
 // module state, so this critical manifest settles before React mounts. The load is retry-with-backoff (the
 // ONE home, src/asset_manifest.ts): a transient boot failure is NO LONGER cached as an empty manifest —
@@ -33,7 +33,7 @@ import { install_wallet_session_reset } from './auth/session_reset_subscription'
 // manifest mounts the app anyway on its honest local fallbacks.
 await load_asset_manifest()
 
-// The mob look-up catalog (mob_catalog.json) rides the same manifest → Walrus seam every asset uses; load it
+// The mob look-up catalog (mob_catalog.json) rides the same manifest-backed asset seam; load it
 // off the just-seeded manifest. Non-blocking: the world mounts while it resolves, mobs pop from debug-cube to
 // model on arrival (progressive migration; the manifest carries `mob_catalog` only after the seed leg publishes).
 void load_mob_catalog()

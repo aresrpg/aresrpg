@@ -24,7 +24,7 @@ export function is_music_manifest_ready() {
 export async function reload_music_manifest(fetch_fn = globalThis.fetch) {
   if (typeof fetch_fn !== 'function') return false
   try {
-    const url = import.meta.env?.VITE_WALRUS_MANIFEST_URL || '/asset_manifest.json'
+    const url = import.meta.env?.VITE_ASSETS_MANIFEST_URL || '/asset_manifest.json'
     const response = await fetch_fn(url, { cache: 'no-store' })
     if (!response.ok) return false
     configure_assets(await response.json())

@@ -3,7 +3,7 @@
 // TR-97 — SSOT for cosmetic / mount 3D-model resolution + mount detection.
 //
 // Models are convention-linked, not stored as on-chain URLs (no Move change is in scope). Mount authoring
-// uses `cosmetics/<template_id>.glb`; shipped worn cosmetics use the Walrus quilt's
+// uses `cosmetics/<template_id>.glb`; shipped worn cosmetics use the asset-host quilt's
 // `cosmetics/<appearance>.glb` plus an optional KHR material variant. This is the one resolution home for
 // both conventions; the actual hat/cloak attachment stays in engine create_worn_cosmetics.
 //
@@ -129,7 +129,7 @@ export function models_dev_url(spec) {
  */
 export function cosmetic_glb_url(identifier) {
   if (!identifier) return null
-  // Walrus (boot manifest) first — the decentralized home — else the CDN (progressive migration).
+  // asset-host (boot manifest) first — the decentralized home — else the CDN (progressive migration).
   return asset_url('cosmetic', `${identifier}.glb`) ?? `${ASSETS_URL}/cosmetics/${identifier}.glb`
 }
 
@@ -143,8 +143,8 @@ export function worn_dev_url(spec) {
   if (!spec) return null
   const raw = String(spec).trim()
   if (!raw) return null
-  const walrus_url = canonical_asset_url(raw)
-  if (walrus_url) return walrus_url
+  const canonical_url = canonical_asset_url(raw)
+  if (canonical_url) return canonical_url
   if (/^(https?:)?\//i.test(raw)) return raw // already a URL / absolute served path
   const rel = raw.replace(/^\/+/, '')
   if (/\.glb$/i.test(rel)) return `/models/${rel}` // explicit models-relative path
@@ -350,7 +350,7 @@ export function resolve_mount(character, search) {
     const explicit = item && (item.glb || item.glb_url)
     const explicit_local =
       typeof explicit === 'string' && explicit.startsWith('/') && !explicit.startsWith('//') ? explicit : null
-    // Runtime/on-chain refs are untrusted: a Walrus blob path is re-homed onto the manifest CDN, a same-origin
+    // Runtime/on-chain refs are untrusted: a asset-host blob path is re-homed onto the manifest CDN, a same-origin
     // authoring path stays local, and every other absolute host is discarded in favour of the template convention.
     const glb = canonical_asset_url(explicit) || explicit_local || cosmetic_glb_url(template_id)
     return { available: true, glb_url: glb, source: 'equip' }

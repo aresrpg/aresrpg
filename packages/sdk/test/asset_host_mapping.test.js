@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE MAPPING LAW, pinned (#650 — full pivot off Walrus for asset serving, MinIO behind
+// THE MAPPING LAW, pinned (#650 — full pivot off asset-host for asset serving, MinIO behind
 // assets.aresrpg.world). asset_url dispatches by the filename's own extension into one of
-// three shapes; this is the one file proving all three, replacing the coverage walrus_multi_quilt.test.js
+// three shapes; this is the one file proving all three and the published-class contract
 // used to carry for the (now-deleted) quilt-sharding branch:
 //   flat art  → {host}/{family}/{key}[_hd].{ext}
 //   geometry  → {host}/{geometry folder}/{key}.glb   ('models/{family}' for every class but `character`)

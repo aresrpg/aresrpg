@@ -19,7 +19,7 @@ import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { create_customizable_texture } from './customizable-texture.js'
 
-// Walrus (boot manifest) first — the decentralized home — else the bundled /sprites/characters copy
+// asset-host (boot manifest) first — the decentralized home — else the bundled /sprites/characters copy
 // (progressive migration; the manifest carries `character` only after the upload lane publishes it).
 // Resolved at load time (not at module init) so a manifest fetched after boot still wins. The quilt is
 // keyed by GLB basename, so a `/sprites/characters/senshi_male.glb` local path maps to identifier
@@ -83,7 +83,7 @@ export const character_rig_of = (class_id, fallback = null) =>
 /**
  * THE ONE HOME for "a class + a gender → the GLB urls that render it" — consumed by the roam avatar
  * (embed_voxel_player), remote players, the world fight board (world-shell/voxel_fight_folds) and the
- * simulator board, so a body on one surface is the same body on every other. Urls are Walrus-first through
+ * simulator board, so a body on one surface is the same body on every other. Urls are asset-host-first through
  * `character_glb_url`; a bald class/gender row resolves `hair: undefined` (bald, never broken).
  *
  * `fallback` is the ONLY thing that differs between surfaces and it is an explicit argument, not a fork: the

@@ -122,7 +122,7 @@ fun init(otw: CHARACTER, ctx: &mut TxContext) {
   let keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/characters/{class}_{male}.png"), // host-free relative form (jobs.js ASSET_BASE fallback); the walrus_display_step ceremony swaps this to the walrus by-quilt-id URL post-upload
+    utf8(b"/assets/characters/{class}_{male}.png"), // host-free relative form (jobs.js ASSET_BASE fallback)
     utf8(b"An on-chain character."),
     utf8(b"https://aresrpg.world"),
   ];

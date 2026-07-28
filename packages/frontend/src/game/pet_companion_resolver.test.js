@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // #526 RED-FIRST: characters with pet_equipped:true (repro slugs pet_bouloute / pet_modni_lyk) got NO world
-// companion. Root cause (verified live against testnet + the published Walrus quilts, not guesswork): the old
+// companion. Root cause (verified live against testnet + the published asset-host quilts, not guesswork): the old
 // resolve_pet_companion resolved appearance through cosmetic_glb_url's `<slug>.glb` COSMETIC-quilt convention
 // — but no pet's art was EVER published there (every real pet slug 404s against it). The fix resolves through
 // the SAME two published catalogs mob rendering already uses — never a speculative cosmetic-quilt guess.
@@ -17,9 +17,9 @@ import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 import { resolve_pet_companion, resolve_pet_model_url } from './pet_companion_resolver.js'
 
-const mob_url = (glb) => `https://cdn.test/walrus/models/mobs/${glb}.glb`
+const mob_url = (glb) => `https://fake-assets/models/mobs/${glb}.glb`
 
-configure_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
+configure_assets({ aggregator: 'https://fake-assets', classes: { mob: { published: true } } })
 
 afterEach(() => {
   set_pet_catalog_for_test()
