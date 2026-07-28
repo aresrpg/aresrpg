@@ -8,9 +8,10 @@
 // byte-identical `combat_grid::bfs_path_cost` port the board already draws with. A bot that judged
 // legality by its own rules would fail on exactly the divergences it exists to catch.
 
+import { manhattan_distance } from '@aresrpg/sim/cell'
 import { effect_hits, can_target } from '@aresrpg/sim/spell_targeting'
 
-import { GRID_W, bfsPathCost, bfsReachable, encode } from '../los.js'
+import { bfsPathCost, bfsReachable, decode, encode } from '../los.js'
 
 /** `arena.cells` is indexed by the canonical encoded cell (project.js `board_cells`), so this IS the index. */
 export const cell_index = (cell) => encode(cell.x, cell.y)
@@ -37,8 +38,8 @@ export const allies_of = (read) => {
   return me ? living(read).filter((f) => f.team === me.team) : []
 }
 
-/** Manhattan distance — the metric the sim's `is_in_range` uses. */
-export const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+/** Manhattan distance — the metric the sim's `is_in_range` uses. ONE home: `@aresrpg/sim/cell` (#1536 row 4). */
+export const manhattan = manhattan_distance
 
 /** Chebyshev distance — adjacency (the tackle ring). */
 export const chebyshev = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
@@ -70,7 +71,7 @@ export const reachable_cells = (read, from, mp, ignore_id) => {
       .filter((f) => f.id !== ignore_id)
       .map((f) => cell_index(f.cell_committed)),
   ])
-  return bfsReachable(cell_index(from), mp, blocked).map((c) => ({ x: c % GRID_W, y: Math.floor(c / GRID_W) }))
+  return bfsReachable(cell_index(from), mp, blocked).map(decode)
 }
 
 /** MP a move from `from` to `to` costs, or null when it is not reachable inside `mp`. */

@@ -16,7 +16,7 @@
 // does not match the captured bytes is not a mock, it is a second dialect. `sim_chain_wire.test.js` pins every
 // emitted row's key set AND per-key JSON type against those captured rows.
 
-import { GRID_W, encode } from './los.js'
+import { decode, encode } from './los.js'
 import {
   INVISIBILITY_STATUS_KIND,
   MOB_FIGHTER_ID_BASE,
@@ -230,8 +230,10 @@ const encode_effect = (state, effect, ctx) => {
     const to_cell = encode(effect.cell.x, effect.cell.y)
     const from_cell = ctx.cells.get(effect.target_id) ?? to_cell
     ctx.cells.set(effect.target_id, to_cell)
-    const dx = Math.abs((to_cell % GRID_W) - (from_cell % GRID_W))
-    const dy = Math.abs(Math.floor(to_cell / GRID_W) - Math.floor(from_cell / GRID_W))
+    const from_xy = decode(from_cell)
+    const to_xy = decode(to_cell)
+    const dx = Math.abs(to_xy.x - from_xy.x)
+    const dy = Math.abs(to_xy.y - from_xy.y)
     return [
       row('Displaced', {
         fight,
