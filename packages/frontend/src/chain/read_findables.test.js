@@ -8,8 +8,16 @@ import * as chain_sdk from './sdk'
 import { item_type_id } from './item_lineage'
 
 const encyclopedia_calls = []
+// #1488 lever: arm ONE read failure. Set by the never-cache-absence test below and consumed on the next call,
+// so the shared spy stays a single process-global mock instead of a second, order-fragile one.
+let encyclopedia_failure = null
 const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia').mockImplementation(async (...args) => {
   encyclopedia_calls.push(args)
+  if (encyclopedia_failure) {
+    const failure = encyclopedia_failure
+    encyclopedia_failure = null
+    throw failure
+  }
   return {
     items: [
       {
@@ -67,7 +75,8 @@ afterAll(() => {
   get_sdk.mockRestore()
 })
 
-const { get_template_by_item_type_map, get_template_map, get_owned_items_by_id } = await import('./read_findables.js')
+const { get_template_by_item_type_map, get_template_map, get_owned_items_by_id, reset_template_cache_for_test } =
+  await import('./read_findables.js')
 
 test('template maps resolve exact lootbox identity from the /v1 encyclopedia projection', async () => {
   const by_id = await get_template_map()
@@ -158,4 +167,22 @@ test('get_owned_items_by_id drops a dead-lineage object; a current-lineage sibli
   const rows = await get_owned_items_by_id(grpc_client, [CURRENT_ID, DEAD_ID])
   expect(rows.map((r) => r.id)).toEqual([CURRENT_ID])
   expect(rows.find((r) => r.id === DEAD_ID)).toBeUndefined()
+})
+
+// --- never-cache-absence: a failed catalog read must not poison the session (#1488) --------------------------
+// This memo is the ONE catalog every template join reads, including the fight-loot receipt fold
+// (loot_inventory.js resolves each ItemMinted row's category through it). A single flaky /v1 round-trip used
+// to resolve the memo to an empty Map FOREVER, so every later receipt row came back `item_category: ''` and a
+// resource won from a fight filed into the equipment bag — invisible in the resources tab until a page reload
+// re-read the catalog. RED before the cure: the second call returns the same poisoned empty map.
+test('a failed /v1 encyclopedia read degrades ONCE and the next call re-reads (#1488)', async () => {
+  reset_template_cache_for_test()
+  encyclopedia_failure = new Error('/v1 encyclopedia unreachable')
+
+  const degraded = await get_template_map()
+  expect(degraded.size).toBe(0) // honest: the failing caller gets an empty map, never fabricated templates
+
+  const retried = await get_template_map()
+  expect(retried.size).toBeGreaterThan(0) // the absence was NOT memoized — this call re-read the projection
+  expect(retried.get('0xbox')?.category).toBe('CONSUMABLE')
 })
