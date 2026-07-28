@@ -44,7 +44,7 @@ const stable_stringify = (value) => {
 
 /**
  * The CONTENT identity of a normalized event — an FNV-1a digest over its canonical `{ kind, data }`
- * image (the state_hash idiom, packages/fight/src/inputs.js). Source-independent by construction, so
+ * image (the fingerprint_state idiom, packages/fight/src/fingerprint.js). Source-independent by construction, so
  * a receipt event and its journal twin hash EQUAL: this — never the transport `digest` (a tx digest
  * shared by every event of one tx) — is what the accept machine's IDEMPOTENCE / PROTOCOL-FAULT
  * decision compares.

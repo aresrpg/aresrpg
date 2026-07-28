@@ -9,6 +9,7 @@ import { project_board } from './core_project.js'
 
 const stable_value = (value) => {
   if (Array.isArray(value)) return value.map(stable_value)
+  if (typeof value === 'bigint') return value.toString()
   if (value == null || typeof value !== 'object') return value ?? null
   return Object.fromEntries(
     Object.keys(value)
@@ -37,7 +38,11 @@ const roster_id = (view, key) => {
   return key.startsWith('m') ? `mob-${Number(key.slice(1))}` : key
 }
 
-/** Canonical byte image required by #1336: roster identities/cells/HP, owner + chain turn ordinal, statuses. */
+/**
+ * The one canonical parity image. Every field is viewer-free committed truth: fight outcome/turn facts plus each
+ * roster member's identity, position, vitals, readiness, and statuses. Prediction, pacing, and renderer state stay
+ * out of the image because two honest viewers may differ on all three.
+ */
 export const fingerprint_state = (core) => {
   const board = project_board(core)
   const view = core?.inbox?.base_view
@@ -48,6 +53,11 @@ export const fingerprint_state = (core) => {
         id: String(roster_id(view, key)),
         cell: fighter?.cell ?? null,
         hp: fighter?.hp ?? null,
+        alive: fighter?.alive ?? null,
+        invisible: fighter?.invisible ?? null,
+        ap: fighter?.ap ?? null,
+        mp: fighter?.mp ?? null,
+        ready: fighter?.ready ?? null,
         statuses: (fighter?.statuses ?? [])
           .map(status_image)
           .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
@@ -55,9 +65,14 @@ export const fingerprint_state = (core) => {
     })
     .sort((a, b) => a.id.localeCompare(b.id))
   return {
+    fight_id: core?.fight_id ?? board.fight_id ?? null,
+    phase: board.phase ?? null,
     roster,
     active: board.active == null ? null : String(roster_id(view, board.active)),
     turn_ordinal: board.turn_ordinal ?? null,
+    turn_deadline_ms: board.turn_deadline_ms ?? null,
+    turn_seed_inputs: stable_value(board.turn_seed_inputs ?? null),
+    winner: board.winner ?? null,
   }
 }
 

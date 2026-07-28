@@ -3,7 +3,7 @@
 // PLACEMENT GHOSTS — the fold-state home for a PEER's uncommitted placement pick, broadcast p2p: picks
 // aren't committed pre-start, so teammates SEE where others intend to stand. Mirrors my_traps_fold /
 // my_glyphs_fold structurally: a durable per-store accumulator, GC'd in recompute (fold.js), projected through
-// engine_view. Cosmetic ONLY — never part of canonical_state/state_hash (a lying ghost can't do anything;
+// engine_view. Cosmetic ONLY — never part of fingerprint_state (a lying ghost can't do anything;
 // legality and the real commit stay chain-only).
 
 import { describe, expect, test } from 'bun:test'

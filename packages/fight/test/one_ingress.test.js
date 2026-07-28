@@ -12,7 +12,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { create_fight_store, committed_truth } from '../src/store.js'
-import { state_hash } from '../src/inputs.js'
+import { fingerprint_state } from '../src/core.js'
 
 const FIGHT = '0xf1647'
 const ME = '0xchar_a'
@@ -110,6 +110,7 @@ const receipt = (rows, version) => ({
   version,
   receipt: { version, digest: '0xdig', events: rows.map((r) => ({ type: PKG + r.kind, parsedJson: r.data })) },
 })
+const receipt_stream = () => [receipt(STREAM.slice(0, 2), '2'), receipt(STREAM.slice(2), '3')]
 
 // A stale mid-fight OBJECT read that DISAGREES with the fold (mob elsewhere, my hp lower) at a fresh version — the
 // exact snapshot whose adoption used to rewrite committed truth. Under M2b it is a checkpoint, never a state source.
@@ -117,7 +118,11 @@ const stale_snapshot = (version) => ({
   type: 'snapshot',
   fight_id: FIGHT,
   version,
-  fight: fight_object({ mobs: [mob(60, { hp: 3 })], participants: [participant(ME, 21, { hp: 12 })] }),
+  fight: fight_object({
+    mobs: [mob(60, { hp: 3 })],
+    participants: [participant(ME, 21, { hp: 12 })],
+    turn_deadline_ms: 777_000,
+  }),
 })
 
 /** A store bootstrapped from the opening snapshot (v1, an empty journal) — the base every arrival order shares. */
@@ -139,50 +144,52 @@ const drive = (inputs) => {
   return store
 }
 
-const committed_hash = (store) => state_hash(committed_truth(store.getState()))
+const committed_image = (store) => fingerprint_state(store.getState().core)
 
 describe('M2b — one ingress: the fold is invariant to arrival order (idempotence #290 → full ingress)', () => {
-  // The reference: the whole stream folded once, in order, through the receipt door.
-  const reference = committed_hash(drive([receipt(STREAM, '3')]))
+  // The reference: the two transaction versions folded once, in order, through the receipt door.
+  const reference = committed_image(drive(receipt_stream()))
 
   test('the mob turn folds — mob walked to 44, my hp is 44, the turn is over', () => {
-    const committed = committed_truth(drive([receipt(STREAM, '3')]).getState())
+    const committed = committed_truth(drive(receipt_stream()).getState())
     expect(committed.fighters.m0.cell).toBe(44)
     expect(committed.fighters.p0.hp).toBe(44)
     expect(committed.active).toBeNull()
   })
 
   test('JOURNAL-ONLY converges to the same fold as receipt-only', () => {
-    expect(committed_hash(drive([journal_page(STREAM)]))).toBe(reference)
+    expect(committed_image(drive([journal_page(STREAM)]))).toEqual(reference)
   })
 
   test('RECEIPT then a full JOURNAL redelivery is idempotent (the journal page is a silent no-op)', () => {
-    expect(committed_hash(drive([receipt(STREAM, '3'), journal_page(STREAM)]))).toBe(reference)
+    expect(committed_image(drive([...receipt_stream(), journal_page(STREAM)]))).toEqual(reference)
   })
 
   test('JOURNAL then a RECEIPT redelivery is idempotent (the receipt is a silent no-op)', () => {
-    expect(committed_hash(drive([journal_page(STREAM), receipt(STREAM, '3')]))).toBe(reference)
+    expect(committed_image(drive([journal_page(STREAM), ...receipt_stream()]))).toEqual(reference)
   })
 
   test('INTERLEAVED + DUPLICATED (receipt tx1, journal tx1, receipt whole, journal whole) converges', () => {
     const tx1 = STREAM.slice(0, 2)
     expect(
-      committed_hash(drive([receipt(tx1, '2'), journal_page(tx1, '5'), receipt(STREAM, '3'), journal_page(STREAM)]))
-    ).toBe(reference)
+      committed_image(
+        drive([receipt(tx1, '2'), journal_page(tx1, '5'), receipt(STREAM.slice(2), '3'), journal_page(STREAM)])
+      )
+    ).toEqual(reference)
   })
 
   test('a snapshot ahead of the event cursor fully re-adopts', () => {
-    const with_snapshot = committed_hash(drive([receipt(STREAM, '3'), stale_snapshot(9)]))
-    expect(with_snapshot, 'the ahead object is the new complete base').not.toBe(reference)
-    expect(with_snapshot).toBe(committed_hash(drive([stale_snapshot(9)])))
+    const with_snapshot = committed_image(drive([...receipt_stream(), stale_snapshot(9)]))
+    expect(with_snapshot, 'the ahead object is the new complete base').not.toEqual(reference)
+    expect(with_snapshot).toEqual(committed_image(drive([stale_snapshot(9)])))
   })
 
   test('events and snapshots behind the latest adopted cursor are inert', () => {
     expect(
-      committed_hash(
+      committed_image(
         drive([stale_snapshot(9), receipt(STREAM.slice(0, 2), '2'), stale_snapshot(10), journal_page(STREAM)])
       )
-    ).toBe(committed_hash(drive([stale_snapshot(10)])))
+    ).toEqual(committed_image(drive([stale_snapshot(10)])))
   })
 
   test('BOOTSTRAP-from-snapshot + journal backfill == journal-from-zero', () => {
@@ -208,13 +215,13 @@ describe('M2b — one ingress: the fold is invariant to arrival order (idempoten
     )
     // Backfill only the TAIL the snapshot did not already fold (seq 2..4); seq 0..1 are below the seeded head.
     store.getState().input(journal_page(STREAM.slice(2), '5'), T0 + 100)
-    expect(committed_hash(store)).toBe(reference)
+    expect(committed_image(store)).toEqual(reference)
   })
 
   test('OUT-OF-ORDER journal pages: the tail page waits on the gap, the fold converges once the gap fills', () => {
     // The tail page (seq 2..4) arrives BEFORE the head page (seq 0..1): the accept machine holds it behind the gap
     // (nothing folds past a hole), then the head page fills seq 0..1 and its re-walk delivers the tail contiguously.
     const store = drive([journal_page(STREAM.slice(2), '5'), journal_page(STREAM, '5')])
-    expect(committed_hash(store)).toBe(reference)
+    expect(committed_image(store)).toEqual(reference)
   })
 })

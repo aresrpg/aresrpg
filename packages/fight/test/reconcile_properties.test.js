@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { state_hash } from '../src/inputs.js'
+import { fingerprint_state } from '../src/core.js'
 import { apply_retirement } from '../src/fold.js'
 import { committed_truth, create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
@@ -69,6 +69,7 @@ const drain = (store, now) => {
   for (const t of [...store.getState().wave]) store.getState().input({ type: 'presented', seq: t.seq }, now)
 }
 const mob0 = (store) => engine_view(store.getState()).fighters.get('mob-0')
+const image_of = (store) => fingerprint_state(store.getState().core)
 
 // ── CLASS 1 — MONOTONIC-IDEMPOTENCE ──────────────────────────────────────────────────────────────────────────
 describe('§⑤.1 monotonic-idempotence', () => {
@@ -84,17 +85,17 @@ describe('§⑤.1 monotonic-idempotence', () => {
       2_000
     )
     drain(store, 2_100)
-    const before = state_hash(store.getState())
+    const before = image_of(store)
     // v3 and v5 are behind the v6 event cursor: both are discarded whole.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(1, 1) }), version: 3 }, 2_200)
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(9, 9) }), version: 5 }, 2_300)
-    expect(state_hash(store.getState()), 'behind reads are inert').toBe(before)
+    expect(image_of(store), 'behind reads are inert').toEqual(before)
 
     // The v6 object is settled by the event-proven cursor. It cannot roll the move back to its own stale cell.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(1, 1) }), version: 6 }, 2_400)
     expect(store.getState().view_version).toBe(5)
     expect(mob0(store).cell).toEqual({ x: 6, y: 4 })
-    expect(state_hash(store.getState())).toBe(before)
+    expect(image_of(store)).toEqual(before)
   })
 
   test('delivery order cannot alter the terminal state (commutative fold under floors)', () => {
@@ -111,7 +112,7 @@ describe('§⑤.1 monotonic-idempotence', () => {
       })
       store.getState().input({ type: 'snapshot', fight: fight_object(), version: 5 }, 1_000)
       for (const step of steps) store.getState().input(step, 2_000)
-      return state_hash(store.getState())
+      return image_of(store)
     }
     const A = drive([
       { type: 'receipt', fight_id: FIGHT, version: 7, receipt: hit },
@@ -123,7 +124,7 @@ describe('§⑤.1 monotonic-idempotence', () => {
       { type: 'receipt', fight_id: FIGHT, version: 6, receipt: started },
       { type: 'receipt', fight_id: FIGHT, version: 7, receipt: hit },
     ])
-    expect(A).toBe(B)
+    expect(A).toEqual(B)
   })
 })
 
@@ -318,15 +319,15 @@ describe('§4 T-B — receipt idempotence · behind-snapshot no-op · provider r
     }
     store.getState().input(r, 2_000)
     drain(store, 2_100)
-    const once = state_hash(store.getState())
+    const once = image_of(store)
     store.getState().input(r, 2_200) // exact re-delivery (reconnect catch-up)
-    expect(state_hash(store.getState()), 'the same (version,event_idx) keys fold idempotently').toBe(once)
+    expect(image_of(store), 'the same (version,event_idx) keys fold idempotently').toEqual(once)
   })
 
   test('provider refusal: a local push while NOT my turn is refused + logged, state unchanged', () => {
     const store = boot({ turn_ptr: 1 }) // the MOB is active → provider is idle_wait, not local_turn
     expect(store.getState().provider).toBe('idle_wait')
-    const before = state_hash(store.getState())
+    const before = { image: image_of(store), entries: store.getState().entries }
     store
       .getState()
       .input({ type: 'intent', intent: { kind: 'cast', target_cell: encode(5, 4), damaging: true } }, 2_000)
@@ -334,6 +335,9 @@ describe('§4 T-B — receipt idempotence · behind-snapshot no-op · provider r
       type: 'intent',
       reason: 'provider',
     })
-    expect(state_hash(store.getState()), 'the refused push never touched fight state').toBe(before)
+    expect(
+      { image: image_of(store), entries: store.getState().entries },
+      'the refused push never touched fight state'
+    ).toEqual(before)
   })
 })
