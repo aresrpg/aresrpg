@@ -18,10 +18,13 @@ const vercel_config = JSON.parse(readFileSync(new URL('../vercel.json', import.m
 const spa_rewrite = vercel_config.rewrites.find(({ destination }) => destination === '/index.html')
 const matches_spa = (path) => new RegExp(`^${spa_rewrite.source}/?$`).test(path)
 
-test('the SPA rewrite never claims a build asset path', () => {
+test('the SPA rewrite never claims build assets or root PWA files', () => {
   expect(matches_spa('/assets/index-DEADBEEF.js')).toBe(false)
   expect(matches_spa('/assets/index-DEADBEEF.css')).toBe(false)
   expect(matches_spa('/assets/items/vanilla_sword.png')).toBe(false)
+  expect(matches_spa('/sw.js')).toBe(false)
+  expect(matches_spa('/workbox-12345.js')).toBe(false)
+  expect(matches_spa('/discord-callback.html')).toBe(false)
 })
 
 test('the SPA rewrite still serves every deep link', () => {
