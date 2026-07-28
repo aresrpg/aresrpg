@@ -1,8 +1,0 @@
-2026-07-27 — republish window open — compat assertions suspended, size assertions remain.
-
-The mainnet-bound republish mints a fresh package lineage, so the compatibility verifier's verdict
-is an assertion about a lineage nobody will upgrade. While this file exists,
-ceremony_preflight_compat.mjs runs SIZE-ONLY: every package still fails over 102400 bytes.
-
-Delete this file at ceremony close — the compat teeth return with it, mechanically. It may never be
-promoted: a master-bound run treats this file's presence as a hard failure.
