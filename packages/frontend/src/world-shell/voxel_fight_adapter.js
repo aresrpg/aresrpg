@@ -1041,12 +1041,17 @@ export function create_voxel_fight_adapter(
           reconcile()
           await play_trap_boom(payload)
         } else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
-        else if (spec.kind === 'status' && payload.status === 'DRAIN')
+        else if (spec.kind === 'status' && payload.status === 'DRAIN') {
           // The receipt presenter derived this one fold outcome; every mounted viewer emits its own client-only
           // lines from those exact counts — the loss line for what landed, the dodge line for what a contest ate.
           // No contest is rolled or reconstructed at the render edge.
           emit_drain_lines(read_board_fight_state, context.dispatch, payload)
-        else if (spec.kind === 'status') {
+          for (const float of tackle_float_payloads(
+            payload.pool === 'ap' ? payload.landed : 0,
+            payload.pool === 'mp' ? payload.landed : 0
+          ))
+            board.float?.(payload.target_id, float)
+        } else if (spec.kind === 'status') {
           // ONE standalone-status home: SHIELD/STUN/POISON/GLYPH (and any future named status) announce at the
           // affected rig instead of disappearing between producer and presenter. Persistent badges/zones remain
           // projection-owned; this short board float is the ordered "it landed now" beat.
