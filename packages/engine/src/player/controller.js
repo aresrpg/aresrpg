@@ -79,6 +79,10 @@ const AIR_JUMP_MULT = 1.45
 const GRAVITY_UNDERWATER = 5
 const SWIM_LAMBDA = 12 // swim accel damp (the legacy exp form — water is MEANT to feel gliding)
 const SWIM_UP_SPEED = 1.5 * GRAVITY_UNDERWATER // hold jump underwater = buoyant rise (ported)
+// [#1433] BUOYANCY rate: a body with water still above its head rises to the water line on its own, at half
+// the held-jump rate — a swim, not a launch. Derived from GRAVITY_UNDERWATER so the dive and the float stay
+// one knob apart. `swim_vertical_velocity` (below) is the rule this feeds and carries the whole why.
+const SWIM_FLOAT_SPEED = 0.5 * GRAVITY_UNDERWATER
 const TERMINAL_FALL = -60 // clamp fall speed so a long drop can't tunnel / read jarring
 // Forgiveness windows (the parkour enablers):
 const COYOTE_TIME = 0.12 // s after leaving ground during which a jump still fires
@@ -234,6 +238,20 @@ function turn_toward(facing, target, lambda, dt) {
 }
 
 /**
+ * BUOYANT SWIM (#1433) — the vertical velocity of a body whose head is in water. Jump rises fast, the
+ * walk/dive key sinks, and everything else settles the head AT the water line: still submerged → float up,
+ * already at the line → hold. The old model sank unconditionally, so crossing any water put the body on the
+ * SEABED, where a step taller than AUTO_STEP_HEIGHT (1.05) is an impassable wall — a player holding forward
+ * toward a mob across water dead-stopped with no signal (a live drive froze 28 m short of its target,
+ * velocity [0,0,0], under 7 blocks of sea). Mobs are already seated ON the surface (spawn_rigs
+ * `resolve_group_seat` 'float'), so surfacing the player is also what makes physics and rendering agree.
+ * @param {boolean} jump @param {boolean} dive @param {boolean} submerged water above the head cell
+ * @returns {number} m/s on the y axis
+ */
+export const swim_vertical_velocity = (jump, dive, submerged) =>
+  jump ? SWIM_UP_SPEED : dive ? -GRAVITY_UNDERWATER : submerged ? SWIM_FLOAT_SPEED : 0
+
+/**
  * Advances the controller one fixed step. Pure w.r.t. `env` (no globals, no three). Mutates + returns
  * `state`. Order mirrors the dapp: resolve intent → accel/decel (ground full control, air reduced) →
  * jump (coyote + buffer) → gravity/buoyancy → collide → post-physics ground/anim.
@@ -302,8 +320,12 @@ export function step_controller(state, input, env, dt) {
   state._jump_buffer = Math.max(0, state._jump_buffer - dt)
 
   if (in_water) {
-    // buoyant swim: hold jump to rise, otherwise sink slowly (dapp underwater model)
-    vel[1] = input.jump ? SWIM_UP_SPEED : -GRAVITY_UNDERWATER
+    // #1433 — a swimmer belongs AT the water line, not on the floor (the rule + its why: the helper above).
+    vel[1] = swim_vertical_velocity(
+      !!input.jump,
+      !!input.walk,
+      liquid_at(Math.floor(pos_x), Math.floor(head_y + 1), Math.floor(pos_z))
+    )
   } else {
     // variable jump height: releasing jump while still rising cuts the ascent (tap = short hop,
     // hold = the full approved apex). One-shot by nature — the release edge fires once.
