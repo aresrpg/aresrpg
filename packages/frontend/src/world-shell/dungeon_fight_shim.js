@@ -25,6 +25,7 @@ export { resolve_world_offset, sync_dungeon_fight } from './dungeon_fight_sync.j
  * @param {{ fight_id: string, character_id: string|null, address: string|null, spectator?: boolean,
  *   run?: any, rooms_total?: number,
  *   mob_names?: Record<string,string>, mob_levels?: Record<string,number>, mob_elements?: Record<string,number>,
+ *   mob_roster?: Array<{template_id:string,name?:string|null,min_level?:number|null,element?:number|null}>,
  *   offset?: { x:number, z:number } }} args
  */
 export function init_dungeon_fight({
@@ -37,6 +38,7 @@ export function init_dungeon_fight({
   mob_names = {},
   mob_levels = {},
   mob_elements = {},
+  mob_roster = [],
   offset = undefined,
 }) {
   if (fight_store.getState().fight_id === fight_id) return // already the live core fight — never re-wipe on re-entry
@@ -54,6 +56,7 @@ export function init_dungeon_fight({
       mob_names,
       mob_levels,
       mob_elements,
+      mob_roster,
       offset,
       beat_ctx: { grid_width: GRID_W },
     },

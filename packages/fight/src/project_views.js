@@ -310,10 +310,20 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   ;(view.mobs ?? []).forEach((m, i) => {
     const f = p.fighters?.[mob_key(i)] ?? {}
     const cf = c.fighters?.[mob_key(i)] ?? {}
+    // WORLD IDENTITY ROSTER — a claim already composed and rendered the seated templates positionally. That
+    // roster crosses the fight's ctx input and wins here; the shared group template remains the dungeon/legacy
+    // fallback. Projection reads ctx directly so identity can heal without re-decoding the chain snapshot.
+    const identity = ctx.mob_roster?.[i] ?? null
+    const template = identity?.template_id || m.template || `mob-${i}`
+    const mapped_name = view.mob_names?.[template] || null
     map.set(`mob-${i}`, {
       id: `mob-${i}`,
-      variant: m.template,
-      name: view.mob_names?.[m.template] || 'Mob',
+      variant: template,
+      // A missing display read must name the actual template id, never invent the literal "Mob". The renderer
+      // uses identity_resolved to keep that honest text fallback on its built-in capsule without requesting the
+      // fake hy__missing GLB.
+      name: identity?.name || mapped_name || template,
+      identity_resolved: identity?.name != null || mapped_name != null,
       team: 1,
       cell: decode_xy(d.fighters?.[mob_key(i)]?.cell ?? f.cell ?? m.cell), // DISPLAY cell (walk-hold)
       health: f.hp ?? m.hp,
@@ -335,7 +345,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       dead:
         !death_hold.has(`mob-${i}`) &&
         ((s.busy && s.optimistic_dead?.[mob_key(i)] != null) || (f.hp != null ? !f.alive : !m.alive)),
-      element: m.element,
+      element: Number(identity?.element ?? m.element),
       invisible: !!f.invisible,
     })
   })

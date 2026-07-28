@@ -907,6 +907,11 @@ export const use_dungeon = create((set, get) => ({
   _resolve_mob_identities(sdk, fight, { is_current = () => true } = {}) {
     const id = fight?.group_template
     if (!id || !fight?.mobs?.length) return // no group template / no mobs (PvP) — nothing to resolve
+    // A world claim carried the exact seated identity roster through the fight input door. It is positional and
+    // can represent a mixed pack; re-reading the shared primary template here would be both a second source and
+    // lossy. A carried id with no name is a genuine world-side miss and remains the honest id fallback.
+    const carried = fight_store.getState().ctx?.mob_roster
+    if (Array.isArray(carried) && carried.length >= fight.mobs.length) return
     const known = get().mob_names
     if (id in known || _mob_tmpl_cache.has(id) || _mob_tmpl_pending.has(id)) return
     _mob_tmpl_pending.add(id)
