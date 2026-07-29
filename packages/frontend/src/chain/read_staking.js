@@ -96,9 +96,19 @@ export async function get_owned_items(sdk, owner, package_id, fetch_v1 = get_own
   } catch (error) {
     game_log('get_owned_items', '/v1 owner-items unavailable — falling back to chain-direct kiosk walk', error)
   }
+  return get_owned_items_from_kiosks(sdk, owner, package_id)
+}
 
-  // FALLBACK (the sanctioned /v1-outage path — the reason this walk STAYS, not dead code). Below the frozen
-  // read-count baseline: it adds ZERO new chain reads over what this file already had.
+/**
+ * Fresh chain custody for a player's loose Items. This is the sanctioned kiosk-union walk used by the /v1
+ * fallback and by compose/reconcile edges that must not reuse an indexer or store snapshot after object deletion.
+ * @param {{ kiosk_client: any, grpc_client: any }} sdk
+ * @param {string} owner
+ * @param {string} package_id
+ */
+export async function get_owned_items_from_kiosks(sdk, owner, package_id) {
+  // FALLBACK/direct read. Below the frozen read-count baseline for the ordinary /v1-outage path; explicit
+  // compose/reconcile callers pay for it because object ids are transaction inputs, not display cache.
   // item_type_id (issue #524's item_lineage — one home for the `${pkg}::item::Item` struct tag, shared with
   // is_aresrpg_item) — same short-circuit as before: an empty/malformed package_id yields no chain walk at all.
   let want

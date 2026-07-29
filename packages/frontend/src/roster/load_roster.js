@@ -51,7 +51,7 @@ import { report_error } from '../core/report.js'
 import { get_sdk } from '../chain/sdk'
 import { DEMO_NETWORK } from '../chain/deployment'
 import { read_character } from '../chain/read_character.js'
-import { get_owned_items } from '../chain/read_staking.js'
+import { get_owned_items, get_owned_items_from_kiosks } from '../chain/read_staking.js'
 import { merge_character_enrichment } from '../chain/fight_character_reconcile.js'
 // Loot-box open-latch self-clear (D1): this loader's kiosk-union item read IS the "fresh read" data input —
 // a box still present in a read that STARTED after its open promise settled is proven unconsumed, so the
@@ -213,6 +213,12 @@ export async function load_roster() {
       fight_active: () => world_fight_active(fight_store.getState()),
       submit: submit_stack_merges,
       fold: apply_stack_merge_receipt,
+      // The merge deletes every source object. Re-derive the bag from fresh kiosk custody, then send that
+      // snapshot through the same action/sui_data reducer door as every other roster read.
+      refresh: async () => {
+        const items = await get_owned_items_from_kiosks(sdk, address, PACKAGE_ID)
+        context.dispatch('action/sui_data', { kind: 'snapshot', items })
+      },
     }).catch((error) => game_log('load_roster', 'stack sweep threw (never fatal)', error))
 
     // auto-select the first character if none is selected (chat/HUD need a valid id)

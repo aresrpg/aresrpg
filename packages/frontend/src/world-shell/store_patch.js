@@ -54,8 +54,8 @@ export function decrement_bag_items(/** @type {string} */ id, units = 1) {
 
 /**
  * #1495 — fold the boot sweep's PROVEN stack merges: each `from` was deleted on chain, the surviving `into`
- * carries the summed `total`. Receipt-only by construction (chain/stack_merge.js reads the ItemMerged events),
- * so a failed or partial merge paints nothing.
+ * carries the summed `total`. Receipt-only by construction (chain/stack_merge.js reads `item::ItemMerged`, with
+ * `extract::StacksMerged` as its custody-wrapper fallback), so a failed or partial merge paints nothing.
  * @param {{ into: string, from: string, total: number }[]} merges
  */
 export function apply_stack_merge_receipt(merges) {

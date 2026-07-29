@@ -50,18 +50,25 @@ export function plan_stack_merges(items) {
 }
 
 /**
- * What the chain ACTUALLY merged, read off the transaction's own `item::ItemMerged` events. The bag folds from
- * THIS, never from the plan: a partially-applied batch, a re-ordered fold or an amount the client mispredicted
- * all resolve to the truth the receipt carries (`total` is the survivor's post-merge amount).
+ * What the chain ACTUALLY merged, read off the transaction's own `item::ItemMerged` events (or the wrapper's
+ * equivalent `extract::StacksMerged` event). The bag folds from THIS, never from the plan: a partially-applied
+ * batch, a re-ordered fold or an amount the client mispredicted all resolve to the receipt's truth.
  * @param {{ events?: any[] } | null | undefined} receipt  the normalized run_tx result
  * @returns {{ into: string, from: string, total: number }[]}
  */
 export function stack_merge_receipt_rows(receipt) {
-  return (receipt?.events ?? []).flatMap((event) => {
-    if (!String(event?.type ?? '').endsWith('::item::ItemMerged')) return []
+  const events = receipt?.events ?? []
+  // item::merge emits ItemMerged and the custody wrapper emits StacksMerged for the SAME deletion. Prefer the
+  // item event; use the wrapper event only as a compatibility fallback so one merge never folds twice.
+  const item_events = events.filter((event) => String(event?.type ?? '').endsWith('::item::ItemMerged'))
+  return (item_events.length ? item_events : events).flatMap((event) => {
+    const type = String(event?.type ?? '')
+    const item_event = type.endsWith('::item::ItemMerged')
+    const extract_event = type.endsWith('::extract::StacksMerged')
+    if (!item_event && !extract_event) return []
     const merged = event?.parsedJson ?? {}
-    const into = String(merged.into ?? '')
-    const from = String(merged.from ?? '')
+    const into = String(merged.into ?? merged.target ?? '')
+    const from = String(merged.from ?? merged.source ?? '')
     const total = Number(merged.total ?? 0)
     if (!into || !from || !(total > 0)) return []
     return [{ into, from, total }]

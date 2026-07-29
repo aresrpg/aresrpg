@@ -41,11 +41,12 @@ const session_latch = { fired: false }
  *   fight_active: () => boolean,
  *   submit: (merges: any[]) => Promise<any>,
  *   fold: (rows: { into: string, from: string, total: number }[]) => void,
+ *   refresh?: () => Promise<void>,
  *   latch?: { fired: boolean },
  * }} deps
  * @returns {Promise<{ swept: boolean, reason?: string, merged?: number, error?: unknown }>}
  */
-export async function sweep_duplicate_stacks({ items, fight_active, submit, fold, latch = session_latch }) {
+export async function sweep_duplicate_stacks({ items, fight_active, submit, fold, refresh, latch = session_latch }) {
   if (latch.fired) return { swept: false, reason: 'already-swept' }
   if (fight_active()) return { swept: false, reason: 'fight-active' }
 
@@ -56,6 +57,15 @@ export async function sweep_duplicate_stacks({ items, fight_active, submit, fold
   try {
     const rows = stack_merge_receipt_rows(await submit(merges))
     if (rows.length) fold(rows)
+    // Re-read live kiosk custody after the merge transaction: every source object is deleted on chain, so a
+    // display row keyed by its pre-sweep id is a corpse even when the receipt projection changes shape.
+    try {
+      await refresh?.()
+    } catch (error) {
+      // The receipt fold above is already chain proof and remains the immediate reducer input. A direct-read
+      // outage must not relabel a successfully executed merge as a failed transaction.
+      game_log('stack-sweep', 'post-merge live custody refresh failed — receipt projection remains', error)
+    }
     game_log('stack-sweep', `merged ${rows.length}/${merges.length} duplicate stack(s)`)
     return { swept: true, merged: rows.length }
   } catch (error) {

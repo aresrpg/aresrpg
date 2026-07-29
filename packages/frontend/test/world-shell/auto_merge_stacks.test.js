@@ -5,6 +5,7 @@
 // sweep takes its fight predicate, submit door, fold door and session latch — no store, no chain, no mocks.
 
 import { describe, expect, test } from 'bun:test'
+import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import { sweep_duplicate_stacks } from '../../src/world-shell/auto_merge_stacks.js'
 
@@ -103,5 +104,49 @@ describe('sweep_duplicate_stacks', () => {
     const result = await sweep_duplicate_stacks(deps)
     expect(result.swept).toBe(true)
     expect(result.error).toBeInstanceOf(Error)
+  })
+
+  test('post-sweep live custody refresh leaves only the surviving object id in inventory rows', async () => {
+    let state = {
+      items: bag(),
+      characters: [],
+      settled_item_floor: {},
+      minted_character_floor: {},
+      xp_floor: {},
+      deleted_ids: {},
+    }
+    const live = [{ ...bag()[0], amount: 3 }]
+
+    await sweep_duplicate_stacks({
+      items: state.items,
+      fight_active: () => false,
+      submit: async () => ({
+        events: [
+          {
+            type: '0xp::extract::StacksMerged',
+            parsedJson: { target: '0xa', source: '0xb', total: 2 },
+          },
+          {
+            type: '0xp::extract::StacksMerged',
+            parsedJson: { target: '0xa', source: '0xc', total: 3 },
+          },
+        ],
+      }),
+      fold: (merges) => {
+        state = reduce_sui_data(state, {
+          kind: 'receipt_patch',
+          op: 'merge_stacks',
+          merges,
+        })
+      },
+      refresh: async () => {
+        state = reduce_sui_data(state, { kind: 'snapshot', items: live })
+      },
+      latch: { fired: false },
+    })
+
+    expect(state.items.map((item) => item.id)).toEqual(['0xa'])
+    expect(state.items[0].amount).toBe(3)
+    expect(state.items.some((item) => item.id === '0xb' || item.id === '0xc')).toBe(false)
   })
 })

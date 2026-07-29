@@ -15,7 +15,7 @@ import { get_personal_cap } from '../kiosk_cap_cache'
 
 /**
  * @param {{ kiosk_id: string, target_item_id: string, source_item_id: string }[]} merges
- * @returns {Promise<any>} the normalized receipt (its `item::ItemMerged` events are the bag's fold input)
+ * @returns {Promise<any>} the normalized receipt (its stack-merge events are the bag's fold input)
  */
 export async function submit_stack_merges(merges) {
   const { address } = use_auth.getState()
