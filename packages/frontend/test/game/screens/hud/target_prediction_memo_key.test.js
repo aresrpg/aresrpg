@@ -17,7 +17,6 @@
 // the same args object the derivation reads.
 
 import { afterEach, describe, expect, test } from 'bun:test'
-
 import { board_view, engine_view } from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 import { K_ALTER_STAT, STAT_PERCENT_DAMAGE } from '@aresrpg/sim/spell_effect'
