@@ -187,6 +187,21 @@ const auto_pass = async ({ shim, clock, drain }) => {
 }
 
 describe('the simulator’s deadline auto-pass keeps the turn it committed', () => {
+  test('an idle deadline auto-passes the zero-draft player turn and completes the mob turn', async () => {
+    const { shim, clock, drain, stop_edge } = open_fight()
+    const version_before_deadline = shim.chain().version
+
+    expect(staged_turn_paths(fight_store).draft_actions).toEqual([])
+
+    await auto_pass({ shim, clock, drain })
+    stop_edge()
+
+    // One player pass and one mob turn prove that the deadline edge fired and the round completed. A clock tick
+    // alone cannot advance the local chain version.
+    expect(shim.chain().version).toBe(version_before_deadline + 2)
+    expect(fight_view(fight_store.getState())?.active_entity_id).toBe(SEAT)
+  })
+
   test('a staged move survives the auto pass — the client stands where the sim put it, never back on the start cell', async () => {
     const { shim, clock, drain, stop_edge } = open_fight()
     const start_cell = { ...me_of().cell }
