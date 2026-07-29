@@ -6,7 +6,7 @@
 // failures, not chain failures. Everything here composes the SAME @aresrpg/sdk builders the client ships, so a
 // green run is a statement about the GAME, not about a test harness.
 //
-// Four legs, each an independent verdict row:
+// Five legs, each an independent verdict row:
 //   SOLO      one bot drives a world fight end to end (create → place → turns → terminal → settle) and the
 //             settled FightResult must carry xp.
 //   COOP      two bots, ONE fight: both seat, the turn queue hands the turn between them, both act on their
@@ -15,6 +15,8 @@
 //             projection must equal what the players saw (fold parity at the read level).
 //   TIMEOUT   a bot deliberately idles past its turn deadline and the permissionless `turns::crank` must
 //             carry the fight FORWARD instead of wedging it (the class that burned us).
+//   CRAFT     a bot loots the starter farmer tool, gathers the starter recipe's materials from seeded world
+//             nodes, then drives the deployed-shape SDK craft PTB; the output must land in its character kiosk.
 //
 // EVERY wait is bounded and fails LOUD — a bot that waits forever is the disease this cures. Any leg failure
 // exits non-zero with the verdict table printed.
@@ -74,6 +76,8 @@ const SEARCH_TRAVEL_BLOCKS_PER_SECOND = 900
 const PASS_GRACE_MS = 250
 const TURN_MS_MIN = 5_000 // config.move TURN_MS_MIN — the shortest turn the chain will clamp to
 const DEFAULT_TURN_MS = 45_000 // config.move DEFAULT_TURN_MS — restored after the timeout leg
+const CRAFT_LEG_WALL_MS = 180_000
+const CRAFT_MAX_ATTEMPTS = 8 // starter roll is 50% at L1; eight fully-funded attempts bound the RNG tail
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, Math.max(0, ms)))
 const unwrap = (v) => (v && typeof v === 'object' && 'fields' in v ? v.fields : v)
@@ -110,6 +114,19 @@ async function with_timeout(label, effect, timeout_ms) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(`ASSERT FAILED: ${message}`)
+}
+
+/** The post-#1612 client rule: biggest-first stacks until their sum covers the recipe need. */
+function covering_stack_ids(stacks, target) {
+  if (!(target > 0)) return null
+  const chosen = []
+  let remaining = target
+  for (const stack of [...stacks].sort((a, b) => b.amount - a.amount)) {
+    if (remaining <= 0) break
+    chosen.push(stack.id)
+    remaining -= stack.amount
+  }
+  return remaining <= 0 ? chosen : null
 }
 
 // ── fight reads ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -790,6 +807,149 @@ async function set_turn_dial(manifest, value_ms) {
   return result
 }
 
+// ── LEG 5 · CRAFT ───────────────────────────────────────────────────────────────────────────────────────────
+// The active corpus seeds live iron-ore nodes, so this leg uses the real gather/job acquisition path rather than
+// an admin fixture grant. Gathering is tool-gated: the preferred melee mob guarantees the starter farmer tool in
+// its loot table, so the bot first wins + settles a real fight, mints that sanctioned rolled drop, equips it, then
+// gathers. Every craft attempt consumes TWO distinct gathered stacks through Driver.craft → SDK craft_ptb. This is
+// both the #1494 driven starter craft and the cheap cross-stack case; the bounded pool absorbs the reference 50%
+// level-1 success roll without ever retrying an executed failure as though it had not happened.
+async function leg_craft(input) {
+  return with_timeout('craft leg completes', () => drive_craft(input), CRAFT_LEG_WALL_MS)
+}
+
+async function drive_craft({ manifest }) {
+  const [crafter_identity] = identities(manifest)
+  const bot = await make_bot({
+    manifest,
+    wallet: crafter_identity.wallet,
+    character: crafter_identity.character,
+    name: 'crafter',
+  })
+  const starter = manifest.seed?.recipes?.[0]
+  assert(starter?.recipe && starter?.output, 'the active seed carries no starter recipe/output ids')
+
+  const recipe_fields = await get_fields(bot.client, starter.recipe)
+  const ingredients = (recipe_fields?.inputs ?? []).map(unwrap)
+  assert(ingredients.length === 1, `starter recipe has ${ingredients.length} ingredient rows, expected 1`)
+  const ingredient_template_id = String(ingredients[0]?.template ?? '')
+  const ingredient_need = Number(ingredients[0]?.quantity ?? 0)
+  const ore_template_id = manifest.seed?.items?.iron_ore
+  assert(
+    ingredient_template_id === ore_template_id && ingredient_need >= 2,
+    `starter recipe is not the seeded iron_ore cross-stack recipe (template=${ingredient_template_id}, need=${ingredient_need})`
+  )
+
+  // Bootstrap the gather tool through ordinary fight loot: no admin mint and no fixture grant.
+  const world = await read_world(bot.client, manifest.world_id)
+  const zone = await discover_zone(bot, manifest, world)
+  const fight_id = await create_open_fight(bot, world, zone)
+  await place_and_start([bot], fight_id)
+  const fought = await drive_to_terminal([bot], fight_id)
+  assert(is_terminal_fight_status(fought.final.status), `craft bootstrap fight not terminal (${fought.final.status})`)
+  const settle = await bot.driver.settle_open_world({ fight_id, ...bot.ids })
+  assert(settle?.res?.ok && settle.result_id, `craft bootstrap settle failed: ${settle?.res?.abort ?? 'no result'}`)
+  assert(
+    Number(settle.res.event('::results::ResultOpened')?.xp_share ?? 0) > 0,
+    'craft bootstrap fight did not win — no sanctioned loot path is available'
+  )
+
+  const tool_template_id = manifest.seed?.items?.tool_farmer
+  assert(tool_template_id, 'the active seed carries no starter farmer tool template')
+  const tool = await bot.driver.mint_rolled({
+    result_id: settle.result_id,
+    item_template_id: tool_template_id,
+    ...bot.ids,
+  })
+  assert(tool?.res?.ok && tool.item_id, `starter tool loot mint failed: ${tool?.res?.abort ?? 'no item'}`)
+  const equipped = await bot.driver.equip({
+    ...bot.ids,
+    item_id: tool.item_id,
+    item_template_id: tool_template_id,
+  })
+  assert(equipped?.res?.ok, `starter farmer tool equip failed: ${equipped?.res?.abort ?? 'no receipt'}`)
+
+  // The dialled rig authors exactly 16 nodes in every discovered zone. Pre-gather the bounded attempt pool while
+  // each tier-1 harvest yields one unit, preserving two distinct input objects for EVERY probabilistic attempt.
+  const wanted_stacks = ingredient_need * CRAFT_MAX_ATTEMPTS
+  const nodes = zone.nodes.filter((node) => node.template_id === ore_template_id && node.remaining > 0)
+  assert(nodes.length >= wanted_stacks, `need ${wanted_stacks} live starter-material nodes, found ${nodes.length}`)
+  const gathered_stacks = []
+  for (const node of nodes.slice(0, wanted_stacks)) {
+    const gathered = await bot.driver.gather({
+      world_id: world.id,
+      ...bot.ids,
+      zx: zone.zx,
+      zy: zone.zy,
+      node_index: node.node_index,
+      template_id: ore_template_id,
+      protector_template_id: zone.mob.template_id,
+    })
+    const event = gathered?.res?.event('::gathering::ResourceGathered')
+    const amount = Number(event?.quantity ?? 0)
+    assert(
+      gathered?.res?.ok && gathered.item_id,
+      `gather node ${node.node_index} failed: ${gathered?.res?.abort ?? 'no item'}`
+    )
+    assert(amount === 1, `gather node ${node.node_index} yielded ${amount}, expected one unit for cross-stack proof`)
+    gathered_stacks.push({ id: gathered.item_id, amount })
+  }
+
+  let available = gathered_stacks
+  let successful = null
+  let attempts = 0
+  for (; attempts < CRAFT_MAX_ATTEMPTS; attempts += 1) {
+    const input_item_ids = covering_stack_ids(available, ingredient_need)
+    assert(input_item_ids?.length >= 2, `attempt ${attempts + 1} did not select two covering material stacks`)
+    const crafted = await bot.driver.craft({
+      recipe_id: starter.recipe,
+      ...bot.ids,
+      input_item_ids,
+      output_template_id: starter.output,
+    })
+    assert(crafted?.res?.ok, `SDK craft PTB refused legal inputs: ${crafted?.res?.abort ?? 'no receipt'}`)
+    const event = crafted.res.event('::crafting::Crafted')
+    assert(event?.recipe === starter.recipe, 'craft receipt carries no matching Crafted event')
+    available = available.filter((stack) => !input_item_ids.includes(stack.id))
+    if (!event.success) {
+      assert(!crafted.item_id, 'a failed craft roll unexpectedly created an Item')
+      continue
+    }
+    assert(crafted.item_id, 'a successful craft event produced no Item object id')
+    successful = {
+      digest: crafted.res.digest,
+      output_item_id: crafted.item_id,
+      input_stack_count: input_item_ids.length,
+    }
+    break
+  }
+  assert(successful, `starter craft missed ${CRAFT_MAX_ATTEMPTS} bounded success rolls`)
+
+  const output = await wait_until(
+    `crafted output ${successful.output_item_id} lands in character kiosk ${bot.ids.kiosk_id}`,
+    async () => {
+      const object = await get_object(bot.client, successful.output_item_id).catch(() => null)
+      const wrapper_id = object?.owner?.ObjectOwner
+      const wrapper = wrapper_id ? await get_object(bot.client, wrapper_id).catch(() => null) : null
+      const kiosk_id = wrapper?.owner?.ObjectOwner
+      const template = object?.content?.fields?.template
+      return kiosk_id === bot.ids.kiosk_id && template === starter.output ? object : null
+    },
+    { timeout_ms: 20_000 }
+  )
+  assert(output, 'crafted output kiosk readback returned no object')
+
+  return {
+    recipe: starter.label ?? starter.recipe,
+    craft_digest: successful.digest,
+    output_item_id: successful.output_item_id,
+    kiosk_id: bot.ids.kiosk_id,
+    material_acquisition: 'gather/job (tool from sanctioned fight loot; ore from seeded zone nodes)',
+    craft_attempts: attempts + 1,
+    cross_stack: `${successful.input_stack_count} gathered stacks (sum-covers)`,
+  }
+}
+
 // ── boot ────────────────────────────────────────────────────────────────────────────────────────────────────
 // The SAME primitives `test/gold/up_gold.mjs` boots with, in the same order, stopping at what a FIGHT needs:
 // stack → isolated CLI config → publish (ceremony + enable) → seed → admin dials → funded actors + characters.
@@ -905,6 +1065,7 @@ const LEGS = [
   { name: 'coop', run: leg_coop },
   { name: 'spectate', run: leg_spectate },
   { name: 'timeout', run: leg_timeout },
+  { name: 'craft', run: leg_craft },
 ]
 
 async function main() {

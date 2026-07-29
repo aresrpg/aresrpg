@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# CI FIGHT BOTS — fights are verified by BOTS, never by a browser (standing ruling). Four SDK-driven legs
-# (solo · coop · spectate · timeout) run against a disposable LOCALNET stood up inside the job: the driver
+# CI FIGHT BOTS — fights + the starter craft are verified by BOTS, never by a browser (standing ruling). Five
+# SDK-driven legs (solo · coop · spectate · timeout · craft) run against a disposable LOCALNET stood up inside
+# the job: the driver
 # publishes the current Move source, seeds the in-repo `active` corpus, self-grants four faucet-funded actors
 # with characters, and drives real PTBs. NO SECRETS, no testnet dependency, no private seed content — every
 # key is generated for this throwaway chain and dies with it.
@@ -63,7 +64,7 @@ jobs:
           sudo chmod +x /usr/local/bin/sui*
           sui --version
 
-      - name: fight bots — boot the localnet and drive all four legs
+      - name: fight bots — boot the localnet and drive all five legs
         run: node scripts/fight_bots.mjs --boot
 
       - name: the verdict table + logs

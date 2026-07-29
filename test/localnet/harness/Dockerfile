@@ -5,9 +5,15 @@ FROM ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebff
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 ARG SUI_TAG=testnet-v1.76.0
-ARG SUI_ARCH=aarch64
-ARG SUI_SHA256=4a34ef21e56650772064f946919d262d9e22102034007dccec3cc3418b93505d
-RUN curl -fsSL -o /tmp/sui.tgz \
+ARG TARGETARCH
+ARG SUI_SHA256_X86_64=4a34ef21e56650772064f946919d262d9e22102034007dccec3cc3418b93505d
+ARG SUI_SHA256_AARCH64=b6d2191eff4985051ae59c53f9857f84c80467acfb19bcbfafc2c4be058e9ce4
+RUN case "${TARGETARCH}" in \
+      amd64) SUI_ARCH=x86_64; SUI_SHA256="${SUI_SHA256_X86_64}" ;; \
+      arm64) SUI_ARCH=aarch64; SUI_SHA256="${SUI_SHA256_AARCH64}" ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL -o /tmp/sui.tgz \
       https://github.com/MystenLabs/sui/releases/download/${SUI_TAG}/sui-${SUI_TAG}-ubuntu-${SUI_ARCH}.tgz \
  && echo "${SUI_SHA256}  /tmp/sui.tgz" | sha256sum -c - \
  && tar -xzf /tmp/sui.tgz -C /usr/local/bin \
