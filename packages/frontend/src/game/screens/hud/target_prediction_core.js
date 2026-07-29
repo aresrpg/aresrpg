@@ -58,6 +58,30 @@ const resolve_armed_spell = (armed, me) => {
 }
 
 /**
+ * THE PREVIEW'S DEPENDENCY SET — the memo key `use_target_prediction` re-runs the derivation on, living HERE next
+ * to the derivation it keys so the two can never be maintained apart (they were: the key was hand-listed in the
+ * hook, and every input it forgot became a preview frozen at a stale number). The law it must satisfy is a pure
+ * property this module's test asserts directly: two states with the SAME key must derive the SAME prediction.
+ * Compared element-wise with Object.is, exactly as React compares a deps array.
+ * @param {{ fight: any, hover: any, dungeon: any, slot?: number|null }} args the SAME object handed to
+ *   `compute_target_prediction` — one call site, one set of inputs, no second assembly.
+ * @returns {any[]}
+ */
+export const prediction_memo_key = ({ fight, hover, dungeon, slot = null }) => {
+  const hovered_id = hover?.entity_id ?? null
+  const target = fight && hovered_id ? fight.fighters.get(hovered_id) : null
+  return [
+    fight?.armed_spell_id ?? null,
+    fight?.my_entity_id ?? null,
+    hovered_id,
+    target?.cell ? encode(target.cell.x, target.cell.y) : null,
+    target?.health ?? null,
+    dungeon,
+    slot,
+  ]
+}
+
+/**
  * entity id → { is_mob, idx } against the live dungeon escrow — the SAME mapping DungeonBoard.resolve_ref uses (a
  * mob rides 'mob-N', a player rides its escrow seat). null when the id is not a live fighter.
  * @param {any} dungeon @param {string | null | undefined} fighter_id

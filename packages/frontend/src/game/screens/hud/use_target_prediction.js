@@ -8,13 +8,11 @@
 
 import { useMemo } from 'react'
 
-import { encode } from '@aresrpg/fight/los'
-
 import { my_action_slot } from '@aresrpg/fight/project'
 
 import { use_fight, use_fight_view, use_game_state } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
-import { compute_target_prediction } from './target_prediction_core.js'
+import { compute_target_prediction, prediction_memo_key } from './target_prediction_core.js'
 
 // re-export so existing importers keep resolving these from here too.
 export { compute_target_prediction, resolve_dungeon_ref } from './target_prediction_core.js'
@@ -23,8 +21,8 @@ export { compute_target_prediction, resolve_dungeon_ref } from './target_predict
  * The live prediction of the armed spell on the hovered target — the SINGLE resolved outcome (crit or not is a
  * seed-deterministic fact), its is_crit flag, the target ref, and the spell's secondary effect rows. The core
  * prices the pending cast's crit SLOT off the fight store's own journal (#1224 — my drafted casts ride it as
- * intents), exactly like the DeckCluster socket glow. Memoized on the armed id / caster / hovered target (+ its
- * encoded cell & hp) / the dungeon identity / THAT slot — the one number this preview actually depends on.
+ * intents), exactly like the DeckCluster socket glow. Memoized on `prediction_memo_key` — the core's OWN statement
+ * of what this preview depends on, never a list re-assembled here.
  * @returns {ReturnType<typeof compute_target_prediction>}
  */
 export const use_target_prediction = () => {
@@ -35,19 +33,9 @@ export const use_target_prediction = () => {
   // that change this preview (a drafted cast, a landed receipt, my turn restarting) and on no other.
   const slot = use_fight(my_action_slot)
 
-  const armed = fight?.armed_spell_id ?? null
-  const caster_id = fight?.my_entity_id ?? null
-  const hovered_id = hover?.entity_id ?? null
-  const target = fight && hovered_id ? fight.fighters.get(hovered_id) : null
-  const target_key = target?.cell ? encode(target.cell.x, target.cell.y) : null
-  const target_hp = target?.health ?? null
-
-  return useMemo(
-    () => compute_target_prediction({ fight, hover, dungeon, slot }),
-    // `fight` is intentionally read live inside the core but excluded from deps: recomputing on every fold would
-    // re-run the sim each frame. The aim primitives below capture every change that alters THIS preview — including
-    // `slot`, since queuing a cast advances the pending cast's crit slot (the roll can flip crit↔non-crit).
-    // (react-hooks exhaustive-deps is not registered on this tree, so no disable directive — it would error.)
-    [armed, caster_id, hovered_id, target_key, target_hp, dungeon, slot]
-  )
+  const args = { fight, hover, dungeon, slot }
+  // ONE derivation, ONE key: the memo key comes from the same module as the derivation and is built from the same
+  // args object, so an input the preview reads can never be missing from the key it re-runs on.
+  // (react-hooks exhaustive-deps is not registered on this tree, so no disable directive — it would error.)
+  return useMemo(() => compute_target_prediction(args), prediction_memo_key(args))
 }
