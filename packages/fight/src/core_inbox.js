@@ -72,9 +72,25 @@ const action_hash = (action) => {
 const roster_hash = (view) =>
   hash_state((view?.escrow ?? []).map((row) => [String(row.character ?? ''), String(row.addr ?? '')]))
 
+/** `hash_state` digests STABLE JSON, and a decoded view is NOT plain JSON: the u64 fields (`world_seed`, `spawn_id`)
+ *  arrive as BigInt from the SDK decode, and `JSON.stringify` THROWS on a BigInt — which took the store's ONE
+ *  reducer door down at the very line that decides whether a read carries news. Widen a u64 to its decimal string
+ *  (lossless and order-stable) so the content test is TOTAL over the shapes a real chain read actually carries. */
+const plain = (value) => {
+  if (typeof value === 'bigint') return value.toString()
+  if (Array.isArray(value)) return value.map(plain)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, plain(inner)]))
+}
+
+/** The semantic content of an adopted view, for the redundant-checkpoint test. Only the OBJECT VERSION is excluded —
+ *  it is the read's coordinate, not its content, and the whole point of the guard is "same content, new version =
+ *  nothing new to say". EVERY other field rides the hash, statuses included: the status class is AUTHORITATIVE-ONLY
+ *  (the client cannot re-derive it), so stripping it made a status-only read hash equal to its predecessor and be
+ *  refused as redundant — the fold silently declining chain truth about invisibility, buffs and debuffs (#1584). */
 const snapshot_content_hash = (view) => {
-  const { version, invisibility_statuses, ...content } = view ?? {}
-  return hash_state(content)
+  const { version, ...content } = view ?? {}
+  return hash_state(plain(content))
 }
 
 /** Strip the resolver closure + seq from a normalized action so the log holds PURE DATA — `resolve_seat` is

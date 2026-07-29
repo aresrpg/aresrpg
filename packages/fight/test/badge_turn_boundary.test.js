@@ -152,11 +152,14 @@ describe('#598/#597 the badge lifetime survives the turn boundary (post-V2-cutov
     expect(buff_turns(store), 'and after the wave drains — nobody aged my row but me').toBe(3)
   })
 
-  test('a mid-fight object read cannot blank the badge — a snapshot is a checkpoint, never a base', () => {
+  test('a mid-fight object read cannot blank the badge — a snapshot at/below the cursor is a checkpoint', () => {
     const store = boot()
     // The reported shape of the defect was "turn advance rebuilds the presentation from a turn-scoped snapshot".
-    // It cannot: after bootstrap a decoded Fight object is a version/journal WATERMARK and nothing else (M2b, one
-    // ingress) — it never re-adopts. So even a read that positively states ZERO status rows leaves the fold alone.
+    // It cannot: a mid-fight object read rides the SAME object version as the events of the tx that produced it, so
+    // it lands AT OR BELOW the truth cursor those events already advanced — and `adopt_snapshot` drops a read that
+    // is not ahead of the frontier. That is what makes the object a version WATERMARK mid-fight: not blindness to
+    // its content (a read genuinely AHEAD of the frontier is authoritative — #1584), but the cursor gate.
+    feed(store, 7, [ev('TurnStarted', { is_mob: true, idx: 0, deadline_ms: 0 })], 2_500)
     for (const statuses of [[], undefined])
       store
         .getState()
