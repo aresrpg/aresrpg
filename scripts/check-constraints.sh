@@ -804,7 +804,7 @@ fixture_adjudication_gate() {
   local mutating_commits=0
   local mutated_files=0
   local exempt_additions=0
-  for commit in "${commits[@]}"; do
+  for commit in "${commits[@]+"${commits[@]}"}"; do
     local parent
     parent="$(git rev-parse "${commit}^1" 2>/dev/null)" || {
       red "  ✗ RED: $commit has no readable first parent; its fixture delta cannot be judged."
@@ -817,13 +817,13 @@ fixture_adjudication_gate() {
       red_rows=$((red_rows + 1))
       continue
     fi
-    local mutations=("${COMMIT_DIFF_FILES[@]}")
+    local mutations=("${COMMIT_DIFF_FILES[@]+"${COMMIT_DIFF_FILES[@]}"}")
     if ! collect_commit_diff_files "$parent" "$commit" A; then
       red "  ✗ RED: $commit new-fixture additions could not be read."
       red_rows=$((red_rows + 1))
       continue
     fi
-    local additions=("${COMMIT_DIFF_FILES[@]}")
+    local additions=("${COMMIT_DIFF_FILES[@]+"${COMMIT_DIFF_FILES[@]}"}")
     exempt_additions=$((exempt_additions + ${#additions[@]}))
 
     local short
@@ -863,7 +863,7 @@ fixture_adjudication_gate() {
 
     local accepted_identity=
     local self_identity=
-    for identity in "${adjudicators[@]}"; do
+    for identity in "${adjudicators[@]+"${adjudicators[@]}"}"; do
       local canonical
       canonical="$(git check-mailmap "$identity" 2>/dev/null)" || continue
       local adjudicator_email=

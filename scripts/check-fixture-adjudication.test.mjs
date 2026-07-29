@@ -63,6 +63,15 @@ afterEach(() => {
 })
 
 describe('fixture-adjudication constraint row', () => {
+  it('judges an empty local range instead of crashing on an unset bash 3.2 array', () => {
+    const fixture = fixture_repo()
+
+    const { status, output } = run_gate(fixture)
+    expect(status).toBe(0)
+    expect(output).toContain('commits=0')
+    expect(output).toContain('FIXTURE-ADJUDICATION GATE PASSED')
+  })
+
   it('fails a fixture-mutating commit without an Adjudicated-by trailer', () => {
     const fixture = fixture_repo()
     fs.writeFileSync(fixture.fixture_path, '{"state":"mutated"}\n')
