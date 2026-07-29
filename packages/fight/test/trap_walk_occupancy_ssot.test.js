@@ -139,28 +139,37 @@ describe('#1493 a corpse never re-routes the walk that decides trap consumption'
     expect(engine_view(store.getState()).trap_prims).toEqual([detour_cell])
   })
 
-  test('a body killed EARLIER in the same receipt frees its cell for the walk that follows', () => {
+  // The fixture's corpse is REVIVED for the two rows below: the blocker is alive in the snapshot, so the walk
+  // really is re-routed unless the tail proves it dead. The first row is the live control that says so.
+  const boot_with_living_blocker = () => {
     const store = boot()
-    // The corpse of the fixture is revived for this row: it is ALIVE in the snapshot and dies in the tail, so the
-    // ledger must free its cell mid-stream exactly as the chain rebuilds its wall mask per mover.
     store.getState().input(
-      { type: 'snapshot', fight: { ...fight_object, mobs: [{ ...fight_object.mobs[0], hp: 30 }, fight_object.mobs[1]] }, version: 6 },
+      {
+        type: 'snapshot',
+        fight: { ...fight_object, mobs: [{ ...fight_object.mobs[0], hp: 30 }, fight_object.mobs[1]] },
+        version: 6,
+      },
       1_050
     )
     place_trap(store, 'trap-on-detour', detour_cell)
+    return store
+  }
+
+  const walk_after = (store, events) =>
     store.getState().input(
-      {
-        type: 'receipt',
-        version: 8,
-        receipt: {
-          events: [
-            event('Hit', { victim_is_mob: true, victim_idx: 0, amount: 30, remaining_hp: 0 }),
-            event('MobMoved', { idx: 1, to_cell: walker_dest }),
-          ],
-        },
-      },
+      { type: 'receipt', version: 8, receipt: { events: [...events, event('MobMoved', { idx: 1, to_cell: walker_dest })] } },
       1_200
     )
+
+  test('LIVE CONTROL — a LIVING blocker really does re-route the walk onto the detour trap', () => {
+    const store = boot_with_living_blocker()
+    walk_after(store, [])
+    expect(trap_by_anchor(store, detour_cell)?.gone).toBe(true)
+  })
+
+  test('a body killed EARLIER in the same receipt frees its cell for the walk that follows', () => {
+    const store = boot_with_living_blocker()
+    walk_after(store, [event('Hit', { victim_is_mob: true, victim_idx: 0, amount: 30, remaining_hp: 0 })])
 
     expect(trap_by_anchor(store, detour_cell)?.gone).toBe(false)
     expect(engine_view(store.getState()).trap_prims).toEqual([detour_cell])
