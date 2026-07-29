@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// #1214 + #1210 — ONE occupancy home. DungeonBoard.jsx builds a cell-keyed `occupied` Map from dungeon.escrow /
-// dungeon.mobs and every reader (the weapon target loop, the LOS blockers list, the free_cell trap footprint
-// filter, flush_commit's target resolution) reads THAT map. A last-write-wins collapse let a corpse — it keeps
+// #1214 + #1210 — ONE occupancy home. DungeonBoard.jsx composes its occupant rows from dungeon.escrow /
+// dungeon.mobs and folds them through `@aresrpg/fight/occupancy`'s `occupancy_of` — the SAME index prediction's
+// pre-fire snapshot uses (#1232), so the board and the prediction can never disagree about who holds a stacked
+// cell. Every reader (the weapon target loop, the LOS blockers list, the free_cell trap footprint filter,
+// flush_commit's target resolution) reads THAT map. A last-write-wins collapse let a corpse — it keeps
 // its on-chain cell but never body-blocks — silently overwrite a live occupant sharing that cell (a mob walking
 // onto its own kill's corpse), which (a) refused a legal weapon cast with a SILENT disarm (traced end-to-end
 // against a real 353-input capsule replay, /tmp/aresrpg-lanes/sword-refusal-trace/FINDING_sword_refusal.md) and
@@ -18,6 +20,7 @@
 // fixture data — never reimplemented — so a green test proves the shipped algorithm, not a hand-written stand-in.
 import { describe, expect, test } from 'bun:test'
 import { lineOfSight } from '@aresrpg/fight/los'
+import { occupancy_of } from '@aresrpg/fight/occupancy'
 
 const GRID_W = 20
 const enc = (x, y) => y * GRID_W + x
@@ -60,8 +63,8 @@ const stacked_dungeon = (mob_order) => ({
 
 describe('#1214 — a corpse never shadows a living occupant sharing its cell', () => {
   test('① dead-after-alive (the trace order): the stacked cell resolves to the LIVING mob, weapon-castable', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon'])
-    const occupied = build_occupied(stacked_dungeon('alive_first'))
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const occupied = build_occupied(stacked_dungeon('alive_first'), occupancy_of)
     const stacked = occupied.get(STACK_CELL)
     expect(stacked).toEqual({ kind: 'mob', alive: true, idx: 0 }) // m1 (alive), never m2 (the corpse, idx 1)
 
@@ -81,14 +84,14 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
   })
 
   test('② order-reversal control (alive-after-dead): stays green whichever mob is indexed last', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon'])
-    const occupied = build_occupied(stacked_dungeon('dead_first'))
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const occupied = build_occupied(stacked_dungeon('dead_first'), occupancy_of)
     // dead idx 0 first, alive idx 1 last — this order already "worked" by luck pre-fix; it must keep working post-fix.
     expect(occupied.get(STACK_CELL)).toEqual({ kind: 'mob', alive: true, idx: 1 })
   })
 
   test('③ LOS: a solo corpse between me and a live target never blocks sight; a corpse-shadowed live body still does', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon'])
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
     const build_los_blockers = await extract(
       'const los_blockers = [...obstacles]',
       '// P1 SELF-CAST (#55)',
@@ -105,7 +108,7 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
     const solo_corpse = build_occupied({
       escrow: [{ cell: A, alive: true }],
       mobs: [{ cell: B, alive: false }, { cell: C, alive: true }],
-    })
+    }, occupancy_of)
     const blockers_solo = build_los_blockers([], solo_corpse, me)
     expect(blockers_solo.includes(B)).toBe(false)
     expect(lineOfSight(A, C, blockers_solo)).toBe(true) // target still lit + castable
@@ -116,15 +119,15 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
     const shadowed = build_occupied({
       escrow: [{ cell: A, alive: true }],
       mobs: [{ cell: B, alive: true }, { cell: B, alive: false }, { cell: C, alive: true }],
-    })
+    }, occupancy_of)
     const blockers_shadowed = build_los_blockers([], shadowed, me)
     expect(blockers_shadowed.includes(B)).toBe(true)
     expect(lineOfSight(A, C, blockers_shadowed)).toBe(false)
   })
 
   test('④ the target readout (flush_commit / hover) resolves the LIVING mob, never the corpse sharing its cell', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon'])
-    const occupied = build_occupied(stacked_dungeon('alive_first'))
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const occupied = build_occupied(stacked_dungeon('alive_first'), occupancy_of)
     const tgt = occupied.get(STACK_CELL)
     // flush_commit's committed_target_alive / any hover panel reads THIS idx — it must be the living mob's (0),
     // never the corpse's (1), or the readout describes a dead mob's hp.

@@ -63,6 +63,7 @@ import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon, move_plan_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { encode, decode, manhattan, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
+import { occupancy_of } from '@aresrpg/fight/occupancy'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
 import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
@@ -309,23 +310,25 @@ export function DungeonBoard() {
   const effective_pick = placement_pick ?? seeded_pick
 
   const occupied = useMemo(() => {
-    /** @type {Map<number, { kind: 'player' | 'mob', alive: boolean, idx: number }>} */
-    const map = new Map()
-    if (!dungeon) return map
-    // LIVING-WINS (#1214): a corpse keeps its on-chain cell but never body-blocks, so a live occupant may legally
-    // share it. This candidate set must resolve the SAME living occupant `find_living_mob_at` / `find_entity_at`
-    // do (cast.move / fight_state.js — a fresh scan, corpses can never shadow a living target) — a last-write-wins
-    // collapse let a later-indexed corpse silently overwrite a live occupant sharing its cell (a mob walking onto
-    // its own kill's corpse), refusing a legal weapon cast and letting a shadowed live mob dodge LOS. A living
-    // occupant is claimed once and never displaced, whatever the write order.
-    const claim = (cell, occupant) => {
-      const existing = map.get(cell)
-      if (existing?.alive && !occupant.alive) return // a corpse never displaces the living occupant already here
-      map.set(cell, occupant)
-    }
-    dungeon.escrow.forEach((p, i) => claim(p.cell, { kind: 'player', alive: p.committed?.alive ?? p.alive, idx: i }))
-    dungeon.mobs.forEach((m, i) => claim(m.cell, { kind: 'mob', alive: m.committed?.alive ?? m.alive, idx: i }))
-    return map
+    // LIVING-WINS (#1214/#1232): a corpse keeps its on-chain cell but never body-blocks, so a live occupant may
+    // legally share it. This candidate set must resolve the SAME living occupant `find_living_mob_at` /
+    // `find_entity_at` do (cast.move / fight_state.js) — `occupancy_of` is the ONE index that enforces it,
+    // shared with prediction's own pre-fire snapshot (predict_cast `evolve_flush_casts`), so the board and the
+    // prediction can never disagree about who holds a stacked cell.
+    return occupancy_of([
+      ...(dungeon?.escrow ?? []).map((p, i) => ({
+        cell: p.cell,
+        kind: 'player',
+        alive: p.committed?.alive ?? p.alive,
+        idx: i,
+      })),
+      ...(dungeon?.mobs ?? []).map((m, i) => ({
+        cell: m.cell,
+        kind: 'mob',
+        alive: m.committed?.alive ?? m.alive,
+        idx: i,
+      })),
+    ])
   }, [dungeon])
 
   // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the move-cost anchor evolution, the

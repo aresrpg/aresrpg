@@ -14,6 +14,7 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
+import { occupancy_of } from './occupancy.js'
 import { sim_effects_of, status_row_of } from './statuses.js'
 import { WEAPON_ATTACK_ID } from './weapon.js'
 
@@ -742,16 +743,22 @@ export const evolve_flush_casts = ({
     sequence,
     resolve_ref,
     snapshot: (sim) => {
-      const occupied = new Map()
-      for (const fighter of [...(sim.team0 ?? []), ...(sim.team1 ?? [])]) {
-        const ref = resolve_ref(fighter.id)
-        if (!ref || !fighter.cell) continue
-        occupied.set(encode(fighter.cell.x, fighter.cell.y), {
-          kind: ref.is_mob ? 'mob' : 'player',
-          idx: ref.idx,
-          alive: fighter.health > 0,
+      // LIVING-WINS (#1232) through the ONE index: a corpse sharing a live fighter's cell must never shadow it,
+      // whatever the team/index write order — the same law the board's candidate set obeys (#1214).
+      const occupied = occupancy_of(
+        [...(sim.team0 ?? []), ...(sim.team1 ?? [])].flatMap((fighter) => {
+          const ref = resolve_ref(fighter.id)
+          if (!ref || !fighter.cell) return []
+          return [
+            {
+              cell: encode(fighter.cell.x, fighter.cell.y),
+              kind: ref.is_mob ? 'mob' : 'player',
+              idx: ref.idx,
+              alive: fighter.health > 0,
+            },
+          ]
         })
-      }
+      )
       const caster = find_entity(sim, caster_id)
       return { occupied, caster_cell: caster?.cell ? encode(caster.cell.x, caster.cell.y) : null }
     },
