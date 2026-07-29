@@ -2493,7 +2493,8 @@
     "delete_unfinished_fight": "Ce personnage a un résultat de combat non ouvert. Ouvrez-le d'abord, puis réessayez.",
     "delete_in_dungeon": "Ce personnage est en plein donjon. Quittez-le ou abandonnez-le d'abord.",
     "sponsor_zklogin_only": "Le gas sponsorisé est réservé à la connexion Google — ce portefeuille paie son propre gas.",
-    "group_proof_unavailable": "Impossible de vérifier ce groupe auprès de la chaîne — rien n'a été envoyé. Réessayez dans un instant."
+    "group_proof_unavailable": "Impossible de vérifier ce groupe auprès de la chaîne — rien n'a été envoyé. Réessayez dans un instant.",
+    "spell_data_unavailable_retrying": "Données des sorts indisponibles — nouvelle tentative en cours"
   },
   "vault": {
     "connect_wallet": "Connecter le portefeuille",

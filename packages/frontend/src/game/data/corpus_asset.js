@@ -16,8 +16,15 @@ const version_pattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/
 // The client also requests the pointer with `cache: no-store`; the response policy above is still required
 // because the CDN, not just the browser cache, must revalidate the mutable object.
 
-const published_corpus_url = () =>
-  asset_url('spell_corpus', 'spell_corpus.json') ?? asset_url('world_corpus', 'world_corpus.json')
+/**
+ * Resolve the pre-versioning mutable payload URL. This remains the compatibility fallback when the shared
+ * pointer is unavailable during a publication rollout.
+ * @param {'spell_corpus' | 'world_corpus'} corpus_name
+ * @returns {string | null}
+ */
+export const bare_corpus_url = (corpus_name) => asset_url(corpus_name, `${corpus_name}.json`)
+
+const published_corpus_url = () => bare_corpus_url('spell_corpus') ?? bare_corpus_url('world_corpus')
 
 /** Decode the pointer's intentionally tiny wire format; null is invalid data, never a guessed version. */
 export const decode_corpus_version = (pointer) => {
@@ -51,6 +58,6 @@ export async function load_corpus_version(fetch_impl = globalThis.fetch) {
 export function versioned_corpus_url(corpus_name, version) {
   const safe_version = decode_corpus_version({ version })
   if (!safe_version) throw new Error('invalid corpus version')
-  const mutable_url = asset_url(corpus_name, `${corpus_name}.json`)
+  const mutable_url = bare_corpus_url(corpus_name)
   return mutable_url ? new URL(`${corpus_name}.${safe_version}.json`, mutable_url).href : null
 }

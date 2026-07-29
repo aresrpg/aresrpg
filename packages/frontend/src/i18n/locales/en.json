@@ -2493,7 +2493,8 @@
     "delete_unfinished_fight": "This character has an unopened fight result. Open it first, then try again.",
     "delete_in_dungeon": "This character is in the middle of a dungeon. Leave or abandon it first.",
     "sponsor_zklogin_only": "Sponsored gas is for Google sign-in only — this wallet pays its own gas.",
-    "group_proof_unavailable": "Couldn't verify this group against the chain — nothing was sent. Try again in a moment."
+    "group_proof_unavailable": "Couldn't verify this group against the chain — nothing was sent. Try again in a moment.",
+    "spell_data_unavailable_retrying": "Spell data unavailable — retrying"
   },
   "vault": {
     "connect_wallet": "Connect Wallet",

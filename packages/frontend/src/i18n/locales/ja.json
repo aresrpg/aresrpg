@@ -2493,7 +2493,8 @@
     "delete_unfinished_fight": "このキャラクターには未開封の戦闘結果があります。先に開いてから再試行してください。",
     "delete_in_dungeon": "このキャラクターはダンジョンの最中です。先に退出するか放棄してください。",
     "sponsor_zklogin_only": "スポンサー付きガスはGoogleサインイン専用です。このウォレットはガスを自己負担します。",
-    "group_proof_unavailable": "このグループをチェーンと照合できませんでした。送信はされていません。少し待ってからもう一度お試しください。"
+    "group_proof_unavailable": "このグループをチェーンと照合できませんでした。送信はされていません。少し待ってからもう一度お試しください。",
+    "spell_data_unavailable_retrying": "呪文データを取得できません — 再試行しています"
   },
   "vault": {
     "connect_wallet": "ウォレットを接続",
