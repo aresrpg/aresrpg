@@ -100,7 +100,12 @@ const my_cast_prediction = (turn) => ({
     { kind: 'Hit', victim_is_mob: true, victim_idx: 0, amount: 5, remaining_hp: 900 - 5 * turn },
   ],
   beats: [
-    { kind: 'cast', at: 0, duration: 1, payload: { source_id: CHAR, spell_id: 'dungeon_strike', cell: { x: 5, y: 5 } } },
+    {
+      kind: 'cast',
+      at: 0,
+      duration: 1,
+      payload: { source_id: CHAR, spell_id: 'dungeon_strike', cell: { x: 5, y: 5 } },
+    },
   ],
 })
 
@@ -165,6 +170,14 @@ const make_board = () => {
   }
 }
 
+// Injected rather than inherited: the ambient game context is a module singleton whose engine events are only
+// wired by a mounted app, so a suite-wide run would otherwise mount this adapter against an uninitialised bus.
+const game_context = {
+  events: { on: () => {}, off: () => {}, emit: () => {} },
+  dispatch: () => {},
+  get_state: () => ({ sui: { characters: [] } }),
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const poll = async (predicate, { timeout = 8_000, step = 20 } = {}) => {
   const t0 = Date.now()
@@ -198,7 +211,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('#1672 · the world presentation fol
     fight_store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 })
     expect(use_dungeon.getState().dungeon?.id, 'the projection mirror must publish the live board').toBe(FIGHT)
     if (adapter_handle.current) return
-    adapter_handle.current = create_voxel_fight_adapter(board)
+    adapter_handle.current = create_voxel_fight_adapter(board, { game_context })
     const wired = await poll(() => board.calls.upserts.some((u) => u.id === CHAR))
     expect(wired, 'the adapter never built/wired the board').toBe(true)
   }
