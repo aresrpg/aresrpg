@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# The JavaScript protocol vocabulary belongs to @aresrpg/sim. This pack catches declarations of the
+# numeric spell-effect vocabulary in consumer packages; scripts/sim-constants-gate.sh ratchets the
+# current kill-list debt per rule + file, so only deletion can move the baseline.
+rules:
+  - id: sim-protocol-spell-effect-kind
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      Spell-effect kind ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical
+      vocabulary; do not re-declare a wire discriminant in a consumer package (#1603).
+    pattern-either:
+      - pattern: const K_ALTER_STAT = 9
+      - pattern: const K_ALTER_RESIST = 11
+      - pattern: const K_INVISIBILITY = 27
+      - pattern: const FLAG_NEGATIVE = 8
+      - patterns:
+          - pattern: const $NAME = { ... }
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: '^(?:KIND_NAMES|kind_names)$'
+
+  - id: sim-protocol-stat-id
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      Spell-effect stat ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical
+      vocabulary; do not re-declare the numeric stat map in a consumer package (#1603).
+    patterns:
+      - pattern: const $NAME = { ... }
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: '^(?:STAT_CHAIN_ID|STAT_VIEW)$'
+
+  - id: sim-protocol-element-ordinal
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      Spell element ordinals belong to @aresrpg/sim/spell. Import or derive the canonical vocabulary;
+      do not re-declare fire/water/earth/air/none ids in a consumer package (#1603).
+    patterns:
+      - pattern: const $NAME = { ... }
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: '^(?:ELEMENT_ORDINAL|RESIST_ELEMENT|element_names)$'
+
+  - id: sim-protocol-aoe-shape-id
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      AoE shape ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical vocabulary;
+      do not re-declare point/circle/cross/line/tbar/ring/allmap/cone ids (#1603).
+    patterns:
+      - pattern: const $NAME = { ... }
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: '^(?:SHAPE_NAMES|shape_names)$'
+
+  - id: sim-protocol-point-kind-id
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      AP/MP point-kind ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical
+      vocabulary; do not re-declare point discriminants or their lookup tables (#1603).
+    pattern-either:
+      - pattern: const POINT_AP = 0
+      - pattern: const POINT_MP = 1
+      - patterns:
+          - pattern: const $NAME = { ... }
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: '^(?:POINT_POOL|POINT_VIEW|POOL_POINT_KIND)$'
+
+  - id: sim-protocol-target-filter-bit
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      Target-filter bits belong to @aresrpg/sim/spell_effect. Import the canonical TF_* constant;
+      do not re-declare a target bit in a consumer package (#1603).
+    pattern-either:
+      - pattern: const TF_NONE = 0
+      - pattern: const TF_NOT_TEAM = 1
+      - pattern: const TF_NOT_SELF = 2
+      - pattern: const TF_NOT_ENEMY = 4
+      - pattern: const TF_ONLY_CASTER = 32
+
+  - id: sim-protocol-cast-cap-sentinel
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      The unlimited cast-cap sentinel belongs to @aresrpg/sim/spell_templates. Import
+      CASTS_UNLIMITED; do not give 255 cast-limit meaning in a consumer package (#1603).
+    pattern-either:
+      - pattern: 'casts_per_turn: 255'
+      - pattern: 'casts_per_target: 255'
+      - pattern: $LEVEL.casts_per_turn >= 255
+      - pattern: $LEVEL.casts_per_target >= 255
+      - pattern: authored === 255
+
+  - id: sim-protocol-signed-value-bias
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      The signed-value bias belongs to @aresrpg/sim. Import the canonical shift; do not re-declare
+      32768 under a local bias/shift name in a consumer package (#1603).
+    pattern-either:
+      - pattern: const SIGNED_SHIFT = 32768
+      - pattern: const SIGNED_SHIFT = 32_768
+      - pattern: const SIGNED_KINDS = new Set([9, 11])

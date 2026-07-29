@@ -1123,6 +1123,13 @@ if ! bash scripts/semgrep-gate.sh; then
   red "ARCH GATE (semgrep) FAILED."
   FAIL=1
 fi
+# #1603 SSOT prevention: consumers import spell protocol numbers from @aresrpg/sim. The present
+# kill-list rows are a per-file baseline; new numeric re-declarations are red and the floor only shrinks.
+echo
+if ! bash scripts/sim-constants-gate.sh; then
+  red "SIM PROTOCOL CONSTANTS GATE FAILED."
+  FAIL=1
+fi
 echo
 if ! bash scripts/depcruise-gate.sh; then
   red "ARCH GATE (dependency-cruiser) FAILED."
