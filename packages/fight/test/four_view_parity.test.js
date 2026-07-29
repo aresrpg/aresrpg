@@ -102,11 +102,11 @@ const canonical_image = (s) => {
  * (deduped on change — a view that folds the same fact through more inputs than another still has to publish
  * the same succession of canonical states).
  */
-const replay_view = ({ map, courtesy = false }, image = canonical_image) => {
+const replay_view = ({ map, courtesy = false }, image = canonical_image, inputs = trace.inputs) => {
   const store = create_fight_store()
   const sequence = []
   let last = null
-  for (const row of trace.inputs) {
+  for (const row of inputs) {
     store.getState().input(map(row.msg), row.at)
     // COOP's extra ingress: the party transport relays a peer's committed draft into the same door as a
     // legality-gated PREDICTION. It may paint; it may never move canonical truth — that is what this asserts.
@@ -160,10 +160,22 @@ describe('four-view class gate — one recorded fight, one fold (#1336)', () => 
           .map(([key, f]) => [
             key,
             { cell: f.cell ?? null, hp: f.hp ?? null, alive: f.alive ?? null, ap: f.ap ?? null, mp: f.mp ?? null },
-          ])
+        ])
       ),
     })
-    const repointed = replay_view(VIEWS.solo, second_fold_image)
-    expect(repointed).not.toEqual(sequences.solo)
+    // TOOTH, not a second full parity sweep: committed and presentation truth first CAN diverge on the trace's
+    // first non-empty `predicted` input. The 42 rows before it establish the real init/snapshot/journal context;
+    // row 43 paints the optimistic fold and is the first possible red. Replaying the remaining 1264 messages
+    // proved no additional failure mode, but made this positive control load-flaky at Bun's 5 s budget.
+    const first_prediction = trace.inputs.findIndex(
+      (row) => row.msg.type === 'predicted' && Array.isArray(row.msg.actions) && row.msg.actions.length > 0
+    )
+    const tooth = trace.inputs.slice(0, first_prediction + 1)
+    expect(tooth).toHaveLength(43) // captured-trace bound: setup + the first divergent input, never the 1307-row tail
+    expect(tooth.at(-1).msg.type).toBe('predicted') // non-vacuity: the divergence trigger is present
+
+    const committed = replay_view(VIEWS.solo, canonical_image, tooth)
+    const repointed = replay_view(VIEWS.solo, second_fold_image, tooth)
+    expect(repointed).not.toEqual(committed)
   })
 })
