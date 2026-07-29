@@ -37,7 +37,7 @@ const { clear_budget_cache } = await import('./budget_cache.js')
 const { chain_gas_from_receipt, clear_gas_coin_cache, _peek_gas_cache } = await import('./gas_coin_cache.js')
 const { get_log_buffer, _reset_log_for_test } = await import('../core/log.js')
 const { error_executed_digest } = await import('../world-shell/tx_digest_error.js')
-const { is_preflight_refusal } = await import('../game/core/abort_copy.js')
+const { humanize_tx_error, is_preflight_refusal } = await import('../game/core/abort_copy.js')
 const { cancel_engage_timing, ENGAGE_MARK_NAMES, ENGAGE_MEASURE_NAMES, mark_engage_ptb_built, start_engage_timing } =
   await import('../core/engage_timing.js')
 
@@ -86,6 +86,25 @@ describe('execute_tx — the tx choke (S-54)', () => {
     ).rejects.toThrow()
     expect(grpc.core.simulateTransaction).toHaveBeenCalledTimes(1) // it DID dry-run
     expect(sae).toHaveBeenCalledTimes(0) // …and NEVER signed
+  })
+
+  test('simulation RPC refusal keeps the full reason while refusing before signing (friend-add sad path)', async () => {
+    const reason = 'That player is already in your friend roster.'
+    grpc.core.simulateTransaction.mockImplementationOnce(async () => {
+      throw new Error(reason)
+    })
+    const sae = mock(async () => ({ digest: 'MUST_NOT_EXECUTE' }))
+    const error = await execute_tx({
+      wallet: make_wallet(sae),
+      address: ADDR,
+      transaction: make_tx(),
+      chain: CHAIN,
+    }).catch((failure) => failure)
+    expect(error).toBeInstanceOf(Error)
+    expect(error.message).toContain(reason)
+    expect(humanize_tx_error(error)).toContain(reason)
+    expect(is_preflight_refusal(error)).toBe(true)
+    expect(sae).toHaveBeenCalledTimes(0)
   })
 
   test('over-ceiling (>0.25 SUI net) → REFUSES before signing', async () => {

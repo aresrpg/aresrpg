@@ -2402,6 +2402,7 @@
     "sponsor_outcome_unknown": "La réponse de cette transaction sponsorisée s'est perdue — elle est peut-être déjà passée. Vérifie le résultat avant de recommencer.",
     "sponsor_stale_client": "L'application n'est pas à jour. Actualise la page pour continuer à jouer.",
     "tx_simulation_failed": "Impossible de simuler la transaction — rien n'a été envoyé. Réessaie.",
+    "tx_simulation_failed_reason": "Impossible de simuler la transaction — rien n'a été envoyé.\nRaison : {{reason}}",
     "sale_paused": "Cette vente est en pause pour le moment. Reviens bientôt.",
     "payment_below_price": "Ce n'est pas assez de SUI pour le prix de cet objet.",
     "wrong_item": "Cet objet ne correspond pas à cette vente. Actualise et réessaie.",

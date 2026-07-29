@@ -6,8 +6,8 @@
 //   EXPANDED  → adds the OFFLINE friends + an ADD FRIEND bar (paste a 0x address; the primary add UX is
 //               clicking a player in the world or a name in chat → PlayerActionMenu)
 //
-// DATA (all honest, no fakes): the friend list = read_roster (chain-direct FriendList + /v1 enrichment,
-// use_rpc_view short-poll + focus-heal per the UI-DATA LAW). ONLINE status = the server-observed courier stream:
+// DATA (all honest, no fakes): the friend list = the reducer-owned friends atom, reconciled from read_roster
+// (chain-direct FriendList + /v1 enrichment) on a short poll + focus heal. ONLINE status = the courier stream:
 // a friend is "online" iff their wallet is in the live presence set, NOT the RPC's last-position freshness.
 // Names = friend_display_name below: the stream name when present, else
 // the indexer character name, else character_name_resolve.js's ONE HOME fallback — never a raw address slice.
@@ -21,10 +21,9 @@ import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 
 import { presence_character_by_address, use_presence } from '../../../../world-shell/presence_adapter.js'
 import { use_auth } from '../../../../auth'
-import { use_rpc_view } from '../../../../rpc/use_view'
 import { friend_display_name } from '../../../../world-shell/friends_display.js'
-import { read_roster } from '../../../../world-shell/friends_reads'
-import { add_friend_flow, remove_friend_flow, on_friends_changed } from '../../../../world-shell/friends_actions'
+import { refresh_friends, use_friends } from '../../../../world-shell/friends_adapter.js'
+import { add_friend_flow, remove_friend_flow } from '../../../../world-shell/friends_actions'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { open_player_menu } from './player_menu_store.js'
 
@@ -40,16 +39,25 @@ export function OnlinePlayers() {
   // (NEVER a native window.confirm — house dialog law). null = closed; confirm runs the remove flow for it.
   const [pending_remove, set_pending_remove] = useState(/** @type {{ address: string, name: string } | null} */ (null))
 
-  // Friend list (chain-direct) + per-friend /v1 enrichment — one atomic poll, lags OK, self-heals on focus.
-  const view = use_rpc_view(
-    /** @returns {Promise<{ list_id: string | null, rows: any[] }>} */ (signal) => read_roster(address, signal),
-    { deps: [address], enabled: !!address, interval_ms: 8000 }
-  )
-  const list_id = view.data?.list_id ?? null
-  const rows = view.data?.rows ?? []
+  const list_id = use_friends((state) => state.list_id)
+  const rows = use_friends((state) => state.rows)
 
-  // Refetch the instant an add/remove lands from ANY surface (this bar, the world click, the chat click).
-  useEffect(() => on_friends_changed(() => view.refetch()), [view])
+  // Reconciliation cadence only. Confirmed add/remove writes paint synchronously through the reducer input door.
+  useEffect(() => {
+    const controller = new AbortController()
+    void refresh_friends(address, controller.signal)
+    if (!address) return () => controller.abort()
+    const refresh = () => {
+      if (!document.hidden) void refresh_friends(address, controller.signal)
+    }
+    const timer = setInterval(refresh, 8000)
+    window.addEventListener('focus', refresh)
+    return () => {
+      controller.abort()
+      clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [address])
 
   // ONLINE = present in the server-observed world stream. name = friend_display_name's ONE derivation, always
   // a truthy display string — never empty, never a raw address needing a per-row fallback below.

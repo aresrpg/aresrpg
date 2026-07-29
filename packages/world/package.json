@@ -40,6 +40,9 @@
     },
     "./friend_target": {
       "import": "./src/friend_target.js"
+    },
+    "./friends": {
+      "import": "./src/friends.js"
     }
   },
   "author": "AresRPG's Team",

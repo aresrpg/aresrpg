@@ -18,7 +18,8 @@ import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { is_suins_name, resolve_suins_address } from '../utils/suins'
 
-import { get_owner_by_name, read_friend_list } from './friends_reads'
+import { friends_input, refresh_friends, use_friends } from './friends_adapter.js'
+import { get_owner_by_name } from './friends_reads'
 import { run_tx } from './tx.js'
 
 const CTX = { network: DEMO_NETWORK }
@@ -51,24 +52,6 @@ export function created_friend_list_id(result) {
   return created?.objectId ?? null
 }
 
-// S-67 — ROSTER CHANGE bus: the friends surfaces (the HUD presence panel) live apart from the add/remove
-// TRIGGERS (the in-world nameplate click, the chat name click, the panel's own add bar), so a change here must
-// refetch there without prop drilling. One tiny pub/sub, fired only on a CONFIRMED on-chain add/remove.
-const _friends_listeners = new Set()
-/** Subscribe a surface to roster changes; returns the unsubscribe. */
-export function on_friends_changed(/** @type {() => void} */ cb) {
-  _friends_listeners.add(cb)
-  return () => _friends_listeners.delete(cb)
-}
-function _notify_friends_changed() {
-  for (const cb of _friends_listeners)
-    try {
-      cb()
-    } catch {
-      /* a rotten listener never blocks the others */
-    }
-}
-
 const _is_addr = (/** @type {string} */ a) => /^0x[0-9a-f]{64}$/.test(a)
 
 /** Enter the existing transaction flow with an already-resolved address. */
@@ -78,24 +61,27 @@ async function add_friend_address_flow(my_address, target, toast) {
     .toLowerCase()
   if (!_is_addr(addr)) return void toast.add(i18n.t('friends.invalid_address'), 'error')
   if (addr === String(my_address ?? '').toLowerCase()) return void toast.add(i18n.t('friends.cannot_add_self'), 'error')
-  const { list_id, friends } = await read_friend_list(my_address)
-  if (friends.some((f) => String(f).toLowerCase() === addr))
+  await refresh_friends(my_address)
+  const roster = use_friends.getState()
+  if (roster.rows.some((friend) => String(friend.address).toLowerCase() === addr))
     return void toast.add(i18n.t('friends.already_friend'), 'error')
   try {
-    let lid = list_id
+    let lid = roster.list_id
     if (!lid) {
       const { result } = await toast.promise(create_friend_list(), {
         pending: i18n.t('friends.pending_create'),
         success: i18n.t('friends.toast_create'),
       })
       lid = created_friend_list_id(result)
+      if (lid) friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
     }
     if (!lid) return
     await toast.promise(add_friend(lid, addr), {
       pending: i18n.t('friends.pending_add'),
       success: i18n.t('friends.toast_add'),
     })
-    _notify_friends_changed()
+    friends_input({ type: 'friend_added', address: my_address, list_id: lid, friend: addr })
+    void refresh_friends(my_address)
   } catch {
     /* already surfaced by the humanizing toast */
   }
@@ -141,12 +127,15 @@ export async function add_friend_flow(my_address, target) {
  */
 export async function remove_friend_flow(list_id, target) {
   if (!list_id) return
+  const { address } = use_friends.getState()
+  if (!address) return
   try {
     await use_toast.getState().promise(remove_friend(list_id, target), {
       pending: i18n.t('friends.pending_remove'),
       success: i18n.t('friends.toast_remove'),
     })
-    _notify_friends_changed()
+    friends_input({ type: 'friend_removed', address, list_id, friend: target })
+    void refresh_friends(address)
   } catch {
     /* already surfaced by the humanizing toast */
   }

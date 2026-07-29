@@ -11,12 +11,7 @@ import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
 import { invalidate as invalidate_kiosk_cap_cache } from '../chain/kiosk_cap_cache.js'
 
 import * as kiosk_resolve from './kiosk_resolve.js'
-import {
-  buy_destination_kiosk,
-  cap_for_kiosk,
-  remember_character_kiosk,
-  join_kiosk_for_character,
-} from './kiosk_resolve.js'
+import { buy_destination_kiosk, cap_for_kiosk, join_kiosk_for_character } from './kiosk_resolve.js'
 
 const ADDR = '0xowner'
 const CHAR_ID = '0xcharacter'
@@ -144,11 +139,11 @@ describe('cap_for_kiosk (cap lookup FROM a known kiosk id — the inverse resolv
   })
 })
 
-// join_kiosk_for_character — the create→auto-join race fix. A just-minted character's kiosk pair is memoized from
-// the create receipt (remember_character_kiosk), so the auto-join firing seconds later resolves with ZERO reads
-// instead of racing the chain-direct owned-object index on a brand-new object. On a memo MISS it falls to the
+// join_kiosk_for_character — the create→auto-join race fix. A just-minted character's kiosk pair enters the
+// roster reducer from the create receipt, so the auto-join firing seconds later resolves with ZERO reads
+// instead of racing the chain-direct owned-object index on a brand-new object. Without a known handle it falls to the
 // derive-from-character resolver with a BOUNDED read-only retry (never the join tx). The instant-`sleep` injection
-// keeps the backoff test-fast. Unique character ids per test → the module memo never bleeds across cases.
+// keeps the backoff test-fast.
 /** A spy sdk that counts chain reads and lets the character resolve only from `resolve_on_attempt` onward. */
 function spy_sdk({ char_id, resolve_on_attempt = 1, kiosk = KIOSK_CHAR }) {
   let char_reads = 0
@@ -175,17 +170,19 @@ function spy_sdk({ char_id, resolve_on_attempt = 1, kiosk = KIOSK_CHAR }) {
 }
 const NOOP_SLEEP = async () => {}
 
-describe('join_kiosk_for_character (create→auto-join race — effects-threading + bounded resolver retry)', () => {
-  it('create-effects → returns the memoized pair with ZERO reads (no resolver call — the whole race fix)', async () => {
+describe('join_kiosk_for_character (create→auto-join race — reducer handle + bounded resolver retry)', () => {
+  it('receipt-reduced handle → returns the pair with ZERO reads (no resolver call — the whole race fix)', async () => {
     const CHAR = '0xfresh_created'
-    remember_character_kiosk(CHAR, { kiosk_id: KIOSK_CHAR, personal_kiosk_cap_id: CAP_CHAR })
     const sdk = spy_sdk({ char_id: CHAR })
-    const handle = await join_kiosk_for_character(sdk, ADDR, CHAR, NOOP_SLEEP)
+    const handle = await join_kiosk_for_character(sdk, ADDR, CHAR, {
+      known_handle: { kiosk_id: KIOSK_CHAR, personal_kiosk_cap_id: CAP_CHAR },
+      sleep: NOOP_SLEEP,
+    })
     expect(handle).toEqual({ kiosk_id: KIOSK_CHAR, personal_kiosk_cap_id: CAP_CHAR })
     expect(sdk.calls()).toEqual({ char_reads: 0, owned_reads: 0 }) // no chain read raced the fresh mint
   })
 
-  it('no memo (rejoin / legacy) → derives through the resolver, no retry when visible', async () => {
+  it('no reducer handle (rejoin / legacy) → derives through the resolver, no retry when visible', async () => {
     const CHAR = '0xlegacy_a'
     const sdk = spy_sdk({ char_id: CHAR, resolve_on_attempt: 1 })
     const handle = await join_kiosk_for_character(sdk, ADDR, CHAR, NOOP_SLEEP)
@@ -213,13 +210,15 @@ describe('join_kiosk_for_character (create→auto-join race — effects-threadin
     expect(sdk.calls().char_reads).toBe(3) // exactly 3, then the honest absence (the manual switcher is the retry)
   })
 
-  it('an incomplete memo entry is ignored (no false cache hit — falls through to the resolver)', async () => {
+  it('an incomplete reducer handle is ignored (no false hit — falls through to the resolver)', async () => {
     const CHAR = '0xpartial'
-    // @ts-expect-error — deliberately missing personal_kiosk_cap_id
-    remember_character_kiosk(CHAR, { kiosk_id: KIOSK_CHAR })
     const sdk = spy_sdk({ char_id: CHAR, resolve_on_attempt: 1 })
-    const handle = await join_kiosk_for_character(sdk, ADDR, CHAR, NOOP_SLEEP)
-    expect(sdk.calls().char_reads).toBe(1) // the partial memo did NOT short-circuit — the resolver ran
+    const handle = await join_kiosk_for_character(sdk, ADDR, CHAR, {
+      // @ts-expect-error — deliberately missing personal_kiosk_cap_id
+      known_handle: { kiosk_id: KIOSK_CHAR },
+      sleep: NOOP_SLEEP,
+    })
+    expect(sdk.calls().char_reads).toBe(1) // the partial handle did NOT short-circuit — the resolver ran
     expect(handle).toEqual({ kiosk_id: KIOSK_CHAR, personal_kiosk_cap_id: CAP_CHAR })
   })
 })

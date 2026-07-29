@@ -2402,6 +2402,7 @@
     "sponsor_outcome_unknown": "We lost the answer for that sponsored transaction — it may already have gone through. Check the result before doing it again.",
     "sponsor_stale_client": "The app is out of date. Please refresh the page to keep playing.",
     "tx_simulation_failed": "Couldn't simulate the transaction — nothing was sent. Try again.",
+    "tx_simulation_failed_reason": "Couldn't simulate the transaction — nothing was sent.\nReason: {{reason}}",
     "sale_paused": "This sale is paused right now. Check back soon.",
     "payment_below_price": "That's not enough SUI for this item's price.",
     "wrong_item": "That item doesn't match this sale. Refresh and try again.",

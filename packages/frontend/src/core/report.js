@@ -32,7 +32,7 @@ const RELEASE = typeof __GIT_SHA__ !== 'undefined' ? __GIT_SHA__ : 'dev'
 let live = false
 let handlers_installed = false
 
-/** Is Sentry initialised? (report_error / set_report_user are hard no-ops until then.) */
+/** Is Sentry initialised? (remote capture / set_report_user are hard no-ops until then.) */
 export function is_reporting_live() {
   return live
 }
@@ -148,15 +148,15 @@ function short_addr(/** @type {string} */ address) {
 }
 
 /**
- * THE single place an error becomes a Sentry event. No-op until Sentry is live. The player-facing side
- * (a humanized toast via abort_copy) is the CALLER's job — this is purely "loud to us".
+ * THE single place an error becomes locally visible and, when armed, a Sentry event. The player-facing side
+ * (a humanized toast via abort_copy) is the CALLER's job.
  * @param {unknown} err the RAW machine error (never the humanized copy — we want the real cause here)
  * @param {{ area?: string, action?: string, world?: string, character_id?: string, digest?: string,
  *   uncaught?: boolean, [k: string]: unknown }} [context] structured tags/context; `uncaught` flags
  *   a global-handler capture (mechanism handled:false).
  */
 export function report_error(err, context = {}) {
-  if (!live) return
+  if (should_drop(err)) return
   // ONE event per error object, even when it crosses two chokes (run_tx's catch rethrows into a caller's
   // toast catch that also reports): the first report stamps the object; later calls no-op. Primitives
   // (thrown strings) can't be stamped — they rely on Sentry's own dedupe integration instead.
@@ -168,6 +168,19 @@ export function report_error(err, context = {}) {
       /* frozen error object — report anyway */
     }
   }
+  const root_cause = (() => {
+    let current = err
+    const seen = new Set()
+    while (current != null && typeof current === 'object' && current.cause && !seen.has(current)) {
+      seen.add(current)
+      current = current.cause
+    }
+    return current
+  })()
+  // Console is the always-on local error surface. Include the wrapper, deepest raw cause, component stack, and
+  // structured context as separate arguments so devtools preserve their full inspectable shapes.
+  console.error('[ares-error]', err, root_cause, context.component_stack ?? '', context)
+  if (!live) return
   const { uncaught, area, action, world, character_id, digest, ...rest } = context
   Sentry.withScope((scope) => {
     scope.setContext('game', {
@@ -207,7 +220,6 @@ export function boundary_context(component_stack) {
  * @param {string | null | undefined} [component_stack]
  */
 export function report_boundary_error(error, component_stack) {
-  console.error('[error-boundary] uncaught render error', error, component_stack ?? '')
   report_error(error, boundary_context(component_stack))
 }
 

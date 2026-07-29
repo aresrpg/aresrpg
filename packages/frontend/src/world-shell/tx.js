@@ -147,19 +147,25 @@ export async function run_tx_self_pay(klass, tx, include = DEFAULT_INCLUDE) {
  * splits the price off `tx.gas`); a non-money &Random tx leaves it false and is sponsor-first for a low zkLogin
  * wallet. Same receipt/timing/throw contract as `run_tx`.
  * @param {string} klass @param {any} tx @param {any} [include]
- * @param {{ sponsor_excluded?: boolean }} [opts]
+ * @param {{ sponsor_excluded?: boolean,
+ *   on_executed?:(receipt:{digest:string,result:any|null,at:number})=>void|Promise<void> }} [opts]
  * @returns {Promise<{ result: any, timing: TxTiming }>}
  */
-export async function run_tx_random(klass, tx, include = DEFAULT_INCLUDE, { sponsor_excluded = false } = {}) {
+export async function run_tx_random(
+  klass,
+  tx,
+  include = DEFAULT_INCLUDE,
+  { sponsor_excluded = false, on_executed } = {}
+) {
   // run() calls submit(wallet_name, address, tx, gas_pin, want_effects); bind the money-split flag onto the
   // terminal-&Random door (gas_pin is unused here; the door hardcodes want_effects for the fast path).
   const submit = (wallet_name, address, transaction) =>
     submit_terminal_random_tx(wallet_name, address, transaction, { sponsor_excluded })
-  return run_character_action(() => run(klass, tx, include, undefined, submit))
+  return run_character_action(() => run(klass, tx, include, undefined, submit, { on_executed }))
 }
 
 /** The shared pipeline behind both doors — sign+execute via `submit`, wait, normalize, throw on failure. */
-async function run(klass, tx, include, signer, submit) {
+async function run(klass, tx, include, signer, submit, { on_executed } = {}) {
   const auth = use_auth.getState()
   const address = signer?.address ?? auth.address
   const wallet_name = signer?.wallet_name ?? auth.wallet_name
@@ -181,6 +187,22 @@ async function run(klass, tx, include, signer, submit) {
     // detection vs the SDK default's up-to-2000ms dead zones) instead of the un-tuned default poll schedule.
     const submit_result = await submit(wallet_name, address, tx, undefined, true)
     ;({ digest } = submit_result)
+    if (on_executed) {
+      // A digest is the executed-write boundary. Start optimistic projection immediately; never await this read
+      // edge and never let its failure turn an already-executed transaction into a retryable tx failure.
+      try {
+        const executed_result = submit_result.effects_result ? normalize_receipt(submit_result.effects_result) : null
+        const known_failure = executed_result?.effects?.status?.status === 'failure'
+        if (!known_failure) {
+          const projection = on_executed({ digest, result: executed_result, at: now() })
+          Promise.resolve(projection).catch((error) =>
+            report_error(error, { area: 'tx', action: klass, stage: 'executed_projection', digest })
+          )
+        }
+      } catch (error) {
+        report_error(error, { area: 'tx', action: klass, stage: 'executed_projection', digest })
+      }
+    }
     stage = submit_result.effects_result ? 'certified-effects' : 'finality-wait'
     const t1 = now() // wallet signed + submitted (± the certified effects, on the fast path)
     // #23 gRPC: wait (or reuse the already-certified result) + re-project into the jsonRpc-ish shape.

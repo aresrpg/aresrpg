@@ -57,11 +57,18 @@ export function project_character_mint(receipt: any, draft: character_mint_draft
     String(character_change.objectId),
     String(character_change.objectType)
   )
+  const kiosk_id = kiosk_change?.objectId ? String(kiosk_change.objectId) : null
+  const personal_kiosk_cap_id = cap_change?.objectId ? String(cap_change.objectId) : null
+  const receipt_character = {
+    ...character,
+    kiosk_id,
+    personal_kiosk_cap_id,
+  }
 
   return {
-    character,
-    kiosk_id: kiosk_change?.objectId ? String(kiosk_change.objectId) : null,
-    personal_kiosk_cap_id: cap_change?.objectId ? String(cap_change.objectId) : null,
-    roster_input: { kind: 'receipt_patch', op: 'mint_character', row: character },
+    character: receipt_character,
+    kiosk_id,
+    personal_kiosk_cap_id,
+    roster_input: { kind: 'receipt_patch', op: 'mint_character', row: receipt_character },
   }
 }

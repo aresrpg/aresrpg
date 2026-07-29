@@ -22,11 +22,12 @@ import { use_toast } from '../../../../../toast'
 import { use_auth } from '../../../../../auth'
 import { get_encyclopedia } from '../../../../../rpc/client'
 import { use_rpc_view } from '../../../../../rpc/use_view'
-import { add_friend_flow, on_friends_changed } from '../../../../../world-shell/friends_actions'
+import { refresh_friends, use_friends } from '../../../../../world-shell/friends_adapter.js'
+import { add_friend_flow } from '../../../../../world-shell/friends_actions'
 import { ItemIcon } from '../../ItemIcon.jsx'
 import { artisan_craftable_recipes } from './commission_recipes.js'
 import { owned_from_items, commission_recipe_row, missing_summary, artisan_net_mist } from './commission_logic.js'
-import { list_artisans, request_craft, to_mist, from_mist, meets_min_payment, MIN_PAYMENT_SUI } from './commission_actions.js'
+import { artisans_from_rows, request_craft, to_mist, from_mist, meets_min_payment, MIN_PAYMENT_SUI } from './commission_actions.js'
 
 const JOB_LABEL = /** @type {Record<string, string>} */ (Object.fromEntries(JOBS.map(j => [j.id, j.label])))
 
@@ -47,8 +48,11 @@ export function CommissionCustomerView() {
   const items = use_game_state(s => s.sui.items)
   const address = use_auth(s => s.address)
 
-  const [artisans, set_artisans] = useState(/** @type {import('./commission_actions.js').Artisan[]} */ ([]))
-  const [loading, set_loading] = useState(true)
+  const friend_rows = use_friends((state) => state.rows)
+  const friends_loading = use_friends((state) => state.loading)
+  const friends_loaded = use_friends((state) => state.loaded)
+  const artisans = useMemo(() => artisans_from_rows(friend_rows), [friend_rows])
+  const loading = !!address && (friends_loading || !friends_loaded)
   const [selected_address, set_selected_address] = useState(/** @type {string | null} */ (null))
   const [selected_recipe_id, set_selected_recipe_id] = useState(/** @type {string | null} */ (null))
   const [payment, set_payment] = useState(String(MIN_PAYMENT_SUI))
@@ -56,26 +60,22 @@ export function CommissionCustomerView() {
   // Empty-state SHORTCUT: paste an artisan's 0x address to add them as a friend (Commission Flow v2 — the artisan
   // list IS the friend list). Reuses the SAME add flow the presence panel uses (add_friend_flow); no redesign.
   const [add_input, set_add_input] = useState('')
-  const [reload, set_reload] = useState(0)
 
-  // The artisan list = MY FRIEND ROSTER. Re-reads on login change + after any roster
-  // add/remove from ANY surface (this bar, the presence panel, an in-world click) so a fresh friend appears here.
+  // The artisan list is a projection of the ONE friend atom. This mount only starts a reconcile read; confirmed
+  // add/remove results paint the shared rows immediately, so there is no callback-owned reload lane.
   useEffect(() => {
-    let alive = true
-    set_loading(true)
-    list_artisans(address).then(list => {
-      if (!alive) return
-      set_artisans(list)
-      // keep the current pick if it's still a friend, else fall to the first row
-      set_selected_address(prev => (prev && list.some(a => a.address === prev) ? prev : list[0]?.address ?? null))
-      set_loading(false)
-    })
-    return () => {
-      alive = false
-    }
-  }, [address, reload])
+    const controller = new AbortController()
+    void refresh_friends(address, controller.signal)
+    return () => controller.abort()
+  }, [address])
 
-  useEffect(() => on_friends_changed(() => set_reload(r => r + 1)), [])
+  useEffect(() => {
+    set_selected_address((previous) =>
+      previous && artisans.some((artisan_row) => artisan_row.address === previous)
+        ? previous
+        : (artisans[0]?.address ?? null)
+    )
+  }, [artisans])
 
   const artisan = useMemo(
     () => artisans.find(a => a.address === selected_address) ?? null,
@@ -152,7 +152,7 @@ export function CommissionCustomerView() {
   }
 
   // The add-artisan-as-friend shortcut in the empty state — reuses the presence panel's exact add flow, then the
-  // roster-change bus refetches the list (on_friends_changed → reload). Guards empty input; the flow toasts the rest.
+  // shared friend reducer paints the new artisan immediately. Guards empty input; the flow toasts the rest.
   const on_add_friend = async () => {
     const v = add_input.trim()
     if (!v) return
