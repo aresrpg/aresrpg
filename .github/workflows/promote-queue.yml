@@ -21,6 +21,20 @@
 # waits for every check (not just gate/checks) before it lands. No polling, no babysitting — the
 # owner's one `/promote` already blessed each PR. Silent: guidance is posted once by promote.yml.
 #
+# THE STRAND (#1530): `workflow_run` fires only on a NEW gate/checks completion. If a PR's full
+# check rollup settles green sometime AFTER the last gate/checks event this trigger list produced
+# — e.g. a slow third-party check finishes minutes later — the queue evaluated the PR too early,
+# found it ineligible, and no later event ever re-fires it: the PR sits clean, all-green,
+# promote-requested, and the queue stays dark until an UNRELATED PR's CI happens to complete.
+# `schedule:` below is the dead-man sweep that closes it: a low-frequency tick re-runs this same
+# job on an otherwise-quiet repo. It is not a new engine — it shares the cheap gate (skip when
+# nothing is promote-requested), the same landing engine, and the same `promotion-landing`
+# concurrency lock (queue: max, cancel-in-progress: false) as every other trigger, so a scheduled
+# tick can never race a workflow_run or a `/promote` request, only wait its turn in the same FIFO.
+# The engine re-verifies everything from scratch every run, so a tick that finds nothing eligible
+# (or re-confirms an already-landed PR is gone) is a clean no-op — safe by construction, exactly
+# as #1530 itself proposed.
+#
 # SECURITY: a workflow_run's triggering head is UNTRUSTED (a fork PR's code) and stays excluded
 # exactly as before — the checkout below takes a FIXED BRANCH REF and never a PR ref, so a
 # triggering head can only enter as DATA (`refs/pull/<n>/head`, fetched inside the engine), never
@@ -33,16 +47,21 @@
 # further gated by the engine's owner-/promote + approval asserts, and edge's required_signatures
 # rejects any unsigned (e.g. API-rebased) commit.
 #
-# BOOTSTRAP: `workflow_run` (like `issue_comment`) only triggers from the workflow file on the
-# DEFAULT branch (master). This file activates the queue the moment it reaches master via a
-# release promotion; until then the live `/promote` handler on master is unchanged. Note the two
-# are different questions: WHICH FILE runs is fixed by GitHub at master, WHICH ENGINE it executes
-# is the checkout ref below — edge.
+# BOOTSTRAP: `workflow_run` (like `issue_comment` and `schedule`) only triggers from the workflow
+# file on the DEFAULT branch (master). This file activates the queue the moment it reaches master
+# via a release promotion; until then the live `/promote` handler on master is unchanged. Note the
+# two are different questions: WHICH FILE runs is fixed by GitHub at master, WHICH ENGINE it
+# executes is the checkout ref below — edge.
 name: promote-queue
 on:
   workflow_run:
     workflows: [gate, checks]
     types: [completed]
+  schedule:
+    # Dead-man sweep for #1530 (see the header comment above). Every 10 minutes is tight enough
+    # that a stranded PR's wait is player-felt-short, loose enough to stay a background hum next
+    # to the workflow_run path that fires on every real CI completion.
+    - cron: '*/10 * * * *'
 permissions:
   contents: write
   actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
@@ -56,10 +75,11 @@ permissions:
   # below and statically by .github/scripts/test/promote-split-check.sh.
 jobs:
   land:
-    if: github.event.workflow_run.event == 'pull_request'
-    # Keep the landing lock behind the triggering-run gate above: only PR CI can make a queued
-    # head newly eligible, so base-branch CI must never queue here. This side must also opt into the
-    # shared FIFO; a default-single queue run could otherwise replace a pending /promote handler.
+    if: github.event_name == 'schedule' || github.event.workflow_run.event == 'pull_request'
+    # Keep the landing lock behind the triggering-run gate above: only PR CI, or the schedule
+    # dead-man sweep (#1530), can make a queued head newly eligible — base-branch CI must never
+    # queue here. This side must also opt into the shared FIFO; a default-single queue run could
+    # otherwise replace a pending /promote handler.
     concurrency:
       group: promotion-landing
       cancel-in-progress: false
@@ -79,7 +99,10 @@ jobs:
         # leaves this engine's stamping power UNKNOWN, and an engine in an unknown auth state has
         # no business landing commits on production.
         env:
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          # workflow_run carries the triggering head; schedule carries none — fall back to this
+          # run's own checked-out sha (master, the file's own ref). Either is a valid sha to probe:
+          # the canary only proves the TOKEN can't mint, never anything about the sha itself.
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -uo pipefail
           if OUT=$(gh api "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
