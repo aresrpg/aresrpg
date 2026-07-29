@@ -27,6 +27,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import sdk_classes from '@aresrpg/sdk/classes'
+import { get_secondary_stats } from '@aresrpg/sdk/stats'
 
 import { ModalFrame } from '../components/modal_frame'
 import { seed_el_label } from '../game/screens/hud/seed-effect-line.js'
@@ -158,6 +159,11 @@ function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
   const budget = stat_budget(character.level)
   const { items } = resolve_loadout(by_id, character.loadout)
   const equipment_stats = equipment_aggregate(items)
+  // READ-ONLY COMBAT ROWS come from the SDK's existing secondary-stat derivation — the same home the game
+  // stats panel reads. This surface only decides which non-zero gear donations to display; it owns no aggregate.
+  const secondary_stats = get_secondary_stats({ equipment_stats } as Parameters<typeof get_secondary_stats>[0]).filter(
+    ({ value }) => value !== 0
+  )
 
   return (
     <div className="flex flex-col gap-2">
@@ -194,6 +200,16 @@ function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
                   <span className="stats__prow-bonus"> ({signed_bonus})</span>
                 </Tooltip>
               )}
+            </div>
+          )
+        })}
+        {secondary_stats.map(({ key, value, unit }) => {
+          const suffix = unit === 'percent' ? '%' : ''
+          const signed_value = value > 0 ? `+${value}${suffix}` : `${value}${suffix}`
+          return (
+            <div className="stats__prow" key={key}>
+              <StatIdentity t={t} stat_key={key} describe={false} />
+              <span className="stats__prow-bonus"> ({signed_value})</span>
             </div>
           )
         })}

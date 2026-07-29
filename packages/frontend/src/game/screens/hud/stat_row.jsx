@@ -69,6 +69,14 @@ export const stat_text = (/** @type {any} */ t, /** @type {string} */ key) => {
       return { label: t('stat.critical_hit'), description: t('stats.description.critical_hit') }
     case STATISTICS.RAW_DAMAGE:
       return { label: t('stat.raw_damage'), description: t('stats.description.raw_damage') }
+    case STATISTICS.FIRE_RESISTANCE:
+      return { label: t('stat.fire_resistance'), description: '' }
+    case STATISTICS.WATER_RESISTANCE:
+      return { label: t('stat.water_resistance'), description: '' }
+    case STATISTICS.EARTH_RESISTANCE:
+      return { label: t('stat.earth_resistance'), description: '' }
+    case STATISTICS.AIR_RESISTANCE:
+      return { label: t('stat.air_resistance'), description: '' }
     default:
       return { label: '', description: '' }
   }
