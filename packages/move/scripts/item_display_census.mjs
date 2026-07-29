@@ -69,7 +69,7 @@ export function classify_image_url(url) {
   if (value.startsWith('/'))
     return { url: value, kind: 'relative', explorer_ok: false, unresolved, host: null }
   try {
-    const host = new URL(value).host
+    const { host } = new URL(value)
     return { url: value, kind: 'absolute', explorer_ok: !unresolved, unresolved, host }
   } catch {
     return { url: value, kind: 'malformed', explorer_ok: false, unresolved, host: null }
@@ -82,6 +82,18 @@ export function index_by_id(objects, field = 'name') {
   for (const object of objects ?? []) {
     const id = object?.id
     if (is_id(id) && object?.[field] != null && !(id in out)) out[id] = object[field]
+  }
+  return out
+}
+
+/** Stable authored identity (`item_type`) -> field value, first-wins. Unlike an ItemTemplate object id,
+ * `item_type` survives a republish and is therefore the only valid join key for authored convergence. */
+export function index_by_item_type(templates, field = 'name') {
+  const out = {}
+  for (const template of templates ?? []) {
+    const item_type = template?.item_type
+    if (typeof item_type === 'string' && item_type.length > 0 && template?.[field] != null && !(item_type in out))
+      out[item_type] = template[field]
   }
   return out
 }
@@ -121,7 +133,7 @@ export function item_type_collisions(templates) {
   for (const t of templates ?? []) {
     const it = t?.item_type
     if (it == null) continue
-    ;(by_type[it] ??= []).push(t.id)
+    by_type[it] = [...(by_type[it] ?? []), t.id]
   }
   const shared = {}
   const unique = []
@@ -133,19 +145,17 @@ export function item_type_collisions(templates) {
 }
 
 /** Seed-convergence oracle: for the authored-name sample (slug -> expected name), is the on-chain template
- * name equal to the authored truth? A non-empty `diverged` means a TEMPLATE (not just an object) still
- * lies — the ceremony rename never landed. Proves the "template == authored == client-correct" claim. */
-export function template_seed_convergence({ expected_name_by_slug, manifest_items, template_name_by_id }) {
+ * with that stable item_type equal to the authored truth? A non-empty `diverged` means a TEMPLATE (not just
+ * an object) still lies — the ceremony rename never landed. */
+export function template_seed_convergence({ expected_name_by_slug, template_name_by_slug }) {
   const converged = []
   const diverged = []
   const missing = []
   for (const [slug, expected] of Object.entries(expected_name_by_slug ?? {})) {
-    const id = manifest_items?.[slug]
-    if (!is_id(id)) { missing.push({ slug, why: 'no manifest id' }); continue }
-    const actual = template_name_by_id?.[id]
-    if (actual == null) { missing.push({ slug, id, why: 'template unreadable' }); continue }
-    if (actual === expected) converged.push({ slug, id, name: actual })
-    else diverged.push({ slug, id, expected, actual })
+    const actual = template_name_by_slug?.[slug]
+    if (actual == null) { missing.push({ slug, why: 'item_type unreadable' }); continue }
+    if (actual === expected) converged.push({ slug, name: actual })
+    else diverged.push({ slug, expected, actual })
   }
   return { converged, diverged, missing }
 }
@@ -164,18 +174,6 @@ async function gql(endpoint, query, variables = {}) {
   const body = await response.json()
   if (body.errors) throw new Error(`GraphQL: ${JSON.stringify(body.errors).slice(0, 300)}`)
   return body.data
-}
-
-/** Batched read of a flat {id,name,item_type,category,template} per object id (multiGetObjects, ≤45/call). */
-async function read_objects(endpoint, ids) {
-  const out = {}
-  for (let i = 0; i < ids.length; i += 45) {
-    const keys = ids.slice(i, i + 45).map((a) => `{address:"${a}"}`).join(',')
-    const data = await gql(endpoint, `query{ multiGetObjects(keys:[${keys}]){ address asMoveObject{ contents{ json } } } }`)
-    for (const node of data?.multiGetObjects ?? [])
-      if (node?.asMoveObject?.contents?.json) out[node.address] = node.asMoveObject.contents.json
-  }
-  return out
 }
 
 /** Paginate every ROOT-VISIBLE object of a Move type. NOTE: kiosk-LOCKED items are dynamic-object-fields
@@ -223,7 +221,13 @@ function deployment(network) {
   const displays = ares?.displays ?? {}
   const origin = ares?.origin
   if (!is_id(origin)) throw new Error(`release.json has no aresrpg.origin for ${network}`)
-  return { origin, item_type: `${origin}::item::Item`, display_item: displays.Item, display_template: displays.ItemTemplate }
+  return {
+    origin,
+    item_type: `${origin}::item::Item`,
+    template_type: `${origin}::item::ItemTemplate`,
+    display_item: displays.Item,
+    display_template: displays.ItemTemplate,
+  }
 }
 
 async function main() {
@@ -231,14 +235,14 @@ async function main() {
   const limit = process.env.LIMIT ? Number(process.env.LIMIT) : null
   const endpoint = GQL(network)
   const dep = deployment(network)
-  const manifest = read_json(join(script_dir, 'out', 'seed_manifest.json'))
-  const manifest_items = manifest.items ?? {}
 
-  const all_template_ids = Object.values(manifest_items).filter(is_id)
-  const template_ids = limit == null ? all_template_ids : all_template_ids.slice(0, limit)
-  const template_json = await read_objects(endpoint, template_ids)
-  const templates = Object.values(template_json)
+  // ItemTemplate ids are deployment receipts and become stale at every republish. Enumerate the current
+  // lineage by its live Move type, then use `item_type` for authored joins and `id` only for an Item's exact
+  // template reference.
+  const all_templates = await enumerate_type(endpoint, dep.template_type)
+  const templates = limit == null ? all_templates : all_templates.slice(0, limit)
   const template_name_by_id = index_by_id(templates, 'name')
+  const template_name_by_slug = index_by_item_type(templates, 'name')
 
   const objects = await enumerate_type(endpoint, dep.item_type)
   const names = diff_object_vs_template(objects, template_name_by_id)
@@ -246,14 +250,13 @@ async function main() {
   const collisions = item_type_collisions(templates)
   const convergence = template_seed_convergence({
     expected_name_by_slug: cosmetic_expected_names(repo_dir),
-    manifest_items,
-    template_name_by_id,
+    template_name_by_slug,
   })
 
   const display_item = dep.display_item ? await read_display_fields(endpoint, dep.display_item) : null
   const display_template = dep.display_template ? await read_display_fields(endpoint, dep.display_template) : null
   // Resolve the Display over one stale object + one unique-item_type object to SHOW the icon verdict.
-  const stale_sample = names.stale[0]
+  const [stale_sample] = names.stale
   const stale_obj = objects.find((o) => o?.id === stale_sample?.id)
   const image_state = display_item?.fields?.image_url
     ? classify_image_url(interpolate_display(display_item.fields, stale_obj ?? objects[0] ?? {}).image_url)
@@ -262,7 +265,7 @@ async function main() {
   console.log(`=== ITEM DISPLAY-TRUTH CENSUS | READ-ONLY | network=${network} ===`)
   console.log(`origin=${dep.origin}`)
   console.log(
-    `templates read: ${templates.length}/${all_template_ids.length}${limit ? ` (LIMIT ${limit})` : ''} · ` +
+    `templates read: ${templates.length}/${all_templates.length}${limit ? ` (LIMIT ${limit})` : ''} · ` +
       `root-visible Item objects: ${objects.length} (kiosk-locked items are DOFs — not counted; lower bound)`,
   )
   console.log(
@@ -318,6 +321,7 @@ async function main() {
     network,
     generated_at: new Date().toISOString(),
     origin: dep.origin,
+    template_identity: 'live ItemTemplate.item_type (enumerated by current Move type)',
     templates_read: templates.length,
     root_visible_objects: objects.length,
     kiosk_locked_caveat: 'kiosk-locked items are dynamic-object-fields, not returned by a root type filter — the object census is a lower bound',

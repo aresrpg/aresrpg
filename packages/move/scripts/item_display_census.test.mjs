@@ -11,6 +11,7 @@ import {
   classify_image_url,
   diff_object_vs_template,
   index_by_id,
+  index_by_item_type,
   interpolate_display,
   item_type_collisions,
   template_seed_convergence,
@@ -99,11 +100,26 @@ test('index_by_id — first-wins, id-validated', () => {
 test('template_seed_convergence — a diverged template (rename never landed) is surfaced', () => {
   const result = template_seed_convergence({
     expected_name_by_slug: { cape_lorito_air: 'Lorito Cloak (Opal)', cape_lorito_x: 'Missing' },
-    manifest_items: { cape_lorito_air: AIR_TMPL, cape_lorito_x: id(77) },
-    template_name_by_id: { [AIR_TMPL]: 'Lorito Cloak (Opal)', [id(77)]: 'WRONG' },
+    template_name_by_slug: { cape_lorito_air: 'Lorito Cloak (Opal)', cape_lorito_x: 'WRONG' },
   })
   expect(result.converged.map((r) => r.slug)).toEqual(['cape_lorito_air'])
   expect(result.diverged.map((r) => r.slug)).toEqual(['cape_lorito_x'])
+})
+
+test('template_seed_convergence follows stable item_type identity across a republish', () => {
+  const current_templates = [
+    { id: id(42), item_type: 'cape_lorito_air', name: 'Lorito Cloak (Opal)' },
+  ]
+  const result = template_seed_convergence({
+    expected_name_by_slug: { cape_lorito_air: 'Lorito Cloak (Opal)' },
+    template_name_by_slug: index_by_item_type(current_templates),
+  })
+
+  expect(result).toEqual({
+    converged: [{ slug: 'cape_lorito_air', name: 'Lorito Cloak (Opal)' }],
+    diverged: [],
+    missing: [],
+  })
 })
 
 test('HISTORICAL_COSMETIC_NAMES pins the delisted element family (the Opal source of truth)', () => {
