@@ -6,7 +6,10 @@
 //
 // The syncing state is a quiet one-line header at the viewport top. Normal checkpoint drift stays below the
 // checkpoint-lag threshold and renders nothing; real staleness keeps the numeric count and locally predicted
-// status while leaving the minimap corner to the overlaid toast stack.
+// status while leaving the minimap corner to the overlaid toast stack. Alerting is deliberately asymmetric:
+// the header appears only once the lag has held above the threshold for SUSTAINED_LAG_SAMPLES consecutive
+// polls (a spike shorter than one poll interval is seen at most once and stays quiet), but a single caught-up
+// sample clears it — being late is a claim that must be corroborated, being healthy is not.
 //
 // The ETA is a pure fold over the SAME polled samples this component already reads (see ./sync_eta) — no
 // new poller, no store: one local `useState` derived by one `useEffect` edge that feeds the pure reducer.
@@ -19,7 +22,7 @@ import { useTranslation } from 'react-i18next'
 import { get_sdk } from '../chain/sdk'
 import { use_fight_view } from '../game/store.js'
 import { get_status } from '../rpc/client'
-import { resolve_checkpoint_lag, type CheckpointLag } from '../rpc/checkpoint_lag'
+import { fold_lag_streak, is_sustained_lag, resolve_checkpoint_lag, type CheckpointLag } from '../rpc/checkpoint_lag'
 import { fold_sync_sample, format_eta_duration, project_sync_status, type SyncEstimatorState } from '../rpc/sync_eta'
 import { use_rpc_view } from '../rpc/use_view'
 
@@ -48,11 +51,22 @@ export function RpcLagBanner() {
   const { data } = use_rpc_view(read_checkpoint_lag, { deps: [], interval_ms: POLL_MS })
   const fight_deadline_starved = use_fight_view()?.deadline_starved ?? false
   const [estimator, set_estimator] = useState<SyncEstimatorState | null>(null)
+  const [lag_streak, set_lag_streak] = useState(0)
   const was_lagging_ref = useRef(false)
 
-  const lagging = data?.lagging ?? false
+  const sample_lagging = data?.lagging ?? false
   const remaining = data?.remaining_checkpoints
   const sampled_at = data?.sampled_at
+
+  // The persistence gate, folded per landed sample (`sampled_at` is the sample's by-value identity, so an
+  // unchanged checkpoint count still counts as an observation, and a FAILED poll — which retains the prior
+  // data — is not one). A healthy sample resets the streak, so recovery still clears the header immediately.
+  useEffect(() => {
+    if (sampled_at == null) return
+    set_lag_streak((prev) => fold_lag_streak(prev, sample_lagging))
+  }, [sample_lagging, sampled_at])
+
+  const lagging = is_sustained_lag(lag_streak)
 
   // The one edge that feeds the pure fold: every successful async observation re-enters as an input,
   // including a later sample whose remaining count is unchanged. `sampled_at` is its by-value identity;

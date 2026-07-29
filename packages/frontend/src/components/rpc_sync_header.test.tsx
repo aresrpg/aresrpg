@@ -5,7 +5,34 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
+import { fold_lag_streak, is_sustained_lag, resolve_checkpoint_lag } from '../rpc/checkpoint_lag'
+
 import { rpc_sync_header } from './rpc_sync_header'
+
+const COMMITTER_CHECKPOINT = 1_000_000
+
+/** Replay a series of observed lags through the REAL decision path the banner rides: per-sample threshold
+ * resolution → consecutive-sample fold → sustained predicate → the chip renderer. '' means nothing mounts. */
+function header_after_samples(lags: readonly number[]): string {
+  let streak = 0
+  let remaining = 0
+
+  for (const lag of lags) {
+    const sample = resolve_checkpoint_lag(COMMITTER_CHECKPOINT + lag, COMMITTER_CHECKPOINT)
+    streak = fold_lag_streak(streak, sample?.lagging ?? false)
+    remaining = sample?.remaining_checkpoints ?? 0
+  }
+
+  const syncing = is_sustained_lag(streak)
+  return renderToStaticMarkup(
+    rpc_sync_header({
+      syncing,
+      sync_label: 'Syncing',
+      status_label: 'Measuring speed…',
+      remaining: syncing ? remaining : undefined,
+    })
+  )
+}
 
 describe('rpc_sync_header', () => {
   test('mounts a full-width quiet header with spinner, label, and numeric progress while syncing', () => {
@@ -40,6 +67,47 @@ describe('rpc_sync_header', () => {
         remaining: 42,
       })
     ).toBeNull()
+  })
+})
+
+describe('banner visibility over a sample series', () => {
+  test('a small drift blip stays invisible however long it lasts', () => {
+    expect(header_after_samples([8])).toBe('')
+    expect(header_after_samples([8, 8, 8, 8])).toBe('')
+  })
+
+  test('a single deeply-late sample stays invisible — one spike is not an incident', () => {
+    expect(header_after_samples([150])).toBe('')
+    expect(header_after_samples([0, 150])).toBe('')
+  })
+
+  test('a lag that survives consecutive samples mounts the chip with its live count', () => {
+    const html = header_after_samples([150, 150])
+
+    expect(html).toContain('data-rpc-sync-header=""')
+    expect(html).toContain('data-sync-progress=""')
+    expect(html).toContain('150')
+    expect(html).toContain('Syncing')
+  })
+
+  test('the count shown is the latest sample, not the peak of the episode', () => {
+    expect(header_after_samples([26_510, 26_510, 12_000])).toContain('12,000')
+  })
+
+  test('catching up clears the chip on the very next healthy sample', () => {
+    expect(header_after_samples([150, 150, 4])).toBe('')
+  })
+})
+
+describe('RpcLagBanner persistence gate wiring', () => {
+  test('the chip renders off the sustained predicate, never off a raw single sample', () => {
+    // Same DOM-free seam lock as the estimator ingress below: the pure pipeline above stays green even if the
+    // component forgot to consume it, so pin that the gate is what `lagging` — and thus the chip — rides on.
+    const source = readFileSync(new URL('./RpcLagBanner.tsx', import.meta.url), 'utf8')
+
+    expect(source).toContain('is_sustained_lag(lag_streak)')
+    expect(source).toContain('fold_lag_streak(prev, sample_lagging)')
+    expect(source).not.toMatch(/const lagging = data\?\.lagging/)
   })
 })
 

@@ -2,7 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { CHECKPOINT_LAG_THRESHOLD, resolve_checkpoint_lag } from './checkpoint_lag'
+import {
+  CHECKPOINT_LAG_THRESHOLD,
+  SUSTAINED_LAG_SAMPLES,
+  fold_lag_streak,
+  is_sustained_lag,
+  resolve_checkpoint_lag,
+} from './checkpoint_lag'
 
 describe('checkpoint lag threshold', () => {
   test('normal checkpoint drift stays quiet through the staleness threshold', () => {
@@ -40,5 +46,42 @@ describe('checkpoint lag threshold', () => {
     expect(resolve_checkpoint_lag(undefined, 100)).toBeNull()
     expect(resolve_checkpoint_lag(101n, null)).toBeNull()
     expect(resolve_checkpoint_lag(BigInt(Number.MAX_SAFE_INTEGER) + 1n, 100)).toBeNull()
+  })
+
+  test('alerts only at a hundred checkpoints behind, not at ordinary drift', () => {
+    expect(CHECKPOINT_LAG_THRESHOLD).toBe(100)
+    expect(resolve_checkpoint_lag(1_000_008, 1_000_000)?.lagging).toBe(false)
+    expect(resolve_checkpoint_lag(1_000_100, 1_000_000)?.lagging).toBe(false)
+    expect(resolve_checkpoint_lag(1_000_101, 1_000_000)?.lagging).toBe(true)
+  })
+})
+
+describe('sustained lag gate', () => {
+  test('a lone over-threshold sample never reaches the sustained bar', () => {
+    expect(SUSTAINED_LAG_SAMPLES).toBeGreaterThan(1)
+    expect(is_sustained_lag(fold_lag_streak(0, true))).toBe(false)
+  })
+
+  test('consecutive over-threshold samples reach the bar and settle there', () => {
+    let streak = 0
+    for (let sample = 0; sample < SUSTAINED_LAG_SAMPLES; sample += 1) streak = fold_lag_streak(streak, true)
+
+    expect(is_sustained_lag(streak)).toBe(true)
+    // Clamped: a long episode keeps the folded value stable instead of counting forever.
+    expect(fold_lag_streak(streak, true)).toBe(SUSTAINED_LAG_SAMPLES)
+  })
+
+  test('one healthy sample resets the streak so recovery is never delayed', () => {
+    const sustained = fold_lag_streak(fold_lag_streak(0, true), true)
+    expect(is_sustained_lag(sustained)).toBe(true)
+
+    const recovered = fold_lag_streak(sustained, false)
+    expect(recovered).toBe(0)
+    expect(is_sustained_lag(recovered)).toBe(false)
+  })
+
+  test('an interrupted streak restarts rather than accumulating across episodes', () => {
+    const interrupted = fold_lag_streak(fold_lag_streak(fold_lag_streak(0, true), false), true)
+    expect(is_sustained_lag(interrupted)).toBe(false)
   })
 })
