@@ -219,6 +219,13 @@ jobs:
           set -euo pipefail
           node packages/move/scripts/ceremony_preflight_compat.mjs --mode-check
           node packages/move/scripts/ceremony_preflight_compat.mjs --size-only
+      - name: the landing engine's own harnesses (#1573)
+        # These pin the promotion asserts and the post-landing dispatch argv, and until now NOTHING
+        # ran them — the machinery that closes the board was guarded by tests no gate invoked, which
+        # is how a dispatch could go wrong twice without CI noticing. Pure bash, no network.
+        run: |
+          bash .github/scripts/test/promote-green-eval-check.sh
+          bash .github/scripts/test/promote-land-dispatch-check.sh
       - name: enforcement ladder — bun run lint
         run: bun run lint
 
