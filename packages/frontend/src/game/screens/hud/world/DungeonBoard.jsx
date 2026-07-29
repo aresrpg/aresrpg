@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_game_state, use_fight_view } from '../../../store.js'
+import { use_spell_corpus } from '../../../data/use_spell_corpus.js'
 import { use_expedition, STATUS_ACTIVE as EXPEDITION_ACTIVE } from '../../../../roster/store'
 import { seat_character } from '../../../../world-shell/seat_character.js'
 import { fight_spell_template, resolve_class_spells, seat_spell_level, seat_spell_row } from '../fight-spells.js'
@@ -142,6 +143,7 @@ export function DungeonBoard() {
   const character_id = use_dungeon((s) => s.character_id)
   const fight = use_fight_view() // synchronous core view (S2 mirror kill) — the board never gates on a lagging copy
   const characters = use_game_state((s) => s.sui.characters)
+  const spell_corpus = use_spell_corpus()
   const controlled_character_id = fight?.my_entity_id ?? character_id
 
   // LEAVE-DUNGEON confirm modal (replaces the native window.confirm — standing house law: no OS dialogs). The
@@ -200,7 +202,7 @@ export function DungeonBoard() {
       : xp_progress(my_character?.experience ?? 0).level
   // The REAL on-chain spells this character can cast (unlock_level ≤ level), each carrying its SpellTemplate
   // object_id — the single source the bar renders and the cast stages. A class with no seed → [] (weapon+move).
-  const my_spells = useMemo(() => resolve_class_spells(my_class, my_level), [my_class, my_level])
+  const my_spells = useMemo(() => resolve_class_spells(my_class, my_level), [my_class, my_level, spell_corpus])
 
   // D98 (a "no valid target" bug — targeting felt wrong) — the cast RANGE + AP are PER-CLASS, from the seeded
   // primary spell, NOT a hardcoded [1,4]/4. The old constants matched only senshi's fire_strike ([1,4], 4 AP); a
