@@ -188,6 +188,30 @@ export function report_error(err, context = {}) {
 }
 
 /**
+ * The context a React error boundary reports a caught crash under. PURE — exported so the boundary's
+ * contract is unit-assertable without arming Sentry.
+ * @param {string | null | undefined} component_stack React's own component stack (errorInfo.componentStack)
+ */
+export function boundary_context(component_stack) {
+  return { area: 'error_boundary', uncaught: true, component_stack: component_stack ?? null }
+}
+
+/**
+ * A CAUGHT CRASH IS STILL A CRASH (#1563). A boundary that only re-renders a fallback is a silent total
+ * failure: React 19 hands a boundary-caught error to nobody else, so the client died for every seated
+ * fighter with zero console line, zero pageerror, and nothing for a monitor or a driven session to see.
+ * This is the ONE door a boundary reports through — the console line makes it visible locally (the one
+ * sanctioned raw-console outlet in docs/ERRORS.md's convention: here the console IS the error surface),
+ * report_error makes it visible to us, and the component stack says WHICH subtree died.
+ * @param {unknown} error the raw thrown value
+ * @param {string | null | undefined} [component_stack]
+ */
+export function report_boundary_error(error, component_stack) {
+  console.error('[error-boundary] uncaught render error', error, component_stack ?? '')
+  report_error(error, boundary_context(component_stack))
+}
+
+/**
  * Set the pseudonymous Sentry user to the connected wallet address (on-chain data only — NEVER any email
  * or Google identity). Pass null on logout. No-op until Sentry is live. Called from auth's address
  * subscription (subsequent switches) and once at boot from main.tsx (the initial connect).

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import * as Sentry from '@sentry/react'
 import { Component, Suspense, lazy, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 
 import i18n from './i18n'
+import { report_boundary_error } from './core/report.js'
 import { use_auth, type AuthState } from './auth'
 import { DappKitProviders } from './auth/dapp_kit_providers'
 import { use_toast, TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'
@@ -41,8 +41,12 @@ class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNod
   static getDerivedStateFromError(error: Error) {
     return { error }
   }
-  componentDidCatch(error: Error) {
-    Sentry.captureException(error)
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    // LOUD, always (#1563): a caught crash is still a crash. This used to be a bare captureException —
+    // no console line, no component stack — which is exactly why a total client death (every seated
+    // fight board) sat undetected: the boundary swallowed the throw and no monitor saw a thing. One
+    // door now (core/report.js), so the boundary can never diverge from the app's reporting choke.
+    report_boundary_error(error, info?.componentStack)
     // [P0 2026-07-14 blank-page-after-login] A failed lazy-chunk import (a stale service worker
     // holding a pre-deploy page whose old-hash chunks no longer exist) is only cured by fetching the
     // fresh shell — a setState retry re-imports the same dead URL. One-shot reload, time-latched so a
