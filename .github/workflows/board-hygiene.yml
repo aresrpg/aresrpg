@@ -9,10 +9,10 @@
 # below is that chain rebuilt: the board drains as work lands, not on a calendar.
 #
 # The jobs, in order of how much of the work they carry:
-#   landing   — PRIMARY, explicitly dispatched by the promotion engine after every ff-push to edge
-#               (GITHUB_TOKEN pushes do not self-trigger workflows). Reads the landed commits and
-#               their pull requests for close-keyword refs and closes each still-open row, citing
-#               the landing PR and commit as evidence. The push trigger remains for human pushes.
+#   landing   — PRIMARY. Every edge push resolves the event's exact before..after commit range and
+#               reads the landed commits' associated PR bodies for close-keyword refs. The promotion
+#               engine also dispatches it explicitly because GITHUB_TOKEN pushes do not self-trigger
+#               workflows. Each still-open row closes with the landing PR and commit as evidence.
 #   backstop  — the same sweep on a daily schedule over pull requests merged into edge in the last
 #               14 days, so a missed, failed, or raced landing run self-heals.
 #   link_gate — BLOCKING. A pull request into `edge` must carry a close-keyword the `landing` job
@@ -61,6 +61,7 @@ permissions:
 concurrency:
   group: board-hygiene-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
+  queue: max
 jobs:
   landing:
     name: close on landing
@@ -74,22 +75,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
       issues: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: close every row this push landed
+      - name: close every row this landing added
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
           LANDED_SHA: ${{ inputs.sha || github.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
         run: |
+          if [ "$EVENT_NAME" = push ]; then
+            node scripts/board_hygiene.mjs landing --event "$GITHUB_EVENT_PATH"
+            exit
+          fi
           case "$LANDED_SHA" in
             ''|*[!0-9a-fA-F]*) echo "invalid landed sha: $LANDED_SHA"; exit 1 ;;
           esac
           if [ "${#LANDED_SHA}" -ne 40 ]; then echo "invalid landed sha length"; exit 1; fi
-          BASE_SHA="${PUSH_BEFORE:-${LANDED_SHA}^}"
-          node scripts/board_hygiene.mjs landing --base "$BASE_SHA" --head "$LANDED_SHA"
+          node scripts/board_hygiene.mjs landing --base "${LANDED_SHA}^" --head "$LANDED_SHA"
 
   backstop:
     name: landed-but-open backstop

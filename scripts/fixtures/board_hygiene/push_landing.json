@@ -1,0 +1,55 @@
+{
+  "event": {
+    "ref": "refs/heads/edge",
+    "before": "1111111111111111111111111111111111111111",
+    "after": "4444444444444444444444444444444444444444",
+    "deleted": false
+  },
+  "compare": {
+    "status": "ahead",
+    "base_commit": { "sha": "1111111111111111111111111111111111111111" },
+    "commits": [
+      {
+        "sha": "2222222222222222222222222222222222222222",
+        "commit": { "message": "fix(ci): first landing commit\n\nFixes #7000" }
+      },
+      {
+        "sha": "3333333333333333333333333333333333333333",
+        "commit": { "message": "fix(ci): second landing commit" }
+      },
+      {
+        "sha": "4444444444444444444444444444444444444444",
+        "commit": { "message": "fix(ci): landing tip" }
+      }
+    ]
+  },
+  "associated_pulls": {
+    "2222222222222222222222222222222222222222": [
+      {
+        "number": 1570,
+        "title": "fix(ci): a title saying Fixes #7001 is not a body instruction",
+        "body": "Fixes #1573\nCloses #1094\nRefs #1600\n\n```\nFixes #7002\n```\n",
+        "base": { "ref": "edge" }
+      }
+    ],
+    "3333333333333333333333333333333333333333": [
+      {
+        "number": 1569,
+        "body": "Fixes #7003",
+        "base": { "ref": "master" }
+      },
+      {
+        "number": 1571,
+        "body": "Closes aresrpg/aresrpg#1601\nFixes othervendor/other#7004",
+        "base": { "ref": "edge" }
+      }
+    ],
+    "4444444444444444444444444444444444444444": [
+      {
+        "number": 1571,
+        "body": "Closes aresrpg/aresrpg#1601",
+        "base": { "ref": "edge" }
+      }
+    ]
+  }
+}

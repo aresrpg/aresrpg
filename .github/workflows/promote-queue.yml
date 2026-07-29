@@ -43,10 +43,12 @@ jobs:
   land:
     if: github.event.workflow_run.event == 'pull_request'
     # Keep the landing lock behind the triggering-run gate above: only PR CI can make a queued
-    # head newly eligible, so base-branch CI must never queue behind or displace a real landing.
+    # head newly eligible, so base-branch CI must never queue here. This side must also opt into the
+    # shared FIFO; a default-single queue run could otherwise replace a pending /promote handler.
     concurrency:
       group: promotion-landing
       cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

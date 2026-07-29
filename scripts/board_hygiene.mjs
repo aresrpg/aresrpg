@@ -42,8 +42,11 @@
 // Board text — issue bodies, PR titles, commit messages — is UNTRUSTED DATA. It is scanned for issue
 // numbers, bounded, and placed in JSON request bodies. It is never executed, never shell-interpolated,
 // and never allowed to manufacture the HTML-comment markers this file uses as its idempotency protocol.
+import { execFile as exec_file } from 'node:child_process'
+import { readFileSync as read_file_sync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
+import { promisify } from 'node:util'
 
 const GITHUB_API_ORIGIN = 'https://api.github.com'
 const READ_DELAY_MS = 90
@@ -51,6 +54,8 @@ const MUTATION_DELAY_MS = 400
 const MAX_RETRIES = 3
 const MAX_PAGES = 30
 const DAY_MS = 86_400_000
+const ZERO_SHA = '0000000000000000000000000000000000000000'
+const GH_API_MAX_BUFFER = 16 * 1024 * 1024
 
 export const BOT_LOGIN = 'github-actions[bot]'
 export const STALE_WARNING_LABEL = 'stale-warning'
@@ -91,7 +96,9 @@ const ACTIVITY_EVENTS = new Set([
 ])
 
 const wait = (delay_ms) => new Promise((resolve) => setTimeout(resolve, delay_ms))
+const exec_file_async = promisify(exec_file)
 const is_record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+const is_full_sha = (value) => /^[0-9a-f]{40}$/i.test(String(value ?? ''))
 
 // ---------------------------------------------------------------------------
 // Pure core — every decision this file makes is one of the functions below.
@@ -120,6 +127,22 @@ export function parse_close_refs(text, repository) {
     .map(([, , number]) => Number(number))
     .filter((number) => Number.isSafeInteger(number) && number > 0)
   return [...new Set(numbers)].toSorted((left, right) => left - right)
+}
+
+// A push checkout only proves the new tree. The event payload is the authority for what this one
+// landing added, including a multi-commit fast-forward; resolving HEAD^ would silently inspect just
+// the tip commit. Kept pure so fixture payloads exercise the exact GitHub boundary.
+export function resolve_landing_range(push_event) {
+  if (!is_record(push_event)) throw new Error('push event must be an object')
+  if (push_event.ref !== 'refs/heads/edge')
+    throw new Error(`landing push must target edge, got ${push_event.ref ?? '<none>'}`)
+  const base = String(push_event.before ?? '')
+  const head = String(push_event.after ?? '')
+  if (!(is_full_sha(base) && is_full_sha(head))) throw new Error('landing push needs full before and after SHAs')
+  if (base === ZERO_SHA || head === ZERO_SHA || push_event.deleted === true)
+    throw new Error('branch creation/deletion has no landed commit range')
+  if (base.toLowerCase() === head.toLowerCase()) throw new Error('landing push range is empty')
+  return { base, head }
 }
 
 // The ref-gate asks the looser question ("did this PR reference ANY row?"). A deliberate `Refs #123`
@@ -373,11 +396,16 @@ async function collect_pages(config, url, stop = null, collected = [], page_coun
   return next && !(stop && data.some(stop)) ? collect_pages(config, next, stop, all, page_count + 1) : all
 }
 
-const api_url = (config, path_name, params = {}) => {
-  const parts = String(config.repository).split('/')
+const assert_repository = (repository) => {
+  const parts = String(repository).split('/')
   if (parts.length !== 2 || parts.some((part) => !/^[A-Za-z0-9_.-]+$/.test(part)))
     throw new Error('GITHUB_REPOSITORY must be owner/name')
-  const url = new URL(`/repos/${config.repository}${path_name}`, GITHUB_API_ORIGIN)
+  return parts.join('/')
+}
+
+const api_url = (config, path_name, params = {}) => {
+  const repository = assert_repository(config.repository)
+  const url = new URL(`/repos/${repository}${path_name}`, GITHUB_API_ORIGIN)
   url.search = new URLSearchParams(params).toString()
   return url.href
 }
@@ -385,6 +413,18 @@ const api_url = (config, path_name, params = {}) => {
 const get_json = async (config, path_name, params) => {
   const { data } = await request_json(api_url(config, path_name, params), { config, delay_ms: READ_DELAY_MS })
   return data
+}
+
+// The landing issue's boundary explicitly uses `gh api`: arguments are passed without a shell, and
+// the token stays in the child environment rather than appearing in argv or logs.
+const get_gh_json = async (config, path_name) => {
+  const repository = assert_repository(config.repository)
+  const { stdout } = await exec_file_async('gh', ['api', `repos/${repository}${path_name}`], {
+    encoding: 'utf8',
+    env: { ...process.env, GH_TOKEN: config.github_token },
+    maxBuffer: GH_API_MAX_BUFFER,
+  })
+  return JSON.parse(stdout)
 }
 
 const mutate = async (config, method, path_name, body) => {
@@ -427,20 +467,45 @@ async function ensure_stale_label(config) {
 // cites the commit that actually carried the fix.
 const merge_evidence = (found, number, evidence) => (found.has(number) ? found : new Map(found).set(number, evidence))
 
-async function pushed_landings(config) {
-  const compare = await get_json(config, `/compare/${config.base}...${config.head}`)
+// Pure half of the push pass. The compare endpoint resolves every commit in before..after; GitHub's
+// associated-pulls endpoint supplies the PR bodies. Bodies are the close contract contributors edit
+// and review, so commit messages, PR titles, unrelated-base PRs, and quoted transcript refs do not
+// become mutation instructions here.
+export function extract_landed_references(compare, associated_pulls, repository) {
   const commits = Array.isArray(compare?.commits) ? compare.commits : []
-  return commits.reduce(async (found_promise, commit) => {
-    const found = await found_promise
+  const pulls_by_sha = is_record(associated_pulls) ? associated_pulls : {}
+  return commits.reduce((found, commit) => {
     const sha = String(commit?.sha ?? '')
-    const pulls = await get_json(config, `/commits/${sha}/pulls`)
-    const pull = (Array.isArray(pulls) ? pulls : []).find((candidate) => candidate?.base?.ref === 'edge') ?? null
-    const text = [commit?.commit?.message, pull?.title, pull?.body].filter(Boolean).join('\n')
-    return parse_close_refs(text, config.repository).reduce(
-      (accumulated, number) => merge_evidence(accumulated, number, { sha, pr_number: pull?.number ?? null }),
-      found
-    )
-  }, Promise.resolve(new Map()))
+    if (!is_full_sha(sha)) throw new Error('compare payload contains a commit without a full SHA')
+    const pulls = pulls_by_sha[sha]
+    if (!Array.isArray(pulls)) throw new Error(`associated pull payload missing for ${sha}`)
+    return pulls
+      .filter((pull) => pull?.base?.ref === 'edge')
+      .reduce(
+        (from_pulls, pull) =>
+          parse_close_refs(pull?.body, repository).reduce(
+            (from_refs, number) =>
+              merge_evidence(from_refs, number, {
+                sha,
+                pr_number: Number.isSafeInteger(Number(pull?.number)) ? Number(pull.number) : null,
+              }),
+            from_pulls
+          ),
+        found
+      )
+  }, new Map())
+}
+
+async function pushed_landings(config) {
+  const { base, head } = config.push_event ? resolve_landing_range(config.push_event) : config
+  const compare = await get_gh_json(config, `/compare/${base}...${head}`)
+  const commits = Array.isArray(compare?.commits) ? compare.commits : []
+  const associated_pulls = {}
+  for (const commit of commits) {
+    const sha = String(commit?.sha ?? '')
+    associated_pulls[sha] = await get_gh_json(config, `/commits/${sha}/pulls`)
+  }
+  return extract_landed_references(compare, associated_pulls, config.repository)
 }
 
 async function merged_pull_landings(config) {
@@ -694,11 +759,12 @@ export function parse_args(argv) {
   const [mode] = argv
   if (!Object.hasOwn(MODES, mode ?? ''))
     throw new Error(
-      `usage: board_hygiene.mjs <${Object.keys(MODES).join('|')}> [--dry-run] [--base SHA --head SHA] [--pr N] [--since-days N]`
+      `usage: board_hygiene.mjs <${Object.keys(MODES).join('|')}> [--dry-run] [--event PATH | --base SHA --head SHA] [--pr N] [--since-days N]`
     )
   return {
     mode,
     dry_run: argv.includes('--dry-run'),
+    event_path: flag_value(argv, 'event'),
     base: flag_value(argv, 'base'),
     head: flag_value(argv, 'head'),
     pull_number: Number(flag_value(argv, 'pr', '0')),
@@ -720,12 +786,14 @@ export function resolve_now(args, wall_clock_ms) {
 
 async function main() {
   const args = parse_args(process.argv.slice(2))
-  if (args.mode === 'landing' && !(args.base && args.head)) throw new Error('landing mode needs --base and --head')
+  if (args.mode === 'landing' && !(args.event_path || (args.base && args.head)))
+    throw new Error('landing mode needs --event or --base and --head')
   if (args.mode === 'ref-gate' && !Number.isSafeInteger(args.pull_number)) throw new Error('ref-gate mode needs --pr')
   if (args.mode === 'link-gate' && !(Number.isSafeInteger(args.pull_number) && args.pull_number > 0))
     throw new Error('link-gate mode needs --pr')
   const config = {
     ...args,
+    push_event: args.event_path ? JSON.parse(read_file_sync(args.event_path, 'utf8')) : null,
     github_token: required_env('GITHUB_TOKEN'),
     repository: required_env('GITHUB_REPOSITORY'),
     now_ms: resolve_now(args, Date.now()),

@@ -15,6 +15,7 @@ import {
   decide_link_gate,
   decide_ref_gate,
   decide_stale,
+  extract_landed_references,
   is_conventional_subject,
   landing_marker,
   last_human_activity,
@@ -23,6 +24,7 @@ import {
   mentions_issue,
   parse_args,
   parse_close_refs,
+  resolve_landing_range,
   resolve_now,
   run_landing,
   run_link_gate,
@@ -34,6 +36,7 @@ const read_fixture = (name) =>
 
 const merged_pulls = read_fixture('merged_pulls.json')
 const open_issues = read_fixture('open_issues.json')
+const push_landing = read_fixture('push_landing.json')
 
 const DAY_MS = 86_400_000
 const now_ms = Date.parse('2026-07-27T12:00:00Z')
@@ -174,6 +177,43 @@ describe('the landing sweep never fights a human', () => {
     expect(decide_landing({ state: 'open' }, swept, { sha: 'bbbbbbbbbbbb', pr_number: 1200 })).toEqual({
       action: 'close',
     })
+  })
+})
+
+describe('a push fixture resolves the exact landing range and associated PR bodies', () => {
+  it('takes the range from before..after, never from a checkout guess', () => {
+    expect(resolve_landing_range(push_landing.event)).toEqual({
+      base: '1111111111111111111111111111111111111111',
+      head: '4444444444444444444444444444444444444444',
+    })
+  })
+
+  it('extracts close refs only from edge PR bodies associated with commits in that range', () => {
+    expect([
+      ...extract_landed_references(push_landing.compare, push_landing.associated_pulls, REPOSITORY).entries(),
+    ]).toEqual([
+      [
+        1094,
+        {
+          sha: '2222222222222222222222222222222222222222',
+          pr_number: 1570,
+        },
+      ],
+      [
+        1573,
+        {
+          sha: '2222222222222222222222222222222222222222',
+          pr_number: 1570,
+        },
+      ],
+      [
+        1601,
+        {
+          sha: '3333333333333333333333333333333333333333',
+          pr_number: 1571,
+        },
+      ],
+    ])
   })
 })
 
