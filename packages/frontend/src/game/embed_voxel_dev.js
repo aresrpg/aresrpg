@@ -13,6 +13,24 @@ import { game_log } from '../core/log.js'
 import { scan_for_claimable_group } from './dev/world_fight_scan.js'
 
 /**
+ * The rig mounts into a CLEAN store — but a reset that discards an EXISTING session deletes the very
+ * precondition a drive may be there to test (#1645: a stale boot fight reference surviving into a fresh
+ * engage). Every proof drive through these seams was structurally blind to that whole class because this
+ * clear ran silently. It never does again: what is thrown away is announced on the console, loudly and
+ * unconditionally — game_log is the quiet channel and a driver reading the console must not have to opt in.
+ * @param {any} use_dungeon the store module's singleton @param {string} seam which rig hook is clearing
+ */
+const discard_session_for_dev_mount = (use_dungeon, seam) => {
+  const { fight_id, run_pass_id } = use_dungeon.getState()
+  if (!fight_id && !run_pass_id) return
+  console.warn(
+    `[dev] ${seam}: DISCARDING an existing session before mount — fight_id=${fight_id} run_pass_id=${run_pass_id}. ` +
+      'This drive can no longer observe a stale-session bug; drive the store directly to keep that precondition.'
+  )
+  use_dungeon.getState().reset_local()
+}
+
+/**
  * @param {{ engine: any, board: any, ctl: any, cam: any, canvas: HTMLCanvasElement, get_avatar: () => any,
  *   trigger_zoom_punch?: () => void, trigger_fight_entry?: () => void }} rig
  */
@@ -108,7 +126,7 @@ export function install_dev_rig({
       import('../rpc/client'),
       import('./zone_rows.js'),
     ])
-    if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) use_dungeon.getState().reset_local()
+    discard_session_for_dev_mount(use_dungeon, '__dev_start_world_fight')
     const world_id = (await fetch_world_binding(character_id)) ?? use_dungeon.getState().world_id
     if (!world_id) return game_log('dev', 'start_world_fight: character has no world binding')
     const zdata = await get_zones(world_id).catch(() => null)
@@ -184,7 +202,7 @@ export function install_dev_rig({
       import('../world-shell/dungeon_store.js'),
       import('../world-shell/world_fight.js'),
     ])
-    if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) use_dungeon.getState().reset_local()
+    discard_session_for_dev_mount(use_dungeon, '__dev_enter_world_fight')
     enter_world_fight({ fight_id, world_id, character_id: cid })
     await use_dungeon.getState().refresh()
     const s = use_dungeon.getState()
