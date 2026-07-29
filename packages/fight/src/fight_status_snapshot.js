@@ -52,6 +52,27 @@ const fields_of = (value) => value?.fields ?? value ?? {}
 const num = (value) => (value == null || value === '' ? null : Number(value))
 
 /**
+ * THE ONE READER of a status row's OWNER (#1444). A `FighterStatus.fighter` is a chain u64 — a seat index, or
+ * `1000 + mob index` (cast.move `fid_of`, twin-pinned below). It arrives over the wire as a number or a decimal
+ * string, and it is the ONLY thing that says whose HUD row a status belongs on.
+ *
+ * ABSENCE IS NOT SEAT 0. `Number(null)`, `Number('')` and `Number(false)` are all 0, so a bare `Number(row.fighter)`
+ * silently attributed every owner-less row to the FIRST PARTICIPANT — which, in a solo fight, is the player, on
+ * their own card. That is the shape of #1444: a mob's authored self-buff ("+20% Damage · 1 turn", the same family
+ * Razkin's live +25% row belongs to) rendering on a level-1 character that has no buff spell at all. An
+ * unreadable owner is DROPPED, never guessed — a status nobody can attribute is not a status.
+ * @param {unknown} raw @returns {number | null} the fid, or null when the wire did not state one
+ */
+export const fighter_fid = (raw) => {
+  // ACCEPT-LIST, not a deny-list: `Number()` maps `[]`, `false` and `''` to 0 just as happily as it maps `'0'`,
+  // so only the two shapes the wire actually uses are readable at all.
+  if (typeof raw !== 'number' && typeof raw !== 'string') return null
+  if (raw === '') return null
+  const fid = Number(raw)
+  return Number.isInteger(fid) && fid >= 0 ? fid : null
+}
+
+/**
  * Read ALL active fighter-status rows from a raw json:true Fight document — the chain corpus is already generic
  * (FighterStatus{ fighter, kind, effect, remaining_turns, source } — spell_board.move, mirrored by
  * sim/effect_board.js). Was invisibility-only (kind 27); now carries EVERY status kind with its chain duration so
@@ -71,10 +92,10 @@ export function read_fighter_statuses(json) {
   for (const raw of rows) {
     const row = fields_of(raw)
     const effect = fields_of(row.effect)
-    const fighter = Number(row.fighter)
+    const fighter = fighter_fid(row.fighter)
     const kind = Number(row.kind ?? effect.kind)
     const remaining_turns = Number(row.remaining_turns ?? effect.turns ?? 0)
-    if (Number.isInteger(fighter) && fighter >= 0 && Number.isFinite(kind) && remaining_turns > 0)
+    if (fighter != null && Number.isFinite(kind) && remaining_turns > 0)
       out.push({
         fighter,
         kind,
@@ -103,7 +124,10 @@ export function read_fighter_statuses(json) {
 export function status_snapshot_entities(rows, participant_ids, mob_count) {
   const out = []
   for (const row of rows ?? []) {
-    const fighter = Number(row?.fighter)
+    // The SAME owner reader the wire decode uses — this door is also reached with sim-projected rows, so an
+    // owner-less row must die here too rather than land on seat 0 (#1444).
+    const fighter = fighter_fid(row?.fighter)
+    if (fighter == null) continue
     const mob_idx = fighter - MOB_FIGHTER_ID_BASE
     const entity_id =
       fighter >= MOB_FIGHTER_ID_BASE
