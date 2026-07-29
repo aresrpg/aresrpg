@@ -59,27 +59,20 @@ const resolve_armed_spell = (armed, me) => {
 
 /**
  * THE PREVIEW'S DEPENDENCY SET — the memo key `use_target_prediction` re-runs the derivation on, living HERE next
- * to the derivation it keys so the two can never be maintained apart (they were: the key was hand-listed in the
- * hook, and every input it forgot became a preview frozen at a stale number). The law it must satisfy is a pure
- * property this module's test asserts directly: two states with the SAME key must derive the SAME prediction.
+ * to the derivation it keys so the two can never be maintained apart. It is the derivation's OWN inputs, never a
+ * subset of them: keying on hand-picked aim primitives (the armed id, the caster, the target's cell and hp) named
+ * nothing about the CASTER's status block, so a +110% damage buff folded, the card painted it, and the held hover
+ * kept serving its pre-buff number (#1480). `fight` is whole and changes exactly once per FOLD — `engine_view_of`
+ * memoizes one view per core state — never per frame. `hover` is the one exception, read by ITS ID: the slice is
+ * re-created on every pointermove (it carries the cursor's x/y) and `entity_id` is the only field the derivation
+ * reads off it, so keying the object would re-run the sim per mouse pixel. The law both halves must satisfy is a
+ * pure property this module's test asserts directly: two states with the SAME key derive the SAME prediction.
  * Compared element-wise with Object.is, exactly as React compares a deps array.
  * @param {{ fight: any, hover: any, dungeon: any, slot?: number|null }} args the SAME object handed to
  *   `compute_target_prediction` — one call site, one set of inputs, no second assembly.
  * @returns {any[]}
  */
-export const prediction_memo_key = ({ fight, hover, dungeon, slot = null }) => {
-  const hovered_id = hover?.entity_id ?? null
-  const target = fight && hovered_id ? fight.fighters.get(hovered_id) : null
-  return [
-    fight?.armed_spell_id ?? null,
-    fight?.my_entity_id ?? null,
-    hovered_id,
-    target?.cell ? encode(target.cell.x, target.cell.y) : null,
-    target?.health ?? null,
-    dungeon,
-    slot,
-  ]
-}
+export const prediction_memo_key = ({ fight, hover, dungeon, slot = null }) => [fight, hover?.entity_id ?? null, dungeon, slot]
 
 /**
  * entity id → { is_mob, idx } against the live dungeon escrow — the SAME mapping DungeonBoard.resolve_ref uses (a
