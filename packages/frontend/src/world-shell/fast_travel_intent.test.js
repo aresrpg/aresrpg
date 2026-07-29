@@ -90,10 +90,9 @@ describe('friend entry → the shared fast-travel input door', () => {
   })
 
   test('a route that names NO world is still an honest refusal (the character is in no world to reach)', () => {
-    const intent = fast_travel_intent(
-      { ...live_friend, routes: [{ character_id: 'C_FRIEND', world_id: null }] },
-      [{ id: 'C_FRIEND' }]
-    )
+    const intent = fast_travel_intent({ ...live_friend, routes: [{ character_id: 'C_FRIEND', world_id: null }] }, [
+      { id: 'C_FRIEND' },
+    ])
 
     expect(intent).toEqual({ type: 'begin', refusal: 'fast_travel.realm_unreachable' })
   })

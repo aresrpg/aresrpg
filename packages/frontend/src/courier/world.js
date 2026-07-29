@@ -60,8 +60,7 @@ export function courier_refusal(error, kind) {
     report: status === 400 || status >= 500,
     // A chat line is a player ACT (they must learn it did not go out); a position is machinery, and a toast
     // per refused pose would be a spam cannon.
-    toast:
-      kind !== 'chat' ? null : status === 429 ? 'world_chat.send_rate_limited' : 'world_chat.send_failed',
+    toast: kind !== 'chat' ? null : status === 429 ? 'world_chat.send_rate_limited' : 'world_chat.send_failed',
   }
 }
 
