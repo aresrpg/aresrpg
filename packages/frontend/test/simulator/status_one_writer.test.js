@@ -76,7 +76,11 @@ describe('#1646 — one writer for the run status', () => {
 
   test('an undecided fight stays ACTIVE — the projection, not a translation, decides', () => {
     const store = active_store()
-    store.getState().input({ type: 'receipt', version: 3, receipt: { events: [ev('Hit', { victim_is_mob: true, victim_idx: 0, amount: 1, remaining_hp: 19 })] } })
+    store.getState().input({
+      type: 'receipt',
+      version: 3,
+      receipt: { events: [ev('Hit', { victim_is_mob: true, victim_idx: 0, amount: 1, remaining_hp: 19 })] },
+    })
     expect(board_view(store.getState()).status).toBe(STATUS_ACTIVE)
   })
 })

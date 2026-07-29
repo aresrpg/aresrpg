@@ -505,8 +505,11 @@ describe('confirmed forfeit receipt', () => {
     await flush_engine()
     const character = context.get_state().sui.characters.find((row) => row.id === CHARACTER_ID)
     expect(character.current_hp).toBe(0)
-    expect(character.hp_updated_ms).toBeGreaterThan(1)
-    expect(projected_hp(character, character.hp_updated_ms)).toBe(0)
+    // #1643 — the prediction stamps its OWN local base, never the chain's anchor (which stays where the last
+    // chain read left it), so a skewed client clock can never out-rank the settle stamp that follows.
+    expect(character.hp_updated_ms).toBe(1)
+    expect(character.hp_previsional_ms).toBeGreaterThan(1)
+    expect(projected_hp(character, character.hp_previsional_ms)).toBe(0)
   })
 })
 
@@ -557,7 +560,10 @@ describe('natural terminal defeat (mob kill — no forfeit)', () => {
 
     const character = context.get_state().sui.characters.find((row) => row.id === CHARACTER_ID)
     expect(character.current_hp).toBe(0)
-    expect(character.hp_updated_ms).toBeGreaterThan(1)
-    expect(projected_hp(character, character.hp_updated_ms)).toBe(0)
+    // #1643 — the prediction stamps its OWN local base, never the chain's anchor (which stays where the last
+    // chain read left it), so a skewed client clock can never out-rank the settle stamp that follows.
+    expect(character.hp_updated_ms).toBe(1)
+    expect(character.hp_previsional_ms).toBeGreaterThan(1)
+    expect(projected_hp(character, character.hp_previsional_ms)).toBe(0)
   })
 })

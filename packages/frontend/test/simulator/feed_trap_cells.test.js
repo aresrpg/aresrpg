@@ -88,7 +88,10 @@ const open_fight = () => {
     store,
     schedule: (/** @type {any} */ fn) => tasks.push(fn),
     now: () => 1_700_000_000_000,
-    dungeon: { getState: () => ({ dungeon: null, mob_names: {}, mob_levels: {}, mob_elements: {} }), setState: () => {} },
+    dungeon: {
+      getState: () => ({ dungeon: null, mob_names: {}, mob_levels: {}, mob_elements: {} }),
+      setState: () => {},
+    },
     engine_context: { get_state: () => ({ sui: { characters: roster } }), dispatch: () => {} },
   })
   const opened = shim.start({
