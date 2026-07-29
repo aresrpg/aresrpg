@@ -12,8 +12,13 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
+import { status_row_of } from '@aresrpg/fight/statuses'
+import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
+import { find_entity } from '@aresrpg/sim/fight_state'
+import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
 
 import en from '../../../i18n/locales/en.json'
+import corpus from '../../../simulator/spell_corpus_l2.fixture.json'
 import { EffectBadges, effect_badge_view } from './EffectBadges.jsx'
 
 const i18n = i18next.createInstance()
@@ -82,5 +87,94 @@ describe('EffectBadges — compact persistent-effect rows on the turn card', () 
     expect(effect_badge_view(t, { ...poison_2t, element: 3 }).label).toBe('2 Air damage per turn · 2 turns')
     expect(effect_badge_view(t, poison_2t).label).toBe('2 damage per turn · 2 turns')
     expect(effect_badge_view(t, poison_2t).label).not.toContain('spells.')
+  })
+
+  test('#1744 Quakebed keeps one badge turn while its second damage tick fires', () => {
+    const published = corpus.rows.find((spell) => spell.id === 'mori_quakebed')
+    const base_level = published.levels[0]
+    const quakebed = {
+      ...published,
+      levels: [{ ...base_level, crit_rate: 0, crit_effects: [] }],
+    }
+    const spell_templates = normalize_chain_spell_corpus([quakebed])
+    const arena = {
+      width: 11,
+      height: 11,
+      cells: new Uint8Array(121),
+      spawns_a: [],
+      spawns_b: [],
+    }
+    const fighter = (id, cell, is_player) => ({
+      id,
+      name: id,
+      cell,
+      health: 30,
+      health_max: 30,
+      ap: 6,
+      ap_max: 6,
+      mp: 3,
+      mp_max: 3,
+      ap_used: 0,
+      mp_used: 0,
+      is_player,
+      template_id: is_player ? 'mori' : 'quakebed-target',
+      level: 3,
+      stats: {},
+      effects: [],
+      spell_levels: is_player ? { [quakebed.id]: 1 } : {},
+      ap_reserve: 0,
+    })
+    const initial = create_fight_state({
+      fight_id: 'quakebed-badge-boundary',
+      arena_seed: 1744,
+      arena_radius: 0,
+      arena,
+      team0: [fighter('p0', { x: 5, y: 5 }, true)],
+      team1: [fighter('m0', { x: 6, y: 5 }, false)],
+    })
+    const ctx = { arena, spell_templates }
+    let state = {
+      ...initial,
+      started: true,
+      turn_order: ['p0', 'm0'],
+      current_turn_idx: 0,
+    }
+    state = reduce(
+      state,
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: quakebed.id,
+        target: { x: 5, y: 5 },
+      },
+      ctx,
+    ).state
+
+    // First victim turn: tick once, then end it. Cycle the caster so the second victim turn begins.
+    state = reduce(
+      state,
+      { type: 'end_turn', entity_id: 'p0' },
+      ctx,
+    ).state
+    state = reduce(
+      state,
+      { type: 'end_turn', entity_id: 'm0' },
+      ctx,
+    ).state
+    const second_turn = reduce(
+      state,
+      { type: 'end_turn', entity_id: 'p0' },
+      ctx,
+    )
+    const tick = second_turn.events
+      .find((event) => event.type === 'fight_turn_effects')
+      ?.effects.find((effect) => effect.target_id === 'm0')
+    expect(tick).toMatchObject({ damage: 2, new_health: 26 })
+
+    const dot = find_entity(second_turn.state, 'm0')?.effects
+      .map(status_row_of)
+      .find((row) => row?.kind === 21)
+    expect(dot).toBeDefined()
+    expect(effect_badge_view(t, dot).turns).toBe(1)
   })
 })

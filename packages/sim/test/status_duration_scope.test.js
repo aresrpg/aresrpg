@@ -10,10 +10,9 @@
 // whose turn ENDS, and that call decrements `spell_board::decrement_fighter_statuses(fx, fid)` (cast.move:1585) —
 // the rows of THAT fighter and nobody else. A 3-turn row therefore burns exactly ONE tick per ROUND.
 //
-// The sim already holds that scope: `process_turn_effects` (fight_actions.js:440) decrements one entity's
-// `effects`, and `advance_to_actor` (reduce.js:672) runs it only for the actor whose turn begins. These tests
-// are the LOCK on it — the phase differs from the chain's by design (the sim ticks on the owner's turn START,
-// the chain on its turn END), but the SCOPE and the lifetime are identical: three usable turns, one tick each.
+// The sim holds that scope and phase: `expire_turn_effects` decrements one entity's rows, and
+// `advance_to_actor` runs it only for the actor whose turn ends. These tests lock the exact cadence: three
+// usable turns, one tick at each owner turn-end.
 import { describe, expect, test } from 'bun:test'
 
 import { reduce, create_fight_state } from '../src/reduce.js'
@@ -222,7 +221,7 @@ describe("#973 status durations tick on the OWNER's turn only (cast.move:1585 sc
     let cur = reduce(cast, { type: 'end_turn', entity_id: 'p0' }, ctx).state
     const mob = get_current_turn_entity(cur).id
     cur = reduce(cur, { type: 'ai_turn', entity_id: mob }, ctx).state
-    expect(row_of(cur, 'p0', 'STAT_BUFF').turns_remaining).toBe(3)
+    expect(row_of(cur, 'p0', 'STAT_BUFF').turns_remaining).toBe(2)
   })
 
   test("a mob's OWN 3-turn row ticks on its own turn only — the scope is side-symmetric", () => {

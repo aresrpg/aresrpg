@@ -8,18 +8,24 @@ import { apply_spell_effect } from './fight_spells.js'
 import { crank_damage_roll } from './turn_seed.js'
 import { turn_rng_of } from './combat_clock.js'
 
-/** Resolve due timed payload rows before ordinary turn-start status decay. */
+/** Decrement the bearer's private queue at turn start and resolve every now-due timed payload row. */
 export const process_delayed_payloads = (state, entity_id) => {
   const bearer = find_entity(state, entity_id)
   if (!bearer) return { state, effects: [] }
   const due = bearer.effects.filter(
     effect => effect.type === 'TIMED_PAYLOAD' && effect.turns_remaining <= 1,
   )
-  if (due.length === 0) return { state, effects: [] }
-  const cleared = update_entity(state, entity_id, entity => ({
+  const advanced = update_entity(state, entity_id, entity => ({
     ...entity,
-    effects: entity.effects.filter(effect => !due.includes(effect)),
+    effects: entity.effects
+      .filter(effect => !due.includes(effect))
+      .map(effect =>
+        effect.type === 'TIMED_PAYLOAD'
+          ? { ...effect, turns_remaining: effect.turns_remaining - 1 }
+          : effect,
+      ),
   }))
+  if (due.length === 0) return { state: advanced, effects: [] }
   return due.reduce(
     (outer, row) => {
       const source = find_entity(outer.state, row.source_id)
@@ -43,7 +49,7 @@ export const process_delayed_payloads = (state, entity_id) => {
       }, outer)
     },
     {
-      state: cleared,
+      state: advanced,
       effects:
         /** @type {import('./fight_spells.js').SpellCastEffect[]} */ ([]),
     },

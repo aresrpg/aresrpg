@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   apply_incoming_damage,
+  expire_turn_effects,
   process_turn_effects,
 } from '../src/fight_actions.js'
 import { find_entity } from '../src/fight_state.js'
@@ -224,7 +225,7 @@ const run_stance_lifecycle = vector => {
     }),
   ])
   const expiring = cast(state, caster.id, one_turn, caster.cell)
-  const expired = process_turn_effects(expiring.state, caster.id)
+  const expired = expire_turn_effects(expiring.state, caster.id)
   const fresh = state_of(
     [fighter('p0', { x: 2, y: 2 }, true)],
     [fighter('m0', { x: 3, y: 2 }, false)],

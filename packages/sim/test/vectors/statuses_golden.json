@@ -114,7 +114,7 @@
       "input": { "hidden_turns": 1 },
       "expected": {
         "next_actor": "p0",
-        "hidden_remaining": false,
+        "hidden_remaining": true,
         "mob_moved": true,
         "mob_cast": false,
         "mob_closed_on_anchor": true

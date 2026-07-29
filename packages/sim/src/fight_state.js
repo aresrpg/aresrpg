@@ -287,7 +287,7 @@ export const next_id = state => ({
 
 /**
  * Net of the active STAT_BUFF (+) / STAT_DEBUFF (-) modifiers on `key`. The modifier's DURATION + expiry
- * are owned by the existing per-turn plumbing (`process_turn_effects` decrements turns_remaining + drops the
+ * are owned by the existing per-turn plumbing (`expire_turn_effects` decrements turns_remaining + drops the
  * expired); this only READS the live modifiers. Pure, integer.
  * @param {FightEntity} entity
  * @param {keyof Stats | 'ap' | 'mp' | 'summons' | 'max_hp'} key
@@ -333,24 +333,15 @@ export const effective_stats = entity => {
 }
 
 /**
- * Sum of the ap/mp pool modifiers that are STILL ACTIVE for the upcoming turn — a row expiring on this turn's
- * start-decrement (turns_remaining <= 1) is NOT active this turn and must not sustain the refill. This is NOT
- * the same check stat_modifier/effective_stats make — those apply NO turns_remaining filter at all (see their
- * own docstrings above): they trust the effects array is already pruned by process_turn_effects by the time
- * they're read. advance_turn's ap/mp refill is the ONE read that happens BEFORE process_turn_effects prunes the
- * entity's expiring rows for that turn — every other stat_modifier/effective_stats call site reads AFTER the
- * prune, so it never needed its own turns_remaining check. This filter is a genuinely new, narrower predicate
- * needed only because of WHERE it's called (pools refill at turn start, ahead of the prune), not a restatement
- * of a rule effective_stats already enforces. #598: without it, counting an expiring row refilled the pool one
- * turn past the buff's life — the sim granted a turn the chain had already expired (Move ages the give/drain
- * CREDIT row at the PRIOR turn-END, so its begin_turn refill never sees one).
+ * Sum of the ap/mp pool modifiers active for the upcoming turn. Timed rows age at their owner's preceding turn
+ * end, exactly like Move, so every row still present at begin-turn contributes to the refill.
  * @param {FightEntity} entity
  * @param {'ap'|'mp'} key
  * @returns {number}
  */
 const active_pool_modifier = (entity, key) =>
   entity.effects.reduce((sum, eff) => {
-    if (eff.stat !== key || eff.turns_remaining <= 1) return sum
+    if (eff.stat !== key) return sum
     if (eff.type === 'STAT_BUFF') return sum + eff.value
     if (eff.type === 'STAT_DEBUFF') return sum - eff.value
     return sum
