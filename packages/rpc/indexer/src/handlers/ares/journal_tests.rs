@@ -59,9 +59,9 @@ const MOVED_WIRE: &[u8] = &[
 // the event whose 16 unread trailing bytes wedged every fight in placement (#1579); the journal
 // had no captured-wire test for it, which is why the shortfall survived here too.
 const TURNSTARTED_WIRE: &[u8] = &[
-    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96,
-    148, 86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-    224, 88, 171, 159, 1, 0, 0, 189, 45, 249, 176, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96, 148,
+    86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 224, 88,
+    171, 159, 1, 0, 0, 189, 45, 249, 176, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
 ];
 const TURNSTARTED_FIGHT: &str =
     "0xaf7429843ed544cedd9ed0d0a08ac0cab5d26094563bfa197806c3c54cb38167";
@@ -90,7 +90,8 @@ fn turn_started_wire_decodes_with_its_turn_seed_inputs() {
 
 #[test]
 fn fight_created_wire_decodes_and_shapes_like_the_fullnode() {
-    let (oid, kind, data) = decode_journal_event("fight_events", "FightCreated", FIGHTCREATED_WIRE).unwrap();
+    let (oid, kind, data) =
+        decode_journal_event("fight_events", "FightCreated", FIGHTCREATED_WIRE).unwrap();
     assert_eq!(oid, fight_oid());
     assert_eq!(kind, "FightCreated");
     assert_eq!(
@@ -122,7 +123,8 @@ fn hit_wire_decodes_and_shapes_like_the_fullnode() {
 
 #[test]
 fn displaced_wire_keeps_the_u8_kind_distinct_from_the_event_name() {
-    let (oid, kind, data) = decode_journal_event("fight_events", "Displaced", DISPLACED_WIRE).unwrap();
+    let (oid, kind, data) =
+        decode_journal_event("fight_events", "Displaced", DISPLACED_WIRE).unwrap();
     assert_eq!(oid, fight_oid());
     assert_eq!(kind, "Displaced");
     // The payload's `kind` (12, the push/pull mechanics code, a u8 → NUMBER) is a distinct
@@ -141,7 +143,10 @@ fn moved_wire_decodes_character_and_cell() {
     let (oid, kind, data) = decode_journal_event("fight_events", "Moved", MOVED_WIRE).unwrap();
     assert_eq!(oid, fight_oid());
     assert_eq!(kind, "Moved");
-    assert_eq!(data, json!({ "fight": FIGHT, "character": CHARACTER, "to_cell": "64" }));
+    assert_eq!(
+        data,
+        json!({ "fight": FIGHT, "character": CHARACTER, "to_cell": "64" })
+    );
 }
 
 #[test]
@@ -170,9 +175,20 @@ fn deferred_and_foreign_events_are_not_journalled() {
 #[test]
 fn journal_writes_build_the_ordered_member_score_and_ttl() {
     let (_, kind, data) = decode_journal_event("fight_events", "Hit", HIT_WIRE).unwrap();
-    let cursor =
-        JournalCursor { checkpoint: 4_200, intra_checkpoint_event_index: 19, tx_index: 3, event_index: 7 };
-    let w = journal_writes(FIGHT, cursor, kind, data.clone(), "TxDigestBase58", Some(88));
+    let cursor = JournalCursor {
+        checkpoint: 4_200,
+        intra_checkpoint_event_index: 19,
+        tx_index: 3,
+        event_index: 7,
+    };
+    let w = journal_writes(
+        FIGHT,
+        cursor,
+        kind,
+        data.clone(),
+        "TxDigestBase58",
+        Some(88),
+    );
     let key = k_fight_journal(FIGHT);
     let expected_payload = json!({
         "id": "4200:19", "kind": "Hit", "data": data,
@@ -190,11 +206,18 @@ fn journal_writes_build_the_ordered_member_score_and_ttl() {
 
 #[test]
 fn a_terminal_that_destroyed_the_object_journals_a_null_version() {
-    let (_, kind, data) = decode_journal_event("fight_events", "Defeat", &FIGHTCREATED_WIRE[..32]).unwrap();
-    let cursor =
-        JournalCursor { checkpoint: 9, intra_checkpoint_event_index: 2, tx_index: 0, event_index: 0 };
+    let (_, kind, data) =
+        decode_journal_event("fight_events", "Defeat", &FIGHTCREATED_WIRE[..32]).unwrap();
+    let cursor = JournalCursor {
+        checkpoint: 9,
+        intra_checkpoint_event_index: 2,
+        tx_index: 0,
+        event_index: 0,
+    };
     let w = journal_writes(FIGHT, cursor, kind, data, "D", None);
-    let RedisWrite::ZAdd { member, .. } = &w[0] else { panic!("expected ZAdd") };
+    let RedisWrite::ZAdd { member, .. } = &w[0] else {
+        panic!("expected ZAdd")
+    };
     // version is JSON null (the fight object was deleted → no post-tx output version).
     assert!(member.contains("\"version\":null"), "member = {member}");
 }
@@ -212,7 +235,8 @@ fn member_prefixes_sort_in_checkpoint_tx_event_order() {
             tx_index: tx,
             event_index: evt,
         };
-        let RedisWrite::ZAdd { member, .. } = journal_writes(FIGHT, cursor, kind, data, "d", Some(1)).remove(0)
+        let RedisWrite::ZAdd { member, .. } =
+            journal_writes(FIGHT, cursor, kind, data, "d", Some(1)).remove(0)
         else {
             panic!()
         };

@@ -103,121 +103,189 @@ pub(super) fn decode_journal_event(
         }
         "FightJoined" => {
             let e: FightJoined = decode_bcs(module, name, contents)?;
-            (e.fight, "FightJoined", json!({
-                "fight": hex(e.fight), "character": hex(e.character), "seat": e.seat.to_string(),
-            }))
+            (
+                e.fight,
+                "FightJoined",
+                json!({
+                    "fight": hex(e.fight), "character": hex(e.character), "seat": e.seat.to_string(),
+                }),
+            )
         }
         "Placed" => {
             let e: Placed = decode_bcs(module, name, contents)?;
-            (e.fight, "Placed", json!({
-                "fight": hex(e.fight), "character": hex(e.character), "cell": e.cell.to_string(),
-            }))
+            (
+                e.fight,
+                "Placed",
+                json!({
+                    "fight": hex(e.fight), "character": hex(e.character), "cell": e.cell.to_string(),
+                }),
+            )
         }
         "Ready" => {
             let e: Ready = decode_bcs(module, name, contents)?;
-            (e.fight, "Ready", json!({ "fight": hex(e.fight), "character": hex(e.character) }))
+            (
+                e.fight,
+                "Ready",
+                json!({ "fight": hex(e.fight), "character": hex(e.character) }),
+            )
         }
         "TurnStarted" => {
             let e: TurnStarted = decode_bcs(module, name, contents)?;
-            (e.fight, "TurnStarted", json!({
-                "fight": hex(e.fight), "is_mob": e.is_mob,
-                "idx": e.idx.to_string(), "deadline_ms": e.deadline_ms.to_string(),
-                // The turn-seed inputs the client folds to derive THIS turn's rolls
-                // (`@aresrpg/fight` predict_cast.js). A receipt carries them, so a journal
-                // page must too — otherwise a replayed/spectated fight folds a different
-                // seed than the actor's own receipt did.
-                "turn_entropy": e.turn_entropy.to_string(),
-                "turn_ordinal": e.turn_ordinal.to_string(),
-            }))
+            (
+                e.fight,
+                "TurnStarted",
+                json!({
+                    "fight": hex(e.fight), "is_mob": e.is_mob,
+                    "idx": e.idx.to_string(), "deadline_ms": e.deadline_ms.to_string(),
+                    // The turn-seed inputs the client folds to derive THIS turn's rolls
+                    // (`@aresrpg/fight` predict_cast.js). A receipt carries them, so a journal
+                    // page must too — otherwise a replayed/spectated fight folds a different
+                    // seed than the actor's own receipt did.
+                    "turn_entropy": e.turn_entropy.to_string(),
+                    "turn_ordinal": e.turn_ordinal.to_string(),
+                }),
+            )
         }
         "Moved" => {
             let e: Moved = decode_bcs(module, name, contents)?;
-            (e.fight, "Moved", json!({
-                "fight": hex(e.fight), "character": hex(e.character), "to_cell": e.to_cell.to_string(),
-            }))
+            (
+                e.fight,
+                "Moved",
+                json!({
+                    "fight": hex(e.fight), "character": hex(e.character), "to_cell": e.to_cell.to_string(),
+                }),
+            )
         }
         "MobMoved" => {
             let e: MobMoved = decode_bcs(module, name, contents)?;
-            (e.fight, "MobMoved", json!({
-                "fight": hex(e.fight), "idx": e.idx.to_string(), "to_cell": e.to_cell.to_string(),
-            }))
+            (
+                e.fight,
+                "MobMoved",
+                json!({
+                    "fight": hex(e.fight), "idx": e.idx.to_string(), "to_cell": e.to_cell.to_string(),
+                }),
+            )
         }
         "Displaced" => {
             let e: Displaced = decode_bcs(module, name, contents)?;
-            (e.fight, "Displaced", json!({
-                "fight": hex(e.fight), "target_is_mob": e.target_is_mob,
-                "target_idx": e.target_idx.to_string(), "kind": e.kind,
-                "from_cell": e.from_cell.to_string(), "to_cell": e.to_cell.to_string(),
-                "requested": e.requested.to_string(), "blocked": e.blocked.to_string(),
-            }))
+            (
+                e.fight,
+                "Displaced",
+                json!({
+                    "fight": hex(e.fight), "target_is_mob": e.target_is_mob,
+                    "target_idx": e.target_idx.to_string(), "kind": e.kind,
+                    "from_cell": e.from_cell.to_string(), "to_cell": e.to_cell.to_string(),
+                    "requested": e.requested.to_string(), "blocked": e.blocked.to_string(),
+                }),
+            )
         }
         "Cast" => {
             let e: Cast = decode_bcs(module, name, contents)?;
-            (e.fight, "Cast", json!({
-                "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
-                "caster_idx": e.caster_idx.to_string(), "target_cell": e.target_cell.to_string(),
-            }))
+            (
+                e.fight,
+                "Cast",
+                json!({
+                    "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
+                    "caster_idx": e.caster_idx.to_string(), "target_cell": e.target_cell.to_string(),
+                }),
+            )
         }
         "CriticalFailure" => {
             let e: CriticalFailure = decode_bcs(module, name, contents)?;
-            (e.fight, "CriticalFailure", json!({
-                "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
-                "caster_idx": e.caster_idx.to_string(),
-            }))
+            (
+                e.fight,
+                "CriticalFailure",
+                json!({
+                    "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
+                    "caster_idx": e.caster_idx.to_string(),
+                }),
+            )
         }
         "StanceChanged" => {
             let e: StanceChanged = decode_bcs(module, name, contents)?;
-            (e.fight, "StanceChanged", json!({
-                "fight": hex(e.fight), "fighter_is_mob": e.fighter_is_mob,
-                "fighter_idx": e.fighter_idx.to_string(), "stance": e.stance.to_string(),
-                "active": e.active,
-            }))
+            (
+                e.fight,
+                "StanceChanged",
+                json!({
+                    "fight": hex(e.fight), "fighter_is_mob": e.fighter_is_mob,
+                    "fighter_idx": e.fighter_idx.to_string(), "stance": e.stance.to_string(),
+                    "active": e.active,
+                }),
+            )
         }
         "Revealed" => {
             let e: Revealed = decode_bcs(module, name, contents)?;
-            (e.fight, "Revealed", json!({
-                "fight": hex(e.fight), "is_mob": e.is_mob, "idx": e.idx.to_string(),
-            }))
+            (
+                e.fight,
+                "Revealed",
+                json!({
+                    "fight": hex(e.fight), "is_mob": e.is_mob, "idx": e.idx.to_string(),
+                }),
+            )
         }
         "Hit" => {
             let e: Hit = decode_bcs(module, name, contents)?;
-            (e.fight, "Hit", json!({
-                "fight": hex(e.fight), "victim_is_mob": e.victim_is_mob,
-                "victim_idx": e.victim_idx.to_string(), "amount": e.amount.to_string(),
-                "remaining_hp": e.remaining_hp.to_string(),
-            }))
+            (
+                e.fight,
+                "Hit",
+                json!({
+                    "fight": hex(e.fight), "victim_is_mob": e.victim_is_mob,
+                    "victim_idx": e.victim_idx.to_string(), "amount": e.amount.to_string(),
+                    "remaining_hp": e.remaining_hp.to_string(),
+                }),
+            )
         }
         "Drain" => {
             let e: Drain = decode_bcs(module, name, contents)?;
-            (e.fight, "Drain", json!({
-                "fight": hex(e.fight), "target_is_mob": e.target_is_mob,
-                "target_idx": e.target_idx.to_string(), "point_kind": e.point_kind,
-                "removed": e.removed.to_string(), "requested": e.requested.to_string(),
-            }))
+            (
+                e.fight,
+                "Drain",
+                json!({
+                    "fight": hex(e.fight), "target_is_mob": e.target_is_mob,
+                    "target_idx": e.target_idx.to_string(), "point_kind": e.point_kind,
+                    "removed": e.removed.to_string(), "requested": e.requested.to_string(),
+                }),
+            )
         }
         "Tackled" => {
             let e: Tackled = decode_bcs(module, name, contents)?;
-            (e.fight, "Tackled", json!({
-                "fight": hex(e.fight), "runner_is_mob": e.runner_is_mob,
-                "runner_idx": e.runner_idx.to_string(), "ap_lost": e.ap_lost.to_string(),
-                "mp_lost": e.mp_lost.to_string(), "num": e.num.to_string(), "den": e.den.to_string(),
-            }))
+            (
+                e.fight,
+                "Tackled",
+                json!({
+                    "fight": hex(e.fight), "runner_is_mob": e.runner_is_mob,
+                    "runner_idx": e.runner_idx.to_string(), "ap_lost": e.ap_lost.to_string(),
+                    "mp_lost": e.mp_lost.to_string(), "num": e.num.to_string(), "den": e.den.to_string(),
+                }),
+            )
         }
         "TurnEnded" => {
             let e: TurnEnded = decode_bcs(module, name, contents)?;
-            (e.fight, "TurnEnded", json!({
-                "fight": hex(e.fight), "is_mob": e.is_mob, "idx": e.idx.to_string(),
-            }))
+            (
+                e.fight,
+                "TurnEnded",
+                json!({
+                    "fight": hex(e.fight), "is_mob": e.is_mob, "idx": e.idx.to_string(),
+                }),
+            )
         }
         "Abandoned" => {
             let e: Abandoned = decode_bcs(module, name, contents)?;
-            (e.fight, "Abandoned", json!({
-                "fight": hex(e.fight), "character": hex(e.character), "seat": e.seat.to_string(),
-            }))
+            (
+                e.fight,
+                "Abandoned",
+                json!({
+                    "fight": hex(e.fight), "character": hex(e.character), "seat": e.seat.to_string(),
+                }),
+            )
         }
         "Victory" => {
             let e: FightVictory = decode_bcs(module, name, contents)?;
-            (e.fight, "Victory", json!({ "fight": hex(e.fight), "aged_bp": e.aged_bp.to_string() }))
+            (
+                e.fight,
+                "Victory",
+                json!({ "fight": hex(e.fight), "aged_bp": e.aged_bp.to_string() }),
+            )
         }
         "Defeat" => {
             let e: OneId = decode_bcs(module, name, contents)?;
@@ -225,9 +293,13 @@ pub(super) fn decode_journal_event(
         }
         "Settled" => {
             let e: FightSettled = decode_bcs(module, name, contents)?;
-            (e.fight, "Settled", json!({
-                "fight": hex(e.fight), "outcome": e.outcome, "results": e.results.to_string(),
-            }))
+            (
+                e.fight,
+                "Settled",
+                json!({
+                    "fight": hex(e.fight), "outcome": e.outcome, "results": e.results.to_string(),
+                }),
+            )
         }
         "Swept" => {
             let e: OneId = decode_bcs(module, name, contents)?;

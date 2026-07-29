@@ -56,7 +56,12 @@ fn pool_buy_sets_absolute_reserves_not_relative() {
 #[test]
 fn sale_created_seeds_supply_and_index() {
     let (sale, tmpl) = (oid(0x44), oid(0x55));
-    let body = enc(&SaleCreated { sale, template: tmpl, price: 250, supply: Some(10) });
+    let body = enc(&SaleCreated {
+        sale,
+        template: tmpl,
+        price: 250,
+        supply: Some(10),
+    });
     let w = map("shop", "SaleCreated", PKG, SENDER, TS, &body).unwrap();
     let ss = sale.to_canonical_string(true);
     assert_eq!(
@@ -86,7 +91,12 @@ fn sale_created_then_burned_removes_document_and_shop_index() {
         PKG,
         SENDER,
         TS,
-        &enc(&SaleCreated { sale, template, price: 250, supply: Some(10) }),
+        &enc(&SaleCreated {
+            sale,
+            template,
+            price: 250,
+            supply: Some(10),
+        }),
     )
     .unwrap();
     let burned = map(
@@ -95,7 +105,11 @@ fn sale_created_then_burned_removes_document_and_shop_index() {
         PKG,
         SENDER,
         TS,
-        &enc(&SaleBurned { sale, template, minted: 3 }),
+        &enc(&SaleBurned {
+            sale,
+            template,
+            minted: 3,
+        }),
     )
     .unwrap_or_default();
 
@@ -119,8 +133,14 @@ fn sale_created_then_burned_removes_document_and_shop_index() {
         }
     }
 
-    assert!(!shop_index.contains(&sale_id), "burn left sale in rpc:idx:sales");
-    assert!(!documents.contains(&sale_key), "burn left rpc:sale document");
+    assert!(
+        !shop_index.contains(&sale_id),
+        "burn left sale in rpc:idx:sales"
+    );
+    assert!(
+        !documents.contains(&sale_key),
+        "burn left rpc:sale document"
+    );
 }
 
 #[test]
@@ -175,7 +195,12 @@ fn sale_bought_history_receipt_is_idempotent_on_replay() {
 #[test]
 fn sale_unlimited_supply_serializes_null() {
     let sale = oid(0x44);
-    let body = enc(&SaleCreated { sale, template: oid(0x55), price: 1, supply: None });
+    let body = enc(&SaleCreated {
+        sale,
+        template: oid(0x55),
+        price: 1,
+        supply: None,
+    });
     let w = map("shop", "SaleCreated", PKG, SENDER, TS, &body).unwrap();
     match &w[0] {
         RedisWrite::Set { json, .. } => assert!(json.contains("\"supply\":null")),
@@ -213,7 +238,12 @@ fn character_created_records_name_class_owner_and_indexes() {
 #[test]
 fn item_equipped_writes_bracket_keyed_equipment_entry() {
     let (ch, item, tmpl) = (oid(0x88), oid(0x99), oid(0xaa));
-    let body = enc(&ItemEquip { character: ch, item, template: tmpl, amount: 1 });
+    let body = enc(&ItemEquip {
+        character: ch,
+        item,
+        template: tmpl,
+        amount: 1,
+    });
     let w = map("extract", "ItemEquipped", PKG, SENDER, TS, &body).unwrap();
     let (cs, is) = (ch.to_canonical_string(true), item.to_canonical_string(true));
     let key = k_character(&cs);
@@ -233,7 +263,12 @@ fn item_equipped_writes_bracket_keyed_equipment_entry() {
 #[test]
 fn equipment_cursor_tracks_both_identity_mutations() {
     let character = oid(0x88);
-    let body = enc(&ItemEquip { character, item: oid(0x99), template: oid(0xaa), amount: 1 });
+    let body = enc(&ItemEquip {
+        character,
+        item: oid(0x99),
+        template: oid(0xaa),
+        amount: 1,
+    });
     let key = k_character(&character.to_canonical_string(true));
     for name in ["ItemEquipped", "ItemUnequipped"] {
         assert_eq!(
@@ -254,10 +289,18 @@ fn equipment_cursor_tracks_both_identity_mutations() {
 #[test]
 fn item_unequipped_deletes_the_entry() {
     let (ch, item) = (oid(0x88), oid(0x99));
-    let body = enc(&ItemEquip { character: ch, item, template: oid(0xaa), amount: 1 });
+    let body = enc(&ItemEquip {
+        character: ch,
+        item,
+        template: oid(0xaa),
+        amount: 1,
+    });
     let w = map("extract", "ItemUnequipped", PKG, SENDER, TS, &body).unwrap();
     let (cs, is) = (ch.to_canonical_string(true), item.to_canonical_string(true));
-    assert_eq!(w, vec![del(k_character(&cs), &format!("$.equipment[\"{is}\"]"))]);
+    assert_eq!(
+        w,
+        vec![del(k_character(&cs), &format!("$.equipment[\"{is}\"]"))]
+    );
 }
 
 // ── encyclopedia templates + listing feed ────────────────────────────────────
@@ -265,14 +308,21 @@ fn item_unequipped_deletes_the_entry() {
 #[test]
 fn template_created_lives_and_indexes() {
     let t = oid(0xbb);
-    let body = enc(&Template { template: t, item_type: "weapon".into() });
+    let body = enc(&Template {
+        template: t,
+        item_type: "weapon".into(),
+    });
     let w = map("item", "TemplateCreated", PKG, SENDER, TS, &body).unwrap();
     let ts = t.to_canonical_string(true);
     assert_eq!(
         w,
         vec![
             // NX-init + per-field set (no full `$` replace) so the object snapshot can co-enrich the doc.
-            set_nx(k_template(&ts), "$", json!({ "template": ts, "live": true })),
+            set_nx(
+                k_template(&ts),
+                "$",
+                json!({ "template": ts, "live": true })
+            ),
             set(k_template(&ts), "$.item_type", json!("weapon")),
             sadd(K_TEMPLATES.into(), ts),
         ]
@@ -296,7 +346,10 @@ fn template_created_then_renamed_reuses_one_document_and_index_member() {
         PKG,
         SENDER,
         TS,
-        &enc(&Template { template, item_type: "cloak".into() }),
+        &enc(&Template {
+            template,
+            item_type: "cloak".into(),
+        }),
     )
     .unwrap_or_default();
     let snapshotted = super::super::snapshot::map_item_template_object(
@@ -317,7 +370,10 @@ fn template_created_then_renamed_reuses_one_document_and_index_member() {
         PKG,
         SENDER,
         TS + 1,
-        &enc(&TemplateRenamedFixture { template, name: "Lorito Cloak (Emerald)".into() }),
+        &enc(&TemplateRenamedFixture {
+            template,
+            name: "Lorito Cloak (Emerald)".into(),
+        }),
     )
     .unwrap_or_default();
 
@@ -326,7 +382,9 @@ fn template_created_then_renamed_reuses_one_document_and_index_member() {
     let mut projected_name = None;
     for write in created.iter().chain(&snapshotted).chain(&renamed) {
         match write {
-            RedisWrite::Set { key, path, json, .. } => {
+            RedisWrite::Set {
+                key, path, json, ..
+            } => {
                 document_keys.insert(key.clone());
                 if path == "$.name" {
                     projected_name = serde_json::from_str(json).ok();
@@ -339,7 +397,10 @@ fn template_created_then_renamed_reuses_one_document_and_index_member() {
         }
     }
 
-    assert_eq!(document_keys, std::collections::HashSet::from([template_key]));
+    assert_eq!(
+        document_keys,
+        std::collections::HashSet::from([template_key])
+    );
     assert_eq!(
         index_entries,
         std::collections::HashSet::from([(K_TEMPLATES.into(), template_id)])
@@ -352,9 +413,17 @@ fn template_created_then_renamed_reuses_one_document_and_index_member() {
 #[test]
 fn item_minted_seeds_and_bumps_supply_by_amount() {
     let (item, tmpl) = (oid(0x11), oid(0x22));
-    let body = enc(&ItemMinted { item, template: tmpl, item_type: "potion".into(), amount: 5 });
+    let body = enc(&ItemMinted {
+        item,
+        template: tmpl,
+        item_type: "potion".into(),
+        amount: 5,
+    });
     let w = map("item", "ItemMinted", PKG, SENDER, TS, &body).unwrap();
-    let (is, ts) = (item.to_canonical_string(true), tmpl.to_canonical_string(true));
+    let (is, ts) = (
+        item.to_canonical_string(true),
+        tmpl.to_canonical_string(true),
+    );
     assert_eq!(
         w,
         vec![
@@ -372,9 +441,16 @@ fn item_burned_decrements_supply_by_the_destroyed_amount() {
     let (item, tmpl) = (oid(0x11), oid(0x22));
     // extract::burn always destroys the WHOLE item object and reports its full `amount` —
     // there is no partial/unit-level consume door (verified against extract.move).
-    let body = enc(&ItemBurned { item, template: tmpl, amount: 3 });
+    let body = enc(&ItemBurned {
+        item,
+        template: tmpl,
+        amount: 3,
+    });
     let w = map("extract", "ItemBurned", PKG, SENDER, TS, &body).unwrap();
-    let (is, ts) = (item.to_canonical_string(true), tmpl.to_canonical_string(true));
+    let (is, ts) = (
+        item.to_canonical_string(true),
+        tmpl.to_canonical_string(true),
+    );
     assert_eq!(
         w,
         vec![
@@ -412,11 +488,17 @@ fn pet_power_advanced_sets_absolute_feed_state() {
 #[test]
 fn food_power_set_adds_template_to_pet_food_allowlist() {
     let food_template = oid(0x55);
-    let body = enc(&FoodPowerSet { food_template, power_per_unit: 1 });
+    let body = enc(&FoodPowerSet {
+        food_template,
+        power_per_unit: 1,
+    });
     let w = map("pet", "FoodPowerSet", PKG, SENDER, TS, &body).unwrap();
     assert_eq!(
         w,
-        vec![sadd(K_PET_FEED_FOODS.into(), food_template.to_canonical_string(true))]
+        vec![sadd(
+            K_PET_FEED_FOODS.into(),
+            food_template.to_canonical_string(true)
+        )]
     );
 }
 
@@ -429,8 +511,21 @@ fn supply_drift_check_two_mints_one_burn_nets_to_one() {
     // split are net-zero by construction and deliberately untracked, so they can't be a drift
     // source either — see the k_supply doc comment).
     let tmpl = oid(0x22);
-    let mint = |item: ObjectID| enc(&ItemMinted { item, template: tmpl, item_type: "sword".into(), amount: 1 });
-    let burn = |item: ObjectID| enc(&ItemBurned { item, template: tmpl, amount: 1 });
+    let mint = |item: ObjectID| {
+        enc(&ItemMinted {
+            item,
+            template: tmpl,
+            item_type: "sword".into(),
+            amount: 1,
+        })
+    };
+    let burn = |item: ObjectID| {
+        enc(&ItemBurned {
+            item,
+            template: tmpl,
+            amount: 1,
+        })
+    };
 
     let w1 = map("item", "ItemMinted", PKG, SENDER, TS, &mint(oid(0x31))).unwrap();
     let w2 = map("item", "ItemMinted", PKG, SENDER, TS, &mint(oid(0x32))).unwrap();
@@ -441,7 +536,11 @@ fn supply_drift_check_two_mints_one_burn_nets_to_one() {
         .iter()
         .flatten()
         .filter_map(|w| match w {
-            RedisWrite::NumIncrBy { key, path, by } if *key == k_supply(&ts) && path == "$.amount" => Some(*by),
+            RedisWrite::NumIncrBy { key, path, by }
+                if *key == k_supply(&ts) && path == "$.amount" =>
+            {
+                Some(*by)
+            }
             _ => None,
         })
         .sum();
@@ -451,7 +550,11 @@ fn supply_drift_check_two_mints_one_burn_nets_to_one() {
 #[test]
 fn kiosk_item_listed_uses_sender_as_seller_and_records_the_kiosk_directory() {
     let (kiosk, item) = (oid(0xcc), oid(0xdd));
-    let body = enc(&KioskItemListed { kiosk, id: item, price: 1200 });
+    let body = enc(&KioskItemListed {
+        kiosk,
+        id: item,
+        price: 1200,
+    });
     let w = map("kiosk", "ItemListed", "0x2", SENDER, TS, &body).unwrap();
     let is = item.to_canonical_string(true);
     let ks = kiosk.to_canonical_string(true);
@@ -477,8 +580,22 @@ fn kiosk_item_listed_uses_sender_as_seller_and_records_the_kiosk_directory() {
 fn kiosk_delist_removes_the_listing_exactly() {
     let item = oid(0xdd);
     let is = item.to_canonical_string(true);
-    let delisted = map("kiosk", "ItemDelisted", "0x2", SENDER, TS, &enc(&KioskItemDelisted { kiosk: oid(0xcc), id: item })).unwrap();
-    assert_eq!(delisted, vec![del(k_listing(&is), "$"), srem(K_LISTINGS.into(), is)]);
+    let delisted = map(
+        "kiosk",
+        "ItemDelisted",
+        "0x2",
+        SENDER,
+        TS,
+        &enc(&KioskItemDelisted {
+            kiosk: oid(0xcc),
+            id: item,
+        }),
+    )
+    .unwrap();
+    assert_eq!(
+        delisted,
+        vec![del(k_listing(&is), "$"), srem(K_LISTINGS.into(), is)]
+    );
 }
 
 #[test]
@@ -486,10 +603,28 @@ fn kiosk_purchase_drops_listing_and_logs_a_capped_idempotent_sale() {
     let (kiosk, item) = (oid(0xcc), oid(0xdd));
     let is = item.to_canonical_string(true);
     let ks = kiosk.to_canonical_string(true);
-    let w = map("kiosk", "ItemPurchased", "0x2", SENDER, TS, &enc(&KioskItemListed { kiosk, id: item, price: 5000 })).unwrap();
+    let w = map(
+        "kiosk",
+        "ItemPurchased",
+        "0x2",
+        SENDER,
+        TS,
+        &enc(&KioskItemListed {
+            kiosk,
+            id: item,
+            price: 5000,
+        }),
+    )
+    .unwrap();
 
     // 1) the consumed active listing is still dropped (unchanged behaviour)…
-    assert_eq!(&w[..2], &[del(k_listing(&is), "$"), srem(K_LISTINGS.into(), is.clone())][..]);
+    assert_eq!(
+        &w[..2],
+        &[
+            del(k_listing(&is), "$"),
+            srem(K_LISTINGS.into(), is.clone())
+        ][..]
+    );
     // 2) …then the sale is appended to the seller's per-kiosk log: a row scored by ts,
     //    a rank cap, and a refreshed idle TTL. Buyer = the purchase tx sender.
     let row = json!({ "item": is, "price_mist": "5000", "buyer": SENDER, "ts": TS }).to_string();
@@ -510,7 +645,11 @@ fn kiosk_equip_exit_does_not_create_sale_history_row() {
     let (kiosk, item) = (oid(0xcc), oid(0xdd));
     let is = item.to_canonical_string(true);
     let ks = kiosk.to_canonical_string(true);
-    let body = enc(&KioskItemListed { kiosk, id: item, price: 0 });
+    let body = enc(&KioskItemListed {
+        kiosk,
+        id: item,
+        price: 0,
+    });
     let w = map_with_context(
         "kiosk",
         "ItemPurchased",
@@ -570,7 +709,11 @@ fn kiosk_purchase_row_is_idempotent_on_replay() {
     // sorted set is why the sale log needs no non-idempotent NUMINCRBY, unlike shop
     // minted). Proven at the projection level: the two projections are equal.
     let (kiosk, item) = (oid(0xcc), oid(0xdd));
-    let ev = enc(&KioskItemListed { kiosk, id: item, price: 5000 });
+    let ev = enc(&KioskItemListed {
+        kiosk,
+        id: item,
+        price: 5000,
+    });
     let a = map("kiosk", "ItemPurchased", "0x2", SENDER, TS, &ev).unwrap();
     let b = map("kiosk", "ItemPurchased", "0x2", SENDER, TS, &ev).unwrap();
     assert_eq!(a, b);
@@ -581,7 +724,14 @@ fn kiosk_purchase_row_is_idempotent_on_replay() {
 #[test]
 fn zone_searched_records_counts_and_zone_index() {
     let world = oid(0xee);
-    let body = enc(&ZoneSearched { world, zx: 7, zy: 9, at_ms: 1_700_000_000_000, mob_groups: 5, resource_nodes: 12 });
+    let body = enc(&ZoneSearched {
+        world,
+        zx: 7,
+        zy: 9,
+        at_ms: 1_700_000_000_000,
+        mob_groups: 5,
+        resource_nodes: 12,
+    });
     let w = map("zones", "ZoneSearched", PKG, SENDER, TS, &body).unwrap();
     let ws = world.to_canonical_string(true);
     // NX skeleton + per-field sets (NOT a full `$` replace) so the Zone-DF object snapshot
@@ -590,8 +740,16 @@ fn zone_searched_records_counts_and_zone_index() {
     assert_eq!(
         w,
         vec![
-            set_nx(k_zone(&ws, 7, 9), "$", json!({ "world": ws, "zx": 7, "zy": 9, "discovered": true })),
-            set(k_zone(&ws, 7, 9), "$.discovered_at_ms", json!(1_700_000_000_000u64)),
+            set_nx(
+                k_zone(&ws, 7, 9),
+                "$",
+                json!({ "world": ws, "zx": 7, "zy": 9, "discovered": true })
+            ),
+            set(
+                k_zone(&ws, 7, 9),
+                "$.discovered_at_ms",
+                json!(1_700_000_000_000u64)
+            ),
             set(k_zone(&ws, 7, 9), "$.mob_groups", json!(5)),
             set(k_zone(&ws, 7, 9), "$.resource_nodes", json!(12)),
             sadd(k_zones(&ws), "7:9".into()),
@@ -619,7 +777,14 @@ fn mob_group_claimed_projects_group_template() {
     });
     let w = map("zones", "MobGroupClaimed", PKG, SENDER, TS, &body).unwrap();
     let ws = world.to_canonical_string(true);
-    assert_eq!(w, vec![set(k_group_template(&ws, 42), "$", json!(template.to_canonical_string(true)))]);
+    assert_eq!(
+        w,
+        vec![set(
+            k_group_template(&ws, 42),
+            "$",
+            json!(template.to_canonical_string(true))
+        )]
+    );
 }
 
 #[test]
@@ -630,11 +795,27 @@ fn world_created_seeds_the_doc_without_clobbering_the_object_snapshot() {
     // "Lv 1+ on every world" state on every backfill).
     let world = oid(0x77);
     let ws = world.to_canonical_string(true);
-    let w = map("world", "WorldCreated", PKG, SENDER, TS, &enc(&WorldCreated { world, seed: 424242, biome: "archipelago".into() })).unwrap();
+    let w = map(
+        "world",
+        "WorldCreated",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&WorldCreated {
+            world,
+            seed: 424242,
+            biome: "archipelago".into(),
+        }),
+    )
+    .unwrap();
     assert_eq!(
         w,
         vec![
-            set_nx(k_world(&ws), "$", json!({ "world": ws, "seed": "424242", "biome": "archipelago" })),
+            set_nx(
+                k_world(&ws),
+                "$",
+                json!({ "world": ws, "seed": "424242", "biome": "archipelago" })
+            ),
             sadd(K_WORLDS.into(), ws),
         ]
     );
@@ -648,22 +829,43 @@ fn rare_link_set_and_cleared_upsert_then_remove() {
     let ws = world.to_canonical_string(true);
     let ts = template.to_canonical_string(true);
     // SET: link the base template to its rare variant + index it under the world.
-    let set_w = map("world", "RareLinkSet", PKG, SENDER, TS, &enc(&RareLinkSet { world, template, rare_template: rare })).unwrap();
+    let set_w = map(
+        "world",
+        "RareLinkSet",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&RareLinkSet {
+            world,
+            template,
+            rare_template: rare,
+        }),
+    )
+    .unwrap();
     assert_eq!(
         set_w,
         vec![
-            set(k_rare_link(&ws, &ts), "$", json!(rare.to_canonical_string(true))),
+            set(
+                k_rare_link(&ws, &ts),
+                "$",
+                json!(rare.to_canonical_string(true))
+            ),
             sadd(k_rare_links(&ws), ts.clone()),
         ]
     );
     // CLEARED: remove both the link doc and the index entry.
-    let clr_w = map("world", "RareLinkCleared", PKG, SENDER, TS, &enc(&RareLinkCleared { world, template })).unwrap();
+    let clr_w = map(
+        "world",
+        "RareLinkCleared",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&RareLinkCleared { world, template }),
+    )
+    .unwrap();
     assert_eq!(
         clr_w,
-        vec![
-            del(k_rare_link(&ws, &ts), "$"),
-            srem(k_rare_links(&ws), ts),
-        ]
+        vec![del(k_rare_link(&ws, &ts), "$"), srem(k_rare_links(&ws), ts),]
     );
 }
 
@@ -671,7 +873,10 @@ fn rare_link_set_and_cleared_upsert_then_remove() {
 
 #[test]
 fn dial_changed_inits_config_then_sets_dial() {
-    let body = enc(&DialChanged { dial: "xp_multiplier".into(), value: 2 });
+    let body = enc(&DialChanged {
+        dial: "xp_multiplier".into(),
+        value: 2,
+    });
     let w = map("config", "DialChanged", PKG, SENDER, TS, &body).unwrap();
     assert_eq!(
         w,
@@ -687,13 +892,21 @@ fn dial_changed_inits_config_then_sets_dial() {
 #[test]
 fn kolizeum_created_opens_lobby_and_indexes() {
     let kz = oid(0x1a);
-    let body = enc(&KolizeumCreated { kolizeum: kz, creator: saddr(0x2b), format_slots: 3, pledge_amount: 10_000, is_public: true });
+    let body = enc(&KolizeumCreated {
+        kolizeum: kz,
+        creator: saddr(0x2b),
+        format_slots: 3,
+        pledge_amount: 10_000,
+        is_public: true,
+    });
     let w = map("kolizeum_events", "KolizeumCreated", PKG, SENDER, TS, &body).unwrap();
     let ks = kz.to_canonical_string(true);
     match &w[0] {
         RedisWrite::Set { key, json, .. } => {
             assert_eq!(key, &k_kolizeum(&ks));
-            assert!(json.contains("\"status\":\"open\"") && json.contains("\"pledge_mist\":\"10000\""));
+            assert!(
+                json.contains("\"status\":\"open\"") && json.contains("\"pledge_mist\":\"10000\"")
+            );
         }
         _ => panic!("expected lobby doc"),
     }
@@ -720,9 +933,22 @@ fn kolizeum_settled_decodes_current_onchain_field_order() {
         winners: u64,
     }
     let kz = oid(0x1a);
-    let chain = ChainKolizeumSettled { kolizeum: kz, winning_side: 1, pot: 100_000, fee: 10_000, winners: 3 };
-    let w = map("kolizeum_events", "KolizeumSettled", PKG, SENDER, TS, &enc(&chain))
-        .expect("current-layout KolizeumSettled must decode");
+    let chain = ChainKolizeumSettled {
+        kolizeum: kz,
+        winning_side: 1,
+        pot: 100_000,
+        fee: 10_000,
+        winners: 3,
+    };
+    let w = map(
+        "kolizeum_events",
+        "KolizeumSettled",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&chain),
+    )
+    .expect("current-layout KolizeumSettled must decode");
     let key = k_kolizeum(&kz.to_canonical_string(true));
     assert_eq!(
         w,
@@ -738,7 +964,12 @@ fn kolizeum_settled_decodes_current_onchain_field_order() {
 #[test]
 fn run_activated_records_bound_character() {
     let (pass, world, player, character) = (oid(0x3c), oid(0x4d), saddr(0x5e), oid(0x6f));
-    let body = enc(&RunActivated { pass, world, player, character });
+    let body = enc(&RunActivated {
+        pass,
+        world,
+        player,
+        character,
+    });
     let w = map("dungeon_events", "RunActivated", PKG, SENDER, TS, &body).unwrap();
     let (ps, ws, pl, ch) = (
         pass.to_canonical_string(true),
@@ -766,7 +997,14 @@ fn run_activated_records_bound_character() {
 fn pass_entered_fight_backfills_character() {
     let (pass, fight, world, player, character) =
         (oid(0x3c), oid(0xf1), oid(0x4d), saddr(0x5e), oid(0x6f));
-    let body = enc(&PassEnteredFight { pass, fight, world, player, room: 2, character });
+    let body = enc(&PassEnteredFight {
+        pass,
+        fight,
+        world,
+        player,
+        room: 2,
+        character,
+    });
     let w = map("dungeon_events", "PassEnteredFight", PKG, SENDER, TS, &body).unwrap();
     let ps = pass.to_canonical_string(true);
     let key = k_run(&ps);
@@ -781,8 +1019,16 @@ fn pass_entered_fight_backfills_character() {
                     "player": player.to_string(), "status": "active",
                 })
             ),
-            set(key.clone(), "$.character", json!(character.to_canonical_string(true))),
-            set(key.clone(), "$.fight", json!(fight.to_canonical_string(true))),
+            set(
+                key.clone(),
+                "$.character",
+                json!(character.to_canonical_string(true))
+            ),
+            set(
+                key.clone(),
+                "$.fight",
+                json!(fight.to_canonical_string(true))
+            ),
             set(key, "$.room", json!(2)),
         ]
     );
@@ -791,7 +1037,13 @@ fn pass_entered_fight_backfills_character() {
 #[test]
 fn run_advanced_backfills_character_and_clears_fight() {
     let (pass, world, player, character) = (oid(0x3c), oid(0x4d), saddr(0x5e), oid(0x6f));
-    let body = enc(&RunAdvanced { pass, world, player, room: 3, character });
+    let body = enc(&RunAdvanced {
+        pass,
+        world,
+        player,
+        room: 3,
+        character,
+    });
     let w = map("dungeon_events", "RunAdvanced", PKG, SENDER, TS, &body).unwrap();
     let ps = pass.to_canonical_string(true);
     let key = k_run(&ps);
@@ -806,7 +1058,11 @@ fn run_advanced_backfills_character_and_clears_fight() {
                     "player": player.to_string(), "status": "active",
                 })
             ),
-            set(key.clone(), "$.character", json!(character.to_canonical_string(true))),
+            set(
+                key.clone(),
+                "$.character",
+                json!(character.to_canonical_string(true))
+            ),
             set(key.clone(), "$.room", json!(3)),
             set(key, "$.fight", json!(null)),
         ]
@@ -837,7 +1093,13 @@ fn craft_requested_seeds_doc_and_indexes_both_parties() {
     let request = oid(0xc0);
     let (customer, artisan) = (saddr(0xcc), saddr(0xa5));
     let recipe = oid(0x4e);
-    let body = enc(&CraftRequested { request, customer, artisan, recipe, amount: 2_000_000_000 });
+    let body = enc(&CraftRequested {
+        request,
+        customer,
+        artisan,
+        recipe,
+        amount: 2_000_000_000,
+    });
     let w = map("commission", "CraftRequested", PKG, SENDER, TS, &body).unwrap();
     let id = request.to_canonical_string(true);
     let (cs, ars) = (customer.to_string(), artisan.to_string());
@@ -864,7 +1126,12 @@ fn craft_accepted_marks_accepted_and_records_artisan_proof() {
     let request = oid(0xc0);
     let artisan = saddr(0xa5);
     let character = oid(0xce);
-    let body = enc(&CraftAccepted { request, artisan, artisan_level: 42, artisan_character: character });
+    let body = enc(&CraftAccepted {
+        request,
+        artisan,
+        artisan_level: 42,
+        artisan_character: character,
+    });
     let w = map("commission", "CraftAccepted", PKG, SENDER, TS, &body).unwrap();
     let key = k_commission(&request.to_canonical_string(true));
     assert_eq!(
@@ -872,7 +1139,11 @@ fn craft_accepted_marks_accepted_and_records_artisan_proof() {
         vec![
             set(key.clone(), "$.accepted", json!(true)),
             set(key.clone(), "$.artisan_level", json!(42)),
-            set(key, "$.artisan_character", json!(character.to_canonical_string(true))),
+            set(
+                key,
+                "$.artisan_character",
+                json!(character.to_canonical_string(true))
+            ),
         ]
     );
 }
@@ -883,7 +1154,14 @@ fn craft_executed_deletes_doc_and_unindexes_both_parties() {
     let request = oid(0xc0);
     let (customer, artisan) = (saddr(0xcc), saddr(0xa5));
     let body = enc(&CraftExecuted {
-        request, customer, artisan, recipe: oid(0x4e), amount: 2_000_000_000, fee: 200_000_000, success: true, artisan_xp: 150,
+        request,
+        customer,
+        artisan,
+        recipe: oid(0x4e),
+        amount: 2_000_000_000,
+        fee: 200_000_000,
+        success: true,
+        artisan_xp: 150,
     });
     let w = map("commission", "CraftExecuted", PKG, SENDER, TS, &body).unwrap();
     let id = request.to_canonical_string(true);
@@ -935,7 +1213,8 @@ fn craft_executed_decodes_current_onchain_field_order() {
     };
     let body = enc(&chain);
 
-    let w = map("commission", "CraftExecuted", PKG, SENDER, TS, &body).expect("current-layout CraftExecuted must decode");
+    let w = map("commission", "CraftExecuted", PKG, SENDER, TS, &body)
+        .expect("current-layout CraftExecuted must decode");
     let id = request.to_canonical_string(true);
     assert_eq!(
         w,
@@ -947,7 +1226,8 @@ fn craft_executed_decodes_current_onchain_field_order() {
     );
 
     // amount/fee/success/artisan_xp carry no Redis projection today — pin them directly.
-    let e: CraftExecuted = bcs::from_bytes(&body).expect("struct decode must match the chain layout");
+    let e: CraftExecuted =
+        bcs::from_bytes(&body).expect("struct decode must match the chain layout");
     assert_eq!(e.amount, 2_000_000_000);
     assert_eq!(e.fee, 200_000_000);
     assert!(e.success);
@@ -961,7 +1241,12 @@ fn craft_cancelled_deletes_doc_and_unindexes_both_parties() {
     // both parties — the v1 cancel's artisan-index monotonic wart is gone.
     let request = oid(0xc0);
     let (customer, artisan) = (saddr(0xcc), saddr(0xa5));
-    let body = enc(&CraftCancelled { request, customer, artisan, amount: 2_000_000_000 });
+    let body = enc(&CraftCancelled {
+        request,
+        customer,
+        artisan,
+        amount: 2_000_000_000,
+    });
     let w = map("commission", "CraftCancelled", PKG, SENDER, TS, &body).unwrap();
     let id = request.to_canonical_string(true);
     assert_eq!(
@@ -977,7 +1262,10 @@ fn craft_cancelled_deletes_doc_and_unindexes_both_parties() {
 #[test]
 fn kolizeum_drawn_sets_drawn_status_and_refund() {
     let kz = oid(0x1a);
-    let body = enc(&KolizeumDrawn { kolizeum: kz, refunded_total: 30_000 });
+    let body = enc(&KolizeumDrawn {
+        kolizeum: kz,
+        refunded_total: 30_000,
+    });
     let w = map("kolizeum_events", "KolizeumDrawn", PKG, SENDER, TS, &body).unwrap();
     let key = k_kolizeum(&kz.to_canonical_string(true));
     assert_eq!(
@@ -994,25 +1282,63 @@ fn kolizeum_outcome_opened_is_deferred() {
     // Added with the aresrpg_kolizeum package split. Recognised-but-deferred: the
     // consumed FightOutcome object DELETE rides the ares_snapshot pipeline, and the
     // event carries no outcome_id/owner to key /v1/pending-outcomes (HANDLERS.md).
-    assert!(map("kolizeum_events", "KolizeumOutcomeOpened", PKG, SENDER, TS, &[]).is_none());
+    assert!(map(
+        "kolizeum_events",
+        "KolizeumOutcomeOpened",
+        PKG,
+        SENDER,
+        TS,
+        &[]
+    )
+    .is_none());
 }
 
 #[test]
 fn creation_sponsor_and_free_surface_on_the_creation_doc() {
     let sponsor = saddr(0x9a);
-    let sp = map("creation", "SponsorSet", PKG, SENDER, TS, &enc(&SponsorSet { sponsor: Some(sponsor) })).unwrap();
+    let sp = map(
+        "creation",
+        "SponsorSet",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&SponsorSet {
+            sponsor: Some(sponsor),
+        }),
+    )
+    .unwrap();
     assert_eq!(
         sp,
         vec![
-            set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
+            set_nx(
+                K_CREATION.into(),
+                "$",
+                json!({ "classes": {}, "starters": {} })
+            ),
             set(K_CREATION.into(), "$.sponsor", json!(sponsor.to_string())),
         ]
     );
     // None → null (self-pay).
-    let cleared = map("creation", "SponsorSet", PKG, SENDER, TS, &enc(&SponsorSet { sponsor: None })).unwrap();
+    let cleared = map(
+        "creation",
+        "SponsorSet",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&SponsorSet { sponsor: None }),
+    )
+    .unwrap();
     assert_eq!(cleared[1], set(K_CREATION.into(), "$.sponsor", json!(null)));
 
-    let free = map("creation", "FreeEnabledSet", PKG, SENDER, TS, &enc(&FreeEnabledSet { enabled: true })).unwrap();
+    let free = map(
+        "creation",
+        "FreeEnabledSet",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&FreeEnabledSet { enabled: true }),
+    )
+    .unwrap();
     assert_eq!(free[1], set(K_CREATION.into(), "$.free", json!(true)));
 }
 
@@ -1022,11 +1348,20 @@ fn creation_sponsor_and_free_surface_on_the_creation_doc() {
 fn fight_created_seeds_doc_and_world_index() {
     let (fight, world) = (oid(0xf1), oid(0xe0));
     let body = enc(&FightCreated {
-        fight, world, spawn_id: 77, anchor_x: 100, anchor_z: 200,
-        public_fight: true, aged_bp: 500, mob_count: 3,
+        fight,
+        world,
+        spawn_id: 77,
+        anchor_x: 100,
+        anchor_z: 200,
+        public_fight: true,
+        aged_bp: 500,
+        mob_count: 3,
     });
     let w = map("fight_events", "FightCreated", PKG, SENDER, TS, &body).unwrap();
-    let (fs, ws) = (fight.to_canonical_string(true), world.to_canonical_string(true));
+    let (fs, ws) = (
+        fight.to_canonical_string(true),
+        world.to_canonical_string(true),
+    );
     assert_eq!(
         w,
         vec![
@@ -1047,9 +1382,16 @@ fn fight_created_seeds_doc_and_world_index() {
 #[test]
 fn fight_joined_maps_seat_and_reverse_pointer() {
     let (fight, ch) = (oid(0xf1), oid(0xc2));
-    let body = enc(&FightJoined { fight, character: ch, seat: 1 });
+    let body = enc(&FightJoined {
+        fight,
+        character: ch,
+        seat: 1,
+    });
     let w = map("fight_events", "FightJoined", PKG, SENDER, TS, &body).unwrap();
-    let (fs, cs) = (fight.to_canonical_string(true), ch.to_canonical_string(true));
+    let (fs, cs) = (
+        fight.to_canonical_string(true),
+        ch.to_canonical_string(true),
+    );
     let key = k_fight(&fs);
     assert_eq!(
         w,
@@ -1076,15 +1418,15 @@ fn fight_joined_maps_seat_and_reverse_pointer() {
 // stayed green — and did, while every fight on testnet wedged in placement. These bytes come
 // from the chain, so no change to `model.rs` can ever make them agree with themselves.
 const TURN_STARTED_WIRE: &[u8] = &[
-    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96,
-    148, 86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-    224, 88, 171, 159, 1, 0, 0, 189, 45, 249, 176, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96, 148,
+    86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 224, 88,
+    171, 159, 1, 0, 0, 189, 45, 249, 176, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
 ];
 // The positive control: same transaction, same checkpoint, consecutive event sequence.
 const MOB_MOVED_WIRE: &[u8] = &[
-    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96,
-    148, 86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0,
-    0, 0, 0, 0, 0, 0,
+    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96, 148,
+    86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0,
+    0, 0,
 ];
 const WEDGED_FIGHT: &str = "0xaf7429843ed544cedd9ed0d0a08ac0cab5d26094563bfa197806c3c54cb38167";
 
@@ -1092,8 +1434,17 @@ const WEDGED_FIGHT: &str = "0xaf7429843ed544cedd9ed0d0a08ac0cab5d26094563bfa1978
 fn turn_started_real_wire_flips_active_and_sets_cursor() {
     // The fullnode's own parsedJson for this event: is_mob false, idx "0",
     // deadline_ms "1785286156291", turn_entropy "2969120189", turn_ordinal "1".
-    let w = map("fight_events", "TurnStarted", PKG, SENDER, TS, TURN_STARTED_WIRE)
-        .expect("the captured on-chain TurnStarted must decode — it is the only writer of status:active");
+    let w = map(
+        "fight_events",
+        "TurnStarted",
+        PKG,
+        SENDER,
+        TS,
+        TURN_STARTED_WIRE,
+    )
+    .expect(
+        "the captured on-chain TurnStarted must decode — it is the only writer of status:active",
+    );
     let key = k_fight(WEDGED_FIGHT);
     assert_eq!(
         w,
@@ -1115,7 +1466,10 @@ fn the_mirror_consumes_the_whole_turn_started_wire() {
     let e: TurnStarted = bcs::from_bytes(TURN_STARTED_WIRE).expect("mirror must match the wire");
     assert_eq!(TURN_STARTED_WIRE.len(), 65);
     assert_eq!(e.fight.to_canonical_string(true), WEDGED_FIGHT);
-    assert_eq!((e.is_mob, e.idx, e.deadline_ms), (false, 0, 1_785_286_156_291));
+    assert_eq!(
+        (e.is_mob, e.idx, e.deadline_ms),
+        (false, 0, 1_785_286_156_291)
+    );
     assert_eq!((e.turn_entropy, e.turn_ordinal), (2_969_120_189, 1));
 }
 
@@ -1129,7 +1483,11 @@ fn the_same_transactions_mob_moved_is_the_positive_control() {
     assert_eq!(
         w,
         vec![
-            set_nx(key.clone(), "$", json!({ "fight": WEDGED_FIGHT, "mob_positions": {} })),
+            set_nx(
+                key.clone(),
+                "$",
+                json!({ "fight": WEDGED_FIGHT, "mob_positions": {} })
+            ),
             set_nx(key.clone(), "$.mob_positions", json!({})),
             set(key, "$.mob_positions[\"0\"]", json!(4)),
         ]
@@ -1139,14 +1497,22 @@ fn the_same_transactions_mob_moved_is_the_positive_control() {
 #[test]
 fn mob_moved_stores_latest_cell_on_the_fight_doc() {
     let fight = oid(0xf1);
-    let body = enc(&MobMoved { fight, idx: 3, to_cell: 15 });
+    let body = enc(&MobMoved {
+        fight,
+        idx: 3,
+        to_cell: 15,
+    });
     let w = map("fight_events", "MobMoved", PKG, SENDER, TS, &body).unwrap();
     let fs = fight.to_canonical_string(true);
     let key = k_fight(&fs);
     assert_eq!(
         w,
         vec![
-            set_nx(key.clone(), "$", json!({ "fight": fs, "mob_positions": {} })),
+            set_nx(
+                key.clone(),
+                "$",
+                json!({ "fight": fs, "mob_positions": {} })
+            ),
             set_nx(key.clone(), "$.mob_positions", json!({})),
             set(key, "$.mob_positions[\"3\"]", json!(15)),
         ]
@@ -1159,13 +1525,55 @@ fn mob_moved_stores_latest_cell_on_the_fight_doc() {
 fn victory_defeat_flip_status_settle_and_sweep_delete() {
     let fight = oid(0xf1);
     let fs = fight.to_canonical_string(true);
-    let victory = map("fight_events", "Victory", PKG, SENDER, TS, &enc(&FightVictory { fight, aged_bp: 500 })).unwrap();
-    assert_eq!(victory, vec![set(k_fight(&fs), "$.status", json!("victory"))]);
-    let defeat = map("fight_events", "Defeat", PKG, SENDER, TS, &enc(&OneId { id: fight })).unwrap();
+    let victory = map(
+        "fight_events",
+        "Victory",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&FightVictory {
+            fight,
+            aged_bp: 500,
+        }),
+    )
+    .unwrap();
+    assert_eq!(
+        victory,
+        vec![set(k_fight(&fs), "$.status", json!("victory"))]
+    );
+    let defeat = map(
+        "fight_events",
+        "Defeat",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&OneId { id: fight }),
+    )
+    .unwrap();
     assert_eq!(defeat, vec![set(k_fight(&fs), "$.status", json!("defeat"))]);
-    let settled = map("fight_events", "Settled", PKG, SENDER, TS, &enc(&FightSettled { fight, outcome: 2, results: 2 })).unwrap();
+    let settled = map(
+        "fight_events",
+        "Settled",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&FightSettled {
+            fight,
+            outcome: 2,
+            results: 2,
+        }),
+    )
+    .unwrap();
     assert_eq!(settled, vec![del(k_fight(&fs), "$")]);
-    let swept = map("fight_events", "Swept", PKG, SENDER, TS, &enc(&OneId { id: fight })).unwrap();
+    let swept = map(
+        "fight_events",
+        "Swept",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&OneId { id: fight }),
+    )
+    .unwrap();
     assert_eq!(swept, vec![del(k_fight(&fs), "$")]);
 }
 
@@ -1175,7 +1583,12 @@ fn victory_defeat_flip_status_settle_and_sweep_delete() {
 fn stat_raised_upserts_absolute_per_stat_allocation() {
     let ch = oid(0xc1);
     // raise vitality (index 0) by 10 → new total 10.
-    let body = enc(&StatRaised { character: ch, stat: 0, points: 10, stat_total: 10 });
+    let body = enc(&StatRaised {
+        character: ch,
+        stat: 0,
+        points: 10,
+        stat_total: 10,
+    });
     let w = map("stat_allocation", "StatRaised", PKG, SENDER, TS, &body).unwrap();
     let cs = ch.to_canonical_string(true);
     let key = k_character(&cs);
@@ -1198,7 +1611,12 @@ fn stat_raised_upserts_absolute_per_stat_allocation() {
 #[test]
 fn stat_raised_projects_from_the_merged_character_link_module() {
     let ch = oid(0xc2);
-    let body = enc(&StatRaised { character: ch, stat: 3, points: 5, stat_total: 41 });
+    let body = enc(&StatRaised {
+        character: ch,
+        stat: 3,
+        points: 5,
+        stat_total: 41,
+    });
     let merged = map("character_link", "StatRaised", PKG, SENDER, TS, &body).unwrap();
     let cs = ch.to_canonical_string(true);
     let key = k_character(&cs);
@@ -1212,14 +1630,24 @@ fn stat_raised_projects_from_the_merged_character_link_module() {
     );
     // Byte-identical projection from BOTH emitters — the history before the republish keeps
     // re-indexing correctly, which is why the retired module is matched rather than replaced.
-    assert_eq!(merged, map("stat_allocation", "StatRaised", PKG, SENDER, TS, &body).unwrap());
+    assert_eq!(
+        merged,
+        map("stat_allocation", "StatRaised", PKG, SENDER, TS, &body).unwrap()
+    );
 }
 
 #[test]
 fn protector_triggered_writes_the_per_gatherer_signal() {
     let (world, tmpl) = (oid(0xe0), oid(0x7b));
     let gatherer = saddr(0xab);
-    let body = enc(&ProtectorTriggered { world, gatherer, template: tmpl, x: 12, z: 34, spawn_id: 99 });
+    let body = enc(&ProtectorTriggered {
+        world,
+        gatherer,
+        template: tmpl,
+        x: 12,
+        z: 34,
+        spawn_id: 99,
+    });
     let w = map("gathering", "ProtectorTriggered", PKG, SENDER, TS, &body).unwrap();
     let g = gatherer.to_string();
     assert_eq!(
@@ -1240,7 +1668,15 @@ fn protector_triggered_writes_the_per_gatherer_signal() {
 fn result_minted_seeds_doc_maps_outcome_and_indexes_by_owner() {
     let (result, fight, ch) = (oid(0xab), oid(0xf1), oid(0xc1));
     let owner = saddr(0x5e);
-    let body = enc(&ResultMinted { result, fight, character: ch, owner, outcome: 2, xp_share: 1200, final_hp: 45 });
+    let body = enc(&ResultMinted {
+        result,
+        fight,
+        character: ch,
+        owner,
+        outcome: 2,
+        xp_share: 1200,
+        final_hp: 45,
+    });
     let w = map("fight_events", "ResultMinted", PKG, SENDER, TS, &body).unwrap();
     let (rs, os) = (result.to_canonical_string(true), owner.to_string());
     assert_eq!(
@@ -1268,7 +1704,20 @@ fn result_opened_creates_ticket_doc_and_burned_deletes() {
     // index it, never patch a root that does not exist.
     let result = oid(0xab);
     let rs = result.to_canonical_string(true);
-    let opened = map("results", "ResultOpened", PKG, SENDER, TS, &enc(&ResultOpened { result, character: oid(0xc1), xp_share: 1200, loot_units: 3 })).unwrap();
+    let opened = map(
+        "results",
+        "ResultOpened",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&ResultOpened {
+            result,
+            character: oid(0xc1),
+            xp_share: 1200,
+            loot_units: 3,
+        }),
+    )
+    .unwrap();
     assert_eq!(
         opened,
         vec![
@@ -1285,7 +1734,15 @@ fn result_opened_creates_ticket_doc_and_burned_deletes() {
             sadd(k_results(SENDER), rs.clone()),
         ]
     );
-    let burned = map("results", "ResultBurned", PKG, SENDER, TS, &enc(&OneId { id: result })).unwrap();
+    let burned = map(
+        "results",
+        "ResultBurned",
+        PKG,
+        SENDER,
+        TS,
+        &enc(&OneId { id: result }),
+    )
+    .unwrap();
     assert_eq!(burned, vec![del(k_result(&rs), "$")]);
 }
 
@@ -1295,8 +1752,19 @@ fn result_opened_creates_ticket_doc_and_burned_deletes() {
 fn deferred_fight_events_return_none() {
     // Granular board/turn events + LootMinted are deferred (live board = presence
     // + client sim replay) — see HANDLERS.md.
-    for n in ["Placed", "Ready", "Moved", "Cast", "Hit", "TurnEnded", "LootMinted"] {
-        assert!(map("fight_events", n, PKG, SENDER, TS, &[]).is_none(), "fight_events::{n} should be deferred");
+    for n in [
+        "Placed",
+        "Ready",
+        "Moved",
+        "Cast",
+        "Hit",
+        "TurnEnded",
+        "LootMinted",
+    ] {
+        assert!(
+            map("fight_events", n, PKG, SENDER, TS, &[]).is_none(),
+            "fight_events::{n} should be deferred"
+        );
     }
 }
 
@@ -1309,7 +1777,10 @@ fn deferred_and_foreign_events_return_none() {
         ("catalog", "CategoryAdded"),
         ("some_other_pkg", "Whatever"),
     ] {
-        assert!(map(m, n, PKG, SENDER, TS, &[]).is_none(), "{m}::{n} should not be indexed");
+        assert!(
+            map(m, n, PKG, SENDER, TS, &[]).is_none(),
+            "{m}::{n} should not be indexed"
+        );
     }
 }
 
@@ -1329,6 +1800,9 @@ fn craft_pet_analytics_runes_gather_verbs_are_deferred() {
         ("gathering", "ProtectorTriggered"),
         ("commission", "CraftXpRedeemed"),
     ] {
-        assert!(map(m, n, PKG, SENDER, TS, &[]).is_none(), "{m}::{n} should be deferred (activity → object state)");
+        assert!(
+            map(m, n, PKG, SENDER, TS, &[]).is_none(),
+            "{m}::{n} should be deferred (activity → object state)"
+        );
     }
 }
