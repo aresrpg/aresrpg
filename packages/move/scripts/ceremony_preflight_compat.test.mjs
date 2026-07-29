@@ -9,6 +9,7 @@ import { expect, test } from 'bun:test'
 import {
   ci_context,
   republish_window_verdict,
+  size_verdict,
 } from './ceremony_preflight_compat.mjs'
 
 const pr = (base_ref) => ({
@@ -128,4 +129,45 @@ test('a CI pull_request with no base ref is refused rather than guessed', () => 
       ref_name: null,
     }).mode
   ).toBe('refused')
+})
+
+// ── The size leg's verdict (#1581) ──────────────────────────────────────────────────────────────
+// The measurement itself needs a toolchain and a build; the DECISION over a measured number does
+// not, and the decision is the half that reached edge broken — `aresrpg` sat 47 bytes over the
+// chain ceiling on edge because nothing evaluated this on a pull request at all.
+
+test('a package inside both its budget and the ceiling passes, and reports both margins', () => {
+  const v = size_verdict({ name: 'aresrpg', size: 101_000, budget: 101_770 })
+  expect(v.ok).toBe(true)
+  expect(v.status).toBe('ok')
+  expect(v.ceiling_headroom).toBe(1400)
+  expect(v.budget_headroom).toBe(770)
+  // the numbers are printed on SUCCESS too — headroom is visible in every Move PR, not only a red one
+  expect(v.line).toContain('101000 / 102400')
+  expect(v.line).toContain('1400 under')
+  expect(v.line).toContain('budget 101770 (770 under)')
+})
+
+test('over BUDGET fails while still under the ceiling — the cliff moved earlier', () => {
+  const v = size_verdict({ name: 'aresrpg', size: 102_000, budget: 101_770 })
+  expect(v.ok).toBe(false)
+  expect(v.status).toBe('over-budget')
+  expect(v.ceiling_headroom).toBe(400) // still shippable — and still refused
+  expect(v.line).toContain('budget 101770 (230 OVER)')
+})
+
+test('over the CHAIN CEILING is its own status, never merely over policy', () => {
+  // the exact breach #1581 was filed for: edge measured 102447 against the 102400 ceiling
+  const v = size_verdict({ name: 'aresrpg', size: 102_447, budget: 101_770 })
+  expect(v.ok).toBe(false)
+  expect(v.status).toBe('over-ceiling')
+  expect(v.ceiling_headroom).toBe(-47)
+  expect(v.line).toContain('47 OVER')
+})
+
+test('a package with no budget row is still held to the chain ceiling', () => {
+  expect(size_verdict({ name: 'foundation', size: 40_000 }).status).toBe('ok')
+  expect(size_verdict({ name: 'foundation', size: 102_401 }).status).toBe(
+    'over-ceiling'
+  )
 })

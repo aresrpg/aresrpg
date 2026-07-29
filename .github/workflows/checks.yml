@@ -22,8 +22,9 @@ permissions:
 jobs:
   ladder:
     runs-on: ubuntu-latest
-    # 20, not 15: while a REPUBLISH_WINDOW marker is open this job compiles the Move set twice —
-    # once as the field-cap leg's freshness witness, once inside the size-only preflight below.
+    # 20, not 15: this job compiles the Move set twice on EVERY run — once as the field-cap leg's
+    # freshness witness, once inside the size preflight below, which builds each package into its
+    # own throwaway --install-dir so no prior command's output can reach the measured number.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -100,23 +101,29 @@ jobs:
             echo "::endgroup::"
           done
           exit "$overall"
-      - name: republish window — mode gate + size-only preflight
+      - name: republish window — mode gate + Move package size (#1581)
         # The ceremony preflight has two modes and CI owns the half that needs no chain.
         #   · --mode-check is hermetic (repo bytes + the GitHub context) and FAILS when a
         #     packages/move/REPUBLISH_WINDOW marker rides a master-bound run — the window lives on
         #     edge and must never be promoted to production. That refusal is the whole reason this
         #     step is armed here rather than left to the ceremony operator's terminal.
-        #   · while the marker exists, the size-only preflight runs for real: the compat verdict is
-        #     meaningless for a fresh lineage, but the chain's 102400-byte package ceiling is not,
-        #     and this job already installed the pinned sui and built every package above.
-        # Marker absent (the steady state) = mode-check prints COMPAT and this step is a no-op; the
-        # compat leg itself still needs a fullnode + a live upgrade cap, so it stays in the ceremony.
+        #   · --size-only measures every package's predicted on-chain MovePackage object size and
+        #     fails on the chain's 102400-byte ceiling OR the package's committed SIZE_BUDGETS row.
+        #     It needs a local build and NOTHING else — no fullnode, no identity, no upgrade cap —
+        #     which is exactly why it can run on a pull request. The compat leg still cannot, so it
+        #     stays in the ceremony.
+        #
+        # #1581 — THIS RUNS UNCONDITIONALLY, and that is the fix. It used to be `if [ -f
+        # packages/move/REPUBLISH_WINDOW ]`, so in the steady state (no marker) NOTHING in CI ever
+        # measured a package's size. `aresrpg` crossed the chain ceiling on edge at ff00a0b6 and sat
+        # there breaching — every queued Move upgrade dead on arrival with MovePackageTooBig — until
+        # a human happened to run the ceremony preflight by hand. A gate that only arms during a
+        # ceremony cannot catch what a PR lands; the numbers now print on every Move PR, green ones
+        # included, so headroom is a thing contributors see rather than discover.
         run: |
           set -euo pipefail
           node packages/move/scripts/ceremony_preflight_compat.mjs --mode-check
-          if [ -f packages/move/REPUBLISH_WINDOW ]; then
-            node packages/move/scripts/ceremony_preflight_compat.mjs
-          fi
+          node packages/move/scripts/ceremony_preflight_compat.mjs --size-only
       - name: enforcement ladder — bun run lint
         run: bun run lint
 

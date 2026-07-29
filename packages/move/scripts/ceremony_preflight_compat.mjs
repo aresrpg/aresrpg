@@ -58,6 +58,29 @@ const RELEASE_PATH = path.resolve(
 // on-chain at object_size 106584 against this 102400 ceiling).
 const MAX_OBJECT_SIZE = 102_400
 
+// ── The per-package size BUDGET (the PR-time half of this gate) ──────────────────────────────────
+// The chain ceiling above is a cliff: crossing it is only discovered at EXECUTION, mid-ceremony,
+// with gas already burned. `aresrpg` crossed it on edge at ff00a0b6 (#1442's set_template_effect
+// door, 26 bytes over) and sat there breaching until #1581 — because the size leg only ever ran
+// under a REPUBLISH_WINDOW marker, so in the steady state NOTHING measured this number on a PR.
+//
+// A budget is the cliff moved earlier, where it is cheap: a package over budget fails the PR that
+// grew it, naming the bytes, instead of failing the ceremony that ships it. While the package-split
+// decision (#1279) is open, a Move change that genuinely needs bytes bumps this line in the same
+// reviewed commit — which is precisely the visibility #1442 did not have.
+//
+// aresrpg measures 101770 here with the honest cuts exhausted (every private name is already
+// golfed, zero unused code, the shared pipelines already single-homed). The row is 101900, not
+// 101770: this proxy is recomputed from a fresh `sui move build` on whatever host runs it, and a
+// budget pinned to the exact byte would turn any 1-byte toolchain or host difference into a red on
+// a PR that changed no Move source — and a required check that reds for nothing is a check someone
+// disables. 130 bytes absorbs jitter while still failing 500 bytes BEFORE the ceiling; it is far
+// inside anything a real change moves (#1442 crossed by hundreds).
+//
+// Budgets only SHRINK (FROZEN.md: baselines only shrink, severities only ratchet up). A package
+// with no row here is held to the chain ceiling alone.
+const SIZE_BUDGETS = { aresrpg: 101_900 }
+
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's
 // verdict is an assertion about a lineage nobody will ever upgrade. Asserting it anyway reds every
@@ -269,6 +292,39 @@ function measurePackageSize(pkgPath, buildRoot) {
   return ownBytes + moduleMapOverhead + typeOriginBytes + linkageBytes
 }
 
+// Pure. The size leg's whole decision, so it can be unit-tested without a toolchain or a build.
+// → { ok, status: 'ok' | 'over-budget' | 'over-ceiling', ceiling_headroom, budget_headroom, line }
+// The ceiling is checked FIRST and reported as its own status: a package over the chain ceiling is
+// unshippable, not merely over policy, and the two must never read the same in a log.
+export function size_verdict({
+  name,
+  size,
+  budget = null,
+  ceiling = MAX_OBJECT_SIZE,
+}) {
+  const ceiling_headroom = ceiling - size
+  const budget_headroom = budget == null ? null : budget - size
+  const margin = (n) => (n < 0 ? `${-n} OVER` : `${n} under`)
+  const budget_part =
+    budget == null
+      ? '  budget none (chain ceiling only)'
+      : `  budget ${budget} (${margin(budget_headroom)})`
+  const line = `${name} SIZE ${size} / ${ceiling} (${margin(ceiling_headroom)})${budget_part}`
+  const status =
+    ceiling_headroom < 0
+      ? 'over-ceiling'
+      : budget_headroom != null && budget_headroom < 0
+        ? 'over-budget'
+        : 'ok'
+  return {
+    ok: status === 'ok',
+    status,
+    ceiling_headroom,
+    budget_headroom,
+    line,
+  }
+}
+
 // SIZE-ONLY pass (the republish window's whole gate). Builds each package with `sui move build` —
 // no chain read, no upgrade cap, no identity, nothing to serialize — and measures the predicted
 // MovePackage object size against the protocol ceiling. Same measurePackageSize as the compat path,
@@ -294,32 +350,47 @@ function size_only_run(packages) {
       console.log(`${name} ERROR  build produced no bytecode to measure`)
       continue
     }
-    const over = size > MAX_OBJECT_SIZE
-    if (over) any_failed = true
-    const margin = over
-      ? `${size - MAX_OBJECT_SIZE} over`
-      : `${MAX_OBJECT_SIZE - size} under`
-    console.log(`${name} SIZE ${size} / ${MAX_OBJECT_SIZE} (${margin})`)
+    const verdict = size_verdict({
+      name,
+      size,
+      budget: SIZE_BUDGETS[name] ?? null,
+    })
+    console.log(verdict.line)
+    if (verdict.status === 'over-ceiling') {
+      any_failed = true
+      console.log(
+        `${name} FAIL  over the chain's max_object_size — this package cannot be published or upgraded (MovePackageTooBig at execution).`
+      )
+    } else if (verdict.status === 'over-budget') {
+      any_failed = true
+      console.log(
+        `${name} FAIL  over its committed size budget with ${verdict.ceiling_headroom} bytes of ceiling left. Shrink the package, or raise SIZE_BUDGETS.${name} in packages/move/scripts/ceremony_preflight_compat.mjs in this same commit and say why.`
+      )
+    }
   }
   return any_failed
 }
 
 const HELP = `ceremony_preflight_compat — catch IncompatibleUpgrade BEFORE the ceremony, mechanically.
 
-Usage: node ceremony_preflight_compat.mjs [pkg...] [--mode-check]
+Usage: node ceremony_preflight_compat.mjs [pkg...] [--mode-check] [--size-only]
 
   pkg           one or more of: ${Object.keys(PKG_DEPS).join(', ')}
                 defaults to: ${DEFAULT_PACKAGES.join(' ')}
   --mode-check  print which mode the gate would run in and exit — no build, no chain, no CLI.
                 Non-zero only when a REPUBLISH_WINDOW marker is refused by its branch context.
+  --size-only   run ONLY the size leg: a local build and nothing else — no fullnode, no identity,
+                no upgrade cap. This is the half CI runs on every pull request (checks.yml), which
+                is why a package over the ceiling now fails at PR time instead of at the ceremony.
 
 For each package, runs \`sui client upgrade --serialize-unsigned-transaction\` against its source dir
 (no signing, no execution, no gas) and parses the local compatibility verifier's verdict. Prints one row
 per package — "<name> COMPATIBLE" or "<name> INCOMPATIBLE  <count>x<E-code> ..." — and exits non-zero if
 any requested package is incompatible (or errors for a non-compatibility reason). Also prints a SIZE row
-per package — "<name> SIZE <bytes> / 102400 (<margin>)" — a local proxy for the on-chain MovePackage
-object size (see measurePackageSize), and exits non-zero if any package would exceed the chain's
-max_object_size (MovePackageTooBig at execution, caught here before the ceremony ever dry-runs).
+per package — "<name> SIZE <bytes> / 102400 (<margin>)  budget <b> (<margin>)" — a local proxy for the
+on-chain MovePackage object size (see measurePackageSize), and exits non-zero if any package exceeds
+the chain's max_object_size (MovePackageTooBig at execution, caught here before the ceremony ever
+dry-runs) OR its committed SIZE_BUDGETS row, which fails earlier so a PR learns before the cliff.
 
 Env:
   NETWORK          testnet (default) | mainnet — must match the CLI's active-env (assert_env, fail-closed)
@@ -495,22 +566,37 @@ async function main() {
 
   const requested = args.filter((a) => !a.startsWith('--'))
 
-  if (verdict.mode === 'size-only') {
+  // `--size-only` is the PR-TIME entry point: the size leg needs a local build and nothing else —
+  // no fullnode, no identity, no upgrade cap — so CI can run it on every pull request, which the
+  // compat leg can never do. It only ever ADDS the size mode to a run that would have been compat;
+  // a REFUSED verdict is returned above, so the flag can never talk a master-bound marker open.
+  const size_only = verdict.mode === 'size-only' || args.includes('--size-only')
+
+  if (size_only) {
     const packages = requested.length ? requested : DEFAULT_PACKAGES
     assert_known_packages(packages)
     console.log('════════════════════════════════════════════════════════')
-    console.log(
-      '  REPUBLISH MODE — compat assertions SUSPENDED, size assertions BINDING.'
-    )
-    console.log(`  marker: ${REPUBLISH_MARKER_PATH}`)
-    for (const line of fs
-      .readFileSync(REPUBLISH_MARKER_PATH, 'utf8')
-      .trim()
-      .split('\n'))
-      console.log(`  > ${line}`)
-    console.log(
-      `  every package still fails over ${MAX_OBJECT_SIZE} bytes; delete the marker to restore the compat leg.`
-    )
+    if (marker_present) {
+      console.log(
+        '  REPUBLISH MODE — compat assertions SUSPENDED, size assertions BINDING.'
+      )
+      console.log(`  marker: ${REPUBLISH_MARKER_PATH}`)
+      for (const line of fs
+        .readFileSync(REPUBLISH_MARKER_PATH, 'utf8')
+        .trim()
+        .split('\n'))
+        console.log(`  > ${line}`)
+      console.log(
+        `  every package still fails over ${MAX_OBJECT_SIZE} bytes; delete the marker to restore the compat leg.`
+      )
+    } else {
+      console.log(
+        '  SIZE-ONLY PREFLIGHT — the PR-time half of the ceremony gate.'
+      )
+      console.log(
+        `  chain ceiling ${MAX_OBJECT_SIZE} bytes (max_object_size); per-package budgets fail EARLIER, on purpose.`
+      )
+    }
     console.log('════════════════════════════════════════════════════════')
     return size_only_run(packages) ? 1 : 0
   }
@@ -543,14 +629,13 @@ async function main() {
     }
 
     if (result.size != null) {
-      const over = result.size > MAX_OBJECT_SIZE
-      if (over) any_failed = true
-      const margin = over
-        ? `${result.size - MAX_OBJECT_SIZE} over`
-        : `${MAX_OBJECT_SIZE - result.size} under`
-      console.log(
-        `${name} SIZE ${result.size} / ${MAX_OBJECT_SIZE} (${margin})`
-      )
+      const size = size_verdict({
+        name,
+        size: result.size,
+        budget: SIZE_BUDGETS[name] ?? null,
+      })
+      if (!size.ok) any_failed = true
+      console.log(size.line)
     }
   }
 
