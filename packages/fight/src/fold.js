@@ -20,6 +20,7 @@ import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'
 import { GRID_W } from './los.js'
 import { base_from_view } from './fold_base.js'
+import { blocks_a_walk } from './fight_render_prims.js'
 import { masks_entries, pace_segment } from './present.js'
 import { fold_trap_ledger } from './trap_ledger.js'
 import {
@@ -393,7 +394,8 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
   }
   const fighter_positions = new Map(
     Object.entries(draft.fighters ?? {}).flatMap(([key, fighter]) => {
-      if (fighter?.alive === false || Number(fighter?.hp ?? 1) <= 0) return []
+      // Same body mask as the fold's trap ledger — ONE home (`blocks_a_walk`), the chain's `add_living_bodies`.
+      if (!blocks_a_walk(fighter)) return []
       const id = fighter_id_of_key(key)
       const cell = cell_of(key)
       return id && cell ? [[String(id), cell]] : []

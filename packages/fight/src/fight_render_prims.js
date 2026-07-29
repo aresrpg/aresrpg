@@ -123,6 +123,15 @@ export const reconstructed_path = (from, to, board = {}) => {
   return bfs ? bfs.slice(1) : path_between(from, to)
 }
 
+/** THE ONE body mask a REBUILT walk may use (#1493). A chain `Moved`/`MobMoved` carries only the landing cell,
+ *  so both consumers that decide "which cells did this walk enter" — the fold's trap ledger and the receipt beat
+ *  producer — rebuild the route, and both must mask bodies exactly as the chain does:
+ *  `displacement::move_blocked_cells` → `add_living_bodies`, i.e. only LIVING bodies block. A CORPSE holds no
+ *  cell. Written twice with different answers, this predicate re-routed the ledger around a body the chain walks
+ *  straight through, and the detour decided trap lifecycle — consuming traps no one ever stepped on while the
+ *  really-crossed one survived. One home, so the two rebuilds cannot drift again. */
+export const blocks_a_walk = (fighter) => !!fighter && fighter.alive !== false && Number(fighter.hp ?? 1) > 0
+
 export const trap_covers = (trap, cell) => (trap?.cells ?? []).some((candidate) => same_cell(candidate, cell))
 
 // The 1.29-aligned product visibility is deliberately this one line so the spectator ruling is easy to re-rule later.

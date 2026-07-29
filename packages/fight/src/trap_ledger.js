@@ -5,7 +5,14 @@
 import { K_PLACE_TRAP } from '@aresrpg/sim/spell_effect'
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 
-import { armed_at, decoded_cell, encoded_cell, placements_by_anchor, reconstructed_path } from './fight_render_prims.js'
+import {
+  armed_at,
+  blocks_a_walk,
+  decoded_cell,
+  encoded_cell,
+  placements_by_anchor,
+  reconstructed_path,
+} from './fight_render_prims.js'
 import { fighter_key, seat_resolver } from './inputs.js'
 import { GRID_W, decode, encode } from './los.js'
 
@@ -45,10 +52,21 @@ const committed_entries_of = ({ authoritative_tail, base, view }) => {
     width: GRID_W,
   }
   const resolve_seat_key = seat_resolver(view)
-  const cell_at = new Map(Object.entries(base.fighters ?? {}).map(([key, fighter]) => [key, fighter.cell]))
+  // Only LIVING bodies mask a rebuilt route (`blocks_a_walk` — the chain's `add_living_bodies` rule, one home).
+  const cell_at = new Map(
+    Object.entries(base.fighters ?? {})
+      .filter(([, fighter]) => blocks_a_walk(fighter))
+      .map(([key, fighter]) => [key, fighter.cell])
+  )
   const committed_entries = []
 
   authoritative_tail.forEach((entry, at) => {
+    // A body killed EARLIER in this same tail frees its cell for a LATER mover: the chain rebuilds its wall mask
+    // per mover (`move_blocked_cells` at each `walk` call), so a mid-receipt corpse blocks nothing after it falls.
+    if (entry.kind === 'Hit' && Number(entry.remaining_hp) <= 0) {
+      cell_at.delete(`${entry.victim_is_mob ? 'm' : 'p'}${Number(entry.victim_idx)}`)
+      return
+    }
     if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) return
     const resolve_seat = entry.resolve_seat ?? resolve_seat_key
     const key =
