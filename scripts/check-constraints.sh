@@ -652,6 +652,27 @@ test_reachability_hits() {
 
 test_reachability_gate() {
   echo "== AresRPG test-reachability gate (every *.test.*/*.spec.* file must be reachable by some ares test <selector>) =="
+  local control_dir
+  local control_path
+  local control_output
+  local control_status
+  control_dir="$(mktemp -d scripts/.test-reachability-control.XXXXXX)" || {
+    red "TEST-REACHABILITY GATE FAILED. Could not create the fresh orphan control."
+    return 1
+  }
+  control_path="$control_dir/fresh_orphan.test.mjs"
+  touch "$control_path"
+  control_output="$(test_reachability_hits)"
+  control_status=$?
+  rm -f "$control_path"
+  rmdir "$control_dir"
+  echo "  control trip (expected):"
+  echo "$control_output" | sed 's/^/    /'
+  if [ "$control_status" -eq 0 ] || ! printf '%s\n' "$control_output" | grep -Fq "$control_path"; then
+    red "TEST-REACHABILITY GATE FAILED. Blind guard did not reject its fresh orphan."
+    return 1
+  fi
+
   local output
   local status
   output="$(test_reachability_hits)"
@@ -905,6 +926,67 @@ fixture_adjudication_gate() {
   grn "FIXTURE-ADJUDICATION GATE PASSED."
 }
 
+fixture_adjudication_blind_guard() {
+  local control_repo
+  local fixture_path
+  local base
+  local head
+  local output
+  local status
+  control_repo="$(mktemp -d "${TMPDIR:-/tmp}/ares-fixture-adjudication-control.XXXXXX")" || return 1
+  fixture_path="$control_repo/packages/sim/test/fixtures/fresh-control.json"
+  mkdir -p "$(dirname "$fixture_path")"
+  if ! env -u GIT_DIR -u GIT_WORK_TREE git -C "$control_repo" init --quiet --initial-branch=edge . ||
+    ! git --git-dir="$control_repo/.git" --work-tree="$control_repo" config user.name "Fresh Control Author" ||
+    ! git --git-dir="$control_repo/.git" --work-tree="$control_repo" config user.email "fresh-control@aresrpg.world"; then
+    rm -rf "$control_repo"
+    red "FIXTURE-ADJUDICATION GATE FAILED. Could not initialize the fresh mutation control repository."
+    return 1
+  fi
+  printf '{"state":"seed"}\n' >"$fixture_path"
+  git --git-dir="$control_repo/.git" --work-tree="$control_repo" add . &&
+    git --git-dir="$control_repo/.git" --work-tree="$control_repo" -c commit.gpgsign=false commit \
+      --no-verify --quiet --message "seed control fixture"
+  if [ "$?" -ne 0 ]; then
+    rm -rf "$control_repo"
+    red "FIXTURE-ADJUDICATION GATE FAILED. Could not commit the fresh mutation control seed."
+    return 1
+  fi
+  base="$(git --git-dir="$control_repo/.git" --work-tree="$control_repo" rev-parse HEAD)"
+  printf '{"state":"fresh-unadjudicated-mutation"}\n' >"$fixture_path"
+  git --git-dir="$control_repo/.git" --work-tree="$control_repo" add . &&
+    git --git-dir="$control_repo/.git" --work-tree="$control_repo" -c commit.gpgsign=false commit \
+      --no-verify --quiet --message "mutate control fixture"
+  if [ "$?" -ne 0 ]; then
+    rm -rf "$control_repo"
+    red "FIXTURE-ADJUDICATION GATE FAILED. Could not commit the fresh mutation control violation."
+    return 1
+  fi
+  head="$(git --git-dir="$control_repo/.git" --work-tree="$control_repo" rev-parse HEAD)"
+  output="$(
+    export GIT_DIR="$control_repo/.git"
+    export GIT_WORK_TREE="$control_repo"
+    export FIXTURE_ADJUDICATION_BASE_SHA="$base"
+    export FIXTURE_ADJUDICATION_HEAD_SHA="$head"
+    fixture_adjudication_gate
+  )"
+  status=$?
+  rm -rf "$control_repo"
+  echo "  control trip (expected):"
+  echo "$output" | sed 's/^/    /'
+  if [ "$status" -eq 0 ] ||
+    ! printf '%s\n' "$output" | grep -Fq "packages/sim/test/fixtures/fresh-control.json" ||
+    ! printf '%s\n' "$output" | grep -Fq "red=1"; then
+    red "FIXTURE-ADJUDICATION GATE FAILED. Blind guard did not reject its fresh unadjudicated mutation."
+    return 1
+  fi
+}
+
+fixture_adjudication_controlled_gate() {
+  fixture_adjudication_blind_guard || return 1
+  fixture_adjudication_gate
+}
+
 if [ "${1:-}" = "--test-reachability" ]; then
   test_reachability_gate
   exit $?
@@ -914,7 +996,7 @@ if [ "${1:-}" = "--fixture-adjudication" ]; then
     echo "usage: bash scripts/check-constraints.sh --fixture-adjudication" >&2
     exit 2
   fi
-  fixture_adjudication_gate
+  fixture_adjudication_controlled_gate
   exit $?
 fi
 if [ "$#" -ne 0 ]; then
@@ -960,7 +1042,7 @@ if ! test_reachability_gate; then
 fi
 
 echo
-if ! fixture_adjudication_gate; then
+if ! fixture_adjudication_controlled_gate; then
   FAIL=1
 fi
 

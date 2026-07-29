@@ -434,6 +434,21 @@ export function check_doc_file_references(repo_root) {
   }
 }
 
+export function doc_reference_blind_guard() {
+  const cited_path = 'scripts/fresh-doc-reference-control.mjs'
+  const references = collect_references(`\`${cited_path}\``, 'docs/fresh-control.md')
+  const unresolved = unresolved_references(references, {
+    find_matches: () => [],
+    path_exists: () => false,
+    repo_root: '/fresh-doc-reference-control',
+  })
+  return (
+    unresolved.length === 1 &&
+    unresolved[0].cited_path === cited_path &&
+    unresolved[0].reason === 'missing target'
+  )
+}
+
 function parse_root_argument(args) {
   if (args.length === 0) return default_repo_root
   if (args.length === 2 && args[0] === '--root') return path.resolve(args[1])
@@ -443,6 +458,12 @@ function parse_root_argument(args) {
 function main() {
   try {
     const repo_root = parse_root_argument(process.argv.slice(2))
+    const fresh_control = Number(doc_reference_blind_guard())
+    console.log(`docs file references control trip (expected): fresh_unresolved=${fresh_control}`)
+    if (fresh_control !== 1) {
+      console.error('docs file references: FAIL (blind guard did not reject its fresh missing citation)')
+      return 1
+    }
     const result = check_doc_file_references(repo_root)
     if (result.unresolved.length === 0) {
       console.log(`docs file references: PASS (${result.doc_count} docs, ${result.reference_count} references)`)

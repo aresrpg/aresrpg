@@ -38,6 +38,15 @@ const MANIFEST_PATH = 'packages/move/scripts/out/seed_manifest.json'
 const RELEASE_PATH = 'packages/sdk/src/deployment/release.json'
 // Same five lineages, same order, as seed_full_corpus.mjs's own LINEAGE_STAMP.
 const STAMP_PACKAGES = ['foundation', 'aresrpg', 'spells', 'aresrpg', 'engine']
+const release_stamp_of = (packages) => STAMP_PACKAGES.map((name) => packages[name].origin).join(',')
+const lineage_is_stale = (manifest_stamp, packages) => manifest_stamp !== release_stamp_of(packages)
+
+function fresh_lineage_control_fires() {
+  const packages = Object.fromEntries(
+    [...new Set(STAMP_PACKAGES)].map((name, index) => [name, { origin: `fresh-control-origin-${index}` }])
+  )
+  return lineage_is_stale(`${release_stamp_of(packages)}-stale`, packages)
+}
 
 function read_json(root, relative_path) {
   const absolute_path = path.join(root, relative_path)
@@ -51,6 +60,12 @@ function read_json(root, relative_path) {
 
 export function run_manifest_lineage_gate({ root = default_root } = {}) {
   console.log('== AresRPG seed-manifest lineage gate (bundled manifest vs release.json pins, #698) ==')
+  const fresh_control = Number(fresh_lineage_control_fires())
+  console.log(`  control trip (expected): fresh_stale_lineage_rejected=${fresh_control}`)
+  if (fresh_control !== 1) {
+    console.log('MANIFEST LINEAGE GATE FAILED. Blind guard did not reject its fresh stale-lineage control.')
+    return 1
+  }
 
   const manifest_read = read_json(root, MANIFEST_PATH)
   if (manifest_read.error) {
@@ -92,8 +107,8 @@ export function run_manifest_lineage_gate({ root = default_root } = {}) {
     return 1
   }
 
-  const release_stamp = STAMP_PACKAGES.map((name) => packages[name].origin).join(',')
-  if (manifest_stamp !== release_stamp) {
+  const release_stamp = release_stamp_of(packages)
+  if (lineage_is_stale(manifest_stamp, packages)) {
     console.log(
       'MANIFEST LINEAGE GATE FAILED. The bundled seed manifest was seeded against a different package lineage than release.json currently pins — every id it carries is stale (#698 class).'
     )
