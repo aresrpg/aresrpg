@@ -13,37 +13,34 @@
 // render exhaustiveness gate — reads them instead of a local list.
 
 import { effective_stats } from '@aresrpg/sim/fight_state'
+import * as fx from '@aresrpg/sim/spell_effect'
 
 import { is_signed_status_kind } from './fight_status_snapshot.js'
 
-const K_ALTER_STAT = 9
-const K_ALTER_RESIST = 11
-const K_INVISIBILITY = 27
 const ELEMENT_NEUTRAL = 255
-const FLAG_NEGATIVE = 8
 
 /** `Drain`/`Granted` point discriminant (`spell_effect::point_ap()` = 0, `point_mp()` = 1). Only these two sim
  *  stat keys are POOLS; every other stat is a timed block row. */
-const POOL_POINT_KIND = { ap: 0, mp: 1 }
+const POOL_POINT_KIND = { ap: fx.POINT_AP, mp: fx.POINT_MP }
 
 /** The sim's stat keys → the chain's numeric stat id (`spell_effect.move` STAT_*; the inverse of the spell
  *  normalizer's STAT_ID_MAP). A key absent here carries no numeric id and rides as null. */
 const STAT_CHAIN_ID = {
-  strength: 0,
-  intelligence: 1,
-  chance: 2,
-  agility: 3,
-  wisdom: 4,
-  vitality: 5,
-  range: 6,
-  critical_hit: 7,
-  percent_damage: 8,
-  raw_damage: 9,
-  max_hp: 10,
-  heal: 11,
-  ap_dodge: 12,
-  mp_dodge: 13,
-  physical_damage: 14,
+  strength: fx.STAT_STRENGTH,
+  intelligence: fx.STAT_INTELLIGENCE,
+  chance: fx.STAT_CHANCE,
+  agility: fx.STAT_AGILITY,
+  wisdom: fx.STAT_WISDOM,
+  vitality: fx.STAT_VITALITY,
+  range: fx.STAT_RANGE,
+  critical_hit: fx.STAT_CRIT,
+  percent_damage: fx.STAT_PERCENT_DAMAGE,
+  raw_damage: fx.STAT_RAW_DAMAGE,
+  max_hp: fx.STAT_MAX_HP,
+  heal: fx.STAT_HEAL,
+  ap_dodge: fx.STAT_AP_DODGE,
+  mp_dodge: fx.STAT_MP_DODGE,
+  physical_damage: fx.STAT_PHYSICAL_DAMAGE,
 }
 
 /** Resist stat key → the chain element ordinal a K_ALTER_RESIST row carries (255 = NONE/neutral). */
@@ -58,28 +55,30 @@ const RESIST_ELEMENT = {
 /** A sim `ActiveEffect.type` → the chain status kind it is recorded as. The pool/resist variants of the two stat
  *  rows are disambiguated by the row's own `stat` in `status_kind_of`, so this table holds the rest. */
 const STATUS_KIND = {
-  INVISIBILITY: 27, // K_INVISIBILITY
-  POISON: 21, // K_APPLY_DOT
-  SHIELD: 24, // K_REDUCE_DAMAGE
-  REFLECT_DAMAGE: 25, // K_REFLECT_DAMAGE
-  RETURN_SPELL: 29, // K_RETURN_SPELL
-  APPLY_STATE: 22, // K_APPLY_STATE
-  STUN: 22, // a stun is a named state on chain (no dedicated kind)
-  DAMAGE_TO_HEAL: 32, // K_DAMAGE_TO_HEAL
-  TIMED_PAYLOAD: 34, // K_TIMED_PAYLOAD
-  NAMED_DAMAGE_STACK: 35, // K_NAMED_DAMAGE_STACK
-  STANCE: 36, // K_STANCE
-  REACTIVE_PUNISHMENT: 37, // K_REACTIVE_PUNISHMENT
-  EROSION: 38, // K_EROSION
-  DAMAGE_REDIRECT: 39, // K_DAMAGE_REDIRECT
+  GIVE_POINTS: fx.K_GIVE_POINTS,
+  REMOVE_POINTS: fx.K_REMOVE_POINTS,
+  ALTER_STAT: fx.K_ALTER_STAT,
+  ALTER_RESIST: fx.K_ALTER_RESIST,
+  INVISIBILITY: fx.K_INVISIBILITY,
+  POISON: fx.K_APPLY_DOT,
+  SHIELD: fx.K_REDUCE_DAMAGE,
+  REFLECT_DAMAGE: fx.K_REFLECT_DAMAGE,
+  RETURN_SPELL: fx.K_RETURN_SPELL,
+  APPLY_STATE: fx.K_APPLY_STATE,
+  STUN: fx.K_APPLY_STATE, // a stun is a named state on chain (no dedicated kind)
+  DAMAGE_TO_HEAL: fx.K_DAMAGE_TO_HEAL,
+  TIMED_PAYLOAD: fx.K_TIMED_PAYLOAD,
+  NAMED_DAMAGE_STACK: fx.K_NAMED_DAMAGE_STACK,
+  STANCE: fx.K_STANCE,
+  REACTIVE_PUNISHMENT: fx.K_REACTIVE_PUNISHMENT,
+  EROSION: fx.K_EROSION,
+  DAMAGE_REDIRECT: fx.K_DAMAGE_REDIRECT,
 }
 
 /** EVERY chain kind that can appear in the per-fighter status home — the stat/point/resist alter rows plus the
  *  table above. The ONE universe: the receipt door asks it whether an envelope row is a status, and the render
  *  exhaustiveness gate asks it which kinds must own a badge arm (a kind added here with no arm goes red). */
-export const STATUS_KINDS = Object.freeze(
-  [...new Set([6, 7, 9, 11, ...Object.values(STATUS_KIND)])].sort((a, b) => a - b)
-)
+export const STATUS_KINDS = Object.freeze([...new Set(Object.values(STATUS_KIND))].sort((a, b) => a - b))
 
 const STATUS_KIND_SET = new Set(STATUS_KINDS)
 
@@ -93,8 +92,9 @@ export const is_status_kind = (kind) => STATUS_KIND_SET.has(Number(kind))
 const status_kind_of = (effect) => {
   if (effect.dot) return STATUS_KIND.POISON
   if (effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') {
-    if (POOL_POINT_KIND[effect.stat] !== undefined) return effect.type === 'STAT_BUFF' ? 6 : 7 // GIVE/REMOVE_POINTS
-    return RESIST_ELEMENT[effect.stat] !== undefined ? 11 : 9 // ALTER_RESIST : ALTER_STAT
+    if (POOL_POINT_KIND[effect.stat] !== undefined)
+      return effect.type === 'STAT_BUFF' ? STATUS_KIND.GIVE_POINTS : STATUS_KIND.REMOVE_POINTS
+    return RESIST_ELEMENT[effect.stat] !== undefined ? STATUS_KIND.ALTER_RESIST : STATUS_KIND.ALTER_STAT
   }
   return STATUS_KIND[effect.type] ?? null
 }
@@ -123,7 +123,7 @@ export const status_row_of = (effect) => {
     value: negative ? -magnitude : magnitude,
     stat: POOL_POINT_KIND[effect.stat] ?? STAT_CHAIN_ID[effect.stat] ?? null,
     chance: effect.chance ?? null,
-    ...(negative ? { flags: FLAG_NEGATIVE } : {}),
+    ...(negative ? { flags: fx.FLAG_NEGATIVE } : {}),
   }
 }
 
@@ -144,8 +144,8 @@ const SIM_RESIST_OF_ELEMENT = Object.freeze(
  *  element is NEUTRAL — the same default the seed mint writes (255 = NONE) and the sim's own RESIST_STAT_MAP takes. */
 const sim_stat_of = (row) => {
   const kind = Number(row?.kind)
-  if (kind === K_ALTER_STAT) return SIM_STAT_OF_CHAIN_ID[Number(row.stat)] ?? null
-  if (kind === K_ALTER_RESIST)
+  if (kind === STATUS_KIND.ALTER_STAT) return SIM_STAT_OF_CHAIN_ID[Number(row.stat)] ?? null
+  if (kind === STATUS_KIND.ALTER_RESIST)
     return SIM_RESIST_OF_ELEMENT[row.element == null ? ELEMENT_NEUTRAL : Number(row.element)] ?? null
   return null
 }
@@ -187,7 +187,7 @@ export const sim_effects_of = (fighter) => {
         value: Math.abs(delta),
         turns_remaining: Number(row.remaining_turns) || 0,
       })
-    } else if (kind === K_INVISIBILITY)
+    } else if (kind === STATUS_KIND.INVISIBILITY)
       effects.push({
         id: row.id ?? `invisibility:${index}`,
         type: 'INVISIBILITY',

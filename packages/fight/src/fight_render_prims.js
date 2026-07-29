@@ -7,6 +7,7 @@
 // are re-exported from fight_render_events.js so existing consumers keep their import path.
 
 import { find_path_4dir } from '@aresrpg/sim/pathfind'
+export { K_TELEPORT as DISPLACE_TELEPORT } from '@aresrpg/sim/spell_effect'
 
 // The retro-1.29 reference gait arrays — vendored verbatim from the reference client's sprite mover (both
 // reference emulators carry the same arrays): px/ms by facing octant, the straight octants (0, 4) the
@@ -43,10 +44,8 @@ export const FIGHT_RENDER_TIMINGS = Object.freeze({
   instant: 0,
 })
 
-// The Displaced mechanics code for a TELEPORT (spell_effect PUSH 12 / PULL 13 / TELEPORT 14). Chain-stable and
-// identical to the sim's spell-effect kind, so it doubles as "this cast teleports the caster". A teleport renders
-// INSTANT (blink); push/pull slide cardinally. ONE in-package home for the constant (predicted + receipt + fold).
-export const DISPLACE_TELEPORT = 14
+// The Displaced mechanics code is the sim's chain-stable K_TELEPORT, re-exported above under the render-facing
+// name. It doubles as "this cast teleports the caster": teleport blinks; push/pull slide cardinally.
 
 export const CAST_BEAT_MS = FIGHT_RENDER_TIMINGS.cast
 export const DISPLACEMENT_CELL_MS = FIGHT_RENDER_TIMINGS.displacement_cell

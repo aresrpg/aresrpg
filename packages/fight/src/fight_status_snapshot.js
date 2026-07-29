@@ -5,9 +5,10 @@
 // chain duration without widening the SDK surface owned by another lane.
 
 import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
+import { K_ALTER_RESIST, K_ALTER_STAT } from '@aresrpg/sim/spell_effect'
 import { mob_entity_id } from './fight_control.js'
 
-export const INVISIBILITY_STATUS_KIND = 27
+export { K_INVISIBILITY as INVISIBILITY_STATUS_KIND } from '@aresrpg/sim/spell_effect'
 export const MOB_FIGHTER_ID_BASE = 1000
 
 // ── THE SIGNED-EFFECT WIRE DECODE (issue #886) ────────────────────────────────────────────────────────
@@ -15,7 +16,7 @@ export const MOB_FIGHTER_ID_BASE = 1000
 // FLAG_NEGATIVE is derived only. Live 2026-07-26 bytes pin +25 → 32793 and −17 → 32751. Both ingress doors
 // (snapshot and receipt action, #983) decode here; downstream reads signed deltas, while other kinds keep their
 // plain magnitude.
-const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_effect.move)
+const SIGNED_KINDS = new Set([K_ALTER_STAT, K_ALTER_RESIST]) // spell_effect.move
 
 /** Does this status kind ride its value CENTERED on the wire? The one membership test for the encoding. */
 export const is_signed_status_kind = (kind) => SIGNED_KINDS.has(Number(kind))

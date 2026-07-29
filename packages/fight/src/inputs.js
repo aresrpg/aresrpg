@@ -13,6 +13,7 @@
 // feed the SAME action vocabulary, so there is one fold and one home for canonical fight state.
 
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+import * as FX from '@aresrpg/sim/spell_effect'
 
 import { fight_status_of } from './board_state.js'
 import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } from './fight_status_snapshot.js'
@@ -31,15 +32,17 @@ import { is_status_kind } from './statuses.js'
 //   · TIMED_PAYLOAD (34) / NAMED_DAMAGE_STACK (35) / STANCE (36) — `schedule_payload`, `record_named_stack` and
 //     `retro_effects::apply_stance` each write their OWN derived record; the envelope's row is never the row.
 // Chance-gated effects and rows aimed away from the caster fail the recipient proof and remain snapshot truth.
-const K_GIVE_POINTS = 6
-const K_REMOVE_POINTS = 7
 /** Status kinds whose chain arm does NOT record the envelope's Effect verbatim — contested, or derived. */
-const DERIVED_STATUS_KINDS = new Set([7, 8, 10, 34, 35, 36])
+const DERIVED_STATUS_KINDS = new Set([
+  FX.K_REMOVE_POINTS,
+  FX.K_STEAL_POINTS,
+  FX.K_STEAL_STAT,
+  FX.K_TIMED_PAYLOAD,
+  FX.K_NAMED_DAMAGE_STACK,
+  FX.K_STANCE,
+])
 /** A GIVE/REMOVE_POINTS row's `stat` is the chain POINT id (`spell_effect` POINT_AP/POINT_MP) — the pool it moves. */
-const POINT_POOL = { 0: 'ap', 1: 'mp' }
-const TF_NOT_TEAM = 1
-const TF_NOT_SELF = 2
-const TF_ONLY_CASTER = 32
+const POINT_POOL = { [FX.POINT_AP]: 'ap', [FX.POINT_MP]: 'mp' }
 
 /** Canonical fighter key. idx-keyed events (turn/cast/hit/move/displace) all resolve here; `character`-keyed
  *  `Moved` uses the injected seat resolver (roster, S2) or falls back to a `c:<addr>` key until the alias lands. */
@@ -230,8 +233,8 @@ const self_status_from_effect = (state, action) => {
   const kind = Number(effect.kind)
   const target_filter = Number(effect.target_filter) || 0
   const hits_caster =
-    (target_filter & TF_ONLY_CASTER) === TF_ONLY_CASTER ||
-    ((target_filter & TF_NOT_SELF) === 0 && (target_filter & TF_NOT_TEAM) === 0)
+    (target_filter & FX.TF_ONLY_CASTER) === FX.TF_ONLY_CASTER ||
+    ((target_filter & FX.TF_NOT_SELF) === 0 && (target_filter & FX.TF_NOT_TEAM) === 0)
   const remaining_turns = Number(effect.turns) || 0
   if (
     !context ||
@@ -298,8 +301,8 @@ const pool_grant = (statuses, pool) =>
     if (POINT_POOL[Number(row?.stat)] !== pool || (Number(row?.remaining_turns) || 0) <= 0) return sum
     const kind = Number(row?.kind)
     const value = Number(row?.value) || 0
-    if (kind === K_GIVE_POINTS) return sum + value
-    return kind === K_REMOVE_POINTS ? sum - value : sum
+    if (kind === FX.K_GIVE_POINTS) return sum + value
+    return kind === FX.K_REMOVE_POINTS ? sum - value : sum
   }, 0)
 
 /** Apply an MP delta without discarding temporary debt below zero. The visible pool stays clamped, but a later
@@ -519,7 +522,7 @@ export const apply_action = (state, action) => {
       // read's row.ap/mp. u64/u8 fields ride as strings off Sui JSON — coerce here.
       const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
       const f = state.fighters[key]
-      const pool = Number(action.point_kind) === 0 ? 'ap' : 'mp'
+      const pool = Number(action.point_kind) === FX.POINT_AP ? 'ap' : 'mp'
       if (f?.[pool] == null) return state
       if (pool === 'mp') return patch_mp_delta(state, key, -(Number(action.removed) || 0))
       return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) - (Number(action.removed) || 0)) })
@@ -537,7 +540,7 @@ export const apply_action = (state, action) => {
       //    Drain/Cast/Tackled pattern); an absent overlay reconciles through row.ap/mp. u64 rides as a string — coerce.
       const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
       const f = state.fighters[key]
-      const pool = Number(action.point_kind) === 0 ? 'ap' : 'mp'
+      const pool = Number(action.point_kind) === FX.POINT_AP ? 'ap' : 'mp'
       if (f?.[pool] == null) return state
       if (pool === 'mp') return patch_mp_delta(state, key, Number(action.granted) || 0)
       return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) + (Number(action.granted) || 0)) })

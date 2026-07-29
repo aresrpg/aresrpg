@@ -16,14 +16,10 @@
 // does not match the captured bytes is not a mock, it is a second dialect. `sim_chain_wire.test.js` pins every
 // emitted row's key set AND per-key JSON type against those captured rows.
 
-import { DISPLACE_TELEPORT } from './fight_render_prims.js'
-import {
-  INVISIBILITY_STATUS_KIND,
-  MOB_FIGHTER_ID_BASE,
-  encode_status_value,
-  is_signed_status_kind,
-} from './fight_status_snapshot.js'
+import { K_INVISIBILITY, K_PUSH, K_TELEPORT, POINT_AP, POINT_MP } from '@aresrpg/sim/spell_effect'
+
 import { decode, encode } from './los.js'
+import { MOB_FIGHTER_ID_BASE, encode_status_value, is_signed_status_kind } from './fight_status_snapshot.js'
 import { status_row_of } from './statuses.js'
 
 /** The mock package id every emitted row is namespaced under. `decode_fight_event` keys off the LAST `::`
@@ -42,11 +38,9 @@ const u64 = (value) => String(Math.trunc(Number(value) || 0))
 // partition the client branches on: a non-cardinal relocation cannot be a slide, so it is an instant jump
 // (fight_render_events DISPLACE_TELEPORT skips the walk window); anything cardinal keeps its slide. PUSH vs
 // PULL (12 vs 13) is not observable from the row and no consumer reads the difference.
-const DISPLACE_PUSH = 12
-
 /** `Drain.point_kind` / `Granted.point_kind` — the chain's pool discriminant (`spell_effect::point_ap()` = 0,
  *  `point_mp()` = 1). Only these two sim stat keys are POOLS; every other stat is a timed block row. */
-const POOL_POINT_KIND = { ap: 0, mp: 1 }
+const POOL_POINT_KIND = { ap: POINT_AP, mp: POINT_MP }
 
 // ╔════════════════ [ Fighter identity — the sim's entity ids ↔ the chain's (side, idx) ] ═══════════════════ ]
 
@@ -241,7 +235,7 @@ const encode_effect = (state, effect, ctx) => {
         fight,
         target_is_mob: is_mob,
         target_idx: u64(idx),
-        kind: dx > 0 && dy > 0 ? DISPLACE_TELEPORT : DISPLACE_PUSH, // u8 — see the constants above
+        kind: dx > 0 && dy > 0 ? K_TELEPORT : K_PUSH,
         from_cell: u64(from_cell),
         to_cell: u64(to_cell),
         requested: u64(dx + dy),
@@ -276,7 +270,7 @@ const encode_effect = (state, effect, ctx) => {
         fight,
         fighter_is_mob: is_mob,
         fighter_idx: u64(idx),
-        stance: u64(INVISIBILITY_STATUS_KIND),
+        stance: u64(K_INVISIBILITY),
         active: true,
       }),
     ]
@@ -562,7 +556,7 @@ const encode_event = (event, ctx) => {
             fight,
             target_is_mob: is_mob,
             target_idx: u64(idx),
-            point_kind: 0, // u8 — a native JSON number off Sui, unlike every u64 above
+            point_kind: POINT_AP, // u8 — a native JSON number off Sui, unlike every u64 above
             granted: u64(event.ap_added ?? 0),
           }),
         ],
