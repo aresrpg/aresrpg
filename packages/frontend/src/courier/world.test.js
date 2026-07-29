@@ -1,9 +1,114 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 
-import { courier_inputs } from './world.js'
+import { presence_store } from '../world-shell/presence_adapter.js'
+
+import { courier_inputs, courier_refusal, join_courier, leave_courier } from './world.js'
+
+// THE "P2P IDLE" LIE (#1641): the chip renders the presence atom's `link_status`, but the transport edge only
+// ever handed its status to a debug log — a channel that is OFF for players. A fully connected world stream
+// therefore read as "idle" forever, because nothing on earth wrote that field.
+describe('the world link reports itself onto the presence atom', () => {
+  class FakeEventSource {
+    constructor(url) {
+      this.url = url
+      this.readyState = 0
+      this.listeners = new Map()
+    }
+    addEventListener(type, handler) {
+      this.listeners.set(type, handler)
+    }
+    emit(type, event = {}) {
+      this.listeners.get(type)?.(event)
+    }
+    close() {
+      this.readyState = 2
+    }
+  }
+
+  afterEach(() => {
+    leave_courier()
+    delete globalThis.EventSource
+  })
+
+  test('opening the link moves the atom off idle, and a live frame reports it connected', () => {
+    /** @type {any} */
+    let source
+    globalThis.EventSource = class extends FakeEventSource {
+      constructor(url) {
+        super(url)
+        source = this
+      }
+    }
+    expect(presence_store.getState().link_status).toBe('idle')
+
+    join_courier('0xworld', '0xcharacter', '0xaddress')
+    expect(presence_store.getState().link_status).toBe('connecting')
+
+    source.emit('open')
+    expect(presence_store.getState()).toMatchObject({ link_status: 'connected', link_error: null })
+  })
+
+  test('a link that gives up says WHY on the atom, never a bare idle chip', () => {
+    /** @type {any} */
+    let source
+    globalThis.EventSource = class extends FakeEventSource {
+      constructor(url) {
+        super(url)
+        source = this
+      }
+    }
+    join_courier('0xworld', '0xcharacter', '0xaddress')
+    source.readyState = 2
+    source.emit('error')
+
+    expect(presence_store.getState().link_status).toBe('failed')
+    expect(presence_store.getState().link_error).toMatch(/unavailable/i)
+  })
+
+  test('leaving returns the atom to idle with no stale reason', () => {
+    globalThis.EventSource = FakeEventSource
+    join_courier('0xworld', '0xcharacter', '0xaddress')
+    leave_courier()
+    expect(presence_store.getState()).toMatchObject({ link_status: 'idle', link_error: null })
+  })
+})
+
+// #1641 — a refused POST used to be one silenced game_log line (the console channel is OFF for players), so a
+// 400 reached the owner as a bare browser network row and a rejected signature froze every send for the whole
+// 4-minute auth-reuse window. This is the ONE policy that decides what each refusal means.
+describe('courier refusal policy', () => {
+  test('a 401 drops the cached signature so the very next send re-signs — no page refresh', () => {
+    expect(courier_refusal({ status: 401, code: 'authentication_failed' }, 'position')).toMatchObject({
+      resign: true,
+      report: false,
+      code: 'authentication_failed',
+    })
+  })
+
+  test('a 400 is OUR bug: reported loudly, never silently retried into the same wall', () => {
+    expect(courier_refusal({ status: 400, code: 'text_too_long' }, 'chat')).toMatchObject({
+      resign: false,
+      report: true,
+      toast: 'world_chat.send_failed',
+    })
+  })
+
+  test('a refused CHAT send always tells the player; a refused POSITION never toasts (it would be a spam cannon)', () => {
+    expect(courier_refusal({ status: 429, code: 'rate_limited' }, 'chat').toast).toBe('world_chat.send_rate_limited')
+    expect(courier_refusal({ status: 429, code: 'rate_limited' }, 'position').toast).toBe(null)
+    expect(courier_refusal({ status: 503, code: 'store_down' }, 'position')).toMatchObject({
+      report: true,
+      toast: null,
+    })
+  })
+
+  test('an error with no wire reason at all still names itself', () => {
+    expect(courier_refusal(new Error('network down'), 'chat')).toMatchObject({ status: 0, code: 'unknown' })
+  })
+})
 
 describe('presence SSE courier rows', () => {
   test('position rows enter the established peer-position fold shape', () => {

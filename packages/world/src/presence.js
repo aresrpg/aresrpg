@@ -54,21 +54,9 @@ export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 // ~60s worst-case floor with real margin while still bounding how long a TRULY dead peer (frozen channel, no
 // clean onPeerLeave) lingers as a ghost. They live together HERE so the relationship is one read, never two
 // scattered magic numbers.
-export const PEER_HEARTBEAT_MS = 7_000 // I re-broadcast my last cell this often (liveness ping; reuses `pos`) — the FOREGROUND cadence; a backgrounded tab's actual send gap is bounded by the browser's throttle floor, not this number
+export const PEER_HEARTBEAT_MS = 7_000 // I re-broadcast my last pose this often (liveness ping; reuses the position POST) — the FOREGROUND cadence; a backgrounded tab's actual send gap is bounded by the browser's throttle floor, not this number. It MUST stay under the courier's pose TTL (api/courier.mjs POSITION_TTL_MS, 10s) or a standing player expires out of every joiner's snapshot (#1641).
 export const PEER_EXPIRY_MS = 90_000 // silent this long ⇒ the peer folds out on the next tick — sized above the background-throttle floor (#305), not the heartbeat cadence
-export const LINK_HEALTH_POLL_MS = 5_000 // the edge samples relay-socket health this often
-export const LINK_GRACE_MS = 12_000 // after each (re)join, suppress death judgment this long (sockets connect async)
-export const REJOIN_JITTER_MS = 600 // the edge adds up to this much random jitter per retry (thundering-herd guard)
-export const REJOIN_MAX_ATTEMPTS = 6 // 1+2+4+8+16+30s (+ jitter): finite automatic recovery, then an honest UI error
-const REJOIN_BASE_MS = 1_000 // backoff base: attempt 1 waits ~1s
-const REJOIN_MAX_MS = 30_000 // backoff ceiling — bounded, never an unbounded grow
-
-/** The DETERMINISTIC rejoin backoff for a consecutive-failure attempt (1-based): exponential, capped at
- *  REJOIN_MAX_MS. The edge adds REJOIN_JITTER_MS of randomness at schedule time — jitter is an effect, kept OUT
- *  of the pure fold so the schedule stays testable. */
-export function rejoin_backoff_ms(attempt) {
-  return Math.min(REJOIN_BASE_MS * 2 ** Math.max(0, attempt - 1), REJOIN_MAX_MS)
-}
+export const REJOIN_MAX_ATTEMPTS = 6 // the finite reconnect budget an SSE edge spends before it gives up honestly (a `failed` link with its reason) instead of retrying forever
 
 /** @typedef {{ x:number, y:number, h?:number, yw?:number }} PeerCell */
 /**
@@ -123,12 +111,12 @@ const blank_peer = (id) => ({
  *   dungeon_fight_rows: Map<string, any>,
  *   link_status: 'idle'|'connecting'|'connected'|'reconnecting'|'failed',
  *   link_error: string|null,
- *   rejoin_attempt: number,
- *   rejoin: { seq:number, attempt:number, delay:number }|null, rejoin_seq: number,
- *   reannounce: { seq:number }|null, reannounce_seq: number,
  *   input: (input:any, now?:number) => void,
  * }} PresenceState
  */
+
+/** The link vocabulary — the only statuses the `link` input can put on the atom. */
+export const LINK_STATUSES = new Set(['idle', 'connecting', 'connected', 'reconnecting', 'failed'])
 
 // The plausibility rule as its own pure export (the headless-testable half of the cheater policy).
 export function passes_speed_check(prev, x, y, now, mounted) {
@@ -259,27 +247,19 @@ const fold_online = (state, input) => {
   return { ...state, online }
 }
 
-// A rejoin / re-announce is an EFFECT REQUEST — a versioned ref the transport edge subscribes to. These two
-// tiny helpers are the single home for bumping each request's seq (derive, don't copy).
-const request_rejoin = (state, attempt, delay) => ({
-  ...state,
-  link_status: 'reconnecting',
-  link_error: null,
-  rejoin_attempt: attempt,
-  rejoin_seq: state.rejoin_seq + 1,
-  rejoin: { seq: state.rejoin_seq + 1, attempt, delay },
-})
-const request_reannounce = (state) => ({
-  ...state,
-  reannounce_seq: state.reannounce_seq + 1,
-  reannounce: { seq: state.reannounce_seq + 1 },
-})
-
-// THE LINK-LIFECYCLE FOLD — the self-heal half of the presence core (liveness expiry + the connection-death →
-// bounded-rejoin → re-announce state machine). Connection events are INPUTS; recovery is an EFFECT REQUEST the
-// transport edge performs. Dispatched from the ONE reduce door below, exactly like the other fold_* helpers.
+// THE LINK-LIFECYCLE FOLD — the self-heal half of the presence core: liveness expiry, and the ONE writer of
+// `link_status` / `link_error`. The transport edge (frontend `src/courier/world.js` → presence_sse_adapter)
+// owns the socket and its finite retry budget; it reports what the link IS through this one input, and the UI
+// reads the atom. Before #1641 the edge only logged its status, so the chip read "P2P idle" against a fully
+// connected stream — a status with no writer is a lie with a UI.
 const fold_link = (state, input, now) => {
   switch (input.type) {
+    case 'link': {
+      const status = LINK_STATUSES.has(input.status) ? input.status : 'idle'
+      const error = input.error ? String(input.error) : null
+      if (status === state.link_status && error === state.link_error) return state
+      return { ...state, link_status: status, link_error: error }
+    }
     case 'tick': {
       // LIVENESS EXPIRY — fold out any peer silent past PEER_EXPIRY_MS (honest count over a frozen one); a tick
       // that drops nobody is IDENTITY (no roster churn).
@@ -292,36 +272,6 @@ const fold_link = (state, input, now) => {
         }
       return dropped ? { ...state, peers, roster_seq: state.roster_seq + 1 } : state
     }
-    case 'room_lost': {
-      // CONNECTION DEATH (relays gone / channel closed) — request a rejoin at the next bounded, escalating step.
-      // A capped delay with an UNCAPPED attempt count is not bounded recovery: it is an immortal relay-note loop.
-      // Once the finite budget is spent, stop automatically and tell the UI the truth.
-      if (state.link_status === 'failed') return state
-      if (state.rejoin_attempt >= REJOIN_MAX_ATTEMPTS)
-        return {
-          ...state,
-          link_status: 'failed',
-          link_error: `Peer connection unavailable after ${REJOIN_MAX_ATTEMPTS} attempts`,
-        }
-      const attempt = state.rejoin_attempt + 1
-      return request_rejoin(state, attempt, rejoin_backoff_ms(attempt))
-    }
-    case 'rejoin_ok': // live again — reset the backoff AND re-announce so both sides reconverge with no refresh
-      return {
-        ...request_reannounce(state),
-        link_status: state.peers.size > 0 ? 'connected' : 'connecting',
-        link_error: null,
-        rejoin_attempt: 0,
-      }
-    case 'network_recover': // mid-backoff ⇒ kick to an IMMEDIATE rejoin; healthy ⇒ just re-announce
-      if (state.link_status === 'failed') return state
-      return state.rejoin_attempt > 0 ? request_rejoin(state, state.rejoin_attempt, 0) : request_reannounce(state)
-    case 'link_start':
-      return { ...state, link_status: 'connecting', link_error: null, rejoin_attempt: 0 }
-    case 'peer_connected':
-      return { ...state, link_status: 'connected', link_error: null, rejoin_attempt: 0 }
-    case 'peer_disconnected':
-      return state.link_status === 'failed' ? state : { ...state, link_status: 'connecting' }
     default:
       return state
   }
@@ -401,13 +351,12 @@ export function reduce_presence(state, input, now) {
         fight_markers: new Map(),
         dungeon_fight_rows: new Map(),
         roster_seq: state.roster_seq + 1,
-        link_status: 'idle',
+        link_status: 'idle', // a deliberate teardown: no link, and the next join's `link` input says so
         link_error: null,
-        rejoin_attempt: 0, // a deliberate teardown starts the next join with a clean backoff
       }
     default:
-      // SELF-HEAL — the link-lifecycle inputs (tick / room_lost / rejoin_ok / network_recover) fold through here;
-      // a genuinely unknown input returns state unchanged (fold_link's own default). One door, one dispatch.
+      // SELF-HEAL — the link-lifecycle inputs (`link` / `tick`) fold through here; a genuinely unknown input
+      // returns state unchanged (fold_link's own default). One door, one dispatch.
       return fold_link(state, input, now)
   }
 }
@@ -440,11 +389,6 @@ export function create_presence_store() {
     dungeon_fight_rows: new Map(),
     link_status: 'idle',
     link_error: null,
-    rejoin_attempt: 0,
-    rejoin: null,
-    rejoin_seq: 0,
-    reannounce: null,
-    reannounce_seq: 0,
     input: make_presence_input(set, get),
   }))
 }
@@ -470,22 +414,6 @@ export function subscribe_chat(store, on_row) {
 export function subscribe_commissions(store, on_row) {
   return store.subscribe((state, prev) => {
     if (state.commission && state.commission !== prev.commission) on_row(state.commission.row)
-  })
-}
-
-/** One call per REJOIN request — the edge tears down the dead room and rejoins after `delay` (+ its own jitter),
- *  then feeds `rejoin_ok` on success. Fires on every room_lost / network_recover-while-lost. */
-export function subscribe_rejoin(store, on_rejoin) {
-  return store.subscribe((state, prev) => {
-    if (state.rejoin && state.rejoin !== prev.rejoin) on_rejoin(state.rejoin)
-  })
-}
-
-/** One call per RE-ANNOUNCE request — the edge re-broadcasts our cell + state to the whole room so both sides
- *  reconverge without a user refresh. Fires on rejoin success and on a healthy network/visibility recovery. */
-export function subscribe_reannounce(store, on_reannounce) {
-  return store.subscribe((state, prev) => {
-    if (state.reannounce && state.reannounce !== prev.reannounce) on_reannounce(state.reannounce)
   })
 }
 

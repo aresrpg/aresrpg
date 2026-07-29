@@ -45,8 +45,33 @@ describe('friend entry → the shared fast-travel input door', () => {
     expect(intent).toEqual({ type: 'begin', refusal: 'fast_travel.friend_offline' })
   })
 
-  test('an online friend without an accepted cell dispatches the existing realm refusal', () => {
+  // #1641 — an online friend with no live pose used to be "a realm you can't reach", which is a lie about the
+  // WORLD: presence and reachability are the read layer's, and the resolver reads the target's own /v1 document
+  // for its world and anchor position. A pose only REFINES the landing coordinate; its absence never refuses.
+  test('an online friend without an accepted cell still travels — the /v1 resolver decides, never a refusal', () => {
     const intent = fast_travel_intent(live_friend, [{ ...live_peer, cell: { x: 0, y: 0, ts: 0 } }])
+
+    expect(intent).toEqual({
+      type: 'begin',
+      character_id: 'C_FRIEND',
+      address: '0xfriend',
+      name: 'Ares',
+      world_id: 'W_FAR',
+    })
+  })
+
+  test('a friend the read layer sees but the roster has no route for resolves through /v1 too', () => {
+    const intent = fast_travel_intent({ ...live_friend, routes: [] }, [{ id: 'C_FRIEND' }])
+
+    expect(intent).toMatchObject({ type: 'begin', character_id: 'C_FRIEND', world_id: null })
+    expect(intent.refusal).toBeUndefined()
+  })
+
+  test('a route that names NO world is still an honest refusal (the character is in no world to reach)', () => {
+    const intent = fast_travel_intent(
+      { ...live_friend, routes: [{ character_id: 'C_FRIEND', world_id: null }] },
+      [{ id: 'C_FRIEND' }]
+    )
 
     expect(intent).toEqual({ type: 'begin', refusal: 'fast_travel.realm_unreachable' })
   })
