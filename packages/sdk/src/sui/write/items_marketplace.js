@@ -15,6 +15,7 @@ import {
 } from '../transfer_policies.js'
 
 import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
+import { fold_stacks_ptb } from './item_stacks.js'
 
 /**
  * @typedef {Object} MarketplacePolicy
@@ -30,7 +31,10 @@ import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
  * @property {MarketplacePolicy} policy
  * @property {Transaction} [tx]
  *
- * @typedef {MarketplaceBuyBase & { item_id: string }} MarketplaceItemBuy
+ * @typedef {MarketplaceBuyBase & { item_id: string, existing_stack_ids?: string[] }} MarketplaceItemBuy
+ * `existing_stack_ids` — the buyer's already-owned stacks of the bought item's template, in `kiosk_id`
+ * (resolve them with `same_template_stack_ids` off the bag rows the client already reads). Supplied, the
+ * purchase FOLDS into them in the same PTB, so a bought stack never lands as a duplicate.
  * @typedef {MarketplaceBuyBase & { character_id: string }} MarketplaceCharacterBuy
  *
  * @typedef {Object} MarketplaceStackList
@@ -316,6 +320,7 @@ export function delist_ptb(context) {
  */
 function marketplace_buy_ptb(context, kind) {
   const { network } = context
+  const fold_stacks = fold_stacks_ptb(context)
   return ({
     item_id,
     character_id,
@@ -323,6 +328,7 @@ function marketplace_buy_ptb(context, kind) {
     price_mist,
     kiosk_id = null,
     personal_kiosk_cap_id = null,
+    existing_stack_ids = [],
     policy,
     tx = new Transaction(),
   }) => {
@@ -337,6 +343,10 @@ function marketplace_buy_ptb(context, kind) {
     if (!asset_id || !seller_kiosk_id)
       throw new Error(
         `[items_marketplace] ${is_item ? 'item_id' : 'character_id'} and seller_kiosk_id are required`,
+      )
+    if (!is_item && existing_stack_ids?.length)
+      throw new Error(
+        '[items_marketplace] existing_stack_ids is item-only — characters never stack',
       )
     assert_policy_id(policy, policy_id)
 
@@ -412,6 +422,18 @@ function marketplace_buy_ptb(context, kind) {
       arguments: [policy_arg, request],
     })
     binding.finalize()
+    // AFTER finalize, never before: the fold's Move door borrows the owner cap out of the PersonalKioskCap
+    // itself, which the purchase held borrowed until here. The bought stack is locked in the buyer's kiosk by
+    // this point, so it folds into the stacks they already owned (#1495 — no duplicate is ever created). A
+    // first-time buyer (no cap ⇒ a kiosk created in this very PTB) owns nothing to fold into.
+    fold_stacks({
+      kiosk_id,
+      personal_kiosk_cap_id,
+      folds: [
+        { sibling_item_ids: existing_stack_ids, incoming_item_ids: [asset_id] },
+      ],
+      tx,
+    })
     return tx
   }
 }

@@ -8,7 +8,7 @@ import {
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
 
-import { split_locked_stack_id } from './item_stacks.js'
+import { fold_stacks_ptb, split_locked_stack_id } from './item_stacks.js'
 
 // GIFT PTB BUILDERS for the merged `aresrpg` package's `gift` module — escrow-recoverable player-to-player item
 // send (design `docs/ITEM_SEND_PLAN.md` §A4). Three signer-split doors:
@@ -204,15 +204,22 @@ export function gift_send_ptb(context) {
  * receipt resolves INSIDE the Move call (one moveCall, no offline rule resolution). The ITEM_POLICY is passed
  * MUTABLE — `royalty_rule::pay` writes the royalty into the policy's balance. `sender_kiosk_id` is the sender's
  * kiosk the items are listed in (read off the gift's caps); the recipient's kiosk + pkcap are the destination.
+ *
+ * `stack_folds` (optional, one entry per arriving TEMPLATE — `{ sibling_item_ids, incoming_item_ids }`,
+ * resolved client-side with `same_template_stack_ids` off the bag rows already read): the claimed stacks fold
+ * into the ones the recipient already owns IN THE SAME PTB, so a gifted stackable never lands as a duplicate
+ * (#1495). Omitted, the claim composes exactly as before.
  * @param {import("../../../types.js").Context} context
  */
 export function gift_claim_ptb(context) {
   const { network } = context
+  const fold_stacks = fold_stacks_ptb(context)
   return ({
     gift_id,
     sender_kiosk_id,
     recipient_kiosk_id,
     personal_kiosk_cap_id,
+    stack_folds = [],
     tx = new Transaction(),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
@@ -236,6 +243,15 @@ export function gift_claim_ptb(context) {
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version
       ],
+    })
+    // The claim landed every item LOCKED in the recipient's kiosk; folding after it merges the arrivals into
+    // the recipient's existing stacks without a second signature (the pkcap is passed by reference above, so
+    // nothing is borrowed out of it here).
+    fold_stacks({
+      kiosk_id: recipient_kiosk_id,
+      personal_kiosk_cap_id,
+      folds: stack_folds,
+      tx,
     })
     return tx
   }

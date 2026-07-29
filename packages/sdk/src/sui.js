@@ -157,6 +157,13 @@ import {
 // The first-party DF namespace ids (mirrors extension.move) — re-exported so read_namespaced_field callers
 // name the slot they inspect instead of hardcoding the u8.
 export { ITEMS_NS } from './sui/read/items.js'
+// The PURE halves of the acquisition fold (#1495) — no context, no chain: a client resolves the destination
+// kiosk's same-template stacks off the bag rows it already reads, then hands them to a door builder below.
+export {
+  MAX_FOLDS_PER_ACQUISITION,
+  plan_stack_folds,
+  same_template_stack_ids,
+} from './sui/write/item_stacks.js'
 
 // keep fetched balances for 3s to avoid spamming the nodes
 /** @type {LRUCache<string, bigint>} */
