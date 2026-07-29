@@ -14,39 +14,43 @@ import { chain_critical, crit_clock_of } from '../src/predict_cast.js'
 
 const CLOCK = { world_seed: 123456789n, spawn_id: 42n, turn_entropy: 3141592653n, turn_ordinal: 7n, slot: 0 }
 const FIGHT = { world_seed: 123456789n, spawn_id: 42n, turn_entropy: 3141592653n, turn_ordinal: 7n }
-// a board_state escrow row, trimmed to what the clock reads (board_state.js stamps `seat` = participant index)
-const ROW = { seat: 0, casts_this_turn: 0, character: '0xc' }
+// a board_state escrow row, trimmed to what the clock reads (board_state.js stamps `seat` = participant index).
+// `casts_this_turn` is deliberately NOT among them since #1224: the slot arrives from its one home
+// (project.my_action_slot, folded off the ordered journal), never re-derived from a raw snapshot row here.
+const ROW = { seat: 0, character: '0xc' }
 
 describe('crit_clock_of — the ONE composer of the §7 clock (#1190)', () => {
   it('takes the seat off the row itself, never a lookup', () => {
-    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW })).toEqual({ ...FIGHT, seat: 0, slot: 0 })
-    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, seat: 3 } })?.seat).toBe(3)
+    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW, slot: 0 })).toEqual({ ...FIGHT, seat: 0, slot: 0 })
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, seat: 3 }, slot: 0 })?.seat).toBe(3)
   })
 
-  it('the slot is my committed casts plus the local draft — composed once, for all four surfaces', () => {
-    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW, draft_len: 2 })?.slot).toBe(2)
-    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, casts_this_turn: 1 }, draft_len: 1 })?.slot).toBe(2)
-    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, casts_this_turn: 2 } })?.slot).toBe(2)
+  it('the slot is the one it is handed — composed once, for all four surfaces (#1224)', () => {
+    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW, slot: 2 })?.slot).toBe(2)
+    // a stale `casts_this_turn` riding the row can no longer price the roll behind the slot's back
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { ...ROW, casts_this_turn: 9 }, slot: 2 })?.slot).toBe(2)
   })
 
   it('THE LIVE MISS: an empty/unlanded roster yields no row, and no row is null — never seat -1', () => {
     // both resolving cast paths used to run escrow.findIndex here; on the simulator's empty escrow that is -1
-    expect(crit_clock_of({ fight: FIGHT, seat_row: null })).toBeNull()
-    expect(crit_clock_of({ fight: FIGHT, seat_row: {} })).toBeNull()
-    expect(crit_clock_of({ fight: FIGHT, seat_row: { seat: -1 } })).toBeNull()
+    expect(crit_clock_of({ fight: FIGHT, seat_row: null, slot: 0 })).toBeNull()
+    expect(crit_clock_of({ fight: FIGHT, seat_row: {}, slot: 0 })).toBeNull()
+    expect(crit_clock_of({ fight: FIGHT, seat_row: { seat: -1 }, slot: 0 })).toBeNull()
   })
 
   it('every other unknowable input degrades to the SAME null, so the guard downstream is one rule', () => {
-    expect(crit_clock_of({ fight: null, seat_row: ROW })).toBeNull()
-    expect(crit_clock_of({ fight: { ...FIGHT, world_seed: null }, seat_row: ROW })).toBeNull()
-    expect(crit_clock_of({ fight: { ...FIGHT, spawn_id: null }, seat_row: ROW })).toBeNull()
+    expect(crit_clock_of({ fight: null, seat_row: ROW, slot: 0 })).toBeNull()
+    expect(crit_clock_of({ fight: { ...FIGHT, world_seed: null }, seat_row: ROW, slot: 0 })).toBeNull()
+    expect(crit_clock_of({ fight: { ...FIGHT, spawn_id: null }, seat_row: ROW, slot: 0 })).toBeNull()
     // 0 is board_state's UNSTAMPED deadline (placement), not a seed input — the normalization lives here now
-    expect(crit_clock_of({ fight: { ...FIGHT, turn_ordinal: 0 }, seat_row: ROW })).toBeNull()
+    expect(crit_clock_of({ fight: { ...FIGHT, turn_ordinal: 0 }, seat_row: ROW, slot: 0 })).toBeNull()
+    // an unknowable SLOT is the same class of refusal (#1224)
+    expect(crit_clock_of({ fight: FIGHT, seat_row: ROW })).toBeNull()
   })
 
   it('a composed clock is exactly what chain_critical accepts — the two ends agree by construction', () => {
-    expect(chain_critical(crit_clock_of({ fight: FIGHT, seat_row: ROW }), 2)).toBe(true)
-    expect(chain_critical(crit_clock_of({ fight: FIGHT, seat_row: null }), 2)).toBeNull()
+    expect(chain_critical(crit_clock_of({ fight: FIGHT, seat_row: ROW, slot: 0 }), 2)).toBe(true)
+    expect(chain_critical(crit_clock_of({ fight: FIGHT, seat_row: null, slot: 0 }), 2)).toBeNull()
   })
 })
 

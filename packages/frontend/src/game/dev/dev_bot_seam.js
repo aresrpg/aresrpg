@@ -44,7 +44,7 @@
 // scripts/zero-drift-gate.mjs for the tooth that enforces it.
 
 import { decode, encode } from '@aresrpg/fight/los'
-import { board_view, fight_view, min_turn_left } from '@aresrpg/fight/project'
+import { board_view, fight_view, min_turn_left, my_action_slot } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { fight_store } from '@aresrpg/fight/store'
 import { crit_clock_of, predict_cast } from '@aresrpg/fight/predict_cast'
@@ -245,7 +245,8 @@ const bank_predictions = (actions) => {
   const escrow_row = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === caster_id) ?? null
   const resolve_ref = (id) => resolve_dungeon_ref(dungeon, id)
   const rows = []
-  // this turn's local draft count — the crit clock's slot is my committed casts_this_turn plus this (crit_clock_of).
+  // Casts of a PLANNED batch that exist in no journal yet — the one legitimate `ahead` offset on the ONE slot
+  // derivation (#1224): everything already drafted rides the store log this reads below.
   let drafted = 0
   for (const [index, action] of actions.entries()) {
     if (action.kind !== CAST_KIND) continue
@@ -267,7 +268,11 @@ const bank_predictions = (actions) => {
     }
     // this cast's own slot, then the counter advances for the next one (a template-less row still consumes a slot
     // on the chain's sequence, so it advances before the bail below).
-    const critical_clock = crit_clock_of({ fight: dungeon, seat_row: escrow_row, draft_len: drafted })
+    const critical_clock = crit_clock_of({
+      fight: dungeon,
+      seat_row: escrow_row,
+      slot: my_action_slot(fight_store.getState(), { ahead: drafted }),
+    })
     drafted += 1
     if (!spell?.template) {
       rows.push(banked)

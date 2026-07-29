@@ -9,7 +9,7 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 import { roll_in_range, slot_damage_roll, turn_seed } from '@aresrpg/sim/turn_seed'
 
 import { crit_clock_of, predict_cast } from '../src/predict_cast.js'
-import { board_view, engine_view } from '../src/project.js'
+import { board_view, engine_view, my_action_slot } from '../src/project.js'
 import { create_fight_store } from '../src/store.js'
 
 const FIGHT = '0xentropy_replay'
@@ -116,7 +116,7 @@ describe('TurnStarted entropy replay -> projected prediction', () => {
   test('the folded wire bytes produce the same turn seed and cast outcome as Move', () => {
     const store = replay()
     const board = board_view(store.getState())
-    const clock = crit_clock_of({ fight: board, seat_row: board.escrow[0] })
+    const clock = crit_clock_of({ fight: board, seat_row: board.escrow[0], slot: my_action_slot(store.getState()) })
 
     expect(board.turn_entropy).toBe(TURN_ENTROPY)
     expect(board.turn_ordinal).toBe(TURN_ORDINAL)

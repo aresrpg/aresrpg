@@ -10,6 +10,7 @@ import { slot_crit_roll, turn_seed } from '@aresrpg/sim/turn_seed'
 
 import { board_state_from_fight } from '../src/board_state.js'
 import { crit_clock_of } from '../src/predict_cast.js'
+import { next_action_slot } from '../src/turn_action_slot.js'
 import {
   arena_from_board,
   create_sim_chain,
@@ -64,7 +65,13 @@ const snapshot_clock = (chain) => {
   const fight = board_state_from_fight({ fight: snapshot, version: chain.version })
   return {
     snapshot,
-    clock: crit_clock_of({ fight, seat_row: fight.escrow[0] }),
+    // #1224: the clock composes a slot it is HANDED. This fixture has no journal past the snapshot, so the
+    // committed row IS the whole slot — which is exactly what this row measures.
+    clock: crit_clock_of({
+      fight,
+      seat_row: fight.escrow[0],
+      slot: next_action_slot({ base: fight.escrow[0].casts_this_turn, events: [], seat: fight.escrow[0].seat }),
+    }),
   }
 }
 
