@@ -46,8 +46,8 @@ export function PlayerActionMenu() {
     return () => window.removeEventListener('keydown', on_key)
   }, [target, close])
 
-  // Chat and nameplates normally carry the signed courier address directly. Resolve it from the live
-  // server-observed presence row when a caller only supplied the character id.
+  // Nameplates carry the address directly; a chat click carries only the character id. Resolve the wallet
+  // from the live peer row when a caller supplied no address.
   // Hoisted above the early return (below) so BOTH the render and the preload effect share one derivation.
   const address = target?.address || presence_character(target?.id ?? '')?.address || null
   // Fast travel (the third menu option): needs MY selected character to ride, a resolvable target (character id

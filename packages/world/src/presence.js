@@ -79,13 +79,17 @@ export function rejoin_backoff_ms(attempt) {
  *   target_yaw: number|undefined,
  *   address: string, color_1: number, color_2: number, color_3: number,
  *   party_id: string|null, dungeon_id: string|null,
- *   mounted: boolean, mount_glb: string|null, veteran: boolean,
+ *   mounted: boolean,
  *   classe: string|null, male: boolean|null, name: string|null,
  *   chain: { name?:string, classe?:string, male?:boolean, color_1?:number }|null,
  *   last_seen: number,
  * }} PeerEntry
  */
 
+// `mounted` is the ONLY cosmetic a peer still declares, and it is not decoration: it is the speed cap this
+// fold applies to that peer (MOUNTED_SPEED_HEADROOM below). Everything a peer could gain by lying about
+// appearance — worn slots, pet, veteran title — resolves from chain truth at the renderer instead, so no
+// self-declared field has a second home here.
 const blank_peer = (id) => ({
   id,
   cell: { x: 0, y: 0, ts: 0 },
@@ -99,8 +103,6 @@ const blank_peer = (id) => ({
   party_id: null,
   dungeon_id: null,
   mounted: false,
-  mount_glb: null,
-  veteran: false,
   classe: null,
   male: null,
   name: null,
@@ -112,9 +114,8 @@ const blank_peer = (id) => ({
  *   character_id: string|null,
  *   my_cell: PeerCell|null,
  *   my_state: { address:string, color_1:number, color_2:number, color_3:number, party_id:string|null, dungeon_id:string|null, classe?:string|null, male?:boolean|null, name?:string|null }|null,
- *   my_cosmetic: { mounted:boolean, mount_glb:string|null, veteran:boolean },
+ *   my_cosmetic: { mounted:boolean },
  *   peers: Map<string, PeerEntry>,
- *   online: Map<string, { id:string, address:string, world:string|null, name?:string|null }>,
  *   roster_seq: number,
  *   identity_requests: { seq:number, ids:string[] }|null, identity_seq: number,
  *   chat: { seq:number, row:any }|null, chat_seq: number,
@@ -191,8 +192,6 @@ const fold_peer_state = (state, input, now) => {
     party_id: input.party_id ?? null,
     dungeon_id: input.dungeon_id ?? null,
     mounted: !!input.mounted,
-    mount_glb: input.mount_glb ? String(input.mount_glb) : null,
-    veteran: !!input.veteran,
     classe: input.classe ? String(input.classe) : null,
     male: typeof input.male === 'boolean' ? input.male : null,
     name: input.name ? String(input.name) : null,
@@ -227,36 +226,6 @@ const fold_runs_snapshot = (state, input) => {
     dungeon_fight_rows.set(row.id, row)
   }
   return { ...state, dungeon_fight_rows }
-}
-
-// ── SERVER-OBSERVED PRESENCE (#1384) — the read layer terminates every stream, so an open connection IS
-// presence: the world stream sends the full current set on connect and join/leave deltas after. It folds into
-// its OWN map, never the peer table: a peer row is a POSITION sighting (realtime ticks, freshness-law'd, in
-// sight) while an online row is server truth about a player who may be nowhere near me. A snapshot REPLACES
-// the set — the server owns it whole, so a stale local row can never linger.
-const online_row = (raw) => {
-  const id = raw?.id ?? raw?.character_id
-  return id ? { ...raw, id: String(id) } : null
-}
-const fold_online = (state, input) => {
-  if (input.type === 'stream_current') {
-    const online = new Map()
-    for (const raw of input.rows ?? []) {
-      const row = online_row(raw)
-      if (row) online.set(row.id, row)
-    }
-    return { ...state, online }
-  }
-  if (input.type === 'stream_join') {
-    const row = online_row(input.row)
-    if (!row) return state
-    return { ...state, online: new Map(state.online).set(row.id, row) }
-  }
-  const id = input.id == null ? null : String(input.id)
-  if (!id || !state.online.has(id)) return state
-  const online = new Map(state.online)
-  online.delete(id)
-  return { ...state, online }
 }
 
 // A rejoin / re-announce is an EFFECT REQUEST — a versioned ref the transport edge subscribes to. These two
@@ -330,9 +299,6 @@ const fold_link = (state, input, now) => {
 const FOLD_BY_INPUT_TYPE = new Map([
   ['peer_pos', fold_peer_pos],
   ['peer_state', fold_peer_state],
-  ['stream_current', fold_online],
-  ['stream_join', fold_online],
-  ['stream_leave', fold_online],
   ['fights_snapshot', fold_fights_snapshot],
   ['runs_snapshot', fold_runs_snapshot],
 ])
@@ -395,9 +361,8 @@ export function reduce_presence(state, input, now) {
         character_id: null,
         my_cell: null,
         my_state: null,
-        my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
+        my_cosmetic: { mounted: false },
         peers: new Map(),
-        online: new Map(),
         fight_markers: new Map(),
         dungeon_fight_rows: new Map(),
         roster_seq: state.roster_seq + 1,
@@ -426,9 +391,8 @@ export function create_presence_store() {
     character_id: null,
     my_cell: null,
     my_state: null,
-    my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
+    my_cosmetic: { mounted: false },
     peers: new Map(),
-    online: new Map(),
     roster_seq: 0,
     identity_requests: null,
     identity_seq: 0,
@@ -528,14 +492,6 @@ export function peer_states_by_address(state, address) {
 export function peer_state_by_address(state, address) {
   if (!address) return null
   for (const p of state.peers.values()) if (p.address === address) return peer_state_of(state, p.id)
-  return null
-}
-
-/** Server-authored online presence by wallet address (the #1384 stream's current set). Position peers are
- *  deliberately NOT consulted: "online" is the server's connection truth, never p2p visibility. */
-export function online_state_by_address(state, address) {
-  if (!address) return null
-  for (const row of state.online.values()) if (row.address === address) return row
   return null
 }
 

@@ -27,7 +27,7 @@ import { context } from './core/game.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
 import { use_expedition } from '../roster/store'
-import { leave_courier } from '../courier/world.js'
+import { leave_lobby } from '../p2p/lobby-room.js'
 import { invalidate as invalidate_kiosk_cap_cache } from '../chain/kiosk_cap_cache'
 
 /** @typedef {{ type: 'wallet_session/reset' }} WalletSessionInput */
@@ -59,8 +59,10 @@ export function reset_wallet_session(input = { type: 'wallet_session/reset' }) {
   //    boundary (party_store re-publishes on dungeon_id delta). B relearns its own party via the invite nudge.
   use_party.getState().reset_local()
 
-  // 4. Courier — close A's stream and reset its presence fold before B opens a newly identified link.
-  leave_courier()
+  // 4. P2P lobby — fully leave so my_character_id/my_last_state/peer maps drop. REQUIRED: without it a re-join keeps
+  //    the `if (room) return` no-op path and A's identity lingers (the spectate backdrop's join_lobby(null) can't
+  //    re-identify while my_character_id is still A). B's lobby remount then join_lobby(B_id)'s into a fresh room.
+  leave_lobby()
 
   // 5. EXPEDITION store (S-19a — the gap this closes) — the character / kiosk / personal-kiosk-cap + active-run
   //    mirror that the in-world HUD reads (GameWorldHud / SelfPlate / CharacterMenu). It is wallet-scoped but

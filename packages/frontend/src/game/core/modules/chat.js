@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Chat — stateless courier POSTs fan out on the world presence SSE. Incoming messages flow through
-// @aresrpg/world's presence atom: the stream adapter dispatches `chat_received`, the core carries the chat head, and this module's
+// Chat — serverless P2P (no WS server exists). The composition-edge `chat_send.js` broadcasts a line to the
+// Trystero lobby (the party-scoped direct action for GROUP) and echoes it locally through this reducer. Incoming PEER
+// messages flow through @aresrpg/world's presence atom (D770a W3b — the WS-era `packet/chatMessage` shim is
+// dead): the transport dispatches `chat_received`, the core carries the chat stream head, and this module's
 // `observe` subscribes to it and folds each row into message_history (session-local, no backlog). CHANNEL
 // routes the render color; `id` is the character identity used for the "me" test, while `address` is the
 // zkLogin-verified wallet address.

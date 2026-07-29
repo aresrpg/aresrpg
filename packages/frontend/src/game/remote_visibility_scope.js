@@ -9,7 +9,8 @@
  *
  * Two players share a render instance when:
  *   - both stand in the open world (dungeon_id null on both sides) — one continuous world; range decides the rest.
- *   - both stand in a dungeon AND belong to the SAME accepted on-chain party (party_id from party_store). It is the
+ *   - both stand in a dungeon AND belong to the SAME accepted on-chain party (party_id — broadcast in every
+ *     low-frequency p2p `state`, lobby-room.js broadcast_state / party_store.js _publish_state). party_id is the
  *     one identity genuinely SHARED between real co-op partners, unlike the personal run_pass_id. Every dungeon
  *     cave reuses the same local room coordinates (cave_session.js seeds off world_id — "co-op consistent, same
  *     world, same room"), so a stranger running the identical dungeon TEMPLATE without being in my party must

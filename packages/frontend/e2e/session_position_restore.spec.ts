@@ -57,7 +57,7 @@ test('walking away from spawn then refreshing restores the live position (not WO
   expect(before_walk, 'the DEV rig must expose __voxel_ctl once the session boots').toBeTruthy()
   console.log('[session-position] boot position:', before_walk)
 
-  // walk forward for a while — normal roam speed is ~4 tiles/s, so ~13s covers ~50 blocks.
+  // walk forward for a while — normal roam speed is ~4 tiles/s (lobby-room.js), so ~13s covers ~50 blocks.
   await page.keyboard.down('KeyW')
   await page.waitForTimeout(13_000)
   await page.keyboard.up('KeyW')

@@ -3,7 +3,7 @@
 // Feature #19 (read-only SPECTATE) proof, D770a W3b — the presence BRIDGE (game/core/modules/presence.js) must
 // render a remote avatar from a peer's presence ALONE, with ZERO own-roster / own-session state (a logged-out
 // spectator has no characters, no wallet, no selected id). The peer truth now lives in @aresrpg/world's presence
-// atom: this drives it exactly like the courier decoder does for a position row (`peer_pos`),
+// atom: this drives it exactly like lobby-room.js does on a received peer packet (a `peer_pos` presence_input),
 // with an EMPTY roster, and asserts the bridge built a visible-character entry. The chain-direct enrichment read
 // (get_sdk → read_character, run by the adapter's identity executor) is mocked to REJECT — a logged-out spectator
 // has no SDK session — proving the placeholder survives on the payload-only fallback (name/class default), no crash.
@@ -61,7 +61,7 @@ test('foreign avatar builds from a core peer row with an EMPTY own-roster (spect
   const ctx = make_spectator_context()
   presence().observe(ctx)
 
-  // A remote peer's decoded courier position.
+  // A remote peer's position — exactly what lobby-room.js dispatches on pos_action.onMessage (h→y, y→z).
   presence_input({ type: 'peer_pos', id: 'peer_char_0xABC', x: 5, y: 7, h: 0 })
 
   // The bridge must have inserted the foreign avatar into visible_characters from the peer row alone.

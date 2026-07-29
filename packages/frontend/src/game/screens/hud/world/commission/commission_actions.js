@@ -10,7 +10,7 @@
 //       (soulbound FriendList + /v1 `jobs` enrichment). Every friend is a candidate artisan; their craftable
 //       recipes derive from their on-chain job levels. The old "every artisan" mock is GONE.
 //     list_commissions(address)  → { as_artisan, as_customer }   still the /v1 stub (the parallel Move-v2 read
-//       lane owns it).
+//       lane owns it); the ARTISAN view MERGES the live p2p inbox (commission_inbox.js) AHEAD of it.
 //   WRITES (swap the mock body for an @aresrpg/sdk PTB run through the standard run_tx choke — dryRun-guarded,
 //           NO auto-retry, ONE honest toast at the call site):
 //     request_craft({ artisan_address, recipe_id, job_id, payment_mist }) → { ok: true }
@@ -25,6 +25,7 @@
 // }} Commission
 
 import { read_roster } from '../../../../../world-shell/friends_reads.js'
+import { nudge_commission_request } from '../../../../../p2p/lobby-room.js'
 
 /** SUI is 9-decimal (MIST). The payment is authored in SUI and stored on-chain as MIST. */
 export const SUI_DECIMALS = 9
@@ -114,7 +115,9 @@ export async function list_commissions(address) {
 /**
  * CUSTOMER → request a craft from an artisan. STUB write today (resolves after a beat); the real body composes the
  * @aresrpg/sdk commission PTB (escrow the ≥0.1 SUI payment + the recipe intent) through run_tx when the Move-v2
- * read wiring lands.
+ * read wiring lands. EITHER way it then fires the p2p NUDGE so the artisan's live session gets a toast + chime + an
+ * inbox row NOW (Commission Flow v2). Fire-and-forget: the request is the source of truth; an OFFLINE artisan
+ * simply misses the live cue.
  * @param {{ artisan_address: string, recipe_id: string, job_id: string, payment_mist: number,
  *   customer_address?: string, customer_name?: string, recipe_name?: string, recipe_icon?: string,
  *   recipe_category?: string }} req
@@ -122,6 +125,15 @@ export async function list_commissions(address) {
  */
 export async function request_craft(req) {
   await beat(300)
+  nudge_commission_request(req.artisan_address, {
+    from_address: req.customer_address,
+    from_name: req.customer_name,
+    recipe_id: req.recipe_id,
+    recipe_name: req.recipe_name,
+    recipe_icon: req.recipe_icon,
+    recipe_category: req.recipe_category,
+    payment_mist: req.payment_mist,
+  })
   return { ok: true }
 }
 

@@ -7,9 +7,10 @@
 //               clicking a player in the world or a name in chat → PlayerActionMenu)
 //
 // DATA (all honest, no fakes): the friend list = read_roster (chain-direct FriendList + /v1 enrichment,
-// use_rpc_view short-poll + focus-heal per the UI-DATA LAW). ONLINE status = the server-observed courier stream:
-// a friend is "online" iff their wallet is in the live presence set, NOT the RPC's last-position freshness.
-// Names = friend_display_name below: the stream name when present, else
+// use_rpc_view short-poll + focus-heal per the UI-DATA LAW). ONLINE status = the p2p room: a friend is
+// "online" iff their wallet is in my live peer set — room membership IS presence, so there is no second
+// registry to disagree with it, and it is never the RPC's last-position freshness.
+// Names = friend_display_name below: the peer's self-declared name when present, else
 // the indexer character name, else character_name_resolve.js's ONE HOME fallback — never a raw address slice.
 //
 // The per-row "invite to party" that used to live here moved to PlayerActionMenu (clicking the player) so the
@@ -31,7 +32,7 @@ import { open_player_menu } from './player_menu_store.js'
 /** @returns {import('react').ReactElement | null} */
 export function OnlinePlayers() {
   const { t } = useTranslation()
-  use_presence((state) => state.online)
+  use_presence((state) => state.roster_seq) // re-render on peer join/leave — the roster's own change counter
   const address = use_auth((s) => s.address)
   const [expanded, set_expanded] = useState(false)
   const [input, set_input] = useState('')
@@ -51,7 +52,7 @@ export function OnlinePlayers() {
   // Refetch the instant an add/remove lands from ANY surface (this bar, the world click, the chat click).
   useEffect(() => on_friends_changed(() => view.refetch()), [view])
 
-  // ONLINE = present in the server-observed world stream. name = friend_display_name's ONE derivation, always
+  // ONLINE = present in my p2p peer set. name = friend_display_name's ONE derivation, always
   // a truthy display string — never empty, never a raw address needing a per-row fallback below.
   const decorated = rows.map((r) => {
     const peer = presence_character_by_address(r.address)

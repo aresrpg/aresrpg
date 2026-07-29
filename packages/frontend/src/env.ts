@@ -50,12 +50,30 @@ export const RPC_URL = derive_rpc_url(
 // wallets stay self-pay.
 export const SPONSOR_URL = env.VITE_SPONSOR_URL || '/api/sponsor'
 
-// Stateless zkLogin-authenticated position/chat courier + public presence SSE. Production defaults to the
-// sponsor sibling host; local development runs api/courier.mjs on 9529 unless explicitly overridden.
-export const COURIER_URL = derive_rpc_url(
-  env.VITE_COURIER_URL,
-  import.meta.env.DEV ? 'http://localhost:9529' : 'https://sponsor.aresrpg.world'
+// THE p2p signaling relay — OURS, and only ours (docs/REALTIME.md lane 2). A self-hosted MQTT broker
+// (mosquitto, persistence off) that browsers meet on to exchange WebRTC offers; after the handshake every
+// byte is browser↔browser and this host carries nothing. It is a message-passer, never authoritative, and
+// it is NOT a fallback for anything: relay down ⇒ presence reports DOWN, loudly. A third-party relay URL
+// must never appear here — public relays rate-limited us into a fight stall on 2026-07-27, which is the
+// whole reason we run our own. Single value, no list: redundancy is pods behind one host, not a fanout of
+// strangers. The `/mqtt` path is the broker's websockets listener; local dev points at a port-forward of the
+// same in-cluster service (`kubectl port-forward svc/mqtt-relay 9001:9001`), never at a public broker.
+export const RELAY_URL = derive_rpc_url(
+  env.VITE_RELAY_URL,
+  import.meta.env.DEV ? 'ws://localhost:9001/mqtt' : 'wss://relay.aresrpg.world/mqtt'
 )
+
+// NAT traversal for the ~10-15% of peers whose direct WebRTC never forms. STUN is ours and always on.
+//
+// TURN IS NOT USABLE YET and this file refuses to pretend otherwise: coturn is up, but nothing mints the
+// short-lived `expiry:id` + HMAC credential its use-auth-secret mode requires, so any username/credential a
+// build could ship today would be a lie. Until that minting lands, TURN stays OPT-IN through VITE_TURN_URL —
+// unset (the default) means the ICE config carries STUN only, and a peer behind a symmetric NAT fails LOUDLY
+// at the transport (see lobby-room.js) instead of silently never seeing anyone.
+export const STUN_URL = env.VITE_STUN_URL || 'stun:turn.aresrpg.world:3478'
+export const TURN_URL = env.VITE_TURN_URL || ''
+export const TURN_USER = env.VITE_TURN_USER || ''
+export const TURN_CRED = env.VITE_TURN_CRED || ''
 
 // Sentry error-reporting (errors-only scope — no tracing, no replay; see core/report.js). DSN present ⇒ the
 // reporter inits; ABSENT (the default for dev/local) ⇒ init is a hard no-op, so a bare boot never phones home.
