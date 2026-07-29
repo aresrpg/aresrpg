@@ -17,6 +17,7 @@ import { MyLotsPanel } from './my_lots_panel'
 import { SellItemHeader } from './sell_item_header'
 import {
   marketplace_lot_sizes_for_owned_quantity,
+  marketplace_lot_source,
   marketplace_lot_offers,
   visible_marketplace_listings,
   type MarketplaceLotSize,
@@ -105,7 +106,7 @@ export function SellPanel() {
         : [],
     [listable, selected, selected_identity]
   )
-  const exact_stack = raw_stacks.find((stack) => stack.quantity === lot_size) ?? null
+  const lot_source = marketplace_lot_source(raw_stacks, lot_size)
   const available_lot_sizes = marketplace_lot_sizes_for_owned_quantity(selected?.quantity ?? 0)
   const ladder = useMemo(
     () =>
@@ -116,7 +117,7 @@ export function SellPanel() {
       ),
     [listings, selected_identity]
   )
-  const listing_item = selected?.stackable ? exact_stack : selected
+  const listing_item = selected?.stackable ? lot_source : selected
   const can_list = !!listing_item && !busy && !!price.trim()
 
   // OPTIMISTIC list — validate the price, fire it; the card clears + the row appears in col 1 instantly.
@@ -129,7 +130,7 @@ export function SellPanel() {
       set_price_error(true)
       return
     }
-    submit_listing(listing_item, price_mist)
+    submit_listing(listing_item, price_mist, selected?.stackable ? lot_size : undefined)
     set_selected(null)
     set_price('')
   }

@@ -63,7 +63,7 @@ export type ListableCharacter = {
 
 // Build the optimistic listing the frozen page consumes — identical shape to read_listings.js build_listing
 // (neutral rarity/appearance match the on-chain read exactly), so it renders in Browse + My Listings instantly.
-function optimistic_listing(item: ListableItem, price_mist: bigint, seller: string): MarketplaceListing {
+function optimistic_listing(item: ListableItem, price_mist: bigint, seller: string, lot: number): MarketplaceListing {
   return {
     id: item.id,
     kiosk_id: item.kiosk_id, // the kiosk that LOCKS the item — a delist of this optimistic row targets it
@@ -78,7 +78,8 @@ function optimistic_listing(item: ListableItem, price_mist: bigint, seller: stri
       // #1227 — carry the ListableItem's own item_type slug forward so the optimistic row's icon resolves the
       // same way the reconciled chain row will (build_listing_from_view threads the same field).
       slug: item.slug,
-      quantity: item.quantity,
+      // the LOT being sold, not the source stack's size — a 10-lot split out of 25 units lists 10.
+      quantity: lot,
       stats_json: '{}',
       slot: '',
       name: item.name,
@@ -231,7 +232,8 @@ interface MarketplaceChainStore extends MarketState {
   load_listable: (force?: boolean) => Promise<void>
   /** Chain-direct: sums every personal kiosk's `profits` field (no /v1 view — a private per-owner balance). */
   load_kiosk_profits: () => Promise<void>
-  submit_listing: (item: ListableItem, price_mist: bigint) => void
+  /** `lot_size` is the lot to sell out of a stackable item's stack (1/10/100/1000); omit to sell the whole stack. */
+  submit_listing: (item: ListableItem, price_mist: bigint, lot_size?: number) => void
   submit_delist: (listing: MarketplaceListing) => void
   submit_buy: (listing: MarketplaceListing) => void
   submit_split_stack: (item: ListableItem, amount: number) => void
@@ -371,11 +373,18 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
 
     // OPTIMISTIC list — the listing appears in Browse + My Listings instantly, tx rides the loading toast. A
     // failed tx drops the pending-list ledger row (receipt_failed) — never a stored rollback value.
-    submit_listing: (item, price_mist) => {
+    submit_listing: (item, price_mist, lot_size) => {
       if (get().busy) return
       const { address } = use_auth.getState()
       if (!address) return
-      const listing = optimistic_listing(item, price_mist, address)
+      // A stackable sale is a LOT out of a stack: `lot_size` when the picker chose one, else the whole stack
+      // (the pre-lot callers, and every non-stackable item, sell exactly what they are).
+      const lot = item.stackable ? (lot_size ?? item.quantity) : item.quantity
+      // The lot is SPLIT off when the source holds more, so the object that ends up listed is a child minted
+      // inside the tx — its id is unknowable here. The optimistic row stands in under the source's id and the
+      // post-tx reload below swaps in the real chain row.
+      const splits = item.stackable && lot < item.quantity
+      const listing = optimistic_listing(item, price_mist, address, lot)
       set((s) => ({
         busy: true,
         ...reduce(s, { type: 'receipt', kind: 'list', listing }).state,
@@ -385,7 +394,8 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
         ? list_stack({
             item_id: item.id,
             kiosk_id: item.kiosk_id,
-            amount: item.quantity,
+            amount: lot,
+            source_amount: item.quantity,
             price_mist,
           })
         : list_item({ item_id: item.id, kiosk_id: item.kiosk_id, price_mist })
@@ -398,6 +408,13 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
           // rejection.message` fallback only kicks in when `error` is omitted; a static string here ALWAYS won,
           // silently discarding the real humanized abort reason (mirrors the template_tab_actions.ts / kolizeum.tsx
           // fixed pattern: drop it, let the humanized `.message` flow to the player).
+        })
+        .then(() => {
+          // A split listing leaves two rows stale: the placeholder (keyed on the source id, while the chain
+          // listed the split child) and the source stack itself (now short by the lot). Both owners re-read.
+          if (!splits) return
+          get().load()
+          get().load_listable(true)
         })
         .catch(() =>
           set((s) => ({

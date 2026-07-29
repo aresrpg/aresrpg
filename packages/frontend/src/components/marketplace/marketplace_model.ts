@@ -14,6 +14,24 @@ export function marketplace_lot_sizes_for_owned_quantity(owned_quantity: number)
   return MARKETPLACE_LOT_SIZES.filter((size) => size <= owned_quantity)
 }
 
+/**
+ * Pick the stack a `lot_size` lot is sold OUT OF (#492). A stack of exactly the lot ships untouched; otherwise the
+ * SMALLEST stack that can cover it is split in the listing PTB, which keeps the seller's big stacks whole. Null
+ * means no stack can supply this lot. The world hands out arbitrary stack sizes while a kiosk lot may only be
+ * 1/10/100/1000, so a seller who had to already own an exactly-sized stack could not list at all.
+ */
+export function marketplace_lot_source<T extends { quantity: number }>(stacks: T[], lot_size: number): T | null {
+  return (
+    stacks.find((stack) => stack.quantity === lot_size) ??
+    stacks
+      .filter((stack) => stack.quantity > lot_size)
+      .reduce<T | null>(
+        (smallest, stack) => (smallest === null || stack.quantity < smallest.quantity ? stack : smallest),
+        null
+      )
+  )
+}
+
 const STACKABLE_MARKET_CATEGORIES = new Set(['Consumable', 'Resource', 'Rune'])
 
 export function is_marketplace_lot_size(amount: number): amount is MarketplaceLotSize {

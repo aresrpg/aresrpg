@@ -15,7 +15,7 @@ import {
 } from '../transfer_policies.js'
 
 import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
-import { fold_stacks_ptb } from './item_stacks.js'
+import { fold_stacks_ptb, split_locked_stack_id } from './item_stacks.js'
 
 /**
  * @typedef {Object} MarketplacePolicy
@@ -40,8 +40,9 @@ import { fold_stacks_ptb } from './item_stacks.js'
  * @typedef {Object} MarketplaceStackList
  * @property {string} kiosk_id
  * @property {string} personal_kiosk_cap_id
- * @property {string} item_id
- * @property {bigint | number | string} amount
+ * @property {string} item_id the SOURCE stack — the listed object when it already is the lot, else the one split from
+ * @property {bigint | number | string} amount the lot being sold (1/10/100/1000)
+ * @property {bigint | number | string} [source_amount] units `item_id` holds today; defaults to `amount` (no split)
  * @property {bigint | number | string} price_mist seller ask for the complete lot, excluding royalty
  * @property {MarketplacePolicy} policy
  * @property {Transaction} [tx]
@@ -85,6 +86,18 @@ function assert_legal_lot_size(amount) {
     throw new Error(
       `[items_marketplace] stack amount must be one of 1, 10, 100, 1000; got ${String(amount)}`,
     )
+}
+
+/**
+ * `kiosk::list`'s `id: ID` argument accepts either an id KNOWN client-side (a plain string → a pure ID) or one
+ * PRODUCED by an earlier command in the same PTB (`extract::split_locked_stack` returns the freshly shaped lot's
+ * `ID` — see list_stack_ptb). A result is already an ID value and must be passed through untouched; wrapping it
+ * in `tx.pure` would encode the result handle instead of the object it names.
+ * @param {Transaction} tx
+ * @param {string | import('@mysten/sui/transactions').TransactionArgument} item_id
+ */
+function id_arg(tx, item_id) {
+  return typeof item_id === 'string' ? tx.pure.id(item_id) : item_id
 }
 
 /**
@@ -232,7 +245,7 @@ export function list_ptb(context) {
           arguments: [
             as_object_arg(tx, kiosk_id), // self: &mut Kiosk (ref-or-id seam — a cached ref must be mutable:true)
             owner_cap, // cap: &KioskOwnerCap
-            tx.pure.id(item_id), // id: ID
+            id_arg(tx, item_id), // id: ID (an id string, or an earlier command's ID result — see list_stack_ptb)
             tx.pure.u64(BigInt(price_mist)), // price: u64
           ],
         })
@@ -243,28 +256,58 @@ export function list_ptb(context) {
 }
 
 /**
- * LIST a stack through the native Item listing path after enforcing the client-side lot contract. `amount` is a
- * pre-flight snapshot of the listed object's on-chain amount; the universal `lot_rule` repeats this check against
- * the purchased Item at policy resolution, so a stale or hostile client cannot bypass it.
+ * LIST a stackable lot. `amount` is the lot the seller is SELLING (a legal lot size — the universal `lot_rule`
+ * repeats the check against the purchased Item at policy resolution, so a stale or hostile client cannot bypass
+ * it); `source_amount` is the units `item_id` currently holds.
+ *
+ * A gathered stack is an ARBITRARY size (2, 3, 47 units — a bag accumulates whatever the world dropped), while a
+ * kiosk lot may only be 1/10/100/1000. Requiring the seller to already own a stack of exactly the lot size made
+ * every other stack unlistable (#492: the sell flow simply could not complete). So the general case owns both:
+ * when the source IS exactly the lot, list it as-is; when it holds MORE, `extract::split_locked_stack` shapes the
+ * lot off IN THE SAME PTB and the CHILD is what gets listed — the remainder stays kiosk-locked with the seller,
+ * one signature, no orphan. Splitting is impossible at equality by construction (`item::split` asserts the source
+ * keeps >= 1 unit), which is exactly the branch that needs no split.
  * @param {import("../../../types.js").Context} context
  * @returns {(args: MarketplaceStackList) => Transaction}
  */
 export function list_stack_ptb(context) {
   const list_item = list_ptb(context)
+  const split_locked_stack = split_locked_stack_id(context)
   return ({
     kiosk_id,
     personal_kiosk_cap_id,
     item_id,
     amount,
+    source_amount = amount,
     price_mist,
     policy,
     tx = new Transaction(),
   }) => {
     assert_legal_lot_size(amount)
+    const lot = BigInt(amount)
+    const held = BigInt(source_amount)
+    if (held < lot)
+      throw new Error(
+        `[items_marketplace] stack ${item_id} holds ${String(held)} units — cannot list a lot of ${String(lot)}`,
+      )
+
+    // The split MUST be composed before `list_item` opens the personal-cap borrow: it takes the cap by immutable
+    // reference, and the borrow_val/return_val dance between them would leave no cap to read.
+    const [child_id] =
+      held === lot
+        ? [item_id]
+        : split_locked_stack({
+            kiosk_id,
+            personal_kiosk_cap_id,
+            item_id,
+            amount: lot,
+            tx,
+          })
+
     return list_item({
       kiosk_id,
       personal_kiosk_cap_id,
-      item_id,
+      item_id: child_id,
       price_mist,
       policy,
       tx,

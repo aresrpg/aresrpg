@@ -125,6 +125,54 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
       ).toThrow(/one of 1, 10, 100, 1000/)
     }
   })
+
+  // #492 — a gathered stack is an ARBITRARY size, but a kiosk lot may only be 1/10/100/1000. Listing therefore has
+  // to SHAPE the lot out of the stack it is given; requiring the seller to already hold a stack of exactly the lot
+  // size is what made the sell flow uncompletable for every stack the world actually produces.
+  test('list_stack splits the lot out of a larger stack, then lists the SPLIT CHILD', () => {
+    const tx = list_stack_ptb(deployed_context)({
+      ...list_args,
+      amount: 10,
+      source_amount: 25,
+    })
+    expect(targets(tx)).toEqual([
+      'extract::split_locked_stack',
+      'personal_kiosk::borrow_val',
+      'kiosk::list',
+      'personal_kiosk::return_val',
+    ])
+
+    // The listed id must be the split's RESULT, never the source stack — listing the 25-unit source would abort
+    // `ELotInvalid` at the buyer's `prove_lot`, leaving an unsellable listing (a money trap, not a refusal).
+    const split_index = targets(tx).indexOf('extract::split_locked_stack')
+    const listed = tx.getData().commands[targets(tx).indexOf('kiosk::list')]
+      .MoveCall.arguments[2]
+    expect(listed.$kind).toBe('NestedResult')
+    expect(listed.NestedResult).toEqual([split_index, 0])
+  })
+
+  test('list_stack lists the source directly when it already IS the lot (no split)', () => {
+    const tx = list_stack_ptb(deployed_context)({
+      ...list_args,
+      amount: 10,
+      source_amount: 10,
+    })
+    expect(targets(tx)).toEqual([
+      'personal_kiosk::borrow_val',
+      'kiosk::list',
+      'personal_kiosk::return_val',
+    ])
+  })
+
+  test('list_stack refuses a lot larger than the stack holds', () => {
+    expect(() =>
+      list_stack_ptb(deployed_context)({
+        ...list_args,
+        amount: 100,
+        source_amount: 25,
+      }),
+    ).toThrow(/holds 25 units/)
+  })
 })
 
 describe('marketplace exact wallet debit', () => {

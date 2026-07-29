@@ -99,11 +99,13 @@ export async function list_item({ item_id, kiosk_id, price_mist }) {
 }
 
 /**
- * List one already-shaped stack through the SDK's native kiosk composer. `amount` is guarded client-side by the
- * composer and repeated against the purchased Item by lot_rule, so only 1/10/100/1000 can reach a buyer.
- * @param {{ item_id: string, kiosk_id?: string, amount: number, price_mist: bigint | string }} args
+ * List a stackable LOT. `amount` is the lot being sold — guarded client-side by the composer and repeated against
+ * the purchased Item by lot_rule, so only 1/10/100/1000 can reach a buyer. `source_amount` is what the source
+ * stack holds today: when it exceeds the lot the composer splits the lot off in the SAME PTB and lists the child,
+ * which is what lets a seller list out of the arbitrary-sized stacks the world actually produces (#492).
+ * @param {{ item_id: string, kiosk_id?: string, amount: number, source_amount?: number, price_mist: bigint | string }} args
  */
-export async function list_stack({ item_id, kiosk_id, amount, price_mist }) {
+export async function list_stack({ item_id, kiosk_id, amount, source_amount, price_mist }) {
   const sdk = await get_sdk()
   const { address } = use_auth.getState()
   if (!address) throw new Error(i18n.t('marketplace.lots.not_signed_in'))
@@ -118,6 +120,7 @@ export async function list_stack({ item_id, kiosk_id, amount, price_mist }) {
     personal_kiosk_cap_id: cap.objectId,
     item_id,
     amount,
+    source_amount: source_amount ?? amount,
     price_mist,
     policy,
     tx,
