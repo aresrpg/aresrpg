@@ -253,8 +253,7 @@ export function FightControls({
       my_entity_id: fight?.my_entity_id ?? null,
       overdue_ms: turn_overdue_ms(chain_turn, now_ms),
     })
-    // `now_ms` deliberately absent: it ticks every second and would re-run this on a latch that already holds.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- now_ms deliberately absent: it ticks every second and would re-run this on a latch that already holds; chain_turn is derived purely from fight_status/turn_deadline_ms, both already tracked
   }, [report_stall, turn_deadline_ms, fight, fight_status])
 
   if (!fight) return null
