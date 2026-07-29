@@ -85,6 +85,7 @@ function move_inputs() {
       }
       const local_module = qualified_module.split('::').at(-1)
       inputs.push({
+        package_dir,
         source_path,
         tokens,
         qualified_module,
@@ -400,22 +401,47 @@ if (inputs.length === 0) {
   )
 }
 
-const stale_inputs = inputs.filter((input) => {
-  if (
-    !fs.existsSync(input.build_info_path) ||
-    !fs.existsSync(input.bytecode_path) ||
-    !fs.existsSync(input.built_source_path)
-  )
-    return true
-  return !fs.readFileSync(input.source_path).equals(fs.readFileSync(input.built_source_path))
-})
+const stale_move_inputs = (move_inputs) =>
+  move_inputs.filter((input) => {
+    if (
+      !fs.existsSync(input.build_info_path) ||
+      !fs.existsSync(input.bytecode_path) ||
+      !fs.existsSync(input.built_source_path)
+    )
+      return true
+    return !fs.readFileSync(input.source_path).equals(fs.readFileSync(input.built_source_path))
+  })
+
+const stale_inputs = stale_move_inputs(inputs)
 if (stale_inputs.length > 0) {
+  // A fresh checkout has no ignored build/ tree. Build only the stale package set, once each: Move's own
+  // dependency cache handles the bounded package graph, while a warm checkout pays no build cost at all.
+  const stale_packages = [...new Map(stale_inputs.map((input) => [input.package_dir, input])).values()]
+  for (const input of stale_packages) {
+    console.log(`  ↻ absent/stale build witness; running ${input.build_command}`)
+    const package_path = path.relative(repo_root, input.package_dir)
+    const build = spawn_sync('sui', ['move', 'build', '--path', package_path], {
+      cwd: repo_root,
+      encoding: 'utf8',
+    })
+    if (build.error || build.status !== 0) {
+      const detail = String(build.stderr || build.stdout || build.error?.message || 'unknown build failure').trim()
+      no_verdict(
+        [`${input.build_command} failed${detail ? `: ${detail}` : ''}`],
+        `Fix the Move build error above, then re-run ${input.build_command}.`
+      )
+    }
+  }
+}
+
+const unbuilt_inputs = stale_move_inputs(inputs)
+if (unbuilt_inputs.length > 0) {
   no_verdict(
-    stale_inputs.map(
+    unbuilt_inputs.map(
       (input) =>
-        `absent/stale build output for ${path.relative(repo_root, input.source_path)}; run ${input.build_command}`
+        `absent/stale build output for ${path.relative(repo_root, input.source_path)} after ${input.build_command}`
     ),
-    'The verdict is only rendered against fresh build output — rebuild the packages above and re-run.'
+    'The automatic build completed without a fresh witness — inspect the package build output and re-run.'
   )
 }
 
