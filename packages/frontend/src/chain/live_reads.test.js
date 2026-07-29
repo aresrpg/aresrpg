@@ -28,6 +28,8 @@
 import { beforeAll, describe, expect, it } from 'bun:test'
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 
+import { use_real_expedition_sdk } from '../test_helpers/expedition_sdk_mock.js'
+
 import { get_owned_items } from './read_staking.js'
 import { get_sdk } from './sdk'
 import { DEMO_NETWORK } from './deployment'
@@ -50,6 +52,10 @@ d('D105 live gRPC wrapper regression (testnet)', () => {
   let sdk
 
   beforeAll(async () => {
+    // #1564 — `../chain/sdk` is mocked process-wide the moment ANY file pulls the expedition-sdk helper, so
+    // inside a full `bun test src` run this file's `get_sdk` is that mock. Arm the shared helper's ONE
+    // sanctioned real-SDK door so this row drives the real chain in every file order, not just alone.
+    use_real_expedition_sdk()
     sdk = await get_sdk()
   }, NET_TIMEOUT)
 

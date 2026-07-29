@@ -27,7 +27,21 @@
 // every file downstream (the #123 TypeError — `sdk.grpc_client.core.getObject` on an empty `{}` — was that
 // mock's exact return shape leaking into items_sale_actions.test.js). Grep `mock.module(['"].*chain/sdk` before
 // adding a new one; there must only ever be this one.
+// THIRD RULE, same issue class (#1564): the registration below is not just process-wide, it is
+// IRREVERSIBLE — a file that needs the REAL `get_sdk` cannot get it back by importing `../chain/sdk`,
+// because bun re-points that module's namespace for every importer the moment this helper loads
+// ANYWHERE in the process. The live-chain rows (chain/live_reads.test.js, chain/read_templates.test.js)
+// were exactly that victim: green alone, red inside `bun test src` with `expedition SDK mock was not
+// configured`, purely because some earlier world-shell file pulled this helper in. So the real
+// implementation is captured HERE, as a function VALUE, before the mock.module call below re-points the
+// namespace (a captured value survives the swap; the namespace binding does not) — and handed out
+// through `use_real_expedition_sdk()`. One home owns both shapes; nothing weakens the loud
+// unconfigured throw, which stays the default for every other file.
 import { mock } from 'bun:test'
+
+// A COPIED value, deliberately — an ESM `import { get_sdk }` binding is live and follows the swap below
+// straight back into this module's own indirection (an infinite recursion); a const copy does not.
+const real_get_sdk = (await import('../chain/sdk')).get_sdk
 
 const unconfigured_get_sdk = async () => {
   throw new Error('expedition SDK mock was not configured')
@@ -41,6 +55,11 @@ export const set_expedition_sdk_mock = (implementation) => {
 
 export const reset_expedition_sdk_mock = () => {
   get_sdk_implementation = unconfigured_get_sdk
+}
+
+/** Opt a live-chain suite back onto the REAL, unmocked `get_sdk` — the one sanctioned escape. */
+export const use_real_expedition_sdk = () => {
+  get_sdk_implementation = real_get_sdk
 }
 
 mock.module('../chain/sdk', () => ({

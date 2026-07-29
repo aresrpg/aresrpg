@@ -23,8 +23,10 @@
 // NETWORK: hits the live testnet GraphQL endpoint via the app's own get_sdk(). ON by default; set
 // ARES_SKIP_LIVE=1 to skip in an offline CI lane (mirrors live_reads.test.js's D105 convention).
 
-import { describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, it } from 'bun:test'
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
+
+import { use_real_expedition_sdk } from '../test_helpers/expedition_sdk_mock.js'
 
 import { get_item_templates } from './read_templates.js'
 import { get_sdk } from './sdk'
@@ -37,6 +39,11 @@ const d = LIVE ? describe : describe.skip
 const NET_TIMEOUT = 60_000
 
 d('read_templates event-type regression (testnet)', () => {
+  // #1564 — `../chain/sdk` is mocked process-wide the moment ANY file pulls the expedition-sdk helper, so
+  // inside a full `bun test src` run this file's `get_sdk` is that mock. Arm the shared helper's ONE
+  // sanctioned real-SDK door so this row drives the real chain in every file order, not just alone.
+  beforeAll(use_real_expedition_sdk)
+
   it(
     'get_item_templates resolves a non-empty catalog including pet_lootbox (item::TemplateCreated, category field)',
     async () => {
