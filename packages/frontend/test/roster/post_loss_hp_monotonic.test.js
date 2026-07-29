@@ -48,7 +48,7 @@ describe('#1485 — the world HP plate is monotonic across a post-loss repaint s
       op: 'fight_receipt',
       character_id: 'c1',
       final_hp: 0,
-      now: SETTLE_MS,
+      previsional_ms: SETTLE_MS,
     })
     expect(painted(settled, SETTLE_MS)).toBe(0)
 
@@ -77,9 +77,35 @@ describe('#1485 — the world HP plate is monotonic across a post-loss repaint s
       op: 'fight_receipt',
       character_id: 'c1',
       final_hp: 0,
-      now: SETTLE_MS,
+      previsional_ms: SETTLE_MS,
     })
     const lagging = reduce_sui_data(settled, { kind: 'snapshot', characters: [row()] })
     expect(painted(lagging, SETTLE_MS + 30_000)).toBeGreaterThan(0)
+  })
+
+  // #1643 — the same storm on a machine whose clock runs years ahead of the chain. The prediction is painted
+  // off the CLIENT's instant (so the plate reads 0 immediately, as it must), but the chain's own catch-up read
+  // still wins on arrival: the plate that used to freeze at 0 forever heals.
+  test('a skewed client clock predicts the loss and STILL yields to the chain read', () => {
+    const SKEWED_NOW = 4_000_000_000_000
+    const start = { characters: [row()], items: [], xp_floor: {}, loaded: true }
+    const settled = reduce_sui_data(start, {
+      kind: 'receipt_patch',
+      op: 'fight_receipt',
+      character_id: 'c1',
+      final_hp: 0,
+      previsional_ms: SKEWED_NOW,
+    })
+    expect(painted(settled, SKEWED_NOW), 'the defeat paints 0 on the client that predicted it').toBe(0)
+
+    const caught_up = reduce_sui_data(settled, {
+      kind: 'snapshot',
+      characters: [row({ current_hp: 0, hp_updated_ms: SETTLE_MS })],
+    })
+    const healed = reduce_sui_data(caught_up, {
+      kind: 'snapshot',
+      characters: [row({ current_hp: FULL, hp_updated_ms: SETTLE_MS + 600_000 })],
+    })
+    expect(painted(healed, SETTLE_MS + 600_000), 'the roster row is not frozen at 0').toBe(FULL)
   })
 })

@@ -6,7 +6,6 @@
 
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
-import { context } from '../game/store.js'
 import { load_roster } from '../roster/load_roster'
 
 import { settle_owned_dungeon_runs } from './owned_team_actions.js'
@@ -14,6 +13,7 @@ import { receipt_minted_outcomes } from './fight_result_receipt.js'
 import { invalidate_pending_outcomes } from './pending_outcomes.js'
 import { enqueue_mint, drain_pending_mints } from './pending_mints.js'
 import { mint_deps } from './dungeon_settlement.js'
+import { apply_fight_receipt } from './store_patch.js'
 
 /**
  * @param {{ leader_receipt:any, world_id:string|null, leader_character_id:string|null,
@@ -46,14 +46,9 @@ export async function settle_owned_dungeon_companions({
           enqueue_mint(opened.result_id)
           void drain_pending_mints(mint_deps()).catch(() => {})
         }
-        // M5: same-wallet companion HP/XP write-back as a typed receipt_patch (folded + XP-floored in the reducer).
-        context.dispatch('action/sui_data', {
-          kind: 'receipt_patch',
-          op: 'fight_receipt',
-          character_id,
-          xp_share: opened?.xp_share,
-          final_hp: opened?.final_hp,
-        })
+        // M5 + #1643: same-wallet companion HP/XP write-back through the ONE post-fight roster door (folded +
+        // XP-floored in the reducer, previsional until the chain's own anchor lands).
+        apply_fight_receipt(character_id, { xp_share: opened?.xp_share, final_hp: opened?.final_hp })
       },
     })
     return opened_result_ids

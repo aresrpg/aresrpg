@@ -64,6 +64,28 @@ export function apply_stack_merge_receipt(merges) {
 }
 
 /**
+ * #1643 — THE ONE DOOR for a post-fight roster write. Every caller (the settlement receipt's HP/XP write-back,
+ * the forfeit's local defeat, the terminal claim's defeat prediction) dispatches THIS, so the merge law folds
+ * it against the LATEST roster instead of read-modify-writing `state.sui` from outside.
+ *
+ * `previsional_ms` is where the client's wall clock enters — ONCE, at this edge, and only as the prediction's
+ * own regen base. It is NEVER the chain's `hp_updated_ms` anchor: the client has no reading of the chain's
+ * clock, and a skewed one stamped there made the row unbeatable by chain truth forever.
+ * @param {string} character_id
+ * @param {{ xp_share?: number|null, final_hp?: number|null }} receipt
+ */
+export function apply_fight_receipt(character_id, receipt) {
+  if (!character_id) return
+  context.dispatch('action/sui_data', {
+    kind: 'receipt_patch',
+    op: 'fight_receipt',
+    character_id,
+    previsional_ms: Date.now(),
+    ...receipt,
+  })
+}
+
+/**
  * Project a SIGNED equip tx's cosmetic-slot transition onto the character row now (the world rig re-dresses
  * this frame — client-independence §1; the rig projects `characters[i].worn` per frame and had no writer
  * besides the laggy /v1 reconcile). reconcile_equip_state's confirmed row adopts chain truth right after.

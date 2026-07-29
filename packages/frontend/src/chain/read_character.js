@@ -172,6 +172,16 @@ export function character_max_hp(character) {
 }
 
 /**
+ * The instant the regen projection accrues FROM. Normally the chain's own settle anchor; while the roster row
+ * holds a client PREVISION (#1643 — a post-fight HP the reducer painted before the indexer projected it),
+ * that prediction's local base instant instead. The previsional field is deliberately a second, LOCAL field:
+ * `hp_updated_ms` stays chain-only so the merge law never compares a wall clock against a chain stamp.
+ * @param {CharacterFields} character @returns {number}
+ */
+const hp_regen_base_ms = (character) =>
+  Number(/** @type {any} */ (character).hp_previsional_ms ?? character.hp_updated_ms ?? 0)
+
+/**
  * The character's current HP projected to `now_ms`, replicating the on-chain lazy natural regen
  * (aresrpg_foundation::progression_math::regen_hp, ANNEX §5.4) so an off-chain read matches what a chain settle
  * would compute: HP/sec = `(150 + level×6 + wisdom×2) / 75` accrued from the stored `current_hp`, capped at the
@@ -190,7 +200,7 @@ export function projected_hp(character, now_ms) {
   const folded_max = character_max_hp(character)
   const level = character_level(character)
   const current = Number(character.current_hp ?? 0)
-  const last = Number(character.hp_updated_ms ?? 0)
+  const last = hp_regen_base_ms(character)
   const [settled] = regen_hp(current, last, regen_max, level, 0, now_ms)
   return Math.min(settled, folded_max)
 }
@@ -204,7 +214,7 @@ export function next_projected_hp_ms(character, now_ms) {
   const max = Math.min(character_regen_max_hp(character), character_max_hp(character))
   const level = character_level(character)
   const current = Number(character.current_hp ?? 0)
-  const last = Number(character.hp_updated_ms ?? 0)
+  const last = hp_regen_base_ms(character)
   return next_regen_hp_ms(current, last, max, level, 0, now_ms)
 }
 
