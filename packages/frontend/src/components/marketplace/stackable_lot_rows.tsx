@@ -2,9 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Loader2 } from 'lucide-react'
 
 import type { MarketplaceListing } from '../../types/chain'
+import { ConfirmDialog } from '../../game/screens/hud/world/ConfirmDialog'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import {
   marketplace_buyer_total_mist,
@@ -41,42 +41,41 @@ export function LotPurchaseConfirmation({
   const buyer_total_mist = marketplace_buyer_total_mist(ask_mist, royalty_min_mist)
 
   return (
-    <div
-      data-marketplace-buy-confirm
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 border-t border-border bg-gold/[0.06]"
-    >
-      <span className="text-[9px] tracking-[0.14em] uppercase text-muted">
-        {t('marketplace.lots.confirm_lot', { count: size })}
-      </span>
-      <span className="text-[8px] tracking-[0.1em] uppercase text-muted/70 tabular-nums">
+    <ConfirmDialog
+      open
+      title={t('marketplace.lots.confirm_lot', { count: size })}
+      message={<LotPurchaseConfirmationMessage listing={listing} royalty_min_mist={royalty_min_mist} />}
+      confirm_label={`${t(
+        purchase_state === 'insufficient_balance'
+          ? 'marketplace.purchase.insufficient_balance'
+          : 'marketplace.lots.confirm_buy'
+      )} · ${format_mist_to_sui(buyer_total_mist, 2)} SUI`}
+      cancel_label={t('common.cancel')}
+      confirm_disabled={busy || purchase_state !== 'ready'}
+      on_confirm={on_confirm}
+      on_cancel={on_cancel}
+    />
+  )
+}
+
+export function LotPurchaseConfirmationMessage({
+  listing,
+  royalty_min_mist,
+}: {
+  listing: MarketplaceListing
+  royalty_min_mist: bigint
+}) {
+  const { t } = useTranslation()
+  const ask_mist = BigInt(listing.price_mist)
+  const buyer_total_mist = marketplace_buyer_total_mist(ask_mist, royalty_min_mist)
+  return (
+    <div data-marketplace-buy-confirm className="flex flex-col gap-2 uppercase tabular-nums">
+      <span className="text-[8px] tracking-[0.1em] text-muted/70">
         {t('marketplace.lots.ask_total', { price: format_mist_to_sui(ask_mist, 2) })}
       </span>
-      <span className="text-[10px] tracking-[0.1em] uppercase text-cyan tabular-nums">
-        {t('marketplace.lots.wallet_total', {
-          price: format_mist_to_sui(buyer_total_mist, 2),
-        })}
+      <span className="text-[10px] tracking-[0.1em] text-cyan">
+        {t('marketplace.lots.wallet_total', { price: format_mist_to_sui(buyer_total_mist, 2) })}
       </span>
-      <span className="flex-1 min-w-2" />
-      <button
-        type="button"
-        disabled={busy || purchase_state !== 'ready'}
-        onClick={on_confirm}
-        className="btn-gold inline-flex items-center gap-1.5 px-3 py-1.5 text-[9px] tracking-[0.16em] uppercase disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {busy ? <Loader2 size={10} className="animate-spin" /> : null}
-        {t(
-          purchase_state === 'insufficient_balance'
-            ? 'marketplace.purchase.insufficient_balance'
-            : 'marketplace.lots.confirm_buy'
-        )}
-      </button>
-      <button
-        type="button"
-        onClick={on_cancel}
-        className="text-[9px] uppercase tracking-[0.15em] text-muted border border-border px-2 py-1.5 hover:text-text transition-colors cursor-pointer"
-      >
-        {t('common.cancel')}
-      </button>
     </div>
   )
 }
@@ -127,11 +126,14 @@ export function StackableLotRows({
                 type="button"
                 disabled={!ask || busy || purchase_state !== 'ready'}
                 aria-expanded={is_armed}
+                aria-haspopup="dialog"
                 onClick={() => {
                   if (purchase_state === 'ready') set_armed_size(offer.size)
                 }}
-                className="btn-gold flex flex-col items-center justify-center gap-1 min-h-16 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40"
+                className="btn-outline bg-bg flex flex-col items-center justify-center gap-1 min-h-16 px-3 py-2 rounded-none disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: 'var(--color-bg)' }}
               >
+                <span className="text-[7px] tracking-[0.22em] uppercase text-gold/70">{t('marketplace.sui.buy')}</span>
                 <span className="text-[11px] tracking-[0.18em] uppercase">×{offer.size}</span>
                 <span className="text-[9px] tracking-[0.08em] tabular-nums">
                   {ask
@@ -161,7 +163,10 @@ export function StackableLotRows({
             royalty_min_mist
           )}
           busy={busy}
-          on_confirm={() => confirm_marketplace_lot_ask(armed.asks, address, on_buy)}
+          on_confirm={() => {
+            set_armed_size(null)
+            confirm_marketplace_lot_ask(armed.asks, address, on_buy)
+          }}
           on_cancel={() => set_armed_size(null)}
         />
       )}

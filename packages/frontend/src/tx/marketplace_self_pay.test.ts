@@ -98,4 +98,23 @@ describe('marketplace self-pay transaction route', () => {
     expect(sponsor.fetch_balance_mist).toHaveBeenCalledTimes(0)
     expect(sponsor.run_sponsored).toHaveBeenCalledTimes(0)
   })
+
+  test('an executed marketplace failure receipt is returned once and never auto-submitted again', async () => {
+    const failed = { digest: 'BURNED', effects: { status: { status: 'failure', error: 'MoveAbort' } } }
+    const sign = mock(async () => failed)
+    const sponsor = sponsor_deps()
+
+    const result = await execute_tx({
+      wallet: wallet(sign),
+      address: '0xbuyer',
+      transaction: transaction(),
+      chain: 'sui:testnet',
+      sponsor_excluded: true,
+      sponsor_fallback: sponsor,
+    })
+
+    expect(result.digest).toBe('BURNED')
+    expect(sign).toHaveBeenCalledTimes(1)
+    expect(sponsor.run_sponsored).toHaveBeenCalledTimes(0)
+  })
 })

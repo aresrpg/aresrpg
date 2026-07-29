@@ -71,6 +71,11 @@
     color 0.18s ease,
     background 0.18s ease;
 }
+.confirm-dialog .confirm-dialog__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 /* SECONDARY / cancel — GOLD OUTLINE at rest (was muted #6b7280 = read as disabled). Visibly a button. */
 .confirm-dialog .confirm-dialog__btn--cancel {

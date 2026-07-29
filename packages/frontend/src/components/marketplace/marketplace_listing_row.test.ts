@@ -8,6 +8,8 @@ import { describe, expect, test } from 'bun:test'
 // same idiom as sell_panel.test.ts). Design ruling 2026-07-18: clicking BUY must open a proper "are you sure you want to
 // buy X for X SUI" confirm modal, NOT the old inline PAY-WITH-SUI strip.
 const src = readFileSync(new URL('./marketplace_listing_row.tsx', import.meta.url), 'utf8')
+const lot_src = readFileSync(new URL('./stackable_lot_rows.tsx', import.meta.url), 'utf8')
+const dialog_src = readFileSync(new URL('../../game/screens/hud/world/ConfirmDialog.jsx', import.meta.url), 'utf8')
 
 describe('marketplace listing row buy confirmation', () => {
   test('BUY opens the shared confirm modal, never the inline pay strip', () => {
@@ -29,5 +31,20 @@ describe('marketplace listing row buy confirmation', () => {
     expect(src).not.toMatch(/pay\s*with\s*sui/i)
     expect(src).not.toMatch(/buy\s*with\s*sui/i)
     expect(src).toContain("t('marketplace.sui.buy')")
+  })
+
+  test('the shared purchase modal traps focus, dismisses on Escape, and consumes rapid confirm once', () => {
+    expect(dialog_src).toContain("event.key === 'Escape'")
+    expect(dialog_src).toContain("event.key !== 'Tab'")
+    expect(dialog_src).toContain('querySelectorAll')
+    expect(dialog_src).toContain('confirm_consumed_ref')
+  })
+
+  test('lot purchase uses the shared modal and the existing gothic-terminal outline tokens', () => {
+    expect(lot_src).toContain('<ConfirmDialog')
+    expect(lot_src).toContain('message={<LotPurchaseConfirmationMessage')
+    expect(lot_src).toContain('btn-outline')
+    expect(lot_src).toContain('bg-bg')
+    expect(lot_src).toContain("t('marketplace.sui.buy')")
   })
 })

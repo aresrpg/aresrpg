@@ -8,19 +8,31 @@
 // player-facing strings (t('…')). Reused by every abandon-confirm surface (DungeonBoard / DungeonIdleRoom /
 // CharacterSwitcher) so the prompt is ONE component, one look, zero native dialogs.
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
+import { resettable_single_shot } from '../../../../utils/single_flight.js'
+
 import './confirm-dialog.css'
+
+const FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
 
 /**
  * @param {{
  *   open: boolean,
  *   title: string,
- *   message: string,
- *   confirm_label: string,
+ *   message: import('react').ReactNode,
+ *   confirm_label: import('react').ReactNode,
  *   cancel_label: string,
  *   danger?: boolean,
+ *   confirm_disabled?: boolean,
  *   on_confirm: () => void,
  *   on_cancel: () => void,
  * }} props
@@ -33,20 +45,69 @@ export function ConfirmDialog({
   confirm_label,
   cancel_label,
   danger = false,
+  confirm_disabled = false,
   on_confirm,
   on_cancel,
 }) {
-  // Escape cancels (parity with a native dialog's Esc), bound only while open.
+  const dialog_ref = useRef(null)
+  const cancel_ref = useRef(on_cancel)
+  const confirm_consumed_ref = useRef(resettable_single_shot())
+
   useEffect(() => {
-    if (!open) return
-    const on_key = e => {
-      if (e.key === 'Escape') on_cancel()
+    cancel_ref.current = on_cancel
+  }, [on_cancel])
+
+  // Focus enters the modal, Tab/Shift+Tab wrap inside it, Escape cancels, and focus returns to the trigger.
+  // The listener is bound only while open; callback churn does not tear down/re-focus the dialog.
+  useEffect(() => {
+    if (!open) {
+      confirm_consumed_ref.current.reset()
+      return
+    }
+    confirm_consumed_ref.current.reset()
+    const previous_focus = document.activeElement
+    const dialog = dialog_ref.current
+    const focusable = () => [...(dialog?.querySelectorAll(FOCUSABLE_SELECTOR) ?? [])]
+    const first_focusable = focusable()[0]
+    ;(first_focusable ?? dialog)?.focus()
+
+    const on_key = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        cancel_ref.current()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const nodes = focusable()
+      if (nodes.length === 0) {
+        event.preventDefault()
+        dialog?.focus()
+        return
+      }
+      const first = nodes[0]
+      const last = nodes[nodes.length - 1]
+      const active = document.activeElement
+      if (event.shiftKey && (active === first || !dialog?.contains(active))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
     window.addEventListener('keydown', on_key)
-    return () => window.removeEventListener('keydown', on_key)
-  }, [open, on_cancel])
+    return () => {
+      window.removeEventListener('keydown', on_key)
+      previous_focus?.focus?.()
+    }
+  }, [open])
 
   if (!open) return null
+
+  const confirm_once = () => {
+    if (!confirm_consumed_ref.current.take()) return
+    on_confirm()
+  }
 
   // Portal to <body> (mirrors PetFeedModal/PlayerActionMenu/AddFundsModal): several callers (WorldSwitcher's
   // travel confirm, OnlinePlayers' friend-remove) mount this from inside a `.gw-panel`, and EVERY `.gw-panel`
@@ -58,9 +119,11 @@ export function ConfirmDialog({
   return createPortal(
     <div className="confirm-dialog__scrim" onClick={on_cancel}>
       <div
+        ref={dialog_ref}
         className="confirm-dialog"
         role="alertdialog"
         aria-modal="true"
+        tabIndex={-1}
         onClick={e => e.stopPropagation()}
       >
         <div className="confirm-dialog__title">{title}</div>
@@ -75,8 +138,9 @@ export function ConfirmDialog({
           </button>
           <button
             type="button"
+            disabled={confirm_disabled}
             className={`confirm-dialog__btn ${danger ? 'confirm-dialog__btn--danger' : 'confirm-dialog__btn--confirm'}`}
-            onClick={on_confirm}
+            onClick={confirm_once}
           >
             {confirm_label}
           </button>

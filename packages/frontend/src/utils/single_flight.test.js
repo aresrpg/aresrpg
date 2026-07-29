@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { latching_single_flight } from './single_flight.js'
+import { latching_single_flight, resettable_single_shot } from './single_flight.js'
 
 // Regression tests for the character-create double-submit / double-sponsor guard (money-class bug).
 describe('latching_single_flight', () => {
@@ -54,5 +54,16 @@ describe('latching_single_flight', () => {
     })
     expect(calls).toBe(2) // retry ran
     expect(flight.busy).toBe(true) // then latched on the successful retry
+  })
+})
+
+describe('resettable_single_shot', () => {
+  test('rapid confirmation consumes exactly once until a new modal opening resets it', () => {
+    const shot = resettable_single_shot()
+    expect(shot.take()).toBe(true)
+    expect(shot.take()).toBe(false)
+    expect(shot.take()).toBe(false)
+    shot.reset()
+    expect(shot.take()).toBe(true)
   })
 })

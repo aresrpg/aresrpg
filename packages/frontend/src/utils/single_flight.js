@@ -34,3 +34,20 @@ export function latching_single_flight() {
     },
   }
 }
+
+// A synchronous, resettable one-shot for modal confirmation doors. `take()` consumes BEFORE the caller starts
+// an effect, so two click/Enter events in the same tick cannot both reach a transaction. Only an explicit new
+// modal opening calls reset(); a thrown/executed failure never schedules or performs another attempt itself.
+export function resettable_single_shot() {
+  let consumed = false
+  return {
+    take() {
+      if (consumed) return false
+      consumed = true
+      return true
+    },
+    reset() {
+      consumed = false
+    },
+  }
+}

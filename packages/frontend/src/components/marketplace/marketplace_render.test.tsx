@@ -14,7 +14,7 @@ import { LedgerItemCard } from './ledger_item_card'
 import { MarketplaceListingRow } from './marketplace_listing_row'
 import { MyLotsPanel } from './my_lots_panel'
 import { SellItemHeader } from './sell_item_header'
-import { LotPurchaseConfirmation, StackableLotRows } from './stackable_lot_rows'
+import { LotPurchaseConfirmationMessage, StackableLotRows } from './stackable_lot_rows'
 import { TemplateUnavailableCard } from './template_unavailable_card'
 
 const test_i18n = i18next.createInstance()
@@ -226,6 +226,7 @@ describe('StackableLotRows', () => {
 
     expect((html.match(/data-lot-size=/g) ?? []).length).toBe(4)
     expect((html.match(/data-marketplace-buy-button/g) ?? []).length).toBe(4)
+    expect((html.match(/>BUY</g) ?? []).length).toBe(4)
     expect(html).toContain('Cheapest · 2.20 SUI')
     expect(html).toContain('Cheapest · 5.50 SUI')
     expect((html.match(/disabled=""/g) ?? []).length).toBe(2)
@@ -276,14 +277,9 @@ describe('StackableLotRows', () => {
 
   test('the armed confirmation shows ask and exact purchase total at 2-decimal precision, never royalty', () => {
     const html = render(
-      <LotPurchaseConfirmation
+      <LotPurchaseConfirmationMessage
         listing={lot_listing('four-sui', 10, '4000000000')}
-        size={10}
         royalty_min_mist={10_000_000n}
-        purchase_state="ready"
-        busy={false}
-        on_confirm={() => {}}
-        on_cancel={() => {}}
       />
     )
 
@@ -307,14 +303,9 @@ describe('StackableLotRows', () => {
     const [, card_html] = market_html.split('data-lot-size="10"')
     const [, ladder_html] = market_html.split('data-marketplace-ask-ladder')
     const confirm_html = render(
-      <LotPurchaseConfirmation
+      <LotPurchaseConfirmationMessage
         listing={lot_listing('four-sui', 10, '4000000000')}
-        size={10}
         royalty_min_mist={10_000_000n}
-        purchase_state="ready"
-        busy={false}
-        on_confirm={() => {}}
-        on_cancel={() => {}}
       />
     )
 
