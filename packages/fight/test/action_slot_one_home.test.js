@@ -27,14 +27,14 @@ const at = (version, event_idx, row) => ({ version, event_idx, source: 'receipt'
 const turn_started = (idx) => ({ kind: 'TurnStarted', is_mob: false, idx })
 const cast_by = (idx) => ({ kind: 'Cast', caster_is_mob: false, caster_idx: idx })
 
-describe('next_action_slot — the ONE fold of a seat\'s per-turn action counter', () => {
+describe("next_action_slot — the ONE fold of a seat's per-turn action counter", () => {
   test('the snapshot row is only a BASE: my TurnStarted in the tail resets it, my Casts advance it', () => {
     expect(next_action_slot({ base: 2, events: [], seat: 0 })).toBe(2)
     expect(next_action_slot({ base: 2, events: [at(5, 0, turn_started(0))], seat: 0 })).toBe(0)
     expect(next_action_slot({ base: 2, events: [at(5, 0, turn_started(0)), at(5, 1, cast_by(0))], seat: 0 })).toBe(1)
   })
 
-  test('another seat\'s turn start never resets MY counter, and their casts never advance it', () => {
+  test("another seat's turn start never resets MY counter, and their casts never advance it", () => {
     expect(next_action_slot({ base: 2, events: [at(5, 0, turn_started(1)), at(5, 1, cast_by(1))], seat: 0 })).toBe(2)
   })
 

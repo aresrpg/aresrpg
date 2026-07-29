@@ -70,7 +70,10 @@ const seated_store = () => {
   const store = create_fight_store()
   store
     .getState()
-    .input({ type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: '0xme', beat_ctx: { grid_width: 20 } } }, T0)
+    .input(
+      { type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: '0xme', beat_ctx: { grid_width: 20 } } },
+      T0
+    )
   return store
 }
 
