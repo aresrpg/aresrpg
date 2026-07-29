@@ -301,6 +301,47 @@ export function prepMoveCopy() {
   for (const f of ['Move.toml', 'Move.lock', 'Published.toml'])
     if (fs.existsSync(path.join(MOVE, f))) fs.copyFileSync(path.join(MOVE, f), path.join(P.BUILD, f))
   fs.symlinkSync(MOVE_NM, path.join(P.BUILD, 'node_modules'))
+  link_sibling_packages()
+}
+
+// The publish/seed scripts import SIBLING packages by relative path (`../../fight/src/...` from
+// packages/move/scripts). The rsync above copies ONLY packages/move, so in the copy those paths resolve to
+// `.build/<pkg>` — which did not exist, and `seed_testnet` died on `Cannot find module .build/fight/src/
+// fight_status_snapshot.js` the day a script first reached across. Symlinking (not copying) keeps the sibling
+// sources single-homed. The scan is the positive control: a sibling imported but not linked THROWS instead of
+// surfacing as a module-not-found halfway through a seed.
+function link_sibling_packages() {
+  const packages_root = path.dirname(MOVE)
+  const build_root = path.dirname(P.BUILD)
+  const imported = new Set()
+  const scan = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) scan(full)
+      else if (/\.(mjs|js)$/.test(entry.name))
+        for (const [, name] of fs.readFileSync(full, 'utf8').matchAll(/from '\.\.\/\.\.\/([\w-]+)\//g))
+          imported.add(name)
+    }
+  }
+  scan(path.join(P.BUILD, 'scripts'))
+  const linked = []
+  const absent = []
+  for (const name of imported) {
+    const source = path.join(packages_root, name)
+    // Not every sibling is IN this repo: `scripts/crit_fold.mjs` imports `../../validation/`, which lives in the
+    // private seed repo (the content boundary). Those scripts are not on the publish/seed path, so an absent
+    // sibling is reported, never fatal — only a sibling that EXISTS and goes unlinked is the rot this guards.
+    if (!fs.existsSync(source)) {
+      absent.push(name)
+      continue
+    }
+    const link = path.join(build_root, name)
+    fs.rmSync(link, { recursive: true, force: true })
+    fs.symlinkSync(source, link)
+    linked.push(name)
+  }
+  log(`sibling packages linked into ${build_root}: ${linked.sort().join(', ') || '(none)'}`)
+  if (absent.length) log(`sibling packages NOT in this repo (skipped): ${absent.sort().join(', ')}`)
 }
 
 // ── publish the external Kiosk package to the gold localnet + repoint the copy's aresrpg ──────
@@ -331,12 +372,25 @@ export function publishKiosk() {
   t = t.replace(/kiosk\s*=\s*"0x0"/, `kiosk = "${kid}"`)
   fs.writeFileSync(ktoml, t)
   // Every Kiosk-linking package must resolve the one freshly-published local package, never a testnet id.
+  // The dependency block is matched by SHAPE (header + its `key = value` lines, terminated by the blank line),
+  // never by the value of `rev`: the old pattern keyed on `rev = "testnet"` and went silently inert the day the
+  // six packages pinned a Kiosk commit SHA, leaving every one of them resolving the real TESTNET Kiosk id — an
+  // object no disposable localnet has, so `sui move build` failed with `Failed to fetch package Kiosk` and the
+  // rig could not boot at all. A no-match now THROWS (#1567's law: absence is not success).
   for (const pkg of kiosk_packages) {
     const toml = path.join(P.BUILD, pkg, 'Move.toml')
     if (!fs.existsSync(toml)) continue
-    let a = fs.readFileSync(toml, 'utf8')
-    a = a.replace(/\[dependencies\.Kiosk\][\s\S]*?rev = "testnet"\n/, '[dependencies.Kiosk]\nlocal = "../kiosk"\n')
-    fs.writeFileSync(toml, a)
+    const a = fs.readFileSync(toml, 'utf8')
+    const repointed = a.replace(
+      /\[dependencies\.Kiosk\]\n(?:[\w-]+ = .*\n)+/,
+      `[dependencies.Kiosk]\nlocal = "../kiosk"\n`
+    )
+    if (repointed === a)
+      throw new Error(
+        `gold Kiosk repoint FAILED for ${pkg}: no [dependencies.Kiosk] block matched in ${toml}. ` +
+          `Unrepointed, ${pkg} resolves the testnet Kiosk package id, which does not exist on this localnet.`
+      )
+    fs.writeFileSync(toml, repointed)
     fs.rmSync(path.join(P.BUILD, pkg, 'Move.lock'), { force: true })
   }
   return kid
@@ -409,6 +463,13 @@ export function sdkBlock(m) {
       id,
       initial_shared_version: m.engine.shared_versions?.FightRegistryShards?.[i] ?? '1',
     })),
+    // The ceremony stamps FightLatchShards alongside the registry shards, but this projection only ever mapped
+    // the registry half — so every fight builder resolved an EMPTY latch list and refused ("holds 0 rows,
+    // expected 16") before a single PTB could be signed. Same shape, same index order as its sibling above.
+    FIGHT_LATCH_SHARDS: (m.engine.shared.FightLatchShards ?? []).map((id, i) => ({
+      id,
+      initial_shared_version: m.engine.shared_versions?.FightLatchShards?.[i] ?? '1',
+    })),
     POOL_REGISTRY: m.gifting.shared.PoolRegistry,
     ITEM_POLICY: m.policies?.item?.policy,
     ITEM_ROYALTY_MIN_MIST: String(10_000_000),
@@ -465,7 +526,20 @@ const TUNE = { ZONE_SIZE: 32, BASE_AP: 12, BASE_MP: 6, BASE_HP: 1_000_000 }
 const CORE_CLASS_IDS = [0, 1, 5, 9] // senshi / yajin / shugo / tomoda
 
 /** Admin fixture (docs §4): super-speed travel + max loot/xp multipliers + reachability tune, ONE PTB, AdminCap-gated. */
-export async function adminDials({ client, signer, ids, world_id, speed = 100_000, mult = 400 }) {
+// `zone_size` is a DIAL WITH A TRAP: a world's mob difficulty is anchored on its authored spawn zone, so
+// shrinking zone_size after authoring moves the spawn thousands of zones away from that anchor and NOTHING is
+// eligible to spawn any more — searches succeed, resources derive, and every zone's group commitment comes back
+// with count 0, i.e. a world in which no fight can be started. The browser suite wants small zones (short
+// travel); a caller that needs the authored geometry passes it here instead of inheriting TUNE's.
+export async function adminDials({
+  client,
+  signer,
+  ids,
+  world_id,
+  speed = 100_000,
+  mult = 400,
+  zone_size = TUNE.ZONE_SIZE,
+}) {
   const { Transaction } = await load_deps()
   const tx = new Transaction()
   const pkg = ids.LATEST_PACKAGE_ID
@@ -476,7 +550,7 @@ export async function adminDials({ client, signer, ids, world_id, speed = 100_00
   tx.moveCall({ target: `${pkg}::world::set_speed_budget`, arguments: [cap(), world(), tx.pure.u64(speed), version()] })
   tx.moveCall({
     target: `${pkg}::world::set_zone_size`,
-    arguments: [cap(), world(), tx.pure.u32(TUNE.ZONE_SIZE), version()],
+    arguments: [cap(), world(), tx.pure.u32(zone_size), version()],
   })
   tx.moveCall({
     target: `${pkg}::world::set_density`,

@@ -19,6 +19,11 @@ services:
     build:
       context: ../localnet/harness
       dockerfile: Dockerfile
+      # The Dockerfile's SUI_ARCH default is the dev machines' aarch64; CI runners are x86_64. Threading it
+      # through compose keeps `up --build` (what bootStack runs) correct on both, instead of forcing every
+      # caller to pass `--build-arg` on a separate pre-build step.
+      args:
+        SUI_ARCH: ${SUI_ARCH:-aarch64}
     image: aresrpg-localnet:1.75.1
     # TEST-RIG protocol dial (localnet only): raise max_move_package_size 100KB→256KB so the current-lineage
     # aresrpg package (104.7KB on this working tree) publishes to the disposable test chain. This is a test
