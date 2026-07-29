@@ -201,13 +201,20 @@ mechanism."* Every AresRPG character (and item, §11) is kiosk-locked, and a kio
 `ObjectOwner(<0x2::dynamic_field::Field wrapper>)`, and that wrapper's OWN owner is
 `ObjectOwner(<kiosk>)` (empirically verified on testnet: character `0x5972…fae75` → wrapper
 `0xbb0b…0afa` → kiosk `0x6b1f…eb62`). `process()` therefore builds a per-checkpoint `wrapper → kiosk`
-map from every `dynamic_field::Field` OUTPUT object (this `0x2` framework type is EXEMPT from the
+map from every `dynamic_field::Field` INPUT/OUTPUT object (this `0x2` framework type is EXEMPT from the
 `ARES_PACKAGES` allowlist, like the event pipeline admits native kiosk), then `resolve_kiosk` does
 the two-hop for each of OUR objects. The wrapper and its child are both output objects exactly at
 mint / place / trade (the only moments the binding is set or changes), so the edge is latest-wins and
 self-maintaining across trades; between those it stays valid. Written as `$.kiosk_id` on the character
-doc. The mechanism is TYPE-GENERIC — items reuse `resolve_kiosk` in a future kiosk-inventory slice
-(their `rpc:item:{id}` docs already exist); no item projection is built here (nothing consumes it yet).
+doc. Items use the same edge for `$.kiosk_id` plus `rpc:idx:kiosk_items:{kiosk}` membership.
+Pre-delete inputs keep the edge resolvable when a kiosk wrapper and its child die together.
+
+**Deleted-object lifecycle sweep.** For every id in a transaction's `effects.deleted()`, the snapshot
+pipeline classifies the pre-delete input type and reaps only indexer-owned chain-object mirrors:
+`item::Item`, `results::FightResult`, `settlement::FightOutcome`, and `loot_box::PetBoxClaim`.
+Exact kiosk/owner membership edges are removed when the input carries enough ownership context.
+The existing `ItemBurned`/`ResultBurned` event arms remain fast paths. Derived or aggregate documents
+(`listing`, `pet_feed`, `supply`, sale history, and similar projections) are not lifecycle-swept.
 
 **Pending FightOutcomes** (`map_fight_outcome_object` + `remove_pending_outcome`). The engine's
 soulbound `aresrpg_fight::settlement::FightOutcome` is minted (address-owned) at `settle_and_destroy`
@@ -263,7 +270,8 @@ Doc `rpc:listing:{item}`, index `rpc:idx:listings`.
 | `kiosk::ItemPurchased` | kiosk, id, price | `DEL rpc:listing:{id}`; `SREM idx:listings {id}`; **+ discriminated sales-history writes (below)** |
 | `kiosk::ItemDelisted` | kiosk, id | `DEL rpc:listing:{id}`; `SREM idx:listings {id}` |
 | `item::ItemMinted` | item, template, item_type, amount | NX `rpc:item:{item} {id,level:null}`; `SET $.template/$.item_type`; **+ supply arm (below)** |
-| `item::TemplateBurned`→`extract::ItemBurned` | item, template, amount | `DEL rpc:item:{item}`, `DEL rpc:listing:{item}`, `SREM idx:listings`; **+ supply arm (below)** |
+| `extract::ItemBurned` | item, template, amount | Fast path: `DEL rpc:item:{item}`, `DEL rpc:listing:{item}`, `SREM idx:listings`; **+ supply arm (below)** |
+| deleted `item::Item` input | `effects.deleted()` + pre-delete owner | Lifecycle truth: `DEL rpc:item:{item}`; exact `SREM idx:kiosk_items:{kiosk}` when kiosk-resolved; derived docs/counters untouched |
 
 ---
 
@@ -730,7 +738,8 @@ Doc `rpc:result:{result}`, owner index `rpc:idx:results:{owner}`.
 | --- | --- | --- |
 | `ResultMinted` | result, fight, character, owner, outcome, xp_share, final_hp | `SET rpc:result:{result}` (`outcome` u8 2/3→`"victory"`/`"defeat"`, `opened:false`, `loot_units:0`); `SADD idx:results:{owner}` |
 | `ResultOpened` | result, character, xp_share, loot_units | `SET rpc:result:{result}` (**CREATE**, not a patch: `results::open` consumes the engine FightOutcome and mints a NEW core FightResult — disjoint id families; owner = tx sender, `opened:true`, fight/outcome/final_hp `null`); `SADD idx:results:{owner=sender}` |
-| `ResultBurned` | result | `DEL rpc:result:{result}` — emptied husk deleted for the rebate |
+| `ResultBurned` | result | Fast path: `DEL rpc:result:{result}` — emptied husk deleted for the rebate |
+| deleted `results::FightResult` input | `effects.deleted()` + pre-delete owner | Lifecycle truth: `DEL rpc:result:{result}`; exact `SREM idx:results:{owner}` |
 
 ## Pending FightOutcomes — `/v1/pending-outcomes?owner=`
 
@@ -828,8 +837,6 @@ Terminal events that **omit** the membership key force read-time cleanup:
 
 - `rpc:idx:fights:{world}` retains ids after a fight goes terminal/deleted (Settled/Swept omit
   `world`) → `/v1/fights?world=` **drops missing docs and status-filters** at read time.
-- `rpc:idx:results:{owner}` retains ids after `ResultBurned` (omits `owner`) → `/v1/fight-results`
-  **drops missing docs** at read time.
 - the `ResultMinted` outcome doc stays `opened:false` after `results::open` consumes the on-chain
   FightOutcome — no event links the outcome id to the new FightResult id, so it CANNOT be dropped
   or flipped from events alone (the opened truth lands on the NEW ticket doc). A client must treat
