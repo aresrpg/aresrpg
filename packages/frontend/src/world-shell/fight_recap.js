@@ -16,6 +16,11 @@
  *   fighters: Map<string, { id: string, name: string, team: number, level: number, is_player: boolean,
  *     dead: boolean, owner?: string, variant?: string | null }> | null | undefined,
  *   my_addr: string | null,
+ *   my_entity_id?: string | null, // THE SEAT THIS SESSION HELD (engine_view.my_entity_id), captured with the
+ *     roster while the fight slice is still live. null = this session held no seat (spectator, or a card opened
+ *     for a fight we never joined). #1661: the end-fight cards derive the local row from THIS, never from the
+ *     live `selected_character_id` — a character switch after the fight used to make the card render the
+ *     currently-selected character as a fallen party member of a fight it never entered.
  *   winner: number,        // winning TEAM index — the player team is 0 (engine_view contract)
  *   xp?: number,           // defeat consolation pool (rides the summary; the win card ignores it)
  *   duration_ms?: number,  // wall-clock fight length (settle time - fight start), when the caller has one.
@@ -27,15 +32,24 @@
  *     adopt — this client discovered an already-live fight rather than starting/joining it fresh), so
  *     duration_ms UNDERSTATES the true length. The card renders it with a "~" prefix instead of false precision.
  * }} args
- * @returns {{ summary: { winner: number, participants: Array<{ id: string, name: string, team: number,
+ * @returns {{ summary: { winner: number, me_id: string | null, participants: Array<{ id: string, name: string, team: number,
  *   level: number, is_player: boolean, template_id: string | null, alive: boolean }>, duration_ms: number, duration_partial: boolean,
  *   xp: number, loot: never[], cause: null }, won: boolean }}
  */
-export function fight_recap_payload({ fighters, my_addr, winner, xp = 0, duration_ms = 0, duration_partial = false }) {
+export function fight_recap_payload({
+  fighters,
+  my_addr,
+  my_entity_id = null,
+  winner,
+  xp = 0,
+  duration_ms = 0,
+  duration_partial = false,
+}) {
   const won = winner === 0
   return {
     summary: {
       winner,
+      me_id: my_entity_id ?? null,
       participants: [...(fighters?.values() ?? [])].map((f) => ({
         id: f.id,
         name: f.name,

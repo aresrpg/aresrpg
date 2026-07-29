@@ -6,8 +6,9 @@
 // Data: the local reward is the `fight_result` slice (player_experience.js — RESOLVED ONLY by the settlement
 // receipt's ResultOpened dispatch, finish_result/dungeon_settlement.js; /v1 owes this card nothing); the
 // roster rides the `fight_summary` recap, opened for BOTH outcomes since the v30 fix (dungeon_run_store.js
-// open_fight_recap — a WIN now carries the real multiplayer roster too). The self row is still synthesized
-// defensively when the roster raced/omitted it (WS-path fights, or any edge the recap missed) — FightReport
+// open_fight_recap — a WIN now carries the real multiplayer roster too). The party block projects through the
+// ONE shared home (fight_report_roster.js) off the recap's CAPTURED seat identity, never the live character
+// selection (#1661); the self row is still synthesized when a known seat's roster row raced — FightReport
 // re-resolves every OTHER party/enemy row's name off the ONE character-name home regardless (fight_report_names.js),
 // so a raw address never survives even when this file's own `p.name` passthrough is stale. React only renders
 // — truth is the chain. Wires the VICTORY sound cue (warm ascending swell) on card entrance.
@@ -17,12 +18,11 @@ import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { use_game_state, context } from '../../store.js'
-import { use_auth } from '../../../auth'
 import { get_class } from '../../data/classes.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_fight_cost, format_fight_cost } from '../../../world-shell/fight_gas_ledger.js'
 import { FightReport } from './FightReport.jsx'
-import { fight_report_enemy_rows } from './fight_report_roster.js'
+import { fight_report_enemy_rows, fight_report_party_rows } from './fight_report_roster.js'
 
 // closing the win modal clears BOTH the reward slice AND the shared recap (a win opens both).
 const close = () => {
@@ -40,10 +40,8 @@ export function FightResult({ slug_by_name = {} }) {
   const { t } = useTranslation()
   const reward = use_game_state((s) => s.fight_result)
   const recap = use_game_state((s) => s.fight_summary)
-  const me_id = use_game_state((s) => s.selected_character_id)
   const characters = use_game_state((s) => s.sui.characters)
   const items = use_game_state((s) => s.sui.items)
-  const address = use_auth((s) => s.address)
   const net_mist = use_fight_cost((s) => s.net_mist)
 
   // VICTORY sound cue (design mood: warm ascending swell) — fire once as the card appears, reset on close.
@@ -60,43 +58,23 @@ export function FightResult({ slug_by_name = {} }) {
 
   if (!reward) return null
 
-  const me = characters.find((c) => c.id === me_id) ?? null
+  // PARTICIPATION, NEVER SELECTION (#1661): the local row is the character that HELD THE SEAT, captured in the
+  // recap while the fight was live — never `selected_character_id`, which the switcher can move under this slice.
+  // A win always has a seat, so this is the defeat card's fix riding the ONE shared projection, not a second rule.
+  const seat_id = recap?.summary?.me_id ?? null
+  const me = characters.find((c) => c.id === seat_id) ?? null
   const my_class = get_class(me?.classe ?? me?.class_id ?? '')?.name ?? null
-  // the local fighter is identified by the character id (WS path) OR the wallet address (dungeon fighters
-  // are keyed by address) — either match is "me".
-  const is_local = (p) => p.id === me_id || (address != null && p.id === address)
 
   const roster = recap?.summary?.participants ?? []
-  const my_team = roster.find(is_local)?.team ?? 0
-
-  // YOUR PARTY — every member, self ALWAYS present (synthesize the local row if the roster raced/omitted it).
-  let party = roster.filter((p) => p.team === my_team)
-  if (!party.some(is_local))
-    party = [
-      {
-        id: me_id ?? 'me',
-        name: me?.name ?? t('fight_end.you'),
-        team: my_team,
-        level: reward.level,
-        is_player: true,
-        alive: true,
-      },
-      ...party,
-    ]
-  const party_rows = party.map((p) => {
-    const mine = is_local(p)
-    return {
-      id: p.id,
-      // prefer the character name for the local row; every OTHER row's name is re-resolved by FightReport
-      // itself off the ONE character-name home (fight_report_names.js) — this passthrough is just its input.
-      name: (mine ? me?.name : null) || p.name || t('fight_end.you'),
-      level: mine ? reward.level : p.level,
-      is_me: mine,
-      is_player: p.is_player ?? true, // a party row is always a player; roster rows carry it explicitly
-      alive: p.alive,
-      hp_pct: p.alive ? 100 : 0,
-      class_name: mine ? my_class : null,
-    }
+  // YOUR PARTY — every member, the seat that won ALWAYS present (synthesized if the roster raced/omitted it).
+  const { my_team, party_rows } = fight_report_party_rows({
+    roster,
+    me_id: seat_id,
+    me_name: me?.name ?? null,
+    my_level: reward.level,
+    my_class,
+    self_alive: true,
+    fallback_name: t('fight_end.you'),
   })
   // ONE adapter shared with the defeat card preserves the mob template id that powers the bestiary deep-link.
   const enemy_rows = fight_report_enemy_rows(roster, my_team)

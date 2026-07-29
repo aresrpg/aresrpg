@@ -249,6 +249,9 @@ function open_fight_recap(get, winner, xp = 0) {
     fight_recap_payload({
       fighters: fight_view()?.fighters, // synchronous core view (S2 mirror kill)
       my_addr: use_auth.getState().address,
+      // #1661 — the seat identity, snapshotted from the SAME live view as the roster. The cards project the
+      // local row off this, so a post-fight character switch can never fabricate a party member.
+      my_entity_id: fight_view()?.my_entity_id ?? null,
       winner,
       xp,
       // duration_partial:true on a resume/poll-adopt means the clock started AFTER the fight did — an honest

@@ -36,3 +36,60 @@ export const fight_report_enemy_rows = (roster, my_team) =>
       hp_pct: participant.alive ? 100 : 0,
       template_id: participant.template_id ?? null,
     }))
+
+/**
+ * YOUR PARTY rows + the local player's team — the ONE home both end-fight cards project through (victory and
+ * defeat differ only by the local row's `self_alive` and which level source they hand in).
+ *
+ * PARTICIPATION, NEVER SELECTION (#1661): `me_id` is the seat identity the recap CAPTURED while the fight slice
+ * was live (`fight_recap.js` → `summary.me_id`), not whichever character the switcher happens to have selected
+ * when the card renders. Both older invariants survive, and the lie between them does not:
+ *   - a KNOWN seat missing from the roster is still synthesized (a dungeon claim can escrow-remove the dead
+ *     player before the recap snapshots) — named off the character that actually held it;
+ *   - a roster that raced away EMPTY still renders one local row, but an ANONYMOUS one ("You"), because a
+ *     seatless recap knows the session fought without knowing which character did;
+ *   - a populated roster is never joined by a phantom row. Naming an uninvolved alt as a fallen party member
+ *     was the whole bug: the card read client identity state where it owed the player participation truth.
+ *
+ * @param {{
+ *   roster: Array<{ id: string, name?: string, team: number, level?: number, is_player?: boolean, alive?: boolean }>,
+ *   me_id: string | null,
+ *   me_name: string | null,
+ *   my_level: number,
+ *   my_class: string | null,
+ *   self_alive: boolean,
+ *   fallback_name: string,
+ * }} args
+ * @returns {{ my_team: number, party_rows: Array<{ id: string, name: string, level: number, is_me: boolean,
+ *   is_player: boolean, alive: boolean, hp_pct: number, class_name: string | null }> }}
+ */
+export function fight_report_party_rows({ roster, me_id, me_name, my_level, my_class, self_alive, fallback_name }) {
+  const is_local = (participant) => me_id != null && participant.id === me_id
+  const my_team = roster.find(is_local)?.team ?? 0
+  const seated = roster.filter((participant) => participant.team === my_team)
+  // Synthesize the local row for a KNOWN seat the roster lost, or to rescue a roster that raced away empty —
+  // never to pad a populated roster with a seat we cannot source.
+  const needs_self = !seated.some(is_local) && (me_id != null || seated.length === 0)
+  const self_row = { id: me_id ?? 'me', name: me_name ?? fallback_name, team: my_team, level: my_level, is_player: true, alive: self_alive }
+  const party = needs_self ? [self_row, ...seated] : seated
+  return {
+    my_team,
+    party_rows: party.map((participant) => {
+      // the synthesized row is mine by construction — it must stay `is_me` even when no seat id was captured,
+      // or FightReport would try to re-resolve a character name for it and render a short-id instead of "You".
+      const mine = participant === self_row || is_local(participant)
+      return {
+        id: participant.id,
+        // the local row is named off the character that HELD THE SEAT; every other row's name is re-resolved by
+        // FightReport itself off the ONE character-name home (fight_report_names.js) — this is just its input.
+        name: (mine ? me_name : null) || participant.name || fallback_name,
+        level: mine ? my_level : participant.level,
+        is_me: mine,
+        is_player: participant.is_player ?? true, // a party row is always a player; roster rows carry it explicitly
+        alive: participant.alive,
+        hp_pct: participant.alive ? 100 : 0,
+        class_name: mine ? my_class : null,
+      }
+    }),
+  }
+}
