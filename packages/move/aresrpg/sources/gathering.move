@@ -10,9 +10,9 @@
 /// gather param (the mint door needs the template object — no mint-by-id exists) and is asserted against the link
 /// BEFORE the draw — a wrong/stale client aborts deterministically, never only on the jackpot roll (lead ruling).
 ///
-/// EVERYTHING happens INSIDE the entry: `&Random` forbids any post-roll PTB command except transfers/merges, so
-/// the mint+lock cannot be deferred to a later command — it composes in this call (the buy_many law). Refusals
-/// come first (they cost only gas); no state mutates until every gate passes.
+/// EVERYTHING happens INSIDE the entry. `&Random` post-roll PTB rule: TransferObjects and MergeCoins only; no
+/// MoveCalls of any kind after the roll. The mint+lock cannot be deferred to a later command — it composes in
+/// this call (the buy_many law). Refusals come first (they cost only gas); no state mutates until every gate passes.
 ///
 /// PROTECTOR AMBUSH (§17.22, WIRED 2026-07-11): the 2% protector roll now SPAWNS A REAL solo PvM fight vs the
 /// passed defender `MobTemplate`, INTRA-call through `fight::y47` (the engine composes from a

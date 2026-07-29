@@ -230,13 +230,13 @@ public fun set_zone_size(cap: &AdminCap, w: &mut World, value: u32, version: &Ve
 
 public fun set_zone_ttl_ms(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  y142(w).zone_ttl_ms = y145(value, TTL_MIN, TTL_MAX);
+  y142(w).zone_ttl_ms = std::u64::min(std::u64::max(value, TTL_MIN), TTL_MAX);
   y144(w);
 }
 
 public fun set_speed_budget(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  y142(w).speed_budget = y145(value, SPEED_MIN, SPEED_MAX);
+  y142(w).speed_budget = std::u64::min(std::u64::max(value, SPEED_MIN), SPEED_MAX);
   y144(w);
 }
 
@@ -250,7 +250,7 @@ public fun set_spawn_zone(cap: &AdminCap, w: &mut World, x: u32, z: u32, version
 
 public fun set_protector_bp(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  y142(w).protector_bp = y145(value, 0, BP_MAX);
+  y142(w).protector_bp = std::u64::min(std::u64::max(value, 0), BP_MAX);
   y144(w);
 }
 
@@ -651,8 +651,6 @@ fun gate(cap: &AdminCap, version: &Version, ctx: &TxContext) {
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y144(w: &World) { event::emit(WorldUpdated { world: object::id(w) }); }
 
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
-fun y145(v: u64, lo: u64, hi: u64): u64 { if (v < lo) lo else if (v > hi) hi else v }
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 fun y146(v: u32, lo: u32, hi: u32): u32 { if (v < lo) lo else if (v > hi) hi else v }
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing

@@ -9,7 +9,7 @@ const PUBLISH_PACKAGES = [
   { name: 'engine', dependencies: ['foundation', 'spells'] },
   {
     name: 'aresrpg',
-    dependencies: ['foundation', 'spells', 'social', 'engine'],
+    dependencies: ['foundation', 'spells', 'engine'],
   },
   { name: 'kolizeum', dependencies: ['aresrpg', 'engine', 'social'] },
   { name: 'forgemagie', dependencies: ['aresrpg', 'foundation'] },

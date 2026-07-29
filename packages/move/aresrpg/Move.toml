@@ -1,6 +1,6 @@
 # aresrpg — THE core game package (S-46 merge of items/game/kolizeum/dungeon/pools into one module set).
 # Cross-module trust within it is now public(package); the multi-package cap machinery (ExtensionCap/CreatorCap/custody)
-# is dissolved. Depends on Sui + Kiosk + the sibling packages aresrpg_foundation / aresrpg_fight / aresrpg_social / aresrpg_spells.
+# is dissolved. Depends on Sui + Kiosk + the sibling packages aresrpg_foundation / aresrpg_fight / aresrpg_spells.
 [package]
 name = "aresrpg"
 version = "0.1.0"
@@ -41,10 +41,6 @@ local = "../foundation"
 # call `create<W>/join<W>`; claims assert the echoed brand. Arrow: core → engine, never back.
 [dependencies.aresrpg_fight]
 local = "../engine"
-
-# Standalone social (party + friends). Core reads FriendList read-only (kolizeum allowlist snapshot).
-[dependencies.aresrpg_social]
-local = "../social"
 
 # Standalone spell data. Core reads SpellTemplate read-only (spell_level spend door).
 [dependencies.aresrpg_spells]
