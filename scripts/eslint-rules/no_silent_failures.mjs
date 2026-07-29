@@ -40,6 +40,11 @@ const DEFAULT_SINKS = [
   'capture_',
   'log_', // log_telemetry, log_fight_fingerprint
   'reject', // Promise.reject / a deferred's reject — the failure keeps travelling
+  // An INJECTED failure channel: the caller handed the module somewhere to speak, and calling it IS speech.
+  // Found by reading hack_radio.js's `.catch((e) => … : on_error?.())` — the handler was compliant and the
+  // rule flagged it, which is how a registry earns its rows.
+  'on_error',
+  'on_failure',
 ]
 
 // Keys that make a returned object a FAILURE VALUE rather than a coerced success (L-D1 reducer shapes).

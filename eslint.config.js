@@ -7,6 +7,7 @@ import importPlugin from 'eslint-plugin-import'
 import eslintConfigPrettier from 'eslint-config-prettier'
 
 import one_pipeline from './scripts/eslint-rules/one_pipeline.mjs'
+import no_silent_failures from './scripts/eslint-rules/no_silent_failures.mjs'
 import fp_law_layer from './scripts/eslint-rules/fp_law.config.mjs'
 import typed_fp_layer from './scripts/eslint-rules/typed_fp.config.mjs'
 
@@ -136,6 +137,36 @@ export default [
       'one-pipeline/no-async-store-write': 'error',
       'one-pipeline/no-settimeout-in-stores': 'error',
     },
+  },
+  {
+    // THE SILENT-FAILURE TRIPWIRE (docs/CODE_LAW.md L-D1; Agent Standard #3 "no silent failure, ever").
+    // The house law — instruments THROW, never coerce — pointed at PRODUCT code for the first time. A failure
+    // handler that erases its failure (`.catch(() => null)`, `catch { return DEFAULT }`) leaves the break
+    // recorded nowhere, and every caller downstream reads a coerced success. The board class census
+    // (2026-07-30) measured that class at 16.6% of the open board — 26/157 rows: swallowed catches, bare-null
+    // returns, unexplained refusals, cached negatives, raw errors reaching players. A handler must SPEAK:
+    // re-throw · return the failure as data · report through a sanctioned sink (the registry is the rule's
+    // `sinks` option, censused from the real channels: game_log 358, console.error 112, console.warn 57,
+    // report_* 52, toast 29, Sentry.captureException 4).
+    //
+    // SEVERITY: WARN repo-wide — a burn-down, not an unrunnable red gate, exactly as the fp-law layer landed.
+    // BASELINE 2026-07-30 (this net, measured pre-wiring): 414 hits / 193 files. Per package —
+    // frontend 397, engine 19, api 7, rpc 7, fight 4, world 1, inventory 1, party 0. Severity only ratchets
+    // up: `packages/party/src` is CLEAN today and is the first free ERROR ratchet; the promoted cores
+    // (fight/world/inventory, 6 hits between them) are the next promotion once burned down.
+    //
+    // SCOPE NOTES — both deliberate, both measured, neither a carve-out:
+    //   · `.jsx` is out for the same reason every tier above keeps it out: matching it activates the 15 stale
+    //     `react-hooks/*` disable comments those files carry, which ERROR against an unregistered rule (the
+    //     F-1 janitor ticket). Cost of the exclusion: 25 hits / 14 files. Widen when F-1 lands.
+    //   · tests/e2e are out of THIS net: 189 hits there are dominated by the legitimate Playwright probe idiom
+    //     (`isVisible().catch(() => false)`), a boolean probe rather than an erased failure. The instrument
+    //     half of the law (a swallowed `page.screenshot(…).catch(() => undefined)` that lied about artifacts)
+    //     wants its own tier with a probe-aware option — a follow-up, not this gate.
+    files: ['packages/*/src/**/*.{js,ts,tsx}', 'api/**/*.{js,mjs}'],
+    ignores: ['**/*.test.*', '**/*.spec.*'],
+    plugins: { 'no-silent-failures': no_silent_failures },
+    rules: { 'no-silent-failures/no-swallowed-failure': 'warn' },
   },
   // THE FP-LAW LAYER (docs/CODE_LAW.md) — naming/purity/immutability/composition tripwires.
   // Tiering + severity rationale live in the layer file; rules in scripts/eslint-rules/fp_law.mjs.
