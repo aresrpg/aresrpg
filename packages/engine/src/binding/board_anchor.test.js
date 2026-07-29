@@ -25,6 +25,9 @@ const WS = 3735928559 // 0xDEADBEEF — a fixed CHAIN u64 world seed for the anc
 // Duplicated here WITH this citation because the engine ships NO @aresrpg/sim dependency by design (prng.js
 // vendoring law) — one home for the vectors is sim's board_gen.test.js. Same (world_seed, x, z) → the same seed
 // + raw board (dims / mask bitset / obstacles / holes / start cells) here as there ⇒ engine ≡ sim ≡ Move.
+// #1680 added the fold's LIVE tooth alongside these frozen vectors: test/binding/board_seed_parity.test.js
+// imports @aresrpg/sim (a devDependency — test-time only, the shipped graph is still sim-free) and sweeps
+// board_seed_from_anchor against it over 1030 anchors, so a drifted copy reds on VALUE, not just on a vector.
 const CROSS_TWIN = [
   {
     args: [12345, 100, 200],
