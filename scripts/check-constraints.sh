@@ -65,6 +65,39 @@ grep_collected() {
   esac
 }
 
+# ── MATCHER SELF-TEST: a scan gate must prove its matcher can still FIRE ─────────────────────────
+# A scan gate's ✓ means "the matcher ran over these files and found nothing". Nothing else above
+# proves the matcher can find ANYTHING: an awk edit, a regex typo, a grep/awk version change or a
+# comment-stripping refactor turns it into a permanent no-op — and a no-op reads exactly like a clean
+# tree, forever, in the same green. The spatial (#1536) and Display (#592) gates already answer this
+# by asserting their pattern still matches its own home; the gates below have no such in-tree line to
+# point at (their clean state is total absence), so each runs its REAL matcher over a synthetic
+# violation first and fails when nothing comes back.
+#
+# The fixture is written to a temp dir at RUNTIME on purpose. A tracked fixture carrying a real
+# violation would be collected by these very scans — and by every whole-tree gate in this file — and
+# red the build for the right pattern at the wrong time.
+SELFTEST_DIR="$(mktemp -d)" || exit 2
+trap 'rm -rf "$SELFTEST_DIR"' EXIT
+
+# matcher_fires <label> <synthetic-violation> <matcher> [matcher-args…]
+# Swaps COLLECTED_FILES for the fixture, runs the matcher exactly as the gate does, restores.
+matcher_fires() {
+  local label="$1" violation="$2"
+  shift 2
+  local fixture="$SELFTEST_DIR/fixture"
+  printf '%s\n' "$violation" >"$fixture" || return 1
+  local saved=("${COLLECTED_FILES[@]+"${COLLECTED_FILES[@]}"}")
+  local out status=0
+  COLLECTED_FILES=("$fixture")
+  out="$("$@")" || status=$?
+  COLLECTED_FILES=("${saved[@]+"${saved[@]}"}")
+  if [ "$status" -ne 0 ] || [ -z "$out" ]; then
+    red "  ✗ FAIL: $label found nothing in its own synthetic violation — the matcher is a no-op, so its ✓ is a lie."
+    return 1
+  fi
+}
+
 # D756 — on-chain names are generationless. Signature changes republish the package under the one clean name;
 # they never add V2/V3, _old, legacy, or deprecated markers to a module, callable, struct, enum, or event type.
 MOVE_SOURCE_PATHSPEC=':(glob)packages/move/*/sources/*.move'
@@ -141,6 +174,7 @@ move_public_surface_gate() {
   echo "== AresRPG Move clean-name gate (D756: no public version markers) =="
   local hits
   local scan_status
+  matcher_fires 'the Move clean-name matcher' 'public fun claim_reward_v2() {' move_public_surface_hits || return 1
   if ! collect_files "$MOVE_SOURCE_PATHSPEC"; then
     red "  ✗ FAIL: no Move sources collected — this gate cannot pass on an empty scan set."
     return 1
@@ -233,6 +267,7 @@ app_identifier_gate() {
   echo "== AresRPG app-side clean-name gate (D756 extension: no _v2 identifiers in packages/*/src) =="
   local hits
   local scan_status
+  matcher_fires 'the app clean-name matcher' 'const items_v2_ready = true' app_identifier_hits || return 1
   if ! collect_files "${APP_SOURCE_PATHSPEC[@]}"; then
     red "  ✗ FAIL: no app sources collected — this gate cannot pass on an empty scan set."
     return 1
@@ -259,6 +294,9 @@ asset_codename_gate() {
   local path_hits
   local hits
   local scan_status
+  # This gate collects the WHOLE repo, so the synthetic violation is assembled at runtime rather than
+  # written here as a literal — the same self-avoidance the `w[a]lrus` bracket already practises.
+  matcher_fires 'the retired asset-codename matcher' "$(printf 'w%slrus' a)" grep_collected 'w[a]lrus' -IilE || return 1
   if ! collect_files; then
     red "  ✗ FAIL: no repository files collected — this gate cannot pass on an empty scan set."
     return 1
@@ -1021,10 +1059,17 @@ fi
 # All four checks share ONE collected file set. `severity` is fail|warn: a warn prints and moves on,
 # a fail is fatal. A scan that could NOT run is fatal at either severity — an unproven pattern is not
 # an absent one, and the checkmark reads the same either way.
+# A sixth argument is a SYNTHETIC VIOLATION: the pattern is run over it first and the check fails when
+# it does not fire. Both hard-fail rows below scan for shapes with ZERO hits in the tree — the state in
+# which a rotted regex and a clean tree are the same green (the matcher self-test law above). The two
+# warn rows have live hits, which is their own standing proof the pattern still matches.
 move_pattern_check() {
-  local severity="$1" pattern="$2" hit_msg="$3" remedy="$4" clean_msg="$5"
+  local severity="$1" pattern="$2" hit_msg="$3" remedy="$4" clean_msg="$5" probe="${6:-}"
   local hits
   local scan_ok=0
+  if [ -n "$probe" ]; then
+    matcher_fires "the '$clean_msg' matcher" "$probe" grep_collected "$pattern" -InE || return 1
+  fi
   hits="$(grep_collected "$pattern" -InE)" || scan_ok=$?
   if [ "$scan_ok" -ne 0 ]; then
     red "  ✗ FAIL: the scan did not run to completion — see the error above; an unproven pattern is not an absent one."
@@ -1058,7 +1103,8 @@ else
   move_pattern_check fail 'mul_mod|mulmod|div_rem|fun mul_div' \
     'hand-rolled modular/wide math (mul_mod/div_rem/custom mul_div) in packages/move:' \
     'MUL_MOD GATE FAILED. Use the framework u128-upcast mul_div/mul_div_ceil — never hand-roll modular math.' \
-    'no hand-rolled mul_mod/div_rem/custom mul_div (framework mul_div/mul_div_ceil only)' || FAIL=1
+    'no hand-rolled mul_mod/div_rem/custom mul_div (framework mul_div/mul_div_ceil only)' \
+    'let remainder = mul_mod(a, b, m);' || FAIL=1
 
   # 2) HARD FAIL — u256 narrowing/overflow-prone casts (same OZ bug family: wide math cast back down
   #    loses the overflow signal). Scoped to an in-statement u256↔narrower-cast pairing so the
@@ -1068,7 +1114,8 @@ else
   move_pattern_check fail 'u256[^;]*as u(8|16|32|64|128)\b|as u(8|16|32|64|128)\b[^;]*u256' \
     'u256 narrowing/overflow-prone cast in packages/move:' \
     'U256-NARROW GATE FAILED. A u256 value cast down to a narrower int is the Cetus/OZ hazard shape — re-derive without the wide type, or prove the narrowing is bounds-checked.' \
-    'no u256 value narrowed by an in-statement cast to a smaller int' || FAIL=1
+    'no u256 value narrowed by an in-statement cast to a smaller int' \
+    'let narrow = ((wide as u256) as u64);' || FAIL=1
 
   # 3) WARN — type_name::get (deprecated) vs with_defining_ids (upgrade-stable: defining-id vs
   #    original-id can differ for a type introduced in a package upgrade). Fires TODAY —
