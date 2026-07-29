@@ -846,11 +846,11 @@ describe('decode_fight — status label, geometry arrays, counts, bigints', () =
   })
 
   test('shape_mask decodes losslessly as BigInt above 2^53 — the OLD Number() path silently drops real board cells (proven against a REAL byte-identical-twin fixture)', () => {
-    // Copied (NOT imported — sdk stays import-free of @aresrpg/frontend) from dungeon-grid.js's
-    // `board_shape_from_anchor(world_seed=1n, anchor_x=0, anchor_z=0)` → `maskWords(...)`: the byte-identical
-    // twin of Move's `board::generate_for_anchor`, a real 13×12 board. 3 of the 6 u64 words exceed 2^53 (real
-    // bitset magnitude near 2^64, not a contrived toy) — the exact class dungeon-grid.js:364 and
-    // fight_bridge.js:217 already document as dropping real board cells via the old `Number()` decode.
+    // Copied (NOT imported — sdk stays import-free of @aresrpg/sim) from
+    // `board_gen.generate_for_anchor(world_seed=1, anchor_x=0, anchor_z=0)`, the byte-identical Move twin for a
+    // real 13×12 board. 3 of the 6 u64 words exceed 2^53 (real bitset magnitude near 2^64, not a contrived toy)
+    // — the exact class frontend dungeon-grid.js and fight_bridge.js document as dropping real board cells via
+    // the old `Number()` decode.
     const words_str = [
       '17302828673139738623',
       '18375249361442374143',
