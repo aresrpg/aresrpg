@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Burn-tally regression for the craft ingredient selector. crafting::craft burns WHOLE stacks and requires the
-// tally to land EXACT (EIngredientOverSupply on any over-large stack, EMissingIngredient on a shortfall), and
-// item::split is public(package) — the client cannot split. So the selector MUST pick a subset summing exactly
-// to each ingredient's need, out of the ONE kiosk the craft runs in (#1494). Pure functions, zero mocks.
+// Burn-tally regression for the craft ingredient selector. crafting::craft consumes min(need, amount) per stack
+// and AUTO-SPLITS an over-large one (surplus re-locked), so a bag satisfies a recipe iff the owned amounts SUM
+// to the requirement per ingredient — out of the ONE kiosk the craft runs in (#1494). #1604: the selector used
+// to demand an EXACT tally and refused the merged single stack the world-load sweep produces. Zero mocks.
 
 import { describe, expect, it } from 'bun:test'
 
-import { exact_subset, select_ingredients } from './craft_select.js'
+import { covering_stacks, select_ingredients } from './craft_select.js'
 
 const stack = (id, amount) => ({ id, amount })
 // s.sui.items row (read_staking shape) — only the fields the selector reads.
@@ -20,34 +20,39 @@ const row = (id, item_type, amount, kiosk_id = 'K1', kiosk_cap_id = 'C1') => ({
 })
 const sum = (ids, by) => ids.reduce((s, id) => s + by[id], 0)
 
-describe('exact_subset', () => {
+describe('covering_stacks', () => {
   it('a single stack that equals the target', () => {
-    expect(exact_subset([stack('a', 2)], 2)).toEqual(['a'])
+    expect(covering_stacks([stack('a', 2)], 2)).toEqual(['a'])
   })
 
   it('two unit stacks that sum to the target', () => {
-    const picked = exact_subset([stack('a', 1), stack('b', 1)], 2)
+    const picked = covering_stacks([stack('a', 1), stack('b', 1)], 2)
     expect(picked).not.toBeNull()
     expect(sum(picked, { a: 1, b: 1 })).toBe(2)
   })
 
-  it('REFUSES when the only stack is larger than the need (no split door)', () => {
-    // The QA hazard: a single crude_branch stack of 3, recipe needs 2 → no exact subset, must refuse.
-    expect(exact_subset([stack('a', 3)], 2)).toBeNull()
+  it('ACCEPTS a stack larger than the need — the chain splits the surplus and re-locks it', () => {
+    expect(covering_stacks([stack('a', 3)], 2)).toEqual(['a'])
   })
 
-  it('prefers the exact stack over an over-large one', () => {
-    expect(exact_subset([stack('big', 3), stack('exact', 2)], 2)).toEqual(['exact'])
+  it('takes the fewest objects that cover the need (no redundant input)', () => {
+    // Biggest-first, stopping at coverage: the 3-stack alone covers 2, so the 1-stack is never supplied — a
+    // stack for an already-satisfied ingredient is exactly what EIngredientOverSupply aborts on.
+    expect(covering_stacks([stack('big', 3), stack('small', 1)], 2)).toEqual(['big'])
   })
 
-  it('finds a single large stack that greedy-ascending would miss', () => {
-    // stacks [1,3], target 3 → the [3] alone (not the [1]); a naive ascending accumulate would stall at 1.
-    expect(exact_subset([stack('one', 1), stack('three', 3)], 3)).toEqual(['three'])
+  it('sums across stacks when no single one covers the need', () => {
+    const picked = covering_stacks([stack('one', 1), stack('two', 2)], 3)
+    expect(picked.sort()).toEqual(['one', 'two'])
+  })
+
+  it('refuses when the owned total is short', () => {
+    expect(covering_stacks([stack('a', 1), stack('b', 1)], 3)).toBeNull()
   })
 
   it('empty stacks / non-positive target → null', () => {
-    expect(exact_subset([], 2)).toBeNull()
-    expect(exact_subset([stack('a', 2)], 0)).toBeNull()
+    expect(covering_stacks([], 2)).toBeNull()
+    expect(covering_stacks([stack('a', 2)], 0)).toBeNull()
   })
 })
 
@@ -78,7 +83,7 @@ describe('select_ingredients', () => {
     expect(sel.input_items.map((item) => item.id).sort()).toEqual(['o1', 'w1'])
   })
 
-  it('picks an exact subset within the crafting kiosk, ignoring a sibling kiosk stack', () => {
+  it('covers the need within the crafting kiosk, ignoring a sibling kiosk stack', () => {
     // K1 holds a 1-stack and a 2-stack; the sibling K2 stack is unreachable for the craft.
     const items = [
       row('a', 'crude_branch', 1, 'K1', 'C1'),
@@ -113,10 +118,29 @@ describe('select_ingredients', () => {
     expect(select_ingredients([row('x', 'sword', 1)], [{ id: 'crude_branch', qty: 2 }], 'K1')).toBeNull()
   })
 
-  it('refuses (not wrong_kiosk) when no kiosk can satisfy the tally', () => {
-    // A single over-large stack in each kiosk: no exact subset anywhere, so this is a materials refusal.
-    const items = [row('a', 'crude_branch', 3, 'K1', 'C1'), row('b', 'crude_branch', 3, 'K2', 'C2')]
-    expect(select_ingredients(items, [{ id: 'crude_branch', qty: 2 }], 'K1')).toBeNull()
+  it('refuses (not wrong_kiosk) when the whole bag is short of the tally', () => {
+    // Short in each kiosk AND short across both: a genuine materials refusal, not a custody one.
+    const items = [row('a', 'crude_branch', 1, 'K1', 'C1'), row('b', 'crude_branch', 1, 'K2', 'C2')]
+    expect(select_ingredients(items, [{ id: 'crude_branch', qty: 3 }], 'K1')).toBeNull()
+  })
+
+  // #1604 — the chain SPLITS an over-large ingredient stack and re-locks the surplus (crafting.move y18), so the
+  // post-auto-merge bag shape (ONE stack per resource, see chain/stack_merge.js) is craftable, not a refusal.
+  it('a single merged stack covers a smaller requirement (the chain splits the surplus)', () => {
+    const items = [row('merged', 'crude_branch', 20)]
+    const sel = select_ingredients(items, [{ id: 'crude_branch', qty: 3 }], 'K1')
+    expect(sel.input_items.map((item) => item.id)).toEqual(['merged'])
+  })
+
+  it('sums across stacks when no single stack covers the need', () => {
+    const items = [row('a', 'crude_branch', 2), row('b', 'crude_branch', 1)]
+    const sel = select_ingredients(items, [{ id: 'crude_branch', qty: 3 }], 'K1')
+    expect(sel.input_items.map((item) => item.id).sort()).toEqual(['a', 'b'])
+  })
+
+  it('refuses when the owned total is short of the requirement', () => {
+    const items = [row('a', 'crude_branch', 1), row('b', 'crude_branch', 1)]
+    expect(select_ingredients(items, [{ id: 'crude_branch', qty: 3 }], 'K1')).toBeNull()
   })
 
   it('ignores rows with no kiosk cap (unusable)', () => {

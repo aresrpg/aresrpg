@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // CRAFT actions — the tx seam over @aresrpg/sdk's `craft_ptb` (crafting::craft), the single-transaction,
-// exact-ingredient, reference-corpus success-roll craft (rolls off the crafter's job level). ONE user action: click Craft on a recipe → burn the crafter's own
+// reference-corpus success-roll craft (rolls off the crafter's job level). ONE user action: click Craft on a recipe → burn the crafter's own
 // kiosk-locked ingredient stacks from THEIR OWN custody kiosks → mint the recipe's output into the character's
 // personal kiosk (kiosk-lock constitution — nothing reaches a raw address), all atomic. Mirrors
 // consumable_actions / crush_actions:
@@ -17,9 +17,8 @@
 // template's slug, memoized per session — a second home for a fact the read layer already publishes, and
 // one that could disagree with the very grid the player clicked.)
 //
-// EXACT-STACK SELECTION: crafting::craft burns WHOLE items and requires the tally to land EXACT (a single
-// stack whose amount exceeds the need auto-splits, and the surplus re-locks). Loot/gather mint SEPARATE stacks
-// (no merge on mint), so we pick a subset of the player's stacks that sums EXACTLY to each ingredient's quantity.
+// STACK SELECTION: craft_select.js owns the rule (it is the chain's own — see its header) and this module only
+// surfaces its refusals; a recipe the bag cannot cover never reaches the PTB.
 //
 // ONE KIOSK (#1494): the chain borrows the crafter's character AND extracts every ingredient out of the single
 // kiosk the PTB names, so the selection is bounded to the character's kiosk. Ingredients stranded in a sibling
