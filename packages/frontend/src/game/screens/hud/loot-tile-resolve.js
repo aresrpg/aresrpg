@@ -8,7 +8,7 @@
 // decision logic in a co-located helper so it tests independently of the component tree.
 //
 // `resolved` names the three honest data sources that can back a drop: the player's live bag snapshot,
-// the exact ItemTemplate row, or a fold-snapshotted live render slug. Neither present means the
+// the exact ItemTemplate row, or an injected live template-id → render-slug join. Neither present means the
 // drop is a genuine orphan — the caller then renders the D53 bold-letter fallback instead of <ItemIcon>.
 
 import { to_item_view } from './item-view.js'
@@ -22,7 +22,10 @@ import { onchain_template_to_detail_props } from '../../../components/items'
  * @param {string | null | undefined} item_type
  * @returns {string}
  */
-const item_type_label = (item_type) => String(item_type ?? '').replace(/_/g, ' ').trim()
+const item_type_label = (item_type) =>
+  String(item_type ?? '')
+    .replace(/_/g, ' ')
+    .trim()
 
 const template_id_of = (item) => String(item?.template_id ?? item?.template ?? '')
 
@@ -35,7 +38,10 @@ const raw_item_of = (entry, items, template_id) => {
   return matching_items[matching_items.length - 1] ?? null
 }
 
-const stable_name_key = (name) => String(name ?? '').trim().toLowerCase()
+const stable_name_key = (name) =>
+  String(name ?? '')
+    .trim()
+    .toLowerCase()
 
 const template_of = (entry, template_map, template_id) => {
   const exact = template_id ? template_map.get(template_id) : null
@@ -84,19 +90,18 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
  * @param {Map<string, any>} template_map exact template id → chain template row, plus legacy item_type keys
  * @param {((tmpl: any, field: 'name' | 'description') => string) | undefined} tt use_template_t() resolver
  * @param {(key: string, opts?: any) => string} t
+ * @param {Record<string, string>} [slug_by_template_id] live ItemTemplate id → authored render slug
  * @param {Record<string, number> | null} [rolled_stats] exact owned instance's centered-u16 StatsKey block
  */
-export function resolve_loot_tile(entry, items, template_map, tt, t, rolled_stats = null) {
+export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id = {}, rolled_stats = null) {
   const template_id = template_id_of(entry)
   // An item_type such as "resource" is a class, not identity. Once the receipt carries an exact template,
   // never join it to an arbitrary sibling merely because both rows share that class.
   const raw = raw_item_of(entry, items, template_id)
   const view = to_item_view(raw ?? { item_type: entry.item_type, name: entry.name, amount: entry.amount })
   const tmpl = template_of(entry, template_map, template_id)
-  // Settlement already held the session-memoized live id → template row and captured its authored item_type
-  // onto this projection. Reading it here is synchronous and fight-local: no bundled receipt and no live join.
-  const snapshot_slug = entry.icon_slug
-  const resolved = [raw, tmpl, snapshot_slug].some(Boolean)
+  const published_slug = template_id ? slug_by_template_id[template_id] : undefined
+  const resolved = [raw, tmpl, published_slug].some(Boolean)
   const name = loot_name_of(entry, raw, tmpl)
   const category = category_of(raw, view, tmpl)
   const icon = icon_of({
@@ -105,7 +110,7 @@ export function resolve_loot_tile(entry, items, template_map, tt, t, rolled_stat
     template: tmpl,
     name,
     category,
-    published_slug: snapshot_slug,
+    published_slug,
   })
   const detail = onchain_template_to_detail_props(
     {
@@ -125,7 +130,7 @@ export function resolve_loot_tile(entry, items, template_map, tt, t, rolled_stat
       owned: true,
       rolled_stats,
     },
-    tt,
+    tt
   )
   return {
     resolved,

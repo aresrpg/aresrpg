@@ -62,10 +62,11 @@ import './fight-hud.css'
  * The fight-phase HUD. Renders nothing until the phase machine says a board is up, so the setup phase is never
  * covered by fight chrome and a mid-fight STOP tears the whole layer down with the phase.
  *
- * @param {{ draw?: boolean }} props `draw` paints the DRAW banner over the production defeat card — the sim's
- *   third outcome (winner 2) has no chain status of its own (spec §4.4, last row).
+ * @param {{ draw?: boolean, slug_by_name?: Readonly<Record<string, string>> }} props `draw` paints the DRAW
+ *   banner over the production defeat card — the sim's third outcome (winner 2) has no chain status of its own
+ *   (spec §4.4, last row). The page composition root injects the authored item catalog.
  */
-export function SimulatorFightHud({ draw = false }) {
+export function SimulatorFightHud({ draw = false, slug_by_name = {} }) {
   const { t } = useTranslation()
   const phase = use_fight_phase()
   if (!should_mount_board(phase)) return null
@@ -89,8 +90,8 @@ export function SimulatorFightHud({ draw = false }) {
           to `use_dungeon.commit_turn`, which fight_shim.js seeded with the local sim submit. */}
       <DungeonBoard />
       {/* the result cards gate on their own store slices, so they outlive the board teardown by a beat */}
-      <FightResult />
-      <FightSummary />
+      <FightResult slug_by_name={slug_by_name} />
+      <FightSummary slug_by_name={slug_by_name} />
       {draw && (
         <div className="sim-draw-banner" role="status">
           {t('simulator.fight_draw')}

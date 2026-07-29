@@ -170,8 +170,9 @@ module.exports = {
         'The allowlist below is the boot-paint set — three modules that project the receipt WITHOUT ever ' +
         'letting it filter a live row: chain/deployment.ts (the seeded world id enumeration + display label), ' +
         'pages/encyclopedia/world_corpus.ts and game/screens/hud/Inventory.jsx (authored-slug → minted-id ' +
-        'projections over the authored catalog). FightReport was removed from this set by #1522: settlement ' +
-        'snapshots the live /v1 item_type slug onto each loot projection before the fight card renders. ' +
+        'projections over the authored catalog). FightReport was removed from this set by #1522: its legal ' +
+        'world/simulator composition roots inject authored name→slug data, then the fight path joins each ' +
+        'live /v1 template id → name → slug through props without importing either frozen receipt itself. ' +
         'A FOURTH importer is a deliberate, reviewed act: add it here with its reason, or read /v1 like ' +
         "everything else. #1490 added the fourth: game/data/mobs.js, the mob display-fact resolver. A mob's " +
         'TIER (archi/boss/protector) is authored content the chain does not carry — MobTemplate has no role ' +

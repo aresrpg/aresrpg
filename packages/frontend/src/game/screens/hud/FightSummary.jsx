@@ -23,8 +23,9 @@ import { fight_report_enemy_rows } from './fight_report_roster.js'
 
 const close = () => context.dispatch('action/fight_summary/close', {})
 
-/** @returns {import('react').JSX.Element | null} */
-export function FightSummary() {
+/** @param {{ slug_by_name?: Readonly<Record<string, string>> }} props
+ * @returns {import('react').JSX.Element | null} */
+export function FightSummary({ slug_by_name = {} }) {
   const { t } = useTranslation()
   const recap = use_game_state((s) => s.fight_summary)
   const fight_result = use_game_state((s) => s.fight_result)
@@ -104,6 +105,7 @@ export function FightSummary() {
       enemies={enemy_rows}
       spoils={null}
       items={items}
+      slug_by_name={slug_by_name}
       cost={format_fight_cost(net_mist)}
       cause={cause}
       duration_ms={summary.duration_ms ?? 0} /* 0 until fight_recap_payload gets a real start timestamp */

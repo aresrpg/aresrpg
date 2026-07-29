@@ -33,9 +33,10 @@ const close = () => {
 /**
  * The end-of-fight WIN card. Gates off the discrete `fight_result` flag (not fight_mode), so it persists a
  * beat after the board despawns and never churns per-frame.
+ * @param {{ slug_by_name?: Readonly<Record<string, string>> }} props
  * @returns {import('react').JSX.Element | null}
  */
-export function FightResult() {
+export function FightResult({ slug_by_name = {} }) {
   const { t } = useTranslation()
   const reward = use_game_state((s) => s.fight_result)
   const recap = use_game_state((s) => s.fight_summary)
@@ -110,6 +111,7 @@ export function FightResult() {
       enemies={enemy_rows}
       spoils={spoils}
       items={items}
+      slug_by_name={slug_by_name}
       cost={format_fight_cost(net_mist)}
       pending={reward.status === 'pending'} /* xp/level still resolving on-chain → skeleton, never a literal +0 */
       loot_units={reward.loot_units} /* ResultOpened rolled count → loot skeletons until the items delta lands */

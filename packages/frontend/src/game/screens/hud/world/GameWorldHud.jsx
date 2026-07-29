@@ -19,6 +19,7 @@
 // bundle. Companion tokens only (gold/cyan/JetBrains/sharp).
 
 import { useEffect, useSyncExternalStore } from 'react'
+import { slugs } from 'virtual:item_catalog'
 
 import './game-world-hud.css'
 import './world_toast_overlay.css'
@@ -371,8 +372,8 @@ export function GameWorldHud() {
         <RewardRecap />
         {/* end-of-fight result + defeat recap + level-up — gate off their OWN store slices (not fight_mode),
             so they persist a beat past the board teardown; each renders null when its slice is empty. */}
-        <FightResult />
-        <FightSummary />
+        <FightResult slug_by_name={slugs} />
+        <FightSummary slug_by_name={slugs} />
         <LevelUp />
         <JobLevelUp />
       </div>

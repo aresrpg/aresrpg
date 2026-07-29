@@ -36,18 +36,24 @@ describe('resolve_loot_tile — the enrichment signal', () => {
   })
 })
 
-describe('resolve_loot_tile — the fallback name chain (template name → entry name → item_type words → \'?\')', () => {
+describe("resolve_loot_tile — the fallback name chain (template name → entry name → item_type words → '?')", () => {
   test('entry.name present, unresolved → the entry name is used verbatim', () => {
     const out = resolve_loot_tile({ item_type: 'qa_thing', name: 'QA Thing', amount: 1 }, [], new Map(), undefined, t)
     expect(out.name).toBe('QA Thing')
   })
 
   test('entry.name MISSING, unresolved → the item_type slug humanized to words', () => {
-    const out = resolve_loot_tile({ item_type: 'qa_ghost_blade_01', name: undefined, amount: 1 }, [], new Map(), undefined, t)
+    const out = resolve_loot_tile(
+      { item_type: 'qa_ghost_blade_01', name: undefined, amount: 1 },
+      [],
+      new Map(),
+      undefined,
+      t
+    )
     expect(out.name).toBe('qa ghost blade 01')
   })
 
-  test('nothing at all rode the wire (no name, no item_type) → the literal \'?\' last resort', () => {
+  test("nothing at all rode the wire (no name, no item_type) → the literal '?' last resort", () => {
     const out = resolve_loot_tile({ item_type: undefined, name: undefined, amount: 1 }, [], new Map(), undefined, t)
     expect(out.name).toBe('?')
   })
@@ -60,7 +66,13 @@ describe('resolve_loot_tile — the tooltip never lies about what it knows', () 
   })
 
   test('unresolved AND no name at all → the honest i18n disclaimer rides the tooltip description', () => {
-    const out = resolve_loot_tile({ item_type: 'qa_ghost_blade_01', name: undefined, amount: 1 }, [], new Map(), undefined, t)
+    const out = resolve_loot_tile(
+      { item_type: 'qa_ghost_blade_01', name: undefined, amount: 1 },
+      [],
+      new Map(),
+      undefined,
+      t
+    )
     expect(out.detail.description).toBe('fight_end.loot_metadata_unavailable')
   })
 
@@ -68,7 +80,13 @@ describe('resolve_loot_tile — the tooltip never lies about what it knows', () 
     const template_map = new Map([
       ['rusty_blade', { name: 'Rusty Blade', category: 'sword', level: 4, display: { description: 'A worn blade.' } }],
     ])
-    const out = resolve_loot_tile({ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }, [], template_map, undefined, t)
+    const out = resolve_loot_tile(
+      { item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 },
+      [],
+      template_map,
+      undefined,
+      t
+    )
     expect(out.detail.description).toBe('A worn blade.')
   })
 })
@@ -154,7 +172,8 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
       template_map,
       undefined,
       t,
-      { vitality: 32775 },
+      {},
+      { vitality: 32775 }
     )
 
     expect(out.item_id).toBe('0xreceipt-created')
@@ -178,6 +197,26 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
 })
 
 describe('resolve_loot_tile — republish-stable live catalog join (#1522)', () => {
+  test('the injected live template-id map wins over a generic chain class', () => {
+    const template_id = `0x${'1522'.repeat(16)}`
+    const out = resolve_loot_tile(
+      {
+        template_id,
+        item_type: 'resource',
+        name: 'Starfell Shard',
+        amount: 1,
+      },
+      [],
+      new Map([[template_id, { name: 'Starfell Shard', item_type: 'resource', category: 'RESOURCE' }]]),
+      undefined,
+      t,
+      { [template_id]: 'post_republish_starfell_shard' }
+    )
+
+    expect(out.resolved).toBe(true)
+    expect(out.icon).toBe('post_republish_starfell_shard')
+  })
+
   test('a shuffled receipt re-mint resolves the loot icon by its stable name, never the stale template id', () => {
     const receipt_template_id = `0x${'1522'.repeat(16)}`
     const live_template_id = `0x${'2251'.repeat(16)}`
@@ -205,7 +244,7 @@ describe('resolve_loot_tile — republish-stable live catalog join (#1522)', () 
       [],
       live_templates,
       undefined,
-      t,
+      t
     )
 
     expect(out.resolved).toBe(true)

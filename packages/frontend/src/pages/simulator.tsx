@@ -24,6 +24,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dices, Play, Plus, Square, Swords } from 'lucide-react'
+import { slugs } from 'virtual:item_catalog'
 
 import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 import { board_of } from '../simulator/board'
@@ -339,7 +340,7 @@ export function SimulatorPage() {
           here is the LOAD gate — a setup session must not pay for the module tree at all. */}
       {phase === 'fight' && (
         <Suspense fallback={null}>
-          <SimulatorFightHud />
+          <SimulatorFightHud slug_by_name={slugs} />
         </Suspense>
       )}
     </div>

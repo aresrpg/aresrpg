@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// FIGHT COST card-render proof: FightReport is a pure-props shell (no stores, no
-// react-i18next context — `t` rides in as a prop), so renderToStaticMarkup (react-dom/server, already a
-// dependency — no new dep) is enough to assert the formatted cost line actually reaches the DOM markup.
+// FightReport is a pure-props shell, so server markup proves values reach the rendered card.
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { reset_assets_for_test } from '@aresrpg/sdk/jobs'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -14,8 +12,7 @@ import { FightReport } from './FightReport.jsx'
 
 const t = (key, opts) => (opts?.sui != null ? `${key}:${opts.sui}` : key) // stub — no i18n init needed
 
-// Cold-state pin: these suites assert the resolver's manifest-less fallbacks; a sibling file's real-manifest
-// configure (the process-wide asset-host singleton) would reroute icons to asset-host URLs and fail them in combined runs.
+// Keep manifest-less asset fallbacks deterministic across combined test runs.
 beforeEach(() => reset_assets_for_test())
 
 const base = {
@@ -50,8 +47,7 @@ describe('FightReport — the fight-cost line', () => {
   })
 })
 
-// ── ITEM 3 (0xp then a second later the correct xp — show a loading skeleton instead of 0) +
-//    ITEM 4 ("looted items need a tooltip of at least the item name"). Pure-props render proof (no DOM env). ──
+// XP and loot render a skeleton while the receipt hydrates.
 describe('FightReport — xp/loot SKELETON while the reward hydrates', () => {
   const pending_base = { ...base, spoils: { xp: 0, tokens: 0, loot: [] }, cost: null }
 
@@ -74,10 +70,10 @@ describe('FightReport — xp/loot SKELETON while the reward hydrates', () => {
 
   test('loot_units but no count (null / 0) → no loot skeletons (never a skeleton forever on a no-loot win)', () => {
     expect(renderToStaticMarkup(<FightReport {...pending_base} pending={true} loot_units={null} />)).not.toContain(
-      'fe-tile--skel',
+      'fe-tile--skel'
     )
     expect(renderToStaticMarkup(<FightReport {...pending_base} pending={true} loot_units={0} />)).not.toContain(
-      'fe-tile--skel',
+      'fe-tile--skel'
     )
   })
 })
@@ -107,24 +103,22 @@ describe('FightReport — looted items carry the item NAME (item 4: the hover to
 describe('FightReport — the fight cost skeletons until minting has folded (item 5)', () => {
   const pending_base = { ...base, spoils: { xp: 0, tokens: 0, loot: [] } }
   test('pending=true → the cost is a skeleton, NOT a mid-settle partial number', () => {
-    const html = renderToStaticMarkup(<FightReport {...pending_base} pending={true} cost={{ sui: '0.0100', is_refund: false }} />)
+    const html = renderToStaticMarkup(
+      <FightReport {...pending_base} pending={true} cost={{ sui: '0.0100', is_refund: false }} />
+    )
     expect(html).toContain('fe-cost')
     expect(html).toContain('fe-skel')
     expect(html).not.toContain('fight_end.cost:0.0100') // the partial is hidden behind the skeleton
   })
   test('pending=false (settled) → the FINAL cost renders (create + turns + settle + open + mint + burn)', () => {
-    const html = renderToStaticMarkup(<FightReport {...base} pending={false} cost={{ sui: '0.0420', is_refund: false }} />)
+    const html = renderToStaticMarkup(
+      <FightReport {...base} pending={false} cost={{ sui: '0.0420', is_refund: false }} />
+    )
     expect(html).toContain('fight_end.cost:0.0420')
   })
 })
 
-// ── 07-18 DRIVEN-COMPOSITE RED (.fe-gain empty for 93 polls / 45s): the settle's dry-run refusal latched as
-// EXECUTED (see pending_outcomes.test.js), no receipt ever existed, so the fight_result slice stayed 'pending'
-// and the gain span held only the aria-hidden skeleton — textContent "" against the pw matcher /\+\d+ XP/.
-// These rows pin the dialog's RECEIPT-FIRST derivation end to end at the fold level: the REAL player_experience
-// reducer folds the slice; the render mirrors FightResult.jsx's slice→props mapping (that component is
-// unloadable headless — it pulls the store/auth/sfx graph); ZERO /v1 state is involved anywhere (overseer law:
-// the gain renders from the opened result's own xp — /v1 catches up whenever it likes and owes the dialog nothing).
+// Receipt-first fold proof: unresolved settlement stays skeletoned; ResultOpened supplies the XP.
 const fold_slice = (() => {
   const mod = player_experience()
   return (slice, type, payload) => mod.reduce({ fight_result: slice }, { type, payload }).fight_result
@@ -174,9 +168,7 @@ describe('the victory gain row — receipt-first derivation (07-18 driven-compos
   })
 })
 
-// D2 (the victory card must still show the defeated enemy team) — the shared shell's ENEMIES
-// section renders whenever the roster carries opposing rows; the win card's roster rides the fight_summary
-// recap (opened for BOTH outcomes since the v30 fix — fight_recap.js pins the payload side; this pins render).
+// A victory still renders the defeated enemy team carried by the recap.
 describe('FightReport — the defeated enemy team block (v30 regression pin)', () => {
   const enemies = [
     { id: 'mob-0', name: 'Razkin', level: 8, alive: false, hp_pct: 0 },
@@ -207,10 +199,7 @@ describe('FightReport — the defeated enemy team block (v30 regression pin)', (
   })
 })
 
-// The rendering CONTRACT: a loot slot must NEVER render as an empty un-hoverable box, no matter how broken
-// the drop's metadata is (QA test-mob drops missing their /v1 encyclopedia row and/or a bag
-// match rendered a bare, un-hoverable grey box). resolve_loot_tile.js owns the enrichment decision + name
-// chain (unit-tested directly in loot-tile-resolve.test.js); these assert the RENDER picks the right branch.
+// Broken loot metadata still renders an honest, named fallback tile.
 describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, missing everywhere)', () => {
   test('no bag match AND no template row → the bold letter tile, never <ItemIcon>, never a bare box', () => {
     const spoils = { xp: 10, tokens: 0, loot: [{ item_type: 'qa_ghost_blade_01', name: 'QA Ghost Blade', amount: 1 }] }
@@ -221,7 +210,7 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
     expect(html).toContain('aria-label="QA Ghost Blade"') // the tile still names itself
   })
 
-  test('genuinely bare drop (no name, no item_type match) → the \'?\' last resort, still a real tile', () => {
+  test("genuinely bare drop (no name, no item_type match) → the '?' last resort, still a real tile", () => {
     const spoils = { xp: 10, tokens: 0, loot: [{ item_type: undefined, name: undefined, amount: 1 }] }
     const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={[]} cost={null} />)
     expect(html).toContain('fe-tile__letter')
@@ -238,24 +227,10 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
   })
 })
 
-// Bug (maintainer report, prod v1.12.37): the victory loot tile rendered the generic placeholder box
-// glyph instead of the item's real icon. ROOT CAUSE: LootTile builds its <ItemIcon> key straight off
-// `entry.item_type` (the raw on-chain template field), bypassing `inventory_item_icon` — the ONE shared
-// icon resolver every other surface (InventoryBag/Inventory/EquipmentSlot) routes through, which ALSO
-// consults `cosmetic_icon_of` (packages/frontend/src/game/cosmetic_icons.js). That map exists precisely
-// because on-chain `item_type` for a shop cosmetic is the generic EQUIP SLOT WORD ("hat"/"cloak"), never
-// the unique art slug — item_icon_url then builds the SAME non-existent `items/hat.png` for every
-// hat-slot cosmetic (curl-verified live: /assets/items/hat.png resolves to the asset-host quilt shard
-// `-TEi2iUTk50pyc3zpfNukt-K8xNRDEZeI0n2NTokKfg/hat.png` → HTTP 404; the correct alias
-// `coiffe_fuwa-white.png` → quilt `GFwmQjUVLPrqanmZV1m2qVW7fEqqE_Utn7wvNawNPx0` → HTTP 200). The loot
-// card was never wired to the fix that already ships on every other icon surface.
 describe('FightReport — loot tile icon resolution routes through the SAME shared resolver as the inventory (never a raw item_type bypass)', () => {
-  test('a post-receipt template renders the slug snapshotted from the live map, never its generic chain class', () => {
-    // Fabricate an id that cannot have existed in the bundled seed receipt. The settlement fold has already
-    // joined this id to the session's live /v1 template map and snapshots only the render slug onto the loot row;
-    // FightReport must consume that projection without importing the receipt or fetching the catalog mid-render.
+  test('a stale receipt slug cannot bypass the injected live map', () => {
+    // SSR skips live hydration; an old receipt slug must not become first-paint art authority.
     const template_id = `0x${'1522'.repeat(16)}`
-    const live_slug_by_template_id = new Map([[template_id, 'post_receipt_starfell_shard']])
     const spoils = {
       xp: 10,
       tokens: 0,
@@ -263,7 +238,7 @@ describe('FightReport — loot tile icon resolution routes through the SAME shar
         {
           template_id,
           item_type: 'resource',
-          icon_slug: live_slug_by_template_id.get(template_id),
+          icon_slug: 'stale_seed_starfell_shard',
           name: 'Starfell Shard',
           amount: 1,
         },
@@ -272,16 +247,15 @@ describe('FightReport — loot tile icon resolution routes through the SAME shar
 
     const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} cost={null} />)
 
-    expect(html).toContain('/assets/items/post_receipt_starfell_shard.png')
+    expect(html).toContain('fe-tile__letter')
+    expect(html).not.toContain('/assets/items/stale_seed_starfell_shard.png')
     expect(html).not.toContain('/assets/items/resource.png')
   })
 
   test('a published RESOURCE renders its exact manifest art, never the generic resource package', () => {
     const template_id = `0x${'e13d'.repeat(16)}` // synthetic runtime id — a source literal trips the chain-id gate
     // Chain-truth shape (live /v1): `item_type` is the authored art slug; 'resource' is the CATEGORY.
-    const items = [
-      { template_id, item_type: 'obsidian_core', name: 'Obsidian Core', item_category: 'resource' },
-    ]
+    const items = [{ template_id, item_type: 'obsidian_core', name: 'Obsidian Core', item_category: 'resource' }]
     const spoils = {
       xp: 10,
       tokens: 0,
@@ -292,7 +266,7 @@ describe('FightReport — loot tile icon resolution routes through the SAME shar
     expect(html).not.toContain('/assets/items/resource.png')
   })
 
-  test('a cosmetic drop resolves its icon via inventory_item_icon\'s cosmetic alias, not the raw on-chain slot word', () => {
+  test("a cosmetic drop resolves its icon via inventory_item_icon's cosmetic alias, not the raw on-chain slot word", () => {
     // items[] carries the bag match (template_map is unreachable here — FightReport hydrates it via an
     // internal useEffect that never fires under renderToStaticMarkup) so `resolved` is true and the
     // <ItemIcon> branch mounts; the icon KEY under test is entry.item_type/name either way.
@@ -513,7 +487,16 @@ describe('FightReport — the EXPORT REPLAY button (always visible; never a surp
 describe('FightReport — participant-row model (#342: compact single-line rows)', () => {
   test('name + class·level meta share ONE line — no stacked 2-line block ever reintroduces', () => {
     const party = [
-      { id: 'me', name: 'Hero', level: 12, class_name: 'Templar', is_me: true, is_player: true, alive: true, hp_pct: 100 },
+      {
+        id: 'me',
+        name: 'Hero',
+        level: 12,
+        class_name: 'Templar',
+        is_me: true,
+        is_player: true,
+        alive: true,
+        hp_pct: 100,
+      },
     ]
     const html = renderToStaticMarkup(<FightReport {...base} party={party} cost={null} />)
     expect(html).toContain('fe-row__nametext')
