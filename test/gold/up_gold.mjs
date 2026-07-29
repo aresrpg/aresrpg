@@ -267,49 +267,68 @@ async function main() {
   phase('parity', t)
 
   // 7c — deterministic cross-wallet marketplace inventory: two unique objects plus native lots 1/10/100.
+  // The public active corpus has no qualifying non-stack shop Sale, so the marketplace row remains an
+  // explicit mainnet-corpus skip while its sibling COOP rows use the minted fixtures below.
   t = Date.now()
-  const market_two_actor = await create_market_two_actor({
-    api: API,
-    client,
-    admin_signer,
-    ids,
-    kiosk_pkg: kiosk,
-    wallets,
-    characters,
-    wait_v1: waitV1,
-  })
-  log(`market fixture ready · items=${market_two_actor.unique_item_ids.length + market_two_actor.stack_lots.length}`)
+  const market_two_actor =
+    corpus_source === 'mainnet'
+      ? await create_market_two_actor({
+          api: API,
+          client,
+          admin_signer,
+          ids,
+          kiosk_pkg: kiosk,
+          wallets,
+          characters,
+          wait_v1: waitV1,
+        })
+      : null
+  if (market_two_actor)
+    log(`market fixture ready · items=${market_two_actor.unique_item_ids.length + market_two_actor.stack_lots.length}`)
+  else log(`market fixture SKIPPED — corpus '${corpus_source}' has no qualifying non-stack shop Sale`)
   phase('market_fixture', t)
 
-  // Sponsor key was generated before compose interpolation; fund it only from this disposable localnet.
-  await faucet(sponsor_wallet.address, 4)
-  const sponsor_release = {
-    schema: 1,
-    generated_at: new Date().toISOString(),
-    networks: {
-      localnet: {
-        packages: Object.fromEntries(
-          gold_move_packages.map((name) => [name, { origin: cer[name].pkg, latest: cer[name].latest ?? cer[name].pkg }])
-        ),
-        rules_package: ids.KIOSK_ROYALTY_RULE_PACKAGE_ID,
-        system: { sponsor_framework_packages: ['0x2', kiosk, ids.KIOSK_ROYALTY_RULE_PACKAGE_ID] },
+  // The sponsor's from-source Rust image is irrelevant to specs/ and specs_multiplayer/. CI opts out to keep
+  // their shared rig bounded; local gold boots preserve the full sponsor fixture by default.
+  const sponsor_enabled = process.env.GOLD_SPONSOR !== '0'
+  let sponsor_fixture_result = null
+  if (sponsor_enabled) {
+    // Sponsor key was generated before compose interpolation; fund it only from this disposable localnet.
+    await faucet(sponsor_wallet.address, 4)
+    const sponsor_release = {
+      schema: 1,
+      generated_at: new Date().toISOString(),
+      networks: {
+        localnet: {
+          packages: Object.fromEntries(
+            gold_move_packages.map((name) => [
+              name,
+              { origin: cer[name].pkg, latest: cer[name].latest ?? cer[name].pkg },
+            ])
+          ),
+          rules_package: ids.KIOSK_ROYALTY_RULE_PACKAGE_ID,
+          system: { sponsor_framework_packages: ['0x2', kiosk, ids.KIOSK_ROYALTY_RULE_PACKAGE_ID] },
+        },
       },
-    },
+    }
+    fs.writeFileSync(P.SPONSOR_RELEASE, `${JSON.stringify(sponsor_release, null, 2)}\n`)
+    process.env.GOLD_SPONSOR_RELEASE_PATH = P.SPONSOR_RELEASE
+    boot_sponsor(sponsor_wallet.privkey)
+    const sponsor_endpoint = await wait_sponsor()
+    sponsor_fixture_result = {
+      endpoint: `${sponsor_endpoint}/api/sponsor`,
+      wallet_index: N_WALLETS,
+      wallet: { address: poor_wallet.address },
+      character: {
+        character_id: poor_character_result.character_id,
+        kiosk_id: poor_character_result.kiosk_id,
+        personal_kiosk_cap_id: poor_character_result.personal_kiosk_cap_id,
+      },
+    }
+  } else {
+    log('sponsor SKIPPED (GOLD_SPONSOR=0) — specs/ and specs_multiplayer/ have no sponsor dependency')
   }
-  fs.writeFileSync(P.SPONSOR_RELEASE, `${JSON.stringify(sponsor_release, null, 2)}\n`)
-  process.env.GOLD_SPONSOR_RELEASE_PATH = P.SPONSOR_RELEASE
-  boot_sponsor(sponsor_wallet.privkey)
-  const sponsor_endpoint = await wait_sponsor()
-  const sponsor_fixture = {
-    endpoint: `${sponsor_endpoint}/api/sponsor`,
-    wallet_index: N_WALLETS,
-    wallet: { address: poor_wallet.address },
-    character: {
-      character_id: poor_character_result.character_id,
-      kiosk_id: poor_character_result.kiosk_id,
-      personal_kiosk_cap_id: poor_character_result.personal_kiosk_cap_id,
-    },
-  }
+  const sponsor_fixture = sponsor_fixture_result
 
   // 8 — deterministic fight fixtures live outside the production-parity world/count baseline: each dedicated
   //     World has one mob roster, so the headed win/loss/beat rows never depend on production encounter RNG.
@@ -374,9 +393,11 @@ async function main() {
     ids: { aresrpg: ids, kiosk },
     world_id,
     dials: { speed_budget: 100_000, xp_multiplier: 400, loot_multiplier: 400, digest: dials.digest },
+    corpus_source,
     fight_fixtures,
     runtime_catalog,
     market_two_actor,
+    sponsor_booted: sponsor_enabled,
     sponsor_fixture,
     coop_full_kit_roster,
     publisher, // localnet throwaway — regenerated every boot, worthless off this chain

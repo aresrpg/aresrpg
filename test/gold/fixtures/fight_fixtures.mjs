@@ -4,6 +4,7 @@
 // has exactly one roster row. These objects live only on the disposable localnet and their ids are meant to be
 // copied into the gold deployment manifest.
 import { load_deps } from '../deps_gold.mjs'
+import { log } from '../lib_gold.mjs'
 
 const localnet_gas_ceiling = 1_000_000_000
 const centered_resistance = 32_768
@@ -437,11 +438,12 @@ export async function create_fight_fixtures({ client, signer, ids, seeded_mobs }
 
   for (const spec of fixture_specs) {
     const seeded = spec.mode === 'seeded' ? seeded_mobs?.[spec.seed_key] : null
-    if (spec.mode === 'seeded' && !seeded)
-      throw new Error(
-        `fight fixtures: '${spec.seed_key}' is not in the seed manifest — ` +
-          `gold fight fixtures require the production corpus (GOLD_CORPUS=mainnet)`
-      )
+    if (spec.mode === 'seeded' && !seeded) {
+      // The public active corpus deliberately omits this production-authored row. Dependent specs already
+      // gate on fight_fixtures.win; the minted COOP fixtures remain available to the public CI rig.
+      log(`fight fixtures: SKIP '${spec.key}' — '${spec.seed_key}' requires GOLD_CORPUS=mainnet`)
+      continue
+    }
     const create_transaction = new Transaction()
     build_fixture_objects(create_transaction, ids, spec)
     const create_receipt = await execute_transaction({

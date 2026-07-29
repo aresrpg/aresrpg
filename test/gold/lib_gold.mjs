@@ -347,7 +347,12 @@ function link_sibling_packages() {
 
 // ── publish the external Kiosk package to the gold localnet + repoint the copy's aresrpg ──────
 export function publishKiosk() {
-  const cache = sh(`ls -d ~/.move/https___github_com_MystenLabs_apps_git_testnet/kiosk 2>/dev/null | head -1`).trim()
+  // Sui 1.75 keys fresh git caches by resolved commit under ~/.move/git; older installs used flat
+  // branch-named directories. The copy below is repointed to FRAMEWORK_REV either way.
+  const cache =
+    sh(`ls -d ~/.move/https___github_com_MystenLabs_apps_git_testnet/kiosk 2>/dev/null | head -1`).trim() ||
+    sh(`ls -d ~/.move/https___github_com_MystenLabs_apps_git_*/kiosk 2>/dev/null | sort | head -1`).trim() ||
+    sh(`ls -d ~/.move/git/https___github_com_MystenLabs_apps_git_*/kiosk 2>/dev/null | sort | head -1`).trim()
   if (!cache) throw new Error('Kiosk git cache not found in ~/.move — run a testnet build once to populate it')
   const kdir = path.join(P.BUILD, 'kiosk')
   fs.rmSync(kdir, { recursive: true, force: true })
@@ -358,7 +363,7 @@ export function publishKiosk() {
   let t = fs.readFileSync(ktoml, 'utf8')
   t = t.replace(/^published-at\s*=.*$/m, '')
   t = t.replace(/kiosk\s*=\s*"0x[0-9a-fA-F]+"/, 'kiosk = "0x0"')
-  t = t.replace(/rev\s*=\s*"testnet"/g, `rev = "${FRAMEWORK_REV}"`)
+  t = t.replace(/rev\s*=\s*"[^"]+"/g, `rev = "${FRAMEWORK_REV}"`)
   fs.writeFileSync(ktoml, t)
   const out = sh(
     `cd '${kdir}' && SUI_CONFIG_DIR='${P.SUICFG}' sui client publish --skip-dependency-verification --json`,
