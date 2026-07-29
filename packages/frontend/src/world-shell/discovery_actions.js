@@ -79,13 +79,18 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Fold the chain-direct rows for a known-executed search through the spawns reducer door. Null is an
- * unconfirmed negative seconds after a write, so the optimistic leg retries reads only; it never retries the tx.
+ * unconfirmed empty zone seconds after a write, so the optimistic leg retries reads only; it never retries the tx.
  */
 async function fold_zone_rows_after_write({ world_id, zx, zy, at_executed, reconcile = false }) {
+  const read_kind = reconcile ? 'finality-reconcile' : 'executed-fast-path'
   const delays = reconcile ? [0] : zone_read_delays_ms
   for (const delay_ms of delays) {
     if (delay_ms) await sleep(delay_ms)
-    const rows = await zone_rows_chain(world_id, zx, zy)
+    const rows = await zone_rows_chain(world_id, zx, zy).catch((error) => {
+      throw new Error(`[discovery/${read_kind}/failed-read] chain-direct zone ${zx}:${zy} read failed`, {
+        cause: error,
+      })
+    })
     if (rows === null) continue
     spawns_input({ type: 'zone_rows', zx, zy, proven: true, rows })
     context.events.emit('discovery/zone_rows_ready', {
@@ -103,7 +108,7 @@ async function fold_zone_rows_after_write({ world_id, zx, zy, at_executed, recon
     )
     return rows
   }
-  return null
+  throw new Error(`[discovery/${read_kind}/empty-zone] chain-direct zone ${zx}:${zy} stayed empty`)
 }
 
 /**
