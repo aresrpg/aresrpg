@@ -12,13 +12,14 @@
 // asserted here are the shipped data sheet's own: 3 spells unlock at level 1 for every class — the exact
 // count the report saw — and 20 by level 200.
 
-import { describe, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, test } from 'bun:test'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { GRID_W, decode } from '@aresrpg/fight/los'
 import { LOCAL_ADDRESS, create_sim_chain, snapshot_from_sim } from '@aresrpg/fight/sim_chain'
 
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
+import { reset_fight_core } from '../test_helpers/fight_core_harness.js'
 
 import { board_of } from './board'
 import { build_start_args, class_spellbook_of } from './fight_start.js'
@@ -103,6 +104,8 @@ const open = (level) => {
   store.getState().input({ type: 'snapshot', fight: snapshot_from_sim(chain, { now_ms: 0 }), version: 1 })
   return { built, chain, store, seat: chain.sim_state.team0[0] }
 }
+
+beforeEach(reset_fight_core)
 
 describe('the seat carries its level into the deck', () => {
   test('a level-200 roster row decks every unlocked class spell, not the first tier', () => {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import { presence_store } from '../world-shell/presence_adapter.js'
 
@@ -27,6 +27,10 @@ describe('the world link reports itself onto the presence atom', () => {
       this.readyState = 2
     }
   }
+
+  beforeEach(() => {
+    presence_store.getState().input({ type: 'reset' })
+  })
 
   afterEach(() => {
     leave_courier()
