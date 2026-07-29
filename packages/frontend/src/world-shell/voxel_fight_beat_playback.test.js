@@ -47,7 +47,9 @@ const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import(
 const FIGHT = '0xbeat-fight'
 const CHAR = '0xc1'
 const MOB_HIT_ON_ME = 7
-const STANDALONE_STATUSES = ['SHIELD', 'STUN', 'POISON', 'GLYPH']
+// STAT_BUFF/STAT_DEBUFF are the reported leak (an owner live-report saw a literal slug floating over a fighter):
+// the sim passes its own effect type straight through as the status name (fight_stat_effects.js / evolve.js).
+const STANDALONE_STATUSES = ['SHIELD', 'STUN', 'POISON', 'GLYPH', 'STAT_BUFF', 'STAT_DEBUFF']
 
 /** A decoded-Fight-shaped object the core's snapshot door adopts (fight_board_simdrive.test.js's harness,
  *  ACTIVE status so derive_phase wants a live board). */
@@ -192,7 +194,10 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
       )
       expect(wired, 'the adapter never built/wired the board (no fighter rigs upserted)').toBe(true)
 
-      // ── standalone statuses: feed the exact renderer-neutral specs the real prediction producer emits ──
+      // ── standalone statuses: feed the exact renderer-neutral specs the real prediction producer emits.
+      //    OWNER LAW (live report, floats = numbers only): a float is a NUMBER — damage / heal / AP / MP.
+      //    A status beat must mount NO float at all; the arm that printed `String(payload.status)` shipped raw
+      //    effect slugs ("STAT_BUFF") as floating combat numbers over the fighters. ──
       fight_store.getState().input({
         type: 'predicted',
         intent_id: 'status-presentation',
@@ -206,15 +211,14 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
           source_turn: 'status-presentation',
         })),
       })
-      await poll(() => board.calls.floats.length === STANDALONE_STATUSES.length)
-      for (const status of STANDALONE_STATUSES)
-        expect(
-          board.calls.floats.some((row) => row.id === CHAR && row.kind === 'info' && row.text === status),
-          `${status} status beat never mounted its board float`
-        ).toBe(true)
+      await sleep(250) // give the (forbidden) status floats every chance to land before counting
+      expect(
+        board.calls.floats,
+        'a status beat mounted a slug float — floats are numbers only (damage / heal / AP / MP)'
+      ).toEqual([])
 
-      // ── DRAIN keeps its OWN arm: the general status float must never swallow the status kind that
-      //    already voices itself as combat-log lines (a general arm ordered first shadows the specific one) ──
+      // ── DRAIN keeps its OWN arm — and it speaks in NUMBERS (the AP/MP pool delta, see
+      //    voxel_fight_adapter_drain_float.test.js), never the status name as a text float ──
       fight_store.getState().input({
         type: 'predicted',
         intent_id: 'drain-presentation',

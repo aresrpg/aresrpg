@@ -3,7 +3,7 @@
 // DRAIN RESOURCE FLOATS (#1478) — the reported symptom: a landed drain stripped AP/MP silently, the status row
 // never spoke. The contract this drives: one landed DRAIN beat mounts EXACTLY ONE house-coloured number float on
 // the affected target ("-3" in AP amber / "-2" in MP mint — tackle_float_payloads, the one home shared with the
-// tackle forfeit), never the generic "DRAIN" info float the standalone-status arm mounts for SHIELD/STUN/POISON.
+// tackle forfeit), never the status NAME as a text float — floats are numbers only (float_gate.test.js).
 //
 // Driven, not source-read: the real create_voxel_fight_adapter over the real singleton fight_store, with a
 // recording board handle (the voxel_fight_beat_playback.test.js harness). Counting `board.float?.(` occurrences
@@ -174,7 +174,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('voxel fight adapter — Drain resou
       expect(emitted[0]).toEqual({ id: CHAR, ...expected })
     }
 
-    // the generic standalone-status arm (SHIELD/STUN/POISON…) must never also voice DRAIN as a text float.
+    // no arm may voice DRAIN (or any status) as a text float — the number IS the presentation.
     expect(
       board.calls.floats.some((row) => row.text === 'DRAIN'),
       'a DRAIN beat mounted the generic status float — its own number arm is shadowed'

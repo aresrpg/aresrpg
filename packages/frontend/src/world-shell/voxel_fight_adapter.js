@@ -91,7 +91,7 @@ import { finish_engage_timing } from '../core/engage_timing.js'
 import { create_fight_audio_observer, fight_audio_sfx_key, fight_damage_audio_beat } from './fight_audio.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { use_dungeon } from './dungeon_store.js'
-import { damage_floater } from './damage-floater.js'
+import { damage_floater, numeric_float } from './damage-floater.js'
 import { fight_active_in_scope, fight_scope_world, fight_view_in_scope } from './fight_session_scope.js'
 import { presentation_blocked_cells } from './fight_board_blockers.js'
 import { create_fight_render_queue } from './fight_render_queue.js'
@@ -474,7 +474,11 @@ export function create_voxel_fight_adapter(
     trigger_fight_flash({ color: feel.flash, intensity: 0.3 * mag, grade: feel.grade })
     game_log('fight-trap', 'trap VFX + floater', { id, cell, damage: hit.damage, t: performance.now() })
     // the mob flinches AT the trap cell, carrying the damage floater (mirrors beats_from_packet's float shape).
-    const done = board.entity_beat(id, { anim: 'hit', float: { text: `-${hit.damage}`, kind: 'damage' }, face: cell })
+    const done = board.entity_beat(id, {
+      anim: 'hit',
+      float: numeric_float({ text: `-${hit.damage}`, kind: 'damage' }),
+      face: cell,
+    })
     // COMBAT LOG (realtime): the locally owned trap is known through engine_view.my_entity_id; a legacy/foreign
     // hit without that owner uses the neutral fallback, never the victim as attacker.
     emit_trap_line(read_board_fight_state, game_context.dispatch, {
@@ -521,6 +525,13 @@ export function create_voxel_fight_adapter(
       })
   }
 
+  /** THE STANDALONE FLOAT DOOR — the one seam every non-beat float leaves through, gated by `numeric_float`
+   *  (damage-floater.js): a payload that is not one of the numeric classes never reaches the board. */
+  const float_on = (/** @type {string} */ id, /** @type {any} */ payload) => {
+    const float = numeric_float(payload)
+    if (float) board.float?.(id, float)
+  }
+
   /** One queued number/reaction beat. It deliberately does not kill the rig; `play_death_beat` is the next event
    *  (guarded there — a duplicate `killed` re-assertion of an already-presented death is a no-op). */
   const play_damage_beat = async (/** @type {any} */ event, { floater = damage_floater(event) } = {}) => {
@@ -540,7 +551,7 @@ export function create_voxel_fight_adapter(
     const kind = floater?.kind ?? 'damage'
     const done = board.entity_beat(id, {
       anim: kind === 'heal' ? 'idle' : 'hit',
-      float: floater ? { text: floater.text, kind } : null,
+      float: numeric_float(floater ? { text: floater.text, kind } : null),
       face: source?.cell,
     })
     if (kind !== 'heal' && hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
@@ -730,7 +741,7 @@ export function create_voxel_fight_adapter(
         const face = caster?.cell ?? undefined // the victim turns toward its attacker (item 7 facing)
         const done = board.entity_beat(beat.id, {
           anim: beat.anim, // always 'hit' — the flinch; a kill chains its death off this beat's done (below)
-          float: beat.float ?? undefined,
+          float: numeric_float(beat.float),
           face,
         })
         // COMBAT LOG (realtime): the "<caster> hit <target> for N" line streams WITH this victim's floater beat
@@ -987,7 +998,7 @@ export function create_voxel_fight_adapter(
           // number in the house mint MP green ('mp' kind → FLOAT_COLOR.mp #4fd6a0) — no unit suffix, the green IS
           // the "this is MP" signal. Only THIS floater changes; the tackle pool-forfeit floater keeps its AP/MP tag.
           if (payload.mp_spent > 0 && payload.entity_id && entity_ids.has(payload.entity_id))
-            board.float?.(payload.entity_id, { text: `-${payload.mp_spent}`, kind: 'mp' })
+            float_on(payload.entity_id, { text: `-${payload.mp_spent}`, kind: 'mp' })
         } else if (spec.kind === 'arrival') {
           if (payload.entity_id && payload.cell) placed_cell.set(payload.entity_id, payload.cell)
           reconcile()
@@ -1050,16 +1061,11 @@ export function create_voxel_fight_adapter(
             payload.pool === 'ap' ? payload.landed : 0,
             payload.pool === 'mp' ? payload.landed : 0
           ))
-            board.float?.(payload.target_id, float)
-        } else if (spec.kind === 'status') {
-          // ONE standalone-status home: SHIELD/STUN/POISON/GLYPH (and any future named status) announce at the
-          // affected rig instead of disappearing between producer and presenter. Persistent badges/zones remain
-          // projection-owned; this short board float is the ordered "it landed now" beat.
-          // Ordered AFTER the DRAIN arm on purpose: DRAIN voices itself as combat-log lines, so the general
-          // arm must stay the fallback for statuses that have no presentation of their own.
-          const target_id = payload.target_id ?? payload.entity_id
-          if (target_id && payload.status && entity_ids.has(target_id))
-            board.float?.(target_id, { text: String(payload.status), kind: 'info' })
+            float_on(payload.target_id, float)
+          // NO general standalone-status arm: a float is a NUMBER (damage / heal / AP / MP), never a mechanic
+          // label — SHIELD/STUN/POISON and every other named status live on the projection-owned badge surface.
+          // The arm that mounted `String(payload.status)` as a float printed raw effect slugs ("STAT_BUFF") over
+          // the fighters; `numeric_float` (damage-floater.js) now drops any such payload at the door too.
         } else if (spec.kind === 'tackled') {
           // TACKLE BITE: a tackled player plays the hit animation just before moving —
           // the runner FLINCHES; the producer already ordered this beat strictly before any retry move beat,
@@ -1071,7 +1077,7 @@ export function create_voxel_fight_adapter(
           const played = await play_damage_beat(payload, { floater: null })
           if (played)
             for (const float of tackle_float_payloads(payload.ap_lost, payload.mp_lost))
-              board.float?.(payload.target_id, float)
+              float_on(payload.target_id, float)
         }
         // #170 (5th recurrence): no 'death' beat kind reaches the wave anymore — producers stopped emitting it
         // (fight_render_events.js / fight_predicted_render.js); play_death_beat is called directly from whichever
