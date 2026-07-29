@@ -15,7 +15,8 @@
 // The rule is therefore mechanical, not advisory: a test builds its instance with
 // `i18next.createInstance()` and scopes it with `<I18nextProvider i18n={…}>` (or `getFixedT`).
 // It never installs it globally.
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { describe, expect, test } from 'bun:test'
@@ -31,11 +32,18 @@ const source_files = (dir) =>
   })
 
 describe('react-i18next default instance has one home (#833)', () => {
-  test('nothing outside src/i18n/index.ts registers an i18next instance globally', () => {
-    const offenders = source_files(SRC)
-      .filter((path) => !path.endsWith(THE_ONE_HOME) && !path.endsWith('react_default_instance.test.js'))
-      .filter((path) => readFileSync(path, 'utf8').includes('initReactI18next'))
-      .map((path) => path.slice(SRC.length))
+  test('nothing outside src/i18n/index.ts registers an i18next instance globally', async () => {
+    const files = source_files(SRC)
+    expect(files.some((path) => path.endsWith(THE_ONE_HOME))).toBe(true) // positive control: the scan reached home
+    const candidates = files.filter(
+      (path) => !path.endsWith(THE_ONE_HOME) && !path.endsWith('react_default_instance.test.js')
+    )
+    // One asynchronous fan-out keeps this source guard from serially blocking Bun's only test thread on hundreds
+    // of small reads under suite load. The assertion and scope stay identical; only the I/O schedule changes.
+    const sources = await Promise.all(candidates.map(async (path) => [path, await readFile(path, 'utf8')]))
+    const offenders = sources
+      .filter(([, source]) => source.includes('initReactI18next'))
+      .map(([path]) => path.slice(SRC.length))
 
     expect(offenders).toEqual([])
   })
