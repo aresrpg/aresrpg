@@ -3,6 +3,11 @@
 
 const FRIEND_OFFLINE = 'fast_travel.friend_offline'
 const REALM_UNREACHABLE = 'fast_travel.realm_unreachable'
+const PRESENCE_DOWN = 'fast_travel.presence_down'
+// Presence has ONE read stream (docs/REALTIME.md lane 2). When that stream is dead or was never opened, we do
+// not know where anybody is — and an outage must be loud, never a sentence about the world ("a realm you can't
+// reach") that no world fact backs. `connecting`/`reconnecting` are still trying, so they are not an outage.
+const presence_is_down = (link_status) => link_status === 'failed' || link_status === 'idle'
 
 /** The freshest candidate carrying an ACCEPTED live pose, or null when nobody has one. A pose is a refinement
  *  of the landing coordinate — never the proof that a world is reachable (#1641). */
@@ -31,18 +36,22 @@ const freshest_posed = (candidates) =>
  *   kind?:'friend', id?:string|null, address?:string|null, name?:string,
  *   routes?:Array<{character_id:string,world_id:string|null}>
  * }} target
- * @param {Array<{id:string,cell?:{ts?:number},position?:{x:number,z:number}}>} [friend_peers]
+ * @param {Array<{id:string,cell?:{ts?:number},position?:{x:number,z:number}}>} [friend_peers] read from the
+ *   presence atom the SSE stream feeds — never a private cache that outlives the stream.
+ * @param {string} [link_status] the presence stream's own state; a caller that cannot observe it says nothing
+ *   about the link rather than inventing an outage.
  */
-export function fast_travel_intent(target, friend_peers = []) {
+export function fast_travel_intent(target, friend_peers = [], link_status = 'connected') {
   if (target.kind === 'friend') {
-    if (!friend_peers.length) return { type: 'begin', refusal: FRIEND_OFFLINE }
+    const outage = presence_is_down(link_status)
+    if (!friend_peers.length) return { type: 'begin', refusal: outage ? PRESENCE_DOWN : FRIEND_OFFLINE }
     const routes = target.routes ?? []
     const posed = freshest_posed(friend_peers)
     const peer =
       posed ??
       friend_peers.find((candidate) => candidate?.id && routes.some((r) => r.character_id === candidate.id)) ??
       friend_peers.find((candidate) => candidate?.id)
-    if (!peer) return { type: 'begin', refusal: REALM_UNREACHABLE }
+    if (!peer) return { type: 'begin', refusal: outage ? PRESENCE_DOWN : REALM_UNREACHABLE }
     const route = routes.find((candidate) => candidate.character_id === peer.id)
     if (route && !route.world_id) return { type: 'begin', refusal: REALM_UNREACHABLE }
     const begin = {
@@ -62,9 +71,9 @@ export function fast_travel_intent(target, friend_peers = []) {
   }
 }
 
-/** @param {any} target @param {(input:any)=>void} dispatch @param {any[]} [friend_peers] */
-export function dispatch_fast_travel(target, dispatch, friend_peers = []) {
-  const intent = fast_travel_intent(target, friend_peers)
+/** @param {any} target @param {(input:any)=>void} dispatch @param {any[]} [friend_peers] @param {string} [link_status] */
+export function dispatch_fast_travel(target, dispatch, friend_peers = [], link_status = 'connected') {
+  const intent = fast_travel_intent(target, friend_peers, link_status)
   dispatch(intent)
   return intent
 }

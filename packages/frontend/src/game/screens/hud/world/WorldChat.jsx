@@ -193,7 +193,11 @@ export function WorldChat({ readonly = false } = {}) {
             role="status"
             title={link_error ?? undefined}
           >
-            {t(`world_chat.link_${link_status}`)}
+            {/* A dead presence link says WHY on the chip itself — an outage the player can read beats a
+                three-word status with the reason buried in a tooltip (docs/REALTIME.md, #1641). */}
+            {link_status === 'failed' && link_error
+              ? t('world_chat.link_failed_reason', { reason: link_error })
+              : t(`world_chat.link_${link_status}`)}
           </span>
         </span>
         <div className="gw-chat__channels">

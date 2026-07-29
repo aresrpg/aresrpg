@@ -45,6 +45,28 @@ describe('friend entry → the shared fast-travel input door', () => {
     expect(intent).toEqual({ type: 'begin', refusal: 'fast_travel.friend_offline' })
   })
 
+  // #1641 — with the presence stream dead we do not KNOW where anyone is. Saying "that friend is offline" or
+  // "a realm you can't reach" states a fact we cannot have; the outage itself is the honest answer.
+  test('a DEAD presence stream refuses as an outage, never as offline or an unreachable realm', () => {
+    expect(fast_travel_intent(live_friend, [], 'failed')).toEqual({
+      type: 'begin',
+      refusal: 'fast_travel.presence_down',
+    })
+    expect(fast_travel_intent(live_friend, [], 'idle')).toEqual({
+      type: 'begin',
+      refusal: 'fast_travel.presence_down',
+    })
+    expect(fast_travel_intent(live_friend, [{}], 'failed')).toEqual({
+      type: 'begin',
+      refusal: 'fast_travel.presence_down',
+    })
+  })
+
+  test('a stream still trying (connecting/reconnecting) is not an outage — the honest offline answer stands', () => {
+    expect(fast_travel_intent(live_friend, [], 'reconnecting').refusal).toBe('fast_travel.friend_offline')
+    expect(fast_travel_intent(live_friend, [live_peer], 'reconnecting')).toMatchObject({ character_id: 'C_FRIEND' })
+  })
+
   // #1641 — an online friend with no live pose used to be "a realm you can't reach", which is a lie about the
   // WORLD: presence and reachability are the read layer's, and the resolver reads the target's own /v1 document
   // for its world and anchor position. A pose only REFINES the landing coordinate; its absence never refuses.
