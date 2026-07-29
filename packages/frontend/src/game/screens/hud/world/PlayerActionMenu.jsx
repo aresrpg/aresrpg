@@ -17,6 +17,7 @@ import { add_friend_flow } from '../../../../world-shell/friends_actions'
 import {
   presence_character,
   presence_characters_by_address,
+  use_presence,
 } from '../../../../world-shell/presence_adapter.js'
 import { use_game_state } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
@@ -90,12 +91,15 @@ export function PlayerActionMenu() {
     if (!can_fast_travel) return
     // Friend + in-world targets share this shaping seam and the ONE reducer door. Everything after the input —
     // route gates, cross-world join, dragon flight, and notices — remains owned by the existing travel pipeline.
+    // Reachability reads the ONE presence stream (docs/REALTIME.md lane 2), and its link state rides along:
+    // a dead stream refuses LOUDLY as an outage, never as a sentence about the world (#1641).
     const friend_peers = target.kind === 'friend' ? presence_characters_by_address(address) : []
     // The store is keyed by traveler (tranche F): a manual fast-travel flies the character I'm driving.
     dispatch_fast_travel(
       { ...target, address },
       (input) => ft_dispatch({ ...input, traveler_id: selected_character_id }),
-      friend_peers
+      friend_peers,
+      use_presence.getState().link_status
     )
   }
 
