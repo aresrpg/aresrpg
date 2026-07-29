@@ -20,7 +20,7 @@ import { encode } from '@aresrpg/fight/los'
 import { fight_store } from '@aresrpg/fight/store'
 import { context } from '../store.js'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { engine_view_of, fight_view } from '@aresrpg/fight/project'
+import { engine_view_of, fight_view, my_placement_zone } from '@aresrpg/fight/project'
 import { use_dungeon_turn } from '../screens/dungeon-turn.js'
 import { fight_end_state } from '../../fight-engine/fight_end_machine.js'
 import { cast_vfx, burst_vfx, is_burst_element } from '../fight_cast_vfx.js'
@@ -191,9 +191,9 @@ async function dev_place_ready() {
   const address = fight.my_entity_id
   const me = address ? fight.fighters.get(address) : null
   if (!me) return { ok: false, reason: 'my fighter not in slice' }
-  // team-0 = the human player's placement band (mobs are team 1); read it via my own team so a non-zero seat
-  // still resolves correctly. Pick the first cell no other living fighter stands on (exclude myself).
-  const zone = /** @type {{ x: number, y: number }[]} */ (fight.placement_cells?.[me.team] ?? [])
+  // My own band, so a non-zero seat still resolves correctly (one home: `my_placement_zone`). Pick the first
+  // cell no other living fighter stands on (exclude myself).
+  const zone = my_placement_zone(fight)
   const occupied = occupied_keys(fight, me.id)
   const cell = zone.find(c => !occupied.has(`${c.x},${c.y}`))
   if (!cell) return { ok: false, reason: 'no free start cell in team-0 zone' }
