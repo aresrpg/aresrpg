@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { create } from 'zustand'
 
+export { STATUS_ACTIVE } from '@aresrpg/fight/board_state'
+
 import {
   use_auth,
   sponsor_and_execute_transaction,
@@ -65,9 +67,6 @@ export type character_draft = Readonly<{
   color_2: number
   color_3: number
 }>
-
-// expedition.status: 0 ACTIVE, 1 RETURNING, 2 DEAD (aresrpg::expedition)
-const STATUS_ACTIVE = 0
 
 function err_message(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
@@ -420,5 +419,3 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
     get().input({ type: 'expedition/refreshed', expedition })
   },
 }))
-
-export { STATUS_ACTIVE }
