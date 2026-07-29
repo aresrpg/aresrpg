@@ -1,3 +1,3 @@
 [test]
 root = "src"
-preload = ["../../test/preload/glb_url_plugin.js"]
+preload = ["../../test/preload/glb_url_plugin.js", "./test/preload/i18n_detector_pin.js"]

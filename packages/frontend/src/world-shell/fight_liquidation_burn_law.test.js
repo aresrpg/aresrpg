@@ -17,6 +17,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
+import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
 import { attach_executed_digest } from './tx_digest_error.js'
 
@@ -29,28 +30,9 @@ let crank_impl = /** @type {(id: string, silent: boolean) => Promise<any>} */ (
   }
 )
 
-const global_keys = ['window', 'localStorage', 'requestAnimationFrame', 'cancelAnimationFrame']
-const global_descriptors = new Map(global_keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
-const local_storage = { getItem: () => null, setItem() {}, removeItem() {} }
-Object.defineProperties(globalThis, {
-  window: {
-    configurable: true,
-    writable: true,
-    value: {
-      addEventListener() {},
-      removeEventListener() {},
-      matchMedia: () => ({ matches: false }),
-      location: { origin: 'http://localhost:5173', href: 'http://localhost:5173/', search: '' },
-      dispatchEvent: () => true,
-      localStorage: local_storage,
-      setInterval: globalThis.setInterval.bind(globalThis),
-      clearInterval: globalThis.clearInterval.bind(globalThis),
-    },
-  },
-  localStorage: { configurable: true, writable: true, value: local_storage },
-  requestAnimationFrame: { configurable: true, writable: true, value: () => 0 },
-  cancelAnimationFrame: { configurable: true, writable: true, value: () => {} },
-})
+// #1564 — one home for the test browser surface: this file used to hand-roll its own byte-shaped copy of
+// install_browser_globals(), a second home for the same fact.
+const restore_browser_globals = install_browser_globals()
 
 reset_auth_mock()
 const dungeon_actions = await import('./dungeon_actions')
@@ -120,11 +102,7 @@ afterEach(() => {
 })
 afterAll(() => {
   for (const spy of action_spies) spy.mockRestore()
-  for (const key of global_keys) {
-    const descriptor = global_descriptors.get(key)
-    if (descriptor) Object.defineProperty(globalThis, key, descriptor)
-    else delete globalThis[key]
-  }
+  restore_browser_globals()
 })
 
 describe('#1262 · the stale fight never becomes a gas-burn loop', () => {

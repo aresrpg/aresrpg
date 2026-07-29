@@ -1,2 +1,2 @@
 [test]
-preload = ["./test/preload/glb_url_plugin.js"]
+preload = ["./test/preload/glb_url_plugin.js", "./packages/frontend/test/preload/i18n_detector_pin.js"]
