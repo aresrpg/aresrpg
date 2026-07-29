@@ -45,7 +45,7 @@ const NOW = 1_784_752_468_344
 const MOB_HP = 4000 // deep enough that no swing is truncated — every roll is observable in full
 
 // The §7 clock the preview rolls against (the same tuple `crit_clock_of` composes in production).
-const CLOCK = { world_seed: 0x51ee7, spawn_id: 7, turn_deadline_ms: NOW + 30_000, seat: 0 }
+const CLOCK = { world_seed: 0x51ee7, spawn_id: 7, turn_entropy: 0x1323, turn_ordinal: 1, seat: 0 }
 const SLOTS = [...Array(16).keys()]
 
 // The seat's FAMILY line (participant.move `Weapon`) — deliberately a different element and a fixed, distinct
