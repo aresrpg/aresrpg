@@ -4,9 +4,8 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Swords, Shield, Sparkles, Hammer, Wheat, Users, ArrowLeft } from 'lucide-react'
 import { JOBS } from '@aresrpg/sdk/jobs'
-import { slugs } from 'virtual:item_catalog'
 
-import { RARITY_COLORS, SectionDivider, SectionTitle } from '../../components/entity_display'
+import { SectionDivider, SectionTitle } from '../../components/entity_display'
 import { ItemImage } from '../../components/items'
 import jobs_data from '../../data/jobs.json'
 import { use_template_t } from '../../i18n/template_t'
@@ -16,7 +15,8 @@ import { use_rpc_view } from '../../rpc/use_view'
 
 import { gather_ladder_of } from './world_corpus'
 import { encyclopedia_item_asset } from './encyclopedia_assets'
-import { related_items_for_job } from './item_catalog'
+import { rare_variants_by_base } from './gather_rare'
+import { JobRecipesSection } from './job_recipes_section'
 
 const { JOB_MASTER_JOBS, CRAFT_XP_TABLE } = jobs_data
 // widened view: job ids index a plain string map (the JSON's exact shape would reject j.id)
@@ -70,26 +70,10 @@ function JobsTab({
   // T1) — the literal source of truth now lives in the seed, derived, never hardcoded.
   const gather_ladder = gather_ladder_of(selected_job_id)
 
-  // The related panel is the job's own economy: authored gather rows by job, their /v1 rare-link twins,
-  // and /v1 recipe outputs by required job. Every leg follows projection linkage, so seed-side re-jobbing
-  // changes membership without a frontend list or slug edit.
-  const related_items = useMemo(
-    () =>
-      related_items_for_job(enc?.items, gather_ladder, rare_links, enc?.recipes, job_index).map((row) => ({
-        id: row.template_id,
-        item_type: row.item_type ?? '',
-        name: row.name ?? '',
-        level: row.level ?? 0,
-        category: row.category ?? '',
-        asset: encyclopedia_item_asset({
-          id: row.template_id,
-          slug: slugs[row.name ?? ''],
-          item_type: row.item_type ?? undefined,
-          name: row.name ?? undefined,
-        }),
-      })),
-    [enc, gather_ladder, job_index, rare_links]
-  )
+  // The gather ladder's jackpot twins: base resource template id -> its live rare-variant /v1 item. The
+  // ladder rows carry the base template id, so the column is pure linkage — a re-authored rare link moves
+  // with the chain, no frontend list to edit.
+  const rare_by_base = useMemo(() => rare_variants_by_base(rare_links, enc?.items), [rare_links, enc])
 
   const is_gathering = selected_job?.category === 'Gathering'
 
@@ -241,28 +225,63 @@ function JobsTab({
                   <span className="text-[8px] tracking-[0.15em] uppercase text-muted flex-1">
                     {t('encyclopedia.resource')}
                   </span>
+                  <span className="text-[8px] tracking-[0.15em] uppercase text-muted flex-1">
+                    {t('encyclopedia.rare_variant')}
+                  </span>
                   <span className="text-[8px] tracking-[0.15em] uppercase text-muted w-16 text-right">
                     {t('encyclopedia.xp_per_harvest')}
                   </span>
                 </div>
-                {gather_ladder.map((row) => (
-                  <div
-                    key={row.id}
-                    className="flex items-center gap-0 px-2 py-1.5 border-b border-border/30 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                    onClick={() => on_navigate_to_item(row.id)}
-                  >
-                    <span className="text-[9px] text-gold/70 w-12">T{row.tier}</span>
-                    <span className="text-[9px] text-muted w-16">{t('entity.level_short', { level: row.level })}</span>
-                    <span className="flex items-center gap-2 flex-1 min-w-0">
-                      {/* ItemImage keys on the asset SLUG (…/items/{slug}.png), never the 0x id used for nav. */}
-                      <ItemImage id={row.slug} style={{ width: 16, height: 16 }} />
-                      <span className="text-[9px] truncate hover:underline text-text">{tt(row, 'name')}</span>
-                    </span>
-                    <span className="text-[9px] text-cyan w-16 text-right">
-                      {t('encyclopedia.xp_suffix', { xp: row.xp })}
-                    </span>
-                  </div>
-                ))}
+                {gather_ladder.map((row) => {
+                  // The tier's jackpot twin, when the chain has one minted; otherwise the honest dash.
+                  const rare = rare_by_base.get(row.id)
+                  const rare_asset = rare
+                    ? encyclopedia_item_asset({
+                        id: rare.template_id,
+                        item_type: rare.item_type ?? undefined,
+                        name: rare.name ?? undefined,
+                      })
+                    : null
+                  return (
+                    <div
+                      key={row.id}
+                      className="flex items-center gap-0 px-2 py-1.5 border-b border-border/30 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      onClick={() => on_navigate_to_item(row.id)}
+                    >
+                      <span className="text-[9px] text-gold/70 w-12">T{row.tier}</span>
+                      <span className="text-[9px] text-muted w-16">
+                        {t('entity.level_short', { level: row.level })}
+                      </span>
+                      <span className="flex items-center gap-2 flex-1 min-w-0">
+                        {/* ItemImage keys on the asset SLUG (…/items/{slug}.png), never the 0x id used for nav. */}
+                        <ItemImage id={row.slug} style={{ width: 16, height: 16 }} />
+                        <span className="text-[9px] truncate hover:underline text-text">{tt(row, 'name')}</span>
+                      </span>
+                      {rare && rare_asset ? (
+                        <span
+                          className="flex items-center gap-2 flex-1 min-w-0"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            on_navigate_to_item(rare.template_id)
+                          }}
+                        >
+                          <ItemImage
+                            id={rare_asset.id}
+                            image_url={rare_asset.image_url}
+                            category={rare.category}
+                            style={{ width: 16, height: 16 }}
+                          />
+                          <span className="text-[9px] truncate hover:underline text-gold">{rare.name ?? ''}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-muted/50 flex-1">&mdash;</span>
+                      )}
+                      <span className="text-[9px] text-cyan w-16 text-right">
+                        {t('encyclopedia.xp_suffix', { xp: row.xp })}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -300,47 +319,14 @@ function JobsTab({
             </div>
           )}
 
-          {/* Craftable Items */}
-          {related_items.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <SectionDivider />
-              <SectionTitle title={`${t('encyclopedia.craftable_items')} (${related_items.length})`} />
-              <div className="flex flex-col gap-0">
-                {related_items.map((item: any) => {
-                  // NO quality tiers — neutral body tone, no rarity tint.
-                  const color = '#e8e4dc'
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-3 px-2 py-1.5 cursor-pointer border-b border-border/30 hover:bg-white/[0.02] transition-colors"
-                      onClick={() => on_navigate_to_item(item.id)}
-                    >
-                      <ItemImage
-                        id={item.asset.id}
-                        image_url={item.asset.image_url}
-                        category={item.category}
-                        style={{ width: 24, height: 24 }}
-                      />
-                      <div className="flex flex-col gap-0 min-w-0 flex-1">
-                        <span className="text-[9px] tracking-[0.1em] uppercase truncate" style={{ color }}>
-                          {tt(item, 'name')}
-                        </span>
-                        <span className="text-[8px] text-muted truncate">
-                          {t('entity.level_short', { level: item.level || 0 })} ·{' '}
-                          {
-                            t(
-                              `entity.category.${(item.category || '').toLowerCase()}`,
-                              (item.category || '').replace(/_/g, ' ')
-                            ) as string
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          {/* RECIPES — every job's own crafts, gathering jobs included (#1670). One home: the /v1 recipe
+              rows filtered by the chain's own `required_job`. */}
+          <JobRecipesSection
+            recipes={enc?.recipes}
+            items={enc?.items}
+            job_index={job_index}
+            on_navigate_to_item={on_navigate_to_item}
+          />
         </div>
       )}
     </div>

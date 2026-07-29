@@ -57,6 +57,7 @@ import { craft_affordability_of, craft_recipes_for_job } from '../../../pages/en
 import { get_encyclopedia } from '../../../rpc/client'
 import { use_rpc_view } from '../../../rpc/use_view'
 import { Tooltip } from './Tooltip.jsx'
+import { effective_job_tab, job_subtabs } from './job_subtabs.js'
 // Item detail REUSES the EXACT encyclopedia item-display (ItemDetailView) over the EXACT same live /v1 row
 // projection the Encyclopedia tab renders (item_view_model.ts + encyclopedia_item_asset — one home for the
 // shape, one home for the art slug) — HD icon, type, DESCRIPTION + characteristics (right-section, not a
@@ -676,10 +677,9 @@ function JobDetail({ job, xp, active, owned }) {
     set_selected(null)
   }, [job.id])
 
-  // Reset the tab to the job's natural default when the job changes.
-  const natural_tab = is_gathering ? 'resources' : 'recipes'
-  const effective_tab =
-    (is_gathering && tab === 'recipes') || (!is_gathering && tab === 'resources') ? natural_tab : tab
+  // The showing tab, from the job's own tab set (job_subtabs.js): a selection the new job does not have
+  // falls back to its natural default. A gathering job HAS the recipes tab — its own crafts (#1670).
+  const effective_tab = effective_job_tab(is_gathering, tab)
 
   return (
     <div className="jobs__detail">
@@ -727,24 +727,16 @@ function JobDetail({ job, xp, active, owned }) {
           {is_gathering && <GatherBar job={job} />}
 
           <div className="jobs__subtabs">
-            {is_gathering && (
+            {job_subtabs(is_gathering).map(name => (
               <button
+                key={name}
                 type="button"
-                className={`jobs__subtab${effective_tab === 'resources' ? ' is-active' : ''}`}
-                onClick={() => set_tab('resources')}
+                className={`jobs__subtab${effective_tab === name ? ' is-active' : ''}`}
+                onClick={() => set_tab(name)}
               >
-                {i18n.t('jobs.tabs.resources')}
+                {name === 'resources' ? i18n.t('jobs.tabs.resources') : i18n.t('jobs.tabs.recipes')}
               </button>
-            )}
-            {!is_gathering && (
-              <button
-                type="button"
-                className={`jobs__subtab${effective_tab === 'recipes' ? ' is-active' : ''}`}
-                onClick={() => set_tab('recipes')}
-              >
-                {i18n.t('jobs.tabs.recipes')}
-              </button>
-            )}
+            ))}
           </div>
 
           {effective_tab === 'resources' ? (
