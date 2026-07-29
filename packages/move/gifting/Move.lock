@@ -25,8 +25,8 @@ deps = { MoveStdlib = "MoveStdlib" }
 [pinned.mainnet.aresrpg]
 source = { local = "../aresrpg" }
 use_environment = "mainnet"
-manifest_digest = "8556D442D494BFA3144B638FB555FE285C9A24617E7B54415652918B78EA779A"
-deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui", aresrpg_fight = "aresrpg_fight", aresrpg_foundation = "aresrpg_foundation", aresrpg_social = "aresrpg_social", aresrpg_spells = "aresrpg_spells" }
+manifest_digest = "79B490A56F8107997789542D4A289A09CCB4D691B86ADC13350ADC0DD411E9BE"
+deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui", aresrpg_fight = "aresrpg_fight", aresrpg_foundation = "aresrpg_foundation", aresrpg_spells = "aresrpg_spells" }
 
 [pinned.mainnet.aresrpg_fight]
 source = { local = "../engine" }
@@ -45,12 +45,6 @@ source = { root = true }
 use_environment = "mainnet"
 manifest_digest = "EB08767A70958A2841063DF6FC6962974FD832F61ACF6539813057D6EC1F5AB0"
 deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui", aresrpg = "aresrpg" }
-
-[pinned.mainnet.aresrpg_social]
-source = { local = "../social" }
-use_environment = "mainnet"
-manifest_digest = "AB7F503F724A059A52FA38B8CE68AA23828279F06860B428E52E9A6EC4E05346"
-deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui" }
 
 [pinned.mainnet.aresrpg_spells]
 source = { local = "../spells" }
@@ -79,8 +73,8 @@ deps = { MoveStdlib = "MoveStdlib" }
 [pinned.testnet.aresrpg]
 source = { local = "../aresrpg" }
 use_environment = "testnet"
-manifest_digest = "D5A3C924791B93A55D91B0413FB1121233D2920A4AC71746854930DB242C4E58"
-deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui", aresrpg_fight = "aresrpg_fight", aresrpg_foundation = "aresrpg_foundation", aresrpg_social = "aresrpg_social", aresrpg_spells = "aresrpg_spells" }
+manifest_digest = "97F1FEE13DAFD8ED6CBA0FBD03D7DC2970A03D38E8060A07986F9FA4E6AD90CC"
+deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui", aresrpg_fight = "aresrpg_fight", aresrpg_foundation = "aresrpg_foundation", aresrpg_spells = "aresrpg_spells" }
 
 [pinned.testnet.aresrpg_fight]
 source = { local = "../engine" }
@@ -99,12 +93,6 @@ source = { root = true }
 use_environment = "testnet"
 manifest_digest = "F5E0D3400CBE96B51C741E0A3BAA0B0CA68F02F887CB66ECD050B408DAF0BA46"
 deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui", aresrpg = "aresrpg" }
-
-[pinned.testnet.aresrpg_social]
-source = { local = "../social" }
-use_environment = "testnet"
-manifest_digest = "31544A3A30F60FE55E30790615BA66F555681D97E4914B0F0866A313D3714990"
-deps = { Kiosk = "Kiosk", MoveStdlib = "MoveStdlib", Sui = "Sui" }
 
 [pinned.testnet.aresrpg_spells]
 source = { local = "../spells" }

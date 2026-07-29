@@ -13,10 +13,10 @@
 ///
 /// SINGLE-STEP RANDOMNESS (per docs.sui.io on-chain randomness — the documented DEFAULT, not commit-reveal):
 /// `buy`/`buy_many` consume `&Random` to roll stats, so they are private `entry` (the framework REJECTS `public`
-/// functions taking `Random`, and Sui rejects any PTB command other than `TransferObjects`/`MergeCoins` after a
-/// `MoveCall` that used `Random`). Both obey it: they are `entry` (not `public`), return NOTHING, and the
-/// roll → attach → kiosk-lock all happen INSIDE the one call — so each is the TERMINAL command with no result to
-/// chain a test-and-abort on. THE MULTI-BUY LAW: `buy_many` makes ONE generator and draws N times in a single
+/// functions taking `Random`). `&Random` post-roll PTB rule: TransferObjects and MergeCoins only; no MoveCalls
+/// of any kind after the roll. Both obey it: they are `entry` (not `public`), return NOTHING, and the roll →
+/// attach → kiosk-lock all happen INSIDE the one call — so each is the TERMINAL command with no result to chain a
+/// test-and-abort on. THE MULTI-BUY LAW: `buy_many` makes ONE generator and draws N times in a single
 /// terminal call — a SECOND `&Random` consumer in the same tx is illegal on Sui, so a pack is one call / N rolls
 /// / N locks, never a loop of `buy`s. That shuts the abort-and-reroll door WITHOUT a sealed/reveal ceremony: the
 /// buyer pays and rolls atomically; the outcome commits the instant the tx lands and cannot be inspected-then-

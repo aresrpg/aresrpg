@@ -17,8 +17,9 @@
 ///      under-levelled crafter (`EUnderLevel`). Commission reads the SAME field (accept-time knowledge proof).
 ///   ② SUCCESS CHANCE — `y91(level) = min(9900, 5000 + (level−1)×50)` bp, i.e. 50% at job level 1,
 ///      +0.5%/level, capped 99% (CraftingFormulas.java:13-15). Rolled `< bp` over a framework `&Random` draw
-///      (CraftQueue.java:197,201 `rng.nextDouble() < successRate`). ONE terminal `&Random` command (the buy_many /
-///      gather law): the roll + the conditional mint compose INSIDE the entry — nothing defers to a later command.
+///      (CraftQueue.java:197,201 `rng.nextDouble() < successRate`). `&Random` post-roll PTB rule: TransferObjects
+///      and MergeCoins only; no MoveCalls of any kind after the roll. ONE terminal command (the buy_many / gather
+///      law): the roll + the conditional mint compose INSIDE the entry — nothing defers to a later command.
 ///   ③ FAILURE SEMANTICS — on a failed roll the ingredients are STILL fully consumed (CraftQueue.java:212 burns
 ///      `n × quantity` for every attempt regardless of outcome) and only the OUTPUT is withheld. Deterministic
 ///      refusals (missing / wrong / over-supplied ingredients, under-level, forged output) still abort the WHOLE tx
