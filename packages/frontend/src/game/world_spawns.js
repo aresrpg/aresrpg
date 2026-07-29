@@ -46,10 +46,10 @@ import i18n from '../i18n'
 import { cancel_engage_timing, start_engage_timing } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 import { display_mob_name } from '../content/mob_name_overrides'
-import { mob_tier_of } from '../content/seed_manifest'
 import { report_error } from '../core/report.js'
 import { get_config } from '../rpc/client'
 import { subscribe_zones } from '../rpc/zones_poll'
+import { get_mob_tier } from './data/mobs.js'
 import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
 import { get_sdk } from '../chain/sdk'
 import { use_world_binding } from '../world-shell/session_gate.js'
@@ -191,7 +191,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     .catch(() => {}) // defaults hold — the card mirrors config.move's own DEFAULT_* constants
 
   // template_id (Sui object ID) → name + authored level band + tier, resolved once per template. The band comes
-  // from the chain object; the tier comes from the matching ruled deployment receipt (mob_tier_of).
+  // from the chain object; the tier is the authored fact its NAME resolves to (get_mob_tier).
   /** @type {Map<string, { name: string, min_level: number, max_level: number, element: number, tier: string | null } | null>} */
   const tmpl_cache = new Map()
   const tmpl_pending = new Set()
@@ -212,7 +212,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
                 min_level: tpl.min_level,
                 max_level: tpl.max_level ?? tpl.min_level,
                 element: tpl.element ?? 255, // carried into note_group_identity so the fight board resolves the mob's cast element
-                tier: mob_tier_of(id),
+                tier: get_mob_tier(tpl.name),
               }
             : null
           tmpl_cache.set(id, facts)

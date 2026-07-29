@@ -24,8 +24,7 @@ import { useTranslation } from 'react-i18next'
 
 import { normalize_search } from '../../utils/search'
 import { ArchiBadge, ELEMENT_COLORS, MobDetailView, is_new_template, NewBadge } from '../../components/entity_display'
-import { mob_tier_of } from '../../content/seed_manifest'
-import { is_archi_tier } from '../../game/data/mobs.js'
+import { get_mob_tier, is_archi_tier } from '../../game/data/mobs.js'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 import { ELEMENTS, MOB_LEVEL_BRACKETS } from '../../constants/encyclopedia'
 import { display_mob_name } from '../../content/mob_name_overrides'
@@ -87,7 +86,7 @@ export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null
       fireResistance: decode_mob_resist(m.fire_resistance),
       waterResistance: decode_mob_resist(m.water_resistance),
       airResistance: decode_mob_resist(m.air_resistance),
-      tier: mob_tier_of(m.template_id),
+      tier: get_mob_tier(m.name),
       drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
       found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
       createdAt: undefined as number | undefined,

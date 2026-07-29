@@ -67,13 +67,3 @@ export function resolve_seed_manifest(modules: Readonly<Record<string, unknown>>
 }
 
 export const seed_manifest = resolve_seed_manifest(manifest_modules)
-
-// The deployment receipt is the ruled per-template content model consumed by both the world roster and the
-// encyclopedia. Keep the authored mob tier keyed by the live template id here, beside its decode, so display
-// surfaces never infer archi-ness from a name or carry their own role lookup.
-const mob_tier_by_id = new Map(
-  Object.values(seed_manifest.mobs).map(({ id, role }) => [id, role?.toLowerCase() ?? null] as const)
-)
-
-export const mob_tier_of = (template_id: string | null | undefined): string | null =>
-  mob_tier_by_id.get(template_id ?? '') ?? null

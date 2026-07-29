@@ -18,6 +18,7 @@
 import { mob_icon_url, asset_url } from '@aresrpg/sdk/jobs'
 
 import { catalog_name_of } from '../../content/mob_name_overrides'
+import { seed_manifest } from '../../content/seed_manifest'
 import { model_asset_url } from '../model_asset_url.js'
 import { get_catalog } from './mob_catalog.js'
 
@@ -58,6 +59,32 @@ const catalog_key_of = (name) => {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
   return key || null
+}
+
+/**
+ * The authored TIER of a mob (`archi` / `boss` / `protector` / `normal`), by NAME — the same key every other
+ * authored display fact resolves on here (get_mob_model / mob_icon_url). The tier is authored content the
+ * chain does not carry: `MobTemplate` has no role field and `/v1` projects none, so the deployment receipt is
+ * the only source — and it may be read ONLY the way it is read here, keyed on the mob's own name.
+ *
+ * NEVER key this on a template id. The receipt is a build-time artifact and its ids are re-minted by every
+ * republish: measured against the live testnet on 2026-07-29, ZERO of the receipt's 374 mob ids matched any of
+ * the 383 rows `/v1` was serving, while the normalized NAME matched 374 of them (all 60 authored archi mobs
+ * among them). Names are authored and survive a re-mint; ids do not. Same lesson as #1467/#1510.
+ *
+ * A miss decorates nothing (null → no badge) — this never filters or hides a live row.
+ * @param {string | undefined | null} name @returns {string | null}
+ */
+export const get_mob_tier = (name) => mob_tiers_by_key().get(catalog_key_of(name) ?? '') ?? null
+
+/** @type {Map<string, string | null> | null} */
+let mob_tiers = null
+const mob_tiers_by_key = () => {
+  if (!mob_tiers)
+    mob_tiers = new Map(
+      Object.values(seed_manifest.mobs).map(({ name, role }) => [catalog_key_of(name) ?? '', role?.toLowerCase() ?? null])
+    )
+  return mob_tiers
 }
 
 /** (appearance) keys already error'd about — the fight board re-derives specs every frame, so the error dedupes

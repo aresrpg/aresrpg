@@ -173,12 +173,19 @@ module.exports = {
         'projections over the authored catalog). FightReport was removed from this set by #1522: settlement ' +
         'snapshots the live /v1 item_type slug onto each loot projection before the fight card renders. ' +
         'A FOURTH importer is a deliberate, reviewed act: add it here with its reason, or read /v1 like ' +
-        'everything else.',
+        "everything else. #1490 added the fourth: game/data/mobs.js, the mob display-fact resolver. A mob's " +
+        'TIER (archi/boss/protector) is authored content the chain does not carry — MobTemplate has no role ' +
+        'field and /v1 projects none — so the receipt is its only source. It is read there the ONE safe way: ' +
+        'keyed on the mob NAME, the same key get_mob_model/mob_icon_url already resolve every other authored ' +
+        'display fact on. Names are authored and survive a re-mint; ids do not. Re-measured against live ' +
+        "testnet 2026-07-29: 0 of the receipt's 374 mob ids matched the 383 rows /v1 serves, while the " +
+        'normalized name matched 374 of them (all 60 authored archi mobs). A miss decorates nothing (null → ' +
+        'no badge), so it never filters or hides a live row.',
       severity: 'error',
       from: {
         path: '^packages/frontend/src/',
         pathNot:
-          '^packages/frontend/src/(chain/deployment\\.ts|pages/encyclopedia/world_corpus\\.ts|game/screens/hud/Inventory\\.jsx)$',
+          '^packages/frontend/src/(chain/deployment\\.ts|pages/encyclopedia/world_corpus\\.ts|game/screens/hud/Inventory\\.jsx|game/data/mobs\\.js)$',
       },
       to: {
         path: '^packages/frontend/src/content/seed_manifest\\.ts$|^packages/move/scripts/out/seed_manifest\\.json$',
