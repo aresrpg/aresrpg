@@ -586,11 +586,14 @@ export async function settle_and_open({
  * DUNGEON settle chain (§9, ONE PTB): `dungeon::settle_run` (BORROWS the outcome — victory advances the room /
  * defeat+last-room consume the pass) THEN `results::open` (CONSUMES the outcome, rolls loot, terminal &Random).
  * Random-terminal legal: settle_run precedes the one &Random call.
- * @param {{ run_pass_id:string, outcome_id:string, world_id?:string|null, character_id:string }} args
- *   character_id = outcome.character — `open` kiosk-borrows it, so the kiosk MUST be the one holding it.
+ * @param {{ run_pass_id:string, outcome_id:string, world_id?:string|null, character_id:string,
+ *           automated?:boolean }} args
+ *   character_id = outcome.character — `open` kiosk-borrows it AND keys the latch shard the open releases, so
+ *   the kiosk MUST be the one holding it. `automated` (a wire opened this, not a press) makes the submission the
+ *   spend guard's subject: an executed failure opens that outcome's circuit for the session (#1262 / #1383 ②).
  * @returns {Promise<{ receipt:any, result_id:string|null, xp_share:number|null, loot_units:number|null, final_hp:number|null }>} the ResultOpened event fields (opened_result_of)
  */
-export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id }) {
+export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id, automated = false }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -610,6 +613,7 @@ export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, c
   })
   open_result_ptb(ctx)({
     outcome_id,
+    character_id, // #1383: `results::open` releases the CHARACTER-keyed latch shard — omitting it threw at BUILD
     kiosk_id: handle.kiosk_id,
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
     tx,
@@ -617,17 +621,29 @@ export async function settle_run_and_open({ run_pass_id, outcome_id, world_id, c
   clear_budget_cache() // FIGHT END (result open) — the fight's act shapes are dead; drop their cached budgets
   clear_fight_ref_cache() // + its pinned shared-ref (the Fight is being destroyed)
   clear_gas_coin_cache() // + the chained gas-coin pin (the fight's commit chain is done)
-  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true)
+  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true, null, {
+    intent: `open_result:${outcome_id}`,
+    automated,
+  })
   return { receipt, ...opened_result_of(receipt) }
 }
 
 /**
  * OPEN a WORLD-fight `FightOutcome` (no run to settle): `results::open` alone — consumes the outcome, mints my
  * soulbound `FightResult` with the rolled loot checklist + XP/HP write-backs (terminal &Random).
- * `character_id` = outcome.character — `open` kiosk-borrows it, so we MUST pass the kiosk that holds it.
+ * `character_id` = outcome.character — `open` kiosk-borrows it AND keys the `FightLatch` shard the open
+ * releases, so it must reach BOTH the kiosk resolution and the PTB builder (#1383: it reached only the first,
+ * so every recovery open threw `fight_shard_index … got undefined` at BUILD time — no tx, no gas, and a message
+ * ambiguous enough that the burn-law classifier latched it as executed. The one door out of an abort-111
+ * lockout was dead by construction).
+ * `automated` marks a wire-fired open as the spend guard's subject (#1262); a player's press is never gated.
  * @returns {Promise<{ receipt:any, result_id:string|null, xp_share:number|null, loot_units:number|null, final_hp:number|null }>} the ResultOpened event fields (opened_result_of)
  */
-export async function open_outcome(/** @type {string} */ outcome_id, /** @type {string} */ character_id) {
+export async function open_outcome(
+  /** @type {string} */ outcome_id,
+  /** @type {string} */ character_id,
+  /** @type {{ automated?: boolean }} */ { automated = false } = {}
+) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -637,13 +653,17 @@ export async function open_outcome(/** @type {string} */ outcome_id, /** @type {
   if (!handle) throw new Error('That character is not in your kiosk')
   const tx = open_result_ptb(ctx_of(sdk))({
     outcome_id,
+    character_id, // #1383: the latch shard `results::open` releases is keyed by the CHARACTER, never guessed
     kiosk_id: handle.kiosk_id,
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
   })
   clear_budget_cache() // FIGHT END (result open) — the fight's act shapes are dead; drop their cached budgets
   clear_fight_ref_cache() // + its pinned shared-ref (the Fight is being destroyed)
   clear_gas_coin_cache() // + the chained gas-coin pin (the fight's commit chain is done)
-  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true)
+  const receipt = await sign(tx, i18n.t('fights.action_open_result'), true, null, {
+    intent: `open_result:${outcome_id}`,
+    automated,
+  })
   return { receipt, ...opened_result_of(receipt) }
 }
 

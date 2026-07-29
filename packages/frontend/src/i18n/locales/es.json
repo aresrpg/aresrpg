@@ -2424,6 +2424,7 @@
     "fight_wrong_party": "Ese es un combate privado — necesitas estar en el grupo correcto para unirte.",
     "fight_world_changed": "El mundo cambió antes de que tu combate pudiera comenzar — actualiza e inténtalo de nuevo.",
     "fight_already_seated": "Ya estás participando en ese combate.",
+    "fight_settle_failed": "Tu combate no se pudo liquidar — no se reclamó nada.",
     "fight_unclaimed_result": "Tienes un resultado de combate sin abrir — ábrelo desde el panel de tu personaje para volver a luchar.",
     "fight_character_busy": "Este personaje ya está en un combate en curso — termínalo o liquídalo antes de empezar otro.",
     "fight_character_busy_expired_started": "Este personaje estaba en un combate en fase de colocación cuyo tiempo expiró. El combate se inició automáticamente — vuelve a él para continuar.",

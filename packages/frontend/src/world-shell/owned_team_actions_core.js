@@ -106,7 +106,9 @@ export function create_owned_team_actions({ join_world_fight, activate_run, join
 
     const opened_by_character = new Map()
     for (const row of pending) {
-      const opened = await settle_run_and_open({ world_id, ...row })
+      // WIRE-FIRED (the leader's receipt drives it, no press): the spend guard owns it like any automation —
+      // an executed failure retires THAT companion's outcome instead of re-burning on the next receipt (#1383).
+      const opened = await settle_run_and_open({ world_id, ...row, automated: true })
       opened_by_character.set(row.character_id, opened)
       await on_settled?.(row.character_id, opened)
     }

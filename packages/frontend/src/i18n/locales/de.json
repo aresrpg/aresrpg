@@ -2424,6 +2424,7 @@
     "fight_wrong_party": "Das ist ein privater Kampf — du musst in der richtigen Gruppe sein, um beizutreten.",
     "fight_world_changed": "Die Welt hat sich geändert, bevor dein Kampf beginnen konnte — aktualisiere und versuch es erneut.",
     "fight_already_seated": "Du nimmst bereits an diesem Kampf teil.",
+    "fight_settle_failed": "Dein Kampf konnte nicht abgerechnet werden — nichts wurde eingelöst.",
     "fight_unclaimed_result": "Du hast ein ungeöffnetes Kampfergebnis — öffne es im Charakter-Panel, um erneut zu kämpfen.",
     "fight_character_busy": "Dieser Charakter befindet sich bereits in einem laufenden Kampf — beende oder schließe ihn ab, bevor du einen weiteren beginnst.",
     "fight_character_busy_expired_started": "Dieser Charakter war in einem Platzierungskampf, dessen Zeit abgelaufen war. Der Kampf wurde automatisch gestartet — kehre zurück, um ihn fortzusetzen.",

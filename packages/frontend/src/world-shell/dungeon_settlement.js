@@ -42,6 +42,7 @@ import {
   recover_settled_elsewhere,
   run_result_auto_open,
   is_preflight_failure,
+  settle_halt_notice,
 } from './pending_outcomes.js'
 import { run_latched_claim } from './fight_claim_latch.js'
 import { settle_verdict } from './fight_settle_confirm.js'
@@ -73,6 +74,32 @@ const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: u
  *  recovery) — a silent wallet tx with zero UI reads as malware to a player. Best-effort: fires once per
  *  attempted row, same as the dead announce-toast below it corrects a blocked one after the fact. */
 const announce_auto_claim = () => push_event_toast({ state: 'info', title: i18n.t('fights.claiming_pending_result') })
+
+/**
+ * THE HALT LINE (#1383 ①) — the ONE place a settlement halt speaks, and it speaks a PROJECTION. "You have an
+ * unfinished fight result" is a claim about the `/v1/pending-outcomes` row the character-panel badge renders,
+ * so it is made only when that row exists; the halt used to push it blind, including on the EXECUTED abort that
+ * reverts the whole PTB and mints nothing at all — the live report ("the toast said so, the surface showed
+ * nothing"). With no row the honest line is the failure itself. `settle_halt_notice` owns the decision (leaf,
+ * unit-driven); this edge only renders it.
+ *
+ * FIRE-AND-FORGET at both call sites: the halt VERDICT must reach its caller at exactly the speed it always
+ * did (the retry engine reads it), and the line can land a beat later, once the projection has answered.
+ * @param {string|null} character_id @param {unknown} error the halt's own cause, when there is one
+ */
+async function surface_settle_halt(character_id, error) {
+  const { address } = use_auth.getState()
+  const { claim } = await settle_halt_notice(() =>
+    address && character_id ? find_pending_outcome(address, character_id) : Promise.resolve(null)
+  )
+  const title =
+    claim === 'pending_result'
+      ? i18n.t('errors.fight_unclaimed_result')
+      : error
+        ? humanize_abort(error)
+        : i18n.t('errors.fight_settle_failed')
+  push_event_toast({ state: 'error', title })
+}
 
 /** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT.
  *  `current_address` is the LIVE use_auth identity (loot_inventory_effect.js's header has the story). */
@@ -154,8 +181,8 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
       })
       if (!verdict.settled) {
         game_log('dungeon', 'settle+open landed with NO chain confirmation — reporting unsettled', { fight_id })
-        push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
         invalidate_pending_outcomes() // whatever this tx did, /v1 truth (not this client) owns the next step
+        void surface_settle_halt(character_id, null).catch(() => {}) // the line the FRESH projection can back
         on_halt?.(verdict.halt) // executed: gas was spent, so the latch holds — never an automatic re-fire
         return false
       }
@@ -183,8 +210,8 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, lost 
       // #1223 ③: a PRE-FLIGHT halt is not a dead end any more — it PROVES the racing settle minted my outcome, and
       // the drain below opens it right now. Only an EXECUTED halt (gas burned, fight still live, never re-fired)
       // still tells the player to go press the pill themselves.
-      if (!preflight) push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
       invalidate_pending_outcomes() // a racing janitor may have minted MY outcome — the pill re-fetches truth
+      if (!preflight) void surface_settle_halt(character_id, error).catch(() => {}) // one line, backed by truth
       on_halt?.(preflight ? 'transient' : 'executed_failure')
       if (preflight) strand = { character_id, fight_id }
       return false
@@ -264,7 +291,9 @@ export async function settle_chain_latched(store, args, { manual = false } = {})
  * `_settling` single-flight. `summary_toast` fires the auto-open success beat (07-10).
  * @param {any} store
  * @param {{ outcome_id: string, run_pass_id?: string|null, world_id?: string|null, character_id: string|null,
- *           terminal: boolean, room?: number, summary_toast?: boolean, surface_failure?: boolean }} args
+ *           terminal: boolean, room?: number, summary_toast?: boolean, surface_failure?: boolean,
+ *           automated?: boolean }} args `automated` — a WIRE fired this open, not a press: the submission
+ *   becomes the spend guard's subject, so an executed failure retires that outcome mechanically (#1383 ②).
  * @returns {Promise<{ landed: boolean, preflight?: boolean, receipt?:any, error?:unknown }>} landed=true once
  *   `results::open` landed (the character's fight_marker is CLEARED); on failure `preflight` classifies it.
  */
@@ -279,6 +308,7 @@ async function land_outcome(
     room = 0,
     summary_toast = false,
     surface_failure = true,
+    automated = false,
   }
 ) {
   let receipt = null
@@ -288,8 +318,8 @@ async function land_outcome(
   let final_hp = null
   try {
     ;({ receipt, result_id, xp_share, loot_units, final_hp } = run_pass_id
-      ? await settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id })
-      : await open_outcome(outcome_id, character_id))
+      ? await settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id, automated })
+      : await open_outcome(outcome_id, character_id, { automated }))
   } catch (error) {
     // results::open is where fight_marker::clear fires (the ONLY discharge). A failure here leaves the
     // character MARKED with an unopened outcome → abort 111 on the next fight. NEVER silent, NEVER auto-retried
@@ -617,6 +647,7 @@ export function open_pending_row(
           terminal: true,
           summary_toast: true,
           surface_failure,
+          automated: !manual, // a press is the player spending their own gas on purpose; a wire is not
         })
         return landed ? { status: 'opened', receipt } : { status: 'failed', error: error ?? null }
       } finally {

@@ -121,9 +121,12 @@ describe('owned team production sequencing', () => {
       ]),
     })
 
+    // #1383: every companion open here is WIRE-fired off the leader's receipt — no player pressed anything —
+    // so each declares itself `automated` and becomes the spend guard's subject (an executed failure retires
+    // that one outcome's intent instead of re-burning on the next receipt).
     expect(calls).toEqual([
-      { world_id: 'world', character_id: 'alt-a', run_pass_id: 'pass-a', outcome_id: 'outcome-a' },
-      { world_id: 'world', character_id: 'alt-b', run_pass_id: 'pass-b', outcome_id: 'outcome-b' },
+      { world_id: 'world', character_id: 'alt-a', run_pass_id: 'pass-a', outcome_id: 'outcome-a', automated: true },
+      { world_id: 'world', character_id: 'alt-b', run_pass_id: 'pass-b', outcome_id: 'outcome-b', automated: true },
     ])
     expect([...settled.keys()]).toEqual(['alt-a', 'alt-b'])
   })
