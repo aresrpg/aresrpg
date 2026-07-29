@@ -89,6 +89,9 @@ test('a missing pointer falls back to the pre-versioning spell corpus URL', asyn
   })
   const error_spy = spyOn(console, 'error').mockImplementation(() => {})
 
+  // spyOn re-acquires the SAME process-global fetch spy, and its call history outlives
+  // afterEach's mock.restore() — clear it so this list is this test's fetches alone.
+  fetch_spy.mockClear()
   await load_spell_corpus(load_corpus_version())
 
   expect(get_spell_corpus()).toEqual(fallback_rows)
@@ -112,6 +115,9 @@ test('pointer and bare-corpus failures toast the player and report the raw fallb
   })
   const error_spy = spyOn(console, 'error').mockImplementation(() => {})
 
+  // spyOn re-acquires the SAME process-global fetch spy, and its call history outlives
+  // afterEach's mock.restore() — clear it so this list is this test's fetches alone.
+  fetch_spy.mockClear()
   await load_spell_corpus(load_corpus_version())
 
   expect(get_spell_corpus()).toEqual([])
