@@ -15,6 +15,11 @@ use std::sync::{Arc, Mutex};
 use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
 use sui_indexer_alt_framework::types::object::Owner;
 
+/// The fresh-publish `aresrpg` origin stamped by ceremony #4. Keeping this fixture in the test
+/// module prevents test-only lineage evidence from becoming dead production code.
+const FRESH_ARESRPG_ORIGIN: &str =
+    "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb";
+
 #[derive(Clone, Default)]
 struct SharedLog(Arc<Mutex<Vec<u8>>>);
 
@@ -38,7 +43,8 @@ impl Write for SharedLog {
 /// The pre-#577 origin — the last universe live before the 2026-07-23 fresh publish, and the one
 /// registered 25-byte lineage. This is the file's one pre-existing chain-capture reference; every
 /// synthetic object id below is built from the gate's short-id fixture convention instead.
-const NARROW_EFFECT_ARESRPG_ORIGIN: &str = "0x4217b46f8dfe7c1ccc6a5e1c37e012a53bf25b07e0edb228a3c5a1575eeb2b06";
+const NARROW_EFFECT_ARESRPG_ORIGIN: &str =
+    "0x4217b46f8dfe7c1ccc6a5e1c37e012a53bf25b07e0edb228a3c5a1575eeb2b06";
 
 /// The `json` string of the first `JSON.SET key path …` write matching `path`.
 fn set_json<'a>(writes: &'a [RedisWrite], path: &str) -> Option<&'a str> {
@@ -49,13 +55,17 @@ fn set_json<'a>(writes: &'a [RedisWrite], path: &str) -> Option<&'a str> {
 }
 
 fn has_sadd(writes: &[RedisWrite], key: &str, member: &str) -> bool {
-    writes.iter().any(|w| matches!(w, RedisWrite::SetAdd { key: k, member: m } if k == key && m == member))
+    writes
+        .iter()
+        .any(|w| matches!(w, RedisWrite::SetAdd { key: k, member: m } if k == key && m == member))
 }
 
 /// Canonicalize a deliberately short synthetic fixture id at runtime. The BCS/ObjectID builder
 /// supplies the zero padding; source never contains a full-width string that could be a live id.
 fn synthetic_object_id(short: &str) -> String {
-    ObjectID::from_hex_literal(short).unwrap().to_canonical_string(true)
+    ObjectID::from_hex_literal(short)
+        .unwrap()
+        .to_canonical_string(true)
 }
 
 // ── Character object snapshot ────────────────────────────────────────────────
@@ -93,10 +103,19 @@ fn character_snapshot_round_trips_and_derives_level() {
         name: "Aiden".into(),
         class: "sram".into(),
         male: false,
-        customization: Customization { color_1: 1, color_2: 2, color_3: 3 },
+        customization: Customization {
+            color_1: 1,
+            color_2: 2,
+            color_3: 3,
+        },
         experience: 22_385_000, // exactly the level-70 threshold
         created_at_ms: 42,
-        anchor: PositionAnchor { pos_x: 0, pos_z: 0, zone: String::new(), anchored_at_ms: 0 },
+        anchor: PositionAnchor {
+            pos_x: 0,
+            pos_z: 0,
+            zone: String::new(),
+            anchored_at_ms: 0,
+        },
     };
     let bytes = bcs::to_bytes(&obj).unwrap();
     let writes = map_character_object("0xabc", &bytes, None).unwrap();
@@ -150,7 +169,8 @@ const REAL_CHARACTER_SMOKE_BCS_HEX: &str = "e9254e19fa953a1f4049136303e6eb099ca8
 fn character_arm_unaffected_by_mob_loot_extension() {
     let bytes = hex::decode(REAL_CHARACTER_SMOKE_BCS_HEX).unwrap();
     let id = "0xe9254e19fa953a1f4049136303e6eb099ca8825d555d88c4973a38b1acc4ee25";
-    let writes = map_character_object(id, &bytes, None).expect("live character bytes must still decode");
+    let writes =
+        map_character_object(id, &bytes, None).expect("live character bytes must still decode");
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(id)));
     assert_eq!(set_json(&writes, "$.name"), Some(r#""smoke85987""#));
     assert_eq!(set_json(&writes, "$.class"), Some(r#""senshi""#));
@@ -170,12 +190,18 @@ fn job_xp_field_projects_absolute_total_at_the_numeric_index() {
     let writes = map_job_xp_field(character, 2, 1911);
 
     // char_init NX skeleton first (a job-xp snapshot can precede the mint event).
-    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character)));
+    assert!(
+        matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character))
+    );
     // `$.jobs` NX-init + the absolute set at the numeric index.
-    assert!(writes.iter().any(|w| matches!(w, RedisWrite::Set { path, nx: true, .. } if path == "$.jobs")));
+    assert!(writes
+        .iter()
+        .any(|w| matches!(w, RedisWrite::Set { path, nx: true, .. } if path == "$.jobs")));
     assert_eq!(set_json(&writes, r#"$.jobs["2"]"#), Some("1911"));
     // Replay-safe: no relative counter on the projection (idempotent JSON.SET only).
-    assert!(writes.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(writes
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 #[test]
@@ -192,7 +218,10 @@ fn job_xp_field_bcs_matches_the_onchain_df_layout() {
     let bytes = bcs::to_bytes(&f).unwrap();
     assert_eq!(bytes.len(), 32 + 1 + 1 + 8);
     let decoded: JobXpField = bcs::from_bytes(&bytes).unwrap();
-    assert_eq!((decoded.namespace, decoded.job, decoded.value), (2, 2, 1911));
+    assert_eq!(
+        (decoded.namespace, decoded.job, decoded.value),
+        (2, 2, 1911)
+    );
 }
 
 #[test]
@@ -201,13 +230,15 @@ fn is_job_xp_key_discriminates_from_the_byte_identical_stat_alloc_key() {
     // Field<NsKey<JobXpKey>, u64> matches; the byte-identical Field<NsKey<StatAllocKey>, u64>
     // (same namespace, same {u8}->u64 shape) must NOT — the inner struct NAME is the only signal.
     let job = TypeTag::from_str("0x2::extension::NsKey<0x2::character_link::JobXpKey>").unwrap();
-    let stat = TypeTag::from_str("0x2::extension::NsKey<0x2::character_link::StatAllocKey>").unwrap();
+    let stat =
+        TypeTag::from_str("0x2::extension::NsKey<0x2::character_link::StatAllocKey>").unwrap();
     assert!(is_job_xp_key(&job));
     assert!(!is_job_xp_key(&stat));
     // The value type param (u64) — a non-struct key — never matches.
     assert!(!is_job_xp_key(&TypeTag::U64));
     // Right inner key, WRONG envelope struct → also rejected.
-    let wrong_ns = TypeTag::from_str("0x2::extension::Wrong<0x2::character_link::JobXpKey>").unwrap();
+    let wrong_ns =
+        TypeTag::from_str("0x2::extension::Wrong<0x2::character_link::JobXpKey>").unwrap();
     assert!(!is_job_xp_key(&wrong_ns));
 }
 
@@ -222,13 +253,17 @@ fn progression_field_projects_absolute_xp_level_and_raw_hp_state() {
     let writes = map_progression_field(character, 32_600, 12, 137, 1_700_000_000_123);
 
     // char_init NX skeleton first (a progression snapshot can precede the mint event).
-    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character)));
+    assert!(
+        matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character))
+    );
     assert_eq!(set_json(&writes, "$.experience"), Some("32600"));
     assert_eq!(set_json(&writes, "$.level"), Some("12"));
     assert_eq!(set_json(&writes, "$.current_hp"), Some("137"));
     assert_eq!(set_json(&writes, "$.hp_updated_ms"), Some("1700000000123"));
     // Replay-safe: idempotent JSON.SET only, never a relative counter.
-    assert!(writes.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(writes
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 /// RUNTIME PROVENANCE (P1 xp-reset-on-refresh, 2026-07-17): the exact 60 bytes of the LIVE testnet
@@ -247,9 +282,16 @@ const REAL_PROGRESSION_FIELD_BCS_HEX: &str =
 fn progression_field_bcs_decodes_the_real_onchain_wire() {
     let bytes = hex::decode(REAL_PROGRESSION_FIELD_BCS_HEX).unwrap();
     assert_eq!(bytes.len(), 32 + 1 + 1 + 8 + 2 + 8 + 8); // 60 — the dummy_field byte is on the wire
-    let decoded: ProgressionField = bcs::from_bytes(&bytes).expect("real progression DF bytes must decode");
+    let decoded: ProgressionField =
+        bcs::from_bytes(&bytes).expect("real progression DF bytes must decode");
     assert_eq!(
-        (decoded.namespace, decoded.xp, decoded.level, decoded.hp, decoded.hp_updated_ms),
+        (
+            decoded.namespace,
+            decoded.xp,
+            decoded.level,
+            decoded.hp,
+            decoded.hp_updated_ms
+        ),
         (0, 9, 1, 30, 1_784_286_447_122)
     );
     let character = "0xc00f5791c883c391b704088a25ccd61cccb77ac805761d1762d4e7543a8adc79";
@@ -271,7 +313,8 @@ fn is_progression_key_discriminates_from_the_other_character_dfs() {
     use std::str::FromStr;
     // Field<NsKey<ProgressionKey>, Progression> matches; the sibling Character DFs (job-xp / equipment,
     // same envelope) must NOT — the inner struct identity is the only signal.
-    let prog = TypeTag::from_str("0x2::extension::NsKey<0x2::character_link::ProgressionKey>").unwrap();
+    let prog =
+        TypeTag::from_str("0x2::extension::NsKey<0x2::character_link::ProgressionKey>").unwrap();
     let job = TypeTag::from_str("0x2::extension::NsKey<0x2::character_link::JobXpKey>").unwrap();
     let equip = TypeTag::from_str("0x2::extension::NsKey<0x2::equipment::EquipmentKey>").unwrap();
     assert!(is_progression_key(&prog));
@@ -314,12 +357,16 @@ fn equipment_state_projects_pet_truth_and_clears_identity() {
     let mut absent_stats = test_equipment_stats(55);
     absent_stats.strength = 7;
     let absent = map_equipment_state(character, absent_stats, false, 488, 7);
-    assert!(matches!(&absent[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character)));
+    assert!(
+        matches!(&absent[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character))
+    );
     assert_eq!(set_json(&absent, "$.gear_vitality"), Some("55"));
-    assert!(set_json(&absent, "$.gear_positive").unwrap().contains(r#""strength":7"#));
-    assert!(absent.iter().any(
-        |w| matches!(w, RedisWrite::Set { path, nx: true, .. } if path == "$.gear_malus")
-    ));
+    assert!(set_json(&absent, "$.gear_positive")
+        .unwrap()
+        .contains(r#""strength":7"#));
+    assert!(absent
+        .iter()
+        .any(|w| matches!(w, RedisWrite::Set { path, nx: true, .. } if path == "$.gear_malus")));
     assert_eq!(set_json(&absent, "$.pet_equipped"), Some("false"));
     assert_eq!(
         set_json(&absent, "$.gear_cursor"),
@@ -331,7 +378,9 @@ fn equipment_state_projects_pet_truth_and_clears_identity() {
     assert_eq!(set_json(&present, "$.gear_vitality"), Some("89"));
     assert_eq!(set_json(&present, "$.pet_equipped"), Some("true"));
     assert_eq!(set_json(&present, "$.pet"), None);
-    assert!(present.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(present
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 #[test]
@@ -364,7 +413,14 @@ fn equipment_state_reads_constructed_pet_true_after_the_complete_variable_tail()
     b.extend_from_slice(&[1, 7]); // tool_job: Some(7)
     b.push(1); // pet: true
     let decoded = equipment_state(&b).expect("complete Move-derived EquipmentMap wire must decode");
-    assert_eq!((decoded.gear.strength, decoded.gear.vitality, decoded.pet_equipped), (7, 42, true));
+    assert_eq!(
+        (
+            decoded.gear.strength,
+            decoded.gear.vitality,
+            decoded.pet_equipped
+        ),
+        (7, 42, true)
+    );
     // A body truncated before the final pet bool yields None — never a guessed false.
     assert!(equipment_state(&b[..b.len() - 1]).is_none());
     let mut malformed_option = b.clone();
@@ -388,7 +444,8 @@ const REAL_EQUIPMENT_FIELD_BCS_HEX: &str =
 fn equipment_gear_vitality_decodes_the_real_onchain_wire() {
     let bytes = hex::decode(REAL_EQUIPMENT_FIELD_BCS_HEX).unwrap();
     assert_eq!(bytes.len(), 218);
-    let decoded = equipment_state(&bytes).expect("real equipment DF bytes including the tail must decode");
+    let decoded =
+        equipment_state(&bytes).expect("real equipment DF bytes including the tail must decode");
     assert_eq!((decoded.gear.vitality, decoded.pet_equipped), (0, false));
 }
 
@@ -405,7 +462,8 @@ fn equipment_malus_field_projects_only_the_private_namespaced_key() {
     {
         bytes.extend_from_slice(&value.to_le_bytes());
     }
-    let writes = map_equipment_malus_field(character, &bytes).expect("private malus field must decode");
+    let writes =
+        map_equipment_malus_field(character, &bytes).expect("private malus field must decode");
     let stats = set_json(&writes, "$.gear_malus").unwrap();
     assert!(stats.contains(r#""strength":3"#));
     assert!(stats.contains(r#""vitality":2"#));
@@ -432,7 +490,8 @@ fn equipment_malus_type_guard_requires_namespaced_u64_to_spell_stats() {
 #[test]
 fn is_equipment_key_discriminates_from_the_equipped_item_dfs() {
     use std::str::FromStr;
-    let equip = TypeTag::from_str("0xa11ce::extension::NsKey<0xa11ce::equipment::EquipmentKey>").unwrap();
+    let equip =
+        TypeTag::from_str("0xa11ce::extension::NsKey<0xa11ce::equipment::EquipmentKey>").unwrap();
     // The sibling equipped-ITEM DFs sit under the SAME NS_CHARACTER_EQUIPMENT namespace, keyed by the
     // item id (`object::ID`) — only the inner struct NAME tells them apart.
     let item = TypeTag::from_str("0xa11ce::extension::NsKey<0x2::object::ID>").unwrap();
@@ -473,7 +532,9 @@ fn equipped_pet_item_field_projects_the_move_derived_identity() {
         value: ChainItem,
     }
 
-    let character = ObjectID::from_hex_literal("0xc1").unwrap().to_canonical_string(true);
+    let character = ObjectID::from_hex_literal("0xc1")
+        .unwrap()
+        .to_canonical_string(true);
     let item_id = ObjectID::from_hex_literal("0xa001").unwrap();
     let template_id = ObjectID::from_hex_literal("0x7a01").unwrap();
     let field = ChainEquippedItemField {
@@ -491,7 +552,8 @@ fn equipped_pet_item_field_projects_the_move_derived_identity() {
         },
     };
     let bytes = bcs::to_bytes(&field).unwrap();
-    let writes = map_equipped_pet_field(&character, &bytes).expect("Move-derived pet Item field must decode");
+    let writes = map_equipped_pet_field(&character, &bytes)
+        .expect("Move-derived pet Item field must decode");
     let pet: serde_json::Value = serde_json::from_str(set_json(&writes, "$.pet").unwrap()).unwrap();
     assert_eq!(
         pet,
@@ -522,7 +584,9 @@ fn equipped_pet_item_field_projects_the_move_derived_identity() {
             amount: 1,
         },
     };
-    assert!(map_equipped_pet_field(&character, &bcs::to_bytes(&wrong_namespace).unwrap()).is_none());
+    assert!(
+        map_equipped_pet_field(&character, &bcs::to_bytes(&wrong_namespace).unwrap()).is_none()
+    );
 
     let non_pet = ChainEquippedItemField {
         field_id: ObjectID::from_hex_literal("0xf3").unwrap(),
@@ -561,10 +625,18 @@ fn zone_field_with_consumed_spawns_projects_both_bitmap_arrays() {
     let writes = map_zone_field(world, &bytes).expect("zone df must decode");
 
     // NX skeleton on the SAME rpc:zone:{world}:{zx}:{zy} doc the ZoneSearched event arm uses.
-    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_zone(world, 7, 9)));
-    assert_eq!(set_json(&writes, "$.discovered_at_ms"), Some("1700000000000")); // RAW stamp (client owns TTL)
-    // The composition seed is a STRING (full u64); the bitmaps are plain byte arrays.
-    assert_eq!(set_json(&writes, "$.seed"), Some(r#""18446744073709551615""#));
+    assert!(
+        matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_zone(world, 7, 9))
+    );
+    assert_eq!(
+        set_json(&writes, "$.discovered_at_ms"),
+        Some("1700000000000")
+    ); // RAW stamp (client owns TTL)
+       // The composition seed is a STRING (full u64); the bitmaps are plain byte arrays.
+    assert_eq!(
+        set_json(&writes, "$.seed"),
+        Some(r#""18446744073709551615""#)
+    );
     assert_eq!(set_json(&writes, "$.mob_bitmap"), Some("[5]"));
     assert_eq!(set_json(&writes, "$.res_bitmap"), Some("[2]"));
     // The retired materialised-row paths must never reappear: fresh Zone DFs contain no such
@@ -573,7 +645,9 @@ fn zone_field_with_consumed_spawns_projects_both_bitmap_arrays() {
     assert_eq!(set_json(&writes, "$.resources"), None);
     // Zone indexed under the world; replay-safe (idempotent JSON.SET only, never a relative counter).
     assert!(has_sadd(&writes, &format!("rpc:idx:zones:{world}"), "7:9"));
-    assert!(writes.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(writes
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 #[test]
@@ -593,7 +667,15 @@ fn zone_field_bcs_matches_the_onchain_df_layout() {
     let bytes = bcs::to_bytes(&z).unwrap();
     assert_eq!(bytes.len(), 32 + 4 + 4 + 8 + 8 + 1 + 1);
     let decoded: ZoneField = bcs::from_bytes(&bytes).unwrap();
-    assert_eq!((decoded.zx, decoded.zy, decoded.discovered_at_ms, decoded.seed), (1, 2, 9, 42));
+    assert_eq!(
+        (
+            decoded.zx,
+            decoded.zy,
+            decoded.discovered_at_ms,
+            decoded.seed
+        ),
+        (1, 2, 9, 42)
+    );
     // A freshly-searched zone still projects (seed + empty bitmaps) — distinct from undiscovered (no doc
     // at all): the client derives the full advertised population from the seed alone.
     let writes = map_zone_field("0xe01", &bytes).expect("fresh zone still decodes");
@@ -642,7 +724,9 @@ fn group_root_field_projects_the_commitment_onto_the_zone_doc() {
     let writes = map_group_root_field(world, &bytes).expect("commitment df must decode");
 
     // NX skeleton on the SAME rpc:zone:{world}:{zx}:{zy} doc (self-sufficient, like map_zone_field).
-    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_zone(world, 7, 9)));
+    assert!(
+        matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_zone(world, 7, 9))
+    );
     // The 32-byte Blake2b root travels as a plain byte ARRAY (symmetric with the bitmaps — the SDK
     // composer accepts number[]); the count is a plain number (≤ 64 groups by construction on-chain).
     assert_eq!(
@@ -654,7 +738,9 @@ fn group_root_field_projects_the_commitment_onto_the_zone_doc() {
     assert_eq!(set_json(&writes, "$.group_count"), Some("64"));
     // Zone indexed under the world; replay-safe (idempotent JSON.SET only, never a relative counter).
     assert!(has_sadd(&writes, &format!("rpc:idx:zones:{world}"), "7:9"));
-    assert!(writes.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(writes
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 #[test]
@@ -718,9 +804,10 @@ fn orphaned_lineage_progression_key_is_rejected_fresh_lineage_is_admitted() {
     let orphaned = "0xd0";
     let handler = AresSnapshotHandler::new(Some(HashSet::from([fresh.to_string()])));
 
-    let fresh_key =
-        TypeTag::from_str(&format!("{fresh}::extension::NsKey<{fresh}::character_link::ProgressionKey>"))
-            .unwrap();
+    let fresh_key = TypeTag::from_str(&format!(
+        "{fresh}::extension::NsKey<{fresh}::character_link::ProgressionKey>"
+    ))
+    .unwrap();
     let orphaned_key = TypeTag::from_str(&format!(
         "{orphaned}::extension::NsKey<{orphaned}::character_link::ProgressionKey>"
     ))
@@ -817,17 +904,26 @@ fn crushed_stores_coefficient_bracket_and_pressure() {
     assert_eq!(set_json(&writes, "$.snapshot"), Some("15000"));
     assert!(has_sadd(&writes, "rpc:idx:taux", &t));
     // the bracket's current monotone pressure is stored under its own key
-    assert!(writes.iter().any(|w| matches!(w, RedisWrite::Set { key, json, .. }
+    assert!(writes
+        .iter()
+        .any(|w| matches!(w, RedisWrite::Set { key, json, .. }
         if key == "rpc:taux:bracket:2" && json == "15000")));
 }
 
 #[test]
 fn recipeless_set_marks_the_row() {
     let gear = ObjectID::from_hex_literal("0x606d").unwrap();
-    let e = RecipelessSet { gear_template: gear, recipe_less: true };
+    let e = RecipelessSet {
+        gear_template: gear,
+        recipe_less: true,
+    };
     let writes = map_taux_event("RecipelessSet", &bcs::to_bytes(&e).unwrap()).unwrap();
     assert_eq!(set_json(&writes, "$.recipe_less"), Some("true"));
-    assert!(has_sadd(&writes, "rpc:idx:taux", &gear.to_canonical_string(true)));
+    assert!(has_sadd(
+        &writes,
+        "rpc:idx:taux",
+        &gear.to_canonical_string(true)
+    ));
 }
 
 #[test]
@@ -858,9 +954,15 @@ fn map_last_sale_writes_one_latest_wins_doc_with_string_price() {
 #[test]
 fn kiosk_purchase_per_unit_divides_a_stack_and_skips_the_extract_seam() {
     // A 5-unit stack sold for 10 SUI → 2 SUI per unit (floored).
-    assert_eq!(kiosk_purchase_per_unit(10_000_000_000, 5), Some(2_000_000_000));
+    assert_eq!(
+        kiosk_purchase_per_unit(10_000_000_000, 5),
+        Some(2_000_000_000)
+    );
     // A unique NFT: whole price per its single unit.
-    assert_eq!(kiosk_purchase_per_unit(7_000_000_000, 1), Some(7_000_000_000));
+    assert_eq!(
+        kiosk_purchase_per_unit(7_000_000_000, 1),
+        Some(7_000_000_000)
+    );
     // price == 0 is the EXTRACT SEAM's internal zero-price list+purchase (every equip / burn /
     // crush / merge) — stamping it would zero every touched template's last sale constantly.
     assert_eq!(kiosk_purchase_per_unit(0, 1), None);
@@ -881,13 +983,17 @@ fn item_template_object_enriches_the_encyclopedia_doc() {
         category: "sword".into(),
         level: 12,
     };
-    let writes = map_item_template_object(id, &bcs::to_bytes(&obj).unwrap()).expect("item template must decode");
+    let writes = map_item_template_object(id, &bcs::to_bytes(&obj).unwrap())
+        .expect("item template must decode");
 
     // Writes into the SAME rpc:template:{id} doc + rpc:idx:templates the event arm uses.
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
     assert_eq!(set_json(&writes, "$.item_type"), Some(r#""bronze_sword""#));
     assert_eq!(set_json(&writes, "$.name"), Some(r#""Bronze Sword""#));
-    assert_eq!(set_json(&writes, "$.description"), Some(r#""A sturdy blade.""#));
+    assert_eq!(
+        set_json(&writes, "$.description"),
+        Some(r#""A sturdy blade.""#)
+    );
     assert_eq!(set_json(&writes, "$.category"), Some(r#""sword""#));
     assert_eq!(set_json(&writes, "$.level"), Some("12"));
     assert!(has_sadd(&writes, "rpc:idx:templates", id));
@@ -924,7 +1030,10 @@ fn item_template_decodes_current_onchain_field_order() {
         .expect("current-layout ItemTemplate must decode");
     // Every field lands on its OWN key — not `description` bleeding into `item_type` (the drift symptom).
     assert_eq!(set_json(&writes, "$.name"), Some(r#""Bronze Sword""#));
-    assert_eq!(set_json(&writes, "$.description"), Some(r#""A sturdy blade.""#));
+    assert_eq!(
+        set_json(&writes, "$.description"),
+        Some(r#""A sturdy blade.""#)
+    );
     assert_eq!(set_json(&writes, "$.item_type"), Some(r#""bronze_sword""#));
     assert_eq!(set_json(&writes, "$.category"), Some(r#""sword""#));
     assert_eq!(set_json(&writes, "$.level"), Some("12"));
@@ -956,8 +1065,8 @@ fn item_stats_min_field_projects_the_named_block_onto_the_template_doc() {
         water_resistance: 32_768,
         air_resistance: 32_768,
     };
-    let writes =
-        map_item_stats_min_field(id, &bcs::to_bytes(&f).unwrap()).expect("item stats min DF must decode");
+    let writes = map_item_stats_min_field(id, &bcs::to_bytes(&f).unwrap())
+        .expect("item stats min DF must decode");
 
     // Self-sufficient: NX skeleton first (a stats DF can land before TemplateCreated/the object snapshot).
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
@@ -1000,12 +1109,14 @@ fn item_stats_max_field_projects_onto_the_sibling_stats_max_path() {
         water_resistance: 32_768,
         air_resistance: 32_768,
     };
-    let writes =
-        map_item_stats_max_field(id, &bcs::to_bytes(&f).unwrap()).expect("item stats max DF must decode");
+    let writes = map_item_stats_max_field(id, &bcs::to_bytes(&f).unwrap())
+        .expect("item stats max DF must decode");
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
     // Independent sub-path from the min half — no cross-DF read-modify-write.
     assert!(set_json(&writes, "$.stats_min").is_none());
-    assert!(set_json(&writes, "$.stats_max").unwrap().contains(r#""vitality":33000"#));
+    assert!(set_json(&writes, "$.stats_max")
+        .unwrap()
+        .contains(r#""vitality":33000"#));
     assert!(has_sadd(&writes, "rpc:idx:templates", id));
 }
 
@@ -1026,11 +1137,17 @@ const REAL_STATS_MIN_FIELD_BCS_HEX: &str = "0c42697752fcbc484f0de9bcfe8d7627e6d4
 fn item_stats_min_field_bcs_decodes_the_real_onchain_wire() {
     let bytes = hex::decode(REAL_STATS_MIN_FIELD_BCS_HEX).unwrap();
     assert_eq!(bytes.len(), 32 + 1 + 17 * 2); // 67 — id | dummy_field | 17 × u16
-    let decoded: ItemStatsField = bcs::from_bytes(&bytes).expect("real StatsMinKey DF bytes must decode");
+    let decoded: ItemStatsField =
+        bcs::from_bytes(&bytes).expect("real StatsMinKey DF bytes must decode");
     // Live values (SHIFT_U16 = 32768 centre): vitality/strength/air_resistance carry the authored
     // MIN bonus, every other field sits at the neutral centre.
     assert_eq!(
-        (decoded.vitality, decoded.strength, decoded.air_resistance, decoded.wisdom),
+        (
+            decoded.vitality,
+            decoded.strength,
+            decoded.air_resistance,
+            decoded.wisdom
+        ),
         (32_788, 32_785, 32_770, 32_768)
     );
 
@@ -1052,9 +1169,15 @@ const REAL_STATS_MAX_FIELD_BCS_HEX: &str = "f84bfef99eeb94c3c3aed833890ac5db6fb7
 fn item_stats_max_field_bcs_decodes_the_real_onchain_wire() {
     let bytes = hex::decode(REAL_STATS_MAX_FIELD_BCS_HEX).unwrap();
     assert_eq!(bytes.len(), 32 + 1 + 17 * 2);
-    let decoded: ItemStatsField = bcs::from_bytes(&bytes).expect("real StatsMaxKey DF bytes must decode");
+    let decoded: ItemStatsField =
+        bcs::from_bytes(&bytes).expect("real StatsMaxKey DF bytes must decode");
     assert_eq!(
-        (decoded.vitality, decoded.strength, decoded.critical, decoded.air_resistance),
+        (
+            decoded.vitality,
+            decoded.strength,
+            decoded.critical,
+            decoded.air_resistance
+        ),
         (32_868, 32_853, 32_772, 32_778)
     );
 
@@ -1116,15 +1239,32 @@ fn item_damages_field_projects_a_multi_element_line_array() {
         id: ObjectID::from_hex_literal("0xdf3").unwrap(),
         dummy_field: false,
         lines: vec![
-            ItemDamagesLine { from: 22, to: 39, damage_type: "weapon".into(), element: "earth".into() },
-            ItemDamagesLine { from: 19, to: 36, damage_type: "weapon".into(), element: "air".into() },
+            ItemDamagesLine {
+                from: 22,
+                to: 39,
+                damage_type: "weapon".into(),
+                element: "earth".into(),
+            },
+            ItemDamagesLine {
+                from: 19,
+                to: 36,
+                damage_type: "weapon".into(),
+                element: "air".into(),
+            },
         ],
     };
-    let writes = map_item_damages_field(id, &bcs::to_bytes(&f).unwrap()).expect("item damages DF must decode");
+    let writes = map_item_damages_field(id, &bcs::to_bytes(&f).unwrap())
+        .expect("item damages DF must decode");
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
     let damages = set_json(&writes, "$.damages").unwrap();
-    assert!(damages.contains(r#"{"element":"earth","from":22,"to":39,"damage_type":"weapon"}"#), "{damages}");
-    assert!(damages.contains(r#"{"element":"air","from":19,"to":36,"damage_type":"weapon"}"#), "{damages}");
+    assert!(
+        damages.contains(r#"{"element":"earth","from":22,"to":39,"damage_type":"weapon"}"#),
+        "{damages}"
+    );
+    assert!(
+        damages.contains(r#"{"element":"air","from":19,"to":36,"damage_type":"weapon"}"#),
+        "{damages}"
+    );
     assert!(has_sadd(&writes, "rpc:idx:templates", id));
 }
 
@@ -1140,16 +1280,37 @@ const REAL_LONGDRAW_DAMAGES_BCS_HEX: &str = "a6f55cd63c10abf995392f4f07f980a77d0
 #[test]
 fn real_testnet_longdraw_damages_bcs_decodes_the_real_onchain_wire() {
     let bytes = hex::decode(REAL_LONGDRAW_DAMAGES_BCS_HEX).unwrap();
-    let decoded: ItemDamagesField = bcs::from_bytes(&bytes).expect("real DamagesKey DF bytes must decode");
+    let decoded: ItemDamagesField =
+        bcs::from_bytes(&bytes).expect("real DamagesKey DF bytes must decode");
     assert_eq!(decoded.lines.len(), 2);
-    assert_eq!((decoded.lines[0].from, decoded.lines[0].to, decoded.lines[0].element.as_str()), (22, 39, "earth"));
-    assert_eq!((decoded.lines[1].from, decoded.lines[1].to, decoded.lines[1].element.as_str()), (19, 36, "air"));
+    assert_eq!(
+        (
+            decoded.lines[0].from,
+            decoded.lines[0].to,
+            decoded.lines[0].element.as_str()
+        ),
+        (22, 39, "earth")
+    );
+    assert_eq!(
+        (
+            decoded.lines[1].from,
+            decoded.lines[1].to,
+            decoded.lines[1].element.as_str()
+        ),
+        (19, 36, "air")
+    );
 
     let id = "0x76faa8b18c3aba367f51640fd676502d95a902a8bdcf53b8e4d4ca7cc7f7f49b";
     let writes = map_item_damages_field(id, &bytes).expect("must project");
     let damages = set_json(&writes, "$.damages").unwrap();
-    assert!(damages.contains(r#"{"element":"earth","from":22,"to":39,"damage_type":"weapon"}"#), "{damages}");
-    assert!(damages.contains(r#"{"element":"air","from":19,"to":36,"damage_type":"weapon"}"#), "{damages}");
+    assert!(
+        damages.contains(r#"{"element":"earth","from":22,"to":39,"damage_type":"weapon"}"#),
+        "{damages}"
+    );
+    assert!(
+        damages.contains(r#"{"element":"air","from":19,"to":36,"damage_type":"weapon"}"#),
+        "{damages}"
+    );
 }
 
 #[test]
@@ -1183,26 +1344,47 @@ fn item_object_snapshots_display_fields_and_kiosk_membership() {
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_item(id)));
     assert_eq!(set_json(&writes, "$.name"), Some(r#""Iron Sword""#));
     assert_eq!(set_json(&writes, "$.item_type"), Some(r#""sword_iron""#));
-    assert_eq!(set_json(&writes, "$.description"), Some(r#""Forged in the deep.""#));
+    assert_eq!(
+        set_json(&writes, "$.description"),
+        Some(r#""Forged in the deep.""#)
+    );
     assert_eq!(set_json(&writes, "$.category"), Some(r#""sword""#));
     assert_eq!(set_json(&writes, "$.amount"), Some("1"));
-    assert_eq!(set_json(&writes, "$.template"), Some(format!("\"{}\"", tpl.to_canonical_string(true)).as_str()));
-    assert_eq!(set_json(&writes, "$.kiosk_id"), Some(format!("\"{kiosk}\"").as_str()));
+    assert_eq!(
+        set_json(&writes, "$.template"),
+        Some(format!("\"{}\"", tpl.to_canonical_string(true)).as_str())
+    );
+    assert_eq!(
+        set_json(&writes, "$.kiosk_id"),
+        Some(format!("\"{kiosk}\"").as_str())
+    );
     // issue #524 server half: the object's OWN package id, so the frontend's dead-universe
     // lineage filter (`is_aresrpg_item`) can run on the PRIMARY `/v1/owner-items` path.
-    assert_eq!(set_json(&writes, "$.package"), Some(format!("\"{package}\"").as_str()));
-    assert!(has_sadd(&writes, &format!("rpc:idx:kiosk_items:{kiosk}"), id));
+    assert_eq!(
+        set_json(&writes, "$.package"),
+        Some(format!("\"{package}\"").as_str())
+    );
+    assert!(has_sadd(
+        &writes,
+        &format!("rpc:idx:kiosk_items:{kiosk}"),
+        id
+    ));
 
     // Unresolved kiosk → NO kiosk_id / kiosk_items write (never fabricate; the row waits for a
     // checkpoint where the wrapper is an output object — mint/place/trade always are).
     let no_kiosk = map_item_object(id, &bytes, None, package).unwrap();
-    assert!(no_kiosk.iter().all(|w| !matches!(w, RedisWrite::Set { path, .. } if path == "$.kiosk_id")));
     assert!(no_kiosk
         .iter()
-        .all(|w| !matches!(w, RedisWrite::SetAdd { key, .. } if key.starts_with("rpc:idx:kiosk_items:"))));
+        .all(|w| !matches!(w, RedisWrite::Set { path, .. } if path == "$.kiosk_id")));
+    assert!(no_kiosk.iter().all(
+        |w| !matches!(w, RedisWrite::SetAdd { key, .. } if key.starts_with("rpc:idx:kiosk_items:"))
+    ));
     // `package` is written regardless of kiosk resolution — it comes off the object's own type,
     // not the kiosk join.
-    assert_eq!(set_json(&no_kiosk, "$.package"), Some(format!("\"{package}\"").as_str()));
+    assert_eq!(
+        set_json(&no_kiosk, "$.package"),
+        Some(format!("\"{package}\"").as_str())
+    );
 }
 
 #[test]
@@ -1240,7 +1422,10 @@ fn item_object_decodes_current_onchain_field_order() {
         .expect("current-layout Item must decode");
     assert_eq!(set_json(&writes, "$.name"), Some(r#""Iron Sword""#));
     assert_eq!(set_json(&writes, "$.item_type"), Some(r#""sword_iron""#));
-    assert_eq!(set_json(&writes, "$.description"), Some(r#""Forged in the deep.""#));
+    assert_eq!(
+        set_json(&writes, "$.description"),
+        Some(r#""Forged in the deep.""#)
+    );
     assert_eq!(set_json(&writes, "$.category"), Some(r#""sword""#));
     assert_eq!(set_json(&writes, "$.amount"), Some("1"));
 }
@@ -1260,20 +1445,33 @@ fn real_testnet_personal_kiosk_cap_projects_owner_edge() {
     let cap_id = "0x13c0a3ced5a7553414a9d6e9924d0f0ddc41e6cf158f068a200dfd860e4beb29";
     let kiosk = "0xc773a959874101ad19de80a6addd29b7a51ba9cd391179d8fd8034e5c7f27204";
     let owner = SuiAddress::from_bytes([0x3d; 32]).unwrap(); // the edge keys by the AddressOwner
-    let writes = map_personal_kiosk_cap(cap_id, &bytes, &Owner::AddressOwner(owner)).expect("real cap must decode");
+    let writes = map_personal_kiosk_cap(cap_id, &bytes, &Owner::AddressOwner(owner))
+        .expect("real cap must decode");
 
     // owner → kiosk membership + the per-kiosk doc carrying the cap id (client's kiosk_cap_id).
-    assert!(has_sadd(&writes, &format!("rpc:idx:owner_kiosks:{owner}"), kiosk));
+    assert!(has_sadd(
+        &writes,
+        &format!("rpc:idx:owner_kiosks:{owner}"),
+        kiosk
+    ));
     let doc = set_json(&writes, "$").expect("cap writes the kiosk doc");
-    assert!(doc.contains(&format!(r#""kiosk_id":"{kiosk}""#)), "doc: {doc}");
-    assert!(doc.contains(&format!(r#""cap_id":"{cap_id}""#)), "doc: {doc}");
+    assert!(
+        doc.contains(&format!(r#""kiosk_id":"{kiosk}""#)),
+        "doc: {doc}"
+    );
+    assert!(
+        doc.contains(&format!(r#""cap_id":"{cap_id}""#)),
+        "doc: {doc}"
+    );
     // The kiosk doc is CREATE-ONCE (nx) — the immutable-edge invariant that makes a forged
     // look-alike cap unable to overwrite a victim's cap_id (the real cap wins the NX at creation).
     assert!(writes
         .iter()
         .any(|w| matches!(w, RedisWrite::Set { key, nx: true, .. } if key == &format!("rpc:kiosk:{kiosk}"))));
     // No relative counters on the ownership edge (replay-safe like every other write here).
-    assert!(writes.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(writes
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 #[test]
@@ -1283,7 +1481,9 @@ fn personal_kiosk_cap_non_address_owner_or_garbage_is_none() {
     // Soulbound by construction — a non-address owner is pathological → not projected.
     assert!(map_personal_kiosk_cap("0xdead", &bytes, &Owner::ObjectOwner(wrapper)).is_none());
     // Garbage bytes → safe None (never panics the batch).
-    assert!(map_personal_kiosk_cap("0xdead", &[0x00, 0x01], &Owner::AddressOwner(wrapper)).is_none());
+    assert!(
+        map_personal_kiosk_cap("0xdead", &[0x00, 0x01], &Owner::AddressOwner(wrapper)).is_none()
+    );
 }
 
 // ── MobTemplate prefix snapshot (§14 bestiary name/level-range/hp/element) ────
@@ -1292,7 +1492,14 @@ fn personal_kiosk_cap_non_address_owner_or_garbage_is_none() {
 /// (`id | name | min_level | max_level | base_hp | ap | mp | element`) followed by
 /// arbitrary TRAILING bytes standing in for the real `stats`/`spells`/`loot`/`xp` —
 /// proving the prefix parser reads the head and TOLERATES the (undecoded) tail.
-fn mob_template_bytes(name: &str, min: u16, max: u16, hp: u64, element: u8, trailing: &[u8]) -> Vec<u8> {
+fn mob_template_bytes(
+    name: &str,
+    min: u16,
+    max: u16,
+    hp: u64,
+    element: u8,
+    trailing: &[u8],
+) -> Vec<u8> {
     let mut b = vec![0xabu8; 32]; // UID (bare 32-byte ObjectID)
     b.push(name.len() as u8); // ULEB128 length (single byte for a short name)
     b.extend_from_slice(name.as_bytes());
@@ -1317,7 +1524,10 @@ fn synthetic_mob_canonical_manifest() -> String {
         ("velvet_slime", "Velvet Slime", "0xb3"),
     ]
     .map(|(key, name, short)| {
-        format!(r#"  {{"key":"{key}","name":"{name}","id":"{}"}}"#, synthetic_object_id(short))
+        format!(
+            r#"  {{"key":"{key}","name":"{name}","id":"{}"}}"#,
+            synthetic_object_id(short)
+        )
     })
     .join(",\n");
     format!("[\n{rows}\n]")
@@ -1340,8 +1550,8 @@ fn mob_canonical_allowlist_filters_a_projection_walk_and_unset_warns_fail_open()
     }
 
     let manifest = synthetic_mob_canonical_manifest();
-    let canonical =
-        parse_mob_canonical_ids(manifest.as_bytes()).expect("synthetic custody-manifest shape must parse");
+    let canonical = parse_mob_canonical_ids(manifest.as_bytes())
+        .expect("synthetic custody-manifest shape must parse");
     assert_eq!(canonical.len(), 3);
 
     let included_id = synthetic_object_id("0xb1");
@@ -1454,24 +1664,37 @@ fn mob_canonical_allowlist_filters_a_projection_walk_and_unset_warns_fail_open()
 #[test]
 fn a_mob_minted_after_the_census_still_projects() {
     let manifest = synthetic_mob_canonical_manifest();
-    let census =
-        parse_mob_canonical_ids(manifest.as_bytes()).expect("synthetic custody-manifest shape must parse");
+    let census = parse_mob_canonical_ids(manifest.as_bytes())
+        .expect("synthetic custody-manifest shape must parse");
     let handler = AresSnapshotHandler::from_parts(None, Some(census));
 
     // A mob minted AFTER the census was written: an id no row can carry, and a display name no row
     // ever adjudicated. Nothing about it is contested — it must reach the bestiary.
     let fresh_id = synthetic_object_id("0xf5e5");
-    let fresh_bytes = mob_template_bytes("Voltstripe the Stormfang", 40, 40, 4200, 3 /* AIR */, &[]);
-    let writes = match handler.project_mob_template(&fresh_id, &fresh_bytes, NARROW_EFFECT_ARESRPG_ORIGIN) {
-        MobTemplateProjection::Writes(writes) => writes,
-        MobTemplateProjection::SkippedNonCanonical => {
-            panic!("a mob the census never adjudicated must not be refused as a superseded twin")
-        }
-        MobTemplateProjection::Malformed => panic!("fresh mob prefix must parse"),
-    };
+    let fresh_bytes = mob_template_bytes(
+        "Voltstripe the Stormfang",
+        40,
+        40,
+        4200,
+        3, /* AIR */
+        &[],
+    );
+    let writes =
+        match handler.project_mob_template(&fresh_id, &fresh_bytes, NARROW_EFFECT_ARESRPG_ORIGIN) {
+            MobTemplateProjection::Writes(writes) => writes,
+            MobTemplateProjection::SkippedNonCanonical => {
+                panic!(
+                    "a mob the census never adjudicated must not be refused as a superseded twin"
+                )
+            }
+            MobTemplateProjection::Malformed => panic!("fresh mob prefix must parse"),
+        };
     assert!(has_sadd(&writes, K_MOB_TEMPLATES, &fresh_id));
     let doc = set_json(&writes, "$").expect("fresh mob writes its whole doc");
-    assert!(doc.contains(r#""name":"Voltstripe the Stormfang""#), "doc: {doc}");
+    assert!(
+        doc.contains(r#""name":"Voltstripe the Stormfang""#),
+        "doc: {doc}"
+    );
 
     // The tooth the census exists for is UNCHANGED: an unlisted id whose display name the census
     // awards to another id is the superseded twin, still refused.
@@ -1541,12 +1764,16 @@ fn real_testnet_mob_template_decodes_prefix_and_loot() {
     // Loot: longsword @ 5000 bp (qty 1) + iron_ore @ 8000 bp (qty 1-3), decoded past the
     // 176-byte Stats + the SpellLevel kit — the exact on-chain seed content.
     assert!(
-        doc.contains(r#""template_id":"0xf541309de2496c93c01b98f55cc279550298d5c15e2d98ecfaadb5d8fa3ce3ed""#),
+        doc.contains(
+            r#""template_id":"0xf541309de2496c93c01b98f55cc279550298d5c15e2d98ecfaadb5d8fa3ce3ed""#
+        ),
         "doc: {doc}"
     );
     assert!(doc.contains(r#""chance_bp":5000"#), "doc: {doc}");
     assert!(
-        doc.contains(r#""template_id":"0xd41443bae6f0d4fc90cbe3d1ce35499ab4ea03bdf6d1a87e7455ced7b46cb27f""#),
+        doc.contains(
+            r#""template_id":"0xd41443bae6f0d4fc90cbe3d1ce35499ab4ea03bdf6d1a87e7455ced7b46cb27f""#
+        ),
         "doc: {doc}"
     );
     assert!(doc.contains(r#""chance_bp":8000"#), "doc: {doc}");
@@ -1588,7 +1815,9 @@ fn real_testnet_boar_mob_projects_nonzero_resistances() {
 
     // The loot table still decodes past the resistance read (5 real drop rows on this mob).
     assert!(
-        doc.contains(r#""template_id":"0xaa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf""#),
+        doc.contains(
+            r#""template_id":"0xaa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf""#
+        ),
         "doc: {doc}"
     );
     assert!(doc.contains(r#""chance_bp":5740"#), "doc: {doc}");
@@ -1641,13 +1870,20 @@ fn effect_byte_width_resolves_registered_origins_and_refuses_the_rest() {
 /// sibling package would break the image build.
 #[test]
 fn release_origins_are_all_registered() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../sdk/src/deployment/release.json");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../sdk/src/deployment/release.json"
+    );
     let raw = std::fs::read_to_string(path).expect("release.json is the ceremony's own output");
     let release: serde_json::Value = serde_json::from_str(&raw).expect("release.json parses");
-    let networks = release["networks"].as_object().expect("release.json has networks");
+    let networks = release["networks"]
+        .as_object()
+        .expect("release.json has networks");
     let mut checked = 0;
     for (network, row) in networks {
-        let origin = row["packages"]["aresrpg"]["origin"].as_str().unwrap_or_default();
+        let origin = row["packages"]["aresrpg"]["origin"]
+            .as_str()
+            .unwrap_or_default();
         if origin.is_empty() {
             continue; // an unpublished network (mainnet today) pins nothing yet
         }
@@ -1658,7 +1894,10 @@ fn release_origins_are_all_registered() {
         );
         checked += 1;
     }
-    assert!(checked > 0, "no published aresrpg origin found in release.json — the gate must not vacuously pass");
+    assert!(
+        checked > 0,
+        "no published aresrpg origin found in release.json — the gate must not vacuously pass"
+    );
 }
 
 /// Build a `spells: vector<SpellLevel>` (ONE level, ONE `effects` entry sized `effect_bytes`,
@@ -1692,12 +1931,16 @@ fn fresh_origin_mob_decodes_resistances_and_loot_past_the_widened_effect() {
     let bytes = mob_template_bytes("Glowmoth", 20, 30, 200, 3 /* AIR */, &trailing);
     let id = "0x0000000000000000000000000000000000000000000000000000000000fee5";
 
-    let writes = map_mob_template_object(id, &bytes, FRESH_ARESRPG_ORIGIN).expect("fresh-shape mob must parse");
+    let writes = map_mob_template_object(id, &bytes, FRESH_ARESRPG_ORIGIN)
+        .expect("fresh-shape mob must parse");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
     assert!(doc.contains(r#""name":"Glowmoth""#), "doc: {doc}");
     assert!(doc.contains(r#""fire_resistance":32808"#), "doc: {doc}");
     // The tell: loot only decodes correctly if the 33-byte Effect was skipped, not 25.
-    assert!(doc.contains(&format!(r#""template_id":"0x{loot_template}""#)), "doc: {doc}");
+    assert!(
+        doc.contains(&format!(r#""template_id":"0x{loot_template}""#)),
+        "doc: {doc}"
+    );
     assert!(doc.contains(r#""chance_bp":5000"#), "doc: {doc}");
     assert!(doc.contains(r#""min_qty":1"#), "doc: {doc}");
     assert!(doc.contains(r#""max_qty":2"#), "doc: {doc}");
@@ -1714,10 +1957,13 @@ fn old_origin_mob_using_the_25_byte_effect_still_decodes_loot() {
     let bytes = mob_template_bytes("Glowmoth Elder", 20, 30, 200, 3, &trailing);
     let id = "0x0000000000000000000000000000000000000000000000000000000000fee6";
 
-    let writes =
-        map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN).expect("old-shape mob must parse");
+    let writes = map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN)
+        .expect("old-shape mob must parse");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
-    assert!(doc.contains(&format!(r#""template_id":"0x{loot_template}""#)), "doc: {doc}");
+    assert!(
+        doc.contains(&format!(r#""template_id":"0x{loot_template}""#)),
+        "doc: {doc}"
+    );
     assert!(doc.contains(r#""chance_bp":5000"#), "doc: {doc}");
 }
 
@@ -1761,8 +2007,8 @@ fn fresh_origin_bytes_decoded_with_the_wrong_old_width_misaligns_loot() {
     // Wrong origin ⇒ wrong (old, 25B) width chosen for genuinely fresh (33B) bytes. The origin must
     // be a REGISTERED narrow one: an unregistered origin refuses the walk outright (the sibling
     // fail-closed test), which would prove the guard, not the misalignment this control is about.
-    let writes =
-        map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN).expect("prefix still parses");
+    let writes = map_mob_template_object(id, &bytes, NARROW_EFFECT_ARESRPG_ORIGIN)
+        .expect("prefix still parses");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
     assert!(
         !doc.contains(&format!(r#""template_id":"0x{loot_template}""#)),
@@ -1809,7 +2055,8 @@ fn world_object_snapshots_the_live_required_level() {
 fn world_create_default_level_snapshots_as_one() {
     // A just-created world (create_world default) must project 1 — same value the API fallback
     // serves, so the doc converges instead of flapping between absent and present.
-    let writes = map_world_object("0x1f", &world_bytes(1, "testlands", 1, &[])).expect("world bytes must decode");
+    let writes = map_world_object("0x1f", &world_bytes(1, "testlands", 1, &[]))
+        .expect("world bytes must decode");
     let doc = set_json(&writes, "$").expect("world writes its whole doc");
     assert!(doc.contains(r#""required_level":1"#), "doc: {doc}");
 }
@@ -1927,7 +2174,11 @@ fn world_inner_field_bytes(version: u64, seed: u64, biome: &str, required_level:
 fn wrapped_world_shell_never_projects_through_the_legacy_reader() {
     let id = synthetic_object_id("0xe05");
     let bytes = wrapped_world_shell_bytes(0x0e, &legacy_readable_versioned_uid(), 1);
-    assert_eq!(bytes.len(), 72, "the wrapped shell is exactly UID | Versioned{{UID,u64}}");
+    assert_eq!(
+        bytes.len(),
+        72,
+        "the wrapped shell is exactly UID | Versioned{{UID,u64}}"
+    );
     assert!(
         map_world_object(&id, &bytes).is_none(),
         "a wrapped shell must project NOTHING — its state lives in the Field<u64, WorldInner>"
@@ -1954,7 +2205,8 @@ fn wrapped_world_payload_projects_the_live_join_gate() {
 #[test]
 fn wrapped_and_legacy_worlds_project_the_same_doc() {
     let id = synthetic_object_id("0xe07");
-    let legacy = map_world_object(&id, &world_bytes(777, "archipelago", 34, &[])).expect("legacy decodes");
+    let legacy =
+        map_world_object(&id, &world_bytes(777, "archipelago", 34, &[])).expect("legacy decodes");
     let wrapped = map_world_inner_field(&id, &world_inner_field_bytes(1, 777, "archipelago", 34))
         .expect("wrapped decodes");
     assert_eq!(legacy, wrapped);
@@ -1966,7 +2218,9 @@ fn wrapped_and_legacy_worlds_project_the_same_doc() {
 #[test]
 fn wrapped_world_payload_of_an_unspoken_version_is_dropped() {
     let id = synthetic_object_id("0xe08");
-    assert!(map_world_inner_field(&id, &world_inner_field_bytes(2, 777, "archipelago", 34)).is_none());
+    assert!(
+        map_world_inner_field(&id, &world_inner_field_bytes(2, 777, "archipelago", 34)).is_none()
+    );
     assert!(map_world_inner_field(&id, &[0u8; 20]).is_none()); // truncated — dropped, never panicked
 }
 
@@ -1975,11 +2229,17 @@ fn wrapped_world_payload_of_an_unspoken_version_is_dropped() {
 #[test]
 fn world_shape_discriminator_separates_wrapped_from_legacy() {
     let real_legacy = hex::decode(REAL_WORLD_BCS_PREFIX_HEX).unwrap();
-    assert!(world_shell(&real_legacy).is_none(), "a real live World is NOT a wrapped shell");
+    assert!(
+        world_shell(&real_legacy).is_none(),
+        "a real live World is NOT a wrapped shell"
+    );
     assert!(world_shell(&world_bytes(1, "testlands", 1, &[])).is_none());
     let shell = wrapped_world_shell_bytes(0x0e, &legacy_readable_versioned_uid(), 1);
     let decoded = world_shell(&shell).expect("the wrapped shell decodes");
-    assert_eq!(decoded.inner.id, ObjectID::from_bytes(legacy_readable_versioned_uid()).unwrap());
+    assert_eq!(
+        decoded.inner.id,
+        ObjectID::from_bytes(legacy_readable_versioned_uid()).unwrap()
+    );
     // Trailing input is REFUSED — that strictness is what makes the two shapes unconfusable.
     let mut with_tail = shell.clone();
     with_tail.push(0);
@@ -2002,7 +2262,9 @@ fn world_inner_field_is_matched_by_the_u64_key_and_the_value_origin() {
     assert!(is_versioned_payload_key(&TypeTag::U64));
     assert!(!is_versioned_payload_key(&fresh_value));
     assert!(is_world_inner_value(&fresh_value));
-    assert!(!is_world_inner_value(&TypeTag::from_str(&format!("{fresh}::world::World")).unwrap()));
+    assert!(!is_world_inner_value(
+        &TypeTag::from_str(&format!("{fresh}::world::World")).unwrap()
+    ));
 
     // The exact dispatch condition `process` runs for this arm.
     assert!(is_world_inner_value(&fresh_value) && handler.origin_admitted(&fresh_value));
@@ -2039,11 +2301,15 @@ fn real_localnet_recipe_snapshots_the_full_crafting_truth() {
     assert!(doc.contains(r#""craft_xp":23"#), "doc: {doc}");
     // Both ingredient rows, template id + quantity each.
     assert!(
-        doc.contains(r#""template_id":"0x79623d667a08a16a29e09295872b36e5fa035403bc11ca32798179c54b410148""#),
+        doc.contains(
+            r#""template_id":"0x79623d667a08a16a29e09295872b36e5fa035403bc11ca32798179c54b410148""#
+        ),
         "doc: {doc}"
     );
     assert!(
-        doc.contains(r#""template_id":"0xb04ef0ae8602d22b8f0b67fb4f75b5e54c5f0ab47997d6487fc12d164304461d""#),
+        doc.contains(
+            r#""template_id":"0xb04ef0ae8602d22b8f0b67fb4f75b5e54c5f0ab47997d6487fc12d164304461d""#
+        ),
         "doc: {doc}"
     );
     assert!(doc.contains(r#""quantity":1"#), "doc: {doc}");
@@ -2056,8 +2322,14 @@ fn recipe_round_trips_multi_ingredient_quantities_exactly() {
     let obj = RecipeObject {
         id: ObjectID::from_hex_literal("0x1c1").unwrap(),
         inputs: vec![
-            RecipeIngredient { template: ObjectID::from_hex_literal("0xaa01").unwrap(), quantity: 3 },
-            RecipeIngredient { template: ObjectID::from_hex_literal("0xbb02").unwrap(), quantity: 12 },
+            RecipeIngredient {
+                template: ObjectID::from_hex_literal("0xaa01").unwrap(),
+                quantity: 3,
+            },
+            RecipeIngredient {
+                template: ObjectID::from_hex_literal("0xbb02").unwrap(),
+                quantity: 12,
+            },
         ],
         output_template: ObjectID::from_hex_literal("0xcc03").unwrap(),
         output_quantity: 5,
@@ -2065,7 +2337,8 @@ fn recipe_round_trips_multi_ingredient_quantities_exactly() {
         required_level: 25,
         craft_xp: 480,
     };
-    let writes = map_recipe_object("0x1c1", &bcs::to_bytes(&obj).unwrap()).expect("round-trip must decode");
+    let writes =
+        map_recipe_object("0x1c1", &bcs::to_bytes(&obj).unwrap()).expect("round-trip must decode");
     let doc = set_json(&writes, "$").expect("recipe writes its whole doc");
     assert!(doc.contains(r#""quantity":3"#), "doc: {doc}");
     assert!(doc.contains(r#""quantity":12"#), "doc: {doc}");
@@ -2094,7 +2367,10 @@ fn resolve_kiosk_two_hops_object_owner_to_kiosk() {
     let kiosk = SuiAddress::from_bytes([0x6b; 32]).unwrap();
     let mut map = HashMap::new();
     map.insert(wrapper, kiosk);
-    assert_eq!(resolve_kiosk(&Owner::ObjectOwner(wrapper), &map), Some(ObjectID::from(kiosk).to_canonical_string(true)));
+    assert_eq!(
+        resolve_kiosk(&Owner::ObjectOwner(wrapper), &map),
+        Some(ObjectID::from(kiosk).to_canonical_string(true))
+    );
     // Address-owned (not kiosk-locked) → None.
     assert_eq!(resolve_kiosk(&Owner::AddressOwner(wrapper), &map), None);
     // Object-owned but the wrapper is not in this checkpoint's map → None (never fabricate).
@@ -2109,21 +2385,35 @@ fn character_snapshot_writes_kiosk_id_only_when_resolved() {
         name: "Aiden".into(),
         class: "sram".into(),
         male: true,
-        customization: Customization { color_1: 1, color_2: 2, color_3: 3 },
+        customization: Customization {
+            color_1: 1,
+            color_2: 2,
+            color_3: 3,
+        },
         experience: 0,
         created_at_ms: 42,
-        anchor: PositionAnchor { pos_x: 0, pos_z: 0, zone: String::new(), anchored_at_ms: 0 },
+        anchor: PositionAnchor {
+            pos_x: 0,
+            pos_z: 0,
+            zone: String::new(),
+            anchored_at_ms: 0,
+        },
     };
     let bytes = bcs::to_bytes(&obj).unwrap();
     let kiosk = "0x6b1ff2a365e231af5c80ca741c8739d47a757489d375bdf87f9297633555eb62";
 
     // Resolved → the character doc carries `$.kiosk_id` (what the roster serves).
     let with_kiosk = map_character_object("0xabc", &bytes, Some(kiosk)).unwrap();
-    assert_eq!(set_json(&with_kiosk, "$.kiosk_id"), Some(format!("\"{kiosk}\"").as_str()));
+    assert_eq!(
+        set_json(&with_kiosk, "$.kiosk_id"),
+        Some(format!("\"{kiosk}\"").as_str())
+    );
 
     // Unresolved → NO kiosk_id write (additive/back-compat; the view renders null).
     let without = map_character_object("0xabc", &bytes, None).unwrap();
-    assert!(without.iter().all(|w| !matches!(w, RedisWrite::Set { path, .. } if path == "$.kiosk_id")));
+    assert!(without
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::Set { path, .. } if path == "$.kiosk_id")));
 }
 
 // ── Pending FightOutcomes (create/delete → per-owner set + per-outcome doc) ───
@@ -2140,26 +2430,53 @@ fn real_testnet_fight_outcome_projects_pending_row() {
     let bytes = hex::decode(REAL_FIGHT_OUTCOME_BCS_HEX).unwrap();
     let id = "0x4fd5a7a1433e994bf6c563ef8115204fa875deaa15c115b3a20a83651238b079";
     let owner = SuiAddress::from_bytes([0x3d; 32]).unwrap();
-    let writes = map_fight_outcome_object(id, &bytes, &Owner::AddressOwner(owner), 1_700_000_000_000)
-        .expect("real fight outcome bytes must decode");
+    let writes =
+        map_fight_outcome_object(id, &bytes, &Owner::AddressOwner(owner), 1_700_000_000_000)
+            .expect("real fight outcome bytes must decode");
 
     // The per-outcome doc carries EXACTLY the frozen view fields (0x5972… character,
     // 0xbfc5… fight, 0x0d93… world, outcome 3 = defeat, aged_bp 400, pvp false).
     let doc = set_json(&writes, "$").expect("outcome writes its doc");
-    assert!(doc.contains(r#""outcome_id":"0x4fd5a7a1433e994bf6c563ef8115204fa875deaa15c115b3a20a83651238b079""#), "doc: {doc}");
-    assert!(doc.contains(r#""character_id":"0x59725530910de90712e39d8e279e6522f4da1b50de9f4ced936749ede17fae75""#), "doc: {doc}");
-    assert!(doc.contains(r#""fight_id":"0xbfc5222665988a711622543d2f221512ee8267dad5b4bb53735b0b1e3281596e""#), "doc: {doc}");
-    assert!(doc.contains(r#""world_id":"0x0d936039531aa9c68da6fba56564d7f8adb02c26c1691c59d4efa7375164e4d1""#), "doc: {doc}");
+    assert!(
+        doc.contains(
+            r#""outcome_id":"0x4fd5a7a1433e994bf6c563ef8115204fa875deaa15c115b3a20a83651238b079""#
+        ),
+        "doc: {doc}"
+    );
+    assert!(
+        doc.contains(
+            r#""character_id":"0x59725530910de90712e39d8e279e6522f4da1b50de9f4ced936749ede17fae75""#
+        ),
+        "doc: {doc}"
+    );
+    assert!(
+        doc.contains(
+            r#""fight_id":"0xbfc5222665988a711622543d2f221512ee8267dad5b4bb53735b0b1e3281596e""#
+        ),
+        "doc: {doc}"
+    );
+    assert!(
+        doc.contains(
+            r#""world_id":"0x0d936039531aa9c68da6fba56564d7f8adb02c26c1691c59d4efa7375164e4d1""#
+        ),
+        "doc: {doc}"
+    );
     assert!(doc.contains(r#""pvp":false"#), "doc: {doc}");
     assert!(doc.contains(r#""outcome":3"#), "doc: {doc}");
     assert!(doc.contains(r#""aged_bp":400"#), "doc: {doc}");
 
     // Owner index: ZADD (member = outcome id, score = checkpoint ts) + a recency cap.
     let idx = k_pending_outcomes(&owner.to_string());
-    assert!(writes.iter().any(|w| matches!(w, RedisWrite::ZAdd { key, member, .. } if key == &idx && member == id)));
-    assert!(writes.iter().any(|w| matches!(w, RedisWrite::ZRemRangeByRank { key, .. } if key == &idx)));
+    assert!(writes
+        .iter()
+        .any(|w| matches!(w, RedisWrite::ZAdd { key, member, .. } if key == &idx && member == id)));
+    assert!(writes
+        .iter()
+        .any(|w| matches!(w, RedisWrite::ZRemRangeByRank { key, .. } if key == &idx)));
     // Money-safe: the pending path carries NO relative counter (replay double-count guard).
-    assert!(writes.iter().all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
+    assert!(writes
+        .iter()
+        .all(|w| !matches!(w, RedisWrite::NumIncrBy { .. })));
 }
 
 #[test]
@@ -2169,7 +2486,10 @@ fn fight_outcome_non_address_owner_is_none() {
     let bytes = hex::decode(REAL_FIGHT_OUTCOME_BCS_HEX).unwrap();
     let wrapper = SuiAddress::from_bytes([0xbb; 32]).unwrap();
     assert!(map_fight_outcome_object("0xdead", &bytes, &Owner::ObjectOwner(wrapper), 0).is_none());
-    assert!(map_fight_outcome_object("0xdead", &[0x00, 0x01], &Owner::AddressOwner(wrapper), 0).is_none());
+    assert!(
+        map_fight_outcome_object("0xdead", &[0x00, 0x01], &Owner::AddressOwner(wrapper), 0)
+            .is_none()
+    );
 }
 
 #[test]
@@ -2181,7 +2501,10 @@ fn remove_pending_outcome_drops_index_member_and_doc() {
     let writes = remove_pending_outcome(id, &owner);
     assert_eq!(
         writes,
-        vec![zrem(k_pending_outcomes(&owner), id.to_string()), del(k_pending_outcome(id), "$")]
+        vec![
+            zrem(k_pending_outcomes(&owner), id.to_string()),
+            del(k_pending_outcome(id), "$")
+        ]
     );
 }
 
@@ -2234,8 +2557,12 @@ fn pet_box_claim_decodes_current_onchain_field_order() {
         box_template: ObjectID::from_hex_literal("0xb002").unwrap(),
         rolled_template: rolled,
     };
-    let writes = map_pet_box_claim_object(claim_id, &bcs::to_bytes(&chain).unwrap(), &Owner::AddressOwner(owner))
-        .expect("current-layout PetBoxClaim must decode");
+    let writes = map_pet_box_claim_object(
+        claim_id,
+        &bcs::to_bytes(&chain).unwrap(),
+        &Owner::AddressOwner(owner),
+    )
+    .expect("current-layout PetBoxClaim must decode");
     assert_eq!(
         set_json(&writes, &format!(r#"$.claims["{claim_id}"]"#)),
         Some(format!("\"{}\"", rolled.to_canonical_string(true))).as_deref()
@@ -2256,7 +2583,9 @@ fn pet_box_claim_non_address_owner_or_garbage_is_none() {
     // Soulbound by construction — a non-address owner is pathological → not projected.
     assert!(map_pet_box_claim_object("0xabc", &bytes, &Owner::ObjectOwner(wrapper)).is_none());
     // Garbage bytes → safe None (never panics the batch).
-    assert!(map_pet_box_claim_object("0xabc", &[0x00, 0x01], &Owner::AddressOwner(owner)).is_none());
+    assert!(
+        map_pet_box_claim_object("0xabc", &[0x00, 0x01], &Owner::AddressOwner(owner)).is_none()
+    );
 }
 
 #[test]
@@ -2266,5 +2595,8 @@ fn remove_pet_box_claim_drops_the_claims_map_entry() {
     let owner = SuiAddress::from_bytes([0x3d; 32]).unwrap().to_string();
     let claim_id = "0x000000000000000000000000000000000000000000000000000000000000ab0a";
     let writes = remove_pet_box_claim(claim_id, &owner);
-    assert_eq!(writes, vec![del(k_pet_claims(&owner), &mpath("$.claims", claim_id))]);
+    assert_eq!(
+        writes,
+        vec![del(k_pet_claims(&owner), &mpath("$.claims", claim_id))]
+    );
 }

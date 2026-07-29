@@ -83,7 +83,9 @@ pub(super) fn report_parse_failure(domain: &str, name: &str, wire_bytes: usize, 
 fn report(domain: &str, name: &str, wire_bytes: usize, error_chain: &dyn std::fmt::Display) {
     let culprit = format!("{domain}::{name}");
     let occurrences = {
-        let mut counts = FAILURES.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut counts = FAILURES
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let slot = counts.entry(culprit.clone()).or_insert(0);
         *slot += 1;
         *slot
@@ -124,17 +126,26 @@ mod tests {
         assert!(decoded.is_none(), "trailing input must never decode");
         // …and it was COUNTED, not swallowed: the whole point of #1579.
         let counted = |name: &str| {
-            let counts = FAILURES.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let counts = FAILURES
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             counts.get(&format!("test::{name}")).copied().unwrap_or(0)
         };
         assert_eq!(counted("NarrowMirror"), 1);
         let _: Option<(u64, u64)> = decode_bcs("test", "NarrowMirror", &wire);
-        assert_eq!(counted("NarrowMirror"), 2, "every occurrence counts, even when not logged");
+        assert_eq!(
+            counted("NarrowMirror"),
+            2,
+            "every occurrence counts, even when not logged"
+        );
     }
 
     #[test]
     fn a_matching_mirror_decodes() {
         let wire = bcs::to_bytes(&(7_u64, 9_u64)).unwrap();
-        assert_eq!(decode_bcs::<(u64, u64)>("test", "ExactMirror", &wire), Some((7, 9)));
+        assert_eq!(
+            decode_bcs::<(u64, u64)>("test", "ExactMirror", &wire),
+            Some((7, 9))
+        );
     }
 }

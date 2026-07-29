@@ -291,6 +291,41 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           ) || true
 
+  tests-indexer:
+    name: tests (indexer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: install Rust toolchain
+        # Pin the compiler used to validate the standalone indexer crate; rustup verifies the
+        # toolchain artifacts and the version assertion makes accidental runner drift loud.
+        env:
+          RUST_TOOLCHAIN: 1.91.1
+          RUSTC_VERSION: rustc 1.91.1 (ed61e7d7e 2025-11-07)
+        run: |
+          set -euo pipefail
+          rustup toolchain install "$RUST_TOOLCHAIN" \
+            --profile minimal \
+            --component clippy,rustfmt \
+            --no-self-update
+          rustup default "$RUST_TOOLCHAIN"
+          installed=$(rustc --version)
+          if [ "$installed" != "$RUSTC_VERSION" ]; then
+            echo "rustc version drift: expected '${RUSTC_VERSION}', got '${installed}'" >&2
+            exit 1
+          fi
+          echo "$installed"
+      - name: cargo fmt --check
+        working-directory: packages/rpc/indexer
+        run: cargo fmt --check
+      - name: cargo clippy
+        working-directory: packages/rpc/indexer
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: cargo test
+        working-directory: packages/rpc/indexer
+        run: cargo test
+
   live-canary:
     # THE LIVE READS' NEW HOME (#996) — the two frontend rows the `tests` job above now skips
     # (src/chain/read_templates.test.js, src/chain/live_reads.test.js) run here against live Sui

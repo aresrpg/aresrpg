@@ -686,7 +686,10 @@ where
     }
 }
 
-async fn subscribe_courier(client: &redis::Client, world: &str) -> Result<impl Stream<Item = String>> {
+async fn subscribe_courier(
+    client: &redis::Client,
+    world: &str,
+) -> Result<impl Stream<Item = String>> {
     let mut pubsub = client
         .get_async_pubsub()
         .await
@@ -857,9 +860,11 @@ mod tests {
     async fn published_courier_rows_reach_a_subscribed_connection() {
         let world = fixture_id("aa");
         let character = fixture_id("1");
-        let pose =
-            format!(r#"{{"type":"position","world":"{world}","character":"{character}","x":4.0,"z":6.0}}"#);
-        let line = format!(r#"{{"type":"chat","world":"{world}","character":"{character}","text":"hi"}}"#);
+        let pose = format!(
+            r#"{{"type":"position","world":"{world}","character":"{character}","x":4.0,"z":6.0}}"#
+        );
+        let line =
+            format!(r#"{{"type":"chat","world":"{world}","character":"{character}","text":"hi"}}"#);
         let (sender, mut receiver) = mpsc::channel::<SseItem>(8);
 
         pump_courier(
@@ -888,7 +893,10 @@ mod tests {
     #[test]
     fn the_join_snapshot_carries_every_live_pose_and_no_debris() {
         let world = fixture_id("aa");
-        let pose = format!(r#"{{"type":"position","character":"{}","x":1.0,"z":2.0}}"#, fixture_id("1"));
+        let pose = format!(
+            r#"{{"type":"position","character":"{}","x":1.0,"z":2.0}}"#,
+            fixture_id("1")
+        );
         let frame = courier_positions_frame(
             &world,
             &[Some(pose.clone()), None, Some("expired debris".to_owned())],

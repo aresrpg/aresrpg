@@ -36,20 +36,21 @@ use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
 use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress, TransactionDigest};
 use sui_indexer_alt_framework::types::effects::TransactionEffectsAPI;
-use sui_indexer_alt_framework::types::TypeTag;
 use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
 use sui_indexer_alt_framework::types::object::Owner;
+use sui_indexer_alt_framework::types::TypeTag;
 use tracing::{debug, warn};
 
 use super::decode::decode_bcs;
 use super::model::{
-    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemDamagesField, ItemObject,
-    ItemStatsField, ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject,
-    PoolBuy, PoolSell, ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
+    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject,
+    ItemDamagesField, ItemObject, ItemStatsField, ItemTemplateObject, JobXpField, KioskItemListed,
+    PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell, ProgressionField, RecipeObject,
+    RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
 };
 use super::project::{
-    self, char_init, del, k_character, k_item, k_lastsale, k_template, k_world, k_zone, k_zones, mpath, sadd,
-    set, set_nx, zadd, zrem, zrem_rank_keep_newest, RedisWrite, K_TEMPLATES, K_WORLDS,
+    self, char_init, del, k_character, k_item, k_lastsale, k_template, k_world, k_zone, k_zones,
+    mpath, sadd, set, set_nx, zadd, zrem, zrem_rank_keep_newest, RedisWrite, K_TEMPLATES, K_WORLDS,
 };
 use super::xp_curve::level_from_xp;
 use crate::store::RedisStore;
@@ -88,18 +89,11 @@ const MOB_TEMPLATE_TYPE: &str = "MobTemplate";
 /// Optional deploy-owned custody manifest. Unset/unreadable deliberately fails open so a missing
 /// mount can reintroduce duplicates but can never blank the bestiary.
 const MOB_CANONICAL_IDS_PATH_ENV: &str = "ARES_MOB_CANONICAL_IDS_PATH";
-/// The fresh-publish `aresrpg` origin (a NEW package, not an in-place upgrade —
-/// `Published.toml`'s `original-id`/`version = 1` for this ceremony), verified against the
-/// ceremony's own stamp. RE-KEYED to ceremony #4 — the origin `release.json` currently stamps
-/// (`networks.testnet.packages.aresrpg.origin`), so the lineage tests below exercise the universe
-/// production actually serves (issue #1409); ceremony #3's origin, 0x045fdf6f…80adc9, and every
-/// earlier one are superseded, not additive.
 /// A MobTemplate's BCS layout is fixed at the checkpoint it was CREATED, by whichever
 /// `aresrpg_foundation::spell_effect::Effect` shape that MobTemplate's own `aresrpg` package
 /// was built against — so the MINTING object's package address (never the bytes, which give
 /// no reliable shape signal once every field is variable-length) is the one durable signal for
 /// which width `skip_effect_vec` needs (issue #629 round-2, `effect_byte_width`).
-const FRESH_ARESRPG_ORIGIN: &str = "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb";
 /// EVERY `aresrpg` origin whose MobTemplate bodies this indexer can walk, represented by a
 /// non-reversible fingerprint and paired with the `spell_effect::Effect` width that origin's
 /// templates embed. The lineage — not a boundary constant with an open-ended default (issue #1315
@@ -284,20 +278,29 @@ const KIOSK_MODULE: &str = "kiosk";
 /// The Sui framework package (`0x2`) in canonical form — the ONLY package whose
 /// `kiosk::ItemPurchased` is admitted (allowlist-exempt but address-PINNED, unlike the
 /// match-by-name-only arms: a look-alike foreign "kiosk" module must never stamp prices).
-const SUI_FRAMEWORK_PKG: &str = "0x0000000000000000000000000000000000000000000000000000000000000002";
+const SUI_FRAMEWORK_PKG: &str =
+    "0x0000000000000000000000000000000000000000000000000000000000000002";
 
 // ── taux key builders (the CONTRACT the JS `/v1/taux` view mirrors) ───────────
-fn k_taux(template: &str) -> String { format!("rpc:taux:{template}") }
+fn k_taux(template: &str) -> String {
+    format!("rpc:taux:{template}")
+}
 const K_TAUX_IDX: &str = "rpc:idx:taux";
-fn k_taux_bracket(bracket: u64) -> String { format!("rpc:taux:bracket:{bracket}") }
+fn k_taux_bracket(bracket: u64) -> String {
+    format!("rpc:taux:bracket:{bracket}")
+}
 const K_TAUX_META: &str = "rpc:taux_meta";
 
 // ── mob-template key builders (the CONTRACT the JS `/v1/encyclopedia` view mirrors) ─
-fn k_mob_template(id: &str) -> String { format!("rpc:mob_template:{id}") }
+fn k_mob_template(id: &str) -> String {
+    format!("rpc:mob_template:{id}")
+}
 const K_MOB_TEMPLATES: &str = "rpc:idx:mob_templates";
 
 // ── recipe key builders (the CONTRACT the JS `/v1/encyclopedia` view mirrors) ────────
-fn k_recipe(id: &str) -> String { format!("rpc:recipe:{id}") }
+fn k_recipe(id: &str) -> String {
+    format!("rpc:recipe:{id}")
+}
 const K_RECIPES: &str = "rpc:idx:recipes";
 
 // ── owner-items key builders (the CONTRACT the JS `/v1/owner-items` view mirrors) ────
@@ -306,16 +309,26 @@ const K_RECIPES: &str = "rpc:idx:recipes";
 // per-kiosk doc carries the cap id (the client threads `kiosk_cap_id` onto every row). The
 // `kiosk_items` sets are MONOTONIC (an item that moves/burns lingers in its old set); the read
 // reconciles each row against the item doc's LIVE `kiosk_id`, so stale membership is harmless.
-fn k_owner_kiosks(owner: &str) -> String { format!("rpc:idx:owner_kiosks:{owner}") }
-fn k_kiosk(kiosk: &str) -> String { format!("rpc:kiosk:{kiosk}") }
-fn k_kiosk_items(kiosk: &str) -> String { format!("rpc:idx:kiosk_items:{kiosk}") }
+fn k_owner_kiosks(owner: &str) -> String {
+    format!("rpc:idx:owner_kiosks:{owner}")
+}
+fn k_kiosk(kiosk: &str) -> String {
+    format!("rpc:kiosk:{kiosk}")
+}
+fn k_kiosk_items(kiosk: &str) -> String {
+    format!("rpc:idx:kiosk_items:{kiosk}")
+}
 
 // ── pending-outcome key builders (the CONTRACT the JS `/v1/pending-outcomes` view mirrors) ─
 // Per-owner index is a SORTED set (score = checkpoint ts, member = outcome id) so it caps
 // by recency; the per-outcome doc carries the view's frozen fields. Both created on outcome
 // create, both dropped on outcome delete (exact self-clean — the owning address rides the object).
-fn k_pending_outcome(id: &str) -> String { format!("rpc:pending_outcome:{id}") }
-fn k_pending_outcomes(owner: &str) -> String { format!("rpc:idx:pending_outcomes:{owner}") }
+fn k_pending_outcome(id: &str) -> String {
+    format!("rpc:pending_outcome:{id}")
+}
+fn k_pending_outcomes(owner: &str) -> String {
+    format!("rpc:idx:pending_outcomes:{owner}")
+}
 /// Defensive per-owner cap: a griefer can mint many owned outcomes, but each costs them
 /// on-chain storage and is normally opened (→ deleted → self-cleaned). 100 bounds the
 /// index; an outcome that ages past the cap still self-cleans its doc on delete (the delete
@@ -331,7 +344,9 @@ const PENDING_CAP: i64 = 100;
 // unlike `pending_outcome`'s sorted-set-plus-cap, no defensive cap is needed here (a claim
 // costs the opener real SUI to mint — no free-griefing vector). The `/v1/pet-claims` view
 // still SERVES it as a bare array (`Object.entries` at read time).
-fn k_pet_claims(owner: &str) -> String { format!("rpc:petclaims:{owner}") }
+fn k_pet_claims(owner: &str) -> String {
+    format!("rpc:petclaims:{owner}")
+}
 
 /// Snapshot one `aresrpg::character::Character` object's owner-ratified fields into
 /// its character doc. `None` = the bytes did not decode as a Character (defensive —
@@ -341,7 +356,11 @@ fn k_pet_claims(owner: &str) -> String { format!("rpc:petclaims:{owner}") }
 /// frozen on-chain curve so the doc serves it directly. `kiosk_id` (the resolved
 /// kiosk that holds this kiosk-locked character — see [`resolve_kiosk`]) is written
 /// when known; `None` leaves the field absent (the view renders `null`).
-pub fn map_character_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -> Option<Vec<RedisWrite>> {
+pub fn map_character_object(
+    id: &str,
+    contents: &[u8],
+    kiosk_id: Option<&str>,
+) -> Option<Vec<RedisWrite>> {
     let c: CharacterObject = decode_bcs("object", "Character", contents)?;
     let key = k_character(id);
     let mut writes = vec![
@@ -389,7 +408,9 @@ pub fn map_character_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -
 /// whole ten-arm match on `key`'s own top-level struct address) rather than here — this predicate
 /// stays a pure (module, name) shape check.
 fn is_job_xp_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(ns) = key_tag else { return false };
+    let TypeTag::Struct(ns) = key_tag else {
+        return false;
+    };
     if ns.module.as_str() != EXTENSION_MODULE || ns.name.as_str() != NS_KEY_TYPE {
         return false;
     }
@@ -402,7 +423,9 @@ fn is_job_xp_key(key_tag: &TypeTag) -> bool {
 /// name), stable across upgrades, the same match-by-name trust the sibling arms run under). Selects
 /// the ONE `Progression` block from every other Character DF (job-xp / stat-alloc / world / equipment).
 fn is_progression_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(ns) = key_tag else { return false };
+    let TypeTag::Struct(ns) = key_tag else {
+        return false;
+    };
     if ns.module.as_str() != EXTENSION_MODULE || ns.name.as_str() != NS_KEY_TYPE {
         return false;
     }
@@ -415,7 +438,9 @@ fn is_progression_key(key_tag: &TypeTag) -> bool {
 /// `EquipmentMap` DF from the sibling equipped-ITEM DFs (keyed by `NsKey<0x2::object::ID>` under the
 /// SAME NS_CHARACTER_EQUIPMENT namespace) — only the inner struct NAME differs.
 fn is_equipment_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(ns) = key_tag else { return false };
+    let TypeTag::Struct(ns) = key_tag else {
+        return false;
+    };
     if ns.module.as_str() != EXTENSION_MODULE || ns.name.as_str() != NS_KEY_TYPE {
         return false;
     }
@@ -428,7 +453,9 @@ fn is_equipment_key(key_tag: &TypeTag) -> bool {
 /// EquipmentMap. Runtime decode additionally requires namespace 1, key == Item.id, category `pet`,
 /// and an `item::Item` VALUE type parameter before it can project pet identity.
 fn is_equipped_item_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(ns) = key_tag else { return false };
+    let TypeTag::Struct(ns) = key_tag else {
+        return false;
+    };
     if ns.module.as_str() != EXTENSION_MODULE || ns.name.as_str() != NS_KEY_TYPE {
         return false;
     }
@@ -444,7 +471,9 @@ fn is_item_value(value_tag: &TypeTag) -> bool {
 /// The private malus cache uses `Field<extension::NsKey<u64>, spell::Stats>`. The numeric key is
 /// checked from the BCS body before projection; this type guard only narrows the dynamic-field family.
 fn is_namespaced_u64_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(ns) = key_tag else { return false };
+    let TypeTag::Struct(ns) = key_tag else {
+        return false;
+    };
     ns.module.as_str() == EXTENSION_MODULE
         && ns.name.as_str() == NS_KEY_TYPE
         && ns.type_params.len() == 1
@@ -465,7 +494,9 @@ fn is_spell_stats_value(value_tag: &TypeTag) -> bool {
 /// Origin hardening lives at the call site (`process`'s `origin_admitted`), not here — see
 /// [`is_job_xp_key`]'s doc for why (an orphaned lineage's `zones::search_zone` stays callable forever).
 fn is_zone_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(s) = key_tag else { return false };
+    let TypeTag::Struct(s) = key_tag else {
+        return false;
+    };
     s.module.as_str() == ZONES_MODULE && s.name.as_str() == ZONE_KEY_TYPE
 }
 
@@ -476,7 +507,9 @@ fn is_zone_key(key_tag: &TypeTag) -> bool {
 /// can attach it to a World's UID (`&mut UID`), so a forged look-alike lands under an attacker-owned
 /// parent the client never queries. Origin hardening rides the same call-site gate as [`is_zone_key`].
 fn is_group_root_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(s) = key_tag else { return false };
+    let TypeTag::Struct(s) = key_tag else {
+        return false;
+    };
     s.module.as_str() == ZONES_MODULE && s.name.as_str() == ZONE_GROUP_ROOT_KEY_TYPE
 }
 
@@ -500,14 +533,18 @@ fn is_world_inner_value(value_tag: &TypeTag) -> bool {
 /// `aresrpg::item_stats::StatsMinKey`? A PLAIN struct key (NOT `NsKey`-wrapped), attached
 /// directly to an ItemTemplate's UID — mirrors [`is_zone_key`]'s match-by-(module,name) shape.
 fn is_stats_min_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(s) = key_tag else { return false };
+    let TypeTag::Struct(s) = key_tag else {
+        return false;
+    };
     s.module.as_str() == ITEM_STATS_MODULE && s.name.as_str() == STATS_MIN_KEY_TYPE
 }
 
 /// The sibling MAX stat-range key — `aresrpg::item_stats::StatsMaxKey`. Mirrors [`is_stats_min_key`];
 /// only the inner NAME differs, same as `StatsMinKey`'s own byte-identical `ItemStatistics` value.
 fn is_stats_max_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(s) = key_tag else { return false };
+    let TypeTag::Struct(s) = key_tag else {
+        return false;
+    };
     s.module.as_str() == ITEM_STATS_MODULE && s.name.as_str() == STATS_MAX_KEY_TYPE
 }
 
@@ -515,7 +552,9 @@ fn is_stats_max_key(key_tag: &TypeTag) -> bool {
 /// `aresrpg::item_damages::DamagesKey`? A PLAIN struct key attached directly to an ItemTemplate's
 /// UID — mirrors [`is_stats_min_key`]'s match-by-(module,name) shape (issue #619 leg 3).
 fn is_damages_key(key_tag: &TypeTag) -> bool {
-    let TypeTag::Struct(s) = key_tag else { return false };
+    let TypeTag::Struct(s) = key_tag else {
+        return false;
+    };
     s.module.as_str() == ITEM_DAMAGES_MODULE && s.name.as_str() == DAMAGES_KEY_TYPE
 }
 
@@ -631,7 +670,11 @@ fn map_equipment_state(
         set(key.clone(), "$.gear_vitality", json!(gear.vitality)),
         set(key.clone(), "$.gear_positive", equipment_stats_json(&gear)),
         // No malus DF means an exact zero block. NX makes the independent sibling SET order-safe.
-        set_nx(key.clone(), "$.gear_malus", equipment_stats_json(&equipment_stats_zero())),
+        set_nx(
+            key.clone(),
+            "$.gear_malus",
+            equipment_stats_json(&equipment_stats_zero()),
+        ),
         set(key.clone(), "$.pet_equipped", json!(pet_equipped)),
         // Written after every other checkpoint mutation; opening this gate makes the aggregate readable.
         set(
@@ -702,8 +745,9 @@ pub fn map_equipped_pet_field(character_id: &str, contents: &[u8]) -> Option<Vec
 /// Project one discovered `aresrpg::zones::Zone` DF onto its zone doc `rpc:zone:{world}:{zx}:{zy}` — the
 /// SAME doc/index the `zones::ZoneSearched` event arm projects (see `project.rs`), converging idempotently:
 /// the event sets discovery + the DERIVED-population counts, this snapshot adds the raw ZONE STATE (`$.seed`
-/// + `$.mob_bitmap`/`$.res_bitmap` — the search-cost-rework Zone DF stores seed + consumed-bitmaps, never
-/// spawn rows; the CLIENT derives the rows via `@aresrpg/sim`). `world_id` is the Field's parent (its
+/// together with `$.mob_bitmap`/`$.res_bitmap` — the search-cost-rework Zone DF stores seed +
+/// consumed-bitmaps, never spawn rows; the CLIENT derives the rows via `@aresrpg/sim`). `world_id`
+/// is the Field's parent (its
 /// checkpoint `ObjectOwner` — the Zone DF is attached DIRECTLY to the World's UID). Self-sufficient (NX
 /// skeleton + SADD index) so a zone surfaces in `/v1/zones` even if its snapshot lands before the
 /// `ZoneSearched` event; latest-wins (idempotent — the Zone DF re-emits on every search/claim/gather that
@@ -716,7 +760,11 @@ pub fn map_zone_field(world_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>
     let key = k_zone(world_id, z.zx, z.zy);
     Some(vec![
         // NX skeleton (matches the ZoneSearched event arm) so this snapshot is self-sufficient.
-        set_nx(key.clone(), "$", json!({ "world": world_id, "zx": z.zx, "zy": z.zy, "discovered": true })),
+        set_nx(
+            key.clone(),
+            "$",
+            json!({ "world": world_id, "zx": z.zx, "zy": z.zy, "discovered": true }),
+        ),
         set(key.clone(), "$.discovered_at_ms", json!(z.discovered_at_ms)),
         set(key.clone(), "$.seed", json!(z.seed.to_string())),
         set(key.clone(), "$.mob_bitmap", json!(z.mob_bitmap)),
@@ -740,7 +788,11 @@ pub fn map_group_root_field(world_id: &str, contents: &[u8]) -> Option<Vec<Redis
     let f: ZoneGroupRootField = decode_bcs("df", "ZoneGroupRootField", contents)?;
     let key = k_zone(world_id, f.zx, f.zy);
     Some(vec![
-        set_nx(key.clone(), "$", json!({ "world": world_id, "zx": f.zx, "zy": f.zy, "discovered": true })),
+        set_nx(
+            key.clone(),
+            "$",
+            json!({ "world": world_id, "zx": f.zx, "zy": f.zy, "discovered": true }),
+        ),
         set(key.clone(), "$.group_root", json!(f.root)),
         set(key, "$.group_count", json!(f.count)),
         sadd(k_zones(world_id), format!("{}:{}", f.zx, f.zy)),
@@ -760,9 +812,9 @@ fn resolve_kiosk(owner: &Owner, wrappers: &HashMap<SuiAddress, SuiAddress>) -> O
         // Format as an object id (canonical 0x+64 hex), like every other id in the model —
         // `SuiAddress` has no `to_canonical_string`, so hop through `ObjectID` (they share the
         // 32-byte `AccountAddress`).
-        Owner::ObjectOwner(wrapper) => {
-            wrappers.get(wrapper).map(|kiosk| ObjectID::from(*kiosk).to_canonical_string(true))
-        }
+        Owner::ObjectOwner(wrapper) => wrappers
+            .get(wrapper)
+            .map(|kiosk| ObjectID::from(*kiosk).to_canonical_string(true)),
         _ => None,
     }
 }
@@ -774,8 +826,15 @@ fn resolve_kiosk(owner: &Owner, wrappers: &HashMap<SuiAddress, SuiAddress>) -> O
 /// checkpoint timestamp (the sorted-set score = recency, for the defensive cap). `None`
 /// also when the bytes do not decode as a FightOutcome (never fails the batch). The doc
 /// carries EXACTLY the frozen view fields.
-pub fn map_fight_outcome_object(id: &str, contents: &[u8], owner: &Owner, ts_ms: u64) -> Option<Vec<RedisWrite>> {
-    let Owner::AddressOwner(owner_addr) = owner else { return None };
+pub fn map_fight_outcome_object(
+    id: &str,
+    contents: &[u8],
+    owner: &Owner,
+    ts_ms: u64,
+) -> Option<Vec<RedisWrite>> {
+    let Owner::AddressOwner(owner_addr) = owner else {
+        return None;
+    };
     let o: FightOutcomeObject = decode_bcs("object", "FightOutcome", contents)?;
     let owner = owner_addr.to_string();
     let idx = k_pending_outcomes(&owner);
@@ -804,7 +863,10 @@ pub fn map_fight_outcome_object(id: &str, contents: &[u8], owner: &Owner, ts_ms:
 /// is exact — no monotonic index wart (unlike the fight/result terminals). Both writes are
 /// idempotent (removing/deleting absent keys is a no-op), so the batch replays safely.
 fn remove_pending_outcome(id: &str, owner: &str) -> Vec<RedisWrite> {
-    vec![zrem(k_pending_outcomes(owner), id.to_string()), del(k_pending_outcome(id), "$")]
+    vec![
+        zrem(k_pending_outcomes(owner), id.to_string()),
+        del(k_pending_outcome(id), "$"),
+    ]
 }
 
 /// Snapshot one `aresrpg::loot_box::PetBoxClaim` output object into its opener's pet-claims
@@ -813,15 +875,25 @@ fn remove_pending_outcome(id: &str, owner: &str) -> Vec<RedisWrite> {
 /// (`AddressOwner` — the claim is soulbound, `key`-only, no `store`); a non-address owner is
 /// pathological → `None`. `None` also when the bytes do not decode as a PetBoxClaim
 /// (defensive — never fails the batch).
-pub fn map_pet_box_claim_object(id: &str, contents: &[u8], owner: &Owner) -> Option<Vec<RedisWrite>> {
-    let Owner::AddressOwner(owner_addr) = owner else { return None };
+pub fn map_pet_box_claim_object(
+    id: &str,
+    contents: &[u8],
+    owner: &Owner,
+) -> Option<Vec<RedisWrite>> {
+    let Owner::AddressOwner(owner_addr) = owner else {
+        return None;
+    };
     let c: PetBoxClaimObject = decode_bcs("object", "PetBoxClaim", contents)?;
     let owner = owner_addr.to_string();
     let key = k_pet_claims(&owner);
     Some(vec![
         // NX skeleton so a snapshot landing before any other write to this wallet's doc still has one.
         set_nx(key.clone(), "$", json!({ "owner": owner, "claims": {} })),
-        set(key, &mpath("$.claims", id), json!(c.rolled_template.to_canonical_string(true))),
+        set(
+            key,
+            &mpath("$.claims", id),
+            json!(c.rolled_template.to_canonical_string(true)),
+        ),
     ])
 }
 
@@ -882,7 +954,11 @@ pub fn map_item_stats_min_field(template_id: &str, contents: &[u8]) -> Option<Ve
     let f: ItemStatsField = decode_bcs("df", "ItemStatsField", contents)?;
     let key = k_template(template_id);
     Some(vec![
-        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set_nx(
+            key.clone(),
+            "$",
+            json!({ "template": template_id, "live": true }),
+        ),
         set(key, "$.stats_min", stats_json(&f)),
         sadd(K_TEMPLATES.into(), template_id.to_string()),
     ])
@@ -893,7 +969,11 @@ pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Ve
     let f: ItemStatsField = decode_bcs("df", "ItemStatsField", contents)?;
     let key = k_template(template_id);
     Some(vec![
-        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set_nx(
+            key.clone(),
+            "$",
+            json!({ "template": template_id, "live": true }),
+        ),
         set(key, "$.stats_max", stats_json(&f)),
         sadd(K_TEMPLATES.into(), template_id.to_string()),
     ])
@@ -922,7 +1002,11 @@ pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<
         .map(|l| json!({ "element": l.element, "from": l.from, "to": l.to, "damage_type": l.damage_type }))
         .collect();
     Some(vec![
-        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set_nx(
+            key.clone(),
+            "$",
+            json!({ "template": template_id, "live": true }),
+        ),
         set(key, "$.damages", json!(lines)),
         sadd(K_TEMPLATES.into(), template_id.to_string()),
     ])
@@ -942,13 +1026,22 @@ pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<
 /// re-stamps the deployment's package id is followed automatically — the same "derive, never
 /// hardcode" stance `item_lineage.ts`'s `ARESRPG_PACKAGE_ID` already takes client-side.
 /// `None` = the bytes did not decode as an Item (defensive — never fails the batch).
-pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>, package: &str) -> Option<Vec<RedisWrite>> {
+pub fn map_item_object(
+    id: &str,
+    contents: &[u8],
+    kiosk_id: Option<&str>,
+    package: &str,
+) -> Option<Vec<RedisWrite>> {
     let it: ItemObject = decode_bcs("object", "Item", contents)?;
     let key = k_item(id);
     let mut writes = vec![
         // NX skeleton matches the ItemMinted arm, so either pipeline can arrive first.
         set_nx(key.clone(), "$", json!({ "id": id, "level": null })),
-        set(key.clone(), "$.template", json!(it.template.to_canonical_string(true))),
+        set(
+            key.clone(),
+            "$.template",
+            json!(it.template.to_canonical_string(true)),
+        ),
         set(key.clone(), "$.name", json!(it.name)),
         set(key.clone(), "$.item_type", json!(it.item_type)),
         set(key.clone(), "$.description", json!(it.description)),
@@ -983,13 +1076,19 @@ pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>, packag
 /// ATTACKER's own `owner_kiosks`, but that only surfaces already-public kiosk contents under
 /// the attacker's address with the victim's real, unusable soulbound cap — no leak, no poison.)
 pub fn map_personal_kiosk_cap(id: &str, contents: &[u8], owner: &Owner) -> Option<Vec<RedisWrite>> {
-    let Owner::AddressOwner(owner_addr) = owner else { return None };
+    let Owner::AddressOwner(owner_addr) = owner else {
+        return None;
+    };
     let cap: PersonalKioskCapObject = decode_bcs("object", "PersonalKioskCap", contents)?;
     let kiosk = cap.cap?.for_kiosk.to_canonical_string(true);
     let owner = owner_addr.to_string();
     Some(vec![
         sadd(k_owner_kiosks(&owner), kiosk.clone()),
-        set_nx(k_kiosk(&kiosk), "$", json!({ "kiosk_id": kiosk, "cap_id": id, "owner": owner })),
+        set_nx(
+            k_kiosk(&kiosk),
+            "$",
+            json!({ "kiosk_id": kiosk, "cap_id": id, "owner": owner }),
+        ),
     ])
 }
 
@@ -1071,7 +1170,15 @@ impl MobTemplatePrefix {
             (true, Some(width)) => r.read_mob_loot(width),
             _ => None,
         };
-        Some(Self { name, min_level, max_level, base_hp, element, resistances, drops })
+        Some(Self {
+            name,
+            min_level,
+            max_level,
+            base_hp,
+            element,
+            resistances,
+            drops,
+        })
     }
 }
 
@@ -1158,7 +1265,10 @@ fn mob_template_doc(id: &str, p: &MobTemplatePrefix) -> Vec<RedisWrite> {
 /// halves through the census gate, which must read the decoded display name before it can project.
 #[cfg(test)]
 fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Option<Vec<RedisWrite>> {
-    Some(mob_template_doc(id, &mob_template_prefix(id, contents, package)?))
+    Some(mob_template_doc(
+        id,
+        &mob_template_prefix(id, contents, package)?,
+    ))
 }
 
 /// Snapshot one `aresrpg_game::world::World` object's join gate into its world doc
@@ -1504,7 +1614,12 @@ impl<'a> ByteReader<'a> {
         let earth_resistance = self.u64()?;
         let air_resistance = self.u64()?;
         self.skip(11 * 8)?; // percent_damage..the D172 gear-fold carriers — the remaining 22-11 fields
-        Some(MobResistances { fire_resistance, water_resistance, earth_resistance, air_resistance })
+        Some(MobResistances {
+            fire_resistance,
+            water_resistance,
+            earth_resistance,
+            air_resistance,
+        })
     }
 
     /// From just after `stats` (the caller already consumed it via [`read_mob_resistances`]):
@@ -1523,7 +1638,12 @@ impl<'a> ByteReader<'a> {
             let chance_bp = self.u16()?;
             let min_qty = self.u16()?;
             let max_qty = self.u16()?;
-            rows.push(LootRow { template_id, chance_bp, min_qty, max_qty });
+            rows.push(LootRow {
+                template_id,
+                chance_bp,
+                min_qty,
+                max_qty,
+            });
         }
         Some(rows)
     }
@@ -1594,7 +1714,11 @@ pub fn map_taux_event(name: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
             let t = e.template.to_canonical_string(true);
             vec![
                 // NX-init preserves a prior `recipe_less` flag across a later crush.
-                set_nx(k_taux(&t), "$", json!({ "template": t, "recipe_less": false })),
+                set_nx(
+                    k_taux(&t),
+                    "$",
+                    json!({ "template": t, "recipe_less": false }),
+                ),
                 set(k_taux(&t), "$.coeff_milli", json!(e.coeff_after)),
                 set(k_taux(&t), "$.bracket", json!(e.bracket)),
                 set(k_taux(&t), "$.snapshot", json!(e.pressure_after)),
@@ -1693,7 +1817,10 @@ impl AresSnapshotHandler {
         }
     }
 
-    fn from_parts(packages: Option<HashSet<String>>, mob_census: Option<MobCanonicalCensus>) -> Self {
+    fn from_parts(
+        packages: Option<HashSet<String>>,
+        mob_census: Option<MobCanonicalCensus>,
+    ) -> Self {
         if mob_census.is_none() {
             warn!("mob canonical allowlist not configured — projecting all templates, duplicates possible");
         }
@@ -1813,10 +1940,14 @@ impl Processor for AresSnapshotHandler {
                 if !self.admits(&ty.address().to_canonical_string(true)) {
                     continue;
                 }
-                let Some(mv) = obj.data.try_as_move() else { continue };
-                let Some(shell) = world_shell(mv.contents()) else { continue }; // legacy inline World
-                // The decoded UID must BE this object's id — a foreign 72-byte body cannot claim a
-                // Versioned id it does not own, so no attacker-attached payload can hijack a world doc.
+                let Some(mv) = obj.data.try_as_move() else {
+                    continue;
+                };
+                let Some(shell) = world_shell(mv.contents()) else {
+                    continue;
+                }; // legacy inline World
+                   // The decoded UID must BE this object's id — a foreign 72-byte body cannot claim a
+                   // Versioned id it does not own, so no attacker-attached payload can hijack a world doc.
                 if shell.id != obj.id() {
                     continue;
                 }
@@ -1830,7 +1961,9 @@ impl Processor for AresSnapshotHandler {
             let mut equipment_map_writes = Vec::new();
             for obj in tx.output_objects(&checkpoint.object_set) {
                 let Some(ty) = obj.type_() else { continue };
-                if ty.module().as_str() == DYNAMIC_FIELD_MODULE && ty.name().as_str() == DYNAMIC_FIELD_TYPE {
+                if ty.module().as_str() == DYNAMIC_FIELD_MODULE
+                    && ty.name().as_str() == DYNAMIC_FIELD_TYPE
+                {
                     if let Owner::ObjectOwner(kiosk) = obj.owner() {
                         kiosk_of_wrapper.insert(obj.id().into(), *kiosk);
                     }
@@ -1860,18 +1993,27 @@ impl Processor for AresSnapshotHandler {
                         // old-lineage key fails the filter and becomes `None`, so every
                         // `key.is_some_and(is_*_key)` below is automatically `false` for it —
                         // one gate for all ten mutually-exclusive arms.
-                        let key = params.first().map(|k| &**k).filter(|k| self.origin_admitted(k));
+                        let key = params
+                            .first()
+                            .map(|k| &**k)
+                            .filter(|k| self.origin_admitted(k));
                         let value = params.get(1).map(|v| &**v);
                         let id = || ObjectID::from(*parent).to_canonical_string(true);
                         if key.is_some_and(is_job_xp_key) {
                             if let Some(mv) = obj.data.try_as_move() {
-                                if let Some(f) = decode_bcs::<JobXpField>("df", "JobXpField", mv.contents()) {
+                                if let Some(f) =
+                                    decode_bcs::<JobXpField>("df", "JobXpField", mv.contents())
+                                {
                                     writes.extend(map_job_xp_field(&id(), f.job, f.value));
                                 }
                             }
                         } else if key.is_some_and(is_progression_key) {
                             if let Some(mv) = obj.data.try_as_move() {
-                                if let Some(p) = decode_bcs::<ProgressionField>("df", "ProgressionField", mv.contents()) {
+                                if let Some(p) = decode_bcs::<ProgressionField>(
+                                    "df",
+                                    "ProgressionField",
+                                    mv.contents(),
+                                ) {
                                     progression_writes.extend(map_progression_field(
                                         &id(),
                                         p.xp,
@@ -1901,7 +2043,9 @@ impl Processor for AresSnapshotHandler {
                                     equipment_malus_writes.extend(w);
                                 }
                             }
-                        } else if key.is_some_and(is_equipped_item_key) && value.is_some_and(is_item_value) {
+                        } else if key.is_some_and(is_equipped_item_key)
+                            && value.is_some_and(is_item_value)
+                        {
                             if let Some(mv) = obj.data.try_as_move() {
                                 if let Some(w) = map_equipped_pet_field(&id(), mv.contents()) {
                                     writes.extend(w);
@@ -1942,7 +2086,10 @@ impl Processor for AresSnapshotHandler {
                                     writes.extend(w);
                                 }
                             }
-                        } else if params.first().map(|k| &**k).is_some_and(is_versioned_payload_key)
+                        } else if params
+                            .first()
+                            .map(|k| &**k)
+                            .is_some_and(is_versioned_payload_key)
                             && value.is_some_and(is_world_inner_value)
                             && value.is_some_and(|v| self.origin_admitted(v))
                         {
@@ -1954,7 +2101,8 @@ impl Processor for AresSnapshotHandler {
                             match world_of_inner.get(&versioned) {
                                 Some(world) => {
                                     if let Some(mv) = obj.data.try_as_move() {
-                                        if let Some(w) = map_world_inner_field(world, mv.contents()) {
+                                        if let Some(w) = map_world_inner_field(world, mv.contents())
+                                        {
                                             writes.extend(w);
                                         }
                                     }
@@ -1994,8 +2142,13 @@ impl Processor for AresSnapshotHandler {
                         && self.admits(&ty.address().to_canonical_string(true))
                     {
                         if let Some(mv) = obj.data.try_as_move() {
-                            if let Some(it) = decode_bcs::<ItemObject>("object", "Item", mv.contents()) {
-                                tx_items.insert(obj.id(), (it.template.to_canonical_string(true), it.amount));
+                            if let Some(it) =
+                                decode_bcs::<ItemObject>("object", "Item", mv.contents())
+                            {
+                                tx_items.insert(
+                                    obj.id(),
+                                    (it.template.to_canonical_string(true), it.amount),
+                                );
                             }
                         }
                     }
@@ -2017,7 +2170,9 @@ impl Processor for AresSnapshotHandler {
                         // Primary shop: `price` is already PER-UNIT (shop.move charges
                         // `price × quantity`; the event echoes `sale.price` + `amount`).
                         (SHOP_MODULE, "SaleBought") if self.admits(&pkg) => {
-                            if let Some(e) = decode_bcs::<SaleBought>("shop", "SaleBought", &event.contents) {
+                            if let Some(e) =
+                                decode_bcs::<SaleBought>("shop", "SaleBought", &event.contents)
+                            {
                                 let t = e.template.to_canonical_string(true);
                                 writes.extend(map_last_sale(&t, e.price, ts_ms));
                             }
@@ -2025,7 +2180,9 @@ impl Processor for AresSnapshotHandler {
                         // AMM pool: totals for `quantity` units → per-unit floored. Buy uses the
                         // buyer's `sui_in`; sell uses `gross` (pre-royalty market value).
                         (POOL_MODULE, "PoolBuy") if self.admits(&pkg) => {
-                            if let Some(e) = decode_bcs::<PoolBuy>("pool", "PoolBuy", &event.contents) {
+                            if let Some(e) =
+                                decode_bcs::<PoolBuy>("pool", "PoolBuy", &event.contents)
+                            {
                                 if e.quantity > 0 {
                                     let t = e.template.to_canonical_string(true);
                                     writes.extend(map_last_sale(&t, e.sui_in / e.quantity, ts_ms));
@@ -2033,7 +2190,9 @@ impl Processor for AresSnapshotHandler {
                             }
                         }
                         (POOL_MODULE, "PoolSell") if self.admits(&pkg) => {
-                            if let Some(e) = decode_bcs::<PoolSell>("pool", "PoolSell", &event.contents) {
+                            if let Some(e) =
+                                decode_bcs::<PoolSell>("pool", "PoolSell", &event.contents)
+                            {
                                 if e.quantity > 0 {
                                     let t = e.template.to_canonical_string(true);
                                     writes.extend(map_last_sale(&t, e.gross / e.quantity, ts_ms));
@@ -2045,9 +2204,15 @@ impl Processor for AresSnapshotHandler {
                         // purchases skipped (`kiosk_purchase_per_unit`). `ItemPurchased<T>`'s phantom
                         // `T` is not in the BCS body — same decode as the event pipeline's listing arm.
                         (KIOSK_MODULE, "ItemPurchased") if pkg == SUI_FRAMEWORK_PKG => {
-                            if let Some(e) = decode_bcs::<KioskItemListed>("kiosk", "ItemPurchased", &event.contents) {
+                            if let Some(e) = decode_bcs::<KioskItemListed>(
+                                "kiosk",
+                                "ItemPurchased",
+                                &event.contents,
+                            ) {
                                 if let Some((template, amount)) = tx_items.get(&e.id) {
-                                    if let Some(per_unit) = kiosk_purchase_per_unit(e.price, *amount) {
+                                    if let Some(per_unit) =
+                                        kiosk_purchase_per_unit(e.price, *amount)
+                                    {
                                         writes.extend(map_last_sale(template, per_unit, ts_ms));
                                     }
                                 }
@@ -2062,7 +2227,8 @@ impl Processor for AresSnapshotHandler {
             // Neither the settled outcome nor the redeemed claim is an output object, so read
             // its pre-delete state (owning address + id) from the tx's input objects, gated by the
             // effects' delete set.
-            let deleted: HashSet<ObjectID> = tx.effects.deleted().into_iter().map(|r| r.0).collect();
+            let deleted: HashSet<ObjectID> =
+                tx.effects.deleted().into_iter().map(|r| r.0).collect();
             if !deleted.is_empty() {
                 for obj in tx.input_objects(&checkpoint.object_set) {
                     if !deleted.contains(&obj.id()) {
@@ -2072,14 +2238,18 @@ impl Processor for AresSnapshotHandler {
                     if !self.admits(&ty.address().to_canonical_string(true)) {
                         continue;
                     }
-                    if ty.module().as_str() == SETTLEMENT_MODULE && ty.name().as_str() == FIGHT_OUTCOME_TYPE {
+                    if ty.module().as_str() == SETTLEMENT_MODULE
+                        && ty.name().as_str() == FIGHT_OUTCOME_TYPE
+                    {
                         if let Owner::AddressOwner(owner) = obj.owner() {
                             writes.extend(remove_pending_outcome(
                                 &obj.id().to_canonical_string(true),
                                 &owner.to_string(),
                             ));
                         }
-                    } else if ty.module().as_str() == LOOT_BOX_MODULE && ty.name().as_str() == PET_BOX_CLAIM_TYPE {
+                    } else if ty.module().as_str() == LOOT_BOX_MODULE
+                        && ty.name().as_str() == PET_BOX_CLAIM_TYPE
+                    {
                         if let Owner::AddressOwner(owner) = obj.owner() {
                             writes.extend(remove_pet_box_claim(
                                 &obj.id().to_canonical_string(true),
@@ -2106,7 +2276,8 @@ impl Processor for AresSnapshotHandler {
                 if module == PERSONAL_KIOSK_MODULE && name == PERSONAL_KIOSK_CAP_TYPE {
                     if let Some(mv) = obj.data.try_as_move() {
                         let id = obj.id().to_canonical_string(true);
-                        if let Some(mut w) = map_personal_kiosk_cap(&id, mv.contents(), obj.owner()) {
+                        if let Some(mut w) = map_personal_kiosk_cap(&id, mv.contents(), obj.owner())
+                        {
                             writes.append(&mut w);
                         }
                     }
@@ -2115,7 +2286,9 @@ impl Processor for AresSnapshotHandler {
                 if !self.admits(&ty.address().to_canonical_string(true)) {
                     continue;
                 }
-                let Some(mv) = obj.data.try_as_move() else { continue };
+                let Some(mv) = obj.data.try_as_move() else {
+                    continue;
+                };
                 let id = obj.id().to_canonical_string(true);
                 let mapped = match (module, name) {
                     (CHARACTER_MODULE, CHARACTER_TYPE) => {
@@ -2129,7 +2302,9 @@ impl Processor for AresSnapshotHandler {
                         let package = ty.address().to_canonical_string(true);
                         map_item_object(&id, mv.contents(), kiosk.as_deref(), &package)
                     }
-                    (ITEM_MODULE, ITEM_TEMPLATE_TYPE) => map_item_template_object(&id, mv.contents()),
+                    (ITEM_MODULE, ITEM_TEMPLATE_TYPE) => {
+                        map_item_template_object(&id, mv.contents())
+                    }
                     (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => match self.project_mob_template(
                         &id,
                         mv.contents(),
@@ -2157,7 +2332,9 @@ impl Processor for AresSnapshotHandler {
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
                         map_fight_outcome_object(&id, mv.contents(), obj.owner(), ts_ms)
                     }
-                    (LOOT_BOX_MODULE, PET_BOX_CLAIM_TYPE) => map_pet_box_claim_object(&id, mv.contents(), obj.owner()),
+                    (LOOT_BOX_MODULE, PET_BOX_CLAIM_TYPE) => {
+                        map_pet_box_claim_object(&id, mv.contents(), obj.owner())
+                    }
                     _ => continue,
                 };
                 if let Some(mut w) = mapped {
@@ -2168,7 +2345,11 @@ impl Processor for AresSnapshotHandler {
         self.log_mob_template_skips(skipped_mob_templates, checkpoint.summary.sequence_number);
         writes.append(&mut progression_writes);
         if !writes.is_empty() {
-            debug!(count = writes.len(), checkpoint = checkpoint.summary.sequence_number, "projected ares snapshot writes");
+            debug!(
+                count = writes.len(),
+                checkpoint = checkpoint.summary.sequence_number,
+                "projected ares snapshot writes"
+            );
         }
         Ok(writes)
     }

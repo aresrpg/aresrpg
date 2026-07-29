@@ -160,14 +160,18 @@ impl Processor for AresHandler {
                 .iter()
                 .filter_map(|event| {
                     match (event.type_.module.as_str(), event.type_.name.as_str()) {
-                        ("extract", "ItemEquipped") => {
-                            decode::decode_bcs::<model::ItemEquip>("extract", "ItemEquipped", &event.contents)
-                                .map(|event| event.item)
-                        }
-                        ("extract", "ItemBurned") => {
-                            decode::decode_bcs::<model::ItemBurned>("extract", "ItemBurned", &event.contents)
-                                .map(|event| event.item)
-                        }
+                        ("extract", "ItemEquipped") => decode::decode_bcs::<model::ItemEquip>(
+                            "extract",
+                            "ItemEquipped",
+                            &event.contents,
+                        )
+                        .map(|event| event.item),
+                        ("extract", "ItemBurned") => decode::decode_bcs::<model::ItemBurned>(
+                            "extract",
+                            "ItemBurned",
+                            &event.contents,
+                        )
+                        .map(|event| event.item),
                         _ => None,
                     }
                 })
@@ -178,7 +182,10 @@ impl Processor for AresHandler {
                 intra_checkpoint_event_index += 1;
                 let module = event.type_.module.as_str();
                 let name = event.type_.name.as_str();
-                let pkg = event.type_.address.to_canonical_string(/* with_prefix */ true);
+                let pkg = event
+                    .type_
+                    .address
+                    .to_canonical_string(/* with_prefix */ true);
                 if !self.admits(&pkg, module) {
                     continue;
                 }
@@ -189,13 +196,13 @@ impl Processor for AresHandler {
                         "ItemPurchased",
                         &event.contents,
                     )
-                        .map(|event| project::KioskPurchaseContext {
-                            transient_zero_listing: event.price == 0
-                                && transient_zero_listings.contains(&(event.kiosk, event.id)),
-                            has_royalty_receipt: royalty_receipt,
-                            confirmed_extract_exit: confirmed_extract_items.contains(&event.id),
-                        })
-                        .unwrap_or_default();
+                    .map(|event| project::KioskPurchaseContext {
+                        transient_zero_listing: event.price == 0
+                            && transient_zero_listings.contains(&(event.kiosk, event.id)),
+                        has_royalty_receipt: royalty_receipt,
+                        confirmed_extract_exit: confirmed_extract_items.contains(&event.id),
+                    })
+                    .unwrap_or_default();
                     project::map_with_context(
                         module,
                         name,
@@ -259,7 +266,11 @@ impl Processor for AresHandler {
             }
         }
         if !writes.is_empty() {
-            debug!(count = writes.len(), checkpoint = checkpoint.summary.sequence_number, "projected ares writes");
+            debug!(
+                count = writes.len(),
+                checkpoint = checkpoint.summary.sequence_number,
+                "projected ares writes"
+            );
         }
         Ok(writes)
     }

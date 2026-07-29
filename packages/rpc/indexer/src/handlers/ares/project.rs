@@ -45,7 +45,11 @@ pub enum RedisWrite {
     SetDel { key: String, member: String },
     /// `ZADD key score member` — append/refresh a scored row (idempotent when the
     /// member is unique per event, e.g. a per-item sale row: re-adding is a no-op).
-    ZAdd { key: String, score: i64, member: String },
+    ZAdd {
+        key: String,
+        score: i64,
+        member: String,
+    },
     /// `ZREM key member` — drop a scored row by member (idempotent: removing an
     /// absent member is a no-op, so a delete replays safely).
     ZRem { key: String, member: String },
@@ -60,9 +64,21 @@ pub enum RedisWrite {
     Expire { key: String, seconds: i64 },
     /// Atomic Party reducers. The three-field events do not carry the resulting
     /// order/new leader, so Redis derives them from the prior projected document.
-    PartyCreate { party: String, character: String, owner: String },
-    PartyJoin { party: String, character: String, owner: String },
-    PartyLeave { party: String, character: String, owner: String },
+    PartyCreate {
+        party: String,
+        character: String,
+        owner: String,
+    },
+    PartyJoin {
+        party: String,
+        character: String,
+        owner: String,
+    },
+    PartyLeave {
+        party: String,
+        character: String,
+        owner: String,
+    },
 }
 
 // ── write constructors (terse match arms) ────────────────────────────────────
@@ -70,16 +86,33 @@ pub enum RedisWrite {
 // `pub(super)` on the constructors + key/skeleton helpers the sibling `snapshot`
 // module (object snapshots + taux) reuses — one home for the write shapes.
 pub(super) fn set(key: String, path: &str, json: Value) -> RedisWrite {
-    RedisWrite::Set { key, path: path.to_string(), json: json.to_string(), nx: false }
+    RedisWrite::Set {
+        key,
+        path: path.to_string(),
+        json: json.to_string(),
+        nx: false,
+    }
 }
 pub(super) fn set_nx(key: String, path: &str, json: Value) -> RedisWrite {
-    RedisWrite::Set { key, path: path.to_string(), json: json.to_string(), nx: true }
+    RedisWrite::Set {
+        key,
+        path: path.to_string(),
+        json: json.to_string(),
+        nx: true,
+    }
 }
 pub(super) fn del(key: String, path: &str) -> RedisWrite {
-    RedisWrite::Del { key, path: path.to_string() }
+    RedisWrite::Del {
+        key,
+        path: path.to_string(),
+    }
 }
 fn incr(key: String, path: &str, by: i64) -> RedisWrite {
-    RedisWrite::NumIncrBy { key, path: path.to_string(), by }
+    RedisWrite::NumIncrBy {
+        key,
+        path: path.to_string(),
+        by,
+    }
 }
 pub(super) fn sadd(key: String, member: String) -> RedisWrite {
     RedisWrite::SetAdd { key, member }
@@ -96,7 +129,11 @@ pub(super) fn zrem(key: String, member: String) -> RedisWrite {
 /// Trim a sorted set to its newest `cap` members (highest scores). The set is
 /// ascending by score, so the oldest live at ranks `0..len-cap`.
 pub(super) fn zrem_rank_keep_newest(key: String, cap: i64) -> RedisWrite {
-    RedisWrite::ZRemRangeByRank { key, start: 0, stop: -(cap + 1) }
+    RedisWrite::ZRemRangeByRank {
+        key,
+        start: 0,
+        stop: -(cap + 1),
+    }
 }
 fn zrem_score_through(key: String, max: i64) -> RedisWrite {
     RedisWrite::ZRemRangeByScore { key, min: 0, max }
@@ -107,9 +144,15 @@ pub(super) fn expire(key: String, seconds: i64) -> RedisWrite {
 
 // ── key builders (the CONTRACT the JS views mirror — keep in sync) ────────────
 
-pub(super) fn k_character(id: &str) -> String { format!("rpc:character:{id}") }
-fn k_char_owner(addr: &str) -> String { format!("rpc:idx:char_owner:{addr}") }
-fn k_char_name(name: &str) -> String { format!("rpc:idx:char_name:{}", name.to_ascii_lowercase()) }
+pub(super) fn k_character(id: &str) -> String {
+    format!("rpc:character:{id}")
+}
+fn k_char_owner(addr: &str) -> String {
+    format!("rpc:idx:char_owner:{addr}")
+}
+fn k_char_name(name: &str) -> String {
+    format!("rpc:idx:char_name:{}", name.to_ascii_lowercase())
+}
 // `pub(super)` so the sibling `snapshot` module's Item object-snapshot writes to the SAME
 // item doc the `item::ItemMinted` event arm projects (one home for the item key shape — the
 // event sets template/item_type, the snapshot adds name/category/amount/kiosk_id, converging
@@ -117,7 +160,9 @@ fn k_char_name(name: &str) -> String { format!("rpc:idx:char_name:{}", name.to_a
 pub(super) fn k_item(id: &str) -> String { format!("rpc:item:{id}") }
 fn k_pet_feed(id: &str) -> String { format!("rpc:pet_feed:{id}") }
 const K_PET_FEED_FOODS: &str = "rpc:idx:pet_feed_foods";
-fn k_listing(item: &str) -> String { format!("rpc:listing:{item}") }
+fn k_listing(item: &str) -> String {
+    format!("rpc:listing:{item}")
+}
 const K_LISTINGS: &str = "rpc:idx:listings";
 // Marketplace sales-history (seller-side) — storage-light by construction. A
 // realised sale is a native `0x2::kiosk::ItemPurchased` after transaction-level
@@ -130,8 +175,12 @@ const K_LISTINGS: &str = "rpc:idx:listings";
 // self-evicts its whole log). The sorted set is IDEMPOTENT (a per-item row is unique,
 // so ZADD-on-replay is a no-op) — it needs no `NUMINCRBY` on the money path and stays
 // crash-replay safe like every other write here (store.rs).
-fn k_sales(kiosk: &str) -> String { format!("rpc:sales_log:{kiosk}") }
-fn k_seller_kiosks(seller: &str) -> String { format!("rpc:idx:seller_kiosks:{seller}") }
+fn k_sales(kiosk: &str) -> String {
+    format!("rpc:sales_log:{kiosk}")
+}
+fn k_seller_kiosks(seller: &str) -> String {
+    format!("rpc:idx:seller_kiosks:{seller}")
+}
 /// Keep the newest N sales per kiosk. 500 fully contains a 30d revenue window for any
 /// realistic seller (>500 sales/30d = 16+/day); beyond that the oldest rows fall off
 /// and `revenue_30d` slightly under-counts — bump the cap (or add a daily rollup) if
@@ -150,22 +199,34 @@ const K_SALES: &str = "rpc:idx:sales";
 // so the oldest UTC calendar day remains complete regardless of event time.
 const K_SALES_OVER_TIME: &str = "rpc:sales_over_time";
 const SALES_OVER_TIME_RETENTION_MS: u64 = 366 * 24 * 60 * 60 * 1_000;
-pub(super) fn k_world(id: &str) -> String { format!("rpc:world:{id}") }
+pub(super) fn k_world(id: &str) -> String {
+    format!("rpc:world:{id}")
+}
 pub(super) const K_WORLDS: &str = "rpc:idx:worlds";
 // `pub(super)` so the sibling `snapshot` module's Zone-DF object snapshot writes to the SAME
 // zone doc/index the `zones::ZoneSearched` event arm projects (one home for the zone key shapes —
 // the event sets discovery + derived counts, while the snapshot adds the seed + consumed bitmaps
 // from which the client derives the live rows, converging idempotently).
-pub(super) fn k_zone(world: &str, zx: u32, zy: u32) -> String { format!("rpc:zone:{world}:{zx}:{zy}") }
-pub(super) fn k_zones(world: &str) -> String { format!("rpc:idx:zones:{world}") }
+pub(super) fn k_zone(world: &str, zx: u32, zy: u32) -> String {
+    format!("rpc:zone:{world}:{zx}:{zy}")
+}
+pub(super) fn k_zones(world: &str) -> String {
+    format!("rpc:idx:zones:{world}")
+}
 // §6 golden-gather link table: one doc per (world, base template) holding the rare
 // variant id, plus a per-world index set for enumeration (mirrors the zone shape).
-fn k_rare_link(world: &str, template: &str) -> String { format!("rpc:rare_link:{world}:{template}") }
-fn k_rare_links(world: &str) -> String { format!("rpc:idx:rare_links:{world}") }
+fn k_rare_link(world: &str, template: &str) -> String {
+    format!("rpc:rare_link:{world}:{template}")
+}
+fn k_rare_links(world: &str) -> String {
+    format!("rpc:idx:rare_links:{world}")
+}
 // `pub(super)` so the sibling `snapshot` module's ItemTemplate object-snapshot
 // enrichment writes to the SAME encyclopedia doc/index the `TemplateCreated` event
 // arm below projects (one home for the item-template key shapes).
-pub(super) fn k_template(id: &str) -> String { format!("rpc:template:{id}") }
+pub(super) fn k_template(id: &str) -> String {
+    format!("rpc:template:{id}")
+}
 pub(super) const K_TEMPLATES: &str = "rpc:idx:templates";
 // Live on-chain supply per template — SUM of `amount` (item.move's fungible-units field: always 1
 // for a unique NFT, N for a stackable) across every still-alive `Item`. `item.move` deliberately
@@ -180,7 +241,9 @@ pub(super) const K_TEMPLATES: &str = "rpc:idx:templates";
 // HANDLERS.md's other deferred events. `NUMINCRBY` is RELATIVE like shop `minted` (not idempotent on
 // a replayed checkpoint) — the accepted approximation class this module's header documents; a fresh
 // re-index (new FIRST_CHECKPOINT) re-derives it exactly.
-pub(super) fn k_supply(template: &str) -> String { format!("rpc:supply:{template}") }
+pub(super) fn k_supply(template: &str) -> String {
+    format!("rpc:supply:{template}")
+}
 // Last realised PER-UNIT sale price per template (marketcap = supply × this, client-side) —
 // `{ template, price_mist: "<string>", ts }`, latest-wins SET. Written EXCLUSIVELY by the
 // `ares_snapshot` pipeline (snapshot.rs `map_last_sale`): all three sale venues (shop primary,
@@ -188,16 +251,30 @@ pub(super) fn k_supply(template: &str) -> String { format!("rpc:supply:{template
 // is exact — splitting venues across the two pipelines (each with its own watermark) would let a
 // backfilling pipeline overwrite a newer sale the other already wrote. `pub(super)` = one home
 // for the key shape, mirrored by the JS view (`K.lastsale`).
-pub(super) fn k_lastsale(template: &str) -> String { format!("rpc:lastsale:{template}") }
+pub(super) fn k_lastsale(template: &str) -> String {
+    format!("rpc:lastsale:{template}")
+}
 const K_CONFIG: &str = "rpc:config";
 const K_CREATION: &str = "rpc:creation";
-fn k_kolizeum(id: &str) -> String { format!("rpc:kolizeum:{id}") }
+fn k_kolizeum(id: &str) -> String {
+    format!("rpc:kolizeum:{id}")
+}
 const K_KOLIZEUMS: &str = "rpc:idx:kolizeums";
-fn k_run(pass: &str) -> String { format!("rpc:run:{pass}") }
-fn k_runs(owner: &str) -> String { format!("rpc:idx:runs:{owner}") }
-fn k_fight(id: &str) -> String { format!("rpc:fight:{id}") }
-fn k_char_fight(c: &str) -> String { format!("rpc:char_fight:{c}") }
-fn k_fights(world: &str) -> String { format!("rpc:idx:fights:{world}") }
+fn k_run(pass: &str) -> String {
+    format!("rpc:run:{pass}")
+}
+fn k_runs(owner: &str) -> String {
+    format!("rpc:idx:runs:{owner}")
+}
+fn k_fight(id: &str) -> String {
+    format!("rpc:fight:{id}")
+}
+fn k_char_fight(c: &str) -> String {
+    format!("rpc:char_fight:{c}")
+}
+fn k_fights(world: &str) -> String {
+    format!("rpc:idx:fights:{world}")
+}
 // A world-fight mob-group's homogeneous `MobTemplate` id, keyed by (world, spawn_id) — the pair the
 // Fight doc also stores (`world` + `spawn_id`). `zones::MobGroupClaimed` fires in the SAME PTB as the
 // fight it opens and carries the identical id the GroupTicket hands `fight::create`, so this doc IS the
@@ -211,25 +288,39 @@ fn k_results(owner: &str) -> String { format!("rpc:idx:results:{owner}") }
 // keyed by gatherer address (latest-wins). The ambush Fight itself rides the fight
 // handlers (FightCreated/FightJoined — the gatherer is auto-seated); this is the
 // address-keyed "your gather spawned an ambush" signal + its spawn_id/where context.
-fn k_protector(gatherer: &str) -> String { format!("rpc:protector_trigger:{gatherer}") }
+fn k_protector(gatherer: &str) -> String {
+    format!("rpc:protector_trigger:{gatherer}")
+}
 // aresrpg::commission (v2) — a CraftRequest doc + its two directory indexes (the artisan
 // it's offered TO, the customer who opened it). execute/cancel DELETE the doc (the
 // on-chain CraftRequest is consumed either way) and — both carrying customer AND artisan
 // — un-index EXACTLY under both parties.
-fn k_commission(id: &str) -> String { format!("rpc:commission:{id}") }
-fn k_commissions_by_artisan(artisan: &str) -> String { format!("rpc:idx:commissions_by_artisan:{artisan}") }
-fn k_commissions_by_customer(customer: &str) -> String { format!("rpc:idx:commissions_by_customer:{customer}") }
+fn k_commission(id: &str) -> String {
+    format!("rpc:commission:{id}")
+}
+fn k_commissions_by_artisan(artisan: &str) -> String {
+    format!("rpc:idx:commissions_by_artisan:{artisan}")
+}
+fn k_commissions_by_customer(customer: &str) -> String {
+    format!("rpc:idx:commissions_by_customer:{customer}")
+}
 
 /// `FightResult.outcome` u8 → the string the view passes through. 2 = victory,
 /// 3 = defeat (aresrpg_fight::fight STATUS_VICTORY / STATUS_DEFEAT).
 fn outcome_str(outcome: u8) -> &'static str {
-    if outcome == 2 { "victory" } else { "defeat" }
+    if outcome == 2 {
+        "victory"
+    } else {
+        "defeat"
+    }
 }
 
 /// JSONPath to a map entry keyed by an arbitrary (hex) string: `$.equipment["0x…"]`.
 /// `pub(super)` so the sibling `snapshot` module's job-xp DF arm addresses `$.jobs["<u8>"]`
 /// through the SAME builder the stats block uses (one home for the map-entry path shape).
-pub(super) fn mpath(base: &str, key: &str) -> String { format!("{base}[\"{key}\"]") }
+pub(super) fn mpath(base: &str, key: &str) -> String {
+    format!("{base}[\"{key}\"]")
+}
 
 /// BCS-decode this arm's event body. The `(module, name)` that selected the arm is passed
 /// straight through so a mismatch between the Rust mirror and its Move struct is REPORTED
@@ -268,7 +359,15 @@ pub fn map(
     ts_ms: u64,
     contents: &[u8],
 ) -> Option<Vec<RedisWrite>> {
-    map_with_context(module, name, pkg, sender, ts_ms, contents, KioskPurchaseContext::default())
+    map_with_context(
+        module,
+        name,
+        pkg,
+        sender,
+        ts_ms,
+        contents,
+        KioskPurchaseContext::default(),
+    )
 }
 
 /// Context-aware event projection. `ts_ms` is the enclosing checkpoint's
@@ -293,7 +392,11 @@ pub(super) fn map_with_context(
             let pool = e.pool.to_canonical_string(true);
             vec![
                 set(k_pool(&pool), "$.item_reserve", json!(e.item_reserve)),
-                set(k_pool(&pool), "$.real_sui_mist", json!(e.real_sui.to_string())),
+                set(
+                    k_pool(&pool),
+                    "$.real_sui_mist",
+                    json!(e.real_sui.to_string()),
+                ),
             ]
         }
         ("pool", "PoolSell") => {
@@ -301,7 +404,11 @@ pub(super) fn map_with_context(
             let pool = e.pool.to_canonical_string(true);
             vec![
                 set(k_pool(&pool), "$.item_reserve", json!(e.item_reserve)),
-                set(k_pool(&pool), "$.real_sui_mist", json!(e.real_sui.to_string())),
+                set(
+                    k_pool(&pool),
+                    "$.real_sui_mist",
+                    json!(e.real_sui.to_string()),
+                ),
             ]
         }
         // ── shop ─────────────────────────────────────────────────────────────
@@ -309,12 +416,16 @@ pub(super) fn map_with_context(
             let e: SaleCreated = decode(module, name, contents)?;
             let sale = e.sale.to_canonical_string(true);
             vec![
-                set(k_sale(&sale), "$", json!({
-                    "sale": sale, "template": e.template.to_canonical_string(true),
-                    "price_mist": e.price.to_string(),
-                    "supply": e.supply, "minted": 0, "paused": false,
-                    "start_ms": Value::Null, "end_ms": Value::Null,
-                })),
+                set(
+                    k_sale(&sale),
+                    "$",
+                    json!({
+                        "sale": sale, "template": e.template.to_canonical_string(true),
+                        "price_mist": e.price.to_string(),
+                        "supply": e.supply, "minted": 0, "paused": false,
+                        "start_ms": Value::Null, "end_ms": Value::Null,
+                    }),
+                ),
                 sadd(K_SALES.into(), sale),
             ]
         }
@@ -336,14 +447,22 @@ pub(super) fn map_with_context(
             let retention_cutoff = ts_ms.saturating_sub(SALES_OVER_TIME_RETENTION_MS) as i64;
             // RELATIVE: exact under object-snapshot of `Sale.minted`.
             vec![
-                incr(k_sale(&e.sale.to_canonical_string(true)), "$.minted", e.amount as i64),
+                incr(
+                    k_sale(&e.sale.to_canonical_string(true)),
+                    "$.minted",
+                    e.amount as i64,
+                ),
                 zadd(K_SALES_OVER_TIME.into(), ts_ms as i64, receipt),
                 zrem_score_through(K_SALES_OVER_TIME.into(), retention_cutoff),
             ]
         }
         ("shop", "PriceChanged") => {
             let e: ShopPriceChanged = decode(module, name, contents)?;
-            vec![set(k_sale(&e.sale.to_canonical_string(true)), "$.price_mist", json!(e.price.to_string()))]
+            vec![set(
+                k_sale(&e.sale.to_canonical_string(true)),
+                "$.price_mist",
+                json!(e.price.to_string()),
+            )]
         }
         ("shop", "WindowChanged") => {
             let e: WindowChanged = decode(module, name, contents)?;
@@ -355,7 +474,11 @@ pub(super) fn map_with_context(
         }
         ("shop", "SalePaused") => {
             let e: SalePaused = decode(module, name, contents)?;
-            vec![set(k_sale(&e.sale.to_canonical_string(true)), "$.paused", json!(e.paused))]
+            vec![set(
+                k_sale(&e.sale.to_canonical_string(true)),
+                "$.paused",
+                json!(e.paused),
+            )]
         }
 
         // ── character creation (config + the character doc) ───────────────────
@@ -376,22 +499,42 @@ pub(super) fn map_with_context(
         ("creation", "PriceChanged") => {
             let e: CreationPriceChanged = decode(module, name, contents)?;
             vec![
-                set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
-                set(K_CREATION.into(), "$.price_mist", json!(e.price.to_string())),
+                set_nx(
+                    K_CREATION.into(),
+                    "$",
+                    json!({ "classes": {}, "starters": {} }),
+                ),
+                set(
+                    K_CREATION.into(),
+                    "$.price_mist",
+                    json!(e.price.to_string()),
+                ),
             ]
         }
         ("creation", "PausedSet") => {
             let e: PausedSet = decode(module, name, contents)?;
             vec![
-                set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
+                set_nx(
+                    K_CREATION.into(),
+                    "$",
+                    json!({ "classes": {}, "starters": {} }),
+                ),
                 set(K_CREATION.into(), "$.paused", json!(e.paused)),
             ]
         }
         ("creation", "ClassAdded") => {
             let e: ClassName = decode(module, name, contents)?;
             vec![
-                set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
-                set(K_CREATION.into(), &mpath("$.classes", &e.class), json!(true)),
+                set_nx(
+                    K_CREATION.into(),
+                    "$",
+                    json!({ "classes": {}, "starters": {} }),
+                ),
+                set(
+                    K_CREATION.into(),
+                    &mpath("$.classes", &e.class),
+                    json!(true),
+                ),
             ]
         }
         ("creation", "ClassRemoved") => {
@@ -404,14 +547,26 @@ pub(super) fn map_with_context(
         ("creation", "SponsorSet") => {
             let e: SponsorSet = decode(module, name, contents)?;
             vec![
-                set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
-                set(K_CREATION.into(), "$.sponsor", json!(e.sponsor.map(|a| a.to_string()))),
+                set_nx(
+                    K_CREATION.into(),
+                    "$",
+                    json!({ "classes": {}, "starters": {} }),
+                ),
+                set(
+                    K_CREATION.into(),
+                    "$.sponsor",
+                    json!(e.sponsor.map(|a| a.to_string())),
+                ),
             ]
         }
         ("creation", "FreeEnabledSet") => {
             let e: FreeEnabledSet = decode(module, name, contents)?;
             vec![
-                set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
+                set_nx(
+                    K_CREATION.into(),
+                    "$",
+                    json!({ "classes": {}, "starters": {} }),
+                ),
                 set(K_CREATION.into(), "$.free", json!(e.enabled)),
             ]
         }
@@ -434,9 +589,13 @@ pub(super) fn map_with_context(
             let key = k_character(&ch);
             vec![
                 char_init(&key, &ch),
-                set(key, "$.position", json!({
-                    "x": e.pos_x, "z": e.pos_z, "zone": e.zone, "at_ms": e.anchored_at_ms,
-                })),
+                set(
+                    key,
+                    "$.position",
+                    json!({
+                        "x": e.pos_x, "z": e.pos_z, "zone": e.zone, "at_ms": e.anchored_at_ms,
+                    }),
+                ),
             ]
         }
 
@@ -459,7 +618,11 @@ pub(super) fn map_with_context(
             vec![
                 char_init(&key, &ch),
                 set_nx(key.clone(), "$.stats", json!({})),
-                set(key, &mpath("$.stats", &e.stat.to_string()), json!(e.stat_total)),
+                set(
+                    key,
+                    &mpath("$.stats", &e.stat.to_string()),
+                    json!(e.stat_total),
+                ),
             ]
         }
 
@@ -507,7 +670,11 @@ pub(super) fn map_with_context(
                 set(key, "$.item_type", json!(e.item_type)),
                 // Supply arm: NX-seed the per-template counter doc, then bump it by the
                 // minted units (1 for a unique NFT, N for a stackable — see k_supply).
-                set_nx(supply_key.clone(), "$", json!({ "template": template, "amount": 0 })),
+                set_nx(
+                    supply_key.clone(),
+                    "$",
+                    json!({ "template": template, "amount": 0 }),
+                ),
                 incr(supply_key, "$.amount", e.amount as i64),
             ]
         }
@@ -528,7 +695,10 @@ pub(super) fn map_with_context(
         }
         ("pet", "FoodPowerSet") => {
             let e: FoodPowerSet = decode(module, name, contents)?;
-            vec![sadd(K_PET_FEED_FOODS.into(), e.food_template.to_canonical_string(true))]
+            vec![sadd(
+                K_PET_FEED_FOODS.into(),
+                e.food_template.to_canonical_string(true),
+            )]
         }
 
         // -- extract: equipment on the character doc -------------------------
@@ -539,9 +709,13 @@ pub(super) fn map_with_context(
             let key = k_character(&ch);
             vec![
                 char_init(&key, &ch),
-                set(key, &mpath("$.equipment", &item), json!({
-                    "template": e.template.to_canonical_string(true), "amount": e.amount,
-                })),
+                set(
+                    key,
+                    &mpath("$.equipment", &item),
+                    json!({
+                        "template": e.template.to_canonical_string(true), "amount": e.amount,
+                    }),
+                ),
             ]
         }
         ("extract", "ItemUnequipped") => {
@@ -561,7 +735,11 @@ pub(super) fn map_with_context(
                 del(k_listing(&item), "$"),
                 srem(K_LISTINGS.into(), item),
                 // Supply arm: the whole item (its full `amount`) just ceased to exist.
-                set_nx(supply_key.clone(), "$", json!({ "template": template, "amount": 0 })),
+                set_nx(
+                    supply_key.clone(),
+                    "$",
+                    json!({ "template": template, "amount": 0 }),
+                ),
                 incr(supply_key, "$.amount", -(e.amount as i64)),
             ]
         }
@@ -574,7 +752,11 @@ pub(super) fn map_with_context(
                 // NX: the snapshot pipeline (its own watermark — snapshot.rs `map_world_object`) owns the
                 // FULL doc incl. `required_level`; a replayed/lagging create event must seed the skeleton
                 // when absent but never clobber the richer object truth back to the 3 event fields.
-                set_nx(k_world(&world), "$", json!({ "world": world, "seed": e.seed.to_string(), "biome": e.biome })),
+                set_nx(
+                    k_world(&world),
+                    "$",
+                    json!({ "world": world, "seed": e.seed.to_string(), "biome": e.biome }),
+                ),
                 sadd(K_WORLDS.into(), world),
             ]
         }
@@ -585,7 +767,11 @@ pub(super) fn map_with_context(
             let world = e.world.to_canonical_string(true);
             let template = e.template.to_canonical_string(true);
             vec![
-                set(k_rare_link(&world, &template), "$", json!(e.rare_template.to_canonical_string(true))),
+                set(
+                    k_rare_link(&world, &template),
+                    "$",
+                    json!(e.rare_template.to_canonical_string(true)),
+                ),
                 sadd(k_rare_links(&world), template),
             ]
         }
@@ -604,7 +790,11 @@ pub(super) fn map_with_context(
             let key = k_character(&ch);
             vec![
                 char_init(&key, &ch),
-                set(key.clone(), "$.world", json!(e.world.to_canonical_string(true))),
+                set(
+                    key.clone(),
+                    "$.world",
+                    json!(e.world.to_canonical_string(true)),
+                ),
                 set(key, "$.position", json!({ "x": e.x, "z": e.z })),
             ]
         }
@@ -619,7 +809,11 @@ pub(super) fn map_with_context(
                 // wiping the other — the SAME convergence pattern as the ItemTemplate doc. These
                 // are the search-time totals; the API subtracts consumed-bitmap popcounts for the
                 // live counts.
-                set_nx(key.clone(), "$", json!({ "world": world, "zx": e.zx, "zy": e.zy, "discovered": true })),
+                set_nx(
+                    key.clone(),
+                    "$",
+                    json!({ "world": world, "zx": e.zx, "zy": e.zy, "discovered": true }),
+                ),
                 set(key.clone(), "$.discovered_at_ms", json!(e.at_ms)),
                 set(key.clone(), "$.mob_groups", json!(e.mob_groups)),
                 set(key, "$.resource_nodes", json!(e.resource_nodes)),
@@ -640,7 +834,11 @@ pub(super) fn map_with_context(
         ("zones", "MobGroupClaimed") => {
             let e: MobGroupClaimed = decode(module, name, contents)?;
             let world = e.world.to_canonical_string(true);
-            vec![set(k_group_template(&world, e.spawn_id), "$", json!(e.template.to_canonical_string(true)))]
+            vec![set(
+                k_group_template(&world, e.spawn_id),
+                "$",
+                json!(e.template.to_canonical_string(true)),
+            )]
         }
 
         // ── gathering: the resource-protector ambush signal (§17.22) ──────────
@@ -651,14 +849,18 @@ pub(super) fn map_with_context(
         ("gathering", "ProtectorTriggered") => {
             let e: ProtectorTriggered = decode(module, name, contents)?;
             let gatherer = e.gatherer.to_string();
-            vec![set(k_protector(&gatherer), "$", json!({
-                "gatherer": gatherer,
-                "world": e.world.to_canonical_string(true),
-                "template": e.template.to_canonical_string(true),
-                "x": e.x, "z": e.z,
-                "spawn_id": e.spawn_id.to_string(),
-                "at_ms": ts_ms,
-            }))]
+            vec![set(
+                k_protector(&gatherer),
+                "$",
+                json!({
+                    "gatherer": gatherer,
+                    "world": e.world.to_canonical_string(true),
+                    "template": e.template.to_canonical_string(true),
+                    "x": e.x, "z": e.z,
+                    "spawn_id": e.spawn_id.to_string(),
+                    "at_ms": ts_ms,
+                }),
+            )]
         }
 
         // ── game config (dials + class rows) ──────────────────────────────────
@@ -680,9 +882,13 @@ pub(super) fn map_with_context(
             let e: ClassRowSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CONFIG.into(), "$", json!({ "dials": {}, "classes": {} })),
-                set(K_CONFIG.into(), &mpath("$.classes", &e.class_id.to_string()), json!({
-                    "base_hp": e.base_hp, "base_ap": e.base_ap, "base_mp": e.base_mp,
-                })),
+                set(
+                    K_CONFIG.into(),
+                    &mpath("$.classes", &e.class_id.to_string()),
+                    json!({
+                        "base_hp": e.base_hp, "base_ap": e.base_ap, "base_mp": e.base_mp,
+                    }),
+                ),
             ]
         }
 
@@ -696,11 +902,15 @@ pub(super) fn map_with_context(
             let pass = e.pass.to_canonical_string(true);
             let player = e.player.to_string();
             vec![
-                set(k_run(&pass), "$", json!({
-                    "pass": pass, "world": e.world.to_canonical_string(true),
-                    "player": player, "character": e.character.to_canonical_string(true),
-                    "status": "active", "room": 1, "fight": Value::Null,
-                })),
+                set(
+                    k_run(&pass),
+                    "$",
+                    json!({
+                        "pass": pass, "world": e.world.to_canonical_string(true),
+                        "player": player, "character": e.character.to_canonical_string(true),
+                        "status": "active", "room": 1, "fight": Value::Null,
+                    }),
+                ),
                 sadd(k_runs(&player), pass),
             ]
         }
@@ -711,12 +921,24 @@ pub(super) fn map_with_context(
             vec![
                 // The explicit character write also backfills a doc whose activation
                 // predates the indexer's retained checkpoint window.
-                set_nx(key.clone(), "$", json!({
-                    "pass": pass, "world": e.world.to_canonical_string(true),
-                    "player": e.player.to_string(), "status": "active",
-                })),
-                set(key.clone(), "$.character", json!(e.character.to_canonical_string(true))),
-                set(key.clone(), "$.fight", json!(e.fight.to_canonical_string(true))),
+                set_nx(
+                    key.clone(),
+                    "$",
+                    json!({
+                        "pass": pass, "world": e.world.to_canonical_string(true),
+                        "player": e.player.to_string(), "status": "active",
+                    }),
+                ),
+                set(
+                    key.clone(),
+                    "$.character",
+                    json!(e.character.to_canonical_string(true)),
+                ),
+                set(
+                    key.clone(),
+                    "$.fight",
+                    json!(e.fight.to_canonical_string(true)),
+                ),
                 set(key, "$.room", json!(e.room)),
             ]
         }
@@ -725,11 +947,19 @@ pub(super) fn map_with_context(
             let pass = e.pass.to_canonical_string(true);
             let key = k_run(&pass);
             vec![
-                set_nx(key.clone(), "$", json!({
-                    "pass": pass, "world": e.world.to_canonical_string(true),
-                    "player": e.player.to_string(), "status": "active",
-                })),
-                set(key.clone(), "$.character", json!(e.character.to_canonical_string(true))),
+                set_nx(
+                    key.clone(),
+                    "$",
+                    json!({
+                        "pass": pass, "world": e.world.to_canonical_string(true),
+                        "player": e.player.to_string(), "status": "active",
+                    }),
+                ),
+                set(
+                    key.clone(),
+                    "$.character",
+                    json!(e.character.to_canonical_string(true)),
+                ),
                 set(key.clone(), "$.room", json!(e.room)),
                 set(key, "$.fight", Value::Null),
             ]
@@ -737,7 +967,10 @@ pub(super) fn map_with_context(
         ("dungeon_events", "RunEnded") => {
             let e: RunEnded = decode(module, name, contents)?;
             let pass = e.pass.to_canonical_string(true);
-            vec![del(k_run(&pass), "$"), srem(k_runs(&e.player.to_string()), pass)]
+            vec![
+                del(k_run(&pass), "$"),
+                srem(k_runs(&e.player.to_string()), pass),
+            ]
         }
 
         // ── kolizeum lobby status (aresrpg_kolizeum::kolizeum_events) ─────────────────────────────────
@@ -745,11 +978,15 @@ pub(super) fn map_with_context(
             let e: KolizeumCreated = decode(module, name, contents)?;
             let kz = e.kolizeum.to_canonical_string(true);
             vec![
-                set(k_kolizeum(&kz), "$", json!({
-                    "kolizeum": kz, "creator": e.creator.to_string(),
-                    "format_slots": e.format_slots, "pledge_mist": e.pledge_amount.to_string(),
-                    "is_public": e.is_public, "status": "open",
-                })),
+                set(
+                    k_kolizeum(&kz),
+                    "$",
+                    json!({
+                        "kolizeum": kz, "creator": e.creator.to_string(),
+                        "format_slots": e.format_slots, "pledge_mist": e.pledge_amount.to_string(),
+                        "is_public": e.is_public, "status": "open",
+                    }),
+                ),
                 sadd(K_KOLIZEUMS.into(), kz),
             ]
         }
@@ -804,12 +1041,16 @@ pub(super) fn map_with_context(
             let fight = e.fight.to_canonical_string(true);
             let world = e.world.to_canonical_string(true);
             vec![
-                set(k_fight(&fight), "$", json!({
-                    "fight": fight, "world": world, "spawn_id": e.spawn_id.to_string(),
-                    "anchor_x": e.anchor_x, "anchor_z": e.anchor_z,
-                    "public_fight": e.public_fight, "aged_bp": e.aged_bp, "mob_count": e.mob_count,
-                    "status": "placement", "participants": {}, "current_turn": Value::Null,
-                })),
+                set(
+                    k_fight(&fight),
+                    "$",
+                    json!({
+                        "fight": fight, "world": world, "spawn_id": e.spawn_id.to_string(),
+                        "anchor_x": e.anchor_x, "anchor_z": e.anchor_z,
+                        "public_fight": e.public_fight, "aged_bp": e.aged_bp, "mob_count": e.mob_count,
+                        "status": "placement", "participants": {}, "current_turn": Value::Null,
+                    }),
+                ),
                 sadd(k_fights(&world), fight),
             ]
         }
@@ -820,7 +1061,11 @@ pub(super) fn map_with_context(
             let key = k_fight(&fight);
             vec![
                 // NX skeleton so a (pathological) out-of-order join still has a map.
-                set_nx(key.clone(), "$", json!({ "fight": fight.clone(), "participants": {} })),
+                set_nx(
+                    key.clone(),
+                    "$",
+                    json!({ "fight": fight.clone(), "participants": {} }),
+                ),
                 set(key, &mpath("$.participants", &character), json!(e.seat)),
                 set(k_char_fight(&character), "$", json!(fight)),
             ]
@@ -830,9 +1075,13 @@ pub(super) fn map_with_context(
             let key = k_fight(&e.fight.to_canonical_string(true));
             vec![
                 set(key.clone(), "$.status", json!("active")),
-                set(key, "$.current_turn", json!({
-                    "is_mob": e.is_mob, "idx": e.idx, "deadline_ms": e.deadline_ms,
-                })),
+                set(
+                    key,
+                    "$.current_turn",
+                    json!({
+                        "is_mob": e.is_mob, "idx": e.idx, "deadline_ms": e.deadline_ms,
+                    }),
+                ),
             ]
         }
         // A MOB repositioned — store its LATEST cell on the fight doc (`$.mob_positions[idx]`).
@@ -847,16 +1096,28 @@ pub(super) fn map_with_context(
             vec![
                 set_nx(key.clone(), "$", json!({ "fight": f, "mob_positions": {} })),
                 set_nx(key.clone(), "$.mob_positions", json!({})),
-                set(key, &mpath("$.mob_positions", &e.idx.to_string()), json!(e.to_cell)),
+                set(
+                    key,
+                    &mpath("$.mob_positions", &e.idx.to_string()),
+                    json!(e.to_cell),
+                ),
             ]
         }
         ("fight_events", "Victory") => {
             let e: FightVictory = decode(module, name, contents)?;
-            vec![set(k_fight(&e.fight.to_canonical_string(true)), "$.status", json!("victory"))]
+            vec![set(
+                k_fight(&e.fight.to_canonical_string(true)),
+                "$.status",
+                json!("victory"),
+            )]
         }
         ("fight_events", "Defeat") => {
             let e: OneId = decode(module, name, contents)?;
-            vec![set(k_fight(&e.id.to_canonical_string(true)), "$.status", json!("defeat"))]
+            vec![set(
+                k_fight(&e.id.to_canonical_string(true)),
+                "$.status",
+                json!("defeat"),
+            )]
         }
         // Settled + Swept both DESTROY the shared Fight on-chain — mirror the delete.
         ("fight_events", "Settled") => {
@@ -874,12 +1135,16 @@ pub(super) fn map_with_context(
             let result = e.result.to_canonical_string(true);
             let owner = e.owner.to_string();
             vec![
-                set(k_result(&result), "$", json!({
-                    "result": result.clone(), "fight": e.fight.to_canonical_string(true),
-                    "character": e.character.to_canonical_string(true), "owner": owner.clone(),
-                    "outcome": outcome_str(e.outcome), "xp_share": e.xp_share,
-                    "final_hp": e.final_hp, "opened": false, "loot_units": 0,
-                })),
+                set(
+                    k_result(&result),
+                    "$",
+                    json!({
+                        "result": result.clone(), "fight": e.fight.to_canonical_string(true),
+                        "character": e.character.to_canonical_string(true), "owner": owner.clone(),
+                        "outcome": outcome_str(e.outcome), "xp_share": e.xp_share,
+                        "final_hp": e.final_hp, "opened": false, "loot_units": 0,
+                    }),
+                ),
                 sadd(k_results(&owner), result),
             ]
         }
@@ -895,12 +1160,16 @@ pub(super) fn map_with_context(
             let e: ResultOpened = decode(module, name, contents)?;
             let result = e.result.to_canonical_string(true);
             vec![
-                set(k_result(&result), "$", json!({
-                    "result": result.clone(), "fight": Value::Null,
-                    "character": e.character.to_canonical_string(true), "owner": sender,
-                    "outcome": Value::Null, "xp_share": e.xp_share, "final_hp": Value::Null,
-                    "opened": true, "loot_units": e.loot_units,
-                })),
+                set(
+                    k_result(&result),
+                    "$",
+                    json!({
+                        "result": result.clone(), "fight": Value::Null,
+                        "character": e.character.to_canonical_string(true), "owner": sender,
+                        "outcome": Value::Null, "xp_share": e.xp_share, "final_hp": Value::Null,
+                        "opened": true, "loot_units": e.loot_units,
+                    }),
+                ),
                 sadd(k_results(sender), result),
             ]
         }
@@ -923,11 +1192,15 @@ pub(super) fn map_with_context(
             let customer = e.customer.to_string();
             let artisan = e.artisan.to_string();
             vec![
-                set(k_commission(&id), "$", json!({
-                    "commission": id, "customer": customer, "artisan": artisan,
-                    "recipe": e.recipe.to_canonical_string(true),
-                    "amount_mist": e.amount.to_string(), "accepted": false, "requested_at_ms": ts_ms,
-                })),
+                set(
+                    k_commission(&id),
+                    "$",
+                    json!({
+                        "commission": id, "customer": customer, "artisan": artisan,
+                        "recipe": e.recipe.to_canonical_string(true),
+                        "amount_mist": e.amount.to_string(), "accepted": false, "requested_at_ms": ts_ms,
+                    }),
+                ),
                 sadd(k_commissions_by_artisan(&artisan), id.clone()),
                 sadd(k_commissions_by_customer(&customer), id),
             ]
@@ -938,7 +1211,11 @@ pub(super) fn map_with_context(
             vec![
                 set(key.clone(), "$.accepted", json!(true)),
                 set(key.clone(), "$.artisan_level", json!(e.artisan_level)),
-                set(key, "$.artisan_character", json!(e.artisan_character.to_canonical_string(true))),
+                set(
+                    key,
+                    "$.artisan_character",
+                    json!(e.artisan_character.to_canonical_string(true)),
+                ),
             ]
         }
         ("commission", "CraftExecuted") => {
@@ -968,10 +1245,14 @@ pub(super) fn map_with_context(
             let item = e.id.to_canonical_string(true);
             let kiosk = e.kiosk.to_canonical_string(true);
             vec![
-                set(k_listing(&item), "$", json!({
-                    "item_id": &item, "kiosk": &kiosk,
-                    "price_mist": e.price.to_string(), "seller": sender,
-                })),
+                set(
+                    k_listing(&item),
+                    "$",
+                    json!({
+                        "item_id": &item, "kiosk": &kiosk,
+                        "price_mist": e.price.to_string(), "seller": sender,
+                    }),
+                ),
                 sadd(K_LISTINGS.into(), item),
                 // Durable seller→kiosk directory: the purchase event carries the kiosk
                 // but not the seller, and it DELETES the listing — so bind the edge here
@@ -997,10 +1278,7 @@ pub(super) fn map_with_context(
                 "buyer": sender, "ts": ts_ms,
             })
             .to_string();
-            let mut writes = vec![
-                del(k_listing(&item), "$"),
-                srem(K_LISTINGS.into(), item),
-            ];
+            let mut writes = vec![del(k_listing(&item), "$"), srem(K_LISTINGS.into(), item)];
             let realised_sale = e.price > 0
                 || (!purchase.confirmed_extract_exit
                     && (!purchase.transient_zero_listing || purchase.has_royalty_receipt));
@@ -1064,7 +1342,12 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
     let mut pipe = redis::pipe();
     for w in writes {
         match w {
-            RedisWrite::Set { key, path, json, nx } => {
+            RedisWrite::Set {
+                key,
+                path,
+                json,
+                nx,
+            } => {
                 pipe.cmd("JSON.SET").arg(key).arg(path).arg(json);
                 if *nx {
                     pipe.arg("NX");
@@ -1097,7 +1380,11 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
             RedisWrite::Expire { key, seconds } => {
                 pipe.cmd("EXPIRE").arg(key).arg(*seconds);
             }
-            RedisWrite::PartyCreate { party: party_id, character, owner } => {
+            RedisWrite::PartyCreate {
+                party: party_id,
+                character,
+                owner,
+            } => {
                 pipe.cmd("EVAL")
                     .arg(party::LUA_REDUCE)
                     .arg(2)
@@ -1108,7 +1395,11 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
                     .arg(character)
                     .arg(owner);
             }
-            RedisWrite::PartyJoin { party: party_id, character, owner } => {
+            RedisWrite::PartyJoin {
+                party: party_id,
+                character,
+                owner,
+            } => {
                 pipe.cmd("EVAL")
                     .arg(party::LUA_REDUCE)
                     .arg(2)
@@ -1119,7 +1410,11 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
                     .arg(character)
                     .arg(owner);
             }
-            RedisWrite::PartyLeave { party: party_id, character, owner } => {
+            RedisWrite::PartyLeave {
+                party: party_id,
+                character,
+                owner,
+            } => {
                 pipe.cmd("EVAL")
                     .arg(party::LUA_REDUCE)
                     .arg(2)
@@ -1143,7 +1438,9 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
         .await
         .context("redis pipeline")?;
     for (w, reply) in writes.iter().zip(replies) {
-        let redis::Value::ServerError(server_err) = reply else { continue };
+        let redis::Value::ServerError(server_err) = reply else {
+            continue;
+        };
         let err = redis::RedisError::from(server_err);
         match w {
             RedisWrite::Set { key, path, .. } => {
