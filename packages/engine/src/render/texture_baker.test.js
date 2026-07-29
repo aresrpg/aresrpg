@@ -54,10 +54,39 @@ function fnv1a(bytes) {
   return h >>> 0
 }
 
+/**
+ * ONE bake per distinct (seed, max_layers) for the read-only tests. A bake costs ~230 ms and this
+ * file asked for 19 of them across 10 distinct keys — the atlas is a pure function of its options
+ * and no test mutates one, so the repeats were pure waste. Every seed the file used is still baked:
+ * the cross-seed coverage of the structural invariants is unchanged, only the duplicates are gone.
+ * NOT for the determinism pairs below — there, two INDEPENDENT bakes ARE the assertion.
+ * @type {Map<string, import('./texture_baker.js').BakeResult>}
+ */
+const bakes = new Map()
+/**
+ * @param {number} seed
+ * @param {number} [max_layers]
+ * @returns {import('./texture_baker.js').BakeResult}
+ */
+function atlas(seed, max_layers) {
+  const key = `${seed}/${max_layers ?? ''}`
+  const hit = bakes.get(key)
+  if (hit) return hit
+  const baked = bake_block_textures(max_layers === undefined ? { size: SIZE, seed } : { size: SIZE, seed, max_layers })
+  bakes.set(key, baked)
+  return baked
+}
+
 describe('determinism', () => {
+  // The four bakes this whole describe needs, hoisted: `a`/`b` are two INDEPENDENT bakes of the same
+  // seed (their independence is the assertion — never route these through the `atlas` memo), shared by
+  // the two run-stability tests below which each used to bake their own identical pair.
+  const a = bake_block_textures({ size: SIZE, seed: 1337 })
+  const b = bake_block_textures({ size: SIZE, seed: 1337 })
+  const seed_1 = bake_block_textures({ size: SIZE, seed: 1 })
+  const seed_2 = bake_block_textures({ size: SIZE, seed: 2 })
+
   test('same seed ⇒ byte-identical atlas', () => {
-    const a = bake_block_textures({ size: SIZE, seed: 1337 })
-    const b = bake_block_textures({ size: SIZE, seed: 1337 })
     expect(a.albedo.length).toBe(b.albedo.length)
     expect(fnv1a(a.albedo)).toBe(fnv1a(b.albedo))
     // Full byte compare, not just the hash.
@@ -72,15 +101,11 @@ describe('determinism', () => {
   })
 
   test('different seed ⇒ different atlas', () => {
-    const a = bake_block_textures({ size: SIZE, seed: 1 })
-    const b = bake_block_textures({ size: SIZE, seed: 2 })
-    expect(fnv1a(a.albedo)).not.toBe(fnv1a(b.albedo))
+    expect(fnv1a(seed_1.albedo)).not.toBe(fnv1a(seed_2.albedo))
   })
 
   test('variant layers of one recipe are byte-stable across runs AND decorrelated from each other', () => {
     // Same seed ⇒ every variant layer is byte-identical (fix #3 must not break determinism).
-    const a = bake_block_textures({ size: SIZE, seed: 1337 })
-    const b = bake_block_textures({ size: SIZE, seed: 1337 })
     const stride = SIZE * SIZE * 4
     const base = /** @type {number} */ (a.layer_of_name.get('grass'))
     const count = /** @type {number} */ (a.variants_of_name.get('grass'))
@@ -96,7 +121,7 @@ describe('determinism', () => {
 })
 
 describe('dimensions & mappings', () => {
-  const res = bake_block_textures({ size: SIZE, seed: 7 })
+  const res = atlas(7)
 
   test('atlas length matches layers × size² × 4', () => {
     expect(res.size).toBe(SIZE)
@@ -185,7 +210,7 @@ describe('device texture-array limit (GPUValidationError guard)', () => {
     console.log(`atlas layers: ${layers} / ceiling ${MAX_ATLAS_LAYERS} (WebGPU default limit is 256)`)
     expect(layers).toBeLessThanOrEqual(MAX_ATLAS_LAYERS)
     // The pure helper MUST equal the real baked layer count — they size the same atlas, from one source.
-    expect(bake_block_textures({ size: SIZE, seed: 1 }).layers).toBe(layers)
+    expect(atlas(1).layers).toBe(layers)
     // We MUST be over the WebGPU default, else the renderer's raised-limit request is dead code and this
     // whole guard is pointless — this documents WHY the device-limit request has to exist.
     expect(layers).toBeGreaterThan(256)
@@ -198,8 +223,8 @@ describe('spec-minimum adapter fallback (256-layer budget — no black world on 
   // REDUCED atlas that fits. This is the release-blocking guard: on those devices the world MUST still
   // render every block's correct recipe, never a truncated/black atlas.
   const SPEC_MIN = 256
-  const reduced = bake_block_textures({ size: SIZE, seed: 1337, max_layers: SPEC_MIN })
-  const full = bake_block_textures({ size: SIZE, seed: 1337 })
+  const reduced = atlas(1337, SPEC_MIN)
+  const full = atlas(1337)
 
   test('reduced atlas fits the spec-minimum device limit', () => {
     expect(reduced.layers).toBeLessThanOrEqual(SPEC_MIN)
@@ -298,7 +323,7 @@ describe('A1 procedural-tree species art (append-only parity)', () => {
   ]
 
   test('all 14 tree recipes present, appended AFTER the pre-A1 atlas', () => {
-    const res = bake_block_textures({ size: SIZE, seed: 1337 })
+    const res = atlas(1337)
     for (const n of NEW_NAMES) expect(res.layer_of_name.has(n)).toBe(true)
     // Every new base layer sits at/after the pre-A1 end (210) — pure append, never an insertion.
     for (const n of NEW_NAMES) expect(/** @type {number} */ (res.layer_of_name.get(n))).toBeGreaterThanOrEqual(210)
@@ -331,7 +356,7 @@ describe('A1 procedural-tree species art (append-only parity)', () => {
     // species tiles are post-A1); every other pre-A1 layer is still byte-frozen against this new baseline.
     const ORIGINAL_LAYERS = 228
     const PRE_A1_HASH = 1486638945
-    const res = bake_block_textures({ size: SIZE, seed: 1337 })
+    const res = atlas(1337)
     const stride = SIZE * SIZE * 4
     expect(res.layers).toBeGreaterThan(ORIGINAL_LAYERS)
     expect(fnv1a(res.albedo.subarray(0, ORIGINAL_LAYERS * stride))).toBe(PRE_A1_HASH)
@@ -341,7 +366,7 @@ describe('A1 procedural-tree species art (append-only parity)', () => {
   })
 
   test('leaf/twig cards are alpha-clip cutouts; barks + cap are opaque', () => {
-    const res = bake_block_textures({ size: SIZE, seed: 42 })
+    const res = atlas(42)
     for (const n of ALPHA_CLIP_NEW) {
       const a = alpha_values(res, /** @type {number} */ (res.layer_of_name.get(n)))
       expect(a.has(0), `${n} must punch transparent holes`).toBe(true)
@@ -354,7 +379,7 @@ describe('A1 procedural-tree species art (append-only parity)', () => {
 })
 
 describe('alpha invariants', () => {
-  const res = bake_block_textures({ size: SIZE, seed: 42 })
+  const res = atlas(42)
 
   test('alpha-clip layers contain both alpha=0 and alpha=255', () => {
     for (const name of ALPHA_CLIP_NAMES) {
@@ -389,7 +414,7 @@ describe('painterly grain bound', () => {
     // fBm+clumps (no axis bias). Encode "no stripes" structurally: the variance of the ROW means must
     // be comparable to the variance of the COLUMN means — a directional ramp would blow one up while
     // the other stayed ~0. We assert their ratio is within a modest band (neither axis dominates).
-    const res = bake_block_textures({ size: SIZE, seed: 99 })
+    const res = atlas(99)
     const stride = SIZE * SIZE * 4
     const base = /** @type {number} */ (res.layer_of_name.get('grass')) * stride
     /** @type {(x: number, y: number) => number} */
@@ -435,7 +460,7 @@ describe('painterly grain bound', () => {
     // to the blade-family anchor: the ground now bakes in the BLADE-BODY green family (mean chroma ≈0.17)
     // so tufts root in same-coloured sward; the ENG-1 tint multiplies both identically so they cannot
     // drift apart. Guard at 0.24: blocks a full re-saturation regression while allowing the blade anchor.
-    const res = bake_block_textures({ size: SIZE, seed: 99 })
+    const res = atlas(99)
     const stride = SIZE * SIZE * 4
     const base = /** @type {number} */ (res.layer_of_name.get('grass')) * stride
     let sum_chroma = 0
@@ -458,7 +483,7 @@ describe('painterly grain bound', () => {
     // cluster-speckle are deliberate COLOUR PATCHES (a different, stronger feature) so we isolate the
     // grain envelope by measuring luma deviation within small local neighbourhoods (a 4px window is
     // below the clump scale ≈ size/3, so window spread ≈ grain, not patch). Stays within the bound.
-    const res = bake_block_textures({ size: SIZE, seed: 99 })
+    const res = atlas(99)
     const stride = SIZE * SIZE * 4
     const base = /** @type {number} */ (res.layer_of_name.get('grass')) * stride
     /** @type {(x: number, y: number) => number} */
@@ -489,7 +514,7 @@ describe('painterly grain bound', () => {
 
 describe('three DataArrayTexture', () => {
   test('builds with correct dims, filters, colorspace, mips', () => {
-    const res = bake_block_textures({ size: SIZE, seed: 5 })
+    const res = atlas(5)
     const tex = build_data_array_texture(THREE, res)
     expect(tex.image.width).toBe(SIZE)
     expect(tex.image.height).toBe(SIZE)
@@ -512,7 +537,7 @@ describe('three DataArrayTexture', () => {
 
 describe('preview dump', () => {
   test('writes /tmp/baker_preview.rgba (named base layers side by side)', () => {
-    const res = bake_block_textures({ size: SIZE, seed: 2024 })
+    const res = atlas(2024)
     // Named base layers so the new grass_side rim is eyeball-verifiable next to grass/dirt/stone.
     const names = ['grass', 'grass_side', 'dirt', 'stone']
     const width = names.length * SIZE
@@ -544,7 +569,7 @@ describe('preview dump', () => {
 // bilinear bleed then blends transparent with transparent — no straight quad edge can survive). Covers the
 // base species AND every proc-tree species tile (all route through op_leaf — one home).
 describe('leaf sprite silhouette (round-2: multi-clump, no card read)', () => {
-  const res = bake_block_textures({ size: SIZE, seed: 0 })
+  const res = atlas(0)
   const LEAF_TILE_NAMES = [
     'leaves',
     'leaves_conifer',
