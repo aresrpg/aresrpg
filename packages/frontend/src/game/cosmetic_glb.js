@@ -14,7 +14,6 @@
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
 import { canonical_asset_url } from '@aresrpg/sdk/jobs'
 
-import { ASSETS_URL } from '../env'
 import { get_encyclopedia } from '../rpc/client'
 
 import { cosmetic_icon_of } from './cosmetic_icons.js'
