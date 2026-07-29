@@ -116,6 +116,10 @@ tester.run('no-swallowed-failure', plugin.rules['no-swallowed-failure'], {
       options: [{ allow: ['/e2e/'] }],
     },
     {
+      name: 'an injected failure channel is speech — the caller handed us somewhere to speak (hack_radio #825)',
+      code: `play().catch((e) => (e?.name === 'NotAllowedError' ? arm_gesture_retry() : on_error?.(e)))`,
+    },
+    {
       name: 'a caller-supplied sink registry replaces the default one',
       code: `load().catch((e) => house_channel(e))`,
       options: [{ sinks: ['house_channel'] }],
