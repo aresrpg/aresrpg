@@ -34,7 +34,6 @@ test/**
 **/*.fixture.*
 **/*.snap
 
-# Test source — RED-FIRST manufactures test mass by design; it is the payment, not the debt (#1713)
-**/test/**
+# Test files — RED-FIRST manufactures test mass by design; it is the payment, not the debt (#1713)
 **/*.test.*
 **/*.spec.*
