@@ -2,6 +2,16 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One browser edge for the stateless courier: a public world presence SSE inbound, zkLogin-authenticated
 // position/chat POSTs outbound, and a trailing position coalescer that stays under the shared 2/s hard gate.
+//
+// PRESENCE IS THE READ LAYER'S (#1641). The inbound link is `/v1/stream/presence/:world` — an open connection
+// IS presence, and its `current-set`/`join`/`leave` frames are the one home for who is in this world. This
+// module reports that link's own status onto the presence atom (the chip renders the atom, so a live stream
+// can never read as an idle one), and it never invents a presence signal of its own.
+//
+// A REFUSED POST IS NOT A SILENT ONE. `courier_refusal` is the single home for what each refusal means: a 401
+// drops the cached signature so the very next send re-signs (the #1640 cascade used to freeze sending for the
+// whole 4-minute reuse window, recoverable only by a page refresh), a 400 is our bug and is reported loudly,
+// and a refused CHAT send always tells the player their line did not go out.
 
 import { courier_challenge, post_courier_chat, post_courier_position } from '@aresrpg/sdk/courier'
 
@@ -12,12 +22,18 @@ import { open_presence_stream, presence_frames } from '../world-shell/presence_s
 
 const POSITION_MIN_INTERVAL_MS = 500
 const AUTH_REUSE_MS = 4 * 60_000
+// The stream spends a finite reconnect budget and then closes for good — honest, but permanent: presence stayed
+// dead until a page refresh. A failed link re-opens on this slow schedule, and immediately when the browser
+// itself says the network is back. Nothing is remembered across the gap: a re-opened stream re-reads the world.
+const RELINK_DELAY_MS = 30_000
 const GROUP_CHANNEL = 'CHAT_GROUP'
 const FIGHT_CHANNEL = 'CHAT_FIGHT'
 
 let close_stream = null
 let active_world = null
 let active_identity = null
+let link_target = null
+let relink_timer = null
 let active_party = null
 let auth_cache = null
 let auth_in_flight = null
@@ -26,6 +42,44 @@ let position_timer = null
 let position_in_flight = false
 let last_position_post_at = Number.NEGATIVE_INFINITY
 const fight_stream_listeners = new Set()
+
+/**
+ * ONE home for what a refused courier POST MEANS — pure, so the policy is testable and the caller performs
+ * the effects. `kind` is the send that was refused ('chat' | 'position').
+ * @param {{ status?: number, code?: string }} error a CourierError from the SDK seam
+ * @param {'chat'|'position'} kind
+ */
+export function courier_refusal(error, kind) {
+  const status = Number(error?.status) || 0
+  return {
+    status,
+    code: error?.code ?? 'unknown',
+    // 401 — the cached challenge/signature is stale or rejected. Drop it: the next send re-signs by itself.
+    resign: status === 401,
+    // 400 — we sent something the endpoint calls invalid. It never self-heals, so it is reported loudly, once.
+    report: status === 400 || status >= 500,
+    // A chat line is a player ACT (they must learn it did not go out); a position is machinery, and a toast
+    // per refused pose would be a spam cannon.
+    toast:
+      kind !== 'chat' ? null : status === 429 ? 'world_chat.send_rate_limited' : 'world_chat.send_failed',
+  }
+}
+
+/** Execute that one policy. The loud/player-facing legs ride lazy failure-path imports, so the headless
+ *  presence tests never pull the toast store or the reporter in merely by importing this module. */
+async function courier_refused(kind, error) {
+  const refusal = courier_refusal(error, kind)
+  game_log('courier', `${kind} POST refused`, refusal.code, error)
+  if (refusal.resign) auth_cache = null
+  if (refusal.report)
+    await import('../core/report.js')
+      .then(({ report_error }) => report_error(error, { area: 'courier', kind, code: refusal.code }))
+      .catch(() => {})
+  if (refusal.toast)
+    await Promise.all([import('../toast'), import('../i18n')])
+      .then(([{ use_toast }, { default: i18n }]) => use_toast.getState().add(i18n.t(refusal.toast), 'error'))
+      .catch(() => {})
+}
 
 async function courier_auth() {
   // Auth owns browser-only Enoki registration, so keep it behind the actual POST edge. Stream decode and every
@@ -153,12 +207,23 @@ export function join_courier(world, character = null, address = null) {
   }
   close_stream?.()
   close_stream = null
+  clear_relink()
   presence_input({ type: 'reset' })
   presence_input({ type: 'session', character_id: character })
   active_world = world
   active_identity = identity
+  link_target = null
   if (!character && !address)
     return game_log('courier', 'presence link not opened — this session names neither a character nor a wallet')
+  link_target = { world, character, address }
+  open_link()
+}
+
+/** Open the ONE inbound link for the current target. Re-entrant: a relink closes the dead source first. */
+function open_link() {
+  if (!link_target) return
+  const { world, character, address } = link_target
+  close_stream?.()
   close_stream = open_presence_stream({
     world,
     address,
@@ -166,13 +231,46 @@ export function join_courier(world, character = null, address = null) {
     input: presence_input,
     base_url: RPC_URL,
     frames: { ...presence_frames, ...courier_frames },
-    set_status: (status, error) => game_log('courier', `presence link ${status}`, error),
+    set_status: on_link_status,
   })
 }
+
+/** The link's status is presence STATE, not a log line: it goes on the atom the chip reads (#1641) — and a
+ *  link that gave up schedules its own return, so presence recovers without a page refresh. */
+function on_link_status(status, error) {
+  game_log('courier', `presence link ${status}`, error)
+  presence_input({ type: 'link', status, error })
+  if (status === 'failed') arm_relink()
+}
+
+const clear_relink = () => {
+  if (relink_timer) clearTimeout(relink_timer)
+  relink_timer = null
+}
+
+function arm_relink(delay = RELINK_DELAY_MS) {
+  if (relink_timer || !link_target) return
+  const timer = setTimeout(() => {
+    relink_timer = null
+    open_link()
+  }, delay)
+  timer.unref?.() // never hold a test/node process open on a pending relink
+  relink_timer = timer
+}
+
+// The browser's own recovery signal beats any schedule: a laptop waking up relinks now, not in 30 seconds.
+if (typeof window !== 'undefined')
+  window.addEventListener?.('online', () => {
+    if (!link_target || presence_store.getState().link_status !== 'failed') return
+    clear_relink()
+    open_link()
+  })
 
 export function leave_courier() {
   close_stream?.()
   close_stream = null
+  clear_relink()
+  link_target = null
   active_world = null
   active_identity = null
   active_party = null
@@ -202,7 +300,7 @@ async function flush_position() {
     const auth = await courier_auth()
     await post_courier_position({ base_url: COURIER_URL, ...position, ...auth })
   } catch (error) {
-    game_log('courier', 'position POST refused', error)
+    await courier_refused('position', error)
   } finally {
     position_in_flight = false
     if (pending_position && !position_timer) position_timer = setTimeout(flush_position, POSITION_MIN_INTERVAL_MS)
@@ -232,7 +330,7 @@ async function post_chat(character, text, channel, target, party) {
       ...auth,
     })
   } catch (error) {
-    game_log('courier', 'chat POST refused', error)
+    await courier_refused('chat', error)
   }
 }
 

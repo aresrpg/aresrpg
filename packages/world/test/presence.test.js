@@ -20,9 +20,6 @@ import {
   subscribe_identity_requests,
   subscribe_chat,
   subscribe_commissions,
-  subscribe_rejoin,
-  subscribe_reannounce,
-  rejoin_backoff_ms,
   MAX_PLAUSIBLE_TILES_PER_SEC,
   MOUNTED_SPEED_HEADROOM,
   PEER_EXPIRY_MS,
@@ -323,73 +320,36 @@ describe('SELF-HEAL ① liveness — silence expires a peer; a heartbeat keeps a
   })
 })
 
-// ─── SELF-HEAL LEG ②③④ (red-first): CONNECTION DEATH → BOUNDED REJOIN → RE-ANNOUNCE ───
-// Connection lifecycle is an INPUT to the reducer; recovery is an EFFECT REQUEST executed at the edge (no
-// async callback ever set()s the store). room_lost ⇒ a rejoin request with jittered/bounded backoff;
-// rejoin_ok ⇒ backoff reset + a FULL re-announce so both sides reconverge without a user refresh.
+// ─── THE LINK STATE (red-first, #1641): the presence atom is the ONE home for what the world link IS ───
+// The transport edge owns the socket and its finite retry budget; it reports status through this ONE input and
+// the chip renders the atom. The old room_lost → bounded-rejoin → re-announce machine was deleted with this
+// pass: it had ZERO producers since the p2p transport went away, and a second writer of `link_status` is how
+// the UI ended up reading "P2P idle" against a live stream.
 
-describe('SELF-HEAL ②③④ connection death → bounded rejoin → re-announce on recovery', () => {
-  it('room_lost requests a rejoin (backoff attempt 1); a persistent loss ESCALATES the backoff', () => {
+describe('the link input is the single writer of link_status / link_error', () => {
+  it('carries the edge\'s status onto the atom, with its reason', () => {
     const { store, input } = boot()
-    const rejoins = []
-    subscribe_rejoin(store, (r) => rejoins.push(r))
-    input({ type: 'room_lost' })
-    input({ type: 'room_lost' })
-    expect(rejoins.map((r) => r.attempt)).toEqual([1, 2])
-    expect(rejoins.map((r) => r.delay)).toEqual([rejoin_backoff_ms(1), rejoin_backoff_ms(2)])
-    expect(store.getState().rejoin_attempt).toBe(2)
+    expect(store.getState().link_status).toBe('idle')
+    input({ type: 'link', status: 'connecting' })
+    expect(store.getState()).toMatchObject({ link_status: 'connecting', link_error: null })
+    input({ type: 'link', status: 'connected' })
+    expect(store.getState().link_status).toBe('connected')
+    input({ type: 'link', status: 'failed', error: 'Presence stream unavailable after 6 attempts' })
+    expect(store.getState()).toMatchObject({ link_status: 'failed', link_error: expect.stringContaining('6 attempts') })
   })
-  it('the backoff is bounded and monotonic (attempt 1 < 2 < … ≤ the ceiling)', () => {
-    expect(rejoin_backoff_ms(1)).toBeLessThan(rejoin_backoff_ms(2))
-    expect(rejoin_backoff_ms(2)).toBeLessThan(rejoin_backoff_ms(3))
-    expect(rejoin_backoff_ms(99)).toBe(rejoin_backoff_ms(50)) // both pinned at the ceiling
-  })
-  it('rejoin_ok resets the backoff AND requests a full re-announce (both sides converge)', () => {
+  it('a repeated status is identity (no churn), and an unknown status can never smuggle itself onto the atom', () => {
     const { store, input } = boot()
-    const reannounces = []
-    subscribe_reannounce(store, (r) => reannounces.push(r))
-    input({ type: 'room_lost' })
-    expect(store.getState().rejoin_attempt).toBe(1)
-    input({ type: 'rejoin_ok' })
-    expect(store.getState().rejoin_attempt).toBe(0)
-    expect(reannounces).toHaveLength(1)
+    input({ type: 'link', status: 'connected' })
+    const settled = store.getState()
+    input({ type: 'link', status: 'connected' })
+    expect(store.getState()).toBe(settled)
+    input({ type: 'link', status: 'exploded' })
+    expect(store.getState().link_status).toBe('idle')
   })
-  it('network/visibility recovery re-arms an in-flight backoff to an IMMEDIATE rejoin; healthy = re-announce only', () => {
+  it('reset (scene teardown / account switch) returns the link to idle with no stale reason', () => {
     const { store, input } = boot()
-    const rejoins = []
-    const reannounces = []
-    subscribe_rejoin(store, (r) => rejoins.push(r))
-    subscribe_reannounce(store, (r) => reannounces.push(r))
-    // healthy (attempt 0): recovery re-announces (cheap convergence), never churns a rejoin on a working room
-    input({ type: 'network_recover' })
-    expect(rejoins).toHaveLength(0)
-    expect(reannounces).toHaveLength(1)
-    // lost mid-backoff: recovery kicks the scheduled rejoin to an IMMEDIATE (delay 0) retry
-    input({ type: 'room_lost' })
-    input({ type: 'network_recover' })
-    expect(rejoins.at(-1)).toMatchObject({ delay: 0 })
-  })
-  it('reset (scene teardown / account switch) clears the backoff so a fresh join starts healthy', () => {
-    const { store, input } = boot()
-    input({ type: 'room_lost' })
+    input({ type: 'link', status: 'failed', error: 'gone' })
     input({ type: 'reset' })
-    expect(store.getState().rejoin_attempt).toBe(0)
-  })
-  it('stops automatic rejoins after a finite budget and exposes an honest terminal error', () => {
-    const { store, input } = boot()
-    const rejoins = []
-    subscribe_rejoin(store, (r) => rejoins.push(r))
-
-    for (let n = 0; n < 7; n++) input({ type: 'room_lost' })
-
-    expect(rejoins).toHaveLength(6)
-    expect(store.getState()).toMatchObject({
-      rejoin_attempt: 6,
-      link_status: 'failed',
-    })
-    expect(store.getState().link_error).toContain('6 attempts')
-    const terminal = store.getState()
-    input({ type: 'network_recover' })
-    expect(store.getState()).toBe(terminal)
+    expect(store.getState()).toMatchObject({ link_status: 'idle', link_error: null })
   })
 })
