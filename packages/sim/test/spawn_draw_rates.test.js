@@ -135,6 +135,12 @@ const roam = ({ format, zones_per_world, at }) => {
   return tally
 }
 
+/** One shared open-map roam — every assertion below reads the SAME counted population (and it is counted once). */
+const once = fn => {
+  let v = null
+  return () => (v ??= fn())
+}
+
 /** Uniform over the whole zone grid — the open map, where the §4 caps have fully opened. */
 const anywhere = (rnd, w) => [
   Math.floor(rnd() * Math.max(1, Math.floor(w.bounds_x / w.zone_size))),
@@ -143,14 +149,14 @@ const anywhere = (rnd, w) => [
 /** The first-join box itself — progress 0, where every §4 cap sits at its floor. */
 const first_join = (_rnd, w) => [centre_zone(w), centre_zone(w)]
 
-// The ONE counted population every open-map assertion below reads — rolled at module load, not inside a test, so
-// the shared 134k-group roam is never charged to whichever test happens to run first (a 5s-timeout flake).
-const open_map = roam({ format: 3, zones_per_world: 120, at: anywhere })
+const open_map = once(() =>
+  roam({ format: 3, zones_per_world: 120, at: anywhere }),
+)
 
 describe('spawn draw rates — the live tables, measured (#1491)', () => {
   // ── the instrument itself: does a row of weight w actually draw at w / Σw? ──────────────────────────────────
   test('the primary pick is PROPORTIONAL to the authored rate_bp (the guard on any future rate fix)', () => {
-    const t = open_map
+    const t = open_map()
     expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
     for (const w of live.worlds) {
       const { picks } = t.per_world.get(w.wid)
@@ -178,7 +184,7 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
   test.failing(
     'archi-tier mobs draw at the ruled 1% — RED until the rare-draw lands (#1491)',
     () => {
-      const t = open_map
+      const t = open_map()
       expect(t.units).toBeGreaterThanOrEqual(MIN_DRAWS)
       const measured_bp = (t.archi_units / t.units) * 10_000
       expect(Math.abs(measured_bp - ARCHI_RATE_BP)).toBeLessThanOrEqual(
@@ -188,7 +194,7 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
   )
 
   test('the archi over-rate is the TABLE share, not a correlated roll (what the fix has to move)', () => {
-    const t = open_map
+    const t = open_map()
     const table_share =
       live.worlds.flatMap(w => w.mobs).filter(m => m.role === 'archi').length /
       live.worlds.flatMap(w => w.mobs).length
@@ -199,16 +205,16 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
 
   // ── #1098 part 3: do groups mix species? ───────────────────────────────────────────────────────────────────
   test('format 3 packs MIX species; format 2 packs never do', () => {
-    const mixed = open_map
+    const mixed = open_map()
     const mono = roam({ format: 2, zones_per_world: 40, at: anywhere })
     expect(mixed.multi_groups).toBeGreaterThanOrEqual(MIN_DRAWS)
     expect(mixed.mixed_groups / mixed.multi_groups).toBeGreaterThan(0.9)
     expect(mono.mixed_groups).toBe(0)
-  }, 60_000)
+  })
 
   // ── #1098 part 2: zone diversity ───────────────────────────────────────────────────────────────────────────
   test('every authored row of a world is reachable in it (the #1111 equal-spawn ruling, measured)', () => {
-    const t = open_map
+    const t = open_map()
     for (const w of live.worlds) {
       const { drawn, roster } = t.per_world.get(w.wid)
       expect(drawn).toBe(roster)
@@ -233,7 +239,7 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
     ).toBe(0)
     expect(size_cap(0, TEAM_BOUND)).toBe(2)
     expect([...t.sizes.keys()].sort((a, b) => a - b)).toEqual([2])
-  }, 60_000)
+  })
 
   // RED WITNESS. Measured 2026-07-29 over 44 981 open-map groups: sizes are {2: 49.0%, 3: 51.0%} and NOTHING
   // else, at zones whose `size_cap` is the full team bound of 6. Cause: all 329 live rows author
@@ -244,14 +250,14 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
   test.failing(
     'the §4 size gradient reaches the team bound out on the open map — RED (#1098)',
     () => {
-      const t = open_map
+      const t = open_map()
       expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
       expect(Math.max(...t.sizes.keys())).toBe(TEAM_BOUND)
     },
   )
 
   test('a rolled size never leaves [authored min, min(authored max, size_cap)]', () => {
-    const t = open_map
+    const t = open_map()
     expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
     const bands = live.worlds.flatMap(w => w.mobs)
     const lo = Math.min(...bands.map(m => m.min_group))
