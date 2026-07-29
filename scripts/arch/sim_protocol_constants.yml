@@ -112,6 +112,23 @@ rules:
       - pattern: $LEVEL.casts_per_target >= 255
       - pattern: authored === 255
 
+  - id: sim-protocol-character-level-ceiling
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      include: ['packages/frontend/src/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      The character level ceiling derives from the SDK experience table. Import MAX_LEVEL from
+      @aresrpg/sdk/experience; do not re-declare or re-derive it in the client (#782).
+    pattern-either:
+      - patterns:
+          - pattern: const $NAME = 200
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: '^(?:MAX_LEVEL|MAX_CHARACTER_LEVEL|CHARACTER_MAX_LEVEL)$'
+      - pattern: const MAX_CHARACTER_LEVEL = experience_to_level(Number.MAX_SAFE_INTEGER)
+
   - id: sim-protocol-displacement-kind
     languages: [js, ts]
     severity: ERROR
@@ -127,6 +144,20 @@ rules:
     pattern-either:
       - pattern: const DISPLACE_TELEPORT = 14
       - pattern: const DISPLACE_TELEPORT = 14n
+
+  - id: sim-protocol-grid-stride
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      include: ['packages/fight/src/**', 'packages/frontend/src/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      Encoded fight cells use @aresrpg/sim/combat_grid GRID_W. Import the canonical stride; do not
+      re-declare 20 or pass it as a local grid_width protocol constant (#782).
+    pattern-either:
+      - pattern: const GRID_W = 20
+      - pattern: const CELL_STRIDE = 20
+      - pattern: 'grid_width: 20'
 
   - id: sim-protocol-signed-value-bias
     languages: [js, ts]

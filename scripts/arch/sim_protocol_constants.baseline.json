@@ -8,6 +8,7 @@
     "packages/fight/src/predict_cast.js": 2,
     "packages/frontend/src/pages/encyclopedia/classes_tab.tsx": 2
   },
+  "sim-protocol-character-level-ceiling": {},
   "sim-protocol-displacement-kind": {},
   "sim-protocol-element-ordinal": {
     "packages/fight/src/sim_chain_events.js": 1,
@@ -21,6 +22,7 @@
     "packages/fight/src/statuses.js": 1,
     "packages/frontend/src/game/screens/hud/seed-effect-line.js": 1
   },
+  "sim-protocol-grid-stride": {},
   "sim-protocol-signed-value-bias": {
     "packages/fight/src/fight_status_snapshot.js": 2
   },

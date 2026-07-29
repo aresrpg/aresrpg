@@ -34,7 +34,7 @@ import { context } from '../store.js'
 import { use_auth } from '../../auth'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
 import { fight_store } from '@aresrpg/fight/store'
-import { encode } from '@aresrpg/fight/los'
+import { GRID_W, encode } from '@aresrpg/fight/los'
 import { game_log } from '../../core/log.js'
 
 // A real catalog mob (mob_models.json) so the board renders a genuine GLB rig, not the debug cube. Join-key
@@ -144,7 +144,7 @@ const fold = (fight, version, flavor = 'world') => {
         mob_levels: use_dungeon.getState().mob_levels,
         mob_elements: use_dungeon.getState().mob_elements,
         offset: { x: 0, z: 0 }, // identity codec — anchor_x/z above are already world coords
-        beat_ctx: { grid_width: 20 },
+        beat_ctx: { grid_width: GRID_W },
       },
     })
   input({ type: 'snapshot', fight, version: Number(version) })

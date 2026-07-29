@@ -209,7 +209,7 @@ export const levels = [
   7407232000, // index 200 (level 200)
 ]
 
-const MAX_LEVEL = levels.length - 1 // 200 — mirrors character_xp.move's `MAX_LEVEL`
+export const MAX_LEVEL = levels.length - 1 // 200 — mirrors character_xp.move's `MAX_LEVEL`
 
 /**
  * Character level from total xp — binary search for the highest level whose curve threshold is <= xp.

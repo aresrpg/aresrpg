@@ -15,6 +15,7 @@
 // allocations to the smaller budget rather than leaving an invalid build: stats scale down proportionally,
 // spells fall to the highest level the budget still affords.
 
+import { MAX_LEVEL } from '@aresrpg/sdk/experience'
 import { spell_points_for_level, spell_points_invested, stat_points_for_level } from '@aresrpg/sdk/progression'
 import { STATISTICS_PRIMARY } from '@aresrpg/sdk/stats'
 
@@ -29,8 +30,9 @@ export const SIM_STATS = STATISTICS_PRIMARY as readonly SimStat[]
 export const MAX_ROSTER = 6
 /** 1–6 mobs per fight — the enemy band seats exactly six (board_gen `MAX_SEATS`), so the cap is the board's. */
 export const MAX_MOBS = 6
-export const MAX_LEVEL = 200
 export const MAX_NAME_LENGTH = 24
+
+export { MAX_LEVEL } from '@aresrpg/sdk/experience'
 
 export type SimCharacter = {
   id: string

@@ -3,6 +3,8 @@
 // Retro 1.29 XP curve — copied from plugins/core/.../Experience.java
 // Index 0 unused, levels 1–200
 
+import { MAX_LEVEL } from '@aresrpg/sdk/experience'
+
 const XP_CURVE = [
   0, 0, 110, 650, 1_500, 2_800, 4_800, 7_300, 10_500, 14_500, 19_200, 25_200, 32_600, 41_000, 50_500, 61_000, 75_000,
   91_000, 115_000, 142_000, 171_000, 202_000, 235_000, 270_000, 310_000, 353_000, 398_500, 448_000, 503_000, 561_000,
@@ -27,8 +29,6 @@ const XP_CURVE = [
   2_192_686_000, 2_341_679_000, 2_501_990_000, 2_673_655_000, 2_856_710_000, 3_051_194_000, 3_257_146_000,
   3_474_606_000, 3_703_616_000, 7_407_232_000,
 ]
-
-const MAX_LEVEL = 200
 
 function get_level_capped(xp: number, max_level: number): number {
   if (xp <= 0) return 1

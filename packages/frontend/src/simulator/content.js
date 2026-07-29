@@ -11,7 +11,7 @@
 // reducer's — one home). It refuses out-of-domain input loudly instead of silently coercing it.
 
 import CLASSES_JSON from '@aresrpg/sdk/classes' with { type: 'json' }
-import { experience_to_level, level_to_experience } from '@aresrpg/sdk/experience'
+import { MAX_LEVEL as MAX_CHARACTER_LEVEL, level_to_experience } from '@aresrpg/sdk/experience'
 import { STATISTICS, get_equipment_stat, get_max_health, get_total_stat } from '@aresrpg/sdk/stats'
 import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
 import { ITEM_STAT_CATALOG_ORDER, ITEM_STAT_SHIFT, fold_equipment_snapshot } from '@aresrpg/sim/equipment_stats'
@@ -42,9 +42,6 @@ export const SIMULATOR_CLASSES = Object.entries(CLASSES_JSON).map(([id, def]) =>
 // rebalance of the base pools reaches the simulator with no edit here.
 export const BASE_AP = get_total_stat(/** @type {any} */ ({}), STATISTICS.ACTION)
 export const BASE_MP = get_total_stat(/** @type {any} */ ({}), STATISTICS.MOVEMENT)
-
-/** The top of the on-chain xp curve (character_xp.move MAX_LEVEL, via the SDK's own table). */
-const MAX_CHARACTER_LEVEL = experience_to_level(Number.MAX_SAFE_INTEGER)
 
 // ── items: max roll → the centered wire the fold reads ────────────────────────────────────────────
 // THREE vocabularies meet here and none of them is invented in this file. The fold speaks the Move
