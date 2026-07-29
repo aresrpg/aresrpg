@@ -4,9 +4,9 @@
 const FRIEND_OFFLINE = 'fast_travel.friend_offline'
 const REALM_UNREACHABLE = 'fast_travel.realm_unreachable'
 const PRESENCE_DOWN = 'fast_travel.presence_down'
-// Presence has ONE read stream (docs/REALTIME.md lane 2). When that stream is dead or was never opened, we do
-// not know where anybody is — and an outage must be loud, never a sentence about the world ("a realm you can't
-// reach") that no world fact backs. `connecting`/`reconnecting` are still trying, so they are not an outage.
+// Presence has ONE read stream. When that stream is dead or was never opened, we do not know where anybody is
+// — and an outage must be loud, never a sentence about the world ("a realm you can't reach") that no world
+// fact backs. `connecting`/`reconnecting` are still trying, so they are not an outage.
 const presence_is_down = (link_status) => link_status === 'failed' || link_status === 'idle'
 
 /** The freshest candidate carrying an ACCEPTED live pose, or null when nobody has one. A pose is a refinement
@@ -30,8 +30,9 @@ const freshest_posed = (candidates) =>
  * REACHABILITY IS THE READ LAYER'S (#1641). A friend seen by the presence stream but carrying no live pose used
  * to be refused as "a realm you can't reach" — a statement about the WORLD that no world fact backed. The pose
  * is optional now: with one, it seeds the landing coordinate; without one, the intent still names the character
- * and the resolver reads its world and anchor position from /v1. Only two things refuse here: a friend nobody
- * has seen at all (offline), and a roster route that positively names NO world.
+ * and the resolver reads its world and anchor position from /v1. Three things refuse here, each naming its own
+ * truth: a dead presence stream (an outage), a friend nobody has seen at all (offline), and a roster route that
+ * positively names NO world.
  * @param {{
  *   kind?:'friend', id?:string|null, address?:string|null, name?:string,
  *   routes?:Array<{character_id:string,world_id:string|null}>
