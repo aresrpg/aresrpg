@@ -58,7 +58,7 @@ let layers
 let frames
 let next_frame
 
-beforeAll(async () => {
+const import_world_spawns = async () => {
   for (const key of ['window', 'location', 'document', 'navigator']) remember(key)
   const import_window = {
     ...fake_target(),
@@ -73,15 +73,15 @@ beforeAll(async () => {
     // MISSING-ARTIFACT (#117): world_spawns.js imports spawn_rigs.js, which imports create_mob_model from
     // @aresrpg/engine3/player (character_controller.js) — unconditionally re-exporting create_character_avatar,
     // which static-imports the absent-by-design senshi_male.glb (test_helpers/glb_fixture.js; full chain in
-    // packages/engine/src/test_helpers/glb_fixture.js). Caught here (not left to crash beforeAll) so the two
+    // packages/engine/src/test_helpers/glb_fixture.js). Caught here (not left to crash beforeAll) so the
     // source-shape tests below — which only grep world_spawns_source, no import needed — keep running for real.
     if (SENSHI_MALE_GLB_AVAILABLE) ({ create_world_spawns } = await import('./world_spawns.js'))
   } finally {
     for (const key of ['window', 'location', 'document', 'navigator']) restore(key)
   }
-})
+}
 
-beforeEach(() => {
+const install_world_globals = () => {
   for (const key of [
     'window',
     'location',
@@ -123,9 +123,9 @@ beforeEach(() => {
   globalThis.cancelAnimationFrame = (id) => frames.delete(id)
   globalThis.setInterval = () => 1
   globalThis.clearInterval = () => {}
-})
+}
 
-afterEach(() => {
+const restore_world_globals = () => {
   for (const key of [
     'window',
     'location',
@@ -137,9 +137,7 @@ afterEach(() => {
     'clearInterval',
   ])
     restore(key)
-})
-
-afterAll(() => saved_globals.clear())
+}
 
 describe('world spawn mob-card layer route gate', () => {
   test('prepares the owned party before a group fight snapshots its on-chain party gate', () => {
@@ -232,8 +230,18 @@ describe('world spawn mob-card layer route gate', () => {
     expect(aggregate_body).toContain('.promise(fn, {')
     expect(aggregate_body).not.toContain('.promise(fn(), {')
   })
+})
 
-  test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('a non-world screen hides the body layer until a fresh world frame', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('driven renderer behavior', () => {
+  // Only these two cases instantiate the renderer. Keep its large dynamic import and process-global DOM/timer
+  // stubs out of the eleven source-shape cases: the old file-wide beforeEach paid that setup thirteen times and
+  // was observed timing out unnamed at 7273.97 ms under load before a source-only assertion could even start.
+  beforeAll(import_world_spawns)
+  beforeEach(install_world_globals)
+  afterEach(restore_world_globals)
+  afterAll(() => saved_globals.clear())
+
+  test('a non-world screen hides the body layer until a fresh world frame', () => {
     const canvas = { ...fake_target(), getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }) }
     const controls = create_world_spawns({
       engine: { sample_block: () => 0, get_camera: () => null },
@@ -259,9 +267,7 @@ describe('world spawn mob-card layer route gate', () => {
     controls.dispose()
   })
 
-  test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
-    'the once-a-minute telemetry line goes through the house debug gate, never a raw console line',
-    () => {
+  test('the once-a-minute telemetry line goes through the house debug gate, never a raw console line', () => {
     // Regression ("annoying logs"): the [world-spawns] telemetry line used to be a bare console.info,
     // printing on EVERY player's console for the whole session regardless of debug state. game_log (core/log.js)
     // is the ONE house gate — console output only under DEV/`?debug=1`/localStorage.ares_debug — while still
@@ -289,7 +295,9 @@ describe('world spawn mob-card layer route gate', () => {
     const entry = get_log_buffer().find((e) => e.ns === 'world-spawns')
     expect(entry?.message).toMatch(/^telemetry: groups=\d+\/32 rigs=\d+ nodes=\d+\/48 heap=\S+ entries=\d+$/)
   })
+})
 
+describe('world spawn mob-card layer route gate', () => {
   test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
     'leg ① — a group a live fight already claimed is refused LOCALLY before any claim_intent/compose/submit',
     () => {
