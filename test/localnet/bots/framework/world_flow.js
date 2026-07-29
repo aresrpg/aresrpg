@@ -21,6 +21,7 @@
 
 import { CHAIN_MIN_TURN_MS } from '../../../../packages/fight/src/draft_budget.js'
 import { derive_zone } from '../../../../packages/sim/src/zone_derive.js'
+import { world_inner_field_id, WORLD_VERSION } from '../../../../packages/sdk/src/sui/read/world_inner.js'
 
 import { deriveDynamicFieldID, bcs } from './deps.js'
 import { classify_throw, get_object } from './sui.js'
@@ -61,18 +62,49 @@ const to_bytes = (v) => {
  * @returns {Promise<{ mobs: Array<{spawn_id:string,template_id:string,x:number,z:number,group_size:number}>,
  *   resources: Array<{node_index:number,spawn_id:string,template_id:string,x:number,z:number,remaining:number}> } | null>}
  */
+/**
+ * The `WorldInner` payload behind a `World` shell (#1289: `World { id, inner: Versioned }` holds NO world
+ * facts — the dials and spawn tables live in a `Field<u64, WorldInner>` on the Versioned's own UID).
+ *
+ * Reading the shell as if it were the payload does not FAIL: every field comes back absent, so `zone_size` is
+ * NaN and the spawn tables are empty, and `derive_zone` then yields ZERO rows for every zone in the world —
+ * a bot that can never find a mob, with nothing anywhere reporting an error. The field address is derived by
+ * the SDK's own `world_inner_field_id` (one home for that fact); an undecodable payload returns null so the
+ * caller fails shut rather than treating an empty world as a real one.
+ */
+async function read_world_payload(client, shell) {
+  const inner = unwrap(shell?.data?.content?.fields?.inner)
+  const versioned_id = unwrap(inner?.id)?.id ?? inner?.id?.id ?? inner?.id
+  if (typeof versioned_id !== 'string') return null
+  const field = await client
+    .getObject({ id: world_inner_field_id(versioned_id, WORLD_VERSION), options: { showContent: true } })
+    .catch(() => null)
+  return unwrap(unwrap(field?.data?.content?.fields)?.value) ?? null
+}
+
 export async function read_zone_spawns(client, pkg_origin, world_id, zx, zy) {
   const field_id = deriveDynamicFieldID(
     world_id,
     `${pkg_origin}::zones::ZoneKey`,
     zone_key_bcs.serialize({ zx, zy }).toBytes()
   )
-  const [o, w] = await Promise.all([
+  // The zone's SIBLING commitment (`ZoneGroupRootKey{zx,zy}` → `ZoneGroupCommitment{root,count}`, a DF on the
+  // WORLD's own UID). Its first byte selects the derivation, and `derive_zone` documents that omitting it
+  // "silently derives the legacy one" — which is exactly what happened: a format-3 (member-list) zone derived
+  // as format 1, so every spawn_id was wrong and claiming one aborted `zones::EMemberZone` (112).
+  const root_field_id = deriveDynamicFieldID(
+    world_id,
+    `${pkg_origin}::zones::ZoneGroupRootKey`,
+    zone_key_bcs.serialize({ zx, zy }).toBytes()
+  )
+  const [o, shell, root_object] = await Promise.all([
     client.getObject({ id: field_id, options: { showContent: true } }).catch(() => null),
     client.getObject({ id: world_id, options: { showContent: true } }).catch(() => null),
+    client.getObject({ id: root_field_id, options: { showContent: true } }).catch(() => null),
   ])
+  const group_root = to_bytes(unwrap(root_object?.data?.content?.fields?.value)?.root)
   const value = unwrap(o?.data?.content?.fields?.value)
-  const wf = w?.data?.content?.fields
+  const wf = await read_world_payload(client, shell)
   if (!value || !wf) return null
   const world = {
     zone_size: Number(wf.zone_size),
@@ -104,6 +136,7 @@ export async function read_zone_spawns(client, pkg_origin, world_id, zx, zy) {
       discovered_at_ms: Number(value.discovered_at_ms ?? 0),
       mob_bitmap: to_bytes(value.mob_bitmap),
       res_bitmap: to_bytes(value.res_bitmap),
+      group_root,
     },
     zx,
     zy,
@@ -112,7 +145,17 @@ export async function read_zone_spawns(client, pkg_origin, world_id, zx, zy) {
   })
   const mobs = rows
     .filter((r) => r.kind === 'mob')
-    .map((m) => ({ spawn_id: m.spawn_id, template_id: m.template_id, x: m.x, z: m.z, group_size: m.size }))
+    // `members` (the committed per-unit roster) rides along: a format-3 group is claimed through the MEMBER
+    // door, which needs that roster in its committed order. Dropping it here is what left callers with only
+    // the legacy door to call.
+    .map((m) => ({
+      spawn_id: m.spawn_id,
+      template_id: m.template_id,
+      x: m.x,
+      z: m.z,
+      group_size: m.size,
+      members: m.members ?? null,
+    }))
   const resources = rows
     .filter((r) => r.kind === 'resource')
     .map((r) => ({
