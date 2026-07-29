@@ -124,10 +124,11 @@ test('a glyph/DoT effect defaults to PHASE_START — the seeder KIND_PHASE table
   expect(encode_effect({ kind: K_DAMAGE, value: 5 }).phase).toBe(0)
 })
 
-test('a kit over MAX_SPELLS is a REFUSAL — the setter mirrors mint’s bound, never weaker', () => {
+test('five spells are admitted and a sixth is a REFUSAL — the setter mirrors mint’s bound', () => {
   const level = { ap_cost: 3, effects: [{ kind: K_DAMAGE, value: 1 }] }
+  expect(MAX_SPELLS).toBe(5)
   expect(encode_kit(Array(MAX_SPELLS).fill(level))).toHaveLength(MAX_SPELLS)
-  expect(() => encode_kit(Array(MAX_SPELLS + 1).fill(level))).toThrow(/MAX_SPELLS|4/)
+  expect(() => encode_kit(Array(MAX_SPELLS + 1).fill(level))).toThrow(/MAX_SPELLS|5/)
   expect(encode_kit([])).toEqual([]) // an empty kit CLEARS the vector — a legal, deliberate write
 })
 

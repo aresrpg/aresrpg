@@ -41,7 +41,7 @@ public fun loot_entry_max_qty(e: &MobLootEntry): u16 { e.max_qty }
 
 // ╔════════════════ [ Mob spec (plain IO — the consumer mirrors its template into this) ] ═ ]
 
-const MAX_SPELLS: u64 = 4; // §17.21 mob spell-list bound (bounded compute, exact client prediction)
+const MAX_SPELLS: u64 = 5; // §17.21 mob spell-list bound (#1406; bounded compute, exact client prediction)
 const MAX_LOOT: u64 = 16; // §17.14 loot entries per group (the single-path-claim bound)
 
 const ETooManySpells: u64 = 101; // new_mob_spec: spell kit exceeds MAX_SPELLS

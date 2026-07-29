@@ -166,6 +166,46 @@ const bolt_templates_raw = {
   },
 }
 
+// #1406's five-spell mob-kit twin. The first four rows are deliberately AP-ineligible and the fifth is the
+// only viable cast: the replay can only go green if the sim retains and evaluates the newly sanctioned slot.
+const five_spell_mob_templates_raw = {
+  yajin: Object.fromEntries(
+    Array.from({ length: 5 }, (_, index) => {
+      const is_fifth = index === 4
+      const id = `boss_spell_${index + 1}`
+      return [
+        id,
+        {
+          name: is_fifth ? 'Fifth Spell' : `Sealed Spell ${index + 1}`,
+          description: is_fifth ? 'the sanctioned fifth kit row' : 'AP-ineligible replay guard',
+          levels: [
+            {
+              cost: is_fifth ? 3 : 11,
+              range: [1, 4],
+              critical_chance: 0,
+              area: 0,
+              area_type: 'cell',
+              casts_per_turn: 255,
+              casts_per_target: 255,
+              cooldown_turns: 0,
+              modifiable_range: false,
+              line_of_sight: true,
+              linear: false,
+              free_cell: false,
+              base_effects: [
+                {
+                  type: 'damage', min: 5, max: 5, target: 'enemies', element: 'earth', chance: 100,
+                },
+              ],
+              critical_effects: [],
+            },
+          ],
+        },
+      ]
+    }),
+  ),
+}
+
 // A life-steal drain BOTH sides carry (raw `steal` shape, sdk spells.json lineage; min===max so the damage is
 // deterministic and the steal-back is exactly half of a known number).
 const drain_templates_raw = {
@@ -635,6 +675,41 @@ const scenarios = [
       team1: [
         make_entity('m0', { x: 12, y: 10 }, false, {
           spell_levels: { bolt: 1 },
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'ai_turn', entity_id: 'm0' },
+    ],
+  },
+  {
+    // #1406 sim↔Move twin: MAX_SPELLS lifts from four to five for three sanctioned boss kits. Four deliberately
+    // AP-ineligible rows precede the only viable spell, so the AI must preserve, inspect and cast slot five.
+    meta: {
+      id: 'five_spell_mob_casts_fifth_slot',
+      class: 'mob_ai',
+      authored: '2026-07-29',
+      source: 'authored',
+      notes:
+        '#1406: a five-spell mob retains its whole kit and casts the only viable row at slot five; twin of both Move MAX_SPELLS guards.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: five_spell_mob_templates_raw,
+    initial: {
+      fight_id: 'capsule_five_spell_mob',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          spell_levels: {},
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 7, y: 5 }, false, {
+          spell_levels: Object.fromEntries(
+            Array.from({ length: 5 }, (_, index) => [`boss_spell_${index + 1}`, 1]),
+          ),
         }),
       ],
     },
