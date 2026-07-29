@@ -1,0 +1,7 @@
+{
+  "status": "TODO-capture",
+  "target": "transfer_policy::confirm_request",
+  "package": "sui_framework",
+  "reason": "capture sandbox has no network (fetch failed)",
+  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+}

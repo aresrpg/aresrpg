@@ -1,0 +1,7 @@
+{
+  "status": "TODO-capture",
+  "target": "header::aresrpg",
+  "package": "aresrpg",
+  "reason": "capture sandbox has no network (fetch failed)",
+  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+}
