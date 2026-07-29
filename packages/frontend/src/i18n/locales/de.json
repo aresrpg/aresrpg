@@ -73,6 +73,8 @@
     "hp": "HP",
     "lv": "St {{level}}",
     "fighter": "Kämpfer",
+    "turn_stalled": "{{name}} beendet den Zug nicht",
+    "force_pass": "ZUG ERZWINGEN",
     "waiting_for": "Warten auf {{name}}",
     "none": "Keine",
     "drawing_cards": "Karten werden gezogen…",

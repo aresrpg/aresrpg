@@ -73,6 +73,8 @@
     "hp": "HP",
     "lv": "Niv {{level}}",
     "fighter": "Combattant",
+    "turn_stalled": "{{name}} ne termine pas son tour",
+    "force_pass": "FORCER LE PASSAGE",
     "waiting_for": "En attente de {{name}}",
     "none": "Aucun",
     "drawing_cards": "Distribution des cartes…",

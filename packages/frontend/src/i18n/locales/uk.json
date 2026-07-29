@@ -73,6 +73,8 @@
     "hp": "HP",
     "lv": "Рв {{level}}",
     "fighter": "Боєць",
+    "turn_stalled": "{{name}} не завершує свій хід",
+    "force_pass": "ПРИМУСОВИЙ ХІД",
     "waiting_for": "Очікування ходу {{name}}",
     "none": "Немає",
     "drawing_cards": "Роздавання карт…",

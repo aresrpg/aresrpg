@@ -73,6 +73,8 @@
     "hp": "HP",
     "lv": "Lv {{level}}",
     "fighter": "Fighter",
+    "turn_stalled": "{{name}} is not ending their turn",
+    "force_pass": "FORCE PASS",
     "waiting_for": "Waiting for {{name}}",
     "none": "None",
     "drawing_cards": "Drawing cards…",
