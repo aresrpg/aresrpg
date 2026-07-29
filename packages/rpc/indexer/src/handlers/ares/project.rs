@@ -157,8 +157,12 @@ fn k_char_name(name: &str) -> String {
 // item doc the `item::ItemMinted` event arm projects (one home for the item key shape — the
 // event sets template/item_type, the snapshot adds name/category/amount/kiosk_id, converging
 // idempotently like the ItemTemplate doc).
-pub(super) fn k_item(id: &str) -> String { format!("rpc:item:{id}") }
-fn k_pet_feed(id: &str) -> String { format!("rpc:pet_feed:{id}") }
+pub(super) fn k_item(id: &str) -> String {
+    format!("rpc:item:{id}")
+}
+fn k_pet_feed(id: &str) -> String {
+    format!("rpc:pet_feed:{id}")
+}
 const K_PET_FEED_FOODS: &str = "rpc:idx:pet_feed_foods";
 fn k_listing(item: &str) -> String {
     format!("rpc:listing:{item}")
@@ -189,8 +193,12 @@ const SALES_CAP: i64 = 500;
 /// 90d idle TTL: a kiosk with no sale for 90d frees its whole log. Refreshed on every
 /// sale, so an active log persists; matches the API's 30d revenue horizon with margin.
 const SALES_TTL_SECS: i64 = 90 * 24 * 60 * 60;
-fn k_pool(id: &str) -> String { format!("rpc:pool:{id}") }
-fn k_sale(id: &str) -> String { format!("rpc:sale:{id}") }
+fn k_pool(id: &str) -> String {
+    format!("rpc:pool:{id}")
+}
+fn k_sale(id: &str) -> String {
+    format!("rpc:sale:{id}")
+}
 const K_SALES: &str = "rpc:idx:sales";
 // Exact first-party shop receipts for `/v1/sales-over-time`. `SaleBought.item`
 // is unique per purchase, so each JSON member is stable under checkpoint replay;
@@ -281,9 +289,15 @@ fn k_fights(world: &str) -> String {
 // fight's `group.template`, addressed independently of the fight's derived object id. The /v1/fights
 // view joins it at read time (like /v1/listings joins the item template) to NAME a fight's mobs. Bare
 // string value; latest-wins + stable (a spawn's group is seed-derived).
-fn k_group_template(world: &str, spawn_id: u64) -> String { format!("rpc:group_template:{world}:{spawn_id}") }
-fn k_result(id: &str) -> String { format!("rpc:result:{id}") }
-fn k_results(owner: &str) -> String { format!("rpc:idx:results:{owner}") }
+fn k_group_template(world: &str, spawn_id: u64) -> String {
+    format!("rpc:group_template:{world}:{spawn_id}")
+}
+fn k_result(id: &str) -> String {
+    format!("rpc:result:{id}")
+}
+fn k_results(owner: &str) -> String {
+    format!("rpc:idx:results:{owner}")
+}
 // §17.22 resource-protector ambush signal — the gatherer's LATEST protector trigger,
 // keyed by gatherer address (latest-wins). The ambush Fight itself rides the fight
 // handlers (FightCreated/FightJoined — the gatherer is auto-seated); this is the
@@ -665,7 +679,11 @@ pub(super) fn map_with_context(
             let supply_key = k_supply(&template);
             vec![
                 // NX init lets the event and object-snapshot pipelines converge without clobbering.
-                set_nx(key.clone(), "$", json!({ "id": item, "level": Value::Null })),
+                set_nx(
+                    key.clone(),
+                    "$",
+                    json!({ "id": item, "level": Value::Null }),
+                ),
                 set(key.clone(), "$.template", json!(template)),
                 set(key, "$.item_type", json!(e.item_type)),
                 // Supply arm: NX-seed the per-template counter doc, then bump it by the
