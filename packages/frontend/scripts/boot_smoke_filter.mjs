@@ -20,10 +20,9 @@ export const CONSOLE_ERROR_ALLOWLIST = [
   '[deployment] seed manifest carries no worlds', // deployment.ts — worlds enumeration
   '[world_corpus] world knowledge inert', // world_corpus.ts — runtime blob unpublished/unreachable in CI (#196)
   '[living_corpus] seed manifest carries', // living_corpus.ts — living-content fence
-  // Environmental — the headless CI preview has NO backend (RPC / asset-host aggregator / asset host), so boot-time
-  // asset & RPC fetches fail. These are BROWSER resource-load failures, not app-code errors; the pageerror
-  // assertion is what guards real JS crashes. Never masks a migration-stub throw (those are uncaught, not 404s).
-  'Failed to load resource',
+  // Environmental — unpublished assets 404 in the headless CI preview. Keep the status in the match:
+  // a broad "Failed to load resource" entry also swallows a real 500 from the boot-serving path.
+  'Failed to load resource: the server responded with a status of 404',
 ]
 
 export const is_blocking_console_error = (text) => !CONSOLE_ERROR_ALLOWLIST.some((fragment) => text.includes(fragment))
