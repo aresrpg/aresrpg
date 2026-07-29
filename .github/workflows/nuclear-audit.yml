@@ -16,6 +16,9 @@ on:
       - 'scripts/fixtures/nuclear_audit_tests.mjs'
       - 'scripts/fixtures/nuclear_audit/**'
       - '.github/workflows/nuclear-audit.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/nuclear-audit.yml'
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
@@ -31,6 +34,7 @@ permissions:
 jobs:
   nuclear-audit:
     name: nuclear-audit (ratchet)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

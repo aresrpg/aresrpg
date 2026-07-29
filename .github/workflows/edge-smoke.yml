@@ -3,6 +3,9 @@
 name: edge smoke
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/edge-smoke.yml'
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
@@ -12,6 +15,7 @@ permissions:
 
 jobs:
   prod-smoke:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
