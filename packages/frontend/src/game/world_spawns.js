@@ -38,7 +38,7 @@
 import { Raycaster, Vector2 } from 'three'
 import { get_mob_template } from '@aresrpg/sdk/game'
 import { zone_of_world } from '@aresrpg/sdk/coords'
-import { spawn_rows as core_spawn_rows } from '@aresrpg/world/spawns_zones'
+import { spawn_rows as core_spawn_rows, subscribe_world_rows_request } from '@aresrpg/world/spawns_zones'
 import { engage_offset } from '@aresrpg/world/spawns_reconcile'
 import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
@@ -157,6 +157,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       : () => {}
   }
   let polling = false
+  let entry_read_pending = false
   let engaging = false
   let resumed = false // one-shot guard: fire the world-fight reconnect read once the world binds (see poll)
   let my_gather_key = /** @type {string | null} */ (null) // the gather_target WE set (never stomp another writer's)
@@ -282,6 +283,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   const ensure_world_dims = async (/** @type {string} */ world_id) => {
     if (dims_world === world_id) return
     const doc = await zone_world_doc(world_id)
+    if (current_world_id() !== world_id) return
     spawns_input({ type: 'world_doc', doc })
     if (doc) dims_world = world_id
   }
@@ -347,6 +349,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     polling = true
     try {
       await ensure_world_dims(world_id)
+      if (current_world_id() !== world_id) return
       if (spawns_store.getState().world_id !== world_id) spawns_input({ type: 'world_bound', world_id }) // ferry belt
       const { zone_size, offset_x, offset_z } = spawns_store.getState()
       const p = get_player_pos()
@@ -367,7 +370,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       const fetched = await Promise.all(
         cells.map(async (c) => ({ ...c, rows: await fetch_zone_spawns(world_id, c.zx, c.zy).catch(() => null) }))
       )
-      if (disposed) return
+      if (disposed || current_world_id() !== world_id) return
       // ONE atomic reconcile input: the discovered-zone list + the fetched neighbourhood rows. The CORE owns
       // the discipline (stale-version discard, receipt grace shields, tombstones); this adapter only ferries.
       poll_seq += 1
@@ -381,7 +384,21 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       if (drop_claimed_ghosts()) sync_from_core() // fold visible_fights truth in the SAME tick (#480)
     } finally {
       polling = false
+      if (entry_read_pending) {
+        entry_read_pending = false
+        request_zone_rows_read()
+      }
     }
+  }
+
+  // A world can settle after the cold-entry read already observed "unbound". Wake the SAME read immediately
+  // from that reducer delta; if another read is finishing, retain one request and fold it directly afterward.
+  const request_zone_rows_read = () => {
+    if (polling) {
+      entry_read_pending = true
+      return
+    }
+    void poll()
   }
 
   // ── SEARCH FAST-PATH ──
@@ -1139,7 +1156,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   }
 
   raf = requestAnimationFrame(frame)
-  void poll()
+  const unsubscribe_world_rows_request = subscribe_world_rows_request(spawns_store, request_zone_rows_read)
+  request_zone_rows_read()
   const timer = setInterval(poll, POLL_MS)
   // OPTIMISTIC render on executed search (see on_zone_rows_ready); /v1 remains the steady-state reconciler.
   context.events.on('discovery/zone_rows_ready', on_zone_rows_ready)
@@ -1174,6 +1192,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       cancelAnimationFrame(raf)
       clearInterval(timer)
       unsubscribe_zones()
+      unsubscribe_world_rows_request()
       context.events.off('discovery/zone_rows_ready', on_zone_rows_ready)
       ;(canvas ?? window).removeEventListener('pointerdown', /** @type {any} */ (on_down))
       window.removeEventListener('pointerup', /** @type {any} */ (on_up))

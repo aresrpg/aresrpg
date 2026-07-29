@@ -367,6 +367,16 @@ export function create_spawns_store() {
   }))
 }
 
+/**
+ * Effect edge: a newly settled non-null world binding requests its entry zone rows immediately. The executor
+ * returns every async result through this store's `input` door; this subscription only observes the delta.
+ */
+export function subscribe_world_rows_request(store, on_request) {
+  return store.subscribe((state, prev) => {
+    if (state.world_id && state.world_id !== prev.world_id) on_request(state.world_id)
+  })
+}
+
 /** Effect edge: one call per NEW tx request row (search_tx / claim_tx / gather_tx). */
 export function subscribe_spawn_tx(store, on_request) {
   return store.subscribe((state, prev) => {
