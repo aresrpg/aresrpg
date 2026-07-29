@@ -72,25 +72,29 @@ export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null
     // that cross-artifact equality check turned a populated 374-row response into the honest-empty screen.
     // The authored corpus remains optional enrichment (role/world/xp/spells), keyed when the ids converge.
     .filter((m) => is_listed_mob_role(mob_corpus_of(m.template_id)?.role))
-    .map((m) => ({
-      id: m.template_id,
-      name: display_mob_name(m.name) || '',
-      // icon lookup stays the RAW chain/seed name (the asset catalog is keyed by it) — only the
-      // display string above goes through the override.
-      icon_name: m.name ?? '',
-      minLevel: m.min_level ?? 0,
-      maxLevel: m.max_level ?? 0,
-      health: m.base_hp ?? 0,
-      element: ELEMENT_NAMES[m.element ?? -1] ?? '',
-      earthResistance: decode_mob_resist(m.earth_resistance),
-      fireResistance: decode_mob_resist(m.fire_resistance),
-      waterResistance: decode_mob_resist(m.water_resistance),
-      airResistance: decode_mob_resist(m.air_resistance),
-      tier: get_mob_tier(m.name),
-      drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
-      found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
-      createdAt: undefined as number | undefined,
-    }))
+    .map((m) => {
+      const tier = get_mob_tier(m.name)
+      return {
+        id: m.template_id,
+        name: display_mob_name(m.name) || '',
+        // icon lookup stays the RAW chain/seed name (the asset catalog is keyed by it) — only the
+        // display string above goes through the override.
+        icon_name: m.name ?? '',
+        minLevel: m.min_level ?? 0,
+        maxLevel: m.max_level ?? 0,
+        health: m.base_hp ?? 0,
+        element: ELEMENT_NAMES[m.element ?? -1] ?? '',
+        earthResistance: decode_mob_resist(m.earth_resistance),
+        fireResistance: decode_mob_resist(m.fire_resistance),
+        waterResistance: decode_mob_resist(m.water_resistance),
+        airResistance: decode_mob_resist(m.air_resistance),
+        tier,
+        archi: is_archi_tier(tier),
+        drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
+        found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
+        createdAt: undefined as number | undefined,
+      }
+    })
 
 export function BestiaryMobRow({
   mob,
@@ -129,7 +133,7 @@ export function BestiaryMobRow({
             <span className="text-[10px] tracking-[0.1em] uppercase truncate" style={{ color: el_color }}>
               {tt(mob, 'name')}
             </span>
-            {is_archi_tier(mob.tier) && <ArchiBadge />}
+            {mob.archi && <ArchiBadge />}
             {is_new_template(mob.createdAt) && <NewBadge />}
             <span className="text-[9px] shrink-0 text-muted">
               {t('encyclopedia.level_range', { min: mob.minLevel, max: mob.maxLevel })}

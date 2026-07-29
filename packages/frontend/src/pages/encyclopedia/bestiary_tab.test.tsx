@@ -15,6 +15,7 @@ import en from '../../i18n/locales/en.json'
 import { MobDetailView } from '../../components/mob_detail_view'
 import { seed_manifest } from '../../content/seed_manifest'
 import { render_group_card } from '../../game/spawn_card'
+import { compose_group_card } from '../../game/spawn_compose'
 import type { RpcEncyclopediaMob } from '../../rpc/views'
 import encyclopedia_fixture from '../../rpc/fixtures/encyclopedia.json'
 
@@ -142,6 +143,17 @@ test('an archi-tier graded mob composes the world badge and encyclopedia marker'
     min_level: 8,
     max_level: 20,
   }
+  const world_archi = compose_group_card({
+    roster: [graded_archi],
+    graded: true,
+    progress: 500,
+    size: 1,
+    group_seed: '7719283746501',
+    archimob_bp: 0,
+    team_bound: 6,
+  })
+  expect([world_archi.rows[0]?.archi, encyclopedia_archi.archi]).toEqual([true, true])
+
   const original_document = globalThis.document
   const nameplate = new FakeElement()
   try {
