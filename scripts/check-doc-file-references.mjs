@@ -442,11 +442,7 @@ export function doc_reference_blind_guard() {
     path_exists: () => false,
     repo_root: '/fresh-doc-reference-control',
   })
-  return (
-    unresolved.length === 1 &&
-    unresolved[0].cited_path === cited_path &&
-    unresolved[0].reason === 'missing target'
-  )
+  return unresolved.length === 1 && unresolved[0].cited_path === cited_path && unresolved[0].reason === 'missing target'
 }
 
 function parse_root_argument(args) {

@@ -6,8 +6,7 @@ import fs from 'node:fs'
 
 const rule_of = (check_id) => check_id.split('.').pop()
 const read_json = (path) => JSON.parse(fs.readFileSync(path, 'utf8'))
-const normalize_fixture_path = (result_path) =>
-  result_path.replace(/^.*fixtures\/sim_constants\/(?:red|green)\//, '')
+const normalize_fixture_path = (result_path) => result_path.replace(/^.*fixtures\/sim_constants\/(?:red|green)\//, '')
 const counts_of = (semgrep) => {
   const counts = new Map()
   for (const result of semgrep.results.filter((row) => rule_of(row.check_id).startsWith('sim-protocol-'))) {

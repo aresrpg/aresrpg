@@ -6,12 +6,12 @@
 
 ## Seat ruling
 
-| State | AresRPG size | Delta from baseline | Chain-ceiling margin |
-| --- | ---: | ---: | ---: |
-| Baseline | **101,865 B** | — | **535 B** |
-| Variant A, build-refined | **101,865 B** | **0 B** | **535 B** |
-| Variant B, current-edge/full-repo refined (97 additions) | **98,061 B** | **−3,804 B** | **4,339 B** |
-| Variant B, artifact-exact/Ares-only (100 additions) | **97,953 B** | **−3,912 B** | **4,447 B** |
+| State                                                    |  AresRPG size | Delta from baseline | Chain-ceiling margin |
+| -------------------------------------------------------- | ------------: | ------------------: | -------------------: |
+| Baseline                                                 | **101,865 B** |                   — |            **535 B** |
+| Variant A, build-refined                                 | **101,865 B** |             **0 B** |            **535 B** |
+| Variant B, current-edge/full-repo refined (97 additions) |  **98,061 B** |        **−3,804 B** |          **4,339 B** |
+| Variant B, artifact-exact/Ares-only (100 additions)      |  **97,953 B** |        **−3,912 B** |          **4,447 B** |
 
 The canonical three-number result is therefore **101,865 → 101,865 → 98,061
 bytes**. The canonical after-B value is the one for which the complete
@@ -34,15 +34,15 @@ left. Build-valid Variant B would instead leave 4,339 B to the chain ceiling and
 
 ## Provenance and commands
 
-| Field | Value |
-| --- | --- |
-| Measurement date | 2026-07-30 |
-| Evidence branch | `lane/deletable-weight` |
-| Baseline | `origin/edge` at `ea9595e0795afb8dadc8d5ec7b5c7c942be610cf` |
-| Census | `origin/lane/fn-census:docs/analysis/ARESRPG_FN_CENSUS_2026-07-30.md` |
-| Census source commit | `903cf9b887fc6284685775da5401820ae8182120` |
-| Chain ceiling | 102,400 B |
-| Repo AresRPG budget | 101,900 B |
+| Field                | Value                                                                 |
+| -------------------- | --------------------------------------------------------------------- |
+| Measurement date     | 2026-07-30                                                            |
+| Evidence branch      | `lane/deletable-weight`                                               |
+| Baseline             | `origin/edge` at `ea9595e0795afb8dadc8d5ec7b5c7c942be610cf`           |
+| Census               | `origin/lane/fn-census:docs/analysis/ARESRPG_FN_CENSUS_2026-07-30.md` |
+| Census source commit | `903cf9b887fc6284685775da5401820ae8182120`                            |
+| Chain ceiling        | 102,400 B                                                             |
+| Repo AresRPG budget  | 101,900 B                                                             |
 
 The census artifact was fetched and read before source surgery. The measurements use
 the same size code as CI:

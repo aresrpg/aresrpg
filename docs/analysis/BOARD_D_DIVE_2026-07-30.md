@@ -6,20 +6,20 @@ Candidate scope control: #1664 is absent from the 157-row input, #1676 was alrea
 
 ## Sub-fractions
 
-| Root sub-class | Rows | Fraction of D | Fraction of board |
-|---|---:|---:|---:|
-| E-CONVERGENCE | 9 | 9/68 (13.2%) | 9/157 (5.7%) |
-| FEATURE | 14 | 14/68 (20.6%) | 14/157 (8.9%) |
-| PERF | 3 | 3/68 (4.4%) | 3/157 (1.9%) |
-| CONTENT/BALANCE | 5 | 5/68 (7.4%) | 5/157 (3.2%) |
-| INFRA-PROVISIONING | 4 | 4/68 (5.9%) | 4/157 (2.5%) |
-| EPIC/META | 17 | 17/68 (25.0%) | 17/157 (10.8%) |
-| ONE-OFF-BUG | 10 | 10/68 (14.7%) | 10/157 (6.4%) |
-| ARCHITECTURE | 3 | 3/68 (4.4%) | 3/157 (1.9%) |
-| DOCS | 1 | 1/68 (1.5%) | 1/157 (0.6%) |
-| PROCESS | 1 | 1/68 (1.5%) | 1/157 (0.6%) |
-| SECURITY | 1 | 1/68 (1.5%) | 1/157 (0.6%) |
-| **Total D** | **68** | **68/68 (100.0%)** | **68/157 (43.3%)** |
+| Root sub-class     |   Rows |      Fraction of D |  Fraction of board |
+| ------------------ | -----: | -----------------: | -----------------: |
+| E-CONVERGENCE      |      9 |       9/68 (13.2%) |       9/157 (5.7%) |
+| FEATURE            |     14 |      14/68 (20.6%) |      14/157 (8.9%) |
+| PERF               |      3 |        3/68 (4.4%) |       3/157 (1.9%) |
+| CONTENT/BALANCE    |      5 |        5/68 (7.4%) |       5/157 (3.2%) |
+| INFRA-PROVISIONING |      4 |        4/68 (5.9%) |       4/157 (2.5%) |
+| EPIC/META          |     17 |      17/68 (25.0%) |     17/157 (10.8%) |
+| ONE-OFF-BUG        |     10 |      10/68 (14.7%) |      10/157 (6.4%) |
+| ARCHITECTURE       |      3 |        3/68 (4.4%) |       3/157 (1.9%) |
+| DOCS               |      1 |        1/68 (1.5%) |       1/157 (0.6%) |
+| PROCESS            |      1 |        1/68 (1.5%) |       1/157 (0.6%) |
+| SECURITY           |      1 |        1/68 (1.5%) |       1/157 (0.6%) |
+| **Total D**        | **68** | **68/68 (100.0%)** | **68/157 (43.3%)** |
 
 ## E-CONVERGENCE — full row list
 
@@ -132,12 +132,12 @@ VERDICT: E-CONVERGENCE is 9/68 D rows (13.2%) and 9/157 board rows (5.7%); D is 
 
 The random draw was made after the first pass; each selected title and full body was re-read.
 
-| Row | First-pass root | Re-read root | Change |
-|---|---|---|---:|
-| #1146 | E-CONVERGENCE | E-CONVERGENCE | 0 |
-| #1233 | EPIC/META | EPIC/META | 0 |
-| #1453 | CONTENT/BALANCE | CONTENT/BALANCE | 0 |
-| #652 | EPIC/META | EPIC/META | 0 |
-| #880 | EPIC/META | EPIC/META | 0 |
-| #1486 | E-CONVERGENCE | E-CONVERGENCE | 0 |
-| **Delta** |  |  | **0/6** |
+| Row       | First-pass root | Re-read root    |  Change |
+| --------- | --------------- | --------------- | ------: |
+| #1146     | E-CONVERGENCE   | E-CONVERGENCE   |       0 |
+| #1233     | EPIC/META       | EPIC/META       |       0 |
+| #1453     | CONTENT/BALANCE | CONTENT/BALANCE |       0 |
+| #652      | EPIC/META       | EPIC/META       |       0 |
+| #880      | EPIC/META       | EPIC/META       |       0 |
+| #1486     | E-CONVERGENCE   | E-CONVERGENCE   |       0 |
+| **Delta** |                 |                 | **0/6** |

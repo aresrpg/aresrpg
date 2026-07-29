@@ -180,19 +180,19 @@ Method: Read title and full body for all 157 open issues; treated issue text as 
 
 ## D sub-tag histogram
 
-| Sub-tag | Count |
-|---|---:|
-| balance | 2 |
-| bug-other | 12 |
-| content | 1 |
-| design | 13 |
-| docs | 1 |
-| epic | 17 |
-| feature | 8 |
-| infra | 6 |
-| perf | 6 |
-| process | 1 |
-| security | 1 |
+| Sub-tag   | Count |
+| --------- | ----: |
+| balance   |     2 |
+| bug-other |    12 |
+| content   |     1 |
+| design    |    13 |
+| docs      |     1 |
+| epic      |    17 |
+| feature   |     8 |
+| infra     |     6 |
+| perf      |     6 |
+| process   |     1 |
+| security  |     1 |
 
 ## Consistency control
 
