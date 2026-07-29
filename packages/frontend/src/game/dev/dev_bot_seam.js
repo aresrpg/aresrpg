@@ -44,7 +44,7 @@
 // scripts/zero-drift-gate.mjs for the tooth that enforces it.
 
 import { decode, encode } from '@aresrpg/fight/los'
-import { board_view, fight_view, min_turn_left } from '@aresrpg/fight/project'
+import { board_view, fight_view, min_turn_left, my_placement_zone } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { fight_store } from '@aresrpg/fight/store'
 import { crit_clock_of, predict_cast } from '@aresrpg/fight/predict_cast'
@@ -180,7 +180,7 @@ const spell_rows = (seat, class_id, char_level) =>
  * PROJECTION, never a world-only chain slice — #1025's rule).
  * @returns {object} `{ ok: false, error }` when no fight is live.
  */
-function dev_read() {
+export function dev_read() {
   const store = use_dungeon.getState()
   const view = fight_view()
   if (!view) return { ok: false, error: 'no active fight' }
@@ -194,7 +194,9 @@ function dev_read() {
     busy: store.busy,
     error: store.error ? String(store.error) : null,
     placement: !!view.placement,
-    placement_cells: (view.placement_cells?.[0] ?? []).map((c) => ({ x: c.x, y: c.y })),
+    // MY band, never team 0's (#1645): a team-1 seat read an empty array here forever, which a driver cannot
+    // tell apart from an unrendered board. One home — `my_placement_zone`, the same resolver the click gate uses.
+    placement_cells: my_placement_zone(view).map((c) => ({ x: c.x, y: c.y })),
     winner: view.winner ?? -1,
     turn_number: view.turn_number ?? 0,
     my_id: view.my_entity_id ?? null,

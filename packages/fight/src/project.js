@@ -247,6 +247,19 @@ export const next_move_tackle = (s) => {
 }
 
 /**
+ * MY SEAT'S DECLARED PLACEMENT BAND — the ONE home for "which start cells are mine". The chain declares both
+ * zones (`placement_cells` is keyed BY TEAM, #1093) and a seat is NOT always team 0: a PvP/Kolizeum seat sits on
+ * team 1, so every reader must resolve the band through its OWN seat. Reading `[0]` unconditionally reports an
+ * EMPTY band to a team-1 seat, which is indistinguishable from "the board never rendered" — a probe that does it
+ * lies about the very symptom it was built to witness (#1645). Empty when there is no seat / no placement zone.
+ * @param {any} view an engine view @returns {{ x: number, y: number }[]}
+ */
+export const my_placement_zone = (view) => {
+  const me = view?.my_entity_id ? view.fighters?.get(view.my_entity_id) : null
+  return me ? (view.placement_cells?.[me.team] ?? []) : []
+}
+
+/**
  * PLACEMENT CLICK LEGALITY — the pick-vs-deny decision for a placement-phase board click (M3: moved from the
  * adapter's cell_click; the adapter relays 'pick' → the local pick stash and renders 'deny' as pulse+sfx+nudge).
  * 'pick' = a FREE start cell of MY team (my own current cell re-picks); 'deny' = off-zone or taken; null = not
@@ -259,7 +272,7 @@ export const placement_click = (s, cell) => {
   if (!view || !view.placement || view.winner !== -1 || !cell) return null
   const me = view.my_entity_id ? view.fighters.get(view.my_entity_id) : null
   if (!me) return null
-  const on_zone = (view.placement_cells?.[me.team] ?? []).some((c) => c.x === cell.x && c.y === cell.y)
+  const on_zone = my_placement_zone(view).some((c) => c.x === cell.x && c.y === cell.y)
   if (!on_zone) return 'deny'
   for (const [key, fighter] of Object.entries(committed_truth(s).fighters ?? {})) {
     if (fighter.alive === false || entity_id_of_key(s.view, key) === me.id || fighter.cell == null) continue
