@@ -69,6 +69,11 @@ export function seed_fight_core({
   // so the local anchor rules and every existing seeding stays byte-identical); set it when a test needs the
   // chain's own min-turn anchor — `deadline − turn_ms + 3s`, widening included (#1484 / #1644).
   turn_ms = 0,
+  // Per-fighter status rows exactly as the chain read hands them over (`fight_status_snapshot.read_fighter_statuses`
+  // shape: numeric `fighter` = seat index, or 1000 + mob index). The fold groups them per fighter and every status
+  // surface — the effect badges AND the cast preview — reads that one home, so a test seeds a live buff here
+  // instead of hand-shaping a fighter literal.
+  statuses = [],
 } = {}) {
   const store = fight_store
   const my_seat = seats.findIndex((s) => s.character === my)
@@ -103,6 +108,7 @@ export function seed_fight_core({
       placement_deadline_ms,
       start_cells_a: placement ? [100, 101, 102] : [],
       start_cells_b: [],
+      invisibility_statuses: statuses,
     },
   })
   return store
