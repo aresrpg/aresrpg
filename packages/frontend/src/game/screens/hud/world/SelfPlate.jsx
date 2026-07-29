@@ -33,6 +33,7 @@ const character_hp_revision = (state, my_entity_id) => {
     character?._type,
     character?.current_hp,
     character?.hp_updated_ms,
+    character?.hp_previsional_ms, // #1643 — the previsional base is a projection input, so it is a repaint input
     character?.health,
     character?.experience,
     character?.level,

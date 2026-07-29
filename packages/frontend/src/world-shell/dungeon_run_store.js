@@ -35,7 +35,6 @@ import {
 import { auto_commit_blocked, executed_turn_failure, stage_to_batch, turn_commit_key } from '@aresrpg/fight/turn_commit'
 import { fight_geometry_complete } from '@aresrpg/fight/board_state'
 import { mob_entity_id, transaction_character_id } from '@aresrpg/fight/fight_control'
-import { apply_fight_receipt_to_roster } from '@aresrpg/inventory/fight_receipt_roster'
 import { GRID_W } from '@aresrpg/fight/los'
 
 import { context } from '../game/store.js'
@@ -90,6 +89,7 @@ import {
   recover_fight_entry_refusal,
   auto_open_pending_outcomes,
 } from './dungeon_settlement.js'
+import { apply_fight_receipt } from './store_patch.js'
 import { should_boot_open } from './pending_outcomes.js'
 import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
 import { should_hold_receipt_fight } from './world_fight_receipt.js'
@@ -1529,9 +1529,9 @@ export const use_dungeon = create((set, get) => ({
         // back is the correct, harmless default, never a crash on the receipt-teardown path (#117).
         trap_cells: project.engine_view(fight_store.getState())?.my_traps ?? [],
       })
-    const { characters } = context.get_state().sui
-    const defeated = apply_fight_receipt_to_roster(characters, { character_id, final_hp: 0 })
-    if (defeated !== characters) context.dispatch('action/sui_data', { characters: defeated })
+    // SPEC §17.23 — a forfeit exits at 0 HP, client-knowable the instant the receipt lands. Through the ONE
+    // typed door (#1643): folded against the LATEST roster, previsional until the chain's own stamp arrives.
+    apply_fight_receipt(character_id, { final_hp: 0 })
     await get().claim({
       immediate: true,
       winner: 1,
@@ -1635,17 +1635,10 @@ export const use_dungeon = create((set, get) => ({
       // POST-DEFEAT HP STALE FIX: teardown() just killed the live fight-view HP mirror (SelfPlate's `me` source,
       // S2 mirror kill) SYNCHRONOUSLY, but the chain write-back only lands async below (route_settlement is
       // fire-and-forget). A defeat's HP outcome is CLIENT-KNOWABLE though (SPEC §17.23 "defeat exits at 0 HP" —
-      // a constant, not a computation) — predict it into the roster NOW, same idiom as abandon_fight's own patch,
-      // so the world HUD's projected_hp never reads the stale pre-fight current_hp in the settle window. The later
+      // a constant, not a computation) — predict it into the roster NOW through the ONE typed door (#1643), so
+      // the world HUD's projected_hp never reads the stale pre-fight current_hp in the settle window. The later
       // settlement receipt (finish_result → apply_receipt_character) re-applies the same final_hp=0 (idempotent).
-      if (winner !== 0 && chain_ids.character_id) {
-        const { characters } = context.get_state().sui
-        const defeated = apply_fight_receipt_to_roster(characters, {
-          character_id: chain_ids.character_id,
-          final_hp: 0,
-        })
-        if (defeated !== characters) context.dispatch('action/sui_data', { characters: defeated })
-      }
+      if (winner !== 0 && chain_ids.character_id) apply_fight_receipt(chain_ids.character_id, { final_hp: 0 })
       // Receipt-driven settlement spends gas: executed failures latch; only transport/preflight refusals re-arm.
       if (settle)
         void route_settlement(

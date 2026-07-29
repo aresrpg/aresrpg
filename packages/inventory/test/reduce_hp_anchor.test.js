@@ -28,16 +28,18 @@ describe('#1485 — a stale /v1 snapshot must never restore HP over a receipt-pr
       op: 'fight_receipt',
       character_id: 'c1',
       final_hp: 0,
-      now: 9000,
+      previsional_ms: 9000,
     })
     expect(settled.characters[0].current_hp).toBe(0)
-    expect(settled.characters[0].hp_updated_ms).toBe(9000)
+    // #1643: the receipt is a client PREVISION — it paints the HP and leaves the chain's anchor alone.
+    expect(settled.characters[0].hp_updated_ms).toBe(1000)
+    expect(settled.characters[0].hp_previsional_ms).toBe(9000)
 
     // 2. the settlement's trailing load_roster() lands BEFORE the indexer projected the fight — the row it
     //    carries is the pre-fight one, anchor and all.
     const stale = reduce_sui_data(settled, { kind: 'snapshot', characters: [pre_fight()] })
     expect(stale.characters[0].current_hp).toBe(0) // was 50 — the reported full-restore blip
-    expect(stale.characters[0].hp_updated_ms).toBe(9000)
+    expect(stale.characters[0].hp_previsional_ms).toBe(9000)
 
     // 3. the indexer catches up: same anchor as the receipt-proven write-back, authority handed back.
     const caught_up = reduce_sui_data(stale, {
@@ -57,14 +59,14 @@ describe('#1485 — a stale /v1 snapshot must never restore HP over a receipt-pr
     expect(healed.characters[0].hp_updated_ms).toBe(12000)
   })
 
-  test('the legacy (kind-less) full merge obeys the same law — dungeon_run_store dispatches through it', () => {
+  test('the legacy (kind-less) full merge obeys the same law (boot_roster / equip reconcile / create)', () => {
     const start = base({ characters: [pre_fight()] })
     const settled = reduce_sui_data(start, {
       kind: 'receipt_patch',
       op: 'fight_receipt',
       character_id: 'c1',
       final_hp: 0,
-      now: 9000,
+      previsional_ms: 9000,
     })
     const stale = reduce_sui_data(settled, { characters: [pre_fight()] })
     expect(stale.characters[0].current_hp).toBe(0)

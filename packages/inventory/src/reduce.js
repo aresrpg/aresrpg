@@ -19,8 +19,8 @@
 //                     Authoritative — folds against the latest state, never a stale captured array.
 //   'enrichment'    — a chain-direct cosmetics/stats read (colors, vitality) that must NEVER clobber a
 //                     newer receipt-proven fact (XP / level / current HP); it carries the immutable base.
-//   (no kind)       — legacy full merge (boot_roster, equip reconcile, create, defeat): spread as today
-//                     PLUS the XP floor, so those paths also stop regressing a fresh fight's XP.
+//   (no kind)       — legacy full merge (boot_roster, equip reconcile, create): spread as today PLUS the XP
+//                     floor, so those paths also stop regressing a fresh fight's XP.
 
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
@@ -55,6 +55,12 @@ function floor_characters(characters, xp_floor) {
  * This is the HP twin of the XP floor above, and it needs no ledger: the anchor rides on the row itself.
  * An equal-or-newer anchor hands authority straight back to the snapshot (an out-of-band heal is chain
  * truth, not a regression), exactly like `floor_settled_items`' presence rule.
+ *
+ * A row we hold PREVISIONALLY (#1643 — a client prediction, marked by `hp_previsional_ms`) is the same law
+ * with one term changed: the anchor it is compared on is the CHAIN anchor the row still carries (the client
+ * never advanced it), so authority hands back only once the chain's stamp moves strictly PAST that base —
+ * an equal anchor is exactly the lagging pre-fight projection the prediction was made against. Both sides of
+ * every comparison here are therefore chain stamps; no wall clock can ever win, or freeze, a row.
  * @param {any[]} characters the incoming snapshot rows @param {any[]} held the rows already in the store
  */
 function keep_settled_hp(characters, held) {
@@ -63,12 +69,23 @@ function keep_settled_hp(characters, held) {
   let changed = false
   const next = characters.map((c) => {
     const prior = by_id.get(c?.id)
-    const prior_anchor = Number(prior?.hp_updated_ms ?? NaN)
-    if (!Number.isFinite(prior_anchor) || prior?.current_hp == null) return c
+    if (prior?.current_hp == null) return c
+    const previsional = Number(prior.hp_previsional_ms ?? NaN)
+    const held_anchor = Number(prior.hp_updated_ms ?? NaN)
+    if (!Number.isFinite(held_anchor) && !Number.isFinite(previsional)) return c
     const anchor = Number(c?.hp_updated_ms ?? NaN)
-    if (Number.isFinite(anchor) && c?.current_hp != null && anchor >= prior_anchor) return c
+    const base = Number.isFinite(held_anchor) ? held_anchor : -Infinity
+    const chain_wins =
+      Number.isFinite(anchor) &&
+      c?.current_hp != null &&
+      (Number.isFinite(previsional) ? anchor > base : anchor >= base)
+    if (chain_wins) return c
     changed = true
-    return { ...c, current_hp: prior.current_hp, hp_updated_ms: prior_anchor }
+    // A previsional hold keeps the incoming row's chain anchor (it IS the chain's last word on this row) and
+    // re-marks itself; a chain-settled hold restores its own anchor with its HP block.
+    return Number.isFinite(previsional)
+      ? { ...c, current_hp: prior.current_hp, hp_previsional_ms: previsional }
+      : { ...c, current_hp: prior.current_hp, hp_updated_ms: held_anchor }
   })
   return changed ? next : characters
 }
@@ -343,16 +360,16 @@ function apply_receipt_patch(sui, payload) {
   switch (payload.op) {
     case 'fight_receipt': {
       // HP/XP write-back mirror (results::write_back_hp + the XP delta). apply_fight_receipt_to_roster ADDS
-      // the xp_share once and stamps final_hp — the SAME helper the outside writers used, now folded here so
-      // the XP floor is raised in the same step (a stale snapshot can never regress it afterward).
+      // the xp_share once and paints final_hp — the ONE door every post-fight roster write goes through
+      // (#1643), so the XP floor is raised in the same step (a stale snapshot can never regress it after).
       const characters = apply_fight_receipt_to_roster(sui.characters, {
         character_id: payload.character_id,
         xp_share: payload.xp_share,
         final_hp: payload.final_hp,
-        // The settle instant is an INPUT, not something the fold reads off the wall clock — the anchor it
-        // stamps is what `keep_settled_hp` compares later, so it has to be reproducible. Dispatchers that
-        // omit it keep the helper's Date.now() default.
-        ...(payload.now == null ? {} : { now: payload.now }),
+        // The prediction's local base instant is an INPUT (effects at the edges — store_patch supplies it),
+        // never read off a wall clock in here. It projects regen and NOTHING else; the chain's own anchor
+        // stays untouched, which is what makes clock skew unable to freeze the row.
+        previsional_ms: payload.previsional_ms,
       })
       const xp_floor = raise_floor(sui.xp_floor, characters, payload.character_id)
       if (characters === sui.characters && xp_floor === sui.xp_floor) return sui

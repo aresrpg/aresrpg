@@ -31,6 +31,7 @@ import { settle_and_open, settle_run_and_open, open_outcome, mint_all_and_burn }
 import { loot_from_minted_rows, loot_from_rolled } from './fight_result_receipt.js'
 import { mint_and_reduce_inventory as reduce_minted_inventory } from './loot_inventory_effect.js'
 import { settled_loot_rows } from './loot_inventory.js'
+import { apply_fight_receipt } from './store_patch.js'
 import {
   pending_outcomes_for,
   invalidate_pending_outcomes,
@@ -349,20 +350,6 @@ async function land_outcome(
 }
 
 /**
- * Patch ONE roster character's HP block IN PLACE — the client mirror of the chain's post-fight write-back
- * (results.move → character_link::write_back_hp(character, final_hp, now)). NO refetch (07-13): the
- * settlement payload already IS the exact state, so stamp current_hp = final_hp + the clock and re-dispatch the
- * roster; the lobby SelfPlate's projected_hp then reads honest post-fight HP the instant it remounts. A character
- * absent from the roster (never happens post-fight) no-ops.
- */
-function apply_receipt_character(character_id, receipt) {
-  // M5: dispatch the settlement delta as a typed receipt_patch; the sui_session reducer folds the HP/XP
-  // write-back AND raises the XP floor against the LATEST roster, so a racing load_roster snapshot can never
-  // regress this fresh fight's XP (RED#1). `receipt` = { xp_share } or { final_hp }.
-  context.dispatch('action/sui_data', { kind: 'receipt_patch', op: 'fight_receipt', character_id, ...receipt })
-}
-
-/**
  * The loot-landing TAIL shared by settle_chain (composed settle+open) and land_outcome (the pill): once
  * `results::open` has landed (fight_marker CLEARED, `FightResult` minted), mint every rolled template the result
  * owes then burn it for the rebate ONLY once every mint actually landed (results.move:170 aborts 105 ENotEmpty
@@ -415,7 +402,7 @@ async function finish_result(
     const before = Number(char?.experience ?? 0)
     const levels_gained = Math.max(0, experience_to_level(before + xp_value) - experience_to_level(before))
     // ResultOpened's xp_share is the chain-paid DELTA — patch the roster immediately, not just the modal.
-    apply_receipt_character(character_value, { xp_share: xp_value })
+    apply_fight_receipt(character_value, { xp_share: xp_value })
     context.dispatch('action/fight_result/resolve', {
       xp: xp_value,
       level: experience_to_level(before + xp_value),
@@ -442,7 +429,7 @@ async function finish_result(
   // FIX 3 (07-13 — NO refetch): the correlated ResultMinted event carries `final_hp` — apply it straight
   // into the roster's HP block, zero extra RPC. Event-sourced fast path; the object-read below is the fallback
   // when the receipt lacks that event (same on-chain HP scale as character_max_hp — projected_hp reads it honestly).
-  if (final_hp != null && character) apply_receipt_character(character, { final_hp })
+  if (final_hp != null && character) apply_fight_receipt(character, { final_hp })
 
   if (result_id) {
     // MINT DECOUPLED (stranded-loot fix, pending_mints.js): the mint rides the receipt-driven queue now, NOT the
@@ -470,7 +457,7 @@ async function finish_result(
     const result = await read_result_with_retry(() => get_fight_result({ grpc_client: sdk.grpc_client })(result_id))
     character ??= result?.character ?? null
     if (final_hp == null && result && character)
-      apply_receipt_character(character, { final_hp: Number(result.final_hp ?? 0) }) // fallback
+      apply_fight_receipt(character, { final_hp: Number(result.final_hp ?? 0) }) // fallback
     const rolled = result?.rolled ?? []
     if (loot_units == null)
       rolled_units = rolled.reduce((/** @type {number} */ s, /** @type {any} */ e) => s + Number(e.qty ?? 0), 0)
