@@ -920,6 +920,8 @@
   text-align: center;
   line-height: 1.35;
   color: var(--text-dim, #9aa0ab);
+}
+
 /* #1381 — THE STALL LINE + ITS ONE DOOR. Same chip family as the countdown above (the state it replaces is a
  * dead clock), in the quieter muted ink: it names a fact about another player, it does not shout at them. The
  * door beside it is a subordinate outline — never the gold CTA weight of END TURN, because forcing someone
