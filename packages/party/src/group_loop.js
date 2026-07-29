@@ -120,7 +120,6 @@ export const empty_group_state = () => ({
   },
 })
 
-const leader_world = (state) => state.world_by_character[state.leader_character_id] ?? null
 const follow_leader_world = (state) => state.world_by_character[state.follow.leader_character_id] ?? null
 
 /** Owned members EXCLUDING the leader, in chain group order — the follow/join candidate set. */
@@ -131,18 +130,18 @@ const owned_alts = (state) =>
 
 const is_blocked = (state, character_id, scope) => !!state.blocked[character_id]?.[scope]
 
-/** Owned alts standing in the leader's world — the movement/seat candidate set. */
-const aligned_alts = (state) => {
-  const world = leader_world(state)
-  if (!world) return []
-  return owned_alts(state).filter((member) => state.world_by_character[member.character] === world)
-}
-
-/** Aligned alts that are in the follower set — the members the loop seats into fights. Since group membership
- *  IS auto-follow now (#613 DESIGN COLLAPSE), the follower set == the owned group members, so this is the
- *  aligned owned members; the guard still holds a blocked/not-yet-armed member out of the leader's fight. */
-const armed_aligned_alts = (state) =>
-  aligned_alts(state).filter((member) => state.follow.follower_character_ids.includes(member.character))
+/**
+ * #1661 — ARRIVED alts: the owned members whose follow row reached `with_you`, the ONE state both arrival
+ * paths converge on through `enter_with_you` (a near same-world settle, a run-in expiry, a dragon landing).
+ * Arrival is an EVENT, not a measurement: same-world was a LOOSE predicate — an alt whose travel never
+ * completed (its join tx never landed, its transit still running, its client not there to sign) shares the
+ * leader's world field long before it stands beside them, and being seated in that state is an idle forfeit.
+ * A distance threshold would only swap one loose predicate for another. A row can only be `with_you` in the
+ * leader's world (the machine seats it there), so world alignment falls out — no second check, and an alt
+ * that never arrives satisfies nothing without a single presence/offline branch to maintain.
+ */
+const arrived_alts = (state) =>
+  owned_alts(state).filter((member) => state.follow.followers[member.character]?.status === 'with_you')
 
 const prune_keys = (record, keep) => {
   const next = {}
@@ -682,12 +681,13 @@ function reduce_fight(state, input) {
       const requested_before = same ? state.fight.requested : []
       // #540/#495 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-join every fight the active
       // character engaged (never completes, the fight never starts, refresh doesn't re-adopt — a full
-      // multi-char block). Steer ONLY the per-character armed followers (follow.follower_character_ids, the
-      // toggled-on set), never every owned alt in the world — an invited-but-not-following alt stays out.
+      // multi-char block). #1661 tightened the survivor to ARRIVAL: only an alt that COMPLETED travel to the
+      // leader (`arrived_alts` — the with_you state) may be auto-seated. A member still in transit, still
+      // waiting on its world join, or simply not there stays out of the fight it cannot play.
       const joiners =
         !join_open || !state.follow.enabled
           ? []
-          : armed_aligned_alts(state).filter(
+          : arrived_alts(state).filter(
               (member) =>
                 !seated_now.includes(member.character) &&
                 !requested_before.includes(member.character) &&

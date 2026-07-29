@@ -64,6 +64,16 @@ const following = (...ids) => {
   return reduce_group(s, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
 }
 
+/** #1661 — armed followers driven all the way to ARRIVAL: their checkpoint read lands them beside the leader,
+ *  which is the `with_you` state. Auto-seating asks for arrival, so a fight-join fixture must travel first
+ *  (the unarrived cases are their own fence — test/auto_seat_arrival.test.js). */
+const arrived = (...ids) =>
+  ids.reduce(
+    (state, character_id) =>
+      reduce_group(state, { kind: 'follow_position_read', character_id, position: { x: 1, z: 1 }, now: NOW }).state,
+    following(...ids).state
+  )
+
 // ── membership + world alignment ──────────────────────────────────────────────────────────────────────────────────
 test('group fold mirrors membership; nothing is requested while worlds are unknown', () => {
   const { state, outputs } = fold([
@@ -281,8 +291,8 @@ test('a SOLO leader emits no dungeon-enter for a non-member alt (#540)', () => {
   expect(outputs.enter_dungeon).toEqual([])
 })
 
-test('fight_started emits join_fight ONCE per aligned unseated group member; seats/latches dedupe', () => {
-  const state = armed()
+test('fight_started emits join_fight ONCE per ARRIVED unseated group member; seats/latches dedupe', () => {
+  const state = arrived(ALT_1, ALT_2)
   const first = reduce_group(state, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
   expect(first.outputs.join_fight.map((r) => r.character_id).sort()).toEqual([ALT_1, ALT_2].sort())
   expect(first.outputs.join_fight.every((r) => r.fight_id === '0xfight')).toBe(true)
@@ -297,7 +307,7 @@ test('fight_started emits join_fight ONCE per aligned unseated group member; sea
 })
 
 test('fight_started with join_open:false arms focus/seats but emits NO join (closed chain window)', () => {
-  const state = armed()
+  const state = arrived(ALT_1, ALT_2)
   const { state: next, outputs } = reduce_group(state, {
     kind: 'fight_started',
     fight_id: '0xfight',
