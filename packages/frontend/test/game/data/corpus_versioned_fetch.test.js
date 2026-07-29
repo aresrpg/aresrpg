@@ -74,7 +74,9 @@ test('one pointer flip makes both new corpora visible without purging the old UR
 test('the service worker routes the mutable pointer NetworkFirst before immutable CDN assets', () => {
   const vite_source = readFileSync(new URL('../../../vite.config.ts', import.meta.url), 'utf8')
   const pointer_index = vite_source.indexOf('corpus_version\\.json')
-  const cdn_assets_index = vite_source.indexOf('assets\\.aresrpg\\.world\\/.+/')
+  // The broad CDN rule now lives in sw_cdn_assets_cache.ts (its cache-mode law sits beside an executable
+  // fixture instead of untestable config text), so the ORDER law is asserted against the registration site.
+  const cdn_assets_index = vite_source.indexOf('cdn_assets_runtime_cache,')
   expect(pointer_index).toBeGreaterThan(-1)
   expect(cdn_assets_index).toBeGreaterThan(pointer_index)
   expect(vite_source.slice(pointer_index, cdn_assets_index)).toContain("handler: 'NetworkFirst'")
