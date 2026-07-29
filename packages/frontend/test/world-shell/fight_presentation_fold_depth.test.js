@@ -322,7 +322,5 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('#1672 · the world presentation fol
     expect(fight_store.getState().view?.id, 'the fight died mid-drive').toBe(FIGHT)
     expect(use_dungeon.getState().dungeon?.id, 'the projection mirror stopped publishing').toBe(FIGHT)
     expect(fight_store.getState().applied_version).toBe(5 + TURNS)
-    // eslint-disable-next-line no-console
-    console.log(`#1672 drive — per-turn max fold depth: ${per_turn.join(', ')} (paced mob turns: ${paced_mob_turns})`)
   }, 60_000)
 })
