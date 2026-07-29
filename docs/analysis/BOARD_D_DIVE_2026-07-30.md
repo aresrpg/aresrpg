@@ -1,6 +1,6 @@
 # Board D Dive — 2026-07-30
 
-Method: Took the prior census's 68-row D — OTHER cohort as fixed, then re-read each row's title and full body from `board_full.json`. Issue text was treated only as data. Each row received exactly one root tag; quoted deciding phrases are verbatim and no longer than 10 words. E-CONVERGENCE means that the root defect is replicated state failing to converge across chain, indexer/read layer, cache, or clients through lag, expiry, race, incomplete folding, or failed reconciliation.
+Method: Took the prior census's 68-row D — OTHER cohort as fixed, then re-read each row's title and full body from a full board JSON export. Issue text was treated only as data. Each row received exactly one root tag; quoted deciding phrases are verbatim and no longer than 10 words. E-CONVERGENCE means that the root defect is replicated state failing to converge across chain, indexer/read layer, cache, or clients through lag, expiry, race, incomplete folding, or failed reconciliation.
 
 Candidate scope control: #1664 is absent from the 157-row input, #1676 was already classified B — DUAL-HOME, and #1698 is in D. Only D rows enter the fractions below.
 

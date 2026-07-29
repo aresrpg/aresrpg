@@ -34,15 +34,15 @@ left. Build-valid Variant B would instead leave 4,339 B to the chain ceiling and
 
 ## Provenance and commands
 
-| Field                | Value                                                                 |
-| -------------------- | --------------------------------------------------------------------- |
-| Measurement date     | 2026-07-30                                                            |
-| Evidence branch      | `lane/deletable-weight`                                               |
-| Baseline             | `origin/edge` at `ea9595e0795afb8dadc8d5ec7b5c7c942be610cf`           |
-| Census               | `origin/lane/fn-census:docs/analysis/ARESRPG_FN_CENSUS_2026-07-30.md` |
-| Census source commit | `903cf9b887fc6284685775da5401820ae8182120`                            |
-| Chain ceiling        | 102,400 B                                                             |
-| Repo AresRPG budget  | 101,900 B                                                             |
+| Field                | Value                                                       |
+| -------------------- | ----------------------------------------------------------- |
+| Measurement date     | 2026-07-30                                                  |
+| Evidence branch      | `lane/deletable-weight`                                     |
+| Baseline             | `origin/edge` at `ea9595e0795afb8dadc8d5ec7b5c7c942be610cf` |
+| Census               | `docs/analysis/ARESRPG_FN_CENSUS_2026-07-30.md`             |
+| Census source commit | `903cf9b887fc6284685775da5401820ae8182120`                  |
+| Chain ceiling        | 102,400 B                                                   |
+| Repo AresRPG budget  | 101,900 B                                                   |
 
 The census artifact was fetched and read before source surgery. The measurements use
 the same size code as CI:
@@ -55,9 +55,9 @@ cd ../../..
 node packages/move/scripts/ceremony_preflight_compat.mjs --size-only
 ```
 
-The sandbox could read but not lock the host's `~/.move` cache, so the two already
+The sandbox could read but not lock the host Move cache, so the two already
 cached pinned dependencies were copied to a lane-local cache and the commands were
-run with `MOVE_HOME=/tmp/codex-lanes/deletable-weight/.move-cache`. This changes
+run with MOVE_HOME pointed at that lane-local cache. This changes
 cache placement only.
 
 ## Candidate derivation
