@@ -929,9 +929,9 @@ pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<
 }
 
 /// Snapshot one `aresrpg::item::Item` object's display fields into its item doc
-/// `rpc:item:{id}` — the SAME doc the `item::ItemMinted`/`scribe::Scribed` event arms project
-/// (see `project.rs`), so the two converge idempotently (the event sets template/item_type/
-/// level; the snapshot adds name/category/amount). Self-sufficient (NX doc init) so an item
+/// `rpc:item:{id}` — the SAME doc the `item::ItemMinted` event arm projects (see
+/// `project.rs`), so the two converge idempotently (the event sets template/item_type;
+/// the snapshot adds name/category/amount). Self-sufficient (NX doc init) so an item
 /// surfaces even if its snapshot lands before its mint event. When the wrapper→kiosk hop
 /// resolved (see [`resolve_kiosk`]), the item's CURRENT kiosk is written latest-wins AND the
 /// item joins that kiosk's membership set — the two halves the `/v1/owner-items` join reads.
@@ -946,8 +946,7 @@ pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>, packag
     let it: ItemObject = decode_bcs("object", "Item", contents)?;
     let key = k_item(id);
     let mut writes = vec![
-        // NX skeleton (matches the ItemMinted arm) so `level` stays event-sourced (Scribed)
-        // and a snapshot arriving before the mint event never clobbers a scribed level.
+        // NX skeleton matches the ItemMinted arm, so either pipeline can arrive first.
         set_nx(key.clone(), "$", json!({ "id": id, "level": null })),
         set(key.clone(), "$.template", json!(it.template.to_canonical_string(true))),
         set(key.clone(), "$.name", json!(it.name)),

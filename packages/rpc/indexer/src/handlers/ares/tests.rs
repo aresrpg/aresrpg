@@ -2,11 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //! Unit tests for the pure event→Redis projection ([`super::map`]).
 //!
-//! Each test builds a synthetic event body, BCS-encodes it exactly as the chain
-//! would, runs it through the handler mapping and asserts the projected writes.
-//! This proves the decode↔project contract offline (no Redis, no live chain). The
-//! Rust struct field ORDER is verified against the Move sources by inspection;
-//! runtime BCS-vs-Move-layout is confirmed once the packages publish to testnet.
+//! Synthetic bodies here exercise projection semantics only. Decode/layout coverage
+//! lives in captured-wire tests and the Move↔Rust parity gate.
 
 use super::*; // map, RedisWrite, the write/key helpers, and the model types (re-globbed)
 use serde::Serialize;
@@ -28,29 +25,6 @@ const SENDER: &str = "0x5e11e2"; // stand-in tx sender
 const TS: u64 = 1_700_000_000_000; // stand-in checkpoint timestamp (the sale "when")
 
 // ── pools: absolute reserves in, idempotent sets out ─────────────────────────
-
-#[test]
-fn pool_created_writes_doc_index_and_template_pointer() {
-    let (pool, tmpl) = (oid(0x11), oid(0x22));
-    let body = enc(&PoolCreated { pool, template: tmpl, item_reserve: 500, virtual_sui: 1_000_000 });
-    let w = map("pool", "PoolCreated", PKG, SENDER, TS, &body).unwrap();
-    let (ps, ts) = (pool.to_canonical_string(true), tmpl.to_canonical_string(true));
-    assert_eq!(
-        w,
-        vec![
-            set(
-                k_pool(&ps),
-                "$",
-                json!({
-                    "pool": ps, "template": ts, "item_reserve": 500,
-                    "virtual_sui_mist": "1000000", "real_sui_mist": "0", "paused": false,
-                })
-            ),
-            sadd(K_POOLS.into(), ps.clone()),
-            set(k_pool_by_template(&ts), "$", json!(ps)),
-        ]
-    );
-}
 
 #[test]
 fn pool_buy_sets_absolute_reserves_not_relative() {

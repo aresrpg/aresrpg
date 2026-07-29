@@ -33,7 +33,6 @@ levels, seats and rooms are JSON numbers. IDs/addresses are canonical `0x…` he
 | `aresrpg_items::character` | `character` | `/v1/characters` (mint + anchor) |
 | `aresrpg_items::item` | `item` | `/v1/encyclopedia` templates + listing-enrichment item docs |
 | `aresrpg_items::extract` | `extract` | `/v1/characters` equipment |
-| `aresrpg_items::scribe` | `scribe` | item level (listing filter join) |
 | `aresrpg_game::world` / `zones` / `config` | `world`,`zones`,`config` | `/v1/zones`, `/v1/encyclopedia`, `/v1/config` |
 | `aresrpg::dungeon_events` | `dungeon_events` | `/v1/dungeon-runs` |
 | `aresrpg_kolizeum::kolizeum_events` | `kolizeum_events` | `/v1/kolizeum` |
@@ -265,7 +264,6 @@ Doc `rpc:listing:{item}`, index `rpc:idx:listings`.
 | `kiosk::ItemDelisted` | kiosk, id | `DEL rpc:listing:{id}`; `SREM idx:listings {id}` |
 | `item::ItemMinted` | item, template, item_type, amount | NX `rpc:item:{item} {id,level:null}`; `SET $.template/$.item_type`; **+ supply arm (below)** |
 | `item::TemplateBurned`→`extract::ItemBurned` | item, template, amount | `DEL rpc:item:{item}`, `DEL rpc:listing:{item}`, `SREM idx:listings`; **+ supply arm (below)** |
-| `scribe::Scribed` | item, level | NX `rpc:item:{item}`; `SET $.level` (feeds the level filter) |
 
 ---
 
@@ -463,11 +461,10 @@ and returns a zero-filled oldest-first UTC series `[{day,count,volume}]`, where 
 
 ## Pools / Shop / Encyclopedia / Config
 
-Unchanged from the base slice — see the arms in `project.rs`:
+Current read-layer event arms:
 
-- **`pool::{PoolCreated,PoolBuy,PoolSell,PoolPaused}`** → `rpc:pool:{id}` (+ `pool_by_template`,
-  `idx:pools`). Buy/Sell carry **post-trade absolute** reserves → idempotent `SET`. The view
-  computes `sui_reserve` and the marginal `spot_price`.
+- **`pool::{PoolBuy,PoolSell}`** carry **post-trade absolute** reserves → idempotent `SET` on
+  `rpc:pool:{id}`. The view computes `sui_reserve` and the marginal `spot_price`.
 - **`shop::{SaleCreated,SaleBought,PriceChanged,WindowChanged,SalePaused}`** → `rpc:sale:{id}`
   (+ `idx:sales`). `SaleBought.amount` is the one **RELATIVE** `NUMINCRBY $.minted` (a delta),
   exact under object-snapshot of `Sale.minted`; it also appends the replay-safe receipt described
@@ -481,7 +478,7 @@ Unchanged from the base slice — see the arms in `project.rs`:
   indexed**: the client resolves minted SpellTemplates directly from the seed manifest
   (`fight-spells.json`), so §14 keys no spell-liveness view.
 - **`config::{ConfigEnabledSet,DialChanged,ClassRowSet}`** → `rpc:config`.
-- **`creation::{PriceChanged,PausedSet,ClassAdded,ClassRemoved,StarterSet,SponsorSet,FreeEnabledSet}`**
+- **`creation::{PriceChanged,PausedSet,ClassAdded,ClassRemoved,SponsorSet,FreeEnabledSet}`**
   → `rpc:creation`. **`SponsorSet`/`FreeEnabledSet`** surface `$.sponsor` (address or null,
   from `Option<address>`) and `$.free` (bool) so a create-character UI knows if creation is
   free and the publish ceremony can assert the sponsor over the RPC.
@@ -806,9 +803,9 @@ it lands with **object-snapshot indexing**; the events are named here so the gap
 - **CRAFT / PET ANALYTICS / RUNES / GATHER verbs** — `crafting::{Crafted,RecipeCreated}`,
   `pet::PetFed`, `runes::{GearCrushed,GearScribed,CrushOutputSet}`,
   `gathering::{ResourceGathered,ProtectorTriggered}`. Activity events whose durable result is
-  object/DF state: the minted output item (already indexed via `item::ItemMinted`), accrued
-  job-xp / rune inventory (items), and the scribed item level (already indexed
-  via `scribe::Scribed`). The same object-snapshot class as character level/progression. **§14
+  object/DF state: the minted output item (already indexed via `item::ItemMinted`) and accrued
+  job-xp / rune inventory (items). The same object-snapshot class as character
+  level/progression. **§14
   defines no activity-feed view and no consumer keys one** — per "document the gap, never
   invent," they stay deferred. (A future recent-activity feed, if a consumer materialises, is an
   additive slice keyed by actor address — not a state projection.)

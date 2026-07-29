@@ -111,9 +111,9 @@ pub(super) fn k_character(id: &str) -> String { format!("rpc:character:{id}") }
 fn k_char_owner(addr: &str) -> String { format!("rpc:idx:char_owner:{addr}") }
 fn k_char_name(name: &str) -> String { format!("rpc:idx:char_name:{}", name.to_ascii_lowercase()) }
 // `pub(super)` so the sibling `snapshot` module's Item object-snapshot writes to the SAME
-// item doc the `item::ItemMinted`/`scribe::Scribed` event arms project (one home for the
-// item key shape — the event sets template/item_type/level, the snapshot adds name/category/
-// amount/kiosk_id, converging idempotently like the ItemTemplate doc).
+// item doc the `item::ItemMinted` event arm projects (one home for the item key shape — the
+// event sets template/item_type, the snapshot adds name/category/amount/kiosk_id, converging
+// idempotently like the ItemTemplate doc).
 pub(super) fn k_item(id: &str) -> String { format!("rpc:item:{id}") }
 fn k_pet_feed(id: &str) -> String { format!("rpc:pet_feed:{id}") }
 const K_PET_FEED_FOODS: &str = "rpc:idx:pet_feed_foods";
@@ -141,8 +141,6 @@ const SALES_CAP: i64 = 500;
 /// sale, so an active log persists; matches the API's 30d revenue horizon with margin.
 const SALES_TTL_SECS: i64 = 90 * 24 * 60 * 60;
 fn k_pool(id: &str) -> String { format!("rpc:pool:{id}") }
-fn k_pool_by_template(t: &str) -> String { format!("rpc:pool_by_template:{t}") }
-const K_POOLS: &str = "rpc:idx:pools";
 fn k_sale(id: &str) -> String { format!("rpc:sale:{id}") }
 const K_SALES: &str = "rpc:idx:sales";
 // Exact first-party shop receipts for `/v1/sales-over-time`. `SaleBought.item`
@@ -205,7 +203,7 @@ fn k_fights(world: &str) -> String { format!("rpc:idx:fights:{world}") }
 // fight it opens and carries the identical id the GroupTicket hands `fight::create`, so this doc IS the
 // fight's `group.template`, addressed independently of the fight's derived object id. The /v1/fights
 // view joins it at read time (like /v1/listings joins the item template) to NAME a fight's mobs. Bare
-// string value, mirroring `k_pool_by_template`; latest-wins + stable (a spawn's group is seed-derived).
+// string value; latest-wins + stable (a spawn's group is seed-derived).
 fn k_group_template(world: &str, spawn_id: u64) -> String { format!("rpc:group_template:{world}:{spawn_id}") }
 fn k_result(id: &str) -> String { format!("rpc:result:{id}") }
 fn k_results(owner: &str) -> String { format!("rpc:idx:results:{owner}") }
@@ -290,21 +288,6 @@ pub(super) fn map_with_context(
         ("party", _) => vec![party::map(name, contents)?],
 
         // ── pools ────────────────────────────────────────────────────────────
-        ("pool", "PoolCreated") => {
-            let e: PoolCreated = decode(module, name, contents)?;
-            let pool = e.pool.to_canonical_string(true);
-            let template = e.template.to_canonical_string(true);
-            vec![
-                set(k_pool(&pool), "$", json!({
-                    "pool": pool, "template": template,
-                    "item_reserve": e.item_reserve,
-                    "virtual_sui_mist": e.virtual_sui.to_string(),
-                    "real_sui_mist": "0", "paused": false,
-                })),
-                sadd(K_POOLS.into(), pool.clone()),
-                set(k_pool_by_template(&template), "$", json!(pool)),
-            ]
-        }
         ("pool", "PoolBuy") => {
             let e: PoolBuy = decode(module, name, contents)?;
             let pool = e.pool.to_canonical_string(true);
@@ -321,12 +304,6 @@ pub(super) fn map_with_context(
                 set(k_pool(&pool), "$.real_sui_mist", json!(e.real_sui.to_string())),
             ]
         }
-        ("pool", "PoolPaused") => {
-            let e: PoolPaused = decode(module, name, contents)?;
-            let pool = e.pool.to_canonical_string(true);
-            vec![set(k_pool(&pool), "$.paused", json!(e.paused))]
-        }
-
         // ── shop ─────────────────────────────────────────────────────────────
         ("shop", "SaleCreated") => {
             let e: SaleCreated = decode(module, name, contents)?;
@@ -420,13 +397,6 @@ pub(super) fn map_with_context(
         ("creation", "ClassRemoved") => {
             let e: ClassName = decode(module, name, contents)?;
             vec![del(K_CREATION.into(), &mpath("$.classes", &e.class))]
-        }
-        ("creation", "StarterSet") => {
-            let e: StarterSet = decode(module, name, contents)?;
-            vec![
-                set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
-                set(K_CREATION.into(), &mpath("$.starters", &e.class), json!(e.template.to_canonical_string(true))),
-            ]
         }
         // Free-creation state (sponsor pays) — surfaced so a create-character UI and
         // the publish ceremony's RPC assertion can read whether creation is free/who
@@ -531,7 +501,7 @@ pub(super) fn map_with_context(
             let template = e.template.to_canonical_string(true);
             let supply_key = k_supply(&template);
             vec![
-                // NX init so a prior Scribed(level) is never clobbered by the mint.
+                // NX init lets the event and object-snapshot pipelines converge without clobbering.
                 set_nx(key.clone(), "$", json!({ "id": item, "level": Value::Null })),
                 set(key.clone(), "$.template", json!(template)),
                 set(key, "$.item_type", json!(e.item_type)),
@@ -593,17 +563,6 @@ pub(super) fn map_with_context(
                 // Supply arm: the whole item (its full `amount`) just ceased to exist.
                 set_nx(supply_key.clone(), "$", json!({ "template": template, "amount": 0 })),
                 incr(supply_key, "$.amount", -(e.amount as i64)),
-            ]
-        }
-
-        // ── scribe: item level (feeds listing filter join) ────────────────────
-        ("scribe", "Scribed") => {
-            let e: Scribed = decode(module, name, contents)?;
-            let item = e.item.to_canonical_string(true);
-            let key = k_item(&item);
-            vec![
-                set_nx(key.clone(), "$", json!({ "id": item, "level": Value::Null })),
-                set(key, "$.level", json!(e.level)),
             ]
         }
 
@@ -676,7 +635,7 @@ pub(super) fn map_with_context(
         // with the SAME `template_id`). Keyed by (world, spawn_id) — the pair the fight doc also stores —
         // so the /v1/fights view joins it at read time (like /v1/listings joins the item template) to NAME
         // a fight's mobs. Latest-wins + stable (a spawn's group is seed-deterministic → a re-claim rewrites
-        // the identical id), so a bare-string SET like `k_pool_by_template`. Ambush/PvP fights use a
+        // the identical id), so a bare-string SET is sufficient. Ambush/PvP fights use a
         // ticketless door (no MobGroupClaimed) → no doc → the view's null → the honest "Enemies #N" stays.
         ("zones", "MobGroupClaimed") => {
             let e: MobGroupClaimed = decode(module, name, contents)?;
@@ -1071,8 +1030,7 @@ pub(super) fn map_with_context(
         // result is object/DF state — the minted output item (already indexed via
         // items::item::ItemMinted; the §6 jackpot's rare unit mints through the SAME
         // door, so RareGathered mirrors ResourceGathered's deferral), accrued
-        // job-xp / rune inventory,
-        // and the scribed item level (already indexed via items::scribe::Scribed).
+        // job-xp / rune inventory.
         // That state is the same object-snapshot class as character level /
         // progression (no event carries it); §14 defines no activity-feed view and
         // no consumer keys one, so per "document the gap, never invent" they stay

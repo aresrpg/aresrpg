@@ -23,14 +23,6 @@ use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
 
 // ── aresrpg_pools::pool ──────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PoolCreated {
-    pub pool: ObjectID,
-    pub template: ObjectID,
-    pub item_reserve: u64,
-    pub virtual_sui: u64,
-}
-
 /// `PoolBuy` and `PoolSell` both carry the **post-trade absolute** reserves
 /// (`item_reserve`, `real_sui`), so the projection is an idempotent `JSON.SET`
 /// of the new reserves — no relative accumulation, replay-safe.
@@ -56,12 +48,6 @@ pub struct PoolSell {
     pub net: u64,
     pub item_reserve: u64,
     pub real_sui: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PoolPaused {
-    pub pool: ObjectID,
-    pub paused: bool,
 }
 
 // ── aresrpg_items::shop ──────────────────────────────────────────────────────
@@ -135,12 +121,6 @@ pub struct PausedSet {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassName {
     pub class: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StarterSet {
-    pub class: String,
-    pub template: ObjectID,
 }
 
 /// `SponsorSet { sponsor: Option<address> }` — the gas-station address that
@@ -249,14 +229,6 @@ pub struct PetPowerAdvanced {
 pub struct FoodPowerSet {
     pub food_template: ObjectID,
     pub power_per_unit: u64,
-}
-
-// -- aresrpg_items::scribe ----------------------------------------------------
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Scribed {
-    pub item: ObjectID,
-    pub level: u16,
 }
 
 // ── aresrpg_game::world ──────────────────────────────────────────────────────
