@@ -1080,6 +1080,14 @@ const LEGS = [
 async function main() {
   const requested = (process.argv.find((a) => a.startsWith('--legs='))?.split('=')[1] ?? '').split(',').filter(Boolean)
   const selected = requested.length ? LEGS.filter((l) => requested.includes(l.name)) : LEGS
+  // The verdict below is `rows.every(r => r.ok)`, and `[].every(…)` is TRUE: one mistyped or renamed
+  // leg name selects nothing and this driver reports a green, empty verdict table with exit 0. A gate
+  // that cannot fail is not measuring anything — so an unknown leg is fatal before any chain is touched.
+  const unknown = requested.filter((name) => !LEGS.some((leg) => leg.name === name))
+  if (unknown.length)
+    throw new Error(
+      `--legs names no such leg: ${unknown.join(', ')} — known legs are ${LEGS.map((l) => l.name).join(', ')}`
+    )
 
   // `--boot` stands the localnet up first (what CI does); without it the driver runs against a stack already up.
   if (process.argv.includes('--boot'))
