@@ -115,7 +115,19 @@ jobs:
         timeout-minutes: 30
         # UNVERIFIED-RUNTIME: local sandbox port binding prevented a full Playwright measurement. No retry,
         # continue-on-error, or skip-to-green shim: both COOP specs execute against the minted active fixtures.
-        run: xvfb-run --auto-servernum bun ares test multiplayer
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const manifest = JSON.parse(fs.readFileSync('test/gold/.gold-deployment.json', 'utf8'))
+          const required = {
+            'fight_fixtures.multi_turn': manifest.fight_fixtures?.multi_turn,
+            'fight_fixtures.coop_full_kit': manifest.fight_fixtures?.coop_full_kit,
+            coop_full_kit_roster: manifest.coop_full_kit_roster,
+          }
+          const missing = Object.entries(required).filter(([, value]) => !value).map(([name]) => name)
+          if (missing.length) throw new Error(`gold multiplayer fixtures missing: ${missing.join(', ')}`)
+          NODE
+          xvfb-run --auto-servernum bun ares test multiplayer
       - name: teardown the bare PR smoke
         if: always() && github.event_name == 'pull_request'
         timeout-minutes: 5
