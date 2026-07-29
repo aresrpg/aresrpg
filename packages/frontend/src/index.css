@@ -24,6 +24,11 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Global status colors for HUD surfaces that render outside the scoped `.gw-tab` token bridge. */
+  --good: #4fd6a0;
+  --warn: #ffb454;
+  --bad: #ff6b6b;
 }
 
 /* Insurance: iOS Safari paints the overscroll/safe-area gutter from `html`'s background, not `body`'s —

@@ -43,11 +43,6 @@
   --glass: rgba(20, 27, 38, 0.55);
   --glass-hi: rgba(38, 48, 64, 0.6);
 
-  /* status */
-  --good: #4fd6a0;
-  --warn: #ffb454;
-  --bad: #ff6b6b;
-
   /* combat-log token palette — MOVED (07-12, D151 mount-tree fix). The --clog-* SSOT now lives in
      screens/hud/hud.css on `.hud-chat-line.is-combat` (the live combat-log line), because THIS file's `:root`
      is not loaded in the running app: base.css @imports it but nothing imports base.css (main.tsx loads
