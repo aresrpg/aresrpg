@@ -74,6 +74,7 @@
     "lv": "Niv {{level}}",
     "fighter": "Combattant",
     "waiting_for": "En attente de {{name}}",
+    "turn_min_widened": "Minimum du tour {{seconds}}s — les monstres qui viennent de jouer se résolvent encore sur la chaîne.",
     "none": "Aucun",
     "drawing_cards": "Distribution des cartes…",
     "weapon_attack": "Attaque d'arme",

@@ -64,6 +64,10 @@ export function seed_fight_core({
   placement_deadline_ms = 0,
   version = 1,
   status = placement ? 0 : 1,
+  // The chain's per-turn DIAL. Left 0 by default (no dial ⇒ `chain_min_turn_at` refuses to fabricate a floor,
+  // so the local anchor rules and every existing seeding stays byte-identical); set it when a test needs the
+  // chain's own min-turn anchor — `deadline − turn_ms + 3s`, widening included (#1484 / #1644).
+  turn_ms = 0,
 } = {}) {
   const store = fight_store
   const my_seat = seats.findIndex((s) => s.character === my)
@@ -91,6 +95,7 @@ export function seed_fight_core({
       mobs,
       queue,
       turn_ptr: active_ptr,
+      turn_ms,
       turn_deadline_ms,
       turn_entropy,
       turn_ordinal,

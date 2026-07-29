@@ -46,6 +46,7 @@ export {
   committed_truth,
   MIN_ACTION_MS,
   min_turn_ready_at,
+  min_turn_widened_ms,
   PLAYER_TURN_FLOOR_MS,
   submit_wait_ms,
   WAVE_ACK_GRACE_MS,

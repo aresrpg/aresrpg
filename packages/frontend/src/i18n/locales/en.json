@@ -74,6 +74,7 @@
     "lv": "Lv {{level}}",
     "fighter": "Fighter",
     "waiting_for": "Waiting for {{name}}",
+    "turn_min_widened": "Turn minimum {{seconds}}s — the mobs that just played are still resolving on chain.",
     "none": "None",
     "drawing_cards": "Drawing cards…",
     "weapon_attack": "Weapon Attack",

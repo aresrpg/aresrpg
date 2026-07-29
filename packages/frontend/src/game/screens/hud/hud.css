@@ -909,6 +909,19 @@
   background: linear-gradient(165deg, #12121a, #0a0a0f);
 }
 
+/* #1644 — the WIDENED min-turn reason line. Same chip, but a sentence rather than a number: it must wrap and
+ * stay readable, so the countdown's nowrap/uppercase/wide-tracking treatment is relaxed here. */
+.hud-fightctl__countdown--reason {
+  max-width: 34ch;
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.35;
+  color: var(--text-dim, #9aa0ab);
+}
+
 /* identity + vitals card — bust, name/level, RED-gradient HP bar, AP/MP/Reserve as single icon+number,
  * and a thin global XP bar along the bottom. Compact + centered, off the borders. */
 .hud-vitals {

@@ -74,6 +74,7 @@
     "lv": "St {{level}}",
     "fighter": "Kämpfer",
     "waiting_for": "Warten auf {{name}}",
+    "turn_min_widened": "Zug-Minimum {{seconds}}s — die Monster, die gerade gespielt haben, werden noch auf der Chain aufgelöst.",
     "none": "Keine",
     "drawing_cards": "Karten werden gezogen…",
     "weapon_attack": "Waffenangriff",

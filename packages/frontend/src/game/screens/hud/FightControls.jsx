@@ -24,9 +24,9 @@ import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { turn_input_armed } from '../../../world-shell/voxel_fight_folds.js'
 import { should_auto_end_turn, should_report_stall, turn_overdue_ms } from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
-import { fight_store } from '@aresrpg/fight/store'
+import { fight_store, PLAYER_TURN_FLOOR_MS } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
-import { min_turn_left } from '@aresrpg/fight/project'
+import { min_turn_left, min_turn_widened_ms } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 import { FightBugReportModal } from './FightBugReportModal.jsx'
@@ -181,6 +181,11 @@ export function FightControls({
   const [now_ms, set_now_ms] = useState(() => Date.now())
   const min_turn_left_ms = min_turn_left(fight_state, now_ms)
   const min_turn_gating = min_turn_left_ms > 0
+  // #1644 — A WIDENED FLOOR SAYS SO. `actions::assert_min_turn` gates on the chain's turn start, and
+  // `resolve_from` stamps `deadline = start + turn_ms + 3s × replayed mobs`: kill one mob and the next turn's
+  // minimum is 6s, not the 3s the player knows. Correct, and mute — it reads as a desync. The core derives the
+  // excess (min_turn_widened_ms); this only decides whether there is anything to say.
+  const min_turn_widened = min_turn_gating ? min_turn_widened_ms(fight_state) : 0
   const placement = placement_override != null ? placement_override : !!fight?.placement && fight?.winner === -1
   const has_placement_deadline = placement_deadline_ms > 0
   const has_turn_deadline = !placement && turn_phase === 'armed' && has_turn_draft && turn_deadline_ms > 0
@@ -315,6 +320,16 @@ export function FightControls({
         {placement && countdown_s != null && placement_label && (
           <span className="hud-fightctl__countdown" role="status" aria-live="polite">
             {placement_label(countdown_s)}
+          </span>
+        )}
+        {!placement && min_turn_widened > 0 && (
+          <span
+            className="hud-fightctl__countdown hud-fightctl__countdown--reason"
+            role="status"
+            aria-live="polite"
+            data-widened-ms={min_turn_widened}
+          >
+            {t('fight.turn_min_widened', { seconds: Math.ceil((PLAYER_TURN_FLOOR_MS + min_turn_widened) / 1000) })}
           </span>
         )}
         {placement ? (

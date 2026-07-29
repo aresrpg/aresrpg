@@ -55,6 +55,23 @@ export const min_turn_ready_at = (state) => {
 }
 
 /**
+ * How much LONGER than the plain 3s floor this turn's min-turn wait runs — the chain's `3s per replayed mob`
+ * widening (`resolve_from`: `deadline = start + turn_ms + 3s×N`) as the PLAYER experiences it, so the HUD can
+ * say WHY the countdown reads 6s when the rule everyone knows is 3s (#1644: "some desync it seem").
+ *
+ * Derived from the two clocks `min_turn_ready_at` already reconciles — no new stored fact, no second reading of
+ * the chain dial. It self-suppresses honestly: when the client's own anchor (`turn_started_at`, stamped as its
+ * mob replay drained) is already late enough to cover the chain floor, the visible countdown IS the ordinary 3s
+ * and there is nothing mysterious to explain — only the excess the chain's widening actually adds is reported.
+ * @param {any} state @returns {number} 0 when the ordinary floor rules (or it is not my playable turn)
+ */
+export const min_turn_widened_ms = (state) => {
+  const ready_at = min_turn_ready_at(state)
+  if (ready_at == null) return 0
+  return Math.max(0, ready_at - Number(state.turn_started_at) - PLAYER_TURN_FLOOR_MS)
+}
+
+/**
  * How long an end-turn SUBMIT must wait before the chain will accept its terminal pass — 0 when it may go now.
  * The ONE answer both submit doors read (the optimistic intent door and the PTB door), so neither re-derives it:
  * the min-turn remainder above, MINUS the deadline escape hatch. A turn about to expire submits immediately —

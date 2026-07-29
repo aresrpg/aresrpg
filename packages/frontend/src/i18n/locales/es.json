@@ -74,6 +74,7 @@
     "lv": "Nv {{level}}",
     "fighter": "Combatiente",
     "waiting_for": "Esperando a {{name}}",
+    "turn_min_widened": "Mínimo del turno {{seconds}}s — los monstruos que acaban de jugar aún se están resolviendo en la cadena.",
     "none": "Ninguno",
     "drawing_cards": "Repartiendo cartas…",
     "weapon_attack": "Ataque de arma",

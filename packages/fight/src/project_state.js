@@ -6,7 +6,7 @@ import { GRID_W } from './los.js'
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { committed_truth, min_turn_ready_at } from './store.js'
 
-export { committed_truth, submit_wait_ms } from './store.js'
+export { committed_truth, min_turn_widened_ms, submit_wait_ms } from './store.js'
 
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
 
