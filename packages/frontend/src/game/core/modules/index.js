@@ -11,7 +11,6 @@ import presence from './presence.js'
 import mob_groups from './mob_groups.js'
 import resource_nodes from './resource_nodes.js'
 import fight from './fight.js'
-import fight_sfx from './fight-sfx.js'
 import player_experience from './player_experience.js'
 import job_progression from './job_progression.js'
 import craft from './craft.js'
@@ -26,7 +25,6 @@ export const MODULES = [
   mob_groups,
   resource_nodes,
   fight,
-  fight_sfx,
   player_experience,
   job_progression,
   craft,

@@ -58,7 +58,7 @@ import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { read_worn_templates, resolve_worn_cosmetics } from '../game/cosmetic_glb.js'
 import { context } from '../game/store.js'
 import { play_fight_sfx, play_element_sfx, play_sfx } from '../game/core/audio/sfx.js'
-import { play_hurt_sfx } from '../game/core/modules/fight-sfx.js'
+import { death_sfx_key, play_hurt_sfx } from '../game/core/modules/fight-sfx.js'
 import { cast_vfx, burst_vfx, arrival_vfx, is_burst_element, prewarm_fight_vfx } from '../game/fight_cast_vfx.js'
 import {
   IMPACT_FEEL,
@@ -581,6 +581,10 @@ export function create_voxel_fight_adapter(
   const play_death_beat = async ({ target_id: id, face } = {}) => {
     if (!id || !entity_ids.has(id) || !observe_death(id, true)) return
     dying.add(id)
+    const fight = read_board_fight()
+    const victim = fight?.fighters?.get(id)
+    const death_sfx = death_sfx_key(victim, id, fight?.my_entity_id)
+    if (death_sfx) play_sfx(death_sfx)
     const done = board.entity_beat(id, { anim: 'death', face })
     emit_death_line(read_board_fight_state, game_context.dispatch, { target_id: id })
     if (is_mob(id)) schedule_corpse_removal(id, done)
