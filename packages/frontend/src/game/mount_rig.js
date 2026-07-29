@@ -16,6 +16,7 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
 import { mount_is_flight, mount_model_yaw, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
+import { fast_travel_dragon_file } from './fast_travel_assets.js'
 import { create_mount_glb_cache } from './mount_glb_cache.js'
 import { game_log } from '../core/log.js'
 import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
@@ -26,18 +27,16 @@ const BLEND_RATE = 8 // idle↔move weight ease (per-second lambda)
 /** Fetch+parse each unique mount GLB once; failed work is evicted, resolved render data stays page-cached. */
 const glb_cache = create_mount_glb_cache((/** @type {string} */ url) => load_glb_checked(url))
 
-
 /** The mount GLB refusal rule (non-CDN URLs rejected) — ONE home, shared by create_mount_rig and the
  *  #175 preload below so a preload always warms the EXACT cache key the real mount will ask for.
  *  @param {string} glb_url @returns {string | null} */
-const resolve_source_url = (glb_url) =>
-  canonical_model_source_url(glb_url, { allow_dev_models: true })
+const resolve_source_url = (glb_url) => canonical_model_source_url(glb_url, { allow_dev_models: true })
 
 /** Which dragon skin the fast-travel dragon rides — fire by default; `?ftdragon=frost|void` previews the
  *  others in DEV. ONE home so the mount AND the #175 preload below always resolve the identical URL. */
 export function ft_dragon_glb_url() {
-  const pick = (import.meta.env.DEV && new URLSearchParams(location.search).get('ftdragon')) || 'dragon-fire'
-  const file = ['dragon-fire', 'dragon-frost', 'dragon-void'].includes(pick) ? `${pick}.glb` : 'dragon-fire.glb'
+  const pick = import.meta.env.DEV ? new URLSearchParams(location.search).get('ftdragon') : null
+  const file = fast_travel_dragon_file(pick)
   return model_asset_url('mob', file)
 }
 

@@ -16,5 +16,12 @@
     "shop_render": { "published": true },
     "hack_radio": { "published": true },
     "airdrop": { "published": true }
+  },
+  "sequences": {
+    "fast_travel": [
+      { "url_class": "mob", "filename": "dragon-fire.glb" },
+      { "url_class": "mob", "filename": "dragon-frost.glb" },
+      { "url_class": "mob", "filename": "dragon-void.glb" }
+    ]
   }
 }
