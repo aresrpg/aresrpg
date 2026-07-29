@@ -11,7 +11,8 @@
 /// the cross-package seam law), the `dungeon_key_template`, and the room-by-room dungeon roster (§9).
 ///
 /// PLACEMENT-BY-RESPONSIBILITY: this module owns the template DATA + its own field validity (clamp bands). It is a
-/// dependency LEAF — it imports no sibling game module and no `GameConfig`: the LIVE engine bound on mob group
+/// dependency leaf except for `config::clamp`, the package's one u64 clamp home; it imports no `GameConfig`.
+/// The LIVE engine bound on mob group
 /// size (§17.8 team_size_bound = 6) is one home on `GameConfig` and is applied at SPAWN time by `zones` (which
 /// holds `&GameConfig` there); a world only stores per-world authored sizes (sane-clamped). Setters are AdminCap-
 /// + Version-gated and CLAMP (coercion, not rejection — a compromised cap can rebalance a world but never store an
@@ -20,7 +21,7 @@
 module aresrpg::world;
 use aresrpg_foundation::world_math;
 
-use aresrpg::{admin::AdminCap, version::Version};
+use aresrpg::{admin::AdminCap, config, version::Version};
 use std::string::String;
 use sui::{dynamic_field as df, event, vec_map::{Self, VecMap}, versioned::{Self, Versioned}};
 
@@ -230,13 +231,13 @@ public fun set_zone_size(cap: &AdminCap, w: &mut World, value: u32, version: &Ve
 
 public fun set_zone_ttl_ms(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  y142(w).zone_ttl_ms = std::u64::min(std::u64::max(value, TTL_MIN), TTL_MAX);
+  y142(w).zone_ttl_ms = config::clamp(value, TTL_MIN, TTL_MAX);
   y144(w);
 }
 
 public fun set_speed_budget(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  y142(w).speed_budget = std::u64::min(std::u64::max(value, SPEED_MIN), SPEED_MAX);
+  y142(w).speed_budget = config::clamp(value, SPEED_MIN, SPEED_MAX);
   y144(w);
 }
 
@@ -250,7 +251,7 @@ public fun set_spawn_zone(cap: &AdminCap, w: &mut World, x: u32, z: u32, version
 
 public fun set_protector_bp(cap: &AdminCap, w: &mut World, value: u64, version: &Version, ctx: &TxContext) {
   gate(cap, version, ctx);
-  y142(w).protector_bp = std::u64::min(std::u64::max(value, 0), BP_MAX);
+  y142(w).protector_bp = config::clamp(value, 0, BP_MAX);
   y144(w);
 }
 

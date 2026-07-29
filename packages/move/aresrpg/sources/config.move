@@ -443,7 +443,7 @@ public fun set_class_base_mp(cap: &AdminCap, config: &mut GameConfig, class_id: 
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-fun clamp(v: u64, lo: u64, hi: u64): u64 {
+public(package) fun clamp(v: u64, lo: u64, hi: u64): u64 {
   if (v < lo) lo else if (v > hi) hi else v
 }
 
