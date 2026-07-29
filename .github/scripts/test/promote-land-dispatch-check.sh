@@ -13,7 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../promote-land-dispatch.sh"
 
 CALL_LOG=$(mktemp)
-trap 'rm -f "$CALL_LOG"' EXIT
+ERROR_LOG=$(mktemp)
+trap 'rm -f "$CALL_LOG" "$ERROR_LOG"' EXIT
 REPO=aresrpg/aresrpg
 MOCK_FAIL_WORKFLOW=
 
@@ -45,9 +46,15 @@ workflow run nuclear-audit.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
   "$(cat "$CALL_LOG")"
 
 : >"$CALL_LOG"
+: >"$ERROR_LOG"
 MOCK_FAIL_WORKFLOW=board-hygiene.yml
-dispatch_edge_landing_automations "$SHA"
-expect_equal "a dispatch failure stays non-fatal after the ff-push" "0" "$?"
+dispatch_edge_landing_automations "$SHA" 2>"$ERROR_LOG"
+DISPATCH_RC=$?
+expect_equal "a dispatch failure exits non-zero after the ff-push" "1" "$DISPATCH_RC"
+expect_equal \
+  "a dispatch failure emits a visible Actions error" \
+  "::error::board-hygiene.yml dispatch failed for $SHA — edge already landed; re-run it manually" \
+  "$(cat "$ERROR_LOG")"
 expect_equal \
   "one failed dispatch does not starve the next automation" \
   "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA

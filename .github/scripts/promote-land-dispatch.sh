@@ -9,12 +9,14 @@
 EDGE_LANDING_WORKFLOWS=(board-hygiene.yml nuclear-audit.yml)
 
 dispatch_edge_landing_automations() {
-  local sha="${1:?landed sha required}" workflow
+  local sha="${1:?landed sha required}" workflow failed=0
   for workflow in "${EDGE_LANDING_WORKFLOWS[@]}"; do
     if gh workflow run "$workflow" --repo "${REPO:?GITHUB_REPOSITORY required}" --ref edge -f "sha=$sha"; then
       echo "dispatched $workflow for edge landing $sha"
     else
-      echo "WARN: $workflow dispatch failed for $sha — re-run it manually (edge already landed)"
+      echo "::error::$workflow dispatch failed for $sha — edge already landed; re-run it manually" >&2
+      failed=1
     fi
   done
+  return "$failed"
 }
