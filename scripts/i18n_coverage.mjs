@@ -57,6 +57,30 @@ const TERNARY =
 // line every gate run, so this class stays VISIBLE instead of silently unchecked forever.
 const TEMPLATE = /\bt\(\s*`([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*[._])\$\{/g
 
+// EXTRACTOR SELF-TEST — the gate's verdict is "every key we FOUND resolves". A regex that stops
+// finding anything (a syntax migration, a bad edit, a stricter char class) makes `used` empty, every
+// key trivially resolvable, and the gate permanently, silently green — indistinguishable from a
+// perfectly translated tree. So the three extractors run over a synthetic source first and must each
+// come back with what they were written to find. The fixture is a string here, never a scanned file:
+// a real one would inject undefined keys into the coverage set it is proving.
+const SELFTEST_SRC = String.raw`
+  t('selftest.plain'); i18nKey="selftest.attribute"
+  t(flag ? 'selftest.left' : 'selftest.right')
+  t(` + '`selftest.dynamic_${suffix}`' + `)
+`
+const selftest = (label, re, want) => {
+  const found = [...SELFTEST_SRC.matchAll(re)].length
+  if (found >= want) return
+  console.log(
+    `\n  ✗ i18n GATE FAILED (extractor self-test): the ${label} pattern found ${found}/${want} keys in its own` +
+      ' synthetic source. The extractor is blind, so a clean verdict from it would be a lie.'
+  )
+  process.exit(1)
+}
+selftest('static t()/i18nKey', KEY, 2)
+selftest('both-literal ternary', TERNARY, 1)
+selftest('template-literal', TEMPLATE, 1)
+
 const used = new Map() // key -> Set(files)
 const dynamicPrefixes = new Map() // 'namespace.prefix_' -> Set(files)
 for (const f of files) {
