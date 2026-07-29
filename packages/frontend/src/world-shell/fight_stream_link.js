@@ -17,8 +17,8 @@
 //  · CATCH-UP — journal rows written before the SSE route shipped carry no chain cursor and are skipped by the
 //    stream on purpose (stream.rs `decode_stored_fight_event`), so only the page can deliver them. One walk on
 //    every connect.
-//  · FALLBACK — `/v1/stream/*` is not deployed yet (404) and a runtime may have no `EventSource` at all. Both
-//    are ordinary states here, not errors: the link reports itself not-live and the 4s poll keeps paging.
+//  · FALLBACK — a location may not serve `/v1/stream/*` (404), and a runtime may have no `EventSource` at all.
+//    Both are ordinary states here, not errors: the link reports itself not-live and the 4s poll keeps paging.
 //  · THE DEADLINE BELT — the adapter's #1381 belt fires ONE direct read before each turn deadline, so a silent
 //    stream can never cost the turn the deadline is about to end.
 
