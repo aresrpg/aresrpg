@@ -182,16 +182,36 @@ public(package) fun emit_expired_stances(fight: &Fight, target_is_mob: bool, tar
   };
 }
 
-/// Stats ids 5 (Vitality) and 10 (MAX_HP) deliberately have no `Stats` field. Punishment bonuses therefore
-/// increase the fighter's capacity directly and this expiry fold removes each independent row's exact gain.
+/// Stats ids 5 (Vitality) and 10 (MAX_HP) deliberately have no `Stats` field (`spell::add_stat` skips both), so
+/// an ALTER_STAT row naming either of them is a HP-CAPACITY fact and nothing else. `is_max_hp_alter` is the ONE
+/// place that question is answered; `apply_max_hp_alter` and `revert_expired_max_hp` are its two directions and
+/// are exact inverses by construction — every mint of such a row pays into the first, every departure (expiry,
+/// dispel) into the second.
+public(package) fun is_max_hp_alter(effect: &Effect): bool {
+  effect.kind() == spell_effect::k_alter_stat()
+    && (effect.stat() == spell_effect::stat_vitality() || effect.stat() == spell_effect::stat_max_hp())
+}
+
+/// APPLY one vitality/MAX_HP alter's capacity delta. A no-op for every other row, so callers hand it whatever
+/// alter they just landed. Current HP never rides a gain up (capacity only) and is clamped down by a loss.
+public(package) fun apply_max_hp_alter(fight: &mut Fight, target_is_mob: bool, target_idx: u64, effect: &Effect) {
+  if (!is_max_hp_alter(effect)) return;
+  // Sign and magnitude both come out of the CENTERED value (#904).
+  let (amount, neg) = participant::alter_delta(effect);
+  if (neg) {
+    remove_max_hp(fight, target_is_mob, target_idx, amount);
+  } else {
+    add_max_hp(fight, target_is_mob, target_idx, amount);
+  };
+}
+
+/// The expiry inverse of `apply_max_hp_alter`, folded over every row that just left the board.
 public(package) fun revert_expired_max_hp(fight: &mut Fight, target_is_mob: bool, target_idx: u64, expired: &vector<Effect>) {
   let n = expired.length();
   let mut i = 0;
   while (i < n) {
     let effect = expired.borrow(i);
-    if (effect.kind() == spell_effect::k_alter_stat()
-      && (effect.stat() == spell_effect::stat_vitality() || effect.stat() == spell_effect::stat_max_hp())) {
-      // Sign and magnitude both come out of the CENTERED value (#904) — the revert is the row's own inverse.
+    if (is_max_hp_alter(effect)) {
       let (amount, neg) = participant::alter_delta(effect);
       if (neg) {
         add_max_hp(fight, target_is_mob, target_idx, amount);

@@ -5,7 +5,12 @@
 
 import { rng_range } from './prng.js'
 import { turn_rng_of, with_turn_rng } from './combat_clock.js'
-import { add_effect } from './fight_actions.js'
+import {
+  add_effect,
+  apply_max_hp_delta,
+  is_max_hp_stat,
+  max_hp_riders,
+} from './fight_actions.js'
 import { effective_stats, next_id, update_entity } from './fight_state.js'
 import {
   FLAG_DODGE,
@@ -129,10 +134,22 @@ export const apply_stat_effect = (state, effect, caster, target) => {
     return { handled: true, state, effects: [] }
   const draw = rng_range(turn_rng_of(state), effect.min, effect.max)
   const with_rng = with_turn_rng(state, draw.state)
-  const stored = add_row(with_rng, target.id, caster.id, effect, draw.value)
+  // CAPACITY IDS (5 vitality / 10 max_hp) carry no stat-block field on either twin, so the row is minted under
+  // the single `max_hp` key the expiry inverse reads and the HP capacity moves now — without this leg the row
+  // landed, `effective_stats` folded nothing, and a +60 vitality buff changed literally nothing (#1628; Move
+  // `cast::land_alter_player` → `retro_effects::apply_max_hp_alter`).
+  const capacity = is_max_hp_stat(effect.stat)
+  const stored = add_row(
+    with_rng,
+    target.id,
+    caster.id,
+    capacity ? { ...effect, stat: 'max_hp' } : effect,
+    draw.value,
+  )
   const delta = effect.type === 'ADD' ? draw.value : -draw.value
-  const after =
-    effect.stat === 'ap' || effect.stat === 'mp'
+  const after = capacity
+    ? apply_max_hp_delta(stored, target.id, delta)
+    : effect.stat === 'ap' || effect.stat === 'mp'
       ? update_entity(stored, target.id, entity => ({
           ...entity,
           [effect.stat]: Math.max(0, entity[effect.stat] + delta),
@@ -142,9 +159,24 @@ export const apply_stat_effect = (state, effect, caster, target) => {
   // STAT_BUFF — target LOSES it, caster GAINS it, both revert on expiry (spell_effect.move:33 declared intent; the
   // K_STEAL_POINTS twin feeds the caster the same way, immediate-pool there / timed-row here since stats are folded
   // by effective_stats and decayed by process_turn_effects, not a consumable pool). Chain arm rides the next train.
+  // A stolen CAPACITY stat moves both fighters' max HP, exactly like the pair of alter rows Move's
+  // `apply_steal_stat` mints and then pays into `apply_max_hp_alter` for.
   const with_caster_gain =
     effect.kind === K_STEAL_STAT
-      ? add_row(after, caster.id, caster.id, effect, draw.value, 'STAT_BUFF')
+      ? capacity
+        ? apply_max_hp_delta(
+            add_row(
+              after,
+              caster.id,
+              caster.id,
+              { ...effect, stat: 'max_hp' },
+              draw.value,
+              'STAT_BUFF',
+            ),
+            caster.id,
+            draw.value,
+          )
+        : add_row(after, caster.id, caster.id, effect, draw.value, 'STAT_BUFF')
       : after
   return {
     handled: true,
@@ -158,6 +190,8 @@ export const apply_stat_effect = (state, effect, caster, target) => {
         status: effect.type === 'ADD' ? 'STAT_BUFF' : 'STAT_DEBUFF',
         stat: effect.stat,
         value: draw.value,
+        // A capacity row also states the new ceiling and the HP a loss clamped to — see `max_hp_riders`.
+        ...(capacity ? max_hp_riders(with_caster_gain, target.id) : {}),
       },
       ...(effect.kind === K_STEAL_STAT
         ? [
@@ -166,6 +200,7 @@ export const apply_stat_effect = (state, effect, caster, target) => {
               status: 'STAT_BUFF',
               stat: effect.stat,
               value: draw.value,
+              ...(capacity ? max_hp_riders(with_caster_gain, caster.id) : {}),
             },
           ]
         : []),

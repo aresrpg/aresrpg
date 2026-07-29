@@ -1218,11 +1218,7 @@ fun apply_to_player(
     );
     give_caster_points(fight, caster_side, caster_idx, effect.stat(), removed);
   } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
-    // Timed (turns>0) alters live ONLY as board rows; turns==0 is permanent and lands on the base block.
-    // Either way the live block re-derives from base + rows — never delta-reverted (the 0-floor leaked gains).
-    apply_alter(fight, pc, effect);
-    record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
-    refresh_player_stats(fight, pc);
+    land_alter_player(fight, pc, fid_of(caster_side, caster_idx), effect);
   } else if (kind == spell_effect::k_steal_stat()) {
     apply_steal_stat(fight, false, pc, caster_side, caster_idx, effect);
   } else if (kind == spell_effect::k_apply_dot()) {
@@ -1354,11 +1350,7 @@ fun apply_to_mob(
     );
     give_caster_points(fight, caster_side, caster_idx, effect.stat(), removed);
   } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
-    // TIMED → board row on the mob's fid; PERMANENT (turns==0) → the mob's base block. Either way the live block
-    // re-derives from base + rows (the `apply_to_player` twin). Symmetric sign: a debuff shreds, an ally's buff adds.
-    apply_alter_mob(fight, midx, effect);
-    record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
-    refresh_mob_stats(fight, midx);
+    land_alter_mob(fight, midx, fid_of(caster_side, caster_idx), effect);
   } else if (kind == spell_effect::k_steal_stat()) {
     apply_steal_stat(fight, true, midx, caster_side, caster_idx, effect);
   } else if (kind == spell_effect::k_push() || kind == spell_effect::k_pull()) {
@@ -1816,9 +1808,7 @@ fun apply_board_batch_from(
         // (zero-caster law: the source is dead/anonymous). Mirrors the player board branch below.
         mob::drain_points(fight::mobs_mut(fight).borrow_mut(idx), effect.stat(), base);
       } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
-        apply_alter_mob(fight, idx, effect);
-        record_timed(fight, mob_fid(idx), mob_fid(idx), effect);
-        refresh_mob_stats(fight, idx);
+        land_alter_mob(fight, idx, mob_fid(idx), effect);
       } else if (kind == spell_effect::k_forced_death()) {
         retro_effects::force_death(fight, true, idx);
       } else if (kind == spell_effect::k_stance()) {
@@ -1841,9 +1831,7 @@ fun apply_board_batch_from(
       // steal-in-payload = its removal half (MOB_DEBUFF_HAT P3 cast:534) — see the mob branch above.
       participant::remove_points(fight::participants_mut(fight).borrow_mut(idx), effect.stat(), base);
     } else if (kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()) {
-      apply_alter(fight, idx, effect);
-      record_timed(fight, idx, idx, effect);
-      refresh_player_stats(fight, idx);
+      land_alter_player(fight, idx, idx, effect);
     } else if (kind == spell_effect::k_forced_death()) {
       retro_effects::force_death(fight, false, idx);
     } else if (kind == spell_effect::k_stance()) {
@@ -1871,6 +1859,29 @@ fun apply_alter(fight: &mut Fight, pc: u64, effect: &Effect) {
   } else {
     participant::alter_base_resist(p, effect.element(), amount, neg)
   };
+}
+
+/// LAND one alter on a PLAYER — the ONE home for "what happens when an alter row arrives", shared by the cast
+/// sink and the board-batch (trap/glyph payload) sink so the two can never drift: base-or-row, re-derive, and
+/// the HP-CAPACITY leg. That last leg is not an extra: stat ids 5 (Vitality) and 10 (MAX_HP) have NO `Stats`
+/// field (`spell::add_stat` skips both), so for those rows the capacity move IS the whole effect — without it a
+/// +60 vitality buff folded into literally nothing while its EXPIRY still subtracted 60 (#1628).
+fun land_alter_player(fight: &mut Fight, pc: u64, src_fid: u64, effect: &Effect) {
+  // Timed (turns>0) alters live ONLY as board rows; turns==0 is permanent and lands on the base block.
+  // Either way the live block re-derives from base + rows — never delta-reverted (the 0-floor leaked gains).
+  apply_alter(fight, pc, effect);
+  record_timed(fight, pc, src_fid, effect);
+  refresh_player_stats(fight, pc);
+  retro_effects::apply_max_hp_alter(fight, false, pc, effect);
+}
+
+/// The MOB twin of `land_alter_player`. TIMED → board row on the mob's fid; PERMANENT (turns==0) → the mob's
+/// base block. Symmetric sign: a debuff shreds, an ally's buff adds.
+fun land_alter_mob(fight: &mut Fight, midx: u64, src_fid: u64, effect: &Effect) {
+  apply_alter_mob(fight, midx, effect);
+  record_timed(fight, mob_fid(midx), src_fid, effect);
+  refresh_mob_stats(fight, midx);
+  retro_effects::apply_max_hp_alter(fight, true, midx, effect);
 }
 
 /// Re-derive player `pc`'s live stats from base + its live alter rows (`participant::refresh_stats`) — apply
@@ -2023,6 +2034,11 @@ fun apply_steal_stat(
   else refresh_player_stats(fight, target_idx);
   if (caster_side == MOB_SIDE) refresh_mob_stats(fight, caster_idx)
   else refresh_player_stats(fight, caster_idx);
+  // The rows are ordinary ALTER_STAT rows, so a stolen VITALITY/MAX_HP moves capacity on both fighters — and
+  // must, because both rows expire through `revert_expired_max_hp` (#1628: a mint that skipped the capacity leg
+  // left the expiry handing out a delta nobody ever applied).
+  retro_effects::apply_max_hp_alter(fight, target_is_mob, target_idx, &debit);
+  retro_effects::apply_max_hp_alter(fight, caster_side == MOB_SIDE, caster_idx, &credit);
 }
 
 /// The (ap_debt, mp_debt, ap_credit, mp_credit) point adjustments on a fighter — the turn machine reads them at

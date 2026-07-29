@@ -190,6 +190,53 @@ export const consume_shields = (state, target_id, shields_consumed) => {
 }
 
 /**
+ * Stat ids 5 (Vitality) and 10 (MAX_HP) have no field in either twin's stat block (`spell::add_stat` skips both
+ * on chain; `effective_stats` excludes `max_hp` here), so an ALTER_STAT row naming either of them is an
+ * HP-CAPACITY fact and nothing else. This predicate is the ONE home for that question — the Move twin is
+ * `retro_effects::is_max_hp_alter`. Every mint of such a row moves capacity through `apply_max_hp_delta` and
+ * every departure (expiry, dispel) moves it back, so the two directions are exact inverses (#1628).
+ * @param {string | undefined} stat
+ */
+export const is_max_hp_stat = stat => stat === 'vitality' || stat === 'max_hp'
+
+/**
+ * Move `retro_effects::apply_max_hp_alter` / `revert_expired_max_hp`, one signed home. A GAIN is capacity only —
+ * current HP does not ride it up (`participant::add_max_hp_bonus`); a LOSS floors capacity at 1 and clamps
+ * current HP down to it (`participant::remove_max_hp_bonus`), and the clamp is never a heal on the way back.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} target_id
+ * @param {number} delta
+ * @returns {import('./fight_state.js').FightState}
+ */
+export const apply_max_hp_delta = (state, target_id, delta) =>
+  delta === 0
+    ? state
+    : update_entity(state, target_id, entity => {
+        const health_max = Math.max(1, entity.health_max + delta)
+        return {
+          ...entity,
+          health_max,
+          health: Math.min(entity.health, health_max),
+        }
+      })
+
+/**
+ * The RECEIPT riders every capacity move owes. A max-HP change is observable twice over — the new ceiling, and
+ * the current HP a LOSS clamps down to — and the receipt is the only channel a consumer that folds events has
+ * for either (the chain carries them on the object read; the simulator has no object read). Without these a
+ * capacity clamp was an HP change no emitted event described, which is exactly what the twin-coherence property
+ * (`test/evolve_coherence.test.js`) refuses.
+ * @param {import('./fight_state.js').FightState} state  the state AFTER the capacity move
+ * @param {string} id
+ */
+export const max_hp_riders = (state, id) => {
+  const entity = find_entity(state, id)
+  return entity
+    ? { max_hp: entity.health_max, new_health: entity.health }
+    : {}
+}
+
+/**
  * Apply healing, clamped to health_max. Donor apply_heal (actions.ts:227).
  * @param {import('./fight_state.js').FightState} state
  * @param {string} target_id
@@ -287,6 +334,8 @@ export const apply_incoming_damage = (
       target_id: recipient_id,
       status: 'EROSION',
       damage: erosion,
+      // Erosion is a capacity move like any other — same riders, same reason (`max_hp_riders`).
+      ...max_hp_riders(next, recipient_id),
     })
   }
 
@@ -294,7 +343,7 @@ export const apply_incoming_damage = (
     ? []
     : punishment_bonuses(recipient, hit.damage_dealt)) {
     const allocated = next_id(next)
-    const vitality = bonus.stat === 'vitality' || bonus.stat === 'max_hp'
+    const vitality = is_max_hp_stat(bonus.stat)
     next = add_effect(allocated.state, recipient_id, {
       id: allocated.id,
       type: 'STAT_BUFF',
@@ -304,16 +353,13 @@ export const apply_incoming_damage = (
       value: bonus.value,
       turns_remaining: bonus.turns_remaining,
     })
-    if (vitality)
-      next = update_entity(next, recipient_id, entity => ({
-        ...entity,
-        health_max: entity.health_max + bonus.value,
-      }))
+    if (vitality) next = apply_max_hp_delta(next, recipient_id, bonus.value)
     extra_effects.push({
       target_id: recipient_id,
       status: 'PUNISHMENT_TRIGGER',
       stat: bonus.stat,
       value: bonus.value,
+      ...(vitality ? max_hp_riders(next, recipient_id) : {}),
     })
   }
 
@@ -454,27 +500,32 @@ export const process_turn_effects = (state, entity_id) => {
   const expired_stances = post_tick.effects.filter(
     effect => effect.type === 'STANCE' && effect.turns_remaining <= 1,
   )
+  // CAPACITY EXPIRY — the exact inverse of every max-hp row that dies on this tick, SIGNED: a departing buff
+  // gives its capacity back, a departing debuff returns what it shaved (Move `revert_expired_max_hp`, whose own
+  // sign comes from the row's centered value). Keyed on `max_hp` alone because every mint normalizes the
+  // vitality id onto it (`is_max_hp_stat`).
   const max_hp_expiry = post_tick.effects.reduce(
     (sum, effect) =>
       sum +
-      (effect.type === 'STAT_BUFF' &&
-      effect.stat === 'max_hp' &&
-      effect.turns_remaining <= 1
-        ? effect.value
+      (effect.stat === 'max_hp' && effect.turns_remaining <= 1
+        ? effect.type === 'STAT_BUFF'
+          ? -effect.value
+          : effect.type === 'STAT_DEBUFF'
+            ? effect.value
+            : 0
         : 0),
     0,
   )
-  const decayed = update_entity(tick.state, entity_id, e => {
-    const health_max = Math.max(1, e.health_max - max_hp_expiry)
-    return {
+  const decayed = update_entity(
+    apply_max_hp_delta(tick.state, entity_id, max_hp_expiry),
+    entity_id,
+    e => ({
       ...e,
-      health_max,
-      health: Math.min(e.health, health_max),
       effects: e.effects
         .map(eff => ({ ...eff, turns_remaining: eff.turns_remaining - 1 }))
         .filter(eff => eff.turns_remaining > 0),
-    }
-  })
+    }),
+  )
   return {
     state: decayed,
     effects: [

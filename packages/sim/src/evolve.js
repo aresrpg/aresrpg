@@ -121,17 +121,27 @@ const apply_effect_row = (state, effect) => {
   let delta = {}
   /** @type {FrameFact[]} */
   const facts = []
+  // A CAPACITY row (`max_hp` present — a vitality/MAX_HP alter, an erosion, a punishment bonus) states its new
+  // ceiling and the current HP a LOSS clamped down to. It is a health change no damage was dealt for, so it
+  // folds the health but states itself as `capacity`, never as a phantom hit.
+  const capacity = effect.max_hp != null
   if (effect.new_health != null) {
     const health = Number(effect.new_health)
     delta = { ...delta, health, alive: health > 0 }
-    facts.push({
-      kind: effect.heal != null ? 'heal' : 'hit',
-      id,
-      new_health: health,
-      ...(effect.damage != null ? { damage: Number(effect.damage) } : {}),
-      ...(effect.heal != null ? { heal: Number(effect.heal) } : {}),
-      ...(effect.killed ? { killed: true } : {}),
-    })
+    facts.push(
+      capacity
+        ? { kind: 'capacity', id, max_hp: Number(effect.max_hp), new_health: health }
+        : {
+            kind: effect.heal != null ? 'heal' : 'hit',
+            id,
+            new_health: health,
+            ...(effect.damage != null ? { damage: Number(effect.damage) } : {}),
+            ...(effect.heal != null ? { heal: Number(effect.heal) } : {}),
+            ...(effect.killed ? { killed: true } : {}),
+          },
+    )
+  } else if (capacity) {
+    facts.push({ kind: 'capacity', id, max_hp: Number(effect.max_hp) })
   }
   if (effect.cell != null) {
     delta = { ...delta, cell: effect.cell }

@@ -32,6 +32,22 @@ const REGOLD = process.env.REGOLD === '1'
 /** JSON round-trip so live values and parsed fixtures digest identically (drops undefined keys). */
 const jsonify = value => JSON.parse(JSON.stringify(value))
 
+/**
+ * THE CROSS-TWIN TOOTH (#1052). Everything else in this gate is a sim SELF-RECORDING: regolding writes whatever
+ * the sim does today, so a sim-vs-Move divergence cannot fail it by construction. A scenario may therefore also
+ * carry `pinned_facts` — terminal readings TRANSCRIBED FROM THE MOVE SOURCE, each with the site it was read at.
+ * They are asserted against the replay, never regolded, so a rules change that moves one of them has to be
+ * re-derived from the chain by hand instead of silently absorbed. Same contract as `pinned_move_path`, general.
+ */
+const read_path = (root, path) =>
+  path
+    .split('.')
+    .reduce(
+      (node, key) =>
+        node == null ? undefined : node[/^\d+$/.test(key) ? Number(key) : key],
+      root,
+    )
+
 // ── Shared scenario atoms (mirrors fight_death.test.js conventions — copy > abstract) ──────────
 
 const flat_arena_json = (width = 21) => ({
@@ -210,6 +226,77 @@ const veil_templates_raw = {
           linear: false,
           free_cell: false,
           base_effects: [{ type: 'invisibility', turns: 3, chance: 100 }],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
+// A vitality BUFF on the caster and a vitality DEBUFF on an enemy (#1628). Stat ids 5/10 have no stat-block
+// field on either twin, so these two lines move HP CAPACITY and nothing else; min===max keeps the roll fixed.
+const vitality_templates_raw = {
+  yajin: {
+    fortify: {
+      name: 'Fortify',
+      description: '+60 vitality for two turns',
+      levels: [
+        {
+          cost: 2,
+          range: [0, 6],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: true,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'add',
+              statistic: 'vitality',
+              min: 60,
+              max: 60,
+              turns: 2,
+              target: 'self',
+              chance: 100,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+    wither: {
+      name: 'Wither',
+      description: '-30 vitality on an enemy for one turn',
+      levels: [
+        {
+          cost: 2,
+          range: [1, 6],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: true,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'remove',
+              statistic: 'vitality',
+              min: 30,
+              max: 30,
+              turns: 1,
+              target: 'enemies',
+              chance: 100,
+            },
+          ],
           critical_effects: [],
         },
       ],
@@ -557,6 +644,70 @@ const scenarios = [
       { type: 'end_turn', entity_id: 'm0' },
     ],
   },
+  {
+    // #1628 twin parity — a vitality line is an HP-CAPACITY line. Stat ids 5 (Vitality) and 10 (MAX_HP) have no
+    // field in either twin's stat block (`spell::add_stat` skips both; `effective_stats` excludes max_hp), so
+    // the alter's stat fold is a no-op for them and the capacity move IS the effect. Before the fix BOTH twins
+    // dropped it on the ordinary cast path: the row landed, the block re-derived identically, and a +60 vitality
+    // buff changed nothing — while the EXPIRY inverse (`retro_effects::revert_expired_max_hp`) still ran.
+    meta: {
+      id: 'vitality_alter_moves_max_hp',
+      class: 'twin',
+      authored: '2026-07-29',
+      source: 'authored',
+      notes:
+        'Issue #1628: p0 self-buffs +60 vitality (capacity only, no heal) and withers m0 for -30 (capacity down, current HP clamped to it).',
+    },
+    arena: flat_arena_json(),
+    templates_raw: vitality_templates_raw,
+    initial: {
+      fight_id: 'capsule_vitality_capacity',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          spell_levels: { fortify: 1, wither: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'fortify',
+        target: { x: 5, y: 5 },
+      },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'wither',
+        target: { x: 7, y: 5 },
+      },
+    ],
+    pinned_facts: [
+      {
+        cite: 'retro_effects.move apply_max_hp_alter → participant::add_max_hp_bonus (capacity += 60)',
+        path: 'team0.0.health_max',
+        equals: 160,
+      },
+      {
+        cite: 'participant.move:311 add_max_hp_bonus — capacity ONLY, current HP never rides the gain',
+        path: 'team0.0.health',
+        equals: 100,
+      },
+      {
+        cite: 'retro_effects.move apply_max_hp_alter → participant::remove_max_hp_bonus (capacity -= 30)',
+        path: 'team1.0.health_max',
+        equals: 70,
+      },
+      {
+        cite: 'mob.move:282 remove_max_hp_bonus — current HP is clamped down to the new capacity',
+        path: 'team1.0.health',
+        equals: 70,
+      },
+    ],
+  },
 ]
 
 // ── The gate ───────────────────────────────────────────────────────────────────────────────────
@@ -616,6 +767,13 @@ describe('fight-replay gate (capsule goldens)', () => {
         const moved = replay.events.find(event => event.type === 'fight_moved')
         expect(moved?.path).toEqual(scenario.pinned_move_path)
       }
+
+      // 2b. CROSS-TWIN — the hand-transcribed chain readings (never regolded).
+      for (const fact of scenario.pinned_facts ?? [])
+        expect(
+          jsonify(read_path(replay.terminal, fact.path)),
+          `${fact.path} — ${fact.cite}`,
+        ).toEqual(fact.equals)
 
       // 3. DETERMINISM — an independent second replay produces the identical trace.
       expect(replay_capsule(capsule).trace_digest).toBe(replay.trace_digest)
