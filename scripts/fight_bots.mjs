@@ -31,7 +31,12 @@ import { Driver } from '../test/localnet/bots/framework/driver.js'
 import { build_context, make_kiosk_client } from '../test/localnet/bots/framework/context.js'
 import { Transaction } from '../test/localnet/bots/framework/deps.js'
 import { make_client, submit, get_fields, get_object, SubmitStats } from '../test/localnet/bots/framework/sui.js'
-import { reach_zone, is_terminal_fight_status, manhattan } from '../test/localnet/bots/framework/world_flow.js'
+import {
+  reach_zone,
+  read_zone_spawns,
+  is_terminal_fight_status,
+  manhattan,
+} from '../test/localnet/bots/framework/world_flow.js'
 import {
   P,
   RPC,
@@ -61,6 +66,11 @@ import {
 const GAS_BUDGET = 1_000_000_000 // 1 SUI — disposable localnet, &Random-safe fixed ceiling
 const GRID_W = 20
 const POLL_MS = 150
+const SEARCH_MAX_HOPS = 3
+const SEARCH_LEG_TIMEOUT_MS = 90_000
+const SEARCH_ZONE_READ_TIMEOUT_MS = 15_000
+const SEARCH_API_TIMEOUT_MS = 5_000
+const SEARCH_TRAVEL_BLOCKS_PER_SECOND = 900
 const PASS_GRACE_MS = 250
 const TURN_MS_MIN = 5_000 // config.move TURN_MS_MIN — the shortest turn the chain will clamp to
 const DEFAULT_TURN_MS = 45_000 // config.move DEFAULT_TURN_MS — restored after the timeout leg
@@ -81,6 +91,21 @@ async function wait_until(label, predicate, { timeout_ms = 30_000, interval_ms =
     await sleep(interval_ms)
   }
   throw new Error(`TIMEOUT after ${timeout_ms}ms waiting for: ${label}`)
+}
+
+/** Bound a whole mutation leg too: individual polls cannot protect a transaction or network call that stalls. */
+async function with_timeout(label, effect, timeout_ms) {
+  let timer = null
+  try {
+    return await Promise.race([
+      effect(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`TIMEOUT after ${timeout_ms}ms running: ${label}`)), timeout_ms)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function assert(condition, message) {
@@ -182,25 +207,151 @@ async function read_world(client, world_id) {
     offset_x: Number(payload.offset_x ?? 0),
     offset_z: Number(payload.offset_z ?? 0),
     zone_size: Number(payload.zone_size),
+    bounds_x: Number(payload.bounds_x),
+    bounds_z: Number(payload.bounds_z),
   }
 }
 
-/** Discover a zone holding a live mob group, preferring the seeded MELEE template (a healer group net-heals). */
-async function discover_zone(bot, manifest, world) {
+/** The matrix drive's search picker: nearest undiscovered zone centre around the standing checkpoint. */
+async function next_search_target(manifest, world, standing, excluded) {
+  const response = await fetch(`${manifest.api}/v1/zones?world=${encodeURIComponent(world.id)}`, {
+    signal: AbortSignal.timeout(SEARCH_API_TIMEOUT_MS),
+  })
+  assert(response.ok, `SEARCH zone-list read failed with HTTP ${response.status}`)
+  const body = await response.json()
+  assert(Array.isArray(body?.zones), 'SEARCH zone-list response carries no zones array')
+
+  const known = new Set(body.zones.map((row) => `${row.zx}:${row.zy}`))
+  for (const key of excluded) known.add(key)
+  const { zone_size } = world
+  const cx = Math.floor(standing.x / zone_size)
+  const cy = Math.floor(standing.z / zone_size)
+  const choices = []
+
+  // Match the matrix drive's bounded nearest-ring scan. A hop is one paid search, not one ring radius.
+  for (let radius = 0; radius <= 16 && choices.length === 0; radius += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const zx = cx + dx
+        const zy = cy + dy
+        if (zx < 0 || zy < 0 || known.has(`${zx}:${zy}`)) continue
+        const chain_x = Math.min(world.bounds_x - 1, zx * zone_size + Math.floor(zone_size / 2))
+        const chain_z = Math.min(world.bounds_z - 1, zy * zone_size + Math.floor(zone_size / 2))
+        if (
+          chain_x < 0 ||
+          chain_z < 0 ||
+          Math.floor(chain_x / zone_size) !== zx ||
+          Math.floor(chain_z / zone_size) !== zy
+        )
+          continue
+        const distance = Math.hypot(chain_x - standing.x, chain_z - standing.z)
+        choices.push({ zx, zy, chain_x, chain_z, distance })
+      }
+    }
+  }
+
+  choices.sort((a, b) => a.distance - b.distance || a.zx - b.zx || a.zy - b.zy)
+  const [target] = choices
+  return target
+    ? {
+        ...target,
+        wait_ms: Math.max(150, Math.ceil((target.distance / SEARCH_TRAVEL_BLOCKS_PER_SECOND) * 1_000)),
+      }
+    : null
+}
+
+/**
+ * SEARCH leg: inspect the checkpoint zone first, then search at most three fresh zones before engaging.
+ * Every read and the whole leg are bounded; depletion therefore ends in an explicit failure, never a hang.
+ */
+async function search_populated_zone(bot, manifest, world) {
   const pkg_origin = manifest.ids.aresrpg.PACKAGE_ID
   const melee_template = manifest.seed?.mobs?.melee?.id ?? null
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const zone = await reach_zone({
-      driver: bot.driver,
-      client: bot.client,
-      ids: bot.ids,
-      world,
-      pkg_origin,
-      prefer_template: melee_template,
-    })
-    if (zone?.mob) return zone
+  const initial = await reach_zone({
+    driver: bot.driver,
+    client: bot.client,
+    ids: bot.ids,
+    world,
+    pkg_origin,
+    prefer_template: melee_template,
+  })
+  if (initial?.mob) {
+    log(`SEARCH found populated checkpoint zone ${initial.zx}:${initial.zy}`)
+    return initial
   }
-  throw new Error('no mob group discovered after 4 zone-discovery attempts')
+
+  let standing = initial.spawn
+  const tried = new Set([`${initial.zx}:${initial.zy}`])
+  const trace = [...(initial.trace ?? [])]
+  log(`SEARCH checkpoint zone ${initial.zx}:${initial.zy} is depopulated; scouting up to ${SEARCH_MAX_HOPS} zones`)
+
+  for (let hop = 1; hop <= SEARCH_MAX_HOPS; hop += 1) {
+    const target = await next_search_target(manifest, world, standing, tried)
+    assert(target, `SEARCH exhausted the nearest-zone ring before hop ${hop}/${SEARCH_MAX_HOPS}`)
+    tried.add(`${target.zx}:${target.zy}`)
+    log(`SEARCH hop ${hop}/${SEARCH_MAX_HOPS} → zone ${target.zx}:${target.zy}`)
+    await sleep(target.wait_ms)
+
+    const searched = await bot.driver.search({
+      world_id: world.id,
+      ...bot.ids,
+      x: target.chain_x - world.offset_x,
+      z: target.chain_z - world.offset_z,
+      offset_x: world.offset_x,
+      offset_z: world.offset_z,
+    })
+    const already = searched?.res?.abort_code === 105
+    assert(
+      searched?.res?.ok || already,
+      `SEARCH hop ${hop}/${SEARCH_MAX_HOPS} failed in zone ${target.zx}:${target.zy}: ${
+        searched?.res?.abort_code ?? searched?.res?.error ?? 'no receipt'
+      }`
+    )
+    trace.push({
+      step: 'search',
+      hop,
+      zx: target.zx,
+      zy: target.zy,
+      ok: !!searched?.res?.ok || already,
+      abort_code: searched?.res?.abort_code,
+    })
+
+    const rows = await wait_until(
+      `SEARCH zone ${target.zx}:${target.zy} becomes readable`,
+      () => read_zone_spawns(bot.client, pkg_origin, world.id, target.zx, target.zy),
+      { timeout_ms: SEARCH_ZONE_READ_TIMEOUT_MS }
+    )
+    const mobs = rows.mobs ?? []
+    const nodes = rows.resources ?? []
+    const mob = (melee_template && mobs.find((row) => row.template_id === melee_template)) || mobs[0] || null
+    if (mob) {
+      log(`SEARCH found ${mobs.length} live group(s) in zone ${target.zx}:${target.zy}`)
+      return {
+        ok: true,
+        search: searched,
+        zx: target.zx,
+        zy: target.zy,
+        spawn: { x: target.chain_x, z: target.chain_z },
+        mobs,
+        nodes,
+        mob,
+        node: nodes[0] ?? null,
+        trace,
+      }
+    }
+    standing = { x: target.chain_x, z: target.chain_z }
+    log(`SEARCH zone ${target.zx}:${target.zy} is depopulated`)
+  }
+
+  throw new Error(`SEARCH exhausted ${SEARCH_MAX_HOPS} zones without finding a live mob group`)
+}
+
+async function discover_zone(bot, manifest, world) {
+  return with_timeout(
+    'SEARCH populated-zone leg',
+    () => search_populated_zone(bot, manifest, world),
+    SEARCH_LEG_TIMEOUT_MS
+  )
 }
 
 /**
