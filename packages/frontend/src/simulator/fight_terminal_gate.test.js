@@ -11,7 +11,7 @@
 // [terminal-gate2] sentinel warns on, and a black page is what the player saw.
 //
 // Nothing here is mocked: the shim opens the real local chain, the real fight core folds every receipt, and the
-// terminal status under test is published by the shim's own `sync_status`. The last two assertions are the
+// terminal status under test is published by the ONE projection mirror (#1646). The last two assertions are the
 // ADAPTER'S reconcile head, verbatim — the same two folds that decided to tear the board down.
 
 import { afterAll, describe, expect, test } from 'bun:test'
@@ -81,7 +81,7 @@ const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
 /**
  * Play the fight to its end through the SHIM'S OWN doors: the player holds position and casts the moment the
  * closing mob is in range; every mob turn is pumped by the shim itself. No store is written by hand — the
- * terminal status under test is published by `sync_status`, exactly as it is on the page.
+ * terminal status under test is published by the ONE projection mirror, exactly as it is on the page.
  */
 const play_to_victory = async (shim, { max_turns = 60 } = {}) => {
   for (let turn = 0; turn < max_turns; turn += 1) {
@@ -143,7 +143,7 @@ const ended = await play_to_victory(shim)
 describe('#1056 — a WON simulator fight reaches its victory sequence, never a black page', () => {
   test('the fight really was won through the shim, and the shim published the terminal', () => {
     expect(ended.sim_state.winner).toBe(0) // team0 — a genuine VICTORY, not an abandon
-    expect(use_dungeon.getState().dungeon.status).toBe(STATUS_WON) // sync_status published it
+    expect(use_dungeon.getState().dungeon.status).toBe(STATUS_WON) // the projection mirror published it
   })
 
   test('the phase machine reads that victory as TERMINAL — the card is EARNED, not an EXIT', () => {
