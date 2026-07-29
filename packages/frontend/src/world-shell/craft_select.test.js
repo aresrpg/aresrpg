@@ -6,8 +6,9 @@
 // to demand an EXACT tally and refused the merged single stack the world-load sweep produces. Zero mocks.
 
 import { describe, expect, it } from 'bun:test'
+import { covering_stacks } from '@aresrpg/sdk/items'
 
-import { covering_stacks, select_ingredients } from './craft_select.js'
+import { select_ingredients } from './craft_select.js'
 
 const stack = (id, amount) => ({ id, amount })
 // s.sui.items row (read_staking shape) — only the fields the selector reads.

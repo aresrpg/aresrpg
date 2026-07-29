@@ -63,6 +63,25 @@ export function is_stackable_category(category) {
   return STACKABLE_CATEGORIES.includes(String(category ?? '').toLowerCase())
 }
 
+/**
+ * The fewest of `stacks` whose amounts sum to at least `target`, or null when custody is short.
+ * Biggest-first keeps PTBs small; the chain-facing consumer splits surplus off the final cover.
+ * @param {{ id: string, amount: number }[]} stacks
+ * @param {number} target
+ * @returns {string[] | null}
+ */
+export function covering_stacks(stacks, target) {
+  if (!(target > 0)) return null
+  const chosen = []
+  let remaining = target
+  for (const stack of [...stacks].sort((a, b) => b.amount - a.amount)) {
+    if (remaining <= 0) break
+    chosen.push(stack.id)
+    remaining -= stack.amount
+  }
+  return remaining <= 0 ? chosen : null
+}
+
 export const EQUIPMENTS = [
   ITEM_CATEGORY.RELIC,
   ITEM_CATEGORY.RUNE,

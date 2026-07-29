@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// CRAFT ingredient selection — the PURE (effect-free, import-free) core of craft_actions.js, split out so the
+// CRAFT ingredient selection — the PURE (effect-free) core of craft_actions.js, split out so the
 // burn-tally logic is unit-testable with zero mocks (bun mock.module process-global collision law).
 //
 // THE RULE IS THE CHAIN'S RULE (#1604): crafting::craft (packages/move/aresrpg/sources/crafting.move, `y18`)
@@ -11,25 +11,7 @@
 // This matters because the world-load stack sweep (chain/stack_merge.js) folds every duplicate into ONE stack
 // per resource: demanding stacks that tile the need exactly would refuse the shape the bag normally has.
 
-/**
- * The fewest of `stacks` (`{ id, amount }`) whose amounts SUM to at least `target`, or null when the owned
- * total is short. Biggest-first, stopping the moment the tally is covered: fewest objects in the PTB, no
- * redundant stack for an already-satisfied ingredient (the chain splits the surplus off the last one).
- * @param {{ id: string, amount: number }[]} stacks
- * @param {number} target
- * @returns {string[] | null}
- */
-export function covering_stacks(stacks, target) {
-  if (!(target > 0)) return null
-  const chosen = []
-  let remaining = target
-  for (const stack of [...stacks].sort((a, b) => b.amount - a.amount)) {
-    if (remaining <= 0) break
-    chosen.push(stack.id)
-    remaining -= stack.amount
-  }
-  return remaining <= 0 ? chosen : null
-}
+import { covering_stacks } from '@aresrpg/sdk/items'
 
 /**
  * Pick the ingredient stacks for `ingredients` (`[{ id (slug), qty }]`) out of the owned-items bag (s.sui.items
