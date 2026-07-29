@@ -229,16 +229,20 @@ describe('L4 · a seeded fight runs start → decided, headless', () => {
 describe('L4 · determinism — the seed is the whole fight', () => {
   const a = run_fight(SEED)
   const b = run_fight(SEED)
+  const capsule_a = capsule_of(a.chain)
+  const capsule_b = capsule_of(b.chain)
 
   test('the same seed twice ⇒ byte-identical chain rows', () => {
     expect(JSON.stringify(a.rows)).toBe(JSON.stringify(b.rows))
     expect(a.batches.map((batch) => batch.version)).toEqual(b.batches.map((batch) => batch.version))
     expect(a.chain.sim_state.winner).toBe(b.chain.sim_state.winner)
+    // The exported recorder header + commands are also part of determinism. Pin their bytes directly so the
+    // digest test below only has to replay ONE already-proven-identical capsule under the suite's 5 s budget.
+    expect(JSON.stringify(capsule_a)).toBe(JSON.stringify(capsule_b))
   })
 
   test('the capsule trace digest is STABLE — pinned, so it holds across processes too', () => {
-    const digest_of = (run) => replay_capsule(capsule_of(run.chain)).trace_digest
-    expect(digest_of(a)).toBe(digest_of(b))
+    const trace_digest = replay_capsule(capsule_a).trace_digest
     // A pinned golden: a change here means the sim, the seed threading, or the command list moved. That is a
     // conversation, not a rebaseline — the whole determinism story rides on this number. It moved TWICE:
     //   1. when the recorder header started holding raw templates — it pins the REPLAY's trace, which until
@@ -263,7 +267,7 @@ describe('L4 · determinism — the seed is the whole fight', () => {
     //      crank, so every draw after one shifts. Determinism is again untouched: the capsule records the clock
     //      on the move command it folded with, so the replay re-rolls the identical escape.
     // The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved — it seats no characters.
-    expect(digest_of(a)).toMatchSnapshot()
+    expect(trace_digest).toMatchSnapshot()
   })
 
   test('a DIFFERENT seed ⇒ a different fight (else the equality above proves nothing)', () => {
