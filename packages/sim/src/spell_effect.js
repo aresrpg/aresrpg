@@ -3,7 +3,7 @@
 // SPELL EFFECT ENVELOPE — the composable, data-only effect record, a byte-for-byte mirror of
 // aresrpg_foundation::spell_effect.move (S-16 parity). A spell is a LIST of `Effect`s, each selecting one of
 // ~30 mechanics by a `kind` discriminant; element/stat are PARAMETERS, not opcodes. PURE DATA — no coupling to
-// board/fighter state. This is the vocabulary `effect_board.js` resolves against and `stats_derive.js` folds.
+// board/fighter state. This is the vocabulary `effect_board.js` resolves against.
 //
 // Independent of `spell.js` on purpose (mirrors the Move no-cycle rule: spell_effect never `use`s spell).
 

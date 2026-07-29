@@ -3,10 +3,9 @@
 // SPELL — Stats + element vocabulary, the deterministic subset of aresrpg_foundation::spell.move.
 //
 // PARITY MIRROR (S-16): byte-for-byte the on-chain `spell` module's Stats block + saturating stat/resist
-// mutators — the substrate `stats_derive.js` re-derives live combat stats over. The RNG damage pipeline
-// (roll_damage / is_critical / calculate_final_damage) is OUT OF SCOPE here (crit draws stay server-truth);
-// the existing `spell_calculator.js` owns the sim's damage math. This file mirrors ONLY the pure integer
-// stat state the timed-alter recompute law folds over.
+// mutators. The RNG damage pipeline (roll_damage / is_critical / calculate_final_damage) is OUT OF SCOPE here
+// (crit draws stay server-truth); the existing `spell_calculator.js` owns the sim's damage math. This file
+// mirrors ONLY the pure integer stat state.
 
 // ── Elements. Discriminants match spell.move exactly (FIRE→int, WATER→chance, EARTH→str, AIR→agility). ──
 export const EL_FIRE = 0

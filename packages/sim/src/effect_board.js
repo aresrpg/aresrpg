@@ -308,8 +308,7 @@ export const clear_fighter = (board, fighter_id) => {
 }
 
 /**
- * Every LIVE timed alter row (stat/resist) on `fighter_id` — the fold set stats_derive re-derives live stats
- * from (base + rows). Mirrors spell_board::fighter_alter_rows.
+ * Every LIVE timed alter row (stat/resist) on `fighter_id`. Mirrors spell_board::fighter_alter_rows.
  * @returns {import('./spell_effect.js').Effect[]}
  */
 export const fighter_alter_rows = (board, fighter_id) => {
