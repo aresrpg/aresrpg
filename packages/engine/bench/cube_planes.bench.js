@@ -6,7 +6,7 @@
 // binary-greedy mesher → the real TSL terrain material (whose positionNode carries the POSITIVE-FACE
 // +1 PLANE CORRECTION under test — src/render/terrain_material.js `positive_push`). From 6 pinned,
 // orthogonal-ish poses (one per cube face) the test projects the cube's 8 world-space corners through
-// an analytic pinhole camera (the exact inverse of the proven ray-gen in streaming.spec.js's hole
+// an analytic pinhole camera (the exact inverse of the proven ray-gen in streaming.bench.js's hole
 // classifier, so the projection is self-validated) and asserts the RENDERED silhouette's pixel
 // bounding box matches the PROJECTED corners' box within EDGE_TOL_PX (3 px — a measured AA bound; see
 // its note) on every side. Each face plane is thus pinned as a crisp silhouette edge in 4 of the 6
@@ -118,7 +118,7 @@ function look_at(campos, target) {
 
 /**
  * Analytic pinhole projection of a world point to screen pixels — the exact inverse of the ray-gen in
- * streaming.spec.js's classify_holes (fwd/right/up basis + vertical FOV + aspect), so it maps to the
+ * streaming.bench.js's classify_holes (fwd/right/up basis + vertical FOV + aspect), so it maps to the
  * SAME pixels the GPU rendered (reversed-Z only affects depth, never x/y).
  * @param {{ campos: [number,number,number], yaw: number, pitch: number, width: number, height: number }} pose
  * @param {[number,number,number]} q world point
@@ -265,7 +265,7 @@ test('gate zero: cube face planes render at the correct world plane (±2px, 6 po
   // math uses. If someone re-homes the cube, this fails loudly instead of silently desyncing.
   expect([CUBE_CHUNK[0], CUBE_CHUNK[1], CUBE_CHUNK[2], L, S], 'cube layout const drift').toEqual([0, 6, 0, 8, 8])
 
-  // DOUBLE warm-up (matches streaming.spec.js): the first demo load after a dev-server (re)start makes
+  // DOUBLE warm-up (matches streaming.bench.js): the first demo load after a dev-server (re)start makes
   // Vite pre-bundle the module graph (pool_renderer → three/webgpu) and then trigger a FULL PAGE
   // RELOAD when optimization finishes — landing that reload mid-evaluate invalidates the freshly
   // imported module, so an in-page `import('/src/render/pool_renderer.js')` resolves a half-built

@@ -11,8 +11,9 @@
 // enumerates the REAL tree anchors of the densest 5×5 forest ring (via the exported resolve_placement_at)
 // and times both paths over that exact population — no terrain-fill / stamp-cost confound.
 //
-// Run: `bun test packages/engine/bench/tree_bake_ab.test.js` (explicit path — Playwright's testMatch is
-// '*.spec.js', so this bun-only .test.js is never picked up by the browser runner).
+// Run: `bun run --cwd packages/engine test` with the rest of the suite, or on its own with
+// `bun test packages/engine/bench/tree_bake_ab.test.js`. The two runners split this directory by
+// extension: `.test.js` is bun's, `.bench.js` is Playwright's testMatch — neither sees the other's.
 
 import { test, expect, describe } from 'bun:test'
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared bench primitives — the camera-pin protocol, stream settle, and the voxel-true HOLE
-// CLASSIFIER, extracted from the old 876-line streaming.spec.js so both split gates
-// (streaming.spec.js perf + holes_flight.spec.js) stay under the 600-LoC law and share ONE copy
-// of the pin/classify logic. Pure helpers; no test() here. Consumed by bench/*.spec.js.
+// CLASSIFIER, extracted from the old 876-line streaming.bench.js so both split gates
+// (streaming.bench.js perf + holes_flight.bench.js) stay under the 600-LoC law and share ONE copy
+// of the pin/classify logic. Pure helpers; no test() here. Consumed by bench/*.bench.js.
 
 import { mkdir, writeFile } from 'node:fs/promises'
 
@@ -209,7 +209,7 @@ export const FOG_DG_DISPLAY = 16 // displayed (post-AgX) fog blue-over-green at 
 // when its blue-dominance ≤ FOG_D*×f + this. Measured: mid-fog displayed chroma tracks FOG_D*×f within
 // ~±10 units (AgX midtone wobble + silhouette AA), so 12 masks legit haze with headroom while leaving
 // a cyan riser (b−r 36 at f≈0) and a true sky-hole (b−r 45) flagged with 24–33 units to spare. Not a
-// per-frame pixel budget (that is HOLE_AA_EPSILON in holes_flight.spec.js) — this is the per-PIXEL
+// per-frame pixel budget (that is HOLE_AA_EPSILON in holes_flight.bench.js) — this is the per-PIXEL
 // "is this blue explainable by fog" threshold.
 export const HOLE_FOG_CHROMA_EPS = 12
 

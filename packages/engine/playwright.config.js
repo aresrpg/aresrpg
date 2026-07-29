@@ -9,7 +9,11 @@ const is_ci = Boolean(process.env.CI)
 
 export default defineConfig({
   testDir: './bench',
-  testMatch: '*.spec.js',
+  // `.bench.js`, never `.spec.js`: bun's default glob is `**/*.{test,spec}.*` with no exclude, so a
+  // playwright scenario named `.spec.js` is unavoidably swept into `bun test` — where it dies on
+  // `test.afterEach() called here` and turns the package's suite red for anyone who runs the bare
+  // command. One extension per runner keeps the two reaches disjoint by construction (#1705).
+  testMatch: '*.bench.js',
   timeout: 60_000,
   fullyParallel: false, // GPU bench: one scenario at a time, never overlap frame captures
   retries: 0,

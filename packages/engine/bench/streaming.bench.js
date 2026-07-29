@@ -6,7 +6,7 @@
 // camera flies HORIZONTALLY at a fixed altitude over the surface.
 //
 // SPLIT NOTE (B2 LoC law): the old 876-line file also carried the no-holes flight gate; that gate now
-// lives in bench/holes_flight.spec.js and the shared camera/settle/classify/percentile primitives in
+// lives in bench/holes_flight.bench.js and the shared camera/settle/classify/percentile primitives in
 // bench/_shared.js. This file keeps ONLY the streaming + perf scenario.
 //
 // CAMERA CONTROL: demo/main.js pins the pose to [70,55,70] pitch -0.55 (tuned for the OLD synthetic
