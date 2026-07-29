@@ -24,6 +24,11 @@ test('the SPA rewrite never claims a build asset path', () => {
   expect(matches_spa('/assets/items/vanilla_sword.png')).toBe(false)
 })
 
+test('the SPA rewrite never claims a root-emitted PWA or callback file', () => {
+  for (const emitted_path of ['/sw.js', '/workbox-DEADBEEF.js', '/discord-callback.html'])
+    expect(matches_spa(emitted_path)).toBe(false)
+})
+
 test('the SPA rewrite still serves every deep link', () => {
   for (const deep_link of ['/', '/encyclopedia', '/encyclopedia/items/sword', '/shop/listing/0xabc', '/assets'])
     expect(matches_spa(deep_link)).toBe(true)
