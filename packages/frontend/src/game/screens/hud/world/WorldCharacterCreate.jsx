@@ -88,7 +88,7 @@ export function InlineCharacterCreateHost({ price_sui = ADDITIONAL_CHARACTER_PRI
     }
     // price_sui is captured once at open (mirrors CreateHost/CharactersDrawer.jsx) — a later-arriving live
     // price must never remount mid-form (it would tear down the pedestal and drop in-progress input).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // (the react-hooks/exhaustive-deps directive that sat here was dead — the plugin is not registered.)
   }, [])
 
   return <div ref={host} className="world-character-create" data-world-slot="character-create" />

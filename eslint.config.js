@@ -169,6 +169,27 @@ export default [
     rules: { 'no-undef': 'error' },
   },
   {
+    // THE TEMPORAL-DEAD-ZONE GATE (P0 2026-07-29, #1563) — the sibling of the reference-error gate above.
+    // `optimistic_vacated`'s useMemo factory in DungeonBoard.jsx read a `const` declared 25 lines BELOW it.
+    // React runs a memo factory synchronously during render, so every seated fighter's board threw
+    // `ReferenceError: Cannot access 'resolve_ref' before initialization` and the whole HUD fell into the
+    // error boundary — one click wedged a character out of the game. `no-undef` cannot see it (the binding
+    // IS defined, just later) and the boundary swallowed the throw, so nothing mechanical caught the class.
+    // `variables: true` is the TDZ tooth; `functions: false` spares legal hoisted-function style.
+    // SCOPE: the fight-board tree — the render surface where a TDZ is a total client death, and the
+    // widest net that is CLEAN today. Repo-wide the rule reports ~220 pre-existing (overwhelmingly benign
+    // late-const reads from bodies that only run later) and the wider HUD tree trips the F-1 stale
+    // `react-hooks/*` disable directives the reference-error gate above already documents — both are
+    // janitor burn-downs, not this gate. Severity only ratchets up: widen as those land, never narrow.
+    // hack_radio.js is a MUTUALLY RECURSIVE closure pair (gesture-retry ↔ play), unsatisfiable by
+    // reordering alone — burn-down, not carve-out.
+    files: ['packages/frontend/src/game/screens/hud/world/**/*.{js,jsx,ts,tsx}'],
+    ignores: ['packages/frontend/src/game/screens/hud/world/hack_radio.js'],
+    rules: {
+      'no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
+    },
+  },
+  {
     // Vendored game source + migrated sim/sdk packages keep their own lint/format/typecheck
     // pipelines (run inside each package); the indexer is Rust. Keep them out of the companion lint.
     ignores: [
