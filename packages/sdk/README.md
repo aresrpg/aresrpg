@@ -51,7 +51,6 @@ The same builders are also exported per-domain (`@aresrpg/sdk/fight`, `/dungeon`
 import {
   experience_to_level,
   level_to_experience,
-  apply_wisdom_xp,
 } from '@aresrpg/sdk/experience'
 import {
   get_total_stat,

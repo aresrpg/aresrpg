@@ -237,22 +237,6 @@ export function level_to_experience(level = 1) {
   return levels[level] ?? 0
 }
 
-// Wisdom XP bonus (the reference corpus's "Wisdom XP Bonus" note, l.970: `xp *= (1 + wisdom / 600)` — 600 wisdom = double
-// XP, diminishing returns). The single home for the wisdom-derived XP multiplier the fight reward path applies.
-const WISDOM_XP_DENOM = 600
-
-/**
- * Apply the reference corpus's wisdom XP bonus to a base XP award. Integer + floored to keep the on-chain XP curve clean:
- * `floor(xp * (600 + wisdom) / 600)`. wisdom defaults to 0 (no bonus -> xp unchanged).
- * @param {number} xp      base xp before the wisdom bonus
- * @param {number} [wisdom] the awardee's total wisdom stat
- * @returns {number} xp after the wisdom multiplier
- */
-export function apply_wisdom_xp(xp, wisdom = 0) {
-  const w = Math.max(0, wisdom)
-  return Math.floor((xp * (WISDOM_XP_DENOM + w)) / WISDOM_XP_DENOM)
-}
-
 /**
  * Level + within-level XP progress off the SDK curve (min level 1). `into`/`span` are the raw XP into the
  * current level and that level's XP span; `pct` is the clamped 0-100 progress (UNROUNDED — callers round

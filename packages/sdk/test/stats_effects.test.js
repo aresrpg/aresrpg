@@ -3,10 +3,8 @@
 import { describe, test, expect } from 'bun:test'
 
 import { get_max_health, get_secondary_stats, get_total_stat } from '../src/stats.js'
-import { apply_wisdom_xp } from '../src/experience.js'
 
-// Stat effects: wisdom multiplies XP (Wisdom XP Bonus l.970 — kept; the proposed health-regen was DROPPED,
-// never implemented). The soul -> max-HP convex curve was deleted 2026-07-10:
+// Stat effects: the soul -> max-HP convex curve was deleted 2026-07-10:
 // the on-chain Character struct never carried a `soul` field (the frontend decode dropped it), so the
 // curve's full-soul fallback always fired and the feature was permanently inert (janitor law).
 
@@ -41,25 +39,6 @@ describe('max health (class base + 5 per level gained + vitality)', () => {
 
   test('positive-only vitality remains a compatibility fallback before the aggregate backfill', () => {
     expect(get_max_health(character({ gear_vitality: 9 }))).toBe(79)
-  })
-})
-
-describe('wisdom -> XP bonus (xp * (1 + wisdom/600))', () => {
-  test('zero / absent wisdom leaves XP unchanged', () => {
-    expect(apply_wisdom_xp(600)).toBe(600)
-    expect(apply_wisdom_xp(600, 0)).toBe(600)
-  })
-
-  test('600 wisdom doubles XP (the reference-corpus calibration point)', () => {
-    expect(apply_wisdom_xp(600, 600)).toBe(1200)
-  })
-
-  test('partial wisdom gives a floored proportional bonus', () => {
-    expect(apply_wisdom_xp(100, 300)).toBe(150) // floor(100 * 900 / 600)
-  })
-
-  test('negative wisdom never reduces XP (clamped to 0)', () => {
-    expect(apply_wisdom_xp(100, -50)).toBe(100)
   })
 })
 
