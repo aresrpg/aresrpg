@@ -133,6 +133,20 @@ export const create_fight_shim = ({
    * the core's own machinery — the production failure path, with no simulator-special handling.
    */
   const commit_turn = async (actions, { background = false } = {}) => {
+    // THE RECEIPT NEVER LANDS INSIDE THE CALLER'S STACK. A chain submit crosses the network, so its receipt always
+    // re-enters the fight core's ONE door from a LATER task; every consumer of that door is built on it. The local
+    // chain is pure and synchronous, so without this yield the whole submit → fold → `input({type:'receipt'})` ran
+    // inside the zustand NOTIFICATION that fired it — the deadline auto-commit is a store subscriber
+    // (`fight/txs.js subscribe_commit_due`), observing the `commit_due` flag raised by the very `tick` input it
+    // re-enters. `with_core_fold` (fight/store.js) folds the core BEFORE calling the door and writes it back
+    // AFTER, so a nested input's fold is overwritten on the outer call's way out: the whole committed turn was
+    // admitted and then discarded. The SIM kept it (the mobs planned against the moved-to cell) while the client
+    // fell back to the adopted base snapshot — the fight's START cell — and that turn's status rows went with it
+    // (the owner's "auto turn pass put me back on the starting one" + "my buffs are always gone when I end my
+    // turn", one root). `pump_mobs` already deferred through `schedule`, which is why only the PLAYER's own turn
+    // was ever lost. Ordering is untouched: callers await this promise, so the fold still completes before they
+    // continue.
+    await Promise.resolve()
     // NO SILENT REFUSAL (#922): a commit that returns false rolls the player's whole drafted turn back, so every
     // refusal names itself. This one fired on a STOP/teardown race and used to return false without a word.
     if (!live) {
