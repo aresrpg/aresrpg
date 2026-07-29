@@ -4,6 +4,13 @@
 // duplicates every acquisition path mints (see chain/stack_merge.js for why they exist) into one stack per
 // template, in ONE transaction.
 //
+// DATED BRIDGE — this module has an END DATE, not an owner's memory. The real fix is structural: each
+// acquisition door folds its arrival into the existing stack in its OWN transaction, so no duplicate is ever
+// created. The two doors whose arriving item id is known at composition time (marketplace buy, gift claim)
+// already do (SDK `fold_stacks_ptb`); the MINT-class doors (shop, craft, gather, crush, loot) cannot until
+// their Move returning-variants land (#1571). This sweep covers exactly that gap and dies by TICKET #1572
+// once it closes — never by anyone remembering to delete it.
+//
 // The orchestrator only. Its fight predicate, submit door and fold door are INJECTED by the edge that owns
 // them (roster/load_roster.js) — this module reads nothing and writes nothing, so its four laws are provable
 // with plain functions:
