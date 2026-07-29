@@ -6,6 +6,8 @@
 // roster read (`recap.summary.participants`) came up empty on a win → the enemies section never rendered.
 import { describe, expect, it } from 'bun:test'
 
+import { fight_report_enemy_rows } from '../game/screens/hud/fight_report_roster.js'
+
 import { fight_recap_payload } from './fight_recap.js'
 
 const ME = '0xME'
@@ -48,6 +50,30 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
     const { summary } = fight_recap_payload({ fighters: razkin_win(), my_addr: ME, winner: 0 })
     expect(summary.participants.find((p) => p.id === 'mob-0')?.template_id).toBe('0xTPL_RAZKIN')
     expect(summary.participants.find((p) => p.id === 'seat-0')?.template_id).toBe(null)
+  })
+
+  it('the shared card adapter preserves the recap template id for both terminal cards (#1222)', () => {
+    const { summary } = fight_recap_payload({ fighters: razkin_win(), my_addr: ME, winner: 0 })
+    expect(fight_report_enemy_rows(summary.participants, 0)).toEqual([
+      {
+        id: 'mob-0',
+        name: 'Razkin',
+        level: 8,
+        is_player: false,
+        alive: false,
+        hp_pct: 0,
+        template_id: '0xTPL_RAZKIN',
+      },
+      {
+        id: 'mob-1',
+        name: 'Razkin Alpha',
+        level: 10,
+        is_player: false,
+        alive: false,
+        hp_pct: 0,
+        template_id: '0xTPL_ALPHA',
+      },
+    ])
   })
 
   it('on a WIN the local player keeps the core liveness — alive when alive, honestly dead when carried', () => {

@@ -22,6 +22,7 @@ import { get_class } from '../../data/classes.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_fight_cost, format_fight_cost } from '../../../world-shell/fight_gas_ledger.js'
 import { FightReport } from './FightReport.jsx'
+import { fight_report_enemy_rows } from './fight_report_roster.js'
 
 // closing the win modal clears BOTH the reward slice AND the shared recap (a win opens both).
 const close = () => {
@@ -36,13 +37,13 @@ const close = () => {
  */
 export function FightResult() {
   const { t } = useTranslation()
-  const reward = use_game_state(s => s.fight_result)
-  const recap = use_game_state(s => s.fight_summary)
-  const me_id = use_game_state(s => s.selected_character_id)
-  const characters = use_game_state(s => s.sui.characters)
-  const items = use_game_state(s => s.sui.items)
-  const address = use_auth(s => s.address)
-  const net_mist = use_fight_cost(s => s.net_mist)
+  const reward = use_game_state((s) => s.fight_result)
+  const recap = use_game_state((s) => s.fight_summary)
+  const me_id = use_game_state((s) => s.selected_character_id)
+  const characters = use_game_state((s) => s.sui.characters)
+  const items = use_game_state((s) => s.sui.items)
+  const address = use_auth((s) => s.address)
+  const net_mist = use_fight_cost((s) => s.net_mist)
 
   // VICTORY sound cue (design mood: warm ascending swell) — fire once as the card appears, reset on close.
   const played = useRef(false)
@@ -58,23 +59,30 @@ export function FightResult() {
 
   if (!reward) return null
 
-  const me = characters.find(c => c.id === me_id) ?? null
+  const me = characters.find((c) => c.id === me_id) ?? null
   const my_class = get_class(me?.classe ?? me?.class_id ?? '')?.name ?? null
   // the local fighter is identified by the character id (WS path) OR the wallet address (dungeon fighters
   // are keyed by address) — either match is "me".
-  const is_local = p => p.id === me_id || (address != null && p.id === address)
+  const is_local = (p) => p.id === me_id || (address != null && p.id === address)
 
   const roster = recap?.summary?.participants ?? []
   const my_team = roster.find(is_local)?.team ?? 0
 
   // YOUR PARTY — every member, self ALWAYS present (synthesize the local row if the roster raced/omitted it).
-  let party = roster.filter(p => p.team === my_team)
+  let party = roster.filter((p) => p.team === my_team)
   if (!party.some(is_local))
     party = [
-      { id: me_id ?? 'me', name: me?.name ?? t('fight_end.you'), team: my_team, level: reward.level, is_player: true, alive: true },
+      {
+        id: me_id ?? 'me',
+        name: me?.name ?? t('fight_end.you'),
+        team: my_team,
+        level: reward.level,
+        is_player: true,
+        alive: true,
+      },
       ...party,
     ]
-  const party_rows = party.map(p => {
+  const party_rows = party.map((p) => {
     const mine = is_local(p)
     return {
       id: p.id,
@@ -89,10 +97,8 @@ export function FightResult() {
       class_name: mine ? my_class : null,
     }
   })
-  const enemy_rows = roster
-    .filter(p => p.team !== my_team)
-    // template_id: the mob's on-chain template (fight_recap.js) — the row's bestiary deep-link. Players: null.
-    .map(p => ({ id: p.id, name: p.name, level: p.level, is_player: p.is_player, alive: p.alive, hp_pct: p.alive ? 100 : 0, template_id: p.template_id ?? null }))
+  // ONE adapter shared with the defeat card preserves the mob template id that powers the bestiary deep-link.
+  const enemy_rows = fight_report_enemy_rows(roster, my_team)
 
   // SPOILS receipt (silent-auto — the card IS the receipt). tokens=0: no on-chain token reward exists yet.
   const spoils = { xp: reward.xp, tokens: 0, loot: reward.loot ?? [] }
