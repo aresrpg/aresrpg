@@ -24,13 +24,24 @@ import { dump_capsule } from '../../src/recorder.js'
 import { fight_id_of, fold_stream, generate_stream } from './generator.js'
 import QUARANTINE from './quarantine.json'
 
-/** 32 streams x 150 commands — enough draws for every band to fire many times over, cheap enough
- *  to ride the one test truth (`bun run test`) without anyone noticing. */
+/** 32 is the largest power-of-two tier that keeps this fuzzer near two seconds and the complete
+ *  sim suite below ten seconds on a development machine. Nightly runs trade that bound for depth. */
+const DEFAULT_SEED_COUNT = 32
+const NIGHTLY_SEED_COUNT = 512
+const NIGHTLY = ['1', 'true', 'yes'].includes(
+  String(process.env.SIM_TWIN_FUZZ_NIGHTLY ?? '').toLowerCase(),
+)
+const SEED_COUNT = NIGHTLY ? NIGHTLY_SEED_COUNT : DEFAULT_SEED_COUNT
 const SEEDS = Array.from(
-  { length: 32 },
+  { length: SEED_COUNT },
   (_unused, i) => (Math.imul(i + 1, 0x9e3779b1) ^ 0x2545f491) >>> 0,
 )
 const STREAM_LENGTH = 150
+const DETERMINISM_SEED = 0x6d2b79f5
+
+process.stdout.write(
+  `\n[sim:twin-fuzzer] mode=${NIGHTLY ? 'nightly' : 'standing'} seeds=${SEED_COUNT} commands=${STREAM_LENGTH}\n`,
+)
 
 const hex = seed => `0x${seed.toString(16).padStart(8, '0')}`
 
@@ -166,6 +177,28 @@ describe('L1 laws — every folded command, legal or not', () => {
 // ── Law 6 — determinism ─────────────────────────────────────────────────────────────────────────
 
 describe('law 6 — the same seed is the same fight, twice', () => {
+  test('the fixed determinism seed reproduces commands, state, and capsule', () => {
+    const commands = generate_stream({
+      seed: DETERMINISM_SEED,
+      length: STREAM_LENGTH,
+    })
+    const first = fold_stream({ seed: DETERMINISM_SEED, commands })
+    const reproduced_commands = generate_stream({
+      seed: DETERMINISM_SEED,
+      length: STREAM_LENGTH,
+    })
+    const second = fold_stream({
+      seed: DETERMINISM_SEED,
+      commands: reproduced_commands,
+    })
+
+    expect(reproduced_commands).toEqual(commands)
+    expect(second.state).toEqual(first.state)
+    expect(
+      dump_capsule(second.recorder, fight_id_of(DETERMINISM_SEED)),
+    ).toEqual(dump_capsule(first.recorder, fight_id_of(DETERMINISM_SEED)))
+  })
+
   test('generation and folding are both pure functions of the seed', () => {
     for (const run of RUNS) {
       expect(
