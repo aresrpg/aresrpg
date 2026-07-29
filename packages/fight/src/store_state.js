@@ -95,6 +95,9 @@ export const empty_fight = () => ({
   // Accepted silent budget facts and prediction evidence are bounded, non-canonical overlays.
   claimed_budget: [],
   budget_predictions: [],
+  // The accepted local turn's leftover pools, captured before its receipt retires the predictions/refills.
+  // This is published projection evidence, never a second combat-math owner.
+  post_commit_budget: {},
   view: null,
   view_version: -1,
   ctx: {},

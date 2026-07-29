@@ -206,6 +206,8 @@ export const board_view = (s) => {
     // claim() off THIS the instant the killing receipt folds, so a lagged settle never dead-airs a won fight.
     decided_winner: decided_outcome(s),
     settlement_request: settlement_request(s),
+    // Local receipt evidence is published beside, never inside, the viewer-free committed fighter image.
+    post_commit_budget: s.my_key ? (s.post_commit_budget?.[s.my_key] ?? null) : null,
     turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms,
     // The CHAIN turn-seed inputs travel with the view, the same way the deadline does — every crit/tackle
     // preview surface composes its clock from this projection. Read off the VIEW only: `s.turn_ordinal` is a
@@ -260,6 +262,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   for (const [seat, row] of (view.escrow ?? []).entries()) {
     const entity_id = participant_entity_id(row)
     if (!entity_id) continue
+    const post_commit = s.post_commit_budget?.[seat_key(seat)] ?? null
     const f = p.fighters?.[seat_key(seat)] ?? {}
     const cf = c.fighters?.[seat_key(seat)] ?? {}
     const character_id = participant_character_id(row)
@@ -292,6 +295,9 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       spell_levels: row.spell_levels ?? {},
       // TURN-START BUDGET: the fold predicts the begin_turn refill so the budget paints the instant it's my turn
       // (the TurnStarted event omits ap/mp); the snapshot row.ap/mp reconciles the moment a post-refill read adopts.
+      post_commit_ap: post_commit?.ap ?? null,
+      post_commit_mp: post_commit?.mp ?? null,
+      post_commit_version: post_commit?.version ?? null,
       ap: f.ap ?? row.ap,
       ap_max: row.base_ap,
       mp: f.mp ?? row.mp,

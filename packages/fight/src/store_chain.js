@@ -6,7 +6,7 @@
 // already-ingested core atom and returns the next legacy-shaped presentation state to the store's one write door.
 
 import { enrich_actions, sorted_tail } from './core_fold.js'
-import { merge_entries, recompute, wave_turns_of } from './fold.js'
+import { merge_entries, presented_state, recompute, wave_turns_of } from './fold.js'
 import { actor_from_key } from './inputs.js'
 import { claim_predictions, retain_budget_predictions, update_claimed_budget } from './store_prediction.js'
 import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_state.js'
@@ -34,6 +34,24 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
   // Receipts and authoritative journal confirmation retire predictions by claim. Poll/p2p never do.
   const claim = msg.type === 'receipt' || msg.type === 'journal' ? claim_predictions(state, actions, now) : null
   const reconcile = claim?.result ?? null
+  // Cast/Moved receipts deliberately omit their pool mutations, while a single receipt commonly ends my turn,
+  // drives the mob, and starts my next turn (refilling both pools). Capture the accepted optimistic fold BEFORE
+  // claim retirement, then publish it beside the live/refilled pool. No costs are recomputed here: prediction is
+  // the sim/Move math seam, and a divergent claim publishes nothing rather than laundering a guess as truth.
+  const resolved_fighter =
+    ended_my_turn && claim && !reconcile?.divergence ? presented_state(state).fighters?.[state.my_key] : null
+  const resolved_version = Math.max(Number(msg.version ?? -1), ...actions.map((action) => Number(action.version ?? -1)))
+  const post_commit_budget =
+    resolved_fighter?.ap != null && resolved_fighter?.mp != null
+      ? {
+          ...(state.post_commit_budget ?? {}),
+          [state.my_key]: {
+            ap: Number(resolved_fighter.ap),
+            mp: Number(resolved_fighter.mp),
+            version: resolved_version,
+          },
+        }
+      : state.post_commit_budget
   let intents = Object.fromEntries(
     Object.entries(state.entries).filter(([key, entry]) => {
       if (entry.source !== 'intent') return false
@@ -102,6 +120,7 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
       entries: merge_entries(intents, canonical),
       claimed_budget,
       budget_predictions,
+      post_commit_budget,
       journal_gap,
       protocol_fault,
       wave,
