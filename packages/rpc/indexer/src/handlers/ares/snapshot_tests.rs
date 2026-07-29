@@ -12,8 +12,13 @@ use super::super::model::{
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
-use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
-use sui_indexer_alt_framework::types::object::Owner;
+use sui_indexer_alt_framework::types::{
+    base_types::{MoveObjectType, ObjectID, SequenceNumber, SuiAddress},
+    digests::TransactionDigest,
+    object::{MoveObject, Object, Owner},
+    parse_sui_struct_tag,
+    test_checkpoint_data_builder::TestCheckpointBuilder,
+};
 
 /// The fresh-publish `aresrpg` origin stamped by ceremony #4. Keeping this fixture in the test
 /// module prevents test-only lineage evidence from becoming dead production code.
@@ -1390,6 +1395,113 @@ fn item_object_snapshots_display_fields_and_kiosk_membership() {
 #[test]
 fn item_garbage_bytes_are_a_safe_none() {
     assert!(map_item_object("0xabc", &[0x00, 0x01, 0x02], None, "0xdead").is_none());
+}
+
+fn checkpoint_fixture_object(
+    tag: &str,
+    version: SequenceNumber,
+    contents: Vec<u8>,
+    owner: Owner,
+) -> Object {
+    let move_object = unsafe {
+        MoveObject::new_from_execution_with_limit(
+            MoveObjectType::from(parse_sui_struct_tag(tag).unwrap()),
+            true,
+            version,
+            contents,
+            u64::MAX,
+        )
+        .unwrap()
+    };
+    Object::new_move(move_object, owner, TransactionDigest::ZERO)
+}
+
+#[tokio::test]
+async fn deleted_item_without_item_burned_reaps_its_mirror_and_kiosk_membership() {
+    const ITEM_IDX: u64 = 0xa001;
+    const WRAPPER_IDX: u64 = 0xa002;
+
+    let mut builder = TestCheckpointBuilder::new(1_676)
+        .start_transaction(1)
+        .create_owned_object(ITEM_IDX)
+        .create_owned_object(WRAPPER_IDX)
+        .finish_transaction()
+        .start_transaction(1)
+        .delete_object(ITEM_IDX)
+        .delete_object(WRAPPER_IDX)
+        .finish_transaction();
+    let mut checkpoint = builder.build_checkpoint();
+    assert!(
+        checkpoint.transactions.iter().all(|tx| tx.events.is_none()),
+        "fixture must exercise object lifecycle without a type-specific event"
+    );
+
+    let item = TestCheckpointBuilder::derive_object_id(ITEM_IDX);
+    let wrapper = TestCheckpointBuilder::derive_object_id(WRAPPER_IDX);
+    let kiosk = ObjectID::from_hex_literal("0xcafe").unwrap();
+    let version = checkpoint
+        .object_set
+        .iter()
+        .find(|object| object.id() == item)
+        .unwrap()
+        .version();
+    let item_body = ItemObject {
+        id: item,
+        template: ObjectID::from_hex_literal("0x7a01").unwrap(),
+        name: "Ghost Pelt".into(),
+        item_type: "pelt".into(),
+        description: "A merge source that dies without ItemBurned.".into(),
+        category: "resource".into(),
+        amount: 1,
+    };
+    checkpoint.object_set.insert(checkpoint_fixture_object(
+        &format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::item::Item"),
+        version,
+        bcs::to_bytes(&item_body).unwrap(),
+        Owner::ObjectOwner(wrapper.into()),
+    ));
+    checkpoint.object_set.insert(checkpoint_fixture_object(
+        "0x2::dynamic_field::Field<u64, u64>",
+        version,
+        bcs::to_bytes(&(wrapper, 0_u64, 0_u64)).unwrap(),
+        Owner::ObjectOwner(kiosk.into()),
+    ));
+
+    let writes = AresSnapshotHandler::from_parts(None, None)
+        .process(&Arc::new(checkpoint))
+        .await
+        .unwrap();
+    let item = item.to_canonical_string(true);
+    let kiosk = kiosk.to_canonical_string(true);
+    let item_key = k_item(&item);
+    let kiosk_items_key = k_kiosk_items(&kiosk);
+    let mut mirror_doc_survives = false;
+    let mut kiosk_membership_survives = false;
+    for write in writes {
+        match write {
+            RedisWrite::Set { key, path, .. } if key == item_key && path == "$" => {
+                mirror_doc_survives = true;
+            }
+            RedisWrite::Del { key, path } if key == item_key && path == "$" => {
+                mirror_doc_survives = false;
+            }
+            RedisWrite::SetAdd { key, member } if key == kiosk_items_key && member == item => {
+                kiosk_membership_survives = true;
+            }
+            RedisWrite::SetDel { key, member } if key == kiosk_items_key && member == item => {
+                kiosk_membership_survives = false;
+            }
+            _ => {}
+        }
+    }
+    assert!(
+        !mirror_doc_survives,
+        "deleted Item ghost doc survives when no ItemBurned event fires"
+    );
+    assert!(
+        !kiosk_membership_survives,
+        "deleted Item remains in its kiosk_items membership"
+    );
 }
 
 /// DRIFT GUARD for the `Item` bag decode (same 2026-07-12 `description` insertion, between
