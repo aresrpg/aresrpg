@@ -59,3 +59,32 @@ later finding appends there. Board intake is a budget; the drain must outrun it.
 Before filing ANY row or checkbox: search open rows for the same finding (title keywords +
 surface) — "before creating an issue you should double check what we have." A match means a
 comment or checkbox on the EXISTING row, never a new one.
+
+## The row bar, self-cleaning, and fix-first (binding, every pass)
+
+Why, in the owner's words: *"these loops must be hardened so we're not submerged with BS, issues
+must be real problems, and if they're already done they must be closed, if they are real issues
+impacting us we must clean them up and implement fixes."*
+
+1. **ROW BAR — a row is born only when ALL THREE hold.** (a) **OBSERVABLE**: provably broken
+   behavior in the product or a gate, watchable by someone else; never style, theory, or
+   might-break-someday. (b) **FRESH**: re-verified against the CURRENT edge tip immediately
+   before filing — a finding about code that has since moved is the stale-filing class that
+   flooded the board. (c) **SPINE IMPACT at P0/P1**: it blocks fights, the loot-craft-trade loop,
+   or mainnet. Fail any clause and the finding is a checkbox in this loop's standing epic, or
+   nothing at all.
+2. **SELF-CLEANING — a loop owns its rows' lifecycle, not just their birth.** Every pass carries
+   a standing leg: re-check this loop's OWN open rows against current edge and CLOSE the ones
+   already fixed, citing the landing SHA as the evidence.
+3. **REAL ONES GET FIXED — the board is a work queue; work queues shrink by work.** A row that
+   clears the bar is a queued unit of work, not an archive entry: the filing pass names the
+   smallest fix and the release it must land in, and the row stays open until that fix lands —
+   never until it ages out. (The fixing hands stay outside this loop's fence: it states the work,
+   it never becomes it.)
+
+*In this loop:* an alert is OBSERVABLE only with rubric 1's reachable call site — an unreachable
+advisory is a dismissal with evidence, never a row. FRESH means re-resolving `bun.lock` at the
+edge tip at filing time (a bump may already have landed). SPINE is rubric 4's surfaces —
+`packages/move`, `api/`, the rpc gas pool — plus anything breaking the shipped client's build.
+Self-cleaning sweeps the open `security` + `dependencies` rows and closes those whose resolved
+version now floats above the fix, citing the bump's SHA.
