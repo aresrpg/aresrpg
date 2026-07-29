@@ -25,20 +25,18 @@ const app_version = () => (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSIO
 /** Is there a fight trace worth offering right now? Cheap (reads the bounded in-memory ring buffer only) —
  *  gates the end-card export button's ENABLED state (FightReport.jsx) so it is never a dead click.
  * @returns {boolean} */
-export const has_dumpable_trace = () =>
-  fight_store.trace_tap.dump_current_trace(app_version(), Date.now()) != null
+export const current_fight_trace = () => fight_store.trace_tap.dump_current_trace(app_version(), Date.now())
+
+export const has_dumpable_trace = () => current_fight_trace() != null
 
 /** Dump the most recent fight's trace and trigger a browser download. No-op (returns false) when nothing was
  *  captured — never a fabricated empty file.
+ * @param {ReturnType<typeof current_fight_trace>} [trace]
  * @returns {boolean} */
-export function export_fight_trace() {
-  const trace = fight_store.trace_tap.dump_current_trace(app_version(), Date.now())
+export function export_fight_trace(trace = current_fight_trace()) {
   if (!trace) return false
   // BigInt-safe: decode_fight()'s chain u64 fields (world_seed, shape_mask, …) ride a 'snapshot' input's
   // msg.fight verbatim — a bare JSON.stringify throws the instant the walk reaches one (trace_recorder.js).
-  download_text_file(
-    `aresrpg-fight-trace-${trace.fight_id}-${trace.captured_at}.json`,
-    stringify_trace(trace, 2)
-  )
+  download_text_file(`aresrpg-fight-trace-${trace.fight_id}-${trace.captured_at}.json`, stringify_trace(trace, 2))
   return true
 }

@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, test } from 'bun:test'
 
 import en from '../../../i18n/locales/en.json'
-import { FightExportReplayButton } from './FightReport.jsx'
+import { FightReportBugButton } from './FightReport.jsx'
 
 describe('the R export-replay keybind is gone (owner ruling 2026-07-24 — replaced by a button, never a hidden hotkey)', () => {
   test('the hook file itself no longer exists', () => {
@@ -31,27 +31,27 @@ describe('the R export-replay keybind is gone (owner ruling 2026-07-24 — repla
     expect(report_source).not.toContain('use_fight_trace_keybind')
   })
 
-  test('the export hint no longer advertises the dead "press R" shortcut (en locale — house i18n parity covers the rest; world_spawns.js\'s UNRELATED "press R to attack" onboarding string is untouched, so this pins the export_replay_hint KEY specifically, never a blanket text scan)', () => {
-    expect(en.fight_end.export_replay_hint).not.toMatch(/\bR\b/)
-    expect(en.fight_end.export_replay_hint).toBe("Download this fight's trace to attach to a bug report")
+  test('the report hint no longer advertises the dead "press R" shortcut', () => {
+    expect(en.fight_end.report_bug_hint).not.toMatch(/\bR\b/)
+    expect(en.fight_end.report_bug_hint).toBe('Download the replay capsule and open a prefilled GitHub issue')
   })
 })
 
-// THE EXPORT BUTTON (owner ruling 2026-07-24) — the click fixture, mirroring FightControls.jsx's own
-// FightEndTurnButton pattern exactly: FightExportReplayButton is a hook-free function component, so calling
+// THE REPORT BUTTON — the click fixture, mirroring FightControls.jsx's own
+// FightEndTurnButton pattern exactly: FightReportBugButton is a hook-free function component, so calling
 // it directly returns the React element and `.props.onClick`/`.props.disabled` are readable without a DOM
 // (this repo's SSR-only test convention — see file header). Always rendered by FightReport (never absent);
 // `trace_available` gates ENABLED, never existence.
-describe('FightExportReplayButton — the click fixture (no DOM needed)', () => {
-  test('enabled when a trace is available — clicking fires the export handler exactly once', () => {
+describe('FightReportBugButton — the click fixture (no DOM needed)', () => {
+  test('enabled when a trace is available — clicking fires the report handler exactly once', () => {
     let calls = 0
-    const btn = FightExportReplayButton({
+    const btn = FightReportBugButton({
       trace_available: true,
-      on_export: () => {
+      on_report: () => {
         calls += 1
       },
-      label: 'Export replay',
-      hint: 'Download this fight\'s trace to attach to a bug report',
+      label: 'Report bug',
+      hint: 'Download the replay capsule and open a prefilled GitHub issue',
     })
     expect(btn.props.disabled).toBe(false)
     expect(btn.props.className).toContain('btn--secondary')
@@ -61,13 +61,13 @@ describe('FightExportReplayButton — the click fixture (no DOM needed)', () => 
 
   test('disabled when no trace is available — the button still renders (never absent), just inert', () => {
     let calls = 0
-    const btn = FightExportReplayButton({
+    const btn = FightReportBugButton({
       trace_available: false,
-      on_export: () => {
+      on_report: () => {
         calls += 1
       },
-      label: 'Export replay',
-      hint: 'Download this fight\'s trace to attach to a bug report',
+      label: 'Report bug',
+      hint: 'Download the replay capsule and open a prefilled GitHub issue',
     })
     expect(btn.props.disabled).toBe(true)
     expect(btn.props.className).toContain('btn--secondary')

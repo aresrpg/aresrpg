@@ -1894,8 +1894,8 @@
     "cost": "Coste: {{sui}} SUI",
     "cost_refund": "Reembolsado: {{sui}} SUI",
     "slain_by": "Asesinado por {{killer}} con {{damage}} de daño",
-    "export_replay": "Exportar repetición",
-    "export_replay_hint": "Descarga el registro de este combate para adjuntarlo a un informe de error",
+    "report_bug": "Informar de un error",
+    "report_bug_hint": "Descarga la cápsula de repetición y abre una incidencia de GitHub precompletada",
     "continue": "Continuar",
     "you": "Tú"
   },

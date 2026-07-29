@@ -1894,8 +1894,8 @@
     "cost": "コスト：{{sui}} SUI",
     "cost_refund": "返金：{{sui}} SUI",
     "slain_by": "{{killer}}に{{damage}}ダメージで倒された",
-    "export_replay": "リプレイを書き出す",
-    "export_replay_hint": "この戦闘の記録をダウンロードしてバグ報告に添付できます",
+    "report_bug": "バグを報告",
+    "report_bug_hint": "リプレイカプセルをダウンロードし、入力済みの GitHub Issue を開きます",
     "continue": "続ける",
     "you": "あなた"
   },

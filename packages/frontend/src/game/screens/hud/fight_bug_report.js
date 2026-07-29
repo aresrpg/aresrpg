@@ -30,13 +30,13 @@ const app_version = () => (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSIO
  * @param {string} [client_version]
  * @returns {string}
  */
-export const fight_bug_report_issue_url = (state, client_version = app_version()) => {
+const build_issue_url = (state, client_version, trace_instructions) => {
   const fight_id = state?.fight_id ?? null
   const body = [
     '**What happened?**',
     '',
     '',
-    '**Fight trace** — paste the trace you copied from the report window below this line:',
+    trace_instructions,
     '',
     '',
     '---',
@@ -45,6 +45,20 @@ export const fight_bug_report_issue_url = (state, client_version = app_version()
   const query = new URLSearchParams({ title: `fight: ${short_id(fight_id)} — `, body })
   return `${NEW_ISSUE_URL}?${query}`
 }
+
+export const fight_bug_report_issue_url = (state, client_version = app_version()) =>
+  build_issue_url(
+    state,
+    client_version,
+    '**Fight trace** — paste the trace you copied from the report window below this line:'
+  )
+
+export const fight_replay_bug_report_issue_url = (state, client_version = app_version()) =>
+  build_issue_url(
+    state,
+    client_version,
+    '**Replay capsule** — attach the downloaded replay capsule to this issue before submitting it.'
+  )
 
 const json_replacer = (_key, value) => (typeof value === 'bigint' ? value.toString() : value)
 
@@ -95,4 +109,24 @@ export const copy_via_selection = (element, doc) => {
   } catch {
     return false
   }
+}
+
+/**
+ * Result-card report action. Browser edges are injected so the one-click contract stays headless-testable.
+ * @param {{
+ *   trace: { fight_id?: string | null, inputs?: Array<{ anchors?: { applied_version?: number } }> } | null,
+ *   client_version?: string,
+ *   export_replay: (trace: unknown) => boolean,
+ *   open_issue: (url: string, target: string, features: string) => unknown,
+ * }} edges
+ * @returns {boolean}
+ */
+export const report_fight_bug = ({ trace, client_version = app_version(), export_replay, open_issue }) => {
+  if (!trace || !export_replay(trace)) return false
+  const state = {
+    fight_id: trace.fight_id ?? null,
+    applied_version: trace.inputs?.at(-1)?.anchors?.applied_version ?? -1,
+  }
+  open_issue(fight_replay_bug_report_issue_url(state, client_version), '_blank', 'noopener,noreferrer')
+  return true
 }

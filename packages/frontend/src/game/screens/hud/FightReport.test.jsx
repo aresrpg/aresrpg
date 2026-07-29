@@ -410,18 +410,18 @@ describe('FightReport — RED-FIRST fixture: a 2-player settle result (victory-c
   })
 })
 
-// EXPORT REPLAY row (issue #209; owner ruling 2026-07-24) — the row reads the REAL app fight_store's trace
+// REPORT BUG row — the row reads the REAL app fight_store's trace
 // instance (the exact door FightReport itself reads at mount via has_dumpable_trace), so this exercises the
 // actual wiring, not a stub. ALWAYS rendered now — never a SURPRISE affordance: has_dumpable_trace() gates the
 // button's disabled state, never its existence (the R-keybind alternate died precisely because a hidden button
 // read as "no visible change" whenever nothing had been captured yet).
-describe('FightReport — the EXPORT REPLAY button (always visible; never a surprise, never a dead click)', () => {
+describe('FightReport — the REPORT BUG button (always visible; never a surprise, never a dead click)', () => {
   const anchors = { applied_version: -1, view_version: -1, receipt_seq: 0 }
 
   test('nothing captured (tap empty) — the button still renders, disabled', () => {
     fight_store.trace_tap._reset_for_test()
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
-    expect(html).toContain('fight_end.export_replay')
+    expect(html).toContain('fight_end.report_bug')
     expect(html).toContain('btn--secondary')
     expect(html).toContain('disabled=""')
   })
@@ -434,7 +434,7 @@ describe('FightReport — the EXPORT REPLAY button (always visible; never a surp
       0
     )
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
-    expect(html).toContain('fight_end.export_replay')
+    expect(html).toContain('fight_end.report_bug')
     expect(html).toContain('btn--secondary')
     expect(html).not.toContain('disabled=""')
   })
@@ -447,7 +447,7 @@ describe('FightReport — the EXPORT REPLAY button (always visible; never a surp
       0
     )
     const html = renderToStaticMarkup(<FightReport {...base} verdict="Defeat" spoils={null} cost={null} />)
-    expect(html).toContain('fight_end.export_replay')
+    expect(html).toContain('fight_end.report_bug')
     expect(html).not.toContain('disabled=""')
   })
 
@@ -469,7 +469,7 @@ describe('FightReport — the EXPORT REPLAY button (always visible; never a surp
     fight_store.trace_tap.tap_trace_input({ fight_id: null, ...anchors }, { type: 'init', fight_id: null }, 2)
 
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
-    expect(html).toContain('fight_end.export_replay')
+    expect(html).toContain('fight_end.report_bug')
     expect(html).not.toContain('disabled=""') // RED on current edge: this reads disabled=&quot;&quot; — the dead click issue #700 reports
 
     // export_fight_trace()'s own data source (dump_current_trace) must resolve to the ENDED fight, not null.

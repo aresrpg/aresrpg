@@ -43,7 +43,8 @@ import { use_template_t } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
-import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
+import { current_fight_trace, export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
+import { report_fight_bug } from './fight_bug_report.js'
 import './result.css'
 
 // the single-realm MVP world label (mirrors Minimap.jsx / MapDrawer.jsx — one named realm for now).
@@ -271,11 +272,11 @@ function RowSpoils({ mine, spoils, items, template_map, slug_by_template_id, tt,
  *  no DOM needed). ALWAYS rendered — has_dumpable_trace() gates its ENABLED state, never its existence (owner
  *  ruling 2026-07-24: a hidden-until-available button read as "no visible change" when nothing had been
  *  captured yet, the same beat the dead R keybind silently failed on).
- * @param {{ trace_available: boolean, on_export: () => void, label: string, hint: string }} props
+ * @param {{ trace_available: boolean, on_report: () => void, label: string, hint: string }} props
  */
-export function FightExportReplayButton({ trace_available, on_export, label, hint }) {
+export function FightReportBugButton({ trace_available, on_report, label, hint }) {
   return (
-    <button type="button" className="btn btn--secondary" onClick={on_export} disabled={!trace_available} title={hint}>
+    <button type="button" className="btn btn--secondary" onClick={on_report} disabled={!trace_available} title={hint}>
       {label}
     </button>
   )
@@ -298,11 +299,17 @@ export function FightReport({
   on_close,
 }) {
   const won = verdict !== 'Defeat'
-  // EXPORT REPLAY (issue #209; owner ruling 2026-07-24 retired the R-keybind alternate — a button that only
-  // ever appeared once a trace existed read as "no visible change" the rest of the time). ALWAYS rendered now
-  // (FightExportReplayButton above) — has_dumpable_trace() gates its ENABLED state, never its existence. Fixed
-  // at mount (this card mounts once per concluded fight; dumpability doesn't change while it's up).
+  // REPORT BUG — the result action downloads the replay capsule, then opens a prefilled GitHub issue whose
+  // body tells the player to attach that file. It remains visible while unavailable so absence is never silent.
   const trace_available = useMemo(() => has_dumpable_trace(), [])
+  const on_report_bug = () => {
+    const trace = current_fight_trace()
+    report_fight_bug({
+      trace,
+      export_replay: export_fight_trace,
+      open_issue: (url, target, features) => window.open(url, target, features),
+    })
+  }
   // Loot tooltips reuse the inventory/findables map for legacy slug-only rows, then overlay exact receipt IDs
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
   const tt = use_template_t()
@@ -449,11 +456,11 @@ export function FightReport({
         )}
 
         <div className="cta">
-          <FightExportReplayButton
+          <FightReportBugButton
             trace_available={trace_available}
-            on_export={() => export_fight_trace()}
-            label={t('fight_end.export_replay')}
-            hint={t('fight_end.export_replay_hint')}
+            on_report={on_report_bug}
+            label={t('fight_end.report_bug')}
+            hint={t('fight_end.report_bug_hint')}
           />
           <button type="button" className={`btn ${won ? 'btn--primary' : 'btn--muted'}`} onClick={on_close}>
             {t('fight_end.continue')}
