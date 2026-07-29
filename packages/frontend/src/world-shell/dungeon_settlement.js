@@ -49,6 +49,7 @@ import { read_fight_liveness } from './fight_liveness.js'
 import { lost_group_of } from './lost_group.js'
 import { character_run_pass_id } from './team_entry.js'
 import { enqueue_mint, drain_pending_mints, sweep_stranded_results } from './pending_mints.js'
+import { surface_expired_placement_entry_refusal } from './fight_entry_liveness.js'
 
 /** BOUNDED READ-ONLY retry (kiosk_resolve.js's join_kiosk_for_character idiom): the settle+open PTB already
  *  landed, so a null/thrown read is read-after-write lag on the object it just minted, never a tx to retry.
@@ -491,15 +492,17 @@ export async function find_pending_outcome(address, character_id) {
  * open receipt returns to the entry reducer; an executed entry/open failure is never retried and its original
  * error surfaces untouched. This replaces the old abort-hook callback, which could open after entry had died.
  * @param {any} store @param {string} character_id @param {unknown} refusal
- * @param {{live_world_fight_id?:string|null,live_run_pass_id?:string|null}} [opts]
+ * @param {{live_world_fight_id?:string|null,live_run_pass_id?:string|null,
+ *   force_start_door?:(fight_id:string,silent:boolean)=>Promise<any>}} [opts]
  * @returns {Promise<any>} the shared open receipt (null only for an already-opened stale projection row)
  */
 export async function recover_fight_entry_refusal(
   store,
   character_id,
   refusal,
-  { live_world_fight_id = null, live_run_pass_id = null } = {}
+  { live_world_fight_id = null, live_run_pass_id = null, force_start_door } = {}
 ) {
+  await surface_expired_placement_entry_refusal(character_id, refusal, { force_start_door })
   return recover_marked_fight_entry(refusal, {
     find_result: async () => {
       const { address } = use_auth.getState()

@@ -25,6 +25,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'b
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
+import de from '../i18n/locales/de.json'
+import en from '../i18n/locales/en.json'
+import es from '../i18n/locales/es.json'
+import fr from '../i18n/locales/fr.json'
+import ja from '../i18n/locales/ja.json'
+import uk from '../i18n/locales/uk.json'
 
 const restore_browser_globals = install_browser_globals({ with_document: true })
 
@@ -49,12 +55,16 @@ const get_sdk = async () => ({ grpc_client: { core: { getObject: get_object } } 
 set_expedition_sdk_mock(get_sdk)
 
 const { use_auth } = await import('../auth')
+const { default: i18n } = await import('../i18n')
 const { _reset_rpc_client_for_test } = await import('../rpc/client')
 const { use_dungeon } = await import('./dungeon_store.js')
+const { recover_fight_entry_refusal } = await import('./dungeon_settlement.js')
 const { fight_store } = await import('@aresrpg/fight/store')
 const { board_view } = await import('@aresrpg/fight/project')
 const { resume_world_fight } = await import('./world_fight.js')
-const { resume_decision } = await import('./fight-liquidation.js')
+const { resume_decision, sweep_expired_character_placement } = await import('./fight-liquidation.js')
+const { humanize_tx_error, tx_error } = await import('../game/core/abort_copy.js')
+const { run_fight_entry } = await import('../game/fight_engage.js')
 
 const initial_dungeon = use_dungeon.getInitialState()
 const real_fetch = globalThis.fetch
@@ -93,6 +103,7 @@ const serve_v1_fight = (doc) => {
 }
 
 const settle_tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+const locale_value = (bundle, key) => key.split('.').reduce((node, part) => node?.[part], bundle)
 
 beforeEach(() => {
   reset_auth_mock({ address: OWNER })
@@ -191,6 +202,124 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
     expect(force_start_door).not.toHaveBeenCalled()
     expect(use_dungeon.getState().fight_id).toBe(FIGHT_ID)
     expect(use_dungeon.getState().fight_fresh).toBe(false)
+  })
+})
+
+describe('#677 — a fight-entry busy refusal sweeps the character’s expired placement fight', () => {
+  test('RED-FIRST: engage/join discovery composes the permissionless force-start before surfacing busy', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'placement' })
+    let liquidated = false
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
+      return liquidated
+        ? fight_object(STATUS_ACTIVE, { turn_deadline_ms: Date.now() + 60_000 })
+        : fight_object(STATUS_PLACEMENT, { placement_deadline_ms: Date.now() - 180_000 })
+    }
+    const force_start_door = mock(async () => {
+      liquidated = true
+      return { digest: '0xentry-force-start' }
+    })
+
+    const result = await sweep_expired_character_placement(CHARACTER_ID, { force_start_door })
+
+    expect(force_start_door).toHaveBeenCalledTimes(1)
+    expect(force_start_door.mock.calls[0]).toEqual([FIGHT_ID, true])
+    expect(result).toMatchObject({ state: 'started', fight_id: FIGHT_ID })
+  })
+
+  test('the shared engage/join recovery reports that the expired placement fight was started', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'placement' })
+    let liquidated = false
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
+      return liquidated
+        ? fight_object(STATUS_ACTIVE, { turn_deadline_ms: Date.now() + 60_000 })
+        : fight_object(STATUS_PLACEMENT, { placement_deadline_ms: Date.now() - 180_000 })
+    }
+    const force_start_door = mock(async () => {
+      liquidated = true
+      return { digest: '0xentry-force-start' }
+    })
+    const busy_refusal = tx_error(
+      { MoveAbort: { abortCode: 103, location: { module: 'fight_latch' } } },
+      { preflight: true }
+    )
+    let submissions = 0
+
+    const surfaced = await run_fight_entry({
+      submit: async () => {
+        submissions += 1
+        throw busy_refusal
+      },
+      recover_refusal: (error) => recover_fight_entry_refusal(use_dungeon, CHARACTER_ID, error, { force_start_door }),
+    }).catch((error) => error)
+
+    expect(surfaced).toBeInstanceOf(Error)
+    expect(humanize_tx_error(surfaced)).toBe(i18n.t('errors.fight_character_busy_expired_started'))
+    expect(submissions).toBe(1) // the old fight remains live; never retry the doomed new entry
+    expect(force_start_door).toHaveBeenCalledTimes(1)
+  })
+
+  test('a force-start refusal stays exact data and the toast says the fight is still expired', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'placement' })
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
+      return fight_object(STATUS_PLACEMENT, { placement_deadline_ms: Date.now() - 180_000 })
+    }
+    const force_start_door = mock(async () => {
+      throw new Error('pre-flight force-start refusal (test)')
+    })
+    const busy_refusal = tx_error(
+      { MoveAbort: { abortCode: 103, location: { module: 'fight_latch' } } },
+      { preflight: true }
+    )
+
+    const surfaced = await recover_fight_entry_refusal(use_dungeon, CHARACTER_ID, busy_refusal, {
+      force_start_door,
+    }).catch((error) => error)
+
+    expect(humanize_tx_error(surfaced)).toBe(i18n.t('errors.fight_character_busy_expired_refused'))
+    expect(surfaced.fight_liveness).toMatchObject({
+      state: 'refused',
+      fight_id: FIGHT_ID,
+      reason: expect.stringContaining('force_start door did not land'),
+    })
+    expect(force_start_door).toHaveBeenCalledTimes(1)
+  })
+
+  test('an open placement window keeps the original busy truth and composes no janitor transaction', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'placement' })
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
+      return fight_object(STATUS_PLACEMENT, { placement_deadline_ms: Date.now() + 60_000 })
+    }
+    const force_start_door = mock(async () => ({ digest: '0xnever' }))
+    const busy_refusal = tx_error(
+      { MoveAbort: { abortCode: 103, location: { module: 'fight_latch' } } },
+      { preflight: true }
+    )
+
+    const surfaced = await recover_fight_entry_refusal(use_dungeon, CHARACTER_ID, busy_refusal, {
+      force_start_door,
+    }).catch((error) => error)
+
+    expect(surfaced).toBe(busy_refusal)
+    expect(humanize_tx_error(surfaced)).toBe(i18n.t('errors.fight_character_busy'))
+    expect(force_start_door).not.toHaveBeenCalled()
+  })
+
+  test('every truthful expired-placement outcome ships in all six locales', () => {
+    const keys = [
+      'errors.fight_character_busy_expired_started',
+      'errors.fight_character_busy_expired_finished',
+      'errors.fight_character_busy_expired_refused',
+    ]
+    for (const key of keys)
+      for (const [locale, bundle] of Object.entries({ de, en, es, fr, ja, uk })) {
+        const copy = locale_value(bundle, key)
+        expect(typeof copy, `${key} missing from ${locale}.json`).toBe('string')
+        expect(copy.length, `${key} is empty in ${locale}.json`).toBeGreaterThan(0)
+      }
   })
 })
 

@@ -22,6 +22,7 @@ import { STATUS_PLACEMENT as VIEW_STATUS_PLACEMENT } from '@aresrpg/fight/board_
 
 import { game_log } from '../core/log.js'
 import { get_sdk } from '../chain/sdk'
+import { get_fights } from '../rpc/client'
 import i18n from '../i18n'
 import { push_event_toast } from '../game/core/toast.js'
 import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
@@ -241,7 +242,8 @@ const chain_reason = ({ readable, decoded }) => {
  * @param {string} fight_id
  * @param {{ force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
  *           crank_door?: (fight_id: string, silent: boolean, deadline: number) => Promise<any> }} [doors]
- * @returns {Promise<{ decision: 'enter'|'gone'|'skip', reason: string }>}
+ * @returns {Promise<{ decision: 'enter'|'gone'|'skip', reason: string,
+ *   action: 'force_start'|'crank'|null }>}
  */
 export async function ensure_resumable_fight(fight_id, doors = {}) {
   const { force_start_door = tx_force_start, crank_door = tx_crank } = doors
@@ -265,10 +267,10 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   }
   const first = await read_decoded()
   const decision = verdict(first)
-  if (decision === 'enter') return { decision: 'enter', reason: chain_reason(first) }
+  if (decision === 'enter') return { decision: 'enter', reason: chain_reason(first), action: null }
   // terminal/absent on chain — nothing to mount, an outcome to recover
-  if (decision === 'skip') return { decision: 'gone', reason: chain_reason(first) }
-  if (decision === 'unreadable') return { decision: 'skip', reason: chain_reason(first) }
+  if (decision === 'skip') return { decision: 'gone', reason: chain_reason(first), action: null }
+  if (decision === 'unreadable') return { decision: 'skip', reason: chain_reason(first), action: null }
   const deadline = Number(
     (decision === 'crank' ? first.decoded?.turn_deadline_ms : first.decoded?.placement_deadline_ms) ?? 0
   )
@@ -291,17 +293,51 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   await observe_digest(digest)
   const read = await read_decoded()
   const after = verdict(read)
-  if (after === 'enter') return { decision: 'enter', reason: chain_reason(read) }
+  if (after === 'enter') return { decision: 'enter', reason: chain_reason(read), action: decision }
   // the door resolved it terminal (or it vanished) — route out, never mount
-  if (after === 'skip') return { decision: 'gone', reason: chain_reason(read) }
+  if (after === 'skip') return { decision: 'gone', reason: chain_reason(read), action: decision }
   // Still expired after its one door: an ACTIVE board is still PRESENTABLE and holds the working exit (forfeit),
   // so mount it — the expiry gate surfaces the honest state there. A placement window nothing can start is not.
-  if (after === 'crank') return { decision: 'enter', reason: chain_reason(read) }
+  if (after === 'crank') return { decision: 'enter', reason: chain_reason(read), action: decision }
   // A digest means the door DID execute — the refusal must carry it, or a bug report cannot name the tx (#978).
   const door_clause = digest
     ? `its ${decision} door executed (${digest}) and left it unstartable`
     : `its ${decision} door did not land`
-  return { decision: 'skip', reason: `${chain_reason(read)} — ${door_clause}` }
+  return { decision: 'skip', reason: `${chain_reason(read)} — ${door_clause}`, action: decision }
+}
+
+/**
+ * FIGHT-ENTRY SWEEP (#677): a create/join pre-flight can discover that its character is latched in another
+ * fight without naming that fight in the abort. Resolve the character-keyed /v1 row, but touch ONLY a row still
+ * projected as PLACEMENT; the chain-truth gate above then decides whether its deadline is genuinely expired and
+ * composes the permissionless `force_start` exactly once. ACTIVE fights are deliberately left to their mounted
+ * board/boot-resume path — an entry refusal must never crank an unrelated live turn.
+ *
+ * The result is DATA so the caller's toast can tell the exact truth: `started` means the expired placement fight
+ * is ACTIVE now; `finished` means the force-start resolved it terminal/gone; `refused` means it remains expired
+ * after the one legal send. `not_found`/`not_expired`/`unavailable` make no new claim and preserve the original
+ * busy refusal.
+ * @param {string} character_id
+ * @param {{ force_start_door?: (fight_id:string, silent:boolean)=>Promise<any> }} [doors]
+ * @returns {Promise<{ state:'started'|'finished'|'refused'|'not_found'|'not_expired'|'unavailable',
+ *   fight_id:string|null, reason:string }>}
+ */
+export async function sweep_expired_character_placement(character_id, doors = {}) {
+  let fights
+  try {
+    fights = await get_fights({ character: character_id }, undefined, true)
+  } catch (error) {
+    game_log('world-fight', 'entry sweep discovery failed — preserving the busy refusal', error)
+    return { state: 'unavailable', fight_id: null, reason: 'the character fight list was unreadable this pass' }
+  }
+  const placement = (fights ?? []).find((fight) => fight?.status === 'placement')
+  const fight_id = placement?.fight_id ?? placement?.fight ?? null
+  if (!fight_id) return { state: 'not_found', fight_id: null, reason: 'no placement fight was projected' }
+
+  const result = await ensure_resumable_fight(fight_id, { force_start_door: doors.force_start_door })
+  if (result.action !== 'force_start') return { state: 'not_expired', fight_id, reason: result.reason }
+  const state = result.decision === 'enter' ? 'started' : result.decision === 'gone' ? 'finished' : 'refused'
+  return { state, fight_id, reason: result.reason }
 }
 
 /**
