@@ -1177,6 +1177,14 @@ if ! bash scripts/sim-constants-gate.sh; then
   red "SIM PROTOCOL CONSTANTS GATE FAILED."
   FAIL=1
 fi
+# The DUAL-HOME class gate: the same "one fact, one home" law the sim-constants kill-list enforces
+# for protocol numbers, generalized to anything the tree itself declares twice — duplicate exports,
+# REGISTRY-owned facts declared off-home, rotten registry anchors, store fields with two writers.
+echo
+if ! bash scripts/single-home-gate.sh; then
+  red "SINGLE-HOME GATE FAILED."
+  FAIL=1
+fi
 echo
 if ! bash scripts/depcruise-gate.sh; then
   red "ARCH GATE (dependency-cruiser) FAILED."

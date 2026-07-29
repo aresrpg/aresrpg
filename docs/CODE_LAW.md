@@ -208,6 +208,20 @@ scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at th
   only when the crate changed, ~1m50s); **Move has NO CodeQL extractor** — the contracts stay
   under the D321 grep gates. CLI note: CodeQL is licensed free for OSS/research; private
   automated CI use falls under GitHub Advanced Security terms — confirm licensing before CI wiring.
+- The dual-home gate (`scripts/single-home-gate.sh`, wired into `bun run lint` via
+  check-constraints, ~4s, repo bytes only — no analyzer binary, so it cannot flake): the class gate
+  behind "one home per fact". It derives what to protect from the tree instead of a kill-list —
+  every exported name, plus every `path:line` home named in `docs/REGISTRY.md` — and reports four
+  lanes: `duplicate-export` (one exported name, two files), `registry-fact` (a registry-owned name
+  declared off-home, exported or laundered into a function body), `registry-anchor` (a registry row
+  whose anchor no longer declares anything — the registry drifting off the code it governs), and
+  `store-writers` (one store field written by two modules). Self-tests red AND green on
+  `scripts/arch/fixtures/single_home` before it judges the tree, ratchets against
+  `scripts/arch/single_home.baseline.json`, and carries its own negative control:
+  `--negative-control` writes fresh dual homes into real packages, proves every lane reds, removes
+  them, and proves the verdict reverses. Name-only detection cannot tell two facts that share a
+  name from one fact copied twice; the ratchet holds that noise at its measured count instead of
+  special-casing it.
 - The arch gates (semgrep + dependency-cruiser — `scripts/semgrep-gate.sh` /
   `scripts/depcruise-gate.sh`, both wired into `bun run lint` via check-constraints, ~9s): the
   composite-speed cross-function tier between the eslint tripwire and the CodeQL deep pass.

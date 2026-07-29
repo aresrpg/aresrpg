@@ -1,6 +1,6 @@
 # Reuse registry
 
-Facts in this registry are consumed by import or derivation only. Re-declaring a registry fact outside its canonical home is a gate violation; the existing sim-constants ratchet already enforces this for the protocol-constants family from scripts/arch/sim_protocol_constants.yml.
+Facts in this registry are consumed by import or derivation only. Re-declaring a registry fact outside its canonical home is a gate violation: `scripts/single-home-gate.sh` re-derives each protected symbol from the `path:line` anchors below and reds on any other declaration of it, exported or local, while the sim-constants ratchet (`scripts/arch/sim_protocol_constants.yml`) keeps enforcing the protocol-constants family by value. Each anchor must therefore point at the DECLARATION line of its fact — a row anchored on a comment or a blank line protects nothing, and the gate reports it as such.
 
 | Fact domain                             | Canonical home                                                                                                                     |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
