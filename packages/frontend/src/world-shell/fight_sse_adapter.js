@@ -29,7 +29,7 @@
 // the presence link vocabulary (`connecting` | `connected` | `reconnecting` | `failed`) so the cutover wires it
 // straight onto the existing `link_status` / `link_error` surface without inventing a state home.
 
-import { normalize_journal_page } from '@aresrpg/fight/journal_normalize'
+import { merge_journal_batches, normalize_journal_page } from '@aresrpg/fight/journal_normalize'
 import { u64_string } from '@aresrpg/fight/journal_u64'
 import { REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 
@@ -39,6 +39,15 @@ import { RPC_URL } from '../env'
 // anchor, never a cadence: a stream gap must never cost the turn the deadline is about to end.
 const DEADLINE_LEAD_MS = 5_000
 
+// THE COALESCING WINDOW (#1649). The chain emits ONE event batch per transaction, and the fight presents PER
+// BATCH — a peer's whole turn is one ~3s slot. This wire cuts that batch into one row per frame (`:276`), so a
+// door fed frame-by-frame buys a slot per ROW: a five-row peer turn would take fifteen seconds to watch. Rows
+// are held for this window and handed over as ONE batch — the transport reassembles exactly what the wire
+// fragmented, and nothing downstream can tell the two deliveries apart. It is deliberately shorter than any
+// human-perceptible delay and far shorter than the chain's own min-turn, so two LIVE transactions can never
+// share a window (a delivery that does carry several is a catch-up, and the fold treats it as one).
+export const JOURNAL_COALESCE_MS = 120
+
 const stream_url = (base_url, fight_id, cursor) => {
   const url = new URL(`${base_url}/v1/stream/fight/${encodeURIComponent(fight_id)}`)
   if (cursor != null && cursor !== '') url.searchParams.set('lastEventId', String(cursor))
@@ -46,11 +55,13 @@ const stream_url = (base_url, fight_id, cursor) => {
 }
 
 /**
- * ONE SSE frame → the journal-door message, or null when the frame carries no foldable journal row.
+ * ONE SSE frame → `{ message, whole }`: the journal-door message plus whether the frame already carried a WHOLE
+ * batch. A PAGE is whole (the walker's own wire — nothing fragmented it, so it never enters the coalescing
+ * window); a single #1382 row is a fragment. Null when the frame carries no foldable journal row.
  * @param {{ data?: string, lastEventId?: string }} event
  * @param {string} fight_id
  */
-export function fight_stream_message(event, fight_id) {
+export function fight_stream_frame(event, fight_id) {
   let body
   try {
     body = JSON.parse(event?.data ?? '')
@@ -61,7 +72,10 @@ export function fight_stream_message(event, fight_id) {
   // A PAGE is already the ingress batch — pass it through byte-identical (re-normalizing would re-key rows the
   // walker already keyed, and the fold must not be able to tell the two transports apart).
   if (body.source === 'journal' && Array.isArray(body.events))
-    return { type: 'journal', fight_id, batch: { ...body, fight_id: body.fight_id ?? fight_id } }
+    return {
+      message: { type: 'journal', fight_id, batch: { ...body, fight_id: body.fight_id ?? fight_id } },
+      whole: true,
+    }
   // ONE row (the #1382 frame). `seq` is the fold's ordinal — the SSE id is a chain cursor and serves only as a
   // fallback for a producer that stamps its ordinal there; a row with neither cannot be folded.
   const seq = body.seq ?? event?.lastEventId
@@ -71,8 +85,11 @@ export function fight_stream_message(event, fight_id) {
     journal_head: body.head ?? body.journal_head ?? seq,
     events: [{ seq, kind: body.kind, data: body.data, digest: body.digest, version: body.version }],
   }
-  return { type: 'journal', fight_id, batch: normalize_journal_page(page, { fight_id }) }
+  return { message: { type: 'journal', fight_id, batch: normalize_journal_page(page, { fight_id }) }, whole: false }
 }
+
+/** ONE SSE frame → the journal-door message alone, or null. The frame's shape is `fight_stream_frame`'s answer. */
+export const fight_stream_message = (event, fight_id) => fight_stream_frame(event, fight_id)?.message ?? null
 
 /**
  * Open ONE fight stream. Returns the closer (source + belt + subscription). Every injected seam is a function
@@ -101,6 +118,7 @@ export function open_fight_stream({
   subscribe,
   set_timeout = (fn, delay) => setTimeout(fn, delay),
   clear_timeout = clearTimeout,
+  coalesce_ms = JOURNAL_COALESCE_MS,
 }) {
   const source = event_source_factory(stream_url(base_url, fight_id, cursor?.()))
   let status = 'idle'
@@ -118,9 +136,25 @@ export function open_fight_stream({
     announce('failed', error)
   }
 
+  // ── THE COALESCING WINDOW: the fragments of one chain batch are reassembled here and enter the door ONCE.
+  let held = null
+  let held_timer = null
+  const flush_held = () => {
+    if (held_timer != null) clear_timeout(held_timer)
+    held_timer = null
+    const batch = held
+    held = null
+    if (batch) input({ type: 'journal', fight_id, batch }, now())
+  }
+  const hold = (batch) => {
+    held = held ? merge_journal_batches(held, batch) : batch
+    if (coalesce_ms <= 0) return flush_held() // no window ⇒ no buffering at all (the raw per-frame contract)
+    if (held_timer == null) held_timer = set_timeout(flush_held, coalesce_ms)
+  }
+
   const receive = (event) => {
-    const message = fight_stream_message(event, fight_id)
-    if (!message) {
+    const frame = fight_stream_frame(event, fight_id)
+    if (!frame) {
       // Frames we cannot fold are a CONTRACT mismatch, not weather — tolerate the same finite budget as a
       // reconnect, then say so instead of dropping the fight's rows in silence.
       if ((unusable += 1) > max_attempts) give_up(`Fight stream frames are not journal rows (${unusable} frames)`)
@@ -128,7 +162,14 @@ export function open_fight_stream({
     }
     attempts = 0
     announce('connected')
-    input(message, now())
+    // A WHOLE batch is not a fragment: it flushes whatever the window still holds (so the door keeps seeing the
+    // stream in chain order) and rides straight through, byte-identical.
+    if (frame.whole) {
+      flush_held()
+      input(frame.message, now())
+      return
+    }
+    hold(frame.message.batch)
   }
 
   source.addEventListener?.('message', receive)
@@ -173,6 +214,7 @@ export function open_fight_stream({
   return () => {
     if (closed) return
     closed = true
+    flush_held() // a row already on this client is never dropped on the floor because the fight ended its stream
     unsubscribe?.()
     cancel_belt()
     source.close()

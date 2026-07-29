@@ -13,10 +13,12 @@
 // performs a full re-adopt through that same door, never a partial merge. The `entries`/`wave` state below is a
 // presentation-only sibling seam for prediction retirement and renderer pacing, never a second chain-state owner.
 //
-// PRESENTATION (the S2 wave lane): non-local receipt segments are paced (present.js — ~3s PER mob turn) into
-// `wave` turns the renderer drains; it acks each with input({type:'presented'}). `presenting` is DERIVED
-// (wave_seq > presented_seq) — never a stored latch. Projections show state at the PRESENTED floor while a wave
-// drains, so committed truth never jumps the eye ahead of the beats.
+// PRESENTATION (the S2 wave lane): a chain batch's non-local segments are paced (present.js — ~3s PER mob turn)
+// into `wave` turns the renderer drains; it acks each with input({type:'presented'}). The pacing decision is
+// TRANSPORT-BLIND (fold.paced_wave_turns, #1649) — a receipt and a journal batch of the same events present
+// identically, which is the only way an OBSERVING seat (fed the journal alone) sees a peer's turn at all.
+// `presenting` is DERIVED (wave_seq > presented_seq) — never a stored latch. Projections show state at the
+// PRESENTED floor while a wave drains, so committed truth never jumps the eye ahead of the beats.
 //
 // PLAYER MIN-TURN FLOOR: ONE 3s floor per player
 // turn from the turn's own start; casts are INSTANT. THE FLOOR YIELDS TO THE DEADLINE (a turn can be lost to

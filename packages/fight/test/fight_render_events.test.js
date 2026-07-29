@@ -455,6 +455,29 @@ describe('receipt move path — obstacle-aware reconstruction (mob-crossed-obsta
     }
   })
 
+  // EMPTY MEANS ABSENT (#1649, the sibling trap): `path_for` used `supplied_path ?? reconstructed_path(…)`, so a
+  // resolver returning an EMPTY array short-circuited reconstruction and fell to `path.length ? path : [to]` — ONE
+  // hop straight through the wall. `local_move_beats` defaulted its `path` to `[]` and hands it over as
+  // `() => path`, which puts that exact resolver on the live optimistic-walk lane. A resolver that knows no path
+  // must be indistinguishable from no resolver at all.
+  test('a resolver that returns an EMPTY path reconstructs — never a single wall-piercing hop', () => {
+    const board = {
+      fight_id: 'fight-1',
+      resolve_fighter_id,
+      fighter_cells: new Map([['m1', { x: 0, y: 0 }]]),
+      obstacles: [encoded(1, 0)],
+      board_width: 5,
+      board_height: 3,
+    }
+    const empty_resolver = move_path_of(
+      produce_receipt_render_turns(mob_moved_to(2, 0), { ...board, move_path: () => [] })
+    )
+    // THE DISCRIMINATOR: `[to]` alone is the wall-piercing hop — a jump over the obstacle at (1,0).
+    expect(empty_resolver).not.toEqual([{ x: 2, y: 0 }])
+    // …and it is exactly what NO resolver renders: empty is absent, not an answer.
+    expect(empty_resolver).toEqual(move_path_of(produce_receipt_render_turns(mob_moved_to(2, 0), board)))
+  })
+
   test("twin-consistent: the rendered walk IS the sim's own find_path_4dir answer over the same board", () => {
     const receipt = produce_receipt_render_turns(mob_moved_to(2, 0), {
       fight_id: 'fight-1',
