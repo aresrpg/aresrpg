@@ -1,7 +1,29 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "item::lock_in_kiosk",
   "package": "aresrpg",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb",
+    "module": "item",
+    "function": "lock_in_kiosk",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door item::lock_in_kiosk"
+  },
+  "is_entry": false,
+  "parameters": [
+    "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::item::LockPledge",
+    "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::item::Item",
+    "&mut 0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Kiosk",
+    "&0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::KioskOwnerCap",
+    "&0x0000000000000000000000000000000000000000000000000000000000000002::transfer_policy::TransferPolicy<0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::item::Item>"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "object",
+    "object",
+    "object",
+    "object"
+  ]
 }

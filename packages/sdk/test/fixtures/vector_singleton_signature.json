@@ -1,7 +1,21 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "vector::singleton",
   "package": "move_stdlib",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x1",
+    "module": "vector",
+    "function": "singleton",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door vector::singleton"
+  },
+  "is_entry": false,
+  "parameters": [
+    "T0"
+  ],
+  "ptb_arg_kinds": [
+    "generic"
+  ]
 }

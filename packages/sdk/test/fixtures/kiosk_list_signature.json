@@ -1,7 +1,27 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "kiosk::list",
   "package": "sui_framework",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x2",
+    "module": "kiosk",
+    "function": "list",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door kiosk::list"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&mut 0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Kiosk",
+    "&0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::KioskOwnerCap",
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
+    "u64"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "object",
+    "pure",
+    "pure"
+  ]
 }

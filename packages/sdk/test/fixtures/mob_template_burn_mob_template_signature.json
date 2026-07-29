@@ -1,7 +1,26 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "mob_template::burn_mob_template",
   "package": "aresrpg",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb",
+    "module": "mob_template",
+    "function": "burn_mob_template",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door mob_template::burn_mob_template"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::admin::AdminCap",
+    "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::mob_template::MobTemplate",
+    "&0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::version::Version",
+    "&0x0000000000000000000000000000000000000000000000000000000000000002::tx_context::TxContext"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "object",
+    "object"
+  ]
 }

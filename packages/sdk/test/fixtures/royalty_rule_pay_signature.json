@@ -1,7 +1,25 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "royalty_rule::pay",
   "package": "rules",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
+    "module": "royalty_rule",
+    "function": "pay",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door royalty_rule::pay"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&mut 0x0000000000000000000000000000000000000000000000000000000000000002::transfer_policy::TransferPolicy<T0>",
+    "&mut 0x0000000000000000000000000000000000000000000000000000000000000002::transfer_policy::TransferRequest<T0>",
+    "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "object",
+    "object"
+  ]
 }

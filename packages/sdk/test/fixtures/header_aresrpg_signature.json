@@ -1,7 +1,17 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "header::aresrpg",
   "package": "aresrpg",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb",
+    "module": "header",
+    "function": "aresrpg",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door header::aresrpg"
+  },
+  "is_entry": true,
+  "parameters": [],
+  "ptb_arg_kinds": []
 }
