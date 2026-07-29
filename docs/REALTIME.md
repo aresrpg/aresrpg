@@ -39,7 +39,6 @@ browser ⇄ browser (WebRTC via trystero) — signaling: wss://relay.aresrpg.wor
   removing p2p. A client→server courier existed for one day (07-28) and was retired as a
   violation of the no-client-writes law.
 
-
 ## The fight-turn overlay (the one sanctioned p2p touch near fights)
 
 Observers watching another player's ACTIVE turn get truth from the fight journal — correct, but
