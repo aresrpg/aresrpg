@@ -24,13 +24,21 @@
 // extract. LOCAL is not NO-OP though (#1632): `claim` carries the fight-over TRANSITION as well as the reward,
 // so its local twin is `finish` below — only the reward half has nothing to do here.
 //
+// ── THE RUN STATUS HAS ONE WRITER (#1646) ──────────────────────────────────────────────────────────────────
+// `use_dungeon.dungeon` is published by exactly one thing: the projection mirror in `dungeon_run_store.js`
+// (`fight_store.subscribe(s => setState({ dungeon: board_view(s) }))`). This shim used to publish a SECOND
+// `status` off `live.chain.sim_state.winner` — a translation of the same fact, on a field the mirror
+// overwrites wholesale on its very next pass. The sim's verdict already reaches the store the honest way:
+// `sim_chain_events` encodes `fight_ended` as the chain's own Victory/Defeat row, the core folds it, and the
+// projection derives the status from that fold. So the second writer is gone; nothing here writes it.
+//
 // ── THE CLOCK ──────────────────────────────────────────────────────────────────────────────────────────────
 // `sim_chain` is pure and total: wall-clock turn deadlines are INJECTED (`now_ms`). This shim is where the real
 // clock enters, and nowhere else — determinism rides the capsule's command list, never the clock (spec §10).
 
 import { fight_store } from '@aresrpg/fight/store'
 import { engine_view_of } from '@aresrpg/fight/project'
-import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from '@aresrpg/fight/board_state'
+import { STATUS_ACTIVE, STATUS_PLACEMENT } from '@aresrpg/fight/board_state'
 import { GRID_W } from '@aresrpg/fight/los'
 import {
   LOCAL_ADDRESS,
@@ -70,14 +78,6 @@ export const arm_trace_tee = (store = fight_store) => {
   install_fight_trace_tee(store)
 }
 
-/** The run status the production surface branches its result card on. The SIM decides the outcome; this only
- *  translates its winner into the status vocabulary. A DRAW (winner 2) reads as FAILED — the page paints its
- *  own draw banner over it (spec §4.4's last row). */
-export const status_of = (sim_state) => {
-  if (sim_state.winner === -1) return STATUS_ACTIVE
-  return sim_state.winner === 0 ? STATUS_WON : STATUS_FAILED
-}
-
 /**
  * The simulator's fight session. One per page visit; `start` always opens a FRESH fight id.
  * Every collaborator is injectable so the shim is drivable headless.
@@ -97,17 +97,20 @@ export const create_fight_shim = ({
   let live = /** @type {{ chain: any, fight_id: string, seed: number } | null} */ (null)
 
   /** Fold ONE receipt through the core's door. The store drops a version at or below its frontier, so this is
-   *  idempotent under a double delivery — the property the real receipt lane relies on. */
+   *  idempotent under a double delivery — the property the real receipt lane relies on.
+   *
+   *  `trap_cells` rides along exactly as all three world call sites send it (dungeon_run_store's commit, its
+   *  overdue retry and its forfeit): the fold attributes a trap-triggered wave to the seat that OWNS the trap
+   *  off this list, so a shim that omitted it published every one of the player's own trap procs as ownerless.
+   *  Read from the same projection door the HUD reads, at fire time. */
   const feed = ({ version, receipt }) => {
     if (!live || !receipt?.events?.length) return
-    store.getState().input({ type: 'receipt', version, receipt, fight_id: live.fight_id })
-  }
-
-  const sync_status = () => {
-    if (!live) return
-    dungeon.setState({
-      dungeon: { ...dungeon.getState().dungeon, status: status_of(live.chain.sim_state) },
-      busy: false,
+    store.getState().input({
+      type: 'receipt',
+      version,
+      receipt,
+      fight_id: live.fight_id,
+      trap_cells: engine_view_of(store.getState())?.my_traps ?? [],
     })
   }
 
@@ -116,7 +119,7 @@ export const create_fight_shim = ({
   const pump_mobs = (depth = 0) => {
     if (!live || depth >= MAX_CHAINED_MOB_TURNS) return
     const mob = pending_mob_turn(live.chain)
-    if (!mob) return sync_status()
+    if (!mob) return
     schedule(() => {
       if (!live) return
       const result = submit_commands(live.chain, [{ type: 'ai_turn', entity_id: mob }], { now_ms: now() })
@@ -176,7 +179,6 @@ export const create_fight_shim = ({
       feed(result)
       if (result.chain.violations.length > before)
         log('simulator', 'physics tripwire fired on a committed turn', { violations: result.chain.violations })
-      sync_status()
       pump_mobs()
       return true
     } catch (error) {
