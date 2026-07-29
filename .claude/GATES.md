@@ -61,6 +61,8 @@ the relevant scripts and are an explicit, reviewed act, never a silent debt-abso
 | `.github/workflows/checks.yml` | `ladder` | PR + push to `edge`/`master` | `bun run lint` in full — eslint + prettier + every `check-constraints.sh` leg above |
 | `.github/workflows/checks.yml` | `smoke` | PR + push to `edge`/`master` | builds the frontend and drives the logged-out landing headless — fails on any uncaught page error or non-allowlisted `console.error` at boot |
 | `.github/workflows/checks.yml` | `fp-codeql` | PR + push to `edge`/`master` | the CodeQL deep tier as native code scanning (above) |
+| `.github/workflows/nuclear-audit.yml` | `nuclear-audit` | workflow-file PR (registration only) + push to `edge` + 6-hourly schedule + landing dispatch | ratchets clone census, import fan-out, and repeated literals against the committed baseline |
+| `.github/workflows/edge-smoke.yml` | `prod-smoke` | workflow-file PR (registration only) + 6-hourly schedule + manual dispatch | drives Playwright against the deployed `edge` frontend and captures a report on failure |
 
 ## Ceremony tier — after every publish / republish, before the ceremony is called done
 
