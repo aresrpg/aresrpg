@@ -177,7 +177,9 @@ const five_spell_mob_templates_raw = {
         id,
         {
           name: is_fifth ? 'Fifth Spell' : `Sealed Spell ${index + 1}`,
-          description: is_fifth ? 'the sanctioned fifth kit row' : 'AP-ineligible replay guard',
+          description: is_fifth
+            ? 'the sanctioned fifth kit row'
+            : 'AP-ineligible replay guard',
           levels: [
             {
               cost: is_fifth ? 3 : 11,
@@ -194,7 +196,12 @@ const five_spell_mob_templates_raw = {
               free_cell: false,
               base_effects: [
                 {
-                  type: 'damage', min: 5, max: 5, target: 'enemies', element: 'earth', chance: 100,
+                  type: 'damage',
+                  min: 5,
+                  max: 5,
+                  target: 'enemies',
+                  element: 'earth',
+                  chance: 100,
                 },
               ],
               critical_effects: [],
@@ -708,7 +715,10 @@ const scenarios = [
       team1: [
         make_entity('m0', { x: 7, y: 5 }, false, {
           spell_levels: Object.fromEntries(
-            Array.from({ length: 5 }, (_, index) => [`boss_spell_${index + 1}`, 1]),
+            Array.from({ length: 5 }, (_, index) => [
+              `boss_spell_${index + 1}`,
+              1,
+            ]),
           ),
         }),
       ],
