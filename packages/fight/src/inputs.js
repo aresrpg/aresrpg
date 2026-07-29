@@ -14,6 +14,7 @@
 
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 
+import { fight_status_of } from './board_state.js'
 import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } from './fight_status_snapshot.js'
 import { decode, encode } from './los.js'
 import { is_status_kind } from './statuses.js'
@@ -102,8 +103,11 @@ export const chain_confirmation = ({ actions = [], fight = null, phase = null, s
     null
   )
   const action_phase = terminal_action?.kind === 'Victory' ? 'victory' : terminal_action ? 'defeat' : null
-  const fight_status = Number(fight?.status ?? 0)
-  const fight_phase = fight_status === 3 ? 'defeat' : fight_status !== 0 && fight_status !== 1 ? 'victory' : null
+  // The ONE lifecycle read (#1277): a record with no status yields null and claims NOTHING — never a defaulted
+  // scalar that a `Number()` coercion could turn into a terminal phase.
+  const fight_status = fight_status_of(fight)
+  const fight_phase =
+    fight_status === 3 ? 'defeat' : fight_status != null && fight_status !== 0 && fight_status !== 1 ? 'victory' : null
   const terminal_phase = phase ?? action_phase ?? fight_phase
   if (terminal_phase !== 'victory' && terminal_phase !== 'defeat') return null
   return {

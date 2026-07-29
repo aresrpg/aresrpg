@@ -33,7 +33,7 @@ import {
   to_fight_cell,
 } from '@aresrpg/fight/board_state'
 import { auto_commit_blocked, executed_turn_failure, stage_to_batch, turn_commit_key } from '@aresrpg/fight/turn_commit'
-import { fight_geometry_complete } from '@aresrpg/fight/board_state'
+import { fight_read_complete } from '@aresrpg/fight/board_state'
 import { mob_entity_id, transaction_character_id } from '@aresrpg/fight/fight_control'
 import { apply_fight_receipt_to_roster } from '@aresrpg/inventory/fight_receipt_roster'
 import { GRID_W } from '@aresrpg/fight/los'
@@ -1058,16 +1058,17 @@ export const use_dungeon = create((set, get) => ({
         // decode once → resolve the group identity (real first-frame name) → snapshot with the resolved maps +
         // the per-world offset. The core folds/dedupes/projects; a ≤-floor re-read is dropped INSIDE the core.
         const fight = decode_fight(read.json)
-        // HOLD-NOT-DEGRADE (adoption seam, 07-18): a TORN read (BoardGeom missing → decode width/height 0) is
-        // never presentable — the core's snapshot door refuses it too (fight_geometry_complete gate); holding
-        // HERE keeps the syncing chip honest and skips the wasted identity/offset reads while the receipt/poll
-        // loop re-reads until the record is whole. Traced, never silent.
-        if (!fight_geometry_complete(fight)) {
+        // HOLD-NOT-DEGRADE (adoption seam, 07-18): a TORN read — BoardGeom missing (decode width/height 0) or
+        // the lifecycle scalar absent (#1277) — is never presentable, and the core's snapshot door refuses it
+        // through the SAME `fight_read_complete` gate; holding HERE keeps the syncing chip honest and skips
+        // the wasted identity/offset reads while the receipt/poll loop re-reads until the record is whole.
+        if (!fight_read_complete(fight)) {
           fight_state_trace('fight_adoption_degraded_read_held', {
             fight_id: live_fight_id,
             version: Number(read.version) || 0,
             width: fight?.width ?? null,
             height: fight?.height ?? null,
+            status: fight?.status ?? null,
           })
           return
         }

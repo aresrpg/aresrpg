@@ -64,7 +64,8 @@ const fight_object = (status, { placement_deadline_ms = 0, turn_deadline_ms = 0 
     json: {
       id: FIGHT_ID,
       world: WORLD_ID,
-      status,
+      // `status: undefined` is the TORN shape (#1277) — the key is absent from the flattened json entirely.
+      ...(status == null ? {} : { status }),
       placement_deadline_ms: String(placement_deadline_ms),
       turn_deadline_ms: String(turn_deadline_ms),
       last_action_ms: '0',
@@ -201,5 +202,17 @@ describe('the two status namespaces stay apart (the #932 guard)', () => {
     expect(resume_decision({ status: CHAIN_STATUS_PLACEMENT, placement_deadline_ms: NOW }, NOW)).toBe('force_start')
     // The view scalar is NOT a chain status — feeding it in must refuse, never be read as placement.
     expect(resume_decision({ status: VIEW_STATUS_PLACEMENT, placement_deadline_ms: NOW + 1 }, NOW)).toBe('skip')
+  })
+})
+
+// #1277 — the same gate, fed a TORN read: board intact, `status` gone. Defaulted to 0 it decodes as CHAIN
+// placement, which is exactly the shape the test above proves resumable — so a torn read would mount a
+// fabricated placement board and hold the seat there. Absence is not a verdict; the gate must refuse to answer.
+describe('#1277 — a status-less chain read is never a liveness verdict', () => {
+  test('read_fight_liveness throws on a board-intact / status-absent record rather than reporting live placement', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'placement' })
+    read_response = async () => fight_object(null, { placement_deadline_ms: Date.now() + 60_000 })
+
+    await expect(read_fight_liveness(await get_sdk(), FIGHT_ID)).rejects.toThrow(/torn read/)
   })
 })
