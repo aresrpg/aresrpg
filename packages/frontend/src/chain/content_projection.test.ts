@@ -37,9 +37,9 @@ describe('seed-receipt content projections', () => {
       const { fight_spells_data } = await import('../game/screens/hud/fight-spells.js')
 
       expect(WORLD_CORPUS.worlds.map(({ id }) => id)).toEqual(seed_manifest.worlds.map(({ id }) => id))
-      const seeded_spell_ids = new Set(Object.values(seed_manifest.spells).map(({ id }) => id))
       expect(fight_spells_data.spells).toHaveLength(240)
-      for (const spell of fight_spells_data.spells) expect(seeded_spell_ids.has(spell.object_id)).toBe(true)
+      expect(new Set(fight_spells_data.spells.map(({ name_key }) => name_key)).size).toBe(240)
+      for (const spell of fight_spells_data.spells) expect(spell.object_id).toMatch(/^0x[0-9a-f]{64}$/)
     }
   )
 })

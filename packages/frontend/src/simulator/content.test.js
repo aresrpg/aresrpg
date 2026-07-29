@@ -11,7 +11,7 @@ import { ITEM_STAT_CATALOG_ORDER, ITEM_STAT_SHIFT } from '@aresrpg/sim/equipment
 
 import { EQUIPMENT_SLOTS as INVENTORY_EQUIPMENT_SLOTS } from '../game/screens/hud/simulator-equip.js'
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
-import { seed_manifest } from '../content/seed_manifest'
+import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import { item_corpus_from_v1 } from '../pages/encyclopedia/item_corpus'
 
 import {
@@ -339,7 +339,7 @@ describe('the fold over rows that came from the live corpus', () => {
     last_sale_mist: null,
   })
 
-  const living = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
+  const living = encyclopedia_fixture.items.map(({ template_id }) => template_id)
 
   test('three live templates fold into a seat with sane pools', () => {
     const real = item_corpus_from_v1([

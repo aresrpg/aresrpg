@@ -4,8 +4,6 @@
 // `worn.<slot>.template_id`; the cosmetic quilt is keyed by the seed appearance slug. Prove the complete
 // consumer seam as state in -> rig.set_slots out, including the clearing call on unequip.
 
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
 import { configure_assets } from '@aresrpg/sdk/jobs'
@@ -13,19 +11,23 @@ import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import '../test_helpers/env_mock.js'
 import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
+import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 
 const { resolve_worn_cosmetics, worn_model_of } = await import('./cosmetic_glb.js')
 
 configure_assets({ aggregator: 'https://cdn.test', classes: { cosmetic: { published: true } } })
 
-const seed_manifest = JSON.parse(
-  readFileSync(new URL('../../../move/scripts/out/seed_manifest.json', import.meta.url), 'utf8')
-)
-const live_sale_templates = new Set(seed_manifest.shop.map((row) => row.template))
+const live_by_name = new Map(encyclopedia_fixture.items.map((row) => [row.name, row.template_id]))
+const live_id = (name) => {
+  const id = live_by_name.get(name)
+  if (!id) throw new Error(`captured /v1 fixture is missing ${name}`)
+  return id
+}
+const live_sale_templates = new Set(live_by_name.values())
 
 describe('world worn-cosmetic state -> rig slots', () => {
   test('an equipped Fuwa cape joins its /v1 template id to the quilt appearance, then clears on unequip', () => {
-    const template_id = '0x257136d3c50daba6f27532573a356e63835c7887aa20186a8399cda689fc5cb6'
+    const template_id = live_id('Fuwa Cloak (Black)')
     const cape = { item_id: '0xcape', template_id, category: 'cloak' }
     const templates = new Map([
       [
@@ -75,7 +77,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
 
     const appearances = new Set()
     for (const [index, row] of shop.cosmetics.entries()) {
-      const template_id = seed_manifest.items[row.slug]
+      const template_id = live_id(row.name)
       expect(live_sale_templates.has(template_id)).toBe(true)
       const item = { item_id: `0xitem${index}`, template_id, category: row.category }
       const templates = new Map([[template_id, { template_id, item_type: row.itemType, name: row.name }]])
@@ -107,7 +109,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(shop.cosmetics.filter((row) => row.slug.includes('corbac')).map((row) => row.slug)).toEqual([
       'corbac_head',
     ])
-    const template_id = seed_manifest.items.corbac_head
+    const template_id = live_id('Corbac Headdress')
     expect(live_sale_templates.has(template_id)).toBe(true)
     const model = worn_model_of(
       { template_id },
@@ -116,7 +118,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(model).toEqual({ appearance: 'corbac_head', variant: null })
     // The duplicate's Display name must resolve NO model until the rider purges it on-chain — a loud
     // nothing-render, never a silent alias back to life (no-silent-substitute law).
-    const helmet_id = seed_manifest.items.corbac_helmet
+    const helmet_id = live_id('Corbac Helmet')
     expect(
       worn_model_of(
         { template_id: helmet_id },
@@ -136,8 +138,8 @@ describe('world worn-cosmetic state -> rig slots', () => {
     // the worn transition. This drives the REAL pipeline: reduce_sui_data receipt fold → rig dress spec out.
     const green_row = shop.cosmetics.find((row) => row.slug === 'cape_lorito_agility') // Emerald — the worn one
     const blue_row = shop.cosmetics.find((row) => row.slug === 'cape_lorito_chance') // Sapphire — the bag one
-    const green_id = seed_manifest.items[green_row.slug]
-    const blue_id = seed_manifest.items[blue_row.slug]
+    const green_id = live_id(green_row.name)
+    const blue_id = live_id(blue_row.name)
     const templates = new Map([
       [green_id, { template_id: green_id, item_type: 'cloak', name: green_row.name }],
       [blue_id, { template_id: blue_id, item_type: 'cloak', name: blue_row.name }],
@@ -192,7 +194,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
   test.skipIf(!SHOP_AVAILABLE)('all ten Lorito template ids resolve distinct KHR variants after the gem-name renames', () => {
     const current = shop.cosmetics
       .filter((row) => row.appearance === 'cape_lorito')
-      .map((row) => [seed_manifest.items[row.slug], row.name, row.skin])
+      .map((row) => [live_id(row.name), row.name, row.skin])
     const renamed_names = {
       air: 'Lorito Cloak (Opal)',
       earth: 'Lorito Cloak (Jade)',
@@ -225,7 +227,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     // forever. Pinned literally (the pre-ceremony-#3 manifest's value) since the retired slug no longer
     // resolves through seed_manifest.items.
     const vitality_id = '0x5e3639cfe220a9a651cfc398be53ad496e8232f54ac46e1ffc3e2b7a2a1fc23b'
-    const wisdom_id = seed_manifest.items.capuche_bara_wisdom
+    const wisdom_id = live_id('Bara Hood (Wisdom)')
     const templates = new Map([
       [vitality_id, { template_id: vitality_id, name: 'Bara Hood (Vitality)', item_type: 'hat' }],
       [wisdom_id, { template_id: wisdom_id, name: 'Bara Hood (Wisdom)', item_type: 'hat' }],
@@ -246,7 +248,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
 
     // Scoping proof: cape_lorito's OWN "vitality"/"wisdom" KHR variants are a different appearance and stay
     // literal — the recolor rename never leaks onto a cosmetic that merely shares a variant WORD.
-    const lorito_vitality_id = seed_manifest.items.cape_lorito_vitality
+    const lorito_vitality_id = 'captured-shape-lorito-vitality'
     expect(
       worn_model_of(
         { template_id: lorito_vitality_id },

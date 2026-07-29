@@ -52,7 +52,7 @@ const missing_url = () => mob_visual_url('hy__missing')
  * FIRST (mob_name_overrides.ts) — the reference-corpus catalog is keyed by the raw chain/seed name, so a
  * caller holding the overridden display string must still resolve the real model/icon.
  * @param {string | undefined | null} name @returns {string | null} */
-const catalog_key_of = (name) => {
+export const mob_identity_key = (name) => {
   const key = catalog_name_of(name)
     .toLowerCase()
     .trim()
@@ -75,14 +75,17 @@ const catalog_key_of = (name) => {
  * A miss decorates nothing (null → no badge) — this never filters or hides a live row.
  * @param {string | undefined | null} name @returns {string | null}
  */
-export const get_mob_tier = (name) => mob_tiers_by_key().get(catalog_key_of(name) ?? '') ?? null
+export const get_mob_tier = (name) => mob_tiers_by_key().get(mob_identity_key(name) ?? '') ?? null
 
 /** @type {Map<string, string | null> | null} */
 let mob_tiers = null
 const mob_tiers_by_key = () => {
   if (!mob_tiers)
     mob_tiers = new Map(
-      Object.values(seed_manifest.mobs).map(({ name, role }) => [catalog_key_of(name) ?? '', role?.toLowerCase() ?? null])
+      Object.values(seed_manifest.mobs).map(({ name, role }) => [
+        mob_identity_key(name) ?? '',
+        role?.toLowerCase() ?? null,
+      ])
     )
   return mob_tiers
 }
@@ -106,7 +109,7 @@ export function get_mob_model(mob) {
   const size = 1.4 * wire
   const catalog = get_catalog()
   const by_variant = mob.variant == null ? undefined : catalog[mob.variant]
-  const entry = by_variant ?? catalog[catalog_key_of(mob.name) ?? '']
+  const entry = by_variant ?? catalog[mob_identity_key(mob.name) ?? '']
   const appearance = entry?.appearance ?? null
   const glb = entry?.glb ?? null
   // Asset-host only: an unpublished `mob` class returns null and the caller keeps its honest placeholder state.
@@ -132,7 +135,7 @@ export function get_mob_model(mob) {
 /**
  * The 2D encyclopedia icon URL for a mob, by NAME (the only visual-adjacent fact the /v1 bestiary
  * projection carries — see bestiary_tab.tsx: `get_encyclopedia('mobs')` has no `appearance`/GLB field).
- * SAME catalog lookup as get_mob_model (variant / catalog_key_of(name) → the published mob_catalog), but
+ * SAME catalog lookup as get_mob_model (variant / mob_identity_key(name) → the published mob_catalog), but
  * the FILENAME is the matched CATALOG KEY, never the entry's glb: the two mob namespaces are keyed
  * differently on the asset host — geometry by the GLB basename (`models/mobs/hy_boar.glb`), the icon by
  * the mob key (`mobs/boar.png`). #1013: naming the icon after the glb 404'd every mob, loudest on the
@@ -154,7 +157,7 @@ export function get_mob_model(mob) {
 export function get_mob_icon_url(mob, { hd = false } = {}) {
   const catalog = get_catalog()
   const key =
-    mob.variant != null && catalog[mob.variant] ? mob.variant : (catalog_key_of(mob.name) ?? '')
+    mob.variant != null && catalog[mob.variant] ? mob.variant : (mob_identity_key(mob.name) ?? '')
   if (!catalog[key]?.glb) return null
   return mob_icon_url(`${key}${hd ? '_hd' : ''}.png`)
 }

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Inventory HUD: staged loadout + usable-item bag. Sale-listed rows are hidden at their owner-items source and
-// remain rejected by the UI, reducer, and fresh Accept preflight if stale state ever reaches an equip path.
-
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { slugs, pet_food_slugs, catalog } from 'virtual:item_catalog'
+import { slugs } from 'virtual:item_catalog'
 
 import { xp_progress } from '@aresrpg/sdk/experience'
 
@@ -21,7 +18,6 @@ import { remove_bag_items, add_bag_items, apply_worn_receipt } from '../../../wo
 import { use_toast } from '../../../toast'
 import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
-import { get_template_by_item_type_map, get_template_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { is_lootbox } from '../../../world-shell/lootbox_actions.js'
@@ -32,12 +28,10 @@ import {
   equip_lock_of,
   equip_stage_action,
   equipped_totals,
-  inventory_item_icon,
   is_consumable,
   is_item_listed,
   is_slot_valid,
   invalid_equip_change,
-  item_display_level,
   partition_bag,
   real_equipment_of,
   stage_reducer,
@@ -57,13 +51,10 @@ import {
   is_equip_state_stale,
 } from './lootbox-retry-guard.js'
 import { use_inventory_menus } from './use_inventory_menus.js'
-import { use_onchain_item_tooltip } from '../../../components/entity_display'
 import { is_template_removed } from '../../../components/orphan_item'
-import { seed_manifest } from '../../../content/seed_manifest'
-import { PetFoodHoverRow } from '../../../pages/encyclopedia/pet_food_section'
-import { minted_pet_food_slugs } from '../../../pages/encyclopedia/pet_foods'
 import './hud-panels.css'
 import { game_log } from '../../../core/log.js'
+import { use_inventory_templates } from './use_inventory_templates.jsx'
 
 const TABS = /** @type {const} */ ([
   ['equipment', 'inventory.tab_equipment'],
@@ -71,27 +62,6 @@ const TABS = /** @type {const} */ ([
   ['consumables', 'inventory.tab_consumables'],
   ['resources', 'inventory.tab_resources'],
 ])
-// The D757 pet-food display set: the seed-derived GLOBAL food slugs restricted to what
-// the receipt actually minted — pure one-shot derivation over two bundled constants (pet_foods.ts).
-// Bound HERE (this module already imports virtual:item_catalog, and no bun test reaches it) and handed
-// to the shared hover tooltip as a pre-built node — entity_tooltip must stay virtual-free (bun law).
-const MINTED_FOOD_SLUGS = minted_pet_food_slugs(pet_food_slugs, seed_manifest.items)
-
-// FEED-PET STATS-AT-POWER: pet.effective_stats has no producer on the live read path (grep-
-// verified), so the modal's "syncing" fallback was permanently stuck. Every seed/mainnet pet row authors
-// stats.min === stats.max (verified across the full pet corpus) — that ceiling IS item_stats::stats_max(the
-// on-chain template), so the encyclopedia's own seed-derived catalog already carries what PetPowerCard needs
-// to compute the SAME curve client-side (pet_stats_at_power). object_id -> {stat: ceiling}, template_id-keyed
-// since that's the only pet identity its owner-items view actually returns (no slug on that row).
-const PET_MAX_STATS_BY_TEMPLATE_ID = Object.fromEntries(
-  Object.entries(seed_manifest.items)
-    .filter(([slug]) => catalog[slug]?.stats)
-    .map(([slug, object_id]) => [
-      object_id,
-      Object.fromEntries(Object.entries(catalog[slug].stats).map(([stat, [, max]]) => [stat, max])),
-    ])
-)
-
 /** @returns {import('react').JSX.Element} */
 export function Inventory() {
   const { t } = useTranslation()
@@ -99,76 +69,19 @@ export function Inventory() {
   const items = use_game_state((s) => s.sui.items)
   const characters = use_game_state((s) => s.sui.characters)
   const selected_character_id = use_game_state((s) => s.selected_character_id)
-  const [template_map, set_template_map] = useState(/** @type {Map<string, any>} */ (() => new Map()))
-  const [template_id_map, set_template_id_map] = useState(/** @type {Map<string, any>} */ (() => new Map()))
-  useEffect(() => {
-    let alive = true
-    Promise.all([get_template_by_item_type_map(), get_template_map()]).then(([by_type, by_id]) => {
-      if (!alive) return
-      set_template_map(by_type)
-      set_template_id_map(by_id)
-    })
-    return () => {
-      alive = false
-    }
-  }, [])
-  const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = use_onchain_item_tooltip({
-    pet_food_row: <PetFoodHoverRow food_slugs={MINTED_FOOD_SLUGS} />,
-  })
-  const [rolled_stats_by_id, set_rolled_stats_by_id] = useState(
-    /** @type {Record<string, Record<string, number>|null>} */ ({})
-  )
-  const active_hover_id_ref = useRef(/** @type {string | null} */ (null))
-  const hover_point_ref = useRef({ clientX: 0, clientY: 0 })
-  const paint_item_tooltip = (event, item, rolled_stats) => {
-    // template_id first (bag rows carry it — two cosmetics can share the generic `cloak` item_type,
-    // and the by-type map would join an arbitrary sibling), the by-type join as the fallback.
-    const item_template = template_id_map.get(item.template_id) ?? template_map.get(item.item_type) ?? {}
-    const removed = is_template_removed(item, template_map)
-    on_mouse_enter(event, {
-      ...item_template,
-      item_type: item.item_type,
-      // the SAME resolve the bag cell paints with — the hover card's image id (night-batch #3)
-      icon_slug: inventory_item_icon(item, slugs),
-      // the ONE display-level home (night-batch #1) — never a second `?? level` chain
-      level: item_display_level(item, item_template),
-      removed,
-      owned: true,
-      rolled_stats,
-    })
-  }
-  const on_item_hover = (event, item) => {
-    active_hover_id_ref.current = item.id
-    hover_point_ref.current = { clientX: event.clientX, clientY: event.clientY }
-    paint_item_tooltip(event, item, rolled_stats_by_id[item.id] ?? null)
-    if (!item.id) return
-    void resolve_rolled_stats(item.id)
-      .catch(() => null)
-      .then((rolled_stats) => {
-        set_rolled_stats_by_id((current_stats) => ({ ...current_stats, [item.id]: rolled_stats }))
-        if (active_hover_id_ref.current === item.id)
-          paint_item_tooltip(hover_point_ref.current, item, rolled_stats)
-      })
-  }
-  const on_item_hover_move = (event) => {
-    hover_point_ref.current = { clientX: event.clientX, clientY: event.clientY }
-    on_mouse_move(event)
-  }
-  const [hovered_bag_id, set_hovered_bag_id] = useState(/** @type {string | null} */ (null))
-  const dismiss_item_tooltip = () => {
-    active_hover_id_ref.current = null
-    set_hovered_bag_id(null)
-    on_mouse_leave()
-  }
-  useEffect(() => {
-    if (!hovered_bag_id) return
-    const bag_rows = Array.isArray(items) ? items : []
-    if (!bag_rows.some((i) => i.id === hovered_bag_id)) {
-      active_hover_id_ref.current = null
-      set_hovered_bag_id(null)
-      on_mouse_leave()
-    }
-  }, [items, hovered_bag_id, on_mouse_leave])
+  const {
+    template_map,
+    template_id_map,
+    food_slugs,
+    pet_max_stats_by_template_id,
+    rolled_stats_by_id,
+    set_rolled_stats_by_id,
+    on_item_hover,
+    on_item_hover_move,
+    dismiss_item_tooltip,
+    set_hovered_bag_id,
+    tooltip_element,
+  } = use_inventory_templates(items, slugs)
 
   const [, refresh_retry_guard] = useState(0)
   const {
@@ -663,8 +576,8 @@ export function Inventory() {
         set_pet_menu={set_pet_menu}
         feed_modal={feed_modal}
         set_feed_modal={set_feed_modal}
-        food_slugs={MINTED_FOOD_SLUGS}
-        pet_max_stats={PET_MAX_STATS_BY_TEMPLATE_ID[feed_modal?.pet?.template_id ?? feed_modal?.pet?.template]}
+        food_slugs={food_slugs}
+        pet_max_stats={pet_max_stats_by_template_id[feed_modal?.pet?.template_id ?? feed_modal?.pet?.template]}
         owned={owned}
         character={character}
         crush_menu={crush_menu}

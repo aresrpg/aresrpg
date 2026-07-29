@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect } from 'bun:test'
 
-import { pet_food_rows, minted_pet_food_slugs } from './pet_foods'
+import { live_pet_food_slugs, pet_food_rows, pet_max_stats_by_live_template } from './pet_foods'
 
 // MISSING-ARTIFACT (#117): scripts/lib/item_catalog_transform.mjs is content-pipeline tooling, absent by
 // design in this public repo. Guarded dynamic import; pet_food_rows/minted_pet_food_slugs below are pure,
@@ -88,20 +88,26 @@ describe('pet_food_rows — the encyclopedia join (living /v1 rows -> the food r
   })
 })
 
-describe('minted_pet_food_slugs — the hover-row join (seed receipt -> only MINTED foods count)', () => {
-  const manifest_items = {
-    barley_flour: '0x' + 'a'.repeat(64),
-    tokek_paw: '0x' + 'b'.repeat(64),
-    failed_food: 'not-an-object-id',
-  }
+describe('inventory pet joins — current /v1 identity, never receipt ids', () => {
+  const live_templates = new Map([
+    ['barley_flour', { template_id: '0x' + 'a'.repeat(64), item_type: 'barley_flour' }],
+    ['tokek_paw', { template_id: '0x' + 'b'.repeat(64), item_type: 'tokek_paw' }],
+  ])
 
-  test('keeps only slugs whose receipt id is a real object id', () => {
-    expect(minted_pet_food_slugs(['barley_flour', 'tokek_paw', 'failed_food', 'never_seeded'], manifest_items)).toEqual(
-      ['barley_flour', 'tokek_paw']
-    )
+  test('keeps only food slugs present in the live item-type map', () => {
+    expect(live_pet_food_slugs(['barley_flour', 'tokek_paw', 'never_seeded'], live_templates.keys())).toEqual([
+      'barley_flour',
+      'tokek_paw',
+    ])
   })
 
-  test('honest empty when nothing minted', () => {
-    expect(minted_pet_food_slugs(['x'], {})).toEqual([])
+  test('binds authored stat ceilings to live template ids through stable item_type', () => {
+    const catalog = {
+      barley_flour: { stats: { vitality: [1, 7] } },
+      stale_pet: { stats: { vitality: [1, 99] } },
+    }
+    expect(pet_max_stats_by_live_template(live_templates.values(), catalog)).toEqual({
+      ['0x' + 'a'.repeat(64)]: { vitality: 7 },
+    })
   })
 })

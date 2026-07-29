@@ -70,7 +70,7 @@ export function MobModal({
     )
 
   const built = build_mob(mob, pick.level)
-  const spells = mob_spell_views(mob_corpus_of(mob.id)?.spells)
+  const spells = mob_spell_views(mob_corpus_of(mob.name)?.spells)
   const levels = Array.from({ length: mob.maxLevel - mob.minLevel + 1 }, (_, index) => mob.minLevel + index)
 
   return (

@@ -12,8 +12,6 @@
 // build/serve time by `build_pet_food_slugs` (scripts/lib/item_catalog_transform.mjs) and embedded as
 // `pet_food_slugs` on `virtual:item_catalog` — callers bind it at the call site (the same injection
 // idiom as item_catalog.ts CatalogData), so bun tests recompute live from seed with zero Vite.
-import { is_object_id } from '../../content/object_id'
-
 /** The row shape both surfaces already hold: the encyclopedia's living /v1 items (items_tab joins the
  * seed slug on each row). Extra fields pass through untouched. */
 export interface PetFoodJoinRow {
@@ -35,11 +33,34 @@ export function pet_food_rows<T extends PetFoodJoinRow>(food_slugs: readonly str
 }
 
 /**
- * Hover-row join: the food set restricted to slugs the seed receipt actually MINTED (manifest slug ->
- * on-chain template object id). The inventory hover card has no /v1 encyclopedia list in scope, so the
- * receipt (already bundled — content/seed_manifest) is its liveness oracle; an authored-but-unminted
- * food never inflates the count.
+ * Hover-row join: the food set restricted to item types present in the current live template map.
  */
-export function minted_pet_food_slugs(food_slugs: readonly string[], manifest_items: Record<string, string>): string[] {
-  return food_slugs.filter((slug) => is_object_id(manifest_items[slug]))
+export function live_pet_food_slugs(food_slugs: readonly string[], live_item_types: Iterable<string>): string[] {
+  const live = new Set(live_item_types)
+  return food_slugs.filter((slug) => live.has(slug))
+}
+
+interface LivePetTemplate {
+  template_id?: string
+  item_type?: string
+}
+
+interface PetCatalogRow {
+  stats?: Record<string, readonly [number, number]>
+}
+
+/** Stable item_type joins authored stat ceilings to current-lineage /v1 template ids. */
+export function pet_max_stats_by_live_template(
+  live_templates: Iterable<LivePetTemplate>,
+  catalog: Record<string, PetCatalogRow>
+): Record<string, Record<string, number>> {
+  return Object.fromEntries(
+    [...live_templates].flatMap((template) => {
+      const row = template.item_type ? catalog[template.item_type] : undefined
+      if (!template.template_id || !row?.stats) return []
+      return [
+        [template.template_id, Object.fromEntries(Object.entries(row.stats).map(([stat, [, max]]) => [stat, max]))],
+      ]
+    })
+  )
 }

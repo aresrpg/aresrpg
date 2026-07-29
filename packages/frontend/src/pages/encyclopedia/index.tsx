@@ -10,7 +10,7 @@ import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 
 import { use_content } from './content'
-import { world_corpus_of } from './world_corpus'
+import { bind_world_corpus_to_live, world_corpus_of } from './world_corpus'
 import { ItemsTab } from './items_tab'
 import { BestiaryTab } from './bestiary_tab'
 import { ClassesTab } from './classes_tab'
@@ -116,11 +116,20 @@ function ClassesTabRoute({ classes, is_mobile }: { classes: any[]; is_mobile: bo
 function WorldsTabRoute({ is_mobile }: { is_mobile: boolean }) {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia('worlds', signal), { deps: [] })
+  const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const bound_corpus = bind_world_corpus_to_live(
+    (enc?.worlds ?? []).flatMap((world) => {
+      const corpus = world_corpus_of(world.world_id)
+      return corpus ? [corpus] : []
+    }),
+    enc?.mobs ?? [],
+    enc?.items ?? []
+  )
+  const corpus_by_world = new Map(bound_corpus.worlds.map((world) => [world.id, world]))
   // The live worlds view IS the list (#1467): no build-time id set fences it — that join is frozen into the
   // deployed bundle, so a republish that outran a redeploy blanked the whole tab.
   const worlds: WorldRow[] = (enc?.worlds ?? []).map((w) => {
-    const corpus = world_corpus_of(w.world_id)
+    const corpus = corpus_by_world.get(w.world_id)
     // A world we have no authored knowledge of degrades honestly instead of inventing a name or a band.
     if (!corpus) return { id: w.world_id, name: short_world_id(w.world_id), band: null, biome: w.biome || '' }
     return {

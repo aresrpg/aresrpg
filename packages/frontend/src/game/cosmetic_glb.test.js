@@ -16,7 +16,7 @@ import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
-import { seed_manifest } from '../content/seed_manifest'
+import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 import { reset_model_asset_errors_for_test } from './model_asset_url.js'
@@ -52,7 +52,8 @@ const {
 // freezes into the deployed bundle: a republish left every worn cosmetic unresolved and a receipt-less build
 // rendered none. It reads the live /v1 item view again, the same door every other item-template reader uses.
 test('read_worn_templates indexes the LIVE /v1 item rows, never the bundled seed receipt', async () => {
-  const template_id = seed_manifest.items.solomonk
+  const template_id = encyclopedia_fixture.items.find(({ name }) => name === 'Solomonk Cowl')?.template_id
+  if (!template_id) throw new Error('captured /v1 fixture is missing Solomonk Cowl')
   const rows = [{ template_id, name: 'Solomonk' }]
   const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia').mockImplementation(async (kind) => {
     expect(kind).toBe('items')

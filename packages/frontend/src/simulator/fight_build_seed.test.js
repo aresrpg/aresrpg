@@ -30,7 +30,7 @@ import {
 import { calculate_raw_damage } from '@aresrpg/sim/spell_calculator'
 
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
-import { seed_manifest } from '../content/seed_manifest'
+import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import { item_corpus_from_v1 } from '../pages/encyclopedia/item_corpus'
 
 import { board_of } from './board'
@@ -48,10 +48,10 @@ const WARCLEAVE = CORPUS.find((row) => row.id === 'senshi_warcleave')
 
 /**
  * The captured amulet, through the PRODUCTION corpus door — the same rows `use_item_corpus` hands the page.
- * Its identity is a LIVING template id read out of the seed manifest (the corpus door drops anything else, and
- * a chain id has no business being typed into a tracked file); everything the fold reads is the capture.
+ * Its identity is paired with a template id from the captured live `/v1` response; everything the fold reads
+ * is the captured item wire.
  */
-const [LIVING_ID] = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
+const [LIVING_ID] = encyclopedia_fixture.items.map(({ template_id }) => template_id)
 const [AMULET] = item_corpus_from_v1([{ ...ITEM_WIRE.row, template_id: LIVING_ID }])
 
 /**

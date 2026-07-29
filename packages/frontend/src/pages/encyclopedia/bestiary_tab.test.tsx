@@ -13,7 +13,7 @@ import { I18nextProvider } from 'react-i18next'
 
 import en from '../../i18n/locales/en.json'
 import { MobDetailView } from '../../components/mob_detail_view'
-import { seed_manifest } from '../../content/seed_manifest'
+import { get_mob_tier, is_archi_tier } from '../../game/data/mobs.js'
 import { render_group_card } from '../../game/spawn_card'
 import { compose_group_card } from '../../game/spawn_compose'
 import type { RpcEncyclopediaMob } from '../../rpc/views'
@@ -125,19 +125,11 @@ test('MobDetailView renders the DECODED resist signs, never the raw wire int', (
 })
 
 test('an archi-tier graded mob composes the world badge and encyclopedia marker', () => {
-  const ruled_archi = Object.values(seed_manifest.mobs).find(({ role }) => role === 'archi')
-  if (!ruled_archi) throw new Error('the ruled mob model must contain an archi-tier fixture')
-  const [encyclopedia_archi] = bestiary_mobs_from_v1([
-    {
-      template_id: ruled_archi.id,
-      name: ruled_archi.name ?? 'Archi fixture',
-      min_level: 8,
-      max_level: 20,
-      base_hp: 90,
-      element: 2,
-      drops: [],
-    },
-  ])
+  const ruled_archi = (encyclopedia_fixture.mobs as RpcEncyclopediaMob[]).find((mob) =>
+    is_archi_tier(get_mob_tier(mob.name))
+  )
+  if (!ruled_archi) throw new Error('the captured live /v1 fixture must contain an authored archi mob')
+  const [encyclopedia_archi] = bestiary_mobs_from_v1([ruled_archi])
   const graded_archi = {
     ...encyclopedia_archi,
     min_level: 8,

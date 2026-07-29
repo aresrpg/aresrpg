@@ -21,9 +21,9 @@
 // template_id/name/levels/element/drops — never the world), so the world->roster relation simply does
 // not exist on /v1 and cannot be joined client-side from it. Rather than grow a new indexer projection
 // (packages/rpc image rebuild + repush) for facts that only ever change when we re-seed, the join is
-// computed from the authored blob and keyed by the CURRENT lineage's ids from the seed receipt. The blob
-// carries NO object ids (deliberately, #196): the app joins authored rows to the live lineage via its own
-// seed_manifest receipt, so a republish never stales the blob. There is no second checked-in ID projection.
+// computed from the authored blob and keyed by stable authored names/slugs. The blob carries NO object ids
+// (deliberately, #196): clickable surfaces bind those stable keys to the CURRENT `/v1` template ids through
+// `bind_world_corpus_to_live`, so a republish never stales the blob or a checked-in ID projection.
 //
 // The chain stays the source of truth for WHICH worlds are live: the worlds tab lists /v1's rows and
 // joins THIS for their display knowledge (a /v1 world absent here still renders, honestly degraded).
@@ -33,11 +33,13 @@ import { is_object_id } from '../../content/object_id'
 import { seed_manifest } from '../../content/seed_manifest'
 import jobs_data from '../../data/jobs.json'
 import { load_corpus_version, versioned_corpus_url } from '../../game/data/corpus_asset.js'
+import { mob_identity_key } from '../../game/data/mobs.js'
+import { normalize_search } from '../../utils/search'
 
 const { JOB_MASTER_JOBS } = jobs_data
 
 export interface CorpusMob {
-  /** on-chain mob TEMPLATE id — the key the bestiary detail route matches on */
+  /** republish-stable authored mob key; clickable surfaces bind it to a live /v1 template id */
   id: string
   name: string
   element: string | null
@@ -60,7 +62,7 @@ export interface CorpusMob {
 }
 
 export interface CorpusResource {
-  /** on-chain item TEMPLATE id — the key the items detail route matches on */
+  /** republish-stable authored resource slug; clickable surfaces bind its name to a live /v1 template id */
   id: string
   slug: string
   name: string
@@ -81,9 +83,8 @@ export interface CorpusWorld {
   biome: string
   mobs: CorpusMob[]
   resources: CorpusResource[]
-  /** on-chain TEMPLATE id of this world's dungeon entry key (world.json `dungeonKey` slug → seed_manifest.items) —
-   *  the id the encyclopedia items detail route matches on, so the dungeon modal can deep-link the key name. */
-  dungeon_key_template_id?: string
+  /** republish-stable authored slug of this world's dungeon entry key */
+  dungeon_key_slug?: string
 }
 
 /** One authored mob spell EFFECT row — the exact JSON the seeder minted into the on-chain
@@ -117,7 +118,7 @@ export interface CorpusMobSpell {
   crit_effects?: CorpusMobSpellEffect[]
 }
 
-/** Per-TEMPLATE authored facts the §14 index deliberately does not decode (xp / the spell kit live in
+/** Per-mob-name authored facts the §14 index deliberately does not decode (xp / the spell kit live in
  * the MobTemplate's nested tail — see bestiary_tab.tsx's header). Same corpus-join justification as the
  * world knowledge above: these values were minted VERBATIM from these rows (same generation, id-gated),
  * so displaying them never drifts from chain truth. */
@@ -170,7 +171,7 @@ interface AuthoredWorld {
   band?: number[]
   biome?: string
   resources?: AuthoredWorldResource[]
-  /** the dungeon entry-key item SLUG (resolved to its minted template id via seed_manifest.items). */
+  /** the dungeon entry-key item slug */
   dungeonKey?: string
 }
 
@@ -210,9 +211,7 @@ type ResourceMeta = { name: string; level: number; i18n_json?: string }
  *  roster's gatherables and the JOBS ladders read; absent from the blob ⇒ an empty index (inert corpus). */
 function index_resources_by_slug(blob: WorldCorpusBlob): Map<string, ResourceMeta> {
   const by_slug = new Map<string, ResourceMeta>()
-  for (const { wid } of seed_manifest.worlds) {
-    const entry = blob[wid]
-    if (!entry) continue
+  for (const entry of Object.values(blob)) {
     for (const resource of entry.resources) {
       if (!resource.slug || by_slug.has(resource.slug)) continue
       const names: Record<string, string> = {}
@@ -230,20 +229,22 @@ function index_resources_by_slug(blob: WorldCorpusBlob): Map<string, ResourceMet
   return by_slug
 }
 
-/** One world's roster + the xp/spell facts to accumulate. A mob resolves its template id from the seed
- *  receipt (unresolved keys drop out); PROTECTORS keep a facts row (so the bestiary can exclude them) but
+/** One world's roster + the xp/spell facts to accumulate. A mob uses its stable authored key; PROTECTORS
+ *  keep a facts row (so the bestiary can exclude them) but
  *  never join a roster. `facts` is returned for the caller to apply FIRST-row-wins across worlds. */
 function project_roster(authored_mobs: AuthoredMob[]): { roster: CorpusMob[]; facts: Array<[string, CorpusMobFacts]> } {
   const roster: CorpusMob[] = []
   const facts: Array<[string, CorpusMobFacts]> = []
   for (const mob of authored_mobs) {
-    const id = mob.key ? seed_manifest.mobs[mob.key]?.id : undefined
-    if (!is_object_id(id)) continue
-    facts.push([id, { xp: mob.xp ?? null, spells: mob.spells ?? [], role: mob.role ?? null }])
+    const name = mob.name ?? mob.key ?? ''
+    const id = mob.key ?? mob_identity_key(name)
+    const name_key = mob_identity_key(name)
+    if (!id || !name_key) continue
+    facts.push([name_key, { xp: mob.xp ?? null, spells: mob.spells ?? [], role: mob.role ?? null }])
     if (!is_listed_mob_role(mob.role)) continue
     roster.push({
       id,
-      name: mob.name ?? mob.key ?? '',
+      name,
       element: mob.element ?? null,
       role: mob.role ?? null,
       minLevel: mob.minLevel ?? 0,
@@ -259,19 +260,17 @@ function project_roster(authored_mobs: AuthoredMob[]): { roster: CorpusMob[]; fa
   return { roster, facts }
 }
 
-/** One world's gatherable placements → live item ids + display metadata (unresolved slugs drop out
- *  honestly). Tier-then-job sorted, the WORLDS-tab order. */
+/** One world's gatherable placements → stable slugs + display metadata. Tier-then-job sorted. */
 function project_gatherables(
   authored_world: AuthoredWorld,
   resource_by_slug: Map<string, ResourceMeta>
 ): CorpusResource[] {
   const resources: CorpusResource[] = []
   for (const resource of authored_world.resources ?? []) {
-    const id = resource.slug ? seed_manifest.items[resource.slug] : undefined
     const metadata = resource.slug ? resource_by_slug.get(resource.slug) : undefined
-    if (!resource.slug || !is_object_id(id) || !metadata) continue
+    if (!resource.slug || !metadata) continue
     resources.push({
-      id,
+      id: resource.slug,
       slug: resource.slug,
       name: metadata.name,
       ...(metadata.i18n_json ? { i18nJson: metadata.i18n_json } : {}),
@@ -284,7 +283,7 @@ function project_gatherables(
   return resources
 }
 
-/** Invert worlds by a template-id selector — id → every world that places it (each world at most once by
+/** Invert worlds by a stable-key selector — key → every world that places it (each world at most once by
  *  construction). Powers the bestiary/items "FOUND IN" lists (world_corpus_for_mob / _for_resource). */
 function group_worlds_by(worlds: CorpusWorld[], ids_of: (world: CorpusWorld) => string[]): Map<string, CorpusWorld[]> {
   const map = new Map<string, CorpusWorld[]>()
@@ -319,7 +318,7 @@ function build_gather_ladders(worlds: CorpusWorld[]): Record<string, GatherRow[]
 }
 
 /**
- * PURE projection: the published blob (+ the current seed receipt for ids) → the derived corpus the UI
+ * PURE projection: the published blob (+ current world object ids) → the stable-keyed corpus the UI
  * reads. Worlds present in the seed manifest but absent from the blob are SKIPPED (the migration / empty
  * state degrades to inert). The per-world object-id guard stays HARD — a seeded-but-malformed world is a
  * real data bug, not the absence case. Same math the build-time glob fed; only the source moved.
@@ -327,7 +326,7 @@ function build_gather_ladders(worlds: CorpusWorld[]): Record<string, GatherRow[]
 function build_world_corpus(blob: WorldCorpusBlob): Derived {
   const resource_by_slug = index_resources_by_slug(blob)
   const worlds: CorpusWorld[] = []
-  // template id → authored xp/spell facts, FIRST row wins (the seeder mints one template per key; kits are
+  // normalized mob name → authored xp/spell facts, FIRST row wins (kits are
   // authored identically across placements).
   const mob_facts = new Map<string, CorpusMobFacts>()
   for (const world of seed_manifest.worlds) {
@@ -335,7 +334,7 @@ function build_world_corpus(blob: WorldCorpusBlob): Derived {
     const entry = blob[world.wid]
     if (!entry) continue
     const { roster, facts } = project_roster(entry.mobs)
-    for (const [id, row] of facts) if (!mob_facts.has(id)) mob_facts.set(id, row)
+    for (const [name_key, row] of facts) if (!mob_facts.has(name_key)) mob_facts.set(name_key, row)
     const authored_world = entry.world
     const band =
       Array.isArray(authored_world.band) && authored_world.band.length === 2
@@ -349,16 +348,15 @@ function build_world_corpus(blob: WorldCorpusBlob): Derived {
       biome: authored_world.biome ?? '',
       mobs: roster,
       resources: project_gatherables(authored_world, resource_by_slug),
-      // Same slug→template resolution the gatherables use: the authored key slug → its minted template id.
-      dungeon_key_template_id: authored_world.dungeonKey ? seed_manifest.items[authored_world.dungeonKey] : undefined,
+      dungeon_key_slug: authored_world.dungeonKey,
     })
   }
   worlds.sort((left, right) => (left.band?.[0] ?? 0) - (right.band?.[0] ?? 0))
   return {
     worlds,
     by_id: new Map(worlds.map((w) => [w.id, w])),
-    by_mob_id: group_worlds_by(worlds, (w) => w.mobs.map((m) => m.id)),
-    by_resource_id: group_worlds_by(worlds, (w) => w.resources.map((r) => r.id)),
+    by_mob_id: group_worlds_by(worlds, (w) => w.mobs.map((m) => mob_identity_key(m.name) ?? '')),
+    by_resource_id: group_worlds_by(worlds, (w) => w.resources.map((r) => normalize_search(r.name))),
     mob_facts,
     gather_ladders: build_gather_ladders(worlds),
   }
@@ -466,19 +464,75 @@ export const has_world_corpus = (): boolean => corpus().worlds.length > 0
 export const world_corpus_of = (world_id: string | null | undefined): CorpusWorld | undefined =>
   corpus().by_id.get(world_id ?? '')
 
-/** Offline-authored spawn provenance for a live mob template id; /v1 mob rows do not project a world field. */
-export const world_corpus_for_mob = (mob_template_id: string | null | undefined): readonly CorpusWorld[] =>
-  corpus().by_mob_id.get(mob_template_id ?? '') ?? []
+/** Offline-authored spawn provenance for a mob name; /v1 mob rows do not project a world field. */
+export const world_corpus_for_mob = (mob_name: string | null | undefined): readonly CorpusWorld[] =>
+  corpus().by_mob_id.get(mob_identity_key(mob_name) ?? '') ?? []
 
-/** Offline-authored placement provenance for a live gatherable item template id — the items-tab
+/** Offline-authored placement provenance for a live gatherable item name — the items-tab
  * "FOUND IN" list (night-batch #8), mirroring the mob idiom above. Empty for non-gatherables. */
-export const world_corpus_for_resource = (item_template_id: string | null | undefined): readonly CorpusWorld[] =>
-  corpus().by_resource_id.get(item_template_id ?? '') ?? []
+export const world_corpus_for_resource = (item_name: string | null | undefined): readonly CorpusWorld[] =>
+  corpus().by_resource_id.get(normalize_search(item_name ?? '')) ?? []
 
-/** Authored xp/spell facts for a live mob template id (minted verbatim from these rows — see
+/** Authored xp/spell facts for a stable mob name (minted verbatim from these rows — see
  * CorpusMobFacts), or undefined => the caller renders an honest gap. */
-export const mob_corpus_of = (mob_template_id: string | null | undefined): CorpusMobFacts | undefined =>
-  corpus().mob_facts.get(mob_template_id ?? '')
+export const mob_corpus_of = (mob_name: string | null | undefined): CorpusMobFacts | undefined =>
+  corpus().mob_facts.get(mob_identity_key(mob_name) ?? '')
+
+interface LiveTemplate {
+  template_id: string
+  name: string | null
+}
+
+interface CorpusMeasurement {
+  mobs: { matched: number; total: number }
+  resources: { matched: number; total: number }
+}
+
+/** The ONE world-corpus boundary where stable authored identity becomes current-lineage /v1 ids. */
+export function bind_world_corpus_to_live(
+  worlds: readonly CorpusWorld[],
+  live_mobs: readonly LiveTemplate[],
+  live_items: readonly LiveTemplate[]
+): { worlds: CorpusWorld[]; measurement: CorpusMeasurement } {
+  const mob_by_name = new Map(
+    live_mobs
+      .filter((row) => is_object_id(row.template_id))
+      .map((row) => [mob_identity_key(row.name) ?? '', row.template_id])
+  )
+  const item_by_name = new Map(
+    live_items
+      .filter((row) => is_object_id(row.template_id))
+      .map((row) => [normalize_search(row.name ?? ''), row.template_id])
+  )
+  const authored_mobs = new Set(worlds.flatMap((world) => world.mobs.map((mob) => mob_identity_key(mob.name) ?? '')))
+  const authored_resources = new Set(
+    worlds.flatMap((world) => world.resources.map((resource) => normalize_search(resource.name)))
+  )
+  const bound_worlds = worlds.map((world) => ({
+    ...world,
+    mobs: world.mobs.flatMap((mob) => {
+      const id = mob_by_name.get(mob_identity_key(mob.name) ?? '')
+      return id ? [{ ...mob, id }] : []
+    }),
+    resources: world.resources.flatMap((resource) => {
+      const id = item_by_name.get(normalize_search(resource.name))
+      return id ? [{ ...resource, id }] : []
+    }),
+  }))
+  return {
+    worlds: bound_worlds,
+    measurement: {
+      mobs: {
+        matched: live_mobs.filter((row) => authored_mobs.has(mob_identity_key(row.name) ?? '')).length,
+        total: live_mobs.length,
+      },
+      resources: {
+        matched: live_items.filter((row) => authored_resources.has(normalize_search(row.name ?? ''))).length,
+        total: live_items.length,
+      },
+    },
+  }
+}
 
 /** The gather progression for a job id ('FARMER'|'HERBALIST'|'MINER'), tier-sorted and deduped; [] until
  * the blob loads or for an unknown/absent job id. */

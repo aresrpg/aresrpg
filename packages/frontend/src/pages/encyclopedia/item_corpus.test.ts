@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { seed_manifest } from '../../content/seed_manifest'
+import encyclopedia_fixture from '../../rpc/fixtures/encyclopedia.json'
 import type { RpcEncyclopediaItem } from '../../rpc/views'
 import { items_for_slot } from '../../game/screens/hud/simulator-equip.js'
 
@@ -18,7 +18,7 @@ import { item_corpus_from_v1 } from './item_corpus'
 
 // Fixtures speak REAL seeded template ids so the rows match the shapes /v1 actually serves (no id whitelist
 // gates them any more — #1467). Borrow the first few the receipt pins.
-const LIVING_IDS = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
+const LIVING_IDS = encyclopedia_fixture.items.map(({ template_id }) => template_id)
 
 // The /v1 stat projection serves the on-chain StatsMin/MaxKey ranges BIASED at 32768 (a stat is signed, the
 // chain field is not), so a fixture has to speak that wire — writing plain 3/9 here would test the decoder

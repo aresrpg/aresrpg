@@ -19,24 +19,43 @@ import { make_seat } from './drive.mjs'
  * URL shape is `asset_url`'s own (`<aggregator>/data/<class>.json`), read off the manifest the app
  * boots from — never a second hardcoded host.
  */
-export const pick_mob = async ({ frontend, repo, scenario }) => {
-  const manifest = JSON.parse(readFileSync(resolve(frontend, 'public/asset_manifest.json'), 'utf8'))
-  const pin = JSON.parse(readFileSync(resolve(repo, 'packages/move/scripts/out/seed_manifest.json'), 'utf8'))
-  const response = await fetch(`${manifest.aggregator}/data/world_corpus.json`)
-  if (!response.ok)
-    throw new Error(`world corpus unreachable (HTTP ${response.status}) — the bot needs published content`)
-  const blob = await response.json()
-  const rows = Object.values(blob)
+const mob_name_key = (name) =>
+  String(name ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+/** Published authored rows that still exist in the current /v1 lineage, joined by stable mob name. */
+export const join_live_mobs = (blob, live_mobs) => {
+  const live_names = new Set(live_mobs.map((mob) => mob_name_key(mob.name)).filter(Boolean))
+  return Object.values(blob)
     .flatMap((world) => world.mobs ?? [])
-    // `is_listed_mob_role` — protectors guard gatherables and are not roster mobs.
-    .filter((mob) => mob.role !== 'protector' && pin.mobs?.[mob.key]?.id)
-    .map((mob) => ({
-      key: mob.key,
-      id: pin.mobs[mob.key].id,
-      name: pin.mobs[mob.key].name ?? mob.key,
-      level: Number(mob.minLevel ?? mob.level ?? 1),
-    }))
+    .filter((mob) => mob.role !== 'protector' && live_names.has(mob_name_key(mob.name ?? mob.key)))
+    .map((mob) => {
+      const key = mob.key ?? mob_name_key(mob.name)
+      return {
+        key,
+        // The simulator corpus is itself stable-keyed; `template_id` is its persisted field name, not a Sui id.
+        id: key,
+        name: mob.name ?? key,
+        level: Number(mob.minLevel ?? mob.level ?? 1),
+      }
+    })
     .sort((a, b) => a.level - b.level || a.key.localeCompare(b.key))
+}
+
+export const pick_mob = async ({ frontend, scenario }) => {
+  const manifest = JSON.parse(readFileSync(resolve(frontend, 'public/asset_manifest.json'), 'utf8'))
+  const [corpus_response, live_response] = await Promise.all([
+    fetch(`${manifest.aggregator}/data/world_corpus.json`),
+    fetch(`${process.env.VITE_RPC_URL ?? 'https://rpc.aresrpg.world'}/v1/encyclopedia?kind=mobs`),
+  ])
+  if (!corpus_response.ok)
+    throw new Error(`world corpus unreachable (HTTP ${corpus_response.status}) — the bot needs published content`)
+  if (!live_response.ok)
+    throw new Error(`live mob view unreachable (HTTP ${live_response.status}) — the bot needs current identity`)
+  const rows = join_live_mobs(await corpus_response.json(), (await live_response.json()).mobs ?? [])
   const mob = rows[scenario.mob_rank]
   if (!mob)
     throw new Error(

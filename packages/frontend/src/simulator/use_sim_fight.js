@@ -71,7 +71,7 @@ export function use_sim_fight() {
       board: board_of(state.seed, state.anchor_nonce),
       item_by_id: by_id,
       mob_by_id,
-      mob_spells_of: (id) => mob_corpus_of(id)?.spells ?? [],
+      mob_spells_of: (id) => mob_corpus_of(mob_by_id.get(id)?.name)?.spells ?? [],
     })
     if (!built.ok) return set_blocked(built.reason)
     // A chunk that will not load is a REASON, not a dead button (`simulator.fight_blocked_stale_build`).

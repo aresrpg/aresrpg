@@ -71,7 +71,7 @@ export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null
     // separately republished seed-manifest ids: a republish gives every MobTemplate a new object id, and
     // that cross-artifact equality check turned a populated 374-row response into the honest-empty screen.
     // The authored corpus remains optional enrichment (role/world/xp/spells), keyed when the ids converge.
-    .filter((m) => is_listed_mob_role(mob_corpus_of(m.template_id)?.role))
+    .filter((m) => is_listed_mob_role(mob_corpus_of(m.name)?.role))
     .map((m) => {
       const tier = get_mob_tier(m.name)
       return {
@@ -91,7 +91,7 @@ export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null
         tier,
         archi: is_archi_tier(tier),
         drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
-        found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
+        found_in: world_corpus_for_mob(m.name).map(({ id, name, biome }) => ({ id, name, biome })),
         createdAt: undefined as number | undefined,
       }
     })
@@ -283,7 +283,7 @@ function BestiaryTab({
   // Authored per-template facts (xp + the spell kit) — minted VERBATIM from these corpus rows and
   // id-gated to the living generation (world_corpus.ts CorpusMobFacts), so nothing here can drift from
   // chain truth. A missing row degrades honestly: no xp box, no spells section.
-  const corpus_facts = useMemo(() => (selected_mob ? mob_corpus_of(selected_mob.id) : undefined), [selected_mob])
+  const corpus_facts = useMemo(() => (selected_mob ? mob_corpus_of(selected_mob.icon_name) : undefined), [selected_mob])
   const spell_views = useMemo(() => mob_spell_views(corpus_facts?.spells), [corpus_facts])
 
   const has_active_filters = search !== '' || element_filters.size > 0 || sort !== 'level_asc' || view_mode !== 'all'

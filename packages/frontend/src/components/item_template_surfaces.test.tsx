@@ -22,7 +22,7 @@ import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 
 import en from '../i18n/locales/en.json'
-import { seed_manifest } from '../content/seed_manifest'
+import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import type { ItemInfo } from '../types/chain'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
@@ -41,7 +41,7 @@ void test_i18n.init({
 
 // The fixtures speak REAL seeded template ids so the surfaces are exercised on the shapes they actually
 // render (no id whitelist gates them any more — #1467: the live rows are the corpus).
-const LIVING_IDS = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
+const LIVING_IDS = encyclopedia_fixture.items.map(({ template_id }) => template_id)
 
 // The /v1 stat projection serves the on-chain StatsMin/MaxKey ranges BIASED at 32768 (a stat is signed, the
 // chain field is not) — writing plain 3/9 here would test the decoder against itself.

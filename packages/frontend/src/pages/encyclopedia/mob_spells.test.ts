@@ -3,12 +3,11 @@
 import { describe, expect, test } from 'bun:test'
 import i18next from 'i18next'
 
-import { seed_manifest } from '../../content/seed_manifest'
 import { seed_effect_parts } from '../../game/screens/hud/seed-effect-line.js'
 import en from '../../i18n/locales/en.json'
 
 import { mob_spell_views } from './mob_spells'
-import { mob_corpus_of, has_world_corpus } from './world_corpus'
+import { WORLD_CORPUS, mob_corpus_of, has_world_corpus } from './world_corpus'
 
 const EN = i18next.createInstance()
 await EN.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
@@ -36,7 +35,7 @@ const OP_TO_KIND: Record<string, string> = {
   dispel: 'DISPEL',
 }
 
-const living_template_ids = Object.values(seed_manifest.mobs).map(({ id }) => id)
+const living_mob_names = () => [...new Set(WORLD_CORPUS.worlds.flatMap((world) => world.mobs.map((mob) => mob.name)))]
 
 // RUNTIME BLOB (#196): the world corpus loads from a published asset-host blob at boot (load_world_corpus),
 // never fetched in a headless unit test — world_corpus's mob facts degrade to empty here (issue #106).
@@ -44,10 +43,11 @@ describe('mob corpus facts (xp + spell kit)', () => {
   test.skipIf(!has_world_corpus())(
     'every living mob template resolves authored facts with a real xp and a non-empty kit',
     () => {
-      expect(living_template_ids.length).toBeGreaterThan(0)
-      for (const id of living_template_ids) {
-        const facts = mob_corpus_of(id)
-        if (!facts) throw new Error(`no authored facts for living template ${id}`)
+      const names = living_mob_names()
+      expect(names.length).toBeGreaterThan(0)
+      for (const name of names) {
+        const facts = mob_corpus_of(name)
+        if (!facts) throw new Error(`no authored facts for mob ${name}`)
         expect(facts.xp).toBeGreaterThan(0)
         expect(facts.spells.length).toBeGreaterThan(0)
       }
@@ -65,8 +65,8 @@ describe('mob spell decode', () => {
     'decodes the whole live corpus: kinds match the authored op pairing, wording never leaks a canary or a raw key',
     () => {
       let effects_checked = 0
-      for (const id of living_template_ids) {
-        const facts = mob_corpus_of(id)
+      for (const name of living_mob_names()) {
+        const facts = mob_corpus_of(name)
         const views = mob_spell_views(facts?.spells)
         expect(views.length).toBeGreaterThan(0)
         for (const [spell_index, view] of views.entries()) {
@@ -76,7 +76,7 @@ describe('mob spell decode', () => {
             effects_checked += 1
             const authored = facts!.spells[spell_index].effects![effect_index]
             const expected_kind = OP_TO_KIND[authored.op ?? '']
-            if (!expected_kind) throw new Error(`unmapped authored op '${authored.op}' on template ${id}`)
+            if (!expected_kind) throw new Error(`unmapped authored op '${authored.op}' on mob ${name}`)
             expect(fx.kind).toBe(expected_kind)
             const parts = seed_effect_parts(t as never, fx)
             const line = `${parts.pre}${parts.value ?? ''}${parts.post}${parts.meta ?? ''}`

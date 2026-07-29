@@ -27,7 +27,6 @@ import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { T62_WORLDS } from '../../../../chain/deployment'
 import { as_one_toast } from '../../../../world-shell/dungeon_actions.js'
 import { PreFightAllowanceHint } from '../../../../components/prefight_allowance_hint'
-import { world_corpus_of } from '../../../../pages/encyclopedia/world_corpus'
 import { EncyclopediaLink } from '../../../../pages/encyclopedia/EncyclopediaLink'
 import { ItemIcon } from '../ItemIcon.jsx'
 
@@ -77,10 +76,9 @@ export function DungeonsModal() {
   const key_items = (Array.isArray(items) ? items : []).filter((i) => i.item_category === ITEM_CATEGORY.KEY)
   const keys = key_items.reduce((n, i) => n + (i.amount > 1 ? i.amount : 1), 0)
   const key_name = t('dungeons.key_name', { world: WORLD.label })
-  // The key name deep-links to its encyclopedia item page. The template id resolves from the
-  // authored world corpus (world.json `dungeonKey` slug → minted template id) — no fetch, no chain read, works
-  // even in the no-key branch below. null (unknown key) → EncyclopediaLink degrades to plain text.
-  const key_template_id = world_corpus_of(WORLD.id)?.dungeon_key_template_id ?? null
+  // A held key carries the CURRENT lineage's live template id. With no held row the link degrades to text;
+  // a deployment receipt id would be stale after a republish.
+  const key_template_id = key_items[0]?.template_id ?? key_items[0]?.template ?? null
 
   const can_enter = keys > 0 && !!selected_character_id && !busy
   // ENTER resolves the key AND its kiosk from ONE read (create_dungeon_as_leader → key_candidates +

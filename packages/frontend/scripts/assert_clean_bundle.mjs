@@ -98,13 +98,10 @@ function seed_manifest_problem(dist_files) {
   } catch {
     return `deployment-pin manifest missing/unreadable (${rel}) — the build inlines it; without it the client boots with EMPTY content (encyclopedia, shop fence, spell rows). Commit the manifest, then rebuild.`
   }
-  const ids = [...Object.values(manifest.items ?? {}), ...(manifest.worlds ?? []).map((world) => world?.id)].filter(
-    (value) => typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)
-  )
-  if (ids.length === 0) return `the manifest at ${rel} carries no on-chain object ids (empty/degenerate).`
-  const [sample_id] = ids
-  if (!dist_files.some((f) => readFileSync(f, 'utf8').includes(sample_id)))
-    return `the manifest did NOT resolve into the shipped bundle (sample id ${sample_id} absent from every dist file) — the build inlined an empty manifest. Ensure ${rel} ships, then rebuild.`
+  const [sample_key] = Object.keys(manifest.items ?? {})
+  if (!sample_key) return `the manifest at ${rel} carries no stable item keys (empty/degenerate).`
+  if (!dist_files.some((f) => readFileSync(f, 'utf8').includes(sample_key)))
+    return `the manifest did NOT resolve into the shipped bundle (stable item key ${sample_key} absent from every dist file) — the build inlined an empty manifest. Ensure ${rel} ships, then rebuild.`
   return ''
 }
 

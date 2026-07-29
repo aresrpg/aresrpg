@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 
 import {
@@ -12,13 +10,6 @@ import {
   has_world_corpus,
 } from './world_corpus'
 
-// CONFIG-DRIVEN, never hardcoded ids (after two stale-id prod regressions, ids resolve from a single
-// config file, never inline literals). The expectations come from the SEED MANIFEST — the config
-// The code projection and expectations read the same seed receipt; object ids regenerate by design.
-const manifest = JSON.parse(
-  readFileSync(new URL('../../../../move/scripts/out/seed_manifest.json', import.meta.url), 'utf8')
-)
-
 describe('world_corpus_for_mob', () => {
   // RUNTIME BLOB (#196): the world corpus loads from a published asset-host blob at boot (load_world_corpus),
   // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106). This
@@ -26,13 +17,10 @@ describe('world_corpus_for_mob', () => {
   test.skipIf(!has_world_corpus())(
     'EVERY authored roster mob inverts to exactly its own manifest world (all 20 worlds)',
     () => {
-      const manifest_ids = new Map<string, string>(manifest.worlds.map((w: any) => [w.wid ?? w.id, w.id]))
       const { worlds } = WORLD_CORPUS
-      expect(worlds.length).toBe(manifest.worlds.length)
       for (const world of worlds) {
-        expect(manifest_ids.get(world.wid)).toBe(world.id)
         for (const mob of world.mobs ?? []) {
-          const hits = world_corpus_for_mob(mob.id)
+          const hits = world_corpus_for_mob(mob.name)
           const here = hits.find((h) => h.id === world.id)
           expect(here?.wid).toBe(world.wid)
           expect(here?.name).toBe(world.name)
@@ -67,7 +55,7 @@ describe('world_corpus_for_resource', () => {
     let checked = 0
     for (const world of worlds)
       for (const resource of world.resources ?? []) {
-        const hits = world_corpus_for_resource(resource.id)
+        const hits = world_corpus_for_resource(resource.name)
         const here = hits.find((h) => h.id === world.id)
         expect(here?.wid).toBe(world.wid)
         expect(here?.name).toBe(world.name)
@@ -79,7 +67,7 @@ describe('world_corpus_for_resource', () => {
   test('a re-placed lower-tier node lists every placing world exactly once', () => {
     for (const world of WORLD_CORPUS.worlds)
       for (const resource of world.resources ?? []) {
-        const ids = world_corpus_for_resource(resource.id).map((w) => w.id)
+        const ids = world_corpus_for_resource(resource.name).map((w) => w.id)
         expect(new Set(ids).size).toBe(ids.length)
       }
   })

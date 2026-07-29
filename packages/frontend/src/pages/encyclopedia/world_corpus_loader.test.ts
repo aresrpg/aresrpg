@@ -18,6 +18,7 @@ import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 
 import {
   WORLD_CORPUS,
+  bind_world_corpus_to_live,
   gather_ladder_of,
   has_world_corpus,
   load_world_corpus,
@@ -28,6 +29,7 @@ import {
   world_corpus_for_resource,
   type WorldCorpusBlob,
 } from './world_corpus'
+import encyclopedia_fixture from '../../rpc/fixtures/encyclopedia.json'
 import fixture from './world_corpus.fixture.json'
 
 afterEach(() => set_world_corpus_for_test()) // reset module state (pristine, retryable) between tests
@@ -76,18 +78,17 @@ describe('world corpus runtime loader (#196)', () => {
       for (const mob of world.mobs) {
         roster += 1
         expect(mob.role).not.toBe('protector') // protectors are excluded from every roster
-        expect(world_corpus_for_mob(mob.id).some((w) => w.id === world.id)).toBe(true)
-        const facts = mob_corpus_of(mob.id)
-        expect(facts?.spells).toBeDefined() // authored xp/spell facts resolve for a roster template id
+        expect(world_corpus_for_mob(mob.name).some((w) => w.id === world.id)).toBe(true)
+        const facts = mob_corpus_of(mob.name)
+        expect(facts?.spells).toBeDefined()
       }
       // every gatherable inverts back to this world (items-tab "found in")
       for (const resource of world.resources) {
         gatherables += 1
-        expect(resource.id).toMatch(/^0x[0-9a-fA-F]{64}$/)
-        expect(world_corpus_for_resource(resource.id).some((w) => w.id === world.id)).toBe(true)
+        expect(resource.id).toBe(resource.slug)
+        expect(world_corpus_for_resource(resource.name).some((w) => w.id === world.id)).toBe(true)
       }
-      // the dungeon-key slug resolved to a minted template id (DungeonsModal deep-link, no fetch)
-      expect(world.dungeon_key_template_id).toMatch(/^0x[0-9a-fA-F]{64}$/)
+      expect(world.dungeon_key_slug).toBeTruthy()
     }
     expect(roster).toBeGreaterThan(0)
     expect(gatherables).toBeGreaterThan(0)
@@ -96,6 +97,20 @@ describe('world corpus runtime loader (#196)', () => {
     const farmer = gather_ladder_of('FARMER')
     expect(farmer.length).toBeGreaterThan(0)
     for (const row of farmer) expect(row.xp).toBe(10 + Math.floor(row.level / 2))
+  })
+
+  test('stable authored names bind to the captured live /v1 lineage, never receipt template ids', () => {
+    set_world_corpus_for_test(fixture as WorldCorpusBlob)
+    const bound = bind_world_corpus_to_live(WORLD_CORPUS.worlds, encyclopedia_fixture.mobs, encyclopedia_fixture.items)
+
+    expect(bound.measurement).toEqual({
+      mobs: { matched: 6, total: 374 },
+      resources: { matched: 6, total: 1839 },
+    })
+    expect(bound.worlds.flatMap((world) => world.mobs).every((mob) => /^0x[0-9a-f]{64}$/.test(mob.id))).toBe(true)
+    expect(
+      bound.worlds.flatMap((world) => world.resources).every((resource) => /^0x[0-9a-f]{64}$/.test(resource.id))
+    ).toBe(true)
   })
 
   test('set_world_corpus_for_test() with no blob resets to pristine (empty + retryable)', () => {

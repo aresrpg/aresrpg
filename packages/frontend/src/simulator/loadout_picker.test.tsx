@@ -18,7 +18,7 @@ import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 
 import en from '../i18n/locales/en.json'
-import { seed_manifest } from '../content/seed_manifest'
+import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
 
@@ -31,7 +31,7 @@ void test_i18n.init({
   interpolation: { escapeValue: false },
 })
 
-const LIVING_IDS = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
+const LIVING_IDS = encyclopedia_fixture.items.map(({ template_id }) => template_id)
 
 const STAT_BIAS = 32768 // the /v1 stat projection's on-chain bias — see item_corpus.test.ts
 

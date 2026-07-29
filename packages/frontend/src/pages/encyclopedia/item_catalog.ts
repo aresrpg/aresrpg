@@ -17,6 +17,7 @@
 // — packages/sdk/src/items.json, a STALE 2026-06-29 legacy FalkorDB snapshot — whose ids coincidentally overlapped
 // the seed corpus and resolved "Koa Slime Codex" to the WRONG catalog's row; item_catalog.test.ts pins that case.)
 import { map_stats } from './content'
+import { normalize_search } from '../../utils/search'
 
 export interface CatalogEntry {
   rarity?: string
