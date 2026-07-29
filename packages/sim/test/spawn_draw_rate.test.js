@@ -16,10 +16,7 @@ const SAMPLE_ZONES = 512
 const FORMAT_3_ROOT = [3, ...Array(32).fill(0)]
 
 const table_archi_rate_bp = world => {
-  const total_weight = world.mobs.reduce(
-    (total, row) => total + row.rate_bp,
-    0,
-  )
+  const total_weight = world.mobs.reduce((total, row) => total + row.rate_bp, 0)
   const archi_weight = world.mobs
     .filter(row => row.role === 'archi')
     .reduce((total, row) => total + row.rate_bp, 0)
@@ -28,9 +25,7 @@ const table_archi_rate_bp = world => {
 
 const sample_archi_rate_bp = world => {
   const archi_ids = new Set(
-    world.mobs
-      .filter(row => row.role === 'archi')
-      .map(row => row.template_id),
+    world.mobs.filter(row => row.role === 'archi').map(row => row.template_id),
   )
   let sampler_state = rng_seed(0x5eed_1491)
   let total_draws = 0
@@ -51,9 +46,7 @@ const sample_archi_rate_bp = world => {
       world,
     }).filter(row => row.kind === 'mob')
     total_draws += rows.length
-    archi_draws += rows.filter(row =>
-      archi_ids.has(row.template_id),
-    ).length
+    archi_draws += rows.filter(row => archi_ids.has(row.template_id)).length
   }
   return {
     total_draws,
@@ -66,11 +59,9 @@ describe('spawn draw rate — deterministic synthetic table (#1491)', () => {
     const expected_rate_bp = table_archi_rate_bp(fixture.world)
     const sample = sample_archi_rate_bp(fixture.world)
 
-    expect(sample.total_draws).toBe(
-      SAMPLE_ZONES * fixture.world.min_groups,
+    expect(sample.total_draws).toBe(SAMPLE_ZONES * fixture.world.min_groups)
+    expect(Math.abs(sample.rate_bp - expected_rate_bp)).toBeLessThanOrEqual(
+      RATE_TOLERANCE_BP,
     )
-    expect(
-      Math.abs(sample.rate_bp - expected_rate_bp),
-    ).toBeLessThanOrEqual(RATE_TOLERANCE_BP)
   })
 })

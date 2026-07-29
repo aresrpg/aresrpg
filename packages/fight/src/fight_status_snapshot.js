@@ -6,6 +6,7 @@
 
 import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
 import { K_ALTER_RESIST, K_ALTER_STAT } from '@aresrpg/sim/spell_effect'
+
 import { mob_entity_id } from './fight_control.js'
 
 export { K_INVISIBILITY as INVISIBILITY_STATUS_KIND } from '@aresrpg/sim/spell_effect'

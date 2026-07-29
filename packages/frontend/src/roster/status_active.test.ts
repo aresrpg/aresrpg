@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
-
 import { STATUS_ACTIVE as CHAIN_STATUS_ACTIVE } from '@aresrpg/fight/board_state'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'

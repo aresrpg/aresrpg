@@ -26,7 +26,7 @@ import { board_seed_from_anchor, generate } from '@aresrpg/sim/board_gen'
 import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
 import { effective_stats } from '@aresrpg/sim/fight_state'
 import { create_recorder, dump_capsule, observe_reduce_checked, open_recording } from '@aresrpg/sim/recorder'
-import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
+import { CASTS_UNLIMITED, normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { decode, encode } from './los.js'
 import { DEFAULT_TURN_MS, encode_sim_step, side_of, status_rows_from_sim } from './sim_chain_events.js'
@@ -43,7 +43,7 @@ const weapon_spell_id = (entity_id) => `${WEAPON_ATTACK_ID}:${entity_id}`
 
 /** One seat's weapon as a raw sim template. Damage rows come only from fight/weapon.js's shared derivation. */
 const weapon_template = (entity) => {
-  const weapon = entity.weapon
+  const { weapon } = entity
   const effects = (critical) =>
     weapon_damage_rows(weapon, critical).map(({ element, min, max }) => ({
       kind: 0,
@@ -63,8 +63,8 @@ const weapon_template = (entity) => {
         range_max: Math.max(1, Number(weapon.reach ?? 1)),
         line_of_sight: true,
         free_cell: false,
-        casts_per_turn: 255,
-        casts_per_target: 255,
+        casts_per_turn: CASTS_UNLIMITED,
+        casts_per_target: CASTS_UNLIMITED,
         cooldown_turns: 0,
         crit_rate: Number(weapon.crit_rate ?? 0),
         effects: effects(false),

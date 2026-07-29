@@ -16,6 +16,8 @@
 // nothing about the join.
 import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 
+import encyclopedia_fixture from '../../rpc/fixtures/encyclopedia.json'
+
 import {
   WORLD_CORPUS,
   bind_world_corpus_to_live,
@@ -29,7 +31,6 @@ import {
   world_corpus_for_resource,
   type WorldCorpusBlob,
 } from './world_corpus'
-import encyclopedia_fixture from '../../rpc/fixtures/encyclopedia.json'
 import fixture from './world_corpus.fixture.json'
 
 afterEach(() => set_world_corpus_for_test()) // reset module state (pristine, retryable) between tests

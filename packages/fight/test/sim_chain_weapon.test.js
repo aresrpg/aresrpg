@@ -89,7 +89,7 @@ const boot = () => {
 describe('#1387 — a simulator fight resolves an authored weapon swing', () => {
   test('kind 2 lands the parity fixture’s per-element slot-0 damage', () => {
     const chain = boot()
-    const target = chain.sim_state.team1[0]
+    const [target] = chain.sim_state.team1
     const result = submit_staged(
       chain,
       [{ kind: 2, target: encode(target.cell.x, target.cell.y), spell_key: 'weapon' }],

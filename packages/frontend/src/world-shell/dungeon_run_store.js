@@ -35,7 +35,7 @@ import {
 import { auto_commit_blocked, executed_turn_failure, stage_to_batch, turn_commit_key } from '@aresrpg/fight/turn_commit'
 import { fight_read_complete } from '@aresrpg/fight/board_state'
 import { is_pending_fight_id } from '@aresrpg/sdk/pending_fight_id'
-import { mob_entity_id, transaction_character_id } from '@aresrpg/fight/fight_control'
+import { transaction_character_id } from '@aresrpg/fight/fight_control'
 import { GRID_W } from '@aresrpg/fight/los'
 
 import { context } from '../game/store.js'

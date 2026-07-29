@@ -201,7 +201,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**']
     message: >-
       The (world_seed, anchor) → board-seed fold belongs to @aresrpg/sim/board_gen. Import
       board_seed_from_anchor; do not re-declare the fold or its anchor primes in a consumer package
