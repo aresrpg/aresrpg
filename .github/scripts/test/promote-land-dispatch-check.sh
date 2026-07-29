@@ -69,6 +69,32 @@ expect_equal \
 workflow run nuclear-audit.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
   "$(cat "$CALL_LOG")"
 
+# A workflow_dispatch carrying an input the target workflow does not declare is REJECTED, and the
+# rejection is invisible from here — the landing already happened, so the sweep simply never runs.
+# Assert every `-f key=` the helper sends against the receiving workflow's declared inputs.
+declared_inputs() {
+  awk '
+    /^  workflow_dispatch:/ { in_dispatch = 1; next }
+    in_dispatch && /^  [^ ]/ { in_dispatch = 0 }
+    in_dispatch && /^    inputs:/ { in_inputs = 1; next }
+    in_inputs && /^      [a-z_]+:[[:space:]]*$/ { gsub(/[ :]/, ""); print }
+    in_inputs && /^    [^ ]/ { in_inputs = 0 }
+  ' "${SCRIPT_DIR}/../../workflows/$1"
+}
+# Positive control: a parser that silently returns nothing would pass every assertion below.
+expect_equal "the input parser reads board-hygiene's declarations" "base sha" "$(declared_inputs board-hygiene.yml | tr '\n' ' ' | sed 's/ $//')"
+
+: >"$CALL_LOG"
+MOCK_FAIL_WORKFLOW=
+dispatch_edge_landing_automations "$BEFORE" "$SHA" >/dev/null
+while IFS= read -r CALL; do
+  WORKFLOW=$(printf '%s\n' "$CALL" | awk '{print $3}')
+  DECLARED=$(declared_inputs "$WORKFLOW")
+  for KEY in $(printf '%s\n' "$CALL" | grep -o '\-f [a-z_]*=' | cut -d' ' -f2 | tr -d '='); do
+    expect_equal "$WORKFLOW declares the dispatched input '$KEY'" "$KEY" "$(printf '%s\n' "$DECLARED" | grep -Fx "$KEY")"
+  done
+done < "$CALL_LOG"
+
 echo
 echo "post-landing dispatch: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
