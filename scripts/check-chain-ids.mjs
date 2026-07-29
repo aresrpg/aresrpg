@@ -33,6 +33,9 @@ const captured_replay_prefix = 'packages/fight/test/fixtures/capsules/'
 
 // Exact CLI-owned files only. A new generated output must be deliberately registered here; there is no broad
 // out/** escape hatch. release.json is stamp_all's sole config output; seed files remain run receipts.
+// crafting_craft_signature.json is a CAPTURED deployed Move signature (packages/sdk/scripts/capture_move_signature.mjs
+// reads the package id off release.json and writes the file) — the same captured-with-provenance exemption as the
+// replay capsules: it exists precisely so a PTB builder is asserted against chain truth instead of its own opinion.
 const generated_files = new Set(
   `packages/frontend/public/release_manifest.json
 packages/frontend/src/rpc/fixtures/characters.json
@@ -68,7 +71,8 @@ packages/move/scripts/out/ceremony_manifest.json
 packages/move/scripts/out/seed_manifest.json
 packages/move/social/Published.toml
 packages/move/spells/Published.toml
-packages/sdk/src/deployment/release.json`
+packages/sdk/src/deployment/release.json
+packages/sdk/test/fixtures/crafting_craft_signature.json`
     .trim()
     .split('\n')
 )

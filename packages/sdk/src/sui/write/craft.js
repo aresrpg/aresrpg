@@ -4,7 +4,6 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import {
   aresrpg_deployment,
-  item_type,
   shared_object_arg,
   random_shared_ref,
 } from '../../deployment/aresrpg.js'
@@ -18,51 +17,75 @@ function random_arg(network, tx) {
   return ref ? tx.sharedObjectRef(ref) : tx.object.random()
 }
 
-/** Build a vector from Move-call results (including abilityless BurnPledge values). */
-function result_vector(tx, type, values) {
-  const [first, ...remaining] = values
-  const [vector] = tx.moveCall({
-    target: '0x1::vector::singleton',
-    typeArguments: [type],
-    arguments: [first],
-  })
-  for (const value of remaining)
-    tx.moveCall({
-      target: '0x1::vector::push_back',
-      typeArguments: [type],
-      arguments: [vector, value],
-    })
-  return vector
-}
-
 // CRAFTING PTB BUILDER for the merged `aresrpg` package's `crafting` — the single-transaction, exact-ingredient,
-// reference-corpus SUCCESS-ROLL craft — craft is NO LONGER deterministic: it rolls a success chance off the
-// crafter's job level, so `craft` is now a TERMINAL `&Random` entry). The whole flow (read the crafter's level → burn
-// the crafter's own kiosk-locked inputs → roll → MINT-on-success into the character's personal kiosk, credit job XP
-// on every attempt) fits in ONE tx. Each ingredient is extracted from the personal kiosk named by its OWN custody
-// row before the craft call; no item reaches a raw address. Ids resolve through the ONE stamp-or-throw deployment
-// home (deployment/aresrpg.js):
-// until the ceremony stamps the ids this REFUSES LOUDLY (no builder invents an id). S-51b: the singletons —
-// ItemExtractPolicy (EXTRACT_POLICY) / ItemPolicy / GameConfig / Version — are STATIC SharedObjectRefs via the
-// shared-version cache; recipe / kiosks / pkcaps / output_template ride the ref-or-id seam (`as_object_arg`);
-// &Random (0x8) rides `random_arg` LAST (terminal command → Random-PTB compliant).
+// reference-corpus SUCCESS-ROLL craft (craft is NOT deterministic: it rolls a success chance off the crafter's job
+// level, so `craft` is a TERMINAL `&Random` entry). The whole flow — read the crafter's level, burn the kiosk-locked
+// inputs, roll, MINT-on-success into the character's personal kiosk, credit job XP on every attempt — fits in ONE tx.
 //
-// Craft composition:
-//   N × extract::extract_for_burn(ingredient's kiosk, ingredient's pkcap, ingredient id, ...)
+// ONE KIOSK, BY THE CHAIN'S CONSTRUCTION (#1494 / #1162). The deployed door does the extraction ITSELF:
+//
 //   entry fun craft(recipe: &Recipe, kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, character_id: ID,
-//     input_items: vector<Item>, input_pledges: vector<BurnPledge>, output_template: &ItemTemplate,
+//     input_item_ids: vector<ID>, output_template: &ItemTemplate, xpolicy: &ItemExtractPolicy,
 //     policy: &TransferPolicy<Item>, config: &GameConfig, version: &Version, r: &Random, ctx)
+//
+// `crafting::y93` borrows the CHARACTER out of `kiosk`, and `crafting::y18` runs
+// `extract::extract_for_burn(kiosk, pkcap, …)` for EVERY id — all against that single kiosk. So the character and
+// every ingredient must live in the SAME personal kiosk; anything else aborts inside `0x2::kiosk` with
+// `EItemNotFound` — the player-facing "This item belongs to a different kiosk."
+//
+// This builder therefore VERIFIES custody instead of assuming it: callers pass the owned-item rows
+// (`{ id, kiosk_id, kiosk_cap_id }` — the /v1 owned-items shape), and a row whose kiosk is not the crafting kiosk is
+// REFUSED here, naming both kiosks, for zero gas. A knowably-doomed tx is never composed.
+//
+// The captured deployed signature is pinned in `test/fixtures/crafting_craft_signature.json`; the composition test
+// asserts against it, because a builder that invents an overload the chain does not implement is exactly how craft
+// broke before (a per-ingredient in-PTB extraction against a `(vector<Item>, vector<BurnPledge>)` door that exists
+// in no published package).
+//
+// Ids resolve through the ONE stamp-or-throw deployment home (deployment/aresrpg.js): until the ceremony stamps
+// them this REFUSES LOUDLY (no builder invents an id). S-51b: the singletons — ItemExtractPolicy (EXTRACT_POLICY) /
+// ItemPolicy / GameConfig / Version — are STATIC SharedObjectRefs via the shared-version cache; recipe / kiosk /
+// pkcap / output_template ride the ref-or-id seam (`as_object_arg`); &Random (0x8) rides `random_arg` LAST
+// (terminal command → Random-PTB compliant).
 
 /**
- * CRAFT `recipe`: extract every selected ingredient from the personal kiosk recorded on that owned-item row,
- * CONSUME the extracted values, and MINT the recipe output into the character's personal kiosk in ONE tx.
- * `output_template_id` MUST be the recipe's own output template (a forged richer template aborts EWrongOutput
- * on-chain); the ingredient tally must land EXACT (missing / short / wrong / over-supplied inputs all abort,
- * reverting every extraction — nothing is lost).
- *
- * `input_items` is the owned-items custody shape: `{ id, kiosk_id, kiosk_cap_id }`. The builder deliberately
- * consumes those records directly instead of accepting a flat id list plus one assumed kiosk. The legacy
- * `input_item_ids` form remains for co-located SDK callers and is normalized to the supplied character kiosk/cap.
+ * The ingredient ids to burn, PROVEN to sit in `kiosk_id`. `input_items` is the owned-items custody shape
+ * (`{ id, kiosk_id, kiosk_cap_id }`) and is the form every player-facing caller uses — the rows carry the truth of
+ * where each stack lives, so the mismatch is caught here rather than on chain. `input_item_ids` is the flat form for
+ * co-located callers (bots, fixtures) that already know their ids sit in the passed kiosk.
+ * @param {{ id: string, kiosk_id?: string, kiosk_cap_id?: string }[] | undefined} input_items
+ * @param {string[] | undefined} input_item_ids
+ * @param {string} kiosk_id
+ * @returns {string[]}
+ */
+function ingredient_ids(input_items, input_item_ids, kiosk_id) {
+  if (Array.isArray(input_items) && input_items.length) {
+    input_items.forEach((item, index) => {
+      if (!item?.id || !item?.kiosk_id)
+        throw new Error(
+          `[craft_ptb] input_items[${index}] requires id and kiosk_id from the item's owned-items custody record.`,
+        )
+      // The chain extracts EVERY ingredient from the ONE kiosk it is handed (crafting::y18), which must also hold
+      // the crafter's character (crafting::y93) — so a foreign-kiosk ingredient can only abort. Refuse for free.
+      if (String(item.kiosk_id) !== String(kiosk_id))
+        throw new Error(
+          `[craft_ptb] input_items[${index}] (${item.id}) is held in kiosk ${item.kiosk_id}, but the craft runs in kiosk ${kiosk_id} — crafting::craft burns every ingredient out of the crafting kiosk, so an ingredient in another kiosk cannot be crafted.`,
+        )
+    })
+    return input_items.map(item => String(item.id))
+  }
+  if (Array.isArray(input_item_ids) && input_item_ids.length)
+    return input_item_ids.map(String)
+  throw new Error(
+    '[craft_ptb] input_items must be a non-empty array of owned-item custody records.',
+  )
+}
+
+/**
+ * CRAFT `recipe`: burn the exact ingredient tally out of the crafter's personal kiosk and MINT the recipe output
+ * back into it, in ONE tx. `output_template_id` MUST be the recipe's own output template (a forged richer template
+ * aborts EWrongOutput on-chain); the ingredient tally must land EXACT (missing / short / wrong inputs abort,
+ * reverting every extraction — nothing is lost; an over-large stack auto-splits and the surplus re-locks).
  * @param {import("../../../types.js").Context} context
  */
 export function craft_ptb(context) {
@@ -86,77 +109,26 @@ export function craft_ptb(context) {
       throw new Error(
         "[craft_ptb] character_id is required — the crafter's Character id (the reference-corpus success roll runs at its job level).",
       )
-
-    const custody_items = Array.isArray(input_items)
-      ? input_items
-      : Array.isArray(input_item_ids)
-        ? input_item_ids.map(id => ({
-            id,
-            kiosk_id,
-            kiosk_cap_id: personal_kiosk_cap_id,
-          }))
-        : null
-    if (!Array.isArray(custody_items) || custody_items.length === 0)
+    if (!kiosk_id || !personal_kiosk_cap_id)
       throw new Error(
-        "[craft_ptb] input_items must be a non-empty array of owned-item custody records.",
+        '[craft_ptb] kiosk_id and personal_kiosk_cap_id are required — the personal kiosk holding the crafter and every ingredient.',
       )
-    custody_items.forEach((item, index) => {
-      if (!item?.id || !item?.kiosk_id || !item?.kiosk_cap_id)
-        throw new Error(
-          `[craft_ptb] input_items[${index}] requires id, kiosk_id and kiosk_cap_id from the item's owned-items custody record.`,
-        )
-    })
 
-    const version = shared_object_arg(
-      tx,
-      network,
-      'VERSION',
-      false,
-      a.VERSION,
-    )
-    const xpolicy = shared_object_arg(
-      tx,
-      network,
-      'EXTRACT_POLICY',
-      false,
-      a.EXTRACT_POLICY,
-    )
-    const extracted = custody_items.map(item =>
-      tx.moveCall({
-        target: `${a.LATEST_PACKAGE_ID}::extract::extract_for_burn`,
-        arguments: [
-          as_object_arg(tx, item.kiosk_id),
-          as_object_arg(tx, item.kiosk_cap_id),
-          tx.pure.id(item.id),
-          xpolicy,
-          version,
-        ],
-      }),
-    )
-    const input_values = result_vector(
-      tx,
-      item_type(a),
-      extracted.map(([item]) => item),
-    )
-    const input_pledges = result_vector(
-      tx,
-      `${a.PACKAGE_ID}::extract::BurnPledge`,
-      extracted.map(([, pledge]) => pledge),
-    )
+    const ids = ingredient_ids(input_items, input_item_ids, kiosk_id)
 
     tx.moveCall({
       target: `${a.LATEST_PACKAGE_ID}::crafting::craft`,
       arguments: [
         as_object_arg(tx, recipe_id), // recipe: &Recipe
-        as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk
+        as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk (holds the character AND every ingredient)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID (crafter's char — the roll runs at its job level)
-        input_values, // input_items: vector<Item> (each extracted from its own custody kiosk)
-        input_pledges, // input_pledges: vector<BurnPledge> (paired by index)
+        tx.pure.vector('id', ids), // input_item_ids: vector<ID> (burned out of `kiosk`)
         as_object_arg(tx, output_template_id), // output_template: &ItemTemplate (asserted == recipe's output)
+        shared_object_arg(tx, network, 'EXTRACT_POLICY', false, a.EXTRACT_POLICY), // xpolicy: &ItemExtractPolicy
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY), // policy: &TransferPolicy<Item>
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig (assert_enabled + crafting kill-switch)
-        version, // version: &Version (THE one)
+        shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one)
         random_arg(network, tx), // r: &Random (0x8) — TERMINAL command → Random-PTB compliant
       ],
     })
