@@ -72,6 +72,12 @@ const command_map = tx =>
         : command.$kind,
     )
 
+const listed_id_arg = tx => {
+  const command = tx.getData().commands[targets(tx).indexOf('kiosk::list')]
+  const [, , listed] = command.MoveCall.arguments
+  return listed
+}
+
 describe('marketplace builders — refuse loudly when items undeployed', () => {
   test('list / delist refuse', () => {
     expect(() => list_ptb(undeployed_context)(list_args)).toThrow(
@@ -108,7 +114,11 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
   test('list_stack accepts exactly the four legal amounts and delegates native kiosk::list', () => {
     for (const amount of [1, 10, 100, 1000]) {
       expect(is_legal_lot_size(amount)).toBe(true)
-      const tx = list_stack_ptb(deployed_context)({ ...list_args, amount })
+      const tx = list_stack_ptb(deployed_context)({
+        ...list_args,
+        stacks: [{ id: list_args.item_id, amount }],
+        amount,
+      })
       expect(targets(tx)).toEqual([
         'personal_kiosk::borrow_val',
         'kiosk::list',
@@ -121,7 +131,11 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
     for (const amount of [0, 2, 9, 11, 99, 101, 999, 1001, 'invalid']) {
       expect(is_legal_lot_size(amount)).toBe(false)
       expect(() =>
-        list_stack_ptb(deployed_context)({ ...list_args, amount }),
+        list_stack_ptb(deployed_context)({
+          ...list_args,
+          stacks: [{ id: list_args.item_id, amount: 1000 }],
+          amount,
+        }),
       ).toThrow(/one of 1, 10, 100, 1000/)
     }
   })
@@ -132,8 +146,8 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
   test('list_stack splits the lot out of a larger stack, then lists the SPLIT CHILD', () => {
     const tx = list_stack_ptb(deployed_context)({
       ...list_args,
+      stacks: [{ id: list_args.item_id, amount: 25 }],
       amount: 10,
-      source_amount: 25,
     })
     expect(targets(tx)).toEqual([
       'extract::split_locked_stack',
@@ -145,8 +159,7 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
     // The listed id must be the split's RESULT, never the source stack — listing the 25-unit source would abort
     // `ELotInvalid` at the buyer's `prove_lot`, leaving an unsellable listing (a money trap, not a refusal).
     const split_index = targets(tx).indexOf('extract::split_locked_stack')
-    const listed = tx.getData().commands[targets(tx).indexOf('kiosk::list')]
-      .MoveCall.arguments[2]
+    const listed = listed_id_arg(tx)
     expect(listed.$kind).toBe('NestedResult')
     expect(listed.NestedResult).toEqual([split_index, 0])
   })
@@ -154,8 +167,8 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
   test('list_stack lists the source directly when it already IS the lot (no split)', () => {
     const tx = list_stack_ptb(deployed_context)({
       ...list_args,
+      stacks: [{ id: list_args.item_id, amount: 10 }],
       amount: 10,
-      source_amount: 10,
     })
     expect(targets(tx)).toEqual([
       'personal_kiosk::borrow_val',
@@ -168,10 +181,38 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
     expect(() =>
       list_stack_ptb(deployed_context)({
         ...list_args,
+        stacks: [{ id: list_args.item_id, amount: 25 }],
         amount: 100,
-        source_amount: 25,
       }),
-    ).toThrow(/holds 25 units/)
+    ).toThrow(/hold 25 units/)
+  })
+
+  test('a 10-unit lot is covered across live stacks {4,4,5}, merged, split, then lists the child', () => {
+    const tx = list_stack_ptb(deployed_context)({
+      kiosk_id: list_args.kiosk_id,
+      personal_kiosk_cap_id: list_args.personal_kiosk_cap_id,
+      stacks: [
+        { id: id('stack-four-a'), amount: 4 },
+        { id: id('stack-four-b'), amount: 4 },
+        { id: id('stack-five'), amount: 5 },
+      ],
+      amount: 10,
+      price_mist: list_args.price_mist,
+      policy: item_policy,
+    })
+
+    expect(targets(tx)).toEqual([
+      'extract::merge_locked_stacks_and_relock',
+      'extract::merge_locked_stacks_and_relock',
+      'extract::split_locked_stack',
+      'personal_kiosk::borrow_val',
+      'kiosk::list',
+      'personal_kiosk::return_val',
+    ])
+    const split_index = targets(tx).indexOf('extract::split_locked_stack')
+    const listed = listed_id_arg(tx)
+    expect(listed.$kind).toBe('NestedResult')
+    expect(listed.NestedResult).toEqual([split_index, 0])
   })
 })
 

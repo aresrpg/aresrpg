@@ -8,6 +8,7 @@ import {
   character_type,
   item_type,
 } from '../../deployment/aresrpg.js'
+import { covering_stacks } from '../../items.js'
 import { as_object_arg } from '../object_arg.js'
 import {
   policy_rule_package,
@@ -15,7 +16,11 @@ import {
 } from '../transfer_policies.js'
 
 import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
-import { fold_stacks_ptb, split_locked_stack_id } from './item_stacks.js'
+import {
+  fold_stacks_ptb,
+  merge_stack_ptb,
+  split_locked_stack_id,
+} from './item_stacks.js'
 
 /**
  * @typedef {Object} MarketplacePolicy
@@ -40,9 +45,8 @@ import { fold_stacks_ptb, split_locked_stack_id } from './item_stacks.js'
  * @typedef {Object} MarketplaceStackList
  * @property {string} kiosk_id
  * @property {string} personal_kiosk_cap_id
- * @property {string} item_id the SOURCE stack — the listed object when it already is the lot, else the one split from
+ * @property {{ id: string, amount: bigint | number | string }[]} stacks live same-template stacks in this kiosk
  * @property {bigint | number | string} amount the lot being sold (1/10/100/1000)
- * @property {bigint | number | string} [source_amount] units `item_id` holds today; defaults to `amount` (no split)
  * @property {bigint | number | string} price_mist seller ask for the complete lot, excluding royalty
  * @property {MarketplacePolicy} policy
  * @property {Transaction} [tx]
@@ -258,48 +262,74 @@ export function list_ptb(context) {
 /**
  * LIST a stackable lot. `amount` is the lot the seller is SELLING (a legal lot size — the universal `lot_rule`
  * repeats the check against the purchased Item at policy resolution, so a stale or hostile client cannot bypass
- * it); `source_amount` is the units `item_id` currently holds.
+ * it); `stacks` is live custody resolved immediately before composition.
  *
  * A gathered stack is an ARBITRARY size (2, 3, 47 units — a bag accumulates whatever the world dropped), while a
  * kiosk lot may only be 1/10/100/1000. Requiring the seller to already own a stack of exactly the lot size made
  * every other stack unlistable (#492: the sell flow simply could not complete). So the general case owns both:
- * when the source IS exactly the lot, list it as-is; when it holds MORE, `extract::split_locked_stack` shapes the
- * lot off IN THE SAME PTB and the CHILD is what gets listed — the remainder stays kiosk-locked with the seller,
- * one signature, no orphan. Splitting is impossible at equality by construction (`item::split` asserts the source
- * keeps >= 1 unit), which is exactly the branch that needs no split.
+ * The cover may span several stacks: merge each selected source into the first survivor, then split the lot when
+ * the cover has surplus. Every source deletion, survivor re-lock, surplus split, and list rides this ONE PTB.
  * @param {import("../../../types.js").Context} context
  * @returns {(args: MarketplaceStackList) => Transaction}
  */
 export function list_stack_ptb(context) {
   const list_item = list_ptb(context)
+  const merge_stack = merge_stack_ptb(context)
   const split_locked_stack = split_locked_stack_id(context)
   return ({
     kiosk_id,
     personal_kiosk_cap_id,
-    item_id,
+    stacks,
     amount,
-    source_amount = amount,
     price_mist,
     policy,
     tx = new Transaction(),
   }) => {
     assert_legal_lot_size(amount)
     const lot = BigInt(amount)
-    const held = BigInt(source_amount)
-    if (held < lot)
-      throw new Error(
-        `[items_marketplace] stack ${item_id} holds ${String(held)} units — cannot list a lot of ${String(lot)}`,
+    const live_stacks = [
+      ...new Map(
+        (stacks ?? [])
+          .filter(stack => stack?.id && Number(stack.amount) > 0)
+          .map(stack => [
+            String(stack.id),
+            { id: String(stack.id), amount: Number(stack.amount) },
+          ]),
+      ).values(),
+    ]
+    const covered_ids = covering_stacks(live_stacks, Number(lot))
+    if (!covered_ids) {
+      const held = live_stacks.reduce(
+        (total, stack) => total + BigInt(stack.amount),
+        0n,
       )
+      throw new Error(
+        `[items_marketplace] live stacks hold ${String(held)} units — cannot list a lot of ${String(lot)}`,
+      )
+    }
+    const by_id = new Map(live_stacks.map(stack => [stack.id, stack]))
+    const [survivor_id, ...source_ids] = covered_ids
+    for (const source_item_id of source_ids)
+      merge_stack({
+        kiosk_id,
+        personal_kiosk_cap_id,
+        target_item_id: survivor_id,
+        source_item_id,
+        tx,
+      })
+    const covered = covered_ids.reduce(
+      (total, id) => total + BigInt(by_id.get(id).amount),
+      0n,
+    )
 
-    // The split MUST be composed before `list_item` opens the personal-cap borrow: it takes the cap by immutable
-    // reference, and the borrow_val/return_val dance between them would leave no cap to read.
+    // Every merge/split MUST precede list_item's personal-cap borrow_val/return_val dance.
     const [child_id] =
-      held === lot
-        ? [item_id]
+      covered === lot
+        ? [survivor_id]
         : split_locked_stack({
             kiosk_id,
             personal_kiosk_cap_id,
-            item_id,
+            item_id: survivor_id,
             amount: lot,
             tx,
           })

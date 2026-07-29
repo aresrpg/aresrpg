@@ -25,7 +25,6 @@ import {
   marketplace_item_type_of,
   marketplace_listing_is_visible,
   marketplace_lot_sizes_for_owned_quantity,
-  marketplace_lot_source,
   marketplace_lot_offers,
   marketplace_purchase_total_mist,
   marketplace_type_matches,
@@ -234,33 +233,6 @@ describe('native kiosk lot view model', () => {
     expect(marketplace_lot_sizes_for_owned_quantity(25)).toEqual([1, 10])
     expect(marketplace_lot_sizes_for_owned_quantity(100)).toEqual([1, 10, 100])
     expect(marketplace_lot_sizes_for_owned_quantity(1000)).toEqual([1, 10, 100, 1000])
-  })
-
-  // #492 — the sell flow could not complete for a gathered stack: it demanded a stack of EXACTLY the lot size,
-  // and the world only ever hands out arbitrary sizes, so the LIST button stayed dead with no error shown.
-  test('a lot is sourced from an oversized stack, not only an exactly-sized one', () => {
-    const stacks = [{ id: 'a', quantity: 25 }]
-    expect(marketplace_lot_source(stacks, 10)?.id).toBe('a')
-    expect(marketplace_lot_source(stacks, 1)?.id).toBe('a')
-    // the reporter's real bag: 2 and 3 units of a resource — a 1-lot must still be sellable out of them
-    expect(marketplace_lot_source([{ id: 'pelt', quantity: 2 }], 1)?.id).toBe('pelt')
-  })
-
-  test('an exactly-sized stack wins over a larger one, and the smallest cover is split otherwise', () => {
-    const stacks = [
-      { id: 'big', quantity: 100 },
-      { id: 'exact', quantity: 10 },
-      { id: 'mid', quantity: 25 },
-    ]
-    expect(marketplace_lot_source(stacks, 10)?.id).toBe('exact')
-    expect(marketplace_lot_source(stacks, 100)?.id).toBe('big')
-    // no exact 1-stack: the smallest stack that can cover it is split, keeping the big stacks whole
-    expect(marketplace_lot_source(stacks, 1)?.id).toBe('exact')
-  })
-
-  test('no stack can supply a lot larger than every stack held', () => {
-    expect(marketplace_lot_source([{ id: 'a', quantity: 9 }], 10)).toBeNull()
-    expect(marketplace_lot_source([], 1)).toBeNull()
   })
 
   test('the buy seam invokes the callback with the cheapest external exact-size ask', () => {

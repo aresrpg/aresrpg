@@ -380,10 +380,8 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
       // A stackable sale is a LOT out of a stack: `lot_size` when the picker chose one, else the whole stack
       // (the pre-lot callers, and every non-stackable item, sell exactly what they are).
       const lot = item.stackable ? (lot_size ?? item.quantity) : item.quantity
-      // The lot is SPLIT off when the source holds more, so the object that ends up listed is a child minted
-      // inside the tx — its id is unknowable here. The optimistic row stands in under the source's id and the
-      // post-tx reload below swaps in the real chain row.
-      const splits = item.stackable && lot < item.quantity
+      // A covered stackable lot may merge several source ids and mint a split child. The optimistic row is only
+      // a placeholder; the post-tx reads below replace both owners from chain truth.
       const listing = optimistic_listing(item, price_mist, address, lot)
       set((s) => ({
         busy: true,
@@ -392,13 +390,12 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
       }))
       const write = item.stackable
         ? list_stack({
-            item_id: item.id,
             kiosk_id: item.kiosk_id,
+            template_id: item.template_id ?? '',
             amount: lot,
-            source_amount: item.quantity,
             price_mist,
           })
-        : list_item({ item_id: item.id, kiosk_id: item.kiosk_id, price_mist })
+        : list_item({ item_id: item.id, price_mist })
       use_toast
         .getState()
         .promise(write, {
@@ -410,11 +407,12 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
           // fixed pattern: drop it, let the humanized `.message` flow to the player).
         })
         .then(() => {
-          // A split listing leaves two rows stale: the placeholder (keyed on the source id, while the chain
-          // listed the split child) and the source stack itself (now short by the lot). Both owners re-read.
-          if (!splits) return
-          get().load()
-          get().load_listable(true)
+          // Stack composition may consume several source ids and list a new split child. Re-read both owners;
+          // no store-row object id is allowed to survive as transaction or explorer truth.
+          if (item.stackable) {
+            get().load()
+            get().load_listable(true)
+          }
         })
         .catch(() =>
           set((s) => ({
@@ -471,10 +469,18 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
       set({ busy: true })
       use_toast
         .getState()
-        .promise(split_stack({ item_id: item.id, kiosk_id: item.kiosk_id, amount }), {
-          pending: i18n.t('marketplace.lots.pending_split'),
-          success: i18n.t('marketplace.lots.toast_split'),
-        })
+        .promise(
+          split_stack({
+            item_id: item.id,
+            kiosk_id: item.kiosk_id,
+            template_id: item.template_id ?? '',
+            amount,
+          }),
+          {
+            pending: i18n.t('marketplace.lots.pending_split'),
+            success: i18n.t('marketplace.lots.toast_split'),
+          }
+        )
         .then(() => void get().load_listable(true))
         .catch(() => {})
         .finally(() => set({ busy: false }))

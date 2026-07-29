@@ -17,7 +17,6 @@ import { MyLotsPanel } from './my_lots_panel'
 import { SellItemHeader } from './sell_item_header'
 import {
   marketplace_lot_sizes_for_owned_quantity,
-  marketplace_lot_source,
   marketplace_lot_offers,
   visible_marketplace_listings,
   type MarketplaceLotSize,
@@ -39,7 +38,7 @@ export function SellPanel() {
   const { t } = useTranslation()
   const tt = use_template_t()
   const address = use_auth((s) => s.address)
-  const { listings, listable, templates_item, submit_listing, submit_delist, busy } = use_marketplace_chain()
+  const { listings, templates_item, submit_listing, submit_delist, busy } = use_marketplace_chain()
   const submit_list_character = use_marketplace_chain((s) => s.submit_list_character)
   const load_listable = use_marketplace_chain((s) => s.load_listable)
 
@@ -99,14 +98,6 @@ export function SellPanel() {
   const catalog_slug = catalog_name ? slugs[catalog_name] : undefined
 
   const selected_identity = selected ? (selected.template_id ?? selected.id) : null
-  const raw_stacks = useMemo(
-    () =>
-      selected?.stackable
-        ? listable.filter((item) => item.stackable && (item.template_id ?? item.id) === selected_identity)
-        : [],
-    [listable, selected, selected_identity]
-  )
-  const lot_source = marketplace_lot_source(raw_stacks, lot_size)
   const available_lot_sizes = marketplace_lot_sizes_for_owned_quantity(selected?.quantity ?? 0)
   const ladder = useMemo(
     () =>
@@ -117,7 +108,9 @@ export function SellPanel() {
       ),
     [listings, selected_identity]
   )
-  const listing_item = selected?.stackable ? lot_source : selected
+  // The selected stackable row is the aggregated template balance. Live object selection belongs to the
+  // compose edge, where the shared covering selector sees fresh kiosk custody.
+  const listing_item = selected
   const can_list = !!listing_item && !busy && !!price.trim()
 
   // OPTIMISTIC list — validate the price, fire it; the card clears + the row appears in col 1 instantly.

@@ -14,6 +14,7 @@ import i18n from '../../i18n'
 import { get_sdk } from '../sdk'
 import { DEMO_NETWORK } from '../deployment'
 import { get_personal_cap, get_personal_caps, invalidate as invalidate_kiosk_cap_cache } from '../kiosk_cap_cache'
+import { get_owned_items_from_kiosks } from '../read_staking'
 
 import { get_marketplace_policy, marketplace_buy_tx } from './marketplace_buy_sdk'
 import { build_collect_profits_tx } from './collect_profits_tx'
@@ -21,7 +22,35 @@ import { build_collect_profits_tx } from './collect_profits_tx'
 // S-61: every id below resolves from the SDK's ONE deployment home (aresrpg_id) — the retired T62 bridge is
 // gone. Kiosk operates on the CONCRETE type; the Item struct identity is the ORIGINAL (type-origin) package
 // id, never the upgraded call target.
-const ITEM_TYPE = `${aresrpg_id(DEMO_NETWORK, 'PACKAGE_ID')}::item::Item`
+const ITEM_PACKAGE_ID = aresrpg_id(DEMO_NETWORK, 'PACKAGE_ID')
+const ITEM_TYPE = `${ITEM_PACKAGE_ID}::item::Item`
+
+async function live_custody(sdk, address) {
+  return get_owned_items_from_kiosks(sdk, address, ITEM_PACKAGE_ID)
+}
+
+function live_cap(row) {
+  if (!row?.kiosk_id || !row?.kiosk_cap_id) return null
+  return { kioskId: String(row.kiosk_id), objectId: String(row.kiosk_cap_id) }
+}
+
+function live_template_kiosk_rows(rows, template_id, amount, preferred_kiosk_id) {
+  const groups = new Map()
+  for (const row of rows) {
+    if (!row?.id || !row?.kiosk_id || !row?.kiosk_cap_id || String(row.template_id ?? '') !== String(template_id))
+      continue
+    const kiosk_id = String(row.kiosk_id)
+    groups.set(kiosk_id, [...(groups.get(kiosk_id) ?? []), row])
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => {
+      if (a === String(preferred_kiosk_id ?? '')) return -1
+      if (b === String(preferred_kiosk_id ?? '')) return 1
+      return a < b ? -1 : 1
+    })
+    .map(([, group]) => group)
+    .find((group) => group.reduce((total, row) => total + (Number(row.amount) || 0), 0) >= Number(amount))
+}
 
 // The forked+UPGRADED kiosk-rules package (royalty/kiosk_lock call target — see the SSOT jsdoc). NON-REQUIRED
 // in the deployment gate, so the two buy paths guard it explicitly: an unstamped network must refuse loudly
@@ -79,48 +108,53 @@ function personal_call_client(sdk) {
  * kiosk-locked from birth (the kiosk-lock constitution — see `item::lock_in_kiosk`'s `LockPledge` hot potato,
  * which type-forces a same-PTB lock on every mint/craft/buy/gather path), so listing one is a plain
  * `kiosk::list` on the kiosk that already holds it (mirrors `list_character`), NEVER a place+list of a loose
- * object. `kiosk_id` targets that exact kiosk. The buyer pays exactly `price_mist`; there is no on-chain
+ * object. Fresh custody supplies the exact kiosk and cap. The buyer pays exactly `price_mist`; there is no on-chain
  * marketplace fee (bare policy), so the seller receives the full amount.
- * @param {{ item_id: string, kiosk_id?: string, price_mist: bigint | string }} args
+ * @param {{ item_id: string, price_mist: bigint | string }} args
  */
-export async function list_item({ item_id, kiosk_id, price_mist }) {
+export async function list_item({ item_id, price_mist }) {
   const sdk = await get_sdk()
   const { address } = use_auth.getState()
   if (!address) throw new Error(i18n.t('marketplace.lots.not_signed_in'))
-  const cap = await get_personal_cap(sdk, address, kiosk_id)
+  const rows = await live_custody(sdk, address)
+  const live_item = rows.find((row) => String(row?.id ?? '') === String(item_id))
+  const cap = live_cap(live_item)
   if (!cap) throw new Error(i18n.t('marketplace.lots.item_not_found'))
 
   const tx = new Transaction()
   header(tx)
   const ktx = new KioskTransaction({ transaction: tx, kioskClient: personal_call_client(sdk), cap })
-  ktx.list({ itemType: ITEM_TYPE, itemId: item_id, price: BigInt(price_mist) })
+  ktx.list({ itemType: ITEM_TYPE, itemId: live_item.id, price: BigInt(price_mist) })
   ktx.finalize()
   return sign(tx)
 }
 
 /**
- * List a stackable LOT. `amount` is the lot being sold — guarded client-side by the composer and repeated against
- * the purchased Item by lot_rule, so only 1/10/100/1000 can reach a buyer. `source_amount` is what the source
- * stack holds today: when it exceeds the lot the composer splits the lot off in the SAME PTB and lists the child,
- * which is what lets a seller list out of the arbitrary-sized stacks the world actually produces (#492).
- * @param {{ item_id: string, kiosk_id?: string, amount: number, source_amount?: number, price_mist: bigint | string }} args
+ * List a stackable LOT. Fresh kiosk custody is resolved immediately before composition; the SDK covers `amount`
+ * across same-template stacks in one kiosk, merges them, and splits any surplus in this same PTB.
+ * @param {{ template_id: string, kiosk_id?: string, amount: number, price_mist: bigint | string }} args
  */
-export async function list_stack({ item_id, kiosk_id, amount, source_amount, price_mist }) {
+export async function list_stack({ template_id, kiosk_id, amount, price_mist }) {
   const sdk = await get_sdk()
   const { address } = use_auth.getState()
   if (!address) throw new Error(i18n.t('marketplace.lots.not_signed_in'))
-  const cap = await get_personal_cap(sdk, address, kiosk_id)
+  if (!template_id) throw new Error(i18n.t('marketplace.lots.stack_not_found'))
+  const rows = await live_custody(sdk, address)
+  const live_stacks = live_template_kiosk_rows(rows, template_id, amount, kiosk_id)
+  const cap = live_cap(live_stacks?.[0])
   if (!cap) throw new Error(i18n.t('marketplace.lots.stack_not_found'))
   const item_policy = aresrpg_id(DEMO_NETWORK, 'ITEM_POLICY')
   const policy = await get_marketplace_policy(sdk, item_policy)
   const tx = new Transaction()
   header(tx)
-  await sdk.marketplace_list_stack_ptb({
+  sdk.marketplace_list_stack_ptb({
     kiosk_id: cap.kioskId,
     personal_kiosk_cap_id: cap.objectId,
-    item_id,
+    stacks: live_stacks.map((row) => ({
+      id: String(row.id),
+      amount: Number(row.amount) || 1,
+    })),
     amount,
-    source_amount: source_amount ?? amount,
     price_mist,
     policy,
     tx,
@@ -128,19 +162,34 @@ export async function list_stack({ item_id, kiosk_id, amount, source_amount, pri
   return sign(tx)
 }
 
-/** Split `amount` units from a stack; both halves remain locked in this same kiosk. */
-export async function split_stack({ item_id, kiosk_id, amount }) {
+/** Split `amount` units from a live stack; both halves remain locked in its freshly-resolved kiosk. */
+export async function split_stack({ item_id, kiosk_id, template_id, amount }) {
   const sdk = await get_sdk()
   const { address } = use_auth.getState()
   if (!address) throw new Error(i18n.t('marketplace.lots.not_signed_in'))
-  const cap = await get_personal_cap(sdk, address, kiosk_id)
+  const rows = await live_custody(sdk, address)
+  const exact = rows.find((row) => String(row?.id ?? '') === String(item_id))
+  const candidates = [
+    ...(exact ? [exact] : []),
+    ...rows.filter(
+      (row) =>
+        row !== exact &&
+        template_id &&
+        String(row?.template_id ?? '') === String(template_id) &&
+        (!kiosk_id || String(row?.kiosk_id ?? '') === String(kiosk_id))
+    ),
+  ]
+  const [source] = candidates
+    .filter((row) => Number(row?.amount) > Number(amount))
+    .sort((a, b) => Number(a.amount) - Number(b.amount))
+  const cap = live_cap(source)
   if (!cap) throw new Error(i18n.t('marketplace.lots.stack_not_found'))
   const tx = new Transaction()
   header(tx)
-  await sdk.split_stack_ptb({
+  sdk.split_stack_ptb({
     kiosk_id: cap.kioskId,
     personal_kiosk_cap_id: cap.objectId,
-    item_id,
+    item_id: source.id,
     amount,
     tx,
   })
