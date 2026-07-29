@@ -231,7 +231,10 @@ export function resume_decision(decoded, now) {
 const chain_reason = ({ readable, decoded }) => {
   if (!readable) return 'the fight object was unreadable this pass'
   if (!decoded) return 'the fight object no longer exists on chain'
-  return `chain status ${fight_status_label(decoded.status)} (${Number(decoded.status)})`
+  const status = fight_status_of(decoded)
+  // A torn read has no status to name (#1277) — say that, rather than print `unknown (NaN)`.
+  if (status == null) return 'the fight object decoded without a status (torn read)'
+  return `chain status ${fight_status_label(status)} (${status})`
 }
 
 /**
