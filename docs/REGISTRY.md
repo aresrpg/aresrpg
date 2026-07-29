@@ -25,6 +25,7 @@ Facts in this registry are consumed by import or derivation only. Re-declaring a
 | Characteristic points per level         | `packages/sdk/src/progression.js:17`, `:28` — reusable helper explicitly derived from chain progression.                           |
 | Maximum-HP formula                      | `packages/move/foundation/sources/progression_math.move:20`, `:56` — chain HP law.                                                 |
 | Natural-regeneration formula            | `packages/move/foundation/sources/progression_math.move:27`, `:72` — chain HP mutation.                                            |
+| Previsional roster HP marker            | `packages/inventory/src/fight_receipt_roster.js:6` — the only producer of `hp_previsional_ms`; `hp_updated_ms` stays chain-only.   |
 | Combat-feeding item-stat fields         | `packages/sim/src/equipment_stats.js:29` — executable combat fold mapping.                                                         |
 | Job wire-index order                    | `packages/sdk/src/jobs.js:39` — exported authored job catalog closest to job data.                                                 |
 | Item category to equipment-slot kind    | `packages/move/aresrpg/sources/equipment.move:271` — equip gate used on chain.                                                     |
