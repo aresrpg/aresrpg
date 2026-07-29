@@ -332,7 +332,7 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
       }
     })()
     return cleanup
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- opened.current latches this to run exactly once per mount (StrictMode-safe); box/on_close/on_retry_* are fixed for a reveal card's whole life since InventoryOverlays fully unmounts it before another box can open
   }, [])
 
   // PENDING GUARD (UX-B) — an edge effect keyed to the phase (the same one-pipeline shape as the durable latch):
@@ -357,7 +357,7 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
       clearTimeout(escape_timer)
       clearTimeout(timeout_timer)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-arms only on phase transitions (see the block comment above); box/on_close/on_retry_* are fixed for this card's mount, so listing them would only force needless rearms
   }, [phase])
 
   // Escape/backdrop close (no dead-end law): the reveal always dismisses — the claim flight is durable and

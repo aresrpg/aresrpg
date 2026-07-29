@@ -170,8 +170,7 @@ function CreateHost({ character_count, claimed_free, price_sui, on_close, varian
       destroyed = true
       handle?.destroy()
     }
-    // character_count is captured once at open — the create flow doesn't react to roster changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounts the imperative character_create() widget exactly once; character_count/claimed_free/price_sui/variant/on_close are its initial config, captured at open, and the create flow doesn't react to roster changes mid-flow
   }, [])
   return <div className="chr-create-host" ref={host} />
 }

@@ -97,7 +97,7 @@ export function MapDrawer() {
       cancelled = true
       cancelAnimationFrame(id)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- center_on_player/bump read live refs (view_ref/player_ref) and would rerun this seed-triggered resample on every render if listed
   }, [seed])
 
   // 2) Blit the cached terrain bitmap at the current view (re-runs on every view change; no rAF loop —
@@ -139,7 +139,7 @@ export function MapDrawer() {
     }
     cv.addEventListener('wheel', on_wheel, { passive: false })
     return () => cv.removeEventListener('wheel', on_wheel)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- min_zoom_for/clamp_view read view_ref live; listing them would reattach the wheel listener every render for no behavior change
   }, [bump])
 
   // drag-to-pan (pointer deltas are in displayed px -> scale to canvas-internal px)
