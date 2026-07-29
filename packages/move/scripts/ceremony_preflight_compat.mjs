@@ -69,17 +69,26 @@ const MAX_OBJECT_SIZE = 102_400
 // decision (#1279) is open, a Move change that genuinely needs bytes bumps this line in the same
 // reviewed commit — which is precisely the visibility #1442 did not have.
 //
-// aresrpg measures 101770 here with the honest cuts exhausted (every private name is already
-// golfed, zero unused code, the shared pipelines already single-homed). The row is 101900, not
-// 101770: this proxy is recomputed from a fresh `sui move build` on whatever host runs it, and a
+// aresrpg measures 101627 here with the honest cuts exhausted (every private name is already
+// golfed, zero unused code, the shared pipelines already single-homed). The row is 101757, not
+// 101627: this proxy is recomputed from a fresh `sui move build` on whatever host runs it, and a
 // budget pinned to the exact byte would turn any 1-byte toolchain or host difference into a red on
 // a PR that changed no Move source — and a required check that reds for nothing is a check someone
 // disables. 130 bytes absorbs jitter while still failing 500 bytes BEFORE the ceiling; it is far
 // inside anything a real change moves (#1442 crossed by hundreds).
 //
+// The remaining levers were re-measured at #1581 and are exhausted or unavailable under compat:
+// doc comments cost ZERO bytecode bytes (272,692 chars stripped → byte-identical build, positive
+// control: +20 trivial fns = +1016 bytes); the surviving `clamp` triple is a u64/u32/u16 TYPE
+// family, not a duplicate; all 27 `*_for_testing` scaffolds are already `#[test_only]`; and 423 of
+// the 641 shipped functions are `public`, which the compatibility verifier freezes. What is left is
+// ~22.6 bytes of fixed overhead per package-internal function (measured) across 59 single-call-site
+// ones — a ~1330-byte golf that trades 59 named seams for it, and the package-split decision
+// (#1279) rather than this file's business.
+//
 // Budgets only SHRINK (FROZEN.md: baselines only shrink, severities only ratchet up). A package
 // with no row here is held to the chain ceiling alone.
-const SIZE_BUDGETS = { aresrpg: 101_900 }
+const SIZE_BUDGETS = { aresrpg: 101_757 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's

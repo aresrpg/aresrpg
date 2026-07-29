@@ -32,7 +32,8 @@ use sui::{
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
 const EPledgeMismatch: u64 = 101; // lock_in_kiosk: pledge id != item id
-const ELevelTooLow: u64 = 102; // y50: character level below the template's required level
+// (102 ELevelTooLow retired at #1581 — `y50` was a never-called second home for the equip level gate,
+// whose one live home is `equipment::equip` (abort 109); code stays reserved)
 const ENotPersonalKiosk: u64 = 103; // lock_in_kiosk: destination kiosk is not PERSONAL (constitution)
 const ENotStackable: u64 = 104; // y54/merge/split: the item's category does not stack (gear is a unique NFT)
 const EZeroQuantity: u64 = 105; // y54/split: a stack (or split) must carry at least 1 unit
@@ -77,8 +78,9 @@ public struct Item has key, store {
 /// creation against the admin-editable `catalog` whitelist), and the required `level`. The descriptive game-data
 /// (stat RANGES / damages / consumable effect) rides as TYPED DYNAMIC FIELDS attached at creation by `item_stats`
 /// / `item_damages` / `consumable_effect` under this template's UID — the item base owns the STORAGE, those
-/// modules own the DATA SHAPE (placement law). `category` + `level` are MANDATORY base fields: a
-/// future equip/consume system asserts `character.level >= template.level` via `y50`, and `category`
+/// modules own the DATA SHAPE (placement law). `category` + `level` are MANDATORY base fields: the equip gate
+/// asserts `character.level >= template.level` at its one live home (`equipment::equip`, via `template_level`),
+/// and `category`
 /// is the differentiator every such system dispatches on (gear slot, tool job, consumable…). NO supply ledger
 /// (the sale gate's concern), NO media fields (art is a Display-only URL keyed by `item_type`). `key` only —
 /// shared, never transferable/wrappable.
@@ -182,14 +184,6 @@ public(package) fun y49(
   ctx: &mut TxContext,
 ): ItemTemplate {
   ItemTemplate { id: object::new(ctx), name, description, item_type, category, level }
-}
-
-// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
-/// The single home for the LEVEL gate (you can't consume or equip an item below the level of the
-/// character). `public(package)` so the future in-package equip/consume upgrade asserts through it — one place,
-/// no re-derivation. Aborts (`ELevelTooLow`) when the character is under the template's required level.
-public(package) fun y50(template: &ItemTemplate, character_level: u16) {
-  assert!(character_level >= template.level, ELevelTooLow);
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing

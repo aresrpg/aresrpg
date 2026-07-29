@@ -14,7 +14,6 @@ use sui::{display::{Self, Display}, kiosk::{Self, Kiosk}, package::Publisher, te
 const OWNER: address = @0xA;
 
 const EPledgeMismatch: u64 = 101; // item
-const ELevelTooLow: u64 = 102; // item
 const ENotPersonalKiosk: u64 = 103; // item
 const ENotStackable: u64 = 104; // item
 const EZeroQuantity: u64 = 105; // item
@@ -417,26 +416,9 @@ fun stats_from_raw_preserves_malus_and_round_trips() {
   assert_eq!(item_stats::vitality(&lifted), s); // vitality raw 0, orig ≥ centre → back to centre
 }
 
-// ╔════════════════ [ Level gate (y50 boundary cases) ] ═════════ ]
-
-#[test]
-fun assert_usable_by_at_and_above_level_passes() {
-  let mut sc = ts::begin(OWNER);
-  let tmpl = item::y49(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
-  item::y50(&tmpl, 30); // exactly the required level — OK
-  item::y50(&tmpl, 31); // above — OK
-  item::y50(&tmpl, 200); // well above — OK
-  item::y51(tmpl);
-  sc.end();
-}
-
-#[test, expected_failure(abort_code = ELevelTooLow, location = item)]
-fun assert_usable_by_below_level_aborts() {
-  let mut sc = ts::begin(OWNER);
-  let tmpl = item::y49(b"Boots".to_string(), b"".to_string(), b"boots".to_string(), b"boots".to_string(), 30, sc.ctx());
-  item::y50(&tmpl, 29); // one under → ELevelTooLow
-  abort
-}
+// The item-level gate has ONE home: `equipment::equip` asserts it off `item::template_level`
+// (abort 109) and `equipment_tests::level_gate_aborts` covers it. `item::y50` was a
+// second, never-called home for the same rule — deleted with these tests (#1581).
 
 #[test]
 /// 2026-07-12 rider: per-template flavor text — the template CARRIES it and every mint COPIES it onto the item
