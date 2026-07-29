@@ -308,11 +308,14 @@ describe('world spawn mob-card layer route gate', () => {
     // (the file's own convention): the refuse must PRECEDE claim_intent (the optimistic hide + tx_request) AND
     // create_world_fight, else a doomed gas-burning tx composes.
     const helper_at = world_spawns_source.indexOf('group_engage_blocked(context.get_state().visible_fights')
-    const gate_at = world_spawns_source.indexOf('if (group_has_live_fight(e)) {')
+    const input_at = world_spawns_source.indexOf('claim_eligible: !e || !group_has_live_fight(e)')
+    const engage_at = world_spawns_source.indexOf('const engage = async (')
+    const gate_at = world_spawns_source.indexOf('engage_block(engage_state(e))', engage_at)
     const claim_intent_at = world_spawns_source.indexOf("spawns_input({ type: 'claim_intent'", gate_at)
     const create_at = world_spawns_source.indexOf('return create_world_fight', gate_at)
     expect(helper_at, 'the decision reads rpc truth (visible_fights), not session state').toBeGreaterThan(-1)
-    expect(gate_at, 'engage() carries the local refuse gate').toBeGreaterThan(-1)
+    expect(input_at, 'rpc truth enters the ONE engage gate as claim eligibility').toBeGreaterThan(-1)
+    expect(gate_at, 'engage() reads the local refuse gate').toBeGreaterThan(engage_at)
     expect(claim_intent_at, 'the refuse precedes the optimistic claim_intent').toBeGreaterThan(gate_at)
     expect(create_at, 'the refuse precedes the compose+submit (create_world_fight)').toBeGreaterThan(gate_at)
   })
@@ -329,14 +332,17 @@ describe('world spawn mob-card layer route gate', () => {
       // (visible_fights via group_engage_blocked) — fold it through the SAME claim_failed/ghost door the
       // on-chain zones-108 abort already uses (drop_ghost), then reconcile the render/minimap the same tick,
       // all BEFORE the early return — source-shape locked since engage() is an un-exported closure.
-      const gate_at = world_spawns_source.indexOf('if (group_has_live_fight(e)) {')
-      const toast_at = world_spawns_source.indexOf("push_event_toast({ state: 'info'", gate_at)
-      const drop_at = world_spawns_source.indexOf('drop_ghost(e)', gate_at)
+      const engage_at = world_spawns_source.indexOf('const engage = async (')
+      const gate_at = world_spawns_source.indexOf('engage_block(engage_state(e))', engage_at)
+      const refuse_at = world_spawns_source.indexOf('refuse_engage(block)', gate_at)
+      const claimed_at = world_spawns_source.indexOf("if (block === 'group_claimed')", refuse_at)
+      const drop_at = world_spawns_source.indexOf('drop_ghost(e)', claimed_at)
       const resync_at = world_spawns_source.indexOf('sync_from_core()', drop_at)
-      const next_statement_at = world_spawns_source.indexOf('// THE DOOR DECIDES', gate_at)
-      expect(gate_at, 'engage() carries the local refuse gate').toBeGreaterThan(-1)
-      expect(toast_at, 'the honest toast still fires').toBeGreaterThan(gate_at)
-      expect(drop_at, 'the SAME row drops through the existing ghost-claim door').toBeGreaterThan(toast_at)
+      const next_statement_at = world_spawns_source.indexOf('// THE DOOR DECIDES', claimed_at)
+      expect(gate_at, 'engage() carries the local refuse gate').toBeGreaterThan(engage_at)
+      expect(refuse_at, 'the gate refusal keeps the honest surface').toBeGreaterThan(gate_at)
+      expect(claimed_at, 'the claimed-group block retains its synchronous cleanup').toBeGreaterThan(refuse_at)
+      expect(drop_at, 'the SAME row drops through the existing ghost-claim door').toBeGreaterThan(claimed_at)
       expect(resync_at, 'entries/markers reconcile before the early return').toBeGreaterThan(drop_at)
       expect(next_statement_at, 'the drop stays INSIDE the gate, before the next statement').toBeGreaterThan(
         resync_at
@@ -393,6 +399,45 @@ describe('world spawn mob-card layer route gate', () => {
     )
   })
 
+  test('#1647 — claim eligibility has one home: prompt and press both derive from engage_gate', () => {
+    const state_at = world_spawns_source.indexOf('const engage_state = (')
+    const state_end = world_spawns_source.indexOf('// NO SILENT FAILURES', state_at)
+    const state_body = world_spawns_source.slice(state_at, state_end)
+    expect(state_body, 'the gate input includes the selected group').toContain('(e = null)')
+    expect(state_body, 'the live-fight fact enters the ONE engage gate as eligibility').toContain(
+      'claim_eligible: !e || !group_has_live_fight(e)'
+    )
+
+    const arm_at = world_spawns_source.indexOf('const set_attack_target = (')
+    const arm_gate_at = world_spawns_source.indexOf('engage_block(engage_state(e))', arm_at)
+    const register_at = world_spawns_source.indexOf('register_prompt({', arm_at)
+    expect(arm_gate_at, 'the prompt derives eligibility from engage_gate').toBeGreaterThan(arm_at)
+    expect(arm_gate_at).toBeLessThan(register_at)
+
+    const engage_at = world_spawns_source.indexOf('const engage = async (')
+    const press_gate_at = world_spawns_source.indexOf('engage_block(engage_state(e))', engage_at)
+    const claim_intent_at = world_spawns_source.indexOf("spawns_input({ type: 'claim_intent'", engage_at)
+    expect(press_gate_at, 'the press re-reads the SAME gate for races').toBeGreaterThan(engage_at)
+    expect(press_gate_at).toBeLessThan(claim_intent_at)
+
+    const target_at = world_spawns_source.indexOf('set_attack_target(attack_armed')
+    expect(
+      world_spawns_source.slice(target_at, target_at + 180),
+      'the frame has no second group-eligibility predicate beside engage_gate'
+    ).not.toContain('group_has_live_fight')
+    expect(
+      world_spawns_source.slice(engage_at, claim_intent_at),
+      'the press has no second group-refusal gate beside engage_gate'
+    ).not.toContain('if (group_has_live_fight(e))')
+
+    const refuse_at = world_spawns_source.indexOf('const refuse_engage = (')
+    const refuse_end = world_spawns_source.indexOf('// FIGHT-ENTRY OPTIMISTIC BEAT', refuse_at)
+    expect(
+      world_spawns_source.slice(refuse_at, refuse_end),
+      'a raced refusal still fires the existing event toast from the gate copy'
+    ).toContain("if (copy_key) push_event_toast({ state: 'info', title: i18n.t(copy_key) })")
+  })
+
   test('#1010 — the LAST silent return on the press door is gone: a press with no group SURFACES', () => {
     // Reported: [R] pressed at distance 4 from a mob pack produced no fight, no refusal and no log. #861 made
     // every refusal BELOW the entry point loud (the gate, the claimed-group leg, the too-far hint), but left
@@ -401,7 +446,7 @@ describe('world spawn mob-card layer route gate', () => {
     // a rig click whose hit-test walk resolves no `__spawn_entry`. Both now reach the SAME door and say so.
     // engage() is an un-exported closure (this file's own convention for that seam), so the shape is the lock.
     const engage_at = world_spawns_source.indexOf('const engage = async (')
-    const engage_block_at = world_spawns_source.indexOf('engage_block(engage_state())', engage_at)
+    const engage_block_at = world_spawns_source.indexOf('engage_block(engage_state(e))', engage_at)
     const engage_head = world_spawns_source.slice(engage_at, engage_block_at)
     expect(engage_at).toBeGreaterThan(-1)
     expect(engage_block_at).toBeGreaterThan(engage_at)

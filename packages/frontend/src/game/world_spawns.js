@@ -548,12 +548,13 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // #861 — the live inputs of the ONE engage gate (engage_gate.js). This is the whole effectful half: the
   // predicate itself is pure, so both the pill's presentation and engage()'s press door decide off the SAME
   // fact and can never disagree about whether — or why — a press is refused.
-  const engage_state = () => {
+  const engage_state = (e = null) => {
     const phase = use_dungeon.getState()
     return {
       engaging,
       fight_session_id: world_fight_session(phase) ? phase.fight_id : (phase.run_pass_id ?? null),
       character_id: context.get_state().selected_character_id,
+      claim_eligible: !e || !group_has_live_fight(e),
     }
   }
 
@@ -587,7 +588,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // #861 — ONE gate, read here for PRESENTATION and again inside engage() as the last line of defense, so the
     // pill can never promise a press that cannot fire. A blocked pill renders the house honest-block variant
     // (`busy` — gold→muted, still clickable, label = the reason) exactly like the [G] gather gate.
-    const block = e ? engage_block(engage_state()) : null
+    const block = e ? engage_block(engage_state(e)) : null
     if (e === attack_entry && engageable === attack_target_engageable && block === attack_target_block) return
     if (attack_entry && attack_entry !== e) set_highlight(attack_entry, 'off')
     attack_entry = e
@@ -695,23 +696,18 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // (in_cave = cave-only), so a direct rig CLICK can reach here mid-fight — the fight_session block is what
     // stops a second claim+create tx. Cross-domain locks are ADAPTER logic (the core never reads another
     // domain's store — seams law), which is why the store reads happen HERE and the gate itself stays pure.
-    const block = engage_block(engage_state())
-    if (block) return refuse_engage(block)
-    const character_id = context.get_state().selected_character_id
-    // ENGAGE-GROUP GATE (leg ①): refuse LOCALLY here — BEFORE claim_intent / compose / submit — with the SAME
-    // honest "already taken" copy the on-chain zones-108 abort surfaces, so account 2's engage of a group
-    // account 1 already claimed never composes a doomed, gas-burning tx. The pre-sign liveness re-check
-    // (create_world_fight) shrinks the residual poll-lag window this 6s-polled truth can't.
-    if (group_has_live_fight(e)) {
-      push_event_toast({ state: 'info', title: i18n.t('errors.fight_group_claimed') })
-      // The refusal IS chain truth — drop the SAME marker synchronously so this exact bounce can never repeat
-      // (#480: a stale marker used to survive its own refusal toast and re-fire the identical "gone" bounce
-      // on every future press until an unrelated poll noticed, which — see drop_claimed_ghosts above — it
-      // never reliably did on its own for a group nobody re-engaged).
-      drop_ghost(e)
-      sync_from_core()
+    const block = engage_block(engage_state(e))
+    if (block) {
+      refuse_engage(block)
+      if (block === 'group_claimed') {
+        // The refusal IS chain truth — drop the SAME marker synchronously so this exact bounce can never repeat
+        // (#480: a stale marker used to survive its own refusal toast and re-fire the identical "gone" bounce).
+        drop_ghost(e)
+        sync_from_core()
+      }
       return
     }
+    const character_id = context.get_state().selected_character_id
     // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity with the core's `engage_d2` + pending state in the
     // fold. A refused intent (far click — on_up raycasts placed rigs to the despawn radius) teaches "get
     // closer" instead of firing a doomed claim; an accepted one marks the row pending (the optimistic hide as
@@ -1093,9 +1089,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       !in_cave && !engaging && !world_fight && core.attack_target_key
         ? (entries.get(core.attack_target_key) ?? null)
         : null
-    // a group a LIVE fight already claimed arms VISIBLE, never gold-claimable — the honest "taken" cue paired with
-    // the observer sword world_fights_discovery already plants on it; a press still routes to engage()'s refuse.
-    set_attack_target(attack_armed, !!(attack_armed && core.attack_engageable) && !group_has_live_fight(attack_armed))
+    // Claim eligibility joins the other prompt/press preconditions inside engage_gate; a claimed group therefore
+    // renders the muted honest-block variant, and a raced press re-reads that same gate before claim_intent.
+    set_attack_target(attack_armed, !!(attack_armed && core.attack_engageable))
 
     // RIG BUDGET (P0): cap resident rigs nearest-first, INCREMENTALLY (≤ PLACE_PER_FRAME each). Placement flows
     // ONLY here (never inline) so the cap + anti-burst hold from the very first frame in the world.

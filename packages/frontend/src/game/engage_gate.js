@@ -14,22 +14,30 @@
 // transform over plain data (and a real unit, not a source-shape assertion).
 
 /**
- * @typedef {'engaging' | 'fight_session' | 'no_character'} EngageBlock
+ * @typedef {'engaging' | 'fight_session' | 'no_character' | 'group_claimed'} EngageBlock
  *   `engaging`      — a claim from THIS renderer is already in flight (re-entry latch; internal, never copy).
  *   `fight_session` — the dungeon store still holds a live fight/run-pass session for this client.
  *   `no_character`  — no character is selected, so there is nobody to seat in the fight.
+ *   `group_claimed`  — chain/RPC truth says another live fight already owns this mob group.
  */
 
 /**
  * The FIRST precondition that refuses this press, or null when it may proceed. Order is the order engage()
  * itself checks in, so the pill and the press can never disagree about WHY.
- * @param {{ engaging?: boolean, fight_session_id?: string | null, character_id?: string | null }} state
+ * @param {{ engaging?: boolean, fight_session_id?: string | null, character_id?: string | null,
+ *   claim_eligible?: boolean }} state
  * @returns {EngageBlock | null}
  */
-export function engage_block({ engaging = false, fight_session_id = null, character_id = null } = {}) {
+export function engage_block({
+  engaging = false,
+  fight_session_id = null,
+  character_id = null,
+  claim_eligible = true,
+} = {}) {
   if (engaging) return 'engaging'
   if (fight_session_id) return 'fight_session'
   if (!character_id) return 'no_character'
+  if (!claim_eligible) return 'group_claimed'
   return null
 }
 
@@ -44,6 +52,7 @@ const BLOCK_COPY = {
   // the exact fact the on-chain refusal already words this way — one home for the copy too
   fight_session: 'errors.fight_character_busy',
   no_character: 'errors.engage_no_character',
+  group_claimed: 'errors.fight_group_claimed',
 }
 
 /**

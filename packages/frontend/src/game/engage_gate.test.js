@@ -52,6 +52,17 @@ describe('engage gate (#861) — one home for the [R] pill and engage()', () => 
     expect(engage_block_copy_key('no_character')).toBe('errors.engage_no_character')
   })
 
+  test('#1647 — a non-claim-eligible group blocks the prompt and a raced press keeps the claimed toast', () => {
+    const non_eligible_group = {
+      engaging: false,
+      fight_session_id: null,
+      character_id: '0xchar',
+      claim_eligible: false,
+    }
+    expect(engage_block(non_eligible_group)).toBe('group_claimed')
+    expect(engage_block_copy_key('group_claimed')).toBe('errors.fight_group_claimed')
+  })
+
   test('the in-flight latch blocks FIRST and stays deliberately silent (internal, not a player refusal)', () => {
     // A claim from this renderer is already running: the pill is already cleared by the frame loop, so there is
     // nothing to tell the player. It must still be a NAMED block (a log line), never a bare return.
@@ -64,7 +75,7 @@ describe('engage gate (#861) — one home for the [R] pill and engage()', () => 
   })
 
   test('every refusal copy key resolves in all six locales (i18n law)', () => {
-    const keys = ['fight_session', 'no_character'].map(engage_block_copy_key)
+    const keys = ['fight_session', 'no_character', 'group_claimed'].map(engage_block_copy_key)
     for (const key of keys) {
       expect(key, 'a player-relevant block must carry copy').toBeTruthy()
       for (const [name, bundle] of Object.entries({ en, de, es, fr, ja, uk })) {
