@@ -389,8 +389,21 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     const { world_id, zx, zy, at_cert } = ev ?? {}
     if (disposed || !world_id || world_id !== current_world_id()) return
     await ensure_world_dims(world_id)
-    const rows = await zone_rows_chain(world_id, zx, zy).catch(() => null)
-    if (disposed || !rows?.length) return
+    // NO SILENT FAILURES (craft law): this read IS the whole fast path. Both misses used to return without a
+    // word, so a player who waited out the 6s poll + indexer lag (~10s, #1489) left a console that never said
+    // whether the fast path had fired, failed, or read an empty zone — the report was unfalsifiable.
+    const rows = await zone_rows_chain(world_id, zx, zy).catch((error) => {
+      console.error(`[world-spawns] search fast-path: chain-direct read of zone ${zx}:${zy} FAILED`, error)
+      return null
+    })
+    if (disposed) return
+    if (!rows?.length) {
+      console.warn(
+        `[world-spawns] search fast-path: zone ${zx}:${zy} read back ${rows == null ? 'UNREADABLE' : 'EMPTY'} — ` +
+          'the steady-state poll is now the only path, so its spawns wait out the indexer lag'
+      )
+      return
+    }
     // Tag the cert instant BEFORE the ferry so place() emits the one-shot cert→visible delta for the first
     // NEW spawn (the fix's own proof it renders < 1s); _searched marks ride the sync below.
     if (at_cert != null) render_probe_at = at_cert
