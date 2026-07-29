@@ -191,8 +191,8 @@ export const ingest = (state, envelope, now = envelope?.observed_at_ms ?? 0) => 
       // ONE field moves; the inbox, ledger, clock and ctx are untouched (a boot would wipe the predicted board
       // and reintroduce the blank frame this exists to remove). Guarded on `from` so a late/duplicate receipt
       // can never re-point a session that already moved on — a mismatch is failure-as-data, never a silent write.
-      return String(state.fight_id ?? '') === String(payload.from ?? '') ?
-          { ...state, fight_id: payload.to ?? null }
+      return String(state.fight_id ?? '') === String(payload.from ?? '')
+        ? { ...state, fight_id: payload.to ?? null }
         : with_failures(state, [
             { kind: 'stale_rekey', got: String(payload.from), want: String(state.fight_id), at: now },
           ])
