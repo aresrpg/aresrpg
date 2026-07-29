@@ -52,6 +52,27 @@ const GRID = [
   [-9, -15],
 ]
 
+/** Every GRID column for one recipe, generated once (~45 ms each — never regenerate a recipe).
+ * @param {Parameters<typeof create_gen_context>[0]} config */
+function grid_columns(config) {
+  const ctx = create_gen_context(config)
+  return GRID.map(([cx, cz]) => generate_column(ctx, cx, cz))
+}
+
+/**
+ * Index of the first GRID column where two recipes differ, or -1 if none do. SENSITIVITY asks only
+ * "does this layer move ANY block", so it stops at the first witness instead of generating the whole
+ * grid to re-confirm what column 0 already proved; the search space is still the full grid, so the
+ * FAILING case (nothing moves) scans all ten and fails exactly as before. `baseline` is the already-
+ * generated grid of the reference recipe, so only the compared recipe is generated here.
+ * @param {ReturnType<typeof grid_columns>} baseline
+ * @param {Parameters<typeof create_gen_context>[0]} config
+ */
+function first_moved_column(baseline, config) {
+  const ctx = create_gen_context(config)
+  return GRID.findIndex(([cx, cz], i) => column_diff(baseline[i], generate_column(ctx, cx, cz)) > 0)
+}
+
 describe('S-25+ region-driven terrain on the CLASSIC spline path (drives_terrain gate)', () => {
   // A spline-path world (massif OFF, like every non-Everest world) with a region block. The gate:
   // biome-pin-only / knob-free regions ⇒ drives_terrain false ⇒ the spline path is byte-identical to legacy;
@@ -75,6 +96,10 @@ describe('S-25+ region-driven terrain on the CLASSIC spline path (drives_terrain
       { name: 'hi', upto: 1.01, relief_scale: 1.8, height_bias: 20 }, // amplify + raise
     ],
   }
+  // The recipes' terrain is the FIXTURE; the tests below are the comparisons. Generated once each —
+  // the knob-free grid used to be built twice (once per test) and the knobbed grid ten times over.
+  const knobfree_grid = grid_columns({ ...spline, regions: region_no_knobs })
+  const absent_grid = grid_columns(spline)
 
   test('drives_terrain is FALSE for knob-free regions, TRUE once any class (or variance) carries a terrain knob', () => {
     expect(create_region_context(region_no_knobs, [], SEED).drives_terrain).toBe(false)
@@ -86,19 +111,12 @@ describe('S-25+ region-driven terrain on the CLASSIC spline path (drives_terrain
   })
 
   test('PARITY — a knob-free region on a spline world is byte-identical to regions ABSENT (legacy path untouched)', () => {
-    const absent = create_gen_context(spline)
-    const knobfree = create_gen_context({ ...spline, regions: region_no_knobs })
-    for (const [cx, cz] of GRID)
-      expect(column_hash(generate_column(knobfree, cx, cz))).toBe(column_hash(generate_column(absent, cx, cz)))
+    expect(knobfree_grid.map(column_hash)).toEqual(absent_grid.map(column_hash))
   })
 
   test('SENSITIVITY — adding terrain knobs MOVES the surface on the spline path (regions drive terrain)', () => {
-    const knobfree = create_gen_context({ ...spline, regions: region_no_knobs })
-    const knobbed = create_gen_context({ ...spline, regions: region_knobs })
-    let total = 0
-    for (const [cx, cz] of GRID)
-      total += column_diff(generate_column(knobfree, cx, cz), generate_column(knobbed, cx, cz))
-    expect(total).toBeGreaterThan(0) // the region field genuinely reshapes the classic-spline surface
+    // the region field genuinely reshapes the classic-spline surface
+    expect(first_moved_column(knobfree_grid, { ...spline, regions: region_knobs })).toBeGreaterThanOrEqual(0)
   })
 })
 
@@ -194,23 +212,23 @@ describe('S-25 region layer — unit (region_profile)', () => {
 })
 
 describe('S-25 region layer — integration (massif world)', () => {
+  const disabled = /** @type {import('../../config/world_gen_config.js').WorldGenConfig} */ ({
+    ...structuredClone(EVEREST_WORLD),
+    regions: { ...EVEREST_WORLD.regions, enabled: false },
+  })
+  const absent = structuredClone(EVEREST_WORLD)
+  delete absent.regions
+  // Same split as the spline describe: recipes are the fixture, tests are the comparisons. The
+  // regions-OFF grid used to be generated twice (once per test), the regions-ON grid ten times over.
+  const disabled_grid = grid_columns(disabled)
+  const absent_grid = grid_columns(absent)
+
   test('SENSITIVITY — enabling regions changes the everest world', () => {
-    const on = create_gen_context(EVEREST_WORLD)
-    const off_cfg = { ...structuredClone(EVEREST_WORLD), regions: { ...EVEREST_WORLD.regions, enabled: false } }
-    const off = create_gen_context(/** @type {import('../../config/world_gen_config.js').WorldGenConfig} */ (off_cfg))
-    let total = 0
-    for (const [cx, cz] of GRID) total += column_diff(generate_column(on, cx, cz), generate_column(off, cx, cz))
-    expect(total).toBeGreaterThan(0) // the region layer genuinely moves blocks
+    expect(first_moved_column(disabled_grid, EVEREST_WORLD)).toBeGreaterThanOrEqual(0) // regions move blocks
   })
 
   test('PARITY — regions.enabled:false ≡ regions absent (both take the massif-only legacy path)', () => {
-    const disabled = { ...structuredClone(EVEREST_WORLD), regions: { ...EVEREST_WORLD.regions, enabled: false } }
-    const absent = structuredClone(EVEREST_WORLD)
-    delete absent.regions
-    const a = create_gen_context(/** @type {import('../../config/world_gen_config.js').WorldGenConfig} */ (disabled))
-    const b = create_gen_context(absent)
-    for (const [cx, cz] of GRID)
-      expect(column_hash(generate_column(a, cx, cz))).toBe(column_hash(generate_column(b, cx, cz)))
+    expect(disabled_grid.map(column_hash)).toEqual(absent_grid.map(column_hash))
   })
 
   test('BIOME PINS drive the column biome; the world shows MULTIPLE regions (variety)', () => {
