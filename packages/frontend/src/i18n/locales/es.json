@@ -1755,6 +1755,8 @@
     "click_to_fight": "Haz clic para iniciar el combate",
     "cast_needs_target": "Ese hechizo necesita un objetivo — el lanzamiento se quitó de tu turno.",
     "cast_target_unreachable": "{{spell}}: objetivo fuera de alcance, hechizo cancelado",
+    "auto_pass_fired": "Terminando el turno — nada preparado, pasando",
+    "auto_crank_fired": "Plazo del turno vencido — el combate avanza",
     "auto_force_start_fired": "Colocación expirada — comienza el combate",
     "cast_dropped_stale": "Turno confirmado sin {{spell}}: su objetivo ya no era válido.",
     "spell_on_cooldown": "En reutilización durante {{n}} turno(s) más.",

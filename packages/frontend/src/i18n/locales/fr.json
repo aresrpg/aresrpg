@@ -1755,6 +1755,8 @@
     "click_to_fight": "Clique pour lancer le combat",
     "cast_needs_target": "Ce sort nécessite une cible — le lancer a été retiré de ton tour.",
     "cast_target_unreachable": "{{spell}} : cible hors de portée, sort annulé",
+    "auto_pass_fired": "Fin du tour — aucune action, passage",
+    "auto_crank_fired": "Délai du tour dépassé — le combat avance",
     "auto_force_start_fired": "Placement expiré — début du combat",
     "cast_dropped_stale": "Tour validé sans {{spell}} — sa cible n'était plus valide.",
     "spell_on_cooldown": "En recharge pour encore {{n}} tour(s).",
