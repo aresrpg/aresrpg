@@ -110,7 +110,6 @@ const SIM_ONLY = [
   ['packages/fight/src/sim_chain.js', 'MOCK'],
   ['packages/fight/src/sim_chain_events.js', 'MOCK'],
 
-  ['packages/sim/src/equipment_stats.js', 'MOCK-MATH'],
   ['packages/sim/src/mob_stats.js', 'MOCK-MATH'],
   ['packages/sim/src/recorder.js', 'MOCK-MATH'],
   ['packages/sim/src/world.js', 'MOCK-MATH'],
@@ -142,6 +141,7 @@ const SIM_ONLY = [
   ['packages/frontend/src/pages/encyclopedia/mob_spells.ts', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/mob_spells_section.tsx', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/world_corpus.ts', 'CORPUS'],
+  ['packages/frontend/src/utils/search.ts', 'CORPUS'],
 
   ['packages/frontend/src/simulator/BoardPane.tsx', 'BOARD'],
   ['packages/frontend/src/simulator/board_paint.ts', 'BOARD'],
