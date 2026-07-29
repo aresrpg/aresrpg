@@ -8,6 +8,7 @@
 // never a second formula. The hook (use_target_prediction.js) only feeds it the three live slices.
 
 import { crit_clock_of, predict_cast, weapon_spell_template } from '@aresrpg/fight/predict_cast'
+import { mob_entity_index } from '@aresrpg/fight/project'
 import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 import { encode } from '@aresrpg/fight/los'
 
@@ -63,8 +64,8 @@ const resolve_armed_spell = (armed, me) => {
  * @returns {{ is_mob: boolean, idx: number } | null}
  */
 export const resolve_dungeon_ref = (dungeon, fighter_id) => {
-  const mob = /^mob-(\d+)$/.exec(String(fighter_id))
-  if (mob) return { is_mob: true, idx: Number(mob[1]) }
+  const mob_idx = mob_entity_index(fighter_id)
+  if (mob_idx != null) return { is_mob: true, idx: mob_idx }
   const idx =
     dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
   return idx < 0 ? null : { is_mob: false, idx }

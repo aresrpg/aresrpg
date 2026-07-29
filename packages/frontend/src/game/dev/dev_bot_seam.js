@@ -44,7 +44,7 @@
 // scripts/zero-drift-gate.mjs for the tooth that enforces it.
 
 import { decode, encode } from '@aresrpg/fight/los'
-import { board_view, fight_view, min_turn_left, my_action_slot, my_placement_zone } from '@aresrpg/fight/project'
+import { board_view, fight_view, min_turn_left, mob_entity_id, my_action_slot, my_placement_zone } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { fight_store } from '@aresrpg/fight/store'
 import { crit_clock_of, predict_cast } from '@aresrpg/fight/predict_cast'
@@ -76,7 +76,7 @@ const committed_by_id = () => {
     const id = participant_entity_id(row)
     if (id) map.set(id, row.committed ?? null)
   }
-  ;(board.mobs ?? []).forEach((row, index) => map.set(`mob-${index}`, row.committed ?? null))
+  ;(board.mobs ?? []).forEach((row, index) => map.set(mob_entity_id(index), row.committed ?? null))
   return map
 }
 

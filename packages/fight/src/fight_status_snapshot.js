@@ -5,6 +5,7 @@
 // chain duration without widening the SDK surface owned by another lane.
 
 import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
+import { mob_entity_id } from './fight_control.js'
 
 export const INVISIBILITY_STATUS_KIND = 27
 export const MOB_FIGHTER_ID_BASE = 1000
@@ -122,7 +123,7 @@ export function status_snapshot_entities(rows, participant_ids, mob_count) {
     const entity_id =
       fighter >= MOB_FIGHTER_ID_BASE
         ? mob_idx >= 0 && mob_idx < mob_count
-          ? `mob-${mob_idx}`
+          ? mob_entity_id(mob_idx)
           : null
         : (participant_ids[fighter] ?? null)
     if (!entity_id) continue

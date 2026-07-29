@@ -22,7 +22,7 @@ import { get_mob_template } from '@aresrpg/sdk/game'
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
-import { fight_view, submit_wait_ms } from '@aresrpg/fight/project'
+import { fight_view, mob_entity_id, submit_wait_ms } from '@aresrpg/fight/project'
 import { u64 } from '@aresrpg/fight/journal_u64'
 import {
   STATUS_OPEN,

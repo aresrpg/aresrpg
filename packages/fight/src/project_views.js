@@ -327,7 +327,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     // dungeon/legacy fallback. Projection reads ctx directly so identity can heal without re-decoding the chain
     // snapshot, and an array reorder cannot rename a living fighter mid-fight (#1608).
     const identity = mob_identities.get(entity_id) ?? null
-    const template = identity?.template_id || m.template || `mob-${i}`
+    const template = identity?.template_id || m.template || mob_entity_id(i)
     const mapped_name = view.mob_names?.[template] || null
     map.set(entity_id, {
       id: entity_id,

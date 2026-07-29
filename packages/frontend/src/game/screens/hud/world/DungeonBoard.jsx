@@ -42,7 +42,15 @@ import {
   staged_turn_paths,
 } from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
-import { committed_mob_hp, committed_truth, fight_view, my_action_slot, next_move_tackle } from '@aresrpg/fight/project'
+import {
+  committed_mob_hp,
+  committed_truth,
+  fight_view,
+  mob_entity_id,
+  mob_entity_index,
+  my_action_slot,
+  next_move_tackle,
+} from '@aresrpg/fight/project'
 import {
   CAST_DROP_STALE_TARGET,
   CAST_DROP_TARGET_OUT_OF_REACH,
@@ -338,8 +346,8 @@ export function DungeonBoard() {
   // sitting below it is still in the temporal dead zone when that factory reads it — the whole HUD fell into the
   // error boundary for every seated fighter (#1563). Its only closure is `dungeon`, so this is its earliest home.
   const resolve_ref = (fighter_id) => {
-    const mob_match = /^mob-(\d+)$/.exec(String(fighter_id))
-    if (mob_match) return { is_mob: true, idx: Number(mob_match[1]) }
+    const mob_idx = mob_entity_index(fighter_id)
+    if (mob_idx != null) return { is_mob: true, idx: mob_idx }
     const idx =
       dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
     return idx < 0 ? null : { is_mob: false, idx }
@@ -371,7 +379,7 @@ export function DungeonBoard() {
       const committed_hp = committed_mob_hp(fight_store.getState(), idx)
       if (!(committed_hp > 0)) continue
       // this turn's casts already kill it → its cell opens for the move
-      if ((predicted.get(`mob-${idx}`) ?? committed_hp) <= 0) vacated.add(m.cell)
+      if ((predicted.get(mob_entity_id(idx)) ?? committed_hp) <= 0) vacated.add(m.cell)
     }
     return vacated
   }, [cast_path, dungeon, entity_id, my_spells, me?.weapon])
@@ -604,7 +612,7 @@ export function DungeonBoard() {
         {
           fight_id: fight.fight_id,
           resolve_fighter_id: ({ is_mob, idx, character }) =>
-            character != null ? String(character) : is_mob ? `mob-${Number(idx)}` : entity_id,
+            character != null ? String(character) : is_mob ? mob_entity_id(idx) : entity_id,
         }
       ),
     })

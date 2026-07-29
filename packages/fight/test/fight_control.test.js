@@ -6,6 +6,8 @@ import {
   active_controlled_character_id,
   can_select_controlled_character,
   controlled_character_ids,
+  mob_entity_id,
+  mob_entity_index,
   participant_entity_id,
   selected_controlled_character_id,
   set_character_cast_key,
@@ -20,6 +22,13 @@ const OTHER = '0xother'
 const row = (character, addr = ME) => ({ character, addr })
 
 describe('fight character control', () => {
+  it('round-trips mob entity ids through the one convention door', () => {
+    expect(mob_entity_id(7)).toBe('mob-7')
+    expect(mob_entity_index('mob-7')).toBe(7)
+    expect(mob_entity_index('mob-seven')).toBeNull()
+    expect(mob_entity_index('player-7')).toBeNull()
+  })
+
   it('keeps same-wallet participants as distinct character identities in seat order', () => {
     const participants = [row('char-a'), row('friend', OTHER), row('char-b'), row('char-a')]
     expect(controlled_character_ids(participants, ME)).toEqual(['char-a', 'char-b'])

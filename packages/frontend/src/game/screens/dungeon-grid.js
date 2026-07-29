@@ -20,6 +20,7 @@ import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
 import { board_seed_from_anchor, place_blockers } from '@aresrpg/sim/board_gen'
 
 import { GRID_W, GRID_H, GRID_CELLS, encode, decode, bfsPath } from '@aresrpg/fight/los'
+import { mob_entity_id } from '@aresrpg/fight/project'
 
 const MASK32 = 0xffffffff
 const MIN_W = 7 // min playable width (RECT vocab low bound)
@@ -509,7 +510,7 @@ export function dungeon_blocked_cells(dungeon, exclude_id, also_vacated = null) 
     if (p.alive && participant_id !== exclude_id) blocked.add(p.cell)
   }
   dungeon.mobs.forEach((m, i) => {
-    if (m.alive && `mob-${i}` !== exclude_id && !also_vacated?.has(m.cell)) blocked.add(m.cell)
+    if (m.alive && mob_entity_id(i) !== exclude_id && !also_vacated?.has(m.cell)) blocked.add(m.cell)
   })
   return blocked
 }

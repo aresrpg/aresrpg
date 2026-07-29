@@ -14,7 +14,7 @@
 // and read through the store's ONE door (`store.committed_truth`). This module owns the PRESENTATION folds only —
 // which is why nothing here derives committed state at all, and why `core_fold.js` may import this file's base.
 
-import { participant_entity_id } from './fight_control.js'
+import { mob_entity_id, mob_entity_index, participant_entity_id } from './fight_control.js'
 import { apply_action, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'
@@ -264,7 +264,8 @@ export const recompute = (draft, now) => {
  *  the store's committed health oracle both read it, so a renamed seat can never mean two different fighters. */
 export const entity_fold_key = (escrow, source_id) => {
   const id = String(source_id)
-  if (id.startsWith('mob-')) return `m${id.slice(4)}`
+  const mob_idx = mob_entity_index(id)
+  if (mob_idx != null) return `m${mob_idx}`
   const seat = (escrow ?? []).findIndex((p) => participant_entity_id(p) === id)
   return seat >= 0 ? `p${seat}` : null
 }
@@ -374,7 +375,7 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
     character != null
       ? String(character)
       : is_mob
-        ? `mob-${Number(idx)}`
+        ? mob_entity_id(idx)
         : (participant_entity_id(escrow[Number(idx)] ?? {}) ?? `player-${Number(idx)}`)
   const cell_of = (key) => {
     const encoded = draft.fighters?.[key]?.cell
@@ -386,7 +387,7 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
   }
   const fighter_id_of_key = (key) => {
     const idx = Number(key.slice(1))
-    if (key.startsWith('m')) return `mob-${idx}`
+    if (key.startsWith('m')) return mob_entity_id(idx)
     if (!key.startsWith('p')) return null
     return participant_entity_id(escrow[idx] ?? {}) ?? `player-${idx}`
   }

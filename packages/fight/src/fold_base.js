@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure snapshot-base helpers shared by the presentation fold and the headless core fold.
 
-import { participant_entity_id } from './fight_control.js'
+import { mob_entity_index, participant_entity_id } from './fight_control.js'
 import { empty_state } from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_WON } from './board_state.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
@@ -67,7 +67,8 @@ export const base_from_view = (view, fight_id) => {
     const id = status?.entity_id == null ? '' : String(status.entity_id)
     if (!id) continue
     const seat = (view.escrow ?? []).findIndex((p) => participant_entity_id(p) === id)
-    const key = seat >= 0 ? `p${seat}` : id.startsWith('mob-') ? `m${id.slice(4)}` : null
+    const mob_idx = mob_entity_index(id)
+    const key = seat >= 0 ? `p${seat}` : mob_idx == null ? null : `m${mob_idx}`
     if (key && fighters[key])
       status_rows[key] = [
         ...(status_rows[key] ?? []),

@@ -11,6 +11,7 @@ import { is_invisible } from '@aresrpg/sim/fight_statuses'
 import { check_traps } from '@aresrpg/sim/fight_traps'
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
+import { mob_entity_index } from './fight_control.js'
 import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
@@ -49,9 +50,10 @@ export const CHAIN_PENDING = new Set([10, 15, 16, 17, 22, 25, 26, 29])
 // consumer now reads `evolve_draft_health` below, which is the prediction itself. There is no preview math.
 
 const entity_ref = (entity_id) => {
-  const match = /^(p|m)(\d+)$/.exec(String(entity_id)) ?? /^mob-(\d+)$/.exec(String(entity_id))
+  const mob_idx = mob_entity_index(entity_id)
+  if (mob_idx != null) return { is_mob: true, idx: mob_idx }
+  const match = /^(p|m)(\d+)$/.exec(String(entity_id))
   if (!match) return null
-  if (match.length === 2) return { is_mob: true, idx: Number(match[1]) }
   return { is_mob: match[1] === 'm', idx: Number(match[2]) }
 }
 

@@ -14,6 +14,7 @@ import { engine_view, entity_id_of_key, project_board_cells } from './project_vi
 import { next_action_slot } from './turn_action_slot.js'
 
 export * from './project_state.js'
+export { mob_entity_id, mob_entity_index } from './fight_control.js'
 export { board_view, committed_mob_hp, engine_view, entity_id_of_key } from './project_views.js'
 export { read_fight_traps } from './trap_ledger.js'
 

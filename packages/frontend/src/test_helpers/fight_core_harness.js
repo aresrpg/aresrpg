@@ -20,6 +20,7 @@
 // process happens to run next.
 
 import { fight_store } from '@aresrpg/fight/store'
+import { mob_entity_id } from '@aresrpg/fight/project'
 
 /** One chain-shaped participant row for `seats[i]` (character id + per-seat overrides). */
 const participant = ({ character, owner = '0xaaa', team = 0, ap = 6, mp = 3, hp = 50, cell = 100, ...rest }) => ({
@@ -81,7 +82,7 @@ export function seed_fight_core({
   const queue = [...seats.map((_, idx) => ({ is_mob: false, idx })), ...mobs.map((_, idx) => ({ is_mob: true, idx }))]
   const active_ptr = Math.max(
     0,
-    queue.findIndex((a) => (a.is_mob ? `mob-${a.idx}` === active : (seats[a.idx]?.character ?? null) === active))
+    queue.findIndex((a) => (a.is_mob ? mob_entity_id(a.idx) === active : (seats[a.idx]?.character ?? null) === active))
   )
   store.getState().input({
     type: 'snapshot',

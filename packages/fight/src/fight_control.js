@@ -15,8 +15,14 @@ export function participant_entity_id(participant) {
   return participant_character_id(participant) ?? (participant?.addr ? String(participant.addr) : null)
 }
 
-/** Stable render/input identity of a mob fighter at its chain index. @param {number|string} index */
-export const mob_entity_id = (index) => `mob-${Number(index)}`
+/** Stable render/input identity of a mob fighter at its chain index. @param {number|string} idx */
+export const mob_entity_id = (idx) => `mob-${Number(idx)}`
+
+/** The exact inverse of `mob_entity_id`, or null when the value is not a mob entity id. */
+export const mob_entity_index = (entity_id) => {
+  const match = /^mob-(\d+)$/.exec(String(entity_id))
+  return match ? Number(match[1]) : null
+}
 
 /**
  * Chain-derived character ids this wallet may control, in fight seat/group order.
