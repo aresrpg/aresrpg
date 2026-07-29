@@ -36,6 +36,10 @@ export function create_owned_team_actions({ join_world_fight, activate_run, join
         fight_id,
         character_id: member.character_id,
         party_id,
+        // WIRE-FIRED (#1661): the group loop seats an arrived alt with no press behind it, so this submission is
+        // `automated` for the spend guard by definition — exactly like the settlement door below. Automation is
+        // never a guard bypass: it takes the manual join's every guard plus the circuit/ceiling a press is spared.
+        automated: true,
         ...(queued ? { queued: true } : {}),
       })
       receipts_by_character.set(member.character_id, receipt)

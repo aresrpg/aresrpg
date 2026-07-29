@@ -257,8 +257,20 @@ function opened_result_of(/** @type {any} */ receipt) {
  * JOIN an existing world fight during placement — `fight::join` (public/party gate is on-chain). A join DERIVES
  * NOTHING: the PTB carries the character-keyed `fight_latch` and no registry shard at all, so this door needs no
  * derivation scope (sdk/src/fight.js — `latch: &mut FightLatch (join derives nothing)`).
+ *
+ * THE ONE JOIN DOOR (#1661): a press (FightsModal) and the group loop's auto-seat reach the chain through this
+ * function and nothing else, so both get the same simulate-before-sign, the same spend ceiling, and the same
+ * executed-digest latch by construction. `automated` is the ONLY difference a wire is allowed to declare — and
+ * it declares MORE guard, never less: the spend guard's circuit/breaker are scoped to automated submissions
+ * (#1262), so an executed failure retires the automatic re-fire while the player may still press.
  */
-export async function join_world_fight({ fight_id, character_id, party_id = null, queued = false }) {
+export async function join_world_fight({
+  fight_id,
+  character_id,
+  party_id = null,
+  queued = false,
+  automated = false,
+}) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -275,7 +287,14 @@ export async function join_world_fight({ fight_id, character_id, party_id = null
     party_id,
     raised_spell_ids,
   })
-  return sign(tx, i18n.t('dungeons.action_join', { dungeon: i18n.t('fights.a_fight') }), false, null, { queued })
+  // The intent is a fact about the TRANSACTION, not about who asked for it: the same character joining the same
+  // fight is ONE intent whether a press or the group loop sent it, so an executed abort of exactly that join is
+  // what the circuit retires. Declared HERE, on the door, so no caller can reach the lane unnamed.
+  return sign(tx, i18n.t('dungeons.action_join', { dungeon: i18n.t('fights.a_fight') }), false, null, {
+    queued,
+    intent: `join_fight:${fight_id}:${character_id}`,
+    automated,
+  })
 }
 
 // ╔════════════════ [ DUNGEON RUN — activate / room fights / abandon ] ══════════ ]
