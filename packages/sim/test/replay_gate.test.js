@@ -280,6 +280,47 @@ const chanced_strike_templates_raw = {
   },
 }
 
+// A 2-turn glyph on an empty cell (#1540). Nobody ever stands on it, so its DURATION is the only thing the
+// capsule measures — a glyph is never sprung by standing on it (it ticks and persists); it dies by expiry alone.
+const glyph_templates_raw = {
+  yajin: {
+    glyph2: {
+      name: 'Glyph',
+      description: 'a persistent zone that lives two player turns',
+      levels: [
+        {
+          cost: 2,
+          range: [1, 8],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          // LOS off: a placement spell drops its zone on a cell, and an ALLY standing on the line must not be
+          // what decides whether this capsule's duration pin runs (p0 sits between p1 and the target).
+          line_of_sight: false,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'glyph',
+              min: 5,
+              max: 5,
+              element: 'fire',
+              target: 'cell',
+              chance: 100,
+              turns: 2,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
 // A vitality BUFF on the caster and a vitality DEBUFF on an enemy (#1628). Stat ids 5/10 have no stat-block
 // field on either twin, so these two lines move HP CAPACITY and nothing else; min===max keeps the roll fixed.
 const vitality_templates_raw = {
@@ -798,6 +839,79 @@ const scenarios = [
       },
     ],
   },
+  // ── #1540, the glyph clock: ONE cadence, invariant to where the caster sits in the order ──────────────
+  //
+  // The chain's anchor is declared at `cast.move` `tick_turn_end`: its `is_mob` arm only refreshes mob stats,
+  // and the NON-mob arm calls `spell_board::decrement_glyphs` — the single home of glyph duration on chain
+  // (`grep decrement_glyphs packages/move/engine/sources` → 1 hit). `turns.move:167` routes every player turn
+  // end (pass, crank, active-abandon) through it; `turns.move:280,:321` end a mob turn on the `is_mob` arm.
+  // So the clock counts PLAYER TURN-ENDS and nothing else — not global turn advances, and not the viewer's own
+  // turns. The turn order here is [p0, m0, p1]; the two capsules differ ONLY in which player casts, i.e. whether
+  // the caster acts before or after the mob, and both must read the SAME duration after the SAME number of
+  // player turn-ends. An intermittent, fight-dependent expiry is exactly what a seat-relative clock produces.
+  ...['p0', 'p1'].map(caster => ({
+    meta: {
+      id: `glyph_clock_player_turn_ends_caster_${caster}`,
+      class: 'twin',
+      authored: '2026-07-29',
+      source: 'authored',
+      notes: `Issue #1540: a 2-turn glyph cast by ${caster} (turn order p0, m0, p1) reads 1 after exactly ONE player turn-end — whichever side of the mob its caster sits on.`,
+    },
+    arena: flat_arena_json(),
+    templates_raw: glyph_templates_raw,
+    initial: {
+      fight_id: `capsule_glyph_clock_${caster}`,
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          spell_levels: { glyph2: 1 },
+        }),
+        make_entity('p1', { x: 5, y: 6 }, true, {
+          spell_levels: { glyph2: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      // Walk to the caster's own turn, then place the glyph and spend exactly ONE player turn-end.
+      ...(caster === 'p0'
+        ? [
+            {
+              type: 'cast',
+              entity_id: 'p0',
+              spell_id: 'glyph2',
+              target: { x: 3, y: 3 },
+            },
+            { type: 'end_turn', entity_id: 'p0' },
+            // …and a MOB turn-end on top, which the chain's is_mob arm never charges the glyph for.
+            { type: 'ai_turn', entity_id: 'm0' },
+          ]
+        : [
+            { type: 'end_turn', entity_id: 'p0' },
+            { type: 'ai_turn', entity_id: 'm0' },
+            {
+              type: 'cast',
+              entity_id: 'p1',
+              spell_id: 'glyph2',
+              target: { x: 3, y: 3 },
+            },
+            { type: 'end_turn', entity_id: 'p1' },
+          ]),
+    ],
+    pinned_facts: [
+      {
+        cite: 'cast.move tick_turn_end — the non-mob arm calls spell_board::decrement_glyphs; one player turn-end spends one turn of the budget',
+        path: 'glyphs.0.turns_remaining',
+        equals: 1,
+      },
+      {
+        cite: 'cast.move tick_turn_end is_mob arm — a mob turn-end never reaches decrement_glyphs, so the glyph is still on the board',
+        path: 'glyphs.length',
+        equals: 1,
+      },
+    ],
+  })),
 ]
 
 // ── The gate ───────────────────────────────────────────────────────────────────────────────────
@@ -858,12 +972,15 @@ describe('fight-replay gate (capsule goldens)', () => {
         expect(moved?.path).toEqual(scenario.pinned_move_path)
       }
 
-      // 2b. CROSS-TWIN — the hand-transcribed chain readings (never regolded).
-      for (const fact of scenario.pinned_facts ?? [])
+      // 2b. CROSS-TWIN — the hand-transcribed chain readings (never regolded). An ABSENT path reads `null`,
+      // never a thrown parse error: "the fact this pin measures is not there any more" is itself the finding.
+      for (const fact of scenario.pinned_facts ?? []) {
+        const read = read_path(replay.terminal, fact.path)
         expect(
-          jsonify(read_path(replay.terminal, fact.path)),
+          read === undefined ? null : jsonify(read),
           `${fact.path} — ${fact.cite}`,
         ).toEqual(fact.equals)
+      }
 
       // 3. DETERMINISM — an independent second replay produces the identical trace.
       expect(replay_capsule(capsule).trace_digest).toBe(replay.trace_digest)

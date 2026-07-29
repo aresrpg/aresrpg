@@ -195,6 +195,77 @@ describe('glyph duration ticks on the CHAIN cadence: player turn-ends only (#154
     expect(acc.glyphs).toEqual([])
   })
 
+  // ── COOP: the clock counts PLAYER TURN-ENDS, never the CASTER's own turns ──────────────────────────────
+  //
+  // The felt symptom of a seat-relative clock is INTERMITTENCE: the same spell expires on time in one fight
+  // and a turn early in the next, because what changed between them is the caster's position in the turn
+  // order. On chain there is nothing seat-relative to change — `turns.move:167` routes EVERY player's turn end
+  // through `cast::tick_turn_end`'s non-mob arm, so a 2-turn glyph is dead after any two player turn-ends,
+  // whoever cast it and whoever they were. The two cases below are the same fight with the caster moved from
+  // one side of the mob to the other; both must read identically.
+  const coop_fight = () => {
+    const arena = flat_arena()
+    const ctx = { spell_templates, arena }
+    return {
+      ctx,
+      state: reduce(
+        create_fight_state({
+          fight_id: 'coop',
+          arena_seed: 7,
+          arena_radius: arena.radius,
+          arena,
+          team0: [
+            make_entity('p0', { x: 4, y: 5 }, true, { glyph3: 1 }),
+            make_entity('p1', { x: 4, y: 6 }, true, { glyph3: 1 }),
+          ],
+          team1: [make_entity('m0', { x: 9, y: 5 }, false, {})],
+        }),
+        { type: 'start' },
+        ctx,
+      ).state,
+    }
+  }
+
+  /** Walk turns until `caster` holds the slot, cast, then spend `player_ends` PLAYER turn-ends. */
+  const glyph_after_player_ends = (caster, player_ends) => {
+    const { state, ctx } = coop_fight()
+    let acc = state
+    for (let i = 0; i < 6 && get_current_turn_entity(acc)?.id !== caster; i++)
+      acc = end_current_turn(acc, ctx).state
+    expect(get_current_turn_entity(acc)?.id).toBe(caster)
+    acc = reduce(
+      acc,
+      {
+        type: 'cast',
+        entity_id: caster,
+        spell_id: 'glyph3',
+        target: { x: 2, y: 5 },
+      },
+      ctx,
+    ).state
+    expect(acc.glyphs.length).toBe(1) // the cast must actually have placed, or the pin measures nothing
+    let seen = 0
+    for (let i = 0; i < 20 && seen < player_ends; i++) {
+      const step = end_current_turn(acc, ctx)
+      acc = step.state
+      if (step.actor.is_player) seen += 1
+    }
+    expect(seen).toBe(player_ends)
+    return acc.glyphs[0]?.turns_remaining ?? 0
+  }
+
+  test('a coop glyph reads the same after N player turn-ends whichever seat cast it (the intermittence signature)', () => {
+    // The turn order interleaves the two player seats around the mob, so p0 and p1 sit on opposite sides of it.
+    for (const player_ends of [1, 2, 3])
+      expect(glyph_after_player_ends('p0', player_ends)).toBe(
+        glyph_after_player_ends('p1', player_ends),
+      )
+    // …and the shared reading is the chain's own budget: 3 minus the player turn-ends spent, dead at 3.
+    expect(glyph_after_player_ends('p0', 1)).toBe(2)
+    expect(glyph_after_player_ends('p0', 2)).toBe(1)
+    expect(glyph_after_player_ends('p0', 3)).toBe(0)
+  })
+
   test('the glyph is still ALIVE after a full round of mob turns (the PvM divergence #1540 measures)', () => {
     const { state: started, ctx } = pvm_fight()
     let acc = reduce(
