@@ -69,6 +69,21 @@ const payload_of = (msg) => {
   }
 }
 
+// The convergence ceiling for ONE outer input's re-entrant fan-out. A real input fans out to a handful of acks
+// (a wave drain acks its turns, a mirror echoes one claim); 1000 is orders of magnitude above any of them and
+// still drains in milliseconds. Crossing it means a subscriber dispatches unconditionally on every notification
+// — a fixpoint that does not exist. That is a BUG in the subscriber, and it says so, loudly, naming the kinds
+// still queued: a silent give-up would leave the board frozen with no evidence.
+const REENTRANT_FOLD_CAP = 1000
+
+const reentrant_storm = (pending) =>
+  new Error(
+    `fight store: ${REENTRANT_FOLD_CAP} re-entrant inputs folded during ONE input — a subscriber dispatches on ` +
+      `every notification and never converges (still queued: ${[
+        ...new Set(pending.map((entry) => String(entry?.msg?.type ?? 'unknown'))),
+      ].join(', ')})`
+  )
+
 /**
  * THE CORE'S INGRESS — the SAME one door, wrapped once. `input(msg, now)` remains the ONLY writer of fight state;
  * this folds the message into the headless core FIRST, then hands only that normalized result to the
@@ -76,6 +91,14 @@ const payload_of = (msg) => {
  * historical-corpus converter already share. A zustand subscriber may synchronously call `input()` while the
  * adapter is notifying. Those re-entrant calls are captured immediately, then folded FIFO after the current core
  * is installed; no older fold can overwrite a core produced by a nested call.
+ *
+ * THE DRAIN IS ONE FLAT LOOP, never a nest: exactly one drain runs at a time (`draining`), so a queued input
+ * folded from inside a notification re-enters that SAME loop instead of opening a new one. Nesting the drains
+ * cost one frame set per re-entrant input, and a subscriber feeding the door on every notification walked the
+ * stack off its end (RangeError, live #1636). Depth is now O(1) in the number of re-entrant inputs; a subscriber
+ * that never converges hits REENTRANT_FOLD_CAP and throws loudly, naming the kinds still queued — never a
+ * silent give-up. The drain still runs at every `set`, so a level-triggered edge (the single-flight commit
+ * claim) still observes a nested claim before the same adapter's next notification.
  *
  * The capture ordinal lives in THIS closure, never in the atom: it is provenance for the envelope, not fight state
  * (the tee keeps its own the same way). Session identity comes from the STORE's own post-commit `fight_id`, never
@@ -93,18 +116,32 @@ const payload_of = (msg) => {
 const with_core_fold = (make_door, set, get) => {
   let capture_seq = 0
   let folding = false
+  let draining = false
+  let admitted = 0
   let active_core = null
   const pending = []
 
+  // THE ONE DRAIN. A nested call returns immediately — its entries are already queued and the loop that is
+  // running will reach them, at ITS stack depth. That re-entrancy guard is the whole fix: without it every
+  // queued input folds one level deeper than the input that admitted it.
   const drain = () => {
-    while (pending.length) fold(pending.shift())
+    if (draining) return
+    draining = true
+    try {
+      while (pending.length) {
+        if (++admitted > REENTRANT_FOLD_CAP) throw reentrant_storm(pending)
+        fold(pending.shift())
+      }
+    } finally {
+      draining = false
+    }
   }
 
   const publish_core = () => {
+    // A nested fold may have advanced `active_core` while this adapter notified. Publish the newest ordered
+    // fold, never a now-stale local capture. An identical core publishes nothing — zustand skips the notify.
     const core = active_core
     set((s) => (core === s.core ? s : { ...s, core }))
-    drain()
-    if (active_core !== core) publish_core()
   }
 
   const serialized_set = (update) => {
@@ -116,10 +153,7 @@ const with_core_fold = (make_door, set, get) => {
 
   const fold = ({ msg, now, envelope }) => {
     active_core = ingest(active_core, envelope, now)
-    const core = active_core
-    const result = door(msg, now, core)
-    // A nested fold may have advanced `active_core` while this adapter notified. Publish the newest ordered fold,
-    // never this call's now-stale local `core`.
+    const result = door(msg, now, active_core)
     publish_core()
     return result
   }
@@ -127,38 +161,34 @@ const with_core_fold = (make_door, set, get) => {
   const door = make_door(serialized_set)
 
   return (raw, now = Date.now()) => {
-    const outer = !folding
-    if (outer) {
-      folding = true
-      active_core = get().core
-    }
-    let entry
-    try {
-      const msg = raw
-      const envelope = input_envelope({
+    const msg = raw
+    const entry = {
+      msg,
+      now,
+      envelope: input_envelope({
         session_id: get().fight_id ?? null,
         input_seq: capture_seq++,
         observed_at_ms: now,
         payload: payload_of(msg),
-      })
-      entry = { msg, now, envelope }
-    } catch (error) {
-      if (outer) {
-        active_core = null
-        folding = false
-      }
-      throw error
+      }),
     }
-    if (!outer) {
+    // A subscriber dispatching during a notification queues FIFO behind the fold that is notifying it, and the
+    // ONE running drain folds it. Never fold it here — that is the frame-per-input recursion (#1636).
+    if (folding) {
       pending.push(entry)
       return
     }
 
+    folding = true
+    admitted = 0
+    active_core = get().core
     try {
       const result = fold(entry)
       drain()
       return result
     } finally {
+      // A storm (or any throw mid-fold) leaves no backlog to re-enter the next input with.
+      pending.length = 0
       active_core = null
       folding = false
     }
