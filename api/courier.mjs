@@ -282,20 +282,26 @@ export async function courier_fetch(request, service = production_service) {
   return Response.json(result.json, { status: result.status, headers: CORS })
 }
 
+/** A malformed body is DATA, not a throw: the adapter answers the same named 400 the Bun handler does, rather
+ *  than letting a JSON.parse blow up into an unexplained 500. */
+const parse_body = (raw) => {
+  if (typeof raw !== 'string') return { ok: true, body: raw }
+  try {
+    return { ok: true, body: JSON.parse(raw) }
+  } catch {
+    return { ok: false, body: null }
+  }
+}
+
 // Node/Vercel-style adapter, kept beside the Bun fetch handler so the endpoint contract has one route home.
 export default async function handler(request, response) {
   Object.entries(CORS).forEach(([key, value]) => response.setHeader(key, value))
   if (request.method === 'OPTIONS') return response.status(204).end()
   if (request.method !== 'POST') return response.status(405).json({ error: 'POST only', code: 'method_not_allowed' })
   const [pathname] = String(request.url || '').split('?')
-  let body = request.body
-  if (typeof body === 'string')
-    try {
-      body = JSON.parse(body)
-    } catch {
-      return response.status(400).json({ error: 'invalid JSON body', code: 'invalid_json' })
-    }
-  const result = await route_courier_post(pathname, body)
+  const parsed = parse_body(request.body)
+  if (!parsed.ok) return response.status(400).json({ error: 'invalid JSON body', code: 'invalid_json' })
+  const result = await route_courier_post(pathname, parsed.body)
   return response.status(result.status).json(result.json)
 }
 
