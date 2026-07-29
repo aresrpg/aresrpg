@@ -12,7 +12,7 @@ import type { Wallet as WalletStandard } from '@mysten/wallet-standard'
 
 import { get_sdk } from '../chain/sdk'
 import i18n from '../i18n'
-import { tx_error } from '../game/core/abort_copy.js'
+import { humanize_tx_error, tx_error } from '../game/core/abort_copy.js'
 import { gas_guard_decision, sim_gas, GAS_CEILING_SUI, GAS_CEILING_MIST } from '../game/core/gas_guard.js'
 import { SPONSOR_URL } from '../env'
 import { read_sui_balance_mist } from '../auth/sui_balance'
@@ -100,6 +100,11 @@ export type { SponsoredReceipt, TxReceipt }
 // Net cost over GAS_CEILING_SUI → REFUSE loudly with the number. Otherwise pin the computation-padded budget
 // (simulated storage + computation ×1.5) so the wallet can never under-budget again.
 
+/** Preserve the most specific simulation refusal the RPC supplied without leaking `[object Object]`. */
+export function simulation_failure_reason(error: unknown): string {
+  return humanize_tx_error({ name: 'SimulationError', cause: error })
+}
+
 /** simulateTransaction (I/O). Throws a humanized error when the RPC itself can't simulate. The RAW cause is
  * kept on `.cause` — a deep-dust wallet can fail GAS SELECTION inside the node's simulate, and the fallback's
  * detector (gas_fallback is_gas_selection_error) walks the cause chain to recognize that class through the
@@ -111,7 +116,14 @@ async function simulate(transaction: Transaction): Promise<any> {
   } catch (e) {
     // couldn't even simulate (RPC/unsupported) — refuse rather than gamble real gas on an unknown-cost tx
     game_log('gas-guard', 'simulation threw — refusing (zero gas):', e)
-    throw new Error(i18n.t('errors.tx_simulation_failed'), { cause: e })
+    const failure = new Error(
+      i18n.t('errors.tx_simulation_failed_reason', {
+        reason: simulation_failure_reason(e),
+      }),
+      { cause: e }
+    )
+    failure.name = 'SimulationError'
+    throw failure
   }
 }
 

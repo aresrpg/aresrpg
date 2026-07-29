@@ -20,11 +20,13 @@ import { route_create_payment } from '../chain/money_route'
 import { is_sponsor_self_pay_refusal } from '../tx'
 import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
 import { game_log } from '../core/log.js'
+import i18n from '../i18n'
+import { context } from '../game/core/game.js'
 import { read_world_joined } from '../game/core/world_joined.js'
 import { tx_error } from '../game/core/abort_copy.js'
 
 import { run_tx } from './tx.js'
-import { join_kiosk_for_character } from './kiosk_resolve.js'
+import { character_join_handle, join_kiosk_for_character } from './kiosk_resolve.js'
 import { publish_world_binding } from './session_gate.js'
 import { invalidate_world_position } from './spawns_adapter.js'
 import { seed_checkpoint_spawn } from './world_checkpoint.js'
@@ -79,8 +81,9 @@ async function build_join(character_id, world_id) {
   const sdk = await get_sdk()
   // Create-effects FIRST (a just-minted character's kiosk pair is known EXACTLY — zero reads, zero race), else the
   // derive-from-character resolver with a bounded READ-ONLY retry (never the join tx). See kiosk_resolve.js.
-  const handle = await join_kiosk_for_character(sdk, address, character_id)
-  if (!handle) throw new Error('That character is not in one of your kiosks')
+  const known_handle = character_join_handle(context.get_state().sui.characters, character_id)
+  const handle = await join_kiosk_for_character(sdk, address, character_id, { known_handle })
+  if (!handle) throw new Error(i18n.t('characters.delete.not_in_kiosk'))
   return join_world_ptb({ network: DEMO_NETWORK })({
     world_id,
     kiosk_id: handle.kiosk_id,

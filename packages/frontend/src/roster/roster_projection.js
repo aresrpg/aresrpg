@@ -48,6 +48,9 @@ export function rpc_to_card(character) {
     available_points: Number(character.available_points ?? 0),
     current_hp: character.current_hp == null ? null : Number(character.current_hp),
     hp_updated_ms: character.hp_updated_ms == null ? null : Number(character.hp_updated_ms),
+    // The indexed Character row names its owning kiosk. The matching PersonalKioskCap id is receipt-only
+    // client knowledge, retained by the roster reducer until this kiosk identity catches up.
+    kiosk_id: character.kiosk_id ?? null,
     gear_vitality: character.gear_vitality == null ? null : Number(character.gear_vitality),
     equipment_stats:
       character.equipment_stats == null

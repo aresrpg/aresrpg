@@ -12,7 +12,6 @@ import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { context } from '../game/core/game.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
-import { remember_character_kiosk } from '../world-shell/kiosk_resolve.js'
 import { begin_join } from '../world-shell/session_gate.js'
 import { game_log } from '../core/log.js'
 import { get_sdk, type ExpeditionSdk } from '../chain/sdk'
@@ -82,15 +81,10 @@ function mint_error(error?: string | null): Error {
   return new Error(ENAME_TAKEN.test(e) ? 'That name is already taken, choose another.' : humanize_abort(e))
 }
 
-/** Feed a settled Character mint through the roster reducer door and memoize its receipt-proven kiosk pair. */
+/** Feed a settled Character mint through the roster reducer door. */
 function ingest_character_mint_receipt(receipt: any, draft: character_draft) {
   const projection = project_character_mint(receipt, draft)
   if (!projection) return null
-  if (projection.kiosk_id && projection.personal_kiosk_cap_id)
-    remember_character_kiosk(projection.character.id, {
-      kiosk_id: projection.kiosk_id,
-      personal_kiosk_cap_id: projection.personal_kiosk_cap_id,
-    })
   context.dispatch('action/sui_data', projection.roster_input)
   return projection
 }

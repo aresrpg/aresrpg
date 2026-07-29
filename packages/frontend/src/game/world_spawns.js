@@ -50,7 +50,7 @@ import { report_error } from '../core/report.js'
 import { get_config } from '../rpc/client'
 import { subscribe_zones } from '../rpc/zones_poll'
 import { get_mob_tier } from './data/mobs.js'
-import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
+import { zone_rows_v1, zone_world_doc } from './zone_rows.js'
 import { get_sdk } from '../chain/sdk'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { spawns_store, spawns_input } from '../world-shell/spawns_adapter.js'
@@ -378,29 +378,22 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     }
   }
 
-  // ── SEARCH FAST-PATH — the gap between mobs appearing and search done was too slow ──
-  // discovery_actions.js dispatches the `zone_searched` RECEIPT into the core the instant the tx CERTIFIES
-  // (checkpoint+zone+hunt_zone advance atomically there) and broadcasts the same beat on the shared bus. The
-  // steady-state /v1 poll would only SEE the new spawns seconds later (indexer ~1.5s + api cache 5s + client
-  // LRU 3s), so THIS listener reads the zone the tx just wrote CHAIN-DIRECT (zone_rows_chain — atomically
-  // consistent post-cert) and ferries the rows in as a PROVEN top-up: the core grace-shields them against the
-  // lagging poll, the next frame places them. READ-ONLY: no tx, zero gas, money rails untouched.
-  const on_zone_searched = async (/** @type {{ world_id:string, zx:number, zy:number, at_cert?:number }} */ ev) => {
-    const { world_id, zx, zy, at_cert } = ev ?? {}
+  // ── SEARCH FAST-PATH ──
+  // discovery_actions folds executed-result rows through the spawns reducer before finality. This listener only
+  // projects that atom into rigs; no second read or bypass writer lives at the render edge.
+  const on_zone_rows_ready = (/** @type {{ world_id:string, zx:number, zy:number,
+   * row_count:number, at_executed?:number, reconcile?:boolean }} */ ev) => {
+    const { world_id, zx, zy, row_count, at_executed, reconcile } = ev ?? {}
     if (disposed || !world_id || world_id !== current_world_id()) return
-    await ensure_world_dims(world_id)
-    const rows = await zone_rows_chain(world_id, zx, zy).catch(() => null)
-    if (disposed || !rows?.length) return
-    // Tag the cert instant BEFORE the ferry so place() emits the one-shot cert→visible delta for the first
+    // Tag the execute instant BEFORE the sync so place() emits the one-shot execute→visible delta for the first
     // NEW spawn (the fix's own proof it renders < 1s); _searched marks ride the sync below.
-    if (at_cert != null) render_probe_at = at_cert
+    if (at_executed != null && !reconcile) render_probe_at = at_executed
     const before = new Set(entries.keys())
-    spawns_input({ type: 'zone_rows', zx, zy, proven: true, rows })
     sync_from_core() // search fast-path: new rows in-world + on the minimap the same beat
     for (const [key, e] of entries) if (!before.has(key)) e._searched = true
     console.info(
-      `[world-spawns] search fast-path: zone ${zx}:${zy} → ${rows.length} spawns chain-direct` +
-        (at_cert != null ? ` (data @ ${Math.round(performance.now() - at_cert)}ms after cert)` : '')
+      `[world-spawns] search ${reconcile ? 'reconcile' : 'fast-path'}: zone ${zx}:${zy} → ${row_count} spawns` +
+        (at_executed != null ? ` (visible @ ${Math.round(performance.now() - at_executed)}ms after execute)` : '')
     )
   }
 
@@ -1127,9 +1120,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   raf = requestAnimationFrame(frame)
   void poll()
   const timer = setInterval(poll, POLL_MS)
-  // OPTIMISTIC render on search-cert (see on_zone_searched): the /v1 poll above is the steady-state reconciler;
-  // this collapses the cert→mobs-visible gap from a 6s poll tick + indexer/cache lag to one chain-direct read.
-  context.events.on('discovery/zone_searched', on_zone_searched)
+  // OPTIMISTIC render on executed search (see on_zone_rows_ready); /v1 remains the steady-state reconciler.
+  context.events.on('discovery/zone_rows_ready', on_zone_rows_ready)
 
   return {
     // CLEAN FOOTAGE parity (ambient/remotes): hide every plate for cinematic recording (rigs stay in scene).
@@ -1161,7 +1153,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       cancelAnimationFrame(raf)
       clearInterval(timer)
       unsubscribe_zones()
-      context.events.off('discovery/zone_searched', on_zone_searched)
+      context.events.off('discovery/zone_rows_ready', on_zone_rows_ready)
       ;(canvas ?? window).removeEventListener('pointerdown', /** @type {any} */ (on_down))
       window.removeEventListener('pointerup', /** @type {any} */ (on_up))
       release_gather()

@@ -135,6 +135,31 @@ function floor_minted_characters(characters, minted_character_floor, deleted_ids
 }
 
 /**
+ * Keep the receipt-proven join handle on a Character while the read model catches up. A matching kiosk hands
+ * authority to the snapshot for every other field but retains the cap id that /v1 does not project. A different
+ * kiosk invalidates the old pair instead of joining through stale ownership.
+ * @param {any[]} characters the incoming snapshot rows
+ * @param {any[]} held the reducer-owned rows before this snapshot
+ */
+function keep_character_join_handles(characters, held) {
+  if (!Array.isArray(characters) || !Array.isArray(held) || held.length === 0) return characters
+  const by_id = new Map(held.map((character) => [character?.id, character]))
+  let changed = false
+  const next = characters.map((character) => {
+    const prior = by_id.get(character?.id)
+    if (!prior?.kiosk_id || !prior?.personal_kiosk_cap_id) return character
+    if (character?.kiosk_id && String(character.kiosk_id) !== String(prior.kiosk_id)) return character
+    changed = true
+    return {
+      ...character,
+      kiosk_id: character?.kiosk_id ?? prior.kiosk_id,
+      personal_kiosk_cap_id: prior.personal_kiosk_cap_id,
+    }
+  })
+  return changed ? next : characters
+}
+
+/**
  * The ONE roster-adoption law every non-receipt feed passes through: drop receipt-proven burns, never regress
  * a receipt-proven XP floor or a settled HP anchor, then hold receipt-proven mints the feed has not projected
  * yet. Both snapshot doors below share it — the law lives here once, never once per door.
@@ -142,7 +167,10 @@ function floor_minted_characters(characters, minted_character_floor, deleted_ids
  */
 function adopt_roster(sui, characters) {
   return floor_minted_characters(
-    keep_settled_hp(floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor), sui.characters),
+    keep_character_join_handles(
+      keep_settled_hp(floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor), sui.characters),
+      sui.characters
+    ),
     sui.minted_character_floor,
     sui.deleted_ids
   )

@@ -113,11 +113,31 @@ describe('init + the headless envelope proof (fake DSN, captured transport — n
       .filter(([h]) => h.type === 'event')
       .map(([, p]) => p)
 
-  it('init without a DSN is a hard no-op', () => {
+  it('init without a DSN leaves remote reporting unarmed and local reporting safe', () => {
+    const original = console.error
+    console.error = () => {}
     expect(is_reporting_live()).toBe(false)
     expect(init_reporting({ dsn: '' })).toBe(false)
     expect(is_reporting_live()).toBe(false)
-    expect(() => report_error(new Error('before init — must no-op'))).not.toThrow()
+    try {
+      expect(() => report_error(new Error('before init — must not throw'))).not.toThrow()
+    } finally {
+      console.error = original
+    }
+  })
+
+  it('a reported error always prints its full cause locally even when Sentry is not armed', () => {
+    const original = console.error
+    const calls = []
+    console.error = (...args) => calls.push(args)
+    try {
+      const reason = new Error('full kiosk census failure reason')
+      report_error(new Error('join failed', { cause: reason }), { area: 'join', action: 'auto_join_world' })
+    } finally {
+      console.error = original
+    }
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toContainEqual(expect.objectContaining({ message: 'full kiosk census failure reason' }))
   })
 
   it('a forced error attempts an outbound envelope carrying the game_log breadcrumbs', async () => {
@@ -134,8 +154,14 @@ describe('init + the headless envelope proof (fake DSN, captured transport — n
 
     game_log('join', 'player joined world 42') // the bracket keeper → breadcrumb pairing
     const boom = new Error('forced test error')
-    report_error(boom, { area: 'test', action: 'headless_proof', digest: '0xproof' })
-    report_error(boom, { area: 'test' }) // same object again — the dedup stamp must swallow it
+    const original = console.error
+    console.error = () => {}
+    try {
+      report_error(boom, { area: 'test', action: 'headless_proof', digest: '0xproof' })
+      report_error(boom, { area: 'test' }) // same object again — the dedup stamp must swallow it
+    } finally {
+      console.error = original
+    }
 
     const Sentry = await import('@sentry/react')
     await Sentry.flush(2000)

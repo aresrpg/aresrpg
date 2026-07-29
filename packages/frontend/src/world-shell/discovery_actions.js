@@ -22,6 +22,9 @@ import { play_discovery_sfx } from '../game/core/audio/sfx.js'
 import { pulse_walk_fov } from '../game/core/camera_juice.js'
 import { read_zone_searched } from '../game/core/zone_searched.js'
 import { humanize_tx_error } from '../game/core/abort_copy.js'
+import { zone_rows_chain } from '../game/zone_rows.js'
+import { game_log } from '../core/log.js'
+import { report_error } from '../core/report.js'
 
 import { run_tx_random } from './tx.js'
 import { spawns_store, spawns_input } from './spawns_adapter.js'
@@ -69,6 +72,38 @@ export function fetch_world_doc(world_id) {
     _world_docs.set(world_id, read)
   }
   return _world_docs.get(world_id)
+}
+
+const zone_read_delays_ms = [0, 180, 420]
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Fold the chain-direct rows for a known-executed search through the spawns reducer door. Null is an
+ * unconfirmed negative seconds after a write, so the optimistic leg retries reads only; it never retries the tx.
+ */
+async function fold_zone_rows_after_write({ world_id, zx, zy, at_executed, reconcile = false }) {
+  const delays = reconcile ? [0] : zone_read_delays_ms
+  for (const delay_ms of delays) {
+    if (delay_ms) await sleep(delay_ms)
+    const rows = await zone_rows_chain(world_id, zx, zy)
+    if (rows === null) continue
+    spawns_input({ type: 'zone_rows', zx, zy, proven: true, rows })
+    context.events.emit('discovery/zone_rows_ready', {
+      world_id,
+      zx,
+      zy,
+      row_count: rows.length,
+      at_executed,
+      reconcile,
+    })
+    game_log(
+      'discovery',
+      `zone ${zx}:${zy} rows folded ${Math.round(performance.now() - at_executed)}ms after execute` +
+        (reconcile ? ' (finality reconcile)' : '')
+    )
+    return rows
+  }
+  return null
 }
 
 /**
@@ -135,7 +170,25 @@ export function search_zone({ world_id, x, z, character_id, kiosk_id, personal_k
         offset_z: off.z,
       })
     })
-    .then((tx) => run_tx_random('search_zone', tx))
+    .then((tx) =>
+      run_tx_random('search_zone', tx, undefined, {
+        on_executed: ({ at: at_executed }) => {
+          if (!searched_cell) return
+          void fold_zone_rows_after_write({
+            world_id,
+            zx: searched_cell.zx,
+            zy: searched_cell.zy,
+            at_executed,
+          }).catch((error) =>
+            report_error(error, {
+              area: 'discovery',
+              action: 'search_zone_executed_projection',
+              world: world_id,
+            })
+          )
+        },
+      })
+    )
     .then((res) => {
       resolve_progress_toast(toast_id, { state: 'success', title: i18n.t('discovery.search_done') })
       const found = read_zone_searched(res?.result)
@@ -171,6 +224,21 @@ export function search_zone({ world_id, x, z, character_id, kiosk_id, personal_k
         zy: found.zy,
         at_cert: performance.now(),
       })
+      // Finality is reconciliation, not the first paint. A direct read re-enters the same reducer door and can
+      // enrich/correct the executed projection without delaying the success toast or returned tx result.
+      void fold_zone_rows_after_write({
+        world_id,
+        zx: found.zx,
+        zy: found.zy,
+        at_executed: performance.now(),
+        reconcile: true,
+      }).catch((error) =>
+        report_error(error, {
+          area: 'discovery',
+          action: 'search_zone_finality_reconcile',
+          world: world_id,
+        })
+      )
       return res
     })
     .catch((e) => {

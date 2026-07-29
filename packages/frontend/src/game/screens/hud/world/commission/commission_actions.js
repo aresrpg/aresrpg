@@ -5,9 +5,8 @@
 // and demoable NOW. When the chain lands ONLY THIS FILE changes — the views never do:
 //
 //   READS:
-//     list_artisans(my_address)  → Artisan[]   the caller's FRIEND ROSTER (Commission Flow v2 — an artisan
-//       must be a friend first, so the picker never shows a thousand names) — read_roster
-//       (soulbound FriendList + /v1 `jobs` enrichment). Every friend is a candidate artisan; their craftable
+//     artisans_from_rows(rows)  → Artisan[]   the caller's reducer-owned FRIEND ROSTER (Commission Flow v2 —
+//       an artisan must be a friend first, so the picker never shows a thousand names). Every friend is a candidate; their craftable
 //       recipes derive from their on-chain job levels. The old "every artisan" mock is GONE.
 //     list_commissions(address)  → { as_artisan, as_customer }   still the /v1 stub (the parallel Move-v2 read
 //       lane owns it).
@@ -23,8 +22,6 @@
 //   artisan_name: string, artisan_address: string,
 //   recipe_id: string, recipe_name: string, recipe_icon: string, recipe_category: string, recipe_quality: string,
 // }} Commission
-
-import { read_roster } from '../../../../../world-shell/friends_reads.js'
 
 /** SUI is 9-decimal (MIST). The payment is authored in SUI and stored on-chain as MIST. */
 export const SUI_DECIMALS = 9
@@ -86,17 +83,19 @@ const MOCK_COMMISSIONS = {
 const beat = (/** @type {number} */ ms = 220) => new Promise(res => setTimeout(res, ms))
 
 /**
- * The craftspeople a customer can commission = the caller's FRIEND ROSTER. Reads the
- * soulbound FriendList + /v1 enrichment via read_roster and projects each friend to `{ address, name, jobs }`.
+ * The craftspeople a customer can commission = the caller's FRIEND ROSTER. Projects the reducer rows to
+ * `{ address, name, jobs }`; async reads have already entered through the shared friend input door.
  * Every friend is a candidate artisan; the view derives their craftable recipes from `jobs` (a friend with no
  * craft levels shows an empty recipe list). Empty roster / logged-out → `[]` (the view shows the add-friends hint).
- * @param {string | null} [my_address] the signed-in wallet whose friend list to read
- * @returns {Promise<Artisan[]>}
+ * @param {any[]} rows
+ * @returns {Artisan[]}
  */
-export async function list_artisans(my_address) {
-  if (!my_address) return []
-  const { rows } = await read_roster(my_address)
-  return rows.map(r => ({ address: r.address, name: r.name || short(r.address), jobs: r.jobs ?? {} }))
+export function artisans_from_rows(rows) {
+  return (rows ?? []).map((row) => ({
+    address: row.address,
+    name: row.name || short(row.address),
+    jobs: row.jobs ?? {},
+  }))
 }
 
 /**

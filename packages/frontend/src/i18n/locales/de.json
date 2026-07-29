@@ -2405,6 +2405,7 @@
     "sponsor_outcome_unknown": "Die Antwort auf diese gesponserte Transaktion ist verloren gegangen — sie könnte bereits durchgegangen sein. Prüfe das Ergebnis, bevor du es erneut versuchst.",
     "sponsor_stale_client": "Die App ist veraltet. Bitte lade die Seite neu, um weiterzuspielen.",
     "tx_simulation_failed": "Transaktion konnte nicht simuliert werden — nichts wurde gesendet. Versuch es erneut.",
+    "tx_simulation_failed_reason": "Transaktion konnte nicht simuliert werden — nichts wurde gesendet.\nGrund: {{reason}}",
     "sale_paused": "Dieser Verkauf ist derzeit pausiert. Schau bald wieder vorbei.",
     "payment_below_price": "Das ist nicht genug SUI für den Preis dieses Gegenstands.",
     "wrong_item": "Dieser Gegenstand passt nicht zu diesem Verkauf. Aktualisiere und versuch es erneut.",

@@ -125,27 +125,18 @@ export function kiosk_resolve_last_failure() {
   return last ? { branch: last.branch, character_id: last.character_id, t: last.t } : null
 }
 
-// ── CREATE-EFFECTS MEMO (S-57 create→auto-join race, design ruling 2026-07-12) ─────────────────────────────────
-// A character is kiosk-locked FOREVER (kiosk-lock constitution), so its (kiosk_id, personal_kiosk_cap_id) is
-// IMMUTABLE the instant the create tx lands — and that tx's receipt NAMES all three ids (store.ts reads them off
-// objectChanges). Stash them here at create time so the AUTO-JOIN firing seconds later (DiscoveryPrompts, off the
-// world-less / index-lagged /v1 doc) resolves with ZERO reads instead of racing the chain-direct getOwnedKiosks /
-// getObject on a just-minted object — the owned-object index lags a checkpoint or two, which is the "not in one of
-// your kiosks" a real wallet hit on a fresh lineage. Session-scoped; entries are inert for any character the wallet
-// can't join (character_ids are globally unique), so no cross-account leak and no eviction needed.
-const created_kiosks = /** @type {Map<string, {kiosk_id:string, personal_kiosk_cap_id:string}>} */ (new Map())
-
 /**
- * Record the kiosk pair a create tx just minted for `character_id` (read off the receipt's created objects). The
- * ONE writer is the create flow (roster/store.ts); everything else reads through `join_kiosk_for_character`.
- * @param {string} character_id @param {{kiosk_id?:string, personal_kiosk_cap_id?:string}} handle
+ * Read the join handle from the reducer-owned roster. The confirmed mint receipt writes this pair through
+ * `action/sui_data`; a lagging roster snapshot cannot erase it.
+ * @param {any[]} characters @param {string} character_id
  */
-export function remember_character_kiosk(character_id, handle) {
-  if (character_id && handle?.kiosk_id && handle?.personal_kiosk_cap_id)
-    created_kiosks.set(String(character_id), {
-      kiosk_id: String(handle.kiosk_id),
-      personal_kiosk_cap_id: String(handle.personal_kiosk_cap_id),
-    })
+export function character_join_handle(characters, character_id) {
+  const character = (characters ?? []).find((row) => String(row?.id) === String(character_id))
+  if (!character?.kiosk_id || !character?.personal_kiosk_cap_id) return null
+  return {
+    kiosk_id: String(character.kiosk_id),
+    personal_kiosk_cap_id: String(character.personal_kiosk_cap_id),
+  }
 }
 
 /** @param {number} ms */
@@ -158,13 +149,18 @@ const default_sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  * the JOIN TX is NEVER retried here). ~3 tries over ~3.2s, then the honest absence (null → the caller's toast; the
  * manual switcher is the retry). `sleep` is injectable so the backoff is instant under test.
  * @param {any} sdk @param {string} address @param {string} character_id
- * @param {(ms:number)=>Promise<void>} [sleep]
+ * @param {{known_handle?:{kiosk_id:string,personal_kiosk_cap_id:string}|null,
+ *   sleep?:(ms:number)=>Promise<void>}|((ms:number)=>Promise<void>)} [options]
  */
-export async function join_kiosk_for_character(sdk, address, character_id, sleep = default_sleep) {
-  const remembered = created_kiosks.get(String(character_id))
-  if (remembered) {
-    game_log('join', `create-effects → join args (kiosk ${remembered.kiosk_id})`)
-    return remembered
+export async function join_kiosk_for_character(sdk, address, character_id, options = {}) {
+  const known_handle = typeof options === 'function' ? null : options.known_handle
+  const sleep = typeof options === 'function' ? options : (options.sleep ?? default_sleep)
+  if (known_handle?.kiosk_id && known_handle?.personal_kiosk_cap_id) {
+    game_log('join', `roster receipt → join args (kiosk ${known_handle.kiosk_id})`)
+    return {
+      kiosk_id: String(known_handle.kiosk_id),
+      personal_kiosk_cap_id: String(known_handle.personal_kiosk_cap_id),
+    }
   }
   // Miss (rejoin / legacy-unjoined / a refresh that wiped the session memo mid-create-window): DERIVE through the
   // resolver, retrying the READ a few times — never the tx. Kiosk-lock is forever, so a resolved handle is final.
