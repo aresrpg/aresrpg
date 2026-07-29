@@ -57,7 +57,7 @@ import {
   is_ending,
   fight_end_state,
 } from '../fight-engine/fight_end_machine.js'
-import { humanize_abort, parse_move_abort, tx_error } from '../game/core/abort_copy.js'
+import { humanize_abort, is_fight_over_abort, parse_move_abort, tx_error } from '../game/core/abort_copy.js'
 import { had_active_seat, mark_active_seat, session_reset } from '../fight-engine/phase.js'
 import { set_zone_music, stop_zone_music } from '../game/core/audio/ambient_music.js'
 import { game_log } from '../core/log.js'
@@ -1421,6 +1421,16 @@ export const use_dungeon = create((set, get) => ({
       await get()
         .refresh()
         .catch(() => {})
+      // #1136 — THE ABORT IS EVIDENCE, NOT JUST COPY. `actions::101/105` is the chain saying this fight already
+      // went terminal (a keeper or the opposing flow settled it under a live-looking board — discriminator ①,
+      // machine-confirmed on 0x46af229c). The refresh above gets FIRST say: a settled-but-not-yet-destroyed
+      // Fight folds its own WON/FAILED through the ordinary snapshot door and the result card opens by itself.
+      // Only when the session is STILL latched afterwards has nothing folded the terminal — and then the honest
+      // response is the same terminal door the gone-object read takes, never a dead board behind a red toast.
+      if (is_fight_over_abort(error) && get().fight_id === fight_id) {
+        fight_state_trace('commit_terminal_abort_collapse', { fight_id, turn_key })
+        get()._collapse_terminal_ghost(fight_id)
+      }
     }
     set({ busy: false, ...(ok ? { _turn_commit_failure: null } : {}) })
     fight_state_trace('commit_finished', { turn_key, background, ok })
