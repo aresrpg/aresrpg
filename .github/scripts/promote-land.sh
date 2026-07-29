@@ -5,7 +5,7 @@
 # promote-land.sh — the SHARED landing engine for the promotion queue (issue #105).
 #
 # ONE home for "land a promote-requested PR onto its base by fast-forward, signatures intact".
-# Called by BOTH triggers so the asserts + stamp + ff-push are never duplicated:
+# Called by BOTH triggers so the asserts + ff-push are never duplicated:
 #   • .github/workflows/promote.yml       — the owner's `/promote` command (one PR, interactive)
 #   • .github/workflows/promote-queue.yml — gate/checks workflow_run:completed (land-on-green)
 #
@@ -32,9 +32,11 @@
 #   argv[1] = PR number.   env: GH_TOKEN, GITHUB_REPOSITORY (+ RUNNER_TEMP/GITHUB_OUTPUT if set).
 #   Writes `promote_result=<result>` to stdout and, when set, to $GITHUB_OUTPUT (the caller reads
 #   it via the step output). Result ∈
-#     landed · stale · not-green · wrong-base · unauthorized · not-release-tipped
+#     landed · stale · not-green · wrong-base · unauthorized · not-release-tipped ·
+#     republish-window · master-push-rejected
 #   Exit code: 0 landed · 3 transient (stale | not-green — leave the label, the queue retries) ·
-#              1 hard refusal (wrong-base | unauthorized | not-release-tipped) or infra error ·
+#              1 hard refusal (wrong-base | unauthorized | not-release-tipped | republish-window |
+#                master-push-rejected — the ruleset turned the ff down) or infra error ·
 #              4 LANDED, but a post-landing automation dispatch failed — the push is done and must
 #                never be retried; the caller reddens its run so a human re-runs the dispatch.
 #   MUST run in a repo checked out with `fetch-depth: 0` (needs origin/<base> history for the
@@ -159,27 +161,30 @@ if [ "$BASE" = master ]; then
   fi
 fi
 
-# ── stamp the `promoted` status BEFORE the push (master only) — ORDER IS LOAD-BEARING ───────
-# GitHub evaluates the required-status-checks ruleset against the statuses already on the SHA AT
-# PUSH TIME (statuses attach to the commit object, not a ref). A ff-push writes $HEAD_SHA onto
-# master VERBATIM, so once master's ruleset requires `promoted`, that status must already exist
-# on the SHA or the push is rejected before any post-push step could run. Stamping here is safe:
-# $HEAD_SHA already exists as a commit object (fetched above); a stamped-but-never-pushed SHA is
-# harmless — a commit status carries no permission of its own. Only THIS engine can mint it, and
-# only after the asserts above pass, which is what makes master bot-exclusive by construction.
-if [ "$BASE" = master ]; then
-  gh api "repos/${REPO}/statuses/${HEAD_SHA}" -f state=success -f context=promoted \
-    -f description="fast-forwarded to master by the promote queue" >/dev/null
-fi
-
 # ── the landing: a plain fast-forward push (git itself rejects anything non-ff) ─────────────
+# THE ENGINE NEVER MINTS THE `promoted` STAMP (seat ruling 2026-07-29, issue #1573). It used to
+# stamp right here, before the push — but this engine also runs unattended from promote-queue.yml,
+# and a landing engine that writes its own permission slip is not a gate. The stamp is minted by
+# promote.yml alone, at the owner's `/promote`, and the queue holds no statuses:write at all.
+# master's ruleset then enforces the stamp SERVER-SIDE on the push below: a sha the owner never
+# blessed (a rebase makes a new one, carrying nothing) is refused by GitHub, not by this script.
 # Everything past this line is post-landing bookkeeping over a push that ALREADY HAPPENED and can
 # never be retried. A failed landing-automation dispatch is therefore recorded, never fatal here:
 # aborting mid-tail would strand the `promote-requested` label, re-land the same PR every CI cycle,
 # and make the /promote handler report a completed landing as a refusal. It is answered at the very
 # end with exit 4, which reddens the caller's run without lying about what happened.
 DISPATCH_FAILED=0
-git push origin "$HEAD_SHA:$BASE"
+if ! git push origin "$HEAD_SHA:$BASE"; then
+  # git's rejection message for a missing required status is indistinguishable from any other
+  # protected-branch refusal, so name the cause the master leg actually has: no `promoted` stamp.
+  if [ "$BASE" = master ]; then
+    emit master-push-rejected
+    echo "::error::master refused the fast-forward of $HEAD_SHA — its required 'promoted' status is missing (only promote.yml mints it, at the owner's /promote; a rebase produces a NEW sha that carries no stamp) or master moved under this run. Re-/promote the release PR."
+    exit 1
+  fi
+  echo "::error::the fast-forward of $HEAD_SHA onto $BASE was rejected — see the push output above"
+  exit 1
+fi
 echo "landed PR #$PR onto $BASE ($HEAD_SHA)"
 if [ "$BASE" = edge ]; then
   dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA" || DISPATCH_FAILED=1

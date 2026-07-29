@@ -23,9 +23,19 @@
 #
 # GOVERNANCE: the master hop is deploy-class and fires only on the owner's explicit word; the edge
 # hop is routine integration. "Who may land code" is enforced by the engine's asserts (owner
-# /promote comment + approval story + green + fast-forward + the `promoted` stamp), NEVER by a
+# /promote comment + approval story + green + fast-forward) plus, for master, the `promoted` stamp
+# this workflow mints and the ruleset requires server-side — NEVER by a
 # ruleset review rule or a bypass grant — the bot holds zero bypass privilege and clears the exact
 # same required checks, signatures, linear-history and ff rules as any other pusher.
+#
+# FROZEN BY DESIGN (seat ruling 2026-07-29, issue #1573). This handler is the SPLIT's privileged
+# half: it is the one place that mints the `promoted` status master's ruleset requires, and it runs
+# only behind an owner-identity assert on a human comment. It stays deliberately small and pinned to
+# the default branch — the unattended queue (promote-queue.yml) executes the engine from edge and
+# holds NO statuses:write, so the code that lands PRs can iterate at edge speed while the code that
+# mints deploy permission cannot. Changing this file changes who may put a commit on production:
+# it reaches master only through the owner's own promotion word, which is the acceptance this
+# ruling records.
 name: promote
 on:
   issue_comment:
@@ -34,7 +44,7 @@ permissions:
   contents: write
   actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
   pull-requests: write # label, comment, read reviews, open the next standing draft
-  statuses: write # stamp the `promoted` commit status (F1a — closes the direct-push-to-master hole)
+  statuses: write # THE mint: the `promoted` stamp lives here alone (F1a; split 2026-07-29, #1573)
 jobs:
   request:
     if: >-
@@ -68,6 +78,25 @@ jobs:
           gh label create promote-requested --repo "$GITHUB_REPOSITORY" --color BFD4F2 \
             --description "queued for land-on-green (issue #105)" --force >/dev/null
           gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label promote-requested >/dev/null
+      - name: stamp `promoted` on the head sha (master hop only) — the owner's word IS the mint
+        # THE SPLIT (seat ruling 2026-07-29, issue #1573). master's ruleset requires a `promoted`
+        # status on the sha AT PUSH TIME, and exactly one place may mint it: here, behind the
+        # owner-identity assert above. The shared engine no longer stamps — the unattended queue
+        # runs that same engine with no statuses:write, so a landing it performs can only ever
+        # fast-forward a sha the owner already blessed by hand.
+        #
+        # ORDER: the stamp is written BEFORE the engine's asserts run, and that is sound — a commit
+        # status carries no permission of its own, and the push it enables is still gated by the
+        # engine (green + fast-forward + release-tipped + republish-window) and by every other rule
+        # on master. A rebase produces a NEW sha carrying no stamp; the author re-/promotes, which
+        # is simply the owner re-saying the deploy word.
+        run: |
+          BASE=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json baseRefName -q .baseRefName)
+          if [ "$BASE" != master ]; then echo "edge hop — no promoted stamp needed"; exit 0; fi
+          SHA=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid -q .headRefOid)
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" -f state=success -f context=promoted \
+            -f description="promoted to master by the owner's /promote" >/dev/null
+          echo "stamped promoted on $SHA"
       - name: attempt landing (shared engine)
         id: land
         run: |
