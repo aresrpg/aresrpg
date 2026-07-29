@@ -73,7 +73,9 @@ const payload_of = (msg) => {
  * THE CORE'S INGRESS — the SAME one door, wrapped once. `input(msg, now)` remains the ONLY writer of fight state;
  * this folds the message into the headless core FIRST, then hands only that normalized result to the
  * settlement/presentation adapter. The envelope bridge is `classify_input` — the same pure map the tee and the
- * historical-corpus converter already share.
+ * historical-corpus converter already share. A zustand subscriber may synchronously call `input()` while the
+ * adapter is notifying. Those re-entrant calls are captured immediately, then folded FIFO after the current core
+ * is installed; no older fold can overwrite a core produced by a nested call.
  *
  * The capture ordinal lives in THIS closure, never in the atom: it is provenance for the envelope, not fight state
  * (the tee keeps its own the same way). Session identity comes from the STORE's own post-commit `fight_id`, never
@@ -83,24 +85,83 @@ const payload_of = (msg) => {
  *
  * NO FAULT BOUNDARY, deliberately: the core is the truth owner, so swallowing a throw here would freeze the
  * board silently — the exact class the no-silent-failure law bans. `ingest` is total by construction (ingest.js).
- * @param {(msg: any, now?: number) => any} door the settlement/presentation reducer door
+ * @param {(serialized_set:(fn:(s:any)=>any)=>void)=>(msg:any, now?:number, core?:any)=>any} make_door
+ *   builds the settlement/presentation reducer door against the serialized set seam
  * @param {(fn:(s:any)=>any)=>void} set
  * @param {()=>any} get
  */
-const with_core_fold = (door, set, get) => {
+const with_core_fold = (make_door, set, get) => {
   let capture_seq = 0
-  return (raw, now = Date.now()) => {
-    const msg = raw
-    const envelope = input_envelope({
-      session_id: get().fight_id ?? null,
-      input_seq: capture_seq++,
-      observed_at_ms: now,
-      payload: payload_of(msg),
-    })
-    const core = ingest(get().core, envelope, now)
-    const result = door(msg, now, core)
+  let folding = false
+  let active_core = null
+  const pending = []
+
+  const drain = () => {
+    while (pending.length) fold(pending.shift())
+  }
+
+  const publish_core = () => {
+    const core = active_core
     set((s) => (core === s.core ? s : { ...s, core }))
+    drain()
+    if (active_core !== core) publish_core()
+  }
+
+  const serialized_set = (update) => {
+    set(update)
+    // A subscriber's input is captured while `set` notifies. Drain it before the outer adapter can issue a
+    // second notification, so level-triggered effects observe the nested busy/consumed claim exactly once.
+    drain()
+  }
+
+  const fold = ({ msg, now, envelope }) => {
+    active_core = ingest(active_core, envelope, now)
+    const core = active_core
+    const result = door(msg, now, core)
+    // A nested fold may have advanced `active_core` while this adapter notified. Publish the newest ordered fold,
+    // never this call's now-stale local `core`.
+    publish_core()
     return result
+  }
+
+  const door = make_door(serialized_set)
+
+  return (raw, now = Date.now()) => {
+    const outer = !folding
+    if (outer) {
+      folding = true
+      active_core = get().core
+    }
+    let entry
+    try {
+      const msg = raw
+      const envelope = input_envelope({
+        session_id: get().fight_id ?? null,
+        input_seq: capture_seq++,
+        observed_at_ms: now,
+        payload: payload_of(msg),
+      })
+      entry = { msg, now, envelope }
+    } catch (error) {
+      if (outer) {
+        active_core = null
+        folding = false
+      }
+      throw error
+    }
+    if (!outer) {
+      pending.push(entry)
+      return
+    }
+
+    try {
+      const result = fold(entry)
+      drain()
+      return result
+    } finally {
+      active_core = null
+      folding = false
+    }
   }
 }
 
@@ -488,7 +549,7 @@ export const create_fight_store = () => {
     // session_closed and the core returns a fresh atom for both (ingest.js), so re-seeding it from the settlement
     // reset would wipe the session the very same message just opened. One home for "a new fight clears the fold".
     core: empty_core_state(null),
-    input: with_core_fold(make_input(set, get, trace_tap), set, get),
+    input: with_core_fold((serialized_set) => make_input(serialized_set, get, trace_tap), set, get),
   }))
   return { ...store, trace_tap }
 }
