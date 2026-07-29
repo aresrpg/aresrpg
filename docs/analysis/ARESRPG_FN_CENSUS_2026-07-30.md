@@ -45,13 +45,13 @@ without being public ABI, so the public surface is not the same thing as the wri
 A public function is classified by who can still reach it. Five consumer surfaces were
 swept, and each row records the evidence that placed it:
 
-| Surface               | How it was read                                                                                                  | Exactness                            |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| Shipped Move code     | `Call` instructions in the disassembly, resolved against each module's `use` address table                       | exact                                |
-| Sibling Move packages | same, over built `dungeon`, `kolizeum`, `forgemagie`, `gifting` (the four that declare `[dependencies.aresrpg]`) | exact                                |
-| Off-chain static      | `` `${pkg}::module::fn` `` in `*.js,*.ts,*.mjs,*.jsx,*.tsx` across the repo, `node_modules` excluded             | exact                                |
-| Off-chain dynamic     | `` `${pkg}::module::${expr}` `` sites, candidate names resolved from string literals in the same file            | heuristic                            |
-| Move tests            | `packages/move/aresrpg/tests/**` qualified calls and method-syntax calls                                         | qualified exact, method-syntax fuzzy |
+| Surface               | How it was read                                                                                                   | Exactness                            |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Shipped Move code     | `Call` instructions in the disassembly, resolved against each module's `use` address table                        | exact                                |
+| Sibling Move packages | same, over built `dungeon`, `kolizeum`, `forgemagie`, `gifting` (the four that declare `[dependencies.aresrpg]`)  | exact                                |
+| Off-chain static      | `` `${pkg}::module::fn` `` in JS/TS sources (.js, .ts, .mjs, .jsx, .tsx) across the repo, `node_modules` excluded | exact                                |
+| Off-chain dynamic     | `` `${pkg}::module::${expr}` `` sites, candidate names resolved from string literals in the same file             | heuristic                            |
+| Move tests            | `packages/move/aresrpg/tests/**` qualified calls and method-syntax calls                                          | qualified exact, method-syntax fuzzy |
 
 Classification rule, applied mechanically:
 
