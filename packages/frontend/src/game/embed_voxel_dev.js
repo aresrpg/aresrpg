@@ -10,7 +10,7 @@ import { context } from './store.js'
 import { fight_view } from '@aresrpg/fight/project'
 import { HIT_FLASH_TINT } from '../world-shell/voxel_fight_adapter.js'
 import { game_log } from '../core/log.js'
-import { first_uniform_refusal, uniform_refusal_sample_size } from './dev/uniform_refusal.js'
+import { scan_for_claimable_group } from './dev/world_fight_scan.js'
 
 /**
  * @param {{ engine: any, board: any, ctl: any, cam: any, canvas: HTMLCanvasElement, get_avatar: () => any,
@@ -85,9 +85,10 @@ export function install_dev_rig({
   // and MOUNT it, using the EXACT production path (create_world_fight → enter_world_fight — the same two calls
   // world_spawns' [R]/click engage fires). It iterates the discovered zones' mob spawns and lets the tx choke's
   // dry-run REFUSE any spawn not in the character's checkpoint zone for FREE (zero-gas over_ceiling/sim_failed),
-  // so the first claimable group in reach is the one that actually executes. Five byte-identical initial
-  // refusals stop the scan as an account-wide failure instead of dry-running hundreds more. DEV-only; retires
-  // with the world click being reliably drivable headless.
+  // so the first claimable group in reach is the one that actually executes. The refusal POLICY (fail fast on a
+  // character-wide strand, skip an out-of-reach zone whole, and report the real cause instead of burning the
+  // ceiling) lives in dev/world_fight_scan.js — #1263. DEV-only; retires with the world click being reliably
+  // drivable headless.
   w.__dev_start_world_fight = async () => {
     const store = await import('./store.js')
     const character_id = store.context.get_state().selected_character_id
@@ -112,61 +113,63 @@ export function install_dev_rig({
     if (!world_id) return game_log('dev', 'start_world_fight: character has no world binding')
     const zdata = await get_zones(world_id).catch(() => null)
     const zones = (zdata?.zones ?? []).filter((z) => z.discovered !== false)
-    /** @type {{spawn_id:number|string, template_id:string}[]} */
+    /** @type {{spawn_id:number|string, template_id:string, zx:number, zy:number}[]} */
     const mobs = []
     for (const z of zones) {
       const rows = (await zone_rows_v1(world_id, z.zx, z.zy).catch(() => null)) ?? []
-      for (const r of rows) if (r.kind === 'mob') mobs.push({ spawn_id: r.spawn_id, template_id: r.template_id })
+      // zx/zy ride along: the production engage passes them (world_spawns.js), and a zone-scoped refusal can
+      // only skip a zone's remaining groups if each candidate still knows which zone it came from.
+      for (const r of rows)
+        if (r.kind === 'mob') mobs.push({ spawn_id: r.spawn_id, template_id: r.template_id, zx: z.zx, zy: z.zy })
     }
     game_log(
       'dev',
       `start_world_fight: ${mobs.length} discovered mob groups; trying each (dry-run refuses wrong-zone free)`
     )
-    const refusal_reasons = []
-    for (const [mob_index, m] of mobs.entries()) {
-      try {
+    const scan = await scan_for_claimable_group({
+      candidates: mobs,
+      log: (line) => game_log('dev', `start_world_fight: ${line}`),
+      attempt: async ({ spawn_id, template_id, zx, zy }) => {
         const { fight_id } = await create_world_fight({
           world_id,
-          spawn_id: m.spawn_id,
-          mob_template_id: m.template_id,
+          spawn_id,
+          zx,
+          zy,
+          mob_template_id: template_id,
           character_id,
         })
-        if (fight_id) {
-          enter_world_fight({ fight_id, world_id, character_id })
-          await use_dungeon.getState().refresh()
-          const s = use_dungeon.getState()
-          const g = store.context.get_state()
-          game_log('dev', 'start_world_fight MOUNTED:', {
-            fight_id,
-            dungeon_id: s.dungeon_id,
-            status: s.dungeon?.status,
-            phase: s.phase,
-            fight_mode: g.fight_mode,
-            fighters: fight_view()?.fighters?.size ?? 0,
-            mobs: s.dungeon?.mobs?.length ?? 0,
-          })
-          return fight_id
-        }
-      } catch (error) {
-        const refusal_reason = String(error?.message ?? error)
-        if (refusal_reasons.length < uniform_refusal_sample_size) refusal_reasons.push(refusal_reason)
-        const uniform_reason = first_uniform_refusal(refusal_reasons)
-        if (uniform_reason !== null) {
-          const remaining_spawns = mobs.length - mob_index - 1
-          game_log(
-            'dev',
-            `start_world_fight: ${uniform_refusal_sample_size} identical refusals; stopping before ${remaining_spawns} more spawns — ${uniform_reason.slice(0, 80)}`
-          )
-          return null
-        }
-        game_log(
-          'dev',
-          `start_world_fight: spawn ${m.spawn_id} refused (wrong zone / travel) — next`,
-          refusal_reason.slice(0, 80)
-        )
-      }
+        return fight_id
+      },
+    })
+    if (scan.fight_id) {
+      enter_world_fight({ fight_id: scan.fight_id, world_id, character_id })
+      await use_dungeon.getState().refresh()
+      const s = use_dungeon.getState()
+      const g = store.context.get_state()
+      game_log('dev', 'start_world_fight MOUNTED:', {
+        fight_id: scan.fight_id,
+        dungeon_id: s.dungeon_id,
+        status: s.dungeon?.status,
+        phase: s.phase,
+        fight_mode: g.fight_mode,
+        fighters: fight_view()?.fighters?.size ?? 0,
+        mobs: s.dungeon?.mobs?.length ?? 0,
+      })
+      return scan.fight_id
     }
-    game_log('dev', 'start_world_fight: no claimable mob group in reach (none in the checkpoint zone)')
+    // The REAL cause, always — a scan that ran out of candidates is a different fact from a stranded seat, and
+    // the counts say which (#1263: both used to surface as the same silent 420s timeout). The verdict is also
+    // parked on the window so a headless driver can name the cause it hit (fight_bot/world_surface.mjs); the
+    // hook's own return stays `fight_id | null`, the shape every e2e spec binds to.
+    w.__dev_last_world_fight_scan = scan
+    game_log('dev', 'start_world_fight: no fight claimed', {
+      verdict: scan.verdict,
+      attempted: scan.attempted,
+      of: mobs.length,
+      skipped_zones: scan.skipped_zones,
+      refusals: scan.tally,
+      reason: scan.reason?.slice(0, 160) ?? null,
+    })
     return null
   }
 

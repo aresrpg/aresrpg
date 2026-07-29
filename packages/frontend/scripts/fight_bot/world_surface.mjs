@@ -110,10 +110,16 @@ export const create_world_fight = async ({ seat, log, timeout_ms = 420_000 }) =>
     timeout_ms,
     'the world-fight create'
   )
-  if (!fight_id)
+  if (!fight_id) {
+    // #1263 — the scan's own verdict, never a guessed cause: `strand` (the character cannot claim ANYWHERE,
+    // e.g. it is not in the seat's kiosk) reads nothing like `exhausted` (every reachable group is taken).
+    const scan = await seat.page.evaluate(() => window.__dev_last_world_fight_scan ?? null).catch(() => null)
     throw new Error(
-      'no claimable mob group in reach — the seat’s checkpoint zone holds no unclaimed group, or the zone reads came back empty'
+      scan
+        ? `no fight claimed (${scan.verdict}): tried ${scan.attempted} groups, skipped ${scan.skipped_zones} out-of-reach zones — ${scan.reason ?? 'every reachable group is already claimed'}`
+        : 'no claimable mob group in reach — the seat’s checkpoint zone holds no unclaimed group, or the zone reads came back empty'
     )
+  }
   log(`[bot] seat ${seat.name}: fight ${fight_id} created`)
   return fight_id
 }
