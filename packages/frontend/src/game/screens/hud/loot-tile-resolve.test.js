@@ -176,3 +176,39 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
     expect(out.category).toBe('resource')
   })
 })
+
+describe('resolve_loot_tile — republish-stable live catalog join (#1522)', () => {
+  test('a shuffled receipt re-mint resolves the loot icon by its stable name, never the stale template id', () => {
+    const receipt_template_id = `0x${'1522'.repeat(16)}`
+    const live_template_id = `0x${'2251'.repeat(16)}`
+    const unrelated_id = `0x${'1018'.repeat(16)}`
+    const live_templates = new Map([
+      [unrelated_id, { id: unrelated_id, item_type: 'moonstone_chip', name: 'Moonstone Chip', category: 'RESOURCE' }],
+      [
+        live_template_id,
+        {
+          id: live_template_id,
+          item_type: 'post_republish_starfell_shard',
+          name: 'Starfell Shard',
+          category: 'RESOURCE',
+        },
+      ],
+    ])
+
+    const out = resolve_loot_tile(
+      {
+        template_id: receipt_template_id,
+        item_type: 'resource',
+        name: 'Starfell Shard',
+        amount: 1,
+      },
+      [],
+      live_templates,
+      undefined,
+      t,
+    )
+
+    expect(out.resolved).toBe(true)
+    expect(out.icon).toBe('post_republish_starfell_shard')
+  })
+})

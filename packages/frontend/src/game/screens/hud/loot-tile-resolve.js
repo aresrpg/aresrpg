@@ -35,8 +35,22 @@ const raw_item_of = (entry, items, template_id) => {
   return matching_items[matching_items.length - 1] ?? null
 }
 
-const template_of = (entry, template_map, template_id) =>
-  (template_id ? template_map.get(template_id) : template_map.get(entry.item_type)) ?? null
+const stable_name_key = (name) => String(name ?? '').trim().toLowerCase()
+
+const template_of = (entry, template_map, template_id) => {
+  const exact = template_id ? template_map.get(template_id) : null
+  if (exact) return exact
+
+  // Template object ids re-mint on every publish, while the fight-result row already carries the authored
+  // name. Resolve a stale receipt id against the live catalog by that stable key before considering item_type:
+  // several stackable families legitimately carry a generic class word such as "resource" there.
+  const name_key = stable_name_key(entry.name)
+  if (name_key) {
+    const named = [...template_map.values()].find((candidate) => stable_name_key(candidate?.name) === name_key)
+    if (named) return named
+  }
+  return template_map.get(entry.item_type) ?? null
+}
 
 const loot_name_of = (entry, raw, template) =>
   [template?.name, raw?.name, entry.name, item_type_label(entry.item_type)].find(Boolean) ?? '?'
@@ -49,7 +63,7 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
     ...(template ?? {}),
     name,
     item_type: entry.item_type,
-    slug: published_slug ?? template?.slug ?? raw?.slug,
+    slug: published_slug ?? template?.slug ?? template?.item_type ?? raw?.slug,
   })
   // Generic item classes do not name an asset. With no published slug or authored cosmetic/icon alias,
   // start on ItemIcon's semantic category glyph instead of requesting a known-bad /items/resource.png.
