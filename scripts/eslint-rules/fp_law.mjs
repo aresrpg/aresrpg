@@ -375,11 +375,50 @@ const no_module_scope_effects = {
   },
 }
 
+// A bare `eslint-disable` is the canonical stale-closure/silent-bypass hiding place (16 correctly
+// reasoned examples already in-tree use `-- reason`). Legal states: an honest `-- reason`, or a
+// visible-suspect pointer `-- UNJUSTIFIED, suspect: see #<row>` — a claim of "no reason exists yet"
+// that still names where it's tracked. `-- UNJUSTIFIED` with no `#row` is just a bare disable in a
+// costume, so it's red too.
+const disable_needs_reason = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description: 'every eslint-disable directive names its reason (`-- reason`, or `-- UNJUSTIFIED, suspect: see #<row>`)',
+    },
+    schema: [],
+    messages: {
+      bare: 'eslint-disable for `{{rule}}` has no `-- reason` — justify it inline, or mark `-- UNJUSTIFIED, suspect: see #<row>`.',
+      unjustifiedNoRow: '`-- UNJUSTIFIED` needs a row pointer (`see #<row>`) — otherwise it is a bare disable in disguise.',
+    },
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          const head = comment.value.trim().match(/^eslint-disable(?:-next-line|-line)?\b([^]*)$/)
+          if (!head) continue
+          const dash = head[1].indexOf('--')
+          const rule = (dash === -1 ? head[1] : head[1].slice(0, dash)).trim() || '(all)'
+          const reason = dash === -1 ? '' : head[1].slice(dash + 2).trim()
+          if (!reason) {
+            context.report({ loc: comment.loc, messageId: 'bare', data: { rule } })
+            continue
+          }
+          if (/^UNJUSTIFIED\b/.test(reason) && !/#(?:\d+|TBD)\b/.test(reason))
+            context.report({ loc: comment.loc, messageId: 'unjustifiedNoRow' })
+        }
+      },
+    }
+  },
+}
+
 export default {
   meta: { name: 'fp-law', version: '1.0.0' },
   rules: {
     'snake-case': snake_case,
     'no-mutating-methods': no_mutating_methods,
     'no-module-scope-effects': no_module_scope_effects,
+    'disable-needs-reason': disable_needs_reason,
   },
 }

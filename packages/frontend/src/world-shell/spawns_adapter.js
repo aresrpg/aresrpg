@@ -325,8 +325,7 @@ export function note_world_position({ character_id, world_id, x, z }, now = Date
   const elapsed = now - (last_position_write.get(owner) ?? 0)
   if (elapsed >= write_interval_ms) return commit_pending_position(now)
   clear_position_timer()
-  // This is a persistence debounce at the app edge, not a reducer clock: no state transition reads it.
-  // eslint-disable-next-line one-pipeline/no-settimeout-in-stores
+  // eslint-disable-next-line one-pipeline/no-settimeout-in-stores -- a persistence debounce at the app edge, not a reducer clock: no state transition reads it
   position_timer = setTimeout(() => {
     void commit_pending_position()
   }, movement_stop_ms)

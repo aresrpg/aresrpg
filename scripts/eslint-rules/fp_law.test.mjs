@@ -199,3 +199,41 @@ tester.run('no-module-scope-effects', plugin.rules['no-module-scope-effects'], {
     },
   ],
 })
+
+tester.run('disable-needs-reason', plugin.rules['disable-needs-reason'], {
+  valid: [
+    {
+      name: 'an honest reason is legal',
+      code: `// eslint-disable-next-line no-console -- debug harness prints to the real console on purpose\nconsole.log('x')`,
+    },
+    {
+      name: 'a multi-line block reason (the persistence.ts / spawns_adapter.js shape) is legal',
+      code: `/* eslint-disable no-console --\n   the platform completion channel is assignment; everything above stays pure. */\nconsole.log('x')`,
+    },
+    {
+      name: 'UNJUSTIFIED with a row pointer is a legal visible-suspect state',
+      code: `// eslint-disable-next-line no-console -- UNJUSTIFIED, suspect: see #1234\nconsole.log('x')`,
+    },
+    {
+      name: 'UNJUSTIFIED with the #TBD placeholder is legal (row filled at harvest)',
+      code: `// eslint-disable-next-line no-console -- UNJUSTIFIED, suspect: see #TBD\nconsole.log('x')`,
+    },
+  ],
+  invalid: [
+    {
+      name: 'a bare disable (the shape of the six exhaustive-deps directives this rule was built for) is red',
+      code: `// eslint-disable-next-line no-console\nconsole.log('x')`,
+      errors: [{ messageId: 'bare' }],
+    },
+    {
+      name: 'UNJUSTIFIED with no row pointer is a bare disable in disguise',
+      code: `// eslint-disable-next-line no-console -- UNJUSTIFIED\nconsole.log('x')`,
+      errors: [{ messageId: 'unjustifiedNoRow' }],
+    },
+    {
+      name: 'clause-6 synthetic: a fresh bare disable on an unrelated rule the fixed six never touched',
+      code: `// eslint-disable-next-line no-unused-vars\nconst never_read = 1`,
+      errors: [{ messageId: 'bare' }],
+    },
+  ],
+})

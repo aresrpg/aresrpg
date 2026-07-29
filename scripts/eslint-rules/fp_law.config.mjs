@@ -17,7 +17,8 @@
 //
 // .tsx joined the net with the typed tier (2026-07-17 census: eqeqeq + prefer-arrow-callback still
 // 0 on .tsx — the ratchets extend; ~96 new warns, no-param-reassign 53 the largest). .jsx remains
-// out (F-1: its 15 stale react-hooks disable comments error on opt-in; janitor ticket).
+// out of T1/T2 (F-1: naming/mutation burn-down, janitor ticket) except T1b below, which lands
+// disable-directive hygiene on .jsx alone (2026-07-30: measured clean after the six-directive fix).
 import functional from 'eslint-plugin-functional'
 
 import fp_law from './fp_law.mjs'
@@ -53,6 +54,7 @@ export default [
       // ratchets — measured CLEAN repo-wide on 2026-07-17, never let them regress
       eqeqeq: ['error', 'smart'], // L-P2: sound equality keeps referential reasoning honest
       'prefer-arrow-callback': 'error', // L-C2: callbacks are lambdas, not `function` machinery
+      'fp-law/disable-needs-reason': 'error', // measured CLEAN repo-wide 2026-07-30 (the six bare exhaustive-deps cured this diff)
       // burn-downs
       'fp-law/snake-case': 'warn', // L-N1
       'functional/no-classes': [
@@ -65,6 +67,16 @@ export default [
       complexity: ['warn', 30], // L-C3 ceiling; the law's target is far lower — see CODE_LAW.md
       'max-depth': ['warn', 5], // L-C3
       'max-lines': ['warn', { max: 600 }], // house law: files ≤600 LoC (CLAUDE.md Agent Standard #7)
+    },
+  },
+  {
+    // T1b — .jsx carries the ONE rule it measures clean on today (2026-07-30: the six bare
+    // exhaustive-deps disables cured, repo-wide .jsx has zero left). The rest of T1/T2 stays off
+    // .jsx until F-1's naming/mutation burn-down lands — this block doesn't wait on that.
+    files: ['**/*.jsx'],
+    plugins: { 'fp-law': fp_law },
+    rules: {
+      'fp-law/disable-needs-reason': 'error',
     },
   },
   {
