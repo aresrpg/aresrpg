@@ -20,6 +20,18 @@ describe('D111 combat_music_active — battle bed only when a fight is LIVE (pas
     expect(combat_music_active({ fight_mode: true, fight: { placement: false } })).toBe(true)
   })
 
+  it('CHAIN ACTIVE with a stale placement flag → battle music ON (#1446)', () => {
+    // The phase machine already adjudicates this live divergence: READY landed and an actor exists, but the
+    // projected placement bit can stay true until the next snapshot. The music door must take the same forward
+    // progress instead of leaving the roam bed playing through the fight.
+    expect(
+      combat_music_active({
+        fight_mode: true,
+        fight: { placement: true, active_entity_id: '0xactive-fighter' },
+      })
+    ).toBe(true)
+  })
+
   it('a WS/dungeon fight with no placement flag at all + fight_mode → battle music ON (a started slice)', () => {
     expect(combat_music_active({ fight_mode: true, fight: {} })).toBe(true)
   })
