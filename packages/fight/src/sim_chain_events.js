@@ -349,7 +349,9 @@ const level_of = (state, entity_id, spell_id, templates) => {
   if (!template) return null
   const entity = state.team0.concat(state.team1).find((e) => e.id === entity_id)
   const level = Number(entity?.spell_levels?.[spell_id] ?? 1)
-  return template.levels?.[level - 1] ?? template.levels?.[0] ?? null
+  const authored_level = template.levels?.[level - 1]
+  if (!authored_level) throw new Error(`sim_chain: spell '${spell_id}' has no authored level ${level}`)
+  return authored_level
 }
 
 /** The effect list the cast resolved from — `process_spell_cast`'s own selection (fight_spells.js:558-564). */
