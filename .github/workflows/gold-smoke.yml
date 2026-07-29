@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# GOLD RIG SMOKE — the seated-fight substrate (test/gold) is the only localnet rig in the tree, and
+# until #1566 it appeared in NO workflow: it rotted until a hand ran it, which is how it reached a
+# state where it could not boot at all. This is the cheapest standing proof that it still can —
+# the publish guard's own refusals plus a real localnet standing up and being torn down. It does
+# NOT run the full ceremony/seed boot (minutes of publishing per package, and the trunk-ancestry
+# gate #1298 refuses any tree not yet on edge — a PR branch by definition); that stays a local/
+# scheduled run. Fork-safe: no secrets, ever (FROZEN.md rule 8).
+name: gold smoke
+
+on:
+  pull_request:
+    paths:
+      - 'test/gold/**'
+      - 'packages/move/**'
+      - '.github/workflows/gold-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gold_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOLD_SMOKE_PROJECT: aresrpg-gold-smoke
+      # compose interpolates the sponsor profile's `${SPONSOR_DEV_KEY:?…}` at PARSE time, so even a
+      # localnet-only up (and every down) demands the var. A benign placeholder — the smoke never
+      # boots the sponsor and there is no key on this path.
+      SPONSOR_DEV_KEY: gold-smoke-config-only-not-a-key
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: setup Bun
+        id: setup_bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: setup Bun (retry)
+        if: steps.setup_bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: publish guard — the rig's refusals (#1298/#1305/#1566/#1567)
+        run: bun test packages/move/scripts/env_guard.test.mjs
+      - name: build the localnet image
+        # The Dockerfile's SUI_ARCH default is the dev machines' aarch64; the runner is x86_64.
+        run: >-
+          docker compose -f test/gold/compose.gold.yml -p "$GOLD_SMOKE_PROJECT"
+          build --build-arg SUI_ARCH=x86_64 localnet
+      - name: stand the gold localnet up
+        run: >-
+          docker compose -f test/gold/compose.gold.yml -p "$GOLD_SMOKE_PROJECT"
+          up -d --wait localnet
+      - name: the substrate is really serving — chain identifier + faucet
+        run: |
+          set -euo pipefail
+          curl -sf -X POST http://127.0.0.1:9100 -H 'content-type: application/json' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"sui_getChainIdentifier","params":[]}' | tee /dev/stderr | grep -q '"result"'
+          curl -sf -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9223/ | grep -qE '2..|4..'
+      - name: teardown — no container of this project survives (kill-your-own-rigs law)
+        if: always()
+        run: |
+          set -euo pipefail
+          docker compose -f test/gold/compose.gold.yml -p "$GOLD_SMOKE_PROJECT" \
+            --profile sponsor down -v --remove-orphans
+          survivors=$(docker ps -aq --filter "label=com.docker.compose.project=$GOLD_SMOKE_PROJECT")
+          test -z "$survivors" || { echo "gold smoke leaked containers: $survivors" >&2; exit 1; }
