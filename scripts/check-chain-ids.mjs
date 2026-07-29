@@ -33,9 +33,11 @@ const captured_replay_prefix = 'packages/fight/test/fixtures/capsules/'
 
 // Exact CLI-owned files only. A new generated output must be deliberately registered here; there is no broad
 // out/** escape hatch. release.json is stamp_all's sole config output; seed files remain run receipts.
-// crafting_craft_signature.json is a CAPTURED deployed Move signature (packages/sdk/scripts/capture_move_signature.mjs
-// reads the package id off release.json and writes the file) — the same captured-with-provenance exemption as the
-// replay capsules: it exists precisely so a PTB builder is asserted against chain truth instead of its own opinion.
+// packages/sdk/test/fixtures/*_signature.json entries below are CAPTURED deployed Move signatures
+// (packages/sdk/scripts/capture_move_signature.mjs reads each package id off release.json, except immutable 0x1/0x2
+// protocol packages, and writes each exact file). This is the same captured-with-provenance exemption as the replay
+// capsules: the fixtures exist precisely so every SDK write door is asserted against chain truth instead of its own
+// opinion. Keep the allowlist exact-path; a newly composed door must be deliberately added to the capture census.
 const generated_files = new Set(
   `packages/frontend/public/release_manifest.json
 packages/frontend/src/rpc/fixtures/characters.json
@@ -72,7 +74,70 @@ packages/move/scripts/out/seed_manifest.json
 packages/move/social/Published.toml
 packages/move/spells/Published.toml
 packages/sdk/src/deployment/release.json
-packages/sdk/test/fixtures/crafting_craft_signature.json`
+packages/sdk/test/fixtures/airdrop_admin_add_addresses_signature.json
+packages/sdk/test/fixtures/airdrop_admin_close_signature.json
+packages/sdk/test/fixtures/airdrop_admin_create_signature.json
+packages/sdk/test/fixtures/airdrop_admin_remove_addresses_signature.json
+packages/sdk/test/fixtures/airdrop_claim_signature.json
+packages/sdk/test/fixtures/character_extract_delete_character_signature.json
+packages/sdk/test/fixtures/character_listing_rule_prove_level_signature.json
+packages/sdk/test/fixtures/character_lock_in_kiosk_signature.json
+packages/sdk/test/fixtures/character_new_customization_signature.json
+packages/sdk/test/fixtures/commission_accept_signature.json
+packages/sdk/test/fixtures/commission_cancel_signature.json
+packages/sdk/test/fixtures/commission_execute_signature.json
+packages/sdk/test/fixtures/commission_redeem_craft_xp_signature.json
+packages/sdk/test/fixtures/commission_request_signature.json
+packages/sdk/test/fixtures/consume_use_many_signature.json
+packages/sdk/test/fixtures/creation_create_character_free_signature.json
+packages/sdk/test/fixtures/creation_create_character_paid_signature.json
+packages/sdk/test/fixtures/crafting_craft_signature.json
+packages/sdk/test/fixtures/dungeon_abandon_signature.json
+packages/sdk/test/fixtures/equipment_equip_signature.json
+packages/sdk/test/fixtures/equipment_unequip_signature.json
+packages/sdk/test/fixtures/extract_burn_signature.json
+packages/sdk/test/fixtures/extract_extract_for_burn_signature.json
+packages/sdk/test/fixtures/extract_extract_for_equip_signature.json
+packages/sdk/test/fixtures/extract_merge_locked_stacks_and_relock_signature.json
+packages/sdk/test/fixtures/extract_split_locked_stack_signature.json
+packages/sdk/test/fixtures/friends_add_friend_signature.json
+packages/sdk/test/fixtures/friends_create_friend_list_signature.json
+packages/sdk/test/fixtures/friends_remove_friend_signature.json
+packages/sdk/test/fixtures/gathering_gather_signature.json
+packages/sdk/test/fixtures/gift_claim_signature.json
+packages/sdk/test/fixtures/gift_recall_signature.json
+packages/sdk/test/fixtures/gift_send_signature.json
+packages/sdk/test/fixtures/header_aresrpg_signature.json
+packages/sdk/test/fixtures/item_lock_in_kiosk_signature.json
+packages/sdk/test/fixtures/item_prove_listing_amount_signature.json
+packages/sdk/test/fixtures/item_prove_lot_signature.json
+packages/sdk/test/fixtures/kiosk_borrow_val_signature.json
+packages/sdk/test/fixtures/kiosk_delist_signature.json
+packages/sdk/test/fixtures/kiosk_list_signature.json
+packages/sdk/test/fixtures/kiosk_lock_rule_prove_signature.json
+packages/sdk/test/fixtures/kiosk_return_val_signature.json
+packages/sdk/test/fixtures/kolizeum_cancel_signature.json
+packages/sdk/test/fixtures/kolizeum_create_friends_only_signature.json
+packages/sdk/test/fixtures/kolizeum_create_public_signature.json
+packages/sdk/test/fixtures/kolizeum_exit_signature.json
+packages/sdk/test/fixtures/kolizeum_join_signature.json
+packages/sdk/test/fixtures/kolizeum_sweep_signature.json
+packages/sdk/test/fixtures/loot_box_claim_pet_signature.json
+packages/sdk/test/fixtures/loot_box_open_box_signature.json
+packages/sdk/test/fixtures/mob_template_burn_mob_template_signature.json
+packages/sdk/test/fixtures/personal_kiosk_borrow_val_signature.json
+packages/sdk/test/fixtures/personal_kiosk_return_val_signature.json
+packages/sdk/test/fixtures/personal_kiosk_rule_prove_signature.json
+packages/sdk/test/fixtures/royalty_rule_fee_amount_signature.json
+packages/sdk/test/fixtures/royalty_rule_pay_signature.json
+packages/sdk/test/fixtures/shop_burn_sale_signature.json
+packages/sdk/test/fixtures/shop_buy_many_signature.json
+packages/sdk/test/fixtures/shop_buy_signature.json
+packages/sdk/test/fixtures/transfer_policy_confirm_request_signature.json
+packages/sdk/test/fixtures/vector_push_back_signature.json
+packages/sdk/test/fixtures/vector_singleton_signature.json
+packages/sdk/test/fixtures/zones_join_world_signature.json
+packages/sdk/test/fixtures/zones_search_zone_signature.json`
     .trim()
     .split('\n')
 )

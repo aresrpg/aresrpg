@@ -1,0 +1,7 @@
+{
+  "status": "TODO-capture",
+  "target": "extract::merge_locked_stacks_and_relock",
+  "package": "aresrpg",
+  "reason": "capture sandbox has no network (fetch failed)",
+  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+}

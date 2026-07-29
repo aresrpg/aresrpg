@@ -1,0 +1,7 @@
+{
+  "status": "TODO-capture",
+  "target": "royalty_rule::pay",
+  "package": "rules",
+  "reason": "capture sandbox has no network (fetch failed)",
+  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+}
