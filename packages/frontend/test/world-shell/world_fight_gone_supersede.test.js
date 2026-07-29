@@ -42,6 +42,7 @@ const get_sdk = async () => ({ grpc_client: { core: { getObject: get_object } } 
 set_expedition_sdk_mock(get_sdk)
 
 const { use_auth } = await import('../../src/auth')
+const { default: i18n } = await import('../../src/i18n')
 const { _reset_rpc_client_for_test } = await import('../../src/rpc/client')
 const { use_dungeon } = await import('../../src/world-shell/dungeon_store.js')
 const { event_toast_store } = await import('../../src/game/core/toast.js')
@@ -67,6 +68,10 @@ const serve_stale_candidate = () => {
 }
 
 const settle_tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms))
+/** Is the "your fight was already resolved" claim on the event stack? (title, not count — the stack is capped
+ *  and self-dismissing, and the CLAIM is what this fix is about.) */
+const cleared_claim_shown = () =>
+  event_toast_store.get().some((t) => t.title === i18n.t('fights.expired_fight_cleared'))
 /** Let the resume run until it is parked on the chain read (its last await before the `gone` verdict). The two
  *  /v1 hops sit WORLD_POLL_STAGGER_MS (750) apart in the poll scheduler, so this waits in real time. */
 const until_chain_read = async () => {
@@ -122,8 +127,6 @@ test('RED-FIRST: a stale boot candidate resolving GONE never tears down the figh
     fight_fresh: true,
     session_address: OWNER,
   })
-  const toasts_before = event_toast_store.get().length
-
   gate.resolve(null)
   await resume
   await settle_tick()
@@ -134,7 +137,7 @@ test('RED-FIRST: a stale boot candidate resolving GONE never tears down the figh
   expect(use_dungeon.getState().phase).toBe('playing')
   expect(use_dungeon.getState().character_id).toBe(CHARACTER_ID)
   // …and no "that fight was already resolved" claim about a fight the player never saw.
-  expect(event_toast_store.get().length).toBe(toasts_before)
+  expect(cleared_claim_shown()).toBe(false)
 })
 
 test('the legitimate path stays: with the store still empty, a GONE candidate recovers the character and says so', async () => {
@@ -144,11 +147,11 @@ test('the legitimate path stays: with the store still empty, a GONE candidate re
   }
   const recover = mock(() => {})
   use_dungeon.setState({ _recover_dead_fight_reference: recover })
-  const toasts_before = event_toast_store.get().length
+  expect(cleared_claim_shown()).toBe(false)
 
   await resume_world_fight(CHARACTER_ID)
 
   expect(recover).toHaveBeenCalledTimes(1)
   expect(recover.mock.calls[0][0]).toMatchObject({ character_id: CHARACTER_ID, state: 'settled' })
-  expect(event_toast_store.get().length).toBe(toasts_before + 1)
+  expect(cleared_claim_shown()).toBe(true)
 })
