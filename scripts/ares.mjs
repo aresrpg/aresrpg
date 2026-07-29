@@ -173,6 +173,7 @@ export const unit_test_files = [
   'test/gold/specs_anchor/pacing_envelopes_test.ts', // the SPEC §7b beat-trace evaluator pure unit (same *_test.ts law)
   'test/gold/specs_anchor/trajectory_eval_test.ts', // the pos-trace trajectory-conformance evaluator pure unit (same *_test.ts law)
   'test/gold/tree_freeze_fingerprint.test.ts', // the mechanical tree-freeze pure unit
+  'test/localnet/harness/verify-sui-artifact.test.js', // #1718 per-arch release row + pre-fetch/checksum ordering
   'test/localnet/bots/framework/world_flow.test.js', // terminal polling + transient pre-execution retry contract for driven fights
   'test/localnet/bots/framework/gate.test.js', // #1165 boot/leg gate determinism: bounded retry-once, ENV-FAIL vs PRODUCT-FAIL exit codes, no Promise.race
   'test/gold/rig_integrity.test.mjs', // localnet closure + the browser dynamic-import audit (stale rig URLs 404 silently at drive time)

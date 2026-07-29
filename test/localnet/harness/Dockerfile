@@ -6,16 +6,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
  && rm -rf /var/lib/apt/lists/*
 ARG SUI_TAG=testnet-v1.76.0
 ARG TARGETARCH
-ARG SUI_SHA256_X86_64=4a34ef21e56650772064f946919d262d9e22102034007dccec3cc3418b93505d
-ARG SUI_SHA256_AARCH64=b6d2191eff4985051ae59c53f9857f84c80467acfb19bcbfafc2c4be058e9ce4
+# SHA-256 rows derived from the two official release assets (tag + filenames are provenance):
+# https://github.com/MystenLabs/sui/releases/download/testnet-v1.76.0/sui-testnet-v1.76.0-ubuntu-{x86_64,aarch64}.tgz
+ARG SUI_ROW_X86_64=x86_64:4a34ef21e56650772064f946919d262d9e22102034007dccec3cc3418b93505d
+ARG SUI_ROW_AARCH64=aarch64:b6d2191eff4985051ae59c53f9857f84c80467acfb19bcbfafc2c4be058e9ce4
+COPY verify-sui-artifact.sh /usr/local/bin/verify-sui-artifact.sh
 RUN case "${TARGETARCH}" in \
-      amd64) SUI_ARCH=x86_64; SUI_SHA256="${SUI_SHA256_X86_64}" ;; \
-      arm64) SUI_ARCH=aarch64; SUI_SHA256="${SUI_SHA256_AARCH64}" ;; \
+      amd64) SUI_ARCH=x86_64; SUI_ROW="${SUI_ROW_X86_64}" ;; \
+      arm64) SUI_ARCH=aarch64; SUI_ROW="${SUI_ROW_AARCH64}" ;; \
       *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
+ && sh /usr/local/bin/verify-sui-artifact.sh "${SUI_ARCH}" "${SUI_ROW}" \
  && curl -fsSL -o /tmp/sui.tgz \
       https://github.com/MystenLabs/sui/releases/download/${SUI_TAG}/sui-${SUI_TAG}-ubuntu-${SUI_ARCH}.tgz \
- && echo "${SUI_SHA256}  /tmp/sui.tgz" | sha256sum -c - \
+ && sh /usr/local/bin/verify-sui-artifact.sh "${SUI_ARCH}" "${SUI_ROW}" /tmp/sui.tgz \
  && tar -xzf /tmp/sui.tgz -C /usr/local/bin \
  && rm /tmp/sui.tgz && chmod +x /usr/local/bin/sui*
 EXPOSE 9000 9123
