@@ -11,16 +11,77 @@
 // authored: item_stat_law's D765_CRIT_OUTLIERS allowlist value-pins each; any 20th over-envelope row, or a
 // pinned slug drifting off its pin, stays a hard error.
 //
-// The pins + envelope are NOT copied here — that is the cardinal single-home law. `verify_folded` runs the
-// REAL validation gates (packages/validation), so this module and the constitution can never disagree.
-
-import { gate_item_stat_law } from '../../validation/src/mainnet/gates/item_stat_law.ts'
-import { DEAD_CRIT_STATS } from '../../validation/src/mainnet/schema.ts'
+// The retired validation workspace used to own the fold-only critical envelope and its 19 exception pins.
+// Keeping imports to that deleted private tree made this public script unloadable. These fold facts now live
+// here, beside their sole consumer; the broader item-stat constitution did not move into this repository.
 
 export const CRITICAL_STAT = 'critical'
 export const CRITICAL_CHANCE = 'critical_chance'
 export const CRITICAL_OUTCOMES = 'critical_outcomes'
 export const DEAD_CRIT_KEYS = [CRITICAL_CHANCE, CRITICAL_OUTCOMES]
+const DEAD_CRIT_STATS = new Set(DEAD_CRIT_KEYS)
+
+// Observed effective-max `critical` envelopes for the ten 20-level bands (L1-20 … L181-200), inclusive.
+// This is the complete fold-relevant projection of the retired item-stat artifact; no other stat law is
+// duplicated here.
+const CRITICAL_ENVELOPES = Object.freeze([
+  Object.freeze({ min: 1, max: 3 }),
+  Object.freeze({ min: 1, max: 10 }),
+  Object.freeze({ min: 1, max: 10 }),
+  Object.freeze({ min: 1, max: 7 }),
+  Object.freeze({ min: 2, max: 10 }),
+  Object.freeze({ min: 3, max: 10 }),
+  Object.freeze({ min: 2, max: 6 }),
+  Object.freeze({ min: 1, max: 6 }),
+  Object.freeze({ min: 3, max: 7 }),
+  Object.freeze({ min: 2, max: 7 }),
+])
+
+// The exact authored fold sums that are legal above their band envelope. Value-pinned: a named row at any
+// other value is drift, even if that value happens to fall back inside the ordinary envelope.
+const CRIT_OUTLIER_PINS = new Map([
+  ['10_sunspire_dunes/frostwolf_hauberk', 8],
+  ['14_charnel_marches/soul_shard_loop', 14],
+  ['16_the_sundering/abyssrift_warbelt_of_torn_ground', 9],
+  ['16_the_sundering/riftsunder_fangs', 9],
+  ['17_obsidian_choir/litany_of_cinders', 7],
+  ['17_obsidian_choir/hymnbound_girdle_choir', 10],
+  ['17_obsidian_choir/kiln_potholder', 8],
+  ['17_obsidian_choir/welcome_doormat', 10],
+  ['18_abyssal_weald/deepwoven_crest_of_drowned_weald', 8],
+  ['18_abyssal_weald/deepwoven_cincture_of_drowned_weald_mire', 10],
+  ['19_hollow_crown/feathergilt_visor_of_silent_court_godbone', 11],
+  ['20_zenith_scar/concussion', 11],
+  ['20_zenith_scar/legweight', 9],
+  ['20_zenith_scar/longdraw', 9],
+  ['20_zenith_scar/lastwhisper', 9],
+  ['20_zenith_scar/neckoath', 8],
+  ['20_zenith_scar/evenhand', 9],
+  ['20_zenith_scar/marginalia', 8],
+  ['20_zenith_scar/backswing', 8],
+])
+
+const ENVELOPED_CATEGORIES = new Set([
+  'LONGSWORD',
+  'DAGGERS',
+  'BOW',
+  'SPEAR',
+  'STAFF',
+  'AXE',
+  'SPELLBOOK',
+  'BATTLEAXE',
+  'SWORD',
+  'CLUB',
+  'MACE',
+  'HELMET',
+  'CHESTPLATE',
+  'BELT',
+  'GAUNTLETS',
+  'PANTS',
+  'BOOTS',
+  'AMULET',
+  'RING',
+])
 
 // Crit lines are SIGNED (a below-center malus is a legal negative, e.g. cocoon_king_cowl min crit_chance -4),
 // so the fold sums signed integers. A non-integer (string/float/NaN) is a schema surprise and refuses loudly.
@@ -94,34 +155,33 @@ export function fold_corpus(items) {
   return { folded, deltas }
 }
 
-// Project a folded row to ONLY its critical stat. item_stat_law then checks exactly the crit fold's law — the
-// 19-pin D765 allowlist + the critical band envelope — and never a pre-existing NON-crit corpus issue (a pet
-// resistance, a future unknown key: that breadth is the full validation harness's separate job). The pin key
-// (world/slug) and the band keys (category/level) are preserved.
-const project_critical = (item) => ({
-  slug: item.slug,
-  world: item.world,
-  category: item.category,
-  level: item.level,
-  stats: {
-    min: {},
-    max:
-      item.stats?.max && CRITICAL_STAT in item.stats.max ? { [CRITICAL_STAT]: item.stats.max[CRITICAL_STAT] } : {},
-  },
-})
-
 // Verify the crit fold is law-clean, scoped to the crit fold alone. (1) The 19-pin allowlist + the critical
-// band envelope come from the REAL item_stat_law gate (single source of truth for the pins/envelope), fed the
-// critical-only projection so an unrelated non-crit corpus finding never false-reds this receipt. (2) The
-// dead-key ban: every DEAD_CRIT_STATS key (schema.ts is their single home) must be gone from the folded rows.
+// band envelope live above as the fold's single source of truth; unrelated non-crit corpus facts never enter
+// this receipt. (2) The dead-key ban is derived from DEAD_CRIT_KEYS, the transform's own vocabulary.
 export function verify_folded(folded_items) {
-  const stat_law = gate_item_stat_law({ items: folded_items.map(project_critical), mobs: [] })
-  const errors = stat_law.errors.map((issue) => `${issue.validator}: ${issue.message}`)
-  for (const item of folded_items)
+  const errors = []
+  for (const item of folded_items) {
+    const where = item.world ? `${item.world}/${item.slug}` : item.slug
+    const category = String(item.category ?? '').toUpperCase()
+    const value = Number(item.stats?.max?.[CRITICAL_STAT])
+    if (ENVELOPED_CATEGORIES.has(category) && Number.isFinite(value) && value > 0) {
+      const pinned = CRIT_OUTLIER_PINS.get(where)
+      if (pinned != null && value !== pinned)
+        errors.push(`item_stat_law: '${where}' critical max ${value} drifted from pinned fold sum ${pinned}`)
+      else if (pinned == null) {
+        const band = Math.min(9, Math.max(0, Math.ceil((Number(item.level) || 1) / 20) - 1))
+        const envelope = CRITICAL_ENVELOPES[band]
+        if (value < envelope.min || value > envelope.max)
+          errors.push(
+            `item_stat_law: '${where}' critical max ${value} outside observed [${envelope.min}, ${envelope.max}] — corpus band ${band}`
+          )
+      }
+    }
     for (const name of ['min', 'max'])
       for (const key of Object.keys(item.stats?.[name] ?? {}))
         if (DEAD_CRIT_STATS.has(key))
           errors.push(`strict_key_schema: '${item.world}/${item.slug}' ${name} dead key '${key}' survived the fold`)
+  }
   return { ok: errors.length === 0, errors }
 }
 
