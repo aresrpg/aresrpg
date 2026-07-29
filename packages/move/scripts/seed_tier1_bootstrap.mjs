@@ -36,6 +36,7 @@ import { fileURLToPath } from 'node:url'
 
 import { Transaction } from '@mysten/sui/transactions'
 
+import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
 import { keypair, sui_client } from './client.js'
 import { run, deriveBudget, netGas } from './ceremony_lib.mjs'
 
@@ -54,7 +55,6 @@ const CAP = M.items.admin
 const VER = M.items.version
 const CATALOG = M.items.shared.Catalog
 const WORLD = SEED.world.id
-const SHIFT = 32768
 
 const T = { loot: `${FIGHT}::mob::MobLootEntry`, idmg: `${ARES}::item_damages::ItemDamages` }
 

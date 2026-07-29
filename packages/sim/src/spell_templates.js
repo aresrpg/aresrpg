@@ -62,13 +62,7 @@ import {
   TF_NOT_TEAM,
   TF_ONLY_CASTER,
 } from './spell_effect.js'
-
-/**
- * The centering of every SIGNED value on chain (#904 final ruling): a delta is stored as `32768 + delta`.
- * Same number, same reason as `equipment_stats.js` ITEM_STAT_SHIFT (gear) and `spell.move` RES_SHIFT (mob
- * resistances) — one system, three surfaces. Applied here to effect kinds 9 / 11 only.
- */
-const SIGNED_SHIFT = 32_768
+import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from './equipment_stats.js'
 
 /**
  * One spell effect, sim-internal (UPPERCASE). A faithful subset of the donor union (spells/types.ts:162).

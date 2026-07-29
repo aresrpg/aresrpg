@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# The JavaScript protocol vocabulary belongs to @aresrpg/sim. This pack catches declarations of the
-# numeric spell-effect vocabulary in consumer packages; scripts/sim-constants-gate.sh ratchets the
-# current kill-list debt per rule + file, so only deletion can move the baseline.
+# The JavaScript protocol vocabulary belongs to one canonical module. This pack catches declarations of
+# numeric protocol facts outside each rule's home; scripts/sim-constants-gate.sh ratchets the current
+# kill-list debt per rule + file, so only deletion can move the baseline.
 rules:
   - id: sim-protocol-spell-effect-kind
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       Spell-effect kind ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical
       vocabulary; do not re-declare a wire discriminant in a consumer package (#1603).
@@ -27,7 +27,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       Spell-effect stat ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical
       vocabulary; do not re-declare the numeric stat map in a consumer package (#1603).
@@ -41,7 +41,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       Spell element ordinals belong to @aresrpg/sim/spell. Import or derive the canonical vocabulary;
       do not re-declare fire/water/earth/air/none ids in a consumer package (#1603).
@@ -55,7 +55,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       AoE shape ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical vocabulary;
       do not re-declare point/circle/cross/line/tbar/ring/allmap/cone ids (#1603).
@@ -69,7 +69,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       AP/MP point-kind ids belong to @aresrpg/sim/spell_effect. Import or derive the canonical
       vocabulary; do not re-declare point discriminants or their lookup tables (#1603).
@@ -86,7 +86,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       Target-filter bits belong to @aresrpg/sim/spell_effect. Import the canonical TF_* constant;
       do not re-declare a target bit in a consumer package (#1603).
@@ -101,7 +101,7 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**', 'packages/sim/src/**', 'packages/move/scripts/**']
     message: >-
       The unlimited cast-cap sentinel belongs to @aresrpg/sim/spell_templates. Import
       CASTS_UNLIMITED; do not give 255 cast-limit meaning in a consumer package (#1603).
@@ -163,13 +163,25 @@ rules:
     languages: [js, ts]
     severity: ERROR
     paths:
-      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+      exclude:
+        - '**/*.test.*'
+        - '**/*.spec.*'
+        - '**/test_helpers/**'
+        - 'packages/sim/src/equipment_stats.js'
     message: >-
-      The signed-value bias belongs to @aresrpg/sim. Import the canonical shift; do not re-declare
-      32768 under a local bias/shift name in a consumer package (#1603).
+      The signed-value bias belongs to @aresrpg/sim/equipment_stats. Import ITEM_STAT_SHIFT; do not
+      re-declare 32768 under a local bias/shift name (#990).
     pattern-either:
-      - pattern: const SIGNED_SHIFT = 32768
-      - pattern: const SIGNED_SHIFT = 32_768
+      - patterns:
+          - pattern: const $NAME = 32768
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: '^(?:ITEM_STAT_SHIFT|SIGNED_SHIFT|STAT_BIAS|RES_SHIFT|SHIFT)$'
+      - patterns:
+          - pattern: const $NAME = 32_768
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: '^(?:ITEM_STAT_SHIFT|SIGNED_SHIFT|STAT_BIAS|RES_SHIFT|SHIFT)$'
       - pattern: const SIGNED_KINDS = new Set([9, 11])
 
   - id: sim-protocol-board-seed-fold

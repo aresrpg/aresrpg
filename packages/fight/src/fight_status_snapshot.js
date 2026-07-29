@@ -4,26 +4,16 @@
 // The raw json:true Fight document still carries these nested fields, so the frontend can bind status visuals to
 // chain duration without widening the SDK surface owned by another lane.
 
+import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
+
 export const INVISIBILITY_STATUS_KIND = 27
 export const MOB_FIGHTER_ID_BASE = 1000
 
 // ── THE SIGNED-EFFECT WIRE DECODE (issue #886) ────────────────────────────────────────────────────────
-// `Effect.value` is a u64 on chain, but alter_stat (kind 9) and alter_resist (kind 11) author BOTH signs, so
-// for exactly those two kinds the mint stores the delta CENTERED at 32768 (`value = 32768 + delta` — the same
-// RES_SHIFT convention gear ItemStatistics and mob resistances use; `FLAG_NEGATIVE` is DERIVED from the
-// delta's sign, never an independent fact). Captured live 2026-07-26 (testnet MobTemplates, `sui client
-// object`): Razkin `0x4a00a579…be97` authors +25% damage → chain `value "32793"`, flags 0; Bonelet
-// `0xb80ade53…d444` authors −17 agility → `value "32751"`, flags 8; Kraken Leviathan `0x89072bd3…af56`
-// −7 range → `32761`, flags 8.
-//
-// `decode_status_value` is the ONE decoder of that centering (decode-once law), called by EVERY door the wire
-// enters the client through — the snapshot read below, and the receipt's action envelope
-// (`inputs.self_status_from_effect`, #983). Both write the same per-fighter status home, so both must strip it
-// or the home carries two dialects: every downstream reader — the effect badges, the range-bonus fold — sees a
-// real SIGNED delta and never touches 32768. Displaying the raw wire is exactly the `-32793 Percent Damage`
-// bug; folding it is the `+1 Range` buff that granted 32769 range. Non-signed kinds pass through untouched:
-// their `value` is a plain magnitude.
-const SIGNED_SHIFT = 32768
+// Alter-stat (9) and alter-resist (11) author both signs, so their u64 value is centered at SIGNED_SHIFT and
+// FLAG_NEGATIVE is derived only. Live 2026-07-26 bytes pin +25 → 32793 and −17 → 32751. Both ingress doors
+// (snapshot and receipt action, #983) decode here; downstream reads signed deltas, while other kinds keep their
+// plain magnitude.
 const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_effect.move)
 
 /** Does this status kind ride its value CENTERED on the wire? The one membership test for the encoding. */

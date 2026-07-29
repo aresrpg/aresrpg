@@ -31,6 +31,7 @@ import { fileURLToPath as file_url_to_path } from 'node:url'
 
 import { Transaction } from '@mysten/sui/transactions'
 
+import { ITEM_STAT_SHIFT as RES_SHIFT } from '../../sim/src/equipment_stats.js'
 import release from '../../sdk/src/deployment/release.json' with { type: 'json' }
 
 import { getClient as get_client } from './ceremony_lib.mjs'
@@ -47,7 +48,7 @@ const repo_dir = resolve(script_dir, '..', '..', '..')
 const read_json = (file_path) => JSON.parse(read_file(file_path, 'utf8'))
 
 // ── constants ───────────────────────────────────────────────────────────────────────────────────
-export const RES_SHIFT = 32768 // foundation spell::RES_SHIFT — mob resistances stored centered
+export { RES_SHIFT }
 export const MAX_RESIST_MAGNITUDE = 60 // the SPEC §7.4 / S4-2 real-time cap (ruled 50 → 60 on 2026-07-23) —
 // combat clamps at foundation `spell::apply_resistance`, which is the ONE home of this number; this constant
 // mirrors it and must be re-derived from that function whenever the ruling moves (cite the SYMBOL, never a

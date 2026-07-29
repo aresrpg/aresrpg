@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url'
 
 import { Transaction } from '@mysten/sui/transactions'
 
+import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
 import { keypair, sui_client } from './client.js'
 import { run, netGas } from './ceremony_lib.mjs'
 import { damage_lines, pack_qty_for_job } from './seed_economy.mjs'
@@ -88,7 +89,6 @@ const T = {
   idmg: `${ITEMS}::item_damages::ItemDamages`,
   ceff: `${ITEMS}::consumable_effect::ConsumableEffect`,
 }
-const SHIFT = 32768 // item_stats + mob resistances are centered here
 // [world-mob-size 2026-07-12 · groups DOUBLED 2026-07-13] fresh-lineage spawn density. create_world defaults are a
 // sparse 3-8 groups / 8-16 nodes; the 07-11 live dial raised them to 12-24 / 16-28; baked ≈1.5× → 18-36 / 24-42.
 // The mob-group density floor doubled 2026-07-13 ("at LEAST double the mob groups"): literal 2× max (72) breaches DENSITY_MAX=64, so the min

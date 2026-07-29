@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url'
 
 import { Transaction } from '@mysten/sui/transactions'
 
+import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
 import { keypair, sui_client } from './client.js'
 import { canonical_map, canonical_rows, mob_level_of } from './corpus_canon.mjs'
 import {
@@ -96,7 +97,6 @@ const MANIFEST = JSON.parse(
 )
 const OUT_PATH = path.join(__dir, 'out', 'seed_manifest.json')
 const CEIL = 1 // refuse any tx whose derived budget exceeds 1 SUI (money law)
-const SHIFT = 32768 // item_stats + mob resistances are centered here
 
 // ── Live lineage (retargeted ids; items/game/fight all alias the single aresrpg pkg) ──────────
 const FND = MANIFEST.foundation.pkg

@@ -19,6 +19,7 @@ import { run } from '../ceremony_lib.mjs'
 import { buy_ptb } from '../../../sdk/src/sui/write/items_shop.js'
 import { create_character_paid_ptb } from '../../../sdk/src/sui/write/items_creation.js'
 import { crush_ptb } from '../../../sdk/src/game.js'
+import { ITEM_STAT_SHIFT as SHIFT } from '../../../sim/src/equipment_stats.js'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const OUT = path.join(__dir, '..', 'out')
@@ -107,7 +108,6 @@ async function phase_registry() {
 }
 
 // ════════════════════════════ PHASE: gear (fresh char+kiosk + throwaway L20 gear item) ════════════════════════════
-const SHIFT = 32768
 const FIELDS = ['vitality', 'wisdom', 'strength', 'intelligence', 'chance', 'agility', 'range', 'movement', 'action', 'critical', 'raw_damage', 'critical_chance', 'critical_outcomes', 'earth_resistance', 'fire_resistance', 'water_resistance', 'air_resistance']
 // REPRESENTATIVE-HEAVY L20 block (raw deltas onto SHIFT): 7 runeable lines at LOW values (each yields ~1 unit ⇒
 // ~1 stack). Measured cost model (fit to real runs): peak ≈ 12.5M + 6.8M × stacks — so 7 stacks ≈ 60M peak,

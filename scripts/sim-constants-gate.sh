@@ -34,7 +34,9 @@ TARGETS=(
   packages/fight/src
   packages/frontend/src
   packages/inventory/src
+  packages/move/scripts
   packages/party/src
+  packages/sim/src
   packages/world/src
   packages/rpc/api
 )
