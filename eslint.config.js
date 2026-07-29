@@ -18,6 +18,11 @@ export default [
     plugins: {
       import: importPlugin,
     },
+    settings: {
+      // The gold rig links its Playwright dependency here at boot. Keep it classified as external
+      // whether the link exists or not so import/order has one stable verdict.
+      'import/external-module-folders': ['node_modules', 'test/gold/node_modules'],
+    },
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
