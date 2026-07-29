@@ -73,7 +73,7 @@ if [ "$ready" -ne 1 ]; then
   exit 1
 fi
 
-for file in *.test.js; do
+for file in *.test.js test/*.test.js; do
   echo "── $file ──"
   ok=1
   if [ "$file" = sponsor.test.js ] || [ "$file" = courier.test.js ]; then

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared anti-drain counters and once-only reservation state for the station sponsor.
 export const RL_WINDOW_MS = Number(process.env.SPONSOR_RL_WINDOW_MS || 600_000)
-const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 5)
+const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 30)
 export const ADDR_RL_MAX = Number(process.env.SPONSOR_ADDR_MAX || 60)
 export const SELF_PAY_MIST = BigInt(process.env.SPONSOR_SELF_PAY_MIST || 200_000_000)
 export const ADDR_DAILY_CAP_MIST = BigInt(process.env.SPONSOR_ADDR_DAILY_CAP_MIST || 1_000_000_000)

@@ -16,7 +16,7 @@ import { describe, expect, test } from 'bun:test'
 process.env.REDIS_URL = '' // explicit empty = "no store configured" (the ?? seam; unset under Bun would default to localhost)
 const S = await import('./sponsor.mjs')
 
-const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 5)
+const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 30)
 const ADDR_RL_MAX = Number(process.env.SPONSOR_ADDR_MAX || 60)
 
 describe('NO store configured (Vercel/Node class) ⇒ in-memory per-instance windows, enforced — never refuse-all', () => {

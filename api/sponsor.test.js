@@ -40,7 +40,7 @@ const S = await import('./sponsor.mjs')
 // A SECOND connection = a stand-in "second serverless instance": same store, independent client.
 const other = new RedisClient(url)
 
-const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 5) // per-IP window max
+const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 30) // per-IP window max
 const ADDR_RL_MAX = Number(process.env.SPONSOR_ADDR_MAX || 60) // per-address window max
 
 beforeEach(async () => {
