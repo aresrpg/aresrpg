@@ -264,13 +264,7 @@ function opened_result_of(/** @type {any} */ receipt) {
  * it declares MORE guard, never less: the spend guard's circuit/breaker are scoped to automated submissions
  * (#1262), so an executed failure retires the automatic re-fire while the player may still press.
  */
-export async function join_world_fight({
-  fight_id,
-  character_id,
-  party_id = null,
-  queued = false,
-  automated = false,
-}) {
+export async function join_world_fight({ fight_id, character_id, party_id = null, queued = false, automated = false }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()

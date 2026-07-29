@@ -76,7 +76,10 @@ const landed = () => ({
   effects_result: {
     Transaction: {
       digest: LANDED,
-      effects: { changedObjects: [], gasUsed: { computationCost: '2000000', storageCost: '1000000', storageRebate: '0' } },
+      effects: {
+        changedObjects: [],
+        gasUsed: { computationCost: '2000000', storageCost: '1000000', storageRebate: '0' },
+      },
       objectTypes: {},
       events: [],
     },
@@ -84,7 +87,8 @@ const landed = () => ({
 })
 
 /** The auto-seat door exactly as group_wiring calls it: the reducer's request, one arrived alt, queued. */
-const auto_seat = () => join_owned_world_fight({ fight_id: FIGHT, party_id: null, members: [{ character_id: ALT }], queued: true })
+const auto_seat = () =>
+  join_owned_world_fight({ fight_id: FIGHT, party_id: null, members: [{ character_id: ALT }], queued: true })
 
 /** The press door exactly as FightsModal calls it. */
 const press = () => dungeon_actions.join_world_fight({ fight_id: FIGHT, character_id: ALT, party_id: null })

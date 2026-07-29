@@ -257,14 +257,20 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     expect(calls.follow.at(-1)).toEqual([]) // the render despawns the dropped rig
   })
 
-  test('a placement fight joins the aligned alts ONCE across polls; focus follows each owned turn', async () => {
+  test('a placement fight joins the ARRIVED alts ONCE across polls; focus follows each owned turn', async () => {
     const { wiring, calls } = make_harness()
+    // #1661 — the leader's pose comes FIRST so each alt's checkpoint read can settle: {105,100} against a
+    // leader at {100,100} is a near arrival (with_you). Only an ARRIVED alt is auto-seated, so a fixture that
+    // never lets its followers finish traveling is a fixture that must not see a join.
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
     sync_full_group(wiring, [
       [LEADER, WORLD],
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    // group membership IS auto-follow (#613): both grouped alts are followers → fight_started steers both.
+    await wiring.settled()
+    // group membership IS auto-follow (#613): both grouped alts are followers → once they ARRIVE, fight_started
+    // steers both.
     const facts = { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] }
     wiring.fight_snapshot(facts, { join_open: true })
     wiring.fight_snapshot(facts, { join_open: true }) // poll echo
@@ -309,12 +315,15 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
           order.push(`${character_id}:end`)
         }, options),
     })
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
     sync_full_group(wiring, [
       [LEADER, WORLD],
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    // group membership IS auto-follow (#613): both grouped alts are followers → fight_started steers both.
+    await wiring.settled()
+    // group membership IS auto-follow (#613): both grouped alts are followers, and both ARRIVED above (#1661)
+    // → fight_started steers both.
 
     wiring.fight_snapshot(
       { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] },

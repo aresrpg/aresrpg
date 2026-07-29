@@ -29,7 +29,8 @@ const FIGHT = '0xfight'
 const NOW = 5_000_000
 
 const members = (...ids) => ids.map((character, order) => ({ character, owner: ME, order }))
-const fold = (inputs, state = empty_group_state()) => inputs.reduce((acc, input) => reduce_group(acc, input).state, state)
+const fold = (inputs, state = empty_group_state()) =>
+  inputs.reduce((acc, input) => reduce_group(acc, input).state, state)
 
 /** Leader at the origin with ONE owned alt grouped behind it, reconciled (membership IS auto-follow, #613). */
 const grouped_with_alt = (alt_world) =>
@@ -66,8 +67,10 @@ test('a SAME-WORLD alt that has not finished traveling is never auto-seated (the
   expect(seated_by(running)).toEqual([])
 
   // Half the run-in is not arrival either — nothing about a fight starting shortens the journey.
-  const halfway = reduce_group(running, { kind: 'transit_tick', now: NOW + running.follow.followers[ALT].total_ms / 2 })
-    .state
+  const halfway = reduce_group(running, {
+    kind: 'transit_tick',
+    now: NOW + running.follow.followers[ALT].total_ms / 2,
+  }).state
   expect(halfway.follow.followers[ALT].status).toBe('in_transit')
   expect(seated_by(halfway)).toEqual([])
 })
@@ -105,13 +108,16 @@ test('the moment travel COMPLETES, the same alt is seated — exactly once', () 
   }).state
   expect(seated_by(running)).toEqual([])
 
-  const arrived = reduce_group(running, { kind: 'transit_tick', now: NOW + running.follow.followers[ALT].total_ms })
-    .state
+  const arrived = reduce_group(running, {
+    kind: 'transit_tick',
+    now: NOW + running.follow.followers[ALT].total_ms,
+  }).state
   expect(arrived.follow.followers[ALT].status).toBe('with_you')
 
   const joined = reduce_group(arrived, { kind: 'fight_started', fight_id: FIGHT, seated: [LEADER] })
   expect(joined.outputs.join_fight).toEqual([{ character_id: ALT, fight_id: FIGHT }])
   // the request latches: a poll re-announcing the same fight asks for nothing more
-  expect(reduce_group(joined.state, { kind: 'fight_started', fight_id: FIGHT, seated: [LEADER] }).outputs.join_fight)
-    .toEqual([])
+  expect(
+    reduce_group(joined.state, { kind: 'fight_started', fight_id: FIGHT, seated: [LEADER] }).outputs.join_fight
+  ).toEqual([])
 })

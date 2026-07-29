@@ -32,8 +32,10 @@ describe('owned team production sequencing', () => {
 
     expect(calls).toEqual([
       // #1206: no per-member spell vector rides here — each door derives its OWN seat's raised spells.
-      { fight_id: 'fight', character_id: 'alt-a', party_id: 'party' },
-      { fight_id: 'fight', character_id: 'alt-b', party_id: 'party' },
+      // #1661: every seat here is WIRE-fired by the group loop, so each declares itself `automated` and becomes
+      // the spend guard's subject — automation takes the manual join's guards PLUS the circuit and the ceiling.
+      { fight_id: 'fight', character_id: 'alt-a', party_id: 'party', automated: true },
+      { fight_id: 'fight', character_id: 'alt-b', party_id: 'party', automated: true },
     ])
     expect([...receipts]).toEqual([
       ['alt-a', 'receipt-alt-a'],
