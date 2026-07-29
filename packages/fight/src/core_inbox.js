@@ -30,7 +30,7 @@ import { hash_state } from '@aresrpg/sim/evolve'
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
 import { fighter_key, seat_resolver } from './inputs.js'
-import { board_state_from_fight, fight_geometry_complete, roster_open } from './board_state.js'
+import { board_state_from_fight, fight_read_complete, roster_open } from './board_state.js'
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
 // A verified source's precedence when two deliveries collide at one coordinate. RECEIPT is the one-way floor (my own
@@ -306,7 +306,9 @@ export const admit_events = (inbox, actions, now) => {
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const object_version = Number(version ?? 0)
   const fight = revive_wire(rows)
-  if (fight != null && !fight_geometry_complete(fight)) return inbox
+  // COMPLETENESS GATE — a decoded record must carry its real BoardGeom AND its lifecycle scalar, or it is a
+  // torn read that seeds and replaces nothing (#1140 geometry half, #1277 status half).
+  if (fight != null && !fight_read_complete(fight)) return inbox
   const base_view = board_state_from_fight({
     fight,
     version: object_version,

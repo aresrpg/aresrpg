@@ -34,14 +34,11 @@ const ENGINE_DEFEAT = 3
 // placement exactly once. A base adopted inside that window is therefore PROVISIONAL — it must re-derive from a
 // later placement read, or a joiner who lands after the creator's first read is invisible to her for the entire
 // fight (her turn order, her placement occupancy, and every event keyed to his character, which orphans off-seat).
-// The two accessors below read the SAME law in the two vocabularies this module already translates between.
+// ONE accessor, on the decoded view: a raw-record twin would need its own `status ?? 0` default and that default
+// IS the #1277 bug — the window must never be read off a scalar nobody proved was there.
 
 /** The window, read off a decoded board view (client `status`). @param {{status?:number}|null} view */
 export const roster_open = (view) => view?.status === STATUS_PLACEMENT
-
-/** The window, read off a RAW decoded chain record (engine `status`) — for doors that decide whether to adopt a
- *  read BEFORE deriving its view. @param {{status?:number}|null} fight */
-export const fight_roster_open = (fight) => Number(fight?.status ?? 0) === ENGINE_PLACEMENT
 
 /** A chain BoardGeom cell → the client's canonical cell — IDENTITY (bounds-guarded; the engine board is
  *  canonical stride-20). An out-of-range cell (decode fault) collapses to 0 rather than mis-strided. */
@@ -198,6 +195,17 @@ export const seat_entity_at = (view, seat) => (view?.escrow?.[seat] ? participan
  *  torn-read signature, undefined is not. */
 export const fight_geometry_complete = (fight) => Number(fight?.width) !== 0 && Number(fight?.height) !== 0
 
+/** THE ONE lifecycle read of a decoded Fight (#1277) — `null` when the record carries no `status`, NEVER a
+ *  defaulted 0. `Fight.status` is non-optional on chain (fight.move), so an absent one is a torn read; defaulting
+ *  it invents ENGINE_PLACEMENT, and a placement base is PROVISIONAL by design (`roster_open` — the newest
+ *  placement read wins, joins stay legal), so one such read reopens the roster window for the rest of the fight.
+ *  @param {{status?: number|null}|null} fight */
+export const fight_status_of = (fight) => (fight?.status == null ? null : Number(fight.status))
+
+/** True iff a decoded Fight is WHOLE enough to become a base: its real BoardGeom AND its lifecycle scalar. The
+ *  adoption door's one completeness gate — a record failing it is a torn read and seeds/replaces nothing. */
+export const fight_read_complete = (fight) => fight_geometry_complete(fight) && fight_status_of(fight) != null
+
 /**
  * Build the board view from a decoded engine `Fight` + the run context. Null fight + a live run = the OPEN
  * (pre-engage) view. `version` is the Fight OBJECT version (the snapshot-adoption floor). `offset` is the
@@ -318,7 +326,12 @@ export function board_state_from_fight({
     }
   })
   const room_index = Math.max(0, (run?.room ?? 1) - 1)
-  const engine_status = Number(fight.status ?? 0)
+  // THE DECODE ASSERT (#1277) — a board-carrying record with no lifecycle scalar is torn, and there is no honest
+  // value to invent for it: 0 reads as the roster window and anything else fabricates an outcome. The adoption
+  // door refuses such reads (`fight_read_complete`) so this never fires on the chain path; a direct caller that
+  // hands one over gets a loud decode failure at the seam instead of a fight that looks provisional forever.
+  const engine_status = fight_status_of(fight)
+  if (engine_status == null) throw new Error('board_state_from_fight: Fight record carries a board but no status')
   const status =
     engine_status === ENGINE_PLACEMENT
       ? STATUS_PLACEMENT

@@ -72,7 +72,10 @@ export function decode_fight(json) {
     placement_ms: to_bigint(json.placement_ms),
     team_bound: Number(json.team_bound ?? 0),
     // lifecycle
-    status: Number(json.status ?? 0),
+    // NEVER a defaulted 0 (#1277): `status` is non-optional on chain, so an absent one is a TORN read and 0 is
+    // the roster window — the one value that makes a live fight look provisional forever. Absent stays null and
+    // the fight core's completeness gate refuses the record; `status_label` reads it as 'unknown'.
+    status: json.status == null ? null : Number(json.status),
     status_label: fight_status_label(json.status),
     // fighters (raw flattened arrays + convenience counts)
     participants: json.participants ?? [],

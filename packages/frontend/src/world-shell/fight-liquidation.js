@@ -18,7 +18,7 @@
 // it at one toast per distinct deadline. CHAIN-AUTHORSHIP LAW: real signed txs, never p2p messages.
 
 import { decode_fight, fight_status_label } from '@aresrpg/sdk/fight'
-import { STATUS_PLACEMENT as VIEW_STATUS_PLACEMENT } from '@aresrpg/fight/board_state'
+import { STATUS_PLACEMENT as VIEW_STATUS_PLACEMENT, fight_status_of } from '@aresrpg/fight/board_state'
 
 import { game_log } from '../core/log.js'
 import { get_sdk } from '../chain/sdk'
@@ -214,7 +214,10 @@ export function reset_liquidation() {
  */
 export function resume_decision(decoded, now) {
   if (!decoded) return 'skip' // unreadable fight — never adopt on hope; a later boot pass retries
-  const status = Number(decoded.status)
+  // A status-less decode is a TORN read (#1277): `Number(null)` is 0 = PLACEMENT, so coercing it would resume a
+  // player into a fabricated placement window. Unknown is already a `skip` in this vocabulary.
+  const status = fight_status_of(decoded)
+  if (status == null) return 'skip'
   if (status === CHAIN_STATUS_ACTIVE) return turn_liquidatable(decoded, now) ? 'crank' : 'enter'
   if (status !== CHAIN_STATUS_PLACEMENT) return 'skip' // terminal/unknown — nothing a live session can present
   const deadline = Number(decoded.placement_deadline_ms ?? 0)

@@ -288,3 +288,24 @@ describe('M3 · tx transparency toasts on the background janitors', () => {
     expect(event_toast_store.get().filter((t) => t.id > floor).length).toBe(0)
   })
 })
+
+// #1277 — the boot-resume gate reads a RAW CHAIN decode, where `Number(null)` is 0 = CHAIN_STATUS_PLACEMENT.
+// A torn read (board intact, `status` absent) must therefore never resume a player into a fabricated placement
+// window: absent is unknown, and unknown is already `skip` in this vocabulary.
+describe('#1277 — a status-less chain decode is never a resumable placement', () => {
+  it('resume_decision skips a decoded Fight carrying no status', async () => {
+    const { resume_decision } = await import('./fight-liquidation.js')
+    const now = Date.now()
+    // control: the same record WITH placement (0) inside its window resumes.
+    expect(resume_decision({ status: 0, placement_deadline_ms: now + 60_000 }, now)).toBe('enter')
+    expect(resume_decision({ status: null, placement_deadline_ms: now + 60_000 }, now)).toBe('skip')
+    expect(resume_decision({ placement_deadline_ms: now + 60_000 }, now)).toBe('skip')
+  })
+
+  it('decode_fight hands back a null status rather than inventing placement', async () => {
+    const { decode_fight } = await import('@aresrpg/sdk/fight')
+    expect(decode_fight({ status: 0 }).status).toBe(0)
+    expect(decode_fight({}).status).toBeNull()
+    expect(decode_fight({}).status_label).toBe('unknown')
+  })
+})
