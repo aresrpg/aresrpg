@@ -859,7 +859,7 @@ export async function seed_full_corpus() {
     }
   } // seed_recipes — invoked after PHASE 6 (see the PHASE 4 header)
 
-  // ── PHASE 5 · mob templates (fight bounds: ≤4 spells, ≤16 loot; loot = faithful MobLootEntry vectors).
+  // ── PHASE 5 · mob templates (fight bounds: ≤5 spells, ≤16 loot; loot = faithful MobLootEntry vectors).
   //    Corpus mob spell kits are param-less stubs → each mob gets ONE canonical element-damage SpellLevel
   //    (enough for a real, settleable fight). BATCHED like PHASE 2; `MobTemplateCreated` only carries `name`
   //    (not unique across ~250 mobs) → CONTENT read-back (name+levels+hp+ap+mp+xp key), chunked. ──
@@ -896,7 +896,7 @@ export async function seed_full_corpus() {
                 ],
               },
             ]
-      ).slice(0, 4) // MAX_SPELLS = 4 (mob_template.move §17.21)
+      ).slice(0, 5) // MAX_SPELLS = 5 (mob_template.move §17.21, #1406)
       const spells = levelVec(
         tx,
         kit.map((sp) =>

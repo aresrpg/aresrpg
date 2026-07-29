@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// MOB TEMPLATE — the admin-minted mob CONTENT blueprint (stats, a ≤4-spell kit, a ≤16-entry loot table, xp).
+/// MOB TEMPLATE — the admin-minted mob CONTENT blueprint (stats, a ≤5-spell kit, a ≤16-entry loot table, xp).
 /// S-46 final split: the ENGINE spawns from a plain `MobSpec` — this module owns the shared authoring object and
 /// mirrors it into the spec at the core fight doors (`y69` — resistances stored CENTERED here are DECENTERED
 /// into true magnitudes exactly where the old engine spawn decoded them).
@@ -12,7 +12,7 @@ use aresrpg_foundation::{spell::{Self, Stats}, spell_effect::SpellLevel};
 use std::string::String;
 use sui::event;
 
-const MAX_SPELLS: u64 = 4; // §17.21 mob spell-list bound
+const MAX_SPELLS: u64 = 5; // §17.21 mob spell-list bound (#1406 sanctioned five-spell boss kits)
 const MAX_LOOT: u64 = 16; // §17.14 loot entries per mob template
 
 const ETooManySpells: u64 = 101; // mint: spell kit exceeds MAX_SPELLS
@@ -166,7 +166,7 @@ public fun set_loot(
   event::emit(MobLootRetuned { template: object::id(tmpl), entries: tmpl.loot.length() });
 }
 
-/// Retune a live mob template's SPELL KIT in place — replace the whole `≤4`-entry `vector<SpellLevel>`. The
+/// Retune a live mob template's SPELL KIT in place — replace the whole `≤5`-entry `vector<SpellLevel>`. The
 /// correction door for the ratified effect encoding: the live kits were minted CENTERED while both runtimes
 /// consume magnitude+flag, and `spells` was MINT-ONLY, so no correction could fire without a re-mint (which
 /// would change the template ID every world mob-entry and zone-group points at). This additive setter is the

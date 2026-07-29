@@ -25,7 +25,7 @@
 //   "kits": {                          // REQUIRED — mob key → the WHOLE kit (set_spells replaces the vector)
 //     "<mob key>": {
 //       "id": "0x…",                   // OPTIONAL — else resolved via out/seed_manifest.json `mobs[key].id`
-//       "spells": [                    // ≤ MAX_SPELLS(4) SpellLevel rows; [] deliberately CLEARS the kit
+//       "spells": [                    // ≤ MAX_SPELLS(5) SpellLevel rows; [] deliberately CLEARS the kit
 //         { "ap_cost": 3, "range_min": 1, "range_max": 4,          // ap_cost REQUIRED; everything else defaults
 //           "min_char_level": 1, "modifiable_range": false, "line_launch": false, "line_of_sight": true,
 //           "free_cell": false, "casts_per_turn": 255, "casts_per_target": 255, "cooldown_turns": 0,
@@ -51,13 +51,13 @@
 // ── THE BATCH WIDTH (arithmetic, not a vibe) ────────────────────────────────────────────────────────
 // A kit is command-DENSE and, unlike loot, VARIABLE: one set_spells expands to
 //   Σ_levels (effects + crit_effects + 2 makeMoveVec + 1 new_spell_level) + 1 makeMoveVec(levels) + 1 set_spells
-// — from 2 commands (a kit CLEAR) to ~80 (4 levels × 12 effects). A fixed mob count therefore either wastes the
+// — from 2 commands (a kit CLEAR) to ~100 (5 levels × 12 effects). A fixed mob count therefore either wastes the
 // PTB (small kits) or breaches it (20 × 62 = 1240 > Sui's 1024-command cap), so the width is a COMMAND BUDGET:
 // mobs are packed greedily while the running cost stays ≤ MAX_COMMANDS_PER_PTB, with a hard mob cap on top.
 // 256 commands is a 4× margin under the 1024 cap and the binding constraint is BYTES, not commands: each
 // `new_effect` carries 11 pure inputs, so 256 commands ≈ ≤250 effects ≈ ~11 KB of inputs — under 10% of the
 // 128 KB tx-size cap (ceremony_lib's probe measured full spell rows at ~31 cmd/row breaching at n=40; a mob kit
-// is a ≤4-level slice of that shape). A single kit richer than the whole budget is a REFUSAL, never a silently
+// is a ≤5-level slice of that shape). A single kit richer than the whole budget is a REFUSAL, never a silently
 // over-cap PTB.
 import { readFileSync as read_file, existsSync as exists } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -86,7 +86,7 @@ const script_dir = dirname(file_url_to_path(import.meta.url))
 const read_json = (file_path) => JSON.parse(read_file(file_path, 'utf8'))
 
 // ── constants ───────────────────────────────────────────────────────────────────────────────────
-export const MAX_SPELLS = 4 // §17.21 — mob_template.move MAX_SPELLS (the setter mirrors mint's bound, never weaker)
+export const MAX_SPELLS = 5 // §17.21 — mob_template.move MAX_SPELLS (#1406; setter mirrors mint, never weaker)
 export const MAX_COMMANDS_PER_PTB = 256 // the width budget — see THE BATCH WIDTH above
 export const MAX_MOBS_PER_PTB = 16 // hard cap on top of the budget (a PTB of 16 kit CLEARs is still only 32 cmds)
 export const GAS_BUDGET_MIST = 50_000_000 // fixed 0.05 SUI/PTB (D747 shape — the target isn't simulatable

@@ -494,8 +494,47 @@ fun set_spells_replaces_the_spell_kit() {
   sc.end();
 }
 
+#[test]
+/// #1406's sanctioned boss shape: both authoring doors admit all five SpellLevels and store the fifth row.
+/// This is the boundary value; the six-row refusal below proves the bounded-compute guard remains armed.
+fun five_spell_kit_is_admitted_by_mint_and_setter() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut five = vector[];
+  let mut i = 0;
+  while (i < 5) { five.push_back(kit_level(SIGNED_SHIFT + i)); i = i + 1 };
+  let tid = mob_template::mint(
+    &cap, &ver, b"boss".to_string(), 1, 2, 10, 6, 3, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), five, vector[], 1, sc.ctx(),
+  );
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
+  assert_eq!(mob_template::mob_spells(&tmpl).length(), 5);
+  let mut replacement = vector[];
+  let mut i = 0;
+  while (i < 5) { replacement.push_back(kit_level(SIGNED_SHIFT + 10 + i)); i = i + 1 };
+  mob_template::set_spells(&cap, &ver, &mut tmpl, replacement, sc.ctx());
+  let stored = mob_template::mob_spells(&tmpl);
+  assert_eq!(stored.length(), 5);
+  assert_eq!(spell_effect::value(stored.borrow(4).sl_effects().borrow(0)), SIGNED_SHIFT + 14);
+  ts::return_shared(tmpl);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+  sc.end();
+}
+
 #[test, expected_failure(abort_code = MT_ETooManySpells, location = mob_template)]
-/// A kit exceeding MAX_SPELLS (4) aborts `ETooManySpells` — the SAME bound `mint` asserts (mirrored, never
+/// A kit exceeding MAX_SPELLS (5) aborts `ETooManySpells` — the SAME bound `mint` asserts (mirrored, never
 /// weaker), so the correction door can never bake a kit `mint` would have rejected.
 fun set_spells_over_cap_aborts() {
   let mut sc = ts::begin(OWNER);
@@ -518,8 +557,8 @@ fun set_spells_over_cap_aborts() {
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
   let mut spells = vector[];
   let mut i = 0;
-  while (i < 5) { spells.push_back(kit_level(SIGNED_SHIFT + 25)); i = i + 1 };
-  mob_template::set_spells(&cap, &ver, &mut tmpl, spells, sc.ctx()); // ETooManySpells (5 > 4)
+  while (i < 6) { spells.push_back(kit_level(SIGNED_SHIFT + 25)); i = i + 1 };
+  mob_template::set_spells(&cap, &ver, &mut tmpl, spells, sc.ctx()); // ETooManySpells (6 > 5)
   abort
 }
 
