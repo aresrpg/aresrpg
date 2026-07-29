@@ -5,7 +5,9 @@
 //
 // `sim_chain_events.js`'s `level_of` resolves the authored level a cast priced and resolved at:
 //
-//     return template.levels?.[level - 1] ?? template.levels?.[0] ?? null
+//     const authored_level = template.levels?.[level - 1]
+//     if (!authored_level) throw new Error(...)
+//     return authored_level
 //
 // The second `??` is the subject of this file. On a level-index MISS — the seat's learned level naming a rank
 // the authored template does not carry — the encoder silently prices rank 1 and emits a full action envelope
@@ -13,9 +15,7 @@
 // holds while `ap_cost` and the effect descriptors state the rank the encoder fell back to. A miss on an
 // authored template is corpus/seed corruption, and corruption that names itself is the #1032 loud-refusal law.
 //
-// The green test below is the durable half: it proves the encoder prices the SEAT'S rank whenever the index
-// resolves, so a regression back to "always levels[0]" is caught. The skipped test is #1089's definition of
-// done — it cannot go green without the production change that replaces the fallback with a refusal.
+// The tests prove the encoder prices the SEAT'S rank whenever the index resolves and refuses a corrupt miss.
 
 import { describe, expect, test } from 'bun:test'
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
@@ -125,11 +125,7 @@ describe('the action envelope prices the rank the seat actually holds', () => {
     })
   })
 
-  // #1089 — THE DEFINITION OF DONE. Skipped: it cannot go green without the production change that replaces
-  // `level_of`'s `?? template.levels?.[0]` fallback (sim_chain_events.js:343-349) with a loud refusal. Today a
-  // seat holding rank 5 of a 3-rank template mints an envelope priced at rank 1 while `learned_level` states 5
-  // — a row that contradicts itself, on the resolution path, from corpus corruption that never named itself.
-  test.skip('a level-index MISS refuses loudly instead of pricing rank 1 (#1089)', () => {
+  test('a level-index MISS refuses loudly instead of pricing rank 1 (#1089)', () => {
     expect(() => envelope_of({ learned_level: 5 })).toThrow(/level/i)
   })
 })
