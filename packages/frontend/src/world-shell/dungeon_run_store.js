@@ -80,6 +80,7 @@ import { settle_owned_dungeon_companions } from './owned_dungeon_settlement.js'
 import { derive_team_entry_plan, select_owned_run_pass_ids } from './team_entry.js'
 import { fight_recap_payload } from './fight_recap.js'
 import { commit_with_overdue_retry } from './overdue_retry.js'
+import { force_pass_key, run_force_pass } from './turn_stall.js'
 import { read_object, decode_pass, load_world_meta, resolve_entry_key, is_gone_error } from './run_reads.js'
 import { read_fight_liveness } from './fight_liveness.js'
 import { key_candidates } from './key_pick.js'
@@ -291,6 +292,8 @@ const cleared_session = (/** @type {string} */ phase) => ({
   fight_syncing: false,
   spectating: false,
   _turn_commit_failure: null,
+  _force_pass_key: null,
+  _force_passing: false,
 })
 
 export const use_dungeon = create((set, get) => ({
@@ -300,6 +303,10 @@ export const use_dungeon = create((set, get) => ({
   fight_syncing: false,
   /** Executed-failure proof for one exact fight@actor@deadline. Automatic fire may never cross it. */
   _turn_commit_failure: null,
+  /** @type {string | null} the fight@deadline whose ONE force pass this session already owns (#1381 ③). */
+  _force_pass_key: null,
+  /** True while that single force-pass submission is in flight — a second press composes nothing. */
+  _force_passing: false,
   /** True for a seatless, read-only world-fight observer. Null identity keeps the core provider idle. */
   spectating: false,
   /** True when the live `fight_id` was set by THIS client's explicit start/join gesture (a FRESH create). The
@@ -521,6 +528,49 @@ export const use_dungeon = create((set, get) => ({
     if (get()._settling) return false
     set({ _settling: true })
     return true
+  },
+
+  /**
+   * #1381 ③ — the SINGLE-SHOT force-pass latch, as a reducer transition. One press per fight@DEADLINE: a
+   * refused claim composes nothing at all, so no amount of re-pressing (or re-rendering) can double-fire a
+   * transaction. A fresh deadline is a new key and re-arms by itself. Mirrors `claim_settling` deliberately —
+   * the same door shape for the same job.
+   * @param {string|null} key `force_pass_key(fight_id, deadline)` @returns {boolean} true = this call owns it
+   */
+  claim_force_pass: (key) => {
+    const { _force_pass_key, _force_passing } = get()
+    if (!key || _force_passing || _force_pass_key === key) return false
+    set({ _force_passing: true, _force_pass_key: key })
+    return true
+  },
+
+  /**
+   * FORCE PASS (#1381 ②③) — the stalled-turn door the OTHER participants are offered once the janitors have
+   * had their window (fight_expiry_gate's grace) and the fight still has not moved. A human press fires it;
+   * nothing here is automatic.
+   *
+   * The crank door dry-runs before the wallet signs, so the simulation itself discriminates: it passes ⇒ ONE
+   * submission; it aborts turns::107/105 ⇒ the turn already advanced and we were merely desynced ⇒ re-read and
+   * stay silent (zero gas, zero submissions). An executed failure says so once and is never retried — the
+   * spend guard's per-deadline circuit holds it mechanically too.
+   */
+  async force_pass() {
+    const { fight_id, dungeon } = get()
+    const deadline = Number(dungeon?.turn_deadline_ms ?? 0)
+    const key = force_pass_key(fight_id, deadline)
+    if (!key) return 'held'
+    const { verdict, error } = await run_force_pass({
+      claim: () => get().claim_force_pass(key),
+      crank: () => tx_crank(fight_id, true, deadline),
+      resync: () => get().refresh(),
+    })
+    if (verdict === 'held') return verdict // another press owns this attempt; touch no state of its
+    set({ _force_passing: false })
+    // LOUD EXACTLY ONCE, and only when there is something to say: a landed pass shows itself on the board, and
+    // "we were desynced" is not news to a player.
+    if (verdict === 'executed' || verdict === 'refused')
+      push_event_toast({ state: 'error', title: humanize_abort(error) })
+    return verdict
   },
 
   /**

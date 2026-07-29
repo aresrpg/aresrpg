@@ -73,6 +73,8 @@
     "hp": "HP",
     "lv": "Lv {{level}}",
     "fighter": "戦闘者",
+    "turn_stalled": "{{name}}がターンを終了していません",
+    "force_pass": "ターンを強制終了",
     "waiting_for": "{{name}}のターンを待っています",
     "turn_min_widened": "ターンの最小時間は{{seconds}}秒 — 直前に行動したモンスターがまだチェーン上で解決中です。",
     "none": "なし",

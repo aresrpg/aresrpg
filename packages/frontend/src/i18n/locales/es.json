@@ -73,6 +73,8 @@
     "hp": "HP",
     "lv": "Nv {{level}}",
     "fighter": "Combatiente",
+    "turn_stalled": "{{name}} no está terminando su turno",
+    "force_pass": "FORZAR PASO",
     "waiting_for": "Esperando a {{name}}",
     "turn_min_widened": "Mínimo del turno {{seconds}}s — los monstruos que acaban de jugar aún se están resolviendo en la cadena.",
     "none": "Ninguno",

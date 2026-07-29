@@ -920,6 +920,35 @@
   text-align: center;
   line-height: 1.35;
   color: var(--text-dim, #9aa0ab);
+/* #1381 — THE STALL LINE + ITS ONE DOOR. Same chip family as the countdown above (the state it replaces is a
+ * dead clock), in the quieter muted ink: it names a fact about another player, it does not shout at them. The
+ * door beside it is a subordinate outline — never the gold CTA weight of END TURN, because forcing someone
+ * else's pass is a last resort, not the turn's normal action. */
+.hud-fightctl__stalled {
+  align-self: center;
+  padding: 3px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fg-muted);
+  border: 1px solid var(--edge);
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+}
+.hud-fightctl .hud-fightctl__force-pass {
+  min-width: 104px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  border-color: rgba(200, 150, 60, 0.5);
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+}
+.hud-fightctl .hud-fightctl__force-pass:hover:not(:disabled) {
+  color: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 /* identity + vitals card — bust, name/level, RED-gradient HP bar, AP/MP/Reserve as single icon+number,

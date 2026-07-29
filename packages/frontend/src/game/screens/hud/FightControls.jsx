@@ -45,6 +45,9 @@ const default_ready = () => {
   const pick = use_dungeon_turn.getState().placement_pick
   if (pick != null) use_dungeon.getState().place_at_cell(pick)
 }
+// #1381 ③: the stalled-turn door. The store action owns the single-shot latch, the one submission and the
+// silent already-advanced resync — this is only the press.
+const default_force_pass = () => use_dungeon.getState().force_pass()
 
 /**
  * One turn-control phase verdict for the END TURN button. Resolve the actor through the
@@ -104,6 +107,7 @@ export function FightEndTurnButton({ phase, disabled = false, on_end_turn, end_l
  * props — gets the death warning before it ever signs; no caller needs to build its own modal for this door.
  * @param {{
  *   on_end_turn?: () => void, on_abandon?: () => void, on_ready?: () => void, on_leave_spectate?: () => void,
+ *   on_force_pass?: () => void,
  *   end_label?: string, abandon_label?: string, ready_label?: string, waiting_label?: string,
  *   leave_spectate_label?: string,
  *   end_disabled?: boolean, abandon_disabled?: boolean, ready_disabled?: boolean,
@@ -115,6 +119,7 @@ export function FightControls({
   on_end_turn = default_end_turn,
   on_abandon = default_abandon,
   on_leave_spectate = default_leave_spectate,
+  on_force_pass = default_force_pass, // #1381: the stalled-turn offer (store-owned latch + one submission)
   on_ready, // dungeon injects the ONE place_at path; default (below) = place_at the explicit placement pick
   end_label = 'End turn',
   abandon_label,
@@ -159,6 +164,9 @@ export function FightControls({
   // `chain_backed: false`), so absence reads as the chain — a world/dungeon fight can never opt out by
   // omission.
   const chain_backed = use_dungeon((s) => s.chain_backed !== false)
+  // The single force-pass submission's own flight, read from the store that owns it (never a local ref — the
+  // latch is a reducer fact, so every mount of this bar agrees about it).
+  const force_passing = use_dungeon((s) => s._force_passing)
   // THE CORE FLOOR (@aresrpg/fight store PLAYER_TURN_FLOOR_MS): min_turn_left reads the core's raw
   // `turn_started_at` — a field the projected view (`fight`, above) doesn't carry — so this subscribes to
   // the raw core state via the React binding (game/store.js use_fight; the core store itself is vanilla).
@@ -255,12 +263,18 @@ export function FightControls({
   const abandon_button_label = abandon_label ?? t('dungeons.abandon_fight')
   const active_turn_fighter =
     turn_phase === 'waiting' && fight.active_entity_id ? fight.fighters.get(fight.active_entity_id) : null
-  const turn_waiting_label =
-    active_turn_fighter == null
-      ? null
-      : t('fight.waiting_for', {
-          name: active_turn_fighter.name || active_turn_fighter.id || t('fight.fighter'),
-        })
+  const active_turn_name = active_turn_fighter
+    ? active_turn_fighter.name || active_turn_fighter.id || t('fight.fighter')
+    : null
+  const turn_waiting_label = active_turn_name == null ? null : t('fight.waiting_for', { name: active_turn_name })
+  // ── #1381 ② · THE STALL IS OFFERED TO THE OTHERS ────────────────────────────────────────────────────────
+  // The console.error above was the whole surface: every other player sat in front of a frozen board while the
+  // machinery (auto-crank + the deadline-proximity read) had already had its window and failed to move it. The
+  // SAME predicate now also opens a door — and only a door, never a fire: forcing a pass for a slow-but-alive
+  // player would grief them and burn gas doing it, so it waits for a human press. Reachable only on SOMEONE
+  // ELSE'S turn (`waiting`) — my own late turn auto-presses END TURN a few lines up — and `report_stall`
+  // already carries the janitors' grace and refuses while anything of ours is in flight.
+  const stalled_name = report_stall && turn_phase === 'waiting' ? active_turn_name : null
 
   // D110: seconds until the chain force-starts the fight (begin_active_if_expired). Clamped ≥0; shown only in
   // placement with a real deadline + a label factory (the dungeon path).
@@ -331,6 +345,21 @@ export function FightControls({
           >
             {t('fight.turn_min_widened', { seconds: Math.ceil((PLAYER_TURN_FLOOR_MS + min_turn_widened) / 1000) })}
           </span>
+        )}
+        {stalled_name && (
+          <>
+            <span className="hud-fightctl__stalled" role="status" aria-live="polite">
+              {t('fight.turn_stalled', { name: stalled_name })}
+            </span>
+            <button
+              type="button"
+              className="hud-fightctl__btn hud-fightctl__force-pass"
+              onClick={on_force_pass}
+              disabled={force_passing}
+            >
+              {t('fight.force_pass')}
+            </button>
+          </>
         )}
         {placement ? (
           <button
