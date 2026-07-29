@@ -44,6 +44,12 @@ const SEAT = { owner: '0xme', character: '0xchar', team: 0, hp: '30', max_hp: '3
 beforeEach(() => {
   listDynamicFields.mockClear()
   getObjects.mockClear()
+  // `fight_store` is a process-wide singleton, so this file inherits whatever session the previously
+  // executed file left in it. A chain input for a DIFFERENT fight is refused outright by the
+  // provenance gate (store.js `refuse_reason`), so the sync below would attach nothing and the
+  // escrow assertion would read undefined — a red that depends only on file order. `init` is a
+  // control signal that always passes that gate: it opens a fresh session for THIS fight.
+  fight_store.getState().input({ type: 'init', fight_id: '0xfight_lines', my_key: SEAT.character, ctx: {} })
 })
 
 describe('#1323 — the authored weapon lines reach the fight record the preview reads', () => {
