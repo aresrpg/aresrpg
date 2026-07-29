@@ -37,18 +37,26 @@ expect_equal() {
   fi
 }
 
+BEFORE=fedcba9876543210fedcba9876543210fedcba98
 SHA=0123456789abcdef0123456789abcdef01234567
-dispatch_edge_landing_automations "$SHA"
+dispatch_edge_landing_automations "$BEFORE" "$SHA"
 expect_equal \
-  "both landing automations receive the landed sha on edge" \
-  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA
+  "the sweep receives the exact landed RANGE, the audit the landed tree" \
+  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA -f base=$BEFORE
 workflow run nuclear-audit.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
+  "$(cat "$CALL_LOG")"
+
+: >"$CALL_LOG"
+dispatch_edge_landing_automations "$SHA" "$SHA"
+expect_equal \
+  "an align push that moved nothing dispatches nothing" \
+  "" \
   "$(cat "$CALL_LOG")"
 
 : >"$CALL_LOG"
 : >"$ERROR_LOG"
 MOCK_FAIL_WORKFLOW=board-hygiene.yml
-dispatch_edge_landing_automations "$SHA" 2>"$ERROR_LOG"
+dispatch_edge_landing_automations "$BEFORE" "$SHA" 2>"$ERROR_LOG"
 DISPATCH_RC=$?
 expect_equal "a dispatch failure exits non-zero after the ff-push" "1" "$DISPATCH_RC"
 expect_equal \
@@ -57,7 +65,7 @@ expect_equal \
   "$(cat "$ERROR_LOG")"
 expect_equal \
   "one failed dispatch does not starve the next automation" \
-  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA
+  "workflow run board-hygiene.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA -f base=$BEFORE
 workflow run nuclear-audit.yml --repo aresrpg/aresrpg --ref edge -f sha=$SHA" \
   "$(cat "$CALL_LOG")"
 

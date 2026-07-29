@@ -101,6 +101,10 @@ FETCH_REFS=("refs/pull/${PR}/head:refs/promote/land-${PR}" "+refs/heads/${BASE}:
 if [ "$BASE" != edge ]; then FETCH_REFS+=("+refs/heads/edge:refs/remotes/origin/edge"); fi
 git fetch --quiet origin "${FETCH_REFS[@]}"
 HEAD_SHA=$(git rev-parse "refs/promote/land-${PR}")
+# edge as it stands BEFORE any push below — the base of the range the landing automations sweep.
+# Both fetch shapes above refresh origin/edge, and it is read HERE because `git push` updates the
+# remote-tracking ref, which would erase the before-state the sweep needs.
+EDGE_BEFORE=$(git rev-parse refs/remotes/origin/edge)
 
 # ── master-hop: the tip must be release-shaped (release-only-production law) ─────────────────
 if [ "$BASE" = master ]; then
@@ -170,7 +174,7 @@ fi
 git push origin "$HEAD_SHA:$BASE"
 echo "landed PR #$PR onto $BASE ($HEAD_SHA)"
 if [ "$BASE" = edge ]; then
-  dispatch_edge_landing_automations "$HEAD_SHA"
+  dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA"
 fi
 
 # ── master-only post-landing tail (best-effort; the promotion already HAPPENED at the push) ──
@@ -180,7 +184,7 @@ if [ "$BASE" = master ]; then
   if git merge-base --is-ancestor "refs/remotes/origin/edge" "$HEAD_SHA"; then
     if git push origin "$HEAD_SHA:edge"; then
       echo "edge aligned to master ($HEAD_SHA)"
-      dispatch_edge_landing_automations "$HEAD_SHA"
+      dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA"
     else
       echo "WARN: edge align push failed (non-fatal; master already landed)"
     fi
