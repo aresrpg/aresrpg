@@ -219,7 +219,7 @@ describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
     await settle_tick()
 
     expect(crank_door).toHaveBeenCalledTimes(1)
-    expect(crank_door.mock.calls[0]).toEqual([FIGHT_ID, true]) // the silent janitor door, not a toast path
+    expect(crank_door.mock.calls[0]).toEqual([FIGHT_ID, true, expect.any(Number)]) // silent janitor + deadline scope
     // The loop of record: the session was adopted as-is and the zombie re-captured the character.
     expect(use_dungeon.getState().fight_id).toBeNull()
     expect(use_dungeon.getState().dungeon_id).toBeNull()

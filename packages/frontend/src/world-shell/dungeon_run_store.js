@@ -1368,7 +1368,7 @@ export const use_dungeon = create((set, get) => ({
         commit: () => commit_turn_batch(fight_id, character_id, batch, true, solo),
         // The inner overdue crank is silent machinery (owner ruling 2026-07-22): it forfeits a stalled player's
         // expired turn so this commit can land — never player-facing news, so it fires WITHOUT a toast.
-        crank: () => tx_crank(fight_id, true),
+        crank: () => tx_crank(fight_id, true, dungeon?.turn_deadline_ms ?? 0),
         is_overdue: is_someone_overdue_abort,
       })
       fight_state_trace('commit_receipt', {

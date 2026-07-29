@@ -91,7 +91,7 @@ export function maybe_liquidate(view, get) {
         }
         // The overdue-turn crank is silent machinery (owner ruling 2026-07-22): it forfeits an away player's
         // expired turn and resolves the fight forward — never player-facing news, so it fires WITHOUT a toast.
-        await tx_crank(fight_id, true)
+        await tx_crank(fight_id, true, deadline)
         await get().refresh()
       } catch (error) {
         if (executed_failure(error)) {
@@ -240,7 +240,7 @@ const chain_reason = ({ readable, decoded }) => {
  * The verdict carries its REASON: the caller refuses OUT LOUD or not at all (#932).
  * @param {string} fight_id
  * @param {{ force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
- *           crank_door?: (fight_id: string, silent: boolean) => Promise<any> }} [doors]
+ *           crank_door?: (fight_id: string, silent: boolean, deadline: number) => Promise<any> }} [doors]
  * @returns {Promise<{ decision: 'enter'|'gone'|'skip', reason: string }>}
  */
 export async function ensure_resumable_fight(fight_id, doors = {}) {
@@ -269,13 +269,14 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   // terminal/absent on chain — nothing to mount, an outcome to recover
   if (decision === 'skip') return { decision: 'gone', reason: chain_reason(first) }
   if (decision === 'unreadable') return { decision: 'skip', reason: chain_reason(first) }
-  const door = decision === 'crank' ? crank_door : force_start_door
   const deadline = Number(
     (decision === 'crank' ? first.decoded?.turn_deadline_ms : first.decoded?.placement_deadline_ms) ?? 0
   )
   let digest = /** @type {string | null} */ (null)
   try {
-    digest = (await door(fight_id, true))?.digest ?? null // silent janitor tx
+    const receipt =
+      decision === 'crank' ? await crank_door(fight_id, true, deadline) : await force_start_door(fight_id, true)
+    digest = receipt?.digest ?? null // silent janitor tx
     claim_probe_dedup(decision, deadline)
   } catch (error) {
     if (executed_failure(error)) claim_probe_dedup(decision, deadline) // gas burned — never a second send

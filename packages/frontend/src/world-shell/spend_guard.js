@@ -11,7 +11,8 @@
 //
 // THREE GATES, all scoped to AUTOMATED submissions only (a player pressing a button is never blocked by us):
 //   ① CIRCUIT   — an EXECUTED FAILURE (a digest proves gas burned) opens that intent's circuit for the whole
-//                 session. No automated resubmission of `advance_turn:0xFIGHT`, ever, until a reload.
+//                 session. No resubmission of `advance_turn:0xFIGHT:<deadline>`, while a fresh deadline is a
+//                 fresh intent.
 //   ② BACKOFF   — a PRE-EXECUTION refusal (no digest: RPC refusal, simulate failure, network) burned nothing, so
 //                 it stays retryable — on an exponential schedule with jitter, per intent, reset by a success.
 //   ③ BREAKER   — automated submissions accrue a session gas ledger; past AUTOMATED_SPEND_CEILING_MIST ALL

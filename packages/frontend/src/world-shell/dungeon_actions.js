@@ -432,14 +432,18 @@ export async function force_start(/** @type {string} */ fight_id, /** @type {boo
 
 /** CRANK a stalled ACTIVE fight past its turn deadline (`turns::crank`, permissionless janitor) — #1262's
  *  transaction. Every caller (the liquidation poll, the boot-resume heal, the commit path's inner crank) reaches
- *  the chain through here, so ONE intent key covers them all: an executed failure retires the door for this
- *  fight, for this session, no matter which of them observes the next expiry. */
-export async function crank(/** @type {string} */ fight_id, /** @type {boolean} */ silent = false) {
+ *  the chain through here, so ONE intent key covers them all PER DEADLINE: an executed failure retires that
+ *  expired turn without disarming a later turn in the same fight (#1606). */
+export async function crank(
+  /** @type {string} */ fight_id,
+  /** @type {boolean} */ silent = false,
+  /** @type {bigint|number|string} */ turn_deadline_ms = 0
+) {
   const sdk = await get_sdk()
   const fight_arg = (await ensure_fight_shared_ref(sdk, fight_id)) ?? fight_id
   const tx = crank_ptb(ctx_of(sdk))({ fight_id: fight_arg })
   return sign(tx, i18n.t('dungeons.action_pass_turn'), silent, null, {
-    intent: `advance_turn:${fight_id}`,
+    intent: `advance_turn:${fight_id}:${turn_deadline_ms}`,
     automated: true,
   })
 }
