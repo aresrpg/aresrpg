@@ -15,7 +15,6 @@ import {
   peer_state_of,
   peer_state_by_address,
   peer_states_by_address,
-  online_state_by_address,
   see_fights_count,
   subscribe_identity_requests,
   subscribe_chat,
@@ -36,28 +35,33 @@ const boot = () => {
   return { store, input, state: () => store.getState() }
 }
 
-describe('server presence stream — current/join/leave fold through the presence_input door', () => {
-  it('replaces the current set, adds a join, and removes a leave without touching position peers', () => {
+// #1698 — ONE ROSTER. The server-observed registry that briefly sat beside `peers` is retired: it had the read
+// layer writing redis on a client's say-so (REALTIME.md laws 1 and 2) and it made presence answer twice. These
+// guard the deletion: no second table may appear on the atom, and the retired vocabulary must fold to NOTHING
+// rather than quietly rebuilding one.
+describe('one roster — the retired server-presence registry cannot come back', () => {
+  it('exposes no roster map beside `peers`', () => {
+    const { state } = boot()
+    const maps = Object.entries(state()).filter(([, value]) => value instanceof Map)
+    expect(maps.map(([key]) => key).sort()).toEqual(['dungeon_fight_rows', 'fight_markers', 'peers'])
+  })
+
+  it('folds the retired stream_current/join/leave inputs to nothing — identity, never a second table', () => {
     const { input, state } = boot()
-    input({
-      type: 'stream_current',
-      rows: [{ id: PEER, address: '0xalice', name: 'Alice', world: '0xworld' }],
-    })
-    expect(online_state_by_address(state(), '0xalice')).toMatchObject({ id: PEER, name: 'Alice' })
-
-    input({
-      type: 'stream_join',
-      row: { character_id: PEER_B, address: '0xbob', name: 'Bob', world: '0xworld' },
-    })
-    expect(online_state_by_address(state(), '0xbob')).toMatchObject({ id: PEER_B, name: 'Bob' })
-
+    const before = state()
+    input({ type: 'stream_current', rows: [{ id: PEER, address: '0xalice', name: 'Alice', world: '0xworld' }] })
+    input({ type: 'stream_join', row: { character_id: PEER_B, address: '0xbob', name: 'Bob' } })
     input({ type: 'stream_leave', id: PEER })
-    expect(online_state_by_address(state(), '0xalice')).toBe(null)
+    expect(state()).toBe(before)
     expect(state().peers.size).toBe(0)
+  })
 
-    input({ type: 'stream_current', rows: [{ id: PEER, address: '0xalice', name: 'Alice' }] })
-    expect(online_state_by_address(state(), '0xbob')).toBe(null)
-    expect(online_state_by_address(state(), '0xalice')?.id).toBe(PEER)
+  it('answers who-is-here from the peer table alone — a room announcement IS the presence', () => {
+    const { input, state } = boot()
+    input({ type: 'peer_state', id: PEER, address: '0xalice', name: 'Alice', classe: 'senshi' })
+    expect(peer_state_by_address(state(), '0xalice')).toMatchObject({ address: '0xalice', name: 'Alice' })
+    input({ type: 'peer_leave', id: PEER })
+    expect(peer_state_by_address(state(), '0xalice')).toBe(null)
   })
 })
 
