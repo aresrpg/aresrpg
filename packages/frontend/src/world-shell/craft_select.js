@@ -36,24 +36,41 @@ export function exact_subset(stacks, target) {
 }
 
 /**
- * Pick exact ingredient stacks for `ingredients` (`[{ id (slug), qty }]`) across the owned-items bag
- * (s.sui.items rows: `{ id, item_type, amount, kiosk_id, kiosk_cap_id }`). Each selected row is returned intact
- * as the craft PTB's custody input, so the SDK extracts that item from the kiosk which actually holds it. There
- * is deliberately no item-id→kiosk lookup alongside this function: the owned row is the custody record.
+ * Pick exact ingredient stacks for `ingredients` (`[{ id (slug), qty }]`) out of the owned-items bag (s.sui.items
+ * rows: `{ id, item_type, amount, kiosk_id, kiosk_cap_id }`), restricted to the ONE kiosk the craft runs in.
+ *
+ * WHY ONE KIOSK (#1494): `crafting::craft` borrows the crafter's character out of the kiosk it is handed AND runs
+ * `extract::extract_for_burn` for every ingredient against that SAME kiosk — so an ingredient sitting in a sibling
+ * personal kiosk can only abort `0x2::kiosk::EItemNotFound` ("This item belongs to a different kiosk"). Selecting
+ * across the whole bag composed exactly that doomed tx.
+ *
+ * Failures flow as DATA so the caller can be honest about WHICH refusal it is: `{ error: 'wrong_kiosk' }` means the
+ * ingredients exist but live in another kiosk (a real, actionable state — not "you lack the materials"), while
+ * `null` means the bag genuinely cannot satisfy the recipe.
  * @param {any[]} items
  * @param {{ id: string, qty: number }[]} ingredients
- * @returns {{ input_items: any[] } | null}
+ * @param {string} kiosk_id the kiosk holding the crafter's character — the craft's one custody home
+ * @returns {{ input_items: any[] } | { error: 'wrong_kiosk' } | null}
  */
-export function select_ingredients(items, ingredients) {
+export function select_ingredients(items, ingredients, kiosk_id) {
   const usable = (items ?? []).filter((item) => item?.id && item?.kiosk_id && item?.kiosk_cap_id)
-  const by_id = new Map(usable.map((item) => [item.id, item]))
-  const selected = ingredients.map((ing) => {
-    const stacks = usable
-      .filter((item) => item.item_type === ing.id)
-      .map((item) => ({ id: item.id, amount: Number(item.amount) || 1 }))
-    return exact_subset(stacks, ing.qty)
-  })
-  if (selected.some((picked) => !picked)) return null
-  const input_items = selected.flatMap((picked) => picked.map((id) => by_id.get(id)))
-  return input_items.length ? { input_items } : null
+  const pick = (pool) => {
+    const by_id = new Map(pool.map((item) => [item.id, item]))
+    const selected = ingredients.map((ing) =>
+      exact_subset(
+        pool
+          .filter((item) => item.item_type === ing.id)
+          .map((item) => ({ id: item.id, amount: Number(item.amount) || 1 })),
+        ing.qty
+      )
+    )
+    if (selected.some((picked) => !picked)) return null
+    const input_items = selected.flatMap((picked) => picked.map((id) => by_id.get(id)))
+    return input_items.length ? { input_items } : null
+  }
+
+  const here = pick(usable.filter((item) => String(item.kiosk_id) === String(kiosk_id)))
+  if (here) return here
+  // Satisfiable somewhere, just not where the craft can reach — name that state instead of "no ingredients".
+  return pick(usable) ? { error: 'wrong_kiosk' } : null
 }

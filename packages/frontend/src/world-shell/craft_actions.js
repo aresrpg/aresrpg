@@ -18,10 +18,13 @@
 // one that could disagree with the very grid the player clicked.)
 //
 // EXACT-STACK SELECTION: crafting::craft burns WHOLE items and requires the tally to land EXACT (a single
-// stack whose amount exceeds the need aborts EIngredientOverSupply; item::split is public(package), so the
-// client cannot split). Loot/gather mint SEPARATE stacks (no merge on mint), so we pick a subset of the
-// player's stacks that sums EXACTLY to each ingredient's quantity across the owned bag. The selected owned-item
-// rows retain their `kiosk_id`/`kiosk_cap_id`, so the PTB extracts every item from the kiosk that owns it.
+// stack whose amount exceeds the need auto-splits, and the surplus re-locks). Loot/gather mint SEPARATE stacks
+// (no merge on mint), so we pick a subset of the player's stacks that sums EXACTLY to each ingredient's quantity.
+//
+// ONE KIOSK (#1494): the chain borrows the crafter's character AND extracts every ingredient out of the single
+// kiosk the PTB names, so the selection is bounded to the character's kiosk. Ingredients stranded in a sibling
+// personal kiosk are refused honestly (`errors.item_wrong_kiosk`) at zero gas rather than sent as a tx that can
+// only abort `0x2::kiosk::EItemNotFound` — the toast this flow used to produce.
 
 import { use_auth } from '../auth'
 import i18n from '../i18n'
@@ -58,15 +61,18 @@ export async function craft_item({ recipe, items, character_id }) {
   if (!recipe.recipe_id || !ingredients.length || ingredients.some(({ id, qty }) => !id || qty <= 0))
     throw new Error(i18n.t('errors.craft_no_recipe'))
 
-  const selection = select_ingredients(items, ingredients)
-  if (!selection) throw new Error(i18n.t('errors.craft_no_ingredients'))
-
+  // The crafting kiosk is resolved FIRST because it bounds the selection: the chain burns every ingredient out of
+  // the kiosk holding the crafter's character, so a stack in a sibling kiosk is not craftable (see craft_select).
   const sdk = await get_sdk()
   const handle = await kiosk_for_character(sdk, address, character_id)
   if (!handle) throw new Error(i18n.t('errors.craft_failed'))
+
+  const selection = select_ingredients(items, ingredients, handle.kiosk_id)
+  if (!selection) throw new Error(i18n.t('errors.craft_no_ingredients'))
+  if (selection.error === 'wrong_kiosk') throw new Error(i18n.t('errors.item_wrong_kiosk'))
+
   const tx = sdk.craft_ptb({
     recipe_id: recipe.recipe_id,
-    // Character/output custody stays distinct from ingredient custody. Each input row below names its own kiosk.
     kiosk_id: handle.kiosk_id,
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
     character_id,

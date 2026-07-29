@@ -24,12 +24,13 @@ const item = {
   kiosk_id: '0xitem-kiosk',
   level: 1,
 }
-const item_cap_id = '0xitem-cap'
+// The character's personal kiosk — the ONE kiosk a crush runs in; the fixture item lives in it.
+const character_handle = { kiosk_id: '0xitem-kiosk', personal_kiosk_cap_id: '0xcharacter-cap' }
 const composed = []
 
 const { crush_item } = await import('./crush_actions.js')
 
-let item_cap_resolve
+let character_kiosk_resolve
 let submit
 let refresh
 let spies = []
@@ -49,14 +50,14 @@ beforeEach(() => {
     composed.push(args)
     return { fake: 'tx' }
   })
-  item_cap_resolve = spyOn(kiosk_resolve, 'cap_for_kiosk').mockResolvedValue(item_cap_id)
+  character_kiosk_resolve = spyOn(kiosk_resolve, 'kiosk_for_character').mockResolvedValue(character_handle)
   // run_tx_random returns the submitted digest on timing; normalized result is the effects/event receipt.
   submit = spyOn(tx_seam, 'run_tx_random').mockResolvedValue({
     result: {},
     timing: { digest: '11111111111111111111111111111111' },
   })
   refresh = spyOn(roster, 'load_roster').mockResolvedValue(undefined)
-  spies = [template_map, template_type_map, registry, compose, item_cap_resolve, submit, refresh]
+  spies = [template_map, template_type_map, registry, compose, character_kiosk_resolve, submit, refresh]
 })
 
 afterEach(() => {
@@ -67,21 +68,32 @@ afterEach(() => {
 })
 
 describe('crush_item kiosk resolution', () => {
-  test("builds a sibling-kiosk item's PTB against the item's own kiosk and cap", async () => {
+  // #1162 — forgemagie::crush borrows the CHARACTER out of the kiosk it is handed and extracts the gear from that
+  // same kiosk, so the crush runs in the character's kiosk and the gear must be there too.
+  test("builds the PTB against the CHARACTER's kiosk and cap", async () => {
     await expect(crush_item({ item, character_id: '0xcharacter' })).resolves.toEqual({
       result: {},
       timing: { digest: '11111111111111111111111111111111' },
     })
 
-    expect(item_cap_resolve).toHaveBeenCalledWith(fake_sdk, '0xowner', item.kiosk_id)
+    expect(character_kiosk_resolve).toHaveBeenCalledWith(fake_sdk, '0xowner', '0xcharacter')
     expect(composed).toHaveLength(1)
     expect(composed[0]).toMatchObject({
-      kiosk_id: item.kiosk_id,
-      personal_kiosk_cap_id: item_cap_id,
+      kiosk_id: character_handle.kiosk_id,
+      personal_kiosk_cap_id: character_handle.personal_kiosk_cap_id,
       character_id: '0xcharacter',
       gear_item_ids: [item.id],
     })
     expect(submit).toHaveBeenCalledWith('crush', { fake: 'tx' })
     expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  test('refuses gear stranded in a sibling kiosk for ZERO gas instead of composing a doomed tx', async () => {
+    await expect(
+      crush_item({ item: { ...item, kiosk_id: '0xsome-other-kiosk' }, character_id: '0xcharacter' })
+    ).rejects.toThrow()
+
+    expect(composed).toHaveLength(0)
+    expect(submit).not.toHaveBeenCalled()
   })
 })

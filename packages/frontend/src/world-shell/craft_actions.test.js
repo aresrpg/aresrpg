@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// #1494 — the craft action must pass each selected owned-item custody row to the SDK unchanged. A character/output
-// kiosk is a separate concern; it must never replace either ingredient's own kiosk.
+// #1494 — the craft runs in the CHARACTER's kiosk: `crafting::craft` borrows the crafter out of the kiosk it is
+// handed and burns every ingredient out of that same kiosk. So the action selects ingredients from that kiosk and
+// refuses honestly when the materials are stranded in a sibling personal kiosk.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
@@ -36,6 +37,12 @@ const items = [
     kiosk_cap_id: '0xwood-cap',
   },
 ]
+// The same bag, but every stack sitting where the craft can actually reach it (the character's kiosk).
+const in_character_kiosk = items.map((item) => ({
+  ...item,
+  kiosk_id: character_handle.kiosk_id,
+  kiosk_cap_id: character_handle.personal_kiosk_cap_id,
+}))
 const recipe = {
   recipe_id: '0xrecipe',
   output_template_id: '0xoutput',
@@ -72,11 +79,11 @@ afterEach(() => {
 })
 
 describe('craft_item kiosk custody', () => {
-  test('passes two ingredients in different kiosks as their own custody rows', async () => {
+  test("composes the craft against the character's kiosk with ingredients from that same kiosk", async () => {
     await expect(
       craft_item({
         recipe,
-        items,
+        items: in_character_kiosk,
         character_id: '0xcharacter',
       })
     ).resolves.toEqual({ digest: '0xdigest' })
@@ -88,10 +95,25 @@ describe('craft_item kiosk custody', () => {
       kiosk_id: character_handle.kiosk_id,
       personal_kiosk_cap_id: character_handle.personal_kiosk_cap_id,
       character_id: '0xcharacter',
-      input_items: items,
+      input_items: in_character_kiosk,
       output_template_id: recipe.output_template_id,
     })
     expect(tx_seam.run_tx).toHaveBeenCalledWith('craft', fake_tx)
     expect(roster.load_roster).toHaveBeenCalledTimes(1)
+  })
+
+  // The chain burns every ingredient out of the crafting kiosk, so stacks stranded in sibling kiosks can only
+  // abort `0x2::kiosk::EItemNotFound` — the "This item belongs to a different kiosk" toast players hit (#1494).
+  test('refuses ingredients stranded in sibling kiosks for ZERO gas', async () => {
+    await expect(
+      craft_item({
+        recipe,
+        items,
+        character_id: '0xcharacter',
+      })
+    ).rejects.toThrow()
+
+    expect(composed).toHaveLength(0)
+    expect(tx_seam.run_tx).not.toHaveBeenCalled()
   })
 })

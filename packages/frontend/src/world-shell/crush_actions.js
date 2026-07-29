@@ -9,8 +9,8 @@
 // PRE-FLIGHT GUARDS (zero-gas honest refusals, thrown as translated Errors the modal's toast surfaces):
 //   • template resolution (item_type slug → the template OBJECT id off the /v1 template map — the slug is an
 //     art key, never an object id);
-//   • item-location resolution: the holding kiosk threaded on the bag row (read_staking / `/v1/owner-items`)
-//     selects the exact PersonalKioskCap through the shared kiosk resolver — never a character-default kiosk;
+//   • item-location resolution: the crush runs in the CHARACTER's kiosk (the chain borrows the character out of
+//     it and extracts the gear from it), so gear whose `/v1` row names another kiosk is refused for zero gas;
 //   • the REGISTRY guard: every rune this item's stat lines can yield (deterministic set —
 //     `reachable_rune_keys`) must be registered on the CrushBoard, else the chain would abort
 //     `EMissingTemplate` mid-tx — refused here for free instead.
@@ -38,7 +38,7 @@ import { get_template_by_item_type_map, get_template_map } from '../chain/read_f
 import { load_roster } from '../roster/load_roster.js'
 import { get_taux_rows } from '../rpc/client'
 
-import { cap_for_kiosk } from './kiosk_resolve.js'
+import { kiosk_for_character } from './kiosk_resolve.js'
 import { resolve_crush_template } from './crush_resolve.js'
 import { run_tx_random } from './tx.js'
 
@@ -122,14 +122,16 @@ export async function crush_item({ item, character_id }) {
   // next ceremony). Refuse honestly and loudly — never compose a knowably-doomed tx against a ghost template.
   if (removed) throw new Error(i18n.t('removed_item.crush_pending'))
 
-  // ── ITEM LOCATION: `/v1/owner-items.kiosk_id` is the truth of where this loose item sits ──
-  // Multi-lineage wallets own sibling personal kiosks, so deriving from the active character can target a
-  // different kiosk and falsely refuse an owned item. Resolve the matching cap FROM the item's source kiosk in
-  // the one kiosk-resolution home; never pick a character-default or first cap here.
-  const kiosk_id = item?.kiosk_id
-  const personal_kiosk_cap_id = kiosk_id ? await cap_for_kiosk(sdk, address, kiosk_id) : null
-  if (!kiosk_id || !personal_kiosk_cap_id) throw new Error(i18n.t('crush.no_kiosk'))
-  const handle = { kiosk_id, personal_kiosk_cap_id }
+  // ── ONE KIOSK, BY THE CHAIN'S CONSTRUCTION (#1162) ──
+  // `forgemagie::crush` borrows the CHARACTER out of the kiosk it is handed (the level bracket prices the yield)
+  // AND extracts the gear from that SAME kiosk. So the kiosk is the CHARACTER's — passing the item's kiosk merely
+  // moved the abort from the gear lookup to the character lookup, with the same `0x2::kiosk::EItemNotFound` and
+  // the same toast. `/v1/owner-items.kiosk_id` is the truth of where the gear sits, so a mismatch is a state we
+  // can name for free instead of burning gas on a tx that can only abort.
+  const handle = await kiosk_for_character(sdk, address, character_id)
+  if (!handle?.kiosk_id || !handle?.personal_kiosk_cap_id) throw new Error(i18n.t('crush.no_kiosk'))
+  if (!item?.kiosk_id) throw new Error(i18n.t('crush.no_kiosk'))
+  if (String(item.kiosk_id) !== String(handle.kiosk_id)) throw new Error(i18n.t('errors.item_wrong_kiosk'))
 
   // ── the REGISTRY guard: every reachable rune needs its registered template (else on-chain EMissingTemplate) ──
   const [stats, registry] = await Promise.all([
