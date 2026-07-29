@@ -328,6 +328,20 @@ export function DungeonBoard() {
     return map
   }, [dungeon])
 
+  // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the move-cost anchor evolution, the
+  // optimistic cast, AND the flush's ⑭ evolved-sequence validation all resolve fighter refs the same way — a
+  // player rides its character id, a mob rides 'mob-N'. Guards a null dungeon (pre-fight) so callers never throw.
+  // Declared ABOVE every reader: `optimistic_vacated`'s memo factory runs SYNCHRONOUSLY at mount, so a `const`
+  // sitting below it is still in the temporal dead zone when that factory reads it — the whole HUD fell into the
+  // error boundary for every seated fighter (#1563). Its only closure is `dungeon`, so this is its earliest home.
+  const resolve_ref = (fighter_id) => {
+    const mob_match = /^mob-(\d+)$/.exec(String(fighter_id))
+    if (mob_match) return { is_mob: true, idx: Number(mob_match[1]) }
+    const idx =
+      dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
+    return idx < 0 ? null : { is_mob: false, idx }
+  }
+
   // PATHFINDING (retro-exact): the move-range set is the 4-connected BFS reach around the
   // SAME blocked set the contract charges — obstacles ∪ holes ∪ out-of-bounds (room shape) ∪ every OTHER living
   // fighter (body-blocking) — via the fight-los twin of combat_grid::bfs_path_cost. So the range wash, the
@@ -358,17 +372,6 @@ export function DungeonBoard() {
     }
     return vacated
   }, [cast_path, dungeon, entity_id, my_spells, me?.weapon])
-
-  // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the move-cost anchor evolution, the
-  // optimistic cast, AND the flush's ⑭ evolved-sequence validation all resolve fighter refs the same way — a
-  // player rides its character id, a mob rides 'mob-N'. Guards a null dungeon (pre-fight) so callers never throw.
-  const resolve_ref = (fighter_id) => {
-    const mob_match = /^mob-(\d+)$/.exec(String(fighter_id))
-    if (mob_match) return { is_mob: true, idx: Number(mob_match[1]) }
-    const idx =
-      dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
-    return idx < 0 ? null : { is_mob: false, idx }
-  }
 
   // #300/#398 NEXT-ACTION ANCHOR — evolve committed truth through the canonical staged prefix. Ordinary moves,
   // denied tackles (`landed:false`), and caster-relocating casts all participate, so both the next move and next
