@@ -124,3 +124,26 @@ rules:
       - pattern: const SIGNED_SHIFT = 32768
       - pattern: const SIGNED_SHIFT = 32_768
       - pattern: const SIGNED_KINDS = new Set([9, 11])
+
+  - id: sim-protocol-board-seed-fold
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      The (world_seed, anchor) → board-seed fold belongs to @aresrpg/sim/board_gen. Import
+      board_seed_from_anchor; do not re-declare the fold or its anchor primes in a consumer package
+      (#1680). One digit of drift silently desyncs every generated board from the chain. The engine's
+      binding/ twin is the ONE sanctioned copy (it ships no @aresrpg/sim dependency by design — see
+      packages/engine/src/binding/prng.js) and is held to the sim by a live cross-import parity sweep
+      in packages/engine/test/binding/board_seed_parity.test.js; it is out of this pack's scan
+      targets (scripts/sim-constants-gate.sh) rather than baselined.
+    pattern-either:
+      - pattern: const $NAME = 0x85ebca77n
+      - pattern: const $NAME = 0x85ebca77
+      - pattern: const $NAME = 2240710263
+      - pattern: const $NAME = 0xc2b2ae3dn
+      - pattern: const $NAME = 0xc2b2ae3d
+      - pattern: const $NAME = 3266489405
+      - pattern: function board_seed_from_anchor(...) { ... }
+      - pattern: const board_seed_from_anchor = (...) => { ... }

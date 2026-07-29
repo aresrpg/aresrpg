@@ -11,13 +11,13 @@ import {
   dungeon_grid_of,
   placement_cells_of,
   maskWords,
-  board_seed_from_anchor,
   board_shape_from_anchor,
   crossMask,
   dungeon_blocked_cells,
 } from './dungeon-grid.js'
 import { encode, bfsPathCost, bfsPath, GRID_W, GRID_CELLS } from '@aresrpg/fight/los'
-import { generate as generate_board } from '@aresrpg/sim/board_gen'
+// #1680 — the fold has ONE home; the client imports it exactly as dungeon-grid.js does.
+import { generate as generate_board, board_seed_from_anchor } from '@aresrpg/sim/board_gen'
 
 // D75 — cells are CANONICAL stride-20 (fight-los GRID_W) everywhere in the client. The Move determinism
 // contract is pinned MOVE-NATIVE (dungeon_grid_test.move golden vectors); `generateGrid` is a DEV/TEST twin
