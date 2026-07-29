@@ -159,7 +159,14 @@ export default defineConfig({
             urlPattern: /^https:\/\/assets\.aresrpg\.world\/.+/,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'cdn-assets',
+              // #1598 — the cache matches by URL only, so whichever mode asked first won for everyone: one
+              // no-cors `<img>` load stored an OPAQUE response, and every later cors consumer (Three.js
+              // crossorigin textures, programmatic fetch) got it back and threw `Failed to fetch` →
+              // net::ERR_FAILED, for up to maxAgeSeconds and across SW updates. Fetching in cors mode (the
+              // host sends ACAO) stores a CORS-clean response, which satisfies cors AND no-cors consumers.
+              cacheName: 'cdn-assets-v2', // bumped so already-poisoned clients abandon the old cache
+              fetchOptions: { mode: 'cors' },
+              cacheableResponse: { statuses: [200] }, // never cache an opaque or failed response
               expiration: { maxEntries: 800, maxAgeSeconds: 86400 },
             },
           },
