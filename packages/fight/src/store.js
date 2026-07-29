@@ -301,13 +301,13 @@ const make_input =
         // adopted view's `id`. Both move together, everything folded stays. A `from` that is not the live id is
         // a stale receipt and changes nothing.
         set((s) =>
-          String(s.fight_id ?? '') !== String(msg.from ?? '') ? s : (
-            {
-              ...s,
-              fight_id: msg.to ?? null,
-              view: s.view ? { ...s.view, id: msg.to ?? null } : s.view,
-            }
-          )
+          String(s.fight_id ?? '') !== String(msg.from ?? '')
+            ? s
+            : {
+                ...s,
+                fight_id: msg.to ?? null,
+                view: s.view ? { ...s.view, id: msg.to ?? null } : s.view,
+              }
         )
         return
       case 'ctx':

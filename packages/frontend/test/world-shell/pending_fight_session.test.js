@@ -18,10 +18,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'b
 
 import { install_browser_globals } from '../../src/test_helpers/browser_globals.js'
 import { reset_auth_mock } from '../../src/test_helpers/auth_mock.js'
-import {
-  reset_expedition_sdk_mock,
-  set_expedition_sdk_mock,
-} from '../../src/test_helpers/expedition_sdk_mock.js'
+import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
 
 const restore_browser_globals = install_browser_globals({ with_document: true })
 
@@ -46,12 +43,8 @@ const { fight_store } = await import('@aresrpg/fight/store')
 const { engine_view_of } = await import('@aresrpg/fight/project')
 const { generate_for_anchor } = await import('@aresrpg/sim/board_gen')
 const { is_pending_fight_id } = await import('@aresrpg/sdk/pending_fight_id')
-const {
-  abandon_pending_world_fight,
-  enter_pending_world_fight,
-  predicted_world_fight,
-  rekey_world_fight,
-} = await import('../../src/world-shell/world_fight.js')
+const { abandon_pending_world_fight, enter_pending_world_fight, predicted_world_fight, rekey_world_fight } =
+  await import('../../src/world-shell/world_fight.js')
 
 const initial_dungeon = use_dungeon.getInitialState()
 const real_fetch = globalThis.fetch
@@ -135,7 +128,7 @@ describe('① the measure — placement cells at SUBMIT, not at finality', () =>
         world_seed: null,
         anchor_x: ANCHOR_X,
         anchor_z: ANCHOR_Z,
-      }),
+      })
     ).toBeNull()
     expect(
       enter_pending_world_fight({
@@ -144,7 +137,7 @@ describe('① the measure — placement cells at SUBMIT, not at finality', () =>
         world_seed: undefined,
         anchor_x: ANCHOR_X,
         anchor_z: ANCHOR_Z,
-      }),
+      })
     ).toBeNull()
     expect(use_dungeon.getState().fight_id).toBeNull() // …and no half-mounted session survives the refusal
   })
