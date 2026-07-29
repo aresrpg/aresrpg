@@ -17,7 +17,7 @@ import {
 // "steal stat X" and NOTHING lands in FightState (normalize_effect → UNSUPPORTED no-op → effects 0->0). The
 // DECLARED chain semantics (spell_effect.move:33 "debuff target + buff caster same stat; value = amount"): the
 // TARGET loses `value` of the stat AND the CASTER gains the same, BOTH as timed rows that revert on expiry — the
-// alter_stat idiom (STAT_DEBUFF/STAT_BUFF rows effective_stats folds and process_turn_effects decays). The chain
+// alter_stat idiom (STAT_DEBUFF/STAT_BUFF rows effective_stats folds and turn-end expiry decays). The chain
 // arm rides the next train (cast.move:610 records the raw row only, no split yet); the sim mirrors it first,
 // matrix-gated. Representative convicted slots (real corpus payloads, seed/mainnet/spells; all target_filter 1 =
 // NOT_TEAM → the enemy m0 is the victim):

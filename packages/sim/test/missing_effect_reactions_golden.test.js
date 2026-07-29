@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   apply_incoming_damage,
-  process_turn_effects,
+  expire_turn_effects,
 } from '../src/fight_actions.js'
 import { effective_stats, find_entity } from '../src/fight_state.js'
 import {
@@ -63,8 +63,8 @@ const run_named_stack = vector => {
   const second = cast(first.state, caster.id, spell, aimed.cell)
   const twice_aimed = find_entity(second.state, aimed.id)
   const twice_other = find_entity(second.state, other.id)
-  const tick1 = process_turn_effects(first.state, aimed.id)
-  const tick2 = process_turn_effects(tick1.state, aimed.id)
+  const tick1 = expire_turn_effects(first.state, aimed.id)
+  const tick2 = expire_turn_effects(tick1.state, aimed.id)
   const before = find_entity(tick2.state, aimed.id).health
   const after_expiry = cast(tick2.state, caster.id, spell, aimed.cell)
   return {
@@ -106,7 +106,7 @@ const run_punishment = vector => {
     attacker.id,
   )
   const after = find_entity(hit.state, target.id)
-  const expired = process_turn_effects(hit.state, target.id)
+  const expired = expire_turn_effects(hit.state, target.id)
   const killed_target = fighter('m0', { x: 3, y: 2 }, false, {
     health: 5,
     effects: [punishment_row(20, 'strength', 10, 2)],

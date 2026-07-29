@@ -141,7 +141,7 @@ export const apply_stat_effect = (state, effect, caster, target) => {
   // STEAL_STAT mirror leg: the debited `draw.value` ALSO lands on the CASTER as a same-stat, same-duration timed
   // STAT_BUFF — target LOSES it, caster GAINS it, both revert on expiry (spell_effect.move:33 declared intent; the
   // K_STEAL_POINTS twin feeds the caster the same way, immediate-pool there / timed-row here since stats are folded
-  // by effective_stats and decayed by process_turn_effects, not a consumable pool). Chain arm rides the next train.
+  // by effective_stats and decayed by expire_turn_effects, not a consumable pool). Chain arm rides the next train.
   const with_caster_gain =
     effect.kind === K_STEAL_STAT
       ? add_row(after, caster.id, caster.id, effect, draw.value, 'STAT_BUFF')

@@ -26,6 +26,7 @@ import {
   check_victory,
   use_ap_reserve,
   process_turn_effects,
+  expire_turn_effects,
   is_stunned,
 } from './fight_actions.js'
 import { process_spell_cast } from './fight_spells.js'
@@ -589,7 +590,7 @@ const handle_end_turn = (state, cmd) => {
 
 /**
  * Run the turn-start hazards for the entity whose turn just began: glyphs on its cell, then its TURN_START
- * DoT/HoT effects (which also decrement+expire its effect counters, including STUN). Returns the floating-
+ * DoT/HoT effects. Timed rows remain live through the turn and expire in `run_turn_end`, like Move. Returns the floating-
  * number events (`fight_turn_effects`) so the client renders the ticks. Pure (rng-free: DoT values are
  * pre-rolled; glyph damage threads rng inside check_glyphs).
  * @param {import('./fight_state.js').FightState} state
@@ -617,7 +618,8 @@ const run_turn_start_hazards = (state, entity_id) => {
 }
 
 /**
- * THE GLYPH CLOCK (#1540 — the chain's cadence, one home). A glyph's duration ticks on PLAYER turn-ends only:
+ * THE TURN-END CLOCK (#1540 — the chain's cadence, one home). The ending fighter's timed rows decrement first;
+ * a glyph's duration additionally ticks on PLAYER turn-ends only:
  * Move's `cast::tick_turn_end` decrements glyphs inside its NON-MOB arm (cast.move:1708, declared at
  * :1691-1692), reached from `turns::forfeit_current` (turns.move:167) — the single door every player turn end
  * goes through. A mob turn-end takes the `is_mob` arm (turns.move:280/:321) and never decrements, and a seat
@@ -625,26 +627,45 @@ const run_turn_start_hazards = (state, entity_id) => {
  * keyed on the ACTOR WHOSE TURN IS ENDING, never on the global turn ordinal — that one advances on mob turns
  * and would price a 3-turn glyph as dead after a single PvM round.
  * @param {import('./fight_state.js').FightState} state  the state BEFORE the turn pointer steps
- * @returns {import('./fight_state.js').FightState}
+ * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
  */
-const tick_turn_end_glyphs = state =>
-  get_current_turn_entity(state)?.is_player ? decay_glyphs(state) : state
+const run_turn_end = state => {
+  const actor = get_current_turn_entity(state)
+  if (!actor) return { state, events: [] }
+  const expired = expire_turn_effects(state, actor.id)
+  const next = actor.is_player ? decay_glyphs(expired.state) : expired.state
+  return {
+    state: next,
+    events:
+      expired.effects.length > 0
+        ? [
+            {
+              type: 'fight_turn_effects',
+              fight_id: state.fight_id,
+              entity_id: actor.id,
+              effects: expired.effects,
+            },
+          ]
+        : [],
+  }
+}
 
 /**
  * Advance the turn to the next ACTABLE entity: step the index, reset AP/MP, run turn-start hazards, and skip
- * any entity that is dead OR stunned (a stunned actor loses its whole turn — its STUN is consumed by the
- * turn-start decrement; emit `fight_turn_skipped` so the client shows it). Glyph durations tick on the ending
- * PLAYER's turn end (`tick_turn_end_glyphs` — never on a mob's, never on a stepped-over corpse's).
+ * any entity that is dead OR stunned (a stunned actor loses its whole turn, then its STUN ages at that skipped
+ * turn's end; emit `fight_turn_skipped` so the client shows it). Timed rows and glyph durations tick through
+ * `run_turn_end` — never on a stepped-over corpse or an actor killed by its start hazards.
  * Bounded by turn_order length so an all-skipped order can't loop forever. Returns the collected events.
  * @param {import('./fight_state.js').FightState} state
  * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
  */
 const advance_to_actor = state => {
-  /** @type {import('./reduce.js').FightEvent[]} */
-  let events = []
   // The actor here just ENDED its turn — including a player who self-killed mid-turn, whose own pass still runs
   // the end-phase work on chain (turns.move:181-184, `forfeit_current` tolerates a dead current seat).
-  let next = advance_turn(tick_turn_end_glyphs(state))
+  const { state: ended_state, events: ended_events } = run_turn_end(state)
+  /** @type {import('./reduce.js').FightEvent[]} */
+  let events = ended_events
+  let next = advance_turn(ended_state)
   for (let i = 0; i <= next.turn_order.length; i++) {
     const entity = get_current_turn_entity(next)
     if (!entity) break
@@ -654,7 +675,8 @@ const advance_to_actor = state => {
       next = advance_turn(next)
       continue
     }
-    // Was this actor stunned at the START of its turn? Decide BEFORE the turn-start decrement consumes it.
+    // Was this actor stunned at the START of its turn? It remains live through start work and expires at the
+    // skipped turn's END, matching Move's split start/end arms.
     const stunned = is_stunned(next, entity.id)
     const hazards = run_turn_start_hazards(next, entity.id)
     next = hazards.state
@@ -666,9 +688,8 @@ const advance_to_actor = state => {
       next = advance_turn(next)
       continue
     }
-    // Stunned -> turn is skipped (STUN consumed by the decrement above); announce + step over. The turn DID
-    // begin (its start hazards just ran) and now ends without an action — the sim's own analogue of a forfeited
-    // player turn, so a stunned PLAYER still spends one glyph turn; a stunned mob still spends none.
+    // Stunned -> turn is skipped; announce, run its real turn-end expiry, then step over. The turn DID begin
+    // (its start hazards just ran), so a stunned PLAYER still spends one glyph turn; a stunned mob still spends none.
     if (stunned) {
       events = [
         ...events,
@@ -678,7 +699,9 @@ const advance_to_actor = state => {
           entity_id: entity.id,
         },
       ]
-      next = advance_turn(tick_turn_end_glyphs(next))
+      const skipped_end = run_turn_end(next)
+      events = [...events, ...skipped_end.events]
+      next = advance_turn(skipped_end.state)
       continue
     }
     break

@@ -314,7 +314,7 @@ describe('ap/mp pool modifiers', () => {
 })
 
 // ── Expiry via the existing per-turn plumbing ───────────────────────────────────
-describe('buff duration + expiry (process_turn_effects)', () => {
+describe('buff duration + expiry (owner turn-end)', () => {
   test('a 1-turn buff is gone after the caster cycles back; a 3-turn buff survives', () => {
     const { state, ctx } = duel(6)
     const short = cast(state, ctx, 'p0', 'str_buff1', { x: 1, y: 5 })
@@ -323,7 +323,7 @@ describe('buff duration + expiry (process_turn_effects)', () => {
       find_entity(long.state, 'p0').effects.filter(e => e.type === 'STAT_BUFF')
         .length,
     ).toBe(2)
-    // one full round: p0 end -> p1 end -> p0 turn-start decrements both buffs once
+    // one full round: p0 end decrements both buffs once; p1's turn leaves p0's rows untouched
     const back = end(end(long.state, ctx, 'p0').state, ctx, 'p1')
     const buffs = find_entity(back.state, 'p0').effects.filter(
       e => e.type === 'STAT_BUFF',

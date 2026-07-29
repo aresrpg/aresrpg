@@ -427,7 +427,7 @@ export const apply_spell_effect = (
   }
   if (effect.type === 'APPLY_STATE') {
     // A NAMED STATE — a pure flag row carrying the state id (effect.value), no delta; it decrements + expires
-    // like a STUN row (process_turn_effects no-ops its non-DAMAGE/HEAL tick, then decays it). Stored so a
+    // like a STUN row (turn-start processing no-ops its non-DAMAGE/HEAL tick; turn-end expiry decays it). Stored so a
     // required/forbidden-states cast gate reads it by (type 'APPLY_STATE', value === state_id) — the sim twin of
     // Move's spell_board::fighter_has_state (kind == k_apply_state && value == state_id). One home for the state.
     const { state: s2, id } = next_id(state)
@@ -451,7 +451,7 @@ export const apply_spell_effect = (
   }
   if (effect.type === 'REFLECT_DAMAGE') {
     // A FLAT damage-reflect (spell_effect.move:57, value = flat) — a TIMED defensive row on the protected fighter
-    // carrying the flat amount + duration; it no-ops on tick and decays like a STUN (process_turn_effects). Mirrors
+    // carrying the flat amount + duration; it no-ops on tick and decays like a STUN at turn end. Mirrors
     // Move's record_timed (cast.move:681) + the DAMAGE_REDIRECT idiom — a timed row the damage path consults. The
     // FLAT-reflect CONSUMPTION (distinct from DAMAGE_REDIRECT's PERCENT reflect, fight_reactions::reflect_percent)
     // rides the next train; the sim lands the row honestly here (matrix `status` postcondition).

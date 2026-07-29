@@ -556,7 +556,7 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
       // Spawn an AI minion onto the caster's team (fight_summon.js); `summon` is the art/variant id.
       return { ...base, type: 'SUMMON', summon: String(e['summon'] ?? '') }
     case 'add':
-      // Stat / ap / mp BUFF for `turns` (rolled [min,max] on `stat`); ticked + expired by process_turn_effects.
+      // Stat / ap / mp BUFF for `turns` (rolled [min,max] on `stat`); expired at the owner's turn end.
       return { ...base, type: 'ADD' }
     case 'remove':
       // Stat / ap / mp DEBUFF for `turns` (AresRPG `remove` = subtract points of `statistic`, NOT a cleanse).

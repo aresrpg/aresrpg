@@ -10,10 +10,9 @@
 // whose turn ENDS, and that call decrements `spell_board::decrement_fighter_statuses(fx, fid)` (cast.move:1585) —
 // the rows of THAT fighter and nobody else. A 3-turn row therefore burns exactly ONE tick per ROUND.
 //
-// The sim already holds that scope: `process_turn_effects` (fight_actions.js:440) decrements one entity's
-// `effects`, and `advance_to_actor` (reduce.js:672) runs it only for the actor whose turn begins. These tests
-// are the LOCK on it — the phase differs from the chain's by design (the sim ticks on the owner's turn START,
-// the chain on its turn END), but the SCOPE and the lifetime are identical: three usable turns, one tick each.
+// The sim holds that scope and phase: `expire_turn_effects` decrements one entity's rows, and
+// `advance_to_actor` runs it only for the actor whose turn ends. These tests lock the exact cadence: three
+// usable turns, one tick at each owner turn-end.
 import { describe, expect, test } from 'bun:test'
 
 import { reduce, create_fight_state } from '../src/reduce.js'
@@ -25,6 +24,7 @@ import { find_entity, get_current_turn_entity } from '../src/fight_state.js'
 import { K_INVISIBILITY, TF_ONLY_CASTER } from '../src/spell_effect.js'
 
 const MP_BUFF_ID = 'mp_buff3'
+const MP_BUFF2_ID = 'mp_buff2'
 const INVIS_ID = 'vanish_probe'
 
 // The player half of the reported cast: `+1 MP · 3 turns`, authored JSON run through the REAL normalizer.
@@ -53,6 +53,35 @@ const SPELLS_JSON = {
               target: 'cell',
               chance: 100,
               turns: 3,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+    [MP_BUFF2_ID]: {
+      name: 'MP Buff 2t',
+      description: 'self +1 MP for 2 turns',
+      levels: [
+        {
+          cost: 1,
+          range: [0, 0],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'circle',
+          modifiable_range: false,
+          line_of_sight: false,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'add',
+              statistic: 'mp',
+              min: 1,
+              max: 1,
+              target: 'cell',
+              chance: 100,
+              turns: 2,
             },
           ],
           critical_effects: [],
@@ -99,7 +128,7 @@ spell_templates.set(INVIS_ID, {
   ],
 })
 
-const DECK = [MP_BUFF_ID, INVIS_ID]
+const DECK = [MP_BUFF_ID, MP_BUFF2_ID, INVIS_ID]
 
 const flat_arena = (width = 21) => ({
   width,
@@ -189,6 +218,25 @@ const row_of = (state, id, type) =>
   find_entity(state, id).effects.find(effect => effect.type === type)
 
 describe("#973 status durations tick on the OWNER's turn only (cast.move:1585 scope)", () => {
+  test("a duration-2 self-buff decrements at the caster's END, then survives every mob and the next START", () => {
+    const { state, ctx } = three_seat_fight()
+    const cast = cast_self(state, ctx, MP_BUFF2_ID)
+    expect(row_of(cast, 'p0', 'STAT_BUFF').turns_remaining).toBe(2)
+
+    let phase = reduce(cast, { type: 'end_turn', entity_id: 'p0' }, ctx).state
+    expect(row_of(phase, 'p0', 'STAT_BUFF').turns_remaining).toBe(1)
+
+    while (get_current_turn_entity(phase)?.id !== 'p0') {
+      const mob = get_current_turn_entity(phase)
+      expect(row_of(phase, 'p0', 'STAT_BUFF').turns_remaining).toBe(1)
+      phase = reduce(phase, { type: 'ai_turn', entity_id: mob.id }, ctx).state
+    }
+    expect(row_of(phase, 'p0', 'STAT_BUFF').turns_remaining).toBe(1)
+
+    phase = reduce(phase, { type: 'end_turn', entity_id: 'p0' }, ctx).state
+    expect(row_of(phase, 'p0', 'STAT_BUFF')).toBeUndefined()
+  })
+
   test('a 3-turn MP status survives one full round with 2 turns remaining', () => {
     const { state, ctx } = three_seat_fight()
     expect(get_current_turn_entity(state).id).toBe('p0')
@@ -222,7 +270,7 @@ describe("#973 status durations tick on the OWNER's turn only (cast.move:1585 sc
     let cur = reduce(cast, { type: 'end_turn', entity_id: 'p0' }, ctx).state
     const mob = get_current_turn_entity(cur).id
     cur = reduce(cur, { type: 'ai_turn', entity_id: mob }, ctx).state
-    expect(row_of(cur, 'p0', 'STAT_BUFF').turns_remaining).toBe(3)
+    expect(row_of(cur, 'p0', 'STAT_BUFF').turns_remaining).toBe(2)
   })
 
   test("a mob's OWN 3-turn row ticks on its own turn only — the scope is side-symmetric", () => {

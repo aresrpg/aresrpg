@@ -377,7 +377,8 @@ export const is_stunned = (state, entity_id) => {
 }
 
 /**
- * Apply pre-rolled turn-start effects, then decrement every status counter.
+ * Apply pre-rolled turn-start effects. Status counters age separately at the owner's turn end, matching
+ * `cast::tick_turn_start` / `cast::tick_turn_end` rather than disappearing as the next turn begins.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[] }}
@@ -385,7 +386,7 @@ export const is_stunned = (state, entity_id) => {
 export const process_turn_effects = (state, entity_id) => {
   const entity = find_entity(state, entity_id)
   if (!entity) return { state, effects: [] }
-  const tick = entity.effects
+  return entity.effects
     .filter(effect => effect.timing === 'TURN_START')
     .reduce(
       (acc, effect) => {
@@ -450,11 +451,22 @@ export const process_turn_effects = (state, entity_id) => {
           /** @type {import('./fight_spells.js').SpellCastEffect[]} */ ([]),
       },
     )
-  const post_tick = find_entity(tick.state, entity_id) ?? entity
-  const expired_stances = post_tick.effects.filter(
+}
+
+/**
+ * Decrement and expire one fighter's timed rows at that fighter's turn end. Mirrors
+ * `cast::tick_turn_end` -> `spell_board::decrement_fighter_statuses`.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} entity_id
+ * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[] }}
+ */
+export const expire_turn_effects = (state, entity_id) => {
+  const entity = find_entity(state, entity_id)
+  if (!entity) return { state, effects: [] }
+  const expired_stances = entity.effects.filter(
     effect => effect.type === 'STANCE' && effect.turns_remaining <= 1,
   )
-  const max_hp_expiry = post_tick.effects.reduce(
+  const max_hp_expiry = entity.effects.reduce(
     (sum, effect) =>
       sum +
       (effect.type === 'STAT_BUFF' &&
@@ -464,26 +476,27 @@ export const process_turn_effects = (state, entity_id) => {
         : 0),
     0,
   )
-  const decayed = update_entity(tick.state, entity_id, e => {
+  const decayed = update_entity(state, entity_id, e => {
     const health_max = Math.max(1, e.health_max - max_hp_expiry)
     return {
       ...e,
       health_max,
       health: Math.min(e.health, health_max),
       effects: e.effects
-        .map(eff => ({ ...eff, turns_remaining: eff.turns_remaining - 1 }))
+        .map(eff =>
+          eff.type === 'TIMED_PAYLOAD'
+            ? eff
+            : { ...eff, turns_remaining: eff.turns_remaining - 1 },
+        )
         .filter(eff => eff.turns_remaining > 0),
     }
   })
   return {
     state: decayed,
-    effects: [
-      ...tick.effects,
-      ...expired_stances.map(() => ({
-        target_id: entity_id,
-        status: 'STANCE_END',
-      })),
-    ],
+    effects: expired_stances.map(() => ({
+      target_id: entity_id,
+      status: 'STANCE_END',
+    })),
   }
 }
 
