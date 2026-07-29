@@ -58,7 +58,8 @@ describe('#1136 — an executed "the fight is over" abort is EVIDENCE the sessio
     // 104 EIllegalMove (stale board) and 108 ETurnTooFast (min-turn floor) are both recoverable on a LIVE fight;
     // reading either as terminal would tear a healthy session down. 106 EAlreadyDead is a seat fact, not a
     // fight fact — the fight can still be running for everyone else.
-    for (const code of [102, 103, 104, 106, 107, 108]) expect(is_fight_over_abort(grpc_abort('actions', code))).toBe(false)
+    for (const code of [102, 103, 104, 106, 107, 108])
+      expect(is_fight_over_abort(grpc_abort('actions', code))).toBe(false)
   })
 
   test('the same codes in ANOTHER module are not this fight’s terminal — module scoping is load-bearing', () => {

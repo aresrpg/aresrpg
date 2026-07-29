@@ -74,7 +74,9 @@ afterEach(reset_fight_core)
 describe('#1644 — a min-turn floor the chain widened explains itself', () => {
   test('ONE replayed mob: the HUD names the 6s minimum and why it is 6, not 3', () => {
     const html = render_turn({ mobs_replayed: 1 })
-    expect(html, 'the reason line is rendered, not hidden in a hover title').toContain('hud-fightctl__countdown--reason')
+    expect(html, 'the reason line is rendered, not hidden in a hover title').toContain(
+      'hud-fightctl__countdown--reason'
+    )
     expect(html).toContain(en.fight.turn_min_widened.replace('{{seconds}}', '6'))
     expect(widened_ms(html)).toBeCloseTo(MOB_REPLAY_MS, -2)
   })
