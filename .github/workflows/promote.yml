@@ -81,6 +81,11 @@ jobs:
           RESULT='${{ steps.land.outputs.promote_result }}'
           case "$RESULT" in
             landed)
+              # rc=4 is a real landing whose board sweep never got dispatched (#1605 fail-loud):
+              # say so in red rather than reporting a half-finished landing as a clean one.
+              if [ "${{ steps.land.outputs.rc }}" = 4 ]; then
+                echo "::error::landed, but a landing automation dispatch failed — re-run it manually"; exit 1
+              fi
               echo "landed — nothing to comment" ;;
             stale)
               BASE=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json baseRefName -q .baseRefName)

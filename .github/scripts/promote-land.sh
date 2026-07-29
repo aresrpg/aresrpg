@@ -34,7 +34,9 @@
 #   it via the step output). Result ∈
 #     landed · stale · not-green · wrong-base · unauthorized · not-release-tipped
 #   Exit code: 0 landed · 3 transient (stale | not-green — leave the label, the queue retries) ·
-#              1 hard refusal (wrong-base | unauthorized | not-release-tipped) or infra error.
+#              1 hard refusal (wrong-base | unauthorized | not-release-tipped) or infra error ·
+#              4 LANDED, but a post-landing automation dispatch failed — the push is done and must
+#                never be retried; the caller reddens its run so a human re-runs the dispatch.
 #   MUST run in a repo checked out with `fetch-depth: 0` (needs origin/<base> history for the
 #   merge-base ancestor test and the release-subject read).
 
@@ -171,10 +173,16 @@ if [ "$BASE" = master ]; then
 fi
 
 # ── the landing: a plain fast-forward push (git itself rejects anything non-ff) ─────────────
+# Everything past this line is post-landing bookkeeping over a push that ALREADY HAPPENED and can
+# never be retried. A failed landing-automation dispatch is therefore recorded, never fatal here:
+# aborting mid-tail would strand the `promote-requested` label, re-land the same PR every CI cycle,
+# and make the /promote handler report a completed landing as a refusal. It is answered at the very
+# end with exit 4, which reddens the caller's run without lying about what happened.
+DISPATCH_FAILED=0
 git push origin "$HEAD_SHA:$BASE"
 echo "landed PR #$PR onto $BASE ($HEAD_SHA)"
 if [ "$BASE" = edge ]; then
-  dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA"
+  dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA" || DISPATCH_FAILED=1
 fi
 
 # ── master-only post-landing tail (best-effort; the promotion already HAPPENED at the push) ──
@@ -184,7 +192,7 @@ if [ "$BASE" = master ]; then
   if git merge-base --is-ancestor "refs/remotes/origin/edge" "$HEAD_SHA"; then
     if git push origin "$HEAD_SHA:edge"; then
       echo "edge aligned to master ($HEAD_SHA)"
-      dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA"
+      dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA" || DISPATCH_FAILED=1
     else
       echo "WARN: edge align push failed (non-fatal; master already landed)"
     fi
@@ -227,4 +235,8 @@ fi
 # ── landed: drop the label (bookkeeping) + report ───────────────────────────────────────────
 gh pr edit "$PR" --repo "$REPO" --remove-label "$LABEL" >/dev/null 2>&1 || true
 emit landed
+if [ "$DISPATCH_FAILED" = 1 ]; then
+  echo "::error::PR #$PR landed on $BASE ($HEAD_SHA) but a landing automation dispatch failed — the board sweep did not run; re-run it manually"
+  exit 4
+fi
 exit 0
