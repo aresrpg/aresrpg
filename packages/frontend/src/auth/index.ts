@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { create } from 'zustand'
 import { getWallets, isWalletWithRequiredFeatureSet } from '@mysten/wallet-standard'
-import { EnokiClient, registerEnokiWallets } from '@mysten/enoki'
+import { EnokiClient } from '@mysten/enoki'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { Transaction } from '@mysten/sui/transactions'
 import type { Wallet as WalletStandard, WalletAccount } from '@mysten/wallet-standard'
@@ -16,6 +16,7 @@ import { game_log } from '../core/log.js'
 import { tx_refusal_input } from '../world-shell/tx_refusal.js'
 
 import { derive_zklogin_seed } from './zklogin_seed'
+import { register_enoki_wallets_with_zkp_retry } from './zklogin_proof_retry'
 import { ZKLOGIN_FAILURE_COPY, read_zklogin_seed, type ZkloginSession } from './zklogin_session_seed'
 import { read_sui_balance_mist, with_post_tx_refresh, settle_balance_after_tx } from './sui_balance'
 import { is_zklogin_wallet } from './zklogin_wallet'
@@ -53,7 +54,7 @@ const graphql_client = new SuiGraphQLClient({
 // dead store's shop gas dry-run; every live auth read/write routes through the SDK's gRPC/GraphQL clients now,
 // so no JSON-RPC surface remains here (the no-jsonrpc gate is absolute).
 
-registerEnokiWallets({
+register_enoki_wallets_with_zkp_retry({
   apiKey: ENOKI_API_KEY,
   providers: {
     google: {

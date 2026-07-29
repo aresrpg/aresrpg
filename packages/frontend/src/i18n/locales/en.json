@@ -2339,6 +2339,7 @@
     "zklogin_session_expired": "Your Google session has expired or can no longer be read. Please sign in with Google again.",
     "zklogin_salt_unavailable": "Couldn't reach the sign-in service to prepare your character. Please check your connection and try again.",
     "zklogin_address_mismatch": "Your Google account doesn't match this wallet address. Sign out and sign back in with the right account.",
+    "zklogin_proof_unavailable": "We couldn't verify your Google sign-in. Please sign in again and try once more.",
     "free_already_claimed": "You already claimed your free character — additional ones cost SUI.",
     "name_taken": "That name is already taken. Try another one.",
     "name_invalid": "Names are 4 to 19 letters or numbers, with no spaces.",

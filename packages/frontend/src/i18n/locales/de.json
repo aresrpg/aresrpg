@@ -2339,6 +2339,7 @@
     "zklogin_session_expired": "Deine Google-Sitzung ist abgelaufen oder nicht mehr lesbar. Bitte melde dich erneut mit Google an.",
     "zklogin_salt_unavailable": "Der Anmeldedienst war nicht erreichbar, um deinen Charakter vorzubereiten. Prüfe deine Verbindung und versuche es erneut.",
     "zklogin_address_mismatch": "Dein Google-Konto passt nicht zu dieser Wallet-Adresse. Melde dich ab und mit dem richtigen Konto wieder an.",
+    "zklogin_proof_unavailable": "Deine Google-Anmeldung konnte nicht bestätigt werden. Melde dich erneut an und versuche es noch einmal.",
     "free_already_claimed": "Du hast deinen Gratis-Charakter bereits beansprucht — weitere kosten SUI.",
     "name_taken": "Dieser Name ist bereits vergeben. Wähle einen anderen.",
     "name_invalid": "Namen bestehen aus 4 bis 19 Buchstaben oder Zahlen, ohne Leerzeichen.",

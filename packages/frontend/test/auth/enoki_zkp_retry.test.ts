@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, mock, test } from 'bun:test'
-import { create_zklogin_zkp_with_retry } from '@mysten/enoki'
 
-const enoki_400 = (response_body: string) =>
-  Object.assign(new Error('Request to Enoki API failed (status: 400)'), {
+import { create_zklogin_zkp_with_retry } from '../../src/auth/zklogin_proof_retry'
+
+const enoki_400 = (response_body: string) => {
+  const error = Object.assign(new Error('Request to Enoki API failed (status: 400)'), {
+    name: 'EnokiClientError',
     status: 400,
-    response_body,
+    errors: JSON.parse(response_body).errors,
   })
+  return error
+}
 
 describe('first-sign zkLogin proof recovery', () => {
   test('a mismatched first-sign pair silently re-derives once and succeeds', async () => {
@@ -15,13 +19,21 @@ describe('first-sign zkLogin proof recovery', () => {
       ephemeral_public_key: 'jwt-ephemeral-key',
       max_epoch: 42,
       randomness: 'jwt-randomness',
+      nonce: 'jwt-committed-nonce',
     }
     const stale_materials = {
-      ...committed_materials,
       ephemeral_public_key: 'stale-ephemeral-key',
+      max_epoch: 41,
+      randomness: 'stale-randomness',
+      nonce: 'stale-nonce',
     }
     const create_proof = mock(async (materials: typeof committed_materials) => {
-      if (materials.ephemeral_public_key !== committed_materials.ephemeral_public_key)
+      if (
+        materials.ephemeral_public_key !== committed_materials.ephemeral_public_key ||
+        materials.max_epoch !== committed_materials.max_epoch ||
+        materials.randomness !== committed_materials.randomness ||
+        materials.nonce !== committed_materials.nonce
+      )
         throw enoki_400(
           '{"errors":[{"code":"invalid_request","message":"ephemeralPublicKey does not match JWT nonce"}]}'
         )
@@ -74,4 +86,15 @@ describe('first-sign zkLogin proof recovery', () => {
     expect((failure as { code?: string }).code).toBe('zklogin_proof_unavailable')
     expect(rederive_materials).not.toHaveBeenCalled()
   })
+})
+
+test('plain proof-failure copy ships in all six locales', async () => {
+  const locales = ['en', 'fr', 'de', 'es', 'ja', 'uk']
+  for (const locale of locales) {
+    const json = await Bun.file(new URL(`../../src/i18n/locales/${locale}.json`, import.meta.url)).json()
+    const copy = json?.errors?.zklogin_proof_unavailable
+    expect(typeof copy).toBe('string')
+    expect(copy.trim().length).toBeGreaterThan(0)
+    expect(copy).not.toMatch(/zkp/i)
+  }
 })

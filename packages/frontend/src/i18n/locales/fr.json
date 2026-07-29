@@ -2339,6 +2339,7 @@
     "zklogin_session_expired": "Votre session Google a expiré ou n'est plus lisible. Veuillez vous reconnecter avec Google.",
     "zklogin_salt_unavailable": "Impossible de joindre le service de connexion pour préparer votre personnage. Vérifiez votre connexion et réessayez.",
     "zklogin_address_mismatch": "Votre compte Google ne correspond pas à cette adresse de portefeuille. Déconnectez-vous et reconnectez-vous avec le bon compte.",
+    "zklogin_proof_unavailable": "Nous n’avons pas pu vérifier votre connexion Google. Reconnectez-vous, puis réessayez.",
     "free_already_claimed": "Tu as déjà réclamé ton personnage gratuit — les suivants coûtent des SUI.",
     "name_taken": "Ce nom est déjà pris. Choisis-en un autre.",
     "name_invalid": "Les noms font de 4 à 19 lettres ou chiffres, sans espaces.",

@@ -121,6 +121,13 @@ describe('humanize_tx_error — the four shapes, NEVER "[object Object]"', () =>
     )
   })
 
+  test('a zkLogin proof marker becomes plain sign-in copy, never raw zkp jargon', () => {
+    const error = Object.assign(new Error('failed to get zkp'), { code: 'zklogin_proof_unavailable' })
+    const copy = humanize_tx_error(error)
+    expect(copy).toBe(i18n.t('errors.zklogin_proof_unavailable'))
+    expect(copy).not.toMatch(/zkp|proof/i)
+  })
+
   test('(3) a bare string passes through', () => {
     expect(humanize_tx_error('No personal kiosk found')).toBe('No personal kiosk found')
   })

@@ -576,6 +576,10 @@ function to_message_string(/** @type {unknown} */ error, technical = false) {
  * @param {unknown} error @param {{ phase?: 'kiosk_lookup' }} [opts] @returns {string}
  */
 export function humanize_tx_error(error, { phase } = {}) {
+  // Enoki proof failures are decoded once at the auth seam into a structural marker. The raw SDK message
+  // ("failed to get zkp") and its invalid-field response body stay diagnostic-only.
+  if (/** @type {any} */ (error)?.code === 'zklogin_proof_unavailable')
+    return i18n.t('errors.zklogin_proof_unavailable')
   // HONESTY SPLIT: "failed on-chain" LIES for a pre-flight refusal (ZERO gas spent) — a refusal says "no gas spent" while an EXECUTED failure keeps its own copy.
   const preflight = is_preflight_refusal(error)
   const generic = () => {
