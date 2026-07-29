@@ -28,7 +28,7 @@
 // clock enters, and nowhere else — determinism rides the capsule's command list, never the clock (spec §10).
 
 import { fight_store } from '@aresrpg/fight/store'
-import { fight_view } from '@aresrpg/fight/project'
+import { engine_view_of } from '@aresrpg/fight/project'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from '@aresrpg/fight/board_state'
 import { GRID_W } from '@aresrpg/fight/los'
 import {
@@ -154,12 +154,12 @@ export const create_fight_shim = ({
       return false
     }
     // THE SEAT IS A PROJECTION, NOT A SLICE (#922 root cause). `active_entity_id` is computed by
-    // `fight_view`/`engine_view` (project.js:508) out of the folded turn pointer — the raw `store.getState().view`
+    // `engine_view_of` (project.js) out of the folded turn pointer — the raw `store.getState().view`
     // is the adopted BOARD snapshot and has never carried that field. Reading it off the slice therefore yielded
     // `undefined` on every single press: END TURN refused forever, the turn never ended, and the only trace was
     // DungeonBoard's `flush_finished ok:false`. This is the SAME door the HUD reads (`use_fight_view`), so the
     // seat the shim commits for is by construction the seat the board is showing as active.
-    const seat = fight_view(store.getState())?.active_entity_id ?? null
+    const seat = engine_view_of(store.getState())?.active_entity_id ?? null
     if (!seat) {
       log('simulator', 'commit dropped — no active seat at fire time', { background })
       return false
