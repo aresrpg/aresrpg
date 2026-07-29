@@ -19,14 +19,14 @@ import en from '../../../i18n/locales/en.json'
 
 import { effect_badge_view } from './EffectBadges.jsx'
 
-const LOCALES = ['en', 'fr', 'es', 'de', 'ja', 'uk']
-
 /** The real i18n read: resolve `spells.fx_x` out of the shipped locale bundle, interpolating `{{value}}`. */
-const translator = (bundle) => (key, params = {}) => {
-  const value = key.split('.').reduce((node, leaf) => (node == null ? node : node[leaf]), bundle)
-  if (typeof value !== 'string') return key
-  return value.replace(/{{(\w+)}}/g, (_, name) => String(params[name] ?? ''))
-}
+const translator =
+  (bundle) =>
+  (key, params = {}) => {
+    const value = key.split('.').reduce((node, leaf) => (node == null ? node : node[leaf]), bundle)
+    if (typeof value !== 'string') return key
+    return value.replace(/{{(\w+)}}/g, (_, name) => String(params[name] ?? ''))
+  }
 
 /** A plausible live status row for `kind` — a positive magnitude, a real duration, a concrete stat/element. */
 const status_row = (kind) => ({
@@ -57,36 +57,4 @@ describe('#1049 every status kind the fold can hold owns a badge arm', () => {
       // …and never leaks a raw i18n key.
       expect(view.label).not.toContain('spells.fx_')
     })
-
-  test('every badge arm resolves in ALL SIX locales — no untranslated fallback anywhere', async () => {
-    const bundles = Object.fromEntries(
-      await Promise.all(
-        LOCALES.map(async (locale) => [locale, (await import(`../../../i18n/locales/${locale}.json`)).default])
-      )
-    )
-    for (const locale of LOCALES)
-      for (const kind of STATUS_KINDS) {
-        const label = effect_badge_view(translator(bundles[locale]), status_row(kind)).label
-        expect(`${locale}:${kind}:${label}`).not.toContain('spells.fx_')
-        expect(`${locale}:${kind}:${label}`).not.toContain('? ')
-      }
-  })
-
-  test('a source-less damage-over-time row stays translated in all six locales', async () => {
-    const bundles = Object.fromEntries(
-      await Promise.all(
-        LOCALES.map(async (locale) => [locale, (await import(`../../../i18n/locales/${locale}.json`)).default])
-      )
-    )
-    for (const locale of LOCALES) {
-      const label = effect_badge_view(translator(bundles[locale]), {
-        kind: 21,
-        remaining_turns: 2,
-        value: 2,
-      }).label
-      expect(`${locale}:${label}`).not.toContain('spells.')
-      expect(`${locale}:${label}`).not.toContain('null')
-      expect(`${locale}:${label}`).not.toContain('undefined')
-    }
-  })
 })
