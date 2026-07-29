@@ -71,10 +71,20 @@ jobs:
         run: |
           PRS=$(gh pr list --repo "$GITHUB_REPOSITORY" --label promote-requested --state open \
             --json number,createdAt --jq 'sort_by(.createdAt) | .[].number')
+          DISPATCH_FAILED=0
           while IFS= read -r PR; do
             [ -z "$PR" ] && continue
             set +e
             bash .github/scripts/promote-land.sh "$PR"
-            echo "PR #$PR → rc=$?"
+            RC=$?
             set -e
+            echo "PR #$PR → rc=$RC"
+            # rc=4 means the PR LANDED but its board sweep was never dispatched. A refusal (rc=1) or
+            # a queued PR (rc=3) is routine and stays quiet; a landing whose automations went
+            # missing is the #1605 fail-loud case — carry it to the end, then redden this run.
+            if [ "$RC" = 4 ]; then DISPATCH_FAILED=1; fi
           done <<< "$PRS"
+          if [ "$DISPATCH_FAILED" = 1 ]; then
+            echo "::error::a landing automation dispatch failed — the board sweep did not run for a landed PR"
+            exit 1
+          fi
