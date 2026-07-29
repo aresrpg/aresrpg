@@ -155,11 +155,10 @@ describe('#1493 a corpse never re-routes the walk that decides trap consumption'
     return store
   }
 
-  const walk_after = (store, events) =>
-    store.getState().input(
-      { type: 'receipt', version: 8, receipt: { events: [...events, event('MobMoved', { idx: 1, to_cell: walker_dest })] } },
-      1_200
-    )
+  const walk_after = (store, events) => {
+    const receipt = { events: [...events, event('MobMoved', { idx: 1, to_cell: walker_dest })] }
+    return store.getState().input({ type: 'receipt', version: 8, receipt }, 1_200)
+  }
 
   test('LIVE CONTROL — a LIVING blocker really does re-route the walk onto the detour trap', () => {
     const store = boot_with_living_blocker()
