@@ -8,6 +8,7 @@
     "packages/fight/src/predict_cast.js": 2,
     "packages/frontend/src/pages/encyclopedia/classes_tab.tsx": 2
   },
+  "sim-protocol-displacement-kind": {},
   "sim-protocol-element-ordinal": {
     "packages/fight/src/sim_chain_events.js": 1,
     "packages/fight/src/statuses.js": 1,

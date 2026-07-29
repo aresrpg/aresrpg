@@ -16,13 +16,14 @@
 // does not match the captured bytes is not a mock, it is a second dialect. `sim_chain_wire.test.js` pins every
 // emitted row's key set AND per-key JSON type against those captured rows.
 
-import { decode, encode } from './los.js'
+import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import {
   INVISIBILITY_STATUS_KIND,
   MOB_FIGHTER_ID_BASE,
   encode_status_value,
   is_signed_status_kind,
 } from './fight_status_snapshot.js'
+import { decode, encode } from './los.js'
 import { status_row_of } from './statuses.js'
 
 /** The mock package id every emitted row is namespaced under. `decode_fight_event` keys off the LAST `::`
@@ -42,7 +43,6 @@ const u64 = (value) => String(Math.trunc(Number(value) || 0))
 // (fight_render_events DISPLACE_TELEPORT skips the walk window); anything cardinal keeps its slide. PUSH vs
 // PULL (12 vs 13) is not observable from the row and no consumer reads the difference.
 const DISPLACE_PUSH = 12
-const DISPLACE_TELEPORT = 14
 
 /** `Drain.point_kind` / `Granted.point_kind` — the chain's pool discriminant (`spell_effect::point_ap()` = 0,
  *  `point_mp()` = 1). Only these two sim stat keys are POOLS; every other stat is a timed block row. */

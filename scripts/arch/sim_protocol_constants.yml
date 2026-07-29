@@ -112,6 +112,22 @@ rules:
       - pattern: $LEVEL.casts_per_target >= 255
       - pattern: authored === 255
 
+  - id: sim-protocol-displacement-kind
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      include: ['packages/fight/src/**']
+      exclude:
+        - '**/*.test.*'
+        - '**/*.spec.*'
+        - 'packages/fight/src/fight_render_prims.js'
+    message: >-
+      Displaced event kinds belong to fight_render_prims. Import DISPLACE_TELEPORT; do not re-declare
+      the teleport wire discriminant in another fight module (#781).
+    pattern-either:
+      - pattern: const DISPLACE_TELEPORT = 14
+      - pattern: const DISPLACE_TELEPORT = 14n
+
   - id: sim-protocol-signed-value-bias
     languages: [js, ts]
     severity: ERROR
