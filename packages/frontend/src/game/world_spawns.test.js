@@ -140,6 +140,20 @@ const restore_world_globals = () => {
 }
 
 describe('world spawn mob-card layer route gate', () => {
+  test('a settled world input wakes the entry rows read without adding a timer', () => {
+    const subscription_at = world_spawns_source.indexOf(
+      'subscribe_world_rows_request(spawns_store, request_zone_rows_read)'
+    )
+    const initial_read_at = world_spawns_source.indexOf('request_zone_rows_read()', subscription_at)
+    const steady_timer_at = world_spawns_source.indexOf('const timer = setInterval(poll, POLL_MS)')
+    const release_at = world_spawns_source.indexOf('unsubscribe_world_rows_request()', steady_timer_at)
+
+    expect(subscription_at, 'the world-bound settle delta owns an immediate rows request').toBeGreaterThan(-1)
+    expect(initial_read_at, 'an already-settled world keeps the cold-entry read').toBeGreaterThan(subscription_at)
+    expect(steady_timer_at, 'the existing steady cadence remains the only timer').toBeGreaterThan(initial_read_at)
+    expect(release_at, 'the settle subscription leaves with the world-spawn edge').toBeGreaterThan(steady_timer_at)
+  })
+
   test('prepares the owned party before a group fight snapshots its on-chain party gate', () => {
     const prepare_at = world_spawns_source.indexOf(
       'const owned_party_ready = await use_party.getState().ensure_owned_party()'

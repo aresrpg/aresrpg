@@ -23,6 +23,7 @@ import {
   subscribe_spawn_tx,
   subscribe_spawn_beats,
   subscribe_fight_entry,
+  subscribe_world_rows_request,
 } from '../src/spawns_zones.js'
 import {
   zone_row_of,
@@ -91,6 +92,27 @@ describe('zone map rectangles — canonical ids and signed-world bounds', () => 
 })
 
 describe('boot facts — world binding, dims, checkpoint seeding', () => {
+  it('a settled world entry re-requests searched-zone rows and folds its pips without waiting for a poll', () => {
+    const store = create_spawns_store()
+    const requested = []
+    const unsubscribe = subscribe_world_rows_request(store, (world_id) => {
+      requested.push(world_id)
+      store.getState().input({ type: 'world_doc', doc: DOC })
+      store.getState().input({
+        type: 'zones_rows_snapshot',
+        version: 1,
+        zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+        cells: [{ zx: 5, zy: 5, rows: [mob('entry', 520, 540)] }],
+      })
+    })
+
+    store.getState().input({ type: 'world_bound', world_id: WORLD })
+
+    expect(requested).toEqual([WORLD])
+    expect(spawn_markers(store.getState()).map((marker) => marker.spawn_id)).toEqual(['entry'])
+    unsubscribe()
+  })
+
   it('world_bound + world_doc resolve the codec (zone_size, offsets, ttl)', () => {
     const { state } = boot()
     expect(state()).toMatchObject({
