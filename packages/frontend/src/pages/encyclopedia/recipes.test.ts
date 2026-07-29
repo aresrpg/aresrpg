@@ -18,7 +18,6 @@ import type { RpcEncyclopediaItem, RpcRecipe } from '../../rpc/views'
 import {
   craft_affordability_of,
   craft_recipes_for_job,
-  craftable_items_for_job,
   recipe_for_output,
   recipes_consuming,
   short_id,
@@ -116,10 +115,10 @@ describe('short_id — the honest not-yet-snapshotted fallback', () => {
 // Bug report (2026-07-19): the encyclopedia's jobs tab didn't display any recipes for items above
 // level 110. Root cause was the JOBS tab reading a STALE bundled seed snapshot (packages/sdk/src
 // items.json + recipes.json, legacy-ported, capped at level 110) instead of this SAME /v1 projection
-// every other crafting surface (RecipeSections) already reads. craftable_items_for_job is the fix: the
+// every other crafting surface (RecipeSections) already reads. craft_recipes_for_job is the fix: the
 // JOBS tab's item list now comes from the live chain projection, which carries NO level field at all on
 // the recipe side — so there is no cutoff to reintroduce, ever.
-describe('craftable_items_for_job — the JOBS tab item source (chain truth, no level cutoff)', () => {
+describe('craft_recipes_for_job — the JOBS tab recipe source (chain truth, no level cutoff)', () => {
   const HIGH_LEVEL_ITEM: RpcEncyclopediaItem = {
     template_id: '0xtpl_void_relic_l120',
     item_type: 'relic',
@@ -151,26 +150,26 @@ describe('craftable_items_for_job — the JOBS tab item source (chain truth, no 
   }
 
   test('a level-120 recipe output is included — same job, sorted after the low-level one', () => {
-    const rows = craftable_items_for_job([JEWELER_RECIPE, HIGH_LEVEL_RECIPE], [LOW_LEVEL_ITEM, HIGH_LEVEL_ITEM], 11)
+    const rows = craft_recipes_for_job([JEWELER_RECIPE, HIGH_LEVEL_RECIPE], [LOW_LEVEL_ITEM, HIGH_LEVEL_ITEM], 11)
     expect(rows.map((r) => r.id)).toEqual([LOW_LEVEL_ITEM.template_id, HIGH_LEVEL_ITEM.template_id])
     expect(rows[1].level).toBe(120)
     expect(rows[1].name).toBe('Void-Forged Relic')
   })
 
   test('a different required_job is excluded', () => {
-    const rows = craftable_items_for_job([HIGH_LEVEL_RECIPE], [HIGH_LEVEL_ITEM], 13 /* baker */)
+    const rows = craft_recipes_for_job([HIGH_LEVEL_RECIPE], [HIGH_LEVEL_ITEM], 13 /* baker */)
     expect(rows).toEqual([])
   })
 
   test('a recipe whose output has no live item row yet is skipped, never fabricated', () => {
-    const rows = craftable_items_for_job([HIGH_LEVEL_RECIPE], [], 11)
+    const rows = craft_recipes_for_job([HIGH_LEVEL_RECIPE], [], 11)
     expect(rows).toEqual([])
   })
 
   test('undefined recipes/items or a negative job index is honest-empty, never throws', () => {
-    expect(craftable_items_for_job(undefined, [HIGH_LEVEL_ITEM], 11)).toEqual([])
-    expect(craftable_items_for_job([HIGH_LEVEL_RECIPE], undefined, 11)).toEqual([])
-    expect(craftable_items_for_job([HIGH_LEVEL_RECIPE], [HIGH_LEVEL_ITEM], -1)).toEqual([])
+    expect(craft_recipes_for_job(undefined, [HIGH_LEVEL_ITEM], 11)).toEqual([])
+    expect(craft_recipes_for_job([HIGH_LEVEL_RECIPE], undefined, 11)).toEqual([])
+    expect(craft_recipes_for_job([HIGH_LEVEL_RECIPE], [HIGH_LEVEL_ITEM], -1)).toEqual([])
   })
 
   // DATA-PLUMBING (icon-slug canon): the JOBS tab paints each craftable row's icon through
@@ -191,7 +190,7 @@ describe('craftable_items_for_job — the JOBS tab item source (chain truth, no 
       last_sale_mist: null,
     }
     const bag_recipe: RpcRecipe = { ...JEWELER_RECIPE, output_template_id: BAG_OF_QUARTZ.template_id }
-    const [row] = craftable_items_for_job([bag_recipe], [BAG_OF_QUARTZ], 11)
+    const [row] = craft_recipes_for_job([bag_recipe], [BAG_OF_QUARTZ], 11)
     expect(row.item_type).toBe('bag_quartz')
   })
 })
@@ -203,8 +202,7 @@ describe('craftable_items_for_job — the JOBS tab item source (chain truth, no 
 // the one surface still reading the bundled seed snapshot — packages/sdk/src/{items,recipes}.json,
 // which are `{}` in this repo BY CONSTRUCTION (the content boundary: content reaches the game only as
 // published chain state). So it rendered `jobs.recipes.empty_seed` for every profession, forever.
-// craft_recipes_for_job is craftable_items_for_job with the BILL OF MATERIALS resolved — the drawer
-// needs the ingredient rows and the live `recipe_id` to actually fire a craft tx.
+// The drawer needs this projection's ingredient rows and live `recipe_id` to fire a craft tx.
 //
 // CAPTURED PROVENANCE: every VALUE below is the verbatim live projection read from rpc-redis on
 // 2026-07-25 (`JSON.GET rpc:recipe:0x5fe1…c3c` plus its five `rpc:template:*` docs) — a real armorsmith
@@ -319,13 +317,6 @@ describe('craft_recipes_for_job — the in-game drawer source (issue #765)', () 
     expect(rows[0].ingredients[0].id).toBe('diadem_lattice_crown')
     expect(rows[0].ingredients[1].id).toBeNull()
     expect(rows[0].ingredients[1].name).toBe(short_id(LIVE_ARMORSMITH_RECIPE.inputs[1].template_id))
-  })
-
-  test('craftable_items_for_job stays the same projection (one home, no second walk)', () => {
-    const rich = craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8)
-    expect(craftable_items_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8)).toEqual(
-      rich.map(({ id, item_type, name, level, category }) => ({ id, item_type, name, level, category }))
-    )
   })
 })
 

@@ -38,41 +38,6 @@ export function recipes_consuming(
 /** Display fallback for a template id that is not (yet) a live encyclopedia item. */
 export const short_id = (id: string) => `${id.slice(0, 6)}…${id.slice(-4)}`
 
-export interface CraftableItemRow {
-  id: string
-  /** The row's on-chain art key — what encyclopedia_item_asset builds `items/{item_type}.png` from. Kept on
-   *  the projection because a display name is not an art identity: dropping it left the jobs tab guessing. */
-  item_type: string
-  name: string
-  level: number
-  category: string
-}
-
-/**
- * The JOBS tab's "Craftable Items" list for one job (the SDK `JOBS` array index — `RpcRecipe.required_job`
- * is that same index verbatim). Filters the /v1 recipes to this job, then resolves each recipe's
- * `output_template_id` against the live /v1 items (a recipe whose output hasn't snapshotted yet is
- * skipped, never fabricated — same existence law as recipe_for_output above).
- *
- * There is NO level field anywhere in this path and therefore no cutoff to reintroduce: `level` passes
- * through verbatim from the chain, exactly like every other field in this file. (Was: the JOBS tab read a
- * static bundled seed snapshot — packages/sdk/src/{items,recipes}.json, a legacy-ported catalog that was
- * simply never generated past level 110 — so nothing above it could ever appear, on ANY job.)
- */
-export function craftable_items_for_job(
-  recipes: RpcRecipe[] | undefined,
-  items: RpcEncyclopediaItem[] | undefined,
-  job_index: number
-): CraftableItemRow[] {
-  return craft_recipes_for_job(recipes, items, job_index).map(({ id, item_type, name, level, category }) => ({
-    id,
-    item_type,
-    name,
-    level,
-    category,
-  }))
-}
-
 /** One line of a recipe's BILL OF MATERIALS, joined to the live item projection. */
 export interface CraftIngredientRow {
   /**
@@ -89,7 +54,15 @@ export interface CraftIngredientRow {
 }
 
 /** A craftable row with everything a craft tx and its bill of materials need — see craft_recipes_for_job. */
-export interface CraftRecipeRow extends CraftableItemRow {
+export interface CraftRecipeRow {
+  /** the OUTPUT template id — the encyclopedia's navigation key */
+  id: string
+  /** The row's on-chain art key — what encyclopedia_item_asset builds `items/{item_type}.png` from. Kept on
+   *  the projection because a display name is not an art identity: dropping it left the jobs tab guessing. */
+  item_type: string
+  name: string
+  level: number
+  category: string
   /** the live `crafting::Recipe` shared-object id — the craft tx's own input, no chain-direct lookup needed */
   recipe_id: string
   output_template_id: string
@@ -102,10 +75,11 @@ export interface CraftRecipeRow extends CraftableItemRow {
 
 /**
  * Every live recipe for one job (the SDK `JOBS` array index — `RpcRecipe.required_job` is that index
- * verbatim), with its BILL OF MATERIALS resolved against the same /v1 items list. This is the single walk
- * behind both crafting surfaces: the encyclopedia JOBS tab takes the display quartet through
- * `craftable_items_for_job` above, and the in-game Jobs drawer takes the whole row (it needs `recipe_id`
- * and the ingredient slugs to actually fire `crafting::craft`).
+ * verbatim), with its BILL OF MATERIALS resolved against the same /v1 items list. THE single walk behind
+ * every per-job crafting surface: the encyclopedia JOBS tab's RECIPES section, the in-game Jobs drawer and
+ * the commission board all take this row (they need `recipe_id` and the ingredient slugs to actually fire
+ * `crafting::craft`). A job's recipe membership therefore has exactly one home — the chain's own
+ * `required_job` — for gathering jobs (flours / powders / blends) exactly like for the smiths (#1670).
  *
  * EXISTENCE LAW, both directions: a recipe whose OUTPUT has not snapshotted is skipped entirely (nothing
  * to render or craft), while an unresolved INGREDIENT keeps its row — dropping it would understate the
