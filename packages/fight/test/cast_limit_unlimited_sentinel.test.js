@@ -13,9 +13,8 @@
 // `bot/policy.js:213`, which makes the divergence a PARITY-ORACLE failure rather than a cosmetic HUD one: the
 // bot drafts a cast the chain aborts, and the twin goes red with this sentinel as its root cause.
 //
-// This file is the shared oracle both readers must satisfy. The green tests below pin what the authority
-// actually does for every authored cap in use today; the skipped test is #1071's definition of done and cannot
-// go green without the production fix (one decoder both sides import, `cap_of` no longer treating 0 as 255).
+// This file is the shared oracle both readers must satisfy. The tests pin what the authority actually does for
+// every authored cap, including the corrupt-but-representable 0 that must fail closed after its first cast.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -94,11 +93,7 @@ describe('the client decoder agrees with the authority', () => {
     expect([cap_of(null), cap_of(undefined)]).toEqual([Infinity, Infinity])
   })
 
-  // #1071 — THE DEFINITION OF DONE. Skipped because it cannot go green without the production fix: `cap_of`
-  // (draft_budget.js:83-84) reads `authored === 0` as unlimited, so it returns Infinity where the chain accepts
-  // exactly one cast. Un-skip when the two readers share one decoder; `draft_budget.test.js:136`
-  // (`expect(cap_of(0)).toBe(Infinity)`) pins the divergent behaviour and flips in the same commit.
-  test.skip("an authored 0 decodes to the chain's cap, not to unlimited (#1071)", () => {
+  test("an authored 0 decodes to the chain's cap, not to unlimited (#1071)", () => {
     expect({ authored: 0, cap: cap_of(0) }).toEqual({ authored: 0, cap: chain_cap_of(0) })
   })
 })

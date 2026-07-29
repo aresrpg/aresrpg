@@ -131,9 +131,9 @@ describe('casts_at_cell / cap_of — the per-target cap that drops a saturated c
     expect(casts_at_cell(path, 'vanish', 40)).toBe(1)
     expect(casts_at_cell([], 'gutterknife', 40)).toBe(0)
   })
-  it('cap_of: the spell_bands UNLIMITED sentinels (255 / 0) and null are Infinity; a real count passes through', () => {
+  it('cap_of: only the chain sentinel 255 and an absent value are unlimited; authored 0 admits its first cast', () => {
     expect(cap_of(255)).toBe(Infinity)
-    expect(cap_of(0)).toBe(Infinity)
+    expect(cap_of(0)).toBe(1)
     expect(cap_of(null)).toBe(Infinity)
     expect(cap_of(undefined)).toBe(Infinity)
     expect(cap_of(2)).toBe(2) // Gutterknife casts_per_target — the 3rd cast at one cell is undraftable
