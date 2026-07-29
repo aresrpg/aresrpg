@@ -4,6 +4,8 @@ import { describe, test, expect } from 'bun:test'
 
 import { apply_action, empty_state } from '../src/inputs.js'
 import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
+import { enrich_actions } from '../src/core_fold.js'
+import { empty_inbox } from '../src/core_state.js'
 import { create_fight_store } from '../src/store.js'
 
 // REGRESSION STUB — optimistic invisibility reveal (FIGHTREAL delta#1). The chain reveals a hidden fighter on any
@@ -64,7 +66,10 @@ describe('invisibility reveal — mirror of statuses::reveal', () => {
       },
       { version: 2, fight_id: FIGHT }
     )
-    s = actions.reduce(apply_action, s)
+    // The `damaging` mark is FOLD-time enrichment, not decode output (#1700): a derived field baked into an admitted
+    // row rides the content hash and makes a row's receipt and journal twins conflict. So the peer reveal is folded
+    // through the same door production uses — decode (chain bytes) → `enrich_actions` (derivations) → `apply_action`.
+    s = enrich_actions(empty_inbox(), actions).reduce(apply_action, s)
     expect(s.fighters.m0.invisible).toBe(false)
   })
 })

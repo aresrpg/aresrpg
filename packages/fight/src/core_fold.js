@@ -33,20 +33,54 @@
 // PURE, NO THROW. `base_from_view` + `apply_action` are the existing homes; this module only composes them over the
 // inbox, attaching the current seat resolver at fold time (never baked stale into the log).
 
-import { apply_action, empty_state } from './inputs.js'
+import { apply_action, empty_state, fighter_key } from './inputs.js'
 import { base_from_view, base_budget } from './fold.js'
 import { inbox_resolver } from './core_inbox.js'
 
+/** The rows that close a cast's effect segment — anything past one belongs to another action. */
+const SEGMENT_END = new Set(['Cast', 'TurnStarted', 'TurnEnded'])
+
+/**
+ * The indices of the Cast rows whose segment hits somebody other than their caster. A DERIVATION over the ordered
+ * event stream, not a property of the Cast row: the chain emits no reveal event, so `apply_action` mirrors
+ * `statuses::reveal` off this mark (inputs.js). It lives HERE, with the fold's other derivations, because a
+ * derivation baked into an admitted log row gets hashed as chain content and makes one row's two transport twins
+ * conflict (#1700) — and because the fold sees the whole ordered tail, not one delivery window.
+ * @param {Array<Record<string, any>>} actions in coordinate order
+ * @returns {Set<number>}
+ */
+const damaging_casts = (actions) => {
+  const marked = new Set()
+  actions.forEach((action, index) => {
+    if (action.kind !== 'Cast') return
+    const caster = fighter_key({ is_mob: action.caster_is_mob, idx: action.caster_idx })
+    for (let ahead = index + 1; ahead < actions.length; ahead++) {
+      const row = actions[ahead]
+      if (SEGMENT_END.has(row.kind)) break
+      if (row.kind !== 'Hit') continue
+      if (fighter_key({ is_mob: row.victim_is_mob, idx: row.victim_idx }) !== caster) {
+        marked.add(index)
+        break
+      }
+    }
+  })
+  return marked
+}
+
 /** The sorted authoritative tail: every admitted log action above the snapshot base, in coordinate order, with the
- *  view-dependent enrichment attached at FOLD time (never baked stale into the log): the CURRENT seat resolver
- *  (character-keyed events resolve against the live base view) and the deterministic
+ *  derived enrichment attached at FOLD time (never baked into the log, where it would ride the content hash): the
+ *  CURRENT seat resolver (character-keyed events resolve against the live base view), the deterministic
  *  turn-start budget (a player `TurnStarted` carries no ap/mp — the begin_turn refill is predicted from the base
- *  view's escrow, exactly as V1 injects it, so the projected budget is not the stale pre-refill snapshot). */
+ *  view's escrow, exactly as V1 injects it, so the projected budget is not the stale pre-refill snapshot), and the
+ *  `damaging` mark that drives the invisibility reveal. */
 export const enrich_actions = (inbox, actions) => {
   const resolve_seat = inbox_resolver(inbox)
   const budget_of = base_budget(inbox.base_view)
-  const enrich = (action) => {
-    if (action.kind !== 'TurnStarted' || action.is_mob || action.ap != null) return { ...action, resolve_seat }
+  const damaging = damaging_casts(actions)
+  const enrich = (action, index) => {
+    const marked = damaging.has(index) ? { damaging: true } : {}
+    if (action.kind !== 'TurnStarted' || action.is_mob || action.ap != null)
+      return { ...action, ...marked, resolve_seat }
     const budget = budget_of(Number(action.idx))
     return budget ? { ...action, resolve_seat, ap: budget.ap, mp: budget.mp } : { ...action, resolve_seat }
   }

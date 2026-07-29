@@ -29,7 +29,7 @@
 import { hash_state } from '@aresrpg/sim/evolve'
 import { decode_fight_event } from '@aresrpg/sdk/fight'
 
-import { fighter_key, seat_resolver } from './inputs.js'
+import { seat_resolver } from './inputs.js'
 import { board_state_from_fight, fight_read_complete, roster_open } from './board_state.js'
 import { revive_wire, coord_key, coord_cmp, COORD_ZERO } from './core_wire.js'
 
@@ -97,29 +97,14 @@ const snapshot_content_hash = (view) => {
  *  re-attached at FOLD time from the CURRENT base view (never baked stale into the log), and `seq` rides separately. */
 const as_data = ({ resolve_seat, ...rest }) => rest
 
-/** A Cast is damaging when its segment later hits somebody other than its caster. This is a chain-decode fact:
- * it lives here, beside the sole raw event decoder, rather than in the reducer. */
-const mark_damaging_casts = (decoded) => {
-  const out = decoded.map((event) => ({ ...event }))
-  for (let i = 0; i < out.length; i++) {
-    if (out[i].kind !== 'Cast') continue
-    const caster = fighter_key({ is_mob: out[i].caster_is_mob, idx: out[i].caster_idx })
-    for (let j = i + 1; j < out.length; j++) {
-      if (['Cast', 'TurnStarted', 'TurnEnded'].includes(out[j].kind)) break
-      if (out[j].kind !== 'Hit') continue
-      const victim = fighter_key({ is_mob: out[j].victim_is_mob, idx: out[j].victim_idx })
-      if (victim !== caster) {
-        out[i].damaging = true
-        break
-      }
-    }
-  }
-  return out
-}
-
 /**
  * The sole receipt/poll raw-event decoder. Tests and tooling that need decoded actions enter through this same
  * function; production state admission wraps it with `batch_to_actions` below.
+ *
+ * It yields CHAIN BYTES AND NOTHING ELSE. Client-side derivations — the seat resolver, the turn-start budget, and
+ * the `damaging` mark — attach at FOLD time (`core_fold.enrich_actions`), never here: a derived field baked into an
+ * admitted row is hashed by `action_hash` as if the chain had said it, so a row enriched on one transport and not
+ * the other raised a false `hash_conflict` at a coordinate where the wire bytes were identical (#1700).
  */
 export const decode_fight_batch = (
   rows,
@@ -132,7 +117,7 @@ export const decode_fight_batch = (
       return decoded_event ? { ...decoded_event, event_idx } : null
     })
     .filter((event) => event && (!fight_id || String(event.fight) === String(fight_id)))
-  return mark_damaging_casts(decoded).map((event) => {
+  return decoded.map((event) => {
     const budget = base_of && event.kind === 'TurnStarted' && !event.is_mob ? base_of(Number(event.idx)) : null
     return {
       ...event,
