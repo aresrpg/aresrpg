@@ -449,13 +449,14 @@ const state_from_view = (view, caster_id, stats_of) => {
  * Everything unknowable degrades to null, the ONE convention `chain_critical` and `next_slot_crit` both reject:
  * no row (a roster read that has not landed), an unstamped deadline (0 during placement), a Fight whose static
  * seeds are absent.
- * @param {{ fight: object|null, seat_row: object|null, draft_len?: number }} args `fight` carries the public
- *   seed fields (world_seed / spawn_id / turn_entropy / turn_ordinal); `seat_row` is MY escrow row (seat +
- *   casts_this_turn); `draft_len` is the local AP-queue's queued cast/weapon count (moves never count).
+ * @param {{ fight: object|null, seat_row: object|null, slot: number|null }} args `fight` carries the public seed
+ *   fields (world_seed / spawn_id / turn_entropy / turn_ordinal); `seat_row` supplies MY seat; `slot` is the
+ *   next action's chain slot from its ONE home (`project.my_action_slot` — #1224). This composer never derives
+ *   the slot from a raw `casts_this_turn` row again: that row is a base the journal may already have superseded.
  * @returns {{ world_seed: number|bigint, spawn_id: number|bigint, turn_entropy: number|bigint,
  *   turn_ordinal: number|bigint, seat: number, slot: number } | null}
  */
-export const crit_clock_of = ({ fight, seat_row, draft_len = 0 }) => {
+export const crit_clock_of = ({ fight, seat_row, slot = null }) => {
   const world_seed = fight?.world_seed ?? null
   const spawn_id = fight?.spawn_id ?? null
   // The u64 seed bytes as decoded (BigInt/string) — passed through verbatim, NEVER `?? 0` (a fake-0 entropy previews
@@ -471,7 +472,9 @@ export const crit_clock_of = ({ fight, seat_row, draft_len = 0 }) => {
     turn_ordinal == null ||
     Number(turn_ordinal) <= 0 ||
     seat == null ||
-    !(seat >= 0)
+    !(seat >= 0) ||
+    slot == null ||
+    !(slot >= 0)
   )
     return null
   return {
@@ -480,7 +483,7 @@ export const crit_clock_of = ({ fight, seat_row, draft_len = 0 }) => {
     turn_entropy,
     turn_ordinal,
     seat,
-    slot: Number(seat_row?.casts_this_turn ?? 0) + Number(draft_len ?? 0),
+    slot: Number(slot),
   }
 }
 

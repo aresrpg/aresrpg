@@ -32,13 +32,14 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sword } from 'lucide-react'
 
-import { use_fight_view } from '../../store.js'
+import { use_fight, use_fight_view } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
 import { fight_spell, seat_spell_row } from './fight-spells.js'
 import { cooldown_display, cap_of } from '@aresrpg/fight/draft_budget'
 import { crit_clock_of } from '@aresrpg/fight/predict_cast'
+import { my_action_slot } from '@aresrpg/fight/project'
 import { element_color } from './element-colors.js'
 import { spell_category } from './spell-category.js'
 import { Tooltip } from './Tooltip.jsx'
@@ -174,20 +175,20 @@ export function DeckCluster() {
 
   // §7 TURN-SEED CRIT PREVIEW (the socket glow): the NEXT action slot's crit roll, derived
   // byte-identically to the chain (deck-crit-glow.js → @aresrpg/sim) from PUBLIC state: the Fight's static
-  // world_seed/spawn_id, this turn's deadline, my seat — and the slot = my committed casts_this_turn + the
-  // local AP-queue draft (cast_path; strikes and casts count, moves never), so the glow LIVE-ADVANCES as the
-  // player queues actions. null off-turn / pre-read → no socket glows.
+  // world_seed/spawn_id, this turn's deadline, my seat — and the slot off the fight store's own ordered journal
+  // (#1224), where every drafted cast/strike already rides as an intent, so the glow LIVE-ADVANCES as the player
+  // queues actions AND follows a turn the chain has already restarted. null off-turn / pre-read → no glows.
   const world_seed = use_dungeon((s) => s.dungeon?.world_seed ?? null)
   const spawn_id = use_dungeon((s) => s.dungeon?.spawn_id ?? null)
   const chain_turn_entropy = use_dungeon((s) => s.dungeon?.turn_entropy ?? null)
   const chain_turn_ordinal = use_dungeon((s) => s.dungeon?.turn_ordinal ?? null)
-  const draft_len = use_dungeon_turn((s) => s.cast_path.length)
+  const slot = use_fight(my_action_slot)
   const crit = next_slot_crit(
     my_turn
       ? crit_clock_of({
           fight: { world_seed, spawn_id, turn_entropy: chain_turn_entropy, turn_ordinal: chain_turn_ordinal },
           seat_row: my_row,
-          draft_len,
+          slot,
         })
       : null
   )

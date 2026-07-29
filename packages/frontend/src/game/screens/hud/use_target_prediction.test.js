@@ -44,7 +44,7 @@ const armed_hover = (mob_hp) => {
 }
 
 const outcome_of = ({ fight, hover, dungeon, mob_hp }) => {
-  const { prediction, is_crit, target_ref, effects } = compute_target_prediction({ fight, hover, dungeon })
+  const { prediction, is_crit, target_ref, effects } = compute_target_prediction({ fight, hover, dungeon, slot: 0 })
   return { ...predicted_target_outcome(prediction, target_ref, mob_hp), is_crit, effects }
 }
 
@@ -71,7 +71,7 @@ describe('compute_target_prediction — the live hover card', () => {
   test('unarmed / unhovered → empty (name+hp only, no preview)', () => {
     seed_fight_core({ seats: [{ character: '0xme', cell: CASTER_CELL }], mobs: [{ template: '0xabc', hp: 30, cell: MOB_CELL }] })
     const state = fight_store.getState()
-    const nothing = compute_target_prediction({ fight: engine_view(state), hover: null, dungeon: board_view(state) })
+    const nothing = compute_target_prediction({ fight: engine_view(state), hover: null, dungeon: board_view(state), slot: 0 })
     expect(nothing.prediction).toBeNull()
     expect(nothing.target_ref).toBeNull()
   })
@@ -95,7 +95,12 @@ describe('compute_target_prediction — the CASTABLE-NOW gate (crit-display bug)
     })
     fight_store.getState().input({ type: 'arm', spell_id: WEAPON_ATTACK_ID })
     const state = fight_store.getState()
-    return compute_target_prediction({ fight: engine_view(state), hover: { entity_id: 'mob-0' }, dungeon: board_view(state) })
+    return compute_target_prediction({
+      fight: engine_view(state),
+      hover: { entity_id: 'mob-0' },
+      dungeon: board_view(state),
+      slot: 0,
+    })
   }
 
   test('sanity: armed + affordable + my turn → a live forecast (a resolved prediction, is_crit a boolean)', () => {
@@ -165,7 +170,7 @@ describe('compute_target_prediction — the deterministic crit IS the resolved d
       turn_entropy: TURN_ENTROPY,
       turn_ordinal: TURN_ORDINAL,
     }
-    const p = compute_target_prediction({ fight: engine_view(state), hover: { entity_id: 'mob-0' }, dungeon })
+    const p = compute_target_prediction({ fight: engine_view(state), hover: { entity_id: 'mob-0' }, dungeon, slot: 0 })
     return { ...p, outcome: predicted_target_outcome(p.prediction, p.target_ref, 30) }
   }
 

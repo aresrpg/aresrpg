@@ -42,7 +42,7 @@ import {
   staged_turn_paths,
 } from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
-import { committed_mob_hp, committed_truth, fight_view, next_move_tackle } from '@aresrpg/fight/project'
+import { committed_mob_hp, committed_truth, fight_view, my_action_slot, next_move_tackle } from '@aresrpg/fight/project'
 import {
   CAST_DROP_STALE_TARGET,
   CAST_DROP_TARGET_OUT_OF_REACH,
@@ -549,6 +549,7 @@ export function DungeonBoard() {
   // chance rows and B7's not-yet-deployed chain kinds remain cast-only until authoritative settlement.
   const optimistic_cast = (mob_cell) => {
     const queue = use_dungeon_turn.getState().cast_path
+    const core = fight_store.getState()
     const spell_key = queue.at(-1)?.spell_key ?? armed_key ?? null
     const template =
       spell_key === WEAPON_ATTACK_ID ? weapon_spell_template(me?.weapon) : fight_spell_template(spell_key)
@@ -565,12 +566,12 @@ export function DungeonBoard() {
       target_cell: mob_cell,
       // The §7 clock through its ONE composer (#1190): the seat is MY escrow row's own `seat`, the same tuple the
       // socket glow and the tooltip preview roll — so a cast can never resolve against a sequence the player was
-      // not shown. The drafted queue's LAST entry is this very cast, hence length - 1.
-      critical_clock: crit_clock_of({ fight: dungeon, seat_row: me, draft_len: Math.max(0, queue.length - 1) }),
+      // not shown. Its slot comes from the store's own fold (#1224): the casts already drafted this turn ride the
+      // journal as intents and THIS one has not been folded yet, so the count is exact — no second store, no `- 1`.
+      critical_clock: crit_clock_of({ fight: dungeon, seat_row: me, slot: my_action_slot(core) }),
       resolve_ref,
     })
     if (!prediction?.actions.length) return
-    const core = fight_store.getState()
     core.input({
       type: 'predicted',
       intent_id: `cast:${fight.fight_id}:${core.intent_seq}`,

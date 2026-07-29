@@ -82,11 +82,12 @@ export const resolve_dungeon_ref = (dungeon, fighter_id) => {
  * last action (a different cast, a move) spends the AP this one needed. Mirrors the identical two facts
  * @aresrpg/fight/project.turn_input_armed + the adapter's wash_armed_spell already gate the board's OWN
  * targeting-range wash on — never a heuristic, the same pipeline.
- * @param {{ fight: any, hover: any, dungeon: any, draft_len?: number }} args  draft_len = the live AP-queue cast
- *   count (dungeon-turn cast_path) so the pending cast's crit slot advances with the draft, exactly like the glow.
+ * @param {{ fight: any, hover: any, dungeon: any, slot?: number|null }} args  `slot` = the pending cast's chain
+ *   slot from its ONE home (`project.my_action_slot` — #1224), so the tooltip advances with the draft exactly
+ *   like the glow, follows a turn the chain already restarted, and never prices off a second count.
  * @returns {{ prediction: any, is_crit: boolean, effects: any[], target_ref: { is_mob: boolean, idx: number } | null }}
  */
-export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0 }) => {
+export const compute_target_prediction = ({ fight, hover, dungeon, slot = null }) => {
   const armed = fight?.armed_spell_id ?? null
   const caster_id = fight?.my_entity_id ?? null
   const hovered_id = hover?.entity_id ?? null
@@ -111,11 +112,11 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   const resolve_ref = (id) => resolve_dungeon_ref(dungeon, id)
   // DETERMINISTIC CRIT (#163): a fight is seed-deterministic, so whether THIS pending cast crits is a FACT
   // computable pre-cast — never a chance. It lands on the NEXT turn-seed slot (my committed casts_this_turn + the
-  // live AP-queue draft), the EXACT slot the DeckCluster socket glow previews. crit_clock_of (@aresrpg/fight) is
+  // journal's own casts), the EXACT slot the DeckCluster socket glow previews. crit_clock_of (@aresrpg/fight) is
   // the ONE composer of that clock and next_slot_crit / socket_glows (deck-crit-glow.js → @aresrpg/sim) roll it,
   // so the tooltip, the glow and the cast that follows can never disagree and all mirror what the chain settles.
   // Seed-less / seat-less ⇒ null clock ⇒ the roll is unknown ⇒ the honest non-crit branch. (Past the turn gate.)
-  const crit_clock = crit_clock_of({ fight: dungeon, seat_row: me, draft_len })
+  const crit_clock = crit_clock_of({ fight: dungeon, seat_row: me, slot })
   const crit_slot = next_slot_crit(crit_clock)
   const is_crit = !!crit_slot && socket_glows(crit_slot.crit_roll, crit_rate)
 

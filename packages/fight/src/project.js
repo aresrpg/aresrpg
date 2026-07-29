@@ -11,7 +11,7 @@ import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable 
 import { committed_truth, fight_store, presented_state } from './store.js'
 import { cast_presenting, is_my_turn, is_over, presenting } from './project_state.js'
 import { engine_view, entity_id_of_key, project_board_cells } from './project_views.js'
-import { casts_this_turn_from_events } from './turn_action_slot.js'
+import { next_action_slot } from './turn_action_slot.js'
 
 export * from './project_state.js'
 export { board_view, committed_mob_hp, engine_view, entity_id_of_key } from './project_views.js'
@@ -92,18 +92,21 @@ const tackle_lockers = (s, me, my_team) => {
   return lockers
 }
 
-/** The chain slot my NEXT move's tackle roll folds with (actions.move: `participant::casts_this_turn` at the
- *  move's execution). casts_this_turn resets every turn on-chain, so the base is the snapshot row UNLESS my
- *  own TurnStarted rides the post-view tail (fresh turn ⇒ 0); every Cast in the ordered tail for my seat counts on
- *  top. Receipt and intent casts both precede the NEXT appended move; weapon strikes are Casts in this log too. */
-const my_next_move_slot = (s, seat, row) => {
-  return casts_this_turn_from_events({
-    base: row.casts_this_turn,
-    events: s.log,
-    turn_started: (event) => event.kind === 'TurnStarted' && !event.is_mob && Number(event.idx) === seat,
-    cast: (event) => event.kind === 'Cast' && !event.caster_is_mob && Number(event.caster_idx) === seat,
-  })
+/** The chain slot my NEXT action folds with (actions.move: `participant::casts_this_turn` at its execution),
+ *  read off the live fold: the snapshot row as base, the ordered post-view tail as the correction. Receipt and
+ *  intent casts both precede the NEXT appended action; weapon strikes are Casts in this log too. THE read every
+ *  seeded preview shares — the move wash's tackle contest, the §7 crit clock, the socket glow (#1224) — so a
+ *  preview and the roll it previews can never price different slots. A scalar by design: React surfaces
+ *  subscribe to it directly instead of to the journal it derives from. Null when there is no seat to price.
+ *  `ahead` counts actions of a PLANNED batch that exist in no journal yet (the bot's bank).
+ *  @param {any} s the fight store state @param {{ ahead?: number }} [opts] */
+export const my_action_slot = (s, { ahead = 0 } = {}) => {
+  const seat = Number(String(s?.my_key ?? '').slice(1))
+  const row = Number.isInteger(seat) ? s?.view?.escrow?.[seat] : null
+  return row ? next_action_slot({ base: row.casts_this_turn, events: s.log, seat, ahead }) : null
 }
+
+const my_next_move_slot = (s, seat, row) => next_action_slot({ base: row.casts_this_turn, events: s.log, seat })
 
 /** The presentation-truth blocked set for movement: board terrain (obstacles ∪ holes ∪ out-of-shape) plus every
  *  OTHER living presented body — the same truth the committed move charges, at the eye's fold. */
