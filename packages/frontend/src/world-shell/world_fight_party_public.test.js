@@ -22,11 +22,11 @@ const WORLD_ID = 'world-a'
 
 let roster = [LEADER, ALT]
 
-const [{ context }, read_party, courier, { use_dungeon }, party_actions, shim, receipt, { use_party }, world_fight] =
+const [{ context }, read_party, lobby, { use_dungeon }, party_actions, shim, receipt, { use_party }, world_fight] =
   await Promise.all([
     import('../game/store.js'),
     import('../chain/read_party'),
-    import('../courier/world.js'),
+    import('../p2p/lobby-room.js'),
     import('./dungeon_store.js'),
     import('./party_actions'),
     import('./dungeon_fight_shim.js'),
@@ -45,7 +45,7 @@ const spies = [
   })),
   spyOn(context.events, 'on').mockImplementation(() => context.events),
   spyOn(read_party, 'get_party').mockImplementation(async () => null),
-  spyOn(courier, 'sync_party_room').mockImplementation(() => {}),
+  spyOn(lobby, 'sync_party_room').mockImplementation(() => {}),
   spyOn(party_actions, 'create_party').mockImplementation(async (...args) => {
     create_calls.push(args)
     return { party_id: '0xnew-party', receipt: {} }

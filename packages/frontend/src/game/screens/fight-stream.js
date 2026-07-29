@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COURTESY CHANNEL (#334) — the transport seam for channel two (docs/FIGHT_PIPELINE.md). In a multi-peer
-// fight the ACTIVE player's client STREAMS its drafted turn (the move/cast batch, PRE-commit) through the courier;
+// fight the ACTIVE player's client STREAMS its drafted turn (the move/cast batch, PRE-commit) to its peers;
 // RECEIVERS feed each peer batch into the ONE fight door (`apply_peer_batch`), which sim-verifies it
 // through the LOCAL sim (peer_legality) and either PRE-PAINTS it as a prediction or DROPS + FLAGS it — an illegal
 // injected batch never reaches the eye, and raises ONE neutral toast. Legality is the CORE's single home now (the
 // old dungeon_turn AP/MP/range gates moved into peer_legality); this module is pure transport glue.
 //
-// CHAIN-AUTHORSHIP LAW (untouched): the stream is PREVIEW, NEVER authorship — courier paints, the chain authors. A
+// CHAIN-AUTHORSHIP LAW (untouched): the stream is PREVIEW, NEVER authorship — peers paint, the chain authors. A
 // courtesy batch enters the prediction overlay (source 'intent'), never committed truth; the canonical receipt/
 // journal retires it by claim. Loss of the courtesy channel costs LATENCY, never correctness.
 //
@@ -23,7 +23,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { STATUS_PLACEMENT } from '@aresrpg/fight/board_state'
 import { apply_peer_batch, drafted_batches, subscribe_flagged } from '@aresrpg/fight/txs'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { broadcast_fight_stream, subscribe_fight_stream } from '../../courier/world.js'
+import { broadcast_fight_stream, subscribe_fight_stream } from '../../p2p/lobby-room.js'
 import { push_event_toast } from '../core/toast.js'
 import i18n from '../../i18n'
 import { use_dungeon_turn } from './dungeon-turn.js'

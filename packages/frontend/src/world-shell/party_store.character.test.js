@@ -29,11 +29,11 @@ const party = {
 }
 
 reset_auth_mock({ address: '0xwallet' })
-const [{ context }, read_party, courier, core_toast, { use_dungeon }, party_actions, character_name_resolve] =
+const [{ context }, read_party, lobby, core_toast, { use_dungeon }, party_actions, character_name_resolve] =
   await Promise.all([
     import('../game/store.js'),
     import('../chain/read_party'),
-    import('../courier/world.js'),
+    import('../p2p/lobby-room.js'),
     import('../game/core/toast.js'),
     import('./dungeon_store.js'),
     import('./party_actions'),
@@ -48,7 +48,7 @@ const spies = [
     read_calls.push(character_id)
     return read_party_impl(character_id)
   }),
-  spyOn(courier, 'sync_party_room').mockImplementation((party_id) => synced.push(party_id)),
+  spyOn(lobby, 'sync_party_room').mockImplementation((party_id) => synced.push(party_id)),
   spyOn(core_toast, 'push_event_toast').mockImplementation(() => {}),
   spyOn(use_dungeon, 'getState').mockImplementation(() => ({ dungeon_id: null })),
   spyOn(use_dungeon, 'subscribe').mockImplementation(() => () => {}),

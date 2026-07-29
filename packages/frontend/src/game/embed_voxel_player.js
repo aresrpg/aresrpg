@@ -3,7 +3,7 @@
 // The LOCAL PLAYER — split from embed_voxel.js at the 600-LoC law. Everything about the player's own body and
 // its control: the engine shoulder camera + input (WASD/arrows, the mouse-or-keys law), the on-chain avatar
 // (+ hair, #20 recolor, senshi fallback), the veteran-title aura, the local nameplate, the TR-97 mount ride,
-// the TR-1 cinematic/creative-fly modes, the per-frame controller feed, the courier presence broadcast, and the
+// the TR-1 cinematic/creative-fly modes, the per-frame controller feed, the p2p presence broadcast, and the
 // walk follow-camera. The host owns the session/engine/board; this owns the man in it.
 //
 // D154: ONE input gate — a focused text field makes ALL game keys inert (text_focused below).
@@ -25,7 +25,7 @@ import { create_auto_run } from './auto_run.js'
 import { create_cursor_lock_toggle } from './embed_voxel_cursor_lock.js'
 import { resolve_cosmetic_aura } from './cosmetic_aura.js'
 import { tick_environment_audio, dispose_environment_audio } from './core/audio/environment_audio.js'
-import { broadcast_position } from '../courier/world.js'
+import { broadcast_position, set_local_cosmetic } from '../p2p/lobby-room.js'
 import { create_local_nameplate } from './local_nameplate.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from './screens/character-glb.js'
 import { push_event_toast } from './core/toast.js'
@@ -243,8 +243,12 @@ export function create_player({
   // in multiplayer): press X to TOGGLE riding. On mount-on we resolve the character's ride (dev `?mount=<glb>`
   // trailer override, else the equipped `.mount` slot post-republish, else — #594 — the active PET: the pet
   // is BOTH a walking companion AND a mountable ride), spawn the GLB under the body, ride it (×1.5 roam via
-  // the speed_scale knob below). Roam only — a fight ignores the key. The rig-load discipline lives in
-  // mount_rig.js; this local ride state is never propagated as a cosmetic fast path.
+  // the speed_scale knob below), and DECLARE the ride so peers render it. Roam only — a fight ignores the
+  // key. The rig-load discipline lives in mount_rig.js.
+  //
+  // `mounted` is not decoration on the wire: it is the speed headroom every peer grants me in their own
+  // plausibility check (MOUNTED_SPEED_HEADROOM), which is why a rider must declare it or get dropped as a
+  // speed-hacker. Worn cosmetics stay off the wire — peers resolve those from /v1 themselves.
   let riding = false
   /** @type {ReturnType<typeof create_mount_rig> | null} */ let mount_ctl = null
   /** @type {'dev' | 'equip' | 'pet' | 'dragon' | null} */ let mount_source = null // what riding=true IS right now
@@ -266,6 +270,7 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = source
+    set_local_cosmetic({ mounted: true }) // earns my ×1.5 its plausibility headroom on every peer
     push_event_toast({
       state: 'success',
       title: i18n.t(mobile_input.mobile() ? 'world.mount_on_touch' : 'world.mount_on'),
@@ -275,6 +280,7 @@ export function create_player({
     if (!riding) return
     riding = false
     mount_source = null
+    set_local_cosmetic({ mounted: false })
     mount_ctl?.dispose()
     mount_ctl = null
     push_event_toast({ state: 'info', title: i18n.t('world.mount_off') })
@@ -299,11 +305,13 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = 'dragon'
+    set_local_cosmetic({ mounted: true }) // the flight rides the same declared headroom
   }
   const unmount_dragon = () => {
     if (!riding) return
     riding = false
     mount_source = null
+    set_local_cosmetic({ mounted: false })
     mount_ctl?.dispose()
     mount_ctl = null
   }
@@ -588,7 +596,7 @@ export function create_player({
         facing_yaw: t.facing_yaw,
         fps: Math.round(engine.get_stats?.().fps ?? 0),
       })
-      // D206: announce our cell to the courier on ACTUAL change only; its edge coalesces to the hard rate cap.
+      // D206: announce our cell to the room on ACTUAL change only; the heartbeat re-emits it between changes.
       // D217: the payload carries the WORLD height too — a VERTICAL cell change (hills/jumps/falls) also
       // broadcasts, so peers track y exactly instead of inferring ground.
       if (character?.id) {
@@ -612,7 +620,9 @@ export function create_player({
           last_bcast_z = bz
           last_bcast_y = by
           last_bcast_yaw = t.facing_yaw
-          broadcast_position(world_id, character.id, bx, bz, Math.round(t.facing_yaw * 100) / 100)
+          // D217: the payload carries the WORLD height too — `by` is the exact value the vertical branch above
+          // triggers on, so peers track y instead of ground-scanning for it.
+          broadcast_position(character.id, bx, bz, by, Math.round(t.facing_yaw * 100) / 100)
         }
       }
     }

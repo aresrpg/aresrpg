@@ -30,7 +30,9 @@ import { open_player_menu } from './player_menu_store.js'
 /** @returns {import('react').ReactElement | null} */
 export function OnlinePlayers() {
   const { t } = useTranslation()
-  use_presence((state) => state.online)
+  // Re-render on roster CHURN, not on map identity: `roster_seq` is the fold's own change counter, bumped
+  // exactly when someone joins, leaves or resolves — a scalar, so a position tick never repaints this panel.
+  use_presence((state) => state.roster_seq)
   const address = use_auth((s) => s.address)
   const [expanded, set_expanded] = useState(false)
   const [input, set_input] = useState('')
@@ -59,7 +61,8 @@ export function OnlinePlayers() {
     }
   }, [address])
 
-  // ONLINE = present in the server-observed world stream. name = friend_display_name's ONE derivation, always
+  // ONLINE = present in my world's lobby room — joining IS the announcement, so membership is the whole
+  // signal and there is no registry to disagree with it. name = friend_display_name's ONE derivation, always
   // a truthy display string — never empty, never a raw address needing a per-row fallback below.
   const decorated = rows.map((r) => {
     const peer = presence_character_by_address(r.address)

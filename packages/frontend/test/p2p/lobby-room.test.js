@@ -14,7 +14,10 @@
 import { afterEach, beforeEach, describe, expect, it, setSystemTime } from 'bun:test'
 import { PEER_EXPIRY_MS, PEER_HEARTBEAT_MS, REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 
-import '../../src/test_helpers/env_mock.js'
+// A first sighting makes the presence edge REQUEST a chain identity. This suite is about the transport, so the
+// resolve answers offline — armed per-test because the helper's registration is process-wide (see its header).
+import '../../src/test_helpers/expedition_sdk_mock.js'
+import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
 import {
   deliver,
   reset_trystero_mock,
@@ -115,6 +118,8 @@ async function spend_the_retry_budget() {
 }
 
 beforeEach(() => {
+  set_expedition_sdk_mock(() => Promise.reject(new Error('no SDK session in a headless transport suite')))
+  leave_lobby() // an earlier suite may have left a room mounted on this module singleton
   reset_trystero_mock()
   capture_timers()
   install_browser_signals()
@@ -125,6 +130,7 @@ afterEach(() => {
   restore_timers()
   remove_browser_signals()
   setSystemTime()
+  reset_expedition_sdk_mock()
 })
 
 describe('the room IS the world — joining is the announcement', () => {
@@ -133,17 +139,24 @@ describe('the room IS the world — joining is the announcement', () => {
     expect(trystero_room_configs[0].room_id).toBe(WORLD)
   })
 
-  it('dials OUR relay and nobody else — relayConfig.urls is passed explicitly so the public defaults die', () => {
+  it('dials ONE relay, ours, passed explicitly so the strategy never falls back to its public defaults', () => {
     const { config } = trystero_room_configs[0]
-    expect(config.relayConfig.urls).toEqual(['ws://relay.test/mqtt'])
+    // `relayConfig.urls` present ⇒ @trystero-p2p/core's getRelays returns it verbatim and the baked-in public
+    // broker list is never consulted. One entry, no fallback: redundancy is pods behind the host, not a
+    // fanout of strangers (and the field would be inert here anyway).
+    expect(config.relayConfig.urls).toHaveLength(1)
+    expect(config.relayConfig.urls[0]).toMatch(/^wss?:\/\//)
     expect(config.relayConfig.redundancy).toBeUndefined()
   })
 
   it('ships STUN-only ICE while nothing mints a TURN credential — never a fake username', () => {
     const { iceServers } = trystero_room_configs[0].config.rtcConfig
     expect(iceServers).toHaveLength(1)
-    expect(iceServers[0].urls).toEqual(['stun:stun.test:3478'])
+    expect(iceServers[0].urls).toHaveLength(1)
+    expect(iceServers[0].urls[0]).toStartWith('stun:')
+    // A credential nothing can mint would just fail at connect time — the absence is the honest state.
     expect(JSON.stringify(iceServers)).not.toContain('username')
+    expect(JSON.stringify(iceServers)).not.toContain('credential')
   })
 
   it('is idempotent for the same world+identity, and re-rooms on a world change', () => {

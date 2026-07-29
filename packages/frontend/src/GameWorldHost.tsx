@@ -19,7 +19,7 @@ import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
 import { use_toast } from './toast'
 import i18n from './i18n'
-import { destroy_scene_and_leave_courier } from './world-shell/scene_lifecycle.js'
+import { destroy_scene_and_leave_lobby } from './world-shell/scene_lifecycle.js'
 
 // The PERSISTENT, always-on game-world canvas host (drift-#4 boot-routing law). It is mounted once,
 // BEHIND the companion's routed meta pages, and it never mounts/unmounts on navigation. On the FIRST
@@ -370,7 +370,7 @@ export function GameWorldHost(): ReactElement {
       scene.current = null
       mounted_key.current = null
       if (released_scene) {
-        destroy_scene_and_leave_courier(
+        destroy_scene_and_leave_lobby(
           released_scene,
           () => !scene.current,
           (error) => report_error(error, { area: 'game-world', action: 'leave_unmounted_lobby' })

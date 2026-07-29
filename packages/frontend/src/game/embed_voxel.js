@@ -28,7 +28,7 @@ import { wire_join_request_effect } from '../world-shell/join_request_effect.js'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { read_world_biome } from '../world-shell/world_biome.js'
 import { resolve_engine_recipe } from '../chain/deployment'
-import { join_courier } from '../courier/world.js'
+import { join_lobby } from '../p2p/lobby-room.js'
 import { get_saved_quality } from './screens/hud/world/quality_pref.js'
 import { apply_saved_engine_flags, resolve_hack_mode } from './screens/hud/world/engine_flags_pref.js'
 import {
@@ -326,9 +326,9 @@ function create_session(
     // D183+D184+D201 SPECTATE BACKDROP: NO controller, NO game input — the hands-on iso camera lives in
     // embed_voxel_spectate.js (pan clamped in-zone, yaw, pitch LOCKED; the APP deliberately drives it —
     // one writer: the first set trips the engine's D185 standdown, the designed interplay).
-    // D206 (the spectate view must show other players too): the shared courier link was opened before this
-    // session was created. Render every delivered presence entry as a live avatar; chat reaches the D207
-    // read-only overlay through the same stream.
+    // D206 (the spectate view must show other players too): the lobby room was joined before this session was
+    // created. Render every delivered presence entry as a live avatar; chat reaches the D207 read-only
+    // overlay through the same room.
     const remotes = create_remote_players(engine, canvas) // D232 — plates project through THIS canvas's rect
     // INTERACTION GATE: the backdrop is DISPLAY-ONLY until the visitor chose "watch the
     // live world" (use_spectate_gate.chosen) OR is logged in (use_auth.address — the S-57 confirmed-unbound
@@ -526,8 +526,8 @@ function create_session(
     })
   }
 
-  // D206 (session half): the frame loop below publishes cell changes through the courier. Party reads and the
-  // courier's party-chat scope arm once here; remote players render from the same presence fold spectate uses.
+  // D206 (session half): the frame loop below broadcasts cell changes to the room. Party reads and the
+  // party-chat scope arm once here; remote players render from the same presence fold spectate uses.
   if (character?.id) {
     wire_party_reads()
     // MULTICHAR group loop (flagship system): the pure @aresrpg/party group_loop reducer + its edges —
@@ -1130,12 +1130,10 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
     character_id: incoming_character_id,
     follow: !!follow,
   }
-  if (!follow)
-    join_courier(
-      incoming_world_id,
-      mode === 'session' ? incoming_character_id : null,
-      use_auth.getState().address ?? null
-    )
+  // The room IS this world's presence. A SPECTATE mount joins with a null id — the documented silent listener:
+  // it receives every peer's pose and chat and broadcasts nothing, and re-identifies in place on login. A
+  // follow scene observes another character and must never replace the resident player's lobby identity.
+  if (!follow) join_lobby(incoming_world_id, mode === 'session' ? incoming_character_id : null)
   if (session?.dispose_timer) {
     clearTimeout(session.dispose_timer)
     session.dispose_timer = null
