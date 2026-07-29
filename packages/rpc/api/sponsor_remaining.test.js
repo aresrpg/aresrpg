@@ -23,9 +23,11 @@ const ADDR = '0x00000000000000000000000000000000000000000000000000000000000005e1
 const UTC_DAY = new Date().toISOString().slice(0, 10)
 const KEY = `sponsor:spent:${UTC_DAY}:${ADDR.toLowerCase()}`
 
-// Mimic the sponsor's grant EXACTLY: INCRBY the per-day per-addr counter (api/sponsor.mjs
-// addr_daily_record). Using the sponsor's own key scheme is the point — a drift here would
-// mean the client shows a remaining detached from what the sponsor enforces.
+// Mimic the sponsor's grant EXACTLY: INCRBY the per-day per-addr counter (api/sponsor_state.mjs
+// addr_daily_hold books it at reserve, settle_daily_hold corrects it to the executed charge).
+// Using the sponsor's own key scheme is the point — a drift here would mean the client shows a
+// remaining detached from what the sponsor enforces. An in-flight reservation counts against that
+// remaining on purpose: a hold IS a commitment to spend, and it is released if it never executes.
 const grant = (mist) => redis.send('INCRBY', [KEY, String(mist)])
 
 // The cap the handler reads from env (SPONSOR_ADDR_DAILY_CAP_MIST); default 1 SUI. We assert

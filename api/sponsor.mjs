@@ -17,10 +17,11 @@ import {
   PER_TX_BUDGET_CEILING_MIST,
   RL_WINDOW_MS,
   SELF_PAY_MIST,
-  addr_daily_record,
-  addr_daily_would_exceed,
+  addr_daily_hold,
   addr_rate_limited,
   rate_limited,
+  release_daily_hold,
+  settle_daily_hold,
   stash_reservation,
   take_reservation,
   utc_date,
@@ -28,13 +29,14 @@ import {
 export {
   ADDR_DAILY_CAP_MIST,
   PER_TX_BUDGET_CEILING_MIST,
-  addr_daily_record,
-  addr_daily_would_exceed,
+  addr_daily_hold,
+  addr_daily_spent,
   addr_rate_limited,
   addr_rl_key,
   addr_spent_key,
   ip_rl_key,
   rate_limited,
+  release_daily_hold,
   stash_reservation,
 } from './sponsor_state.mjs'
 
@@ -530,7 +532,12 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     stats.refused.ceiling += 1
     throw error
   }
-  if (await addr_daily_would_exceed(sender, real_charge_mist(gas_used))) {
+  // THE DAILY CAP, BOOKED — not merely consulted. The budget about to be reserved is charged against the day
+  // counter HERE, atomically, so a pipelined burst of reserves cannot each read the same pre-burst total and all
+  // pass (see sponsor_state.mjs). The hold rides in the reservation and is settled to the REAL charge at execute;
+  // every path that ends the reservation early releases it, and an abandoned one is released at its expiry.
+  const daily_hold = await addr_daily_hold(sender, budget)
+  if (daily_hold == null) {
     stats.refused.daily += 1
     throw sponsor_refusal(
       DAILY_CAP_REASON,
@@ -541,18 +548,22 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   try {
     reservation = await station_reserve({ gas_budget: Number(budget), reserve_duration_secs: RESERVE_DURATION_SECS })
   } catch (error) {
+    await release_daily_hold(daily_hold, sender) // no reservation exists ⇒ nothing is owed against the cap
     stats.refused.station += 1
     throw error
   }
   const { sponsor_address, reservation_id, gas_coins } = reservation
-  if (normalizeSuiAddress(sender) === normalizeSuiAddress(sponsor_address))
+  if (normalizeSuiAddress(sender) === normalizeSuiAddress(sponsor_address)) {
+    await release_daily_hold(daily_hold, sender)
     throw new Error('sender must differ from @server (ctx.sponsor() would be None)')
+  }
   await stash_reservation(reservation_id, {
     sender,
     sponsor_address,
     gas_coins,
     budget: String(budget),
     kind: txKindBytes,
+    daily_hold,
   })
   stats.reserved += 1
   stats.addresses.add(sender)
@@ -573,24 +584,30 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
     throw new Error(
       'sponsor-reservation-unknown: no such reservation (expired, already used, or foreign) — reserve again'
     )
+  // The reservation is consumed, so its cap hold is this call's to settle: released whole on every path that
+  // charges nothing, corrected to the executed charge on the one path that does.
   try {
     assert_tx_matches_reservation(txBytes, reservation)
   } catch (error) {
+    await release_daily_hold(reservation.daily_hold, reservation.sender)
     stats.refused.mismatch += 1
     throw error
   }
-  // Exactly one execute call: effects mean gas burned, so this path never auto-retries.
+  // Exactly one execute call: effects mean gas burned, so this path never auto-retries. A THROW here (station
+  // unreachable / HTTP error) is the one shape that cannot prove non-execution, so the hold is deliberately NOT
+  // released: it lapses at its own expiry, and until then the player's cap counts a spend that may be real.
   const { effects, error } = await station_execute({
     reservation_id: reservationId,
     tx_bytes: txBytes,
     user_sig: userSig,
   })
   if (!effects) {
+    await release_daily_hold(reservation.daily_hold, reservation.sender)
     stats.refused.execreject += 1
     throw new Error(`sponsor-exec-rejected: ${error ?? 'no effects'} — pre-execution rejection, no gas charged`)
   }
   const charge = real_charge_mist(effects.gasUsed)
-  await addr_daily_record(reservation.sender, charge)
+  await settle_daily_hold(reservation.daily_hold, reservation.sender, charge)
   stats.sponsored += 1
   stats.spent += charge
   stats.charged_total += charge

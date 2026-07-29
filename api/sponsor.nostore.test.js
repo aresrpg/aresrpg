@@ -32,8 +32,10 @@ describe('NO store configured (Vercel/Node class) ⇒ in-memory per-instance win
   })
   test('per-address DAILY cap: the in-memory shadow is the primary counter and still enforces', async () => {
     const addr = '0xNoStoreDaily'
-    expect(await S.addr_daily_would_exceed(addr, 100n)).toBe(false) // fresh address, tiny charge → allowed
-    await S.addr_daily_record(addr, S.ADDR_DAILY_CAP_MIST) // fill the whole daily budget (in-memory)
-    expect(await S.addr_daily_would_exceed(addr, 1n)).toBe(true) // 1 mist over remaining → refuse
+    const tiny = await S.addr_daily_hold(addr, 100n) // fresh address, tiny charge → allowed
+    expect(tiny).not.toBeNull()
+    await S.release_daily_hold(tiny, addr) // …and giving it back leaves the whole budget available
+    expect(await S.addr_daily_hold(addr, S.ADDR_DAILY_CAP_MIST)).not.toBeNull() // fill it (in-memory)
+    expect(await S.addr_daily_hold(addr, 1n)).toBeNull() // 1 mist over remaining → refuse
   })
 })

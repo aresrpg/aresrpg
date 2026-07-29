@@ -104,10 +104,8 @@ describe('F1 — per-player daily cap charges REAL gas (drain closed: ~3 bombs f
     const addr = '0xBomber'
     const charge = S.derive_budget_mist({ computationCost: '2000000', storageCost: '180000000' }) // 0.273 SUI REAL
     let n = 0
-    while (!(await S.addr_daily_would_exceed(addr, charge))) {
-      await S.addr_daily_record(addr, charge)
-      if (++n > 50) break // safety — must terminate FAST (the old flat-EST bug needed ~500 to trip)
-    }
+    // Each granted hold BOOKS its charge (the reserve-time accounting), so the loop is the cap counting itself.
+    while (await S.addr_daily_hold(addr, charge)) if (++n > 50) break // safety — must terminate FAST
     // 0.273 × 3 = 0.819 < 1 SUI ; the 4th would exceed → the cap trips after exactly 3 sponsored bombs (was 500).
     expect(n).toBe(Number(S.ADDR_DAILY_CAP_MIST / charge)) // floor(cap/charge) bombs fit before the cap trips
     expect(n).toBe(3)
@@ -122,9 +120,10 @@ describe('F1 — per-player daily cap charges REAL gas (drain closed: ~3 bombs f
 describe('F1 — per-address cap refuses when cost > REMAINING daily budget', () => {
   test('cost within remaining passes; cost over remaining refuses', async () => {
     const addr = '0xNearCap'
-    await S.addr_daily_record(addr, S.ADDR_DAILY_CAP_MIST - 100_000_000n) // spend down to 0.1 SUI remaining
-    expect(await S.addr_daily_would_exceed(addr, 200_000_000n)).toBe(true) // 0.2 > 0.1 remaining → refuse
-    expect(await S.addr_daily_would_exceed(addr, 50_000_000n)).toBe(false) // 0.05 ≤ 0.1 remaining → allowed
+    expect(await S.addr_daily_hold(addr, S.ADDR_DAILY_CAP_MIST - 100_000_000n)).not.toBeNull() // 0.1 SUI left
+    expect(await S.addr_daily_hold(addr, 200_000_000n)).toBeNull() // 0.2 > 0.1 remaining → refuse
+    // …and the refused hold booked NOTHING: a 0.05 that fits the same remaining budget still passes after it.
+    expect(await S.addr_daily_hold(addr, 50_000_000n)).not.toBeNull()
   })
 })
 

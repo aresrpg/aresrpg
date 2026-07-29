@@ -144,6 +144,21 @@ describe('EVERY refusal arm returns BEFORE the station — nothing reserved, not
     })
 })
 
+// The MONEY refusal shares that machine channel: a spent-out day is not a simulation verdict, but the client
+// must branch on it (never silently self-pay past the free promise) without matching localized copy.
+describe('the MONEY refusals carry machine reasons on the wire, not just English', () => {
+  test('a spent-out day → reason "daily-cap", station NEVER called', async () => {
+    const capped = `0x${'c9'.repeat(32)}`
+    next_simulation = clean
+    await S.addr_daily_hold(capped, S.ADDR_DAILY_CAP_MIST) // the whole free budget, already booked
+    const { value, error } = await reserve({ sender: capped })
+    expect(value).toBeNull()
+    expect(error.sponsor_reason).toBe(S.DAILY_CAP_REASON)
+    expect(S.sponsor_error_response(error).reason).toBe('daily-cap')
+    expect(station_calls).toEqual([])
+  })
+})
+
 // The gas half of the same gate: a simulation that IS clean but prices to nothing / to too much must refuse on
 // the same side of the station. These arms were entirely uncovered — the review's finding 4.
 describe('the GAS arms refuse before the station too', () => {

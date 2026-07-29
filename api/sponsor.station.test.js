@@ -234,11 +234,11 @@ describe('executeSponsored — once-only, exact-charge booking from the returned
     expect(call.url).toBe('http://rpc-gas-pool.test:9527/v1/execute_tx')
     expect(call.init.headers.authorization).toBe('Bearer test-bearer')
     expect(JSON.parse(call.init.body)).toEqual({ reservation_id: 101, tx_bytes: txBytes, user_sig: 'usersig' })
-    // booked EXACTLY real_charge_mist(gasUsed) = 3M — this is the ledger source of truth (no reconcile)
+    // the day's ledger settles to EXACTLY real_charge_mist(gasUsed) = 3M (this reservation carried no hold, so
+    // the settle books the whole executed charge — the pre-hold shape a rolling deploy can still hand us)
     const charge = S.real_charge_mist(eff.gasUsed)
     expect(charge).toBe(3_000_000n)
-    expect(await S.addr_daily_would_exceed(sender, S.ADDR_DAILY_CAP_MIST - charge)).toBe(false) // exactly fits
-    expect(await S.addr_daily_would_exceed(sender, S.ADDR_DAILY_CAP_MIST - charge + 1n)).toBe(true) // 1 mist over
+    expect(await S.addr_daily_spent(sender)).toBe(charge)
   })
 
   test('a MISMATCHED tx_bytes is refused and the station is NEVER called (no gas burned)', async () => {
@@ -274,7 +274,7 @@ describe('executeSponsored — once-only, exact-charge booking from the returned
       /sponsor-exec-rejected/
     )
     // nothing booked: the whole cap is still available
-    expect(await S.addr_daily_would_exceed(sender, S.ADDR_DAILY_CAP_MIST)).toBe(false)
+    expect(await S.addr_daily_spent(sender)).toBe(0n)
   })
 })
 

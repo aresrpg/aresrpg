@@ -37,12 +37,14 @@ describe('Redis unreachable ⇒ every gate FAILS CLOSED (refuse, never fail-open
     T
   )
   test(
-    'per-address DAILY cap → Redis down falls to the in-memory shadow and STILL enforces (never fail-open)',
+    'per-address DAILY cap → Redis down falls to the IN-PROCESS shadow, which still enforces (never fail-open)',
     async () => {
       const addr = '0xfailclosed'
-      // record fills the in-memory shadow (the Redis write is best-effort and fails); the cap must still bite.
-      await S.addr_daily_record(addr, S.ADDR_DAILY_CAP_MIST)
-      expect(await S.addr_daily_would_exceed(addr, 1n)).toBe(true) // 1 mist over a full cap → refuse, not fail-open
+      // The hold fills the in-process shadow (the Redis write is best-effort and fails); the cap must still bite.
+      // Scope note: this proves the SHADOW enforces within one process — it cannot see a cross-process or
+      // post-restart counter, which the shared store owns.
+      expect(await S.addr_daily_hold(addr, S.ADDR_DAILY_CAP_MIST)).not.toBeNull()
+      expect(await S.addr_daily_hold(addr, 1n)).toBeNull() // 1 mist over a full cap → refuse, not fail-open
     },
     T
   )

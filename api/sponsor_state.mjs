@@ -6,7 +6,15 @@ const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 5)
 export const ADDR_RL_MAX = Number(process.env.SPONSOR_ADDR_MAX || 60)
 export const SELF_PAY_MIST = BigInt(process.env.SPONSOR_SELF_PAY_MIST || 200_000_000)
 export const ADDR_DAILY_CAP_MIST = BigInt(process.env.SPONSOR_ADDR_DAILY_CAP_MIST || 1_000_000_000)
+// SPONSOR_GAS_BUDGET is the RULING home for the per-tx ceiling — the deployed chart sets it (0.4 SUI at the
+// time of writing); the literal below is only the unconfigured-process default, never the deployed number.
 export const PER_TX_BUDGET_CEILING_MIST = BigInt(process.env.SPONSOR_GAS_BUDGET || 300_000_000)
+// How long a reservation — and the daily-cap hold that rides with it — stays alive: the station's own reserve
+// duration plus slack for the client's build+sign round trip. ONE home for that lifetime, overridable whole so
+// the expiry paths are exercisable without waiting a minute and a half.
+const RESERVATION_TTL_MS = Number(
+  process.env.SPONSOR_RESERVE_TTL_MS || Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60) * 1000 + 30_000
+)
 const rl_bucket = () => Math.floor(Date.now() / RL_WINDOW_MS)
 export const utc_date = () => new Date().toISOString().slice(0, 10)
 export const ip_rl_key = (ip) => `sponsor:rl:ip:${rl_bucket()}:${ip}`
@@ -85,23 +93,79 @@ function roll_daily_memory() {
   }
 }
 export const addr_spent_key = (address) => `sponsor:spent:${utc_date()}:${address.toLowerCase()}`
-export async function addr_daily_would_exceed(address, charge) {
-  const result = await redis_op((redis) => redis.send('GET', [addr_spent_key(address)]))
-  if (result.ok) return BigInt(result.value || 0) + charge > ADDR_DAILY_CAP_MIST
+
+// ── THE DAILY CAP — booked at RESERVE, settled at EXECUTE ────────────────────────────────────────────────
+// Reading the counter at reserve and writing it at execute leaves a window in which a reservation exists but is
+// not booked, and a pipelined burst fits N of them inside that window: every request reads the same pre-burst
+// total, every one passes, and the cap holds against a human but not against a script. So the derived budget is
+// BOOKED here, book-then-compare — the INCRBY's own return value is what the cap is compared against, never a
+// separate read — and settled to the real charge at execute. Cap VALUES are untouched; only when they are
+// counted moved.
+//
+// A reservation that is never executed would otherwise keep its budget booked all day, so every hold carries the
+// reservation's own lifetime and is released lazily on the next hold — the one door that cares. In-process by
+// design: a restart forfeits pending holds until the UTC rollover (fail-closed, bounded by one transaction's
+// budget) rather than inventing a second durable ledger for a 90-second fact.
+const holds = new Map()
+let last_hold_id = 0
+
+/** Move a day counter by `delta` (negative releases) in BOTH stores; returns the authoritative total. */
+async function addr_daily_add(address, delta) {
   roll_daily_memory()
-  return (daily_memory.get(address) || 0n) + charge > ADDR_DAILY_CAP_MIST
-}
-export async function addr_daily_record(address, charge) {
-  roll_daily_memory()
-  daily_memory.set(address, (daily_memory.get(address) || 0n) + charge)
+  const memory_key = String(address).toLowerCase()
+  const memory_total = (daily_memory.get(memory_key) || 0n) + delta
+  daily_memory.set(memory_key, memory_total)
   const key = addr_spent_key(address)
-  await redis_op(async (redis) => {
-    await redis.send('INCRBY', [key, String(charge)])
+  const result = await redis_op(async (redis) => {
+    const total = BigInt(await redis.send('INCRBY', [key, String(delta)]))
     await redis.send('EXPIREAT', [key, String(next_utc_midnight_s())])
+    return total
   })
+  return result.ok ? result.value : memory_total
 }
 
-const RESERVATION_TTL_MS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60) * 1000 + 30_000
+async function release_expired_holds() {
+  const now = Date.now()
+  for (const [id, hold] of [...holds]) if (hold.expiry <= now) await settle_daily_hold(id, hold.address, 0n)
+}
+
+/** What this address has booked against today's cap (holds included — a hold IS a commitment to spend). */
+export async function addr_daily_spent(address) {
+  const result = await redis_op((redis) => redis.send('GET', [addr_spent_key(address)]))
+  if (result.ok) return BigInt(result.value || 0)
+  roll_daily_memory()
+  return daily_memory.get(String(address).toLowerCase()) || 0n
+}
+
+/** Book `amount` against today's cap. Returns a hold id, or null when it would cross the cap (nothing booked). */
+export async function addr_daily_hold(address, amount) {
+  await release_expired_holds()
+  const day = utc_date()
+  const total = await addr_daily_add(address, amount)
+  if (total > ADDR_DAILY_CAP_MIST) {
+    await addr_daily_add(address, -amount)
+    return null
+  }
+  last_hold_id += 1
+  holds.set(last_hold_id, { address, amount, day, expiry: Date.now() + RESERVATION_TTL_MS })
+  return last_hold_id
+}
+
+/**
+ * Reconcile a hold to what the chain actually charged (0 releases it outright). The correction is
+ * `charge - booked`, and `booked` is 0 for a hold this process no longer has — swept at expiry, lost to a
+ * restart, or belonging to a day whose counter has already rolled away (Redis EXPIREAT / roll_daily_memory).
+ * Booking the full charge in that case is the safe direction: the ledger may over-count, never lose a spend.
+ */
+export async function settle_daily_hold(id, address, charge) {
+  const hold = holds.get(id)
+  holds.delete(id)
+  const booked = hold != null && hold.day === utc_date() ? hold.amount : 0n
+  if (charge !== booked) await addr_daily_add(address, charge - booked)
+}
+
+export const release_daily_hold = (id, address) => settle_daily_hold(id, address, 0n)
+
 const reservation_memory = new Map()
 const reservation_key = (id) => `sponsor:resv:${id}`
 export async function stash_reservation(reservation_id, value) {
@@ -120,9 +184,11 @@ export async function take_reservation(reservation_id) {
   if (!raw) {
     const id = String(reservation_id)
     const entry = reservation_memory.get(id)
-    if (entry?.expiry > Date.now()) {
-      raw = entry.value
+    // An EXPIRED stash is as unknown as a missing one — stated, not inferred from `undefined > number`. The
+    // entry goes either way: taken once, or dropped because its window closed.
+    if (entry != null) {
       reservation_memory.delete(id)
+      if (entry.expiry > Date.now()) raw = entry.value
     }
   }
   if (!raw) return null
