@@ -23,6 +23,7 @@
     "packages/frontend/src/game/screens/hud/seed-effect-line.js": 1
   },
   "sim-protocol-grid-stride": {},
+  "sim-protocol-progress-scale": {},
   "sim-protocol-signed-value-bias": {
     "packages/fight/src/fight_status_snapshot.js": 1
   },

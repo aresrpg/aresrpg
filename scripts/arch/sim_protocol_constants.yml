@@ -159,6 +159,19 @@ rules:
       - pattern: const CELL_STRIDE = 20
       - pattern: 'grid_width: 20'
 
+  - id: sim-protocol-progress-scale
+    languages: [js, ts]
+    severity: ERROR
+    paths:
+      include: ['packages/frontend/src/**']
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test_helpers/**']
+    message: >-
+      World difficulty progress uses @aresrpg/sim/zone_derive PROGRESS_SCALE. Import the canonical
+      fixed-point unit; do not re-declare 1000 in a client-side twin (#1192).
+    pattern-either:
+      - pattern: const PROGRESS_SCALE = 1000
+      - pattern: const PROGRESS_SCALE = 1_000
+
   - id: sim-protocol-signed-value-bias
     languages: [js, ts]
     severity: ERROR

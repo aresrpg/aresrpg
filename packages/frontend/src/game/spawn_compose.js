@@ -12,6 +12,7 @@
 // Pure module on purpose (only the sim import — no i18n/DOM) so bun test loads it headless.
 
 import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
+import { PROGRESS_SCALE } from '@aresrpg/sim/zone_derive'
 
 import { is_archi_tier } from './data/mobs.js'
 
@@ -35,7 +36,6 @@ const MASK32 = 0xffff_ffffn // prng.move `rng_seed` keeps only the low 32 bits o
  * @returns {{ members: Array<{ level:number, archi:boolean }>, state: number }} `state` = the advanced prng
  *   state after the last member (uint32) — the cross-language anchor the vector test pins.
  */
-const PROGRESS_SCALE = 1000 // mob.move PROGRESS_SCALE — `progress` ∈ [0, 1000]
 const BAND_WINDOW_BP = 2500 // mob.move BAND_WINDOW_BP — the drawn window is a quarter of the authored band
 
 /**

@@ -473,7 +473,7 @@ const p_grow_cluster = (state, ax, az, cap, min_x, max_x, min_z, max_z) => {
 
 // ── §4 distance-difficulty pipeline (integer ports of world_math.move — the derivation INPUT filters) ──────────
 
-const PROGRESS_SCALE = 1000
+export const PROGRESS_SCALE = 1000
 const DIST_EDGE = 5000
 const DIST_A1 = 250
 const DIST_A2 = 1000
