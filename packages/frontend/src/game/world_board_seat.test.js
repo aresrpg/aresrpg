@@ -81,10 +81,13 @@ const drive = (/** @type {(x:number,y:number,z:number)=>number} */ sample) =>
     half_z: HALF,
     step: STEP,
     // fast, deterministic test cadence — poll tight, quiesce after 2 stable polls, generous ceiling so a
-    // fully-revealing footprint always settles (the determinism we assert lives in the SETTLED value).
+    // fully-revealing footprint always settles (the determinism we assert lives in the SETTLED value). The
+    // stream advances from scan count, not wall time, so a virtual wait preserves every reveal-order tooth
+    // without putting Bun's 5 s test budget in a race with a same-sized resolver deadline under machine load.
     settle_ms: 5000,
     poll_ms: 1,
     stable_polls: 2,
+    wait_for_poll: () => Promise.resolve(),
   })
 
 describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('world_seat_from_surfaces — the seat statistic is order-independent (a SET, not a sequence)', () => {

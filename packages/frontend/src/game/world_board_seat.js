@@ -105,6 +105,7 @@ function nearest_streamable_footprint(sample, cx, cz, half_x, half_z, step) {
  * @param {number} [p.settle_ms] bounded settle-wait (test override)
  * @param {number} [p.poll_ms] poll cadence (test override)
  * @param {number} [p.stable_polls] quiesce run length (test override)
+ * @param {(ms: number) => Promise<void>} [p.wait_for_poll] poll scheduler (test override)
  * @returns {Promise<{ x: number, y: number, z: number }>}
  */
 export async function resolve_world_board_origin({
@@ -118,6 +119,7 @@ export async function resolve_world_board_origin({
   settle_ms = STREAM_SETTLE_MS,
   poll_ms = POLL_MS,
   stable_polls = STABLE_POLLS,
+  wait_for_poll = sleep,
 }) {
   // ── ROOT CLAMP: a world fight ALWAYS happens within engage range of the player, so the board seats where the
   // player STANDS. Trust the chain anchor only while it is plausibly the engaged group (within MAX_ANCHOR_DRIFT →
@@ -152,7 +154,7 @@ export async function resolve_world_board_origin({
     }
     prev_count = surfaces.length
     if (now() >= deadline) break
-    await sleep(poll_ms)
+    await wait_for_poll(poll_ms)
   }
   const settled = stable >= stable_polls
   let seat = world_seat_from_surfaces(surfaces) // p90 over the SETTLED full sample — deterministic across boots
