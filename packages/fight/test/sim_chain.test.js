@@ -35,6 +35,7 @@ import { base_budget, base_from_view } from '../src/fold.js'
 import { apply_action, seat_resolver } from '../src/inputs.js'
 import { decode_fight_batch as normalize_events } from '../src/core_inbox.js'
 import { encode } from '../src/los.js'
+import { WEAPON_ATTACK_ID } from '../src/weapon.js'
 import {
   abandon_fight,
   arena_from_board,
@@ -436,8 +437,16 @@ describe('loudness — the mock never drops a fact', () => {
     expect(() => encode_sim_step(step({ post_state: grown }))).toThrow(/roster changed mid-step/)
   })
 
-  test('a staged WEAPON strike throws — the sim reducer has no weapon command', () => {
-    expect(() => commands_from_staged([{ kind: 2, target: 40 }], 'sim_c1')).toThrow(/no sim command/)
+  test('a staged WEAPON strike becomes the seat’s shared-derived weapon cast', () => {
+    expect(commands_from_staged([{ kind: 2, target: 40 }], 'sim_c1')).toEqual([
+      {
+        type: 'cast',
+        entity_id: 'sim_c1',
+        spell_id: `${WEAPON_ATTACK_ID}:sim_c1`,
+        target: { x: 0, y: 2 },
+      },
+      { type: 'end_turn', entity_id: 'sim_c1' },
+    ])
   })
 
   test('a staged draft becomes move-path + cast + a closing end_turn', () => {

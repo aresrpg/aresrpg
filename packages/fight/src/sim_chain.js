@@ -31,12 +31,48 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 import { decode, encode } from './los.js'
 import { DEFAULT_TURN_MS, encode_sim_step, side_of, status_rows_from_sim } from './sim_chain_events.js'
 import { casts_this_turn_from_events } from './turn_action_slot.js'
+import { WEAPON_ATTACK_ID, weapon_damage_rows } from './weapon.js'
 
 export * from './sim_chain_events.js'
 
 /** Every simulator seat is owned by this one address, so `fight_control.controlled_character_ids` returns the
  *  WHOLE roster and the production seat-focus switching drives multi-account play with zero new mechanism. */
 export const LOCAL_ADDRESS = '0x51m0000000000000000000000000000000000000000000000000000000000000'
+
+const weapon_spell_id = (entity_id) => `${WEAPON_ATTACK_ID}:${entity_id}`
+
+/** One seat's weapon as a raw sim template. Damage rows come only from fight/weapon.js's shared derivation. */
+const weapon_template = (entity) => {
+  const weapon = entity.weapon
+  const effects = (critical) =>
+    weapon_damage_rows(weapon, critical).map(({ element, min, max }) => ({
+      kind: 0,
+      value: min,
+      value_max: max,
+      element,
+      target_filter: 1,
+      chance: 100,
+    }))
+  return {
+    id: weapon_spell_id(entity.id),
+    name: 'Weapon attack',
+    levels: [
+      {
+        ap_cost: Number(weapon.ap_cost ?? 0),
+        range_min: 1,
+        range_max: Math.max(1, Number(weapon.reach ?? 1)),
+        line_of_sight: true,
+        free_cell: false,
+        casts_per_turn: 255,
+        casts_per_target: 255,
+        cooldown_turns: 0,
+        crit_rate: Number(weapon.crit_rate ?? 0),
+        effects: effects(false),
+        crit_effects: effects(true),
+      },
+    ],
+  }
+}
 
 /** Board-shape mask bit test — the `combat_grid.move` u64 BITSET layout (word `cell>>6`, bit `cell & 63`). */
 const mask_has = (mask, cell) => {
@@ -220,11 +256,12 @@ export const create_sim_chain = ({
 }) => {
   const { board, anchor_x, anchor_z } = derive_board(seed, anchor)
   const arena = arena_from_board(board)
+  const raw_templates = [...templates_raw, ...team0.filter((entity) => entity.weapon).map(weapon_template)]
   // The mock chain has no framework `&Random`, so it derives a deterministic local entropy carrier from the
   // fight seed and turn ordinal. The shape and seed fold are the production wire's; only the entropy source is
   // simulator-local. `fold_command` refreshes seat/slot/ordinal before every player cast.
   const ctx = {
-    spell_templates: normalize_spell_templates(templates_raw),
+    spell_templates: normalize_spell_templates(raw_templates),
     arena,
     turn_context: {
       world_seed: BigInt(WORLD_SEED >>> 0),
@@ -261,7 +298,7 @@ export const create_sim_chain = ({
     sim_state: initial,
     version: 1,
     actions: {},
-    recorder: open_recorder({ fight_id, arena, templates_raw, initial, capacity }),
+    recorder: open_recorder({ fight_id, arena, templates_raw: raw_templates, initial, capacity }),
     violations: [],
   }
   return commands.reduce((chain, command) => fold_command(chain, command).chain, opened)
@@ -435,8 +472,9 @@ export const pending_mob_turn = (chain) => {
 
 /**
  * The store's staged draft → sim commands (spec §4.5). Staged rows are `{ kind, target }` where kind 0 = one
- * move STEP (the drafted path, in order), 1 = a cast. A turn always closes with `end_turn` — a zero-draft turn
- * still commits, which is what hands the mobs their wave (turn_commit.js `auto_commit_decision`).
+ * move STEP (the drafted path, in order), 1 = a cast, 2 = the seat's weapon. A turn always closes with
+ * `end_turn` — a zero-draft turn still commits, which is what hands the mobs their wave
+ * (turn_commit.js `auto_commit_decision`).
  * @param {Array<{ kind:number, target:number, spell_template_id?:string }>} staged
  * @param {string} entity_id
  */
@@ -446,7 +484,7 @@ export const commands_from_staged = (staged, entity_id) => {
   const folded = (staged ?? []).reduce(
     (acc, action) => {
       if (action.kind === 0) return { ...acc, path: [...acc.path, decode(Number(action.target))] }
-      if (action.kind === 1)
+      if (action.kind === 1 || action.kind === 2)
         return {
           path: [],
           commands: [
@@ -454,13 +492,11 @@ export const commands_from_staged = (staged, entity_id) => {
             {
               type: 'cast',
               entity_id,
-              spell_id: String(action.spell_template_id),
+              spell_id: action.kind === 2 ? weapon_spell_id(entity_id) : String(action.spell_template_id),
               target: decode(Number(action.target)),
             },
           ],
         }
-      // kind 2 is the §17.27 WEAPON strike: the sim reducer has no weapon command, so there is nothing
-      // authoritative to fold. Loud, never a silent downgrade to "the player did nothing".
       throw new Error(`sim_chain: staged action kind ${action.kind} has no sim command`)
     },
     { commands: [], path: [] }
@@ -468,8 +504,11 @@ export const commands_from_staged = (staged, entity_id) => {
   return [...flush(folded), { type: 'end_turn', entity_id }]
 }
 
-/** A staged row is a cast (spec §4.5 kind 1) — the rows the receipt owes a `Cast` for. */
-const staged_casts = (staged) => (staged ?? []).filter((action) => action.kind === 1)
+/** Casts and weapon strikes both owe one `Cast` receipt row. */
+const staged_casts = (staged) => (staged ?? []).filter((action) => action.kind === 1 || action.kind === 2)
+
+const staged_spell_id = (action, entity_id) =>
+  action?.kind === 2 ? weapon_spell_id(entity_id) : String(action?.spell_template_id)
 
 /**
  * WHY a staged cast folded nothing (#1012). The sim reducer answers every refusal the same way — the state
@@ -497,10 +536,9 @@ const cast_refusal_reason = (chain, { entity_id, spell_id, recast }) => {
  * receipt owed back. Every staged cast MUST produce its `Cast` row: the sim reducer declines a cast it cannot
  * honour by returning the state untouched with ZERO events, and encoding that as an ordinary turn is how a
  * player's card became a no-op — the turn committed, a version landed, and nothing said a word: no damage, no
- * AP spent, no refusal, nothing on the console. So the door REFUSES the whole turn instead, exactly as
- * `commands_from_staged` already refuses the kind-2 weapon strike. `fight_shim`'s `commit_turn` catches it,
- * logs it and returns false, which rolls the drafted turn back through the production failure path and leaves
- * the turn in the player's hands.
+ * AP spent, no refusal, nothing on the console. So the door REFUSES the whole turn instead.
+ * `fight_shim`'s `commit_turn` catches it, logs it and returns false, which rolls the drafted turn back through
+ * the production failure path and leaves the turn in the player's hands.
  *
  * The raw `submit_commands` stays tolerant on purpose: it is the door the mob AI, the abandon path and the
  * property oracle fold arbitrary commands through, where a refused command IS the case under test. A COMMITTED
@@ -518,8 +556,8 @@ export const submit_staged = (chain, staged, entity_id, clock) => {
   const owed = staged_casts(staged)
   if (cast_rows === owed.length) return result
   const dissolved = owed[cast_rows] // the rows encode in staged order, so the first unpaid cast is this one
-  const spell_id = String(dissolved?.spell_template_id)
-  const recast = owed.slice(0, cast_rows).some((cast) => String(cast.spell_template_id) === spell_id)
+  const spell_id = staged_spell_id(dissolved, entity_id)
+  const recast = owed.slice(0, cast_rows).some((cast) => staged_spell_id(cast, entity_id) === spell_id)
   throw new Error(
     `sim_chain: cast of '${spell_id}' by '${entity_id}' folded nothing — ` +
       `${cast_refusal_reason(chain, { entity_id, spell_id, recast })}`
