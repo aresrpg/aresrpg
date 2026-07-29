@@ -5,8 +5,8 @@
 // corpus facts, not live chain state.
 //
 // RUNTIME BLOB, NOT A BUILD-TIME GLOB (#196): the authored trio (world/mobs/resources per wid) is ONE
-// published asset-host blob (world_corpus.json), fetched at boot exactly like game/data/spell_corpus.js and
-// mob_catalog.js — one runtime-content pattern, now three consumers. Gameplay content NEVER ships inside
+// versioned asset-host blob (world_corpus.<version>.json), fetched at boot through the shared pointer in
+// game/data/corpus_asset.js. Gameplay content NEVER ships inside
 // this repo; it reaches the game only as published chain state + CDN blobs. Until the blob publishes (or
 // on a fetch failure) the corpus DEGRADES LOUDLY to inert (zero worlds + ONE console.error) and the app
 // still mounts — never a crash, never a cached absence (a failed load leaves the cache empty AND `status`
@@ -28,11 +28,11 @@
 // The chain stays the source of truth for WHICH worlds are live: the worlds tab lists /v1's rows and
 // joins THIS for their display knowledge (a /v1 world absent here still renders, honestly degraded).
 import { create } from 'zustand'
-import { asset_url } from '@aresrpg/sdk/jobs'
 
 import { is_object_id } from '../../content/object_id'
 import { seed_manifest } from '../../content/seed_manifest'
 import jobs_data from '../../data/jobs.json'
+import { load_corpus_version, versioned_corpus_url } from '../../game/data/corpus_asset.js'
 
 const { JOB_MASTER_JOBS } = jobs_data
 
@@ -402,7 +402,7 @@ const warn_degrade = (why: string): void => {
   warned = true
   console.error(
     `[world_corpus] world knowledge inert (${why}) — the encyclopedia lists no worlds until the seed ` +
-      `ceremony publishes world_corpus.json (issue #106).`
+      `ceremony publishes a versioned world corpus (issue #106).`
   )
 }
 
@@ -419,11 +419,12 @@ const degrade = (why: string): void => {
  * the blob joins to nothing — leaving the cache empty and RETRYABLE (never a frozen absence), never a throw.
  * Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  */
-export async function load_world_corpus(): Promise<void> {
+export async function load_world_corpus(version_promise?: Promise<string | null>): Promise<void> {
   if (corpus().status === 'ready') return
-  const url = asset_url('world_corpus', 'world_corpus.json')
-  if (!url) return degrade('unpublished — not in the asset manifest')
   try {
+    const version = await (version_promise ?? load_corpus_version())
+    const url = version ? versioned_corpus_url('world_corpus', version) : null
+    if (!url) return degrade('unpublished — not in the asset manifest')
     const response = await fetch(url)
     if (!response.ok) return degrade(`HTTP ${response.status}`)
     const blob = (await response.json()) as WorldCorpusBlob

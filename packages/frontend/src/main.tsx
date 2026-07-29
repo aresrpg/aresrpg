@@ -10,6 +10,7 @@ import { App } from './app'
 import { load_asset_manifest, subscribe } from './asset_manifest'
 import { load_mob_catalog } from './game/data/mob_catalog.js'
 import { load_pet_catalog } from './game/data/pet_catalog.js'
+import { load_corpus_version } from './game/data/corpus_asset.js'
 import { load_spell_corpus } from './game/data/spell_corpus.js'
 import { load_world_corpus } from './pages/encyclopedia/world_corpus'
 import { register_service_worker } from './sw'
@@ -44,16 +45,17 @@ void load_mob_catalog()
 // Non-blocking, same contract as load_mob_catalog: an equipped pet stays honestly unspawned until this lands.
 void load_pet_catalog()
 
-// The authored spell corpus (spell_corpus.json) rides the SAME runtime-asset seam — one pattern, two content
-// blobs. Non-blocking: the scene mounts while it resolves, the spell surfaces fill in on arrival. An absent
+// The authored spell corpus rides the shared version pointer below. Non-blocking: the scene mounts while it
+// resolves, the spell surfaces fill in on arrival. An absent
 // blob (open-source / pre-publish tree) degrades loudly to inert spell surfaces, never a crash (issue #106).
-void load_spell_corpus()
+const corpus_version = load_corpus_version()
+void load_spell_corpus(corpus_version)
 
-// The authored world corpus (world_corpus.json) — the THIRD blob on that same seam, and the only client-side
+// The authored world corpus shares that exact pointer version and is the only client-side
 // home of world rosters, gatherable placements and the mob combat block. It had no caller at all until now:
 // the encyclopedia's worlds/bestiary/jobs surfaces and the fight simulator's mob picker all read an inert
 // corpus, so the picker opened on `0/0`. Non-blocking; its cache is a store, so those surfaces fill in on arrival.
-void load_world_corpus()
+void load_world_corpus(corpus_version)
 
 // ERRORS-ONLY error reporting (core/report.js) — inits ONLY when VITE_SENTRY_DSN is present (a hard no-op
 // otherwise, so a bare dev/local boot never phones home). No tracing, no session replay. It also wires the

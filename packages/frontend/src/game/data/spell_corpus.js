@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The authored spell corpus — ONE published asset-host blob (spell_corpus.json), fetched at boot like every other
-// asset (mirrors game/data/mob_catalog.js — one runtime-content pattern, two consumers). It is the merged
+// The authored spell corpus — ONE versioned asset-host blob (spell_corpus.<version>.json), fetched at boot
+// after the shared corpus pointer (corpus_asset.js). It is the merged
 // projection the seed ceremony emits at PUBLISH time: the authored spell rows joined to the deployment's
 // on-chain object ids. The client never merges in prod — it fetches the already-merged blob and caches it;
 // get_spell_corpus() reads that cache synchronously (fight-spells.js re-derives its rows from it). Gameplay
@@ -11,7 +11,7 @@
 // inert while the scene still renders. Absence is NEVER cached as truth: a failed load leaves the cache empty
 // AND `loaded` false, so a later call still populates it.
 
-import { asset_url } from '@aresrpg/sdk/jobs'
+import { load_corpus_version, versioned_corpus_url } from './corpus_asset.js'
 
 /** @type {Array<Record<string, any>>} */
 let corpus = []
@@ -30,7 +30,7 @@ const warn_absent = (why) => {
   warned = true
   console.error(
     `[spell-corpus] no spell_corpus runtime asset (${why}) — the spellbook, casting and the spell ` +
-      `encyclopedia are inert until the seed ceremony publishes spell_corpus.json (issue #106).`
+      `encyclopedia are inert until the seed ceremony publishes a versioned spell corpus (issue #106).`
   )
 }
 
@@ -41,11 +41,12 @@ const warn_absent = (why) => {
  * absence). Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  * @returns {Promise<void>}
  */
-export async function load_spell_corpus() {
+export async function load_spell_corpus(version_promise) {
   if (loaded) return
-  const url = asset_url('spell_corpus', 'spell_corpus.json')
-  if (!url) return warn_absent('not in the asset manifest — unpublished')
   try {
+    const version = await (version_promise ?? load_corpus_version())
+    const url = version ? versioned_corpus_url('spell_corpus', version) : null
+    if (!url) return warn_absent('not in the asset manifest — unpublished')
     const response = await fetch(url)
     if (!response.ok) return warn_absent(`HTTP ${response.status}`)
     const rows = await response.json()

@@ -14,7 +14,7 @@ const CONFIG_PATH = new URL('../vite.config.ts', import.meta.url)
 // Slices the runtimeCaching entry whose urlPattern names the asset host: walk back to the entry's opening
 // brace, then brace-match forward. No brace appears inside that entry's regex literal or string values.
 function cdn_assets_entry_source(source: string): string {
-  const host_index = source.indexOf('assets\\.aresrpg\\.world')
+  const host_index = source.indexOf('assets\\.aresrpg\\.world\\/.+/')
   if (host_index === -1) throw new Error('no runtimeCaching entry matches the asset host')
   const start = source.lastIndexOf('{', host_index)
   let depth = 0

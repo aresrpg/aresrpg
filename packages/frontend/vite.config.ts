@@ -151,6 +151,18 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
+          // The corpus pointer is the ONE mutable data URL (#1237). It must reach the network before the
+          // broad CDN SWR rule below; an offline fallback may use the prior pointer because publishers retain
+          // every immutable version, but an online client sees a publish on its very next boot.
+          {
+            urlPattern: /^https:\/\/assets\.aresrpg\.world\/data\/corpus_version\.json$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'corpus-pointer',
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 1, maxAgeSeconds: 300 },
+            },
+          },
           // MinIO asset host (#650 — full pivot off asset-host for serving): item/spell/mob/cosmetic/character
           // PNGs, GLBs, music mp3s, and the runtime /data/*.json content blobs all serve from this one origin
           // now (packages/sdk/src/jobs.js asset_url). It's already Cloudflare-tunnel-fronted, so SWR
