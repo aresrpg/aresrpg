@@ -180,7 +180,7 @@ const spell_rows = (seat, class_id, char_level) =>
  * PROJECTION, never a world-only chain slice — #1025's rule).
  * @returns {object} `{ ok: false, error }` when no fight is live.
  */
-export function dev_read() {
+function dev_read() {
   const store = use_dungeon.getState()
   const view = fight_view()
   if (!view) return { ok: false, error: 'no active fight' }
