@@ -6,15 +6,23 @@ import fs from 'node:fs'
 
 const rule_of = (check_id) => check_id.split('.').pop()
 const read_json = (path) => JSON.parse(fs.readFileSync(path, 'utf8'))
+const normalize_fixture_path = (result_path) =>
+  result_path.replace(/^.*fixtures\/sim_constants\/(?:red|green)\//, '')
 const counts_of = (semgrep) => {
   const counts = new Map()
   for (const result of semgrep.results.filter((row) => rule_of(row.check_id).startsWith('sim-protocol-'))) {
-    const key = `${rule_of(result.check_id)} · ${result.path}`
+    const key = `${rule_of(result.check_id)} · ${normalize_fixture_path(result.path)}`
     const current = counts.get(key) ?? { count: 0, lines: [] }
     counts.set(key, { count: current.count + 1, lines: [...current.lines, result.start.line] })
   }
   return counts
 }
+const expected_counts = (expected) =>
+  new Map(
+    Object.entries(expected).flatMap(([fixture_path, rules]) =>
+      Object.entries(rules).map(([rule, count]) => [`${rule} · ${fixture_path}`, count])
+    )
+  )
 const baseline_counts = (baseline) =>
   new Map(
     Object.entries(baseline).flatMap(([rule, by_path]) =>
@@ -31,14 +39,46 @@ const baseline_json = (actual) => {
   return `${JSON.stringify(baseline, null, 2)}\n`
 }
 
-const [mode, baseline_path, semgrep_path] = process.argv.slice(2)
-if (!['--baseline', '--write-baseline'].includes(mode) || !baseline_path || !semgrep_path) {
-  console.error('usage: sim_constants_verdict.mjs <--baseline|--write-baseline> <baseline.json> <semgrep.json>')
+const [mode, baseline_path, side_or_semgrep_path, fixture_semgrep_path] = process.argv.slice(2)
+if (
+  !['--baseline', '--write-baseline', '--expect'].includes(mode) ||
+  !baseline_path ||
+  !side_or_semgrep_path ||
+  (mode === '--expect' && !fixture_semgrep_path)
+) {
+  console.error(
+    'usage: sim_constants_verdict.mjs <--baseline|--write-baseline> <baseline.json> <semgrep.json> | --expect <expected.json> <red|green> <semgrep.json>'
+  )
   process.exit(2)
 }
+const semgrep_path = fixture_semgrep_path ?? side_or_semgrep_path
 if (!fs.existsSync(baseline_path)) {
   console.error(`SIM PROTOCOL CONSTANTS GATE FAILED — baseline missing: ${baseline_path}`)
   process.exit(1)
+}
+
+if (mode === '--expect') {
+  const side = side_or_semgrep_path
+  const expected = read_json(baseline_path)[side]
+  if (!expected) {
+    console.error(`sim constants self-test: no '${side}' section in ${baseline_path}`)
+    process.exit(2)
+  }
+  const actual = counts_of(read_json(semgrep_path))
+  const wanted = expected_counts(expected)
+  const keys = [...new Set([...actual.keys(), ...wanted.keys()])].sort()
+  const mismatches = keys.filter((key) => (actual.get(key)?.count ?? 0) !== (wanted.get(key) ?? 0))
+  if (mismatches.length > 0) {
+    console.error(
+      `SIM PROTOCOL CONSTANTS SELF-TEST FAILED (${side} fixture) — the matcher no longer fires on its pinned home:`
+    )
+    for (const key of mismatches)
+      console.error(`  ${key}: expected ${wanted.get(key) ?? 0}, got ${actual.get(key)?.count ?? 0}`)
+    process.exit(1)
+  }
+  const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
+  console.log(`  self-test ${side}: ${total} finding(s), exactly as pinned`)
+  process.exit(0)
 }
 
 const floor = baseline_counts(read_json(baseline_path))

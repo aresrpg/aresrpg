@@ -40,12 +40,36 @@ TARGETS=(
   packages/world/src
   packages/rpc/api
 )
+FIXTURE_ROOT="scripts/arch/fixtures/sim_constants"
 for target in "${TARGETS[@]}"; do
   if [ ! -d "$target" ]; then
     echo "  FAIL: scan target missing: $target"
     exit 1
   fi
 done
+
+"$SEMGREP" scan --config "$RULESET" \
+  --json --metrics=off --disable-version-check --quiet \
+  "$FIXTURE_ROOT/red" >"$OUT_DIR/red.json" 2>"$OUT_DIR/err.log"
+code=$?
+if [ "$code" -gt 1 ]; then
+  echo "  semgrep failed (exit $code) on red control fixture:"
+  sed 's/^/    /' "$OUT_DIR/err.log" | head -20
+  exit 1
+fi
+"$SEMGREP" scan --config "$RULESET" \
+  --json --metrics=off --disable-version-check --quiet \
+  "$FIXTURE_ROOT/green" >"$OUT_DIR/green.json" 2>"$OUT_DIR/err.log"
+code=$?
+if [ "$code" -gt 1 ]; then
+  echo "  semgrep failed (exit $code) on green control fixture:"
+  sed 's/^/    /' "$OUT_DIR/err.log" | head -20
+  exit 1
+fi
+node scripts/arch/sim_constants_verdict.mjs \
+  --expect "$FIXTURE_ROOT/expected.json" red "$OUT_DIR/red.json" || exit 1
+node scripts/arch/sim_constants_verdict.mjs \
+  --expect "$FIXTURE_ROOT/expected.json" green "$OUT_DIR/green.json" || exit 1
 
 "$SEMGREP" scan --config "$RULESET" \
   --json --metrics=off --disable-version-check --quiet \

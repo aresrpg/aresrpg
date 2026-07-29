@@ -1,0 +1,10 @@
+{
+  "red": {
+    "consumer.js": {
+      "sim-protocol-point-kind-id": 1
+    }
+  },
+  "green": {
+    "consumer.js": {}
+  }
+}
