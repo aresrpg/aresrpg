@@ -14,6 +14,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { ItemIcon, category_glyph, item_fallback_glyph } from './ItemIcon.jsx'
 
 describe('ItemIcon — renders the right INITIAL candidate for hd vs. thumb', () => {
+  test('asset icons opt into cors so an img load cannot seed an opaque service-worker entry', () => {
+    const html = renderToStaticMarkup(<ItemIcon item="coiffe_fuwa-white" alt="Fuwa Hood (White)" />)
+    expect(html).toContain('crossorigin="anonymous"')
+  })
+
   test('hd requests the _hd variant first', () => {
     const html = renderToStaticMarkup(<ItemIcon item="coiffe_fuwa-white" hd alt="Fuwa Hood (White)" />)
     expect(html).toContain('coiffe_fuwa-white_hd.png')

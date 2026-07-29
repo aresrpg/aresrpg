@@ -33,6 +33,11 @@ const src_of = (el: React.ReactElement): string =>
   (renderToStaticMarkup(el).match(/<img[^>]*\bsrc="([^"]*)"/) ?? [])[1] ?? ''
 
 describe('ItemImage — Display re-homing guard + HD', () => {
+  test('asset icons opt into cors so an img load cannot seed an opaque service-worker entry', () => {
+    const html = renderToStaticMarkup(<ItemImage id="tool_herbalist" category="sword" />)
+    expect(html).toContain('crossorigin="anonymous"')
+  })
+
   test('a foreign-host Display url is RE-HOMED onto the configured asset host, never rendered raw (#650)', () => {
     const src = src_of(
       <ItemImage
