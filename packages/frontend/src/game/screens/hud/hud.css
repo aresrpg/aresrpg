@@ -645,13 +645,20 @@
  * `.hud-fightctl` (0,2,0+) so it BEATS the reset and the opaque fills actually render. */
 .hud-fightctl .hud-fightctl__btn {
   pointer-events: auto;
+  box-sizing: border-box;
   min-width: 104px;
+  max-width: 100%;
   padding: 9px 16px;
   border-radius: var(--r-2);
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+  /* #1607 — the compact fight host is intentionally width-capped. Keep every localized action inside that
+   * box: long labels and the temporary "END TURN · N" gate wrap to another line instead of being centered
+   * through the button's clipped inline edge. */
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
   border: 1px solid var(--edge);
   border-top-color: var(--edge-top);
@@ -871,10 +878,15 @@
 /* spectate (view-only) label beside the Leave-spectate button */
 .hud-fightctl__watching {
   align-self: center;
+  box-sizing: border-box;
+  max-width: 100%;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
   color: var(--accent);
 }
 

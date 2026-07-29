@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
 import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
@@ -38,6 +39,20 @@ const EN_I18N = i18next.createInstance()
 await EN_I18N.init({
   lng: 'en',
   resources: { en: { translation: en } },
+  interpolation: { escapeValue: false },
+})
+
+const NARROW_LABEL_I18N = i18next.createInstance()
+await NARROW_LABEL_I18N.init({
+  lng: 'en',
+  resources: {
+    en: {
+      translation: {
+        fight: { bug_report: 'COPY BUG REPORT' },
+        fights: { spectating: 'WATCHING FIGHT', leave_spectate: 'LEAVE SPECTATE' },
+      },
+    },
+  },
   interpolation: { escapeValue: false },
 })
 
@@ -308,5 +323,44 @@ describe('fight turn controls — one phase source for the button and silent aut
     expect(html).toContain('hud-fightctl__abandon')
     expect(html).toContain('>FORFEIT<')
     expect(html).toContain('hud-fightctl__report')
+  })
+
+  test('1280px and 1024px fight bars keep every full control label inside its box (#1607)', () => {
+    const end_turn = renderToStaticMarkup(
+      <FightEndTurnButton
+        phase="committing"
+        on_end_turn={() => {}}
+        end_label="END TURN"
+        disabled_label="END TURN · 6"
+      />
+    )
+    expect(end_turn).toContain('>END TURN · 6<')
+
+    const store = seed()
+    store.getState().input({ type: 'ctx', ctx: { spectator: true, my_entity_id: null, address: null } })
+    const spectator = renderToStaticMarkup(
+      <I18nextProvider i18n={NARROW_LABEL_I18N}>
+        <FightControls on_leave_spectate={() => {}} />
+      </I18nextProvider>
+    )
+    expect(spectator).toContain('>WATCHING FIGHT<')
+    expect(spectator).toContain('>COPY BUG REPORT<')
+
+    // Bun's DOM renderer cannot calculate painted glyph boxes. Pin the CSS side of the same contract using
+    // the repo's established block-scoped overflow assertions: at either requested viewport the bar can be
+    // narrowed by its host, so labels must wrap inside their own boxes instead of relying on clipped overflow.
+    const css = [
+      readFileSync(new URL('./hud.css', import.meta.url), 'utf8'),
+      readFileSync(new URL('./mobile-fight-hud.css', import.meta.url), 'utf8'),
+    ].join('\n')
+    const button_rule = css.match(/\.hud-fightctl \.hud-fightctl__btn\s*\{[^}]*\}/)?.[0] ?? ''
+    const watching_rule = css.match(/\.hud-fightctl__watching\s*\{[^}]*\}/)?.[0] ?? ''
+
+    expect(button_rule).toContain('max-width: 100%')
+    expect(button_rule).toContain('white-space: normal')
+    expect(button_rule).toContain('overflow-wrap: anywhere')
+    expect(watching_rule).toContain('max-width: 100%')
+    expect(watching_rule).toContain('white-space: normal')
+    expect(watching_rule).toContain('overflow-wrap: anywhere')
   })
 })
