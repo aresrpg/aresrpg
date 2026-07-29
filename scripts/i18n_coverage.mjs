@@ -63,11 +63,11 @@ const TEMPLATE = /\bt\(\s*`([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*[._])\$\{/g
 // perfectly translated tree. So the three extractors run over a synthetic source first and must each
 // come back with what they were written to find. The fixture is a string here, never a scanned file:
 // a real one would inject undefined keys into the coverage set it is proving.
-const SELFTEST_SRC = String.raw`
-  t('selftest.plain'); i18nKey="selftest.attribute"
-  t(flag ? 'selftest.left' : 'selftest.right')
-  t(` + '`selftest.dynamic_${suffix}`' + `)
-`
+const SELFTEST_SRC = [
+  `t('selftest.plain'); i18nKey="selftest.attribute"`,
+  `t(flag ? 'selftest.left' : 'selftest.right')`,
+  't(`selftest.dynamic_${suffix}`)',
+].join('\n')
 const selftest = (label, re, want) => {
   const found = [...SELFTEST_SRC.matchAll(re)].length
   if (found >= want) return
