@@ -102,6 +102,23 @@ public fun bag_spec(base_hp: u64): MobSpec {
   mob::new_mob_spec(1, 1, base_hp, 0, 0, mob_stats(), vector[], 100, loot)
 }
 
+/// create_fight with a MOBILE punching bag: `bag_spec`'s shape but with a live AP/MP budget, so a test can drive
+/// a mob turn that actually WALKS. `bag_spec` mobs carry 0 MP, which makes "the mob did not move" unfalsifiable —
+/// the #1061 search-walk suite needs a mob whose standing still would be a real failure.
+public fun create_fight_mobile(sc: &mut Scenario, base_hp: u64, spawn_id: u64, now: u64, ap: u64, mp: u64) {
+  sc.next_tx(OWNER);
+  let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
+  let ver = sc.take_shared<Version>();
+  let loot = vector[mob::new_loot_entry(object::id_from_address(LOOT), 10000, 1, 1)];
+  let spec = mob::new_mob_spec(1, 1, base_hp, ap, mp, mob_stats(), vector[], 100, loot);
+  let clock = mk_clock(sc, now);
+  fight::create_for_testing(&mut registry, &mut latch, object::id_from_address(WORLD), spawn_id, 12345, 100, 200, 0, true, option::none(), &spec, 1, combatant(CHAR, 100), &ver, &clock, sc.ctx());
+  clock::destroy_for_testing(clock);
+  ts::return_shared(latch);
+  ts::return_shared(registry);
+  ts::return_shared(ver);
+}
+
 public fun mk_clock(sc: &mut Scenario, now: u64): Clock {
   let mut c = clock::create_for_testing(sc.ctx());
   c.set_for_testing(now);

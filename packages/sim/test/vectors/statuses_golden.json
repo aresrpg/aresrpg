@@ -109,14 +109,15 @@
       "expected": { "cast_target": 50 }
     },
     {
-      "id": "all_targets_invisible_mob_idles_and_ticks",
+      "id": "all_targets_invisible_mob_searches_toward_spawn_anchor",
       "scenario": "all_hidden",
       "input": { "hidden_turns": 1 },
       "expected": {
         "next_actor": "p0",
         "hidden_remaining": false,
-        "mob_moved": false,
-        "mob_cast": false
+        "mob_moved": true,
+        "mob_cast": false,
+        "mob_closed_on_anchor": true
       }
     },
     {
@@ -126,8 +127,9 @@
       "expected": {
         "next_actor": "p0",
         "hidden_remaining": true,
-        "mob_moved": false,
-        "mob_cast": false
+        "mob_moved": true,
+        "mob_cast": false,
+        "mob_closed_on_anchor": true
       }
     },
     {

@@ -7,14 +7,14 @@ module aresrpg_fight::invisibility_tests;
 use aresrpg_fight::{
   cast,
   fight::{Self, Fight},
-  fight_scaffold::{combatant, create_fight, mk_clock, mob_stats, stand_up, tsregs_for},
+  fight_scaffold::{combatant, create_fight, create_fight_mobile, mk_clock, mob_stats, stand_up, tsregs_for},
   mob,
   participant,
   statuses,
   turns,
   version::Version,
 };
-use aresrpg_foundation::{spell, spell_board, spell_effect::{Self, Effect, SpellLevel}};
+use aresrpg_foundation::{combat_grid, spell, spell_board, spell_effect::{Self, Effect, SpellLevel}};
 use aresrpg_spells::spell_template::SpellTemplate;
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
@@ -273,8 +273,15 @@ fun direct_push_collision_reveals() {
 }
 
 #[test]
-/// Vectors: mob_skips_invisible_target; all_targets_invisible_mob_idles_and_ticks.
-fun mob_target_input_excludes_hidden_and_all_hidden_idles_with_expiry() {
+/// Vectors: mob_skips_invisible_target; all_targets_invisible_mob_ticks_expiry.
+///
+/// #1061 SEALED REVERSAL (seat ruling, cited in this commit): this test used to close on
+/// `assert!(mob::cell(..) == before)` — the idle-pass assertion sealed by #599/#627. The ruling repeals idling,
+/// so that line is GONE: it measured nothing here anyway (the `bag_spec` mob carries 0 MP, so standing still was
+/// unfalsifiable). What survives is what this test is actually FOR — hidden cells never enter the AI input, and
+/// a blinded mob's turn still runs its turn-end expiry. The behavior half moved to
+/// `all_targets_invisible_mob_searches_toward_spawn_anchor`, where the mob has a real MP budget to fail with.
+fun mob_target_input_excludes_hidden_and_all_hidden_ticks_expiry() {
   let mut sc = ts::begin(OWNER);
   stand_up(&mut sc);
   create_fight(&mut sc, 100, 1, 0, 1000, true, option::none());
@@ -305,30 +312,63 @@ fun mob_target_input_excludes_hidden_and_all_hidden_idles_with_expiry() {
       spell_effect::phase_on_enter(),
     ),
   );
-  let before = mob::cell(fight::mobs(&fight).borrow(0));
   let mut rng = 7;
 
   turns::resolve_mob_turn_for_testing(&mut fight, 0, &mut rng);
 
-  assert!(mob::cell(fight::mobs(&fight).borrow(0)) == before);
   assert!(spell_board::fighter_status_of(fight::fx(&fight), MOB_FID, spell_effect::k_apply_state()).is_none());
   ts::return_shared(fight);
   sc.end();
 }
 
 #[test]
-/// Vector: all_targets_invisible_full_crank_advances (#599 — the SOFT-LOCK guard, whole-crank, not the isolated
-/// mob turn above). A SOLO fight whose only player is hidden: the permissionless `crank` forfeits the overdue
-/// player, the mob's turn finds ZERO visible targets and must PASS (never the ENoLivingTargets abort a naked
-/// `decide_turn` would raise), and the walk lands the turn BACK on the still-alive hidden player. Proves the
-/// fresh-publish crank can never wedge on an all-invisible board — the field-report freeze, resolved as a pass.
-fun all_targets_invisible_full_crank_advances() {
+/// Vector: all_targets_invisible_mob_searches_toward_spawn_anchor (#1061 — the RULED behavior, isolated mob turn).
+///
+/// Every opponent hidden ⇒ the mob does NOT idle: it walks the STATELESS SEARCH WALK toward the observation-free
+/// landmark (`turns::search_anchor` = `fight::start_cells_b[0]`, the mob side's spawn anchor — "retreat toward
+/// home ground"). Asserted the way the policy is DEFINED rather than against a hardcoded cell: the mob ends on a
+/// DIFFERENT cell and STRICTLY closer to the anchor, on whatever board the seed draws. The walk reads only board
+/// geometry, so the sealed contract above still holds — no hidden position ever reaches the AI.
+fun all_targets_invisible_mob_searches_toward_spawn_anchor() {
   let mut sc = ts::begin(OWNER);
   stand_up(&mut sc);
-  create_fight(&mut sc, 100, 1, 0, 1000, true, option::none());
+  create_fight_mobile(&mut sc, 100, 1, 1000, 6, 3);
+  sc.next_tx(OWNER);
+  let mut fight = sc.take_shared<Fight>();
+  let anchor = *fight::start_cells_b(&fight).borrow(0);
+  // Hide the only player: the mob's visible-target set is empty and its policy input is the empty vector.
+  spell_board::add_status(fight::fx_mut(&mut fight), 0, 0, invisibility(3, spell_effect::tf_none()));
+  assert!(turns::visible_player_cells_for_testing(&fight).is_empty());
+  let before = mob::cell(fight::mobs(&fight).borrow(0));
+  assert!(before != anchor && combat_grid::manhattan(before, anchor) > 1); // the walk has somewhere to go
+  let mut rng = 7;
+
+  turns::resolve_mob_turn_for_testing(&mut fight, 0, &mut rng);
+
+  let after = mob::cell(fight::mobs(&fight).borrow(0));
+  assert!(after != before); // it MOVED — the idle is repealed
+  assert!(combat_grid::manhattan(after, anchor) < combat_grid::manhattan(before, anchor)); // …toward the anchor
+  ts::return_shared(fight);
+  sc.end();
+}
+
+#[test]
+/// Vector: all_targets_invisible_full_crank_searches (#599's SOFT-LOCK guard, whole-crank, on the PRODUCTION
+/// path — not the isolated mob turn above). A SOLO fight whose only player is hidden: the permissionless `crank`
+/// forfeits the overdue player, the mob's turn finds ZERO visible targets, and the walk lands the turn BACK on
+/// the still-alive hidden player. Proves the crank can never wedge on an all-invisible board.
+///
+/// #1061 SEALED REVERSAL (seat ruling, cited in this commit): #599 resolved the freeze as an idle PASS, and this
+/// test's mob carried 0 MP, so "it passed" was never measurable here. The mob now carries a real MP budget and
+/// the crank must produce the SEARCH WALK — the soft-lock seal is untouched, the idle claim it rode on is gone.
+fun all_targets_invisible_full_crank_searches() {
+  let mut sc = ts::begin(OWNER);
+  stand_up(&mut sc);
+  create_fight_mobile(&mut sc, 100, 1, 1000, 6, 3);
   sc.next_tx(OWNER);
   let mut fight = sc.take_shared<Fight>();
   let ver = sc.take_shared<Version>();
+  let anchor = *fight::start_cells_b(&fight).borrow(0);
   // Place the SOLO creator → the last ready auto-starts the fight ACTIVE (turn_ptr on the player).
   let c0 = participant::cell(fight::participants(&fight).borrow(0));
   let clock = mk_clock(&mut sc, 1000);
@@ -339,11 +379,14 @@ fun all_targets_invisible_full_crank_advances() {
   // Hide the ONLY player: the mob's turn will see an empty target set.
   spell_board::add_status(fight::fx_mut(&mut fight), 0, 0, invisibility(3, spell_effect::tf_none()));
   assert!(turns::visible_player_cells_for_testing(&fight).is_empty());
-  // Permissionless crank far past the deadline → forfeit p0, resolve the mob (idle-pass), land back on p0.
+  let before = mob::cell(fight::mobs(&fight).borrow(0));
+  // Permissionless crank far past the deadline → forfeit p0, resolve the mob (search walk), land back on p0.
   turns::crank_for_testing(&mut fight, 999_999);
   assert!(fight::status(&fight) == fight::status_active()); // NO abort, NO soft-lock — the fight advanced
   assert!(turns::is_current_seat(&fight, 0)); // the turn returned to the still-alive hidden player
-  assert!(mob::is_alive(fight::mobs(&fight).borrow(0))); // the mob is intact — it passed, it did not die/abort
+  assert!(mob::is_alive(fight::mobs(&fight).borrow(0))); // the mob is intact — it searched, it did not die/abort
+  let after = mob::cell(fight::mobs(&fight).borrow(0));
+  assert!(after != before && combat_grid::manhattan(after, anchor) < combat_grid::manhattan(before, anchor));
   ts::return_shared(fight);
   ts::return_shared(ver);
   sc.end();

@@ -1,0 +1,307 @@
+{
+  "meta": {
+    "id": "all_targets_invisible_mob_searches",
+    "class": "twin",
+    "authored": "2026-07-29",
+    "source": "authored",
+    "notes": "Issue #1061: p0 vanishes; the blinded m0 walks (7,5)→(3,5), the closest-by-cost cell adjacent to its spawn anchor (2,5) — never an empty pass."
+  },
+  "arena": {
+    "width": 21,
+    "height": 21,
+    "cells": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 7
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 2,
+        "y": 5
+      }
+    ]
+  },
+  "templates_raw": {
+    "yajin": {
+      "veil": {
+        "name": "Veil",
+        "description": "vanish for 3 turns",
+        "levels": [
+          {
+            "cost": 2,
+            "range": [0, 1],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "invisibility",
+                "turns": 3,
+                "chance": 100
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      }
+    }
+  },
+  "initial": {
+    "fight_id": "capsule_invis_search",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 5,
+          "y": 7
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {
+          "veil": 1
+        },
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 7,
+          "y": 5
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "veil",
+      "target": {
+        "x": 5,
+        "y": 7
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "ai_turn",
+      "entity_id": "m0"
+    }
+  ],
+  "pinned_move_path": [
+    {
+      "x": 6,
+      "y": 5
+    },
+    {
+      "x": 5,
+      "y": 5
+    },
+    {
+      "x": 4,
+      "y": 5
+    },
+    {
+      "x": 3,
+      "y": 5
+    }
+  ],
+  "pinned_facts": [
+    {
+      "cite": "turns.move resolve_mob_turn — empty visible set ⇒ bfs_best_toward(cell, search_anchor, …, mp) lands the mob one cell short of the anchor at (3,5)",
+      "path": "team1.0.cell.x",
+      "equals": 3
+    },
+    {
+      "cite": "turns.move resolve_mob_turn — the search walk is a straight monotonic advance; the row never changes",
+      "path": "team1.0.cell.y",
+      "equals": 5
+    },
+    {
+      "cite": "turns.move living_player_seats_and_cells — hidden positions never enter the AI input, so p0 is untouched by the mob turn",
+      "path": "team0.0.health",
+      "equals": 100
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_invis_search",
+        "turn_order": ["p0", "m0"],
+        "seed": 1
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "p0",
+        "spell_id": "veil",
+        "target": {
+          "x": 5,
+          "y": 7
+        },
+        "effects": [
+          {
+            "target_id": "p0",
+            "status": "INVISIBILITY"
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 8
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_moved",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "m0",
+        "path": [
+          {
+            "x": 6,
+            "y": 5
+          },
+          {
+            "x": 5,
+            "y": 5
+          },
+          {
+            "x": 4,
+            "y": 5
+          },
+          {
+            "x": 3,
+            "y": 5
+          }
+        ],
+        "tackled": false,
+        "mp_remaining": 1
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_invis_search",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      }
+    ],
+    "terminal_digest": "e385fdeb",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 2,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 100,
+          "cell": {
+            "x": 5,
+            "y": 7
+          }
+        },
+        {
+          "id": "m0",
+          "health": 100,
+          "cell": {
+            "x": 3,
+            "y": 5
+          }
+        }
+      ]
+    }
+  }
+}

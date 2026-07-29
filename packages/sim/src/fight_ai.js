@@ -22,7 +22,7 @@
 import { manhattan_distance } from './cell.js'
 import { encode } from './combat_grid.js'
 import { find_path_4dir, get_reachable_cells } from './pathfind.js'
-import { find_entity, living_enemies } from './fight_state.js'
+import { find_entity, living_enemies, team_of } from './fight_state.js'
 import { is_invisible } from './fight_statuses.js'
 import { can_target } from './spell_targeting.js'
 
@@ -39,7 +39,7 @@ import { can_target } from './spell_targeting.js'
  */
 const nearest_enemy = (state, entity) => {
   // No last-known-cell state exists in the frozen fight shape: hidden enemies are unknown to AI, never
-  // approached omnisciently. An empty visible list naturally yields an end-turn action below.
+  // approached omnisciently. An empty visible list sends the planner to the SEARCH WALK below.
   const enemies = living_enemies(state, entity.id).filter(
     enemy => !is_invisible(enemy),
   )
@@ -183,8 +183,26 @@ const best_toward = (start, target, reachable) => {
 }
 
 /**
+ * THE SEARCH LANDMARK (#1061) — the goal a BLINDED fighter walks toward when every opponent is invisible: its OWN
+ * side's spawn anchor (team 0 → `team0_cells[0]`, team 1 → `team1_cells[0]`; for a mob that is the pole opposite
+ * the players' start zone — it falls back toward home ground). Fixed board geometry, decided at fight creation,
+ * so the walk consumes ZERO information about where the hidden enemies are: the sealed property that hidden cells
+ * never enter AI input holds by construction. Stateless — nothing is remembered between turns.
+ * MOVE TWIN: `turns.move::search_anchor` — `fight::start_cells_b[0]`, same rule.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {import('./fight_state.js').FightEntity} entity
+ * @returns {import('./cell.js').Cell | null}
+ */
+const search_anchor = (state, entity) => {
+  const home =
+    team_of(state, entity.id) === 0 ? state.team0_cells : state.team1_cells
+  return home?.[0] ?? null
+}
+
+/**
  * Plan a mob's turn: strike the nearest enemy from the closest reachable band cell (moving there first if needed),
- * else advance toward it, else end turn. Returns an ordered action list for the reducer to execute.
+ * else advance toward it; with NO visible enemy at all, walk toward the search landmark instead of passing
+ * (#1061 — invisibility buys repositioning pressure, never a free turn). Returns an ordered action list.
  *
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
@@ -206,7 +224,6 @@ export const ai_choose_turn = (
   if (!entity) return [{ type: 'end_turn' }]
 
   const target = nearest_enemy(state, entity)
-  if (!target) return [{ type: 'end_turn' }]
 
   // Cells reachable within MP (4-dir BFS — the Move `bfs_*` queue-discipline twin), including the mob's own cell.
   const reachable = get_reachable_cells(
@@ -215,6 +232,31 @@ export const ai_choose_turn = (
     is_walkable,
     is_occupied,
   )
+
+  // A single monotonic advance toward `goal` — the ONE home of the "walk, don't cast" step, shared by the
+  // reposition fallback and the #1061 search walk (mirrors `combat_grid::bfs_best_toward` + `movement::walk`).
+  const advance_toward = goal => {
+    const landing = best_toward(entity.cell, goal, reachable)
+    if (landing.x === entity.cell.x && landing.y === entity.cell.y)
+      return [/** @type {FightAction} */ ({ type: 'end_turn' })]
+    const path = find_path_4dir(
+      entity.cell,
+      landing,
+      entity.mp,
+      is_walkable,
+      is_occupied,
+    )
+    return path
+      ? [/** @type {FightAction} */ ({ type: 'move', path })]
+      : [/** @type {FightAction} */ ({ type: 'end_turn' })]
+  }
+
+  // 0. SEARCH (#1061): nothing visible to fight ⇒ the fighter does NOT idle — it walks toward its search
+  //    landmark, hunting for the vanished enemy. Only a board with no anchor at all falls back to a pass.
+  if (!target) {
+    const anchor = search_anchor(state, entity)
+    return anchor ? advance_toward(anchor) : [{ type: 'end_turn' }]
+  }
 
   // 1. ATTACK: strike from the CLOSEST reachable band cell. cost 0 = strike from standing (attack-now); cost > 0 =
   //    advance exactly to that cast cell then strike (attack-move, no wasted MP). Band-aware, so a min-range spell
@@ -247,17 +289,5 @@ export const ai_choose_turn = (
 
   // 2. REPOSITION: no reachable cast cell → a single advance toward the target, monotonic (never ends farther —
   //    MP spent only to close for next turn). Mirrors the on-chain reposition fallback.
-  const goal = best_toward(entity.cell, target.cell, reachable)
-  if (goal.x !== entity.cell.x || goal.y !== entity.cell.y) {
-    const path = find_path_4dir(
-      entity.cell,
-      goal,
-      entity.mp,
-      is_walkable,
-      is_occupied,
-    )
-    if (path) return [{ type: 'move', path }]
-  }
-
-  return [{ type: 'end_turn' }]
+  return advance_toward(target.cell)
 }

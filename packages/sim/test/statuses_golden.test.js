@@ -31,8 +31,10 @@ const arena = {
   radius: 4,
   center: { x: 4, y: 4 },
   cells: new Uint8Array(WIDTH * WIDTH),
-  spawns_a: [],
-  spawns_b: [],
+  // The two spawn poles are load-bearing for the #1061 all-hidden vectors: `spawns_b[0]` IS the mob side's
+  // search landmark (fight_ai.js `search_anchor` — twin of `turns::search_anchor` reading start_cells_b[0]).
+  spawns_a: [{ x: 5, y: 4 }],
+  spawns_b: [{ x: 1, y: 1 }],
 }
 const targeting = { blocks_los: () => false, is_occupied: () => false }
 const encode = cell => cell.y * WIDTH + cell.x
@@ -350,6 +352,9 @@ const run_mob_targeting = vector => {
   return { cast_target: cast ? encode(cast.target) : -1 }
 }
 
+// #1061: every opponent hidden ⇒ the mob SEARCHES — a stateless walk toward its own side's spawn anchor —
+// instead of idling. `mob_closed_on_anchor` is the behavior assertion; `mob_moved` alone would also be satisfied
+// by a mob wandering anywhere.
 const run_all_hidden = vector => {
   const { spell_id, templates } = ai_spell_state(vector)
   const hidden = fighter('p0', { x: 5, y: 4 }, true, {
@@ -362,11 +367,16 @@ const run_all_hidden = vector => {
     { type: 'ai_turn', entity_id: mob.id },
     { arena, spell_templates: templates },
   )
+  const [anchor] = arena.spawns_b
+  const distance = cell =>
+    Math.abs(cell.x - anchor.x) + Math.abs(cell.y - anchor.y)
   return {
     next_actor: get_current_turn_entity(result.state)?.id,
     hidden_remaining: fighter_is_invisible(result.state, hidden.id),
     mob_moved: result.events.some(event => event.type === 'fight_moved'),
     mob_cast: result.events.some(event => event.type === 'fight_cast'),
+    mob_closed_on_anchor:
+      distance(find_entity(result.state, mob.id).cell) < distance(mob.cell),
   }
 }
 

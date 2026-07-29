@@ -694,6 +694,11 @@ public(package) fun all_start_cells(fight: &Fight): vector<u64> {
   out
 }
 
+/// The FAR-POLE start cells — team 1's seats under PvP, and under PvM the pole OPPOSITE the players' near-side
+/// `start_cells_a` (the two lists are the head and the tail of the same open-cell pool: `board::pick_starts`).
+/// Fixed board geometry, decided once at creation. Read by `turns::search_anchor` — the #1061 search landmark.
+public(package) fun start_cells_b(fight: &Fight): vector<u64> { fight.board.start_cells_b }
+
 public(package) fun is_start_cell_a(fight: &Fight, cell: u64): bool { fight.board.start_cells_a.contains(&cell) }
 public(package) fun is_start_cell_b(fight: &Fight, cell: u64): bool { fight.board.start_cells_b.contains(&cell) }
 

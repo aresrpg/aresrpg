@@ -14,7 +14,7 @@
 /// settlement mints per-seat soulbound results, no epochs).
 module aresrpg_fight::turns;
 
-use aresrpg_foundation::prng;
+use aresrpg_foundation::{combat_grid, prng};
 
 use aresrpg_fight::{
   cast,
@@ -275,16 +275,28 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
   cast::note_mob_turn(fight, midx);
   if (!cast::tick_turn_start(fight, true, midx)) return; // died at turn start
   let (_seats, cells) = living_player_seats_and_cells(fight);
-  // Frozen fight layouts carry no last-known cell. If every enemy is invisible, idle without reading their live
-  // positions, but still run turn-end expiry so the mob's own statuses advance normally.
-  if (cells.is_empty()) { cast::tick_turn_end(fight, true, midx); return };
-  // §17.21 support policy needs ally state: the OTHER living mobs' cells + how wounded each is (self-heal excluded).
-  let (ally_cells, ally_missing) = living_ally_cells_and_missing(fight, midx);
   // (d) memo: reuse the crank-wide off-shape scan; bodies (moved/dead this walk) are re-read inside the builder.
   let move_blocked = cast::move_blocked_cells_memo(fight, midx, off_shape);
-  let los = cast::los_obstacles(fight);
-  let (new_cell, spell_opt, target_cell) = mob::decide_turn(fight::mobs(fight).borrow(midx), mob::kit_spells(fight::content_kit(fight::member_content(fight, midx))), &cells, &ally_cells, &ally_missing, &move_blocked, &los, rng);
   let move_budget = mob::mp(fight::mobs(fight).borrow(midx));
+  // THE SEARCH WALK (#1061, seat ruling 2026-07-29) vs the §17.21 policy. Every opponent invisible ⇒ the visible
+  // set is EMPTY and `decide_turn` may not be called at all (it asserts a non-empty target set — ENoLivingTargets),
+  // so the caller supplies the goal: a blinded mob still MOVES, advancing toward `search_anchor` with the SAME
+  // monotonic primitive the reposition fallback uses. No cast, no target — just repositioning pressure, which is
+  // what invisibility is supposed to buy. Both arms produce the identical `(new_cell, spell_opt, target_cell)`
+  // triple, so everything below (tackle, walk, MobMoved, turn-end) is ONE path for both.
+  let (new_cell, spell_opt, target_cell) = if (cells.is_empty()) {
+    let here = mob::cell(fight::mobs(fight).borrow(midx));
+    let anchor = search_anchor(fight);
+    if (anchor.is_some()) {
+      let goal = anchor.destroy_some();
+      (combat_grid::bfs_best_toward(here, goal, &move_blocked, move_budget), option::none(), goal)
+    } else (here, option::none(), here) // degenerate board with no far pole: hold, exactly as before
+  } else {
+    // §17.21 support policy needs ally state: the OTHER living mobs' cells + how wounded each is (self-heal excluded).
+    let (ally_cells, ally_missing) = living_ally_cells_and_missing(fight, midx);
+    let los = cast::los_obstacles(fight);
+    mob::decide_turn(fight::mobs(fight).borrow(midx), mob::kit_spells(fight::content_kit(fight::member_content(fight, midx))), &cells, &ally_cells, &ally_missing, &move_blocked, &los, rng)
+  };
   // TACKLE (sim twin fight_actions.js:63-100, mob orientation): a mob leaving a living adjacent player's zone
   // contests the exit off the CRANK rng thread (the wave's entropy — like mob-cast drains; mob turns are never
   // previewable). Gated on an ACTUAL planned move so a standing mob draws nothing. A failed escape drains the
@@ -394,6 +406,20 @@ public(package) fun all_mobs_dead(fight: &Fight): bool {
   let mut i = 0;
   while (i < n) { if (mob::is_alive(fight::mobs(fight).borrow(i))) return false; i = i + 1; };
   true
+}
+
+/// THE SEARCH LANDMARK (#1061) — the single home of the goal a BLINDED mob walks toward when every opponent is
+/// invisible: the mob side's SPAWN ANCHOR, `start_cells_b[0]` (the pole opposite the players' near-side start
+/// zone — the mob falls back toward home ground). It is FIXED BOARD GEOMETRY, decided at fight creation, so the
+/// walk consumes ZERO information about where the hidden players actually are — the sealed contract at
+/// `living_player_seats_and_cells` (hidden positions never enter the AI input) holds BY CONSTRUCTION, not by
+/// review. Stateless on purpose: nothing is remembered between turns, so the Fight struct is unchanged and no
+/// upgrade carries new state. A mob already standing next to the anchor holds — `bfs_best_toward` never ends
+/// farther from its goal, and the anchor's own cell is not a candidate (the stop-adjacent rule).
+/// SIM TWIN: `packages/sim/src/fight_ai.js::search_anchor` — the acting side's first spawn cell, same rule.
+fun search_anchor(fight: &Fight): Option<u64> {
+  let anchors = fight::start_cells_b(fight);
+  if (anchors.is_empty()) option::none() else option::some(*anchors.borrow(0))
 }
 
 /// Parallel (seat, cell) vectors of the living VISIBLE players. Hidden positions never enter the AI input.

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// #599 leg (b) — the PRESENTATION twin of the Move soft-lock guard (invisibility_tests.move
-// ::all_targets_invisible_full_crank_advances). When a mob's only target is invisible it PASSES with ZERO
-// gameplay events, so the pass receipt is a bare [TurnEnded(player), TurnStarted(player)] — an EMPTY mob wave
-// (every other mob turn emits at least a MobMoved/Cast). This proves the client does NOT wait forever on that
-// empty wave: `presenting` stays false (no non-local turn to drain) and the player regains a PLAYABLE turn.
+// #599 leg (b) — the PRESENTATION guard against an EMPTY mob wave: a pass receipt that is a bare
+// [TurnEnded(player), TurnStarted(player)] with no mob gameplay event between them. The client must not wait
+// forever on it — `presenting` stays false (no non-local turn to drain) and the player regains a PLAYABLE turn.
+//
+// #1061 lineage: this used to be introduced as "the all-invisible case", which no longer produces an empty wave
+// (a blinded mob now emits MobMoved for its search walk — turns.move::search_anchor). The receipt shape this
+// guards is still reachable and still the client's worst case: a mob that is walled in, or already standing at
+// its goal, resolves its turn emitting nothing. The chain-side cause moved; the presentation invariant did not.
 import { describe, test, expect } from 'bun:test'
 
 import { create_fight_store } from '../src/store.js'

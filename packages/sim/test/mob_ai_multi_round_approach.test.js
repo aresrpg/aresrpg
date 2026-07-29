@@ -8,11 +8,14 @@
 // the distance its MP pays for, from any distance. `fight_ai.js` is that twin, and these tests hold it to the
 // same outcome, so "the mobs never moved" can never be a sim-policy fact.
 //
-// The two ways passivity is CORRECT are pinned too, because they are the real readings of the report:
-//   · MP 0 — nothing to walk with (the chain's `movement::walk` budget is the same number).
-//   · an INVISIBLE target — `turns.move:399 living_player_seats_and_cells` filters hidden players out of the AI
-//     input on-chain, and `fight_ai.js nearest_enemy` filters them here. A hidden player is UNAPPROACHABLE by
-//     design (no last-known-cell state exists), never an AI bug.
+// MP 0 is the ONE case where standing still is correct — nothing to walk with (the chain's `movement::walk`
+// budget is the same number).
+//
+// An INVISIBLE target is NOT such a case any more (#1061 seat ruling, this commit). It stays true that
+// `turns.move living_player_seats_and_cells` filters hidden players out of the AI input on-chain and
+// `fight_ai.js nearest_enemy` filters them here — a hidden player is never APPROACHED, since no last-known-cell
+// state exists. What changed is what the mob does with the empty target set: it SEARCHES, walking toward its
+// spawn anchor (`search_anchor`, both twins) instead of banking a free turn.
 import { describe, expect, test } from 'bun:test'
 
 import { reduce, create_fight_state } from '../src/reduce.js'
@@ -129,7 +132,7 @@ describe('#974 mob AI closes the distance over a multi-round fight (turns.move:2
     expect(find_entity(late, 'm1').cell).toEqual(M1_CELL)
   })
 
-  test('an INVISIBLE player is unapproachable BY DESIGN (turns.move:399 filters hidden seats)', () => {
+  test('an INVISIBLE player is never approached — the mobs SEARCH toward their spawn anchor instead (#1061)', () => {
     const { state, ctx } = three_seat_fight({
       player_effects: [
         {
@@ -143,8 +146,24 @@ describe('#974 mob AI closes the distance over a multi-round fight (turns.move:2
       ],
     })
     const late = drive(state, ctx, 9)
-    // Not a bug: with no last-known-cell state the policy has nothing to walk toward, on either twin.
-    expect(find_entity(late, 'm0').cell).toEqual(M0_CELL)
-    expect(find_entity(late, 'm1').cell).toEqual(M1_CELL)
+    // #1061 SEALED REVERSAL (seat ruling, cited in this commit): this used to assert both mobs stand on their
+    // start cells forever — the reading #974 adjudicated as correct passivity. The ruling repeals it: an
+    // invisibility buys repositioning pressure, never free turns. The property that actually mattered is
+    // asserted below and is STRONGER than the old one — the mobs walk to the observation-free landmark and
+    // never once close on the hidden player, which no amount of standing still could have proven.
+    const [anchor] = flat_arena().spawns_b
+    for (const [id, from] of [
+      ['m0', M0_CELL],
+      ['m1', M1_CELL],
+    ]) {
+      const { cell } = find_entity(late, id)
+      expect(cell).not.toEqual(from)
+      expect(manhattan_distance(cell, anchor)).toBeLessThan(
+        manhattan_distance(from, anchor),
+      )
+      expect(manhattan_distance(cell, P_CELL)).toBeGreaterThanOrEqual(
+        manhattan_distance(from, P_CELL),
+      )
+    }
   })
 })

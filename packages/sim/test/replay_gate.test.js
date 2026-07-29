@@ -648,6 +648,9 @@ const scenarios = [
     // Invisibility across turns (v35 live symptom: "invis LOST after end-turn").
     // Self-cast veil (3 turns), then two full turn cycles — the golden pins the sim's true
     // apply/tick/expiry arc so any client divergence has an argue-proof reference timeline.
+    // #1061 note: this capsule's arena puts the mob's spawn anchor ON the mob's own cell, so the blinded mob's
+    // search walk is a legal zero-step hold and the recorded stream is unchanged. The MOVING case is the
+    // `all_targets_invisible_mob_searches` capsule below.
     meta: {
       id: 'invisibility_across_turns',
       class: 'status',
@@ -680,6 +683,77 @@ const scenarios = [
       { type: 'ai_turn', entity_id: 'm0' },
       { type: 'end_turn', entity_id: 'p0' },
       { type: 'ai_turn', entity_id: 'm0' },
+    ],
+  },
+  {
+    // #1061 twin parity — THE SEARCH WALK. Every opponent invisible: the mob's visible-target set is empty, and
+    // instead of idling it advances toward its own side's spawn anchor (`spawns_b[0]`, here (2,5)), reusing the
+    // ordinary monotonic reposition primitive. The walk reads BOARD GEOMETRY ONLY, so the sealed property holds
+    // — a hidden player's cell never enters the AI input, and the mob's route is identical whether the hidden
+    // p0 stands at (5,7) or anywhere else off the path.
+    meta: {
+      id: 'all_targets_invisible_mob_searches',
+      class: 'twin',
+      authored: '2026-07-29',
+      source: 'authored',
+      notes:
+        'Issue #1061: p0 vanishes; the blinded m0 walks (7,5)→(3,5), the closest-by-cost cell adjacent to its spawn anchor (2,5) — never an empty pass.',
+    },
+    arena: {
+      ...flat_arena_json(),
+      spawns_a: [{ x: 5, y: 7 }],
+      spawns_b: [{ x: 2, y: 5 }],
+    },
+    templates_raw: veil_templates_raw,
+    initial: {
+      fight_id: 'capsule_invis_search',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 7 }, true, {
+          spell_levels: { veil: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'veil',
+        target: { x: 5, y: 7 },
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'ai_turn', entity_id: 'm0' },
+    ],
+    // Hand-traced from the chain: `turns.move` feeds the empty-target arm into
+    // `combat_grid::bfs_best_toward(cell, search_anchor, move_blocked, mp)`. Budget 5 from (7,5) toward the
+    // anchor (2,5) on open ground: the anchor's OWN cell is never a candidate (stop-adjacent), so the best
+    // reachable distance is 1, and among the d=1 cells {(3,5) cost 4, (2,4) cost 5, (2,6) cost 5} the cost
+    // tie-break takes (3,5) — no cell-index tie-break needed, so the two grids' differing strides cannot
+    // diverge here. The straight westward route is the 4-dir path both twins walk.
+    pinned_move_path: [
+      { x: 6, y: 5 },
+      { x: 5, y: 5 },
+      { x: 4, y: 5 },
+      { x: 3, y: 5 },
+    ],
+    pinned_facts: [
+      {
+        cite: 'turns.move resolve_mob_turn — empty visible set ⇒ bfs_best_toward(cell, search_anchor, …, mp) lands the mob one cell short of the anchor at (3,5)',
+        path: 'team1.0.cell.x',
+        equals: 3,
+      },
+      {
+        cite: 'turns.move resolve_mob_turn — the search walk is a straight monotonic advance; the row never changes',
+        path: 'team1.0.cell.y',
+        equals: 5,
+      },
+      {
+        cite: 'turns.move living_player_seats_and_cells — hidden positions never enter the AI input, so p0 is untouched by the mob turn',
+        path: 'team0.0.health',
+        equals: 100,
+      },
     ],
   },
   {
