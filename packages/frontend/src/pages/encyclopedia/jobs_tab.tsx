@@ -84,8 +84,8 @@ function JobsTab({
         asset: encyclopedia_item_asset({
           id: row.template_id,
           slug: slugs[row.name ?? ''],
-          item_type: row.item_type,
-          name: row.name,
+          item_type: row.item_type ?? undefined,
+          name: row.name ?? undefined,
         }),
       })),
     [enc, gather_ladder, job_index, rare_links]
