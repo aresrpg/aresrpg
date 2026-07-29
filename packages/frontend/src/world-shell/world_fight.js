@@ -39,6 +39,18 @@ import { ensure_resumable_fight } from './fight-liquidation.js'
 const { getState } = use_dungeon
 /** True while a fight/dungeon session already owns the shared store (never stomp a live board). */
 const session_busy = () => getState().fight_id != null || getState().run_pass_id != null
+/** A resume reads for SECONDS (two /v1 hops + a chain read + a liquidation door); a player can engage a whole
+ *  new fight inside that window. `resume_world_fight` only ever starts from an EMPTY store (its own entry gate),
+ *  so ANY session standing here now is younger than this pass's reads: this candidate is stale and owns nothing —
+ *  neither a mount nor a recovery. Traced, never silent (#1645). @param {string} fight_id the stale candidate */
+const resume_superseded = (fight_id) => {
+  if (!session_busy()) return false
+  fight_state_trace('fight_resume_validation_superseded', {
+    candidate_fight_id: fight_id,
+    current_fight_id: getState().fight_id,
+  })
+  return true
+}
 const is_live = (f) => !!f && (f.status === 'placement' || f.status === 'active') // the two hostable statuses
 const ENGINE_PLACEMENT = 0 // fight.move status — the window a freshly created Fight opens in
 
@@ -326,11 +338,7 @@ export async function resume_world_fight(character_id, deps = {}) {
   }
   if (!is_current()) return
   if (!current) {
-    if (session_busy())
-      return fight_state_trace('fight_resume_validation_superseded', {
-        candidate_fight_id: fight_id,
-        current_fight_id: getState().fight_id,
-      })
+    if (resume_superseded(fight_id)) return
     return getState()._recover_dead_fight_reference({ character_id, state: 'absent' })
   }
   // ONE chain-truth gate for both live statuses (#882): expired placement → force_start, expired turn → crank,
@@ -342,6 +350,10 @@ export async function resume_world_fight(character_id, deps = {}) {
   })
   if (!is_current()) return
   if (decision === 'gone') {
+    // The recovery below is a FULL local teardown (reset_local) aimed at THIS stale candidate's reference. A
+    // session that opened while the door read is not it — tearing it down unmounts a live board the player is
+    // standing on (#1645). Guard BEFORE the toast: no recovery, no "your fight was cleared" claim.
+    if (resume_superseded(fight_id)) return
     fight_state_trace('fight_resume_expired_gone', { fight_id, character_id, reason })
     push_event_toast({ state: 'info', title: i18n.t('fights.expired_fight_cleared') })
     return getState()._recover_dead_fight_reference({ character_id, state: 'settled' })
