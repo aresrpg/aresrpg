@@ -4,7 +4,7 @@ import type { MarketplaceListing } from '../../types/chain'
 import { is_cosmetic_item } from '../../game/item_classification'
 import { EQUIPMENT_CATEGORIES, PET_CATEGORIES, RUNE_CATEGORIES } from '../../constants/item_categories'
 
-export { marketplace_purchase_total_mist } from '../../utils/marketplace_purchase'
+export { marketplace_buyer_total_mist } from '../../utils/marketplace_purchase'
 
 export const MARKETPLACE_LOT_SIZES = [1, 10, 100, 1000] as const
 export type MarketplaceLotSize = (typeof MARKETPLACE_LOT_SIZES)[number]

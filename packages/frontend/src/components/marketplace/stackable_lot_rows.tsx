@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 import type { MarketplaceListing } from '../../types/chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import {
+  marketplace_buyer_total_mist,
   marketplace_purchase_balance_state,
   type MarketplacePurchaseBalanceState,
 } from '../../utils/marketplace_purchase'
@@ -15,7 +16,6 @@ import {
   confirm_marketplace_lot_ask,
   marketplace_available_lot_ask,
   marketplace_lot_offers,
-  marketplace_purchase_total_mist,
   type MarketplaceLotSize,
 } from './marketplace_model'
 
@@ -38,7 +38,7 @@ export function LotPurchaseConfirmation({
 }) {
   const { t } = useTranslation()
   const ask_mist = BigInt(listing.price_mist)
-  const payment = marketplace_purchase_total_mist(ask_mist, royalty_min_mist)
+  const buyer_total_mist = marketplace_buyer_total_mist(ask_mist, royalty_min_mist)
 
   return (
     <div
@@ -53,7 +53,7 @@ export function LotPurchaseConfirmation({
       </span>
       <span className="text-[10px] tracking-[0.1em] uppercase text-cyan tabular-nums">
         {t('marketplace.lots.wallet_total', {
-          price: format_mist_to_sui(payment.total_mist, 2),
+          price: format_mist_to_sui(buyer_total_mist, 2),
         })}
       </span>
       <span className="flex-1 min-w-2" />
@@ -108,6 +108,10 @@ export function StackableLotRows({
         {offers.map((offer) => {
           const ask = marketplace_available_lot_ask(offer.asks, address)
           const is_armed = armed_size === offer.size
+          const buyer_total_mist =
+            ask && royalty_min_mist != null
+              ? marketplace_buyer_total_mist(BigInt(ask.price_mist), royalty_min_mist)
+              : null
           const purchase_state = ask
             ? marketplace_purchase_balance_state(balance_mist, BigInt(ask.price_mist), royalty_min_mist)
             : 'unknown'
@@ -133,9 +137,11 @@ export function StackableLotRows({
                   {ask
                     ? purchase_state === 'insufficient_balance'
                       ? t('marketplace.purchase.insufficient_balance')
-                      : t('marketplace.lots.cheapest_price', {
-                          price: format_mist_to_sui(BigInt(ask.price_mist), 2),
-                        })
+                      : buyer_total_mist == null
+                        ? '—'
+                        : t('marketplace.lots.cheapest_price', {
+                            price: format_mist_to_sui(buyer_total_mist, 2),
+                          })
                     : t('marketplace.lots.none_listed')}
                 </span>
               </button>
@@ -171,9 +177,17 @@ export function StackableLotRows({
               {offer.asks.length === 0 ? (
                 <span>{t('marketplace.lots.none_listed')}</span>
               ) : (
-                offer.asks
-                  .slice(0, 3)
-                  .map((ask) => <span key={ask.id}>{format_mist_to_sui(BigInt(ask.price_mist), 2)} SUI</span>)
+                offer.asks.slice(0, 3).map((ask) => {
+                  const buyer_total_mist =
+                    royalty_min_mist == null
+                      ? null
+                      : marketplace_buyer_total_mist(BigInt(ask.price_mist), royalty_min_mist)
+                  return (
+                    <span key={ask.id}>
+                      {buyer_total_mist == null ? '—' : format_mist_to_sui(buyer_total_mist, 2)} SUI
+                    </span>
+                  )
+                })
               )}
             </div>
           ))}

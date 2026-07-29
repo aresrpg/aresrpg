@@ -4,6 +4,7 @@
 // shared house gas reserve stays untouched. UI controls and the write-store edge consume this same verdict.
 
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
+import { marketplace_total_mist } from '@aresrpg/sdk/marketplace-pricing'
 
 import { DEMO_NETWORK } from '../chain/deployment'
 
@@ -14,24 +15,16 @@ export const MARKETPLACE_ROYALTY_MIN_MIST = royalty_min_stamp ? BigInt(royalty_m
 
 export type MarketplacePurchaseBalanceState = 'unknown' | 'insufficient_balance' | 'ready'
 
-// The live universal policy is 1000bp with a stamped floor. royalty_rule::fee_amount takes the higher of
-// percentage and floor; this is the exact value the marketplace builder splits from the wallet before gas.
-export function marketplace_purchase_total_mist(
-  ask_mist: bigint,
-  royalty_min_mist: bigint,
-  royalty_bp = 1000n
-): { royalty_mist: bigint; total_mist: bigint } {
-  const percentage = (ask_mist * royalty_bp) / 10_000n
-  const royalty_mist = percentage > royalty_min_mist ? percentage : royalty_min_mist
-  return { royalty_mist, total_mist: ask_mist + royalty_mist }
-}
+// ONE buyer-total home. The SDK helper is derived from its existing MARKETPLACE_ROYALTY_BPS constant and the
+// stamped policy floor; every frontend price display and affordability verdict imports this alias.
+export { marketplace_total_mist as marketplace_buyer_total_mist }
 
 export function marketplace_purchase_required_mist(
   ask_mist: bigint,
   royalty_min_mist: bigint | null = MARKETPLACE_ROYALTY_MIN_MIST
 ): bigint | null {
   if (royalty_min_mist == null) return null
-  return marketplace_purchase_total_mist(ask_mist, royalty_min_mist).total_mist + GAS_RESERVE_MIST
+  return marketplace_total_mist(ask_mist, royalty_min_mist) + GAS_RESERVE_MIST
 }
 
 export function marketplace_purchase_balance_state(

@@ -9,6 +9,7 @@ import fr from '../../i18n/locales/fr.json'
 import ja from '../../i18n/locales/ja.json'
 import uk from '../../i18n/locales/uk.json'
 import {
+  marketplace_buyer_total_mist,
   marketplace_purchase_balance_state,
   marketplace_purchase_required_mist,
 } from '../../utils/marketplace_purchase'
@@ -26,7 +27,6 @@ import {
   marketplace_listing_is_visible,
   marketplace_lot_sizes_for_owned_quantity,
   marketplace_lot_offers,
-  marketplace_purchase_total_mist,
   marketplace_type_matches,
   marketplace_types_for_item_type,
   visible_marketplace_listings,
@@ -268,15 +268,9 @@ describe('native kiosk lot view model', () => {
     )
   })
 
-  test('confirms ask plus the higher of 1000bp royalty or stamped floor', () => {
-    expect(marketplace_purchase_total_mist(4_000_000_000n, 10_000_000n)).toEqual({
-      royalty_mist: 400_000_000n,
-      total_mist: 4_400_000_000n,
-    })
-    expect(marketplace_purchase_total_mist(10_000_000n, 10_000_000n)).toEqual({
-      royalty_mist: 10_000_000n,
-      total_mist: 20_000_000n,
-    })
+  test('buyer total is ask plus the higher of 1000bp royalty or stamped floor', () => {
+    expect(marketplace_buyer_total_mist(4_000_000_000n, 10_000_000n)).toBe(4_400_000_000n)
+    expect(marketplace_buyer_total_mist(10_000_000n, 10_000_000n)).toBe(20_000_000n)
   })
 
   test('prechecks the exact marketplace debit plus fixed gas headroom', () => {

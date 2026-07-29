@@ -19,6 +19,9 @@
       "types": "./types/sui.d.ts",
       "import": "./src/sui.js"
     },
+    "./marketplace-pricing": {
+      "import": "./src/sui/write/items_marketplace.js"
+    },
     "./deployment/items": {
       "types": "./types/deployment/items.d.ts",
       "import": "./src/deployment/items.js"

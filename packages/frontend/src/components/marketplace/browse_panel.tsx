@@ -10,7 +10,11 @@ import { use_auth } from '../../auth'
 import { use_template_t } from '../../i18n/template_t'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
-import { MARKETPLACE_ROYALTY_MIN_MIST, marketplace_purchase_balance_state } from '../../utils/marketplace_purchase'
+import {
+  MARKETPLACE_ROYALTY_MIN_MIST,
+  marketplace_buyer_total_mist,
+  marketplace_purchase_balance_state,
+} from '../../utils/marketplace_purchase'
 import { app_mobile_classes, use_mobile_mode } from '../../game/screens/hud/mobile_layout.js'
 import { ItemImage } from '../items'
 import { ItemHoverTooltip } from '../item_hover_tooltip'
@@ -307,7 +311,12 @@ export function BrowsePanel() {
                       const is_own = !!address && listing.seller_sui_address === address
                       const armed = confirm_id === listing.id
                       const price_mist = BigInt(listing.price_mist)
-                      const price_label = `${format_mist_to_sui(price_mist, 2)} SUI`
+                      const buyer_total_mist =
+                        MARKETPLACE_ROYALTY_MIN_MIST == null
+                          ? null
+                          : marketplace_buyer_total_mist(price_mist, MARKETPLACE_ROYALTY_MIN_MIST)
+                      const price_label =
+                        buyer_total_mist == null ? '—' : `${format_mist_to_sui(buyer_total_mist, 2)} SUI`
                       const purchase_state = marketplace_purchase_balance_state(balance_mist, price_mist)
                       return (
                         <ItemHoverTooltip

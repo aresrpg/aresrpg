@@ -226,8 +226,8 @@ describe('StackableLotRows', () => {
 
     expect((html.match(/data-lot-size=/g) ?? []).length).toBe(4)
     expect((html.match(/data-marketplace-buy-button/g) ?? []).length).toBe(4)
-    expect(html).toContain('Cheapest · 2.00 SUI')
-    expect(html).toContain('Cheapest · 5.00 SUI')
+    expect(html).toContain('Cheapest · 2.20 SUI')
+    expect(html).toContain('Cheapest · 5.50 SUI')
     expect((html.match(/disabled=""/g) ?? []).length).toBe(2)
     expect(html).toContain('None listed')
     expect(html).not.toContain('0.01 SUI')
@@ -248,7 +248,7 @@ describe('StackableLotRows', () => {
 
     const [, after_ten] = html.split('data-lot-size="10"')
     const [ten] = after_ten.split('data-lot-size="100"')
-    expect(ten).toContain('Cheapest · 2.00 SUI')
+    expect(ten).toContain('Cheapest · 2.20 SUI')
     expect(ten).not.toContain('disabled=""')
   })
 
@@ -269,7 +269,7 @@ describe('StackableLotRows', () => {
 
     expect((html.match(/data-lot-size=/g) ?? []).length).toBe(4)
     expect((html.match(/data-marketplace-buy-button/g) ?? []).length).toBe(4)
-    expect(html).toContain('Cheapest · 2.00 SUI')
+    expect(html).toContain('Cheapest · 2.20 SUI')
     expect(html).not.toContain('rune-seven')
     expect(html).not.toContain('0.01 SUI')
   })
@@ -291,6 +291,36 @@ describe('StackableLotRows', () => {
     expect(html).toContain('Ask 4.00 SUI')
     expect(html).toContain('Purchase total 4.40 SUI')
     expect(html).not.toContain('Royalty')
+  })
+
+  test('buyer card, ask ladder, and confirmation render the same fee-included total', () => {
+    const market_html = render(
+      <StackableLotRows
+        listings={[lot_listing('four-sui', 10, '4000000000')]}
+        address={null}
+        balance_mist={10_000_000_000n}
+        busy={false}
+        royalty_min_mist={10_000_000n}
+        on_buy={() => {}}
+      />
+    )
+    const [, card_html] = market_html.split('data-lot-size="10"')
+    const [, ladder_html] = market_html.split('data-marketplace-ask-ladder')
+    const confirm_html = render(
+      <LotPurchaseConfirmation
+        listing={lot_listing('four-sui', 10, '4000000000')}
+        size={10}
+        royalty_min_mist={10_000_000n}
+        purchase_state="ready"
+        busy={false}
+        on_confirm={() => {}}
+        on_cancel={() => {}}
+      />
+    )
+
+    expect(card_html).toContain('4.40 SUI')
+    expect(ladder_html).toContain('4.40 SUI')
+    expect(confirm_html).toContain('4.40 SUI')
   })
 })
 

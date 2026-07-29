@@ -10,7 +10,11 @@ import { RpcStale } from '../../rpc/RpcStale'
 import { use_auth } from '../../auth'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
-import { marketplace_purchase_balance_state } from '../../utils/marketplace_purchase'
+import {
+  MARKETPLACE_ROYALTY_MIN_MIST,
+  marketplace_buyer_total_mist,
+  marketplace_purchase_balance_state,
+} from '../../utils/marketplace_purchase'
 import { class_color, CLASS_COLORS } from '../../constants/class_colors'
 import { ChipRow } from '../chip_row'
 import { use_address_names } from '../../rpc/use_address_names'
@@ -138,7 +142,11 @@ export function CharactersPanel() {
           const is_own = !!address && row.seller === address
           const armed = confirm_id === row.item_id
           const price_mist = BigInt(row.price_mist)
-          const price_label = `${format_mist_to_sui(price_mist, 2)} SUI`
+          const buyer_total_mist =
+            MARKETPLACE_ROYALTY_MIN_MIST == null
+              ? null
+              : marketplace_buyer_total_mist(price_mist, MARKETPLACE_ROYALTY_MIN_MIST)
+          const price_label = buyer_total_mist == null ? '—' : `${format_mist_to_sui(buyer_total_mist, 2)} SUI`
           const purchase_state = marketplace_purchase_balance_state(balance_mist, price_mist)
           return (
             <MarketplaceListingRow
