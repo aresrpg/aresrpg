@@ -19,9 +19,10 @@
 // projection would fire two submits for one turn. So the injection point is `commit_turn` ITSELF — seeded into
 // the store exactly like every other dependency the surface reads. That is store seeding, not a fork: the
 // surface file is untouched, and the same rule retires the S5 worry — `claim` / `mint_loot` / `abandon` are
-// store-injected too (DungeonBoard.jsx:134-136), so the terminal path fires LOCAL no-ops and the simulator is
+// store-injected too (DungeonBoard.jsx:134-136), so the terminal path runs LOCALLY and the simulator is
 // structurally unable to sign a transaction. Nothing here imports a PTB composer; there is no chain call to
-// extract.
+// extract. LOCAL is not NO-OP though (#1632): `claim` carries the fight-over TRANSITION as well as the reward,
+// so its local twin is `finish` below — only the reward half has nothing to do here.
 //
 // ── THE CLOCK ──────────────────────────────────────────────────────────────────────────────────────────────
 // `sim_chain` is pure and total: wall-clock turn deadlines are INJECTED (`now_ms`). This shim is where the real
@@ -43,6 +44,7 @@ import {
 } from '@aresrpg/fight/sim_chain'
 
 import { with_experience } from '../world-shell/seat_character.js'
+import { hold_until_presented } from '../world-shell/dungeon_fight_shim.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { mark_active_seat } from '../fight-engine/phase.js'
 import { install_fight_trace_tee } from '../world-shell/fight_trace_tee.js'
@@ -88,6 +90,7 @@ export const create_fight_shim = ({
   schedule = (fn) => setTimeout(fn, 0),
   now = Date.now,
   log = game_log,
+  on_finish = null,
 } = {}) => {
   // THE ONE mutable holder in this lane — the effect edge's live chain, exactly as `dev_synth_fight.js` holds
   // its `synth`. Every transform on it is pure (sim_chain); nothing else in the lane mutates.
@@ -200,6 +203,25 @@ export const create_fight_shim = ({
     return { ok: true }
   }
 
+  /**
+   * THE TERMINAL EXIT (#1632) — the seeded `claim`. On chain, `claim()` is not a reward button: it IS the whole
+   * fight-over transition (dungeon_run_store.js), and DungeonBoard fires it from ONE level-triggered effect the
+   * instant the killing receipt folds (`dungeon.decided_winner`). Seeding it as a bare `async () => {}` — because
+   * a sandbox has nothing to claim — left a DECIDED fight with no exit at all: the frozen board and its dead mob
+   * stood there forever, the auto-commit loop kept cycling on the surface behind them, and the setup screen never
+   * came back. A local no-op is only sound for a door that owes the page nothing; this one owes it the transition.
+   *
+   * The HOLD is the same one the chain path uses: collapse only once the killing wave has drained, so the fight
+   * never disappears out from under its own last beat. Where it collapses TO belongs to the page — `use_sim_fight`
+   * owns start/stop and is the one home for "a simulator fight session ended".
+   */
+  const finish = () => {
+    if (!live || live.chain.sim_state.winner === -1) return
+    if (!on_finish)
+      return log('simulator', 'fight over, but this shim has no session owner to return to — board left frozen')
+    hold_until_presented(() => on_finish())
+  }
+
   /** The store seeds the production fight surface reads (spec §6, the dev_synth_fight seed set) — plus the
    *  four LOCAL doors that keep the terminal path off the chain (header: the S5 answer). */
   const seed_stores = ({ fight_id, roster, mobs, width, height }) => {
@@ -247,7 +269,7 @@ export const create_fight_shim = ({
       mob_elements: Object.fromEntries(mobs.map(({ template_id, element }) => [template_id, element ?? 0])),
       // ── the local doors (no chain, no gas, no signature) ──
       commit_turn,
-      claim: async () => {},
+      claim: async () => finish(),
       mint_loot: async () => {},
       abandon: async () => stop(),
       place_at_cell: async () => false,

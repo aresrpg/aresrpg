@@ -55,6 +55,15 @@ export function use_sim_fight() {
   const { by_id } = item_corpus.use_item_corpus()
   const mob_by_id = use_mob_index()
 
+  /** THE ONE way a simulator fight session ends — the STOP control's, and (#1632) the shim's own terminal
+   *  exit's. Stable identity, so the shim below can be handed it once at construction. */
+  const stop = useCallback(() => {
+    shim.current?.stop()
+    shim.current?.dispose()
+    use_simulator.getState().input({ type: 'fight_stopped' })
+    set_blocked(null)
+  }, [])
+
   const start = useCallback(async () => {
     const state = use_simulator.getState()
     const built = build_start_args({
@@ -74,21 +83,16 @@ export function use_sim_fight() {
     // FIRST and the shim is handed the id the page now holds. One home for the id, one for the phase.
     state.input({ type: 'fight_started' })
     const { fight } = use_simulator.getState()
-    shim.current = shim.current ?? create_fight_shim()
+    // `on_finish` is the fight-over door (#1632): the shim decides WHEN a decided fight collapses, this hook
+    // owns WHERE it collapses to. Without it the terminal effect fired into a no-op and the board never left.
+    shim.current = shim.current ?? create_fight_shim({ on_finish: stop })
     const opened = shim.current.start({ ...built.args, fight_id: fight.fight_id })
     if (!opened.ok) {
       state.input({ type: 'fight_stopped' })
       return set_blocked(opened.reason)
     }
     return set_blocked(null)
-  }, [by_id, mob_by_id])
-
-  const stop = useCallback(() => {
-    shim.current?.stop()
-    shim.current?.dispose()
-    use_simulator.getState().input({ type: 'fight_stopped' })
-    set_blocked(null)
-  }, [])
+  }, [by_id, mob_by_id, stop])
 
   // ≥1 PLACED CHARACTER arms the control (#883 ⑤). The mob half is not a disabled button but a REASON: an
   // empty enemy band is a thing you fix in one click, and a dead grey button never says which click.
