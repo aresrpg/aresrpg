@@ -87,16 +87,16 @@ const real_dungeon_turn = await import('../../../../../src/game/screens/dungeon-
 const real_roster = await import('../../../../../src/roster/store')
 
 // A zustand hook that answers from LIVE state under a static render (see the header note on getInitialState).
-const static_hook = (store, state) => Object.assign((selector = s => s) => selector(state), store)
+const static_hook = (store, state) => Object.assign((selector = (s) => s) => selector(state), store)
 
 // The engine state this board reads: a seat the WALLET does not own (#1001) — its identity resolves off the
 // fight's own fighter book, the same path a simulator/spectator seat takes.
 const GAME_STATE = { sui: { characters: [] }, world_presentation: 'terrain' }
 
 mock.module('../../../../../src/game/store.js', () => ({
-  use_game_state: (selector = s => s) => selector(GAME_STATE),
+  use_game_state: (selector = (s) => s) => selector(GAME_STATE),
   use_fight_view: () => project.fight_view(),
-  use_fight: (selector = s => s) => selector(fight_store.getState()),
+  use_fight: (selector = (s) => s) => selector(fight_store.getState()),
   context: { get_state: () => GAME_STATE, events: { on() {}, off() {} } },
 }))
 mock.module('../../../../../src/world-shell/dungeon_store.js', () => ({
