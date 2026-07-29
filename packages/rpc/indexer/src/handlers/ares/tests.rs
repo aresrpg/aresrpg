@@ -1547,7 +1547,7 @@ fn victory_defeat_flip_status_settle_and_sweep_delete() {
         PKG,
         SENDER,
         TS,
-        &enc(&OneId { id: fight }),
+        &enc(&FightDefeat { fight }),
     )
     .unwrap();
     assert_eq!(defeat, vec![set(k_fight(&fs), "$.status", json!("defeat"))]);
@@ -1571,7 +1571,7 @@ fn victory_defeat_flip_status_settle_and_sweep_delete() {
         PKG,
         SENDER,
         TS,
-        &enc(&OneId { id: fight }),
+        &enc(&FightSwept { fight }),
     )
     .unwrap();
     assert_eq!(swept, vec![del(k_fight(&fs), "$")]);
@@ -1740,7 +1740,7 @@ fn result_opened_creates_ticket_doc_and_burned_deletes() {
         PKG,
         SENDER,
         TS,
-        &enc(&OneId { id: result }),
+        &enc(&ResultBurned { result }),
     )
     .unwrap();
     assert_eq!(burned, vec![del(k_result(&rs), "$")]);
