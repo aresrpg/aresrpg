@@ -295,6 +295,21 @@ const make_input =
           }
         })
         return
+      case 'rekey':
+        // #1609 — the presentation half of the ONE re-key transition (the core half is core_ingest's
+        // `session_rekeyed`). Session identity lives in exactly two fields here: the gate's `fight_id` and the
+        // adopted view's `id`. Both move together, everything folded stays. A `from` that is not the live id is
+        // a stale receipt and changes nothing.
+        set((s) =>
+          String(s.fight_id ?? '') !== String(msg.from ?? '') ? s : (
+            {
+              ...s,
+              fight_id: msg.to ?? null,
+              view: s.view ? { ...s.view, id: msg.to ?? null } : s.view,
+            }
+          )
+        )
+        return
       case 'ctx':
         // MULTICHAR seat focus: a my_entity_id switch re-resolves my_key against the adopted view — a stale
         // stamped seat keeps the projection + transaction_character_id on the WRONG character (burned gas).

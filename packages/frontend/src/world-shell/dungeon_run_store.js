@@ -34,6 +34,7 @@ import {
 } from '@aresrpg/fight/board_state'
 import { auto_commit_blocked, executed_turn_failure, stage_to_batch, turn_commit_key } from '@aresrpg/fight/turn_commit'
 import { fight_read_complete } from '@aresrpg/fight/board_state'
+import { is_pending_fight_id } from '@aresrpg/sdk/pending_fight_id'
 import { mob_entity_id, transaction_character_id } from '@aresrpg/fight/fight_control'
 import { GRID_W } from '@aresrpg/fight/los'
 
@@ -1026,6 +1027,10 @@ export const use_dungeon = create((set, get) => ({
     if (!is_current()) return
     const { fight_id, run_pass_id } = get()
     if (!fight_id && !run_pass_id) return
+    // #1609 — a PENDING session has no chain identity to read: its create has not finalized, so there is no
+    // Fight object and no journal. It renders the predicted fold alone until `rekey_world_fight` swaps in the
+    // minted id and starts the reads. Never started by the pending mount; guarded here so no other caller can.
+    if (is_pending_fight_id(fight_id)) return
     try {
       const sdk = await get_sdk()
       if (!is_current()) return
