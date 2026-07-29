@@ -1,20 +1,27 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# GOLD RIG SMOKE — the seated-fight substrate (test/gold) is the only localnet rig in the tree, and
-# until #1566 it appeared in NO workflow: it rotted until a hand ran it, which is how it reached a
-# state where it could not boot at all. This is the cheapest standing proof that it still can —
-# the publish guard's own refusals plus a real localnet standing up and being torn down. It does
-# NOT run the full ceremony/seed boot (minutes of publishing per package, and the trunk-ancestry
-# gate #1298 refuses any tree not yet on edge — a PR branch by definition); that stays a local/
-# scheduled run. Fork-safe: no secrets, ever (FROZEN.md rule 8).
+# GOLD RIG SMOKE — PRs retain the cheap bare-localnet proof because the publish guard correctly refuses
+# non-edge ancestry. Pushes to edge, the nightly schedule, and edge-selected manual dispatches upgrade this
+# SAME job to the public active-corpus rig and drive specs_multiplayer FIRST. UNVERIFIED-RUNTIME (#1727):
+# the browser leg could not bind a sandbox port locally, so its 30-minute ceiling is deliberately conservative.
+# Fork-safe: no secrets, ever (FROZEN.md rule 8).
 name: gold smoke
 
 on:
+  push:
+    branches: [edge]
+    paths:
+      - 'test/gold/**'
+      - 'packages/frontend/**'
+      - 'packages/move/**'
+      - '.github/workflows/gold-smoke.yml'
   pull_request:
     paths:
       - 'test/gold/**'
       - 'packages/move/**'
       - '.github/workflows/gold-smoke.yml'
+  schedule:
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -23,9 +30,12 @@ permissions:
 jobs:
   gold_smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 90 }}
     env:
       GOLD_SMOKE_PROJECT: aresrpg-gold-smoke
+      GOLD_CORPUS: active
+      GOLD_SPONSOR: '0'
+      SUI_ARCH: x86_64
       # compose interpolates the sponsor profile's `${SPONSOR_DEV_KEY:?…}` at PARSE time, so even a
       # localnet-only up (and every down) demands the var. A benign placeholder — the smoke never
       # boots the sponsor and there is no key on this path.
@@ -42,27 +52,66 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
       - name: publish guard — the rig's refusals (#1298/#1305/#1566/#1567)
+        if: github.event_name == 'pull_request'
         run: bun test packages/move/scripts/env_guard.test.mjs
       - name: build the localnet image
+        if: github.event_name == 'pull_request'
         # The Dockerfile's SUI_ARCH default is the dev machines' aarch64; the runner is x86_64.
         run: >-
           docker compose -f test/gold/compose.gold.yml -p "$GOLD_SMOKE_PROJECT"
           build --build-arg SUI_ARCH=x86_64 localnet
       - name: stand the gold localnet up
+        if: github.event_name == 'pull_request'
         run: >-
           docker compose -f test/gold/compose.gold.yml -p "$GOLD_SMOKE_PROJECT"
           up -d --wait localnet
       - name: the substrate is really serving — chain identifier + faucet
+        if: github.event_name == 'pull_request'
         run: |
           set -euo pipefail
           curl -sf -X POST http://127.0.0.1:9100 -H 'content-type: application/json' \
             -d '{"jsonrpc":"2.0","id":1,"method":"sui_getChainIdentifier","params":[]}' | tee /dev/stderr | grep -q '"result"'
           curl -sf -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9223/ | grep -qE '2..|4..'
-      - name: teardown — no container of this project survives (kill-your-own-rigs law)
-        if: always()
+      - name: install the pinned Sui CLI
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/sui.tgz \
+            https://github.com/MystenLabs/sui/releases/download/testnet-v1.75.1/sui-testnet-v1.75.1-ubuntu-x86_64.tgz
+          sudo tar -xzf /tmp/sui.tgz -C /usr/local/bin
+          sudo chmod +x /usr/local/bin/sui*
+          sui --version
+      - name: warm the Move dependency cache
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 10
+        working-directory: packages/move
+        run: sui move build
+      - name: install Playwright chromium
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 10
+        working-directory: packages/frontend
+        run: bunx playwright install --with-deps chromium
+      - name: stand the public gold rig up
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 30
+        run: node test/gold/up_gold.mjs
+      - name: specs_multiplayer — COOP first (#1727)
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 30
+        # UNVERIFIED-RUNTIME: local sandbox port binding prevented a full Playwright measurement. No retry,
+        # continue-on-error, or skip-to-green shim: both COOP specs execute against the minted active fixtures.
+        run: xvfb-run --auto-servernum bun ares test multiplayer
+      - name: teardown the bare PR smoke
+        if: always() && github.event_name == 'pull_request'
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           docker compose -f test/gold/compose.gold.yml -p "$GOLD_SMOKE_PROJECT" \
             --profile sponsor down -v --remove-orphans
           survivors=$(docker ps -aq --filter "label=com.docker.compose.project=$GOLD_SMOKE_PROJECT")
           test -z "$survivors" || { echo "gold smoke leaked containers: $survivors" >&2; exit 1; }
+      - name: teardown the full gold rig
+        if: always() && github.event_name != 'pull_request'
+        timeout-minutes: 5
+        run: node test/gold/down_gold.mjs

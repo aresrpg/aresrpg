@@ -54,7 +54,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `GOLD_VITE_CACHE_DIR='${VITE_CACHE_DIR}' VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} bunx --bun vite --config '${VITE_CONFIG}' --port ${PORT} --strictPort`,
+    // Pin IPv4: Linux can otherwise bind Vite to ::1 while Playwright probes localhost via 127.0.0.1.
+    command: `GOLD_VITE_CACHE_DIR='${VITE_CACHE_DIR}' VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} bunx --bun vite --config '${VITE_CONFIG}' --host 127.0.0.1 --port ${PORT} --strictPort`,
     cwd: FRONTEND,
     url: `${BASE}/`,
     // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class
