@@ -1,7 +1,23 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "vector::push_back",
   "package": "move_stdlib",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x1",
+    "module": "vector",
+    "function": "push_back",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door vector::push_back"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&mut vector<T0>",
+    "T0"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "generic"
+  ]
 }

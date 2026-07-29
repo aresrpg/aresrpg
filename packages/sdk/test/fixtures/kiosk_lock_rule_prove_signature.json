@@ -1,7 +1,23 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "kiosk_lock_rule::prove",
   "package": "rules",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
+    "module": "kiosk_lock_rule",
+    "function": "prove",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door kiosk_lock_rule::prove"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&mut 0x0000000000000000000000000000000000000000000000000000000000000002::transfer_policy::TransferRequest<T0>",
+    "&0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Kiosk"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "object"
+  ]
 }

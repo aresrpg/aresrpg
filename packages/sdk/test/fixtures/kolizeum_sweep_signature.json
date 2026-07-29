@@ -1,7 +1,21 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "kolizeum::sweep",
   "package": "kolizeum",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0xc31057878371744a0c2aad4b1c73dcafbecdb907482cb962b4b51b0651b7a0af",
+    "module": "kolizeum",
+    "function": "sweep",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door kolizeum::sweep"
+  },
+  "is_entry": false,
+  "parameters": [
+    "0xc31057878371744a0c2aad4b1c73dcafbecdb907482cb962b4b51b0651b7a0af::kolizeum::Kolizeum"
+  ],
+  "ptb_arg_kinds": [
+    "object"
+  ]
 }

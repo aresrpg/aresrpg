@@ -1,7 +1,34 @@
 {
-  "status": "TODO-capture",
+  "status": "captured",
   "target": "kolizeum::create_public",
   "package": "kolizeum",
-  "reason": "capture sandbox has no network (fetch failed)",
-  "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs"
+  "provenance": {
+    "network": "testnet",
+    "package_id": "0xc31057878371744a0c2aad4b1c73dcafbecdb907482cb962b4b51b0651b7a0af",
+    "module": "kolizeum",
+    "function": "create_public",
+    "source": "sui.rpc.v2.MovePackageService/GetFunction @ https://fullnode.testnet.sui.io:443",
+    "captured": "2026-07-29",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door kolizeum::create_public"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::config::GameConfig",
+    "u64",
+    "u64",
+    "u64",
+    "&0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::character::Character",
+    "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+    "&0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb::version::Version",
+    "&mut 0x0000000000000000000000000000000000000000000000000000000000000002::tx_context::TxContext"
+  ],
+  "ptb_arg_kinds": [
+    "object",
+    "pure",
+    "pure",
+    "pure",
+    "object",
+    "object",
+    "object"
+  ]
 }
