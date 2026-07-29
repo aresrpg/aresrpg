@@ -1754,6 +1754,8 @@
     "click_to_fight": "クリックして戦闘を開始",
     "cast_needs_target": "その呪文にはターゲットが必要です — キャストはターンから除外されました。",
     "cast_target_unreachable": "「{{spell}}」を中止 — 対象が範囲外へ移動しました",
+    "auto_pass_fired": "ターン終了 — 行動なし、パスします",
+    "auto_crank_fired": "ターン期限切れ — 戦闘を進行します",
     "auto_force_start_fired": "配置時間切れ — 戦闘を開始します",
     "cast_dropped_stale": "「{{spell}}」なしでターンを確定しました — 対象がすでに無効でした。",
     "spell_on_cooldown": "クールダウン中：あと{{n}}ターン。",

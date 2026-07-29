@@ -1754,6 +1754,8 @@
     "click_to_fight": "Click to start the fight",
     "cast_needs_target": "That spell needs a target — the cast was dropped from your turn.",
     "cast_target_unreachable": "{{spell}} cancelled — its target moved out of reach",
+    "auto_pass_fired": "Ending turn — nothing drafted, passing",
+    "auto_crank_fired": "Turn deadline passed — advancing the fight",
     "auto_force_start_fired": "Placement expired — starting the fight",
     "cast_dropped_stale": "Turn committed without {{spell}} — its target was no longer valid.",
     "spell_on_cooldown": "On cooldown for {{n}} more turn(s).",

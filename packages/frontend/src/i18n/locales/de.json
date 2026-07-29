@@ -1754,6 +1754,8 @@
     "click_to_fight": "Klicken, um den Kampf zu starten",
     "cast_needs_target": "Dieser Zauber braucht ein Ziel — der Wurf wurde aus deinem Zug entfernt.",
     "cast_target_unreachable": "{{spell}} abgebrochen — Ziel außer Reichweite",
+    "auto_pass_fired": "Zug wird beendet — nichts geplant, passen",
+    "auto_crank_fired": "Zugfrist abgelaufen — der Kampf wird fortgesetzt",
     "auto_force_start_fired": "Aufstellung abgelaufen — der Kampf beginnt",
     "cast_dropped_stale": "Zug ohne {{spell}} bestätigt — Ziel war nicht mehr gültig.",
     "spell_on_cooldown": "Noch {{n}} Runde(n) Abklingzeit.",
