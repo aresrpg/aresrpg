@@ -130,7 +130,12 @@ const apply_effect_row = (state, effect) => {
     delta = { ...delta, health, alive: health > 0 }
     facts.push(
       capacity
-        ? { kind: 'capacity', id, max_hp: Number(effect.max_hp), new_health: health }
+        ? {
+            kind: 'capacity',
+            id,
+            max_hp: Number(effect.max_hp),
+            new_health: health,
+          }
         : {
             kind: effect.heal != null ? 'heal' : 'hit',
             id,

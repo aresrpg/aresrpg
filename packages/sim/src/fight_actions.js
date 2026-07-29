@@ -231,9 +231,7 @@ export const apply_max_hp_delta = (state, target_id, delta) =>
  */
 export const max_hp_riders = (state, id) => {
   const entity = find_entity(state, id)
-  return entity
-    ? { max_hp: entity.health_max, new_health: entity.health }
-    : {}
+  return entity ? { max_hp: entity.health_max, new_health: entity.health } : {}
 }
 
 /**
