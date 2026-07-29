@@ -1284,7 +1284,7 @@
     "remove_mob": "削除",
     "fight_draw": "引き分け",
     "fight_blocked_empty_roster": "開始する前にキャラクターを1体以上配置してください。",
-    "fight_blocked_no_mobs": "開始する前にモンスターを1体以上選択してください。",
+    "fight_blocked_no_mobs": "開始する前に、ボードの赤いマスでモンスターを1体以上選択してください。",
     "fight_blocked_stale_build": "このページは古いバージョンです。再読み込みして戦闘を開始してください。",
     "mob_team": "モンスターチーム",
     "edit_character": "キャラクター編集",

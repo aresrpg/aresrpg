@@ -1284,7 +1284,7 @@
     "remove_mob": "ENTFERNEN",
     "fight_draw": "UNENTSCHIEDEN",
     "fight_blocked_empty_roster": "Platziere mindestens einen Charakter, bevor du startest.",
-    "fight_blocked_no_mobs": "Wähle mindestens einen Gegner, bevor du startest.",
+    "fight_blocked_no_mobs": "Wähle vor dem Start mindestens einen Gegner auf einem roten Spielfeld.",
     "fight_blocked_stale_build": "Diese Seite ist veraltet. Lade neu, um den Kampf zu starten.",
     "mob_team": "MONSTER-TEAM",
     "edit_character": "CHARAKTER BEARBEITEN",

@@ -21,7 +21,7 @@ import { decode } from '@aresrpg/fight/los'
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
 
 import { board_of } from './board'
-import { build_start_args, class_spellbook_of, START_BLOCKED } from './fight_start.js'
+import { build_start_args, class_spellbook_of, start_blocked_reason, START_BLOCKED } from './fight_start.js'
 import { EMPTY_STAT_ALLOC, INITIAL_SIMULATOR_STATE } from './reducer'
 
 const SEED = 0xc81f3a92
@@ -95,6 +95,12 @@ const fold = (state, { mob_spells = [MOB_SPELL] } = {}) => {
 }
 
 describe('the START fold refuses honestly', () => {
+  test('the pre-click gate names both missing teams and arms only a complete matchup (#1436)', () => {
+    expect(start_blocked_reason({ ...state_of(), placements: {} })).toBe(START_BLOCKED.EMPTY_ROSTER)
+    expect(start_blocked_reason({ ...state_of(), mob_picks: {} })).toBe(START_BLOCKED.NO_MOBS)
+    expect(start_blocked_reason(state_of())).toBeNull()
+  })
+
   test('no character on the board is a REASON, never a silent no-op', () => {
     expect(fold({ ...state_of(), placements: {} })).toEqual({ ok: false, reason: START_BLOCKED.EMPTY_ROSTER })
   })

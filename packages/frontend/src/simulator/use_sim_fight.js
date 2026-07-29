@@ -16,7 +16,7 @@ import * as item_corpus from '../pages/encyclopedia/item_corpus'
 import { report_chunk_load_failure } from '../core/stale_deploy_recovery'
 
 import { board_of } from './board'
-import { build_start_args } from './fight_start.js'
+import { build_start_args, start_blocked_reason } from './fight_start.js'
 import { use_mob_index } from './MobPicker'
 import { use_simulator } from './store'
 
@@ -52,6 +52,7 @@ export function use_sim_fight() {
   const [blocked, set_blocked] = useState(/** @type {string | null} */ (null))
   const phase = use_simulator((state) => state.phase)
   const placements = use_simulator((state) => state.placements)
+  const mob_picks = use_simulator((state) => state.mob_picks)
   const { by_id } = item_corpus.use_item_corpus()
   const mob_by_id = use_mob_index()
 
@@ -94,9 +95,10 @@ export function use_sim_fight() {
     return set_blocked(null)
   }, [by_id, mob_by_id, stop])
 
-  // ≥1 PLACED CHARACTER arms the control (#883 ⑤). The mob half is not a disabled button but a REASON: an
-  // empty enemy band is a thing you fix in one click, and a dead grey button never says which click.
-  const can_start = useMemo(() => Object.keys(placements).length > 0, [placements])
+  // The fold's two setup refusals are visible BEFORE a click (#1436): both teams need one placed member.
+  // FightControls renders this exact reason beside the disabled button and points aria-describedby at it.
+  const setup_blocked = useMemo(() => start_blocked_reason({ placements, mob_picks }), [placements, mob_picks])
+  const can_start = setup_blocked == null
 
-  return { phase, can_start, blocked, start, stop }
+  return { phase, can_start, blocked: setup_blocked ?? blocked, start, stop }
 }

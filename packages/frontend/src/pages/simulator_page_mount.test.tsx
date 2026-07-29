@@ -58,13 +58,14 @@ describe('the /simulator route mounts', () => {
     expect(html.split(en.simulator.seat_empty).length - 1).toBeGreaterThan(1)
   })
 
-  // #883 ⑤ — the page had no way at all to start a fight. It is in the top bar, disabled until a character
-  // stands on the board, and it says WHY while it is.
-  test('a START FIGHT control exists, disabled until at least one character is placed', () => {
+  // #883 ⑤ / #1436 — START needs both teams. The initial shell has neither, so the control is disabled and
+  // its visible refusal is also its accessible description; the pure gate separately pins the zero-mob case.
+  test('a START FIGHT control exists, disabled with an accessible reason until the matchup is complete', () => {
     const html = markup()
     expect(html).toContain(en.simulator.start_fight)
     expect(html).toContain('disabled=""')
     expect(html).toContain(en.simulator.fight_blocked_empty_roster)
+    expect(html).toContain('aria-describedby="simulator-start-refusal"')
   })
 
   test('no editor is mounted until a seat is opened — the page is seats, not a standing form', () => {

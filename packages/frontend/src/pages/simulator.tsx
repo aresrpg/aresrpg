@@ -179,12 +179,15 @@ function MobRow({ cell }: Readonly<{ cell: number }>) {
 function FightControls() {
   const { t } = useTranslation()
   const { phase, can_start, blocked, start, stop } = use_sim_fight()
+  const blocked_label = blocked
+    ? t(`simulator.fight_blocked_${blocked}`, { defaultValue: t('simulator.fight_blocked_empty_roster') })
+    : null
 
   return (
     <div className="flex items-center gap-3 ml-auto">
-      {blocked && (
-        <span className={micro} style={{ color: '#ff9f43' }} role="status">
-          {t(`simulator.fight_blocked_${blocked}`, { defaultValue: t('simulator.fight_blocked_empty_roster') })}
+      {blocked_label && (
+        <span id="simulator-start-refusal" className={micro} style={{ color: '#ff9f43' }} role="status">
+          {blocked_label}
         </span>
       )}
       {phase === 'fight' ? (
@@ -207,7 +210,8 @@ function FightControls() {
               : { border: HAIRLINE, color: '#6b7280' }
           }
           disabled={!can_start}
-          title={can_start ? undefined : t('simulator.fight_blocked_empty_roster')}
+          aria-describedby={!can_start && blocked_label ? 'simulator-start-refusal' : undefined}
+          title={can_start ? undefined : (blocked_label ?? undefined)}
           onClick={start}
         >
           <Play size={11} />

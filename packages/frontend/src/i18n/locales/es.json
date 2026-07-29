@@ -1284,7 +1284,7 @@
     "remove_mob": "QUITAR",
     "fight_draw": "EMPATE",
     "fight_blocked_empty_roster": "Coloca al menos un personaje antes de empezar.",
-    "fight_blocked_no_mobs": "Elige al menos un monstruo antes de empezar.",
+    "fight_blocked_no_mobs": "Elige al menos un monstruo en una casilla roja del tablero antes de empezar.",
     "fight_blocked_stale_build": "Esta página está desactualizada. Recarga para iniciar el combate.",
     "mob_team": "EQUIPO DE MOBS",
     "edit_character": "EDITAR PERSONAJE",

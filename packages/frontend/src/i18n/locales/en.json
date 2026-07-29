@@ -1284,7 +1284,7 @@
     "remove_mob": "REMOVE",
     "fight_draw": "DRAW",
     "fight_blocked_empty_roster": "Place at least one character before starting.",
-    "fight_blocked_no_mobs": "Pick at least one mob before starting.",
+    "fight_blocked_no_mobs": "Pick at least one mob on a red board cell before starting.",
     "fight_blocked_stale_build": "This page is out of date. Reload to start the fight.",
     "mob_team": "MOB TEAM",
     "edit_character": "EDIT CHARACTER",

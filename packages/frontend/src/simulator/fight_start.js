@@ -35,6 +35,18 @@ export const START_BLOCKED = {
 }
 
 /**
+ * The setup facts that can refuse START before a click. This is the UI gate and the fold's first two
+ * refusals expressed over the page state, so a zero-seat team is named while the control is disabled.
+ * @param {{ placements?: Record<string, unknown>, mob_picks?: Record<string, unknown> }} state
+ * @returns {string | null}
+ */
+export const start_blocked_reason = (state) => {
+  if (Object.keys(state?.placements ?? {}).length === 0) return START_BLOCKED.EMPTY_ROSTER
+  if (Object.keys(state?.mob_picks ?? {}).length === 0) return START_BLOCKED.NO_MOBS
+  return null
+}
+
+/**
  * THE ID A COMMITTED CAST NAMES (#931). The production board stages `object_id` — the on-chain SpellTemplate
  * shared object `act_cast` takes — and the simulator routes those very staged rows through the sim chain's
  * `commands_from_staged`, which reads `spell_template_id` verbatim as the spell to cast. So the local chain's
