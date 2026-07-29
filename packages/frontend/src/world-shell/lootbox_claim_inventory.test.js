@@ -54,7 +54,7 @@ describe('lootbox claim → inventory reducer door (#265)', () => {
   it('folds a claim_pet receipt into the bag without a refresh', async () => {
     const inputs = []
     const on_input = (input) => inputs.push(input)
-    context.events.on('action/sui_data', on_input)
+    context.events.on('action/inventory/loot', on_input)
 
     try {
       await reduce_minted_receipt(claim_settlement, '0xowner-a', {
@@ -65,20 +65,19 @@ describe('lootbox claim → inventory reducer door (#265)', () => {
       await settle_engine()
 
       expect(inputs).toHaveLength(1)
-      expect(inputs[0]).toMatchObject({ kind: 'receipt_patch', op: 'settled_loot' })
       expect(inputs[0].rows).toEqual([
         expect.objectContaining({ id: pet_id, template_id, amount: 1, item_category: 'pet', stackable: false }),
       ])
       expect(context.get_state().sui.items.some((item) => item.id === pet_id)).toBe(true)
     } finally {
-      context.events.off('action/sui_data', on_input)
+      context.events.off('action/inventory/loot', on_input)
     }
   })
 
   it('drops a late claim receipt after the active account switches wallets mid-flight', async () => {
     const inputs = []
     const on_input = (input) => inputs.push(input)
-    context.events.on('action/sui_data', on_input)
+    context.events.on('action/inventory/loot', on_input)
 
     try {
       // The pre-tx snapshot — mirrors claim_pet reading `address` off use_auth BEFORE run_tx.
@@ -93,7 +92,7 @@ describe('lootbox claim → inventory reducer door (#265)', () => {
       expect(inputs).toEqual([])
       expect(context.get_state().sui.items.some((item) => item.id === pet_id)).toBe(false)
     } finally {
-      context.events.off('action/sui_data', on_input)
+      context.events.off('action/inventory/loot', on_input)
     }
   })
 })

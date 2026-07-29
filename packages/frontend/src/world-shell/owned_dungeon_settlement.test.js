@@ -11,7 +11,7 @@
 // lootbox_claim_inventory.test.js already imports it the same way).
 //
 // ROOT CAUSE: the leader's own settlement (dungeon_settlement.js finish_result) enqueues its result_id for
-// mint+burn via pending_mints.js and that mint dispatches `action/sui_data` on success — the bag updates without
+// mint+burn via pending_mints.js and that mint publishes `action/inventory/loot` on success — the bag updates without
 // a refresh. A same-wallet companion character's settlement (owned_dungeon_settlement.js
 // settle_owned_dungeon_companions) opens its OWN FightResult per character and stores the id in
 // `owned_result_ids` (dungeon_run_store.js) — but NOTHING ever enqueues that result_id for its mint+burn. The

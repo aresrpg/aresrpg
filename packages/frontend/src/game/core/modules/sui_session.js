@@ -5,7 +5,8 @@
 //
 // M5 (audit row #3): the `action/sui_data` merge is NO LONGER a blind spread. Every async source
 // dispatches a TYPED input and the merge law (XP floor, pending ledgers, receipt-over-snapshot) lives
-// in one place — @aresrpg/inventory (reduce.js). See its header for the input kinds.
+// in one place — @aresrpg/inventory (reduce.js). #1488's loot edge publishes domain facts instead;
+// this reducer door is the single home that derives their typed settled-loot input.
 
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
@@ -102,6 +103,17 @@ export default function sui_session() {
         // SAME sui ref so a delta that changed nothing never churns React.
         case 'action/sui_data': {
           const sui = reduce_sui_data(state.sui, payload)
+          return sui === state.sui ? state : { ...state, sui }
+        }
+        // Mint effects publish receipt-proven rows as a domain event; state derivation belongs here, never in
+        // their async completion callbacks. The inventory reducer owns de-duplication and its receipt floor, so
+        // a later stale snapshot cannot erase loot and replaying the same event cannot duplicate it.
+        case 'action/inventory/loot': {
+          const sui = reduce_sui_data(state.sui, {
+            kind: 'receipt_patch',
+            op: 'settled_loot',
+            rows: payload?.rows ?? [],
+          })
           return sui === state.sui ? state : { ...state, sui }
         }
         default:
