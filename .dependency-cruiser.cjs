@@ -193,6 +193,22 @@ module.exports = {
       },
     },
     {
+      name: 'roster-hp-writeback-single-home',
+      comment:
+        'Issue #1643 (the #1336 one-pipeline law applied to the roster HP block): a post-fight HP/XP ' +
+        "write-back enters `state.sui` ONLY through the reducer door — `reduce_sui_data`'s typed " +
+        "`{kind:'receipt_patch', op:'fight_receipt'}` input. `apply_fight_receipt_to_roster` is that door's " +
+        'private fold step, so packages/inventory/src/reduce.js is its ONLY importer. Two outside importers ' +
+        'shipped the bug this rule closes: dungeon_run_store read `context.get_state().sui`, applied the ' +
+        'helper to the captured array and re-dispatched the whole roster — a read-modify-write that both ' +
+        "raced the reducer and (via the helper's old `Date.now()` default) stamped `hp_updated_ms` with a " +
+        'CLIENT wall clock, freezing the row against genuinely fresher chain reads under skew. A new ' +
+        'importer here is that same class: dispatch the typed input instead.',
+      severity: 'error',
+      from: { pathNot: '^packages/inventory/src/reduce\\.js$' },
+      to: { path: '^packages/inventory/src/fight_receipt_roster\\.js$' },
+    },
+    {
       name: 'no-circular',
       comment:
         'L-C1 (composition is associative only on a DAG): no module-level import cycles inside ' +
