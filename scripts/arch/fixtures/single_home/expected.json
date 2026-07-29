@@ -1,0 +1,20 @@
+{
+  "red": {
+    "duplicate-export": {
+      "K_TEST · packages/alpha/src/protocol.js": 1,
+      "K_TEST · packages/beta/src/copy.js": 1
+    },
+    "registry-fact": {
+      "K_TEST (Test protocol constant) · packages/beta/src/copy.js": 1,
+      "K_TEST (Test protocol constant) · packages/beta/src/laundered.js": 1
+    },
+    "registry-anchor": {
+      "Rotten anchor · packages/alpha/src/protocol.js:3": 1
+    },
+    "store-writers": {
+      "use_thing.phase · packages/gamma/src/writer_one.js": 1,
+      "use_thing.phase · packages/gamma/src/writer_two.js": 1
+    }
+  },
+  "green": {}
+}
