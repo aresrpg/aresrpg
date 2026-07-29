@@ -12,6 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { load_deps } from './deps_gold.mjs'
+import { repoint_kiosk_dependency } from './kiosk_manifest.mjs'
 
 const GOLD = path.dirname(fileURLToPath(import.meta.url)) // test/gold
 const REPO = path.resolve(GOLD, '..', '..')
@@ -380,17 +381,14 @@ export function publishKiosk() {
   for (const pkg of kiosk_packages) {
     const toml = path.join(P.BUILD, pkg, 'Move.toml')
     if (!fs.existsSync(toml)) continue
-    const a = fs.readFileSync(toml, 'utf8')
-    const repointed = a.replace(
-      /\[dependencies\.Kiosk\]\n(?:[\w-]+ = .*\n)+/,
-      `[dependencies.Kiosk]\nlocal = "../kiosk"\n`
-    )
-    if (repointed === a)
+    const source = fs.readFileSync(toml, 'utf8')
+    const repointed = repoint_kiosk_dependency(source)
+    if (!repointed.ok)
       throw new Error(
         `gold Kiosk repoint FAILED for ${pkg}: no [dependencies.Kiosk] block matched in ${toml}. ` +
           `Unrepointed, ${pkg} resolves the testnet Kiosk package id, which does not exist on this localnet.`
       )
-    fs.writeFileSync(toml, repointed)
+    fs.writeFileSync(toml, repointed.manifest)
     fs.rmSync(path.join(P.BUILD, pkg, 'Move.lock'), { force: true })
   }
   return kid
