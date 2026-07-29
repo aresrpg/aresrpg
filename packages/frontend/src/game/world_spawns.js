@@ -70,6 +70,7 @@ import { start_fight_engage } from './fight_engage.js'
 import { push_event_toast } from './core/toast.js'
 import { context } from './core/game.js'
 import { fight_store } from '@aresrpg/fight/store'
+import { mob_entity_id } from '@aresrpg/fight/fight_control'
 import { parse_move_abort } from './core/abort_copy.js'
 import { plate_occluded, project_plate } from './nameplate_occlusion.js'
 import { render_group_card, update_group_aging } from './spawn_card.js'
@@ -781,11 +782,13 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       // session the reconnect leg enters; the shared dungeon store's refresh/sync_engine paints the board+HUD.
       if (fight_id) {
         // CARRY the exact roster the world ALREADY composed and rendered. `e.roster` is seated_roster's output;
-        // every template lookup below is the settled world cache that gated placement. The fight receives this
-        // data through its init input — no second roster derivation, template decode or identity catalog.
-        const mob_roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ template_id) => {
+        // every template lookup below is the settled world cache that gated placement. Stamp each row with the
+        // fold's stable fighter id ONCE here; the fight receives that id-keyed book through its init input — no
+        // second roster derivation, template decode or positional name lookup.
+        const mob_roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ template_id, index) => {
           const tpl = resolve_template(template_id)
           return {
+            id: mob_entity_id(index),
             template_id,
             name: tpl?.name ?? null,
             min_level: tpl?.min_level ?? null,

@@ -25,7 +25,7 @@ export { resolve_world_offset, sync_dungeon_fight } from './dungeon_fight_sync.j
  * @param {{ fight_id: string, character_id: string|null, address: string|null, spectator?: boolean,
  *   run?: any, rooms_total?: number,
  *   mob_names?: Record<string,string>, mob_levels?: Record<string,number>, mob_elements?: Record<string,number>,
- *   mob_roster?: Array<{template_id:string,name?:string|null,min_level?:number|null,element?:number|null}>,
+ *   mob_roster?: Array<{id:string,template_id:string,name?:string|null,min_level?:number|null,element?:number|null}>,
  *   offset?: { x:number, z:number } }} args
  */
 export function init_dungeon_fight({

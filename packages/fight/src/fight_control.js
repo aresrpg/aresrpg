@@ -15,6 +15,9 @@ export function participant_entity_id(participant) {
   return participant_character_id(participant) ?? (participant?.addr ? String(participant.addr) : null)
 }
 
+/** Stable render/input identity of a mob fighter at its chain index. @param {number|string} index */
+export const mob_entity_id = (index) => `mob-${Number(index)}`
+
 /**
  * Chain-derived character ids this wallet may control, in fight seat/group order.
  * Rows owned by anybody else are deliberately excluded.

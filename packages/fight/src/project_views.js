@@ -5,7 +5,7 @@
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
 import { GRID_W, GRID_H, decode as decode_xy } from './los.js'
-import { participant_entity_id, participant_character_id } from './fight_control.js'
+import { mob_entity_id, participant_entity_id, participant_character_id } from './fight_control.js'
 import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
@@ -89,7 +89,7 @@ export const committed_mob_hp = (state, idx) => committed_truth(state).fighters?
 /** Entity id of a thin-fold key (`p0` → the seat's character id, `m2` → `mob-2`), resolved through the view. */
 export const entity_id_of_key = (view, key) => {
   if (!key || !view) return null
-  if (key[0] === 'm') return `mob-${Number(key.slice(1))}`
+  if (key[0] === 'm') return mob_entity_id(key.slice(1))
   const row = view.escrow?.[Number(key.slice(1))]
   return row ? (participant_entity_id(row) ?? null) : null
 }
@@ -249,6 +249,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       ...(st.flags != null ? { flags: st.flags } : {}),
     }))
   const ctx = s.ctx ?? {}
+  // A mob's display identity is carried by the same stable fighter id every fight surface already uses. Build
+  // this book once per projection; roster order is presentation metadata and may change across phase/viewer
+  // recomposition, so it is never a join key.
+  const mob_identities = new Map()
+  for (const identity of ctx.mob_roster ?? [])
+    if (identity?.id != null) mob_identities.set(String(identity.id), identity)
   const map = new Map()
   const ready = new Set()
   for (const [seat, row] of (view.escrow ?? []).entries()) {
@@ -307,16 +313,18 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     })
   }
   ;(view.mobs ?? []).forEach((m, i) => {
+    const entity_id = mob_entity_id(i)
     const f = p.fighters?.[mob_key(i)] ?? {}
     const cf = c.fighters?.[mob_key(i)] ?? {}
-    // WORLD IDENTITY ROSTER — a claim already composed and rendered the seated templates positionally. That
-    // roster crosses the fight's ctx input and wins here; the shared group template remains the dungeon/legacy
-    // fallback. Projection reads ctx directly so identity can heal without re-decoding the chain snapshot.
-    const identity = ctx.mob_roster?.[i] ?? null
+    // WORLD IDENTITY ROSTER — a claim already composed and rendered the seated templates. That roster crosses
+    // the fight's ctx input keyed by the fold fighter id and wins here; the shared group template remains the
+    // dungeon/legacy fallback. Projection reads ctx directly so identity can heal without re-decoding the chain
+    // snapshot, and an array reorder cannot rename a living fighter mid-fight (#1608).
+    const identity = mob_identities.get(entity_id) ?? null
     const template = identity?.template_id || m.template || `mob-${i}`
     const mapped_name = view.mob_names?.[template] || null
-    map.set(`mob-${i}`, {
-      id: `mob-${i}`,
+    map.set(entity_id, {
+      id: entity_id,
       variant: template,
       // A missing display read must name the actual template id, never invent the literal "Mob". The renderer
       // uses identity_resolved to keep that honest text fallback on its built-in capsule without requesting the
@@ -342,7 +350,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       level: m.level || 1,
       is_player: false,
       dead:
-        !death_hold.has(`mob-${i}`) &&
+        !death_hold.has(entity_id) &&
         ((s.busy && s.optimistic_dead?.[mob_key(i)] != null) || (f.hp != null ? !f.alive : !m.alive)),
       element: Number(identity?.element ?? m.element),
       invisible: !!f.invisible,
@@ -424,7 +432,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     origin: DUNGEON_BOARD_ORIGIN,
     fighters: map,
     turn_order: (view.turn_queue ?? [])
-      .map((a) => (a.is_mob ? `mob-${a.idx}` : participant_entity_id(view.escrow?.[a.idx] ?? {})))
+      .map((a) => (a.is_mob ? mob_entity_id(a.idx) : participant_entity_id(view.escrow?.[a.idx] ?? {})))
       .filter(Boolean),
     active_entity_id,
     turn_ordinal: c.turn_ordinal ?? null,

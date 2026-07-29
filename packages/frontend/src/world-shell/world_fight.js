@@ -27,8 +27,8 @@ const is_live = (f) => !!f && (f.status === 'placement' || f.status === 'active'
  *  non-engage entry that stays on today's behavior). `world_group` is the claimed group's identity
  *  ({world_id,zx,zy,index}) carried straight out of the claim — the session FACT a lost fight gives back (#609);
  *  a resume has no claim to carry one, and releases nothing.
- *  `mob_roster` is the claimed group's already-composed world identity, carried positionally into the fight
- *  reducer; a reconnect/join without that local fact keeps the normal adoption fallback.
+ *  `mob_roster` is the claimed group's already-composed world identity, carried by stable fighter id into the
+ *  fight reducer; a reconnect/join without that local fact keeps the normal adoption fallback.
  *  @param {{fight_id,world_id?,character_id,resumed?,is_public?,world_group?,mob_roster?}} */
 export function enter_world_fight({
   fight_id,

@@ -34,7 +34,7 @@ import {
 } from '@aresrpg/fight/board_state'
 import { auto_commit_blocked, executed_turn_failure, stage_to_batch, turn_commit_key } from '@aresrpg/fight/turn_commit'
 import { fight_geometry_complete } from '@aresrpg/fight/board_state'
-import { transaction_character_id } from '@aresrpg/fight/fight_control'
+import { mob_entity_id, transaction_character_id } from '@aresrpg/fight/fight_control'
 import { apply_fight_receipt_to_roster } from '@aresrpg/inventory/fight_receipt_roster'
 import { GRID_W } from '@aresrpg/fight/los'
 
@@ -907,11 +907,13 @@ export const use_dungeon = create((set, get) => ({
   _resolve_mob_identities(sdk, fight, { is_current = () => true } = {}) {
     const id = fight?.group_template
     if (!id || !fight?.mobs?.length) return // no group template / no mobs (PvP) — nothing to resolve
-    // A world claim carried the exact seated identity roster through the fight input door. It is positional and
-    // can represent a mixed pack; re-reading the shared primary template here would be both a second source and
-    // lossy. A carried id with no name is a genuine world-side miss and remains the honest id fallback.
+    // A world claim carried the exact seated identity roster through the fight input door. It is keyed by each
+    // fold fighter id and can represent a mixed pack; re-reading the shared primary template here would be both
+    // a second source and lossy. A carried id with no name is a genuine world-side miss and remains the honest
+    // id fallback.
     const carried = fight_store.getState().ctx?.mob_roster
-    if (Array.isArray(carried) && carried.length >= fight.mobs.length) return
+    const carried_ids = new Set((carried ?? []).map((row) => row?.id).filter(Boolean))
+    if (fight.mobs.every((_, index) => carried_ids.has(mob_entity_id(index)))) return
     const known = get().mob_names
     if (id in known || _mob_tmpl_cache.has(id) || _mob_tmpl_pending.has(id)) return
     _mob_tmpl_pending.add(id)

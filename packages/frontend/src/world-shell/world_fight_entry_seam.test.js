@@ -217,8 +217,8 @@ describe('the world→fight handoff seam (composition root)', () => {
 
   test('the claimed world roster crosses init and projects each mob without a second template read', async () => {
     const mob_roster = [
-      { template_id: TEMPLATE_ID, name: 'Chicklet', min_level: 1, element: 3 },
-      { template_id: SECONDARY_TEMPLATE_ID, name: 'Draugr', min_level: 8, element: 2 },
+      { id: 'mob-0', template_id: TEMPLATE_ID, name: 'Chicklet', min_level: 1, element: 3 },
+      { id: 'mob-1', template_id: SECONDARY_TEMPLATE_ID, name: 'Draugr', min_level: 8, element: 2 },
     ]
     read_response = async (object_id) => {
       if (object_id !== FIGHT_ID) throw new Error(`object not found: ${object_id}`)
