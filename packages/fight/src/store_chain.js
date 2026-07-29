@@ -6,7 +6,7 @@
 // already-ingested core atom and returns the next legacy-shaped presentation state to the store's one write door.
 
 import { enrich_actions, sorted_tail } from './core_fold.js'
-import { merge_entries, presented_state, recompute, wave_turns_of } from './fold.js'
+import { merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
 import { actor_from_key } from './inputs.js'
 import { claim_predictions, retain_budget_predictions, update_claimed_budget } from './store_prediction.js'
 import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_state.js'
@@ -86,16 +86,16 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
   const canonical = sorted_tail(next_core.inbox)
   const claimed_budget = update_claimed_budget(state.claimed_budget, reconcile?.claimed, [...canonical, ...actions])
 
-  // Renderer pacing is the explicit sibling seam. It receives already-decoded changed actions reshaped for the
-  // existing beat producer; no state decoder or admission policy lives here.
-  const raw_pace = changed.map(({ kind, version, event_idx, source, resolve_seat, ...data }) => ({
-    type: kind,
-    parsedJson: data,
-  }))
-  const base_seq = changed[0]?.event_idx ?? 0
+  // Renderer pacing is the explicit sibling seam. It receives the already-decoded changed actions; WHAT paces —
+  // and under which chain version and entry window — is decided in ONE home off the ROWS (fold.paced_wave_turns),
+  // never off this envelope: a journal batch names no chain version, and an observing seat is fed nothing else.
+  // Poll/p2p stay out: a poll is a wholesale re-read of settled truth and p2p is unverified courtesy.
   const new_turns =
-    msg.type === 'receipt' && changed.length
-      ? wave_turns_of(state, raw_pace, msg.version, msg.trap_cells ?? [], base_seq, committed_health(state))
+    msg.type === 'receipt' || msg.type === 'journal'
+      ? paced_wave_turns(state, changed, {
+          trap_cells: msg.trap_cells ?? [],
+          fighter_health: committed_health(state),
+        })
       : []
   const wave = [...state.wave, ...new_turns]
   const seq_head = Number(next_core.inbox.seq_head)

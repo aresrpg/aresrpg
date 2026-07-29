@@ -103,6 +103,29 @@ export const normalize_journal_page = (page, { fight_id } = {}) => {
   return { fight_id: fid, source: 'journal', head: u64_string(page?.journal_head), events }
 }
 
+/** The further of two u64 heads (either may be absent — an unknown head never lowers a known one). */
+const further_head = (a, b) => {
+  const left = u64(a)
+  const right = u64(b)
+  if (left == null) return b ?? null
+  if (right == null) return a
+  return left >= right ? a : b
+}
+
+/**
+ * Two normalized JOURNAL batches → ONE. The #1382 wire cuts a transaction's event batch into one row per frame;
+ * reassembling it is a pure concat over the already-ordered wire plus the further head. Nothing is re-keyed and
+ * no ordinal is re-derived: `seq` is chain truth and rides through untouched, so a reassembled batch folds
+ * exactly as the single page carrying the same rows would.
+ * @param {{ fight_id: any, source: string, head: string|null, events: any[] }} held
+ * @param {{ head?: string|null, events?: any[] }} next
+ */
+export const merge_journal_batches = (held, next) => ({
+  ...held,
+  head: further_head(held.head, next?.head),
+  events: [...held.events, ...(next?.events ?? [])],
+})
+
 /**
  * A TX RECEIPT (the existing store shape `{ events:[{ type, parsedJson }] }`, or a bare event array)
  * → the SAME batch shape. The receipt carries no seq — the caller passes `from_seq` (its accept

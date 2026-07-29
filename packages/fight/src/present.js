@@ -181,8 +181,10 @@ export const local_intent_beats = (raw_events, ctx = {}) => {
  *  a RESOLVER `(event, source_id, known_from, to) => cells|null` invoked PER Moved event — so the single already
  *  known path is handed over as a resolver (`() => path`), NEVER the raw array (a raw array is "called" as
  *  move_path?.(event,…) → the S2 flip's "instance of Array" crash). ONE home for the local-move beat build so a
- *  call site can't re-break the resolver contract. */
-export const local_move_beats = ({ fight_id, character, to_cell, path = [] }) =>
+ *  call site can't re-break the resolver contract. An UNKNOWN path is `null`, never `[]` — empty means absent
+ *  on both sides of this seam (#1649), so the producer reconstructs the walk instead of rendering one hop
+ *  through the nearest wall. */
+export const local_move_beats = ({ fight_id, character, to_cell, path = null }) =>
   local_intent_beats(synthetic_move_events({ fight_id, character, to_cell }), { fight_id, move_path: () => path })
 
 /** The status effects a rendered 'cast' beat carries — a pure read of the beat's source event, for the render

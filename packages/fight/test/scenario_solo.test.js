@@ -297,16 +297,27 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
     ]
 
     rounds.forEach((round, index) => {
-      store
-        .getState()
-        .input({ type: 'journal', fight_id: FIGHT, page: world_round_page(round) }, T0 + 6_000 + index * 4_000)
-      const state = store.getState()
-      const view = engine_view(state)
-      folded_rounds.push(committed_truth(state).fighters.p0.turn_number)
+      const at = T0 + 6_000 + index * 4_000
+      const before = engine_view(store.getState()).fighters.get('mob-0').cell
+      store.getState().input({ type: 'journal', fight_id: FIGHT, page: world_round_page(round) }, at)
+
+      // #1649: a JOURNAL batch paces exactly as a receipt does — this is the only transport an observing seat
+      // ever gets, so the mob's non-local turn takes its own slot and the eye HOLDS at the presented floor
+      // while it drains (never a teleport). Committed truth is instant on both lanes, as always.
+      folded_rounds.push(committed_truth(store.getState()).fighters.p0.turn_number)
+      const paced = store.getState().wave.filter((turn) => !turn.is_local)
+      expect(paced.map((turn) => String(turn.source_id))).toEqual(['mob-0'])
+      expect(paced[0].duration).toBe(MOB_TURN_MS)
+      expect(
+        engine_view(store.getState()).fighters.get('mob-0').cell,
+        'the eye never jumps ahead of the walk it is about to play'
+      ).toEqual(before)
+
+      store.getState().input({ type: 'presented', seq: paced.at(-1).seq }, at + MOB_TURN_MS)
+      const view = engine_view(store.getState())
       surfaced_rounds.push(view.turn_number)
       expect(view.fighters.get('mob-0').cell).toEqual({ x: round.mob_cell % 20, y: 2 })
       expect(view.fighters.get(ME).health).toBe(round.remaining_hp)
-      expect(state.wave, 'journal backfill commits without creating presentation waves').toEqual([])
     })
 
     expect(folded_rounds).toEqual([1, 2, 3])

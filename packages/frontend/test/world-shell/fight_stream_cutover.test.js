@@ -20,7 +20,7 @@ import { normalize_journal_page } from '@aresrpg/fight/journal_normalize'
 import { install_browser_globals } from '../../src/test_helpers/browser_globals.js'
 import { reset_auth_mock } from '../../src/test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
-import { fight_stream_message } from '../../src/world-shell/fight_sse_adapter.js'
+import { fight_stream_message, JOURNAL_COALESCE_MS } from '../../src/world-shell/fight_sse_adapter.js'
 
 const restore_browser_globals = install_browser_globals({ with_document: true })
 
@@ -174,6 +174,13 @@ const settle = async () => {
   for (let tick = 0; tick < 6; tick++) await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
+/** Past the transport's coalescing window (#1649): a FRAGMENTED frame (one row) reaches the door only once the
+ *  window closes — the wire cuts a chain batch into rows and the adapter hands it over reassembled. */
+const settle_stream_window = async () => {
+  await new Promise((resolve) => setTimeout(resolve, JOURNAL_COALESCE_MS + 10))
+  await settle()
+}
+
 beforeEach(() => {
   sources = []
   globalThis.EventSource = scripted_event_source()
@@ -238,7 +245,7 @@ describe('① the stream is the live event source — the fold advances with no 
       },
       '90:7'
     )
-    await settle()
+    await settle_stream_window()
 
     expect(project.board_view(fight_store.getState()).status).toBe(STATUS_ACTIVE)
     expect(journal_reads).toBe(reads_before)

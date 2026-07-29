@@ -205,8 +205,12 @@ export function produce_receipt_render_turns(
         `fight render: move_path must be a resolver function or null, got ${Array.isArray(move_path) ? 'Array' : typeof move_path}`
       )
     const occupied_cells = [...settled_cells.entries()].filter(([id]) => id !== source_id).map(([, cell]) => cell)
+    // EMPTY MEANS ABSENT (#1649): a resolver that knows no route must be indistinguishable from no resolver at
+    // all. `supplied_path ?? …` let an EMPTY array short-circuit reconstruction and fall to the `[to]` default
+    // below — ONE hop straight through whatever stood in the way. `local_move_beats` hands its `path` over as
+    // exactly this resolver, so the trap sat on the live optimistic-walk lane.
     const path =
-      supplied_path ??
+      (supplied_path?.length ? supplied_path : null) ??
       reconstructed_path(from, to, {
         obstacles,
         holes,

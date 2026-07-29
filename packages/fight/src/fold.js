@@ -7,7 +7,8 @@
 // · base_from_view — the snapshot half of snapshot+tail: the adopted rich view → the thin fold base.
 // · recompute — snapshot base + sorted authoritative tail → committed state + the derived PROVIDER token.
 // · presented_state / display_state — the PRESENTATION projections (the eye's pacing floor) the consumers read.
-// · wave_turns_of — pace an accepted batch's non-local events into presentation wave turns (window in seq space).
+// · paced_wave_turns — the ONE pacing decision: an accepted batch's non-local events → wave turns (window in
+//   seq space), keyed on the chain version the ROWS carry, transport-blind.
 //
 // COMMITTED TRUTH IS NOT HERE (#1027). The committed board is the HEADLESS CORE's, projected by `project_board`
 // and read through the store's ONE door (`store.committed_truth`). This module owns the PRESENTATION folds only —
@@ -352,7 +353,7 @@ export const display_state = (s) => wave_masked_fold(s, true)
  *  (presented_state) hides exactly the entries inside a still-unacked window.
  *  `fighter_health` is the PRE-RECEIPT committed HP oracle the damage pricer needs; the store supplies it from
  *  the core door (`committed_truth`) because committed truth is not this module's to derive (#1027). */
-export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0, fighter_health = null) => {
+const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0, fighter_health = null) => {
   const ctx = draft.ctx ?? {}
   if (!Array.isArray(raw_events) || !raw_events.length || !ctx.beat_ctx) return []
   const my_entity = ctx.my_entity_id ?? null
@@ -472,4 +473,34 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
       beats: t.beats,
       ...idx_window(t),
     }))
+}
+
+/**
+ * THE PACING DECISION — the ONE home (`wave_turns_of` is private to this module; grep `paced_wave_turns` for
+ * every caller). Newly-admitted authoritative rows become presentation wave turns keyed on the CHAIN VERSION
+ * they carry, never on the transport that delivered them — an OBSERVING seat learns its peers' turns through
+ * the journal (the SSE stream / the walker's pages), an ACTING seat through its own receipt, and both must see
+ * the same wave (#1649: the gate used to read `msg.type === 'receipt'`, so observers presented nothing at all).
+ *  · the version AND the entry window's `base_seq` are read off the ROWS. A receipt names its object version in
+ *    the envelope, but a journal batch names none — `classify_input` falls back to the batch head, which is a
+ *    seq, not a chain version — while every journal row carries its own. A receipt's rows all carry that one
+ *    object version, so the receipt lane's output is byte-identical to what it was.
+ *  · a batch spanning SEVERAL versions is a CATCH-UP (a walker gap page, a stream replayed from the top), never
+ *    live play: the chain's own min-turn keeps two transactions seconds apart, so they cannot share one live
+ *    delivery. It FOLDS without pacing — replaying settled minutes as 3s slots is not presentation, and the
+ *    eye's anchor (the pre-batch board every resolver below reads) is only true for the first of them anyway.
+ * @param {any} draft the PRE-input state — the board the eye currently shows
+ * @param {Array<Record<string, any>>} changed the newly-admitted authoritative actions
+ * @param {{ trap_cells?: any[], fighter_health?: ((id: string, event: any) => number|null) | null }} [opts]
+ */
+export const paced_wave_turns = (draft, changed, { trap_cells = [], fighter_health = null } = {}) => {
+  if (!changed.length) return []
+  const version = Number(changed[0].version)
+  if (!changed.every((action) => Number(action.version) === version)) return []
+  // The beat producer speaks the raw chain-event shape; provenance/order/closure fields are not event content.
+  const raw_events = changed.map(({ kind, version: row_version, event_idx, seq, source, resolve_seat, ...data }) => ({
+    type: kind,
+    parsedJson: data,
+  }))
+  return wave_turns_of(draft, raw_events, version, trap_cells, Number(changed[0].event_idx ?? 0), fighter_health)
 }
