@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { afterEach, expect, mock, spyOn, test } from 'bun:test'
 import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
+import { dismiss_event_toast, event_toast_store } from '../../../src/game/core/toast.js'
 import { load_corpus_version } from '../../../src/game/data/corpus_asset.js'
 import { get_spell_corpus, load_spell_corpus, set_spell_corpus_for_test } from '../../../src/game/data/spell_corpus.js'
 import { load_world_corpus, set_world_corpus_for_test } from '../../../src/pages/encyclopedia/world_corpus.ts'
@@ -25,6 +26,7 @@ afterEach(() => {
   set_spell_corpus_for_test()
   set_world_corpus_for_test()
   reset_assets_for_test()
+  for (const toast of event_toast_store.get()) dismiss_event_toast(toast.id)
   mock.restore()
 })
 
@@ -69,6 +71,64 @@ test('one pointer flip makes both new corpora visible without purging the old UR
     `${host}/data/world_corpus.v2.json`,
   ])
   expect(error_spy).not.toHaveBeenCalled()
+})
+
+test('a missing pointer falls back to the pre-versioning spell corpus URL', async () => {
+  configure_assets({
+    aggregator: host,
+    classes: {
+      spell_corpus: { published: true },
+    },
+  })
+  const fallback_rows = [{ id: 'spell-from-bare-corpus' }]
+  const fetch_spy = spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input)
+    if (url === pointer_url) return { ok: false, status: 404 }
+    if (url === `${host}/data/spell_corpus.json`) return response(fallback_rows)
+    throw new Error(`unexpected corpus URL: ${url}`)
+  })
+  const error_spy = spyOn(console, 'error').mockImplementation(() => {})
+
+  await load_spell_corpus(load_corpus_version())
+
+  expect(get_spell_corpus()).toEqual(fallback_rows)
+  expect(fetch_spy.mock.calls.map(([url]) => String(url))).toEqual([pointer_url, `${host}/data/spell_corpus.json`])
+  expect(error_spy).not.toHaveBeenCalled()
+})
+
+test('pointer and bare-corpus failures toast the player and report the raw fallback error', async () => {
+  configure_assets({
+    aggregator: host,
+    classes: {
+      spell_corpus: { published: true },
+    },
+  })
+  const fallback_error = new Error('bare spell corpus offline')
+  const fetch_spy = spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input)
+    if (url === pointer_url) return { ok: false, status: 404 }
+    if (url === `${host}/data/spell_corpus.json`) throw fallback_error
+    throw new Error(`unexpected corpus URL: ${url}`)
+  })
+  const error_spy = spyOn(console, 'error').mockImplementation(() => {})
+
+  await load_spell_corpus(load_corpus_version())
+
+  expect(get_spell_corpus()).toEqual([])
+  expect(event_toast_store.get()).toEqual([
+    expect.objectContaining({
+      state: 'error',
+      title: 'Spell data unavailable — retrying',
+    }),
+  ])
+  expect(error_spy).toHaveBeenCalledWith(
+    '[ares-error]',
+    fallback_error,
+    fallback_error,
+    '',
+    expect.objectContaining({ area: 'spell_corpus', action: 'load_fallback' })
+  )
+  expect(fetch_spy.mock.calls.map(([url]) => String(url))).toEqual([pointer_url, `${host}/data/spell_corpus.json`])
 })
 
 test('the service worker routes the mutable pointer NetworkFirst before immutable CDN assets', () => {
