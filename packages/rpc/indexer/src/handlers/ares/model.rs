@@ -507,12 +507,21 @@ pub struct FightJoined {
     pub seat: u64,
 }
 
+/// Field order mirrors `aresrpg_fight::fight_events::TurnStarted { fight, is_mob, idx,
+/// deadline_ms, turn_entropy, turn_ordinal }` byte-for-byte. The trailing `turn_entropy`/
+/// `turn_ordinal` pair publishes the inputs `fight::turn_seed` hangs on (the client derives
+/// this turn's rolls the instant the turn opens); it was APPENDED on chain while this mirror
+/// stayed 4 fields wide. BCS refuses trailing input, so every `TurnStarted` ever emitted failed
+/// to decode — and `TurnStarted` is the ONLY writer of `$.status = "active"`, so every fight in
+/// the read layer stayed `placement` forever while the chain had already started it (#1579).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TurnStarted {
     pub fight: ObjectID,
     pub is_mob: bool,
     pub idx: u64,
     pub deadline_ms: u64,
+    pub turn_entropy: u64,
+    pub turn_ordinal: u64,
 }
 
 /// `MobMoved { fight, idx, to_cell }` — a MOB repositioned during its turn (keyed by

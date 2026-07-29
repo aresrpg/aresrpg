@@ -41,6 +41,7 @@ use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
 use sui_indexer_alt_framework::types::object::Owner;
 use tracing::{debug, warn};
 
+use super::decode::decode_bcs;
 use super::model::{
     BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemDamagesField, ItemObject,
     ItemStatsField, ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject,
@@ -341,7 +342,7 @@ fn k_pet_claims(owner: &str) -> String { format!("rpc:petclaims:{owner}") }
 /// kiosk that holds this kiosk-locked character — see [`resolve_kiosk`]) is written
 /// when known; `None` leaves the field absent (the view renders `null`).
 pub fn map_character_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -> Option<Vec<RedisWrite>> {
-    let c: CharacterObject = bcs::from_bytes(contents).ok()?;
+    let c: CharacterObject = decode_bcs("object", "Character", contents)?;
     let key = k_character(id);
     let mut writes = vec![
         // NX skeleton so a snapshot arriving before any mint event still has a doc.
@@ -649,11 +650,21 @@ fn map_equipment_state(
 /// `NsKey<u64> -> Stats` fields must never be mistaken for equipment.
 fn map_equipment_malus_field(character_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
     let mut r = ByteReader::new(contents);
+    // The namespace/key gate is a legitimate skip; a walk that runs out of bytes AFTER it is a
+    // layout drift and reports loudly, like every other decode in this handler.
     r.skip(32)?; // Field UID
     if r.u8()? != NS_CHARACTER_EQUIPMENT || r.u64()? != EQUIPMENT_MALUS_CACHE_KEY {
         return None;
     }
-    let malus = r.equipment_stats()?;
+    let Some(malus) = r.equipment_stats() else {
+        super::decode::report_parse_failure(
+            "df",
+            "EquipmentMalus",
+            contents.len(),
+            "Stats block truncated after a matching namespace + malus cache key",
+        );
+        return None;
+    };
     let key = k_character(character_id);
     Some(vec![
         char_init(&key, character_id),
@@ -666,7 +677,7 @@ fn map_equipment_malus_field(character_id: &str, contents: &[u8]) -> Option<Vec<
 /// `item_type`). EquipmentMap remains the sole authority for `pet_equipped`; this write never invents
 /// or changes that boolean. `None` drops malformed, wrong-namespace, mismatched-key, or non-pet fields.
 pub fn map_equipped_pet_field(character_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let field: EquippedItemField = bcs::from_bytes(contents).ok()?;
+    let field: EquippedItemField = decode_bcs("df", "EquippedItemField", contents)?;
     if field.namespace != NS_CHARACTER_EQUIPMENT
         || field.key != field.value.id
         || field.value.category != "pet"
@@ -701,7 +712,7 @@ pub fn map_equipped_pet_field(character_id: &str, contents: &[u8]) -> Option<Vec
 /// random u64) is a STRING (2^53 law); the api view subtracts the bitmap popcounts off the event's totals to
 /// serve LIVE counts.
 pub fn map_zone_field(world_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let z: ZoneField = bcs::from_bytes(contents).ok()?;
+    let z: ZoneField = decode_bcs("df", "ZoneField", contents)?;
     let key = k_zone(world_id, z.zx, z.zy);
     Some(vec![
         // NX skeleton (matches the ZoneSearched event arm) so this snapshot is self-sufficient.
@@ -726,7 +737,7 @@ pub fn map_zone_field(world_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>
 /// and latest-wins like every snapshot here; `None` = the bytes did not decode (defensive — never
 /// fails the batch). `count` ≤ 64 on-chain (`zone_gen` MAX_GROUPS), so a plain JSON number is exact.
 pub fn map_group_root_field(world_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let f: ZoneGroupRootField = bcs::from_bytes(contents).ok()?;
+    let f: ZoneGroupRootField = decode_bcs("df", "ZoneGroupRootField", contents)?;
     let key = k_zone(world_id, f.zx, f.zy);
     Some(vec![
         set_nx(key.clone(), "$", json!({ "world": world_id, "zx": f.zx, "zy": f.zy, "discovered": true })),
@@ -765,7 +776,7 @@ fn resolve_kiosk(owner: &Owner, wrappers: &HashMap<SuiAddress, SuiAddress>) -> O
 /// carries EXACTLY the frozen view fields.
 pub fn map_fight_outcome_object(id: &str, contents: &[u8], owner: &Owner, ts_ms: u64) -> Option<Vec<RedisWrite>> {
     let Owner::AddressOwner(owner_addr) = owner else { return None };
-    let o: FightOutcomeObject = bcs::from_bytes(contents).ok()?;
+    let o: FightOutcomeObject = decode_bcs("object", "FightOutcome", contents)?;
     let owner = owner_addr.to_string();
     let idx = k_pending_outcomes(&owner);
     Some(vec![
@@ -804,7 +815,7 @@ fn remove_pending_outcome(id: &str, owner: &str) -> Vec<RedisWrite> {
 /// (defensive — never fails the batch).
 pub fn map_pet_box_claim_object(id: &str, contents: &[u8], owner: &Owner) -> Option<Vec<RedisWrite>> {
     let Owner::AddressOwner(owner_addr) = owner else { return None };
-    let c: PetBoxClaimObject = bcs::from_bytes(contents).ok()?;
+    let c: PetBoxClaimObject = decode_bcs("object", "PetBoxClaim", contents)?;
     let owner = owner_addr.to_string();
     let key = k_pet_claims(&owner);
     Some(vec![
@@ -827,7 +838,7 @@ fn remove_pet_box_claim(id: &str, owner: &str) -> Vec<RedisWrite> {
 /// (NX doc + SADD) so items surface in `/v1/encyclopedia` even before/without the event.
 /// `None` = the bytes did not decode as an ItemTemplate (defensive — never fails the batch).
 pub fn map_item_template_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let t: ItemTemplateObject = bcs::from_bytes(contents).ok()?;
+    let t: ItemTemplateObject = decode_bcs("object", "ItemTemplate", contents)?;
     let key = k_template(id);
     Some(vec![
         set_nx(key.clone(), "$", json!({ "template": id, "live": true })),
@@ -868,7 +879,7 @@ fn stats_json(f: &ItemStatsField) -> Value {
 /// (`handle_encyclopedia`) joins `$.stats_min`/`$.stats_max` into the served
 /// `stats: {field: [min,max]}` shape.
 pub fn map_item_stats_min_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let f: ItemStatsField = bcs::from_bytes(contents).ok()?;
+    let f: ItemStatsField = decode_bcs("df", "ItemStatsField", contents)?;
     let key = k_template(template_id);
     Some(vec![
         set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
@@ -879,7 +890,7 @@ pub fn map_item_stats_min_field(template_id: &str, contents: &[u8]) -> Option<Ve
 
 /// The sibling MAX half — mirrors [`map_item_stats_min_field`] at `$.stats_max`.
 pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let f: ItemStatsField = bcs::from_bytes(contents).ok()?;
+    let f: ItemStatsField = decode_bcs("df", "ItemStatsField", contents)?;
     let key = k_template(template_id);
     Some(vec![
         set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
@@ -903,7 +914,7 @@ pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Ve
 /// event. `None` = the bytes did not decode as an `ItemDamagesField` (defensive — never fails the
 /// batch, mirrors the stats min/max arms).
 pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let f: ItemDamagesField = bcs::from_bytes(contents).ok()?;
+    let f: ItemDamagesField = decode_bcs("df", "ItemDamagesField", contents)?;
     let key = k_template(template_id);
     let lines: Vec<Value> = f
         .lines
@@ -932,7 +943,7 @@ pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<
 /// hardcode" stance `item_lineage.ts`'s `ARESRPG_PACKAGE_ID` already takes client-side.
 /// `None` = the bytes did not decode as an Item (defensive — never fails the batch).
 pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>, package: &str) -> Option<Vec<RedisWrite>> {
-    let it: ItemObject = bcs::from_bytes(contents).ok()?;
+    let it: ItemObject = decode_bcs("object", "Item", contents)?;
     let key = k_item(id);
     let mut writes = vec![
         // NX skeleton (matches the ItemMinted arm) so `level` stays event-sourced (Scribed)
@@ -974,7 +985,7 @@ pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>, packag
 /// the attacker's address with the victim's real, unusable soulbound cap — no leak, no poison.)
 pub fn map_personal_kiosk_cap(id: &str, contents: &[u8], owner: &Owner) -> Option<Vec<RedisWrite>> {
     let Owner::AddressOwner(owner_addr) = owner else { return None };
-    let cap: PersonalKioskCapObject = bcs::from_bytes(contents).ok()?;
+    let cap: PersonalKioskCapObject = decode_bcs("object", "PersonalKioskCap", contents)?;
     let kiosk = cap.cap?.for_kiosk.to_canonical_string(true);
     let owner = owner_addr.to_string();
     Some(vec![
@@ -1170,10 +1181,23 @@ pub fn map_world_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
         return None;
     }
     let mut r = ByteReader::new(contents);
-    r.skip(32)?; // UID = a bare 32-byte ObjectID (no length prefix)
-    let seed = r.u64()?;
-    let biome = r.string()?;
-    let required_level = r.u16()?;
+    let walked = (|| {
+        r.skip(32)?; // UID = a bare 32-byte ObjectID (no length prefix)
+        let seed = r.u64()?;
+        let biome = r.string()?;
+        let required_level = r.u16()?;
+        Some((seed, biome, required_level))
+    })();
+    let Some((seed, biome, required_level)) = walked else {
+        // Not a shell (checked above) and not a readable legacy body — the inline layout moved.
+        super::decode::report_parse_failure(
+            "object",
+            "World",
+            contents.len(),
+            "legacy inline World prefix (id | seed | biome | required_level) did not read",
+        );
+        return None;
+    };
     Some(world_doc_writes(id, seed, &biome, required_level))
 }
 
@@ -1200,6 +1224,10 @@ struct VersionedShell {
 /// input, and the legacy inline `World` is ≥107 bytes even with an empty biome and empty tables, so
 /// no legacy body can satisfy this and no wrapped body can be mistaken for a legacy one. THE shape
 /// discriminator — the legacy projection and the Phase-0 parent map both ask it, never a byte count.
+///
+/// The ONE decode in this handler that deliberately does NOT go through [`super::decode`]: here a
+/// failure is the ANSWER ("not a shell"), not a bug, so reporting it would cry wolf on every legacy
+/// World. Every other decode is already type-discriminated before it is asked, and reports.
 fn world_shell(contents: &[u8]) -> Option<WorldShell> {
     bcs::from_bytes::<WorldShell>(contents).ok()
 }
@@ -1213,13 +1241,22 @@ fn world_shell(contents: &[u8]) -> Option<WorldShell> {
 /// `None` = a version this indexer does not speak, or a truncated/foreign body (defensive).
 pub fn map_world_inner_field(world_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
     let mut r = ByteReader::new(contents);
+    // A version that is not ours is a legitimate skip; a body that will not read AT that version
+    // is a layout drift and reports loudly.
     r.skip(32)?; // the Field's OWN UID
     if r.u64()? != WORLD_INNER_VERSION {
         return None;
     }
-    let seed = r.u64()?;
-    let biome = r.string()?;
-    let required_level = r.u16()?;
+    let walked = (|| Some((r.u64()?, r.string()?, r.u16()?)))();
+    let Some((seed, biome, required_level)) = walked else {
+        super::decode::report_parse_failure(
+            "df",
+            "WorldInner",
+            contents.len(),
+            "wrapped WorldInner payload (seed | biome | required_level) did not read at WORLD_INNER_VERSION",
+        );
+        return None;
+    };
     Some(world_doc_writes(world_id, seed, &biome, required_level))
 }
 
@@ -1250,7 +1287,7 @@ fn world_doc_writes(id: &str, seed: u64, biome: &str, required_level: u16) -> Ve
 /// set (idempotent; the object is immutable after share, so replays converge trivially). `None` =
 /// the bytes did not decode as a Recipe (defensive — never fails the batch).
 pub fn map_recipe_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let r: RecipeObject = bcs::from_bytes(contents).ok()?;
+    let r: RecipeObject = decode_bcs("object", "Recipe", contents)?;
     let inputs: Vec<_> = r
         .inputs
         .iter()
@@ -1506,21 +1543,37 @@ struct EquipmentState {
 /// Cursor parsing keeps the fixed Stats position explicit while strictly walking every variable tail
 /// before pet; malformed option tags, bools, or truncation return `None` rather than guessing state.
 fn equipment_state(contents: &[u8]) -> Option<EquipmentState> {
-    let mut r = ByteReader::new(contents);
-    r.skip(32)?; // id: UID — a bare 32-byte ObjectID (no length prefix)
-    if r.u8()? != NS_CHARACTER_EQUIPMENT {
-        return None;
+    match equipment_walk(contents) {
+        // `Ok(None)` = a foreign namespace, a legitimate skip. `Err` = the layout moved on chain
+        // and this walk's byte widths did not follow — a BUG, reported like a failed BCS decode
+        // rather than dropped in silence (#1579's lesson applied to the hand-rolled walks).
+        Ok(state) => state,
+        Err(reason) => {
+            super::decode::report_parse_failure("df", "EquipmentMap", contents.len(), reason);
+            None
+        }
     }
-    r.bool()?; // EquipmentKey {}'s hidden dummy bool (empty Move structs are one byte)
-    r.skip_u8_vec()?; // singles: vector<u8>
-    r.skip(1)?; // ring_count: u8
-    r.skip_id_vec()?; // relic_templates: vector<ID>
-    let gear = r.equipment_stats()?;
-    r.skip_option_id()?; // weapon_item: Option<ID>
-    r.skip_option_string()?; // weapon_family: Option<String>
-    r.skip_option_u8()?; // tool_job: Option<u8>
-    let pet_equipped = r.bool()?;
-    Some(EquipmentState { gear, pet_equipped })
+}
+
+/// The cursor walk itself. `Err(reason)` is a malformed/truncated body; `Ok(None)` is a body
+/// that is simply not this namespace's.
+fn equipment_walk(contents: &[u8]) -> Result<Option<EquipmentState>, &'static str> {
+    let mut r = ByteReader::new(contents);
+    let truncated = "cursor walk hit a malformed option tag, bool, or truncation";
+    r.skip(32).ok_or(truncated)?; // id: UID — a bare 32-byte ObjectID (no length prefix)
+    if r.u8().ok_or(truncated)? != NS_CHARACTER_EQUIPMENT {
+        return Ok(None);
+    }
+    r.bool().ok_or(truncated)?; // EquipmentKey {}'s hidden dummy bool (empty Move structs are one byte)
+    r.skip_u8_vec().ok_or(truncated)?; // singles: vector<u8>
+    r.skip(1).ok_or(truncated)?; // ring_count: u8
+    r.skip_id_vec().ok_or(truncated)?; // relic_templates: vector<ID>
+    let gear = r.equipment_stats().ok_or(truncated)?;
+    r.skip_option_id().ok_or(truncated)?; // weapon_item: Option<ID>
+    r.skip_option_string().ok_or(truncated)?; // weapon_family: Option<String>
+    r.skip_option_u8().ok_or(truncated)?; // tool_job: Option<u8>
+    let pet_equipped = r.bool().ok_or(truncated)?;
+    Ok(Some(EquipmentState { gear, pet_equipped }))
 }
 
 /// Project one `aresrpg_forgemagie::forgemagie` event into the taux read-model. `None` = a
@@ -1530,7 +1583,7 @@ fn equipment_state(contents: &[u8]) -> Option<EquipmentState> {
 pub fn map_taux_event(name: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
     Some(match name {
         "BoardCreated" => {
-            let e: BoardCreated = bcs::from_bytes(contents).ok()?;
+            let e: BoardCreated = decode_bcs("forgemagie", name, contents)?;
             vec![set(
                 K_TAUX_META.into(),
                 "$",
@@ -1538,7 +1591,7 @@ pub fn map_taux_event(name: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
             )]
         }
         "Crushed" => {
-            let e: Crushed = bcs::from_bytes(contents).ok()?;
+            let e: Crushed = decode_bcs("forgemagie", name, contents)?;
             let t = e.template.to_canonical_string(true);
             vec![
                 // NX-init preserves a prior `recipe_less` flag across a later crush.
@@ -1552,7 +1605,7 @@ pub fn map_taux_event(name: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
             ]
         }
         "RecipelessSet" => {
-            let e: RecipelessSet = bcs::from_bytes(contents).ok()?;
+            let e: RecipelessSet = decode_bcs("forgemagie", name, contents)?;
             let t = e.gear_template.to_canonical_string(true);
             vec![
                 set_nx(k_taux(&t), "$", json!({ "template": t })),
@@ -1813,13 +1866,13 @@ impl Processor for AresSnapshotHandler {
                         let id = || ObjectID::from(*parent).to_canonical_string(true);
                         if key.is_some_and(is_job_xp_key) {
                             if let Some(mv) = obj.data.try_as_move() {
-                                if let Ok(f) = bcs::from_bytes::<JobXpField>(mv.contents()) {
+                                if let Some(f) = decode_bcs::<JobXpField>("df", "JobXpField", mv.contents()) {
                                     writes.extend(map_job_xp_field(&id(), f.job, f.value));
                                 }
                             }
                         } else if key.is_some_and(is_progression_key) {
                             if let Some(mv) = obj.data.try_as_move() {
-                                if let Ok(p) = bcs::from_bytes::<ProgressionField>(mv.contents()) {
+                                if let Some(p) = decode_bcs::<ProgressionField>("df", "ProgressionField", mv.contents()) {
                                     progression_writes.extend(map_progression_field(
                                         &id(),
                                         p.xp,
@@ -1942,7 +1995,7 @@ impl Processor for AresSnapshotHandler {
                         && self.admits(&ty.address().to_canonical_string(true))
                     {
                         if let Some(mv) = obj.data.try_as_move() {
-                            if let Ok(it) = bcs::from_bytes::<ItemObject>(mv.contents()) {
+                            if let Some(it) = decode_bcs::<ItemObject>("object", "Item", mv.contents()) {
                                 tx_items.insert(obj.id(), (it.template.to_canonical_string(true), it.amount));
                             }
                         }
@@ -1965,7 +2018,7 @@ impl Processor for AresSnapshotHandler {
                         // Primary shop: `price` is already PER-UNIT (shop.move charges
                         // `price × quantity`; the event echoes `sale.price` + `amount`).
                         (SHOP_MODULE, "SaleBought") if self.admits(&pkg) => {
-                            if let Ok(e) = bcs::from_bytes::<SaleBought>(&event.contents) {
+                            if let Some(e) = decode_bcs::<SaleBought>("shop", "SaleBought", &event.contents) {
                                 let t = e.template.to_canonical_string(true);
                                 writes.extend(map_last_sale(&t, e.price, ts_ms));
                             }
@@ -1973,7 +2026,7 @@ impl Processor for AresSnapshotHandler {
                         // AMM pool: totals for `quantity` units → per-unit floored. Buy uses the
                         // buyer's `sui_in`; sell uses `gross` (pre-royalty market value).
                         (POOL_MODULE, "PoolBuy") if self.admits(&pkg) => {
-                            if let Ok(e) = bcs::from_bytes::<PoolBuy>(&event.contents) {
+                            if let Some(e) = decode_bcs::<PoolBuy>("pool", "PoolBuy", &event.contents) {
                                 if e.quantity > 0 {
                                     let t = e.template.to_canonical_string(true);
                                     writes.extend(map_last_sale(&t, e.sui_in / e.quantity, ts_ms));
@@ -1981,7 +2034,7 @@ impl Processor for AresSnapshotHandler {
                             }
                         }
                         (POOL_MODULE, "PoolSell") if self.admits(&pkg) => {
-                            if let Ok(e) = bcs::from_bytes::<PoolSell>(&event.contents) {
+                            if let Some(e) = decode_bcs::<PoolSell>("pool", "PoolSell", &event.contents) {
                                 if e.quantity > 0 {
                                     let t = e.template.to_canonical_string(true);
                                     writes.extend(map_last_sale(&t, e.gross / e.quantity, ts_ms));
@@ -1993,7 +2046,7 @@ impl Processor for AresSnapshotHandler {
                         // purchases skipped (`kiosk_purchase_per_unit`). `ItemPurchased<T>`'s phantom
                         // `T` is not in the BCS body — same decode as the event pipeline's listing arm.
                         (KIOSK_MODULE, "ItemPurchased") if pkg == SUI_FRAMEWORK_PKG => {
-                            if let Ok(e) = bcs::from_bytes::<KioskItemListed>(&event.contents) {
+                            if let Some(e) = decode_bcs::<KioskItemListed>("kiosk", "ItemPurchased", &event.contents) {
                                 if let Some((template, amount)) = tx_items.get(&e.id) {
                                     if let Some(per_unit) = kiosk_purchase_per_unit(e.price, *amount) {
                                         writes.extend(map_last_sale(template, per_unit, ts_ms));
@@ -2088,7 +2141,17 @@ impl Processor for AresSnapshotHandler {
                             skipped_mob_templates += 1;
                             None
                         }
-                        MobTemplateProjection::Malformed => None,
+                        MobTemplateProjection::Malformed => {
+                            // A body typed as MobTemplate that the prefix walk could not read —
+                            // the mob ABI moved. Loud, never a quiet gap in the bestiary.
+                            super::decode::report_parse_failure(
+                                "object",
+                                "MobTemplate",
+                                mv.contents().len(),
+                                "scalar-prefix walk failed (stats/spells widths vs the Move sources)",
+                            );
+                            None
+                        }
                     },
                     (WORLD_MODULE, WORLD_TYPE) => map_world_object(&id, mv.contents()),
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),

@@ -52,8 +52,40 @@ const MOVED_WIRE: &[u8] = &[
     248, 227, 64, 0, 0, 0, 0, 0, 0, 0,
 ];
 
+// TurnStarted (65 bytes) — a DIFFERENT capture from the rest of this file: transaction
+// `4KTjXhW15G2GYVXSxcPX2GtqhzxpvLAULtiZo3HgfBz4` (`turns::force_start`, checkpoint 365484088,
+// engine package `0x9cfadc…84b3`) on fight `0xaf742984…8167`. parsedJson: is_mob false,
+// idx "0", deadline_ms "1785286156291", turn_entropy "2969120189", turn_ordinal "1". This is
+// the event whose 16 unread trailing bytes wedged every fight in placement (#1579); the journal
+// had no captured-wire test for it, which is why the shortfall survived here too.
+const TURNSTARTED_WIRE: &[u8] = &[
+    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96,
+    148, 86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    224, 88, 171, 159, 1, 0, 0, 189, 45, 249, 176, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+];
+const TURNSTARTED_FIGHT: &str =
+    "0xaf7429843ed544cedd9ed0d0a08ac0cab5d26094563bfa197806c3c54cb38167";
+
 fn fight_oid() -> ObjectID {
     ObjectID::from_hex_literal(FIGHT).unwrap()
+}
+
+#[test]
+fn turn_started_wire_decodes_with_its_turn_seed_inputs() {
+    let (oid, kind, data) =
+        decode_journal_event("fight_events", "TurnStarted", TURNSTARTED_WIRE).unwrap();
+    assert_eq!(oid, ObjectID::from_hex_literal(TURNSTARTED_FIGHT).unwrap());
+    assert_eq!(kind, "TurnStarted");
+    // Field-for-field with the fullnode's parsedJson — including the turn-seed pair a receipt
+    // carries, so a journal replay folds the SAME seed the actor's own receipt did.
+    assert_eq!(
+        data,
+        json!({
+            "fight": TURNSTARTED_FIGHT, "is_mob": false, "idx": "0",
+            "deadline_ms": "1785286156291",
+            "turn_entropy": "2969120189", "turn_ordinal": "1",
+        })
+    );
 }
 
 #[test]

@@ -52,6 +52,7 @@
 use serde_json::{json, Value};
 use sui_indexer_alt_framework::types::base_types::ObjectID;
 
+use super::decode::decode_bcs;
 use super::model::*;
 use super::project::{expire, zadd, RedisWrite};
 
@@ -87,7 +88,7 @@ pub(super) fn decode_journal_event(
     }
     Some(match name {
         "FightCreated" => {
-            let e: FightCreated = bcs::from_bytes(contents).ok()?;
+            let e: FightCreated = decode_bcs(module, name, contents)?;
             (
                 e.fight,
                 "FightCreated",
@@ -101,42 +102,48 @@ pub(super) fn decode_journal_event(
             )
         }
         "FightJoined" => {
-            let e: FightJoined = bcs::from_bytes(contents).ok()?;
+            let e: FightJoined = decode_bcs(module, name, contents)?;
             (e.fight, "FightJoined", json!({
                 "fight": hex(e.fight), "character": hex(e.character), "seat": e.seat.to_string(),
             }))
         }
         "Placed" => {
-            let e: Placed = bcs::from_bytes(contents).ok()?;
+            let e: Placed = decode_bcs(module, name, contents)?;
             (e.fight, "Placed", json!({
                 "fight": hex(e.fight), "character": hex(e.character), "cell": e.cell.to_string(),
             }))
         }
         "Ready" => {
-            let e: Ready = bcs::from_bytes(contents).ok()?;
+            let e: Ready = decode_bcs(module, name, contents)?;
             (e.fight, "Ready", json!({ "fight": hex(e.fight), "character": hex(e.character) }))
         }
         "TurnStarted" => {
-            let e: TurnStarted = bcs::from_bytes(contents).ok()?;
+            let e: TurnStarted = decode_bcs(module, name, contents)?;
             (e.fight, "TurnStarted", json!({
                 "fight": hex(e.fight), "is_mob": e.is_mob,
                 "idx": e.idx.to_string(), "deadline_ms": e.deadline_ms.to_string(),
+                // The turn-seed inputs the client folds to derive THIS turn's rolls
+                // (`@aresrpg/fight` predict_cast.js). A receipt carries them, so a journal
+                // page must too — otherwise a replayed/spectated fight folds a different
+                // seed than the actor's own receipt did.
+                "turn_entropy": e.turn_entropy.to_string(),
+                "turn_ordinal": e.turn_ordinal.to_string(),
             }))
         }
         "Moved" => {
-            let e: Moved = bcs::from_bytes(contents).ok()?;
+            let e: Moved = decode_bcs(module, name, contents)?;
             (e.fight, "Moved", json!({
                 "fight": hex(e.fight), "character": hex(e.character), "to_cell": e.to_cell.to_string(),
             }))
         }
         "MobMoved" => {
-            let e: MobMoved = bcs::from_bytes(contents).ok()?;
+            let e: MobMoved = decode_bcs(module, name, contents)?;
             (e.fight, "MobMoved", json!({
                 "fight": hex(e.fight), "idx": e.idx.to_string(), "to_cell": e.to_cell.to_string(),
             }))
         }
         "Displaced" => {
-            let e: Displaced = bcs::from_bytes(contents).ok()?;
+            let e: Displaced = decode_bcs(module, name, contents)?;
             (e.fight, "Displaced", json!({
                 "fight": hex(e.fight), "target_is_mob": e.target_is_mob,
                 "target_idx": e.target_idx.to_string(), "kind": e.kind,
@@ -145,21 +152,21 @@ pub(super) fn decode_journal_event(
             }))
         }
         "Cast" => {
-            let e: Cast = bcs::from_bytes(contents).ok()?;
+            let e: Cast = decode_bcs(module, name, contents)?;
             (e.fight, "Cast", json!({
                 "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
                 "caster_idx": e.caster_idx.to_string(), "target_cell": e.target_cell.to_string(),
             }))
         }
         "CriticalFailure" => {
-            let e: CriticalFailure = bcs::from_bytes(contents).ok()?;
+            let e: CriticalFailure = decode_bcs(module, name, contents)?;
             (e.fight, "CriticalFailure", json!({
                 "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
                 "caster_idx": e.caster_idx.to_string(),
             }))
         }
         "StanceChanged" => {
-            let e: StanceChanged = bcs::from_bytes(contents).ok()?;
+            let e: StanceChanged = decode_bcs(module, name, contents)?;
             (e.fight, "StanceChanged", json!({
                 "fight": hex(e.fight), "fighter_is_mob": e.fighter_is_mob,
                 "fighter_idx": e.fighter_idx.to_string(), "stance": e.stance.to_string(),
@@ -167,13 +174,13 @@ pub(super) fn decode_journal_event(
             }))
         }
         "Revealed" => {
-            let e: Revealed = bcs::from_bytes(contents).ok()?;
+            let e: Revealed = decode_bcs(module, name, contents)?;
             (e.fight, "Revealed", json!({
                 "fight": hex(e.fight), "is_mob": e.is_mob, "idx": e.idx.to_string(),
             }))
         }
         "Hit" => {
-            let e: Hit = bcs::from_bytes(contents).ok()?;
+            let e: Hit = decode_bcs(module, name, contents)?;
             (e.fight, "Hit", json!({
                 "fight": hex(e.fight), "victim_is_mob": e.victim_is_mob,
                 "victim_idx": e.victim_idx.to_string(), "amount": e.amount.to_string(),
@@ -181,7 +188,7 @@ pub(super) fn decode_journal_event(
             }))
         }
         "Drain" => {
-            let e: Drain = bcs::from_bytes(contents).ok()?;
+            let e: Drain = decode_bcs(module, name, contents)?;
             (e.fight, "Drain", json!({
                 "fight": hex(e.fight), "target_is_mob": e.target_is_mob,
                 "target_idx": e.target_idx.to_string(), "point_kind": e.point_kind,
@@ -189,7 +196,7 @@ pub(super) fn decode_journal_event(
             }))
         }
         "Tackled" => {
-            let e: Tackled = bcs::from_bytes(contents).ok()?;
+            let e: Tackled = decode_bcs(module, name, contents)?;
             (e.fight, "Tackled", json!({
                 "fight": hex(e.fight), "runner_is_mob": e.runner_is_mob,
                 "runner_idx": e.runner_idx.to_string(), "ap_lost": e.ap_lost.to_string(),
@@ -197,33 +204,33 @@ pub(super) fn decode_journal_event(
             }))
         }
         "TurnEnded" => {
-            let e: TurnEnded = bcs::from_bytes(contents).ok()?;
+            let e: TurnEnded = decode_bcs(module, name, contents)?;
             (e.fight, "TurnEnded", json!({
                 "fight": hex(e.fight), "is_mob": e.is_mob, "idx": e.idx.to_string(),
             }))
         }
         "Abandoned" => {
-            let e: Abandoned = bcs::from_bytes(contents).ok()?;
+            let e: Abandoned = decode_bcs(module, name, contents)?;
             (e.fight, "Abandoned", json!({
                 "fight": hex(e.fight), "character": hex(e.character), "seat": e.seat.to_string(),
             }))
         }
         "Victory" => {
-            let e: FightVictory = bcs::from_bytes(contents).ok()?;
+            let e: FightVictory = decode_bcs(module, name, contents)?;
             (e.fight, "Victory", json!({ "fight": hex(e.fight), "aged_bp": e.aged_bp.to_string() }))
         }
         "Defeat" => {
-            let e: OneId = bcs::from_bytes(contents).ok()?;
+            let e: OneId = decode_bcs(module, name, contents)?;
             (e.id, "Defeat", json!({ "fight": hex(e.id) }))
         }
         "Settled" => {
-            let e: FightSettled = bcs::from_bytes(contents).ok()?;
+            let e: FightSettled = decode_bcs(module, name, contents)?;
             (e.fight, "Settled", json!({
                 "fight": hex(e.fight), "outcome": e.outcome, "results": e.results.to_string(),
             }))
         }
         "Swept" => {
-            let e: OneId = bcs::from_bytes(contents).ok()?;
+            let e: OneId = decode_bcs(module, name, contents)?;
             (e.id, "Swept", json!({ "fight": hex(e.id) }))
         }
         // ActionStarted/ActionEffect/ActionResolved (deferred triple), ResultMinted/

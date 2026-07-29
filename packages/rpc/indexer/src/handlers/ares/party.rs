@@ -23,7 +23,13 @@ struct PartyEvent {
 }
 
 pub(super) fn map(name: &str, contents: &[u8]) -> Option<RedisWrite> {
-    let event: PartyEvent = bcs::from_bytes(contents).ok()?;
+    // Name FIRST: the three projected events share one layout, so decoding before the match
+    // would report a foreign/future `party` event as a mirror bug. A recognised name that
+    // fails to decode IS a mirror bug and says so loudly (see `super::decode`).
+    if !matches!(name, "PartyCreated" | "PartyJoined" | "PartyLeft") {
+        return None;
+    }
+    let event: PartyEvent = super::decode::decode_bcs("party", name, contents)?;
     let party = event.party.to_canonical_string(true);
     let character = event.character.to_canonical_string(true);
     let owner = event.owner.to_string();

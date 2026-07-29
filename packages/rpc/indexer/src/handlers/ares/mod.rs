@@ -21,6 +21,7 @@
 //! logic lives in the pure, unit-tested `project::map` — this file is only the
 //! framework glue and the optional package allowlist.
 
+mod decode;
 mod journal;
 mod model;
 mod party;
@@ -78,7 +79,7 @@ fn equipment_cursor_write(
     if module != "extract" || !matches!(name, "ItemEquipped" | "ItemUnequipped") {
         return None;
     }
-    let event = bcs::from_bytes::<model::ItemEquip>(contents).ok()?;
+    let event = decode::decode_bcs::<model::ItemEquip>(module, name, contents)?;
     let character = event.character.to_canonical_string(true);
     Some(project::set(
         project::k_character(&character),
@@ -145,7 +146,8 @@ impl Processor for AresHandler {
                     {
                         return None;
                     }
-                    let listed: model::KioskItemListed = bcs::from_bytes(&event.contents).ok()?;
+                    let listed: model::KioskItemListed =
+                        decode::decode_bcs(KIOSK_MODULE, "ItemListed", &event.contents)?;
                     (listed.price == 0).then_some((listed.kiosk, listed.id))
                 })
                 .collect::<HashSet<_>>();
@@ -158,12 +160,14 @@ impl Processor for AresHandler {
                 .iter()
                 .filter_map(|event| {
                     match (event.type_.module.as_str(), event.type_.name.as_str()) {
-                        ("extract", "ItemEquipped") => bcs::from_bytes::<model::ItemEquip>(&event.contents)
-                            .ok()
-                            .map(|event| event.item),
-                        ("extract", "ItemBurned") => bcs::from_bytes::<model::ItemBurned>(&event.contents)
-                            .ok()
-                            .map(|event| event.item),
+                        ("extract", "ItemEquipped") => {
+                            decode::decode_bcs::<model::ItemEquip>("extract", "ItemEquipped", &event.contents)
+                                .map(|event| event.item)
+                        }
+                        ("extract", "ItemBurned") => {
+                            decode::decode_bcs::<model::ItemBurned>("extract", "ItemBurned", &event.contents)
+                                .map(|event| event.item)
+                        }
                         _ => None,
                     }
                 })
@@ -180,8 +184,11 @@ impl Processor for AresHandler {
                 }
                 let sender = event.sender.to_string();
                 let mapped = if module == KIOSK_MODULE && name == "ItemPurchased" {
-                    let purchase = bcs::from_bytes::<model::KioskItemListed>(&event.contents)
-                        .ok()
+                    let purchase = decode::decode_bcs::<model::KioskItemListed>(
+                        KIOSK_MODULE,
+                        "ItemPurchased",
+                        &event.contents,
+                    )
                         .map(|event| project::KioskPurchaseContext {
                             transient_zero_listing: event.price == 0
                                 && transient_zero_listings.contains(&(event.kiosk, event.id)),

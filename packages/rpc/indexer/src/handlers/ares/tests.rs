@@ -1087,17 +1087,77 @@ fn fight_joined_maps_seat_and_reverse_pointer() {
     );
 }
 
+// ── #1579: the TurnStarted mirror, pinned to REAL CAPTURED WIRE ──────────────
+//
+// RUNTIME PROVENANCE. Both byte arrays are the EXACT base64 `bcs` bodies of the two events
+// emitted by testnet transaction `4KTjXhW15G2GYVXSxcPX2GtqhzxpvLAULtiZo3HgfBz4`
+// (`turns::force_start`, checkpoint 365484088, engine package
+// `0x9cfadccfe8063db9ad280777e9e7780dcc9ebe21bd64594c0481170fb0c884b3`, fight
+// `0xaf742984…8167`), read off the fullnode's own event response. They are a CONTROLLED PAIR
+// from ONE transaction: `MobMoved` (48 bytes) indexed fine while `TurnStarted` (65) was
+// dropped, which is how the mirror — not the ingest path — was convicted.
+//
+// This is the code-law's "assert captured wire bytes" (docs/CODE_LAW.md): the previous test
+// here BCS-encoded with the very struct it decoded with, so a mirror wrong in both directions
+// stayed green — and did, while every fight on testnet wedged in placement. These bytes come
+// from the chain, so no change to `model.rs` can ever make them agree with themselves.
+const TURN_STARTED_WIRE: &[u8] = &[
+    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96,
+    148, 86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    224, 88, 171, 159, 1, 0, 0, 189, 45, 249, 176, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+];
+// The positive control: same transaction, same checkpoint, consecutive event sequence.
+const MOB_MOVED_WIRE: &[u8] = &[
+    175, 116, 41, 132, 62, 213, 68, 206, 221, 158, 208, 208, 160, 138, 192, 202, 181, 210, 96,
+    148, 86, 59, 250, 25, 120, 6, 195, 197, 76, 179, 129, 103, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0,
+    0, 0, 0, 0, 0, 0,
+];
+const WEDGED_FIGHT: &str = "0xaf7429843ed544cedd9ed0d0a08ac0cab5d26094563bfa197806c3c54cb38167";
+
 #[test]
-fn turn_started_flips_active_and_sets_cursor() {
-    let fight = oid(0xf1);
-    let body = enc(&TurnStarted { fight, is_mob: false, idx: 0, deadline_ms: 1_700_000_000_000 });
-    let w = map("fight_events", "TurnStarted", PKG, SENDER, TS, &body).unwrap();
-    let key = k_fight(&fight.to_canonical_string(true));
+fn turn_started_real_wire_flips_active_and_sets_cursor() {
+    // The fullnode's own parsedJson for this event: is_mob false, idx "0",
+    // deadline_ms "1785286156291", turn_entropy "2969120189", turn_ordinal "1".
+    let w = map("fight_events", "TurnStarted", PKG, SENDER, TS, TURN_STARTED_WIRE)
+        .expect("the captured on-chain TurnStarted must decode — it is the only writer of status:active");
+    let key = k_fight(WEDGED_FIGHT);
     assert_eq!(
         w,
         vec![
             set(key.clone(), "$.status", json!("active")),
-            set(key, "$.current_turn", json!({ "is_mob": false, "idx": 0, "deadline_ms": 1_700_000_000_000u64 })),
+            set(
+                key,
+                "$.current_turn",
+                json!({ "is_mob": false, "idx": 0, "deadline_ms": 1_785_286_156_291u64 })
+            ),
+        ]
+    );
+}
+
+#[test]
+fn the_mirror_consumes_the_whole_turn_started_wire() {
+    // BCS refuses trailing input, so a successful decode already proves the widths agree; this
+    // states the arithmetic the bug hid behind: 32 (ID) + 1 (bool) + 4×8 (u64) = 65.
+    let e: TurnStarted = bcs::from_bytes(TURN_STARTED_WIRE).expect("mirror must match the wire");
+    assert_eq!(TURN_STARTED_WIRE.len(), 65);
+    assert_eq!(e.fight.to_canonical_string(true), WEDGED_FIGHT);
+    assert_eq!((e.is_mob, e.idx, e.deadline_ms), (false, 0, 1_785_286_156_291));
+    assert_eq!((e.turn_entropy, e.turn_ordinal), (2_969_120_189, 1));
+}
+
+#[test]
+fn the_same_transactions_mob_moved_is_the_positive_control() {
+    // MobMoved decoded and indexed throughout the outage — same tx, same checkpoint, same
+    // fight key. It is what proves the ingest path was healthy and only the mirror was wrong.
+    let w = map("fight_events", "MobMoved", PKG, SENDER, TS, MOB_MOVED_WIRE).unwrap();
+    let key = k_fight(WEDGED_FIGHT);
+    assert_eq!(MOB_MOVED_WIRE.len(), 48);
+    assert_eq!(
+        w,
+        vec![
+            set_nx(key.clone(), "$", json!({ "fight": WEDGED_FIGHT, "mob_positions": {} })),
+            set_nx(key.clone(), "$.mob_positions", json!({})),
+            set(key, "$.mob_positions[\"0\"]", json!(4)),
         ]
     );
 }

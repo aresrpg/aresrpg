@@ -23,7 +23,7 @@ use redis::aio::{ConnectionLike, MultiplexedConnection};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
-use super::{model::*, party};
+use super::{decode::decode_bcs, model::*, party};
 
 /// One Redis mutation. `PartialEq` so tests assert the exact projection.
 #[derive(Debug, Clone, PartialEq)]
@@ -233,8 +233,12 @@ fn outcome_str(outcome: u8) -> &'static str {
 /// through the SAME builder the stats block uses (one home for the map-entry path shape).
 pub(super) fn mpath(base: &str, key: &str) -> String { format!("{base}[\"{key}\"]") }
 
-fn decode<T: DeserializeOwned>(contents: &[u8]) -> Option<T> {
-    bcs::from_bytes::<T>(contents).ok()
+/// BCS-decode this arm's event body. The `(module, name)` that selected the arm is passed
+/// straight through so a mismatch between the Rust mirror and its Move struct is REPORTED
+/// (loudly, to Sentry) instead of vanishing — see [`super::decode`]. `None` = decode failed
+/// and the arm projects nothing; it never means "quietly skipped".
+fn decode<T: DeserializeOwned>(module: &str, name: &str, contents: &[u8]) -> Option<T> {
+    decode_bcs(module, name, contents)
 }
 
 /// Canonical character doc skeleton every character-touching event inits (NX), so
@@ -287,7 +291,7 @@ pub(super) fn map_with_context(
 
         // ── pools ────────────────────────────────────────────────────────────
         ("pool", "PoolCreated") => {
-            let e: PoolCreated = decode(contents)?;
+            let e: PoolCreated = decode(module, name, contents)?;
             let pool = e.pool.to_canonical_string(true);
             let template = e.template.to_canonical_string(true);
             vec![
@@ -302,7 +306,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("pool", "PoolBuy") => {
-            let e: PoolBuy = decode(contents)?;
+            let e: PoolBuy = decode(module, name, contents)?;
             let pool = e.pool.to_canonical_string(true);
             vec![
                 set(k_pool(&pool), "$.item_reserve", json!(e.item_reserve)),
@@ -310,7 +314,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("pool", "PoolSell") => {
-            let e: PoolSell = decode(contents)?;
+            let e: PoolSell = decode(module, name, contents)?;
             let pool = e.pool.to_canonical_string(true);
             vec![
                 set(k_pool(&pool), "$.item_reserve", json!(e.item_reserve)),
@@ -318,14 +322,14 @@ pub(super) fn map_with_context(
             ]
         }
         ("pool", "PoolPaused") => {
-            let e: PoolPaused = decode(contents)?;
+            let e: PoolPaused = decode(module, name, contents)?;
             let pool = e.pool.to_canonical_string(true);
             vec![set(k_pool(&pool), "$.paused", json!(e.paused))]
         }
 
         // ── shop ─────────────────────────────────────────────────────────────
         ("shop", "SaleCreated") => {
-            let e: SaleCreated = decode(contents)?;
+            let e: SaleCreated = decode(module, name, contents)?;
             let sale = e.sale.to_canonical_string(true);
             vec![
                 set(k_sale(&sale), "$", json!({
@@ -338,12 +342,12 @@ pub(super) fn map_with_context(
             ]
         }
         ("shop", "SaleBurned") => {
-            let e: SaleBurned = decode(contents)?;
+            let e: SaleBurned = decode(module, name, contents)?;
             let sale = e.sale.to_canonical_string(true);
             vec![del(k_sale(&sale), "$"), srem(K_SALES.into(), sale)]
         }
         ("shop", "SaleBought") => {
-            let e: SaleBought = decode(contents)?;
+            let e: SaleBought = decode(module, name, contents)?;
             let receipt = json!({
                 "sale": e.sale.to_canonical_string(true),
                 "item": e.item.to_canonical_string(true),
@@ -361,11 +365,11 @@ pub(super) fn map_with_context(
             ]
         }
         ("shop", "PriceChanged") => {
-            let e: ShopPriceChanged = decode(contents)?;
+            let e: ShopPriceChanged = decode(module, name, contents)?;
             vec![set(k_sale(&e.sale.to_canonical_string(true)), "$.price_mist", json!(e.price.to_string()))]
         }
         ("shop", "WindowChanged") => {
-            let e: WindowChanged = decode(contents)?;
+            let e: WindowChanged = decode(module, name, contents)?;
             let sale = e.sale.to_canonical_string(true);
             vec![
                 set(k_sale(&sale), "$.start_ms", json!(e.start_ms)),
@@ -373,13 +377,13 @@ pub(super) fn map_with_context(
             ]
         }
         ("shop", "SalePaused") => {
-            let e: SalePaused = decode(contents)?;
+            let e: SalePaused = decode(module, name, contents)?;
             vec![set(k_sale(&e.sale.to_canonical_string(true)), "$.paused", json!(e.paused))]
         }
 
         // ── character creation (config + the character doc) ───────────────────
         ("creation", "CharacterCreated") => {
-            let e: CharacterCreated = decode(contents)?;
+            let e: CharacterCreated = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let key = k_character(&ch);
             let name_index = k_char_name(&e.name);
@@ -393,32 +397,32 @@ pub(super) fn map_with_context(
             ]
         }
         ("creation", "PriceChanged") => {
-            let e: CreationPriceChanged = decode(contents)?;
+            let e: CreationPriceChanged = decode(module, name, contents)?;
             vec![
                 set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
                 set(K_CREATION.into(), "$.price_mist", json!(e.price.to_string())),
             ]
         }
         ("creation", "PausedSet") => {
-            let e: PausedSet = decode(contents)?;
+            let e: PausedSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
                 set(K_CREATION.into(), "$.paused", json!(e.paused)),
             ]
         }
         ("creation", "ClassAdded") => {
-            let e: ClassName = decode(contents)?;
+            let e: ClassName = decode(module, name, contents)?;
             vec![
                 set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
                 set(K_CREATION.into(), &mpath("$.classes", &e.class), json!(true)),
             ]
         }
         ("creation", "ClassRemoved") => {
-            let e: ClassName = decode(contents)?;
+            let e: ClassName = decode(module, name, contents)?;
             vec![del(K_CREATION.into(), &mpath("$.classes", &e.class))]
         }
         ("creation", "StarterSet") => {
-            let e: StarterSet = decode(contents)?;
+            let e: StarterSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
                 set(K_CREATION.into(), &mpath("$.starters", &e.class), json!(e.template.to_canonical_string(true))),
@@ -428,14 +432,14 @@ pub(super) fn map_with_context(
         // the publish ceremony's RPC assertion can read whether creation is free/who
         // sponsors it.
         ("creation", "SponsorSet") => {
-            let e: SponsorSet = decode(contents)?;
+            let e: SponsorSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
                 set(K_CREATION.into(), "$.sponsor", json!(e.sponsor.map(|a| a.to_string()))),
             ]
         }
         ("creation", "FreeEnabledSet") => {
-            let e: FreeEnabledSet = decode(contents)?;
+            let e: FreeEnabledSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CREATION.into(), "$", json!({ "classes": {}, "starters": {} })),
                 set(K_CREATION.into(), "$.free", json!(e.enabled)),
@@ -444,7 +448,7 @@ pub(super) fn map_with_context(
 
         // ── character (low-level mint + position) ─────────────────────────────
         ("character", "CharacterMinted") => {
-            let e: CharacterMinted = decode(contents)?;
+            let e: CharacterMinted = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let key = k_character(&ch);
             vec![
@@ -455,7 +459,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("character", "PositionAnchored") => {
-            let e: PositionAnchored = decode(contents)?;
+            let e: PositionAnchored = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let key = k_character(&ch);
             vec![
@@ -479,7 +483,7 @@ pub(super) fn map_with_context(
         // module's events stay in every checkpoint before the republish, and re-indexing
         // from an earlier watermark must still project them.
         ("stat_allocation" | "character_link", "StatRaised") => {
-            let e: StatRaised = decode(contents)?;
+            let e: StatRaised = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let key = k_character(&ch);
             vec![
@@ -491,7 +495,7 @@ pub(super) fn map_with_context(
 
         // ── items: encyclopedia templates + listing-enrichment item docs ──────
         ("item", "TemplateCreated") => {
-            let e: Template = decode(contents)?;
+            let e: Template = decode(module, name, contents)?;
             let t = e.template.to_canonical_string(true);
             vec![
                 // NX-init + per-field set (NEVER a full `$` replace) so the ItemTemplate object
@@ -503,7 +507,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("item", "TemplateRenamed") => {
-            let e: TemplateRenamed = decode(contents)?;
+            let e: TemplateRenamed = decode(module, name, contents)?;
             let t = e.template.to_canonical_string(true);
             let key = k_template(&t);
             vec![
@@ -516,12 +520,12 @@ pub(super) fn map_with_context(
             ]
         }
         ("item", "TemplateBurned") => {
-            let e: Template = decode(contents)?;
+            let e: Template = decode(module, name, contents)?;
             let t = e.template.to_canonical_string(true);
             vec![del(k_template(&t), "$"), srem(K_TEMPLATES.into(), t)]
         }
         ("item", "ItemMinted") => {
-            let e: ItemMinted = decode(contents)?;
+            let e: ItemMinted = decode(module, name, contents)?;
             let item = e.item.to_canonical_string(true);
             let key = k_item(&item);
             let template = e.template.to_canonical_string(true);
@@ -540,7 +544,7 @@ pub(super) fn map_with_context(
 
         // -- pet feeding: absolute cadence + food-template membership --------
         ("pet", "PetPowerAdvanced") => {
-            let e: PetPowerAdvanced = decode(contents)?;
+            let e: PetPowerAdvanced = decode(module, name, contents)?;
             let pet = e.pet.to_canonical_string(true);
             vec![set(
                 k_pet_feed(&pet),
@@ -553,13 +557,13 @@ pub(super) fn map_with_context(
             )]
         }
         ("pet", "FoodPowerSet") => {
-            let e: FoodPowerSet = decode(contents)?;
+            let e: FoodPowerSet = decode(module, name, contents)?;
             vec![sadd(K_PET_FEED_FOODS.into(), e.food_template.to_canonical_string(true))]
         }
 
         // -- extract: equipment on the character doc -------------------------
         ("extract", "ItemEquipped") => {
-            let e: ItemEquip = decode(contents)?;
+            let e: ItemEquip = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let item = e.item.to_canonical_string(true);
             let key = k_character(&ch);
@@ -571,13 +575,13 @@ pub(super) fn map_with_context(
             ]
         }
         ("extract", "ItemUnequipped") => {
-            let e: ItemEquip = decode(contents)?;
+            let e: ItemEquip = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let item = e.item.to_canonical_string(true);
             vec![del(k_character(&ch), &mpath("$.equipment", &item))]
         }
         ("extract", "ItemBurned") => {
-            let e: ItemBurned = decode(contents)?;
+            let e: ItemBurned = decode(module, name, contents)?;
             let item = e.item.to_canonical_string(true);
             let template = e.template.to_canonical_string(true);
             let supply_key = k_supply(&template);
@@ -594,7 +598,7 @@ pub(super) fn map_with_context(
 
         // ── scribe: item level (feeds listing filter join) ────────────────────
         ("scribe", "Scribed") => {
-            let e: Scribed = decode(contents)?;
+            let e: Scribed = decode(module, name, contents)?;
             let item = e.item.to_canonical_string(true);
             let key = k_item(&item);
             vec![
@@ -605,7 +609,7 @@ pub(super) fn map_with_context(
 
         // ── worlds + zones/discovery ──────────────────────────────────────────
         ("world", "WorldCreated") => {
-            let e: WorldCreated = decode(contents)?;
+            let e: WorldCreated = decode(module, name, contents)?;
             let world = e.world.to_canonical_string(true);
             vec![
                 // NX: the snapshot pipeline (its own watermark — snapshot.rs `map_world_object`) owns the
@@ -618,7 +622,7 @@ pub(super) fn map_with_context(
         // §6 golden-gather link table (absolute upsert/remove). SET the rare variant id at the
         // per-(world,template) doc root + index the base template; RareLinkCleared removes both.
         ("world", "RareLinkSet") => {
-            let e: RareLinkSet = decode(contents)?;
+            let e: RareLinkSet = decode(module, name, contents)?;
             let world = e.world.to_canonical_string(true);
             let template = e.template.to_canonical_string(true);
             vec![
@@ -627,7 +631,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("world", "RareLinkCleared") => {
-            let e: RareLinkCleared = decode(contents)?;
+            let e: RareLinkCleared = decode(module, name, contents)?;
             let world = e.world.to_canonical_string(true);
             let template = e.template.to_canonical_string(true);
             vec![
@@ -636,7 +640,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("zones", "WorldJoined") => {
-            let e: WorldJoined = decode(contents)?;
+            let e: WorldJoined = decode(module, name, contents)?;
             let ch = e.character.to_canonical_string(true);
             let key = k_character(&ch);
             vec![
@@ -646,7 +650,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("zones", "ZoneSearched") => {
-            let e: ZoneSearched = decode(contents)?;
+            let e: ZoneSearched = decode(module, name, contents)?;
             let world = e.world.to_canonical_string(true);
             let key = k_zone(&world, e.zx, e.zy);
             vec![
@@ -675,7 +679,7 @@ pub(super) fn map_with_context(
         // the identical id), so a bare-string SET like `k_pool_by_template`. Ambush/PvP fights use a
         // ticketless door (no MobGroupClaimed) → no doc → the view's null → the honest "Enemies #N" stays.
         ("zones", "MobGroupClaimed") => {
-            let e: MobGroupClaimed = decode(contents)?;
+            let e: MobGroupClaimed = decode(module, name, contents)?;
             let world = e.world.to_canonical_string(true);
             vec![set(k_group_template(&world, e.spawn_id), "$", json!(e.template.to_canonical_string(true)))]
         }
@@ -686,7 +690,7 @@ pub(super) fn map_with_context(
         // the per-gatherer SIGNAL (latest-wins) so the gatherer's client can react
         // to the spawn + read its where/what context. `spawn_id == 0` = SKIPPED.
         ("gathering", "ProtectorTriggered") => {
-            let e: ProtectorTriggered = decode(contents)?;
+            let e: ProtectorTriggered = decode(module, name, contents)?;
             let gatherer = e.gatherer.to_string();
             vec![set(k_protector(&gatherer), "$", json!({
                 "gatherer": gatherer,
@@ -700,21 +704,21 @@ pub(super) fn map_with_context(
 
         // ── game config (dials + class rows) ──────────────────────────────────
         ("config", "ConfigEnabledSet") => {
-            let e: ConfigEnabledSet = decode(contents)?;
+            let e: ConfigEnabledSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CONFIG.into(), "$", json!({ "dials": {}, "classes": {} })),
                 set(K_CONFIG.into(), "$.enabled", json!(e.enabled)),
             ]
         }
         ("config", "DialChanged") => {
-            let e: DialChanged = decode(contents)?;
+            let e: DialChanged = decode(module, name, contents)?;
             vec![
                 set_nx(K_CONFIG.into(), "$", json!({ "dials": {}, "classes": {} })),
                 set(K_CONFIG.into(), &mpath("$.dials", &e.dial), json!(e.value)),
             ]
         }
         ("config", "ClassRowSet") => {
-            let e: ClassRowSet = decode(contents)?;
+            let e: ClassRowSet = decode(module, name, contents)?;
             vec![
                 set_nx(K_CONFIG.into(), "$", json!({ "dials": {}, "classes": {} })),
                 set(K_CONFIG.into(), &mpath("$.classes", &e.class_id.to_string()), json!({
@@ -729,7 +733,7 @@ pub(super) fn map_with_context(
         // doc + owner-index entry; since RunEnded carries `player`, the SREM is
         // exact — no monotonic index wart (unlike the fight/result terminals).
         ("dungeon_events", "RunActivated") => {
-            let e: RunActivated = decode(contents)?;
+            let e: RunActivated = decode(module, name, contents)?;
             let pass = e.pass.to_canonical_string(true);
             let player = e.player.to_string();
             vec![
@@ -742,7 +746,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("dungeon_events", "PassEnteredFight") => {
-            let e: PassEnteredFight = decode(contents)?;
+            let e: PassEnteredFight = decode(module, name, contents)?;
             let pass = e.pass.to_canonical_string(true);
             let key = k_run(&pass);
             vec![
@@ -758,7 +762,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("dungeon_events", "RunAdvanced") => {
-            let e: RunAdvanced = decode(contents)?;
+            let e: RunAdvanced = decode(module, name, contents)?;
             let pass = e.pass.to_canonical_string(true);
             let key = k_run(&pass);
             vec![
@@ -772,14 +776,14 @@ pub(super) fn map_with_context(
             ]
         }
         ("dungeon_events", "RunEnded") => {
-            let e: RunEnded = decode(contents)?;
+            let e: RunEnded = decode(module, name, contents)?;
             let pass = e.pass.to_canonical_string(true);
             vec![del(k_run(&pass), "$"), srem(k_runs(&e.player.to_string()), pass)]
         }
 
         // ── kolizeum lobby status (aresrpg_kolizeum::kolizeum_events) ─────────────────────────────────
         ("kolizeum_events", "KolizeumCreated") => {
-            let e: KolizeumCreated = decode(contents)?;
+            let e: KolizeumCreated = decode(module, name, contents)?;
             let kz = e.kolizeum.to_canonical_string(true);
             vec![
                 set(k_kolizeum(&kz), "$", json!({
@@ -791,7 +795,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("kolizeum_events", "KolizeumStarted") => {
-            let e: KolizeumStarted = decode(contents)?;
+            let e: KolizeumStarted = decode(module, name, contents)?;
             let kz = k_kolizeum(&e.kolizeum.to_canonical_string(true));
             vec![
                 set(kz.clone(), "$.status", json!("started")),
@@ -800,7 +804,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("kolizeum_events", "KolizeumSettled") => {
-            let e: KolizeumSettled = decode(contents)?;
+            let e: KolizeumSettled = decode(module, name, contents)?;
             let kz = k_kolizeum(&e.kolizeum.to_canonical_string(true));
             vec![
                 set(kz.clone(), "$.status", json!("settled")),
@@ -810,7 +814,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("kolizeum_events", "KolizeumCancelled") => {
-            let e: KolizeumCancelled = decode(contents)?;
+            let e: KolizeumCancelled = decode(module, name, contents)?;
             let kz = k_kolizeum(&e.kolizeum.to_canonical_string(true));
             vec![
                 set(kz.clone(), "$.status", json!("cancelled")),
@@ -818,7 +822,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("kolizeum_events", "KolizeumDrawn") => {
-            let e: KolizeumDrawn = decode(contents)?;
+            let e: KolizeumDrawn = decode(module, name, contents)?;
             let kz = k_kolizeum(&e.kolizeum.to_canonical_string(true));
             vec![
                 set(kz.clone(), "$.status", json!("drawn")),
@@ -826,7 +830,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("kolizeum_events", "KolizeumSwept") => {
-            let e: KolizeumSwept = decode(contents)?;
+            let e: KolizeumSwept = decode(module, name, contents)?;
             let id = e.kolizeum.to_canonical_string(true);
             vec![del(k_kolizeum(&id), "$"), srem(K_KOLIZEUMS.into(), id)]
         }
@@ -837,7 +841,7 @@ pub(super) fn map_with_context(
         // emitted); it rides the presence layer + client sim replay. See
         // HANDLERS.md for the full map + the deferred events.
         ("fight_events", "FightCreated") => {
-            let e: FightCreated = decode(contents)?;
+            let e: FightCreated = decode(module, name, contents)?;
             let fight = e.fight.to_canonical_string(true);
             let world = e.world.to_canonical_string(true);
             vec![
@@ -851,7 +855,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("fight_events", "FightJoined") => {
-            let e: FightJoined = decode(contents)?;
+            let e: FightJoined = decode(module, name, contents)?;
             let fight = e.fight.to_canonical_string(true);
             let character = e.character.to_canonical_string(true);
             let key = k_fight(&fight);
@@ -863,7 +867,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("fight_events", "TurnStarted") => {
-            let e: TurnStarted = decode(contents)?;
+            let e: TurnStarted = decode(module, name, contents)?;
             let key = k_fight(&e.fight.to_canonical_string(true));
             vec![
                 set(key.clone(), "$.status", json!("active")),
@@ -878,7 +882,7 @@ pub(super) fn map_with_context(
         // primitive (not a new stream). `$.mob_positions` is NX-init'd here (absent from the
         // FightCreated skeleton) so the arm is self-contained on a pre-created OR fresh doc.
         ("fight_events", "MobMoved") => {
-            let e: MobMoved = decode(contents)?;
+            let e: MobMoved = decode(module, name, contents)?;
             let f = e.fight.to_canonical_string(true);
             let key = k_fight(&f);
             vec![
@@ -888,26 +892,26 @@ pub(super) fn map_with_context(
             ]
         }
         ("fight_events", "Victory") => {
-            let e: FightVictory = decode(contents)?;
+            let e: FightVictory = decode(module, name, contents)?;
             vec![set(k_fight(&e.fight.to_canonical_string(true)), "$.status", json!("victory"))]
         }
         ("fight_events", "Defeat") => {
-            let e: OneId = decode(contents)?;
+            let e: OneId = decode(module, name, contents)?;
             vec![set(k_fight(&e.id.to_canonical_string(true)), "$.status", json!("defeat"))]
         }
         // Settled + Swept both DESTROY the shared Fight on-chain — mirror the delete.
         ("fight_events", "Settled") => {
-            let e: FightSettled = decode(contents)?;
+            let e: FightSettled = decode(module, name, contents)?;
             vec![del(k_fight(&e.fight.to_canonical_string(true)), "$")]
         }
         ("fight_events", "Swept") => {
-            let e: OneId = decode(contents)?;
+            let e: OneId = decode(module, name, contents)?;
             vec![del(k_fight(&e.id.to_canonical_string(true)), "$")]
         }
 
         // ── fight results: soulbound settled outcomes, keyed by owner ──────────
         ("fight_events", "ResultMinted") => {
-            let e: ResultMinted = decode(contents)?;
+            let e: ResultMinted = decode(module, name, contents)?;
             let result = e.result.to_canonical_string(true);
             let owner = e.owner.to_string();
             vec![
@@ -929,7 +933,7 @@ pub(super) fn map_with_context(
         // stays `opened:false` behind — the view's drop-missing strategy does not
         // cover it (documented in HANDLERS.md).
         ("results", "ResultOpened") => {
-            let e: ResultOpened = decode(contents)?;
+            let e: ResultOpened = decode(module, name, contents)?;
             let result = e.result.to_canonical_string(true);
             vec![
                 set(k_result(&result), "$", json!({
@@ -942,7 +946,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("results", "ResultBurned") => {
-            let e: OneId = decode(contents)?;
+            let e: OneId = decode(module, name, contents)?;
             vec![del(k_result(&e.id.to_canonical_string(true)), "$")]
         }
 
@@ -955,7 +959,7 @@ pub(super) fn map_with_context(
         // `CraftXpRedeemed` (the artisan banks their XP voucher) is craft-activity → object/
         // DF state (job xp) and stays DEFERRED, like Crafted/RecipeCreated (see below).
         ("commission", "CraftRequested") => {
-            let e: CraftRequested = decode(contents)?;
+            let e: CraftRequested = decode(module, name, contents)?;
             let id = e.request.to_canonical_string(true);
             let customer = e.customer.to_string();
             let artisan = e.artisan.to_string();
@@ -970,7 +974,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("commission", "CraftAccepted") => {
-            let e: CraftAccepted = decode(contents)?;
+            let e: CraftAccepted = decode(module, name, contents)?;
             let key = k_commission(&e.request.to_canonical_string(true));
             vec![
                 set(key.clone(), "$.accepted", json!(true)),
@@ -979,7 +983,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("commission", "CraftExecuted") => {
-            let e: CraftExecuted = decode(contents)?;
+            let e: CraftExecuted = decode(module, name, contents)?;
             let id = e.request.to_canonical_string(true);
             vec![
                 del(k_commission(&id), "$"),
@@ -988,7 +992,7 @@ pub(super) fn map_with_context(
             ]
         }
         ("commission", "CraftCancelled") => {
-            let e: CraftCancelled = decode(contents)?;
+            let e: CraftCancelled = decode(module, name, contents)?;
             let id = e.request.to_canonical_string(true);
             vec![
                 del(k_commission(&id), "$"),
@@ -1001,7 +1005,7 @@ pub(super) fn map_with_context(
         // Category/level are joined at READ time by the /v1/listings view from the
         // item doc (map is pure — it cannot read Redis). Seller = tx sender.
         ("kiosk", "ItemListed") => {
-            let e: KioskItemListed = decode(contents)?;
+            let e: KioskItemListed = decode(module, name, contents)?;
             let item = e.id.to_canonical_string(true);
             let kiosk = e.kiosk.to_canonical_string(true);
             vec![
@@ -1026,7 +1030,7 @@ pub(super) fn map_with_context(
         // own, even when the paired transient ItemListed(0) is absent (avoids phantom
         // "SOLD FOR 0 SUI" rows on equip). A genuine buy→equip keeps `price > 0` so it still sells.
         ("kiosk", "ItemPurchased") => {
-            let e: KioskItemListed = decode(contents)?;
+            let e: KioskItemListed = decode(module, name, contents)?;
             let item = e.id.to_canonical_string(true);
             let sales_key = k_sales(&e.kiosk.to_canonical_string(true));
             let row = json!({
@@ -1054,7 +1058,7 @@ pub(super) fn map_with_context(
             writes
         }
         ("kiosk", "ItemDelisted") => {
-            let e: KioskItemDelisted = decode(contents)?;
+            let e: KioskItemDelisted = decode(module, name, contents)?;
             let item = e.id.to_canonical_string(true);
             vec![del(k_listing(&item), "$"), srem(K_LISTINGS.into(), item)]
         }
