@@ -117,7 +117,7 @@ fn incr(key: String, path: &str, by: i64) -> RedisWrite {
 pub(super) fn sadd(key: String, member: String) -> RedisWrite {
     RedisWrite::SetAdd { key, member }
 }
-fn srem(key: String, member: String) -> RedisWrite {
+pub(super) fn srem(key: String, member: String) -> RedisWrite {
     RedisWrite::SetDel { key, member }
 }
 pub(super) fn zadd(key: String, score: i64, member: String) -> RedisWrite {
@@ -292,10 +292,10 @@ fn k_fights(world: &str) -> String {
 fn k_group_template(world: &str, spawn_id: u64) -> String {
     format!("rpc:group_template:{world}:{spawn_id}")
 }
-fn k_result(id: &str) -> String {
+pub(super) fn k_result(id: &str) -> String {
     format!("rpc:result:{id}")
 }
-fn k_results(owner: &str) -> String {
+pub(super) fn k_results(owner: &str) -> String {
     format!("rpc:idx:results:{owner}")
 }
 // §17.22 resource-protector ambush signal — the gatherer's LATEST protector trigger,

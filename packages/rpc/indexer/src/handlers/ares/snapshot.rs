@@ -49,8 +49,9 @@ use super::model::{
     RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
 };
 use super::project::{
-    self, char_init, del, k_character, k_item, k_lastsale, k_template, k_world, k_zone, k_zones,
-    mpath, sadd, set, set_nx, zadd, zrem, zrem_rank_keep_newest, RedisWrite, K_TEMPLATES, K_WORLDS,
+    self, char_init, del, k_character, k_item, k_lastsale, k_result, k_results, k_template,
+    k_world, k_zone, k_zones, mpath, sadd, set, set_nx, srem, zadd, zrem, zrem_rank_keep_newest,
+    RedisWrite, K_TEMPLATES, K_WORLDS,
 };
 use super::xp_curve::level_from_xp;
 use crate::store::RedisStore;
@@ -265,6 +266,10 @@ const ZONE_GROUP_ROOT_KEY_TYPE: &str = "ZoneGroupRootKey";
 /// allowlist entry: matched by (module, name) like every other arm here.
 const LOOT_BOX_MODULE: &str = "loot_box";
 const PET_BOX_CLAIM_TYPE: &str = "PetBoxClaim";
+/// The core soulbound claim ticket. Its event projection keeps a per-object mirror doc; deletion
+/// truth comes from checkpoint effects even when a future destruction path omits `ResultBurned`.
+const RESULTS_MODULE: &str = "results";
+const FIGHT_RESULT_TYPE: &str = "FightResult";
 /// The three SALE venues feeding the per-template last-sale price (marketcap): the primary shop
 /// (`shop::SaleBought` — per-unit `price` direct), the AMM pools (`pool::PoolBuy`/`PoolSell` —
 /// per-unit = total / quantity), and the native kiosk marketplace (`0x2::kiosk::ItemPurchased` —
@@ -317,6 +322,26 @@ fn k_kiosk(kiosk: &str) -> String {
 }
 fn k_kiosk_items(kiosk: &str) -> String {
     format!("rpc:idx:kiosk_items:{kiosk}")
+}
+
+/// Reap only the chain-object mirror and its exact kiosk membership edge. The item-keyed listing,
+/// pet-feed cadence and template supply are derived projections with their own lifecycle signals;
+/// an object deletion must never guess at or mutate them.
+fn remove_item(id: &str, kiosk: Option<&str>) -> Vec<RedisWrite> {
+    let mut writes = vec![del(k_item(id), "$")];
+    if let Some(kiosk) = kiosk {
+        writes.push(srem(k_kiosk_items(kiosk), id.to_string()));
+    }
+    writes
+}
+
+/// Reap the FightResult mirror plus the exact owner membership when the deleted input carries one.
+fn remove_fight_result(id: &str, owner: Option<&str>) -> Vec<RedisWrite> {
+    let mut writes = vec![del(k_result(id), "$")];
+    if let Some(owner) = owner {
+        writes.push(srem(k_results(owner), id.to_string()));
+    }
+    writes
 }
 
 // ── pending-outcome key builders (the CONTRACT the JS `/v1/pending-outcomes` view mirrors) ─
@@ -1915,11 +1940,25 @@ impl Processor for AresSnapshotHandler {
         // ── Phase 1 (checkpoint-wide): kiosk discovery map ────────────────────
         // A kiosk-locked object's checkpoint owner is `ObjectOwner(<dynamic-object-field
         // wrapper>)`; the wrapper's OWN owner is `ObjectOwner(<kiosk>)`. Index every
-        // `0x2::dynamic_field::Field` output object → its kiosk (its own owner). This
-        // framework `0x2` type is deliberately EXEMPT from the AresRPG package allowlist
-        // (like the event pipeline admits native kiosk). Only OUR objects' owners consume
-        // the map (Phase 2), so unrelated dynamic fields here never produce a write.
+        // `0x2::dynamic_field::Field` input/output object → its kiosk (its own owner). Inputs
+        // matter when the wrapper and its child are deleted together: the pre-delete wrapper is
+        // the only remaining source for the child's kiosk membership. This framework `0x2` type
+        // is deliberately EXEMPT from the AresRPG package allowlist (like the event pipeline
+        // admits native kiosk). Only OUR objects' owners consume the map (Phase 2), so unrelated
+        // dynamic fields here never produce a write.
         let mut kiosk_of_wrapper: HashMap<SuiAddress, SuiAddress> = HashMap::new();
+        for tx in &checkpoint.transactions {
+            for obj in tx.input_objects(&checkpoint.object_set) {
+                let Some(ty) = obj.type_() else { continue };
+                if ty.module().as_str() == DYNAMIC_FIELD_MODULE
+                    && ty.name().as_str() == DYNAMIC_FIELD_TYPE
+                {
+                    if let Owner::ObjectOwner(kiosk) = obj.owner() {
+                        kiosk_of_wrapper.insert(obj.id().into(), *kiosk);
+                    }
+                }
+            }
+        }
 
         // ── Phase 0 (checkpoint-wide): wrapped-World parent map ───────────────
         // Post-#1289 a World's state lives in `Field<u64, WorldInner>` hung off the shell's NESTED
@@ -2223,10 +2262,13 @@ impl Processor for AresSnapshotHandler {
                 }
             }
 
-            // ── fight-outcome + pet-claim DELETES (consumed by results::open / claim_pet) ──
-            // Neither the settled outcome nor the redeemed claim is an output object, so read
-            // its pre-delete state (owning address + id) from the tx's input objects, gated by the
-            // effects' delete set.
+            // ── mirrored chain-object DELETES (effects.deleted() is lifecycle truth) ──
+            // A deleted object is never an output, so classify its pre-delete input type and reap
+            // only mirror documents this indexer owns. Per-event delete arms stay as fast paths;
+            // this sweep covers destruction paths that emit no type-specific event. Exact owner/
+            // kiosk index memberships ride the input object and wrapper map. Derived documents
+            // and aggregates (listing, pet-feed, supply, sales, etc.) deliberately remain under
+            // their own projection signals.
             let deleted: HashSet<ObjectID> =
                 tx.effects.deleted().into_iter().map(|r| r.0).collect();
             if !deleted.is_empty() {
@@ -2238,24 +2280,32 @@ impl Processor for AresSnapshotHandler {
                     if !self.admits(&ty.address().to_canonical_string(true)) {
                         continue;
                     }
-                    if ty.module().as_str() == SETTLEMENT_MODULE
-                        && ty.name().as_str() == FIGHT_OUTCOME_TYPE
-                    {
-                        if let Owner::AddressOwner(owner) = obj.owner() {
-                            writes.extend(remove_pending_outcome(
-                                &obj.id().to_canonical_string(true),
-                                &owner.to_string(),
-                            ));
+                    let id = obj.id().to_canonical_string(true);
+                    match (ty.module().as_str(), ty.name().as_str()) {
+                        (ITEM_MODULE, ITEM_TYPE) => {
+                            let kiosk = resolve_kiosk(obj.owner(), &kiosk_of_wrapper);
+                            writes.extend(remove_item(&id, kiosk.as_deref()));
                         }
-                    } else if ty.module().as_str() == LOOT_BOX_MODULE
-                        && ty.name().as_str() == PET_BOX_CLAIM_TYPE
-                    {
-                        if let Owner::AddressOwner(owner) = obj.owner() {
-                            writes.extend(remove_pet_box_claim(
-                                &obj.id().to_canonical_string(true),
-                                &owner.to_string(),
-                            ));
+                        (RESULTS_MODULE, FIGHT_RESULT_TYPE) => {
+                            let owner = match obj.owner() {
+                                Owner::AddressOwner(owner) => Some(owner.to_string()),
+                                _ => None,
+                            };
+                            writes.extend(remove_fight_result(&id, owner.as_deref()));
                         }
+                        (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
+                            let Owner::AddressOwner(owner) = obj.owner() else {
+                                continue;
+                            };
+                            writes.extend(remove_pending_outcome(&id, &owner.to_string()));
+                        }
+                        (LOOT_BOX_MODULE, PET_BOX_CLAIM_TYPE) => {
+                            let Owner::AddressOwner(owner) = obj.owner() else {
+                                continue;
+                            };
+                            writes.extend(remove_pet_box_claim(&id, &owner.to_string()));
+                        }
+                        _ => {}
                     }
                 }
             }

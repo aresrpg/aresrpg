@@ -2620,6 +2620,21 @@ fn remove_pending_outcome_drops_index_member_and_doc() {
     );
 }
 
+#[test]
+fn remove_fight_result_drops_the_mirror_and_exact_owner_membership() {
+    let id = synthetic_object_id("0xdefea7");
+    let owner = SuiAddress::from_bytes([0x3d; 32]).unwrap().to_string();
+    assert_eq!(
+        remove_fight_result(&id, Some(&owner)),
+        vec![del(k_result(&id), "$"), srem(k_results(&owner), id.clone())]
+    );
+    assert_eq!(
+        remove_fight_result(&id, None),
+        vec![del(k_result(&id), "$")],
+        "the mirror doc must still be reaped if no owner index can be resolved"
+    );
+}
+
 // ── Pet-box claims (create/delete → per-owner claims map) ────────────────────
 
 #[test]
