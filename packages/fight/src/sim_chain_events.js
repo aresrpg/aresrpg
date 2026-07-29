@@ -302,12 +302,10 @@ const tackle_losses = (pre_state, post_state, entity_id) => {
 // the effect loop for both the player and mob arms — cast.move:208-239 / 534-560; the captured corpus proves it:
 // `ActionStarted, ActionEffect(kind 0), Hit, Cast, ActionResolved`), so this encoder wraps every cast too.
 //
-// ORDER. A real receipt emits its effect rows BEFORE the `Cast` (fight_render_events.js:45); this mock has
-// always emitted them after, and `core_fold.damaging_casts` reads that adjacency — so the mock, not the chain, is
-// what that derivation is currently correct against (#1700 measured 4 false marks and 69 misses over the captured
-// corpus; the predicate is filed separately). The envelope brackets the whole
-// action either way — `ActionStarted` … `Cast` … effect rows … `ActionResolved` — which is the ordering the
-// fold actually contracts on (context opened before any `ActionEffect`, retired after the last one).
+// ORDER. A real receipt emits its effect rows BEFORE the `Cast` (fight_render_events.js:45); this mock has always
+// emitted them after, and `core_fold.damaging_casts` reads that adjacency — so that derivation is correct against
+// the MOCK, not the chain (#1700 measured 4 false marks + 69 misses on the corpus; the predicate is filed apart).
+// The envelope brackets the action either way — opening before any `ActionEffect`, retiring after the last one.
 
 /** `ActionStarted.action_kind` / `ActionResolved.action_kind` — `fight_events::action_kind_spell()`. */
 const ACTION_KIND_SPELL = 0
