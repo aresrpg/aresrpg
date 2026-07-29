@@ -93,7 +93,7 @@ export const weapon_strike_elements = (weapon) => [...new Set(weapon_damage_rows
  * `cast.move`'s `weapon_effect_value` verbatim, and deliberately element-neutral/pre-resistance like it (the
  * bar has no target). Null without a resolvable slot (off-turn, pre-read): the roll is genuinely unknown then,
  * and the band above is the honest thing to show instead of a fabricated number.
- * @param {{ world_seed:any, spawn_id:any, turn_deadline_ms:any, seat:number, slot:number } | null} clock
+ * @param {{ world_seed:any, spawn_id:any, turn_entropy:any, turn_ordinal:any, seat:number, slot:number } | null} clock
  * @param {any} weapon @param {boolean} [critical]
  * @returns {number | null}
  */
