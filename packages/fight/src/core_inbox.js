@@ -318,6 +318,16 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     creator: ctx.creator ?? null,
     ...(ctx.offset ? { offset: ctx.offset } : {}),
   })
+  // HOLD-NOT-DEGRADE, the ROSTER half of the geometry gate (#1140/#1145). A read that yields NO roster is either
+  // the pre-engage OPEN view (`sync_dungeon_fight({ read: null })` — a run with no fight yet, which decodes to a
+  // run-shaped stub or to nothing at all) or a raced/torn read. It may SEED a base, never REPLACE an adopted one:
+  // adopting it strips escrow/mobs/turn_queue from a LIVE fight, so the turn rail iterates an empty participant
+  // set (the cards vanish mid-fight) and the committed fold loses every mob, which makes `decided_outcome`
+  // permanently null (claim() never fires ⇒ no result card at fight end). The seat that eats this is the OBSERVING
+  // one — the actor is driven by its own receipt while the observer keeps re-reading. Only the session door
+  // (`init`) clears a fight base. This also removes the null-`base_view` dereference below (a raw TypeError out of
+  // the one write door on the world-fight shape, where the run-less stub is `null` rather than empty).
+  if (!base_view?.escrow?.length && inbox.base_view?.escrow?.length) return inbox
   const has_base = inbox.base_view != null
   const current_roster_open = roster_open(inbox.base_view)
   const incoming_roster_open = roster_open(base_view)
