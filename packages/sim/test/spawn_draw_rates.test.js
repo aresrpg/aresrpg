@@ -14,7 +14,11 @@
 // share quoted from a 100-draw vibe check is a hypothesis, not a measurement.
 import { describe, test, expect } from 'bun:test'
 
-import { derive_zone, size_cap, spawn_distance_progress } from '../src/zone_derive.js'
+import {
+  derive_zone,
+  size_cap,
+  spawn_distance_progress,
+} from '../src/zone_derive.js'
 
 import live from './fixtures/world_spawn_tables_live.json'
 
@@ -95,7 +99,13 @@ const roam = ({ format, zones_per_world, at }) => {
     for (let i = 0; i < zones_per_world; i += 1) {
       const [zx, zy] = at(rnd, w)
       const rows = derive_zone({
-        zone: { seed: Math.floor(rnd() * 0xffff_ffff), discovered_at_ms: 0, mob_bitmap: [], res_bitmap: [], group_root: root_of(format) },
+        zone: {
+          seed: Math.floor(rnd() * 0xffff_ffff),
+          discovered_at_ms: 0,
+          mob_bitmap: [],
+          res_bitmap: [],
+          group_root: root_of(format),
+        },
         zx,
         zy,
         world: doc,
@@ -103,17 +113,24 @@ const roam = ({ format, zones_per_world, at }) => {
       })
       for (const row of rows) {
         if (row.kind !== 'mob') continue
-        const members = row.members ?? Array.from({ length: row.size }, () => row.template_id)
+        const members =
+          row.members ?? Array.from({ length: row.size }, () => row.template_id)
         tally.groups += 1
         tally.units += members.length
-        tally.archi_units += members.filter(id => role.get(id) === 'archi').length
+        tally.archi_units += members.filter(
+          id => role.get(id) === 'archi',
+        ).length
         if (members.length > 1) tally.multi_groups += 1
         if (new Set(members).size > 1) tally.mixed_groups += 1
         tally.sizes.set(row.size, (tally.sizes.get(row.size) ?? 0) + 1)
         picks.set(row.template_id, (picks.get(row.template_id) ?? 0) + 1)
       }
     }
-    tally.per_world.set(w.wid, { drawn: picks.size, roster: w.mobs.length, picks })
+    tally.per_world.set(w.wid, {
+      drawn: picks.size,
+      roster: w.mobs.length,
+      picks,
+    })
   }
   return tally
 }
@@ -132,7 +149,9 @@ const anywhere = (rnd, w) => [
 /** The first-join box itself — progress 0, where every §4 cap sits at its floor. */
 const first_join = (_rnd, w) => [centre_zone(w), centre_zone(w)]
 
-const open_map = once(() => roam({ format: 3, zones_per_world: 120, at: anywhere }))
+const open_map = once(() =>
+  roam({ format: 3, zones_per_world: 120, at: anywhere }),
+)
 
 describe('spawn draw rates — the live tables, measured (#1491)', () => {
   // ── the instrument itself: does a row of weight w actually draw at w / Σw? ──────────────────────────────────
@@ -147,7 +166,9 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
         const expected = (m.rate_bp / total_weight) * drawn
         // Poisson 5σ — the honest band for a count, not a flat percentage: wide enough that 329 independent rows
         // never flake, tight enough that a draw ignoring the weights (or reading a stale table) fails on sight.
-        expect(Math.abs((picks.get(m.template_id) ?? 0) - expected)).toBeLessThan(5 * Math.sqrt(expected))
+        expect(
+          Math.abs((picks.get(m.template_id) ?? 0) - expected),
+        ).toBeLessThan(5 * Math.sqrt(expected))
       }
     }
   })
@@ -160,12 +181,17 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
   // archi predicate (`MobTemplate` has no role field), so the fix is a chain-side rare-draw kernel change plus a
   // world-side archi mask, exactly like the `boss_mask` fence, and rides a publish. `test.failing` seals the
   // check RED: the day the draw honours the ruling this test FAILS and must be flipped to a plain `test`.
-  test.failing('archi-tier mobs draw at the ruled 1% — RED until the rare-draw lands (#1491)', () => {
-    const t = open_map()
-    expect(t.units).toBeGreaterThanOrEqual(MIN_DRAWS)
-    const measured_bp = (t.archi_units / t.units) * 10_000
-    expect(Math.abs(measured_bp - ARCHI_RATE_BP)).toBeLessThanOrEqual(RATE_TOLERANCE_BP)
-  })
+  test.failing(
+    'archi-tier mobs draw at the ruled 1% — RED until the rare-draw lands (#1491)',
+    () => {
+      const t = open_map()
+      expect(t.units).toBeGreaterThanOrEqual(MIN_DRAWS)
+      const measured_bp = (t.archi_units / t.units) * 10_000
+      expect(Math.abs(measured_bp - ARCHI_RATE_BP)).toBeLessThanOrEqual(
+        RATE_TOLERANCE_BP,
+      )
+    },
+  )
 
   test('the archi over-rate is the TABLE share, not a correlated roll (what the fix has to move)', () => {
     const t = open_map()
@@ -199,7 +225,7 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
   test('inside the first-join box EVERY group is exactly 2 — size_cap at its floor', () => {
     const t = roam({ format: 3, zones_per_world: 60, at: first_join })
     expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
-    const w = live.worlds[0]
+    const [w] = live.worlds
     expect(
       spawn_distance_progress({
         ox: centre_zone(w) * w.zone_size,
@@ -221,18 +247,24 @@ describe('spawn draw rates — the live tables, measured (#1491)', () => {
   // (2 near the spawn, lerped to `team_bound` at the edge) is inert above 3 and a pack can never be a pack.
   // The authored bands are content (`world::me_min_group/me_max_group`, published state), so this one is fixed
   // corpus-side; the code half below already proves the kernel honours whatever band it is handed.
-  test.failing('the §4 size gradient reaches the team bound out on the open map — RED (#1098)', () => {
-    const t = open_map()
-    expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
-    expect(Math.max(...t.sizes.keys())).toBe(TEAM_BOUND)
-  })
+  test.failing(
+    'the §4 size gradient reaches the team bound out on the open map — RED (#1098)',
+    () => {
+      const t = open_map()
+      expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
+      expect(Math.max(...t.sizes.keys())).toBe(TEAM_BOUND)
+    },
+  )
 
   test('a rolled size never leaves [authored min, min(authored max, size_cap)]', () => {
     const t = open_map()
     expect(t.groups).toBeGreaterThanOrEqual(MIN_DRAWS)
     const bands = live.worlds.flatMap(w => w.mobs)
     const lo = Math.min(...bands.map(m => m.min_group))
-    const hi = Math.min(Math.max(...bands.map(m => m.max_group)), size_cap(1000, TEAM_BOUND))
+    const hi = Math.min(
+      Math.max(...bands.map(m => m.max_group)),
+      size_cap(1000, TEAM_BOUND),
+    )
     for (const size of t.sizes.keys()) {
       expect(size).toBeGreaterThanOrEqual(lo)
       expect(size).toBeLessThanOrEqual(hi)
