@@ -23,6 +23,7 @@ import {
   lifecycle,
   session_opened,
   session_closed,
+  session_rekeyed,
 } from './envelope.js'
 
 // The chain-read messages, keyed by the source label the union carries. `rows` is the source's native
@@ -52,6 +53,10 @@ export const classify_input = (msg = {}) => {
       return msg.fight_id != null
         ? session_opened({ fight_id: msg.fight_id, my_key: msg.my_key ?? null, ctx: msg.ctx })
         : session_closed({ fight_id: null, reason: 'reset' })
+    case 'rekey':
+      // #1609 — the create receipt landing on a session that mounted under a pending id. NOT a boot: the
+      // predicted fold, the ctx and the seat survive; only the identity moves.
+      return session_rekeyed({ from: msg.from, to: msg.to })
     case 'ctx':
       return lifecycle({ phase: 'ctx', ctx: msg.ctx })
     case 'presented':
@@ -184,6 +189,7 @@ export const classify_input = (msg = {}) => {
 // `unknown`). Exported so the converter can flag a historical capture that carried an unmapped type.
 export const KNOWN_INPUT_TYPES = new Set([
   'init',
+  'rekey',
   'ctx',
   'presented',
   'trap_triggered',

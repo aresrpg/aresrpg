@@ -50,7 +50,7 @@ import { report_error } from '../core/report.js'
 import { get_config } from '../rpc/client'
 import { subscribe_zones } from '../rpc/zones_poll'
 import { get_mob_tier } from './data/mobs.js'
-import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
+import { zone_rows_v1, zone_rows_chain, zone_world_doc, settled_world_doc } from './zone_rows.js'
 import { get_sdk } from '../chain/sdk'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { spawns_store, spawns_input } from '../world-shell/spawns_adapter.js'
@@ -61,7 +61,13 @@ import { instrument_cpu_callback } from './cpu_span.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { as_one_toast } from '../world-shell/dungeon_actions.js'
 import { use_party } from '../world-shell/party_store.js'
-import { enter_world_fight, resume_world_fight } from '../world-shell/world_fight.js'
+import {
+  abandon_pending_world_fight,
+  enter_pending_world_fight,
+  enter_world_fight,
+  rekey_world_fight,
+  resume_world_fight,
+} from '../world-shell/world_fight.js'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 
 import { cardinal_of } from './screens/hud/world/compass_math.js'
@@ -728,6 +734,21 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // and is absent from the returned task, so its completion can never delay the receipt handoff or board mount.
     // Success keeps the group hidden; failure restores it + aborts the beat while the engage toast names why.
     const anchor = e.placed ? [e.cx, e.cy, e.cz] : [e.row.x, Number(get_player_pos()[1]), e.row.z]
+    // CARRY the exact roster the world ALREADY composed and rendered. `e.roster` is seated_roster's output;
+    // every template lookup below is the settled world cache that gated placement. Stamp each row with the
+    // fold's stable fighter id ONCE here; the fight receives that id-keyed book through its init input — no
+    // second roster derivation, template decode or positional name lookup.
+    const mob_roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ template_id, index) => {
+      const tpl = resolve_template(template_id)
+      return {
+        id: mob_entity_id(index),
+        template_id,
+        name: tpl?.name ?? null,
+        min_level: tpl?.min_level ?? null,
+        element: tpl?.element ?? null,
+      }
+    })
+    let pending_id = /** @type {string | null} */ (null)
     try {
       const submitted = as_one_toast(i18n.t('fights.action_engage'), () =>
         start_fight_engage({
@@ -776,26 +797,26 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
             report_error(error, { area: 'fight-entry', action: 'world_engage_presentation' }),
         })
       )
+      // #1609 — THE PENDING MOUNT, in this same click turn: the board the create is about to store is already
+      // derivable (world seed + the row's own anchor), so the session opens NOW under a branded pending id
+      // instead of after ~6.5s of transaction finality. Every SDK write door refuses that id mechanically, and
+      // the receipt below either RE-KEYS this exact session onto the minted id or kills it outright. A world
+      // this tab has not read yet yields no prediction and falls through to the original receipt-time mount.
+      pending_id = enter_pending_world_fight({
+        world_id: request.payload.world_id,
+        character_id,
+        world_seed: settled_world_doc(request.payload.world_id)?.seed,
+        anchor_x: e.row.x,
+        anchor_z: e.row.z,
+        mob_roster,
+      })
       const { fight_id, group } = await submitted
       const { world_id, is_public } = request.payload
       // MOUNT the tactical board on the minted fight — the create receipt carries its id. Same run-pass-less
       // session the reconnect leg enters; the shared dungeon store's refresh/sync_engine paints the board+HUD.
-      if (fight_id) {
-        // CARRY the exact roster the world ALREADY composed and rendered. `e.roster` is seated_roster's output;
-        // every template lookup below is the settled world cache that gated placement. Stamp each row with the
-        // fold's stable fighter id ONCE here; the fight receives that id-keyed book through its init input — no
-        // second roster derivation, template decode or positional name lookup.
-        const mob_roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ template_id, index) => {
-          const tpl = resolve_template(template_id)
-          return {
-            id: mob_entity_id(index),
-            template_id,
-            name: tpl?.name ?? null,
-            min_level: tpl?.min_level ?? null,
-            element: tpl?.element ?? null,
-          }
-        })
-        // The claimed group rides into the session as a FACT (#609): a defeat gives exactly this group back.
+      // The claimed group rides into the session as a FACT (#609): a defeat gives exactly this group back.
+      if (fight_id && pending_id) rekey_world_fight(pending_id, fight_id, { is_public, world_group: group ?? null })
+      else if (fight_id)
         enter_world_fight({
           fight_id,
           world_id,
@@ -804,7 +825,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
           world_group: group ?? null,
           mob_roster,
         })
-      }
+      // A receipt that minted NO fight id is a create that did not happen: the pending session dies with it.
+      else abandon_pending_world_fight(pending_id)
       // THE CLAIM RECEIPT through the door: removes the row (tombstoned against the lagging poll), advances
       // checkpoint+hunt_zone to the group, emits the fight_entry handoff. The re-poll stays for freshness.
       void publish_claim_checkpoint_receipt(character_id, world_id, e.key, fight_id ?? null, e.row)
@@ -812,6 +834,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       void poll()
     } catch (error) {
       cancel_engage_timing()
+      // THE SAD PATH (#1609): a refused/aborted/failed create kills the pending session outright — no latch, no
+      // ghost board, nothing settleable (a pending id is refused by every write door by construction).
+      abandon_pending_world_fight(pending_id)
       /* already surfaced by the intent-time engage toast's humaniser */
       // GRACEFUL 108 (zones::ESpawnNotFound — the rendered group no longer exists in that zone: claimed by
       // another player, or a stale gRPC read served a ghost row): the honest reaction is claim_failed with

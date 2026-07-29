@@ -186,6 +186,16 @@ export const ingest = (state, envelope, now = envelope?.observed_at_ms ?? 0) => 
       }
     case 'session_closed':
       return { ...empty_core_state(null), session_generation: state.session_generation + 1 }
+    case 'session_rekeyed':
+      // #1609 — THE re-key: a session that mounted under a pending id learns the chain id its create minted.
+      // ONE field moves; the inbox, ledger, clock and ctx are untouched (a boot would wipe the predicted board
+      // and reintroduce the blank frame this exists to remove). Guarded on `from` so a late/duplicate receipt
+      // can never re-point a session that already moved on — a mismatch is failure-as-data, never a silent write.
+      return String(state.fight_id ?? '') === String(payload.from ?? '') ?
+          { ...state, fight_id: payload.to ?? null }
+        : with_failures(state, [
+            { kind: 'stale_rekey', got: String(payload.from), want: String(state.fight_id), at: now },
+          ])
     case 'lifecycle': {
       // Context merge (roster / beat_ctx / my_entity_id) — never folded, never hashed; only re-resolves my seat.
       if (payload.phase !== 'ctx' && payload.ctx == null) return state

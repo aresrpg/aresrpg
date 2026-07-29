@@ -24,6 +24,19 @@ import { get_zone, get_config } from '../rpc/client'
 /** @type {Map<string, Promise<any>>} world_id → the World doc read (tables + dials — config-grade, cached) */
 const world_docs = new Map()
 
+/** @type {Map<string, any>} the SETTLED value of the same read — stamped on success only (never absence). */
+const settled_world_docs = new Map()
+
+/**
+ * The World doc SYNCHRONOUSLY, if this tab has already read it — `null` when it has not. Same one home as
+ * `zone_world_doc` (the promise resolves into this map; nothing else writes it), exposed for the callers that
+ * cannot await: a pending fight session mounts its predicted board in the click's own turn (#1609), and a doc
+ * that is not there yet simply yields no prediction rather than a fabricated one. Never caches absence — an
+ * unreadable world leaves the map untouched and is retried by the promise path exactly as before.
+ * @param {string} world_id
+ */
+export const settled_world_doc = (world_id) => world_docs.has(world_id) ? (settled_world_docs.get(world_id) ?? null) : null
+
 /** The World doc (spawn tables + density + bounds) — one chain read per world, shared by every consumer. */
 export function zone_world_doc(/** @type {string} */ world_id) {
   if (!world_docs.has(world_id)) {
@@ -31,10 +44,12 @@ export function zone_world_doc(/** @type {string} */ world_id) {
       .then((sdk) => get_world({ grpc_client: sdk.grpc_client })(world_id))
       .then((doc) => {
         if (!doc) world_docs.delete(world_id) // an unreadable world is retried on the next call, never cached
+        else settled_world_docs.set(world_id, doc)
         return doc
       })
       .catch(() => {
         world_docs.delete(world_id)
+        settled_world_docs.delete(world_id)
         return null
       })
     world_docs.set(world_id, read)

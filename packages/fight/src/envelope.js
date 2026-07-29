@@ -111,3 +111,8 @@ export const session_opened = ({ fight_id, my_key, ctx } = {}) => tagged('sessio
 
 /** A fight/session closed or reset (init with no fight id). */
 export const session_closed = ({ fight_id, reason } = {}) => tagged('session_closed', { fight_id, reason })
+
+/** The SAME session, re-keyed from its pending id to the minted chain id at create finality (#1609). Carries
+ *  `from`/`to` and deliberately no `fight_id` — the identity gate compares that field against the id this
+ *  input is here to CHANGE, so naming it would refuse the transition it performs. */
+export const session_rekeyed = ({ from, to } = {}) => tagged('session_rekeyed', { from, to })
