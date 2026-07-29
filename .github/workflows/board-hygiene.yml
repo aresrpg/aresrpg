@@ -11,8 +11,9 @@
 # The jobs, in order of how much of the work they carry:
 #   landing   — PRIMARY. Every edge push resolves the event's exact before..after commit range and
 #               reads the landed commits' associated PR bodies for close-keyword refs. The promotion
-#               engine also dispatches it explicitly because GITHUB_TOKEN pushes do not self-trigger
-#               workflows. Each still-open row closes with the landing PR and commit as evidence.
+#               engine dispatches it explicitly with that same range (`base`+`sha`) because
+#               GITHUB_TOKEN ff-pushes do not self-trigger workflows — one range, two arrival paths.
+#               Each still-open row closes with the landing PR and commit as evidence.
 #   backstop  — the same sweep on a daily schedule over pull requests merged into edge in the last
 #               14 days, so a missed, failed, or raced landing run self-heals.
 #   link_gate — BLOCKING. A pull request into `edge` must carry a close-keyword the `landing` job
@@ -52,8 +53,12 @@ on:
     - cron: '23 4 * * *'
   workflow_dispatch:
     inputs:
+      base:
+        description: 'Edge tip immediately BEFORE the landing — the swept range is base..sha'
+        required: false
+        type: string
       sha:
-        description: 'Exact SHA just fast-forwarded to edge (defaults to the dispatched ref HEAD)'
+        description: 'Exact SHA just fast-forwarded to edge — supply both, or neither for the backstop'
         required: false
         type: string
 permissions:
@@ -67,9 +72,10 @@ jobs:
     name: close on landing
     # A branch-creation or force-push push event carries no usable base to compare against; the
     # daily backstop reconciles those instead of failing loudly on an unreachable commit. A
-    # dispatch carries the landed head explicitly and compares its first-parent edge.
+    # dispatch carries the landed range explicitly; a dispatch WITHOUT it is a hand-run backstop
+    # (the mirror of the `inputs.sha == ''` gate the backstop and stale jobs read).
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && inputs.sha != '') ||
       (github.event_name == 'push' &&
       github.event.before != '0000000000000000000000000000000000000000')
     runs-on: ubuntu-latest
@@ -85,17 +91,23 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
-          LANDED_SHA: ${{ inputs.sha || github.sha }}
+          LANDED_BASE: ${{ inputs.base }}
+          LANDED_SHA: ${{ inputs.sha }}
         run: |
           if [ "$EVENT_NAME" = push ]; then
             node scripts/board_hygiene.mjs landing --event "$GITHUB_EVENT_PATH"
             exit
           fi
-          case "$LANDED_SHA" in
-            ''|*[!0-9a-fA-F]*) echo "invalid landed sha: $LANDED_SHA"; exit 1 ;;
-          esac
-          if [ "${#LANDED_SHA}" -ne 40 ]; then echo "invalid landed sha length"; exit 1; fi
-          node scripts/board_hygiene.mjs landing --base "${LANDED_SHA}^" --head "$LANDED_SHA"
+          # Both ends or nothing: a landing is a RANGE, and a missing base must throw rather than
+          # coerce to `sha^`, which would silently sweep the tip of a multi-commit fast-forward and
+          # leave the rest of the pull request's rows open — the exact shape of the bug this closes.
+          for CANDIDATE in "$LANDED_BASE" "$LANDED_SHA"; do
+            case "$CANDIDATE" in
+              *[!0-9a-fA-F]*|'') echo "::error::landing dispatch needs base AND sha as full SHAs (base='$LANDED_BASE' sha='$LANDED_SHA')"; exit 1 ;;
+            esac
+            if [ "${#CANDIDATE}" -ne 40 ]; then echo "::error::landing dispatch SHAs must be 40 hex characters: $CANDIDATE"; exit 1; fi
+          done
+          node scripts/board_hygiene.mjs landing --base "$LANDED_BASE" --head "$LANDED_SHA"
 
   backstop:
     name: landed-but-open backstop
