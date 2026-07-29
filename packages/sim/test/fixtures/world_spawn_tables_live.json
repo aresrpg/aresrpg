@@ -1,3273 +1,3273 @@
 {
-  "_provenance": {
-    "captured": "2026-07-29",
-    "network": "testnet",
-    "method": "SuiGrpcClient core.getObject over each seeded World shell -> its Versioned WorldInner payload (packages/sdk/src/sui/read/world_inner.js, WORLD_VERSION 1); authored ROLE joined by mob NAME via /v1/encyclopedia?kind=mobs x packages/move/scripts/out/seed_manifest.json, the ONLY legal key (packages/frontend/src/game/data/mobs.js get_mob_tier - receipt ids are re-minted every republish, names are not)",
-    "lineage": "seed_manifest.json _seededAt 2026-07-27T22:05:37.848Z, corpus seed/mainnet",
-    "issue": "https://github.com/aresrpg/aresrpg/issues/1491",
-    "coverage": "all 20 seeded worlds, all 329 mob-table rows; every row resolved to a live name AND an authored role (the probe throws otherwise - a partial join may not report a rate)"
-  },
-  "worlds": [
+ "_provenance": {
+  "captured": "2026-07-29",
+  "network": "testnet",
+  "method": "SuiGrpcClient core.getObject over each seeded World shell -> its Versioned WorldInner payload (packages/sdk/src/sui/read/world_inner.js, WORLD_VERSION 1); authored ROLE joined by mob NAME via /v1/encyclopedia?kind=mobs x packages/move/scripts/out/seed_manifest.json, the ONLY legal key (packages/frontend/src/game/data/mobs.js get_mob_tier - receipt ids are re-minted every republish, names are not)",
+  "lineage": "seed_manifest.json _seededAt 2026-07-27T22:05:37.848Z, corpus seed/mainnet",
+  "issue": "https://github.com/aresrpg/aresrpg/issues/1491",
+  "coverage": "all 20 seeded worlds, all 329 mob-table rows; every row resolved to a live name AND an authored role (the probe throws otherwise - a partial join may not report a rate)"
+ },
+ "worlds": [
+  {
+   "wid": "01_first_shore",
+   "world_id": "0x8beecc2101a8d5a3a4de39fefcb4ba54fdcbd2e62413d27de1bdbc39543f5a62",
+   "seed": "2151050269",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
     {
-      "wid": "01_first_shore",
-      "world_id": "0x8beecc2101a8d5a3a4de39fefcb4ba54fdcbd2e62413d27de1bdbc39543f5a62",
-      "seed": "2151050269",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xeeac6b08c541e970d9c278c05c0a2465fe0541103c69151f545d27eaa1aa6dd0",
-          "name": "Wooling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x02b1075cfa9c8a424a77ae5edbb9f7d0038b7b732537cdd5a74c01e41cd2db93",
-          "name": "Razkin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0f4e5e20d79a6efd773234af1927d8c391ae20d1c6333bec0f47d3dc0182a6fc",
-          "name": "Alley Bunny",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7fbf73f6cf9f6a50ee707fba6d7d51a4a069773db91f31e457ed316cff4f830a",
-          "name": "Green Walker",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x442d2ba6e5913bbc58faa4cef26e2850218c177e41e7eb1afac0ac9454961d06",
-          "name": "Runt Piglet",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7b6e17e0b502d2d21a27fd1ded4981a826b4875a78de81a7c9993eef15c7edd1",
-          "name": "Razmo",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1dfa5015a521ea81f74936d8441c6f6fe1803e1fcd7f481210558a19085aee22",
-          "name": "Piglet",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9d9cb3d53e73a5c68af9f3748ce688879021f8d4a8914f638f0d7e264566af53",
-          "name": "Bonelet",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa5bea5d70b7030f9c18f4e3fa912633b57754cfd2e731fcb294e82bd5b6ae635",
-          "name": "Ditch Koaletin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xdf2406a594698f1316c98aecc07df20b08c498b71ff2192bfeb007441994b9a8",
-          "name": "Sparrowdart",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf8debb0830bb69d63dc7dea83c815b5222fb958f9d9abe7401e2f24b8abecad6",
-          "name": "Grainfox",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5dbdcaaaa917c3238056f87a200286438045b99865eff48fda5cbade84e9e157",
-          "name": "Pecker the Widow",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x54306a987843ffd2a0b3c7d521038dc751da529e272d672f9d89df61a8af0379",
-          "name": "Rapido the Plague King",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0xeeac6b08c541e970d9c278c05c0a2465fe0541103c69151f545d27eaa1aa6dd0",
+     "name": "Wooling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "02_verdant_hollow",
-      "world_id": "0x953e2a2843539695125c4fc6e35995f6cd282f24c9b7f11d0b802eee25e681d7",
-      "seed": "3503687430",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x05486dfb633aa3f9b58544a0caddbc13e2c0eb5ce55893a79c23b8b96d7d3a9f",
-          "name": "Young Parasite",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2e5b4375a443d9af5a5e4643eb27b0f3a408f2b9eb69f2ef0f5213f25868fd6c",
-          "name": "Plaza Chicklet",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbe02f92e6b031c46b0b06ce09fa85f0c405af129ce042f8c7625bbc97f100df8",
-          "name": "Koaletin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf647f5fea117b6013671b1f6eda00d4f872ce29c7b83e7c10ad20d353c0f9c1c",
-          "name": "Stray Kit",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x56770d57a826551d0f479292c5c09e00388ca50c469373a074a61b3c93bc047d",
-          "name": "Wooligan",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3fc0f0a39c5bf479f76cdd67849f0c51975f6c07cb8078b974c344939a229614",
-          "name": "Rooftop Pecker",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7bf9868029cba580c077cb4d4be686a5d3f7d39710eb037e940e1ec32ad30ea7",
-          "name": "Koa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x31f054778d1ecc12e365264c5341ccb96df62979fe10fdc3b594ecf717a6d6a7",
-          "name": "Cluckling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4761a6020e05c7d903c2617434dd1f6b35c3429fa70de60485f63037e3deb39a",
-          "name": "Strawman",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf71374f613cf2818282adb6166061d3117cba7daad295a9290e138723dd1a2c8",
-          "name": "Wheat Slither",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2bb51e5dacc2789088bcf0a7877b124936e1909507a2d9d02b5e575cc513de9b",
-          "name": "Nerakling Marrow",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xafe3f2c97ad3fc0520bb23bfe50481acd4c5cfc78da2e8ba4501e6c34a5682de",
-          "name": "Hornhead",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x05fda7c63ef5e876697132a35b0e84a099a1260ea1b974cd85c86a7fb3952341",
-          "name": "Tikling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1d6696e7d78d3c84240e892493a458fb5190cfdd2995c444686219c56764f4bb",
-          "name": "Silkling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x71cbd0e39a2a8408abba9d37fb173167f68a64ce30907d1f54fc01b4fe6b2f25",
-          "name": "Wanilla the Pretty",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x02b1075cfa9c8a424a77ae5edbb9f7d0038b7b732537cdd5a74c01e41cd2db93",
+     "name": "Razkin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "03_emberfall_steppe",
-      "world_id": "0x2737019bfff7419f1dacf4d09fb2fbc29067952e7cea9a9353b11ba2edc6ef82",
-      "seed": "2783507451",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x0c785a1cea598a9c0c8f43e81a6350170974ac3fd692253cc704e53f931c0108",
-          "name": "Great Razmo",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6b607630698bebdeedf3bdf24b2a51f0ca5b59fa7c2a362bf8bae81a5a9ac63d",
-          "name": "Parasite",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9937373a673e6b279c2fea0c684944825a68e994dca7007db412e4ad88d9fbac",
-          "name": "Scuttler",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa0b318a777674b10bc290f6eae48d1c8cb65be6ef6157d5a66311f4c41ad6dcd",
-          "name": "Wildling Spearling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf932c0daf3f744ca764958ad61e1c2fd5bc663f8804e5ca119667a52872b53b6",
-          "name": "Campcaw",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7d09498b1d7db21f232bb860945dd18c4d8328e57f81d4d03961e610e7bf483b",
-          "name": "Shore Gull",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3f8df8c9cd8f05e67bdb2c4d3afad69d4c78d1710132dba28bba647328da0d06",
-          "name": "Chief Wooligan",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xdf4d33cbc731be98753b3ebf346222d01f4e3fce4619ef81b3610d5a786e9ee8",
-          "name": "Tusklet",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4b1cfe8fe6d92bbcec83baa41eef3d9e6de810253d788cd255868d4968991535",
-          "name": "Shambling Draugr",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5547dae99941c154c86b4c1ef9ed6956cdd072ca330ff6678f3ec2c195cb1e57",
-          "name": "Wolfling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb69697e0771d4b4e721fe117789d73d4d05414abf51246e12e56900ff832c5e2",
-          "name": "Wildling Huntress",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x40b916f03c11b4ccd4919d58ae3dd707feef5e459829d0e75081005ac464f91e",
-          "name": "Emberbat",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x51feaab767980dfb2e7270ff4c6cd369aba330501c944933ceebebd25764aac9",
-          "name": "Slothling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe90b0232c0b365d25d8d5243960280841e0df9315294e83df7c88ecd95aa98da",
-          "name": "Zephyr Silkweaver",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4e71ed76cad237cd37994479fab7062ebaf7b8706d72211b52b890dc3c81e621",
-          "name": "Koard",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8da7f2db0ad95d2b218487df58c3cf521fc94b6a0ff7be07149361d65dfc89be",
-          "name": "Koa the Bloated",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x0f4e5e20d79a6efd773234af1927d8c391ae20d1c6333bec0f47d3dc0182a6fc",
+     "name": "Alley Bunny",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "04_mistral_heights",
-      "world_id": "0xdcac222db5b45e508a70b2b5ee514401c8e6bf03b72e412e9a0b37302839dd08",
-      "seed": "1818461777",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xda56e754fdb605c513d1ee70abe17241f4989c85eae7df60fb751bcb688eaab1",
-          "name": "Cinderwhisker",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x574327601a08349281c108fa22fb4bbd5b9eb6855ae2e8acf1ad425dbd028238",
-          "name": "Shore Crab",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3da3fbe9600b46dd1516dbb9fdc985988084fe23ec73a86974ab5b3f62c8eb56",
-          "name": "Burnt Effigy",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5aadeb3c6ba192a77ba78e4539ad9f1b8db76589e9ed7f19f47464169fe55284",
-          "name": "Sproutkin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x62bfe62c9888eb87e3ce5ff928393efc6242bdab97dd03319088dcc6d3c03b17",
-          "name": "Glass Snail",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x50520fa2c5e6c8ee278969cae20f536fecfc1bc3162b376be757c7730979d761",
-          "name": "Swamp Sentinel",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4e82c9c2b51d06b869534c16a5b98922fa89d3a7447c674d3cb2f73b440ea4c9",
-          "name": "Magmalug",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8f031cb76bd2081e8cffea735751b41f58f7ffbc7f1a3a330917fa7f4a6ed9cc",
-          "name": "Razord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2b9f04b209e240391f9ebb4c651d4348ae8da39d792d33866fdb4808f9e9e465",
-          "name": "Timber Wolf",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x93a8b2a8462a9359dd5b6a81508b6bd440d5202fcea7dd3943ae82253b2c373b",
-          "name": "Bannerwatch",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x528650771d85bdcdbbbf174d918c13e05bbfb6bf21872fe1d1864422abb05826",
-          "name": "Phacoch Cultist",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc1d46b8a29aaa31520a8eac525d5fe8a217e3dbfe455fa8b4ca81646cf38cac1",
-          "name": "Aragog's child",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xaceb233243c5d53c4cf1fe5c9fe1594d7bd1f8c4b27bfb7b1820cac7649986cf",
-          "name": "Goblin Brute",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9851d865c3e0fb7feb930e85fbe5728a94d794d6b636cb124839c63709c72465",
-          "name": "Woolly Doom",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6b7e465cc87f1878060d4410527d430e99a330408196edfe9054240ae8261de4",
-          "name": "Noggin the Chief",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6353b8facd383f1dccc0a53132ae989c87e890a917b34180c8ce04382d84588b",
-          "name": "Magmalug the Gorged",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x7fbf73f6cf9f6a50ee707fba6d7d51a4a069773db91f31e457ed316cff4f830a",
+     "name": "Green Walker",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "05_drowned_fen",
-      "world_id": "0x5a136e4467134030081dbf6eef51844832ab1ad889241cfbcaecd8cfa376e990",
-      "seed": "3800099628",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xb18e2e3a55f8dcbe99ef13817fe251d024796456d03d982752bbb45b52311952",
-          "name": "Tokek",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4abf3e03d3aed4d56276b805597dade5557e2c4c47d85cd8a4e458507f14817c",
-          "name": "Ember Silkweaver",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa79e47386f0979126ca2a758ecc855e8758aed2f5c56cce9ee4c6fd97f867c9c",
-          "name": "Gopnik",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x298df855b84b351598e0f448257df5d532bf8100b700e020dfeb93b21fb23024",
-          "name": "Boneguard",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x250973353d3da6810387f0c1f2ea2a64ede40ad70017a8fcb5323d2564fe4cb9",
-          "name": "Boar",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9a38c97de4fc42975e49c9ccfbbcc5e63d08ff87c5021f3115ae7b7e4eed161a",
-          "name": "Sparkling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4d55a26e37f7047843fbe86b5856ea6c4b28eb162b0d9e3abf311d828c3f07e9",
-          "name": "Wallow Grub",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x924697d879504e713cee54f7fff9714c64d326fee3d030a4d0b89f1321cdba3d",
-          "name": "Goblin Runt",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xeb69f5eea6722c61b5a6d4f363d8e09a654c20a8e54ca03ff9cb097bfececb86",
-          "name": "Webling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5f334e703b22bd2d5c08779ffc5c29801c9a9c59795d9d1a393021672a790050",
-          "name": "Cave Raptor",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x23d90aa847759d784a378fa49a8a5f7fbfb85c0726e2f9b8cff2efc97c8ef5c9",
-          "name": "Crazy Goblin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xcbcbd6549db947564904e565c3870c0ab8dec748141a491a23416dd7c4a0fb22",
-          "name": "Scarak Louse",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa5111e501d58ec638e4c60afe0d78380eb989bc8859dadfc5f0e9ca0c89c3a0f",
-          "name": "Firekoa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa27c5c8bd03a42f2cd8ef4dd460329a97ac2a255a1001ad438067618d4fbcf88",
-          "name": "Magmaweaver",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x30cb35ec566a73ee09d3fd2193350a8669316a98d4d11a7276c0c1bb10ff5690",
-          "name": "Cauldron Imp",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4c71a161a5990f8cc8134bbd6e67a3ba6548271b20ded73b5831d426f54ea66a",
-          "name": "Hanged Effigy",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5ac0e6f5dc2f63670d24a2d8e6e5fea9a70fc845f802dffb79001f99a6179a62",
-          "name": "Crabito The Drowned",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x40c371db4ebacd5555b574a0950fbfc8f036935d04333222b938a50e501e77a6",
-          "name": "Tokek the Sunking",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x442d2ba6e5913bbc58faa4cef26e2850218c177e41e7eb1afac0ac9454961d06",
+     "name": "Runt Piglet",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "06_pandora_reach",
-      "world_id": "0xa78dfcc0abcf33d05503a77378553cb229c1696e7b8bcdd2ed3a31a3f948de03",
-      "seed": "1021944697",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x2361642c708c435e9744fb6f680cef4f5b81440adbde5c8c349e0c551de06f2e",
-          "name": "Weak Snapthorn",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2753af573e6b36b6bffa93ca75dfe5a35cc8fb50f51c5034345d2e99fabf61e5",
-          "name": "Green Goblin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xdf9fab804551e8fe3d623d47c1363010d475fc60bd75b79f9901accc0968b8f4",
-          "name": "Hermitude",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc8a394f62be83648ee651ab3ed52ca23e6b1d625466c7b0f3f357138b71ac9fc",
-          "name": "Sandskip",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x508600663c958445a8a8425b0660e0655fa8761d56694e81f1343a483f2174e5",
-          "name": "Magmooligan",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc54e9bee8d6db8665390b967c9865ac305f136e962744063956423035840099a",
-          "name": "Sandwraith",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x616c16a17219618e6f32a9bd3307a765d0c57a2777ffbb11b8bb8062e469a6db",
-          "name": "Seedkin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa4cc752a0be72b304dd6bf3f5ede95e5672248d9efda4a8671a251271d2b4455",
-          "name": "Pike",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbbc891cc57c6d7a15c805df0fac12726ba29479bfee4b32a86ff55542eabd568",
-          "name": "Reef Pike",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbe0ab06b3fddad08b79d7627077e4262ddc0f56d3349e009b188300323533870",
-          "name": "Wraithling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe46dc02c9e9456823a511f1d0ae2666fcfa5fcb060aba84538452d56e9febec6",
-          "name": "Truffle Wraith",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbb7a44d73f2fcd18a0cfdca6df4ad59564c3d6d66d5488891a7eb3e7be2c5c5e",
-          "name": "Koagulant",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xdd38d5092bb22552c40d196ff92ec49a14118e2ab5adc2c84fed1e97c8484d71",
-          "name": "Zephyr Silklord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x52b0283bec4f34ea0f2f53a4d1622ed673e21068d5d921711609774cc51ccc80",
-          "name": "Bonegorger",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9d07b5de553eda3bca944e6ebb718a473f30b03663a6cefb551581b6f377aebf",
-          "name": "Feran Cub",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x40f5107c245245facab5e8a9b3254875e13ded830470d68fadbd74b8c3f0b578",
-          "name": "Slothmaster",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xce889dbd33231e6263c82a0e9ca63e5fd16958e3a383ebb98e202616a669110e",
-          "name": "Flareling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x63ecf87dd7eaf2170d55779bf3a7c0f9a19707a27bbe74bb517ec3dac6120281",
-          "name": "Grimfang",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf57128d73c6613d3b3acd26586ac27292028dfb915be5cd2488116c9ae0bc9e5",
-          "name": "Warthog",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1f257449f953314dd483508b4d37be5c03f49214b1de1da4537da1cee8bb2eab",
-          "name": "Shadow Knight",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb06b936cd277d009ba9e9900bd513062496a8d2cbc94d01f8dc1b514e6d8ea48",
-          "name": "Ashraptor",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3c861cc4dbd97ac31e1e81a67f09e9397ba7a0d7e9812c21cd2a7dba13166bd9",
-          "name": "The Banner of Silence",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xab641aa1faae25b0ec56ffd4fba7a6a11204668d3e86406d51a5967117a13e22",
-          "name": "Saurian Scout",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x08114fc78ba466c3b9c2820574061a79d3d9e4e8b2c54968f8589def2059be33",
-          "name": "Goblin Sous-Chef",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb769bee6beff87fccc0b9bfab42519e2dbdaf36d02a9a249f33b30a75e2e91b8",
-          "name": "Gopnik Blyat",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x7b6e17e0b502d2d21a27fd1ded4981a826b4875a78de81a7c9993eef15c7edd1",
+     "name": "Razmo",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "07_cinderforge_depths",
-      "world_id": "0x75f02e82bf07a92de2870ec9799583873c1e6f55af53d09e72eea0f56e715288",
-      "seed": "1808327442",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x0356fbcbef5b45d2fbfa75220bcfbb3bc3de1065c8ccfb358966e2e90a2deaf1",
-          "name": "Bjorn",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7416a98ef34230025c89cfecf30acf90e48e52e155abf1a4a220d1b1b33b6eb7",
-          "name": "Ashskin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5e606e7fc175b7da23101ba790b0ace4539076fa34ee04cdb439a002bae2388a",
-          "name": "Fire Goblin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa7cd6336a3666c29f121cfbacea0a1a6b9787b81f1ffbf2dc2181e0d23977881",
-          "name": "Goblin Taster",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf93d2be7f081b7160bba19a039f19420721ffc160f9f3baa7322f75596b8266d",
-          "name": "Weaver",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb2a300efcd7922657f006af4482409a108c02a72b558dfdb5cd99222a8636f9a",
-          "name": "Piranha School",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xea1041d2464ef842597d81971081923684ecd590087d2ef3aefa790fba9d91de",
-          "name": "Moldrot",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd192687ded30fd6ab052a612ff452ab4d2d261d15f44752d56e815e4c65d6a01",
-          "name": "Sapling Warden",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x36f0d466e97b2870c0f014829ecd8d8dbe367ed2378829bac654837e7b42a66e",
-          "name": "Feran Scout",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd79251945ffc311b62bba55e9b207ab7c52a299c7ca41fd7cd56c599220b9221",
-          "name": "Lantern Wraith",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf20fa19ac0d43f0a2eccd74e0ac48638dea8c6d8d988fb1df6187fbb500f3d83",
-          "name": "Queen of the Crater",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xfec5298384837a7d997e85d4c17074210b54bbdd4bb6a7b55b12ac77c2b4df56",
-          "name": "Tuskarr the Oldest",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf538a48db7066f661776dc8bc95c5dfaf776636c85ba6a19c7c2bcf797520b10",
-          "name": "Fenrik the Moonlit",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x1dfa5015a521ea81f74936d8441c6f6fe1803e1fcd7f481210558a19085aee22",
+     "name": "Piglet",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "08_palewood",
-      "world_id": "0xcc56412e05f0901e7192a00b758736cd0ab68267f8adf06e9b536cf7437d9f15",
-      "seed": "542262713",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xbb9ecc95df18f1645d459bee269994889032edf8906ea43bce5ba5feb1f748e5",
-          "name": "Scarak Fighter",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x73148800a86ce856e3fe6057ce65ce2f267907b7f012b97124414a7af89fea7f",
-          "name": "Plaguemo",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7c1fa820a47aa323bbc9f9bf10bceb131a78a1e1b43b791cfe4e40240ae45cda",
-          "name": "Clawlord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8f0b6240e348f519adfcae4b6fd8dd5eed5413370ec1b525e6246d97763abed6",
-          "name": "Thunder Owl",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xcf0e224ac9291e7a8ec686e0c27d7f3fbf22f0b5b923e17ab87dccaa64cd5c50",
-          "name": "Archaeo",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe099bfff4dbd80bbb051f522cc6762ec829d39dcc2c2a4ab3f7c88725a144629",
-          "name": "Skyfin",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xec6275997f3bca4c851c9ce405071b0955712d868665cf67cd3a6ada5edb3960",
-          "name": "Emberwulf",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8087f132093e9947a485a8a347627e39bd1bd35ccb21490f8871d890288c1bd9",
-          "name": "Obsidian Tokek",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9150aabe612ea76acb7a08d216bd226a7de2fc9aed3a2c441b2776002935d995",
-          "name": "Sir Rattlebone",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xcf00defcbdf3d847d9086e67c8b1055833a767b063769e53dc6874cc1b73ab45",
-          "name": "Gobadoc the Starved",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4609129e3202cbe3445f59adedfe3df2862597ded404b38d110132b47b0a5c65",
-          "name": "Black Piranha King",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x97435d00bd7c8636309135a05b1aff8dceec58d45cc921336ad4a10f08057466",
-          "name": "Feran the Whisperer",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x9d9cb3d53e73a5c68af9f3748ce688879021f8d4a8914f638f0d7e264566af53",
+     "name": "Bonelet",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "09_coral_throne",
-      "world_id": "0x65ec98956d578f1e64821710e0e6bdbda9121d95d2e72d9118eb9c699a4f64f4",
-      "seed": "326054741",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xa0187d583afe6428b3f1775b2958c1b93d0a1cf3192c73317f021d539028e5ba",
-          "name": "Shadow Vulture",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7a75e2934b7f69ddc53f077dd18dc3e709e58d437c31d71a9bb5e9d3fbb8ef57",
-          "name": "Banner Wraith",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc3eca28513c15a4a23d89889caed530b836d72f94e45a6201ec0503399947a8a",
-          "name": "Elder Sloth",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2b3e6dca92cb07f9a2fc86b2573e24c1c5c0925ba8d9101864ee1911ce11fe49",
-          "name": "Ember Kweebec",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xec30b7b678539beba4fdf5bd3cdfeb40d4cec3c78bcdf19aa9e7efe426cdca05",
-          "name": "Snapjaw",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe21d0cad31b4dfb5ca41289ae8da28a92a5f8e6fc35b06cacb494d161b9210ce",
-          "name": "Ensable Hatchling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x76c5b094930c247a4a678fdfacefa494b6bbeafa66466705f0352a760b4994ec",
-          "name": "Broodling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xfad06fe7995dd909b3cfbf0626d0c2e1a63b6b134e4dec7f4d10f14acd294cda",
-          "name": "Palebones",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0ca1ef679f3288dbd492ec10aaa251726f6de1317e6e2253396481bbe3293e2a",
-          "name": "Kweebec Grove Heart",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x11169ba7001bfa3900f8d38504508f70ca6a762139029a9e5d7d7e258e4d360a",
-          "name": "Grizzly",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x39a52e8dd0940e6597c5bad4158137b728422f8dd329a1e038e0dd1bcdd8ef30",
-          "name": "Saurian Warden",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xda6864fffa1e1b33fb38ad3a387e26a4d60e2bb4c838340da8b1b5a393c34066",
-          "name": "Scarak Defender",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0a41e06815e933750934ee06a0c980bcfaacbe912e63a4622331c988acb365c1",
-          "name": "Sabertooth",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf320243ce8404e757a314e7170731db8e193987b913aebbdac26bfd7f0367111",
-          "name": "Nine-Tails Kitsune",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x35898cf4f2105c6d05b1f4ecf6c5914c35cd1d7646aec58e4704f05ee6dc2305",
-          "name": "Pyre Warthog",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb7bd6b583951c8d24c9496aaf0c80b0ccc4efc9a1062beff7de8a026d3d65edd",
-          "name": "Bone Choir",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x69978e8b4b680377a5692a298fe2583d0d1f28930fe0800218a075ad1623fcc7",
-          "name": "Pale Weaver",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0xa5bea5d70b7030f9c18f4e3fa912633b57754cfd2e731fcb294e82bd5b6ae635",
+     "name": "Ditch Koaletin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "10_sunspire_dunes",
-      "world_id": "0xed0cad999d5d2efe03f850db707dfe555701eb4cd8284c627e9c5f1822bdbe46",
-      "seed": "1372474904",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x0b5a4e3b97b50bab294e3f717174351e5ce68ae4e9e1dee5074a95c3144fcb42",
-          "name": "Talokan Nakwa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4d3dbaf1ce27c3fead3e61875ad4f418b30c6527f4612f2dfbae764b9c78c339",
-          "name": "Talokan Aero",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb1aee088afecc68e40c28b49e9cb77d34b4fabf650109fd98c749b927a04e78d",
-          "name": "Woolice",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x92a2a694c67ca16c41b421b6e2c1f6e8e4058302f8a8563baa2fcfd58ca0b470",
-          "name": "Boneherald",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb03430cee8c81742c386f123b2700f7964075a1d0b114a114e4e0072d6d0c68d",
-          "name": "Goblin Duke",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4fa88f46121761e100fd5b21e1e39cec1cfd2a51dde8e2c8813b7e8c4057abb1",
-          "name": "Armorscale",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1734529551b16eb8e3229fb396027fd2de873e36191c06f4a6d1d1a8a11f2947",
-          "name": "Sand Lich",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2a6cf0ebc17c3dc664113ef93dddc34089193be2175de58bb8334a2ee0ecd316",
-          "name": "Silk Lancer",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1da8ec93a8f52d3caa5c4411127633b54a8d91077283a0cce09e663b462bb048",
-          "name": "Kweebec Heartwood",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xde03dcf62bd37a8a39bfc8f865b1878f9cf6ebfd06ddddf82da48de9592222ae",
-          "name": "Marrow Acolyte",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xefda512f6479f1350b11019db1d9e35c363eb1684304d12af9b8879be953f9c8",
-          "name": "Scarak Seeker",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe8f63a4d0707a3678dcb8753e607afdc326b37119ca84bd2a184b7b1cfe4e70d",
-          "name": "Koloss",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8f37235cb43ba49e47c18a2de2f834c0ab1abcb5927d0e7a911660e5d1a281f1",
-          "name": "Pale Mare",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe8d7ce5fdaeeada1e9819f872e92b7c488c7ec640af0982ca5b6cb93a5999c22",
-          "name": "Magmaclaw",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xdb81779fc32a5aa950a4102e68af148e7cc78cacd16635d8f2895e847434212a",
-          "name": "Stormhawk",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8a0a687c394861177a7873d307b89147d97c07bd24039b18bda69e8dfa027691",
-          "name": "The Silent Abbot",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0xdf2406a594698f1316c98aecc07df20b08c498b71ff2192bfeb007441994b9a8",
+     "name": "Sparrowdart",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "11_rootheart",
-      "world_id": "0x738999d7736b86a3b124aec132b31118d71d9edc6ec029e87199800678fb1e18",
-      "seed": "4083707254",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xfe95e81e3f124014e1b9907404465649a1abc6907ea52430265dc75e9e5fbd06",
-          "name": "Widow Matron",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd9c656c9b9936fb67b16080d87ddf46a37e6220cca9f725c14d154c89afec66e",
-          "name": "Nerak Priest",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7fd3c10e9769972e882f8c9aa7827f62fed76c69028d8d4c9f45b81b89ef3685",
-          "name": "Frostling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa7822794f39333325566a1021e4c47b9e3d3e1f39c8a41488965e25501ce0910",
-          "name": "Razmaster",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x202ec7f473be9f7736deef1edc61f30bc586e8464e00bad66b9ad2e52dce90fd",
-          "name": "Frostkoa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd1d77fef772dde505be96589206d104ee3dd6a03885e9d43739028fe444c7fff",
-          "name": "Frost Silkweaver",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbab4a07a9047c798c631e2382c09da70d27ccde25c6296b78f8d12461bb2a608",
-          "name": "Frostwolf",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5068785fe3ba3d0ca5f49fea223c2e6cd6c9198346812039d633619bb33261d7",
-          "name": "Bisonbrute",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9ddf24d7f6ed9232feddceb283969cb006ceab6570447d8f5ae7d412cba599fc",
-          "name": "Pterodon",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x37e9c031467dc742f69d041f00fb4ca8bf5b0dcdbf65b2a9773cfd10154ebae6",
-          "name": "Trillo",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd15954935e90a5d3002dd1bcd84b5cec13e580dadf55f57f84d0bf4143bb8734",
-          "name": "Cinder Bonelord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5e46ab3a5d9d5612722100e9fc21a6b2a7d3e5ff46271df8c527eabd6d7e8b6e",
-          "name": "Fen Stalker",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x79a14ffed8d34431da25176b5fd4fac1b3446bebc166e8f89a98f058767441ab",
-          "name": "Swamp Firekoa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd94a1b84f1af8d804c9ec7b94d7b9b9cb7ab2f89b49645a5d4617f5397f249ec",
-          "name": "Yurei Abbot",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x20ac7d6d525fb7c426e4b61e16a7bd8646a446d06da71a04c02bf36c8ed6eac5",
-          "name": "Duke the Insolvent",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0xf8debb0830bb69d63dc7dea83c815b5222fb958f9d9abe7401e2f24b8abecad6",
+     "name": "Grainfox",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "12_static_fields",
-      "world_id": "0x580bb716d98d93a9032cf411d7793f98ce4643ab66472cc0c0a142b7e706bf9d",
-      "seed": "4111704015",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x65734ada6e0b46ebe2fa51f400c34406ab432fe543c4f3cba4d44bc646967c91",
-          "name": "Frostshamble",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xfeee2c505b89e78fad83b2e9bb88e9d0408b53124ad5984ec991302a1be74bfe",
-          "name": "Firesteel Golem",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x115f73d3c08abc62035c360254f7175fe7e802e46d86f5220616cd25de17872e",
-          "name": "Rex Alpha",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc6014294c6c265d20ae1478fc00d62bc9180c609b5ebfaf5833d4f2cdeda6cfa",
-          "name": "Flarewolf",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x525d073bb098a646357be3c9178869981b01c5a6c8b6a9778c1132de1fdfc875",
-          "name": "Hammerhead",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa4e4186a7abc31259f9020d98cce8c2d24e8b69601329ec031fd3ae60358a1d7",
-          "name": "Widow of Widows",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8615c8e70367cfadb6619958a93525304b5079e31f7f090bbcadb7a85850db6c",
-          "name": "Dread Lancer",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x40e54e9e2fb63c756c4899baa6db02f89ddd18cd0a131e6e1a583253354c6a4a",
-          "name": "Frostclaw",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0dfc890c766ae2862ce8636e98cd634755cc659fdee00b870c5be5923abf5a52",
-          "name": "Yeti",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4c6a406ac2cce659406fa841bb9a8419052c9b080808c237ff80877bd056f015",
-          "name": "Aragog Spawnling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9f0e49fcdf03d2ae41ad33ab422cc70db77ce775da924b7e130c85b00392e67c",
-          "name": "Ramrage the Ancient",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x5dbdcaaaa917c3238056f87a200286438045b99865eff48fda5cbade84e9e157",
+     "name": "Pecker the Widow",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     },
     {
-      "wid": "13_mirrormere",
-      "world_id": "0x032e76cd1a4ec5dfcbb85a12ef14b62c8d5ae2a625bdd5ef19eaf513a864661d",
-      "seed": "3250165758",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x308321168027042168ffbb7b9b9af5d5b32822f141ded4eb03bdbf553773e594",
-          "name": "Crystal Golem",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7df666195fab0a10d77d73f0653556457d37025f1c01203f60308a2cd1289c9c",
-          "name": "Polar Reaver",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xade2213a3d7815068ca836c3b76a9ba4eb2255f6da514e5720cddbde388d5ccd",
-          "name": "Silk Warden",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd29a092cb74af7901961f7313f5b4defd65d2e0860098a2549cc0e0cf70be344",
-          "name": "Widow Consort",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x956c51e63abd62068a96bf11417601b6e381284e20f0ac1a7a9639be10bedb7e",
-          "name": "Thunderlord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9b783287c2002f172cf59b98e5d3388e8f5501f7b5172788e6a9a5667d0dba0c",
-          "name": "Feran Elder Warrior",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4366ca73e9a17f35d03563814bd68672c8d25b4081e50c8259ab662b1409524b",
-          "name": "Soulking",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x729a07a04e2d11c784374f9f42710e97cb4c9fbd71f0215d05d12a63ee85d4ae",
-          "name": "Drowned Buccaneer",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xada31dd636f61ea545b57b5b5685cbfdd42889135c7974711aa000b3db165794",
-          "name": "Eternwool",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x4818a12345733d03f9b91a9fcff01062746795e2e38951d49ce414f0ebd43f46",
-          "name": "Pyre Wraith",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x92e757fa9fc0759e014f0d45390c910d2a565dd23085f02e0135d4cd6d0d99cb",
-          "name": "Tentacle Horror",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x691262c4b350f7d8447a43402611e349b18cc27c80374e21c0fa21cbda44a6e2",
-          "name": "Fen the Silent",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbc6afe9cf858e52c4c587f98e0152e2cbc6c13c2589295c08d0561ba559c9c99",
-          "name": "Rex the Elder",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "14_charnel_marches",
-      "world_id": "0x6411585b718f86814a2283b2dfecc44bf7e7d3966e67e055263e4da28cbd17e3",
-      "seed": "2262870268",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xe1683d2227d09ab35b5c4b83775f2870c7d2a50dfa587a86f54593ea653d0fc9",
-          "name": "Aberrant Hulk",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xaf618fe6fb04c69919cf3c66b12a00994a7c88e26e7dcdadd457e4fa49f7cd76",
-          "name": "Plague Razmo",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe85962184d6e8ec50b6064ab5867929040d26d71fcda127c5a55cb49ddd8384d",
-          "name": "Cocoon King",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x89c064f8ee9725ea63a0cb5680db88eab0cd01ee723414d3a606d9e684d5bb0b",
-          "name": "Moonfang Alpha",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb448bb0603eb818c8a791cd35da4fef05a4a810ffeb3d05ce73441e2f4b2b43c",
-          "name": "Scarak Overlord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb1643bfc5dc169f16d933af41b4c88dfd832735425d6815d87ccd43091e42489",
-          "name": "Wildlord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xabe7625341e0735ce08af4f6364a85160fb4e7903d75a91b14fb47bd1b596b9b",
-          "name": "Ancient Hermit",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8413c3342bab85e959bc6b33634fd5e89077e9ee3acf1b95f8fb7b86670c0503",
-          "name": "Saurian Warlord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x56f17b842939f7f2a6e926a967cb0b2d5b2f576268254ca242e5148869095862",
-          "name": "Void Crawler",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x391eb9237ecebe45338de767720acd2b2dddb5bc08d737ec066b158edbb05c47",
-          "name": "Titan Koa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc384b4cb59e52635f9b33edf8208fa429e988ed8d7662a02fe2e41c094002603",
-          "name": "Titan Claw",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9393ae4e90e04c62cc2e88ebc9f0bfb0ffa983ea6b180073c9665c62194eae6c",
-          "name": "The White Widow",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6ebe02c7bbf0cdb065f4f72209ac90fdbd3f03682912862d59c8d338f9211984",
-          "name": "Fen Dread",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2ce9031561f41be551f5818e810c4886660eb8944ed48f314c76ba2cb63b07fe",
-          "name": "Glacial Sovereign",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x276fbfd81a9129f4c3ee2e5a3ff1b3eb6cfd7d92a4555e61598f9a25f68c5f7d",
-          "name": "Silklord Ageless",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0b3a0447b2b675cd2416b5f1a11253a104eb9f624189d37665b87aade569c516",
-          "name": "Broodfather",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x99a0e0f8aa903e16d92b50a45fc3d444bebaacf8cd3f56036f8b136ba5eec0e3",
-          "name": "The Tempest Lord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbd86da8254cea385b3ab1b9dd4bb50b01426af710efa358246df073925b11993",
-          "name": "Woolkin Celestial",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf598726624c3d5c694b42a5f143fb480b2db7a0e3dc32c03adb66de4a81bf39d",
-          "name": "Deathless Paragon",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xec3b6a9f46675bd107a5cc1e0551ced9ec6fefc29f3c5509fb59a58cac92f812",
-          "name": "Spinner Prime",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8f26f0e3a164dea9120ca0836681b3d2c6a40e18c909d57dc96e82471ac89be0",
-          "name": "Rootlord Ancient",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x042be2ceebf72c63c7c6b287fa347b5aaa827f1ffa0fa311f50e9cd598c1d010",
-          "name": "Mire Titan",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x61dfbaadd2571354e3988f52653bd9428f81163d0c01df9b5037be40a1ad076c",
-          "name": "The Patient Elder",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbe15225af2f29778e503da613d207d916a73c9fcb0786420bc2971a8d50ff825",
-          "name": "The Soulless Regent",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3c741bb13e504c4540e09511c46b1776bff5776f4de993478d62dda9473b7e8b",
-          "name": "Hades Keeper",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8831621412a86c666f65a1d3b09cc820523ed06ed16fcecdfa8f24d76a3899b2",
-          "name": "Talokan Tidelord",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd2b70c17d24e4fabbb649094003200eece007fc9fe36176e4d95dbb4fd015ab2",
-          "name": "The Abbot of Ends",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xeb4cf23cb2a542a3d2118fbb07ae13b6585eaebf605e30661206df75738d627e",
-          "name": "Fenrik the Dire",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x045ff9bf56a9d5294b320707a610909b9dcb626a7c43d89fb6e253d4fb6dc1ed",
-          "name": "The Ember King",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xfc69519d675579af2be487b798d7063ec4ef8e20ae7bc55ec06d56450a39eb76",
-          "name": "Ramrage Eternal",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbd91a6ece03edc5aedd751e70a6bf34b33551d4a143007423ceba8be44c508dd",
-          "name": "Tuskarr the Eternal",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8555cbe51a17f582fccaf9fa05b04f0f49da07ecd91ef4ca3649c6ac5193015c",
-          "name": "Grizzly the Undying",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x60a8681a3f37adbe519141515e33c2429bfc652e37021ccec625bab22e3e3151",
-          "name": "Sir Deathless",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe32a9f80eae19861c99f32d8bad9fc454901d6188c94829bf4502acf3c455b8b",
-          "name": "Yeti the Deathless",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "15_silent_atoll",
-      "world_id": "0x9365ccc0ada7ff2ef5f027ec03384d350008b41266cdf2f7fe870035c2fd921b",
-      "seed": "3842344178",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xa5e1cafda790cca44163ad4dcccbf2c0862c174f6a8adc0a771e442e5a64cbe6",
-          "name": "Bonelord",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb073d1e19e3e3831ff4a0aac70b18478de217391c3eecceebe54abae8a78171e",
-          "name": "Ancient Tusk",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x5d7c8869f17ad1ba10182342c5496c532cc3c5baf21379f5625834cd4bc6e3ea",
-          "name": "Heartwood Ancient",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3389f41790a22a6404353b09b0be15f8dcb0e0aa07a31d0c6f68777e2b05648a",
-          "name": "Pyre Titan",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x160a6230ced109819b954a1f99f298818b345867e37d6d55e5b76b48db9116d3",
-          "name": "Rex Primordial",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xeb05e9fe0064a65971b44e08c114384b094854b1e646234cd14b317d69f9bd69",
-          "name": "Abyss Eel",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb3cbe387da55a6e8061a46136f344140b4edea7e244c1a6229e45dac51984d92",
-          "name": "Risen Prime",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x82407536a957a659b1bc4ba8c4c7f9cce9efee99d5b84d13073098b4f5bce78a",
-          "name": "Void Eye",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf51ea99c91d47880d503e135f9ac604276674017e5aa11cc6051a8080aac4b9d",
-          "name": "Deep Leviathan",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6f7fcd5f166415ea36a0ff0ae8e6e7a714c84acc0722b28a6c2dbecbf31983ee",
-          "name": "Titan Bear",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xac4c70a1727396b70e988619207ef994a2303bdadc01ef1c063274a2a3c9dbe5",
-          "name": "Void Spawn",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x92418ddcb29765b10c822a4e8613ac4de9602aa6368e2563f84ae603819c5163",
-          "name": "Razlord Prime",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xe49e048fddd964e93b8ebd4b79612d0ff3de94bb1452d852b3c4dac9ebad1db4",
-          "name": "Moonfang Ancient",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9e3ed9d5e4e7f645ee8316c092e8adf92b64a6f32126885444eb38cb60c05dbf",
-          "name": "Void Necromancer",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x07695fe42eca5be77643f762ac4a1fcaa726541d8be568481a609a2826aef338",
-          "name": "Void Spawnling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x39eac8471e8168187ccbeff6f4b8c9b12472d27b1235cf375f3df3a9749d6213",
-          "name": "Primordial Koa",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0fc0b93f5e69e81e79bcaded96179c1563b5fd4a3a614433a59eb94982e7c0b5",
-          "name": "The Sunken Claw",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0f45eea33d42db0b09d55ee84663e35c767f12801f3406212fabe92a9e7f255a",
-          "name": "Mammoth King",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9897fe51dfa38842fd58239b4da0d9d00cf7002f60a8aaef11d6d266c55f961f",
-          "name": "Primal Tyrant",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb644715fbf7755a1043a8298716dc361d243756ec4f1022eb40ef014947377e4",
-          "name": "Moonclaw Empress",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8bfc3c299e3d92c98442662aa7c97c773fe4669bff8438b3adf169c0dac76acf",
-          "name": "Saberfang the Ageless",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc12a430d99ea5d042ba83ebe3914f98d0f701d3ca64a9b880fb786a9280a085d",
-          "name": "Talokan Ancient",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xaa4ace9a4d2743d3e6518d3e0f2ffac51cb6fd42380d3a8f9edf4358a569e42a",
-          "name": "Piranha Tyrant",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xcf95def83ea3de62ec358ce8a02cbca650b516fff6f2a5b9be0900c472cca6f2",
-          "name": "Crabito the Crowned",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x465cdd250b357551d5da4acc34489258f79677703e6925b8c3ea26fa32b72ee8",
-          "name": "The Golden Matron",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf43d0050f09f4bd21a3440d05ef4b6607070a2845add83857a0dd1eed2e8f23a",
-          "name": "Scarak Hive Prime",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8d5cfd5114faaa9b1914da71fc68a6444c94706361f2b89898cbea6107bad2cd",
-          "name": "Razmo the Crowned",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa12c04e1286c7b22fed0efbf32f35b418878801ddac01b1fc74286b92f1b6272",
-          "name": "Bjorn Prime",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x70ec462c81f2cb333912852d5ac5fcf1af3df959ceaba19dd9f40baca7875e76",
-          "name": "Empress of Widows",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd72c76ac0cc1ebc68b9ae6c7271531e90a5cce0f48a6051fa0165e5eeb1c6718",
-          "name": "Koa the Eternal",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x58b114e14fd65ee1b6d892a826580e7b9215ef2b6ec30de36be6d379d4b99cc7",
-          "name": "The Saurian God-King",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xcd2c6576e6127e189b17a68f60502b9efe2e16b2ea11e149050903bf1dd0f346",
-          "name": "Thunderscorn",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8b05b03fe365b83e4a69d1d790aebb7cb22c07740a7834edcf55aa053f6ac85f",
-          "name": "Rex the World Eater",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf5f8b291ec6e16fab74164c4c478bbf03cc51d955730f7d2e371f5e919a2d161",
-          "name": "The First Hollow",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "16_the_sundering",
-      "world_id": "0xdcad633ade9d49bf297b48fad7a08498310ce46402d88ef42d3b1feee6dfc70e",
-      "seed": "3255190784",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x83e042d1c6b1f3613b30d7ff7132afd3601051beef91d189ca46df806f7ae60e",
-          "name": "Gate Watcher",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf10703ff3b0e5a54598de08cda945a04a62b49260ec4251f6bb7cceadb12936c",
-          "name": "Ash Prophet",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8d4f84732f3e952b0ea27a86d45ce8cdfc71e75d8bc85ffd902790f42e18dd35",
-          "name": "Hadean Hound",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x14c34ee87a26708f2c59739198ef78b86989de1d6d462355ef273b07a5ed5a9b",
-          "name": "Void Harrier",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xcd46dd7b8915462cfac0ebd90f573b8b10cc7a73bd1d228fd34fdd2fd1e17a4f",
-          "name": "Pyre Colossus",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xc32fd3033755d8a5d51aad3f3d375492d0ceef46312d04ef4f7d5dc8483bb78c",
-          "name": "Soul Auditor",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x69b2500ef5983e28bda9b97f1457bf37be47e00825ba529818d7b1fa2dceb723",
-          "name": "The Hadean Gatekeeper",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7ee1b29fa926ae57b06e5529f44f7247d811294983d2ecf5fa647b63bdb95b5e",
-          "name": "Rift Matriarch",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9657d50ed60fc346305e2c089910d133c4c5f1f8ef55d05f64b981626ceaee42",
-          "name": "Riftmaw Devourer",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "17_obsidian_choir",
-      "world_id": "0x222c67799efa5ac566f3f872565dc021d1d13d1c9e31fe70596314482cb5bc16",
-      "seed": "3239739785",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x7a85c2199d5a7fae32a907c62adcd07e5c94e65fed50ea1714f2bbc5509dac64",
-          "name": "Glasskin Chorister",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x158b253c61f49f1d2cb6bf8f6bffab69862688bb1bb4dfe3595a72335b7c7f79",
-          "name": "Cinder Acolyte",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7196352ac7c01d42e74a919f80910061cd34b8c3dbc4b2c977faa9156b0bae4f",
-          "name": "Basalt Shambler",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf228e116a7de353383ca46c6805c78f093508f3c53706cfd0fd80f05fc42ea35",
-          "name": "Pyre Moth",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x37f53a8ce52e66f30e378954ed6aeda9879f70ddc599a1a19acaf775ead1a524",
-          "name": "Chant Leader",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbd8c63161cec269cebbc0cf15967b0083bdd9f604c3cd198b1874207c665225c",
-          "name": "Obsidian Wisp",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x26e65cfddfdaf6765860b512d52deadaa1f77375f3c52d1c43e282f0bde8675e",
-          "name": "Pyre Tender",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x67f0a8ec8c030dc1e98ccee1ecf95b52ebbe5ffaae78f122422f57ff6d6415a7",
-          "name": "Choir Sentinel",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb22312b4d67291baf58cc2401e16000c8ecde4fd5c9b24ad5d969037e8044e02",
-          "name": "Lava Hound",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1f1f499fd1b1ff4345ad2820c0c80ca2781fa3254ea9ac3a9b7fe5fb365f03c3",
-          "name": "The Dissonant",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x111b15755aa32ee75c7e87fe664689778b975b9a89078d1002ae554a70845211",
-          "name": "The Choirmaster",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd543f71d938cdc7c64d1bde2f713fe11ae0975637ad5cfa856fb4e5afbc79e56",
-          "name": "The Ashsinger",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xdb2a44ab930923e9e6fb6791425a1c72dae0c6ca123709b27b1c4fdfe5c0de2c",
-          "name": "Choir Apostate",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "18_abyssal_weald",
-      "world_id": "0xbcfb4af98e77df9b3fe582bb599db48d98fe7fb45a2d497a3c80c4f3e4dbd64f",
-      "seed": "2003344192",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x9fd037f8fd97247745fe44808847110a12be44415034168d71930ffa374556be",
-          "name": "Lightless Frog",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xeccd3592ff84308c5336ba88f6f6df61979b37026d27f93c69d878939d5c252a",
-          "name": "Mire Creeper",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xbd8aa65d404bef61738558712f89da4ac4d466842111806f420bce1421539253",
-          "name": "Gloomwing",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x3b0fa8428ce05724eb6661c2b5a327225af828f790bba19265d51fc9c95001d2",
-          "name": "Sporeback",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xfcaf674d2c88fb0425fe9a6ed57c90db5e597dc32ef903186853548180f2e251",
-          "name": "Weald Shade",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa3c17b347d8ed11525e5a440c7fded29972fab24885c81d98411fc6a89bcc609",
-          "name": "Moss Bear",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6177c44c87fb310c89b1e00dc6fb164f4caaadb3c77bcbf9b0ab797f2c0b7078",
-          "name": "Anglerqueen",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x705b26b36c9935219c6bdd8eeca8ebc01bc0faa3db1cf053d13b1af218df3a36",
-          "name": "Bear Patriarch",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x0bbeac56ea3ccf64eb1a11d959d9d1e545dee3d89fee08e71790ee8d2887a387",
-          "name": "Gloom Piper",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf4aa8ea38b59bd1bffa156b32f48674ba37001468a730e0c91a8a1f407d0a68a",
-          "name": "Deep Oracle",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf166cd607ab49337493a03eb7942db6bf815cd665d0dde4614f1635edefd5097",
-          "name": "The Titan Bear",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x24d787c0379b332c13c664fa7a34e9dce1c294f658e5359e4ea98102097e6da3",
-          "name": "Lure Tyrant",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xeb1c60f3f622a014a7b039290e196e8146e5743fa1f13691d4374268216b5d89",
-          "name": "Drownlure Tyrant",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "19_hollow_crown",
-      "world_id": "0x74f459b629f3f0805f907dc3ebcc9f844170b26f52686f82df7cb59f7529b35d",
-      "seed": "3737024213",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0xcb34dbc19c8dc74873e38a171c6b19c08d1626121762b8537e238a384e9f0042",
-          "name": "Quill Fledgling",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x352d1fc90bbc29b9672436593f862a91747e4f8d476ff4c4cafe4d4332a39f11",
-          "name": "Maw Gnat",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf3d1014d6e525ebd3b390e97941e22122eb825917c270a619cadbc5078a9be5b",
-          "name": "Halo Zealot",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x74c493e727ca56ea93f2de3bc32300ab622606eca544ae4ab97eacd493e9bf23",
-          "name": "Crownkeeper",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xf58c7ec6ed8fdaab55b1b0fa9f45053ce03be03e025e5fe125f4655a765be35a",
-          "name": "Light Bearer",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x7711d1f78970130bb2cb9ac31141fedc851f2275439b20a8cde93beec75c9827",
-          "name": "Skyray",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x2e56c885b9e6d75efecf9427bfb1c5903602931db023c4f808afafee0db2468d",
-          "name": "Skywarden",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x042cec9a82608a3034ae5e951079b0bd820cca390e357987c851f67b2d7783b8",
-          "name": "Seraph Herald",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x94454085d1c6f9372dd35009f194adc8e17a2ae410f16bdba5ce2d6e0be41de2",
-          "name": "Halo Judge",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9459bf64ab9bd634716a95b027eaec81ea95fa3fc5a8faf8fd6d097bc6a31a2a",
-          "name": "Godbone Colossus",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x9fbaff9856b9bd5e41853a5599d420903c3896f5883bbc8a3ca8d4553b65a718",
-          "name": "The Dead God's Eye",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x280b7a0a0440bfdb2fa502451f4225acc0d8a3c8e023ee9d96a883965d2d972c",
-          "name": "The Crown Regent",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x1ae293adb2ad8ef549eda66b7bfc633447fe3c5d5eb44a8979eea229fa2f46c5",
-          "name": "Gilded Apostate",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
-    },
-    {
-      "wid": "20_zenith_scar",
-      "world_id": "0xd67fdf517c5aa4d689eb20c2d243fb69c7c8e7c85ee435a9e68d04466ced555b",
-      "seed": "2021226272",
-      "zone_size": 512,
-      "bounds_x": 500000,
-      "bounds_z": 500000,
-      "min_groups": 48,
-      "max_groups": 64,
-      "spawn_zone_x": 1000,
-      "spawn_zone_z": 1000,
-      "boss_mask": [],
-      "mobs": [
-        {
-          "template_id": "0x33cfb6419f8afee3bfd79c970dd280ab1607eaf73965c1a7628c48424347550e",
-          "name": "Scar Borer",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x084a80da03dc4bd2ed378c4f3604c54398b3fcfe35c54749a74fdca14a3ec9de",
-          "name": "Wound Leech",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xd6e9031872e6d5417e025435079eff5dc45ba5d6bba1a2871db6eb529f623a0d",
-          "name": "Pilgrim Husk",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8d3039cf0dd7b6afef9e276e8484dc0b1899404f3e5d83881aee9683f804a294",
-          "name": "Rift Toad",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x68d1a7bdec354d1ee94b2dca6e06b43977c7c52d0281a14abacc96e5b81f633f",
-          "name": "Scar Chanter",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x8ca101dada00716a4aaefffd91f2b03aef39ffdb5a91cf589ba1595bcaa6c6f6",
-          "name": "Glimmer Shade",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x65f04f7eaf9c7db03d36dbaa39d5142da7c6f9e1b98b278e75f3d48b8634d360",
-          "name": "Suture Priest",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xa8c22e2ffc6cd689dcf166f223ab6c7cc0206985fc0f4e4db15c188a9717df7f",
-          "name": "Wall Fragment",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0xb92b7ab6a889a4b3e22c5bcdfae9f4176736de6262315f8d2f0bf803f8b1b8b0",
-          "name": "Deep Auditor",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x6543c661bddeae5d4a4221e6f3c9cc025891c00873d17b8e8de96fe213f343bc",
-          "name": "Scarhound",
-          "role": "normal",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x60cc331d198dac78d25f41caa3410e805c50329d3de987d2e195a5ea3ed2c3ac",
-          "name": "The First Ward",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x49b6e0b9139d4a15d8d7918a3e24e4b44f202b473ae9c4b80f99164b972ab6a8",
-          "name": "The Wound Oracle",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        },
-        {
-          "template_id": "0x76123abc3726ae49eec422d3335a7c088a3b29e57777827d2289df6999fa025a",
-          "name": "Scarbound Auditor",
-          "role": "archi",
-          "rate_bp": 8000,
-          "level": 0,
-          "min_group": 2,
-          "max_group": 3
-        }
-      ]
+     "template_id": "0x54306a987843ffd2a0b3c7d521038dc751da529e272d672f9d89df61a8af0379",
+     "name": "Rapido the Plague King",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
     }
-  ]
+   ]
+  },
+  {
+   "wid": "02_verdant_hollow",
+   "world_id": "0x953e2a2843539695125c4fc6e35995f6cd282f24c9b7f11d0b802eee25e681d7",
+   "seed": "3503687430",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x05486dfb633aa3f9b58544a0caddbc13e2c0eb5ce55893a79c23b8b96d7d3a9f",
+     "name": "Young Parasite",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2e5b4375a443d9af5a5e4643eb27b0f3a408f2b9eb69f2ef0f5213f25868fd6c",
+     "name": "Plaza Chicklet",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbe02f92e6b031c46b0b06ce09fa85f0c405af129ce042f8c7625bbc97f100df8",
+     "name": "Koaletin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf647f5fea117b6013671b1f6eda00d4f872ce29c7b83e7c10ad20d353c0f9c1c",
+     "name": "Stray Kit",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x56770d57a826551d0f479292c5c09e00388ca50c469373a074a61b3c93bc047d",
+     "name": "Wooligan",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3fc0f0a39c5bf479f76cdd67849f0c51975f6c07cb8078b974c344939a229614",
+     "name": "Rooftop Pecker",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7bf9868029cba580c077cb4d4be686a5d3f7d39710eb037e940e1ec32ad30ea7",
+     "name": "Koa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x31f054778d1ecc12e365264c5341ccb96df62979fe10fdc3b594ecf717a6d6a7",
+     "name": "Cluckling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4761a6020e05c7d903c2617434dd1f6b35c3429fa70de60485f63037e3deb39a",
+     "name": "Strawman",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf71374f613cf2818282adb6166061d3117cba7daad295a9290e138723dd1a2c8",
+     "name": "Wheat Slither",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2bb51e5dacc2789088bcf0a7877b124936e1909507a2d9d02b5e575cc513de9b",
+     "name": "Nerakling Marrow",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xafe3f2c97ad3fc0520bb23bfe50481acd4c5cfc78da2e8ba4501e6c34a5682de",
+     "name": "Hornhead",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x05fda7c63ef5e876697132a35b0e84a099a1260ea1b974cd85c86a7fb3952341",
+     "name": "Tikling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x1d6696e7d78d3c84240e892493a458fb5190cfdd2995c444686219c56764f4bb",
+     "name": "Silkling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x71cbd0e39a2a8408abba9d37fb173167f68a64ce30907d1f54fc01b4fe6b2f25",
+     "name": "Wanilla the Pretty",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "03_emberfall_steppe",
+   "world_id": "0x2737019bfff7419f1dacf4d09fb2fbc29067952e7cea9a9353b11ba2edc6ef82",
+   "seed": "2783507451",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x0c785a1cea598a9c0c8f43e81a6350170974ac3fd692253cc704e53f931c0108",
+     "name": "Great Razmo",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6b607630698bebdeedf3bdf24b2a51f0ca5b59fa7c2a362bf8bae81a5a9ac63d",
+     "name": "Parasite",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9937373a673e6b279c2fea0c684944825a68e994dca7007db412e4ad88d9fbac",
+     "name": "Scuttler",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa0b318a777674b10bc290f6eae48d1c8cb65be6ef6157d5a66311f4c41ad6dcd",
+     "name": "Wildling Spearling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf932c0daf3f744ca764958ad61e1c2fd5bc663f8804e5ca119667a52872b53b6",
+     "name": "Campcaw",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7d09498b1d7db21f232bb860945dd18c4d8328e57f81d4d03961e610e7bf483b",
+     "name": "Shore Gull",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3f8df8c9cd8f05e67bdb2c4d3afad69d4c78d1710132dba28bba647328da0d06",
+     "name": "Chief Wooligan",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xdf4d33cbc731be98753b3ebf346222d01f4e3fce4619ef81b3610d5a786e9ee8",
+     "name": "Tusklet",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4b1cfe8fe6d92bbcec83baa41eef3d9e6de810253d788cd255868d4968991535",
+     "name": "Shambling Draugr",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5547dae99941c154c86b4c1ef9ed6956cdd072ca330ff6678f3ec2c195cb1e57",
+     "name": "Wolfling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb69697e0771d4b4e721fe117789d73d4d05414abf51246e12e56900ff832c5e2",
+     "name": "Wildling Huntress",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x40b916f03c11b4ccd4919d58ae3dd707feef5e459829d0e75081005ac464f91e",
+     "name": "Emberbat",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x51feaab767980dfb2e7270ff4c6cd369aba330501c944933ceebebd25764aac9",
+     "name": "Slothling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe90b0232c0b365d25d8d5243960280841e0df9315294e83df7c88ecd95aa98da",
+     "name": "Zephyr Silkweaver",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4e71ed76cad237cd37994479fab7062ebaf7b8706d72211b52b890dc3c81e621",
+     "name": "Koard",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8da7f2db0ad95d2b218487df58c3cf521fc94b6a0ff7be07149361d65dfc89be",
+     "name": "Koa the Bloated",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "04_mistral_heights",
+   "world_id": "0xdcac222db5b45e508a70b2b5ee514401c8e6bf03b72e412e9a0b37302839dd08",
+   "seed": "1818461777",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xda56e754fdb605c513d1ee70abe17241f4989c85eae7df60fb751bcb688eaab1",
+     "name": "Cinderwhisker",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x574327601a08349281c108fa22fb4bbd5b9eb6855ae2e8acf1ad425dbd028238",
+     "name": "Shore Crab",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3da3fbe9600b46dd1516dbb9fdc985988084fe23ec73a86974ab5b3f62c8eb56",
+     "name": "Burnt Effigy",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5aadeb3c6ba192a77ba78e4539ad9f1b8db76589e9ed7f19f47464169fe55284",
+     "name": "Sproutkin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x62bfe62c9888eb87e3ce5ff928393efc6242bdab97dd03319088dcc6d3c03b17",
+     "name": "Glass Snail",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x50520fa2c5e6c8ee278969cae20f536fecfc1bc3162b376be757c7730979d761",
+     "name": "Swamp Sentinel",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4e82c9c2b51d06b869534c16a5b98922fa89d3a7447c674d3cb2f73b440ea4c9",
+     "name": "Magmalug",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8f031cb76bd2081e8cffea735751b41f58f7ffbc7f1a3a330917fa7f4a6ed9cc",
+     "name": "Razord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2b9f04b209e240391f9ebb4c651d4348ae8da39d792d33866fdb4808f9e9e465",
+     "name": "Timber Wolf",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x93a8b2a8462a9359dd5b6a81508b6bd440d5202fcea7dd3943ae82253b2c373b",
+     "name": "Bannerwatch",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x528650771d85bdcdbbbf174d918c13e05bbfb6bf21872fe1d1864422abb05826",
+     "name": "Phacoch Cultist",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc1d46b8a29aaa31520a8eac525d5fe8a217e3dbfe455fa8b4ca81646cf38cac1",
+     "name": "Aragog's child",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xaceb233243c5d53c4cf1fe5c9fe1594d7bd1f8c4b27bfb7b1820cac7649986cf",
+     "name": "Goblin Brute",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9851d865c3e0fb7feb930e85fbe5728a94d794d6b636cb124839c63709c72465",
+     "name": "Woolly Doom",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6b7e465cc87f1878060d4410527d430e99a330408196edfe9054240ae8261de4",
+     "name": "Noggin the Chief",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6353b8facd383f1dccc0a53132ae989c87e890a917b34180c8ce04382d84588b",
+     "name": "Magmalug the Gorged",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "05_drowned_fen",
+   "world_id": "0x5a136e4467134030081dbf6eef51844832ab1ad889241cfbcaecd8cfa376e990",
+   "seed": "3800099628",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xb18e2e3a55f8dcbe99ef13817fe251d024796456d03d982752bbb45b52311952",
+     "name": "Tokek",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4abf3e03d3aed4d56276b805597dade5557e2c4c47d85cd8a4e458507f14817c",
+     "name": "Ember Silkweaver",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa79e47386f0979126ca2a758ecc855e8758aed2f5c56cce9ee4c6fd97f867c9c",
+     "name": "Gopnik",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x298df855b84b351598e0f448257df5d532bf8100b700e020dfeb93b21fb23024",
+     "name": "Boneguard",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x250973353d3da6810387f0c1f2ea2a64ede40ad70017a8fcb5323d2564fe4cb9",
+     "name": "Boar",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9a38c97de4fc42975e49c9ccfbbcc5e63d08ff87c5021f3115ae7b7e4eed161a",
+     "name": "Sparkling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4d55a26e37f7047843fbe86b5856ea6c4b28eb162b0d9e3abf311d828c3f07e9",
+     "name": "Wallow Grub",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x924697d879504e713cee54f7fff9714c64d326fee3d030a4d0b89f1321cdba3d",
+     "name": "Goblin Runt",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xeb69f5eea6722c61b5a6d4f363d8e09a654c20a8e54ca03ff9cb097bfececb86",
+     "name": "Webling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5f334e703b22bd2d5c08779ffc5c29801c9a9c59795d9d1a393021672a790050",
+     "name": "Cave Raptor",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x23d90aa847759d784a378fa49a8a5f7fbfb85c0726e2f9b8cff2efc97c8ef5c9",
+     "name": "Crazy Goblin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xcbcbd6549db947564904e565c3870c0ab8dec748141a491a23416dd7c4a0fb22",
+     "name": "Scarak Louse",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa5111e501d58ec638e4c60afe0d78380eb989bc8859dadfc5f0e9ca0c89c3a0f",
+     "name": "Firekoa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa27c5c8bd03a42f2cd8ef4dd460329a97ac2a255a1001ad438067618d4fbcf88",
+     "name": "Magmaweaver",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x30cb35ec566a73ee09d3fd2193350a8669316a98d4d11a7276c0c1bb10ff5690",
+     "name": "Cauldron Imp",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4c71a161a5990f8cc8134bbd6e67a3ba6548271b20ded73b5831d426f54ea66a",
+     "name": "Hanged Effigy",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5ac0e6f5dc2f63670d24a2d8e6e5fea9a70fc845f802dffb79001f99a6179a62",
+     "name": "Crabito The Drowned",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x40c371db4ebacd5555b574a0950fbfc8f036935d04333222b938a50e501e77a6",
+     "name": "Tokek the Sunking",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "06_pandora_reach",
+   "world_id": "0xa78dfcc0abcf33d05503a77378553cb229c1696e7b8bcdd2ed3a31a3f948de03",
+   "seed": "1021944697",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x2361642c708c435e9744fb6f680cef4f5b81440adbde5c8c349e0c551de06f2e",
+     "name": "Weak Snapthorn",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2753af573e6b36b6bffa93ca75dfe5a35cc8fb50f51c5034345d2e99fabf61e5",
+     "name": "Green Goblin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xdf9fab804551e8fe3d623d47c1363010d475fc60bd75b79f9901accc0968b8f4",
+     "name": "Hermitude",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc8a394f62be83648ee651ab3ed52ca23e6b1d625466c7b0f3f357138b71ac9fc",
+     "name": "Sandskip",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x508600663c958445a8a8425b0660e0655fa8761d56694e81f1343a483f2174e5",
+     "name": "Magmooligan",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc54e9bee8d6db8665390b967c9865ac305f136e962744063956423035840099a",
+     "name": "Sandwraith",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x616c16a17219618e6f32a9bd3307a765d0c57a2777ffbb11b8bb8062e469a6db",
+     "name": "Seedkin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa4cc752a0be72b304dd6bf3f5ede95e5672248d9efda4a8671a251271d2b4455",
+     "name": "Pike",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbbc891cc57c6d7a15c805df0fac12726ba29479bfee4b32a86ff55542eabd568",
+     "name": "Reef Pike",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbe0ab06b3fddad08b79d7627077e4262ddc0f56d3349e009b188300323533870",
+     "name": "Wraithling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe46dc02c9e9456823a511f1d0ae2666fcfa5fcb060aba84538452d56e9febec6",
+     "name": "Truffle Wraith",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbb7a44d73f2fcd18a0cfdca6df4ad59564c3d6d66d5488891a7eb3e7be2c5c5e",
+     "name": "Koagulant",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xdd38d5092bb22552c40d196ff92ec49a14118e2ab5adc2c84fed1e97c8484d71",
+     "name": "Zephyr Silklord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x52b0283bec4f34ea0f2f53a4d1622ed673e21068d5d921711609774cc51ccc80",
+     "name": "Bonegorger",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9d07b5de553eda3bca944e6ebb718a473f30b03663a6cefb551581b6f377aebf",
+     "name": "Feran Cub",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x40f5107c245245facab5e8a9b3254875e13ded830470d68fadbd74b8c3f0b578",
+     "name": "Slothmaster",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xce889dbd33231e6263c82a0e9ca63e5fd16958e3a383ebb98e202616a669110e",
+     "name": "Flareling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x63ecf87dd7eaf2170d55779bf3a7c0f9a19707a27bbe74bb517ec3dac6120281",
+     "name": "Grimfang",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf57128d73c6613d3b3acd26586ac27292028dfb915be5cd2488116c9ae0bc9e5",
+     "name": "Warthog",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x1f257449f953314dd483508b4d37be5c03f49214b1de1da4537da1cee8bb2eab",
+     "name": "Shadow Knight",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb06b936cd277d009ba9e9900bd513062496a8d2cbc94d01f8dc1b514e6d8ea48",
+     "name": "Ashraptor",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3c861cc4dbd97ac31e1e81a67f09e9397ba7a0d7e9812c21cd2a7dba13166bd9",
+     "name": "The Banner of Silence",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xab641aa1faae25b0ec56ffd4fba7a6a11204668d3e86406d51a5967117a13e22",
+     "name": "Saurian Scout",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x08114fc78ba466c3b9c2820574061a79d3d9e4e8b2c54968f8589def2059be33",
+     "name": "Goblin Sous-Chef",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb769bee6beff87fccc0b9bfab42519e2dbdaf36d02a9a249f33b30a75e2e91b8",
+     "name": "Gopnik Blyat",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "07_cinderforge_depths",
+   "world_id": "0x75f02e82bf07a92de2870ec9799583873c1e6f55af53d09e72eea0f56e715288",
+   "seed": "1808327442",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x0356fbcbef5b45d2fbfa75220bcfbb3bc3de1065c8ccfb358966e2e90a2deaf1",
+     "name": "Bjorn",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7416a98ef34230025c89cfecf30acf90e48e52e155abf1a4a220d1b1b33b6eb7",
+     "name": "Ashskin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5e606e7fc175b7da23101ba790b0ace4539076fa34ee04cdb439a002bae2388a",
+     "name": "Fire Goblin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa7cd6336a3666c29f121cfbacea0a1a6b9787b81f1ffbf2dc2181e0d23977881",
+     "name": "Goblin Taster",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf93d2be7f081b7160bba19a039f19420721ffc160f9f3baa7322f75596b8266d",
+     "name": "Weaver",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb2a300efcd7922657f006af4482409a108c02a72b558dfdb5cd99222a8636f9a",
+     "name": "Piranha School",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xea1041d2464ef842597d81971081923684ecd590087d2ef3aefa790fba9d91de",
+     "name": "Moldrot",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd192687ded30fd6ab052a612ff452ab4d2d261d15f44752d56e815e4c65d6a01",
+     "name": "Sapling Warden",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x36f0d466e97b2870c0f014829ecd8d8dbe367ed2378829bac654837e7b42a66e",
+     "name": "Feran Scout",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd79251945ffc311b62bba55e9b207ab7c52a299c7ca41fd7cd56c599220b9221",
+     "name": "Lantern Wraith",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf20fa19ac0d43f0a2eccd74e0ac48638dea8c6d8d988fb1df6187fbb500f3d83",
+     "name": "Queen of the Crater",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xfec5298384837a7d997e85d4c17074210b54bbdd4bb6a7b55b12ac77c2b4df56",
+     "name": "Tuskarr the Oldest",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf538a48db7066f661776dc8bc95c5dfaf776636c85ba6a19c7c2bcf797520b10",
+     "name": "Fenrik the Moonlit",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "08_palewood",
+   "world_id": "0xcc56412e05f0901e7192a00b758736cd0ab68267f8adf06e9b536cf7437d9f15",
+   "seed": "542262713",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xbb9ecc95df18f1645d459bee269994889032edf8906ea43bce5ba5feb1f748e5",
+     "name": "Scarak Fighter",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x73148800a86ce856e3fe6057ce65ce2f267907b7f012b97124414a7af89fea7f",
+     "name": "Plaguemo",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7c1fa820a47aa323bbc9f9bf10bceb131a78a1e1b43b791cfe4e40240ae45cda",
+     "name": "Clawlord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8f0b6240e348f519adfcae4b6fd8dd5eed5413370ec1b525e6246d97763abed6",
+     "name": "Thunder Owl",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xcf0e224ac9291e7a8ec686e0c27d7f3fbf22f0b5b923e17ab87dccaa64cd5c50",
+     "name": "Archaeo",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe099bfff4dbd80bbb051f522cc6762ec829d39dcc2c2a4ab3f7c88725a144629",
+     "name": "Skyfin",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xec6275997f3bca4c851c9ce405071b0955712d868665cf67cd3a6ada5edb3960",
+     "name": "Emberwulf",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8087f132093e9947a485a8a347627e39bd1bd35ccb21490f8871d890288c1bd9",
+     "name": "Obsidian Tokek",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9150aabe612ea76acb7a08d216bd226a7de2fc9aed3a2c441b2776002935d995",
+     "name": "Sir Rattlebone",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xcf00defcbdf3d847d9086e67c8b1055833a767b063769e53dc6874cc1b73ab45",
+     "name": "Gobadoc the Starved",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4609129e3202cbe3445f59adedfe3df2862597ded404b38d110132b47b0a5c65",
+     "name": "Black Piranha King",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x97435d00bd7c8636309135a05b1aff8dceec58d45cc921336ad4a10f08057466",
+     "name": "Feran the Whisperer",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "09_coral_throne",
+   "world_id": "0x65ec98956d578f1e64821710e0e6bdbda9121d95d2e72d9118eb9c699a4f64f4",
+   "seed": "326054741",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xa0187d583afe6428b3f1775b2958c1b93d0a1cf3192c73317f021d539028e5ba",
+     "name": "Shadow Vulture",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7a75e2934b7f69ddc53f077dd18dc3e709e58d437c31d71a9bb5e9d3fbb8ef57",
+     "name": "Banner Wraith",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc3eca28513c15a4a23d89889caed530b836d72f94e45a6201ec0503399947a8a",
+     "name": "Elder Sloth",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2b3e6dca92cb07f9a2fc86b2573e24c1c5c0925ba8d9101864ee1911ce11fe49",
+     "name": "Ember Kweebec",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xec30b7b678539beba4fdf5bd3cdfeb40d4cec3c78bcdf19aa9e7efe426cdca05",
+     "name": "Snapjaw",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe21d0cad31b4dfb5ca41289ae8da28a92a5f8e6fc35b06cacb494d161b9210ce",
+     "name": "Ensable Hatchling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x76c5b094930c247a4a678fdfacefa494b6bbeafa66466705f0352a760b4994ec",
+     "name": "Broodling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xfad06fe7995dd909b3cfbf0626d0c2e1a63b6b134e4dec7f4d10f14acd294cda",
+     "name": "Palebones",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0ca1ef679f3288dbd492ec10aaa251726f6de1317e6e2253396481bbe3293e2a",
+     "name": "Kweebec Grove Heart",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x11169ba7001bfa3900f8d38504508f70ca6a762139029a9e5d7d7e258e4d360a",
+     "name": "Grizzly",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x39a52e8dd0940e6597c5bad4158137b728422f8dd329a1e038e0dd1bcdd8ef30",
+     "name": "Saurian Warden",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xda6864fffa1e1b33fb38ad3a387e26a4d60e2bb4c838340da8b1b5a393c34066",
+     "name": "Scarak Defender",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0a41e06815e933750934ee06a0c980bcfaacbe912e63a4622331c988acb365c1",
+     "name": "Sabertooth",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf320243ce8404e757a314e7170731db8e193987b913aebbdac26bfd7f0367111",
+     "name": "Nine-Tails Kitsune",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x35898cf4f2105c6d05b1f4ecf6c5914c35cd1d7646aec58e4704f05ee6dc2305",
+     "name": "Pyre Warthog",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb7bd6b583951c8d24c9496aaf0c80b0ccc4efc9a1062beff7de8a026d3d65edd",
+     "name": "Bone Choir",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x69978e8b4b680377a5692a298fe2583d0d1f28930fe0800218a075ad1623fcc7",
+     "name": "Pale Weaver",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "10_sunspire_dunes",
+   "world_id": "0xed0cad999d5d2efe03f850db707dfe555701eb4cd8284c627e9c5f1822bdbe46",
+   "seed": "1372474904",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x0b5a4e3b97b50bab294e3f717174351e5ce68ae4e9e1dee5074a95c3144fcb42",
+     "name": "Talokan Nakwa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4d3dbaf1ce27c3fead3e61875ad4f418b30c6527f4612f2dfbae764b9c78c339",
+     "name": "Talokan Aero",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb1aee088afecc68e40c28b49e9cb77d34b4fabf650109fd98c749b927a04e78d",
+     "name": "Woolice",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x92a2a694c67ca16c41b421b6e2c1f6e8e4058302f8a8563baa2fcfd58ca0b470",
+     "name": "Boneherald",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb03430cee8c81742c386f123b2700f7964075a1d0b114a114e4e0072d6d0c68d",
+     "name": "Goblin Duke",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4fa88f46121761e100fd5b21e1e39cec1cfd2a51dde8e2c8813b7e8c4057abb1",
+     "name": "Armorscale",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x1734529551b16eb8e3229fb396027fd2de873e36191c06f4a6d1d1a8a11f2947",
+     "name": "Sand Lich",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2a6cf0ebc17c3dc664113ef93dddc34089193be2175de58bb8334a2ee0ecd316",
+     "name": "Silk Lancer",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x1da8ec93a8f52d3caa5c4411127633b54a8d91077283a0cce09e663b462bb048",
+     "name": "Kweebec Heartwood",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xde03dcf62bd37a8a39bfc8f865b1878f9cf6ebfd06ddddf82da48de9592222ae",
+     "name": "Marrow Acolyte",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xefda512f6479f1350b11019db1d9e35c363eb1684304d12af9b8879be953f9c8",
+     "name": "Scarak Seeker",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe8f63a4d0707a3678dcb8753e607afdc326b37119ca84bd2a184b7b1cfe4e70d",
+     "name": "Koloss",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8f37235cb43ba49e47c18a2de2f834c0ab1abcb5927d0e7a911660e5d1a281f1",
+     "name": "Pale Mare",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe8d7ce5fdaeeada1e9819f872e92b7c488c7ec640af0982ca5b6cb93a5999c22",
+     "name": "Magmaclaw",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xdb81779fc32a5aa950a4102e68af148e7cc78cacd16635d8f2895e847434212a",
+     "name": "Stormhawk",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8a0a687c394861177a7873d307b89147d97c07bd24039b18bda69e8dfa027691",
+     "name": "The Silent Abbot",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "11_rootheart",
+   "world_id": "0x738999d7736b86a3b124aec132b31118d71d9edc6ec029e87199800678fb1e18",
+   "seed": "4083707254",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xfe95e81e3f124014e1b9907404465649a1abc6907ea52430265dc75e9e5fbd06",
+     "name": "Widow Matron",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd9c656c9b9936fb67b16080d87ddf46a37e6220cca9f725c14d154c89afec66e",
+     "name": "Nerak Priest",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7fd3c10e9769972e882f8c9aa7827f62fed76c69028d8d4c9f45b81b89ef3685",
+     "name": "Frostling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa7822794f39333325566a1021e4c47b9e3d3e1f39c8a41488965e25501ce0910",
+     "name": "Razmaster",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x202ec7f473be9f7736deef1edc61f30bc586e8464e00bad66b9ad2e52dce90fd",
+     "name": "Frostkoa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd1d77fef772dde505be96589206d104ee3dd6a03885e9d43739028fe444c7fff",
+     "name": "Frost Silkweaver",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbab4a07a9047c798c631e2382c09da70d27ccde25c6296b78f8d12461bb2a608",
+     "name": "Frostwolf",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5068785fe3ba3d0ca5f49fea223c2e6cd6c9198346812039d633619bb33261d7",
+     "name": "Bisonbrute",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9ddf24d7f6ed9232feddceb283969cb006ceab6570447d8f5ae7d412cba599fc",
+     "name": "Pterodon",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x37e9c031467dc742f69d041f00fb4ca8bf5b0dcdbf65b2a9773cfd10154ebae6",
+     "name": "Trillo",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd15954935e90a5d3002dd1bcd84b5cec13e580dadf55f57f84d0bf4143bb8734",
+     "name": "Cinder Bonelord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5e46ab3a5d9d5612722100e9fc21a6b2a7d3e5ff46271df8c527eabd6d7e8b6e",
+     "name": "Fen Stalker",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x79a14ffed8d34431da25176b5fd4fac1b3446bebc166e8f89a98f058767441ab",
+     "name": "Swamp Firekoa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd94a1b84f1af8d804c9ec7b94d7b9b9cb7ab2f89b49645a5d4617f5397f249ec",
+     "name": "Yurei Abbot",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x20ac7d6d525fb7c426e4b61e16a7bd8646a446d06da71a04c02bf36c8ed6eac5",
+     "name": "Duke the Insolvent",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "12_static_fields",
+   "world_id": "0x580bb716d98d93a9032cf411d7793f98ce4643ab66472cc0c0a142b7e706bf9d",
+   "seed": "4111704015",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x65734ada6e0b46ebe2fa51f400c34406ab432fe543c4f3cba4d44bc646967c91",
+     "name": "Frostshamble",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xfeee2c505b89e78fad83b2e9bb88e9d0408b53124ad5984ec991302a1be74bfe",
+     "name": "Firesteel Golem",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x115f73d3c08abc62035c360254f7175fe7e802e46d86f5220616cd25de17872e",
+     "name": "Rex Alpha",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc6014294c6c265d20ae1478fc00d62bc9180c609b5ebfaf5833d4f2cdeda6cfa",
+     "name": "Flarewolf",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x525d073bb098a646357be3c9178869981b01c5a6c8b6a9778c1132de1fdfc875",
+     "name": "Hammerhead",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa4e4186a7abc31259f9020d98cce8c2d24e8b69601329ec031fd3ae60358a1d7",
+     "name": "Widow of Widows",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8615c8e70367cfadb6619958a93525304b5079e31f7f090bbcadb7a85850db6c",
+     "name": "Dread Lancer",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x40e54e9e2fb63c756c4899baa6db02f89ddd18cd0a131e6e1a583253354c6a4a",
+     "name": "Frostclaw",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0dfc890c766ae2862ce8636e98cd634755cc659fdee00b870c5be5923abf5a52",
+     "name": "Yeti",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4c6a406ac2cce659406fa841bb9a8419052c9b080808c237ff80877bd056f015",
+     "name": "Aragog Spawnling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9f0e49fcdf03d2ae41ad33ab422cc70db77ce775da924b7e130c85b00392e67c",
+     "name": "Ramrage the Ancient",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "13_mirrormere",
+   "world_id": "0x032e76cd1a4ec5dfcbb85a12ef14b62c8d5ae2a625bdd5ef19eaf513a864661d",
+   "seed": "3250165758",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x308321168027042168ffbb7b9b9af5d5b32822f141ded4eb03bdbf553773e594",
+     "name": "Crystal Golem",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7df666195fab0a10d77d73f0653556457d37025f1c01203f60308a2cd1289c9c",
+     "name": "Polar Reaver",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xade2213a3d7815068ca836c3b76a9ba4eb2255f6da514e5720cddbde388d5ccd",
+     "name": "Silk Warden",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd29a092cb74af7901961f7313f5b4defd65d2e0860098a2549cc0e0cf70be344",
+     "name": "Widow Consort",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x956c51e63abd62068a96bf11417601b6e381284e20f0ac1a7a9639be10bedb7e",
+     "name": "Thunderlord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9b783287c2002f172cf59b98e5d3388e8f5501f7b5172788e6a9a5667d0dba0c",
+     "name": "Feran Elder Warrior",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4366ca73e9a17f35d03563814bd68672c8d25b4081e50c8259ab662b1409524b",
+     "name": "Soulking",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x729a07a04e2d11c784374f9f42710e97cb4c9fbd71f0215d05d12a63ee85d4ae",
+     "name": "Drowned Buccaneer",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xada31dd636f61ea545b57b5b5685cbfdd42889135c7974711aa000b3db165794",
+     "name": "Eternwool",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x4818a12345733d03f9b91a9fcff01062746795e2e38951d49ce414f0ebd43f46",
+     "name": "Pyre Wraith",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x92e757fa9fc0759e014f0d45390c910d2a565dd23085f02e0135d4cd6d0d99cb",
+     "name": "Tentacle Horror",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x691262c4b350f7d8447a43402611e349b18cc27c80374e21c0fa21cbda44a6e2",
+     "name": "Fen the Silent",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbc6afe9cf858e52c4c587f98e0152e2cbc6c13c2589295c08d0561ba559c9c99",
+     "name": "Rex the Elder",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "14_charnel_marches",
+   "world_id": "0x6411585b718f86814a2283b2dfecc44bf7e7d3966e67e055263e4da28cbd17e3",
+   "seed": "2262870268",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xe1683d2227d09ab35b5c4b83775f2870c7d2a50dfa587a86f54593ea653d0fc9",
+     "name": "Aberrant Hulk",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xaf618fe6fb04c69919cf3c66b12a00994a7c88e26e7dcdadd457e4fa49f7cd76",
+     "name": "Plague Razmo",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe85962184d6e8ec50b6064ab5867929040d26d71fcda127c5a55cb49ddd8384d",
+     "name": "Cocoon King",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x89c064f8ee9725ea63a0cb5680db88eab0cd01ee723414d3a606d9e684d5bb0b",
+     "name": "Moonfang Alpha",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb448bb0603eb818c8a791cd35da4fef05a4a810ffeb3d05ce73441e2f4b2b43c",
+     "name": "Scarak Overlord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb1643bfc5dc169f16d933af41b4c88dfd832735425d6815d87ccd43091e42489",
+     "name": "Wildlord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xabe7625341e0735ce08af4f6364a85160fb4e7903d75a91b14fb47bd1b596b9b",
+     "name": "Ancient Hermit",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8413c3342bab85e959bc6b33634fd5e89077e9ee3acf1b95f8fb7b86670c0503",
+     "name": "Saurian Warlord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x56f17b842939f7f2a6e926a967cb0b2d5b2f576268254ca242e5148869095862",
+     "name": "Void Crawler",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x391eb9237ecebe45338de767720acd2b2dddb5bc08d737ec066b158edbb05c47",
+     "name": "Titan Koa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc384b4cb59e52635f9b33edf8208fa429e988ed8d7662a02fe2e41c094002603",
+     "name": "Titan Claw",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9393ae4e90e04c62cc2e88ebc9f0bfb0ffa983ea6b180073c9665c62194eae6c",
+     "name": "The White Widow",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6ebe02c7bbf0cdb065f4f72209ac90fdbd3f03682912862d59c8d338f9211984",
+     "name": "Fen Dread",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2ce9031561f41be551f5818e810c4886660eb8944ed48f314c76ba2cb63b07fe",
+     "name": "Glacial Sovereign",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x276fbfd81a9129f4c3ee2e5a3ff1b3eb6cfd7d92a4555e61598f9a25f68c5f7d",
+     "name": "Silklord Ageless",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0b3a0447b2b675cd2416b5f1a11253a104eb9f624189d37665b87aade569c516",
+     "name": "Broodfather",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x99a0e0f8aa903e16d92b50a45fc3d444bebaacf8cd3f56036f8b136ba5eec0e3",
+     "name": "The Tempest Lord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbd86da8254cea385b3ab1b9dd4bb50b01426af710efa358246df073925b11993",
+     "name": "Woolkin Celestial",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf598726624c3d5c694b42a5f143fb480b2db7a0e3dc32c03adb66de4a81bf39d",
+     "name": "Deathless Paragon",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xec3b6a9f46675bd107a5cc1e0551ced9ec6fefc29f3c5509fb59a58cac92f812",
+     "name": "Spinner Prime",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8f26f0e3a164dea9120ca0836681b3d2c6a40e18c909d57dc96e82471ac89be0",
+     "name": "Rootlord Ancient",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x042be2ceebf72c63c7c6b287fa347b5aaa827f1ffa0fa311f50e9cd598c1d010",
+     "name": "Mire Titan",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x61dfbaadd2571354e3988f52653bd9428f81163d0c01df9b5037be40a1ad076c",
+     "name": "The Patient Elder",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbe15225af2f29778e503da613d207d916a73c9fcb0786420bc2971a8d50ff825",
+     "name": "The Soulless Regent",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3c741bb13e504c4540e09511c46b1776bff5776f4de993478d62dda9473b7e8b",
+     "name": "Hades Keeper",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8831621412a86c666f65a1d3b09cc820523ed06ed16fcecdfa8f24d76a3899b2",
+     "name": "Talokan Tidelord",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd2b70c17d24e4fabbb649094003200eece007fc9fe36176e4d95dbb4fd015ab2",
+     "name": "The Abbot of Ends",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xeb4cf23cb2a542a3d2118fbb07ae13b6585eaebf605e30661206df75738d627e",
+     "name": "Fenrik the Dire",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x045ff9bf56a9d5294b320707a610909b9dcb626a7c43d89fb6e253d4fb6dc1ed",
+     "name": "The Ember King",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xfc69519d675579af2be487b798d7063ec4ef8e20ae7bc55ec06d56450a39eb76",
+     "name": "Ramrage Eternal",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbd91a6ece03edc5aedd751e70a6bf34b33551d4a143007423ceba8be44c508dd",
+     "name": "Tuskarr the Eternal",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8555cbe51a17f582fccaf9fa05b04f0f49da07ecd91ef4ca3649c6ac5193015c",
+     "name": "Grizzly the Undying",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x60a8681a3f37adbe519141515e33c2429bfc652e37021ccec625bab22e3e3151",
+     "name": "Sir Deathless",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe32a9f80eae19861c99f32d8bad9fc454901d6188c94829bf4502acf3c455b8b",
+     "name": "Yeti the Deathless",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "15_silent_atoll",
+   "world_id": "0x9365ccc0ada7ff2ef5f027ec03384d350008b41266cdf2f7fe870035c2fd921b",
+   "seed": "3842344178",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xa5e1cafda790cca44163ad4dcccbf2c0862c174f6a8adc0a771e442e5a64cbe6",
+     "name": "Bonelord",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb073d1e19e3e3831ff4a0aac70b18478de217391c3eecceebe54abae8a78171e",
+     "name": "Ancient Tusk",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x5d7c8869f17ad1ba10182342c5496c532cc3c5baf21379f5625834cd4bc6e3ea",
+     "name": "Heartwood Ancient",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3389f41790a22a6404353b09b0be15f8dcb0e0aa07a31d0c6f68777e2b05648a",
+     "name": "Pyre Titan",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x160a6230ced109819b954a1f99f298818b345867e37d6d55e5b76b48db9116d3",
+     "name": "Rex Primordial",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xeb05e9fe0064a65971b44e08c114384b094854b1e646234cd14b317d69f9bd69",
+     "name": "Abyss Eel",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb3cbe387da55a6e8061a46136f344140b4edea7e244c1a6229e45dac51984d92",
+     "name": "Risen Prime",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x82407536a957a659b1bc4ba8c4c7f9cce9efee99d5b84d13073098b4f5bce78a",
+     "name": "Void Eye",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf51ea99c91d47880d503e135f9ac604276674017e5aa11cc6051a8080aac4b9d",
+     "name": "Deep Leviathan",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6f7fcd5f166415ea36a0ff0ae8e6e7a714c84acc0722b28a6c2dbecbf31983ee",
+     "name": "Titan Bear",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xac4c70a1727396b70e988619207ef994a2303bdadc01ef1c063274a2a3c9dbe5",
+     "name": "Void Spawn",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x92418ddcb29765b10c822a4e8613ac4de9602aa6368e2563f84ae603819c5163",
+     "name": "Razlord Prime",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xe49e048fddd964e93b8ebd4b79612d0ff3de94bb1452d852b3c4dac9ebad1db4",
+     "name": "Moonfang Ancient",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9e3ed9d5e4e7f645ee8316c092e8adf92b64a6f32126885444eb38cb60c05dbf",
+     "name": "Void Necromancer",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x07695fe42eca5be77643f762ac4a1fcaa726541d8be568481a609a2826aef338",
+     "name": "Void Spawnling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x39eac8471e8168187ccbeff6f4b8c9b12472d27b1235cf375f3df3a9749d6213",
+     "name": "Primordial Koa",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0fc0b93f5e69e81e79bcaded96179c1563b5fd4a3a614433a59eb94982e7c0b5",
+     "name": "The Sunken Claw",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0f45eea33d42db0b09d55ee84663e35c767f12801f3406212fabe92a9e7f255a",
+     "name": "Mammoth King",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9897fe51dfa38842fd58239b4da0d9d00cf7002f60a8aaef11d6d266c55f961f",
+     "name": "Primal Tyrant",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb644715fbf7755a1043a8298716dc361d243756ec4f1022eb40ef014947377e4",
+     "name": "Moonclaw Empress",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8bfc3c299e3d92c98442662aa7c97c773fe4669bff8438b3adf169c0dac76acf",
+     "name": "Saberfang the Ageless",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc12a430d99ea5d042ba83ebe3914f98d0f701d3ca64a9b880fb786a9280a085d",
+     "name": "Talokan Ancient",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xaa4ace9a4d2743d3e6518d3e0f2ffac51cb6fd42380d3a8f9edf4358a569e42a",
+     "name": "Piranha Tyrant",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xcf95def83ea3de62ec358ce8a02cbca650b516fff6f2a5b9be0900c472cca6f2",
+     "name": "Crabito the Crowned",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x465cdd250b357551d5da4acc34489258f79677703e6925b8c3ea26fa32b72ee8",
+     "name": "The Golden Matron",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf43d0050f09f4bd21a3440d05ef4b6607070a2845add83857a0dd1eed2e8f23a",
+     "name": "Scarak Hive Prime",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8d5cfd5114faaa9b1914da71fc68a6444c94706361f2b89898cbea6107bad2cd",
+     "name": "Razmo the Crowned",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa12c04e1286c7b22fed0efbf32f35b418878801ddac01b1fc74286b92f1b6272",
+     "name": "Bjorn Prime",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x70ec462c81f2cb333912852d5ac5fcf1af3df959ceaba19dd9f40baca7875e76",
+     "name": "Empress of Widows",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd72c76ac0cc1ebc68b9ae6c7271531e90a5cce0f48a6051fa0165e5eeb1c6718",
+     "name": "Koa the Eternal",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x58b114e14fd65ee1b6d892a826580e7b9215ef2b6ec30de36be6d379d4b99cc7",
+     "name": "The Saurian God-King",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xcd2c6576e6127e189b17a68f60502b9efe2e16b2ea11e149050903bf1dd0f346",
+     "name": "Thunderscorn",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8b05b03fe365b83e4a69d1d790aebb7cb22c07740a7834edcf55aa053f6ac85f",
+     "name": "Rex the World Eater",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf5f8b291ec6e16fab74164c4c478bbf03cc51d955730f7d2e371f5e919a2d161",
+     "name": "The First Hollow",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "16_the_sundering",
+   "world_id": "0xdcad633ade9d49bf297b48fad7a08498310ce46402d88ef42d3b1feee6dfc70e",
+   "seed": "3255190784",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x83e042d1c6b1f3613b30d7ff7132afd3601051beef91d189ca46df806f7ae60e",
+     "name": "Gate Watcher",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf10703ff3b0e5a54598de08cda945a04a62b49260ec4251f6bb7cceadb12936c",
+     "name": "Ash Prophet",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8d4f84732f3e952b0ea27a86d45ce8cdfc71e75d8bc85ffd902790f42e18dd35",
+     "name": "Hadean Hound",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x14c34ee87a26708f2c59739198ef78b86989de1d6d462355ef273b07a5ed5a9b",
+     "name": "Void Harrier",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xcd46dd7b8915462cfac0ebd90f573b8b10cc7a73bd1d228fd34fdd2fd1e17a4f",
+     "name": "Pyre Colossus",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xc32fd3033755d8a5d51aad3f3d375492d0ceef46312d04ef4f7d5dc8483bb78c",
+     "name": "Soul Auditor",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x69b2500ef5983e28bda9b97f1457bf37be47e00825ba529818d7b1fa2dceb723",
+     "name": "The Hadean Gatekeeper",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7ee1b29fa926ae57b06e5529f44f7247d811294983d2ecf5fa647b63bdb95b5e",
+     "name": "Rift Matriarch",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9657d50ed60fc346305e2c089910d133c4c5f1f8ef55d05f64b981626ceaee42",
+     "name": "Riftmaw Devourer",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "17_obsidian_choir",
+   "world_id": "0x222c67799efa5ac566f3f872565dc021d1d13d1c9e31fe70596314482cb5bc16",
+   "seed": "3239739785",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x7a85c2199d5a7fae32a907c62adcd07e5c94e65fed50ea1714f2bbc5509dac64",
+     "name": "Glasskin Chorister",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x158b253c61f49f1d2cb6bf8f6bffab69862688bb1bb4dfe3595a72335b7c7f79",
+     "name": "Cinder Acolyte",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7196352ac7c01d42e74a919f80910061cd34b8c3dbc4b2c977faa9156b0bae4f",
+     "name": "Basalt Shambler",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf228e116a7de353383ca46c6805c78f093508f3c53706cfd0fd80f05fc42ea35",
+     "name": "Pyre Moth",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x37f53a8ce52e66f30e378954ed6aeda9879f70ddc599a1a19acaf775ead1a524",
+     "name": "Chant Leader",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbd8c63161cec269cebbc0cf15967b0083bdd9f604c3cd198b1874207c665225c",
+     "name": "Obsidian Wisp",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x26e65cfddfdaf6765860b512d52deadaa1f77375f3c52d1c43e282f0bde8675e",
+     "name": "Pyre Tender",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x67f0a8ec8c030dc1e98ccee1ecf95b52ebbe5ffaae78f122422f57ff6d6415a7",
+     "name": "Choir Sentinel",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb22312b4d67291baf58cc2401e16000c8ecde4fd5c9b24ad5d969037e8044e02",
+     "name": "Lava Hound",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x1f1f499fd1b1ff4345ad2820c0c80ca2781fa3254ea9ac3a9b7fe5fb365f03c3",
+     "name": "The Dissonant",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x111b15755aa32ee75c7e87fe664689778b975b9a89078d1002ae554a70845211",
+     "name": "The Choirmaster",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd543f71d938cdc7c64d1bde2f713fe11ae0975637ad5cfa856fb4e5afbc79e56",
+     "name": "The Ashsinger",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xdb2a44ab930923e9e6fb6791425a1c72dae0c6ca123709b27b1c4fdfe5c0de2c",
+     "name": "Choir Apostate",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "18_abyssal_weald",
+   "world_id": "0xbcfb4af98e77df9b3fe582bb599db48d98fe7fb45a2d497a3c80c4f3e4dbd64f",
+   "seed": "2003344192",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x9fd037f8fd97247745fe44808847110a12be44415034168d71930ffa374556be",
+     "name": "Lightless Frog",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xeccd3592ff84308c5336ba88f6f6df61979b37026d27f93c69d878939d5c252a",
+     "name": "Mire Creeper",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xbd8aa65d404bef61738558712f89da4ac4d466842111806f420bce1421539253",
+     "name": "Gloomwing",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x3b0fa8428ce05724eb6661c2b5a327225af828f790bba19265d51fc9c95001d2",
+     "name": "Sporeback",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xfcaf674d2c88fb0425fe9a6ed57c90db5e597dc32ef903186853548180f2e251",
+     "name": "Weald Shade",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa3c17b347d8ed11525e5a440c7fded29972fab24885c81d98411fc6a89bcc609",
+     "name": "Moss Bear",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6177c44c87fb310c89b1e00dc6fb164f4caaadb3c77bcbf9b0ab797f2c0b7078",
+     "name": "Anglerqueen",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x705b26b36c9935219c6bdd8eeca8ebc01bc0faa3db1cf053d13b1af218df3a36",
+     "name": "Bear Patriarch",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x0bbeac56ea3ccf64eb1a11d959d9d1e545dee3d89fee08e71790ee8d2887a387",
+     "name": "Gloom Piper",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf4aa8ea38b59bd1bffa156b32f48674ba37001468a730e0c91a8a1f407d0a68a",
+     "name": "Deep Oracle",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf166cd607ab49337493a03eb7942db6bf815cd665d0dde4614f1635edefd5097",
+     "name": "The Titan Bear",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x24d787c0379b332c13c664fa7a34e9dce1c294f658e5359e4ea98102097e6da3",
+     "name": "Lure Tyrant",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xeb1c60f3f622a014a7b039290e196e8146e5743fa1f13691d4374268216b5d89",
+     "name": "Drownlure Tyrant",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "19_hollow_crown",
+   "world_id": "0x74f459b629f3f0805f907dc3ebcc9f844170b26f52686f82df7cb59f7529b35d",
+   "seed": "3737024213",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0xcb34dbc19c8dc74873e38a171c6b19c08d1626121762b8537e238a384e9f0042",
+     "name": "Quill Fledgling",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x352d1fc90bbc29b9672436593f862a91747e4f8d476ff4c4cafe4d4332a39f11",
+     "name": "Maw Gnat",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf3d1014d6e525ebd3b390e97941e22122eb825917c270a619cadbc5078a9be5b",
+     "name": "Halo Zealot",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x74c493e727ca56ea93f2de3bc32300ab622606eca544ae4ab97eacd493e9bf23",
+     "name": "Crownkeeper",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xf58c7ec6ed8fdaab55b1b0fa9f45053ce03be03e025e5fe125f4655a765be35a",
+     "name": "Light Bearer",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x7711d1f78970130bb2cb9ac31141fedc851f2275439b20a8cde93beec75c9827",
+     "name": "Skyray",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x2e56c885b9e6d75efecf9427bfb1c5903602931db023c4f808afafee0db2468d",
+     "name": "Skywarden",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x042cec9a82608a3034ae5e951079b0bd820cca390e357987c851f67b2d7783b8",
+     "name": "Seraph Herald",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x94454085d1c6f9372dd35009f194adc8e17a2ae410f16bdba5ce2d6e0be41de2",
+     "name": "Halo Judge",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9459bf64ab9bd634716a95b027eaec81ea95fa3fc5a8faf8fd6d097bc6a31a2a",
+     "name": "Godbone Colossus",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x9fbaff9856b9bd5e41853a5599d420903c3896f5883bbc8a3ca8d4553b65a718",
+     "name": "The Dead God's Eye",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x280b7a0a0440bfdb2fa502451f4225acc0d8a3c8e023ee9d96a883965d2d972c",
+     "name": "The Crown Regent",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x1ae293adb2ad8ef549eda66b7bfc633447fe3c5d5eb44a8979eea229fa2f46c5",
+     "name": "Gilded Apostate",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  },
+  {
+   "wid": "20_zenith_scar",
+   "world_id": "0xd67fdf517c5aa4d689eb20c2d243fb69c7c8e7c85ee435a9e68d04466ced555b",
+   "seed": "2021226272",
+   "zone_size": 512,
+   "bounds_x": 500000,
+   "bounds_z": 500000,
+   "min_groups": 48,
+   "max_groups": 64,
+   "spawn_zone_x": 1000,
+   "spawn_zone_z": 1000,
+   "boss_mask": [],
+   "mobs": [
+    {
+     "template_id": "0x33cfb6419f8afee3bfd79c970dd280ab1607eaf73965c1a7628c48424347550e",
+     "name": "Scar Borer",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x084a80da03dc4bd2ed378c4f3604c54398b3fcfe35c54749a74fdca14a3ec9de",
+     "name": "Wound Leech",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xd6e9031872e6d5417e025435079eff5dc45ba5d6bba1a2871db6eb529f623a0d",
+     "name": "Pilgrim Husk",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8d3039cf0dd7b6afef9e276e8484dc0b1899404f3e5d83881aee9683f804a294",
+     "name": "Rift Toad",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x68d1a7bdec354d1ee94b2dca6e06b43977c7c52d0281a14abacc96e5b81f633f",
+     "name": "Scar Chanter",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x8ca101dada00716a4aaefffd91f2b03aef39ffdb5a91cf589ba1595bcaa6c6f6",
+     "name": "Glimmer Shade",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x65f04f7eaf9c7db03d36dbaa39d5142da7c6f9e1b98b278e75f3d48b8634d360",
+     "name": "Suture Priest",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xa8c22e2ffc6cd689dcf166f223ab6c7cc0206985fc0f4e4db15c188a9717df7f",
+     "name": "Wall Fragment",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0xb92b7ab6a889a4b3e22c5bcdfae9f4176736de6262315f8d2f0bf803f8b1b8b0",
+     "name": "Deep Auditor",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x6543c661bddeae5d4a4221e6f3c9cc025891c00873d17b8e8de96fe213f343bc",
+     "name": "Scarhound",
+     "role": "normal",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x60cc331d198dac78d25f41caa3410e805c50329d3de987d2e195a5ea3ed2c3ac",
+     "name": "The First Ward",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x49b6e0b9139d4a15d8d7918a3e24e4b44f202b473ae9c4b80f99164b972ab6a8",
+     "name": "The Wound Oracle",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    },
+    {
+     "template_id": "0x76123abc3726ae49eec422d3335a7c088a3b29e57777827d2289df6999fa025a",
+     "name": "Scarbound Auditor",
+     "role": "archi",
+     "rate_bp": 8000,
+     "level": 0,
+     "min_group": 2,
+     "max_group": 3
+    }
+   ]
+  }
+ ]
 }
