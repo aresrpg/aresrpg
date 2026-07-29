@@ -21,6 +21,10 @@ const script_path = file_url_to_path(import.meta.url)
 const default_root = path.resolve(path.dirname(script_path), '..')
 const id_re = /0x[0-9a-f]{64}/g
 const ignored_segments = new Set(['.git', '.agents', '.codex', 'build', 'dist', 'node_modules', 'target'])
+// The #1728 audit observed 269 baseline occurrences. origin/edge commit de3ca08c then deliberately
+// retired one worn_render_path.test.js mock id; pin its reviewed 268-row successor so a matcher
+// that goes blind cannot report the resulting count drop as an improvement.
+const EXPECTED_BASELINE_ROWS = 268
 
 // The V2 fight-replay corpus (commit d4ebe84c) — real historical chain traces converted by
 // scripts/convert_fight_traces.mjs into provenance-tagged capsules; every id inside is a
@@ -287,14 +291,7 @@ function scan_files(root) {
     .sort()
 }
 
-function file_hits(root, relative_path) {
-  const absolute_path = path.join(root, relative_path)
-  if (!fs.existsSync(absolute_path)) return []
-  const stat = fs.lstatSync(absolute_path)
-  if (!stat.isFile()) return []
-  const source_buffer = fs.readFileSync(absolute_path)
-  if (source_buffer.includes(0)) return []
-  const source = source_buffer.toString('utf8')
+function source_hits(relative_path, source) {
   return source.split(/\r?\n/).flatMap((line, index) =>
     [...line.matchAll(id_re)].map((match) => ({
       file: relative_path,
@@ -302,6 +299,16 @@ function file_hits(root, relative_path) {
       id: match[0],
     }))
   )
+}
+
+function file_hits(root, relative_path) {
+  const absolute_path = path.join(root, relative_path)
+  if (!fs.existsSync(absolute_path)) return []
+  const stat = fs.lstatSync(absolute_path)
+  if (!stat.isFile()) return []
+  const source_buffer = fs.readFileSync(absolute_path)
+  if (source_buffer.includes(0)) return []
+  return source_hits(relative_path, source_buffer.toString('utf8'))
 }
 
 function classify_hits(hits, strict) {
@@ -322,6 +329,12 @@ function classify_hits(hits, strict) {
     else rogue.push(hit)
   }
   return { sanctioned, baseline, rogue }
+}
+
+function fresh_control_rogue_count() {
+  const fresh_id = `0x${'c0'.repeat(32)}`
+  const hits = source_hits('scripts/chain-id-fresh-control.js', `const chain_id = '${fresh_id}'`)
+  return classify_hits(hits, false).rogue.length
 }
 
 function print_hits(label, hits) {
@@ -407,6 +420,7 @@ export function run_chain_id_gate({
 } = {}) {
   const hits = scan_files(root).flatMap((file) => file_hits(root, file))
   const result = classify_hits(hits, strict)
+  const baseline_observed = strict ? classify_hits(hits, false).baseline.length : result.baseline.length
   console.log('== AresRPG hardcoded chain-id gate (source/test/config) ==')
   if (refresh_inventory_path) refresh_inventory(root, refresh_inventory_path, result.sanctioned)
   if (inventory) console.log(generated_inventory_section(result.sanctioned, secret_denylist(root)))
@@ -415,6 +429,16 @@ export function run_chain_id_gate({
   console.log(
     `chain-id census: total=${hits.length} sanctioned=${result.sanctioned.length} baseline_rogue=${result.baseline.length} new_rogue=${result.rogue.length}`
   )
+  const fresh_rogue_count = fresh_control_rogue_count()
+  console.log(
+    `chain-id control: fresh_synthetic_rogue=${fresh_rogue_count} baseline_observed=${baseline_observed}/${EXPECTED_BASELINE_ROWS}`
+  )
+  if (fresh_rogue_count !== 1 || baseline_observed !== EXPECTED_BASELINE_ROWS) {
+    console.log(
+      'CHAIN-ID GATE FAILED. Matcher blind guard lost its one fresh rogue or an observed baseline row; review the matcher and deliberately repin a proven baseline improvement.'
+    )
+    return 1
+  }
   if (result.rogue.length) {
     console.log('CHAIN-ID GATE FAILED. Read IDs from /v1 or an explicitly generated deployment artifact.')
     return 1
