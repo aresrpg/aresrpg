@@ -143,6 +143,7 @@ export const unit_test_files = [
   // corpus through the reducer and asserts its effect-class postcondition held. RED the moment any SUPPORTED
   // effect kind regresses; the known-unsupported kinds are the enumerated worklist in MATRIX_CONVICTIONS.md.
   'packages/sim/test/spell_effect_conformance_matrix.test.js',
+  'packages/sim/test/spawn_draw_rate.test.js',
   'test/scripts/check-doc-file-references.test.mjs',
   'test/scripts/arch-gates-missing-tools.test.mjs',
   'scripts/check-chain-ids.test.mjs',
