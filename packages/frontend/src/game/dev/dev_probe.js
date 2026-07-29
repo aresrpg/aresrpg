@@ -28,6 +28,9 @@ import { IMPACT_FEEL, magnitude_scale } from '../vfx_map.js'
 import { play_element_sfx, play_sfx } from '../core/audio/sfx.js'
 import { trigger_fight_flash } from '../core/toast.js'
 import { cell_cast_world } from '../../world-shell/voxel_fight_adapter.js'
+import { use_prompt_stack } from '../../world-shell/prompt_stack.js'
+import { get_log_buffer } from '../../core/log.js'
+import { world_fight_session } from '../../world-shell/fight_session_scope.js'
 
 const MOVE_KIND = 0 // dungeon_turn.move apply_move (0 = move, 1 = cast)
 const STATUS_ACTIVE = 1
@@ -99,6 +102,55 @@ function dev_state() {
     move_path: use_dungeon_turn.getState().move_path.length,
     armed: fight?.armed_spell_id ?? null,
     cast_target: use_dungeon_turn.getState().cast_target ?? null,
+  }
+}
+
+/**
+ * WITNESS HOOK (#1645 busy-guard drive, lane-local instrumentation — never landed). Reads ONLY: the raw
+ * session-identity fields `receipt_entry_decision` gates on, plus the board-presence DOM truth. No game rules.
+ */
+function dev_witness() {
+  const d = use_dungeon.getState()
+  return {
+    at: Date.now(),
+    fight_id: d.fight_id ?? null,
+    run_pass_id: d.run_pass_id ?? null,
+    dungeon_id: d.dungeon_id ?? null,
+    phase: d.phase ?? null,
+    in_session: d.in_session ?? null,
+    fight_syncing: d.fight_syncing ?? null,
+    spectating: d.spectating ?? null,
+    busy: d.busy ?? null,
+    error: d.error ? String(d.error) : null,
+    dungeon_status: d.dungeon?.status ?? null,
+    session_address: d.session_address ?? null,
+    // the busy predicate itself, evaluated on the LIVE store
+    would_refuse_new_entry: d.fight_id != null || d.run_pass_id != null,
+    // BOARD PRESENCE — DOM truth, not inference
+    board_present: !!document.querySelector('.hud-fightctl'),
+    voxel_board: typeof (/** @type {any} */ (window).__voxel_board),
+    prompt_count: document.querySelectorAll('.gw-npc-prompt').length,
+    trace_len: Array.isArray(/** @type {any} */ (window).__ARES_FIGHT_TRACE)
+      ? (/** @type {any} */ (window).__ARES_FIGHT_TRACE).length
+      : 0,
+    // THE PILL'S OWN TRUTH — what engage_block decided at arm time, read from the registered prompt rather
+    // than re-derived (world_spawns' `engaging` latch is closure-local and unreadable from here).
+    prompts: Object.values(use_prompt_stack.getState().prompts).map((p) => ({
+      id: p.id,
+      key: p.key,
+      busy: !!p.busy,
+      label: p.label,
+    })),
+    // The SCOPE classifier the engage gate reads, evaluated on the same live store the guard reads. A
+    // divergence between these two columns is the whole question this witness exists to answer.
+    // The game_log RING — the refusal's real home (console printing is debug-gated; the ring never is).
+    log_ring: get_log_buffer()
+      .filter((e) => e.ns === 'world-fight' || e.ns === 'world-spawns' || e.ns === 'dev')
+      .slice(-25),
+    world_scope: world_fight_session(use_dungeon.getState()),
+    gate_fight_session_id: world_fight_session(use_dungeon.getState())
+      ? (use_dungeon.getState().fight_id ?? null)
+      : (use_dungeon.getState().run_pass_id ?? null),
   }
 }
 
@@ -298,4 +350,5 @@ export function register_dev_probe() {
   ;(/** @type {any} */ (window)).__ARES_DEV_CELL_SCREEN = dev_cell_screen
   ;(/** @type {any} */ (window)).__ARES_DEV_PLACE_READY = dev_place_ready
   ;(/** @type {any} */ (window)).__ARES_DEV_CAST_VFX = dev_cast_vfx
+  ;(/** @type {any} */ (window)).__ARES_DEV_WITNESS = dev_witness
 }
