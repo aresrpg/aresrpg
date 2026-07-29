@@ -114,9 +114,13 @@ const sponsor_compose_env = (sponsor_dev_key) => {
   }
 }
 // Reused publish/seed scripts, driven against the GOLD localnet under the isolated CLI config.
-// PUBLISH_GATE_SKIP=1: sanctioned bypass — this disposable publish IS what a green gate later certifies.
+// PUBLISH_GUARD_REPO_ROOT: the rig compiles a DERIVED copy of packages/move (.build, Kiosk repointed at
+// the locally published package), whose scripts/ carries its own copy of env_guard — which would derive
+// its repository from that copy's path and read every git fact from `test/gold` (#1566/#1567). Name the
+// checkout the copy came from instead: nothing is skipped, ancestry and the clean-tree control run
+// against a real repository. An operator whose lane is not on trunk yet supplies another checkout.
 export const script_env = (privkey) =>
-  `SUI_CONFIG_DIR='${P.SUICFG}' NETWORK=testnet SUI_RPC='${RPC}' SUI_GRPC_URL='${RPC}' PRIVATE_KEY='${privkey}' PUBLISH_GATE_SKIP=1`
+  `SUI_CONFIG_DIR='${P.SUICFG}' NETWORK=testnet SUI_RPC='${RPC}' SUI_GRPC_URL='${RPC}' PRIVATE_KEY='${privkey}' PUBLISH_GUARD_REPO_ROOT='${process.env.PUBLISH_GUARD_REPO_ROOT ?? P.REPO}'`
 
 // ── deps: symlink node_modules so the Playwright config/specs resolve @playwright/test (the
 //    bun-isolated-install trap the bots' deps.js documents; @mysten/* resolves via deps_gold's
