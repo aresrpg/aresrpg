@@ -44,6 +44,25 @@ export const ITEM_CATEGORY = {
   CHARACTER: 'character',
 }
 
+// STACKABILITY is a CATEGORY property, never an Item field — the 1:1 mirror of the contract's
+// `item::is_stackable_category` (packages/move/aresrpg/sources/item.move). ONE home for every client
+// derivation: the bag projections, the duplicate sweep and the door-time folds all read it from here.
+export const STACKABLE_CATEGORIES = Object.freeze([
+  ITEM_CATEGORY.CONSUMABLE,
+  ITEM_CATEGORY.RESOURCE,
+  ITEM_CATEGORY.RUNE,
+])
+
+/**
+ * Does this on-chain item category STACK? Case-normalized because the admin template editor stores
+ * categories UPPERCASE while the chain and the read layer emit them lowercase.
+ * @param {string | null | undefined} category
+ * @returns {boolean}
+ */
+export function is_stackable_category(category) {
+  return STACKABLE_CATEGORIES.includes(String(category ?? '').toLowerCase())
+}
+
 export const EQUIPMENTS = [
   ITEM_CATEGORY.RELIC,
   ITEM_CATEGORY.RUNE,

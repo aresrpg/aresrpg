@@ -14,7 +14,7 @@
 //                            /v1-first via `/v1/owner-items`, chain-union fallback (the SANCTIONED outage walk)
 
 import { normalizeStructTag } from '@mysten/sui/utils'
-import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
+import { is_stackable_category } from '@aresrpg/sdk/items'
 
 import { get_owner_items } from '../rpc/client'
 import { with_timeout } from '../utils/with_timeout'
@@ -22,11 +22,10 @@ import { game_log } from '../core/log.js'
 
 import { item_type_id } from './item_lineage'
 
-// Stackability is a CATEGORY property (consumable / resource / rune — item.move is_stackable_category),
-// never an Item field. The SINGLE client home for the derivation, applied to BOTH the /v1 rows and the
-// chain-direct fallback rows so the two paths yield an identical bag shape (`stackable` is not on the wire).
-const STACKABLE_CATEGORIES = new Set([ITEM_CATEGORY.CONSUMABLE, ITEM_CATEGORY.RESOURCE, ITEM_CATEGORY.RUNE])
-const with_stackable = (/** @type {any} */ row) => ({ ...row, stackable: STACKABLE_CATEGORIES.has(row.item_category) })
+// Stackability is a CATEGORY property, never an Item field — derived from the SDK's `is_stackable_category`
+// (the 1:1 mirror of item.move). Applied to BOTH the /v1 rows and the chain-direct fallback rows so the two
+// paths yield an identical bag shape (`stackable` is not on the wire).
+const with_stackable = (/** @type {any} */ row) => ({ ...row, stackable: is_stackable_category(row.item_category) })
 
 /**
  * @typedef {{ id: string, name: string, classe: string, experience: number, vitality: number,

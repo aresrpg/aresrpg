@@ -4,7 +4,8 @@
 // Item through item::ItemMinted; turn those facts into bag rows and let the ONE inventory reducer own state.
 // No reads, dispatches, callbacks, or store writes live here.
 
-const STACKABLE_CATEGORIES = new Set(['consumable', 'resource', 'rune'])
+import { is_stackable_category } from '@aresrpg/sdk/items'
+
 const chain_category = (category) => {
   const upper = String(category ?? '').toUpperCase()
   return upper === 'FISHINGROD' ? 'fishingRod' : upper.toLowerCase()
@@ -43,7 +44,7 @@ export function settled_loot_rows(settlement, template_by_id = new Map()) {
         kiosk_id: settlement?.kiosk_id ?? null,
         kiosk_cap_id: settlement?.kiosk_cap_id ?? null,
         listed: false,
-        stackable: STACKABLE_CATEGORIES.has(item_category),
+        stackable: is_stackable_category(item_category),
       },
     ]
   })
