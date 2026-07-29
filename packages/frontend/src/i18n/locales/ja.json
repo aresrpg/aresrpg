@@ -1065,6 +1065,7 @@
     "pet_food": "エサ",
     "spell_n": "スペル {{n}}",
     "range": "射程",
+    "range_modifiability": "射程変更",
     "no_spells_minted": "オンチェーンで発行された呪文はありません",
     "xp_suffix": "+{{xp}} XP",
     "boss_badge": "ボス",

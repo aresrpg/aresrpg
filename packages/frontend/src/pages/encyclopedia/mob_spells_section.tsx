@@ -13,6 +13,7 @@ import { SectionDivider, SectionTitle } from '../../components/entity_display'
 import { EffectLine } from '../../game/screens/hud/EffectLine.jsx'
 import { seed_effect_parts } from '../../game/screens/hud/seed-effect-line.js'
 import { Tooltip } from '../../game/screens/hud/Tooltip.jsx'
+import { spell_range_caption_key } from '../../game/screens/hud/spell-range-caption.js'
 
 import type { MobSpellView } from './mob_spells'
 
@@ -31,7 +32,7 @@ function SpellFact({ label, value }: { label: string; value: string }) {
 }
 
 /** The hover card: every on-chain SpellLevel fact + the full effect list. */
-function MobSpellCard({ spell, index }: { spell: MobSpellView; index: number }) {
+export function MobSpellCard({ spell, index }: { spell: MobSpellView; index: number }) {
   const { t } = useTranslation()
   const translate = t as Translate
   return (
@@ -42,6 +43,10 @@ function MobSpellCard({ spell, index }: { spell: MobSpellView; index: number }) 
       <div className="grid grid-cols-2 gap-1">
         <SpellFact label={translate('encyclopedia.ap_cost')} value={String(spell.ap)} />
         <SpellFact label={translate('encyclopedia.range')} value={`${spell.range[0]}–${spell.range[1]}`} />
+        <SpellFact
+          label={translate('encyclopedia.range_modifiability')}
+          value={translate(spell_range_caption_key(spell))}
+        />
         <SpellFact
           label={translate('encyclopedia.cooldown')}
           value={

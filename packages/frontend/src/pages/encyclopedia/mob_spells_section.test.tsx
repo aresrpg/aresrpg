@@ -8,7 +8,7 @@ import { I18nextProvider } from 'react-i18next'
 import en from '../../i18n/locales/en.json'
 
 import { mob_spell_views } from './mob_spells'
-import { MobSpellsSection } from './mob_spells_section'
+import { MobSpellCard, MobSpellsSection } from './mob_spells_section'
 
 const EN_I18N = i18next.createInstance()
 EN_I18N.init({
@@ -58,4 +58,39 @@ test('an empty kit renders no section at all (honest gap, never an empty shell)'
     </I18nextProvider>
   )
   expect(html).toBe('')
+})
+
+test('a bestiary spell carries the corpus range-modifiability verdict through the shared spell caption', () => {
+  const [extendable, fixed] = mob_spell_views([
+    {
+      ap: 3,
+      rmin: 1,
+      rmax: 5,
+      mod: true,
+      effects: [{ kind: 0, op: 'damage', element: 'earth', base: 10 }],
+    },
+    {
+      ap: 4,
+      rmin: 1,
+      rmax: 2,
+      mod: false,
+      effects: [{ kind: 0, op: 'damage', element: 'fire', base: 8 }],
+    },
+  ])
+
+  expect(extendable.modifiable_range).toBe(true)
+  expect(fixed.modifiable_range).toBe(false)
+
+  const render_card = (spell: typeof extendable) =>
+    renderToStaticMarkup(
+      <I18nextProvider i18n={EN_I18N}>
+        <MobSpellCard spell={spell} index={0} />
+      </I18nextProvider>
+    )
+
+  const extendable_html = render_card(extendable)
+  const fixed_html = render_card(fixed)
+  expect(extendable_html).toContain('RANGE MODIFIABILITY')
+  expect(extendable_html).toContain('+RANGE STAT EXTENDS THIS')
+  expect(fixed_html).toContain('FIXED — +RANGE STAT DOES NOT APPLY')
 })

@@ -107,6 +107,7 @@ describe('mob spell decode', () => {
     expect(view).toEqual({
       ap: 3,
       range: [1, 5],
+      modifiable_range: false,
       cooldown: 2,
       crit_rate: 20,
       line_of_sight: true,
@@ -130,6 +131,7 @@ describe('mob spell decode', () => {
     expect(defaults).toEqual({
       ap: 4,
       range: [1, 4],
+      modifiable_range: false,
       cooldown: 0,
       crit_rate: 0,
       line_of_sight: true,

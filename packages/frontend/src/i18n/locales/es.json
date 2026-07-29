@@ -1065,6 +1065,7 @@
     "pet_food": "COMIDA",
     "spell_n": "HECHIZO {{n}}",
     "range": "ALCANCE",
+    "range_modifiability": "MODIFICACIÓN DE ALCANCE",
     "no_spells_minted": "Ningún hechizo acuñado on-chain",
     "xp_suffix": "+{{xp}} XP",
     "boss_badge": "JEFE",

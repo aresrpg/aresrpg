@@ -1065,6 +1065,7 @@
     "pet_food": "FUTTER",
     "spell_n": "ZAUBER {{n}}",
     "range": "REICHWEITE",
+    "range_modifiability": "REICHWEITENÄNDERUNG",
     "no_spells_minted": "Keine Zauber on-chain geprägt",
     "xp_suffix": "+{{xp}} EP",
     "boss_badge": "BOSS",

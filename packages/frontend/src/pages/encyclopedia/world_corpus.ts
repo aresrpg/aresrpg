@@ -108,6 +108,8 @@ export interface CorpusMobSpell {
   ap?: number
   rmin?: number
   rmax?: number
+  /** Authored range-modifiability bit; seed_full_corpus.mjs passes this `mod` field to SpellLevel verbatim. */
+  mod?: boolean
   cd?: number
   crit?: number
   los?: boolean

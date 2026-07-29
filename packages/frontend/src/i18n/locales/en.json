@@ -1065,6 +1065,7 @@
     "pet_food": "FOOD",
     "spell_n": "SPELL {{n}}",
     "range": "RANGE",
+    "range_modifiability": "RANGE MODIFIABILITY",
     "no_spells_minted": "No spells minted on-chain",
     "xp_suffix": "+{{xp}} XP",
     "boss_badge": "BOSS",

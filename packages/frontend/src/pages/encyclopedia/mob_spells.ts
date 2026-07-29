@@ -78,6 +78,7 @@ const VALUE_RANGE_KINDS = new Set(['DAMAGE', 'APPLY_DOT', 'LIFE_STEAL', 'PUNISHM
 export interface MobSpellView {
   ap: number
   range: [number, number]
+  modifiable_range: boolean
   cooldown: number
   crit_rate: number
   line_of_sight: boolean
@@ -110,6 +111,7 @@ export const mob_spell_views = (spells: readonly CorpusMobSpell[] | null | undef
   (spells ?? []).map((spell) => ({
     ap: spell.ap ?? 4,
     range: [spell.rmin ?? 1, spell.rmax ?? 4],
+    modifiable_range: spell.mod === true,
     cooldown: spell.cd ?? 0,
     crit_rate: spell.crit ?? 0,
     line_of_sight: spell.los !== false,

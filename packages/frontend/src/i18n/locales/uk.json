@@ -1065,6 +1065,7 @@
     "pet_food": "ЇЖА",
     "spell_n": "ЗАКЛИНАННЯ {{n}}",
     "range": "ДАЛЬНІСТЬ",
+    "range_modifiability": "МОЖЛИВІСТЬ ЗМІНИ ДАЛЬНОСТІ",
     "no_spells_minted": "Немає закарбованих заклять у мережі",
     "xp_suffix": "+{{xp}} XP",
     "boss_badge": "БОС",

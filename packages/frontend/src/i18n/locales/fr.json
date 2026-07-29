@@ -1065,6 +1065,7 @@
     "pet_food": "NOURRITURE",
     "spell_n": "SORT {{n}}",
     "range": "PORTÉE",
+    "range_modifiability": "MODIFICATION DE PORTÉE",
     "no_spells_minted": "Aucun sort forgé on-chain",
     "xp_suffix": "+{{xp}} XP",
     "boss_badge": "BOSS",
