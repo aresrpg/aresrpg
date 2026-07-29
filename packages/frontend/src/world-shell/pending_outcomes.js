@@ -16,6 +16,7 @@
 import { parse_move_abort } from '../game/core/abort_copy.js'
 
 import { error_executed_digest, error_preflight_marked } from './tx_digest_error.js'
+import { backoff_delay_ms } from './spend_guard.js'
 
 /**
  * PURE: `/v1/pending-outcomes` rows → Map<character_id, row>. Rows without an outcome_id/character_id are
@@ -170,16 +171,33 @@ export function acquire_settlement_flight(store) {
 }
 
 /**
+ * #1383 ② — THE FREE-DRY-RUN BUDGET. A PRE-FLIGHT refusal burned NOTHING: the tx choke simulates every open
+ * before the wallet signs, so a would-fail open is refused at zero gas (src/tx guard). Parking the player on a
+ * manual badge after ONE such refusal made the recovery surface the normal flow; simulation is free, so the
+ * open re-attempts on the house backoff (spend_guard's ONE schedule) until the simulation passes — then it
+ * submits exactly once. Four attempts ≈ 1s + 2s + 4s of waiting; past that the badge is the honest last resort.
+ * An EXECUTED failure never enters this loop at all: a digest means the gas is already gone.
+ */
+export const OPEN_RETRY_ATTEMPTS = 4
+
+const default_sleep = (/** @type {number} */ ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
  * Own one result-open flight from detection through its receipt. The slot is claimed and its Promise is bound
  * synchronously, before `open` can perform an awaited run lookup or compose a transaction, so boot/engage/manual
- * detectors for the same result always await one effect. An attempted open that fails latches its exact error;
- * a local deferral did not attempt the open and therefore re-arms an untouched result.
+ * detectors for the same result always await one effect (and coalesce onto its free retries too). A PRE-FLIGHT
+ * refusal is retried for free; an EXECUTED failure latches its exact error at once; a local deferral did not
+ * attempt the open and therefore re-arms an untouched result.
  * @param {string} outcome_id
  * @param {() => Promise<{status:'opened'|'failed'|'deferred',receipt?:any,error?:unknown}>} open
- * @param {{manual?:boolean}} [opts]
+ * @param {{manual?:boolean, max_attempts?:number, sleep?:(ms:number)=>Promise<any>}} [opts]
  * @returns {Promise<{status:'opened',receipt:any}|{status:'blocked'|'failed',error:unknown|null}>}
  */
-export function run_result_auto_open(outcome_id, open, { manual = false } = {}) {
+export function run_result_auto_open(
+  outcome_id,
+  open,
+  { manual = false, max_attempts = OPEN_RETRY_ATTEMPTS, sleep = default_sleep } = {}
+) {
   if (!outcome_id || typeof open !== 'function') return Promise.resolve({ status: 'blocked', error: null })
   const shared = attempt_flight(outcome_id)
   if (shared) return shared
@@ -197,8 +215,14 @@ export function run_result_auto_open(outcome_id, open, { manual = false } = {}) 
     )
   }
   const flight = (async () => {
-    try {
-      const result = await open()
+    for (let attempt = 1; ; attempt += 1) {
+      /** @type {{status?:string, receipt?:any, error?:unknown}} */
+      let result
+      try {
+        result = await open()
+      } catch (error) {
+        result = { status: 'failed', error }
+      }
       if (result?.status === 'opened') {
         end_attempt(outcome_id, 'opened')
         return { status: 'opened', receipt: result.receipt ?? null }
@@ -213,11 +237,14 @@ export function run_result_auto_open(outcome_id, open, { manual = false } = {}) 
         return { status: 'blocked', error: result.error ?? null }
       }
       const error = result?.error ?? null
-      end_attempt(outcome_id, error_executed_digest(error) ? 'executed_failure' : 'refused', error)
-      return { status: 'failed', error }
-    } catch (error) {
-      end_attempt(outcome_id, error_executed_digest(error) ? 'executed_failure' : 'refused', error)
-      return { status: 'failed', error }
+      // ONE HONEST FAILURE, ZERO RETRIES (burn law): a digest — or any error this classifier cannot POSITIVELY
+      // prove pre-flight — is treated as executed. Re-sending would burn a second time.
+      if (!is_preflight_failure(error) || attempt >= max_attempts) {
+        end_attempt(outcome_id, error_executed_digest(error) ? 'executed_failure' : 'refused', error)
+        return { status: 'failed', error }
+      }
+      // PROVEN PRE-FLIGHT: nothing was signed, nothing was spent. Wait out the house backoff and dry-run again.
+      await sleep(backoff_delay_ms(attempt, Math.random()))
     }
   })()
   bind_attempt_flight(outcome_id, flight)
@@ -274,6 +301,21 @@ export async function recover_settled_elsewhere(halt, { find_result, open_result
     : { status: 'failed', error: opened?.error ?? null }
 }
 
+/**
+ * #1383 ① — THE ONE HOME for the line a settlement halt may honestly speak. "You have an unfinished fight
+ * result" is a claim ABOUT THIS PROJECTION — the same `/v1/pending-outcomes` row the character-panel badge
+ * renders — so it may only be made when the projection actually has an actionable row. It used to be pushed
+ * blind from the halt path, including the EXECUTED-abort case where the whole PTB reverted and no outcome
+ * exists at all: the player was sent to hunt a result that was never minted. Toast ⊆ projection truth, by
+ * construction. An unreadable projection makes NO claim (hold, never invent).
+ * @param {() => Promise<{ outcome_id?: string }|null|undefined>} find_row the caller's projection read
+ * @returns {Promise<{ claim: 'pending_result', row: any } | { claim: 'settle_failed', row: null }>}
+ */
+export async function settle_halt_notice(find_row) {
+  const row = await find_row().catch(() => null)
+  return row?.outcome_id ? { claim: 'pending_result', row } : { claim: 'settle_failed', row: null }
+}
+
 /** @param {string} outcome_id @returns {'inflight' | 'latched' | 'opened' | null} */
 export function attempt_state(outcome_id) {
   return attempts.get(outcome_id)?.state ?? null
@@ -315,6 +357,11 @@ export function is_preflight_failure(error) {
   // lagging the killing commit → simulated settlement::101, ZERO gas, NO digest) was byte-identical to an
   // executed abort → latched → the fight core's retry engine starved → the card skeletoned forever.
   if (error_preflight_marked(error)) return true
+  // The SPEND GUARD's own refusal (tx.js `spend_guard_error`): the lane refused BEFORE anything was built,
+  // simulated or signed, so it is zero-gas by construction. STRUCTURAL provenance (the error name it is stamped
+  // with), never message text — and never a latch: latching here would let the guard's own transient backoff
+  // permanently retire the auto-open it is protecting.
+  if (/** @type {any} */ (error)?.name === 'SpendGuardRefusal') return true
   const message = String(/** @type {any} */ (error)?.message ?? error ?? '')
   // our own pre-submit client refusals (dungeon_actions/open_outcome throw these before any bytes are built)
   if (/not connected|not signed in|not in your kiosk/i.test(message)) return true

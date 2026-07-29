@@ -2420,6 +2420,7 @@
     "fight_wrong_party": "That's a private fight — you need to be in the right party to join.",
     "fight_world_changed": "The world changed before your fight could start — refresh and try again.",
     "fight_already_seated": "You're already seated in that fight.",
+    "fight_settle_failed": "Your fight could not be settled — nothing was claimed.",
     "fight_unclaimed_result": "You have an unfinished fight result — open it from your character panel to fight again.",
     "fight_character_busy": "This character is already in a live fight — finish or settle it before starting another.",
     "fight_character_busy_expired_started": "This character was in a placement fight whose timer expired. That fight was started automatically — return to it to continue.",
