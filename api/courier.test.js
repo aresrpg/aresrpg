@@ -251,7 +251,9 @@ describe('POST /v1/courier/chat — every 400 names its own reason (#1641)', () 
   })
 
   test('malformed JSON names itself', async () => {
-    const response = await (await import('./courier.mjs')).courier_fetch(
+    const response = await (
+      await import('./courier.mjs')
+    ).courier_fetch(
       new Request('https://sponsor.test/v1/courier/chat', { method: 'POST', body: '{not json' }),
       open_service()
     )
@@ -268,7 +270,10 @@ describe('POST /v1/courier/chat — every 400 names its own reason (#1641)', () 
       address: CHARACTER,
       kind: 'batch',
       intent_id: `${'9'.repeat(64)}`,
-      actions: [{ type: 'move', path: [1, 2, 3, 4, 5, 6, 7, 8] }, { type: 'cast', spell: 'x'.repeat(40), cell: 42 }],
+      actions: [
+        { type: 'move', path: [1, 2, 3, 4, 5, 6, 7, 8] },
+        { type: 'cast', spell: 'x'.repeat(40), cell: 42 },
+      ],
     })
     expect(signal.length).toBeGreaterThan(CHAT_MAX_LENGTH) // the payload that was 400ing in production
     expect(signal.length).toBeLessThan(FIGHT_MAX_LENGTH)

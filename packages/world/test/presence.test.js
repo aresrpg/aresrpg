@@ -327,7 +327,7 @@ describe('SELF-HEAL ① liveness — silence expires a peer; a heartbeat keeps a
 // the UI ended up reading "P2P idle" against a live stream.
 
 describe('the link input is the single writer of link_status / link_error', () => {
-  it('carries the edge\'s status onto the atom, with its reason', () => {
+  it("carries the edge's status onto the atom, with its reason", () => {
     const { store, input } = boot()
     expect(store.getState().link_status).toBe('idle')
     input({ type: 'link', status: 'connecting' })
