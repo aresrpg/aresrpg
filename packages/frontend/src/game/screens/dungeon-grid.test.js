@@ -36,22 +36,54 @@ describe('dungeon-grid / hashSeed (mirrors dungeon_grid_test.move::hash_seed_mat
   })
 })
 
+const grid_parity_cases = [
+  [0, 0],
+  [0xdeadbeef, 3],
+  [12345, 1],
+  [0xffffffff, 7],
+  [777, 2],
+]
+
+const frontend_grid_as_sim_shape = (grid) => ({
+  ...grid,
+  shape_mask: maskWords(grid.shape_mask),
+})
+
+const printable_grid = (grid) =>
+  JSON.stringify(grid, (_, value) => (typeof value === 'bigint' ? `${value}n` : value))
+
+const first_grid_parity_drift = (frontend_generate = generateGrid) =>
+  grid_parity_cases
+    .map(([seed, variant]) => ({
+      seed,
+      variant,
+      frontend: frontend_grid_as_sim_shape(frontend_generate(seed, variant)),
+      sim: generate_board(seed, variant),
+    }))
+    .find(({ frontend, sim }) => printable_grid(frontend) !== printable_grid(sim))
+
+const assert_grid_parity = (frontend_generate = generateGrid) => {
+  const drift = first_grid_parity_drift(frontend_generate)
+  if (drift)
+    throw new Error(
+      `generateGrid parity drift seed=${drift.seed} variant=${drift.variant}: ` +
+        `frontend=${printable_grid(drift.frontend)} sim=${printable_grid(drift.sim)}`
+    )
+}
+
 describe('dungeon-grid / generateGrid (D75 dev/test twin — determinism + invariants at canonical stride 20)', () => {
-  it('stays byte-equivalent to the deterministic sim home', () => {
-    for (const [seed, variant] of [
-      [0, 0],
-      [0xdeadbeef, 3],
-      [12345, 1],
-      [0xffffffff, 7],
-      [777, 2],
-    ]) {
-      const frontend = generateGrid(seed, variant)
-      const sim = generate_board(seed, variant)
-      expect({
-        ...frontend,
-        shape_mask: maskWords(frontend.shape_mask),
-      }).toEqual(sim)
+  it('stays byte-equivalent to the deterministic sim home and names both values on drift', () => {
+    assert_grid_parity()
+  })
+
+  it('positive control: a one-value frontend drift is detected', () => {
+    const drifted_generate = (seed, variant) => {
+      const grid = generateGrid(seed, variant)
+      return { ...grid, width: grid.width + 1 }
     }
+    expect(() => assert_grid_parity(drifted_generate)).toThrow(
+      /generateGrid parity drift .*frontend=.*"width":\d+.*sim=.*"width":\d+/
+    )
   })
 
   // JS-side determinism pins (captured from THIS twin; the load-bearing determinism gate is Move-native).
