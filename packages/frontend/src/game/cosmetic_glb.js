@@ -274,11 +274,17 @@ export function worn_model_of(item, templates = new Map()) {
  *  "veteran"/"unbroken" (the Mark of the Unbroken line) lands in the slot. ONE home for the gate: the local
  *  player reads it off its live character (embed_voxel_player.js), a REMOTE peer off the same field of the
  *  /v1 character doc (remote_character_cache.js) — the aura is chain truth, never a self-declared claim.
+ *
+ *  Every identity field is read, never the first present one (#1546): a minted item's `id` is a Sui object
+ *  id — a hex address, never the template slug — so a `??` chain starting at `id` made every later field
+ *  dead on exactly the shape this gate exists for. Same shape as cosmetic_aura's aura_of_item.
  *  @param {any} character */
 export function has_veteran_title(character) {
   const item = character?.title
   if (!item) return false
-  return /veteran|unbroken/i.test(String(item.id ?? item.item_type ?? item.type ?? item.name ?? ''))
+  return ['item_type', 'template_id', 'slug', 'type', 'name', 'id'].some((field) =>
+    /veteran|unbroken/i.test(String(item[field] ?? ''))
+  )
 }
 
 /**
