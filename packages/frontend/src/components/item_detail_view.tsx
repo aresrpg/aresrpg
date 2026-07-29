@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Dice5, PackageX } from 'lucide-react'
+import { PackageX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
 
 import { ItemImage } from './item_image'
 import {
@@ -20,30 +18,9 @@ import { SectionDivider, SectionTitle } from './entity_section'
 
 // --- ConsumableEffectLine ---
 
-export function ConsumableEffectLine({
-  effect,
-  on_item_click,
-}: {
-  effect: { type: string; [key: string]: any }
-  on_item_click?: (template_id: string) => void
-}) {
+export function ConsumableEffectLine({ effect }: { effect: { type: string; [key: string]: any } }) {
   const { t } = useTranslation()
-  // Consumable-referenced item names resolve through the live /v1 door (#856) — they used to be looked up in
-  // the bundled seed catalog, `{}` by construction here, so every referenced roll printed its raw slug.
-  const { find, name_of } = use_item_lookup()
   switch (effect.type) {
-    case 'RESET_STATS':
-      return (
-        <div className="text-[10px] tracking-wide" style={{ color: '#b366ff' }}>
-          {t('entity.reset_stats')}
-        </div>
-      )
-    case 'RESET_SPELLS':
-      return (
-        <div className="text-[10px] tracking-wide" style={{ color: '#00cccc' }}>
-          {t('entity.reset_spells')}
-        </div>
-      )
     case 'LIFE_REGEN': {
       const color = '#ff66b2'
       const instant = !effect.duration || effect.duration <= 0
@@ -56,76 +33,6 @@ export function ConsumableEffectLine({
           ) : (
             <span>{t('entity.health_regen_effect', { amount: effect.amount, duration: effect.duration })}</span>
           )}
-        </div>
-      )
-    }
-    case 'ADD_STATS': {
-      const ck = stat_color_key(effect.stat || '')
-      const color = STAT_COLORS[ck] || '#e8e4dc'
-      const label = stat_label(t, effect.stat || '')
-      return (
-        <div className="text-[10px] tracking-wide" style={{ color }}>
-          {t('entity.add_stats_effect', { amount: effect.amount, stat: label, duration: effect.duration })}
-        </div>
-      )
-    }
-    case 'RANDOM_ITEMS': {
-      const rolls: { template_id: string; weight: number; quantity?: number }[] = effect.rolls || []
-      const total_weight = rolls.reduce((sum, r) => sum + (r.weight || 0), 0)
-      if (!rolls.length || !total_weight) return null
-      return (
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <Dice5 size={10} className="text-cyan/60" />
-            <span className="text-[9px] tracking-[0.15em] uppercase text-cyan/80 font-semibold">
-              {t('entity.random_item')}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {rolls
-              .sort((a, b) => b.weight - a.weight)
-              .map((roll) => {
-                const name = name_of(roll.template_id)
-                // NO quality tiers — roll rows render in the neutral body tone.
-                const color = '#e8e4dc'
-                const pct = ((roll.weight / total_weight) * 100).toFixed(1)
-                // The icon key of a published row IS its authored art slug; a template OBJECT id 404s.
-                const icon_id = find(roll.template_id)?.item_type || roll.template_id
-                return (
-                  <div
-                    key={roll.template_id}
-                    className={`flex items-center gap-2 px-2 py-1.5 ${on_item_click ? 'cursor-pointer' : ''}`}
-                    style={{ background: 'rgba(255,255,255,0.02)' }}
-                    onClick={on_item_click ? () => on_item_click(roll.template_id) : undefined}
-                    onMouseEnter={
-                      on_item_click
-                        ? (e) => {
-                            ;(e.currentTarget as HTMLElement).style.background = 'rgba(200,150,60,0.08)'
-                          }
-                        : undefined
-                    }
-                    onMouseLeave={
-                      on_item_click
-                        ? (e) => {
-                            ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'
-                          }
-                        : undefined
-                    }
-                  >
-                    <ItemImage id={icon_id} className="w-5 h-5 object-contain shrink-0" />
-                    <span className="text-[9px] tracking-[0.1em] uppercase flex-1 truncate" style={{ color }}>
-                      {name}
-                    </span>
-                    {(roll.quantity ?? 1) > 1 && (
-                      <span className="text-[9px] tracking-wide shrink-0 font-mono text-gold">×{roll.quantity}</span>
-                    )}
-                    <span className="text-[9px] tracking-wide shrink-0 font-mono" style={{ color: '#6b7280' }}>
-                      {pct}%
-                    </span>
-                  </div>
-                )
-              })}
-          </div>
         </div>
       )
     }
@@ -217,7 +124,6 @@ function format_marketcap_sui(supply: number, last_sale_mist: string): string {
 export function ItemDetailView({
   item,
   children,
-  on_item_click,
 }: {
   item: {
     id?: string
@@ -256,7 +162,6 @@ export function ItemDetailView({
     last_sale_mist?: string | null
   }
   children?: ReactNode
-  on_item_click?: (template_id: string) => void
 }) {
   const { t } = useTranslation()
   const obtention_line = (() => {
@@ -448,7 +353,7 @@ export function ItemDetailView({
           {/* Consumable Effect */}
           {item.consumable_effect && (
             <div className="px-2 py-1">
-              <ConsumableEffectLine effect={item.consumable_effect} on_item_click={on_item_click} />
+              <ConsumableEffectLine effect={item.consumable_effect} />
             </div>
           )}
         </div>

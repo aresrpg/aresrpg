@@ -29,7 +29,6 @@ import * as item_corpus from '../pages/encyclopedia/item_corpus'
 import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
 
 import { ItemTooltipContent } from './items'
-import { ConsumableEffectLine } from './item_detail_view'
 import { use_tooltip_detail } from './item_hover_tooltip'
 
 const test_i18n = i18next.createInstance()
@@ -86,7 +85,7 @@ const text_of = (html: string): string =>
 // ── the class fence ───────────────────────────────────────────────────────────────────────────────
 
 describe('the item-template surfaces read the LIVE corpus, never the bundled seed catalog (#856)', () => {
-  const SURFACES = ['../pages/shop.tsx', './items.tsx', './item_hover_tooltip.tsx', './item_detail_view.tsx'] as const
+  const SURFACES = ['../pages/shop.tsx', './items.tsx', './item_hover_tooltip.tsx'] as const
 
   test.each(SURFACES)('%s resolves item templates through the /v1 door', (path) => {
     const source = readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -186,27 +185,5 @@ describe('the marketplace hover tooltip', () => {
     expect(html).toContain('<span id="name">Published Name 0</span>')
     // the template authors vitality [3,9] and this instance carries no roll — the honest "unavailable" line
     expect(html).toContain('<span id="unavailable">true</span>')
-  })
-})
-
-describe('ConsumableEffectLine — a referenced roll table', () => {
-  const effect = {
-    type: 'RANDOM_ITEMS',
-    rolls: [
-      { template_id: LIVING_IDS[0], weight: 3 },
-      { template_id: 'art_slug_1', weight: 1 },
-    ],
-  }
-
-  test('each referenced template resolves its published name and its ART SLUG icon (an object id 404s)', () => {
-    expect(text_of(render_against(cold, <ConsumableEffectLine effect={effect} />))).toContain('art slug 1')
-
-    const html = render_against(landed([wire(0), wire(1)]), <ConsumableEffectLine effect={effect} />)
-    const text = text_of(html)
-    expect(text).toContain('Published Name 0')
-    expect(text).toContain('Published Name 1')
-    // the icon key is the authored art slug on BOTH rows — including the one keyed by its object id
-    expect(html).toContain('art_slug_0')
-    expect(html).not.toContain(LIVING_IDS[0])
   })
 })
