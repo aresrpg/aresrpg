@@ -63,22 +63,29 @@ if (expect_path) {
   const wrong = keys.filter((key) => (actual.get(key)?.count ?? 0) !== (expected.get(key) ?? 0))
   if (wrong.length > 0) {
     console.error(`  SELF-TEST FAILED (${expect_case}) — the scanner no longer measures what it claims:`)
-    for (const key of wrong) console.error(`    ${key}: found ${actual.get(key)?.count ?? 0}, expected ${expected.get(key) ?? 0}`)
+    for (const key of wrong)
+      console.error(`    ${key}: found ${actual.get(key)?.count ?? 0}, expected ${expected.get(key) ?? 0}`)
     process.exit(1)
   }
-  console.log(`  self-test ${expect_case}: ${actual.size} pinned finding key(s) over ${result.files} file(s) — exact match`)
+  console.log(
+    `  self-test ${expect_case}: ${actual.size} pinned finding key(s) over ${result.files} file(s) — exact match`
+  )
   process.exit(0)
 }
 
 if (!baseline_path) {
-  console.error('usage: single_home_verdict.mjs [--root d] [--scan a,b] --baseline f [--write] | --expect f --case red|green')
+  console.error(
+    'usage: single_home_verdict.mjs [--root d] [--scan a,b] --baseline f [--write] | --expect f --case red|green'
+  )
   process.exit(2)
 }
 
 if (has('write')) {
   fs.writeFileSync(baseline_path, nest(actual))
   const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
-  console.log(`  baseline written: ${baseline_path} (${total} finding(s) over ${result.files} files, ${result.rows} registry rows)`)
+  console.log(
+    `  baseline written: ${baseline_path} (${total} finding(s) over ${result.files} files, ${result.rows} registry rows)`
+  )
   process.exit(0)
 }
 
@@ -93,7 +100,9 @@ const regressions = keys.filter((key) => (actual.get(key)?.count ?? 0) > (floor.
 const improvements = keys.filter((key) => (actual.get(key)?.count ?? 0) < (floor.get(key) ?? 0))
 
 if (regressions.length > 0) {
-  console.error('SINGLE-HOME GATE FAILED — a fact grew a second home (docs/REGISTRY.md, CLAUDE.md "One home per fact"):')
+  console.error(
+    'SINGLE-HOME GATE FAILED — a fact grew a second home (docs/REGISTRY.md, CLAUDE.md "One home per fact"):'
+  )
   for (const key of regressions) {
     const finding = actual.get(key)
     console.error(`  ${key}: ${finding?.count ?? 0} > baseline ${floor.get(key) ?? 0}`)
@@ -104,7 +113,9 @@ if (regressions.length > 0) {
 }
 
 const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
-console.log(`  ratchet: ${total} finding(s) over ${result.files} files / ${result.rows} registry rows, none above the ${floor.size}-key baseline`)
+console.log(
+  `  ratchet: ${total} finding(s) over ${result.files} files / ${result.rows} registry rows, none above the ${floor.size}-key baseline`
+)
 if (improvements.length > 0) {
   console.log(`  ${improvements.length} key(s) improved — tighten only:`)
   console.log('    bash scripts/single-home-gate.sh --write-baseline')

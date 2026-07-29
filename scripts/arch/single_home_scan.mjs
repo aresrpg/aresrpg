@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The DUAL-HOME scanner — pure detection for scripts/single-home-gate.sh.
 //
-// One fact, one home (CLAUDE.md "One home per fact"). Three mechanical shapes of the violation,
+// One fact, one home (CLAUDE.md "One home per fact"). Four mechanical shapes of the violation,
 // each derived from repo bytes only — no heuristics, no similarity scoring:
 //
 //   duplicate-export  — one exported name declared in two or more source files.
@@ -18,19 +18,31 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const CODE_FILE = /\.(?:js|jsx|mjs|cjs|ts|tsx)$/
+// A `.d.ts` declares no value: it is either tsc emit (a derived mirror of its own source — the one
+// "duplicate" that is single-homed by construction, and `bun run --cwd packages/sim lint` writes a
+// fresh one mid-gate) or an ambient declaration for someone else's module. Type-level drift is a
+// different lane than this gate claims; it does not judge type surfaces.
+const TYPE_SURFACE = /\.d\.ts$/
 const MOVE_FILE = /\.move$/
 const TEST_FILE = /(?:\.|_)(?:test|spec)\.[a-z]+$/
 const SKIP_DIR = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', '.git', 'test', 'tests', '__tests__'])
 
 // A declaration is a name BOUND at this spot. `exported` separates the package's published
 // vocabulary (duplicate-export's population) from any binding at all (registry-fact's population).
-const EXPORTED_DECL = /^export\s+(?:default\s+)?(?:async\s+)?(?:function\s*\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/
+const EXPORTED_DECL =
+  /^export\s+(?:default\s+)?(?:async\s+)?(?:function\s*\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/
 const JS_DECL = /(?:^|[\s;{(])(?:const|let|var|function\s*\*?|class)\s+([A-Za-z_$][\w$]*)/g
 const MOVE_DECL = /(?:^|\s)(?:const|fun|struct|enum)\s+([A-Za-z_][\w]*)/g
-const STORE_WRITE = /\b(use_[a-z0-9_]+)\.setState\(\s*\{/g
+const STORE_WRITE = /\b([a-z_][\w]*)\.setState\(\s*\{/g
+// A store reaches a module under whatever name it is bound to — `const dungeon = use_dungeon`, a
+// default parameter, an aliased import. Writers must be attributed to the STORE, not to the local
+// spelling, or the second writer of a field hides behind a rename (#1687's exact shape).
+const STORE_ALIAS = /(?:^|[\s,({=])([a-z_][\w]*)\s*=\s*(use_[a-z0-9_]+)\b/g
+const STORE_IMPORT_ALIAS = /\b(use_[a-z0-9_]+)\s+as\s+([a-z_][\w]*)/g
 const OBJECT_KEY = /(?:^|[{,]\s*)([a-z_][a-z0-9_]*)\s*:/gm
 
-const is_scannable = (file) => (CODE_FILE.test(file) || MOVE_FILE.test(file)) && !TEST_FILE.test(file)
+const is_scannable = (file) =>
+  (CODE_FILE.test(file) || MOVE_FILE.test(file)) && !TEST_FILE.test(file) && !TYPE_SURFACE.test(file)
 
 const walk = (root, relative) => {
   const absolute = path.join(root, relative)
@@ -168,18 +180,31 @@ const braced_body = (text, open_index) => {
   return ''
 }
 
+const store_aliases = (text) => {
+  const aliases = new Map()
+  for (const [, local, store] of text.matchAll(STORE_ALIAS)) aliases.set(local, store)
+  for (const [, store, local] of text.matchAll(STORE_IMPORT_ALIAS)) aliases.set(local, store)
+  return aliases
+}
+
 export const store_writes = (sources) => {
   const writers = new Map()
-  for (const { path: file, text } of sources)
+  for (const { path: file, text } of sources) {
+    const aliases = store_aliases(text)
     for (const match of text.matchAll(STORE_WRITE)) {
+      // An unattributable receiver (`store.setState` in a helper that takes any store) names no
+      // fact, so it names no home: it is not a finding, it is unknown.
+      const store = match[1].startsWith('use_') ? match[1] : aliases.get(match[1])
+      if (!store) continue
       const body = braced_body(text, match.index + match[0].length - 1)
       for (const [, key] of body.matchAll(OBJECT_KEY)) {
-        const field = `${match[1]}.${key}`
+        const field = `${store}.${key}`
         const entry = writers.get(field) ?? new Map()
         if (!entry.has(file)) entry.set(file, line_of(text, match.index))
         writers.set(field, entry)
       }
     }
+  }
   return [...writers]
     .filter(([, by_file]) => by_file.size > 1)
     .flatMap(([field, by_file]) =>
