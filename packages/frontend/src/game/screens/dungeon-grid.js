@@ -17,7 +17,7 @@
 // Cells use the CANONICAL stride-20 encoding (`encode(x,y)=y*20+x`, fight-los GRID_W=20).
 
 import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
-import { place_blockers } from '@aresrpg/sim/board_gen'
+import { board_seed_from_anchor, place_blockers } from '@aresrpg/sim/board_gen'
 
 import { GRID_W, GRID_H, GRID_CELLS, encode, decode, bfsPath } from '@aresrpg/fight/los'
 
@@ -350,19 +350,12 @@ export function generateGrid(dungeonHash, roomIdx) {
 // same draw order + shapes). Only the unreadable mask is twinned; obstacles/holes/starts/dims stay chain-STORED
 // truth (their cell-index decode is lossless). SSOT twins — NEVER reorder a draw: board.move:61-63 (the fold) /
 // sim board_gen.js / engine board_anchor.js.
-const _BSEED_MASK32 = 0xffffffffn
-const _BSEED_PRIME_X = 0x85ebca77n // board.move PRIME_X
-const _BSEED_PRIME_Z = 0xc2b2ae3dn // board.move PRIME_Z
-
-/** Fold (world_seed u64, anchor_x/z u32) → the u32 board seed. BigInt throughout (anchor·PRIME overflows 2^53
- *  before the &MASK32). Mirrors board::board_seed_from_anchor byte-for-byte.
- *  @param {number|bigint} world_seed @param {number} anchor_x @param {number} anchor_z @returns {number} uint32 */
-export function board_seed_from_anchor(world_seed, anchor_x, anchor_z) {
-  const ws = BigInt(world_seed) & _BSEED_MASK32
-  const ax = (BigInt(Math.trunc(Number(anchor_x))) * _BSEED_PRIME_X) & _BSEED_MASK32
-  const az = (BigInt(Math.trunc(Number(anchor_z))) * _BSEED_PRIME_Z) & _BSEED_MASK32
-  return Number((ws ^ ax ^ az) & _BSEED_MASK32)
-}
+//
+// #1680 — the FOLD is IMPORTED, never re-declared. This file used to carry its own `board_seed_from_anchor`
+// with its own PRIME_X/PRIME_Z literals: a second independently-typed home for a chain-twin fold, where one
+// digit of drift silently desyncs every generated board from the chain. `@aresrpg/sim/board_gen` owns it (the
+// fixture-pinned Move twin); the anchors it is handed must be integers, exactly as the chain's u32 params are —
+// the sim fold throws on a non-integer rather than silently truncating one into a different board.
 
 /** The deterministic engine-Fight board for (world_seed, spawn anchor), variant 0 — byte-identical to the layout
  *  `board::generate_for_anchor` produced on-chain. Returns generateGrid's normalized shape (canonical stride-20
