@@ -100,11 +100,13 @@ export function LoginPopup({
   on_connect_wallet,
   on_spectate,
   loading,
+  show_wallet_connect = is_wallet_connect_enabled(),
 }: {
   on_login: () => void
   on_connect_wallet: (wallet_name: string) => void
   on_spectate: () => void
   loading: boolean
+  show_wallet_connect?: boolean
 }) {
   const { t } = useTranslation()
   return (
@@ -114,12 +116,12 @@ export function LoginPopup({
         <Wordmark subtitle={t('auth.sign_in_to_play')} />
         <div className="flex flex-col items-stretch gap-3 w-full">
           <GoogleButton onClick={on_login} loading={loading} />
-          {/* #73 — zkLogin can't complete on Vercel preview URLs (dynamic OAuth redirect), so preview/dev
-              builds offer a direct wallet-standard connect. Build-time gate: a production release never
+          {/* #73 — zkLogin can't complete on dynamic preview URLs, so dev-mode builds offer a direct
+              wallet-standard connect. Build-time gate: a production bundle never
               renders this branch (asserted in auth/wallet_connect_gate.test.ts, not hidden by CSS).
               #dappkit-modal — the trigger's own label already reads "Connect wallet" (house tokens), so
               this divider reuses the plain "or" separator instead of stuttering the same words twice. */}
-          {is_wallet_connect_enabled() && (
+          {show_wallet_connect && (
             <>
               <Divider label={t('auth.or')} />
               <WalletConnectSection on_connect={on_connect_wallet} loading={loading} />

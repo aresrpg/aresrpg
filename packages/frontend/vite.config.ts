@@ -206,10 +206,6 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __GIT_SHA__: JSON.stringify(GIT_SHA),
-    // #73 — the deployment environment for the non-production wallet-connect gate (Vercel VERCEL_ENV:
-    // 'production' | 'preview' | 'development'; '' when building outside Vercel). Injected at build time so
-    // the gate folds to a static constant — a production release never ships the wallet-connect surface.
-    __DEPLOY_ENV__: JSON.stringify(process.env.VERCEL_ENV || ''),
   },
   envDir: '../../',
   build: { sourcemap: false },

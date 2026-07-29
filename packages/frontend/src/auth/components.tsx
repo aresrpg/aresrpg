@@ -61,8 +61,8 @@ export function bridge_wallet_name(wallet_state: {
   return wallet_state.isConnected && wallet_state.currentWallet ? wallet_state.currentWallet.name : null
 }
 
-// NON-PRODUCTION wallet-standard connect (#73). The login popup renders this only when the build-time gate
-// allows it (preview/dev — never a production release; auth/wallet_connect_gate.ts, asserted in its own
+// NON-PRODUCTION wallet-standard connect (#73). The login popup renders this only when Vite's build-time
+// gate allows it (dev server only — never a production bundle; auth/wallet_connect_gate.ts, asserted in its own
 // test, never hidden by CSS). The picker is the REAL @mysten/dapp-kit ConnectModal (Mysten's official
 // wallet picker) — maintainer ruling (public-repo review) replacing the old hand-rolled per-wallet button
 // list. Our own gothic trigger opens it; the picker UI itself stays 100% the official component.

@@ -4,29 +4,15 @@ import { describe, expect, test } from 'bun:test'
 
 import { wallet_connect_enabled } from './wallet_connect_gate'
 
-// #73 ACCEPTANCE — the wallet-connect visibility gate resolves from the build-time deployment
-// environment, NOT from CSS. The one non-negotiable: a production (v* release) build must NOT enable the
-// option; preview + local builds must. Asserted on the pure gate so it holds regardless of any styling.
+// #73 ACCEPTANCE — the wallet-connect visibility gate resolves from Vite's build mode, NOT a
+// deployment-provider variable and NOT CSS. A production bundle must never enable the option, whether
+// Vercel built it or not; a dev-mode bundle must.
 describe('wallet_connect_enabled — build-time gate', () => {
-  test('a Vercel production deployment NEVER enables the wallet-connect option (#73 acceptance)', () => {
-    expect(wallet_connect_enabled('production')).toBe(false)
+  test('a production build NEVER enables the wallet-connect option (#73 acceptance)', () => {
+    expect(wallet_connect_enabled(true)).toBe(false)
   })
 
-  test('a Vercel preview deployment enables it (zkLogin cannot run on preview URLs — the whole point)', () => {
-    expect(wallet_connect_enabled('preview')).toBe(true)
-  })
-
-  test('a local build (no VERCEL_ENV → empty string) enables it', () => {
-    expect(wallet_connect_enabled('')).toBe(true)
-  })
-
-  test('a Vercel development environment enables it', () => {
-    expect(wallet_connect_enabled('development')).toBe(true)
-  })
-
-  test("only the exact 'production' string hides it — any other value shows it", () => {
-    expect(wallet_connect_enabled('prod')).toBe(true)
-    expect(wallet_connect_enabled('Production')).toBe(true)
-    expect(wallet_connect_enabled('staging')).toBe(true)
+  test('a development build enables it', () => {
+    expect(wallet_connect_enabled(false)).toBe(true)
   })
 })
