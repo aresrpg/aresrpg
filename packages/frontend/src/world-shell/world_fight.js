@@ -21,7 +21,7 @@
 
 import { generate_for_anchor } from '@aresrpg/sim/board_gen'
 import { fight_store } from '@aresrpg/fight/store'
-import { new_pending_fight_id, is_pending_fight_id } from '@aresrpg/sdk/pending_fight_id'
+import { new_pending_fight_id } from '@aresrpg/sdk/pending_fight_id'
 
 import { use_auth } from '../auth'
 import { get_fights } from '../rpc/client'
@@ -35,8 +35,6 @@ import { fight_state_trace } from './fight_state_trace.js'
 import { poll_receipt_fight, receipt_entry_decision } from './world_fight_receipt.js'
 import { init_dungeon_fight } from './dungeon_fight_shim.js'
 import { ensure_resumable_fight } from './fight-liquidation.js'
-
-export { new_pending_fight_id, is_pending_fight_id }
 
 const { getState } = use_dungeon
 /** True while a fight/dungeon session already owns the shared store (never stomp a live board). */
@@ -158,7 +156,8 @@ function mount_world_fight({
   // The PREDICTED board through the core's ONE snapshot door at version 0 — the same door every chain read
   // uses, so the renderer never learns this board came from a fold instead of a node. The first real read
   // arrives at the Fight object's version (≥ 1) and adopts over it by the reducer's ordinary versioned merge.
-  if (predicted) fight_store.getState().input({ type: 'snapshot', fight: predicted, fight_id: predicted.id, version: 0 })
+  if (predicted)
+    fight_store.getState().input({ type: 'snapshot', fight: predicted, fight_id: predicted.id, version: 0 })
   fight_state_trace('fight_create_published', { fight_id, character_id, resumed, fight_syncing: !resumed })
   return true
 }
