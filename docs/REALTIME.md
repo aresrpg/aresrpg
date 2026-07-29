@@ -39,6 +39,17 @@ browser ⇄ browser (WebRTC via trystero) — signaling: wss://relay.aresrpg.wor
   removing p2p. A client→server courier existed for one day (07-28) and was retired as a
   violation of the no-client-writes law.
 
+
+## The fight-turn overlay (the one sanctioned p2p touch near fights)
+
+Observers watching another player's ACTIVE turn get truth from the fight journal — correct, but
+paced at commit granularity. The liveness between commits (walking previews, aim telegraphs,
+the feel of watching someone play) streams peer-to-peer as a PRESENTATION OVERLAY with a hard
+fence: peer intents never fold into the fight core, never gate any input, and never reach a
+transaction — they paint on top of the folded truth and are discarded on commit. A dropped feed
+degrades to journal-paced rendering, never to wrongness. "Fights never ride p2p" stays exact:
+fight TRUTH never rides p2p; this overlay carries no truth.
+
 ## The laws
 
 1. **Only the indexer writes redis.** /v1 and SSE are read-only projections; rpc is stateless
