@@ -1193,11 +1193,66 @@ else
   fi
 fi
 
+# ── RENDEZVOUS-HOST GATE (the 2026-07-27 fight stall, graduated) ────────────────────────────────
+# Ephemeral social rides p2p, and p2p needs a place for two browsers to meet. For three weeks that
+# place was five PUBLIC nostr relays; on 2026-07-27 they rate-limited us at once, fights stalled, and
+# the transport was ripped out for a day. The cure was a relay WE run (docs/REALTIME.md lane 2), and
+# the failure mode is a one-line edit away forever: any third-party relay, broker or STUN host pasted
+# back into shipped source. Prose cannot hold that; this can. Shipped SOURCE only — the p2p test
+# suite names these hosts deliberately, as the list it asserts we never dial.
+RENDEZVOUS_SOURCE_PATHSPEC=(
+  ':(glob)packages/*/src/**/*.[jt]s'
+  ':(glob)packages/*/src/**/*.[jt]sx'
+  ':(glob)packages/*/src/*.[jt]s'
+  ':(glob)packages/*/src/*.[jt]sx'
+)
+# Every host this repo has ever dialled for rendezvous or NAT discovery, plus the mqtt strategy's own
+# baked-in public defaults (the list @trystero-p2p/mqtt falls back to when relayConfig.urls is absent).
+BANNED_RENDEZVOUS_HOSTS='relay\.damus\.io|nos\.lol|relay\.nostr\.band|nostr\.mom|relay\.snort\.social|openrelay\.metered\.ca|stun\.l\.google\.com|stun[0-9]*\.l\.google\.com|stun\.cloudflare\.com|test\.mosquitto\.org|broker\.emqx\.io|broker-cn\.emqx\.io|broker\.hivemq\.com|public\.cloud\.shiftr\.io'
+
+rendezvous_host_gate() {
+  echo "== AresRPG rendezvous-host gate (p2p meets on OUR relay, never a stranger's) =="
+  if ! collect_files "${RENDEZVOUS_SOURCE_PATHSPEC[@]}"; then
+    red "  ✗ FAIL: no package sources collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local kept=()
+  local file
+  for file in "${COLLECTED_FILES[@]}"; do
+    case "$file" in *.test.js | *.test.jsx | *.test.ts | *.test.tsx) continue ;; esac
+    kept+=("$file")
+  done
+  if [ "${#kept[@]}" -eq 0 ]; then
+    red "  ✗ FAIL: every collected source was a test file — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  COLLECTED_FILES=("${kept[@]}")
+  local scanned="${#COLLECTED_FILES[@]}"
+  local hits
+  hits="$(grep_collected "$BANNED_RENDEZVOUS_HOSTS" -nE || true)"
+  if ! grep_collected "$BANNED_RENDEZVOUS_HOSTS" -lE >/dev/null 2>&1; then
+    red "  ✗ FAIL: the rendezvous scan could not run — treat as a violation, never as clean."
+    return 1
+  fi
+  if [ -n "$hits" ]; then
+    red "  ✗ FAIL: a third-party rendezvous host is named in shipped source:"
+    echo "$hits" >&2
+    red "RENDEZVOUS GATE FAILED. p2p signaling and NAT discovery point at our own hosts (packages/frontend/src/env.ts RELAY_URL / STUN_URL) — public relays are what stalled the fights on 2026-07-27."
+    return 1
+  fi
+  grn "  ✓ no third-party rendezvous host in shipped source ($scanned sources scanned)"
+}
+
 # ── Move framework-rev gate (#1284) ─────────────────────────────────────────────────────────────
 # The rule packages/move/Move.toml carried as PROSE since the FeatureNotYetSupported incident: ONE
 # sui-framework + ONE move-stdlib rev per environment, and no floating git revs. It was broken anyway,
 # for a year, because nothing read the lock — the graduation trigger. Pure repo bytes: no chain, no
 # CLI, no network, so it costs nothing and cannot flake.
+echo
+if ! rendezvous_host_gate; then
+  FAIL=1
+fi
+
 echo
 if ! move_display_gate; then
   red "MOVE DISPLAY GATE FAILED."

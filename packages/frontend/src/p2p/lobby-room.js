@@ -110,8 +110,7 @@ export function join_lobby(world_id, character_id = null, initial_cell) {
   // A resident A→B swap (or a world change) is a NEW network identity: leave first so peers receive A's
   // departure before the replacement announces. Mutating the atom in place would leave A as a ghost until the
   // freshness timeout expires it.
-  if (room && (room_world !== world_id || (active_character_id && character_id !== active_character_id)))
-    leave_lobby()
+  if (room && (room_world !== world_id || (active_character_id && character_id !== active_character_id))) leave_lobby()
   if (room) {
     // The spectate→session UPGRADE: a silent listener's room (joined with a null id on the logged-out backdrop)
     // RE-IDENTIFIES on login instead of tearing down — same room, no reconnect churn.

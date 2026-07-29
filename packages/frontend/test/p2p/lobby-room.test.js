@@ -140,7 +140,7 @@ describe('the room IS the world — joining is the announcement', () => {
   })
 
   it('dials ONE relay, ours, passed explicitly so the strategy never falls back to its public defaults', () => {
-    const { config } = trystero_room_configs[0]
+    const [{ config }] = trystero_room_configs
     // `relayConfig.urls` present ⇒ @trystero-p2p/core's getRelays returns it verbatim and the baked-in public
     // broker list is never consulted. One entry, no fallback: redundancy is pods behind the host, not a
     // fanout of strangers (and the field would be inert here anyway).
@@ -205,7 +205,10 @@ describe('one door — received actions fold through presence_input, never into 
     trystero_sent.length = 0
     live_room().connectPeer('peer-socket-2')
     expect(sent('pos').at(-1)).toMatchObject({ payload: { id: ME }, options: { target: 'peer-socket-2' } })
-    expect(sent('state').at(-1)).toMatchObject({ payload: { id: ME, address: '0xme' }, options: { target: 'peer-socket-2' } })
+    expect(sent('state').at(-1)).toMatchObject({
+      payload: { id: ME, address: '0xme' },
+      options: { target: 'peer-socket-2' },
+    })
   })
 })
 
@@ -304,7 +307,7 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(trystero_relay_calls.pause).toBe(1) // and we stop hammering a broker that is not there
   })
 
-  it('recovers on the browser\'s own online signal — a rejoin re-derives the room, no refresh', async () => {
+  it("recovers on the browser's own online signal — a rejoin re-derives the room, no refresh", async () => {
     trystero_relay_socket.readyState = 3
     await spend_the_retry_budget()
     expect(state().link_status).toBe('failed')

@@ -59,9 +59,11 @@ projected slice, compare by value, and emit only on real change (law L-P6 in
 
 - **Canonical**: receipts + journal pages → the accept door → the fold. Correctness lives
   here exclusively.
-- **Courtesy (courier)**: every player streams their committed actions to the fight room in
-  real time, over a hidden `CHAT_FIGHT` courier row (never visible chat history). A receiving client validates each peer action through its OWN local sim before
-  painting; an illegal action is never displayed and is flagged. Painted peer beats claim
+- **Courtesy (peer-to-peer)**: every player streams their drafted actions to their peers in
+  real time, over the lobby room's `fstream` action (`packages/frontend/src/p2p/lobby-room.js`) —
+  the one sanctioned p2p touch near a fight, and presentation-only by construction
+  (`docs/REALTIME.md`). A receiving client validates each peer action through its OWN local sim
+  before painting; an illegal action is never displayed and is flagged. Painted peer beats claim
   their identity so the canonical replay skips them. Loss of the courtesy channel costs
   latency only — never correctness.
 

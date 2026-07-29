@@ -12,8 +12,9 @@
 // src tree). The double below runs the REAL modules through a REAL dispatch→reduce→STATE_UPDATED fold — the
 // same idiom presence.spectate.test.js uses — so what is proven here is this bridge, and nothing else's mess.
 
-import { afterEach, beforeEach, expect, test } from 'bun:test'
 import { EventEmitter } from 'events'
+
+import { afterEach, beforeEach, expect, test } from 'bun:test'
 
 // Keep chain identity reads offline: the presence edge REQUESTS an identity for every fresh peer, and this
 // repro is about the transport, not the chain. Armed per-test because the helper is process-wide.
