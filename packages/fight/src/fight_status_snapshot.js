@@ -63,7 +63,7 @@ const num = (value) => (value == null || value === '' ? null : Number(value))
  * unreadable owner is DROPPED, never guessed — a status nobody can attribute is not a status.
  * @param {unknown} raw @returns {number | null} the fid, or null when the wire did not state one
  */
-export const fighter_fid = (raw) => {
+export const read_fighter_fid = (raw) => {
   // ACCEPT-LIST, not a deny-list: `Number()` maps `[]`, `false` and `''` to 0 just as happily as it maps `'0'`,
   // so only the two shapes the wire actually uses are readable at all.
   if (typeof raw !== 'number' && typeof raw !== 'string') return null
@@ -92,7 +92,7 @@ export function read_fighter_statuses(json) {
   for (const raw of rows) {
     const row = fields_of(raw)
     const effect = fields_of(row.effect)
-    const fighter = fighter_fid(row.fighter)
+    const fighter = read_fighter_fid(row.fighter)
     const kind = Number(row.kind ?? effect.kind)
     const remaining_turns = Number(row.remaining_turns ?? effect.turns ?? 0)
     if (fighter != null && Number.isFinite(kind) && remaining_turns > 0)
@@ -126,7 +126,7 @@ export function status_snapshot_entities(rows, participant_ids, mob_count) {
   for (const row of rows ?? []) {
     // The SAME owner reader the wire decode uses — this door is also reached with sim-projected rows, so an
     // owner-less row must die here too rather than land on seat 0 (#1444).
-    const fighter = fighter_fid(row?.fighter)
+    const fighter = read_fighter_fid(row?.fighter)
     if (fighter == null) continue
     const mob_idx = fighter - MOB_FIGHTER_ID_BASE
     const entity_id =

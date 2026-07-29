@@ -13,7 +13,7 @@
 // HUD is precisely that coercion's output.
 //
 // The fix is the class, not an instance: absence is DROPPED, never guessed (a status nobody can attribute is not
-// a status). RED-FIRST — every "owner-less" case below landed on seat 0 before `fighter_fid` existed.
+// a status). RED-FIRST — every "owner-less" case below landed on seat 0 before `read_fighter_fid` existed.
 //
 // EVIDENCE NOTE, stated honestly: the fight journal capture the row asks for does not exist, so the TRIGGER that
 // produced an owner-less row on that particular fight is not proven here. What is proven is that this seam could
@@ -23,7 +23,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   MOB_FIGHTER_ID_BASE,
-  fighter_fid,
+  read_fighter_fid,
   read_fighter_statuses,
   status_snapshot_entities,
 } from '../src/fight_status_snapshot.js'
@@ -73,10 +73,10 @@ describe('#1444 — a status row with no readable owner is dropped, never pinned
   })
 
   test('the owner reader is the ONE home for the fid, and it refuses every unreadable shape', () => {
-    expect(fighter_fid(0)).toBe(0)
-    expect(fighter_fid('1000')).toBe(MOB_FIGHTER_ID_BASE)
+    expect(read_fighter_fid(0)).toBe(0)
+    expect(read_fighter_fid('1000')).toBe(MOB_FIGHTER_ID_BASE)
     for (const bad of [null, undefined, '', false, true, {}, [], 'mob-0', -1, 1.5, NaN])
-      expect(fighter_fid(bad), `${JSON.stringify(bad)} is not a fighter id`).toBeNull()
+      expect(read_fighter_fid(bad), `${JSON.stringify(bad)} is not a fighter id`).toBeNull()
   })
 
   test('an out-of-range owner is still dropped — a fid nobody seats attributes to nobody', () => {
