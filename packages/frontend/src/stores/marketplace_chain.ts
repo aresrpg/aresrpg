@@ -13,7 +13,7 @@ import { item_stats_from_v1 } from '../chain/read_findables'
 import { get_kiosk_profits } from '../chain/read_kiosk_profits'
 import { get_sdk } from '../chain/sdk'
 import { format_mist_to_sui } from '../utils/sui_mist'
-import { marketplace_purchase_balance_state } from '../utils/marketplace_purchase'
+import { marketplace_purchase_args } from '../utils/marketplace_purchase'
 import { get_encyclopedia, get_listings } from '../rpc/client'
 import {
   list_item,
@@ -446,14 +446,15 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
     // OPTIMISTIC buy — the native kiosk listing vanishes instantly; lot_rule resolves inside the same SDK path. A
     // failed tx drops the pending-hide ledger row, re-projecting straight from raw — never a captured pre-tx value.
     submit_buy: (listing) => {
+      if (get().busy) return
       const balance_mist = use_auth.getState().sui_balance_mist
-      if (get().busy || marketplace_purchase_balance_state(balance_mist, BigInt(listing.price_mist)) !== 'ready') return
-      set((s) => ({ busy: true, ...reduce(s, { type: 'receipt', kind: 'buy', listing_id: listing.id }).state }))
-      const args = {
+      const args = marketplace_purchase_args(balance_mist, {
         item_id: listing.id,
         seller_kiosk_id: listing.kiosk_id,
         price_mist: BigInt(listing.price_mist),
-      }
+      })
+      if (!args) return
+      set((s) => ({ busy: true, ...reduce(s, { type: 'receipt', kind: 'buy', listing_id: listing.id }).state }))
       use_toast
         .getState()
         .promise(buy_item(args), {
@@ -552,22 +553,21 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
     // Nothing local to paint (the characters category reads the RPC listings view, not this
     // store's `listings`) — the row drops on the view's next poll; busy + the one self-updating toast carry the lifecycle.
     submit_buy_character: (row) => {
+      if (get().busy) return
       const balance_mist = use_auth.getState().sui_balance_mist
-      if (get().busy || marketplace_purchase_balance_state(balance_mist, BigInt(row.price_mist)) !== 'ready') return
+      const args = marketplace_purchase_args(balance_mist, {
+        character_id: row.item_id,
+        seller_kiosk_id: row.kiosk_id,
+        price_mist: BigInt(row.price_mist),
+      })
+      if (!args) return
       set({ busy: true })
       use_toast
         .getState()
-        .promise(
-          buy_character({
-            character_id: row.item_id,
-            seller_kiosk_id: row.kiosk_id,
-            price_mist: BigInt(row.price_mist),
-          }),
-          {
-            pending: i18n.t('marketplace.chain.pending_buy'),
-            success: i18n.t('marketplace.characters.toast_bought'),
-          }
-        )
+        .promise(buy_character(args), {
+          pending: i18n.t('marketplace.chain.pending_buy'),
+          success: i18n.t('marketplace.characters.toast_bought'),
+        })
         .catch(() => {})
         .finally(() => set({ busy: false }))
     },

@@ -16,6 +16,7 @@ import type { MarketState } from './marketplace_chain'
 // the same idiom embed_voxel_fight_camera.test.js uses for its own window-touching module under bun test).
 const restore_browser_globals = install_browser_globals()
 const { use_auth } = await import('../auth')
+const { use_toast } = await import('../toast')
 const { reduce, empty_market_state, use_marketplace_chain } = await import('./marketplace_chain')
 afterAll(restore_browser_globals)
 
@@ -160,8 +161,16 @@ describe('reduce — non-pending rows and empty state', () => {
 describe('marketplace purchase balance precheck', () => {
   test('an insufficient cached balance returns before item or character purchase work starts', () => {
     const previous_auth = use_auth.getState()
+    const previous_promise = use_toast.getState().promise
+    let submit_count = 0
     const ask = listing({ id: 'priced', kiosk_id: 'kiosk', price_mist: '1000000000' })
     use_auth.setState({ address: '0xbuyer', sui_balance_mist: 0n })
+    use_toast.setState({
+      promise: () => {
+        submit_count += 1
+        return Promise.resolve()
+      },
+    })
     use_marketplace_chain.setState({
       ...empty_market_state(),
       raw: [ask],
@@ -178,7 +187,9 @@ describe('marketplace purchase balance precheck', () => {
       .getState()
       .submit_buy_character({ item_id: 'character', kiosk_id: 'kiosk', price_mist: '1000000000' })
     expect(use_marketplace_chain.getState().busy).toBe(false)
+    expect(submit_count).toBe(0)
 
+    use_toast.setState({ promise: previous_promise })
     use_auth.setState({
       address: previous_auth.address,
       sui_balance_mist: previous_auth.sui_balance_mist,

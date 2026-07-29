@@ -36,3 +36,12 @@ export function marketplace_purchase_balance_state(
   if (balance_mist == null || required_mist == null) return 'unknown'
   return balance_mist < required_mist ? 'insufficient_balance' : 'ready'
 }
+
+/** UI-only gate: a ready purchase returns the caller's exact args object; every other state returns no work. */
+export function marketplace_purchase_args<T extends Readonly<{ price_mist: bigint }>>(
+  balance_mist: bigint | null,
+  args: T,
+  royalty_min_mist: bigint | null = MARKETPLACE_ROYALTY_MIN_MIST
+): T | null {
+  return marketplace_purchase_balance_state(balance_mist, args.price_mist, royalty_min_mist) === 'ready' ? args : null
+}

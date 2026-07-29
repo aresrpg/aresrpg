@@ -10,6 +10,7 @@ import ja from '../../i18n/locales/ja.json'
 import uk from '../../i18n/locales/uk.json'
 import {
   marketplace_buyer_total_mist,
+  marketplace_purchase_args,
   marketplace_purchase_balance_state,
   marketplace_purchase_required_mist,
 } from '../../utils/marketplace_purchase'
@@ -279,6 +280,16 @@ describe('native kiosk lot view model', () => {
     expect(marketplace_purchase_balance_state(null, 4_000_000_000n, 10_000_000n)).toBe('unknown')
     expect(marketplace_purchase_balance_state(required! - 1n, 4_000_000_000n, 10_000_000n)).toBe('insufficient_balance')
     expect(marketplace_purchase_balance_state(required!, 4_000_000_000n, 10_000_000n)).toBe('ready')
+  })
+
+  test('the UI gate rejects zero balance and preserves sufficient purchase args byte-for-byte', () => {
+    const args = {
+      item_id: '0xitem',
+      seller_kiosk_id: '0xkiosk',
+      price_mist: 4_000_000_000n,
+    }
+    expect(marketplace_purchase_args(0n, args, 10_000_000n)).toBeNull()
+    expect(marketplace_purchase_args(4_600_000_000n, args, 10_000_000n)).toBe(args)
   })
 
   test('the insufficient-balance button copy exists in all six locales', () => {
