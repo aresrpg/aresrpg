@@ -31,6 +31,13 @@ import { join_fight_ptb, create_member_fight_ptb } from '../packages/sdk/src/fig
 import { world_inner_field_id, WORLD_VERSION } from '../packages/sdk/src/sui/read/world_inner.js'
 import { Driver } from '../test/localnet/bots/framework/driver.js'
 import { build_context, make_kiosk_client } from '../test/localnet/bots/framework/context.js'
+import {
+  ENV_FAIL,
+  PRODUCT_FAIL,
+  exit_code_for,
+  run_boot_gate,
+  run_leg_gate,
+} from '../test/localnet/bots/framework/gate.js'
 import { Transaction } from '../test/localnet/bots/framework/deps.js'
 import { make_client, submit, get_fields, get_object, SubmitStats } from '../test/localnet/bots/framework/sui.js'
 import {
@@ -76,6 +83,8 @@ const SEARCH_TRAVEL_BLOCKS_PER_SECOND = 900
 const PASS_GRACE_MS = 250
 const TURN_MS_MIN = 5_000 // config.move TURN_MS_MIN — the shortest turn the chain will clamp to
 const DEFAULT_TURN_MS = 45_000 // config.move DEFAULT_TURN_MS — restored after the timeout leg
+const BOOT_WALL_MS = 12 * 60_000
+const FIGHT_LEG_WALL_MS = 5 * 60_000
 const CRAFT_LEG_WALL_MS = 180_000
 const CRAFT_MAX_ATTEMPTS = 8 // starter roll is 50% at L1; eight fully-funded attempts bound the RNG tail
 
@@ -98,7 +107,7 @@ async function wait_until(label, predicate, { timeout_ms = 30_000, interval_ms =
 }
 
 /** Bound a whole mutation leg too: individual polls cannot protect a transaction or network call that stalls. */
-async function with_timeout(label, effect, timeout_ms) {
+export async function with_timeout(label, effect, timeout_ms) {
   let timer = null
   try {
     return await Promise.race([
@@ -815,7 +824,7 @@ async function set_turn_dial(manifest, value_ms) {
 // both the #1494 driven starter craft and the cheap cross-stack case; the bounded pool absorbs the reference 50%
 // level-1 success roll without ever retrying an executed failure as though it had not happened.
 async function leg_craft(input) {
-  return with_timeout('craft leg completes', () => drive_craft(input), CRAFT_LEG_WALL_MS)
+  return drive_craft(input)
 }
 
 async function drive_craft({ manifest }) {
@@ -1061,11 +1070,11 @@ async function boot() {
 
 // ── runner ──────────────────────────────────────────────────────────────────────────────────────────────────
 const LEGS = [
-  { name: 'solo', run: leg_solo },
-  { name: 'coop', run: leg_coop },
-  { name: 'spectate', run: leg_spectate },
-  { name: 'timeout', run: leg_timeout },
-  { name: 'craft', run: leg_craft },
+  { name: 'solo', run: leg_solo, timeout_ms: FIGHT_LEG_WALL_MS },
+  { name: 'coop', run: leg_coop, timeout_ms: FIGHT_LEG_WALL_MS },
+  { name: 'spectate', run: leg_spectate, timeout_ms: FIGHT_LEG_WALL_MS },
+  { name: 'timeout', run: leg_timeout, timeout_ms: FIGHT_LEG_WALL_MS },
+  { name: 'craft', run: leg_craft, timeout_ms: CRAFT_LEG_WALL_MS },
 ]
 
 async function main() {
@@ -1073,7 +1082,13 @@ async function main() {
   const selected = requested.length ? LEGS.filter((l) => requested.includes(l.name)) : LEGS
 
   // `--boot` stands the localnet up first (what CI does); without it the driver runs against a stack already up.
-  if (process.argv.includes('--boot')) await boot()
+  if (process.argv.includes('--boot'))
+    await run_boot_gate({
+      boot,
+      bound: with_timeout,
+      timeout_ms: BOOT_WALL_MS,
+      log,
+    })
   if (!fs.existsSync(P.DEPLOY))
     throw new Error(`no manifest at ${P.DEPLOY} — run with --boot, or boot via node test/gold/up_gold.mjs`)
   const manifest = JSON.parse(fs.readFileSync(P.DEPLOY, 'utf8'))
@@ -1083,20 +1098,23 @@ async function main() {
   const carry = {}
   const started = Date.now()
   for (const leg of selected) {
-    const t0 = Date.now()
-    try {
-      const detail = await leg.run({ manifest, ...carry })
-      carry[leg.name] = detail
-      rows.push({ leg: leg.name, ok: true, ms: Date.now() - t0, detail })
-      log(`✓ ${leg.name} (${Date.now() - t0}ms) ${JSON.stringify(detail)}`)
-    } catch (error) {
-      rows.push({ leg: leg.name, ok: false, ms: Date.now() - t0, error: error.message })
-      log(`✗ ${leg.name} (${Date.now() - t0}ms) ${error.message}`)
-    }
+    const row = await run_leg_gate({
+      name: leg.name,
+      run: leg.run,
+      input: { manifest, ...carry },
+      bound: with_timeout,
+      timeout_ms: leg.timeout_ms,
+    })
+    rows.push(row)
+    if (row.ok) {
+      carry[leg.name] = row.detail
+      log(`✓ ${leg.name} (${row.ms}ms) ${JSON.stringify(row.detail)}`)
+    } else log(`✗ ${leg.name} · ${row.failure_kind} (${row.ms}ms) ${row.error}`)
   }
 
   const verdict = {
     ok: rows.every((r) => r.ok),
+    failure_kind: rows.every((r) => r.ok) ? null : PRODUCT_FAIL,
     network: 'localnet',
     chain_id: manifest.chain_id,
     wall_ms: Date.now() - started,
@@ -1106,17 +1124,24 @@ async function main() {
   const out = path.join(P.OUT, 'fight_bots_verdict.json')
   fs.writeFileSync(out, JSON.stringify(verdict, null, 2))
 
-  console.log(`\n${'LEG'.padEnd(10)}${'VERDICT'.padEnd(10)}${'WALL'.padEnd(10)}DETAIL`)
+  console.log(`\n${'LEG'.padEnd(10)}${'VERDICT'.padEnd(16)}${'WALL'.padEnd(10)}DETAIL`)
   for (const row of rows)
     console.log(
-      `${row.leg.padEnd(10)}${(row.ok ? 'PASS' : 'FAIL').padEnd(10)}${`${(row.ms / 1000).toFixed(1)}s`.padEnd(10)}` +
+      `${row.leg.padEnd(10)}${(row.ok ? 'PASS' : row.failure_kind).padEnd(16)}` +
+        `${`${(row.ms / 1000).toFixed(1)}s`.padEnd(10)}` +
         `${row.ok ? JSON.stringify(row.detail) : row.error}`
     )
   console.log(`\ntotal ${(verdict.wall_ms / 1000).toFixed(1)}s · verdict → ${out}`)
-  if (!verdict.ok) process.exit(1)
+  return verdict.ok ? 0 : exit_code_for(PRODUCT_FAIL)
 }
 
-main().catch((error) => {
-  console.error(`[fight-bots] FATAL: ${error.stack ?? error.message}`)
-  process.exit(1)
-})
+if (import.meta.main)
+  main()
+    .then((exit_code) => {
+      process.exitCode = exit_code
+    })
+    .catch((error) => {
+      const failure_kind = error.failure_kind ?? ENV_FAIL
+      console.error(`[fight-bots] ${failure_kind}: ${error.stack ?? error.message}`)
+      process.exitCode = exit_code_for(failure_kind)
+    })
