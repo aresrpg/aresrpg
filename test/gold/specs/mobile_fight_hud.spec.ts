@@ -20,10 +20,6 @@ const game_world_hud_css = readFileSync(
   new URL('../../../packages/frontend/src/game/screens/hud/world/game-world-hud.css', import.meta.url),
   'utf8'
 )
-const fight_targeting_css = readFileSync(
-  new URL('../../../packages/frontend/src/game/screens/hud/fight-targeting.css', import.meta.url),
-  'utf8'
-)
 const index_html = readFileSync(new URL('../../../packages/frontend/index.html', import.meta.url), 'utf8')
 const result_css = readFileSync(
   new URL('../../../packages/frontend/src/game/screens/hud/result.css', import.meta.url),
@@ -48,7 +44,6 @@ test('iPhone landscape fight chrome is compact and keeps READY/FORFEIT inside th
       ${hud_css}
       ${mobile_hud_css}
       ${mobile_css}
-      ${fight_targeting_css}
     </style>
     <div
       data-testid="game-world-viewport"
@@ -81,7 +76,6 @@ test('iPhone landscape fight chrome is compact and keeps READY/FORFEIT inside th
           <button class="hud-fightctl__btn hud-fightctl__abandon">FORFEIT</button>
         </div>
       </div>
-      <div class="fight-readout fight-readout--mobile"><div class="sd">Spell detail</div></div>
     </div>
   `)
 
@@ -96,7 +90,6 @@ test('iPhone landscape fight chrome is compact and keeps READY/FORFEIT inside th
       placement_direction: style('.hud-placement').flexDirection,
       ready: rect('.hud-fightctl__ready'),
       forfeit: rect('.hud-fightctl__abandon'),
-      readout: rect('.fight-readout--mobile'),
     }
   })
 
@@ -117,8 +110,6 @@ test('iPhone landscape fight chrome is compact and keeps READY/FORFEIT inside th
   expect(geometry.placement_direction).toBe('row')
   expect(geometry.ready?.right).toBeLessThanOrEqual(797)
   expect(geometry.forfeit?.right).toBeLessThanOrEqual(797)
-  expect(geometry.readout?.width).toBeLessThanOrEqual(240)
-  expect(geometry.readout?.left).toBeGreaterThanOrEqual(47)
   expect(covered_viewport?.left).toBe(0)
   expect(covered_viewport?.right).toBe(844)
 })

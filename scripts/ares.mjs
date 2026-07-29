@@ -79,8 +79,15 @@ const anchor_stack_health_script = [
 ].join('\n')
 function run_gold_suite(suite, run = run_test_command) {
   const frontend_root = path.join(repo_root, 'packages/frontend')
-  const playwright_args = ['playwright', 'test', '--config', `../../test/gold/playwright.${suite}.config.ts`]
-  if (suite !== 'anchor') return run('bunx', playwright_args, frontend_root)
+  // Keep Playwright under Bun: multiplayer imports the tracked classes JSON directly, which Node 25 refuses
+  // without an import attribute before Playwright can collect the COOP specs.
+  const playwright_args = [
+    path.join(frontend_root, 'node_modules', '@playwright', 'test', 'cli.js'),
+    'test',
+    '--config',
+    `../../test/gold/playwright.${suite}.config.ts`,
+  ]
+  if (suite !== 'anchor') return run('bun', playwright_args, frontend_root)
   if (run(process.execPath, ['--input-type=module', '-e', anchor_stack_health_script], repo_root) !== 0) {
     console.error('REFUSING ares test anchor: the gold stack is DOWN (lib_gold.mjs waitHealthy/waitApi probe failed).')
     console.error('  boot it first: node test/gold/up_gold.mjs   # ~5-10 min: regenesis + publish + seed + backfill')
@@ -91,7 +98,7 @@ function run_gold_suite(suite, run = run_test_command) {
   // list output and, after a green exit, REQUIRES the driven MULTI-TURN row literally `passed` (skipped or
   // absent = RED). The driven-fight rows live only in specs_anchor/, so gold/multiplayer have none to require.
   fs.rmSync(anchor_report_path, { force: true }) // a stale report must never green a fresh run
-  const playwright_exit = run('bunx', [...playwright_args, '--reporter=list,json'], frontend_root, {
+  const playwright_exit = run('bun', [...playwright_args, '--reporter=list,json'], frontend_root, {
     PLAYWRIGHT_JSON_OUTPUT_FILE: anchor_report_path,
   })
   if (playwright_exit !== 0) return playwright_exit
