@@ -17,10 +17,32 @@ import {
   assert_trunk_ancestry,
   assert_publishable_tree,
   clean_tree_verdict,
-  path_inside_repo_verdict,
+  path_inside_tree_verdict,
+  resolve_verified_root,
+  VERIFIED_ROOT_ENV,
 } from './env_guard.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
+
+// A real (tiny) git repository — the tree-integrity rules are ABOUT git, so the checks that exist to
+// catch an empty scan are proven against the real command, never a stubbed reader.
+const fixture_repo = ({ move_files = ['aresrpg/Move.toml'] } = {}) => {
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'envguard-repo-')))
+  const run = (...args) =>
+    execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: 'pipe' })
+  run('init', '--quiet', '--initial-branch=main')
+  run('config', 'user.email', 'gate@aresrpg.test')
+  run('config', 'user.name', 'gate')
+  for (const file of move_files) {
+    const target = path.join(dir, 'packages/move', file)
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, '# fixture\n')
+  }
+  fs.writeFileSync(path.join(dir, 'README.md'), '# fixture\n')
+  run('add', '-A')
+  run('commit', '--quiet', '-m', 'fixture')
+  return dir
+}
 
 const fixture_config = (active_env) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envguard-'))
@@ -156,14 +178,18 @@ describe('tree integrity (#1305) — the wrong-BYTES door', () => {
   const dirty = () =>
     ' M packages/move/aresrpg/sources/world.move\n?? packages/move/aresrpg/sources/injected.move'
 
-  test('a clean Move tree with in-repo paths passes', () => {
+  const tracked = () => 'packages/move/aresrpg/Move.toml'
+  const move_tree = path.resolve(__dir, '..')
+
+  test('a clean Move tree with in-tree paths passes', () => {
     expect(() =>
       assert_publishable_tree({
         ancestry: () => {},
         read_status: clean,
+        read_tracked: tracked,
         root: '/repo',
-        resolve_path: () => '/repo/packages/move/aresrpg',
-        paths: ['packages/move/aresrpg'],
+        resolve_path: () => path.join(move_tree, 'aresrpg'),
+        paths: ['aresrpg'],
       })
     ).not.toThrow()
   })
@@ -173,16 +199,19 @@ describe('tree integrity (#1305) — the wrong-BYTES door', () => {
       assert_publishable_tree({
         ancestry: () => {},
         read_status: dirty,
+        read_tracked: tracked,
+        root: '/repo',
         paths: [],
       })
     ).toThrow(/PUBLISH TREE REFUSED/)
   })
 
-  test('a package path outside the verified repository is REFUSED', () => {
+  test('a package path outside the compiled tree is REFUSED', () => {
     expect(() =>
       assert_publishable_tree({
         ancestry: () => {},
         read_status: clean,
+        read_tracked: tracked,
         root: '/repo',
         resolve_path: () => '/somewhere/else/aresrpg',
         paths: ['/somewhere/else/aresrpg'],
@@ -209,16 +238,110 @@ describe('tree integrity (#1305) — the wrong-BYTES door', () => {
     )
   })
 
-  test('path_inside_repo_verdict accepts packages/move and its children only', () => {
-    const root = '/repo'
-    expect(path_inside_repo_verdict('/repo/packages/move', root).ok).toBe(true)
+  test('path_inside_tree_verdict accepts the compiled tree and its children only', () => {
+    const tree = '/repo/packages/move'
+    expect(path_inside_tree_verdict('/repo/packages/move', tree).ok).toBe(true)
+    expect(path_inside_tree_verdict('/repo/packages/move/aresrpg', tree).ok).toBe(true)
+    expect(path_inside_tree_verdict('/repo/packages/moveX', tree).ok).toBe(false)
+    expect(path_inside_tree_verdict('/repo/packages', tree).ok).toBe(false)
+    expect(path_inside_tree_verdict('/elsewhere', tree).ok).toBe(false)
+  })
+})
+
+// ── #1567: absence read as cleanliness ──────────────────────────────────────────────────────────
+describe('missing scope (#1567) — an empty scan is NOT a clean tree', () => {
+  test('a repository with no packages/move FAILS, naming the scope', () => {
+    const repo = fixture_repo({ move_files: [] }) // a real repo, real `git status` — just no Move scope
+    try {
+      expect(() =>
+        assert_publishable_tree({ ancestry: () => {}, root: repo, paths: [] })
+      ).toThrow(
+        new RegExp(
+          `PUBLISH SCOPE REFUSED \\(#1567\\).*${path.join(repo, 'packages/move')}.*no git-tracked file`,
+          's'
+        )
+      )
+    } finally {
+      fs.rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('the same repository WITH a tracked Move scope passes the control', () => {
+    const repo = fixture_repo()
+    try {
+      expect(() =>
+        assert_publishable_tree({ ancestry: () => {}, root: repo, paths: [] })
+      ).not.toThrow()
+    } finally {
+      fs.rmSync(repo, { recursive: true, force: true })
+    }
+  })
+})
+
+// ── #1566: the guard's own repository, when the guard itself has been copied ────────────────────
+describe('verified root (#1566) — a root that is only INSIDE a repository is refused', () => {
+  const toplevel_of = (map) => (dir) => map[dir] ?? ''
+
+  test('a git toplevel resolves to itself', () => {
     expect(
-      path_inside_repo_verdict('/repo/packages/move/aresrpg', root).ok
-    ).toBe(true)
-    expect(path_inside_repo_verdict('/repo/packages/moveX', root).ok).toBe(
-      false
-    )
-    expect(path_inside_repo_verdict('/repo/packages', root).ok).toBe(false)
-    expect(path_inside_repo_verdict('/elsewhere', root).ok).toBe(false)
+      resolve_verified_root({
+        supplied: __dir,
+        read_toplevel: toplevel_of({ [fs.realpathSync(__dir)]: fs.realpathSync(__dir) }),
+      })
+    ).toBe(fs.realpathSync(__dir))
+  })
+
+  test('a directory inside a repository (the .build copy shape) is REFUSED, never used', () => {
+    expect(() =>
+      resolve_verified_root({
+        supplied: __dir,
+        read_toplevel: toplevel_of({ [fs.realpathSync(__dir)]: '/repo' }),
+      })
+    ).toThrow(/PUBLISH ROOT REFUSED \(#1566\).*not a git repository root/s)
+  })
+
+  test('a path that does not exist is REFUSED', () => {
+    expect(() =>
+      resolve_verified_root({ supplied: path.join(os.tmpdir(), 'no-such-root-42') })
+    ).toThrow(/PUBLISH ROOT REFUSED \(#1566\)/)
+  })
+
+  // The gold localnet rig, end to end and offline: a COPY of this guard under <tmp>/.build/move/scripts
+  // publishes packages from <tmp>/.build/move — the layout that refused by construction (#1566).
+  test('a copied guard publishes its own tree when the caller names the verified root', async () => {
+    const repo = fixture_repo()
+    const build = path.join(repo, 'test/gold/.build/move') // the rig's real layout, to the letter
+    const scripts = path.join(build, 'scripts')
+    fs.mkdirSync(scripts, { recursive: true })
+    fs.mkdirSync(path.join(build, 'foundation'), { recursive: true })
+    fs.copyFileSync(path.join(__dir, 'env_guard.mjs'), path.join(scripts, 'env_guard.mjs'))
+    const copied = await import(path.join(scripts, 'env_guard.mjs'))
+    const previous = process.env[VERIFIED_ROOT_ENV]
+    try {
+      // Unnamed: the copy derives `<tmp>/.build` — inside a repository, but not its root.
+      delete process.env[VERIFIED_ROOT_ENV]
+      expect(() =>
+        copied.assert_publishable_tree({ ancestry: () => {}, paths: [] })
+      ).toThrow(/PUBLISH ROOT REFUSED \(#1566\)/)
+
+      // Named: every check runs, against a real repository — and the copy's own packages pass.
+      process.env[VERIFIED_ROOT_ENV] = repo
+      expect(() =>
+        copied.assert_publishable_tree({
+          ancestry: () => {},
+          paths: [path.join(build, 'foundation')],
+        })
+      ).not.toThrow()
+
+      // Told where to look, never what to skip: a dirty Move scope in that repository still refuses.
+      fs.writeFileSync(path.join(repo, 'packages/move/aresrpg/Move.toml'), '# edited\n')
+      expect(() =>
+        copied.assert_publishable_tree({ ancestry: () => {}, paths: [] })
+      ).toThrow(/PUBLISH TREE REFUSED/)
+    } finally {
+      if (previous === undefined) delete process.env[VERIFIED_ROOT_ENV]
+      else process.env[VERIFIED_ROOT_ENV] = previous
+      fs.rmSync(repo, { recursive: true, force: true })
+    }
   })
 })

@@ -114,12 +114,23 @@ export function trunk_ancestry_verdict({ head, edge, is_ancestor }) {
 }
 
 // ── Sanitized git ───────────────────────────────────────────────────────────────────────────────
-// The guard's own repository, derived from THIS FILE's location — never the ambient cwd, which a
-// caller chooses. Every git invocation below is pinned to it.
-const REPO_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..'
-)
+// Two facts, two homes — conflating them is what broke the gold localnet rig (#1566):
+//   · the COMPILED TREE — the packages/move directory THIS FILE belongs to; every path handed to
+//     the compiler must live inside it.
+//   · the VERIFIED ROOT — the git repository whose HEAD and clean packages/move vouch for the
+//     source. Read from the caller (`PUBLISH_GUARD_REPO_ROOT`), else derived from this file.
+// In the canonical checkout they are one directory (`<root>/packages/move`), which is why deriving
+// both from this file's path worked until something copied the scripts: the gold rig rsyncs
+// packages/move (scripts and all) to test/gold/.build/move and publishes the copy to a disposable
+// localnet, where `../../..` resolves to `test/gold` — not a repository root, so every git fact read
+// from it was vacuous and the tree check passed on an empty scan (#1567). The caller now SUPPLIES
+// the root and it is validated to BE a git toplevel before any check reads it. The guard is told
+// where to look; no check is skipped and no override exists — see #1298/#1305 above.
+const MOVE_SCOPE = 'packages/move'
+const GUARD_FILE = fileURLToPath(import.meta.url)
+const MOVE_TREE = fs.realpathSync(path.resolve(path.dirname(GUARD_FILE), '..'))
+const DERIVED_ROOT = path.resolve(MOVE_TREE, '../..')
+export const VERIFIED_ROOT_ENV = 'PUBLISH_GUARD_REPO_ROOT'
 
 // Environment a hostile or merely careless caller could use to point git at a DIFFERENT repository
 // (or a rewritten history) while the publish scripts compile the bytes in front of them. Stripped,
@@ -157,27 +168,60 @@ function git_env() {
 
 // Argument ARRAY, fixed cwd, replacement history disabled — no shell to quote through, no ambient
 // state to inherit.
-const git = (args) =>
-  execFileSync('git', ['--no-replace-objects', '-C', REPO_ROOT, ...args], {
+const git = (root, args) =>
+  execFileSync('git', ['--no-replace-objects', '-C', root, ...args], {
     encoding: 'utf8',
     env: git_env(),
   }).trim()
 
-// Effectful shell around the verdict; I/O injectable so the rule is testable with zero subprocess.
-export function assert_trunk_ancestry({
-  read_head = () => git(['rev-parse', 'HEAD']),
-  read_edge = () =>
-    git(['ls-remote', EDGE_REMOTE, 'refs/heads/edge']).split(/\s+/)[0],
-  is_ancestor = (head, edge) => {
-    git(['fetch', '--quiet', EDGE_REMOTE, 'edge'])
+// The root every git fact below is read from, VALIDATED: an existing directory that is itself a git
+// toplevel. A root that is merely *inside* a repository (the .build copy's `test/gold`) is refused
+// loudly here rather than silently producing pathspecs that match nothing — absence must never read
+// as cleanliness (#1567). I/O injectable so the rule is testable without a subprocess.
+export function resolve_verified_root({
+  supplied = process.env[VERIFIED_ROOT_ENV],
+  fallback = DERIVED_ROOT,
+  read_toplevel = (dir) => {
     try {
-      git(['merge-base', '--is-ancestor', head, edge])
-      return true
+      return fs.realpathSync(git(dir, ['rev-parse', '--show-toplevel']))
     } catch {
-      return false
+      return ''
     }
   },
 } = {}) {
+  const candidate = path.resolve(supplied?.trim() || fallback)
+  const real = fs.existsSync(candidate) ? fs.realpathSync(candidate) : ''
+  const toplevel = real ? read_toplevel(real) : ''
+  if (!real || toplevel !== real)
+    throw new Error(
+      `PUBLISH ROOT REFUSED (#1566): ${candidate} is not a git repository root ` +
+        `(${supplied ? `${VERIFIED_ROOT_ENV}=${supplied}` : 'derived from this guard file'}` +
+        `${toplevel ? `; its toplevel is ${toplevel}` : ''}). Set ${VERIFIED_ROOT_ENV} to the checkout ` +
+        `whose HEAD and clean ${MOVE_SCOPE} vouch for what is about to be published.`
+    )
+  return real
+}
+
+// Effectful shell around the verdict; I/O injectable so the rule is testable with zero subprocess.
+// `root` is the verified repository (resolved lazily: a caller that injects every reader never
+// touches git at all).
+export function assert_trunk_ancestry({ root, ...io } = {}) {
+  let resolved = root
+  const repo = () => (resolved ??= resolve_verified_root())
+  const {
+    read_head = () => git(repo(), ['rev-parse', 'HEAD']),
+    read_edge = () =>
+      git(repo(), ['ls-remote', EDGE_REMOTE, 'refs/heads/edge']).split(/\s+/)[0],
+    is_ancestor = (head, edge) => {
+      git(repo(), ['fetch', '--quiet', EDGE_REMOTE, 'edge'])
+      try {
+        git(repo(), ['merge-base', '--is-ancestor', head, edge])
+        return true
+      } catch {
+        return false
+      }
+    },
+  } = io
   const head = read_head()
   const edge = read_edge()
   const verdict = trunk_ancestry_verdict({
@@ -201,11 +245,15 @@ export function assert_trunk_ancestry({
 // belong to the verified repository at all. Both holes have the same shape as the one ancestry
 // closed (a precondition believed rather than checked), so they close the same way.
 //
-// Two assertions, and the chain doors below run them together:
-//   · every path about to be compiled resolves INSIDE the guard's own repository, under packages/move;
+// Three assertions, and the chain doors below run them together:
+//   · packages/move in the verified root contains TRACKED files — the positive control (#1567). An
+//     empty `git status` over a scope that is not there is indistinguishable from a clean one, and
+//     that is precisely how a wrong root printed "publish tree clean" over a directory git had just
+//     warned it could not open. Absence is not cleanliness; a missing scope FAILS, loudly, by name.
 //   · `git status --porcelain` over packages/move is EMPTY — no modified, no staged, no untracked
 //     files. What is published is then exactly what the verified commit contains.
-const MOVE_SCOPE = 'packages/move'
+//   · every path about to be compiled resolves INSIDE the compiled tree (the packages/move this
+//     guard file belongs to) — a directory handed to `ceremony_upgrade` from anywhere else is refused.
 
 // Pure. → { ok } | { ok: false, reason }
 export function clean_tree_verdict(status_lines) {
@@ -217,44 +265,72 @@ export function clean_tree_verdict(status_lines) {
   }
 }
 
-// Pure. → { ok } | { ok: false, reason }. `resolved` is the realpath; `root` the guard's repo root.
-export function path_inside_repo_verdict(resolved, root = REPO_ROOT) {
-  const move_root = path.join(root, MOVE_SCOPE)
-  if (resolved === move_root || resolved.startsWith(move_root + path.sep))
-    return { ok: true, reason: `inside ${MOVE_SCOPE}` }
+// Pure. → { ok } | { ok: false, reason }. `resolved` is the realpath; `tree` the compiled tree.
+export function path_inside_tree_verdict(resolved, tree = MOVE_TREE) {
+  if (resolved === tree || resolved.startsWith(tree + path.sep))
+    return { ok: true, reason: `inside ${tree}` }
   return {
     ok: false,
-    reason: `${resolved} is outside ${move_root} — the verified tree cannot vouch for it`,
+    reason: `${resolved} is outside ${tree} — the verified tree cannot vouch for it`,
   }
 }
 
 // Effectful. Every chain-writing door calls this ONE function: trunk ancestry (the commit), a clean
 // Move tree (the bytes), and every compiled path inside the verified repository. Injectable I/O so
 // the rules are testable without a subprocess. No override exists, deliberately — see above.
-export function assert_publishable_tree({
-  paths = [],
-  root = REPO_ROOT,
-  ancestry = assert_trunk_ancestry,
-  read_status = () =>
-    git(['status', '--porcelain', '--untracked-files=all', '--', MOVE_SCOPE]),
-  resolve_path = (p) => fs.realpathSync(path.resolve(p)),
-} = {}) {
+export function assert_publishable_tree({ paths = [], root, ...io } = {}) {
+  const verified = root ?? resolve_verified_root()
+  const {
+    ancestry = () => assert_trunk_ancestry({ root: verified }),
+    read_status = () =>
+      git(verified, [
+        'status',
+        '--porcelain',
+        '--untracked-files=all',
+        '--',
+        MOVE_SCOPE,
+      ]),
+    read_tracked = () => git(verified, ['ls-files', '--', MOVE_SCOPE]),
+    resolve_path = (p) => fs.realpathSync(path.resolve(p)),
+  } = io
+
+  console.log(
+    `[env_guard] verified repository ${verified} · compiled tree ${MOVE_TREE}`
+  )
   ancestry()
+
+  // POSITIVE CONTROL FIRST (#1567): prove the scope is THERE before reading its cleanliness.
+  const scope = path.join(verified, MOVE_SCOPE)
+  const tracked = read_tracked()
+    .split('\n')
+    .filter((l) => l.trim())
+  if (!tracked.length)
+    throw new Error(
+      `PUBLISH SCOPE REFUSED (#1567): ${scope} contains no git-tracked file in ${verified} — a clean-tree ` +
+        `check over a scope that is not there scans nothing and reads EMPTY, and empty is not clean. Point ` +
+        `${VERIFIED_ROOT_ENV} at the checkout that actually carries ${MOVE_SCOPE}.`
+    )
 
   const tree = clean_tree_verdict(read_status().split('\n'))
   if (!tree.ok)
     throw new Error(
       `PUBLISH TREE REFUSED (#1305): ${tree.reason}. Ancestry proves a commit; this proves the BYTES. Commit or remove them, then publish from a tree that matches trunk.`
     )
-  console.log(`[env_guard] publish tree clean — ${tree.reason}`)
+  console.log(
+    `[env_guard] publish tree clean — ${tree.reason} (${tracked.length} tracked file(s))`
+  )
 
   for (const candidate of paths) {
-    const verdict = path_inside_repo_verdict(resolve_path(candidate), root)
+    const verdict = path_inside_tree_verdict(resolve_path(candidate))
     if (!verdict.ok)
       throw new Error(`PUBLISH PATH REFUSED (#1305): ${verdict.reason}`)
   }
   if (paths.length)
     console.log(
-      `[env_guard] ${paths.length} publish path(s) inside the verified tree`
+      `[env_guard] ${paths.length} publish path(s) inside the compiled tree`
+    )
+  if (MOVE_TREE !== scope)
+    console.log(
+      `[env_guard] compiled tree is a DERIVED COPY of ${scope} — the verified repository vouches for its SOURCE`
     )
 }
