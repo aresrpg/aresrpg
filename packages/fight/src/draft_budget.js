@@ -87,10 +87,12 @@ export function casts_at_cell(cast_path, spell_key, cell) {
   return (cast_path ?? []).reduce((n, e) => (e.spell_key === spell_key && e.cell === cell ? n + 1 : n), 0)
 }
 
-/** An authored per-turn / per-target cap → a usable number: the spell_bands UNLIMITED sentinels (255 / 0) or
- *  null → Infinity, else the count itself. @param {number|null|undefined} authored @returns {number} */
+/** An authored per-turn / per-target cap → the number of casts the chain accepts. Only 255 is the chain's
+ *  unlimited sentinel. An authored 0 still admits the first unrecorded cast, then refuses every later attempt;
+ *  absent is a client-only shape and stays unbounded. @param {number|null|undefined} authored @returns {number} */
 export function cap_of(authored) {
-  return authored == null || authored === 255 || authored === 0 ? Infinity : authored
+  if (authored == null || authored === 255) return Infinity
+  return authored === 0 ? 1 : authored
 }
 
 /** THE ONE PER-TARGET VERDICT (#1045) — cast.move's TargetKey/TargetRecord rule: `cell` is SPENT for `spell_key`
