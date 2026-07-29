@@ -222,7 +222,12 @@ export const calculate_heal = (effect, caster_stats, roll) => {
 export const effect_triggers = (rng, effect) => {
   const chance =
     'chance' in effect && effect.chance !== undefined ? effect.chance : 100
+  // BOTH certainties short-circuit WITHOUT drawing — `cast::effect_proc`'s own two guards
+  // (`chance >= 100 → true`, `chance == 0 → false`) come before its `prng::rng_int`, so a certain OR impossible
+  // line leaves the thread byte-identical on chain. The sim used to draw for chance 0 and desynchronise every
+  // later roll of the same cast against the chain's stream.
   if (chance >= 100) return { rng, value: true }
+  if (chance <= 0) return { rng, value: false }
   const { state, value } = rng_int(rng, 100)
   return { rng: state, value: value < chance }
 }

@@ -1059,6 +1059,12 @@ fun apply_effect(
     return false
   };
   if (kind == spell_effect::k_teleport()) {
+    // A teleport resolves at ONE target (the caster), so it rolls its chance exactly once — the sim's target
+    // list for a TELEPORT line is `[caster_id]` and `apply_spell_effect` rolls per entry.
+    if (!effect_proc(
+      effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
+      random_effect_ordinals, random_rolls, random_bounds,
+    )) return false;
     // Announce the relocation on the SAME Displaced seam push/pull ride so the client renders it — without this
     // the caster's cell silently changed and the client never learned ("senshi teleport fully dead", 07-18).
     // kind=k_teleport distinguishes the blink; requested=blocked=0 — a teleport is instant, no collision walk.
@@ -1090,7 +1096,15 @@ fun apply_effect(
     if (alive && zone.contains(&pcell)) {
       let same_team = caster_side == PLAYER_SIDE && pteam == caster_team;
       let is_caster = caster_side == PLAYER_SIDE && i == caster_idx;
-      if (spell_target::effect_hits(tf, is_caster, same_team)) {
+      // THE PROC ROLL (#1628's sibling row): an authored `chance` under 100 is a die, ONE draw per admitted
+      // target, taken here — before any write and after the target filter, which is exactly where the
+      // @aresrpg/sim twin takes it (`fight_spells.js` `apply_spell_effect` opens with `effect_triggers`, once
+      // per entity in its resolved target list). The ordinary dispatch never asked before, so every corpus line
+      // authored at 50% resolved at 100% on chain while the client predicted a coin flip.
+      if (spell_target::effect_hits(tf, is_caster, same_team) && effect_proc(
+        effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
+        random_effect_ordinals, random_rolls, random_bounds,
+      )) {
         if (kind == spell_effect::k_geometric_push()) {
           let requested = displacement::zone_edge_distance(&zone, target_cell, pcell);
           if (displace_target(fight, false, i, target_cell, caster_level, kind, requested)) did_damage = true;
@@ -1115,7 +1129,11 @@ fun apply_effect(
     let (alive, mcell) = { let m = fight::mobs(fight).borrow(j); (mob::is_alive(m), mob::cell(m)) };
     if (alive && zone.contains(&mcell)) {
       let is_caster = m_same_team && j == caster_idx;
-      if (spell_target::effect_hits(tf, is_caster, m_same_team)) {
+      // The player loop's twin — same die, same position in the walk (see there).
+      if (spell_target::effect_hits(tf, is_caster, m_same_team) && effect_proc(
+        effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
+        random_effect_ordinals, random_rolls, random_bounds,
+      )) {
         if (kind == spell_effect::k_geometric_push()) {
           let requested = displacement::zone_edge_distance(&zone, target_cell, mcell);
           if (displace_target(fight, true, j, target_cell, caster_level, kind, requested)) did_damage = true;
@@ -1247,10 +1265,9 @@ fun apply_to_player(
   } else if (kind == spell_effect::k_stance()) {
     retro_effects::apply_stance(fight, false, pc, fid_of(caster_side, caster_idx), effect);
   } else if (kind == spell_effect::k_critical_failure()) {
-    if (effect_proc(
-      effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
-      random_effect_ordinals, random_rolls, random_bounds,
-    )) record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
+    // The hand-rolled proc that used to live here is GONE: `apply_effect` now rolls every kind's chance once,
+    // at the door, so keeping this one would have drawn twice for a single line (and the sim draws once).
+    record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
   } else if (is_board_status(kind)) {
     record_timed(fight, pc, fid_of(caster_side, caster_idx), effect);
   } else if (is_unimplemented(kind)) {
@@ -1376,10 +1393,7 @@ fun apply_to_mob(
   } else if (kind == spell_effect::k_stance()) {
     retro_effects::apply_stance(fight, true, midx, fid_of(caster_side, caster_idx), effect);
   } else if (kind == spell_effect::k_critical_failure()) {
-    if (effect_proc(
-      effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
-      random_effect_ordinals, random_rolls, random_bounds,
-    )) record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
+    record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect); // see the `apply_to_player` twin
   } else if (is_board_status(kind)) {
     record_timed(fight, mob_fid(midx), fid_of(caster_side, caster_idx), effect);
   } else if (is_unimplemented(kind)) {

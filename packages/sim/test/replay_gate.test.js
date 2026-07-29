@@ -233,6 +233,53 @@ const veil_templates_raw = {
   },
 }
 
+// The "Cold Deck" shape — two same-element damage lines, each carrying its own authored proc `chance`. Pinned
+// at the two DETERMINISTIC ends (100 and 0) so the capsule measures whether the chance is CONSULTED at all,
+// without inheriting either twin's rng stream: exactly one of the two lines may ever land.
+const chanced_strike_templates_raw = {
+  yajin: {
+    cold_deck: {
+      name: 'Cold Deck',
+      description: 'two chanced strikes',
+      levels: [
+        {
+          cost: 3,
+          range: [1, 4],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: true,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'damage',
+              min: 20,
+              max: 20,
+              target: 'enemies',
+              element: 'earth',
+              chance: 100,
+            },
+            {
+              type: 'damage',
+              min: 20,
+              max: 20,
+              target: 'enemies',
+              element: 'earth',
+              chance: 0,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
 // A vitality BUFF on the caster and a vitality DEBUFF on an enemy (#1628). Stat ids 5/10 have no stat-block
 // field on either twin, so these two lines move HP CAPACITY and nothing else; min===max keeps the roll fixed.
 const vitality_templates_raw = {
@@ -705,6 +752,49 @@ const scenarios = [
         cite: 'mob.move:282 remove_max_hp_bonus — current HP is clamped down to the new capacity',
         path: 'team1.0.health',
         equals: 70,
+      },
+    ],
+  },
+  {
+    // The Cold Deck row's twin parity — an authored `chance` is a die, and the chain has to roll it. Before the
+    // fix `cast::apply_effect` walked its zone and applied every admitted line unconditionally: only RETURN_SPELL
+    // and CRITICAL_FAILURE ever called `effect_proc`, so a 0%-chance line dealt FULL damage on chain while the
+    // sim folded nothing for it. Pinned at the deterministic ends so the capsule can never be satisfied by a
+    // lucky stream: the 100% line lands, the 0% line cannot, so m0 loses exactly 20.
+    meta: {
+      id: 'chanced_lines_roll_their_proc',
+      class: 'twin',
+      authored: '2026-07-29',
+      source: 'authored',
+      notes:
+        'Cold Deck shape: a chance-100 and a chance-0 damage line in one cast; only the certain one may resolve.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: chanced_strike_templates_raw,
+    initial: {
+      fight_id: 'capsule_chanced_lines',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          spell_levels: { cold_deck: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'cold_deck',
+        target: { x: 7, y: 5 },
+      },
+    ],
+    pinned_facts: [
+      {
+        cite: 'cast.move apply_effect — effect_proc gates every admitted target; chance 0 returns false, chance 100 returns true without drawing',
+        path: 'team1.0.health',
+        equals: 80,
       },
     ],
   },
