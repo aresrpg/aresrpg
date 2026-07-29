@@ -54,19 +54,9 @@ const SIGNED_ITEM_MARKER_KEY: u64 = 0x415245535f534947;
 // ╔════════════════ [ Slot-kind taxonomy (14 kinds → 20 physical slots; ring/relic are the multi-slots) ] ═ ]
 
 const SK_WEAPON: u8 = 0; // holds a class weapon OR a gathering tool (no dedicated tool slot)
-const SK_HELMET: u8 = 1;
-const SK_CHESTPLATE: u8 = 2;
-const SK_BELT: u8 = 3;
-const SK_GAUNTLETS: u8 = 4;
-const SK_PANTS: u8 = 5;
-const SK_BOOTS: u8 = 6;
-const SK_AMULET: u8 = 7;
 const SK_RING: u8 = 8; // 2 physical slots
 const SK_PET: u8 = 9;
 const SK_RELIC: u8 = 10; // 6 physical slots, unique per type
-const SK_TITLE: u8 = 11; // cosmetic (zero stats)
-const SK_HAT: u8 = 12; // cosmetic
-const SK_CLOAK: u8 = 13; // cosmetic
 
 const RING_SLOTS: u8 = 2;
 const RELIC_SLOTS: u64 = 6;
@@ -98,6 +88,13 @@ const WEAPON_FAMILIES: vector<vector<u8>> = vector[
 // Gathering-tool categories → job id (SPEC §6 order: 0 FARMER · 1 HERBALIST · 2 MINER — matches the gathering tests
 // + the admin resource-authoring convention). A tool occupies the weapon slot and is NOT class-locked.
 const TOOL_CATEGORIES: vector<vector<u8>> = vector[b"tool_farmer", b"tool_herbalist", b"tool_miner"];
+// The non-weapon slot categories, ORDERED so that index i is slot kind i+1 (SK_WEAPON = 0 is resolved separately by
+// `y96`, since weapon families and gathering tools both route there). `y96` reads the kind straight off this index
+// instead of a 13-branch equality chain — the per-slot SK_ constants the chain needed no longer exist.
+const SLOT_CATEGORIES: vector<vector<u8>> = vector[
+  b"helmet", b"chestplate", b"belt", b"gauntlets", b"pants", b"boots", b"amulet",
+  b"ring", b"pet", b"relic", b"title", b"hat", b"cloak",
+];
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -271,21 +268,14 @@ fun y95(map: &mut EquipmentMap, category: String, template_id: ID, bonus: &Stats
 /// Map an item `category` to its slot kind, or `none` if it is not equippable (consumable/resource/…). Weapon
 /// families AND gathering tools both route to the weapon slot (the tool/weapon split is resolved in `place`).
 fun y96(category: String): Option<u8> {
-  if (y97(category) || y98(category)) option::some(SK_WEAPON)
-  else if (category == b"helmet".to_string()) option::some(SK_HELMET)
-  else if (category == b"chestplate".to_string()) option::some(SK_CHESTPLATE)
-  else if (category == b"belt".to_string()) option::some(SK_BELT)
-  else if (category == b"gauntlets".to_string()) option::some(SK_GAUNTLETS)
-  else if (category == b"pants".to_string()) option::some(SK_PANTS)
-  else if (category == b"boots".to_string()) option::some(SK_BOOTS)
-  else if (category == b"amulet".to_string()) option::some(SK_AMULET)
-  else if (category == b"ring".to_string()) option::some(SK_RING)
-  else if (category == b"pet".to_string()) option::some(SK_PET)
-  else if (category == b"relic".to_string()) option::some(SK_RELIC)
-  else if (category == b"title".to_string()) option::some(SK_TITLE)
-  else if (category == b"hat".to_string()) option::some(SK_HAT)
-  else if (category == b"cloak".to_string()) option::some(SK_CLOAK)
-  else option::none()
+  if (y97(category) || y98(category)) return option::some(SK_WEAPON);
+  let slots = SLOT_CATEGORIES;
+  let mut i = 0;
+  while (i < slots.length()) {
+    if (slots[i].to_string() == category) return option::some((i as u8) + 1);
+    i = i + 1;
+  };
+  option::none()
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing

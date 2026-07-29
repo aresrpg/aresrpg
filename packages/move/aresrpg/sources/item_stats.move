@@ -20,6 +20,8 @@ use sui::dynamic_field as df;
 
 /// The zero-point every stat is y126 on: stored value = 32768 + signed_stat.
 const SHIFT_U16: u16 = 32_768;
+/// How many stat fields the block carries — the length of the `y126`/`y167` vector view.
+const FIELDS: u64 = 17;
 const PET_FULL_FEEDS: u64 = 60;
 const EInvalidScale: u64 = 101;
 
@@ -127,12 +129,20 @@ public fun from_raw(orig: &ItemStatistics, raw: &vector<u64>): ItemStatistics {
     c.push_back(if (v == 0 && o < SHIFT_U16) o else SHIFT_U16 + (v as u16));
     i = i + 1;
   };
+  y167(&c)
+}
+
+// name shortened 2026-07-29: aresrpg at Sui object-size ceiling; see the #1581 landing
+/// `y126` inverted — the 17-vector back into a block, in the same catalog id order. Every per-field transform in
+/// this module (roll, scale, clamp, uniform, from_raw) loops over the vector view and packs through HERE, so the
+/// index↔field mapping is written exactly twice in the package: `y126` reads it, this writes it.
+fun y167(c: &vector<u16>): ItemStatistics {
   ItemStatistics {
-    vitality: *c.borrow(0), wisdom: *c.borrow(1), strength: *c.borrow(2), intelligence: *c.borrow(3),
-    chance: *c.borrow(4), agility: *c.borrow(5), range: *c.borrow(6), movement: *c.borrow(7),
-    action: *c.borrow(8), critical: *c.borrow(9), raw_damage: *c.borrow(10), critical_chance: *c.borrow(11),
-    critical_outcomes: *c.borrow(12), earth_resistance: *c.borrow(13), fire_resistance: *c.borrow(14),
-    water_resistance: *c.borrow(15), air_resistance: *c.borrow(16),
+    vitality: c[0], wisdom: c[1], strength: c[2], intelligence: c[3],
+    chance: c[4], agility: c[5], range: c[6], movement: c[7],
+    action: c[8], critical: c[9], raw_damage: c[10], critical_chance: c[11],
+    critical_outcomes: c[12], earth_resistance: c[13], fire_resistance: c[14],
+    water_resistance: c[15], air_resistance: c[16],
   }
 }
 
@@ -149,7 +159,7 @@ public fun template_max_raw(template: &ItemTemplate): vector<u64> {
 public fun zero_raw(): vector<u64> {
   let mut v = vector<u64>[];
   let mut i = 0u64;
-  while (i < 17) { v.push_back(0); i = i + 1; };
+  while (i < FIELDS) { v.push_back(0); i = i + 1; };
   v
 }
 
@@ -235,25 +245,16 @@ fun y127(state: &mut u64, lo: u16, hi: u16): u16 {
 /// type equip rule (§10, cross-package). Cosmetics carry NO ranges at all (zero stats).
 public(package) fun roll(min: &ItemStatistics, max: &ItemStatistics, seed: u64): ItemStatistics {
   let mut state = prng::rng_seed(seed);
-  ItemStatistics {
-    vitality: y127(&mut state, min.vitality, max.vitality),
-    wisdom: y127(&mut state, min.wisdom, max.wisdom),
-    strength: y127(&mut state, min.strength, max.strength),
-    intelligence: y127(&mut state, min.intelligence, max.intelligence),
-    chance: y127(&mut state, min.chance, max.chance),
-    agility: y127(&mut state, min.agility, max.agility),
-    range: y127(&mut state, min.range, max.range),
-    movement: y127(&mut state, min.movement, max.movement),
-    action: y127(&mut state, min.action, max.action),
-    critical: y127(&mut state, min.critical, max.critical),
-    raw_damage: y127(&mut state, min.raw_damage, max.raw_damage),
-    critical_chance: y127(&mut state, min.critical_chance, max.critical_chance),
-    critical_outcomes: y127(&mut state, min.critical_outcomes, max.critical_outcomes),
-    earth_resistance: y127(&mut state, min.earth_resistance, max.earth_resistance),
-    fire_resistance: y127(&mut state, min.fire_resistance, max.fire_resistance),
-    water_resistance: y127(&mut state, min.water_resistance, max.water_resistance),
-    air_resistance: y127(&mut state, min.air_resistance, max.air_resistance),
-  }
+  // The draw ORDER is the catalog id order (`y126`), which is exactly the field order the per-field literal
+  // used — so the seeded stream stays byte-identical to every roll already minted on chain.
+  let (lo, hi) = (y126(min), y126(max));
+  let mut c = vector<u16>[];
+  let mut i = 0;
+  while (i < lo.length()) {
+    c.push_back(y127(&mut state, lo[i], hi[i]));
+    i = i + 1;
+  };
+  y167(&c)
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
@@ -302,25 +303,14 @@ public(package) fun y67(item: &mut Item, stats: ItemStatistics) {
 /// maximum, including authored malus lines below the center.
 public fun scale_from_center(value: &ItemStatistics, numerator: u64, denominator: u64): ItemStatistics {
   assert!(denominator > 0 && numerator <= denominator, EInvalidScale);
-  ItemStatistics {
-    vitality: y128(value.vitality, numerator, denominator),
-    wisdom: y128(value.wisdom, numerator, denominator),
-    strength: y128(value.strength, numerator, denominator),
-    intelligence: y128(value.intelligence, numerator, denominator),
-    chance: y128(value.chance, numerator, denominator),
-    agility: y128(value.agility, numerator, denominator),
-    range: y128(value.range, numerator, denominator),
-    movement: y128(value.movement, numerator, denominator),
-    action: y128(value.action, numerator, denominator),
-    critical: y128(value.critical, numerator, denominator),
-    raw_damage: y128(value.raw_damage, numerator, denominator),
-    critical_chance: y128(value.critical_chance, numerator, denominator),
-    critical_outcomes: y128(value.critical_outcomes, numerator, denominator),
-    earth_resistance: y128(value.earth_resistance, numerator, denominator),
-    fire_resistance: y128(value.fire_resistance, numerator, denominator),
-    water_resistance: y128(value.water_resistance, numerator, denominator),
-    air_resistance: y128(value.air_resistance, numerator, denominator),
-  }
+  let v = y126(value);
+  let mut c = vector<u16>[];
+  let mut i = 0;
+  while (i < v.length()) {
+    c.push_back(y128(v[i], numerator, denominator));
+    i = i + 1;
+  };
+  y167(&c)
 }
 
 /// The single source of the pet-power curve length, shared by feed validation, item derivation, and equip-time
@@ -346,34 +336,22 @@ fun y128(value: u16, numerator: u64, denominator: u64): u16 {
 /// Per-field MIN of `value` against `max` — the scribe clamp reuses this so the field enumeration lives ONLY
 /// here. Returns a block where each field is `min(value_field, max_field)`.
 public fun clamp_to(value: &ItemStatistics, max: &ItemStatistics): ItemStatistics {
-  ItemStatistics {
-    vitality: y129(value.vitality, max.vitality),
-    wisdom: y129(value.wisdom, max.wisdom),
-    strength: y129(value.strength, max.strength),
-    intelligence: y129(value.intelligence, max.intelligence),
-    chance: y129(value.chance, max.chance),
-    agility: y129(value.agility, max.agility),
-    range: y129(value.range, max.range),
-    movement: y129(value.movement, max.movement),
-    action: y129(value.action, max.action),
-    critical: y129(value.critical, max.critical),
-    raw_damage: y129(value.raw_damage, max.raw_damage),
-    critical_chance: y129(value.critical_chance, max.critical_chance),
-    critical_outcomes: y129(value.critical_outcomes, max.critical_outcomes),
-    earth_resistance: y129(value.earth_resistance, max.earth_resistance),
-    fire_resistance: y129(value.fire_resistance, max.fire_resistance),
-    water_resistance: y129(value.water_resistance, max.water_resistance),
-    air_resistance: y129(value.air_resistance, max.air_resistance),
-  }
+  let (a, b) = (y126(value), y126(max));
+  let mut c = vector<u16>[];
+  let mut i = 0;
+  while (i < a.length()) {
+    c.push_back(y129(a[i], b[i]));
+    i = i + 1;
+  };
+  y167(&c)
 }
 
 /// A block with every field set to `v` — the scribe builds its hardcoded conservative ceiling from this.
 public fun uniform(v: u16): ItemStatistics {
-  ItemStatistics {
-    vitality: v, wisdom: v, strength: v, intelligence: v, chance: v, agility: v, range: v, movement: v,
-    action: v, critical: v, raw_damage: v, critical_chance: v, critical_outcomes: v, earth_resistance: v,
-    fire_resistance: v, water_resistance: v, air_resistance: v,
-  }
+  let mut c = vector<u16>[];
+  let mut i = 0;
+  while (i < FIELDS) { c.push_back(v); i = i + 1; };
+  y167(&c)
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
