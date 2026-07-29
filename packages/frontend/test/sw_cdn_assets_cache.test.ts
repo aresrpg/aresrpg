@@ -34,7 +34,9 @@ describe('#1598 cdn-assets runtime cache', () => {
 
     expect(options.plugins).toContain(cdn_assets_cache_guard)
     expect(cdn_assets_cache_guard.cachedResponseWillBeUsed({ request, cachedResponse: opaque_response })).toBeNull()
-    expect(cdn_assets_cache_guard.cachedResponseWillBeUsed({ request, cachedResponse: cors_response })).toBe(cors_response)
+    expect(cdn_assets_cache_guard.cachedResponseWillBeUsed({ request, cachedResponse: cors_response })).toBe(
+      cors_response
+    )
   })
 })
 
