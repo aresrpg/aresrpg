@@ -65,6 +65,9 @@
     "./los": {
       "import": "./src/los.js"
     },
+    "./occupancy": {
+      "import": "./src/occupancy.js"
+    },
     "./draft_budget": {
       "import": "./src/draft_budget.js"
     },
