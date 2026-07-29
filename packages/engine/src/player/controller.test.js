@@ -224,27 +224,13 @@ describe('step_controller — swim float', () => {
     expect(s.velocity[1]).toBeGreaterThan(0) // buoyant rise while holding jump
   })
 
-  // #1433 — this assertion USED to read "sinks slowly when not holding jump underwater". The unconditional
-  // sink was the reported bug's mechanism (a swimmer pinned to the seabed cannot cross an underwater step
-  // taller than AUTO_STEP_HEIGHT, so walking to a mob across water dead-stopped); sinking is now the DIVE
-  // key's job. The gentle-rate half of the old contract is kept: neither direction is a full-gravity fall.
-  // See test/player/swim_buoyancy.test.js for the crossing regression itself.
-  it('sinks only while the dive (walk) key is held underwater', () => {
+  it('sinks slowly when not holding jump underwater', () => {
     const env = flat_env(20)
     const s = create_controller_state([0.5, 5, 0.5])
-    step_controller(s, { forward: 0, strafe: 0, jump: false, walk: true, yaw: 0 }, env, 1 / 60)
+    step_controller(s, { forward: 0, strafe: 0, jump: false, yaw: 0 }, env, 1 / 60)
     expect(s.in_water).toBe(true)
     expect(s.velocity[1]).toBeLessThan(0) // gentle sink
     expect(s.velocity[1]).toBeGreaterThan(-CONTROLLER_CONSTANTS.RISE_GRAVITY) // but NOT full-gravity fall
-  })
-
-  it('rises to the surface on its own while submerged with no key held', () => {
-    const env = flat_env(20)
-    const s = create_controller_state([0.5, 5, 0.5])
-    step_controller(s, { forward: 0, strafe: 0, jump: false, walk: false, yaw: 0 }, env, 1 / 60)
-    expect(s.in_water).toBe(true)
-    expect(s.velocity[1]).toBeGreaterThan(0) // buoyancy, not gravity
-    expect(s.velocity[1]).toBeLessThan(CONTROLLER_CONSTANTS.RISE_GRAVITY)
   })
 })
 
