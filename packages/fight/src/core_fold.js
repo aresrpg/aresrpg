@@ -78,11 +78,10 @@ export const enrich_actions = (inbox, actions) => {
   const budget_of = base_budget(inbox.base_view)
   const damaging = damaging_casts(actions)
   const enrich = (action, index) => {
-    const marked = damaging.has(index) ? { damaging: true } : {}
-    if (action.kind !== 'TurnStarted' || action.is_mob || action.ap != null)
-      return { ...action, ...marked, resolve_seat }
+    const marked = damaging.has(index) ? { ...action, damaging: true, resolve_seat } : { ...action, resolve_seat }
+    if (action.kind !== 'TurnStarted' || action.is_mob || action.ap != null) return marked
     const budget = budget_of(Number(action.idx))
-    return budget ? { ...action, resolve_seat, ap: budget.ap, mp: budget.mp } : { ...action, resolve_seat }
+    return budget ? { ...marked, ap: budget.ap, mp: budget.mp } : marked
   }
   return actions.map(enrich)
 }

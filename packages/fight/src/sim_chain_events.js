@@ -303,7 +303,9 @@ const tackle_losses = (pre_state, post_state, entity_id) => {
 // `ActionStarted, ActionEffect(kind 0), Hit, Cast, ActionResolved`), so this encoder wraps every cast too.
 //
 // ORDER. A real receipt emits its effect rows BEFORE the `Cast` (fight_render_events.js:45); this mock has
-// always emitted them after, and `mark_damaging_casts` reads that adjacency. The envelope brackets the whole
+// always emitted them after, and `core_fold.damaging_casts` reads that adjacency — so the mock, not the chain, is
+// what that derivation is currently correct against (#1700 measured 4 false marks and 69 misses over the captured
+// corpus; the predicate is filed separately). The envelope brackets the whole
 // action either way — `ActionStarted` … `Cast` … effect rows … `ActionResolved` — which is the ordering the
 // fold actually contracts on (context opened before any `ActionEffect`, retired after the last one).
 
