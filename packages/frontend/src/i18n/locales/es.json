@@ -85,9 +85,14 @@
     "casts_exhausted": "Sin lanzamientos restantes este turno",
     "predicted_kill": "MATA AL MONSTRUO",
     "courtesy_dropped": "No se pudo mostrar la vista previa de un compañero",
-    "bug_report": "Copiar informe de error",
-    "bug_report_copied": "Datos del combate copiados: pégalos en la incidencia que acabamos de abrir.",
-    "bug_report_copy_failed": "No se pudieron copiar los datos del combate: describe el error en la incidencia abierta."
+    "bug_report": "Informar de un error",
+    "bug_report_title": "Informe de error de combate",
+    "bug_report_intro": "Copia los datos del combate de abajo, luego abre la incidencia y pégalos.",
+    "bug_report_copy": "Copiar texto",
+    "bug_report_copied": "Copiado",
+    "bug_report_copy_failed": "Pulsa Ctrl+C (Cmd+C en Mac): el texto ya está seleccionado.",
+    "bug_report_open_issue": "Abrir incidencia de GitHub",
+    "bug_report_close": "Cerrar"
   },
   "nav": {
     "world": "Mundo",

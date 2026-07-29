@@ -85,9 +85,14 @@
     "casts_exhausted": "このターンの使用回数は上限です",
     "predicted_kill": "モンスターを倒す",
     "courtesy_dropped": "仲間のライブプレビューを表示できませんでした",
-    "bug_report": "バグ報告をコピー",
-    "bug_report_copied": "戦闘データをコピーしました。今開いた Issue に貼り付けてください。",
-    "bug_report_copy_failed": "戦闘データをコピーできませんでした。開いた Issue にバグの内容を書いてください。"
+    "bug_report": "バグを報告",
+    "bug_report_title": "戦闘バグ報告",
+    "bug_report_intro": "下の戦闘データをコピーし、Issue を開いて貼り付けてください。",
+    "bug_report_copy": "テキストをコピー",
+    "bug_report_copied": "コピーしました",
+    "bug_report_copy_failed": "Ctrl+C（Mac は Cmd+C）を押してください。テキストは選択済みです。",
+    "bug_report_open_issue": "GitHub の Issue を開く",
+    "bug_report_close": "閉じる"
   },
   "nav": {
     "world": "ワールド",

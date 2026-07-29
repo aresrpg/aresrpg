@@ -7,12 +7,13 @@
 export const FIGHT_BUG_REPORT_EVENT_LIMIT = 20
 export const FIGHT_BUG_REPORT_ISSUES_URL = 'https://github.com/aresrpg/aresrpg/issues'
 
-// Issue #885 — the report flow asks the reporter for ONE act: press Create. The button opens GitHub's
-// new-issue page already carrying a title and a body skeleton; the trace stays on the CLIPBOARD because it
-// does not fit a query string (a fight trace runs to tens of KB while browsers/servers cap a URL around
-// 2-8 KB — a body-borne trace would silently truncate), so the body carries a paste marker instead. The
-// body is English on purpose: it is the board's language, and a triage thread arriving in six languages
-// costs the maintainer more than it saves the reporter — the PLAYER-facing half is the toast, localized.
+// Issue #885 — the report flow opens GitHub's new-issue page already carrying a title and a body skeleton;
+// the trace does NOT ride the query string (a fight trace runs to tens of KB while browsers/servers cap a URL
+// around 2-8 KB — a body-borne trace would silently truncate), so the body carries a paste marker instead.
+// The reporter gets that trace from the report MODAL, which shows it as selectable text (see below — this
+// flow never asks the browser for clipboard permission). The body is English on purpose: it is the board's
+// language, and a triage thread arriving in six languages costs the maintainer more than it saves the
+// reporter — the PLAYER-facing half is the modal, localized.
 const NEW_ISSUE_URL = `${FIGHT_BUG_REPORT_ISSUES_URL}/new`
 const short_id = (id) => {
   const text = String(id ?? '')
@@ -35,7 +36,7 @@ export const fight_bug_report_issue_url = (state, client_version = app_version()
     '**What happened?**',
     '',
     '',
-    '**Fight trace** — it is already on your clipboard, paste it below this line:',
+    '**Fight trace** — paste the trace you copied from the report window below this line:',
     '',
     '',
     '---',
@@ -65,11 +66,33 @@ export const capture_fight_bug_report = (state) => {
   )
 }
 
-/** Clipboard effect edge with the writer injected for a headless proof and zero browser coupling in capture.
- * @param {{ fight_id?: string | null, applied_version?: number, log?: any[] } | null | undefined} state
- * @param {(blob: string) => Promise<void> | void} write_text
- * @returns {Promise<void>}
+/** Select every character of an already-rendered text field. The modal calls this on open so the trace is
+ *  pre-selected: Ctrl/Cmd+C is then the guaranteed manual floor, whatever the copy button does.
+ * @param {{ focus?: () => void, select?: () => void } | null | undefined} element
+ * @returns {void}
  */
-export const copy_fight_bug_report = async (state, write_text) => {
-  await write_text(capture_fight_bug_report(state))
+export const select_all_text = (element) => {
+  element?.focus?.()
+  element?.select?.()
+}
+
+/** THE CLIPBOARD EDGE — owner ruling 2026-07-25: "the browser permissions to use clipboard is too scary in
+ *  crypto, let's find something else". The ASYNC clipboard API is permission-gated and was failing SILENTLY
+ *  (the issue template promised a trace the player never had); it is banned from this flow — the tests scan
+ *  these sources for its name, so it may not even be spelled here. The legacy `document.execCommand('copy')`
+ *  is a different beast: it needs no permission at all — it just copies the current selection when it runs
+ *  inside a user gesture. It can still refuse, so it returns a verdict rather than throwing: on `false` the
+ *  caller leaves the text selected and says press Ctrl/Cmd+C.
+ * @param {{ focus?: () => void, select?: () => void } | null | undefined} element
+ * @param {{ execCommand?: (command: string) => boolean } | null | undefined} doc
+ * @returns {boolean} true only when the document reports the copy actually happened
+ */
+export const copy_via_selection = (element, doc) => {
+  if (!element || typeof doc?.execCommand !== 'function') return false
+  select_all_text(element)
+  try {
+    return doc.execCommand('copy') === true
+  } catch {
+    return false
+  }
 }

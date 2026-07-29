@@ -26,11 +26,11 @@ import { should_auto_end_turn, should_report_stall, turn_overdue_ms } from '../.
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
-import { push_event_toast } from '../../core/toast.js'
 import { min_turn_left } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
-import { copy_fight_bug_report, fight_bug_report_issue_url } from './fight_bug_report.js'
+import { FightBugReportModal } from './FightBugReportModal.jsx'
+import { capture_fight_bug_report, fight_bug_report_issue_url } from './fight_bug_report.js'
 
 // DEFAULT handlers = the live on-chain path (the ONLY fight backend now the WS server is gone). The dungeon
 // board INJECTS a richer End Turn (draft-flush) + Ready (place_at the picked cell) as props that ALWAYS win
@@ -168,6 +168,11 @@ export function FightControls({
   // gets it for free. Confirming runs `on_abandon` (default: the store's `abandon_fight`).
   const [confirm_open, set_confirm_open] = useState(false)
 
+  // BUG REPORT window — the captured trace IS the open flag (null = closed): one fact, snapshotted at PRESS so
+  // the text the player copies is the fight as it was when they hit the button, not as it drifted while reading.
+  const [report_trace, set_report_trace] = useState(/** @type {string | null} */ (null))
+  const [report_issue_url, set_report_issue_url] = useState('')
+
   // MIN-TURN gate — MUST precede the early return (Rules of Hooks); reads `fight` null-safely. FIGHTREAL finding:
   // the old client gate re-anchored per turn_deadline_ms and mis-scoped the 3s floor PER CAST; the core enforces
   // ONE floor per turn (turn_started_at stamped once, on the turn's own false→true edge — see fight/store.js).
@@ -264,36 +269,39 @@ export function FightControls({
     on_abandon()
   }
 
-  // Issue #166 / #885 — the only effect edge for the compact report: snapshot the fight core at PRESS, open
-  // GitHub's new-issue page ALREADY PREFILLED (title + body skeleton) so Create is the last remaining click,
-  // and copy the trace locally for the one paste the URL cannot carry. The window.open is SYNCHRONOUS inside
-  // the click: deferring it behind the clipboard promise is what popup blockers kill. Clipboard rejection is
-  // still surfaced — the issue page stands on its own, the reporter just has no trace to paste.
+  // Issue #166 / #885 — snapshot the fight core at PRESS and hand it to the report window. Owner ruling
+  // 2026-07-25: NO clipboard permission prompt anywhere in this flow ("too scary in crypto") — the window shows
+  // the trace as selectable text and offers a prompt-free copy; opening GitHub is the player's own next click
+  // from inside it, so the popup fires from that gesture and nothing races a browser permission dialog.
   const on_bug_report = () => {
     const state = fight_store.getState()
-    if (typeof window !== 'undefined') window.open(fight_bug_report_issue_url(state), '_blank', 'noopener,noreferrer')
-    const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : null
-    if (!clipboard?.writeText) {
-      push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
-      return
-    }
-    void copy_fight_bug_report(state, (blob) => clipboard.writeText(blob)).then(
-      () => push_event_toast({ state: 'success', title: t('fight.bug_report_copied') }),
-      () => push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
-    )
+    set_report_issue_url(fight_bug_report_issue_url(state))
+    set_report_trace(capture_fight_bug_report(state))
   }
+
+  const bug_report_modal = (
+    <FightBugReportModal
+      trace={report_trace}
+      issue_url={report_issue_url}
+      t={t}
+      on_close={() => set_report_trace(null)}
+    />
+  )
 
   if (fight.spectator)
     return (
-      <div className="hud-fightctl">
-        <span className="hud-fightctl__watching">{t('fights.spectating')}</span>
-        <button type="button" className="hud-fightctl__btn hud-fightctl__abandon" onClick={on_leave_spectate}>
-          {leave_spectate_label ?? t('fights.leave_spectate')}
-        </button>
-        <button type="button" className="hud-fightctl__btn hud-fightctl__report" onClick={on_bug_report}>
-          {t('fight.bug_report')}
-        </button>
-      </div>
+      <>
+        <div className="hud-fightctl">
+          <span className="hud-fightctl__watching">{t('fights.spectating')}</span>
+          <button type="button" className="hud-fightctl__btn hud-fightctl__abandon" onClick={on_leave_spectate}>
+            {leave_spectate_label ?? t('fights.leave_spectate')}
+          </button>
+          <button type="button" className="hud-fightctl__btn hud-fightctl__report" onClick={on_bug_report}>
+            {t('fight.bug_report')}
+          </button>
+        </div>
+        {bug_report_modal}
+      </>
     )
 
   return (
@@ -354,6 +362,7 @@ export function FightControls({
         on_confirm={on_forfeit_confirmed}
         on_cancel={() => set_confirm_open(false)}
       />
+      {bug_report_modal}
     </>
   )
 }

@@ -85,9 +85,14 @@
     "casts_exhausted": "Keine Einsätze mehr in dieser Runde",
     "predicted_kill": "TÖTET DAS MONSTER",
     "courtesy_dropped": "Live-Vorschau eines Teamkameraden nicht möglich",
-    "bug_report": "Fehlerbericht kopieren",
-    "bug_report_copied": "Kampfdaten kopiert — füge sie in das soeben geöffnete Issue ein.",
-    "bug_report_copy_failed": "Die Kampfdaten konnten nicht kopiert werden — beschreibe den Fehler im geöffneten Issue."
+    "bug_report": "Fehler melden",
+    "bug_report_title": "Kampf-Fehlerbericht",
+    "bug_report_intro": "Kopiere die Kampfdaten unten, öffne dann das Issue und füge sie dort ein.",
+    "bug_report_copy": "Text kopieren",
+    "bug_report_copied": "Kopiert",
+    "bug_report_copy_failed": "Drücke Strg+C (Cmd+C auf dem Mac) — der Text ist bereits ausgewählt.",
+    "bug_report_open_issue": "GitHub-Issue öffnen",
+    "bug_report_close": "Schließen"
   },
   "nav": {
     "world": "Welt",

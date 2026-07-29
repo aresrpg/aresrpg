@@ -85,9 +85,14 @@
     "casts_exhausted": "No casts left this turn",
     "predicted_kill": "KILLS THE MOB",
     "courtesy_dropped": "Couldn't show a teammate's live preview",
-    "bug_report": "Copy bug report",
-    "bug_report_copied": "Fight data copied — paste it into the issue we just opened.",
-    "bug_report_copy_failed": "Couldn't copy the fight data — describe the bug in the issue we opened."
+    "bug_report": "Report a bug",
+    "bug_report_title": "Fight bug report",
+    "bug_report_intro": "Copy the fight data below, then open the issue and paste it in.",
+    "bug_report_copy": "Copy text",
+    "bug_report_copied": "Copied",
+    "bug_report_copy_failed": "Press Ctrl+C (Cmd+C on Mac) — the text is already selected.",
+    "bug_report_open_issue": "Open GitHub issue",
+    "bug_report_close": "Close"
   },
   "nav": {
     "world": "World",

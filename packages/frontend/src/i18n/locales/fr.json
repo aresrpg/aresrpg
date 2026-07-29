@@ -85,9 +85,14 @@
     "casts_exhausted": "Plus de lancers ce tour",
     "predicted_kill": "TUE LE MONSTRE",
     "courtesy_dropped": "Impossible d'afficher l'aperçu en direct d'un équipier",
-    "bug_report": "Copier le rapport de bug",
-    "bug_report_copied": "Données du combat copiées — collez-les dans le ticket qui vient de s'ouvrir.",
-    "bug_report_copy_failed": "Impossible de copier les données du combat — décrivez le bug dans le ticket ouvert."
+    "bug_report": "Signaler un bug",
+    "bug_report_title": "Rapport de bug de combat",
+    "bug_report_intro": "Copiez les données du combat ci-dessous, puis ouvrez le ticket et collez-les.",
+    "bug_report_copy": "Copier le texte",
+    "bug_report_copied": "Copié",
+    "bug_report_copy_failed": "Appuyez sur Ctrl+C (Cmd+C sur Mac) — le texte est déjà sélectionné.",
+    "bug_report_open_issue": "Ouvrir le ticket GitHub",
+    "bug_report_close": "Fermer"
   },
   "nav": {
     "world": "Monde",
