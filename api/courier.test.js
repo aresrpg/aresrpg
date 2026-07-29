@@ -20,6 +20,7 @@ if (!redis_url && !redis_socket && !memory_protocol)
 process.env.COURIER_POSITION_TTL_MS = '60'
 const {
   CHAT_MAX_LENGTH,
+  FIGHT_MAX_LENGTH,
   create_courier_service,
   create_redis_courier_registry,
   position_index_key,
@@ -210,5 +211,71 @@ describe('POST /v1/courier/chat', () => {
     const refused = await route_courier_post('/v1/courier/chat', oversized, observing_service)
     expect(refused.status).toBe(400)
     expect(refused.json.error).toMatch(/280/)
+  })
+})
+
+// #1641 — a bare 400 costs an investigation every time. EVERY reject on this route names itself in a
+// machine-readable `code`, and the codes are DISTINCT: the client logs one line and knows which field it got
+// wrong. The reason vocabulary has one home — CourierApiError's `code`, derived from the rejected field name.
+describe('POST /v1/courier/chat — every 400 names its own reason (#1641)', () => {
+  const open_service = () =>
+    create_courier_service({
+      registry: { take_rate_slot: async () => true, put_position: async () => {}, publish_chat: async () => {} },
+      authenticate: async ({ sender }) => sender,
+    })
+
+  const reject = async (body) => await route_courier_post('/v1/courier/chat', { ...chat(), ...body }, open_service())
+
+  test('each invalid field rejects with its OWN code, never a bare 400', async () => {
+    const cases = [
+      [{ world: 'overworld' }, 'invalid_world'],
+      [{ character: '0xdead' }, 'invalid_character'],
+      [{ sender: 'not-an-address' }, 'invalid_sender'],
+      [{ party: '0x1' }, 'invalid_party'],
+      [{ text: '   ' }, 'empty_text'],
+      [{ text: 'x'.repeat(CHAT_MAX_LENGTH + 1) }, 'text_too_long'],
+      [{ channel: 'CLIENT_COMBAT' }, 'invalid_channel'],
+    ]
+    for (const [body, code] of cases) {
+      const refused = await reject(body)
+      expect({ code, status: refused.status, got: refused.json.code }).toEqual({ code, status: 400, got: code })
+      expect(refused.json.error.length).toBeGreaterThan(0)
+    }
+    expect(new Set(cases.map(([, code]) => code)).size).toBe(cases.length) // distinct, never one blanket reason
+  })
+
+  test('a position reject names its field too', async () => {
+    const refused = await route_courier_post('/v1/courier/position', { ...position(), x: 'over-there' }, open_service())
+    expect(refused.status).toBe(400)
+    expect(refused.json.code).toBe('invalid_x')
+  })
+
+  test('malformed JSON names itself', async () => {
+    const response = await (await import('./courier.mjs')).courier_fetch(
+      new Request('https://sponsor.test/v1/courier/chat', { method: 'POST', body: '{not json' }),
+      open_service()
+    )
+    expect(response.status).toBe(400)
+    expect((await response.json()).code).toBe('invalid_json')
+  })
+
+  // THE OBSERVED 400 (#1641): the fight courtesy channel is MACHINE traffic on the human-chat ingress —
+  // `{dungeon_id, address, kind, intent_id, actions}` JSON is ~240 chars BEFORE a single action, so every
+  // drafted batch blew the 280-code-point human cap and 400'd. The machine channel gets its own bounded cap.
+  test('a CHAT_FIGHT courtesy payload over the human cap is accepted under the machine cap', async () => {
+    const signal = JSON.stringify({
+      dungeon_id: WORLD,
+      address: CHARACTER,
+      kind: 'batch',
+      intent_id: `${'9'.repeat(64)}`,
+      actions: [{ type: 'move', path: [1, 2, 3, 4, 5, 6, 7, 8] }, { type: 'cast', spell: 'x'.repeat(40), cell: 42 }],
+    })
+    expect(signal.length).toBeGreaterThan(CHAT_MAX_LENGTH) // the payload that was 400ing in production
+    expect(signal.length).toBeLessThan(FIGHT_MAX_LENGTH)
+    const accepted = await reject({ text: signal, channel: 'CHAT_FIGHT' })
+    expect({ status: accepted.status, code: accepted.json.code }).toEqual({ status: 202, code: undefined })
+
+    const over = await reject({ text: 'x'.repeat(FIGHT_MAX_LENGTH + 1), channel: 'CHAT_FIGHT' })
+    expect({ status: over.status, code: over.json.code }).toEqual({ status: 400, code: 'text_too_long' })
   })
 })

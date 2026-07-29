@@ -11,6 +11,22 @@ The shared `api/server.mjs` process exposes two ephemeral, zkLogin-only ingress 
 allowlist as the sponsor challenge. The signature scheme must be zkLogin. Redis failures refuse both writes
 with `503`; neither hard gate fails open.
 
+The optional `channel` must be a `CHAT_*` name — an unknown one is refused, never silently rewritten to
+general. `CHAT_FIGHT` is the machine courtesy channel (a serialized drafted turn, never rendered as chat) and
+carries its own larger cap, `COURIER_FIGHT_MAX_LENGTH` (2000 code points): the human 280 cap 400'd every
+courtesy batch (#1641). Both caps stay under the same per-address rate gate.
+
+## Every refusal names itself
+
+No bare 400s (#1641). Each refusal answers `{ error, code }` — `error` is the human sentence, `code` is the
+machine-readable reason, and its ONE home is the `CourierApiError` raised at the site of the rule that broke.
+Field rules derive theirs from the field (`invalid_world`, `invalid_character`, `invalid_sender`,
+`invalid_party`, `invalid_x`…), policy rules name themselves (`empty_text`, `text_too_long`,
+`invalid_channel`, `invalid_json`, `rate_limited`, `authentication_failed`, `store_down`). The browser edge
+reads the code it was handed and branches only on the HTTP status — `401` means re-sign (the cached courier
+signature is dropped so the next heartbeat re-authenticates), `429`/`503` mean retry later, and a `400` is a
+client bug, reported loudly.
+
 ## Presence wire
 
 Delivery is not this process. It is the RPC read layer's presence route — `stream.rs` in

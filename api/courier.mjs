@@ -15,6 +15,11 @@ export const POSITION_TTL_MS = Number(process.env.COURIER_POSITION_TTL_MS || 10_
 export const CHAT_RATE_LIMIT = Number(process.env.COURIER_CHAT_RATE_LIMIT || 1)
 export const CHAT_RATE_WINDOW_MS = Number(process.env.COURIER_CHAT_RATE_WINDOW_MS || 2000)
 export const CHAT_MAX_LENGTH = Number(process.env.COURIER_CHAT_MAX_LENGTH || 280)
+// The fight COURTESY channel is MACHINE traffic on the human-chat ingress (a drafted turn serialized as JSON:
+// ~240 code points before a single action), so the human abuse cap 400'd every single batch (#1641). It gets
+// its own bounded cap — still rate-gated to one line per address per CHAT_RATE_WINDOW_MS, still never stored,
+// and never rendered as chat (the browser edge drops CHAT_FIGHT rows out of visible history).
+export const FIGHT_MAX_LENGTH = Number(process.env.COURIER_FIGHT_MAX_LENGTH || 2000)
 
 const NETWORK = process.env.VITE_NETWORK || 'testnet'
 const GRPC_URL =
@@ -23,6 +28,8 @@ const CHALLENGE_TTL_MS = Number(process.env.COURIER_CHALLENGE_TTL_MS || 5 * 60_0
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379'
 const SUI_ID = /^0x[0-9a-f]{64}$/i
 const CHAT_CHANNEL = /^CHAT_[A-Z_]+$/
+const FIGHT_CHANNEL = 'CHAT_FIGHT'
+const DEFAULT_CHANNEL = 'CHAT_GENERAL'
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': 'content-type',
@@ -31,6 +38,14 @@ const CORS = {
   'cache-control': 'no-store',
 }
 
+/**
+ * THE reject vocabulary — one home, and it is this class: every refusal on this route is a CourierApiError
+ * carrying a machine-readable `code` beside its human `message`, constructed at the single site of the rule it
+ * breaks. Field rules DERIVE their code from the rejected field (`invalid_<field>`), so the vocabulary can
+ * never drift from the fields themselves; policy rules name themselves (`empty_text`, `text_too_long`,
+ * `invalid_channel`, `invalid_json`, `rate_limited`, `authentication_failed`, `store_down`, `not_found`).
+ * No consumer re-declares this list: a client reads the code it was handed and branches on the HTTP status.
+ */
 export class CourierApiError extends Error {
   /** @param {string} message @param {number} status @param {string} code */
   constructor(message, status = 400, code = 'invalid_request') {
@@ -130,13 +145,22 @@ async function authenticate_courier(input) {
 
 const require_id = (value, name) => {
   const id = String(value ?? '').toLowerCase()
-  if (!SUI_ID.test(id)) throw new CourierApiError(`${name} must be a full 0x + 64-hex Sui id`)
+  if (!SUI_ID.test(id)) throw new CourierApiError(`${name} must be a full 0x + 64-hex Sui id`, 400, `invalid_${name}`)
   return id
 }
 const require_number = (value, name) => {
   const number = Number(value)
-  if (!Number.isFinite(number)) throw new CourierApiError(`${name} must be finite`)
+  if (!Number.isFinite(number)) throw new CourierApiError(`${name} must be finite`, 400, `invalid_${name}`)
   return number
+}
+/** The declared channel, or the general default when absent. A PRESENT-but-unknown channel is refused, never
+ *  silently rewritten to general: a coerced channel delivers a line to the wrong audience in total silence. */
+const require_channel = (value) => {
+  if (value == null || value === '') return DEFAULT_CHANNEL
+  const channel = String(value)
+  if (!CHAT_CHANNEL.test(channel))
+    throw new CourierApiError(`channel ${channel} is not a CHAT_* channel`, 400, 'invalid_channel')
+  return channel
 }
 const require_auth = (body) => ({
   sender: require_id(body?.sender, 'sender'),
@@ -195,13 +219,14 @@ export function create_courier_service({
     async post_chat(body) {
       const world = require_id(body?.world, 'world')
       const character = require_id(body?.character, 'character')
+      const channel = require_channel(body?.channel)
+      const max_length = channel === FIGHT_CHANNEL ? FIGHT_MAX_LENGTH : CHAT_MAX_LENGTH
       const text = String(body?.text ?? '').trim()
-      if (!text) throw new CourierApiError('text must not be empty')
-      if ([...text].length > CHAT_MAX_LENGTH)
-        throw new CourierApiError(`text must be at most ${CHAT_MAX_LENGTH} characters`)
+      if (!text) throw new CourierApiError('text must not be empty', 400, 'empty_text')
+      if ([...text].length > max_length)
+        throw new CourierApiError(`text must be at most ${max_length} characters`, 400, 'text_too_long')
       const address = String(await authenticate(authenticate_fn, body)).toLowerCase()
       await hard_rate_gate(registry, 'chat', address, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_MS)
-      const channel = body?.channel && CHAT_CHANNEL.test(String(body.channel)) ? String(body.channel) : 'CHAT_GENERAL'
       const target = String(body?.target ?? '').slice(0, 128)
       const party = body?.party ? require_id(body.party, 'party') : null
       const row = {
@@ -251,7 +276,7 @@ export async function courier_fetch(request, service = production_service) {
   try {
     body = await request.json()
   } catch {
-    return Response.json({ error: 'invalid JSON body', code: 'invalid_request' }, { status: 400, headers: CORS })
+    return Response.json({ error: 'invalid JSON body', code: 'invalid_json' }, { status: 400, headers: CORS })
   }
   const result = await route_courier_post(url.pathname, body, service)
   return Response.json(result.json, { status: result.status, headers: CORS })
@@ -263,7 +288,13 @@ export default async function handler(request, response) {
   if (request.method === 'OPTIONS') return response.status(204).end()
   if (request.method !== 'POST') return response.status(405).json({ error: 'POST only', code: 'method_not_allowed' })
   const [pathname] = String(request.url || '').split('?')
-  const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body
+  let body = request.body
+  if (typeof body === 'string')
+    try {
+      body = JSON.parse(body)
+    } catch {
+      return response.status(400).json({ error: 'invalid JSON body', code: 'invalid_json' })
+    }
   const result = await route_courier_post(pathname, body)
   return response.status(result.status).json(result.json)
 }

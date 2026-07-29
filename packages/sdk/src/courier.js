@@ -9,11 +9,12 @@ export const COURIER_PRESENCE_PATH = '/v1/stream/presence'
 export const COURIER_CHAT_MAX_LENGTH = 280
 
 export class CourierError extends Error {
-  /** @param {string} message @param {number} status */
-  constructor(message, status) {
+  /** @param {string} message @param {number} status @param {string} [code] the endpoint's machine-readable reason */
+  constructor(message, status, code = 'unknown') {
     super(message)
     this.name = 'CourierError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -23,10 +24,16 @@ export const courier_challenge = (address, issued_at = Date.now()) => `aresrpg-c
 /** @param {string} base_url @param {string} path */
 const endpoint = (base_url, path) => `${String(base_url ?? '').replace(/\/+$/, '')}${path}`
 
-/** @param {Response} response */
+/** Carry the endpoint's OWN reason across the seam — dropping `code` here is what made a 400 unreadable (#1641).
+ *  @param {Response} response */
 async function decode(response) {
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new CourierError(String(body?.error ?? `courier HTTP ${response.status}`), response.status)
+  if (!response.ok)
+    throw new CourierError(
+      String(body?.error ?? `courier HTTP ${response.status}`),
+      response.status,
+      body?.code ? String(body.code) : 'unknown'
+    )
   return body
 }
 
