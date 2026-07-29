@@ -5,6 +5,15 @@
 # SAME job to the public active-corpus rig and drive specs_multiplayer FIRST. UNVERIFIED-RUNTIME (#1727):
 # the browser leg could not bind a sandbox port locally, so its 30-minute ceiling is deliberately conservative.
 # Fork-safe: no secrets, ever (FROZEN.md rule 8).
+#
+# FOUR-FAMILY DISPOSITION (#1727):
+#   specs_multiplayer/ — WIRED below (COOP on the active corpus); marketplace remains local-only because its
+#     fixture requires a private mainnet-corpus non-stack Sale that a public runner cannot possess.
+#   specs/ — LOCAL-ONLY BASELINE: its parity rows assert the private authored 240-spell corpus; substituting
+#     the public active seed would weaken those oracles and contradict the family's production-parity contract.
+#   specs_anchor/ — LOCAL-ONLY BASELINE: the canonical gate requires the private authored corpus, the sponsor
+#     fixture, and headed Metal/WebGPU; ubuntu-latest cannot provide that contract without weakening the oracle.
+#   specs_prod_smoke/ — WIRED in edge-smoke.yml (45-minute job ceiling against the deployed edge bundle).
 name: gold smoke
 
 on:
@@ -12,8 +21,13 @@ on:
     branches: [edge]
     paths:
       - 'test/gold/**'
+      - 'bun.lock'
+      - 'packages/engine/**'
+      - 'packages/fight/**'
       - 'packages/frontend/**'
       - 'packages/move/**'
+      - 'packages/sdk/**'
+      - 'scripts/ares.mjs'
       - '.github/workflows/gold-smoke.yml'
   pull_request:
     paths:
@@ -30,7 +44,7 @@ permissions:
 jobs:
   gold_smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 90 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 100 }}
     env:
       GOLD_SMOKE_PROJECT: aresrpg-gold-smoke
       GOLD_CORPUS: active
