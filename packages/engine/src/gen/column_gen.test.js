@@ -147,25 +147,48 @@ describe('determinism gate: golden hash (§3.7 world-identity contract)', () => 
   })
 
   test('worm cave-cache eviction is world-neutral (a far column is identical after heavy streaming)', () => {
-    // The region-cached worm carver bounds memory by clearing its cache past a region cap. That MUST
-    // never change output — a column generated in a fresh context and after streaming enough columns
-    // to overflow (and evict) the cache must hash identically. Guards the streaming-history-dependence
-    // bug the canonical/golden set can't reach (it stays under the cap).
+    // The region-cached worm carver and the lake-tile memo both bound memory by CLEARING past a cap.
+    // That MUST never change output — a far column hashed in a fresh context and after streaming
+    // enough columns to evict both caches must be byte-identical. Guards the streaming-history
+    // dependence bug the canonical golden can't reach (it stays under the caps).
+    // The path is REGION-STRIDED (3 structure-regions/step) and starts beside the far column's own
+    // region, so each step primes a fully fresh 3×3 worm neighborhood + a fresh lake tile: both caches
+    // overflow in ~33 columns where the old 9-chunk stride needed 160 (5× the work, same proof), and
+    // the far column's OWN regions get primed-then-evicted — the sharpest shape of the bug. Evictions
+    // are OBSERVED (both caches clear wholesale, so a size drop IS one) and asserted: raising a cap
+    // can no longer make this test silently vacuous.
+    const REQUIRED_EVICTIONS = 2 // each cache cleared AND repopulated twice
+    const STREAM_CAP = 60 // fail loud rather than grind if a cap ever outruns the stride
     const hash_col = (/** @type {import('./column_gen.js').GenContext} */ c) => {
       const h = createHash('sha256')
       for (const chunk of generate_column(c, 200, 200)) h.update(new Uint8Array(chunk.ids.buffer))
       return h.digest('hex')
     }
     const fresh = hash_col(create_gen_context())
+
     const streamed_ctx = create_gen_context()
-    for (let i = 0; i < 160; i += 1) generate_column(streamed_ctx, (i % 40) * 9 - 180, Math.floor(i / 40) * 9 - 180)
+    let cave_evictions = 0
+    let lake_evictions = 0
+    let primed_caves = 0
+    let primed_lakes = 0
+    let streamed = 0
+    while (streamed < STREAM_CAP && !(cave_evictions >= REQUIRED_EVICTIONS && lake_evictions >= REQUIRED_EVICTIONS)) {
+      generate_column(streamed_ctx, 192 - 24 * (streamed % 6), 200 - 24 * Math.floor(streamed / 6))
+      streamed += 1
+      const caves = streamed_ctx.density.caves.primed.size
+      const lakes = streamed_ctx.hydro.lake_tiles.size
+      if (caves < primed_caves) cave_evictions += 1
+      if (lakes < primed_lakes) lake_evictions += 1
+      primed_caves = caves
+      primed_lakes = lakes
+    }
+    // the streaming REALLY evicted both caches — otherwise the identity below proves nothing.
+    expect(cave_evictions).toBeGreaterThanOrEqual(REQUIRED_EVICTIONS)
+    expect(lake_evictions).toBeGreaterThanOrEqual(REQUIRED_EVICTIONS)
+    expect(streamed).toBeLessThan(STREAM_CAP)
+
     expect(hash_col(streamed_ctx)).toBe(fresh)
-    // 15s timeout (2026-07-03): the 160-column churn now also exercises the LAKE-TILE memo (the
-    // 9-chunk stride crosses a fresh 8-chunk tile nearly every step → ~160 tile computes + cap
-    // evictions — this doubles as the eviction-neutrality proof for BOTH gen caches), and v5
-    // sky-island gen made columns dearer; the default 5s flaked under full-suite load while
-    // passing isolated.
-  }, 15000)
+  })
 })
 
 // ── PANDORA SKY-ISLAND FORK (GEN_VERSION 5) ──────────────────────────────────────────────────────
