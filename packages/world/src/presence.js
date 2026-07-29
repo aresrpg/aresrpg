@@ -36,15 +36,16 @@ export const MOUNTED_SPEED_HEADROOM = 1.8
 // bound is ~8× that, a pure sanity net against garbage, never a tight gameplay boundary.
 export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 
-// ── SELF-HEAL timing — the ONE home for the presence link's liveness + recovery constants ──────────────────────
-// The presence link can silently die — a dropped stream that never fires a clean peer_leave — and NOTHING
-// detected it, so peer lists froze until a full page refresh on BOTH ends. These constants make the link self-heal, all as INPUTS
-// to the pure fold (never a timer that set()s state):
-//  · every client re-emits its cell as a low-frequency HEARTBEAT (the edge reuses the `pos` send), so a peer that
-//    stands still is still PROVABLY alive; a peer silent past PEER_EXPIRY_MS folds out on the next `tick` — an
-//    honest count over a frozen one.
-//  · a dead room (0 relays / online / visibility-return) is a `room_lost` / `network_recover` input; recovery is
-//    an EFFECT REQUEST (rejoin / re-announce) the edge executes with bounded, jittered backoff.
+// ── SELF-HEAL timing — the ONE home for the presence link's liveness constants ─────────────────────────────────
+// The presence link can silently die — a dropped stream that never fires a clean leave — and if nothing detects
+// it, peer lists freeze until a full page refresh on BOTH ends. Liveness is an INPUT to the pure fold (never a
+// timer that set()s state): a peer silent past PEER_EXPIRY_MS folds out on the next `tick` — an honest count
+// over a frozen one. Connection state itself arrives on the `link` input; the transport edge owns the socket,
+// its finite reconnect budget (REJOIN_MAX_ATTEMPTS), and the schedule on which it comes back.
+// OPEN (#1641, no producer today): PEER_HEARTBEAT_MS and `tick` both describe a re-emit/expiry cadence that
+// nothing currently drives — the client POSTs a pose only on an actual cell/facing change, so a player who
+// stands still lapses out of the courier's TTL rows and vanishes from every LATER joiner's snapshot. Whether
+// the fix is a client keep-alive or a longer server TTL is an architecture call, not this fold's.
 // INVARIANT (#305 fix): PEER_EXPIRY_MS must clear the BROWSER'S BACKGROUND-TAB TIMER THROTTLE floor, not just
 // be "a comfortable multiple" of PEER_HEARTBEAT_MS — a backgrounded tab's heartbeat TIMER is clamped by
 // the browser regardless of its requested period (Chrome intensively throttles a hidden tab's timers to ~1/min),
@@ -54,7 +55,7 @@ export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 // ~60s worst-case floor with real margin while still bounding how long a TRULY dead peer (frozen channel, no
 // clean onPeerLeave) lingers as a ghost. They live together HERE so the relationship is one read, never two
 // scattered magic numbers.
-export const PEER_HEARTBEAT_MS = 7_000 // I re-broadcast my last pose this often (liveness ping; reuses the position POST) — the FOREGROUND cadence; a backgrounded tab's actual send gap is bounded by the browser's throttle floor, not this number. It MUST stay under the courier's pose TTL (api/courier.mjs POSITION_TTL_MS, 10s) or a standing player expires out of every joiner's snapshot (#1641).
+export const PEER_HEARTBEAT_MS = 7_000 // the intended re-emit cadence for my own pose (see OPEN above — no producer drives it today); it must stay under the courier's pose TTL (api/courier.mjs POSITION_TTL_MS, 10s), and a backgrounded tab's real send gap is bounded by the browser's throttle floor, not this number
 export const PEER_EXPIRY_MS = 90_000 // silent this long ⇒ the peer folds out on the next tick — sized above the background-throttle floor (#305), not the heartbeat cadence
 export const REJOIN_MAX_ATTEMPTS = 6 // the finite reconnect budget an SSE edge spends before it gives up honestly (a `failed` link with its reason) instead of retrying forever
 
