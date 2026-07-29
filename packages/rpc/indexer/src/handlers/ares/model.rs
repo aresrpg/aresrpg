@@ -544,11 +544,19 @@ pub struct ResultOpened {
     pub loot_units: u64,
 }
 
-/// `Defeat { fight }` / `Swept { fight }` / `ResultBurned { result }` — a single
-/// positional `ID` (BCS ignores the field name).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OneId {
-    pub id: ObjectID,
+pub struct FightDefeat {
+    pub fight: ObjectID,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FightSwept {
+    pub fight: ObjectID,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResultBurned {
+    pub result: ObjectID,
 }
 
 // ── fight board/turn events → the per-fight ORDERED JOURNAL (`journal.rs`, #216) ──

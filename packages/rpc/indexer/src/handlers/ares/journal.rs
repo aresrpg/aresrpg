@@ -288,8 +288,8 @@ pub(super) fn decode_journal_event(
             )
         }
         "Defeat" => {
-            let e: OneId = decode_bcs(module, name, contents)?;
-            (e.id, "Defeat", json!({ "fight": hex(e.id) }))
+            let e: FightDefeat = decode_bcs(module, name, contents)?;
+            (e.fight, "Defeat", json!({ "fight": hex(e.fight) }))
         }
         "Settled" => {
             let e: FightSettled = decode_bcs(module, name, contents)?;
@@ -302,8 +302,8 @@ pub(super) fn decode_journal_event(
             )
         }
         "Swept" => {
-            let e: OneId = decode_bcs(module, name, contents)?;
-            (e.id, "Swept", json!({ "fight": hex(e.id) }))
+            let e: FightSwept = decode_bcs(module, name, contents)?;
+            (e.fight, "Swept", json!({ "fight": hex(e.fight) }))
         }
         // ActionStarted/ActionEffect/ActionResolved (deferred triple), ResultMinted/
         // ResultOpened/LootMinted/ResultBurned (result artifacts), CreatorCapIssued.

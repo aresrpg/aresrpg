@@ -1130,9 +1130,9 @@ pub(super) fn map_with_context(
             )]
         }
         ("fight_events", "Defeat") => {
-            let e: OneId = decode(module, name, contents)?;
+            let e: FightDefeat = decode(module, name, contents)?;
             vec![set(
-                k_fight(&e.id.to_canonical_string(true)),
+                k_fight(&e.fight.to_canonical_string(true)),
                 "$.status",
                 json!("defeat"),
             )]
@@ -1143,8 +1143,8 @@ pub(super) fn map_with_context(
             vec![del(k_fight(&e.fight.to_canonical_string(true)), "$")]
         }
         ("fight_events", "Swept") => {
-            let e: OneId = decode(module, name, contents)?;
-            vec![del(k_fight(&e.id.to_canonical_string(true)), "$")]
+            let e: FightSwept = decode(module, name, contents)?;
+            vec![del(k_fight(&e.fight.to_canonical_string(true)), "$")]
         }
 
         // ── fight results: soulbound settled outcomes, keyed by owner ──────────
@@ -1192,8 +1192,8 @@ pub(super) fn map_with_context(
             ]
         }
         ("results", "ResultBurned") => {
-            let e: OneId = decode(module, name, contents)?;
-            vec![del(k_result(&e.id.to_canonical_string(true)), "$")]
+            let e: ResultBurned = decode(module, name, contents)?;
+            vec![del(k_result(&e.result.to_canonical_string(true)), "$")]
         }
 
         // ── commission: artisan-commission v2 lifecycle (aresrpg::commission) ──
