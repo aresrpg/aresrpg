@@ -17,7 +17,6 @@ import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
 import { ITEM_STAT_CATALOG_ORDER, ITEM_STAT_SHIFT, fold_equipment_snapshot } from '@aresrpg/sim/equipment_stats'
 import { scaled_hp } from '@aresrpg/sim/mob_stats'
 
-import { fight_spells_data } from '../game/screens/hud/fight-spells.js'
 import { equip_item } from '../game/screens/hud/simulator-equip.js'
 import { ITEM_STAT_KEY_MAP } from '../pages/encyclopedia/item_corpus'
 
@@ -172,17 +171,6 @@ export const build_seat = (character, items = []) => {
 }
 
 // ── spells ───────────────────────────────────────────────────────────────────────────────────────
-
-/**
- * The sim template map for every published CLASS spell, keyed by NAME_KEY. Derived off the live corpus
- * projection the game itself resolves casts through (fight-spells.js), so a simulated cast and a real one
- * read the same template. name_key — not the object id — is the key on purpose: it is the id the reducer's
- * `spell_levels` store, the id the fight store's hand carries, and the only one stable across a republish.
- * Empty until the corpus blob loads — inert, never a stub.
- * @returns {Map<string, object>}
- */
-export const class_spell_templates = () =>
-  new Map(fight_spells_data.spells.filter((spell) => spell.template).map((spell) => [spell.name_key, spell.template]))
 
 /**
  * The sim-local id of a mob's authored spell. Mirrors the SDK's `mob_attack_spell_id` idiom (a mob-scoped

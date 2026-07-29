@@ -10,7 +10,6 @@ import { describe, expect, test } from 'bun:test'
 import { ITEM_STAT_CATALOG_ORDER, ITEM_STAT_SHIFT } from '@aresrpg/sim/equipment_stats'
 
 import { EQUIPMENT_SLOTS as INVENTORY_EQUIPMENT_SLOTS } from '../game/screens/hud/simulator-equip.js'
-import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
 import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import { item_corpus_from_v1 } from '../pages/encyclopedia/item_corpus'
 
@@ -24,7 +23,6 @@ import {
   build_mob_spell_templates,
   build_seat,
   centered_max_roll,
-  class_spell_templates,
   mob_spell_id,
   resolve_loadout,
 } from './content.js'
@@ -274,49 +272,6 @@ describe('build_mob_spell_templates — the authored kit to sim templates', () =
   test('an unauthored kit is an empty map, never a stub spell', () => {
     expect(build_mob_spell_templates('0xmob', []).size).toBe(0)
     expect(build_mob_spell_templates('0xmob', undefined).size).toBe(0)
-  })
-})
-
-describe('class_spell_templates — the published corpus to the sim template map', () => {
-  const CORPUS_ROW = {
-    id: '0xspell',
-    object_id: '0xobj',
-    classType: 'senshi',
-    unlock: 1,
-    name: 'Ember Strike',
-    role: 'damage',
-    element: 'fire',
-    levels: [
-      {
-        min_char_level: 1,
-        ap_cost: 3,
-        range_min: 1,
-        range_max: 4,
-        line_of_sight: true,
-        crit_rate: 20,
-        cooldown_turns: 0,
-        casts_per_turn: 2,
-        casts_per_target: 255,
-        effects: [{ kind: 0, element: 0, value: 9 }],
-        crit_effects: [],
-      },
-    ],
-  }
-
-  // Keyed by NAME_KEY, matching the reducer's `spell_levels` and the fight store's hand — the only spell id
-  // that survives a republish (the object id is re-minted, and may be null before the receipt ships).
-  test('keys the sim templates by name_key, not the re-mintable object id', () => {
-    set_spell_corpus_for_test([CORPUS_ROW])
-    const templates = class_spell_templates()
-    expect(templates.has('0xspell')).toBe(false)
-    expect(templates.get('ember_strike')?.levels[0].cost).toBe(3)
-    expect(templates.get('ember_strike')?.levels[0].range).toEqual([1, 4])
-    set_spell_corpus_for_test()
-  })
-
-  test('an unpublished corpus yields an empty map — inert, never a stub', () => {
-    set_spell_corpus_for_test()
-    expect(class_spell_templates().size).toBe(0)
   })
 })
 
