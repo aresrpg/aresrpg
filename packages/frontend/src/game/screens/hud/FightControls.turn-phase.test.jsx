@@ -362,5 +362,19 @@ describe('fight turn controls — one phase source for the button and silent aut
     expect(watching_rule).toContain('max-width: 100%')
     expect(watching_rule).toContain('white-space: normal')
     expect(watching_rule).toContain('overflow-wrap: anywhere')
+
+    // THE COMPACT HOST IS THE ONLY ONE THAT CAN CLIP (measured 2026-07-29 in a real browser at 1280×800 and
+    // 1024×768): the desktop `.hud-bottom` is shrink-to-fit with room to spare, so even the pre-fix rules
+    // never truncated there. `.gw-fight-layer--mobile .hud-bottom` is a hard `width: 104px`, and the buttons
+    // inside it only stay readable because they INHERIT the wrapping from the base rule asserted above —
+    // the mobile rule itself sets `min-width: 0` and never re-states it. Re-introducing `nowrap` (or an
+    // `overflow: hidden`) on THIS rule would restore #1607 while every assertion above still passed, so the
+    // compact host guards its own actionable buttons here.
+    const mobile_button_rule =
+      css.match(/\.gw-fight-layer--mobile \.hud-fightctl \.hud-fightctl__btn\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(mobile_button_rule).not.toBe('')
+    expect(mobile_button_rule).not.toContain('white-space: nowrap')
+    expect(mobile_button_rule).not.toContain('overflow: hidden')
+    expect(mobile_button_rule).not.toContain('text-overflow: ellipsis')
   })
 })
