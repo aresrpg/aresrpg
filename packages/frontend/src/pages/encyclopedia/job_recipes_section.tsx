@@ -32,9 +32,16 @@ function RecipeCard({ row, on_navigate_to_item }: { row: CraftRecipeRow; on_navi
       onClick={() => on_navigate_to_item(row.id)}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <ItemImage id={asset.id} image_url={asset.image_url} category={row.category} style={{ width: 24, height: 24 }} />
+        <ItemImage
+          id={asset.id}
+          image_url={asset.image_url}
+          category={row.category}
+          style={{ width: 24, height: 24 }}
+        />
         <span className="text-[9px] tracking-[0.1em] uppercase truncate flex-1 text-text">{row.name}</span>
-        {row.output_quantity > 1 && <span className="text-[8px] shrink-0 text-muted">&times;{row.output_quantity}</span>}
+        {row.output_quantity > 1 && (
+          <span className="text-[8px] shrink-0 text-muted">&times;{row.output_quantity}</span>
+        )}
       </div>
       <div className="flex items-center gap-1 flex-wrap">
         <span
