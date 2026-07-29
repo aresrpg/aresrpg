@@ -14,6 +14,7 @@
 module aresrpg::extension;
 
 use aresrpg::{character::{Self, Character}, config::GameConfig, item::{Self, Item, ItemTemplate, LockPledge}, item_stats::{Self, ItemStatistics}, version::Version};
+use std::string::String;
 use sui::dynamic_field as df;
 
 // ╔════════════════ [ Reserved namespaces (append-only; the u8 stamped into every NsKey) ] ═ ]
@@ -68,6 +69,26 @@ public(package) fun y30(template: &ItemTemplate, quantity: u64, version: &Versio
 public fun mint_item_stack_brand<W: drop>(_: W, config: &GameConfig, template: &ItemTemplate, quantity: u64, version: &Version, ctx: &mut TxContext): (Item, LockPledge) {
   config.assert_forge_brand<W>();
   y30(template, quantity, version, ctx)
+}
+
+/// Additive forge-brand mint door over a same-PTB template snapshot. The forge builder snapshots only immutable
+/// item base fields from a real shared `ItemTemplate`; this consumes those fields after its terminal random roll
+/// so a variable shared-template roster needs no 35-reference signature. Output is identical to `y30`.
+public fun mint_item_stack_snapshot_brand<W: drop>(
+  _: W,
+  config: &GameConfig,
+  template: ID,
+  name: String,
+  description: String,
+  item_type: String,
+  category: String,
+  quantity: u64,
+  version: &Version,
+  ctx: &mut TxContext,
+): (Item, LockPledge) {
+  config.assert_forge_brand<W>();
+  version.assert_enabled();
+  item::mint_stack_snapshot(template, name, description, item_type, category, quantity, ctx)
 }
 
 /// BRAND TWIN (2026-07-12 forge split): the rolled-stat REWRITE for the PINNED forge sibling (scribe outcome

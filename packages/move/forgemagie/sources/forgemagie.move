@@ -20,6 +20,9 @@
 ///     object args in one MoveCall are of unverified PTB legality, so the client never sends duplicates; the
 ///     walk below tolerates them anyway). Unregistered / zero-owed / duplicate slots no-op; any owed rune
 ///     whose template was NOT passed aborts (`EMissingTemplate`) — the whole tx reverts, the gear is safe.
+///     The additive staged twin removes that fixed arity without touching `crush`: `open_crush` commits template
+///     IDs, `add_rune_template` snapshots each matching shared template, and terminal `close_crush` performs the
+///     same roll/mint body. Its ability-less `RuneMint` forces close in the opening PTB.
 ///   • YIELD CALIBRATION (curve-based, docs/ECONOMY_SIM.md §7): the R3 formula
 ///     transcribed raw yields ~2000 runes for a L50/40-Fo line @100%. A PER-LEVEL-BAND divisor
 ///     (`aresrpg_foundation::forgemagie::band_divisor`) replaces the old flat constant so the steady-state
@@ -38,6 +41,7 @@ use aresrpg::{admin::AdminCap, character::Character, character_link, config::{Se
 use aresrpg::{extract::ItemExtractPolicy, item::{Self, Item, ItemTemplate}, item_stats::{Self, ItemStatistics}};
 use aresrpg_foundation::{forgemagie as forge, job_xp, prng, rune_catalog as cat, taux};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
+use std::string::String;
 use sui::{dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random}, table::{Self, Table}, transfer_policy::TransferPolicy};
 
 // ╔════════════════ [ The brand witness (core's `*_brand` doors key on this) ] ═ ]
@@ -74,6 +78,9 @@ const EMissingTemplate: u64 = 109; // crush: a rune was owed whose ItemTemplate 
 const EBadRegistration: u64 = 111; // register_rune: (stat, tier) is not a real Retro rune
 const EEmptyBatch: u64 = 112; // crush_orphan: empty gear batch — no item to derive the burned template id from
 const EOrphanWrongTemplate: u64 = 113; // crush_orphan: a batch item is not of the first item's derived template
+const ERuneRosterFull: u64 = 114; // open/add staged crush: commitment exceeds 35, or every committed slot landed
+const EWrongRuneTemplate: u64 = 115; // add_rune_template: template is not the NEXT committed id (swap/reorder)
+const EPartialRuneRoster: u64 = 116; // close_crush: fewer templates landed than the commitment names
 
 /// The fixed rune-template arity of `crush` — the FROZEN catalog bound on distinct rune templates ONE crush can
 /// yield: 10 multi-tier stats × 3 tiers + 5 single-tier majors = 35 (`rune_catalog`: the 15 RUNEABLE fields;
@@ -96,6 +103,22 @@ public struct CrushBoard has key {
 }
 
 public struct RuneRef has copy, drop, store { stat: u8, tier: u8 }
+
+/// A staged crush under construction — a HOT POTATO with no abilities, so the PTB that opens it must close it.
+/// `committed` binds every shared template position; `landed` holds immutable base-field snapshots because Move
+/// cannot place `&ItemTemplate` values in a vector.
+public struct RuneMint {
+  committed: vector<ID>,
+  landed: vector<RuneTemplate>,
+}
+
+public struct RuneTemplate has drop {
+  template: ID,
+  name: String,
+  description: String,
+  item_type: String,
+  category: String,
+}
 
 /// Per-template taux state (foundation `taux` two-phase model). `recipe_less` prices at min(coeff, 50%)
 /// (anti boss-loot-fodder floor); defaults false on auto-created rows — the admin marks drop-only templates.
@@ -247,6 +270,87 @@ entry fun crush(
   mint_slot(board, &mut owed, t26, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t27, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t28, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t29, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t30, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t31, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t32, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t33, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t34, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t35, kiosk, pkcap, policy, config, version, ctx);
   assert_owed_empty(&owed);
+}
+
+// ╔════════════════ [ STAGED CRUSH — variable shared-template roster ] ════════ ]
+
+/// OPEN the additive crush builder with the template-ID commitment the client will satisfy positionally. IDs
+/// are plain values, so this command has no shared-reference arity ceiling; the 35-template catalog bound still
+/// caps work. Omitting an actually owed rune remains impossible because close retains `assert_owed_empty`.
+public fun open_crush(committed: vector<ID>): RuneMint {
+  assert!(committed.length() <= CRUSH_TEMPLATE_SLOTS, ERuneRosterFull);
+  RuneMint { committed, landed: vector[] }
+}
+
+/// ADD the next committed shared rune template. The snapshot is immutable base data copied from the real object
+/// in this PTB; a swap, reorder, or foreign template aborts before the terminal random command.
+public fun add_rune_template(mint: &mut RuneMint, template: &ItemTemplate) {
+  let slot = mint.landed.length();
+  assert!(slot < mint.committed.length(), ERuneRosterFull);
+  assert!(mint.committed[slot] == item::template_id(template), EWrongRuneTemplate);
+  mint.landed.push_back(RuneTemplate {
+    template: item::template_id(template),
+    name: item::template_name(template),
+    description: item::template_description(template),
+    item_type: item::template_item_type(template),
+    category: item::template_category(template),
+  });
+}
+
+/// CONSUME the potato and execute the same seeded roll + mint walk as legacy `crush`. Public `&Random` is safe
+/// here for the same structural reason as `results::open_taken`: no random result is returned, every minted
+/// stack lands kiosk-locked, and this must be the PTB's terminal MoveCall.
+#[allow(lint(public_random))]
+public fun close_crush(
+  mint: RuneMint,
+  board: &mut CrushBoard,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  character_id: ID,
+  gear_template: &ItemTemplate,
+  gear_ids: vector<ID>,
+  xpolicy: &ItemExtractPolicy,
+  policy: &TransferPolicy<Item>,
+  config: &GameConfig,
+  version: &Version,
+  r: &Random,
+  ctx: &mut TxContext,
+) {
+  let seed = random::new_generator(r, ctx).generate_u64();
+  close_crush_seeded(
+    mint, board, kiosk, pkcap, character_id, gear_template, gear_ids,
+    xpolicy, policy, config, version, seed, ctx,
+  );
+}
+
+fun close_crush_seeded(
+  mint: RuneMint,
+  board: &mut CrushBoard,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  character_id: ID,
+  gear_template: &ItemTemplate,
+  gear_ids: vector<ID>,
+  xpolicy: &ItemExtractPolicy,
+  policy: &TransferPolicy<Item>,
+  config: &GameConfig,
+  version: &Version,
+  seed: u64,
+  ctx: &mut TxContext,
+): vector<u64> {
+  let RuneMint { committed, landed } = mint;
+  assert!(landed.length() == committed.length(), EPartialRuneRoster);
+  let rolled = crush_roll(
+    board, kiosk, pkcap, character_id, gear_template, gear_ids, xpolicy, config, version, seed, ctx,
+  );
+  let mut owed = rolled;
+  let mut i = 0;
+  while (i < landed.length()) {
+    mint_snapshot_slot(board, &mut owed, &landed[i], kiosk, pkcap, policy, config, version, ctx);
+    i = i + 1;
+  };
+  assert_owed_empty(&owed);
+  rolled
 }
 
 /// The seeded crush body (single home — the entry door draws the seed from `&Random`, the test twin injects
@@ -480,6 +584,31 @@ fun mint_slot(
   item::lock_in_kiosk(pledge, stack, kiosk, personal_kiosk::borrow(pkcap), policy);
 }
 
+/// Staged twin of `mint_slot`: identical registry/owed handling, but the mint consumes the immutable template
+/// base fields captured by `add_rune_template` before the terminal random command.
+fun mint_snapshot_slot(
+  board: &CrushBoard,
+  owed: &mut vector<u64>,
+  t: &RuneTemplate,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  policy: &TransferPolicy<Item>,
+  config: &GameConfig,
+  version: &Version,
+  ctx: &mut TxContext,
+) {
+  if (!board.runes.contains(t.template)) return;
+  let rune_ref = *board.runes.borrow(t.template);
+  let idx = (rune_ref.stat as u64) * 3 + (rune_ref.tier as u64) - 1;
+  let qty = *owed.borrow(idx);
+  if (qty == 0) return;
+  *owed.borrow_mut(idx) = 0;
+  let (stack, pledge) = extension::mint_item_stack_snapshot_brand(
+    Forge {}, config, t.template, t.name, t.description, t.item_type, t.category, qty, version, ctx,
+  );
+  item::lock_in_kiosk(pledge, stack, kiosk, personal_kiosk::borrow(pkcap), policy);
+}
+
 /// Every owed row must be zero after the mint walk — a leftover means a yielded rune's template was not among
 /// the passed slots (client bug / unregistered rune): abort so the WHOLE crush reverts and the gear survives.
 fun assert_owed_empty(owed: &vector<u64>) {
@@ -592,6 +721,14 @@ public fun mint_lock_gear_for_testing(template: &ItemTemplate, kiosk: &mut Kiosk
 public fun create_board_for_testing(ctx: &mut TxContext) {
   let board = CrushBoard { id: object::new(ctx), runes: table::new(ctx), taux: table::new(ctx), pressure: table::new(ctx) };
   transfer::share_object(board);
+}
+
+#[test_only]
+public fun create_board_id_for_testing(ctx: &mut TxContext): ID {
+  let board = CrushBoard { id: object::new(ctx), runes: table::new(ctx), taux: table::new(ctx), pressure: table::new(ctx) };
+  let id = object::id(&board);
+  transfer::share_object(board);
+  id
 }
 
 /// ONE home for the scribe body (entry draws the seed from `&Random`; the test twin injects one — the same
@@ -713,6 +850,30 @@ public fun crush_for_testing(
   mint_slot(board, &mut owed, t4, kiosk, pkcap, policy, config, version, ctx);
   assert_owed_empty(&owed);
   rolled
+}
+
+#[test_only]
+/// Deterministic staged close: the same `close_crush_seeded` body as the live terminal door, with the rolled
+/// vector returned so tests can pin seed-for-seed parity against legacy `crush_for_testing`.
+public fun close_crush_for_testing(
+  mint: RuneMint,
+  board: &mut CrushBoard,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  character_id: ID,
+  gear_template: &ItemTemplate,
+  gear_ids: vector<ID>,
+  xpolicy: &ItemExtractPolicy,
+  policy: &TransferPolicy<Item>,
+  config: &GameConfig,
+  version: &Version,
+  seed: u64,
+  ctx: &mut TxContext,
+): vector<u64> {
+  close_crush_seeded(
+    mint, board, kiosk, pkcap, character_id, gear_template, gear_ids,
+    xpolicy, policy, config, version, seed, ctx,
+  )
 }
 
 #[test_only]

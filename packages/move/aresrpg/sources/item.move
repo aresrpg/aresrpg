@@ -257,20 +257,28 @@ public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, L
 /// cap-gated `extension::y30` (gather / pools). Returns the `LockPledge` — a stackable is personal-
 /// kiosk-locked from birth like every item. Stackables carry NO stat ranges, so there is nothing to roll.
 public(package) fun y54(template: &ItemTemplate, quantity: u64, ctx: &mut TxContext): (Item, LockPledge) {
-  assert!(is_stackable_category(template.category), ENotStackable);
+  mint_stack_snapshot(
+    object::id(template), template.name, template.description, template.item_type, template.category, quantity, ctx,
+  )
+}
+
+/// Mint from the immutable base-field snapshot a staged sibling door took from a real `ItemTemplate` earlier in
+/// this PTB. Package-private: only the forge-brand wrapper can reach it. The object and `ItemMinted` payload are
+/// byte-for-byte the `y54` shape; this overload exists solely because Move cannot retain a shared-object borrow.
+public(package) fun mint_stack_snapshot(
+  template: ID,
+  name: String,
+  description: String,
+  item_type: String,
+  category: String,
+  quantity: u64,
+  ctx: &mut TxContext,
+): (Item, LockPledge) {
+  assert!(is_stackable_category(category), ENotStackable);
   assert!(quantity >= 1, EZeroQuantity);
-  let tid = object::id(template);
-  let item = Item {
-    id: object::new(ctx),
-    template: tid,
-    name: template.name,
-    description: template.description,
-    item_type: template.item_type,
-    category: template.category,
-    amount: quantity,
-  };
+  let item = Item { id: object::new(ctx), template, name, description, item_type, category, amount: quantity };
   let item_id = object::id(&item);
-  event::emit(ItemMinted { item: item_id, template: tid, item_type: template.item_type, amount: quantity });
+  event::emit(ItemMinted { item: item_id, template, item_type, amount: quantity });
   (item, LockPledge { item_id })
 }
 
