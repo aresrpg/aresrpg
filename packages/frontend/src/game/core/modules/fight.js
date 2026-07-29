@@ -172,6 +172,9 @@ function spell_display_name(spell_id) {
  * The post-fight summary recap (winner, participants, duration, xp, loot) for the end-of-fight modal.
  * @typedef {object} FightSummary
  * @property {number} winner    winning team (0 / 1)
+ * @property {string | null} me_id  the seat THIS session held, captured with the roster while the fight slice
+ *   was live (#1661). The end-fight cards project the local row off this, never off `selected_character_id` —
+ *   a switch under this persistent slice used to render an uninvolved character as a fallen party member.
  * @property {{ id: string, name: string, team: number, level: number, is_player: boolean, alive: boolean }[]} participants
  * @property {number} duration_ms
  * @property {number} xp
