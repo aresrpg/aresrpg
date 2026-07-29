@@ -67,7 +67,14 @@ test('#1661 the local row is named off the SEAT, never off a stale roster name',
 
   expect(my_team).toBe(0)
   expect(party_rows).toHaveLength(1)
-  expect(party_rows[0]).toMatchObject({ id: ARES, name: 'ARES', is_me: true, alive: false, hp_pct: 0, class_name: 'Senshi' })
+  expect(party_rows[0]).toMatchObject({
+    id: ARES,
+    name: 'ARES',
+    is_me: true,
+    alive: false,
+    hp_pct: 0,
+    class_name: 'Senshi',
+  })
 })
 
 test('a KNOWN seat the roster lost is still synthesized — a dungeon claim can escrow-remove the dead player', () => {
