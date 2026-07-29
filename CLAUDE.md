@@ -90,6 +90,7 @@ labeled `good-first-issue` are self-contained starter tasks.
   micro-labels, sharp corners, slow atmospheric motion. New UI matches the existing tokens.
 - **i18n**: every player-facing string ships in all six locales
   (`packages/frontend/src/i18n/locales/`) in the same commit.
+- **Reuse**: canonical fact homes live in `docs/REGISTRY.md`; import or derive, never re-declare.
 - **Commits**: conventional subject, body ≤5 lines, atomic — one concern, exactly its files.
 - **Models**: this codebase is agent-friendly by construction — rules, rubrics, and gates ship in
   the repo. Use the strongest model available to you for judgment-dense work (architecture,

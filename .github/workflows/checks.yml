@@ -20,6 +20,101 @@ on:
 permissions:
   contents: read
 jobs:
+  loc-ledger:
+    name: LoC ledger gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: new code pays rent (#1603)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+        run: |
+          set -euo pipefail
+
+          ledger_tmp=$(mktemp -d)
+          trap 'rm -rf "$ledger_tmp"' EXIT
+          range="${BASE_SHA}...${HEAD_SHA}"
+          pathspecs=(':(top,glob)**')
+          while IFS= read -r pattern || [ -n "$pattern" ]; do
+            case "$pattern" in
+              ''|'#'*) continue ;;
+            esac
+            pathspecs+=(":(top,exclude,glob)$pattern")
+          done < .github/loc-ledger-excludes
+
+          git diff --no-renames --numstat "$range" -- > "$ledger_tmp/all"
+          git diff --no-renames --numstat "$range" -- "${pathspecs[@]}" > "$ledger_tmp/included"
+
+          sum_stats() {
+            awk '
+              BEGIN { added = deleted = binary = files = 0 }
+              $1 == "-" || $2 == "-" { binary++; files++; next }
+              { added += $1; deleted += $2; files++ }
+              END { print added, deleted, binary, files }
+            ' "$1"
+          }
+          read -r all_added all_deleted all_binary all_files < <(sum_stats "$ledger_tmp/all")
+          read -r added deleted binary files < <(sum_stats "$ledger_tmp/included")
+          excluded_added=$((all_added - added))
+          excluded_deleted=$((all_deleted - deleted))
+          excluded_binary=$((all_binary - binary))
+          excluded_files=$((all_files - files))
+          net=$((added - deleted))
+
+          budget=$(
+            node --input-type=module <<'NODE'
+          import { parse_close_refs } from './scripts/board_hygiene.mjs'
+
+          // Keep the board parser's quoted-evidence rules and numeric validation as the one parser
+          // home. Full-width hashes hide unrelated issue close-refs; only declarations become refs.
+          const declaration_refs = String(process.env.PR_BODY ?? '')
+            .replaceAll('#', '＃')
+            .replace(/\bloc-budget\s*:\s*(\d+)\b/gi, 'fixes #$1')
+          const [strictest_budget] = parse_close_refs(declaration_refs, '')
+          if (strictest_budget !== undefined) process.stdout.write(String(strictest_budget))
+          NODE
+          )
+
+          verdict=GREEN
+          reason='net LoC is at or below +400 — report only'
+          rc=0
+          if [ "$net" -gt 400 ]; then
+            if [ -z "$budget" ]; then
+              verdict=RED
+              reason='net LoC exceeds +400 and the PR body has no loc-budget declaration'
+              rc=1
+            elif [ "$net" -gt "$budget" ]; then
+              verdict=RED
+              reason="net LoC exceeds the declared loc-budget: $budget"
+              rc=1
+            else
+              reason="net LoC is within the declared loc-budget: $budget"
+            fi
+          fi
+
+          {
+            echo '### LoC ledger (#1603)'
+            echo
+            echo '| added | deleted | excluded | net | loc-budget | verdict |'
+            echo '|---:|---:|---:|---:|---:|:---|'
+            printf '| %d | %d | +%d/-%d across %d files (%d binary) | %+d | %s | **%s** |\n' \
+              "$added" "$deleted" "$excluded_added" "$excluded_deleted" "$excluded_files" \
+              "$excluded_binary" "$net" "${budget:-none}" "$verdict"
+            echo
+            echo "$reason."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          exit "$rc"
+
   ladder:
     runs-on: ubuntu-latest
     # 20, not 15: this job compiles the Move set twice on EVERY run — once as the field-cap leg's

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# The one exclusion home for the #1603 LoC ledger. Patterns use Git's glob pathspec grammar.
+
+# Lockfiles
+**/*.lock
+**/*-lock.json
+**/*-lock.yaml
+**/*-lock.yml
+
+# Generated files and build products
+**/generated/**
+**/*.generated.*
+**/dist/**
+**/build/**
+**/coverage/**
+packages/engine/assets/**
+packages/frontend/src/i18n/locales/**
+packages/frontend/src/game/screens/hud/spellbook-seed.json
+packages/inventory/types/**
+packages/party/types/**
+packages/sdk/types/**
+packages/sdk/src/deployment/release.json
+packages/move/scripts/out/**
+test/gold/.build/**
+test/gold/out/**
+
+# Fixtures and captured evidence
+**/fixtures/**
+**/*.fixture.*
+**/*.snap
