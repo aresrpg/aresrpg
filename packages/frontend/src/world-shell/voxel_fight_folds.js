@@ -313,9 +313,12 @@ export const is_death_edge = (was_dead, dead) => dead && !was_dead
  *      fires per corpse (death anim, then depop — never loop back to idle).
  *  • 'skip'    — nothing to do: a dead fighter already dying / already absent, or a LIVING fighter whose
  *      in-flight walk / paced replay owns its position this frame (re-placing would teleport it mid-lerp).
- *  • 'walk'    — a LIVING MOB whose chain cell drifted from where its rig stands, with no walk/replay owning it
- *      (the fold moved it but a beat didn't — a snapshot-reset poll / a packet-less move): smooth-walk it to `to`
- *      via the existing walk path instead of a teleport-snap (mobs APPROACH, never blink).
+ *  • 'walk'    — a LIVING FIGHTER (mob or player) whose chain cell drifted from where its rig stands, with no
+ *      walk/replay owning it (the fold moved it but a beat didn't — a snapshot-reset poll / a packet-less move,
+ *      and in coop every peer action an observing seat folds off the journal): smooth-walk it to `to` via the
+ *      existing walk path instead of a teleport-snap (bodies APPROACH, never blink). Never during PLACEMENT —
+ *      a placement pick PLACES a body, it does not move one, so it snaps (the rest of the phase agrees: the
+ *      D290 re-face rides the same upsert).
  *  • 'upsert'  — the living default create/refresh/snap at the chain cell: a NEW id or a fighter already on its cell.
  *
  * ONE DEAD RULE: player or mob, live or snapshot rebuild, active or terminal — a dead row NEVER upserts. A live
@@ -334,15 +337,25 @@ export const is_death_edge = (was_dead, dead) => dead && !was_dead
  *
  * @param {{ id: string, dead?: boolean, is_player?: boolean, cell: {x:number,y:number} }} fighter a fight.fighters value
  * @param {{ winner: number, has_entity: boolean, is_dying: boolean, walking: boolean, replay_owned: boolean,
- *   placed: {x:number,y:number} | null, queued?: boolean, poofed?: boolean, committed_dead?: boolean }} ctx the
+ *   placed: {x:number,y:number} | null, queued?: boolean, poofed?: boolean, committed_dead?: boolean,
+ *   placement?: boolean }} ctx the
  *   adapter's live per-id state (mirrors + the AUTHORITATIVE committed liveness — never the flickering engine_view.dead)
  * @returns {{ kind: 'despawn' | 'skip' | 'walk' | 'upsert', to?: {x:number,y:number} }}
  */
 export function entity_fold_action(
   fighter,
-  { has_entity, is_dying, walking, replay_owned, placed, queued = false, poofed = false, committed_dead = false }
+  {
+    has_entity,
+    is_dying,
+    walking,
+    replay_owned,
+    placed,
+    queued = false,
+    poofed = false,
+    committed_dead = false,
+    placement = false,
+  }
 ) {
-  const is_mob = !fighter.is_player
   // #170 + #450 POOFED-CORPSE GUARD: a rig already poofed this fight stays DOWN — never re-upsert a fresh
   // (default-orientation) model, never re-fire death — while it is dead in ANY projection. The door back is a
   // GENUINE revive: alive in EVERY sense. #170 covered the committed flicker (committed_dead holds it down even
@@ -363,8 +376,14 @@ export function entity_fold_action(
   if (committed_dead && !has_entity) return { kind: 'skip' }
   // living: an in-flight walk / paced replay owns the position this frame → leave it (the mid-lerp teleport guard).
   if (has_entity && (walking || replay_owned)) return { kind: 'skip' }
-  // living MOB drifted from its placed cell with no beat owning it → smooth-walk (the fold's position safety net).
-  if (is_mob && has_entity && placed && (placed.x !== fighter.cell.x || placed.y !== fighter.cell.y))
+  // A living FIGHTER drifted from its placed cell with no beat owning it → smooth-walk (the fold's position safety
+  // net). #1138/#1139: this used to require `is_mob`, which closed the net on the one case it matters most in coop —
+  // an OBSERVING seat folds a peer's committed move over the journal transport, which produces no paced wave turn,
+  // so this verdict is the ONLY channel that can move a peer's rig. Gated on mobs, the occupancy flipped while the
+  // model stood still (#1138), and a drifted anchor was corrected by a snap instead of a walked route from the
+  // previous cell (#1139). Nothing about "the fold moved it but a beat didn't" was ever mob-specific — except in
+  // PLACEMENT, where a pick PLACES a body rather than moving one and must still snap.
+  if (!placement && has_entity && placed && (placed.x !== fighter.cell.x || placed.y !== fighter.cell.y))
     return { kind: 'walk', to: { x: fighter.cell.x, y: fighter.cell.y } }
   return { kind: 'upsert' }
 }

@@ -1408,6 +1408,7 @@ export function create_voxel_fight_adapter(
         placed: placed_cell.get(f.id) ?? null,
         queued: wave_claimed.has(f.id),
         poofed: removed_corpses.has(f.id), // #170 sticky poofed guard
+        placement: !!fight.placement, // a placement pick PLACES a body — it snaps, it never walks
         committed_dead: f.committed_dead, // the AUTHORITATIVE liveness — the only door back, never the flickering f.dead
       })
       // #170 a poofed rig that the COMMITTED fold now shows ALIVE is a genuine divergence-correction revive → the
