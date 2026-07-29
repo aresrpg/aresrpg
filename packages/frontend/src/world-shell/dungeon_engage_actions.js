@@ -232,7 +232,10 @@ export async function create_world_fight({
     // spell casts at the free baseline 1 whatever the character invested. Read in the same parallel leg.
     raised_spell_ids_for(character_id),
   ])
-  if (!handle) throw new Error('That character is not in your kiosk')
+  // A CHARACTER-scoped refusal: this seat cannot claim ANY group anywhere until its character is back in the
+  // kiosk, so the throw declares that scope itself (it never reaches the chain, so it carries no abort to
+  // decode). #1263 — a scan that re-learns this fact once per candidate spends its whole ceiling on one fact.
+  if (!handle) throw Object.assign(new Error('That character is not in your kiosk'), { refusal_scope: 'character' })
   // A live fight already holds this spawn ⇒ refuse PRE-SIGN (zero gas, no digest) with the structured zones-108
   // shape, IMMEDIATELY before compose/sign. The throw propagates to engage()'s catch, which reads the 108 and
   // reconciles (ghost-drop the row + re-poll) — identical to the on-chain claim race, minus the burned gas.
