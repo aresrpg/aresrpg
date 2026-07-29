@@ -111,38 +111,3 @@ export const base_from_view = (view, fight_id) => {
     winner: view.status === STATUS_WON ? 0 : view.status === STATUS_FAILED ? 1 : -1,
   }
 }
-
-/** V2 · A5 OMISSION-HOLD (register V2 · BLANKPAGE A5). A newly-adopted view that does NOT MODEL the status class
- *  (`invisibility_statuses === undefined` — a thinner payload / indexer gap / legacy read) must not DROP a
- *  receipt-floored positive fact: reconstruct the status rows from the prior committed fighters so base_from_view
- *  re-derives them (invisibility/buffs a payload never knew about are HELD, never zeroed). A view that DOES model
- *  the class (any array, INCLUDING []) is authoritative — an absent fighter there is genuinely not-invisible — and
- *  passes through untouched. Backfilling the STORED view (not a per-recompute overlay) makes the hold persist. */
-export const carry_statuses = (view, prior) => {
-  if (!view || view.invisibility_statuses !== undefined) return view
-  const escrow = view.escrow ?? []
-  const rows = []
-  for (const [key, f] of Object.entries(prior?.fighters ?? {})) {
-    const statuses = f.statuses?.length
-      ? f.statuses
-      : f.invisible
-        ? [{ kind: INVISIBILITY_STATUS_KIND, remaining_turns: 1 }]
-        : []
-    if (!statuses.length) continue
-    const entity_id = key[0] === 'm' ? `mob-${key.slice(1)}` : participant_entity_id(escrow[Number(key.slice(1))] ?? {})
-    if (!entity_id) continue
-    for (const st of statuses)
-      rows.push({
-        entity_id,
-        kind: st.kind,
-        remaining_turns: st.remaining_turns ?? 0,
-        element: st.element ?? null,
-        value: st.value ?? null,
-        stat: st.stat ?? null,
-        chance: st.chance ?? null,
-        source: st.source ?? null,
-        ...(st.flags != null ? { flags: st.flags } : {}),
-      })
-  }
-  return { ...view, invisibility_statuses: rows }
-}

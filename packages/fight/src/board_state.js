@@ -334,14 +334,15 @@ export function board_state_from_fight({
   const holes = (fight.holes ?? []).map(canon)
   const start_cells_a = (fight.start_cells_a ?? []).map(canon)
   const start_cells_b = (fight.start_cells_b ?? []).map(canon)
-  // V2 · A5 OMISSION SIGNAL (register): preserve the distinction between a payload that MODELS the status class (an
-  // array, incl []) and one that OMITS it (undefined). The store's omission-hold (fold.carry_statuses) reads this to
-  // decide whether to HOLD a prior receipt-floored status or adopt "nobody has one" as authoritative. Coercing to []
-  // here (the old `?? []`) destroyed the signal and let a thinner read silently drop a floored invisibility/buff.
-  const invisibility_statuses =
-    fight.invisibility_statuses === undefined
-      ? undefined
-      : status_snapshot_entities(fight.invisibility_statuses, escrow.map(participant_entity_id), mobs.length)
+  // A fight read's status array is AUTHORITATIVE: `[]` is the positive claim "nobody carries a status", not "this
+  // payload did not look". Every snapshot door states the class (the chain read decodes `fx.statuses` — absent
+  // becomes `[]`, never a gap — and the simulator read projects the sim's own rows), so there is no "omitted class"
+  // to hold: the adopted array IS the truth `base_from_view` re-derives the per-fighter rows from.
+  const invisibility_statuses = status_snapshot_entities(
+    fight.invisibility_statuses ?? [],
+    escrow.map(participant_entity_id),
+    mobs.length
+  )
   return {
     id: fight.id,
     status,

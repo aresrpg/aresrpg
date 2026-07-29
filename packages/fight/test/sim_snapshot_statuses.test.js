@@ -2,10 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // sim_snapshot_statuses.test.js — THE SNAPSHOT STATUS GATE (#952).
 //
-// `snapshot_from_sim` IS the simulator's object read: it is the ONLY durable channel behind the receipt. The
-// store's omission-hold law (fold.js `carry_statuses`) is explicit — a view whose `invisibility_statuses` is
-// ANY array, INCLUDING [], is AUTHORITATIVE ("an absent fighter there is genuinely not-invisible"); only
-// `undefined` means "this payload does not model the class, HOLD the prior fact".
+// `snapshot_from_sim` IS the simulator's object read: it is the ONLY durable channel behind the receipt. A
+// snapshot's `invisibility_statuses` is AUTHORITATIVE — an absent fighter there is genuinely not-invisible —
+// so the array the read states IS the status truth the fold re-derives from.
 //
 // The mock used to hardcode `[]`. That is the strongest possible lie: every snapshot refresh told the store
 // "nobody has any status", wiping the invisibility the receipt had just floored AND every buff/debuff badge

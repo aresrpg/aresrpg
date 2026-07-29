@@ -119,9 +119,9 @@ const ELEMENT_ORDINAL = { FIRE: 0, WATER: 1, EARTH: 2, AIR: 3, NONE: 255 }
 
 /**
  * THE SIMULATOR'S STATUS READ. `snapshot_from_sim` is the only durable channel behind the receipt, so it must
- * state the statuses the sim HOLDS — the store's omission-hold law (fold.js `carry_statuses`) treats any array,
- * `[]` included, as authoritative "nobody has one". A hardcoded `[]` therefore wiped the invisibility the
- * receipt had just floored and every buff badge with it, which is #952's wholesale rollback.
+ * state the statuses the sim HOLDS — the store treats a snapshot's status array, `[]` included, as authoritative
+ * "nobody has one". A hardcoded `[]` therefore wiped the invisibility the receipt had just floored and every
+ * buff badge with it, which is #952's wholesale rollback.
  *
  * The sim-row → status-row projection is `statuses.status_row_of` — the ONE home (#1049), shared verbatim with
  * the prediction door so a kind can never be a status on one and invisible on the other. Rows come out in the

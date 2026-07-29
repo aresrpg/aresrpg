@@ -28,7 +28,7 @@ import {
   without_expired_budget_predictions,
 } from './budget_claims.js'
 
-export { base_budget, base_from_view, carry_statuses, last_action_of } from './fold_base.js'
+export { base_budget, base_from_view, last_action_of } from './fold_base.js'
 
 // M2b · ONE INGRESS (#291): with a SINGLE canonical source (the accept machine's deduped, contiguous `apply`
 // stream — receipts and journal pages folded through ONE door keyed `(fight_id, seq)`) there is no longer a merge

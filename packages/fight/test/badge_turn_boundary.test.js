@@ -165,19 +165,4 @@ describe('#598/#597 the badge lifetime survives the turn boundary (post-V2-cutov
     expect(store.getState().view_version, 'the base did not move — the read was a checkpoint').toBe(5)
     expect(buff_turns(store), 'and the badge is still the fold s truth').toBe(3)
   })
-
-  test('the omission-hold carries the badge across a re-BOOTSTRAP — the one moment a read seeds the base', () => {
-    // A thin base (`invisibility_statuses === undefined` — an indexer gap / legacy read) means "this payload does
-    // not state the rows", NOT "there are no rows": `fold.carry_statuses` re-states the committed set onto it.
-    const store = create_fight_store()
-    store
-      .getState()
-      .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } } })
-    store
-      .getState()
-      .input({ type: 'snapshot', fight: fight_object({ invisibility_statuses: undefined }), version: 5 }, 1_000)
-
-    expect(store.getState().view_version, 'this read DID seed the base').toBe(5)
-    expect(badges(store), 'nothing to carry from an empty prior fold — the hold is not an invention').toEqual([])
-  })
 })

@@ -182,9 +182,9 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
     start_cells_b: board.start_cells_b,
     anchor_x,
     anchor_z,
-    // The simulator's object read STATES the statuses the sim holds. `[]` is not "we did not look" — the
-    // store's omission-hold law reads any array as authoritative (fold.js `carry_statuses`), so a hardcoded
-    // empty set wiped every live invisibility and buff badge on each refresh (#952).
+    // The simulator's object read STATES the statuses the sim holds. `[]` is not "we did not look" — the store
+    // reads a snapshot's status array as authoritative (board_state.js), so a hardcoded empty set wiped every
+    // live invisibility and buff badge on each refresh (#952).
     invisibility_statuses: status_rows_from_sim(sim_state),
   }
 }
