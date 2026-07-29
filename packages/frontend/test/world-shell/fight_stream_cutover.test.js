@@ -8,8 +8,8 @@
 // cutover has to hold:
 //
 //  ① THE STREAM FEEDS THE FOLD — a frame folds the event through the SAME journal door with NO page fetched.
-//  ② THE FALLBACK HOLDS — a 404 stream (today's production shape: /v1/stream/* is not deployed yet) and a
-//    runtime with no EventSource at all both leave the fight on REST paging, still following the chain edge.
+//  ② THE FALLBACK HOLDS — a 404 stream (a location that does not serve /v1/stream/*) and a runtime with no
+//    EventSource at all both leave the fight on REST paging, still following the chain edge.
 //  ③ TRANSPORT PARITY (the class gate against divergence) — ONE captured wire row, ingested through the stream
 //    and through the REST pager, produces byte-identical events. Neither transport shapes an event: both hand
 //    the same bytes to the ONE normalizer, and the fold's own accepted head is the ONE resume cursor.
@@ -260,7 +260,7 @@ describe('② the fallback holds — a fight never depends on the stream being d
     await poll()
     await settle()
     expect(project.fight_view().active_entity_id).toBe(CHARACTER_ID)
-    expect(sources.at(-1).readyState).toBe(2) // the wire is gone, exactly as it is in production today
+    expect(sources.at(-1).readyState).toBe(2) // the wire is gone — the shape a location without the route serves
 
     journal = [
       { seq: '0', kind: 'TurnEnded', version: '2', digest: '0xadv', data: { fight: FIGHT_ID, is_mob: false, idx: 0 } },
@@ -310,6 +310,69 @@ describe('② the fallback holds — a fight never depends on the stream being d
 // own `fight_frame_carries_the_journal_sequence` test (`{"seq":12,"kind":"Placed","data":{"cell":"4"},
 // "digest":"a","version":"1"}`, SSE id `90:7`), and the REST twin is the entry `handle_fight_events` serves
 // (packages/rpc/api/views.js:1201 — the identical `{ seq, kind, data, digest, version }` field set).
+// ④ THE SAD PATH (#1457) — a dropped stream is the NORMAL case, not an incident: the browser reconnects on its
+// own and the pump has no client cursor to resume from (fight_stream_link.js keeps none by design), so the wire
+// replays rows the fold has ALREADY accepted. Idempotence is therefore load-bearing twice over: the fold must
+// not re-accept the row (core_inbox.js:272 — a matching content hash at an admitted coordinate is skipped), and
+// the PRESENTATION must not re-pace it (store_chain.js:93 `paced_wave_turns` runs off `read.changed`, so a row
+// that leaked past the dedupe would make an observer re-watch a turn they already watched). Nothing pinned
+// either property before this: the cutover specs above only ever deliver a row once.
+describe('④ a stream drop replays delivered rows — each folds exactly once', () => {
+  const replayed_rows = () => [
+    { seq: 0, kind: 'TurnEnded', digest: '0xdrop', version: '2', data: { fight: FIGHT_ID, is_mob: false, idx: 0 } },
+    {
+      seq: 1,
+      kind: 'TurnStarted',
+      digest: '0xdrop',
+      version: '2',
+      data: { fight: FIGHT_ID, is_mob: true, idx: 0, deadline_ms: FUTURE() },
+    },
+  ]
+
+  test('a reconnect that replays every accepted row folds nothing twice and raises no protocol fault', async () => {
+    seat_a_fight_in(ENGINE_ACTIVE)
+
+    await poll()
+    await settle()
+    sources[0].open()
+    await settle()
+
+    // ONE evaluation, delivered twice: a replay re-sends the bytes Redis stored, never a freshly-built row.
+    const rows = replayed_rows()
+    rows.forEach((row, index) => sources[0].emit_fight(row, `90:${index}`))
+    await settle_stream_window()
+
+    // The turn advanced off the wire, exactly as the happy path does.
+    expect(project.fight_view().active_entity_id).toBe('mob-0')
+    expect(fight_store.getState().accept_state.head).toBe('1')
+    expect(fight_store.getState().protocol_fault).toBeFalsy()
+
+    // THE DROP: the connection dies and `EventSource` reconnects itself. The pump replays the fight's journal
+    // from its start (stream.rs `read_fight_events`, `-inf`) — the identical rows arrive a second time.
+    sources[0].open()
+    await settle()
+    rows.forEach((row, index) => sources[0].emit_fight(row, `90:${index}`))
+    await settle_stream_window()
+
+    expect(fight_store.getState().accept_state.head).toBe('1')
+    expect(project.fight_view().active_entity_id).toBe('mob-0')
+    // A re-delivered row must be recognised as the SAME row. Admitting it as a second, conflicting truth at an
+    // occupied coordinate is what raises `hash_conflict` → `protocol_fault` (store_chain.js:105), which surfaces
+    // to the player as a desync on a connection blip that cost nothing.
+    expect(fight_store.getState().protocol_fault).toBeFalsy()
+
+    // ANTI-VACUITY CONTROL: none of the above is an observation unless the wire is still the live carrier at this
+    // point — a green from a dead source would prove nothing. A genuinely NEW row must still fold, immediately.
+    sources[0].emit_fight(
+      { seq: 2, kind: 'TurnEnded', digest: '0xnext', version: '3', data: { fight: FIGHT_ID, is_mob: true, idx: 0 } },
+      '90:2'
+    )
+    await settle_stream_window()
+
+    expect(fight_store.getState().accept_state.head).toBe('2')
+  })
+})
+
 describe('③ transport parity — the stream and the pager cannot shape an event differently', () => {
   const WIRE_ROW = { seq: 12, kind: 'Placed', data: { cell: '4' }, digest: 'a', version: '1' }
   const SSE_ID = '90:7'
