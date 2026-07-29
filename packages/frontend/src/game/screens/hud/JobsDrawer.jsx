@@ -139,6 +139,7 @@ function ItemIcon({ icon, size = 28 }) {
       className="jobs__item-img"
       src={url}
       alt=""
+      crossOrigin="anonymous"
       width={size}
       height={size}
       loading="lazy"

@@ -290,6 +290,7 @@ function CaseStage({
               className="case-worn"
               src={worn_url}
               alt=""
+              crossOrigin="anonymous"
               loading="lazy"
               decoding="async"
               onError={() => set_worn_failed(true)}

@@ -157,6 +157,7 @@ function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
           <img
             src={spell_icon_url(spell.icon_key) ?? undefined}
             alt=""
+            crossOrigin="anonymous"
             className="w-[72px] h-[72px] object-cover"
             onError={(e) => {
               ;(e.target as HTMLImageElement).style.display = 'none'
@@ -467,6 +468,7 @@ function ClassesTab({
                 <img
                   src={spell_icon_url(spell.icon_key) ?? undefined}
                   alt=""
+                  crossOrigin="anonymous"
                   className="w-4 h-4 shrink-0 object-cover"
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).style.display = 'none'
@@ -504,6 +506,7 @@ function ClassesTab({
                 <img
                   src={spell_icon_url(spell.icon_key) ?? undefined}
                   alt=""
+                  crossOrigin="anonymous"
                   className="w-5 h-5 shrink-0 object-cover"
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).style.display = 'none'

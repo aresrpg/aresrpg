@@ -26,11 +26,15 @@ describe('#1598 cdn-assets runtime cache', () => {
   })
 
   it('treats an opaque cached entry as a miss for a cors consumer', () => {
-    const request = new Request('https://assets.aresrpg.world/items/opaque-seed.png', { mode: 'cors' })
+    // Bun currently reports `navigate` for `new Request(url, {mode: 'cors'})`; a plain request fixture keeps
+    // the browser's actual FetchEvent shape explicit while exercising Workbox's callback contract.
+    const request = { mode: 'cors' } as Request
     const opaque_response = { type: 'opaque' } as Response
+    const cors_response = { type: 'cors' } as Response
 
     expect(options.plugins).toContain(cdn_assets_cache_guard)
     expect(cdn_assets_cache_guard.cachedResponseWillBeUsed({ request, cachedResponse: opaque_response })).toBeNull()
+    expect(cdn_assets_cache_guard.cachedResponseWillBeUsed({ request, cachedResponse: cors_response })).toBe(cors_response)
   })
 })
 

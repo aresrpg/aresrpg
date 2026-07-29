@@ -245,7 +245,7 @@ export function LevelUp({ on_allocate }) {
             <div className="unlock">
               <div className="unlock__well">
                 {unlock.icon ? (
-                  <img src={unlock.icon} alt="" />
+                  <img src={unlock.icon} alt="" crossOrigin="anonymous" />
                 ) : (
                   <svg
                     viewBox="0 0 24 24"

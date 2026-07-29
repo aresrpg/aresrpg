@@ -105,6 +105,7 @@ export function ItemImage({
     <img
       src={primary ?? undefined}
       alt=""
+      crossOrigin="anonymous"
       loading={eager ? 'eager' : 'lazy'}
       referrerPolicy="no-referrer"
       className={className}

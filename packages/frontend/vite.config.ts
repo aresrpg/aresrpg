@@ -10,6 +10,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 import { resolve_app_version } from './src/resolve_app_version.mjs'
+import { cdn_assets_runtime_cache } from './sw_cdn_assets_cache'
 
 // CONTENT AUTHORING lives with the private authoring tree — its vite middlewares (local
 // content, cosmetic GLB linking, move-hash, the seed-derived catalog) never ship here. The
@@ -163,25 +164,9 @@ export default defineConfig({
               expiration: { maxEntries: 1, maxAgeSeconds: 300 },
             },
           },
-          // MinIO asset host (#650 — full pivot off asset-host for serving): item/spell/mob/cosmetic/character
-          // PNGs, GLBs, music mp3s, and the runtime /data/*.json content blobs all serve from this one origin
-          // now (packages/sdk/src/jobs.js asset_url). It's already Cloudflare-tunnel-fronted, so SWR
-          // mirrors that edge TTL client-side rather than fighting it — the SW never revalidates faster.
-          {
-            urlPattern: /^https:\/\/assets\.aresrpg\.world\/.+/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              // #1598 — the cache matches by URL only, so whichever mode asked first won for everyone: one
-              // no-cors `<img>` load stored an OPAQUE response, and every later cors consumer (Three.js
-              // crossorigin textures, programmatic fetch) got it back and threw `Failed to fetch` →
-              // net::ERR_FAILED, for up to maxAgeSeconds and across SW updates. Fetching in cors mode (the
-              // host sends ACAO) stores a CORS-clean response, which satisfies cors AND no-cors consumers.
-              cacheName: 'cdn-assets-v2', // bumped so already-poisoned clients abandon the old cache
-              fetchOptions: { mode: 'cors' },
-              cacheableResponse: { statuses: [200] }, // never cache an opaque or failed response
-              expiration: { maxEntries: 800, maxAgeSeconds: 86400 },
-            },
-          },
+          // MinIO asset host (#650): one SWR strategy for PNG/GLB/audio/data assets. Its cache-mode law lives
+          // beside its executable opaque-hit regression fixture, rather than as untestable config text.
+          cdn_assets_runtime_cache,
         ],
       },
       manifest: {

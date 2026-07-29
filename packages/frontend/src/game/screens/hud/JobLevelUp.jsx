@@ -44,6 +44,7 @@ function UnlockChip({ icon, name }) {
           <img
             src={url}
             alt=""
+            crossOrigin="anonymous"
             width={22}
             height={22}
             referrerPolicy="no-referrer"

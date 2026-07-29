@@ -91,6 +91,7 @@ export function SpellSocket({
               className="hud-socket__gem-art"
               src={art_url}
               alt=""
+              crossOrigin="anonymous"
               draggable={false}
               onError={on_failed_attempt}
               // An HTTP-ok response with an undecodable body fires onLoad with naturalWidth 0, never onError —

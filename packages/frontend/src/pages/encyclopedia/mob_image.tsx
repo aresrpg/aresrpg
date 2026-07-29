@@ -88,6 +88,7 @@ export function EncyclopediaMobImage({
       key={`${url}#${active.attempt}`}
       src={url}
       alt=""
+      crossOrigin="anonymous"
       loading={hd ? 'eager' : 'lazy'}
       referrerPolicy="no-referrer"
       className={className}

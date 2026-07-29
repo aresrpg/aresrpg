@@ -58,6 +58,7 @@ function ItemTile({ item }: { item: AirdropSetItem }) {
           <img
             src={item.icon_url ?? undefined}
             alt=""
+            crossOrigin="anonymous"
             loading="lazy"
             referrerPolicy="no-referrer"
             className="w-[78%] h-[78%] object-contain"

@@ -45,7 +45,16 @@ export function SpellIcon({ icon, color, name, cls = 'sb__ic' }) {
         {(name || '?').slice(0, 1).toUpperCase()}
       </span>
     )
-  return <img className={cls} src={url} alt="" draggable={false} onError={() => set_failed(true)} />
+  return (
+    <img
+      className={cls}
+      src={url}
+      alt=""
+      crossOrigin="anonymous"
+      draggable={false}
+      onError={() => set_failed(true)}
+    />
+  )
 }
 
 /**

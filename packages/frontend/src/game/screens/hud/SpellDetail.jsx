@@ -43,6 +43,7 @@ export function SpellArt({ icon, color, name, className = '' }) {
       className={`sd__art ${className}`}
       src={url}
       alt=""
+      crossOrigin="anonymous"
       aria-hidden="true"
       draggable={false}
       onError={on_failed_attempt}

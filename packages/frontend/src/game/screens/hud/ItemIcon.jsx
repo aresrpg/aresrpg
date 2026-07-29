@@ -156,6 +156,7 @@ export function ItemIcon({ item, alt = '', hd = false, className, glyph, categor
           className="item-icon__img"
           src={url}
           alt={alt}
+          crossOrigin="anonymous"
           loading="lazy"
           referrerPolicy="no-referrer"
           draggable={false}

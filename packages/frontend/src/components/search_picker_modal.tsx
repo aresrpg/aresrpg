@@ -26,6 +26,7 @@ function PickerIcon({ src }: { src: string }) {
     <img
       src={src}
       alt=""
+      crossOrigin="anonymous"
       className="w-4 h-4 shrink-0 mt-0.5"
       style={{ imageRendering: 'pixelated' }}
       onError={() => set_failed(true)}
