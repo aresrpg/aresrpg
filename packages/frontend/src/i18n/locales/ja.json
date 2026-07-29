@@ -1806,7 +1806,8 @@
     "follow_with_you": "一緒にいます",
     "follow_blocked_fight_result": "{{name}} の戦闘結果を開く必要があります",
     "follow_open_result_cta": "結果を開く",
-    "follow_background": "バックグラウンド"
+    "follow_background": "バックグラウンド",
+    "auto_seat_notice": "あなたが始めた戦闘には、あなたのキャラクター{{count}}体も参加します。"
   },
   "inventory": {
     "craft_success": "{{name}} を作成しました",

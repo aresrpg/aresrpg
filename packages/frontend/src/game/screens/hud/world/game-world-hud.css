@@ -564,6 +564,17 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+/* #1661 — the auto-seat consequence, stated once above the roster. A quiet micro-label, not an alarm: it
+   reports a standing rule of grouping your own characters, so it must not shout over the member rows. */
+.gw-party__auto-seat {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  padding: 2px 0 4px;
+  text-transform: uppercase;
+}
 /* #613 — the follower's entry was refused (an unopened fight result): an explicit, named inline state with the
    open action, never a dead 00:00 bar or a context-free toast. */
 .gw-party__blocked {

@@ -1806,7 +1806,8 @@
     "follow_with_you": "Bei dir",
     "follow_blocked_fight_result": "{{name}} muss sein Kampfergebnis öffnen",
     "follow_open_result_cta": "Ergebnis öffnen",
-    "follow_background": "Im Hintergrund"
+    "follow_background": "Im Hintergrund",
+    "auto_seat_notice": "{{count}} deiner Charaktere nehmen an den Kämpfen teil, die du beginnst."
   },
   "inventory": {
     "craft_success": "Hergestellt: {{name}}",

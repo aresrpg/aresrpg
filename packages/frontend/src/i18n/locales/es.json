@@ -1806,7 +1806,8 @@
     "follow_with_you": "Contigo",
     "follow_blocked_fight_result": "{{name}} necesita abrir su resultado de combate",
     "follow_open_result_cta": "Abrir resultado",
-    "follow_background": "En segundo plano"
+    "follow_background": "En segundo plano",
+    "auto_seat_notice": "{{count}} de tus personajes entrarán en los combates que inicies."
   },
   "inventory": {
     "craft_success": "Fabricado: {{name}}",

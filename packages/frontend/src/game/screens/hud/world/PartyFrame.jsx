@@ -188,6 +188,9 @@ export function PartyFrame() {
     )
 
   const visible_members = members.slice(0, MAX_ROWS)
+  // The armed follower set IS the auto-seat set — the same `follow.follower_character_ids` group_loop.js
+  // filters to aligned alts when it emits join_fight. Read it, never re-derive it (one home).
+  const auto_seated_count = follow.follower_character_ids.length
 
   return (
     <>
@@ -195,6 +198,15 @@ export function PartyFrame() {
       {picker_card}
       <div className="gw-party gw-panel">
         <div className="gw-party__h">{t('party.title')}</div>
+        {/* #1661 — AUTO-SEATING IS INVISIBLE OTHERWISE. Grouping your own characters arms them as followers
+            (#613: membership IS auto-follow), and `group_loop.js` fires a join tx for every armed alt aligned to
+            your world the moment you engage — a seat the player never asked for, which idle-forfeits if nobody
+            drives it. State the consequence where the roster lives. Other players' members are NOT counted:
+            the chain seats only the creator (engine/fight.move:283) and every other seat is that player's own
+            join tx, so nobody else is pulled in by your engage. */}
+        {auto_seated_count > 0 ? (
+          <div className="gw-party__auto-seat">{t('party.auto_seat_notice', { count: auto_seated_count })}</div>
+        ) : null}
         {visible_members.map((member) => {
           const character_id = member.character
           const row = member_cache.get(character_id)

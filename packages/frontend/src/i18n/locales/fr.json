@@ -1806,7 +1806,8 @@
     "follow_with_you": "À vos côtés",
     "follow_blocked_fight_result": "{{name}} doit ouvrir son résultat de combat",
     "follow_open_result_cta": "Ouvrir le résultat",
-    "follow_background": "En arrière-plan"
+    "follow_background": "En arrière-plan",
+    "auto_seat_notice": "{{count}} de vos personnages seront engagés dans les combats que vous lancez."
   },
   "inventory": {
     "craft_success": "Fabriqué : {{name}}",

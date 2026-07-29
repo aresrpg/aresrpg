@@ -1806,7 +1806,8 @@
     "follow_with_you": "With you",
     "follow_blocked_fight_result": "{{name}} needs its fight result opened",
     "follow_open_result_cta": "Open result",
-    "follow_background": "Background"
+    "follow_background": "Background",
+    "auto_seat_notice": "{{count}} of your characters will be seated in the fights you start."
   },
   "inventory": {
     "craft_success": "Crafted {{name}}",
