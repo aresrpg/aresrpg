@@ -160,7 +160,7 @@ describe('four-view class gate — one recorded fight, one fold (#1336)', () => 
           .map(([key, f]) => [
             key,
             { cell: f.cell ?? null, hp: f.hp ?? null, alive: f.alive ?? null, ap: f.ap ?? null, mp: f.mp ?? null },
-        ])
+          ])
       ),
     })
     // TOOTH, not a second full parity sweep: committed and presentation truth first CAN diverge on the trace's

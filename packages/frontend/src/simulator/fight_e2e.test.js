@@ -242,7 +242,7 @@ describe('L4 · determinism — the seed is the whole fight', () => {
   })
 
   test('the capsule trace digest is STABLE — pinned, so it holds across processes too', () => {
-    const trace_digest = replay_capsule(capsule_a).trace_digest
+    const { trace_digest } = replay_capsule(capsule_a)
     // A pinned golden: a change here means the sim, the seed threading, or the command list moved. That is a
     // conversation, not a rebaseline — the whole determinism story rides on this number. It moved TWICE:
     //   1. when the recorder header started holding raw templates — it pins the REPLAY's trace, which until
