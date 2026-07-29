@@ -12,10 +12,12 @@ import i18n from '../i18n'
 
 import {
   execute_sponsored_tx,
+  is_sponsor_daily_cap_refusal,
   is_sponsor_outdated_package_refusal,
   is_sponsor_self_pay_refusal,
   is_sponsor_unpriceable_refusal,
   is_sponsor_would_abort_refusal,
+  SPONSOR_REFUSAL_DAILY_CAP,
   SPONSOR_REFUSAL_OUTDATED_PACKAGE,
   SPONSOR_REFUSAL_SELF_PAY,
   SPONSOR_REFUSAL_SIMULATION_INFRASTRUCTURE,
@@ -218,4 +220,21 @@ describe('execute_sponsored_tx — ONLY the balance rule tags for silent self-pa
       expect(is_sponsor_self_pay_refusal(error)).toBe(false)
     })
   }
+
+  // The daily cap now arrives as a MACHINE reason, like every other money refusal — the `/daily free gameplay/`
+  // regex over a server-authored sentence stays only as the FALLBACK for an un-rolled @server (a refreshed
+  // client reaches players before the image does). Both shapes must produce the same tagged block.
+  test('reason=daily-cap → tagged for the cap block even when the message matches no regex', async () => {
+    const error = await drive_refusal(
+      JSON.stringify({ error: 'a diagnostic nobody parses', reason: SPONSOR_REFUSAL_DAILY_CAP })
+    )
+    expect(error.message).toBe(i18n.t('errors.sponsor_daily_limit'))
+    expect(is_sponsor_daily_cap_refusal(error)).toBe(true)
+    expect(is_sponsor_self_pay_refusal(error)).toBe(false) // never auto-spend past the free promise
+  })
+
+  test('LEGACY FALLBACK — the untagged English sentence still tags the cap block', async () => {
+    const error = await drive_refusal(HONEST_400S.daily_free_cap)
+    expect(is_sponsor_daily_cap_refusal(error)).toBe(true)
+  })
 })
