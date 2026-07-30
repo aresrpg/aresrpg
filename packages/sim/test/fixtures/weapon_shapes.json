@@ -1,0 +1,83 @@
+{
+  "_doc": [
+    "#387 — the WEAPON SHAPE parity fixture: the exact cell set one strike touches. ONE file, TWO readers —",
+    "packages/fight/test/weapon_shapes.test.js drives the JS twin through the real preview path",
+    "(weapon_spell_template -> get_aoe_cells); packages/move/engine/tests/weapon_shape_tests.move asserts the",
+    "SAME vectors through combat_grid::zone_cells. A divergence breaks one of them, by construction.",
+    "",
+    "Geometry: cell = y*20 + x (GRID_W 20, GRID_H 19). Attacker at (5,5)=105, aimed cell east at (6,5)=106, so",
+    "the strike axis is +x and the perpendicular bar is +/-y (away_dir ties break to x, both twins).",
+    "  106 = the aimed cell   107 = one cell beyond (+x)   105 = the attacker's own cell",
+    "  126 = aimed + y        86  = aimed - y",
+    "",
+    "TWO LAYERS, deliberately separate:",
+    "  `zones`      — ENGINE truth. A zone kind resolves to a cell set. Content's sealed vocabulary names each",
+    "                 kind; the engine speaks the (area_shape, area_size) pair the spell zone engine already",
+    "                 uses. This layer is code-owned and fully asserted on both twins.",
+    "  `categories` — the BUILT-IN DEFAULT assignment (the owner's #387 final ruling), which published catalog",
+    "                 data overrides per template. Assignments are content, not engine — see weapon_shapes.js."
+  ],
+  "caster": 105,
+  "anchor": 106,
+  "zones": [
+    { "zone": "single", "area_shape": 0, "area_size": 0, "cells": [106] },
+    {
+      "zone": "line_inline_2",
+      "area_shape": 3,
+      "area_size": 1,
+      "cells": [106, 107]
+    },
+    {
+      "zone": "line_perp_3",
+      "area_shape": 4,
+      "area_size": 1,
+      "cells": [86, 106, 126]
+    },
+    {
+      "zone": "cross_1",
+      "area_shape": 2,
+      "area_size": 1,
+      "cells": [86, 105, 106, 107, 126]
+    },
+    {
+      "zone": "podium_4",
+      "area_shape": 8,
+      "area_size": 1,
+      "cells": [86, 106, 107, 126]
+    }
+  ],
+  "categories": [
+    { "category": "sword", "zone": "single" },
+    { "category": "dagger", "zone": "single" },
+    { "category": "daggers", "zone": "single" },
+    { "category": "shovel", "zone": "single" },
+    { "category": "axe", "zone": "single" },
+    { "category": "pickaxe", "zone": "single" },
+    { "category": "club", "zone": "line_inline_2" },
+    { "category": "longsword", "zone": "line_inline_2" },
+    { "category": "scythe", "zone": "line_perp_3" },
+    { "category": "staff", "zone": "line_perp_3" },
+    { "category": "spear", "zone": "line_perp_3" },
+    { "category": "battleaxe", "zone": "podium_4" },
+    { "category": "mace", "zone": "podium_4" },
+    { "category": "hammer", "zone": "podium_4" },
+    {
+      "category": "bow",
+      "zone": "single",
+      "range_min": 1,
+      "range_modifiable": true
+    },
+    {
+      "category": "wand",
+      "zone": "single",
+      "range_min": 1,
+      "range_modifiable": false
+    },
+    {
+      "category": "spellbook",
+      "zone": "single",
+      "range_min": 1,
+      "line_only": true
+    }
+  ]
+}

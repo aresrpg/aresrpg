@@ -18,6 +18,7 @@ import { bfsPath, decode, encode } from './los.js'
 import { occupancy_of } from './occupancy.js'
 import { sim_effects_of, status_row_of } from './statuses.js'
 import { WEAPON_ATTACK_ID, weapon_damage_rows } from './weapon.js'
+import { weapon_strike_range, weapon_strike_zone } from './weapon_shapes.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
 // RITUAL: on every engine upgrade re-stamp this to `ceremony_manifest.engine.latest` (the boundary test asserts the
@@ -515,7 +516,7 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
 /** The strike's damage rows in the corpus dialect `normalize_spell_templates` reads — the ONE weapon-damage
  *  derivation (weapon.js `weapon_damage_rows`), never a second reading of the seat's lines. #577's `value_max`
  *  is the row's band MAX (== value ⇒ fixed); the strike rolls in [value, value_max] off the turn seed. */
-const weapon_damage_effects = (weapon, critical) =>
+const weapon_damage_effects = (weapon, critical, zone) =>
   weapon_damage_rows(weapon, critical).map((row) => ({
     kind: 0,
     value: row.min,
@@ -523,31 +524,43 @@ const weapon_damage_effects = (weapon, critical) =>
     element: row.element,
     target_filter: 1,
     chance: 100,
+    // #387 — the strike's ZONE rides the effect, exactly as a spell's own AoE does, so every consumer of this
+    // template (the board's hover paint, the damage preview, `predict_cast` itself) resolves the touched cells
+    // through the ONE zone engine instead of assuming a single cell.
+    area_shape: zone.area_shape,
+    area_size: zone.area_size,
   }))
 
-/** Build the equipped weapon's attack line through the same sim template normalizer. */
-export const weapon_spell_template = (weapon = {}) =>
-  normalize_spell_templates([
+/** Build the equipped weapon's attack line through the same sim template normalizer. #387: the zone and the
+ *  range band come from the weapon-zone door (`weapon_shapes.js`), so the strike is a spell template like any
+ *  other — the special case for weapon geometry falls out of the general one. */
+export const weapon_spell_template = (weapon = {}) => {
+  const zone = weapon_strike_zone(weapon)
+  const { range, modifiable, line_only } = weapon_strike_range(weapon)
+  return normalize_spell_templates([
     {
       id: WEAPON_ATTACK_ID,
       name: 'Weapon attack',
       levels: [
         {
           ap_cost: Number(weapon.ap_cost ?? 0),
-          range_min: 1,
-          range_max: Math.max(1, Number(weapon.reach ?? 1)),
+          range_min: range[0],
+          range_max: range[1],
+          modifiable_range: modifiable,
+          linear: line_only,
           line_of_sight: true,
           free_cell: false,
           casts_per_turn: 255,
           casts_per_target: 255,
           cooldown_turns: 0,
           crit_rate: Number(weapon.crit_rate ?? 0),
-          effects: weapon_damage_effects(weapon, false),
-          crit_effects: weapon_damage_effects(weapon, true),
+          effects: weapon_damage_effects(weapon, false, zone),
+          crit_effects: weapon_damage_effects(weapon, true, zone),
         },
       ],
     },
   ]).get(WEAPON_ATTACK_ID)
+}
 
 /** Convert the live fight projection to a sim state, then run predict_sim_cast synchronously. */
 export const predict_cast = ({

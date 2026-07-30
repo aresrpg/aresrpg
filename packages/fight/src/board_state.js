@@ -15,6 +15,7 @@ import { chain_to_world, DEFAULT_WORLD_OFFSET } from '@aresrpg/sdk/coords'
 import { GRID_CELLS, encode } from './los.js'
 import { status_snapshot_entities } from './fight_status_snapshot.js'
 import { participant_entity_id } from './fight_control.js'
+import { SHAPE_NO_OVERRIDE } from './weapon_shapes.js'
 
 // Legacy status codes — the ONE lifecycle scalar every consumer branches on (preserved verbatim).
 export const STATUS_OPEN = 0 // a live RunPass with NO room fight yet (pre-engage roam on the plane)
@@ -148,6 +149,10 @@ function normalize_weapon_lines(raw) {
       damage_max: Number(line.damage_max ?? damage),
       crit_damage,
       crit_damage_max: Number(line.crit_damage_max ?? crit_damage),
+      // #387 — the authored per-line ZONE override. Absent ⇒ the no-override sentinel, so the category
+      // assignment resolves (weapon_shapes.js); NEVER 0, which is a live single-cell override.
+      area_shape: Number(line.area_shape ?? SHAPE_NO_OVERRIDE),
+      area_size: Number(line.area_size ?? 0),
     }
   })
 }
@@ -174,6 +179,9 @@ function normalize_weapon(raw, lines) {
     crit_rate: Number(w.crit_rate ?? UNARMED_WEAPON.crit_rate),
     ap_cost: Number(w.ap_cost ?? UNARMED_WEAPON.ap_cost),
     reach: Math.max(1, Number(w.reach ?? UNARMED_WEAPON.reach)),
+    // #387 — the FINE category the strike's zone keys on, snapshotted on the chain `Weapon` at fight entry.
+    // Blank/absent (bare hands, a pre-#387 fight, a tool) ⇒ null, which the door resolves to `single`.
+    category: String(w.category ?? '') || null,
   }
 }
 

@@ -185,12 +185,16 @@ describe('#1323 — the preview resolves the seat’s AUTHORED lines, exactly as
   test('the seat’s lines survive the decode onto the weapon the preview prices from', () => {
     // Guard the guard: with no lines on the weapon every assertion below would silently measure the family line.
     expect(seated.weapon.lines).toHaveLength(2)
+    // #387 — a decoded line also carries its ZONE OVERRIDE slot. These wire rows author none, so both land on
+    // the `shape_no_override` sentinel (255) and the strike resolves the category's own zone.
     expect(seated.weapon.lines[0]).toEqual({
       element: 0,
       damage: 10,
       damage_max: 20,
       crit_damage: 15,
       crit_damage_max: 30,
+      area_shape: 255,
+      area_size: 0,
     })
     expect(seated.weapon.lines[1]).toEqual({
       element: 1,
@@ -198,6 +202,8 @@ describe('#1323 — the preview resolves the seat’s AUTHORED lines, exactly as
       damage_max: 9,
       crit_damage: 7,
       crit_damage_max: 13,
+      area_shape: 255,
+      area_size: 0,
     })
   })
 
