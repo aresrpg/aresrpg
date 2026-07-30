@@ -16,6 +16,7 @@ import {
   SHAPE_CROSS,
   SHAPE_LINE,
   SHAPE_POINT,
+  SHAPE_PODIUM,
   SHAPE_RING,
   SHAPE_TBAR,
   TF_NOT_ENEMY,
@@ -240,6 +241,16 @@ const cells_in_tbar = (caster, target, size) => {
   ]
 }
 
+// PODIUM (#387) — the TBAR front arc AT the aimed cell PLUS one cell BEYOND it along the strike axis. The chain
+// twin is `combat_grid::podium_cells`, same construction: tbar ∪ { the one forward step }, off-grid dropped.
+const cells_in_podium = (caster, target, size) => {
+  const forward = dominant_direction(caster, target)
+  const cells = cells_in_tbar(caster, target, size)
+  if (forward.x === 0 && forward.y === 0) return cells
+  const beyond = { x: target.x + forward.x, y: target.y + forward.y }
+  return in_grid(beyond) ? [...cells, beyond] : cells
+}
+
 const cells_in_cone = (caster, target, size) => {
   const direction = dominant_direction(caster, target)
   if (direction.x === 0 && direction.y === 0) return []
@@ -300,6 +311,8 @@ export const get_aoe_cells = (spell, target, caster) => {
       return cells_in_line(caster, target, area + 1, dominant_direction)
     if (shape === SHAPE_TBAR && caster)
       return cells_in_tbar(caster, target, area)
+    if (shape === SHAPE_PODIUM && caster)
+      return cells_in_podium(caster, target, area)
     if (shape === SHAPE_RING)
       return scan_grid(cell => manhattan(target, cell) === area)
     if (shape === SHAPE_ALLMAP) return scan_grid(() => true)

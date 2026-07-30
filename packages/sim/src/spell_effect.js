@@ -63,6 +63,11 @@ export const SHAPE_TBAR = 4
 export const SHAPE_RING = 5
 export const SHAPE_ALLMAP = 6
 export const SHAPE_CONE = 7
+// #387 — the weapon PODIUM: the TBAR front arc at the aimed cell PLUS one cell beyond it along the strike axis.
+export const SHAPE_PODIUM = 8
+// The WeaponLine zone-OVERRIDE sentinel (mirrors spell_effect.move): an authored line whose `area_shape` is this
+// carries NO override and falls through to the category assignment. 255, not 0 — SHAPE_POINT is a live override.
+export const SHAPE_NO_OVERRIDE = 255
 
 export const shape_point = () => SHAPE_POINT
 export const shape_circle = () => SHAPE_CIRCLE
@@ -72,6 +77,7 @@ export const shape_tbar = () => SHAPE_TBAR
 export const shape_ring = () => SHAPE_RING
 export const shape_allmap = () => SHAPE_ALLMAP
 export const shape_cone = () => SHAPE_CONE
+export const shape_podium = () => SHAPE_PODIUM
 
 // ╔════════════════ [ Target filter bitmask (taxonomy §2b) ] ═══════════════════════ ]
 export const TF_NONE = 0
