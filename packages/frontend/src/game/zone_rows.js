@@ -103,8 +103,26 @@ async function compose(/** @type {string} */ world_id, /** @type {number} */ zx,
 export const zone_state_resolvable = (zone) => Array.isArray(zone?.mob_bitmap) && Array.isArray(zone?.res_bitmap)
 
 /**
+ * The authoritative format-3 ZoneGroupCommitment projected by `/v1` from the sibling commitment DF.
+ * A missing/malformed value is not permission to fall back to the legacy derivation: doing so would expose
+ * claim rows whose member-zone polarity the chain rejects.
+ * @param {{ group_root?: number[] | null, group_count?: number | null } | null | undefined} zone
+ * @returns {number[] | null}
+ */
+export const format3_group_commitment = (zone) => {
+  const root = zone?.group_root
+  return Array.isArray(root) &&
+    root.length === 33 &&
+    root[0] === 3 &&
+    Number.isInteger(zone?.group_count) &&
+    Number(zone?.group_count) >= 0
+    ? root
+    : null
+}
+
+/**
  * Zone rows via the /v1 read layer (the steady-state poll path). The v1 zone doc carries the raw
- * `{ seed, mob_bitmap, res_bitmap, discovered_at_ms }` the indexer projected off the Zone DF.
+ * Zone DF state plus the sibling format-3 ZoneGroupCommitment.
  * `null` = undiscovered, OR a doc whose liveness is unresolvable (see `zone_state_resolvable`) — both mean
  * "no derivable truth this poll", which the caller already handles by leaving the zone's rows alone rather
  * than deriving a set it cannot trust.
@@ -121,6 +139,14 @@ export async function zone_rows_v1(world_id, zx, zy, { signal = undefined, fresh
     )
     return null
   }
+  const group_commitment = format3_group_commitment(zone)
+  if (!group_commitment) {
+    console.warn(
+      `[zone-rows] zone ${zx}:${zy} has no authoritative format-3 group commitment; ` +
+        'keeping the last known rows instead of deriving legacy claim eligibility'
+    )
+    return null
+  }
   return compose(world_id, zx, zy, {
     seed: zone.seed,
     discovered_at_ms: Number(zone.discovered_at_ms ?? 0),
@@ -128,7 +154,7 @@ export async function zone_rows_v1(world_id, zx, zy, { signal = undefined, fresh
     res_bitmap: zone.res_bitmap,
     // The commitment root's leading byte selects WHICH derivation this zone was committed under; dropping it
     // here would silently derive the other one — a whole zone of spawn_ids the chain never committed.
-    group_root: zone.group_root,
+    group_root: group_commitment,
   })
 }
 

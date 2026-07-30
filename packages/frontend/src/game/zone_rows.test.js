@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { rows_from_state, zone_state_resolvable } from './zone_rows.js'
+import { format3_group_commitment, rows_from_state, zone_state_resolvable } from './zone_rows.js'
 
 // The PURE composer seam of the search-cost rework: zone {seed, bitmaps} + World doc → live spawn rows. The
 // vectors below are the SAME cross-language fixture both parity suites pin (zone_gen_tests.move
@@ -68,6 +68,14 @@ describe('zone_rows — the derived spawn-row composer', () => {
     // absent bitmap would have fabricated. The two cases are indistinguishable downstream, which is why the
     // decision has to happen here, at the read seam, and not in the derivation.
     expect(rows_from_state(state, 488, 488, world, 6).filter((r) => r.kind === 'mob')).toHaveLength(3)
+  })
+
+  test('claim eligibility accepts only the authoritative format-3 /v1 commitment', () => {
+    const root = [3, ...Array(32).fill(7)]
+    expect(format3_group_commitment({ group_root: root, group_count: 3 })).toBe(root)
+    expect(format3_group_commitment({ group_root: Array(32).fill(7), group_count: 3 })).toBeNull()
+    expect(format3_group_commitment({ group_root: [2, ...Array(32).fill(7)], group_count: 3 })).toBeNull()
+    expect(format3_group_commitment({ group_root: root, group_count: null })).toBeNull()
   })
 
   test('spawn spacing law holds through the composer (pairwise >= 20 blocks)', () => {

@@ -264,6 +264,8 @@ export const zone_spec: Spec<RpcZone> = {
     seed: str, // full u64 → STRING (2^53 law)
     mob_bitmap: arr(num),
     res_bitmap: arr(num),
+    group_root: nullable(arr(num)),
+    group_count: nullable(num),
   },
 }
 

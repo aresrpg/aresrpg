@@ -205,6 +205,10 @@ export interface RpcZone {
   seed?: string
   mob_bitmap?: number[]
   res_bitmap?: number[]
+  // Single-zone reads also carry the sibling ZoneGroupCommitment projected by /v1. Format 3 is encoded as
+  // `[3, ...32-byte digest]`; `group_count` is the full committed stream size, independent of consumption.
+  group_root?: number[] | null
+  group_count?: number | null
 }
 
 export interface RpcZones {

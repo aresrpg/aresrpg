@@ -306,6 +306,11 @@ describe('/v1 contract — recorded live truth, drift-pinned', () => {
     expect(typeof zone?.seed).toBe('string') // u64 → string (2^53 law)
     expect(Array.isArray(zone?.mob_bitmap)).toBe(true)
     expect(Array.isArray(zone?.res_bitmap)).toBe(true)
+    // Eligibility pin: /v1's sibling ZoneGroupCommitment is authoritative. Format 3 is the tag plus digest;
+    // dropping it would make the sim fall back to legacy polarity and surface rows the chain refuses.
+    expect(zone?.group_root).toHaveLength(33)
+    expect(zone?.group_root?.[0]).toBe(3)
+    expect(zone?.group_count).toBe(53)
   })
 
   test('rare-links — get_rare_links unwraps {rare_links}; rows hold RpcRareLink', async () => {
