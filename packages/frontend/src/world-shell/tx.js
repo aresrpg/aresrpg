@@ -49,8 +49,55 @@ if (typeof window !== 'undefined') /** @type {any} */ (window).__TX_TIMINGS = ti
 // ONE cross-character transaction lane. Human-triggered collisions refuse immediately with the existing
 // switch/action copy; system-owned party work opts into the same lane and waits behind the current action.
 // Counting queued work (not just the executing callback) keeps a later user press from cutting between members.
+// The lock is document-scoped: BFCache preserves module cells across pagehide/pageshow, while the old fetch/wallet
+// continuation can be abandoned. A page lifecycle input advances the generation so that orphan can never lock the
+// restored page; its late settlement is correlated to the old generation and cannot decrement the new lane.
 let character_action_tail = Promise.resolve() // eslint-disable-line functional/no-let -- module-owned queue tail
-let pending_character_actions = 0 // eslint-disable-line functional/no-let -- module-owned queued/running count
+
+const initial_character_action_lane = () => ({ generation: 0, ticket_seq: 0, active_tickets: [] })
+
+/** Pure lock lifecycle fold. Every async settlement is ticket-correlated to its document generation. */
+export function reduce_character_action_lane(state, input) {
+  switch (input?.type) {
+    case 'page_hidden':
+      return { generation: state.generation + 1, ticket_seq: state.ticket_seq, active_tickets: [] }
+    case 'requested':
+      if (!input.queued && state.active_tickets.length > 0) return state
+      return {
+        ...state,
+        ticket_seq: state.ticket_seq + 1,
+        active_tickets: [...state.active_tickets, state.ticket_seq + 1],
+      }
+    case 'settled':
+      return input.generation === state.generation && state.active_tickets.includes(input.ticket_id)
+        ? { ...state, active_tickets: state.active_tickets.filter((ticket_id) => ticket_id !== input.ticket_id) }
+        : state
+    default:
+      return state
+  }
+}
+
+let character_action_lane = initial_character_action_lane() // eslint-disable-line functional/no-let -- reducer-owned state
+
+const character_action_input = (input) => {
+  character_action_lane = reduce_character_action_lane(character_action_lane, input)
+  return character_action_lane
+}
+
+/** Release only the outgoing document's lane. Late promises remain generation-fenced from the restored page. */
+export function reset_character_action_lane() {
+  character_action_input({ type: 'page_hidden' })
+  character_action_tail = Promise.resolve()
+}
+
+let character_action_lifecycle_target = null // eslint-disable-line functional/no-let -- app-lifetime edge handle
+
+/** Arm page teardown at the first transaction-lane entry, before the lane can acquire a lock. */
+export function install_character_action_lifecycle(target = globalThis.window) {
+  if (!target || target === character_action_lifecycle_target) return
+  target.addEventListener('pagehide', reset_character_action_lane)
+  character_action_lifecycle_target = target
+}
 
 /** The spend guard's refusal, thrown BEFORE anything is built or signed. Deliberately carries no digest and no
  *  `SimulationError` marker — nothing executed and nothing simulated, so no burn-law classifier upstream may
@@ -82,15 +129,21 @@ function surface_guard_notice(/** @type {{ i18n_key: string } | null} */ notice)
  * @returns {Promise<T>}
  */
 export function run_character_action(task, { queued = false, intent = null, automated = false } = {}) {
+  install_character_action_lifecycle()
   const admission = spend_guard_admit({ intent, automated })
   if (!admission.allow) {
     game_log('spend-guard', `refused ${intent} — ${admission.reason}`)
     return Promise.reject(spend_guard_error(admission))
   }
-  if (!queued && pending_character_actions)
-    return Promise.reject(new Error(i18n.t('errors.character_switch_in_progress')))
-  pending_character_actions += 1
-  const scheduled = character_action_tail.then(task)
+  const before = character_action_lane
+  const admitted = character_action_input({ type: 'requested', queued })
+  if (admitted === before) return Promise.reject(new Error(i18n.t('errors.character_switch_in_progress')))
+  const ticket = { generation: admitted.generation, id: admitted.ticket_seq }
+  const scheduled = character_action_tail.then(() => {
+    if (character_action_lane.generation !== ticket.generation)
+      throw Object.assign(new Error('character action belongs to a previous page'), { name: 'AbortError' })
+    return task()
+  })
   // Async results re-enter the guard as INPUTS through its ledger door — the reducers themselves stay pure and
   // the only effect here is the toast the returned notice asks for.
   const observed = intent
@@ -107,7 +160,7 @@ export function run_character_action(task, { queued = false, intent = null, auto
       )
     : scheduled
   const completed = observed.finally(() => {
-    pending_character_actions -= 1
+    character_action_input({ type: 'settled', generation: ticket.generation, ticket_id: ticket.id })
   })
   character_action_tail = completed.catch(() => undefined)
   return completed
