@@ -2,15 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // RIG BUDGET + DISPOSAL — proof for the P0 world-entry OOM: the mob-density dial went
 // 3-8 → 12-24 groups/zone with NO concurrent-rig cap, so a dense neighbourhood (or a small admin zone_size)
-// resident hundreds of SkeletonUtils clones — mounted in a single on-entry burst — and OOM'd the tab. Three
+// resident hundreds of SkeletonUtils clones — mounted in a single on-entry burst — and OOM'd the tab. Two
 // pure, headless proofs (no three render, no engine, no DOM):
 //   • select_rig_budget — the ceiling: nearest-first placement, farthest-first eviction, INCREMENTAL per-call
 //     cap (anti-burst), and swap hysteresis (boundary jitter never thrashes).
 //   • dispose_member — the teardown FREES: mixer stopped + uncached, each per-clone skeleton disposed (boneTexture
 //     is per-clone, ours to free), root removed REMOVE-ONLY, ref nulled — no leak across spawn/despawn cycles.
-//   • pick_gather_target — the client rider's [G]-target hysteresis (UPGRADE_NOTES2.md §CLIENT RIDER): K
-//     adjacent chain ResourceSpawn cells sit ~1 block apart, so the armed target must not flicker between
-//     neighbours as the player crosses their roughly-equidistant line.
 
 import { describe, expect, it, mock } from 'bun:test'
 
@@ -19,9 +16,7 @@ import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 // MISSING-ARTIFACT (#117): spawn_rigs.js imports @aresrpg/engine3/player, whose character_controller.js
 // unconditionally re-exports create_character_avatar — a static import of the absent-by-design
 // senshi_male.glb — see test_helpers/glb_fixture.js.
-const { select_rig_budget, create_rig_layer, pick_gather_target } = SENSHI_MALE_GLB_AVAILABLE
-  ? await import('./spawn_rigs.js')
-  : {}
+const { select_rig_budget, create_rig_layer } = SENSHI_MALE_GLB_AVAILABLE ? await import('./spawn_rigs.js') : {}
 
 // {key, d2} rows — d2 is the SQUARED player distance (the arbiter never square-roots).
 const row = (/** @type {string} */ key, /** @type {number} */ d2) => ({ key, d2 })
@@ -75,63 +70,6 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('select_rig_budget — the concurren
     })
     expect([...evict].sort()).toEqual(['a', 'b'])
     expect(place).toEqual([])
-  })
-})
-
-describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pick_gather_target — hysteresis hold for K adjacent chain cells (~1 block apart)', () => {
-  it('nothing armed yet: takes the nearest candidate', () => {
-    const key = pick_gather_target({ armed_key: null, armed_d2: null, nearest_key: 'a', nearest_d2: 4, margin_m: 0.75 })
-    expect(key).toBe('a')
-  })
-
-  it('armed IS the nearest: no ambiguity, stays armed', () => {
-    const key = pick_gather_target({ armed_key: 'a', armed_d2: 4, nearest_key: 'a', nearest_d2: 4, margin_m: 0.75 })
-    expect(key).toBe('a')
-  })
-
-  it('a different candidate is nearer but NOT by the margin: HOLDS the armed target (no flicker)', () => {
-    // armed at d=2.0 (d2=4), candidate at d=1.5 (d2=2.25) — only 0.5 nearer, under the 0.75 margin.
-    const key = pick_gather_target({ armed_key: 'a', armed_d2: 4, nearest_key: 'b', nearest_d2: 2.25, margin_m: 0.75 })
-    expect(key).toBe('a')
-  })
-
-  it('a different candidate IS nearer by more than the margin: SWITCHES', () => {
-    // armed at d=2.0 (d2=4), candidate at d=1.0 (d2=1) — 1.0 nearer, over the 0.75 margin.
-    const key = pick_gather_target({ armed_key: 'a', armed_d2: 4, nearest_key: 'b', nearest_d2: 1, margin_m: 0.75 })
-    expect(key).toBe('b')
-  })
-
-  it('exactly AT the margin boundary: does not switch (strictly-greater wins, no thrash on the exact tie)', () => {
-    // armed d=2.0 (d2=4), candidate d=1.25 (d2=1.5625) — exactly 0.75 nearer, not OVER the margin.
-    const key = pick_gather_target({
-      armed_key: 'a',
-      armed_d2: 4,
-      nearest_key: 'b',
-      nearest_d2: 1.5625,
-      margin_m: 0.75,
-    })
-    expect(key).toBe('a')
-  })
-
-  it('armed target left proximity range (torn down/despawned): falls back to the nearest', () => {
-    const key = pick_gather_target({ armed_key: null, armed_d2: null, nearest_key: 'b', nearest_d2: 9, margin_m: 0.75 })
-    expect(key).toBe('b')
-  })
-
-  it('armed target is the ONLY candidate in range: holds it', () => {
-    const key = pick_gather_target({ armed_key: 'a', armed_d2: 4, nearest_key: null, nearest_d2: null, margin_m: 0.75 })
-    expect(key).toBe('a')
-  })
-
-  it('nothing armed and nothing in range: null', () => {
-    const key = pick_gather_target({
-      armed_key: null,
-      armed_d2: null,
-      nearest_key: null,
-      nearest_d2: null,
-      margin_m: 0.75,
-    })
-    expect(key).toBeNull()
   })
 })
 

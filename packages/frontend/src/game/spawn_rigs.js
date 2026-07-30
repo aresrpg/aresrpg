@@ -288,26 +288,6 @@ export function select_rig_budget({ placed, candidates, budget, swap_margin_sq, 
   return { evict, place }
 }
 
-// ── GATHER-TARGET HYSTERESIS (client rider, UPGRADE_NOTES2.md §CLIENT RIDER) ──────────────────────────────────
-// K adjacent chain ResourceSpawn cells (~1 block apart — foundation/world_math.move::grow_cluster) sit close
-// enough that a bare "always the pixel-nearest" pick see-saws the [G] target between two neighbours as the
-// player crosses their roughly-equidistant line — the reticle would flicker. Once a target is ARMED, hold it
-// unless a DIFFERENT candidate is nearer by more than `margin_m` real blocks (not squared — the margin is the
-// same order of magnitude as the inter-node spacing, so a squared-distance shortcut would misfire at this
-// range). Pure over plain keys/distances (no three, no engine) → unit-tested headless (spawn_budget.test.js).
-/**
- * @param {{ armed_key: string|null, armed_d2: number|null, nearest_key: string|null, nearest_d2: number|null,
- *   margin_m: number }} a
- * @returns {string|null} the key to target this frame
- */
-export function pick_gather_target({ armed_key, armed_d2, nearest_key, nearest_d2, margin_m }) {
-  if (armed_key == null || armed_d2 == null) return nearest_key // nothing armed yet — just take the nearest
-  if (armed_key === nearest_key || nearest_key == null) return armed_key // already agree, or armed is the only one in range
-  const armed_d = Math.sqrt(armed_d2)
-  const nearest_d = Math.sqrt(nearest_d2)
-  return nearest_d < armed_d - margin_m ? nearest_key : armed_key // switch only when MEANINGFULLY closer
-}
-
 // ── GATHER-NODE PROCEDURAL PROP (ENGINE_AAA_PLAN §5.3) ─────────────────────────────────────────────────
 // A resource node renders as a small per-node STAND of `v.cards` crossed billboards (wheat 5 tall-narrow
 // blades · herb/ore 3) textured with a REAL PROCEDURAL sprite of its gatherable (synth_gather_buffer — the

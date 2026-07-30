@@ -29,8 +29,8 @@
 // over ONE LINE PER MOB (no ×N collapse) — a UNIT, visibly unlike a player's single bold pill. Within
 // PROXIMITY_M — mirroring the gather distance — a mob group gets a gold
 // card HIGHLIGHT + the [R] ATTACK prompt in the shared PromptStack (same F/G/E language); a resource arms the
-// [G] gather prompt via action/gather_target, held with HYSTERESIS (pick_gather_target — spawn_rigs.js) so the
-// reticle doesn't flicker between two chain cells ~1 block apart as the player crosses their equidistant line.
+// [G] gather prompt via action/gather_target, held with HYSTERESIS
+// (pick_gather_target — @aresrpg/world/spawns_reconcile) so the reticle doesn't flicker between two chain cells.
 // [R] press OR a click fires the EXISTING `create_world_fight` claim+create PTB (spawn_id + world_id +
 // mob_template_id — the row carries all three); on success we re-poll so the claimed group vanishes. We only
 // manage the gather target WE set, never stomping a JobsDrawer selection.
