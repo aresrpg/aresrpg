@@ -21,7 +21,8 @@ const weapon_fields = Object.keys(default_weapon)
 
 function usage() {
   console.log(
-    'Usage: node probe_escrow_weapon.mjs <fight-id>\n' + 'Optional: SUI_GRPC_URL=https://fullnode.testnet.sui.io:443'
+    'Usage: node scripts/probe_escrow_weapon.mjs <fight-id>\n' +
+      'Optional: SUI_GRPC_URL=https://fullnode.testnet.sui.io:443'
   )
 }
 
