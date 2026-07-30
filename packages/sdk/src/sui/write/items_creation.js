@@ -8,14 +8,16 @@ import {
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+import { join_world_call } from './game_world.js'
 
 // CHARACTER CREATION PTB BUILDERS for the merged `aresrpg` package's `creation` — the pure transaction composers for the character
 // mint gate. Both `create_character_free`/`create_character_paid` are COMPOSABLE `public fun`s (no `&Random` — the
-// creation is deterministic — no `&Random` by ruling R-G2), so — UNLIKE `shop::buy` — the whole flow (create the
-// personal kiosk, mint, lock, share) fits in ONE tx. The kiosk-less first-character path creates + personalizes a
-// fresh kiosk inline via `KioskTransaction.createPersonal(true)` (the proven character_new.js sequencing); an
-// existing-kiosk creator borrows their soulbound cap instead. Every minted object is TYPE-FORCED into a personal
-// kiosk in the same PTB (both `lock_in_kiosk`s assert personal) — there is no address-delivery path.
+// creation is deterministic — no `&Random` by ruling R-G2), so the mint, lock and terminal world join fit in ONE
+// tx against an EXISTING personal kiosk. A kiosk-less account first uses `onboard_kiosk_ptb`: the terminal
+// `zones::join_world(..., &Random)` cannot be followed by the share + PersonalKioskCap transfer that a brand-new
+// kiosk still owes. That prerequisite creates no Character; the following creation PTB is the only character
+// state boundary and atomically writes membership. Every minted object is TYPE-FORCED into a personal kiosk in
+// the same PTB (`lock_in_kiosk` asserts personal) — there is no address-delivery path.
 //
 // FROZEN Move signatures (read firsthand from packages/move/aresrpg/sources/{creation,character,item}.move —
 // arities SURVIVED the S-46 merge unchanged; only the id resolution collapsed to the one deployment home):
@@ -54,10 +56,9 @@ function personal_kiosk_call_client(read_client, network, linkage_pkg) {
 }
 
 /**
- * Resolve a `&mut Kiosk` + its `&KioskOwnerCap` for the same-PTB locks, either by creating a fresh PERSONAL kiosk
- * inline (kiosk-less creator — the default) or by borrowing an EXISTING personal kiosk's owner cap. `finalize()`
- * closes the binding (shares the new kiosk + soulbinds its cap / returns the borrowed cap). Both branches are the
- * proven house patterns (character_new.js create-inline; borrow_personal_kiosk_cap.js borrow/return dance).
+ * Resolve a `&mut Kiosk` + its `&KioskOwnerCap` for same-PTB locks by borrowing an EXISTING personal kiosk's
+ * owner cap. The fresh branch remains the shared low-level house primitive, but atomic creation refuses it:
+ * terminal world entry cannot precede the share/cap-transfer commands its `finalize()` appends.
  * @param {{ kiosk_client: import('@mysten/kiosk').KioskClient, tx: Transaction, kiosk_id: string | null,
  *   personal_kiosk_cap_id: string | null, personal_kiosk_package_id: string }} args
  */
@@ -82,6 +83,7 @@ function personal_kiosk_binding({
     return {
       kiosk: as_object_arg(tx, kiosk_id), // ref-or-id seam: a cached shared-kiosk ref must be mutable:true (locks mutate it)
       owner_cap,
+      personal_cap: cap_ref,
       finalize() {
         tx.moveCall({
           target: `${personal_kiosk_package_id}::personal_kiosk::return_val`,
@@ -100,6 +102,7 @@ function personal_kiosk_binding({
   return {
     kiosk: ktx.getKiosk(),
     owner_cap: ktx.getKioskCap(),
+    personal_cap: null,
     finalize() {
       ktx.finalize()
     },
@@ -108,9 +111,9 @@ function personal_kiosk_binding({
 
 /**
  * ONBOARD tx — a kiosk-less buyer creates + SHARES a PERSONAL kiosk and soulbinds its `PersonalKioskCap`, in ONE
- * prior tx. Required ONLY before the first `shop::buy` (buy is a terminal `&Random` command, so it cannot
- * create/share a kiosk in its own tx). Character creation does NOT need this — it composes the kiosk inline. The
- * orchestrator reads the created Kiosk + PersonalKioskCap ids from this tx's effects to feed the follow-up buy.
+ * prior tx. Required before the first `shop::buy` or character creation: both now end in a terminal `&Random`
+ * command, so neither can create/share a kiosk in its own tx. The orchestrator reads the created Kiosk +
+ * PersonalKioskCap ids from this tx's effects and feeds them to the character/item PTB.
  * Harvested from the frontend world-shell onboarding builder.
  * @param {import("../../../types.js").Context} context
  */
@@ -132,9 +135,10 @@ export function onboard_kiosk_ptb(context) {
  * granted (early weapons are admin-authored easy loot; a fresh character fights bare-handed).
  * `address_seed` (string|bigint) is REQUIRED — the caller's zkLogin session seed (S-09d gate); once the mainnet
  * sponsor gate is configured the tx must additionally be SPONSORED by the app's gas station (S-09e — the station
- * signs after verifying the app's OAuth aud; an unsponsored send aborts 110). Omit the kiosk args for a
- * kiosk-less creator (a fresh personal kiosk is created inline); pass BOTH `kiosk_id` + `personal_kiosk_cap_id`
- * to lock into an existing personal kiosk. Refuses loudly if the package is not deployed (no builder invents an id).
+ * signs after verifying the app's OAuth aud; an unsponsored send aborts 110). `world_id`, `kiosk_id`, and
+ * `personal_kiosk_cap_id` are REQUIRED: a kiosk-less account must run
+ * `onboard_kiosk_ptb` first because the terminal world join cannot precede that kiosk's share/cap transfer.
+ * Refuses loudly if the package is not deployed (no builder invents an id).
  * @param {import("../../../types.js").Context} context
  */
 export function create_character_free_ptb(context) {
@@ -147,6 +151,7 @@ export function create_character_free_ptb(context) {
     color_2 = 0,
     color_3 = 0,
     address_seed,
+    world_id,
     kiosk_id = null,
     personal_kiosk_cap_id = null,
     tx = new Transaction(),
@@ -155,6 +160,14 @@ export function create_character_free_ptb(context) {
     if (address_seed === undefined || address_seed === null)
       throw new Error(
         '[create_character_free_ptb] address_seed is required — the zkLogin session seed the sender address derives from (S-09d).',
+      )
+    if (!world_id)
+      throw new Error(
+        '[create_character_free_ptb] world_id is required — character creation must enter a world atomically (#1714).',
+      )
+    if (!kiosk_id || !personal_kiosk_cap_id)
+      throw new Error(
+        '[create_character_free_ptb] kiosk_id and personal_kiosk_cap_id are required for atomic world entry — run onboard_kiosk_ptb first.',
       )
 
     const binding = personal_kiosk_binding({
@@ -199,8 +212,15 @@ export function create_character_free_ptb(context) {
       ],
     })
 
+    // Capture the minted object's ID as a PTB result BEFORE the lock consumes the Character value. This is the
+    // exact `ID` the terminal join door accepts; no receipt/read-back boundary exists.
+    const [character_id] = tx.moveCall({
+      target: `${dep.LATEST_PACKAGE_ID}::character::id`,
+      arguments: [character],
+    })
+
     // Lock the character into the personal kiosk. A failed lock reverts the whole tx, freeing the name AND the
-    // one-free-per-account slot.
+    // one-free-per-account slot. The join below borrows this just-locked character by the piped ID.
     tx.moveCall({
       target: `${dep.LATEST_PACKAGE_ID}::character::lock_in_kiosk`,
       arguments: [
@@ -219,7 +239,13 @@ export function create_character_free_ptb(context) {
     })
 
     binding.finalize()
-    return tx
+    return join_world_call(context, {
+      tx,
+      world: as_object_arg(tx, world_id),
+      kiosk: binding.kiosk,
+      personal_kiosk_cap: binding.personal_cap,
+      character_id,
+    })
   }
 }
 
@@ -227,7 +253,7 @@ export function create_character_free_ptb(context) {
  * Create an ADDITIONAL (paid) character — no free-slot claim. `price_mist` is split EXACTLY off
  * the gas coin as the payment (the gate splits `price` to the treasury and refunds change on-chain, so an exact
  * split refunds nothing; a stale-low price aborts EInsufficientPayment). Read the live price from the gate
- * (`get_creation_state`) before building. Kiosk args behave as in the free path.
+ * (`get_creation_state`) before building. World and kiosk args behave as in the free path.
  * @param {import("../../../types.js").Context} context
  */
 export function create_character_paid_ptb(context) {
@@ -240,6 +266,7 @@ export function create_character_paid_ptb(context) {
     color_2 = 0,
     color_3 = 0,
     price_mist,
+    world_id,
     kiosk_id = null,
     personal_kiosk_cap_id = null,
     tx = new Transaction(),
@@ -248,6 +275,14 @@ export function create_character_paid_ptb(context) {
     if (price_mist == null)
       throw new Error(
         '[create_character_paid_ptb] price_mist is required — read the live gate price (get_creation_state).',
+      )
+    if (!world_id)
+      throw new Error(
+        '[create_character_paid_ptb] world_id is required — character creation must enter a world atomically (#1714).',
+      )
+    if (!kiosk_id || !personal_kiosk_cap_id)
+      throw new Error(
+        '[create_character_paid_ptb] kiosk_id and personal_kiosk_cap_id are required for atomic world entry — run onboard_kiosk_ptb first.',
       )
 
     const binding = personal_kiosk_binding({
@@ -295,6 +330,11 @@ export function create_character_paid_ptb(context) {
       ],
     })
 
+    const [character_id] = tx.moveCall({
+      target: `${dep.LATEST_PACKAGE_ID}::character::id`,
+      arguments: [character],
+    })
+
     tx.moveCall({
       target: `${dep.LATEST_PACKAGE_ID}::character::lock_in_kiosk`,
       arguments: [
@@ -313,6 +353,12 @@ export function create_character_paid_ptb(context) {
     })
 
     binding.finalize()
-    return tx
+    return join_world_call(context, {
+      tx,
+      world: as_object_arg(tx, world_id),
+      kiosk: binding.kiosk,
+      personal_kiosk_cap: binding.personal_cap,
+      character_id,
+    })
   }
 }

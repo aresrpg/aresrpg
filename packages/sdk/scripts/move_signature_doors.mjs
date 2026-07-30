@@ -29,6 +29,7 @@ export const MOVE_SIGNATURE_DOORS = Object.freeze([
   door('aresrpg', 'commission', 'redeem_craft_xp'),
   door('aresrpg', 'character', 'new_customization'),
   door('gifting', 'creation', 'create_character_free'),
+  door('aresrpg', 'character', 'id'),
   door('aresrpg', 'character', 'lock_in_kiosk'),
   door('gifting', 'creation', 'create_character_paid'),
   door('social', 'friends', 'create_friend_list'),

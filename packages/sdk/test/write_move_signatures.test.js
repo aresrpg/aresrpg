@@ -248,12 +248,14 @@ function composed_transactions() {
       name: 'fixture-free',
       class: 'senshi',
       address_seed: 1n,
+      world_id: id('world'),
     }),
     create_character_paid_ptb(deployed_context)({
       ...kiosk,
       name: 'fixture-paid',
       class: 'senshi',
       price_mist: 1n,
+      world_id: id('world'),
     }),
     equip_ptb(deployed_context)({
       ...character,
@@ -392,14 +394,14 @@ function composed_arg_kind(transaction, argument) {
 }
 
 describe('deployed Move signatures — every SDK write door', () => {
-  test('census is 69 call sites / 64 distinct doors, with a real composed sample and fixture for each', () => {
+  test('census is 71 call sites / 65 distinct doors, with a real composed sample and fixture for each', () => {
     const census = source_door_ids()
     const declared = MOVE_SIGNATURE_DOORS.map(
       ({ id: door_id }) => door_id,
     ).sort()
-    expect(census.sites).toBe(69)
+    expect(census.sites).toBe(71)
     expect(census.doors).toEqual(declared)
-    expect(new Set(MOVE_SIGNATURE_FIXTURE_PATHS).size).toBe(64)
+    expect(new Set(MOVE_SIGNATURE_FIXTURE_PATHS).size).toBe(65)
 
     const composed = new Set(all_composed_calls().map(({ target }) => target))
     expect(declared.filter(door_id => !composed.has(door_id))).toEqual([])

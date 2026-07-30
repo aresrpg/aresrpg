@@ -94,20 +94,14 @@ export function reduce_expedition<State extends ResettableExpeditionState>(
 }
 
 /**
- * SWITCH-PARITY LEG ② — the create receipt's adoption effect (roster/store.ts's create_character, the FREE
- * first-character path). A just-minted character's receipt IS the intent to play it now (ONE-PIPELINE LAW:
- * derive from the input, never gate on ambient prior state) — so selection and the join gate BOTH target the
- * SAME id, unconditionally, and can never diverge. Before this fix, selection ran only
- * `if (!cur.selected_character_id)` while the join gate (begin_join) always fired for the new character — a
- * stale/prior selection silently outlived the receipt (DiscoveryPrompts kept polling the OLD character while
- * the join resolved the NEW one). Effects injected so this two-line invariant is behavior-tested directly.
+ * Adopt a settled first-character receipt as the active identity. World membership is already part of that
+ * receipt's creation PTB (#1714), so this effect deliberately owns selection only.
  */
 export function adopt_predicted_character(
   predicted_id: string,
-  deps: { select_character: (id: string) => void; begin_join: (id: string) => void }
+  deps: { select_character: (id: string) => void }
 ): void {
   deps.select_character(predicted_id)
-  deps.begin_join(predicted_id)
 }
 
 /** A wallet's paid mint is also its onboarding mint only when no settled roster row or active identity preceded
@@ -126,16 +120,17 @@ export function should_adopt_paid_mint(
   return !has_settled_character && prior.selected_character_id === null
 }
 
-/** Paid first-mint adoption shares the free path's selection↔join invariant. Additional paid mints are roster
- * deltas only and must leave the active character untouched. Effects stay injected at this transaction edge. */
+/** Paid first-mint adoption shares the free path's selection rule. Additional paid mints are roster deltas
+ * only and must leave the active character untouched. Returns whether the receipt became active. */
 export function adopt_paid_mint_if_first(
   predicted_id: string,
   prior: Readonly<{
     characters: ReadonlyArray<Readonly<{ id?: unknown; ghost?: boolean }> | null | undefined>
     selected_character_id: string | null
   }>,
-  deps: { select_character: (id: string) => void; begin_join: (id: string) => void }
-): void {
-  if (!should_adopt_paid_mint(prior)) return
+  deps: { select_character: (id: string) => void }
+): boolean {
+  if (!should_adopt_paid_mint(prior)) return false
   adopt_predicted_character(predicted_id, deps)
+  return true
 }

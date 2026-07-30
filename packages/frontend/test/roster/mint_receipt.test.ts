@@ -4,7 +4,11 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { mint_session_matches, project_character_mint } from '../../src/roster/mint_receipt'
+import {
+  mint_session_matches,
+  project_character_mint,
+  project_personal_kiosk,
+} from '../../src/roster/mint_receipt'
 import { EXPEDITION_INITIAL_STATE, reduce_expedition } from '../../src/roster/store_reducer'
 
 const draft = {
@@ -73,6 +77,40 @@ describe('project_character_mint', () => {
       row: projection?.character,
     })
     expect(projection?.roster_input.row).toBe(projection?.character)
+  })
+
+  test('reuses the prerequisite kiosk when the atomic mint receipt creates only the Character', () => {
+    const destination = { kiosk_id: '0xexisting-kiosk', personal_kiosk_cap_id: '0xexisting-cap' }
+    const projection = project_character_mint(
+      {
+        objectChanges: [
+          {
+            type: 'created',
+            objectId: '0xcharacter',
+            objectType: '0xares::character::Character',
+          },
+        ],
+      },
+      draft,
+      destination
+    )
+
+    expect(projection).toMatchObject(destination)
+  })
+
+  test('projects a kiosk-only onboarding receipt for the following atomic creation', () => {
+    expect(
+      project_personal_kiosk({
+        objectChanges: [
+          { type: 'created', objectId: '0xkiosk', objectType: '0x2::kiosk::Kiosk' },
+          {
+            type: 'created',
+            objectId: '0xcap',
+            objectType: '0xpersonal::personal_kiosk::PersonalKioskCap',
+          },
+        ],
+      })
+    ).toEqual({ kiosk_id: '0xkiosk', personal_kiosk_cap_id: '0xcap' })
   })
 
   test('refuses to fabricate a row when the receipt contains no created Character', () => {

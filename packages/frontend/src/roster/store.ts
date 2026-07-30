@@ -14,15 +14,22 @@ import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { context } from '../game/core/game.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
-import { begin_join } from '../world-shell/session_gate.js'
+import { publish_world_binding } from '../world-shell/session_gate.js'
+import { seed_world_join_receipt } from '../world-shell/world_join_receipt.js'
 import { game_log } from '../core/log.js'
 import { get_sdk, type ExpeditionSdk } from '../chain/sdk'
 import { normalize_receipt } from '../chain/receipt'
 import { execute_create_routed } from '../chain/money_route'
 import { is_aresrpg_character, ARESRPG_PACKAGE_ID } from '../chain/character_lineage'
+import { T62_WORLDS } from '../chain/deployment'
 
 import { load_roster } from './load_roster'
-import { mint_session_matches, project_character_mint } from './mint_receipt'
+import {
+  mint_session_matches,
+  project_character_mint,
+  project_personal_kiosk,
+  type personal_kiosk_handle,
+} from './mint_receipt'
 import {
   EXPEDITION_INITIAL_STATE,
   reduce_expedition,
@@ -81,11 +88,67 @@ function mint_error(error?: string | null): Error {
 }
 
 /** Feed a settled Character mint through the roster reducer door. */
-function ingest_character_mint_receipt(receipt: any, draft: character_draft) {
-  const projection = project_character_mint(receipt, draft)
+function ingest_character_mint_receipt(
+  receipt: any,
+  draft: character_draft,
+  destination: personal_kiosk_handle
+) {
+  const projection = project_character_mint(receipt, draft, destination)
   if (!projection) return null
   context.dispatch('action/sui_data', projection.roster_input)
   return projection
+}
+
+/**
+ * Resolve the personal kiosk the atomic create+join PTB will use. A brand-new account onboards only the kiosk
+ * in a prerequisite transaction; no Character exists until the following mint+membership transaction commits.
+ */
+async function creation_kiosk(
+  sdk: ExpeditionSdk,
+  address: string,
+  wallet_name: string,
+  known: { kiosk_id: string | null; personal_kiosk_cap_id: string | null }
+): Promise<personal_kiosk_handle> {
+  if (known.kiosk_id && known.personal_kiosk_cap_id)
+    return {
+      kiosk_id: known.kiosk_id,
+      personal_kiosk_cap_id: known.personal_kiosk_cap_id,
+    }
+
+  // Resume-safe: a prior onboarding may have committed before its following create was abandoned. Re-scan
+  // first so retrying creation never mints a procession of empty kiosks.
+  const { kioskOwnerCaps } = await sdk.kiosk_client.getOwnedKiosks({
+    address,
+    pagination: { limit: 25 },
+  })
+  const existing = kioskOwnerCaps.find((cap) => cap.isPersonal)
+  if (existing)
+    return {
+      kiosk_id: String(existing.kioskId),
+      personal_kiosk_cap_id: String(existing.objectId),
+    }
+
+  const { route, digest } = await execute_create_routed({
+    tx: sdk.onboard_kiosk_ptb(),
+    fetch_balance_mist: async () => {
+      const { balance } = await sdk.grpc_client.core.getBalance({ owner: address })
+      return BigInt(balance.balance)
+    },
+    run_self_pay: (tx) => sign_and_execute_transaction(wallet_name, address, tx),
+    run_sponsored: (tx) => sponsor_and_execute_transaction(wallet_name, address, tx),
+    on_mint_error: mint_error,
+  })
+  const receipt = normalize_receipt(
+    await sdk.grpc_client.core.waitForTransaction({
+      digest,
+      include: { effects: true, objectTypes: true },
+    })
+  )
+  if (route === 'self_pay' && receipt.effects?.status?.status !== 'success')
+    throw mint_error(receipt.effects?.status?.error)
+  const handle = project_personal_kiosk(receipt)
+  if (!handle) throw new Error('Kiosk onboarding succeeded but its personal kiosk handle was absent')
+  return handle
 }
 
 interface ExpeditionStore {
@@ -184,11 +247,11 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
     }
   },
 
-  // Create a PLAYABLE first character, fully client-side, for a fresh zkLogin user with no character.
-  // ONE tx (S-50): the SDK's create_character_free_ptb composes the personal-kiosk create + the FREE
-  // first-character mint + the in-kiosk lock inline (creation::create_character_free). SPONSORED (gas paid by
-  // the app gas station → satisfies the gate's optional sponsor check); the sender + the resulting
-  // character/kiosk owner are the LIVE logged-in zkLogin address (the gate's check_zklogin_issuer binds it).
+  // Create a PLAYABLE first character, fully client-side, for a fresh zkLogin user with no character. A
+  // kiosk-less account first onboards only its reusable personal kiosk. The following character transaction
+  // composes FREE mint + lock + world entry atomically; no Character can exist between those state changes.
+  // SPONSORED (gas paid by the app gas station → satisfies the gate's optional sponsor check); the sender +
+  // resulting character/kiosk owner are the LIVE logged-in zkLogin address.
   // #42: the player's CHOSEN identity (name/class/colors) from the EXISTING 3D creator (ExpeditionCreate /
   // CharacterMenu → character_create), minted backend-off. A fresh character is its honest on-chain self (base
   // stats 0, 100 HP) — no starter-stats CAS. Re-throws on failure so the creator surfaces it inline (no
@@ -203,16 +266,17 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
     try {
       const sdk = await get_sdk()
 
-      // ── Tx A: personal kiosk + FREE first-character mint with the PLAYER's chosen identity.
+      // ── Atomic Character tx: FREE first-character mint + kiosk lock + world entry.
       // The mint routes through the loading toast (pending spinner → 'Explorer ready' / error),
       // consistent with explore/stop-exploring. The status-check + wait live INSIDE the promise so a
       // submitted-but-failed tx (e.g. name taken) shows the error toast, never a false success.
-      // S-50: the SDK's create_character_free_ptb composes the REAL on-chain entry
-      // (creation::create_character_free) at the stamped merged-package ids — creating the personal kiosk +
-      // locking the Character inline, in ONE tx. Retires the dead sdk.character_new (api::character_new: no
-      // such module on the merged S-46 package → that mint always aborted).
+      // The reusable kiosk is resolved/onboarded first because world entry is the PTB's terminal Random command.
+      // The creation PTB itself creates no half-state: mint, lock, and membership all commit or all revert.
       /** @type {any} the executed tx receipt — D93 receipt-ingest reads created objects from it */
       let receipt: any = null
+      let create_kiosk: personal_kiosk_handle | null = null
+      const initial_world_id = T62_WORLDS[0]?.id
+      if (!initial_world_id) throw new Error('No seeded world is available for character creation')
       const t0 = performance.now()
       await use_toast.getState().promise(
         (async () => {
@@ -225,6 +289,10 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           // the [tx] failed console.error (no silent failure). A non-zkLogin/dev wallet gets a clear
           // "zkLogin required" toast, never silence.
           const address_seed = await get_zklogin_address_seed(wallet_name)
+          create_kiosk = await creation_kiosk(sdk, address, wallet_name, {
+            kiosk_id: get().kiosk_id,
+            personal_kiosk_cap_id: get().personal_kiosk_cap_id,
+          })
           const tx = sdk.create_character_free_ptb({
             name: draft.name,
             class: draft.classe,
@@ -233,6 +301,9 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
             color_2: draft.color_2,
             color_3: draft.color_3,
             address_seed,
+            world_id: initial_world_id,
+            kiosk_id: create_kiosk.kiosk_id,
+            personal_kiosk_cap_id: create_kiosk.personal_kiosk_cap_id,
           })
           // ── MONEY ROUTING (live-400 fix) ── the @server sponsor's anti-drain law REFUSES a
           // wallet holding > 0.2 SUI (api/sponsor.mjs SELF_PAY_MIST), which is why a funded wallet can hit
@@ -255,7 +326,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           receipt = normalize_receipt(
             await sdk.grpc_client.core.waitForTransaction({
               digest,
-              include: { effects: true, objectTypes: true },
+              include: { effects: true, events: true, objectTypes: true },
             })
           )
           // SELF-PAY returns BCS effects (no pre-check inside execute_create_routed), so its EXECUTED status is
@@ -274,21 +345,15 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       // ── #1127 RECEIPT INPUT ── the settled Character/Kiosk ids + submitted appearance are projected by the
       // pure adapter, then enter the roster through ONE typed reducer delta. The reducer folds against the latest
       // roster, replaces the submit ghost, and owns the optimistic floor until /v1 contains the real object id.
-      const projection = ingest_character_mint_receipt(receipt, draft)
+      if (!create_kiosk) throw new Error('Character creation lost its destination kiosk handle')
+      const projection = ingest_character_mint_receipt(receipt, draft, create_kiosk)
       if (projection) {
         const predicted = projection.character
-        // ONE-BOOT create→play (07-13): select the just-minted character AND enter the JOINING hold NOW —
-        // the instant the create tx landed. GameWorldHost holds ONE loading veil (no decorative→spectate→resident
-        // boot storm, no spectate sky-view detour) until the auto-join resolves the world and the resident scene
-        // boots ONCE. The predicted record is already in the engine roster, so that boot embodies the character
-        // with no /v1 roster wait. (First-character path only — the paid/additional create never embody-reloads.)
-        // SWITCH-PARITY LEG ②: selection and the join gate ALWAYS target the SAME id (adopt_predicted_character,
-        // store_reducer.ts) — a prior conditional-select here could leave selection on a stale character while
-        // begin_join already moved the join gate to the new one.
         adopt_predicted_character(String(predicted.id), {
           select_character: (id) => context.dispatch('action/select_character', id),
-          begin_join,
         })
+        await seed_world_join_receipt(String(predicted.id), initial_world_id, receipt)
+        publish_world_binding(String(predicted.id), initial_world_id, 'manual')
         get().input({
           type: 'character_mint/settled',
           character: predicted as any,
@@ -348,10 +413,17 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       // only; the mint price is ALWAYS the on-chain truth.
       const creation = await sdk.get_creation_state()
       if (!creation) throw new Error('Could not read the on-chain character price')
+      const initial_world_id = T62_WORLDS[0]?.id
+      if (!initial_world_id) throw new Error('No seeded world is available for character creation')
+      let create_kiosk: personal_kiosk_handle | null = null
       /** The paid receipt must survive the toast effect so it can enter the roster reducer immediately. */
       let receipt: any = null
       await use_toast.getState().promise(
         (async () => {
+          create_kiosk = await creation_kiosk(sdk, address, wallet_name, {
+            kiosk_id: get().kiosk_id,
+            personal_kiosk_cap_id: get().personal_kiosk_cap_id,
+          })
           const tx = sdk.create_character_paid_ptb({
             name: draft.name,
             class: draft.classe,
@@ -360,6 +432,9 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
             color_2: draft.color_2,
             color_3: draft.color_3,
             price_mist: creation.price,
+            world_id: initial_world_id,
+            kiosk_id: create_kiosk.kiosk_id,
+            personal_kiosk_cap_id: create_kiosk.personal_kiosk_cap_id,
           })
           // SELF-PAY (NOT sponsored): the wallet's own coin funds the price split; the choke dry-runs first.
           const { digest } = await sign_and_execute_transaction(wallet_name, address, tx)
@@ -368,7 +443,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           receipt = normalize_receipt(
             await sdk.grpc_client.core.waitForTransaction({
               digest,
-              include: { effects: true, objectTypes: true },
+              include: { effects: true, events: true, objectTypes: true },
             })
           )
           if (receipt.effects.status.status !== 'success') throw mint_error(receipt.effects.status.error)
@@ -384,9 +459,10 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       // first character uses this paid door too and must select/join immediately; a true alt remains roster-only
       // and can never yank the active character.
       const roster_before_receipt = context.get_state()
-      const projection = ingest_character_mint_receipt(receipt, draft)
+      if (!create_kiosk) throw new Error('Character creation lost its destination kiosk handle')
+      const projection = ingest_character_mint_receipt(receipt, draft, create_kiosk)
       if (projection) {
-        adopt_paid_mint_if_first(
+        const adopted = adopt_paid_mint_if_first(
           String(projection.character.id),
           {
             characters: roster_before_receipt.sui.characters,
@@ -394,9 +470,12 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           },
           {
             select_character: (id) => context.dispatch('action/select_character', id),
-            begin_join,
           }
         )
+        if (adopted) {
+          await seed_world_join_receipt(String(projection.character.id), initial_world_id, receipt)
+          publish_world_binding(String(projection.character.id), initial_world_id, 'manual')
+        }
         game_log('d93', 'paid mint seeded from receipt', projection.character.id)
         void load_roster().catch(() => {})
         return

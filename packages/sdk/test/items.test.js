@@ -136,17 +136,82 @@ describe('items builders — refuse loudly when the package is undeployed', () =
   })
 })
 
+describe('character creation — atomic world membership', () => {
+  test('the free mint pipes the just-minted character into a terminal world join in the same PTB', () => {
+    const tx = create_character_free_ptb(deployed_context)({
+      name: 'worldbound-starter',
+      class: 'senshi',
+      address_seed: 1n,
+      world_id: id('world'),
+      kiosk_id: id('a5aa'),
+      personal_kiosk_cap_id: id('a5ab'),
+    })
+
+    const call_targets = targets(tx)
+    expect(call_targets).toContain('character::id')
+    expect(call_targets).toContain('zones::join_world')
+    expect(call_targets.at(-1)).toBe('zones::join_world')
+
+    const calls = tx.getData().commands.filter((command) => command.$kind === 'MoveCall')
+    const create_index = calls.findIndex((command) => command.MoveCall.function === 'create_character_free')
+    const id_index = calls.findIndex(
+      (command) => command.MoveCall.module === 'character' && command.MoveCall.function === 'id',
+    )
+    const join = calls.at(-1).MoveCall
+    expect(calls[id_index].MoveCall.arguments[0].NestedResult).toEqual([create_index, 0])
+    expect(join.arguments).toHaveLength(8) // ctx is implicit
+    expect(join.arguments[3].NestedResult).toEqual([id_index, 0])
+  })
+
+  test('refuses every free mint that cannot finish world membership in that PTB', () => {
+    expect(() =>
+      create_character_free_ptb(deployed_context)({
+        name: 'worldless',
+        class: 'senshi',
+        address_seed: 1n,
+        kiosk_id: id('a5aa'),
+        personal_kiosk_cap_id: id('a5ab'),
+      }),
+    ).toThrow(/world_id is required/)
+    expect(() =>
+      create_character_free_ptb(deployed_context)({
+        name: 'kioskless',
+        class: 'senshi',
+        address_seed: 1n,
+        world_id: id('world'),
+      }),
+    ).toThrow(/run onboard_kiosk_ptb first/)
+  })
+})
+
 // The PAID mint SHAPE (a roster-≥1 zkLogin account self-pays the gate price). Deployed
 // context (fixtures idiom): the builder must split the EXACT price off GAS (the gate refunds surplus, so
 // an exact split refunds nothing) and feed it to `creation::create_character_paid` — never the free gate.
 describe('create_character_paid_ptb — paid mint shape (deployed context)', () => {
   const PRICE_MIST = 10_000_000_000n // the live gate default: 10 SUI
 
+  test('pipes the just-minted character into a terminal world join in the same PTB', () => {
+    const tx = create_character_paid_ptb(deployed_context)({
+      name: 'worldbound-hero',
+      class: 'senshi',
+      price_mist: PRICE_MIST,
+      world_id: id('world'),
+      kiosk_id: id('a5aa'),
+      personal_kiosk_cap_id: id('a5ab'),
+    })
+
+    const call_targets = targets(tx)
+    expect(call_targets).toContain('character::id')
+    expect(call_targets).toContain('zones::join_world')
+    expect(call_targets.at(-1)).toBe('zones::join_world')
+  })
+
   test('splits the EXACT price off gas and routes it to creation::create_character_paid', () => {
     const tx = create_character_paid_ptb(deployed_context)({
       name: 'hero',
       class: 'senshi',
       price_mist: PRICE_MIST,
+      world_id: id('world'),
       kiosk_id: id('a5aa'),
       personal_kiosk_cap_id: id('a5ab'),
     })

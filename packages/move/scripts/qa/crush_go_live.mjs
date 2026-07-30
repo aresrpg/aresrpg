@@ -17,7 +17,7 @@ import { KioskClient } from '@mysten/kiosk'
 import { keypair, sui_client } from '../client.js'
 import { run } from '../ceremony_lib.mjs'
 import { buy_ptb } from '../../../sdk/src/sui/write/items_shop.js'
-import { create_character_paid_ptb } from '../../../sdk/src/sui/write/items_creation.js'
+import { create_character_paid_ptb, onboard_kiosk_ptb } from '../../../sdk/src/sui/write/items_creation.js'
 import { crush_ptb } from '../../../sdk/src/game.js'
 import { ITEM_STAT_SHIFT as SHIFT } from '../../../sim/src/equipment_stats.js'
 
@@ -130,13 +130,26 @@ async function phase_gear() {
     ST.gear.setPriceDigest = r.digest; persist()
   }
 
-  // 4b — fresh paid character (guaranteed UNMARKED → no EDirty) + its own personal kiosk
+  // 4b — onboard its reusable kiosk, then atomically create + lock + join the fresh paid character.
   if (!ST.gear.character) {
-    const c_tx = create_character_paid_ptb(ctx)({ name: `crush${Date.now() % 100000}`, class: S.class || 'senshi', male: true, price_mist: 10_000_000 })
+    if (!ST.gear.kiosk || !ST.gear.pkcap) {
+      const kr = await run(sui_client, keypair, 'onboard_kiosk', onboard_kiosk_ptb(ctx)(), { ceilingSui: 0.1 })
+      ST.gear.kiosk = createdIdIncl(kr, '0x2::kiosk::Kiosk')
+      ST.gear.pkcap = (kr.objectChanges || []).find(c => c.type === 'created' && (c.objectType || '').includes('::personal_kiosk::PersonalKioskCap') && c.owner?.AddressOwner === ADDR)?.objectId
+      if (!ST.gear.kiosk || !ST.gear.pkcap) throw new Error(`onboard_kiosk: missing ids in ${kr.digest}`)
+      persist()
+    }
+    const c_tx = create_character_paid_ptb(ctx)({
+      name: `crush${Date.now() % 100000}`,
+      class: S.class || 'senshi',
+      male: true,
+      price_mist: 10_000_000,
+      world_id: S.world.id,
+      kiosk_id: ST.gear.kiosk,
+      personal_kiosk_cap_id: ST.gear.pkcap,
+    })
     const cr = await run(sui_client, keypair, 'create_char', c_tx, { ceilingSui: 0.3 })
     ST.gear.character = createdIdIncl(cr, '::character::Character')
-    ST.gear.kiosk = createdIdIncl(cr, '0x2::kiosk::Kiosk')
-    ST.gear.pkcap = (cr.objectChanges || []).find(c => c.type === 'created' && (c.objectType || '').includes('::personal_kiosk::PersonalKioskCap') && c.owner?.AddressOwner === ADDR)?.objectId
     ST.gear.createCharDigest = cr.digest; persist()
     console.log(`  character=${ST.gear.character?.slice(0, 12)}… kiosk=${ST.gear.kiosk?.slice(0, 12)}… pkcap=${ST.gear.pkcap?.slice(0, 12)}…`)
     if (!ST.gear.character || !ST.gear.kiosk || !ST.gear.pkcap) throw new Error(`create_char: missing ids in ${cr.digest}`)

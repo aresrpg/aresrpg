@@ -1,0 +1,16 @@
+{
+  "status": "todo",
+  "target": "character::id",
+  "package": "aresrpg",
+  "provenance": {
+    "source": "packages/move/aresrpg/sources/character.move:287",
+    "regenerate": "node packages/sdk/scripts/capture_move_signature.mjs --door character::id"
+  },
+  "is_entry": false,
+  "parameters": [
+    "&aresrpg::character::Character"
+  ],
+  "ptb_arg_kinds": [
+    "result"
+  ]
+}

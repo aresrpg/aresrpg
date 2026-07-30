@@ -12,6 +12,7 @@
 // The printed suiprivkey is a DISPOSABLE testnet QA credential — never a prod key, never reused.
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { Transaction } from '@mysten/sui/transactions'
+import fs from 'node:fs'
 
 // Relative import: packages/move/scripts is not an npm workspace member of the SDK — same pattern
 // as this directory's other cross-package reads.
@@ -22,6 +23,8 @@ import { run } from './ceremony_lib.mjs'
 
 const FUND_SUI = Number(process.env.FUND_SUI ?? 12) // creation gate price (10 SUI, goes to the game treasury) + fight/QA gas
 const NAME = process.env.QA_NAME ?? `QA_${Date.now().toString(36).slice(-5).toUpperCase()}`
+const seed_manifest = JSON.parse(fs.readFileSync(new URL('./out/seed_manifest.json', import.meta.url), 'utf8'))
+const WORLD = seed_manifest.world.id
 
 const qa = Ed25519Keypair.generate()
 const qa_address = qa.toSuiAddress()
@@ -33,8 +36,16 @@ const [coin] = fund_tx.splitCoins(fund_tx.gas, [BigInt(Math.floor(FUND_SUI * 1e9
 fund_tx.transferObjects([coin], qa_address)
 await run(sui_client, funder, 'qa-fund', fund_tx, { ceilingSui: 0.05 })
 
-// 2. Mint char-1 via the SDK's paid composer, signed by the throwaway (self-pay, price from the live gate).
+// 2. Onboard only the reusable personal kiosk, then atomically mint + lock + join via the paid composer.
 const sdk = await SDK({ network: 'testnet' })
+const onboard = await run(sui_client, qa, 'qa-onboard-kiosk', sdk.onboard_kiosk_ptb(), { ceilingSui: 0.1 })
+const created = (needle) =>
+  (onboard.objectChanges ?? []).find(
+    (change) => change.type === 'created' && String(change.objectType ?? '').includes(needle),
+  )?.objectId
+const kiosk_id = created('0x2::kiosk::Kiosk')
+const personal_kiosk_cap_id = created('::personal_kiosk::PersonalKioskCap')
+if (!kiosk_id || !personal_kiosk_cap_id) throw new Error('kiosk onboarding receipt did not contain its handle')
 const creation = await sdk.get_creation_state()
 const price_mist = BigInt(creation?.price ?? 0n)
 if (!price_mist) throw new Error(`creation gate returned no price: ${JSON.stringify(creation, (_, v) => String(v))}`)
@@ -49,6 +60,9 @@ const tx = sdk.create_character_paid_ptb({
   color_2: 0xd9af57,
   color_3: 0x8b6539,
   price_mist,
+  world_id: WORLD,
+  kiosk_id,
+  personal_kiosk_cap_id,
 })
 await run(sui_client, qa, 'qa-mint-char', tx, { ceilingSui: 0.5 })
 

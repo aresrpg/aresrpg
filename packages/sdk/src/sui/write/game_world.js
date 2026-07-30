@@ -60,12 +60,45 @@ export const SEARCH_ZONE_GAS_MIST = 400_000_000
 // search_zone/gather (a cached world ref must carry mutable:true for those two).
 
 /**
- * JOIN a world (first join spawns + writes the pre-entry checkpoint; a rejoin keeps the stored checkpoint). Terminal
- * `&Random`. `world_id` is the target `World` shared object.
+ * Append the terminal `zones::join_world` command using arguments already prepared by a parent composer.
+ * Keeping this command-level seam beside `join_world_ptb` lets character creation pipe its freshly minted
+ * `character::id` result into the exact same door without serialising an object id between transactions.
+ * Nothing may be appended after this call: `join_world` consumes `&Random`.
+ *
+ * @param {import("../../../types.js").Context} context
+ * @param {{ tx: Transaction, world: import('@mysten/sui/transactions').TransactionArgument,
+ *   kiosk: import('@mysten/sui/transactions').TransactionArgument,
+ *   personal_kiosk_cap: import('@mysten/sui/transactions').TransactionArgument,
+ *   character_id: import('@mysten/sui/transactions').TransactionArgument }} args
+ */
+export function join_world_call(
+  context,
+  { tx, world, kiosk, personal_kiosk_cap, character_id },
+) {
+  const { network } = context
+  const a = aresrpg_deployment(network, context.ids?.aresrpg)
+  tx.moveCall({
+    target: `${a.LATEST_PACKAGE_ID}::zones::join_world`,
+    arguments: [
+      world, // world: &World
+      kiosk, // kiosk: &mut Kiosk
+      personal_kiosk_cap, // pkcap: &PersonalKioskCap
+      character_id, // character_id: ID — may be a `character::id` result from this PTB
+      shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
+      shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one)
+      tx.object.clock(), // clock: &Clock (0x6)
+      random_arg(network, tx), // r: &Random (0x8) — LAST → Random-PTB compliant
+    ],
+  })
+  return tx
+}
+
+/**
+ * JOIN a world (first join spawns + writes the pre-entry checkpoint; a rejoin keeps the stored checkpoint).
+ * Terminal `&Random`. `world_id` is the target `World` shared object.
  * @param {import("../../../types.js").Context} context
  */
 export function join_world_ptb(context) {
-  const { network } = context
   return ({
     world_id,
     kiosk_id,
@@ -73,21 +106,13 @@ export function join_world_ptb(context) {
     character_id,
     tx = new Transaction(),
   }) => {
-    const a = aresrpg_deployment(network, context.ids?.aresrpg)
-    tx.moveCall({
-      target: `${a.LATEST_PACKAGE_ID}::zones::join_world`,
-      arguments: [
-        as_object_arg(tx, world_id), // world: &World
-        as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk
-        as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap (unwrapped on-chain)
-        tx.pure.id(character_id), // character_id: ID
-        shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
-        shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one)
-        tx.object.clock(), // clock: &Clock (0x6)
-        random_arg(network, tx), // r: &Random (0x8) — LAST → Random-PTB compliant (pinned when stamped → build-offline)
-      ],
+    return join_world_call(context, {
+      tx,
+      world: as_object_arg(tx, world_id),
+      kiosk: as_object_arg(tx, kiosk_id),
+      personal_kiosk_cap: as_object_arg(tx, personal_kiosk_cap_id),
+      character_id: tx.pure.id(character_id),
     })
-    return tx
   }
 }
 

@@ -11,8 +11,8 @@ import { Transaction } from '@mysten/sui/transactions'
 import { KioskClient } from '@mysten/kiosk'
 import { keypair, sui_client } from '../client.js'
 import { run } from '../ceremony_lib.mjs'
-import { create_character_paid_ptb } from '../../../sdk/src/sui/write/items_creation.js'
-import { join_world_ptb, search_zone_ptb, gather_ptb } from '../../../sdk/src/sui/write/game_world.js'
+import { create_character_paid_ptb, onboard_kiosk_ptb } from '../../../sdk/src/sui/write/items_creation.js'
+import { search_zone_ptb, gather_ptb } from '../../../sdk/src/sui/write/game_world.js'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const M = JSON.parse(fs.readFileSync(path.join(__dir, '..', 'out', 'ceremony_manifest.json'), 'utf8'))
@@ -48,19 +48,27 @@ async function main() {
     return tx
   })(), { ceilingSui: 0.2 })
 
-  // 1) PAID create (self-pay) via the real SDK builder → character locked in a fresh personal kiosk.
-  const c_tx = create_character_paid_ptb(ctx)({ name: `SMOKE${Date.now() % 100000}`, class: 'senshi', male: true, price_mist: 50_000_000 })
+  // 1) Onboard only the reusable personal kiosk, then atomically create + lock + join Testlands.
+  const kr = await run(sui_client, keypair, 'player:onboard_kiosk', onboard_kiosk_ptb(ctx)(), { ceilingSui: 0.3 })
+  const kiosk_id = created(kr, '0x2::kiosk::Kiosk')
+  const personal_kiosk_cap_id = created(kr, '::personal_kiosk::PersonalKioskCap', true)
+  if (!kiosk_id || !personal_kiosk_cap_id) throw new Error('onboard: failed to capture kiosk ids')
+  const c_tx = create_character_paid_ptb(ctx)({
+    name: `SMOKE${Date.now() % 100000}`,
+    class: 'senshi',
+    male: true,
+    price_mist: 50_000_000,
+    world_id: WORLD,
+    kiosk_id,
+    personal_kiosk_cap_id,
+  })
   const cr = await run(sui_client, keypair, 'player:create_paid', c_tx, { ceilingSui: 1 })
   const character_id = evt(cr, '::creation::CharacterCreated', 'character') || created(cr, '::character::Character')
-  const kiosk_id = created(cr, '0x2::kiosk::Kiosk')
-  const personal_kiosk_cap_id = created(cr, '::personal_kiosk::PersonalKioskCap', true)
   console.log(`  character=${character_id}\n  kiosk=${kiosk_id}\n  pkcap=${personal_kiosk_cap_id}`)
-  if (!character_id || !kiosk_id || !personal_kiosk_cap_id) throw new Error('create: failed to capture ids')
+  if (!character_id) throw new Error('create: failed to capture character id')
 
-  // 2) JOIN Testlands → spawn checkpoint; WorldJoined carries the spawn (x,z).
-  const j_tx = join_world_ptb(ctx)({ world_id: WORLD, kiosk_id, personal_kiosk_cap_id, character_id })
-  const jr = await run(sui_client, keypair, 'player:join_world', j_tx, { ceilingSui: 1 })
-  const x = Number(evt(jr, '::zones::WorldJoined', 'x')), z = Number(evt(jr, '::zones::WorldJoined', 'z'))
+  // The atomic creation receipt carries WorldJoined and its spawn checkpoint.
+  const x = Number(evt(cr, '::zones::WorldJoined', 'x')), z = Number(evt(cr, '::zones::WorldJoined', 'z'))
   console.log(`  joined at spawn (x=${x}, z=${z})`)
 
   // 3) SEARCH the spawn zone (travel-verified distance 0). Prior smoke runs share the world, so this random

@@ -25,6 +25,11 @@ export type character_mint_projection = Readonly<{
   }>
 }>
 
+export type personal_kiosk_handle = Readonly<{
+  kiosk_id: string
+  personal_kiosk_cap_id: string
+}>
+
 const created_changes = (receipt: any): any[] =>
   (receipt?.objectChanges ?? []).filter((change: any) => change?.type === 'created')
 
@@ -32,17 +37,33 @@ const created_changes = (receipt: any): any[] =>
 export const mint_session_matches = (expected_address: string, current_address: string | null): boolean =>
   expected_address === current_address
 
+/** Project the prerequisite kiosk-onboarding receipt into the handle the atomic create PTB consumes. */
+export function project_personal_kiosk(receipt: any): personal_kiosk_handle | null {
+  const created = created_changes(receipt)
+  const kiosk = created.find((change) => String(change?.objectType ?? '') === '0x2::kiosk::Kiosk')
+  const cap = created.find((change) => String(change?.objectType ?? '').includes('PersonalKioskCap'))
+  return kiosk?.objectId && cap?.objectId
+    ? {
+        kiosk_id: String(kiosk.objectId),
+        personal_kiosk_cap_id: String(cap.objectId),
+      }
+    : null
+}
+
 /**
  * Project a successful Character mint into the ONE roster reducer input. Returns null when the receipt does not
  * prove a created Character; callers then use their existing read-back fallback without fabricating identity.
  */
-export function project_character_mint(receipt: any, draft: character_mint_draft): character_mint_projection | null {
+export function project_character_mint(
+  receipt: any,
+  draft: character_mint_draft,
+  destination: personal_kiosk_handle | null = null
+): character_mint_projection | null {
   const created = created_changes(receipt)
   const character_change = created.find((change) => String(change?.objectType ?? '').endsWith('::character::Character'))
   if (!character_change?.objectId) return null
 
-  const kiosk_change = created.find((change) => String(change?.objectType ?? '') === '0x2::kiosk::Kiosk')
-  const cap_change = created.find((change) => String(change?.objectType ?? '').includes('PersonalKioskCap'))
+  const receipt_kiosk = project_personal_kiosk(receipt)
   const character = normalize_character(
     {
       name: draft.name,
@@ -57,8 +78,9 @@ export function project_character_mint(receipt: any, draft: character_mint_draft
     String(character_change.objectId),
     String(character_change.objectType)
   )
-  const kiosk_id = kiosk_change?.objectId ? String(kiosk_change.objectId) : null
-  const personal_kiosk_cap_id = cap_change?.objectId ? String(cap_change.objectId) : null
+  const kiosk_id = receipt_kiosk?.kiosk_id ?? destination?.kiosk_id ?? null
+  const personal_kiosk_cap_id =
+    receipt_kiosk?.personal_kiosk_cap_id ?? destination?.personal_kiosk_cap_id ?? null
   const receipt_character = {
     ...character,
     kiosk_id,
