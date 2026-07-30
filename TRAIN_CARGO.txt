@@ -1,7 +1,1 @@
-7aa178da3f2c528275424d1a694d44a3bfb436c5 lane/gate-coverage-batch chore(lint): ratchet the warning floor
-b89f8749cdfd418dcd6f3da568fc8fadfccd15ac lane/gate-coverage-batch feat(lint): gate silent reducer refusals
-84c636c9760b11e2d5f2ac6ce40d0deb133686fd lane/gate-coverage-batch feat(gate): see functional store writers
-5e5554d61e884cf7dee18bc9073280013f597093 lane/gate-coverage-batch feat(gate): isolate nested store writers
-7b35bac18b8801bdc49c7dcbdfe0e83e2ca3056e lane/link-degraded-state fix(p2p): link status tells the truth over empty peers
-34abdf2d00c169d3c2ee918ab36d07ce30547288 train/train-18 chore(lint): tighten the warning ceiling to its measured floor
-0d47beaa9e13cc8f4960dad2057602ef849135df train/train-18 chore(lint): reflow the relocated link-degraded parity test
+c43eff6ed4a0dd9ee5729d4390fd4d06c9799379 lane/friend-add-recut fix(social): wait for first friend list indexing
