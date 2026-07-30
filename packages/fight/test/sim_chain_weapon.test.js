@@ -11,13 +11,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { encode } from '../src/los.js'
-import {
-  arena_from_board,
-  create_sim_chain,
-  derive_board,
-  snapshot_from_sim,
-  submit_staged,
-} from '../src/sim_chain.js'
+import { arena_from_board, create_sim_chain, derive_board, snapshot_from_sim, submit_staged } from '../src/sim_chain.js'
 
 const SEED = 0xc81f3a92
 const FIGHT_ID = 'sim:1387:weapon'

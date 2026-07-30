@@ -177,7 +177,7 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
         turn_started: (event) => event.type === 'fight_turn_start' && event.entity_id === e.id,
         cast: (event) => event.type === 'fight_cast' && event.entity_id === e.id,
       }),
-      weapon: null,
+      weapon: e.weapon ?? null,
       // THE WHOLE BLOCK, both halves (#1077) — the mock chain speaks `participant.move`'s own dialect, and that
       // struct carries `stats` LIVE (base + the timed alter rows) next to the `base_stats` join snapshot. A
       // one-key `{agility}` row was the client's blindness: every predict surface read an empty stat block and
