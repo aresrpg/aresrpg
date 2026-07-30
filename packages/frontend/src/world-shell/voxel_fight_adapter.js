@@ -30,6 +30,7 @@ import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
 import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
+import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 
 import {
   move_reachable_set,
@@ -1699,9 +1700,14 @@ export function create_voxel_fight_adapter(
         // Weapon (the SAME reach DungeonBoard's cast_params prices the strike from), so the wash and the click-gate
         // agree cell-for-cell; falls back to the melee floor before the escrow read lands. A real spell reads its
         // seed range as before.
+        // #387 — the band's FLOOR is a category fact too (and the bow's ceiling grows with the range stat), so
+        // the wash reads the same `weapon_spell_template` the hover ring and the strike itself resolve from —
+        // one home for "how far does this weapon reach", never a second reading of `reach`.
         const range =
           wash_armed === WEAPON_ATTACK_ID
-            ? [1, escrow_row?.weapon?.reach ?? WEAPON_ATTACK_RANGE[1]]
+            ? escrow_row?.weapon
+              ? weapon_spell_template(escrow_row.weapon).levels[0].range
+              : WEAPON_ATTACK_RANGE
             : wash_armed
               ? seed_range_of(wash_armed, active)
               : null
@@ -1886,8 +1892,15 @@ export function create_voxel_fight_adapter(
         for (const m of dungeon.mobs ?? []) if (m.alive) los2.push(m.cell)
         // S-25 weapon slot: the sentinel has no seed range — use its S-12 melee ring so the hover strike-highlight
         // works (and cast_range_set_dungeon never gets a null range).
+        // #387 — a weapon's band is a CATEGORY fact (a bow reaches, a sword does not), so the hover ring reads
+        // the seat's own live weapon through the same template the strike resolves from; `WEAPON_ATTACK_RANGE`
+        // stays the pre-read fallback for the split second before the escrow weapon lands.
         const hover_range =
-          fight.armed_spell_id === WEAPON_ATTACK_ID ? WEAPON_ATTACK_RANGE : seed_range_of(fight.armed_spell_id, active)
+          fight.armed_spell_id === WEAPON_ATTACK_ID
+            ? active.weapon
+              ? weapon_spell_template(active.weapon).levels[0].range
+              : WEAPON_ATTACK_RANGE
+            : seed_range_of(fight.armed_spell_id, active)
         const flags2 = seed_cast_flags_of(fight.armed_spell_id, active)
         // 1.29 no-stack (the wash's hover twin): MY live trap cells are never a castable hover for a trap spell.
         if (flags2.places_trap) flags2.trap_cells = fight.my_traps ?? []

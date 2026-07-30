@@ -63,8 +63,10 @@ describe('#1323 — the authored weapon lines reach the fight record the preview
       { element: 0, damage: 10, damage_max: 20, crit_damage: 15, crit_damage_max: 30 },
     ])
     // …and the view the core adopted carries the lines onto the seat's weapon, which is what every preview prices from.
+    // #387 — board_state also decodes each line's ZONE OVERRIDE slot; an un-authored line carries the
+    // `shape_no_override` sentinel (255), so the strike resolves the weapon category's own zone.
     expect(fight_store.getState().view?.escrow?.[0]?.weapon?.lines).toEqual([
-      { element: 0, damage: 10, damage_max: 20, crit_damage: 15, crit_damage_max: 30 },
+      { element: 0, damage: 10, damage_max: 20, crit_damage: 15, crit_damage_max: 30, area_shape: 255, area_size: 0 },
     ])
   })
 

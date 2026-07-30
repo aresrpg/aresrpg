@@ -16,6 +16,8 @@ import { engine_view } from '@aresrpg/fight/project'
 // CIRCLE/CROSS/RING/LINE/TBAR/CONE). The hover footprint below REUSES it verbatim so the telegraph can never
 // diverge from what the reducer actually hits — never a second shape implementation.
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
+import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model } from '../game/data/mobs.js'
@@ -538,10 +540,23 @@ export function footprint_of_effects(effects, target, caster) {
  * @returns {{ x: number, y: number }[]}
  */
 export function spell_footprint(armed_spell_id, target, caster, seat = null) {
-  const spell = fight_spell(armed_spell_id)
-  // the AoE is a per-RANK fact too (a zone widens with the level) — read the seat's own row, never level 1
-  const effects = spell?.template?.levels?.[seat_spell_level(seat, spell) - 1]?.base_effects ?? []
+  // #387 — the WEAPON strike is a zone like any other now: its category's cell set comes from the same
+  // `weapon_spell_template` the board prices the swing from, so the hover paints the exact cells the chain
+  // will hit. The sentinel still has no seed row — it never needed one; it needs the seat's weapon.
+  const effects = weapon_strike_effects(armed_spell_id, seat) ?? spell_level_effects(armed_spell_id, seat)
   return footprint_of_effects(effects, target, caster)
+}
+
+/** The armed WEAPON strike's normalized effects (its zone rides them), or null when a spell is armed. */
+function weapon_strike_effects(armed_spell_id, seat) {
+  if (armed_spell_id !== WEAPON_ATTACK_ID || !seat?.weapon) return null
+  return weapon_spell_template(seat.weapon)?.levels?.[0]?.base_effects ?? []
+}
+
+/** A seed spell's effects at the seat's OWN rank — the AoE is a per-RANK fact (a zone widens with the level). */
+function spell_level_effects(armed_spell_id, seat) {
+  const spell = fight_spell(armed_spell_id)
+  return spell?.template?.levels?.[seat_spell_level(seat, spell) - 1]?.base_effects ?? []
 }
 
 /**
