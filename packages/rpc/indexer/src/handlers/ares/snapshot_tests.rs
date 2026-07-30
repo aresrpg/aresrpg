@@ -1417,6 +1417,103 @@ fn checkpoint_fixture_object(
 }
 
 #[tokio::test]
+async fn mirrored_item_lifecycle_appears_updates_and_disappears() {
+    const ITEM_IDX: u64 = 0xa011;
+    let item = TestCheckpointBuilder::derive_object_id(ITEM_IDX);
+    let owner = Owner::AddressOwner(TestCheckpointBuilder::derive_address(1));
+    let tag = format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::item::Item");
+    let item_body = |name: &str, amount: u64| ItemObject {
+        id: item,
+        template: ObjectID::from_hex_literal("0x7a01").unwrap(),
+        name: name.into(),
+        item_type: "pelt".into(),
+        description: "Lifecycle parity fixture.".into(),
+        category: "resource".into(),
+        amount,
+    };
+    let replace_item = |checkpoint: &mut Checkpoint, body: ItemObject| {
+        let version = checkpoint
+            .object_set
+            .iter()
+            .filter(|object| object.id() == item)
+            .map(|object| object.version())
+            .max()
+            .expect("fixture checkpoint must contain the item");
+        checkpoint.object_set.insert(checkpoint_fixture_object(
+            &tag,
+            version,
+            bcs::to_bytes(&body).unwrap(),
+            owner.clone(),
+        ));
+    };
+
+    let mut builder = TestCheckpointBuilder::new(1_677)
+        .start_transaction(1)
+        .create_owned_object(ITEM_IDX)
+        .finish_transaction();
+    let mut created = builder.build_checkpoint();
+    replace_item(&mut created, item_body("Lifecycle Pelt", 1));
+
+    builder = builder
+        .start_transaction(1)
+        .mutate_owned_object(ITEM_IDX)
+        .finish_transaction();
+    let mut mutated = builder.build_checkpoint();
+    replace_item(&mut mutated, item_body("Lifecycle Pelt+", 2));
+
+    builder = builder
+        .start_transaction(1)
+        .delete_object(ITEM_IDX)
+        .finish_transaction();
+    let mut destroyed = builder.build_checkpoint();
+    replace_item(&mut destroyed, item_body("Lifecycle Pelt+", 2));
+
+    let item = item.to_canonical_string(true);
+    let item_key = k_item(&item);
+    let handler = AresSnapshotHandler::from_parts(None, None);
+
+    let created_writes = handler.process(&Arc::new(created)).await.unwrap();
+    assert!(
+        created_writes.iter().any(
+            |write| matches!(write, RedisWrite::Set { key, path, nx: true, .. } if key == &item_key && path == "$")
+        ),
+        "created Item must make its mirror row appear"
+    );
+    assert_eq!(
+        set_json(&created_writes, "$.name"),
+        Some(r#""Lifecycle Pelt""#)
+    );
+    assert_eq!(set_json(&created_writes, "$.amount"), Some("1"));
+
+    let mutated_writes = handler.process(&Arc::new(mutated)).await.unwrap();
+    assert_eq!(
+        set_json(&mutated_writes, "$.name"),
+        Some(r#""Lifecycle Pelt+""#)
+    );
+    assert_eq!(set_json(&mutated_writes, "$.amount"), Some("2"));
+    assert!(
+        mutated_writes
+            .iter()
+            .all(|write| !matches!(write, RedisWrite::Del { key, path } if key == &item_key && path == "$")),
+        "mutated Item must update rather than remove its mirror row"
+    );
+
+    let destroyed_writes = handler.process(&Arc::new(destroyed)).await.unwrap();
+    assert!(
+        destroyed_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Del { key, path } if key == &item_key && path == "$")),
+        "destroyed Item must make its mirror row disappear"
+    );
+    assert!(
+        destroyed_writes
+            .iter()
+            .all(|write| !matches!(write, RedisWrite::Set { key, .. } if key == &item_key)),
+        "destroyed Item must not be re-snapshotted"
+    );
+}
+
+#[tokio::test]
 async fn deleted_item_without_item_burned_reaps_its_mirror_and_kiosk_membership() {
     const ITEM_IDX: u64 = 0xa001;
     const WRAPPER_IDX: u64 = 0xa002;
