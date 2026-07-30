@@ -110,14 +110,14 @@ const blank_peer = (id) => ({
  *   commission: { seq:number, row:any }|null, commission_seq: number,
  *   fight_markers: Map<string, any>,
  *   dungeon_fight_rows: Map<string, any>,
- *   link_status: 'idle'|'connecting'|'connected'|'reconnecting'|'failed',
+ *   link_status: 'idle'|'connecting'|'connected'|'degraded'|'reconnecting'|'failed',
  *   link_error: string|null,
  *   input: (input:any, now?:number) => void,
  * }} PresenceState
  */
 
 /** The link vocabulary — the only statuses the `link` input can put on the atom. */
-export const LINK_STATUSES = new Set(['idle', 'connecting', 'connected', 'reconnecting', 'failed'])
+export const LINK_STATUSES = new Set(['idle', 'connecting', 'connected', 'degraded', 'reconnecting', 'failed'])
 
 // The plausibility rule as its own pure export (the headless-testable half of the cheater policy).
 export function passes_speed_check(prev, x, y, now, mounted) {

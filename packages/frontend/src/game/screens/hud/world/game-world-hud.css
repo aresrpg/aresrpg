@@ -798,6 +798,12 @@
 .gw-chat__link--connected {
   color: #4ade80;
 }
+.gw-chat__link--degraded {
+  color: var(--color-gold-light);
+  background: color-mix(in srgb, var(--color-gold) 12%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--color-gold-dark) 55%, transparent);
+  outline-offset: 2px;
+}
 .gw-chat__link--failed {
   color: #f87171;
 }

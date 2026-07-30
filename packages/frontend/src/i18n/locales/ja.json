@@ -1850,6 +1850,7 @@
     "link_idle": "プレゼンス停止",
     "link_connecting": "プレゼンス接続中",
     "link_connected": "プレゼンス接続済み",
+    "link_degraded": "プレゼンス制限中：他のプレイヤーに接続できません",
     "link_reconnecting": "プレゼンス再接続中",
     "link_failed": "プレゼンス停止中",
     "link_failed_reason": "プレゼンス停止中: {{reason}}",

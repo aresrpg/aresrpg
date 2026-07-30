@@ -334,6 +334,8 @@ describe('the link input is the single writer of link_status / link_error', () =
     expect(store.getState()).toMatchObject({ link_status: 'connecting', link_error: null })
     input({ type: 'link', status: 'connected' })
     expect(store.getState().link_status).toBe('connected')
+    input({ type: 'link', status: 'degraded' })
+    expect(store.getState().link_status).toBe('degraded')
     input({ type: 'link', status: 'failed', error: 'Presence stream unavailable after 6 attempts' })
     expect(store.getState()).toMatchObject({ link_status: 'failed', link_error: expect.stringContaining('6 attempts') })
   })

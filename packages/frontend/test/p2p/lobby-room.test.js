@@ -307,6 +307,23 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(state().link_status).toBe('connecting')
   })
 
+  it('degrades after signaling saw another room member but no peer channel opened (D3a, #1641-class)', () => {
+    live_room().failPeer('symmetric-nat-peer')
+    poll()
+    expect(state().link_status).toBe('connected') // the fresh-room grace still owns this handshake window
+    setSystemTime(new Date(Date.now() + GRACE_MS + 1))
+    poll()
+    expect(live_room().getPeers()).toEqual({})
+    expect(state().link_status).toBe('degraded')
+  })
+
+  it('stays connected when the relay is up and nobody else announced — alone is legitimate', () => {
+    setSystemTime(new Date(Date.now() + GRACE_MS + 1))
+    poll()
+    expect(live_room().getPeers()).toEqual({})
+    expect(state().link_status).toBe('connected')
+  })
+
   it('says DOWN loudly when our relay is unreachable — and gives up with a REASON, not a forever spinner', async () => {
     trystero_relay_socket.readyState = 3 // the broker is gone, and no direct channel exists to carry us
     await spend_the_retry_budget()

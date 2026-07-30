@@ -1850,6 +1850,7 @@
     "link_idle": "Presencia apagada",
     "link_connecting": "Conectando presencia",
     "link_connected": "Presencia conectada",
+    "link_degraded": "Presencia limitada: jugadores inaccesibles",
     "link_reconnecting": "Reconectando presencia",
     "link_failed": "Presencia caída",
     "link_failed_reason": "Presencia caída: {{reason}}",

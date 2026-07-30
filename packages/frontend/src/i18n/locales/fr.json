@@ -1850,6 +1850,7 @@
     "link_idle": "Présence coupée",
     "link_connecting": "Connexion de la présence",
     "link_connected": "Présence connectée",
+    "link_degraded": "Présence limitée : joueurs injoignables",
     "link_reconnecting": "Présence en reconnexion",
     "link_failed": "Présence hors service",
     "link_failed_reason": "Présence hors service : {{reason}}",

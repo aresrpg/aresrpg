@@ -60,6 +60,7 @@ const REJOIN_JITTER_MS = 1_000 // de-synchronize a whole world's tabs reconnecti
 
 let room = null
 let room_world = null
+let room_generation = 0
 let pos_action = null
 let chat_action = null
 let party_chat_action = null
@@ -70,6 +71,10 @@ let party_room_id = null
 /** @type {Map<string, string>} trystero peer_id → the on-chain character_id it broadcasts as — the one
  * transport-level routing fact that stays OUTSIDE the atom (the core never sees trystero peer ids). */
 const peer_characters = new Map()
+/** Peer ids for which Trystero exchanged signaling/SDP but could not open an RTC channel. `getPeers()` exposes
+ * only OPEN channels, so `onJoinError` is the transport's sole honest evidence that an empty room is not an
+ * empty population. A new room generation clears the evidence; a successful channel clears its own peer. */
+const unreachable_peers = new Set()
 
 /** The live session id — read from the atom (the transport's own-echo filter + send guard). */
 const my_character_id = () => presence_store.getState().character_id
@@ -149,11 +154,19 @@ let watchdogs_started = false
  *  peer table) SURVIVES a rebuild — only the dead transport is replaced — so the re-announce has facts to send
  *  and peers that truly left expire via the tick. */
 function _build_room(world_id) {
+  const generation = ++room_generation
   link_grace_until = Date.now() + LINK_GRACE_MS
+  unreachable_peers.clear()
   room_world = world_id
   // The room id is the world id, and trystero hashes it into the topic (sha1 → base36, no separators), so the
   // broker's single-level topic ACL holds for any world id we ever mint.
-  room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, world_id)
+  room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, world_id, {
+    // Trystero emits this only after a remote room member reached signaling but peer setup failed. That is
+    // the distinction the relay-up/zero-channel case needs: no callback means connected-and-alone is true.
+    onJoinError: ({ peerId }) => {
+      if (generation === room_generation && peerId) unreachable_peers.add(peerId)
+    },
+  })
   pos_action = room.makeAction('pos')
   chat_action = room.makeAction('chat')
   party_chat_action = room.makeAction('pchat')
@@ -201,6 +214,7 @@ function _build_room(world_id) {
   // exchange a packet and each renders an empty world.
   room.onPeerJoin = (peerId) => {
     const { character_id, my_cell } = presence_store.getState()
+    unreachable_peers.delete(peerId)
     if (character_id && my_cell) pos_action?.send({ id: character_id, ...my_cell }, { target: peerId }).catch(() => {})
     if (character_id) _send_state(peerId)
     rejoin_attempt = 0
@@ -269,21 +283,31 @@ function _retire_failed_room(reason) {
   pauseRelayReconnection()
   const failed_room = room
   room = null
+  room_generation += 1
   _clear_room_actions()
   peer_characters.clear()
+  unreachable_peers.clear()
   Promise.resolve(failed_room?.leave()).catch(() => {})
 }
 
 /** LINK HEALTH — an active RTCDataChannel is the primary truth: relay loss during a live direct session must
- *  never tear down the game channel. With no direct peer, the relay sockets are the signaling lifeline. */
+ *  never tear down the game channel. With no direct peer, the relay sockets are the signaling lifeline.
+ *  Relay-up is connected-and-alone UNLESS Trystero saw another member and failed its channel; after the same
+ *  fresh-room grace, that evidence derives `degraded` instead of painting an empty world green (D3a). */
 function _health_check() {
-  if (direct_peer_count() > 0 || connected_relays() > 0) {
+  const peer_count = direct_peer_count()
+  const relay_count = connected_relays()
+  if (peer_count > 0 || relay_count > 0) {
     rejoin_attempt = 0
     if (rejoin_timer) {
       clearTimeout(rejoin_timer)
       rejoin_timer = null
     }
-    if (presence_store.getState().link_status !== 'connected') set_link('connected')
+    const status =
+      peer_count === 0 && relay_count > 0 && unreachable_peers.size > 0 && Date.now() >= link_grace_until
+        ? 'degraded'
+        : 'connected'
+    if (presence_store.getState().link_status !== status) set_link(status)
     return
   }
   if (Date.now() < link_grace_until || rejoin_timer || rejoin_in_flight) return
@@ -428,8 +452,10 @@ export function leave_room() {
   _stop_watchdogs()
   room?.leave()
   room = null
+  room_generation += 1
   room_world = null
   _clear_room_actions()
   peer_characters.clear()
+  unreachable_peers.clear()
   presence_input({ type: 'reset' })
 }

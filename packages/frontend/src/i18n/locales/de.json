@@ -1850,6 +1850,7 @@
     "link_idle": "Präsenz aus",
     "link_connecting": "Präsenz verbindet",
     "link_connected": "Präsenz verbunden",
+    "link_degraded": "Präsenz eingeschränkt: Spieler nicht erreichbar",
     "link_reconnecting": "Präsenz verbindet neu",
     "link_failed": "Präsenz ausgefallen",
     "link_failed_reason": "Präsenz ausgefallen: {{reason}}",

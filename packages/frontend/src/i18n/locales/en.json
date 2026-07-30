@@ -1850,6 +1850,7 @@
     "link_idle": "Presence off",
     "link_connecting": "Presence linking",
     "link_connected": "Presence connected",
+    "link_degraded": "Presence limited: players unreachable",
     "link_reconnecting": "Presence reconnecting",
     "link_failed": "Presence down",
     "link_failed_reason": "Presence down: {{reason}}",
