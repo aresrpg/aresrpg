@@ -10,16 +10,18 @@
 // one per address), then add/remove addresses freely. `create_friend_list` returns the promise so the page can
 // resolve the new list id from the tx result and chain the first add.
 
-import { create_friend_list_ptb, add_friend_ptb, remove_friend_ptb } from '@aresrpg/sdk/social'
+import { create_friend_list_ptb, add_friend_ptb, get_friend_list, remove_friend_ptb } from '@aresrpg/sdk/social'
 import { submit_friend_target } from '@aresrpg/world/friend_target'
 
 import { DEMO_NETWORK } from '../chain/deployment'
+import { get_sdk } from '../chain/sdk'
 import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { is_suins_name, resolve_suins_address } from '../utils/suins'
 
 import { friends_input, refresh_friends, use_friends } from './friends_adapter.js'
 import { get_owner_by_name } from './friends_reads'
+import { backoff_delay_ms } from './spend_guard.js'
 import { run_tx } from './tx.js'
 
 const CTX = { network: DEMO_NETWORK }
@@ -50,6 +52,26 @@ export function created_friend_list_id(result) {
       String(c?.objectType ?? c?.type ?? '').includes('::friends::FriendList')
   )
   return created?.objectId ?? null
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Wait until the fullnode can resolve a just-created FriendList before building the add transaction. The SDK
+ * create door cannot compose the follow-up: Move returns unit and transfers the list instead of returning it.
+ * Reuse the house exponential backoff, but bound this user gesture so a degraded read cannot wait forever.
+ */
+export async function await_friend_list_indexed(
+  friend_list_id,
+  { attempts = 4, get_sdk_fn = get_sdk, sleep_fn = sleep } = {}
+) {
+  const { grpc_client } = await get_sdk_fn()
+  const read_list = get_friend_list({ grpc_client })
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    if (await read_list(friend_list_id)) return
+    if (attempt < attempts) await sleep_fn(backoff_delay_ms(attempt))
+  }
+  throw new Error('Friend list creation succeeded, but the list is not readable yet')
 }
 
 const _is_addr = (/** @type {string} */ a) => /^0x[0-9a-f]{64}$/.test(a)
@@ -98,7 +120,10 @@ async function add_friend_address_flow(my_address, target, toast) {
         success: i18n.t('friends.toast_create'),
       })
       lid = created_friend_list_id(result)
-      if (lid) friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
+      if (lid) {
+        friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
+        await await_friend_list_indexed(lid)
+      }
     }
     if (!lid) return
     await submit_friend_add({ my_address, list_id: lid, friend: addr, toast })
