@@ -152,9 +152,12 @@ describe('the room IS the world — joining is the announcement', () => {
 
   it('ships STUN-only ICE while nothing mints a TURN credential — never a fake username', () => {
     const { iceServers } = trystero_room_configs[0].config.rtcConfig
-    expect(iceServers).toHaveLength(1)
-    expect(iceServers[0].urls).toHaveLength(1)
-    expect(iceServers[0].urls[0]).toStartWith('stun:')
+    expect(iceServers.length).toBeGreaterThanOrEqual(1)
+    for (const server of iceServers) {
+      const urls = Array.isArray(server.urls) ? server.urls : [server.urls]
+      expect(urls.length).toBeGreaterThanOrEqual(1)
+      for (const url of urls) expect(url).toStartWith('stun:')
+    }
     // A credential nothing can mint would just fail at connect time — the absence is the honest state.
     expect(JSON.stringify(iceServers)).not.toContain('username')
     expect(JSON.stringify(iceServers)).not.toContain('credential')
