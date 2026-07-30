@@ -36,6 +36,26 @@ describe('#884 — spell icons resolve to the served .webp', () => {
     expect(spell_icon_url('tomoda_lashline')).toBe(`${ASSET_BASE}/spells/tomoda_lashline.webp`)
   })
 
+  test('an address-like garbage key is refused instead of becoming a bare fallback URL', () => {
+    configure_assets({ aggregator: HOST, classes: { spell: {} } })
+    const malformed_id = '0xnot-an-object-id'
+    let returned
+    let refusal
+    try {
+      returned = spell_icon_url(malformed_id)
+    } catch (error) {
+      refusal = error
+    }
+    expect({ returned, refusal }).toEqual({
+      returned: undefined,
+      refusal: expect.any(TypeError),
+    })
+    expect(refusal?.message).toContain('malformed Sui object id')
+    expect(() => spell_icon_url(`0x${'25'.repeat(32)}`)).toThrow(
+      'not a Sui object id',
+    )
+  })
+
   test('no `_hd` variant can be minted — spells are 128px single-size by contract', () => {
     configure_assets({ aggregator: HOST, classes: { spell: { published: true } } })
     // The old `{ hd: true }` option is DELETED: a stale caller passing it gets the base icon, never a

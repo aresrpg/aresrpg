@@ -7,8 +7,8 @@
 //
 // Consumed by the client JobsDrawer (job cards + progression bars) and the bottom-center job-xp bar
 // (resolved from the equipped tool via job_from_tool). Pure data + integer math — no I/O, no floats
-// leaking into game state (gather_time is display-only seconds). Gathering itself is
-// server-authoritative; this is the shared definition + display math.
+// leaking into game state (gather_time is display-only seconds). Gathering is server-authoritative.
+import { isValidSuiObjectId } from '@mysten/sui/utils'
 
 import ITEMS_DATA from './items.json' with { type: 'json' }
 import RECIPES_DATA from './recipes.json' with { type: 'json' }
@@ -426,8 +426,8 @@ export function mob_icon_url(filename) {
 
 /**
  * The URL for a spell icon — same asset-host/fallback path machinery as item_icon_url, just the `spells/`
- * path. Accepts the spell's `icon` key (e.g. 'ikari_haki') verbatim; unlike item_icon_url, it does not
- * reject object-id-shaped strings. Returns null for an empty key.
+ * path. Accepts the spell's authored `icon` key (e.g. 'ikari_haki') and refuses address-like values so
+ * a lost corpus join cannot silently become a fallback URL. Returns null for an empty key.
  *   asset host: ${aggregator}/spells/${icon}.webp
  *   relative:   /assets/spells/${icon}.webp
  * SPELLS ARE .webp AND SINGLE-SIZE (#884) — the family diverges from items on both axes, by the content
@@ -442,6 +442,14 @@ export function mob_icon_url(filename) {
 export function spell_icon_url(spell) {
   const key = typeof spell === 'string' ? spell : (spell?.icon ?? null)
   if (!key) return null
+  if (key.startsWith('0x')) {
+    const id_kind = isValidSuiObjectId(key)
+      ? 'a Sui object id'
+      : 'a malformed Sui object id'
+    throw new TypeError(
+      `spell_icon_url requires an authored icon key, not ${id_kind}`,
+    )
+  }
   const name = `${key}.webp`
   return asset_url('spell', name) ?? `${ASSET_BASE}/spells/${name}`
 }
