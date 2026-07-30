@@ -1,15 +1,7 @@
-0970ce0dba103a27ceca6640cfa5bf6ffdcfdf78 harvest/drain-frontend-a fix(hud): decode wallet errors at toast boundary (Fixes #1725)
-94748b140a071963fd0db1f3d3f49b40999e5b8c harvest/drain-frontend-a fix(world): scope action lock to page lifecycle (Fixes #1731)
-85d5f7132bf7bc464fb0cee67557ebd24cf9ba98 harvest/drain-frontend-a fix(world-shell): correlate resume lock release (Fixes #1730)
-48cebd9c5a2d2abbd888057b279b8392de862b7c harvest/drain-frontend-a fix(social): reconcile optimistic friend adds (Fixes #1761)
-b0378af306c41c1e19e6b06851a6f4e3896a4ad9 harvest/drain-frontend-b fix(encyclopedia): bind boss rosters to live worlds (Fixes #1623)
-a7c2340c06dfee44d7c7d39e3135ec3a2c41d80a harvest/drain-frontend-b fix(encyclopedia): derive worlds from published corpus (Fixes #1331)
-0626f59c89bb2fde2118625b738a54b34f5b3a8a harvest/drain-frontend-b fix(radio): skip failed tracks without stopping playback (Fixes #825)
-d21fe56050c70fbb816d2bdbbd460665f7feb6b3 harvest/drain-frontend-b fix(items): remove unsupported rarity tint path (Fixes #1764)
-aa4e41f82429d80031e0b788857cc3d0838dfcee harvest/drain-sim fix(sim): skip zero-distance push receipt (Fixes #967)
-05af158da5d1912769bbc182160ff2a6f7a43e2d harvest/drain-sim fix(sim): keep revived arena geometry integer (Fixes #756)
-63a7309fe019b1398d2d8206c29bdbe54baf65da harvest/drain-sim fix(sim): reject authored effects without fold arms (Fixes #998)
-965d71bd4d0e292b651ec95902ef34cf4497ce5c harvest/drain-infra chore(dependabot): target edge updates (Fixes #1783)
-61341d41f0a780bbc1eb6b9131f10eedbc2eced2 harvest/drain-infra fix(ci): exempt test trees from LoC rent (Fixes #1713)
-b03d19d95f73897121e9a1f335d2ad901685afd6 harvest/drain-infra fix(ci): gate fork PRs into master (Fixes #1777)
-90dca1f6b22fad88343eeeb4d903fde99fa81fca harvest/drain-infra test(rpc): cover mirror lifecycle parity (Fixes #1749)
+7aa178da3f2c528275424d1a694d44a3bfb436c5 lane/gate-coverage-batch chore(lint): ratchet the warning floor
+b89f8749cdfd418dcd6f3da568fc8fadfccd15ac lane/gate-coverage-batch feat(lint): gate silent reducer refusals
+84c636c9760b11e2d5f2ac6ce40d0deb133686fd lane/gate-coverage-batch feat(gate): see functional store writers
+5e5554d61e884cf7dee18bc9073280013f597093 lane/gate-coverage-batch feat(gate): isolate nested store writers
+7b35bac18b8801bdc49c7dcbdfe0e83e2ca3056e lane/link-degraded-state fix(p2p): link status tells the truth over empty peers
+34abdf2d00c169d3c2ee918ab36d07ce30547288 train/train-18 chore(lint): tighten the warning ceiling to its measured floor
+0d47beaa9e13cc8f4960dad2057602ef849135df train/train-18 chore(lint): reflow the relocated link-degraded parity test
