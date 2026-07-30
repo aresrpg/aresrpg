@@ -54,18 +54,22 @@ public struct Weapon has copy, drop, store {
   crit_rate: u64, // 1-in-X; 0 = never crit
   ap_cost: u64,
   reach: u64,
+  // §387 — the FINE category slug the strike's ZONE keys on (`weapon_zone_of`). Snapshotted at fight entry from
+  // the equipped item's family, so a PTB can never hand the chain a zone; b"" = bare hands / a tool / an
+  // unmatched slug, which resolves the 1-cell default (never wider than a pre-§387 strike).
+  category: String,
 }
 
 /// PACKAGE-PRIVATE by the anti-forgery ruling (F-02): a public weapon constructor + a public combatant
 /// constructor + a raw-param `create` was the forge-a-god-seat exploit chain. Fight-internal code (and this
 /// package's tests) build weapons; PTBs never do. FIXED alias (range == single value); `new_weapon_ranged` authors a spread.
 public(package) fun new_weapon(element: u8, damage: u64, crit_damage: u64, crit_rate: u64, ap_cost: u64, reach: u64): Weapon {
-  Weapon { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage, crit_rate, ap_cost, reach }
+  Weapon { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage, crit_rate, ap_cost, reach, category: b"".to_string() }
 }
 
 /// #577 — RANGE-aware weapon constructor: `[damage, damage_max]` normal, `[crit_damage, crit_damage_max]` crit.
 public(package) fun new_weapon_ranged(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64, crit_rate: u64, ap_cost: u64, reach: u64): Weapon {
-  Weapon { element, damage, damage_max, crit_damage, crit_damage_max, crit_rate, ap_cost, reach }
+  Weapon { element, damage, damage_max, crit_damage, crit_damage_max, crit_rate, ap_cost, reach, category: b"".to_string() }
 }
 
 /// ONE authored damage LINE of the equipped weapon (§17.27 wave-2a): an elemental damage RANGE `[damage,
@@ -125,6 +129,78 @@ const WL_CRIT_RATE: vector<u64> = vector[20, 10, 25, 20, 20, 20, 20, 22, 20, 18,
 const WL_AP_COST: vector<u64> = vector[4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3];
 const WL_REACH: vector<u64> = vector[1, 1, 1, 2, 3, 4, 8, 1, 1, 1, 1]; // Manhattan
 
+// ╔══════ [ §387 — THE WEAPON ZONE TABLE: which cells one strike touches, keyed by FINE category ] ══════ ]
+//
+// The chain twin of `@aresrpg/fight/weapon_shapes`. A strike no longer touches one cell: it touches the ZONE
+// its category is assigned, drawn by the SAME `combat_grid::zone_cells` every spell AoE already uses — this
+// table only says WHICH `(area_shape, area_size)` descriptor a category carries, never how a zone is drawn.
+//
+// SELF-CONTAINED on purpose, NOT index-aligned with `WL_FAMILIES` above: a category can be ruled a zone before
+// the engine carries a damage line for it (and a tool has a line but no zone). The two tables answer different
+// questions about the same slug. A slug in NEITHER resolves `single` — never wider than a pre-§387 strike.
+//
+// The named zone kinds (the content house's sealed vocabulary), each an existing spell zone:
+//   single (POINT/0, 1 cell) · line_inline_2 (LINE/1, 2) · line_perp_3 (TBAR/1, 3) · cross_1 (CROSS/1, 5)
+//   · podium_4 (PODIUM/1, 4)
+const WZ_CATEGORIES: vector<vector<u8>> = vector[
+  b"sword", b"dagger", b"daggers", b"shovel", b"axe", b"pickaxe",
+  b"club", b"longsword",
+  b"scythe", b"staff", b"spear",
+  b"battleaxe", b"mace", b"hammer",
+  b"bow", b"wand", b"spellbook",
+];
+// Index-aligned with WZ_CATEGORIES. 0 = POINT · 2 = CROSS · 3 = LINE · 4 = TBAR · 8 = PODIUM (spell_effect §3).
+const WZ_SHAPE: vector<u8> = vector[0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 8, 8, 8, 0, 0, 0];
+const WZ_SIZE: vector<u64> = vector[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0];
+// The RANGE BAND facts. The band CEILING is the weapon's own `reach` (one home — never restated here); the
+// category contributes the FLOOR, whether the caster's range stat extends it (bow), and whether the aimed cell
+// must sit on a straight line from the attacker (spellbook).
+const WZ_RANGE_MIN: vector<u64> = vector[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const WZ_RANGE_MOD: vector<bool> = vector[
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  true, // bow
+  false, // wand
+  false, // spellbook
+];
+const WZ_LINE_ONLY: vector<bool> = vector[
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  false, false,
+  true, // spellbook
+];
+
+/// The strike geometry a FINE category is assigned: `(area_shape, area_size, range_min, range_modifiable,
+/// line_only)`. An empty / unknown slug resolves the 1-cell `single` zone at melee floor 1 — the exact
+/// pre-§387 strike, so an un-authored weapon is never silently widened. ZERO category names appear in this
+/// resolver: the slugs live once, in the table above.
+public fun weapon_zone_of(category: &String): (u8, u64, u64, bool, bool) {
+  let bytes = category.as_bytes();
+  let cats = WZ_CATEGORIES;
+  let n = cats.length();
+  let mut i = 0;
+  while (i < n) {
+    if (&cats[i] == bytes) {
+      let (shape, size, rmin, rmod, lonly) = (WZ_SHAPE, WZ_SIZE, WZ_RANGE_MIN, WZ_RANGE_MOD, WZ_LINE_ONLY);
+      return (shape[i], size[i], rmin[i], rmod[i], lonly[i])
+    };
+    i = i + 1;
+  };
+  (spell_effect::shape_point(), 0, 1, false, false)
+}
+
+/// The zone a STRIKE resolves, applying the whole resolution order: an AUTHORED line override outranks the
+/// category assignment, which outranks `single`. The FIRST line carrying an override wins — a weapon has one
+/// strike, so it has one zone, and taking the first keeps both twins' answer identical.
+public fun weapon_strike_zone(lines: &vector<WeaponLine>, category: &String): (u8, u64) {
+  let mut i = 0;
+  while (i < lines.length()) {
+    let line = lines.borrow(i);
+    if (line.area_shape != spell_effect::shape_no_override()) return (line.area_shape, line.area_size);
+    i = i + 1;
+  };
+  let (shape, size, _, _, _) = weapon_zone_of(category);
+  (shape, size)
+}
+
 /// The attack line for an equipped weapon FAMILY (`equipment::equipped_weapon_family` is the feed). `none` — or a
 /// slug outside the 11 §3 families (a gathering tool in the weapon slot) — fights BARE-HANDED: a weak earth line,
 /// never an abort (a miner ambushed mid-gather still gets a fight, §7). `affinity` (DECISIONS 07-12: the caller
@@ -133,12 +209,12 @@ const WL_REACH: vector<u64> = vector[1, 1, 1, 2, 3, 4, 8, 1, 1, 1, 1]; // Manhat
 public fun weapon_line_of(family: Option<String>, affinity: bool): Weapon {
   if (family.is_none()) return unarmed_line();
   let f = family.destroy_some();
-  let bytes = f.as_bytes();
+  let bytes = *f.as_bytes(); // COPY: `f` itself is moved into the Weapon's §387 `category` below
   let fams = WL_FAMILIES;
   let n = fams.length();
   let mut i = 0;
   while (i < n) {
-    if (&fams[i] == bytes) {
+    if (fams[i] == bytes) {
       let (el, dmg, cdmg, crate, ap, reach) = (WL_ELEMENT, WL_DAMAGE, WL_CRIT_DAMAGE, WL_CRIT_RATE, WL_AP_COST, WL_REACH);
       return Weapon {
         element: el[i],
@@ -149,6 +225,7 @@ public fun weapon_line_of(family: Option<String>, affinity: bool): Weapon {
         crit_rate: crate[i], // affinity NEVER touches crit_rate / ap_cost / reach (mechanics, not damage)
         ap_cost: ap[i],
         reach: reach[i],
+        category: f, // §387 — the matched FINE family IS the zone key
       }
     };
     i = i + 1;
@@ -162,7 +239,7 @@ fun affinity_scale(base: u64, affinity: bool): u64 { if (affinity) base * 110 / 
 
 /// Bare hands: earth (the guaranteed-resolvable element), low fixed damage, cheap swings, melee reach.
 fun unarmed_line(): Weapon {
-  Weapon { element: 2, damage: 4, damage_max: 4, crit_damage: 6, crit_damage_max: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
+  Weapon { element: 2, damage: 4, damage_max: 4, crit_damage: 6, crit_damage_max: 6, crit_rate: 30, ap_cost: 3, reach: 1, category: b"".to_string() }
 }
 
 /// §387 — `weapon_line_of` with an AUTHORABLE per-template AP cost. `ap_override` some(ap) ⇒ that authored AP; none
@@ -229,6 +306,8 @@ public(package) fun weapon_crit_damage_max(self: &Participant): u64 { self.weapo
 public(package) fun weapon_crit_rate(self: &Participant): u64 { self.weapon.crit_rate }
 public(package) fun weapon_ap_cost(self: &Participant): u64 { self.weapon.ap_cost }
 public(package) fun weapon_reach(self: &Participant): u64 { self.weapon.reach }
+/// §387 — the seat's FINE weapon category, the key `weapon_zone_of` resolves the strike's zone from.
+public(package) fun weapon_category(self: &Participant): String { self.weapon.category }
 
 // ╔════════════════ [ Reads ] ════════════════════════════════════════════════ ]
 

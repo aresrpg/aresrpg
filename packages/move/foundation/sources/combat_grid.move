@@ -696,6 +696,10 @@ public fun step_cell(cell: u64, dir: u8): Option<u64> {
   else option::none()
 }
 
+/// Do two cells share a row or a column? The CARDINAL linearity gate (§387 — a `line_only` weapon category may
+/// only aim along a straight line, the same rule the sim's `is_linear` applies to a `line_launch` spell).
+public fun same_line(a: u64, b: u64): bool { cell_x(a) == cell_x(b) || cell_y(a) == cell_y(b) }
+
 /// Containment for the DIRECTION-INDEPENDENT shapes (point/circle/cross/ring/allmap) — EXACT (no lozenge
 /// approximation). LINE/TBAR need the cast direction, which a placed board zone does not store, so they fall
 /// back to the filled lozenge here (flagged — the census's placed zones are point/circle; instantaneous
