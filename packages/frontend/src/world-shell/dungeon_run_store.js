@@ -378,6 +378,8 @@ export const use_dungeon = create((set, get) => ({
   /** @type {number | null} Date.now() a busy-holder acquired the lock — only resume_dungeon stamps this (#654
    *  staleness ceiling); null means either idle or a non-stamped holder, and is never treated as stale. */
   busy_since: null,
+  /** @type {symbol | null} exact resume_dungeon lock owner; late cancellation may only release its own token. */
+  _resume_lock: null,
   /** @type {ReturnType<typeof setInterval> | null} */
   _poll_timer: null,
   /** @type {ReturnType<typeof bind_fight_stream> | null} the live fight's SSE link (#1384) */
@@ -764,6 +766,7 @@ export const use_dungeon = create((set, get) => ({
   async resume_dungeon(run_pass_id, character_id, { user = false, is_current = () => true } = {}) {
     const cancelled = () => !is_current()
     const cancelled_outcome = () => ({ status: 'refused', reason: 'cancelled' })
+    const resume_lock = Symbol('resume_dungeon')
     if (cancelled()) return cancelled_outcome()
     if (get().busy) {
       // #654 STALENESS CEILING: a busy holder THIS door itself stamped (busy_since) past the ceiling is an
@@ -782,6 +785,7 @@ export const use_dungeon = create((set, get) => ({
     set({
       busy: true,
       busy_since: Date.now(),
+      _resume_lock: resume_lock,
       error: null,
       phase: 'entering',
       character_id,
@@ -888,7 +892,9 @@ export const use_dungeon = create((set, get) => ({
     } finally {
       // #654 — EVERY exit releases the lock (a cancelled()/gone-pass/dead-fight/refresh-raced early `return`
       // above, the catch, or the plain success fallthrough): a rejected/aborted resume must never outlive itself.
-      set({ busy: false, busy_since: null })
+      // Correlate the release: a cancelled old read can settle after reset_local + a replacement action acquired
+      // `busy`, and must never unlock that successor.
+      if (get()._resume_lock === resume_lock) set({ busy: false, busy_since: null, _resume_lock: null })
     }
     return { status: 'done' }
   },
@@ -1772,6 +1778,7 @@ export const use_dungeon = create((set, get) => ({
       error: null,
       busy: false,
       busy_since: null,
+      _resume_lock: null,
       in_session: false,
       room_recap: null,
       _claiming: false,
