@@ -8,9 +8,7 @@ const LOCALES = ['en', 'fr', 'de', 'es', 'ja', 'uk']
 
 describe('i18n · degraded presence link copy exists in all six locales', () => {
   test.each(LOCALES)('%s.json carries non-empty world_chat.link_degraded', async (lang) => {
-    const json = await Bun.file(
-      new URL(`../../../src/i18n/locales/${lang}.json`, import.meta.url),
-    ).json()
+    const json = await Bun.file(new URL(`../../../src/i18n/locales/${lang}.json`, import.meta.url)).json()
     const value = json?.world_chat?.link_degraded
     expect(typeof value).toBe('string')
     expect(value.trim().length).toBeGreaterThan(0)
