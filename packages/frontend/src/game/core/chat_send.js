@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Outbound chat composition edge: reads the selected character and POSTs through the stateless courier.
-// The presence SSE is the one receive path for every line, including our own accepted send.
+// Outbound chat composition edge: reads the selected character and calls the ONE social transport home. That
+// home keeps the courier alive while publishing the same line into the room during the additive transition.
 
 import { broadcast_chat, broadcast_party_chat } from '../../courier/world.js'
 
@@ -18,10 +18,19 @@ export function send_chat_message(message, channel = CHANNEL.general, target = '
   const { selected_character_id, sui } = context.get_state()
   if (!selected_character_id) return
 
-  // Name stays a caller-side rendering hint only; the stream row carries the verified wallet address and
-  // character id. Do not echo here: accepted chat returns through the same presence SSE as every remote line.
+  // A data channel does not echo a sender's own packet, so publish the local copy through the same reducer door
+  // peer lines use. Peers resolve richer identity from room state; id remains the stable fallback.
   const me = sui.characters.find((character) => character.id === selected_character_id)
   const name = me?.name ?? ''
   if (channel === CHANNEL.group) broadcast_party_chat(selected_character_id, name, message, channel, target)
   else broadcast_chat(selected_character_id, name, message, channel, target)
+  context.dispatch('action/chat_message', {
+    id: selected_character_id,
+    message,
+    address: selected_character_id,
+    name,
+    channel,
+    target,
+    from_me: true,
+  })
 }

@@ -25,7 +25,7 @@ import { create_auto_run } from './auto_run.js'
 import { create_cursor_lock_toggle } from './embed_voxel_cursor_lock.js'
 import { resolve_cosmetic_aura } from './cosmetic_aura.js'
 import { tick_environment_audio, dispose_environment_audio } from './core/audio/environment_audio.js'
-import { broadcast_position } from '../courier/world.js'
+import { broadcast_position, set_local_cosmetic } from '../courier/world.js'
 import { create_local_nameplate } from './local_nameplate.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from './screens/character-glb.js'
 import { push_event_toast } from './core/toast.js'
@@ -266,6 +266,7 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = source
+    set_local_cosmetic({ mounted: true })
     push_event_toast({
       state: 'success',
       title: i18n.t(mobile_input.mobile() ? 'world.mount_on_touch' : 'world.mount_on'),
@@ -275,6 +276,7 @@ export function create_player({
     if (!riding) return
     riding = false
     mount_source = null
+    set_local_cosmetic({ mounted: false })
     mount_ctl?.dispose()
     mount_ctl = null
     push_event_toast({ state: 'info', title: i18n.t('world.mount_off') })
@@ -299,11 +301,13 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = 'dragon'
+    set_local_cosmetic({ mounted: true })
   }
   const unmount_dragon = () => {
     if (!riding) return
     riding = false
     mount_source = null
+    set_local_cosmetic({ mounted: false })
     mount_ctl?.dispose()
     mount_ctl = null
   }
@@ -588,7 +592,8 @@ export function create_player({
         facing_yaw: t.facing_yaw,
         fps: Math.round(engine.get_stats?.().fps ?? 0),
       })
-      // D206: announce our cell to the courier on ACTUAL change only; its edge coalesces to the hard rate cap.
+      // D206: announce our cell on ACTUAL change only. Both transition paths stay live until room presence is
+      // driven-proven; the final courier retirement removes the first send.
       // D217: the payload carries the WORLD height too — a VERTICAL cell change (hills/jumps/falls) also
       // broadcasts, so peers track y exactly instead of inferring ground.
       if (character?.id) {
@@ -612,7 +617,8 @@ export function create_player({
           last_bcast_z = bz
           last_bcast_y = by
           last_bcast_yaw = t.facing_yaw
-          broadcast_position(world_id, character.id, bx, bz, Math.round(t.facing_yaw * 100) / 100)
+          const heading = Math.round(t.facing_yaw * 100) / 100
+          broadcast_position(world_id, character.id, bx, bz, heading, by)
         }
       }
     }

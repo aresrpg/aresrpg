@@ -5,8 +5,8 @@ const noop = () => {}
 const load_courier = () => import('../courier/world.js')
 
 /**
- * Destroy an existing world scene, then close its module-global courier stream once the lazy chunk is ready.
- * The caller-supplied guard prevents a stale import resolution from tearing down a newer scene's stream.
+ * Destroy an existing world scene, then close its module-global social links once the lazy chunk is ready.
+ * The caller-supplied guard prevents a stale import resolution from tearing down a newer scene's links.
  * A null scene is the cold-login path: it deliberately performs no import and therefore cannot open the link.
  *
  * @param {{ destroy: () => void } | null} scene

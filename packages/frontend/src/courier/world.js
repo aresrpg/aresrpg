@@ -17,7 +17,16 @@ import { courier_challenge, post_courier_chat, post_courier_position } from '@ar
 
 import { COURIER_URL, RPC_URL } from '../env'
 import { game_log } from '../core/log.js'
-import { publish_room_state, set_room_party } from '../p2p/lobby-room.js'
+import {
+  join_room,
+  leave_room,
+  publish_room_chat,
+  publish_room_party_chat,
+  publish_room_position,
+  publish_room_state,
+  set_room_local_cosmetic,
+  set_room_party,
+} from '../p2p/lobby-room.js'
 import { presence_input, presence_store } from '../world-shell/presence_adapter.js'
 import { open_presence_stream, presence_frames } from '../world-shell/presence_sse_adapter.js'
 
@@ -198,8 +207,7 @@ const courier_frames = {
  * read layer's presence vocabulary and the courier's. The route registers this connection by identity, so a
  * link that can name neither a character nor a wallet is refused before framing and is never opened.
  */
-export function join_courier(world, character = null, address = null) {
-  if (!world || typeof EventSource === 'undefined') return
+function join_courier_transport(world, character, address) {
   const identity = `${character ?? ''}:${address ?? ''}`
   if (close_stream && active_world === world && active_identity === identity) {
     presence_input({ type: 'session', character_id: character })
@@ -217,6 +225,16 @@ export function join_courier(world, character = null, address = null) {
     return game_log('courier', 'presence link not opened — this session names neither a character nor a wallet')
   link_target = { world, character, address }
   open_link()
+}
+
+/**
+ * Join both additive social transports through one public home. A later train removes only the courier leg;
+ * callers and the room primitive remain unchanged.
+ */
+export function join_courier(world, character = null, address = null) {
+  if (!world) return
+  if (typeof EventSource !== 'undefined') join_courier_transport(world, character, address)
+  join_room(world, character)
 }
 
 /** Open the ONE inbound link for the current target. Re-entrant: a relink closes the dead source first. */
@@ -278,6 +296,7 @@ export function leave_courier() {
   if (position_timer) clearTimeout(position_timer)
   position_timer = null
   presence_input({ type: 'reset' })
+  leave_room()
 }
 
 export function sync_party_room(party_id) {
@@ -314,9 +333,10 @@ async function flush_position() {
 }
 
 /** Coalesce movement to the newest pose and publish at most twice per second. */
-export function broadcast_position(world, character, x, z, heading = 0) {
+export function broadcast_position(world, character, x, z, heading = 0, height = 0) {
   if (!world || !character) return
   presence_input({ type: 'my_cell', x, y: z, yw: heading })
+  publish_room_position(character, x, z, height, heading)
   pending_position = { world, character, x, z, heading }
   void flush_position()
 }
@@ -340,13 +360,20 @@ async function post_chat(character, text, channel, target, party) {
   }
 }
 
-export function broadcast_chat(character, _name, message, channel, target = '') {
+export function broadcast_chat(character, name, message, channel, target = '') {
+  publish_room_chat(character, name, message, channel, target)
   void post_chat(character, message, channel, target, null)
 }
 
-export function broadcast_party_chat(character, _name, message, channel, target = '') {
+export function broadcast_party_chat(character, name, message, channel, target = '') {
   if (!active_party) return
+  publish_room_party_chat(character, name, message, channel, target)
   void post_chat(character, message, channel, target, active_party)
+}
+
+/** Publish room-only live cosmetic state through the public social-transport home. */
+export function set_local_cosmetic(partial) {
+  set_room_local_cosmetic(partial)
 }
 
 /** Best-effort fight previews share the authenticated chat ingress but never enter visible chat history. */

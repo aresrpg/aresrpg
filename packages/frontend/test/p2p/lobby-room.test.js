@@ -21,6 +21,7 @@ import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/te
 import {
   deliver,
   reset_trystero_mock,
+  trystero_actions,
   trystero_relay_calls,
   trystero_relay_socket,
   trystero_room_configs,
@@ -157,6 +158,11 @@ describe('the room IS the world — joining is the announcement', () => {
     // A credential nothing can mint would just fail at connect time — the absence is the honest state.
     expect(JSON.stringify(iceServers)).not.toContain('username')
     expect(JSON.stringify(iceServers)).not.toContain('credential')
+  })
+
+  it('creates no fight action — journals remain on their SSE lane', () => {
+    expect(trystero_actions.has('fstream')).toBe(false)
+    expect([...trystero_actions.keys()].sort()).toEqual(['chat', 'pchat', 'pos', 'state'])
   })
 
   it('is idempotent for the same world+identity, and re-rooms on a world change', () => {

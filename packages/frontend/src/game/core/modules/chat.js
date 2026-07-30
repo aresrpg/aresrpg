@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Chat — stateless courier POSTs fan out on the world presence SSE. Incoming messages flow through
-// @aresrpg/world's presence atom: the stream adapter dispatches `chat_received`, the core carries the chat head, and this module's
-// `observe` subscribes to it and folds each row into message_history (session-local, no backlog). CHANNEL
-// routes the render color; `id` is the character identity used for the "me" test, while `address` is the
-// zkLogin-verified wallet address.
+// Chat — serverless browser↔browser traffic in the world room. The composition edge echoes my own line through
+// this reducer; peer lines enter through the presence atom's `chat_received` input and its subscription below.
+// History stays session-local with no backlog. CHANNEL routes render color; `id` is character identity.
 
 import { subscribe_chat } from '@aresrpg/world/presence'
 

@@ -1130,12 +1130,14 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
     character_id: incoming_character_id,
     follow: !!follow,
   }
-  if (!follow)
+  if (!follow) {
+    // The public social home keeps the courier alive while joining the replacement room internally.
     join_courier(
       incoming_world_id,
       mode === 'session' ? incoming_character_id : null,
       use_auth.getState().address ?? null
     )
+  }
   if (session?.dispose_timer) {
     clearTimeout(session.dispose_timer)
     session.dispose_timer = null

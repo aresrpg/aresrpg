@@ -59,7 +59,7 @@ export function reset_wallet_session(input = { type: 'wallet_session/reset' }) {
   //    boundary (party_store re-publishes on dungeon_id delta). B relearns its own party via the invite nudge.
   use_party.getState().reset_local()
 
-  // 4. Courier — close A's stream and reset its presence fold before B opens a newly identified link.
+  // 4. Realtime transition — the public social home closes both identities before B opens newly identified links.
   leave_courier()
 
   // 5. EXPEDITION store (S-19a — the gap this closes) — the character / kiosk / personal-kiosk-cap + active-run
