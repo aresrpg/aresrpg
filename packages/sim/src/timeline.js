@@ -217,8 +217,8 @@ export const check_tripwires = (prev, next, command, events = []) => {
 export const revive_arena = arena => ({
   width: arena.width,
   height: arena.height,
-  radius: (arena.width - 1) / 2,
-  center: { x: (arena.width - 1) / 2, y: (arena.height - 1) / 2 },
+  radius: arena.width >> 1,
+  center: { x: arena.width >> 1, y: arena.height >> 1 },
   cells: Uint8Array.from(arena.cells),
   spawns_a: arena.spawns_a,
   spawns_b: arena.spawns_b,
