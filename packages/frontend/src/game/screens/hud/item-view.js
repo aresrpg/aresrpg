@@ -20,8 +20,6 @@ import agility_icon from '../../assets/statistics/agility.png'
 import crit_icon from '../../assets/statistics/crit.png'
 import raw_damage_icon from '../../assets/statistics/raw_damage.png'
 
-import { quality_color } from './quality.js'
-
 // item stat field -> display label, accent colour + stat ICON. Ported 1:1 from the AresRPG donor
 // item-description.vue (incl. its resistance->primary icon reuse). Each stat renders as an icon + value +
 // name ROW (the donor's format), never a chip.
@@ -116,7 +114,6 @@ const type_label = (/** @type {string} */ cat) =>
  *   level: number | null,
  *   category: string,
  *   type_label: string,
- *   tint: string,
  *   icon: string | null,
  *   stats: Array<{ key: string, label: string, color: string, icon: string, min: number, max: number }>,
  *   damages: Array<{ element: string, min: number, max: number }>,
@@ -212,9 +209,6 @@ export function to_item_view(raw) {
     level,
     category,
     type_label: type_label(category),
-    // NO QUALITY TIERS: the residual quality/rarity template field is
-    // deliberately dropped here — views are tier-blind; the tint is the one neutral tone.
-    tint: quality_color(),
     icon,
     stats,
     damages,

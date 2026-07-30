@@ -108,14 +108,10 @@ function LootTile({ entry, items, template_map, slug_by_template_id, tt, t }) {
   const resolved_tile = rolled_stats
     ? resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id, rolled_stats)
     : base_tile
-  const { resolved, name, tint, category, icon, detail } = resolved_tile
+  const { resolved, name, category, icon, detail } = resolved_tile
   return (
     <Tooltip content={<ItemDetailView item={detail} />} className="tt-card--solid">
-      <div
-        className="fe-tile"
-        style={/** @type {import('react').CSSProperties} */ ({ '--rq': tint })}
-        aria-label={name}
-      >
+      <div className="fe-tile" aria-label={name}>
         {resolved ? (
           <ItemIcon item={{ icon, category }} alt={name} />
         ) : (

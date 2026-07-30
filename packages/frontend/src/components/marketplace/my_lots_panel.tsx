@@ -6,7 +6,6 @@ import { Store } from 'lucide-react'
 
 import type { MarketplaceListing } from '../../types/chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
-import { quality_color } from '../../game/screens/hud/quality'
 import { ItemImage } from '../items'
 
 import { visible_marketplace_listings } from './marketplace_model'
@@ -77,12 +76,7 @@ export function MyLotsPanel({
                   className="w-7 h-7 shrink-0"
                 />
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span
-                    className="text-[10px] tracking-[0.1em] uppercase truncate"
-                    style={{ color: quality_color(listing.item.rarity) }}
-                  >
-                    {display_name}
-                  </span>
+                  <span className="text-[10px] tracking-[0.1em] uppercase truncate text-text">{display_name}</span>
                   <span className="text-[8px] tracking-[0.1em] uppercase text-muted/50">
                     {listing.item.category} &middot; Lv. {listing.item.level}
                   </span>

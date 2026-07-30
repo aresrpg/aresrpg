@@ -15,7 +15,6 @@ import { has_collectible_profits } from '../../chain/read_kiosk_profits'
 import { use_template_t } from '../../i18n/template_t'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import { truncate_address } from '../../utils/address'
-import { quality_color } from '../../game/screens/hud/quality'
 import { ItemImage } from '../items'
 import { AddressName } from '../address_name'
 
@@ -86,9 +85,9 @@ export function HistoryPanel() {
   const has_profits = has_collectible_profits(kiosk_profits_mist)
   const collectible = format_mist_to_sui(kiosk_profits_mist, 2)
 
-  // Resolve an item's display name + rarity color from the shared template catalog (browse's `name_of`),
-  // keyed by the item_type slug the sales row carries as `category`. No template (or a character/burned
-  // sale) → the humanized slug, else the shortened item id — the gap is rendered, never faked.
+  // Resolve an item's display name from the shared template catalog (browse's `name_of`), keyed by the
+  // item_type slug the sales row carries as `category`. No template (or a character/burned sale) → the
+  // humanized slug, else the shortened item id — the gap is rendered, never faked.
   function present(template_id: string | null, item_type: string | null, item_id: string) {
     const exact = template_id ? templates_item.find((tp: any) => tp.template_id === template_id) : null
     const candidates = exact || !item_type ? [] : templates_item.filter((tp: any) => tp.id === item_type)
@@ -111,7 +110,6 @@ export function HistoryPanel() {
       icon: icon.id,
       image_url: icon.image_url ?? undefined,
       category: tmpl?.category ?? null,
-      color: quality_color(tmpl?.quality || tmpl?.rarity || 'common'),
     }
   }
 
@@ -211,9 +209,7 @@ export function HistoryPanel() {
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <ItemImage id={p.icon} image_url={p.image_url} category={p.category} className="w-8 h-8 shrink-0" />
-                  <span className="text-[11px] tracking-[0.06em] truncate" style={{ color: p.color }}>
-                    {p.name}
-                  </span>
+                  <span className="text-[11px] tracking-[0.06em] truncate text-text">{p.name}</span>
                 </div>
                 <span className="text-[9px] tracking-[0.08em] uppercase text-muted">
                   {format_ago(r.sold_at_ms, lang)}

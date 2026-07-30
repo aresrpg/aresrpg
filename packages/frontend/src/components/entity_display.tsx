@@ -6,7 +6,6 @@
 // import of `../entity_display` / `./entity_display` keeps resolving unchanged.
 
 export {
-  RARITY_COLORS,
   STAT_COLORS,
   ELEMENT_COLORS,
   RANK_COLORS,

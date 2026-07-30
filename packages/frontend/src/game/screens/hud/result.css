@@ -688,16 +688,13 @@
   height: 26px;
   display: grid;
   place-items: center;
-  --rq: #a9b4c4; /* the ONE neutral item tone (quality.js NEUTRAL) — quality tiers are dead */
-  /* D11: the item tint is the inset radial ONLY. The border is a NEUTRAL hairline
-     — a tinted border is the same bug class as the white item edge. */
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rq) 22%, transparent), transparent 72%);
+  background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .fe-tile .item-icon {
   width: 18px;
   height: 18px;
-  color: color-mix(in srgb, var(--rq) 78%, white);
+  color: var(--fg-muted);
 }
 /* D53 letter-tile idiom (ported from DeckCluster's SpellSocket art-fail fallback): an orphaned drop — no
    bag match AND no encyclopedia template row (resolve_loot_tile.js) — replaces the icon well with a bold,

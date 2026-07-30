@@ -7,14 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { is_archi_tier } from '../game/data/mobs.js'
 import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 
-import {
-  RARITY_COLORS,
-  STAT_COLORS,
-  ELEMENT_COLORS,
-  STAT_LABEL_KEYS,
-  format_stat_name,
-  stat_color_key,
-} from './entity_colors'
+import { STAT_COLORS, ELEMENT_COLORS, STAT_LABEL_KEYS, format_stat_name, stat_color_key } from './entity_colors'
 import { ArchiBadge, is_new_template, NewBadge } from './entity_new_badge'
 import { SectionDivider, SectionTitle } from './entity_section'
 
@@ -287,7 +280,6 @@ export function MobDetailView({
         {mob.drops && mob.drops.length > 0 ? (
           <div className="flex flex-col gap-1">
             {mob.drops.map((drop) => {
-              const drop_color = RARITY_COLORS[drop.rarity] || RARITY_COLORS.common
               const qty = drop.minQty === drop.maxQty ? `×${drop.minQty}` : `×${drop.minQty}-${drop.maxQty}`
               // EXACT on-chain chance (bp/100), rendered to 2 decimals and NEVER rounded.
               const chance = drop.chance_percent ?? drop.drop_weight ?? 0
@@ -314,9 +306,7 @@ export function MobDetailView({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px]" style={{ color: drop_color }}>
-                        {drop.name}
-                      </span>
+                      <span className="text-[10px] text-text">{drop.name}</span>
                       <span className="text-[8px] tracking-wide uppercase" style={{ color: '#6b728080' }}>
                         {drop.category}
                       </span>

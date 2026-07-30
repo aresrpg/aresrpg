@@ -22,12 +22,8 @@ import { type ItemInfo } from '../types/chain'
 import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
 import { display_rolled_stats, has_authored_stats } from '../chain/rolled_stats.js'
-// Rarity SSOT: QUALITY_COLOR-derived tint + hue (quality.js) so an item's rarity reads the SAME here as
-// on every HUD surface. Replaces the old whitish RARITY_COLORS border with a per-tier inset radial tint.
-import { quality_color, rarity_tint } from '../game/screens/hud/quality'
 
 import {
-  RARITY_COLORS,
   STAT_COLORS,
   ELEMENT_COLORS,
   STAT_LABEL_KEYS,
@@ -47,7 +43,6 @@ export function ItemTooltipContent({ item }: { item: ItemInfo }) {
   // looked up in the bundled seed catalog, which is `{}` here, so a hovered item could only ever fall back
   // to its own chain-carried name — never the localized published one.
   const { find, name_of } = use_item_lookup()
-  const rarity_color = RARITY_COLORS[item.rarity] || RARITY_COLORS.common
   const tmpl = find(item.template_id)
   const display_name = name_of(item.template_id, item.name)
   const resolved_description = (tmpl && tt(tmpl, 'description')) || item.description
@@ -65,10 +60,7 @@ export function ItemTooltipContent({ item }: { item: ItemInfo }) {
     <div
       className="pointer-events-none z-50"
       style={{
-        // D11 (design SSOT): rarity is a top-weighted inset radial tint over the dark base — NOT a border
-        // (the old `${rarity_color}4d` read whitish on `common`) and NO rarity outer box. Structural edge
-        // is a neutral hairline. Name text keeps its rarity colour below.
-        background: `${rarity_tint(item.rarity)}, var(--color-bg)`,
+        background: 'var(--color-bg)',
         border: '1px solid rgba(255,255,255,0.08)',
         padding: '12px 16px',
         maxWidth: 280,
@@ -76,14 +68,8 @@ export function ItemTooltipContent({ item }: { item: ItemInfo }) {
       }}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[11px] tracking-[0.15em] uppercase font-semibold" style={{ color: rarity_color }}>
-          {display_name}
-        </span>
-        {item.level > 0 && (
-          <span className="text-[9px] tracking-wide shrink-0" style={{ color: rarity_color, opacity: 0.7 }}>
-            Lvl {item.level}
-          </span>
-        )}
+        <span className="text-[11px] tracking-[0.15em] uppercase font-semibold text-text">{display_name}</span>
+        {item.level > 0 && <span className="text-[9px] tracking-wide shrink-0 text-muted">Lvl {item.level}</span>}
       </div>
       {item.category && <div className="text-[9px] tracking-[0.1em] uppercase mt-0.5 text-muted">{item.category}</div>}
       {pet_power_pct !== null && (
@@ -370,7 +356,6 @@ export function ItemSlot({
   on_click?: () => void
   size?: number
 }) {
-  const rarity_color = item ? quality_color(item.rarity) : undefined
   const SlotIcon = slot ? SLOT_ICONS[slot] : null
 
   return (
@@ -382,26 +367,19 @@ export function ItemSlot({
       style={{
         width: size,
         height: size,
-        // D11 (design SSOT): a FILLED cell carries NO resting rarity border — rarity is the top-weighted
-        // inset radial tint (rarity_tint) over a dark base. Hover / is-selected still light a QUALITY_COLOR
-        // edge for feedback. An EMPTY cell is a dark neutral square (no whitish outline / "white square").
         border: selected
-          ? `1px solid ${rarity_color || 'rgba(200,150,60,0.6)'}`
+          ? '1px solid rgba(200,150,60,0.6)'
           : item
             ? '1px solid transparent'
             : '1px dashed rgba(255,255,255,0.05)',
-        background: selected
-          ? `${rarity_color}12`
-          : item
-            ? `${rarity_tint(item.rarity)}, rgba(255,255,255,0.02)`
-            : 'rgba(0,0,0,0.18)',
-        boxShadow: selected ? `0 0 12px ${rarity_color}30` : 'none',
+        background: selected ? 'rgba(200,150,60,0.08)' : item ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.18)',
+        boxShadow: selected ? '0 0 12px rgba(200,150,60,0.19)' : 'none',
       }}
       onClick={on_click}
       onMouseEnter={(e) => {
         if (!selected && item) {
-          ;(e.currentTarget as HTMLElement).style.borderColor = `${rarity_color}`
-          ;(e.currentTarget as HTMLElement).style.boxShadow = `0 0 10px ${rarity_color}25`
+          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.18)'
+          ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px rgba(255,255,255,0.08)'
         }
       }}
       onMouseLeave={(e) => {

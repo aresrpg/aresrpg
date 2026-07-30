@@ -4,11 +4,10 @@
  * Canonical item-card (c143) — ItemCard.jsx. Ported from the AresRPG donor item-description.vue: a header
  * (name + set + level on the right), then a two-column body — the ICON top-LEFT with its category, and
  * the effects on the RIGHT as organized ROWS of coloured LINES (element-coloured damage + one stat-icon +
- * value + name row per stat), NOT chips. House Frosted-Obsidian skin; `--q` = the quality colour.
+ * value + name row per stat), NOT chips. House Frosted-Obsidian skin.
  */
 
 .item-card {
-  --q: var(--accent);
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
@@ -27,7 +26,7 @@
   width: 340px;
 }
 
-/* header: name (quality-tinted, bold) + set (italic) + level pushed to the right */
+/* header: name (bold) + set (italic) + level pushed to the right */
 .item-card__head {
   display: flex;
   flex-flow: row nowrap;
@@ -39,7 +38,7 @@
   font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 0.01em;
-  color: var(--q);
+  color: var(--fg);
 }
 .item-card--lg .item-card__name {
   font-size: 1.1rem;
@@ -74,11 +73,7 @@
   width: 96px;
   height: 96px;
   border-radius: var(--r-2);
-  background: radial-gradient(
-    circle at 50% 45%,
-    color-mix(in srgb, var(--q) 16%, transparent),
-    transparent 70%
-  );
+  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.06), transparent 70%);
   filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.5));
 }
 .item-card--lg .item-card__icon {

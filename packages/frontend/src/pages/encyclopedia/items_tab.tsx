@@ -8,13 +8,7 @@ import { Search, Swords, ArrowLeft, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { catalog, slugs, pet_food_slugs } from 'virtual:item_catalog'
 
-import {
-  RARITY_COLORS,
-  SectionDivider,
-  ItemDetailView,
-  is_new_template,
-  NewBadge,
-} from '../../components/entity_display'
+import { SectionDivider, ItemDetailView, is_new_template, NewBadge } from '../../components/entity_display'
 import { ItemImage } from '../../components/items'
 import { FoundInWorldsSection } from '../../components/mob_detail_view'
 import { PetFullFedNote } from '../../components/pet_power_card'
@@ -356,7 +350,6 @@ export function ItemsTab({
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {filtered.map((item: any, idx: number) => {
-            const rarity_color = RARITY_COLORS.common
             const is_selected = selected_item_id === item.id
             const asset = encyclopedia_item_asset(item)
             return (
@@ -364,7 +357,7 @@ export function ItemsTab({
                 key={item.id}
                 className="flex flex-col gap-0.5 px-3 py-2 cursor-pointer"
                 style={{
-                  borderLeft: is_selected ? '2px solid #c8963c' : `2px solid ${rarity_color}40`,
+                  borderLeft: is_selected ? '2px solid #c8963c' : '2px solid rgba(255,255,255,0.08)',
                   background: is_selected
                     ? 'rgba(200,150,60,0.08)'
                     : idx % 2 === 1
@@ -391,7 +384,7 @@ export function ItemsTab({
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[10px] tracking-[0.1em] uppercase truncate" style={{ color: rarity_color }}>
+                      <span className="text-[10px] tracking-[0.1em] uppercase truncate text-text">
                         {tt(item, 'name')}
                       </span>
                       {is_new_template(item.createdAt) && <NewBadge />}

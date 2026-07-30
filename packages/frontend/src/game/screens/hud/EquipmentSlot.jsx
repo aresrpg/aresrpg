@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// One paper-doll equipment slot. Renders the slot art + a level badge + a rarity-tinted bottom edge
-// when filled, or a per-slot line glyph + caption when empty (canon-04 "Loadout" doll). Wires the
+// One paper-doll equipment slot. Renders the slot art + a level badge when filled, or a per-slot line
+// glyph + caption when empty (canon-04 "Loadout" doll). Wires the
 // select/unequip/drag-drop/right-click handlers. Hover → the SHARED onchain item tooltip (Inventory.jsx owns
 // the single useOnchainItemTooltip instance + portal for the whole panel — bag cells AND equipped slots —
 // so there is exactly one tooltip mounted, not one per slot). Right-click on a FILLED slot opens EquipMenu
@@ -24,7 +24,6 @@ import {
 } from 'lucide-react'
 
 import { ItemIcon } from './ItemIcon.jsx'
-import { rarity_tint } from './quality.js'
 import { inventory_item_icon, SLOT_LABEL } from './inventory-equip.js'
 
 // Per-slot empty-state icon — REUSES the companion's canonical slot icon set (the lucide glyphs in
@@ -85,19 +84,11 @@ export function EquipmentSlot({
         },
       }
     : {}
-  // Shared rarity CELL treatment (rarity_tint SSOT, quality.js): the inset radial gradient, painted as a
-  // background layer by the CSS — never a border/edge. One source across every item cell (D11).
-  const tint = item ? rarity_tint(item.quality ?? item.rarity) : null
   return (
     <div
       className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${
         selected ? ' is-selected' : ''
       }${valid ? ' is-valid' : ''}`}
-      style={
-        item
-          ? /** @type {import('react').CSSProperties} */ ({ '--q-tint': tint })
-          : undefined
-      }
       onDragOver={e => e.preventDefault()}
       onDrop={on_drop}
       {...activation}

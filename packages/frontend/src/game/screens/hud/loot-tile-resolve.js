@@ -12,7 +12,6 @@
 // drop is a genuine orphan — the caller then renders the D53 bold-letter fallback instead of <ItemIcon>.
 
 import { to_item_view } from './item-view.js'
-import { quality_color } from './quality.js'
 import { inventory_item_icon } from './inventory-equip.js'
 import { onchain_template_to_detail_props } from '../../../components/items'
 
@@ -83,8 +82,8 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
 
 /**
  * Resolve one loot entry against the player's bag + the encyclopedia template map into everything LootTile
- * needs to render: whether it's genuinely backed by data, the best available name, the rarity tint, the
- * category (for ItemIcon's own glyph fallback), and the tooltip's detail props.
+ * needs to render: whether it's genuinely backed by data, the best available name, the category (for
+ * ItemIcon's own glyph fallback), and the tooltip's detail props.
  * @param {LootEntry} entry
  * @param {any[]} items live bag snapshot (state.sui.items), used for exact instance enrichment
  * @param {Map<string, any>} template_map exact template id → chain template row, plus legacy item_type keys
@@ -135,7 +134,6 @@ export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_tem
   return {
     resolved,
     name,
-    tint: view?.tint ?? quality_color('common'),
     category,
     icon,
     item_id: entry.item_id ?? null,

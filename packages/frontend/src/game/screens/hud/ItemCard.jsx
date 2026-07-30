@@ -57,12 +57,7 @@ export function ItemCard({ item, compare = null, size = 'md' }) {
   const has_effects = view.damages.length > 0 || view.stats.length > 0
 
   return (
-    <article
-      className={`item-card item-card--${size}`}
-      style={
-        /** @type {import('react').CSSProperties} */ ({ '--q': view.tint })
-      }
-    >
+    <article className={`item-card item-card--${size}`}>
       <header className="item-card__head">
         <span className="item-card__name">{view.name}</span>
         {view.set && (

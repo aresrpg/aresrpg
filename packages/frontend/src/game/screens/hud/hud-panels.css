@@ -465,12 +465,8 @@
   background: var(--accent-dim);
 }
 
-/* D11 SSOT: a filled slot's rarity is the shared inset radial tint (--q-tint = rarity_tint(), quality.js),
-   painted as a background layer over the base glass — NOT a bottom edge/border (the old ::after rarity bar
-   was the "weird edge" bug class). The neutral hairline border from .inv__slot stays; hover/selected own
-   their own borders (separate paths). */
 .inv__slot.is-filled:not(.is-selected):not(.is-valid) {
-  background-image: var(--q-tint, none), linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
 }
 
 .inv__slot-lvl {
@@ -687,13 +683,9 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* #22a / D11: a FILLED cell drops the resting hairline border (transparent, keeps the 1px box model for
-   grid alignment with the dashed EMPTY cells) — rarity reads via the SHARED inset radial tint ONLY
-   (--q-tint = rarity_tint(), quality.js), painted as a background layer over the base glass. NO rarity
-   edge/border (the old ::after bar was the same bug class as the white border). Hover/selected own theirs. */
 .inv__cell--filled {
   border-color: transparent;
-  background-image: var(--q-tint, none), linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
 }
 
 /* D11: a MOUSE click on an item cell must not leave a stray light focus outline ("white
@@ -1487,22 +1479,6 @@
   min-height: 0;
 }
 
-/* rarity-tinted icon well (shared by the type rows + the detail head; --rq = rarity tint) */
-.mkt__well {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  flex: none;
-  padding: 3px;
-  box-sizing: border-box;
-  border-radius: var(--r-2);
-  background:
-    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--rq) 20%, transparent), transparent 70%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
-  border: 1px solid color-mix(in srgb, var(--rq) 45%, var(--edge));
-}
 .mkt__floor-label {
   font-family: var(--font-mono);
   font-size: 0.55rem;
@@ -1706,13 +1682,6 @@
 }
 .mkt__lr:nth-child(even) {
   background: rgba(255, 255, 255, 0.018);
-}
-.mkt__lr-rar {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rq, var(--fg-muted));
 }
 .mkt__lr-seller {
   font-size: 0.75rem;

@@ -959,10 +959,8 @@
 }
 
 /* ── v910 companion item cells (paperdoll slots + inventory cells) ────────────────────────────────
- * Dark tile + a RARITY border + an inset rarity glow + a top-left corner pip + the real item glyph (the
- * FRAME is the quality bar, never a flat colour square). Empty = a dim glyph on the dark tile. Scoped to
- * .chr-detail so the in-world HUD inventory keeps its native Frosted-Obsidian cells. The --q-tint comes
- * from the shared quality SSOT (quality.js) — a near-identical ramp to the companion rarity colours.
+ * Dark tile + the real item glyph. Empty = a dim glyph on the dark tile. Scoped to .chr-detail so the
+ * in-world HUD inventory keeps its native Frosted-Obsidian cells.
  * ──────────────────────────────────────────────────────────────────────────────────────────────── */
 .chr-detail .inv__slot,
 .chr-detail .inv__cell {
@@ -973,31 +971,23 @@
 .chr-detail .inv__cell:hover {
   border-color: var(--hair-strong);
 }
-/* filled = the SHARED inset radial tint ONLY. Regression guard (D11, 2026-07-02, re-caught 2026-07-03): the
- * weird white border around items + the top-left white square had to go. Both lived here: the filled border was `--q-tint`
- * (steel #a9b4c4 for common → reads white) and the ::before corner pip was the top-left square. Fixed: the
- * edge stays a NEUTRAL hairline (--hair, matching the base cell — no rarity/steel box), the pip is GONE,
- * and rarity now reads via the ONE cell treatment — --q-tint carries the rarity_tint() gradient (quality.js
- * SSOT), painted as a background layer over the #0c0c13 base (design spec_rarity_tint.md — "the inset
- * gradient is enough"). */
+/* Filled cells keep a neutral hairline; selection owns the only emphasized edge. */
 .chr-detail .inv__slot.is-filled,
 .chr-detail .inv__cell--filled {
   border-color: var(--hair);
-  background-image: var(--q-tint, none);
 }
-/* (top-left rarity corner pip REMOVED — regression guard D11: the top-left white square is gone) */
-/* the native bottom quality strip is replaced by the border + pip */
+/* The native bottom quality strip stays absent. */
 .chr-detail .inv__slot.is-filled::after,
 .chr-detail .inv__cell--filled::after {
   display: none;
 }
-/* empty = a dim glyph on the dark tile (no rarity) */
+/* Empty = a dim glyph on the dark tile. */
 .chr-detail .inv__cell--empty {
   background: #0c0c13;
   border-color: var(--steel);
   border-style: dashed;
 }
-/* the selected ring (gold) stays crisp over the rarity frame */
+/* The selected ring stays crisp. */
 .chr-detail .inv__slot.is-selected,
 .chr-detail .inv__cell.is-selected {
   border-color: var(--accent);

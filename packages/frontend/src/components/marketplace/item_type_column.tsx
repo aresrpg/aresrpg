@@ -11,8 +11,7 @@ import { marketplace_item_icon } from './marketplace_icon'
 // The per-template picker ("Lorito Cloak (Sapphire)") was a top TAB over the detail
 // pane; it becomes the THIRD browse column — Category → Subcategory → THIS item-type list → the listings.
 // House idiom (the subcategory column's twin): compact, monospace, uppercase, gold left-accent on the
-// active row, zero border-radius. NO rarity/quality tint (dead concept) — the old tab coloured
-// each row by quality_color; that is intentionally gone. The search moved here (it filters THIS list).
+// active row, zero border-radius. The search moved here (it filters THIS list).
 type ItemTypeColumnProps = {
   types: MarketplaceTypeBucket[]
   selected_template_id: string | null

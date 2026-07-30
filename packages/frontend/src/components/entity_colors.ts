@@ -2,14 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // --- Constants ---
 
-import { QUALITY_COLOR } from '../game/screens/hud/quality'
 import { game_log } from '../core/log.js'
-
-// Rarity → text/edge hue. RECONCILED to the ONE canonical ramp: QUALITY_COLOR (quality.js), the design
-// SSOT (spec_rarity_tint.md). This is now a pure ALIAS — the old local table's `common: #ffffff` was the
-// root D11 defect (white item borders/edges); the canonical common is steel #a9b4c4. Every consumer of
-// RARITY_COLORS (name text, row-accent stripes, canvas labels) now reads the same hues the HUD does.
-export const RARITY_COLORS: Record<string, string> = QUALITY_COLOR
 
 export const STAT_COLORS: Record<string, string> = {
   strength: '#8b6914',

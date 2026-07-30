@@ -5,7 +5,6 @@ import { slugs } from 'virtual:item_catalog'
 
 import { ItemIcon } from './ItemIcon.jsx'
 import { inventory_item_icon } from './inventory-equip.js'
-import { rarity_tint } from './quality.js'
 import { box_retry_digest } from './lootbox-retry-guard.js'
 import './inventory-guard.css'
 
@@ -84,11 +83,6 @@ export function InventoryBag({
                 className={`inv__cell inv__cell--filled${selected_item_id === item.id ? ' is-selected' : ''}${
                   action_disabled ? ' is-action-disabled' : ''
                 }`}
-                style={
-                  /** @type {import('react').CSSProperties} */ ({
-                    '--q-tint': rarity_tint(item.quality ?? item.rarity),
-                  })
-                }
                 draggable={(category === 'equipment' || category === 'cosmetics') && !equip_lock && !action_disabled}
                 aria-disabled={action_disabled}
                 data-equip-refusal={equip_refusal_reason ?? undefined}
