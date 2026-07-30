@@ -11,7 +11,13 @@
 import { describe, expect, test } from 'bun:test'
 
 import { encode } from '../src/los.js'
-import { arena_from_board, create_sim_chain, derive_board, submit_staged } from '../src/sim_chain.js'
+import {
+  arena_from_board,
+  create_sim_chain,
+  derive_board,
+  snapshot_from_sim,
+  submit_staged,
+} from '../src/sim_chain.js'
 
 const SEED = 0xc81f3a92
 const FIGHT_ID = 'sim:1387:weapon'
@@ -87,6 +93,14 @@ const boot = () => {
 }
 
 describe('#1387 — a simulator fight resolves an authored weapon swing', () => {
+  test('fight creation escrows the equipped weapon already held by deterministic sim state', () => {
+    const chain = boot()
+    const snapshot = snapshot_from_sim(chain)
+
+    expect(chain.sim_state.team0[0].weapon).toEqual(authored_weapon)
+    expect(snapshot.participants[0].weapon).toEqual(authored_weapon)
+  })
+
   test('kind 2 lands the parity fixture’s per-element slot-0 damage', () => {
     const chain = boot()
     const [target] = chain.sim_state.team1
