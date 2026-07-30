@@ -71,15 +71,9 @@ export const RELAY_URL = derive_rpc_url(
   import.meta.env.DEV ? 'ws://localhost:9001/mqtt' : 'wss://relay.aresrpg.world/mqtt'
 )
 
-// NAT traversal beside the relay. STUN is ours and always on.
-//
-// TURN IS NOT USABLE YET and this file refuses to pretend otherwise: coturn is up, but nothing mints the
-// short-lived `expiry:id` + HMAC credential its use-auth-secret mode requires, so any username/credential a
-// build could ship today would be a lie that fails at connect time. Until that minting lands TURN stays
-// OPT-IN through VITE_TURN_URL — unset (the default) means the ICE config carries STUN only, and the
-// transport ANNOUNCES that at join (p2p/lobby-room.js) instead of silently degrading a symmetric-NAT
-// player into an empty world.
-export const STUN_URL = env.VITE_STUN_URL || 'stun:turn.aresrpg.world:3478'
+// STUN/TURN ride free public endpoints per standing ruling; self-hosted only by explicit recorded sanction (VITE_STUN_URL is the override).
+export const STUN_URL = env.VITE_STUN_URL || 'stun:stun.l.google.com:19302'
+export const STUN_FALLBACK_URL = env.VITE_STUN_URL ? '' : 'stun:stun.cloudflare.com:3478'
 export const TURN_URL = env.VITE_TURN_URL || ''
 export const TURN_USER = env.VITE_TURN_USER || ''
 export const TURN_CRED = env.VITE_TURN_CRED || ''

@@ -11,7 +11,7 @@
 // produces for dev / built respectively.
 import { describe, expect, test } from 'bun:test'
 
-import { derive_rpc_url } from './env'
+import { derive_rpc_url, STUN_URL } from './env'
 
 const DEV_FALLBACK = 'http://localhost:3000'
 const BUILT_FALLBACK = 'https://rpc.aresrpg.world'
@@ -35,5 +35,12 @@ describe('derive_rpc_url', () => {
 
   test('empty-string VITE_RPC_URL is treated as unset (falls back, matches the `||` default semantics)', () => {
     expect(derive_rpc_url('', BUILT_FALLBACK)).toBe(BUILT_FALLBACK)
+  })
+})
+
+describe('STUN_URL', () => {
+  test('THE DEFAULT: STUN does not use an aresrpg.world domain', () => {
+    const host = new URL(STUN_URL.replace(/^stuns?:/, 'http://')).hostname
+    expect(host === 'aresrpg.world' || host.endsWith('.aresrpg.world')).toBe(false)
   })
 })

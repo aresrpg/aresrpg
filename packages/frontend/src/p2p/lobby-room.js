@@ -29,7 +29,7 @@ import { PEER_HEARTBEAT_MS, REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
-import { NETWORK, RELAY_URL, STUN_URL, TURN_CRED, TURN_URL, TURN_USER } from '../env'
+import { NETWORK, RELAY_URL, STUN_FALLBACK_URL, STUN_URL, TURN_CRED, TURN_URL, TURN_USER } from '../env'
 
 const APP_ID = `aresrpg-world-lobby-${NETWORK}`
 // ONE relay, ours (env.ts RELAY_URL is its single home). trystero reads `relayConfig.urls` — passing the list
@@ -39,14 +39,12 @@ const APP_ID = `aresrpg-world-lobby-${NETWORK}`
 // mean something. Relay redundancy is pods behind the one hostname, decided in the cluster, not in this bundle.
 const relay_config = { urls: [RELAY_URL] }
 
-// WebRTC ICE — STUN discovers a direct path; TURN would relay the bytes for the minority whose NAT never lets
-// one form. Both hosts are ours, but TURN CANNOT BE USED YET: coturn's use-auth-secret mode needs a
-// server-minted `expiry:id` + HMAC credential and nothing mints one, so shipping a username here would be a
-// lie that fails at connect time. Until the minting lands, TURN is opt-in via VITE_TURN_URL and its absence is
-// ANNOUNCED at join (below) rather than silently degrading a symmetric-NAT player into an empty world.
+// WebRTC ICE — public STUN discovers a direct path; TURN would relay the bytes for the minority whose NAT
+// never lets one form. TURN stays opt-in via VITE_TURN_URL and its absence is ANNOUNCED at join (below)
+// rather than silently degrading a symmetric-NAT player into an empty world.
 const RTC_CONFIG = {
   iceServers: [
-    { urls: [STUN_URL] },
+    { urls: [STUN_URL, ...(STUN_FALLBACK_URL ? [STUN_FALLBACK_URL] : [])] },
     ...(TURN_URL ? [{ urls: [TURN_URL], username: TURN_USER, credential: TURN_CRED }] : []),
   ],
 }
