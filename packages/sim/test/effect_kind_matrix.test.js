@@ -10,9 +10,7 @@ import { normalize_spell_templates } from '../src/spell_templates.js'
 import { arena, fighter, state_of } from './missing_effect_helpers.js'
 
 // ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
-// ║ PILLAR 2a — SIM × MOCKED SPELL EFFECTS — the design brief, verbatim (second paragraph):            ║
-// ║   "test the modules independently like the sim with mocked spells effects … try all our effects on ║
-// ║    layout of mobs and see if it executes properly."                                                ║
+// ║ PILLAR 2a — SIM × MOCKED SPELL EFFECTS                                                             ║
 // ║                                                                                                    ║
 // ║ A TABLE-DRIVEN harness that runs EVERY spell-effect kind (the 41 K_* discriminants of              ║
 // ║ spell_effect.js) through the deterministic reducer (`reduce(state,{type:'cast'},ctx)`) on          ║

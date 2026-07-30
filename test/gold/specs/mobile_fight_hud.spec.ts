@@ -114,10 +114,9 @@ test('iPhone landscape fight chrome is compact and keeps READY/FORFEIT inside th
   expect(covered_viewport?.right).toBe(844)
 })
 
-// PLAYER REPORT (mobile prod, v1.12.26, REPEAT): "the toast is still full width" — the in-game event-toast
-// (.gw-toast, GameWorldHud.jsx's local Toasts()). Proves the REAL layout engine wraps a long title+message
-// instead of overflowing past the safe-viewport cap, not just that the CSS text contains the right
-// declarations (unit-tested separately, mobile_layout.test.jsx).
+// The in-game event toast (.gw-toast, GameWorldHud.jsx's local Toasts()) must wrap a long title+message
+// instead of overflowing past the safe-viewport cap. This proves the real layout behavior, not just that
+// the CSS text contains the right declarations (unit-tested separately, mobile_layout.test.jsx).
 test('iPhone landscape in-game toast wraps long text within the safe viewport instead of overflowing', async ({
   page,
 }) => {

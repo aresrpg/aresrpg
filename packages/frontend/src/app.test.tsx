@@ -11,10 +11,9 @@ import { TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'
 
 const read_fixture = (relative_path: string) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
 
-// OWNER (07-16, live iPhone fight session): "show the version in small top right to make sure I'm on the
-// right version" — then 07-18: "the version over canvas is only for mobile, on desktop it's the sidebar."
-// The sidebar's v{__APP_VERSION__} tag (components/sidebar.tsx) is the SOLE desktop home; the fixed badge
-// stays mounted unconditionally (crash/route survival) but is CSS-gated to the house mobile signals.
+// The sidebar's v{__APP_VERSION__} tag (components/sidebar.tsx) is the sole desktop home; the fixed canvas
+// badge is mobile-only. It stays mounted unconditionally for crash/route survival but is CSS-gated to the
+// house mobile signals.
 //
 // app.tsx itself is NOT imported here: its transitive graph pulls in Vite-only virtual modules
 // (`virtual:item_catalog`) that bun:test cannot resolve — the badge lives in its own module (version_badge.tsx)

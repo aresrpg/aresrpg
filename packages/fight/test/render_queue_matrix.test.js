@@ -6,9 +6,7 @@ import { FIGHT_RENDER_TIMINGS, produce_receipt_render_turns } from '../src/fight
 import { MOB_TURN_MS, pace_segment } from '../src/present.js'
 
 // ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
-// ║ PILLAR 2b — RENDERER × MOCKED QUEUES:                                                              ║
-// ║   "the rendering with mocked fight state or queue to try all our effects on layout of mobs and see ║
-// ║    if it executes properly."                                                                       ║
+// ║ PILLAR 2b — RENDERER × MOCKED QUEUES                                                               ║
 // ║                                                                                                    ║
 // ║ NO BROWSER — the presentation cursor is a PURE function of an ordered event queue                  ║
 // ║ (fight_render_events.produce_receipt_render_turns + present.pace_segment). This harness feeds      ║
