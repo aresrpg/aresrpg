@@ -7,9 +7,10 @@
 // gone, and nothing anywhere saying "nothing was there".
 //
 // Two halves, both proved here:
-//   · `cast_whiffed` (voxel_fight_folds) — the PURE verdict the adapter gates its impact package on. Nothing
-//     resolved = no effect row AND no displacement. A trap PLACEMENT resolves an effect row, so a successful
-//     placement is never a whiff; a teleport carries a displacement, likewise.
+//   · `cast_whiffed` (voxel_fight_folds) — the PURE verdict the adapter gates its impact package on. It is judged
+//     over the SOURCE TURN's beat list on purpose: a queued cast renders `split_render`, so its own beat carries
+//     only status rows and every victim rides a SEPARATE damage/heal/displacement beat behind it. Reading the cast
+//     beat alone would call every ordinary hit a whiff — the trap this row exists to keep shut.
 //   · `emit_cast_whiff_line` (game/core/modules/fight.js — the ONE log-composition home) — its OWN copy, in all
 //     six locales, never a hit's line.
 
@@ -21,32 +22,29 @@ import { cast_whiffed } from '../../src/world-shell/voxel_fight_folds.js'
 const LOCALES = ['en', 'fr', 'de', 'es', 'ja', 'uk']
 
 describe('cast_whiffed — nothing resolved', () => {
-  test('an AoE on a vacant centre (no effects, no displacements) is a whiff', () => {
-    expect(cast_whiffed({ entity_id: 'p0', spell_id: 'warcleave', effects: [], displacements: [] })).toBe(true)
+  test('an AoE on a vacant centre (nothing follows the cast beat) is a whiff', () => {
+    expect(cast_whiffed({ following: [{ kind: 'arrival' }], own_effects: [] })).toBe(true)
   })
 
-  test('a packet with no effects key at all is a whiff', () => {
-    expect(cast_whiffed({ entity_id: 'p0', spell_id: 'warcleave' })).toBe(true)
+  test('a bare cast with no beats behind it at all is a whiff', () => {
+    expect(cast_whiffed()).toBe(true)
   })
 
-  test('a landed damage effect is NOT a whiff', () => {
-    expect(cast_whiffed({ effects: [{ target_id: 'mob-0', damage: 7, has_health: true }] })).toBe(false)
+  test('THE SPLIT-RENDER TRAP: an ordinary hit carries its victim on a SEPARATE damage beat — never a whiff', () => {
+    expect(cast_whiffed({ following: [{ kind: 'damage' }], own_effects: [] })).toBe(false)
   })
 
-  test('a fully-absorbed hit (0 damage on a health-bearing effect) is NOT a whiff — it hit a body', () => {
-    expect(cast_whiffed({ effects: [{ target_id: 'mob-0', damage: 0, has_health: true }] })).toBe(false)
+  test('a heal, a push, a teleport and a trap placement each resolve the cast', () => {
+    for (const kind of ['heal', 'displacement', 'teleport_arrival', 'trap_place', 'trap_trigger', 'status'])
+      expect(cast_whiffed({ following: [{ kind }], own_effects: [] })).toBe(false)
   })
 
-  test('a trap PLACEMENT resolves an effect row — never a whiff', () => {
-    expect(cast_whiffed({ effects: [{ target_id: 'p0', has_health: false, new_health: 0 }] })).toBe(false)
+  test('a self-buff resolves on its OWN status row (no sibling beat needed)', () => {
+    expect(cast_whiffed({ following: [], own_effects: [{ status: 'INVISIBILITY' }] })).toBe(false)
   })
 
-  test('a displacement-only cast (teleport/push) is NOT a whiff', () => {
-    expect(cast_whiffed({ effects: [], displacements: [{ target_id: 'p0', path: [{ x: 1, y: 1 }] }] })).toBe(false)
-  })
-
-  test('a null packet is not a whiff (nothing was cast)', () => {
-    expect(cast_whiffed(null)).toBe(false)
+  test('the scan stops at the NEXT cast — a later cast’s victims are not this cast’s', () => {
+    expect(cast_whiffed({ following: [{ kind: 'cast' }, { kind: 'damage' }], own_effects: [] })).toBe(true)
   })
 })
 

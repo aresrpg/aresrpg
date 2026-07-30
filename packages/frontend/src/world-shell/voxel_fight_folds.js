@@ -475,18 +475,40 @@ export function seed_cast_flags_of(armed_spell_id, seat = null) {
   }
 }
 
+/** The beat kinds that ARE a cast resolving on something: a body took damage or healing, an entity was moved or
+ *  teleported, a trap/glyph was placed, one triggered, or a status/drain landed. Everything else (`arrival`,
+ *  `tackled`, another `cast`) is not this cast's payload. */
+const CAST_RESOLUTION_KINDS = new Set([
+  'damage',
+  'heal',
+  'displacement',
+  'teleport_arrival',
+  'trap_place',
+  'trap_trigger',
+  'status',
+])
+
 /**
- * #1741 (a) — DID THIS CAST RESOLVE NOTHING? A whiff: no effect row and no displacement, so nobody was hit,
- * nothing was placed, nothing moved. The spells that keep genuine empty-cell semantics (AoE on a vacant centre,
- * traps, free_cell aims) can still produce one, and it must never be presented as a hit: the adapter emits the
- * whiff's OWN log line and skips the impact package (thwack/shake/flash) on this verdict. A trap PLACEMENT
- * resolves a status-only effect row and a teleport carries a displacement, so neither is a whiff. Pure.
- * @param {{ effects?: any[], displacements?: any[] } | null | undefined} packet a cast beat payload
+ * #1741 (a) — DID THIS CAST RESOLVE NOTHING? A whiff: nobody hit, nothing placed, nothing moved. Judged over the
+ * SOURCE TURN's beat list, because that is where the answer lives: a queued cast renders `split_render`, so its
+ * own beat carries only the status rows (`fight_cast_beat_effects`) and every victim rides a SEPARATE damage/heal/
+ * displacement beat behind it — reading the cast beat alone would call every ordinary hit a whiff. `following` is
+ * the specs after this cast; the scan stops at the next `cast`, which owns everything past itself (the same
+ * attribution `bind_render_turn`'s `active_cast` uses).
+ *
+ * A whiff must never be presented as a hit: the adapter emits its OWN log line and skips the impact package
+ * (thwack/shake/flash/ripple) on this verdict. A trap PLACEMENT emits `trap_place`, a teleport a displacement, a
+ * self-buff its own status row — none of them is a whiff. Pure.
+ * @param {{ following?: { kind?: string }[], own_effects?: any[] }} beat
  * @returns {boolean}
  */
-export function cast_whiffed(packet) {
-  if (!packet) return false
-  return (packet.effects ?? []).length === 0 && (packet.displacements ?? []).length === 0
+export function cast_whiffed({ following = [], own_effects = [] } = {}) {
+  if ((own_effects ?? []).length > 0) return false
+  for (const spec of following ?? []) {
+    if (spec?.kind === 'cast') break
+    if (CAST_RESOLUTION_KINDS.has(String(spec?.kind))) return false
+  }
+  return true
 }
 
 /**

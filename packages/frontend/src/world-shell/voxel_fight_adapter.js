@@ -662,10 +662,11 @@ export function create_voxel_fight_adapter(
     // can't resolve (a healer MOB's cast — mob ids aren't in fight-spells.json); everything else reads its
     // on-chain row via element_of_spell (which owns the seed-side heal-kind branch).
     const effects = packet.effects ?? []
-    // #1741 (a) — THE WHIFF. This cast resolved nothing: no effect row, no displacement (an AoE over a vacant
-    // centre, a free_cell aim nothing was standing on). Its own log line fires HERE, right after the context line,
-    // and the delivery below lands SILENT (the impact package is skipped) — a whiff must never read as a hit.
-    const whiffed = cast_whiffed(packet)
+    // #1741 (a) — THE WHIFF. This cast resolved nothing (an AoE over a vacant centre, a free_cell aim nothing was
+    // standing on): the verdict was bound at `bind_render_turn`, the only place that sees the cast's sibling
+    // damage/displacement beats. Its own log line fires HERE, right after the context line, and the delivery lands
+    // SILENT (the impact package is skipped) — a whiff must never read as a hit.
+    const whiffed = packet.whiffed === true
     if (whiffed)
       emit_cast_whiff_line(read_board_fight_state, game_context.dispatch, {
         entity_id: packet.entity_id,
@@ -986,7 +987,12 @@ export function create_voxel_fight_adapter(
         source_id: spec.payload?.trap_damage ? null : (spec.payload?.source_id ?? cast?.entity_id ?? null),
         spell_id: spec.payload?.spell_id ?? cast?.spell_id,
       }
-      if (spec.kind === 'cast') payload.effects = fight_cast_beat_effects(payload.source_event)
+      if (spec.kind === 'cast') {
+        payload.effects = fight_cast_beat_effects(payload.source_event)
+        // #1741 (a): the WHIFF verdict is bound HERE, where the whole source turn is visible — a split-rendered
+        // cast beat cannot see its own victims (they ride the damage/displacement beats behind it).
+        payload.whiffed = cast_whiffed({ following: specs.slice(index + 1), own_effects: payload.effects })
+      }
       if (spec.kind === 'trap_trigger' && payload.damage == null) {
         const damage = specs
           .slice(index + 1)
