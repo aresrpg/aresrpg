@@ -1,11 +1,6 @@
-5889d54a8fbf67850fbf82430b0a19b16f176ecc harvest/membrane-wave docs: purge analysis session exhaust
-c4df97cb52d4b7c6e7653730e590d4139950737d harvest/membrane-wave chore: clear root debris
-bc69e3b0169ea01230487a311e5d653652876b0e harvest/membrane-wave test: restructure complaint ledger
-1698d3b3a3edbdb2e1133503d1065237b49bb4ea harvest/membrane-wave test: purge gold investigations
-adc3921432397543701dc668963f24ceb10e6192 harvest/membrane-wave test: rename fight reconciliation anchor
-9c077aa3db5f51c959c2c15ff0e4e6e983dc9822 harvest/membrane-wave docs: neutralize private voice and donor branding
-787ccdba3d6a71127148f5790c9ace7716fdd696 harvest/membrane-wave docs(frozen): maintainer-voice amendment (#1784 membrane)
-2c48594e51ad079c87c73820e91f412b761485f0 harvest/membrane-wave test(gold): wooling fixture voice neutralization (#1784)
-651111055facf29685367c1d4de03e5e948b6039 harvest/membrane-wave chore: enforce public tree membrane
-fbf43291d31603ee3baa6c27a95598542d03b643 harvest/membrane-wave docs: extend review membrane checklist
-b9aee47a8f5cca46b09c967195a61ac70533ef6c harvest/membrane-wave fix(gates): membrane precision — scoped voice tokens + train manifest allowlist
+f905e518f621339c10364fe4621bf44021706229 harvest/stun-default fix(p2p): default STUN rides public endpoints
+99a006cbb236e3b0efe8de5036f8b163d5519246 harvest/stun-default test(p2p): the STUN law pins the class, not the count
+401e21c2956228b03c74dda71dc89ec66e56c96d harvest/world-join-atomic fix(sdk): atomically join created characters (#1714)
+067e10376d24936e5ab7a44aa2f8751a53f81f2a harvest/world-join-atomic fix(frontend): remove post-create join scheduler (#1714)
+d0d5f58b8b23b96957f5347f314a6a4c4e84bcab harvest/world-join-atomic fix(frontend): pin format-3 claim eligibility (#1714)
+c664cf86ae03e9ce35e82b013fda5e48e6b84d80 harvest/world-join-atomic chore: format and gate world join changes (#1714)
