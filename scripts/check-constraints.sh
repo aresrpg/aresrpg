@@ -1033,6 +1033,8 @@ MEMBRANE_ALLOWED_ROOT_FILES=(
   'LICENSE'
   'README.md'
   'SECURITY.md'
+  # Train landings repeatedly place this grep-able cargo manifest at root by protocol; rejecting it kills landings.
+  'TRAIN_CARGO.txt'
   'bun.lock'
   'bunfig.toml'
   'eslint.config.js'
@@ -1049,9 +1051,15 @@ membrane_root_file_allowed() {
   return 1
 }
 
-membrane_content_hits() {
+membrane_docs_content_hits() {
   grep_collected \
-    'the[[:space:]]+owner([^[:alnum:]_]|$)|owner[[:space:]]+(said|script)([^[:alnum:]_]|$)|p0[_]owner([^[:alnum:]_]|$)|d[o]fus([^[:alnum:]_]|$)|/U[s]ers/' \
+    'the[[:space:]]+owner([^[:alnum:]_]|$)|owner[[:space:]]+(said|named|asked|ordered|froze|wants|script)([^[:alnum:]_]|$)|p0[_]owner([^[:alnum:]_]|$)|d[o]fus([^[:alnum:]_]|$)|/U[s]ers/' \
+    -IinE
+}
+
+membrane_source_content_hits() {
+  grep_collected \
+    'owner[[:space:]]+(said|named|asked|ordered|froze|wants|script)([^[:alnum:]_]|$)|p0[_]owner([^[:alnum:]_]|$)|d[o]fus([^[:alnum:]_]|$)|/U[s]ers/' \
     -IinE
 }
 
@@ -1061,7 +1069,8 @@ membrane_gate() {
   local analysis_paths=()
   local investigation_paths=()
   local root_debris=()
-  local content_hits
+  local docs_content_hits
+  local source_content_hits
   local scan_status
 
   [ -e docs/analysis ] && analysis_paths+=('docs/analysis')
@@ -1084,33 +1093,72 @@ membrane_gate() {
     membrane_root_file_allowed "$candidate" || root_debris+=("$candidate")
   done
 
-  local control
-  for control in \
+  local docs_control
+  for docs_control in \
     "$(printf '%s %s' "t""he" owner)" \
     "$(printf '%s %s' owner "sa""id")" \
     "$(printf '%s %s' owner "scr""ipt")" \
     "$(printf 'p0_%s' owner)" \
     "$(printf 'D%sfus' o)" \
     "$(printf '/U%sers/dev/repo' s)"; do
-    matcher_fires 'the membrane content matcher' "$control" membrane_content_hits || return 1
+    matcher_fires 'the membrane docs-class content matcher' "$docs_control" membrane_docs_content_hits ||
+      return 1
   done
 
-  if ! collect_files --tracked-only; then
-    red "  ✗ ERROR: no tracked files collected — the membrane cannot pass on an empty content scan."
+  local source_control
+  for source_control in \
+    "$(printf '%s %s' owner "sa""id")" \
+    "$(printf '%s %s' owner "scr""ipt")" \
+    "$(printf 'p0_%s' owner)" \
+    "$(printf 'D%sfus' o)" \
+    "$(printf '/U%sers/dev/repo' s)"; do
+    matcher_fires 'the membrane source-class content matcher' "$source_control" membrane_source_content_hits ||
+      return 1
+  done
+
+  if ! collect_files --tracked-only 'docs/' '*.md' 'test/gold/'; then
+    red "  ✗ ERROR: no tracked docs-class files collected — the membrane cannot pass on an empty content scan."
     return 1
   fi
-  local content_files=()
+  local docs_content_files=()
   for candidate in "${COLLECTED_FILES[@]}"; do
     case "$candidate" in
-      CLAUDE.md | .github/CODEOWNERS) continue ;;
+      CLAUDE.md) continue ;;
     esac
-    content_files+=("$candidate")
+    docs_content_files+=("$candidate")
   done
-  COLLECTED_FILES=("${content_files[@]}")
-  content_hits="$(membrane_content_hits)"
+  if [ "${#docs_content_files[@]}" -eq 0 ]; then
+    red "  ✗ ERROR: the tracked docs-class trust filter left no files to scan."
+    return 1
+  fi
+  COLLECTED_FILES=("${docs_content_files[@]}")
+  docs_content_hits="$(membrane_docs_content_hits)"
   scan_status=$?
   if [ "$scan_status" -ne 0 ]; then
-    red "  ✗ ERROR: tracked-content scan could not complete (exit=$scan_status)"
+    red "  ✗ ERROR: tracked docs-class content scan could not complete (exit=$scan_status)"
+    return 1
+  fi
+
+  if ! collect_files --tracked-only; then
+    red "  ✗ ERROR: no tracked source-class files collected — the membrane cannot pass on an empty content scan."
+    return 1
+  fi
+  local source_content_files=()
+  for candidate in "${COLLECTED_FILES[@]}"; do
+    case "$candidate" in
+      docs/* | *.md | test/gold/* | .github/CODEOWNERS) continue ;;
+    esac
+    source_content_files+=("$candidate")
+  done
+  if [ "${#source_content_files[@]}" -eq 0 ]; then
+    red "  ✗ ERROR: the tracked source-class trust filter left no files to scan."
+    return 1
+  fi
+  COLLECTED_FILES=("${source_content_files[@]}")
+  source_content_hits="$(membrane_source_content_hits)"
+  scan_status=$?
+  if [ "$scan_status" -ne 0 ]; then
+    red "  ✗ ERROR: tracked source-class content scan could not complete (exit=$scan_status)"
     return 1
   fi
 
@@ -1129,9 +1177,14 @@ membrane_gate() {
     printf '      %s\n' "${root_debris[@]}"
     failed=1
   fi
-  if [ -n "$content_hits" ]; then
-    red "  ✗ ERROR: private/session content marker(s) remain in tracked files:"
-    echo "$content_hits" | cut -c1-200 | sed 's/^/      /'
+  if [ -n "$docs_content_hits" ]; then
+    red "  ✗ ERROR: private/session content marker(s) remain in tracked docs-class files:"
+    echo "$docs_content_hits" | cut -c1-200 | sed 's/^/      /'
+    failed=1
+  fi
+  if [ -n "$source_content_hits" ]; then
+    red "  ✗ ERROR: private/session content marker(s) remain in tracked source-class files:"
+    echo "$source_content_hits" | cut -c1-200 | sed 's/^/      /'
     failed=1
   fi
 
@@ -1141,7 +1194,7 @@ membrane_gate() {
   fi
   grn "  ✓ analysis and investigation session paths are absent"
   grn "  ✓ repo-root files match the explicit ${#MEMBRANE_ALLOWED_ROOT_FILES[@]}-file manifest"
-  grn "  ✓ tracked content is clean (2-file trust allowlist: CLAUDE.md, .github/CODEOWNERS)"
+  grn "  ✓ tracked docs/source content is clean (2-file trust allowlist: CLAUDE.md, .github/CODEOWNERS)"
 }
 
 if [ "${1:-}" = "--test-reachability" ]; then
