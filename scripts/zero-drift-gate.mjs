@@ -141,6 +141,7 @@ const SIM_ONLY = [
   ['packages/frontend/src/pages/encyclopedia/mob_spells.ts', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/mob_spells_section.tsx', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/world_corpus.ts', 'CORPUS'],
+  ['packages/sdk/src/world_seed.js', 'CORPUS'],
   ['packages/frontend/src/utils/search.ts', 'CORPUS'],
 
   ['packages/frontend/src/simulator/BoardPane.tsx', 'BOARD'],

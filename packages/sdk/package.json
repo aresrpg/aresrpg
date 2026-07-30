@@ -67,6 +67,9 @@
       "types": "./types/jobs.d.ts",
       "import": "./src/jobs.js"
     },
+    "./world-seed": {
+      "import": "./src/world_seed.js"
+    },
     "./character": {
       "types": "./types/character.d.ts",
       "import": "./src/character.js"

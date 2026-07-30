@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
+import { world_seed } from '../../sdk/src/world_seed.js'
 import { keypair, sui_client } from './client.js'
 import { canonical_map, canonical_rows, mob_level_of } from './corpus_canon.mjs'
 import {
@@ -484,12 +485,6 @@ const elMove = (name) =>
   name === 'neutral' || name === 'none' || !name ? 'el_none' : `el_${name}`
 const bp = (rate) =>
   Math.min(10000, Math.max(0, Math.round((rate ?? 0) * 10000))) // float prob 0..1 → basis points
-const world_seed = (id) => {
-  let h = 5381
-  for (const c of String(id)) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0
-  return h || 1
-}
-
 export function loadCorpus() {
   const corpus_dir = seed_dir()
   const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))

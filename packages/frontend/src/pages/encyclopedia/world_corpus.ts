@@ -28,6 +28,7 @@
 // The chain stays the source of truth for WHICH worlds are live: the worlds tab lists /v1's rows and
 // joins THIS for their display knowledge (a /v1 world absent here still renders, honestly degraded).
 import { create } from 'zustand'
+import { world_seed } from '@aresrpg/sdk/world-seed'
 
 import { is_object_id } from '../../content/object_id'
 import { seed_manifest } from '../../content/seed_manifest'
@@ -483,6 +484,11 @@ interface LiveTemplate {
   name: string | null
 }
 
+interface LiveWorld {
+  world_id: string
+  seed: string | number
+}
+
 interface CorpusMeasurement {
   mobs: { matched: number; total: number }
   resources: { matched: number; total: number }
@@ -492,7 +498,8 @@ interface CorpusMeasurement {
 export function bind_world_corpus_to_live(
   worlds: readonly CorpusWorld[],
   live_mobs: readonly LiveTemplate[],
-  live_items: readonly LiveTemplate[]
+  live_items: readonly LiveTemplate[],
+  live_worlds: readonly LiveWorld[] = []
 ): { worlds: CorpusWorld[]; measurement: CorpusMeasurement } {
   const mob_by_name = new Map(
     live_mobs
@@ -508,7 +515,16 @@ export function bind_world_corpus_to_live(
   const authored_resources = new Set(
     worlds.flatMap((world) => world.resources.map((resource) => normalize_search(resource.name)))
   )
-  const bound_worlds = worlds.map((world) => ({
+  const live_world_id_by_seed = new Map(
+    live_worlds.filter((world) => is_object_id(world.world_id)).map((world) => [String(world.seed), world.world_id])
+  )
+  const current_worlds = live_worlds.length
+    ? worlds.flatMap((world) => {
+        const id = live_world_id_by_seed.get(String(world_seed(world.wid)))
+        return id ? [{ ...world, id }] : []
+      })
+    : [...worlds]
+  const bound_worlds = current_worlds.map((world) => ({
     ...world,
     mobs: world.mobs.flatMap((mob) => {
       const id = mob_by_name.get(mob_identity_key(mob.name) ?? '')
