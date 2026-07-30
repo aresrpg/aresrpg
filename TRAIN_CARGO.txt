@@ -1,1 +1,4 @@
-c43eff6ed4a0dd9ee5729d4390fd4d06c9799379 lane/friend-add-recut fix(social): wait for first friend list indexing
+47f5a5f5d8105f552d24b0c85afa953c267c6503 lane/ssot-deletion-pack fix(frontend): use SDK stackability helper
+036fc6542b06ad4da11e3494df413df98e8e3d96 lane/ssot-deletion-pack fix(frontend): use world fight section order
+5ca45cbddae3e718538093957ec99654d287461c lane/ssot-deletion-pack refactor(frontend): remove vendored gather picker
+76947d0ed2314858056f83cf361096c5c14ec02f train/train-20 chore(lint): tighten the warning ceiling to its measured floor
