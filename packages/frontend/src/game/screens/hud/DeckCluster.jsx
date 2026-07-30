@@ -46,19 +46,12 @@ import { Tooltip } from './Tooltip.jsx'
 import { SpellSeedTip } from './tooltip-content.jsx'
 import { resolve_key_arm, deck_my_turn, is_arm_key } from './deck-key-arm.js'
 import { next_slot_crit, socket_glows } from './deck-crit-glow.js'
-import { weapon_next_hit, weapon_strike_band, weapon_strike_elements } from '@aresrpg/fight/weapon'
 import { use_fight_phase } from './world/use_fight_phase.js'
 import { use_mobile_input_mode } from '../../touch/mobile_input_mode.js'
 import { SpellSocket } from './deck-spell-socket.jsx'
 import { SpellHoverTip } from './spell-hover-tip.jsx'
 import { socket_columns, socket_slots } from './deck-socket-grid.js'
-
-// §17.27 weapon element id → localized element name (participant.move WL_ELEMENT: 0 fire · 1 water · 2 earth · 3 air).
-const WEAPON_ELEMENT_KEYS = ['fire', 'water', 'earth', 'air']
-const weapon_element_name = (t, element) => t(`encyclopedia.element.${WEAPON_ELEMENT_KEYS[element] ?? 'neutral'}`)
-// Bare hands = the participant.move unarmed_line signature (earth, dmg 4, ap 3, reach 1). No family slug survives
-// the on-chain Weapon decode, so this signature is the honest "no weapon equipped" tell for the tooltip label.
-const is_bare_hands = (w) => !!w && w.element === 2 && w.damage === 4 && w.ap_cost === 3 && w.reach === 1
+import { weapon_socket_projection } from './deck-weapon-socket.js'
 
 // Seeded socket gems follow the selected level's actual-effect category. A legacy simulator-only card has no
 // projected spell row here, so it keeps the existing normalized element tint instead of guessing.
@@ -90,28 +83,9 @@ const is_typing = () => {
  *   onPick: () => void, t: (k: string) => string }} props
  */
 function WeaponSocket({ armed, enabled, weapon, glow, clock, keyCap, onPick, t }) {
-  const name = is_bare_hands(weapon) ? t('fight.weapon_bare') : t('fight.weapon_attack')
-  // The DAMAGE the tooltip states comes from the ONE strike derivation (@aresrpg/fight/weapon), not the family
-  // `Weapon` fields: a seat with authored item lines strikes for Σ(lines), across the elements those lines
-  // name, and printing the family line here was the socket's half of #1323. The band is the honest resting
-  // state; `next_hit` sharpens it to the slot-exact number whenever the §7 clock resolves.
-  const band = weapon ? weapon_strike_band(weapon, false) : null
-  const crit_band = weapon ? weapon_strike_band(weapon, true) : null
-  const rolled = weapon ? weapon_next_hit(weapon, clock, glow) : null
-  // pass the FACTS object (element names resolved) when the escrow weapon has loaded, else `true` (name-only).
-  const facts = weapon
-    ? {
-        ...weapon,
-        damage: band.min,
-        damage_max: band.max,
-        crit_damage: crit_band.min,
-        crit_damage_max: crit_band.max,
-        element_name: weapon_strike_elements(weapon)
-          .map((element) => weapon_element_name(t, element))
-          .join(' / '),
-        next_hit: rolled == null ? null : { value: rolled, crit: glow },
-      }
-    : true
+  // Purely project the escrow line before handing it to the tooltip; deck-weapon-socket.test.js pins that an
+  // equipped weapon cannot silently become the bare-hands signature (#1746).
+  const { name, facts } = weapon_socket_projection({ weapon, glow, clock, t })
   return (
     <Tooltip placement="top" content={<SpellSeedTip t={t} name={name} weapon={facts} />} className="tt-card--solid">
       <button
