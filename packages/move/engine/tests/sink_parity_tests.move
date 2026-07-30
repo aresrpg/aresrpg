@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// SINK PARITY — the whole effect vocabulary, through BOTH sinks, in one walk.
 ///
-/// `apply_to_player` and `apply_to_mob` are parallel if/else-if chains over 40 `u8` kinds, and parallel chains
+/// `apply_to_player` and `apply_to_mob` are parallel if/else-if chains over 41 `u8` kinds, and parallel chains
 /// drift: `k_punishment_damage` was implemented only on the mob side (a mob's punishment line did nothing to a
 /// player but damaged a mob), and the mob chain had no terminal arm at all, so anything it did not name was a
 /// silent no-op there while the player tail recorded a row for it. Nothing failed, on either count, because no
@@ -10,7 +10,7 @@
 ///
 /// This suite is that enumeration. Every kind is driven at a seat AND at a mob; a kind that reaches neither an
 /// implementation nor a named no-op aborts `EUnhandledEffectKind`, so this walk is what keeps that terminal arm
-/// unreachable. Adding kind 41 without wiring both sinks fails HERE, before it can reach a player.
+/// unreachable. Adding kind 42 without wiring both sinks fails HERE, before it can reach a player.
 #[test_only]
 module aresrpg_fight::sink_parity_tests;
 
@@ -77,6 +77,7 @@ fun every_kind(): vector<u8> {
     spell_effect::k_reactive_punishment(),
     spell_effect::k_erosion(),
     spell_effect::k_damage_redirect(),
+    spell_effect::k_pool_shield(),
   ]
 }
 
@@ -121,7 +122,7 @@ fun the_walked_vocabulary_is_contiguous_and_complete() {
     assert!(kinds[i] == (i as u8), i);
     i = i + 1;
   };
-  assert!(kinds.length() == 40, 100);
+  assert!(kinds.length() == 41, 100);
 }
 
 fun ranged_punishment_level(min_char_level: u16): spell_effect::SpellLevel {

@@ -9,16 +9,22 @@ import {
 } from '../src/spell_calculator.js'
 import { consume_shields } from '../src/fight_actions.js'
 
-// Regression for the "shields never deplete" combat bug: apply_shields computed the absorbed amount for
-// damage reduction, but the spell pipeline discarded shields_consumed, so a shield blocked the same amount
-// on every hit forever. consume_shields now spends each shield by what it absorbed (dropping it at 0), and
-// the DAMAGE/STEAL branches call it. These tests lock the helper + the deplete-over-two-hits behavior.
+// Kind 40 owns pool depletion; kind 24 is a per-hit flat and must never be spent. These tests lock the
+// low-level reservoir mutation while pool_shield_parity.test.js pins the four cross-twin decisions.
 
 const target_with_shield = (id, value, element) => ({
   team0: [
     {
       id,
-      effects: [{ id: 1, type: 'SHIELD', value, element, turns_remaining: 3 }],
+      effects: [
+        {
+          id: 1,
+          type: 'POOL_SHIELD',
+          value,
+          element,
+          turns_remaining: 3,
+        },
+      ],
     },
   ],
   team1: [],
@@ -56,18 +62,20 @@ describe('elementless damage does NOT crash (flying_soul steal — the cast->ser
   })
 })
 
-describe('consume_shields (spend SHIELD effects by absorbed amount)', () => {
+describe('consume_shields (spend POOL_SHIELD effects by absorbed amount)', () => {
   test('decrements a partially-used shield, keeps it', () => {
     const state = target_with_shield('t', 10)
     const next = consume_shields(state, 't', [{ id: 1, absorbed: 4 }])
-    const shield = next.team0[0].effects.find(e => e.type === 'SHIELD')
+    const shield = next.team0[0].effects.find(e => e.type === 'POOL_SHIELD')
     expect(shield.value).toBe(6)
   })
 
   test('drops a fully-consumed shield', () => {
     const state = target_with_shield('t', 4)
     const next = consume_shields(state, 't', [{ id: 1, absorbed: 4 }])
-    expect(next.team0[0].effects.some(e => e.type === 'SHIELD')).toBe(false)
+    expect(next.team0[0].effects.some(e => e.type === 'POOL_SHIELD')).toBe(
+      false,
+    )
   })
 
   test('no-op when nothing was absorbed', () => {
@@ -76,10 +84,17 @@ describe('consume_shields (spend SHIELD effects by absorbed amount)', () => {
   })
 })
 
-describe('shield depletes across hits (apply_shields + consume_shields)', () => {
-  test('a shield no longer absorbs the same amount forever', () => {
+describe('pool shield depletes across hits (apply_shields + consume_shields)', () => {
+  test('a pool spends its reservoir and leaks the exhausting hit', () => {
     // shield 6; element matches (neutral absorbs everything)
-    let shields = [{ id: 1, type: 'SHIELD', value: 6, turns_remaining: 3 }]
+    let shields = [
+      {
+        id: 1,
+        type: 'POOL_SHIELD',
+        value: 6,
+        turns_remaining: 3,
+      },
+    ]
 
     // hit 1: 4 dmg -> shield absorbs 4 (0 through), shield now 2
     const h1 = apply_shields(4, 'fire', shields)
@@ -90,7 +105,7 @@ describe('shield depletes across hits (apply_shields + consume_shields)', () => 
       't',
       h1.shields_consumed,
     )
-    shields = s1.team0[0].effects.filter(e => e.type === 'SHIELD')
+    shields = s1.team0[0].effects.filter(e => e.type === 'POOL_SHIELD')
     expect(shields[0].value).toBe(2)
 
     // hit 2: 5 dmg -> shield absorbs only its remaining 2, 3 dmg gets THROUGH (pre-fix it would absorb 4 again)
@@ -102,6 +117,6 @@ describe('shield depletes across hits (apply_shields + consume_shields)', () => 
       h2.shields_consumed,
     )
     // shield fully spent -> removed
-    expect(s2.team0[0].effects.some(e => e.type === 'SHIELD')).toBe(false)
+    expect(s2.team0[0].effects.some(e => e.type === 'POOL_SHIELD')).toBe(false)
   })
 })

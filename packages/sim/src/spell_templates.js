@@ -35,6 +35,7 @@ import {
   K_PERCENT_LIFE_DAMAGE,
   K_PLACE_GLYPH,
   K_PLACE_TRAP,
+  K_POOL_SHIELD,
   K_PULL,
   K_PUNISHMENT_DAMAGE,
   K_PUSH,
@@ -68,7 +69,7 @@ import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from './equipment_stats.js'
  * One spell effect, sim-internal (UPPERCASE). A faithful subset of the donor union (spells/types.ts:162).
  * Only the MVP-supported effects carry handlers in fight_spells.js; the rest are inert (flagged TODO).
  * @typedef {object} SpellEffect
- * @property {'DAMAGE'|'PERCENT_LIFE_DAMAGE'|'HEAL'|'STEAL'|'SHIELD'|'STUN'|'POISON'|'TELEPORT'|'PUSH'|'PULL'|'GEOMETRIC_PUSH'|'SWAP_POSITIONS'|'CARRY'|'THROW'|'PLACE_TRAP'|'GLYPH'|'ADD'|'REMOVE'|'SUMMON'|'INVISIBILITY'|'REVEAL'|'APPLY_STATE'|'REMOVE_STATE'|'REFLECT_DAMAGE'|'DISPEL'|'RETURN_SPELL'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'FORCED_DEATH'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'|'UNSUPPORTED'} type
+ * @property {'DAMAGE'|'PERCENT_LIFE_DAMAGE'|'HEAL'|'STEAL'|'SHIELD'|'POOL_SHIELD'|'STUN'|'POISON'|'TELEPORT'|'PUSH'|'PULL'|'GEOMETRIC_PUSH'|'SWAP_POSITIONS'|'CARRY'|'THROW'|'PLACE_TRAP'|'GLYPH'|'ADD'|'REMOVE'|'SUMMON'|'INVISIBILITY'|'REVEAL'|'APPLY_STATE'|'REMOVE_STATE'|'REFLECT_DAMAGE'|'DISPEL'|'RETURN_SPELL'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'FORCED_DEATH'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'|'UNSUPPORTED'} type
  * @property {number} [kind]
  * @property {number} [value]
  * @property {number} [min]
@@ -419,6 +420,7 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
     if (numeric_kind === K_HEAL) return { ...base, type: 'HEAL' }
     if (numeric_kind === K_REDUCE_DAMAGE)
       return { ...base, type: 'SHIELD', element: 'NONE' }
+    if (numeric_kind === K_POOL_SHIELD) return { ...base, type: 'POOL_SHIELD' }
     if (numeric_kind === K_GIVE_POINTS)
       return { ...base, type: 'ADD', stat: POINT_ID_MAP[Number(e['stat'])] }
     if (numeric_kind === K_REMOVE_POINTS)

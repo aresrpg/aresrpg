@@ -62,6 +62,7 @@ const STATUS_KIND = {
   INVISIBILITY: fx.K_INVISIBILITY,
   POISON: fx.K_APPLY_DOT,
   SHIELD: fx.K_REDUCE_DAMAGE,
+  POOL_SHIELD: fx.K_POOL_SHIELD,
   REFLECT_DAMAGE: fx.K_REFLECT_DAMAGE,
   RETURN_SPELL: fx.K_RETURN_SPELL,
   APPLY_STATE: fx.K_APPLY_STATE,
@@ -81,6 +82,14 @@ const STATUS_KIND = {
 export const STATUS_KINDS = Object.freeze([...new Set(Object.values(STATUS_KIND))].sort((a, b) => a - b))
 
 const STATUS_KIND_SET = new Set(STATUS_KINDS)
+
+const CHAIN_ELEMENT_OF = {
+  FIRE: 0,
+  WATER: 1,
+  EARTH: 2,
+  AIR: 3,
+  NONE: ELEMENT_NEUTRAL,
+}
 
 /** Does this chain kind live in the per-fighter status home? */
 export const is_status_kind = (kind) => STATUS_KIND_SET.has(Number(kind))
@@ -116,10 +125,12 @@ export const status_row_of = (effect) => {
   if (remaining_turns <= 0) return null
   const magnitude = Number(effect.value) || 0
   const negative = is_signed_status_kind(kind) && effect.type === 'STAT_DEBUFF'
+  const shield_element =
+    effect.type === 'SHIELD' || effect.type === 'POOL_SHIELD' ? CHAIN_ELEMENT_OF[effect.element] : undefined
   return {
     kind,
     remaining_turns,
-    element: RESIST_ELEMENT[effect.stat] ?? null,
+    element: shield_element ?? RESIST_ELEMENT[effect.stat] ?? null,
     value: negative ? -magnitude : magnitude,
     stat: POOL_POINT_KIND[effect.stat] ?? STAT_CHAIN_ID[effect.stat] ?? null,
     chance: effect.chance ?? null,
@@ -140,6 +151,10 @@ const SIM_RESIST_OF_ELEMENT = Object.freeze(
   Object.fromEntries(Object.entries(RESIST_ELEMENT).map(([key, ordinal]) => [ordinal, key]))
 )
 
+const SIM_ELEMENT_OF_CHAIN_ID = Object.freeze(
+  Object.fromEntries(Object.entries(CHAIN_ELEMENT_OF).map(([key, ordinal]) => [ordinal, key]))
+)
+
 /** The sim stat key ONE raw status row moves, or null when the row is not a timed stat row. A resist row with no
  *  element is NEUTRAL — the same default the seed mint writes (255 = NONE) and the sim's own RESIST_STAT_MAP takes. */
 const sim_stat_of = (row) => {
@@ -156,10 +171,10 @@ const sim_stat_of = (row) => {
  * floater priced the unbuffed number while the chain resolved the buffed one. Range was never special — it was
  * the one stat someone had needed so far — so the special case now falls out of the general one.
  *
- * The ap/mp POOL rows (GIVE/REMOVE_POINTS) stay out on purpose: `inputs.pool_grant` already folds them into the
+ * The ap/mp point-pool rows (GIVE/REMOVE_POINTS) stay out on purpose: `inputs.pool_grant` already folds them into the
  * fighter's turn-start budget and `project.js` hands that RESULT to the sim entity, so promoting them here would
- * count the same grant twice. One home per fact. Every other kind (shields, reflects, DoTs) stays presentation-
- * only until a mechanics consumer states what it does — a badge is not a mechanic.
+ * count the same grant twice. One home per fact. Damage shields ARE promoted because the prediction damage fold
+ * consumes kind 40 and reads kind 24 on every hit; reflects/DoTs stay presentation-only until their consumer does.
  *
  * Already-normalized effects pass through for the legacy world-fight view. */
 export const sim_effects_of = (fighter) => {
@@ -194,6 +209,16 @@ export const sim_effects_of = (fighter) => {
         timing: 'TURN_END',
         source_id: fighter?.id ?? null,
         value: 0,
+        turns_remaining: Number(row.remaining_turns) || 0,
+      })
+    else if (kind === STATUS_KIND.SHIELD || kind === STATUS_KIND.POOL_SHIELD)
+      effects.push({
+        id: row.id ?? `shield:${kind}:${index}`,
+        type: kind === STATUS_KIND.POOL_SHIELD ? 'POOL_SHIELD' : 'SHIELD',
+        timing: 'TURN_END',
+        source_id: fighter?.id ?? null,
+        element: SIM_ELEMENT_OF_CHAIN_ID[row.element == null ? ELEMENT_NEUTRAL : Number(row.element)] ?? 'NONE',
+        value: Math.max(0, Number(row.value) || 0),
         turns_remaining: Number(row.remaining_turns) || 0,
       })
   }

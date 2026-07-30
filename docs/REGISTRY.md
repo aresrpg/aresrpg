@@ -8,16 +8,16 @@ Facts in this registry are consumed by import or derivation only. Re-declaring a
 | Spell-effect kind IDs and display names | `packages/sim/src/spell_effect.js:11` — parity-derived mechanics vocabulary exported to JS consumers.                              |
 | Character XP curve and maximum level    | `packages/move/foundation/sources/character_xp.move:12`, `:18` — chain progression law.                                            |
 | `ItemStatistics` field shape and order  | `packages/move/aresrpg/sources/item_stats.move:35` — stored chain struct layout.                                                   |
-| Status effect/flag protocol constants   | `packages/sim/src/spell_effect.js:20`, `:22`, `:38`, `:105` — exported effect protocol constants.                                  |
+| Status effect/flag protocol constants   | `packages/sim/src/spell_effect.js:20`, `:22`, `:38`, `:106` — exported effect protocol constants.                                  |
 | Job XP curve and maximum level          | `packages/move/foundation/sources/job_xp.move:12`, `:16` — chain job progression law.                                              |
-| Numeric stat IDs                        | `packages/sim/src/spell_effect.js:86` — exported mechanics protocol.                                                               |
+| Numeric stat IDs                        | `packages/sim/src/spell_effect.js:87` — exported mechanics protocol.                                                               |
 | Crush-yield formula                     | `packages/move/foundation/sources/forgemagie.move:329` — formula that mints the actual runes.                                      |
 | Crush level bands and divisors          | `packages/move/foundation/sources/forgemagie.move:304` — chain yield input.                                                        |
 | Taux scale and bounds                   | `packages/move/foundation/sources/taux.move:54` — chain coefficient bounds.                                                        |
-| AoE shape IDs                           | `packages/sim/src/spell_effect.js:57` — exported mechanics vocabulary.                                                             |
+| AoE shape IDs                           | `packages/sim/src/spell_effect.js:58` — exported mechanics vocabulary.                                                             |
 | Element ordinals                        | `packages/sim/src/spell_templates.js:194` — chain-normalization home.                                                              |
-| AP/MP point-kind IDs                    | `packages/sim/src/spell_effect.js:83` — exported effect protocol.                                                                  |
-| Target-filter bits                      | `packages/sim/src/spell_effect.js:76` — exported target protocol.                                                                  |
+| AP/MP point-kind IDs                    | `packages/sim/src/spell_effect.js:84` — exported effect protocol.                                                                  |
+| Target-filter bits                      | `packages/sim/src/spell_effect.js:77` — exported target protocol.                                                                  |
 | Signed chain effect/status value codec  | `packages/sim/src/spell_templates.js:71` plus `packages/sim/src/spell_effect.js:20` — closest chain-effect decoder and kind owner. |
 | Unlimited cast-cap sentinel             | `packages/sim/src/spell_templates.js:156` — exported spell-template semantic.                                                      |
 | First-party extension namespace IDs     | `packages/move/aresrpg/sources/extension.move:23` — actual dynamic-field namespace owner.                                          |

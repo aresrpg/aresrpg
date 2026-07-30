@@ -311,6 +311,13 @@ fun forced_death_respects_only_full_immunity() {
   assert!(!retro::force_death(&mut fight, true, 0), 0);
   assert!(mob::hp(fight::mobs(&fight).borrow(0)) == 100, 1);
   spell_board::clear_fighter_status_kind(fight::fx_mut(&mut fight), MOB_FID, spell_effect::k_reduce_damage());
+  // D2 — an equally full pool is damage mitigation, never forced-death immunity.
+  add_row(
+    &mut fight,
+    MOB_FID,
+    0,
+    effect_of(spell_effect::k_pool_shield(), 100, 100, 2, 0, 0, 0),
+  );
   assert!(retro::force_death(&mut fight, true, 0), 2);
   assert!(mob::hp(fight::mobs(&fight).borrow(0)) == 0, 3);
 

@@ -14,7 +14,7 @@ import { arena, fighter, state_of } from './missing_effect_helpers.js'
 // ║   "test the modules independently like the sim with mocked spells effects … try all our effects on ║
 // ║    layout of mobs and see if it executes properly."                                                ║
 // ║                                                                                                    ║
-// ║ A TABLE-DRIVEN harness that runs EVERY spell-effect kind (the 40 K_* discriminants of              ║
+// ║ A TABLE-DRIVEN harness that runs EVERY spell-effect kind (the 41 K_* discriminants of              ║
 // ║ spell_effect.js) through the deterministic reducer (`reduce(state,{type:'cast'},ctx)`) on          ║
 // ║ representative board layouts, asserting for each (kind × layout):                                  ║
 // ║   (1) IT EXECUTES  — `reduce` accepts the cast and emits a `fight_cast` event (handle_cast returns ║
@@ -419,6 +419,17 @@ const matrix = [
     kind: SE.K_DAMAGE_REDIRECT,
     on: ['wounded_ally'],
     eff: { target_filter: FRIEND, value: 1, turns: 2 },
+    target: 'target',
+  },
+  {
+    kind: SE.K_POOL_SHIELD,
+    on: ['wounded_ally'],
+    eff: {
+      target_filter: FRIEND,
+      element: 255,
+      value: 40,
+      turns: 2,
+    },
     target: 'target',
   },
 ]

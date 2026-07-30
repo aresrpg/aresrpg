@@ -241,6 +241,53 @@ public fun fighter_status_rows_of(board: &BoardState, fighter_id: u64, kind: u8)
 public fun status_effect(status: &FighterStatus): &Effect { &status.effect }
 public fun status_source(status: &FighterStatus): u64 { status.source }
 
+/// Fold one post-formula incoming damage line through the fighter's mitigation rows. Kind 24 is a PER-HIT
+/// property and is never mutated; every matching row contributes its flat value first. Kind 40 is a reservoir:
+/// matching rows absorb what remains in board order, spend their stored value, and disappear at zero. NONE is
+/// the existing neutral/wildcard status element; named elements match exactly.
+public fun mitigate_damage(board: &mut BoardState, fighter_id: u64, element: u8, incoming: u64): u64 {
+  if (incoming == 0) return 0;
+  let none = aresrpg_foundation::spell::el_none();
+  let mut remaining = incoming;
+  let n = board.statuses.length();
+  let mut i = 0;
+  while (i < n && remaining > 0) {
+    let s = board.statuses.borrow(i);
+    if (s.fighter == fighter_id
+      && s.kind == spell_effect::k_reduce_damage()
+      && (s.effect.element() == none || s.effect.element() == element)) {
+      remaining = if (s.effect.value() >= remaining) 0 else remaining - s.effect.value();
+    };
+    i = i + 1;
+  };
+
+  i = 0;
+  while (i < n && remaining > 0) {
+    let s = board.statuses.borrow_mut(i);
+    if (s.fighter == fighter_id
+      && s.kind == spell_effect::k_pool_shield()
+      && (s.effect.element() == none || s.effect.element() == element)) {
+      let pool = s.effect.value();
+      let absorbed = if (pool < remaining) pool else remaining;
+      remaining = remaining - absorbed;
+      spell_effect::set_pool_remaining(&mut s.effect, pool - absorbed);
+    };
+    i = i + 1;
+  };
+
+  // A zero reservoir expires immediately, without disturbing the order of unrelated/live rows.
+  let mut kept = vector[];
+  while (!board.statuses.is_empty()) {
+    let s = board.statuses.pop_back();
+    if (!(s.fighter == fighter_id
+      && s.kind == spell_effect::k_pool_shield()
+      && s.effect.value() == 0)) kept.push_back(s);
+  };
+  kept.reverse();
+  board.statuses = kept;
+  remaining
+}
+
 /// Remove EVERY status row of `kind` on `fighter_id` (REVEAL clears the target's invisibility rows; the field on
 /// the Participant is cleared by the dungeon side). No-op if none present.
 public fun clear_fighter_status_kind(board: &mut BoardState, fighter_id: u64, kind: u8) {
@@ -297,6 +344,7 @@ public fun dispel_fighter(board: &mut BoardState, fighter_id: u64): vector<Effec
 fun status_needs_revert(kind: u8): bool {
   kind == spell_effect::k_alter_stat() || kind == spell_effect::k_alter_resist()
     || kind == spell_effect::k_reduce_damage()
+    || kind == spell_effect::k_pool_shield()
     || kind == spell_effect::k_invisibility() || kind == spell_effect::k_stance()
 }
 

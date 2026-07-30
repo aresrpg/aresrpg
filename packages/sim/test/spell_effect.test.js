@@ -219,13 +219,13 @@ describe('spell effect envelope — parity with spell_effect.move', () => {
         ),
       ),
     ).toBe(false)
-    // Append-only vocabulary: legacy RETURN_SPELL/GEOMETRIC_PUSH ids stay fixed; 40 is the next unknown slot.
+    // Append-only vocabulary: legacy ids stay fixed; kind 40 is live and 41 is the next unknown slot.
     expect(k_return_spell()).toBe(29)
     expect(k_geometric_push()).toBe(30)
     expect(
       is_legal(
         new_effect(
-          40,
+          41,
           255,
           0,
           SHAPE_POINT,

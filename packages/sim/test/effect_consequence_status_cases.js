@@ -191,6 +191,33 @@ export const status_consequence_entries = [
     }),
   ],
   [
+    spell_effect.K_POOL_SHIELD,
+    consequence(
+      'pool shield absorbs a later matching hit and exposes its remaining reservoir',
+      () => {
+        const initial = fight([
+          strike,
+          {
+            id: 'pool',
+            effects: [
+              on_self(spell_effect.K_POOL_SHIELD, {
+                value: 25,
+                turns: 3,
+                element: EARTH,
+              }),
+            ],
+          },
+        ])
+        const guarded = turn_to(cast(initial, 'pool', CASTER_CELL), ENEMY)
+        const struck = cast(guarded, 'strike', CASTER_CELL, ENEMY)
+        expect(hp(struck, CASTER)).toBe(hp(guarded, CASTER))
+        expect(
+          rows(struck, CASTER).find(row => row.type === 'POOL_SHIELD')?.value,
+        ).toBe(5)
+      },
+    ),
+  ],
+  [
     spell_effect.K_REFLECT_DAMAGE,
     consequence('flat reflect debits the subsequent attacker HP', () => {
       const initial = fight([

@@ -18,6 +18,7 @@ import {
   K_ALTER_STAT,
   K_ALTER_RESIST,
   K_REDUCE_DAMAGE,
+  K_POOL_SHIELD,
   K_REFLECT_DAMAGE,
   K_INVISIBILITY,
   PHASE_ON_ENTER,
@@ -259,6 +260,7 @@ const status_needs_revert = k =>
   k === K_ALTER_STAT ||
   k === K_ALTER_RESIST ||
   k === K_REDUCE_DAMAGE ||
+  k === K_POOL_SHIELD ||
   k === K_REFLECT_DAMAGE ||
   k === K_INVISIBILITY
 

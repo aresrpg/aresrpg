@@ -149,7 +149,7 @@ fun allmap_forbidden_kind(k: u8): bool {
 }
 
 /// Duration-bearing kinds that must carry turns >= 1 (F5): stat/resist alters and steals, DoT, glyphs, states,
-/// invisibility, and the reduce / reflect / return shields.
+/// invisibility, and the reduce / reflect / return / pool shields.
 fun is_timed_kind(k: u8): bool {
   k == spell_effect::k_alter_stat()
     || k == spell_effect::k_steal_stat()
@@ -161,6 +161,7 @@ fun is_timed_kind(k: u8): bool {
     || k == spell_effect::k_reduce_damage()
     || k == spell_effect::k_reflect_damage()
     || k == spell_effect::k_return_spell()
+    || k == spell_effect::k_pool_shield()
 }
 
 // ===========================================================================

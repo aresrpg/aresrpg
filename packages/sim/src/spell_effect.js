@@ -52,6 +52,7 @@ export const K_STANCE = 36
 export const K_REACTIVE_PUNISHMENT = 37
 export const K_EROSION = 38
 export const K_DAMAGE_REDIRECT = 39
+export const K_POOL_SHIELD = 40
 
 // ╔════════════════ [ AoE shape codes (taxonomy §3) — the ZONE namespace ] ═════════ ]
 export const SHAPE_POINT = 0
@@ -131,6 +132,7 @@ export const k_stance = () => K_STANCE
 export const k_reactive_punishment = () => K_REACTIVE_PUNISHMENT
 export const k_erosion = () => K_EROSION
 export const k_damage_redirect = () => K_DAMAGE_REDIRECT
+export const k_pool_shield = () => K_POOL_SHIELD
 export const stat_ap_dodge = () => STAT_AP_DODGE
 export const stat_mp_dodge = () => STAT_MP_DODGE
 export const stat_physical_damage = () => STAT_PHYSICAL_DAMAGE
@@ -204,7 +206,7 @@ const AIR_ELEMENT = 3
 const NONE_ELEMENT = 255
 
 export const is_legal = e =>
-  e.kind <= K_DAMAGE_REDIRECT &&
+  e.kind <= K_POOL_SHIELD &&
   e.area_shape <= SHAPE_CONE &&
   (e.target_filter | TF_ALL_MASK) === TF_ALL_MASK &&
   e.chance <= 100 &&

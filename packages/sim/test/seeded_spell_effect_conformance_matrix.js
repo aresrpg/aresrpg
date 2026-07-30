@@ -544,4 +544,27 @@ export const matrix_rows = [
       effect: { value: 25, target_filter: spell_effect.TF_NOT_ENEMY },
     },
   ),
+  effect_row(
+    spell_effect.K_POOL_SHIELD,
+    {
+      fighters: {
+        [ALLY_ID]: {
+          effects: [
+            status('POOL_SHIELD', 25, {
+              element: 'EARTH',
+              turns_remaining: 2,
+            }),
+          ],
+        },
+      },
+    },
+    {
+      target: 'ally',
+      effect: {
+        element: 2,
+        value: 25,
+        target_filter: spell_effect.TF_NOT_ENEMY,
+      },
+    },
+  ),
 ]

@@ -16,7 +16,11 @@ import {
   effective_stats,
   update_entity,
 } from './fight_state.js'
-import { apply_heal, apply_incoming_damage } from './fight_actions.js'
+import {
+  apply_heal,
+  apply_incoming_damage,
+  consume_shields,
+} from './fight_actions.js'
 import { add_row } from './fight_stat_effects.js'
 import { calculate_final_damage } from './spell_calculator.js'
 import { crank_damage_roll } from './turn_seed.js'
@@ -99,7 +103,8 @@ export const place_glyph = (
  * @param {import('./fight_state.js').FightState} state
  * @param {{ element: import('./fight_state.js').Element, min: number, max: number }} hazard
  * @param {import('./fight_state.js').FightEntity} entity
- * @returns {{ rng: import('./prng.js').Rng, damage: number }}
+ * @returns {{ rng: import('./prng.js').Rng, damage: number,
+ *   shields_consumed: { id: number, absorbed: number }[] }}
  */
 const hazard_damage = (state, hazard, entity) => {
   const res = calculate_final_damage(
@@ -114,23 +119,34 @@ const hazard_damage = (state, hazard, entity) => {
     // #577 — a trap tick is board-driven (non-previewable): roll off the threaded rng WITHOUT advancing it
     // (fixed hazards, min==max, stay byte-identical; a range varies deterministically). rng is returned unchanged.
     crank_damage_roll(turn_rng_of(state)),
-    entity.effects.filter(e => e.type === 'SHIELD'),
+    entity.effects.filter(e => e.type === 'SHIELD' || e.type === 'POOL_SHIELD'),
   )
-  return { rng: turn_rng_of(state), damage: res.damage }
+  return {
+    rng: turn_rng_of(state),
+    damage: res.damage,
+    shields_consumed: res.shields_consumed,
+  }
 }
 
-const hazard_hit = (state, target_id, damage, source_id) => {
+const hazard_hit = (
+  state,
+  target_id,
+  damage,
+  source_id,
+  shields_consumed = [],
+) => {
   const hit = apply_incoming_damage(state, target_id, damage, source_id)
-  const recipient = find_entity(hit.state, hit.recipient_id)
+  const after_shields = consume_shields(hit.state, target_id, shields_consumed)
+  const recipient = find_entity(after_shields, hit.recipient_id)
   return {
-    state: hit.state,
+    state: after_shields,
     effects: [
       ...(hit.heal_dealt > 0
         ? [
             {
               target_id,
               heal: hit.heal_dealt,
-              new_health: find_entity(hit.state, target_id)?.health ?? 0,
+              new_health: find_entity(after_shields, target_id)?.health ?? 0,
             },
           ]
         : [
@@ -179,7 +195,7 @@ const apply_payload = (
         effect.min !== undefined &&
         effect.max !== undefined
       ) {
-        const { rng, damage } = hazard_damage(
+        const { rng, damage, shields_consumed } = hazard_damage(
           acc.state,
           /** @type {{ element: import('./fight_state.js').Element, min: number, max: number, source_id: string }} */ ({
             ...effect,
@@ -192,6 +208,7 @@ const apply_payload = (
           entity_id,
           damage,
           source_id,
+          shields_consumed,
         )
         return {
           state: after.state,
@@ -218,7 +235,27 @@ const apply_payload = (
       if (effect.type === 'PERCENT_LIFE_DAMAGE' && flat(effect) > 0) {
         // cast.move:1673-1676 — a fraction of the live HP pool, no element amplification, no resist.
         const damage = Math.floor((target.health * flat(effect)) / 100)
-        const after = hazard_hit(acc.state, entity_id, damage, source_id)
+        const mitigated = calculate_final_damage(
+          {
+            type: /** @type {const} */ ('DAMAGE'),
+            element: effect.element,
+            min: damage,
+            max: damage,
+          },
+          {},
+          {},
+          0,
+          target.effects.filter(
+            e => e.type === 'SHIELD' || e.type === 'POOL_SHIELD',
+          ),
+        )
+        const after = hazard_hit(
+          acc.state,
+          entity_id,
+          mitigated.damage,
+          source_id,
+          mitigated.shields_consumed,
+        )
         return {
           state: after.state,
           effects: [...acc.effects, ...after.effects],
@@ -384,7 +421,7 @@ export const check_glyphs = (state, entity_id) => {
         glyph.max === undefined
       )
         return acc
-      const { rng, damage } = hazard_damage(
+      const { rng, damage, shields_consumed } = hazard_damage(
         acc.state,
         {
           element: glyph.element,
@@ -398,6 +435,7 @@ export const check_glyphs = (state, entity_id) => {
         entity_id,
         damage,
         glyph.source_id,
+        shields_consumed,
       )
       return {
         state: after.state,

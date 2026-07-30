@@ -782,7 +782,7 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   let mut random_bounds = vector[];
   let mut reaction_rng = spell_formula::dodge_seed(turn_seed, slot);
   hit_mob_from(
-    fight, midx, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
+    fight, midx, PLAYER_SIDE, seat, damage, element, 0, &mut reaction_rng, &mut random_domains,
     &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
   );
   if (damage > 0) statuses::reveal(fight, false, seat);
@@ -850,7 +850,7 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
   let mut random_bounds = vector[];
   let mut reaction_rng = spell_formula::dodge_seed(turn_seed, slot);
   hit_player_from(
-    fight, pc, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
+    fight, pc, PLAYER_SIDE, seat, damage, element, 0, &mut reaction_rng, &mut random_domains,
     &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
   );
   if (damage > 0) statuses::reveal(fight, false, seat);
@@ -1183,7 +1183,7 @@ fun apply_to_player(
   if (kind == spell_effect::k_damage()) {
     let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     hit_player_from(
-      fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, pc, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
@@ -1195,14 +1195,14 @@ fun apply_to_player(
     let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
     let damage = pool * base / 100;
     hit_player_from(
-      fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, pc, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_life_steal()) {
     let dmg = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     let actual = hit_player_from(
-      fight, pc, caster_side, caster_idx, dmg, effect_ordinal, rng, random_domains,
+      fight, pc, caster_side, caster_idx, dmg, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     heal_caster(fight, caster_side, caster_idx, actual / 2);
@@ -1214,7 +1214,7 @@ fun apply_to_player(
     let punished = spell_formula::punishment_base(rolled, caster_hp, caster_max_hp);
     let damage = spell_formula::final_damage(punished + damage_bonus, element, caster_stats, &target_stats);
     hit_player_from(
-      fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, pc, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
@@ -1312,14 +1312,14 @@ fun apply_to_mob(
   if (kind == spell_effect::k_damage()) {
     let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     hit_mob_from(
-      fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, midx, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_life_steal()) {
     let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     let actual = hit_mob_from(
-      fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, midx, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     heal_caster(fight, caster_side, caster_idx, actual / 2);
@@ -1330,7 +1330,7 @@ fun apply_to_mob(
     let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
     let damage = pool * base / 100;
     hit_mob_from(
-      fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, midx, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
@@ -1339,7 +1339,7 @@ fun apply_to_mob(
     let punished = spell_formula::punishment_base(rolled, caster_hp, caster_max_hp);
     let damage = spell_formula::final_damage(punished + damage_bonus, element, caster_stats, &target_stats);
     hit_mob_from(
-      fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
+      fight, midx, caster_side, caster_idx, damage, element, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
@@ -1432,6 +1432,7 @@ fun hit_player_from(
   caster_side: u8,
   caster_idx: u64,
   dmg: u64,
+  element: u8,
   effect_ordinal: u64,
   rng: &mut u64,
   random_domains: &mut vector<u8>,
@@ -1449,7 +1450,9 @@ fun hit_player_from(
       fight_events::random_domain_damage_inversion(), effect_ordinal, drawn, 100,
     );
   };
-  retro_effects::hit(fight, false, pc, caster_side == MOB_SIDE, caster_idx, true, dmg, roll)
+  retro_effects::hit_elemental(
+    fight, false, pc, caster_side == MOB_SIDE, caster_idx, true, dmg, element, roll,
+  )
 }
 
 fun hit_mob_from(
@@ -1458,6 +1461,7 @@ fun hit_mob_from(
   caster_side: u8,
   caster_idx: u64,
   dmg: u64,
+  element: u8,
   effect_ordinal: u64,
   rng: &mut u64,
   random_domains: &mut vector<u8>,
@@ -1475,7 +1479,9 @@ fun hit_mob_from(
       fight_events::random_domain_damage_inversion(), effect_ordinal, drawn, 100,
     );
   };
-  retro_effects::hit(fight, true, midx, caster_side == MOB_SIDE, caster_idx, true, dmg, roll)
+  retro_effects::hit_elemental(
+    fight, true, midx, caster_side == MOB_SIDE, caster_idx, true, dmg, element, roll,
+  )
 }
 
 fun effect_proc(
@@ -1512,6 +1518,7 @@ fun is_retro_status(kind: u8): bool {
 fun is_board_status(kind: u8): bool {
   is_retro_status(kind)
     || kind == spell_effect::k_reduce_damage()
+    || kind == spell_effect::k_pool_shield()
     || kind == spell_effect::k_reflect_damage()
     || kind == spell_effect::k_apply_state()
     || kind == spell_effect::k_return_spell()
@@ -1806,11 +1813,14 @@ fun apply_board_batch_from(
     } else if (is_mob) {
       if (is_damage) {
         let target_stats = *mob::stats(fight::mobs(fight).borrow(idx)); // the mob's per-fight block (resist shred applies)
-        retro_effects::hit(fight, true, idx, false, 0, false, spell_formula::final_damage(board_damage, element, &zero, &target_stats), board_roll);
+        retro_effects::hit_elemental(
+          fight, true, idx, false, 0, false,
+          spell_formula::final_damage(board_damage, element, &zero, &target_stats), element, board_roll,
+        );
       } else if (kind == spell_effect::k_percent_life_damage()) {
         let (hp, maxhp) = { let m = fight::mobs(fight).borrow(idx); (mob::hp(m), mob::max_hp(m)) };
         let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
-        retro_effects::hit(fight, true, idx, false, 0, false, pool * base / 100, board_roll);
+        retro_effects::hit_elemental(fight, true, idx, false, 0, false, pool * base / 100, element, board_roll);
       } else if (kind == spell_effect::k_heal()) {
         mob::apply_heal(fight::mobs_mut(fight).borrow_mut(idx), base); // board heals apply flat (zero-caster law)
       } else if (kind == spell_effect::k_give_points()) {
@@ -1827,16 +1837,19 @@ fun apply_board_batch_from(
         retro_effects::force_death(fight, true, idx);
       } else if (kind == spell_effect::k_stance()) {
         retro_effects::apply_stance(fight, true, idx, mob_fid(idx), effect);
-      } else if (is_retro_status(kind)) {
+      } else if (is_retro_status(kind) || kind == spell_effect::k_pool_shield()) {
         record_timed(fight, mob_fid(idx), mob_fid(idx), effect);
       };
     } else if (is_damage) {
       let target_stats = *participant::stats(fight::participants(fight).borrow(idx));
-      retro_effects::hit(fight, false, idx, false, 0, false, spell_formula::final_damage(board_damage, element, &zero, &target_stats), board_roll);
+      retro_effects::hit_elemental(
+        fight, false, idx, false, 0, false,
+        spell_formula::final_damage(board_damage, element, &zero, &target_stats), element, board_roll,
+      );
     } else if (kind == spell_effect::k_percent_life_damage()) {
       let (hp, maxhp) = { let p = fight::participants(fight).borrow(idx); (participant::hp(p), participant::max_hp(p)) };
       let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
-      retro_effects::hit(fight, false, idx, false, 0, false, pool * base / 100, board_roll);
+      retro_effects::hit_elemental(fight, false, idx, false, 0, false, pool * base / 100, element, board_roll);
     } else if (kind == spell_effect::k_heal()) {
       participant::apply_heal(fight::participants_mut(fight).borrow_mut(idx), base);
     } else if (kind == spell_effect::k_give_points()) {
@@ -1850,7 +1863,7 @@ fun apply_board_batch_from(
       retro_effects::force_death(fight, false, idx);
     } else if (kind == spell_effect::k_stance()) {
       retro_effects::apply_stance(fight, false, idx, idx, effect);
-    } else if (is_retro_status(kind)) {
+    } else if (is_retro_status(kind) || kind == spell_effect::k_pool_shield()) {
       record_timed(fight, idx, idx, effect);
     };
     e = e + 1;

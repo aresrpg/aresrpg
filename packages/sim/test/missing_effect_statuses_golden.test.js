@@ -91,12 +91,12 @@ const run_dot_inversion = vector => {
   }
 }
 
-const forced_result = (vector, shield) => {
+const forced_result = (vector, shield, type = 'SHIELD') => {
   const caster = fighter('p0', { x: 2, y: 2 }, true)
   const target = fighter('m0', { x: 3, y: 2 }, false, {
     health: vector.input.health,
     health_max: vector.input.health_max,
-    effects: [active('SHIELD', { value: shield })],
+    effects: [active(type, { value: shield })],
   })
   const spell = spell_of(vector.id, [raw_effect(K_FORCED_DEATH)])
   const result = cast(
@@ -114,6 +114,7 @@ const forced_result = (vector, shield) => {
 const run_forced_death = vector => ({
   partial_shield: forced_result(vector, vector.input.health_max - 1),
   full_shield: forced_result(vector, vector.input.health_max),
+  pool_shield: forced_result(vector, vector.input.health_max, 'POOL_SHIELD'),
 })
 
 const run_timed_normalize = vector => {

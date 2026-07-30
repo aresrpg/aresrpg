@@ -10,6 +10,49 @@ use aresrpg_foundation::spell_board as board;
 use aresrpg_foundation::spell_effect as eff;
 use aresrpg_foundation::spell;
 
+fun mitigation(kind: u8, element: u8, value: u64): eff::Effect {
+  eff::new_effect(
+    kind, element, value, eff::shape_point(), 0, eff::tf_none(), 100, 3, 0, 0, eff::phase_on_enter(),
+  )
+}
+
+#[test]
+/// #1671 F1-F4 Move arithmetic oracle. Kind 24 is the immutable per-hit leg; kind 40 is the mutable reservoir.
+fun t_pool_shield_parity_fixtures() {
+  // F1 — 550 absorbs 200/200/150, leaks 150, and expires during hit three.
+  let mut exhaustion = board::empty();
+  board::add_status(
+    &mut exhaustion, 1, 0, mitigation(eff::k_pool_shield(), spell::el_earth(), 550),
+  );
+  assert!(board::mitigate_damage(&mut exhaustion, 1, spell::el_earth(), 200) == 0, 0);
+  assert!(eff::value(board::fighter_status_of(&exhaustion, 1, eff::k_pool_shield()).borrow()) == 350, 1);
+  assert!(board::mitigate_damage(&mut exhaustion, 1, spell::el_earth(), 200) == 0, 2);
+  assert!(eff::value(board::fighter_status_of(&exhaustion, 1, eff::k_pool_shield()).borrow()) == 150, 3);
+  assert!(board::mitigate_damage(&mut exhaustion, 1, spell::el_earth(), 300) == 150, 4);
+  assert!(board::fighter_status_of(&exhaustion, 1, eff::k_pool_shield()).is_none(), 5);
+
+  // F2 — a named pool ignores a different element and remains byte-for-byte intact.
+  let mut scoped = board::empty();
+  board::add_status(&mut scoped, 1, 0, mitigation(eff::k_pool_shield(), spell::el_earth(), 550));
+  assert!(board::mitigate_damage(&mut scoped, 1, spell::el_fire(), 200) == 200, 6);
+  assert!(eff::value(board::fighter_status_of(&scoped, 1, eff::k_pool_shield()).borrow()) == 550, 7);
+
+  // F3 — flat 10 applies first; only the remaining 40 spends the pool.
+  let mut ordered = board::empty();
+  board::add_status(&mut ordered, 1, 0, mitigation(eff::k_reduce_damage(), spell::el_none(), 10));
+  board::add_status(&mut ordered, 1, 0, mitigation(eff::k_pool_shield(), spell::el_none(), 100));
+  assert!(board::mitigate_damage(&mut ordered, 1, spell::el_earth(), 50) == 0, 8);
+  assert!(eff::value(board::fighter_status_of(&ordered, 1, eff::k_reduce_damage()).borrow()) == 10, 9);
+  assert!(eff::value(board::fighter_status_of(&ordered, 1, eff::k_pool_shield()).borrow()) == 60, 10);
+
+  // F4 — the same kind-24 row subtracts 10 from every hit and is never consumed.
+  let mut flat = board::empty();
+  board::add_status(&mut flat, 1, 0, mitigation(eff::k_reduce_damage(), spell::el_none(), 10));
+  assert!(board::mitigate_damage(&mut flat, 1, spell::el_earth(), 50) == 40, 11);
+  assert!(board::mitigate_damage(&mut flat, 1, spell::el_earth(), 50) == 40, 12);
+  assert!(eff::value(board::fighter_status_of(&flat, 1, eff::k_reduce_damage()).borrow()) == 10, 13);
+}
+
 #[test]
 fun t_add_status_and_fighter_has_state() {
   let mut b = board::empty();

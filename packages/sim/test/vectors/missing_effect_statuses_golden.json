@@ -33,7 +33,8 @@
       "input": { "health": 60, "health_max": 100 },
       "expected": {
         "partial_shield": { "health": 0, "status": "FORCED_DEATH" },
-        "full_shield": { "health": 60, "status": "FORCED_DEATH_IMMUNE" }
+        "full_shield": { "health": 60, "status": "FORCED_DEATH_IMMUNE" },
+        "pool_shield": { "health": 0, "status": "FORCED_DEATH" }
       }
     },
     {

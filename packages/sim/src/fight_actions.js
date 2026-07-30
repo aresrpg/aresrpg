@@ -165,7 +165,7 @@ export const apply_damage = (state, target_id, amount) => {
 }
 
 /**
- * Spend each shield by the amount it absorbed.
+ * Spend each kind-40 pool by the amount it absorbed. Kind-24 SHIELD rows are immutable per-hit flats.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} target_id
  * @param {{ id: number, absorbed: number }[]} shields_consumed
@@ -178,14 +178,14 @@ export const consume_shields = (state, target_id, shields_consumed) => {
     ...e,
     effects: e.effects
       .map(effect =>
-        effect.type === 'SHIELD' && absorbed_by_id.has(effect.id)
+        effect.type === 'POOL_SHIELD' && absorbed_by_id.has(effect.id)
           ? {
               ...effect,
               value: effect.value - (absorbed_by_id.get(effect.id) ?? 0),
             }
           : effect,
       )
-      .filter(effect => !(effect.type === 'SHIELD' && effect.value <= 0)),
+      .filter(effect => !(effect.type === 'POOL_SHIELD' && effect.value <= 0)),
   }))
 }
 
@@ -272,11 +272,17 @@ export const apply_incoming_damage = (
       recipient_id: target_id,
       effects: [],
     }
-  const branch = incoming_branch(
-    state,
-    original,
-    Math.max(0, Math.floor(amount)),
-  )
+  const incoming = Math.max(0, Math.floor(amount))
+  if (incoming === 0)
+    return {
+      state,
+      damage_dealt: 0,
+      heal_dealt: 0,
+      killed: false,
+      recipient_id: target_id,
+      effects: [],
+    }
+  const branch = incoming_branch(state, original, incoming)
   if (branch.mode === 'HEAL') {
     const healed = Math.min(
       branch.amount,

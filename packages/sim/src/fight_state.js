@@ -57,7 +57,7 @@
  * Active status effect on an entity (donor types.ts:32-41). DoT/HoT/shield/stun/invisibility.
  * @typedef {object} ActiveEffect
  * @property {number} id            sim-local id (next_id), NOT a uuid
- * @property {'DAMAGE'|'HEAL'|'SHIELD'|'STUN'|'POISON'|'INVISIBILITY'|'APPLY_STATE'|'REFLECT_DAMAGE'|'RETURN_SPELL'|'STAT_BUFF'|'STAT_DEBUFF'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'} type
+ * @property {'DAMAGE'|'HEAL'|'SHIELD'|'POOL_SHIELD'|'STUN'|'POISON'|'INVISIBILITY'|'APPLY_STATE'|'REFLECT_DAMAGE'|'RETURN_SPELL'|'STAT_BUFF'|'STAT_DEBUFF'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'} type
  * @property {EffectTiming} timing
  * @property {string} source_id     entity that applied this effect
  * @property {Element} [element]

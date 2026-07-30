@@ -81,7 +81,7 @@ describe('the inert effect kinds are exactly the two the board knows about', () 
     expect(INERT.map(kind_name)).toEqual(['K_RESET_POSITIONS'])
     // wiring the last arm makes this list empty — flip `unsupported: true` in effect_kind_matrix.test.js and
     // drop the matching `skip_reason` in seeded_spell_effect_conformance_matrix.js in the SAME commit (#1039)
-    expect(ALL_KINDS.length - INERT.length).toBe(39)
+    expect(ALL_KINDS.length - INERT.length).toBe(40)
   })
 
   test('the seeded conformance matrix quarantines exactly the inert kinds — no more, no fewer', () => {

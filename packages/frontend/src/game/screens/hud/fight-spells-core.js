@@ -51,6 +51,7 @@ const kind_names = {
   37: 'REACTIVE_PUNISHMENT',
   38: 'EROSION',
   39: 'DAMAGE_REDIRECT',
+  40: 'POOL_SHIELD',
 }
 const element_names = { 0: 'fire', 1: 'water', 2: 'earth', 3: 'air', 255: 'neutral' }
 const shape_names = { 0: 'POINT', 1: 'CIRCLE', 2: 'CROSS', 3: 'LINE', 4: 'TBAR', 5: 'RING', 6: 'ALLMAP', 7: 'CONE' }

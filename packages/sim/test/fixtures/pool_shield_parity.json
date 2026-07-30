@@ -1,0 +1,129 @@
+{
+  "kind": 40,
+  "element_convention": {
+    "neutral": "NONE",
+    "named": "exact-match"
+  },
+  "F1_exhaustion_across_hits": {
+    "pool": {
+      "id": 40,
+      "type": "POOL_SHIELD",
+      "value": 550,
+      "element": "EARTH",
+      "turns_remaining": 3
+    },
+    "hits": [
+      {
+        "damage": 200,
+        "element": "EARTH"
+      },
+      {
+        "damage": 200,
+        "element": "EARTH"
+      },
+      {
+        "damage": 300,
+        "element": "EARTH"
+      }
+    ],
+    "move": [
+      {
+        "damage": 0,
+        "absorbed": 200,
+        "pool_remaining": 350,
+        "active": true
+      },
+      {
+        "damage": 0,
+        "absorbed": 200,
+        "pool_remaining": 150,
+        "active": true
+      },
+      {
+        "damage": 150,
+        "absorbed": 150,
+        "pool_remaining": 0,
+        "active": false
+      }
+    ]
+  },
+  "F2_per_element": {
+    "pool": {
+      "id": 40,
+      "type": "POOL_SHIELD",
+      "value": 550,
+      "element": "EARTH",
+      "turns_remaining": 3
+    },
+    "hit": {
+      "damage": 200,
+      "element": "FIRE"
+    },
+    "move": {
+      "damage": 200,
+      "absorbed": 0,
+      "pool_remaining": 550,
+      "active": true
+    }
+  },
+  "F3_flat_before_pool": {
+    "effects": [
+      {
+        "id": 24,
+        "type": "SHIELD",
+        "value": 10,
+        "element": "NONE",
+        "turns_remaining": 3
+      },
+      {
+        "id": 40,
+        "type": "POOL_SHIELD",
+        "value": 100,
+        "element": "NONE",
+        "turns_remaining": 3
+      }
+    ],
+    "hit": {
+      "damage": 50,
+      "element": "EARTH"
+    },
+    "move": {
+      "damage": 0,
+      "flat_absorbed": 10,
+      "pool_absorbed": 40,
+      "flat_remaining": 10,
+      "pool_remaining": 60
+    }
+  },
+  "F4_kind_24_per_hit_regression": {
+    "flat": {
+      "id": 24,
+      "type": "SHIELD",
+      "value": 10,
+      "element": "NONE",
+      "turns_remaining": 3
+    },
+    "hits": [
+      {
+        "damage": 50,
+        "element": "EARTH"
+      },
+      {
+        "damage": 50,
+        "element": "EARTH"
+      }
+    ],
+    "move": [
+      {
+        "damage": 40,
+        "flat_remaining": 10,
+        "active": true
+      },
+      {
+        "damage": 40,
+        "flat_remaining": 10,
+        "active": true
+      }
+    ]
+  }
+}

@@ -44,6 +44,7 @@ fun t_wave_12_kinds_are_append_only_and_structurally_legal() {
   assert_kind_is_legal(effect::k_reactive_punishment(), 37, 37);
   assert_kind_is_legal(effect::k_erosion(), 38, 38);
   assert_kind_is_legal(effect::k_damage_redirect(), 39, 39);
+  assert_kind_is_legal(effect::k_pool_shield(), 40, 40);
 }
 
 #[test]

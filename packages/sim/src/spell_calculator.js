@@ -136,24 +136,30 @@ export const apply_resistance = (damage, element, target_stats) => {
 }
 
 /**
- * Absorb damage against matching-element or neutral shield effects.
+ * Fold matching-element mitigation in deterministic kind order: every kind-24 SHIELD is a per-hit flat and
+ * remains unchanged; then kind-40 POOL_SHIELD rows absorb and report what must be spent.
  * @param {number} damage
  * @param {import("./fight_state.js").Element} element
  * @param {import("./fight_state.js").ActiveEffect[]} effects
  * @returns {{ damage: number, shields_consumed: { id: number, absorbed: number }[] }}
  */
 export const apply_shields = (damage, element, effects) => {
-  let remaining = damage
+  let remaining = Math.max(0, Math.floor(damage))
   const shields_consumed = []
+
+  // D1 — the hit property first. Multiple flat rows stack, but never mutate or enter `shields_consumed`.
   for (const shield of effects) {
     if (shield.type !== 'SHIELD') continue
-    // NEUTRAL absorbs every element — and `'NONE'` IS the sim's spelling of neutral (the same word
-    // `apply_resistance` reads as `neutral_resistance`), so it must not be filtered as if it named an element.
-    // A K_REDUCE_DAMAGE row normalizes to exactly `element: 'NONE'` (spell_templates.js), so the truthiness
-    // guard alone made every "flat incoming-damage reduction" (spell_effect.move:61) inert against any
-    // elemental hit — it only ever absorbed NONE-element damage. Missing and NONE are now one case.
     if (is_elemental(shield.element) && shield.element !== element) continue
-    const absorbed = Math.min(shield.value, remaining)
+    remaining = Math.max(0, remaining - nonnegative(shield.value))
+  }
+  if (remaining === 0) return { damage: 0, shields_consumed }
+
+  // The reservoir second. NONE/missing is the established wildcard spelling; named elements match exactly.
+  for (const shield of effects) {
+    if (shield.type !== 'POOL_SHIELD') continue
+    if (is_elemental(shield.element) && shield.element !== element) continue
+    const absorbed = Math.min(nonnegative(shield.value), remaining)
     remaining -= absorbed
     shields_consumed.push({ id: shield.id, absorbed })
     if (remaining <= 0) break

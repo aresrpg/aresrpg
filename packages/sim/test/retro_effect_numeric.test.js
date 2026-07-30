@@ -67,10 +67,11 @@ describe('wave 12 effect vocabulary numeric parity', () => {
       [effect.K_REACTIVE_PUNISHMENT, effect.k_reactive_punishment()],
       [effect.K_EROSION, effect.k_erosion()],
       [effect.K_DAMAGE_REDIRECT, effect.k_damage_redirect()],
+      [effect.K_POOL_SHIELD, effect.k_pool_shield()],
     ]
 
     expect(pairs.map(([constant]) => constant)).toEqual([
-      31, 32, 33, 34, 35, 36, 37, 38, 39,
+      31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
     ])
     expect(pairs.every(([constant, accessor]) => constant === accessor)).toBe(
       true,
@@ -78,7 +79,8 @@ describe('wave 12 effect vocabulary numeric parity', () => {
     expect(
       pairs.every(([constant]) => effect.is_legal(legal_effect(constant))),
     ).toBe(true)
-    expect(effect.is_legal(legal_effect(40))).toBe(false)
+    expect(effect.is_legal(legal_effect(40))).toBe(true)
+    expect(effect.is_legal(legal_effect(41))).toBe(false)
   })
 
   test('mirrors explicit dodge and physical-damage stat ids', () => {

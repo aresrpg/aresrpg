@@ -285,6 +285,9 @@ const core_parts = (t, fx) => {
     }
     case 'REDUCE_DAMAGE':
       return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_reduce_damage', {}, fx.base) }
+    case 'POOL_SHIELD':
+      // The live row's base is its REMAINING reservoir, so the badge naturally counts down after every absorb.
+      return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_reduce_damage', {}, fx.base) }
     case 'REFLECT_DAMAGE':
       return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_reflect_damage', {}, fx.base) }
     // ── the wave-12 retro statuses (#1049): every kind the per-fighter status home can hold owns an arm here,

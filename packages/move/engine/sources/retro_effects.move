@@ -14,7 +14,7 @@
 module aresrpg_fight::retro_effects;
 
 use aresrpg_fight::{fight::{Self, Fight}, fight_events, mob, participant};
-use aresrpg_foundation::{spell_board, spell_effect::{Self, Effect}, spell_formula};
+use aresrpg_foundation::{spell, spell_board, spell_effect::{Self, Effect}, spell_formula};
 use sui::dynamic_field as df;
 
 const MOB_FID_BASE: u64 = 1_000;
@@ -237,8 +237,31 @@ public(package) fun hit(
   incoming: u64,
   roll: u64,
 ): u64 {
+  hit_elemental(
+    fight, victim_is_mob, victim_idx, attacker_is_mob, attacker_idx, has_attacker,
+    incoming, spell::el_none(), roll,
+  )
+}
+
+/// The element-aware additive door used by the live cast/tick sinks. The legacy `hit` signature stays frozen
+/// and delegates with NONE, preserving every existing caller while named kind-40 pools can scope real hits.
+public(package) fun hit_elemental(
+  fight: &mut Fight,
+  victim_is_mob: bool,
+  victim_idx: u64,
+  attacker_is_mob: bool,
+  attacker_idx: u64,
+  has_attacker: bool,
+  incoming: u64,
+  element: u8,
+  roll: u64,
+): u64 {
   if (incoming == 0 || !fighter_alive(fight, victim_is_mob, victim_idx)) return 0;
   let victim = fid_of(victim_is_mob, victim_idx);
+  // Mitigation is a property of the incoming line, before its damage-to-heal/redirect reaction branch. D1 lives
+  // inside this single fold: immutable kind 24 first, then mutable kind 40.
+  let incoming = spell_board::mitigate_damage(fight::fx_mut(fight), victim, element, incoming);
+  if (incoming == 0) return 0;
 
   let inversion = spell_board::fighter_status_of(fight::fx(fight), victim, spell_effect::k_damage_to_heal());
   if (inversion.is_some()) {
@@ -253,7 +276,9 @@ public(package) fun hit(
       incoming * effect.value(),
     )
   };
-  hit_after_inversion(fight, victim_is_mob, victim_idx, attacker_is_mob, attacker_idx, has_attacker, incoming)
+  hit_after_inversion(
+    fight, victim_is_mob, victim_idx, attacker_is_mob, attacker_idx, has_attacker, incoming,
+  )
 }
 
 fun hit_after_inversion(

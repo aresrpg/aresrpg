@@ -85,6 +85,7 @@ const K_STANCE: u8 = 36; // value=appearance/stance id; FLAG_NEGATIVE restores
 const K_REACTIVE_PUNISHMENT: u8 = 37; // stat=bonus stat; value=per-hit cap; area_size=bonus turns
 const K_EROSION: u8 = 38; // value=percent max-HP loss taken with damage; turns=duration
 const K_DAMAGE_REDIRECT: u8 = 39; // value=0 full redirect to source; >0 percent reflect to attacker
+const K_POOL_SHIELD: u8 = 40; // total matching-element absorb pool; value=remaining reservoir
 
 public fun k_damage(): u8 { K_DAMAGE }
 public fun k_percent_life_damage(): u8 { K_PERCENT_LIFE_DAMAGE }
@@ -126,6 +127,7 @@ public fun k_stance(): u8 { K_STANCE }
 public fun k_reactive_punishment(): u8 { K_REACTIVE_PUNISHMENT }
 public fun k_erosion(): u8 { K_EROSION }
 public fun k_damage_redirect(): u8 { K_DAMAGE_REDIRECT }
+public fun k_pool_shield(): u8 { K_POOL_SHIELD }
 
 // ╔════════════════ [ AoE shape codes (taxonomy §3) ] ═════════════════════════════ ]
 const SHAPE_POINT: u8 = 0; //  the single target cell (also the default for anything unknown)
@@ -302,6 +304,13 @@ public fun flags(e: &Effect): u8 { e.flags }
 public fun phase(e: &Effect): u8 { e.phase }
 public fun has_flag(e: &Effect, flag: u8): bool { e.flags & flag == flag }
 
+/// Spend a pool-shaped effect in place. Foundation-internal because only `spell_board` owns live status rows;
+/// both range endpoints move together so the stored non-range effect remains structurally well-formed.
+public(package) fun set_pool_remaining(e: &mut Effect, remaining: u64) {
+  e.value = remaining;
+  e.value_max = remaining;
+}
+
 // ╔════════════════ [ Signed-value convention — the KIND_SIGNED {alter_stat, alter_resist} decode ] ══════ ]
 // R3 (owner ruling 2026-07-23 — negative stat/resist deltas must WORK): effect kinds 9/11 author BOTH signs in
 // the corpus (a debuff spell authors −8..−33), but `value`/`value_max` are u64 — negatives cannot mint raw. For
@@ -342,7 +351,7 @@ const TF_ALL_MASK: u8 = 39; //  TF_NOT_TEAM(1)|TF_NOT_SELF(2)|TF_NOT_ENEMY(4)|TF
 const FLAG_ALL_MASK: u8 = 31; //  all five FLAG_* bits (1|2|4|8|16) — bit 32 (random-element) is dead vocabulary, rejected
 
 public fun is_legal(e: &Effect): bool {
-  e.kind <= K_DAMAGE_REDIRECT
+  e.kind <= K_POOL_SHIELD
     && e.area_shape <= SHAPE_PODIUM
     && (e.target_filter | TF_ALL_MASK) == TF_ALL_MASK
     && e.chance <= 100
@@ -658,7 +667,7 @@ fun t_is_legal_accepts_wellformed_and_rejects_garbage() {
   // Upgrade append: RETURN_SPELL remains 29; GEOMETRIC_PUSH occupies the formerly-unknown next slot.
   assert!(k_return_spell() == 29, 0);
   assert!(geometric_push(SHAPE_CIRCLE, 3).is_legal(), 0);
-  let next_unknown = new_effect(40, 255, 0, SHAPE_POINT, 0, TF_NONE, 100, 0, 0, 0, PHASE_ON_ENTER);
+  let next_unknown = new_effect(41, 255, 0, SHAPE_POINT, 0, TF_NONE, 100, 0, 0, 0, PHASE_ON_ENTER);
   assert!(!next_unknown.is_legal(), 0);
   // Stat-id growth: the old STAT_HEAL endpoint and Wave 12's new endpoint are both legal.
   assert!(alter_stat(STAT_HEAL, 20, false, true, 3).is_legal(), 0);

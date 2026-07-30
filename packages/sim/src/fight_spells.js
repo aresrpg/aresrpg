@@ -28,6 +28,7 @@ import {
 import { check_traps, place_trap, place_glyph } from './fight_traps.js'
 import { summon_entity } from './fight_summon.js'
 import {
+  apply_shields,
   calculate_final_damage,
   calculate_heal,
   effect_triggers,
@@ -288,7 +289,9 @@ export const apply_spell_effect = (
         ? punishment_base(rolled, caster)
         : rolled) + named_bonus
     const damage_effect = { ...effect, min: base, max: base }
-    const shields = target.effects.filter(e => e.type === 'SHIELD')
+    const shields = target.effects.filter(
+      e => e.type === 'SHIELD' || e.type === 'POOL_SHIELD',
+    )
     const dmg = calculate_final_damage(
       /** @type {any} */ (damage_effect),
       effective_stats(caster),
@@ -314,11 +317,28 @@ export const apply_spell_effect = (
       ? target.health_max - target.health
       : target.health
     const damage = Math.floor((pool * (effect.value ?? 0)) / 100)
-    const after = apply_incoming_damage(state, target_id, damage, caster.id)
+    const mitigated = apply_shields(
+      damage,
+      effect.element,
+      target.effects.filter(
+        e => e.type === 'SHIELD' || e.type === 'POOL_SHIELD',
+      ),
+    )
+    const after = apply_incoming_damage(
+      state,
+      target_id,
+      mitigated.damage,
+      caster.id,
+    )
+    const after_shields = consume_shields(
+      after.state,
+      target_id,
+      mitigated.shields_consumed,
+    )
     return {
-      state: after.state,
+      state: after_shields,
       direct_damage: after.damage_dealt,
-      effects: hit_result_effects(after.state, after, target_id),
+      effects: hit_result_effects(after_shields, after, target_id),
     }
   }
   if (effect.type === 'HEAL') {
@@ -355,7 +375,9 @@ export const apply_spell_effect = (
       effective_stats(caster),
       effective_stats(target),
       damage_roll,
-      target.effects.filter(e => e.type === 'SHIELD'),
+      target.effects.filter(
+        e => e.type === 'SHIELD' || e.type === 'POOL_SHIELD',
+      ),
     )
     const after_dmg = apply_incoming_damage(
       state,
@@ -395,14 +417,14 @@ export const apply_spell_effect = (
       ],
     }
   }
-  if (effect.type === 'SHIELD') {
+  if (effect.type === 'SHIELD' || effect.type === 'POOL_SHIELD') {
     if (effect.min === undefined || effect.max === undefined)
       return { state, effects: [] }
     const { state: s2, id } = next_id(state)
     const draw = rng_range(turn_rng_of(s2), effect.min, effect.max)
     const shielded = add_effect(with_turn_rng(s2, draw.state), target_id, {
       id,
-      type: 'SHIELD',
+      type: effect.type,
       timing: 'TURN_START',
       source_id: caster.id,
       element: effect.element,
@@ -410,7 +432,10 @@ export const apply_spell_effect = (
       ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })
-    return { state: shielded, effects: [{ target_id, status: 'SHIELD' }] }
+    return {
+      state: shielded,
+      effects: [{ target_id, status: effect.type }],
+    }
   }
   if (effect.type === 'STUN') {
     const { state: s2, id } = next_id(state)

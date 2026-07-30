@@ -168,6 +168,25 @@ describe('#1083 the reverse door promotes every stat row prediction can price', 
     expect(sim_effects_of({ effects: [{ kind: 6, stat: SE.POINT_MP, value: 1, remaining_turns: 3 }] })).toEqual([])
   })
 
+  test('a named pool shield round-trips with its remaining magnitude and element intact', () => {
+    const pool = {
+      id: 77,
+      type: 'POOL_SHIELD',
+      element: 'EARTH',
+      value: 55,
+      turns_remaining: 2,
+    }
+    const row = status_row_of(pool)
+
+    expect(row).toMatchObject({
+      kind: SE.K_POOL_SHIELD,
+      element: 2,
+      value: 55,
+      remaining_turns: 2,
+    })
+    expect(sim_effects_of({ id: 'p0', effects: [{ id: pool.id, ...row }] })[0]).toMatchObject(pool)
+  })
+
   test('the range fold is unchanged — widening the door did not move an already-correct number', () => {
     const fighter = { base_range: 6, effects: [status({ stat: SE.STAT_RANGE, value: 1 }), status()] }
     expect(range_bonus_of(fighter)).toBe(7)
