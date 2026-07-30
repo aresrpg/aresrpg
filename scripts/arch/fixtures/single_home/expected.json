@@ -12,6 +12,10 @@
       "Rotten anchor · packages/alpha/src/protocol.js:3": 1
     },
     "store-writers": {
+      "use_thing.dungeon · packages/gamma/src/writer_one.js": 1,
+      "use_thing.dungeon · packages/gamma/src/writer_two.js": 1,
+      "use_thing.dungeon.status · packages/gamma/src/writer_one.js": 1,
+      "use_thing.dungeon.status · packages/gamma/src/writer_two.js": 1,
       "use_thing.phase · packages/gamma/src/writer_one.js": 1,
       "use_thing.phase · packages/gamma/src/writer_two.js": 1,
       "use_thing.phase · packages/gamma/src/writer_three.js": 1

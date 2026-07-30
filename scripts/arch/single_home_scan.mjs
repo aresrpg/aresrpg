@@ -183,6 +183,59 @@ const braced_body = (text, open_index) => {
   return ''
 }
 
+const returned_object_bodies = (body) =>
+  [...body.matchAll(/\breturn\s*\(?\s*\{/g)]
+    .map((match) => braced_body(body, match.index + match[0].length - 1))
+    .filter(Boolean)
+
+const write_bodies = (match, body) => {
+  if (!match[0].includes('=>')) return [body]
+  const after_arrow = match[0].slice(match[0].indexOf('=>') + 2).trim()
+  return after_arrow.startsWith('({') ? [body] : returned_object_bodies(body)
+}
+
+const depth_at = (text, offset) => {
+  let depth = 0
+  for (let cursor = 0; cursor < offset; cursor++) {
+    if (text[cursor] === '{') depth++
+    else if (text[cursor] === '}') depth--
+  }
+  return depth
+}
+
+const close_of = (text, open_index) => {
+  let depth = 0
+  for (let cursor = open_index; cursor < text.length; cursor++) {
+    if (text[cursor] === '{') depth++
+    else if (text[cursor] === '}' && --depth === 0) return cursor
+  }
+  return -1
+}
+
+// The written store fact exists at two useful granularities: every statically named top-level key,
+// plus one nested key when that top-level value is itself an object literal. Deeper objects stay out:
+// this lane claims one-level lifecycle ownership, not a general JavaScript parser.
+const object_write_keys = (body) => {
+  const rows = [...body.matchAll(OBJECT_KEY)].map((match) => {
+    const [, key] = match
+    const key_index = match.index + match[0].lastIndexOf(key)
+    return { key, key_index, value_index: match.index + match[0].length, depth: depth_at(body, key_index) }
+  })
+  if (rows.length === 0) return []
+  const root_depth = Math.min(...rows.map(({ depth }) => depth))
+  const top = rows.filter(({ depth }) => depth === root_depth)
+  return top.flatMap((parent) => {
+    let open_index = parent.value_index
+    while (/\s/.test(body[open_index] ?? '')) open_index++
+    if (body[open_index] !== '{') return [parent.key]
+    const close_index = close_of(body, open_index)
+    const nested = rows
+      .filter(({ key_index, depth }) => key_index > open_index && key_index < close_index && depth === root_depth + 1)
+      .map(({ key }) => `${parent.key}.${key}`)
+    return [parent.key, ...nested]
+  })
+}
+
 const store_aliases = (text) => {
   const aliases = new Map()
   for (const [, local, store] of text.matchAll(STORE_ALIAS)) aliases.set(local, store)
@@ -200,12 +253,13 @@ export const store_writes = (sources) => {
       const store = match[1].startsWith('use_') ? match[1] : aliases.get(match[1])
       if (!store) continue
       const body = braced_body(text, match.index + match[0].length - 1)
-      for (const [, key] of body.matchAll(OBJECT_KEY)) {
-        const field = `${store}.${key}`
-        const entry = writers.get(field) ?? new Map()
-        if (!entry.has(file)) entry.set(file, line_of(text, match.index))
-        writers.set(field, entry)
-      }
+      for (const write_body of write_bodies(match, body))
+        for (const key of object_write_keys(write_body)) {
+          const field = `${store}.${key}`
+          const entry = writers.get(field) ?? new Map()
+          if (!entry.has(file)) entry.set(file, line_of(text, match.index))
+          writers.set(field, entry)
+        }
     }
   }
   return [...writers]

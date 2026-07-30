@@ -59,14 +59,17 @@ if [ "${1:-}" = "--negative-control" ]; then
   cat >"$A" <<'PROBE'
 // Negative control — deleted by scripts/single-home-gate.sh --negative-control.
 export const negative_control_fact = 41
-export const arm_probe = (use_dungeon) => use_dungeon.setState({ negative_control_phase: 'armed' })
+export const arm_probe = (use_dungeon) =>
+  use_dungeon.setState({ dungeon: { negative_control_status: 'armed', only_a: true } })
 PROBE
   cat >"$B" <<'PROBE'
 // Negative control — deleted by scripts/single-home-gate.sh --negative-control.
 export const negative_control_fact = 41
 const MIST_PER_SUI = 1_000_000_000n
 export const disarm_probe = (use_dungeon) =>
-  use_dungeon.setState(() => ({ negative_control_phase: MIST_PER_SUI + negative_control_fact }))
+  use_dungeon.setState(() => ({
+    dungeon: { negative_control_status: MIST_PER_SUI + negative_control_fact },
+  }))
 PROBE
   printf '| Negative control fact | `%s:1` — a comment line, so the row protects nothing. |\n' "$A" >>docs/REGISTRY.md
   out="$(run_tree --baseline "$BASELINE" 2>&1)"
@@ -81,7 +84,8 @@ PROBE
     'duplicate-export · negative_control_fact · packages/fight/src/negative_control_single_home.js' \
     'duplicate-export · negative_control_fact · packages/world/src/negative_control_single_home.js' \
     'registry-fact · MIST_PER_SUI' \
-    'store-writers · use_dungeon.negative_control_phase' \
+    'store-writers · use_dungeon.dungeon.negative_control_status · packages/fight/src/negative_control_single_home.js' \
+    'store-writers · use_dungeon.dungeon.negative_control_status · packages/world/src/negative_control_single_home.js' \
     'registry-anchor · Negative control fact'; do
     if ! echo "$out" | grep -qF -- "$lane"; then
       echo "  FAIL: no finding for: $lane"
