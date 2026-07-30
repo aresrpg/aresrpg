@@ -77,7 +77,9 @@ jobs:
         # Fires ONLY when THIS run minted a fresh tag (created=true) OR on an explicit
         # announce_only dispatch. A master push that re-runs release.yml against an
         # already-existing tag (e.g. a promotion merge that didn't bump the version) skips
-        # it — that is the duplicate-announce fix. The step's OWN errors are always non-blocking.
+        # it — that is the duplicate-announce fix. The step's own DELIVERY errors (the webhook
+        # POST) are non-blocking; the collapse assert below is not — a stub body is a logic
+        # failure and fails the step RED before anything is posted.
         if: ${{ steps.tag.outputs.created == 'true' || inputs.announce_only }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -87,6 +89,7 @@ jobs:
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
           if [ -n "$NOTES_FILE" ]; then BODY=$(cat "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
+          SOURCE_LEN=${#BODY} # pre-truncation size — the collapse assert's reference point
           # Strip the changelog's own leading H1, then open every message with the version
           # tag in an ASCII box (owner rule: the version leads, boxed, above the content).
           # A code fence renders it monospace so the frame lines up in Discord.
@@ -100,12 +103,23 @@ jobs:
           # URLs in normal content otherwise spawn. The banner rides as a file attachment and
           # renders full-width BELOW the text (Discord can't place an attachment above content).
           # Content caps at 2000 chars: reserve room for the release link, then truncate the
-          # body at a paragraph boundary.
+          # body at a paragraph boundary — but changelog bullet lists carry NO blank line
+          # between items, so a cut landing mid-list rewinds to the blank line after the
+          # section header and collapses the whole body to a stub (v1.13.0 posted exactly
+          # that). Keep the paragraph cut only when it retains most of the budget; otherwise
+          # fall back to the last complete LINE, which ends cleanly at a bullet.
           FOOTER=$'\n\n'"Full notes → ${URL}"
           BUDGET=$((2000 - ${#FOOTER}))
           if [ "${#BODY}" -gt "$BUDGET" ]; then
             CUT=$(printf '%s' "$BODY" | head -c "$BUDGET")
-            BODY="${CUT%$'\n\n'*}"
+            PARA="${CUT%$'\n\n'*}"
+            if [ "${#PARA}" -ge $(( ${#CUT} * 75 / 100 )) ]; then BODY="$PARA"; else BODY="${CUT%$'\n'*}"; fi
+          fi
+          # Collapse assert: a real changelog can never truncate down to a header-sized stub.
+          # This is a LOGIC failure, not a delivery one — fail red, post nothing.
+          if [ "$SOURCE_LEN" -ge 400 ] && [ "${#BODY}" -lt 400 ]; then
+            echo "::error::announce body collapsed (${#BODY} chars) — refusing to post a stub"
+            exit 1
           fi
           PAYLOAD="${RUNNER_TEMP:-/tmp}/discord_payload.json"
           jq -n --arg c "${BODY}${FOOTER}" '{content: $c, flags: 4}' > "$PAYLOAD"
