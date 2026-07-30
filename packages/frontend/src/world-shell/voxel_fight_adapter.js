@@ -196,6 +196,12 @@ function wait_cast_anim_done(beat, fire_ratio = 1.1) {
 // void) before the fight is treated as permanently unplaceable. Each attempt re-waits the seat's own bounded
 // stream-settle (~4s), so 3 gives terrain ~12s of streaming grace across refreshes before the honest give-up
 // (a latch + one toast). With the D230 forest-seat fix a refusal is now genuinely rare — this is the safety net.
+// #387 — the armed WEAPON strike's live band, in ONE place for both readers below (the cast wash and the hover
+// ring): the same `weapon_spell_template` the strike itself resolves from, so a bow's reach and a spellbook's
+// line can never be read two ways. `WEAPON_ATTACK_RANGE` stays the pre-read melee fallback until the escrow
+// weapon lands.
+const weapon_band_of = (weapon) => (weapon ? weapon_spell_template(weapon).levels[0].range : WEAPON_ATTACK_RANGE)
+
 const MAX_UNPLACEABLE_ATTEMPTS = 3
 
 // ── [p0-fight-init] ONE-SHOT DIAGNOSTIC LATCHES (first-fight-after-transition input-dead probe) ──────────────
@@ -1701,13 +1707,11 @@ export function create_voxel_fight_adapter(
         // agree cell-for-cell; falls back to the melee floor before the escrow read lands. A real spell reads its
         // seed range as before.
         // #387 — the band's FLOOR is a category fact too (and the bow's ceiling grows with the range stat), so
-        // the wash reads the same `weapon_spell_template` the hover ring and the strike itself resolve from —
-        // one home for "how far does this weapon reach", never a second reading of `reach`.
+        // the wash reads the same band helper the hover ring and the strike itself resolve from — one home for
+        // "how far does this weapon reach", never a second reading of `reach`.
         const range =
           wash_armed === WEAPON_ATTACK_ID
-            ? escrow_row?.weapon
-              ? weapon_spell_template(escrow_row.weapon).levels[0].range
-              : WEAPON_ATTACK_RANGE
+            ? weapon_band_of(escrow_row?.weapon)
             : wash_armed
               ? seed_range_of(wash_armed, active)
               : null
@@ -1897,9 +1901,7 @@ export function create_voxel_fight_adapter(
         // stays the pre-read fallback for the split second before the escrow weapon lands.
         const hover_range =
           fight.armed_spell_id === WEAPON_ATTACK_ID
-            ? active.weapon
-              ? weapon_spell_template(active.weapon).levels[0].range
-              : WEAPON_ATTACK_RANGE
+            ? weapon_band_of(active.weapon)
             : seed_range_of(fight.armed_spell_id, active)
         const flags2 = seed_cast_flags_of(fight.armed_spell_id, active)
         // 1.29 no-stack (the wash's hover twin): MY live trap cells are never a castable hover for a trap spell.
