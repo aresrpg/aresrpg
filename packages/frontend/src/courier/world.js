@@ -17,6 +17,7 @@ import { courier_challenge, post_courier_chat, post_courier_position } from '@ar
 
 import { COURIER_URL, RPC_URL } from '../env'
 import { game_log } from '../core/log.js'
+import { publish_room_state, set_room_party } from '../p2p/lobby-room.js'
 import { presence_input, presence_store } from '../world-shell/presence_adapter.js'
 import { open_presence_stream, presence_frames } from '../world-shell/presence_sse_adapter.js'
 
@@ -281,6 +282,12 @@ export function leave_courier() {
 
 export function sync_party_room(party_id) {
   active_party = party_id ?? null
+  set_room_party(party_id)
+}
+
+/** Publish room-only identity state through the public social-transport home. */
+export function broadcast_state(state) {
+  publish_room_state(state)
 }
 
 async function flush_position() {

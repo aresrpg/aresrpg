@@ -12,6 +12,7 @@ import { attach_executed_digest } from './tx_digest_error.js'
 const action_calls = []
 const read_calls = []
 const synced = []
+const published = []
 const selected = { id: '0xinvited', name: 'Invited', classe: 'senshi', world_id: 'world-a' }
 const owned_alt = { id: '0xowned-alt', name: 'Alt', classe: 'shugo', world_id: 'world-a' }
 let active_character_id = selected.id
@@ -49,6 +50,7 @@ const spies = [
     return read_party_impl(character_id)
   }),
   spyOn(courier, 'sync_party_room').mockImplementation((party_id) => synced.push(party_id)),
+  spyOn(courier, 'broadcast_state').mockImplementation((state) => published.push(state)),
   spyOn(core_toast, 'push_event_toast').mockImplementation(() => {}),
   spyOn(use_dungeon, 'getState').mockImplementation(() => ({ dungeon_id: null })),
   spyOn(use_dungeon, 'subscribe').mockImplementation(() => () => {}),
@@ -84,6 +86,7 @@ beforeEach(() => {
   action_calls.length = 0
   read_calls.length = 0
   synced.length = 0
+  published.length = 0
   active_character_id = selected.id
   roster = [selected]
   projected_party = party
@@ -330,6 +333,12 @@ test('character switch clears A binding, publishes null, and denies every A muta
   stale()
   use_party.getState()._publish_state({ id: active_character_id, name: 'B', classe: 'senshi' })
   expect(synced.at(-1)).toBe(null)
+  expect(published.at(-1)).toMatchObject({
+    address: '0xwallet',
+    party_id: null,
+    classe: 'senshi',
+    name: 'B',
+  })
   expect(use_party.getState().party_id).toBe(null)
 
   for (const [action, args] of [
