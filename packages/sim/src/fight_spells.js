@@ -567,6 +567,7 @@ export const apply_spell_effect = (
       : effect.type === 'PUSH'
         ? get_direction(caster.cell, target.cell)
         : get_direction(target.cell, caster.cell)
+    if (effect.type === 'PUSH' && distance <= 0) return { state, effects: [] }
     return handle_displacement(
       state,
       target_id,

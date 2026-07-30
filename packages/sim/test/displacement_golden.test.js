@@ -542,6 +542,26 @@ describe('Move displacement golden vectors', () => {
     })
   }
 
+  test('a zero-distance push emits no Displaced receipt row (#967)', () => {
+    const base = golden.cases.find(
+      candidate => candidate.id === 'player_spell_mob_push_2_noop_regression',
+    )
+    const vector = {
+      ...base,
+      input: {
+        ...base.input,
+        effect: { ...base.input.effect, requested: 0 },
+      },
+    }
+    const result = run_vector(vector)
+    const before = base.input.fighters.find(
+      fighter => fighter.target_is_mob && fighter.idx === 0,
+    )
+
+    expect(find_entity(result.state, 'm0').cell).toEqual(cell_of(before.cell))
+    expect(result.effects).toEqual([])
+  })
+
   test('a same-team fighter crossing a displacement trap triggers and stops', () => {
     const vector = golden.cases.find(
       candidate => candidate.id === 'player_spell_mob_push_2_noop_regression',
