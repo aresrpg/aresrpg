@@ -73,7 +73,7 @@ describe('world corpus runtime loader (#196)', () => {
     let roster = 0
     let gatherables = 0
     for (const world of worlds) {
-      expect(world.id).toMatch(/^0x[0-9a-fA-F]{64}$/) // object id joined from the seed receipt, not the blob
+      expect(world.id).toBe(world.wid) // stable until a live /v1 world row binds the current object id
       expect(world.name.length).toBeGreaterThan(0)
       // every roster mob inverts back to exactly this world (world_corpus_for_mob is the bestiary "found in")
       for (const mob of world.mobs) {

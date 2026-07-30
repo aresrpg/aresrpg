@@ -31,7 +31,6 @@ import { create } from 'zustand'
 import { world_seed } from '@aresrpg/sdk/world-seed'
 
 import { is_object_id } from '../../content/object_id'
-import { seed_manifest } from '../../content/seed_manifest'
 import jobs_data from '../../data/jobs.json'
 import { load_corpus_version, versioned_corpus_url } from '../../game/data/corpus_asset.js'
 import { mob_identity_key } from '../../game/data/mobs.js'
@@ -76,7 +75,7 @@ export interface CorpusResource {
 }
 
 export interface CorpusWorld {
-  /** world OBJECT id — joins /v1's `world_id` */
+  /** authored wid until `bind_world_corpus_to_live` replaces it with the current `/v1` world object id */
   id: string
   wid: string
   name: string
@@ -319,10 +318,9 @@ function build_gather_ladders(worlds: CorpusWorld[]): Record<string, GatherRow[]
 }
 
 /**
- * PURE projection: the published blob (+ current world object ids) → the stable-keyed corpus the UI
- * reads. Worlds present in the seed manifest but absent from the blob are SKIPPED (the migration / empty
- * state degrades to inert). The per-world object-id guard stays HARD — a seeded-but-malformed world is a
- * real data bug, not the absence case. Same math the build-time glob fed; only the source moved.
+ * PURE projection: the published blob → the stable-keyed corpus the UI reads. The artifact's own keys
+ * enumerate its worlds; a bundled seed receipt never fences newer publications. Current object ids enter
+ * only at `bind_world_corpus_to_live`, through the live `/v1` worlds view.
  */
 function build_world_corpus(blob: WorldCorpusBlob): Derived {
   const resource_by_slug = index_resources_by_slug(blob)
@@ -330,10 +328,7 @@ function build_world_corpus(blob: WorldCorpusBlob): Derived {
   // normalized mob name → authored xp/spell facts, FIRST row wins (kits are
   // authored identically across placements).
   const mob_facts = new Map<string, CorpusMobFacts>()
-  for (const world of seed_manifest.worlds) {
-    if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)
-    const entry = blob[world.wid]
-    if (!entry) continue
+  for (const [wid, entry] of Object.entries(blob)) {
     const { roster, facts } = project_roster(entry.mobs)
     for (const [name_key, row] of facts) if (!mob_facts.has(name_key)) mob_facts.set(name_key, row)
     const authored_world = entry.world
@@ -342,9 +337,9 @@ function build_world_corpus(blob: WorldCorpusBlob): Derived {
         ? ([authored_world.band[0], authored_world.band[1]] as [number, number])
         : null
     worlds.push({
-      id: world.id,
-      wid: world.wid,
-      name: authored_world.name ?? world.wid,
+      id: wid,
+      wid,
+      name: authored_world.name ?? wid,
       band,
       biome: authored_world.biome ?? '',
       mobs: roster,
@@ -461,19 +456,6 @@ export const WORLD_CORPUS = {
  * full-corpus cardinality cases on this — a headless unit test never fetches the blob (issue #106 / #196). */
 export const has_world_corpus = (): boolean => corpus().worlds.length > 0
 
-/** Authored knowledge for a live /v1 world row, or undefined (=> the caller renders an honest gap). */
-export const world_corpus_of = (world_id: string | null | undefined): CorpusWorld | undefined =>
-  corpus().by_id.get(world_id ?? '')
-
-/** Offline-authored spawn provenance for a mob name; /v1 mob rows do not project a world field. */
-export const world_corpus_for_mob = (mob_name: string | null | undefined): readonly CorpusWorld[] =>
-  corpus().by_mob_id.get(mob_identity_key(mob_name) ?? '') ?? []
-
-/** Offline-authored placement provenance for a live gatherable item name — the items-tab
- * "FOUND IN" list (night-batch #8), mirroring the mob idiom above. Empty for non-gatherables. */
-export const world_corpus_for_resource = (item_name: string | null | undefined): readonly CorpusWorld[] =>
-  corpus().by_resource_id.get(normalize_search(item_name ?? '')) ?? []
-
 /** Authored xp/spell facts for a stable mob name (minted verbatim from these rows — see
  * CorpusMobFacts), or undefined => the caller renders an honest gap. */
 export const mob_corpus_of = (mob_name: string | null | undefined): CorpusMobFacts | undefined =>
@@ -484,7 +466,7 @@ interface LiveTemplate {
   name: string | null
 }
 
-interface LiveWorld {
+export interface LiveWorld {
   world_id: string
   seed: string | number
 }
@@ -493,6 +475,40 @@ interface CorpusMeasurement {
   mobs: { matched: number; total: number }
   resources: { matched: number; total: number }
 }
+
+/** Replace authored wids with current-lineage object ids from the published worlds view. */
+const bind_world_ids_to_live = (worlds: readonly CorpusWorld[], live_worlds: readonly LiveWorld[]): CorpusWorld[] => {
+  if (!live_worlds.length) return [...worlds]
+  const live_world_id_by_seed = new Map(
+    live_worlds.filter((world) => is_object_id(world.world_id)).map((world) => [String(world.seed), world.world_id])
+  )
+  return worlds.flatMap((world) => {
+    const id = live_world_id_by_seed.get(String(world_seed(world.wid)))
+    return id ? [{ ...world, id }] : []
+  })
+}
+
+/** Authored knowledge for a live /v1 world row, or undefined (=> the caller renders an honest gap). */
+export const world_corpus_of = (
+  world_id: string | null | undefined,
+  live_worlds: readonly LiveWorld[] = []
+): CorpusWorld | undefined =>
+  bind_world_ids_to_live(corpus().worlds, live_worlds).find((world) => world.id === world_id)
+
+/** Offline-authored spawn provenance for a mob name; /v1 mob rows do not project a world field. */
+export const world_corpus_for_mob = (
+  mob_name: string | null | undefined,
+  live_worlds: readonly LiveWorld[] = []
+): readonly CorpusWorld[] =>
+  bind_world_ids_to_live(corpus().by_mob_id.get(mob_identity_key(mob_name) ?? '') ?? [], live_worlds)
+
+/** Offline-authored placement provenance for a live gatherable item name — the items-tab
+ * "FOUND IN" list (night-batch #8), mirroring the mob idiom above. Empty for non-gatherables. */
+export const world_corpus_for_resource = (
+  item_name: string | null | undefined,
+  live_worlds: readonly LiveWorld[] = []
+): readonly CorpusWorld[] =>
+  bind_world_ids_to_live(corpus().by_resource_id.get(normalize_search(item_name ?? '')) ?? [], live_worlds)
 
 /** The ONE world-corpus boundary where stable authored identity becomes current-lineage /v1 ids. */
 export function bind_world_corpus_to_live(
@@ -515,15 +531,7 @@ export function bind_world_corpus_to_live(
   const authored_resources = new Set(
     worlds.flatMap((world) => world.resources.map((resource) => normalize_search(resource.name)))
   )
-  const live_world_id_by_seed = new Map(
-    live_worlds.filter((world) => is_object_id(world.world_id)).map((world) => [String(world.seed), world.world_id])
-  )
-  const current_worlds = live_worlds.length
-    ? worlds.flatMap((world) => {
-        const id = live_world_id_by_seed.get(String(world_seed(world.wid)))
-        return id ? [{ ...world, id }] : []
-      })
-    : [...worlds]
+  const current_worlds = bind_world_ids_to_live(worlds, live_worlds)
   const bound_worlds = current_worlds.map((world) => ({
     ...world,
     mobs: world.mobs.flatMap((mob) => {

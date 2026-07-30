@@ -50,9 +50,8 @@ export function WorldSwitcher() {
   // The selected character's doc (world binding + level). Cheap 15 s poll, self-heals on focus. The raw
   // hook value is NEVER rendered directly — derive_world_panel identity-guards it (see header).
   const view = use_rpc_view(
-    /** @returns {Promise<{ id?: string, world?: string | null, level?: number | null } | null>} */ async (
-      signal
-    ) => (selected_character_id ? ((await get_characters({ id: selected_character_id }, signal))[0] ?? null) : null),
+    /** @returns {Promise<{ id?: string, world?: string | null, level?: number | null } | null>} */ async (signal) =>
+      selected_character_id ? ((await get_characters({ id: selected_character_id }, signal))[0] ?? null) : null,
     { deps: [selected_character_id], enabled: !!selected_character_id, interval_ms: 15000 }
   )
 
@@ -68,14 +67,16 @@ export function WorldSwitcher() {
   const required_level_by_world = new Map(worlds.map((world) => [world.id, world.required_level]))
 
   const panel = derive_world_panel({ selected_character_id, doc: view.data })
-  const current_label = panel.world_id
-    ? (worlds.find((w) => w.id === panel.world_id)?.label ?? panel.world_id)
-    : null
+  const current_label = panel.world_id ? (worlds.find((w) => w.id === panel.world_id)?.label ?? panel.world_id) : null
   const cards = filter_world_cards(
     derive_world_cards({
       worlds,
       required_level_by_world,
-      corpus_of: world_corpus_of,
+      corpus_of: (world_id) =>
+        world_corpus_of(
+          world_id,
+          worlds.map((world) => ({ world_id: world.id, seed: world.seed }))
+        ),
       my_level: panel.level,
       current_world_id: panel.world_id,
     }),

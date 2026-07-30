@@ -46,7 +46,7 @@ describe('load_world_catalog — the one home for the join gate', () => {
     })
 
     expect(await load_world_catalog()).toEqual([
-      { id: first.id, label: first.label, biome: 'glass_desert', required_level: 42 },
+      { id: first.id, seed: '1', label: first.label, biome: 'glass_desert', required_level: 42 },
     ])
   })
 

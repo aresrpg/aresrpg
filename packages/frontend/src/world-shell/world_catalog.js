@@ -24,7 +24,7 @@
 import { get_encyclopedia } from '../rpc/client'
 import { T62_WORLDS } from '../chain/deployment'
 
-/** @typedef {{ id: string, label: string, biome: string | null, required_level: number }} SeededWorld */
+/** @typedef {{ id: string, seed: string, label: string, biome: string | null, required_level: number }} SeededWorld */
 
 /** @type {Promise<SeededWorld[]> | null} — the session cache (world config is static). */
 let cache = null
@@ -40,6 +40,7 @@ export function load_world_catalog(signal) {
   const pending = get_encyclopedia('worlds', signal).then(({ worlds }) => {
     const rows = (worlds ?? []).map((world) => ({
       id: String(world.world_id),
+      seed: String(world.seed),
       // An unlabelled world is honestly its own id — never a prettified guess at a name the chain lacks.
       label: label_by_id.get(String(world.world_id)) ?? String(world.world_id),
       biome: world.biome || null,

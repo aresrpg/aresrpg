@@ -187,9 +187,13 @@ export function ItemsTab({
   const found_in = useMemo(
     () =>
       selected_item
-        ? world_corpus_for_resource(selected_item.name).map(({ id, name, biome }) => ({ id, name, biome }))
+        ? world_corpus_for_resource(selected_item.name, enc?.worlds).map(({ id, name, biome }) => ({
+            id,
+            name,
+            biome,
+          }))
         : [],
-    [selected_item]
+    [selected_item, enc?.worlds]
   )
 
   const active_chips = useMemo(() => {

@@ -31,7 +31,7 @@ import { display_mob_name } from '../../content/mob_name_overrides'
 import { use_template_t } from '../../i18n/template_t'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
-import type { RpcEncyclopediaMob } from '../../rpc/views'
+import type { RpcEncyclopedia, RpcEncyclopediaMob } from '../../rpc/views'
 import { decode_stat } from '../../chain/stat_bias'
 
 import { DetailLoading } from './shared'
@@ -65,7 +65,10 @@ export const decode_mob_resist = (v: number | null | undefined): number | null =
 
 // Pure /v1 projection reader. Kept outside the component so the captured RPC contract can exercise the
 // exact empty/non-empty decision without mocking React or the request hook.
-export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null | undefined) =>
+export const bestiary_mobs_from_v1 = (
+  rows: readonly RpcEncyclopediaMob[] | null | undefined,
+  live_worlds: Readonly<RpcEncyclopedia['worlds']> = []
+) =>
   (rows ?? [])
     // /v1 is the mob-template projection this surface promises to render. Do not fence it through the
     // separately republished seed-manifest ids: a republish gives every MobTemplate a new object id, and
@@ -91,7 +94,7 @@ export const bestiary_mobs_from_v1 = (rows: readonly RpcEncyclopediaMob[] | null
         tier,
         archi: is_archi_tier(tier),
         drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
-        found_in: world_corpus_for_mob(m.name).map(({ id, name, biome }) => ({ id, name, biome })),
+        found_in: world_corpus_for_mob(m.name, live_worlds).map(({ id, name, biome }) => ({ id, name, biome })),
         createdAt: undefined as number | undefined,
       }
     })
@@ -166,8 +169,9 @@ function BestiaryTab({
   const tt = use_template_t()
 
   const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia('mobs', signal), { deps: [] })
+  const { data: world_enc } = use_rpc_view((signal) => get_encyclopedia('worlds', signal), { deps: [] })
   // Map §14 liveness + projected loot into display shape; unprojected resistances stay honestly empty.
-  const mobs = useMemo(() => bestiary_mobs_from_v1(enc?.mobs), [enc])
+  const mobs = useMemo(() => bestiary_mobs_from_v1(enc?.mobs, world_enc?.worlds), [enc, world_enc])
 
   const [params, set_params] = useSearchParams()
   // Search: instant input + deferred filter term + debounced ?q= (shared home) — see use_deferred_search.
