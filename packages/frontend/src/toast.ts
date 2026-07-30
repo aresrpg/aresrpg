@@ -2,10 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { create } from 'zustand'
 
-import i18n from './i18n'
 import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
 import { humanize_tx_error } from './game/core/abort_copy.js'
+import { decode_toast_error } from './toast_error'
 
 // The fixed app-toast layer overlays the top-right minimap with a comfortable, safe-area-aware viewport inset.
 // It clips the transform-based entrance inside a viewport-bounded box, so an entering card can never grow page
@@ -16,11 +16,8 @@ export const TOAST_CONTAINER_CLASS =
 export const toast_glass_class =
   'flex flex-col gap-2 p-4 border border-white/10 bg-black/70 backdrop-blur-md rounded-[7px] animate-[slide-in_0.3s_ease-out]'
 
-export function resolve_message(code: string): string {
-  const key = `toast.${code}`
-  const translated = i18n.t(key)
-  // If i18next returns the key itself, it means no translation exists — return the raw code
-  return translated !== key ? translated : code
+export function resolve_message(error: unknown): string {
+  return decode_toast_error(error).message
 }
 
 interface Toast {
@@ -33,7 +30,7 @@ interface Toast {
 
 interface ToastState {
   toasts: Toast[]
-  add: (code: string, type?: 'error' | 'info') => void
+  add: (message: unknown, type?: 'error' | 'info') => void
   add_persistent: (
     message: string,
     type: 'error' | 'info' | 'pending',
@@ -51,9 +48,11 @@ let next_id = 0
 
 export const use_toast = create<ToastState>((set, get) => ({
   toasts: [],
-  add: (code, type = 'error') => {
+  add: (input, type = 'error') => {
     const id = next_id++
-    const message = type === 'error' ? resolve_message(code) : code
+    const decoded = type === 'error' ? decode_toast_error(input) : null
+    const message = decoded?.message ?? String(input)
+    if (decoded?.diagnostic) report_error(input, { area: 'toast', action: 'add' })
     set((s) => ({ toasts: [...s.toasts, { id, message, type }] }))
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000)
   },
