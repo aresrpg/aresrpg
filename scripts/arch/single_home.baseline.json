@@ -226,20 +226,7 @@
     "TF_NONE (Target-filter bits) · packages/move/foundation/sources/spell_effect.move": 1,
     "XP_CURVE (Character XP curve and maximum level) · packages/frontend/src/experience.ts": 1
   },
-  "registry-anchor": {
-    "`ItemStatistics` field shape and order · packages/move/aresrpg/sources/item_stats.move:35": 1,
-    "Element ordinals · packages/sim/src/spell_templates.js:194": 1,
-    "First-party extension namespace IDs · packages/move/aresrpg/sources/extension.move:23": 1,
-    "Forgemagie stat/rune catalog · packages/move/foundation/sources/rune_catalog.move:117": 1,
-    "Item category to equipment-slot kind · packages/move/aresrpg/sources/equipment.move:271": 1,
-    "Maximum-HP formula · packages/move/foundation/sources/progression_math.move:56": 1,
-    "Mob fighter-ID base · packages/move/engine/sources/retro_effects.move:418": 1,
-    "Previsional roster HP marker · packages/inventory/src/fight_receipt_roster.js:6": 1,
-    "Ring/relic physical-slot capacities · packages/move/aresrpg/sources/equipment.move:71": 1,
-    "Signed chain effect/status value codec · packages/sim/src/spell_templates.js:71": 1,
-    "Stackable item categories · packages/move/aresrpg/sources/item.move:357": 1,
-    "Unlimited cast-cap sentinel · packages/sim/src/spell_templates.js:156": 1
-  },
+  "registry-anchor": {},
   "store-writers": {
     "use_dungeon.character_id · packages/frontend/src/simulator/fight_shim.js": 1,
     "use_dungeon.character_id · packages/frontend/src/world-shell/world_fight.js": 1,
