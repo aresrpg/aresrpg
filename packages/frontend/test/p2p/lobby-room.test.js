@@ -313,6 +313,30 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(trystero_relay_calls.pause).toBe(1) // and we stop hammering a broker that is not there
   })
 
+  it('emits one structured ares-error when the watchdog marks the relay failed', async () => {
+    const console_errors = []
+    const original_console_error = console.error
+    console.error = (...args) => console_errors.push(args)
+    try {
+      trystero_relay_socket.readyState = 3
+      await spend_the_retry_budget()
+    } finally {
+      console.error = original_console_error
+    }
+
+    const watchdog_errors = console_errors.filter(
+      ([prefix, , , , context]) => prefix === '[ares-error]' && context?.action === 'lobby_room_watchdog'
+    )
+    expect(watchdog_errors).toHaveLength(1)
+    expect(watchdog_errors[0][1]).toBeInstanceOf(Error)
+    expect(watchdog_errors[0][1].message).toContain('relay')
+    expect(watchdog_errors[0][4]).toMatchObject({
+      area: 'p2p',
+      action: 'lobby_room_watchdog',
+      world: WORLD,
+    })
+  })
+
   it("recovers on the browser's own online signal — a rejoin re-derives the room, no refresh", async () => {
     trystero_relay_socket.readyState = 3
     await spend_the_retry_budget()

@@ -7,10 +7,9 @@ import { presence_store } from '../world-shell/presence_adapter.js'
 
 import { courier_inputs, courier_refusal, join_courier, leave_courier } from './world.js'
 
-// THE "P2P IDLE" LIE (#1641): the chip renders the presence atom's `link_status`, but the transport edge only
-// ever handed its status to a debug log — a channel that is OFF for players. A fully connected world stream
-// therefore read as "idle" forever, because nothing on earth wrote that field.
-describe('the world link reports itself onto the presence atom', () => {
+// #1762: room membership owns the presence atom's link health. The additive legacy courier still reconnects
+// itself, but none of its lifecycle signals may overwrite the room chip.
+describe('the courier cannot downgrade room-owned link health', () => {
   class FakeEventSource {
     constructor(url) {
       this.url = url
@@ -37,7 +36,7 @@ describe('the world link reports itself onto the presence atom', () => {
     delete globalThis.EventSource
   })
 
-  test('opening the link moves the atom off idle, and a live frame reports it connected', () => {
+  test('opening the courier and receiving a live frame leave room status untouched', () => {
     /** @type {any} */
     let source
     globalThis.EventSource = class extends FakeEventSource {
@@ -46,16 +45,16 @@ describe('the world link reports itself onto the presence atom', () => {
         source = this
       }
     }
-    expect(presence_store.getState().link_status).toBe('idle')
+    presence_store.getState().input({ type: 'link', status: 'connected' })
 
     join_courier('0xworld', '0xcharacter', '0xaddress')
-    expect(presence_store.getState().link_status).toBe('connecting')
+    expect(presence_store.getState()).toMatchObject({ link_status: 'connected', link_error: null })
 
     source.emit('open')
     expect(presence_store.getState()).toMatchObject({ link_status: 'connected', link_error: null })
   })
 
-  test('a link that gives up says WHY on the atom, never a bare idle chip', () => {
+  test('a courier link that gives up cannot mark the live room failed', () => {
     /** @type {any} */
     let source
     globalThis.EventSource = class extends FakeEventSource {
@@ -64,19 +63,20 @@ describe('the world link reports itself onto the presence atom', () => {
         source = this
       }
     }
+    presence_store.getState().input({ type: 'link', status: 'connected' })
     join_courier('0xworld', '0xcharacter', '0xaddress')
     source.readyState = 2
     source.emit('error')
 
-    expect(presence_store.getState().link_status).toBe('failed')
-    expect(presence_store.getState().link_error).toMatch(/unavailable/i)
+    expect(presence_store.getState()).toMatchObject({ link_status: 'connected', link_error: null })
   })
 
-  test('leaving returns the atom to idle with no stale reason', () => {
+  test('leaving the courier cannot reset the room atom', () => {
     globalThis.EventSource = FakeEventSource
+    presence_store.getState().input({ type: 'link', status: 'connected' })
     join_courier('0xworld', '0xcharacter', '0xaddress')
     leave_courier()
-    expect(presence_store.getState()).toMatchObject({ link_status: 'idle', link_error: null })
+    expect(presence_store.getState()).toMatchObject({ link_status: 'connected', link_error: null })
   })
 })
 

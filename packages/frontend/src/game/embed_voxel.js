@@ -28,7 +28,8 @@ import { wire_join_request_effect } from '../world-shell/join_request_effect.js'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { read_world_biome } from '../world-shell/world_biome.js'
 import { resolve_engine_recipe } from '../chain/deployment'
-import { join_courier } from '../courier/world.js'
+import { join_room } from '../p2p/lobby-room.js'
+import { start_scene_courier } from '../world-shell/scene_lifecycle.js'
 import { get_saved_quality } from './screens/hud/world/quality_pref.js'
 import { apply_saved_engine_flags, resolve_hack_mode } from './screens/hud/world/engine_flags_pref.js'
 import {
@@ -1124,6 +1125,18 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
   const mode = spectate ? 'spectate' : 'session'
   const incoming_world_id = use_world_binding.getState().world ?? null
   const incoming_character_id = character?.id ?? null
+  const incoming_transport_character_id = mode === 'session' ? incoming_character_id : null
+  const incoming_address = use_auth.getState().address ?? null
+  // GameWorldHost already awaited checkpoint + session-position restore before this synchronous boundary.
+  // Seed the room from that resolved cell when one exists so a peer joining before our first movement still
+  // sees us. Absence is deliberately fine: room membership never waits on a spawn read.
+  const incoming_spawn =
+    incoming_world_id && incoming_transport_character_id
+      ? (read_world_position(incoming_transport_character_id, incoming_world_id) ??
+        read_world_chain_anchor(incoming_transport_character_id, incoming_world_id) ??
+        read_checkpoint_spawn(incoming_transport_character_id, incoming_world_id))
+      : null
+  const incoming_cell = incoming_spawn ? { x: incoming_spawn.x, y: incoming_spawn.z } : undefined
   const incoming_identity = {
     mode,
     world_id: incoming_world_id,
@@ -1131,11 +1144,20 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
     follow: !!follow,
   }
   if (!follow) {
-    // The public social home keeps the courier alive while joining the replacement room internally.
-    join_courier(
-      incoming_world_id,
-      mode === 'session' ? incoming_character_id : null,
-      use_auth.getState().address ?? null
+    // #1762: room membership is the primary scene transport. The legacy courier starts only AFTER that join,
+    // behind a separate import/init boundary, so its constructor/refusal/reconnect lifecycle cannot suppress
+    // or downgrade the room.
+    join_room(incoming_world_id, incoming_transport_character_id, incoming_cell)
+    void start_scene_courier(
+      {
+        world_id: incoming_world_id,
+        character_id: incoming_transport_character_id,
+        address: incoming_address,
+      },
+      (error) => {
+        game_log('courier', 'scene courier join failed', error)
+        report_error(error, { area: 'courier', action: 'join_scene_transport' })
+      }
     )
   }
   if (session?.dispose_timer) {

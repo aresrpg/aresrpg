@@ -27,6 +27,7 @@ import { pauseRelayReconnection, resumeRelayReconnection } from '@trystero-p2p/c
 import { PEER_HEARTBEAT_MS, REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 
 import { game_log } from '../core/log.js'
+import { report_error } from '../core/report.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
 import { NETWORK, RELAY_URL, STUN_URL, TURN_CRED, TURN_URL, TURN_USER } from '../env'
 
@@ -260,6 +261,12 @@ async function _rejoin() {
 /** Terminal state: stop room announcements and trystero's relay-socket retry engine. The presence atom stays
  *  mounted so the chat header renders the failure instead of silently disappearing it. */
 function _retire_failed_room(reason) {
+  report_error(new Error(reason), {
+    area: 'p2p',
+    action: 'lobby_room_watchdog',
+    world: room_world,
+    reason,
+  })
   set_link('failed', reason)
   pauseRelayReconnection()
   const failed_room = room

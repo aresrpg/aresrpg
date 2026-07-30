@@ -28,6 +28,7 @@ import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
 import { use_expedition } from '../roster/store'
 import { leave_courier } from '../courier/world.js'
+import { leave_room } from '../p2p/lobby-room.js'
 import { invalidate as invalidate_kiosk_cap_cache } from '../chain/kiosk_cap_cache'
 
 /** @typedef {{ type: 'wallet_session/reset' }} WalletSessionInput */
@@ -59,8 +60,13 @@ export function reset_wallet_session(input = { type: 'wallet_session/reset' }) {
   //    boundary (party_store re-publishes on dungeon_id delta). B relearns its own party via the invite nudge.
   use_party.getState().reset_local()
 
-  // 4. Realtime transition — the public social home closes both identities before B opens newly identified links.
-  leave_courier()
+  // 4. Realtime transition — room and courier are sibling transports (#1762), so close each outgoing identity
+  // independently before B opens its replacements. A courier teardown failure cannot suppress the room leave.
+  try {
+    leave_room()
+  } finally {
+    leave_courier()
+  }
 
   // 5. EXPEDITION store (S-19a — the gap this closes) — the character / kiosk / personal-kiosk-cap + active-run
   //    mirror that the in-world HUD reads (GameWorldHud / SelfPlate / CharacterMenu). It is wallet-scoped but

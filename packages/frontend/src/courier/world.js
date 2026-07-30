@@ -18,8 +18,6 @@ import { courier_challenge, post_courier_chat, post_courier_position } from '@ar
 import { COURIER_URL, RPC_URL } from '../env'
 import { game_log } from '../core/log.js'
 import {
-  join_room,
-  leave_room,
   publish_room_chat,
   publish_room_party_chat,
   publish_room_position,
@@ -44,6 +42,7 @@ let active_world = null
 let active_identity = null
 let link_target = null
 let relink_timer = null
+let courier_link_status = 'idle'
 let active_party = null
 let auth_cache = null
 let auth_in_flight = null
@@ -209,15 +208,10 @@ const courier_frames = {
  */
 function join_courier_transport(world, character, address) {
   const identity = `${character ?? ''}:${address ?? ''}`
-  if (close_stream && active_world === world && active_identity === identity) {
-    presence_input({ type: 'session', character_id: character })
-    return
-  }
+  if (close_stream && active_world === world && active_identity === identity) return
   close_stream?.()
   close_stream = null
   clear_relink()
-  presence_input({ type: 'reset' })
-  presence_input({ type: 'session', character_id: character })
   active_world = world
   active_identity = identity
   link_target = null
@@ -228,13 +222,12 @@ function join_courier_transport(world, character, address) {
 }
 
 /**
- * Join both additive social transports through one public home. A later train removes only the courier leg;
- * callers and the room primitive remain unchanged.
+ * Join only the legacy courier transport. Scene room membership is an independent sibling owned by the scene
+ * boundary; courier construction, identity refusal, and reconnect failure never touch room lifecycle/state.
  */
 export function join_courier(world, character = null, address = null) {
   if (!world) return
   if (typeof EventSource !== 'undefined') join_courier_transport(world, character, address)
-  join_room(world, character)
 }
 
 /** Open the ONE inbound link for the current target. Re-entrant: a relink closes the dead source first. */
@@ -257,7 +250,7 @@ function open_link() {
  *  link that gave up schedules its own return, so presence recovers without a page refresh. */
 function on_link_status(status, error) {
   game_log('courier', `presence link ${status}`, error)
-  presence_input({ type: 'link', status, error })
+  courier_link_status = status
   if (status === 'failed') arm_relink()
 }
 
@@ -279,7 +272,7 @@ function arm_relink(delay = RELINK_DELAY_MS) {
 // The browser's own recovery signal beats any schedule: a laptop waking up relinks now, not in 30 seconds.
 if (typeof window !== 'undefined')
   window.addEventListener?.('online', () => {
-    if (!link_target || presence_store.getState().link_status !== 'failed') return
+    if (!link_target || courier_link_status !== 'failed') return
     clear_relink()
     open_link()
   })
@@ -291,12 +284,11 @@ export function leave_courier() {
   link_target = null
   active_world = null
   active_identity = null
+  courier_link_status = 'idle'
   active_party = null
   pending_position = null
   if (position_timer) clearTimeout(position_timer)
   position_timer = null
-  presence_input({ type: 'reset' })
-  leave_room()
 }
 
 export function sync_party_room(party_id) {
