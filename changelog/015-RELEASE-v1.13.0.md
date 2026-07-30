@@ -32,5 +32,5 @@ The fix you will feel first: a hit that restores health finally reads as a heal 
 and an idle turn auto-passes instead of hanging forever. Base health regeneration is now a third
 of what it was.
 
-Also: 607 bug fixes and stability improvements — full notes →
+Also: 610 bug fixes and stability improvements — full notes →
 https://github.com/aresrpg/aresrpg/compare/v1.12.50...v1.13.0
