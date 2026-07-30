@@ -206,7 +206,111 @@ const no_swallowed_failure = {
   },
 }
 
+const guard_branch_of = (node) => {
+  if (node.parent?.type === 'IfStatement' && node.parent.consequent === node) return node
+  if (
+    node.parent?.type === 'BlockStatement' &&
+    node.parent.parent?.type === 'IfStatement' &&
+    node.parent.parent.consequent === node.parent
+  )
+    return node.parent
+  return null
+}
+
+const owning_function = (node) => {
+  let current = node.parent
+  while (current && !is_function(current)) current = current.parent
+  return current
+}
+
+const branch_speaks = (branch, sinks, source_code) => {
+  let spoke = false
+  walk(
+    branch,
+    (node) => {
+      if (spoke) return
+      if (node.type === 'ThrowStatement') spoke = true
+      else if (node.type === 'CallExpression') {
+        const callee = source_code.getText(node.callee)
+        if (sinks.some((fragment) => callee.includes(fragment))) spoke = true
+      }
+    },
+    (node) => is_function(node)
+  )
+  return spoke
+}
+
+const baseline_floor = (filename, baseline) => {
+  const normalized = String(filename ?? '').replace(/\\/g, '/')
+  const row = Object.entries(baseline).find(([file]) => normalized.endsWith(file))
+  return row?.[1] ?? 0
+}
+
+const no_unchanged_input_guard = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description:
+        'a reducer/fold guard must not silently refuse an input by returning the unchanged accumulator with no failure signal',
+    },
+    schema: [
+      {
+        type: 'object',
+        properties: {
+          baseline: {
+            type: 'object',
+            additionalProperties: { type: 'integer', minimum: 0 },
+            description:
+              'repo-relative file → current finding count; only findings above this shrink-only floor are reported',
+          },
+          sinks: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'sanctioned reporting channels that make an unchanged guard return explicit',
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
+    messages: {
+      unchangedInputGuard:
+        'this guard silently refuses its input by returning `{{input}}` unchanged with no failure signal. ' +
+        'Return the refusal as data (for example `{ state, events: [...] }`), report it through a sanctioned channel, ' +
+        'or remove the guard so the reducer/fold remains observably total.',
+    },
+  },
+  create(context) {
+    const source_code = context.sourceCode
+    const sinks = context.options?.[0]?.sinks ?? DEFAULT_SINKS
+    const baseline = context.options?.[0]?.baseline ?? {}
+    const floor = baseline_floor(context.filename, baseline)
+    const findings = []
+
+    return {
+      ReturnStatement(node) {
+        if (node.argument?.type !== 'Identifier') return
+        const branch = guard_branch_of(node)
+        if (!branch || branch_speaks(branch, sinks, source_code)) return
+        const owner = owning_function(node)
+        const inputs = new Set((owner?.params ?? []).flatMap(bound_names))
+        if (inputs.has(node.argument.name)) findings.push(node)
+      },
+      'Program:exit'() {
+        for (const node of findings.slice(floor))
+          context.report({
+            node,
+            messageId: 'unchangedInputGuard',
+            data: { input: node.argument.name },
+          })
+      },
+    }
+  },
+}
+
 export default {
-  meta: { name: 'no-silent-failures', version: '1.0.0' },
-  rules: { 'no-swallowed-failure': no_swallowed_failure },
+  meta: { name: 'no-silent-failures', version: '1.1.0' },
+  rules: {
+    'no-swallowed-failure': no_swallowed_failure,
+    'no-unchanged-input-guard': no_unchanged_input_guard,
+  },
 }

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import fs from 'node:fs'
+
 import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
@@ -10,6 +12,10 @@ import one_pipeline from './scripts/eslint-rules/one_pipeline.mjs'
 import no_silent_failures from './scripts/eslint-rules/no_silent_failures.mjs'
 import fp_law_layer from './scripts/eslint-rules/fp_law.config.mjs'
 import typed_fp_layer from './scripts/eslint-rules/typed_fp.config.mjs'
+
+const unchanged_input_guard_baseline = JSON.parse(
+  fs.readFileSync(new URL('./scripts/eslint-rules/unchanged_input_guard.baseline.json', import.meta.url), 'utf8')
+)
 
 export default [
   js.configs.recommended,
@@ -167,6 +173,23 @@ export default [
     ignores: ['**/*.test.*', '**/*.spec.*'],
     plugins: { 'no-silent-failures': no_silent_failures },
     rules: { 'no-silent-failures/no-swallowed-failure': 'warn' },
+  },
+  {
+    // THE SILENT-REFUSAL RATCHET (#1689): a reducer/fold guard that returns its input unchanged without
+    // failure-as-data or a report makes an incomplete read indistinguishable from a successful no-op. Keep this
+    // narrow to the fight reducer homes; helper transforms elsewhere legitimately retain accumulator identity.
+    // @aresrpg/sim mirrors this block in its package-local ESLint config. The JSON is the measured 32-hit floor.
+    // It only shrinks as refusals learn to speak; an unlisted reducer file has a zero floor, and any finding above
+    // a file's allowance is an ERROR.
+    files: [
+      'packages/fight/src/**/*{fold,reduce,reducer,inbox,ingest}*.{js,ts,tsx}',
+      'packages/fight/src/inputs.js',
+      'packages/fight/src/store.js',
+    ],
+    plugins: { 'no-silent-failures': no_silent_failures },
+    rules: {
+      'no-silent-failures/no-unchanged-input-guard': ['error', { baseline: unchanged_input_guard_baseline }],
+    },
   },
   // THE FP-LAW LAYER (docs/CODE_LAW.md) — naming/purity/immutability/composition tripwires.
   // Tiering + severity rationale live in the layer file; rules in scripts/eslint-rules/fp_law.mjs.

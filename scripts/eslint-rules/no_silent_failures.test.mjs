@@ -213,3 +213,52 @@ tester.run('no-swallowed-failure', plugin.rules['no-swallowed-failure'], {
     },
   ],
 })
+
+tester.run('no-unchanged-input-guard', plugin.rules['no-unchanged-input-guard'], {
+  valid: [
+    {
+      name: 'a reducer refusal returned as data is explicit rather than silent',
+      code: `export const reduce = (state, command) => {
+        if (!command) return { state, events: [{ type: 'command_refused', reason: 'missing' }] }
+        return apply(state, command)
+      }`,
+    },
+    {
+      name: 'a reported refusal may preserve the unchanged input',
+      code: `export const adopt = (inbox, fight) => {
+        if (!complete(fight)) {
+          report_failure({ kind: 'incomplete_fight_read' })
+          return inbox
+        }
+        return { ...inbox, fight }
+      }`,
+    },
+    {
+      name: 'a final unchanged return is a total fallback, not a guard refusal',
+      code: `export const reduce = (state, command) => {
+        if (command.type === 'known') return apply(state, command)
+        return state
+      }`,
+    },
+  ],
+  invalid: [
+    {
+      name: 'SPECIMEN #1689: completeness guard silently returns the inbox unchanged',
+      code: `export const adopt_snapshot = (inbox, fight) => {
+        if (fight != null && !fight_read_complete(fight)) return inbox
+        return { ...inbox, fight }
+      }`,
+      errors: [{ messageId: 'unchangedInputGuard', data: { input: 'inbox' } }],
+    },
+    {
+      name: 'FRESH: a braced reducer guard silently returns its input state unchanged',
+      code: `export function fold(state, event) {
+        if (!recognized(event)) {
+          return state
+        }
+        return apply(state, event)
+      }`,
+      errors: [{ messageId: 'unchangedInputGuard', data: { input: 'state' } }],
+    },
+  ],
+})

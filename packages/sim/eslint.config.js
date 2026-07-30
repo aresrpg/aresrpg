@@ -1,10 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import fs from 'node:fs'
+
 import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import importPlugin from 'eslint-plugin-import'
 import eslintConfigPrettier from 'eslint-config-prettier'
+
+import no_silent_failures from '../../scripts/eslint-rules/no_silent_failures.mjs'
+
+const unchanged_input_guard_baseline = JSON.parse(
+  fs.readFileSync(
+    new URL(
+      '../../scripts/eslint-rules/unchanged_input_guard.baseline.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+)
 
 export default [
   js.configs.recommended,
@@ -85,6 +99,18 @@ export default [
           message:
             'Determinism: time is a command input; no Date in @aresrpg/sim.',
         },
+      ],
+    },
+  },
+  {
+    // Package-local half of the #1689 silent-refusal ratchet. Only reducer/fold homes are judged; any bare
+    // unchanged-input guard above the measured shared baseline is a new silent refusal and therefore an ERROR.
+    files: ['src/**/*{fold,reduce,reducer}*.{js,ts,tsx}'],
+    plugins: { 'no-silent-failures': no_silent_failures },
+    rules: {
+      'no-silent-failures/no-unchanged-input-guard': [
+        'error',
+        { baseline: unchanged_input_guard_baseline },
       ],
     },
   },
