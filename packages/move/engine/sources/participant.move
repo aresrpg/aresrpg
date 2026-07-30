@@ -127,7 +127,7 @@ const WL_DAMAGE: vector<u64> = vector[18, 10, 22, 14, 12, 10, 15, 20, 17, 16, 15
 const WL_CRIT_DAMAGE: vector<u64> = vector[27, 16, 33, 21, 18, 15, 22, 30, 25, 24, 22];
 const WL_CRIT_RATE: vector<u64> = vector[20, 10, 25, 20, 20, 20, 20, 22, 20, 18, 18]; // 1-in-X
 const WL_AP_COST: vector<u64> = vector[4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3];
-const WL_REACH: vector<u64> = vector[1, 1, 1, 2, 3, 4, 8, 1, 1, 1, 1]; // Manhattan
+const WL_REACH: vector<u64> = vector[1, 1, 1, 2, 3, 5, 6, 1, 1, 1, 1]; // Manhattan
 
 // ╔══════ [ §387 — THE WEAPON ZONE TABLE: which cells one strike touches, keyed by FINE category ] ══════ ]
 //

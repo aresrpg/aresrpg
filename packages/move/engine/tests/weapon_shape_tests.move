@@ -198,9 +198,14 @@ fun the_range_band_rides_the_category() {
   let (_, _, bow_min, bow_mod, bow_line) = participant::weapon_zone_of(&b"bow".to_string());
   let (_, _, _, wand_mod, _) = participant::weapon_zone_of(&b"wand".to_string());
   let (_, _, _, book_mod, book_line) = participant::weapon_zone_of(&b"spellbook".to_string());
+  let bow = participant::weapon_line_of(option::some(b"bow".to_string()), false);
+  let book = participant::weapon_line_of(option::some(b"spellbook".to_string()), false);
   assert!(bow_min == 1 && bow_mod && !bow_line, 0);
   assert!(!wand_mod, 1);
   assert!(!book_mod && book_line, 2);
+  let bow_reach = participant::weapon_line_reach(&bow);
+  let book_reach = participant::weapon_line_reach(&book);
+  assert!(bow_reach == 6 && book_reach == 5, bow_reach * 100 + book_reach);
   // The linearity gate itself: same row / same column only.
   assert!(combat_grid::same_line(CASTER, ANCHOR), 3);
   assert!(combat_grid::same_line(CASTER, CASTER + 20), 4);
