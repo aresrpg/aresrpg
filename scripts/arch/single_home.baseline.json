@@ -236,6 +236,7 @@
     "use_dungeon.dungeon_id · packages/frontend/src/world-shell/world_fight.js": 1,
     "use_dungeon.error · packages/frontend/src/game/dev/dev_synth_fight.js": 1,
     "use_dungeon.error · packages/frontend/src/simulator/fight_shim.js": 1,
+    "use_dungeon.error · packages/frontend/src/world-shell/dungeon_run_store.js": 1,
     "use_dungeon.error · packages/frontend/src/world-shell/world_fight.js": 1,
     "use_dungeon.fight_fresh · packages/frontend/src/game/dev/dev_synth_fight.js": 1,
     "use_dungeon.fight_fresh · packages/frontend/src/simulator/fight_shim.js": 1,

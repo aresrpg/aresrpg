@@ -33,7 +33,10 @@ const EXPORTED_DECL =
   /^export\s+(?:default\s+)?(?:async\s+)?(?:function\s*\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/
 const JS_DECL = /(?:^|[\s;{(])(?:const|let|var|function\s*\*?|class)\s+([A-Za-z_$][\w$]*)/g
 const MOVE_DECL = /(?:^|\s)(?:const|fun|struct|enum)\s+([A-Za-z_][\w]*)/g
-const STORE_WRITE = /\b([a-z_][\w]*)\.setState\(\s*\{/g
+// Both Zustand write doors: `store.setState({ field: value })` and the functional
+// `store.setState((state) => ({ field: derive(state) }))` / block-arrow twin. The match ends on the
+// first object/function-body brace so the shared balanced-brace reader owns the rest.
+const STORE_WRITE = /\b([a-z_][\w]*)\.setState\(\s*(?:\{|(?:async\s+)?(?:\([^()]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\(?\s*\{)/g
 // A store reaches a module under whatever name it is bound to — `const dungeon = use_dungeon`, a
 // default parameter, an aliased import. Writers must be attributed to the STORE, not to the local
 // spelling, or the second writer of a field hides behind a rename (#1687's exact shape).

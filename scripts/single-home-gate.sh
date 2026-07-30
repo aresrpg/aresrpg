@@ -66,7 +66,7 @@ PROBE
 export const negative_control_fact = 41
 const MIST_PER_SUI = 1_000_000_000n
 export const disarm_probe = (use_dungeon) =>
-  use_dungeon.setState({ negative_control_phase: MIST_PER_SUI + negative_control_fact })
+  use_dungeon.setState(() => ({ negative_control_phase: MIST_PER_SUI + negative_control_fact }))
 PROBE
   printf '| Negative control fact | `%s:1` — a comment line, so the row protects nothing. |\n' "$A" >>docs/REGISTRY.md
   out="$(run_tree --baseline "$BASELINE" 2>&1)"
