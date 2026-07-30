@@ -162,7 +162,7 @@ The scene renders against the frontend session-binding home, not a fresh
 character-object membership read: it accepts a world only when the binding
 store's character ID matches the selected character
 (`packages/frontend/src/game/world_spawns.js:269-279`). That binding is normally
-published from `/v1/characters[].world`
+published from the `world` field each row of `/v1/characters` carries
 (`packages/frontend/src/world-shell/session_gate.js:122-140`). A stale binding
 could make the client render an old world's groups, but the corresponding Move
 failure would be zones 102, not the witnessed 112
