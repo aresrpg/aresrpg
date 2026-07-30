@@ -2,7 +2,7 @@
   "_provenance": {
     "source": "GET https://rpc.aresrpg.world/v1/encyclopedia?kind=mobs (the VITE_RPC_URL of the deployed testnet build)",
     "captured": "2026-07-28",
-    "slice": "every live mob row whose drops table contains Wooling Fleece — the owner-reported symptom of #1467",
+    "slice": "every live mob row whose drops table contains Wooling Fleece — the #1467 regression slice",
     "bundled_manifest_mob_ids_matching_these_rows": 0,
     "live_mob_rows_total": 383,
     "bundled_manifest_mob_ids_total": 374
