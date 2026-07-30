@@ -47,11 +47,18 @@
 # job id verbatim — this is exactly the regression: `tests_api`'s id is `tests_api`, its real
 # check-run name (the override) is `tests (api)`. A `strategy.matrix` leg renders the way GitHub
 # renders it: "<name> (<axis-value>[, <axis-value>...])", cartesian across every axis (jq's
-# `combinations`), skipping the matrix's own `include`/`exclude` keys. `CodeQL` is the one name
-# that can never come from a job/matrix name at all: `github/codeql-action/analyze` (the
-# `fp-codeql` job's own step) files a SEPARATE check-run literally named "CodeQL" under the
-# github-advanced-security app, distinct from `fp-codeql`'s own Actions check-run — any job with
-# an `analyze` step contributes that literal name once.
+# `combinations`), skipping the matrix's own `include`/`exclude` keys.
+#
+# MANUFACTURED NAMES ARE BANNED (issue #1789): the set carries only names read off a parsed job —
+# never one this function invents. A clause here used to append the literal "CodeQL" whenever a job
+# ran `github/codeql-action/analyze`, but no github-actions workflow files a check-run under that
+# name; only GitHub's default code-scanning setup does, under the github-advanced-security app,
+# which the provenance filter below correctly refuses as non-evidence. A required name that no
+# provenance-eligible row can ever carry is a PERMANENT wedge — every landing refused with "missing
+# required check(s): CodeQL". The `fp-codeql` job keeps the FP query pack on the bar under its own
+# producible Actions name via the enumeration above; default-setup CodeQL stays defense-in-depth at
+# the GitHub level, outside this queue's bar. The class is sealed by a test asserting derived ⊆
+# producible (test/promote-green-eval-check.sh case 19).
 
 # derive_required_checks <workflow.yml> [<workflow.yml>...] — prints a JSON array of every
 # check-run NAME the given workflow file(s) produce on a PR/push head (see HOW above). Deduped +
@@ -79,10 +86,7 @@ derive_required_checks() {
           [$lists | combinations] | .[] | $base + " (" + (map(tostring) | join(", ")) + ")"
         end
       end
-    ] + (
-      [.[] | (.jobs // {})[] | .steps // [] | .[] | select(.uses? // "" | startswith("github/codeql-action/analyze"))]
-      | if length > 0 then ["CodeQL"] else [] end
-    ) | unique
+    ] | unique
   ' <<<"$docs"
 }
 

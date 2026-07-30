@@ -222,7 +222,84 @@ FIXTURE_DERIVED_JSON=$(derive_required_checks "$FIXTURE_YML")
 expect_array_contains "fixture-plain-job-auto-joins" "totally_new_job" "$FIXTURE_DERIVED_JSON"
 expect_array_contains "fixture-matrix-leg-auto-joins" "matrix_job (alpha)" "$FIXTURE_DERIVED_JSON"
 expect_array_contains "fixture-name-override-auto-joins" "custom display name (v2)" "$FIXTURE_DERIVED_JSON"
-expect_array_contains "fixture-codeql-analyze-step-auto-joins" "CodeQL" "$FIXTURE_DERIVED_JSON"
+# A job that runs codeql-action/analyze joins under its OWN Actions check-run name and nothing else
+# (issue #1789 — see cases 18-19): the separate "CodeQL" row that GitHub's default code-scanning
+# setup files belongs to another app and can never be provenance-eligible evidence here.
+expect_array_contains "fixture-codeql-job-joins-under-its-own-name" "codeql_job" "$FIXTURE_DERIVED_JSON"
+
+# expect_array_lacks <case-name> <needle> <json_array>
+# The mirror of expect_array_contains: asserts a derived set does NOT carry a name. Absence is the
+# assertion for #1789 — a required name nothing can produce wedges every landing forever.
+expect_array_lacks() {
+  local case_name="$1" needle="$2" json_array="$3"
+  if jq -e --arg needle "$needle" 'any(.[]; . == $needle)' <<<"$json_array" >/dev/null; then
+    echo "FAIL  $case_name  →  $json_array must not contain [$needle]"
+    FAIL=$((FAIL + 1))
+  else
+    echo "PASS  $case_name  →  lacks [$needle]"
+    PASS=$((PASS + 1))
+  fi
+}
+
+# ── 18. issue #1789 regression guard: the derived PRODUCTION set (real gate.yml + checks.yml) must
+#       carry `fp-codeql` — the Actions job that actually runs the FP query pack, under the name
+#       its own check-run carries — and must NOT carry the literal "CodeQL". No github-actions
+#       workflow files a check-run by that name; only GitHub's default code-scanning setup does,
+#       under the github-advanced-security app, which the #1305 provenance filter correctly refuses
+#       as non-evidence. Requiring it made every landing refuse with "missing required check(s):
+#       CodeQL" forever — a total, self-inflicted wedge. ───────────────────────────────────────────
+expect_array_contains "fp-codeql-in-derived-production-set" "fp-codeql" "$REQUIRED_CHECKS_JSON"
+expect_array_lacks "manufactured-codeql-not-in-derived-production-set" "CodeQL" "$REQUIRED_CHECKS_JSON"
+
+# ── 19. THE CLASS GATE for #1789: every name in the derived set must be one the parsed workflows
+#       can actually produce. A check-run's name is a job's display name (`name:` override, else the
+#       job id) or, for a matrix job, that display name with a "(legs)" suffix — nothing else. This
+#       is computed straight from the YAML, independently of derive_required_checks()'s own
+#       expansion, so any future clause that MANUFACTURES a name (rather than reading one off a job)
+#       fails here regardless of which name it invents. derived ⊆ producible, forever. ─────────────
+# unproducible_names <derived_json> <workflow.yml...> — prints, one per line, every derived name no
+# job in the given workflow files could file a check-run under. Empty output = the class holds.
+unproducible_names() {
+  local derived_json="$1"
+  shift
+  local jobs_json file
+  jobs_json=$(
+    for file in "$@"; do yq -o=json eval '.' "$file"; done |
+      jq -s -c '[.[] | (.jobs // {}) | to_entries[] |
+        {base: (.value.name // .key), matrix: (.value.strategy.matrix != null)}]'
+  )
+  jq -r --argjson jobs "$jobs_json" '
+    .[] | . as $name
+    | select(
+        [$jobs[] | . as $job | select(
+          $name == $job.base
+          or ($job.matrix and ($name | startswith($job.base + " (")) and ($name | endswith(")")))
+        )] | length == 0
+      )
+  ' <<<"$derived_json" || echo "unproducible_names: jq failed (see stderr) — treat as unproducible"
+}
+
+SCRIPT_WORKFLOWS_DIR="${SCRIPT_DIR}/../../workflows"
+UNPRODUCIBLE=$(unproducible_names "$REQUIRED_CHECKS_JSON" \
+  "${SCRIPT_WORKFLOWS_DIR}/gate.yml" "${SCRIPT_WORKFLOWS_DIR}/checks.yml")
+if [ -z "$UNPRODUCIBLE" ]; then
+  echo "PASS  derived-set-is-producible  →  every required name maps to a real job"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL  derived-set-is-producible  →  no workflow job can produce: $(tr '\n' ' ' <<<"$UNPRODUCIBLE")"
+  FAIL=$((FAIL + 1))
+fi
+
+# The same invariant on the fixture — proves the check has teeth on a set it has never seen, and
+# that a matrix leg (a legitimately synthesised name) is correctly accepted as producible.
+UNPRODUCIBLE_FIXTURE=$(unproducible_names "$FIXTURE_DERIVED_JSON" "$FIXTURE_YML")
+if [ -z "$UNPRODUCIBLE_FIXTURE" ]; then
+  echo "PASS  fixture-derived-set-is-producible  →  every derived name maps to a fixture job"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL  fixture-derived-set-is-producible  →  no fixture job can produce: $(tr '\n' ' ' <<<"$UNPRODUCIBLE_FIXTURE")"
+  FAIL=$((FAIL + 1))
+fi
 
 # ── 14-17. PROVENANCE + the republish window (#1305 review, CRITICAL) ────────────────────────
 # The reported hole: `commits/{sha}/check-runs` returns every row any app ever attached to that
