@@ -14,7 +14,7 @@ against it and files an issue on any breach. The article's law, made a file.
    verdicts bind.
 4. **Production violation-rate.** The tripwire counters ticking in real clients (per release)
    cannot be argued with — only fixed.
-5. **The owner's live play.** The terminal judge, outside the machinery, by design.
+5. **Maintainer live play.** The terminal judge, outside the machinery, by design.
 
 ## Frozen rules
 
@@ -33,7 +33,7 @@ against it and files an issue on any breach. The article's law, made a file.
 8. **No secrets in fork-facing CI.** Workflows triggered by fork PRs run with zero secrets;
    `pull_request_target` + PR-code checkout is banned.
 9. **The read layer never writes.** The rpc serves; it accepts nothing.
-10. **The owner is the only unverified terminal.** Every green path bottoms out at an anchor or at
+10. **The maintainer is the only unverified terminal.** Every green path bottoms out at an anchor or at
     him; no cycle certifies itself.
 
 _(Amendments follow rule 7's own process.)_
