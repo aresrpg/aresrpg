@@ -634,8 +634,6 @@ test_reachability_hits() {
       "scripts/ceremony-signer-gate.test.mjs",
       "scripts/ares.test.mjs", // the ares CLI'\''s OWN suite — ironic, flagged here for a follow-up wiring ticket
       "test/gold/fixtures/fight_fixtures.test.mjs",
-      "test/gold/investigations/b5/b5_drive.spec.ts", // live-prod investigation kit, manual driver — see its README.md
-      "test/gold/investigations/b5/b5_fresh.spec.ts", // live-prod investigation kit, manual driver — see its README.md
     ]
     const is_baselined = (file) => baseline_files.includes(file) || baseline_prefixes.some((p) => file.startsWith(p))
     const new_orphans = raw_orphans.filter((file) => !is_baselined(file))

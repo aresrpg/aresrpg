@@ -231,8 +231,6 @@ scripts/check-constraints.sh	A_78KFzXWSZOE2PgWSLTY2=1 WF8K2AgphFGEB8b75jH392=1 Z
 const sanctioned_fixture_prefixes = [
   // decode-law fixtures: captured chain receipt/event JSON, byte-for-byte from a real indexed run.
   'test/gold/fixtures/receipts/',
-  // p0_owner_script.spec.ts's ALWAYS-WRITE artifact: the recorded tx-outcome column from an actual gold run.
-  'test/gold/investigations/p0_owner_script/',
   // issue #512's pinned live fight/store capsule (trace_512_replay.test.js) — the exported wire payload,
   // not a model-generated twin; the filename itself embeds the captured fight's id.
   'packages/fight/test/fixtures/traces/',
