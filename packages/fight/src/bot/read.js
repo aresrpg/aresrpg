@@ -8,7 +8,6 @@
 // byte-identical `combat_grid::bfs_path_cost` port the board already draws with. A bot that judged
 // legality by its own rules would fail on exactly the divergences it exists to catch.
 
-import { manhattan_distance } from '@aresrpg/sim/cell'
 import { effect_hits, can_target } from '@aresrpg/sim/spell_targeting'
 
 import { bfsPathCost, bfsReachable, decode, encode } from '../los.js'
@@ -38,8 +37,8 @@ export const allies_of = (read) => {
   return me ? living(read).filter((f) => f.team === me.team) : []
 }
 
-/** Manhattan distance — the metric the sim's `is_in_range` uses. ONE home: `@aresrpg/sim/cell` (#1536 row 4). */
-export const manhattan = manhattan_distance
+/** Manhattan distance — the metric the sim's `is_in_range` uses. ONE home: `@aresrpg/sim/combat_grid`. */
+export { manhattan } from '@aresrpg/sim/combat_grid'
 
 /** Chebyshev distance — adjacency (the tackle ring). */
 export const chebyshev = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))

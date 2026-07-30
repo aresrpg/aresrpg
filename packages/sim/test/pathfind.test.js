@@ -7,7 +7,8 @@ import {
   find_path_8dir,
   get_reachable_cells,
 } from '../src/pathfind.js'
-import { manhattan_distance, cell_key } from '../src/cell.js'
+import { cell_key } from '../src/cell.js'
+import { manhattan } from '../src/combat_grid.js'
 
 const open = () => true
 const unoccupied = () => false
@@ -105,7 +106,7 @@ describe('get_reachable_cells', () => {
     const reachable = get_reachable_cells({ x: 0, y: 0 }, 2, open, unoccupied)
     expect(reachable).toHaveLength(13)
     for (const { cell, cost } of reachable) {
-      expect(cost).toBe(manhattan_distance({ x: 0, y: 0 }, cell))
+      expect(cost).toBe(manhattan({ x: 0, y: 0 }, cell))
     }
   })
 

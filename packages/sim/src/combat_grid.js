@@ -48,9 +48,18 @@ export const decode = cell => ({ x: cell_x(cell), y: cell_y(cell) })
 export const in_grid = cell => cell >= 0 && cell < GRID_CELLS
 export const grid_cells = () => GRID_CELLS
 
-/** MANHATTAN distance (4-directional, no diagonals) — |Δx| + |Δy|. */
+const coordinate_x = cell => (typeof cell === 'number' ? cell_x(cell) : cell.x)
+const coordinate_y = cell => (typeof cell === 'number' ? cell_y(cell) : cell.y)
+
+/**
+ * MANHATTAN distance (4-directional, no diagonals) — |Δx| + |Δy|.
+ * Accepts either encoded board cells or `{x,y}` coordinates so both client surfaces share this stride owner.
+ * @param {number | { x: number, y: number }} a
+ * @param {number | { x: number, y: number }} b
+ */
 export const manhattan = (a, b) =>
-  abs_diff(cell_x(a), cell_x(b)) + abs_diff(cell_y(a), cell_y(b))
+  abs_diff(coordinate_x(a), coordinate_x(b)) +
+  abs_diff(coordinate_y(a), coordinate_y(b))
 
 // ╔════════════════ [ shape_mask — 6 BigInt words, one bit per cell (row-major) ] ═══ ]
 /** A fresh all-zero mask (MASK_WORDS words). @returns {bigint[]} */

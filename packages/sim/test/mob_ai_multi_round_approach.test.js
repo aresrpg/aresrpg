@@ -24,7 +24,7 @@ import {
   MOB_ATTACK_ID,
 } from '../src/spell_templates.js'
 import { find_entity, get_current_turn_entity } from '../src/fight_state.js'
-import { manhattan_distance } from '../src/cell.js'
+import { manhattan } from '../src/combat_grid.js'
 
 const spell_templates = normalize_spell_templates([]) // registers MOB_ATTACK_TEMPLATE
 
@@ -105,7 +105,7 @@ const drive = (state, ctx, turns) => {
 }
 
 const dist_to_player = (state, id) =>
-  manhattan_distance(find_entity(state, id).cell, find_entity(state, 'p0').cell)
+  manhattan(find_entity(state, id).cell, find_entity(state, 'p0').cell)
 
 describe('#974 mob AI closes the distance over a multi-round fight (turns.move:281-299 twin)', () => {
   test('both mobs end up STRICTLY closer to the player after one round each', () => {
@@ -158,11 +158,9 @@ describe('#974 mob AI closes the distance over a multi-round fight (turns.move:2
     ]) {
       const { cell } = find_entity(late, id)
       expect(cell).not.toEqual(from)
-      expect(manhattan_distance(cell, anchor)).toBeLessThan(
-        manhattan_distance(from, anchor),
-      )
-      expect(manhattan_distance(cell, P_CELL)).toBeGreaterThanOrEqual(
-        manhattan_distance(from, P_CELL),
+      expect(manhattan(cell, anchor)).toBeLessThan(manhattan(from, anchor))
+      expect(manhattan(cell, P_CELL)).toBeGreaterThanOrEqual(
+        manhattan(from, P_CELL),
       )
     }
   })

@@ -2,12 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import {
-  cell_key,
-  manhattan_distance,
-  chebyshev_distance,
-  neighbors_4dir,
-} from '../src/cell.js'
+import { cell_key, chebyshev_distance, neighbors_4dir } from '../src/cell.js'
+import { manhattan } from '../src/combat_grid.js'
 
 describe('cell', () => {
   test('cell_key is stable and distinct', () => {
@@ -17,9 +13,9 @@ describe('cell', () => {
   })
 
   test('manhattan distance', () => {
-    expect(manhattan_distance({ x: 0, y: 0 }, { x: 0, y: 0 })).toBe(0)
-    expect(manhattan_distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(7)
-    expect(manhattan_distance({ x: -2, y: 1 }, { x: 2, y: -1 })).toBe(6)
+    expect(manhattan({ x: 0, y: 0 }, { x: 0, y: 0 })).toBe(0)
+    expect(manhattan({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(7)
+    expect(manhattan({ x: -2, y: 1 }, { x: 2, y: -1 })).toBe(6)
   })
 
   test('chebyshev distance', () => {

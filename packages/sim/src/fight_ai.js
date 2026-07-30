@@ -16,11 +16,10 @@
 // mob that can reach a firing cell always fires; a mob that can't advances (strictly closer, never a lateral no-op).
 //
 // This planner REUSES the sim's own `get_reachable_cells` / `find_path_4dir` (pathfind.js — the Move BFS queue-order
-// twin), `manhattan_distance` + `encode` (cell.js / combat_grid.js — the same cell metric + index the chain uses),
+// twin), `manhattan` + `encode` (combat_grid.js — the same cell metric + index the chain uses),
 // and `can_target` (spell_targeting.js). The reducer feeds the actions back through its own move/cast handlers.
 
-import { manhattan_distance } from './cell.js'
-import { encode } from './combat_grid.js'
+import { encode, manhattan } from './combat_grid.js'
 import { find_path_4dir, get_reachable_cells } from './pathfind.js'
 import { find_entity, living_enemies, team_of } from './fight_state.js'
 import { is_invisible } from './fight_statuses.js'
@@ -46,7 +45,7 @@ const nearest_enemy = (state, entity) => {
   let best = null
   let best_dist = Infinity
   for (const enemy of enemies) {
-    const dist = manhattan_distance(entity.cell, enemy.cell)
+    const dist = manhattan(entity.cell, enemy.cell)
     if (dist < best_dist) {
       best_dist = dist
       best = enemy
@@ -133,7 +132,7 @@ const closest_cast_cell = (
       context,
     )
     if (!cast) continue
-    const dist = manhattan_distance(cell, target)
+    const dist = manhattan(cell, target)
     const idx = encode(cell.x, cell.y)
     if (
       cost < best_cost ||
@@ -161,12 +160,12 @@ const closest_cast_cell = (
  */
 const best_toward = (start, target, reachable) => {
   let best = start
-  let best_dist = manhattan_distance(start, target)
+  let best_dist = manhattan(start, target)
   let best_cost = 0
   let best_idx = encode(start.x, start.y)
   for (const { cell, cost } of reachable) {
     if (cell.x === target.x && cell.y === target.y) continue
-    const dist = manhattan_distance(cell, target)
+    const dist = manhattan(cell, target)
     const idx = encode(cell.x, cell.y)
     if (
       dist < best_dist ||

@@ -24,6 +24,7 @@ const restore_browser_globals = install_browser_globals({ with_document: true, w
 
 afterAll(restore_browser_globals)
 
+const { manhattan } = await import('@aresrpg/sim/combat_grid')
 const { encode } = await import('@aresrpg/fight/los')
 const { STATUS_WON } = await import('@aresrpg/fight/board_state')
 const { fight_view } = await import('@aresrpg/fight/project')
@@ -75,8 +76,6 @@ const state_of = () => ({
   placements: { [BOARD.start_cells_a[0]]: 'sim_c1' },
   mob_picks: { [BOARD.start_cells_b[0]]: { template_id: MOB.id, level: 1 } },
 })
-
-const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
 
 /**
  * Play the fight to its end through the SHIM'S OWN doors: the player holds position and casts the moment the

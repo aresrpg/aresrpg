@@ -3,12 +3,11 @@
 // Spell range / linearity / AoE / targeting validation.
 //
 // PORTED from koshi-2d/.../shared/src/spells/targeting.ts. Pure integer math. REUSES the sim's own
-// `manhattan_distance` (cell.js) and `has_line_of_sight` (visibility.js) instead of the donor's
+// `manhattan` (combat_grid.js) and `has_line_of_sight` (visibility.js) instead of the donor's
 // pathfinding.ts copies. area_type is the sim-internal UPPERCASE canon ('CIRCLE'|'SQUARE'|'LINE'),
 // produced by spell_templates.js from the seed's lowercase JSON.
 
-import { manhattan_distance } from './cell.js'
-import { GRID_H, GRID_W } from './combat_grid.js'
+import { GRID_H, GRID_W, manhattan } from './combat_grid.js'
 import { has_line_of_sight } from './visibility.js'
 import {
   SHAPE_ALLMAP,
@@ -58,7 +57,7 @@ export const effect_hits = (target_filter, is_caster, same_team) => {
  * @returns {boolean}
  */
 export const is_in_range = (spell, caster, target, range_bonus = 0) => {
-  const distance = manhattan_distance(caster, target)
+  const distance = manhattan(caster, target)
   const [min_range, max_range] = spell.range
   const effective_max = spell.modifiable_range
     ? max_range + range_bonus
@@ -190,7 +189,7 @@ const cells_in_circle = (target, radius) => {
   const cells = []
   for (let dx = -radius; dx <= radius; dx++)
     for (let dy = -radius; dy <= radius; dy++)
-      if (manhattan_distance({ x: 0, y: 0 }, { x: dx, y: dy }) <= radius)
+      if (manhattan({ x: 0, y: 0 }, { x: dx, y: dy }) <= radius)
         cells.push({ x: target.x + dx, y: target.y + dy })
   return cells
 }
@@ -290,11 +289,11 @@ export const get_aoe_cells = (spell, target, caster) => {
   if (shape !== undefined) {
     if (shape === SHAPE_POINT) return [target]
     if (shape === SHAPE_CIRCLE)
-      return scan_grid(cell => manhattan_distance(target, cell) <= area)
+      return scan_grid(cell => manhattan(target, cell) <= area)
     if (shape === SHAPE_CROSS)
       return scan_grid(
         cell =>
-          manhattan_distance(target, cell) <= area &&
+          manhattan(target, cell) <= area &&
           (cell.x === target.x || cell.y === target.y),
       )
     if (shape === SHAPE_LINE && caster)
@@ -302,7 +301,7 @@ export const get_aoe_cells = (spell, target, caster) => {
     if (shape === SHAPE_TBAR && caster)
       return cells_in_tbar(caster, target, area)
     if (shape === SHAPE_RING)
-      return scan_grid(cell => manhattan_distance(target, cell) === area)
+      return scan_grid(cell => manhattan(target, cell) === area)
     if (shape === SHAPE_ALLMAP) return scan_grid(() => true)
     if (shape === SHAPE_CONE && caster)
       return cells_in_cone(caster, target, area)

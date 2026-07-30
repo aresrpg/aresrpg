@@ -16,14 +16,8 @@
  */
 export const cell_key = (x, y) => `${x},${y}`
 
-/**
- * Manhattan (4-directional) distance between two cells.
- * @param {Cell} a
- * @param {Cell} b
- * @returns {number}
- */
-export const manhattan_distance = (a, b) =>
-  Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+// Compatibility name only; the implementation lives with the encoded stride in combat_grid (#1536).
+export { manhattan as manhattan_distance } from './combat_grid.js'
 
 /**
  * Chebyshev (king-move) distance between two cells.

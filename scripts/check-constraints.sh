@@ -342,7 +342,7 @@ asset_codename_gate() {
 # Every check carries a POSITIVE CONTROL: the home's own line must match the pattern. A clean scan whose
 # pattern silently stopped matching anything reads exactly like a clean tree, and is a lie.
 SPATIAL_HOME='packages/sim/src/combat_grid.js'
-SPATIAL_METRIC_HOME='packages/sim/src/cell.js'
+SPATIAL_METRIC_HOME="$SPATIAL_HOME"
 SPATIAL_ENGINE_MIRROR='packages/engine/src/binding/board_anchor.js'
 SPATIAL_SOURCE_PATHSPEC=(
   ':(glob)packages/sim/src/**/*.js' ':(glob)packages/fight/src/**/*.js'
@@ -404,7 +404,7 @@ spatial_vocabulary_gate() {
     'hand-rolled cell decode' \
     "DECODE GATE FAILED. Use decode()/cell_x()/cell_y() from $SPATIAL_HOME — a second decode is a second board." || failed=1
 
-  spatial_scan 'Math\.abs\([^()]*\.x[^()]*\)[[:space:]]*\+[[:space:]]*Math\.abs\([^()]*\.y[^()]*\)' \
+  spatial_scan 'Math\.abs\([^()]*\.x[^()]*\)[[:space:]]*\+[[:space:]]*Math\.abs\([^()]*\.y[^()]*\)|abs_diff\(coordinate_x\(' \
     "$SPATIAL_METRIC_HOME" 'inlined manhattan distance' \
     "MANHATTAN GATE FAILED. Use manhattan_distance() from $SPATIAL_METRIC_HOME (or manhattan() from $SPATIAL_HOME for encoded cells) — this is the spell-range metric, it gets ONE definition." || failed=1
 

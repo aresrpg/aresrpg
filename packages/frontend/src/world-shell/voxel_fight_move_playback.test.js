@@ -26,6 +26,7 @@
 
 import { describe, expect, it } from 'bun:test'
 import { GRID_W, GRID_H, encode, decode } from '@aresrpg/fight/los'
+import { manhattan } from '@aresrpg/sim/combat_grid'
 
 import { legal_move_path } from '../game/screens/dungeon-grid.js'
 import { create_pace_queue } from '../fight-engine/overlay_intents.js'
@@ -61,8 +62,6 @@ const play_move_segment = (rig, waypoints) => {
   if (waypoints.length) rig.cell = { ...waypoints[waypoints.length - 1] }
   return segment
 }
-
-const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
 
 // A cell C lies within the RECTANGLE the straight world-space lerp a→b sweeps — the region board_entities slides a
 // body across for a non-adjacent start→wp1 jump (a cell-stepped BFS walk sweeps only adjacent cells and never this).

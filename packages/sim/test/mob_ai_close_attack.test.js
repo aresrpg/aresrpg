@@ -17,7 +17,7 @@ import {
   MOB_ATTACK_ID,
 } from '../src/spell_templates.js'
 import { get_current_turn_entity, find_entity } from '../src/fight_state.js'
-import { manhattan_distance } from '../src/cell.js'
+import { manhattan } from '../src/combat_grid.js'
 import { TF_NOT_TEAM } from '../src/spell_effect.js'
 
 // A ranged bolt: range band [3,5], LOS-required, cost 3. Registered RAW (like MOB_ATTACK_TEMPLATE) so the DAMAGE
@@ -152,7 +152,7 @@ const resolve_mob_turn = ({ p_cell, m_cell, mob_opts }) => {
   const end_cell = find_entity(after, 'm0').cell
   return {
     end_cell,
-    end_dist: manhattan_distance(end_cell, p_cell),
+    end_dist: manhattan(end_cell, p_cell),
     hp_delta: hp_before - find_entity(after, 'p0').health,
     cast: events.some(e => e.type === 'fight_cast'),
     events,
@@ -206,6 +206,6 @@ describe('#606 mob AI — steps to its range band and attacks', () => {
     const start = { x: 18, y: 10 }
     const p_cell = { x: 10, y: 10 }
     const r = resolve_mob_turn({ p_cell, m_cell: start, mob_opts: { mp: 3 } })
-    expect(r.end_dist).toBeLessThan(manhattan_distance(start, p_cell)) // strictly closer, not lateral
+    expect(r.end_dist).toBeLessThan(manhattan(start, p_cell)) // strictly closer, not lateral
   })
 })

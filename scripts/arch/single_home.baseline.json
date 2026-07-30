@@ -92,8 +92,6 @@
     "make_outline_material · packages/engine/src/tactical/board_highlight_materials.js": 1,
     "make_rng · packages/engine/src/gen/trees/tree_gen.js": 1,
     "make_rng · packages/frontend/src/game/ambient_placement.js": 1,
-    "manhattan · packages/fight/src/bot/read.js": 1,
-    "manhattan · packages/sim/src/combat_grid.js": 1,
     "MAX_BUY_QUANTITY · packages/frontend/src/pages/shop_buy_plan.ts": 1,
     "MAX_BUY_QUANTITY · packages/sdk/src/sui/write/items_shop.js": 1,
     "MAX_MOBS_PER_PTB · packages/move/scripts/apply_loot_payload.mjs": 1,
