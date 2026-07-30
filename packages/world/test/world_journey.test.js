@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // W4 — THE WORLD-JOURNEY headless scenario (D770a): the world twin of the fight core's solo-lifecycle harness.
-// ONE join → spawn → search → claim walk across ALL THREE cores driven by plain-object inputs — session_gate
+// ONE atomic create+join → spawn → search → claim walk across ALL THREE cores driven by plain-object inputs — session_gate
 // (which session is live), spawns_zones (where I am proven + what is claimable), presence (who is around) —
 // with cross-domain facts crossing ONLY as typed inputs ferried by a tiny composition root (cores never import
 // cores). The claim ends at the exact `fight_entry` seam the fight core's solo scenario picks up, and a
@@ -53,17 +53,14 @@ function world() {
   return { session, spawns, presence, s, sp, ferry_bound_world }
 }
 
-describe('W4 — the world journey: join → spawn → search → claim → fight handoff', () => {
+describe('W4 — the world journey: atomic membership → spawn → search → claim → fight handoff', () => {
   it('walks the full solo lifecycle across the three cores, ending at the fight_entry seam', () => {
     const w = world()
     const view = () =>
       plan_scene({ show_world: true, authenticated: true, on_world_tab: true, ...w.session.getState() })
 
-    // ── JOIN — a create→play join holds ONE veil, then binding_published flips plan_scene to RESIDENT ──
-    w.s({ type: 'join_started', character_id: ALICE })
-    expect(view().action).toBe('hold') // joining, world unknown → the one loading veil (never a spectate flash)
+    // ── ATOMIC CREATE+JOIN — the settled receipt publishes its already-committed membership ──
     w.s({ type: 'binding_published', character_id: ALICE, world: WORLD, source: 'manual' })
-    w.s({ type: 'join_ended' })
     expect(view()).toEqual({ action: 'resident', key: `lobby:${ALICE}:${WORLD}` }) // BOUND → the resident session
 
     // FERRY the bound world into the spawns + presence doors (the composition root's job, not a cross-import).

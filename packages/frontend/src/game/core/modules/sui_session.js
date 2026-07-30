@@ -38,8 +38,8 @@ export default function sui_session() {
         const character = get_state().sui.characters.find((row) => row.id === character_id)
         // An indexed roster row carries explicit membership (`string | null`). Ferry that selection through
         // the world shell's ONE typed-input door so its character-keyed scene remounts with the HUD. An
-        // optimistic create row deliberately has `world_id === undefined`; begin_join owns that receipt path,
-        // so never invent a confirmed-unbound binding (or release its joining hold) here.
+        // An optimistic row can still have `world_id === undefined`; creation publishes the atomic receipt's
+        // settled binding directly, so never invent a confirmed-unbound binding from that transient row.
         if (character?.world_id !== undefined) {
           last_published_id = character.id
           session_gate_input({

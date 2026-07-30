@@ -24,7 +24,6 @@ import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party, wire_party_reads } from '../world-shell/party_store.js'
 import { wire_group_loop } from '../world-shell/group_wiring.js'
 import { wire_fast_travel_effects } from '../world-shell/fast_travel_effects.js'
-import { wire_join_request_effect } from '../world-shell/join_request_effect.js'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { read_world_biome } from '../world-shell/world_biome.js'
 import { resolve_engine_recipe } from '../chain/deployment'
@@ -537,9 +536,6 @@ function create_session(
     // FAST TRAVEL: arm the dragon-ride effect edges (resolve /v1 world+pos → gate → join/fly, + lifecycle
     // toasts). Idempotent, one subscription for the app lifetime — survives the cross-world session swap.
     wire_fast_travel_effects()
-    // CREATE→PLAY JOIN (v33): arm the join-request edge — the create receipt's join_request drives the
-    // actual world join off the SAME join/boot seam. Idempotent, one subscription for the app lifetime.
-    wire_join_request_effect()
     // Pass the IN-HAND character — the store read races the mount (see _publish_state).
     use_party.getState()._publish_state(character)
   }

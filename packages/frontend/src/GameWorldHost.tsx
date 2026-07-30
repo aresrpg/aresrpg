@@ -8,7 +8,7 @@ import { use_auth, type AuthState } from './auth'
 import { use_spectate_gate } from './stores/spectate_gate'
 import { use_follow } from './follow'
 import { use_mobile_mode } from './game/screens/hud/mobile_layout.js'
-import { use_world_binding, reset_world_binding, fetch_world_binding, end_join } from './world-shell/session_gate.js'
+import { use_world_binding, reset_world_binding, fetch_world_binding } from './world-shell/session_gate.js'
 import { resolve_world_biome } from './world-shell/world_biome.js'
 import { resolve_checkpoint_spawn } from './world-shell/world_checkpoint.js'
 import { restore_world_position } from './world-shell/spawns_adapter.js'
@@ -124,18 +124,13 @@ export function GameWorldHost(): ReactElement {
   const interactive = in_app || spectate_chosen
   const cpu_enabled = CPU_ENABLED
 
-  // SPECTATE-UNTIL-JOINED: the selected character's WORLD BINDING gates the resident
-  // session — a CONFIRMED-UNBOUND character gets the D183 spectate backdrop (no controller/physics/avatar)
-  // while the auto-join runs; the join's publish flips this reactively and the scene swaps to resident.
+  // The selected character's settled WORLD BINDING gates the resident session. Creation publishes the
+  // membership proven by its atomic mint receipt; a CONFIRMED-UNBOUND legacy row stays on the D183 spectate
+  // backdrop until the player explicitly switches worlds.
   // UNKNOWN (undefined) stays on the session path — the boot effect decides POST-RESOLVE, so an already-
   // bound character enters resident DIRECTLY (no spectate flash).
   const bound_world = use_world_binding((s) => s.world)
   const bound_char_id = use_world_binding((s) => s.character_id)
-  // ONE-BOOT create→play: a fresh create drives create → join → spawn as ONE loading HOLD.
-  // While joining, the plan never yields spectate (no sky-view detour) and the host shows ONE loading veil;
-  // the resident scene boots ONCE when the join resolves the world.
-  const joining = use_world_binding((s) => s.joining)
-
   // THE scene plan (pure — unit-tested): the concrete ACTION + the mount-identity KEY. The KEY now encodes
   // the CHARACTER too, so a decorative lobby (no character) and the resident lobby (character X) are DIFFERENT
   // keys — the host boots into the freshly-created character reactively, WITHOUT the old spectate→resident
@@ -144,7 +139,6 @@ export function GameWorldHost(): ReactElement {
     show_world,
     authenticated: !!address,
     on_world_tab: active,
-    joining,
     world: bound_world,
     character_id: bound_char_id,
     following,
@@ -205,10 +199,8 @@ export function GameWorldHost(): ReactElement {
   // Lazy-boot / swap the scene to match the PLAN. The game chunk is dynamically imported on first need
   // (own bundle); a soft session-bridge failure still renders the live world. A monotonic token cancels
   // a superseded boot (e.g. spectate -> session on login) so concurrent transitions resolve to the plan.
-  // ONE-BOOT create→play: the 'hold' action keeps ONE loading veil (never the spectate
-  // detour) until the join resolves the world; then the resident scene boots ONCE with character + world
-  // + biome + checkpoint all known. `mounted_key` records the ACTUAL mount identity (character-keyed) so
-  // the binding-driven re-render matches and never remount-thrashes.
+  // Atomic create publishes character + world together. `mounted_key` records the ACTUAL mount identity
+  // (character-keyed) so the binding-driven re-render matches and never remount-thrashes.
   useEffect(() => {
     // 'hidden' (meta tab) and 'await-auth' (BOOT-ONCE hold — auth still resolving a stored session) both mean
     // "do nothing": no mount, no dispose. await-auth holds whatever is up (nothing at boot, or the landing's
@@ -220,20 +212,6 @@ export function GameWorldHost(): ReactElement {
     // The confirmed logged-out landing plans 'spectate' — the live world IS the login
     // backdrop again (the d6d32bc 'static' login gate is repealed in plan_scene; the watch-live-world
     // gesture survives below as the INTERACTION gate only).
-
-    // HOLD — a create→play join is in flight and the world is not yet resolved. Tear down any non-resident
-    // scene (the decorative lobby that booted behind the create form) and show the ONE loading veil (rendered
-    // below on `joining`). The resident scene boots when the plan flips to 'resident' (the join landed).
-    if (action === 'hold') {
-      if (scene.current) {
-        game_log('boot-trace', `dispose ${mounted_key.current} → join-hold`)
-        scene.current.destroy()
-        scene.current = null
-      }
-      mounted_key.current = scene_key
-      game_log('boot-trace', 'HOLD — loading veil up (spectate detour suppressed)')
-      return
-    }
 
     void (async () => {
       let game: typeof import('./game/embed.js')
@@ -345,9 +323,6 @@ export function GameWorldHost(): ReactElement {
         })
         scene.current.set_paused(!show_world || document.hidden)
         mounted_key.current = mounted
-        // A terminal scene is up — release the create→play loading hold (idempotent no-op for normal boots,
-        // where `joining` was never set). The engine's own first-load reveal covers the mount pop-in.
-        end_join()
       }
     })()
   }, [show_world, scene_key, action, following, bound_world])
@@ -467,25 +442,6 @@ export function GameWorldHost(): ReactElement {
         <Suspense fallback={null}>
           <CpuOverlay />
         </Suspense>
-      )}
-      {/* ONE-BOOT create→play loading veil: from the create tx landing until the resident
-          scene boots, the app holds ONE honest "Entering the world" surface over the game-world card — no
-          spectate sky-view detour, no visible decorative→resident boot churn. Gated on `joining` alone, so
-          it never shows on a normal boot (joining is never set there). Covers the HUD (z-30 > 12) so the
-          bare chrome doesn't flash mid-join; app-level toasts (z-50) still surface a join-failed message. */}
-      {show_world && joining && (
-        <div
-          style={{
-            ...frame,
-            zIndex: 30,
-            pointerEvents: 'auto',
-            background: 'radial-gradient(ellipse at 50% 35%, #141420, #0a0a0f)',
-          }}
-          className="flex flex-col items-center justify-center gap-5"
-        >
-          <span className="w-6 h-6 rounded-full border-2 border-cyan/25 border-t-cyan animate-spin" />
-          <div className="text-text text-[11px] tracking-[0.28em] uppercase">{i18n.t('auth.entering_world')}</div>
-        </div>
       )}
       {/* HACK MODE'S RADIO — deliberately NOT gated on `active`/`show_world` (owner ruling): it must keep
           playing on every meta page, not just the world tab. Self-gates internally on the session's hack-mode

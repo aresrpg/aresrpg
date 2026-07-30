@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// S-57 session-gate ADAPTER (D770a W1) — the frontend edge of @aresrpg/world's session_gate core. The FOLD,
-// the projections (plan_scene / scene_target / resolved_mode) and the typed-input contract live in the
-// package; THIS file owns exactly the effects: the one store instance + its React binding, the join-failsafe
-// TIMER (executor of the core's {character_id, deadline} effect request), the stale-poll log row, the
-// boot-trace logs, and the RPC binding read. No async callback ever writes — everything dispatches typed
-// inputs through the core's one door.
+// Frontend adapter for @aresrpg/world's settled character↔world binding core. Creation writes membership in
+// its own PTB (#1714); this edge owns only the singleton store, stale-poll logging, and RPC binding reads.
 
 import { useStore } from 'zustand'
-import { create_session_gate_store, subscribe_join_failsafe, subscribe_stale_poll } from '@aresrpg/world/session_gate'
+import { create_session_gate_store, subscribe_stale_poll } from '@aresrpg/world/session_gate'
 
 import { game_log } from '../core/log.js'
 
@@ -27,31 +23,6 @@ export const use_world_binding = Object.assign((selector) => useStore(session_ga
   subscribe: (listener) => session_gate_store.subscribe(listener),
 })
 
-// ── THE FAILSAFE TIMER EDGE — the one executor of the core's effect request. `unref` where available
-// (node/bun) so a pending failsafe never keeps a test process alive; a no-op in the browser.
-let join_timer = null
-subscribe_join_failsafe(session_gate_store, {
-  arm: ({ character_id, deadline }) => {
-    join_timer = setTimeout(
-      () => {
-        join_timer = null
-        const { joining, character_id: current } = session_gate_store.getState()
-        if (joining && current === character_id)
-          game_log('boot-trace', 'join failsafe fired — releasing the loading hold to chain-truth')
-        session_gate_store.getState().input({ type: 'join_timeout', character_id })
-      },
-      Math.max(0, deadline - Date.now())
-    )
-    if (join_timer && typeof (/** @type {any} */ (join_timer).unref) === 'function')
-      /** @type {any} */ (join_timer).unref()
-  },
-  clear: () => {
-    if (!join_timer) return
-    clearTimeout(join_timer)
-    join_timer = null
-  },
-})
-
 // ── THE STALE-POLL LOG EDGE — each discarded poll row lands exactly once as one honest log line.
 subscribe_stale_poll(session_gate_store, ({ character_id, target }) =>
   game_log(
@@ -60,19 +31,13 @@ subscribe_stale_poll(session_gate_store, ({ character_id, target }) =>
   )
 )
 
-// THE JOIN-REQUEST EDGE (the create RECEIPT → the actual world join) lives in its OWN module
-// (join_request_effect.js), NOT here: world_join.js publishes BACK into this gate (publish_world_binding), so
-// wiring the executor inside the gate would close a dependency cycle (depcruise no-circular). It is an
-// "effects at the edges" wire, armed at scene boot beside wire_fast_travel_effects (embed_voxel.js).
-
 /** Dispatch one typed session-gate input without exposing store plumbing at async call sites. */
 export function session_gate_input(input) {
   session_gate_store.getState().input(input)
 }
 
 /** Publish the selected character's binding (undefined never published — a read always CONFIRMS bound/unbound).
- *  Merges — never clobbers `joining` (the create→play hold releases on its own end_join / the resident mount).
- *  `source`: 'manual' (default — join_world_action/auto_join_world's chain-truth publish, fetch_world_binding's
+ *  `source`: 'manual' (default — creation/manual travel chain truth, fetch_world_binding's
  *  resolve-time read) arms the core's pending-confirmation guard; 'poll' (DiscoveryPrompts' char-doc poll only)
  *  is discarded while it disagrees with a pending trusted write, and confirms/clears the guard once it agrees. */
 export function publish_world_binding(character_id, world, source = 'manual') {
@@ -96,22 +61,6 @@ export function rebind_world_character(character_id, world_id) {
   if (!character_id) throw new Error('cannot rebind the world session without a character id')
   if (world_id === undefined) throw new Error(`character ${character_id} has no indexed world binding`)
   session_gate_input({ type: 'character_selected', character_id, world_id })
-}
-
-/** Enter the create→play JOINING hold for `character_id` (loading veil up, spectate suppressed). One writer:
- *  the create flow (roster/store.ts) the instant the create tx lands. The core outputs the failsafe
- *  effect request; the timer edge above executes it. */
-export function begin_join(character_id) {
-  const id = character_id ?? null
-  session_gate_input({ type: 'join_started', character_id: id })
-  game_log('boot-trace', `begin_join ${id ?? '?'} — one-boot create→play hold armed`)
-}
-
-/** Leave the JOINING hold. Called on the resident mount (happy) and the join failure (sad → honest spectate). */
-export function end_join() {
-  const was_joining = session_gate_store.getState().joining
-  session_gate_input({ type: 'join_ended' })
-  if (was_joining) game_log('boot-trace', 'end_join — loading hold released')
 }
 
 /** Back to UNKNOWN (wallet/account switch — a stale binding must never leak a controller across accounts). */

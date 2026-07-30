@@ -4,76 +4,37 @@
 // REGRESSION seam for the "HERE bound to the wrong character" bug: a doc from another character (the exact
 // state use_rpc_view's keep-last-good serves across a selection switch) must never bind the location line.
 
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 
 import characters_fx from '../../../../rpc/fixtures/characters.json'
 import {
-  derive_discovery_join,
+  derive_discovery_binding,
   derive_world_panel,
   derive_world_cards,
   filter_world_cards,
 } from './world_travel_state.js'
 
-// The authoritative roster these cases need is "the worlds this fixture's characters are bound to" — derived
-// from the fixture itself, never from the seeded manifest (chain/deployment's T62_WORLDS). Reading the live
-// corpus made the fixture's own bound world vanish at every republish (a fresh world lineage), turning a
-// JOINED character into a phantom 'migration'; it also warmed a module-global at import, the exact class
-// scripts/order-independence-gate.sh guards. Migration against a foreign roster is covered below, explicitly.
-const fixture_live_world_ids = new Set(
-  characters_fx.characters.map(({ world }) => world).filter((world) => typeof world === 'string' && world)
-)
-
-describe('derive_discovery_join (refresh auto-join door)', () => {
-  test('a joined /v1 character followed by an ambiguous empty read never fires join_world', () => {
+describe('derive_discovery_binding (settled membership only)', () => {
+  test('a joined /v1 character resolves its world; an ambiguous empty read proves nothing', () => {
     const joined = characters_fx.characters[0]
-    const join_world = mock(() => {})
-    const live_world_ids = fixture_live_world_ids
-    // The premise, not the subject: an empty roster proves nothing, so every reason would be null for free.
-    expect(live_world_ids.has(joined.world)).toBe(true)
-
-    for (const documents of [characters_fx.characters, []]) {
-      const decision = derive_discovery_join({
-        character_id: joined.id,
-        documents,
-        live_world_ids,
-        created_this_session: false,
-      })
-      if (decision.reason) join_world(decision)
-    }
-
-    expect(join_world).toHaveBeenCalledTimes(0)
+    expect(derive_discovery_binding({ character_id: joined.id, documents: characters_fx.characters })).toMatchObject({
+      world_id: joined.world,
+      confirmed: true,
+    })
+    expect(derive_discovery_binding({ character_id: joined.id, documents: [] })).toMatchObject({
+      world_id: null,
+      confirmed: false,
+    })
   })
 
-  test('only the selected row with an explicit null world proves unjoined; only this-session creation is silent', () => {
+  test('only the selected row with an explicit null world proves unbound, without scheduling a transaction', () => {
     const character_id = characters_fx.characters[0].id
-    const live_world_ids = fixture_live_world_ids
-    const decide = (documents, created_this_session = false) =>
-      derive_discovery_join({ character_id, documents, live_world_ids, created_this_session })
+    const decide = (documents) => derive_discovery_binding({ character_id, documents })
 
-    expect(decide([]).reason).toBeNull()
-    expect(decide([{ id: '0xother', world: null }]).reason).toBeNull()
-    expect(decide([{ id: character_id }]).reason).toBeNull()
-    expect(decide([{ id: character_id, world: null }]).reason).toBe('unjoined')
-    expect(decide([{ id: character_id, world: null }], true).reason).toBe('created')
-  })
-
-  test('migration requires a proven bound world and a non-empty authoritative live roster', () => {
-    const joined = characters_fx.characters[0]
-    const stale = derive_discovery_join({
-      character_id: joined.id,
-      documents: characters_fx.characters,
-      live_world_ids: new Set(['0xother_live_world']),
-      created_this_session: false,
-    })
-    const missing_roster = derive_discovery_join({
-      character_id: joined.id,
-      documents: characters_fx.characters,
-      live_world_ids: new Set(),
-      created_this_session: false,
-    })
-
-    expect(stale.reason).toBe('migration')
-    expect(missing_roster.reason).toBeNull()
+    expect(decide([]).confirmed).toBe(false)
+    expect(decide([{ id: '0xother', world: null }]).confirmed).toBe(false)
+    expect(decide([{ id: character_id }]).confirmed).toBe(false)
+    expect(decide([{ id: character_id, world: null }])).toMatchObject({ world_id: null, confirmed: true })
   })
 })
 

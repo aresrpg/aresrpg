@@ -78,11 +78,10 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
     await wait_for_selected_character(PLAYER)
     expect(context.get_state().selected_character_id).toBe(PLAYER)
     expect(persisted).toEqual([PLAYER])
-    const { character_id, world, joining } = use_world_binding.getState()
-    expect({ character_id, world, joining }).toEqual({
+    const { character_id, world } = use_world_binding.getState()
+    expect({ character_id, world }).toEqual({
       character_id: PLAYER,
       world: PLAYER_WORLD,
-      joining: false,
     })
     expect(trace).toEqual([`persisted:${PLAYER}`, 'follow:stopped', `rebound:${PLAYER}`, `selected:${PLAYER}`])
     expect(failures).toEqual([])

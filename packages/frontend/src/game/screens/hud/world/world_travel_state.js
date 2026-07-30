@@ -5,7 +5,7 @@
 // resource/mob details.
 //
 // THREE pure folds, zero effects (ONE-PIPELINE law — the components render these outputs verbatim):
-//   • derive_discovery_join — the selected character's proof-gated automatic join decision.
+//   • derive_discovery_binding — the selected character's identity-guarded settled membership.
 //   • derive_world_panel — the SELECTED character's location line. IDENTITY-GUARDED: the char-doc poll
 //     (use_rpc_view) keeps its last-landed data across a selection switch and across failed polls, so the
 //     doc in hand can belong to a DIFFERENT character. A doc whose id does not match the selected character
@@ -20,21 +20,18 @@
 /** @typedef {'no_character'|'unknown'|'not_in_world'|'in_world'} PanelStatus */
 
 /**
- * Resolve the selected character's automatic world-join reason from the character poll.
+ * Resolve the selected character's settled membership from the character poll.
  * @param {{
  *   character_id: string | null,
  *   documents: Array<{ id?: string, world?: string | null }> | null,
- *   live_world_ids: Set<string>,
- *   created_this_session: boolean,
  * }} args
  * @returns {{
- *   reason: 'created'|'unjoined'|'migration'|null,
  *   world_id: string|null,
  *   document: { id?: string, world?: string|null }|null,
  *   confirmed: boolean,
  * }}
  */
-export function derive_discovery_join({ character_id, documents, live_world_ids, created_this_session }) {
+export function derive_discovery_binding({ character_id, documents }) {
   const document =
     character_id && Array.isArray(documents)
       ? (documents.find((candidate) => candidate?.id === character_id) ?? null)
@@ -42,26 +39,14 @@ export function derive_discovery_join({ character_id, documents, live_world_ids,
   // A missing/foreign row or absent field proves NOTHING. In particular, [] is a successful transport response
   // but not proof that this on-chain character is unjoined.
   if (!document || !Object.prototype.hasOwnProperty.call(document, 'world'))
-    return { reason: null, world_id: null, document, confirmed: false }
+    return { world_id: null, document, confirmed: false }
 
-  if (document.world === null)
-    return {
-      reason: live_world_ids.size === 0 ? null : created_this_session ? 'created' : 'unjoined',
-      world_id: null,
-      document,
-      confirmed: true,
-    }
+  if (document.world === null) return { world_id: null, document, confirmed: true }
 
   if (typeof document.world !== 'string' || !document.world)
-    return { reason: null, world_id: null, document, confirmed: false }
+    return { world_id: null, document, confirmed: false }
 
-  const world_id = document.world
-  return {
-    reason: live_world_ids.size > 0 && !live_world_ids.has(world_id) ? 'migration' : null,
-    world_id,
-    document,
-    confirmed: true,
-  }
+  return { world_id: document.world, document, confirmed: true }
 }
 
 /**
