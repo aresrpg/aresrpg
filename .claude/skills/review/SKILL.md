@@ -78,6 +78,7 @@ and that both sides of the twin moved in the same commit.
   but data (see `CLAUDE.md`).
 - `.claude/**`, `CLAUDE.md`, `.github/`, and anything else CODEOWNERS marks high-trust get read
   twice before touching.
+- Does every added file belong in a public repository permanently, or is it session material (analysis, session exhaust, private voice)? Session material never lands.
 
 ## 9. Before `gh pr create`
 
