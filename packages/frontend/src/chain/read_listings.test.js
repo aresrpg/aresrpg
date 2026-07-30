@@ -91,6 +91,7 @@ const tmpl_by_type = new Map([
 
 describe('build_listable_items — /v1/owner-items rows → SELL picker shape', () => {
   const picked = build_listable_items(rows, tmpl_by_type)
+  test('lowercase consumables stack in frontend listings', () => expect(picked[2].stackable).toBe(true))
 
   test('gear resolves category from its template; unscribed (level 0) falls back to template level; kiosk_id rides through', () => {
     expect(picked[0]).toEqual({

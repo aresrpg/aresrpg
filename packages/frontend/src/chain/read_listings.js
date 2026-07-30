@@ -27,8 +27,9 @@
 // the keyless `/v1/encyclopedia?kind=items` view, which carries everything this picker needs
 // (name/category/level by item_type slug — no pods/stats, which only the BUY item-detail renders).
 
+import { is_stackable_category } from '@aresrpg/sdk/items'
+
 import { get_owner_items, get_characters, get_encyclopedia } from '../rpc/client'
-import { STACKABLE_CATEGORIES } from '../constants/item_categories'
 
 import { item_damages_from_v1 } from './read_findables'
 
@@ -101,7 +102,7 @@ export function build_listing_from_view(row, tmpl_by_slug) {
   // Slug wins when it names a fine UI category (fixes the collapsed cloak→"Chestplate" mislabel); else the
   // item's chain category, then the template's, then empty → "Misc" (the frozen page's EQUIPMENT default).
   const category = ui_category_of(slug, row.item_category ?? tmpl?.category ?? '')
-  const stackable = STACKABLE_CATEGORIES.has(category)
+  const stackable = is_stackable_category(category)
   const indexed_amount = Number(row.amount)
   const quantity = Number.isSafeInteger(indexed_amount) && indexed_amount > 0 ? indexed_amount : stackable ? 0 : 1
   const template_id = String(row.template_id ?? (stackable ? row.item_id : slug))
@@ -184,7 +185,7 @@ export function build_listable_items(rows, tmpl_by_type) {
         category,
         level: Number(r.level) || Number(tmpl?.level) || 0,
         quantity: Number(r.amount) || 1,
-        stackable: STACKABLE_CATEGORIES.has(category),
+        stackable: is_stackable_category(category),
       }
     })
 }

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Store } from 'lucide-react'
 import { catalog, slugs } from 'virtual:item_catalog'
+import { is_stackable_category } from '@aresrpg/sdk/items'
 
 import type { MarketplaceListing } from '../../types/chain'
 import { use_auth } from '../../auth'
@@ -19,7 +20,6 @@ import { app_mobile_classes, use_mobile_mode } from '../../game/screens/hud/mobi
 import { ItemImage } from '../items'
 import { ItemHoverTooltip } from '../item_hover_tooltip'
 import { use_address_names } from '../../rpc/use_address_names'
-import { STACKABLE_CATEGORIES } from '../../constants/item_categories'
 import { make_catalog_lookup } from '../../pages/encyclopedia/item_catalog'
 
 import { CharactersPanel } from './characters_panel'
@@ -97,7 +97,7 @@ export function BrowsePanel() {
           browse_category: String(template?.category || listing.item.category),
           rarity: listing.item.rarity,
           appearance: listing.item.appearance,
-          stackable: STACKABLE_CATEGORIES.has(listing.item.category),
+          stackable: is_stackable_category(listing.item.category),
           total: 0,
           cheapest_unit: unit_price,
           listings: [],
