@@ -129,7 +129,7 @@ export function produce_receipt_render_turns(
   const turn_counts = new Map()
   const matches_trap = trap_matcher(trap_cells, is_trap_cell, grid_width)
   const available_traps = (trap_rows ?? []).filter((trap) => !trap.gone).map((trap) => ({ trap, consumed: false }))
-  const hit_damage = new Map()
+  const hit_outcomes = new Map()
   const remaining_health = new Map()
   const dead_fighters = new Set()
   // Hits already narrated by the walk that sprang their trap (the Moved/MobMoved branch claims them, in either
@@ -156,14 +156,27 @@ export function produce_receipt_render_turns(
           : (fighter_health?.get?.(target_id) ?? fighter_health?.[target_id])
       if (known != null && Number.isFinite(Number(known))) hp_before = Math.max(0, Number(known))
     }
-    const raw_amount = Math.max(0, Number(event.amount) || 0)
-    hit_damage.set(event.event_index, hp_before == null ? raw_amount : Math.min(raw_amount, hp_before))
     const remaining_hp = Number(event.remaining_hp)
+    const raw_amount = Math.max(0, Number(event.amount) || 0)
+    const healing = hp_before != null && Number.isFinite(remaining_hp) && remaining_hp > hp_before
+    hit_outcomes.set(event.event_index, {
+      kind: healing ? 'heal' : 'damage',
+      amount: healing
+        ? Math.min(raw_amount, remaining_hp - hp_before)
+        : hp_before == null
+          ? raw_amount
+          : Math.min(raw_amount, hp_before),
+    })
     if (Number.isFinite(remaining_hp)) remaining_health.set(target_id, Math.max(0, remaining_hp))
     else if (hp_before != null) remaining_health.set(target_id, Math.max(0, hp_before - raw_amount))
   }
 
-  const damage_of_hit = (event) => hit_damage.get(event.event_index) ?? Math.max(0, Number(event.amount) || 0)
+  const outcome_of_hit = (event) =>
+    hit_outcomes.get(event.event_index) ?? { kind: 'damage', amount: Math.max(0, Number(event.amount) || 0) }
+  const damage_of_hit = (event) => {
+    const outcome = outcome_of_hit(event)
+    return outcome.kind === 'damage' ? outcome.amount : 0
+  }
 
   // WHEN a trap became armed, within THIS receipt (#1219). `my_traps` is written OPTIMISTICALLY at draft time, so
   // by the time a receipt is narrated the client's trap ledger already holds a cell the turn only takes LATER —
@@ -323,15 +336,17 @@ export function produce_receipt_render_turns(
     for (const event of effects.filter((candidate) => candidate.kind === 'Hit')) {
       const target_id = fighter_id_from(event, 'victim', resolve_fighter_id)
       const trap_hit = trap_hits.find((candidate) => candidate.event_index === event.event_index)
-      append_to(turn, 'damage', DAMAGE_BEAT_MS, {
+      const outcome = outcome_of_hit(event)
+      const killed = outcome.kind === 'damage' && Number(event.remaining_hp) === 0
+      append_to(turn, outcome.kind, DAMAGE_BEAT_MS, {
         target_id,
-        damage: damage_of_hit(event),
+        [outcome.kind]: outcome.amount,
         new_health: event.remaining_hp,
-        killed: event.remaining_hp === 0,
+        ...(outcome.kind === 'damage' ? { killed } : {}),
         ...(trap_hit ? { trap_damage: true, trap_owner_id: trap_hit.trap_owner_id ?? null } : {}),
         source_event: event,
       })
-      if (Number(event.remaining_hp) === 0) {
+      if (killed) {
         dead_fighters.add(target_id)
         settled_cells.delete(target_id)
       }
