@@ -38,7 +38,16 @@ import { base_from_view, base_budget } from './fold.js'
 import { inbox_resolver } from './core_inbox.js'
 
 /** The rows that close a cast's effect segment — anything past one belongs to another action. */
-const SEGMENT_END = new Set(['Cast', 'TurnStarted', 'TurnEnded'])
+const SEGMENT_END = new Set(['Cast', 'TurnStarted', 'TurnEnded', 'ActionStarted', 'ActionResolved'])
+
+const segment_damages_other = (actions, from, step, caster) => {
+  for (let cursor = from; cursor >= 0 && cursor < actions.length; cursor += step) {
+    const row = actions[cursor]
+    if (SEGMENT_END.has(row.kind)) return false
+    if (row.kind === 'Hit' && fighter_key({ is_mob: row.victim_is_mob, idx: row.victim_idx }) !== caster) return true
+  }
+  return false
+}
 
 /**
  * The indices of the Cast rows whose segment hits somebody other than their caster. A DERIVATION over the ordered
@@ -54,15 +63,10 @@ const damaging_casts = (actions) => {
   actions.forEach((action, index) => {
     if (action.kind !== 'Cast') return
     const caster = fighter_key({ is_mob: action.caster_is_mob, idx: action.caster_idx })
-    for (let ahead = index + 1; ahead < actions.length; ahead++) {
-      const row = actions[ahead]
-      if (SEGMENT_END.has(row.kind)) break
-      if (row.kind !== 'Hit') continue
-      if (fighter_key({ is_mob: row.victim_is_mob, idx: row.victim_idx }) !== caster) {
-        marked.add(index)
-        break
-      }
-    }
+    // Authentic receipts emit effects before Cast. The forward arm retains unwrapped legacy/mock batches;
+    // ActionStarted/ActionResolved boundaries keep the following action's effects from leaking backward.
+    if (segment_damages_other(actions, index - 1, -1, caster) || segment_damages_other(actions, index + 1, 1, caster))
+      marked.add(index)
   })
   return marked
 }
