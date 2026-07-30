@@ -39,6 +39,16 @@ const spell = (id, effects) => ({
 })
 
 describe('an unmapped effect kind is LOUD, never silent (#952)', () => {
+  test("authored haki's taunt kind aborts normalization (#998)", () => {
+    expect(() =>
+      normalize_spell_templates([
+        spell('haki', [
+          { type: 'taunt', target: 'enemies', chance: 100, turns: 1 },
+        ]),
+      ]),
+    ).toThrow(/spell 'haki'.*effect kind taunt.*no fold arm/)
+  })
+
   test('an unknown NUMERIC kind names the spell and the kind', () => {
     const lines = captured(() =>
       normalize_spell_templates([

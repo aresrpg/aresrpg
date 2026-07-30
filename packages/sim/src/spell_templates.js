@@ -303,13 +303,13 @@ const TARGET_FILTER_MAP = {
 }
 
 /**
- * The UNSUPPORTED terminal — LOUD, always. A template normally carries several effects, so ONE unmapped kind
- * inside an otherwise-healthy spell used to vanish without a trace: the spell still cast, still folded its
- * other effects, and simply did less than it says on the tin. That silence is what let #952's whole class hide
- * (the per-template "≥1 supported effect" measurement is blind to it). One line per unmapped kind, naming the
- * spell and the kind, is the cheapest possible tripwire.
+ * The numeric UNSUPPORTED terminal stays loud while explicit twin-parity refusals fold nothing.
  */
 const unsupported = (base, spell_id, kind) => {
+  if (typeof kind === 'string')
+    throw new Error(
+      `[sim] spell '${spell_id}': authored effect kind ${kind} has no fold arm`,
+    )
   console.error(
     `[sim] spell '${spell_id}': effect kind ${kind} is not supported — it normalizes to UNSUPPORTED and will fold NOTHING`,
   )
@@ -319,8 +319,8 @@ const unsupported = (base, spell_id, kind) => {
 /**
  * Normalize one AresRPG effect into the sim's UPPERCASE SpellEffect.
  * Handlers exist for: damage, heal, steal, stun, poison, teleport, push, pull, glyph, trap (placement),
- * add/remove (stat + ap/mp buff/debuff), summon, invisibility, and reveal. Still inert (flagged TODO):
- * invulnerable, taunt, trap_modifier, and unsupported.
+ * add/remove (stat + ap/mp buff/debuff), summon, invisibility, and reveal. A lowercase authored kind without
+ * a handler is a decode error; known numeric kinds may use the explicit UNSUPPORTED parity terminal above.
  * @param {Record<string, unknown>} e  raw AresRPG effect
  * @returns {SpellEffect}
  */

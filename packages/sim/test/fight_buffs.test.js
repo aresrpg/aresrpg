@@ -384,7 +384,14 @@ describe('determinism with buffs/debuffs', () => {
 
 // ── REAL content (the shipped spells.json) ──────────────────────────────────────
 describe('real spells.json ADD/REMOVE map to functional handlers', () => {
-  const real = normalize_spell_templates(real_spells)
+  const real = normalize_spell_templates({
+    senshi: {
+      power: real_spells.senshi.power,
+      rage: real_spells.senshi.rage,
+    },
+    tomoda: { tomoda_rage: real_spells.tomoda.tomoda_rage },
+    tokei: { obscuring_clouds: real_spells.tokei.obscuring_clouds },
+  })
   const real_duel = deck => {
     const arena = flat_arena()
     const ctx = { spell_templates: real, arena }

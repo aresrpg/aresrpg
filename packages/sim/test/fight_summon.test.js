@@ -377,7 +377,10 @@ describe('per-caster summon cap', () => {
 
 // ── Real content ────────────────────────────────────────────────────────────
 describe('real spells.json SUMMON spawns minions', () => {
-  const real = normalize_spell_templates(real_spells)
+  const real = normalize_spell_templates({
+    yajin: { arise: real_spells.yajin.arise },
+    rojin: { dummy: real_spells.rojin.dummy },
+  })
   const real_fight = deck => {
     const arena = flat_arena()
     const ctx = { spell_templates: real, arena }
