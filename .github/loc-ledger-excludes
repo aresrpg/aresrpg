@@ -25,6 +25,10 @@ packages/move/scripts/out/**
 test/gold/.build/**
 test/gold/out/**
 
+# Test source is exempt so RED-FIRST bug proofs do not pay production-code rent.
+packages/*/test/**
+test/**
+
 # Fixtures and captured evidence
 **/fixtures/**
 **/*.fixture.*
