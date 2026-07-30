@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
+import { section_fight_rows } from '@aresrpg/world/nearby_fights'
 
-import { fight_hover_teams, section_fight_rows, short_fighter_id, viewer_has_fighter } from './fight_area_panel.js'
+import { fight_hover_teams, short_fighter_id, viewer_has_fighter } from './fight_area_panel.js'
 
 describe('fight-area Option A model', () => {
-  it('keeps PUBLIC and GROUP as simultaneous sections in the original relevance order', () => {
+  it('keeps simultaneous sections in D749 order: GROUP FIGHTS, then PUBLIC', () => {
     const rows = [
       { id: 'group-near', public: false },
       { id: 'public-friend', public: true },
       { id: 'public-near', public: true },
     ]
     expect(section_fight_rows(rows)).toEqual([
-      { key: 'public', rows: [rows[1], rows[2]] },
       { key: 'group', rows: [rows[0]] },
+      { key: 'public', rows: [rows[1], rows[2]] },
     ])
   })
 

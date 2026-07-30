@@ -6,14 +6,6 @@ import { short_fighter_id } from './character_name_resolve.js'
 
 export { short_fighter_id }
 
-/** Section a stable, already-sorted fight list without turning openness into mutually-exclusive tabs. */
-export function section_fight_rows(rows) {
-  return [
-    { key: 'public', rows: rows.filter((row) => row.public) },
-    { key: 'group', rows: rows.filter((row) => !row.public) },
-  ]
-}
-
 /**
  * Detail model for the big two-column hover card. Player identity comes from id-keyed Character docs. The
  * opponent column resolves the mob-group NAME from the fight's `group_template` (the homogeneous MobTemplate id
