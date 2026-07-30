@@ -120,8 +120,6 @@
     "place_trap · packages/sim/src/spell_effect.js": 1,
     "POINT_MP · packages/fight/src/draft_budget.js": 1,
     "POINT_MP · packages/sim/src/spell_effect.js": 1,
-    "reachable_cells · packages/fight/src/bot/read.js": 1,
-    "reachable_cells · packages/frontend/src/game/screens/fight-pathfinding.js": 1,
     "READ_PAGE · packages/move/scripts/apply_loot_payload.mjs": 1,
     "READ_PAGE · packages/move/scripts/apply_spells_payload.mjs": 1,
     "READ_PAGE · packages/move/scripts/apply_xp_payload.mjs": 1,

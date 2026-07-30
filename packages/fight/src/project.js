@@ -7,7 +7,8 @@ import { tackle_contest, tackle_losses } from '@aresrpg/sim/fight_tackle'
 import { tackle_seed, turn_seed } from '@aresrpg/sim/turn_seed'
 import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
-import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
+import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy } from './los.js'
+import { presented_reachable_cells } from './movement_candidates.js'
 import { committed_truth, fight_store, presented_state } from './store.js'
 import { cast_presenting, is_my_turn, is_over, presenting } from './project_state.js'
 import { engine_view, entity_id_of_key, project_board_cells } from './project_views.js'
@@ -168,7 +169,11 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   // The presented pool is the exact ordered prefix. Any drafted grant it contains ran before the NEXT move; any
   // earlier move cost/tackle forfeit is already subtracted. No first-kind regrouping is legal here.
   const mp = Math.max(0, Math.floor(me.mp ?? 0))
-  const reach_full = bfsReachable(me.cell, mp, blocked)
+  const reach_full = presented_reachable_cells({
+    start: me.cell,
+    movement_points: mp,
+    blocked,
+  })
   const lockers = tackle_lockers(s, me, Number(row.team ?? 0))
   if (!lockers.length) return { armed, tackled: false, reach: reach_full, tackle_lost: [] }
   // THE EXACT CONTEST (sim fight_tackle == spell_formula.move, golden-pinned): num/den prices the escape;
@@ -197,7 +202,13 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
       mp_now -= bite.mp_lost
     }
     if (!bitten) return free // the next move walks free — NO red (the "red then walked free" killer)
-    const keep = new Set(bfsReachable(me.cell, mp_now, blocked))
+    const keep = new Set(
+      presented_reachable_cells({
+        start: me.cell,
+        movement_points: mp_now,
+        blocked,
+      })
+    )
     return {
       armed,
       tackled: true,
@@ -208,7 +219,13 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   // DEGRADED (seed-less view): the fraction risk-band — one failed escape's bite as the at-risk remainder.
   const { mp_lost } = tackle_losses(ap, mp, num, den)
   if (!(mp_lost > 0)) return free
-  const keep = new Set(bfsReachable(me.cell, Math.max(0, mp - mp_lost), blocked))
+  const keep = new Set(
+    presented_reachable_cells({
+      start: me.cell,
+      movement_points: Math.max(0, mp - mp_lost),
+      blocked,
+    })
+  )
   return {
     armed,
     tackled: true,
