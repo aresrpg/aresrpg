@@ -21,13 +21,9 @@ import {
   type GoldWallet,
 } from './fight_mouse_helpers'
 
-// P0 RECORDED REPRO — the reported verbatim v35 fight-sync script (recorded 2026-07-19):
-//   "play with the yajin in the test and cast trap, walk, try to escape, get tackled, push mobs into trap,
-//    record to verify if the sim kills them they won't reappear dumbly"
-// reported symptom: "everything is being rolled back, invisibility and traps are appearing then disappearing
-// then appearing again (or not) mobs are dying then being rolledback alive, half of the turns are being not
-// validated or tx fails". Six beats, mouse-verified against the LAGGED projection (proxy_lag — the symptoms are
-// latency-shaped) and RECORDED for a human to read.
+// FIGHT RECONCILIATION ROLLBACK REGRESSION — six mouse-driven beats cover trap placement, movement,
+// tackle escape, push-into-trap, and death persistence against the lagged projection. The sequence records
+// transaction outcomes and rejects rollback, trap-flicker, revived-mob, and lost-turn defects.
 //
 // ── ATTEMPT-2 CURE (this rewrite): the attempt-1 lane DIED DARK — boot_fixture_world threw at search_zone on an
 //    OWNED-OBJECT lock ("already locked by a different transaction") and no artifact was written. Two fixes:
@@ -37,7 +33,7 @@ import {
 //        `window.__ARES_FIGHT_TRACE` (fight_state_trace.js, armed by /?dev&fighttrace=1) into one of five
 //        statuses — the ①-vs-② disease discriminator. Lock-contention retries the BEAT once; the first refusal
 //        stays in the artifact verbatim.
-const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'out', 'p0_owner_script')
+const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'out', 'fight_reconciliation_rollback')
 const manifest = gold_manifest
 
 type Formation = { mob: any; stage: Cell; trap: Cell; direction: Cell; path: Cell[] }
@@ -72,10 +68,11 @@ async function trace_seq(page: Page): Promise<number> {
   return rows.length ? Number(rows[rows.length - 1].sequence ?? 0) : 0
 }
 // A divergence (reconcile "prediction diverged, chain truth adopted") since t0 — the fight-store signal the
-// install_recorder subscription captures synchronously into __P0_ROWS. This is the ok-commit divergent discriminator.
+// install_recorder captures synchronously into __FIGHT_RECONCILIATION_ROWS: the ok-commit divergence discriminator.
 async function divergence_since(page: Page, t0: number): Promise<boolean> {
   return page.evaluate(
-    (t) => ((window as any).__P0_ROWS ?? []).some((r: any) => r.kind === 'divergence' && r.at_ms >= t),
+    (t) =>
+      ((window as any).__FIGHT_RECONCILIATION_ROWS ?? []).some((r: any) => r.kind === 'divergence' && r.at_ms >= t),
     t0
   )
 }
@@ -154,7 +151,7 @@ async function read_extra(page: Page) {
 
 // ── the page-side recorder: subscribes the fight store, the engine combat-log stream, and the toast stacks
 //    SYNCHRONOUSLY so a transient flicker between two Playwright polls is never missed. Trap-set membership +
-//    divergence + toast + per-fighter dead-flip (revive) — the exact shapes of "rolled back" the report named.
+//    divergence + toast + per-fighter dead-flip (revive) — the rollback defect's observable shapes.
 async function install_recorder(page: Page) {
   await page.evaluate(async () => {
     const w = window as any
@@ -162,10 +159,10 @@ async function install_recorder(page: Page) {
       import('/@id/@aresrpg/fight'),
       import('/src/game/core/toast.js'),
     ])
-    w.__P0_OFF?.()
-    w.__P0_ROWS = []
+    w.__FIGHT_RECONCILIATION_OFF?.()
+    w.__FIGHT_RECONCILIATION_ROWS = []
     const view = () => engine_view_of(fight_store.getState())
-    const push = (row: any) => w.__P0_ROWS.push({ at_ms: Date.now(), ...row })
+    const push = (row: any) => w.__FIGHT_RECONCILIATION_ROWS.push({ at_ms: Date.now(), ...row })
     let prev_traps = JSON.stringify(((view()?.my_traps ?? []) as number[]).slice().sort())
     const prev_cells: Record<string, { x: number; y: number }> = {}
     const prev_dead: Record<string, boolean> = {}
@@ -217,7 +214,7 @@ async function install_recorder(page: Page) {
         push({ kind: 'toast', state: t.state, title: t.title, message: t.message })
       }
     })
-    w.__P0_OFF = () => {
+    w.__FIGHT_RECONCILIATION_OFF = () => {
       w.__ARES_ENGINE.events.off('STATE_UPDATED', on_message)
       unsubscribe_fight()
       unsubscribe_toast()
@@ -226,7 +223,7 @@ async function install_recorder(page: Page) {
 }
 
 async function read_rows(page: Page): Promise<any[]> {
-  return page.evaluate(() => (window as any).__P0_ROWS ?? [])
+  return page.evaluate(() => (window as any).__FIGHT_RECONCILIATION_ROWS ?? [])
 }
 
 // ── movement/formation geometry — copied from the proven in_turn_beats.spec.ts pattern (actively green),
@@ -328,7 +325,7 @@ async function commit_once(page: Page, beat: string): Promise<TxRow> {
 
 /** Commit a single-action beat and RECORD it. On lock-contention (a ZERO-gas pre-exec refusal that rolls the
  *  draft back) retry the BEAT ONCE: wait, re-stage the action, re-commit. BOTH rows land in the artifact — the
- *  first refusal is a P0 finding, not noise. An executed failure (digest) is NEVER retried (burn law). */
+ *  first refusal is a reconciliation finding, not noise. An executed failure (digest) is NEVER retried. */
 async function commit_beat(page: Page, beat: string, stage: () => Promise<void>): Promise<TxRow> {
   let row = await commit_once(page, beat)
   tx_rows.push(row)
@@ -363,10 +360,10 @@ async function walk_multi_cell(page: Page, target: Cell, max_turns: number, beat
   return snapshot(page)
 }
 
-test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbatim script', () => {
+test.describe('fight reconciliation rollback regression', () => {
   test.skip(!manifest, 'no .gold-deployment.json — run `node test/gold/up_gold.mjs` first')
 
-  test('@headed @lagged P0 SCRIPT · trap, walk, escape, tackle, push-into-trap, stays dead', async ({ page }) => {
+  test('@headed @lagged trap, walk, escape, tackle, push-into-trap, stays dead', async ({ page }) => {
     test.setTimeout(560_000)
     const beats: BeatRow[] = []
     // FIXTURE — the `win` world (Razkin hp12, ideal for a one-combo push-kill) proved ENGAGE-HOSTILE under the
@@ -375,7 +372,7 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
     // timeout — attempt 1). `multi_turn` (Strawman hp30) is the @lagged-ENGAGE-PROVEN dry world (fight_record_verify
     // is green under lagged on it), so it RELIABLY reaches the beats — the tx-outcome column's whole point. hp30
     // survives one push+trap (≈9-13 dmg), so beat ⑥'s kill/stays-dead sub-check is tolerant (OBSERVED, not FAIL);
-    // the rollback / trap-flicker / turn-not-validated symptoms (the reported dominant complaints) are fully tested
+    // the rollback / trap-flicker / turn-not-validated defect classes are fully tested
     // across every fold regardless. The kill-specific stays-dead check wants a low-HP mob in a dry world (follow-up).
     const fixture = manifest.fight_fixtures?.multi_turn as FightFixture | undefined
     const [, wallet] = manifest.wallets as GoldWallet[] // wallet[1] = yajin (CLASSES[1] in up_gold.mjs)
@@ -425,7 +422,7 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
       }
       const json = JSON.stringify(payload, null, 2)
       fs.mkdirSync(OUT_DIR, { recursive: true })
-      fs.writeFileSync(path.join(OUT_DIR, 'p0_tx_outcomes.json'), json)
+      fs.writeFileSync(path.join(OUT_DIR, 'fight_tx_outcomes.json'), json)
       // Beside the video: the per-test video dir (best-effort — the file finalizes on context close, the dir exists now).
       const video_path = await page
         .video()
@@ -433,16 +430,16 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
         .catch(() => null)
       if (video_path) {
         fs.mkdirSync(path.dirname(video_path), { recursive: true })
-        fs.writeFileSync(path.join(path.dirname(video_path), 'p0_tx_outcomes.json'), json)
+        fs.writeFileSync(path.join(path.dirname(video_path), 'fight_tx_outcomes.json'), json)
       }
-      console.log('[p0-owner-script] TX-OUTCOME COLUMN:', JSON.stringify(status_counts))
+      console.log('[fight-reconciliation-rollback] TX-OUTCOME COLUMN:', JSON.stringify(status_counts))
       for (const r of tx_rows)
         console.log(
           `  tx[${r.beat}#${r.attempt}] ${r.status.padEnd(16)} digest=${r.digest ?? '—'} ${r.error ? `· ${r.error.slice(0, 120)}` : ''}`
         )
-      console.log('[p0-owner-script] BEAT TABLE:')
+      console.log('[fight-reconciliation-rollback] BEAT TABLE:')
       for (const b of beats) console.log(`  [${b.beat}] ${b.status.padEnd(12)} ${b.label} — ${b.note}`)
-      console.log(`[p0-owner-script] artifact: ${path.join(OUT_DIR, 'p0_tx_outcomes.json')}`)
+      console.log(`[fight-reconciliation-rollback] artifact: ${path.join(OUT_DIR, 'fight_tx_outcomes.json')}`)
     }
 
     try {
@@ -505,15 +502,15 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
         const pressed = await click_cell(page, cand)
         const pick = pressed === 'pressed' ? await read_pick().catch(() => null) : null
         console.log(
-          `[p0] placement try ${cell_key(cand)}: pressed=${pressed} placement_pick=${pick ? cell_key(pick) : 'null'} me=${cell_key((await snapshot(page)).me!.cell)}`
+          `[fight-reconciliation] placement try ${cell_key(cand)}: pressed=${pressed} placement_pick=${pick ? cell_key(pick) : 'null'} me=${cell_key((await snapshot(page)).me!.cell)}`
         )
         if (pick) {
           picked = pick
           break
         }
       }
-      // A never-registered placement pick under lag IS the reported "clicking doesn't move" — record it as beat 0,
-      // but keep going (READY may still place at a default) so the 6 beats still get recorded.
+      // An unregistered placement pick under lag is the placement-input defect — record it as beat 0, but keep
+      // going (READY may still place at a default) so the six beats still get recorded.
       beats.push({
         beat: '0',
         label: 'PLACEMENT pick registers (local placement_pick)',
@@ -583,7 +580,7 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
 
       // FLIP-GREEN SCOPE (coordinator): beat-1 trap-persist-through-the-mob-wave IS the cured-code verdict — stop
       // here, because a GREEN path (trap persists) would otherwise run beats 3-6 and blow the 10-min foreground cap.
-      if (process.env.P0_BEAT1_ONLY === '1') return
+      if (process.env.RECONCILIATION_BEAT1_ONLY === '1') return
 
       // ── BEAT ③ / ④ — TRY TO ESCAPE the adjacent mob → GET TACKLED (or escape) via the ordinary-movement
       //    contest (apply_move fires it automatically when adjacent enemies exist). Bounded ≤3 attempts.
@@ -730,9 +727,8 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
         status: saw_dead ? (stays_dead ? 'PASS' : 'FAIL') : 'OBSERVED',
         note: `trap_triggered=${trap_triggered} saw_dead=${saw_dead} mob_hp_now=${mob_now?.health ?? '—'} recorder_revives=${revive_rows.length} poll_flip=${dead_flip_regression} samples=${death_samples.length}${saw_dead ? '' : ' · hp30 Strawman survives one push+trap (≈9-13 dmg) — kill/stays-dead N/A on this fixture'}`,
       })
-      // The KILL is not guaranteed on an hp30 mob, so a no-kill is OBSERVED, never a hard FAIL. But the reported
-      // "dying then rolled back alive" regression IS asserted the instant a real kill lands: a revive/dead-flip on
-      // a mob that DID register dead is the bug. A survival simply leaves stays-dead untested on this fixture.
+      // The kill is not guaranteed on an hp30 mob, so a no-kill is OBSERVED, never a hard FAIL. A revive/dead-flip
+      // after a registered death is always a hard failure; survival leaves stays-dead untested on this fixture.
       if (saw_dead && !stays_dead)
         note_first_fail(
           `BEAT 6 STAYS-DEAD: mob REVIVED (recorder_revives=${revive_rows.length} poll_flip=${dead_flip_regression}) — the roll-back-alive regression`
@@ -740,7 +736,7 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
       if (saw_dead) {
         expect(
           revive_rows.length,
-          `the recorder observed ${revive_rows.length} revive event(s) on the killed mob — this IS the "dying then rolled back alive" regression`
+          `the recorder observed ${revive_rows.length} revive event(s) on the killed mob`
         ).toBe(0)
         expect(dead_flip_regression, 'a poll sample saw dead=true then a LATER sample saw dead=false').toBe(false)
       }
@@ -767,8 +763,10 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
       ).toBe(0)
     } finally {
       // ARTIFACT FIRST — always, before any cleanup, so a mid-beat throw still yields the tx column + video.
-      await write_artifact().catch((e) => console.log('[p0-owner-script] artifact write failed:', String(e)))
-      await page.evaluate(() => (window as any).__P0_OFF?.()).catch(() => {})
+      await write_artifact().catch((e) =>
+        console.log('[fight-reconciliation-rollback] artifact write failed:', String(e))
+      )
+      await page.evaluate(() => (window as any).__FIGHT_RECONCILIATION_OFF?.()).catch(() => {})
       const victory = page.locator('[role="dialog"][aria-label^="Victory:"]')
       const defeat = page.locator('[role="dialog"][aria-label^="Defeat:"]')
       if (
