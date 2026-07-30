@@ -49,7 +49,7 @@ describe('the simulator board pane', () => {
     expect(html).not.toContain('Select a roster character')
   })
 
-  // #883 ②⑤ — the owner drove a live fight and found the setup chrome still there, REROLL included. A reroll
+  // #883 ②⑤ — live-fight verification found the setup chrome still there, REROLL included. A reroll
   // mid-fight regenerates the layout the sim is already fighting on; the button must not exist to be pressed.
   test('the fight phase drops every setup verb — no reroll, no place-a-character hint', () => {
     const html = markup(false)

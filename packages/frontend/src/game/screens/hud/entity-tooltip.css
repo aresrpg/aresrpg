@@ -110,7 +110,7 @@
   color: var(--good);
 }
 /* DETERMINISTIC CRIT (#163): a crit paints its (−X) figure bold + house-orange, right INSIDE the head number —
-   the owner's ruling: no second line, the figure itself is the crit tell. Placed AFTER --dmg/--heal so it wins
+   the presentation rule: no second line, the figure itself is the crit tell. Placed AFTER --dmg/--heal so it wins
    the colour cascade (same specificity, later rule) for a crit hit and the rare crit heal alike. */
 .ent-tt__delta--crit {
   color: #ff9d3c;

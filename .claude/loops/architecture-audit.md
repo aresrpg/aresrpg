@@ -136,14 +136,13 @@ finding creates it (one epic per loop, labeled with the loop's own label + `epic
 later finding appends there. Board intake is a budget; the drain must outrun it.
 
 Before filing ANY row or checkbox: search open rows for the same finding (title keywords +
-surface) — "before creating an issue you should double check what we have." A match means a
+surface). A match means a
 comment or checkbox on the EXISTING row, never a new one.
 
 ## The row bar, self-cleaning, and fix-first (binding, every pass)
 
-Why, in the owner's words: *"these loops must be hardened so we're not submerged with BS, issues
-must be real problems, and if they're already done they must be closed, if they are real issues
-impacting us we must clean them up and implement fixes."*
+These loops admit only verified problems, close completed work, and drive fixes for real,
+high-impact findings.
 
 1. **ROW BAR — a row is born only when ALL THREE hold.** (a) **OBSERVABLE**: provably broken
    behavior in the product or a gate, watchable by someone else; never style, theory, or

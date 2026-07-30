@@ -1,5 +1,5 @@
 {
-  "_ruled": "2026-07-25 — owner rulings, double-sourced — see AIRDROP_CENSUS_2026-07-25",
+  "_ruled": "2026-07-25 — airdrop reservation set, double-sourced",
   "_contract": "visual showcase set — NO claim conditions live here; the whitelist mechanism is chain-side and separate",
   "_art_probe": "2026-07-25 HEAD probes against https://assets.aresrpg.world, cache-busted per the 404-cache law, every non-200 triple-confirmed. Every icon key answers 200 at items/{id}.png (the class-1 canon: these render as ITEM icons) — the cosmetics/{id}.png prefix answers 403, which carries ZERO existence signal, and models/icons/{id}.png 404s. Every GLB key is absent: the cosmetic_glb and pet_glb families are dark host-wide, not mis-keyed — controls models/cosmetics/berserk.glb, models/equipment/berserk.glb and models/pets/nocsy_dragon_saddled.glb all 404 while models/mobs/{glb}.glb answers 200, so models/ is reachable and the hole is an unfired upload wave (MINIO_PIVOT_CENSUS §1 row 8 still lists cosmetic GLBs as seed custody). GLB keys below are the URL MAPPING LAW canon (docs/MINIO_PIVOT_CENSUS.md §2), recorded as documented-canon-not-yet-served — never a guessed path.",
   "items": [
@@ -9,7 +9,7 @@
       "name": "Suifren Bullshark",
       "art": { "glb": "models/pets/suifren_bullshark.glb" },
       "art_status": { "glb": "missing" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"We will also reserve the Suifrens, Vaporeon, Suicune, and oeuftermath pets for airdrop to their own community so do not seed them in the shop.\" — plural \"Suifrens\" covers both GLBs per the ratified fuzzy-match declaration"
+      "provenance": "AIRDROP-RESERVED pet; the Suifren family covers both published GLBs"
     },
     {
       "id": "suifren_capy",
@@ -17,7 +17,7 @@
       "name": "Suifren Capy",
       "art": { "glb": "models/pets/suifren_capy.glb" },
       "art_status": { "glb": "missing" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"We will also reserve the Suifrens, Vaporeon, Suicune, and oeuftermath pets for airdrop to their own community so do not seed them in the shop.\" — plural \"Suifrens\" covers both GLBs per the ratified fuzzy-match declaration"
+      "provenance": "AIRDROP-RESERVED pet; the Suifren family covers both published GLBs"
     },
     {
       "id": "vaporeon",
@@ -25,7 +25,7 @@
       "name": "Vaporeon",
       "art": { "glb": "models/pets/vaporeon.glb" },
       "art_status": { "glb": "missing" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"We will also reserve the Suifrens, Vaporeon, Suicune, and oeuftermath pets for airdrop to their own community so do not seed them in the shop.\""
+      "provenance": "AIRDROP-RESERVED pet"
     },
     {
       "id": "suicune",
@@ -33,7 +33,7 @@
       "name": "Suicune",
       "art": { "glb": "models/pets/suicune.glb" },
       "art_status": { "glb": "missing" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"We will also reserve the Suifrens, Vaporeon, Suicune, and oeuftermath pets for airdrop to their own community so do not seed them in the shop.\" — distinct from the suicunio cosmetic"
+      "provenance": "AIRDROP-RESERVED pet; distinct from the suicunio cosmetic"
     },
     {
       "id": "oeuftermath",
@@ -41,7 +41,7 @@
       "name": "Oeuftermath",
       "art": { "glb": "models/pets/oeuftermath.glb" },
       "art_status": { "glb": "missing" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"We will also reserve the Suifrens, Vaporeon, Suicune, and oeuftermath pets for airdrop to their own community so do not seed them in the shop.\" — distinct from the oeufterhead cosmetic"
+      "provenance": "AIRDROP-RESERVED pet; distinct from the oeufterhead cosmetic"
     },
     {
       "id": "sam",
@@ -50,7 +50,7 @@
       "art": { "glb": "models/cosmetics/sam.glb", "icon": "items/sam.png" },
       "art_status": { "glb": "missing", "icon": "present" },
       "aura_pending": true,
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"For cosmetics you must reserve the Sam, the Sui helmet, the oeufterhead, the hop hat, the fud hat for our airdrops (mark them down too), the rest should be sold in the shop too.\" — reserved crown; its aura pairing was never ruled and stays unbaked pending the owner's veto"
+      "provenance": "AIRDROP-RESERVED crown; its aura pairing remains unspecified"
     },
     {
       "id": "sui_helmet",
@@ -59,7 +59,7 @@
       "art": { "glb": "models/cosmetics/sui_helmet.glb", "icon": "items/sui_helmet.png" },
       "art_status": { "glb": "missing", "icon": "present" },
       "aura": { "color": "water", "status": "declared" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"For cosmetics you must reserve the Sam, the Sui helmet, the oeufterhead, the hop hat, the fud hat for our airdrops (mark them down too), the rest should be sold in the shop too.\" — reserved crown; aura declared water, his word was \"blue\" and the pack has no literal blue"
+      "provenance": "AIRDROP-RESERVED crown; aura declared water"
     },
     {
       "id": "oeufterhead",
@@ -67,7 +67,7 @@
       "name": "Oeufterhead",
       "art": { "glb": "models/cosmetics/oeufterhead.glb", "icon": "items/oeufterhead.png" },
       "art_status": { "glb": "missing", "icon": "present" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"For cosmetics you must reserve the Sam, the Sui helmet, the oeufterhead, the hop hat, the fud hat for our airdrops (mark them down too), the rest should be sold in the shop too.\""
+      "provenance": "AIRDROP-RESERVED crown"
     },
     {
       "id": "hop_hat",
@@ -75,7 +75,7 @@
       "name": "Hop Hat",
       "art": { "glb": "models/cosmetics/hop_hat.glb", "icon": "items/hop_hat.png" },
       "art_status": { "glb": "missing", "icon": "present" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"For cosmetics you must reserve the Sam, the Sui helmet, the oeufterhead, the hop hat, the fud hat for our airdrops (mark them down too), the rest should be sold in the shop too.\""
+      "provenance": "AIRDROP-RESERVED crown"
     },
     {
       "id": "fud",
@@ -83,7 +83,7 @@
       "name": "Fud Hat",
       "art": { "glb": "models/cosmetics/fud.glb", "icon": "items/fud.png" },
       "art_status": { "glb": "missing", "icon": "present" },
-      "provenance": "owner verbatim, session e3b3d178, 2026-07-11: \"For cosmetics you must reserve the Sam, the Sui helmet, the oeufterhead, the hop hat, the fud hat for our airdrops (mark them down too), the rest should be sold in the shop too.\" — \"fud hat\"; the GLB/icon are named fud, unambiguous"
+      "provenance": "AIRDROP-RESERVED crown; the GLB/icon key is fud"
     },
     {
       "id": "suicunio",
@@ -92,7 +92,7 @@
       "art": { "glb": "models/cosmetics/suicunio.glb", "icon": "items/suicunio.png" },
       "art_status": { "glb": "missing", "icon": "present" },
       "aura": { "color": "purple", "status": "pinned" },
-      "provenance": "owner rider, session e3b3d178, 2026-07-11: \"the suicunio hat should be reserved for airdrops too\" — was the S-tier SALE row \"Suicunio Mask\", pulled from the shop catalog; aura purple is owner-pinned"
+      "provenance": "AIRDROP-RESERVED crown; removed from the shop catalog; aura purple is pinned"
     },
     {
       "id": "relic_rrexn",
@@ -101,7 +101,7 @@
       "art": { "icon": "items/relic_rrexn.png" },
       "art_status": { "icon": "present" },
       "note": "stat-less title relic — aura render per game#804",
-      "provenance": "seed-session relay, 2026-07-25: airdropOnly true live at seed/mainnet/19_hollow_crown/items.json:79, amended mid-turn to a stat-less TITLE relic and taken out of the boss loot tables"
+      "provenance": "seed/mainnet/19_hollow_crown/items.json:79; stat-less title relic excluded from boss loot"
     },
     {
       "id": "relic_past",
@@ -110,7 +110,7 @@
       "art": { "icon": "items/relic_past.png" },
       "art_status": { "icon": "present" },
       "note": "stat-less title relic — aura render per game#804",
-      "provenance": "seed-session relay, 2026-07-25: airdropOnly true live at seed/mainnet/20_zenith_scar/items.json:79, same ruling as relic_rrexn"
+      "provenance": "seed/mainnet/20_zenith_scar/items.json:79; same reservation class as relic_rrexn"
     },
     {
       "id": "primemachin",
@@ -118,13 +118,13 @@
       "name": "Primemachin",
       "art": { "glb": "models/cosmetics/primemachin.glb" },
       "art_status": { "glb": "missing" },
-      "provenance": "live generator header ④, seed/generators/shop_catalog.mjs:6-7,93 (AIRDROP-RESERVED full-body outfit) + session b9574f83 citing the owner rider 2026-07-11, AIRDROP_RESERVED.md:41-54: \"reserved for a future title-swap-the-full-body system\""
+      "provenance": "seed/generators/shop_catalog.mjs:6-7,93 (AIRDROP-RESERVED full-body outfit); reserved for a future title-swap system"
     }
   ],
   "pending": [
     {
       "id": "anima",
-      "reason": "generator says AIRDROP-RESERVED; the deleted doc's final text said parked-not-reserved; zero owner verbatim — awaits his one word"
+      "reason": "generator says AIRDROP-RESERVED; reservation status requires reconciliation"
     }
   ]
 }

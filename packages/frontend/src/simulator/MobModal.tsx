@@ -3,7 +3,7 @@
 // simulator/MobModal.tsx — a mob seat's modal: WHICH mob and at WHAT level, and nothing else.
 //
 // A mob is not built, it is chosen: its spells are the authored kit minted into its MobTemplate, so they load
-// with the mob and are shown READ-ONLY — the owner can see what the enemy brings without being offered an
+// with the mob and are shown READ-ONLY — the player can see what the enemy brings without being offered an
 // allocation that has no chain counterpart.
 //
 // The GAME's own components, never lookalikes (the no-divergence law):

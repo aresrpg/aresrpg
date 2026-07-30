@@ -122,7 +122,7 @@ export const walk_parity_scenarios = [
     meta: {
       id: 'trap_kit_board_correction',
       symptom:
-        'prediction skipped the owner trap around a living body and reconciled every turn',
+        'prediction skipped the trap around a living body and reconciled every turn',
     },
     board: { width: 7, height: 7, obstacles: [] },
     mover: { id: 'p0', is_player: true, start: { x: 4, y: 3 } },

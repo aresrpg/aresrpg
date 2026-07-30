@@ -495,7 +495,7 @@ function marketplace_buy_ptb(context, kind) {
       arguments: [policy_arg, request],
     })
     binding.finalize()
-    // AFTER finalize, never before: the fold's Move door borrows the owner cap out of the PersonalKioskCap
+    // AFTER finalize, never before: the fold's Move door borrows its owner cap out of the PersonalKioskCap
     // itself, which the purchase held borrowed until here. The bought stack is locked in the buyer's kiosk by
     // this point, so it folds into the stacks they already owned (#1495 — no duplicate is ever created). A
     // first-time buyer (no cap ⇒ a kiosk created in this very PTB) owns nothing to fold into.

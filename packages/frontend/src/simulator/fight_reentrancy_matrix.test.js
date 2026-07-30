@@ -68,7 +68,7 @@ const character = () => ({
   level: 30,
   stat_alloc: { vitality: 100, wisdom: 0, strength: 45, intelligence: 0, chance: 0, agility: 0 },
   spell_levels: {},
-  loadout: {}, // no equipped weapon: the fixture is the owner's bare-hands seat
+  loadout: {}, // no equipped weapon: the fixture is the player's bare-hands seat
 })
 
 const mob_block = () => ({

@@ -23,20 +23,20 @@ const rng_from = (seed) => () => {
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z)
 
 describe('#593 pet_follow — the pet steers as its own world entity', () => {
-  test('DETACH (red-first) — a pet inside the dead zone does NOT track the owner in lockstep', () => {
+  test('DETACH (red-first) — a pet inside the dead zone does NOT track its target in lockstep', () => {
     // rng()=0 → the roam target lands exactly on the spawn spot (radius 0), isolating the dead-zone gate from
-    // any wander so this measures ONLY whether the pet chases the owner. A welded/parent-transform pet eases
-    // onto the owner (pet.x → 4); a detached pet stays put.
+    // any wander so this measures ONLY whether the pet chases the target. A welded/parent-transform pet eases
+    // onto the target (pet.x → 4); a detached pet stays put.
     const rng = () => 0
     let m = step_pet_follow(empty_pet_motion(), { x: 0, z: 0 }, DT, rng)
     expect(m.x).toBeCloseTo(0, 6)
     expect(m.z).toBeCloseTo(0, 6)
     const start = { x: m.x, z: m.z }
-    // walk the owner 4 blocks along +x over one second — every frame still inside the 5-block dead zone
+    // walk the target 4 blocks along +x over one second — every frame still inside the 5-block dead zone
     for (let i = 1; i <= 60; i++) m = step_pet_follow(m, { x: (4 * i) / 60, z: 0 }, DT, rng)
     const owner = { x: 4, z: 0 }
     expect(dist(m, start)).toBeLessThan(0.5) // the pet barely moved…
-    expect(dist(m, owner)).toBeGreaterThan(3) // …and is ~4 blocks from the owner now, NOT glued to it
+    expect(dist(m, owner)).toBeGreaterThan(3) // …and is ~4 blocks from the target now, NOT glued to it
   })
 
   test('② dead zone — a stationary owner is never chased down; the pet stays bounded to the wander disc', () => {
@@ -47,7 +47,7 @@ describe('#593 pet_follow — the pet steers as its own world entity', () => {
       m = step_pet_follow(m, { x: 0, z: 0 }, DT, rng)
       max_d = Math.max(max_d, dist(m, { x: 0, z: 0 }))
     }
-    expect(max_d).toBeGreaterThan(0.3) // it actually wanders (reads alive, not frozen on the owner)…
+    expect(max_d).toBeGreaterThan(0.3) // it actually wanders (reads alive, not frozen on the target)…
     expect(max_d).toBeLessThanOrEqual(ROAM_RADIUS_M + 1e-6) // …but never past the wander disc — bounded to the zone
   })
 
@@ -58,7 +58,7 @@ describe('#593 pet_follow — the pet steers as its own world entity', () => {
     const before = { x: m.x, z: m.z }
     m = step_pet_follow(m, owner, DT, rng)
     expect(dist(m, before)).toBeCloseTo(CHASE_SPEED * DT, 5) // moved exactly one step at its own speed…
-    expect(m.x).toBeGreaterThan(before.x) // …toward the owner
+    expect(m.x).toBeGreaterThan(before.x) // …toward the target
     for (let i = 0; i < 600 && dist(m, owner) > DEAD_ZONE_M; i++) m = step_pet_follow(m, owner, DT, rng)
     expect(dist(m, owner)).toBeLessThanOrEqual(DEAD_ZONE_M + 1e-6) // and it catches up into the dead zone
   })

@@ -410,7 +410,7 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
 }
 
 /**
- * Emit the combat-log account of ONE point drain, as the owner pinned it (#1352): each half of the outcome
+ * Emit the combat-log account of ONE point drain, as pinned by #1352: each half of the outcome
  * speaks its own SIMPLE line, never a composite. What LANDED rides the ordinary drain line above
  * (emit_effect_line's ap_loss/mp_loss branch — the producer it was written for), and what a contest ate adds
  * "<target> dodged the loss of N AP". So a partial dodge tells its whole story in two plain lines, a full dodge

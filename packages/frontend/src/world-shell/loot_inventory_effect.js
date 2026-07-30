@@ -10,7 +10,7 @@
 // (lootbox_actions.js claim_pet) already holds its receipt the instant its tx lands and calls straight in. A
 // future mint door repeats the same call — never a component-level refresh, never a timer.
 //
-// IDENTITY (#265 recurrence, 2026-07-24): the owner-match race guard reads `current_address()` — the LIVE
+// IDENTITY (#265 recurrence, 2026-07-24): the address-match race guard reads `current_address()` — the LIVE
 // wallet identity (callers inject `() => use_auth.getState().address`) — never the reducer's own state.
 // The reducer used to carry a parallel `sui.selected_address`, written only by the `action/sui_login`
 // dispatch that lived in embed.js's start_session(); commit 671266c2 deleted start_session wholesale

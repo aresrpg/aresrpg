@@ -131,7 +131,7 @@ test('#613·4 with_you render rows carry free_run + the leader anchor (the step_
   const { outputs } = fold(state, { kind: 'leader_position', x: 3, z: 4, yaw: 0.5, now: NOW + 1000 })
   const row = outputs.follow_render.find((r) => r.character_id === ALT)
   expect(row.free_run).toBe(true)
-  expect(row.anchor).toMatchObject({ x: 3, z: 4, yaw: 0.5 }) // the owner target step_pet_follow steers toward
+  expect(row.anchor).toMatchObject({ x: 3, z: 4, yaw: 0.5 }) // the follow target step_pet_follow steers toward
 })
 
 // ── Defect ⑤ — an executed refusal names an explicit blocked row (never a stuck timer / context-free toast). ─

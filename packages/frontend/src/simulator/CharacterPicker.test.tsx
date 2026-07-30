@@ -5,7 +5,7 @@
 // Proven: it offers the WHOLE roster at the cell (a seated character included — picking it moves the seat),
 // an empty roster gets an honest line instead of a blank card, and the anchor never leaves the viewport.
 //
-// ROUND 2 (the owner's screenshot): it FUNCTIONED but rendered as a skinny text list — it read as a tooltip,
+// ROUND 2 (captured screenshot): it functioned but rendered as a skinny text list — it read as a tooltip,
 // not as a picker. So the rows are the roster's OWN row component now, portrait included; a bare list of
 // name/class lines is the red these tests hold down.
 

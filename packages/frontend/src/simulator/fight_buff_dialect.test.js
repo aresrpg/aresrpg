@@ -49,8 +49,8 @@ const SEED = 0xc81f3a92
 const BOARD = board_of(SEED, 0)
 const CLOCK = { now_ms: 1_700_000_000_000 }
 
-/** The captured row: Draghook, a level-6 Senshi self-buff — `+3 Raw Damage · 4 turns`, point self-cast, the
- *  exact effect shape the owner's screenshot carried (kind 9 · stat 9 · turns > 0). */
+/** The captured row: Draghook, a level-6 Senshi self-buff — `+3 Raw Damage · 4 turns`, point self-cast,
+ *  with the captured effect shape (kind 9 · stat 9 · turns > 0). */
 const DRAGHOOK = L2.rows.find((row) => row.id === 'senshi_draghook')
 const [BUFF] = DRAGHOOK.levels[0].effects
 
@@ -167,7 +167,7 @@ describe('#1166 · the turn card reads the AUTHORED magnitude once the turn is c
     expect(lines.join(' ')).not.toContain('3276')
   })
 
-  // The owner's three screenshots, each as the captured row re-authored to its magnitude. The wrong reading is
+  // Three captured cases, each with the row re-authored to its magnitude. The wrong reading is
   // always the complement `value - 32768`, which is what the raw-dialect template folded.
   const CASES = [
     { what: 'raw damage', stat: 9, value: 42, reads: '+42 Raw Damage · 4 turns', wrong: '32726' },

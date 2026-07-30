@@ -23,7 +23,7 @@
 // (arm_spell's number-key handler only hotkeys hand[0..8]).
 export const SPELL_SLOTS = 9
 
-// The owner's rule, verbatim: at most 3 rows; the HUD grows wider to fit.
+// Layout rule: at most 3 rows; the HUD grows wider to fit.
 export const MAX_SOCKET_ROWS = 3
 
 // The bar's default width — weapon + 9 slots as 5-over-4. Mirrored by hud.css's anchor math, which was

@@ -146,7 +146,7 @@ reload machinery, no "requires reload" caveat.
 
 ## 2. The visual spec
 
-The WORLD is retrowave (the owner named it); the SETTINGS UI stays gothic terminal.
+The WORLD is retrowave by design; the SETTINGS UI stays gothic terminal.
 
 ### 2.1 Palette
 

@@ -103,7 +103,7 @@ describe('is_glyph_spell — glyph placements take the orange tint on hover, eve
 // unreachable, not merely avoided by caller discipline.
 describe('[#238] hover_footprint_plan — the hover preview must NEVER touch the persistent "glyph" channel', () => {
   it('REGRESSION: no footprint (idle hover / non-castable cell) clears the transient channels, never "glyph"', () => {
-    // this is the exact "board-state update during the owner's turn" from the report — a movement-path hover
+    // this is the exact board-state update during the active fighter's turn — a movement-path hover
     // refresh, or any hover that resolves no armed-spell footprint — with the caster's zone already painted.
     const plan = hover_footprint_plan('some_armed_spell', [])
     expect(plan.paint).toBeNull()

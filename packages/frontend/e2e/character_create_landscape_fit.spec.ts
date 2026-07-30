@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Landscape-fit proof (#740 + the owner's "no scroll in landscape" bar) — drives the REAL character_create()
+// Landscape-fit proof (#740 + the no-scroll-in-landscape bar) — drives the REAL character_create()
 // screen through the throwaway standalone harness (character-create-harness.html /
 // character_create_harness_main.jsx — no chain, no auth, no roster; see that file's header for why a
 // standalone mount is honest here). Three viewports: two short-viewport LANDSCAPE phones (844×390 the

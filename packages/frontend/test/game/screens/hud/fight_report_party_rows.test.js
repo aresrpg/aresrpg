@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// #1661 — THE GHOST PARTY MEMBER. A DEFEAT card listed the owner's SECOND character in YOUR PARTY for a fight
+// #1661 — THE GHOST PARTY MEMBER. A DEFEAT card listed the player's second character in YOUR PARTY for a fight
 // that character never joined. The chain was never the liar: `engine/sources/fight.move:283` seats exactly ONE
 // participant at create (the creator) and every further seat comes through an explicit per-character `join` tx
 // (`aresrpg/sources/fight.move:185`), with `party_id` acting only as a JOIN ACL (`engine/fight.move:546`) —
@@ -45,7 +45,7 @@ test('#1661 the recap carries the SEAT identity, so presence survives a characte
 })
 
 test('#1661 a recap with no captured seat never fabricates a party member', () => {
-  // The exact shape that produced the owner's screenshot: a roster holding somebody else's seat while the
+  // The captured shape: a roster holding somebody else's seat while the
   // client's own identity state points at an uninvolved character. Presence we cannot source is not rendered.
   const { party_rows } = fight_report_party_rows({
     roster: [{ id: ARES, name: 'ARES', team: 0, level: 12, is_player: true, alive: false }],

@@ -252,7 +252,7 @@ export function same_template_stack_ids({
  *
  * Ordering is the caller's contract: the folds must be appended AFTER the commands that lock the incoming
  * items into this kiosk AND after any `personal_kiosk::borrow_val` has been returned (the Move door borrows
- * the owner cap out of the PersonalKioskCap itself).
+ * its owner cap out of the PersonalKioskCap itself).
  *
  * BOUNDED: at most `MAX_FOLDS_PER_ACQUISITION` merges ride one acquisition (see the constant). Dropping a
  * fold is always safe — an unmerged stack is the status quo the sweep tidies later, whereas a PTB over the

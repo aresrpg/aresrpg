@@ -407,7 +407,7 @@ const DURATION_GAP_REASON = {
   26: 'dispel is instantaneous — its authored turns has no fighter row',
 }
 
-// Tick-to-expiry proof (the owner's "tick the fight") — drive an authored timed effect, then tick the VICTIM's
+// Tick-to-expiry proof — drive an authored timed effect, then tick the victim's
 // turn-end plumbing (`expire_turn_effects`, the sim's real per-owner decrement + expiry) and assert the freshly
 // minted rows clear at exactly their scheduled turn. Representative (not per-effect: the decrement is generic +
 // heavily tested; this confirms it FIRES for a spell-applied row). Returns { turns, cleared_after, ok }.

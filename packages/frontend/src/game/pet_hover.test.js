@@ -4,7 +4,7 @@
 // math (pet_hover.js) with no @aresrpg/engine3 / GLB import (issue #117), the same split pet_follow.test.js
 // already exercises for horizontal steering: a fish pet's resolved y sits HOVER_HEIGHT_M above the fed ground
 // y and bobs over time; a non-fish pet's y is untouched by this module entirely; family detection resolves the
-// owner's own #676 example (Cryofin) as fish, and the #526 fish-sounding-but-not-fish trap (pet_siluri) stays
+// #676 example (Cryofin) as fish, and the #526 fish-sounding-but-not-fish trap (pet_siluri) stays
 // excluded.
 
 import { describe, expect, test } from 'bun:test'
@@ -20,7 +20,7 @@ import {
 } from './pet_hover.js'
 
 describe('#676 pet_hover — family detection', () => {
-  test('Cryofin (the owner\'s own #676 example, "Cryofin et al.") resolves as fish', () => {
+  test('Cryofin (#676 example) resolves as fish', () => {
     expect(is_fish_pet('pet_cryofin')).toBe(true)
   })
 

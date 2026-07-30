@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE 240-SPELL CONFORMANCE TOOTH — the owner's bar, verbatim: "all spells working as they should."
+// THE 240-SPELL CONFORMANCE TOOTH — every authored spell must resolve according to its definition.
 //
 // spell_conformance_engine.js folds EVERY authored spell × level × effect through the REAL reducer and asserts
 // its resolution matches its AUTHORED definition (AP debit, damage magnitude + element, stat/resist SIGN +

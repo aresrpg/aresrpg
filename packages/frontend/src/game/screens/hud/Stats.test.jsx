@@ -280,7 +280,7 @@ describe('Stats allocation actions', () => {
     expect(hud_panels_css).not.toContain('background: #1b2330;') // the old flat neutral box
   })
 
-  // Regression for the owner's cramped-chip report: pages/characters.tsx renders CharactersDrawer
+  // Regression for the cramped-chip layout: pages/characters.tsx renders CharactersDrawer
   // variant="page" → Stats with NO `.hud-root` ancestor (only `.stats` itself, Stats.jsx's own root
   // div). A `.hud-root`-scoped rule silently never fires there, so the sizing must key off `.stats`.
   test('the stepper sizing bridge fires without a .hud-root ancestor (the Characters PAGE mount)', () => {

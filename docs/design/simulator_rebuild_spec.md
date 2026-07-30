@@ -167,7 +167,7 @@ Dispatch: `fight_store.getState().input({type:'init', fight_id, my_key:null, ctx
 (`dungeon_fight_shim.js`), with `ctx.my_entity_id` = the focused roster character id and
 `ctx.offset = {x:0, z:0}` identity codec (dev_synth precedent).
 
-### 4.4 The event encoder — sim events → chain rows (THE mock the owner named)
+### 4.4 The event encoder — sim events → chain rows (the requested mock)
 
 `encode_sim_step(pre_state, post_state, sim_events) → [{type: '0xsim::fight_events::<Kind>',
 parsedJson}]`, consumed by the store as `input({type:'receipt', version: ++v,
@@ -225,8 +225,8 @@ Production already injects submit: `subscribe_commit_due(store, { submit })`
 
 On any emitted `TurnStarted{is_mob:true}` the driver (after the presentation wave for the prior
 batch, next macrotask) folds `reduce(sim_state, {type:'ai_turn', entity_id}, ctx)` → one receipt
-batch. The AI is `@aresrpg/sim/fight_ai` — the deterministic on-chain-policy skeleton; its
-"chain &Random" weighted draw is exactly what the owner said to mock: the sim's seeded thread.
+batch. The AI is `@aresrpg/sim/fight_ai` — the deterministic on-chain-policy skeleton.
+Its chain-and-random weighted draw is the requested mock: the sim's seeded thread.
 Consecutive mob turns chain until a player seat's TurnStarted lands.
 
 ### 4.7 STOP / restart
@@ -280,7 +280,7 @@ roster LOADERS are wallet/chain-coupled — and those are correctly not reused. 
 
 - `LOCAL_ADDRESS = '0xsim…'` (one constant); every roster character's `owner` = it ⇒
   `controlled_character_ids` returns all seats ⇒ the production seat-focus switching drives the
-  whole roster — the owner's "multi account simulation" with zero new mechanism.
+  whole roster — multi-account simulation with zero new mechanism.
 - Seat focus switch = `input({type:'ctx', ctx:{my_entity_id: <char id>}})` (the production
   MULTICHAR path, `store.js` 'ctx' arm) + the same auto-focus `fight_control` selector the live
   board uses.

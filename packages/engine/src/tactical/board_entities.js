@@ -1079,7 +1079,7 @@ function engine_remove(/** @type {Sprite} */ sprite) {
 // hexes unchanged — the AgX bypass alone un-washes them).
 // `mp` = the house mint MP green (--clog-num-mp / --good) — the move's spent-MP floater.
 // `ap` = the house ice-blue AP tone (--clog-num-ap / frosted --accent) — #239: the tackle forfeit's AP leg
-// (mp/ap replace the old combined red "TACKLED -N MP -N AP" label float; the owner ruling bans the label
+// (mp/ap replace the old combined red "TACKLED -N MP -N AP" label float; the presentation rule bans the label
 // entirely, so each pool now floats on its own, colored like its combat-log number).
 const FLOAT_COLOR = {
   damage: '#ff2f1c',

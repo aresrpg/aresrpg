@@ -595,7 +595,7 @@ describe('Move displacement golden vectors', () => {
     // so the trap fires on the ally, and the ordinary walk RESUMES to 167 with its full MP spent.
     const [vector] = golden.movement_cases
     const initial = state_of(vector)
-    const owner = { ...find_entity(initial, 'p0'), cell: cell_of(100) } // stand the owner clear of the route
+    const owner = { ...find_entity(initial, 'p0'), cell: cell_of(100) } // stand the subject clear of the route
     const ally = {
       ...owner,
       id: 'p1',

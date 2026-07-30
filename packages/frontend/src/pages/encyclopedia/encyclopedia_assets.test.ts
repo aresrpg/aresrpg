@@ -5,7 +5,7 @@
 // the icon key must come from what the row DOES carry. That key is `item_type`, the authored art slug the
 // seed uploads `items/{item_type}.png` under; the earlier resolver mistook it for a generic family word (that
 // is `category`) and derived the key from the display NAME instead, which is what put the placeholder flask
-// on "Bag of Quartz" in the owner's detail-page screenshot.
+// on "Bag of Quartz" in the captured detail-page screenshot.
 //
 // PROVENANCE (live /v1 + assets.aresrpg.world, verified 2026-07-25 — full 1854-row census in
 // item_classification.test.js): item_type unique on 1854/1854 rows; name-derivation diverges on 984 and

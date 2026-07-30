@@ -102,7 +102,7 @@ upgrade adds no field to the frozen Version layout", social/sources/admin.move:5
 | Display/TransferPolicy for guild types                    | Satellite's own OTW → Publisher at publish                                                                                                                                                                                                                     | S8 (S10 fallback not needed)                  |
 | Fight-team size for wars                                  | `per_side` is a value, not layout; board geometry is upgradeable foundation/engine math (current HARD bound 6, config.move:84)                                                                                                                                 | S1                                            |
 
-### C. Conditional anchors — ONLY if the owner freezes core at mainnet (recommended: DO NOT)
+### C. Conditional anchors — ONLY if maintainers freeze core at mainnet (recommended: DO NOT)
 
 If `make_immutable(core)` were on the table, ALL of the following would become day-one
 mandatory, because no upgrade could ever add them (S7 kills S1): `guild_brand` pin +
@@ -165,7 +165,7 @@ are u16 bits in the roster row, authenticated per call by character custody (par
 transferable/storable officer cap would be a leakable authority (exploit class: cap leakage via
 `store`); roster-stored rights are revocable by construction and die with the membership row.
 
-Rights bits (Dofus-1.29-shaped, append-only): INVITE=1, KICK=2, EDIT_EMBLEM=4, MANAGE_RIGHTS=8;
+Rights bits (1.29-shaped, append-only): INVITE=1, KICK=2, EDIT_EMBLEM=4, MANAGE_RIGHTS=8;
 treasury bits reserved (SPEND=16, SET_CAP=32) for the treasury upgrade. Leader implicitly holds
 all bits; MANAGE_RIGHTS can only grant/revoke bits the granter holds (no privilege escalation),
 and never targets the leader.
@@ -321,12 +321,12 @@ already walked this road on the live testnet lineage.
 
 ---
 
-## ⑤ OPEN QUESTIONS — owner taste/economy calls (none block the mainnet publish)
+## ⑤ OPEN QUESTIONS — maintainer taste/economy calls (none block the mainnet publish)
 
 1. **Guild creation price** — flat SUI to `@treasury` (character-parity 10 SUI? higher as a
    founding act — 50/100?). Sets the name-squat economics.
-2. **Member cap** — dial default (Dofus-era feel ~50-240; engine wars are 6v6 regardless).
-3. **One guild per character** (assumed YES — Dofus law) vs per WALLET (alts in different
+2. **Member cap** — dial default (donor-era feel ~50-240; engine wars are 6v6 regardless).
+3. **One guild per character** (assumed YES — donor-era rule) vs per WALLET (alts in different
    guilds allowed? character-keyed design says yes, alts may split).
 4. **Rename policy** — v1 none (names permanent, S9 makes freed names unrecoverable anyway).
    Ever want a paid rename (new claim, old name burned forever)?

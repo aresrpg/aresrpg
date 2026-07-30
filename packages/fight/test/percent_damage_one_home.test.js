@@ -34,7 +34,7 @@ const percent_damage_row = (value) => ({
 })
 
 // A fixed-base EARTH strike: value == value_max, so the turn-seed roll cannot move it and the only thing that
-// can change the landed number is the caster's own build. The owner's repro number, verbatim.
+// can change the landed number is the caster's own build. The pinned regression number is exact.
 const AUTHORED_BASE = 108
 const strike = normalize_spell_templates([
   {

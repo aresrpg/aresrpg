@@ -4,7 +4,7 @@
 //
 // The chain moves a stolen point into the caster's pool SILENTLY (cast.move:1200/1328 `give_caster_points` →
 // `participant::give_points`; no event, exactly like the GIVE_POINTS twin), so the receipt is the only channel a
-// fold-based client has. This pins the whole hop the owner's repro broke: the sim's own cast receipt states the
+// fold-based client has. This pins the full regression path: the sim's own cast receipt states the
 // caster's pool row → `sim_chain` mints the fold's `Granted` → `inputs.apply_action` credits the caster's pool,
 // which is the number the HUD paints and the move wash spends. Without the receipt row the encoder had nothing
 // to state and the stolen MP evaporated the instant prediction rebased onto canonical truth (the #952 class).

@@ -6,8 +6,8 @@
 // engine_view.dead momentarily FLICKERS false — a re-armed death beat flips project.death_presenting_ids to
 // "animating" — entity_fold_action fell through to 'upsert': a FRESH rig with NO facing (sync_entities passes
 // facing_yaw only from the placement centroid, null in ACTIVE) → a DEFAULT-ORIENTATION model → then dead again →
-// the death animation RE-PLAYS. The owner's tell verbatim: "his model REAPPEARS WITH A DEFAULT ORIENTATION and
-// dies again." HP projection is intact underneath; the ENTITY LIFECYCLE betrays it.
+// the death animation RE-PLAYS with default orientation. HP projection is intact underneath; the entity
+// lifecycle betrays it.
 //
 // The guard: a POOFED rig stays DOWN while it is COMMITTED-dead, even through the engine_view.dead flicker. The
 // ONLY door back is the COMMITTED fold (authoritative, retirement-floored — never the flickering engine_view.dead)

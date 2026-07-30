@@ -10,7 +10,7 @@
 //
 // So this file folds REAL receipts through the production door — `normalize_events` → `apply_action`, the same
 // two functions the store runs — and asserts the committed state carries the status WITH its counter, and that
-// the counter burns exactly one tick per ROUND at the OWNER's turn end (three usable turns), with two mob turns
+// the counter burns exactly one tick per ROUND at the affected fighter's turn end (three usable turns), with two mob turns
 // in between that must not touch it. Same 1-player + 2-mob seat count as the driven capture in the report.
 
 import { describe, expect, test } from 'bun:test'

@@ -247,7 +247,7 @@ const encode_effect = (state, effect, ctx) => {
   // AP/MP POOL moves. On chain a give lands SILENTLY (cast.move:1098-1101 → participant::give_points) and the
   // DURABLE number reaches the client through the object read; a drain does emit (cast.move:1796 emit_drain).
   // The simulator has NO object read behind the receipt — `snapshot_from_sim` is the read — so a silent grant
-  // would be a fact the client can only ever roll back (#952: the owner lost the bonus MP the instant the
+  // would be a fact the client can only ever roll back (#952: the player lost the bonus MP the instant the
   // receipt landed). `Granted` is the fold's own grant kind and THE one home both grant doors ride (inputs.js),
   // so the pool move is stated there. A non-pool stat row carries no chain event and stays inert below.
   const pool_kind = POOL_POINT_KIND[effect.stat]

@@ -493,7 +493,7 @@ export function is_equip_state_refusal(error) {
 
 // #1136 — THE FIGHT IS OVER, AND THE CHAIN JUST SAID SO. `aresrpg_fight::actions` refuses every act door on a
 // fight that already went terminal: 101 ENotActive (begin_action into a resolved fight) and 105 EFightOver
-// (abandon with nothing left to forfeit). Discriminator ① of the owner's live report was CONFIRMED by machine —
+// (abandon with nothing left to forfeit). Discriminator ① of the live defect was confirmed by machine —
 // the Fight had been settled and DELETED underneath a live-looking board — so this abort is not a "your cast
 // failed" error at all: it is the client's own proof that the session it is rendering no longer exists. Treating
 // it as copy is what stranded the player on a dead board until stall. Consumers route it to the SAME terminal

@@ -427,7 +427,7 @@ export const is_stunned = (state, entity_id) => {
 }
 
 /**
- * Apply pre-rolled turn-start effects. Status counters age separately at the owner's turn end, matching
+ * Apply pre-rolled turn-start effects. Status counters age separately at the affected fighter's turn end, matching
  * `cast::tick_turn_start` / `cast::tick_turn_end` rather than disappearing as the next turn begins.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id

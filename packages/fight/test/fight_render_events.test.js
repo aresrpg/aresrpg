@@ -377,8 +377,8 @@ describe('receipt fight render events', () => {
   // the Cast) used to fall to the else-branch and trip flush_pending() with NO turn open yet → the kill Hits
   // orphaned into a bare non-local 'fight' turn. A non-local turn RE-PACES: its killing 'damage' beat re-entered
   // death_presenting_ids and re-animated a kill the eye had ALREADY presented optimistically (my own cast), so
-  // engine_view.dead flipped back to alive while committed_dead was true — the owner's "death played forever,
-  // rolled back while the turn card showed the mob as dead". The action envelope now joins the pending window, so
+  // engine_view.dead flipped back to alive while committed_dead was true — the death animation replayed and
+  // rolled back while the turn card showed the mob as dead. The action envelope now joins the pending window, so
   // the kill Hits group into their CASTER's turn (p0 — local, filtered out of the wave by wave_turns_of), never a
   // foreign re-pace. (The synthetic short ids mirror the trace's real structure without committing its chain ids —
   // the diagnosis rode the raw capture; this locks the mechanism the house-convention way.)

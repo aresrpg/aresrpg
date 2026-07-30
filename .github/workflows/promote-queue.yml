@@ -40,7 +40,7 @@
 # triggering head can only enter as DATA (`refs/pull/<n>/head`, fetched inside the engine), never
 # as executed code. That ref is `edge`, this repo's protected trust root: signature-required,
 # linear history, CI-gated, and itself only reachable through this same landing flow (the master
-# hop additionally through the owner's identity-checked `/promote`). Nothing can arrive on edge
+# hop additionally through the authorized maintainer's identity-checked `/promote`). Nothing can arrive on edge
 # that master would not accept, so pinning here costs no trust — while pinning to the DEFAULT
 # branch pinned the engine to master's stale copy and froze every landing fix that had already
 # shipped (issue #1573): the code that lands PRs must be the code CI actually gates. Landing is

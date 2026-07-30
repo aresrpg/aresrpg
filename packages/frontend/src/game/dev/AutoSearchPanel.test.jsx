@@ -61,7 +61,7 @@ describe('the HUD row — a real switch and a cog', () => {
     expect(html).toContain('gw-asrch__switch--on')
   })
 
-  // The owner's ruling on this control: label … cog · switch, the switch flush RIGHT, and ROUNDED.
+  // Control contract: label … cog · switch, the switch flush RIGHT, and ROUNDED.
   test('the row reads label → cog → switch, with the switch LAST (flush right)', () => {
     const html = render_row(false)
     const label = html.indexOf('gw-asrch__label')

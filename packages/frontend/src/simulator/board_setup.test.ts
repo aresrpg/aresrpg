@@ -335,7 +335,7 @@ describe('the board invariant — every stored cell is legal on the CURRENT boar
   })
 })
 
-// #883 ⑤ — the owner drove a live fight and found REROLL BOARD still clickable. The button is gone from the
+// #883 ⑤ — live-fight verification found REROLL BOARD still clickable. The button is gone from the
 // pane (BoardPane.test.tsx), but a button is chrome: the DOOR is what has to refuse, or any other caller —
 // a stale handler, a keyboard path, a future surface — can still regenerate the layout the sim is fighting
 // on, re-fitting every pick and placement under a snapshot the authority has already taken.

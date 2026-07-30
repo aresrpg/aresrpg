@@ -10,7 +10,7 @@
 // actually sees — a real store, real receipts, `engine_view(...).effects` (the array the badge HUD renders).
 //
 // The lifetime it pins is the chain's own (`cast.move:1585` ages the ENDING actor's rows): a `turns = 3` row
-// renders 3 → 2 → 1 across the OWNER's three turn ends, is untouched by anyone else's turn, and dies exactly when
+// renders 3 → 2 → 1 across the affected fighter's three turn ends, is untouched by anyone else's turn, and dies exactly when
 // the chain says it does — never at the first boundary.
 //
 // The other two legs of #598 are closed elsewhere and stay closed: the duration semantics leg is the design row
@@ -133,7 +133,7 @@ describe('#598/#597 the badge lifetime survives the turn boundary (post-V2-cutov
     expect(seen).toEqual([2, 1, null])
   })
 
-  test("the badge is untouched by ANOTHER fighter's turn — only the owner's turn end ages it", () => {
+  test("the badge is untouched by ANOTHER fighter's turn — only the affected fighter's turn end ages it", () => {
     const store = boot()
     feed(
       store,

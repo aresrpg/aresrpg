@@ -136,7 +136,7 @@ export const CHANNELS = {
   // live-QA on v1.12.39: the D302 mp_range/path pair still read "too little difference" — the [#212]
   // recolor (0x5ed82e → 0x6ee85c here, path 0x0d6b16 → 0x0b4712) widened the lum-delta floor 180 → 300
   // (see the [#212] test below) so "clear light green" vs "clear dark green" is unmistakable at
-  // fight-camera distance, not just on paper. [#950] the owner picked OPTION B off the swatch pair
+  // fight-camera distance, not just on paper. [#950] option B was selected from the swatch pair
   // (evidence/fight-hud-seats/950-paint-hue-options.png): mp_range 0x6ee85c → 0x7bf06a, path
   // 0x0b4712 → 0x176a24 — the path lifts off near-black into a readable dark green of the SAME hue
   // family while the pair keeps the ≥300 lum-delta floor (469 − 165 = 304).

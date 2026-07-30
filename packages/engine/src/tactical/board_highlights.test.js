@@ -466,8 +466,8 @@ describe('trap BASE — a DARK cell-bounded gradient-tile highlight', () => {
     expect(trap_blob_alpha(0.5, 0.8)).toBeCloseTo(trap_blob_alpha(0.5, 0.2), 5) // symmetric Y
   })
 
-  // RED-FIRST (#1043) — the owner's live report: "a placed trap paints as a faint orange/tan wash barely
-  // distinguishable from the floor". It was the trap GOLD over the pale warm paving: 1.8:1 on the raw tokens,
+  // RED-FIRST (#1043) — a placed trap was barely distinguishable from the floor: trap gold over pale warm
+  // paving measured 1.8:1 on the raw tokens,
   // 1.6:1 once composited — a tint, not a mark. The direction is a DARK cell base carrying a clearly contrasted
   // spike, so the numbers below are the law: the base separates from the floor, the spike separates from
   // the base, and both stay unlit so a night board reads identically.
@@ -714,7 +714,7 @@ describe('channel routing — los_blocked layer + unknown-layer no-op', () => {
     ctrl.set_channel(zone, 'glyph') // the caster's own already-placed AoE zone (paint()'s authoritative write)
     expect(tiles_in(ctrl, 'glyph')).toBe(3)
 
-    // a board-state update DURING the owner's turn: the movement-range wash repaints (a new fighter selected),
+    // a board-state update during the active fighter's turn: the movement-range wash repaints,
     // the steered hover path repaints on every mouse move, and an unrelated hover AoE preview repaints too —
     // none of these ever name 'glyph', so the zone must be completely unaffected by any of them.
     ctrl.set_channel([{ x: 5, y: 5 }], 'mp_range')

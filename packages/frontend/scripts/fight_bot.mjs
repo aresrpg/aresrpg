@@ -50,7 +50,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const FRONTEND = resolve(HERE, '..')
 const REPO = resolve(FRONTEND, '../..')
 
-// 4400 family — 5173 (the owner's dev server) and 9528 are untouchable, and --strictPort makes a collision
+// 4400 family — 5173 (the primary dev server) and 9528 are untouchable, and --strictPort makes a collision
 // a loud failure instead of a silent second port.
 const PORT = Number(process.env.FIGHT_BOT_PORT ?? 4400)
 const BASE = `http://localhost:${PORT}/`

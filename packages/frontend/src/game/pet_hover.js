@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// #676 — owner ruling verbatim: "all fish pets should fly around a bit above me, not walk the ground." Pure
+// #676 — fish pets hover above the character rather than walking on the ground. Pure
 // vertical-placement math + family detection, split out the same way pet_follow.js's dead-zone steering is:
 // engine-free, unit-testable without the @aresrpg/engine3 import pet_companion.js's rig factory carries (issue
 // #117). Horizontal steering (dead-zone follow + roam, pet_follow.js) is UNCHANGED for every pet family —
@@ -16,15 +16,15 @@
 // finding already caught a fish-sounding slug lying: pet_siluri ("Silury" → French "silure", catfish) LOOKS
 // fish-named but its published mob-catalog appearance is 'Tortoise' (verified live, pet_companion_resolver.
 // test.js) — so it is deliberately excluded here. The three below are unambiguous: pet_cryofin / pet_chromafin
-// both carry the "-fin" fish-anatomy suffix, pet_moray is a moray eel by name, and the owner's own #676 ruling
-// names "Cryofin et al." FLAGGED FOR THE CONTENT REPO: a real family/species field on the catalog row would
+// both carry the "-fin" fish-anatomy suffix, pet_moray is a moray eel by name, and #676 names Cryofin.
+// FLAGGED FOR THE CONTENT REPO: a real family/species field on the catalog row would
 // let this hand-kept set retire in favor of a data-driven read.
 export const FISH_PETS = new Set(['pet_cryofin', 'pet_chromafin', 'pet_moray'])
 
 /** @param {string | null | undefined} slug @returns {boolean} */
 export const is_fish_pet = slug => (slug ? FISH_PETS.has(slug) : false)
 
-export const HOVER_HEIGHT_M = 1.5 // world blocks above the fed ground y — "a bit above me" (owner ruling #676)
+export const HOVER_HEIGHT_M = 1.5 // world blocks above the fed ground y (#676)
 export const HOVER_BOB_AMPLITUDE_M = 0.15 // small — a gentle bob, never a bounce
 export const HOVER_BOB_PERIOD_S = 2.6 // seconds per full bob cycle — slow, reads as floating/swimming
 

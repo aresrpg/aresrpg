@@ -3,7 +3,7 @@
 //
 // #1741 — AN EMPTY CELL WAS CASTABLE. A zero-area single-target DAMAGE spell aimed one cell off a mob drafted
 // happily, burned its AP, resolved `act_cast` on chain with no `Hit` event, and damaged nobody: a whiff that read
-// byte-identical to a hit. The ruling ports the Dofus 1.29 rule — single-target damage REFUSES an empty cell —
+// byte-identical to a hit. The ruling ports the donor-era rule — single-target damage REFUSES an empty cell —
 // symmetric with `free_cell`'s existing occupied-cell withhold, in the SAME castability derivation
 // (`cast_range_set_dungeon`, the one home the gate, the wash and the hover all read).
 //

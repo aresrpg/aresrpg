@@ -50,11 +50,9 @@ const PROXY_SCRIPT = path.join(GOLD, 'proxy_lag.mjs')
 // 15:40:20 · both 5491/5492). Wrapping each long-lived server in bounded-run.sh registers a /tmp/agent-leases
 // entry the sweeper spares AND keeps a live babysitting parent; its own teardown sweep also frees the ports on
 // exit (killing the leftover-proxy 3101 conflict). `env` (not a shell prefix) carries the per-server vars so
-// bounded-run's argv stays a clean command. Portable lanes can provide GOLD_RUN_WRAPPER; the legacy Mac wrapper
-// remains the default only where it is installed, while every other environment launches the command directly.
-const LEGACY_GOLD_RUN_WRAPPER = '/Users/sceatstudio/.claude/hooks/bounded-run.sh'
-const GOLD_RUN_WRAPPER =
-  process.env.GOLD_RUN_WRAPPER ?? (fs.existsSync(LEGACY_GOLD_RUN_WRAPPER) ? LEGACY_GOLD_RUN_WRAPPER : '')
+// bounded-run's argv stays a clean command. Portable lanes can provide GOLD_RUN_WRAPPER; every other
+// environment launches the command directly.
+const GOLD_RUN_WRAPPER = process.env.GOLD_RUN_WRAPPER ?? ''
 const with_gold_run_wrapper = (command: string) => (GOLD_RUN_WRAPPER ? `${GOLD_RUN_WRAPPER} ${command}` : command)
 
 export default defineConfig({

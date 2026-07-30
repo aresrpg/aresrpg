@@ -72,7 +72,7 @@ describe('#1444 — a status row with no readable owner is dropped, never pinned
     }
   })
 
-  test('the owner reader is the ONE home for the fid, and it refuses every unreadable shape', () => {
+  test('the status-holder reader is the ONE home for the fid, and it refuses every unreadable shape', () => {
     expect(read_fighter_fid(0)).toBe(0)
     expect(read_fighter_fid('1000')).toBe(MOB_FIGHTER_ID_BASE)
     for (const bad of [null, undefined, '', false, true, {}, [], 'mob-0', -1, 1.5, NaN])

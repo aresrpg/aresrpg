@@ -9,8 +9,7 @@
 //   · the chain's trap `Hit` — emitted BEFORE the walk's row, because `movement::walk` fires the trap INLINE
 //     and `actions.move:69` / `turns.move:305` emit `Moved`/`MobMoved` only AFTER the walk returns — fell into
 //     `pending` and flushed into a bare synthetic `fight` turn at `at: 0`.
-// That last line IS the owner's live symptom, three times over: "the mob took the trap damage at TURN START,
-// before its movement, and the trap did not disappear".
+// That last line is the defect: trap damage appears at turn start before movement, and the trap persists.
 //
 // THE SPEC IS THE CHAIN, and the chain is CORRECT (`packages/move/engine/sources/movement.move:43-50`): the
 // trap fires the instant its cell is ENTERED, entrant-blind (the placer springs their own), it is consumed by
@@ -72,7 +71,7 @@ describe('mid-path trap crossing — the destination-only row no longer eats the
     const receipt = render([TRAP_HIT, MOB_MOVED])
 
     // The whole turn belongs to the MOVER. A synthetic `fight` turn holding a damage beat at at:0 IS the
-    // "damage at turn start, before the mob moved" the owner reported.
+    // The turn-start damage ordering regression.
     expect(receipt.turns.map((turn) => turn.source_id)).toEqual(['m0'])
     expect(shape(receipt.turns[0])).toEqual(SPLIT_WALK)
   })

@@ -23,8 +23,8 @@
 // no `apply: 'serve'` restriction — it degrades empty in every mode, in this public tree), so this
 // substitution cannot mask or fabricate the regression it's guarding against.
 //
-// SAMPLE CHOICE — ARMOR, not the default ALL view: the owner's incident screenshot showed "~zero ARMOR
-// icons" specifically. #160's bug was category-shaped: cosmetics (hat/cloak) resolve through a SEPARATE
+// SAMPLE CHOICE — ARMOR, not the default ALL view: the incident screenshot showed nearly zero armor
+// icons specifically. #160's bug was category-shaped: cosmetics (hat/cloak) resolve through a SEPARATE
 // path (cosmetic_icon_of) unaffected by the empty catalog, so the default level-sorted ALL view mixes
 // in enough cosmetics to dilute the signal (measured: the pre-#160 resolver still showed ~27% "success"
 // on the first 30 ALL-view rows — too close to any reasonable floor to be a clean gate). ARMOR has zero

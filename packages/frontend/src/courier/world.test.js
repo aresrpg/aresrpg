@@ -81,7 +81,7 @@ describe('the courier cannot downgrade room-owned link health', () => {
 })
 
 // #1641 — a refused POST used to be one silenced game_log line (the console channel is OFF for players), so a
-// 400 reached the owner as a bare browser network row and a rejected signature froze every send for the whole
+// 400 reached the browser as a bare network row and a rejected signature froze every send for the whole
 // 4-minute auth-reuse window. This is the ONE policy that decides what each refusal means.
 describe('courier refusal policy', () => {
   test('a 401 drops the cached signature so the very next send re-signs — no page refresh', () => {

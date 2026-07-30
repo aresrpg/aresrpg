@@ -59,7 +59,7 @@ const SOFT_FADE_DIST = 0.4
  *  cosmetic one — never invert that priority". A floor honours both: the burst always READS (≥ floor of its
  *  additive light), the smoothstep still softens the hard PNG-on-terrain edge ABOVE the floor, and a burst behind
  *  geometry dims to the floor (soft occlusion) instead of a hard cut — the accepted cosmetic cost. Live-tunable
- *  (window.__vfx_overlay.soft_floor.value) so the owner grades visibility↔occlusion with his eye; 0 restores the
+ *  (window.__vfx_overlay.soft_floor.value) for live visibility↔occlusion grading; 0 restores the
  *  pre-fix hard fade. */
 const OVERLAY_SOFT_FLOOR = 0.5
 
@@ -162,7 +162,7 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
   // Set `window.__vfx_overlay.no_fade.value = 1` in a live fight to test whether the fade is masking a
   // ground-anchored cast (gap≈0 under the top-down fight camera). If the VFX reappear, the fade is the culprit.
   const u_no_fade = uniform(0)
-  // #158 FIX — the soft-fade floor (OVERLAY_SOFT_FLOOR): live-tunable so the owner grades visibility↔occlusion.
+  // #158 FIX — the soft-fade floor (OVERLAY_SOFT_FLOOR): live-tunable for visibility↔occlusion grading.
   const u_soft_floor = uniform(OVERLAY_SOFT_FLOOR)
   if (typeof window !== 'undefined')
     /** @type {any} */ (window).__vfx_overlay = { gain: u_gain, no_fade: u_no_fade, soft_floor: u_soft_floor } // live-tuning knobs (console access)

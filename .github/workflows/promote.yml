@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# promote.yml — the `/promote` REQUEST handler (owner-triggered, signature-preserving).
+# promote.yml — the `/promote` REQUEST handler (maintainer-triggered, signature-preserving).
 #
 # `/promote` is a one-time land REQUEST, not a babysat rebase→wait→re-comment loop (issue #105).
-# Trigger = the owner commenting `/promote` on a PR targeting edge OR master (explicit command,
-# never an approval side-effect). This job asserts the commenter is the owner, applies the
+# Trigger = the authorized maintainer commenting `/promote` on a PR targeting edge OR master (explicit command,
+# never an approval side-effect). This job asserts the commenter's identity, applies the
 # `promote-requested` label, then invokes the SHARED landing engine (.github/scripts/promote-land.sh):
 #   • green + fast-forward → it lands NOW (byte-identical ff-push; signatures survive; label removed).
 #   • behind its base       → it reports `stale`; this job posts the ONE-TIME author rebase command.
@@ -19,10 +19,10 @@
 # landings are fast-forward PUSHES, not merge-button events, so no auto-delete is ever triggered
 # and landed branches pile up (34 as of 2026-07-21). `master` and `edge` are guarded by NAME and
 # never deleted — a master landing's head IS `edge` (the release PR) and must persist; only
-# `master` and `edge` survive long-term (owner rule 2026-07-21).
+# `master` and `edge` survive long-term (repository policy 2026-07-21).
 #
-# GOVERNANCE: the master hop is deploy-class and fires only on the owner's explicit word; the edge
-# hop is routine integration. "Who may land code" is enforced by the engine's asserts (owner
+# GOVERNANCE: the master hop is deploy-class and fires only on an explicit maintainer command; the edge
+# hop is routine integration. "Who may land code" is enforced by the engine's asserts (authorized
 # /promote comment + approval story + green + fast-forward) plus, for master, the `promoted` stamp
 # this workflow mints and the ruleset requires server-side — NEVER by a
 # ruleset review rule or a bypass grant — the bot holds zero bypass privilege and clears the exact
@@ -30,11 +30,11 @@
 #
 # FROZEN BY DESIGN (seat ruling 2026-07-29, issue #1573). This handler is the SPLIT's privileged
 # half: it is the one place that mints the `promoted` status master's ruleset requires, and it runs
-# only behind an owner-identity assert on a human comment. It stays deliberately small and pinned to
+# only behind a maintainer-identity assert on a human comment. It stays deliberately small and pinned to
 # the default branch — the unattended queue (promote-queue.yml) executes the engine from edge and
 # holds NO statuses:write, so the code that lands PRs can iterate at edge speed while the code that
 # mints deploy permission cannot. Changing this file changes who may put a commit on production:
-# it reaches master only through the owner's own promotion word, which is the acceptance this
+# it reaches master only through the authorized maintainer's promotion command, which is the acceptance this
 # ruling records.
 name: promote
 on:
@@ -63,13 +63,13 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.issue.number }}
     steps:
-      - name: assert commenter is the owner (numeric id is immortal; login is a readable second factor)
+      - name: assert commenter is the authorized maintainer (numeric id is immortal; login is a readable second factor)
         run: |
           # Numeric user IDs never change and freed logins are re-registerable — pin the id and
           # keep the login as a human-readable second factor. BOTH must hold. This gates who may
-          # APPLY the label; the engine re-checks the owner's /promote word before it ever lands.
-          test "${{ github.event.comment.user.id }}" = "11330271" || { echo "commenter is not the owner (id mismatch) — refusing"; exit 1; }
-          test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "commenter is not the owner (login mismatch) — refusing"; exit 1; }
+          # APPLY the label; the engine re-checks the authorized /promote command before it ever lands.
+          test "${{ github.event.comment.user.id }}" = "11330271" || { echo "commenter is not authorized (id mismatch) — refusing"; exit 1; }
+          test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "commenter is not authorized (login mismatch) — refusing"; exit 1; }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
@@ -78,24 +78,24 @@ jobs:
           gh label create promote-requested --repo "$GITHUB_REPOSITORY" --color BFD4F2 \
             --description "queued for land-on-green (issue #105)" --force >/dev/null
           gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label promote-requested >/dev/null
-      - name: stamp `promoted` on the head sha (master hop only) — the owner's word IS the mint
+      - name: stamp `promoted` on the head sha (master hop only) — the maintainer command is the mint
         # THE SPLIT (seat ruling 2026-07-29, issue #1573). master's ruleset requires a `promoted`
         # status on the sha AT PUSH TIME, and exactly one place may mint it: here, behind the
-        # owner-identity assert above. The shared engine no longer stamps — the unattended queue
+        # maintainer-identity assert above. The shared engine no longer stamps — the unattended queue
         # runs that same engine with no statuses:write, so a landing it performs can only ever
-        # fast-forward a sha the owner already blessed by hand.
+        # fast-forward a sha the authorized maintainer already approved.
         #
         # ORDER: the stamp is written BEFORE the engine's asserts run, and that is sound — a commit
         # status carries no permission of its own, and the push it enables is still gated by the
         # engine (green + fast-forward + release-tipped + republish-window) and by every other rule
         # on master. A rebase produces a NEW sha carrying no stamp; the author re-/promotes, which
-        # is simply the owner re-saying the deploy word.
+        # simply requires the maintainer to repeat the deploy command.
         run: |
           BASE=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json baseRefName -q .baseRefName)
           if [ "$BASE" != master ]; then echo "edge hop — no promoted stamp needed"; exit 0; fi
           SHA=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid -q .headRefOid)
           gh api "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" -f state=success -f context=promoted \
-            -f description="promoted to master by the owner's /promote" >/dev/null
+            -f description="promoted to master by an authorized /promote" >/dev/null
           echo "stamped promoted on $SHA"
       - name: attempt landing (shared engine)
         id: land

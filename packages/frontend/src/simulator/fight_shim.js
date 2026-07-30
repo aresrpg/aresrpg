@@ -147,10 +147,10 @@ export const create_fight_shim = ({
     // re-enters. `with_core_fold` (fight/store.js) folds the core BEFORE calling the door and writes it back
     // AFTER, so a nested input's fold is overwritten on the outer call's way out: the whole committed turn was
     // admitted and then discarded. The SIM kept it (the mobs planned against the moved-to cell) while the client
-    // fell back to the adopted base snapshot — the fight's START cell — and that turn's status rows went with it
-    // (the owner's "auto turn pass put me back on the starting one" + "my buffs are always gone when I end my
-    // turn", one root). `pump_mobs` already deferred through `schedule`, which is why only the PLAYER's own turn
-    // was ever lost. Ordering is untouched: callers await this promise, so the fold still completes before they
+    // fell back to the adopted base snapshot — the fight's START cell — and that turn's status rows went with it.
+    // The resulting start-cell rollback and lost-buff defects shared this root. `pump_mobs` already deferred
+    // through `schedule`, which is why only the PLAYER's own turn was ever lost. Ordering is untouched: callers
+    // await this promise, so the fold still completes before they
     // continue.
     await Promise.resolve()
     // NO SILENT REFUSAL (#922): a commit that returns false rolls the player's whole drafted turn back, so every
@@ -316,7 +316,7 @@ export const create_fight_shim = ({
         address: LOCAL_ADDRESS,
         // THE SEAT NAMES (#883 ③). `snapshot_from_sim` carries no `name` on a participant row (the chain's
         // own participant has none either), so the core's projection falls back to `ctx.roster` and, failing
-        // that, prints the OWNER ADDRESS — every sim seat read as `0X51M0…0000` on its turn card. The roster
+        // that, prints the wallet address — every sim seat read as `0X51M0…0000` on its turn card. The roster
         // is handed straight to the core here rather than hoped for on the engine's global `sui.characters`,
         // which on this page holds whatever the world session last loaded (often the player's real roster,
         // which never contains `sim_c1`).

@@ -21,7 +21,7 @@
 // (#553 — public pets: remote_players.js spawns the identical rig for a peer's equipped pet, resolved off
 // remote_character_cache.js's /v1 read instead of the local live-character read below) — a companion's
 // positioning (an independent world entity that follows with a dead zone — pet_follow.js, NOT a rig welded to
-// the owner's transform) and
+// the character transform) and
 // sizing (a small critter, never MOUNT_TABLE's rideable scale) genuinely differ from a ridden mount's
 // (posed at the feet, seat-lifted). It skips mount_rig's idle/move blend + root-y-pin: those exist to
 // fight baked root translation in WALK/RUN clips, and a companion only ever loops ONE clip — IDLE, or for a
@@ -54,10 +54,10 @@ const load_glb = (/** @type {string} */ url) => {
 }
 
 /**
- * A companion rig for `glb_url` that follows its owner as an INDEPENDENT world entity. Fills in ASYNC —
+ * A companion rig for `glb_url` that follows its character as an INDEPENDENT world entity. Fills in ASYNC —
  * `update()`/`set_visible()` no-op until the GLB resolves, so the caller can create it and feed it every frame
  * immediately. `update()` steps the pure pet_follow steering (its own world position, a 5-block dead zone,
- * catch-up beyond it, idle roam within it) and loops its one clip — it is NOT welded to the owner's transform.
+ * catch-up beyond it, idle roam within it) and loops its one clip — it is NOT welded to the character transform.
  * A fish-family `slug` (pet_hover.js's is_fish_pet, #676) hovers HOVER_HEIGHT_M above the fed ground y with a
  * gentle time-based bob instead of the ground_off placement, and prefers a SWIM clip over idle when its GLB
  * carries one; every other pet is byte-identical to before. `dispose()` detaches it (REMOVE-ONLY — never a GPU
@@ -110,14 +110,14 @@ export function create_pet_companion_rig({ engine, glb_url, slug = null }) {
     get ready() {
       return !!rig
     },
-    /** Step the independent follow steering toward the owner's position (dead zone + roam); the loaded clip (idle, or swim for a fish) keeps looping via the mixer. */
+    /** Step the independent follow steering toward the character position; the loaded clip keeps looping. */
     update(owner_x, owner_gy, owner_z, dt) {
       if (!rig) return
       // The pure reducer owns the pet's world position (x/z only — #676's hover is a vertical-only change, the
       // dead-zone follow/roam steering below is IDENTICAL for every family); Math.random (roam entropy) rides
       // its default at this edge.
       rig.motion = step_pet_follow(rig.motion, { x: owner_x, z: owner_z }, dt)
-      // Ground y trails the owner's fed height — the same tolerance the character auto-follow accepts (no
+      // Ground y trails the character's fed height — the same tolerance the character auto-follow accepts (no
       // per-pet voxel scan; #593 explicitly forbids collision agonizing for a cosmetic companion). A fish
       // hovers HOVER_HEIGHT_M above it with a gentle bob instead (#676) — ground_off (the bbox-floor grounding
       // term) does not apply to a hovering creature, so it's deliberately skipped on that branch.

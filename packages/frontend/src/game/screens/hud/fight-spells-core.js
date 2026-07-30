@@ -149,7 +149,7 @@ const CELL_TARGET_KINDS = new Set(['PLACE_TRAP', 'PLACE_GLYPH', 'TELEPORT', 'RES
 const zero_area = (effect) => (effect?.area_size ?? 0) === 0 && (effect?.area_shape ?? 'POINT') === 'POINT'
 
 /**
- * Does this spell LEVEL require a visible occupant under the aim? (#1741, the Dofus 1.29 rule: a single-target
+ * Does this spell LEVEL require a visible occupant under the aim? (#1741, the donor-era rule: a single-target
  * damage spell refuses empty ground — targetless whiffing is not a mechanic there; invisible-hunting is
  * deliberately the AoE/trap game.) TRUE only for the ruled scope: a zero-area spell that damages, is not
  * `free_cell`, and carries no cell-semantics effect. Every other spell — AoE, traps, glyphs, teleports, pure

@@ -198,7 +198,7 @@ function create_session(
   // seating) inherits the flat world through the SAME surface it already reads. SPECTATE is excluded: the
   // login backdrop stays the scenic terrain vista — hack is a preference for sessions you PLAY.
   const presentation = !spectate && resolve_hack_mode(location.search) ? 'hackgrid' : 'terrain'
-  // The HUD needs the SAME answer (hack mode streams the owner's playlist instead of our beds — the radio
+  // The HUD needs the SAME answer (hack mode streams the user's playlist instead of our beds — the radio
   // widget mounts on this). Publishing it through the reducer door here, at the one place the mode is
   // resolved, is what makes a settings flip reach the HUD live: set_hack_mode re-creates the session, which
   // re-runs this line. No second pref read, no page reload, and spectate is correctly never the grid.

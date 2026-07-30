@@ -187,7 +187,7 @@ const cast_self = (state, ctx, spell_id) =>
 const row_of = (state, id, type) =>
   find_entity(state, id).effects.find(effect => effect.type === type)
 
-describe("#973 status durations tick on the OWNER's turn only (cast.move:1585 scope)", () => {
+describe("#973 status durations tick on the affected fighter's turn only (cast.move:1585 scope)", () => {
   test('a 3-turn MP status survives one full round with 2 turns remaining', () => {
     const { state, ctx } = three_seat_fight()
     expect(get_current_turn_entity(state).id).toBe('p0')

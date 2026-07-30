@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // M6 — PREDICTIONS RETIRE BY CLAIM, THE PURGE VERB DIES (issue #308).
 //
-// The bug (diagnosed from the owner's captured traces, #340 lane replay): an optimistic predicted cast was
+// The bug (diagnosed from captured traces, #340 lane replay): an optimistic predicted cast was
 // PURGED by any intervening `receipt` at a version ≥ its basis — even an UNRELATED one (a peer/mob move that
 // says nothing about the cast). presented state reverted to committed (the HP-rollback + "the fight changed
 // on-chain" toast + the second death re-beat), then the cast CONFIRMED later. Provenance for these synthetic

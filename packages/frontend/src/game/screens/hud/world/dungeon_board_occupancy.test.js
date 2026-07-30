@@ -51,7 +51,7 @@ const extract = async (start_marker, end_marker, args, { strip_start = true, ret
   return new Function(...args, body)
 }
 
-// The exact trace-capsule fixture (FINDING_sword_refusal.md, idx 231/246/259): the owner's own weapon kill left a
+// The exact trace-capsule fixture (FINDING_sword_refusal.md, idx 231/246/259): the player's weapon kill left a
 // corpse (m2) on cell 26; a fresh mob (m1) later walked onto it — same cell, dead occupant indexed LAST.
 const ME = enc(6, 0) // manhattan(ME, 26) = 1 — matches the trace's caster@6
 const STACK_CELL = 26

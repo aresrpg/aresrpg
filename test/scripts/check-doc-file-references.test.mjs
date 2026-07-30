@@ -214,7 +214,7 @@ describe('docs file-reference gate', () => {
     const markdown = [
       '[missing](./missing.md)',
       '[escape](../../outside.md)',
-      '`/Users/dev/repo/packages/frontend/src/app.tsx`',
+      '`/home/alice/packages/frontend/src/app.tsx`',
       '`/workspace/repo/packages/frontend/src/app.tsx`',
       '`packages/frontend/src/app.',
       'tsx`',
@@ -237,7 +237,7 @@ describe('docs file-reference gate', () => {
         reason: 'path escapes repository',
       },
       {
-        cited_path: '/Users/dev/repo/packages/frontend/src/app.tsx',
+        cited_path: '/home/alice/packages/frontend/src/app.tsx',
         reason: 'host-absolute path',
       },
       {

@@ -54,7 +54,7 @@ test('reduce() alone (no observe, no store) projects the dispatched snapshot int
 // fix, reduce()'s "freshness law" wipe iterated EVERY key currently in the Map and reaped anything absent from
 // ITS OWN payload — collateral-deleting the other writer's rows every single p2p tick, a beat ahead of
 // apply_follow's own next tick restoring them. remote_players.js reacts correctly (same-tick teardown) to a row
-// vanishing, so the entity itself never truly leaked — but the OWNER ROW leaving and returning off an
+// vanishing, so the entity itself never truly leaked — but the address row leaving and returning off an
 // uncoordinated race is exactly the invariant violation #595 reports: a live-followed pet/avatar cycling
 // torn-down/respawned for no game-logic reason. Each reducer must only reap the rows IT lists.
 test('reduce() never reaps an owned_follow row absent from its own p2p payload (#595)', () => {

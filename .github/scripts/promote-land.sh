@@ -6,7 +6,7 @@
 #
 # ONE home for "land a promote-requested PR onto its base by fast-forward, signatures intact".
 # Called by BOTH triggers so the asserts + ff-push are never duplicated:
-#   • .github/workflows/promote.yml       — the owner's `/promote` command (one PR, interactive)
+#   • .github/workflows/promote.yml       — the authorized maintainer's `/promote` command
 #   • .github/workflows/promote-queue.yml — gate/checks workflow_run:completed (land-on-green)
 #
 # The green assert itself lives in the sibling promote-green-eval.sh (sourced below, unit-tested
@@ -25,7 +25,7 @@
 #   committer stays the author, no web-flow signing). edge carries a required_signatures rule, so
 #   the subsequent fast-forward of an unsigned commit would be REJECTED — the bot therefore NEVER
 #   rebases through the API. A stale branch is rebased by its AUTHOR locally (commits stay signed)
-#   and lands automatically on its next green cycle; the owner's `/promote` is a one-time REQUEST,
+#   and lands automatically on its next green cycle; the maintainer's `/promote` is a one-time REQUEST,
 #   not a babysat rebase→wait→re-comment loop.
 #
 # CONTRACT
@@ -71,8 +71,8 @@ esac
 
 # ── owner authorization — the LABEL IS NOT A CAPABILITY ──────────────────────────────────────
 # `promote-requested` is add-able by any write collaborator via the UI, so it can never be the
-# authorization token. The owner's WORD is: an owner-authored `/promote` comment must exist on
-# this PR. This re-establishes "the owner asked for it" in the workflow_run path (which has no
+# authorization token. An authorized-account `/promote` comment must exist on this PR. This carries
+# the explicit authorization into the workflow_run path (which has no
 # commenter) and makes a manually-labeled PR un-landable. Numeric id is immortal, login the
 # readable second factor — BOTH hold.
 OWNER_PROMOTE=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
@@ -81,14 +81,14 @@ if [ "$OWNER_PROMOTE" -lt 1 ]; then
   emit unauthorized; echo "no owner-authored /promote comment on PR #$PR — refusing"; exit 1
 fi
 
-# Approval story (unchanged): owner-authored PRs — the /promote comment IS the owner's approval
+# Approval story (unchanged): authorized-account PRs — the /promote comment is the approval
 # act (GitHub forbids self-review, so a review assert would be unsatisfiable by construction);
-# foreign-authored PRs — the owner's APPROVED review is required ON TOP of his /promote. Pin the
+# foreign-authored PRs — the authorized maintainer's APPROVED review is required in addition. Pin the
 # author by numeric id (immortal) with login as the second factor; read the REST numeric id.
 AUTHOR_ID=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.user.id')
 AUTHOR_LOGIN=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.user.login')
 if [ "$AUTHOR_ID" = "$OWNER_ID" ] && [ "$AUTHOR_LOGIN" = "$OWNER_LOGIN" ]; then
-  echo "owner-authored PR — the /promote comment is the owner's approval act"
+  echo "authorized-account PR — the /promote comment is the approval act"
 else
   APPROVED=$(gh api "repos/${REPO}/pulls/${PR}/reviews" \
     --jq "[.[] | select(.user.login==\"${OWNER_LOGIN}\")] | last | .state")
@@ -165,9 +165,9 @@ fi
 # THE ENGINE NEVER MINTS THE `promoted` STAMP (seat ruling 2026-07-29, issue #1573). It used to
 # stamp right here, before the push — but this engine also runs unattended from promote-queue.yml,
 # and a landing engine that writes its own permission slip is not a gate. The stamp is minted by
-# promote.yml alone, at the owner's `/promote`, and the queue holds no statuses:write at all.
-# master's ruleset then enforces the stamp SERVER-SIDE on the push below: a sha the owner never
-# blessed (a rebase makes a new one, carrying nothing) is refused by GitHub, not by this script.
+# promote.yml alone, at the authorized maintainer's `/promote`, and the queue holds no statuses:write at all.
+# master's ruleset then enforces the stamp SERVER-SIDE on the push below: an unapproved sha
+# (a rebase makes a new one, carrying nothing) is refused by GitHub, not by this script.
 # Everything past this line is post-landing bookkeeping over a push that ALREADY HAPPENED and can
 # never be retried. A failed landing-automation dispatch is therefore recorded, never fatal here:
 # aborting mid-tail would strand the `promote-requested` label, re-land the same PR every CI cycle,
@@ -179,7 +179,7 @@ if ! git push origin "$HEAD_SHA:$BASE"; then
   # protected-branch refusal, so name the cause the master leg actually has: no `promoted` stamp.
   if [ "$BASE" = master ]; then
     emit master-push-rejected
-    echo "::error::master refused the fast-forward of $HEAD_SHA — its required 'promoted' status is missing (only promote.yml mints it, at the owner's /promote; a rebase produces a NEW sha that carries no stamp) or master moved under this run. Re-/promote the release PR."
+    echo "::error::master refused the fast-forward of $HEAD_SHA — its required 'promoted' status is missing (only promote.yml mints it at an authorized /promote; a rebase produces a NEW sha that carries no stamp) or master moved under this run. Re-/promote the release PR."
     exit 1
   fi
   echo "::error::the fast-forward of $HEAD_SHA onto $BASE was rejected — see the push output above"

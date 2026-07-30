@@ -88,7 +88,7 @@ const names_of = (store) => {
   return [...view.fighters.values()].filter((f) => f.is_player).map((f) => f.name)
 }
 
-describe('#929 — turn-card names key off the CHARACTER, never the owner address', () => {
+describe('#929 — turn-card names key off the CHARACTER, never the wallet address', () => {
   test('the seeded seat names survive a recompose driven by a roster that does not contain them', () => {
     const seeded = [
       { id: 'sim_c1', name: 'Kaelen', classe: 'senshi', level: 1 },
@@ -154,7 +154,7 @@ describe('#929 — turn-card names key off the CHARACTER, never the owner addres
     expect(rows.some((row) => row.id === 'mob-0')).toBe(false) // mobs name off mob_names, never the roster
   })
 
-  test('every player fighter gets a row — the owner-address fallback has no precondition left', () => {
+  test('every player fighter gets a row — the wallet-address fallback has no precondition left', () => {
     const fighters = new Map([
       ['a', { is_player: true, character_id: 'a' }],
       ['b', { is_player: true, character_id: 'b' }],

@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // #1144 — THE BANKED-PREDICTION ORACLE, headless. The bot's every other assertion reads `hp_committed` on BOTH
 // sides of an action, so it compares chain truth against chain truth: it can prove a cast did something and can
-// never prove it did what the player was shown. The owner's live report — a cast that forecast 2 HP of damage
-// and killed the mob outright — passes every one of those rows.
+// never prove it did what the player was shown. A cast that forecast 2 HP remaining but resolved a corpse
+// passes every one of those rows.
 //
 // So the seam banks the client's own `predict_cast` output BEFORE staging the turn, and this drives the assert
 // over that bank: a divergent number is a FAIL row naming BOTH values, the spell rank and the build it was
@@ -77,7 +77,7 @@ const parity_rows = (rows) => rows.filter((row) => String(row.note).startsWith('
 
 describe('#1144 — the bot compares its PREDICTION against the chain, not the chain against itself', () => {
   test('RED: a doctored prediction diverging from the committed fold is a FAIL row naming both values', () => {
-    // The owner's own case: the client forecast 2 HP left, the authority resolved a corpse.
+    // Regression case: the client forecast 2 HP left, the authority resolved a corpse.
     const rows = assert_turn(plan, commit({ before_hp: 60, after_hp: 0, predicted: [bank(2)] }))
     const parity = parity_rows(rows)
     expect(parity).toHaveLength(1)

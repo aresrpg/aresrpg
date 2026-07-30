@@ -6,7 +6,7 @@
 // CURSOR over a beat queue derived from the fold's per-event facts; beats advance by CLOCK ONLY — an animation
 // completing is NOT an input, so a slow renderer misses beats and truth never waits. Past `max_lag` the projection
 // COALESCES/SNAPS: the cursor jumps toward the frontier so it can never fall unboundedly behind (the starve state —
-// truth-frontier ≫ presentation-cursor — renders as a LEGAL board, exactly the owner's acceptance bar).
+// truth-frontier ≫ presentation-cursor — renders as a LEGAL board, exactly the acceptance bar).
 //
 // Rider R2: the §7b envelope/beat-grammar (present.js `produce_receipt_render_turns` / `pace_segment`) remains the
 // ORACLE for beat CONTENT + timing in normal operation (every beat plays whole). This module models the cursor

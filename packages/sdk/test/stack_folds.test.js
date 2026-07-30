@@ -240,7 +240,7 @@ describe('marketplace buy — the bought stack folds into the ones already owned
     const tx = buy({ existing_stack_ids: [SIBLING_HIGH, SIBLING_LOW] })
     const command_targets = targets(tx)
     expect(command_targets.slice(-2)).toEqual([MERGE, MERGE])
-    // the folds ride AFTER the cap is returned — the Move door borrows the owner cap out of the pkcap itself
+    // the folds ride AFTER the cap is returned — the Move door borrows its owner cap out of the pkcap itself
     expect(command_targets.indexOf('personal_kiosk::return_val')).toBeLessThan(
       command_targets.indexOf(MERGE),
     )

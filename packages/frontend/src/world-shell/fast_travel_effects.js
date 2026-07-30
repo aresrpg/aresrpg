@@ -21,7 +21,7 @@ import { join_world_action } from './world_join.js'
 
 const REALM_UNREACHABLE = 'fast_travel.realm_unreachable'
 
-/** Address-only fallback: prefer the owner's character currently in a world, else the first. */
+/** Address-only fallback: prefer a wallet character currently in a world, else the first. */
 const primary_of = (chars) => (chars ?? []).find((c) => c && c.world) ?? (chars ?? [])[0] ?? null
 
 /** The target peer's live broadcast position by character id (same-world retarget seed), or null. */
