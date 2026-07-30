@@ -87,13 +87,11 @@ export function reduce_session_gate(state, input) {
   }
 }
 
-const make_session_gate_input =
-  (set, get) =>
-  (input) => {
-    const state = get()
-    const next = reduce_session_gate(state, input)
-    if (next !== state) set(next, true)
-  }
+const make_session_gate_input = (set, get) => (input) => {
+  const state = get()
+  const next = reduce_session_gate(state, input)
+  if (next !== state) set(next, true)
+}
 
 /** @returns {import('zustand/vanilla').StoreApi<SessionGateState>} */
 export function create_session_gate_store() {

@@ -79,8 +79,7 @@ export function project_character_mint(
     String(character_change.objectType)
   )
   const kiosk_id = receipt_kiosk?.kiosk_id ?? destination?.kiosk_id ?? null
-  const personal_kiosk_cap_id =
-    receipt_kiosk?.personal_kiosk_cap_id ?? destination?.personal_kiosk_cap_id ?? null
+  const personal_kiosk_cap_id = receipt_kiosk?.personal_kiosk_cap_id ?? destination?.personal_kiosk_cap_id ?? null
   const receipt_character = {
     ...character,
     kiosk_id,

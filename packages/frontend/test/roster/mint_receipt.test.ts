@@ -4,11 +4,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import {
-  mint_session_matches,
-  project_character_mint,
-  project_personal_kiosk,
-} from '../../src/roster/mint_receipt'
+import { mint_session_matches, project_character_mint, project_personal_kiosk } from '../../src/roster/mint_receipt'
 import { EXPEDITION_INITIAL_STATE, reduce_expedition } from '../../src/roster/store_reducer'
 
 const draft = {

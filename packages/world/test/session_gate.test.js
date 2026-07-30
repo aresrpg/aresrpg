@@ -66,9 +66,10 @@ describe('scene decisions', () => {
         world: undefined,
       })
     ).toEqual({ action: 'await-auth', key: null })
-    expect(
-      plan_scene({ show_world: false, authenticated: true, on_world_tab: true, world: WORLD })
-    ).toEqual({ action: 'hidden', key: null })
+    expect(plan_scene({ show_world: false, authenticated: true, on_world_tab: true, world: WORLD })).toEqual({
+      action: 'hidden',
+      key: null,
+    })
   })
 })
 

@@ -88,11 +88,7 @@ function mint_error(error?: string | null): Error {
 }
 
 /** Feed a settled Character mint through the roster reducer door. */
-function ingest_character_mint_receipt(
-  receipt: any,
-  draft: character_draft,
-  destination: personal_kiosk_handle
-) {
+function ingest_character_mint_receipt(receipt: any, draft: character_draft, destination: personal_kiosk_handle) {
   const projection = project_character_mint(receipt, draft, destination)
   if (!projection) return null
   context.dispatch('action/sui_data', projection.roster_input)

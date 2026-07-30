@@ -30,11 +30,7 @@ describe('atomic character creation — no post-receipt world transaction', () =
       begin_join: (id: string) => scheduled.push(id),
     }
 
-    adopt_paid_mint_if_first(
-      '0xcharacter',
-      { characters: [], selected_character_id: null },
-      legacy_deps
-    )
+    adopt_paid_mint_if_first('0xcharacter', { characters: [], selected_character_id: null }, legacy_deps)
 
     expect(selected).toEqual(['0xcharacter'])
     expect(scheduled).toEqual([])

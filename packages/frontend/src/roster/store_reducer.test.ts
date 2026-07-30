@@ -34,9 +34,7 @@ describe('adopt_paid_mint_if_first', () => {
     const selected: string[] = []
     const prior = { characters: [{ id: ACTIVE }], selected_character_id: ACTIVE }
     expect(should_adopt_paid_mint(prior)).toBe(false)
-    expect(
-      adopt_paid_mint_if_first(NEW_CHAR, prior, { select_character: (id) => selected.push(id) })
-    ).toBe(false)
+    expect(adopt_paid_mint_if_first(NEW_CHAR, prior, { select_character: (id) => selected.push(id) })).toBe(false)
     expect(selected).toEqual([])
   })
 })
