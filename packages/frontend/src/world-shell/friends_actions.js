@@ -54,6 +54,31 @@ export function created_friend_list_id(result) {
 
 const _is_addr = (/** @type {string} */ a) => /^0x[0-9a-f]{64}$/.test(a)
 
+/** Optimistic add lifecycle: every async result returns through the friend reducer's correlated input door. */
+async function submit_friend_add({ my_address, list_id, friend, toast }) {
+  const request_id = Symbol('friend_add')
+  friends_input({ type: 'friend_add_started', address: my_address, friend, request_id })
+  try {
+    await toast.promise(add_friend(list_id, friend), {
+      pending: i18n.t('friends.pending_add'),
+      success: i18n.t('friends.toast_add'),
+    })
+    friends_input({
+      type: 'friend_add_succeeded',
+      address: my_address,
+      list_id,
+      friend,
+      request_id,
+    })
+    void refresh_friends(my_address)
+    return { ok: true }
+  } catch (error) {
+    friends_input({ type: 'friend_add_failed', address: my_address, friend, request_id })
+    /* the toast promise already surfaced the humanized failure */
+    return { ok: false, error }
+  }
+}
+
 /** Enter the existing transaction flow with an already-resolved address. */
 async function add_friend_address_flow(my_address, target, toast) {
   const addr = String(target ?? '')
@@ -76,12 +101,7 @@ async function add_friend_address_flow(my_address, target, toast) {
       if (lid) friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
     }
     if (!lid) return
-    await toast.promise(add_friend(lid, addr), {
-      pending: i18n.t('friends.pending_add'),
-      success: i18n.t('friends.toast_add'),
-    })
-    friends_input({ type: 'friend_added', address: my_address, list_id: lid, friend: addr })
-    void refresh_friends(my_address)
+    await submit_friend_add({ my_address, list_id: lid, friend: addr, toast })
   } catch {
     /* already surfaced by the humanizing toast */
   }
