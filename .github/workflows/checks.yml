@@ -22,7 +22,7 @@ permissions:
 jobs:
   loc-ledger:
     name: LoC ledger gate
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref != 'master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

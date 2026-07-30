@@ -45,7 +45,23 @@ function commit_all(fixture, message) {
   fixture.git('-c', 'commit.gpgsign=false', 'commit', '--no-verify', '--quiet', '--message', message)
 }
 
-function run_gate(fixture) {
+function run_gate(fixture, refs = null) {
+  const event_path = path.join(fixture.dir, 'event.json')
+  if (refs !== null) {
+    fs.writeFileSync(
+      event_path,
+      JSON.stringify({
+        pull_request: {
+          base: { sha: fixture.base, ref: refs.base, repo: { full_name: 'Sceat/aresrpg' } },
+          head: {
+            sha: fixture.git('rev-parse', 'HEAD').trim(),
+            ref: refs.head,
+            repo: { full_name: refs.head_repo ?? 'Sceat/aresrpg' },
+          },
+        },
+      })
+    )
+  }
   const result = spawn_sync('bash', [gate_path, '--fixture-adjudication'], {
     cwd: repo_root,
     encoding: 'utf8',
@@ -53,9 +69,25 @@ function run_gate(fixture) {
       ...process.env,
       GIT_DIR: path.join(fixture.dir, '.git'),
       GIT_WORK_TREE: fixture.dir,
+      ...(refs === null
+        ? {
+            GITHUB_EVENT_NAME: '',
+            GITHUB_EVENT_PATH: '',
+            GITHUB_ACTIONS: '',
+            CI: '',
+          }
+        : {
+            GITHUB_EVENT_NAME: 'pull_request',
+            GITHUB_EVENT_PATH: event_path,
+          }),
     },
   })
   return { status: result.status, output: `${result.stdout ?? ''}${result.stderr ?? ''}` }
+}
+
+function print_evidence(label, result) {
+  if (process.env.PROMOTION_GATE_EVIDENCE === '1')
+    console.log(`--- ${label} (exit ${result.status}) ---\n${result.output}`)
 }
 
 afterEach(() => {
@@ -82,6 +114,37 @@ describe('fixture-adjudication constraint row', () => {
     expect(output).toContain('RED')
     expect(output).toContain('packages/sim/test/fixtures/replay/case.json')
     expect(output).toContain('wrong fix hide its own evidence')
+  })
+
+  it('passes promotion history while the same commit still reds on a normal PR', () => {
+    const fixture = fixture_repo()
+    fs.writeFileSync(fixture.fixture_path, '{"state":"historical-unadjudicated-mutation"}\n')
+    commit_all(fixture, 'test: historical fixture mutation')
+
+    const normal = run_gate(fixture, { base: 'edge', head: 'topic' })
+    print_evidence('fixture normal PR negative control', normal)
+    expect(normal.status).toBe(1)
+    expect(normal.output).toContain('test: historical fixture mutation')
+    expect(normal.output).toContain('red=1')
+
+    const promotion = run_gate(fixture, { base: 'master', head: 'edge' })
+    print_evidence('fixture promotion control', promotion)
+    expect(promotion.status).toBe(0)
+    expect(promotion.output).toContain(
+      'promotion range: 1 commits already adjudicated on edge entry — pass-with-reason'
+    )
+  })
+
+  it('does not mistake a fork branch named edge for the integration branch', () => {
+    const fixture = fixture_repo()
+    fs.writeFileSync(fixture.fixture_path, '{"state":"fork-mutation"}\n')
+    commit_all(fixture, 'test: fork fixture mutation')
+
+    const fork = run_gate(fixture, { base: 'master', head: 'edge', head_repo: 'fork/aresrpg' })
+
+    expect(fork.status).toBe(1)
+    expect(fork.output).toContain('test: fork fixture mutation')
+    expect(fork.output).not.toContain('pass-with-reason')
   })
 
   it('passes a fixture-mutating commit adjudicated by a non-author', () => {

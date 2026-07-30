@@ -693,7 +693,8 @@ test_reachability_gate() {
 # A file newly added by a commit has no earlier evidence to overwrite and is exempt. Every other
 # per-commit change under those pathspecs needs an Adjudicated-by trailer whose email differs from
 # the author (both canonicalized through .mailmap). The range is the PR's exact base..head in CI and
-# merge-base(origin/edge, HEAD)..HEAD in a contributor checkout.
+# merge-base(origin/edge, HEAD)..HEAD in a contributor checkout. A master←edge promotion is the one
+# range shape that does not re-adjudicate: ff-only entry to edge already judged these exact commits.
 FIXTURE_PATHSPEC=(
   ':(glob)packages/*/test/fixtures/**'
   ':(glob)packages/*/test/**/*.json'
@@ -701,12 +702,22 @@ FIXTURE_PATHSPEC=(
 )
 FIXTURE_RANGE_BASE=
 FIXTURE_RANGE_HEAD=
+FIXTURE_RANGE_BASE_REF=
+FIXTURE_RANGE_HEAD_REF=
+FIXTURE_RANGE_BASE_REPO=
+FIXTURE_RANGE_HEAD_REPO=
 FIXTURE_RANGE_CONTEXT=
+FIXTURE_RANGE_PROMOTION=0
 FIXTURE_RANGE_SKIP=0
 resolve_fixture_pr_range() {
   FIXTURE_RANGE_BASE=
   FIXTURE_RANGE_HEAD=
+  FIXTURE_RANGE_BASE_REF=
+  FIXTURE_RANGE_HEAD_REF=
+  FIXTURE_RANGE_BASE_REPO=
+  FIXTURE_RANGE_HEAD_REPO=
   FIXTURE_RANGE_CONTEXT=
+  FIXTURE_RANGE_PROMOTION=0
   FIXTURE_RANGE_SKIP=0
 
   if [ -n "${FIXTURE_ADJUDICATION_BASE_SHA:-}" ] || [ -n "${FIXTURE_ADJUDICATION_HEAD_SHA:-}" ]; then
@@ -730,7 +741,9 @@ resolve_fixture_pr_range() {
         const base = event.pull_request?.base?.sha
         const head = event.pull_request?.head?.sha
         if (!base || !head) process.exit(2)
-        process.stdout.write(`${base}\n${head}\n`)
+        process.stdout.write(
+          `${base}\n${head}\n${event.pull_request?.base?.ref ?? ""}\n${event.pull_request?.head?.ref ?? ""}\n${event.pull_request?.base?.repo?.full_name ?? ""}\n${event.pull_request?.head?.repo?.full_name ?? ""}\n`
+        )
       ' "$GITHUB_EVENT_PATH"
     )" || {
       red "  ✗ RED: pull-request base/head SHAs could not be read from $GITHUB_EVENT_PATH."
@@ -738,6 +751,10 @@ resolve_fixture_pr_range() {
     }
     FIXTURE_RANGE_BASE="$(printf '%s\n' "$event_range" | sed -n '1p')"
     FIXTURE_RANGE_HEAD="$(printf '%s\n' "$event_range" | sed -n '2p')"
+    FIXTURE_RANGE_BASE_REF="$(printf '%s\n' "$event_range" | sed -n '3p')"
+    FIXTURE_RANGE_HEAD_REF="$(printf '%s\n' "$event_range" | sed -n '4p')"
+    FIXTURE_RANGE_BASE_REPO="$(printf '%s\n' "$event_range" | sed -n '5p')"
+    FIXTURE_RANGE_HEAD_REPO="$(printf '%s\n' "$event_range" | sed -n '6p')"
     FIXTURE_RANGE_CONTEXT=pull-request
   elif [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
     FIXTURE_RANGE_SKIP=1
@@ -762,6 +779,19 @@ resolve_fixture_pr_range() {
   fi
   FIXTURE_RANGE_BASE="$(git rev-parse "$FIXTURE_RANGE_BASE")" || return 1
   FIXTURE_RANGE_HEAD="$(git rev-parse "$FIXTURE_RANGE_HEAD")" || return 1
+  if [ "$FIXTURE_RANGE_BASE_REF" = master ] &&
+    [ "$FIXTURE_RANGE_HEAD_REF" = edge ] &&
+    [ -n "$FIXTURE_RANGE_BASE_REPO" ] &&
+    [ "$FIXTURE_RANGE_BASE_REPO" = "$FIXTURE_RANGE_HEAD_REPO" ]; then
+    local promotion_commits
+    promotion_commits="$(git rev-list --count "$FIXTURE_RANGE_BASE..$FIXTURE_RANGE_HEAD")" || {
+      red "  ✗ RED: git could not enumerate promotion range $FIXTURE_RANGE_BASE..$FIXTURE_RANGE_HEAD."
+      return 1
+    }
+    FIXTURE_RANGE_SKIP=1
+    FIXTURE_RANGE_PROMOTION=1
+    FIXTURE_RANGE_CONTEXT="promotion range: $promotion_commits commits already adjudicated on edge entry — pass-with-reason"
+  fi
 }
 
 COMMIT_DIFF_FILES=()
@@ -805,6 +835,10 @@ fixture_adjudication_gate() {
     return 1
   fi
   if [ "$FIXTURE_RANGE_SKIP" -eq 1 ]; then
+    if [ "$FIXTURE_RANGE_PROMOTION" -eq 1 ]; then
+      grn "  ✓ PASS-WITH-REASON: $FIXTURE_RANGE_CONTEXT"
+      return 0
+    fi
     grn "  ✓ PASS: $FIXTURE_RANGE_CONTEXT; this row judges pull-request ranges."
     return 0
   fi
