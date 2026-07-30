@@ -213,6 +213,24 @@ describe('forgemagie catalog codes — mirror foundation rune_catalog.move', () 
     expect(Object.keys(FORGE_STATS).length).toBe(17)
     expect(FORGE_TIERS).toEqual({ BA: 1, PA: 2, RA: 3 })
   })
+  test('#1603 live drift: critical and vitality match the Move catalog anchor', () => {
+    expect({
+      critical_weight: FORGE_CATALOG.unit_weights[FORGE_STATS.critical],
+      critical_runeable: FORGE_CATALOG.runeable[FORGE_STATS.critical],
+      critical_chance_runeable:
+        FORGE_CATALOG.runeable[FORGE_STATS.critical_chance],
+      vitality: [
+        FORGE_CATALOG.ba_amount[FORGE_STATS.vitality],
+        FORGE_CATALOG.pa_amount[FORGE_STATS.vitality],
+        FORGE_CATALOG.ra_amount[FORGE_STATS.vitality],
+      ],
+    }).toEqual({
+      critical_weight: 50,
+      critical_runeable: 1,
+      critical_chance_runeable: 0,
+      vitality: [3, 10, 30],
+    })
+  })
   test('catalog tables are 17-wide and internally consistent (runeable ⇔ ba amount exists)', () => {
     for (const key of ['unit_weights', 'runeable', 'ba_amount', 'pa_amount', 'ra_amount'])
       expect(FORGE_CATALOG[key].length).toBe(17)
@@ -267,9 +285,12 @@ describe('crush yield preview + reachable set — pure mirrors of foundation cru
     expect(reachable_rune_keys(centered({ strength: 8 }))).toEqual([
       { stat: FORGE_STATS.strength, tier: 1 },
     ])
-    // action +1 (single-tier major): Ba only; critical +5: NOT runeable — nothing.
+    // Action and live critical(9) are single-tier majors; dead critical_chance(11) is not runeable.
     expect(reachable_rune_keys(centered({ action: 1 }))).toEqual([{ stat: FORGE_STATS.action, tier: 1 }])
-    expect(reachable_rune_keys(centered({ critical: 5 }))).toEqual([])
+    expect(reachable_rune_keys(centered({ critical: 5 }))).toEqual([
+      { stat: FORGE_STATS.critical, tier: 1 },
+    ])
+    expect(reachable_rune_keys(centered({ critical_chance: 5 }))).toEqual([])
     // malus: nothing (raw 0).
     expect(reachable_rune_keys(centered({ chance: -12 }))).toEqual([])
   })

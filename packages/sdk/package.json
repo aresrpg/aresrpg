@@ -8,6 +8,7 @@
     "lint": "eslint . && prettier . --check && bun run typecheck",
     "typecheck": "tsc --build",
     "test": "bun test",
+    "generate:forge-catalog": "node scripts/generate_forge_catalog.mjs",
     "format": "prettier . --write && eslint . --fix",
     "postversion": "git push --follow-tags"
   },

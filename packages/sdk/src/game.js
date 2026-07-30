@@ -7,7 +7,9 @@ import {
   shared_object_arg,
   random_shared_ref,
 } from './deployment/aresrpg.js'
+import FORGE_CATALOG_DATA from './forge_catalog.json' with { type: 'json' }
 import { as_object_arg } from './sui/object_arg.js'
+import { ITEM_STAT_FIELDS } from './sui/read/items.js'
 
 // &Random (0x8) PIN — mirrors fight.js's `random_arg` (see there for the full latency rationale). Pins the
 // system object via `random_shared_ref` when the network's genesis version is stamped; falls back to the
@@ -70,25 +72,10 @@ export { get_crush_registry, rune_key } from './sui/read/crush.js'
 // Forgemagie catalog codes — MIRRORS foundation `rune_catalog.move` (stat ids = the ItemStatistics field order
 // 0..16; rune tiers Ba/Pa/Ra = 1/2/3). The single JS home for decoding the `RuneScribed` / `Crushed` events and
 // the crush registry's (stat, tier) keys.
-export const FORGE_STATS = Object.freeze({
-  vitality: 0,
-  wisdom: 1,
-  strength: 2,
-  intelligence: 3,
-  chance: 4,
-  agility: 5,
-  range: 6,
-  movement: 7,
-  action: 8,
-  critical: 9,
-  raw_damage: 10,
-  critical_chance: 11,
-  critical_outcomes: 12,
-  earth_resistance: 13,
-  fire_resistance: 14,
-  water_resistance: 15,
-  air_resistance: 16,
-})
+export const FORGE_STAT_ORDER = ITEM_STAT_FIELDS
+export const FORGE_STATS = Object.freeze(
+  Object.fromEntries(FORGE_STAT_ORDER.map((field, stat) => [field, stat])),
+)
 export const FORGE_TIERS = Object.freeze({ BA: 1, PA: 2, RA: 3 })
 
 /**
@@ -250,26 +237,26 @@ export function feed_ptb(context) {
   }
 }
 
-// ╔════════════════ [ FORGEMAGIE — the pure catalog mirror (rune_catalog.move + crush math) ] ═ ]
+// ╔════════════════ [ FORGEMAGIE — chain-derived catalog + crush math ] ═════════ ]
 
 /**
- * MIRRORS foundation `rune_catalog.move` tables + the `forgemagie.move` band curve / taux constants — the single
- * JS home for the client-side crush YIELD PREVIEW and the reachable-template-set guard (the yield SET is
- * deterministic from an item's stat lines; only quantities/tiers are random). Indexed by the FORGE_STATS
- * stat id (0..16). Weights are the ×5 integer domain; coefficients are milli-percent (100% = 100_000).
+ * Foundation `rune_catalog.move` tables are generated into the SDK corpus by
+ * `scripts/generate_forge_catalog.mjs`; this runtime only freezes that chain-derived data beside the
+ * `forgemagie.move` band/taux constants used by the preview.
  */
+const frozen_catalog_tables = catalog =>
+  Object.freeze(
+    {
+      unit_weights: Object.freeze([...catalog.unit_weights]),
+      runeable: Object.freeze([...catalog.runeable]),
+      ba_amount: Object.freeze([...catalog.ba_amount]),
+      pa_amount: Object.freeze([...catalog.pa_amount]),
+      ra_amount: Object.freeze([...catalog.ra_amount]),
+    },
+  )
+
 export const FORGE_CATALOG = Object.freeze({
-  unit_weights: Object.freeze([
-    1, 15, 5, 5, 5, 5, 255, 450, 500, 200, 100, 50, 5, 10, 10, 10, 10,
-  ]),
-  runeable: Object.freeze([1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1]),
-  ba_amount: Object.freeze([5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1]),
-  pa_amount: Object.freeze([
-    15, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3,
-  ]),
-  ra_amount: Object.freeze([
-    50, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 10, 10, 10, 10,
-  ]),
+  ...frozen_catalog_tables(FORGE_CATALOG_DATA),
   band_max_level: Object.freeze([20, 50, 100, 150]),
   band_divisor: Object.freeze([277, 2044, 6675, 12922, 19822]),
   coeff_scale: 1_000,
@@ -279,9 +266,6 @@ export const FORGE_CATALOG = Object.freeze({
   recipeless_cap_milli: 50_000,
   shift: 32_768, // ItemStatistics centering: raw magnitude = max(0, centered − shift)
 })
-
-/** The stat field names in catalog id order 0..16 (derived from FORGE_STATS — one home). */
-export const FORGE_STAT_ORDER = Object.freeze(Object.keys(FORGE_STATS))
 
 /** The per-level-band crush divisor (mirrors foundation forgemagie's `band_divisor` — a Move-internal fn,
  * never a PTB target; named without the module path so the keep-set gate doesn't read it as one). */

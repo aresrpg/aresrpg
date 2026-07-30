@@ -28,7 +28,7 @@ export const ITEMS_NS = {
   MINT: 4,
 }
 
-const STAT_FIELDS = [
+export const ITEM_STAT_FIELDS = Object.freeze([
   'vitality',
   'wisdom',
   'strength',
@@ -46,7 +46,7 @@ const STAT_FIELDS = [
   'fire_resistance',
   'water_resistance',
   'air_resistance',
-]
+])
 
 // ── low-level helpers ───────────────────────────────────────────────────────
 
@@ -104,7 +104,7 @@ const option_u64 = opt => {
 function decode_stats(json) {
   if (!json) return null
   const out = {}
-  STAT_FIELDS.forEach(field => {
+  ITEM_STAT_FIELDS.forEach(field => {
     out[field] = Number(json[field] ?? 0)
   })
   return out
