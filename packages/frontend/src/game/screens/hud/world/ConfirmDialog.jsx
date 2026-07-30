@@ -25,12 +25,17 @@ const FOCUSABLE_SELECTOR = [
 ].join(',')
 
 /**
+ * `secondary_label`/`on_secondary` (#1751) add the DESTRUCTIVE ALTERNATIVE some prompts need — a third button
+ * between cancel and confirm, danger-styled (the resume door's "forfeit" beside "rejoin"). Both optional: every
+ * existing two-button caller is untouched, and Escape/scrim still cancel, never the destructive path.
  * @param {{
  *   open: boolean,
  *   title: string,
  *   message: import('react').ReactNode,
  *   confirm_label: import('react').ReactNode,
  *   cancel_label: string,
+ *   secondary_label?: string | null,
+ *   on_secondary?: (() => void) | null,
  *   danger?: boolean,
  *   confirm_disabled?: boolean,
  *   on_confirm: () => void,
@@ -44,6 +49,8 @@ export function ConfirmDialog({
   message,
   confirm_label,
   cancel_label,
+  secondary_label = null,
+  on_secondary = null,
   danger = false,
   confirm_disabled = false,
   on_confirm,
@@ -136,6 +143,15 @@ export function ConfirmDialog({
           >
             {cancel_label}
           </button>
+          {secondary_label && on_secondary && (
+            <button
+              type="button"
+              className="confirm-dialog__btn confirm-dialog__btn--danger"
+              onClick={on_secondary}
+            >
+              {secondary_label}
+            </button>
+          )}
           <button
             type="button"
             disabled={confirm_disabled}

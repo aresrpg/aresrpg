@@ -2755,7 +2755,12 @@
     "a_fight": "the fight",
     "a_dungeon": "the dungeon",
     "board_place_failed": "Couldn't place the fight board — please reload.",
-    "expired_fight_cleared": "That fight was already resolved — your character is free."
+    "expired_fight_cleared": "That fight was already resolved — your character is free.",
+    "resume_offer_title": "A fight is still holding your character",
+    "resume_offer_message": "This fight stopped advancing on its own. Rejoining restarts its clock and costs one transaction; forfeiting leaves the fight and frees your character.",
+    "resume_offer_rejoin": "Rejoin the fight",
+    "resume_offer_forfeit": "Forfeit",
+    "resume_offer_later": "Not now"
   },
   "jobs": {
     "category": {

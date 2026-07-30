@@ -178,7 +178,16 @@ const SIM_ONLY = [
 //
 // A NEW row here is fight code the simulator will never run — a second fight-presentation path opening, which
 // is how the pre-#915 board fork started. It is red on purpose, and the fix is to mount the same module.
-const WORLD_ONLY = [['packages/frontend/src/world-shell/world_fight.js', 'CHAIN']]
+//
+// `fight_resume_offer.js` is the chain entry's own consent gate (#1751/#1757): a seat that OUTLIVED its client
+// session is a chain fact, so the boot resume asks the player before it spends gas liquidating it. The simulator's
+// fight is minted and torn down inside one page visit — it has no seat to come back to and no transaction to
+// consent to — so this is the CHAIN leg's own row, not a second presentation path (it renders nothing; its face
+// is the world HUD's shared ConfirmDialog).
+const WORLD_ONLY = [
+  ['packages/frontend/src/world-shell/world_fight.js', 'CHAIN'],
+  ['packages/frontend/src/world-shell/fight_resume_offer.js', 'CHAIN'],
+]
 
 // ── the walk ────────────────────────────────────────────────────────────────────────────────────────────────
 // Resolved imports, not grep: enhanced-resolve with the repo's own `exports` conditions and

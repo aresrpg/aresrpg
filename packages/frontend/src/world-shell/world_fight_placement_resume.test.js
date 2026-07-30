@@ -173,7 +173,9 @@ describe('#932 — a refresh during PLACEMENT re-enters the fight', () => {
     const errors = /** @type {string[]} */ ([])
     console.error = mock((...args) => void errors.push(args.join(' ')))
     try {
-      await resume_world_fight(CHARACTER_ID, { force_start_door })
+      // #1751: the entry ASKS before it liquidates — this row measures the liquidation mechanics, so it answers the
+      // door itself; the door's own behaviour is proved in test/world-shell/world_fight_resume_offer.test.js.
+      await resume_world_fight(CHARACTER_ID, { force_start_door, consent: () => 'rejoin' })
       await settle_tick()
     } finally {
       console.error = real_console_error

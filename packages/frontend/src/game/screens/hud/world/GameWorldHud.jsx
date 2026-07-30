@@ -39,6 +39,7 @@ import { SelfPlate } from './SelfPlate.jsx'
 import { OnlinePlayers } from './OnlinePlayers.jsx'
 import { WorldSwitcher } from './WorldSwitcher.jsx' // S-67 → 07-17 redesign — current-world line + travel modal
 import { PlayerActionMenu } from './PlayerActionMenu.jsx' // S-67 — shared "click a player" menu (add friend / invite)
+import { FightResumeOffer } from './FightResumeOffer.jsx' // #1751 — the entry's rejoin/forfeit door
 import { QualitySelect } from './QualitySelect.jsx' // D157 — render-quality dropdown
 import { apply_saved_tier } from './render_quality.js' // D157 — re-apply the persisted tier on world mount
 import { NpcPrompt } from './NpcPrompt.jsx'
@@ -254,6 +255,9 @@ export function GameWorldHud() {
         {/* S-67 — the shared player-action menu (chat name click / in-world nameplate click). Renders null
             until a seam sets a target; portals to <body>, so mounting it here just keeps it in the HUD tree. */}
         <PlayerActionMenu />
+        {/* #1751 — THE RESUME DOOR. Renders null until a boot/entry finds a chain-live seat this client is not
+            mounting; then it asks (rejoin / forfeit / not now) and nothing commits before the answer. */}
+        <FightResumeOffer />
         {/* PENDING-OUTCOME CHIP — REMOVED: the world HUD never surfaces internal settle state. The characters-panel
             PendingOutcomeBadge (CharactersDrawer.jsx) remains the ONE manual-fallback surface for a genuinely
             latched/dungeon-bound outcome (a stop-rule, tested — auto never improvises the settle_run leg);

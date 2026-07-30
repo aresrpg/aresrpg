@@ -245,14 +245,22 @@ const chain_reason = ({ readable, decoded }) => {
  * out and recovers the outcome), unreadable/refused-placement ⇒ `skip` (defer, never loop a refused door).
  * Each door fires at most ONCE per pass — the tx-retry burn law; a raced janitor may already have advanced it.
  * The verdict carries its REASON: the caller refuses OUT LOUD or not at all (#932).
+ *
+ * CONSENT (#1751/#1757). The door below spends the player's gas and moves their fight's lifecycle, so an ENTRY
+ * caller may hand in a `consent` gate: it is asked BEFORE the transaction is composed, and anything but 'rejoin'
+ * returns `declined` with the choice, having sent NOTHING. Omitting it keeps the silent-janitor behavior verbatim
+ * — which is what the in-fight probes above (and the #677 placement sweep, a response to the player's own press)
+ * still want: there the player is present, watching their own fight run.
  * @param {string} fight_id
  * @param {{ force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
- *           crank_door?: (fight_id: string, silent: boolean, deadline: number) => Promise<any> }} [doors]
- * @returns {Promise<{ decision: 'enter'|'gone'|'skip', reason: string,
- *   action: 'force_start'|'crank'|null }>}
+ *           crank_door?: (fight_id: string, silent: boolean, deadline: number) => Promise<any>,
+ *           consent?: (ask: { fight_id: string, action: 'force_start'|'crank', deadline: number })
+ *             => Promise<string> }} [doors]
+ * @returns {Promise<{ decision: 'enter'|'gone'|'skip'|'declined', reason: string,
+ *   action: 'force_start'|'crank'|null, choice?: string }>}
  */
 export async function ensure_resumable_fight(fight_id, doors = {}) {
-  const { force_start_door = tx_force_start, crank_door = tx_crank } = doors
+  const { force_start_door = tx_force_start, crank_door = tx_crank, consent = null } = doors
   // A TRANSPORT failure is not news about the fight: it holds for a later boot pass (`unreadable`), never a
   // "your fight was cleared" claim. Only a definitive gone-error or a decoded terminal status is that claim.
   const read_decoded = async () => {
@@ -280,6 +288,13 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   const deadline = Number(
     (decision === 'crank' ? first.decoded?.turn_deadline_ms : first.decoded?.placement_deadline_ms) ?? 0
   )
+  // THE CHOICE COMES FIRST (#1751/#1757) — nothing below this line may run on an entry the player has not
+  // answered: the door spends their gas and advances their fight's lifecycle toward a resolution.
+  if (consent) {
+    const choice = await consent({ fight_id, action: decision, deadline })
+    if (choice !== 'rejoin')
+      return { decision: 'declined', reason: `the player chose ${choice}`, action: decision, choice }
+  }
   let digest = /** @type {string | null} */ (null)
   try {
     const receipt =

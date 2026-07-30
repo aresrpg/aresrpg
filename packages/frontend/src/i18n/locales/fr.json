@@ -2755,7 +2755,12 @@
     "a_fight": "le combat",
     "a_dungeon": "le donjon",
     "board_place_failed": "Impossible de placer le plateau de combat — recharge la page.",
-    "expired_fight_cleared": "Ce combat était déjà résolu — votre personnage est libre."
+    "expired_fight_cleared": "Ce combat était déjà résolu — votre personnage est libre.",
+    "resume_offer_title": "Un combat retient encore votre personnage",
+    "resume_offer_message": "Ce combat n’avance plus tout seul. Le rejoindre relance son horloge et coûte une transaction ; abandonner quitte le combat et libère votre personnage.",
+    "resume_offer_rejoin": "Rejoindre le combat",
+    "resume_offer_forfeit": "Abandonner",
+    "resume_offer_later": "Pas maintenant"
   },
   "jobs": {
     "category": {

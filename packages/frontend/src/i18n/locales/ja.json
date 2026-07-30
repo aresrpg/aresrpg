@@ -2755,7 +2755,12 @@
     "a_fight": "戦闘",
     "a_dungeon": "ダンジョン",
     "board_place_failed": "戦闘盤面を配置できませんでした — 再読み込みしてください。",
-    "expired_fight_cleared": "その戦闘はすでに終了していました — キャラクターは解放されています。"
+    "expired_fight_cleared": "その戦闘はすでに終了していました — キャラクターは解放されています。",
+    "resume_offer_title": "戦闘がまだキャラクターを拘束しています",
+    "resume_offer_message": "この戦闘は自力で進行しなくなりました。復帰すると時計が再開し、トランザクションが1件必要です。放棄すると戦闘を離れ、キャラクターが解放されます。",
+    "resume_offer_rejoin": "戦闘に復帰する",
+    "resume_offer_forfeit": "放棄する",
+    "resume_offer_later": "今はしない"
   },
   "jobs": {
     "category": {

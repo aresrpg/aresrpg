@@ -139,7 +139,9 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
       throw new Error('pre-flight refused (test)')
     })
 
-    await resume_world_fight(CHARACTER_ID, { force_start_door })
+    // #1751: the entry ASKS before it liquidates — this row measures the liquidation mechanics, so it answers the
+    // door itself; the door's own behaviour is proved in test/world-shell/world_fight_resume_offer.test.js.
+    await resume_world_fight(CHARACTER_ID, { force_start_door, consent: () => 'rejoin' })
     await settle_tick()
 
     // The hijack of record (gate5): the session was adopted as-is → fight_id set, the snapshot folded, the
@@ -165,7 +167,9 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
       return { digest: '0xforcestart' }
     })
 
-    await resume_world_fight(CHARACTER_ID, { force_start_door })
+    // #1751: the entry ASKS before it liquidates — this row measures the liquidation mechanics, so it answers the
+    // door itself; the door's own behaviour is proved in test/world-shell/world_fight_resume_offer.test.js.
+    await resume_world_fight(CHARACTER_ID, { force_start_door, consent: () => 'rejoin' })
 
     expect(force_start_door).toHaveBeenCalledTimes(1)
     expect(force_start_door.mock.calls[0]).toEqual([FIGHT_ID, true]) // the silent janitor door, not a toast path
@@ -344,7 +348,9 @@ describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
       return { digest: '0xcrank' }
     })
 
-    await resume_world_fight(CHARACTER_ID, { crank_door })
+    // #1751: the entry ASKS before it liquidates — this row measures the liquidation mechanics, so it answers the
+    // door itself; the door's own behaviour is proved in test/world-shell/world_fight_resume_offer.test.js.
+    await resume_world_fight(CHARACTER_ID, { crank_door, consent: () => 'rejoin' })
     await settle_tick()
 
     expect(crank_door).toHaveBeenCalledTimes(1)
@@ -365,7 +371,9 @@ describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
       throw new Error('executed abort (test)')
     })
 
-    await resume_world_fight(CHARACTER_ID, { crank_door })
+    // #1751: the entry ASKS before it liquidates — this row measures the liquidation mechanics, so it answers the
+    // door itself; the door's own behaviour is proved in test/world-shell/world_fight_resume_offer.test.js.
+    await resume_world_fight(CHARACTER_ID, { crank_door, consent: () => 'rejoin' })
 
     expect(crank_door).toHaveBeenCalledTimes(1) // ONE attempt — the tx-retry burn law, never a loop
     expect(use_dungeon.getState().fight_id).toBe(FIGHT_ID)

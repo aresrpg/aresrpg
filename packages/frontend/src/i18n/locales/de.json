@@ -2755,7 +2755,12 @@
     "a_fight": "dem Kampf",
     "a_dungeon": "dem Dungeon",
     "board_place_failed": "Spielfeld konnte nicht platziert werden — bitte neu laden.",
-    "expired_fight_cleared": "Dieser Kampf war bereits aufgelöst — dein Charakter ist frei."
+    "expired_fight_cleared": "Dieser Kampf war bereits aufgelöst — dein Charakter ist frei.",
+    "resume_offer_title": "Ein Kampf hält deinen Charakter noch fest",
+    "resume_offer_message": "Dieser Kampf läuft von allein nicht weiter. Wiedereinstieg startet seine Uhr neu und kostet eine Transaktion; Aufgeben verlässt den Kampf und befreit deinen Charakter.",
+    "resume_offer_rejoin": "Kampf wieder betreten",
+    "resume_offer_forfeit": "Aufgeben",
+    "resume_offer_later": "Jetzt nicht"
   },
   "jobs": {
     "category": {

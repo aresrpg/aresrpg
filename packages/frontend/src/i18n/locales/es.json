@@ -2755,7 +2755,12 @@
     "a_fight": "el combate",
     "a_dungeon": "la mazmorra",
     "board_place_failed": "No se pudo colocar el tablero de combate — recarga la página.",
-    "expired_fight_cleared": "Ese combate ya estaba resuelto — tu personaje está libre."
+    "expired_fight_cleared": "Ese combate ya estaba resuelto — tu personaje está libre.",
+    "resume_offer_title": "Un combate sigue reteniendo a tu personaje",
+    "resume_offer_message": "Este combate dejó de avanzar por su cuenta. Volver a entrar reinicia su reloj y cuesta una transacción; rendirse abandona el combate y libera a tu personaje.",
+    "resume_offer_rejoin": "Volver al combate",
+    "resume_offer_forfeit": "Rendirse",
+    "resume_offer_later": "Ahora no"
   },
   "jobs": {
     "category": {
