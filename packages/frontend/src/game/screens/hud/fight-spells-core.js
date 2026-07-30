@@ -140,6 +140,33 @@ export const project_spell_level = (level) => {
   }
 }
 
+// ── #1741 — WHICH SPELLS NEED A VICTIM UNDER THE AIM ─────────────────────────────────────────────────────
+// The effect kinds whose payload lands on the CELL rather than on whoever stands there: a trap, a glyph, a
+// teleport and a board reset are all meant for empty ground, so a spell carrying one keeps its empty-cell aim
+// however it is otherwise composed (a damage+teleport jump-strike must still be able to land on open floor).
+const CELL_TARGET_KINDS = new Set(['PLACE_TRAP', 'PLACE_GLYPH', 'TELEPORT', 'RESET_POSITIONS'])
+/** Zero-area = the footprint IS the aimed cell (project_spell_effect's POINT/0 default). */
+const zero_area = (effect) => (effect?.area_size ?? 0) === 0 && (effect?.area_shape ?? 'POINT') === 'POINT'
+
+/**
+ * Does this spell LEVEL require a visible occupant under the aim? (#1741, the Dofus 1.29 rule: a single-target
+ * damage spell refuses empty ground — targetless whiffing is not a mechanic there; invisible-hunting is
+ * deliberately the AoE/trap game.) TRUE only for the ruled scope: a zero-area spell that damages, is not
+ * `free_cell`, and carries no cell-semantics effect. Every other spell — AoE, traps, glyphs, teleports, pure
+ * buffs — keeps today's permissive aim. The verdict feeds `cast_range_set_dungeon`'s `occupant_cells` (the ONE
+ * castability derivation) and the flush's `strike_flush_illegal`, never a second legality rule. Pure.
+ * @param {{ free_cell?: boolean, effects?: { kind?: string, area_shape?: string, area_size?: number }[] } | null
+ *   | undefined} level a projected spell level (project_spell_level)
+ * @returns {boolean}
+ */
+export const cast_requires_occupant = (level) => {
+  const effects = level?.effects ?? []
+  if (!effects.length || level?.free_cell === true) return false
+  if (!effects.some((effect) => effect?.kind === 'DAMAGE')) return false
+  if (effects.some((effect) => CELL_TARGET_KINDS.has(String(effect?.kind)))) return false
+  return effects.every(zero_area)
+}
+
 // ── THE PUBLISHED CORPUS SPEAKS THE AUTHORED DIALECT (#1049) ──────────────────────────────────────────────
 // `spell_corpus.json` states a signed ALTER_STAT/ALTER_RESIST magnitude the way a designer writes it: `+20`
 // strength, `−8` strength. The CHAIN cannot — `Effect.value` is a u64 — so the mint CENTRES those two kinds at

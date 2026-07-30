@@ -293,6 +293,32 @@ export const emit_cast_context_line = (get_state, dispatch, { entity_id, spell_i
 }
 
 /**
+ * Emit the WHIFF line for a cast that resolved NOTHING (#1741) — its own copy, never a hit's. A single-target
+ * damage spell can no longer be aimed at empty ground (the castable set withholds it), but the spells with genuine
+ * empty-cell semantics still can: an AoE on a vacant centre, a trap nothing walked into. Those used to read
+ * byte-identical to a landed hit — same context line, same impact package, AP gone, nothing saying "there was
+ * nobody there". This line says it, in plain words with no damage number to celebrate; the adapter pairs it with a
+ * SILENT landing (no impact beat) on the same `cast_whiffed` verdict. @param {() => any} get_state
+ * @param {(type: string, payload: any) => void} dispatch @param {{ entity_id: string, spell_id: string }} cast
+ */
+export const emit_cast_whiff_line = (get_state, dispatch, { entity_id, spell_id }) => {
+  const fighters = get_state().fight?.fighters
+  if (!fighters) return
+  const caster = fighters.get(entity_id)?.name || i18n.t('world_chat.log_unknown_fighter')
+  const spell = spell_display_name(spell_id)
+  dispatch(
+    'action/chat_message',
+    combat_log_line(
+      'whiff',
+      segment_template(i18n.t('world_chat.log_whiff', { caster, spell }), [
+        { value: caster, cls: 'clog-name', ref: entity_id },
+        { value: spell, cls: 'clog-spell' },
+      ])
+    )
+  )
+}
+
+/**
  * Emit ONE colour-coded result line for a single resolved effect — "<caster> hit <target> for N" in the number's
  * damage-red (crit prefixes "CRIT!" in gold), "<caster> healed <target> for +N" pink, an AP/MP drain, or a
  * fully-absorbed (0-damage) hit muted. Damage/heal are the AUTHORITATIVE wire fields. A status-only effect

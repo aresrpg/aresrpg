@@ -179,16 +179,29 @@ export function on_board(cell) {
  *   caster's OWN live traps anchor (engine_view.my_traps) — the caller passes it ONLY for a trap-PLACING spell
  *   (seed_cast_flags_of `places_trap`), and every such cell is dropped: the chain aborts a trap on a trapped
  *   cell (1.29 no-stack, cast::ECellAlreadyTrapped), so the wash/gate must grey it. Enemy invisible traps are
- *   unknowable client-side — those surface as the honest chain-abort toast instead. Defaults preserve the
- *   pre-flag behavior.
+ *   unknowable client-side — those surface as the honest chain-abort toast instead. `occupant_cells` (#1741) =
+ *   the VISIBLE-occupancy set (`@aresrpg/fight/occupancy` visible_occupant_cells) a zero-area single-target DAMAGE
+ *   spell must aim INTO — free_cell's rule inverted, same mechanism: every cell OUTSIDE it is dropped, so an
+ *   empty-cell whiff can no longer be drafted (the 1.29 reference client refuses it; invisible-hunting stays the
+ *   AoE/trap game). `null`/absent ⇒ no occupancy requirement, which is every other spell's behavior unchanged.
+ *   Defaults preserve the pre-flag behavior.
  * @returns {CellSet}
  */
 export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {}) {
-  const { los = true, linear = false, free_cell = false, modifiable_range = false, trap_cells = null } = flags
+  const {
+    los = true,
+    linear = false,
+    free_cell = false,
+    modifiable_range = false,
+    trap_cells = null,
+    occupant_cells = null,
+  } = flags
   // free_cell: the blocker set the target may NOT be (obstacles ∪ bodies — the caller passes exactly that).
   const blocked = free_cell ? new Set(obstacles ?? []) : null
   // 1.29 no-stack: cells anchoring MY live traps are not legal trap targets (chain parity — see JSDoc above).
   const trapped = trap_cells ? (trap_cells instanceof Set ? trap_cells : new Set(trap_cells)) : null
+  // #1741: the VISIBLE occupants a single-target damage spell must aim into (null ⇒ any cell, as before).
+  const occupants = occupant_cells ? (occupant_cells instanceof Set ? occupant_cells : new Set(occupant_cells)) : null
   const out = new Set()
   if (!caster || !grid) return out
   const [rmin, authored_rmax] = range ?? [0, 0]
@@ -208,6 +221,10 @@ export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {
       if (blocked && blocked.has(enc)) continue
       // trap-placing spell: never a cell already anchoring MY live trap (1.29 no-stack — the chain aborts it).
       if (trapped && trapped.has(enc)) continue
+      // #1741 — SINGLE-TARGET DAMAGE NEEDS A VICTIM: a cell holding no VISIBLE occupant is not aimable, the exact
+      // inverse of the free_cell drop two lines up. Invisible occupants are absent from this set by construction
+      // (visible_occupant_cells), so a hidden body's cell withholds identically to an empty one — no leak.
+      if (occupants && !occupants.has(enc)) continue
       const d = manhattan_distance({ x, y }, caster.cell)
       if (d < rmin || d > rmax) continue
       // line-launch (spell_target twin): only orthogonally aligned cells are aimable.

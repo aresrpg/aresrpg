@@ -20,7 +20,12 @@ import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model } from '../game/data/mobs.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from '../game/screens/character-glb.js'
-import { fight_spell, seat_spell_level, seat_spell_row } from '../game/screens/hud/fight-spells.js'
+import {
+  cast_requires_occupant,
+  fight_spell,
+  seat_spell_level,
+  seat_spell_row,
+} from '../game/screens/hud/fight-spells.js'
 
 // The voxel board floats above the streamed terrain at a fixed designated origin (the cave-gen picks this in the
 // real game path; here a flat pose WELL above the world_gen surface, mirroring the engine demo's ORIGIN so the
@@ -449,12 +454,14 @@ export function seed_range_of(armed_spell_id, seat = null) {
  * on-chain row seed_range_of resolves, so the wash, the hover-AoE and DungeonBoard's `castable` gate all share
  * one truth: `los` (line_of_sight gates aim), `linear` (line-launch: orthogonal only), `free_cell` (target must
  * be an EMPTY cell — traps), `places_trap` (the row carries a PLACE_TRAP effect — the caller then feeds the
- * caster's own live trap cells to cast_range_set_dungeon's `trap_cells` drop, the 1.29 no-stack wash/gate).
+ * caster's own live trap cells to cast_range_set_dungeon's `trap_cells` drop, the 1.29 no-stack wash/gate),
+ * `requires_occupant` (#1741 — a zero-area single-target DAMAGE spell may only aim at a VISIBLE occupant; the
+ * caller then feeds the projection's visible-occupancy set to `occupant_cells`, free_cell's rule inverted).
  * Unresolved spell → the safe defaults (LOS on, no line, any occupancy, no placement). Pure.
  * @param {string} armed_spell_id
  * @param {{ spell_levels?: Record<string, number> } | null} [seat] the caster's composed build (its rank)
  * @returns {{ los: boolean, linear: boolean, free_cell: boolean, modifiable_range: boolean,
- *   places_trap: boolean }}
+ *   places_trap: boolean, requires_occupant: boolean }}
  */
 export function seed_cast_flags_of(armed_spell_id, seat = null) {
   const lvl = seat_spell_row(seat, fight_spell(armed_spell_id))
@@ -464,7 +471,22 @@ export function seed_cast_flags_of(armed_spell_id, seat = null) {
     free_cell: lvl?.free_cell === true,
     modifiable_range: lvl?.modifiable_range === true,
     places_trap: (lvl?.effects ?? []).some((e) => e?.kind === 'PLACE_TRAP'),
+    requires_occupant: cast_requires_occupant(lvl),
   }
+}
+
+/**
+ * #1741 (a) — DID THIS CAST RESOLVE NOTHING? A whiff: no effect row and no displacement, so nobody was hit,
+ * nothing was placed, nothing moved. The spells that keep genuine empty-cell semantics (AoE on a vacant centre,
+ * traps, free_cell aims) can still produce one, and it must never be presented as a hit: the adapter emits the
+ * whiff's OWN log line and skips the impact package (thwack/shake/flash) on this verdict. A trap PLACEMENT
+ * resolves a status-only effect row and a teleport carries a displacement, so neither is a whiff. Pure.
+ * @param {{ effects?: any[], displacements?: any[] } | null | undefined} packet a cast beat payload
+ * @returns {boolean}
+ */
+export function cast_whiffed(packet) {
+  if (!packet) return false
+  return (packet.effects ?? []).length === 0 && (packet.displacements ?? []).length === 0
 }
 
 /**

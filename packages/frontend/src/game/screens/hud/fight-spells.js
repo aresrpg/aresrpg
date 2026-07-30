@@ -24,7 +24,7 @@ import { get_spell_corpus } from '../../data/spell_corpus.js'
 import { build_fight_spells } from './fight-spells-core.js'
 
 // Re-exported from the pure core so existing consumers keep importing them from here (single public door).
-export { project_spell_effect, project_spell_level } from './fight-spells-core.js'
+export { cast_requires_occupant, project_spell_effect, project_spell_level } from './fight-spells-core.js'
 
 // LIVE projection over the runtime-loaded corpus. get_spell_corpus() returns the same array reference until the
 // blob (re)loads, so this memo re-derives exactly once per corpus change — the O(1) read the hot paths need.

@@ -117,14 +117,17 @@ export function auto_commit_decision({ enabled, busy, now_ms, deadline_ms, latch
  *    THIS strike's kill, and gating on it dropped a mob-killing swing "as if I did nothing", then the
  *    authoritative receipt revived the corpse. The spell path never gated on target
  *    liveness (a void cast at any legal cell is the player's right), which is exactly why the SPELL kill worked.
- *  · SPELL — legal at any in-footprint cell; only a `free_cell` (trap) spell drops an OCCUPIED-by-living cell.
+ *  · SPELL — legal at any in-footprint cell, with two symmetric occupancy rules: a `free_cell` (trap) spell drops
+ *    an OCCUPIED-by-living cell, and a `requires_occupant` spell (#1741 — zero-area single-target DAMAGE) drops an
+ *    EMPTY one. The click gate already withholds the empty cell, so this catches only the mid-draft change of
+ *    truth: the aimed body died or walked off before the flush, which is the same void cast arriving late.
  *  · SELF-CAST (`self_cast`, rmax 0 — invisibility/vanish, the spellbook 'self' marker) — NEVER illegal. A
  *    self-only buff targets the caster's OWN tile; the caster can never move out of reach of itself, so
  *    re-validating it can only FALSE-DROP the buff (and revert its granted MP) — the #321/#323 absurdity
  *    ceiling ("a self-target cast can never be no longer valid"). The flush snaps its target to the caster's
  *    current cell and this gate lets it through unconditionally (the twin of the trap rule: cells don't move).
  * @param {{ in_footprint: boolean, is_weapon: boolean, target_is_mob?: boolean, committed_target_alive?: boolean,
- *   free_cell?: boolean, occupied_alive?: boolean, self_cast?: boolean }} entry
+ *   free_cell?: boolean, occupied_alive?: boolean, self_cast?: boolean, requires_occupant?: boolean }} entry
  * @returns {boolean} true ⇒ DROP this entry (illegal to commit)
  */
 export function strike_flush_illegal({
@@ -135,9 +138,11 @@ export function strike_flush_illegal({
   free_cell = false,
   occupied_alive = false,
   self_cast = false,
+  requires_occupant = false,
 }) {
   if (self_cast) return false // a self-only buff always commits on the caster's own cell — #321/#323
   if (!in_footprint) return true
   if (is_weapon) return !(target_is_mob && committed_target_alive)
-  return free_cell === true && !!occupied_alive
+  if (free_cell === true) return !!occupied_alive
+  return requires_occupant === true && !occupied_alive
 }

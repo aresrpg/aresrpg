@@ -1865,6 +1865,7 @@
     "log_hit": "{{caster}} hit {{target}} for {{amount}}",
     "log_heal": "{{caster}} healed {{target}} for {{amount}}",
     "log_absorb": "{{caster}} hit {{target}} but dealt no damage",
+    "log_whiff": "{{caster}}’s {{spell}} struck empty ground",
     "log_death": "{{target}} died",
     "log_trap": "{{owner}}'s trap hit {{target}} for {{amount}}",
     "log_trap_neutral": "A trap hit {{target}} for {{amount}}",

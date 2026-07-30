@@ -28,6 +28,7 @@ import * as project from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
+import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 
 import {
@@ -80,6 +81,7 @@ import {
   // COMBAT-LOG REALTIME: the log lines compose in fight.js (one home) but fire HERE, at each
   // beat, so they stream with the paced replay instead of dumping at packet-dispatch time.
   emit_cast_context_line,
+  emit_cast_whiff_line,
   emit_drain_lines,
   emit_effect_line,
   emit_death_line,
@@ -108,6 +110,7 @@ import {
   reachable_hover_path,
   wash_armed_spell,
   cast_face_target,
+  cast_whiffed,
   seed_range_of,
   seed_cast_flags_of,
   spell_footprint,
@@ -659,6 +662,15 @@ export function create_voxel_fight_adapter(
     // can't resolve (a healer MOB's cast — mob ids aren't in fight-spells.json); everything else reads its
     // on-chain row via element_of_spell (which owns the seed-side heal-kind branch).
     const effects = packet.effects ?? []
+    // #1741 (a) — THE WHIFF. This cast resolved nothing: no effect row, no displacement (an AoE over a vacant
+    // centre, a free_cell aim nothing was standing on). Its own log line fires HERE, right after the context line,
+    // and the delivery below lands SILENT (the impact package is skipped) — a whiff must never read as a hit.
+    const whiffed = cast_whiffed(packet)
+    if (whiffed)
+      emit_cast_whiff_line(read_board_fight_state, game_context.dispatch, {
+        entity_id: packet.entity_id,
+        spell_id: packet.spell_id,
+      })
     const packet_heals = effects.some((e) => (e?.heal ?? 0) > 0) && !effects.some((e) => (e?.damage ?? 0) > 0)
     const spell_element =
       packet.spell_id === WEAPON_ATTACK_ID ? 'weapon' : packet_heals ? 'heal' : element_of_spell(packet.spell_id)
@@ -850,6 +862,9 @@ export function create_voxel_fight_adapter(
       const to_world = cell_cast_world(board_frame.origin, packet.target)
       const impact_package = () => {
         observe_cast_resolve()
+        // #1741 (a): a WHIFF has no impact — no thwack, no shake, no flash, no ripple. The arc still travels and
+        // fizzles (the player sees where they aimed); the beat that says "this connected" is what must not fire.
+        if (whiffed) return
         // Heal-beat fix: 'heal' has no row in sfx.js's ELEMENT_SFX_COVERAGE (it is not a damage
         // element), so a heal beat (element === 'heal') would silently fall back to the neutral IMPACT thwack —
         // the wrong voice for "someone got healed". Route heals to the dedicated synthesized sfx.js 'heal' cue instead.
@@ -1694,6 +1709,9 @@ export function create_voxel_fight_adapter(
           const flags = seed_cast_flags_of(wash_armed, active)
           // 1.29 no-stack: a trap-PLACING spell greys MY live trap cells (the chain aborts cast/107 there).
           if (flags.places_trap) flags.trap_cells = fight.my_traps ?? []
+          // #1741: a single-target damage spell washes ONLY the cells holding a VISIBLE occupant — the same
+          // withhold the click gate applies (one derivation), off the projection's own visibility.
+          if (flags.requires_occupant) flags.occupant_cells = visible_occupant_cells(fight.fighters)
           const castable = cast_range_set_dungeon(range, active, grid, los, flags)
           const in_range = manhattan_range_cells(range, active, grid, flags) // every cell within the spell's reach
           // free_cell (traps/glyphs): a mob/obstacle cell is NOT a valid target — and shouldn't read as merely
@@ -1867,6 +1885,8 @@ export function create_voxel_fight_adapter(
         const flags2 = seed_cast_flags_of(fight.armed_spell_id, active)
         // 1.29 no-stack (the wash's hover twin): MY live trap cells are never a castable hover for a trap spell.
         if (flags2.places_trap) flags2.trap_cells = fight.my_traps ?? []
+        // #1741 (the wash's hover twin): no telegraph over a cell a single-target damage spell cannot aim at.
+        if (flags2.requires_occupant) flags2.occupant_cells = visible_occupant_cells(fight.fighters)
         const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
         if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)

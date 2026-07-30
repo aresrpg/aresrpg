@@ -1865,6 +1865,7 @@
     "log_hit": "{{caster}} trifft {{target}} mit {{amount}}",
     "log_heal": "{{caster}} heilt {{target}} um {{amount}}",
     "log_absorb": "{{caster}} trifft {{target}}, richtet aber keinen Schaden an",
+    "log_whiff": "{{caster}}s {{spell}} traf nur leeren Boden",
     "log_death": "{{target}} ist gestorben",
     "log_trap": "{{owner}}s Falle trifft {{target}} mit {{amount}}",
     "log_trap_neutral": "Eine Falle trifft {{target}} mit {{amount}}",
