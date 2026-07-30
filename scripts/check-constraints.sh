@@ -5,7 +5,7 @@
 #
 # Mechanical checks that keep the tree honest, wired into `bun run lint`:
 #   chain-id declarations · Move public-surface law · app identifier naming ·
-#   test reachability · the secret-leak gate.
+#   test reachability · the public-tree membrane · the secret-leak gate.
 #
 # Exit: 0 = clean; 1 = at least one violation.
 
@@ -1019,8 +1019,137 @@ fixture_adjudication_controlled_gate() {
   fixture_adjudication_gate
 }
 
+# ── PUBLIC-TREE MEMBRANE GATE (#1784) ───────────────────────────────────────────────────────────
+MEMBRANE_ALLOWED_ROOT_FILES=(
+  '.dependency-cruiser.cjs'
+  '.env.example'
+  '.gitignore'
+  '.prettierignore'
+  '.prettierrc'
+  'CLA.md'
+  'CLAUDE.md'
+  'CONTRIBUTING.md'
+  'FROZEN.md'
+  'LICENSE'
+  'README.md'
+  'SECURITY.md'
+  'bun.lock'
+  'bunfig.toml'
+  'eslint.config.js'
+  'package.json'
+  'tsconfig.lint.json'
+)
+
+membrane_root_file_allowed() {
+  local candidate="$1"
+  local allowed
+  for allowed in "${MEMBRANE_ALLOWED_ROOT_FILES[@]}"; do
+    [ "$candidate" = "$allowed" ] && return 0
+  done
+  return 1
+}
+
+membrane_content_hits() {
+  grep_collected \
+    'the[[:space:]]+owner([^[:alnum:]_]|$)|owner[[:space:]]+(said|script)([^[:alnum:]_]|$)|p0[_]owner([^[:alnum:]_]|$)|d[o]fus([^[:alnum:]_]|$)|/U[s]ers/' \
+    -IinE
+}
+
+membrane_gate() {
+  echo "== AresRPG public-tree membrane gate (#1784: permanent repository material only) =="
+  local failed=0
+  local analysis_paths=()
+  local investigation_paths=()
+  local root_debris=()
+  local content_hits
+  local scan_status
+
+  [ -e docs/analysis ] && analysis_paths+=('docs/analysis')
+  if [ -d test ]; then
+    local investigation_path
+    while IFS= read -r investigation_path; do
+      [ -n "$investigation_path" ] && investigation_paths+=("$investigation_path")
+    done < <(find test -name investigations -print)
+  fi
+
+  if ! collect_files; then
+    red "  ✗ ERROR: no repository files collected — the membrane cannot pass on an empty scan set."
+    return 1
+  fi
+  local candidate
+  for candidate in "${COLLECTED_FILES[@]}"; do
+    case "$candidate" in
+      */*) continue ;;
+    esac
+    membrane_root_file_allowed "$candidate" || root_debris+=("$candidate")
+  done
+
+  local control
+  for control in \
+    "$(printf '%s %s' "t""he" owner)" \
+    "$(printf '%s %s' owner "sa""id")" \
+    "$(printf '%s %s' owner "scr""ipt")" \
+    "$(printf 'p0_%s' owner)" \
+    "$(printf 'D%sfus' o)" \
+    "$(printf '/U%sers/dev/repo' s)"; do
+    matcher_fires 'the membrane content matcher' "$control" membrane_content_hits || return 1
+  done
+
+  if ! collect_files --tracked-only; then
+    red "  ✗ ERROR: no tracked files collected — the membrane cannot pass on an empty content scan."
+    return 1
+  fi
+  local content_files=()
+  for candidate in "${COLLECTED_FILES[@]}"; do
+    case "$candidate" in
+      CLAUDE.md | .github/CODEOWNERS) continue ;;
+    esac
+    content_files+=("$candidate")
+  done
+  COLLECTED_FILES=("${content_files[@]}")
+  content_hits="$(membrane_content_hits)"
+  scan_status=$?
+  if [ "$scan_status" -ne 0 ]; then
+    red "  ✗ ERROR: tracked-content scan could not complete (exit=$scan_status)"
+    return 1
+  fi
+
+  if [ "${#analysis_paths[@]}" -gt 0 ]; then
+    red "  ✗ ERROR: analysis-session path exists:"
+    printf '      %s\n' "${analysis_paths[@]}"
+    failed=1
+  fi
+  if [ "${#investigation_paths[@]}" -gt 0 ]; then
+    red "  ✗ ERROR: investigation-session path(s) exist:"
+    printf '      %s\n' "${investigation_paths[@]}"
+    failed=1
+  fi
+  if [ "${#root_debris[@]}" -gt 0 ]; then
+    red "  ✗ ERROR: repo-root file(s) are outside the explicit root manifest:"
+    printf '      %s\n' "${root_debris[@]}"
+    failed=1
+  fi
+  if [ -n "$content_hits" ]; then
+    red "  ✗ ERROR: private/session content marker(s) remain in tracked files:"
+    echo "$content_hits" | cut -c1-200 | sed 's/^/      /'
+    failed=1
+  fi
+
+  if [ "$failed" -ne 0 ]; then
+    red "PUBLIC-TREE MEMBRANE GATE FAILED."
+    return 1
+  fi
+  grn "  ✓ analysis and investigation session paths are absent"
+  grn "  ✓ repo-root files match the explicit ${#MEMBRANE_ALLOWED_ROOT_FILES[@]}-file manifest"
+  grn "  ✓ tracked content is clean (2-file trust allowlist: CLAUDE.md, .github/CODEOWNERS)"
+}
+
 if [ "${1:-}" = "--test-reachability" ]; then
   test_reachability_gate
+  exit $?
+fi
+if [ "${1:-}" = "--membrane-only" ]; then
+  membrane_gate
   exit $?
 fi
 if [ "${1:-}" = "--fixture-adjudication" ]; then
@@ -1032,11 +1161,16 @@ if [ "${1:-}" = "--fixture-adjudication" ]; then
   exit $?
 fi
 if [ "$#" -ne 0 ]; then
-  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --spatial-vocabulary | --test-reachability | --fixture-adjudication | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
+  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --asset-codename | --spatial-vocabulary | --test-reachability | --membrane-only | --fixture-adjudication | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
   exit 2
 fi
 
 FAIL=0
+
+echo
+if ! membrane_gate; then
+  FAIL=1
+fi
 
 echo
 if ! node scripts/check-chain-ids.mjs; then
