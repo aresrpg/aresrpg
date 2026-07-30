@@ -208,16 +208,21 @@ export async function load_roster() {
     // dispatched: the sweep owns its own laws (never mid-fight, never retried, receipt-folded — see
     // world-shell/auto_merge_stacks.js), and this call site owns only the WIRING of its three doors.
     // Fire-and-forget by design: a tidy-up must never delay, block or fail the roster load.
+    // The ONE live-custody read behind both sweep doors: the kiosk-union walk threads each item's TRUE
+    // source kiosk onto its row (read_staking.js), which is what makes a merge's kiosk id signable (#1802).
+    const live_custody = () => get_owned_items_from_kiosks(sdk, address, PACKAGE_ID)
     sweep_duplicate_stacks({
       items: owned_items,
+      // The mirror bag above says WHETHER to tidy; chain custody says WHAT to sign — an indexer row whose
+      // item→kiosk edge lags would otherwise list a stack against a kiosk that does not hold it (abort 11).
+      custody: live_custody,
       fight_active: () => world_fight_active(fight_store.getState()),
       submit: submit_stack_merges,
       fold: apply_stack_merge_receipt,
       // The merge deletes every source object. Re-derive the bag from fresh kiosk custody, then send that
       // snapshot through the same action/sui_data reducer door as every other roster read.
       refresh: async () => {
-        const items = await get_owned_items_from_kiosks(sdk, address, PACKAGE_ID)
-        context.dispatch('action/sui_data', { kind: 'snapshot', items })
+        context.dispatch('action/sui_data', { kind: 'snapshot', items: await live_custody() })
       },
     }).catch((error) => game_log('load_roster', 'stack sweep threw (never fatal)', error))
 

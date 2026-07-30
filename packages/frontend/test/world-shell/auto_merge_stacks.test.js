@@ -23,6 +23,8 @@ const harness = (over = {}) => {
     folds,
     deps: {
       items: bag(),
+      // #1802 — chain custody is what gets SIGNED. The default harness has the mirror and the chain agreeing.
+      custody: async () => bag(),
       fight_active: () => false,
       submit: async (merges) => {
         submits.push(merges)
@@ -106,6 +108,80 @@ describe('sweep_duplicate_stacks', () => {
     expect(result.error).toBeInstanceOf(Error)
   })
 
+  // ── #1802: the MULTI-KIOSK wrong-kiosk abort ────────────────────────────────────────────────────────
+  // A veteran wallet holds several personal kiosks. The display bag is the indexer mirror, whose item→kiosk
+  // edge can lag chain custody (an item that moved between the wallet's OWN kiosks keeps its old kiosk_id
+  // until the mirror catches up). Composing on that stale edge lists an item against a kiosk that does not
+  // hold it — `0x2::kiosk::list` abort 11 / EItemNotFound, "This item belongs to a different kiosk" — on
+  // EVERY load. Object ids are transaction inputs, never display cache (read_staking.js's own law), so the
+  // plan that gets SIGNED is derived from the live kiosk-union walk.
+  describe('the signed plan comes from chain custody, never the display mirror', () => {
+    // Mirror: all four stacks claim kiosk-A. Chain: 0xc/0xd actually live in kiosk-B.
+    const mirror = [
+      { id: '0xa', template_id: 't', kiosk_id: '0xk_a', amount: 1, stackable: true },
+      { id: '0xb', template_id: 't', kiosk_id: '0xk_a', amount: 1, stackable: true },
+      { id: '0xc', template_id: 't', kiosk_id: '0xk_a', amount: 1, stackable: true },
+      { id: '0xd', template_id: 't', kiosk_id: '0xk_a', amount: 1, stackable: true },
+    ]
+    const live = [
+      { id: '0xa', template_id: 't', kiosk_id: '0xk_a', amount: 1, stackable: true },
+      { id: '0xb', template_id: 't', kiosk_id: '0xk_a', amount: 1, stackable: true },
+      { id: '0xc', template_id: 't', kiosk_id: '0xk_b', amount: 1, stackable: true },
+      { id: '0xd', template_id: 't', kiosk_id: '0xk_b', amount: 1, stackable: true },
+    ]
+
+    test('every merge names the kiosk that ACTUALLY holds its pair (#1802)', async () => {
+      const { deps, submits } = harness({ items: mirror, custody: async () => live })
+      await sweep_duplicate_stacks(deps)
+      expect(submits).toHaveLength(1)
+      expect(submits[0]).toEqual([
+        { kiosk_id: '0xk_a', target_item_id: '0xa', source_item_id: '0xb' },
+        { kiosk_id: '0xk_b', target_item_id: '0xc', source_item_id: '0xd' },
+      ])
+    })
+
+    test('a stale mirror row never drags a sibling-kiosk stack into another kiosk s merge', async () => {
+      const { deps, submits } = harness({
+        items: mirror,
+        // chain: 0xa/0xb in kiosk-A, the lone 0xc in kiosk-B — one merge, and 0xc is not part of it
+        custody: async () => live.slice(0, 3),
+      })
+      await sweep_duplicate_stacks(deps)
+      expect(submits[0]).toEqual([{ kiosk_id: '0xk_a', target_item_id: '0xa', source_item_id: '0xb' }])
+    })
+
+    test('chain custody says there is nothing to merge: the mirror never signs on its own', async () => {
+      const { deps, submits } = harness({ items: mirror, custody: async () => [live[0], live[2]] })
+      expect(await sweep_duplicate_stacks(deps)).toEqual({ swept: false, reason: 'nothing-to-merge' })
+      expect(submits).toHaveLength(0)
+    })
+
+    test('a failed custody read submits NOTHING — a merge is never signed on an unverified join', async () => {
+      const { deps, submits } = harness({
+        items: mirror,
+        custody: async () => {
+          throw new Error('kiosk union walk timed out')
+        },
+      })
+      const result = await sweep_duplicate_stacks(deps)
+      expect(submits).toHaveLength(0)
+      expect(result.error).toBeInstanceOf(Error)
+    })
+
+    test('a clean mirror never pays for the custody walk (zero duplicates = zero reads)', async () => {
+      let reads = 0
+      const { deps } = harness({
+        items: [mirror[0]],
+        custody: async () => {
+          reads += 1
+          return live
+        },
+      })
+      expect(await sweep_duplicate_stacks(deps)).toEqual({ swept: false, reason: 'nothing-to-merge' })
+      expect(reads).toBe(0)
+    })
+  })
+
   test('post-sweep live custody refresh leaves only the surviving object id in inventory rows', async () => {
     let state = {
       items: bag(),
@@ -119,6 +195,7 @@ describe('sweep_duplicate_stacks', () => {
 
     await sweep_duplicate_stacks({
       items: state.items,
+      custody: async () => bag(),
       fight_active: () => false,
       submit: async () => ({
         events: [

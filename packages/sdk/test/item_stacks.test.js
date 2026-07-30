@@ -118,6 +118,42 @@ describe('merge_stacks_ptb — the acquisition sweep batch (#1495)', () => {
     )
   })
 
+  // #1802 — the MULTI-KIOSK batch. A wallet may hold several personal kiosks, so one sweep can carry
+  // merges for kiosk-A AND kiosk-B; every call must list ITS OWN pair's kiosk (`0x2::kiosk::list` aborts
+  // EItemNotFound / code 11 — "This item belongs to a different kiosk" — the moment a call names a kiosk
+  // that does not hold the item). This SEALS the composer half of #1802: the batch is a loop over the
+  // singular composer and carries each pair's kiosk through untouched, so a wrong kiosk in a composed call
+  // is always the CALLER's join, never this builder's.
+  test('a batch spanning two kiosks lists each pair against ITS OWN kiosk', () => {
+    const kiosk_a = id('kiosk-a')
+    const kiosk_b = id('kiosk-b')
+    const tx = merge_stacks_ptb(deployed_context)({
+      merges: [
+        {
+          kiosk_id: kiosk_a,
+          personal_kiosk_cap_id: id('cap-a'),
+          target_item_id: id('a-target'),
+          source_item_id: id('a-source'),
+        },
+        {
+          kiosk_id: kiosk_b,
+          personal_kiosk_cap_id: id('cap-b'),
+          target_item_id: id('b-target'),
+          source_item_id: id('b-source'),
+        },
+      ],
+    })
+    const { commands, inputs } = tx.getData()
+    // arg #0 is the kiosk object, arg #1 its personal cap — distinct inputs, in the caller's order
+    const object_id_of = (command, arg) =>
+      inputs[command.MoveCall.arguments[arg].Input].UnresolvedObject.objectId
+    expect(commands.map(c => object_id_of(c, 0))).toEqual([kiosk_a, kiosk_b])
+    expect(commands.map(c => object_id_of(c, 1))).toEqual([
+      id('cap-a'),
+      id('cap-b'),
+    ])
+  })
+
   test('an empty plan composes an empty transaction (the sweep never signs a no-op)', () => {
     expect(targets(merge_stacks_ptb(deployed_context)({ merges: [] }))).toEqual(
       [],
