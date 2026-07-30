@@ -70,7 +70,7 @@ jobs:
           # APPLY the label; the engine re-checks the owner's /promote word before it ever lands.
           test "${{ github.event.comment.user.id }}" = "11330271" || { echo "commenter is not the owner (id mismatch) — refusing"; exit 1; }
           test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "commenter is not the owner (login mismatch) — refusing"; exit 1; }
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: ensure the promote-requested label exists, then apply it
