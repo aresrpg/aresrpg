@@ -3,7 +3,7 @@
 // The hack radio's manifest door and its sequential engine. Both halves are headless by construction — the
 // parser is pure, the engine takes an injected audio factory — so this suite needs no jsdom and no network.
 
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test'
 
 import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
@@ -100,8 +100,13 @@ describe('the radio manifest', () => {
 
   test('a track path can never escape the asset host, whatever the manifest says', () => {
     const tracks = parse_radio_manifest(
-      { tracks: [{ file: 'https://evil.example/x.m4a', title: 'x' }, { file: '../../etc/passwd', title: 'y' }] },
-      `${HOST}/data/hack_radio.json`,
+      {
+        tracks: [
+          { file: 'https://evil.example/x.m4a', title: 'x' },
+          { file: '../../etc/passwd', title: 'y' },
+        ],
+      },
+      `${HOST}/data/hack_radio.json`
     )
     for (const track of tracks) expect(track.src.startsWith(`${HOST}/`)).toBe(true)
   })
@@ -131,7 +136,9 @@ describe('loading the tracks', () => {
 
   test('an EMPTY track list is an error row, not a radio that silently plays nothing', async () => {
     publish()
-    expect(await load_radio_tracks({ fetch_impl: async () => ({ ok: true, json: async () => ({ tracks: [] }) }) })).toEqual({
+    expect(
+      await load_radio_tracks({ fetch_impl: async () => ({ ok: true, json: async () => ({ tracks: [] }) }) })
+    ).toEqual({
       tracks: [],
       error: true,
     })
@@ -202,6 +209,7 @@ describe('the sequential engine', () => {
 
   test('a play() that fails for a REAL reason still surfaces as an error — only the policy refusal is silent', async () => {
     let errors = 0
+    const logged = spyOn(console, 'error').mockImplementation(() => {})
     const radio = create_radio(tracks, {
       on_error: () => errors++,
       make_audio: () => ({
@@ -215,7 +223,9 @@ describe('the sequential engine', () => {
     })
     await settle()
     expect(errors).toBe(1)
+    expect(logged).toHaveBeenCalledTimes(3)
     radio.dispose()
+    logged.mockRestore()
   })
 
   test('a manual pause is STICKY — no gesture and no track boundary ever restarts the album behind the player', async () => {
@@ -265,7 +275,10 @@ describe('the sequential engine', () => {
   test('an ended track auto-advances in manifest order and LOOPS back to the first', () => {
     const titles = []
     let audio
-    const radio = create_radio(tracks, { on_track: (x) => titles.push(x), make_audio: (src) => (audio = fake_audio(src)) })
+    const radio = create_radio(tracks, {
+      on_track: (x) => titles.push(x),
+      make_audio: (src) => (audio = fake_audio(src)),
+    })
     audio.emit('ended')
     expect(audio.src).toBe('b.m4a')
     audio.emit('ended')
@@ -277,13 +290,20 @@ describe('the sequential engine', () => {
     radio.dispose()
   })
 
-  test('a media error surfaces — no silent failure', () => {
+  test('a media error is logged and skips to the next playable row', () => {
     let audio
     let errors = 0
+    const logged = spyOn(console, 'error').mockImplementation(() => {})
     const radio = create_radio(tracks, { on_error: () => errors++, make_audio: (src) => (audio = fake_audio(src)) })
     audio.emit('error')
-    expect(errors).toBe(1)
+    expect({ src: audio.src, plays: audio.plays, errors, logged: logged.mock.calls.length }).toEqual({
+      src: 'b.m4a',
+      plays: 2,
+      errors: 0,
+      logged: 1,
+    })
     radio.dispose()
+    logged.mockRestore()
   })
 
   test('dispose stops the element and unwires every listener — a remount never leaves a ghost playing', async () => {

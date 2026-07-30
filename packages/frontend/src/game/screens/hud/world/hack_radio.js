@@ -47,7 +47,11 @@ export function parse_radio_manifest(body, manifest_url) {
     const { pathname } = new URL(file, root)
     const src = new URL(pathname, root).href
     // A row may omit its display title; the filename stem is an honest fallback, never an empty line.
-    const stem = pathname.split('/').pop()?.replace(/\.[^.]+$/, '') ?? ''
+    const stem =
+      pathname
+        .split('/')
+        .pop()
+        ?.replace(/\.[^.]+$/, '') ?? ''
     return [{ src, title: typeof row.title === 'string' && row.title ? row.title : stem }]
   })
 }
@@ -77,6 +81,16 @@ export async function load_radio_tracks({ fetch_impl = globalThis.fetch } = {}) 
  * @param {number} index @param {number} count @returns {number}
  */
 export const next_index = (index, count) => (count > 0 ? (index + 1) % count : 0)
+
+/**
+ * Next row not already known dead, wrapping once. `null` means every row failed.
+ * @param {number} index @param {number} count @param {ReadonlySet<number>} dead_indices
+ * @returns {number | null}
+ */
+export const next_playable_index = (index, count, dead_indices) => {
+  const candidates = Array.from({ length: count }, (_, offset) => (index + offset + 1) % count)
+  return candidates.find((candidate) => !dead_indices.has(candidate)) ?? null
+}
 
 /**
  * Build the radio: ONE audio element walking `tracks` in order, looping forever, announcing each track and
@@ -117,7 +131,7 @@ export function create_radio(
     make_audio = create_audio,
     fight_active = false,
     gesture_target = globalThis.window,
-  } = {},
+  } = {}
 ) {
   if (tracks.length === 0) return null
   const player = make_audio(tracks[0].src, { preload: 'none', volume: MUSIC_VOLUME })
@@ -127,6 +141,7 @@ export function create_radio(
   let paused_by_user = false
   let armed = false
   let fight_paused = fight_active // suppressed by the CURRENT fight — never the user's own intent
+  let dead_indices = new Set()
   const announce = () => on_track?.(tracks[cursor].title)
 
   // ONE shot: the listeners are gone the moment a gesture lands, whether or not the retry succeeded — a radio
@@ -147,19 +162,38 @@ export function create_radio(
     gesture_target.addEventListener('pointerdown', on_gesture)
     gesture_target.addEventListener('keydown', on_gesture)
   }
-  const play = () =>
-    Promise.resolve(player.play()).catch((error) =>
-      error?.name === 'NotAllowedError' ? arm_gesture_retry() : on_error?.(),
-    )
-  const on_ended = () => {
-    cursor = next_index(cursor, tracks.length)
-    player.src = tracks[cursor].src
+  const advance = () => {
+    const next = next_playable_index(cursor, tracks.length, dead_indices)
+    if (next == null) {
+      on_playing?.(false)
+      on_error?.()
+      return
+    }
+    cursor = next
+    player.src = tracks[next].src
     announce()
     if (!paused_by_user && !fight_paused) play() // the boundary is exactly where the stream must NOT stall
   }
+  const fail_track = (failed_cursor, error) => {
+    if (dead_indices.has(failed_cursor)) return
+    dead_indices = new Set([...dead_indices, failed_cursor])
+    const failed_track = tracks[failed_cursor]
+    console.error(`[hack-radio] skipping failed track "${failed_track.title}" (${failed_track.src})`, error)
+    if (failed_cursor === cursor) advance()
+  }
+  const play = async () => {
+    const playing_cursor = cursor
+    try {
+      await player.play()
+    } catch (error) {
+      if (error?.name === 'NotAllowedError') arm_gesture_retry()
+      else fail_track(playing_cursor, error)
+    }
+  }
+  const on_ended = () => advance()
   const on_play = () => on_playing?.(true)
   const on_pause = () => on_playing?.(false)
-  const on_media_error = () => on_error?.()
+  const on_media_error = (error) => fail_track(cursor, error)
 
   player.addEventListener('ended', on_ended)
   player.addEventListener('play', on_play)
