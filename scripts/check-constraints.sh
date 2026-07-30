@@ -1219,6 +1219,56 @@ else
     'no division-before-multiplication pattern in value math' || FAIL=1
 fi
 
+# ── RENDEZVOUS-HOST GATE (the 2026-07-27 fight stall, graduated) ────────────────────────────────
+# Ephemeral social rides p2p, and p2p needs a place for two browsers to meet. Public relays
+# rate-limited the old room path; the replacement meets only on infrastructure recorded in
+# docs/REALTIME.md. Shipped source may never reintroduce a public fallback.
+RENDEZVOUS_SOURCE_PATHSPEC=(
+  ':(glob)packages/*/src/**/*.[jt]s'
+  ':(glob)packages/*/src/**/*.[jt]sx'
+  ':(glob)packages/*/src/*.[jt]s'
+  ':(glob)packages/*/src/*.[jt]sx'
+)
+BANNED_RENDEZVOUS_HOSTS='relay\.damus\.io|nos\.lol|relay\.nostr\.band|nostr\.mom|relay\.snort\.social|openrelay\.metered\.ca|stun\.l\.google\.com|stun[0-9]*\.l\.google\.com|stun\.cloudflare\.com|test\.mosquitto\.org|broker\.emqx\.io|broker-cn\.emqx\.io|broker\.hivemq\.com|public\.cloud\.shiftr\.io'
+
+rendezvous_host_gate() {
+  echo "== AresRPG rendezvous-host gate (p2p meets on OUR relay, never a stranger's) =="
+  if ! collect_files "${RENDEZVOUS_SOURCE_PATHSPEC[@]}"; then
+    red "  ✗ FAIL: no package sources collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local kept=()
+  local file
+  for file in "${COLLECTED_FILES[@]}"; do
+    case "$file" in *.test.js | *.test.jsx | *.test.ts | *.test.tsx) continue ;; esac
+    kept+=("$file")
+  done
+  if [ "${#kept[@]}" -eq 0 ]; then
+    red "  ✗ FAIL: every collected source was a test file — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  COLLECTED_FILES=("${kept[@]}")
+  local scanned="${#COLLECTED_FILES[@]}"
+  local hits
+  hits="$(grep_collected "$BANNED_RENDEZVOUS_HOSTS" -nE || true)"
+  if ! grep_collected "$BANNED_RENDEZVOUS_HOSTS" -lE >/dev/null 2>&1; then
+    red "  ✗ FAIL: the rendezvous scan could not run — treat as a violation, never as clean."
+    return 1
+  fi
+  if [ -n "$hits" ]; then
+    red "  ✗ FAIL: a third-party rendezvous host is named in shipped source:"
+    echo "$hits" >&2
+    red "RENDEZVOUS GATE FAILED. p2p signaling and NAT discovery point at our own hosts (packages/frontend/src/env.ts RELAY_URL / STUN_URL)."
+    return 1
+  fi
+  grn "  ✓ no third-party rendezvous host in shipped source ($scanned sources scanned)"
+}
+
+echo
+if ! rendezvous_host_gate; then
+  FAIL=1
+fi
+
 # The LimitsVerifier struct-field cap, sourced from the 04:09 gold-rig publish failure. The offline
 # source counter refuses absent/stale build output so this pre-publish guard can never lie green.
 echo
