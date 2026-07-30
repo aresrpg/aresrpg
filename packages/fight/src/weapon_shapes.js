@@ -41,11 +41,19 @@
 //
 // Resolution order, one home, both twins: authored line override → category assignment → `single`.
 
-import { SHAPE_CROSS, SHAPE_LINE, SHAPE_POINT, SHAPE_PODIUM, SHAPE_TBAR } from '@aresrpg/sim/spell_effect'
+// SHAPE_NO_OVERRIDE (255) is the sentinel an authored `WeaponLine.area_shape` carries when it holds NO zone
+// override. It lives with the shape codes it belongs to (`@aresrpg/sim/spell_effect`, the Move twin's
+// `shape_no_override()`) and is RE-EXPORTED here so a weapon-side reader has one import, not a second home.
+import {
+  SHAPE_CROSS,
+  SHAPE_LINE,
+  SHAPE_NO_OVERRIDE,
+  SHAPE_POINT,
+  SHAPE_PODIUM,
+  SHAPE_TBAR,
+} from '@aresrpg/sim/spell_effect'
 
-/** The sentinel an authored `WeaponLine.area_shape` carries when it holds NO zone override (Move:
- *  `spell_effect::shape_no_override()`). 255, not 0 — `SHAPE_POINT` is a legitimate single-cell override. */
-export const SHAPE_NO_OVERRIDE = 255
+export { SHAPE_NO_OVERRIDE }
 
 /**
  * @typedef {Object} WeaponZone
