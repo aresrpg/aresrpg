@@ -27,7 +27,7 @@ const visible_text = (html) => html.replace(/<[^>]+>/g, '')
 // executes a wallet action; the grid is pure render.
 reset_auth_mock()
 
-const { RecipeGrid, JobItemDetail } = await import('./JobsDrawer.jsx')
+const { JobDetail, RecipeGrid, JobItemDetail } = await import('./JobsDrawer.jsx')
 
 // CAPTURED PROVENANCE: the values are the verbatim live projection read from rpc-redis on 2026-07-25 —
 // a real armorsmith (SDK JOBS index 8) recipe minted 07-23, knowledge gate 26, output at level 151.
@@ -73,11 +73,35 @@ const LIVE_ITEMS = [
 const ARMORSMITH = 8
 const rows = craft_recipes_for_job([LIVE_RECIPE], LIVE_ITEMS, ARMORSMITH)
 const grid = (props) => renderToStaticMarkup(<RecipeGrid on_select={() => {}} {...props} />)
+const detail = job => renderToStaticMarkup(<JobDetail job={job} xp={0} active={false} owned={{}} />)
 
 // The rendered EN copy (i18n resolves for real here) and the structural markers the grid groups by.
 const EMPTY_COPY = 'Recipes for this profession arrive with the crafting content seed.'
 const LOADING_COPY = 'Loading...'
 const LOCKED_BLOCK = 'jobs__recipe-block-head is-locked'
+
+describe('JobDetail — resources and recipes are stacked, never tabbed', () => {
+  test('a gathering job shows the resource tiers first and recipes directly below', () => {
+    const html = detail(JOBS[0])
+    const resources = html.indexOf('<span>Resources</span>')
+    const recipes = html.indexOf('<span>Recipes</span>')
+
+    expect(resources).toBeGreaterThan(-1)
+    expect(recipes).toBeGreaterThan(resources)
+    expect(html.indexOf('jobs__table')).toBeGreaterThan(resources)
+    expect(html.indexOf('Loading...')).toBeGreaterThan(recipes)
+    expect(html).not.toContain('jobs__subtab')
+  })
+
+  test('a craft job shows the recipes section only', () => {
+    const html = detail(JOBS[ARMORSMITH])
+
+    expect(html).toContain('<div class="jobs__section-head"><span>Recipes</span></div>')
+    expect(html).not.toContain('<span>Resources</span>')
+    expect(html).not.toContain('jobs__table')
+    expect(html.match(/jobs__section-head/g)).toHaveLength(1)
+  })
+})
 
 describe('RecipeGrid — the served corpus renders rows (issue #765)', () => {
   test('a served recipe renders its row, NOT the empty state', () => {

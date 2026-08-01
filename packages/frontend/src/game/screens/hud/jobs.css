@@ -2,10 +2,10 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 /*
  * Jobs drawer — master/detail. LEFT: a job-list rail grouped by category (selectable rows + level
- * chip). RIGHT: the selected job's detail (header, XP bar, Resources | Recipes sub-tabs). Ported in
+ * chip). RIGHT: the selected job's detail (header, XP bar, stacked Resources / Recipes sections). Ported in
  * structure from the aresrpg companion encyclopedia jobs tab, restyled to the house tokens: frosted
- * glass, ONE ice-blue accent (selection + xp fill + active sub-tab), hairline dividers, mono tabular
- * numbers, tabs (not pills), no left-accent rails on cards, no glow soup. Reads tokens only.
+ * glass, ONE ice-blue accent (selection + xp fill + section markers), hairline dividers, mono tabular
+ * numbers, no left-accent rails on cards, no glow soup. Reads tokens only.
  */
 
 .jobs {
@@ -320,35 +320,21 @@
   transition: width var(--dur-2) var(--ease);
 }
 
-/* sub-tabs (Resources | Recipes) — tabs, not pills */
-.jobs__subtabs {
+/* stacked section headings — the retired active-tab marker becomes each section's accent marker */
+.jobs__section-head {
   display: flex;
-  gap: var(--s-4);
   border-bottom: 1px solid var(--hair);
 }
 
-.jobs__subtab {
+.jobs__section-head > span {
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--fg-faint);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
+  color: var(--fg);
+  border-bottom: 2px solid var(--accent);
   padding: var(--s-1) 0 var(--s-2);
   margin-bottom: -1px;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease);
-}
-
-.jobs__subtab:hover {
-  color: var(--fg-muted);
-}
-
-.jobs__subtab.is-active {
-  color: var(--fg);
-  border-bottom-color: var(--accent);
 }
 
 /* ── resources table ───────────────────────────────────────────────────────── */

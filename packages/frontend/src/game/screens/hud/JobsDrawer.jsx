@@ -3,8 +3,8 @@
 // Jobs drawer body — a master/detail panel ported from the aresrpg companion encyclopedia JOBS tab
 // (../../aresrpg/packages/frontend/src/pages/encyclopedia/jobs_tab.tsx): a LEFT job-list rail
 // (grouped by the 4 categories, with a per-job level chip) + a RIGHT detail panel (job header, XP
-// bar, and a Resources | Recipes sub-tab section). Restyled to the house glass + ice-blue tokens
-// (tabs not pills, mono tabular nums, hairline dividers). Every craft job shows ALL RECIPES,
+// bar, and stacked Resources / Recipes sections). Restyled to the house glass + ice-blue tokens
+// (mono tabular nums, hairline dividers). Every craft job shows ALL RECIPES,
 // both UNLOCKED and LOCKED (locked greyed with the unlock level); gathering jobs show their 11-tier
 // resource table (locked tiers greyed with the required level).
 //
@@ -57,7 +57,6 @@ import { craft_affordability_of, craft_recipes_for_job } from '../../../pages/en
 import { get_encyclopedia } from '../../../rpc/client'
 import { use_rpc_view } from '../../../rpc/use_view'
 import { Tooltip } from './Tooltip.jsx'
-import { effective_job_tab, job_subtabs } from './job_subtabs.js'
 // Item detail REUSES the EXACT encyclopedia item-display (ItemDetailView) over the EXACT same live /v1 row
 // projection the Encyclopedia tab renders (item_view_model.ts + encyclopedia_item_asset — one home for the
 // shape, one home for the art slug) — HD icon, type, DESCRIPTION + characteristics (right-section, not a
@@ -629,7 +628,7 @@ function GatherBar({ job }) {
 }
 
 /**
- * RIGHT detail panel — header + XP bar + Resources/Recipes sub-tabs.
+ * RIGHT detail panel — header + XP bar + stacked Resources/Recipes sections.
  * @param {{
  *   job: import('@aresrpg/sdk/jobs').JobDef,
  *   xp: number,
@@ -637,9 +636,8 @@ function GatherBar({ job }) {
  *   owned: Record<string, number>,
  * }} props
  */
-function JobDetail({ job, xp, active, owned }) {
+export function JobDetail({ job, xp, active, owned }) {
   const is_gathering = job.category === JOB_CATEGORY.GATHERING
-  const [tab, set_tab] = useState(/** @type {'resources' | 'recipes'} */ (is_gathering ? 'resources' : 'recipes'))
   // The clicked resource/recipe shown in the right-section as the encyclopedia ItemDetailView
   // (no modal/little-card). `recipe` is set only for a craftable recipe click (drives
   // the inline Craft controls); null for a gathered resource.
@@ -677,10 +675,6 @@ function JobDetail({ job, xp, active, owned }) {
   useEffect(() => {
     set_selected(null)
   }, [job.id])
-
-  // The showing tab, from the job's own tab set (job_subtabs.js): a selection the new job does not have
-  // falls back to its natural default. A gathering job HAS the recipes tab — its own crafts (#1670).
-  const effective_tab = effective_job_tab(is_gathering, tab)
 
   return (
     <div className="jobs__detail">
@@ -727,35 +721,30 @@ function JobDetail({ job, xp, active, owned }) {
         <div className="jobs__browse">
           {is_gathering && <GatherBar job={job} />}
 
-          <div className="jobs__subtabs">
-            {job_subtabs(is_gathering).map(name => (
-              <button
-                key={name}
-                type="button"
-                className={`jobs__subtab${effective_tab === name ? ' is-active' : ''}`}
-                onClick={() => set_tab(name)}
-              >
-                {name === 'resources' ? i18n.t('jobs.tabs.resources') : i18n.t('jobs.tabs.recipes')}
-              </button>
-            ))}
-          </div>
-
-          {effective_tab === 'resources' ? (
-            <ResourceTable
-              job={job}
-              level={level}
-              selected_id={selected?.item_id ?? null}
-              on_select={(item_id) => set_selected({ item_id, recipe: null })}
-            />
-          ) : (
-            <RecipeGrid
-              recipes={recipes}
-              loading={loading}
-              level={level}
-              selected_id={selected?.item_id ?? null}
-              on_select={(recipe) => set_selected({ item_id: recipe.id, recipe })}
-            />
+          {is_gathering && (
+            <>
+              <div className="jobs__section-head">
+                <span>{i18n.t('jobs.tabs.resources')}</span>
+              </div>
+              <ResourceTable
+                job={job}
+                level={level}
+                selected_id={selected?.item_id ?? null}
+                on_select={(item_id) => set_selected({ item_id, recipe: null })}
+              />
+            </>
           )}
+
+          <div className="jobs__section-head">
+            <span>{i18n.t('jobs.tabs.recipes')}</span>
+          </div>
+          <RecipeGrid
+            recipes={recipes}
+            loading={loading}
+            level={level}
+            selected_id={selected?.item_id ?? null}
+            on_select={(recipe) => set_selected({ item_id: recipe.id, recipe })}
+          />
         </div>
 
         {selected && (
@@ -776,7 +765,7 @@ function JobDetail({ job, xp, active, owned }) {
 /**
  * Jobs drawer body. Reads the selected character's per-job XP (server-authoritative, see FLAG) and
  * resolves the active gathering job from the equipped weapon-slot tool. Master/detail: a job list on
- * the left, the selected job's detail (XP + Resources/Recipes) on the right.
+ * the left, the selected job's detail (XP + stacked Resources/Recipes) on the right.
  * @returns {import('react').JSX.Element}
  */
 export function JobsDrawer() {
