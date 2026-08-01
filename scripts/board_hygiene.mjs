@@ -129,6 +129,12 @@ export function parse_close_refs(text, repository) {
   return [...new Set(numbers)].toSorted((left, right) => left - right)
 }
 
+// Batch work pays the SSOT check once, in the reviewed PR body (#1656). A line pasted inside a
+// transcript is evidence about another body, not this one's assertion; use the close parser's same
+// quote stripping. Non-empty prose is required so a bare heading cannot satisfy the gate.
+export const has_ssot_double_check = (text) =>
+  /^\s*(?:[-*]\s+)?SSOT double-check:\s*\S.*$/im.test(without_quoted_blocks(text))
+
 // A push checkout only proves the new tree. The event payload is the authority for what this one
 // landing added, including a multi-commit fast-forward; resolving HEAD^ would silently inspect just
 // the tip commit. Kept pure so fixture payloads exercise the exact GitHub boundary.
@@ -245,6 +251,9 @@ export const link_candidates = (pull_request, commits, repository) =>
 export function decide_link_gate(pull_request, commits, repository, options = {}) {
   const { registered_total = 0, closable_refs = null, rejected_refs = [] } = options
   const candidates = link_candidates(pull_request, commits, repository)
+  const batch_refs = parse_close_refs(pull_request?.body, repository)
+  if (batch_refs.length >= 2 && !has_ssot_double_check(pull_request?.body))
+    return { ok: false, refs: [], via: 'missing-ssot', batch_refs }
   // `closable_refs: null` means NO target verification was performed — the offline reading, where the
   // parse is the whole answer. The driven gate always supplies the verified list, so a ref pointing at
   // a pull request or an already-closed row can never buy a pass there.
@@ -257,6 +266,8 @@ export function decide_link_gate(pull_request, commits, repository, options = {}
 }
 
 export const link_gate_message = (decision) => {
+  if (!decision.ok && decision.via === 'missing-ssot')
+    return `batch closes ${decision.batch_refs.map((number) => `#${number}`).join(', ')} but the PR body has no non-empty \`SSOT double-check:\` line naming the dual-home check and what was found absent.`
   if (decision.ok && decision.via === 'no-issue') return `closes no row on purpose — carries \`${NO_ISSUE_LABEL}\``
   if (decision.ok && decision.via === 'registered-link')
     return `${decision.registered} row(s) linked by hand through the Development panel — accepted as proof. NOTE: the landing pass closes from TEXT only, so nothing drains automatically; add \`Fixes #N\` to the body if you want the row closed on landing.`

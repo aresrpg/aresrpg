@@ -358,6 +358,33 @@ describe('the link gate — the blocking half of the close chain', () => {
     })
   })
 
+  it('refuses a batch body until it names the SSOT double-check (#1656)', () => {
+    expect(decide_link_gate(linked('Fixes #1495\nFixes #1603'), [], REPOSITORY)).toEqual({
+      ok: false,
+      refs: [],
+      via: 'missing-ssot',
+      batch_refs: [1495, 1603],
+    })
+  })
+
+  it('accepts the same batch when the body carries a non-empty SSOT double-check line', () => {
+    const body = 'Fixes #1495\nFixes #1603\n\nSSOT double-check: fight status has one writer; no dual home found.'
+    expect(decide_link_gate(linked(body), [], REPOSITORY)).toEqual({
+      ok: true,
+      refs: [1495, 1603],
+      via: 'close-ref',
+    })
+  })
+
+  it('does not tax a one-row pull request with the batch-only SSOT line', () => {
+    expect(decide_link_gate(linked('Fixes #1495'), [], REPOSITORY).ok).toBe(true)
+  })
+
+  it('does not accept an SSOT line pasted as quoted evidence', () => {
+    const body = 'Fixes #1495\nFixes #1603\n\n```\nSSOT double-check: no dual home found\n```'
+    expect(decide_link_gate(linked(body), [], REPOSITORY).via).toBe('missing-ssot')
+  })
+
   it('passes on a close-keyword that only a commit message carries', () => {
     const commits = [{ commit: { message: 'fix(sim): a thing\n\nCloses #1234' } }]
     expect(decide_link_gate(linked('no row here'), commits, REPOSITORY)).toEqual({
@@ -448,7 +475,8 @@ describe('the link gate — the blocking half of the close chain', () => {
   })
 
   it('keeps only the verified refs when a body names both a dead ref and a live row', () => {
-    expect(decide_link_gate(linked('Closes #1399\nFixes #1495'), [], REPOSITORY, { closable_refs: [1495] })).toEqual({
+    const body = 'Closes #1399\nFixes #1495\nSSOT double-check: parser has one home; no twin found.'
+    expect(decide_link_gate(linked(body), [], REPOSITORY, { closable_refs: [1495] })).toEqual({
       ok: true,
       refs: [1495],
       via: 'close-ref',
@@ -540,14 +568,22 @@ describe('run_link_gate drives the blocking gate end to end', () => {
 
   // Lazy: the walk stops at the first closable row, so the ordinary pull request costs ONE request.
   it('stops resolving at the first closable row', async () => {
-    const pull = { title: 'fix(a): b', body: 'Fixes #10\nFixes #20', labels: [] }
+    const pull = {
+      title: 'fix(a): b',
+      body: 'Fixes #10\nFixes #20\nSSOT double-check: close parser is single-homed; no twin found.',
+      labels: [],
+    }
     const { summary, issue_lookups } = await drive(pull, [])
     expect(summary).toMatchObject({ ok: true, refs: [10], via: 'close-ref' })
     expect(issue_lookups).toEqual([10])
   })
 
   it('walks past a dead ref to reach the live row behind it', async () => {
-    const pull = { title: 'fix(a): b', body: 'Closes #1399\nFixes #1495', labels: [] }
+    const pull = {
+      title: 'fix(a): b',
+      body: 'Closes #1399\nFixes #1495\nSSOT double-check: close parser is single-homed; no twin found.',
+      labels: [],
+    }
     const { summary, issue_lookups } = await drive(pull, [], 0, { 1399: { state: 'closed', pull_request: {} } })
     expect(summary).toMatchObject({ ok: true, refs: [1495] })
     expect(issue_lookups).toEqual([1399, 1495])
