@@ -263,6 +263,25 @@ its pure core is unit-tested in `scripts/standby_parity.test.js`, including the 
 near-miss fixture (twelve ids on both sides, zero overlap — a count check waves it through, set
 equality does not).
 
+## Recipe-ghost purge — the one-time #1814 sweep
+
+The Recipe mirror had no deletion path, so every `crafting::retire_recipe` left its blueprint
+SERVED forever (1,470 rows against 1,434 live objects). The handler fix reaps future retirements;
+the ghosts already in the store predate the watermark and need one operator sweep:
+
+```bash
+PURGE_LIST=…/ceremony/recipe_ghost_purge_2026-08-01.json \
+PURGE_REDIS_URL=redis://…:6379 \
+  bun scripts/purge_recipe_ghosts.mjs            # dry-run: reports, writes nothing
+  bun scripts/purge_recipe_ghosts.mjs --apply    # 0 = purged + count verified · 1 = refused · 2 = unevaluable
+```
+
+Run it AFTER the fixed indexer is serving, or a still-streaming retirement re-ghosts behind you.
+It purges exactly the ids in the oracle file (derived off-chain, each one chain-probed), never a
+scan of its own, and it is idempotent — `JSON.DEL`/`SREM` of an absent key are no-ops, so a re-run
+after a partial failure is safe. On `--apply` it re-measures what the encyclopedia would serve and
+fails loudly if the count misses the oracle's expectation (1,434).
+
 ## Layout
 
 ```
@@ -270,7 +289,8 @@ packages/rpc/
 ├── indexer/            # Rust — checkpoint ingestion → Redis (sui-indexer-alt-framework)
 ├── api/                # Bun  — read-only HTTP JSON API
 ├── gas-pool/           # opt-in Mysten sui-gas-pool sponsor (--profile gas)
-├── scripts/            # ops predicates (standby_parity.mjs — the blue/green flip gate)
+├── scripts/            # ops predicates (standby_parity.mjs — the blue/green flip gate;
+│                       #   purge_recipe_ghosts.mjs — the one-time #1814 mirror sweep)
 ├── docker-compose.yml  # redis + indexer + api (+ gas-pool under the gas profile)
 └── .env.example
 ```
