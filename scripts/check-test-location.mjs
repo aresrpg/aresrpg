@@ -14,7 +14,7 @@ import { fileURLToPath as file_url_to_path } from 'node:url'
 const script_path = file_url_to_path(import.meta.url)
 const repo_root = path.resolve(path.dirname(script_path), '..')
 const baseline_path = path.join(repo_root, 'scripts/arch/in_src_tests.baseline.txt')
-const EXPECTED_BASELINE_ROWS = 661
+const EXPECTED_BASELINE_ROWS = 659
 const ignored_directories = new Set(['.git', '.agents', '.codex', 'build', 'dist', 'node_modules', 'target'])
 const test_file = /\.(?:test|spec)\.[^/]+$/
 

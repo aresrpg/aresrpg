@@ -1,5 +1,5 @@
 # L-L1 in-src test debt baseline — one exact repo-relative path per row.
-# Historical law census: 586 rows. Current edge census: 661 rows (engine 143, frontend 518).
+# Historical law census: 586 rows. Current edge census: 659 rows (engine 143, frontend 516).
 # This file may only shrink as scripts/relocate-tests.mjs moves tests into sibling test/ trees.
 
 packages/engine/src/binding/board_anchor.test.js
