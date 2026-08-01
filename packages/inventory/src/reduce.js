@@ -11,8 +11,9 @@
 //                     receipt-proven XP floor, nor a settled HP block to an OLDER `hp_updated_ms` anchor
 //                     (#1485 — the post-loss full-restore blip); owned items pass through the consumable/bought pending
 //                     ledgers. KEEP-on-omit for owned-item feeds: an indexer-lagging read that OMITS a
-//                     just-bought/owned item must never vanish it (merge_pending_buys re-adds the pending
-//                     row until the id appears) — ONLY an explicit receipt delta removes an item.
+//                     just-bought/owned item must never vanish it (settled_item_floor re-adds the receipt-
+//                     proven row until the id appears) — ONLY an explicit receipt delta removes an item.
+//   'pending_use' / 'drain_pending_use' — the consumable batcher's optimistic delta and its settle drain.
 //   'receipt_patch' — a delta PROVEN by the client's own signed tx: a fight settlement (HP/XP → RAISES the
 //                     per-character XP floor; ItemMinted rows → a bag floor), an equip/consume/buy bag delta,
 //                     the create ghost row, or a settled Character mint → a roster floor.
@@ -25,8 +26,7 @@
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
 import { apply_fight_receipt_to_roster } from './fight_receipt_roster.js'
-import { mask_pending_items } from './consumable_ledger.js'
-import { merge_pending_buys } from './bought_items_ledger.js'
+import { add_pending_units, drain_pending_units, mask_pending_items } from './consumable_ledger.js'
 
 const is_ghost = (/** @type {any} */ c) => String(c?.id ?? '').startsWith('ghost:')
 
@@ -201,9 +201,9 @@ function merge_snapshot(sui, { kind, characters, items, ...flags }) {
     next.characters = roster.characters
     next.minted_character_floor = roster.minted_character_floor
   }
-  // KEEP-on-omit: mask consumed units, then re-add any pending-buy the feed hasn't projected yet.
+  // KEEP-on-omit: mask in-flight consumed units, then re-add any receipt-proven row the feed hasn't projected.
   if (items) {
-    const floored = floor_settled_items(merge_pending_buys(mask_pending_items(items)), sui.settled_item_floor)
+    const floored = floor_settled_items(mask_pending_items(items, sui.pending_uses), sui.settled_item_floor)
     next.items = floored.items
     next.settled_item_floor = floored.settled_item_floor
   }
@@ -398,6 +398,13 @@ function apply_receipt_patch(sui, payload) {
     case 'decrement_item': {
       return decrement_receipt_item(sui, payload)
     }
+    case 'pending_use':
+      // A consumable click's optimistic delta (consumable_ledger's batcher). Reducer-owned so the mask below
+      // renders it, `action/sui_logout` can clear it, and a settle can never land on a different account.
+      return { ...sui, pending_uses: add_pending_units(sui.pending_uses, payload.id, payload.units) }
+    case 'drain_pending_use':
+      // The batch settled — success (the chain burned them) or failure (the caller refetches authoritative).
+      return { ...sui, pending_uses: drain_pending_units(sui.pending_uses, payload.id, payload.units) }
     case 'merge_stacks': {
       // The boot sweep's ItemMerged events: sources gone, the survivor at its summed total.
       return apply_stack_merges(sui, payload.merges)

@@ -2,8 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
-import { add_pending_buy, merge_pending_buys, reset_pending_buys } from '@aresrpg/inventory/bought_items_ledger'
-
 import { tx_error } from '../../core/abort_copy.js'
 
 import {
@@ -318,40 +316,37 @@ describe('storage that cannot CONFIRM a write turns AUTO-sweep OFF (P1 round 3 �
   })
 })
 
-describe('a SUCCESSFUL open purges the bought-item optimistic ledger (CONFIRMING… stuck forever otherwise)', () => {
+describe('a SUCCESSFUL open REPORTS the bought-item purge (CONFIRMING… stuck forever otherwise)', () => {
   // Root cause: buy_items_sale paints a JUST-BOUGHT box optimistically (store_patch.hydrate_bought_items →
-  // add_pending_buy) BEFORE any chain-truth read has ever confirmed it — that ledger row's ONLY self-drain
-  // condition is "a fresh read includes this id" (bought_items_ledger.js). loot_box::open_internal BURNS the
-  // exact box_item_id on a successful open (Move: burn_units destroys the passed object outright, re-minting
-  // only a NEW id for any stack remainder) — so once a box opens before its OWN buy was ever confirmed, that id
-  // can NEVER again appear in a chain-truth read. Without a purge, merge_pending_buys re-injects the phantom
-  // row on EVERY future load_roster snapshot forever — and since is_box_retry_blocked keys off that SAME id
-  // (P3: a success never releases the latch — by design, relying on the tile vanishing), the resurrected tile
-  // stays badged "Confirming…" permanently, with a genuinely different box sitting unbadged beside it.
-  afterEach(reset_pending_buys)
+  // the reducer's settled-loot floor) BEFORE any chain-truth read has ever confirmed it — that floor row's ONLY
+  // self-drain condition is "a fresh read includes this id" (reduce.js floor_settled_items). loot_box::
+  // open_internal BURNS the exact box_item_id on a successful open (Move: burn_units destroys the passed object
+  // outright, re-minting only a NEW id for any stack remainder) — so once a box opens before its OWN buy was
+  // ever confirmed, that id can NEVER again appear in a chain-truth read. Without a purge, the floor re-injects
+  // the phantom row on EVERY future load_roster snapshot forever — and since is_box_retry_blocked keys off that
+  // SAME id (P3: a success never releases the latch — by design, relying on the tile vanishing), the resurrected
+  // tile stays badged "Confirming…" permanently, with a genuinely different box sitting unbadged beside it.
+  // This module stays PURE: it returns the verdict, and BoxReveal purges through the bag's reducer door.
 
-  test('a box opened before its own buy ever confirmed never comes back from the dead', () => {
-    // buy_items_sale → hydrate_bought_items: optimistic paint, indexer/chain-direct read has not caught up yet
-    add_pending_buy({ id: '0xbox', item_type: 'pet_lootbox', item_category: 'consumable', amount: 1 })
+  test('a box opened before its own buy ever confirmed reports the purge exactly once', () => {
     block_box_retry('0xbox') // BoxReveal mounts, on_retry_blocked latches it at submission start
 
-    note_open_settled('0xbox') // SUCCESS — the reveal happened; loot_box::open_internal burned '0xbox' on-chain
-
-    // The FIRST chain-truth read to land after the burn genuinely omits '0xbox' — it can never reappear.
-    const fresh_snapshot = merge_pending_buys([{ id: '0xother' }])
-    expect(fresh_snapshot.some((row) => row.id === '0xbox')).toBe(false) // no phantom tile resurrected
+    // SUCCESS — the reveal happened; loot_box::open_internal burned '0xbox' on-chain.
+    expect(note_open_settled('0xbox'), 'the burn is reported so the caller drops the floor row').toBe(true)
     expect(is_box_retry_blocked('0xbox')).toBe(true) // the latch itself is untouched (P3 still holds)
+
+    // FIRST settle wins: a re-settle never re-purges (the row is already gone from the bag).
+    expect(note_open_settled('0xbox'), 'a second settle never re-fires the purge').toBe(false)
   })
 
-  test('a FAILED open (box provably unburned) leaves the pending-buy row alone — it will self-drain normally', () => {
-    add_pending_buy({ id: '0xbox', item_type: 'pet_lootbox', item_category: 'consumable', amount: 1 })
+  test('a FAILED open (box provably unburned) reports NO purge — the floor self-drains normally', () => {
     block_box_retry('0xbox')
 
-    note_open_settled('0xbox', { error: new Error('open aborted pre-burn') }) // REFUSALS-FIRST: never burned
+    // REFUSALS-FIRST: never burned, so the box is still real and will show up in a genuine read.
+    expect(note_open_settled('0xbox', { error: new Error('open aborted pre-burn') })).toBe(false)
+  })
 
-    // The box is still real and will eventually show up in a genuine read — the ledger must keep carrying it
-    // (this is the SAME box_id from the ledger row, so its presence here is the correct un-drained state).
-    const fresh_snapshot = merge_pending_buys([{ id: '0xother' }])
-    expect(fresh_snapshot.some((row) => row.id === '0xbox')).toBe(true)
+  test('an unlatched id is a no-op — nothing to purge, nothing reported', () => {
+    expect(note_open_settled('0xnever-latched')).toBe(false)
   })
 })

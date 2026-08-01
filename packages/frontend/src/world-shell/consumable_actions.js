@@ -16,7 +16,7 @@
 // during a flight form the next batch. Success/failure each settle with exactly ONE toast; failure drains the
 // batch's pending and refetches authoritative chain truth (D203: never arithmetic-revert), so the count
 // restores. Reconciles racing an active batch can't bounce the number: load_roster's dispatch renders
-// chain_amount − pending (consumable_ledger.mask_pending_items).
+// chain_amount - pending (consumable_ledger.mask_pending_items, over the reducer-owned `sui.pending_uses`).
 
 import { create_consume_batcher } from '@aresrpg/inventory/consumable_ledger'
 
@@ -28,7 +28,7 @@ import i18n from '../i18n'
 import { use_toast } from '../toast'
 import { game_log } from '../core/log.js'
 
-import { decrement_bag_items } from './store_patch.js'
+import { decrement_bag_items, pending_use_delta } from './store_patch.js'
 import { mark_ui_updated, run_tx } from './tx.js'
 // S-57 — THE ONE kiosk-resolution home (derive-from-character; never a first-cap scan). See kiosk_resolve.js.
 import { kiosk_for_character } from './kiosk_resolve.js'
@@ -75,6 +75,10 @@ export async function use_consumable({ character_id, potion_id, amount = 1, item
 // bursts from different surfaces on the same potion still fold into the same batch/tx.
 const batcher = create_consume_batcher({
   flush: use_consumable,
+  // The optimistic delta is REDUCER state: the batcher reports, the reducer owns. A module-scoped ledger here
+  // outlived `action/sui_logout` and masked the next account's stacks with this one's in-flight clicks.
+  on_pending: (potion_id, units) => pending_use_delta(potion_id, units),
+  on_drain: (potion_id, units) => pending_use_delta(potion_id, -units),
   on_settled: ({ timing }) => {
     mark_ui_updated(timing)
     // D9 lazy confirm — the click already painted; ONE quiet toast per BATCH (never per click), then the

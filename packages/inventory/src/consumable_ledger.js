@@ -10,41 +10,37 @@
 // load_roster dispatch — the ONE producer of chain-truth bag amounts). Pending drains exactly when a batch
 // settles: success → the chain burned those units (chain − batch, pending − batch → same rendered count);
 // failure → drain + the caller refetches authoritative (D203: never arithmetic-revert), so the count restores.
+//
+// THE LEDGER IS REDUCER STATE (`sui.pending_uses`), never a module global: it is rendered by the reducer, so
+// the reducer owns it. A module-scoped Map outlived `action/sui_logout` — which clears every reducer-owned
+// ledger by hand — and masked the NEXT account's stacks with the previous one's in-flight clicks. The
+// transforms below are pure records in / records out; the batcher below only REPORTS its deltas through
+// injected dispatchers, exactly like every other async edge in this codebase.
 
-/** pending optimistic uses per potion OBJECT id — units clicked but not yet chain-settled. */
-const pending = new Map()
+/** @param {Record<string, number>} [pending] @param {string} id @returns {number} */
+export const pending_units = (pending, id) => pending?.[id] ?? 0
 
-/** @param {string} id @returns {number} */
-export const pending_units = (id) => pending.get(id) ?? 0
+/** Add `units` to `id`'s pending delta. @param {Record<string, number>} [pending] */
+export const add_pending_units = (pending, id, units) => ({ ...pending, [id]: pending_units(pending, id) + units })
 
-/** @param {string} id @param {number} units */
-export function add_pending(id, units) {
-  pending.set(id, (pending.get(id) ?? 0) + units)
-}
-
-/** Drain `units` from `id`'s pending (a batch settled — success or failure). Floors at 0. */
-export function drain_pending(id, units) {
-  const next = (pending.get(id) ?? 0) - units
-  if (next > 0) pending.set(id, next)
-  else pending.delete(id)
-}
-
-/** TEST-ONLY: reset the module ledger between cases. */
-export function reset_pending() {
-  pending.clear()
+/** Drain `units` from `id`'s pending (a batch settled — success or failure). Floors at 0, dropping the key. */
+export function drain_pending_units(pending, id, units) {
+  const next = pending_units(pending, id) - units
+  const rest = Object.fromEntries(Object.entries(pending ?? {}).filter(([key]) => key !== id))
+  return next > 0 ? { ...rest, [id]: next } : rest
 }
 
 /**
  * Render-mask a CHAIN-TRUTH items array against the ledger: amount − pending per id; a row masked to ≤0 is
  * dropped (the cell disappears — its last units are in flight). Items with no pending pass through untouched
  * (same refs — cheap for the common empty-ledger case).
- * @param {any[]} items @returns {any[]}
+ * @param {any[]} items @param {Record<string, number>} [pending] @returns {any[]}
  */
-export function mask_pending_items(items) {
-  if (pending.size === 0) return items
+export function mask_pending_items(items, pending) {
+  if (!pending || Object.keys(pending).length === 0) return items
   const out = []
   for (const item of items) {
-    const p = pending.get(item?.id)
+    const p = pending[item?.id]
     if (!p) {
       out.push(item)
       continue
@@ -56,19 +52,22 @@ export function mask_pending_items(items) {
 }
 
 /**
- * Trailing-click batcher: every `click` accumulates one unit into the ledger + the current batch; a trailing
- * timer (`delay` ms after the LAST click) fires ONE `flush({ character_id, potion_id, amount })`. Clicks
- * landing while a flush is in flight form the NEXT batch (fired `delay` after the flight settles — flights
- * are serialized per potion so two txs never race the same owned object). Settle (either way) drains the
- * batch's pending; failure additionally reports through `on_failed` (ONE toast per batch, caller-side).
+ * Trailing-click batcher: every `click` accumulates one unit into the batch and REPORTS it through `on_pending`;
+ * a trailing timer (`delay` ms after the LAST click) fires ONE `flush({ character_id, potion_id, amount })`.
+ * Clicks landing while a flush is in flight form the NEXT batch (fired `delay` after the flight settles —
+ * flights are serialized per potion so two txs never race the same owned object). Settle (either way) reports
+ * the batch's drain through `on_drain`; failure additionally reports through `on_failed` (ONE toast per batch,
+ * caller-side). The ledger deltas are DISPATCHED, never written here — the reducer owns the ledger.
  * @param {{
  *   flush: (args: { character_id: string, potion_id: string, amount: number }) => Promise<any>,
+ *   on_pending: (potion_id: string, units: number) => void,
+ *   on_drain: (potion_id: string, units: number) => void,
  *   on_settled?: (out: any, batch: { potion_id: string, units: number }) => void,
  *   on_failed?: (error: any, batch: { potion_id: string, units: number }) => void,
  *   delay?: number,
  * }} opts
  */
-export function create_consume_batcher({ flush, on_settled, on_failed, delay = 500 }) {
+export function create_consume_batcher({ flush, on_pending, on_drain, on_settled, on_failed, delay = 500 }) {
   /** @type {Map<string, { character_id: string, potion_id: string, units: number, timer: any, in_flight: boolean }>} */
   const batches = new Map()
 
@@ -80,7 +79,7 @@ export function create_consume_batcher({ flush, on_settled, on_failed, delay = 5
       batches.set(key, batch)
     }
     batch.units += 1
-    add_pending(potion_id, 1)
+    on_pending(potion_id, 1)
     if (batch.timer) clearTimeout(batch.timer)
     batch.timer = setTimeout(() => fire(key), delay)
   }
@@ -95,10 +94,10 @@ export function create_consume_batcher({ flush, on_settled, on_failed, delay = 5
     batch.in_flight = true
     try {
       const out = await flush({ character_id: batch.character_id, potion_id: batch.potion_id, amount: units })
-      drain_pending(batch.potion_id, units) // chain burned them — mask hands the count back to chain truth
+      on_drain(batch.potion_id, units) // chain burned them — mask hands the count back to chain truth
       on_settled?.(out, { potion_id: batch.potion_id, units })
     } catch (error) {
-      drain_pending(batch.potion_id, units) // failed — drop the optimistic delta; caller refetches authoritative
+      on_drain(batch.potion_id, units) // failed — drop the optimistic delta; caller refetches authoritative
       on_failed?.(error, { potion_id: batch.potion_id, units })
     } finally {
       batch.in_flight = false

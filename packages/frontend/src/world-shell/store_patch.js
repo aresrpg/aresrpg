@@ -9,8 +9,6 @@
 // race). Now each dispatches a TYPED receipt_patch DELTA; the sui_session reducer folds it against the LATEST
 // bag. Same exported signatures — callers (Inventory equip, shop buy, consume) are untouched.
 
-import { add_pending_buy } from '@aresrpg/inventory/bought_items_ledger'
-
 import { context } from '../game/core/game.js'
 
 // (#55 note: the old `bump_character_spell` roster patch died with the S-46 spell model — per-spell levels are
@@ -30,17 +28,17 @@ export function add_bag_items(/** @type {any[]} */ new_items) {
 }
 
 /**
- * Optimistically PAINT just-bought items into the bag NOW (predict) + register them in the bought-item ledger
- * so load_roster's full-replace reconcile PRESERVES them until the /v1 owner-items view catches up (the
+ * Optimistically PAINT just-bought items into the bag NOW (predict) and HOLD them in the reducer's settled-loot
+ * floor so load_roster's full-replace reconcile PRESERVES them until the /v1 owner-items view catches up (the
  * indexer lags a kiosk-locking buy — "the just-bought key took ages to show"). Rows carry the REAL created
  * object ids (from the buy tx effects), so each self-drains the instant a chain read includes its id. Called
  * ONLY on buy SUCCESS (a failed/pre-exec buy throws first → nothing injected → no false paint, never a retry).
+ * A buy receipt is the same fact as any other receipt-proven mint, so it rides the same floor — one home.
  * @param {any[]} rows  bag-shaped rows ({ id, item_type, item_category, name, amount, kiosk_id, kiosk_cap_id })
  */
 export function hydrate_bought_items(/** @type {any[]} */ rows) {
   if (!rows?.length) return
-  for (const row of rows) add_pending_buy(row)
-  add_bag_items(rows)
+  context.dispatch('action/sui_data', { kind: 'receipt_patch', op: 'settled_loot', rows })
 }
 
 /**
@@ -50,6 +48,17 @@ export function hydrate_bought_items(/** @type {any[]} */ rows) {
  */
 export function decrement_bag_items(/** @type {string} */ id, units = 1) {
   context.dispatch('action/sui_data', { kind: 'receipt_patch', op: 'decrement_item', id, units })
+}
+
+/**
+ * D307 — the consumable batcher's optimistic delta: `units > 0` claims them (the count paints down instantly),
+ * `units < 0` drains them when the batch settles (either way — the chain burned them, or the caller refetches
+ * authoritative). The ledger it moves is reducer state, so a wallet switch clears it with everything else.
+ */
+export function pending_use_delta(/** @type {string} */ id, units) {
+  if (!id || !units) return
+  const op = units > 0 ? 'pending_use' : 'drain_pending_use'
+  context.dispatch('action/sui_data', { kind: 'receipt_patch', op, id, units: Math.abs(units) })
 }
 
 /**

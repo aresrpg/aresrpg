@@ -35,6 +35,7 @@ import { play_fight_sfx, play_discovery_sfx } from '../../core/audio/sfx.js'
 import { game_log } from '../../../core/log.js'
 
 import { open_box, claim_pet, resolve_rolled } from '../../../world-shell/lootbox_actions.js'
+import { remove_bag_items } from '../../../world-shell/store_patch.js'
 import {
   PENDING_ESCAPE_MS,
   PENDING_TIMEOUT_MS,
@@ -271,7 +272,8 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
         })
         // Settled + fresh-read input FIRST (module truth, not UI): a late settle after the 45s close still
         // removes the consumed box and lets the self-clear predicate see ground truth.
-        note_open_settled(box.id)
+        // A burned box can never reappear in a chain read — purge its receipt-proven floor row through the door.
+        if (note_open_settled(box.id)) remove_bag_items([box.id])
         load_roster().catch(() => {})
         if (!rolled_template || !claim_id) throw new Error('open_box returned no rolled pet') // honest, no silent no-op
         // RECEIPT PROVEN — leave 'pending' NOW (this disarms the 45s force-close guard, UX-B) and start the

@@ -148,8 +148,8 @@ export async function buy_items_sale({ sale_id, template_id, price_mist, quantit
   }
   // The bought item(s) are minted + kiosk-locked in THIS tx, so they surface as `created` object changes of
   // type `::item::Item` (same parse `created_kiosk_handle` uses on the onboarding tx). Hand the real ids back
-  // so the caller paints the bag optimistically — the id makes the paint self-reconciling (bought_items_ledger
-  // drops it the instant the /v1 read includes it). Empty on the (defensive) miss → the caller skips the paint
+  // so the caller paints the bag optimistically — the id makes the paint self-reconciling (the reducer's
+  // settled-loot floor drops it the instant the /v1 read includes it). Empty on the (defensive) miss → the caller skips the paint
   // and the load_roster reconcile is the only path, never a fabricated id.
   const created_item_ids = (buy_result.result?.objectChanges ?? [])
     .filter((/** @type {any} */ c) => c?.type === 'created' && String(c?.objectType ?? '').endsWith('::item::Item'))

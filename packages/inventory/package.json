@@ -1,7 +1,7 @@
 {
   "name": "@aresrpg/inventory",
   "version": "0.0.0",
-  "description": "AresRPG inventory/roster merge core — the ONE `action/sui_data` reducer (XP floor, receipt-over-snapshot, pending buy/consume ledgers) plus the pure fight-receipt roster patch. The game spine folds it; effects and tx wiring live at the frontend edge.",
+  "description": "AresRPG inventory/roster merge core — the ONE `action/sui_data` reducer (XP floor, receipt-over-snapshot, reducer-owned pending ledgers) plus the pure fight-receipt roster patch. The game spine folds it; effects and tx wiring live at the frontend edge.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -21,10 +21,6 @@
     "./consumable_ledger": {
       "types": "./types/consumable_ledger.d.ts",
       "import": "./src/consumable_ledger.js"
-    },
-    "./bought_items_ledger": {
-      "types": "./types/bought_items_ledger.d.ts",
-      "import": "./src/bought_items_ledger.js"
     },
     "./fight_receipt_roster": {
       "types": "./types/fight_receipt_roster.d.ts",

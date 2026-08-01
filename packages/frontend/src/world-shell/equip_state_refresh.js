@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { ITEM_CATEGORY as item_category } from '@aresrpg/sdk/items'
 import { mask_pending_items } from '@aresrpg/inventory/consumable_ledger'
-import { merge_pending_buys } from '@aresrpg/inventory/bought_items_ledger'
 
 import { rpc_get } from '../rpc/client'
 
@@ -67,8 +66,9 @@ export function normalize_equip_items(rows) {
  * @param {{address:string, character_id:string,
  *   expected_change?:{equipped_ids:string[],unequipped_ids:string[]}}} target
  * @param {{read?:(path:string, params:any, signal:any, fresh:boolean)=>Promise<any>, get_state?:()=>any,
- *   write?:(payload:any)=>void, map_character?:(row:any)=>any, mask_items?:(rows:any[])=>any[],
- *   merge_items?:(rows:any[])=>any[], is_current?:()=>boolean, wait?:(ms:number)=>Promise<void>}} [deps]
+ *   write?:(payload:any)=>void, map_character?:(row:any)=>any,
+ *   mask_items?:(rows:any[], pending?:Record<string,number>)=>any[],
+ *   is_current?:()=>boolean, wait?:(ms:number)=>Promise<void>}} [deps]
  */
 export async function reconcile_equip_state(
   { address, character_id, expected_change },
@@ -78,7 +78,6 @@ export async function reconcile_equip_state(
     write,
     map_character,
     mask_items = mask_pending_items,
-    merge_items = merge_pending_buys,
     is_current = () => true,
     wait = wait_ms,
   } = {}
@@ -122,7 +121,9 @@ export async function reconcile_equip_state(
   const characters = current_characters.some((row) => row.id === character_id)
     ? current_characters.map((row) => (row.id === character_id ? { ...row, ...mapped_character } : row))
     : [...current_characters, mapped_character]
-  const items = merge_items(mask_items(normalize_equip_items(confirmed_items)))
+  // The receipt-proven floor is the reducer's (merge_default re-applies it on this very write); only the
+  // in-flight consume mask has to ride along, and it reads the SAME reducer-owned ledger the bag renders.
+  const items = mask_items(normalize_equip_items(confirmed_items), get_state()?.sui?.pending_uses)
   if (!is_current()) throw new Error('Equipment state refresh owner changed before store write')
   write({ characters, items })
   return true

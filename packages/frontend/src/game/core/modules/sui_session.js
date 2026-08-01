@@ -68,6 +68,8 @@ export default function sui_session() {
               characters: [],
               items: [],
               settled_item_floor: {},
+              // Drop the in-flight consumable deltas — account A's unsettled clicks must never mask B's bag.
+              pending_uses: {},
               // Drop receipt-proven Character rows — a mint from account A can never survive into account B.
               minted_character_floor: {},
               loaded: false,

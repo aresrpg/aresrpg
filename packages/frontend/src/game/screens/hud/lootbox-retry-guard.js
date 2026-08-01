@@ -16,8 +16,6 @@
 // Module scope survives drawer remounts; a full page refresh reconciles box latches (session-scoped) but the
 // executed-failed CLAIM latch outlives it (the boot sweep is an AUTO gas path — it must).
 
-import { drop_pending_buy } from '@aresrpg/inventory/bought_items_ledger'
-
 import { is_preflight_refusal, is_equip_state_refusal } from '../../core/abort_copy.js'
 import { error_executed_digest } from '../../../world-shell/tx_digest_error.js'
 
@@ -134,22 +132,25 @@ export function allow_box_retry(box_id) {
  * unlatched id (no-op).
  *
  * PHANTOM-RESURRECTION PURGE (a bag tile stayed badged "Confirming…" forever on a box that had
- * already opened): a shop buy optimistically paints the box before any chain-truth read confirms it
- * (store_patch.hydrate_bought_items → @aresrpg/inventory's add_pending_buy) — that ledger row's ONLY self-drain
- * condition is "a fresh read includes this id" (bought_items_ledger.js). loot_box::open_internal BURNS the exact
- * box_item_id on a SUCCESSFUL open (Move: burn_units destroys the passed object outright, re-minting only a NEW
- * id for any stack remainder), so a box opened before its own buy was ever confirmed can NEVER again appear in a
- * chain-truth read. Without this purge, merge_pending_buys re-injects the phantom row on every future snapshot
- * forever — and since this module's latch keys off the SAME id (P3: success never releases, by design, trusting
- * the tile to vanish), the resurrected tile stays badged permanently. A FAILED settle never purges: REFUSALS-
- * FIRST means the box was never burned, so the ledger's normal self-drain remains correct for it.
+ * already opened) — REPORTED, never performed: this module is a pure latch, so it returns the verdict and the
+ * caller (BoxReveal) purges through the bag's own reducer door. A shop buy optimistically paints the box
+ * before any chain-truth read confirms it
+ * (store_patch.hydrate_bought_items → the reducer's settled-loot floor) — that floor row's ONLY self-drain
+ * condition is "a fresh read includes this id" (reduce.js floor_settled_items). loot_box::open_internal BURNS the
+ * exact box_item_id on a SUCCESSFUL open (Move: burn_units destroys the passed object outright, re-minting only a
+ * NEW id for any stack remainder), so a box opened before its own buy was ever confirmed can NEVER again appear in
+ * a chain-truth read. Without this purge, the floor re-injects the phantom row on every future snapshot forever —
+ * and since this module's latch keys off the SAME id (P3: success never releases, by design, trusting the tile to
+ * vanish), the resurrected tile stays badged permanently. The purge is an explicit receipt-proven removal through
+ * the ONE door. A FAILED settle never purges: REFUSALS-FIRST means the box was never burned, so the floor's
+ * normal self-drain remains correct for it.
  * @param {string | null | undefined} box_id @param {{ at?: number, error?: unknown }} [outcome]
+ * @returns {boolean} true when THIS settle burned the box — the caller purges it from the bag.
  */
 export function note_open_settled(box_id, { at = Date.now(), error } = {}) {
   const row = box_id ? blocked_boxes.get(box_id) : null
-  if (!box_id || !row) return
+  if (!box_id || !row) return false
   const already_settled = row.settled_at != null
-  if (!already_settled && error == null) drop_pending_buy(box_id)
   blocked_boxes = new Map(blocked_boxes).set(box_id, {
     ...row,
     settled_at: row.settled_at ?? at,
@@ -158,6 +159,7 @@ export function note_open_settled(box_id, { at = Date.now(), error } = {}) {
     settled_failed: already_settled ? row.settled_failed : error != null,
     digest: row.digest ?? error_executed_digest(error),
   })
+  return !already_settled && error == null
 }
 
 /**
