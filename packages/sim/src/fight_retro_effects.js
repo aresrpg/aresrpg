@@ -10,13 +10,24 @@ import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import { critical_failure_roll } from './turn_seed.js'
 import { add_effect, apply_damage } from './fight_actions.js'
 import { find_entity, next_id, update_entity } from './fight_state.js'
-import { FLAG_NEGATIVE, row_flags } from './spell_effect.js'
+import {
+  FLAG_NEGATIVE,
+  rolls_own_magnitude,
+  row_flags,
+} from './spell_effect.js'
 
 const duration_of = effect => Math.max(1, Math.floor(effect.turns ?? 1))
 
+/**
+ * The magnitude of a retro status row. A CHAIN row is FLAT: `cast.move:1315` hands the whole effect to
+ * `record_timed` and every reader takes `effect.value()` back off the board, so `value_max` is ignored
+ * (spell_effect.move:241) and the chain spends no entropy — drawing here moved the shared combat thread one
+ * step past the chain's. Only a donor row (no chain kind) carries a band the sim must roll itself.
+ */
 const rolled_value = (state, effect) => {
   const min = Math.floor(effect.min ?? effect.value ?? 0)
   const max = Math.floor(effect.max ?? effect.value ?? min)
+  if (!rolls_own_magnitude(effect)) return { state, value: min }
   const draw = rng_range(
     turn_rng_of(state),
     Math.min(min, max),

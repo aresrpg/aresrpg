@@ -318,9 +318,12 @@ public(package) fun set_pool_remaining(e: &mut Effect, remaining: u64) {
 // `ItemStatistics` and mob resistances already use (spell.move RES_SHIFT). Damage/heal and every other kind stay
 // RAW. `signed_delta` is the ONE decode home both apply call sites (permanent `apply_alter`, timed `fold_alters`)
 // AND the sim twin (`spell_effect.js`) read through, so a rolled/stored centered value always resolves to the same
-// (is_negative, magnitude) pair on chain and client. A ranged debuff rolls on the centered endpoints first
-// (`spell_formula::roll_in_range` needs no change — centered endpoints are ordinary ascending u64s) and the decode
-// applies to the ROLLED result.
+// (is_negative, magnitude) pair on chain and client. Centering does NOT make an alter a RANGE kind: `value_max`
+// is ignored for kinds 9/11, exactly as the field doc above states, so both apply call sites decode `value` and
+// apply that magnitude flat, spending no entropy. (This paragraph used to describe a ranged debuff rolling on the
+// centered endpoints — a shape neither twin has ever implemented, and one the sim's wire decode contradicts by
+// collapsing a signed row's band to its decoded magnitude. The roll-range vocabulary is damage / life-steal /
+// caster-damage / punishment / heal / DoT, and only those; `sink_parity_tests` gates it.)
 const SIGNED_SHIFT: u64 = 32768;
 
 /// The KIND_SIGNED set — the only kinds whose `value`/`value_max` are centered (else the field is raw).

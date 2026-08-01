@@ -109,6 +109,91 @@ fun every_effect_kind_lands_in_a_defined_branch_on_both_sinks() {
   sc.end();
 }
 
+/// THE ROLL-RANGE LAW's population: every kind whose magnitude is a SCALAR. `Effect.value_max` is a roll band
+/// for the RANGE kinds only — damage / life-steal / caster-damage / punishment / heal / DoT — and for all of
+/// these it is "== value, ignored" (`spell_effect.move:241`). `apply_to_player` states the same thing at
+/// `let base = effect.value()` ("deterministic, never rolled") and hands that scalar to `land_alter_player`,
+/// `give_points`, `resolve_drain` and `record_timed` unchanged. Displacement and the pure-control kinds are out:
+/// they carry a distance or nothing at all, not a magnitude a roll could touch.
+fun flat_magnitude_kinds(): vector<u8> {
+  vector[
+    spell_effect::k_give_points(),
+    spell_effect::k_remove_points(),
+    spell_effect::k_steal_points(),
+    spell_effect::k_alter_stat(),
+    spell_effect::k_steal_stat(),
+    spell_effect::k_alter_resist(),
+    spell_effect::k_apply_state(),
+    spell_effect::k_reduce_damage(),
+    spell_effect::k_reflect_damage(),
+    spell_effect::k_critical_failure(),
+    spell_effect::k_pool_shield(),
+  ]
+}
+
+#[test]
+/// A scalar-magnitude kind spends NO entropy, so no `value_max` band can shift the draws that follow it.
+///
+/// The recorded-random vocabulary has four domains — RETURN, EFFECT_CHANCE, DAMAGE_INVERSION, DRAIN
+/// (`fight_events`) — and none of them is a magnitude, so a rolled stat/shield/points amount could never be
+/// mirrored onto a receipt in the first place. Each kind here is authored RANGED (`value_max` far above `value`)
+/// with a 100 proc chance and no dodge flag: the crank must come back untouched, which is exactly what proves
+/// the band was ignored rather than rolled.
+///
+/// The @aresrpg/sim twin is `packages/sim/test/effect_magnitude_flat_parity.test.js`. The sim rolled these rows
+/// off the shared combat thread, and because a degenerate `[n, n]` draw still advances the stream, every stat
+/// row burned one crank step the chain never takes — shifting the very next dodge-contested drain of the same
+/// cast onto a stream position the chain never reaches.
+fun a_scalar_magnitude_kind_spends_no_entropy() {
+  let mut sc = ts::begin(OWNER);
+  stand_up(&mut sc);
+  create_fight(&mut sc, 100_000, 700, 0, 1000, true, option::none());
+  sc.next_tx(OWNER);
+  let mut fight = sc.take_shared<Fight>();
+  let stats = spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  let kinds = flat_magnitude_kinds();
+  let mut i = 0;
+  while (i < kinds.length()) {
+    // A WIDE authored band on a scalar kind: if any sink read `value_max`, it would have to draw to pick a
+    // point inside it, and the crank below would move.
+    let effect = spell_effect::new_effect_ranged(
+      kinds[i], spell::el_fire(), 32_775, 32_860, 0, 0, 0, 100, 1, 0, 0, 0,
+    );
+    let mut rng = 42;
+    cast::apply_to_both_for_testing(&mut fight, &stats, 0, 0, &effect, &mut rng);
+    assert!(rng == 42, i);
+    i = i + 1;
+  };
+
+  ts::return_shared(fight);
+  sc.end();
+}
+
+#[test]
+/// The other half of the same law, in the number itself: a RANGED alter moves the stat by the magnitude its
+/// `value` decodes to (+7 here), never by anything drawn from the band above it.
+fun a_ranged_alter_applies_the_value_endpoint_flat() {
+  let mut sc = ts::begin(OWNER);
+  stand_up(&mut sc);
+  create_fight(&mut sc, 100_000, 700, 0, 1000, true, option::none());
+  sc.next_tx(OWNER);
+  let mut fight = sc.take_shared<Fight>();
+  let stats = spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  let before = spell::stat_agility(participant::stats(fight::participants(&fight).borrow(0)));
+  let effect = spell_effect::new_effect_ranged(
+    spell_effect::k_alter_stat(), 255, 32_775, 32_860, 0, 0, 0, 100, 3, 3, 0, 0,
+  );
+  let mut rng = 42;
+  cast::apply_to_both_for_testing(&mut fight, &stats, 0, 0, &effect, &mut rng);
+  let after = spell::stat_agility(participant::stats(fight::participants(&fight).borrow(0)));
+  assert!(after == before + 7, 0);
+
+  ts::return_shared(fight);
+  sc.end();
+}
+
 #[test]
 /// The vocabulary this suite walks is the WHOLE vocabulary — a kind minted without a row above would otherwise
 /// slip past the walk unnoticed, which is the same blind spot one layer up.

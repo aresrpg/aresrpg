@@ -205,6 +205,22 @@ export const has_flag = (e, flag) => (e.flags & flag) === flag
  */
 export const row_flags = e => (e?.flags ? { flags: e.flags } : {})
 
+/**
+ * THE ROLL-RANGE LAW (spell_effect.move:241): `value_max` is a roll band for the RANGE kinds — damage,
+ * life-steal, caster-damage, punishment, heal, DoT — and for every OTHER kind it "== value, ignored". So a
+ * stat / shield / points / critical-failure magnitude is the scalar `value`, applied FLAT and drawing NO
+ * entropy, exactly as the chain does (`cast.move:1223` binds `base = effect.value()` "deterministic, never
+ * rolled" and hands it to `land_alter_player` / `give_points` / `record_timed`; `fight_events` records only
+ * RETURN / EFFECT_CHANCE / DAMAGE_INVERSION / DRAIN, so a rolled magnitude has no receipt channel at all).
+ *
+ * Only a DONOR template — normalized with no chain `kind` — carries an authored [min, max] the sim must roll
+ * itself; it has no chain twin to diverge from. Rolling a chain row instead advanced the shared combat thread
+ * one step the chain never takes, so every later draw of the same cast (the dodge-contested drain above all)
+ * resolved off a stream position the chain never reaches.
+ * @param {{ kind?: number }} [e]
+ */
+export const rolls_own_magnitude = e => e?.kind === undefined
+
 // ╔════════════════ [ Structural legality — mirrors spell_effect::is_legal ] ════════ ]
 const TF_ALL_MASK = 39 // NOT_TEAM|NOT_SELF|NOT_ENEMY|ONLY_CASTER
 const FLAG_ALL_MASK = 31 // all five FLAG_* bits; bit 32 is dead vocabulary, matching Move

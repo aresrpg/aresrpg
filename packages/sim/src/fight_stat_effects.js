@@ -17,6 +17,7 @@ import {
   K_REMOVE_POINTS,
   K_STEAL_POINTS,
   K_STEAL_STAT,
+  rolls_own_magnitude,
   row_flags,
 } from './spell_effect.js'
 import { remove_points } from './spell_formula.js'
@@ -132,7 +133,15 @@ export const apply_stat_effect = (state, effect, caster, target) => {
 
   if (effect.min === undefined || effect.max === undefined)
     return { handled: true, state, effects: [] }
-  const draw = rng_range(turn_rng_of(state), effect.min, effect.max)
+  // THE ROLL-RANGE LAW (`rolls_own_magnitude`): an alter/steal/points row's magnitude is `value`, FLAT, with no
+  // draw — the chain applies exactly that scalar (cast.move:1223) and records no magnitude entropy domain.
+  // Rolling it here burned one crank step per stat row that the chain never takes, so the NEXT draw of the same
+  // cast — the dodge-contested drain in the branch above — resolved off a stream position the chain never
+  // reaches, and the client predicted a pool the chain had already shaved. Donor rows (no chain kind) keep the
+  // authored band: they have no chain twin to diverge from.
+  const draw = rolls_own_magnitude(effect)
+    ? rng_range(turn_rng_of(state), effect.min, effect.max)
+    : { state: turn_rng_of(state), value: effect.min }
   const with_rng = with_turn_rng(state, draw.state)
   // CAPACITY IDS (5 vitality / 10 max_hp) carry no stat-block field on either twin, so the row is minted under
   // the single `max_hp` key the expiry inverse reads and the HP capacity moves now — without this leg the row

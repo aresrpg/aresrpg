@@ -60,6 +60,7 @@ import {
   K_CASTER_DAMAGE,
   K_DAMAGE,
   K_PUNISHMENT_DAMAGE,
+  rolls_own_magnitude,
   row_flags,
   SHAPE_POINT,
   TF_NONE,
@@ -421,7 +422,12 @@ export const apply_spell_effect = (
     if (effect.min === undefined || effect.max === undefined)
       return { state, effects: [] }
     const { state: s2, id } = next_id(state)
-    const draw = rng_range(turn_rng_of(s2), effect.min, effect.max)
+    // FLAT for a chain row (`rolls_own_magnitude`): the chain stores the shield through `record_timed` and reads
+    // `effect.value()` back at consumption (retro_effects.move:334/353) — `value_max` is ignored for a non-range
+    // kind (spell_effect.move:241), and no magnitude entropy domain exists to mirror a roll.
+    const draw = rolls_own_magnitude(effect)
+      ? rng_range(turn_rng_of(s2), effect.min, effect.max)
+      : { state: turn_rng_of(s2), value: effect.min }
     const shielded = add_effect(with_turn_rng(s2, draw.state), target_id, {
       id,
       type: effect.type,
