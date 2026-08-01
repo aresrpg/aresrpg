@@ -297,7 +297,7 @@ test('a cancelled M2b journal walk cannot feed old-fight events into a replaceme
   expect(await walk).toBe('stale')
   expect(fight_store.getState()).toMatchObject({
     fight_id: NEW_FIGHT_ID,
-    accept_state: { head: null, digests: {} },
+    core: { inbox: { delivered_seq: -1 } },
     entries: {},
   })
 })

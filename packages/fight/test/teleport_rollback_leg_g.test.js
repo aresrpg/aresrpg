@@ -222,11 +222,11 @@ describe.skip('LEG G-FIX — a foreign adoption must not roll back my un-flushed
     // the peer's committed move arrives as a wholesale read → foreign_replay DEFERS the adopt behind the replay
     store.getState().input({ type: 'snapshot', fight: peer_moved, version: 6 }, 1_200)
     expect(store.getState().wave.length, 'the peer move paces a foreign replay wave').toBeGreaterThan(0)
-    expect(store.getState().view_version, 'the wholesale adopt is deferred behind the replay').toBe(5)
+    expect(store.getState().core.inbox.base_version, 'the wholesale adopt is deferred behind the replay').toBe(5)
     expect(me(store).cell, 'my teleport still holds while the peer replay drains').toEqual(at(DEST))
     // drain the replay → the deferred wholesale read adopts (this is where the old code purged my intent)
     drain(store, 1_300)
-    expect(store.getState().view_version, 'the foreign base adopted').toBe(6)
+    expect(store.getState().core.inbox.base_version, 'the foreign base adopted').toBe(6)
     expect(me(store).cell, 'my un-flushed teleport SURVIVES the foreign adoption (re-anchored over the base)').toEqual(
       at(DEST)
     )

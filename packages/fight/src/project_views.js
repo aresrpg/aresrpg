@@ -428,7 +428,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     if (fighter) map.set(character, { ...fighter, cell: decode_xy(cell) })
   }
   return {
-    fight_id: view.id,
+    fight_id: s.core.fight_id,
     my_traps: my_trap_cells,
     trap_prims,
     my_trap_payloads,

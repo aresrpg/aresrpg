@@ -93,6 +93,6 @@ export function sync_dungeon_fight({
   // the core; a stale fight-A read must never write fight A's traps into a newer fight B session.
   if (String(fight_store.getState().fight_id ?? '') === String(fight?.id ?? ''))
     fight_store.getState().input({ type: 'ctx', ctx: { chain_traps } })
-  if (fight?.id && String(fight_store.getState().view?.id) === String(fight.id)) mark_engage_fight_adopted(fight.id)
+  if (fight?.id && String(fight_store.getState().core.fight_id) === String(fight.id)) mark_engage_fight_adopted(fight.id)
   return fight
 }

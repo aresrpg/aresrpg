@@ -64,7 +64,7 @@ export async function resolve_fight_roster_appearances(ids, effects = {}) {
 
 const fight_session_key = () => {
   const state = fight_store.getState()
-  return `${state.session_generation ?? 0}:${state.fight_id ?? ''}`
+  return `${state.core.session_generation ?? 0}:${state.fight_id ?? ''}`
 }
 
 const empty_adoption = (session_key) => ({

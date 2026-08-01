@@ -159,7 +159,7 @@ describe('INC-0 · session identity (B-F02/F06 — A→B crossings drop, id-less
       },
       T0 + 2_000
     )
-    expect(store.getState().view_version).not.toBe(99) // fight B never adopted into fight A
+    expect(store.getState().core.inbox.base_version).not.toBe(99) // fight B never adopted into fight A
     expect(image_of(store)).toEqual(before)
     expect(store.getState().refused).toMatchObject({ type: 'snapshot', reason: 'fight_id' })
   })
@@ -178,7 +178,7 @@ describe('INC-0 · session identity (B-F02/F06 — A→B crossings drop, id-less
     // The identity gate claims the id-less read for this session, then the single snapshot door re-adopts it because
     // v7 is ahead. It is neither rejected nor partially merged with the v1 base.
     expect(store.getState().refused, 'the id-less read passed the identity gate').toBeNull()
-    expect(store.getState().view_version, 'the ahead read replaces the base').toBe(7)
+    expect(store.getState().core.inbox.base_version, 'the ahead read replaces the base').toBe(7)
     expect(engine_view(store.getState()).fighters.get(ME).health).toBe(44)
   })
 })

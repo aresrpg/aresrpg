@@ -74,9 +74,9 @@ let sent_generation = null
  *  overlays (excluded by drafted_batches) never re-broadcast. */
 function stream_my_drafts() {
   const state = fight_store.getState()
-  if (state.session_generation !== sent_generation) {
+  if (state.core.session_generation !== sent_generation) {
     sent_batches.clear()
-    sent_generation = state.session_generation
+    sent_generation = state.core.session_generation
   }
   if (state.provider !== 'local_turn') return // only MY own turn streams a courtesy draft
   const dungeon_id = state.fight_id

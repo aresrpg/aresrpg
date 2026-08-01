@@ -120,7 +120,7 @@ describe.skip('spectator replay — a peer’s committed turn paces through the 
     expect(kinds).toContain('cast') // the cast animation
     expect(kinds).toContain('damage') // the damage floater
     // GREEN: the wholesale board truth is DEFERRED behind the replay (the eye never jumps ahead of the beats).
-    expect(alice.getState().view_version, 'the wholesale adopt waits for the replay to drain').toBe(1)
+    expect(alice.getState().core.inbox.base_version, 'the wholesale adopt waits for the replay to drain').toBe(1)
     expect(alice.getState().pending_snapshot?.version).toBe(2)
   })
 
@@ -166,12 +166,12 @@ describe.skip('spectator replay — a peer’s committed turn paces through the 
     const mob_alive = engine_view(alice.getState()).fighters.get('mob-0')
     expect(mob_alive.dead, 'the mob holds alive through its death beat').toBe(false)
     // …and the wholesale board truth is deferred until the replay drains.
-    expect(alice.getState().view_version).toBe(1)
+    expect(alice.getState().core.inbox.base_version).toBe(1)
 
     // Draining the replay adopts the wholesale read — the mob is now committed dead.
     const last = wave_of(alice)[wave_of(alice).length - 1]
     alice.getState().input({ type: 'presented', seq: last.seq }, T0 + 3_000 + MOB_TURN_MS)
-    expect(alice.getState().view_version).toBe(2)
+    expect(alice.getState().core.inbox.base_version).toBe(2)
     expect(alice.getState().pending_snapshot).toBeNull()
     expect(engine_view(alice.getState()).fighters.get('mob-0').dead).toBe(true)
   })
@@ -184,7 +184,7 @@ describe.skip('spectator replay — a peer’s committed turn paces through the 
     const mine = fight_object({ seats: [participant('0xa11ce', ALICE, 23), participant('0xb0b', BOB, 22)] })
     alice.getState().input({ type: 'snapshot', fight: mine, version: 2 }, T0 + 3_000)
     expect(presenting(alice.getState())).toBe(false)
-    expect(alice.getState().view_version).toBe(2)
+    expect(alice.getState().core.inbox.base_version).toBe(2)
     expect(alice.getState().pending_snapshot).toBeNull()
   })
 
@@ -198,7 +198,7 @@ describe.skip('spectator replay — a peer’s committed turn paces through the 
     alice.getState().input({ type: 'snapshot', fight: after_bob, version: 2 }, T0 + 3_000)
     const last = wave_of(alice)[wave_of(alice).length - 1]
     alice.getState().input({ type: 'presented', seq: last.seq }, T0 + 3_000 + MOB_TURN_MS)
-    expect(alice.getState().view_version).toBe(2)
+    expect(alice.getState().core.inbox.base_version).toBe(2)
     // the SAME object read arrives again (reconnect / poll catch-up): committed == snapshot ⇒ no new wave.
     alice.getState().input({ type: 'snapshot', fight: after_bob, version: 2 }, T0 + 7_000)
     expect(presenting(alice.getState())).toBe(false)

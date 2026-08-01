@@ -222,12 +222,12 @@ const refuse_reason = (state, msg) => {
   if (IDENTITY_SCOPED.has(msg.type)) {
     if (msg.fight_id != null && state.fight_id != null && String(msg.fight_id) !== String(state.fight_id))
       return { type: msg.type, reason: 'fight_id', got: String(msg.fight_id), want: String(state.fight_id) }
-    if (msg.session_generation != null && msg.session_generation !== state.session_generation)
+    if (msg.session_generation != null && msg.session_generation !== state.core.session_generation)
       return {
         type: msg.type,
         reason: 'session_generation',
         got: msg.session_generation,
-        want: state.session_generation,
+        want: state.core.session_generation,
       }
   }
   return null
@@ -281,10 +281,10 @@ const make_input =
           const ctx = observer_ctx(msg.ctx ?? {})
           return {
             ...empty_fight(),
+            // The core bumped its own session generation on this same init (core_ingest's session_opened/closed);
+            // an in-flight async result tagged with the prior generation drops at the gate above, off that ONE
+            // home, instead of corrupting the session this message just opened.
             core: next_core,
-            // A new session generation per init — an in-flight async result tagged with the prior generation
-            // (a fight-A response landing after fight B opened) drops at the gate above instead of corrupting B.
-            session_generation: (state.session_generation ?? 0) + 1,
             fight_id: msg.fight_id ?? null,
             my_key: ctx.spectator === true ? null : (msg.my_key ?? null),
             ctx,
@@ -297,18 +297,10 @@ const make_input =
         return
       case 'rekey':
         // #1609 — the presentation half of the ONE re-key transition (the core half is core_ingest's
-        // `session_rekeyed`). Session identity lives in exactly two fields here: the gate's `fight_id` and the
-        // adopted view's `id`. Both move together, everything folded stays. A `from` that is not the live id is
-        // a stale receipt and changes nothing.
-        set((s) =>
-          String(s.fight_id ?? '') !== String(msg.from ?? '')
-            ? s
-            : {
-                ...s,
-                fight_id: msg.to ?? null,
-                view: s.view ? { ...s.view, id: msg.to ?? null } : s.view,
-              }
-        )
+        // `session_rekeyed`). ONE field moves: the gate's `fight_id`; everything folded stays. The adopted view is
+        // chain data a read produced, never a second identity home (#1799) — presentation projects the session id
+        // off the core. A `from` that is not the live id is a stale receipt and changes nothing.
+        set((s) => (String(s.fight_id ?? '') !== String(msg.from ?? '') ? s : { ...s, fight_id: msg.to ?? null }))
         return
       case 'ctx':
         // MULTICHAR seat focus: a my_entity_id switch re-resolves my_key against the adopted view — a stale

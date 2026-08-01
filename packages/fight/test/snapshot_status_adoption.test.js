@@ -99,7 +99,7 @@ describe('#1584 the snapshot content hash counts the status class', () => {
 
     // THE REPORTED DEFECT: the status class was stripped before hashing, so this read hashed equal to its
     // predecessor and `adopt_snapshot` returned the inbox untouched — view_version stayed 5 and badges stayed [].
-    expect(store.getState().view_version, 'the status-only read carried new information and re-based').toBe(6)
+    expect(store.getState().core.inbox.base_version, 'the status-only read carried new information and re-based').toBe(6)
     expect(
       badges(store).find((row) => row.kind === SE.K_ALTER_STAT)?.remaining_turns,
       'the chain-stated buff reached the badge the HUD renders'
@@ -109,10 +109,10 @@ describe('#1584 the snapshot content hash counts the status class', () => {
   test('the dedupe guard is still armed — a read identical in every field, statuses included, is dropped', () => {
     const store = boot()
     store.getState().input({ type: 'snapshot', fight: fight_object(BUFF), version: 6 }, 2_000)
-    expect(store.getState().view_version).toBe(6)
+    expect(store.getState().core.inbox.base_version).toBe(6)
 
     store.getState().input({ type: 'snapshot', fight: fight_object(BUFF), version: 7 }, 3_000)
-    expect(store.getState().view_version, 'nothing new to say — the read stayed a checkpoint').toBe(6)
+    expect(store.getState().core.inbox.base_version, 'nothing new to say — the read stayed a checkpoint').toBe(6)
   })
 
   test('a status EXPIRY is content too — a read that drops the row re-bases and clears the badge', () => {
@@ -122,7 +122,7 @@ describe('#1584 the snapshot content hash counts the status class', () => {
 
     // The authoritative empty set is a positive claim, not silence: it must be adoptable in both directions.
     store.getState().input({ type: 'snapshot', fight: fight_object([]), version: 7 }, 3_000)
-    expect(store.getState().view_version).toBe(7)
+    expect(store.getState().core.inbox.base_version).toBe(7)
     expect(badges(store), 'the chain says the row is gone').toEqual([])
   })
 })

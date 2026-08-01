@@ -54,7 +54,7 @@ describe('issue #512 — the live fold never starves behind trap presentation', 
           trace_seq: seq,
           kind: msg.type,
           applied_version: store.getState().applied_version,
-          accept_head: store.getState().accept_state.head,
+          accept_head: store.getState().core.inbox.delivered_seq,
           presented_seq: store.getState().presented_seq,
           wave_seq: store.getState().wave_seq,
           trap: consumed,
@@ -67,7 +67,7 @@ describe('issue #512 — the live fold never starves behind trap presentation', 
     expect(
       {
         applied_version: final.applied_version,
-        view_version: final.view_version,
+        view_version: final.core.inbox.base_version,
         receipt_seq: final.receipt_seq,
       },
       'the fresh fold must reach the final captured reducer anchors'

@@ -165,7 +165,6 @@ describe('③ the re-key — one transition, both identity homes', () => {
     expect(use_dungeon.getState().dungeon_id).toBe(FIGHT_ID)
     expect(fight_store.getState().fight_id).toBe(FIGHT_ID)
     expect(fight_store.getState().core.fight_id).toBe(FIGHT_ID)
-    expect(fight_store.getState().view.id).toBe(FIGHT_ID)
     // The whole point: the predicted board did not blink through the transition.
     expect(engine_view_of(fight_store.getState()).placement_cells[0].length).toBe(cells_before)
   })

@@ -160,7 +160,7 @@ describe('#1336 retirement state across snapshot boundaries', () => {
     confirm_kill(store)
     drain(store, 3_500)
     store.getState().input({ type: 'snapshot', fight: fight_object(8), version: 8 }, 4_000)
-    expect(store.getState().view_version).toBe(8)
+    expect(store.getState().core.inbox.base_version).toBe(8)
     expect(mob0(store).committed_dead, 'the complete v8 base says the mob is alive').toBe(false)
     // A masking wave keeps presented/display on their re-fold branch; neither may carry the discarded retirement.
     store.getState().input(

@@ -379,11 +379,11 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
       },
       T0 + 6_500
     )
-    expect(store.getState().view_version).toBe(5)
+    expect(store.getState().core.inbox.base_version).toBe(5)
     expect(engine_view(store.getState()).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 })
     expect(store.getState().wave, 're-adopt deletes the subsumed presentation tail with the event tail').toEqual([])
     const s = store.getState()
-    expect(s.view_version).toBe(5)
+    expect(s.core.inbox.base_version).toBe(5)
     expect(engine_view(s).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 })
   })
 })

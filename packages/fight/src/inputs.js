@@ -185,7 +185,7 @@ export const reconcile_settlement = (value, base, log = [], draft = {}) => {
   const confirmation = chain_confirmation({
     phase,
     source: terminal?.source ?? 'snapshot',
-    version: terminal?.version ?? draft.view_version ?? -1,
+    version: terminal?.version ?? draft.core?.inbox?.base_version ?? -1,
     last_room,
   })
   return reduce_settlement(value, confirmation)

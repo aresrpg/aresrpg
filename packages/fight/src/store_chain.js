@@ -109,10 +109,6 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
     {
       ...state,
       core: next_core,
-      accept_state: {
-        head: delivered_seq >= 0 ? String(delivered_seq) : state.accept_state.head,
-        digests: {},
-      },
       commit_due: false,
       receipt_seq: msg.type === 'receipt' ? state.receipt_seq + 1 : state.receipt_seq,
       staged: msg.type === 'receipt' && ended_my_turn ? [] : state.staged,
@@ -149,7 +145,6 @@ export const reduce_snapshot_input = (state, msg, next_core, now) => {
       ...state,
       core: next_core,
       view,
-      view_version: version,
       entries: merge_entries(intents, sorted_tail(next_core.inbox)),
       retired: {},
       claimed_budget: (state.claimed_budget ?? []).filter(

@@ -104,9 +104,6 @@ export const empty_fight = () => ({
   ...empty_state(null),
   entries: {},
   applied_version: -1,
-  // Compatibility projection for the journal walker. This is derived from the core inbox's delivered seq; it is
-  // not an admission cursor or a second state home.
-  accept_state: { head: null, digests: {} },
   journal_gap: null,
   protocol_fault: null,
   // Accepted silent budget facts and prediction evidence are bounded, non-canonical overlays.
@@ -116,7 +113,6 @@ export const empty_fight = () => ({
   // This is published projection evidence, never a second combat-math owner.
   post_commit_budget: {},
   view: null,
-  view_version: -1,
   ctx: {},
   sim: null,
   wave: [],
@@ -154,7 +150,6 @@ export const empty_fight = () => ({
   intent_seq: 0,
   settlement: settle_input.empty_settlement(),
   provider: 'idle_wait',
-  session_generation: 0,
   refused: null,
   divergence: null,
 })

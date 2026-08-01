@@ -143,14 +143,15 @@ export async function walk_current_fight_journal({
 /**
  * THE ONE RESUME CURSOR (#1384): the journal `seq` both transports resume from — our ACCEPTED frontier, lowered
  * by a still-open contiguity gap. It is DERIVED from the fold, never bookkept per transport, so the stream's
- * catch-up and the poll's walk can never drift apart.
+ * catch-up and the poll's walk can never drift apart. The frontier is read off the core inbox that admits the
+ * rows (#1799) — the store's old `accept_state` copy of the same number was a second home to forget.
  * @param {any} core_state `fight_store.getState()`
  * @param {string} fight_id
  * @returns {string} the u64 decimal seq to page from
  */
 export function fight_journal_from(core_state, fight_id) {
-  const accepted = u64(core_state?.accept_state?.head)
-  const frontier = accepted == null ? 0n : accepted + 1n
+  const delivered = Math.trunc(Number(core_state?.core?.inbox?.delivered_seq ?? -1))
+  const frontier = Number.isFinite(delivered) && delivered >= 0 ? BigInt(delivered) + 1n : 0n
   const gap = core_state?.journal_gap
   const gap_from = gap && String(gap.fight_id ?? fight_id) === String(fight_id) ? u64(gap.from) : null
   return (gap_from != null && gap_from < frontier ? gap_from : frontier).toString()

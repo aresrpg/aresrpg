@@ -97,6 +97,6 @@ describe('LEG C — invisibility + MP buff hold continuously across adoption cyc
     expect(me(store).invisible, 'no flicker while the foreign wave presents').toBe(true)
     // once it drains, the deferred read adopts — the effect reconciles ONCE against chain truth, not a flicker loop
     for (const t of [...store.getState().wave]) store.getState().input({ type: 'presented', seq: t.seq }, 2_500)
-    expect(store.getState().view_version, 'the deferred read adopts after the wave').toBe(6)
+    expect(store.getState().core.inbox.base_version, 'the deferred read adopts after the wave').toBe(6)
   })
 })

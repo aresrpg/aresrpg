@@ -149,7 +149,7 @@ describe('#1274 — the creator re-derives her roster when a join lands', () => 
     // banned: once the roster is frozen, an object read never re-folds the board.
     poll(alice, fight_record({ participants: BOTH, status: 1 }), 11)
 
-    expect(alice.getState().view_version).toBe(10) // no re-adopt
+    expect(alice.getState().core.inbox.base_version).toBe(10) // no re-adopt
     expect(project.board_view(alice.getState()).escrow).toHaveLength(1)
   })
 

@@ -1160,7 +1160,8 @@ export function create_voxel_fight_adapter(
   const drain_wave = () => {
     const fight_state = fight_store.getState()
     if (!fight_active_in_scope(fight_state, scope)) return reconcile()
-    const { wave, fight_id, session_generation } = fight_state
+    const { wave, fight_id } = fight_state
+    const { session_generation } = fight_state.core
     for (const turn of wave) {
       if (turn.seq <= last_enqueued_seq) continue
       last_enqueued_seq = turn.seq

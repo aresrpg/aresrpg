@@ -117,7 +117,7 @@ describe('#8 — the timeline card HP holds through the death beat, never snaps 
     // v8 is ahead of the death receipt. The complete object becomes the base, including its hp/alive statement.
     store.getState().input({ type: 'snapshot', fight: base_fight(), version: 8 }, 3_000)
     const revived = me(store)
-    expect(store.getState().view_version).toBe(8)
+    expect(store.getState().core.inbox.base_version).toBe(8)
     expect(revived.presented_health).toBe(10)
     expect(revived.dead).toBe(false)
     expect(presented_state(store.getState()).fighters.p0.alive).toBe(true)

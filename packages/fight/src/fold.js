@@ -55,6 +55,11 @@ export const merge_entries = (entries, actions) => {
   return next
 }
 
+/** THE FOLD FLOOR — the object version of the snapshot base every projection folds on top of. It is read off the
+ *  ONE inbox that admits it (#1799): the store used to mirror it onto a `view_version` field and every new input
+ *  path had to remember the second write. Absent core (a hand-built projection input) folds from the origin. */
+const adopted_base_version = (s) => Number(s.core?.inbox?.base_version ?? -1)
+
 // ── V1 · RETIREMENT FLOOR (register V1 · BLANKPAGE §③) ────────────────────────────────────────────────────────
 // Death is a FLOORED, append-only retirement — NOT a boolean re-derived from a snapshot's raw hp every recompute.
 // `retired` is a durable accumulator `{ fighter_key → floor_version }` (carried through recompute like my_traps),
@@ -65,10 +70,10 @@ export const merge_entries = (entries, actions) => {
 
 /** Fold the append-only death floors: base-dead fighters floor at the adopted view's version (their death predates
  *  the base); tail deaths floor at the proving event's version. Idempotent — a key already retired keeps its floor. */
-export const derive_retired = (prev, base, authoritative_tail, view_version) => {
+export const derive_retired = (prev, base, authoritative_tail, base_version) => {
   const retired = { ...(prev ?? {}) }
   for (const [key, f] of Object.entries(base.fighters ?? {}))
-    if (f.alive === false && retired[key] == null) retired[key] = view_version
+    if (f.alive === false && retired[key] == null) retired[key] = base_version
   for (const e of authoritative_tail ?? []) {
     const key =
       e.kind === 'Hit' && Number(e.remaining_hp) <= 0
@@ -121,21 +126,22 @@ export const GHOST_STALE_MS = 15_000
 export const recompute = (draft, now) => {
   const observed_deadline = Number(draft.turn_deadline_ms ?? 0)
   const base = base_from_view(draft.view, draft.fight_id)
+  const base_version = adopted_base_version(draft)
   const all_log = without_expired_budget_predictions(
     with_budget_predictions(sorted_log(draft.entries), draft.budget_predictions)
   )
-  const log = all_log.filter((e) => e.version > draft.view_version)
-  const claimed_budget = (draft.claimed_budget ?? []).filter((row) => claim_version(row) > Number(draft.view_version))
+  const log = all_log.filter((e) => e.version > base_version)
+  const claimed_budget = (draft.claimed_budget ?? []).filter((row) => claim_version(row) > base_version)
   const committed = fold_claimed_budget(base, log, claimed_budget)
   const authoritative_tail = log.filter((entry) => entry.source !== 'intent')
   const chain_committed = authoritative_tail.reduce(apply_action, base)
-  // V1: append-only death floors, carried forward (base-dead at view_version + authoritative tail deaths at their
+  // V1: append-only death floors, carried forward (base-dead at the adopted base version + tail deaths at their
   // own version). Intents never retire (predictions). `alive` derives from this — apply_retirement below overrides
   // any later positive-hp read for a floor-dead fighter (the resurrection root).
-  const retired = derive_retired(draft.retired, base, authoritative_tail, draft.view_version)
-  const authoritative_log = all_log.filter((e) => e.version >= draft.view_version && e.source !== 'intent')
+  const retired = derive_retired(draft.retired, base, authoritative_tail, base_version)
+  const authoritative_log = all_log.filter((e) => e.version >= base_version && e.source !== 'intent')
   const last_version = authoritative_log.length ? authoritative_log[authoritative_log.length - 1].version : -1
-  const applied_version = Math.max(draft.view_version, last_version)
+  const applied_version = Math.max(base_version, last_version)
   const settlement = settle_input.reconcile_settlement(draft.settlement, base, authoritative_log, draft)
   // A spectator is permanently seatless inside the core, not merely masked in the UI projection. Global party
   // focus updates still cross the ctx door while WATCH is open; discarding their resolved key here keeps locality,
@@ -275,8 +281,9 @@ export const entity_fold_key = (escrow, source_id) => {
  * question (what may I still spend this turn), never committed truth: only legality/budget consumers read it. */
 export const claimed_budget_state = (s) => {
   const base = base_from_view(s.view, s.fight_id)
-  const log = sorted_log(s.entries ?? {}).filter((e) => e.version > s.view_version && e.source !== 'intent')
-  const claimed_budget = (s.claimed_budget ?? []).filter((row) => claim_version(row) > Number(s.view_version))
+  const base_version = adopted_base_version(s)
+  const log = sorted_log(s.entries ?? {}).filter((e) => e.version > base_version && e.source !== 'intent')
+  const claimed_budget = (s.claimed_budget ?? []).filter((row) => claim_version(row) > base_version)
   const claimed = fold_claimed_budget(base, log, claimed_budget)
   return { ...claimed, fighters: apply_retirement(claimed.fighters, s.retired) }
 }
@@ -308,7 +315,8 @@ const wave_masked_fold = (s, hold_intents) => {
   const pending = (s.wave ?? []).filter(masks_entries) // non-local turns + MY windowed displacement/walk legs
   if (!pending.length) return s
   const windowed = pending.filter((t) => t.from_idx != null)
-  if (s.view != null && windowed.length && !(s.view_version < Math.min(...windowed.map((t) => t.version)))) return s
+  const base_version = adopted_base_version(s)
+  if (s.view != null && windowed.length && !(base_version < Math.min(...windowed.map((t) => t.version)))) return s
   const masked = (e) =>
     windowed.some((t) => e.version === t.version && e.event_idx >= t.from_idx && e.event_idx <= t.until_idx)
   const base = base_from_view(s.view, s.fight_id)
@@ -325,7 +333,7 @@ const wave_masked_fold = (s, hold_intents) => {
   // its card HP to 0 seconds before the death floater lands (engine_view.dead already holds the visual death via
   // the same wave fact). It dies exactly when its beat acks — the turn drains, the key leaves this set, the floor
   // binds. Every OTHER retired fighter still floors (the #134 stale-resurrection of an ALREADY-presented death).
-  const claimed_budget = (s.claimed_budget ?? []).filter((row) => claim_version(row) > Number(s.view_version))
+  const claimed_budget = (s.claimed_budget ?? []).filter((row) => claim_version(row) > base_version)
   const folded = fold_claimed_budget(base, log, claimed_budget)
   const presenting = death_presenting_keys(s.wave)
   const floor = presenting.size

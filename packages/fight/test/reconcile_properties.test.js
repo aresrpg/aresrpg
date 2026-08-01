@@ -93,7 +93,7 @@ describe('§⑤.1 monotonic-idempotence', () => {
 
     // The v6 object is settled by the event-proven cursor. It cannot roll the move back to its own stale cell.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_cell: encode(1, 1) }), version: 6 }, 2_400)
-    expect(store.getState().view_version).toBe(5)
+    expect(store.getState().core.inbox.base_version).toBe(5)
     expect(mob0(store).cell).toEqual({ x: 6, y: 4 })
     expect(image_of(store)).toEqual(before)
   })
@@ -149,7 +149,7 @@ describe('§⑤.2 snapshot boundary replacement', () => {
 
     // The v6 object is settled by the event cursor and cannot resurrect the event-proven death.
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 6 }, 2_300)
-    expect(store.getState().view_version).toBe(5)
+    expect(store.getState().core.inbox.base_version).toBe(5)
     expect(mob0(store).committed_dead).toBe(true)
 
     // A later complete object follows the same door; a foreign event behind it remains inert.
@@ -163,7 +163,7 @@ describe('§⑤.2 snapshot boundary replacement', () => {
       },
       2_500
     )
-    expect(store.getState().view_version).toBe(9)
+    expect(store.getState().core.inbox.base_version).toBe(9)
     expect(mob0(store).committed_alive).toBe(true)
     expect(mob0(store).health).toBe(20)
   })

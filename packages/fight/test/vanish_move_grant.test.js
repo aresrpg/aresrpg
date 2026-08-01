@@ -170,7 +170,7 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
         },
         2_200
       )
-      expect(store.getState().view_version).toBe(7)
+      expect(store.getState().core.inbox.base_version).toBe(7)
       expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
       expect(wash_cells(store).has(four_steps_away)).toBe(true)
 

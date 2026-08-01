@@ -112,12 +112,12 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
     store.getState().input({ type: 'snapshot', fight: degraded_fight(), version: 6 })
     const held = project.board_view(store.getState())
     expect(held).toMatchObject({ grid_width: 13, grid_height: 12 }) // never the fallback frame — the torn read is dropped
-    expect(store.getState().view_version).toBe(5) // the torn read raised no floor
+    expect(store.getState().core.inbox.base_version).toBe(5) // the torn read raised no floor
 
     // The torn read did not raise the cursor. Its healed v6 replacement is therefore ahead and re-adopts the complete
     // object; neither attempt ever exposes the fallback geometry and no field is merged from the v5 base.
     store.getState().input({ type: 'snapshot', fight: real_fight({ cell: 6 }), version: 6 })
-    expect(store.getState().view_version).toBe(6)
+    expect(store.getState().core.inbox.base_version).toBe(6)
     expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 })
     expect(project.board_view(store.getState()).escrow[0].cell).toBe(6)
   })
@@ -143,6 +143,6 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
     expect(view).not.toBeNull()
     expect(view).toMatchObject({ grid_width: 13, grid_height: 12 })
     expect(view.escrow[0].cell).toBe(7) // the object at v9 is the whole statement of v9 — placement visible
-    expect(store.getState().view_version).toBe(9)
+    expect(store.getState().core.inbox.base_version).toBe(9)
   })
 })

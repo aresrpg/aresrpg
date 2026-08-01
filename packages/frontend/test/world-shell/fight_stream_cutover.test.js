@@ -344,7 +344,7 @@ describe('④ a stream drop replays delivered rows — each folds exactly once',
 
     // The turn advanced off the wire, exactly as the happy path does.
     expect(project.fight_view().active_entity_id).toBe('mob-0')
-    expect(fight_store.getState().accept_state.head).toBe('1')
+    expect(fight_store.getState().core.inbox.delivered_seq).toBe(1)
     expect(fight_store.getState().protocol_fault).toBeFalsy()
 
     // THE DROP: the connection dies and `EventSource` reconnects itself. The pump replays the fight's journal
@@ -354,7 +354,7 @@ describe('④ a stream drop replays delivered rows — each folds exactly once',
     rows.forEach((row, index) => sources[0].emit_fight(row, `90:${index}`))
     await settle_stream_window()
 
-    expect(fight_store.getState().accept_state.head).toBe('1')
+    expect(fight_store.getState().core.inbox.delivered_seq).toBe(1)
     expect(project.fight_view().active_entity_id).toBe('mob-0')
     // A re-delivered row must be recognised as the SAME row. Admitting it as a second, conflicting truth at an
     // occupied coordinate is what raises `hash_conflict` → `protocol_fault` (store_chain.js:105), which surfaces
@@ -369,7 +369,7 @@ describe('④ a stream drop replays delivered rows — each folds exactly once',
     )
     await settle_stream_window()
 
-    expect(fight_store.getState().accept_state.head).toBe('2')
+    expect(fight_store.getState().core.inbox.delivered_seq).toBe(2)
   })
 })
 

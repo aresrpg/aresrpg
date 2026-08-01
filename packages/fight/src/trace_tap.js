@@ -22,7 +22,7 @@ export const create_trace_tap = (capacity) => {
 
   /**
    * Capture one input VERBATIM, before it folds — including inputs the provider/identity gate later refuses.
-   * @param {{ fight_id: string|null, applied_version: number, view_version: number, receipt_seq: number }} state
+   * @param {{ fight_id: string|null, applied_version: number, core: any, receipt_seq: number }} state
    * @param {object} msg
    * @param {number} now
    */
@@ -34,7 +34,8 @@ export const create_trace_tap = (capacity) => {
       at: now,
       anchors: {
         applied_version: state.applied_version,
-        view_version: state.view_version,
+        // The recorded anchor keeps its trace-format name; its value is read off the ONE home (#1799).
+        view_version: state.core?.inbox?.base_version ?? -1,
         receipt_seq: state.receipt_seq,
       },
     })

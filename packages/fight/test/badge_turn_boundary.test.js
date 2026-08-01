@@ -165,7 +165,7 @@ describe('#598/#597 the badge lifetime survives the turn boundary (post-V2-cutov
         .getState()
         .input({ type: 'snapshot', fight: fight_object({ invisibility_statuses: statuses }), version: 7 }, 3_000)
 
-    expect(store.getState().view_version, 'the base did not move — the read was a checkpoint').toBe(5)
+    expect(store.getState().core.inbox.base_version, 'the base did not move — the read was a checkpoint').toBe(5)
     expect(buff_turns(store), 'and the badge is still the fold s truth').toBe(3)
   })
 })
