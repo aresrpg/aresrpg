@@ -39,7 +39,18 @@ import { committed_truth, COURTESY_EVENT_BASE, empty_fight, observer_ctx } from 
 import { expired_wave_seq, reduce_tick_state, reduce_wave_head } from './store_tick.js'
 import { create_trace_tap } from './trace_tap.js'
 import { merge_entries, recompute } from './fold.js'
+import { turn_submit_epoch } from './turn_commit.js'
 import { present_trap } from './trap_ledger.js'
+
+/**
+ * THE GENERATION STAMP. Two turn submits can be in flight at once (a commit fires, its receipt folds and opens
+ * the next turn, and only then does an earlier flight report). Both feed this one door, so the LOSER's feedback
+ * must never land on the WINNER's state. Every async submit result carries `born_epoch` — the generation it was
+ * claimed under — and the door refuses it once that generation is dead. No locks, no queues: a stamp and a
+ * refusal. A null live generation never refuses: a turn that already ended must still purge its own prediction.
+ * @param {string|null|undefined} born @param {string|null|undefined} live
+ */
+const dead_generation = (born, live) => born != null && live != null && born !== live
 
 // The PRESENTATION projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
 // names so project.js and tools keep importing them from the store's door.
@@ -465,6 +476,9 @@ const make_input =
         // `intent_id` (a composite cast batch) or `predicts` {version, event_idx}; default = the whole optimistic
         // turn. ONLY intent rows are ever removed; an authoritative receipt/snapshot fact is never rolled back.
         set((s) => {
+          // A rollback belongs to the optimistic generation it was born under — once a receipt has folded and
+          // moved the turn on, those predictions are already gone and the entries here are the LIVE turn's.
+          if (dead_generation(msg.born_epoch, turn_submit_epoch(s))) return s
           const drop = (e) => {
             if (e.source !== 'intent') return false
             if (msg.intent_id != null) return e.intent_id === msg.intent_id
@@ -515,13 +529,19 @@ const make_input =
         set((s) => ({ ...s, hand: msg.hand ?? [] }))
         return
       case 'busy':
-        set((s) => ({
-          ...s,
-          busy: !!msg.value,
-          commit_latch: msg.latch === undefined ? s.commit_latch : msg.latch,
-          commit_attempt_epoch: msg.attempt_epoch === undefined ? s.commit_attempt_epoch : (msg.attempt_epoch ?? null),
-          ...(msg.value ? { error: null, commit_due: false } : {}),
-        }))
+        // The latch is a handshake: only the attempt still HOLDING the claim may release it.
+        set((s) =>
+          dead_generation(msg.born_epoch, s.commit_attempt_epoch)
+            ? s
+            : {
+                ...s,
+                busy: !!msg.value,
+                commit_latch: msg.latch === undefined ? s.commit_latch : msg.latch,
+                commit_attempt_epoch:
+                  msg.attempt_epoch === undefined ? s.commit_attempt_epoch : (msg.attempt_epoch ?? null),
+                ...(msg.value ? { error: null, commit_due: false } : {}),
+              }
+        )
         return
       case 'error':
         set((s) => ({ ...s, error: msg.message ?? null }))

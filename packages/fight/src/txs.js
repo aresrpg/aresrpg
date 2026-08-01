@@ -36,7 +36,10 @@ export function subscribe_commit_due(store, { submit, on_error = () => {} }) {
     // removes exactly those predicted entries and recomputes to committed truth (B-F03: the sticky predicted
     // HP/cell/AP class the register convicts here). Rollback is NOT a retry — it never resubmits (the
     // executed-failure burn law: a digest means gas spent); the next authoritative read reconciles.
-    const rollback = () => store.getState().input({ type: 'rollback' })
+    // Every result of THIS flight carries the generation it was born under (`born_epoch`), so a submit that
+    // reports after a newer turn has opened is refused at the door instead of clobbering it (see store.js
+    // `dead_generation`). Stamps, not locks — two flights can overlap; only the live one's feedback lands.
+    const rollback = () => store.getState().input({ type: 'rollback', born_epoch: epoch })
     try {
       Promise.resolve(submit())
         .then((result) => {
@@ -50,11 +53,11 @@ export function subscribe_commit_due(store, { submit, on_error = () => {} }) {
           rollback()
           on_error(error)
         })
-        .finally(() => store.getState().input({ type: 'busy', value: false }))
+        .finally(() => store.getState().input({ type: 'busy', value: false, born_epoch: epoch }))
     } catch (error) {
       rollback()
       on_error(error)
-      store.getState().input({ type: 'busy', value: false })
+      store.getState().input({ type: 'busy', value: false, born_epoch: epoch })
     }
   }
   const stop = store.subscribe(observe)

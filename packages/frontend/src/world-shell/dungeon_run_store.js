@@ -32,7 +32,13 @@ import {
   STATUS_FAILED,
   to_fight_cell,
 } from '@aresrpg/fight/board_state'
-import { auto_commit_blocked, executed_turn_failure, stage_to_batch, turn_commit_key } from '@aresrpg/fight/turn_commit'
+import {
+  auto_commit_blocked,
+  executed_turn_failure,
+  stage_to_batch,
+  turn_commit_key,
+  turn_submit_epoch,
+} from '@aresrpg/fight/turn_commit'
 import { fight_read_complete } from '@aresrpg/fight/board_state'
 import { is_pending_fight_id } from '@aresrpg/sdk/pending_fight_id'
 import { transaction_character_id } from '@aresrpg/fight/fight_control'
@@ -1424,6 +1430,9 @@ export const use_dungeon = create((set, get) => ({
     // the player loses a turn they legitimately spent 3+ seconds on. The core owns the one answer (chain floor
     // vs local edge, with the about-to-expire escape hatch); wait it out ONCE here, PRE-SIGN, so the refusal
     // costs zero gas and leaves no digest. Never a retry: an executed abort is never auto-fired again (burn law).
+    // The generation THIS flight is born under: its failure feedback below is refused at the reducer door if a
+    // receipt has meanwhile opened the next turn, so a late loser can never roll back the live turn (store.js).
+    const born_epoch = turn_submit_epoch(fight_store.getState())
     const wait_ms = submit_wait_ms(fight_store.getState())
     if (wait_ms > 0) {
       fight_state_trace('commit_min_turn_wait', { turn_key, background, wait_ms })
@@ -1475,7 +1484,7 @@ export const use_dungeon = create((set, get) => ({
     } catch (error) {
       // Execution failure is an INPUT, never a replacement snapshot: discard the optimistic turn through the
       // reducer before any refresh arrives. An executed digest remains latched below and is never retried.
-      fight_store.getState().input({ type: 'rollback' })
+      fight_store.getState().input({ type: 'rollback', born_epoch })
       fight_state_trace('commit_failed', {
         turn_key,
         background,
