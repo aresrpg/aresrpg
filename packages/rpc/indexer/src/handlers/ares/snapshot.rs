@@ -203,7 +203,9 @@ fn read_mob_canonical_ids(path: &Path) -> Result<MobCanonicalCensus> {
 /// `aresrpg::crafting::Recipe` — the §14 encyclopedia crafting blueprint. The shared object
 /// carries the FULL recipe truth (ingredient list + output + job/level/xp); the `RecipeCreated`
 /// EVENT carries only counts, so the encyclopedia's recipe view snapshots the object, exactly
-/// like ItemTemplate/MobTemplate above. Create-only: crafting.move has no update/burn door.
+/// like ItemTemplate/MobTemplate above. NOT create-only: `set_recipe_inputs`/`set_recipe_craft_xp`
+/// mutate it in place (re-output → latest-wins snapshot) and `retire_recipe` DELETES the shared
+/// object (`RecipeRetired`), which the delete sweep below reaps.
 const CRAFTING_MODULE: &str = "crafting";
 const RECIPE_TYPE: &str = "Recipe";
 /// The engine's soulbound settled outcome (`aresrpg_fight::settlement::FightOutcome`) —
@@ -333,6 +335,20 @@ fn remove_item(id: &str, kiosk: Option<&str>) -> Vec<RedisWrite> {
         writes.push(srem(k_kiosk_items(kiosk), id.to_string()));
     }
     writes
+}
+
+/// Reap the retired recipe's encyclopedia doc AND its `idx:recipes` membership. `retire_recipe`
+/// DELETES the shared Recipe object (crafting.move — true deletion, deliberately not an inert
+/// flag), so the mirror must die with it: a served recipe whose object no longer resolves is a
+/// blueprint the game can never craft, and §14's "if it's in the encyclopedia it's in game" law
+/// makes that a lie, not a lag. Both writes are idempotent (DEL/SREM of an absent key are no-ops)
+/// → replay-safe. Doc first: the read edge (`read_index` MGETs then drops nulls) hides the row on
+/// the DEL alone, so index membership is belt-and-braces, never the only defense.
+fn remove_recipe(id: &str) -> Vec<RedisWrite> {
+    vec![
+        del(k_recipe(id), "$"),
+        srem(K_RECIPES.into(), id.to_string()),
+    ]
 }
 
 /// Reap the FightResult mirror plus the exact owner membership when the deleted input carries one.
@@ -1418,8 +1434,8 @@ fn world_doc_writes(id: &str, seed: u64, biome: &str, required_level: u16) -> Ve
 /// EXACT on-chain values (ingredient template ids + quantities, output template + quantity,
 /// required job u8 + knowledge level, per-craft xp) — the §14 crafting truth: a recipe served
 /// here is a real shared Recipe object, so it is provably craftable in game. Latest-wins whole-doc
-/// set (idempotent; the object is immutable after share, so replays converge trivially). `None` =
-/// the bytes did not decode as a Recipe (defensive — never fails the batch).
+/// set (idempotent — a re-authored recipe re-outputs and overwrites; a RETIRED one is reaped by
+/// [`remove_recipe`]). `None` = the bytes did not decode as a Recipe (never fails the batch).
 pub fn map_recipe_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
     let r: RecipeObject = decode_bcs("object", "Recipe", contents)?;
     let inputs: Vec<_> = r
@@ -2285,6 +2301,9 @@ impl Processor for AresSnapshotHandler {
                         (ITEM_MODULE, ITEM_TYPE) => {
                             let kiosk = resolve_kiosk(obj.owner(), &kiosk_of_wrapper);
                             writes.extend(remove_item(&id, kiosk.as_deref()));
+                        }
+                        (CRAFTING_MODULE, RECIPE_TYPE) => {
+                            writes.extend(remove_recipe(&id));
                         }
                         (RESULTS_MODULE, FIGHT_RESULT_TYPE) => {
                             let owner = match obj.owner() {

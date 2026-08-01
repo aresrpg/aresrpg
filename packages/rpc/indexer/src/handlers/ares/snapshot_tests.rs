@@ -2563,6 +2563,114 @@ fn recipe_garbage_bytes_are_a_safe_none() {
     assert!(map_recipe_object("0xdead", &[0x00, 0x01, 0x02]).is_none());
 }
 
+#[test]
+fn remove_recipe_drops_the_doc_and_index_membership() {
+    // `retire_recipe` DELETES the shared object → mirror the delete on BOTH edges. Idempotent
+    // (DEL/SREM of an absent key are no-ops), so a checkpoint replay is safe.
+    let id = synthetic_object_id("0x1c1de7");
+    assert_eq!(
+        remove_recipe(&id),
+        vec![del(k_recipe(&id), "$"), srem(K_RECIPES.into(), id.clone())]
+    );
+}
+
+/// RED-FIRST for #1814: the `/v1/encyclopedia` recipes view served 1,470 rows against 1,434 live
+/// chain objects because `retire_recipe`'s deletion had NO mirror path at all — neither the
+/// `RecipeRetired` event nor the checkpoint delete sweep touched `rpc:recipe:{id}`, so a retired
+/// blueprint kept being served forever. Drives the whole handler over the real create → retire
+/// lifecycle (the same shape as the Item lifecycle test above); before the fix the destroyed
+/// checkpoint produced ZERO writes for the recipe key.
+#[tokio::test]
+async fn mirrored_recipe_lifecycle_appears_and_disappears() {
+    const RECIPE_IDX: u64 = 0xc0f1;
+    let recipe = TestCheckpointBuilder::derive_object_id(RECIPE_IDX);
+    let tag = format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::crafting::Recipe");
+    let body = RecipeObject {
+        id: recipe,
+        inputs: vec![RecipeIngredient {
+            template: ObjectID::from_hex_literal("0x7a01").unwrap(),
+            quantity: 2,
+        }],
+        output_template: ObjectID::from_hex_literal("0x7b02").unwrap(),
+        output_quantity: 1,
+        required_job: 11,
+        required_level: 1,
+        craft_xp: 23,
+    };
+    // The builder mints a coin at the object index; overwrite the object_set entry at the SAME
+    // version with real `Recipe`-typed bytes so the handler sees the type it mirrors.
+    let replace_recipe = |checkpoint: &mut Checkpoint| {
+        let version = checkpoint
+            .object_set
+            .iter()
+            .filter(|object| object.id() == recipe)
+            .map(|object| object.version())
+            .max()
+            .expect("fixture checkpoint must contain the recipe");
+        checkpoint.object_set.insert(checkpoint_fixture_object(
+            &tag,
+            version,
+            bcs::to_bytes(&body).unwrap(),
+            Owner::Shared {
+                initial_shared_version: SequenceNumber::MIN,
+            },
+        ));
+    };
+
+    // Recipes are SHARED objects (create_recipe shares them) — the retire door takes one by value
+    // and deletes it, which Sui permits for shared objects.
+    let mut builder = TestCheckpointBuilder::new(1_814)
+        .start_transaction(1)
+        .create_shared_object(RECIPE_IDX)
+        .finish_transaction();
+    let mut created = builder.build_checkpoint();
+    replace_recipe(&mut created);
+
+    builder = builder
+        .start_transaction(1)
+        .delete_object(RECIPE_IDX)
+        .finish_transaction();
+    let mut retired = builder.build_checkpoint();
+    replace_recipe(&mut retired);
+    assert!(
+        retired.transactions.iter().all(|tx| tx.events.is_none()),
+        "the reap must ride checkpoint lifecycle truth, not a RecipeRetired event"
+    );
+
+    let recipe = recipe.to_canonical_string(true);
+    let recipe_key = k_recipe(&recipe);
+    let handler = AresSnapshotHandler::from_parts(None, None);
+
+    let created_writes = handler.process(&Arc::new(created)).await.unwrap();
+    assert!(
+        created_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Set { key, path, .. } if key == &recipe_key && path == "$")),
+        "created Recipe must make its encyclopedia row appear"
+    );
+    assert!(has_sadd(&created_writes, "rpc:idx:recipes", &recipe));
+
+    let retired_writes = handler.process(&Arc::new(retired)).await.unwrap();
+    assert!(
+        retired_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Del { key, path } if key == &recipe_key && path == "$")),
+        "retired Recipe must make its encyclopedia row disappear (#1814: 38 served ghosts)"
+    );
+    assert!(
+        retired_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::SetDel { key, member } if key == K_RECIPES && member == &recipe)),
+        "retired Recipe must leave the idx:recipes membership"
+    );
+    assert!(
+        retired_writes
+            .iter()
+            .all(|write| !matches!(write, RedisWrite::Set { key, .. } if key == &recipe_key)),
+        "retired Recipe must not be re-snapshotted"
+    );
+}
+
 // ── Generic kiosk discovery (mandated: char→kiosk from checkpoint ownership) ─
 
 #[test]
