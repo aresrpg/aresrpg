@@ -26,8 +26,17 @@ test/gold/.build/**
 test/gold/out/**
 
 # Test source is exempt so RED-FIRST bug proofs do not pay production-code rent.
-packages/*/test/**
+# `**` (not `*`) on purpose: test roots are not all one level deep, and not all singular. The
+# singular-and-shallow pattern silently charged rent to whole test trees — packages/rpc/indexer/tests/
+# and every packages/move/*/tests/ suite (128 Move test files) — which is how train-25 booked a
+# 537-line Rust integration test as production debt.
+packages/**/test/**
+packages/**/tests/**
 test/**
+# Rust keeps its test modules beside the source it tests, so the exemption is a filename class there.
+# The Move suffix twin (*_tests.move) needs no rule: all 128 already live under a tests/ dir above.
+**/*_tests.rs
+**/tests.rs
 
 # Fixtures and captured evidence
 **/fixtures/**
