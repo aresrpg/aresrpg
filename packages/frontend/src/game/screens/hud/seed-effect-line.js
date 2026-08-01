@@ -46,6 +46,7 @@ import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
 import { localize_spell_state } from '../../data/spell-text.js'
 
 import { element_color } from './element-colors.js'
+import { point_keys, stat_keys } from './spell-effect-sentence.js'
 
 // L1 value-free spell prose extends this existing shared effect-line seam; L2 state lookup and L3 panel
 // composition consume these exports later without creating a second spell-surface wording home.
@@ -56,26 +57,28 @@ export const TONE_BUFF = '#4fd6a0' // green — beneficial value (house --good /
 export const TONE_BAD = '#ff6b6b' // red — penalty/drain value (house --bad)
 export const HEAL_PINK = '#ff6bb0' // heal value — the house heal grammar (--clog-num-heal)
 
-// Move STAT_* id (spell_effect.move:135-149) → { statistics/<icon>.png key, stat.* i18n leaf, unit? }. AP/MP
-// ride the POINT_AP/POINT_MP ids of GIVE/REMOVE_POINTS through the same asset set (action/movement).
+// Move STAT_* id (spell_effect.move:135-149) → { statistics/<icon>.png key, stat.* i18n leaf, unit? }. The
+// leaf names come from spell-effect-sentence.js (the one home for id → `stat.*`); only the icon and the unit
+// are this view's own facts. AP/MP ride the POINT_AP/POINT_MP ids of GIVE/REMOVE_POINTS through the same
+// asset set (action/movement).
 // `unit` rides the VALUE, not the stat name (owner copy law, issue #886: the reading is `+25% Damage` — the
 // symbol '%', never the word "percent" in any locale). Percent-typed stats are the only ones that carry one.
 const STAT_VIEW = {
-  0: { icon: 'strength', key: 'stat.strength' },
-  1: { icon: 'intelligence', key: 'stat.intelligence' },
-  2: { icon: 'chance', key: 'stat.chance' },
-  3: { icon: 'agility', key: 'stat.agility' },
-  4: { icon: 'wisdom', key: 'stat.wisdom' },
-  5: { icon: 'vitality', key: 'stat.vitality' },
-  6: { icon: 'range', key: 'stat.range' },
-  7: { icon: 'crit', key: 'stat.critical_hit' },
-  8: { icon: 'raw_damage', key: 'stat.percent_damage', unit: '%' },
-  9: { icon: 'raw_damage', key: 'stat.raw_damage' },
-  11: { icon: 'health', key: 'stat.heal' },
+  0: { icon: 'strength', key: stat_keys[0] },
+  1: { icon: 'intelligence', key: stat_keys[1] },
+  2: { icon: 'chance', key: stat_keys[2] },
+  3: { icon: 'agility', key: stat_keys[3] },
+  4: { icon: 'wisdom', key: stat_keys[4] },
+  5: { icon: 'vitality', key: stat_keys[5] },
+  6: { icon: 'range', key: stat_keys[6] },
+  7: { icon: 'crit', key: stat_keys[7] },
+  8: { icon: 'raw_damage', key: stat_keys[8], unit: '%' },
+  9: { icon: 'raw_damage', key: stat_keys[9] },
+  11: { icon: 'health', key: stat_keys[11] },
 }
 const POINT_VIEW = {
-  0: { icon: 'action', key: 'stat.action' }, // POINT_AP
-  1: { icon: 'movement', key: 'stat.movement' }, // POINT_MP
+  0: { icon: 'action', key: point_keys[0] }, // POINT_AP
+  1: { icon: 'movement', key: point_keys[1] }, // POINT_MP
 }
 
 // The four elements as they arrive decoded (fight-spells.js element_names) — the one home for "is this a
@@ -282,11 +285,11 @@ const core_parts = (t, fx, state) => {
     case 'ALTER_STAT': {
       // The frontend JSON keeps the generator's SIGNED base (the mint moves the sign into FLAG_NEGATIVE),
       // so the sign here is the honest buff/debuff discriminator.
-      const view = STAT_VIEW[fx.stat] ?? { icon: 'raw_damage', key: 'stat.raw_damage' }
+      const view = STAT_VIEW[fx.stat] ?? STAT_VIEW[9]
       return stat_parts(t, view, fx.base ?? 0)
     }
     case 'STEAL_STAT': {
-      const view = STAT_VIEW[fx.stat] ?? { icon: 'raw_damage', key: 'stat.raw_damage' }
+      const view = STAT_VIEW[fx.stat] ?? STAT_VIEW[9]
       const s = split_value(t, 'spells.fx_steal_stat', { stat: t(view.key) }, Math.abs(fx.base ?? 0))
       return { icon: view.icon, dot: null, tone: TONE_BAD, ...s }
     }

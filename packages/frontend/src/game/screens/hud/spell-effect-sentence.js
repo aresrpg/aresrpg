@@ -17,12 +17,14 @@ const element_keys = Object.freeze({
   neutral: 'spells.neutral',
 })
 
-const point_keys = Object.freeze({
+/** The one home for POINT_AP/POINT_MP id → `stat.*` i18n leaf — seed-effect-line's POINT_VIEW derives from it. */
+export const point_keys = Object.freeze({
   0: 'stat.action',
   1: 'stat.movement',
 })
 
-const stat_keys = Object.freeze({
+/** The one home for Move STAT_* id (spell_effect.move:135-149) → `stat.*` i18n leaf — STAT_VIEW derives from it. */
+export const stat_keys = Object.freeze({
   0: 'stat.strength',
   1: 'stat.intelligence',
   2: 'stat.chance',
