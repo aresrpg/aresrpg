@@ -50,13 +50,6 @@ export const RPC_URL = derive_rpc_url(
 // wallets stay self-pay.
 export const SPONSOR_URL = env.VITE_SPONSOR_URL || '/api/sponsor'
 
-// HALF-CONTRACT TRANSITION: keep the working courier configured until the room presence proof is driven.
-// The final retirement commit removes this only after docs/PRESENCE_PROOF.md exists as the boarding gate.
-export const COURIER_URL = derive_rpc_url(
-  env.VITE_COURIER_URL,
-  import.meta.env.DEV ? 'http://localhost:9529' : 'https://sponsor.aresrpg.world'
-)
-
 // THE p2p signaling relay — OURS, and only ours (docs/REALTIME.md lane 2). A self-hosted MQTT broker
 // (mosquitto, persistence off) that browsers meet on to exchange WebRTC offers; after the handshake every
 // byte is browser↔browser and this host carries nothing. It is a message-passer, never authoritative, and

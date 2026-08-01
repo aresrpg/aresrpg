@@ -8,7 +8,6 @@ mock.module('../env', () => ({
   ASSETS_URL: 'https://cdn.test',
   RPC_URL: 'http://localhost:3000',
   SPONSOR_URL: '/api/sponsor',
-  COURIER_URL: 'http://localhost:9529',
   RELAY_URL: 'ws://relay.test/mqtt',
   STUN_URL: 'stun:stun.test:3478',
   TURN_URL: '',

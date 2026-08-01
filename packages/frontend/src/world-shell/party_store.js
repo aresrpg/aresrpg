@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Party driver EDGE (composition root): the pure state machine lives in @aresrpg/party; this shell reads ambient
 // identity (selected character, wallet address, owned roster), builds inputs, DISPATCHES them into the ONE reducer,
-// and executes the reducer's effect requests — self-paid party PTBs (party_actions), transitional courier scope,
+// and executes the reducer's effect requests — self-paid party PTBs (party_actions), room chat scope,
 // room presence, the /v1
 // poll, join toasts, divergence logs. No async result ever set()s domain state directly (ONE-PIPELINE law); the
 // edge-local tx-phase flags (busy/error — not reconcile state) re-enter through the ONE `_tx_phase` door, and the
@@ -18,7 +18,7 @@ import { context } from '../game/store.js'
 import { use_auth } from '../auth'
 import { use_toast } from '../toast'
 import { get_party } from '../chain/read_party'
-import { broadcast_state, sync_party_room } from '../courier/world.js'
+import { publish_room_state, set_room_party } from '../p2p/lobby-room.js'
 import { push_event_toast } from '../game/core/toast.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
 import { game_log } from '../core/log.js'
@@ -488,7 +488,7 @@ party_store.setState({
     const { incoming_invite, _party_character_id: bound_character_id } = get()
     const drop_invite = !!incoming_invite && incoming_invite.invited_character_id !== character_id
     const mismatched = !!bound_character_id && bound_character_id !== character_id
-    if (mismatched) sync_party_room(null)
+    if (mismatched) set_room_party(null)
     if (drop_invite || mismatched)
       get()._dispatch({ kind: 'intent', action: 'switch_basis', to_character_id: character_id })
     return mismatched
@@ -496,7 +496,7 @@ party_store.setState({
 
   reset_local() {
     get()._stop_polling()
-    sync_party_room(null)
+    set_room_party(null)
     // Drop any toast still tracked for the OLD session — an uncleared entry would leak a "waiting…" toast that
     // nothing left in this store can ever resolve (no matching pending_invites row survives the reset below).
     const ids = get()._pending_invite_toast_ids
@@ -529,7 +529,7 @@ party_store.setState({
       get()._awaiting_party_id === get().party_id
     const published_party_id =
       character_id && (is_bound_member(get(), character_id) || awaiting_this_character) ? get().party_id : null
-    sync_party_room(published_party_id)
+    set_room_party(published_party_id)
     const { address } = use_auth.getState()
     if (!address) return
     if (!character?.classe)
@@ -537,7 +537,7 @@ party_store.setState({
         'p2p',
         'state published WITHOUT identity (roster/selection not ready) — peers render the fallback rig until the next publish'
       )
-    broadcast_state({
+    publish_room_state({
       address,
       color_1: character?.color_1 ?? 0,
       color_2: character?.color_2 ?? 0,

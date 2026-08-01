@@ -3,7 +3,7 @@
 // The LOCAL PLAYER — split from embed_voxel.js at the 600-LoC law. Everything about the player's own body and
 // its control: the engine shoulder camera + input (WASD/arrows, the mouse-or-keys law), the on-chain avatar
 // (+ hair, #20 recolor, senshi fallback), the veteran-title aura, the local nameplate, the TR-97 mount ride,
-// the TR-1 cinematic/creative-fly modes, the per-frame controller feed, the courier presence broadcast, and the
+// the TR-1 cinematic/creative-fly modes, the per-frame controller feed, the room presence broadcast, and the
 // walk follow-camera. The host owns the session/engine/board; this owns the man in it.
 //
 // D154: ONE input gate — a focused text field makes ALL game keys inert (text_focused below).
@@ -25,7 +25,7 @@ import { create_auto_run } from './auto_run.js'
 import { create_cursor_lock_toggle } from './embed_voxel_cursor_lock.js'
 import { resolve_cosmetic_aura } from './cosmetic_aura.js'
 import { tick_environment_audio, dispose_environment_audio } from './core/audio/environment_audio.js'
-import { broadcast_position, set_local_cosmetic } from '../courier/world.js'
+import { publish_room_position, set_room_local_cosmetic } from '../p2p/lobby-room.js'
 import { create_local_nameplate } from './local_nameplate.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from './screens/character-glb.js'
 import { push_event_toast } from './core/toast.js'
@@ -266,7 +266,7 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = source
-    set_local_cosmetic({ mounted: true })
+    set_room_local_cosmetic({ mounted: true })
     push_event_toast({
       state: 'success',
       title: i18n.t(mobile_input.mobile() ? 'world.mount_on_touch' : 'world.mount_on'),
@@ -276,7 +276,7 @@ export function create_player({
     if (!riding) return
     riding = false
     mount_source = null
-    set_local_cosmetic({ mounted: false })
+    set_room_local_cosmetic({ mounted: false })
     mount_ctl?.dispose()
     mount_ctl = null
     push_event_toast({ state: 'info', title: i18n.t('world.mount_off') })
@@ -301,13 +301,13 @@ export function create_player({
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
     mount_source = 'dragon'
-    set_local_cosmetic({ mounted: true })
+    set_room_local_cosmetic({ mounted: true })
   }
   const unmount_dragon = () => {
     if (!riding) return
     riding = false
     mount_source = null
-    set_local_cosmetic({ mounted: false })
+    set_room_local_cosmetic({ mounted: false })
     mount_ctl?.dispose()
     mount_ctl = null
   }
@@ -592,8 +592,7 @@ export function create_player({
         facing_yaw: t.facing_yaw,
         fps: Math.round(engine.get_stats?.().fps ?? 0),
       })
-      // D206: announce our cell on ACTUAL change only. Both transition paths stay live until room presence is
-      // driven-proven; the final courier retirement removes the first send.
+      // D206: announce our cell on ACTUAL change only — the room's heartbeat keeps a standing player alive.
       // D217: the payload carries the WORLD height too — a VERTICAL cell change (hills/jumps/falls) also
       // broadcasts, so peers track y exactly instead of inferring ground.
       if (character?.id) {
@@ -618,7 +617,7 @@ export function create_player({
           last_bcast_y = by
           last_bcast_yaw = t.facing_yaw
           const heading = Math.round(t.facing_yaw * 100) / 100
-          broadcast_position(world_id, character.id, bx, bz, heading, by)
+          publish_room_position(character.id, bx, bz, by, heading)
         }
       }
     }

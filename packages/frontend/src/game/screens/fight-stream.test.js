@@ -10,15 +10,17 @@
 // REAL PATH: the real room courtesy subscription, the real use_dungeon_turn store (zustand — picks are
 // drafted through it exactly as DungeonBoard/voxel_fight_adapter do), the real fight_store singleton (seeded
 // through the house test door, test_helpers/fight_core_harness.js) and the real board_view projection mirrored
-// into use_dungeon.dungeon by hand (production wiring a poll loop performs; nothing polls in a unit test). The
-// ONLY fake is the room transport edge — publish/subscribe_room_courtesy are spied as named exports that
-// restore, never a mock.module (a process-global registry entry that would outlive this file — the #123
-// pollution class). Spying `subscribe_room_courtesy` BEFORE the install is also how this file gets its hand on
-// the real `on_peer_stream`: the module has no receive-side export, and capturing the listener the production
-// code actually registers keeps the received path real instead of re-implementing it here.
+// into use_dungeon.dungeon by hand (production wiring a poll loop performs; nothing polls in a unit test).
+//
+// The transport is NOT spied at all: this file joins a REAL lobby room over the house trystero double
+// (test_helpers/trystero_mock.js) and reads/drives the wire. Sends are asserted off the recorded `fstream`
+// frames; a peer signal is delivered through the real action handler, so `on_peer_stream` is exercised exactly
+// as production registers it. Spying the transport's named exports instead would patch a module OTHER suites
+// in this shared process also import — the #123 pollution class, with no restore that reaches them.
 
-import { afterAll, afterEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test'
 
+import { deliver, reset_trystero_mock, trystero_sent } from '../../test_helpers/trystero_mock.js'
 import { fight_store, presented_state } from '@aresrpg/fight/store'
 import { board_view, fight_view } from '@aresrpg/fight/project'
 import { install_browser_globals } from '../../test_helpers/browser_globals.js'
@@ -43,22 +45,26 @@ const CELL_A = 40
 const CELL_B = 41
 const CELL_C = 42
 
-// The transport edge, faked before the install so the capture below sees the real registration.
-const broadcast_spy = spyOn(lobby_room, 'publish_room_courtesy').mockImplementation(() => {})
-/** @type {(signal: any) => void} */
-let on_peer_stream = () => {}
-const subscribe_spy = spyOn(lobby_room, 'subscribe_room_courtesy').mockImplementation((listener) => {
-  on_peer_stream = listener
-  return () => {}
-})
-
 // Idempotent per app-lifetime install (fight-stream.js:70-84) — safe to call once here at module load, exactly
 // as the dungeon bridge does on the app's first sync.
 init_fight_stream()
-expect(subscribe_spy).toHaveBeenCalledTimes(1)
 
-const fire = (payload) => on_peer_stream(payload)
-const sent_to = (kind) => broadcast_spy.mock.calls.map(([p]) => p).filter(p => p.kind === kind)
+const WORLD = `0x${'a'.repeat(64)}`
+
+// ONE real room for the file: the sender half needs a live `fstream` action to send on, and the receiver half
+// needs the handler production registers. Both come from actually joining.
+beforeAll(() => {
+  reset_trystero_mock()
+  lobby_room.join_room(WORLD, ME, { x: 0, y: 0 })
+})
+
+/** A peer's courtesy signal, delivered through the REAL room action handler production registers. */
+const fire = (payload) => deliver('fstream', payload)
+const sent_to = (kind) =>
+  trystero_sent
+    .filter((row) => row.name === 'fstream')
+    .map((row) => row.payload)
+    .filter((p) => p.kind === kind)
 
 /** Seed BOTH halves fight-stream.js reads: the fight core (the house test door) + its board_view mirror into
  *  use_dungeon.dungeon (dungeon_run_store's real projection — production wiring a poll loop performs; this
@@ -70,15 +76,14 @@ function seed(opts) {
 }
 
 afterEach(() => {
-  broadcast_spy.mockClear()
+  trystero_sent.length = 0
   use_dungeon_turn.getState().clear_picks()
   use_dungeon.setState({ dungeon: null })
   reset_fight_core()
 })
 
 afterAll(() => {
-  broadcast_spy.mockRestore()
-  subscribe_spy.mockRestore()
+  lobby_room.leave_room()
   restore_browser_globals()
 })
 
