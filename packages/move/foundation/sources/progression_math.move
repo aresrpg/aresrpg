@@ -44,7 +44,11 @@ public fun points_for_level_range(from_level: u64, to_level: u64): (u64, u64) {
 /// authoritative). Move's checked arithmetic makes any overflow ABORT (never silently wrap). The core wrapper
 /// owns the freeze gate + the GameConfig reads.
 public fun xp_add_capped(current_xp: u64, delta: u64, xp_multiplier_hundredths: u64, max_reachable_level: u64): u64 {
-  let boosted = delta * xp_multiplier_hundredths / 100;
+  // ROUNDED, never truncated: the multiplier is in HUNDREDTHS, so any dial that is not a whole multiple of 100
+  // leaves a sub-unit remainder on EVERY award. Flooring it dropped that remainder silently and always in the
+  // house's favour (at 1.50× a 1-xp kill paid 1). The regen kernel below carries its remainder onto its clock;
+  // a pure scalar kernel has nowhere to bank one, so it rounds half-up — unbiased, and the dial stops lying.
+  let boosted = (delta * xp_multiplier_hundredths + 50) / 100;
   let cap = character_xp::xp_for_level(max_reachable_level);
   let total = current_xp + boosted;
   if (total > cap) cap else total
@@ -118,4 +122,18 @@ fun xp_cap_discards() {
   assert!(xp_add_capped(0, 1000, 200, 200) == 2000, 1); // 2.00× boost
   let cap = character_xp::xp_for_level(200);
   assert!(xp_add_capped(cap - 1, 1_000_000_000, 100, 200) == cap, 2); // clamped AT the cap — excess discarded
+}
+
+#[test]
+/// XP TRUNCATION (audit class 5), boundary values: the boost is a HUNDREDTHS multiplier, so any dial that is
+/// not a whole multiple of 100 leaves a sub-unit remainder on every single award. Truncation ate it — silently,
+/// and always in the house's favour: at 1.50× a 1-xp kill paid 1 (a third of the award gone), at 1.25× a 3-xp
+/// kill paid 3 (0.75 gone). The regen kernel next door CARRIES its remainder because it has a clock to carry
+/// on; a pure scalar kernel has nowhere to bank one, so it ROUNDS — unbiased, and the dial stops lying.
+fun xp_boost_rounds_not_truncates() {
+  assert!(xp_add_capped(0, 1, 150, 200) == 2, 0); // 1 × 1.50 = 1.5 → 2 (truncation paid 1)
+  assert!(xp_add_capped(0, 3, 125, 200) == 4, 1); // 3 × 1.25 = 3.75 → 4 (truncation paid 3)
+  assert!(xp_add_capped(0, 1, 149, 200) == 1, 2); // 1.49 → 1: below the half, rounding must NOT invent xp
+  assert!(xp_add_capped(0, 2, 125, 200) == 3, 3); // 2.5 → 3 (half rounds up)
+  assert!(xp_add_capped(0, 1000, 100, 200) == 1000, 4); // 1.00× stays exact — the default dial is untouched
 }
