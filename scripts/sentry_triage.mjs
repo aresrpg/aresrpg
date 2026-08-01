@@ -7,7 +7,7 @@
 import path from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
 
-const SENTRY_API_ORIGIN = 'https://sentry.io'
+const SENTRY_API_ORIGIN = 'https://de.sentry.io'
 const GITHUB_API_ORIGIN = 'https://api.github.com'
 const SENTRY_REQUEST_DELAY_MS = 250
 const GITHUB_REQUEST_DELAY_MS = 250
