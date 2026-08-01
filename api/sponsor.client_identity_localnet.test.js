@@ -17,7 +17,7 @@ process.env.GAS_STATION_URL = 'http://rpc-gas-pool.test:9527'
 process.env.GAS_STATION_AUTH = 'test-bearer'
 
 const real_state = await import('./sponsor_state.mjs')
-let rate_limit_keys = []
+const rate_limit_keys = []
 mock.module('./sponsor_state.mjs', () => ({
   ...real_state,
   shared_store_ready: async () => true,

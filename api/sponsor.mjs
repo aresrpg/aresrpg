@@ -477,6 +477,15 @@ function roll_stats() {
     addresses: new Set(),
   })
 }
+/**
+ * Count one refusal under its own class — ONE home for how a refusal is counted, next to the one home for how a
+ * refusal is built. `kind` is a key of `initial_refusals()`; every arm names its own, so the daily line and the
+ * /stats surface stay a true census of why sponsorship was declined rather than a single "refused" number.
+ */
+function count_refusal(kind) {
+  stats.refused[kind] += 1
+}
+
 export function sponsor_stats() {
   roll_stats()
   return {
@@ -559,7 +568,7 @@ export function assert_tx_matches_reservation(tx_bytes, reservation) {
 /** No shared store, no sponsorship — the one refusal both money doors take before doing anything else. */
 async function assert_shared_store() {
   if (await shared_store_ready()) return
-  stats.refused.store += 1
+  count_refusal('store')
   throw sponsor_refusal(SHARED_STORE_REASON, SHARED_STORE_ERROR)
 }
 
@@ -579,22 +588,22 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   try {
     await assert_sponsor_zklogin_challenge(sender, challenge, signature)
   } catch (error) {
-    stats.refused.zklogin += 1
+    count_refusal('zklogin')
     throw error
   }
   const { balance } = await client.core.getBalance({ owner: sender })
   if (BigInt(balance.balance) > SELF_PAY_MIST) {
-    stats.refused.balance += 1
+    count_refusal('balance')
     throw sponsor_refusal(SELF_PAY_REASON, 'self-pay-required: balance exceeds 0.2 SUI — sign with your own gas')
   }
   try {
     assert_ptb_scope(txKindBytes)
   } catch (error) {
-    stats.refused.scope += 1
+    count_refusal('scope')
     throw error
   }
   if (await addr_rate_limited(sender)) {
-    stats.refused.rate += 1
+    count_refusal('rate')
     throw new Error('rate-limited: too many sponsorships for this address, retry later')
   }
   let simulation
@@ -609,7 +618,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     )
   } catch (error) {
     // INFRASTRUCTURE, not a verdict: the RPC threw or never answered, so the chain said nothing about this PTB.
-    stats.refused.sim_infra += 1
+    count_refusal('sim_infra')
     throw sponsor_refusal(
       SIMULATION_INFRASTRUCTURE_REASON,
       `sponsor-unpriceable: simulation failed (${error?.message ?? error}) — refusing`
@@ -621,14 +630,14 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   const verdict = classify_simulation(simulation)
   if (!verdict.ok) {
     if (verdict.reason === WOULD_ABORT_REASON) {
-      stats.refused.abort += 1
+      count_refusal('abort')
       throw sponsor_refusal(
         WOULD_ABORT_REASON,
         `${WOULD_ABORT_ERROR_PREFIX} ${verdict.chain_error}`,
         verdict.chain_error
       )
     }
-    stats.refused.sim_unreadable += 1
+    count_refusal('sim_unreadable')
     throw sponsor_refusal(SIMULATION_UNREADABLE_REASON, `sponsor-unpriceable: ${verdict.detail} — refusing`)
   }
   const gas_used = verdict.effects.gasUsed
@@ -636,7 +645,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   try {
     budget = derive_budget_mist(gas_used)
   } catch (error) {
-    stats.refused.ceiling += 1
+    count_refusal('ceiling')
     throw error
   }
   // THE DAILY CAP, BOOKED — not merely consulted. The budget about to be reserved is charged against the day
@@ -645,7 +654,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   // every path that ends the reservation early releases it, and an abandoned one is released at its expiry.
   const daily_hold = await addr_daily_hold(sender, budget)
   if (daily_hold == null) {
-    stats.refused.daily += 1
+    count_refusal('daily')
     throw sponsor_refusal(
       DAILY_CAP_REASON,
       'daily free gameplay limit reached — transactions now require your own gas until tomorrow'
@@ -656,7 +665,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     reservation = await station_reserve({ gas_budget: Number(budget), reserve_duration_secs: RESERVE_DURATION_SECS })
   } catch (error) {
     await release_daily_hold(daily_hold, sender) // no reservation exists ⇒ nothing is owed against the cap
-    stats.refused.station += 1
+    count_refusal('station')
     throw error
   }
   const { sponsor_address, reservation_id, gas_coins } = reservation
@@ -677,7 +686,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   })
   if (!stashed) {
     await release_daily_hold(daily_hold, sender)
-    stats.refused.store += 1
+    count_refusal('store')
     throw sponsor_refusal(SHARED_STORE_REASON, SHARED_STORE_ERROR)
   }
   stats.reserved += 1
@@ -708,7 +717,7 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
     assert_tx_matches_reservation(txBytes, reservation)
   } catch (error) {
     await release_daily_hold(reservation.daily_hold, reservation.sender)
-    stats.refused.mismatch += 1
+    count_refusal('mismatch')
     throw error
   }
   // Exactly one execute call: effects mean gas burned, so this path never auto-retries. A THROW here (station
@@ -721,7 +730,7 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
   })
   if (!effects) {
     await release_daily_hold(reservation.daily_hold, reservation.sender)
-    stats.refused.execreject += 1
+    count_refusal('execreject')
     throw new Error(`sponsor-exec-rejected: ${error ?? 'no effects'} — pre-execution rejection, no gas charged`)
   }
   const charge = real_charge_mist(effects.gasUsed)

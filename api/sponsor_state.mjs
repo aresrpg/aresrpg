@@ -95,8 +95,7 @@ async function rate_increment(key) {
   })
   // The in-memory window is a LOCALNET convenience, never a production degradation: with no store configured
   // off localnet the result stays `!ok`, and both callers below read that as "refuse".
-  if (!result.ok && result.unconfigured && SHARED_STORE_OPTIONAL)
-    return { ok: true, value: memory_rate_increment(key) }
+  if (!result.ok && result.unconfigured && SHARED_STORE_OPTIONAL) return { ok: true, value: memory_rate_increment(key) }
   return result
 }
 export async function rate_limited(ip) {

@@ -49,9 +49,7 @@ describe('no shared store + production-shaped env ⇒ FAIL CLOSED', () => {
   })
 
   test('execute refuses the same way — a hold it cannot settle is never executed', async () => {
-    const error = await refusal(() =>
-      S.executeSponsored({ reservationId: 'r1', txBytes: 'AAAA', userSig: 'sig' })
-    )
+    const error = await refusal(() => S.executeSponsored({ reservationId: 'r1', txBytes: 'AAAA', userSig: 'sig' }))
     expect(error.sponsor_reason).toBe(REASON)
   })
 
