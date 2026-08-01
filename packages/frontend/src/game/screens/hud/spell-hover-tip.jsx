@@ -4,7 +4,9 @@
 // and effects come from the same chain projection + shared effect grammar as the grimoire, so there is no
 // second spell-info source to drift.
 
-import { seed_effect_line, seed_el_label } from './seed-effect-line.js'
+import { resolve_spell_description } from '../../data/spell-text.js'
+
+import { seed_effect_line, seed_effect_parts, seed_el_label } from './seed-effect-line.js'
 import { seat_spell_row } from './fight-spells.js'
 import { spell_category } from './spell-category.js'
 import { spell_range_caption_key } from './spell-range-caption.js'
@@ -18,7 +20,7 @@ import { spell_effects } from './spellbook-data.js'
  * @returns {{ ap: number, range_txt: string, range_caption: string, crit_txt: string, cooldown_txt: string,
  *   subline: string, color: string, effects: Array<{ text: string, color: string }> }}
  */
-export const spell_hover_facts = (t, spell, seat) => {
+export const spell_hover_facts = (t, spell, seat, locale = 'en') => {
   const level = seat_spell_row(seat, spell)
   const [range_min, range_max] = level?.range ?? [0, 0]
   const category = spell_category(level)
@@ -29,6 +31,7 @@ export const spell_hover_facts = (t, spell, seat) => {
   const none = t('fight.none')
 
   return {
+    description: resolve_spell_description(spell, locale),
     ap: level?.ap ?? 0,
     range_txt: range_min === range_max ? `${range_min}` : `${range_min}-${range_max}`,
     // Whether the +range stat reaches this spell is half of what a range MEANS in a fight — a number alone
@@ -38,10 +41,14 @@ export const spell_hover_facts = (t, spell, seat) => {
     cooldown_txt: level?.cooldown > 0 ? `${level.cooldown} ${t('spells.turns')}` : none,
     subline,
     color: category.color,
-    effects: spell_effects(level).map((effect) => ({
-      text: seed_effect_line(t, effect),
-      color: effect.color,
-    })),
+    effects: spell_effects(level).map((effect) => {
+      const view = seed_effect_parts(t, effect, { locale })
+      return {
+        text: seed_effect_line(t, effect, { locale }),
+        felt: view.felt,
+        color: effect.color,
+      }
+    }),
   }
 }
 
@@ -56,8 +63,8 @@ export const spell_hover_facts = (t, spell, seat) => {
  *   cd_left?: number }} props
  * @returns {import('react').JSX.Element}
  */
-export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0 }) {
-  const facts = spell_hover_facts(t, spell, seat)
+export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0, locale = 'en' }) {
+  const facts = spell_hover_facts(t, spell, seat, locale)
   const rows = [
     [t('spells.ap_cost'), `${facts.ap}`],
     [t('spells.range'), facts.range_txt, facts.range_caption],
@@ -83,6 +90,8 @@ export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0 }) {
 
       {cd_left > 0 && <div className="tt-spell-card__reason">{t('dungeons.spell_on_cooldown', { n: cd_left })}</div>}
 
+      <div className="tt-spell-card__description">{facts.description}</div>
+
       <div className="tt-spell-card__facts">
         {rows.map(([label, value, note]) => (
           <div className="tt-spell-card__fact" key={label}>
@@ -99,7 +108,10 @@ export function SpellHoverTip({ t, name, spell, seat = null, cd_left = 0 }) {
           {facts.effects.map((effect, index) => (
             <div className="tt-line" key={index}>
               <span className="tt-fx-dot" style={{ background: effect.color }} aria-hidden="true" />
-              <span className="tt-fx-text">{effect.text}</span>
+              <span className="tt-fx-text">
+                {effect.text}
+                {effect.felt && <span className="tt-spell-card__felt">{effect.felt}</span>}
+              </span>
             </div>
           ))}
         </div>

@@ -8,6 +8,8 @@
 import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
 import { encode_status_value, is_signed_status_kind } from '@aresrpg/fight/fight_status_snapshot'
 
+import { build_spell_state_registry, resolve_spell_state_row } from '../../data/spell-text.js'
+
 const kind_names = {
   0: 'DAMAGE',
   1: 'PERCENT_LIFE',
@@ -62,42 +64,48 @@ export const name_key = (name) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '')
 
-export const project_spell_effect = (effect) => ({
-  ...effect,
-  kind_id: effect.kind,
-  kind: kind_names[effect.kind] ?? String(effect.kind),
-  ...(effect.element != null
-    ? { element_id: effect.element, element: element_names[effect.element] ?? String(effect.element) }
-    : {}),
-  base: effect.value ?? 0,
-  // THE AUTHORED BAND (#951). The corpus wire row carries its magnitude as `value` / `value_max`; every
-  // display surface reads `damageMin` / `damageMax` (seed-effect-line's `seed_effect_value`, the one grammar
-  // behind the tooltip, the grimoire and the encyclopedia). Nothing mapped the two, so every magnitude row
-  // rendered its em-dash "no honest bounds" fallback — `− Earth damage · crit 5`, a spell tooltip with no
-  // damage in it. A row with no `value` at all keeps that em dash rather than inventing a 0-0 band.
-  ...(effect.value != null
-    ? { damageMin: Number(effect.value), damageMax: Number(effect.value_max ?? effect.value) }
-    : {}),
-  chance: effect.chance ?? 100,
-  turns: effect.turns ?? 0,
-  target_filter: effect.target_filter ?? 0,
-  flags: effect.flags ?? 0,
-  area_shape_id: effect.area_shape ?? 0,
-  area_shape: shape_names[effect.area_shape ?? 0] ?? 'POINT',
-  area_size: effect.area_size ?? 0,
-  ...(effect.zone != null
-    ? {
-        zone: {
-          ...effect.zone,
-          shape_id: effect.zone.shape ?? 0,
-          shape: shape_names[effect.zone.shape ?? 0] ?? 'POINT',
-          size: effect.zone.size ?? 0,
-        },
-      }
-    : {}),
-})
+export const project_spell_effect = (effect, state_registry = null) => {
+  const state = [22, 23].includes(Number(effect?.kind))
+    ? resolve_spell_state_row(state_registry, effect?.state_id ?? effect?.value)
+    : null
+  return {
+    ...effect,
+    kind_id: effect.kind,
+    kind: kind_names[effect.kind] ?? String(effect.kind),
+    ...(effect.element != null
+      ? { element_id: effect.element, element: element_names[effect.element] ?? String(effect.element) }
+      : {}),
+    ...(state ? { state } : {}),
+    base: effect.value ?? 0,
+    // THE AUTHORED BAND (#951). The corpus wire row carries its magnitude as `value` / `value_max`; every
+    // display surface reads `damageMin` / `damageMax` (seed-effect-line's `seed_effect_value`, the one grammar
+    // behind the tooltip, the grimoire and the encyclopedia). Nothing mapped the two, so every magnitude row
+    // rendered its em-dash "no honest bounds" fallback — `− Earth damage · crit 5`, a spell tooltip with no
+    // damage in it. A row with no `value` at all keeps that em dash rather than inventing a 0-0 band.
+    ...(effect.value != null
+      ? { damageMin: Number(effect.value), damageMax: Number(effect.value_max ?? effect.value) }
+      : {}),
+    chance: effect.chance ?? 100,
+    turns: effect.turns ?? 0,
+    target_filter: effect.target_filter ?? 0,
+    flags: effect.flags ?? 0,
+    area_shape_id: effect.area_shape ?? 0,
+    area_shape: shape_names[effect.area_shape ?? 0] ?? 'POINT',
+    area_size: effect.area_size ?? 0,
+    ...(effect.zone != null
+      ? {
+          zone: {
+            ...effect.zone,
+            shape_id: effect.zone.shape ?? 0,
+            shape: shape_names[effect.zone.shape ?? 0] ?? 'POINT',
+            size: effect.zone.size ?? 0,
+          },
+        }
+      : {}),
+  }
+}
 
-export const project_spell_level = (level) => {
+export const project_spell_level = (level, state_registry = null) => {
   const base_effects = level.effects ?? []
   const critical_effects = level.crit_effects ?? []
   const kind_occurrence = (rows, index) =>
@@ -105,9 +113,9 @@ export const project_spell_level = (level) => {
   const effects = base_effects.map((effect, index) => {
     const occurrence = kind_occurrence(base_effects, index)
     const critical = critical_effects.filter((candidate) => candidate.kind === effect.kind)[occurrence]
-    const decoded = project_spell_effect(effect)
+    const decoded = project_spell_effect(effect, state_registry)
     return critical
-      ? { ...decoded, crit_base: critical.value ?? 0, crit_effect: project_spell_effect(critical) }
+      ? { ...decoded, crit_base: critical.value ?? 0, crit_effect: project_spell_effect(critical, state_registry) }
       : decoded
   })
   // A critical list replaces the base list on-chain. Same-kind occurrences already ride their base row as the
@@ -121,7 +129,7 @@ export const project_spell_level = (level) => {
             const base_count = base_effects.filter((effect) => effect.kind === critical.kind).length
             return occurrence >= base_count
           })
-          .map(project_spell_effect)
+          .map((effect) => project_spell_effect(effect, state_registry))
       : []
   return {
     min_char_level: level.min_char_level,
@@ -222,6 +230,7 @@ export const mint_authored_spell = (spell) => ({ ...spell, levels: (spell?.level
  */
 export function build_fight_spells(spell_corpus) {
   const corpus = Array.isArray(spell_corpus) ? spell_corpus : []
+  const state_registry = build_spell_state_registry(corpus)
   const templates = normalize_chain_spell_corpus(corpus.map(mint_authored_spell))
   const spells = corpus
     .map((spell) => ({
@@ -230,6 +239,9 @@ export function build_fight_spells(spell_corpus) {
       unlock_level: spell.unlock,
       name: spell.name,
       name_key: name_key(spell.name),
+      description_key: spell.description_key,
+      description: spell.description,
+      i18n: spell.i18n,
       // THE SPELL-ART KEY (issue #884) — the asset host keys spell icons by the corpus row's own id
       // (`<class>_<name>`, e.g. `spells/rojin_greed.webp`), NOT by name_key. Probed 2026-07-26 against the live
       // host: `spells/rojin_greed.webp` → 200 while `spells/greed.webp` → 404, and the content house's own upload
@@ -242,7 +254,7 @@ export function build_fight_spells(spell_corpus) {
       kind: spell.role === 'heal' ? 'heal' : 'dmg',
       role: spell.role ?? 'damage',
       element: spell.element ?? null,
-      levels: (spell.levels ?? []).map(project_spell_level),
+      levels: (spell.levels ?? []).map((level) => project_spell_level(level, state_registry)),
     }))
     .sort((left, right) => left.class.localeCompare(right.class) || left.unlock_level - right.unlock_level)
   return { spells, templates }

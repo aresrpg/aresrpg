@@ -19,13 +19,15 @@
 // in place. Content updates (hovering a different fighter) mutate the live DOM node without remounting, so
 // the entrance never re-fires: the numbers swap with zero flicker.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { decode } from '@aresrpg/fight/los'
 
 import './entity-tooltip.css'
 import { use_game_state, use_fight_view } from '../../store.js'
+import { spell_state_name_resolver } from '../../data/spell-text.js'
+import { use_spell_corpus } from '../../data/use_spell_corpus.js'
 import { use_tweened_hp } from './use_tweened_hp.js'
 import { use_target_prediction } from './use_target_prediction.js'
 import { EMPTY_OUTCOME, predicted_target_outcome } from './target_outcome.js'
@@ -105,7 +107,13 @@ function build_vm(hover, fighter) {
 }
 
 export function EntityTooltip() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const spell_corpus = use_spell_corpus()
+  const locale = i18n.resolvedLanguage || i18n.language || 'en'
+  const resolve_state_name = useMemo(
+    () => spell_state_name_resolver(spell_corpus, locale),
+    [spell_corpus, locale]
+  )
   const fight = use_fight_view() // synchronous core view (S2 mirror kill); hover stays a game-core slice
   const hover = use_game_state((s) => s.fight_hover)
   // live predict_cast for the armed spell on this target — the SINGLE resolved outcome (crit or not is a
@@ -182,6 +190,8 @@ export function EntityTooltip() {
       effects={view.effects}
       status_effects={view.status_effects}
       t={t}
+      locale={locale}
+      resolve_state_name={resolve_state_name}
     />
   )
 }

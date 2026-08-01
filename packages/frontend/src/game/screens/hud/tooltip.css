@@ -264,6 +264,13 @@
   font-size: 10px;
   line-height: 1.3;
 }
+.tt-spell-card__description {
+  padding-left: 8px;
+  color: var(--fg-muted, #9aa4b2);
+  border-left: 2px solid rgba(200, 150, 60, 0.35);
+  font-size: 10px;
+  line-height: 1.45;
+}
 .tt-spell-card__facts {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -304,6 +311,14 @@
   letter-spacing: 0.1em;
   line-height: 1.25;
   text-transform: uppercase;
+}
+.tt-spell-card__felt {
+  display: block;
+  margin-top: 2px;
+  color: var(--fg-faint, #6b7280);
+  font-size: 8px;
+  font-style: italic;
+  line-height: 1.35;
 }
 .tt-fx {
   display: flex;

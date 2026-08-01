@@ -44,6 +44,6 @@ describe('fight-spell range surfaces', () => {
     const source = readFileSync(new URL('./Spellbook.jsx', import.meta.url), 'utf8')
 
     expect(source).toContain("import { seed_effect_parts, seed_el_label } from './seed-effect-line.js'")
-    expect(source).toContain('view={seed_effect_parts(t, fx)}')
+    expect(source).toContain('view={seed_effect_parts(t, fx, { locale })}')
   })
 })

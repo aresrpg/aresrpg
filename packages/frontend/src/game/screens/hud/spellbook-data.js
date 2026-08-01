@@ -97,6 +97,9 @@ export const grimoire = (class_id, char_level, points, invested = {}) => {
       id: sp.object_id, // the shared SpellTemplate object id — the spend PTB target
       name: sp.name, // on-chain display name (the i18n fallback)
       name_key: sp.name_key,
+      description_key: sp.description_key,
+      description: sp.description,
+      i18n: sp.i18n,
       icon: sp.icon_key, // spell-art key (#884: the id shape, one home in fight-spells-core); honest-fallback
       levels: sp.levels, // all 6 chain levels (ap/range/crit/effects + per-level min_char_level)
       unlock_tier: sp.unlock_level,

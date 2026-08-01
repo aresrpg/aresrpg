@@ -7,6 +7,7 @@ import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { use_template_t } from '../../i18n/template_t'
 import { use_spell_corpus } from '../../game/data/use_spell_corpus.js'
+import { resolve_spell_description } from '../../game/data/spell-text.js'
 import { class_spells, seat_spell_level } from '../../game/screens/hud/fight-spells.js'
 import {
   seed_effect_parts,
@@ -57,15 +58,16 @@ const encyclopedia_effect_parts = (
   effect: any,
   crit_effect: any,
   crit_rate: number | null | undefined,
-  area_visualized: boolean
+  area_visualized: boolean,
+  locale: string
 ) => {
   const line_effect = area_visualized ? { ...effect, area_shape: 'POINT', area_size: 0 } : effect
   if (!(Number(crit_rate) > 0)) {
-    return seed_effect_parts(t as any, { ...line_effect, crit_base: undefined, crit_effect: undefined })
+    return seed_effect_parts(t as any, { ...line_effect, crit_base: undefined, crit_effect: undefined }, { locale })
   }
-  if (!DAMAGE_KINDS.has(effect.kind)) return seed_effect_parts(t as any, line_effect)
+  if (!DAMAGE_KINDS.has(effect.kind)) return seed_effect_parts(t as any, line_effect, { locale })
   const critical_damage = crit_effect ? seed_effect_value(t as any, { ...effect, ...crit_effect }) : undefined
-  return seed_effect_parts(t as any, { ...line_effect, crit_base: critical_damage })
+  return seed_effect_parts(t as any, { ...line_effect, crit_base: critical_damage }, { locale })
 }
 
 const spell_zone_labels = (t: Translate, level: any) => {
@@ -85,16 +87,10 @@ const spell_zone_labels = (t: Translate, level: any) => {
   return [...new Set(labels)]
 }
 
-// §14 SPELL DETAIL — renders a MINTED SpellTemplate's on-chain facts: name / unlock level / element, then EVERY
-// on-chain field of each SpellLevel — AP, range (+ whether +Range gear extends it), casts per turn/target,
-// cooldown, targeting rules (line of sight, empty-cell-only, straight-line-only), the effect list, and — when
-// the level can crit at all (crit_rate > 0) — a CRITICAL box with the crit chance (per-effect crit VALUES ride
-// each effect line's own `crit N` meta — one home, no duplicate list). The data is the chain-truth row from
-// fight-spells.js (the act_cast target's own SpellLevels, 1:1 with aresrpg_foundation::spell_effect::
-// SpellLevel/Effect) — so nothing here is fabricated. Content audit (S-64): AoE/casts-per-turn/empty-cell/crit
-// were on-chain but unsurfaced; class "passives" were invented UI content with zero Move backing — deleted.
-// Display spec (2026-07-13): effects render as compact LINES (the shared EffectLine + seed_effect_parts
-// grammar — the SAME renderer the grimoire uses), never per-effect card boxes.
+// §14 SPELL DETAIL — a minted template's corpus description plus every on-chain SpellLevel field: AP, range,
+// casts, cooldown, targeting, effects and critical chance. Values come from fight-spells.js's 1:1 chain-truth
+// projection; S-64's invented class passives stay deleted. Effects render as compact shared EffectLine rows,
+// never per-effect card boxes; critical magnitudes ride their own line metadata.
 
 // One home for the small bordered stat tile the AP/RANGE/CASTS/COOLDOWN/TARGETING rows all use.
 function StatChip({
@@ -128,8 +124,10 @@ function StatChip({
 }
 
 function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const tt = use_template_t()
+  const locale = i18n.resolvedLanguage || i18n.language || 'en'
+  const description = resolve_spell_description(spell, locale)
   const levels: any[] = spell.levels ?? []
   const learned_idx = seat_spell_level(seat, spell) - 1
   const [active_idx, set_active_idx] = useState(learned_idx)
@@ -183,6 +181,10 @@ function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
         </div>
       </div>
 
+      <div className="flex flex-col gap-1 border-l-2 border-gold/30 pl-3 py-1">
+        <span className="text-[8px] tracking-[0.2em] uppercase text-muted">{t('spells.description')}</span>
+        <span className="text-[10px] leading-relaxed text-text">{description}</span>
+      </div>
       {/* Level buttons (the spell's own on-chain SpellLevels) */}
       {levels.length > 1 && (
         <div className="flex flex-col gap-1">
@@ -309,7 +311,8 @@ function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
                         eff,
                         crit_effect_for(lvl, eff, i),
                         lvl.crit_rate,
-                        area_grid != null
+                        area_grid != null,
+                        locale
                       )}
                     />
                   </div>

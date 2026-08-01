@@ -43,6 +43,8 @@
 
 import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
 
+import { localize_spell_state } from '../../data/spell-text.js'
+
 import { element_color } from './element-colors.js'
 
 // L1 value-free spell prose extends this existing shared effect-line seam; L2 state lookup and L3 panel
@@ -149,6 +151,7 @@ export const seed_effect_value = (t, fx) => {
  * @property {string} tone          css colour for the value span (element hue / buff green / penalty red / heal pink)
  * @property {string} post          grey text after the value
  * @property {string | null} meta   dim ' · '-joined suffix (duration / crit / zone / proc chance) or null
+ * @property {string | null} felt   corpus-owned state consequence, available to detail tooltips
  */
 
 // Owner (v33 review, "circle 0 is a weird name for a spell of single cell, just don't show anything if
@@ -167,8 +170,11 @@ const meta_of = (t, fx) => {
   const critical_effect = fx.crit_effect
   const critical_min = finite_number(critical_effect?.damageMin)
   const critical_max = finite_number(critical_effect?.damageMax)
-  const critical_value =
-    critical_min != null && critical_max != null
+  // A state effect's `value` is its registry REFERENCE, never a magnitude. Critical rows repeat that reference,
+  // so a generic `crit 788` suffix leaks the raw id beside the resolved state name.
+  const critical_value = ['APPLY_STATE', 'REMOVE_STATE'].includes(fx.kind)
+    ? null
+    : critical_min != null && critical_max != null
       ? seed_effect_value(t, critical_effect)
       : fx.crit_base != null
         ? String(fx.crit_base)
@@ -226,12 +232,19 @@ const sentence_parts = (t, key, params = {}) => ({
  * @param {(key: string, params?: object) => string} t
  * @param {{ kind: string, base?: number, damageMin?: number, damageMax?: number, crit_base?: number,
  *   crit_effect?: { damageMin?: number, damageMax?: number }, element?: string, turns?: number, chance?: number,
- *   stat?: number, area_shape?: string, area_size?: number }} fx
+ *   stat?: number, area_shape?: string, area_size?: number, state?: object }} fx
+ * @param {{ locale?: string, resolve_state_name?: (reference: unknown) => string | null }} options
  * @returns {EffectLineView}
  */
-export const seed_effect_parts = (t, fx) => ({ ...core_parts(t, fx), meta: meta_of(t, fx) })
+export const seed_effect_parts = (t, fx, { locale = 'en', resolve_state_name } = {}) => {
+  const reference = fx?.state_id ?? fx?.value ?? fx?.base
+  const localized_state = localize_spell_state(fx?.state, locale)
+  const resolved_name = typeof resolve_state_name === 'function' ? resolve_state_name(reference) : null
+  const state = resolved_name ? { ...localized_state, name: resolved_name } : localized_state
+  return { ...core_parts(t, fx, state), meta: meta_of(t, fx), felt: state?.felt || null }
+}
 
-const core_parts = (t, fx) => {
+const core_parts = (t, fx, state) => {
   switch (fx.kind) {
     case 'DAMAGE':
       return damage_parts(t, fx, 'spells.fx_damage')
@@ -335,7 +348,9 @@ const core_parts = (t, fx) => {
     case 'INVISIBILITY':
       return sentence_parts(t, 'spells.fx_invisibility')
     case 'APPLY_STATE':
-      return sentence_parts(t, 'spells.fx_apply_state')
+      return state?.name
+        ? sentence_parts(t, 'spells.fx_apply_state', { state: state.name })
+        : sentence_parts(t, 'spells.state_unavailable')
     case 'DISPEL':
       return sentence_parts(t, 'spells.fx_dispel')
     case 'REVEAL':
@@ -352,9 +367,11 @@ const core_parts = (t, fx) => {
 /**
  * The flat-string form — DERIVED from the parts (one grammar). The in-fight dungeon readout + the coverage
  * tests consume this; the grimoire/encyclopedia render the structured parts via <EffectLine>.
- * @param {(key: string, params?: object) => string} t @param {object} fx @returns {string}
+ * @param {(key: string, params?: object) => string} t @param {object} fx
+ * @param {{ locale?: string, resolve_state_name?: (reference: unknown) => string | null }} options
+ * @returns {string}
  */
-export const seed_effect_line = (t, fx) => {
-  const p = seed_effect_parts(t, fx)
+export const seed_effect_line = (t, fx, options) => {
+  const p = seed_effect_parts(t, fx, options)
   return `${p.pre}${p.value ?? ''}${p.post}${p.meta ? ` · ${p.meta}` : ''}`
 }

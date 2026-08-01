@@ -16,9 +16,12 @@
 // localized row grammar. Remaining duration is appended from `remaining_turns` for every live status, whatever
 // its kind — an active projection row must always say how long it remains.
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import './effect-badges.css'
+import { spell_state_name_resolver } from '../../data/spell-text.js'
+import { use_spell_corpus } from '../../data/use_spell_corpus.js'
 import { EffectLine } from './EffectLine.jsx'
 import { project_spell_effect } from './fight-spells.js'
 import { seed_effect_line, seed_effect_parts } from './seed-effect-line.js'
@@ -31,7 +34,7 @@ import { seed_effect_line, seed_effect_parts } from './seed-effect-line.js'
  * @param {{ id?: string | number, kind: number, remaining_turns: number, element?: number, value?: number,
  *   stat?: number, chance?: number, source?: number }} raw
  */
-export const effect_badge_view = (t, raw) => {
+export const effect_badge_view = (t, raw, { locale = 'en', resolve_state_name } = {}) => {
   const turns = Math.max(0, Number(raw.remaining_turns) || 0)
   const resolved_value = raw.value == null ? null : Number(raw.value)
   const fx = project_spell_effect({
@@ -40,12 +43,12 @@ export const effect_badge_view = (t, raw) => {
     ...(Number.isFinite(resolved_value) ? { damageMin: resolved_value, damageMax: resolved_value } : {}),
   })
   const duration = t('spells.fx_turns', { count: turns })
-  const base_view = seed_effect_parts(t, fx)
+  const base_view = seed_effect_parts(t, fx, { locale, resolve_state_name })
   const view = { ...base_view, meta: [base_view.meta, duration].filter(Boolean).join(' · ') }
   return {
     id: raw.id ?? `${raw.kind}-${raw.source ?? 0}`,
     turns,
-    label: `${seed_effect_line(t, fx)} · ${duration}`,
+    label: `${seed_effect_line(t, fx, { locale, resolve_state_name })} · ${duration}`,
     view,
   }
 }
@@ -56,10 +59,10 @@ export const effect_badge_view = (t, raw) => {
  * @param {{ effects?: Array<{ id?: string | number, kind: number, remaining_turns: number }>,
  *   t: (key:string, params?:object) => string }} props
  */
-export function ActiveEffectRows({ effects, t }) {
+export function ActiveEffectRows({ effects, t, locale = 'en', resolve_state_name }) {
   const rows = (effects ?? [])
     .filter((row) => (Number(row?.remaining_turns) || 0) > 0)
-    .map((row) => effect_badge_view(t, row))
+    .map((row) => effect_badge_view(t, row, { locale, resolve_state_name }))
   if (rows.length === 0) return null
 
   return (
@@ -73,6 +76,9 @@ export function ActiveEffectRows({ effects, t }) {
 
 /** Turn-card adapter: hook at the component edge, pure shared rows beneath it. */
 export function EffectBadges({ effects }) {
-  const { t } = useTranslation()
-  return <ActiveEffectRows effects={effects} t={t} />
+  const { t, i18n } = useTranslation()
+  const corpus = use_spell_corpus()
+  const locale = i18n.resolvedLanguage || i18n.language || 'en'
+  const resolve_state_name = useMemo(() => spell_state_name_resolver(corpus, locale), [corpus, locale])
+  return <ActiveEffectRows effects={effects} t={t} locale={locale} resolve_state_name={resolve_state_name} />
 }

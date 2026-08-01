@@ -135,7 +135,7 @@ function EmptySocket({ keyCap }) {
 }
 
 export function DeckCluster() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const mobile = use_mobile_input_mode()
   const fight = use_fight_view() // synchronous core view (S2 mirror kill) — AP/hand/armed never lag a dispatch
   const hand = fight?.hand ?? []
@@ -315,6 +315,7 @@ export function DeckCluster() {
                       name={card.name}
                       spell={spell}
                       seat={me}
+                      locale={i18n.resolvedLanguage || i18n.language}
                       cd_left={gate.on_cd ? gate.cd_left : 0}
                     />
                   ) : null

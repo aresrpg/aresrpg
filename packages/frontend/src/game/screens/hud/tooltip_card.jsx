@@ -26,6 +26,8 @@ export function TooltipCard({
   effects,
   status_effects,
   t,
+  locale = 'en',
+  resolve_state_name,
 }) {
   const o = outcome ?? EMPTY_OUTCOME
   const dmg = o.delta < 0 ? -o.delta : 0 // life reduction magnitude (red "−N")
@@ -54,13 +56,18 @@ export function TooltipCard({
       {/* ACTIVE EFFECTS — fighter.effects comes only from engine_view's presented fighter projection. The board
           hover and turn card share this exact localized row renderer; the armed-spell preview below remains a
           separate "what would happen" projection. */}
-      <ActiveEffectRows effects={status_effects} t={t} />
+      <ActiveEffectRows
+        effects={status_effects}
+        t={t}
+        locale={locale}
+        resolve_state_name={resolve_state_name}
+      />
       {has_preview && (
         <div className="ent-tt__preview">
           {o.kills && <div className="ent-tt__kill">{t('fight.predicted_kill')}</div>}
           {fx_lines.map((fx, i) => (
             <div key={i} className="ent-tt__fx">
-              {seed_effect_line(t, fx)}
+              {seed_effect_line(t, fx, { locale, resolve_state_name })}
             </div>
           ))}
           {push && (

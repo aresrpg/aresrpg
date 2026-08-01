@@ -31,6 +31,7 @@ import { spell_points_for_level } from '@aresrpg/sdk/progression'
 import { use_game_state } from '../../store.js'
 import { get_class } from '../../data/classes.js'
 import { use_spell_corpus } from '../../data/use_spell_corpus.js'
+import { resolve_spell_description } from '../../data/spell-text.js'
 import { upgrade_spell } from '../../../world-shell/spell_actions.js'
 import { mark_ui_updated } from '../../../world-shell/tx.js'
 import { use_toast } from '../../../toast'
@@ -50,7 +51,7 @@ import './spellbook.css'
 
 /** @param {{ on_open?: (panel: string) => void }} props */
 export function Spellbook({ on_open, embedded = false }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const characters = use_game_state((s) => s.sui.characters)
   const selected_character_id = use_game_state((s) => s.selected_character_id)
   const spell_corpus = use_spell_corpus()
@@ -204,6 +205,7 @@ export function Spellbook({ on_open, embedded = false }) {
             points={book.points}
             character_id={character.id}
             ready={!!chain_alloc && !chain_alloc.degraded}
+            locale={i18n.resolvedLanguage || i18n.language}
             on_upgraded={on_upgraded}
           />
         ) : (
@@ -222,10 +224,10 @@ export function Spellbook({ on_open, embedded = false }) {
  * → EFFECTS (punchy token-coloured one-liners) → the UPGRADE button (current → current+1, gated by
  * upgrade_state, independent of the browsed level). Keyed on spell id so `sel` resets to the current level.
  */
-function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_upgraded }) {
+function SpellDetailPanel({ t, row, char_level, points, character_id, ready, locale, on_upgraded }) {
   const cur = row.current_level
   const name = chain_copy(t, row.name_key, '', row.name)
-  const description = chain_copy(t, row.name_key, '_desc') // null (renders nothing) until a locale ships one
+  const description = resolve_spell_description(row, locale)
   const [sel, set_sel] = useState(Math.max(1, cur)) // the BROWSED level (defaults to the real current level)
   const [upgrading, set_upgrading] = useState(false) // in-flight guard (one tx per spell at a time)
   // Follow the REAL current level when it changes under the panel (the async allocation landing, a proven
@@ -355,12 +357,10 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
       </div>
 
       {/* DESCRIPTION (first) */}
-      {description && (
-        <div className="sb__desc">
-          <span className="sb__desc-lab">{t('spells.description')}</span>
-          {description}
-        </div>
-      )}
+      <div className="sb__desc">
+        <span className="sb__desc-lab">{t('spells.description')}</span>
+        {description}
+      </div>
 
       {/* EFFECTS — compact LINES (no cards, just lines): stat icon / element dot leading,
           grey text, only the VALUE coloured (+1 AP grammar), duration/crit/zone as a dim meta suffix.
@@ -370,7 +370,7 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
           <span className="sb__desc-lab">{t('spells.effects')}</span>
           <div className="sb__fx-list">
             {effects.map((fx, i) => (
-              <EffectLine key={i} view={seed_effect_parts(t, fx)} />
+              <EffectLine key={i} view={seed_effect_parts(t, fx, { locale })} />
             ))}
           </div>
         </div>
