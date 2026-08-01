@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
-COPY sponsor.mjs sponsor_state.mjs courier.mjs zklogin_auth.mjs server.mjs report.js ./
+COPY sponsor.mjs sponsor_state.mjs zklogin_auth.mjs server.mjs report.js ./
 COPY release.json /packages/sdk/src/deployment/release.json
 
 # Non-root — the oven/bun image ships a 'bun' user at uid 1000 (matches the chart securityContext runAsUser: 1000).
@@ -21,5 +21,5 @@ USER bun
 EXPOSE 9528
 ENV SPONSOR_PORT=9528
 
-# Shared sponsor + stateless courier router on SPONSOR_PORT.
+# Sponsor router on SPONSOR_PORT.
 CMD ["bun", "server.mjs"]

@@ -160,8 +160,8 @@ export function sponsor_error_response(error) {
 }
 
 // ── BOOT REFUSAL: a dev bypass may never share a process with the gas-station credentials ──────────────
-// api/server.mjs runs the sponsor and the courier in ONE process, and every `*_DEV_BYPASS_*` switch disarms an
-// identity check on the container that also holds the station bearer. Off localnet the two must never coexist:
+// Every `*_DEV_BYPASS_*` switch disarms an identity check on the container that also holds the station
+// bearer. Off localnet a bypass and the station credentials must never coexist:
 // the process refuses to boot instead of serving money with an auth rail switched off. Localnet is exempt by
 // construction — a throwaway chain and a throwaway pool (test/gold/compose.gold.yml drives exactly that).
 const DEV_BYPASS_KEY_RE = /_DEV_BYPASS_/

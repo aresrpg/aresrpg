@@ -37,7 +37,7 @@ describe('credentials without a bypass — the ordinary production boot', () => 
 })
 
 describe('the refusal fires on ANY bypass switch, by shape, not by an enumerated list', () => {
-  test('the sponsor and the courier switches both arm it (one process, one blast radius)', () => {
+  test('every dev-bypass switch arms it (one process, one blast radius)', () => {
     expect(refuses({ ...credentialed, SPONSOR_DEV_BYPASS_ZKLOGIN: '1' })).toBe(true)
     expect(refuses({ ...credentialed, COURIER_DEV_BYPASS_ZKLOGIN: '1' })).toBe(true)
   })

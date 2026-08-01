@@ -35,10 +35,6 @@
       "types": "./types/signer.d.ts",
       "import": "./src/signer.js"
     },
-    "./courier": {
-      "types": "./types/courier.d.ts",
-      "import": "./src/courier.js"
-    },
     "./chunk": {
       "types": "./types/chunk.d.ts",
       "import": "./src/chunk.js"

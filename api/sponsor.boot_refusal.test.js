@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // BOOT REFUSAL (#796) — a development bypass switch may not share a process with the gas-station credentials.
-// api/server.mjs runs the sponsor and the courier in ONE process; each `*_DEV_BYPASS_*` switch disarms an
+// api/server.mjs runs the sponsor's routes in ONE process; each `*_DEV_BYPASS_*` switch disarms an
 // identity check on the container that also holds the station bearer, and nothing asserted them unset. The
 // process now refuses to boot instead of serving money with an auth rail switched off.
 //
@@ -19,7 +19,7 @@ process.env.GAS_STATION_AUTH = 'test-bearer' // the credential that spends real 
 process.env.SPONSOR_DEV_BYPASS_ZKLOGIN = '1' // the switch that turns identity verification off
 
 describe('the api process refuses to boot when a dev bypass shares it with the station credentials', () => {
-  test('importing the whole server (sponsor + courier) rejects, naming the armed switch', async () => {
+  test('importing the whole server rejects, naming the armed switch', async () => {
     const error = await import('./server.mjs').then(
       () => null,
       (rejection) => rejection

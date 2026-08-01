@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// One server-side zkLogin personal-message verifier for the sponsor and its stateless courier sibling.
+// One server-side zkLogin personal-message verifier for the sponsor's routes.
 
 import { parseSerializedSignature } from '@mysten/sui/cryptography'
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
