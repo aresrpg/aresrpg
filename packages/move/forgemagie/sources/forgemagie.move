@@ -81,6 +81,7 @@ const EOrphanWrongTemplate: u64 = 113; // crush_orphan: a batch item is not of t
 const ERuneRosterFull: u64 = 114; // open/add staged crush: commitment exceeds 35, or every committed slot landed
 const EWrongRuneTemplate: u64 = 115; // add_rune_template: template is not the NEXT committed id (swap/reorder)
 const EPartialRuneRoster: u64 = 116; // close_crush: fewer templates landed than the commitment names
+const EBatchTooLarge: u64 = 117; // crush/crush_orphan: the gear batch exceeds MAX_CRUSH_BATCH
 
 /// The fixed rune-template arity of `crush` — the FROZEN catalog bound on distinct rune templates ONE crush can
 /// yield: 10 multi-tier stats × 3 tiers + 5 single-tier majors = 35 (`rune_catalog`: the 15 RUNEABLE fields;
@@ -89,6 +90,11 @@ const EPartialRuneRoster: u64 = 116; // close_crush: fewer templates landed than
 /// vit/wis + 4 resistances + primaries: >30 reachable templates). Documentation constant: the signature carries
 /// the 35 slots explicitly (`t1..t35`).
 const CRUSH_TEMPLATE_SLOTS: u64 = 35;
+
+/// Gas backstop on the caller-supplied gear batch (house idiom: `shop::MAX_BUY_QUANTITY`). Every id in the
+/// vector costs an extract + a stat roll + a burn + a coefficient decay, so an uncapped list is an unbounded
+/// loop behind a fixed-price door. Bigger batches are split across txs client-side.
+const MAX_CRUSH_BATCH: u64 = 50;
 
 // ╔════════════════ [ Shared state — the ONE CrushBoard (admin-created post-upgrade) ] ═ ]
 
@@ -372,6 +378,7 @@ fun crush_roll(
   config.assert_enabled();
   config.assert_domain(config::domain_forgemagie()); // S-46 kill-switch bit
   version.assert_enabled();
+  assert!(gear_ids.length() <= MAX_CRUSH_BATCH, EBatchTooLarge);
   {
     let chr: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
     assert!(fight::is_unmarked(chr), EDirty);
@@ -499,6 +506,7 @@ fun crush_roll_orphan(
   // ▲ ORPHAN: the batch must be non-empty — the burned template id is derived FROM item 0 (crush reads it off the
   //   passed `&ItemTemplate`, so it tolerates an empty batch; this twin cannot).
   assert!(gear_ids.length() > 0, EEmptyBatch);
+  assert!(gear_ids.length() <= MAX_CRUSH_BATCH, EBatchTooLarge);
   // ▲ ORPHAN: derive the taux key from the FIRST item's immutable stamped template ID (the burned template object
   //   is gone; the id lives on the item forever). The PHASE-2 loop asserts every item shares it.
   let tid = {

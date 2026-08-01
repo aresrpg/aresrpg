@@ -56,6 +56,15 @@ use sui::{
 const ENotRecipient: u64 = 101; // claim: the caller is not this gift's named recipient
 const ENotSender: u64 = 102; // recall: the caller is not this gift's sender
 const EEmptyGift: u64 = 103; // send: a gift must carry at least one item
+const ETooManyItems: u64 = 104; // send: the item list exceeds MAX_GIFT_ITEMS
+
+/// Gas backstop on the caller-supplied item list (house idiom: `shop::MAX_BUY_QUANTITY`). Unbounded, `send`
+/// looped a list of any length into ONE shared `Gift` — and `claim`/`recall` have to walk that SAME list back
+/// in a single tx. A gift that is cheap to CREATE but too big to claim or recall strands its items listed in
+/// the sender's kiosk forever, held by caps inside an object nobody can consume. The cap is deliberately
+/// tighter than the shop's 100: claim does strictly more per item (purchase-with-cap + a full policy resolve +
+/// a personal-kiosk lock, across two kiosks). A larger gift is split into several.
+const MAX_GIFT_ITEMS: u64 = 50;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -105,6 +114,7 @@ public fun send(
   version.assert_enabled();
   config.assert_enabled();
   assert!(!item_ids.is_empty(), EEmptyGift);
+  assert!(item_ids.length() <= MAX_GIFT_ITEMS, ETooManyItems); // claim/recall must be able to walk it back
   let gift_sender = sender(ctx);
   let owner_cap = personal_kiosk::borrow(pkcap);
 

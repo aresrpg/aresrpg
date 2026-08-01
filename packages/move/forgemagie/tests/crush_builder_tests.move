@@ -255,3 +255,39 @@ fun leftover_owed_row_aborts() {
   );
   abort
 }
+
+// ╔════════════════ [ Batch bound — the caller-supplied gear list ] ══════════ ]
+
+const EBatchTooLarge: u64 = 117;
+
+#[test, expected_failure(abort_code = EBatchTooLarge, location = forgemagie)]
+/// UNBOUNDED BATCH (audit class 4): `gear_ids` had no length cap, so one fixed-price crush door looped an
+/// arbitrarily long caller-supplied list — an extract, a stat roll, a burn and a coefficient decay EACH. 51
+/// unrolled gear items (one over the cap, and stat-less so nothing is owed and the mint walk stays clean)
+/// must be refused at the door instead of driving the loop.
+fun crush_over_the_batch_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, sword, ba, pa, ra, board_a, _board_b) = stage(&mut sc);
+
+  let mut gear = vector[];
+  let mut i = 0;
+  while (i < 51) { gear.push_back(test_world::mint_lock_gear(&mut sc, OWNER, sword)); i = i + 1; };
+
+  sc.next_tx(OWNER);
+  let mut board = ts::take_shared_by_id<CrushBoard>(&sc, board_a);
+  let mut kiosk = sc.take_shared<Kiosk>();
+  let pkcap = sc.take_from_sender<PersonalKioskCap>();
+  let gear_template = ts::take_shared_by_id<ItemTemplate>(&sc, sword);
+  let t_ba = ts::take_shared_by_id<ItemTemplate>(&sc, ba);
+  let t_pa = ts::take_shared_by_id<ItemTemplate>(&sc, pa);
+  let t_ra = ts::take_shared_by_id<ItemTemplate>(&sc, ra);
+  let xpolicy = sc.take_shared<ItemExtractPolicy>();
+  let policy = sc.take_shared<TransferPolicy<Item>>();
+  let cfg = sc.take_shared<GameConfig>();
+  let ver = sc.take_shared<Version>();
+  forgemagie::crush_for_testing(
+    &mut board, &mut kiosk, &pkcap, cid, &gear_template, gear,
+    &t_ba, &t_pa, &t_ra, &gear_template, &xpolicy, &policy, &cfg, &ver, 7, sc.ctx(),
+  ); // EBatchTooLarge
+  abort
+}

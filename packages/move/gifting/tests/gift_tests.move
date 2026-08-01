@@ -282,3 +282,26 @@ fun claim_underfunded_royalty_aborts() {
   gift::claim(g, &mut sk, &mut rk, &pkcap, &mut policy, &cfg, &ver, sc.ctx()); // ABORTS: escrow short on item 2
   abort 0
 }
+
+// ╔════════════════ [ Batch bound — the caller-supplied item list ] ══════════ ]
+
+const ETooManyItems: u64 = 104; // gift
+
+#[test, expected_failure(abort_code = ETooManyItems, location = gift)]
+/// UNBOUNDED BATCH (audit class 4): `send` looped a caller-supplied `item_ids` of ANY length into one shared
+/// `Gift`, and `claim`/`recall` have to walk that same list back in a single tx. So a list that is cheap to
+/// send but too heavy to claim or recall strands its items — listed in the sender's kiosk, held by caps inside
+/// an object nobody can consume. 51 items (one over the cap) must be refused at the door.
+fun send_over_the_item_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  let tid = boot(&mut sc);
+  let skid = make_kiosk(&mut sc, SENDER);
+  make_kiosk(&mut sc, RECIPIENT);
+
+  let mut items = vector[];
+  let mut i = 0;
+  while (i < 51) { items.push_back(mint_lock_into(&mut sc, SENDER, skid, tid)); i = i + 1; };
+
+  do_send(&mut sc, skid, items, ROYALTY_MIN * 51); // ETooManyItems
+  abort
+}
