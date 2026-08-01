@@ -10,8 +10,12 @@
 // URL and no fallback list — a dead relay must say DOWN, not degrade into a second system. The strategy is one
 // import line (`@trystero-p2p/mqtt`); swapping brokers changes nothing else in this file.
 //
-// FIGHTS NEVER RIDE THIS. Fight state, drafts, previews, placement and journals stay off the room; the fight
-// journal's chain→indexer→SSE path is its only transport.
+// FIGHT TRUTH NEVER RIDES THIS. Fight state, receipts and journals stay off the room; the fight journal's
+// chain→indexer→SSE path is its only transport. The ONE sanctioned neighbour is the PRESENTATION COURTESY
+// overlay (`courtesy_action` below, docs/REALTIME.md "the fight-turn overlay") — a between-commits preview that
+// carries no truth, gates no input, and reaches no transaction. This file's half of that fence is mechanical:
+// the courtesy action is the only action here that does NOT touch `presence_input`, and it writes no store at
+// all — it hands the raw signal to app-lifetime subscribers and nothing else.
 //
 // THE ROOM IS THE WORLD. `join_room(world_id, …)` keys the trystero room by world id, so JOINING IS THE
 // ANNOUNCEMENT and a peer in my room is — by construction, not by a carried field — in my world. That is the
@@ -65,6 +69,10 @@ let pos_action = null
 let chat_action = null
 let party_chat_action = null
 let state_action = null
+let courtesy_action = null
+/** App-lifetime consumers of the fight-turn PRESENTATION overlay. A set, not a store: the transport must not
+ *  own presentation state, and a courtesy signal with zero subscribers must cost nothing. */
+const courtesy_listeners = new Set()
 // Party chat is a distinct ACTION on the existing world-room data channel. `party_room_id` is only the local
 // routing scope; it never creates a second Trystero room (and therefore never doubles relay announcements).
 let party_room_id = null
@@ -171,6 +179,7 @@ function _build_room(world_id) {
   chat_action = room.makeAction('chat')
   party_chat_action = room.makeAction('pchat')
   state_action = room.makeAction('state')
+  courtesy_action = room.makeAction('fstream')
 
   // RECEIVE → typed inputs through the presence door. The plausibility drop and own-echo filtering live in the
   // FOLD (the core knows the session id via the `session` input); this adapter only routes and maps peer ids.
@@ -201,6 +210,17 @@ function _build_room(world_id) {
     if (!row.id) return
     if (row.id !== my_character_id()) peer_characters.set(peerId, row.id)
     presence_input({ type: 'peer_state', ...row })
+  }
+
+  // THE FIGHT-TURN PRESENTATION OVERLAY, and the only action here that folds nothing. Shape is all this seam
+  // judges: WHO may act and whether the preview is legal is the fight core's single home (`apply_peer_batch`
+  // sim-verifies the broadcaster's own seat, then pre-paints or drops+flags), so a transport-side identity or
+  // legality check here would be a second home for a rule that already has one.
+  courtesy_action.onMessage = (data) => {
+    const signal = /** @type {any} */ (data ?? {})
+    if (!signal.dungeon_id || !signal.address) return
+    if (signal.kind !== 'placement' && signal.kind !== 'batch') return
+    for (const listener of courtesy_listeners) listener(signal)
   }
 
   room.onPeerLeave = (peerId) => {
@@ -374,6 +394,7 @@ function _clear_room_actions() {
   chat_action = null
   party_chat_action = null
   state_action = null
+  courtesy_action = null
 }
 
 function _stop_watchdogs() {
@@ -444,6 +465,23 @@ export function publish_room_state(state) {
 export function set_room_local_cosmetic(partial) {
   presence_input({ type: 'my_cosmetic', partial })
   _send_state()
+}
+
+/**
+ * Broadcast one fight-turn PRESENTATION signal (a placement ghost or a drafted batch preview) to the room.
+ * LOSS-TOLERANT BY CONSTRUCTION: no room, no peers, or a rejected send are all silent no-ops, because losing a
+ * courtesy frame costs latency and never correctness — the chain journal is what actually authors the fight.
+ * @param {{ dungeon_id: string, address: string, kind: 'placement'|'batch' }} signal
+ */
+export function publish_room_courtesy(signal) {
+  if (!signal?.address) return
+  courtesy_action?.send(signal).catch(() => {})
+}
+
+/** Subscribe the fight-turn overlay to inbound courtesy signals. Returns the unsubscribe. */
+export function subscribe_room_courtesy(listener) {
+  courtesy_listeners.add(listener)
+  return () => courtesy_listeners.delete(listener)
 }
 
 /** Leave the lobby room (scene teardown) — safe to call even if never joined. The atom resets: every ephemeral

@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COURTESY CHANNEL (#334) — the transport seam for channel two (docs/FIGHT_PIPELINE.md). In a multi-peer
-// fight the ACTIVE player's client STREAMS its drafted turn (the move/cast batch, PRE-commit) through the courier;
-// RECEIVERS feed each peer batch into the ONE fight door (`apply_peer_batch`), which sim-verifies it
-// through the LOCAL sim (peer_legality) and either PRE-PAINTS it as a prediction or DROPS + FLAGS it — an illegal
-// injected batch never reaches the eye, and raises ONE neutral toast. Legality is the CORE's single home now (the
-// old dungeon_turn AP/MP/range gates moved into peer_legality); this module is pure transport glue.
+// fight the ACTIVE player's client STREAMS its drafted turn (the move/cast batch, PRE-commit) over the lobby
+// room's courtesy action; RECEIVERS feed each peer batch into the ONE fight door (`apply_peer_batch`), which
+// sim-verifies it through the LOCAL sim (peer_legality) and either PRE-PAINTS it as a prediction or DROPS +
+// FLAGS it — an illegal injected batch never reaches the eye, and raises ONE neutral toast. Legality is the
+// CORE's single home now (the old dungeon_turn AP/MP/range gates moved into peer_legality); this module is
+// pure transport glue.
 //
-// CHAIN-AUTHORSHIP LAW (untouched): the stream is PREVIEW, NEVER authorship — courier paints, the chain authors. A
-// courtesy batch enters the prediction overlay (source 'intent'), never committed truth; the canonical receipt/
-// journal retires it by claim. Loss of the courtesy channel costs LATENCY, never correctness.
+// CHAIN-AUTHORSHIP LAW (untouched): the stream is PREVIEW, NEVER authorship — the room paints, the chain authors.
+// A courtesy batch enters the prediction overlay (source 'intent'), never committed truth; the canonical receipt/
+// journal retires it by claim. Loss of the courtesy channel costs LATENCY, never correctness — which is why it
+// belongs on the ephemeral lane (docs/REALTIME.md, "the fight-turn overlay") and not on any durable transport.
 //
 // PLACEMENT GHOSTS — a THIRD stream kind (`'placement'`): pre-start picks aren't committed, so teammates SEE where
 // others intend to stand. COSMETIC ONLY, no sim-verify (a lying ghost can't do anything) — folded straight into
@@ -23,7 +25,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { STATUS_PLACEMENT } from '@aresrpg/fight/board_state'
 import { apply_peer_batch, drafted_batches, subscribe_flagged } from '@aresrpg/fight/txs'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { broadcast_fight_stream, subscribe_fight_stream } from '../../courier/world.js'
+import { publish_room_courtesy, subscribe_room_courtesy } from '../../p2p/lobby-room.js'
 import { push_event_toast } from '../core/toast.js'
 import i18n from '../../i18n'
 import { use_dungeon_turn } from './dungeon-turn.js'
@@ -39,7 +41,7 @@ let installed = false
 export function init_fight_stream() {
   if (installed) return
   installed = true
-  subscribe_fight_stream(on_peer_stream)
+  subscribe_room_courtesy(on_peer_stream)
   // SENDER — placement ghosts: every seat streams its own pre-start pick (cosmetic; the core owns the GC).
   use_dungeon_turn.subscribe((s, prev) => {
     if (s.placement_pick !== prev.placement_pick) stream_placement(s.placement_pick)
@@ -61,7 +63,7 @@ function stream_placement(target) {
   const me = fight.my_entity_id
   if (!me || !dungeon.escrow.some(p => (p.character ?? p.character_id) === me)) return
   if (dungeon.status !== STATUS_PLACEMENT) return
-  broadcast_fight_stream({ dungeon_id: dungeon.id, address: me, kind: 'placement', target })
+  publish_room_courtesy({ dungeon_id: dungeon.id, address: me, kind: 'placement', target })
 }
 
 // The courtesy batches already streamed this fight (dedupe by intent_id) — reset per fight/session so the id-set
@@ -85,7 +87,7 @@ function stream_my_drafts() {
   for (const batch of drafted_batches(fight_store)) {
     if (sent_batches.has(batch.intent_id)) continue
     sent_batches.add(batch.intent_id)
-    broadcast_fight_stream({ dungeon_id, address: me, kind: 'batch', intent_id: batch.intent_id, actions: batch.actions })
+    publish_room_courtesy({ dungeon_id, address: me, kind: 'batch', intent_id: batch.intent_id, actions: batch.actions })
   }
 }
 

@@ -7,12 +7,15 @@
 // placement_ghost input), same-event dedupe, multi-peer fan-out, and the error path a throwing local-state read
 // takes (a FINDING, pinned not fixed — see the last describe block's header).
 //
-// REAL PATH: the real courier delivery subscription, the real use_dungeon_turn store (zustand — picks are
+// REAL PATH: the real room courtesy subscription, the real use_dungeon_turn store (zustand — picks are
 // drafted through it exactly as DungeonBoard/voxel_fight_adapter do), the real fight_store singleton (seeded
 // through the house test door, test_helpers/fight_core_harness.js) and the real board_view projection mirrored
 // into use_dungeon.dungeon by hand (production wiring a poll loop performs; nothing polls in a unit test). The
-// ONLY fake is the courier transport edge — broadcast_fight_stream is spied as a named export that restores,
-// never a mock.module (a process-global registry entry that would outlive this file — the #123 pollution class).
+// ONLY fake is the room transport edge — publish/subscribe_room_courtesy are spied as named exports that
+// restore, never a mock.module (a process-global registry entry that would outlive this file — the #123
+// pollution class). Spying `subscribe_room_courtesy` BEFORE the install is also how this file gets its hand on
+// the real `on_peer_stream`: the module has no receive-side export, and capturing the listener the production
+// code actually registers keeps the received path real instead of re-implementing it here.
 
 import { afterAll, afterEach, describe, expect, spyOn, test } from 'bun:test'
 
@@ -26,8 +29,8 @@ import { use_dungeon_turn } from './dungeon-turn.js'
 // browser globals before dynamically importing that chain.
 const restore_browser_globals = install_browser_globals({ with_document: true })
 
-const [courier, { use_dungeon }, { init_fight_stream }] = await Promise.all([
-  import('../../courier/world.js'),
+const [lobby_room, { use_dungeon }, { init_fight_stream }] = await Promise.all([
+  import('../../p2p/lobby-room.js'),
   import('../../world-shell/dungeon_store.js'),
   import('./fight-stream.js'),
 ])
@@ -40,12 +43,21 @@ const CELL_A = 40
 const CELL_B = 41
 const CELL_C = 42
 
+// The transport edge, faked before the install so the capture below sees the real registration.
+const broadcast_spy = spyOn(lobby_room, 'publish_room_courtesy').mockImplementation(() => {})
+/** @type {(signal: any) => void} */
+let on_peer_stream = () => {}
+const subscribe_spy = spyOn(lobby_room, 'subscribe_room_courtesy').mockImplementation((listener) => {
+  on_peer_stream = listener
+  return () => {}
+})
+
 // Idempotent per app-lifetime install (fight-stream.js:70-84) — safe to call once here at module load, exactly
 // as the dungeon bridge does on the app's first sync.
 init_fight_stream()
+expect(subscribe_spy).toHaveBeenCalledTimes(1)
 
-const broadcast_spy = spyOn(courier, 'broadcast_fight_stream').mockImplementation(() => {})
-const fire = (payload) => courier.deliver_fight_stream(payload)
+const fire = (payload) => on_peer_stream(payload)
 const sent_to = (kind) => broadcast_spy.mock.calls.map(([p]) => p).filter(p => p.kind === kind)
 
 /** Seed BOTH halves fight-stream.js reads: the fight core (the house test door) + its board_view mirror into
@@ -66,6 +78,7 @@ afterEach(() => {
 
 afterAll(() => {
   broadcast_spy.mockRestore()
+  subscribe_spy.mockRestore()
   restore_browser_globals()
 })
 
@@ -213,7 +226,7 @@ describe('#37 fan-out — multiple distinct peers project independently, in stab
 // FINDING (partially resolved by #334): on_peer_stream still has NO try/catch, and the PLACEMENT branch calls
 // dungeon.escrow.some(...) with no presence guard — a torn/mid-transition local record (missing escrow — a class
 // board_state.js's own fight_geometry_complete / HOLD-NOT-DEGRADE handling treats as real) makes an arriving
-// placement signal throw synchronously out of the courier subscriber callback. The listener registration
+// placement signal throw synchronously out of the room courtesy subscriber callback. The listener registration
 // survives, so the next valid signal still folds. #334 removed
 // the old turn_queue read (active_character_id): the COURTESY batch path reads only dungeon.id/status, so that
 // torn-record class no longer throws — proven below.
