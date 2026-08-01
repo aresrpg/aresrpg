@@ -1,1 +1,2 @@
-29f0ae917f5d2eb196fc39446464a46eeb08849f lane/jobs-recipes-stack feat(jobs): recipes stack below resource tiers — sub-tabs removed
+28abaadd755093cb6010b20832b47a80e5a0dd9c lane/merge-stacks-kiosk fix(inventory): sign stack merges against chain custody, not the mirror
+2d4dc7f85fe3973534eda2c65670ebdc3f136b29 lane/merge-stacks-kiosk fix(inventory): stop the boot sweep re-signing a refused merge plan
