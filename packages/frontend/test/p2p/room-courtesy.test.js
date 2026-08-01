@@ -20,9 +20,15 @@ import { deliver, reset_trystero_mock, trystero_actions, trystero_sent } from '.
 
 // Mocks register before the transport binds `@trystero-p2p/*` — the dynamic import is what orders that.
 const { presence_store } = await import('../../src/world-shell/presence_adapter.js')
-const { join_room, leave_room, publish_room_courtesy, subscribe_room_courtesy } = await import(
-  '../../src/p2p/lobby-room.js'
-)
+// HELD AS A NAMESPACE, never destructured. `bun test src ./test` is ONE process, and the fight-stream suite
+// spies these very exports; a destructured binding would capture whatever stub was installed at THIS file's
+// evaluation and keep calling it forever. Reading through the namespace resolves live, so this suite tests the
+// transport rather than whichever suite ran before it (the #123 shared-registry class).
+const room = await import('../../src/p2p/lobby-room.js')
+const join_room = (...args) => room.join_room(...args)
+const leave_room = () => room.leave_room()
+const publish_room_courtesy = (signal) => room.publish_room_courtesy(signal)
+const subscribe_room_courtesy = (listener) => room.subscribe_room_courtesy(listener)
 
 const WORLD = `0x${'a'.repeat(64)}`
 const ME = `0x${'1'.repeat(64)}`
@@ -31,11 +37,36 @@ const DUNGEON = `0x${'d'.repeat(64)}`
 const batch = { dungeon_id: DUNGEON, address: `0x${'2'.repeat(64)}`, kind: 'batch', intent_id: 'i1', actions: [{}] }
 const placement = { dungeon_id: DUNGEON, address: `0x${'2'.repeat(64)}`, kind: 'placement', target: 24 }
 
+// THE SHARED-PROCESS HARNESS (the same one test/p2p/lobby-room.test.js runs on, and for the same reason): the
+// transport arms real interval watchdogs at join, and in a whole-suite run those keep firing between this
+// file's tests — a health poll that retires a room clears the very actions being asserted on. Capturing the
+// timer globals hands this suite the transport exactly as written, with nothing firing behind its back.
+const timers = { intervals: [], timeouts: [] }
+const real = { setInterval: globalThis.setInterval, setTimeout: globalThis.setTimeout }
+const fake_handle = () => ({ unref: () => {} })
+function capture_timers() {
+  timers.intervals = []
+  timers.timeouts = []
+  globalThis.setInterval = (fn, ms) => {
+    timers.intervals.push({ fn, ms })
+    return fake_handle()
+  }
+  globalThis.setTimeout = (fn, ms) => {
+    timers.timeouts.push({ fn, ms })
+    return fake_handle()
+  }
+}
+const restore_timers = () => Object.assign(globalThis, real)
+
 beforeEach(() => {
   leave_room()
   reset_trystero_mock()
+  capture_timers()
 })
-afterEach(() => leave_room())
+afterEach(() => {
+  leave_room()
+  restore_timers()
+})
 
 describe('the fight-turn courtesy overlay on the room', () => {
   it('delivers a received signal verbatim to every subscriber', () => {
