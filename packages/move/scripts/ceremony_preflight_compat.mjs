@@ -88,7 +88,14 @@ const MAX_OBJECT_SIZE = 102_400
 //
 // Budgets only SHRINK (FROZEN.md: baselines only shrink, severities only ratchet up). A package
 // with no row here is held to the chain ceiling alone.
-const SIZE_BUDGETS = { aresrpg: 101_818 }
+// 2026-08-01 (#1794): 101_818 → 99_239. 51 `public fun` whose only callers were Move tests became
+// `#[test_only]` (Variant B), taking 1 private helper and 4 constants they orphaned with them —
+// measured −2579 bytes, margin 582 → 3161. 19 AdminCap-gated operator levers that also had no
+// non-test caller were deliberately KEPT public (emergency domain freeze, world teardown, config
+// dials): incident response must not require a republish. Measured cost of that ruling: 2206 bytes.
+// This is a REPUBLISH-only shrink: dropping public functions is an INCOMPATIBLE upgrade, so it
+// lands with a fresh lineage, never over the live one.
+const SIZE_BUDGETS = { aresrpg: 99_239 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's
