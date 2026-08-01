@@ -229,6 +229,13 @@ jobs:
           bash .github/scripts/test/promote-green-eval-check.sh
           bash .github/scripts/test/promote-land-dispatch-check.sh
           bash .github/scripts/test/promote-split-check.sh
+      - name: the smoke suites' own decision gates
+        # Same disease as the step above, one layer out: `bun ares test unit` carries these rows but no
+        # workflow invokes that slice, so a gate could land and never run. Both are pure — the prod-smoke
+        # signing guard/verdict/ledger decisions (#1723) and the workflow-registry reconciliation over
+        # captured bytes (#835) — no network, no browser, milliseconds. The live half of each stays where
+        # it belongs: edge-smoke.yml signs on testnet, board-hygiene.yml reads the real registry.
+        run: bun test test/gold/specs_prod_smoke/signing_ledger_test.ts scripts/check-workflow-registry.test.mjs
       - name: enforcement ladder — bun run lint
         run: bun run lint
 
