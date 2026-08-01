@@ -475,10 +475,10 @@ const make_input =
         // optimistic version survives its own tx failing (the sticky predicted HP/cell/AP class). Targeted by
         // `intent_id` (a composite cast batch) or `predicts` {version, event_idx}; default = the whole optimistic
         // turn. ONLY intent rows are ever removed; an authoritative receipt/snapshot fact is never rolled back.
+        // A rollback belongs to the optimistic generation it was born under — once a receipt has folded and
+        // moved the turn on, those predictions are already gone and the entries here are the LIVE turn's.
+        if (dead_generation(msg.born_epoch, turn_submit_epoch(state))) return
         set((s) => {
-          // A rollback belongs to the optimistic generation it was born under — once a receipt has folded and
-          // moved the turn on, those predictions are already gone and the entries here are the LIVE turn's.
-          if (dead_generation(msg.born_epoch, turn_submit_epoch(s))) return s
           const drop = (e) => {
             if (e.source !== 'intent') return false
             if (msg.intent_id != null) return e.intent_id === msg.intent_id
@@ -530,18 +530,14 @@ const make_input =
         return
       case 'busy':
         // The latch is a handshake: only the attempt still HOLDING the claim may release it.
-        set((s) =>
-          dead_generation(msg.born_epoch, s.commit_attempt_epoch)
-            ? s
-            : {
-                ...s,
-                busy: !!msg.value,
-                commit_latch: msg.latch === undefined ? s.commit_latch : msg.latch,
-                commit_attempt_epoch:
-                  msg.attempt_epoch === undefined ? s.commit_attempt_epoch : (msg.attempt_epoch ?? null),
-                ...(msg.value ? { error: null, commit_due: false } : {}),
-              }
-        )
+        if (dead_generation(msg.born_epoch, state.commit_attempt_epoch)) return
+        set((s) => ({
+          ...s,
+          busy: !!msg.value,
+          commit_latch: msg.latch === undefined ? s.commit_latch : msg.latch,
+          commit_attempt_epoch: msg.attempt_epoch === undefined ? s.commit_attempt_epoch : (msg.attempt_epoch ?? null),
+          ...(msg.value ? { error: null, commit_due: false } : {}),
+        }))
         return
       case 'error':
         set((s) => ({ ...s, error: msg.message ?? null }))

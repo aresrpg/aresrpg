@@ -116,14 +116,15 @@ export async function reconcile_equip_state(
     map_character ??= rpc_to_card
   }
 
-  const current_characters = get_state()?.sui?.characters ?? []
+  const { sui = {} } = get_state() ?? {}
+  const current_characters = sui.characters ?? []
   const mapped_character = map_character(confirmed_character)
   const characters = current_characters.some((row) => row.id === character_id)
     ? current_characters.map((row) => (row.id === character_id ? { ...row, ...mapped_character } : row))
     : [...current_characters, mapped_character]
   // The receipt-proven floor is the reducer's (merge_default re-applies it on this very write); only the
   // in-flight consume mask has to ride along, and it reads the SAME reducer-owned ledger the bag renders.
-  const items = mask_items(normalize_equip_items(confirmed_items), get_state()?.sui?.pending_uses)
+  const items = mask_items(normalize_equip_items(confirmed_items), sui.pending_uses)
   if (!is_current()) throw new Error('Equipment state refresh owner changed before store write')
   write({ characters, items })
   return true

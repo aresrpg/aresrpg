@@ -81,17 +81,15 @@ describe('A6 — a submit result from a dead generation is refused at the reduce
     expect(turn_submit_epoch(store.getState()), 'the live generation is not the dead one').not.toBe(dead_epoch)
 
     // The player drafts and paints on the LIVE turn — state the stale flight has no claim over.
-    store
-      .getState()
-      .input(
-        {
-          type: 'intent',
-          intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 8 },
-          version: 6,
-          event_idx: 0,
-        },
-        99_200
-      )
+    store.getState().input(
+      {
+        type: 'intent',
+        intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 8 },
+        version: 6,
+        event_idx: 0,
+      },
+      99_200
+    )
     expect(predicted_entries(store), 'the live turn is painted').toHaveLength(1)
 
     // ONLY NOW does the dead flight report its failure — the loser's rollback walks the same door.
