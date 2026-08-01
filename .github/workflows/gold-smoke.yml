@@ -48,6 +48,11 @@ jobs:
     env:
       GOLD_SMOKE_PROJECT: aresrpg-gold-smoke
       GOLD_CORPUS: active
+      # SCOPE LIMIT, stated rather than implied (#1726): with the sponsor off, the sponsored-gas route is
+      # exercised by NO workflow in this repo — the one row that drives it (specs_anchor/regressions.spec.ts
+      # "POOR-WALLET SPONSOR ROUTING") lives in the local-only anchor family, and it now refuses by name
+      # rather than TypeError-ing when this rig hands it no fixture. Real players sign through Enoki zkLogin
+      # with the station carrying gas; every verdict this file produces covers keypair self-pay only.
       GOLD_SPONSOR: '0'
       SUI_ARCH: x86_64
       # compose interpolates the sponsor profile's `${SPONSOR_DEV_KEY:?…}` at PARSE time, so even a

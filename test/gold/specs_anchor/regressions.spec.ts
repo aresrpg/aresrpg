@@ -368,6 +368,16 @@ test.describe('07-15 fixed-class regressions — gold localnet', () => {
     const { makeClient } = await import('../lib_gold.mjs')
     const client = await makeClient(manifest.rpc)
     const fixture = manifest.sponsor_fixture
+    // GOLD_SPONSOR=0 boots no sponsor, so this manifest carries no fixture and every line below read
+    // `undefined.wallet` — a TypeError that looks like a product break instead of a rig that was never
+    // asked to stand the sponsored route up. This is the ONE row in the tree that drives station gas, and
+    // #1726's scope limit is exactly that the sponsored path real players use goes unexercised: it must
+    // refuse by name and never skip to green.
+    if (!fixture?.wallet?.address)
+      throw new Error(
+        'sponsor fixture absent — this rig booted with GOLD_SPONSOR=0, so the sponsored gas route was never ' +
+          'stood up. Boot with the sponsor (the local default) or this row proves nothing (#1726).'
+      )
     const before = BigInt((await client.getBalance({ owner: fixture.wallet.address })).totalBalance)
     expect(before).toBeLessThanOrEqual(200_000_000n)
     const result = await sponsored_join_world(manifest)

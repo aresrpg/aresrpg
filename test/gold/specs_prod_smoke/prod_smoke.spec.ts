@@ -303,4 +303,12 @@ test('PROD-SMOKE g · the wallet shim really signs and executes on testnet (#172
     digest,
   ])
   console.log(`PROD-SMOKE g · REAL signed transaction executed on testnet · digest=${digest}`)
+  // The scope limit #1726 requires every drive verdict to carry, printed by the instrument itself rather
+  // than left to whoever writes the report: this suite signs with a dev keypair that self-pays gas, which
+  // is a route only QA uses. Auth and money live on the Enoki zkLogin + sponsored-station path, and the
+  // smoke does not touch it. Delete this line the day an Enoki test identity drives a sponsored row here.
+  console.log(
+    'PROD-SMOKE scope limit (#1726) · verified via dev-wallet keypair signing; the Enoki/sponsored path ' +
+      'real players use is NOT exercised'
+  )
 })
