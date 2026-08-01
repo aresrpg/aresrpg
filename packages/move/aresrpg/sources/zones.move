@@ -719,16 +719,20 @@ public fun drain_zones(cap: &AdminCap, world: &mut World, zxs: vector<u32>, zys:
 // seed+bitmaps, which IS the cost invariant. Derivations that never read a group SIZE pass team_bound = 1: the
 // size clamp draws nothing, so ids/positions/templates are identical for ANY bound (kernel stream law).
 
+#[test_only]
 public fun zone_exists(world: &World, zx: u32, zy: u32): bool {
   df::exists(world::uid(world), ZoneKey { zx, zy })
 }
 
+#[test_only]
 public fun zone_discovered_at(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).discovered_at_ms }
 public fun zone_seed(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).seed }
 
 /// The COST-SHAPE probes: stored bitmap byte lengths (0 right after a search — bits grow lazily on consume).
 /// Together with the `Zone` struct shape these PROVE a search stores nothing per-mob/per-cell.
+#[test_only]
 public fun mob_bitmap_bytes(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).mob_bitmap.length() }
+#[test_only]
 public fun res_bitmap_bytes(world: &World, zx: u32, zy: u32): u64 { y163(world, zx, zy).res_bitmap.length() }
 
 /// Is derived mob group `i` still LIVE (its consumed bit clear)? The bit-side probe `zones_view` filters with.

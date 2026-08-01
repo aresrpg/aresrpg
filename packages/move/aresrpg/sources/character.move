@@ -304,9 +304,13 @@ public fun color_1(c: &Customization): u32 { c.color_1 }
 public fun color_2(c: &Customization): u32 { c.color_2 }
 public fun color_3(c: &Customization): u32 { c.color_3 }
 
+#[test_only]
 public fun anchor_pos_x(a: &PositionAnchor): u32 { a.pos_x }
+#[test_only]
 public fun anchor_pos_z(a: &PositionAnchor): u32 { a.pos_z }
+#[test_only]
 public fun anchor_zone(a: &PositionAnchor): String { a.zone }
+#[test_only]
 public fun anchor_at_ms(a: &PositionAnchor): u64 { a.anchored_at_ms }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]

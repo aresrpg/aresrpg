@@ -66,8 +66,10 @@ public fun assert_enabled(self: &Version) {
 
 public fun current_version(self: &Version): u64 { self.current_version }
 
+#[test_only]
 public fun is_enabled(self: &Version): bool { self.enabled }
 
+#[test_only]
 public fun package_version(): u64 { PACKAGE_VERSION }
 
 // ╔════════════════ [ Package mutators (admin-gated wrappers live in `admin`) ] ═ ]

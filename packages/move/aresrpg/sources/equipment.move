@@ -318,6 +318,7 @@ fun y100(slugs: vector<vector<u8>>, category: String): bool {
 // ╔════════════════ [ Reads (FREE — on-chain state is public; the migrated shim reads + the fight seam) ] ═ ]
 
 /// Does the character have an equipment map yet? (The old shim's `equipment_attached` — gather refuses without it.)
+#[test_only]
 public fun equipment_attached(character: &Character): bool { y104(character) }
 
 /// Is a gathering tool for `job` equipped? (Weapon slot holds a tool whose job == `job`.) Migrated shim read.
@@ -373,6 +374,7 @@ fun y101(character: &Character): Stats {
 
 /// The equipped WEAPON item id (none if the weapon slot is empty or holds a tool). The fight reads the item's
 /// template damage lines to build the §17.27 attack line.
+#[test_only]
 public fun equipped_weapon(character: &Character): Option<ID> {
   if (!y104(character)) return option::none();
   let map = y105(character);
@@ -410,6 +412,7 @@ public(package) fun y23(character: &Character): vector<ItemDamages> {
 /// §17.27 weapon line (keyed off `equipped_weapon_family` by the fight). Lives HERE (not character_link — the
 /// import arrow is equipment → character_link; not fight — game owns what "geared" means). Pure read. Folded
 /// `action`/`movement` adjust the returned base AP/MP scalars, which are the fight's turn-refill budgets.
+#[test_only]
 public fun geared_combat_stats(character: &Character, config: &config::GameConfig): (String, u64, u64, u64, u64, u64, Stats) {
   let (class, level, hp, base_max_hp, base_ap, base_mp) = character_link::combat_stats(character, config);
   y102(character, config, class, level, hp, base_max_hp, base_ap, base_mp)

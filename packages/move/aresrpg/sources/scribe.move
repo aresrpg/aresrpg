@@ -59,6 +59,7 @@ public fun set_band(
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
 
+#[test_only]
 public fun has_band(config: &ScribeConfig, level: u16): bool { config.bands.contains(level) }
 
 public fun band(config: &ScribeConfig, level: u16): &ItemStatistics { config.bands.borrow(level) }

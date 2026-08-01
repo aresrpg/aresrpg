@@ -99,6 +99,7 @@ public fun item_lines(item: &Item): &vector<ItemDamages> {
 /// The line's flat combat magnitude = the range MIDPOINT `(from+to)/2` — the doctrine's per-hit AVG basis
 /// (`WEAPON_DAMAGE.md`: `avg=(from+to)/2`), and the flat-value analogue of a spell's single authored base (spells
 /// carry one flat value, not a range). Wave-2b replaces this with a seeded roll in `[from,to]` (the seed-roll item).
+#[test_only]
 public fun midpoint(self: &ItemDamages): u64 { (((self.from as u64) + (self.to as u64)) / 2) }
 
 /// The line's element as a `spell::el_*` id (the engine speaks u8 ids, the corpus authors strings). `neutral` — or

@@ -166,12 +166,15 @@ fun y130(pet: &mut Item, template: &ItemTemplate, day: u64, version: &Version): 
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
 
+#[test_only]
 public fun has_food(config: &PetFeedConfig, food_template: ID): bool { config.foods.contains(food_template) }
 
+#[test_only]
 public fun food_power(config: &PetFeedConfig, food_template: ID): u64 { *config.foods.borrow(food_template) }
 
 public fun feed_count(pet: &Item): u64 { character_link::pet_power(pet) }
 
+#[test_only]
 public fun full_feed_count(): u64 { item_stats::pet_full_feed_count() }
 
 public fun has_last_feed_day(pet: &Item): bool {
@@ -182,6 +185,7 @@ public fun last_feed_day(pet: &Item): u64 {
   *extension::y38<PetLastFeedDayKey, u64>(pet, extension::y44(), PetLastFeedDayKey {})
 }
 
+#[test_only]
 public fun next_feed_available_ms(pet: &Item): u64 {
   if (!has_last_feed_day(pet)) 0 else (last_feed_day(pet) + 1) * UTC_DAY_MS
 }

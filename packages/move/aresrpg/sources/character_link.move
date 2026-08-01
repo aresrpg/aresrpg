@@ -455,6 +455,7 @@ public fun has_progression(character: &Character): bool {
 
 /// Current HP from the live progression block. Aborts if none — guard with `has_progression` (or read via
 /// `combat_stats`, which defaults a block-less character to full HP).
+#[test_only]
 public fun progression_hp(character: &Character): u64 { y82(character).hp }
 
 /// EFFECTIVE current HP right now — the stored post-fight HP PLUS lazy natural regen accrued since the last touch

@@ -203,16 +203,24 @@ public(package) fun y69(self: &MobTemplate): MobSpec {
 }
 
 public fun template_id(self: &MobTemplate): ID { object::id(self) }
+#[test_only]
 public fun mob_loot(self: &MobTemplate): vector<MobLootEntry> { self.loot }
 /// The stored spell kit. Free read (mirrors `mob_loot`/`mob_stats`) so the `set_spells` correction is
 /// verifiable off-chain and on-chain without a spawn — the readback oracle's on-chain half.
 public fun mob_spells(self: &MobTemplate): vector<SpellLevel> { self.spells }
+#[test_only]
 public fun mob_xp_reward(self: &MobTemplate): u64 { self.xp_reward }
+#[test_only]
 public fun mob_min_level(self: &MobTemplate): u16 { self.min_level }
+#[test_only]
 public fun mob_max_level(self: &MobTemplate): u16 { self.max_level }
+#[test_only]
 public fun mob_base_hp(self: &MobTemplate): u64 { self.base_hp }
+#[test_only]
 public fun mob_ap(self: &MobTemplate): u64 { self.ap }
+#[test_only]
 public fun mob_mp(self: &MobTemplate): u64 { self.mp }
 /// The stored `Stats` block (resistances CENTERED at 32768 — the mob convention; `y69` decenters). Free
 /// read so the `set_stats` retune is verifiable off-chain and on-chain without a spawn.
+#[test_only]
 public fun mob_stats(self: &MobTemplate): Stats { self.stats }

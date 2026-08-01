@@ -307,6 +307,7 @@ fun y138(rolled: &vector<RolledLoot>): u64 {
 public fun outcome(result: &FightResult): u8 { result.outcome }
 public fun final_hp(result: &FightResult): u64 { result.final_hp }
 public fun xp_share(result: &FightResult): u64 { result.xp_share }
+#[test_only]
 public fun is_pvp(result: &FightResult): bool { result.pvp }
 public fun team(result: &FightResult): u8 { result.team }
 public fun winner_team(result: &FightResult): Option<u8> { result.winner_team }

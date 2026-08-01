@@ -54,6 +54,7 @@ const DOMAIN_FIGHT: u16 = 1; // overworld fight create/join
 const DOMAIN_DUNGEON: u16 = 2; // dungeon activate / room fights
 const DOMAIN_PVP: u16 = 4; // PvP arena lobbies (money: pledges) — enforced by the sibling arena package
 const DOMAIN_MARKET: u16 = 8; // shop sales (money)
+#[test_only]
 const DOMAIN_POOLS: u16 = 16; // stackable AMM pools (money)
 const DOMAIN_CRAFTING: u16 = 32; // craft
 const DOMAIN_GATHERING: u16 = 64; // gather
@@ -256,6 +257,7 @@ public fun domain_fight(): u16 { DOMAIN_FIGHT }
 public fun domain_dungeon(): u16 { DOMAIN_DUNGEON }
 public fun domain_pvp(): u16 { DOMAIN_PVP }
 public fun domain_market(): u16 { DOMAIN_MARKET }
+#[test_only]
 public fun domain_pools(): u16 { DOMAIN_POOLS }
 public fun domain_crafting(): u16 { DOMAIN_CRAFTING }
 public fun domain_gathering(): u16 { DOMAIN_GATHERING }
@@ -462,6 +464,7 @@ fun y88(config: &GameConfig, class_id: u64) {
 
 // ╔════════════════ [ Getters — hot paths read these off `&GameConfig` ] ═════ ]
 
+#[test_only]
 public fun is_enabled(self: &GameConfig): bool { self.enabled }
 public fun xp_multiplier(self: &GameConfig): u64 { self.xp_multiplier }
 public fun loot_multiplier(self: &GameConfig): u64 { self.loot_multiplier }
@@ -476,6 +479,7 @@ public fun reclaim_cooldown_ms(self: &GameConfig): u64 { self.reclaim_cooldown_m
 public fun pvp_level_gate(self: &GameConfig): u64 { self.pvp_level_gate }
 public fun listing_level_gate(self: &GameConfig): u64 { self.listing_level_gate }
 public fun team_size_bound(self: &GameConfig): u64 { self.team_size_bound }
+#[test_only]
 public fun class_count(): u64 { CLASS_COUNT }
 
 /// Immutable borrow of a class row by id (aborts `EBadClass` out of range). `progression::max_hp` reads it.

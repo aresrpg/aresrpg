@@ -19,6 +19,7 @@ public fun mob_group_total(world: &World, zx: u32, zy: u32): u64 {
 }
 
 /// LIVE (unconsumed) mob groups — what the map still advertises.
+#[test_only]
 public fun mob_group_count(world: &World, zx: u32, zy: u32): u64 {
   let total = mob_group_total(world, zx, zy);
   let mut live = 0;
@@ -41,6 +42,7 @@ public fun mob_group_pos(world: &World, zx: u32, zy: u32, i: u64): (u32, u32) {
 }
 
 /// Group size DOES read the live `team_size_bound` dial (§4 size cap) — the one getter needing `config`.
+#[test_only]
 public fun mob_group_size(world: &World, config: &GameConfig, zx: u32, zy: u32, i: u64): u16 {
   let (_sids, _t, _x, _z, sizes, _g) = zones::derive_mobs(world, zx, zy, zones::zone_seed(world, zx, zy), config.team_size_bound());
   sizes[i]
@@ -53,6 +55,7 @@ public fun resource_node_total(world: &World, zx: u32, zy: u32): u64 {
 }
 
 /// LIVE (unharvested) resource cells.
+#[test_only]
 public fun resource_node_count(world: &World, zx: u32, zy: u32): u64 {
   let total = resource_node_total(world, zx, zy);
   let mut live = 0;
@@ -64,21 +67,25 @@ public fun resource_node_count(world: &World, zx: u32, zy: u32): u64 {
   live
 }
 
+#[test_only]
 public fun resource_pos(world: &World, zx: u32, zy: u32, i: u64): (u32, u32) {
   let (_sids, _t, xs, zs, _j, _r) = zones::derive_res(world, zx, zy, zones::zone_seed(world, zx, zy));
   (xs[i], zs[i])
 }
 
+#[test_only]
 public fun resource_template(world: &World, zx: u32, zy: u32, i: u64): ID {
   let (_sids, tpls, _x, _z, _j, _r) = zones::derive_res(world, zx, zy, zones::zone_seed(world, zx, zy));
   tpls[i]
 }
 
+#[test_only]
 public fun resource_job(world: &World, zx: u32, zy: u32, i: u64): u8 {
   let (_sids, _t, _x, _z, jobs, _r) = zones::derive_res(world, zx, zy, zones::zone_seed(world, zx, zy));
   jobs[i]
 }
 
+#[test_only]
 public fun resource_tier(world: &World, zx: u32, zy: u32, i: u64): u8 {
   let (_sids, _t, _x, _z, _j, tiers) = zones::derive_res(world, zx, zy, zones::zone_seed(world, zx, zy));
   tiers[i]

@@ -297,6 +297,7 @@ public fun admin_bump_version(cap: &AdminCap, version: &mut Version, ctx: &TxCon
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
 
 /// `true` for the permanent super cap; `false` for an epoch-scoped temp cap.
+#[test_only]
 public fun is_super(cap: &AdminCap): bool { cap.epoch.is_none() }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]

@@ -360,8 +360,10 @@ public fun buy_many_for_testing(
 
 public fun price(self: &Sale): u64 { self.price }
 
+#[test_only]
 public fun is_paused(self: &Sale): bool { self.paused }
 
+#[test_only]
 public fun sale_template(self: &Sale): ID { self.template }
 
 public fun supply(self: &Sale): Option<u64> { self.supply }

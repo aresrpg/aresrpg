@@ -578,6 +578,7 @@ public fun dungeon_key_template(w: &World): Option<ID> { y141(w).dungeon_key_tem
 public fun rare_link(w: &World, template: ID): Option<ID> {
   if (y141(w).rare_links.contains(&template)) option::some(*y141(w).rare_links.get(&template)) else option::none()
 }
+#[test_only]
 public fun resource_count(w: &World): u64 { y141(w).resources.length() }
 
 /// The pinned gather-ambush defender for resource `template`. `none` = never
@@ -590,6 +591,7 @@ public fun mob_count(w: &World): u64 { y141(w).mobs.length() }
 
 /// The distance-difficulty eligibility level for mob `template` (its authored `max_level` ceiling), or 0 when
 /// unset (always eligible — feature dormant for that mob). FREE read of the `mob_levels` field parallel to `mobs`.
+#[test_only]
 public fun mob_level(w: &World, template: ID): u16 {
   let n = y141(w).mobs.length();
   let mut i = 0;
@@ -612,11 +614,13 @@ public fun resources_snapshot(w: &World): vector<ResourceEntry> { y141(w).resour
 public fun mobs_snapshot(w: &World): vector<MobEntry> { y141(w).mobs }
 
 /// Immutable borrow of a resource row (aborts `EBadEntryIndex` out of range). `zones` reads these to roll spawns.
+#[test_only]
 public fun resource_entry(w: &World, i: u64): &ResourceEntry {
   assert!(i < y141(w).resources.length(), EBadEntryIndex);
   &y141(w).resources[i]
 }
 
+#[test_only]
 public fun mob_entry(w: &World, i: u64): &MobEntry {
   assert!(i < y141(w).mobs.length(), EBadEntryIndex);
   &y141(w).mobs[i]

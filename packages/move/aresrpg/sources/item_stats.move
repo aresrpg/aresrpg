@@ -335,6 +335,7 @@ fun y128(value: u16, numerator: u64, denominator: u64): u16 {
 
 /// Per-field MIN of `value` against `max` — the scribe clamp reuses this so the field enumeration lives ONLY
 /// here. Returns a block where each field is `min(value_field, max_field)`.
+#[test_only]
 public fun clamp_to(value: &ItemStatistics, max: &ItemStatistics): ItemStatistics {
   let (a, b) = (y126(value), y126(max));
   let mut c = vector<u16>[];
@@ -347,6 +348,7 @@ public fun clamp_to(value: &ItemStatistics, max: &ItemStatistics): ItemStatistic
 }
 
 /// A block with every field set to `v` — the scribe builds its hardcoded conservative ceiling from this.
+#[test_only]
 public fun uniform(v: u16): ItemStatistics {
   let mut c = vector<u16>[];
   let mut i = 0;
@@ -355,6 +357,7 @@ public fun uniform(v: u16): ItemStatistics {
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
+#[test_only]
 fun y129(a: u16, b: u16): u16 { if (a < b) a else b }
 
 // ╔════════════════ [ Getters ] ══════════════════════════════════════════════ ]
