@@ -24,7 +24,7 @@ Facts in this registry are consumed by import or derivation only. Re-declaring a
 | Centered item-stat bias                 | `packages/move/aresrpg/sources/item_stats.move:22` — stored-value encoding.                                                         |
 | Characteristic points per level         | `packages/sdk/src/progression.js:17`, `:28` — reusable helper explicitly derived from chain progression.                            |
 | Maximum-HP formula                      | `packages/move/foundation/sources/progression_math.move:20` — chain HP law.                                                         |
-| Natural-regeneration formula            | `packages/move/foundation/sources/progression_math.move:27`, `:72` — chain HP mutation.                                             |
+| Natural-regeneration formula            | `packages/move/foundation/sources/progression_math.move:27`, `:76` — chain HP mutation.                                             |
 | Previsional roster HP marker            | `packages/inventory/src/fight_receipt_roster.js:19` — the only producer of `hp_previsional_ms`; `hp_updated_ms` stays chain-only.   |
 | Combat-feeding item-stat fields         | `packages/sim/src/equipment_stats.js:29` — executable combat fold mapping.                                                          |
 | Job wire-index order                    | `packages/sdk/src/jobs.js:39` — exported authored job catalog closest to job data.                                                  |
@@ -36,7 +36,7 @@ Facts in this registry are consumed by import or derivation only. Re-declaring a
 | Mob fighter-ID base                     | `packages/move/engine/sources/retro_effects.move:465` — existing reusable chain decoder closest to the effect board.                |
 | Minimum turn duration                   | `packages/move/engine/sources/actions.move:33` — enforced chain guard.                                                              |
 | Default turn duration                   | `packages/move/aresrpg/sources/config.move:96` — default chain config.                                                              |
-| `buy_many` item limit                   | `packages/move/aresrpg/sources/shop.move:63`, `:380` — enforced limit plus public getter.                                           |
+| `buy_many` item limit                   | `packages/move/aresrpg/sources/shop.move:63`, `:382` — enforced limit plus public getter.                                           |
 | Active Sui network                      | `packages/frontend/src/chain/deployment.ts:6`, `:26` — chain client/deployment selector.                                            |
 | Explorer transaction network            | `packages/frontend/src/chain/deployment.ts:26` — selected network.                                                                  |
 | MIST per SUI                            | `packages/frontend/src/utils/sui_mist.ts:16` — dedicated conversion utility.                                                        |
