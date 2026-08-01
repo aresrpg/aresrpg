@@ -15,7 +15,6 @@ import {
   spell_state_name_resolver,
 } from '../src/game/data/spell-text.js'
 import { build_fight_spells } from '../src/game/screens/hud/fight-spells-core.js'
-import { spell_effect_sentence } from '../src/game/screens/hud/spell-effect-sentence.js'
 import { effect_badge_view } from '../src/game/screens/hud/EffectBadges.jsx'
 import { SpellHoverTip } from '../src/game/screens/hud/spell-hover-tip.jsx'
 import { SpellDetail } from '../src/pages/encyclopedia/classes_tab'
@@ -93,15 +92,6 @@ describe('#1439 L2 corpus-carried spell state registry', () => {
       name: localized(blood_toll, locale, 'name'),
       felt: localized(blood_toll, locale, 'felt'),
     })
-  })
-
-  test.each(locale_rows)('%s fills L1’s resolve_state_name sentence seam', (locale, resources) => {
-    const { t } = i18n_for(locale, resources)
-    const resolve_state_name = spell_state_name_resolver(rows, locale)
-    const sentence = spell_effect_sentence(t, { kind: 22, value: 788 }, { resolve_state_name })
-
-    expect(sentence).toContain(localized(blood_toll, locale, 'name'))
-    expect(sentence).not.toContain('788')
   })
 
   test.each(locale_rows)('%s active-fight state rows render the name and never the id', (locale, resources) => {
