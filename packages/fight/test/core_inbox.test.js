@@ -28,6 +28,9 @@ const hit = (victim_idx, remaining_hp) => ({
 })
 const receipt_actions = (events, version) => batch_to_actions({ events }, { version, source: 'receipt' })
 const poll_actions = (events, version) => batch_to_actions({ events }, { version, source: 'poll' })
+/** The adoption door's inbox half. `refusal` — the reason a gate turned the read away (#1689) — has its own
+ *  block at the end of this file; the tests between here and there are about the base it produces. */
+const adopt = (...args) => adopt_snapshot(...args).inbox
 
 describe('revive_wire — the $bigint un-wrap at the decode seam', () => {
   test('unwraps a $bigint envelope to its native u64 string, recursively, without mutating input', () => {
@@ -79,7 +82,7 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
 
   test('a bootstrap snapshot adopts as the base; the events it subsumes stay logged but fall below the fold floor', () => {
     const with_events = admit_events(empty_inbox(), receipt_actions([hit(0, 50)], 100), 1).inbox
-    const adopted = adopt_snapshot(with_events, fight, 200, {})
+    const adopted = adopt(with_events, fight, 200, {})
     expect(adopted.base_version).toBe(200)
     expect(adopted.base_view.escrow).toHaveLength(1)
     // Full re-adoption discards the wholly subsumed old tail; no partial state crosses the cursor boundary.
@@ -89,22 +92,17 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
   })
 
   test('a snapshot ahead of the fold cursor fully re-adopts through the same door', () => {
-    const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
-    const later = adopt_snapshot(
-      at200,
-      { ...fight, status: 3, participants: [{ ...fight.participants[0], hp: 33 }] },
-      300,
-      {}
-    )
+    const at200 = adopt(empty_inbox(), fight, 200, {})
+    const later = adopt(at200, { ...fight, status: 3, participants: [{ ...fight.participants[0], hp: 33 }] }, 300, {})
     expect(later.base_version).toBe(300)
     expect(later.base_view.status).not.toBe(at200.base_view.status)
     expect(later.base_view.escrow[0].hp).toBe(33)
   })
 
   test('a snapshot at or behind the fold cursor is discarded whole', () => {
-    const at200 = adopt_snapshot(empty_inbox(), fight, 200, {})
-    const earlier = adopt_snapshot(at200, fight, 150, {})
-    const equal = adopt_snapshot(at200, fight, 200, {})
+    const at200 = adopt(empty_inbox(), fight, 200, {})
+    const earlier = adopt(at200, fight, 150, {})
+    const equal = adopt(at200, fight, 200, {})
     expect(earlier).toBe(at200)
     expect(equal).toBe(at200)
   })
@@ -115,17 +113,17 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
   const joined = { ...placement, participants: [...placement.participants, { character: '0xb', cell: '6', hp: '70' }] }
 
   test('a PLACEMENT base re-derives from a later placement read — the joiner becomes visible', () => {
-    const created = adopt_snapshot(empty_inbox(), placement, 200, {})
+    const created = adopt(empty_inbox(), placement, 200, {})
     expect(created.base_view.escrow).toHaveLength(1)
 
-    const after_join = adopt_snapshot(created, joined, 210, {})
+    const after_join = adopt(created, joined, 210, {})
     expect(after_join.base_version).toBe(210)
     expect(after_join.base_view.escrow.map((row) => row.character)).toEqual(['0xa', '0xb'])
   })
 
   test('a read that has LEFT placement never re-adopts — the roster is frozen, the journal owns the rest (#701)', () => {
-    const created = adopt_snapshot(empty_inbox(), placement, 200, {})
-    const activated = adopt_snapshot(created, { ...joined, status: 1 }, 220, {})
+    const created = adopt(empty_inbox(), placement, 200, {})
+    const activated = adopt(created, { ...joined, status: 1 }, 220, {})
     expect(activated).toBe(created) // untouched
   })
 
@@ -135,7 +133,7 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
       [joined, 210],
       [{ ...joined, status: 1 }, 220],
     ]
-    const fold = (order) => order.reduce((inbox, [rows, v]) => adopt_snapshot(inbox, rows, v, {}), empty_inbox())
+    const fold = (order) => order.reduce((inbox, [rows, v]) => adopt(inbox, rows, v, {}), empty_inbox())
     const orders = [
       [reads[0], reads[1], reads[2]],
       [reads[2], reads[1], reads[0]],
@@ -151,13 +149,13 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
   })
 
   test('events above the adopted base survive the adoption', () => {
-    const at100 = adopt_snapshot(empty_inbox(), fight, 100, {})
+    const at100 = adopt(empty_inbox(), fight, 100, {})
     const with_tail = admit_events(at100, receipt_actions([hit(0, 20)], 150), 1).inbox
     expect(Object.keys(with_tail.log)).toEqual(['150:0'])
   })
 
   test('red: a folded buff survives an older snapshot behind the event cursor', () => {
-    const at100 = adopt_snapshot(empty_inbox(), fight, 100, {})
+    const at100 = adopt(empty_inbox(), fight, 100, {})
     const buff = {
       kind: 'StatusAdded',
       target_is_mob: false,
@@ -170,10 +168,39 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
     const buffed = admit_events(at100, [buff], 1).inbox
     expect(fold_canonical(buffed).fighters.p0.statuses).toHaveLength(1)
 
-    const stale = adopt_snapshot(buffed, { ...fight, participants: [{ ...fight.participants[0], hp: '1' }] }, 150, {})
+    const stale = adopt(buffed, { ...fight, participants: [{ ...fight.participants[0], hp: '1' }] }, 150, {})
     expect(stale).toBe(buffed)
     expect(fold_canonical(stale).fighters.p0.statuses).toEqual([buff.status])
     expect(fold_canonical(stale).fighters.p0.hp).toBe(70)
+  })
+
+  // #1689 — EVERY GATE ABOVE NAMES ITSELF. The refusals were indistinguishable to the caller: one unchanged
+  // inbox for a torn read, a stale one and a checkpoint alike. Each gate now hands its reason back with the
+  // untouched inbox, which is what lets the presentation say "syncing" for one and "the read came back
+  // incomplete" for another.
+  const reason_of = (...args) => adopt_snapshot(...args).refusal?.reason ?? null
+
+  test('an adopted read carries NO refusal', () => {
+    expect(reason_of(empty_inbox(), fight, 200, {})).toBe(null)
+  })
+
+  test('a TORN read (a board with no lifecycle scalar) is refused as `torn`', () => {
+    const { status: _dropped, ...no_status } = fight
+    expect(reason_of(empty_inbox(), no_status, 200, {})).toBe('torn')
+  })
+
+  test('the ordering gates name themselves apart from the fault', () => {
+    const at200 = adopt(empty_inbox(), fight, 200, {})
+    expect(reason_of(at200, fight, 150, {})).toBe('behind')
+    expect(reason_of(at200, fight, 200, {})).toBe('behind') // at the cursor is behind it
+    // ahead of the cursor, same phase, byte-identical content and no tail to prove a change: a checkpoint
+    expect(reason_of(at200, fight, 201, {})).toBe('unchanged')
+    // a roster-less read may seed a base but never replace a live one — held, not adopted
+    expect(reason_of(at200, { ...fight, participants: [] }, 300, {})).toBe('roster_hold')
+    // a post-placement read that introduces a joiner is a raced checkpoint, not the roster's source
+    const placed = adopt(empty_inbox(), placement, 200, {})
+    expect(reason_of(placed, { ...joined, status: 1 }, 220, {})).toBe('raced_roster')
+    expect(reason_of(placed, { ...placement, status: 1 }, 220, {})).toBe('unproven_transition')
   })
 })
 
@@ -205,7 +232,7 @@ describe('courtesy (p2p) — unverified, never advances the frontier alone', () 
       empty_inbox(),
       batch_to_actions({ events: [hit(0, 50)] }, { version: 100, source: 'p2p' })
     )
-    const past = reconcile_courtesy(adopt_snapshot(buffered, fight, 200, {}))
+    const past = reconcile_courtesy(adopt(buffered, fight, 200, {}))
     expect(Object.keys(past.courtesy)).toEqual([])
   })
 })

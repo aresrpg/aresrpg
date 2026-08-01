@@ -35,7 +35,7 @@ const action = (kind, fields, version, event_idx = 0) => ({
 })
 
 const core_with = (actions) => {
-  const inbox = adopt_snapshot(empty_core_state().inbox, fight, 10, {})
+  const { inbox } = adopt_snapshot(empty_core_state().inbox, fight, 10, {})
   return { ...empty_core_state('0xfight'), inbox: admit_events(inbox, actions, 1).inbox }
 }
 

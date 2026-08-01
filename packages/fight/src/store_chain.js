@@ -127,12 +127,11 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
 }
 
 /**
- * Mirror an ahead snapshot that the core's one bootstrap/re-adopt door accepted. Behind/equal snapshots are
- * discarded by the core and return the identical presentation state.
+ * Mirror an ahead snapshot that the core's one bootstrap/re-adopt door accepted. A refused adoption never
+ * reaches here: the store's door gates on `last_read.adopted` and publishes the refusal's typed reason on its
+ * rejections channel instead (#1689), so this adapter has exactly one job and no silent branch.
  */
 export const reduce_snapshot_input = (state, msg, next_core, now) => {
-  if (next_core.last_read?.adopted !== true) return state
-
   const view = next_core.inbox.base_view
   const version = next_core.inbox.base_version
   const ctx = observer_ctx({ ...state.ctx, ...(msg.ctx ?? {}) })

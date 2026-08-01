@@ -84,19 +84,26 @@ const ingest_chain_read = (state, payload, now) => {
   const { source, version, fight_id } = payload
   const ver = Number(version ?? 0)
   if (source === 'snapshot') {
-    const inbox = adopt_snapshot(state.inbox, payload.rows, ver, state.ctx)
+    const { inbox, refusal } = adopt_snapshot(state.inbox, payload.rows, ver, state.ctx)
     const with_base = reconcile_courtesy(inbox)
     const ledger = compact_ledger(
       resolve_intents(state.ledger, with_base.base_version, 'stale'),
       truth_version(with_base)
     )
-    return {
-      ...state,
-      inbox: with_base,
-      ledger,
-      my_seat: resolve_my_seat(with_base, state.ctx, state.my_seat),
-      last_read: { source, version: ver, actions: [], changed: [], adopted: inbox !== state.inbox },
-    }
+    return with_failures(
+      {
+        ...state,
+        inbox: with_base,
+        ledger,
+        my_seat: resolve_my_seat(with_base, state.ctx, state.my_seat),
+        // The reason rides the read itself (#1689) — level-triggered, so it is always about THIS read.
+        last_read: { source, version: ver, actions: [], changed: [], adopted: refusal == null, refusal },
+      },
+      // A TORN read is a FAULT: the decoded record was not whole. The ordering refusals (behind / unchanged /
+      // raced roster) are routine — a 4s poll produces them by the hundred — so they ride `last_read` alone
+      // and never grow this unbounded channel.
+      refusal?.reason === 'torn' ? [{ kind: 'torn_read', source, version: ver, at: now }] : []
+    )
   }
   if (source === 'receipt') {
     const actions = batch_to_actions(payload.rows, { version: ver, source, fight_id })

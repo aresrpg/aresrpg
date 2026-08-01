@@ -281,19 +281,28 @@ export const admit_events = (inbox, actions, now) => {
  * state rides the event tail. An ahead lifecycle transition may replace the base through this same door. Rows the
  * replacement subsumes are dropped while a tail above a lowered placement base is retained.
  *
+ * REFUSAL IS DATA (#1689). Every gate below hands back the untouched inbox WITH the reason it refused, so a
+ * caller can tell a TORN read (a decoded record that is not whole — a fault) from a legitimately BEHIND or
+ * unchanged one (ordering). A silent `return inbox` made those indistinguishable at the presentation layer:
+ * both render as a board that simply stops moving.
+ *
  * Pure. `board_state_from_fight` is the one rich-view decode home; the raw wire rows are revived here first.
  * @param {import('./core_state.js').InboxState} inbox
  * @param {any} rows the raw snapshot fight object
  * @param {number} version the object version
  * @param {Record<string, any>} ctx decode context (mob identity maps, offset) — never folded
- * @returns {import('./core_state.js').InboxState}
+ * @returns {{ inbox: import('./core_state.js').InboxState,
+ *   refusal: { reason: 'torn'|'roster_hold'|'behind'|'raced_roster'|'unproven_transition'|'unchanged' } | null }}
+ *   `refusal` is null exactly when the base was replaced
  */
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
+  /** The one refusal shape — the inbox untouched, the reason named. */
+  const refuse = (reason) => ({ inbox, refusal: { reason } })
   const object_version = Number(version ?? 0)
   const fight = revive_wire(rows)
   // COMPLETENESS GATE — a decoded record must carry its real BoardGeom AND its lifecycle scalar, or it is a
   // torn read that seeds and replaces nothing (#1140 geometry half, #1277 status half).
-  if (fight != null && !fight_read_complete(fight)) return inbox
+  if (fight != null && !fight_read_complete(fight)) return refuse('torn')
   const base_view = board_state_from_fight({
     fight,
     version: object_version,
@@ -314,7 +323,7 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   // one — the actor is driven by its own receipt while the observer keeps re-reading. Only the session door
   // (`init`) clears a fight base. This also removes the null-`base_view` dereference below (a raw TypeError out of
   // the one write door on the world-fight shape, where the run-less stub is `null` rather than empty).
-  if (!base_view?.escrow?.length && inbox.base_view?.escrow?.length) return inbox
+  if (!base_view?.escrow?.length && inbox.base_view?.escrow?.length) return refuse('roster_hold')
   const has_base = inbox.base_view != null
   const current_roster_open = roster_open(inbox.base_view)
   const incoming_roster_open = roster_open(base_view)
@@ -324,29 +333,30 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   if (has_base) {
     // Placement bases converge on max(version); a placement read outranks an active read that raced ahead.
     if (incoming_roster_open) {
-      if (current_roster_open && object_version <= inbox.base_version) return inbox
+      if (current_roster_open && object_version <= inbox.base_version) return refuse('behind')
     } else {
       // Leaving placement may reconcile only the SAME frozen roster. An active read that introduces a joiner is a
       // raced checkpoint; the later placement read remains the only lawful roster source. The event tail must have
       // already proved the lifecycle transition, otherwise arrival order between one placement and one active object
       // would decide the roster base.
-      if (object_version <= cursor) return inbox
-      if (current_roster_open && roster_hash(base_view) !== roster_hash(inbox.base_view)) return inbox
-      if (current_roster_open && !has_event_tail) return inbox
+      if (object_version <= cursor) return refuse('behind')
+      if (current_roster_open && roster_hash(base_view) !== roster_hash(inbox.base_view)) return refuse('raced_roster')
+      if (current_roster_open && !has_event_tail) return refuse('unproven_transition')
       if (base_view.status === inbox.base_view.status) {
-        if (roster_hash(base_view) !== roster_hash(inbox.base_view)) return inbox
-        if (!has_event_tail && snapshot_content_hash(base_view) === snapshot_content_hash(inbox.base_view)) return inbox
+        if (roster_hash(base_view) !== roster_hash(inbox.base_view)) return refuse('raced_roster')
+        if (!has_event_tail && snapshot_content_hash(base_view) === snapshot_content_hash(inbox.base_view))
+          return refuse('unchanged')
       }
     }
   } else if (object_version < cursor) {
     // A receipt-first joiner may seed a missing base at the cursor, never behind it.
-    return inbox
+    return refuse('behind')
   }
 
   const log = Object.fromEntries(
     Object.entries(inbox.log).filter(([, action]) => Number(action.version) > object_version)
   )
-  return { ...inbox, log, base_view, base_version: object_version }
+  return { inbox: { ...inbox, log, base_view, base_version: object_version }, refusal: null }
 }
 
 /**

@@ -334,7 +334,19 @@ const make_input =
       case 'snapshot':
         // Bootstrap and reconciliation are the same core operation. A behind/equal snapshot is a whole-input no-op;
         // an ahead snapshot is a full base replacement. This adapter mirrors the adopted base for the renderer only.
-        if (next_core.last_read?.adopted !== true) return
+        // A REFUSED ADOPTION IS A NAMED NON-EVENT (#1689), never a bare return: `adopt_snapshot` hands back WHY
+        // (torn / roster_hold / behind / …) and the reason lands on the same `refused` rejections channel the
+        // provider gate above writes, so an incomplete read is distinguishable from a legitimately behind one.
+        if (next_core.last_read?.adopted !== true)
+          return set((s) => ({
+            ...s,
+            refused: {
+              type: 'snapshot',
+              reason: next_core.last_read?.refusal?.reason ?? 'unknown',
+              version: Number(msg.version ?? 0),
+              at: now,
+            },
+          }))
         set((s) => reduce_snapshot_input(s, msg, next_core, now))
         return
       case 'intent':
