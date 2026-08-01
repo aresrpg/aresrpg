@@ -1032,6 +1032,7 @@ MEMBRANE_ALLOWED_ROOT_FILES=(
   'FROZEN.md'
   'LICENSE'
   'README.md'
+  'REPORT.md'
   'SECURITY.md'
   # Train landings repeatedly place this grep-able cargo manifest at root by protocol; rejecting it kills landings.
   'TRAIN_CARGO.txt'

@@ -45,6 +45,10 @@ import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
 
 import { element_color } from './element-colors.js'
 
+// L1 value-free spell prose extends this existing shared effect-line seam; L2 state lookup and L3 panel
+// composition consume these exports later without creating a second spell-surface wording home.
+export { spell_effect_sentence, spell_effect_sentence_templates } from './spell-effect-sentence.js'
+
 // ── the house value tones (single home — spellbook-data.js + classes_tab.tsx import from here) ──────────────
 export const TONE_BUFF = '#4fd6a0' // green — beneficial value (house --good / --clog-num-mp)
 export const TONE_BAD = '#ff6b6b' // red — penalty/drain value (house --bad)
