@@ -5,9 +5,16 @@
 Defense-in-depth for a wallet-bearing origin. The policy ships from
 `packages/frontend/vercel.json` (`headers` block) — the deploy-time seam, applied to every response.
 
-It is **report-only today**. `vercel.json` is strict JSON (Vercel's schema sets
+It **enforces** (#853). `vercel.json` is strict JSON (Vercel's schema sets
 `additionalProperties: false`, so it can carry neither comments nor a note key) — this file is the
-policy's one home for _why each source is in it_ and _what has to be true before it enforces_.
+policy's one home for _why each source is in it_. The header name is pinned by
+`packages/frontend/test/csp_enforcing_header.test.js`, which also asserts the source inventory below
+line for line and re-derives the two `script-src` hashes from `index.html` — a stale hash under
+enforcement is a blank page for every player, so it is measured, never trusted.
+
+The report-only header is **gone**, not kept alongside: there is no report endpoint, so a second copy
+of the same policy string would duplicate the one home for zero extra signal — an enforced violation
+already prints in the console of the session that hit it.
 
 ## Origin inventory — every source, and where it comes from
 
@@ -37,22 +44,34 @@ its row's origin is gone.
 - **`style-src 'unsafe-inline'`** — required by React inline styles; removing it means eliminating
   every `style={{…}}` prop, not a header change.
 
-## Before flipping to enforcing
+## What the flip was proven on
 
-Rename the header to `Content-Security-Policy` only when all of these hold:
+A production `vite build` was served on loopback with this exact header (read out of `vercel.json`,
+never retyped) and driven in a real Blink: the world landing boots, the voxel world renders, the
+engine's workers and the router's three surfaces run, and the network log shows
+`assets.aresrpg.world`, `fonts.googleapis.com`, `fonts.gstatic.com` and `rpc.aresrpg.world` actually
+contacted — zero `securitypolicyviolation`, zero page errors. The run carries a positive control (an
+image from an origin the policy does not allow) which **is** blocked, so a green run cannot be the
+green of a page that requested nothing.
 
-- [ ] A clean soak on `edge` — a real player session with zero violation reports.
-- [ ] The **undriven** sources are exercised at least once: a Google zkLogin sign-in
-      (`api.enoki.mystenlabs.com`, `accounts.google.com`, `graphql.testnet.sui.io`) and a sponsored
-      transaction (`sponsor.aresrpg.world`). Local verification could not reach these: the dev wallet
-      is DEV-only, so the production-shaped build has no way to sign in. Watch `form-action` on the
-      sign-in specifically — an OAuth flow using `response_mode=form_post` submits a form to Google,
-      which `form-action 'self'` would refuse. A redirect-mode flow is unaffected.
-- [ ] A browser-extension wallet is driven (Sui Wallet / Suiet) — extension-injected page scripts are
-      the one class local dev-wallet driving cannot observe.
-- [ ] The two `script-src` hashes are re-derived from the **built** `dist/index.html`, and something
-      mechanical keeps them honest — a stale hash after an `index.html` edit is a white screen under
-      enforcement. Prefer moving both inline scripts to files under `public/` and dropping the hashes.
+The hashes are pinned mechanically instead of being moved to `public/`: Vite copies both inline
+classic scripts into `dist/index.html` byte-for-byte, so hashing the source file is the same
+measurement with none of the indirection.
+
+## Still undriven — the watch list after the flip
+
+Local driving cannot reach these, so they are watched on the `edge` soak rather than gated on:
+
+- A Google zkLogin sign-in (`api.enoki.mystenlabs.com`, `accounts.google.com`,
+  `graphql.testnet.sui.io`) and a sponsored transaction (`sponsor.aresrpg.world`). Every routed
+  screen renders only for a signed-in address (`app.tsx`: `in_app = !!address`) and the dev wallet is
+  DEV-only, so a production-shaped build has no local way in. Watch `form-action` on the sign-in: an
+  OAuth flow using `response_mode=form_post` submits a form to Google, which `form-action 'self'`
+  would refuse. Installed Enoki uses a top-level popup with `response_type=id_token` and a fragment
+  callback — a redirect-mode flow, unaffected.
+- A browser-extension wallet (Sui Wallet / Suiet) — extension-injected page scripts are the one class
+  local driving cannot observe.
+- `connect-src wss:` narrowing to the app's own relays, blocked on the trystero relay-config bug.
 
 Re-derive the hashes with:
 
