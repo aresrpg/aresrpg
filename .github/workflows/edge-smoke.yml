@@ -19,6 +19,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # Step zero: the instrument asserts its own sight before a single second of spend.
+      # Runs 30710423166 (and its 08:13Z sibling) burned a full install+browser+45min job on an
+      # empty key: the signer threw mid-suite and the failure read like an ordinary red instead
+      # of "the smoke cannot see". A blind instrument must never be mistaken for a verdict — so
+      # this fails LOUD and first. Never a skip, never a green.
+      - name: step zero — the real-signing smoke must be able to see
+        env:
+          VITE_DEV_KEY: ${{ secrets.VITE_DEV_KEY }}
+        run: |
+          if [ -z "${VITE_DEV_KEY//[[:space:]]/}" ]; then
+            echo "::error title=blind smoke::real-signing smoke is BLIND — VITE_DEV_KEY absent/empty; re-set the Actions secret"
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
         id: setup_bun
