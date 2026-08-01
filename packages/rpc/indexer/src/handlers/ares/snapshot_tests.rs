@@ -184,6 +184,101 @@ fn character_arm_unaffected_by_mob_loot_extension() {
     assert_eq!(set_json(&writes, "$.level"), Some("1")); // 0 xp = level 1
 }
 
+/// RED-FIRST for #1818: `character_extract::delete_character` consumes the Character object,
+/// but `CharacterDeleted` had no projection arm and the checkpoint delete sweep did not classify
+/// Character. Replay the real object lifecycle so a deleted avatar can never remain served.
+#[test]
+fn remove_character_drops_the_served_document() {
+    let id = synthetic_object_id("0xc1818");
+    assert_eq!(remove_character(&id), vec![del(k_character(&id), "$")]);
+}
+
+#[tokio::test]
+async fn mirrored_character_lifecycle_appears_and_disappears() {
+    const CHARACTER_IDX: u64 = 0xc1818;
+    let character = TestCheckpointBuilder::derive_object_id(CHARACTER_IDX);
+    let owner = Owner::AddressOwner(TestCheckpointBuilder::derive_address(1));
+    let tag = format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::character::Character");
+    let body = CharacterObject {
+        id: character,
+        name: "Deletion Arms".into(),
+        class: "senshi".into(),
+        male: true,
+        customization: Customization {
+            color_1: 1,
+            color_2: 2,
+            color_3: 3,
+        },
+        experience: 0,
+        created_at_ms: 1_818,
+        anchor: PositionAnchor {
+            pos_x: 0,
+            pos_z: 0,
+            zone: String::new(),
+            anchored_at_ms: 0,
+        },
+    };
+    let replace_character = |checkpoint: &mut Checkpoint| {
+        let version = checkpoint
+            .object_set
+            .iter()
+            .filter(|object| object.id() == character)
+            .map(|object| object.version())
+            .max()
+            .expect("fixture checkpoint must contain the character");
+        checkpoint.object_set.insert(checkpoint_fixture_object(
+            &tag,
+            version,
+            bcs::to_bytes(&body).unwrap(),
+            owner.clone(),
+        ));
+    };
+
+    let mut builder = TestCheckpointBuilder::new(1_818)
+        .start_transaction(1)
+        .create_owned_object(CHARACTER_IDX)
+        .finish_transaction();
+    let mut created = builder.build_checkpoint();
+    replace_character(&mut created);
+
+    builder = builder
+        .start_transaction(1)
+        .delete_object(CHARACTER_IDX)
+        .finish_transaction();
+    let mut deleted = builder.build_checkpoint();
+    replace_character(&mut deleted);
+    assert!(
+        deleted.transactions.iter().all(|tx| tx.events.is_none()),
+        "the reap must ride checkpoint lifecycle truth, not a CharacterDeleted event"
+    );
+
+    let character = character.to_canonical_string(true);
+    let character_key = k_character(&character);
+    let handler = AresSnapshotHandler::from_parts(None, None);
+
+    let created_writes = handler.process(&Arc::new(created)).await.unwrap();
+    assert!(
+        created_writes.iter().any(
+            |write| matches!(write, RedisWrite::Set { key, path, .. } if key == &character_key && path == "$")
+        ),
+        "created Character must make its served row appear"
+    );
+
+    let deleted_writes = handler.process(&Arc::new(deleted)).await.unwrap();
+    assert!(
+        deleted_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Del { key, path } if key == &character_key && path == "$")),
+        "deleted Character must make its served row disappear"
+    );
+    assert!(
+        deleted_writes
+            .iter()
+            .all(|write| !matches!(write, RedisWrite::Set { key, .. } if key == &character_key)),
+        "deleted Character must not be re-snapshotted"
+    );
+}
+
 // ── Per-job XP dynamic field (lights the JobsDrawer + job-progression `character.jobs`) ─
 
 #[test]
@@ -1722,6 +1817,98 @@ fn mob_template_bytes(
     b
 }
 
+/// RED-FIRST for #1818: `mob_template::burn` deletes the shared MobTemplate, but neither its
+/// event nor the checkpoint delete sweep reaped the encyclopedia mirror. Replay create → burn
+/// without events so lifecycle truth alone must remove both the row and index membership.
+#[test]
+fn remove_mob_template_drops_the_doc_and_index_membership() {
+    let id = synthetic_object_id("0xb1818");
+    assert_eq!(
+        remove_mob_template(&id),
+        vec![
+            del(k_mob_template(&id), "$"),
+            srem(K_MOB_TEMPLATES.into(), id.clone()),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn mirrored_mob_template_lifecycle_appears_and_disappears() {
+    const MOB_TEMPLATE_IDX: u64 = 0xb1818;
+    let template = TestCheckpointBuilder::derive_object_id(MOB_TEMPLATE_IDX);
+    let tag = format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::mob_template::MobTemplate");
+    let mut body = mob_template_bytes("Deletion Wisp", 3, 7, 120, 3, &[]);
+    body[..32].copy_from_slice(template.as_ref());
+    let replace_template = |checkpoint: &mut Checkpoint| {
+        let version = checkpoint
+            .object_set
+            .iter()
+            .filter(|object| object.id() == template)
+            .map(|object| object.version())
+            .max()
+            .expect("fixture checkpoint must contain the mob template");
+        checkpoint.object_set.insert(checkpoint_fixture_object(
+            &tag,
+            version,
+            body.clone(),
+            Owner::Shared {
+                initial_shared_version: SequenceNumber::MIN,
+            },
+        ));
+    };
+
+    let mut builder = TestCheckpointBuilder::new(1_818)
+        .start_transaction(1)
+        .create_shared_object(MOB_TEMPLATE_IDX)
+        .finish_transaction();
+    let mut created = builder.build_checkpoint();
+    replace_template(&mut created);
+
+    builder = builder
+        .start_transaction(1)
+        .delete_object(MOB_TEMPLATE_IDX)
+        .finish_transaction();
+    let mut burned = builder.build_checkpoint();
+    replace_template(&mut burned);
+    assert!(
+        burned.transactions.iter().all(|tx| tx.events.is_none()),
+        "the reap must ride checkpoint lifecycle truth, not a MobTemplateBurned event"
+    );
+
+    let template = template.to_canonical_string(true);
+    let template_key = k_mob_template(&template);
+    let handler = AresSnapshotHandler::from_parts(None, None);
+
+    let created_writes = handler.process(&Arc::new(created)).await.unwrap();
+    assert!(
+        created_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Set { key, path, .. } if key == &template_key && path == "$")),
+        "created MobTemplate must make its encyclopedia row appear"
+    );
+    assert!(has_sadd(&created_writes, K_MOB_TEMPLATES, &template));
+
+    let burned_writes = handler.process(&Arc::new(burned)).await.unwrap();
+    assert!(
+        burned_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Del { key, path } if key == &template_key && path == "$")),
+        "burned MobTemplate must make its encyclopedia row disappear"
+    );
+    assert!(
+        burned_writes.iter().any(
+            |write| matches!(write, RedisWrite::SetDel { key, member } if key == K_MOB_TEMPLATES && member == &template)
+        ),
+        "burned MobTemplate must leave the idx:mob_templates membership"
+    );
+    assert!(
+        burned_writes
+            .iter()
+            .all(|write| !matches!(write, RedisWrite::Set { key, .. } if key == &template_key)),
+        "burned MobTemplate must not be re-snapshotted"
+    );
+}
+
 /// Deploy config owns the real 374-row custody manifest. This deliberately invented three-row
 /// fixture preserves its exact `{key,name,id}` shape — including the full-width 64-hex Sui object
 /// id, built at runtime by [`synthetic_object_id`] so source carries no live-shaped literal —
@@ -2258,6 +2445,95 @@ fn world_object_snapshots_the_live_required_level() {
     assert!(doc.contains(r#""biome":"archipelago""#), "doc: {doc}");
     assert!(doc.contains(r#""required_level":34"#), "doc: {doc}");
     assert!(has_sadd(&writes, "rpc:idx:worlds", id));
+}
+
+/// RED-FIRST for #1818: `world::destroy_world` deletes the World after proving it is empty, but
+/// `WorldBurned` had no projection arm and the checkpoint delete sweep ignored the object. Replay
+/// create → destroy without events so lifecycle truth must reap the doc and index membership.
+#[test]
+fn remove_world_drops_the_doc_and_index_membership() {
+    let id = synthetic_object_id("0xd1818");
+    assert_eq!(
+        remove_world(&id),
+        vec![del(k_world(&id), "$"), srem(K_WORLDS.into(), id.clone()),]
+    );
+}
+
+#[tokio::test]
+async fn mirrored_world_lifecycle_appears_and_disappears() {
+    const WORLD_IDX: u64 = 0xd1818;
+    let world = TestCheckpointBuilder::derive_object_id(WORLD_IDX);
+    let tag = format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::world::World");
+    let mut body = world_bytes(1_818, "deletion_reach", 18, &[]);
+    body[..32].copy_from_slice(world.as_ref());
+    let replace_world = |checkpoint: &mut Checkpoint| {
+        let version = checkpoint
+            .object_set
+            .iter()
+            .filter(|object| object.id() == world)
+            .map(|object| object.version())
+            .max()
+            .expect("fixture checkpoint must contain the world");
+        checkpoint.object_set.insert(checkpoint_fixture_object(
+            &tag,
+            version,
+            body.clone(),
+            Owner::Shared {
+                initial_shared_version: SequenceNumber::MIN,
+            },
+        ));
+    };
+
+    let mut builder = TestCheckpointBuilder::new(1_818)
+        .start_transaction(1)
+        .create_shared_object(WORLD_IDX)
+        .finish_transaction();
+    let mut created = builder.build_checkpoint();
+    replace_world(&mut created);
+
+    builder = builder
+        .start_transaction(1)
+        .delete_object(WORLD_IDX)
+        .finish_transaction();
+    let mut burned = builder.build_checkpoint();
+    replace_world(&mut burned);
+    assert!(
+        burned.transactions.iter().all(|tx| tx.events.is_none()),
+        "the reap must ride checkpoint lifecycle truth, not a WorldBurned event"
+    );
+
+    let world = world.to_canonical_string(true);
+    let world_key = k_world(&world);
+    let handler = AresSnapshotHandler::from_parts(None, None);
+
+    let created_writes = handler.process(&Arc::new(created)).await.unwrap();
+    assert!(
+        created_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Set { key, path, .. } if key == &world_key && path == "$")),
+        "created World must make its encyclopedia row appear"
+    );
+    assert!(has_sadd(&created_writes, K_WORLDS, &world));
+
+    let burned_writes = handler.process(&Arc::new(burned)).await.unwrap();
+    assert!(
+        burned_writes
+            .iter()
+            .any(|write| matches!(write, RedisWrite::Del { key, path } if key == &world_key && path == "$")),
+        "burned World must make its encyclopedia row disappear"
+    );
+    assert!(
+        burned_writes.iter().any(
+            |write| matches!(write, RedisWrite::SetDel { key, member } if key == K_WORLDS && member == &world)
+        ),
+        "burned World must leave the idx:worlds membership"
+    );
+    assert!(
+        burned_writes
+            .iter()
+            .all(|write| !matches!(write, RedisWrite::Set { key, .. } if key == &world_key)),
+        "burned World must not be re-snapshotted"
+    );
 }
 
 #[test]

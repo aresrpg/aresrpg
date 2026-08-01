@@ -326,6 +326,15 @@ fn k_kiosk_items(kiosk: &str) -> String {
     format!("rpc:idx:kiosk_items:{kiosk}")
 }
 
+/// Reap a deleted avatar's served document. `character_extract::delete_character` consumes the
+/// Character object after stripping its dynamic fields, so the object lifecycle is the durable
+/// deletion signal even if `CharacterDeleted` is absent or replayed independently. Owner/world
+/// memberships are event-derived and read through MGET (missing docs are dropped), so only the
+/// mirror root is lifecycle-owned here. Idempotent: deleting an absent root is a no-op.
+fn remove_character(id: &str) -> Vec<RedisWrite> {
+    vec![del(k_character(id), "$")]
+}
+
 /// Reap only the chain-object mirror and its exact kiosk membership edge. The item-keyed listing,
 /// pet-feed cadence and template supply are derived projections with their own lifecycle signals;
 /// an object deletion must never guess at or mutate them.
@@ -349,6 +358,23 @@ fn remove_recipe(id: &str) -> Vec<RedisWrite> {
         del(k_recipe(id), "$"),
         srem(K_RECIPES.into(), id.to_string()),
     ]
+}
+
+/// Reap a burned MobTemplate's encyclopedia doc and global membership. The canonical-custody
+/// filter only controls creation snapshots; a chain deletion must remove any row admitted by an
+/// earlier census/configuration. Both writes are idempotent for checkpoint replay.
+fn remove_mob_template(id: &str) -> Vec<RedisWrite> {
+    vec![
+        del(k_mob_template(id), "$"),
+        srem(K_MOB_TEMPLATES.into(), id.to_string()),
+    ]
+}
+
+/// Reap a destroyed World's encyclopedia doc and global membership. Wrapped and legacy Worlds
+/// share this root, so classifying the deleted shell's type closes both layouts with one arm.
+/// Both writes are idempotent for checkpoint replay.
+fn remove_world(id: &str) -> Vec<RedisWrite> {
+    vec![del(k_world(id), "$"), srem(K_WORLDS.into(), id.to_string())]
 }
 
 /// Reap the FightResult mirror plus the exact owner membership when the deleted input carries one.
@@ -2298,9 +2324,18 @@ impl Processor for AresSnapshotHandler {
                     }
                     let id = obj.id().to_canonical_string(true);
                     match (ty.module().as_str(), ty.name().as_str()) {
+                        (CHARACTER_MODULE, CHARACTER_TYPE) => {
+                            writes.extend(remove_character(&id));
+                        }
                         (ITEM_MODULE, ITEM_TYPE) => {
                             let kiosk = resolve_kiosk(obj.owner(), &kiosk_of_wrapper);
                             writes.extend(remove_item(&id, kiosk.as_deref()));
+                        }
+                        (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => {
+                            writes.extend(remove_mob_template(&id));
+                        }
+                        (WORLD_MODULE, WORLD_TYPE) => {
+                            writes.extend(remove_world(&id));
                         }
                         (CRAFTING_MODULE, RECIPE_TYPE) => {
                             writes.extend(remove_recipe(&id));

@@ -215,18 +215,13 @@ Pre-delete inputs keep the edge resolvable when a kiosk wrapper and its child di
 
 **Deleted-object lifecycle sweep.** For every id in a transaction's `effects.deleted()`, the snapshot
 pipeline classifies the pre-delete input type and reaps only indexer-owned chain-object mirrors:
-`item::Item`, `results::FightResult`, `settlement::FightOutcome`, `loot_box::PetBoxClaim`, and
-`crafting::Recipe`. Exact kiosk/owner membership edges are removed when the input carries enough
-ownership context. The existing `ItemBurned`/`ResultBurned`/`TemplateBurned` event arms remain fast
-paths. Derived or aggregate documents (`listing`, `pet_feed`, `supply`, sale history, and similar
-projections) are not lifecycle-swept.
-
-KNOWN GAP (the #1814 class census, tracked separately — do NOT read this list as covered): three
-more mirrored classes have an on-chain delete door and NO reap on either edge, so each ghosts the
-same way `Recipe` did — `mob_template::MobTemplate` (`burn` → `MobTemplateBurned`),
-`world::World` (`burn` → `WorldBurned`), and `character::Character`
-(`character_extract::delete_character` → `CharacterDeleted`). `item::ItemTemplate` is the only one
-already covered, via its `TemplateBurned` event arm.
+`character::Character`, `item::Item`, `mob_template::MobTemplate`, `world::World`,
+`crafting::Recipe`, `results::FightResult`, `settlement::FightOutcome`, and
+`loot_box::PetBoxClaim`. Exact kiosk/owner membership edges are removed when the input carries
+enough ownership context. The existing `ItemBurned`/`ResultBurned`/`TemplateBurned` event arms
+remain fast paths; `item::ItemTemplate` is lifecycle-covered by that last event arm. Derived or
+aggregate documents (`listing`, `pet_feed`, `supply`, sale history, and similar projections) are
+not lifecycle-swept.
 
 **Pending FightOutcomes** (`map_fight_outcome_object` + `remove_pending_outcome`). The engine's
 soulbound `aresrpg_fight::settlement::FightOutcome` is minted (address-owned) at `settle_and_destroy`
