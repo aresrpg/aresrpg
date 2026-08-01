@@ -221,14 +221,11 @@ The indexer also binds a topic-keyed SSE surface on `STREAM_BIND`
 - `GET /v1/stream/fight/{fight_id}` — stored journal replay followed by live
   local-Redis tip polling. `Last-Event-ID` is
   `<checkpoint_sequence>:<intra_checkpoint_event_index>`.
-- `GET /v1/stream/presence/{world_id}?address=…&character=…` — connection-observed
-  `current-set`/`join`/`leave` events over a ~30-second TTL registry. At least one
-  identity query field is required.
 
-Both routes open with a `: ok` comment — the byte that makes a fronting proxy flush
-the response instead of holding an idle subscription as a hang — and re-send a `: ka`
-comment after each 20 seconds of silence. Presence is location-local by design;
-neither route introduces Redis-to-Redis replication.
+Every subscription opens with a `: ok` comment — the byte that makes a fronting proxy
+flush the response instead of holding an idle subscription as a hang — and re-sends a
+`: ka` comment after each 20 seconds of silence. The route introduces no
+Redis-to-Redis replication.
 
 ### Valkey swap
 
