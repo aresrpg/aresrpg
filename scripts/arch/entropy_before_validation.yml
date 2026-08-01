@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# #1841 — a public/entry Move function must validate caller input before it consumes &Random.
+# The property is textual and static: a later guard over unchanged input gives a retry no new
+# information, so drawing entropy first only burns randomness before the same refusal.
+rules:
+  - id: move-entropy-before-validation
+    languages: [move_on_sui]
+    severity: ERROR
+    metadata:
+      issue: 1841
+      doc: docs/CODE_LAW.md
+    message: >-
+      #1841 — this public/entry function consumes its &Random parameter before an assert-family
+      guard over caller input. Validate every deterministic input first, then borrow randomness;
+      otherwise retries burn fresh entropy without changing whether the guard accepts.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              public fun $F(..., $R: &Random, ...) {
+                ...
+              }
+          - pattern-inside: |
+              entry fun $F(..., $R: &Random, ...) {
+                ...
+              }
+      - pattern-inside: |
+          fun $F(..., $INPUT: $INPUT_TYPE, ...) {
+            ...
+          }
+      - pattern-inside: |
+          fun $F(..., $R: &Random, ...) {
+            ...
+            $USE(..., $R, ...);
+            ...
+            $ASSERT(..., <... $INPUT ...>, ...);
+            ...
+          }
+      - metavariable-regex:
+          metavariable: $ASSERT
+          regex: '^assert(?:_eq|_ne)?!$'

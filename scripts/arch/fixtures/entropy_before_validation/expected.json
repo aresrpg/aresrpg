@@ -1,0 +1,10 @@
+{
+  "red": {
+    "bad.move": {
+      "move-entropy-before-validation": 1
+    }
+  },
+  "green": {
+    "good.move": {}
+  }
+}

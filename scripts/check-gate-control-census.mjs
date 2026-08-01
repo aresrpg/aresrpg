@@ -15,6 +15,7 @@ const expected_controls = [
   'manifest-lineage',
   'chain-ids',
   'sim-constants',
+  'entropy-before-validation',
 ]
 
 const definitions = [
@@ -48,6 +49,16 @@ const definitions = [
     file: 'scripts/sim-constants-gate.sh',
     markers: [
       'FIXTURE_ROOT="scripts/arch/fixtures/sim_constants"',
+      '"$FIXTURE_ROOT/red"',
+      '"$FIXTURE_ROOT/green"',
+      '--expect',
+    ],
+  },
+  {
+    id: 'entropy-before-validation',
+    file: 'scripts/entropy-before-validation-gate.sh',
+    markers: [
+      'FIXTURE_ROOT="scripts/arch/fixtures/entropy_before_validation"',
       '"$FIXTURE_ROOT/red"',
       '"$FIXTURE_ROOT/green"',
       '--expect',
