@@ -1,1 +1,8 @@
-506ecf3159e29ae1a9538af2d0f2785e5d13e850 train/train-26 ci(loc-ledger): exempt nested and plural test trees
+8a8f3c537da4e7cefc55e628057e766bb135a21c lane/s1-fight-store test(fight): red — core-owned facts still have two homes
+3781558af87e4e69c85b9dc8f666ab71c912fb48 lane/s1-fight-store fix(fight): delete the store's core-owned mirrors, read the one home
+a0e2fee95a27f60a2b11b0dfec5e32d4aa9304c3 lane/s1-fight-store style(fight): prettier the two re-pointed lines
+db2110e61b88772e2d9426687ddb8c79b3a2bf40 lane/a6-races fix(fight): refuse submit feedback from a dead generation
+feb4abc4aa1c93a4be11cb6bb86e4aab7a365110 lane/a6-races fix(inventory): the pending ledgers become reducer-owned state
+6820e6131c329b8860d79f6e60f67ae90a7a800b lane/a6-races fix(fight): refuse at the door, not by returning state unchanged
+afb86bee1a1a11a2a3986c79bb18ac43fd55619a lane/a9-csp fix(frontend): enforce the Content-Security-Policy
+77f57e7edd875049b710f895bc9cd121aac6e24b lane/a9-csp docs(csp): record what the enforcing flip was proven on
