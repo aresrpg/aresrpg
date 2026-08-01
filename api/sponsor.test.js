@@ -215,12 +215,15 @@ describe('F3 — PTB scope allowlist (aresrpg + composed framework only)', () =>
     })
     expect(() => S.assert_ptb_scope(k)).toThrow(/sponsor-scope.*no aresrpg MoveCall/)
   })
+  // Refused by the COMMAND GRAPH now, one gate earlier than the ≥1-aresrpg-call rule and for the more precise
+  // reason: this PTB draws value out of the station's gas coin. The graph's own corpus lives in
+  // sponsor.command_graph.test.js; this row keeps the composed shape refused from this end too.
   test('(c2) a bare SplitCoins+TransferObjects PTB (zero MoveCalls) is refused', async () => {
     const k = await kind((tx) => {
       const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(1n)])
       tx.transferObjects([coin], tx.pure.address('0x' + '22'.repeat(32)))
     })
-    expect(() => S.assert_ptb_scope(k)).toThrow(/no aresrpg MoveCall/)
+    expect(() => S.assert_ptb_scope(k)).toThrow(/draws value from the sponsored gas coin/)
   })
 })
 

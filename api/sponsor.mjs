@@ -191,6 +191,57 @@ export function require_station_config() {
     throw new Error('sponsor-misconfig: GAS_STATION_URL + GAS_STATION_AUTH required — refusing to boot (fail-closed)')
 }
 
+// ── THE COMMAND GRAPH ─────────────────────────────────────────────────────────────────────────────────
+// The package allowlist answers "may this be CALLED" — it says nothing about the rest of the PTB, and the rest
+// of the PTB rides on a gas coin belonging to the STATION. So the whole graph is checked, on two axes:
+//
+//   KINDS — an allowlist of what the game's own composers actually emit (censused from
+//   packages/sdk/src/sui/write/**: MoveCall and SplitCoins, nothing else). The check used to inspect MoveCalls
+//   and `continue` past every other command, which made "unrecognised" mean "allowed" — the widest possible
+//   default, on the money path. A shape the sponsor does not understand now refuses instead of riding along,
+//   and a composer that starts emitting a new kind reddens api/sponsor.command_graph.test.js first.
+//
+//   THE GAS COIN — a sponsor pays for EXECUTION, never for the transaction's own value. The gas coin of a
+//   sponsored PTB is the station's, and a `SplitCoins(GasCoin, …)` takes real SUI out of it — so the game's
+//   paid PTBs (mint price, shop buy, pledge, royalty, escrow) are self-pay compositions by construction, and a
+//   sponsored request carrying one is refused before signing rather than billed to the pool. Refusing the gas
+//   coin as an ARGUMENT anywhere is what makes that one rule instead of a taint-tracking exercise: no command
+//   can obtain gas value, so no later command can move it.
+export const SPONSORABLE_COMMAND_KINDS = ['MoveCall', 'SplitCoins']
+const SPONSORABLE_KINDS = new Set(SPONSORABLE_COMMAND_KINDS)
+
+/** Every argument a command consumes, flattened. */
+function command_arguments(command) {
+  switch (command.$kind) {
+    case 'MoveCall':
+      return command.MoveCall.arguments ?? []
+    case 'SplitCoins':
+      return [command.SplitCoins.coin, ...(command.SplitCoins.amounts ?? [])]
+    default:
+      return []
+  }
+}
+
+/**
+ * Refuse any PTB whose command graph is not sponsorable: a command kind outside the allowlist, or any command
+ * drawing value from the sponsored gas coin. Pure over the decoded command list, so it is testable without a
+ * chain, a station or a store.
+ */
+export function assert_command_graph(commands) {
+  commands.forEach((command, index) => {
+    if (command.$kind === 'Publish' || command.$kind === 'Upgrade')
+      throw new Error('sponsor-scope: PTB publishes/upgrades a package — never sponsored')
+    if (!SPONSORABLE_KINDS.has(command.$kind))
+      throw new Error(
+        `sponsor-scope: PTB command #${index} is a ${command.$kind} — only ${SPONSORABLE_COMMAND_KINDS.join('/')} commands are sponsored`
+      )
+    if (command_arguments(command).some((argument) => argument?.$kind === 'GasCoin'))
+      throw new Error(
+        `sponsor-scope: PTB command #${index} draws value from the sponsored gas coin — a sponsor pays for execution, never for the transaction's own value`
+      )
+  })
+}
+
 export function assert_ptb_scope(txKindBytes) {
   let commands
   try {
@@ -198,10 +249,9 @@ export function assert_ptb_scope(txKindBytes) {
   } catch (error) {
     throw new Error(`sponsor-scope: unparseable PTB (${error?.message ?? error}) — refusing`)
   }
+  assert_command_graph(commands)
   let aresrpg_calls = 0
   for (const command of commands) {
-    if (command.$kind === 'Publish' || command.$kind === 'Upgrade')
-      throw new Error('sponsor-scope: PTB publishes/upgrades a package — never sponsored')
     if (command.$kind !== 'MoveCall') continue
     const package_id = normalizeSuiAddress(command.MoveCall.package)
     // RETIRED FIRST, unconditionally. The allowlist answers "may this be called"; release.json answers "is this
