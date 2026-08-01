@@ -1854,8 +1854,6 @@
     "link_reconnecting": "Présence en reconnexion",
     "link_failed": "Présence hors service",
     "link_failed_reason": "Présence hors service : {{reason}}",
-    "send_failed": "Message non envoyé — la présence l’a refusé.",
-    "send_rate_limited": "Doucement — une ligne à la fois.",
     "you": "Vous",
     "type_message": "Écrivez un message…",
     "combat_log": "Journal de combat",

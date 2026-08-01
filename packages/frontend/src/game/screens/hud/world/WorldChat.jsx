@@ -22,7 +22,7 @@
 // visible_characters is a Map mutated in place (its ref never changes) — subscribe to a stable digest
 // primitive so React observes spawn/despawn notifications from the presence module.
 //
-// Courier chat: zkLogin-authenticated POST, then one presence-stream receive fold for local and remote lines.
+// Room chat: one broadcast on the lobby room's data channel, folded back through the one presence door.
 
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

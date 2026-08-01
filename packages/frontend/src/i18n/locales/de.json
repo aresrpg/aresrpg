@@ -1854,8 +1854,6 @@
     "link_reconnecting": "Präsenz verbindet neu",
     "link_failed": "Präsenz ausgefallen",
     "link_failed_reason": "Präsenz ausgefallen: {{reason}}",
-    "send_failed": "Nachricht nicht gesendet — die Präsenz hat sie abgelehnt.",
-    "send_rate_limited": "Langsamer — eine Zeile nach der anderen.",
     "you": "Du",
     "type_message": "Nachricht eingeben…",
     "combat_log": "Kampfprotokoll",

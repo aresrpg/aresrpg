@@ -210,8 +210,6 @@ packages/frontend/src/content/seed_manifest.test.ts
 packages/frontend/src/core/log.test.js
 packages/frontend/src/core/report.test.js
 packages/frontend/src/core/stale_deploy_recovery.test.ts
-packages/frontend/src/courier/presence_bridge_chain.test.js
-packages/frontend/src/courier/world.test.js
 packages/frontend/src/env.test.ts
 packages/frontend/src/fight-engine/combat_music.test.js
 packages/frontend/src/fight-engine/fight_end_machine.test.js

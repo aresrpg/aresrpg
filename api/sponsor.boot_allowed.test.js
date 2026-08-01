@@ -14,7 +14,6 @@ process.env.VITE_NETWORK = 'testnet'
 process.env.GAS_STATION_URL = 'http://rpc-gas-pool.test:9527'
 process.env.GAS_STATION_AUTH = 'test-bearer'
 delete process.env.SPONSOR_DEV_BYPASS_ZKLOGIN
-delete process.env.COURIER_DEV_BYPASS_ZKLOGIN
 
 // THE positive control for the whole gate: credentials present, no bypass armed → the real server boots.
 const server = await import('./server.mjs')
@@ -37,9 +36,8 @@ describe('credentials without a bypass — the ordinary production boot', () => 
 })
 
 describe('the refusal fires on ANY bypass switch, by shape, not by an enumerated list', () => {
-  test('every dev-bypass switch arms it (one process, one blast radius)', () => {
+  test('the live dev-bypass switch arms it (one process, one blast radius)', () => {
     expect(refuses({ ...credentialed, SPONSOR_DEV_BYPASS_ZKLOGIN: '1' })).toBe(true)
-    expect(refuses({ ...credentialed, COURIER_DEV_BYPASS_ZKLOGIN: '1' })).toBe(true)
   })
 
   test('a switch that does not exist yet arms it too (the check reads the NAME SHAPE)', () => {

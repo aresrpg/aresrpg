@@ -1854,8 +1854,6 @@
     "link_reconnecting": "プレゼンス再接続中",
     "link_failed": "プレゼンス停止中",
     "link_failed_reason": "プレゼンス停止中: {{reason}}",
-    "send_failed": "メッセージを送信できません — プレゼンスに拒否されました。",
-    "send_rate_limited": "速すぎます — 1行ずつ送信してください。",
     "you": "あなた",
     "type_message": "メッセージを入力…",
     "combat_log": "戦闘ログ",

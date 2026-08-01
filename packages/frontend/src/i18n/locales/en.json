@@ -1854,8 +1854,6 @@
     "link_reconnecting": "Presence reconnecting",
     "link_failed": "Presence down",
     "link_failed_reason": "Presence down: {{reason}}",
-    "send_failed": "Message not sent — presence refused it.",
-    "send_rate_limited": "Slow down — one line at a time.",
     "you": "You",
     "type_message": "Type a message…",
     "combat_log": "Combat log",

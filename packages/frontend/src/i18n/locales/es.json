@@ -1854,8 +1854,6 @@
     "link_reconnecting": "Reconectando presencia",
     "link_failed": "Presencia caída",
     "link_failed_reason": "Presencia caída: {{reason}}",
-    "send_failed": "Mensaje no enviado — la presencia lo rechazó.",
-    "send_rate_limited": "Más despacio — una línea cada vez.",
     "you": "Tú",
     "type_message": "Escribe un mensaje…",
     "combat_log": "Registro de combate",
