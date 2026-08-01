@@ -15,9 +15,11 @@ process.env.REDIS_URL = ''
 process.env.SPONSOR_ARESRPG_PACKAGES = '0x' + 'aa'.repeat(32) + ',not-a-package-id'
 
 describe('SPONSOR_ARESRPG_PACKAGES malformed entry — refuses to boot, names the bad entry', () => {
+  // Same bound as its sibling: the assertion IS a module evaluation (@mysten/sui + gRPC), which outruns bun's
+  // 5s default on a loaded machine. The subject is the refusal, never the clock.
   test('import rejects naming the exact malformed entry', async () => {
     await expect(import('./sponsor.mjs')).rejects.toThrow(
       /sponsor-misconfig.*SPONSOR_ARESRPG_PACKAGES.*malformed entry "not-a-package-id"/
     )
-  })
+  }, 30_000)
 })
