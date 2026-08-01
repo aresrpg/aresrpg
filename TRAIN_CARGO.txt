@@ -1,1 +1,1 @@
-01b345a0d3f5d244e678258c109f0ba00c10b09c train/train-24 fix(sentry): route the triage API at the org's DE region
+5f9c218deaebbc82e3b385328170cc3dd929449c train/train-25 test(indexer): ratchet move event triplets
