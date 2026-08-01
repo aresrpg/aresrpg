@@ -172,6 +172,7 @@ export const unit_test_files = [
   'packages/rpc/api/indexer_log_ship.test.mjs', // Rust indexer JSON-error -> Sentry sidecar decoder/fingerprint
   'scripts/sentry_triage.test.mjs', // hourly Sentry -> GitHub dedupe/material-growth loop pure core
   'scripts/board_hygiene.test.mjs', // #845's close chain: close-keyword parsing, the landing sweep's reopen guard, the stale clock's bot exclusion
+  'scripts/loop_deadman.test.mjs', // the CI dead-man's anchor reader (real captured #1357 bytes), staleness bar, and one-alarm-per-loop ladder
   'scripts/check-move-field-limits.test.mjs', // the field-cap gate's no-verdict severity split (#938) — real subprocess, disposable git fixtures
   'scripts/check-fixture-adjudication.test.mjs', // #1101 — existing fixture mutations need independent commit-trailer ratification
   'scripts/check-loc-ledger-workflow.test.mjs', // #1603 — promotion history scope + ordinary-PR negative control

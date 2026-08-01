@@ -396,7 +396,7 @@ async function collect_pages(config, url, stop = null, collected = [], page_coun
   return next && !(stop && data.some(stop)) ? collect_pages(config, next, stop, all, page_count + 1) : all
 }
 
-const assert_repository = (repository) => {
+export const assert_repository = (repository) => {
   const parts = String(repository).split('/')
   if (parts.length !== 2 || parts.some((part) => !/^[A-Za-z0-9_.-]+$/.test(part)))
     throw new Error('GITHUB_REPOSITORY must be owner/name')
