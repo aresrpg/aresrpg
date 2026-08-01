@@ -176,3 +176,21 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/board_hygiene.mjs ref-gate --pr ${{ github.event.pull_request.number }}
+
+  workflow_registry:
+    name: the registry is not evidence of execution (#835)
+    # Schedule + dispatch only: this reads the live Actions registry, so it must never sit on a pull
+    # request's critical path (a GitHub API blip would red every open PR — the #996 hermeticity lesson).
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: reconcile the Actions workflow registry against master and edge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/check-workflow-registry.mjs
