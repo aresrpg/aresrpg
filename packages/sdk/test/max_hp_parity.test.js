@@ -8,7 +8,7 @@
 //       `base_hp + (level > 1 ? (level − 1) × HP_PER_LEVEL : 0) + vitality`, HP_PER_LEVEL = 5 (ANNEX §4c,
 //       FROZEN — it rides with the immutable XP curve, it is not an admin dial). Its own in-module asserts
 //       (:95-97) pin (70,1,0)=70, (70,10,0)=115, (70,10,25)=140 — reproduced below as the first spread rows.
-//   • `packages/move/aresrpg/sources/config.move:200-216` default_classes() — the per-class BASE HP rows in
+//   • `packages/move/aresrpg/sources/config.move:201-217` default_classes() — the per-class BASE HP rows in
 //       the frozen class-id order. `aresrpg::progression::max_hp` (progression.move:34) is what feeds the two
 //       together on chain: `max_hp_from_base(config::base_hp(row), level, vitality)`.
 //

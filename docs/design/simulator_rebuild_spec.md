@@ -247,8 +247,8 @@ New module `packages/frontend/src/simulator/content.js` (pure; unit-tested):
 - **Spells**: `game/data/spell_corpus.js` blob → `normalize_chain_spell_corpus` → the sim
   template map; per-class grouping via the corpus rows' class field + `seed_manifest.spells`.
   Spell LEVELS: baseline 1, raised freely up to each template's `levels.length`; spell points
-  budget = `(level − 1)` (chain law: `character_link.move:505-510`), stat points =
-  `(level − 1) × 5` (`character_link.move:538-544`). The editor enforces both budgets.
+  budget = `(level − 1)` (chain law: `character_link.move:506-511`), stat points =
+  `(level − 1) × 5` (`character_link.move:539-545`). The editor enforces both budgets.
 - **Items (max roll)**: `@aresrpg/sdk/items-data` (bundled catalog; `stats:
 Record<key,[min,max]>`). MAX ROLL = `range[1]` per stat — derived, never hardcoded. Fold to
   the centered wire (`32768 + value` per `ITEM_STAT_CATALOG_ORDER`) and through

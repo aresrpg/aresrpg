@@ -43,7 +43,7 @@ import { ArchimobOdds } from './archimob_odds'
 import { mob_corpus_of, world_corpus_for_mob, is_listed_mob_role } from './world_corpus'
 
 // Global spawn dial (aresrpg::config — GameConfig.archimob_bp, DEFAULT_ARCHIMOB_BP = 50 basis points,
-// packages/move/aresrpg/sources/config.move:90). Admin-tunable in principle (config.move:286
+// packages/move/aresrpg/sources/config.move:99). Admin-tunable in principle (config.move:371
 // set_archimob_bp), but the indexer only projects a dial's value from its `DialChanged` event —
 // GameConfig has no object-snapshot pipeline, so an admin who never touched this specific setter
 // leaves it unprojected in Redis. The mint-time DEFAULT is the only value provably live today;

@@ -16,7 +16,7 @@
 // the chain snapshots it at fight-lock in `aresrpg_fight::fight::aging_bp` (packages/move/engine/sources/
 // fight.move:383-389) as `min(floor((now − spawned_at_ms)/HOUR_MS) · aging_bp_per_hour, aging_cap_bp)`, with the
 // live GameConfig defaults DEFAULT_AGING_BP_PER_HOUR=100 (+1%/h) and DEFAULT_AGING_CAP_BP=10_000 (+100% cap) —
-// packages/move/aresrpg/sources/config.move:91-92. Settlement scales XP ×(10000+aged_bp)/10000 (settlement.move
+// packages/move/aresrpg/sources/config.move:100-101. Settlement scales XP ×(10000+aged_bp)/10000 (settlement.move
 // :106), so the displayed "+N% XP" = aged_bp/100. We mirror that exact whole-hour-floored formula here so the
 // card previews what a fight started NOW would bank — it ticks up one % per whole hour of age, capped at +100%.
 
@@ -25,8 +25,8 @@ import i18n from '../i18n'
 import { compose_group_card } from './spawn_compose.js'
 
 const HOUR_MS = 3_600_000 // fight.move:44 HOUR_MS — whole-hour granularity (integer floor, matches the chain)
-const AGING_BP_PER_HOUR = 100 // config.move:91 DEFAULT_AGING_BP_PER_HOUR (+1.00%/h)
-const AGING_CAP_BP = 10_000 // config.move:92 DEFAULT_AGING_CAP_BP (+100.00% total, reached at 100h)
+const AGING_BP_PER_HOUR = 100 // config.move:100 DEFAULT_AGING_BP_PER_HOUR (+1.00%/h)
+const AGING_CAP_BP = 10_000 // config.move:101 DEFAULT_AGING_CAP_BP (+100.00% total, reached at 100h)
 
 /**
  * The client mirror of the chain's §8 aging bonus, as a whole-percent XP boost (0..100).

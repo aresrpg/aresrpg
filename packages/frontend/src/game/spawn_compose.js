@@ -16,7 +16,7 @@ import { PROGRESS_SCALE } from '@aresrpg/sim/zone_derive'
 
 import { is_archi_tier } from './data/mobs.js'
 
-// GameConfig dial fallbacks (config.move:90/97 DEFAULT_ARCHIMOB_BP / DEFAULT_TEAM_SIZE) — the live dials ride
+// GameConfig dial fallbacks (config.move:99/106 DEFAULT_ARCHIMOB_BP / DEFAULT_TEAM_SIZE) — the live dials ride
 // /v1/config `dials{}` but only exist there once a DialChanged event ever fired; absent = the chain defaults.
 export const DEFAULT_ARCHIMOB_BP = 50 // 0.50% (§17.26)
 export const DEFAULT_TEAM_BOUND = 6 // §17.8
