@@ -32,14 +32,12 @@ const living_at = (view, x, y) =>
   [...(view?.fighters?.values() ?? [])].find((f) => !f.dead && f.cell?.x === x && f.cell?.y === y) ?? null
 
 /**
- * The corpus row a dealt card names, whichever surface dealt it (#1025). The world deals `name_key`s; the
- * simulator's local chain deals the SpellTemplate object ids themselves (simulator/fight_start.js `cast_id_of`).
- * Falls back to the caster's class primary when the index misses — level-blind here, the authority enforces
- * `min_char_level`.
+ * The corpus row a dealt card names (#1025). Every surface deals `name_key`s — the bar's one vocabulary
+ * (#1034) — and `fight_spell` resolves them through the corpus' own index. Falls back to the caster's class
+ * primary when the index misses — level-blind here, the authority enforces `min_char_level`.
  * @param {string | null} hand_id @param {any[]} castable the caster's class rows @returns {any | null}
  */
-const cast_row = (hand_id, castable) =>
-  (hand_id && (fight_spell(hand_id) ?? castable.find((row) => row.object_id === hand_id))) || castable[0] || null
+const cast_row = (hand_id, castable) => (hand_id && fight_spell(hand_id)) || castable[0] || null
 
 /**
  * window.__ARES_DEV_CAST(spell_idx, target_cell) — draft + commit a REAL cast at {x,y} on the active turn.

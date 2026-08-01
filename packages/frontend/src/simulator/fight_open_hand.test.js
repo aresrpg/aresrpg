@@ -142,7 +142,9 @@ describe("the seat's spells reach the spell bar", () => {
     const { chain, store, seat } = open(200)
     store.getState().input({ ...hand_update_of(chain.sim_state, 'sim_c1'), fight_id: FIGHT_ID })
     const view = fight_view(store.getState())
-    expect(view.hand).toEqual(Object.keys(seat.spell_levels))
+    // ONE CARD PER BOOK ROW, dealt in the book's order — but by `name_key`, the bar's one vocabulary (#1034):
+    // the seat's book is keyed by the CAST id, and `hand_one_vocabulary.test.js` owns that translation.
+    expect(view.hand.length).toBe(Object.keys(seat.spell_levels).length)
     expect(view.hand.length).toBe(20)
   })
 

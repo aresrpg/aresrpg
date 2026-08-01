@@ -37,6 +37,17 @@ const { build_seat } = await import('./content.js')
 const { create_fight_shim } = await import('./fight_shim.js')
 const { SpellBar } = await import('../game/screens/hud/SpellBar.jsx')
 const { reset_assets_for_test } = await import('@aresrpg/sdk/jobs')
+const { set_spell_corpus_for_test } = await import('../game/data/spell_corpus.js')
+const { default: spell_corpus_fixture } = await import('./spell_corpus_l2.fixture.json')
+
+// THE BAR SPEAKS name_keys (#1034), so a socket only fills for a spell the CORPUS can name. The seats below
+// are senshi, so the published fixture is loaded and their book carries Warcleave's real SpellTemplate id
+// beside the sim's built-in `mob_attack` — the one template `templates_raw: []` leaves the local chain able to
+// cast, which is what the #922 gate below drafts. `mob_attack` has no corpus row (nothing publishes the sim's
+// own basic attack), so `hand_update_of` drops it from the bar and SAYS SO: an unnameable card cannot be armed
+// correctly, and a production seat never holds one (`class_spellbook_of` only ever yields corpus ids).
+const SENSHI_WARCLEAVE_ID = '0x0100'
+set_spell_corpus_for_test(spell_corpus_fixture.rows)
 
 // The pinned markup now holds FILLED sockets (#949 — a fight's dealt hand reaches the bar), and a filled
 // socket carries its spell-art URL. That URL is resolved off the process-wide asset manifest, which any
@@ -89,7 +100,7 @@ const open_fight = () => {
       cell: ally[index],
       character: row,
       seat: build_seat(row, []),
-      spell_ids: [MOB_ATTACK_ID],
+      spell_ids: [SENSHI_WARCLEAVE_ID, MOB_ATTACK_ID],
     })),
     picks: mobs.map((mob, index) => ({ cell: enemy[index], mob })),
     class_templates: new Map(),

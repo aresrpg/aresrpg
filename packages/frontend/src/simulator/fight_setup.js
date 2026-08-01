@@ -15,6 +15,8 @@
 // gets here, so a level the player allocated in the inspector is the level the sim casts at. Level 1 is the
 // FREE baseline (an absent row reads 1 on chain), so unallocated spells still enter the book at 1.
 
+import { fight_spell } from '../game/screens/hud/fight-spells.js'
+
 import { build_mob_spell_templates, mob_spell_id } from './content.js'
 
 /** The sim entity fields every fighter carries, whatever side it is on (`fight_state.js` FightEntity). */
@@ -109,6 +111,12 @@ export const mob_entity = ({ mob, index, cell, spells = [] }) => {
  *
  * ONE seat, not the roster: the store keeps a SINGLE bar (the local player's — on chain the server routes
  * each update to its owner), so handing it every seat's would leave the last one showing.
+ *
+ * ONE VOCABULARY (#1034). The bar's cards are `name_key`s — the corpus' own arm id, which is what
+ * `DungeonBoard`'s `armed_row` (`my_spells.find(sp => sp.name_key === armed_spell_id)`) matches on, and the
+ * simulator mounts that very board. The seat's book is keyed by the CAST id instead (the SpellTemplate object
+ * id `seat_spell_level` reads and a committed cast names — `fight_start.js cast_id_of`), so the translation
+ * happens HERE, at this writer's own boundary, and the store never holds two id spaces under one name.
  * @param {{ team0?: Array<{ id: string, spell_levels?: Record<string, number> }> }} sim_state
  * @param {string | null} entity_id  the seat the page is focused on
  * @returns {{ type: 'hand_update', entity_id: string, hand: string[] } | null}  null when the chain holds
@@ -117,7 +125,16 @@ export const mob_entity = ({ mob, index, cell, spells = [] }) => {
 export const hand_update_of = (sim_state, entity_id) => {
   const seat = (sim_state?.team0 ?? []).find(({ id }) => id === entity_id)
   if (!seat) return null
-  return { type: 'hand_update', entity_id: seat.id, hand: Object.keys(seat.spell_levels ?? {}) }
+  const cast_ids = Object.keys(seat.spell_levels ?? {})
+  const hand = cast_ids.map((cast_id) => fight_spell(cast_id)?.name_key).filter(Boolean)
+  // NO SILENT HALF-BAR: a book row the corpus cannot name is dropped, never quietly — the same refusal
+  // `build_start_args` prints for a receipt-less spell, one door later.
+  if (hand.length !== cast_ids.length)
+    console.error(
+      `[simulator] ${cast_ids.length - hand.length} seat spell(s) resolve to no corpus row and were dropped ` +
+        `from the bar — the spell corpus does not carry the SpellTemplate id the fight was built from`
+    )
+  return { type: 'hand_update', entity_id: seat.id, hand }
 }
 
 /**
