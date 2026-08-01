@@ -25,39 +25,35 @@ export const use_presence = Object.assign((selector) => useStore(presence_store,
   subscribe: (listener) => presence_store.subscribe(listener),
 })
 
-/** Server-observed identity joined to the latest courier pose and chain-resolved display record. */
+/** Peer-observed identity joined to the latest broadcast pose and chain-resolved display record. */
 export function presence_character(character_id) {
   const state = presence_store.getState()
   const peer = state.peers.get(character_id)
-  const online = state.online.get(character_id)
-  if (!peer && !online) return null
+  if (!peer) return null
   return {
-    ...(peer ?? {}),
-    ...(online ?? {}),
+    ...peer,
     id: character_id,
-    address: online?.address || peer?.address || '',
-    name: peer?.chain?.name ?? peer?.name ?? online?.name ?? null,
+    address: peer.address || '',
+    name: peer?.chain?.name ?? peer?.name ?? null,
     classe: peer?.chain?.classe ?? peer?.classe ?? null,
     male: peer?.chain?.male ?? peer?.male ?? null,
     color_1: peer?.chain?.color_1 ?? peer?.color_1 ?? 0,
   }
 }
 
-/** The first server-observed character belonging to a wallet address. */
+/** The first character in my room belonging to a wallet address. */
 export function presence_character_by_address(address) {
   if (!address) return null
   const state = presence_store.getState()
-  for (const row of state.online.values()) if (row.address === address) return presence_character(row.id)
   for (const peer of state.peers.values()) if (peer.address === address) return presence_character(peer.id)
   return null
 }
 
-/** Every courier-positioned character currently observed for a wallet address. */
+/** Every positioned character currently observed for a wallet address. */
 export function presence_characters_by_address(address) {
   if (!address) return []
   const state = presence_store.getState()
   const ids = new Set()
-  for (const row of state.online.values()) if (row.address === address) ids.add(row.id)
   for (const peer of state.peers.values()) if (peer.address === address) ids.add(peer.id)
   return [...ids].map(presence_character).filter(Boolean)
 }

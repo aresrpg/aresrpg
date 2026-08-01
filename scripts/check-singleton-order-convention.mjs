@@ -3,17 +3,19 @@
 
 import { readFile } from 'node:fs/promises'
 
+// Exactly as the gate script spells them: two src suites behind its $FE prefix, and the room transport suite
+// at its full path (it lives under packages/frontend/test, per L-L1).
 const EXPECTED_COMBO = [
-  'world-shell/dungeon_fight_weapon_lines.test.js',
-  'simulator/fight_open_hand.test.js',
-  'courier/world.test.js',
+  '$FE/world-shell/dungeon_fight_weapon_lines.test.js',
+  '$FE/simulator/fight_open_hand.test.js',
+  'packages/frontend/test/p2p/lobby-room.test.js',
 ]
 
 const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 const actual_state = async () => {
   const [presence, fight, order_gate, permuted] = await Promise.all([
-    source('packages/frontend/src/courier/world.test.js'),
+    source('packages/frontend/test/p2p/lobby-room.test.js'),
     source('packages/frontend/src/simulator/fight_open_hand.test.js'),
     source('scripts/order-independence-gate.sh'),
     source('scripts/permuted-suite.sh'),
@@ -23,8 +25,9 @@ const actual_state = async () => {
     consumers: [
       {
         id: 'presence',
-        reset_index: presence.indexOf("presence_store.getState().input({ type: 'reset' })"),
-        first_use_index: presence.indexOf("test('opening the courier"),
+        // leave_room() dispatches the presence atom's `reset` input — the room suite's cold-state idiom.
+        reset_index: presence.indexOf('  leave_room() // an earlier suite may have left a room mounted'),
+        first_use_index: presence.indexOf("describe('the room IS the world"),
       },
       {
         id: 'fight',
@@ -32,7 +35,7 @@ const actual_state = async () => {
         first_use_index: fight.indexOf("test('a level-200 roster row"),
       },
     ],
-    combo: EXPECTED_COMBO.filter((file) => order_gate.includes(`$FE/${file}`)),
+    combo: EXPECTED_COMBO.filter((file) => order_gate.includes(file)),
     combo_label: order_gate.includes('consumers self-reset behind a warmed session'),
     permuted_seed: permuted.includes('PERMUTED_SEED:-1729'),
     permuted_runs_bun: permuted.includes('bun test "${FILES[@]}"'),

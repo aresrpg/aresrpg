@@ -17,7 +17,7 @@
 // in the full game HUD, not P2).
 //
 // Option B "Minimal Float": the standalone OnlinePlayers sidebar mount is gone (minimal chrome),
-// so its count folds into the chat header ("CHAT · N ONLINE"). N = the courier presence roster
+// so its count folds into the chat header ("CHAT · N ONLINE"). N = the room presence roster
 // (core/modules/presence.js) + 1 for self. This is the sole aggregate presence-count read.
 // visible_characters is a Map mutated in place (its ref never changes) — subscribe to a stable digest
 // primitive so React observes spawn/despawn notifications from the presence module.
@@ -26,7 +26,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { COURIER_CHAT_MAX_LENGTH } from '@aresrpg/sdk/courier'
+import { CHAT_MAX_LENGTH } from '@aresrpg/world/presence'
 
 import { use_fight, use_game_state } from '../../../store.js'
 import { select_online_count } from '../../../core/presence_count.js'
@@ -237,7 +237,7 @@ export function WorldChat({ readonly = false } = {}) {
                 <span className="gw-chat__name me">{t('world_chat.you')}</span>
               ) : (
                 // S-67: another player's name is a click target — opens PlayerActionMenu (add friend / invite).
-                // The courier row already carries the wallet verified by its signed ingress.
+                // The peer's own broadcast carries the wallet it renders under.
                 <button
                   type="button"
                   className="gw-chat__name gw-chat__name--btn"
@@ -287,7 +287,7 @@ export function WorldChat({ readonly = false } = {}) {
             onKeyDown={(e) => {
               if (e.key === 'Escape') input_ref.current?.blur() // Escape → back to the world (submit handles Enter)
             }}
-            maxLength={COURIER_CHAT_MAX_LENGTH}
+            maxLength={CHAT_MAX_LENGTH}
             placeholder={t('world_chat.type_message')}
           />
         </form>

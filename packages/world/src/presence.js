@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // PRESENCE — the core: who/what is around me NOW. Ephemera under the freshness law — peer facts
-// arrive as realtime courier ticks, expire on peer_leave, and NOTHING here feeds claimability (claimability =
+// arrive as realtime peer ticks, expire on peer_leave, and NOTHING here feeds claimability (claimability =
 // checkpoint zone + proximity + row liveness, spawns-internal — the seams law). ONE atom behind ONE
 // `input(msg, now)` door: the peer table (position + self-declared identity/state + chain-resolved identity),
 // MY broadcastable facts (cell / state / cosmetic — dissolved out of the transport's module-scope side
@@ -11,7 +11,7 @@
 // The CHEATER-PLAUSIBILITY DROP — formerly buried in the transport's receive callbacks — is a pure rule in
 // the fold now (headless-testable): a peer update implying an impossible speed (teleport / speed-hack) is
 // silently DROPPED, never applied; a broadcast-declared MOUNT earns exactly its legit speed headroom.
-// Effects live at the edges: the courier transport (frontend `src/courier/world.js`) dispatches typed inputs
+// Effects live at the edges: the room transport (frontend `src/p2p/lobby-room.js`) dispatches typed inputs
 // and reads the atom to send; identity resolution is an effect REQUEST (the adapter reads the chain and answers
 // through the door). NOTE (#1399): the `peer_state` fold below — and its `peer_state_of` / `peer_states_by_address`
 // / `peer_state_by_address` readers — lost their only producer when the p2p transport was deleted; identity now
@@ -42,10 +42,8 @@ export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 // timer that set()s state): a peer silent past PEER_EXPIRY_MS folds out on the next `tick` — an honest count
 // over a frozen one. Connection state itself arrives on the `link` input; the transport edge owns the socket,
 // its finite reconnect budget (REJOIN_MAX_ATTEMPTS), and the schedule on which it comes back.
-// OPEN (#1641, no producer today): PEER_HEARTBEAT_MS and `tick` both describe a re-emit/expiry cadence that
-// nothing currently drives — the client POSTs a pose only on an actual cell/facing change, so a player who
-// stands still lapses out of the courier's TTL rows and vanishes from every LATER joiner's snapshot. Whether
-// the fix is a client keep-alive or a longer server TTL is an architecture call, not this fold's.
+// PEER_HEARTBEAT_MS is DRIVEN by the room transport's heartbeat interval: a player who stands still still
+// re-emits their pose on this cadence, so they stay provably alive on every peer's expiry clock.
 // INVARIANT (#305 fix): PEER_EXPIRY_MS must clear the BROWSER'S BACKGROUND-TAB TIMER THROTTLE floor, not just
 // be "a comfortable multiple" of PEER_HEARTBEAT_MS — a backgrounded tab's heartbeat TIMER is clamped by
 // the browser regardless of its requested period (Chrome intensively throttles a hidden tab's timers to ~1/min),
@@ -55,9 +53,10 @@ export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 // ~60s worst-case floor with real margin while still bounding how long a TRULY dead peer (frozen channel, no
 // clean onPeerLeave) lingers as a ghost. They live together HERE so the relationship is one read, never two
 // scattered magic numbers.
-export const PEER_HEARTBEAT_MS = 7_000 // the intended re-emit cadence for my own pose (see OPEN above — no producer drives it today); it must stay under the courier's pose TTL (api/courier.mjs POSITION_TTL_MS, 10s), and a backgrounded tab's real send gap is bounded by the browser's throttle floor, not this number
+export const PEER_HEARTBEAT_MS = 7_000 // the re-emit cadence for my own pose (the room transport's heartbeat drives it); a backgrounded tab's real send gap is bounded by the browser's throttle floor, not this number
 export const PEER_EXPIRY_MS = 90_000 // silent this long ⇒ the peer folds out on the next tick — sized above the background-throttle floor (#305), not the heartbeat cadence
-export const REJOIN_MAX_ATTEMPTS = 6 // the finite reconnect budget an SSE edge spends before it gives up honestly (a `failed` link with its reason) instead of retrying forever
+export const REJOIN_MAX_ATTEMPTS = 6 // the finite reconnect budget the transport edge spends before it gives up honestly (a `failed` link with its reason) instead of retrying forever
+export const CHAT_MAX_LENGTH = 280 // one broadcast chat line's ceiling, in code points — the composer's maxLength and the wire's contract are the same number
 
 /** @typedef {{ x:number, y:number, h?:number, yw?:number }} PeerCell */
 /**
@@ -103,7 +102,6 @@ const blank_peer = (id) => ({
  *   my_state: { address:string, color_1:number, color_2:number, color_3:number, party_id:string|null, dungeon_id:string|null, classe?:string|null, male?:boolean|null, name?:string|null }|null,
  *   my_cosmetic: { mounted:boolean, mount_glb:string|null, veteran:boolean },
  *   peers: Map<string, PeerEntry>,
- *   online: Map<string, { id:string, address:string, world:string|null, name?:string|null }>,
  *   roster_seq: number,
  *   identity_requests: { seq:number, ids:string[] }|null, identity_seq: number,
  *   chat: { seq:number, row:any }|null, chat_seq: number,
@@ -218,41 +216,11 @@ const fold_runs_snapshot = (state, input) => {
   return { ...state, dungeon_fight_rows }
 }
 
-// ── SERVER-OBSERVED PRESENCE (#1384) — the read layer terminates every stream, so an open connection IS
-// presence: the world stream sends the full current set on connect and join/leave deltas after. It folds into
-// its OWN map, never the peer table: a peer row is a POSITION sighting (realtime ticks, freshness-law'd, in
-// sight) while an online row is server truth about a player who may be nowhere near me. A snapshot REPLACES
-// the set — the server owns it whole, so a stale local row can never linger.
-const online_row = (raw) => {
-  const id = raw?.id ?? raw?.character_id
-  return id ? { ...raw, id: String(id) } : null
-}
-const fold_online = (state, input) => {
-  if (input.type === 'stream_current') {
-    const online = new Map()
-    for (const raw of input.rows ?? []) {
-      const row = online_row(raw)
-      if (row) online.set(row.id, row)
-    }
-    return { ...state, online }
-  }
-  if (input.type === 'stream_join') {
-    const row = online_row(input.row)
-    if (!row) return state
-    return { ...state, online: new Map(state.online).set(row.id, row) }
-  }
-  const id = input.id == null ? null : String(input.id)
-  if (!id || !state.online.has(id)) return state
-  const online = new Map(state.online)
-  online.delete(id)
-  return { ...state, online }
-}
-
 // THE LINK-LIFECYCLE FOLD — the self-heal half of the presence core: liveness expiry, and the ONE writer of
-// `link_status` / `link_error`. The transport edge (frontend `src/courier/world.js` → presence_sse_adapter)
-// owns the socket and its finite retry budget; it reports what the link IS through this one input, and the UI
-// reads the atom. Before #1641 the edge only logged its status, so the chip read "P2P idle" against a fully
-// connected stream — a status with no writer is a lie with a UI.
+// `link_status` / `link_error`. The transport edge (frontend `src/p2p/lobby-room.js`) owns the socket and its
+// finite retry budget; it reports what the link IS through this one input, and the UI reads the atom. Before
+// #1641 the edge only logged its status, so the chip read "P2P idle" against a fully connected stream — a
+// status with no writer is a lie with a UI.
 const fold_link = (state, input, now) => {
   switch (input.type) {
     case 'link': {
@@ -281,9 +249,6 @@ const fold_link = (state, input, now) => {
 const FOLD_BY_INPUT_TYPE = new Map([
   ['peer_pos', fold_peer_pos],
   ['peer_state', fold_peer_state],
-  ['stream_current', fold_online],
-  ['stream_join', fold_online],
-  ['stream_leave', fold_online],
   ['fights_snapshot', fold_fights_snapshot],
   ['runs_snapshot', fold_runs_snapshot],
 ])
@@ -348,7 +313,6 @@ export function reduce_presence(state, input, now) {
         my_state: null,
         my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
         peers: new Map(),
-        online: new Map(),
         fight_markers: new Map(),
         dungeon_fight_rows: new Map(),
         roster_seq: state.roster_seq + 1,
@@ -378,7 +342,6 @@ export function create_presence_store() {
     my_state: null,
     my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
     peers: new Map(),
-    online: new Map(),
     roster_seq: 0,
     identity_requests: null,
     identity_seq: 0,
@@ -457,14 +420,6 @@ export function peer_states_by_address(state, address) {
 export function peer_state_by_address(state, address) {
   if (!address) return null
   for (const p of state.peers.values()) if (p.address === address) return peer_state_of(state, p.id)
-  return null
-}
-
-/** Server-authored online presence by wallet address (the #1384 stream's current set). Position peers are
- *  deliberately NOT consulted: "online" is the server's connection truth, never p2p visibility. */
-export function online_state_by_address(state, address) {
-  if (!address) return null
-  for (const row of state.online.values()) if (row.address === address) return row
   return null
 }
 

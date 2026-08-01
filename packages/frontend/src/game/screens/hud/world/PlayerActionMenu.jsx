@@ -47,7 +47,7 @@ export function PlayerActionMenu() {
     return () => window.removeEventListener('keydown', on_key)
   }, [target, close])
 
-  // Chat and nameplates normally carry the signed courier address directly. Resolve it from the live
+  // Chat and nameplates normally carry the peer's broadcast address directly. Resolve it from the live
   // server-observed presence row when a caller only supplied the character id.
   // Hoisted above the early return (below) so BOTH the render and the preload effect share one derivation.
   const address = target?.address || presence_character(target?.id ?? '')?.address || null

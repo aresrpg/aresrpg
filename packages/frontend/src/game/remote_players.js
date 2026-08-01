@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // D206 — REMOTE PLAYERS in the voxel world (feature #19's render half; replaces roam.js's dead
 // foreign-player sprites). ONE home for BOTH modes: the walk session AND the logged-out spectate
-// diorama create this layer; it renders every presence entry (visible_characters — fed by the courier
+// diorama create this layer; it renders every presence entry (visible_characters — fed by the room
 // presence fold plus locally-driven owned followers; the active id is never inserted) as a real engine avatar
 // (class rig + hair + equipped pet companion + veteran-title aura), eases position → target_position (presence retargets, we
 // lerp — roam's contract), stands the body on the terrain via ground_surface_y (presence packets
@@ -97,7 +97,7 @@ export function create_remote_players(engine, world_canvas = null) {
   chip_layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:11'
   document.body.appendChild(chip_layer)
 
-  // Identity comes from the normal chain read requested by the courier presence fold.
+  // Identity comes from the normal chain read requested by the presence fold.
   const identity_of = (/** @type {string} */ _id, /** @type {any} */ entry) => {
     const classe = character_rig_of(entry.classe, PLACEHOLDER_RIG_CLASS)
     const male = entry.male !== false

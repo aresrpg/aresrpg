@@ -63,12 +63,13 @@ run_combo "crush SDK exports — checkpoint and action suites share the real mod
   "$FE/world-shell/world_checkpoint.test.js" "$FE/world-shell/crush_actions.test.js"
 
 # ⑫ Shared frontend atoms: the weapon-lines suite opens a fight session before the simulator hand consumer,
-# while the courier suite begins from the presence atom's cold link state. Guards both consumers resetting
-# BEFORE use; the reverse scheduling is the exact pair that reddened train T2 before the weapon-lines guard.
+# while the room transport suite begins from the presence atom's cold link state. Guards both consumers
+# resetting BEFORE use; the reverse scheduling is the exact pair that reddened train T2 before the
+# weapon-lines guard.
 run_combo "fight + presence atoms — consumers self-reset behind a warmed session" \
   "$FE/world-shell/dungeon_fight_weapon_lines.test.js" \
   "$FE/simulator/fight_open_hand.test.js" \
-  "$FE/courier/world.test.js"
+  "packages/frontend/test/p2p/lobby-room.test.js"
 
 if [ "$FAIL" -ne 0 ]; then
   echo "ORDER-INDEPENDENCE GATE FAILED — a reintroduced module-global leak broke a cold-state fixture."

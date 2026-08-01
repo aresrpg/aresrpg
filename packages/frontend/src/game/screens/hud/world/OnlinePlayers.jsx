@@ -7,7 +7,7 @@
 //               clicking a player in the world or a name in chat → PlayerActionMenu)
 //
 // DATA (all honest, no fakes): the friend list = the reducer-owned friends atom, reconciled from read_roster
-// (chain-direct FriendList + /v1 enrichment) on a short poll + focus heal. ONLINE status = the courier stream:
+// (chain-direct FriendList + /v1 enrichment) on a short poll + focus heal. ONLINE status = the lobby room:
 // a friend is "online" iff their wallet is in the live presence set, NOT the RPC's last-position freshness.
 // Names = friend_display_name below: the stream name when present, else
 // the indexer character name, else character_name_resolve.js's ONE HOME fallback — never a raw address slice.
@@ -30,7 +30,7 @@ import { open_player_menu } from './player_menu_store.js'
 /** @returns {import('react').ReactElement | null} */
 export function OnlinePlayers() {
   const { t } = useTranslation()
-  use_presence((state) => state.online)
+  use_presence((state) => state.roster_seq)
   const address = use_auth((s) => s.address)
   const [expanded, set_expanded] = useState(false)
   const [input, set_input] = useState('')
@@ -59,8 +59,9 @@ export function OnlinePlayers() {
     }
   }, [address])
 
-  // ONLINE = present in the server-observed world stream. name = friend_display_name's ONE derivation, always
-  // a truthy display string — never empty, never a raw address needing a per-row fallback below.
+  // ONLINE = present in my lobby room — membership IS the announcement (docs/REALTIME.md lane 2), so there is
+  // no registry to disagree with it. name = friend_display_name's ONE derivation, always a truthy display
+  // string — never empty, never a raw address needing a per-row fallback below.
   const decorated = rows.map((r) => {
     const peer = presence_character_by_address(r.address)
     return { ...r, online: !!peer, name: friend_display_name(r, peer) }

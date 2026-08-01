@@ -15,7 +15,6 @@ import {
   peer_state_of,
   peer_state_by_address,
   peer_states_by_address,
-  online_state_by_address,
   see_fights_count,
   subscribe_identity_requests,
   subscribe_chat,
@@ -35,31 +34,6 @@ const boot = () => {
   input({ type: 'session', character_id: ME })
   return { store, input, state: () => store.getState() }
 }
-
-describe('server presence stream — current/join/leave fold through the presence_input door', () => {
-  it('replaces the current set, adds a join, and removes a leave without touching position peers', () => {
-    const { input, state } = boot()
-    input({
-      type: 'stream_current',
-      rows: [{ id: PEER, address: '0xalice', name: 'Alice', world: '0xworld' }],
-    })
-    expect(online_state_by_address(state(), '0xalice')).toMatchObject({ id: PEER, name: 'Alice' })
-
-    input({
-      type: 'stream_join',
-      row: { character_id: PEER_B, address: '0xbob', name: 'Bob', world: '0xworld' },
-    })
-    expect(online_state_by_address(state(), '0xbob')).toMatchObject({ id: PEER_B, name: 'Bob' })
-
-    input({ type: 'stream_leave', id: PEER })
-    expect(online_state_by_address(state(), '0xalice')).toBe(null)
-    expect(state().peers.size).toBe(0)
-
-    input({ type: 'stream_current', rows: [{ id: PEER, address: '0xalice', name: 'Alice' }] })
-    expect(online_state_by_address(state(), '0xbob')).toBe(null)
-    expect(online_state_by_address(state(), '0xalice')?.id).toBe(PEER)
-  })
-})
 
 describe('the peer table — realtime ticks under the freshness law', () => {
   it('a first sighting spawns a placeholder row + emits ONE identity request', () => {
