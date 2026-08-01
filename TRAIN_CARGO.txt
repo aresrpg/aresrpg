@@ -1,2 +1,1 @@
-28abaadd755093cb6010b20832b47a80e5a0dd9c lane/merge-stacks-kiosk fix(inventory): sign stack merges against chain custody, not the mirror
-2d4dc7f85fe3973534eda2c65670ebdc3f136b29 lane/merge-stacks-kiosk fix(inventory): stop the boot sweep re-signing a refused merge plan
+01b345a0d3f5d244e678258c109f0ba00c10b09c train/train-24 fix(sentry): route the triage API at the org's DE region
