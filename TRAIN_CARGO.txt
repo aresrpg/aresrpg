@@ -1,1 +1,1 @@
-5f9c218deaebbc82e3b385328170cc3dd929449c train/train-25 test(indexer): ratchet move event triplets
+506ecf3159e29ae1a9538af2d0f2785e5d13e850 train/train-26 ci(loc-ledger): exempt nested and plural test trees
