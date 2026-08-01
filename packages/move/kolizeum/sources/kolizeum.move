@@ -177,6 +177,7 @@ public fun join(
   version: &Version,
   ctx: &TxContext,
 ) {
+  config.assert_enabled(); // GLOBAL game freeze — an arena seat is a MONEY path (the pledge)
   config.assert_domain(aresrpg::config::domain_pvp()); // S-46 kill-switch bit
   let level = character_link::level(character);
   join_internal(kolizeum, level, object::id(character), pledge, version, ctx);
@@ -255,6 +256,7 @@ public fun start(
   ctx: &mut TxContext,
 ) {
   version.assert_enabled();
+  config.assert_enabled(); // GLOBAL game freeze — an arena seat is a MONEY path (the pledge)
   config.assert_domain(aresrpg::config::domain_pvp()); // S-46 kill-switch bit
   let who = sender(ctx);
   assert!(who == kolizeum.creator, ENotCreator);
@@ -288,6 +290,7 @@ public fun seat(
   ctx: &TxContext,
 ) {
   version.assert_enabled();
+  config.assert_enabled(); // GLOBAL game freeze — an arena seat is a MONEY path (the pledge)
   config.assert_domain(aresrpg::config::domain_pvp()); // S-46 kill-switch bit
   assert!(kolizeum.status == STATUS_STARTED, ENotStarted);
   assert!(kolizeum.fight_id.is_some() && *kolizeum.fight_id.borrow() == object::id(fight), EWrongFight);

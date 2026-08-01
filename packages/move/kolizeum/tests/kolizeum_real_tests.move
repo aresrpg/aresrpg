@@ -124,3 +124,59 @@ fun create_friends_only_real_character_and_list() {
   ts::return_shared(lobby);
   sc.end();
 }
+
+// ╔════════════════ [ GLOBAL FREEZE — the emergency kill-switch reaches the pledge door ] ═ ]
+
+const C_ENotEnabled: u64 = 101; // aresrpg::config — the GLOBAL game freeze
+
+/// Flip the GLOBAL `GameConfig.enabled` switch OFF (the emergency freeze; domain bits untouched, all-on).
+fun freeze_game(sc: &mut Scenario) {
+  sc.next_tx(koli_world::owner());
+  let cap = sc.take_from_sender<aresrpg::admin::AdminCap>();
+  let mut cfg = sc.take_shared<GameConfig>();
+  aresrpg::config::set_enabled(&cap, &mut cfg, false, sc.ctx());
+  ts::return_shared(cfg); sc.return_to_sender(cap);
+}
+
+#[test, expected_failure(abort_code = C_ENotEnabled, location = aresrpg::config)]
+/// FREEZE BYPASS (audit class 1): `join` asserted only the PvP DOMAIN bit, so a GLOBAL emergency freeze left
+/// the arena taking pledges — SUI into a shared pot of a game that is supposed to be stopped. With `enabled`
+/// off (domain bits all-on) the real join door must abort `ENotEnabled` before the pledge joins the pot.
+fun join_while_globally_frozen_aborts() {
+  let mut sc = ts::begin(koli_world::owner());
+  koli_world::boot(&mut sc);
+  koli_world::open_gate(&mut sc);
+  let creator_cid = koli_world::mint_character(&mut sc, koli_world::owner());
+
+  sc.next_tx(koli_world::owner());
+  {
+    let k = sc.take_shared<Kiosk>();
+    let pkcap = sc.take_from_sender<PersonalKioskCap>();
+    let cfg = sc.take_shared<GameConfig>();
+    let ver = sc.take_shared<Version>();
+    let pay = coin::mint_for_testing<SUI>(PLEDGE, sc.ctx());
+    let chr = k.borrow<Character>(personal_kiosk::borrow(&pkcap), creator_cid);
+    kolizeum::create_public(&cfg, 1, PLEDGE, 100, chr, pay, &ver, sc.ctx());
+    ts::return_shared(k); sc.return_to_sender(pkcap); ts::return_shared(cfg); ts::return_shared(ver);
+  };
+
+  freeze_game(&mut sc); // the emergency freeze lands AFTER the lobby is open
+
+  sc.next_tx(JOINER);
+  let cpolicy = sc.take_shared<TransferPolicy<Character>>();
+  let cust = character::new_customization(1, 2, 3);
+  let (jchr, jpledge) = character::new_for_testing(b"joiner".to_string(), b"senshi".to_string(), true, cust, 1000, sc.ctx());
+  let jcid = character::id(&jchr);
+  let (mut jk, kcap) = kiosk::new(sc.ctx());
+  let jpkcap = personal_kiosk::new(&mut jk, kcap, sc.ctx());
+  character::lock_in_kiosk(jpledge, jchr, &mut jk, personal_kiosk::borrow(&jpkcap), &cpolicy);
+  ts::return_shared(cpolicy);
+
+  let mut lobby = sc.take_shared<Kolizeum>();
+  let cfg = sc.take_shared<GameConfig>();
+  let ver = sc.take_shared<Version>();
+  let pay = coin::mint_for_testing<SUI>(PLEDGE, sc.ctx());
+  let jc = jk.borrow<Character>(personal_kiosk::borrow(&jpkcap), jcid);
+  kolizeum::join(&mut lobby, jc, pay, &cfg, &ver, sc.ctx()); // ENotEnabled
+  abort
+}

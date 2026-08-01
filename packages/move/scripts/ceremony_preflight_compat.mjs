@@ -95,7 +95,12 @@ const MAX_OBJECT_SIZE = 102_400
 // dials): incident response must not require a republish. Measured cost of that ruling: 2206 bytes.
 // This is a REPUBLISH-only shrink: dropping public functions is an INCOMPATIBLE upgrade, so it
 // lands with a fresh lineage, never over the live one.
-const SIZE_BUDGETS = { aresrpg: 99_239 }
+// 2026-08-02 (freeze-bypass audit class 1): 99_239 → 99_260. +21 bytes, TWO `config.assert_enabled()` calls in
+// `shop::buy`/`buy_many` (the market money door asserted only its S-46 DOMAIN bit, so the GLOBAL emergency
+// freeze did not stop it selling) and ONE in `fight::y46` (the dungeon room-fight door, the only one of the
+// three brand siblings missing the gate — `open_room_group_brand` and `y48` already had it). This is a gate
+// RESTORED, not a feature: every byte buys back a kill-switch that measurably did not reach a money path.
+const SIZE_BUDGETS = { aresrpg: 99_260 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's

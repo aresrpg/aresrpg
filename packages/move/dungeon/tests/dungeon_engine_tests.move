@@ -402,3 +402,62 @@ fun next_fight_then_join_fight() {
   let (_, _, _, _, _) = run::consume(joiner_pass);
   sc.end();
 }
+
+// ╔════════════════ [ GLOBAL FREEZE — the emergency kill-switch reaches the room-fight door ] ═ ]
+
+const C_ENotEnabled: u64 = 101; // aresrpg::config — the GLOBAL game freeze
+
+#[test, expected_failure(abort_code = C_ENotEnabled, location = config)]
+/// FREEZE BYPASS (audit class 1): `next_fight` asserts the DUNGEON domain bit and delegates to core's `y46`,
+/// which — unlike its two siblings `open_room_group_brand` and `y48` — never asserted the GLOBAL freeze. So a
+/// global emergency freeze left dungeon room fights minting: new engine `Fight` objects, new latches, new
+/// loot-bearing state on a game that is supposed to be stopped. With `enabled` off (domain bits all-on) the
+/// door must abort `ENotEnabled` before any fight is derived.
+fun next_fight_while_globally_frozen_aborts() {
+  let mut sc = ts::begin(test_world::owner());
+  test_world::boot(&mut sc);
+  boot_engine(&mut sc);
+  let mob_tid = make_mob_template(&mut sc);
+
+  sc.next_tx(test_world::owner());
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let wid = world::create_world(&cap, &ver, 7, b"cave".to_string(), sc.ctx());
+  sc.next_tx(test_world::owner());
+  let mut w = sc.take_shared<World>();
+  world::add_dungeon_room(&cap, &mut w, vector[mob_tid], &ver, sc.ctx());
+  ts::return_shared(w);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+
+  let creator_cid = test_world::mint_character(&mut sc, test_world::owner());
+  sc.next_tx(test_world::owner());
+  let creator_kid = last_kiosk_id();
+
+  // the emergency freeze — GLOBAL switch off, every domain bit still on
+  sc.next_tx(test_world::owner());
+  {
+    let cap = sc.take_from_sender<AdminCap>();
+    let mut cfg = sc.take_shared<GameConfig>();
+    config::set_enabled(&cap, &mut cfg, false, sc.ctx());
+    ts::return_shared(cfg); sc.return_to_sender(cap);
+  };
+
+  sc.next_tx(test_world::owner());
+  let mut creator_pass = run::new(wid, test_world::owner(), 0, 0, creator_cid, sc.ctx());
+  let creator_pass_id = run::id(&creator_pass);
+
+  sc.next_tx(test_world::owner());
+  let (mut reg, mut latch) = shards_for(&sc, creator_pass_id, creator_cid);
+  let world = ts::take_shared_by_id<World>(&sc, wid);
+  let mut k = ts::take_shared_by_id<Kiosk>(&sc, creator_kid);
+  let pkcap = sc.take_from_sender<PersonalKioskCap>();
+  let cfg = sc.take_shared<GameConfig>();
+  let ver = sc.take_shared<Version>();
+  let ever = sc.take_shared<EVersion>();
+  let tmpl = ts::take_shared_by_id<MobTemplate>(&sc, mob_tid);
+  let mut clk = clock::create_for_testing(sc.ctx());
+  clk.set_for_testing(1000);
+  dungeon::next_fight(&mut reg, &mut latch, &world, &mut creator_pass, &tmpl, &mut k, &pkcap, creator_cid, vector[], &cfg, &ever, &ver, &ver, &clk, sc.ctx()); // ENotEnabled
+  abort
+}

@@ -40,6 +40,7 @@ const ESaleEnded: u64 = 107; // shop
 const ESaleNotPaused: u64 = 110; // shop (burn_sale refuses an active sale)
 const V_EWrongVersion: u64 = 101; // version
 const V_ENotEnabled: u64 = 102; // version
+const C_ENotEnabled: u64 = 101; // config (the GLOBAL game freeze)
 
 // ╔════════════════ [ Harness ] ══════════════════════════════════════════════ ]
 
@@ -694,5 +695,37 @@ fun burn_sale_on_stale_version_aborts() {
   shop::set_paused(&cap, &mut sale, true, &ver, sc.ctx()); // paused FIRST — isolates the VERSION gate
   version::test_set_stale(&mut ver);
   shop::burn_sale(&cap, sale, &ver, sc.ctx()); // EWrongVersion
+  abort
+}
+
+// ╔════════════════ [ GLOBAL FREEZE — the emergency kill-switch reaches the money door ] ═ ]
+
+#[test, expected_failure(abort_code = C_ENotEnabled, location = aresrpg::config)]
+/// FREEZE BYPASS (audit class 1): the market DOMAIN bit was the shop's only GameConfig gate, so flipping the
+/// GLOBAL `enabled` switch off left `buy` selling items and taking SUI. An emergency freeze must stop the
+/// money door: with `enabled == false` (domain bits untouched, all-on) the real `&Random` entry aborts
+/// `ENotEnabled` BEFORE any payment splits to the treasury.
+fun buy_while_globally_frozen_aborts() {
+  let mut sc = ts::begin(OWNER);
+  full_setup(&mut sc, option::some(SUPPLY), PRICE, true, option::none(), false);
+
+  // a GameConfig that ships DARK (`enabled == false` at init) — the freeze state, domain bits all-on
+  aresrpg::config::test_init(sc.ctx());
+
+  sc.next_tx(@0x0);
+  random::create_for_testing(sc.ctx());
+  sc.next_tx(@0x0);
+  let mut r = sc.take_shared<Random>();
+  random::update_randomness_state_for_testing(&mut r, 0, x"0404040404040404040404040404040404040404040404040404040404040404", sc.ctx());
+  ts::return_shared(r);
+
+  sc.next_tx(BUYER);
+  let (mut sale, template, ver, policy) = take_buy_world(&sc);
+  let cfg = sc.take_shared<aresrpg::config::GameConfig>();
+  let rr = sc.take_shared<Random>();
+  let (mut kiosk, pkcap) = new_personal_kiosk(&mut sc);
+  let clk = clock_at(&mut sc, 0);
+  let pay = coin::mint_for_testing<SUI>(PRICE, sc.ctx());
+  shop::buy(&mut sale, &template, pay, &mut kiosk, &pkcap, &policy, &clk, &rr, &cfg, &ver, sc.ctx()); // ENotEnabled
   abort
 }

@@ -128,6 +128,7 @@ public fun create_character_free(
   version: &Version,
   ctx: &mut TxContext,
 ): (Character, character::LockPledge) {
+  config.assert_enabled(); // GLOBAL game freeze — creation mints core state (and the paid twin takes SUI)
   version.assert_enabled();
 
   // BOOTSTRAP SUNSET SWITCH — the free path exists only for the launch months (see the Creation doc block);
@@ -179,6 +180,7 @@ public fun create_character_paid(
   version: &Version,
   ctx: &mut TxContext,
 ): (Character, character::LockPledge) {
+  config.assert_enabled(); // GLOBAL game freeze — refuse BEFORE any money moves
   version.assert_enabled();
 
   let price = gate.price;

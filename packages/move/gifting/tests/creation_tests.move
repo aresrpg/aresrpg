@@ -64,7 +64,9 @@ fun full_setup(sc: &mut Scenario, enable: bool, price: u64) {
   let mut gate = sc.take_shared<Creation>();
   if (enable) admin::admin_set_enabled(&cap, &mut ver, true, sc.ctx());
   let mut cfg = sc.take_shared<GameConfig>();
-  if (enable) config::set_enabled(&cap, &mut cfg, true, sc.ctx());
+  // The GLOBAL game switch is ALWAYS on here — `enable` is this PACKAGE's dark-ship Version flag alone, so the
+  // version-gate tests isolate the version gate. The freeze rows below flip this switch explicitly.
+  config::set_enabled(&cap, &mut cfg, true, sc.ctx());
   config::set_gifting_brand<Gifting>(&cap, &mut cfg, &ver, sc.ctx()); // the split's pin
   ts::return_shared(cfg);
   creation::add_class(&cap, &mut gate, b"senshi".to_string(), &ver, sc.ctx());
@@ -514,4 +516,38 @@ fun free_sunset_is_reversible() {
   admin_set_free_enabled(&mut sc, true);
   create_free(&mut sc, b"hero_one", b"senshi");
   sc.end();
+}
+
+// ╔════════════════ [ GLOBAL FREEZE — the emergency kill-switch reaches the creation doors ] ═ ]
+
+const C_ENotEnabled: u64 = 101; // aresrpg::config — the GLOBAL game freeze
+
+/// Flip the GLOBAL `GameConfig.enabled` switch OFF (the emergency freeze).
+fun freeze_game(sc: &mut Scenario) {
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let mut cfg = sc.take_shared<GameConfig>();
+  config::set_enabled(&cap, &mut cfg, false, sc.ctx());
+  ts::return_shared(cfg); sc.return_to_sender(cap);
+}
+
+#[test, expected_failure(abort_code = C_ENotEnabled, location = config)]
+/// FREEZE BYPASS (audit class 1): creation read NO GameConfig gate at all — only its own package `Version` —
+/// so a GLOBAL emergency freeze left the PAID door minting characters and splitting SUI to the treasury.
+fun paid_creation_while_globally_frozen_aborts() {
+  let mut sc = ts::begin(OWNER);
+  full_setup(&mut sc, true, PRICE);
+  freeze_game(&mut sc);
+  create_paid(&mut sc, BUYER, b"Frozen", b"senshi", PRICE); // ENotEnabled
+  abort
+}
+
+#[test, expected_failure(abort_code = C_ENotEnabled, location = config)]
+/// The FREE door's twin of the row above — the same missing global gate, on the path that mints core state.
+fun free_creation_while_globally_frozen_aborts() {
+  let mut sc = ts::begin(OWNER);
+  full_setup(&mut sc, true, PRICE);
+  freeze_game(&mut sc);
+  create_free(&mut sc, b"Frozen", b"senshi"); // ENotEnabled
+  abort
 }

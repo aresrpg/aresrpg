@@ -230,6 +230,7 @@ public(package) fun y46(
   clock: &Clock,
   ctx: &TxContext,
 ) {
+  config.assert_enabled(); // GLOBAL freeze — the sibling twin `open_room_group_brand`/`y48` already gate here
   let (creator, creator_lines) = y117(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
   y116(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the mark applies
   // Dungeon composition seed: derived from (scope, nonce) — deterministic AND public (rooms are authored

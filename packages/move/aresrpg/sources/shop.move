@@ -192,6 +192,7 @@ entry fun buy(
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  config.assert_enabled(); // GLOBAL game freeze — a sale is a MONEY path, so a frozen game sells nothing
   config.assert_domain(aresrpg::config::domain_market()); // S-46 kill-switch bit
   let mut generator = random::new_generator(r, ctx);
   y139(sale, template, 1, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
@@ -214,6 +215,7 @@ entry fun buy_many(
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  config.assert_enabled(); // GLOBAL game freeze — a sale is a MONEY path, so a frozen game sells nothing
   config.assert_domain(aresrpg::config::domain_market()); // S-46 kill-switch bit
   let mut generator = random::new_generator(r, ctx);
   y139(sale, template, quantity, payment, kiosk, pkcap, policy, &mut generator, clock, version, ctx);
