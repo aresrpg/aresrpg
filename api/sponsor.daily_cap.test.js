@@ -19,7 +19,16 @@ import { toBase64, fromBase64 } from '@mysten/sui/utils'
 
 import release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
-process.env.REDIS_URL = '' // in-memory daily cap + reservation stash (deterministic, no store)
+// ── ENV POLARITY, STATED (sponsor_state.mjs memoizes all three at module load) ──
+// The cap arithmetic below has to be readable, so it runs on the in-memory counters — and an in-memory counter
+// is a per-process allowance, which off localnet is a refusal, not a limit (sponsor.store_required.test.js owns
+// that polarity). So this file declares the one network where a store-less process may still sponsor. `localnet`
+// has no release.json entry, so the release derivation that normally fills the scope allowlist comes back empty:
+// the allowlist is stated too, from the same checked-in ids the PTB fixtures are built from.
+const ARES = release.networks.testnet.packages.aresrpg.latest
+process.env.REDIS_URL = '' // no shared store configured → in-memory cap + reservation stash (deterministic)
+process.env.VITE_NETWORK = 'localnet'
+process.env.SPONSOR_ARESRPG_PACKAGES = ARES
 process.env.GAS_STATION_URL = 'http://rpc-gas-pool.test:9527'
 process.env.GAS_STATION_AUTH = 'test-bearer'
 process.env.SPONSOR_RESERVE_TTL_MS = '120' // the hold/stash lifetime — short enough to drive the expiry paths
@@ -62,7 +71,6 @@ beforeEach(() => {
   }
 })
 
-const ARES = release.networks.testnet.packages.aresrpg.latest
 const DIGEST = 'ES6c9UyVEbXAZWQXUtzvyxvcCQ2FZ9BVgKPnjLXFto1p'
 const SPONSOR = `0x${'5b'.repeat(32)}`
 const GAS_COIN = { objectId: `0x${'77'.repeat(32)}`, version: '7', digest: DIGEST }

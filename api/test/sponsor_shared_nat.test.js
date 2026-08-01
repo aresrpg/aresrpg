@@ -5,7 +5,11 @@
 // rail bites; the existing per-address window and 1 SUI/day ledger remain the player-scoped teeth.
 import { expect, test } from 'bun:test'
 
+// The window has to be COUNTABLE to be measured, so it runs on the in-memory one — legal only on localnet,
+// where one process is the whole deployment; off it, a missing shared store refuses every request instead
+// (sponsor.store_required.test.js owns that polarity, and would make all six players "rate limited" here).
 process.env.REDIS_URL = ''
+process.env.VITE_NETWORK = 'localnet'
 delete process.env.SPONSOR_RL_MAX
 
 const { rate_limited } = await import('../sponsor_state.mjs')

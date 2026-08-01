@@ -17,11 +17,14 @@ import {
   PER_TX_BUDGET_CEILING_MIST,
   RL_WINDOW_MS,
   SELF_PAY_MIST,
+  SHARED_STORE_ERROR,
+  SHARED_STORE_REASON,
   addr_daily_hold,
   addr_rate_limited,
   rate_limited,
   release_daily_hold,
   settle_daily_hold,
+  shared_store_ready,
   stash_reservation,
   take_reservation,
   utc_date,
@@ -29,6 +32,9 @@ import {
 export {
   ADDR_DAILY_CAP_MIST,
   PER_TX_BUDGET_CEILING_MIST,
+  SHARED_STORE_ERROR,
+  SHARED_STORE_REASON,
+  shared_store_ready,
   addr_daily_hold,
   addr_daily_spent,
   addr_rate_limited,
@@ -399,6 +405,7 @@ const initial_refusals = () => ({
   rate: 0,
   daily: 0,
   ceiling: 0,
+  store: 0,
   abort: 0,
   sim_unreadable: 0,
   sim_infra: 0,
@@ -511,6 +518,13 @@ export function assert_tx_matches_reservation(tx_bytes, reservation) {
     throw new Error('sponsor-tx-mismatch: transaction kind differs from what was priced (scope-bypass) — refusing')
 }
 
+/** No shared store, no sponsorship — the one refusal both money doors take before doing anything else. */
+async function assert_shared_store() {
+  if (await shared_store_ready()) return
+  stats.refused.store += 1
+  throw sponsor_refusal(SHARED_STORE_REASON, SHARED_STORE_ERROR)
+}
+
 export async function reserveSponsored({ txKindBytes, sender, challenge, signature }) {
   require_station_config()
   if (!txKindBytes || !sender) throw new Error('txKindBytes + sender required')
@@ -519,6 +533,11 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   if (typeof txKindBytes !== 'string' || txKindBytes.length > MAX_TX_KIND_CHARS)
     throw new Error(`sponsor-oversize: PTB kind exceeds the ${MAX_TX_KIND_CHARS}-character limit — refusing`)
   roll_stats()
+  // THE FIRST GATE, and the cheapest: every anti-drain limit below (rate window, daily cap, the once-only
+  // reservation) is a limit only while all instances read one store. Without it they become per-process
+  // allowances that multiply by instance count — so refuse here, before any verification, balance read or
+  // simulation, rather than sponsor against counters that cannot hold.
+  await assert_shared_store()
   try {
     await assert_sponsor_zklogin_challenge(sender, challenge, signature)
   } catch (error) {
@@ -607,7 +626,10 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     await release_daily_hold(daily_hold, sender)
     throw new Error('sender must differ from @server (ctx.sponsor() would be None)')
   }
-  await stash_reservation(reservation_id, {
+  // A reservation only THIS process can find is not a reservation — the execute call may land anywhere. If it
+  // cannot be parked where every instance sees it, nothing is signed: release the cap hold and refuse, and the
+  // station's own reservation lapses at its expiry (no signature, no gas).
+  const stashed = await stash_reservation(reservation_id, {
     sender,
     sponsor_address,
     gas_coins,
@@ -615,6 +637,11 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     kind: txKindBytes,
     daily_hold,
   })
+  if (!stashed) {
+    await release_daily_hold(daily_hold, sender)
+    stats.refused.store += 1
+    throw sponsor_refusal(SHARED_STORE_REASON, SHARED_STORE_ERROR)
+  }
   stats.reserved += 1
   stats.addresses.add(sender)
   return {
@@ -629,6 +656,9 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
   require_station_config()
   if (reservationId == null || !txBytes || !userSig) throw new Error('reservationId + txBytes + userSig required')
   roll_stats()
+  // Same first gate: the hold this call settles, and the once-only reservation it consumes, both live in the
+  // shared store. Refuse honestly instead of executing against state only this instance can see.
+  await assert_shared_store()
   const reservation = await take_reservation(reservationId)
   if (!reservation)
     throw new Error(
@@ -682,6 +712,10 @@ export default async function handler(request, response) {
     report_error(error, { area: 'sponsor', action: 'station_config' })
     return response.status(503).json({ error: String(error?.message ?? error) })
   }
+  // Ahead of the throttle on purpose: with no shared store the throttle itself cannot answer, and "rate
+  // limited" would be a false explanation for an outage.
+  if (!(await shared_store_ready()))
+    return response.status(503).json({ error: SHARED_STORE_ERROR, reason: SHARED_STORE_REASON })
   const ip =
     String(request.headers['x-forwarded-for'] || '')
       .split(',')[0]
@@ -713,6 +747,8 @@ export async function sponsor_fetch(request) {
     request.method === 'POST' &&
     ['/api/sponsor', '/api/sponsor/reserve', '/api/sponsor/execute'].includes(url.pathname)
   ) {
+    if (!(await shared_store_ready()))
+      return Response.json({ error: SHARED_STORE_ERROR, reason: SHARED_STORE_REASON }, { status: 503, headers: CORS })
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
     if (await rate_limited(ip)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
     // Declared size first (refuse before reading a byte), then the real body — a lying/absent content-length

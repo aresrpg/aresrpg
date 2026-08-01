@@ -18,7 +18,17 @@ import { toBase64 } from '@mysten/sui/utils'
 
 import release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
-process.env.REDIS_URL = '' // in-memory daily cap + reservation stash (deterministic, no store)
+// ── ENV POLARITY, STATED (sponsor_state.mjs memoizes all three at module load) ──
+// The refusal arms below are driven against the in-memory counters, and an in-memory counter is a per-process
+// allowance — off localnet its absence refuses outright, which would make every arm below pass for the WRONG
+// reason (sponsor.store_required.test.js owns that polarity). So this file declares the one network where a
+// store-less process may still sponsor. `localnet` has no release.json entry, so the release derivation that
+// normally fills the scope allowlist comes back empty: the allowlist is stated too, from the same checked-in id
+// the PTB fixture is built from — otherwise the scope arm would swallow every other arm's refusal.
+const ARES = release.networks.testnet.packages.aresrpg.latest
+process.env.REDIS_URL = '' // no shared store configured → in-memory cap + reservation stash (deterministic)
+process.env.VITE_NETWORK = 'localnet'
+process.env.SPONSOR_ARESRPG_PACKAGES = ARES
 process.env.GAS_STATION_URL = 'http://rpc-gas-pool.test:9527'
 process.env.GAS_STATION_AUTH = 'test-bearer'
 process.env.SPONSOR_SIMULATE_TIMEOUT_MS = '150' // keep the deadline arm fast
@@ -65,7 +75,6 @@ beforeEach(() => {
   }
 })
 
-const ARES = release.networks.testnet.packages.aresrpg.latest
 const SENDER = `0x${'a1'.repeat(32)}`
 const OBJ = { objectId: `0x${'11'.repeat(32)}`, version: 5n, digest: 'ES6c9UyVEbXAZWQXUtzvyxvcCQ2FZ9BVgKPnjLXFto1p' }
 const build_kind = async () => {

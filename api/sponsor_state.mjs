@@ -20,9 +20,35 @@ export const utc_date = () => new Date().toISOString().slice(0, 10)
 export const ip_rl_key = (ip) => `sponsor:rl:ip:${rl_bucket()}:${ip}`
 export const addr_rl_key = (address) => `sponsor:rl:addr:${rl_bucket()}:${String(address).toLowerCase()}`
 
+// ── THE SHARED STORE IS THE AUTHORITY ──────────────────────────────────────────────────────────────────
+// Every counter in this file — rate windows, the daily cap, holds, reservations — is only a LIMIT while all
+// instances share one. The in-memory maps below give each PROCESS its own full allowance, so any deployment
+// that runs more than one instance (or restarts) multiplies every anti-drain cap by the instance count while
+// still reporting them as enforced. So the shared store is REQUIRED: without one there is no sponsorship at
+// all (a refused sponsorship is degraded UX; an unbounded one is a drained pool).
+//
+// Localnet is the sole exception, and it is derived from the SAME env truth the boot refusal above uses
+// (`assert_no_dev_bypass_with_station_credentials`) rather than a new switch: a throwaway chain on a single
+// process, a state no production configuration can reach.
+const SHARED_STORE_OPTIONAL = (process.env.VITE_NETWORK || 'testnet') === 'localnet'
+export const SHARED_STORE_REASON = 'shared-store-unavailable'
+export const SHARED_STORE_ERROR =
+  'sponsor-unavailable: the shared anti-drain store is unreachable, so per-player limits cannot be enforced — refusing to sponsor (fail-closed)'
+
 const REDIS_URL = process.env.REDIS_URL ?? (typeof Bun !== 'undefined' ? 'redis://127.0.0.1:6379' : '')
 let redis_client
 let redis_down_until = 0
+
+/**
+ * Can the shared store answer right now? Configuration plus breaker state — no extra round trip, so this is
+ * cheap enough to be the FIRST gate of a sponsored request. Localnet answers yes without a store: its
+ * per-process counters are the whole deployment.
+ */
+export async function shared_store_ready() {
+  if (SHARED_STORE_OPTIONAL) return true
+  if (Date.now() < redis_down_until) return false
+  return (await get_redis()) != null
+}
 async function get_redis() {
   if (redis_client !== undefined) return redis_client
   redis_client = null
@@ -32,7 +58,7 @@ async function get_redis() {
     redis_client = new RedisClient(REDIS_URL, { connectionTimeout: 2000, enableOfflineQueue: true })
     console.log('[sponsor] daily-cap shared store enabled')
   } catch (error) {
-    console.warn('[sponsor] redis init failed → in-memory cap only:', error?.message)
+    console.warn('[sponsor] shared store init FAILED — sponsorship refuses until it answers:', error?.message)
   }
   return redis_client
 }
@@ -44,7 +70,7 @@ async function redis_op(operation) {
     return { ok: true, value: await operation(redis) }
   } catch (error) {
     redis_down_until = Date.now() + 15_000
-    console.warn('[sponsor] redis op failed → in-memory cap for 15000 ms:', error?.code || error?.message)
+    console.warn('[sponsor] shared store op FAILED — refusing sponsorship for 15000 ms:', error?.code || error?.message)
     return { ok: false }
   }
 }
@@ -67,7 +93,10 @@ async function rate_increment(key) {
     if (count === 1) await redis.send('EXPIRE', [key, String(Math.ceil(RL_WINDOW_MS / 1000) + 60)])
     return count
   })
-  if (!result.ok && result.unconfigured) return { ok: true, value: memory_rate_increment(key) }
+  // The in-memory window is a LOCALNET convenience, never a production degradation: with no store configured
+  // off localnet the result stays `!ok`, and both callers below read that as "refuse".
+  if (!result.ok && result.unconfigured && SHARED_STORE_OPTIONAL)
+    return { ok: true, value: memory_rate_increment(key) }
   return result
 }
 export async function rate_limited(ip) {
@@ -168,15 +197,19 @@ export const release_daily_hold = (id, address) => settle_daily_hold(id, address
 
 const reservation_memory = new Map()
 const reservation_key = (id) => `sponsor:resv:${id}`
+/** Park a reservation for its one execute. Returns false when it could not be parked WHERE EVERY INSTANCE
+ *  CAN SEE IT — the caller refuses rather than hand out an id only this process could honour. */
 export async function stash_reservation(reservation_id, value) {
   const payload = JSON.stringify(value)
   const result = await redis_op((redis) =>
     redis.send('SET', [reservation_key(reservation_id), payload, 'PX', String(RESERVATION_TTL_MS)])
   )
-  if (result.ok) return
+  if (result.ok) return true
+  if (!SHARED_STORE_OPTIONAL) return false
   const now = Date.now()
   for (const [key, entry] of reservation_memory) if (entry.expiry <= now) reservation_memory.delete(key)
   reservation_memory.set(String(reservation_id), { value: payload, expiry: now + RESERVATION_TTL_MS })
+  return true
 }
 export async function take_reservation(reservation_id) {
   const result = await redis_op((redis) => redis.send('GETDEL', [reservation_key(reservation_id)]))
