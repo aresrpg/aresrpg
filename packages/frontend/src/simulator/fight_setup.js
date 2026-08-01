@@ -60,6 +60,11 @@ export const seat_entity = ({ character, seat, spell_ids, cell }) => ({
   }),
   // every class spell is castable; the allocated level wins, the free baseline 1 otherwise
   spell_levels: Object.fromEntries(spell_ids.map((id) => [id, Number(character.spell_levels?.[id] ?? 1)])),
+  // THE EQUIPPED WEAPON (#1803). L1 resolved the family line (`build_seat`); this only carries it onto the
+  // entity, where `sim_chain`'s snapshot publishes it on the escrow row exactly as the chain publishes the
+  // `Weapon` it built at fight entry — so the HUD's weapon card, the strike's damage rows and its §387 zone all
+  // read one weapon fact. Absent ⇒ null, the bare-handed door `board_state.normalize_weapon` already owns.
+  weapon: seat.weapon ?? null,
 })
 
 /**

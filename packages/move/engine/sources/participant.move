@@ -511,3 +511,12 @@ public fun weapon_line_crit_rate(w: &Weapon): u64 { w.crit_rate }
 public fun weapon_line_ap_cost(w: &Weapon): u64 { w.ap_cost }
 #[test_only]
 public fun weapon_line_reach(w: &Weapon): u64 { w.reach }
+// #1803 — the remaining fields the §17.27 family-line PARITY fixture pins against the JS twin.
+#[test_only]
+public fun weapon_line_element(w: &Weapon): u8 { w.element }
+#[test_only]
+public fun weapon_line_damage_max(w: &Weapon): u64 { w.damage_max }
+#[test_only]
+public fun weapon_line_crit_damage_max(w: &Weapon): u64 { w.crit_damage_max }
+#[test_only]
+public fun weapon_line_category(w: &Weapon): String { w.category }

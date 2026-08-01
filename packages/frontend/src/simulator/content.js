@@ -13,6 +13,7 @@
 import CLASSES_JSON from '@aresrpg/sdk/classes' with { type: 'json' }
 import { MAX_LEVEL as MAX_CHARACTER_LEVEL, level_to_experience } from '@aresrpg/sdk/experience'
 import { STATISTICS, get_equipment_stat, get_max_health, get_total_stat } from '@aresrpg/sdk/stats'
+import { WEAPON_FAMILIES, weapon_line_of } from '@aresrpg/fight/weapon_lines'
 import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
 import { ITEM_STAT_CATALOG_ORDER, ITEM_STAT_SHIFT, fold_equipment_snapshot } from '@aresrpg/sim/equipment_stats'
 import { scaled_hp } from '@aresrpg/sim/mob_stats'
@@ -125,12 +126,27 @@ export const resolve_loadout = (corpus, loadout) => {
 // ── character → fight seat ───────────────────────────────────────────────────────────────────────
 
 /**
+ * THE EQUIPPED WEAPON'S ATTACK LINE (#1803). A chain-backed seat is handed its `Weapon` by
+ * `aresrpg::fight`'s entry fold (`equipped_weapon_family` → `participant::weapon_line_of`, +10% when the family
+ * is the wielder's own class family); this page has no chain, so it runs the SAME two reads over the loadout it
+ * already resolved. The weapon slot is identified exactly as the chain identifies it — by the item's own
+ * `category` being one of the 11 families — so a gathering tool (or an empty slot) fights bare-handed.
+ * @param {string} class_id @param {CorpusItem[]} items @returns {ReturnType<typeof weapon_line_of>}
+ */
+const seat_weapon = (class_id, items) => {
+  const equipped = items.find((item) => WEAPON_FAMILIES.includes(String(item?.category ?? '')))
+  const family = equipped ? String(equipped.category) : null
+  return weapon_line_of(family, family != null && family === CLASSES_JSON[class_id]?.weapon_category)
+}
+
+/**
  * A roster character + its max-rolled loadout → the numbers a fight seat starts with. `stat_alloc` is the
  * player's allocation (the reducer owns its budget); everything else is derived.
  * @param {{ level: number, class_id: string, stat_alloc?: Record<string, number> }} character
  * @param {CorpusItem[]} [items]  the equipped catalog rows, any slot order (the fold is order-independent)
  * @returns {{ level: number, stats: Record<string, number>, hp: number, max_hp: number,
- *   ap_max: number, mp_max: number, equipment_stats: Record<string, number> }}
+ *   ap_max: number, mp_max: number, equipment_stats: Record<string, number>,
+ *   weapon: ReturnType<typeof weapon_line_of> }}
  */
 export const build_seat = (character, items = []) => {
   const level = Number(character?.level)
@@ -167,6 +183,7 @@ export const build_seat = (character, items = []) => {
     ap_max: folded.ap_max,
     mp_max: folded.mp_max,
     equipment_stats: equipment_aggregate(items),
+    weapon: seat_weapon(character.class_id, items),
   }
 }
 

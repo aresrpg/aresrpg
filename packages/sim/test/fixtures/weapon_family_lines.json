@@ -1,0 +1,303 @@
+{
+  "_doc": [
+    "#1803 / \u00a717.27 \u2014 THE WEAPON FAMILY LINE parity fixture: what each of the 11 class-weapon families swings.",
+    "ONE file, TWO readers \u2014 packages/fight/test/weapon_family_lines.test.js asserts the JS twin",
+    "(@aresrpg/fight/weapon_lines::weapon_line_of, the door the chain-LESS build simulator resolves through) and",
+    "packages/move/engine/tests/weapon_line_table_tests.move asserts participant::weapon_line_of, the door a",
+    "chain-backed seat is built through. A tuning edit that lands on one twin breaks the other, by construction.",
+    "",
+    "`line` is the plain family line; `affinity_line` is the same family swung by its OWN class (+10% on the",
+    "damage bases only, integer-floored \u2014 DECISIONS 07-12). `unarmed` is the bare-handed fallback every non-family",
+    "slug resolves to (a gathering tool in the weapon slot, an empty slot); it carries no affinity by rule.",
+    "",
+    "element ids: 0 fire \u00b7 1 water \u00b7 2 earth \u00b7 3 air. crit_rate is 1-in-X. reach is Manhattan."
+  ],
+  "unarmed": {
+    "element": 2,
+    "damage": 4,
+    "damage_max": 4,
+    "crit_damage": 6,
+    "crit_damage_max": 6,
+    "crit_rate": 30,
+    "ap_cost": 3,
+    "reach": 1,
+    "category": ""
+  },
+  "families": [
+    {
+      "family": "longsword",
+      "line": {
+        "element": 2,
+        "damage": 18,
+        "damage_max": 18,
+        "crit_damage": 27,
+        "crit_damage_max": 27,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "longsword"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 19,
+        "damage_max": 19,
+        "crit_damage": 29,
+        "crit_damage_max": 29,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "longsword"
+      }
+    },
+    {
+      "family": "daggers",
+      "line": {
+        "element": 3,
+        "damage": 10,
+        "damage_max": 10,
+        "crit_damage": 16,
+        "crit_damage_max": 16,
+        "crit_rate": 10,
+        "ap_cost": 3,
+        "reach": 1,
+        "category": "daggers"
+      },
+      "affinity_line": {
+        "element": 3,
+        "damage": 11,
+        "damage_max": 11,
+        "crit_damage": 17,
+        "crit_damage_max": 17,
+        "crit_rate": 10,
+        "ap_cost": 3,
+        "reach": 1,
+        "category": "daggers"
+      }
+    },
+    {
+      "family": "battleaxe",
+      "line": {
+        "element": 2,
+        "damage": 22,
+        "damage_max": 22,
+        "crit_damage": 33,
+        "crit_damage_max": 33,
+        "crit_rate": 25,
+        "ap_cost": 5,
+        "reach": 1,
+        "category": "battleaxe"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 24,
+        "damage_max": 24,
+        "crit_damage": 36,
+        "crit_damage_max": 36,
+        "crit_rate": 25,
+        "ap_cost": 5,
+        "reach": 1,
+        "category": "battleaxe"
+      }
+    },
+    {
+      "family": "spear",
+      "line": {
+        "element": 2,
+        "damage": 14,
+        "damage_max": 14,
+        "crit_damage": 21,
+        "crit_damage_max": 21,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 2,
+        "category": "spear"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 15,
+        "damage_max": 15,
+        "crit_damage": 23,
+        "crit_damage_max": 23,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 2,
+        "category": "spear"
+      }
+    },
+    {
+      "family": "staff",
+      "line": {
+        "element": 0,
+        "damage": 12,
+        "damage_max": 12,
+        "crit_damage": 18,
+        "crit_damage_max": 18,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 3,
+        "category": "staff"
+      },
+      "affinity_line": {
+        "element": 0,
+        "damage": 13,
+        "damage_max": 13,
+        "crit_damage": 19,
+        "crit_damage_max": 19,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 3,
+        "category": "staff"
+      }
+    },
+    {
+      "family": "spellbook",
+      "line": {
+        "element": 1,
+        "damage": 10,
+        "damage_max": 10,
+        "crit_damage": 15,
+        "crit_damage_max": 15,
+        "crit_rate": 20,
+        "ap_cost": 3,
+        "reach": 5,
+        "category": "spellbook"
+      },
+      "affinity_line": {
+        "element": 1,
+        "damage": 11,
+        "damage_max": 11,
+        "crit_damage": 16,
+        "crit_damage_max": 16,
+        "crit_rate": 20,
+        "ap_cost": 3,
+        "reach": 5,
+        "category": "spellbook"
+      }
+    },
+    {
+      "family": "bow",
+      "line": {
+        "element": 3,
+        "damage": 15,
+        "damage_max": 15,
+        "crit_damage": 22,
+        "crit_damage_max": 22,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 6,
+        "category": "bow"
+      },
+      "affinity_line": {
+        "element": 3,
+        "damage": 16,
+        "damage_max": 16,
+        "crit_damage": 24,
+        "crit_damage_max": 24,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 6,
+        "category": "bow"
+      }
+    },
+    {
+      "family": "axe",
+      "line": {
+        "element": 0,
+        "damage": 20,
+        "damage_max": 20,
+        "crit_damage": 30,
+        "crit_damage_max": 30,
+        "crit_rate": 22,
+        "ap_cost": 5,
+        "reach": 1,
+        "category": "axe"
+      },
+      "affinity_line": {
+        "element": 0,
+        "damage": 22,
+        "damage_max": 22,
+        "crit_damage": 33,
+        "crit_damage_max": 33,
+        "crit_rate": 22,
+        "ap_cost": 5,
+        "reach": 1,
+        "category": "axe"
+      }
+    },
+    {
+      "family": "mace",
+      "line": {
+        "element": 2,
+        "damage": 17,
+        "damage_max": 17,
+        "crit_damage": 25,
+        "crit_damage_max": 25,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "mace"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 18,
+        "damage_max": 18,
+        "crit_damage": 27,
+        "crit_damage_max": 27,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "mace"
+      }
+    },
+    {
+      "family": "club",
+      "line": {
+        "element": 2,
+        "damage": 16,
+        "damage_max": 16,
+        "crit_damage": 24,
+        "crit_damage_max": 24,
+        "crit_rate": 18,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "club"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 17,
+        "damage_max": 17,
+        "crit_damage": 26,
+        "crit_damage_max": 26,
+        "crit_rate": 18,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "club"
+      }
+    },
+    {
+      "family": "sword",
+      "line": {
+        "element": 2,
+        "damage": 15,
+        "damage_max": 15,
+        "crit_damage": 22,
+        "crit_damage_max": 22,
+        "crit_rate": 18,
+        "ap_cost": 3,
+        "reach": 1,
+        "category": "sword"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 16,
+        "damage_max": 16,
+        "crit_damage": 24,
+        "crit_damage_max": 24,
+        "crit_rate": 18,
+        "ap_cost": 3,
+        "reach": 1,
+        "category": "sword"
+      }
+    }
+  ]
+}

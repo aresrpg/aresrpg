@@ -16,6 +16,9 @@ import { GRID_CELLS, encode } from './los.js'
 import { status_snapshot_entities } from './fight_status_snapshot.js'
 import { participant_entity_id } from './fight_control.js'
 import { SHAPE_NO_OVERRIDE } from './weapon_shapes.js'
+// The §17.27 unarmed line has ONE home (`weapon_lines.js` — the participant.move `unarmed_line` twin); this
+// decoder only falls back onto it.
+import { UNARMED_WEAPON } from './weapon_lines.js'
 
 // Legacy status codes — the ONE lifecycle scalar every consumer branches on (preserved verbatim).
 export const STATUS_OPEN = 0 // a live RunPass with NO room fight yet (pre-engage roam on the plane)
@@ -69,19 +72,6 @@ export function interleave_order(players, mobs) {
     else out.push({ is_mob: true, idx: ib++ })
   }
   return out
-}
-
-// The §17.27 unarmed line (participant.move unarmed_line — bare hands: earth, dmg 4, ap 3, reach 1).
-// `damage_max`/`crit_damage_max` mirror their floors: bare hands author no band (#577 — max == min ⇒ fixed).
-const UNARMED_WEAPON = {
-  element: 2,
-  damage: 4,
-  damage_max: 4,
-  crit_damage: 6,
-  crit_damage_max: 6,
-  crit_rate: 30,
-  ap_cost: 3,
-  reach: 1,
 }
 
 /** Decode the chain-stored `shape_mask` (combat_grid.move u64 BITSET words, BigInt-lossless off the SDK) into

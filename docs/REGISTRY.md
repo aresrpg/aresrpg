@@ -31,7 +31,7 @@ Facts in this registry are consumed by import or derivation only. Re-declaring a
 | Item category to equipment-slot kind    | `packages/move/aresrpg/sources/equipment.move:270` — equip gate used on chain.                                                      |
 | Stackable item categories               | `packages/move/aresrpg/sources/item.move:51`, `:52`, `:53` — chain merge/split vocabulary.                                          |
 | Ring/relic physical-slot capacities     | `packages/move/aresrpg/sources/equipment.move:104` — on-chain slot bookkeeping.                                                     |
-| Projected dungeon/fight-view lifecycle  | `packages/fight/src/board_state.js:21` — projection owner.                                                                          |
+| Projected dungeon/fight-view lifecycle  | `packages/fight/src/board_state.js:24` — projection owner.                                                                          |
 | Stored chain fight status               | `packages/move/engine/sources/fight.move:19` — stored chain status.                                                                 |
 | Mob fighter-ID base                     | `packages/move/engine/sources/retro_effects.move:465` — existing reusable chain decoder closest to the effect board.                |
 | Minimum turn duration                   | `packages/move/engine/sources/actions.move:33` — enforced chain guard.                                                              |
