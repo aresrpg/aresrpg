@@ -18,7 +18,9 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  WALLET_FLOOR_MIST,
   assert_signed_and_executed,
+  assert_wallet_above_floor,
   dev_key_or_throw,
   executed_digest,
   record_signature,
@@ -40,6 +42,29 @@ describe('prod-smoke guard · the smoke must be able to see', () => {
 
   test('a present key survives, trimmed — the guard never rewrites the secret it admits', () => {
     expect(dev_key_or_throw('  suiprivkey-shaped-placeholder  ')).toBe('suiprivkey-shaped-placeholder')
+  })
+})
+
+describe('prod-smoke funding alarm · an unfunded wallet is never a product red', () => {
+  const address = `0x${'ab'.repeat(32)}`
+
+  test('below the floor refuses, names the address and says FUND IT', () => {
+    expect(() => assert_wallet_above_floor({ address, balance_mist: 0n })).toThrow(/FUND IT/)
+    expect(() => assert_wallet_above_floor({ address, balance_mist: WALLET_FLOOR_MIST - 1n })).toThrow(
+      new RegExp(address)
+    )
+  })
+
+  test('the refusal says FUNDING and disowns the product — the three reds stay distinguishable', () => {
+    // BLIND (no secret), UNFUNDED (this), and a broken signing route must never read as each other.
+    expect(() => assert_wallet_above_floor({ address, balance_mist: 1n })).toThrow(
+      /FUNDING failure and never a product one/
+    )
+  })
+
+  test('at or above the floor passes and hands the balance back', () => {
+    expect(assert_wallet_above_floor({ address, balance_mist: WALLET_FLOOR_MIST })).toBe(WALLET_FLOOR_MIST)
+    expect(assert_wallet_above_floor({ address, balance_mist: WALLET_FLOOR_MIST * 9n })).toBe(WALLET_FLOOR_MIST * 9n)
   })
 })
 

@@ -41,6 +41,31 @@ export function dev_key_or_throw(raw: string | undefined) {
   return key
 }
 
+// THE THIRD RED, kept distinguishable on purpose. A real-signing smoke has three ways to go wrong and they
+// mean completely different things: the secret is missing (BLIND — the guard above), the wallet has no gas
+// (UNFUNDED — this), or the signing route itself broke (the verdict below). Without this floor, an unfunded
+// wallet surfaces as a gas-selection failure deep inside the suite and reads exactly like a broken product.
+// One of this suite's writes costs single-digit millions of MIST; the floor sits two orders of magnitude
+// above that so the alarm fires with days of slack rather than after the first red.
+export const WALLET_FLOOR_MIST = 100_000_000n
+
+export function assert_wallet_above_floor({
+  address,
+  balance_mist,
+  floor_mist = WALLET_FLOOR_MIST,
+}: {
+  address: string
+  balance_mist: bigint
+  floor_mist?: bigint
+}) {
+  if (balance_mist < floor_mist)
+    throw new Error(
+      `smoke wallet ${address} holds ${balance_mist} MIST, under the ${floor_mist} floor — FUND IT. This is a ` +
+        'FUNDING failure and never a product one: every signing row below would otherwise red for the wrong reason.'
+    )
+  return balance_mist
+}
+
 // A chain refusal, an empty response and a missing digest are all failures of the SIGNING ROUTE, never
 // data a row may proceed on. Every one of them throws by name — no silent success, no fabricated digest.
 export function executed_digest(response: execute_response) {
