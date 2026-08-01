@@ -48,6 +48,13 @@ export const STALEMATE_ROUNDS = 12
 // winning team, so the reward path (gated on check_victory === 0, a real team1 wipe) credits nothing.
 export const DRAW = 2
 
+export const SIM_EVENT_TYPE = Object.freeze({
+  ABANDONED: 'fight_abandoned',
+  AP_RESERVE_USED: 'ap_reserve_used',
+  PLACED: 'fight_placed',
+  READY: 'fight_ready',
+})
+
 /**
  * Total HP across all living-or-dead fighters (both teams). The stalemate baseline — a frozen sum across a
  * whole round means no progress. Integer (sum of integer health). Pure.
@@ -251,7 +258,7 @@ const handle_place = (state, cmd) => {
     state: placed,
     events: [
       {
-        type: 'fight_placed',
+        type: SIM_EVENT_TYPE.PLACED,
         fight_id: state.fight_id,
         entity_id: cmd.entity_id,
         cell: cmd.cell,
@@ -316,7 +323,7 @@ const handle_ready = (state, cmd) => {
     state: marked,
     events: [
       {
-        type: 'fight_ready',
+        type: SIM_EVENT_TYPE.READY,
         fight_id: state.fight_id,
         entity_id: cmd.entity_id,
       },
@@ -826,7 +833,7 @@ const handle_abandon = (state, cmd) => {
   const hit = apply_damage(state, cmd.entity_id, entity.health)
   return with_victory(state.winner, hit.state, [
     {
-      type: 'fight_abandoned',
+      type: SIM_EVENT_TYPE.ABANDONED,
       fight_id: state.fight_id,
       entity_id: cmd.entity_id,
       effects: [
@@ -858,7 +865,7 @@ const handle_use_ap_reserve = (state, cmd) => {
     state: after,
     events: [
       {
-        type: 'ap_reserve_used',
+        type: SIM_EVENT_TYPE.AP_RESERVE_USED,
         fight_id: state.fight_id,
         entity_id: cmd.entity_id,
         ap_added: added,

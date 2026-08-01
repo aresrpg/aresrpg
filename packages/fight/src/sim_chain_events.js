@@ -17,8 +17,10 @@
 // emitted row's key set AND per-key JSON type against those captured rows.
 
 import { K_INVISIBILITY, K_PUSH, K_TELEPORT, POINT_AP, POINT_MP } from '@aresrpg/sim/spell_effect'
+import { SIM_EVENT_TYPE } from '@aresrpg/sim/reduce'
 
 import { decode, encode } from './los.js'
+import { ACTION_EFFECT_EVENT } from './inputs.js'
 import { MOB_FIGHTER_ID_BASE, encode_status_value, is_signed_status_kind } from './fight_status_snapshot.js'
 import { status_row_of } from './statuses.js'
 
@@ -428,7 +430,7 @@ const cast_envelope = (state, event, ctx) => {
       effect_count: u64(descriptors.length),
     }),
     effects: descriptors.map((effect, ordinal) =>
-      row('ActionEffect', { ...key, effect_ordinal: u64(ordinal), effect })
+      row(ACTION_EFFECT_EVENT, { ...key, effect_ordinal: u64(ordinal), effect })
     ),
     resolved: row('ActionResolved', {
       ...key,
@@ -462,11 +464,11 @@ const encode_event = (event, ctx) => {
   switch (event.type) {
     case 'fight_started':
       return { rows: [] } // the start is visible as the first TurnStarted
-    case 'fight_placed':
+    case SIM_EVENT_TYPE.PLACED:
       return {
         rows: [row('Placed', { fight, character: event.entity_id, cell: u64(encode(event.cell.x, event.cell.y)) })],
       }
-    case 'fight_ready':
+    case SIM_EVENT_TYPE.READY:
       return { rows: [row('Ready', { fight, character: event.entity_id })] }
     case 'fight_turn_start': {
       const { is_mob, idx } = side_of(post_state, event.entity_id)
@@ -535,7 +537,7 @@ const encode_event = (event, ctx) => {
     case 'fight_trap_triggered':
     case 'fight_turn_effects':
       return { rows: effects_of(event.effects) }
-    case 'fight_abandoned': {
+    case SIM_EVENT_TYPE.ABANDONED: {
       // A forfeit is its OWN chain event, never a doubled Hit (actions.move `mark_abandoned` →
       // `fight_events::emit_abandoned{ character, seat }`), so the sim's damage row is not encoded here — the
       // Abandoned row carries the death, exactly as `inputs.js` folds it (hp 0 + alive false).
@@ -548,7 +550,7 @@ const encode_event = (event, ctx) => {
       if (is_mob) throw new Error(`sim_chain: '${event.entity_id}' forfeited from team1 — no PvM Abandoned row`)
       return { rows: [row('Abandoned', { fight, character: event.entity_id, seat: u64(idx) })] }
     }
-    case 'ap_reserve_used': {
+    case SIM_EVENT_TYPE.AP_RESERVE_USED: {
       const { is_mob, idx } = side_of(post_state, event.entity_id)
       return {
         rows: [

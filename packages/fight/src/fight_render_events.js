@@ -23,6 +23,7 @@ import {
   TRAP_BEAT_MS,
 } from './fight_render_prims.js'
 import { GRID_W } from './los.js'
+import { ACTION_EFFECT_EVENT } from './inputs.js'
 
 // The reference gaits + timing constants and the pure grid/path/writer primitives live in fight_render_prims.js;
 // the SIM-prediction render path (also a live producer — DungeonBoard.jsx's own-cast prediction) lives in
@@ -56,7 +57,7 @@ const PENDING_WINDOW_KINDS = new Set([
   'Revealed',
   'CriticalFailure',
   'ActionStarted',
-  'ActionEffect',
+  ACTION_EFFECT_EVENT,
   'ActionResolved',
 ])
 

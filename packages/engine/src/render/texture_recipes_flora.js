@@ -12,6 +12,8 @@
 // absent-by-default ⇒ the DEFAULT world stays byte-identical. See the flora-placement handoff notes
 // for the exact surface_flora() branch diffs + per-world sprite config + suggested densities.
 
+import { FLORA_BLOCKS } from '../config/block_registry_flora.js'
+
 /** @typedef {import('./texture_baker.js').Recipe} Recipe */
 /** The flora sprite ops read extra params the base RecipeOp doesn't declare (bush/branch/shell/etc. knobs);
  *  a local intersection keeps them typed WITHOUT touching the base baker typedef. FloraOp ⊆ RecipeOp, so a
@@ -59,7 +61,7 @@ export const FLORA_RECIPES = [
   },
   {
     // SMALL MUSHROOMS (toadstools) — pale stems + red spotted caps. Fixed colour.
-    name: 'toadstool',
+    name: FLORA_BLOCKS[3].name,
     alpha_clip: true,
     variants: 3,
     ops: [{ op: 'mushroom', cap_rgb: [178, 66, 56], stem_rgb: [224, 212, 188], spot_rgb: [240, 234, 214], count: 3 }],
@@ -143,21 +145,21 @@ export const FLORA_RECIPES = [
   },
   {
     // SEASHELL — a pale scallop fan on the sand. Fixed cream/pink.
-    name: 'seashell',
+    name: FLORA_BLOCKS[8].name,
     alpha_clip: true,
     variants: 3,
     ops: [{ op: 'shell', rgb: [234, 208, 196], ridge_rgb: [198, 158, 148] }],
   },
   {
     // STARFISH — a tan five-armed star. Fixed colour.
-    name: 'starfish',
+    name: FLORA_BLOCKS[9].name,
     alpha_clip: true,
     variants: 2,
-    ops: [{ op: 'starfish', rgb: [222, 148, 82], rgb_light: [244, 196, 140] }],
+    ops: [{ op: FLORA_BLOCKS[9].name, rgb: [222, 148, 82], rgb_light: [244, 196, 140] }],
   },
   {
     // DRIFTWOOD BRANCH — a sun-bleached grey branch. Fixed pale grey-brown.
-    name: 'driftwood',
+    name: FLORA_BLOCKS[10].name,
     alpha_clip: true,
     variants: 2,
     ops: [{ op: 'branch', rgb: [168, 158, 142], rgb_dark: [126, 116, 102], forks: 2, thick: 0.05 }],
@@ -209,7 +211,7 @@ export const FLORA_RECIPES = [
   // ── EVEREST (alpine/arctic) ─────────────────────────────────────────────────────────────────────
   {
     // FROZEN SHRUB — a bare twiggy shrub dusted with frost. Fixed dark wood + baked frost highlight.
-    name: 'frozen_shrub',
+    name: FLORA_BLOCKS[14].name,
     alpha_clip: true,
     variants: 3,
     ops: [

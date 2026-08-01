@@ -16,6 +16,8 @@
 // wire-in (add these names to texture_palette.TEXTURE_FAMILIES then) — DELIBERATELY not done here so the
 // absent-config bake stays byte-identical for the existing atlas.
 
+import { TREE_BLOCKS } from '../config/block_registry_trees.js'
+
 /** @typedef {import('./texture_baker.js').Recipe} Recipe */
 /** Tree ops read a superset of RecipeOp params (needle/frond/moss/branch knobs); a local intersection keeps
  *  them typed without touching the base typedef. TreeOp ⊆ RecipeOp so a TreeRecipe is assignable to Recipe.
@@ -29,7 +31,7 @@ export const TREE_RECIPES = [
   {
     // BROADLEAF CLUMP — oak_broadleaf + jungle_giant. A dappled foliage puff (op_leaf lacework holes), cooler
     // + a touch denser than the base `leaves` so a mixed forest reads as distinct species.
-    name: 'tree_leaf_broadleaf',
+    name: TREE_BLOCKS[0].name,
     alpha_clip: true,
     variants: 4,
     ops: [
@@ -47,7 +49,7 @@ export const TREE_RECIPES = [
   },
   {
     // BIRCH CLUMP — birch_slim. Small, PALE bright-green airy crown (more holes) — the light foil to oak.
-    name: 'tree_leaf_birch',
+    name: TREE_BLOCKS[1].name,
     alpha_clip: true,
     variants: 4,
     ops: [
@@ -66,7 +68,7 @@ export const TREE_RECIPES = [
   {
     // CONIFER NEEDLE BUNCH — pine_cathedral + spruce_mid. Spiky drooping needle fascicles (op_needle_spray),
     // cold dark blue-green — the awe-biome crown, unmistakably needled vs the broadleaf puff.
-    name: 'tree_needle_bunch',
+    name: TREE_BLOCKS[2].name,
     alpha_clip: true,
     variants: 4,
     ops: [
@@ -83,7 +85,7 @@ export const TREE_RECIPES = [
   {
     // DRY SAVANNA CROWN — acacia_umbrella. Sparse straw-olive lacework (op_leaf, most holes) — an open, thin
     // arid canopy; matches the leaves_dry family so a savanna edge reads apart.
-    name: 'tree_leaf_dry',
+    name: TREE_BLOCKS[3].name,
     alpha_clip: true,
     variants: 4,
     ops: [
@@ -102,7 +104,7 @@ export const TREE_RECIPES = [
   {
     // SWAMP MOSS DRAPE — swamp_buttress. Hanging murky grey-green moss strands (op_moss_drape) — the draped,
     // low-tunnel wetland read.
-    name: 'tree_moss_drape',
+    name: TREE_BLOCKS[4].name,
     alpha_clip: true,
     variants: 4,
     ops: [{ op: 'moss_drape', rgb: [72, 86, 56], rgb_light: [104, 118, 84], count: 14 }],
@@ -110,7 +112,7 @@ export const TREE_RECIPES = [
   {
     // PALM FROND ROSETTE — palm_curve. Long arcing pinnate fronds fanning from a crown base (op_frond),
     // yellow-green — the card-only palm crown.
-    name: 'tree_palm_frond',
+    name: TREE_BLOCKS[5].name,
     alpha_clip: true,
     variants: 3,
     ops: [{ op: 'frond', rgb: [112, 124, 40], rgb_dark: [74, 84, 26], rgb_light: [150, 158, 64], count: 7 }],

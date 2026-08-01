@@ -34,7 +34,7 @@ import { use_rpc_view } from '../../rpc/use_view'
 import type { RpcEncyclopedia, RpcEncyclopediaMob } from '../../rpc/views'
 import { decode_stat } from '../../chain/stat_bias'
 
-import { DetailLoading } from './shared'
+import { DetailLoading, ENCYCLOPEDIA_LAYOUT } from './shared'
 import { v1_drops_to_display } from './loot'
 import { EncyclopediaMobImage } from './mob_image'
 import { mob_spell_views } from './mob_spells'
@@ -115,7 +115,7 @@ export function BestiaryMobRow({
   const el_color = ELEMENT_COLORS[(mob.element || '').toLowerCase()] || 'var(--color-muted)'
   return (
     <div
-      className="flex flex-col gap-0.5 px-3 py-2 cursor-pointer"
+      className={ENCYCLOPEDIA_LAYOUT.listRow}
       style={{
         borderLeft: is_selected ? '2px solid #c8963c' : `2px solid ${el_color}40`,
         background: is_selected ? 'rgba(200,150,60,0.08)' : idx % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent',
@@ -138,7 +138,7 @@ export function BestiaryMobRow({
             </span>
             {mob.archi && <ArchiBadge />}
             {is_new_template(mob.createdAt) && <NewBadge />}
-            <span className="text-[9px] shrink-0 text-muted">
+            <span className={ENCYCLOPEDIA_LAYOUT.rowMeta}>
               {t('encyclopedia.level_range', { min: mob.minLevel, max: mob.maxLevel })}
             </span>
           </div>
@@ -306,7 +306,7 @@ function BestiaryTab({
   const render_grid_content = () => {
     if (filtered.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted">
+        <div className={ENCYCLOPEDIA_LAYOUT.empty}>
           <Search size={16} style={{ opacity: 0.3 }} />
           <span className="text-[10px] tracking-[0.2em] uppercase">{t('encyclopedia.no_mobs_match')}</span>
           {has_active_filters && (
@@ -360,7 +360,7 @@ function BestiaryTab({
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className={ENCYCLOPEDIA_LAYOUT.center}>
         <DetailLoading />
       </div>
     )
@@ -368,7 +368,7 @@ function BestiaryTab({
 
   if (mobs.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted">
+      <div className={ENCYCLOPEDIA_LAYOUT.failed}>
         <Shield size={24} style={{ opacity: 0.2 }} />
         <span className="text-[10px] tracking-[0.2em] uppercase">{t('encyclopedia.no_mobs_onchain')}</span>
       </div>
@@ -376,10 +376,10 @@ function BestiaryTab({
   }
 
   const filter_bar = (
-    <div className="flex flex-col gap-2 p-3 border-b border-border shrink-0">
+    <div className={ENCYCLOPEDIA_LAYOUT.filters}>
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none" />
+          <Search size={14} className={ENCYCLOPEDIA_LAYOUT.searchIcon} />
           <input
             className="template-input w-full"
             placeholder={t('encyclopedia.search_mobs')}
@@ -388,7 +388,7 @@ function BestiaryTab({
             style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', paddingLeft: 36 }}
           />
         </div>
-        <span className="text-[8px] tracking-[0.15em] uppercase text-muted shrink-0">
+        <span className={ENCYCLOPEDIA_LAYOUT.filterLabel}>
           {t('encyclopedia.showing_mobs', { count: filtered.length, total: mobs.length })}
         </span>
         <select
@@ -528,7 +528,7 @@ function BestiaryTab({
         ) : (
           <div className="flex flex-col flex-1 min-h-0">
             {filter_bar}
-            <div className="flex-1 overflow-y-auto min-h-0">{render_grid_content()}</div>
+            <div className={ENCYCLOPEDIA_LAYOUT.scroll}>{render_grid_content()}</div>
           </div>
         )}
       </div>
@@ -539,11 +539,9 @@ function BestiaryTab({
     <div className="flex flex-1 min-h-0">
       <div className={`flex flex-col min-w-0 min-h-0 ${selected_mob ? 'flex-[7]' : 'flex-1'}`}>
         {filter_bar}
-        <div className="flex-1 overflow-y-auto min-h-0">{render_grid_content()}</div>
+        <div className={ENCYCLOPEDIA_LAYOUT.scroll}>{render_grid_content()}</div>
       </div>
-      {selected_mob && (
-        <div className="flex-[3] min-w-[380px] overflow-y-auto border-l border-border">{detail_panel}</div>
-      )}
+      {selected_mob && <div className={ENCYCLOPEDIA_LAYOUT.detail}>{detail_panel}</div>}
     </div>
   )
 }

@@ -25,7 +25,7 @@ import { display_mob_name } from '../../content/mob_name_overrides'
 import { use_template_t } from '../../i18n/template_t'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 
-import { DetailLoading } from './shared'
+import { DetailLoading, ENCYCLOPEDIA_LAYOUT } from './shared'
 // The ONE encyclopedia mob-icon home (the MinIO `mobs/` family, through the bestiary's own resolver). #353
 // deleted the legacy local-fallback component and code path (get_mob_icon_url is asset-host-only now) —
 // this stays the one home so the roster icon can never drift from the bestiary's.
@@ -102,7 +102,7 @@ function WorldCard({
   const { t } = useTranslation()
   return (
     <div
-      className="flex flex-col gap-0.5 px-3 py-2 cursor-pointer"
+      className={ENCYCLOPEDIA_LAYOUT.listRow}
       style={{
         borderLeft: is_selected ? '2px solid #c8963c' : '2px solid rgba(74,158,255,0.25)',
         background: is_selected ? 'rgba(200,150,60,0.08)' : 'transparent',
@@ -119,7 +119,7 @@ function WorldCard({
         <Globe2 size={12} className="shrink-0 opacity-50 text-cyan" />
         <span className="text-[10px] tracking-[0.1em] uppercase truncate text-gold flex-1">{world.name}</span>
         {world.band && (
-          <span className="text-[9px] shrink-0 text-muted">
+          <span className={ENCYCLOPEDIA_LAYOUT.rowMeta}>
             {t('encyclopedia.level_range', { min: world.band[0], max: world.band[1] })}
           </span>
         )}
@@ -390,7 +390,7 @@ export function WorldTab({
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className={ENCYCLOPEDIA_LAYOUT.center}>
         <DetailLoading />
       </div>
     )
@@ -398,7 +398,7 @@ export function WorldTab({
 
   if (worlds.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted">
+      <div className={ENCYCLOPEDIA_LAYOUT.failed}>
         <Globe2 size={24} style={{ opacity: 0.2 }} />
         <span className="text-[10px] tracking-[0.2em] uppercase">{t('encyclopedia.no_worlds')}</span>
       </div>
@@ -406,10 +406,10 @@ export function WorldTab({
   }
 
   const filter_bar = (
-    <div className="flex flex-col gap-2 p-3 border-b border-border shrink-0">
+    <div className={ENCYCLOPEDIA_LAYOUT.filters}>
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none" />
+          <Search size={14} className={ENCYCLOPEDIA_LAYOUT.searchIcon} />
           <input
             className="template-input w-full"
             placeholder={t('encyclopedia.search_worlds')}
@@ -418,7 +418,7 @@ export function WorldTab({
             style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', paddingLeft: 36 }}
           />
         </div>
-        <span className="text-[8px] tracking-[0.15em] uppercase text-muted shrink-0">
+        <span className={ENCYCLOPEDIA_LAYOUT.filterLabel}>
           {t('encyclopedia.showing_count', { count: filtered.length, total: worlds.length })}
         </span>
         <select
@@ -457,9 +457,9 @@ export function WorldTab({
   )
 
   const list = (
-    <div className="flex-1 overflow-y-auto min-h-0">
+    <div className={ENCYCLOPEDIA_LAYOUT.scroll}>
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted">
+        <div className={ENCYCLOPEDIA_LAYOUT.empty}>
           <Search size={16} style={{ opacity: 0.3 }} />
           <span className="text-[10px] tracking-[0.2em] uppercase">{t('encyclopedia.no_results')}</span>
         </div>
@@ -521,9 +521,7 @@ export function WorldTab({
         {filter_bar}
         {list}
       </div>
-      {selected_world && (
-        <div className="flex-[3] min-w-[380px] overflow-y-auto border-l border-border">{detail_panel}</div>
-      )}
+      {selected_world && <div className={ENCYCLOPEDIA_LAYOUT.detail}>{detail_panel}</div>}
     </div>
   )
 }

@@ -22,7 +22,7 @@ import { use_rpc_view } from '../../rpc/use_view'
 import { use_items_shop_chain } from '../../stores/items_shop_chain'
 import { marketplace_item_type_key } from '../../components/marketplace/marketplace_model'
 
-import { DetailLoading } from './shared'
+import { DetailLoading, ENCYCLOPEDIA_LAYOUT } from './shared'
 import { encyclopedia_item_view } from './item_view_model'
 import { DroppedBySection } from './dropped_by_section'
 import { PetFoodSection } from './pet_food_section'
@@ -221,7 +221,7 @@ export function ItemsTab({
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className={ENCYCLOPEDIA_LAYOUT.center}>
         <DetailLoading />
       </div>
     )
@@ -229,7 +229,7 @@ export function ItemsTab({
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted">
+      <div className={ENCYCLOPEDIA_LAYOUT.failed}>
         <Swords size={24} style={{ opacity: 0.2 }} />
         <span className="text-[10px] tracking-[0.2em] uppercase">{t('encyclopedia.no_items_onchain')}</span>
       </div>
@@ -237,10 +237,10 @@ export function ItemsTab({
   }
 
   const filter_bar = (
-    <div className="flex flex-col gap-2 p-3 border-b border-border shrink-0">
+    <div className={ENCYCLOPEDIA_LAYOUT.filters}>
       <div className="flex items-center gap-3">
         <div className="relative flex-1 min-w-0">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none" />
+          <Search size={14} className={ENCYCLOPEDIA_LAYOUT.searchIcon} />
           <input
             className="template-input w-full"
             placeholder={t('encyclopedia.search_items')}
@@ -249,7 +249,7 @@ export function ItemsTab({
             style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', paddingLeft: 36 }}
           />
         </div>
-        <span className="text-[8px] tracking-[0.15em] uppercase text-muted shrink-0">
+        <span className={ENCYCLOPEDIA_LAYOUT.filterLabel}>
           {t('encyclopedia.showing_count', { count: filtered.length, total: items.length })}
         </span>
         <select
@@ -338,9 +338,9 @@ export function ItemsTab({
   )
 
   const items_grid = (
-    <div className="flex-1 overflow-y-auto min-h-0">
+    <div className={ENCYCLOPEDIA_LAYOUT.scroll}>
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted">
+        <div className={ENCYCLOPEDIA_LAYOUT.empty}>
           <Search size={16} style={{ opacity: 0.3 }} />
           <span className="text-[10px] tracking-[0.2em] uppercase">{t('encyclopedia.no_results')}</span>
           <button className="btn-outline text-[8px] px-3 py-1" onClick={clear_all_filters}>
@@ -355,7 +355,7 @@ export function ItemsTab({
             return (
               <div
                 key={item.id}
-                className="flex flex-col gap-0.5 px-3 py-2 cursor-pointer"
+                className={ENCYCLOPEDIA_LAYOUT.listRow}
                 style={{
                   borderLeft: is_selected ? '2px solid #c8963c' : '2px solid rgba(255,255,255,0.08)',
                   background: is_selected
@@ -391,7 +391,7 @@ export function ItemsTab({
                       {/* No "Lv. 0" — cosmetics (and any level-less item) carry no level; a level line there
                           is a lie (mirrors ItemDetailView's same rule — one home, not two). */}
                       {item.level > 0 && (
-                        <span className="text-[9px] shrink-0 text-muted">
+                        <span className={ENCYCLOPEDIA_LAYOUT.rowMeta}>
                           {t('entity.level_short', { level: item.level })}
                         </span>
                       )}
@@ -527,7 +527,7 @@ export function ItemsTab({
         {filter_bar}
         {items_grid}
       </div>
-      <div className="flex-[3] min-w-[380px] overflow-y-auto border-l border-border">{items_detail_panel}</div>
+      <div className={ENCYCLOPEDIA_LAYOUT.detail}>{items_detail_panel}</div>
     </div>
   )
 }

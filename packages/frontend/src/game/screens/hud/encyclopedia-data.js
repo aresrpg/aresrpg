@@ -9,6 +9,7 @@ import items_json from '@aresrpg/sdk/items-data' with { type: 'json' }
 import mobs_json from '@aresrpg/sdk/mobs' with { type: 'json' }
 import recipes_json from '@aresrpg/sdk/recipes' with { type: 'json' }
 import { is_developer_item } from '@aresrpg/sdk/jobs'
+import { WEAPON_FAMILIES } from '@aresrpg/fight/weapon_lines'
 
 // ── content typedefs (the seeded JSON shapes) ────────────────────────────────
 /**
@@ -73,7 +74,7 @@ export const ITEM_GROUPS = [
     key: 'WEAPONS',
     label: 'Weapons',
     cats: [
-      'longsword',
+      WEAPON_FAMILIES[0],
       'sword',
       'daggers',
       'mace',
@@ -81,9 +82,9 @@ export const ITEM_GROUPS = [
       'spear',
       'staff',
       'axe',
-      'battleaxe',
+      WEAPON_FAMILIES[2],
       'club',
-      'spellbook',
+      WEAPON_FAMILIES[5],
     ],
   },
   {

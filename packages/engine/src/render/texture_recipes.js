@@ -14,6 +14,8 @@
 // (its per-tile Z-gradient tiled into horizontal bands). `variants`/`rotations` break per-cell repeat;
 // all noise wraps mod freq ⇒ seamless under hardware Repeat. See texture_appeal bench + the autocorr probe.
 
+import { BLOCK_REGISTRY } from '../config/block_registry.js'
+
 import { FLORA_RECIPES } from './texture_recipes_flora.js'
 import { TREE_RECIPES } from './texture_recipes_trees.js'
 import { GATHER_RECIPES } from './texture_recipes_gather.js'
@@ -716,7 +718,7 @@ export const RECIPES = [
   // vivid pink / purple / teal with brighter tips so the reef pops through clear turquoise water. Bottom-
   // anchored like the grass sprites; `variants` decorrelate per cell so a reef patch isn't one clone.
   {
-    name: 'coral_pink',
+    name: BLOCK_REGISTRY[34].name,
     alpha_clip: true,
     variants: 3,
     ops: [
@@ -734,7 +736,7 @@ export const RECIPES = [
     ],
   },
   {
-    name: 'coral_purple',
+    name: BLOCK_REGISTRY[35].name,
     alpha_clip: true,
     variants: 3,
     ops: [
@@ -752,7 +754,7 @@ export const RECIPES = [
     ],
   },
   {
-    name: 'coral_teal',
+    name: BLOCK_REGISTRY[36].name,
     alpha_clip: true,
     variants: 3,
     ops: [
@@ -773,7 +775,7 @@ export const RECIPES = [
   // not emissive nothingness"). Vivid base + lit/shaded reef pockets (clumps) + porous speckle + fbm grain.
   // Full opaque cubes; 3 variants decorrelate the reef mass so it never reads as one tiled block.
   {
-    name: 'coral_rock_rose',
+    name: BLOCK_REGISTRY[37].name,
     variants: 3,
     ops: [
       {
@@ -791,7 +793,7 @@ export const RECIPES = [
     ],
   },
   {
-    name: 'coral_rock_cyan',
+    name: BLOCK_REGISTRY[38].name,
     variants: 3,
     ops: [
       {
@@ -809,7 +811,7 @@ export const RECIPES = [
     ],
   },
   {
-    name: 'coral_rock_gold',
+    name: BLOCK_REGISTRY[39].name,
     variants: 3,
     ops: [
       {

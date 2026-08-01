@@ -20,6 +20,8 @@ import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } fr
 import { decode, encode } from './los.js'
 import { is_status_kind } from './statuses.js'
 
+export const ACTION_EFFECT_EVENT = 'ActionEffect'
+
 // ActionEffect is the only receipt row carrying the exact timed status descriptor. What makes a row foldable is
 // the RECIPIENT PROOF below (a guaranteed point effect on the caster's own cell), not its kind: `cast.move`'s
 // `record_timed` copies the envelope's Effect VERBATIM into the board for every kind that reaches it, so the
@@ -389,7 +391,7 @@ export const apply_action = (state, action) => {
         },
       }
     }
-    case 'ActionEffect': {
+    case ACTION_EFFECT_EVENT: {
       // The authored half of a drain rides THIS row; every other kind clears the descriptor (see the join's doc).
       const carried = { ...state, pending_drain: drain_descriptor(action) }
       const applied = self_status_from_effect(carried, action)

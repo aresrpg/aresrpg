@@ -21,6 +21,7 @@
 // truth, not the reducer's private machinery.
 
 import { digest } from './timeline.js'
+import { SIM_EVENT_TYPE } from './reduce.js'
 
 // The seam version — bumped when the observable shape or the event coverage changes (capsule checkpoints and the
 // CI coherence gate pin it, so a silent shape drift becomes a loud version mismatch).
@@ -189,13 +190,13 @@ export const apply_canonical_event = (state, event) => {
     return { kind: 'sim_failure', event, reason: 'event has no string `type`' }
   switch (event.type) {
     // ── placement phase ──
-    case 'fight_placed':
+    case SIM_EVENT_TYPE.PLACED:
     case 'fight_joined':
       return {
         state: patch_fighter(state, event.entity_id, { cell: event.cell }),
         frame_facts: [{ kind: 'placed', id: event.entity_id, to: event.cell }],
       }
-    case 'fight_ready':
+    case SIM_EVENT_TYPE.READY:
       return { state, frame_facts: [{ kind: 'ready', id: event.entity_id }] }
     case 'fight_started':
       // Turn order + decks are private machinery; the observable turn opens on the fight_turn_start that follows.
@@ -249,7 +250,7 @@ export const apply_canonical_event = (state, event) => {
     }
     // A forfeit: the seat's own death, carried by the ordinary damage row (reduce.js `handle_abandon`, the
     // twin of the chain's `emit_abandoned`) — so the board evolves through the SAME door as any killing hit.
-    case 'fight_abandoned': {
+    case SIM_EVENT_TYPE.ABANDONED: {
       const applied = apply_effects(state, event.effects)
       return {
         state: applied.state,
@@ -281,7 +282,7 @@ export const apply_canonical_event = (state, event) => {
       }
 
     // ── resource bookkeeping (no observable-board delta) ──
-    case 'ap_reserve_used':
+    case SIM_EVENT_TYPE.AP_RESERVE_USED:
       return { state, frame_facts: [] }
 
     // ── terminal ──
