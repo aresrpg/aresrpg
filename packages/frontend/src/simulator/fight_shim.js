@@ -32,13 +32,21 @@
 // `sim_chain_events` encodes `fight_ended` as the chain's own Victory/Defeat row, the core folds it, and the
 // projection derives the status from that fold. So the second writer is gone; nothing here writes it.
 //
+// #1687 finished the job on the SESSION-lifecycle half. `seed_stores` used to open a board with
+// `{ status: STATUS_ACTIVE, width, height, escrow: [] }` and `stop()` used to force `{ status:
+// STATUS_PLACEMENT }` — session transitions, but written onto the mirror's own field. Neither survived its own
+// write: the seed is superseded two statements later by `init` (which nulls the mirror) and then by the adopted
+// snapshot, which carries the real status, geometry AND escrow; and STOP abandons THROUGH the sim first, so the
+// fold's verdict is a terminal and a written PLACEMENT told the page the fight had gone back to seat picking.
+// The core needed no new vocabulary for either — it already publishes both. `stop` keeps `busy`, which is its
+// own field and outside the mirror's patch.
+//
 // ── THE CLOCK ──────────────────────────────────────────────────────────────────────────────────────────────
 // `sim_chain` is pure and total: wall-clock turn deadlines are INJECTED (`now_ms`). This shim is where the real
 // clock enters, and nowhere else — determinism rides the capsule's command list, never the clock (spec §10).
 
 import { fight_store } from '@aresrpg/fight/store'
 import { engine_view_of } from '@aresrpg/fight/project'
-import { STATUS_ACTIVE, STATUS_PLACEMENT } from '@aresrpg/fight/board_state'
 import { GRID_W } from '@aresrpg/fight/los'
 import {
   LOCAL_ADDRESS,
@@ -201,7 +209,9 @@ export const create_fight_shim = ({
       live = { ...live, chain: result.chain }
       feed(result)
     }
-    dungeon.setState({ dungeon: { ...dungeon.getState().dungeon, status: STATUS_PLACEMENT }, busy: false })
+    // `busy` is this door's own field; the board itself belongs to the mirror, which has already published the
+    // abandon terminal the fold above produced (#1687).
+    dungeon.setState({ busy: false })
     return { ok: true }
   }
 
@@ -226,7 +236,7 @@ export const create_fight_shim = ({
 
   /** The store seeds the production fight surface reads (spec §6, the dev_synth_fight seed set) — plus the
    *  four LOCAL doors that keep the terminal path off the chain (header: the S5 answer). */
-  const seed_stores = ({ fight_id, roster, mobs, width, height }) => {
+  const seed_stores = ({ fight_id, roster, mobs }) => {
     if (!engine_context.get_state().sui?.characters?.length)
       engine_context.dispatch('action/sui_data', {
         // A CHAIN CHARACTER CARRIES `experience`, NOT `level` (#949) — every consumer decodes the level off the
@@ -263,9 +273,9 @@ export const create_fight_shim = ({
       // this shim's own wall clock, and STOP is the only exit. So the composition SAYS SO, once, here — and
       // the shared surface reads that instead of guessing from a deadline that means something else.
       chain_backed: false,
-      // Participant rows belong to the snapshot → board_view projection. Until that door publishes them, an
-      // empty list is honest; bare character ids are not board rows (`cave_session` reads each row's `.addr`).
-      dungeon: { status: STATUS_ACTIVE, width, height, escrow: [] },
+      // NO `dungeon` KEY (#1026 → #1687). The board — status, geometry and participant rows alike — belongs to
+      // the snapshot → board_view mirror, and `init` below nulls it before the snapshot republishes it. A seed
+      // here would only be a second writer racing its own successor two statements later.
       mob_names: Object.fromEntries(mobs.map(({ template_id, name }) => [template_id, name])),
       mob_levels: Object.fromEntries(mobs.map(({ template_id, level }) => [template_id, level])),
       mob_elements: Object.fromEntries(mobs.map(({ template_id, element }) => [template_id, element ?? 0])),
@@ -298,7 +308,7 @@ export const create_fight_shim = ({
     // THE SEAT THE PLAYER HOLDS — the ctx's `my_entity_id` and the hand the bar opens on are the same seat, so
     // it is read once here rather than spelled twice.
     const seat_id = focus_id ?? roster[0]?.id ?? null
-    seed_stores({ fight_id, roster, mobs, width: chain.board.width, height: chain.board.height })
+    seed_stores({ fight_id, roster, mobs })
     // THE POLL ANALOGUE (#1056). The phase machine's D81 latch — "this client reached an ACTIVE, seated turn in
     // THIS fight" — is what makes a WON/FAILED read an EARNED terminal instead of an unearned one, and an
     // unearned terminal is EXIT: the fight layer unmounts and the adapter tears the board down, so winning a

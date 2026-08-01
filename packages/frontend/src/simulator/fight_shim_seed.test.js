@@ -82,10 +82,12 @@ const open = () => {
 }
 
 describe('#1026 — simulator escrow has one shape owner', () => {
-  test('the lifecycle seed is empty, then board_view publishes the consumer-compatible participant row', () => {
+  test('the lifecycle seed carries no board, then board_view publishes the consumer-compatible participant row', () => {
     const { store, writes } = open()
 
-    expect(writes[0].dungeon.escrow).toEqual([])
+    // #1687 took the seed the rest of the way: the shim writes no `dungeon` at all now, which is the strongest
+    // form of "the seed does not publish participant rows" — the mirror is the field's only writer.
+    expect(writes.some((patch) => Object.hasOwn(patch, 'dungeon'))).toBe(false)
     expect(board_view(store.getState()).escrow[0]).toMatchObject({
       addr: local_address,
       character: character_id,
