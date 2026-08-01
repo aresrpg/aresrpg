@@ -8,8 +8,6 @@
     "packages/fight/src/predict_cast.js": 2,
     "packages/frontend/src/pages/encyclopedia/classes_tab.tsx": 2
   },
-  "sim-protocol-character-level-ceiling": {},
-  "sim-protocol-displacement-kind": {},
   "sim-protocol-element-ordinal": {
     "packages/fight/src/sim_chain_events.js": 1,
     "packages/fight/src/statuses.js": 1,
@@ -22,21 +20,12 @@
     "packages/fight/src/statuses.js": 1,
     "packages/frontend/src/game/screens/hud/seed-effect-line.js": 1
   },
-  "sim-protocol-grid-stride": {},
-  "sim-protocol-progress-scale": {},
-  "sim-protocol-signed-value-bias": {
-    "packages/fight/src/fight_status_snapshot.js": 1
-  },
   "sim-protocol-spell-effect-kind": {
-    "packages/fight/src/statuses.js": 4,
     "packages/frontend/src/game/screens/hud/fight-spells-core.js": 1,
     "packages/frontend/src/pages/encyclopedia/mob_spells.ts": 1
   },
   "sim-protocol-stat-id": {
     "packages/fight/src/statuses.js": 1,
     "packages/frontend/src/game/screens/hud/seed-effect-line.js": 1
-  },
-  "sim-protocol-target-filter-bit": {
-    "packages/fight/src/inputs.js": 3
   }
 }
