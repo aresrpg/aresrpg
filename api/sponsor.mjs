@@ -192,6 +192,44 @@ export function assert_no_dev_bypass_with_station_credentials(env = process.env)
 }
 assert_no_dev_bypass_with_station_credentials()
 
+// ── THE CLIENT IDENTITY ───────────────────────────────────────────────────────────────────────────────
+// The per-IP window is a limit only while the IP is one the caller cannot CHOOSE. Both adapters below used to
+// read `x-forwarded-for`'s first hop, and every proxy on this path APPENDS rather than replaces: Cloudflare
+// forwards `<whatever the client sent>, <real ip>` and the ingress appends again, so the first hop is the value
+// the CALLER wrote. Rotating it mints a fresh window per request. The sibling read layer measured exactly that
+// against live traffic on 2026-07-21 — packages/rpc/api/client_ip.js carries the incident note; this service is
+// the same cluster behind the same edge, and it spends money instead of serving reads.
+//
+// So the identity comes from the field the EDGE stamps: Cloudflare writes `cf-connecting-ip` on every proxied
+// request and overwrites any client-supplied copy, which is what a client cannot forge. The header NAME is
+// configuration rather than a bake, so an edge change is an env change instead of an image rebuild — the same
+// lesson SPONSOR_ARESRPG_PACKAGES carries from the 07-20 scope-bake outage.
+//
+// Anything else is an identity we cannot VERIFY, and an unverifiable identity is not a rate-limit key: the
+// request is refused rather than throttled against a value the caller picked. Localnet is the one deployment
+// where a process sits behind no edge and IS the whole deployment (the same carve-out sponsor_state.mjs takes
+// for its counters), so there the socket peer is the real client and stands as the identity.
+const LOCALNET = NETWORK === 'localnet'
+const TRUSTED_IP_HEADER = (process.env.SPONSOR_TRUSTED_IP_HEADER || 'cf-connecting-ip').toLowerCase()
+export const UNTRUSTED_IDENTITY_REASON = 'untrusted-client-identity'
+export const UNTRUSTED_IDENTITY_ERROR =
+  `sponsor-unavailable: this request carries no client identity the edge vouched for (${TRUSTED_IP_HEADER}) — ` +
+  'refusing to sponsor rather than bound a player against a caller-chosen value (fail-closed)'
+
+/**
+ * The rate-limit identity of a request, or null when it cannot be verified. `read_header` takes a lowercase
+ * header name (the two adapters hold their headers differently) and `peer` is the socket address. Pure: one home
+ * for the decision, so both doors take it identically and a spoofed header is one test away from red.
+ */
+export function client_identity({ read_header, peer }) {
+  const stamped = String(read_header(TRUSTED_IP_HEADER) ?? '').trim()
+  // A stamped field carries exactly ONE address. A comma means the value was appended to rather than overwritten
+  // — a forwarding chain the caller contributed to, which proves nothing about who is calling.
+  if (stamped && !stamped.includes(',')) return stamped
+  if (!LOCALNET) return null
+  return String(peer ?? '').trim() || null
+}
+
 export function require_station_config() {
   if (!process.env.GAS_STATION_URL?.trim() || !process.env.GAS_STATION_AUTH?.trim())
     throw new Error('sponsor-misconfig: GAS_STATION_URL + GAS_STATION_AUTH required — refusing to boot (fail-closed)')
@@ -716,13 +754,13 @@ export default async function handler(request, response) {
   // limited" would be a false explanation for an outage.
   if (!(await shared_store_ready()))
     return response.status(503).json({ error: SHARED_STORE_ERROR, reason: SHARED_STORE_REASON })
-  const ip =
-    String(request.headers['x-forwarded-for'] || '')
-      .split(',')[0]
-      .trim() ||
-    request.socket?.remoteAddress ||
-    'unknown'
-  if (await rate_limited(ip)) return response.status(429).json({ error: 'rate limited — retry shortly' })
+  const identity = client_identity({
+    read_header: (name) => request.headers[name],
+    peer: request.socket?.remoteAddress,
+  })
+  if (identity == null)
+    return response.status(503).json({ error: UNTRUSTED_IDENTITY_ERROR, reason: UNTRUSTED_IDENTITY_REASON })
+  if (await rate_limited(identity)) return response.status(429).json({ error: 'rate limited — retry shortly' })
   if (oversized(request.headers['content-length'])) return response.status(413).json({ error: OVERSIZE_BODY_ERROR })
   if (typeof request.body === 'string' && oversized(request.body.length))
     return response.status(413).json({ error: OVERSIZE_BODY_ERROR })
@@ -737,7 +775,8 @@ export default async function handler(request, response) {
   }
 }
 
-export async function sponsor_fetch(request) {
+/** @param server the Bun.serve instance — the ONLY holder of the socket peer address (`requestIP`). */
+export async function sponsor_fetch(request, server) {
   const url = new URL(request.url)
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS })
   if (url.pathname === '/') return new Response('OK', { headers: CORS })
@@ -749,8 +788,16 @@ export async function sponsor_fetch(request) {
   ) {
     if (!(await shared_store_ready()))
       return Response.json({ error: SHARED_STORE_ERROR, reason: SHARED_STORE_REASON }, { status: 503, headers: CORS })
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
-    if (await rate_limited(ip)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
+    const identity = client_identity({
+      read_header: (name) => request.headers.get(name),
+      peer: server?.requestIP?.(request)?.address,
+    })
+    if (identity == null)
+      return Response.json(
+        { error: UNTRUSTED_IDENTITY_ERROR, reason: UNTRUSTED_IDENTITY_REASON },
+        { status: 503, headers: CORS }
+      )
+    if (await rate_limited(identity)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
     // Declared size first (refuse before reading a byte), then the real body — a lying/absent content-length
     // must not buy an unbounded read.
     if (oversized(request.headers.get('content-length')))

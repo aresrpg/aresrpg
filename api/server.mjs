@@ -7,10 +7,13 @@ import { courier_fetch } from './courier.mjs'
 import { require_station_config, sponsor_fetch } from './sponsor.mjs'
 import { report_error } from './report.js'
 
-export async function api_fetch(request) {
+// `server` is Bun.serve's own second fetch argument and the only holder of the socket peer address: the sponsor
+// rate-limits on an identity the edge vouched for, and falls back to that peer where there is no edge (localnet).
+// Threaded, never re-derived — a router that dropped it would silently hand the sponsor an unverifiable caller.
+export async function api_fetch(request, server) {
   const { pathname } = new URL(request.url)
   if (pathname === '/v1/courier/position' || pathname === '/v1/courier/chat') return courier_fetch(request)
-  return sponsor_fetch(request)
+  return sponsor_fetch(request, server)
 }
 
 if (typeof Bun !== 'undefined' && import.meta.main) {

@@ -274,7 +274,11 @@ describe('the retired single-POST route returns an honest 410 upgrade signal (st
   }
   test('POST /api/sponsor in station mode ⇒ 410 { error: "sponsor-two-call-upgrade" }', async () => {
     const res = fake_res()
-    await S.default({ method: 'POST', url: '/api/sponsor', headers: {}, body: {} }, res)
+    // The socket peer is part of every real request, and on this file's localnet polarity it IS the client
+    // identity the rate limiter keys on (sponsor.client_identity.test.js owns that decision) — a fixture
+    // without one is a request no listener could ever have accepted.
+    const socket = { remoteAddress: '127.0.0.1' }
+    await S.default({ method: 'POST', url: '/api/sponsor', headers: {}, body: {}, socket }, res)
     expect(res._status).toBe(410)
     expect(res._json).toEqual({ error: 'sponsor-two-call-upgrade' })
     expect(_fetch_calls.length).toBe(0) // no station call for the upgrade signal
