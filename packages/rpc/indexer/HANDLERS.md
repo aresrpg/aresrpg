@@ -699,9 +699,9 @@ whose `ares` watermark is behind the presented checkpoint emits no *frames* unti
 has caught up. Rows written before the cursor field existed remain available to the
 ordinal JSON route but are not assigned invented SSE ids.
 
-Every subscription — both routes — opens with a `: ok` comment and, after each 20
-seconds of silence, a `: ka` comment. These are transport concerns, owned once by
-`stream_response`, not by either pump. The greeting exists because an intermediary
+Every subscription opens with a `: ok` comment and, after each 20 seconds of
+silence, a `: ka` comment. These are transport concerns, owned once by
+`stream_response`, not by the pump. The greeting exists because an intermediary
 (Cloudflare fronts `rpc.aresrpg.world`) forwards no bytes to the client until the
 body has its first one, so an idle subscription otherwise arrives as a hang despite
 a correct `200` and `x-accel-buffering: no`. Comments carry no `id`, so neither frame
@@ -711,20 +711,16 @@ This is one ingestion with two consumers: the existing projection/journal write 
 the SSE journal reader. The SSE route never BCS-decodes an event. Fan-out is a
 location-local Redis tip-poll; there is no Redis-to-Redis transport.
 
-### Presence stream — `/v1/stream/presence/{world_id}` (#1382)
+### Presence stream — RETIRED (#1843)
 
-The same Rust surface accepts `?address=<sui-address>`, `?character=<object-id>`, or
-both. An open socket upserts `{ address?, character?, world }` into
-`rpc:presence:{world}` with a 30-second score TTL and rewrites it every 15 seconds —
-a registry liveness write, unrelated to the transport keepalive above, which is why
-it survived that comment's move into `stream_response`. Each connection receives
-`current-set`, then `join`/`leave`
-events by tip-polling and diffing that registry. Closing a tab stops refresh; expiry
-therefore produces `leave` without a server session or disconnect hook.
-
-Presence is intentionally **location-local**. It describes connections observed by
-the Redis colocated with this indexer only; it is not a global player directory and
-must never be replicated Redis-to-Redis.
+`/v1/stream/presence/{world_id}` served a connection-observed registry plus the poses
+and chat lines the client→server courier wrote. That courier was retired as a
+violation of the no-client-writes law and deleted with its service, SDK and browser
+edge; ephemeral social rides peer-to-peer instead (`docs/REALTIME.md` — "there is no
+server-side presence registry"). The reader was deleted with its writer rather than
+left serving a channel nothing feeds, and `stream.rs` holds a router-level test that
+the path is unroutable. The fight journal above is a different system and is
+untouched.
 
 **Backfill is OPERATIONAL, not code** (same lever the DF snapshots name): the `ares` watermark is
 already at the tip, so this arm journals only checkpoints from deploy on — NEW fights journal from
