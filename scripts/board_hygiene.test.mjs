@@ -14,6 +14,7 @@ import {
   decide_landing,
   decide_link_gate,
   decide_ref_gate,
+  decide_sealed_check,
   decide_stale,
   extract_landed_references,
   is_conventional_subject,
@@ -28,6 +29,8 @@ import {
   resolve_now,
   run_landing,
   run_link_gate,
+  run_sealed_check,
+  sealed_check_candidate_comment,
 } from './board_hygiene.mjs'
 
 const REPOSITORY = 'aresrpg/aresrpg'
@@ -177,6 +180,104 @@ describe('the landing sweep never fights a human', () => {
     expect(decide_landing({ state: 'open' }, swept, { sha: 'bbbbbbbbbbbb', pr_number: 1200 })).toEqual({
       action: 'close',
     })
+  })
+})
+
+describe('the sealed-check audit files evidence and leaves judgment human (#1750)', () => {
+  const closed = {
+    number: 42,
+    state: 'closed',
+    closed_at: '2026-07-30T12:00:00Z',
+    labels: [{ name: 'P1' }],
+  }
+  const closing = (extra = '') => [
+    {
+      created_at: '2026-07-30T11:59:00Z',
+      user: { login: BOT_LOGIN },
+      body: `Closed by #41 (landed \`123456789abc\` on \`edge\`).${extra}`,
+    },
+  ]
+
+  it('flags a synthetically closed P1 whose closing thread names no sealed check', () => {
+    expect(decide_sealed_check(closed, closing(), null)).toEqual({
+      action: 'flag',
+      reason: 'missing-check',
+      sha: '123456789abc',
+      targets: [],
+    })
+  })
+
+  it('passes when the named test path exists in the close-time tree', () => {
+    const comments = closing('\n\nSealed check: scripts/board_hygiene.test.mjs')
+    expect(decide_sealed_check(closed, comments, ['scripts/board_hygiene.test.mjs'])).toEqual({
+      action: 'pass',
+      sha: '123456789abc',
+      targets: ['scripts/board_hygiene.test.mjs'],
+    })
+  })
+
+  it('flags a named check that did not exist at the closing SHA', () => {
+    const comments = closing('\n\nSealed check: scripts/missing.test.mjs')
+    expect(decide_sealed_check(closed, comments, [])).toMatchObject({
+      action: 'flag',
+      reason: 'missing-in-tree',
+    })
+  })
+
+  it('the candidate comment explicitly says the pass did not reopen the row', () => {
+    const body = sealed_check_candidate_comment({
+      action: 'flag',
+      reason: 'missing-check',
+      sha: '123456789abc',
+      targets: [],
+    })
+    expect(body).toContain('did not reopen')
+    expect(body).toContain('judgment stays human')
+  })
+
+  it('comments on missing proof without sending any state mutation', async () => {
+    const proven = {
+      ...closed,
+      number: 43,
+      labels: [{ name: 'P0' }],
+    }
+    const sent = []
+    const json_response = (data) => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => data,
+      text: async () => JSON.stringify(data),
+    })
+    const fetch_fn = async (url, options = {}) => {
+      const { pathname } = new URL(url)
+      const method = options.method ?? 'GET'
+      if (method !== 'GET') {
+        sent.push({ method, pathname, body: JSON.parse(options.body) })
+        return json_response({})
+      }
+      if (pathname === '/repos/aresrpg/aresrpg/issues') return json_response([closed, proven])
+      if (pathname.endsWith('/issues/42/comments')) return json_response(closing())
+      if (pathname.endsWith('/issues/43/comments'))
+        return json_response(closing('\n\nSealed check: scripts/board_hygiene.test.mjs'))
+      throw new Error(`unexpected GET ${pathname}`)
+    }
+    const summary = await run_sealed_check({
+      mode: 'sealed-check',
+      repository: REPOSITORY,
+      github_token: 'test',
+      dry_run: false,
+      fetch_fn,
+      sleep: async () => {},
+      log: () => {},
+      verify_sealed_target: async (_sha, target) => target === 'scripts/board_hygiene.test.mjs',
+    })
+
+    expect(summary).toEqual({ scanned: 2, passed: 1, candidates: 1, flagged: 1, flag_queued: 0, skipped: 0 })
+    expect(sent.map(({ method, pathname }) => `${method} ${pathname}`)).toEqual([
+      'POST /repos/aresrpg/aresrpg/issues/42/comments',
+    ])
+    expect(sent[0].body.body).toContain('did not reopen')
   })
 })
 
@@ -633,5 +734,6 @@ describe('the CLI edge', () => {
     expect(parse_args(['stale', '--dry-run'])).toMatchObject({ mode: 'stale', dry_run: true })
     expect(parse_args(['landing', '--base', 'abc', '--head', 'def'])).toMatchObject({ base: 'abc', head: 'def' })
     expect(parse_args(['ref-gate', '--pr', '42'])).toMatchObject({ pull_number: 42 })
+    expect(parse_args(['sealed-check'])).toMatchObject({ mode: 'sealed-check' })
   })
 })

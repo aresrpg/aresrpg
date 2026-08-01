@@ -22,6 +22,8 @@
 //   ref-gate — warns once when a conventional PR has no issue refs; never a merge blocker.
 //   stale    — the background backstop for rows nobody ever picked up. 7 days without human
 //              activity earns `stale-warning`; 7 more earn a not-planned close.
+//   sealed-check — the scheduled autopsy for closed P0/P1 rows. It verifies a named check in the
+//              close-time tree and comments re-open evidence when proof is absent; it NEVER reopens.
 //
 // WHY A LABEL AND NOT AN API FIELD: `closingIssuesReferences` — GitHub's own registered-link field —
 // is EMPTY for every pull request in this repository (measured 2026-07-29: 0 of 555, across every
@@ -99,6 +101,7 @@ const wait = (delay_ms) => new Promise((resolve) => setTimeout(resolve, delay_ms
 const exec_file_async = promisify(exec_file)
 const is_record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 const is_full_sha = (value) => /^[0-9a-f]{40}$/i.test(String(value ?? ''))
+const label_names = (item) => (item?.labels ?? []).map((label) => label?.name ?? label)
 
 // ---------------------------------------------------------------------------
 // Pure core — every decision this file makes is one of the functions below.
@@ -115,10 +118,8 @@ const CLOSE_REF_RE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*(?:([
 // Measured on #1547, whose own driven-proof transcript made it claim to close #1495.
 const FENCED_BLOCK_RE = /(`{3,}|~{3,})[^\n]*\n[\s\S]*?\1/g
 const INLINE_CODE_RE = /`[^`\n]*`/g
-const without_quoted_blocks = (text) =>
-  String(text ?? '')
-    .replace(FENCED_BLOCK_RE, '\n')
-    .replace(INLINE_CODE_RE, ' ')
+const without_fenced_blocks = (text) => String(text ?? '').replace(FENCED_BLOCK_RE, '\n')
+const without_quoted_blocks = (text) => without_fenced_blocks(text).replace(INLINE_CODE_RE, ' ')
 
 export function parse_close_refs(text, repository) {
   const owned = String(repository ?? '').toLowerCase()
@@ -165,6 +166,7 @@ export const landing_marker = (evidence) =>
 
 export const STALE_WARNING_MARKER = '<!-- board_hygiene stale_warning -->'
 export const REF_GATE_MARKER = '<!-- board_hygiene ref_gate -->'
+export const SEALED_CHECK_CANDIDATE_MARKER = '<!-- board_hygiene sealed_check_candidate -->'
 
 const has_marker = (body, marker) =>
   String(body ?? '')
@@ -172,6 +174,54 @@ const has_marker = (body, marker) =>
     .includes(marker)
 
 const from_bot = (item) => (item?.actor?.login ?? item?.user?.login) === BOT_LOGIN
+
+const SEALED_TARGET_RE = /^\s*(?:[-*]\s+)?Sealed check:\s*(.+?)\s*$/i
+const SAFE_REPO_PATH_RE = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9_./-]+(?::\d+)?$/
+const sealed_target_path = (target) =>
+  SAFE_REPO_PATH_RE.test(String(target ?? '').trim()) ? String(target).trim().replace(/:\d+$/, '') : null
+
+export function parse_sealed_check_targets(text) {
+  return [
+    ...new Set(
+      without_fenced_blocks(text)
+        .split(/\r?\n/)
+        .map((line) => SEALED_TARGET_RE.exec(line)?.[1]?.trim() ?? '')
+        .map((value) => (/^`[^`]+`$/.test(value) ? value.slice(1, -1) : value))
+        .filter((value) => sealed_target_path(value) !== null)
+    ),
+  ]
+}
+
+export function parse_close_sha(text) {
+  const matches = [...String(text ?? '').matchAll(/(?:\blanded\s+`|\bclose SHA:\s*`?)([0-9a-f]{7,40})/gi)]
+  return matches.at(-1)?.[1]?.toLowerCase() ?? null
+}
+
+// Pure policy for #1750. `existing_targets === null` means the effect has not inspected the close
+// tree yet; an array contains the targets it proved there. The only mutating outcome is named
+// `flag`: the caller posts evidence on the CLOSED row and never reopens it.
+export function decide_sealed_check(issue, comments, existing_targets = null) {
+  const labels = label_names(issue)
+  if (issue?.pull_request) return { action: 'noop', reason: 'a pull request, not a board row' }
+  if (issue?.state !== 'closed') return { action: 'noop', reason: 'not closed' }
+  if (!(labels.includes('P0') || labels.includes('P1'))) return { action: 'noop', reason: 'not P0/P1' }
+  if ((comments ?? []).some((comment) => from_bot(comment) && has_marker(comment?.body, SEALED_CHECK_CANDIDATE_MARKER)))
+    return { action: 'noop', reason: 'candidate already filed' }
+
+  const closed_at = Date.parse(issue?.closed_at ?? '')
+  const before_close = (comments ?? []).filter((comment) => {
+    const created_at = Date.parse(comment?.created_at ?? '')
+    return Number.isFinite(created_at) && (!Number.isFinite(closed_at) || created_at <= closed_at)
+  })
+  const thread = [issue?.body, ...before_close.map((comment) => comment?.body)].filter(Boolean).join('\n')
+  const sha = parse_close_sha(thread)
+  const targets = parse_sealed_check_targets(thread)
+  if (!sha) return { action: 'flag', reason: 'missing-close-sha', sha: null, targets }
+  if (targets.length === 0) return { action: 'flag', reason: 'missing-check', sha, targets }
+  if (existing_targets === null) return { action: 'inspect', sha, targets }
+  if (targets.some((target) => existing_targets.includes(target))) return { action: 'pass', sha, targets }
+  return { action: 'flag', reason: 'missing-in-tree', sha, targets }
+}
 
 // A landing sweep must never fight a human. If this pass already closed the row for THIS landing and
 // somebody reopened it, that reopen was a deliberate act with evidence behind it — leave it alone.
@@ -225,8 +275,6 @@ export function decide_stale(issue, timeline, now_ms) {
     ? { action: 'close', last_activity, warned }
     : { action: 'noop', last_activity, warned }
 }
-
-const label_names = (item) => (item?.labels ?? []).map((label) => label?.name ?? label)
 
 // The blocking gate. It deliberately asks the STRICT question the loose ref gate below does not: not
 // "did the author think about the board" but "will a row actually drain when this lands". The sources
@@ -306,6 +354,26 @@ export const landing_comment = (evidence) =>
     '',
     landing_marker(evidence),
   ].join('\n')
+
+export const sealed_check_candidate_comment = (decision) => {
+  const reason = {
+    'missing-close-sha': 'The closing thread names no landed commit, so the close-time tree cannot be inspected.',
+    'missing-check': 'The closing thread names no `Sealed check:` path.',
+    'missing-in-tree': 'None of the named `Sealed check:` targets existed in the close-time tree.',
+  }[decision.reason]
+  return [
+    '**Re-open candidate: sealed-check proof is absent.**',
+    '',
+    reason,
+    `Close SHA: ${decision.sha ? `\`${decision.sha}\`` : '_not recorded_'}.`,
+    `Named targets: ${decision.targets.length > 0 ? decision.targets.map((target) => `\`${target}\``).join(', ') : '_none_'}.`,
+    '',
+    'This scheduled audit did not reopen the row; judgment stays human. Reopen only after reviewing',
+    'the closing promise and this close-time evidence.',
+    '',
+    SEALED_CHECK_CANDIDATE_MARKER,
+  ].join('\n')
+}
 
 export const stale_warning_comment = () =>
   [
@@ -455,6 +523,20 @@ const post_comment = (config, issue_number, body) =>
 
 const close_issue = (config, issue_number, state_reason) =>
   mutate(config, 'PATCH', `/issues/${issue_number}`, { state: 'closed', state_reason })
+
+// Resolve only validated object names, without a shell. A short SHA is allowed because the landing
+// comment records 12 characters; ambiguity or a missing object fails closed as absent evidence.
+export async function verify_sealed_target_at_sha(sha, target, repository_root = process.cwd()) {
+  if (!/^[0-9a-f]{7,40}$/i.test(String(sha ?? ''))) return false
+  const target_path = sealed_target_path(target)
+  if (!target_path) return false
+  try {
+    await exec_file_async('git', ['cat-file', '-e', `${sha}:${target_path}`], { cwd: repository_root })
+    return true
+  } catch {
+    return false
+  }
+}
 
 // GitHub returns 422 when the label already exists; that is this call's success case, not a failure.
 async function ensure_stale_label(config) {
@@ -651,7 +733,56 @@ export async function run_stale(config) {
 }
 
 // ---------------------------------------------------------------------------
-// Pass 4 — the ref gate.
+// Pass 4 — closed P0/P1 sealed-check autopsy (evidence only; never reopens).
+// ---------------------------------------------------------------------------
+
+export async function run_sealed_check(config) {
+  const closed_rows = (
+    await collect_pages(
+      config,
+      api_url(config, '/issues', { state: 'closed', sort: 'updated', direction: 'desc', per_page: '100' })
+    )
+  ).filter(
+    (issue) =>
+      !issue?.pull_request &&
+      issue?.state === 'closed' &&
+      (label_names(issue).includes('P0') || label_names(issue).includes('P1'))
+  )
+  const verify = config.verify_sealed_target ?? verify_sealed_target_at_sha
+  const decisions = []
+  for (const issue of closed_rows) {
+    const comments = await list_comments(config, issue.number)
+    let decision = decide_sealed_check(issue, comments)
+    if (decision.action === 'inspect') {
+      const existing = []
+      for (const target of decision.targets) {
+        if (await verify(decision.sha, target, config.repository_root)) existing.push(target)
+      }
+      decision = decide_sealed_check(issue, comments, existing)
+    }
+    decisions.push({ issue, decision })
+  }
+
+  const candidates = decisions.filter(({ decision }) => decision.action === 'flag')
+  const to_flag = candidates.slice(0, MAX_ACTIONS_PER_RUN)
+  for (const { issue, decision } of to_flag) {
+    config.log(
+      `sealed-check: ${config.dry_run ? 'WOULD flag' : 'flagging'} #${issue.number} — ${decision.reason}; human re-open decision required`
+    )
+    await post_comment(config, issue.number, sealed_check_candidate_comment(decision))
+  }
+  return {
+    scanned: closed_rows.length,
+    passed: decisions.filter(({ decision }) => decision.action === 'pass').length,
+    candidates: candidates.length,
+    flagged: to_flag.length,
+    flag_queued: candidates.length - to_flag.length,
+    skipped: decisions.filter(({ decision }) => decision.action === 'noop').length,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pass 5 — the ref gate.
 // ---------------------------------------------------------------------------
 
 export async function run_ref_gate(config) {
@@ -677,7 +808,7 @@ export async function run_ref_gate(config) {
 }
 
 // ---------------------------------------------------------------------------
-// Pass 5 — the link gate (blocking).
+// Pass 6 — the link gate (blocking).
 // ---------------------------------------------------------------------------
 
 const REGISTERED_LINKS_QUERY = `query($owner:String!,$name:String!,$number:Int!){
@@ -751,6 +882,7 @@ const MODES = {
   landing: run_landing,
   backstop: run_landing,
   stale: run_stale,
+  'sealed-check': run_sealed_check,
   'ref-gate': run_ref_gate,
   'link-gate': run_link_gate,
 }

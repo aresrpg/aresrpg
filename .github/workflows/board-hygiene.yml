@@ -25,6 +25,9 @@
 #   stale     — the background backstop for rows nobody ever picked up: 7 days without human
 #               activity earns `stale-warning`, 7 more earn a not-planned close. Exempt by label:
 #               P0, P1, security, owner-gated, epic.
+#   sealed_check — a scheduled autopsy of closed P0/P1 rows. It proves each named `Sealed check:`
+#               existed in the close-time tree or comments re-open-candidate evidence. It NEVER
+#               changes issue state: re-opening stays a human judgment.
 #
 # SCHEDULES FIRE FROM THE DEFAULT BRANCH (#809, and gate.yml's `release_pins` header says the same):
 # until this file reaches master, the `schedule:` trigger runs ZERO times, so `backstop` and `stale`
@@ -142,6 +145,29 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/board_hygiene.mjs stale
+
+  sealed_check:
+    name: sealed-check re-open candidates
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.sha == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # The schedule is loaded from the default branch, but the protected edge tip owns this audit.
+      # Full history is required because evidence is verified in each row's close-time tree.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: edge
+          fetch-depth: 0
+      - name: flag missing sealed-check proof without reopening anything
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/board_hygiene.mjs sealed-check
 
   link_gate:
     name: issue-link gate
