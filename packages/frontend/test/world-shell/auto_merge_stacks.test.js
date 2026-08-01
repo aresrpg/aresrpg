@@ -7,7 +7,14 @@
 import { describe, expect, test } from 'bun:test'
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
-import { sweep_duplicate_stacks } from '../../src/world-shell/auto_merge_stacks.js'
+import { merge_plan_signature, sweep_duplicate_stacks } from '../../src/world-shell/auto_merge_stacks.js'
+
+/** The injected cross-load refusal memo, in memory (localStorage is the real edge's business). */
+const memo = (seen = []) => ({
+  seen,
+  has: (signature) => seen.includes(signature),
+  remember: (signature) => void seen.push(signature),
+})
 
 const bag = () => [
   { id: '0xa', template_id: 't', kiosk_id: '0xk', amount: 1, stackable: true },
@@ -25,6 +32,7 @@ const harness = (over = {}) => {
       items: bag(),
       // #1802 — chain custody is what gets SIGNED. The default harness has the mirror and the chain agreeing.
       custody: async () => bag(),
+      refusals: memo(),
       fight_active: () => false,
       submit: async (merges) => {
         submits.push(merges)
@@ -182,6 +190,72 @@ describe('sweep_duplicate_stacks', () => {
     })
   })
 
+  // ── #1802 rider: a refused plan is never blindly re-signed on the next load ─────────────────────────
+  // The session latch dies with the tab, so before this the sweep re-submitted the SAME plan on EVERY app
+  // load — a pre-flight refusal looped forever, and an EXECUTED failure re-burned gas each load. The memo
+  // is the only cross-load state: the exact plan that failed is not signed again; ANY change to it is.
+  describe('a failed plan is remembered across loads', () => {
+    const refusing = (over = {}) => {
+      const submits = []
+      const { deps } = harness({
+        submit: async (merges) => {
+          submits.push(merges)
+          throw new Error('SimulationError: This item belongs to a different kiosk')
+        },
+        ...over,
+      })
+      return { deps, submits }
+    }
+
+    test('the same plan is submitted ONCE, however many app loads follow', async () => {
+      const refusals = memo()
+      const first = refusing({ refusals })
+      await sweep_duplicate_stacks(first.deps)
+      expect(first.submits).toHaveLength(1)
+
+      // a fresh app load: new module latch, same bag, same refusal memo
+      const second = refusing({ refusals })
+      expect(await sweep_duplicate_stacks(second.deps)).toEqual({ swept: false, reason: 'already-refused' })
+      expect(second.submits).toHaveLength(0)
+    })
+
+    test('a CHANGED plan is always tried — the memo pins one plan, never the sweep', async () => {
+      const refusals = memo()
+      await sweep_duplicate_stacks(refusing({ refusals }).deps)
+      const grown = [...bag(), { id: '0xd', template_id: 't', kiosk_id: '0xk', amount: 1, stackable: true }]
+      const next = harness({ refusals, items: grown, custody: async () => grown })
+      const result = await sweep_duplicate_stacks(next.deps)
+      expect(result.swept).toBe(true)
+      expect(next.submits).toHaveLength(1)
+    })
+
+    test('an EXECUTED failure is remembered too — a digest burned gas once, never once per load', async () => {
+      const refusals = memo()
+      const executed = Object.assign(new Error('MoveAbort'), { executed_digest: '0xdead' })
+      const { deps } = harness({
+        refusals,
+        submit: async () => {
+          throw executed
+        },
+      })
+      await sweep_duplicate_stacks(deps)
+      expect(refusals.seen).toHaveLength(1)
+    })
+
+    test('a SUCCESSFUL sweep is never memoized — the next bag gets its own attempt', async () => {
+      const refusals = memo()
+      await sweep_duplicate_stacks(harness({ refusals }).deps)
+      expect(refusals.seen).toEqual([])
+    })
+
+    test('the signature pins the kiosk, so the same pair in another kiosk is a different plan', () => {
+      const pair = { target_item_id: '0xa', source_item_id: '0xb' }
+      expect(merge_plan_signature([{ ...pair, kiosk_id: '0xk_a' }])).not.toBe(
+        merge_plan_signature([{ ...pair, kiosk_id: '0xk_b' }])
+      )
+    })
+  })
+
   test('post-sweep live custody refresh leaves only the surviving object id in inventory rows', async () => {
     let state = {
       items: bag(),
@@ -196,6 +270,7 @@ describe('sweep_duplicate_stacks', () => {
     await sweep_duplicate_stacks({
       items: state.items,
       custody: async () => bag(),
+      refusals: memo(),
       fight_active: () => false,
       submit: async () => ({
         events: [

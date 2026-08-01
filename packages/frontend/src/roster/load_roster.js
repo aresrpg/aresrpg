@@ -60,6 +60,7 @@ import { release_settled_box_latches } from '../game/screens/hud/lootbox-retry-g
 // #1495 duplicate-stack sweep — the orchestrator is dependency-injected (it reads and writes nothing itself),
 // so this loader, the edge that already owns the bag read, wires its fight predicate / submit / fold doors.
 import { sweep_duplicate_stacks } from '../world-shell/auto_merge_stacks.js'
+import { stack_sweep_refusals } from '../world-shell/stack_sweep_refusals.js'
 import { world_fight_active } from '../world-shell/fight_session_scope.js'
 import { apply_stack_merge_receipt } from '../world-shell/store_patch.js'
 import { submit_stack_merges } from '../chain/write/write_stack_merge.js'
@@ -216,6 +217,9 @@ export async function load_roster() {
       // The mirror bag above says WHETHER to tidy; chain custody says WHAT to sign — an indexer row whose
       // item→kiosk edge lags would otherwise list a stack against a kiosk that does not hold it (abort 11).
       custody: live_custody,
+      // Cross-load memory of a plan the chain already refused — a failing sweep surfaces once instead of
+      // re-signing the same transaction on every app load (#1802 rider).
+      refusals: stack_sweep_refusals,
       fight_active: () => world_fight_active(fight_store.getState()),
       submit: submit_stack_merges,
       fold: apply_stack_merge_receipt,

@@ -28,9 +28,13 @@
 //      and a custody read that fails signs NOTHING — an unverified join is not a plan.
 //   4. THE RECEIPT FOLDS THE BAG — never the plan (no optimistic rewrite; a failed merge changes nothing).
 //   5. NEVER RETRY — the latch is consumed BEFORE the submit, so an EXECUTED failure (a digest exists = gas
-//      burned) can never re-burn, and a pre-flight refusal simply waits for the next app load. Cosmetics are
-//      the only thing at stake: an unmerged bag is a tidy-up, never a blocker, so every failure is silent
-//      to the player and loud to the console.
+//      burned) can never re-burn within a session. ACROSS sessions the latch is worthless (a fresh app load
+//      is a fresh module), so a failing plan was re-signed on EVERY load: a pre-flight refusal looped
+//      forever and an executed failure re-burned gas each time. The injected `refusals` memo is the one
+//      piece of cross-load state — the EXACT plan that failed is never signed again, and any change to it
+//      (a new duplicate, a merged pair, a corrected kiosk) is a new plan that always is. Cosmetics are the
+//      only thing at stake: an unmerged bag is a tidy-up, never a blocker, so every failure is silent to
+//      the player and loud to the console.
 
 import { plan_stack_merges, stack_merge_receipt_rows } from '../chain/stack_merge.js'
 import { game_log } from '../core/log.js'
@@ -44,9 +48,22 @@ const MAX_MERGES_PER_SWEEP = 32
 const session_latch = { fired: false }
 
 /**
+ * The IDENTITY of a plan (#1802 rider), so the one that failed can be recognised on the next app load.
+ * Every field the chain resolves is in it — a merge is (kiosk, target, source), and the kiosk belongs in the
+ * key because the SAME pair in another kiosk is a different transaction with a different outcome. The plan is
+ * deterministic (plan_stack_merges sorts), so an unchanged bag yields an unchanged signature.
+ * @param {{ kiosk_id: string, target_item_id: string, source_item_id: string }[]} merges
+ * @returns {string}
+ */
+export function merge_plan_signature(merges) {
+  return (merges ?? []).map((m) => `${m.kiosk_id}>${m.target_item_id}<${m.source_item_id}`).join('|')
+}
+
+/**
  * @param {{
  *   items: any[],
  *   custody: () => Promise<any[]>,
+ *   refusals: { has: (signature: string) => boolean, remember: (signature: string) => void },
  *   fight_active: () => boolean,
  *   submit: (merges: any[]) => Promise<any>,
  *   fold: (rows: { into: string, from: string, total: number }[]) => void,
@@ -58,6 +75,7 @@ const session_latch = { fired: false }
 export async function sweep_duplicate_stacks({
   items,
   custody,
+  refusals,
   fight_active,
   submit,
   fold,
@@ -77,7 +95,22 @@ export async function sweep_duplicate_stacks({
     // name a kiosk that does not hold its item (#1802). A throw here lands in the catch below: nothing signed.
     const merges = plan_stack_merges(await custody()).slice(0, MAX_MERGES_PER_SWEEP)
     if (!merges.length) return { swept: false, reason: 'nothing-to-merge' }
-    const rows = stack_merge_receipt_rows(await submit(merges))
+
+    // Law 5: this exact plan already failed on a previous load. Re-signing it would only reproduce the same
+    // refusal (or re-burn the same gas) once per app load, forever — surface it, never loop on it.
+    const signature = merge_plan_signature(merges)
+    if (refusals.has(signature)) {
+      game_log('stack-sweep', `plan already refused on a previous load — not re-submitting (${merges.length} merge(s))`)
+      return { swept: false, reason: 'already-refused' }
+    }
+
+    let rows
+    try {
+      rows = stack_merge_receipt_rows(await submit(merges))
+    } catch (error) {
+      refusals.remember(signature) // pins THIS plan only: any change to the bag composes a new one
+      throw error
+    }
     if (rows.length) fold(rows)
     // Re-read live kiosk custody after the merge transaction: every source object is deleted on chain, so a
     // display row keyed by its pre-sweep id is a corpse even when the receipt projection changes shape.
