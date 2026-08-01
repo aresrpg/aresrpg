@@ -99,7 +99,9 @@ describe('#1584 the snapshot content hash counts the status class', () => {
 
     // THE REPORTED DEFECT: the status class was stripped before hashing, so this read hashed equal to its
     // predecessor and `adopt_snapshot` returned the inbox untouched — view_version stayed 5 and badges stayed [].
-    expect(store.getState().core.inbox.base_version, 'the status-only read carried new information and re-based').toBe(6)
+    expect(store.getState().core.inbox.base_version, 'the status-only read carried new information and re-based').toBe(
+      6
+    )
     expect(
       badges(store).find((row) => row.kind === SE.K_ALTER_STAT)?.remaining_turns,
       'the chain-stated buff reached the badge the HUD renders'
