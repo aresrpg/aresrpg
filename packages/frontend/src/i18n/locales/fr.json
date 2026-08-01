@@ -2523,6 +2523,7 @@
     "gift_not_recipient": "Ce cadeau ne vous est pas destiné.",
     "gift_not_sender": "Seul l'expéditeur peut rappeler ce cadeau.",
     "gift_empty": "Un cadeau doit contenir au moins un objet.",
+    "gift_too_many_items": "Un cadeau ne peut pas contenir autant d'objets — répartissez-les en plusieurs cadeaux.",
     "airdrop_not_eligible": "Ce portefeuille n'est pas éligible, ou a déjà réclamé.",
     "airdrop_wrong_template": "Cet objet d'airdrop n'est plus disponible — actualisez et réessayez.",
     "delete_items_equipped": "Ce personnage a encore des objets équipés. Déséquipez tout, puis réessayez.",

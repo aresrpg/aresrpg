@@ -2523,6 +2523,7 @@
     "gift_not_recipient": "Dieses Geschenk ist nicht an dich adressiert.",
     "gift_not_sender": "Nur der Absender kann dieses Geschenk zurückrufen.",
     "gift_empty": "Ein Geschenk muss mindestens einen Gegenstand enthalten.",
+    "gift_too_many_items": "Ein Geschenk kann nicht so viele Gegenstände enthalten — teile es auf mehrere Geschenke auf.",
     "airdrop_not_eligible": "Diese Wallet ist nicht berechtigt oder hat bereits eingelöst.",
     "airdrop_wrong_template": "Dieser Airdrop-Gegenstand ist nicht mehr verfügbar — aktualisieren und erneut versuchen.",
     "delete_items_equipped": "Dieser Charakter hat noch Gegenstände angelegt. Lege alles ab und versuche es erneut.",

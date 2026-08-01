@@ -324,6 +324,7 @@ const TABLE = {
     101: 'errors.gift_not_recipient', // ENotRecipient — claim by someone who isn't the gift's named recipient
     102: 'errors.gift_not_sender', // ENotSender — recall by someone who isn't the gift's sender
     103: 'errors.gift_empty', // EEmptyGift — send with an empty item list (client-gated, defensive)
+    104: 'errors.gift_too_many_items', // ETooManyItems — over MAX_GIFT_ITEMS; claim/recall must walk the list back
   },
   // Inventory EQUIP + loot-box OPEN share the same typed kiosk-extraction seam. Map the declared module codes and
   // their reachable item/gifting/kiosk/version/config guards so known failures never collapse to generic copy.
