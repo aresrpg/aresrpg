@@ -7,8 +7,16 @@ import { Transaction } from '@mysten/sui/transactions'
 import { toBase64 } from '@mysten/sui/utils'
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
+import {
+  assert_signed_and_executed,
+  dev_key_or_throw,
+  executed_digest,
+  record_signature,
+  type signing_entry,
+} from './signing_ledger.ts'
+
 const PROD_ORIGIN = process.env.PROD_SMOKE_ORIGIN ?? 'https://testnet.aresrpg.world'
-const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
+const DEV_KEY = process.env.VITE_DEV_KEY
 const WALLET_NAME = 'AresRPG Prod Smoke Wallet'
 const SUI_CHAIN = 'sui:testnet'
 const SUI_GRPC_URL = process.env.SUI_GRPC_URL ?? 'https://fullnode.testnet.sui.io:443'
@@ -18,13 +26,14 @@ type live_asset_manifest = {
   classes?: { item?: { quilts?: Array<{ id?: string; first?: string }> } }
 }
 
+// Every guard, verdict and ledger decision below lives in signing_ledger.ts and is driven through all of
+// its polarities off CI (signing_ledger_test.ts). What stays here is only the SDK wiring.
 function prod_signer() {
-  if (!DEV_KEY)
-    throw new Error('VITE_DEV_KEY is required for the authenticated prod-smoke rows; the deploy hook guards absence')
-  const secret = decodeSuiPrivateKey(DEV_KEY).secretKey
-  const keypair = Ed25519Keypair.fromSecretKey(secret)
+  const keypair = Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(dev_key_or_throw(DEV_KEY)).secretKey)
   const grpc_client = new SuiGrpcClient({ network: 'testnet', baseUrl: SUI_GRPC_URL })
   const address = keypair.getPublicKey().toSuiAddress()
+  // Born here, only ever replaced — the ledger is this signer's own value, never shared state.
+  let ledger: readonly signing_entry[] = []
 
   const build_bytes = async (json: string) => {
     const transaction = Transaction.from(json)
@@ -35,25 +44,31 @@ function prod_signer() {
   return {
     address,
     public_key: [...keypair.getPublicKey().toRawBytes()],
-    sign_personal: async (message: number[]) => keypair.signPersonalMessage(new Uint8Array(message)),
+    // The oracle #1723 found missing: what this signer really did, in order.
+    ledger: () => ledger,
+    sign_personal: async (message: number[]) => {
+      const signed = await keypair.signPersonalMessage(new Uint8Array(message))
+      ledger = record_signature(ledger, { op: 'personal' })
+      return signed
+    },
     sign_transaction: async (json: string) => {
       const bytes = await build_bytes(json)
       const { signature } = await keypair.signTransaction(bytes)
+      ledger = record_signature(ledger, { op: 'sign' })
       return { bytes: toBase64(bytes), signature }
     },
     sign_and_execute: async (json: string) => {
       const bytes = await build_bytes(json)
       const { signature } = await keypair.signTransaction(bytes)
-      const result = await grpc_client.core.executeTransaction({
-        transaction: bytes,
-        signatures: [signature],
-        include: { effects: true },
-      })
-      const executed = result.Transaction ?? result.FailedTransaction
-      if (!executed) throw new Error('testnet execute returned no transaction result')
-      if (!(executed.effects?.status.success ?? false))
-        throw new Error(executed.effects?.status.error?.message ?? `transaction ${executed.digest} failed`)
-      return { digest: executed.digest, bytes: toBase64(bytes), signature }
+      const digest = executed_digest(
+        await grpc_client.core.executeTransaction({
+          transaction: bytes,
+          signatures: [signature],
+          include: { effects: true },
+        })
+      )
+      ledger = record_signature(ledger, { op: 'execute', digest })
+      return { digest, bytes: toBase64(bytes), signature }
     },
   }
 }
@@ -133,10 +148,12 @@ async function install_dev_wallet(page: Page) {
     },
     { address: signer.address, public_key: signer.public_key, wallet_name: WALLET_NAME, chain: SUI_CHAIN }
   )
+  // Handed back so a row can assert what the deployed page really made this wallet sign.
+  return signer
 }
 
 async function enter_live_world(page: Page) {
-  await install_dev_wallet(page)
+  const signer = await install_dev_wallet(page)
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' })
   expect(response?.status(), 'the deployed root must answer 200').toBe(200)
   await expect(
@@ -161,6 +178,7 @@ async function enter_live_world(page: Page) {
       `enter_live_world: neither [data-testid="game-world-viewport"] nor .gw-hud became visible within 180s.\n--- page snapshot ---\n${snapshot}`
     )
   })
+  return signer
 }
 
 const attack_prompt = (page: Page) =>
@@ -190,7 +208,7 @@ test('PROD-SMOKE b · VITE_DEV_KEY session reaches the world', async ({ page }) 
 })
 
 test('PROD-SMOKE c · fight engagement reaches an actionable first turn', async ({ page }) => {
-  await enter_live_world(page)
+  const signer = await enter_live_world(page)
   const has_webgpu = await page.evaluate(async () => {
     const { gpu } = navigator as Navigator & { gpu?: { requestAdapter: () => Promise<unknown | null> } }
     return !!gpu && (await gpu.requestAdapter()) != null
@@ -203,11 +221,17 @@ test('PROD-SMOKE c · fight engagement reaches an actionable first turn', async 
     controls.or(engage).first(),
     'a resumed fight or a claimable mob must eventually reach the live client'
   ).toBeVisible({ timeout: 120_000 })
-  if (!(await controls.isVisible().catch(() => false))) {
+  const resumed = await controls.isVisible().catch(() => false)
+  if (!resumed) {
     await engage.click()
     await expect(controls, 'fight controls must mount after the live engage receipt reconciles').toBeVisible({
       timeout: 180_000,
     })
+    // An engage is a CHAIN WRITE. Before #1723 this row could reach mounted controls off a shim that never
+    // signed anything and still read green; the ledger is now the row's own oracle for the signature it
+    // just claimed to have driven. Asserted only on the branch that really engaged — a resumed fight
+    // reconciles from chain state and signs nothing, and a conditional truth must never be asserted flat.
+    console.log(`PROD-SMOKE c · live engage signed on testnet · digest=${assert_signed_and_executed(signer.ledger())}`)
   }
 
   const ready = page.locator('.hud-fightctl__ready')
@@ -260,4 +284,23 @@ test('PROD-SMOKE f · world join and presence state reach the client', async ({ 
   await expect
     .poll(async () => Number((await online_count.textContent()) ?? 0), { timeout: 180_000 })
     .toBeGreaterThan(0)
+})
+
+// #1723's DoD, and the row that makes this suite's name true. Rows a/b/d/e/f never sign anything and row c
+// only signs on the branch that engages, so until this row existed the whole "real-signing smoke" could pass
+// end to end with a signing route that was dead — the shim was never once proven to have produced a
+// signature that testnet accepted. This row is deliberately the SMALLEST possible chain write (one MIST split
+// back to the sender), so what it measures is the ROUTE — build → resolve → sign → execute — and never
+// product state: it is the same shim function the deployed page calls for every sponsored or self-paid
+// action, and it either cites a digest or reds.
+test('PROD-SMOKE g · the wallet shim really signs and executes on testnet (#1723)', async () => {
+  const signer = prod_signer()
+  const transaction = new Transaction()
+  const [coin] = transaction.splitCoins(transaction.gas, [1])
+  transaction.transferObjects([coin], signer.address)
+  const { digest } = await signer.sign_and_execute(await transaction.toJSON())
+  expect(assert_signed_and_executed(signer.ledger()), 'the executed digest must come from THIS signer').toEqual([
+    digest,
+  ])
+  console.log(`PROD-SMOKE g · REAL signed transaction executed on testnet · digest=${digest}`)
 })

@@ -157,8 +157,12 @@ export const unit_test_files = [
   'packages/move/scripts/crit_fold.test.mjs',
   'packages/move/scripts/spell_wire.test.mjs', // #1250 RED-FIRST parity fixture — the ONE new_effect signed-value dialect home
   'packages/move/scripts/apply_xp_payload.test.mjs', // the ceremony driver's LAW ④ cap gate + payload core — unwired until #1246, which is how MAX_RESIST_MAGNITUDE sat at the superseded 50 for days
-  'scripts/prod_smoke_registration.test.mjs',
-  'scripts/prod_asset_census.test.mjs',
+  // PROD-SMOKE SIGNING DECISIONS (#1723): the guard predicate, the execute verdict and the signing ledger
+  // that is the suite's only oracle. The live rows exist solely in CI against testnet; every decision they
+  // make is pure and rides here. `scripts/prod_smoke_registration.test.mjs` and `scripts/prod_asset_census.
+  // test.mjs` sat on this list above it while existing on NO branch — the existence filter below dropped
+  // them silently every run, which is #835's disease inside the unit slice rather than the workflow registry.
+  'test/gold/specs_prod_smoke/signing_ledger_test.ts',
   'scripts/airdrop_dump.test.mjs', // AIRDROP CLAIM-MAPPING ORACLE: resources.json include-set fix (2026-07-19 queue row 4)
   'seed/mainnet/shop_content.test.mjs', // canonical catalog generator/seed convergence + exact v2 economy
   'seed/generators/resist_element_effect.test.mjs', // RESIST-ELEMENT MINT BUG: ALTER_RESIST emits `element`, never element-in-`stat`
