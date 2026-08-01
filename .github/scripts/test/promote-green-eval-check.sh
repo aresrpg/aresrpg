@@ -23,6 +23,17 @@ source "${SCRIPT_DIR}/../promote-green-eval.sh"
 PASS=0
 FAIL=0
 
+expect_equal() {
+  local case_name="$1" expected="$2" actual="$3"
+  if [ "$actual" = "$expected" ]; then
+    echo "PASS  $case_name  →  $actual"
+    PASS=$((PASS + 1))
+  else
+    echo "FAIL  $case_name  →  got [$actual], expected [$expected]"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 # check_run <name> <status> <conclusion-or-null> — one check-run object as a JSON line.
 check_run() {
   local name="$1" status="$2" conclusion="$3"
@@ -345,6 +356,38 @@ expect_window() { # <case> <expected-prefix> <base> <marker-present>
 expect_window "window-refused-on-master"   refused master yes
 expect_window "window-allowed-on-edge"     ok      edge   yes
 expect_window "no-window-master-unaffected" ok     master no
+
+# ── 20. A landing authorizes the whole fast-forward range, never only its tip (#1002) ───────
+# The pure range combiner is fed per-SHA verdicts by promote-land.sh. Drive every polarity here:
+# one/many green commits pass, while an interior red or missing-check verdict refuses the entire
+# range and names the immutable SHA that must be replaced before CI can produce new evidence.
+RANGE_ONE_GREEN='[{"sha":"1111111111111111111111111111111111111111","verdict":"green"}]'
+RANGE_ALL_GREEN='[
+  {"sha":"1111111111111111111111111111111111111111","verdict":"green"},
+  {"sha":"2222222222222222222222222222222222222222","verdict":"green"}
+]'
+RANGE_INTERIOR_RED='[
+  {"sha":"1111111111111111111111111111111111111111","verdict":"not-green: 1 existing check(s) not green"},
+  {"sha":"2222222222222222222222222222222222222222","verdict":"green"}
+]'
+RANGE_INTERIOR_MISSING='[
+  {"sha":"1111111111111111111111111111111111111111","verdict":"not-green: missing required check(s): gate"},
+  {"sha":"2222222222222222222222222222222222222222","verdict":"green"}
+]'
+expect_equal "one green commit authorizes its one-commit range" "green" "$(evaluate_green_range "$RANGE_ONE_GREEN")"
+expect_equal "every green commit authorizes a multi-commit range" "green" "$(evaluate_green_range "$RANGE_ALL_GREEN")"
+expect_equal \
+  "an interior red poisons the range and requires a fresh SHA" \
+  "not-green: commit 1111111111111111111111111111111111111111: 1 existing check(s) not green; replace it with a fresh SHA before adding later commits" \
+  "$(evaluate_green_range "$RANGE_INTERIOR_RED")"
+expect_equal \
+  "an interior commit with no required evidence also refuses the range" \
+  "not-green: commit 1111111111111111111111111111111111111111: missing required check(s): gate; replace it with a fresh SHA before adding later commits" \
+  "$(evaluate_green_range "$RANGE_INTERIOR_MISSING")"
+expect_equal \
+  "an empty landing range fails closed" \
+  "not-green: landing range contains no commits" \
+  "$(evaluate_green_range '[]')"
 
 echo
 echo "── ${PASS} passed, ${FAIL} failed ──"

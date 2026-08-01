@@ -159,6 +159,44 @@ evaluate_green() {
   echo green
 }
 
+# evaluate_green_range <sha_verdicts_json>
+#   sha_verdicts_json = [{"sha":"<40 hex>","verdict":"green|not-green: ..."}, ...]
+#
+# A fast-forward writes every commit in origin/<base>..HEAD, so the authorization subject must be
+# that same range (#1002). promote-land.sh obtains one evaluate_green() verdict per SHA; this pure
+# combiner refuses on the first non-green commit, which keeps the diagnostic deterministic and
+# tells the author exactly which immutable object must be replaced. A failed check-run poisons its
+# SHA forever in this engine because evaluate_green() counts EVERY provenance-eligible row; re-running
+# checks cannot erase the old red row. The recovery is a fresh SHA, built before later commits are
+# stacked on top of it.
+evaluate_green_range() {
+  local sha_verdicts_json="$1" first_bad sha verdict reason
+
+  if ! jq -e '
+      type == "array" and all(.[];
+        (.sha | type == "string" and test("^[0-9a-fA-F]{40}$")) and
+        (.verdict | type == "string"))
+    ' >/dev/null <<<"$sha_verdicts_json"; then
+    echo "not-green: landing range verdicts are malformed"
+    return 0
+  fi
+  if [ "$(jq 'length' <<<"$sha_verdicts_json")" = 0 ]; then
+    echo "not-green: landing range contains no commits"
+    return 0
+  fi
+
+  first_bad=$(jq -c 'first(.[] | select(.verdict != "green")) // empty' <<<"$sha_verdicts_json")
+  if [ -n "$first_bad" ]; then
+    sha=$(jq -r .sha <<<"$first_bad")
+    verdict=$(jq -r .verdict <<<"$first_bad")
+    reason="${verdict#not-green: }"
+    echo "not-green: commit $sha: $reason; replace it with a fresh SHA before adding later commits"
+    return 0
+  fi
+
+  echo green
+}
+
 # ── THE REPUBLISH WINDOW NEVER REACHES PRODUCTION (#1305 review, CRITICAL) ──────────────────────
 # packages/move/REPUBLISH_WINDOW suspends the ceremony preflight's compatibility assertions while a
 # fresh lineage is published. The preflight refuses the marker on a master-bound run, but that

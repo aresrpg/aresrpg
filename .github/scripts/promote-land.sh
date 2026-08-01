@@ -128,24 +128,43 @@ if ! git merge-base --is-ancestor "refs/remotes/origin/${BASE}" "$HEAD_SHA"; the
   emit stale; echo "PR #$PR is behind $BASE — author-side rebase required"; exit 3
 fi
 
-# ── checks green? — every REQUIRED check-run present + green on this exact sha (issue #695) ──
+# ── checks green? — every REQUIRED check-run present + green on every landed sha (#695/#1002) ─
 # The old assert only rejected check-runs that EXISTED and were non-green — a required check that
 # hadn't been CREATED yet at evaluation time (promote-queue.yml fires on EITHER gate or checks
 # completing; a slow checks.yml leg like `smoke`, Playwright + live network, can still be
 # unregistered on the sha when the faster gate.yml run fires the queue first) was invisible to it
 # and read as clean — a still-red landing could fast-forward. evaluate_green() (sourced from
 # promote-green-eval.sh, unit-tested in test/promote-green-eval.test.sh) additionally requires
-# every name in REQUIRED_CHECKS to have a completed green check-run on $HEAD_SHA — missing/pending
-# = not eligible, and an empty check-runs response fails closed the same way.
+# every name in REQUIRED_CHECKS to have a completed green check-run. The push below writes the full
+# origin/edge..$HEAD_SHA range, not only its tip (#1002), so an edge landing evaluates EVERY new
+# commit. A master hop copies commits already admitted through that edge invariant and evaluates the
+# release tip; re-judging the full edge history would charge immutable commits a second time (the
+# promotion-shaped-range ruling). A missing or red new edge commit refuses the landing; because
+# every check-run remains attached to its immutable SHA, the recovery is to replace that commit with
+# a fresh SHA and let it build before stacking later commits, never to re-run a poisoned SHA hoping
+# its prior red row disappears.
 # shellcheck source=.github/scripts/promote-green-eval.sh
 source "$(dirname "${BASH_SOURCE[0]}")/promote-green-eval.sh"
 # PROVENANCE (#1305 review): name-matching alone let green rows from another context satisfy a
 # master promotion. The engine now tells evaluate_green which PR and head ref a row must belong to.
 PROVENANCE_JSON=$(jq -nc --argjson pr "$PR" --arg head "$HEAD_REF" '{pr: $pr, head_ref: $head, app: "github-actions"}')
-CHECK_RUNS_JSON=$(gh api --paginate "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --jq '.check_runs[]' | jq -s '.')
-GREEN=$(evaluate_green "$CHECK_RUNS_JSON" "$REQUIRED_CHECKS_JSON" "$PROVENANCE_JSON")
+RANGE_VERDICTS_JSON='[]'
+if [ "$BASE" = edge ]; then
+  CHECK_RANGE="refs/remotes/origin/edge..${HEAD_SHA}"
+else
+  # The release tip is the only new artifact at this hop; its ancestors were judged on edge entry.
+  CHECK_RANGE="${HEAD_SHA}^..${HEAD_SHA}"
+fi
+while IFS= read -r CANDIDATE_SHA; do
+  [ -n "$CANDIDATE_SHA" ] || continue
+  CHECK_RUNS_JSON=$(gh api --paginate "repos/${REPO}/commits/${CANDIDATE_SHA}/check-runs" --jq '.check_runs[]' | jq -s '.')
+  SHA_GREEN=$(evaluate_green "$CHECK_RUNS_JSON" "$REQUIRED_CHECKS_JSON" "$PROVENANCE_JSON")
+  RANGE_VERDICTS_JSON=$(jq -c --arg sha "$CANDIDATE_SHA" --arg verdict "$SHA_GREEN" \
+    '. + [{sha: $sha, verdict: $verdict}]' <<<"$RANGE_VERDICTS_JSON")
+done < <(git rev-list --reverse "$CHECK_RANGE")
+GREEN=$(evaluate_green_range "$RANGE_VERDICTS_JSON")
 if [ "$GREEN" != "green" ]; then
-  emit not-green; echo "${GREEN#not-green: } on $HEAD_SHA — leaving it queued"; exit 3
+  emit not-green; echo "${GREEN#not-green: } — leaving it queued"; exit 3
 fi
 
 # ── the republish window never reaches production (#1305 review) ────────────────────────────
