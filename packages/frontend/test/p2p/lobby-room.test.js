@@ -163,9 +163,12 @@ describe('the room IS the world — joining is the announcement', () => {
     expect(JSON.stringify(iceServers)).not.toContain('credential')
   })
 
-  it('creates no fight action — journals remain on their SSE lane', () => {
-    expect(trystero_actions.has('fstream')).toBe(false)
-    expect([...trystero_actions.keys()].sort()).toEqual(['chat', 'pchat', 'pos', 'state'])
+  // The room's action set is CLOSED, and this is the assertion that keeps it that way: a new action is a new
+  // thing the ephemeral lane carries, and it must be argued for. `fstream` is the fight-turn PRESENTATION
+  // overlay and nothing else — it carries no truth and folds nothing (proven in test/p2p/room-courtesy.test.js);
+  // fight journals stay on chain→indexer→SSE, which is why no action here ever carries one.
+  it('carries exactly five actions — and none of them is a fight journal', () => {
+    expect([...trystero_actions.keys()].sort()).toEqual(['chat', 'fstream', 'pchat', 'pos', 'state'])
   })
 
   it('is idempotent for the same world+identity, and re-rooms on a world change', () => {
@@ -307,21 +310,33 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(state().link_status).toBe('connecting')
   })
 
-  it('degrades after signaling saw another room member but no peer channel opened (D3a, #1641-class)', () => {
-    live_room().failPeer('symmetric-nat-peer')
-    poll()
-    expect(state().link_status).toBe('connected') // the fresh-room grace still owns this handshake window
+  // THE HONEST-DEGRADED LAW (the courier retirement's discharge basis, docs/PRESENCE_PROOF.md). A relay
+  // socket introduces peers and then carries nothing — no position, no chat, no presence — so a link with
+  // zero OPEN data channels may never claim `connected`. This is what makes an empty world legible instead
+  // of green, and it is the property that had to hold before the server-side presence path could be deleted:
+  // with no second transport left to quietly cover for it, the chip IS the report.
+  it('never claims connected over zero peer channels — an empty room reads degraded, not green', () => {
     setSystemTime(new Date(Date.now() + GRACE_MS + 1))
     poll()
     expect(live_room().getPeers()).toEqual({})
     expect(state().link_status).toBe('degraded')
   })
 
-  it('stays connected when the relay is up and nobody else announced — alone is legitimate', () => {
-    setSystemTime(new Date(Date.now() + GRACE_MS + 1))
+  it('holds its judgement inside the fresh-room grace rather than flashing degraded mid-handshake', () => {
     poll()
     expect(live_room().getPeers()).toEqual({})
+    expect(state().link_status).not.toBe('degraded')
+  })
+
+  it('recovers to connected the moment a channel opens, and degrades again when it closes', () => {
+    setSystemTime(new Date(Date.now() + GRACE_MS + 1))
+    poll()
+    expect(state().link_status).toBe('degraded')
+    live_room().connectPeer('peer-socket-9')
     expect(state().link_status).toBe('connected')
+    live_room().disconnectPeer('peer-socket-9')
+    poll()
+    expect(state().link_status).toBe('degraded')
   })
 
   it('says DOWN loudly when our relay is unreachable — and gives up with a REASON, not a forever spinner', async () => {

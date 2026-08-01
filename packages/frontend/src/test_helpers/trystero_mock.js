@@ -28,7 +28,7 @@ export function reset_trystero_mock() {
 export const deliver = (name, payload, peer_id = 'peer-socket-1') =>
   trystero_actions.get(name)?.onMessage?.(payload, { peerId: peer_id })
 
-const make_room = (callbacks = {}) => {
+const make_room = () => {
   const peers = {}
   const room = {
     makeAction: (name) => {
@@ -53,14 +53,6 @@ const make_room = (callbacks = {}) => {
       delete peers[peer_id]
       room.onPeerLeave?.(peer_id)
     },
-    /** Signaling found a remote room member and exchanged SDP, but no RTC channel opened. */
-    failPeer: (peer_id, error = 'could not connect to peer after exchanging SDP; configure TURN servers') =>
-      callbacks.onJoinError?.({
-        error,
-        appId: 'aresrpg-world-lobby-test',
-        roomId: 'world-test',
-        peerId: peer_id,
-      }),
     leave: () => Promise.resolve(),
   }
   trystero_rooms.push(room)
@@ -72,9 +64,9 @@ const make_room = (callbacks = {}) => {
 mock.module('@trystero-p2p/mqtt', () => ({
   defaultRelayUrls: [],
   getRelaySockets: () => ({ 'ws://relay.test/mqtt': trystero_relay_socket }),
-  joinRoom: (config, room_id, callbacks) => {
+  joinRoom: (config, room_id) => {
     trystero_room_configs.push({ config, room_id })
-    return make_room(callbacks)
+    return make_room()
   },
   selfId: 'bun-test-peer',
 }))
