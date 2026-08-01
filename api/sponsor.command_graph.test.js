@@ -5,11 +5,16 @@
 //
 //   sad paths — a command kind outside the allowlist, and every shape that draws value from the sponsored gas
 //   coin (spent, transferred, or laundered through a framework call), must REFUSE;
-//   happy corpus — every PTB the game's composers emit is read from the ONE shared corpus
+//   happy corpus — every PTB the game's composers emit is read from a CAPTURE of the ONE shared corpus
 //   (packages/sdk/test/_composed_transactions.js) the Move-signature census also reads, and partitioned: the
 //   gas-drawing compositions are the game's SELF-PAY money PTBs and must refuse, everything else — the actual
-//   sponsored gameplay surface — must pass. A composer that starts emitting a new command kind reddens this
-//   money-path test instead of surprising production.
+//   sponsored gameplay surface — must pass.
+//
+// The corpus arrives as CAPTURED SERIALIZED PAYLOADS (test/fixtures/composed_transactions.json, provenance
+// header included) decoded here with api's OWN `@mysten/sui`, never as a live import of sdk-tree code: the
+// `tests (api)` CI job installs `api/` alone, so sdk source pulled into this process would resolve
+// `@mysten/sui` from an sdk/root `node_modules` that does not exist there. Regenerate the fixture with
+// `bun api/test/generate_composed_fixture.mjs` whenever a composer changes.
 //
 //   bun test api/sponsor.command_graph.test.js        (no Redis, no station — pure scope decisions)
 //
@@ -21,7 +26,8 @@ import { Transaction } from '@mysten/sui/transactions'
 import { toBase64 } from '@mysten/sui/utils'
 
 import release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
-import { composed_transactions } from '../packages/sdk/test/_composed_transactions.js'
+
+import composed_fixture from './test/fixtures/composed_transactions.json' with { type: 'json' }
 
 process.env.REDIS_URL = ''
 delete process.env.SPONSOR_ARESRPG_PACKAGES // release.json derivation — so the ids below are really allowlisted
@@ -110,7 +116,9 @@ describe('command KINDS are an allowlist — an unrecognised shape refuses, neve
 })
 
 describe('the real SDK corpus, partitioned', () => {
-  const corpus = composed_transactions()
+  const corpus = composed_fixture.cases.map(({ serialized_b64 }) =>
+    Transaction.from(Buffer.from(serialized_b64, 'base64').toString('utf8'))
+  )
 
   test('the corpus is the census — never let it silently empty out', () => {
     expect(corpus.length).toBeGreaterThan(30)
