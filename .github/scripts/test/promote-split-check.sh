@@ -51,6 +51,14 @@ status_mints() {
   grep -c 'repos/[^ ]*/statuses/' "$1" 2>/dev/null || true
 }
 
+# checkout_refs <workflow.yml> — one ref per actions/checkout step. A missing `with.ref` prints
+# <default>, which is precisely the execution-pinned drift #972 reported: issue_comment workflows
+# silently resolve that checkout to master while the landing engine is developed and gated on edge.
+checkout_refs() {
+  yq -o=json eval '.' "${GITHUB_DIR}/workflows/$1" |
+    jq -r '.jobs[]?.steps[]? | select((.uses // "") | startswith("actions/checkout@")) | .with.ref // "<default>"'
+}
+
 # ── positive controls: both parsers must be caught seeing the legitimate stamper ──────────────
 expect_equal \
   "positive control — the permissions parser sees promote.yml's statuses grant" \
@@ -74,6 +82,14 @@ expect_equal \
   "the shared landing engine makes NO commit-status call" \
   "0" \
   "$(status_mints "${GITHUB_DIR}/scripts/promote-land.sh")"
+expect_equal \
+  "the unattended queue executes the edge-gated engine" \
+  "edge" \
+  "$(checkout_refs promote-queue.yml | sort -u)"
+expect_equal \
+  "the owner-gated /promote handler executes the same edge-gated engine" \
+  "edge" \
+  "$(checkout_refs promote.yml | sort -u)"
 
 # The engine is a directory, not a file: a mint that moved into a sibling helper would satisfy the
 # assert above while restoring the hole. Census every script the engine can source.

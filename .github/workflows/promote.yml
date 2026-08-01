@@ -30,10 +30,11 @@
 #
 # FROZEN BY DESIGN (seat ruling 2026-07-29, issue #1573). This handler is the SPLIT's privileged
 # half: it is the one place that mints the `promoted` status master's ruleset requires, and it runs
-# only behind a maintainer-identity assert on a human comment. It stays deliberately small and pinned to
-# the default branch — the unattended queue (promote-queue.yml) executes the engine from edge and
-# holds NO statuses:write, so the code that lands PRs can iterate at edge speed while the code that
-# mints deploy permission cannot. Changing this file changes who may put a commit on production:
+# only behind a maintainer-identity assert on a human comment. The HANDLER definition stays pinned
+# to the default branch, while its checkout below executes the shared engine from protected `edge`:
+# this keeps the mint frozen but prevents master's stale script copy from bypassing landing fixes
+# (#972). The unattended queue holds NO statuses:write, so the code that lands PRs can iterate at
+# edge speed while the code that mints deploy permission cannot. Changing this file changes who may put a commit on production:
 # it reaches master only through the authorized maintainer's promotion command, which is the acceptance this
 # ruling records.
 name: promote
@@ -72,6 +73,10 @@ jobs:
           test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "commenter is not authorized (login mismatch) — refusing"; exit 1; }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          # Fixed trusted ref, never the triggering PR head. This changes only which reviewed engine
+          # executes; it does not arm a PR. Chain-money PRs still open label-bare and remain held
+          # until the authorized /promote here applies `promote-requested` (label-is-the-hold law).
+          ref: edge
           fetch-depth: 0
       - name: ensure the promote-requested label exists, then apply it
         run: |
