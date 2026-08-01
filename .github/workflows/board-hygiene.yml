@@ -147,7 +147,9 @@ jobs:
     name: issue-link gate
     # Scoped to pull requests into `edge`, where every unit of work enters. The edge->master promotion
     # is a train artifact carrying already-gated work and a version bump — it closes no row of its own.
-    # Read-only and secret-free, so it runs for fork pull requests exactly as it does for ours.
+    # Read-only and secret-free, so it runs for fork pull requests exactly as it does for ours. It
+    # cannot apply `promote-requested`: chain-money PRs therefore stay label-bare until their seat
+    # key deliberately releases the hold (label-is-the-hold law).
     if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'edge'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -156,7 +158,7 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: a landing must drain a row, or say it drains none
+      - name: a landing must drain a row, and batches must name the SSOT check
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
