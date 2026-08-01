@@ -254,6 +254,12 @@ const sanctioned_fixture_prefixes = [
   // model that built them would prove nothing; every id is a captured reading, not a pointer code follows.
   // Exact file, not a directory: a future fixture beside it must face the gate on its own provenance.
   'packages/frontend/test/pages/encyclopedia/fixtures/live_wooling_drops.json',
+  // issue #1809's AoE splash / target_filter parity row (aoe_splash_target_filter.test.js and the
+  // aoe_target_filter_tests.move twin): the one id is Gobadoc the Gourmand's MobTemplate, read from the
+  // deployed package on 2026-08-01 with the reading dated in the file's own `_doc` header. It is the
+  // provenance of a captured shape, not a pointer any shipped code follows — nothing resolves it at
+  // runtime. Exact file, not a directory: the model-derived fixtures beside it keep facing the gate.
+  'packages/sim/test/fixtures/aoe_splash_target_filter.json',
 ]
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)
