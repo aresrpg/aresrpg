@@ -87,6 +87,8 @@ export const empty_state = (fight_id = null) => ({
   turn_deadline_fresh: false,
   winner: -1,
   action_contexts: {},
+  // The authored half of the drain currently resolving — see `drain_descriptor`. Null between actions.
+  pending_drain: null,
 })
 
 const terminal_source_priority = { receipt: 1, poll: 1, p2p: 1, snapshot: 2, settlement_snapshot: 3 }
@@ -269,6 +271,39 @@ const patch_fighter = (state, key, delta) => {
   return { ...base, fighters: { ...base.fighters, [key]: { ...base.fighters[key], ...delta } } }
 }
 
+/** Append ONE timed row to a fighter's status home and re-derive `invisible` from the survivors — the single
+ *  shape every mint door (authoritative envelope, optimistic prediction, the drain join) writes through. */
+const append_status_row = (state, key, status) => {
+  const base = ensure(state, key)
+  const statuses = [...(base.fighters[key].statuses ?? []), status]
+  return patch_fighter(base, key, {
+    statuses,
+    invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+  })
+}
+
+/** THE DRAIN JOIN, authored half. A point removal is the one timed row whose VALUE the envelope cannot state:
+ *  `cast::resolve_drain` is dodge-contested, so the row exists only for the count it actually removed — which is
+ *  why REMOVE_POINTS/STEAL_POINTS sit in `DERIVED_STATUS_KINDS` above. The chain still records that row next to
+ *  the pool shave (`spell_board::add_status(.., spell_effect::drain_row(point_kind, removed, dur))`), and the
+ *  client needs it: `pool_grant` reads it as the next refill's DEBT and `project_views.effects_of` renders it as
+ *  the turn-card chip. So the two halves are joined here — the authored duration off this ActionEffect, the
+ *  contested count off the `Drain` event that follows it. The join is positional and exactly as tight as the
+ *  chain's own emission order: `emit_effect` fires immediately before `apply_effect` for that ordinal
+ *  (cast.move:250/620), and every `emit_drain` the effect produces — one per target for an AoE — happens inside
+ *  it, before the next ordinal's ActionEffect. A non-drain ordinal clears the descriptor, so a stale one can
+ *  never be read by a later event. */
+const drain_descriptor = (action) => {
+  const effect = fields_of(action.effect)
+  const kind = Number(effect.kind)
+  if (kind !== FX.K_REMOVE_POINTS && kind !== FX.K_STEAL_POINTS) return null
+  return {
+    // `resolve_drain` floors the duration at 1 — a removal always denies the next turn.
+    remaining_turns: Math.max(1, Number(effect.turns) || 0),
+    source: (action.caster_is_mob ? MOB_FIGHTER_ID_BASE : 0) + Number(action.caster_idx),
+  }
+}
+
 /** Move decrements every fighter row at that fighter's turn end. Rows survive with one fewer turn or disappear at
  * one; invisibility is always re-derived from the surviving rows. A legacy boolean-only fold has no duration proof,
  * so leave it untouched until its explicit StanceChanged/Revealed event. */
@@ -347,6 +382,7 @@ export const apply_action = (state, action) => {
       const key = action_context_key(action)
       return {
         ...state,
+        pending_drain: null,
         action_contexts: {
           ...state.action_contexts,
           [key]: { target_cell: action.target_cell },
@@ -354,14 +390,10 @@ export const apply_action = (state, action) => {
       }
     }
     case 'ActionEffect': {
-      const applied = self_status_from_effect(state, action)
-      if (!applied) return state
-      const base = ensure(state, applied.key)
-      const statuses = [...(base.fighters[applied.key].statuses ?? []), applied.status]
-      return patch_fighter(base, applied.key, {
-        statuses,
-        invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
-      })
+      // The authored half of a drain rides THIS row; every other kind clears the descriptor (see the join's doc).
+      const carried = { ...state, pending_drain: drain_descriptor(action) }
+      const applied = self_status_from_effect(carried, action)
+      return applied ? append_status_row(carried, applied.key, applied.status) : carried
     }
     case 'StatusAdded': {
       // Prediction-only twin of the authoritative ActionEffect arm. predict_cast has already run deterministic
@@ -369,19 +401,15 @@ export const apply_action = (state, action) => {
       // before its authoritative ActionEffect is re-folded, so the row never double-applies.
       if (!action.status || Number(action.status.remaining_turns) <= 0) return state
       const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
-      const base = ensure(state, key)
-      const statuses = [...(base.fighters[key].statuses ?? []), action.status]
-      return patch_fighter(base, key, {
-        statuses,
-        invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
-      })
+      return append_status_row(state, key, action.status)
     }
     case 'ActionResolved': {
       const key = action_context_key(action)
-      if (!state.action_contexts?.[key]) return state
-      const action_contexts = { ...state.action_contexts }
+      const closed = state.pending_drain ? { ...state, pending_drain: null } : state
+      if (!closed.action_contexts?.[key]) return closed
+      const action_contexts = { ...closed.action_contexts }
       delete action_contexts[key]
-      return { ...state, action_contexts }
+      return { ...closed, action_contexts }
     }
     case 'TurnStarted': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
@@ -521,11 +549,32 @@ export const apply_action = (state, action) => {
       // base would invent a number (the Cast/Tackled pattern); an absent overlay reconciles through the object
       // read's row.ap/mp. u64/u8 fields ride as strings off Sui JSON — coerce here.
       const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
-      const f = state.fighters[key]
-      const pool = Number(action.point_kind) === FX.POINT_AP ? 'ap' : 'mp'
-      if (f?.[pool] == null) return state
-      if (pool === 'mp') return patch_mp_delta(state, key, -(Number(action.removed) || 0))
-      return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) - (Number(action.removed) || 0)) })
+      const removed = Number(action.removed) || 0
+      const point_kind = Number(action.point_kind)
+      const pool = point_kind === FX.POINT_AP ? 'ap' : 'mp'
+      // THE DEBT ROW, the drain's OTHER half (#1168). `resolve_drain` shaves the live pool AND records a timed
+      // row `if (removed > 0)` — the client folded only the shave, so the drain vanished from every reader that
+      // hangs off `statuses`: the next turn's refill (`pool_grant` → the movement paint) and the turn-card chip
+      // (`project_views.effects_of`). Minted here and nowhere else, because this is the only door that carries
+      // the contested count; the authored duration comes from the ActionEffect this Drain resolves under.
+      const debt =
+        removed > 0 && state.pending_drain
+          ? append_status_row(state, key, {
+              kind: FX.K_REMOVE_POINTS, // the chain's own row kind for BOTH remove and steal (spell_effect::drain_row)
+              remaining_turns: state.pending_drain.remaining_turns,
+              element: 255,
+              value: removed,
+              stat: point_kind,
+              chance: 100,
+              source: state.pending_drain.source,
+              flags: 0,
+            })
+          : state
+      // Adopt onto the OVERLAY pool only when it exists — a delta on a null base would invent a number.
+      const f = debt.fighters[key]
+      if (f?.[pool] == null) return debt
+      if (pool === 'mp') return patch_mp_delta(debt, key, -removed)
+      return patch_fighter(debt, key, { [pool]: Math.max(0, Math.floor(f[pool]) - removed) })
     }
     case 'Granted': {
       // The SYMMETRIC TWIN of Drain — a resource GRANT (give_points: +n to a pool). point_kind 0 = AP else MP.
