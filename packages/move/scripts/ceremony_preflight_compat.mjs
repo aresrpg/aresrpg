@@ -100,7 +100,14 @@ const MAX_OBJECT_SIZE = 102_400
 // freeze did not stop it selling) and ONE in `fight::y46` (the dungeon room-fight door, the only one of the
 // three brand siblings missing the gate — `open_room_group_brand` and `y48` already had it). This is a gate
 // RESTORED, not a feature: every byte buys back a kill-switch that measurably did not reach a money path.
-const SIZE_BUDGETS = { aresrpg: 99_260 }
+// 2026-08-02 (#1836): 99_260 → 99_347. +87 bytes UNDOING part of the 07-30 shrink. Three
+// `consumable_effect` discriminant accessors (`stat_reset`/`spell_reset`/`bag_open`) and the three constants
+// they read were demoted to `#[test_only]` because the shrink's caller census reads Move sources and LITERAL
+// JS `target:` strings — and the reseed ceremony composes this call by INTERPOLATED name
+// (`::consumable_effect::${ceff.fn}`). A demoted door there is a whole-PTB abort at the next ceremony, so the
+// bytes are not optional. `seed_full_corpus_doors.test.mjs` is the class gate that stops the next census
+// missing the same shape.
+const SIZE_BUDGETS = { aresrpg: 99_347 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's

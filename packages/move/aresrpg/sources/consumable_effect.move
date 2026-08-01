@@ -19,11 +19,8 @@ use sui::dynamic_field as df;
 
 // ── The frozen §17.15 consumable vocabulary (u8 discriminants; additive growth only) ──
 const KIND_HEAL: u8 = 0; // restore HP (dispatcher blocks it at full HP)
-#[test_only]
 const KIND_STAT_RESET: u8 = 1; // refund all allocated stat points (retro respec scroll)
-#[test_only]
 const KIND_SPELL_RESET: u8 = 2; // refund all allocated spell points
-#[test_only]
 const KIND_BAG_OPEN: u8 = 3; // grant the bag's contents (template-defined)
 const KIND_GACHA_ROLL: u8 = 4; // roll on-chain randomness across referenced templates
 const KIND_MAX: u8 = 4; // highest valid discriminant (bump on additive growth)
@@ -50,12 +47,14 @@ public fun new(kind: u8, amount: u64): ConsumableEffect {
 }
 
 // ── Public discriminant accessors (the cross-package dispatcher names the kinds without reading private consts) ──
+// ALL FIVE ARE PUBLIC ON PURPOSE (#1836). The reseed ceremony composes this call by INTERPOLATED FUNCTION NAME
+// (`seed_full_corpus.mjs`: `::consumable_effect::${ceff.fn}`, one of these five), which is why the 07-30
+// shrink's caller census — Move sources plus literal JS `target:` strings — could not see three of them and
+// demoted `stat_reset`/`spell_reset`/`bag_open` to `#[test_only]`: a whole-PTB abort at the next ceremony.
+// `seed_full_corpus_doors.test.mjs` now holds this row mechanically; demote one and it turns red on the PR.
 public fun heal(): u8 { KIND_HEAL }
-#[test_only]
 public fun stat_reset(): u8 { KIND_STAT_RESET }
-#[test_only]
 public fun spell_reset(): u8 { KIND_SPELL_RESET }
-#[test_only]
 public fun bag_open(): u8 { KIND_BAG_OPEN }
 public fun gacha_roll(): u8 { KIND_GACHA_ROLL }
 
