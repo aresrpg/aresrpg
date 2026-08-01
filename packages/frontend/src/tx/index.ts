@@ -551,6 +551,13 @@ function map_sponsor_error(
     capped.sponsor_refusal = SPONSOR_REFUSAL_DAILY_CAP
     return capped
   }
+  // THE @SERVER REFUSED ON ITS OWN RAILS — no shared anti-drain store to count against, or a request whose
+  // client identity no edge vouched for. Nothing is reserved or signed on either, and the player's read is the
+  // same as an unreachable sponsor. It sits ABOVE the throttle arm on purpose: `sponsor-unavailable` is a PREFIX
+  // CONTRACT the @server owns, while the throttle arm below still matches loose PROSE — and a diagnostic that
+  // merely mentions throttling would otherwise be humanized as "wait a moment", telling a player to wait out an
+  // outage that waiting cannot fix. A prefix contract always outranks a prose match.
+  if (/^sponsor-unavailable/i.test(detail)) return new Error(i18n.t('errors.sponsor_unreachable'))
   // RATE-LIMITED — per-IP 429 or the per-address 400 'rate-limited'. Transient throttle; nothing charged.
   if (status === 429 || /rate[-\s]?limit/i.test(detail)) return new Error(i18n.t('errors.sponsor_rate_limited'))
   // zkLogin challenge rejected (not an Enoki identity / stale challenge) — honest auth error, re-sign a fresh one.

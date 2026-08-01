@@ -153,3 +153,49 @@ describe('SELF-PAY REQUIRED — the funded-wallet re-route holds when the @serve
     expect(sae).toHaveBeenCalledTimes(0)
   })
 })
+
+// ── THE @SERVER'S OWN RAILS ARE DOWN (503 on the reserve leg) ──────────────────────────────────────────
+// The sponsor refuses outright when it cannot enforce what it promises: no shared anti-drain store to count
+// against, or a request whose client identity no edge vouched for. Both are pre-station — nothing reserved,
+// nothing signed — and both are the player's "the sponsor is unavailable" moment, so both must arrive as the
+// LOCALIZED unavailable copy. Before the decoder learned the class they fell through to the raw arm and put the
+// @server's English diagnostic in front of a player in six locales.
+describe('a sponsor that refuses because its OWN rails are down reads as unavailable, never as raw English', () => {
+  const refuse_unavailable = (error, reason) =>
+    route_sponsor({
+      reserve: () => ({ ok: false, status: 503, text: async () => refusal_body(error, reason) }),
+      execute: () => {
+        throw new Error('/execute must never be reached on a reserve refusal')
+      },
+    })
+  const direct = () =>
+    execute_sponsored_tx({
+      wallet: make_wallet(mock(async () => ({ digest: 'X' }))),
+      address: ADDR,
+      transaction: make_tx(),
+      chain: CHAIN,
+      sponsor_url: SPONSOR_URL,
+    })
+
+  const rails = {
+    'no shared anti-drain store to count against': [
+      'sponsor-unavailable: the shared anti-drain store is unreachable, so per-player limits cannot be enforced — refusing to sponsor (fail-closed)',
+      'shared-store-unavailable',
+    ],
+    'no client identity the edge vouched for': [
+      'sponsor-unavailable: this request carries no client identity the edge vouched for (cf-connecting-ip) — refusing to sponsor rather than bound a player against a caller-chosen value (fail-closed)',
+      'untrusted-client-identity',
+    ],
+  }
+
+  for (const [name, [error, reason]] of Object.entries(rails))
+    test(`${name} → the localized unavailable copy, and /execute is never reached`, async () => {
+      const spy = refuse_unavailable(error, reason)
+
+      const thrown = await direct().catch((caught) => caught)
+
+      expect(thrown.message).toBe(i18n.t('errors.sponsor_unreachable'))
+      expect(thrown.message).not.toContain('sponsor-unavailable') // never the server's own English
+      expect(calls_to(spy, '/execute')).toHaveLength(0)
+    })
+})
