@@ -31,11 +31,16 @@ const whole = {
 /** THE TORN READ (#1277): a record carrying a board but no `status`. There is no honest value to invent. */
 const torn = { width: 12, height: 12, participants: whole.participants, mobs: [] }
 
+/** THE ADOPTED BASE, at its one home — the presentation `view_version` mirror is gone (#1799), and the core's
+ *  own `inbox.base_version` is what every fold consumer reads (`fold.js adopted_base_version`). It is also the
+ *  atom the refusal below came out of, so this asserts the base against the very state that refused. */
+const adopted_version = (store) => Number(store.getState().core?.inbox?.base_version ?? -1)
+
 const opened = () => {
   const store = create_fight_store()
   store.getState().input({ type: 'init', fight_id: FIGHT_ID, my_key: null, ctx: {} })
   store.getState().input({ type: 'snapshot', fight: whole, version: 200, fight_id: FIGHT_ID })
-  expect(store.getState().view_version).toBe(200)
+  expect(adopted_version(store)).toBe(200)
   expect(store.getState().refused).toBe(null)
   return store
 }
@@ -49,7 +54,7 @@ describe('#1689 — the adoption door refuses out loud', () => {
     // and it is a FAULT, not ordering — the core records it beside the hash conflicts.
     expect(state.core.failures.at(-1)).toMatchObject({ kind: 'torn_read', version: 300 })
     // the refusal changes nothing else: the adopted base is exactly where it was.
-    expect(state.view_version).toBe(200)
+    expect(adopted_version(store)).toBe(200)
     expect(state.view.escrow).toHaveLength(1)
   })
 
@@ -58,7 +63,7 @@ describe('#1689 — the adoption door refuses out loud', () => {
     store.getState().input({ type: 'snapshot', fight: whole, version: 100, fight_id: FIGHT_ID })
     const state = store.getState()
     expect(state.refused).toMatchObject({ type: 'snapshot', reason: 'behind', version: 100 })
-    expect(state.view_version).toBe(200)
+    expect(adopted_version(store)).toBe(200)
   })
 
   test('routine refusals stay OFF the unbounded failures channel — only faults land there', () => {
@@ -79,7 +84,7 @@ describe('#1689 — the adoption door refuses out loud', () => {
     expect(store.getState().core.last_read.refusal).toEqual({ reason: 'torn' })
     expect(store.getState().core.last_read.adopted).toBe(false)
     store.getState().input({ type: 'snapshot', fight: { ...whole, status: 3 }, version: 400, fight_id: FIGHT_ID })
-    expect(store.getState().view_version).toBe(400)
+    expect(adopted_version(store)).toBe(400)
     expect(store.getState().core.last_read.refusal).toBe(null)
     expect(store.getState().core.last_read.adopted).toBe(true)
   })
