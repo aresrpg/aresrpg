@@ -46,8 +46,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Move BCS — decodes on-chain event bodies (`event.contents`) into typed structs.
-# Same version the framework/sui-types already lock, so no new resolution.
-bcs = "0.1"
+# TWO VERSIONS RESOLVE, deliberately: sui-types still locks bcs 0.1.x, so the tree carries 0.1.6
+# alongside this 0.2.x. That is safe HERE and nowhere by default — BCS is a canonical wire format,
+# not a crate-defined one: the same Rust type serialises to the same bytes under either version, and
+# what changed across the major is the crate's API, not the encoding. This decoder only ever reads
+# chain bytes into its own typed structs, and its round-trip tests are the proof.
+# If a future type is ever handed ACROSS the boundary between the two versions, this note is wrong
+# and the versions must be unified — a money decoder must never guess which BCS wrote a byte.
+bcs = "0.2"
 anyhow = "1"
 hex = "0.4"
 url = "2"
