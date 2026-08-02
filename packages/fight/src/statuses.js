@@ -121,8 +121,13 @@ const status_kind_of = (effect) => {
 export const status_row_of = (effect) => {
   const kind = effect == null ? null : status_kind_of(effect)
   if (kind == null) return null
+  // #2000 (D42) — the counter is the bearer's TURNS STILL TO COME, so a 0 is a row on its LAST COVERED TURN and
+  // this door must still state it: `sim_chain_events.status_rows_from_sim` reads LIVE sim rows through here into
+  // the snapshot the store treats as authoritative, and dropping a 0 deleted a row the sim still holds. The
+  // superseded `<= 0` gate answered a DIFFERENT question — "is this a timed row at all" — which the mint doors
+  // own (`cast.move:2152` keeps a permanent alter off the board; `cast.move:2037` floors a state/DoT at 1), so
+  // nothing the sim mints ever arrives here at 0 except by aging.
   const remaining_turns = Math.max(0, Math.trunc(Number(effect.turns_remaining) || 0))
-  if (remaining_turns <= 0) return null
   const magnitude = Number(effect.value) || 0
   const negative = is_signed_status_kind(kind) && effect.type === 'STAT_DEBUFF'
   const shield_element =
@@ -137,8 +142,6 @@ export const status_row_of = (effect) => {
     ...(negative ? { flags: fx.FLAG_NEGATIVE } : {}),
   }
 }
-
-const active = (row) => row?.remaining_turns == null || Number(row.remaining_turns) > 0
 
 /** Chain stat id → the sim stat key it moves. DERIVED from `STAT_CHAIN_ID` above, never a second table: the two
  *  directions of one fact drift the moment they are written twice. */
@@ -176,11 +179,16 @@ const sim_stat_of = (row) => {
  * count the same grant twice. One home per fact. Damage shields ARE promoted because the prediction damage fold
  * consumes kind 40 and reads kind 24 on every hit; reflects/DoTs stay presentation-only until their consumer does.
  *
+ * PRESENCE IS ACTIVITY (#2000, D42), with no duration predicate of its own: the fold's `inputs.age_statuses`
+ * already dropped every spent row at the bearer's turn start, so a row still standing here has this turn coming —
+ * its counter landing on 0 marks its LAST covered turn, not a dead one (the same reading `pool_grant` and the
+ * sim's `active_pool_modifier` take). The superseded `> 0` predicate here is what made the damage floater price
+ * an unbuffed hit on the exact turn the chain resolved the buffed one.
+ *
  * Already-normalized effects pass through for the legacy world-fight view. */
 export const sim_effects_of = (fighter) => {
   const effects = []
   for (const [index, row] of (fighter?.effects ?? []).entries()) {
-    if (!active(row)) continue
     if (row?.type) {
       effects.push(row)
       continue
