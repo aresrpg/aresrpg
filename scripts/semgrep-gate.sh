@@ -23,7 +23,7 @@ cd "$(dirname "$0")/.." || exit 2
 
 SEMGREP="$(command -v semgrep || true)"
 
-echo "== AresRPG arch gate · semgrep (dataflow: laundered writes, fight effect-freedom, functor purity) =="
+echo "== AresRPG arch gate · semgrep (dataflow: fight-visible sources, laundered writes, fight effect-freedom, functor purity) =="
 if [ -z "$SEMGREP" ]; then
   echo "  FAIL: semgrep not installed (uv tool install semgrep | brew install semgrep | pipx install semgrep)"
   exit 1

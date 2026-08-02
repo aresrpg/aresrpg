@@ -15,6 +15,52 @@
 #   · `(...) => ...` (ellipsis body) matches expression bodies ONLY — never use it as an arrow body.
 #   · `async function $F(...) { ... }` DOES respect the modifier on declarations.
 rules:
+  - id: arch-fight-visible-source-bypass
+    languages: [js, ts]
+    severity: ERROR
+    message: Fight-visible code reads a source store/API directly; add the fact to the canonical fight-visible projection and read it there.
+    paths:
+      include:
+        - '**/packages/frontend/src/components/CharacterSwitcher.tsx'
+        - '**/packages/frontend/src/components/RpcLagBanner.tsx'
+        - '**/packages/frontend/src/design_harness_main.jsx'
+        - '**/packages/frontend/src/game/screens/hud/DeckCluster.jsx'
+        - '**/packages/frontend/src/game/screens/hud/EntityTooltip.jsx'
+        - '**/packages/frontend/src/game/screens/hud/FightControls.jsx'
+        - '**/packages/frontend/src/game/screens/hud/FightPlacementBanner.jsx'
+        - '**/packages/frontend/src/game/screens/hud/FightReport.jsx'
+        - '**/packages/frontend/src/game/screens/hud/FightResult.jsx'
+        - '**/packages/frontend/src/game/screens/hud/FightSummary.jsx'
+        - '**/packages/frontend/src/game/screens/hud/FightTimeline.jsx'
+        - '**/packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx'
+        - '**/packages/frontend/src/game/screens/hud/SpellBar.jsx'
+        - '**/packages/frontend/src/game/screens/hud/TurnBanner.jsx'
+        - '**/packages/frontend/src/game/screens/hud/use_target_prediction.js'
+        - '**/packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/DungeonLeaveButton.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/FightSyncIndicator.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/GameWorldHud.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/PartyFrame.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/RewardRecap.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/SelfPlate.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/WorldChat.jsx'
+        - '**/packages/frontend/src/world-shell/voxel_fight_adapter.js'
+    pattern-either:
+      - patterns:
+          - pattern: use_fight(...)
+          - pattern-not: use_fight(world_fight_view)
+      - pattern: use_game_state(...)
+      - pattern: use_dungeon(...)
+      - pattern: use_expedition(...)
+      - pattern: use_party(...)
+      - pattern: get_characters(...)
+      - pattern: get_fights(...)
+      - pattern: find_pending_outcome(...)
+      - pattern: resolve_character_docs(...)
+      - pattern: get_template_by_item_type_map(...)
+      - pattern: get_template_detail_map(...)
+      - pattern: resolve_rolled_stats(...)
+
   # ── L-P4 · the fight core executes NO effects ──────────────────────────────────────────────────
   # Census 2026-07-17: 0 awaits / 0 async fns / 0 .then / 0 new Promise across all 7 non-test
   # fight/ modules — effects are INJECTED (txs.js `deps.submit`; live submit lives in the context

@@ -11,12 +11,27 @@
       "x-arch-writer-def": 2
     },
     "packages/frontend/src/foreach_async.js": { "arch-foreach-async-dropped-promises": 1 },
-    "packages/frontend/src/foreach_async_fnexpr.jsx": { "arch-foreach-async-dropped-promises": 1 }
+    "packages/frontend/src/foreach_async_fnexpr.jsx": { "arch-foreach-async-dropped-promises": 1 },
+    "packages/frontend/src/game/screens/hud/FightControls.jsx": { "arch-fight-visible-source-bypass": 1 },
+    "packages/frontend/src/game/screens/hud/SpellBar.jsx": { "arch-fight-visible-source-bypass": 2 },
+    "packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx": { "arch-fight-visible-source-bypass": 1 },
+    "packages/frontend/src/game/screens/hud/world/PartyFrame.jsx": { "arch-fight-visible-source-bypass": 2 },
+    "packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx": { "arch-fight-visible-source-bypass": 2 },
+    "packages/frontend/src/game/screens/hud/FightReport.jsx": {
+      "arch-fight-visible-source-bypass": 4,
+      "x-arch-async-ref": 4
+    }
   },
   "green": {
     "packages/fight/src/core_pure.js": {},
     "packages/frontend/src/laundered_green.js": {},
     "packages/frontend/src/map_pure.js": {},
-    "packages/frontend/src/foreach_ok.js": {}
+    "packages/frontend/src/foreach_ok.js": {},
+    "packages/frontend/src/game/screens/hud/FightControls.jsx": {},
+    "packages/frontend/src/game/screens/hud/SpellBar.jsx": {},
+    "packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx": {},
+    "packages/frontend/src/game/screens/hud/world/PartyFrame.jsx": {},
+    "packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx": {},
+    "packages/frontend/src/game/screens/hud/FightReport.jsx": {}
   }
 }
