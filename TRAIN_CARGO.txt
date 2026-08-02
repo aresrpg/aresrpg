@@ -1,2 +1,1 @@
-54d1c4a1177856c2b81a6ee740d971fc70d22c9b train/train-76 docs(consumables): the batcher's surface list stops naming a deleted one
-2ca90a9d441ffd9f71819ef8e22e04f9e94063d9 train/train-76 refactor(hud): delete FastSlots — mounted nowhere
+9448664cbc3817d7b5c4f76628ea821337dd8098 train/train-77 refactor(hud): delete the unmounted TopLaunchers launcher dock
