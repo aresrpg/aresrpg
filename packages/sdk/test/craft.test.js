@@ -10,9 +10,13 @@ import {
   craft_duration_ms,
   craft_affordability,
   craft_job_for_category,
+  craft_success_percent,
+  craft_success_rate_bp,
   job_for_recipe,
   CRAFT_MS_AT_MIN_LEVEL,
   CRAFT_MS_AT_MAX_LEVEL,
+  CRAFT_SUCCESS_BP_AT_LEVEL_1,
+  CRAFT_SUCCESS_BP_CAP,
   JOB_MAX_LEVEL,
   recipe_ingredients,
   craft_recipes,
@@ -132,4 +136,28 @@ test.skipIf(!ITEMS_CATALOG_AVAILABLE)('every explicitly-mapped recipe is listed 
   expect(ids('alchemist').has('minor_healing_brew')).toBe(true)
   expect(ids('baker').has('minor_healing_brew')).toBe(false)
   expect(ids('handyman').has('minor_healing_brew')).toBe(false)
+})
+
+// The success roll (#2034) — the mirror of crafting.move's y91, which `y20` compares a u64 in [0,9999]
+// against. It lived in the frontend until #2052; its y21/y92 siblings were already here.
+test('craft_success_rate_bp: 50% at job level 1, +0.5%/level, capped at 99%', () => {
+  // crafting.move:409 — y91(level) = min(9900, 5000 + (level-1) * 50) basis points.
+  expect(craft_success_rate_bp(1)).toBe(CRAFT_SUCCESS_BP_AT_LEVEL_1)
+  expect(craft_success_rate_bp(1)).toBe(5000)
+  expect(craft_success_rate_bp(2)).toBe(5050)
+  expect(craft_success_rate_bp(50)).toBe(7450)
+  expect(craft_success_rate_bp(99)).toBe(9900)
+  expect(craft_success_rate_bp(100)).toBe(CRAFT_SUCCESS_BP_CAP)
+})
+
+test('craft_success_rate_bp: a level below 1 or an unreadable level clamps to the level-1 floor', () => {
+  expect(craft_success_rate_bp(0)).toBe(5000)
+  expect(craft_success_rate_bp(-3)).toBe(5000)
+  expect(craft_success_rate_bp(Number.NaN)).toBe(5000)
+})
+
+test('craft_success_percent keeps the half-point step the chain actually rolls', () => {
+  expect(craft_success_percent(1)).toBe(50)
+  expect(craft_success_percent(2)).toBe(50.5)
+  expect(craft_success_percent(100)).toBe(99)
 })

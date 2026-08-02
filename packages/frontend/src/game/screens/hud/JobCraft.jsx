@@ -9,13 +9,14 @@
 // pages/encyclopedia/recipes.ts. Nothing here resolves a recipe through the bundled seed catalog.
 import { useMemo, useState } from 'react'
 
+import { craft_success_percent } from '@aresrpg/sdk/jobs'
+
 import { craft_affordability_of } from '../../../pages/encyclopedia/recipes'
 import { use_game_state } from '../../store.js'
 import { Tooltip } from './Tooltip.jsx'
 import { ItemIcon } from './jobs_visuals.jsx'
 import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { craft_item } from '../../../world-shell/craft_actions.js'
-import { craft_success_percent } from '../../../world-shell/craft_outcome.js'
 import { play_discovery_sfx, play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_toast } from '../../../toast'
 import i18n from '../../../i18n'

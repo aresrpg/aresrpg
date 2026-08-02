@@ -836,6 +836,42 @@ export function craft_xp_reward(
   return Math.max(0, Math.floor(per_craft) * Math.max(0, Math.floor(count)))
 }
 
+// ── Crafting: the success roll (crafting.move `y91`, CraftingFormulas.java:13-15) ───────────
+// `crafting::craft` is a ROLL door: inputs burn and job XP credits on EVERY attempt, the output mints only
+// on a pass. This is the chance the chain itself rolls (crafting.move:409 — `y20` compares a u64 in
+// [0,9999] against it), so the number a surface shows is the number the chain uses. Integer math, exact.
+
+/** The floor: a level-1 crafter passes half the time (5000 bp). */
+export const CRAFT_SUCCESS_BP_AT_LEVEL_1 = 5000
+/** The ceiling: no crafter is ever certain (9900 bp). */
+export const CRAFT_SUCCESS_BP_CAP = 9900
+/** Basis points gained per job level above 1. */
+const CRAFT_SUCCESS_BP_PER_LEVEL = 50
+
+/**
+ * The chain's own success chance for a crafter at `level`, in basis points. An unreadable or sub-1 level
+ * clamps to the level-1 floor (the chain's own minimum job level).
+ * @param {number} level @returns {number}
+ */
+export function craft_success_rate_bp(level) {
+  const clamped = Math.max(
+    1,
+    Number.isFinite(Number(level)) ? Math.floor(Number(level)) : 1,
+  )
+  return Math.min(
+    CRAFT_SUCCESS_BP_CAP,
+    CRAFT_SUCCESS_BP_AT_LEVEL_1 + (clamped - 1) * CRAFT_SUCCESS_BP_PER_LEVEL,
+  )
+}
+
+/**
+ * The same chance as a PERCENT for display. The curve steps by 0.5 points, so one decimal is exact — never
+ * rounded to a whole number the chain does not use (50.5% is not 51%).
+ * @param {number} level @returns {number}
+ */
+export const craft_success_percent = level =>
+  Math.round(craft_success_rate_bp(level) / 10) / 10
+
 /**
  * Server + client affordability check for `count` crafts of `recipe_id`. `owned` maps an item_type
  * (== items.json id) to the total owned amount. Returns the resolved ingredient rows with a

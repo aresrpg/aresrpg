@@ -16,12 +16,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import failed_roll_receipt from '../fixtures/craft_receipt_failed_roll.json'
 import { reset_auth_mock } from '../../src/test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
-import {
-  CRAFT_SUCCESS_BP_AT_LEVEL_1,
-  CRAFT_SUCCESS_BP_CAP,
-  craft_outcome,
-  craft_success_rate_bp,
-} from '../../src/world-shell/craft_outcome.js'
+import { craft_outcome } from '../../src/world-shell/craft_outcome.js'
 
 /** The captured receipt with its Crafted event flipped to a passing roll (no successful craft exists on
  *  testnet yet — every other field, and every sibling event, stays exactly as captured). */
@@ -111,23 +106,5 @@ describe('#2034 craft_item reports the roll outcome, not "the transaction resolv
   test('a failed roll still repaints the bag (XP moved on chain)', async () => {
     await craft_item({ recipe, items: bag, character_id: '0xcharacter' })
     expect(roster.load_roster).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('#2034 craft success chance — the client mirror of crafting.move y91', () => {
-  // crafting.move:409 — y91(level) = min(9900, 5000 + (level-1) * 50) basis points.
-  test('50% at job level 1, +0.5%/level, capped at 99%', () => {
-    expect(craft_success_rate_bp(1)).toBe(CRAFT_SUCCESS_BP_AT_LEVEL_1)
-    expect(craft_success_rate_bp(1)).toBe(5000)
-    expect(craft_success_rate_bp(2)).toBe(5050)
-    expect(craft_success_rate_bp(50)).toBe(7450)
-    expect(craft_success_rate_bp(99)).toBe(9900)
-    expect(craft_success_rate_bp(100)).toBe(CRAFT_SUCCESS_BP_CAP)
-  })
-
-  test('a level below 1 or an unreadable level clamps to the level-1 floor', () => {
-    expect(craft_success_rate_bp(0)).toBe(5000)
-    expect(craft_success_rate_bp(-3)).toBe(5000)
-    expect(craft_success_rate_bp(Number.NaN)).toBe(5000)
   })
 })

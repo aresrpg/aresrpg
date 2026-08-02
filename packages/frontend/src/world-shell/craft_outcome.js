@@ -18,9 +18,8 @@
 // AN ABSENT EVENT IS `unknown`, NEVER AN ASSUMED SUCCESS — coercing a missing signal into a plausible
 // answer is precisely the class of lie this row removes.
 //
-// NOTE (one home): `craft_success_rate_bp` mirrors `crafting.move`'s `y91`. Its siblings — the craft XP and
-// unlock-level mirrors of `y21`/`y92` — live in `@aresrpg/sdk/jobs`, which is where this belongs too; the
-// sdk is outside this change's reach, so the mirror lands here with the Move line it copies named above it.
+// The success-chance curve this outcome is rolled against is NOT here: `craft_success_rate_bp` mirrors
+// `crafting.move`'s `y91` and now lives in `@aresrpg/sdk/jobs` beside its `y21`/`y92` siblings (#2052).
 
 /** The event whose `success` flag is the ONLY authority on whether a craft produced anything. */
 const CRAFTED_EVENT_SUFFIX = '::crafting::Crafted'
@@ -45,31 +44,3 @@ export function craft_outcome(receipt) {
     quantity: success ? Number(event.parsedJson.output_quantity) || 0 : 0,
   }
 }
-
-// ── The success chance the recipe UI shows BEFORE the player spends ────────────────────────────────
-// crafting.move:409 — `y91(level) = min(9900, 5000 + (level - 1) * 50)` basis points: 50% at job level 1,
-// +0.5% per level, capped at 99%. Integer math, so the number on screen is the number the chain rolls.
-
-/** The floor: a level-1 crafter passes half the time (5000 bp). */
-export const CRAFT_SUCCESS_BP_AT_LEVEL_1 = 5000
-/** The ceiling: no crafter is ever certain (9900 bp). */
-export const CRAFT_SUCCESS_BP_CAP = 9900
-/** Basis points gained per job level above 1. */
-const CRAFT_SUCCESS_BP_PER_LEVEL = 50
-
-/**
- * The chain's own success chance for a crafter at `level`, in basis points. An unreadable or sub-1 level
- * clamps to the level-1 floor (the chain's own minimum job level).
- * @param {number} level @returns {number}
- */
-export function craft_success_rate_bp(level) {
-  const clamped = Math.max(1, Number.isFinite(Number(level)) ? Math.floor(Number(level)) : 1)
-  return Math.min(CRAFT_SUCCESS_BP_CAP, CRAFT_SUCCESS_BP_AT_LEVEL_1 + (clamped - 1) * CRAFT_SUCCESS_BP_PER_LEVEL)
-}
-
-/**
- * The same chance as a PERCENT for display. The curve steps by 0.5 points, so one decimal is exact — never
- * rounded to a whole number the chain does not use (50.5% is not 51%).
- * @param {number} level @returns {number}
- */
-export const craft_success_percent = (level) => Math.round(craft_success_rate_bp(level) / 10) / 10
