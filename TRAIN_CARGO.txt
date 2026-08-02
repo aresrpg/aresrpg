@@ -1,1 +1,5 @@
-9c598407842d0c3ae846e46d5945d1a178a6a87e lane/2013-gate-wiring ci(checks): run the board-automation suites in the smoke-gates step
+d0eb7867ef2f479512416c8c64498e60e143b388 lane/2007-binding-fold style(binding): prettier the folded session-gate door
+7490ba207a6a9f152f5ba9162381b28f8e47dc77 lane/2007-binding-fold docs(binding): the #708 suite names the book, not the retired closure
+9e3f84c534d5077ac7a8842ca94a04323f32bdf2 lane/2007-binding-fold fix(spawns): the world token has one writer, the binding adapter
+cfe4956509e80a74f7def963e09df4ba41dced59 lane/2007-binding-fold fix(party): group follow resolves member worlds from the binding book
+7e9f36b8bc9a90e62d2e467f8fff9af2179f874a lane/2007-binding-fold fix(binding): one character-keyed book answers every world binding
