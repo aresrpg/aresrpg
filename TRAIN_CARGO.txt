@@ -1,1 +1,1 @@
-9448664cbc3817d7b5c4f76628ea821337dd8098 train/train-77 refactor(hud): delete the unmounted TopLaunchers launcher dock
+0a5654e144ea61fe945badee736aedd2e461b04b train/train-78 feat(lint): the hook law runs — rules-of-hooks was never wired
