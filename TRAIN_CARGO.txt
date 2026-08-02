@@ -1,1 +1,1 @@
-d3855c36ff71fe16836d258c2a36d1bf1501c23c train/train-28 docs(adr): record three architecture decisions as PROPOSED
+adad7355430513b6220266d26d770224b9776199 train/train-29 chore(ceremony): republish artifacts — nine Published.toml + manifests + release pins
