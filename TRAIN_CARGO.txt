@@ -1,3 +1,1 @@
-cec5107bbece4f3273a61bbe07c3aa97367511a8 train/train-47 fix(fight): paint the placement strips from the click door, not the declared bands
-37671b9288ce17e06f0ce18f83b3f676c65ea1d8 train/train-47 fix(i18n): the whiff line claims the resolution, never the ground
-2b042bd07dbb331b4da1e9ac566fae9b81f23672 train/train-47 test(fight): inject the game context into the placement-strip mount
+4da7d1fe87a8d5314183a0e74c89159e9aa11108 lane/1890-scan-roster fix(qa): dev world-fight scan carries the format-3 roster (Fixes #1890)
