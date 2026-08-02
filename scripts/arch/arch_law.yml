@@ -61,6 +61,45 @@ rules:
       - pattern: get_template_detail_map(...)
       - pattern: resolve_rolled_stats(...)
 
+  - id: arch-coop-visible-source-bypass
+    languages: [js, ts]
+    severity: ERROR
+    message: Coop-visible consumer bypasses coop_visible_view; add the fact/provenance to the canonical view and select it there.
+    paths:
+      include:
+        - '**/packages/frontend/src/GameWorldHost.tsx'
+        - '**/packages/frontend/src/components/CharacterSwitcher.tsx'
+        - '**/packages/frontend/src/game/remote_players.js'
+        - '**/packages/frontend/src/game/screens/hud/Minimap.jsx'
+        - '**/packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/FightsModal.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/OnlinePlayers.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/PartyFrame.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/PlayerActionMenu.jsx'
+        - '**/packages/frontend/src/game/screens/hud/world/WorldChat.jsx'
+    pattern-either:
+      - pattern: use_party(...)
+      - pattern: use_party.getState()
+      - pattern: use_world_binding(...)
+      - pattern: use_world_binding.getState()
+      - pattern: use_presence(...)
+      - pattern: use_presence.getState()
+      - pattern: use_game_state(...)
+      - pattern: use_game_state.getState()
+      - pattern: use_dungeon(...)
+      - pattern: use_dungeon.getState()
+      - pattern: context.get_state()
+      - pattern: get_characters(...)
+      - pattern: get_fights(...)
+      - pattern: find_pending_outcome(...)
+      - pattern: resolve_character_docs(...)
+      - pattern: presence_character(...)
+      - pattern: presence_character_by_address(...)
+      - pattern: presence_characters_by_address(...)
+      - pattern: get_group_follow_snapshot(...)
+      - pattern: peer_markers(...)
+      - pattern: select_online_count(...)
+
   # ── L-P4 · the fight core executes NO effects ──────────────────────────────────────────────────
   # Census 2026-07-17: 0 awaits / 0 async fns / 0 .then / 0 new Promise across all 7 non-test
   # fight/ modules — effects are INJECTED (txs.js `deps.submit`; live submit lives in the context
