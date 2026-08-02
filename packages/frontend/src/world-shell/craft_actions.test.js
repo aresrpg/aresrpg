@@ -64,8 +64,18 @@ beforeEach(() => {
   reset_auth_mock({ address: '0xowner', wallet_name: 'zklogin' })
   set_expedition_sdk_mock(async () => fake_sdk)
   const resolve_character = spyOn(kiosk_resolve, 'kiosk_for_character').mockResolvedValue(character_handle)
+  // A receipt in the deployed shape: the roll's own `crafting::Crafted` event is what the action reports
+  // (#2034 — a resolved promise alone never proves the output minted).
   const submit = spyOn(tx_seam, 'run_tx').mockResolvedValue({
-    result: { digest: '0xdigest' },
+    result: {
+      digest: '0xdigest',
+      events: [
+        {
+          type: '0xpkg::crafting::Crafted',
+          parsedJson: { success: true, output_quantity: '1', job_xp_gained: '10' },
+        },
+      ],
+    },
   })
   const refresh = spyOn(roster, 'load_roster').mockResolvedValue(undefined)
   spies = [resolve_character, submit, refresh]
@@ -86,7 +96,7 @@ describe('craft_item kiosk custody', () => {
         items: in_character_kiosk,
         character_id: '0xcharacter',
       })
-    ).resolves.toEqual({ digest: '0xdigest' })
+    ).resolves.toEqual({ outcome: 'success', quantity: 1 })
 
     expect(kiosk_resolve.kiosk_for_character).toHaveBeenCalledWith(fake_sdk, '0xowner', '0xcharacter')
     expect(composed).toHaveLength(1)

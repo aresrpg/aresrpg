@@ -1807,8 +1807,10 @@
     "auto_seat_notice": "{{count}} of your characters will be seated in the fights you start."
   },
   "inventory": {
-    "craft_success": "Crafted {{name}}",
+    "craft_success": "+{{qty}} {{name}}",
     "craft_pending": "Crafting…",
+    "craft_roll_failed": "The craft failed — {{name}} was not made. Your materials are spent; the odds were {{chance}}%. Level the job to improve them.",
+    "craft_outcome_unknown": "The craft went through, but its result couldn't be read. Check your bag for {{name}}.",
     "tx_equip_pending": "Updating equipment…",
     "tx_equip_success": "Equipment updated",
     "tx_equip_error": "Couldn't equip — please try again.",
@@ -2794,6 +2796,7 @@
       "ingredients_head": "Ingredients",
       "requires_level": "Requires {{job}} Lv {{required}} (you are Lv {{level}})",
       "not_enough": "Not enough ingredients",
+      "success_chance": "Success chance",
       "craft_tooltip": "Craft {{name}}",
       "craft_button": "Craft",
       "locked_level": "Locked · Lv {{level}}"

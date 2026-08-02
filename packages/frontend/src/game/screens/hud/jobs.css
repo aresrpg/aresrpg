@@ -662,6 +662,29 @@
   color: var(--warn);
 }
 
+/* SUCCESS CHANCE (#2034) — the chain rolls this off the crafter's job level, so the player reads the bet
+   before spending. Same micro-label + tabular-num grammar as every other stat row in this panel. */
+.jobs__craft-chance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.jobs__craft-chance-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.jobs__craft-chance-value {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
 /* craft action bar — amount picker + the CRAFT button (enabled only at job level >= recipe level). */
 .jobs__craft-bar {
   display: flex;

@@ -1807,8 +1807,10 @@
     "auto_seat_notice": "{{count}} de vos personnages seront engagés dans les combats que vous lancez."
   },
   "inventory": {
-    "craft_success": "Fabriqué : {{name}}",
+    "craft_success": "+{{qty}} {{name}}",
     "craft_pending": "Fabrication…",
+    "craft_roll_failed": "La fabrication a échoué — {{name}} n'a pas été créé. Les matériaux sont perdus ; les chances étaient de {{chance}}%. Montez le métier pour les améliorer.",
+    "craft_outcome_unknown": "La fabrication est passée, mais son résultat n'a pas pu être lu. Vérifie ton sac pour {{name}}.",
     "tx_equip_pending": "Mise à jour de l'équipement…",
     "tx_equip_success": "Équipement mis à jour",
     "cosmetics": "Cosmétiques",
@@ -2794,6 +2796,7 @@
       "ingredients_head": "Ingrédients",
       "requires_level": "Nécessite {{job}} Niv {{required}} (vous êtes Niv {{level}})",
       "not_enough": "Ingrédients insuffisants",
+      "success_chance": "Chance de réussite",
       "craft_tooltip": "Fabriquer {{name}}",
       "craft_button": "Fabriquer",
       "locked_level": "Verrouillé · Niv {{level}}"

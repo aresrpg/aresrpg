@@ -1807,8 +1807,10 @@
     "auto_seat_notice": "{{count}} de tus personajes entrarán en los combates que inicies."
   },
   "inventory": {
-    "craft_success": "Fabricado: {{name}}",
+    "craft_success": "+{{qty}} {{name}}",
     "craft_pending": "Fabricando…",
+    "craft_roll_failed": "La fabricación falló — {{name}} no se creó. Tus materiales se gastaron; la probabilidad era del {{chance}}%. Sube el oficio para mejorarla.",
+    "craft_outcome_unknown": "La fabricación se ejecutó, pero no se pudo leer su resultado. Revisa tu bolsa por {{name}}.",
     "tx_equip_pending": "Actualizando equipo…",
     "tx_equip_success": "Equipo actualizado",
     "cosmetics": "Cosméticos",
@@ -2794,6 +2796,7 @@
       "ingredients_head": "Ingredientes",
       "requires_level": "Requiere {{job}} Nv {{required}} (estás en Nv {{level}})",
       "not_enough": "Ingredientes insuficientes",
+      "success_chance": "Probabilidad de éxito",
       "craft_tooltip": "Fabricar {{name}}",
       "craft_button": "Fabricar",
       "locked_level": "Bloqueado · Nv {{level}}"

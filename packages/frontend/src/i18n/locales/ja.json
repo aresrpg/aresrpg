@@ -1807,8 +1807,10 @@
     "auto_seat_notice": "あなたが始めた戦闘には、あなたのキャラクター{{count}}体も参加します。"
   },
   "inventory": {
-    "craft_success": "{{name}} を作成しました",
+    "craft_success": "+{{qty}} {{name}}",
     "craft_pending": "作成中…",
+    "craft_roll_failed": "製作に失敗しました — {{name}} は作られませんでした。素材は消費されています。成功率は {{chance}}% でした。ジョブレベルを上げると上昇します。",
+    "craft_outcome_unknown": "製作は実行されましたが、結果を読み取れませんでした。バッグで {{name}} を確認してください。",
     "tx_equip_pending": "装備を更新中…",
     "tx_equip_success": "装備を更新しました",
     "cosmetics": "装飾品",
@@ -2794,6 +2796,7 @@
       "ingredients_head": "材料",
       "requires_level": "{{job}} Lv {{required}}が必要（現在Lv {{level}}）",
       "not_enough": "材料が不足しています",
+      "success_chance": "成功率",
       "craft_tooltip": "{{name}}を製作",
       "craft_button": "製作",
       "locked_level": "ロック中 · Lv {{level}}"

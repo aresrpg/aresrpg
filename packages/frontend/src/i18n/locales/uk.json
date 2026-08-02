@@ -1807,8 +1807,10 @@
     "auto_seat_notice": "{{count}} ваших персонажів вступлять у бої, які ви починаєте."
   },
   "inventory": {
-    "craft_success": "Виготовлено: {{name}}",
+    "craft_success": "+{{qty}} {{name}}",
     "craft_pending": "Виготовлення…",
+    "craft_roll_failed": "Виготовлення не вдалося — {{name}} не створено. Матеріали витрачено; шанс був {{chance}}%. Підвищуй рівень професії, щоб його покращити.",
+    "craft_outcome_unknown": "Виготовлення пройшло, але його результат не вдалося прочитати. Перевір сумку на {{name}}.",
     "tx_equip_pending": "Оновлення спорядження…",
     "tx_equip_success": "Спорядження оновлено",
     "cosmetics": "Косметика",
@@ -2796,6 +2798,7 @@
       "ingredients_head": "Інгредієнти",
       "requires_level": "Потрібен {{job}} Рв {{required}} (у вас Рв {{level}})",
       "not_enough": "Недостатньо інгредієнтів",
+      "success_chance": "Шанс успіху",
       "craft_tooltip": "Виготовити {{name}}",
       "craft_button": "Виготовити",
       "locked_level": "Заблоковано · Рв {{level}}"

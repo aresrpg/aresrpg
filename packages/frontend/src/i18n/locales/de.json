@@ -1807,8 +1807,10 @@
     "auto_seat_notice": "{{count}} deiner Charaktere nehmen an den Kämpfen teil, die du beginnst."
   },
   "inventory": {
-    "craft_success": "Hergestellt: {{name}}",
+    "craft_success": "+{{qty}} {{name}}",
     "craft_pending": "Wird hergestellt…",
+    "craft_roll_failed": "Die Herstellung ist fehlgeschlagen — {{name}} wurde nicht hergestellt. Deine Materialien sind verbraucht; die Chance lag bei {{chance}}%. Steigere den Beruf, um sie zu verbessern.",
+    "craft_outcome_unknown": "Die Herstellung lief durch, ihr Ergebnis war aber nicht lesbar. Sieh in deiner Tasche nach {{name}}.",
     "tx_equip_pending": "Ausrüstung wird aktualisiert…",
     "tx_equip_success": "Ausrüstung aktualisiert",
     "cosmetics": "Kosmetik",
@@ -2794,6 +2796,7 @@
       "ingredients_head": "Zutaten",
       "requires_level": "Erfordert {{job}} St {{required}} (du bist St {{level}})",
       "not_enough": "Nicht genug Zutaten",
+      "success_chance": "Erfolgschance",
       "craft_tooltip": "{{name}} herstellen",
       "craft_button": "Herstellen",
       "locked_level": "Gesperrt · St {{level}}"

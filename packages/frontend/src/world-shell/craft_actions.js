@@ -31,6 +31,7 @@ import { get_sdk } from '../chain/sdk'
 import { load_roster } from '../roster/load_roster.js'
 
 import { select_ingredients } from './craft_select.js'
+import { craft_outcome } from './craft_outcome.js'
 import { kiosk_for_character } from './kiosk_resolve.js'
 import { run_tx } from './tx.js'
 
@@ -40,12 +41,17 @@ import { run_tx } from './tx.js'
  * craft tx through the standard run_tx choke and repaints the bag. Throws a translated, player-copy Error on
  * any refusal (the caller surfaces ONE toast); run_tx's own throw is already humanized (abort_copy: the
  * crafting arm).
+ *
+ * THE RETURN IS THE OUTCOME, NOT THE RECEIPT (#2034): the chain rolls for success inside this one tx, so a
+ * resolved promise only means the transaction landed — the roll may still have failed, burning the inputs and
+ * minting nothing. `craft_outcome` reads the authoritative `crafting::Crafted` event, and the caller reports
+ * exactly that. The bag repaint rides BOTH branches: job XP moved either way.
  * @param {{
  *   recipe: import('../pages/encyclopedia/recipes').CraftRecipeRow,
  *   items: any[],
  *   character_id: string,
  * }} args
- * @returns {Promise<any>} the run_tx receipt on success
+ * @returns {Promise<import('./craft_outcome.js').CraftOutcome>} the rolled outcome of the executed craft
  */
 export async function craft_item({ recipe, items, character_id }) {
   const { address } = use_auth.getState()
@@ -81,5 +87,5 @@ export async function craft_item({ recipe, items, character_id }) {
 
   const { result } = await run_tx('craft', tx) // dryRun-guarded self-pay; throws humanized on an on-chain abort
   load_roster().catch(() => {}) // repaint the bag off chain truth → the crafted output appears → quest 'craft' flips
-  return result
+  return craft_outcome(result)
 }

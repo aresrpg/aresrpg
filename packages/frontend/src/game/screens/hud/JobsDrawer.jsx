@@ -67,6 +67,8 @@ import { encyclopedia_item_asset } from '../../../pages/encyclopedia/encyclopedi
 import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { use_template_t } from '../../../i18n/template_t'
 import { craft_item } from '../../../world-shell/craft_actions.js'
+import { craft_success_percent } from '../../../world-shell/craft_outcome.js'
+import { play_discovery_sfx, play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_toast } from '../../../toast'
 import i18n from '../../../i18n'
 import './hud-panels.css'
@@ -312,17 +314,40 @@ function CraftControls({ recipe, job, level, owned }) {
   const level_ok = level >= recipe.required_level
   const can_craft = level_ok && afford.affordable
 
+  // The chance the chain itself will roll for this craft — `crafting.move`'s own curve off the crafter's job
+  // level, mirrored in craft_outcome.js. The player sees what they are betting BEFORE they spend (#2034).
+  const success_chance = craft_success_percent(level)
+
   // REAL on-chain craft (world-shell/craft_actions.js): the live row already carries the Recipe object id,
   // so it just burns the exact kiosk-locked ingredient stacks and mints the output — ONE self-pay tx
-  // through the standard run_tx choke
-  // (dryRun-guarded, no auto-retry). ONE honest toast per outcome; a success repaints the bag (load_roster),
-  // which flips the onboarding quest-ladder 'craft' step the moment the crafted item lands.
+  // through the standard run_tx choke (dryRun-guarded, no auto-retry).
+  //
+  // ONE HONEST TOAST PER OUTCOME (#2034). The craft ROLLS: inputs burn and job XP credits either way, and the
+  // output mints only on a pass — so the action reports the roll (`craft_outcome`, off the `crafting::Crafted`
+  // event), never "the transaction resolved". A pass is green + the discovery sparkle; a failed roll is red +
+  // the restrained `deny` nudge (no failure asset exists; these are the registry's existing cues). The bag
+  // repaints on both branches — craft_actions owns that, because XP moved either way.
   const on_craft = async () => {
     if (!can_craft || pending) return
     set_pending(true)
     try {
-      await craft_item({ recipe, items: bag_items, character_id: selected_character_id })
-      use_toast.getState().add(i18n.t('inventory.craft_success', { name: recipe.name?.trim() || recipe.id }), 'info')
+      const name = recipe.name?.trim() || recipe.id
+      const { outcome, quantity } = await craft_item({
+        recipe,
+        items: bag_items,
+        character_id: selected_character_id,
+      })
+      if (outcome === 'success') {
+        use_toast.getState().add(i18n.t('inventory.craft_success', { qty: quantity || 1, name }), 'success')
+        play_discovery_sfx()
+      } else if (outcome === 'failure') {
+        use_toast.getState().add(i18n.t('inventory.craft_roll_failed', { name, chance: success_chance }), 'error')
+        play_fight_sfx('deny')
+      } else {
+        // The receipt carried no craft event: the transaction landed but nothing proves what it produced.
+        // Never claim a success we cannot see — say so and let the repainted bag answer.
+        use_toast.getState().add(i18n.t('inventory.craft_outcome_unknown', { name }), 'info')
+      }
     } catch (error) {
       // no-silent-failure law: the humanized/translated copy reaches the player; the digest + raw abort stay in console.
       use_toast.getState().add(error?.message || i18n.t('errors.craft_failed'), 'error')
@@ -366,6 +391,13 @@ function CraftControls({ recipe, job, level, owned }) {
             </div>
           )
         })}
+      </div>
+
+      {/* The bet, stated before it is placed: crafting.move rolls this chance off the crafter's JOB level,
+          so a low-level crafter can read why their inputs sometimes vanish for nothing (#2034). */}
+      <div className="jobs__craft-chance">
+        <span className="jobs__craft-chance-label">{i18n.t('jobs.craft.success_chance')}</span>
+        <span className="jobs__craft-chance-value hud-num">{success_chance}%</span>
       </div>
 
       <div className="jobs__craft-bar">

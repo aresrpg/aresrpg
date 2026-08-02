@@ -1,0 +1,85 @@
+{
+  "_provenance": {
+    "network": "sui testnet",
+    "captured": "2026-08-02, graphql.testnet.sui.io (transaction(digest:).effects.events)",
+    "digest": "GBZrteiekUsVD89MovE7usxcTHTHCarPZvF4cuvcm1rY",
+    "why": "#2034 — the reported craft. effects.status is SUCCESS while crafting::Crafted carries success:false: the transaction landed, the roll did not. Inputs burned, job XP credited, nothing minted.",
+    "redaction": "Object/package IDs are REDACTED to readable handles: the hardcoded-chain-id gate (scripts/check-chain-ids.mjs) forbids hand-typed live ids in source, and they are opaque handles this fixture asserts nothing about. Everything the decoder actually reads is byte-exact as captured: the event ordering, the type suffixes, the field names, and the value types — note output_quantity is the STRING \"0\" while success is a real boolean. Re-fetch the untouched original by digest from any testnet read endpoint."
+  },
+  "digest": "GBZrteiekUsVD89MovE7usxcTHTHCarPZvF4cuvcm1rY",
+  "effects": {
+    "status": {
+      "status": "success"
+    }
+  },
+  "events": [
+    {
+      "type": "0xsui-framework::kiosk::ItemListed<0xaresrpg-package::item::Item>",
+      "parsedJson": {
+        "kiosk": "0xcrafter-kiosk",
+        "id": "0xingredient-1",
+        "price": "0"
+      }
+    },
+    {
+      "type": "0xsui-framework::kiosk::ItemPurchased<0xaresrpg-package::item::Item>",
+      "parsedJson": {
+        "kiosk": "0xcrafter-kiosk",
+        "id": "0xingredient-1",
+        "price": "0"
+      }
+    },
+    {
+      "type": "0xaresrpg-package::item::ItemSplit",
+      "parsedJson": {
+        "from": "0xingredient-1",
+        "into": "0xingredient-2",
+        "take": "2",
+        "remaining": "3"
+      }
+    },
+    {
+      "type": "0xaresrpg-package::extract::ItemBurned",
+      "parsedJson": {
+        "item": "0xingredient-1",
+        "template": "0xingredient-3",
+        "amount": "3"
+      }
+    },
+    {
+      "type": "0xsui-framework::kiosk::ItemListed<0xaresrpg-package::item::Item>",
+      "parsedJson": {
+        "kiosk": "0xcrafter-kiosk",
+        "id": "0xingredient-4",
+        "price": "0"
+      }
+    },
+    {
+      "type": "0xsui-framework::kiosk::ItemPurchased<0xaresrpg-package::item::Item>",
+      "parsedJson": {
+        "kiosk": "0xcrafter-kiosk",
+        "id": "0xingredient-4",
+        "price": "0"
+      }
+    },
+    {
+      "type": "0xaresrpg-package::extract::ItemBurned",
+      "parsedJson": {
+        "item": "0xingredient-4",
+        "template": "0xingredient-5",
+        "amount": "3"
+      }
+    },
+    {
+      "type": "0xaresrpg-package::crafting::Crafted",
+      "parsedJson": {
+        "recipe": "0xrecipe",
+        "crafter": "0xcrafter",
+        "output_template": "0xoutput-template",
+        "output_quantity": "0",
+        "success": false,
+        "job_xp_gained": "10"
+      }
+    }
+  ]
+}
