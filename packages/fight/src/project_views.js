@@ -9,7 +9,7 @@ import { mob_entity_id, participant_entity_id, participant_character_id } from '
 import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
-import { trap_render_prims } from './fight_render_prims.js'
+import { trap_render_prims, trap_visible_to } from './fight_render_prims.js'
 import {
   deep_freeze,
   visible_controls,
@@ -407,11 +407,19 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     ? null
     : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
   const active_entity_id = entity_id_of_key(view, c.active)
-  // ④+⑦b THE LIVE trap projection — the sim door reads canonical lifecycle immediately. The render overlay may
-  // keep a canonically-consumed row visible only until its own ordered trigger beat presents; neither position nor
-  // turn advancement participates.
-  const live_traps = (s.my_traps ?? []).filter((trap) => !trap.gone)
-  const visible_traps = (s.my_traps ?? []).filter((trap) => !trap.gone || !trap.presented)
+  // ④+⑦b THE LIVE trap projection — ONE ledger (#1858). `s.my_traps` already holds the public board (adopted in
+  // the fold) alongside this client's own placements, so paint, prediction and cast-legality are three reads of
+  // one list rather than two homes racing: the sim door reads canonical lifecycle immediately, the render overlay
+  // keeps a canonically-consumed row visible only until its own ordered trigger beat presents, and NOTHING reads
+  // `ctx.chain_traps` — a raw read is not a render source. Neither position nor turn advancement participates.
+  // The visibility predicate crosses ONCE, here: an enemy's trap is unknowable to paint AND to prediction (a
+  // locally-placed row is this viewer's team by construction; an adopted row carries the board's owner_team).
+  const ledger = (s.my_traps ?? []).map((trap) =>
+    trap.owner_team == null ? { ...trap, owner_team: viewer_context.team } : trap
+  )
+  const known_traps = ledger.filter((trap) => trap_visible_to(viewer_context, trap))
+  const live_traps = known_traps.filter((trap) => !trap.gone)
+  const visible_traps = known_traps.filter((trap) => !trap.gone || !trap.presented)
   const my_trap_cells = [
     ...new Set(
       live_traps
@@ -420,12 +428,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
         .filter(Number.isFinite)
     ),
   ]
-  // Persistent paint merges the caster's optimistic ledger with the public chain board. Local rows are owned by
-  // this viewer's team by construction; every row still crosses the one visibility predicate before becoming a prim.
-  const trap_prims = trap_render_prims(viewer_context, [
-    ...(ctx.chain_traps ?? []),
-    ...visible_traps.map((trap) => ({ ...trap, owner_team: viewer_context.team })),
-  ])
+  const trap_prims = trap_render_prims(viewer_context, visible_traps)
   // ① each LIVE trap cell → its detonation payload, so the sim door rebuilds the trap WITH damage (not payload:[]).
   // Same canonical live-cell predicate as my_trap_cells (non-gone); first record wins a shared cell.
   // my_traps itself stays a flat encoded-cell list — the payload rides this parallel channel.

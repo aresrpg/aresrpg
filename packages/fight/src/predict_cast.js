@@ -411,11 +411,14 @@ const state_from_view = (view, caster_id, stats_of) => {
   })
   const turn_order = view.turn_order?.length ? [...view.turn_order] : [caster_id]
   const current_turn_idx = Math.max(0, turn_order.indexOf(caster_id))
-  // ④+⑦b MY OWN TRAPS — read from THE FOLD STATE (ruled 07-19): `view.my_traps` is the engine_view projection
-  // of the store's durable `my_traps` (populated by the trap-cast fold, sprung by the committed fold, canonical
-  // gone-cells excluded). The sim door reads STATE only — never trap_overlay (a convicted
-  // render-only module-global). A predicted PUSH force-stops on these exactly as the chain will (killing the
-  // overshoot-then-snapback); an ENEMY's invisible trap stays unknown — correct epistemics. Point traps are the
+  // ④+⑦b THE TRAPS I CAN SEE — read from THE FOLD STATE (ruled 07-19): `view.my_traps` is the engine_view
+  // projection of the store's ONE durable trap ledger (this client's own placements PLUS the public board the
+  // fold adopts, sprung by the committed fold, canonical gone-cells excluded, the visibility predicate already
+  // crossed). The sim door reads STATE only — never trap_overlay (a convicted render-only module-global).
+  // A predicted PUSH or step force-stops and detonates on these exactly as the chain will (killing the
+  // overshoot-then-snapback, and the #2033 divergence where the chain fired a trap this door could not see);
+  // an ENEMY's invisible trap stays unknown — correct epistemics. An ADOPTED row carries no decoded payload, so
+  // it predicts the trigger with zero damage — a missing number, never a missing trigger. Point traps are the
   // live corpus; a zone trap carries every cell here (check_traps matches ANY). Ids ride above base.next_id.
   const width = Number(view.arena?.width) || 20
   const traps = (view.my_traps ?? []).map((encoded, i) => {

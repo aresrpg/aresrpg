@@ -119,6 +119,9 @@ export function sync_dungeon_fight({
 }) {
   const fight = read ? decode_fight(read.json) : null
   const chain_traps = read ? read_fight_traps(read.json) : []
+  // The board list is a VERSIONED fact: the fold adopts its rows into the one trap ledger and needs the read's
+  // own version to tell a stale list still naming a detonated trap (the ghost) from a genuine re-arm (#1858).
+  const chain_traps_version = read ? Number(read.version) : 0
   if (fight && read) fight.invisibility_statuses = read_fighter_statuses(read.json)
   if (fight) fight.weapon_lines = weapon_lines
   fight_store.getState().input({
@@ -130,13 +133,13 @@ export function sync_dungeon_fight({
     version: read ? Number(read.version) : Number(open_version) || 0,
     run,
     rooms_total,
-    ctx: { ...ctx, chain_traps },
+    ctx: { ...ctx, chain_traps, chain_traps_version },
   })
   // Active object reads are checkpoint-only after bootstrap, so refresh the public board prim input through the
   // existing reducer context door too. Apply it only after the session-gated snapshot proves this read still owns
   // the core; a stale fight-A read must never write fight A's traps into a newer fight B session.
   if (String(fight_store.getState().fight_id ?? '') === String(fight?.id ?? ''))
-    fight_store.getState().input({ type: 'ctx', ctx: { chain_traps } })
+    fight_store.getState().input({ type: 'ctx', ctx: { chain_traps, chain_traps_version } })
   if (fight?.id && String(fight_store.getState().core.fight_id) === String(fight.id))
     mark_engage_fight_adopted(fight.id)
   return fight

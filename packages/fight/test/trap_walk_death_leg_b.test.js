@@ -46,7 +46,9 @@ const FIGHT_OBJECT = {
     { is_mob: true, idx: 0 },
     { is_mob: false, idx: 0 },
   ],
-  turn_ptr: 0,
+  // MY turn at boot: the trap below is placed by me, and a local push is only admitted while I hold the mic.
+  // The receipt then opens the mob's turn itself (`TurnStarted is_mob`), so the walk-on it drives is unchanged.
+  turn_ptr: 1,
   turn_deadline_ms: 90_000,
   turn_entropy: 90_000,
   turn_ordinal: 1,
@@ -58,6 +60,20 @@ const boot = () => {
     .getState()
     .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: W } } })
   store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 }, 1_000)
+  // I PLACED this trap. Ownership is a property of the ledger ROW, not of the receipt's `trap_cells` list —
+  // since the public board folds into the same ledger (#1858), that list names every trap I can SEE, an ally's
+  // included, and attributing those to me would be a lie in the combat log.
+  store.getState().input(
+    {
+      type: 'predicted',
+      basis_version: 5,
+      intent_id: 'trap1',
+      actions: [{ kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: TRAP, ap_cost: 2 }],
+      beats: [{ kind: 'cast', at: 0, duration: 100, payload: {} }],
+      place_traps: [TRAP],
+    },
+    1_100
+  )
   return store
 }
 

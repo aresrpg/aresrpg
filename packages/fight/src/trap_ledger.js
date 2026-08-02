@@ -40,6 +40,66 @@ export function read_fight_traps(json) {
   })
 }
 
+/** The chain version a ledger row was consumed at, from the `version:at:step` key `fold_trap_ledger` stamps.
+ *  A row that is `gone` without one is retired by an unknown clock — treat it as consumed forever, never a
+ *  candidate for re-adoption (erring toward "it stays dead" is the safe half: a resurrected marker is a lie). */
+const consumed_version = (trap) => {
+  const version = Number(String(trap.triggered_at ?? '').split(':')[0])
+  return Number.isFinite(version) ? version : Infinity
+}
+
+const covers_anchor = (trap, anchor) =>
+  Number(trap.anchor) === anchor || (trap.cells ?? []).some((cell) => Number(cell) === anchor)
+
+/** Does this ledger row make `anchor` a duplicate of what a read at `version` reports? A LIVE row always does;
+ *  a consumed one only while the read is not NEWER than the consumption (a newer read naming it is a re-arm). */
+const already_held = (trap, anchor, version) =>
+  covers_anchor(trap, anchor) && (!trap.gone || consumed_version(trap) >= version)
+
+/**
+ * ADOPT the public Fight.fx board into the ONE trap ledger (#1858 · #2033). `read_fight_traps` decodes the
+ * authoritative entries; this folds them into the SAME durable ledger a local trap-cast writes, so render,
+ * prediction, cast-legality and the beat producer all read one list.
+ *
+ * Before the fold there were two homes with different lifecycles, and join history decided which one a client
+ * rode: a trap the local ledger never saw — an ally's, or your own after a rejoin — rendered off the raw chain
+ * list, which no boom ever consumed (removal WAS the next object read) and which prediction never looked at at
+ * all. That second home is both the ghost marker and the twin divergence where the chain detonated a trap the
+ * client's sim door did not know existed.
+ *
+ * `version` is the read the rows came from. A row is adopted only when the ledger holds no live row covering
+ * its anchor and no row consumed at/after that read — so the very read that detonated a trap can still name it
+ * without resurrecting it, while a genuine RE-ARM (a NEWER read naming an anchor consumed earlier) is adopted.
+ * Adopted rows carry no payload: the public entry's effects are not decoded here, so they predict a trigger
+ * with no damage — a missing number, never a missing trigger.
+ * @param {any[]} traps the durable ledger
+ * @param {{ anchor:number, owner_team:number, cells:number[] }[]} chain_traps `read_fight_traps` output
+ * @param {number} version the chain version those rows were read at
+ */
+export const adopt_chain_traps = (traps, chain_traps, version) => {
+  const rows = traps ?? []
+  if (!Array.isArray(chain_traps) || chain_traps.length === 0) return rows
+  const adopted = chain_traps
+    .map((row) => ({ row, anchor: Number(row?.anchor) }))
+    .filter(({ anchor }) => Number.isFinite(anchor) && !rows.some((trap) => already_held(trap, anchor, version)))
+  if (adopted.length === 0) return rows
+  return [
+    ...rows,
+    ...adopted.map(({ row, anchor }) => ({
+      // `chain: true` is the ownership fact, not a lifecycle one: an adopted row names no LOCAL owner, so the
+      // renderer attributes its hit through the neutral fallback instead of borrowing this client's entity.
+      chain: true,
+      draft_id: null,
+      basis_version: version,
+      anchor,
+      cells: (row.cells ?? []).map(Number).filter(Number.isFinite),
+      owner_team: Number(row.owner_team),
+      payload: [],
+      gone: false,
+    })),
+  ]
+}
+
 // A trap fires ON-CHAIN only when a fighter ENTERS its cell. Reconstruct every entered cell in canonical row
 // order, including intermediate walk cells; `step` keeps two triggers in one collapsed move individually keyed.
 const committed_entries_of = ({ authoritative_tail, base, view }) => {

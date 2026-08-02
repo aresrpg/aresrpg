@@ -22,7 +22,7 @@ import { GRID_W } from './los.js'
 import { base_from_view } from './fold_base.js'
 import { blocks_a_walk } from './fight_render_prims.js'
 import { masks_entries, pace_segment } from './present.js'
-import { fold_trap_ledger } from './trap_ledger.js'
+import { adopt_chain_traps, fold_trap_ledger } from './trap_ledger.js'
 import {
   claim_version,
   fold_claimed_budget,
@@ -183,10 +183,14 @@ export const recompute = (draft, now) => {
     ? { ...draft.view, turn_entropy: turn_seed_inputs.turn_entropy, turn_ordinal: turn_seed_inputs.turn_ordinal }
     : draft.view
   const provider = provider_of({ presenting, playable, view: draft.view, spectator })
+  // THE ONE TRAP LEDGER (#1858 · #2033): the public board read is ADOPTED here, one door upstream of the
+  // consumption fold, so a trap this client never cast is an ordinary ledger row from its first sighting —
+  // predictable, legality-visible, and retired by its own trigger beat like any other. `ctx.chain_traps` is a
+  // raw read, never a second render source; project_views reads this list alone.
   const my_traps = fold_trap_ledger({
     authoritative_tail,
     base,
-    traps: draft.my_traps,
+    traps: adopt_chain_traps(draft.my_traps, draft.ctx?.chain_traps, Number(draft.ctx?.chain_traps_version ?? 0)),
     view: draft.view,
   })
   // GLYPH EXPIRY (persistent, NOT detonated): unlike a trap, a glyph is never sprung by a fighter standing on it
@@ -370,13 +374,17 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
   const escrow = draft.view?.escrow ?? []
   const my_seat = settle_input.actor_from_key(draft.my_key)?.idx ?? seat_resolver(draft.view)(my_entity)
   const grid_w = Number(ctx.beat_ctx.grid_width) || GRID_W
-  // Receipt trap cells come from engine_view.my_traps — the local-only durable trap ledger. That makes their
-  // owner the local entity even though Hit carries no source. Any trap detected outside this set stays unknown
-  // and therefore renders through the neutral fallback instead of borrowing the semantic turn actor.
+  // Trap OWNERSHIP is a property of the LEDGER ROW, not of the visible set. Since the public board folds into
+  // the same ledger, `trap_cells` names every trap this viewer can SEE — including an ally's — and reading
+  // ownership off it would attribute their detonation to the local entity. Only a row this client PLACED
+  // (`chain !== true`) names a local owner; everything else renders through the neutral fallback, which is
+  // exactly what a `Hit` carrying no source deserves.
   const owned_trap_cells = new Set(
-    (trap_cells ? [...trap_cells] : []).map((cell) =>
-      typeof cell === 'number' || typeof cell === 'bigint' ? Number(cell) : Number(cell?.y) * grid_w + Number(cell?.x)
-    )
+    (draft.my_traps ?? [])
+      .filter((trap) => trap.chain !== true)
+      .flatMap((trap) => trap.cells ?? [])
+      .map(Number)
+      .filter(Number.isFinite)
   )
   const resolve_trap_owner = (_cell, encoded) =>
     my_entity != null && owned_trap_cells.has(Number(encoded)) ? String(my_entity) : null
