@@ -1,2 +1,1 @@
-6d87ff8a9f5e44b8166049ee6c5623712b1082cd train/train-41 fix(corpus): delete the bare-URL degraded mode — the pointer is the one source
-95fbbe696d1dfb9fef96e86987dd39eb451dfb35 train/train-41 fix(engine): pre-warm through the live frame, never an async compile (#1869)
+3ba7fae4dd885c728a300568a7c241470a573689 train/train-37 fix(forgemagie): delete crush's post-draw template filter — it was a free reroll
