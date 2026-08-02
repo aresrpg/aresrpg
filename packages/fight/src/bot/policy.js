@@ -65,6 +65,10 @@ const BUFF_KINDS = new Set([
   'APPLY_STATE',
   'REFLECT_DAMAGE',
   'ALTER_RESIST',
+  // #1874 — INVISIBILITY (kind 27) is a self-buff like any other: it rides `buff_per_turn` and the
+  // already-up check. Missing here it matched NO scoring branch at all, so a Vanish in the book scored
+  // null and the bot could never cast it — a silent hole in the instrument, not a decision it made.
+  'INVISIBILITY',
 ])
 const DEBUFF_KINDS = new Set(['REMOVE_POINTS', 'STEAL_POINTS', 'STEAL_STAT', 'EROSION'])
 const PUSH_KINDS = new Set(['PUSH', 'GEOMETRIC_PUSH'])

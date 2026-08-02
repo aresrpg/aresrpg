@@ -204,6 +204,32 @@ describe('policy — reading the board like a player', () => {
     expect(already.actions.find((a) => a.spell_id === 'guard')).toBeUndefined()
   })
 
+  test('Vanish is a buff — INVISIBILITY scores, and re-scores zero once it is up', () => {
+    // #1874 — INVISIBILITY (kind 27, fight-spells-core `kind_names`) was missing from BUFF_KINDS, so a Vanish
+    // in the book landed in NO scoring branch: `score_on_fighter` returned null and the bot could never cast
+    // it, silently, for the whole run. It rides `buff_per_turn` like every other self-buff.
+    const vanish = spell('vanish', {
+      ap: 2,
+      range: [0, 0],
+      effects: [effect('INVISIBILITY', { kind_id: 27, turns: 2, target_filter: TF_ONLY_CASTER })],
+    })
+    const fresh = plan_turn(
+      read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 9 })], spellbook: [vanish] })
+    )
+    expect(fresh.actions.find((a) => a.spell_id === 'vanish')).toBeDefined()
+
+    const already = plan_turn(
+      read({
+        fighters: [
+          fighter(ME, 0, { x: 5, y: 5 }, { effects: [{ kind: 27, remaining_turns: 1, value: 0, element: null }] }),
+          fighter('mob-0', 1, { x: 5, y: 9 }),
+        ],
+        spellbook: [vanish],
+      })
+    )
+    expect(already.actions.find((a) => a.spell_id === 'vanish')).toBeUndefined()
+  })
+
   test('drops a trap on the mob’s approach path, never under itself or on an already-trapped cell', () => {
     const trap = spell('snare', {
       ap: 3,
