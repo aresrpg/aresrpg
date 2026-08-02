@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "generated_at": "2026-08-02T15:30:23.365Z",
+  "generated_at": "2026-08-02T16:36:01.803Z",
   "networks": {
     "testnet": {
       "chain_id": "",
-      "source_hash": "09bf0ff6db86f7419e93311ff5e4ed63c30be898c26757fea7dcc366f9a5a2a6",
+      "source_hash": "7280d131c39f2103481a5a57580c7b58402d5f871c11579ff62af91850976a43",
       "packages": {
         "foundation": {
           "origin": "0xa778be3fc6fe58eedddd34605a973b682d637b36d0e5f794e07717d5bbd90099",
@@ -20,7 +20,7 @@
         },
         "spells": {
           "origin": "0xfa897c57d3df0cdae92bf7dadea534e9f33d272c0b413fe405d4962ce24a20e2",
-          "latest": "0xfa897c57d3df0cdae92bf7dadea534e9f33d272c0b413fe405d4962ce24a20e2",
+          "latest": "0x54858134da1c195c4cd0a6cade3007cf1fe7bff9b2d2be9b3576d4716dee70eb",
           "previous": [
             "0xe788adeeb9bed9676914bb4a53094bd75b92272669281398440c26d4b7a55bcb"
           ],
@@ -32,7 +32,7 @@
         },
         "social": {
           "origin": "0x17c966f0509cedcf8c163eefba41fce04e91198e13583c8e6a61f1ff5ac177f8",
-          "latest": "0x17c966f0509cedcf8c163eefba41fce04e91198e13583c8e6a61f1ff5ac177f8",
+          "latest": "0x62d4bc9b254784ec35383a1dc31fd3aac71eee45fa9cf4f0a83efb4e46a945e9",
           "previous": [
             "0x195d5c50411afab57857c0fd8fef35ebf900711f9106354b644fe7a0da172849"
           ],
@@ -44,7 +44,7 @@
         },
         "engine": {
           "origin": "0x5b20ac04d1caa5b0b10cb14923f12d12205b7454f2b8061b3fdd9f9188b733b4",
-          "latest": "0x5b20ac04d1caa5b0b10cb14923f12d12205b7454f2b8061b3fdd9f9188b733b4",
+          "latest": "0x91185d2c0c3595be8ea10cdf7e76547b36492abd74b9586a2e9f92e8df562f43",
           "previous": [
             "0x9cfadccfe8063db9ad280777e9e7780dcc9ebe21bd64594c0481170fb0c884b3"
           ],
@@ -56,7 +56,7 @@
         },
         "aresrpg": {
           "origin": "0x2c41f09398414a1c51b0ccbd63057aef1e8e1aeedd3313b2852554dba596eb26",
-          "latest": "0x2c41f09398414a1c51b0ccbd63057aef1e8e1aeedd3313b2852554dba596eb26",
+          "latest": "0xe4c72332c01d52c9566bfce1921c11ad7de3889bd4738297f66fba2faf42a7ac",
           "previous": [
             "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb"
           ],
@@ -75,7 +75,7 @@
         },
         "kolizeum": {
           "origin": "0x1640cef6861915001c4ece930577be6fd2088931fcaeefdf040d867602440b70",
-          "latest": "0x1640cef6861915001c4ece930577be6fd2088931fcaeefdf040d867602440b70",
+          "latest": "0x44254a0ba1137f6165bcc22d752239851b65aa78f9f345cf4ad8bd9995262657",
           "previous": [
             "0xc31057878371744a0c2aad4b1c73dcafbecdb907482cb962b4b51b0651b7a0af"
           ],
@@ -87,7 +87,7 @@
         },
         "forgemagie": {
           "origin": "0x0e7102310cd959c475c8220a4b1fb92c936d2b986514bad77568cc57284e7fb7",
-          "latest": "0x0e7102310cd959c475c8220a4b1fb92c936d2b986514bad77568cc57284e7fb7",
+          "latest": "0x6413c4ab5c199f27a3ebdfcef92861f5a72176a5e18c84e17f65bf3e8a6899ac",
           "previous": [
             "0xad376c5503b4cb456e74f37bebab0f1bbaddc7dbdfd11d07e5fcb7739e77c857"
           ],
@@ -99,7 +99,7 @@
         },
         "gifting": {
           "origin": "0x959a65f7db070a31bcc88881d3b59fa79ac9f2b504c1714319d65448f503475a",
-          "latest": "0x959a65f7db070a31bcc88881d3b59fa79ac9f2b504c1714319d65448f503475a",
+          "latest": "0x802f56147bbc5d8edf75d85ca75785b16e97d199eb9e0dfc932aa9a812c1ba08",
           "previous": [
             "0x83924874b37b87af0cf7356cef3c1ebb127a484d3c2fdd82a1dc01de978bdc37"
           ],
@@ -111,7 +111,7 @@
         },
         "dungeon": {
           "origin": "0xff5456f8aa38d28f4d074a87965d13abf4f0579addd2f198299c9714b2227255",
-          "latest": "0xff5456f8aa38d28f4d074a87965d13abf4f0579addd2f198299c9714b2227255",
+          "latest": "0x6d7d67633be90b13702ae600c752a81534d732bb19a819daff7d0246d4681b78",
           "previous": [
             "0xd7e3b2f6f9de0bb3c6a558b2d2771902d3958eb90977aac7f2e6a6bfa9048686"
           ],

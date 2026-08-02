@@ -108,7 +108,8 @@
       58,
       146,
       226
-    ]
+    ],
+    "latest": "0x54858134da1c195c4cd0a6cade3007cf1fe7bff9b2d2be9b3576d4716dee70eb"
   },
   "social": {
     "pkg": "0x17c966f0509cedcf8c163eefba41fce04e91198e13583c8e6a61f1ff5ac177f8",
@@ -165,7 +166,8 @@
       217,
       249,
       79
-    ]
+    ],
+    "latest": "0x62d4bc9b254784ec35383a1dc31fd3aac71eee45fa9cf4f0a83efb4e46a945e9"
   },
   "engine": {
     "pkg": "0x5b20ac04d1caa5b0b10cb14923f12d12205b7454f2b8061b3fdd9f9188b733b4",
@@ -295,7 +297,8 @@
       32,
       30,
       189
-    ]
+    ],
+    "latest": "0x91185d2c0c3595be8ea10cdf7e76547b36492abd74b9586a2e9f92e8df562f43"
   },
   "aresrpg": {
     "pkg": "0x2c41f09398414a1c51b0ccbd63057aef1e8e1aeedd3313b2852554dba596eb26",
@@ -371,7 +374,8 @@
       224,
       149,
       102
-    ]
+    ],
+    "latest": "0xe4c72332c01d52c9566bfce1921c11ad7de3889bd4738297f66fba2faf42a7ac"
   },
   "kolizeum": {
     "pkg": "0x1640cef6861915001c4ece930577be6fd2088931fcaeefdf040d867602440b70",
@@ -428,7 +432,8 @@
       18,
       246,
       254
-    ]
+    ],
+    "latest": "0x44254a0ba1137f6165bcc22d752239851b65aa78f9f345cf4ad8bd9995262657"
   },
   "forgemagie": {
     "pkg": "0x0e7102310cd959c475c8220a4b1fb92c936d2b986514bad77568cc57284e7fb7",
@@ -488,7 +493,8 @@
       89,
       195,
       201
-    ]
+    ],
+    "latest": "0x6413c4ab5c199f27a3ebdfcef92861f5a72176a5e18c84e17f65bf3e8a6899ac"
   },
   "gifting": {
     "pkg": "0x959a65f7db070a31bcc88881d3b59fa79ac9f2b504c1714319d65448f503475a",
@@ -552,7 +558,8 @@
       212,
       162,
       85
-    ]
+    ],
+    "latest": "0x802f56147bbc5d8edf75d85ca75785b16e97d199eb9e0dfc932aa9a812c1ba08"
   },
   "dungeon": {
     "pkg": "0xff5456f8aa38d28f4d074a87965d13abf4f0579addd2f198299c9714b2227255",
@@ -608,7 +615,8 @@
       140,
       194,
       141
-    ]
+    ],
+    "latest": "0x6d7d67633be90b13702ae600c752a81534d732bb19a819daff7d0246d4681b78"
   },
   "_rules": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
   "_station": null,
