@@ -46,8 +46,9 @@
 import { decode, encode } from '@aresrpg/fight/los'
 import { board_view, fight_view, min_turn_left, mob_entity_id, my_action_slot, my_placement_zone } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
-import { fight_store } from '@aresrpg/fight/store'
+import { committed_truth, fight_store } from '@aresrpg/fight/store'
 import { crit_clock_of, predict_cast } from '@aresrpg/fight/predict_cast'
+import { slot_damage_roll, turn_seed } from '@aresrpg/sim/turn_seed'
 
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
 import { fight_spell, resolve_class_spells, seat_spell_level, seat_spell_row } from '../screens/hud/fight-spells.js'
@@ -175,15 +176,41 @@ const spell_rows = (seat, class_id, char_level) =>
     })
 
 /**
+ * THE RESULT FOLD, published beside the refusal (#2044). A cast that takes the LAST living enemy ENDS the fight,
+ * so `fight_view()` is null the instant the killing receipt folds and this read has no roster to hand back — and
+ * an oracle handed nothing used to coerce it into three plausible passes and one NaN. The COMMITTED FOLD outlives
+ * the view (it is folded from the chain's own event log, not from the adopted snapshot), so the fight's RESULT is
+ * still knowable and the killing blow is still gradable.
+ *
+ * RAW, on purpose. This publishes the fold and the roster that names its seats; the ORACLE projects them to a read
+ * (`bot/read.js` `result_fold_read`). The bot is a headless consumer of this seam and never the other way around —
+ * importing it here would drag the whole bot tree into the app's fight bundle (the zero-drift gate's own rule).
+ * Empty when the client holds nothing: the assertions then report an honest gap, which is the whole point of
+ * publishing this rather than defaulting it.
+ */
+const dev_result_fold = () => {
+  const state = fight_store.getState()
+  // The roster that NAMES the seats: the adopted view while it lives, else the core's own adopted base — the fold
+  // survives the view. Projected to the ONE field `entity_id_of_key` reads, so a terminal read stays plain JSON.
+  const roster = state.view?.escrow ?? state.core?.inbox?.base_view?.escrow ?? []
+  return {
+    board: committed_truth(state),
+    escrow: roster.map((row) => ({ character: participant_entity_id(row) })),
+    my_key: state.my_key ?? null,
+  }
+}
+
+/**
  * window.__ARES_DEV_READ() — ONE plain-JSON snapshot of the live fight: every fighter, the board mask, my
  * traps, the turn clock and the caster's castable book. Read-only, both surfaces (it goes through the fight
  * PROJECTION, never a world-only chain slice — #1025's rule).
- * @returns {object} `{ ok: false, error }` when no fight is live.
+ * @returns {object} `{ ok: false, error, result_fold }` when no fight is live — `result_fold` is the terminal
+ *   committed fold the oracle grades a fight-ending cast off (see `dev_result_fold`).
  */
 function dev_read() {
   const store = use_dungeon.getState()
   const view = fight_view()
-  if (!view) return { ok: false, error: 'no active fight' }
+  if (!view) return { ok: false, error: 'no active fight', result_fold: dev_result_fold() }
   const committed = committed_by_id()
   const fighters = [...view.fighters.values()].map((f) => fighter_row(f, committed.get(f.id)))
   const me = view.my_entity_id ? view.fighters.get(view.my_entity_id) : null
@@ -227,10 +254,19 @@ function dev_read() {
  * runs when a player clicks — this only declines to write the result into the store. A bank computed any other way
  * would be a third implementation of the damage formula and would prove nothing about what the player was shown.
  *
- * EVERY CAST IS PREDICTED OFF THE PRE-TURN VIEW, and that is sound because of the policy's own harness rule: a
- * planned turn never contains two actions claiming the same assertable fact, so no two casts of one turn touch the
- * same fighter's HP. Position is not an input to a damage number, so a preceding move does not move the prediction
- * either. An unresolved prediction (a <100% chance row, a not-yet-deployed chain kind) banks its REASONS and no
+ * EVERY CAST IS PREDICTED OFF THE PRE-TURN VIEW, and that is sound for the damage NUMBER because of the policy's
+ * own harness rule: a planned turn never contains two actions claiming the same assertable fact, so no two casts of
+ * one turn touch the same fighter's HP, and position is not an input to a damage number. It is NOT sound for
+ * LEGALITY (#2044): a melee cast that only becomes reachable after the turn's move is refused by the sim off the
+ * pre-turn view, and a refusal used to bank an empty HP list with no reason at all — so the assertion skipped it in
+ * silence and a cast that dealt real damage was graded not at all. A refused prediction now banks WHY.
+ *
+ * AND IT BANKS THE CLOCK IT DREW ON. Both sides roll this cast's damage out of the same authored band off the same
+ * per-turn seed, so a one-HP divergence is a mismatched ROLL INPUT — the seat's slot, or the turn's entropy — and a
+ * sheet carrying only the two outputs cannot say which. The clock and the resolved roll ride the bank so the
+ * divergence row names both sides' inputs instead of re-opening the question on the next run.
+ *
+ * An unresolved prediction (a <100% chance row, a not-yet-deployed chain kind) banks its REASONS and no
  * number — an honest gap the sheet reports, never a fabricated expectation.
  * @param {Array<{ kind: number, cell: { x: number, y: number }, spell_id?: string }>} actions
  * @returns {Array<object>} one row per cast action, in plan order
@@ -255,6 +291,14 @@ const bank_predictions = (actions) => {
     const spell = fight_spell(action.spell_id)
     const spell_level = seat_spell_level(me, spell)
     const target_cell = encode(action.cell.x, action.cell.y)
+    // this cast's own slot, then the counter advances for the next one (a template-less row still consumes a slot
+    // on the chain's sequence, so it advances before the bail below).
+    const critical_clock = crit_clock_of({
+      fight: dungeon,
+      seat_row: escrow_row,
+      slot: my_action_slot(fight_store.getState(), { ahead: drafted }),
+    })
+    drafted += 1
     const banked = {
       index,
       spell_id: String(action.spell_id),
@@ -264,18 +308,27 @@ const bank_predictions = (actions) => {
       // the build the prediction ran on — a divergence row names it, so "predicted 2, chain killed" carries the
       // stats and rank it was predicted with instead of being an anecdote.
       caster_build: { stats: me.base_stats ?? {}, level: me.level ?? 1 },
+      // THE INPUTS THIS PREDICTION DREW ON. The seed halves are stringified because they are u64s the sheet
+      // carries across the page boundary and prints verbatim.
+      clock: critical_clock
+        ? {
+            turn_ordinal: String(critical_clock.turn_ordinal),
+            turn_entropy: String(critical_clock.turn_entropy),
+            seat: critical_clock.seat,
+            slot: critical_clock.slot,
+          }
+        : null,
+      // the exact roll both sides draw the banded damage from — `weapon.js`'s composition, verbatim
+      damage_roll: critical_clock ? slot_damage_roll(turn_seed(critical_clock), critical_clock.slot) : null,
       hp: [],
       place_traps: [],
-      unresolved: spell?.template ? [] : [`no_template:${action.spell_id}`],
+      unresolved: [
+        ...(spell?.template ? [] : [`no_template:${action.spell_id}`]),
+        // NO CLOCK = the sim rolled this cast off the client's own crank instead of the chain's public turn seed,
+        // so its number can never be a fair parity comparison. A gap that names itself, never a silent divergence.
+        ...(critical_clock ? [] : ['no_clock']),
+      ],
     }
-    // this cast's own slot, then the counter advances for the next one (a template-less row still consumes a slot
-    // on the chain's sequence, so it advances before the bail below).
-    const critical_clock = crit_clock_of({
-      fight: dungeon,
-      seat_row: escrow_row,
-      slot: my_action_slot(fight_store.getState(), { ahead: drafted }),
-    })
-    drafted += 1
     if (!spell?.template) {
       rows.push(banked)
       continue
@@ -305,12 +358,24 @@ const bank_predictions = (actions) => {
       }))
       .filter((row) => !!row.id)
     const place_traps = prediction?.placed_traps ?? []
+    // A CAST THE PRE-TURN VIEW COULD NOT PREDICT NAMES ITSELF (#2044). The bank runs before a single action is
+    // staged, so a cast that only becomes REACHABLE after this turn's own move is refused here
+    // (`SIM_CAST_REJECTED`) while the chain accepts it happily. That refusal used to bank an empty HP list and
+    // nothing else, and the assertion has no way to tell "predicted nothing" from "claimed no HP" — so a cast
+    // that dealt real damage was graded not at all. The reason travels; the move that explains it travels with it.
+    const refused =
+      prediction?.result?.success === false
+        ? [
+            `cast_rejected:${prediction.result.error ?? 'unknown'}`,
+            ...(actions.slice(0, index).some((earlier) => earlier.kind === MOVE_KIND) ? ['post_move_legality'] : []),
+          ]
+        : []
     rows.push({
       ...banked,
       hp,
       place_traps,
       trap_anchor: target_cell,
-      unresolved: [...banked.unresolved, ...(prediction?.unresolved ?? [])],
+      unresolved: [...banked.unresolved, ...(prediction?.unresolved ?? []), ...refused],
     })
   }
   return rows

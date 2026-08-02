@@ -11,6 +11,57 @@
 import { effect_hits, can_target } from '@aresrpg/sim/spell_targeting'
 
 import { bfsPathCost, bfsReachable, decode, encode } from '../los.js'
+import { entity_id_of_key } from '../project_views.js'
+
+/**
+ * THE RESULT-FOLD READ (#2044) — the fight's committed truth AFTER its last enemy fell, in the same shape
+ * `__ARES_DEV_READ()` publishes so every assertion reads one vocabulary.
+ *
+ * A fight-ending cast cannot be graded off the live roster: the fight is over, `fight_view()` is null, and the
+ * seam's post-commit read carries no fighters at all. The COMMITTED FOLD outlives the view — it is folded from
+ * the chain's own event log, not from the adopted snapshot — so the killing blow is graded off the result the
+ * client already holds instead of off three coerced defaults and a NaN.
+ *
+ * HP, LIFE and CELL only, and that is the whole point: this is the settled outcome of the turn, never a live
+ * board. The fold keys fighters `p<seat>` / `m<idx>`; the read speaks ENTITY ids, so seats are named through
+ * `entity_id_of_key` — the ONE home for that mapping — and a seat the roster cannot name is dropped, never guessed.
+ *
+ * @param {{ board: any, escrow?: Array<any>, my_key?: string | null }} args the committed fold (`project_board`),
+ *   the adopted roster that names its seats, and my own fold key — exactly what `dev_read().result_fold` ships
+ * @returns {object | null} null when the fold holds no fighters — an empty projection standing in for a missing
+ *   read would be the same lie in a new coat, and the caller must report a gap instead.
+ */
+export const result_fold_read = ({ board, escrow = [], my_key = null }) => {
+  const roster = { escrow }
+  const fighters = Object.entries(board?.fighters ?? {}).flatMap(([key, fighter]) => {
+    const id = entity_id_of_key(roster, key)
+    if (!id) return []
+    return [
+      {
+        id,
+        hp_committed: fighter.hp,
+        alive_committed: !!fighter.alive,
+        cell_committed: fighter.cell == null ? null : decode(Number(fighter.cell)),
+        effects: (fighter.statuses ?? []).map((status) => ({
+          kind: status.kind,
+          remaining_turns: status.remaining_turns,
+          value: status.value ?? null,
+          stat: status.stat ?? null,
+          element: status.element ?? null,
+        })),
+      },
+    ]
+  })
+  if (!fighters.length) return null
+  return {
+    ok: true,
+    terminal: true,
+    my_id: my_key ? entity_id_of_key(roster, my_key) : null,
+    winner: board.winner ?? -1,
+    turn_number: board.turn_ordinal ?? 0,
+    fighters,
+  }
+}
 
 /** `arena.cells` is indexed by the canonical encoded cell (project.js `board_cells`), so this IS the index. */
 export const cell_index = (cell) => encode(cell.x, cell.y)

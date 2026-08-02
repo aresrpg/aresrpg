@@ -20,10 +20,37 @@ import { get_direction } from '@aresrpg/sim/fight_displacement'
 import { GRID_W } from '../los.js'
 import { reconstructed_path } from '../fight_render_prims.js'
 
-import { blocked_cells, cell_index, living } from './read.js'
+import { blocked_cells, cell_index, living, result_fold_read } from './read.js'
 
 const find = (read, id) => read?.fighters?.find((f) => f.id === id) ?? null
 const same_cell = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y
+
+// THE NO-READ LAW (#2044). A killing blow that takes the LAST living enemy ends the fight, so `fight_view()` is
+// null and the seam's post-commit read carries no roster at all. Every row of that action used to coerce the hole
+// into a plausible number — `?? 0` reads as "dead", `undefined` is falsy so "dead", `?? NaN` can only fail — and
+// the sheet printed three passes and one fail on an action NOTHING had measured. An instrument that cannot look
+// REFUSES: one explicit gap row for the action, never a default and never a NaN comparison.
+const NO_READ_NOTE =
+  'NO POST-COMMIT READ — this action is UNGRADED; a fact the oracle could not look at is never a pass (#2044)'
+const RESULT_FOLD_NOTE = 'graded off the fight RESULT FOLD — this cast ENDED the fight, so the live roster is gone'
+
+/**
+ * The read every post-commit row grades against. The live roster when the fight survived the turn; otherwise the
+ * terminal RESULT FOLD the seam publishes beside its refusal (`dev_read().result_fold` — the committed fold the
+ * client still holds once the view is gone), projected here rather than in the seam so the bot stays a headless
+ * CONSUMER of that surface. Null when the client holds NEITHER: that is the gap row's case, and an empty
+ * projection standing in for it would be the same lie in a new coat.
+ */
+const graded_after = (after) => (after?.ok ? after : after?.result_fold ? result_fold_read(after.result_fold) : null)
+
+// THE TRIVIALLY-AGREEING ROW (#2044). HP floors at zero, so a prediction of `0 hp` is SATURATED: every damage at
+// or above the target's HP produces that exact number on both sides, and the two agreeing says nothing whatever
+// about the roll each drew. Counting those as resolved parity comparisons turned a 0-for-2 banded-damage score
+// into a reported 2-of-4. The row still rides the sheet — and still FAILS if the chain contradicts it — but it is
+// marked and left out of the parity COUNT, which exists to measure how often the client's math matched the chain's.
+const TRIVIAL_NOTE =
+  'TRIVIAL — a predicted 0 hp is saturated: any damage ≥ the target’s HP agrees, so this grades no roll'
+const trivial_prediction = (predicted) => Number(predicted?.remaining_hp) === 0
 
 /** Cells print as `x,y`; everything else prints as itself. A sheet full of `[object Object]` proves nothing. */
 const fmt = (value) =>
@@ -41,6 +68,34 @@ const row = (index, action, check, expected, actual, pass, note = '') => ({
   pass,
   note,
 })
+
+/** One refused verdict for an action whose post-commit truth could not be read. */
+const no_read_row = (index, action, what, actual) =>
+  row(index, action, what, 'a post-commit read of this action’s target', actual, false, NO_READ_NOTE)
+
+/**
+ * The ONE gate every action passes before any of its facts are checked: is the truth it claims READABLE at all?
+ * Two ways it is not — the whole post-commit read is missing (the fight ended and no result fold survived), or
+ * the action's planned target is absent from one side of the comparison (a delta needs both ends). Either way the
+ * action gets ONE row saying so, never a sheet of coerced numbers.
+ * @returns {Array<object>} zero or one row
+ */
+const read_gap = (index, action, raw_after, before, after) => {
+  if (!after) return [no_read_row(index, action, 'the post-commit read landed', raw_after?.error ?? 'no read')]
+  const target_id = action.expect?.target_id
+  if (!target_id) return []
+  const missing = [!find(before, target_id) && 'pre-commit', !find(after, target_id) && 'post-commit'].filter(Boolean)
+  return missing.length
+    ? [
+        no_read_row(
+          index,
+          action,
+          `${target_id} is in the reads this action is graded against`,
+          `absent from the ${missing.join(' AND ')} read`
+        ),
+      ]
+    : []
+}
 
 /** Steps `moved` travelled from `from` along `dir`, or null when it left that ray. */
 const steps_along = (from, moved, dir) => {
@@ -114,7 +169,9 @@ const assert_move = (index, action, before, after) => {
  *
  * AN UNRESOLVED PREDICTION IS A GAP, NOT A PASS. A <100% chance row or a not-yet-deployed chain kind has no
  * deterministic number to compare, so no row is fabricated here; `assert_prediction_proofs` reports the count and
- * the reasons at run level, and a run that resolved NOTHING fails there rather than passing quietly here.
+ * the reasons at run level, and a run that resolved NOTHING fails there rather than passing quietly here. A bank
+ * that names a REASON and claims no HP is that gap made VISIBLE per action (#2044): the pre-turn bank cannot judge
+ * a cast that only becomes legal after the turn's move, and skipping it silently graded that cast not at all.
  * @returns {Array<object>} zero or one row
  */
 const assert_prediction = (index, action, banked, before, after) => {
@@ -122,21 +179,50 @@ const assert_prediction = (index, action, banked, before, after) => {
   if (!banked || !target_id || target_id === before?.my_id) return []
   const rank = `${banked.spell_key ?? banked.spell_id} rank ${banked.spell_level}`
   const predicted = (banked.hp ?? []).find((row) => row.id === target_id)
-  const committed = Number(find(after, target_id)?.hp_committed ?? Number.NaN)
+  const reasons = [...new Set(banked.unresolved ?? [])]
   const build = `predicted with ${JSON.stringify(banked.caster_build?.stats ?? {})} at level ${banked.caster_build?.level ?? '?'}`
-  // A cast that claimed no HP for its target (a buff, a trap placement, an unresolved row) has no number to
-  // grade — the run-level tally counts it, and the action's own delta row above owns whether it did anything.
-  if (!predicted) return []
+  // A cast that claimed no HP for its target has no number to grade. WHY it claimed none decides what that means:
+  // a buff, a trap placement or a heal legitimately claims no HP and its own delta row above owns the fact, so no
+  // row is fabricated here; a bank carrying REASONS could not predict the cast at all, and that is a GAP the sheet
+  // must show beside the action instead of a silence indistinguishable from a clean pass.
+  if (!predicted)
+    return reasons.length
+      ? [
+          row(
+            index,
+            action,
+            `the client predicted this cast’s effect on ${target_id}`,
+            'a predicted HP for the planned target',
+            reasons.join(', '),
+            false,
+            `PREDICTION GAP · ${build}`
+          ),
+        ]
+      : []
+  // THE INPUTS, not only the outputs (#2044). Both sides draw the damage out of the same authored band off the
+  // SAME per-turn clock, so a divergence of one HP is a mismatched ROLL INPUT — the seat's slot or the turn's
+  // entropy — and a row that prints only the two numbers cannot say which. The bank carries the clock it predicted
+  // with; it rides the divergence row so the next run names the input instead of re-opening the question.
+  const clock = banked.clock ?? null
+  const inputs = clock
+    ? `turn_ordinal ${clock.turn_ordinal} · turn_entropy ${clock.turn_entropy} · seat ${clock.seat} · slot ${clock.slot} · roll ${banked.damage_roll ?? 'unbanked'}`
+    : 'no clock banked — this prediction cannot name the roll it drew'
+  const trivial = trivial_prediction(predicted)
+  // `read_gap` already refused every action whose target is absent from this read, so the lookup is total here.
+  const committed = Number(find(after, target_id).hp_committed)
   return [
-    row(
-      index,
-      action,
-      `the authority resolved the HP the client predicted for ${target_id}`,
-      `${predicted.remaining_hp} hp (${rank})`,
-      `${committed} hp (committed fold)`,
-      Number(predicted.remaining_hp) === committed,
-      `PREDICTION↔AUTHORITY · ${build}`
-    ),
+    {
+      ...row(
+        index,
+        action,
+        `the authority resolved the HP the client predicted for ${target_id}`,
+        `${predicted.remaining_hp} hp (${rank})`,
+        `${committed} hp (committed fold)`,
+        Number(predicted.remaining_hp) === committed,
+        `PREDICTION↔AUTHORITY · ${build} · ${inputs}${trivial ? ` · ${TRIVIAL_NOTE}` : ''}`
+      ),
+      ...(trivial ? { trivial: true } : {}),
+    },
   ]
 }
 
@@ -298,10 +384,21 @@ const enemy_walks = (before, after) =>
  *     the payment must belong to a fighter that arrived this turn. A spring charged to a fighter that never moved
  *     is the turn-start firing this whole family is about.
  * @param {Array<{ cell: { x: number, y: number }, turn: number, spell_key: string }>} armed
- * @param {object} before @param {object} after the reads either side of the turn just committed
+ * @param {object} before @param {object} raw_after the reads either side of the turn just committed — the
+ *   post-commit one raw, so a refusal carrying only the terminal result fold still grades (`graded_after`)
  * @returns {{ rows: Array<object>, remaining: Array<object> }}
  */
-export const assert_traps_sprung = (armed, before, after) => {
+export const assert_traps_sprung = (armed, before, raw_after) => {
+  // Same no-read law as every action row (#2044): a turn whose post-commit truth is unreadable proves nothing
+  // about a trap, and coercing the missing entrant's HP to 0 would have printed a spring that nobody measured.
+  const after = graded_after(raw_after)
+  if (!after)
+    return {
+      rows: armed.length
+        ? [no_read_row(0, null, 'the armed traps are checked against a readable turn', raw_after?.error ?? 'no read')]
+        : [],
+      remaining: armed,
+    }
   const rows = []
   const remaining = []
   const walks = enemy_walks(before, after)
@@ -373,6 +470,14 @@ export const assert_cross_client = (plan, result, observer) => {
   // A refused turn has nothing to be visible: `assert_turn` already owns that failure, and adding a second
   // FAIL row for the same fact would inflate the sheet instead of informing it.
   if (!result.ok || !result.after) return { rows: [], status_proofs: 0 }
+  // The ACTOR's own post-commit truth, live roster or terminal result fold — a turn the actor cannot read is not
+  // a cross-client pass (#2044); it is a row saying the comparison had only one side.
+  const mine = graded_after(result.after)
+  if (!mine)
+    return {
+      rows: [no_read_row(0, null, 'the acting client read its own committed turn', result.after?.error ?? 'no read')],
+      status_proofs: 0,
+    }
   if (!observer?.ok)
     return {
       rows: [
@@ -388,7 +493,6 @@ export const assert_cross_client = (plan, result, observer) => {
       ],
       status_proofs: 0,
     }
-  const mine = result.after
   const watched = new Set([mine.my_id, ...plan.actions.map((a) => a.expect?.target_id).filter(Boolean)])
   const rows = []
   for (const id of watched) {
@@ -518,35 +622,54 @@ const ACTION_ASSERTIONS = {
  * CAN compare prediction to chain and never did has proven nothing about parity, and a sheet that reports PASS on
  * that is exactly the disease this oracle was built to cure (a gate structurally incapable of failing). Zero
  * resolved comparisons is a FAIL that names why, never a silent pass.
- * @param {{ checked: number, unresolved: Array<string> }} tally
+ * @param {{ checked: number, trivial?: number, unresolved: Array<string> }} tally
  * @returns {Array<object>}
  */
-export const assert_prediction_proofs = ({ checked = 0, unresolved = [] } = {}) => [
-  row(
-    0,
-    null,
-    'the run compared at least one prediction against the authority',
-    '≥ 1 resolved prediction↔chain comparison',
-    checked ||
-      `0 — ${unresolved.length ? `every cast was unpredictable (${[...new Set(unresolved)].join(', ')})` : 'the surface banked no predictions (an old build, or no cast landed)'}`,
-    checked >= 1,
-    unresolved.length
-      ? `${[...new Set(unresolved)].length} unresolved reason(s): ${[...new Set(unresolved)].join(', ')}`
-      : ''
-  ),
-]
+export const assert_prediction_proofs = ({ checked = 0, trivial = 0, unresolved = [] } = {}) => {
+  // WHY zero, exactly. Three different holes look identical at the tally and must never share one sentence: no
+  // bank at all, every cast unpredictable, or every comparison TRIVIAL (a saturated 0-hp row that agrees for a
+  // whole range of rolls). Reporting the third as "banked no predictions" would replace one lie with another.
+  const reasons = [...new Set(unresolved)]
+  const why = reasons.length
+    ? `every cast was unpredictable (${reasons.join(', ')})`
+    : trivial
+      ? `${trivial} trivial comparison(s) only — a saturated 0-hp prediction grades no roll`
+      : 'the surface banked no predictions (an old build, or no cast landed)'
+  return [
+    row(
+      0,
+      null,
+      'the run compared at least one prediction against the authority',
+      '≥ 1 resolved prediction↔chain comparison',
+      checked || `0 — ${why}`,
+      checked >= 1,
+      [
+        reasons.length ? `${reasons.length} unresolved reason(s): ${reasons.join(', ')}` : '',
+        trivial ? `${trivial} trivial row(s) excluded from the count` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    ),
+  ]
+}
 
 /** The parity tally a run accumulates from one turn's banks — `checked` counts exactly the comparisons
- *  `assert_prediction` actually graded (never a self-target: see its header on the commit window). */
+ *  `assert_prediction` actually graded and that could DISCRIMINATE (never a self-target: see its header on the
+ *  commit window; never a saturated 0-hp row: see `trivial_prediction`). `trivial` carries the excluded ones so
+ *  the run-level row can say WHY it compared nothing rather than blaming a missing bank. */
 export const prediction_tally = (plan, result) => {
   const banks = result?.predicted ?? []
   const me = result?.before?.my_id ?? null
   const targets = new Map(plan.actions.map((action, index) => [index, action.expect?.target_id ?? null]))
+  const graded = banks.flatMap((bank) => {
+    const target = targets.get(bank.index)
+    if (!target || target === me) return []
+    const predicted = (bank.hp ?? []).find((row) => row.id === target)
+    return predicted ? [predicted] : []
+  })
   return {
-    checked: banks.filter((bank) => {
-      const target = targets.get(bank.index)
-      return !!target && target !== me && (bank.hp ?? []).some((row) => row.id === target)
-    }).length,
+    checked: graded.filter((predicted) => !trivial_prediction(predicted)).length,
+    trivial: graded.filter(trivial_prediction).length,
     unresolved: banks.flatMap((bank) => bank.unresolved ?? []),
   }
 }
@@ -572,22 +695,36 @@ export const assert_turn = (plan, result) => {
         'every action assertion is moot — the turn never landed'
       ),
     ]
-  const { before, after } = result
+  const { before } = result
+  // The roster this turn's facts are graded against — or, when this turn's killing blow ENDED the fight, the
+  // terminal result fold the seam publishes beside its refusal. Null means the client held neither, and every
+  // action below becomes one honest gap row instead of a sheet of coerced numbers (#2044).
+  const after = graded_after(result.after)
+  const terminal = !!after?.terminal
   const banked = new Map((result.predicted ?? []).map((bank) => [bank.index, bank]))
   const rows = plan.actions.flatMap((action, index) => {
     const check = ACTION_ASSERTIONS[action.expect?.type]
-    return check
-      ? [...check(index, action, before, after), ...assert_prediction(index, action, banked.get(index), before, after)]
-      : [
-          row(
-            index,
-            action,
-            'the bot knows how to check this action',
-            'a known expectation type',
-            action.expect?.type ?? 'none',
-            false
-          ),
-        ]
+    if (!check)
+      return [
+        row(
+          index,
+          action,
+          'the bot knows how to check this action',
+          'a known expectation type',
+          action.expect?.type ?? 'none',
+          false
+        ),
+      ]
+    const gap = read_gap(index, action, result.after, before, after)
+    if (gap.length) return gap
+    const graded = [
+      ...check(index, action, before, after),
+      ...assert_prediction(index, action, banked.get(index), before, after),
+    ]
+    // A row graded off the result fold never poses as a roster read — it says where it looked.
+    return terminal
+      ? graded.map((r) => ({ ...r, note: [r.note, RESULT_FOLD_NOTE].filter(Boolean).join(' · ') }))
+      : graded
   })
   // THE BUDGET ROW — actions commit as one batch, so AP is the turn's own fact, not any single cast's. It
   // reads the turn-start budget (see the two-clocks note): a batch over budget is refused by the authority,

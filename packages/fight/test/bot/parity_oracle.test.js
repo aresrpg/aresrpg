@@ -138,7 +138,7 @@ describe('#1144 — the bot compares its PREDICTION against the chain, not the c
     const result = commit({ before_hp: 60, after_hp: 18, predicted: [bank(null, { unresolved: ['chance'] })] })
     expect(parity_rows(assert_turn(plan, result))).toHaveLength(0)
     const tally = prediction_tally(plan, result)
-    expect(tally).toEqual({ checked: 0, unresolved: ['chance'] })
+    expect(tally).toEqual({ checked: 0, trivial: 0, unresolved: ['chance'] })
     // and the run says so out loud instead of reporting a quiet PASS
     const [proof] = assert_prediction_proofs(tally)
     expect(proof.pass).toBe(false)
