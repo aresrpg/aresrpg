@@ -16,6 +16,38 @@ import './hud-panels.css'
 import './map.css'
 import './worldmap.css'
 
+/** @typedef {{ zoom: number, ox: number, oy: number }} View */
+/** @typedef {{ width: number, height: number }} Canvas_Size */
+
+// Smallest zoom = the bitmap exactly filling the canvas (no black borders past the world edge —
+// "cannot dezoom too far"). Computed from the live canvas at any drawer size.
+const min_zoom_for = (/** @type {Canvas_Size} */ cv) => Math.max(cv.width, cv.height) / MAP_PX
+
+// Clamp zoom to [min_fill, 8] and pan so the bitmap keeps covering the canvas. Pure: view in, new view out —
+// the ref that holds the live view is written once at the event edge, never through.
+export const clamp_view = (/** @type {Canvas_Size} */ cv, /** @type {View} */ v) => {
+  const zoom = Math.max(min_zoom_for(cv), Math.min(8, v.zoom))
+  const map_w = MAP_PX * zoom
+  return {
+    zoom,
+    ox: Math.min(0, Math.max(cv.width - map_w, v.ox)),
+    oy: Math.min(0, Math.max(cv.height - map_w, v.oy)),
+  }
+}
+
+// Center on the player at a comfortable zoom (2x fill) — the "find me" view. No player: center the world.
+export const center_on_player = (
+  /** @type {Canvas_Size} */ cv,
+  /** @type {{ x: number, y: number } | null | undefined} */ p,
+) => {
+  const zoom = min_zoom_for(cv) * 2
+  if (p) {
+    const { sx, sy } = world_to_screen(p.x, p.y, { zoom, ox: 0, oy: 0 })
+    return clamp_view(cv, { zoom, ox: cv.width / 2 - sx, oy: cv.height / 2 - sy })
+  }
+  return clamp_view(cv, { zoom, ox: (cv.width - MAP_PX * zoom) / 2, oy: (cv.height - MAP_PX * zoom) / 2 })
+}
+
 /**
  * Full-screen colored terrain map: a cached pan/zoom blit of the seeded world with the live player
  * marker. Drag to pan, scroll to zoom around the cursor, Recenter to snap back to the player.
@@ -32,11 +64,12 @@ export function MapDrawer() {
   const [ready, set_ready] = useState(false)
   const [view_version, set_view_version] = useState(0) // bumped (rAF-coalesced) on any view change
 
-  // Latest player cell in a ref so view helpers can read it without re-subscribing.
+  // Latest player cell in a ref so the resample effect and Recenter can feed it to center_on_player
+  // without re-subscribing.
   const player_ref = useRef(player_cell)
   player_ref.current = player_cell
 
-  // Coalesce overlay re-renders to one per animation frame (drag/zoom mutate view_ref directly).
+  // Coalesce overlay re-renders to one per animation frame (drag/zoom swap view_ref.current directly).
   const bump_raf = useRef(0)
   const bump = useCallback(() => {
     if (bump_raf.current) return
@@ -45,35 +78,6 @@ export function MapDrawer() {
       set_view_version((v) => v + 1)
     })
   }, [])
-
-  // Smallest zoom = the bitmap exactly filling the canvas (no black borders past the world edge —
-  // "cannot dezoom too far"). Computed from the live canvas at any drawer size.
-  const min_zoom_for = (/** @type {HTMLCanvasElement} */ cv) => Math.max(cv.width, cv.height) / MAP_PX
-
-  // Clamp zoom to [min_fill, 8] and pan so the bitmap keeps covering the canvas.
-  const clamp_view = (/** @type {HTMLCanvasElement} */ cv) => {
-    const v = view_ref.current
-    v.zoom = Math.max(min_zoom_for(cv), Math.min(8, v.zoom))
-    const map_w = MAP_PX * v.zoom
-    v.ox = Math.min(0, Math.max(cv.width - map_w, v.ox))
-    v.oy = Math.min(0, Math.max(cv.height - map_w, v.oy))
-  }
-
-  // Center on the player at a comfortable zoom (2x fill) — the "find me" view.
-  const center_on_player = (/** @type {HTMLCanvasElement} */ cv) => {
-    const v = view_ref.current
-    v.zoom = min_zoom_for(cv) * 2
-    const p = player_ref.current
-    if (p) {
-      const { sx, sy } = world_to_screen(p.x, p.y, { zoom: v.zoom, ox: 0, oy: 0 })
-      v.ox = cv.width / 2 - sx
-      v.oy = cv.height / 2 - sy
-    } else {
-      v.ox = (cv.width - MAP_PX * v.zoom) / 2
-      v.oy = (cv.height - MAP_PX * v.zoom) / 2
-    }
-    clamp_view(cv)
-  }
 
   // 1) Lazy one-pass sample of the world into an offscreen canvas (deferred so opening never janks).
   useEffect(() => {
@@ -89,7 +93,7 @@ export function MapDrawer() {
       octx.putImageData(sample_world(octx, seed), 0, 0)
       bitmap_ref.current = off
       const cv = canvas_ref.current
-      if (cv) center_on_player(cv)
+      if (cv) view_ref.current = center_on_player(cv, player_ref.current)
       set_ready(true)
       bump()
     })
@@ -97,7 +101,7 @@ export function MapDrawer() {
       cancelled = true
       cancelAnimationFrame(id)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- center_on_player/bump read live refs (view_ref/player_ref) and would rerun this seed-triggered resample on every render if listed
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bump is stable ([] useCallback) and the view helpers are module-scope pure; listing them would rerun this seed-triggered resample for no behavior change
   }, [seed])
 
   // 2) Blit the cached terrain bitmap at the current view (re-runs on every view change; no rAF loop —
@@ -131,15 +135,15 @@ export function MapDrawer() {
       const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
       const next = Math.max(min_zoom_for(cv), Math.min(8, v.zoom * factor))
       const k = next / v.zoom
-      v.ox = cxp - (cxp - v.ox) * k
-      v.oy = cyp - (cyp - v.oy) * k
-      v.zoom = next
-      clamp_view(cv)
+      view_ref.current = clamp_view(cv, {
+        zoom: next,
+        ox: cxp - (cxp - v.ox) * k,
+        oy: cyp - (cyp - v.oy) * k,
+      })
       bump()
     }
     cv.addEventListener('wheel', on_wheel, { passive: false })
     return () => cv.removeEventListener('wheel', on_wheel)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- min_zoom_for/clamp_view read view_ref live; listing them would reattach the wheel listener every render for no behavior change
   }, [bump])
 
   // drag-to-pan (pointer deltas are in displayed px -> scale to canvas-internal px)
@@ -155,10 +159,14 @@ export function MapDrawer() {
     if (!drag_ref.current) return
     const cv = canvas_ref.current
     const k = scale_factor()
-    view_ref.current.ox += (e.clientX - drag_ref.current.x) * k
-    view_ref.current.oy += (e.clientY - drag_ref.current.y) * k
+    const v = view_ref.current
+    const panned = {
+      zoom: v.zoom,
+      ox: v.ox + (e.clientX - drag_ref.current.x) * k,
+      oy: v.oy + (e.clientY - drag_ref.current.y) * k,
+    }
+    view_ref.current = cv ? clamp_view(cv, panned) : panned
     drag_ref.current = { x: e.clientX, y: e.clientY }
-    if (cv) clamp_view(cv)
     bump()
   }
   const on_up = () => {
@@ -167,7 +175,7 @@ export function MapDrawer() {
 
   const recenter = () => {
     const cv = canvas_ref.current
-    if (cv) center_on_player(cv)
+    if (cv) view_ref.current = center_on_player(cv, player_ref.current)
     bump()
   }
 
