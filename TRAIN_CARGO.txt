@@ -1,2 +1,11 @@
-a86d089d365e0028277fbdccd3119fb7a348ea78 lane/1862-sponsored-adoption fix(tx): adopt sponsored creates from the certified execute receipt
-b3f3cb128a1fe7a6bf5a813984ad994f6d5ed40d lane/1862-sponsored-adoption api: return the certified execute receipt, not effects only
+005e2b75822222fc81a14b25af81dcc2d724b3ac lane/2007-p2p-authority chore(gates): tighten three coop-visible floors to their measured counts
+c5bebd620fdedd2227f89a3948816cca2c29d146 lane/2007-p2p-authority fix(presence): the minimap reads composed rows through their one door
+c95cc0dc092adab92a6e1528a3a842a0bfe9d765 lane/2007-p2p-authority chore(presence): retire the last references to the copy and map this train removed
+2b25ccdf14b8bde14e2a4496de273251ca898b85 lane/2007-p2p-authority fix(presence): the resolved owner must be the answer about THIS character
+4e4194999e5ecf625a7936bfe8b9e8766465b993 lane/2007-p2p-authority fix(presence): import the render-row lookup the flight retarget uses
+9d1d23223bfd74a09b22383b5af8aef1a4443106 lane/2007-p2p-authority fix(presence): the canonical character name is the only name a friend row shows
+efbeb3067fb78cdc91ccb6e3921e1edd4cb2f2d2 lane/2007-p2p-authority refactor(presence): one map per fact — observations and my own followers split apart
+a000c04d3c76ee09a9516606be1532b17dab1fb1 lane/2007-p2p-authority fix(presence): the friends panel reports observations, never an online verdict
+5e9526a5850a4aebd5242bdba2e18368efc2a897 lane/2007-p2p-authority fix(presence): nameplates hand the menu a character id, nothing more
+f7bbae3515206f79841ae315e50b440207d01e50 lane/2007-p2p-authority fix(presence): resolve a menu target's owner from the character book, not the opener
+68ca13bb58c2a3fbcf4c2b20570ec5c88f26f859 lane/2007-p2p-authority fix(presence): fast travel resolves the target from the authoritative read, not an observation
