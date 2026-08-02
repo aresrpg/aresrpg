@@ -1,1 +1,4 @@
-0a5654e144ea61fe945badee736aedd2e461b04b train/train-78 feat(lint): the hook law runs — rules-of-hooks was never wired
+615cbd8045f99c61272d1aa6ecedffd2be59b476 train/train-79 fix(gold): retarget the rig specs onto the modules that replaced the deleted ones
+0cb634eb313c8aa3e77b774d4082802586358222 train/train-79 fix(gates): wire the four gate-orphan suites, and a meta-test for the class
+6e3695b8a0fccb8038b6405e03129d3fb01cfdf0 train/train-79 fix(gates): baseline writes are max-of-3, single-pass refused
+fad02490f154b56103cf346cbe63ba8d6ab48f7b train/train-79 refactor(hud): drop the orphaned launcher dock CSS and every stale surface note
