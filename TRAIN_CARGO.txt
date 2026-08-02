@@ -1,1 +1,3 @@
-62b8031e683312e7ab6c16a8db21047d2f7fb735 lane/2028-gold-mint fix(gold): mint through the post-#1714 two-transaction door
+7d4481ea2f39f5ac3e6b7cdeb16ef037403541c4 lane/ceremony-batch chore(git): ignore the ceremony's resume journal
+c2531655271f87403f9506963bd9aa1b95d5132b lane/ceremony-batch feat(ceremony): batch upgrade mode — one landed tree, one pin commit
+8009c98fd56cbb0c8b5fa1df790a53e120f84f31 lane/ceremony-batch chore(ceremony): foundation upgraded to 0x4f26bcf2 (D41/D42 train)
