@@ -1,1 +1,4 @@
-260c7029111219cb4482b16ca2be1fcbd1724daa lane/ceremony-batch chore(ceremony): the remaining 8 packages upgraded (D41/D42 train)
+8c4944f004b5dac4abe83fc2b2d0aa2bb4810c5c lane/trap-family fix(fight): stamp the turn ack with its enqueue-time session identity
+7f6a2cdca3f2394023943f74231d3dfc341d05f4 lane/trap-family docs(fight): correct the trap-visibility header after the one-ledger fold
+fc74e5ae51f3a4c45a2fb1ccf053f86105c5d70b lane/trap-family fix(fight): fold the public trap board into the one ledger
+f92b4919d287b0bbb9cca8152c78408a40dcc437 lane/trap-family test(sim): seal the trap's no-owner-immunity rule
