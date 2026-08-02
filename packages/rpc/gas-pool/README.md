@@ -96,8 +96,13 @@ Bearer `Authorization` on both endpoints:
 
 - `POST /v1/reserve_gas` `{ gas_budget, reserve_duration_secs }` →
   `{ result: { sponsor_address, reservation_id, gas_coins: [{objectId, version, digest}] }, error }`
-- `POST /v1/execute_tx` `{ reservation_id, tx_bytes, user_sig }` → `{ effects, error }` — effects PRESENT ⇒
-  EXECUTED (never retry); effects null + error ⇒ pre-execution rejection (no gas burned).
+- `POST /v1/execute_tx` `{ reservation_id, tx_bytes, user_sig, options? }` → `{ effects, tx_block_response, error }`
+  — effects PRESENT ⇒ EXECUTED (never retry); effects null + error ⇒ pre-execution rejection (no gas burned).
+  `options` is a JSON-RPC `SuiTransactionBlockResponseOptions`; given ANY, the station answers
+  `tx_block_response` (the full response, effects NESTED inside it) instead of the flat `effects` field, so a
+  reader must look in both homes. `api/sponsor.mjs` sends `{showEffects, showObjectChanges, showEvents}` — the
+  created objects and their types are what let a sponsored client adopt them from the execute round-trip
+  instead of polling the read layer ([#1862](https://github.com/aresrpg/aresrpg/issues/1862)).
 
 A real sponsored `zones::join_world` rode reserve → sender-sign → station sponsor-sign → execute to digest
 `2coyX6ihxaDEw2KFgLmV8SHMJDpP8cyrmWNEjcmMYYFE` (Success); `balance_changes` showed **only the sponsor** paid

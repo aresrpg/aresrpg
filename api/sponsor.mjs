@@ -543,6 +543,14 @@ export async function station_reserve({ gas_budget, reserve_duration_secs }) {
     throw new Error('sponsor-reserve-failed: malformed reservation (missing sponsor/id/coins) — refusing')
   return { sponsor_address, reservation_id, gas_coins }
 }
+// #1862 — the CERTIFIED RECEIPT, not effects-only. `execute_tx` takes JSON-RPC response OPTIONS
+// (sui-gas-pool `ExecuteTxRequest.options`); given any, the station answers `tx_block_response` (the full
+// SuiTransactionBlockResponse) instead of the bare `effects` field. Asking for objectChanges + events is what
+// lets the sponsored client ADOPT the objects the transaction created from the execute round-trip itself,
+// instead of demoting to a fullnode waitForTransaction it must poll until the read layer catches up.
+// `showEffects` is NOT optional: the station NULLS the fields the caller did not ask for, and effects are this
+// money path's proof-of-execution AND its gas charge. Unlisted flags default false (the struct is serde-default).
+const EXECUTE_RESPONSE_OPTIONS = { showEffects: true, showObjectChanges: true, showEvents: true }
 async function station_execute({ reservation_id, tx_bytes, user_sig }) {
   require_station_config()
   let response
@@ -550,14 +558,27 @@ async function station_execute({ reservation_id, tx_bytes, user_sig }) {
     response = await fetch(`${process.env.GAS_STATION_URL}/v1/execute_tx`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.GAS_STATION_AUTH}` },
-      body: JSON.stringify({ reservation_id, tx_bytes, user_sig }),
+      body: JSON.stringify({ reservation_id, tx_bytes, user_sig, options: EXECUTE_RESPONSE_OPTIONS }),
     })
   } catch (error) {
     throw new Error(`sponsor-station-down: execute_tx unreachable (${error?.message ?? error}) — refusing`)
   }
   if (!response.ok) throw new Error(`sponsor-station-error: execute_tx HTTP ${response.status} — refusing`)
   const body = await response.json().catch(() => ({}))
-  return { effects: body?.effects ?? null, error: body?.error ?? null }
+  // TWO HOMES, ONE MEANING (money-critical): a station honouring `options` nests effects under
+  // `tx_block_response`; one that ignores them keeps the flat `effects` field. Read BOTH — effects present in
+  // EITHER place means the transaction EXECUTED (gas burned, never retried). Reading only the flat field would
+  // read every successful sponsored tx as a pre-execution rejection and refund a hold against burned gas.
+  const block = body?.tx_block_response ?? null
+  return {
+    effects: block?.effects ?? body?.effects ?? null,
+    // Created/mutated objects WITH their on-chain types, and the events the same receipt consumers parse.
+    // Absent (an options-blind station, or a node that could not resolve them) ⇒ null, and the client keeps
+    // its honest wait — never a silently empty adoption.
+    object_changes: Array.isArray(block?.objectChanges) ? block.objectChanges : null,
+    events: Array.isArray(block?.events) ? block.events : null,
+    error: body?.error ?? null,
+  }
 }
 
 export function assert_tx_matches_reservation(tx_bytes, reservation) {
@@ -767,7 +788,7 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
   // Exactly one execute call: effects mean gas burned, so this path never auto-retries. A THROW here (station
   // unreachable / HTTP error) is the one shape that cannot prove non-execution, so the hold is deliberately NOT
   // released: it lapses at its own expiry, and until then the player's cap counts a spend that may be real.
-  const { effects, error } = await station_execute({
+  const { effects, object_changes, events, error } = await station_execute({
     reservation_id: reservationId,
     tx_bytes: txBytes,
     user_sig: userSig,
@@ -783,7 +804,15 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
   stats.spent += charge
   stats.charged_total += charge
   stats.addresses.add(reservation.sender)
-  return { effects, digest: effects?.transactionDigest ?? null }
+  // The certified receipt as the client needs it: effects (status + gas) plus the created/mutated objects and
+  // events the transaction produced. `objectChanges`/`events` are omitted — not faked — when the station did
+  // not carry them, so the client can tell "adopt from the receipt" from "wait for the read layer" (#1862).
+  return {
+    effects,
+    digest: effects?.transactionDigest ?? null,
+    ...(object_changes ? { objectChanges: object_changes } : {}),
+    ...(events ? { events } : {}),
+  }
 }
 
 async function handle_sponsor_post(pathname, body) {

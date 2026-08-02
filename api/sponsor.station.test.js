@@ -217,7 +217,14 @@ describe('executeSponsored — once-only, exact-charge booking from the returned
     const call = _fetch_calls.at(-1)
     expect(call.url).toBe('http://rpc-gas-pool.test:9527/v1/execute_tx')
     expect(call.init.headers.authorization).toBe('Bearer test-bearer')
-    expect(JSON.parse(call.init.body)).toEqual({ reservation_id: 101, tx_bytes: txBytes, user_sig: 'usersig' })
+    // #1862: the call also ASKS for the certified receipt (effects + objectChanges + events). The wire contract
+    // and the receipt-relocation it triggers are proven in sponsor.execute_receipt.test.js.
+    expect(JSON.parse(call.init.body)).toEqual({
+      reservation_id: 101,
+      tx_bytes: txBytes,
+      user_sig: 'usersig',
+      options: { showEffects: true, showObjectChanges: true, showEvents: true },
+    })
     // the day's ledger settles to EXACTLY real_charge_mist(gasUsed) = 3M (this reservation carried no hold, so
     // the settle books the whole executed charge — the pre-hold shape a rolling deploy can still hand us)
     const charge = S.real_charge_mist(eff.gasUsed)
