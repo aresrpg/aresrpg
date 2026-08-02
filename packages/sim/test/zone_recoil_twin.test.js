@@ -39,7 +39,7 @@ import {
 import { raw_effect } from './missing_effect_helpers.js'
 
 const EARTH = 2
-const SHAPE_CIRCLE = spell_effect.SHAPE_CIRCLE
+const { SHAPE_CIRCLE } = spell_effect
 const SLAM_DAMAGE = 36
 const RECOIL = 10
 
@@ -69,7 +69,7 @@ const slam = ({ recoil = true } = {}) => ({
 })
 
 /** The mob casts its own zone on itself — the reported repro: the area includes the caster's cell. */
-const mob_slams_its_own_cell = (definition) => {
+const mob_slams_its_own_cell = definition => {
   const initial = turn_to(fight([definition], { p0: 200, m0: 200 }), ENEMY)
   return { initial, after: cast(initial, definition.id, ENEMY_CELL, ENEMY) }
 }
@@ -81,8 +81,14 @@ describe('#1809 — a mob zone cast that covers its own cell', () => {
   test('control — the enemies-only zone reaches the player and spares the mob that cast it', () => {
     const { initial, after } = mob_slams_its_own_cell(slam({ recoil: false }))
     expect(after.accepted, 'the cast resolved').toBe(true)
-    expect(hp(after, ENEMY), 'the caster is inside its own zone and takes nothing from it').toBe(hp(initial, ENEMY))
-    expect(hp(initial, CASTER) - hp(after, CASTER), 'the player in the zone is hit').toBeGreaterThan(0)
+    expect(
+      hp(after, ENEMY),
+      'the caster is inside its own zone and takes nothing from it',
+    ).toBe(hp(initial, ENEMY))
+    expect(
+      hp(initial, CASTER) - hp(after, CASTER),
+      'the player in the zone is hit',
+    ).toBeGreaterThan(0)
   })
 
   test('RECOIL is caster-side, not a zone row: the caster pays the flat value and no enemy pays it', () => {
@@ -92,13 +98,17 @@ describe('#1809 — a mob zone cast that covers its own cell', () => {
     // cast.move `apply_effect`: `if (kind == k_caster_damage()) { hit(caster, effect.value()); return false }`
     expect(
       hp(with_recoil.initial, ENEMY) - hp(with_recoil.after, ENEMY),
-      'the chain debits the caster the FLAT authored value — no stats, no element, no filter, no proc roll'
+      'the chain debits the caster the FLAT authored value — no stats, no element, no filter, no proc roll',
     ).toBe(RECOIL)
 
     // …and the recoil never reaches the zone. The player's loss is the DAMAGE line's, byte-identical to the
     // same cast without a recoil row at all.
-    const player_loss = (probe) => hp(probe.initial, CASTER) - hp(probe.after, CASTER)
-    expect(player_loss(with_recoil), 'a recoil row must not inflate what the zone deals').toBe(player_loss(without))
+    const player_loss = probe =>
+      hp(probe.initial, CASTER) - hp(probe.after, CASTER)
+    expect(
+      player_loss(with_recoil),
+      'a recoil row must not inflate what the zone deals',
+    ).toBe(player_loss(without))
   })
 
   test('an ONLY_CASTER recoil aimed away from the caster still lands — the zone is irrelevant to kind 3', () => {
@@ -117,8 +127,14 @@ describe('#1809 — a mob zone cast that covers its own cell', () => {
     const initial = fight([definition], { p0: 200, m0: 200 })
     const after = cast(initial, definition.id, ENEMY_CELL)
     expect(after.accepted).toBe(true)
-    expect(hp(initial, CASTER) - hp(after, CASTER), 'recoil is paid wherever the cast was aimed').toBe(RECOIL)
-    expect(hp(initial, ENEMY) - hp(after, ENEMY), 'and never leaks onto the aimed cell').toBe(0)
+    expect(
+      hp(initial, CASTER) - hp(after, CASTER),
+      'recoil is paid wherever the cast was aimed',
+    ).toBe(RECOIL)
+    expect(
+      hp(initial, ENEMY) - hp(after, ENEMY),
+      'and never leaks onto the aimed cell',
+    ).toBe(0)
   })
 
   test('the caster-side kinds are exactly the two the chain short-circuits before the zone walk', () => {
@@ -130,6 +146,8 @@ describe('#1809 — a mob zone cast that covers its own cell', () => {
 })
 
 test('CASTER_CELL and ENEMY_CELL sit inside one size-4 circle (the fixture measures what it claims)', () => {
-  const distance = Math.abs(CASTER_CELL.x - ENEMY_CELL.x) + Math.abs(CASTER_CELL.y - ENEMY_CELL.y)
+  const distance =
+    Math.abs(CASTER_CELL.x - ENEMY_CELL.x) +
+    Math.abs(CASTER_CELL.y - ENEMY_CELL.y)
   expect(distance).toBeLessThanOrEqual(4)
 })
