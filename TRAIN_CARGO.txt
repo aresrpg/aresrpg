@@ -1,4 +1,5 @@
-576371ad3dcae66cb047ca754049e743e06b608c lane/qol-toasts feat(auto-search): persist the settings group and add a targets axis
-c544da6344d98d1a2133af5f9829ddc1d708bea5 lane/qol-toasts fix(craft): report the roll, not the transaction — honest craft outcomes
-08d14e89d7e75d698d69adbf2954aa07ea5e7cff lane/qol-toasts style(toast): prettier formatting for the toast-door guard (#2032)
-759e8e23d8f59d6c2a90fced3a3b5da1711e3cb5 lane/qol-toasts fix(toast): extract player copy at the door, never render [object Object]
+e98eeee1f484c7e60320f6d53505b398cd2516ce train/train-70 style(sim): satisfy the sim package's own lint leg
+ae10f4c9a823c48968bc7c31598345f07771ed8d train/train-70 fix(discovery): give the finality-reconcile leg a real read ladder
+1f2368179c6b4ecddff44fdd53133ae34b286357 train/train-70 fix(bot): the oracle refuses what it cannot read
+b3c02ddbe30480ba2676e6603857332d0c876bf1 train/train-70 fix(sim): resolve recoil on the caster, not through the zone
+c2328251a09c15e7ffedaf2cf35f0cd85a7622ca train/train-70 fix(fight): hand the turn over once, when the chain says it is playable
