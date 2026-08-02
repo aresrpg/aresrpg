@@ -2450,7 +2450,9 @@ impl Processor for AresSnapshotHandler {
                         }
                     },
                     (WORLD_MODULE, WORLD_TYPE) => map_world_object(&id, mv.contents()),
-                    (PARTY_MODULE, PARTY_TYPE) => super::party::map_party_object(&id, mv.contents()),
+                    (PARTY_MODULE, PARTY_TYPE) => {
+                        super::party::map_party_object(&id, mv.contents())
+                    }
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
                         map_fight_outcome_object(&id, mv.contents(), obj.owner(), ts_ms)

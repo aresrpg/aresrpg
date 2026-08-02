@@ -488,7 +488,12 @@ mod tests {
     #[test]
     fn pending_invites_project_from_the_party_object_body() {
         let id = oid(0x11).to_canonical_string(true);
-        let body = encode_party(0x11, 0x21, &[(0x21, 0x31, 0)], &[(0x22, 0x32), (0x23, 0x33)]);
+        let body = encode_party(
+            0x11,
+            0x21,
+            &[(0x21, 0x31, 0)],
+            &[(0x22, 0x32), (0x23, 0x33)],
+        );
         assert_eq!(
             map_party_object(&id, &body),
             Some(vec![RedisWrite::PartyPending {
