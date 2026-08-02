@@ -199,19 +199,23 @@ async function guard(address: string, transaction: Transaction, pin_budget: bool
 
 /**
  * BALANCE-AUTHORITY resolution (#263 — the auto-pass wedge). When the route would contact the sponsor on an
- * UNKNOWN or STALE-low balance, the CLIENT resolves its own balance with ONE read and re-decides: a now-funded
+ * UNKNOWN or STALE-low balance, the CLIENT resolves its own balance and re-decides: a now-funded
  * wallet self-pays DIRECTLY and THE SPONSOR IS NEVER CONTACTED (the @server refuses > 0.2 SUI with a
  * self-pay-required 400 that once froze a live fight). A FRESH-low route is already client-decided — no redundant
  * read. A read failure keeps the original route (safe: sponsor-first + the self-pay-required backstop). Reuses the
  * ONE routing home (decide_sponsor_route) and its ONE threshold (SELF_PAY_THRESHOLD_MIST) — no parallel policy.
+ * #1854: `resolve_balance_mist` reads the client's BALANCE HOME (auth's `sui_balance_mist`, whose single writer
+ * `refresh_sui_balance` also paints the wallet bar) — not a store-bypassing fullnode getBalance per sign. The
+ * refresh WRITES the home, so the next sign routes off it for free and the read is bounded by the home's own
+ * freshness window, never one per transaction.
  */
 async function client_resolved_route(
   initial: ReturnType<typeof decide_sponsor_route>,
   route_input: Parameters<typeof decide_sponsor_route>[0],
-  fetch_balance_mist: () => Promise<bigint | null>
+  resolve_balance_mist: () => Promise<bigint | null>
 ): Promise<ReturnType<typeof decide_sponsor_route>> {
   if (initial.route !== 'sponsored-first' || initial.reason === 'fresh-balance<=threshold') return initial
-  const resolved_mist = await fetch_balance_mist().catch(() => null)
+  const resolved_mist = await resolve_balance_mist().catch(() => null)
   if (resolved_mist == null) return initial
   const rerouted = decide_sponsor_route({
     ...route_input,
@@ -232,6 +236,9 @@ async function client_resolved_route(
  * @param gas_pin optional chained-turn gas-coin directive.
  * @param cached_balance_mist last observed balance, used only by sponsor-eligible routes.
  * @param cached_balance_read_at_ms epoch timestamp of that successful read; null means unknown/stale.
+ * @param resolve_balance_mist #263's balance resolution, read from the caller's BALANCE HOME (#1854 — auth
+ *   wires its store's own refresh here). Omitted ⇒ the fallback's direct fullnode reader, which is all a
+ *   non-auth caller has.
  * @param want_effects opts into the certified gRPC execute result when the wallet supports sign-only.
  * @param sponsor_fallback TEST seam: the fallback's two effects (fresh balance read + the sponsor
  *   door), injected so the routing matrix unit-tests with plain fakes. Production callers omit it.
@@ -246,6 +253,7 @@ export async function execute_tx({
   gas_pin,
   cached_balance_mist = null,
   cached_balance_read_at_ms = null,
+  resolve_balance_mist,
   want_effects = false,
   sponsor_fallback,
 }: {
@@ -258,6 +266,7 @@ export async function execute_tx({
   gas_pin?: GasPin
   cached_balance_mist?: bigint | null
   cached_balance_read_at_ms?: number | null
+  resolve_balance_mist?: () => Promise<bigint | null>
   want_effects?: boolean
   sponsor_fallback?: SponsorFallbackDeps
 }): Promise<TxReceipt> {
@@ -265,8 +274,9 @@ export async function execute_tx({
   if (!feature?.signAndExecuteTransaction) throw new Error('Wallet does not support signAndExecuteTransaction')
 
   const is_zklogin = is_zklogin_wallet(wallet)
-  // The sponsor door + fresh-balance reader, resolved ONCE (real in prod, injected in tests). Used by BOTH the
-  // sponsor-FIRST route and the gas-selection fallback in the catch.
+  // The sponsor door + FRESH fullnode balance reader, resolved ONCE (real in prod, injected in tests). Since
+  // #1854 `fetch_balance_mist` serves ONLY the gas-selection fallback in the catch — a rare post-failure path
+  // that must never sponsor blind, so it deliberately bypasses the (just-proven-wrong) balance home.
   const deps = sponsor_fallback ?? {
     fetch_balance_mist: () => read_sui_balance_mist(address),
     run_sponsored: (tx: Transaction) =>
@@ -286,7 +296,11 @@ export async function execute_tx({
   // #263 (the auto-pass wedge): the CLIENT — never the @server — decides self-pay vs sponsor. A funded wallet
   // resolves its OWN balance and self-pays directly rather than earning a self-pay-required 400 that once froze a
   // live auto-pass at "AUTO PASS IN 0s". See client_resolved_route.
-  initial_route = await client_resolved_route(initial_route, route_input, deps.fetch_balance_mist)
+  initial_route = await client_resolved_route(
+    initial_route,
+    route_input,
+    resolve_balance_mist ?? deps.fetch_balance_mist
+  )
 
   let sponsor_refused = false
   // The honest sponsor refusal to surface if self-pay below ALSO fails on gas selection (a truly-broke wallet the

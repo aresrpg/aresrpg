@@ -32,6 +32,28 @@ const refresh_balance_after_tx = () =>
     () => use_auth.getState().refresh_sui_balance()
   )
 
+// #1854 (SSOT) — THE routing balance every tx door hands the choke, derived from the ONE balance home
+// (`sui_balance_mist` + its read stamp; single writer `refresh_sui_balance`). The route decides on the exact
+// figure the wallet bar renders, so no sign path opens its own per-transaction fullnode getBalance.
+// `resolve_balance_mist` is #263's cold/stale resolution and drives that SAME home — its refresh WRITES the
+// store, so the number is remembered and the next sign routes for free. A refresh that did not advance the read
+// stamp did not land (the home keeps its last-known figure on a failed read) → null, which keeps the original
+// route exactly as a failed fullnode read did.
+// STALENESS BOUND: a funded reading routes self-pay age-independently (sponsor_route.ts's live-QA rule); a low
+// one is re-resolved after BALANCE_FRESH_MS (30s). The home is invalidated on wallet-bar mount + focus/
+// visibility, every balance-surface mount, and every executed tx — and the @server's SPONSOR_REFUSAL_SELF_PAY
+// remains the authoritative net for a stale edge.
+const route_balance_from_home = () => ({
+  cached_balance_mist: use_auth.getState().sui_balance_mist,
+  cached_balance_read_at_ms: use_auth.getState().sui_balance_read_at_ms,
+  resolve_balance_mist: async () => {
+    const stamped_at = use_auth.getState().sui_balance_read_at_ms
+    await use_auth.getState().refresh_sui_balance()
+    const { sui_balance_mist, sui_balance_read_at_ms } = use_auth.getState()
+    return sui_balance_read_at_ms === stamped_at ? null : sui_balance_mist
+  },
+})
+
 export const ENOKI_API_KEY = 'enoki_public_ff89078fe8efa82d3f14732264813b91'
 export const GOOGLE_CLIENT_ID = '263863163058-qn6qhkjmdvmlj8f1n4r0kdi4e608usbo.apps.googleusercontent.com'
 
@@ -148,8 +170,7 @@ export async function sign_and_execute_transaction(
         transaction,
         chain: SUI_CHAIN,
         gas_pin,
-        cached_balance_mist: use_auth.getState().sui_balance_mist,
-        cached_balance_read_at_ms: use_auth.getState().sui_balance_read_at_ms,
+        ...route_balance_from_home(),
         want_effects,
       }),
     refresh_balance_after_tx
@@ -158,6 +179,8 @@ export async function sign_and_execute_transaction(
 
 // Money PTBs split price/royalty from `tx.gas`, so sponsor gas must never fund them. This keeps the ordinary
 // S-54 simulation and dryRun ×1.5 budget pin while closing both sponsor-first and gas-selection fallback routes.
+// The ONE door with no `route_balance_from_home()`: `sponsor_excluded` decides the route on its own, so no
+// balance — home-derived or otherwise — is ever read here.
 export async function sign_and_execute_self_pay_transaction(
   wallet_name: string,
   address: string,
@@ -203,6 +226,10 @@ export async function submit_terminal_random_tx(
         chain: SUI_CHAIN,
         keep_budget: true,
         sponsor_excluded,
+        // #1854: this door used to hand NO balance at all, so every search/gather/crush/open routed
+        // `balance-unknown` and bought a fresh fullnode getBalance per sign. It reads the same home as the
+        // fight door now — a funded wallet self-pays with zero balance round-trips.
+        ...route_balance_from_home(),
         want_effects: true,
       }),
     refresh_balance_after_tx
