@@ -61,13 +61,26 @@ describe('presentation_blocked_cells', () => {
     expect(blocked.has(encode(2, 1))).toBe(true)
   })
 
-  it('keeps a predicted corpse blocked while committed liveness says it is alive', () => {
+  // #2025 — INVERTED from the old "keeps a predicted corpse blocked" pin, which made the defect law: MY kill is
+  // predicted before it is acked, so committed liveness lags a whole receipt behind the eye and behind the
+  // paint's own blocked set. Dead in EITHER projection frees the cell (driven end-to-end in
+  // test/world-shell/corpse_cell_release.test.js).
+  it('frees a predicted corpse cell while committed liveness still says it is alive', () => {
     const fighters = new Map([
       ['hero', { id: 'hero', cell: cell(0, 0), dead: false, committed_dead: false }],
       ['mob-0', { id: 'mob-0', cell: cell(1, 1), dead: true, committed_dead: false }],
     ])
 
-    expect(presentation_blocked_cells(dungeon, fighters, 'hero').has(encode(1, 1))).toBe(true)
+    expect(presentation_blocked_cells(dungeon, fighters, 'hero').has(encode(1, 1))).toBe(false)
+  })
+
+  it('frees a chain-acked corpse cell whose death beat is still holding it visible', () => {
+    const fighters = new Map([
+      ['hero', { id: 'hero', cell: cell(0, 0), dead: false, committed_dead: false }],
+      ['mob-0', { id: 'mob-0', cell: cell(1, 1), dead: false, committed_dead: true }],
+    ])
+
+    expect(presentation_blocked_cells(dungeon, fighters, 'hero').has(encode(1, 1))).toBe(false)
   })
 
   it('keeps static walls, excludes the mover, and honors a guaranteed optimistic vacancy', () => {

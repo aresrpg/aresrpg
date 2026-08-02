@@ -3,12 +3,17 @@
 // #1806 — A CORPSE NEVER BLOCKS A WALK. Occupancy is LIVING-only on every home: the sim's `make_is_occupied`
 // (find_entity_at drops health<=0), the chain's `displacement::add_living_bodies` (twin fixture:
 // packages/move/engine/tests/corpse_release_tests.move), and the client's two blocked-set builders —
-// `project.move_wash`'s wash_blocked and the frontend's `presentation_blocked_cells`, which keys on the
-// `committed_dead` this projection publishes.
+// `project.move_wash`'s wash_blocked and the frontend's `presentation_blocked_cells`.
 //
 // The drive kills the one body standing between me and the far cell, then asserts the walk opens: the instant
 // the kill's beat has presented (same turn), and again on the next read that adopts hp 0. Both are asserted on
-// the WASH — the one home the movement paint and the click gate both read — not on a private helper.
+// the WASH — the movement paint's home.
+//
+// #2025 CORRECTION: this file's kill arrives as a RECEIPT, so `committed_dead` flips inside the same input and
+// the pre-ack window never opens here. The wash is NOT "the one home the click gate reads" — the gate paths over
+// `presentation_blocked_cells`, which lagged a whole receipt behind on MY OWN predicted kill and refused the
+// freed cell. That half is driven in frontend test/world-shell/corpse_cell_release.test.js; this file stays the
+// chain-acked leg.
 //
 // Measured while writing this (the reported symptom's window): for the length of the killing beat the move
 // affordance is disarmed wholesale (`input_armed` → `presenting`), so during that window there is no reach set
