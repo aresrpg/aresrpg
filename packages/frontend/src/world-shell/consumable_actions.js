@@ -71,7 +71,7 @@ export async function use_consumable({ character_id, potion_id, amount = 1, item
   return run_tx('use', tx)
 }
 
-// The ONE batcher instance every use surface (Inventory bag, FastSlots) clicks through — a shared home so
+// The ONE batcher instance every use surface (the Inventory bag today) clicks through — a shared home so
 // bursts from different surfaces on the same potion still fold into the same batch/tx.
 const batcher = create_consume_batcher({
   flush: use_consumable,
