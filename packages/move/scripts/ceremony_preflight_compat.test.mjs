@@ -183,7 +183,7 @@ test('a warning-escalation death cannot hide either compatibility verdict', () =
       status: 1,
       stdout: '',
       stderr:
-        'warning[W09001]: fixture warning\nCompilation failed because warnings were treated as errors',
+        "error[E09008]: unused function\nThis warning can be suppressed with '#[allow(unused_function)]'\nFailed to build Move modules: Compilation error.",
     }
   )
   const fixtures = [
@@ -215,6 +215,6 @@ test('a warning-escalation death cannot hide either compatibility verdict', () =
     expect(calls).toHaveLength(2)
     expect(calls[1]).toContain('--silence-warnings')
     expect([...result.errors.keys()]).toEqual(fixture.expected)
-    expect(result.warning_failure).toContain('warnings were treated as errors')
+    expect(result.warning_failure).toContain('This warning can be suppressed')
   }
 })
