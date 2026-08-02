@@ -77,6 +77,10 @@ const fight_state = (overrides = {}) => ({
   winner: -1,
   spectator: false,
   presenting: false,
+  // #1808 — THE HANDOVER, projected by engine_view: the chain seat is mine AND the chain has finished
+  // resolving the mobs that played into the turn. A slice that claims my turn without it is exactly the
+  // granted-then-retracted state the phase verdict must read as 'waiting'.
+  playable: true,
   placement: false,
   ready: new Set(),
   ...overrides,
@@ -157,7 +161,9 @@ describe('fight turn controls — one phase source for the button and silent aut
     const deadline_ms = 40_000
     expect(fight_turn_control_phase(fight_state(), false)).toBe('armed')
     expect(fight_turn_control_phase(fight_state({ active_entity_id: 'missing' }), false)).toBe('hidden')
-    expect(fight_turn_control_phase(fight_state({ presenting: true }), false)).toBe('hidden')
+    // #1808 — a turn the chain has not handed over yet (mob replay draining, or its resolution budget still
+    // unspent) reads as WAITING, never armed-then-retracted. `playable` is the one fact carrying both.
+    expect(fight_turn_control_phase(fight_state({ playable: false }), false)).toBe('waiting')
     expect(fight_turn_control_phase(fight_state({ active_entity_id: MOB }), false)).toBe('waiting')
     expect(fight_turn_control_phase(fight_state({ active_entity_id: MOB, winner: 0 }), false)).toBe('hidden')
     expect(fight_turn_control_phase(fight_state({ active_entity_id: MOB, spectator: true }), false)).toBe('hidden')

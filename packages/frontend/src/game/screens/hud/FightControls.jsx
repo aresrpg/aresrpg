@@ -21,12 +21,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
-import { turn_input_armed } from '../../../world-shell/voxel_fight_folds.js'
 import { should_auto_end_turn, should_report_stall, turn_overdue_ms } from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
-import { fight_store, PLAYER_TURN_FLOOR_MS } from '@aresrpg/fight/store'
+import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
-import { min_turn_left, min_turn_widened_ms } from '@aresrpg/fight/project'
+import { min_turn_left } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 import { FightBugReportModal } from './FightBugReportModal.jsx'
@@ -52,8 +51,10 @@ const default_force_pass = () => use_dungeon.getState().force_pass()
 /**
  * One turn-control phase verdict for the END TURN button. Resolve the actor through the
  * live fighter map, exactly like voxel_fight_adapter's input gate: an id without a fighter is a transient/incoherent
- * turn, never a playable one. `busy` flips synchronously when commit starts (before chain confirmation), while
- * `presenting` stays true while another actor's replay drains.
+ * turn, never a playable one. `busy` flips synchronously when commit starts (before chain confirmation).
+ * #1808 — THE TURN IS OFFERED ONCE. `fight.playable` is the folded handover (chain seat ⋀ nothing replaying ⋀ the
+ * chain's own mob-resolution budget spent); a chain seat that has not reached it is 'waiting', exactly like
+ * another actor's turn. The control never appears armed and then retracts.
  * @param {any | null} fight
  * @param {boolean} busy
  * @param {string | null | undefined} [entity_id]
@@ -63,9 +64,8 @@ export function fight_turn_control_phase(fight, busy, entity_id = fight?.my_enti
   const active = fight?.active_entity_id ? fight?.fighters?.get?.(fight.active_entity_id) : null
   const live_actor = !!fight && !fight.spectator && fight.winner === -1 && entity_id != null && active != null
   if (!live_actor) return 'hidden'
-  if (active.id !== entity_id) return 'waiting'
-  if (!turn_input_armed(true, false, !!fight.presenting)) return 'hidden'
-  return turn_input_armed(true, busy, false) ? 'armed' : 'committing'
+  if (active.id !== entity_id || !fight.playable) return 'waiting'
+  return busy ? 'committing' : 'armed'
 }
 
 /** The END TURN companion cue exists only in the same armed phase as the control itself. Pure.
@@ -189,11 +189,6 @@ export function FightControls({
   const [now_ms, set_now_ms] = useState(() => Date.now())
   const min_turn_left_ms = min_turn_left(fight_state, now_ms)
   const min_turn_gating = min_turn_left_ms > 0
-  // #1644 — A WIDENED FLOOR SAYS SO. `actions::assert_min_turn` gates on the chain's turn start, and
-  // `resolve_from` stamps `deadline = start + turn_ms + 3s × replayed mobs`: kill one mob and the next turn's
-  // minimum is 6s, not the 3s the player knows. Correct, and mute — it reads as a desync. The core derives the
-  // excess (min_turn_widened_ms); this only decides whether there is anything to say.
-  const min_turn_widened = min_turn_gating ? min_turn_widened_ms(fight_state) : 0
   const placement = placement_override != null ? placement_override : !!fight?.placement && fight?.winner === -1
   const has_placement_deadline = placement_deadline_ms > 0
   const has_turn_deadline = !placement && turn_phase === 'armed' && has_turn_draft && turn_deadline_ms > 0
@@ -260,12 +255,21 @@ export function FightControls({
 
   const i_am_ready = fight.my_entity_id != null && fight.ready.has(fight.my_entity_id)
   const abandon_button_label = abandon_label ?? t('dungeons.abandon_fight')
-  const active_turn_fighter =
-    turn_phase === 'waiting' && fight.active_entity_id ? fight.fighters.get(fight.active_entity_id) : null
-  const active_turn_name = active_turn_fighter
-    ? active_turn_fighter.name || active_turn_fighter.id || t('fight.fighter')
-    : null
-  const turn_waiting_label = active_turn_name == null ? null : t('fight.waiting_for', { name: active_turn_name })
+  // WHOSE waiting is it? Another fighter's turn names them; MY OWN not-yet-handed-over turn (#1808 — the chain is
+  // still resolving the mobs that played into it) names nobody, because there is nothing a player can act on:
+  // a plain "Waiting…", the same grammar the fight already uses between turns. Never a countdown, never a
+  // mechanics line, and never an END TURN that would have to be taken back.
+  const other_actor =
+    turn_phase === 'waiting' && fight.active_entity_id && fight.active_entity_id !== fight.my_entity_id
+      ? fight.fighters.get(fight.active_entity_id)
+      : null
+  const active_turn_name = other_actor ? other_actor.name || other_actor.id || t('fight.fighter') : null
+  const turn_waiting_label =
+    turn_phase !== 'waiting'
+      ? null
+      : active_turn_name != null
+        ? t('fight.waiting_for', { name: active_turn_name })
+        : t('dungeons.waiting')
   // ── #1381 ② · THE STALL IS OFFERED TO THE OTHERS ────────────────────────────────────────────────────────
   // The console.error above was the whole surface: every other player sat in front of a frozen board while the
   // machinery (auto-crank + the deadline-proximity read) had already had its window and failed to move it. The
@@ -333,16 +337,6 @@ export function FightControls({
         {placement && countdown_s != null && placement_label && (
           <span className="hud-fightctl__countdown" role="status" aria-live="polite">
             {placement_label(countdown_s)}
-          </span>
-        )}
-        {!placement && min_turn_widened > 0 && (
-          <span
-            className="hud-fightctl__countdown hud-fightctl__countdown--reason"
-            role="status"
-            aria-live="polite"
-            data-widened-ms={min_turn_widened}
-          >
-            {t('fight.turn_min_widened', { seconds: Math.ceil((PLAYER_TURN_FLOOR_MS + min_turn_widened) / 1000) })}
           </span>
         )}
         {stalled_name && (

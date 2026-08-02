@@ -164,12 +164,12 @@ describe('#1644 · the tackle half — a body the board shows DEAD never locks t
   })
 })
 
-describe('#1644 · the timer half — a WIDENED min-turn floor says so', () => {
+describe('#1644 · the timer half — SUPERSEDED by #1808: the widened window is waited out, not narrated', () => {
   const CHAIN_TURN_START = 1_000_000
   const TURN_MS = 45_000
   const MOB_REPLAY_MS = 3_000 // actions.move: `deadline = start + turn_ms + 3s × resolved_mobs`
 
-  const timed = ({ mobs_replayed, local_edge }) => {
+  const timed_store = ({ mobs_replayed, local_edge = CHAIN_TURN_START }) => {
     const store = create_fight_store()
     store.getState().input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR } })
     store.getState().input(
@@ -185,37 +185,48 @@ describe('#1644 · the timer half — a WIDENED min-turn floor says so', () => {
       },
       local_edge
     )
-    return store.getState()
+    return store
   }
+  const timed = (opts) => timed_store(opts).getState()
 
-  test('ONE replayed mob: the floor runs 3s longer than the rule the player knows — the 6s the report saw', () => {
+  // #1644 shipped a HUD line explaining the widened floor ("Turn minimum 6s — the mobs that just played are
+  // still resolving on chain"). #1808 is the same defect read one level down: a turn that has to be explained
+  // was never handed over honestly. The line is deleted; the client now waits the chain's window out, so the
+  // floor the player ever sees is the ordinary 3s and there is nothing left to narrate.
+
+  test('ONE replayed mob: the turn is NOT yet mine — the 6s the report saw is chain resolution, not my turn', () => {
     const state = timed({ mobs_replayed: 1, local_edge: CHAIN_TURN_START })
-    expect(project.min_turn_left(state, CHAIN_TURN_START)).toBe(2 * PLAYER_TURN_FLOOR_MS) // the mysterious 6s
-    expect(project.min_turn_widened_ms(state)).toBe(MOB_REPLAY_MS) // …and WHY, as a number the HUD can print
+    expect(project.turn_playable(state), 'the chain is still resolving the mob that just played').toBe(false)
+    expect(state.turn_started_at, 'no turn anchor before the handover').toBe(null)
   })
 
-  test('TWO replayed mobs widen twice — the widening is the chain’s, read off its own dial', () => {
-    expect(project.min_turn_widened_ms(timed({ mobs_replayed: 2, local_edge: CHAIN_TURN_START }))).toBe(
-      2 * MOB_REPLAY_MS
-    )
+  test('TWO replayed mobs widen twice — one tick short of the chain’s dial is still not my turn', () => {
+    const store = timed_store({ mobs_replayed: 2 })
+    store.getState().input({ type: 'tick' }, CHAIN_TURN_START + 2 * MOB_REPLAY_MS - 1)
+    expect(project.turn_playable(store.getState())).toBe(false)
   })
 
-  test('no replay ⇒ nothing to explain: the ordinary 3s floor reports zero widening', () => {
+  test('the handover lands on the chain’s own instant, and the floor from there is the plain 3s', () => {
+    const store = timed_store({ mobs_replayed: 2 })
+    const handover = CHAIN_TURN_START + 2 * MOB_REPLAY_MS
+    store.getState().input({ type: 'tick' }, handover)
+    const state = store.getState()
+    expect(project.turn_playable(state)).toBe(true)
+    expect(state.turn_started_at).toBe(handover)
+    // The rule the player knows — 3s — is now the ONLY floor they can observe.
+    expect(project.min_turn_left(state, handover)).toBe(PLAYER_TURN_FLOOR_MS)
+  })
+
+  test('no replay ⇒ the turn is playable at once, on the ordinary 3s floor', () => {
     const state = timed({ mobs_replayed: 0, local_edge: CHAIN_TURN_START })
+    expect(project.turn_playable(state)).toBe(true)
     expect(project.min_turn_left(state, CHAIN_TURN_START)).toBe(PLAYER_TURN_FLOOR_MS)
-    expect(project.min_turn_widened_ms(state)).toBe(0)
   })
 
-  test('a LATE local anchor already covers the chain floor — the countdown reads 3s, so it claims no widening', () => {
-    // the client only learned the turn was playable after the chain's widened floor had passed: what the player
-    // actually sees is the ordinary 3s, and a "we widened it" line would be a lie.
-    const state = timed({ mobs_replayed: 2, local_edge: CHAIN_TURN_START + 6 * MOB_REPLAY_MS })
-    expect(project.min_turn_left(state, CHAIN_TURN_START + 6 * MOB_REPLAY_MS)).toBe(PLAYER_TURN_FLOOR_MS)
-    expect(project.min_turn_widened_ms(state)).toBe(0)
-  })
-
-  test('not my playable turn ⇒ 0, never a fabricated widening', () => {
-    const state = timed({ mobs_replayed: 2, local_edge: CHAIN_TURN_START })
-    expect(project.min_turn_widened_ms({ ...state, turn_started_at: null })).toBe(0)
+  test('a LATE local anchor already past the chain window hands over immediately', () => {
+    const local_edge = CHAIN_TURN_START + 6 * MOB_REPLAY_MS
+    const state = timed({ mobs_replayed: 2, local_edge })
+    expect(project.turn_playable(state)).toBe(true)
+    expect(project.min_turn_left(state, local_edge)).toBe(PLAYER_TURN_FLOOR_MS)
   })
 })

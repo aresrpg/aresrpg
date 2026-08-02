@@ -4,7 +4,7 @@
 
 import { project_board } from './core_project.js'
 import { auto_commit_fire_at } from './draft_budget.js'
-import { presented_state } from './fold.js'
+import { presented_state, recompute, turn_is_playable } from './fold.js'
 import { MIN_ACTION_MS, min_turn_ready_at, WAVE_ACK_GRACE_MS } from './store_state.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 
@@ -66,7 +66,7 @@ export const reduce_tick_state = (state, msg, next_core, now) => {
             : null
       : null
 
-  return {
+  const ticked = {
     ...state,
     commit_due:
       submit_epoch != null &&
@@ -77,6 +77,26 @@ export const reduce_tick_state = (state, msg, next_core, now) => {
     last_action_ms,
     turn_lost: lost_reason ? { key: turn_key, reason: lost_reason } : state.turn_lost,
   }
+  // THE TURN HANDOVER (#1808) — the ONE transition that is driven by the clock alone: the chain finishes
+  // spending this turn's mob-resolution budget while no input arrives. Every other fold trigger is a message.
+  // Asking the fold's own predicate (never a second copy of the boundary) keeps this to one re-fold per turn,
+  // on the rising edge, through the same reducer door — no timer of its own, no callback write.
+  const handover =
+    !state.turn_playable &&
+    turn_is_playable(
+      {
+        active: canonical.active,
+        my_key: next_core.my_seat ?? state.my_key,
+        wave: state.wave,
+        deadline_ms: state.turn_deadline_ms,
+        turn_ms: state.view?.turn_ms,
+      },
+      now
+    )
+  // The fold reads the SAME core the guard just measured (`canonical`), so the two can never disagree about
+  // whose turn it is. On this path they are already the one object — `input`'s `next_core` defaults to the live
+  // core and the tick has no core of its own to adopt — so this is identity today and coherent if that changes.
+  return handover ? recompute({ ...ticked, core: next_core }, now) : ticked
 }
 
 export const reduce_wave_head = (state, head, now) => ({

@@ -423,13 +423,13 @@ export function create_voxel_fight_adapter(
       // decision fight-overlay's move-click relay triggers. cast_only is false: a plain board click is cast-preferred
       // in DungeonBoard already, so one relay covers both without a separate drag surface.
       const active = fight.active_entity_id ? fight.fighters.get(fight.active_entity_id) : null
-      // END-TURN PRESS LAW + PRESENTATION GATE (voxel_fight_folds.turn_input_armed): `busy`
-      // (use_dungeon) is true from commit_turn's first line — the instant END TURN is pressed, or a background
-      // auto-commit fires — through the whole pending window; `presenting` is true while the mob cascade is still
-      // animating (the chain hands the turn back to me the moment the paced replay starts). Either disarms the
-      // click relay, so a cell click never drafts while my turn is only chain-true but not yet playable.
-      const presenting = project.presenting(fight_store.getState()) // S2: derived from the core's unacked wave
-      if (!turn_input_armed(!!active && active.id === address, use_dungeon.getState().busy, presenting)) return
+      // END-TURN PRESS LAW + HANDOVER GATE (voxel_fight_folds.turn_input_armed): `busy` (use_dungeon) is true
+      // from commit_turn's first line — the instant END TURN is pressed, or a background auto-commit fires —
+      // through the whole pending window; `playable` is the folded handover (#1808) — false while the mob
+      // cascade animates AND while the chain is still spending that cascade's resolution budget. Either disarms
+      // the click relay, so a cell click never drafts while my turn is only chain-true but not yet playable.
+      const playable = project.turn_playable(fight_store.getState()) // S2: the core's own handover fact
+      if (!turn_input_armed(!!active && active.id === address && playable, use_dungeon.getState().busy, false)) return
       // out-of-board clicks never encode a bogus cell (the engine only emits in-bounds cells, but guard anyway).
       const grid = dungeon_grid_of(dungeon)
       if (cell.x < 0 || cell.x >= grid.width || cell.y < 0 || cell.y >= grid.height) return
@@ -1671,11 +1671,12 @@ export function create_voxel_fight_adapter(
       // window (tx signing → chain confirm → refresh()), so the wash clears at PRESS, not at chain confirmation.
       // A refused commit (pre-flight or executed — either way nothing actually advanced the turn) clears busy
       // with my_turn still true — the wash HONESTLY restores.
-      // `armed` = my_turn ⋀ !busy ⋀ !presenting — the ONE input gate: it already suppresses the ENTIRE my-turn
-      // wash (mp_range AND the armed cast ranges — blue painted over a mob replay is the same lie) while the mob
-      // cascade drains; the authoritative pass below clears them, and the drain repaint (flush's .finally →
-      // reconcile, or the watchdog's) repaints the wash on the last settle.
-      const armed = turn_input_armed(my_turn, busy, presenting)
+      // `armed` = playable ⋀ !busy — the ONE input gate: `fight.playable` (#1808) already carries the
+      // presentation gate AND the chain's own mob-resolution budget, so it suppresses the ENTIRE my-turn wash
+      // (mp_range AND the armed cast ranges — blue painted over a mob replay, or over a turn the chain has not
+      // finished handing over, is the same lie); the authoritative pass below clears them, and the drain repaint
+      // (flush's .finally → reconcile, or the watchdog's) repaints the wash on the last settle.
+      const armed = turn_input_armed(my_turn && !!fight.playable, busy, false)
       if (armed && active) {
         // AP-AFFORDABILITY GATE (fixes the range highlight persisting post-cast): the wash paints for the
         // armed spell ONLY while the LIVE folded AP affords one more cast — spent budget ⇒ the blue ranges
@@ -1870,11 +1871,14 @@ export function create_voxel_fight_adapter(
       }
       if (!cell || !fight || !dungeon || fight.placement || fight.winner !== -1) return clear_hover()
       const active = fight.active_entity_id ? fight.fighters.get(fight.active_entity_id) : null
-      // END-TURN PRESS LAW + PRESENTATION GATE: the SAME turn_input_armed gate cell_click uses — a commit in
-      // flight (busy) OR the mob cascade still animating (presenting) clears the hover preview (path/AoE)
-      // immediately, even while active_entity_id already reads as my turn.
-      const presenting = project.presenting(fight_store.getState()) // S2: derived from the core's unacked wave
-      if (!turn_input_armed(!!active && active.id === fight.my_entity_id, use_dungeon.getState().busy, presenting))
+      // END-TURN PRESS LAW + HANDOVER GATE: the SAME turn_input_armed gate cell_click uses — a commit in flight
+      // (busy) or a turn the chain has not finished handing over (`playable`: mob cascade animating, or its
+      // resolution budget still unspent) clears the hover preview (path/AoE) immediately, even while
+      // active_entity_id already reads as my turn.
+      const playable = project.turn_playable(fight_store.getState()) // S2: the core's own handover fact
+      if (
+        !turn_input_armed(!!active && active.id === fight.my_entity_id && playable, use_dungeon.getState().busy, false)
+      )
         return clear_hover()
       const to_enc = encode_cell(cell.x, cell.y)
       let movement_path = /** @type {number[]} */ ([])

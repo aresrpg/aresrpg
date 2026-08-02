@@ -9,7 +9,6 @@
         "draft_count": 0,
         "end_turn_eligible": false,
         "min_turn_ready_at": null,
-        "min_turn_widened_ms": 0,
         "phase": "hidden"
       },
       "entities": {},
@@ -70,6 +69,7 @@
           "0": [],
           "1": []
         },
+        "playable": false,
         "presenting": false,
         "presenting_entity_id": null,
         "seed": {
@@ -94,7 +94,6 @@
         "draft_count": 0,
         "end_turn_eligible": true,
         "min_turn_ready_at": 1003010,
-        "min_turn_widened_ms": 0,
         "phase": "armed"
       },
       "entities": {
@@ -243,6 +242,7 @@
           "0": [],
           "1": []
         },
+        "playable": true,
         "presenting": false,
         "presenting_entity_id": null,
         "seed": {
@@ -267,7 +267,6 @@
         "draft_count": 0,
         "end_turn_eligible": true,
         "min_turn_ready_at": 1003010,
-        "min_turn_widened_ms": 0,
         "phase": "armed"
       },
       "entities": {
@@ -416,6 +415,7 @@
           "0": [],
           "1": []
         },
+        "playable": true,
         "presenting": false,
         "presenting_entity_id": null,
         "seed": {
@@ -440,7 +440,6 @@
         "draft_count": 0,
         "end_turn_eligible": true,
         "min_turn_ready_at": 1003010,
-        "min_turn_widened_ms": 0,
         "phase": "armed"
       },
       "entities": {
@@ -589,6 +588,7 @@
           "0": [],
           "1": []
         },
+        "playable": true,
         "presenting": false,
         "presenting_entity_id": null,
         "seed": {
@@ -613,8 +613,7 @@
         "draft_count": 0,
         "end_turn_eligible": true,
         "min_turn_ready_at": null,
-        "min_turn_widened_ms": 0,
-        "phase": "hidden"
+        "phase": "waiting"
       },
       "entities": {
         "0xchar_a": {
@@ -762,6 +761,7 @@
           "0": [],
           "1": []
         },
+        "playable": false,
         "presenting": true,
         "presenting_entity_id": "mob-0",
         "seed": {
@@ -786,7 +786,6 @@
         "draft_count": 0,
         "end_turn_eligible": true,
         "min_turn_ready_at": 1009000,
-        "min_turn_widened_ms": 0,
         "phase": "armed"
       },
       "entities": {
@@ -935,6 +934,7 @@
           "0": [],
           "1": []
         },
+        "playable": true,
         "presenting": false,
         "presenting_entity_id": null,
         "seed": {
@@ -959,7 +959,6 @@
         "draft_count": 0,
         "end_turn_eligible": true,
         "min_turn_ready_at": 1009000,
-        "min_turn_widened_ms": 0,
         "phase": "armed"
       },
       "entities": {
@@ -1108,6 +1107,7 @@
           "0": [],
           "1": []
         },
+        "playable": true,
         "presenting": false,
         "presenting_entity_id": null,
         "seed": {

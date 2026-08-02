@@ -20,6 +20,7 @@ import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'
 import { GRID_W } from './los.js'
 import { base_from_view } from './fold_base.js'
+import { turn_handover_at } from './draft_budget.js'
 import { blocks_a_walk } from './fight_render_prims.js'
 import { masks_entries, pace_segment } from './present.js'
 import { adopt_chain_traps, fold_trap_ledger } from './trap_ledger.js'
@@ -121,6 +122,22 @@ export const provider_of = ({ presenting, playable, view, spectator = false }) =
  *  15s covers a re-pick cadence with headroom while a stale/dead broadcast never lingers into the fight proper. */
 export const GHOST_STALE_MS = 15_000
 
+/**
+ * THE TURN-HANDOVER PREDICATE (#1808) — is MY turn genuinely playable at `now`? Three facts, one home: the
+ * committed active seat is mine, no NON-LOCAL (mob/peer) replay is still draining locally, and the CHAIN has
+ * finished spending this turn's mob-resolution budget (`turn_handover_at`). The third is what the client used to
+ * skip: the paced replay is only the client's GUESS at the chain's resolution window and can drain far ahead of
+ * it, so the turn was granted and then held back by a countdown nobody could act on. `recompute` folds this;
+ * the store's clock tick asks it to know when a time-ONLY transition must re-fold and hand the turn over.
+ * @param {{ active: string | null, my_key: string | null, wave?: any[], deadline_ms?: number | null,
+ *   turn_ms?: number | null }} turn @param {number} now
+ */
+export const turn_is_playable = ({ active, my_key, wave, deadline_ms, turn_ms }, now) =>
+  active != null &&
+  active === my_key &&
+  !(wave ?? []).some((t) => !t.is_local) &&
+  now >= turn_handover_at(deadline_ms, turn_ms)
+
 /** Re-fold the committed state from the snapshot base + the sorted tail, and reconcile the turn-floor anchor.
  *  `now` stamps the floor the instant MY turn opens; only the false→true edge re-stamps. */
 export const recompute = (draft, now) => {
@@ -149,15 +166,20 @@ export const recompute = (draft, now) => {
   const spectator = draft.ctx?.spectator === true
   const my_key = spectator ? null : draft.my_key
   let { turn_started_at, my_turn_no = 0 } = draft
-  const my_turn = committed.active != null && committed.active === my_key
+  // Chain timestamps are monotonic within one Fight. A version-inflated but semantically stale object may prune a
+  // fresher TurnStarted tail; preserve the greatest observed chain deadline without synthesising a client deadline.
+  const turn_deadline_ms = Math.max(observed_deadline, Number(committed.turn_deadline_ms ?? 0)) || null
   // PLAYABLE-turn anchor + TURN-END DISARM share ONE boundary. The SINGLE-PTB fold resolves my-end→mob-wave→my-next
   // -turn in ONE receipt, so `committed active` never leaves me (my_turn stays true ALL fight) — a
-  // `my_turn && !was_my_turn` edge fires only ONCE (turn 1). Key off the PLAYABLE rising edge instead — my turn AND
-  // no non-local (mob) wave draining — cleared while a wave presents / off-turn, re-stamped the instant it drains.
-  // The SAME gate disarms a stale spell (else it casts on the first click of a fresh turn); my OWN casts are LOCAL
-  // waves (is_local) → they never trip it.
+  // `my_turn && !was_my_turn` edge fires only ONCE (turn 1). Key off the PLAYABLE rising edge instead
+  // (`turn_is_playable` above) — cleared while a wave presents / the chain is still resolving mobs / off-turn,
+  // re-stamped the instant the turn is genuinely mine. The SAME gate disarms a stale spell (else it casts on the
+  // first click of a fresh turn); my OWN casts are LOCAL waves (is_local) → they never trip it.
   const presenting = (draft.wave ?? []).some((t) => !t.is_local)
-  const playable = my_turn && !presenting
+  const playable = turn_is_playable(
+    { active: committed.active, my_key, wave: draft.wave, deadline_ms: turn_deadline_ms, turn_ms: draft.view?.turn_ms },
+    now
+  )
   // MY SEAT-TURN COUNTER (cast.move `seat_turn` twin, the cooldown gate's clock): bumped EXACTLY on the PLAYABLE
   // rising edge — the SAME false→true boundary turn_started_at stamps, so it is DEADLINE-INDEPENDENT (a starved /
   // stale / zero chain deadline still counts my turn). Placement never counts (active is null there → playable
@@ -170,9 +192,6 @@ export const recompute = (draft, now) => {
   }
   if (!playable) turn_started_at = null
   const armed_spell_id = playable ? draft.armed_spell_id : null
-  // Chain timestamps are monotonic within one Fight. A version-inflated but semantically stale object may prune a
-  // fresher TurnStarted tail; preserve the greatest observed chain deadline without synthesising a client deadline.
-  const turn_deadline_ms = Math.max(observed_deadline, Number(committed.turn_deadline_ms ?? 0)) || null
   // THE FOLDED TURN-SEED reaches the view, the same way the deadline does. The chain-only fold stamps it from the
   // TurnStarted wire (a dynamic field the decoded snapshot never carries); we surface it onto `view.turn_entropy`
   // /`view.turn_ordinal` so every preview reads the SEED off `s.view` (project.js / board_view), never the
@@ -259,6 +278,7 @@ export const recompute = (draft, now) => {
     log,
     my_key,
     turn_started_at,
+    turn_playable: playable,
     my_turn_no,
     armed_spell_id,
     turn_deadline_ms,

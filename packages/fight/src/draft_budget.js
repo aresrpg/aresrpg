@@ -21,13 +21,24 @@ export const POINT_MP = 1
 export const COMMIT_BUFFER_MS = 5_000
 export const CHAIN_MIN_TURN_MS = 3_000
 
+/** THE TURN-HANDOVER INSTANT — when the chain has finished spending this turn's MOB-RESOLUTION budget, i.e.
+ *  when the turn actually becomes the player's (#1808). `resolve_from` stamps
+ *  `deadline = start + turn_ms + 3s * resolved_mobs`, so `deadline − turn_ms` IS that instant, widening and
+ *  all. The client's own paced replay of those same mobs is only a GUESS at it and can drain faster (mobile,
+ *  skipped animations) — handing the turn over on the guess is what produced a granted-then-retracted turn.
+ *  0 when the dial or the deadline is unknown: a starved read must never fabricate a boundary and lock a
+ *  player out of a turn the chain already gave them. */
+export function turn_handover_at(deadline, turn_ms) {
+  return Number(deadline) > 0 && Number(turn_ms) > 0 ? Number(deadline) - Number(turn_ms) : 0
+}
+
 /** THE CHAIN'S OWN earliest legal end-turn instant — the single home for `actions.move::assert_min_turn`
- *  (`now + turn_ms >= turn_deadline_ms + MIN_TURN_MS`) read as an absolute ms. The chain stamps
- *  `deadline = start + turn_ms + 3s * resolved_mobs`, so this already carries the per-mob widening; never
- *  re-anchor it to receipt/presentation time. 0 when the dial or the deadline is unknown — a starved read
- *  must never fabricate a floor. */
+ *  (`now + turn_ms >= turn_deadline_ms + MIN_TURN_MS`) read as an absolute ms: the handover above plus the
+ *  anti-instant-pass floor. Never re-anchor it to receipt/presentation time. 0 when the dial or the deadline
+ *  is unknown — a starved read must never fabricate a floor. */
 export function chain_min_turn_at(deadline, turn_ms, min_turn_ms = CHAIN_MIN_TURN_MS) {
-  return Number(deadline) > 0 && Number(turn_ms) > 0 ? Number(deadline) - Number(turn_ms) + min_turn_ms : 0
+  const handover = turn_handover_at(deadline, turn_ms)
+  return handover > 0 ? handover + min_turn_ms : 0
 }
 
 /** Absolute auto-submit instant. A short admin dial cannot fire before the chain floor above permits its

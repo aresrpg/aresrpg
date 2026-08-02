@@ -18,16 +18,17 @@ export function TurnBanner() {
   const fight = use_fight_view() // SYNCHRONOUS core truth (S2 mirror kill) — never the lagging copy
   // ACTIVE + mine + not over + not a spectator. Placement uses its own banner (FightPlacementBanner), so gate it out
   // here — the cue marks the transition INTO acting, which is exactly what the silent handoff was missing.
-  // PRESENTATION GATE (the turn order can already show my name and timer while other mobs are still moving):
-  // the chain flips active_entity_id back to me the instant a mob cascade lands, but the paced replay is still
-  // playing out. Gate on !presenting — the SAME clock DungeonBoard's my_turn (input-arming) and the wash already
-  // use — so the "your turn" ding + banner fire only once the presentation drains, never over a live mob cascade.
+  // HANDOVER GATE (the turn order can already show my name and timer while other mobs are still moving): the
+  // chain flips active_entity_id back to me the instant a mob cascade lands, but the paced replay is still
+  // playing out AND the chain is still spending that cascade's resolution budget. Gate on `playable` — the SAME
+  // folded fact the board's input arming and the END TURN control mount on (#1808) — so the "your turn" ding +
+  // banner fire exactly once, when the turn is genuinely mine.
   const my_turn =
     !!fight &&
     !fight.placement &&
     fight.winner === -1 &&
     !fight.spectator &&
-    !fight.presenting &&
+    fight.playable &&
     fight.active_entity_id != null &&
     fight.active_entity_id === fight.my_entity_id
 

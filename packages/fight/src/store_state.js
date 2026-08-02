@@ -38,10 +38,11 @@ export const MIN_ACTION_MS = 5000
  * MY turn's min-turn floor as an ABSOLUTE instant — the ONE anchor the End Turn button, the intent door and the
  * kill auto-commit all read (#1484). Two clocks measure this turn and only one of them can refuse a transaction:
  * `actions::assert_min_turn` gates on the CHAIN's turn start (its 3s-per-replayed-mob widening already folded
- * into `turn_deadline_ms`) plus the floor, while `turn_started_at` is only the client's local GUESS at that same
- * instant — the moment its own mob replay drained. When the guess runs early the chain aborts ETurnTooFast and
- * the player loses a turn they legitimately spent 3+ seconds on. Take the LATER of the two: never submit before
- * BOTH clocks allow. Null when it is not my playable turn.
+ * into `turn_deadline_ms`) plus the floor, while `turn_started_at` is the instant the turn was HANDED OVER.
+ * Since #1808 that handover already waits out the chain's mob-resolution budget (fold.js `turn_is_playable`), so
+ * the local arm normally rules and the two agree — the chain arm stays as the belt against a fold that has not
+ * re-run under a freshly widened deadline: never submit before BOTH clocks allow, because an early guess aborts
+ * ETurnTooFast and costs the player a turn they legitimately spent 3+ seconds on. Null off my playable turn.
  * @param {any} state @returns {number | null}
  */
 export const min_turn_ready_at = (state) => {
@@ -52,23 +53,6 @@ export const min_turn_ready_at = (state) => {
     state.turn_started_at + PLAYER_TURN_FLOOR_MS,
     chain_min_turn_at(state.turn_deadline_ms, state.view?.turn_ms)
   )
-}
-
-/**
- * How much LONGER than the plain 3s floor this turn's min-turn wait runs — the chain's `3s per replayed mob`
- * widening (`resolve_from`: `deadline = start + turn_ms + 3s×N`) as the PLAYER experiences it, so the HUD can
- * say WHY the countdown reads 6s when the rule everyone knows is 3s (#1644: "some desync it seem").
- *
- * Derived from the two clocks `min_turn_ready_at` already reconciles — no new stored fact, no second reading of
- * the chain dial. It self-suppresses honestly: when the client's own anchor (`turn_started_at`, stamped as its
- * mob replay drained) is already late enough to cover the chain floor, the visible countdown IS the ordinary 3s
- * and there is nothing mysterious to explain — only the excess the chain's widening actually adds is reported.
- * @param {any} state @returns {number} 0 when the ordinary floor rules (or it is not my playable turn)
- */
-export const min_turn_widened_ms = (state) => {
-  const ready_at = min_turn_ready_at(state)
-  if (ready_at == null) return 0
-  return Math.max(0, ready_at - Number(state.turn_started_at) - PLAYER_TURN_FLOOR_MS)
 }
 
 /**
@@ -145,6 +129,9 @@ export const empty_fight = () => ({
   error: null,
   my_key: null,
   turn_started_at: null,
+  // THE TURN-HANDOVER FACT (#1808) — folded, never a UI-side flag: my turn is genuinely playable (chain seat,
+  // nothing replaying, the chain's mob-resolution budget spent). Every turn surface mounts on this.
+  turn_playable: false,
   my_turn_no: 0,
   pending_end_turn: null,
   intent_seq: 0,

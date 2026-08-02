@@ -6,7 +6,7 @@ import { GRID_W } from './los.js'
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { committed_truth, min_turn_ready_at } from './store.js'
 
-export { committed_truth, min_turn_widened_ms, submit_wait_ms } from './store.js'
+export { committed_truth, submit_wait_ms } from './store.js'
 
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
 
@@ -29,11 +29,17 @@ export const active_fighter = (state) => (state.active ? (state.fighters?.[state
 
 export const active_key = (state) => state.active ?? null
 
-/** Is it MY turn — the gate the END-TURN button and the input layer read. */
+/** Is it MY turn on the CHAIN's clock — committed seat only. Whether it is yet PLAYABLE is `turn_playable`. */
 export const is_my_turn = (state) => {
   const { active } = committed_truth(state)
   return active != null && active === state.my_key
 }
+
+/** THE TURN-HANDOVER GATE (#1808) — my turn is genuinely mine: chain seat, no replay draining, and the chain's
+ *  own mob-resolution budget spent. Folded once by `recompute` (fold.js `turn_is_playable`) and read here; every
+ *  turn surface — input arming, the END TURN control, the "your turn" cue — mounts on THIS, never on the raw
+ *  chain seat. Handing the turn over earlier is what made a granted turn retractable. */
+export const turn_playable = (state) => state.turn_playable === true
 
 export const deadline_ms = (state) => state.turn_deadline_ms ?? null
 

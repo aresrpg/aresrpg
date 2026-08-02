@@ -27,6 +27,7 @@ import {
   decided_outcome,
   presenting,
   settlement_request,
+  turn_playable,
 } from './project_state.js'
 
 // The END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — the view's `turn.input_armed`
@@ -506,6 +507,11 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     hovered_spell_id: s.hovered_spell_id ?? null,
     summary: null,
     presenting: presenting(s),
+    // THE TURN-HANDOVER FACT (#1808) — my turn is genuinely mine (chain seat ⋀ nothing replaying ⋀ the chain's
+    // own mob-resolution budget spent). The board's input gate, the END TURN control and the "your turn" cue all
+    // mount on THIS single projected fact; `presenting` alone let the client outrun the chain and grant a turn
+    // it then had to hold back.
+    playable: turn_playable(s),
     // MP-ZONE MISCLICK GUARD — projected so DungeonBoard's click gate (`reachable`) reads the SAME
     // fact move_wash suppresses on, never a second UI-side flag (see cast_presenting's doc above).
     cast_presenting: cast_presenting(s),

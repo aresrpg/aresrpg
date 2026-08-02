@@ -15,6 +15,13 @@
 // the End Turn button armed, the PTB went out, and the chain aborted ETurnTooFast — destroying a turn the
 // player had legitimately spent 3+ seconds on. The fix reads the chain's OWN anchor (it is already on the
 // state: `turn_deadline_ms` + `view.turn_ms`) and never submits before BOTH clocks allow.
+//
+// #1808 CLOSED THE DISAGREEMENT AT ITS SOURCE: the turn is no longer HANDED OVER on the local replay's edge
+// either — `turn_started_at` is stamped at `deadline − turn_ms`, the instant the chain finished spending the
+// mob-resolution budget. So the local anchor can no longer land early and the two clocks agree by construction.
+// This file keeps measuring the invariant that matters (nothing submits before the chain's floor); the `max()`
+// in `min_turn_ready_at` survives as the belt against a fold that has not re-run under a freshly widened
+// deadline, and the tests below now drive the handover the way the store's own clock does.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -30,7 +37,9 @@ const MOBS_REPLAYED = 2
 const DEADLINE = CHAIN_TURN_START + TURN_MS + MOBS_REPLAYED * MOB_REPLAY_MS
 // What actions.move::assert_min_turn will accept — the ONE instant this whole file is about.
 const CHAIN_FLOOR = DEADLINE - TURN_MS + PLAYER_TURN_FLOOR_MS
-// The client drained its mob replay AHEAD of the chain's budget, so its local anchor lands early.
+// The instant the chain finished resolving the mobs that played into my turn (#1808 — the handover).
+const HANDOVER = DEADLINE - TURN_MS
+// The client drained its mob replay AHEAD of the chain's budget, so its local edge lands early.
 const LOCAL_EDGE = CHAIN_TURN_START + 4_000
 
 const fight_object = (over = {}) => ({
@@ -70,22 +79,29 @@ const boot = (over) => {
   return store
 }
 
+/** The same store once the store's own clock has carried it past the chain's handover instant. */
+const handed_over = (over) => {
+  const store = boot(over)
+  store.getState().input({ type: 'tick' }, HANDOVER)
+  return store
+}
+
 describe('#1484 — the min-turn gate reads the CHAIN anchor, not a local guess', () => {
-  test('the harness stamps the early local anchor (the disagreement this bug rides on)', () => {
+  test('the early local edge no longer anchors anything — the turn is not even handed over there', () => {
     const store = boot()
-    expect(store.getState().turn_started_at).toBe(LOCAL_EDGE)
-    expect(project.is_my_turn(store.getState())).toBe(true)
-    expect(LOCAL_EDGE + PLAYER_TURN_FLOOR_MS).toBeLessThan(CHAIN_FLOOR) // the client would arm 2s early
+    expect(store.getState().turn_started_at, 'the client drained ahead of the chain; it waits').toBe(null)
+    expect(project.is_my_turn(store.getState()), 'the chain seat IS mine — it is just not playable yet').toBe(true)
+    expect(project.turn_playable(store.getState())).toBe(false)
+    expect(LOCAL_EDGE + PLAYER_TURN_FLOOR_MS).toBeLessThan(CHAIN_FLOOR) // where the client used to arm 2s early
+    // …and the handover puts the two clocks on the SAME instant, which is the whole point.
+    expect(handed_over().getState().turn_started_at).toBe(HANDOVER)
+    expect(HANDOVER + PLAYER_TURN_FLOOR_MS).toBe(CHAIN_FLOOR)
   })
 
-  test('the button stays gated past the local floor, until the chain floor', () => {
-    const store = boot()
-    const state = store.getState()
+  test('the button stays gated past the old local floor, until the chain floor', () => {
+    const state = handed_over().getState()
     // the moment the OLD flat floor lifted — the chain would still abort ETurnTooFast here
     expect(project.can_end_turn(state, LOCAL_EDGE + PLAYER_TURN_FLOOR_MS)).toBe(false)
-    expect(project.min_turn_left(state, LOCAL_EDGE + PLAYER_TURN_FLOOR_MS)).toBe(
-      CHAIN_FLOOR - LOCAL_EDGE - PLAYER_TURN_FLOOR_MS
-    )
     // one millisecond before the chain's own floor — still refused, locally, for zero gas
     expect(project.can_end_turn(state, CHAIN_FLOOR - 1)).toBe(false)
     expect(project.min_turn_left(state, CHAIN_FLOOR - 1)).toBe(1)
@@ -95,7 +111,7 @@ describe('#1484 — the min-turn gate reads the CHAIN anchor, not a local guess'
   })
 
   test('AT THE BOUNDARY the end-turn intent is HELD for the remainder, never dropped', () => {
-    const store = boot()
+    const store = handed_over()
     store.getState().input({ type: 'intent', intent: { kind: 'end_turn' }, version: 6 }, CHAIN_FLOOR - 1)
     const held = store.getState().pending_end_turn
     expect(held).not.toBeNull() // delayed submit — not a rollback, not a burned turn
@@ -109,8 +125,7 @@ describe('#1484 — the min-turn gate reads the CHAIN anchor, not a local guess'
   })
 
   test('the SUBMIT door waits the exact remainder — the PTB never goes out early', () => {
-    const store = boot()
-    const state = store.getState()
+    const state = handed_over().getState()
     // `submit_wait_ms` is what dungeon_run_store.commit_turn sleeps for before signing: zero gas, no digest,
     // no rollback. (An EXECUTED ETurnTooFast could never be auto-retried — the burn law — so the only correct
     // answer at the boundary is to not submit yet.)

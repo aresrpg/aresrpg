@@ -12,7 +12,7 @@
 // explicitly named. No reconciliation is introduced here — fold-first family migrations are later trains.
 
 import { project_hud } from './core_project.js'
-import { committed_truth, display_state, min_turn_ready_at, min_turn_widened_ms, presented_state } from './store.js'
+import { committed_truth, display_state, min_turn_ready_at, presented_state } from './store.js'
 import {
   cast_presenting,
   chain_terminal_status,
@@ -26,6 +26,7 @@ import {
   phase,
   presenting,
   settlement_request,
+  turn_playable,
 } from './project_state.js'
 
 /** END-TURN PRESS LAW + PRESENTATION GATE — ONE predicate for every turn-input surface: the my-turn wash, the
@@ -40,11 +41,12 @@ import {
  *  @param {boolean} my_turn @param {boolean} busy @param {boolean} [presenting_now] */
 export const turn_input_armed = (my_turn, busy, presenting_now = false) => my_turn && !busy && !presenting_now
 
-/** The state-shaped arming door: my PLAYABLE turn (committed active = me, fight undecided), not busy, nothing
- *  presenting. `busy` stays an edge INPUT — the run store owns tx single-flight across MORE than turn commits
- *  (engage/place/settle), wider than the core's own commit-flight `s.busy`. */
-export const input_armed = (s, { busy = false } = {}) =>
-  turn_input_armed(is_my_turn(s) && !is_over(s), busy, presenting(s))
+/** The state-shaped arming door: my HANDED-OVER turn (`turn_playable` — chain seat, nothing replaying, the
+ *  chain's mob-resolution budget spent) and the fight undecided, not busy. `busy` stays an edge INPUT — the run
+ *  store owns tx single-flight across MORE than turn commits (engage/place/settle), wider than the core's own
+ *  commit-flight `s.busy`. The presentation gate lives INSIDE `turn_playable` now (#1808), so this reads one
+ *  fact instead of re-assembling the boundary. */
+export const input_armed = (s, { busy = false } = {}) => turn_input_armed(turn_playable(s) && !is_over(s), busy, false)
 
 /** Recursively freeze plain objects/arrays — the view is handed out, never handed back. Non-plain values
  *  (numbers, strings, decoded cells built here) either freeze trivially or are already immutable. */
@@ -160,6 +162,9 @@ export const visible_turn = (s, engine, committed, status) => {
     placement_cells: engine?.placement_cells ?? { 0: [], 1: [] },
     winner: s?.winner ?? -1,
     is_my_turn: is_my_turn(s),
+    // THE HANDOVER (#1808): the chain seat is mine (`is_my_turn`) and the chain has finished resolving the mobs
+    // that played into it — the fact every turn surface mounts on.
+    playable: turn_playable(s),
     // The state-shaped arming door (edge `busy` excluded — the run store's single-flight is wider than the core's
     // own and stays an edge input until its family migrates).
     input_armed: input_armed(s),
@@ -244,13 +249,15 @@ export const visible_mount = (s, engine) => {
 }
 
 /** One turn-control phase verdict — the actor resolved THROUGH the entity rows (an id without a row is a
- *  transient/incoherent turn, never a playable one), exactly like the input gate. */
-const turn_control_phase = (engine, active_entity_id, entities, busy, presenting_now) => {
+ *  transient/incoherent turn, never a playable one), exactly like the input gate. A chain seat the turn has NOT
+ *  been handed over on yet is 'waiting', not 'armed' (#1808): the control the player is looking at says it is
+ *  waiting rather than offering a turn it will then take back. */
+const turn_control_phase = (engine, active_entity_id, entities, busy, playable) => {
   const me = engine?.my_entity_id ?? null
   const active = active_entity_id ? entities[active_entity_id] : null
   if (!engine || engine.spectator || engine.winner !== -1 || me == null || active == null) return 'hidden'
   if (active.id !== me) return 'waiting'
-  if (!turn_input_armed(true, false, presenting_now)) return 'hidden'
+  if (!playable) return 'waiting'
   return turn_input_armed(true, busy, false) ? 'armed' : 'committing'
 }
 
@@ -264,10 +271,9 @@ export const visible_controls = (s, engine, active_entity_id, entities) => ({
   // THE min-turn floor as an ABSOLUTE INSTANT, never a remaining-ms (a `now` reading would make this view impure
   // and its memoized value a lie). `min_turn_left(state, now)` is that subtraction, unchanged.
   min_turn_ready_at: min_turn_ready_at(s),
-  min_turn_widened_ms: min_turn_widened_ms(s),
   // The state-only half of `can_end_turn`: my turn, fight live. The floor above completes it at read time.
   end_turn_eligible: is_my_turn(s) && !is_over(s),
   // The END-TURN control's 3-state, derived with the CORE busy (see `busy` above): 'hidden' when there is no
-  // live actor or a replay is draining, 'waiting' when the clock is someone else's, else armed/committing.
-  phase: turn_control_phase(engine, active_entity_id, entities, !!s?.busy, presenting(s)),
+  // live actor, 'waiting' when the turn is someone else's OR not yet handed to me, else armed/committing.
+  phase: turn_control_phase(engine, active_entity_id, entities, !!s?.busy, turn_playable(s)),
 })

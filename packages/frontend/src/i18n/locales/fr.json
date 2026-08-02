@@ -79,7 +79,6 @@
     "turn_stalled": "{{name}} ne termine pas son tour",
     "force_pass": "FORCER LE PASSAGE",
     "waiting_for": "En attente de {{name}}",
-    "turn_min_widened": "Minimum du tour {{seconds}}s — les monstres qui viennent de jouer se résolvent encore sur la chaîne.",
     "none": "Aucun",
     "drawing_cards": "Distribution des cartes…",
     "weapon_attack": "Attaque d'arme",
