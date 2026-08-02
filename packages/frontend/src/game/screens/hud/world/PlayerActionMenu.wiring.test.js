@@ -41,7 +41,7 @@ describe('PlayerActionMenu cold-start party (#329)', () => {
 describe('signed actions resolve their owner authoritatively (advisory-only law)', () => {
   it('resolves the target owner from the /v1 character book, never from the opener-carried field', () => {
     expect(source).toContain('get_characters({ id: target.id }, signal)')
-    expect(source).toContain('target_docs?.[0]?.owner')
+    expect(source).toContain('target_doc?.id === target.id ? target_doc.owner : null')
     expect(source).not.toContain('target?.address')
     expect(source).not.toContain('presence_character(')
   })

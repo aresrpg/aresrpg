@@ -55,7 +55,11 @@ export function PlayerActionMenu() {
     (signal) => (target?.id ? get_characters({ id: target.id }, signal) : Promise.resolve([])),
     { enabled: !!target?.id, deps: [target?.id], interval_ms: 15_000 }
   )
-  const address = (target?.id ? target_docs?.[0]?.owner : target?.owner_address) ?? null
+  // The document must be about THIS character: use_rpc_view keeps its last-good data across a query change
+  // (its no-silent-stale contract), so switching targets briefly leaves the PREVIOUS player's document in
+  // hand. An answer about someone else is not an answer — it reads as unresolved until this one lands.
+  const target_doc = target_docs?.[0]
+  const address = (target?.id ? (target_doc?.id === target.id ? target_doc.owner : null) : target?.owner_address) ?? null
   // Fast travel (the third menu option): needs MY selected character to ride, an authoritatively-owned target,
   // and never my OWN character on another seat (address === my_address hides it — B10).
   const is_self = !!address && !!my_address && address === my_address
