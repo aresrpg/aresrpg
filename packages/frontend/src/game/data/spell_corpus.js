@@ -8,14 +8,15 @@
 // content NEVER ships inside the repo: the blob is a runtime asset. Absence (the manifest carries no
 // `spell_corpus` row yet — the open-source / pre-publish tree — or the fetch fails) DEGRADES LOUDLY to [] +
 // ONE console.error naming the missing asset (issue #106); the spellbook, casting and the encyclopedia go
-// inert while the scene still renders. Absence is NEVER cached as truth: a failed load leaves the cache empty
+// inert while the scene still renders. An UNREADABLE POINTER refuses instead (#1739) — it is the one source,
+// never a bare-URL second home. Absence is NEVER cached as truth: a failed load leaves the cache empty
 // AND `loaded` false, so a later call still populates it.
 
 import i18n from '../../i18n'
 import { report_error } from '../../core/report.js'
 import { push_event_toast } from '../core/toast.js'
 
-import { bare_corpus_url, load_corpus_version, versioned_corpus_url } from './corpus_asset.js'
+import { load_corpus_version, versioned_corpus_url } from './corpus_asset.js'
 
 /** @type {Array<Record<string, any>>} */
 let corpus = []
@@ -38,13 +39,14 @@ const warn_absent = (why) => {
   )
 }
 
-const speak_fallback_failure = (error, pointer_error) => {
+// The pointer is unreadable: REFUSE (#1739). The bare pre-versioning URL is a stale prior publish, so
+// serving it would hand the player a dead deployment's object ids — a loud refusal beats silent wrong data.
+const speak_pointer_failure = (error) => {
   if (warned) return
   warned = true
   report_error(error, {
     area: 'spell_corpus',
-    action: 'load_fallback',
-    pointer_error,
+    action: 'load_pointer',
   })
   push_event_toast({
     state: 'error',
@@ -61,33 +63,24 @@ const speak_fallback_failure = (error, pointer_error) => {
  */
 export async function load_spell_corpus(version_promise) {
   if (loaded) return
-  let pointer_error = null
-  let fallback = false
   let url = null
   try {
     const version = await (version_promise ?? load_corpus_version())
     url = version ? versioned_corpus_url('spell_corpus', version) : null
   } catch (error) {
-    // Compatibility bridge: a missing/broken pointer must not make the pre-versioning bare publication inert.
-    pointer_error = error
-    fallback = true
-    url = bare_corpus_url('spell_corpus')
+    return speak_pointer_failure(error)
   }
   if (!url) return warn_absent('not in the asset manifest — unpublished')
   try {
     const response = await fetch(url)
-    if (!response.ok) {
-      const error = new Error(`spell corpus HTTP ${response.status}`)
-      return fallback ? speak_fallback_failure(error, pointer_error) : warn_absent(`HTTP ${response.status}`)
-    }
+    if (!response.ok) return warn_absent(`HTTP ${response.status}`)
     const rows = await response.json()
     corpus = Array.isArray(rows) ? rows : []
     loaded = true
     publish()
   } catch (error) {
     // Network / parse failure — stay retryable; the spell surfaces stay inert until a later load lands.
-    if (fallback) speak_fallback_failure(error, pointer_error)
-    else warn_absent(`fetch failed: ${error?.message ?? error}`)
+    warn_absent(`fetch failed: ${error?.message ?? error}`)
   }
 }
 

@@ -41,9 +41,7 @@ const client_consumers = () =>
     const source = fs.readFileSync(file, 'utf8')
     const bindings = string_bindings(source)
     const consumers = []
-    for (const match of source.matchAll(
-      /\b(asset_url|bare_corpus_url|versioned_corpus_url)\s*\(\s*([^,)]+)(?:,\s*([^,)]+))?/g
-    )) {
+    for (const match of source.matchAll(/\b(asset_url|versioned_corpus_url)\s*\(\s*([^,)]+)(?:,\s*([^,)]+))?/g)) {
       const url_class = resolve_token(match[2], bindings)
       if (!url_class) continue
       const filename = match[1] === 'asset_url' ? resolve_token(match[3] ?? '', bindings) : `${url_class}.json`
@@ -66,7 +64,7 @@ const loud_fallback = ({ artifact, source }) => {
   if (artifact !== 'corpus_version') return null
   const fallback_checks = {
     'packages/frontend/src/game/data/corpus_asset.js': 'corpus pointer HTTP',
-    'packages/frontend/src/game/data/spell_corpus.js': 'speak_fallback_failure',
+    'packages/frontend/src/game/data/spell_corpus.js': 'speak_pointer_failure',
     'packages/frontend/src/pages/encyclopedia/world_corpus.ts': 'degrade(',
   }
   const pattern = fallback_checks[source]

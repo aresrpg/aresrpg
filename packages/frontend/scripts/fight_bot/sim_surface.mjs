@@ -9,6 +9,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import { configure_assets } from '@aresrpg/sdk/jobs'
+
+import { load_corpus_version, versioned_corpus_url } from '../../src/game/data/corpus_asset.js'
 
 import { await_seams, open_page, wait_for } from './seam.mjs'
 import { make_seat } from './drive.mjs'
@@ -16,8 +19,8 @@ import { make_seat } from './drive.mjs'
 /**
  * A mob the page is guaranteed to be able to resolve: it must exist in the published world corpus (which is
  * what the simulator's mob index is built from) AND carry a minted template id in the deployment pin. The
- * URL shape is `asset_url`'s own (`<aggregator>/data/<class>.json`), read off the manifest the app
- * boots from — never a second hardcoded host.
+ * corpus URL comes from the app's OWN resolver (corpus_asset.js) over the manifest the app boots from — the
+ * shared version pointer, then the immutable payload it names. Never a second host, never the bare object.
  */
 const mob_name_key = (name) =>
   String(name ?? '')
@@ -47,8 +50,10 @@ export const join_live_mobs = (blob, live_mobs) => {
 
 export const pick_mob = async ({ frontend, scenario }) => {
   const manifest = JSON.parse(readFileSync(resolve(frontend, 'public/asset_manifest.json'), 'utf8'))
+  configure_assets(manifest)
+  const corpus_url = versioned_corpus_url('world_corpus', await load_corpus_version())
   const [corpus_response, live_response] = await Promise.all([
-    fetch(`${manifest.aggregator}/data/world_corpus.json`),
+    fetch(corpus_url),
     fetch(`${process.env.VITE_RPC_URL ?? 'https://rpc.aresrpg.world'}/v1/encyclopedia?kind=mobs`),
   ])
   if (!corpus_response.ok)

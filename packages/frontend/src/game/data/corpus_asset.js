@@ -17,14 +17,15 @@ const version_pattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/
 // because the CDN, not just the browser cache, must revalidate the mutable object.
 
 /**
- * Resolve the pre-versioning mutable payload URL. This remains the compatibility fallback when the shared
- * pointer is unavailable during a publication rollout.
+ * The corpus class's base URL on the asset host — the resolution BASE the pointer and every versioned payload
+ * URL below are built against, never a URL a loader fetches (#1739: the unversioned object is a prior
+ * publish, so reading it is reading a dead deployment; the pointer is the one source). Deliberately private.
  * @param {'spell_corpus' | 'world_corpus'} corpus_name
  * @returns {string | null}
  */
-export const bare_corpus_url = (corpus_name) => asset_url(corpus_name, `${corpus_name}.json`)
+const corpus_base_url = (corpus_name) => asset_url(corpus_name, `${corpus_name}.json`)
 
-const published_corpus_url = () => bare_corpus_url('spell_corpus') ?? bare_corpus_url('world_corpus')
+const published_corpus_url = () => corpus_base_url('spell_corpus') ?? corpus_base_url('world_corpus')
 
 /** Decode the pointer's intentionally tiny wire format; null is invalid data, never a guessed version. */
 export const decode_corpus_version = (pointer) => {
@@ -58,6 +59,6 @@ export async function load_corpus_version(fetch_impl = globalThis.fetch) {
 export function versioned_corpus_url(corpus_name, version) {
   const safe_version = decode_corpus_version({ version })
   if (!safe_version) throw new Error('invalid corpus version')
-  const mutable_url = bare_corpus_url(corpus_name)
-  return mutable_url ? new URL(`${corpus_name}.${safe_version}.json`, mutable_url).href : null
+  const base_url = corpus_base_url(corpus_name)
+  return base_url ? new URL(`${corpus_name}.${safe_version}.json`, base_url).href : null
 }

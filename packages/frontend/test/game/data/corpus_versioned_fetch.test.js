@@ -73,18 +73,20 @@ test('one pointer flip makes both new corpora visible without purging the old UR
   expect(error_spy).not.toHaveBeenCalled()
 })
 
-test('a missing pointer falls back to the pre-versioning spell corpus URL', async () => {
+// #1739 — the pointer is the ONE corpus source. There is no bare `data/spell_corpus.json` second home to
+// fall back to: the seed publishes the pointer in every ceremony, and the bare object is a stale prior
+// publish (measured 2026-08-02: all 240 rows carry a PREVIOUS deployment's `object_id`). So a pointer
+// failure REFUSES — typed error to the reporter, toast to the player — instead of silently serving stale ids.
+test('a pointer failure refuses loudly and fetches no bare corpus URL', async () => {
   configure_assets({
     aggregator: host,
     classes: {
       spell_corpus: { published: true },
     },
   })
-  const fallback_rows = [{ id: 'spell-from-bare-corpus' }]
   const fetch_spy = spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input)
     if (url === pointer_url) return { ok: false, status: 404 }
-    if (url === `${host}/data/spell_corpus.json`) return response(fallback_rows)
     throw new Error(`unexpected corpus URL: ${url}`)
   })
   const error_spy = spyOn(console, 'error').mockImplementation(() => {})
@@ -94,32 +96,8 @@ test('a missing pointer falls back to the pre-versioning spell corpus URL', asyn
   fetch_spy.mockClear()
   await load_spell_corpus(load_corpus_version())
 
-  expect(get_spell_corpus()).toEqual(fallback_rows)
-  expect(fetch_spy.mock.calls.map(([url]) => String(url))).toEqual([pointer_url, `${host}/data/spell_corpus.json`])
-  expect(error_spy).not.toHaveBeenCalled()
-})
-
-test('pointer and bare-corpus failures toast the player and report the raw fallback error', async () => {
-  configure_assets({
-    aggregator: host,
-    classes: {
-      spell_corpus: { published: true },
-    },
-  })
-  const fallback_error = new Error('bare spell corpus offline')
-  const fetch_spy = spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-    const url = String(input)
-    if (url === pointer_url) return { ok: false, status: 404 }
-    if (url === `${host}/data/spell_corpus.json`) throw fallback_error
-    throw new Error(`unexpected corpus URL: ${url}`)
-  })
-  const error_spy = spyOn(console, 'error').mockImplementation(() => {})
-
-  // spyOn re-acquires the SAME process-global fetch spy, and its call history outlives
-  // afterEach's mock.restore() — clear it so this list is this test's fetches alone.
-  fetch_spy.mockClear()
-  await load_spell_corpus(load_corpus_version())
-
+  // THE deletion assertion: the pointer is the only URL this loader ever reaches for.
+  expect(fetch_spy.mock.calls.map(([url]) => String(url))).toEqual([pointer_url])
   expect(get_spell_corpus()).toEqual([])
   expect(event_toast_store.get()).toEqual([
     expect.objectContaining({
@@ -129,12 +107,11 @@ test('pointer and bare-corpus failures toast the player and report the raw fallb
   ])
   expect(error_spy).toHaveBeenCalledWith(
     '[ares-error]',
-    fallback_error,
-    fallback_error,
+    expect.objectContaining({ message: 'corpus pointer HTTP 404' }),
+    expect.anything(),
     '',
-    expect.objectContaining({ area: 'spell_corpus', action: 'load_fallback' })
+    expect.objectContaining({ area: 'spell_corpus', action: 'load_pointer' })
   )
-  expect(fetch_spy.mock.calls.map(([url]) => String(url))).toEqual([pointer_url, `${host}/data/spell_corpus.json`])
 })
 
 test('the service worker routes the mutable pointer NetworkFirst before immutable CDN assets', () => {
