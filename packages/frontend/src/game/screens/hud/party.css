@@ -118,7 +118,7 @@
   color: var(--fg-muted);
 }
 
-/* ===== invite prompt — center-top, below the minimap/craft-toast line, instant Accept/Decline ===== */
+/* ===== invite prompt — center-top, below the minimap line, instant Accept/Decline ===== */
 .party-invite {
   position: fixed;
   top: 72px;

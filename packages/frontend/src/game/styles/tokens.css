@@ -64,10 +64,10 @@
   --s-7: 48px;
   --s-8: 64px;
 
-  /* bottom-dock clearance (SSOT) — the fixed bottom-right launcher dock (hud.css .hud-dock, z-28) is
-     ~111px tall + a 16px offset = ~127px of occlusion. This is the padding-bottom every drawer content
-     scroll needs so its LAST rows clear the dock; spent once on .hud-drawer__body (the shared scroll
-     container every tab renders into). Bump this ONE value to retune clearance everywhere. */
+  /* bottom clearance (SSOT) — the padding-bottom every drawer content scroll needs so its LAST rows
+     are not flush to the bottom edge; spent once on .hud-drawer__body (the shared scroll container
+     every tab renders into). Sized against the bottom-right launcher dock that has since been
+     deleted — retuning the value is a layout change, not a comment fix. Bump this ONE value. */
   --dock-clear: 132px;
 
   /* motion */

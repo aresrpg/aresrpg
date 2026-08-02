@@ -215,8 +215,8 @@ export function MapDrawer() {
   )
 }
 
-// Launcher intent for the integration stage (Hud.jsx / TopLaunchers.jsx): the bottom-right dock slot.
-//   key: 'map'  label: 'Map'  — opens as a RIGHT DRAWER titled "Map" rendering <MapDrawer/>.
+// Launcher intent, kept for a future launcher surface: key 'map', label 'Map' — opens as a RIGHT
+// DRAWER titled "Map" rendering <MapDrawer/>.
 export const MAP_LAUNCHER = /** @type {const} */ ({
   key: 'map',
   label: 'Map',

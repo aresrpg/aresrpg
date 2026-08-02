@@ -104,113 +104,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== menu launchers — BOTTOM-RIGHT dock, TWO TIERED ROWS =====
- * The dock is a glass strip anchored bottom-right holding two rows: PRIMARY gameplay launchers
- * (inventory / character / characters / jobs / quests / spells / market) — louder, accent ornament +
- * higher contrast; and SECONDARY meta launchers (encyclopedia / leaderboards / simulator /
- * map / admin) — muted, a smaller row. The dock sits at the right edge and grows LEFTWARD; the
- * consumable fast-slots live in the bottom-center column (fast-slots.css), so the two never overlap.
- * The dock is z-28 so it stays ON TOP of every right drawer (z-26), never covered. */
-.hud-dock {
-  position: fixed;
-  right: var(--s-4);
-  bottom: var(--s-4);
-  z-index: 28; /* launcher buttons ALWAYS on top of the right drawer (drawer z-index 26), never covered */
-  pointer-events: none;
-}
-.hud-launchers {
-  pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--s-2);
-  padding: var(--s-2);
-  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
-  border: 1px solid var(--edge);
-  border-top-color: var(--edge-top);
-  border-radius: var(--r-3);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-}
-.hud-launchers__row {
-  display: flex;
-  gap: 6px;
-}
-/* the muted meta row reads as a second, quieter zone: a hairline divider above + tighter scale */
-.hud-launchers__row--secondary {
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--hair);
-}
-.hud-lbtn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--r-2);
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid var(--hair);
-  transition:
-    color var(--dur-1) var(--ease),
-    background var(--dur-1) var(--ease),
-    transform var(--dur-1) var(--ease);
-}
-.hud-lbtn:hover {
-  color: var(--fg);
-  transform: translateY(-1px);
-}
-/* PRIMARY gameplay launchers — larger, higher contrast, an ice-blue ornament dot top-right */
-.hud-lbtn--primary {
-  width: 42px;
-  height: 42px;
-  color: var(--fg);
-  border-color: var(--hair-strong);
-}
-.hud-lbtn--primary::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0.55;
-  transition: opacity var(--dur-1) var(--ease);
-}
-.hud-lbtn--primary:hover::after {
-  opacity: 1;
-}
-.hud-lbtn--primary svg {
-  width: 22px;
-  height: 22px;
-}
-/* SECONDARY meta launchers — smaller + muted (less contrast), no ornament */
-.hud-lbtn--secondary {
-  width: 34px;
-  height: 34px;
-  color: var(--fg-faint);
-  background: rgba(0, 0, 0, 0.14);
-}
-.hud-lbtn--secondary:hover {
-  color: var(--fg-muted);
-}
-.hud-lbtn--secondary svg {
-  width: 18px;
-  height: 18px;
-}
-.hud-lbtn.active {
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-color: var(--accent-strong);
-}
-.hud-lbtn.active::after {
-  background: var(--accent-ink);
-  opacity: 0.5;
-}
-
 /* ===== top-left merged controls: online players + sound + change-character (OFF the minimap) ===== */
 .hud-players {
   position: fixed;
@@ -555,7 +448,7 @@
   background: rgba(255, 255, 255, 0.07);
 }
 
-/* social context menu (left-click a name) — floats at the cursor, fast-slots-menu pattern */
+/* social context menu (left-click a name) — floats at the cursor */
 .hud-chat-social {
   position: fixed;
   z-index: 40;
@@ -2628,13 +2521,12 @@ button.hud-socket:focus-visible {
 
 /* D59e + D65b — the ALWAYS-THERE dungeon escape, BOTTOM-RIGHT card slot (we ONLY want the
    bottom right card" — the top-right position is DEAD in all states). One place to look for exit
-   controls in and out of fights. Sits ABOVE the two-row launcher dock (dock anchors bottom: var(--s-4);
-   124px clears both rows), independent of the fight HUD so a half-initialised fight can never strand
-   the player without an exit. */
+   controls in and out of fights. Independent of the fight HUD so a half-initialised fight can never
+   strand the player without an exit. */
 .hud-leave-persistent {
   position: fixed;
   /* D213-addendum: "leave dungeon should be near the bottom" — bottom-right corner
-     (chat owns bottom-left, fast-slots bottom-center; FightControls replaces this slot during fights). */
+     (chat owns bottom-left; FightControls replaces this slot during fights). */
   bottom: 14px;
   right: 14px;
   z-index: 9000;

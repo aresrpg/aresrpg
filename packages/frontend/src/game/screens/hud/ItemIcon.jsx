@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared item-icon — the single home for rendering an item's art across every HUD surface (inventory
-// slots/grid, encyclopedia rows/cards/detail, market buckets/rows/confirm/sell, fast-slots, recipe
+// slots/grid, encyclopedia rows/cards/detail, market buckets/rows/confirm/sell, recipe
 // ingredient rows). Resolves the URL via the SDK SSOT helper item_icon_url (host-free
 // `/assets/items/<template-or-icon-slug>.png`, or the asset-host item quilt once published; `_hd` for large detail) and
 // degrades GRACEFULLY: on a failed/blocked <img> it swaps to the item's CATEGORY glyph (a ring, a sword,

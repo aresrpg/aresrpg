@@ -269,9 +269,8 @@ export const INITIAL_STATE = {
 
   /**
    * The live craft-queue state (Wave CRAFT), owned by core/modules/craft.js. The SERVER is the sole
-   * authority on the queue + the per-craft timer; the client only renders the `craftProgress` it
-   * pushes (the center-top CraftToast extrapolates the active craft's progress bar from `per_ms` +
-   * `started_at_ms`). null/idle when no queue is active. NEVER stored in localStorage (the queue lives
+   * authority on the queue + the per-craft timer; the client only holds the `craftProgress` it
+   * pushes. null/idle when no queue is active. NEVER stored in localStorage (the queue lives
    * in transient server Redis; localStorage = preferences only).
    * @type {{
    *   active: boolean,

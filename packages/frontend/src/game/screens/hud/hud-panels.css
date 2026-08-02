@@ -150,11 +150,10 @@
   min-height: 0;
   overflow-y: auto;
   padding: var(--s-4);
-  /* SSOT dock clearance: EVERY tab renders inside this body, so one padding-bottom here lifts the last
-     rows of every scrolling tab clear of the fixed bottom-right launcher dock (hud.css .hud-dock, z-28 >
-     drawer z-26). Body-scroll tabs (jobs, leaderboards, simulator) scroll here directly; height:100% tabs
-     (inventory, stats, market, encyclopedia, characters, quests, admin) have their inner scroll
-     shrunk by this padding so its bottom edge lands above the dock too. One value -> lands everywhere. */
+  /* SSOT bottom clearance: EVERY tab renders inside this body, so one padding-bottom here lifts the
+     last rows of every scrolling tab off the bottom edge. Body-scroll tabs (jobs, leaderboards,
+     simulator) scroll here directly; height:100% tabs (inventory, stats, market, encyclopedia,
+     characters, quests, admin) have their inner scroll shrunk by this padding. One value -> everywhere. */
   padding-bottom: var(--dock-clear);
 }
 

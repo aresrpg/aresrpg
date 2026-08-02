@@ -2,9 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Quest chain data + live-status helpers (NO JSX). The single home for the static tutorial chain
 // (@aresrpg/sdk/quests, sorted by `order`) and the pure functions that fold the server-authoritative
-// progress slice (core/modules/quests.js) into a per-quest status. Shared by the QuestsDrawer (the
-// questbook UI) and the launcher badge (TopLaunchers) so "what counts as an actionable quest" lives
-// in exactly one place — no drift between the badge number and the drawer.
+// progress slice (core/modules/quests.js) into a per-quest status, read by the QuestsDrawer (the
+// questbook UI) so "what counts as an actionable quest" lives in exactly one place.
 
 import quests_content from '@aresrpg/sdk/quests'
 

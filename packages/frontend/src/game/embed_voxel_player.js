@@ -362,8 +362,8 @@ export function create_player({
         if (down && !e.repeat) toggle_cinematic() // one-shot on press (ignore auto-repeat)
         break
       case 'KeyX':
-        // TR-97/#594 — mount ride toggle (roam only; guarded inside). NOT Digit1: that key is the fast-slot
-        // row's (FastSlots.jsx) — X is AZERTY-safe (same physical key/glyph as QWERTY, like C/V above).
+        // TR-97/#594 — mount ride toggle (roam only; guarded inside). X is AZERTY-safe (same physical
+        // key/glyph as QWERTY, like C/V above).
         if (down && !e.repeat) toggle_mount()
         break
       case 'Space':

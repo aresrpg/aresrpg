@@ -270,12 +270,8 @@ export function JobsDrawer() {
   )
 }
 
-// Launcher intent for the integration stage (Hud.jsx / TopLaunchers.jsx): the bottom-right dock slot.
-//   key:   'jobs'
-//   label: 'Jobs'
-//   icon:  a sickle/wheat glyph (Lucide-style). Add to icons.js as `icon_jobs`, e.g.:
-//     export const icon_jobs = svg('<path d="M2 22 16 8"/><path d="M17 7l5-5"/><path d="M14 4l6 6"/>')
-//   Open as a RIGHT DRAWER titled "Jobs" rendering <JobsDrawer/> (all menus are right drawers).
+// Launcher intent, kept for a future launcher surface: key 'jobs', label 'Jobs' — opens as a RIGHT
+// DRAWER titled "Jobs" rendering <JobsDrawer/> (all menus are right drawers).
 export const JOBS_LAUNCHER = /** @type {const} */ ({
   key: 'jobs',
   label: 'Jobs',
