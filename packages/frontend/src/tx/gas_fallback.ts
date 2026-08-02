@@ -126,5 +126,7 @@ export async function attempt_sponsor_fallback({
   }
 
   game_log('gas-fallback', `low-balance tx sponsored (${receipt.digest})`)
-  return { digest: receipt.digest }
+  // #1862: carry the certified receipt through this route too — the fallback is a different ROUTE to the same
+  // one execution, so it must not silently cost the caller its adoption and buy a waitForTransaction back.
+  return { digest: receipt.digest, ...(receipt.effects_result ? { effects_result: receipt.effects_result } : {}) }
 }

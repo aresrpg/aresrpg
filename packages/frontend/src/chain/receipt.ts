@@ -62,6 +62,43 @@ export function normalize_receipt(result: any): NormalizedReceipt {
 }
 
 /**
+ * #1862 — the SPONSORED receipt, projected into the very same Core union `normalize_receipt` consumes.
+ *
+ * The gas station executes and answers with a JSON-RPC receipt (`objectChanges[].{type,objectType,objectId,
+ * version}` + `events[].{type,parsedJson}`) — literally the shape every consumer in this app was written
+ * against before the gRPC cutover. Re-projecting it here (rather than teaching consumers a second receipt
+ * dialect) keeps ONE normalizer: a sponsored transaction then adopts the objects it created from the certified
+ * execute round-trip, instead of demoting to a `waitForTransaction` that polls until the read layer catches up.
+ *
+ * Returns null when the body carries no `objectChanges`/`events` arrays — an INCOMPLETE proof is never an
+ * empty adoption ("this transaction created nothing" is a lie); the caller falls back to the honest wait.
+ */
+export function sponsored_execute_result(body: any, digest: string): any | null {
+  if (!Array.isArray(body?.objectChanges) || !Array.isArray(body?.events)) return null
+  // Created + mutated are the only ops normalize_receipt projects; drop the rest at the seam.
+  const changes = body.objectChanges.filter((c: any) => c?.type === 'created' || c?.type === 'mutated')
+  const tx = {
+    digest,
+    effects: {
+      status: { error: body?.effects?.status?.error ?? null },
+      // Pass the station's own gasUsed through untouched — it is byte-for-byte what a waitForTransaction on
+      // this digest would have read, so nothing downstream sees a different number than it saw before.
+      gasUsed: body?.effects?.gasUsed ?? {},
+      changedObjects: changes.map((c: any) => ({
+        objectId: c.objectId,
+        idOperation: c.type === 'created' ? 'Created' : 'None',
+        outputState: 'ObjectWrite',
+        outputVersion: c.version == null ? null : String(c.version),
+      })),
+    },
+    objectTypes: Object.fromEntries(changes.map((c: any) => [c.objectId, String(c.objectType ?? '')])),
+    events: body.events.map((e: any) => ({ eventType: e?.type, json: e?.parsedJson })),
+  }
+  // The union arm IS the status: `normalize_receipt`/`find_created` read success from which key is present.
+  return body?.effects?.status?.status === 'success' ? { Transaction: tx } : { FailedTransaction: tx }
+}
+
+/**
  * The objectId of the FIRST created object whose on-chain type ends with `type_suffix` (null if none).
  * Takes the RAW gRPC Core result (`{ Transaction }`), the same shape `normalize_receipt` consumes. One home
  * for the create-and-parse pattern the template/item publish adapters share.

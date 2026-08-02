@@ -26,6 +26,7 @@ import {
   mark_engage_wallet_signed,
 } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
+import { sponsored_execute_result } from '../chain/receipt'
 import { attach_executed_digest } from '../world-shell/tx_digest_error.js'
 
 import { attempt_sponsor_fallback, is_gas_selection_error, type SponsorFallbackDeps } from './gas_fallback'
@@ -346,7 +347,13 @@ export async function execute_tx({
       // refusal as pre-flight — an UNMAPPED code on this route showed "executed, gas was spent, don't retry"
       // for a tx that burned NOTHING (digest ''). Route through the ONE decoder (tx_error) with the digest-derived
       // preflight flag so the marker, the decode, AND the "must say why" reason line all apply uniformly here too.
-      if (sponsored.effects.status.status === 'success') return { digest: sponsored.digest }
+      // #1862: the certified /execute answer rides back as `effects_result` when the station carried the
+      // objectChanges, so callers read the same door on both routes and skip their waitForTransaction leg.
+      if (sponsored.effects.status.status === 'success')
+        return {
+          digest: sponsored.digest,
+          ...(sponsored.effects_result ? { effects_result: sponsored.effects_result } : {}),
+        }
       throw attach_executed_digest(
         tx_error(sponsored.effects.status.error, { preflight: !sponsored.digest }),
         sponsored.digest
@@ -789,8 +796,18 @@ export async function execute_sponsored_tx({
     total_ms: now() - sponsored_started,
   })
   const ok = effects?.status?.status === 'success'
+  const receipt_digest = digest ?? effects?.transactionDigest ?? ''
+  // #1862 ADOPTION ON THE CERTIFIED RECEIPT. The station waited for finality before answering, and (since the
+  // /execute response carries objectChanges + events) that answer already names every object the transaction
+  // created, WITH its on-chain type. Hand it back through the SAME `effects_result` door the self-pay
+  // execute-cert lane uses, so a sponsored create proceeds on the execute round-trip instead of paying a
+  // separate waitForTransaction + read-layer catch-up (the structural half of the ≈7s felt create).
+  // NOT a second submit and never a retry — this is the proof of the ONE execution that already happened.
+  // A station that cannot carry the changes yields null here, and the caller keeps its honest wait.
+  const effects_result = sponsored_execute_result(executed.value, receipt_digest)
   return {
-    digest: digest ?? effects?.transactionDigest ?? '',
+    digest: receipt_digest,
+    ...(effects_result ? { effects_result } : {}),
     effects: {
       status: {
         status: ok ? 'success' : 'failure',

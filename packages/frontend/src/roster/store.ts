@@ -124,7 +124,7 @@ async function creation_kiosk(
       personal_kiosk_cap_id: String(existing.objectId),
     }
 
-  const { route, digest } = await execute_create_routed({
+  const { route, digest, effects_result } = await execute_create_routed({
     tx: sdk.onboard_kiosk_ptb(),
     fetch_balance_mist: async () => {
       const { balance } = await sdk.grpc_client.core.getBalance({ owner: address })
@@ -134,11 +134,14 @@ async function creation_kiosk(
     run_sponsored: (tx) => sponsor_and_execute_transaction(wallet_name, address, tx),
     on_mint_error: mint_error,
   })
+  // #1862: the executing door already returned the CERTIFIED receipt (sponsored /execute, or the self-pay
+  // execute-cert lane) — adopt the kiosk off it. The wait is the FALLBACK for a door that carried none.
   const receipt = normalize_receipt(
-    await sdk.grpc_client.core.waitForTransaction({
-      digest,
-      include: { effects: true, objectTypes: true },
-    })
+    effects_result ??
+      (await sdk.grpc_client.core.waitForTransaction({
+        digest,
+        include: { effects: true, objectTypes: true },
+      }))
   )
   if (route === 'self_pay' && receipt.effects?.status?.status !== 'success')
     throw mint_error(receipt.effects?.status?.error)
@@ -270,6 +273,10 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       // The creation PTB itself creates no half-state: mint, lock, and membership all commit or all revert.
       /** @type {any} the executed tx receipt — D93 receipt-ingest reads created objects from it */
       let receipt: any = null
+      // #1862 DoD instrument: where the receipt came from, hoisted out of the toast-wrapped promise so the one
+      // timing line below can name it. 'certified-effects' = the execute round-trip already carried the created
+      // objects; 'finality-wait' = it did not and the fallback read ran.
+      let adoption: 'certified-effects' | 'finality-wait' = 'finality-wait'
       let create_kiosk: personal_kiosk_handle | null = null
       const initial_world_id = T62_WORLDS[0]?.id
       if (!initial_world_id) throw new Error('No seeded world is available for character creation')
@@ -307,7 +314,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           // value for a money call — and self-pay the SAME free-mint PTB when funded (verified live: testnet
           // Creation.sponsor == none ⇒ self-pay is permitted). A getBalance failure THROWS through the toast,
           // never a silent sponsor fallback; the sponsored path (≤ 0.2 SUI) is byte-for-byte unchanged.
-          const { route, digest } = await execute_create_routed({
+          const { route, digest, effects_result } = await execute_create_routed({
             tx,
             fetch_balance_mist: async () => {
               const { balance } = await sdk.grpc_client.core.getBalance({ owner: address })
@@ -319,11 +326,16 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           })
           // #23 gRPC: waitForTransaction + normalize the receipt to the jsonRpc-ish { objectChanges } the D93
           // ingest reads (created Character/Kiosk/PersonalKioskCap from effects.changedObjects + objectTypes).
+          // #1862: that read is now the FALLBACK — both mint doors (sponsored /execute, self-pay execute-cert)
+          // return the CERTIFIED receipt, so the create proceeds bounded by the execute round-trip instead of
+          // paying a fullnode wait plus read-layer catch-up for objects it was already told about.
+          adoption = effects_result ? 'certified-effects' : 'finality-wait'
           receipt = normalize_receipt(
-            await sdk.grpc_client.core.waitForTransaction({
-              digest,
-              include: { effects: true, events: true, objectTypes: true },
-            })
+            effects_result ??
+              (await sdk.grpc_client.core.waitForTransaction({
+                digest,
+                include: { effects: true, events: true, objectTypes: true },
+              }))
           )
           // SELF-PAY returns BCS effects (no pre-check inside execute_create_routed), so its EXECUTED status is
           // read off the WAITED receipt — mirrors create_character_paid. A sim-refused self-pay already threw.
@@ -335,7 +347,9 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           success: i18n.t('world.tx_create_character_success', { name: draft.name }),
         }
       )
-      game_log('d93', 'create tx+wait', Math.round(performance.now() - t0), 'ms')
+      // #1862 DoD instrument: the SOURCE next to the number, so "create proceed-time is bounded by the execute
+      // round-trip" is readable off one line instead of inferred.
+      game_log('d93', 'create tx+wait', Math.round(performance.now() - t0), 'ms', { adoption })
       if (!mint_session_matches(address, use_auth.getState().address)) return
 
       // ── #1127 RECEIPT INPUT ── the settled Character/Kiosk ids + submitted appearance are projected by the

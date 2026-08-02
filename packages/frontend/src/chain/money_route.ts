@@ -24,8 +24,15 @@ export function route_create_payment(balance_mist: bigint): PaymentRoute {
   return balance_mist > SELF_PAY_THRESHOLD_MIST ? 'self_pay' : 'sponsored'
 }
 
-type SponsoredResult = { digest: string; effects?: { status?: { status?: string; error?: string } } }
-type SelfPayResult = { digest: string }
+// `effects_result` — the CERTIFIED receipt when the executing door already carried one (#1862: the sponsored
+// station's /execute answer, or the self-pay execute-cert lane). Both doors produce the same Core union, so
+// the caller adopts the mint's created objects from it instead of waiting on the read layer.
+type SponsoredResult = {
+  digest: string
+  effects?: { status?: { status?: string; error?: string } }
+  effects_result?: any
+}
+type SelfPayResult = { digest: string; effects_result?: any }
 
 /**
  * Fetch a FRESH balance, decide the route, and execute the mint through the matching door. Every effect is
@@ -53,16 +60,16 @@ export async function execute_create_routed<Tx>({
   run_self_pay: (tx: Tx) => Promise<SelfPayResult>
   run_sponsored: (tx: Tx) => Promise<SponsoredResult>
   on_mint_error: (error?: string) => Error
-}): Promise<{ route: PaymentRoute; digest: string }> {
+}): Promise<{ route: PaymentRoute; digest: string; effects_result?: any }> {
   const balance_mist = await fetch_balance_mist()
   const route = route_create_payment(balance_mist)
 
   if (route === 'self_pay') {
-    const { digest } = await run_self_pay(tx)
-    return { route, digest }
+    const { digest, effects_result } = await run_self_pay(tx)
+    return { route, digest, effects_result }
   }
 
   const res = await run_sponsored(tx)
   if (res.effects?.status?.status !== 'success') throw on_mint_error(res.effects?.status?.error)
-  return { route, digest: res.digest }
+  return { route, digest: res.digest, effects_result: res.effects_result }
 }

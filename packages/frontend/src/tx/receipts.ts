@@ -10,7 +10,11 @@
 // caller read the CERTIFIED effects directly and SKIP the separate waitForTransaction read (a ~570ms testnet
 // ledger-availability lag). Absent on the wallet-execute path and on a sponsor fallback ⇒ the caller waits as before.
 export type TxReceipt = { digest: string; effects?: string; bytes?: string; effects_result?: any }
+// #1862: the sponsored door carries `effects_result` too — the station's certified /execute answer, projected
+// into the same Core union (chain/receipt.ts `sponsored_execute_result`). Present ⇒ the caller adopts the
+// created objects straight off the receipt; absent (a station that could not carry objectChanges) ⇒ it waits.
 export type SponsoredReceipt = {
   digest: string
   effects: { status: { status: 'success' | 'failure'; error?: string } }
+  effects_result?: any
 }

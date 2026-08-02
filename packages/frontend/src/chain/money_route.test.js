@@ -93,4 +93,46 @@ describe('execute_create_routed — fresh-balance decision + door dispatch', () 
       })
     ).rejects.toThrow('that name is taken')
   })
+
+  // #1862 — the mint's CERTIFIED RECEIPT must survive the routing hop. The caller (roster/store.ts) adopts the
+  // created Character/Kiosk off `effects_result` and only waits on the read layer when there is none, so a door
+  // that dropped it here would silently buy back the ~570ms wait + read-layer catch-up this ticket removes.
+  const certified = { Transaction: { digest: 'D', effects: { changedObjects: [] }, objectTypes: {} } }
+
+  test('a certified receipt from the SPONSORED door rides through to the caller', async () => {
+    const out = await execute_create_routed({
+      fetch_balance_mist: async () => 80_000_000n,
+      tx: make_tx(),
+      run_self_pay: mock(async () => ({ digest: 'X' })),
+      run_sponsored: mock(async () => ({
+        digest: 'SPONSORED_OK',
+        effects: { status: { status: 'success' } },
+        effects_result: certified,
+      })),
+      on_mint_error: mint_error,
+    })
+    expect(out.effects_result).toBe(certified)
+  })
+
+  test('a door WITHOUT a certified receipt reports none — the caller keeps its honest wait', async () => {
+    const out = await execute_create_routed({
+      fetch_balance_mist: async () => 80_000_000n,
+      tx: make_tx(),
+      run_self_pay: mock(async () => ({ digest: 'X' })),
+      run_sponsored: mock(ok_sponsored),
+      on_mint_error: mint_error,
+    })
+    expect(out.effects_result).toBeUndefined()
+  })
+
+  test('a certified receipt from the SELF-PAY door rides through too (same seam, both routes)', async () => {
+    const out = await execute_create_routed({
+      fetch_balance_mist: async () => 820_000_000n,
+      tx: make_tx(),
+      run_self_pay: mock(async () => ({ digest: 'SELF_PAY_OK', effects_result: certified })),
+      run_sponsored: mock(ok_sponsored),
+      on_mint_error: mint_error,
+    })
+    expect(out.effects_result).toBe(certified)
+  })
 })
