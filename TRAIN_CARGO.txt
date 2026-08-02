@@ -1,1 +1,4 @@
-fb676f887b4a48fd9188b80a4d2ec52adc36e291 train/train-51 feat(gates): coop-visible source-bypass ratchet — measured, shrink-only (Refs #2007)
+01c70a96fc661d57dd8460efdedbd42e82b0292e lane/ci-red-pack fix(promote): an unread range is refused, never read as a clean one
+35790e9b17a7e495eb9dc39386a6d7f3ee2dbde5 lane/ci-red-pack fix(sentry): a valve between Sentry and the board, and a plan read before it writes
+cb9c707a17a44df3ea98ce0250fa9cb6f0c68fb1 lane/ci-red-pack fix(promote): the landing reads its whole range, on the rule CI can satisfy
+14aab749cfa9e509998e0b3823d5434a800ffa90 lane/ci-red-pack fix(board): a pull request drains its rows on its own head, never its range
