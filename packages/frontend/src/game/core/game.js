@@ -268,22 +268,6 @@ export const INITIAL_STATE = {
   job_level_up: null,
 
   /**
-   * The live craft-queue state (Wave CRAFT), owned by core/modules/craft.js. The SERVER is the sole
-   * authority on the queue + the per-craft timer; the client only holds the `craftProgress` it
-   * pushes. null/idle when no queue is active. NEVER stored in localStorage (the queue lives
-   * in transient server Redis; localStorage = preferences only).
-   * @type {{
-   *   active: boolean,
-   *   job_id: string,
-   *   recipe_id: string,
-   *   remaining: number,
-   *   total: number,
-   *   per_ms: number,
-   *   started_at_ms: number,
-   * } | null}
-   */
-  craft: null,
-
   /**
    * The OFF-CHAIN resource inventory (Wave CRAFT, #39 settle parked), owned by core/modules/craft.js: a
    * map of items.json id -> owned count, mirrored from the server's `res:<id>` ledger (the SAME ledger

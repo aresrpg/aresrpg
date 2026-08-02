@@ -185,7 +185,7 @@ describe('inventory context-menu action projection', () => {
     ])
   })
 
-  test('a fast-slot item menu receives SEND without losing use or clear', () => {
+  test('a menu with no explorer escape hatch appends SEND last', () => {
     expect(project_inventory_context_actions(['use', 'clear'])).toEqual(['use', 'clear', 'send'])
   })
 })

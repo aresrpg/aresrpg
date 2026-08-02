@@ -214,10 +214,3 @@ export function MapDrawer() {
     </div>
   )
 }
-
-// Launcher intent, kept for a future launcher surface: key 'map', label 'Map' — opens as a RIGHT
-// DRAWER titled "Map" rendering <MapDrawer/>.
-export const MAP_LAUNCHER = /** @type {const} */ ({
-  key: 'map',
-  label: 'Map',
-})

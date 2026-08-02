@@ -269,10 +269,3 @@ export function JobsDrawer() {
     </div>
   )
 }
-
-// Launcher intent, kept for a future launcher surface: key 'jobs', label 'Jobs' — opens as a RIGHT
-// DRAWER titled "Jobs" rendering <JobsDrawer/> (all menus are right drawers).
-export const JOBS_LAUNCHER = /** @type {const} */ ({
-  key: 'jobs',
-  label: 'Jobs',
-})

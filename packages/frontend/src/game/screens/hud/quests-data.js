@@ -44,19 +44,3 @@ export function quest_status(quest, quests) {
   const active = !completed && trackable && quests?.active_quest_id === quest.id
   return { trackable, count, completed, active, blocked: !trackable }
 }
-
-/**
- * Count of quests the player can act on RIGHT NOW — server-trackable objectives that are not yet
- * completed. Honest + data-driven: reads the same progress slice the drawer renders, returns 0 when
- * progress is unfetched (no fabricated numbers) and naturally drops to 0 once every quest is done.
- * This drives the corner notification badge on the Quests launcher (c149).
- * @param {import('../../core/game.js').State['quests']} quests
- * @returns {number}
- */
-export function count_actionable_quests(quests) {
-  if (!quests?.progress) return 0
-  return QUEST_CHAIN.reduce((n, quest) => {
-    const { trackable, completed } = quest_status(quest, quests)
-    return trackable && !completed ? n + 1 : n
-  }, 0)
-}
