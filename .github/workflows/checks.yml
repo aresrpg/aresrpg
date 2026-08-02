@@ -196,17 +196,12 @@ jobs:
             echo "::endgroup::"
           done
           exit "$overall"
-      - name: republish window — mode gate + Move package size (#1581)
-        # The ceremony preflight has two modes and CI owns the half that needs no chain.
-        #   · --mode-check is hermetic (repo bytes + the GitHub context) and FAILS when a
-        #     packages/move/REPUBLISH_WINDOW marker rides a master-bound run — the window lives on
-        #     edge and must never be promoted to production. That refusal is the whole reason this
-        #     step is armed here rather than left to the ceremony operator's terminal.
-        #   · --size-only measures every package's predicted on-chain MovePackage object size and
-        #     fails on the chain's 102400-byte ceiling OR the package's committed SIZE_BUDGETS row.
-        #     It needs a local build and NOTHING else — no fullnode, no identity, no upgrade cap —
-        #     which is exactly why it can run on a pull request. The compat leg still cannot, so it
-        #     stays in the ceremony.
+      - name: Move compatibility report + package size (#1844, #1581)
+        # CURRENT REPUBLISH WINDOW: the literal --republish-window argument below is the one visible,
+        # reviewable switch. It keeps incompatibilities report-only while the fresh lineage lands;
+        # remove it from BOTH calls when the window closes and incompatibility blocks again. Never
+        # create packages/move/REPUBLISH_WINDOW for CI: stamp_all also reads that ceremony marker.
+        # Warning escalation, probe errors, size budgets and every master-bound context remain red.
         #
         # #1581 — THIS RUNS UNCONDITIONALLY, and that is the fix. It used to be `if [ -f
         # packages/move/REPUBLISH_WINDOW ]`, so in the steady state (no marker) NOTHING in CI ever
@@ -215,10 +210,15 @@ jobs:
         # a human happened to run the ceremony preflight by hand. A gate that only arms during a
         # ceremony cannot catch what a PR lands; the numbers now print on every Move PR, green ones
         # included, so headroom is a thing contributors see rather than discover.
+        env:
+          NETWORK: testnet
+          SUI_CONFIG_DIR: ${{ runner.temp }}/ares-sui-config
         run: |
           set -euo pipefail
-          node packages/move/scripts/ceremony_preflight_compat.mjs --mode-check
-          node packages/move/scripts/ceremony_preflight_compat.mjs --size-only
+          mkdir -p "$SUI_CONFIG_DIR"
+          printf 'y\n' | sui client active-env >/dev/null
+          node packages/move/scripts/ceremony_preflight_compat.mjs --mode-check --republish-window
+          node packages/move/scripts/ceremony_preflight_compat.mjs --republish-window
       - name: the landing engine's own harnesses (#1573)
         # These pin the promotion asserts, the post-landing dispatch argv and the stamper split, and
         # until now NOTHING ran them — the machinery that closes the board was guarded by tests no

@@ -142,13 +142,18 @@ export function ci_context(env = process.env) {
 // on a master-bound run.
 export function republish_window_verdict({
   marker_present,
+  explicit_republish = false,
   ci,
   event,
   base_ref,
   ref_name,
 }) {
-  if (!marker_present)
+  if (!marker_present && !explicit_republish)
     return { mode: 'compat', reason: 'no REPUBLISH_WINDOW marker' }
+  const window_source = explicit_republish
+    ? '--republish-window argument'
+    : 'REPUBLISH_WINDOW marker'
+  const open_mode = explicit_republish ? 'compat-report' : 'size-only'
   // A CONTRADICTORY context is refused before the local-run branch (#1305 review): "not CI" used to
   // rest on GITHUB_ACTIONS alone, so unsetting one variable while still supplying pull_request/master
   // facts downgraded a master-bound run to a permissive local one. If any GitHub context fact is
@@ -157,37 +162,44 @@ export function republish_window_verdict({
   if (!ci && partial)
     return {
       mode: 'refused',
-      reason: `REPUBLISH_WINDOW marker with a partial GitHub context (event="${event}", base="${base_ref}", ref="${ref_name}") — refusing a context that claims to be both CI and not`,
+      reason: `${window_source} with a partial GitHub context (event="${event}", base="${base_ref}", ref="${ref_name}") — refusing a context that claims to be both CI and not`,
     }
   if (!ci)
     return {
-      mode: 'size-only',
-      reason: 'REPUBLISH_WINDOW marker, local run (no CI context)',
+      mode: open_mode,
+      reason: `${window_source}, local run (no CI context)`,
     }
   if (event === 'pull_request' && !base_ref)
     return {
       mode: 'refused',
-      reason:
-        'REPUBLISH_WINDOW marker on a pull_request with no base ref — refusing rather than guessing',
+      reason: `${window_source} on a pull_request with no base ref — refusing rather than guessing`,
     }
   if (event === 'pull_request')
     return base_ref === 'edge'
-      ? { mode: 'size-only', reason: 'REPUBLISH_WINDOW marker, PR into edge' }
+      ? { mode: open_mode, reason: `${window_source}, PR into edge` }
       : {
           mode: 'refused',
-          reason: `REPUBLISH_WINDOW marker on a PR into "${base_ref}" — the window lives on edge and may never be promoted`,
+          reason: `${window_source} on a PR into "${base_ref}" — the window lives on edge and may never be promoted`,
         }
   if (event === 'push')
     return ref_name === 'edge'
-      ? { mode: 'size-only', reason: 'REPUBLISH_WINDOW marker, push on edge' }
+      ? { mode: open_mode, reason: `${window_source}, push on edge` }
       : {
           mode: 'refused',
-          reason: `REPUBLISH_WINDOW marker on a push to "${ref_name}" — the window lives on edge and may never be promoted`,
+          reason: `${window_source} on a push to "${ref_name}" — the window lives on edge and may never be promoted`,
         }
   return {
     mode: 'refused',
-    reason: `REPUBLISH_WINDOW marker under an unrecognised CI event ("${event}") — refusing rather than guessing the branch context`,
+    reason: `${window_source} under an unrecognised CI event ("${event}") — refusing rather than guessing the branch context`,
   }
+}
+
+// COMPAT-REPORT changes only the incompatibility exit bit. Warning escalation and operational
+// failures keep their teeth, so the explicit republish argument cannot launder a broken probe green.
+export function compatibility_result_blocks(result, mode) {
+  if (result.warning_failure) return true
+  if (result.status === 'incompatible') return mode !== 'compat-report'
+  return result.status !== 'compatible'
 }
 
 // ── Package-size preflight ──────────────────────────────────────────────────────────────────────
@@ -401,15 +413,20 @@ function size_only_run(packages) {
 
 const HELP = `ceremony_preflight_compat — catch IncompatibleUpgrade BEFORE the ceremony, mechanically.
 
-Usage: node ceremony_preflight_compat.mjs [pkg...] [--mode-check] [--size-only]
+Usage: node ceremony_preflight_compat.mjs [pkg...] [--mode-check] [--size-only] [--republish-window]
 
   pkg           one or more of: ${Object.keys(PKG_DEPS).join(', ')}
                 defaults to: ${DEFAULT_PACKAGES.join(' ')}
   --mode-check  print which mode the gate would run in and exit — no build, no chain, no CLI.
                 Non-zero only when a REPUBLISH_WINDOW marker is refused by its branch context.
   --size-only   run ONLY the size leg: a local build and nothing else — no fullnode, no identity,
-                no upgrade cap. This is the half CI runs on every pull request (checks.yml), which
-                is why a package over the ceiling now fails at PR time instead of at the ceremony.
+                no upgrade cap. This keeps a hermetic entry point for local size-only checks; the
+                wired CI command reports compatibility and size together.
+  --republish-window
+                run and REPORT the compatibility verdict, but do not block on incompatibility.
+                Warning escalation, probe errors and size failures still block. The argument is the
+                visible CI switch; remove it when the fresh lineage closes instead of creating a
+                REPUBLISH_WINDOW marker (stamp_all also reads that file).
 
 For each package, runs \`sui client upgrade --serialize-unsigned-transaction\` against its source dir
 (no signing, no execution, no gas) and parses the local compatibility verifier's verdict. Prints one row
@@ -511,7 +528,7 @@ export function run_compatibility_probe(args, run = execFileSync) {
   return { ...result, errors, warning_failure }
 }
 
-async function resolveGroundTruth(client, name, entry) {
+async function resolveGroundTruth(client, name, entry, fallback_sender) {
   const manifestPkg = entry.latest ?? entry.pkg
   try {
     const { objects } = await client.core.getObjects({
@@ -521,7 +538,11 @@ async function resolveGroundTruth(client, name, entry) {
     const cap = objects?.[0]
     if (cap instanceof Error) throw cap
     if (cap?.json?.package)
-      return { target: cap.json.package, source: 'upgrade-cap' }
+      return {
+        target: cap.json.package,
+        source: 'upgrade-cap',
+        sender: cap.owner?.AddressOwner ?? fallback_sender,
+      }
     console.warn(
       `${name}: UpgradeCap content not decoded by the node — falling back to manifest`
     )
@@ -534,7 +555,7 @@ async function resolveGroundTruth(client, name, entry) {
     throw new Error(
       `${name}: no on-chain cap.package and no manifest pkg/latest — refusing to guess`
     )
-  return { target: manifestPkg, source: 'manifest' }
+  return { target: manifestPkg, source: 'manifest', sender: fallback_sender }
 }
 
 async function checkPackage(client, release, network, name) {
@@ -548,7 +569,21 @@ async function checkPackage(client, release, network, name) {
   if (!entry.upgradeCap)
     return { name, status: 'error', detail: 'manifest entry has no upgradeCap' }
 
-  const { target, source } = await resolveGroundTruth(client, name, entry)
+  const fallback_sender =
+    release?.networks?.[network]?.actors?.owner ?? null
+  const { target, source, sender } = await resolveGroundTruth(
+    client,
+    name,
+    entry,
+    fallback_sender
+  )
+  if (!sender)
+    return {
+      name,
+      status: 'error',
+      detail:
+        'UpgradeCap has no address owner and release.json has no actors.owner — unsigned compatibility probe has no sender',
+    }
 
   const releasePkg = release?.networks?.[network]?.packages?.[name]?.latest
   if (releasePkg && releasePkg !== target)
@@ -574,6 +609,8 @@ async function checkPackage(client, release, network, name) {
         '--serialize-unsigned-transaction',
         '--upgrade-capability',
         entry.upgradeCap,
+        '--sender',
+        sender,
         pkgPath,
       ]
     )
@@ -647,8 +684,10 @@ async function main() {
   }
 
   const marker_present = fs.existsSync(REPUBLISH_MARKER_PATH)
+  const explicit_republish = args.includes('--republish-window')
   const verdict = republish_window_verdict({
     marker_present,
+    explicit_republish,
     ...ci_context(),
   })
 
@@ -657,7 +696,9 @@ async function main() {
     console.error('  REPUBLISH WINDOW REFUSED — this run is master-bound.')
     console.error(`  ${verdict.reason}`)
     console.error(
-      '  Delete packages/move/REPUBLISH_WINDOW to close the window; the compat teeth return with it.'
+      explicit_republish
+        ? '  Remove --republish-window from the wired command; blocking compat returns with it.'
+        : '  Delete packages/move/REPUBLISH_WINDOW to close the window; the compat teeth return with it.'
     )
     console.error('════════════════════════════════════════════════════════')
     return 1
@@ -726,11 +767,13 @@ async function main() {
         `${name} COMPATIBLE  (target ${result.target}, from ${result.source})`
       )
     } else if (result.status === 'incompatible') {
-      any_failed = true
       const detail = [...result.errors].map(([k, n]) => `${n}x${k}`).join('  ')
-      console.log(`${name} INCOMPATIBLE  ${detail}`)
+      const disposition =
+        verdict.mode === 'compat-report'
+          ? '  REPORT-ONLY (--republish-window); incompatibility does not block'
+          : ''
+      console.log(`${name} INCOMPATIBLE  ${detail}${disposition}`)
     } else {
-      any_failed = true
       console.log(`${name} ERROR  ${result.detail}`)
     }
 
@@ -740,6 +783,7 @@ async function main() {
         `${name} WARNING-ESCALATION  ${result.warning_failure} — compatibility verdict above was recovered with --silence-warnings; warning policy still FAILS.`
       )
     }
+    if (compatibility_result_blocks(result, verdict.mode)) any_failed = true
 
     if (result.size != null) {
       const size = size_verdict({

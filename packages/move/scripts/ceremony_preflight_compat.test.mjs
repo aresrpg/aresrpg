@@ -8,6 +8,7 @@ import { expect, test } from 'bun:test'
 
 import {
   ci_context,
+  compatibility_result_blocks,
   republish_window_verdict,
   run_compatibility_probe,
   size_verdict,
@@ -45,11 +46,30 @@ test('the marker opens size-only mode on edge and on PRs into edge', () => {
   expect(republish_window_verdict(push('edge')).mode).toBe('size-only')
 })
 
+test('the explicit republish argument reports compat on edge without creating the marker', () => {
+  for (const context of [pr('edge'), push('edge')])
+    expect(
+      republish_window_verdict({
+        ...context,
+        marker_present: false,
+        explicit_republish: true,
+      }).mode
+    ).toBe('compat-report')
+})
+
 test('the marker is REFUSED on every master-bound run — the window is never promoted', () => {
   for (const context of [pr('master'), push('master')]) {
     const verdict = republish_window_verdict(context)
     expect(verdict.mode).toBe('refused')
     expect(verdict.reason).toContain('may never be promoted')
+
+    const explicit = republish_window_verdict({
+      ...context,
+      marker_present: false,
+      explicit_republish: true,
+    })
+    expect(explicit.mode).toBe('refused')
+    expect(explicit.reason).toContain('may never be promoted')
   }
 })
 
@@ -130,6 +150,26 @@ test('a CI pull_request with no base ref is refused rather than guessed', () => 
       ref_name: null,
     }).mode
   ).toBe('refused')
+})
+
+test('compat-report softens only incompatibility — warnings and errors remain red', () => {
+  const incompatible = { status: 'incompatible', warning_failure: null }
+  expect(compatibility_result_blocks(incompatible, 'compat')).toBe(true)
+  expect(compatibility_result_blocks(incompatible, 'compat-report')).toBe(
+    false
+  )
+  expect(
+    compatibility_result_blocks(
+      { ...incompatible, warning_failure: 'warning death' },
+      'compat-report'
+    )
+  ).toBe(true)
+  expect(
+    compatibility_result_blocks(
+      { status: 'error', warning_failure: null },
+      'compat-report'
+    )
+  ).toBe(true)
 })
 
 // ── The size leg's verdict (#1581) ──────────────────────────────────────────────────────────────
