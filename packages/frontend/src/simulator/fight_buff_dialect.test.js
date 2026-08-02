@@ -162,17 +162,19 @@ describe('#1166 · the turn card reads the AUTHORED magnitude once the turn is c
   test('RED-FIRST: the captured Draghook self-buff survives the commit as "+3 Raw Damage", not its 32768-complement', () => {
     const lines = turn_card_lines(commit_self_buff([DRAGHOOK]))
 
-    // the crit leg of the published row authors +4 — either is the buff, neither is 32765/32764
-    expect(lines.find((line) => line.includes('Raw Damage'))).toMatch(/^\+[34] Raw Damage · 4 turns$/)
+    // the crit leg of the published row authors +4 — either is the buff, neither is 32765/32764.
+    // The duration reads 5, not 4: the cast turn no longer spends an aging (#2000, D42 — a turn END ages
+    // nothing; the counter is the bearer's turns still to come). The assertion under test is `not.toContain`.
+    expect(lines.find((line) => line.includes('Raw Damage'))).toMatch(/^\+[34] Raw Damage · 5 turns$/)
     expect(lines.join(' ')).not.toContain('3276')
   })
 
   // Three captured cases, each with the row re-authored to its magnitude. The wrong reading is
   // always the complement `value - 32768`, which is what the raw-dialect template folded.
   const CASES = [
-    { what: 'raw damage', stat: 9, value: 42, reads: '+42 Raw Damage · 4 turns', wrong: '32726' },
-    { what: 'critical hit', stat: 7, value: 9, reads: '+9 Critical Hit · 4 turns', wrong: '32759' },
-    { what: 'percent damage', stat: 8, value: 10, reads: '+10% Damage · 4 turns', wrong: '32758' },
+    { what: 'raw damage', stat: 9, value: 42, reads: '+42 Raw Damage · 5 turns', wrong: '32726' },
+    { what: 'critical hit', stat: 7, value: 9, reads: '+9 Critical Hit · 5 turns', wrong: '32759' },
+    { what: 'percent damage', stat: 8, value: 10, reads: '+10% Damage · 5 turns', wrong: '32758' },
   ]
 
   for (const { what, stat, value, reads, wrong } of CASES)

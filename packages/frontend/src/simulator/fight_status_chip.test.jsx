@@ -207,8 +207,11 @@ describe('#973 · a landed self-buff is VISIBLE and its granted MP survives the 
     expect(turns_of(me_of(shim), K_GIVE_POINTS)).toBe(1)
     expect(me_of(shim).mp).toBe(base_mp + 1)
 
-    // ⑤ AND IT LETS GO. A buff that never expired would be the worse bug: the last round burns the row, the chip
-    // leaves the card, and the pool refills to the base the seat actually owns.
+    // ⑤ AND IT LETS GO. A buff that never expired would be the worse bug: the row lets go on the aging that finds
+    // its counter already spent, the chip leaves the card, and the pool refills to the base the seat actually
+    // owns. That takes ONE more round than the superseded end-turn cadence (#2000, D42): the counter is the
+    // bearer's turns still to come, so it lands on 0 for its LAST covered turn before dropping at the next start.
+    expect(await shim.commit_turn([])).toBe(true)
     expect(await shim.commit_turn([])).toBe(true)
     expect(kinds_of(me_of(shim))).toEqual([])
     expect(markup()).not.toContain('hud-effects')
@@ -229,9 +232,10 @@ describe('#973 · a landed self-buff is VISIBLE and its granted MP survives the 
     }
     for (const [projected, sim] of seen) expect(projected).toBe(sim)
     // and the window is genuinely OBSERVED rather than a flat line. A 3-turn buff cast on turn 1 grants that
-    // turn's pool outright and then refills two more (the chain ages the credit at the caster's turn END, so the
-    // third tick expires it before turn 4 opens) — the two turns the capture watched revert.
+    // turn's pool outright and then refills THREE more (#2000, D42 — the cast turn spends no aging and the row
+    // still stands on the turn its counter lands on 0), so the revert lands one turn later than the superseded
+    // end-turn cadence put it.
     const [base] = seen.at(-1)
-    expect(seen.map(([projected]) => projected)).toEqual([base + 1, base + 1, base, base])
+    expect(seen.map(([projected]) => projected)).toEqual([base + 1, base + 1, base + 1, base])
   })
 })
