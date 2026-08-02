@@ -37,11 +37,11 @@ export const allies_of = (read) => {
   return me ? living(read).filter((f) => f.team === me.team) : []
 }
 
-/** Manhattan distance — the metric the sim's `is_in_range` uses. ONE home: `@aresrpg/sim/combat_grid`. */
+/** Manhattan distance — the metric the sim's `is_in_range` uses. ONE home: `@aresrpg/sim/combat_grid`.
+ *  It is also the tackle-adjacency metric: `fight_tackle.js` scans ORTHOGONAL neighbors only, so
+ *  "in the tackle ring" is `manhattan(a, b) <= 1` — never a king-move (chebyshev) test, which would
+ *  count diagonal enemies the chain never does. */
 export { manhattan } from '@aresrpg/sim/combat_grid'
-
-/** Chebyshev distance — adjacency (the tackle ring). */
-export const chebyshev = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
 
 /**
  * The `TargetingContext` `can_target` takes: terrain occlusion + body occupancy, both off committed truth.

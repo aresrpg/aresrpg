@@ -22,7 +22,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { decode } from '@aresrpg/fight/los'
+import { decode, manhattan } from '@aresrpg/fight/los'
 
 import './entity-tooltip.css'
 import { use_game_state, use_fight_view } from '../../store.js'
@@ -36,10 +36,9 @@ import { TooltipCard } from './tooltip_card.jsx'
 // re-export so existing importers (and the unit test) keep resolving the derivation from here too.
 export { predicted_target_outcome }
 
-const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
-
 /**
- * The target's predicted displacement as { cells, pull }: the chebyshev distance it is shoved and whether that is
+ * The target's predicted displacement as { cells, pull }: the manhattan distance it is shoved (chain
+ * displacements are axis-aligned — fight_displacement's four directions — so this IS the shove length) and whether that is
  * a PULL (moved toward the caster) vs a push (away). Reads the prediction's Displaced.to_cell vs the fighter's
  * current cell; caster-relative direction needs no corpus. null when there is no displacement.
  * `fighter_cell`/`caster_cell` are engine_view DECODED {x,y}; only `displaced_to` is an ENCODED int (the
@@ -52,10 +51,10 @@ const displacement_of = (fighter_cell, displaced_to, caster_cell) => {
   if (displaced_to == null || fighter_cell == null) return null
   const from = fighter_cell
   const to = decode(displaced_to)
-  const cells = cheb(from, to)
+  const cells = manhattan(from, to)
   if (cells <= 0) return null
   const caster = caster_cell ?? null
-  return { cells, pull: caster ? cheb(caster, to) < cheb(caster, from) : false }
+  return { cells, pull: caster ? manhattan(caster, to) < manhattan(caster, from) : false }
 }
 
 // gap from the fighter so the card sits beside/above them, never directly on top of the sprite

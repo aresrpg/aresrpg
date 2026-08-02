@@ -26,7 +26,6 @@ import { cap_of, on_cooldown, target_cap_reached } from '../draft_budget.js'
 import {
   allies_of,
   cell_index,
-  chebyshev,
   enemies_of,
   landing_effects,
   living,
@@ -270,7 +269,8 @@ const choose_stance = (read, me, seed, history) => {
   const ap = Number(me.ap ?? me.ap_committed ?? 0)
   const stay = { cell: here, cost: 0, why: 'stayed put', decisions: [] }
   if (!enemies.length || mp <= 0) return stay
-  if (enemies.some((e) => chebyshev(e.cell_committed, here) <= 1))
+  // tackle adjacency is ORTHOGONAL (fight_tackle.js scans 4 cells) — a diagonal enemy cannot tackle
+  if (enemies.some((e) => manhattan(e.cell_committed, here) <= 1))
     return {
       ...stay,
       decisions: [{ phase: 'move', chose: 'stay', why: 'an enemy is adjacent — disengaging invites a tackle' }],
