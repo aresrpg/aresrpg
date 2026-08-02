@@ -36,6 +36,9 @@ tester.run('snake-case', plugin.rules['snake-case'], {
     { name: 'snake params and catch', code: `try { run(item_count) } catch (bad_error) { log(bad_error) }` },
     { name: 'underscore throwaway', code: `const [_, second_part] = pair` },
     { name: 'house hook naming', code: `const use_party = create(() => ({}))` },
+    { name: 'React hook declaration is the library’s name', code: `function useMinimap() {}` },
+    { name: 'React hook const declaration', code: `const useFightView = () => null` },
+    { name: 'zustand hook declaration', code: `const useAutoSearch = create(() => ({}))` },
     {
       name: 'object literal keys are API shapes, not bindings',
       code: `const payload = { gasBudget: 100, showEffects: true }`,
@@ -51,6 +54,11 @@ tester.run('snake-case', plugin.rules['snake-case'], {
       errors: [{ messageId: 'camel' }],
     },
     { name: 'camelCase array pattern', code: `const [firstItem] = xs`, errors: [{ messageId: 'camel' }] },
+    {
+      name: 'the hook carve-out is declaration-only — a `useX` parameter is still a dev choice',
+      code: `const f = (useCache) => useCache`,
+      errors: [{ messageId: 'camel' }],
+    },
     { name: 'camelCase catch binding', code: `try { f() } catch (rawErr) {}`, errors: [{ messageId: 'camel' }] },
     {
       name: 'camelCase default + rest params',

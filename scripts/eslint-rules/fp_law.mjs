@@ -116,6 +116,13 @@ const owning_function = (node) => {
 // object literal keys (external API shapes).
 const is_camel_case = (name) => /^_*[a-z$]/.test(name) && /[A-Z]/.test(name)
 
+// The ONE camelCase shape L-N1 has always granted: a name the library imposes. React's
+// `rules-of-hooks` identifies a custom hook by `/^use[A-Z0-9]/` and nothing else (hard-coded, no
+// option to widen), so a hook DECLARED any other way is invisible to the rule that enforces hook
+// order (#2080). The carve-out is declaration-only — a `useThing` parameter, catch binding or
+// destructure-rename is still a dev choice and still flagged.
+const is_react_hook_name = (name) => /^use[A-Z0-9]/.test(name)
+
 const snake_case = {
   meta: {
     type: 'suggestion',
@@ -162,10 +169,11 @@ const snake_case = {
     }
     return {
       VariableDeclarator(node) {
+        if (node.id.type === 'Identifier' && is_react_hook_name(node.id.name)) return
         check_pattern(node.id)
       },
       FunctionDeclaration(node) {
-        if (node.id && is_camel_case(node.id.name)) report(node.id)
+        if (node.id && is_camel_case(node.id.name) && !is_react_hook_name(node.id.name)) report(node.id)
       },
       ':function'(node) {
         for (const parameter of node.params) check_pattern(parameter)

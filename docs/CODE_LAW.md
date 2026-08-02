@@ -157,8 +157,11 @@ WARN where the census found mass — a cleaned domain gets promoted, never the r
 ## Naming
 
 - **L-N1 — Dev-chosen bindings are snake_case.** camelCase is a library's name, never a
-  declaration choice; PascalCase = components; SCREAMING_SNAKE = constants. [HOUSE] →
-  `fp-law/snake-case` **WARN** (616).
+  declaration choice; PascalCase = components; SCREAMING_SNAKE = constants. React custom hooks
+  are DECLARED `useX`: `rules-of-hooks` identifies a hook by a hard-coded `/^use[A-Z0-9]/`, so
+  the prefix is the library's contract and a snake_case hook is invisible to the rule that
+  enforces hook order (#2080). Declaration position only — a `useThing` parameter or catch
+  binding is still a dev choice. [HOUSE] → `fp-law/snake-case` **WARN** (616).
 - **L-N2 — Name by meaning, generically.** Data-tied names shrink reuse ("compact", not
   "validArticles"); if the honest name is awkward, the design is. [MAG ch02] → judgment.
 
