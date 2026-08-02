@@ -1,1 +1,2 @@
-2effda809bb9869a15663d4dcc105f3e18a326c1 train/train-73 fix(sponsor): bake release.json from its one home, not a gitignored copy
+9e011ecd59291c5e731e533c9fcde65f5a8527c1 train/train-74 fix(lint): .jsx was invisible to the flat config — every glob now names it
+79d3f6e7b790ccd922cfe89a52803e6791894aa6 train/train-74 chore(lint): retire the inert react-hooks directives, order the harness imports
