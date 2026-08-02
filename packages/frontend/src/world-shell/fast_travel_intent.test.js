@@ -39,32 +39,50 @@ describe('friend entry → the shared fast-travel input door', () => {
     expect(dispatched).toEqual([intent])
   })
 
-  test('an offline friend dispatches the honest offline refusal, never a stale travel begin', () => {
-    const intent = fast_travel_intent(live_friend, [])
-
-    expect(intent).toEqual({ type: 'begin', refusal: 'fast_travel.friend_offline' })
-  })
-
-  // #1641 — with the presence stream dead we do not KNOW where anyone is. Saying "that friend is offline" or
-  // "a realm you can't reach" states a fact we cannot have; the outage itself is the honest answer.
-  test('a DEAD presence stream refuses as an outage, never as offline or an unreachable realm', () => {
-    expect(fast_travel_intent(live_friend, [], 'failed')).toEqual({
+  // ADVISORY-ONLY LAW (realtime constitution D2): an observation may never answer an authority question.
+  // "Nobody is observing this friend" is UNKNOWN — it is not "this friend is offline", and it is not a reason
+  // to refuse. The authoritative /v1 roster read already names the character and its world; travel proceeds
+  // on that read and the resolver verifies it.
+  test('a friend nobody observes still travels on the authoritative route — absence is unknown, never offline', () => {
+    expect(fast_travel_intent(live_friend, [])).toEqual({
       type: 'begin',
-      refusal: 'fast_travel.presence_down',
-    })
-    expect(fast_travel_intent(live_friend, [], 'idle')).toEqual({
-      type: 'begin',
-      refusal: 'fast_travel.presence_down',
-    })
-    expect(fast_travel_intent(live_friend, [{}], 'failed')).toEqual({
-      type: 'begin',
-      refusal: 'fast_travel.presence_down',
+      character_id: 'C_FRIEND',
+      address: '0xfriend',
+      name: 'Ares',
+      world_id: 'W_FAR',
     })
   })
 
-  test('a stream still trying (connecting/reconnecting) is not an outage — the honest offline answer stands', () => {
-    expect(fast_travel_intent(live_friend, [], 'reconnecting').refusal).toBe('fast_travel.friend_offline')
-    expect(fast_travel_intent(live_friend, [live_peer], 'reconnecting')).toMatchObject({ character_id: 'C_FRIEND' })
+  // The peer stream's own health is not an input either: it can only refine a coordinate, so an outage in it
+  // changes nothing about what the authoritative read proved.
+  test('the observation stream decides nothing — observed or not, the same authoritative begin', () => {
+    expect(fast_travel_intent(live_friend, [])).toEqual(fast_travel_intent(live_friend, [{}]))
+  })
+
+  // Identity that enables a consequential flow may never be peer-carried: a character id nobody authoritative
+  // named is not a travel target. With no route, the begin names the wallet only and the /v1 resolver picks.
+  test('a peer-carried character id the roster does not name never becomes the travel target', () => {
+    expect(fast_travel_intent({ ...live_friend, routes: [] }, [{ ...live_peer, id: 'C_UNLISTED' }])).toEqual({
+      type: 'begin',
+      character_id: null,
+      address: '0xfriend',
+      name: 'Ares',
+      world_id: null,
+    })
+  })
+
+  test('a pose broadcast for a character the roster does not name never refines the landing coordinate', () => {
+    const intent = fast_travel_intent(live_friend, [
+      { id: 'C_UNLISTED', cell: { ts: 9_999 }, position: { x: 999, z: 999 } },
+    ])
+
+    expect(intent).toEqual({
+      type: 'begin',
+      character_id: 'C_FRIEND',
+      address: '0xfriend',
+      name: 'Ares',
+      world_id: 'W_FAR',
+    })
   })
 
   // #1641 — an online friend with no live pose used to be "a realm you can't reach", which is a lie about the
@@ -82,10 +100,10 @@ describe('friend entry → the shared fast-travel input door', () => {
     })
   })
 
-  test('a friend the read layer sees but the roster has no route for resolves through /v1 too', () => {
+  test('a friend the roster has no route for resolves through /v1 by wallet, never a refusal', () => {
     const intent = fast_travel_intent({ ...live_friend, routes: [] }, [{ id: 'C_FRIEND' }])
 
-    expect(intent).toMatchObject({ type: 'begin', character_id: 'C_FRIEND', world_id: null })
+    expect(intent).toMatchObject({ type: 'begin', character_id: null, address: '0xfriend', world_id: null })
     expect(intent.refusal).toBeUndefined()
   })
 

@@ -7,7 +7,11 @@
 import { describe, expect, test } from 'bun:test'
 
 const LOCALES = ['en', 'fr', 'de', 'es', 'ja', 'uk']
-const KEYS = ['option', 'realm_unreachable', 'friend_offline', 'flying', 'cancelled', 'target_lost', 'arrived']
+// `friend_offline` / `presence_down` are GONE, not merely unlisted: an observation stream's silence is unknown,
+// so no copy may state it as a fact about a player or the link (advisory-only law). The parity guard pins their
+// absence in every locale too — a re-added string is a re-added claim.
+const KEYS = ['option', 'realm_unreachable', 'flying', 'cancelled', 'target_lost', 'arrived']
+const RETIRED_KEYS = ['friend_offline', 'presence_down']
 
 describe('i18n · fast_travel.* present + non-empty in ALL 6 locales', () => {
   for (const key of KEYS) {
@@ -17,5 +21,15 @@ describe('i18n · fast_travel.* present + non-empty in ALL 6 locales', () => {
       expect(typeof value).toBe('string')
       expect(value.trim().length).toBeGreaterThan(0)
     })
+  }
+
+  for (const key of RETIRED_KEYS) {
+    test.each(LOCALES)(
+      `%s.json carries NO fast_travel.${key} — an observation never states a player fact`,
+      async (lang) => {
+        const json = await Bun.file(new URL(`./${lang}.json`, import.meta.url)).json()
+        expect(json?.fast_travel?.[key]).toBeUndefined()
+      }
+    )
   }
 })
