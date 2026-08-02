@@ -1,3 +1,7 @@
-f44276a6d8e2c52692225391ed5d18f4a6cde42d train/train-42 chore(engine): dedupe draco decoder assets
-cd9ca7d3be19516208f3584dd6393d37a7352cff train/train-42 fix(encyclopedia): mob portraits derive from the catalog key, bounded to the live population
-4a3ed0e90485b740e64670cc522a5ec7bc6913fe train/train-42 perf(tx): derive the sign-path balance from the client's balance home
+a4d7eb6a2e9e84aa0e4bad226e42fec7b3f19319 train/train-44 fix(fight): tackle adjacency is orthogonal — the last chebyshev copies die
+7d6c35aebf14d2af1ff8b12f098b36d853c0176c train/train-44 fix(gates): chebyshev + LOS teeth on the spatial-vocabulary gate
+4a3d440069c20271dac16eb2d9e0977491b6932f train/train-44 fix(sim): a DoT tick resists and shields like every other damage line
+198211e98d036f70c57bcc21e65235168fa7807a train/train-44 fix(bot): the policy can see INVISIBILITY, so Vanish is castable
+0105c932cc8c548412ae16271b2e2979be8dcdf9 train/train-44 feat(sim): a mob's pass says what it considered and why it refused
+dff5153c593f69c7e91824e0f09449470918dc84 train/train-44 fix(deploy): pin the Vercel install to the committed lockfile
+2697e91cf59ecc9110e0b9895d3efe258b03fb44 train/train-44 chore(gates): tighten single-home baseline post-landings
