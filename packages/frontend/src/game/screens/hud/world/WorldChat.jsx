@@ -81,8 +81,8 @@ const line_body = (line, fighters) =>
 const open_chat_menu = (/** @type {any} */ e, /** @type {any} */ line, /** @type {any} */ t) => {
   const r = e.currentTarget.getBoundingClientRect()
   open_player_menu({
+    // A chat line is an observation: it names a character, and the menu reads that character's owner from /v1.
     id: line.id,
-    address: line.address ?? null,
     name: line.name || t('party.adventurer'),
     x: r.left,
     y: r.bottom + 4,

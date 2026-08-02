@@ -22,11 +22,39 @@ const friends_source = readFileSync(new URL('./OnlinePlayers.jsx', import.meta.u
 const roster_source = readFileSync(new URL('../../../../world-shell/friends_reads.js', import.meta.url), 'utf8')
 const effects_source = readFileSync(new URL('../../../../world-shell/fast_travel_effects.js', import.meta.url), 'utf8')
 const group_source = readFileSync(new URL('../../../../world-shell/group_wiring.js', import.meta.url), 'utf8')
+const chat_source = readFileSync(new URL('./WorldChat.jsx', import.meta.url), 'utf8')
+const party_source = readFileSync(new URL('./PartyFrame.jsx', import.meta.url), 'utf8')
 
 describe('PlayerActionMenu cold-start party (#329)', () => {
   it('the cold-start invite path calls create_bare(), never the owned-alt-sweeping create()', () => {
     expect(source).toContain('await use_party.getState().create_bare()')
     expect(source).not.toContain('await use_party.getState().create()')
+  })
+})
+
+// ADVISORY-ONLY LAW (realtime constitution D2): an observation may never feed identity into a flow that
+// enables a signed action. Every seam that opens this menu passes a CHARACTER ID; the wallet that the friend
+// and party transactions are composed against is resolved from the authoritative /v1 character book at action
+// time. Same source-text idiom as the #329 proof above, and for the same reason: the assertion is about which
+// read the call site performs, inside a component whose auth/party/tx graph a unit test has no business booting.
+describe('signed actions resolve their owner authoritatively (advisory-only law)', () => {
+  it('resolves the target owner from the /v1 character book, never from the opener-carried field', () => {
+    expect(source).toContain('get_characters({ id: target.id }, signal)')
+    expect(source).toContain('target_docs?.[0]?.owner')
+    expect(source).not.toContain('target?.address')
+    expect(source).not.toContain('presence_character(')
+  })
+
+  it('every signed affordance is gated on that resolved owner — an unresolved character enables nothing', () => {
+    expect(source).toContain('const can_act = !!address && !!my_address')
+    expect(source).toContain('const can_fast_travel = !!target && !!selected_character_id && !!address && !is_self')
+    expect(source).toContain('can_act && !!target.id')
+  })
+
+  it('only the friend seam supplies a wallet, and it is the on-chain friend list key, never a broadcast one', () => {
+    expect(friends_source).toContain('owner_address: row.address')
+    expect(chat_source).not.toContain('address: line.address')
+    expect(party_source).not.toContain('address: member.owner')
   })
 })
 

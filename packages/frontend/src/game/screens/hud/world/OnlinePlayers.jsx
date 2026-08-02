@@ -151,7 +151,8 @@ function FriendRow({ row, t, on_remove }) {
     open_player_menu({
       kind: 'friend',
       id: null,
-      address: row.address,
+      // The one seam allowed to name a wallet: this row's key comes from my own on-chain friend list.
+      owner_address: row.address,
       name: row.name,
       routes: row.routes,
       x: r.left,

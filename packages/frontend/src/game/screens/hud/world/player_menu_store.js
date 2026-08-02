@@ -10,8 +10,11 @@ import { create } from 'zustand'
 /**
  * @typedef {{
  *   kind?: 'friend',          // friend-list targets carry a resolved live route; omitted for in-world/chat seams
- *   id: string | null,        // the peer's on-chain character id (chat + nameplate both carry it) — resolves the wallet address
- *   address: string | null,   // the peer's wallet, when already known (nameplate reads it live); else resolved from `id`
+ *   id: string | null,        // the target's on-chain character id — an identifier, NOT a claim of ownership;
+ *                             // PlayerActionMenu resolves the owning wallet from /v1 before any signed action
+ *   owner_address?: string | null, // ONLY the friend seam, whose key IS a wallet read from my on-chain friend
+ *                             // list. No other seam may supply one: an address a surface merely observed can
+ *                             // never be the owner a transaction is composed against (advisory-only law).
  *   name: string,             // display name for the menu header
  *   routes?: Array<{character_id:string,world_id:string|null}>, // friend roster's already-fetched /v1 worlds
  *   x: number, y: number,     // screen anchor (the click point / element rect) — the menu clamps itself on-screen

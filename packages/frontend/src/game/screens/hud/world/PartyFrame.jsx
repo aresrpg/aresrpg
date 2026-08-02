@@ -220,8 +220,9 @@ export function PartyFrame() {
             e.preventDefault()
             const r = e.currentTarget.getBoundingClientRect()
             open_player_menu({
+              // ONE HOME for owner resolution: the menu reads it from /v1 for every character-id seam, so this
+              // row never needs a second copy of the fact to keep in sync.
               id: character_id,
-              address: member.owner ?? null,
               name,
               x: r.left,
               y: r.bottom + 4,

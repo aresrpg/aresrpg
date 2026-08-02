@@ -14,7 +14,9 @@ import { useTranslation } from 'react-i18next'
 import { use_auth } from '../../../../auth'
 import { use_party } from '../../../../world-shell/party_store.js'
 import { add_friend_flow } from '../../../../world-shell/friends_actions'
-import { presence_character, presence_characters_by_address } from '../../../../world-shell/presence_adapter.js'
+import { presence_characters_by_address } from '../../../../world-shell/presence_adapter.js'
+import { get_characters } from '../../../../rpc/client'
+import { use_rpc_view } from '../../../../rpc/use_view'
 import { use_game_state } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
 import { dispatch_fast_travel } from '../../../../world-shell/fast_travel_intent.js'
@@ -43,14 +45,21 @@ export function PlayerActionMenu() {
     return () => window.removeEventListener('keydown', on_key)
   }, [target, close])
 
-  // Chat and nameplates normally carry the peer's broadcast address directly. Resolve it from the live
-  // server-observed presence row when a caller only supplied the character id.
+  // AUTHORITY AT THE DOOR (realtime constitution D2). Every seam that opens this menu hands over a CHARACTER
+  // ID — an identifier, not a claim about who owns it. The wallet each signed action is composed against is
+  // read HERE from the authoritative /v1 character book (the same `get_characters` the roster and the travel
+  // resolver use), so no observation can put an address in front of a transaction. The lone exception carries
+  // no character id at all: a friend row's key IS a wallet, read from my own on-chain friend list.
   // Hoisted above the early return (below) so BOTH the render and the preload effect share one derivation.
-  const address = target?.address || presence_character(target?.id ?? '')?.address || null
-  // Fast travel (the third menu option): needs MY selected character to ride, a resolvable target (character id
-  // OR owner address), and never my OWN character on another seat (address === my_address hides it — B10).
+  const { data: target_docs } = use_rpc_view(
+    (signal) => (target?.id ? get_characters({ id: target.id }, signal) : Promise.resolve([])),
+    { enabled: !!target?.id, deps: [target?.id], interval_ms: 15_000 }
+  )
+  const address = (target?.id ? target_docs?.[0]?.owner : target?.owner_address) ?? null
+  // Fast travel (the third menu option): needs MY selected character to ride, an authoritatively-owned target,
+  // and never my OWN character on another seat (address === my_address hides it — B10).
   const is_self = !!address && !!my_address && address === my_address
-  const can_fast_travel = !!target && !!selected_character_id && !is_self && (!!target.id || !!address)
+  const can_fast_travel = !!target && !!selected_character_id && !!address && !is_self
 
   // PRELOAD AT WORLD-HUD BOOT + TRAVEL INTENT: this component is always mounted by GameWorldHud, so `!target`
   // starts the small (~1.15 MB) default dragon before any remote/local ride can spawn. Opening a valid travel
