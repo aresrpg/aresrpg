@@ -12,10 +12,11 @@
 //
 // The address is DERIVED from the key and printed; the key itself is never read into any output. The only
 // decision here (the floor) lives in the smoke's pure core, so the suite and this alarm cannot disagree.
+import process from 'node:process'
+
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-import process from 'node:process'
 
 import {
   WALLET_FLOOR_MIST,

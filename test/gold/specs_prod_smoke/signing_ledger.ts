@@ -53,11 +53,11 @@ export function assert_wallet_above_floor({
   address,
   balance_mist,
   floor_mist = WALLET_FLOOR_MIST,
-}: {
+}: Readonly<{
   address: string
   balance_mist: bigint
   floor_mist?: bigint
-}) {
+}>) {
   if (balance_mist < floor_mist)
     throw new Error(
       `smoke wallet ${address} holds ${balance_mist} MIST, under the ${floor_mist} floor — FUND IT. This is a ` +
@@ -68,7 +68,7 @@ export function assert_wallet_above_floor({
 
 // A chain refusal, an empty response and a missing digest are all failures of the SIGNING ROUTE, never
 // data a row may proceed on. Every one of them throws by name — no silent success, no fabricated digest.
-export function executed_digest(response: execute_response) {
+export function executed_digest(response: Readonly<execute_response>) {
   const executed = response.Transaction ?? response.FailedTransaction
   if (!executed) throw new Error('testnet execute returned no transaction result — the signing route is dead')
   if (!(executed.effects?.status?.success ?? false))
