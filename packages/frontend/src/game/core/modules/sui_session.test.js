@@ -7,7 +7,9 @@
 // on every dispatch, so a redundant reselect of the SAME character through any of those doors could still
 // clobber a fresher chain-truth binding a manual write (join success) already published. This suite drives
 // the observer DIRECTLY via context.dispatch — bypassing embed.js's own guard entirely — to prove the class
-// is dead at its root (sui_session.js's own last-published-id closure), not just patched at one call site.
+// is dead at its root. #2007 moved that root from the observer's own last-published-id closure into the
+// binding book itself: the card's world is roster-grade evidence and can never lower an unconfirmed
+// chain-truth row, so the class stays dead with one home instead of a per-observer memory.
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
@@ -15,8 +17,8 @@ import { context } from '../game.js'
 import { publish_world_binding, reset_world_binding, use_world_binding } from '../../../world-shell/session_gate.js'
 
 // Ids distinct from every other fixture in this suite (embed.test.js / character_selection.test.js /
-// follow_gate.test.js) so a stray leftover value from an earlier file can never coincidentally collide with
-// this observer's own closure-tracked last-published id and mask (or fake) this test's outcome.
+// follow_gate.test.js) so a stray leftover row in the shared binding book can never coincidentally satisfy
+// (or fake) this test's outcome.
 const CHAR_ID = '0xd708-select-delta-observer'
 const STALE_WORLD = '0xd708-world-stale' // the roster's cached (pre-travel) world_id
 const FRESH_WORLD = '0xd708-world-fresh' // the just-settled join tx's chain-truth world
@@ -47,7 +49,7 @@ afterEach(async () => {
   context.dispatch('action/select_character', prior_selected_character_id)
 })
 
-describe('sui_session observer — action/select_character publishes the world binding on a genuine DELTA only (#708)', () => {
+describe('sui_session observer — the roster card can never lower a fresher chain-truth binding (#708)', () => {
   test('a redundant reselect of the SAME character must not clobber a fresher chain-truth binding', async () => {
     context.dispatch('action/sui_data', { characters: [{ id: CHAR_ID, world_id: STALE_WORLD }], loaded: true })
     await wait_for_roster([CHAR_ID])
@@ -65,8 +67,8 @@ describe('sui_session observer — action/select_character publishes the world b
 
     // A caller OTHER than embed.js's own now-guarded call site redispatches the SAME character id — a raw
     // context.dispatch, exactly what PartyFrame.jsx's onClick does with no reselect guard of its own. The
-    // roster is still the stale snapshot dispatched above. The observer must recognize the SELECTION carries
-    // no new fact (same id as last published) and skip re-deriving + republishing it.
+    // roster is still the stale snapshot dispatched above, so the card enters the book as roster-grade
+    // evidence and is floored behind the unconfirmed chain-truth row.
     await select_and_settle(CHAR_ID)
 
     // The fresh join publish must survive the redundant reselect — never silently fall back to the stale
@@ -75,9 +77,9 @@ describe('sui_session observer — action/select_character publishes the world b
   })
 
   test('a genuine switch to a DIFFERENT character still publishes its own world (the guard is per-id, not a latch)', async () => {
-    // Fresh ids, never touched by the test above: the observer's closure lives for the whole file (the
-    // engine singleton boots once per process), so reusing CHAR_ID here would find it already
-    // last-published and silently prove nothing.
+    // Fresh ids, never touched by the test above: the binding book lives for the whole file (the engine
+    // singleton boots once per process), so reusing CHAR_ID here would find its row already settled and
+    // silently prove nothing.
     const FIRST_ID = '0xd708-select-delta-solo-a'
     const FIRST_WORLD = '0xd708-world-solo-a'
     const SECOND_ID = '0xd708-select-delta-solo-b'
@@ -94,9 +96,8 @@ describe('sui_session observer — action/select_character publishes the world b
     await select_and_settle(FIRST_ID)
     expect(use_world_binding.getState().world).toBe(FIRST_WORLD)
 
-    // A DIFFERENT id is a genuine delta even though FIRST_ID was already published above — must publish
-    // SECOND's own world, not get suppressed by the same guard that protects against a same-id redundant
-    // reselect (the guard tracks the LAST published id, not "has this observer ever published anything").
+    // A DIFFERENT id is a genuine delta even though FIRST_ID was already published above — the selection
+    // must re-key to SECOND and read SECOND's own world out of the book, never stay on the first.
     await select_and_settle(SECOND_ID)
     expect(use_world_binding.getState().world).toBe(SECOND_WORLD)
   })
