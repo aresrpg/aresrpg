@@ -98,6 +98,27 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
 }
 
 /**
+ * Pure: WHICH character↔world rows the group loop reconciles against — the leader, its group members and the
+ * live follower set, each resolved through `resolve_world` (THE binding book) at decision time. The roster
+ * card's `world_id` is a cached snapshot, so it is never the source here (#2007): a leader whose join receipt
+ * already settled must not send its followers through a stale-world join. An unknown binding reads as
+ * unbound; the set is scoped to the group so no unrelated roster character lands in the loop's mirror.
+ * @param {(character_id: string) => string | null | undefined} resolve_world
+ * @param {{ leader_character_id: string|null, members: Array<{ character: string }>, follower_character_ids: readonly string[] }} scope
+ */
+export function group_world_rows(resolve_world, { leader_character_id, members, follower_character_ids }) {
+  const ids = [
+    leader_character_id,
+    ...(members ?? []).map((member) => member?.character),
+    ...(follower_character_ids ?? []),
+  ]
+  return [...new Set(ids.filter(Boolean))].map((character_id) => ({
+    character_id,
+    world_id: resolve_world(character_id) ?? null,
+  }))
+}
+
+/**
  * @param {{
  *   join_world: (character_id: string, world_id: string, options: { queued: boolean }) => Promise<any>,
  *   read_checkpoint: (character_id: string, world_id: string) => Promise<{x:number,z:number}|null>|{x:number,z:number}|null,

@@ -30,8 +30,10 @@ import {
   create_group_wiring,
   build_follow_entries,
   fight_facts_of,
+  group_world_rows,
   name_alt_fight_refusal,
 } from './group_wiring_core.js'
+import { bound_world_of } from './session_gate.js'
 
 /** A dragon catch-up flight — fixed, run-pace-ish, non-blocking (the leader keeps roaming while it flies). */
 const DRAGON_FLIGHT_MS = 12_000
@@ -140,14 +142,18 @@ function resync() {
     return
   }
   const bound = !!selected && !!address && party_state._party_character_id === selected && !!party_state.party
+  const members = bound ? party_state.party.members : []
   wiring.sync_group({
     my_address: address ?? null,
     leader_character_id: selected,
-    members: bound ? party_state.party.members : [],
-    worlds: (state.sui?.characters ?? []).map((card) => ({
-      character_id: card.id,
-      world_id: card.world_id ?? null,
-    })),
+    members,
+    // #2007 — world truth is resolved from THE binding book at decision time, never re-derived from the
+    // roster cards' cached snapshot (that copy was a third home able to disagree with both).
+    worlds: group_world_rows(bound_world_of, {
+      leader_character_id: selected,
+      members,
+      follower_character_ids: follow.follower_character_ids,
+    }),
   })
 }
 

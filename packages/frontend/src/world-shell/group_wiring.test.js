@@ -11,6 +11,7 @@ import {
   create_group_wiring,
   build_follow_entries,
   fight_facts_of,
+  group_world_rows,
   name_alt_fight_refusal,
 } from './group_wiring_core.js'
 
@@ -366,6 +367,35 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
 })
 
 describe('pure helpers', () => {
+  // #2007 — the group loop's world truth is RESOLVED FROM THE ONE BINDING BOOK at decision time. The roster
+  // card's `world_id` is a cached snapshot: feeding it here made a third home that could disagree with both
+  // the session and the roster, and routed followers through a stale-world join.
+  test('group_world_rows resolves leader + members + live followers from the book, never from cards', () => {
+    const book = new Map([
+      [LEADER, WORLD], // the join receipt already moved the leader; the roster card still says OTHER_WORLD
+      [ALT_1, OTHER_WORLD],
+    ])
+    const rows = group_world_rows((id) => book.get(id), {
+      leader_character_id: LEADER,
+      members: members(LEADER, ALT_1),
+      follower_character_ids: [ALT_2],
+    })
+    expect(rows).toEqual([
+      { character_id: LEADER, world_id: WORLD },
+      { character_id: ALT_1, world_id: OTHER_WORLD },
+      { character_id: ALT_2, world_id: null }, // unknown reads as unbound, never invented
+    ])
+  })
+
+  test('group_world_rows scopes to the group — an unrelated roster character is never fed', () => {
+    const rows = group_world_rows(() => WORLD, {
+      leader_character_id: LEADER,
+      members: members(LEADER),
+      follower_character_ids: [],
+    })
+    expect(rows.map((row) => row.character_id)).toEqual([LEADER])
+  })
+
   test('fight_facts_of maps an engine view to the loop facts (players only, mob keys excluded)', () => {
     const view = {
       fight_id: '0xf',
