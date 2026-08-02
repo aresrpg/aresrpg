@@ -38,6 +38,7 @@ import {
   cast_range_set_dungeon,
   manhattan_range_cells,
   placement_cells_by_team,
+  placement_strips,
   placement_active,
   encode as encode_cell,
   decode as decode_cell,
@@ -1633,11 +1634,19 @@ export function create_voxel_fight_adapter(
       if (placement_active(fight, { in_dungeon, has_my_seat: !!seat, is_placement_phase: true })) {
         const by_team = placement_cells_by_team(fight)
         const mine = fight.my_entity_id ? fight.fighters.get(fight.my_entity_id)?.team : 0
-        // my team = 'placement' (the stand-here cells), the enemy zone = 'target' (a distinct tint).
-        const my_cells = by_team[mine ?? 0] ?? []
-        const foe_cells = by_team[mine === 0 ? 1 : 0] ?? []
-        if (my_cells.length) lit.placement = my_cells
-        if (foe_cells.length) lit.placement_enemy = foe_cells
+        // #1866 — PAINT TRUTH = CLICK TRUTH: 'placement' (the clickable blue) covers exactly the cells the pick
+        // door accepts, asked of `project.placement_click` itself (never a second copy of its rules); every other
+        // declared start cell — a band cell an ally already holds, and the other seats' strip once a seat stands
+        // on it — wears the neutral unavailable grey. The strips no longer share one blue.
+        const placement_state = fight_store.getState()
+        const { pickable, locked } = placement_strips({
+          my_band: by_team[mine ?? 0] ?? [],
+          other_band: by_team[mine === 0 ? 1 : 0] ?? [],
+          accepts_click: (cell) => project.placement_click(placement_state, decode_cell(cell)) === 'pick',
+          occupied: visible_occupant_cells(fight.fighters),
+        })
+        if (pickable.length) lit.placement = pickable
+        if (locked.length) lit.placement_locked = locked
         // PLACEMENT GHOSTS — peers' uncommitted picks (engine_view.placement_ghosts, fold.js-owned; cosmetic
         // only). Painted on the 'ghost' channel (board_highlight_style.js) regardless of whose team — a ghost
         // only ever exists for a fight participant, and this board only ever shows THIS fight.
@@ -2101,7 +2110,9 @@ export function create_voxel_fight_adapter(
  */
 const BASE_PAINT_CHANNEL = /** @type {const} */ ({
   placement: 'placement',
-  placement_enemy: 'target',
+  // #1866 — a declared start cell this seat cannot pick. The neutral grey the tackle band already rules for
+  // "information you may not act on" (board_highlight_style's path_blocked), never a second clickable blue.
+  placement_locked: 'path_blocked',
   ghost: 'ghost',
   hover_movement: 'range',
   movement: 'mp_range',

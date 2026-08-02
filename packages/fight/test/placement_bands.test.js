@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // PLACEMENT BANDS (#1093) — the start-cell zones engine_view declares per team. The board paints MY band as
-// 'placement' and the opposing one as 'placement_enemy', and placement_click gates the pick on MY band — all
+// 'placement' (only where placement_click accepts a pick, #1866) and the other one as 'placement_locked' — all
 // three read `placement_cells[team]`, so a band the projection never declares is a bare board and a dead click.
 // The chain stores BOTH sides (fight.move BoardGeom start_cells_a/start_cells_b) and stamps every participant's
 // team (team 1 = the PvP challenger side); the projection must carry both facts, not assume a PvM seat.
@@ -80,7 +80,7 @@ describe('placement bands — every declared start-cell zone projects (#1093)', 
     expect(view.placement_cells[0]).toEqual(A_CELLS.map((c) => ({ x: c % W, y: Math.floor(c / W) })))
   })
 
-  test('team 1 band = the chain start_cells_b — the opposing zone the board paints as placement_enemy', () => {
+  test('team 1 band = the chain start_cells_b — the other seats’ zone, paintable as placement_locked', () => {
     const view = engine_view(pvm().getState())
     expect(view.placement_cells[1]).toEqual(B_CELLS.map((c) => ({ x: c % W, y: Math.floor(c / W) })))
   })

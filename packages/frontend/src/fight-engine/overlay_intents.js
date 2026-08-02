@@ -37,7 +37,7 @@ export const TRAP_BEAT_S = 0.28 // a trap's trigger burst leads its damage float
 /**
  * @typedef {{ x: number, y: number }} Cell         arena-LOCAL cell (the coord space the overlay paints in)
  * @typedef {Set<number>} CellSet                    a Set of ENCODED cells (fight-los `encode`)
- * @typedef {'placement' | 'placement_enemy' | 'ghost' | 'hover_movement' | 'movement' |
+ * @typedef {'placement' | 'placement_locked' | 'ghost' | 'hover_movement' | 'movement' |
  *   'movement_blocked' | 'movement_path' | 'in_range' | 'los_blocked' | 'target'} CellPaint
  */
 
@@ -48,7 +48,7 @@ export const TRAP_BEAT_S = 0.28 // a trap's trigger burst leads its damage float
  */
 export const CELL_PAINT_PRIORITY = Object.freeze([
   'placement',
-  'placement_enemy',
+  'placement_locked',
   'ghost',
   'hover_movement',
   'movement',
@@ -314,6 +314,30 @@ export function placement_active(fight, ctx) {
 export function placement_cells_by_team(fight) {
   const of = (team) => (fight.placement_cells?.[team] ?? []).map((c) => encode(c.x, c.y))
   return { 0: of(0), 1: of(1) }
+}
+
+/**
+ * THE STRIPS, SPLIT BY CLICK TRUTH (#1866). A declared band is not an affordance: `project.placement_click`
+ * denies a start cell another seat already holds, and denies EVERY cell of the other team's band — yet the board
+ * used to light my whole band clickable-blue and the other band through the `target` channel (a SECOND blue).
+ * Two strips, one paint grammar, and half the cells refused the click they advertised.
+ *
+ * `accepts_click` is the pick door itself (one derivation — the caller passes `placement_click`, never a copy of
+ * its rules), so `pickable` is exactly the set a click would take. Everything else in my band is `locked` — the
+ * neutral unavailable grammar. The other seats' band joins `locked` only when a seat actually STANDS on it: mobs
+ * never use those cells (they hold their own mid-board spawns), so in a solo group fight that strip has no
+ * reader at all and paints nothing. Pure; ENCODED cells in and out.
+ *
+ * @param {{ my_band?: number[], other_band?: number[], accepts_click?: (cell: number) => boolean,
+ *   occupied?: Iterable<number> }} input
+ * @returns {{ pickable: number[], locked: number[] }}
+ */
+export function placement_strips({ my_band = [], other_band = [], accepts_click = () => false, occupied = [] }) {
+  const pickable = my_band.filter((cell) => accepts_click(cell))
+  const locked = my_band.filter((cell) => !pickable.includes(cell))
+  const taken = new Set(occupied)
+  if (other_band.some((cell) => taken.has(cell))) for (const cell of other_band) locked.push(cell)
+  return { pickable, locked }
 }
 
 // ── W4 / impact-beat ordering: the pending_impacts SEQUENCING CONTRACT ─────────────────────────────────────────
