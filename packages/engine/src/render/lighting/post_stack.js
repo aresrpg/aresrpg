@@ -66,7 +66,6 @@ const LF_H = 54
  * @property {() => void} render_frame renders the composed pipeline (replaces renderer.render).
  * @property {() => boolean} try_mount_godrays deferred S-43 godrays mount — rebuilds the output graph
  *   once the sun's shadow map exists (renderer.js calls it per frame until true; no-op when off/mounted).
- * @property {(renderer: *) => Promise<void>} compile async-warms the scene-pass pipelines (D221).
  * @property {() => (import('three').RenderTarget | null)} meter_target the low_freq LDR render target
  *   for auto-exposure metering (renderer.js reads back its average luma each frame). Null before first build.
  * @property {() => *} bloom_node the mounted BloomNode (null on tiers below high) — its
@@ -580,15 +579,17 @@ export function create_post_stack({
       lens_warm_pending = false
       select_lens_output()
     },
-    // [D221 depthStencil-format fix, 2026-07-12] Async-warm the scene-pass pipelines (terrain / water /
-    // far-field / entity GLB — all MeshStandardNodeMaterial) against the PASS's OWN render target, whose
-    // depth attachment is real (this pass renders every frame). PassNode.compileAsync binds that target +
-    // MRT before compiling, so the pipeline descriptor carries the pass's depth format. A BARE
-    // renderer.compileAsync(scene, camera) instead compiles against the renderer's framebuffer target
-    // (AgX tone-mapping ⇒ needsFrameBufferTarget), which the outputColorTransform=false pipeline NEVER
-    // renders into ⇒ its depth texture is never GPU-initialised ⇒ getCurrentDepthStencilFormat → undefined
-    // ⇒ "Async render pipeline creation failed … depthStencil.format undefined" (the reported boot flood).
-    compile: (/** @type {*} */ renderer) => scene_pass.compileAsync(renderer),
+    // [#1869 / D221] There is deliberately NO async warm entry point here. Every pipeline warm in this
+    // engine drives a REAL frame (engine.js pre-warms via renderer.js render_frame), because three only
+    // reaches device.createRenderPipelineAsync from Renderer/PassNode.compileAsync — and that path binds
+    // its render target once, then creates pipelines many awaits later, so an interleaved live frame can
+    // destroy the bound depth texture in between ⇒ getCurrentDepthStencilFormat → undefined ⇒ "Async
+    // render pipeline creation failed … 'format' … Required member is undefined". (The 2026-07-12 boot
+    // flood was the same class from the other end: a bare renderer.compileAsync bound the renderer's
+    // frame-buffer target — AgX ⇒ needsFrameBufferTarget — which THIS outputColorTransform=false
+    // pipeline never renders into, so its depth texture had never been GPU-initialised at all.)
+    // A real render has no await between target setup and pipeline creation: the depth format is
+    // always the frame's own.
     bloom_node: () => bloom_node,
     /** @returns {import('three').RenderTarget | null} the low_freq LDR target for auto-exposure metering. */
     meter_target: () => meter_rt,

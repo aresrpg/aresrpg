@@ -252,6 +252,10 @@ function build_terrain_material({
   // bound, so drawing both faces fills depth and maximizes early-Z; back-culling leaves depth gaps that
   // raise overdraw). KEEP DoubleSide; FrontSide deleted. Report: /tmp/aresrpg-engine-artifacts/winding_report.json.
   const material = new MeshStandardNodeMaterial({ metalness: 0, roughness: 1, side: DoubleSide })
+  // [#1869] three labels every pipeline `renderPipeline_${material.name || material.type}_${id}` — an
+  // unnamed variant reports as a bare `MeshStandardNodeMaterial_<id>` and names nothing. One word here
+  // makes every GPU validation error, hitch-probe attribution line and devtools capture self-identifying.
+  material.name = `terrain_${variant}`
   // World-space unit sun-DIRECTION uniform, shared by the two lit-foliage classes. FOLIAGE uses it for the
   // per-plane sun-dispersion (round-3 — the flora vertex/fragment dot each plane's yaw normal with it);
   // D164 CUTOUT (leaves) uses it for the sun-through-canopy BACKLIGHT (leaf_backlight_node). Default = the

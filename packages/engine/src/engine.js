@@ -640,8 +640,13 @@ export function create_engine({
     // [C1] batch every ALREADY-QUEUED late-GLB warm into this warm, exactly as the streaming path does.
     pipeline_warm_queue?.flush_all()
     Promise.resolve()
-      .then(() => (rh?.post?.render_frame ? rh.post.render_frame() : rh?.renderer?.compileAsync?.(rh.scene, rh.camera)))
-      .catch((error) => console.warn('[voxel] hack-mode pipeline pre-warm failed (world stays playable):', error))
+      .then(() => rh?.render_frame?.())
+      .catch((error) =>
+        console.warn(
+          `[voxel] hack-mode pipeline pre-warm failed (world stays playable) [backend=${rh?.backend} tier=${rh?.tier} post=${rh?.post ? 'on' : 'degraded'}]:`,
+          error
+        )
+      )
       .finally(() => {
         if (disposed) return
         prewarm_settled = true
@@ -1248,10 +1253,14 @@ export function create_engine({
             // entering view compiles its shader on the main thread mid-walk). PRE-WARM here: compile
             // every pipeline reachable from the current scene while the loading shade still covers
             // the screen — the stall moves into boot where nobody feels it. Warm by driving ONE
-            // composite render through the live depth-1 path; never call PassNode.compileAsync here:
-            // it holds the scene-pass render target globally across awaits, so an interleaved live frame
-            // samples and writes that same `depth` texture. Only the degraded path (post null) falls back
-            // to the renderer's bare async scene compile.
+            // composite render through the live depth-1 path — `rh.render_frame()`, the SAME call the
+            // frame loop makes (and the one home for the degraded bare-render branch). NEVER an async
+            // compile: PassNode.compileAsync holds the scene-pass render target globally across awaits,
+            // so an interleaved live frame samples and writes that same `depth` texture, and
+            // Renderer.compileAsync binds its target ONCE at the top and creates pipelines many awaits
+            // later — a live frame that resizes destroys that depth texture in between, leaving
+            // getCurrentDepthStencilFormat → undefined ⇒ "Async render pipeline creation failed …
+            // 'format' … Required member is undefined" (#1869, and the D221 boot flood before it).
             const rh = renderer_handle
             // [D221-FAR 2026-07-14] The warm compiles pipelines REACHABLE FROM THE SCENE — but the far
             // shell's materials only enter the scene when its first section uploads (post-focus_ready,
@@ -1276,13 +1285,16 @@ export function create_engine({
             // Start from a resolved promise so a synchronous render error becomes a rejected warm instead
             // of escaping the frame loop. The mounted variants remain reachable until the warm settles.
             Promise.resolve()
-              .then(() =>
-                rh?.post?.render_frame ? rh.post.render_frame() : rh?.renderer?.compileAsync?.(rh.scene, rh.camera)
-              )
+              .then(() => rh?.render_frame?.())
               .then(() =>
                 console.info('[voxel] D221 pipeline pre-warm complete (first-use compile stalls moved into boot)')
               )
-              .catch((error) => console.warn('[voxel] D221 pre-warm failed (world stays playable):', error))
+              .catch((error) =>
+                console.warn(
+                  `[voxel] D221 pre-warm failed (world stays playable) [backend=${rh?.backend} tier=${rh?.tier} post=${rh?.post ? 'on' : 'degraded'}]:`,
+                  error
+                )
+              )
               .finally(() => {
                 release_far_warmers?.()
                 release_fall_warmers?.()

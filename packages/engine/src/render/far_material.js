@@ -122,6 +122,8 @@ export function build_far_material(
   fade_seconds
 ) {
   const material = new MeshStandardNodeMaterial()
+  // [#1869] name the variant so its pipeline label identifies it (see terrain_material.js).
+  material.name = fade_out ? 'far_section_dying' : 'far_section_birth'
   material.roughness = 1
   material.metalness = 0
   material.side = DoubleSide
