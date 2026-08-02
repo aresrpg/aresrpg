@@ -1208,6 +1208,97 @@ const scenarios = [
       },
     ],
   },
+  {
+    // #1873 twin parity — A DoT TICK IS A DAMAGE LINE. Same three seeds as the capsule above (same public
+    // clock, same fid), so the rolled bases are IDENTICAL — 10 / 28 / 23. What changes is the victim: it now
+    // carries 30% earth resistance AND 100 strength. The chain ticks the rolled number through
+    // `final_damage(board_damage, element, &ZERO, &target_stats)` inside `apply_board_batch_from`, so the
+    // resistance bites and the strength does NOTHING — the DoT's source is a stored fid, never a live stat
+    // block. The sim handed the raw roll to its incoming-damage door, which takes an ALREADY-final amount, so
+    // a poison ignored every resistance in the game. This capsule cannot be satisfied by either error: 139 is
+    // the unmitigated arc and 200 − (20+56+46) = 78 is the caster-scaled one.
+    meta: {
+      id: 'dot_tick_resists_and_never_amplifies',
+      class: 'twin',
+      authored: '2026-08-02',
+      source: 'authored',
+      notes:
+        'Issue #1873: a [10,40] DoT on a 30%-earth-resist victim bites 7 / 19 / 16 — the tick resists like every other damage line, and the 100-strength source amplifies nothing (chain &ZERO).',
+    },
+    arena: flat_arena_json(),
+    templates_raw: venom_templates_raw,
+    initial: {
+      fight_id: 'capsule_dot_tick_mitigation',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          health: 200,
+          health_max: 200,
+          // 100 strength would DOUBLE an earth line if the DoT's source amplified; 30% earth resist is the
+          // target-side term the chain actually applies.
+          stats: {
+            agility: 0,
+            intelligence: 0,
+            range: 0,
+            strength: 100,
+            earth_resistance: 30,
+          },
+          spell_levels: { venom: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'venom',
+        target: { x: 5, y: 5 },
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'end_turn',
+        entity_id: 'm0',
+        turn_context: dot_clock(1, '3153583793'),
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'end_turn',
+        entity_id: 'm0',
+        turn_context: dot_clock(2, '3093350482'),
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'end_turn',
+        entity_id: 'm0',
+        turn_context: dot_clock(3, '3966987260'),
+      },
+    ],
+    // Hand-derived from the Move sources, transcription proved against spell_formula.move's own
+    // `t_slot_damage_roll_parity_vectors` (all ten vectors reproduced) before use. Roll → §5h amplify with the
+    // ZERO block (identity) → `spell::apply_resistance` at 30%:
+    //   ordinal 1 → turn_seed  925360589 → roll  111 → base 10 → floor(10·70/100) =  7
+    //   ordinal 2 → turn_seed 2477364155 → roll 6104 → base 28 → floor(28·70/100) = 19
+    //   ordinal 3 → turn_seed 2229982231 → roll 4248 → base 23 → floor(23·70/100) = 16
+    pinned_facts: [
+      {
+        cite: 'cast.move apply_board_batch_from → spell_formula::final_damage(board_damage, element, &ZERO, &target_stats) — the victim resists every tick: 200 − (7 + 19 + 16)',
+        path: 'team0.0.health',
+        equals: 158,
+      },
+      {
+        cite: 'cast.move apply_board_batch_from — the caster block is `spell::new_stats(0, …)`: the source’s 100 strength amplifies NOTHING (a scaled arc would read 78)',
+        path: 'team0.0.stats.strength',
+        equals: 100,
+      },
+      {
+        cite: 'spell_board.move apply_dot — the authored band is stored verbatim and is what every tick rolls against, resistance applying after the roll',
+        path: 'team0.0.effects.0.value_max',
+        equals: 40,
+      },
+    ],
+  },
   // ── #1540, the glyph clock: ONE cadence, invariant to where the caster sits in the order ──────────────
   //
   // The chain's anchor is declared at `cast.move` `tick_turn_end`: its `is_mob` arm only refreshes mob stats,

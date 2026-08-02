@@ -6,11 +6,11 @@ import { rng_int, rng_next, rng_seed } from './prng.js'
 import { turn_rng_of, with_turn_rng } from './combat_clock.js'
 import {
   crank_damage_roll,
-  roll_in_range,
   slot_damage_roll,
   tackle_seed,
   turn_seed,
 } from './turn_seed.js'
+import { calculate_final_damage } from './spell_calculator.js'
 import {
   find_entity,
   next_id,
@@ -447,28 +447,44 @@ export const is_stunned = (state, entity_id) => {
 }
 
 /**
- * #1826 — ONE TICK'S DAMAGE. A row carrying an authored band rolls it HERE, at tick time, exactly like
+ * ONE TICK'S DAMAGE — the whole chain sink, not just its roll.
+ *
+ * #1826 — the ROLL. A row carrying an authored band rolls it HERE, at tick time, exactly like
  * `cast::apply_board_batch_from`: `roll_in_range(value, value_max, slot_damage_roll(turn_seed(fight, fid), e))`
  * with `e` the row's ordinal in the tick batch. A fixed row (`value_max` absent or ≤ `value`) is the degenerate
- * case and stays byte-identical to the pre-band behaviour. Without a turn clock the fraction comes from the
- * crank's NON-advancing `scramble` — the same clock-less board-tick door trap and glyph ticks already use
- * (fight_traps.js `hazard_damage`), so a mob-seat tick never invents a previewable seed it cannot have.
+ * case. Without a turn clock the fraction comes from the crank's NON-advancing `scramble` — the same clock-less
+ * board-tick door trap and glyph ticks already use (fight_traps.js `hazard_damage`), so a mob-seat tick never
+ * invents a previewable seed it cannot have.
+ *
+ * #1873 — the MITIGATION. That rolled number is a damage LINE, and the chain hands it to
+ * `final_damage(board_damage, element, &ZERO, &target_stats)` and then to `hit_elemental`, which opens with
+ * `spell_board::mitigate_damage`. So the victim's element resistance AND its shields both apply, while the
+ * source never amplifies (`&ZERO` — a DoT row stores a fid, not a live stat block; the reported "caster stats"
+ * symptom is the inverse of the law). The sim handed the raw roll to `apply_incoming_damage`, which takes an
+ * already-final amount — so a DoT ignored resistances and walked through shields. Same call, same argument
+ * order, same zero caster as `fight_traps.js::hazard_damage`: one home for the board sink's magnitude.
  * @param {import('./fight_state.js').FightState} state
- * @param {{ value: number, value_max?: number }} row
+ * @param {{ value: number, value_max?: number, element?: import('./fight_state.js').Element }} row
+ * @param {import('./fight_state.js').FightEntity} victim
  * @param {number|null} tick_seed  the ticking fighter's turn seed, or null for the crank door
  * @param {number} ordinal  the row's index in this fighter's tick batch (the chain's `e`)
- * @returns {number}
+ * @returns {{ damage: number, shields_consumed: { id: number, absorbed: number }[] }}
  */
-const tick_damage = (state, row, tick_seed, ordinal) =>
-  row.value_max === undefined || row.value_max <= row.value
-    ? row.value
-    : roll_in_range(
-        row.value,
-        row.value_max,
-        tick_seed === null
-          ? crank_damage_roll(turn_rng_of(state))
-          : slot_damage_roll(tick_seed, ordinal),
-      )
+const tick_damage = (state, row, victim, tick_seed, ordinal) =>
+  calculate_final_damage(
+    /** @type {any} */ ({
+      type: 'DAMAGE',
+      element: row.element,
+      min: row.value,
+      max: row.value_max ?? row.value,
+    }),
+    {}, // ZERO caster — the chain's `spell::new_stats(0, …)`; a DoT never amplifies off its source
+    effective_stats(victim),
+    tick_seed === null
+      ? crank_damage_roll(turn_rng_of(state))
+      : slot_damage_roll(tick_seed, ordinal),
+    victim.effects.filter(e => e.type === 'SHIELD' || e.type === 'POOL_SHIELD'),
+  )
 
 /**
  * Apply turn-start effects. Status counters age separately at the affected fighter's turn end, matching
@@ -495,17 +511,25 @@ export const process_turn_effects = (state, entity_id, tick_seed = null) => {
       const here = find_entity(acc.state, entity_id)
       if (!here || here.health <= 0) return acc
       if (effect.type === 'DAMAGE') {
-        const after = apply_incoming_damage(
+        const tick = tick_damage(
+          acc.state,
+          effect,
+          here,
+          tick_seed,
+          dot_ordinal.get(effect.id) ?? 0,
+        )
+        const hit = apply_incoming_damage(
           acc.state,
           entity_id,
-          tick_damage(
-            acc.state,
-            effect,
-            tick_seed,
-            dot_ordinal.get(effect.id) ?? 0,
-          ),
+          tick.damage,
           effect.source_id,
         )
+        // #1873 — the absorbing pools are SPENT by the tick (`mitigate_damage` writes the board back), exactly
+        // as the trap/glyph door does. Without this a 5-point pool would soak every tick of the fight for free.
+        const after = {
+          ...hit,
+          state: consume_shields(hit.state, entity_id, tick.shields_consumed),
+        }
         const recipient = find_entity(after.state, after.recipient_id)
         return {
           state: after.state,
