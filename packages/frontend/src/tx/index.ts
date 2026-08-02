@@ -32,7 +32,7 @@ import { attempt_sponsor_fallback, is_gas_selection_error, type SponsorFallbackD
 import { budget_cache_key, cached_budget, remember_budget, forget_budget } from './budget_cache.js'
 import { apply_pinned_gas, invalidate_gas_coin } from './gas_coin_cache.js'
 import { record_self_paid_receipt } from './gas_spend_ledger'
-import { now, stamp_preflight } from './latency.js'
+import { flush_sponsor_legs, now, stamp_preflight, timed } from './latency.js'
 import { decide_sponsor_route, sponsor_route_log } from './sponsor_route'
 import type { SponsoredReceipt, TxReceipt } from './receipts'
 import {
@@ -709,18 +709,29 @@ export async function execute_sponsored_tx({
   // slowest single hop in the flow). Racing them makes the leg cost max() instead of sum(). The challenge
   // timestamp is minted before both, so it only gets FRESHER against the sponsor's 5-minute TTL
   // (SPONSOR_CHALLENGE_TTL_MS / assert_zklogin_challenge), never staler. Order of the POST body is unchanged.
-  const [kind, { signature }] = await Promise.all([build_sponsored_kind(transaction, address), sign_challenge()])
+  // Each leg is timed AT the leg (?txtiming=1 only prints it — the marks themselves are two now() calls).
+  const sponsored_started = now()
+  const [built, signed] = await Promise.all([
+    timed(() => build_sponsored_kind(transaction, address)),
+    timed(sign_challenge),
+  ])
+  const kind = built.value
+  const { signature } = signed.value
+  const prepare_ms = now() - sponsored_started
 
   // ── RESERVE (endpoint 1) ── same policy inputs as the retired single call (the kind-only PTB + the zkLogin
   // challenge). The sponsor enforces ALL money + identity policy HERE (pre-gas); any refusal is decoder-mapped by
   // sponsor_fetch (PRE-execution, zero gas). `self-pay-required` comes back TAGGED so the caller silently self-pays.
   mark_engage_reserve_started(transaction)
-  const { reservationId, sponsorAddress, gasCoins, gasBudget } = await sponsor_fetch(`${sponsor_url}/reserve`, {
-    txKindBytes: toBase64(kind),
-    sender: address,
-    challenge,
-    signature,
-  })
+  const reserved = await timed(() =>
+    sponsor_fetch(`${sponsor_url}/reserve`, {
+      txKindBytes: toBase64(kind),
+      sender: address,
+      challenge,
+      signature,
+    })
+  )
+  const { reservationId, sponsorAddress, gasCoins, gasBudget } = reserved.value
   mark_engage_reserve_finished(transaction)
 
   // ── BETWEEN THE CALLS ── apply the reserved gas EXACTLY to the SAME tx object (the kind stays byte-identical, so
@@ -741,7 +752,8 @@ export async function execute_sponsored_tx({
   // submits a sponsored tx.
   const st = wallet.features['sui:signTransaction'] as SignTransactionFeature | undefined
   if (!st?.signTransaction) throw new Error('Wallet does not support signTransaction')
-  const { signature: userSig, bytes: txBytes } = await st.signTransaction({ account: { address }, transaction, chain })
+  const wallet_signed = await timed(() => st.signTransaction({ account: { address }, transaction, chain }))
+  const { signature: userSig, bytes: txBytes } = wallet_signed.value
   mark_engage_wallet_signed(transaction)
 
   // ── EXECUTE (endpoint 2) ── the station co-signs the gas half + submits + returns the CERTIFIED effects. A
@@ -750,8 +762,18 @@ export async function execute_sponsored_tx({
   // is faster than any client-side wait — the station already waited for finality). `post_submit` marks the leg
   // as unanswerable-by-silence: every failure shape that cannot PROVE non-execution refuses BLOCKING instead of
   // falling through to a self-pay re-sign of a transaction that may already be on chain.
-  const { effects, digest } = await sponsor_fetch(`${sponsor_url}/execute`, { reservationId, txBytes, userSig }, true)
+  const executed = await timed(() => sponsor_fetch(`${sponsor_url}/execute`, { reservationId, txBytes, userSig }, true))
+  const { effects, digest } = executed.value
   mark_engage_execution_finished(transaction)
+  flush_sponsor_legs({
+    build_ms: built.ms,
+    zkp_sign_ms: signed.ms,
+    prepare_ms,
+    reserve_ms: reserved.ms,
+    wallet_sign_ms: wallet_signed.ms,
+    execute_ms: executed.ms,
+    total_ms: now() - sponsored_started,
+  })
   const ok = effects?.status?.status === 'success'
   return {
     digest: digest ?? effects?.transactionDigest ?? '',

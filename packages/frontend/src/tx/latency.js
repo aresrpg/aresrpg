@@ -41,6 +41,34 @@ export function stamp_preflight(
 
 const ms = (/** @type {number|null|undefined} */ v) => (v == null ? '—' : `${Math.round(v)}ms`)
 
+/**
+ * Run one leg and return its value alongside its wall time. The sponsored door measures every hop with this,
+ * so a leg's duration is derived at the leg — never reconstructed from a chain of ambient timestamps.
+ * @template T @param {() => Promise<T>} run @returns {Promise<{ value: T, ms: number }>}
+ */
+export async function timed(run) {
+  const started = now()
+  const value = await run()
+  return { value, ms: now() - started }
+}
+
+/**
+ * The SPONSORED door's per-leg line (#1663). The engage trace (core/engage_timing.js) already covers a fight
+ * engage end-to-end, but it is bound to ONE active fight transaction — create-character and join-world sponsored
+ * txs mark into a dead trace and were invisible. This is the door's own instrument: same ?txtiming=1 gate, same
+ * console.debug idiom, every sponsored tx regardless of caller. `prepare` is the max of its two CONCURRENT legs.
+ * @param {{ build_ms: number, zkp_sign_ms: number, prepare_ms: number, reserve_ms: number,
+ *           wallet_sign_ms: number, execute_ms: number, total_ms: number }} legs
+ */
+export function flush_sponsor_legs(legs) {
+  if (!TX_TIMING_ON) return
+  console.debug(
+    `[txtiming] sponsored: prepare ${ms(legs.prepare_ms)} (kind-build ${ms(legs.build_ms)} ‖ zkp-sign ` +
+      `${ms(legs.zkp_sign_ms)}) · reserve ${ms(legs.reserve_ms)} · wallet-sign ${ms(legs.wallet_sign_ms)} · ` +
+      `execute ${ms(legs.execute_ms)} · total ${ms(legs.total_ms)}`
+  )
+}
+
 /** The fight sign() choke: emit the full per-leg line (dry-run · sign+submit · submit→effects) and clear it. */
 export function flush_leg(/** @type {any} */ tx, /** @type {string} */ label, /** @type {number} */ wait_ms) {
   if (!TX_TIMING_ON) return
