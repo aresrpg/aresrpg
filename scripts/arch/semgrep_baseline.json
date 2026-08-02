@@ -22,13 +22,13 @@
   "arch-coop-visible-source-bypass": {
     "packages/frontend/src/GameWorldHost.tsx": 2,
     "packages/frontend/src/components/CharacterSwitcher.tsx": 8,
-    "packages/frontend/src/game/remote_players.js": 4,
-    "packages/frontend/src/game/screens/hud/Minimap.jsx": 3,
+    "packages/frontend/src/game/remote_players.js": 3,
+    "packages/frontend/src/game/screens/hud/Minimap.jsx": 2,
     "packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx": 3,
     "packages/frontend/src/game/screens/hud/world/FightsModal.jsx": 14,
     "packages/frontend/src/game/screens/hud/world/OnlinePlayers.jsx": 2,
     "packages/frontend/src/game/screens/hud/world/PartyFrame.jsx": 14,
-    "packages/frontend/src/game/screens/hud/world/PlayerActionMenu.jsx": 9,
+    "packages/frontend/src/game/screens/hud/world/PlayerActionMenu.jsx": 8,
     "packages/frontend/src/game/screens/hud/world/WorldChat.jsx": 4
   },
   "arch-fight-effect-free": {
