@@ -510,6 +510,47 @@ const brace_smite_templates_raw = {
   },
 }
 
+// #1999 × #2000 — the CROSS TERM's vehicle: a FIXED-band poison plus the 1-turn strength buff above. Fixed so
+// `roll_in_range` is degenerate and the tick needs no clock at all: every bite is pure arithmetic off the
+// caster's live strength, which is exactly the pair of rulings under test.
+const taint_templates_raw = {
+  yajin: {
+    brace: brace_smite_templates_raw.yajin.brace,
+    taint: {
+      name: 'Taint',
+      description: 'a fixed poison that bites on each of its turns',
+      levels: [
+        {
+          cost: 2,
+          range: [0, 6],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: false,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'poison',
+              min: 20,
+              max: 20,
+              element: 'earth',
+              target: 'self',
+              chance: 100,
+              turns: 2,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
 // A RANGE-BANDED damage-over-time (#1826). `min !== max` is the whole point: the chain re-rolls the band at
 // EVERY tick (`cast::apply_board_batch_from` → `roll_in_range(value, value_max, slot_damage_roll(turn_seed, e))`),
 // so a DoT whose band is a single number cannot measure the divergence. Self-targeted so the victim is a PLAYER
@@ -1280,21 +1321,21 @@ const scenarios = [
     ],
   },
   {
-    // #1873 twin parity — A DoT TICK IS A DAMAGE LINE. Same three seeds as the capsule above (same public
-    // clock, same fid), so the rolled bases are IDENTICAL — 10 / 28 / 23. What changes is the victim: it now
-    // carries 30% earth resistance AND 100 strength. The chain ticks the rolled number through
-    // `final_damage(board_damage, element, &ZERO, &target_stats)` inside `apply_board_batch_from`, so the
-    // resistance bites and the strength does NOTHING — the DoT's source is a stored fid, never a live stat
-    // block. The sim handed the raw roll to its incoming-damage door, which takes an ALREADY-final amount, so
-    // a poison ignored every resistance in the game. This capsule cannot be satisfied by either error: 139 is
-    // the unmitigated arc and 200 − (20+56+46) = 78 is the caster-scaled one.
+    // #1873 + #1999 twin parity — A DoT TICK IS A DAMAGE LINE WITH A CASTER BEHIND IT. Same three seeds as the
+    // capsule above (same public clock, same fid), so the rolled bases are IDENTICAL — 10 / 28 / 23. What
+    // changes is the fighter: it carries 100 strength AND 30% earth resistance, and here it is BOTH the source
+    // and the victim, so one capsule reads both terms of
+    // `final_damage(board_damage, element, &caster_stats, &target_stats)` at once. D41 made the caster block the
+    // source's CURRENT stats (`cast::board_caster_stats`), so the strength doubles the line and the resistance
+    // then takes 30% off it. Every wrong design lands on a different terminal HP: 158 is the old zero-caster
+    // arc, 139 the unmitigated one, 78 the caster-scaled-but-unresisted one.
     meta: {
-      id: 'dot_tick_resists_and_never_amplifies',
+      id: 'dot_tick_scales_with_its_caster_then_resists',
       class: 'twin',
       authored: '2026-08-02',
       source: 'authored',
       notes:
-        'Issue #1873: a [10,40] DoT on a 30%-earth-resist victim bites 7 / 19 / 16 — the tick resists like every other damage line, and the 100-strength source amplifies nothing (chain &ZERO).',
+        'Issues #1873 + #1999: a [10,40] DoT from a 100-strength caster onto a 30%-earth-resist victim bites 14 / 39 / 32 — the source amplifies, then the target resists, every tick.',
     },
     arena: flat_arena_json(),
     templates_raw: venom_templates_raw,
@@ -1305,8 +1346,8 @@ const scenarios = [
         make_entity('p0', { x: 5, y: 5 }, true, {
           health: 200,
           health_max: 200,
-          // 100 strength would DOUBLE an earth line if the DoT's source amplified; 30% earth resist is the
-          // target-side term the chain actually applies.
+          // 100 strength DOUBLES an earth line from this source (#1999); 30% earth resist is the target-side
+          // term that then bites the amplified number.  Both terms on one fighter: it poisons itself.
           stats: {
             agility: 0,
             intelligence: 0,
@@ -1347,19 +1388,19 @@ const scenarios = [
       },
     ],
     // Hand-derived from the Move sources, transcription proved against spell_formula.move's own
-    // `t_slot_damage_roll_parity_vectors` (all ten vectors reproduced) before use. Roll → §5h amplify with the
-    // ZERO block (identity) → `spell::apply_resistance` at 30%:
-    //   ordinal 1 → turn_seed  925360589 → roll  111 → base 10 → floor(10·70/100) =  7
-    //   ordinal 2 → turn_seed 2477364155 → roll 6104 → base 28 → floor(28·70/100) = 19
-    //   ordinal 3 → turn_seed 2229982231 → roll 4248 → base 23 → floor(23·70/100) = 16
+    // `t_slot_damage_roll_parity_vectors` (all ten vectors reproduced) before use. Roll →
+    // `spell_formula::amplify_damage` at 100 strength (base × 200/100) → `spell::apply_resistance` at 30%:
+    //   ordinal 1 → turn_seed  925360589 → roll  111 → base 10 → 20 → floor(20·70/100) = 14
+    //   ordinal 2 → turn_seed 2477364155 → roll 6104 → base 28 → 56 → floor(56·70/100) = 39
+    //   ordinal 3 → turn_seed 2229982231 → roll 4248 → base 23 → 46 → floor(46·70/100) = 32
     pinned_facts: [
       {
-        cite: 'cast.move apply_board_batch_from → spell_formula::final_damage(board_damage, element, &ZERO, &target_stats) — the victim resists every tick: 200 − (7 + 19 + 16)',
+        cite: 'cast.move apply_board_batch_from → spell_formula::final_damage(board_damage, element, &caster_stats, &target_stats) — amplify then resist, every tick: 200 − (14 + 39 + 32)',
         path: 'team0.0.health',
-        equals: 158,
+        equals: 115,
       },
       {
-        cite: 'cast.move apply_board_batch_from — the caster block is `spell::new_stats(0, …)`: the source’s 100 strength amplifies NOTHING (a scaled arc would read 78)',
+        cite: 'cast.move board_caster_stats — the caster block is the SOURCE fighter’s live stats, so its 100 strength doubles each line (the old zero block read 158)',
         path: 'team0.0.stats.strength',
         equals: 100,
       },
@@ -1431,6 +1472,69 @@ const scenarios = [
       {
         cite: 'cast.move tick_turn_expiry — the row aged at the bearer\'s turn START, never its turn end; the caster\'s live strength is back to base once it leaves',
         path: 'team0.0.stats.strength',
+        equals: 0,
+      },
+    ],
+  },
+  {
+    // #1999 × #2000 — THE CROSS TERM. A DoT's LAST tick under the turn-START decrement timing, priced off the
+    // caster's stats AS THEY ARE AT THAT TICK. The two rulings compose: D42 decides how many ticks a row gets
+    // and which rows are still live at each of them, D41 decides how big each tick is.
+    //
+    // p0 (base strength 50) poisons ITSELF for a fixed 20 over 2 turns, then buffs mid-poison. `min === max`
+    // makes the roll degenerate — no clock, no seed math, just `20 × (100 + strength)/100` on a zero-resist
+    // victim:
+    //   T     cast turn — the poison lands, nothing ticks yet
+    //   T+1   expiry ages the row 2 → 1, tick #1 = 20 × 150/100 = 30   → 200 → 170; THEN p0 casts brace (+50, 1t)
+    //   T+2   expiry ages the poison 1 → 0 and brace 1 → 0, BOTH still live: tick #2 = 20 × 200/100 = 40 → 130
+    //   T+3   the aging finds both spent and drops them BEFORE the batch — no third bite
+    // Every neighbouring design lands elsewhere: the old end-turn cadence expires brace before T+2 (arc 30/20 →
+    // 150), a cast-time snapshot repeats the first tick (30/30 → 140), and a flat DoT repeats the authored base
+    // (20/20 → 160). Only both rulings together produce 130.
+    meta: {
+      id: 'dot_last_tick_reads_the_live_caster_under_turn_start_expiry',
+      class: 'twin',
+      authored: '2026-08-02',
+      source: 'authored',
+      notes:
+        'Issues #1999 × #2000: a 2-turn poison bites 30 then 40 — the last tick happens because the counter landing on 0 is still a covered turn, and it is priced off a buff that is live for the same reason.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: taint_templates_raw,
+    initial: {
+      fight_id: 'capsule_dot_cross_term',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          health: 200,
+          health_max: 200,
+          stats: { agility: 0, intelligence: 0, range: 0, strength: 50 },
+          spell_levels: { taint: 1, brace: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      { type: 'cast', entity_id: 'p0', spell_id: 'taint', target: { x: 5, y: 5 } },
+      // `end_turn` for the mob rather than `ai_turn`: no AI plan, no walk — the arc must read the two clocks alone.
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'end_turn', entity_id: 'm0' },
+      { type: 'cast', entity_id: 'p0', spell_id: 'brace', target: { x: 5, y: 5 } },
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'end_turn', entity_id: 'm0' },
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'end_turn', entity_id: 'm0' },
+    ],
+    pinned_facts: [
+      {
+        cite: 'cast.move tick_turn_expiry then tick_turn_start — the poison keeps its authored 2 bites and the LAST one reads the caster stats live at that tick (board_caster_stats): 200 − (30 + 40)',
+        path: 'team0.0.health',
+        equals: 130,
+      },
+      {
+        cite: 'spell_board.move decrement_fighter_statuses — by T+3 the aging has found both the poison and the buff spent and dropped them; nothing lingers past its authored coverage',
+        path: 'team0.0.effects.length',
         equals: 0,
       },
     ],

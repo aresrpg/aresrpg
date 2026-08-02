@@ -447,6 +447,23 @@ export const is_stunned = (state, entity_id) => {
 }
 
 /**
+ * The caster block a board tick amplifies off: the SOURCE fighter's stats as they are right now (#1999 / D41 —
+ * `cast::board_caster_stats`). A row naming nobody, or naming a fighter this fight does not carry, amplifies off
+ * nothing — the chain's zero block, reached there by the same out-of-range guard.
+ *
+ * PARKED (#1999 clause 2, NOT ruled): a DEAD caster's poison. A corpse keeps its entry, so this reads its last
+ * live stats and the poison keeps scaling — the general rule with no special case, and no fixture pins it. When
+ * the reference question is ruled, the branch belongs here and in `cast::board_caster_stats`, nowhere else.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} [source_id]
+ * @returns {Partial<import('./fight_state.js').Stats>}
+ */
+const tick_caster_stats = (state, source_id) => {
+  const caster = source_id ? find_entity(state, source_id) : null
+  return caster ? effective_stats(caster) : {}
+}
+
+/**
  * ONE TICK'S DAMAGE — the whole chain sink, not just its roll.
  *
  * #1826 — the ROLL. A row carrying an authored band rolls it HERE, at tick time, exactly like
@@ -457,14 +474,20 @@ export const is_stunned = (state, entity_id) => {
  * invents a previewable seed it cannot have.
  *
  * #1873 — the MITIGATION. That rolled number is a damage LINE, and the chain hands it to
- * `final_damage(board_damage, element, &ZERO, &target_stats)` and then to `hit_elemental`, which opens with
- * `spell_board::mitigate_damage`. So the victim's element resistance AND its shields both apply, while the
- * source never amplifies (`&ZERO` — a DoT row stores a fid, not a live stat block; the reported "caster stats"
- * symptom is the inverse of the law). The sim handed the raw roll to `apply_incoming_damage`, which takes an
- * already-final amount — so a DoT ignored resistances and walked through shields. Same call, same argument
- * order, same zero caster as `fight_traps.js::hazard_damage`: one home for the board sink's magnitude.
+ * `final_damage(board_damage, element, &caster_stats, &target_stats)` and then to `hit_elemental`, which opens
+ * with `spell_board::mitigate_damage`. So the victim's element resistance AND its shields both apply. The sim
+ * handed the raw roll to `apply_incoming_damage`, which takes an already-final amount — so a DoT ignored
+ * resistances and walked through shields. Same call, same argument order as `fight_traps.js::hazard_damage`:
+ * one home for the board sink's magnitude.
+ *
+ * #1999 (D41) — the AMPLIFICATION. The caster block is the SOURCE fighter's stats read at THIS tick, not a
+ * snapshot from when the poison landed and not a zero block: a caster that buffs mid-poison poisons harder
+ * (`cast::board_caster_stats`, resolving the fid `spell_board::apply_dot` stored). A row with no live source —
+ * a glyph or trap payload, whose owner is a board cell rather than a fighter — still amplifies off nothing,
+ * which is why `fight_traps.js` keeps its zero caster.
  * @param {import('./fight_state.js').FightState} state
- * @param {{ value: number, value_max?: number, element?: import('./fight_state.js').Element }} row
+ * @param {{ value: number, value_max?: number, element?: import('./fight_state.js').Element,
+ *   source_id?: string }} row
  * @param {import('./fight_state.js').FightEntity} victim
  * @param {number|null} tick_seed  the ticking fighter's turn seed, or null for the crank door
  * @param {number} ordinal  the row's index in this fighter's tick batch (the chain's `e`)
@@ -478,7 +501,7 @@ const tick_damage = (state, row, victim, tick_seed, ordinal) =>
       min: row.value,
       max: row.value_max ?? row.value,
     }),
-    {}, // ZERO caster — the chain's `spell::new_stats(0, …)`; a DoT never amplifies off its source
+    tick_caster_stats(state, row.source_id),
     effective_stats(victim),
     tick_seed === null
       ? crank_damage_roll(turn_rng_of(state))

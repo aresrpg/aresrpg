@@ -4,18 +4,18 @@
 //
 // The chain ticks a DoT through the SAME board sink a trap/glyph payload uses
 // (`cast::apply_board_batch_from`): `retro_effects::hit_elemental(fight, .., spell_formula::final_damage(
-// board_damage, element, &ZERO, &target_stats), element, board_roll)` — and `hit_elemental` opens with
-// `spell_board::mitigate_damage`. So the chain's per-tick magnitude is:
+// board_damage, element, &caster_stats, &target_stats), element, board_roll)` — and `hit_elemental` opens
+// with `spell_board::mitigate_damage`. So the chain's per-tick magnitude is:
 //
 //     roll_in_range(value, value_max, slot_damage_roll(turn_seed, e))   [#1826, landed]
-//       → amplify with a ZERO caster block  (the source is a stored fid, never a live stat block)
-//       → the TARGET's element resistance   (spell::apply_resistance)
-//       → the TARGET's shields              (kind-24 flat, then kind-40 pool)
+//       → amplify off the SOURCE's CURRENT stats  (#1999 / D41 — `cast::board_caster_stats`)
+//       → the TARGET's element resistance         (spell::apply_resistance)
+//       → the TARGET's shields                    (kind-24 flat, then kind-40 pool)
 //
 // The sim rolled the band (#1826) and then handed the raw number straight to `apply_incoming_damage`, which
-// takes an ALREADY-final amount — so a DoT ignored the victim's resistances and walked through shields. That is
-// the magnitude divergence #1873 reported; the row's "caster stats" framing is the inverse of the chain law —
-// `&ZERO` means a DoT never scales off its caster, and the tests below pin BOTH halves.
+// takes an ALREADY-final amount — so a DoT ignored the victim's resistances and walked through shields (the
+// magnitude divergence #1873 reported). #1999 then ruled the caster half: a poison scales with whoever cast it,
+// read at EVERY application, and the tests below pin both halves and the order they compose in.
 //
 // Sibling of hazard_zero_caster.test.js (the trap/glyph twin of the same sink).
 
@@ -110,16 +110,55 @@ describe('#1873 — a DoT tick resolves through the chain board sink, not a raw 
     expect(dealt).toBe(12)
   })
 
-  test('the tick NEVER amplifies off the DoT source — the chain block is &ZERO', () => {
-    // p0 carries +100 strength, which would DOUBLE an earth line if the source amplified. `apply_board_batch_from`
-    // builds `spell::new_stats(0, …)` and hands THAT to `final_damage`, so the tick stays the resisted base.
+  test('the tick AMPLIFIES off the DoT source, then the victim resists (#1999 / D41)', () => {
+    // p0 carries +100 strength, which DOUBLES an earth line: 20 × (100+100)/100 = 40, then the victim's 40%
+    // earth resist takes it to floor(40 × 60/100) = 24. Caster first, target second — the flat-DoT status quo
+    // read 12 here, and a target-first order would read 24 only by coincidence at these numbers, which is why
+    // the buffed-mid-DoT case below is the discriminator the ruling actually names.
     const { dealt } = tick_cost(
       state_with_dot({
         caster_stats: { strength: 100 },
         victim_stats: { earth_resistance: 40 },
       }),
     )
-    expect(dealt).toBe(12)
+    expect(dealt).toBe(24)
+  })
+
+  test('THE DISCRIMINATOR: buffing the caster mid-poison raises the NEXT tick (#1999 clause 1)', () => {
+    // A cast-time snapshot and a per-tick read agree on every tick until the caster's stats MOVE between two of
+    // them. Same row, same victim: 20 × 150/100 = 30, then the caster gains another 50 strength and the very
+    // next tick of that same row reads 20 × 200/100 = 40. A snapshot repeats 30; a flat DoT repeats 20.
+    const state = state_with_dot({ caster_stats: { strength: 50 } })
+    const first = tick_cost(state)
+    expect(first.dealt).toBe(30)
+
+    const buffed = {
+      ...first.state,
+      team0: first.state.team0.map(entity =>
+        entity.id === 'p0'
+          ? { ...entity, stats: { ...entity.stats, strength: 100 } }
+          : entity,
+      ),
+    }
+    expect(tick_cost(buffed).dealt).toBe(40)
+  })
+
+  test('a row whose source is gone from the fight amplifies off nothing (the zero-caster fallback)', () => {
+    // The chain's out-of-range guard in `cast::board_caster_stats`: a fid naming no fighter of this fight — a
+    // glyph payload's `spell_board::no_source()`, or a stale id — takes the zero block, never an abort.
+    const state = state_with_dot({ caster_stats: { strength: 100 } })
+    const orphaned = {
+      ...state,
+      team1: state.team1.map(entity => ({
+        ...entity,
+        effects: entity.effects.map(effect =>
+          effect.type === 'DAMAGE'
+            ? { ...effect, source_id: 'nobody' }
+            : effect,
+        ),
+      })),
+    }
+    expect(tick_cost(orphaned).dealt).toBe(20)
   })
 
   test('shields absorb a tick and are SPENT by it (hit_elemental → mitigate_damage)', () => {

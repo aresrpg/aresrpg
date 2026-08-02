@@ -1,10 +1,10 @@
 {
   "meta": {
-    "id": "dot_tick_resists_and_never_amplifies",
+    "id": "dot_tick_scales_with_its_caster_then_resists",
     "class": "twin",
     "authored": "2026-08-02",
     "source": "authored",
-    "notes": "Issue #1873: a [10,40] DoT on a 30%-earth-resist victim bites 7 / 19 / 16 — the tick resists like every other damage line, and the 100-strength source amplifies nothing (chain &ZERO)."
+    "notes": "Issues #1873 + #1999: a [10,40] DoT from a 100-strength caster onto a 30%-earth-resist victim bites 14 / 39 / 32 — the source amplifies, then the target resists, every tick."
   },
   "arena": {
     "width": 21,
@@ -213,12 +213,12 @@
   ],
   "pinned_facts": [
     {
-      "cite": "cast.move apply_board_batch_from → spell_formula::final_damage(board_damage, element, &ZERO, &target_stats) — the victim resists every tick: 200 − (7 + 19 + 16)",
+      "cite": "cast.move apply_board_batch_from → spell_formula::final_damage(board_damage, element, &caster_stats, &target_stats) — amplify then resist, every tick: 200 − (14 + 39 + 32)",
       "path": "team0.0.health",
-      "equals": 158
+      "equals": 115
     },
     {
-      "cite": "cast.move apply_board_batch_from — the caster block is `spell::new_stats(0, …)`: the source’s 100 strength amplifies NOTHING (a scaled arc would read 78)",
+      "cite": "cast.move board_caster_stats — the caster block is the SOURCE fighter’s live stats, so its 100 strength doubles each line (the old zero block read 158)",
       "path": "team0.0.stats.strength",
       "equals": 100
     },
@@ -285,8 +285,8 @@
         "effects": [
           {
             "target_id": "p0",
-            "damage": 7,
-            "new_health": 193,
+            "damage": 14,
+            "new_health": 186,
             "killed": false
           }
         ]
@@ -322,8 +322,8 @@
         "effects": [
           {
             "target_id": "p0",
-            "damage": 19,
-            "new_health": 174,
+            "damage": 39,
+            "new_health": 147,
             "killed": false
           }
         ]
@@ -359,8 +359,8 @@
         "effects": [
           {
             "target_id": "p0",
-            "damage": 16,
-            "new_health": 158,
+            "damage": 32,
+            "new_health": 115,
             "killed": false
           }
         ]
@@ -373,14 +373,14 @@
         "mp": 5
       }
     ],
-    "terminal_digest": "13d2b4e7",
+    "terminal_digest": "b7db9b47",
     "terminal_summary": {
       "winner": -1,
       "turn_number": 4,
       "entities": [
         {
           "id": "p0",
-          "health": 158,
+          "health": 115,
           "cell": {
             "x": 5,
             "y": 5

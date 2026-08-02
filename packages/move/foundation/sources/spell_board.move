@@ -156,21 +156,46 @@ public fun has_trap_at(board: &BoardState, cell: u64): bool {
   false
 }
 
+/// The `sources` entry of a tick-batch effect that has NO live source fighter: a glyph payload is anonymous
+/// (it belongs to a board cell, not to anyone), so its damage amplifies off nothing. Deliberately outside the
+/// fighter-id space in BOTH directions — a reader that maps it back to a mob index lands out of bounds and
+/// takes the same zero-caster path (`aresrpg_fight::cast::board_caster_stats`).
+const NO_SOURCE: u64 = 18446744073709551615;
+
+public fun no_source(): u64 { NO_SOURCE }
+
 /// START-of-turn tick for fighter `fighter_id` standing on `fighter_cell`: the payloads of every start-phase
 /// glyph it stands in, plus its start-phase DoT effects (taxonomy §5d). Read-only — duration decrement is a
-/// separate end-of-turn step so the tick order stays explicit.
+/// separate turn-start step (`decrement_fighter_statuses`, run BEFORE this) so the tick order stays explicit.
+///
+/// Payload-only view of `tick_start_rows`, kept at its published signature for existing callers.
 public fun tick_start(board: &BoardState, fighter_id: u64, fighter_cell: u64): vector<Effect> {
+  let (effects, _sources) = tick_start_rows(board, fighter_id, fighter_cell);
+  effects
+}
+
+/// #1999 — the tick batch WITH its per-effect source fighter, positionally aligned with the effects vector.
+/// A DoT row carries the fid of the fighter that cast it, so the tick can compute damage from that caster's
+/// CURRENT stats (reference-faithful scaling, D41); a glyph payload carries `NO_SOURCE`. Splitting this out of
+/// `tick_start` keeps ONE home for the batch's contents and ordinals — the `e` index a tick's damage roll uses
+/// must mean the same thing to both readers.
+public fun tick_start_rows(board: &BoardState, fighter_id: u64, fighter_cell: u64): (vector<Effect>, vector<u64>) {
   let mut out = collect_glyph_payloads(board, fighter_cell, spell_effect::phase_start());
+  let mut sources = vector[];
+  let ng = out.length();
+  let mut g = 0;
+  while (g < ng) { sources.push_back(NO_SOURCE); g = g + 1; };
   let ns = board.statuses.length();
   let mut k = 0;
   while (k < ns) {
     let s = board.statuses.borrow(k);
     if (s.fighter == fighter_id && s.kind == spell_effect::k_apply_dot() && s.effect.phase() == spell_effect::phase_start()) {
       out.push_back(s.effect);
+      sources.push_back(s.source);
     };
     k = k + 1;
   };
-  out
+  (out, sources)
 }
 
 /// END-of-turn tick: the payloads of every end-phase glyph the fighter stands in (the repulsion class, 402).

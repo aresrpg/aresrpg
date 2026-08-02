@@ -1782,8 +1782,9 @@ public(package) fun tick_turn_start(fight: &mut Fight, is_mob: bool, idx: u64): 
     if (!fighter_alive(fight, is_mob, idx)) return false;
   };
   let cell = fighter_cell(fight, is_mob, idx);
-  let due = spell_board::tick_start(fight::fx(fight), fid, cell);
-  apply_board_batch(fight, is_mob, idx, &due);
+  // #1999 — the batch carries its per-effect SOURCE so a DoT tick can amplify off its caster's CURRENT stats.
+  let (due, sources) = spell_board::tick_start_rows(fight::fx(fight), fid, cell);
+  apply_board_batch_from(fight, is_mob, idx, &due, &sources, option::none(), 1);
   fighter_alive(fight, is_mob, idx)
 }
 
@@ -1830,25 +1831,29 @@ public(package) fun trigger_on_enter(fight: &mut Fight, is_mob: bool, idx: u64) 
   if (anchor.is_some()) {
     let origin = anchor.destroy_some();
     let collision_level = displacement::take_trap_owner_level(fight, origin);
-    if (!payload.is_empty()) apply_board_batch_from(fight, is_mob, idx, &payload, option::some(origin), collision_level);
+    if (!payload.is_empty()) apply_board_batch_from(fight, is_mob, idx, &payload, &vector[], option::some(origin), collision_level);
   };
 }
 
-/// Apply a BOARD payload batch to ONE fighter. The source's live stats are gone (dead/anonymous), so v1
-/// DECLARED: flat values through `final_damage` with a ZERO caster block (the target's resists still apply, no
-/// amplification), heal/points apply directly, alters land base-or-row + re-derive (self-sourced when timed),
-/// and origin-less glyph/DoT displacement remains skipped. Deterministic — no RNG.
+/// Apply a SOURCELESS board payload batch to ONE fighter — a trap/glyph payload belongs to a board cell, not to
+/// anyone, so every line amplifies off a ZERO caster block (the target's resists still apply, no amplification),
+/// heal/points apply directly, alters land base-or-row + re-derive (self-sourced when timed), and origin-less
+/// displacement remains skipped. Deterministic — no RNG. A DoT tick is NOT this case: it comes through
+/// `tick_turn_start` with its caster's fid (#1999).
 fun apply_board_batch(fight: &mut Fight, is_mob: bool, idx: u64, effects: &vector<Effect>) {
-  apply_board_batch_from(fight, is_mob, idx, effects, option::none(), 1);
+  apply_board_batch_from(fight, is_mob, idx, effects, &vector[], option::none(), 1);
 }
 
-/// Trap payload twin: `origin` is the removed trap anchor and `collision_level` is the level recorded for its owner, or
-/// 1 for a pre-upgrade trap. PUSH/PULL route through the same side-aware sink as direct spell effects.
+/// `sources` is the per-effect source fid (`spell_board::tick_start_rows`), positionally aligned with `effects`;
+/// an entry that names no live fighter — `spell_board::no_source()`, a stale fid, or simply a shorter vector —
+/// amplifies off nothing. `origin` is the removed trap anchor and `collision_level` the level recorded for its
+/// owner, or 1 for a pre-upgrade trap. PUSH/PULL route through the same side-aware sink as direct spell effects.
 fun apply_board_batch_from(
   fight: &mut Fight,
   is_mob: bool,
   idx: u64,
   effects: &vector<Effect>,
+  sources: &vector<u64>,
   origin: Option<u64>,
   collision_level: u64,
 ) {
@@ -1869,10 +1874,11 @@ fun apply_board_batch_from(
       let _did_damage = displace_target(fight, is_mob, idx, *origin.borrow(), collision_level, kind, base);
     } else if (is_mob) {
       if (is_damage) {
+        let caster_stats = board_caster_stats(fight, sources, e, &zero);
         let target_stats = *mob::stats(fight::mobs(fight).borrow(idx)); // the mob's per-fight block (resist shred applies)
         retro_effects::hit_elemental(
           fight, true, idx, false, 0, false,
-          spell_formula::final_damage(board_damage, element, &zero, &target_stats), element, board_roll,
+          spell_formula::final_damage(board_damage, element, &caster_stats, &target_stats), element, board_roll,
         );
       } else if (kind == spell_effect::k_percent_life_damage()) {
         let (hp, maxhp) = { let m = fight::mobs(fight).borrow(idx); (mob::hp(m), mob::max_hp(m)) };
@@ -1898,10 +1904,11 @@ fun apply_board_batch_from(
         record_timed(fight, mob_fid(idx), mob_fid(idx), effect);
       };
     } else if (is_damage) {
+      let caster_stats = board_caster_stats(fight, sources, e, &zero);
       let target_stats = *participant::stats(fight::participants(fight).borrow(idx));
       retro_effects::hit_elemental(
         fight, false, idx, false, 0, false,
-        spell_formula::final_damage(board_damage, element, &zero, &target_stats), element, board_roll,
+        spell_formula::final_damage(board_damage, element, &caster_stats, &target_stats), element, board_roll,
       );
     } else if (kind == spell_effect::k_percent_life_damage()) {
       let (hp, maxhp) = { let p = fight::participants(fight).borrow(idx); (participant::hp(p), participant::max_hp(p)) };
@@ -1925,6 +1932,34 @@ fun apply_board_batch_from(
     };
     e = e + 1;
   };
+}
+
+/// #1999 (D41) — THE LIVE STATS BEHIND A BOARD TICK. Effect `e`'s source fid, resolved to that fighter's
+/// CURRENT stat block: a DoT's damage is computed at EVERY application from the caster's stats as they are AT
+/// THAT TICK, not from a snapshot taken when it landed, so a caster that buffs mid-poison poisons harder. The
+/// fid comes off the row itself (`spell_board::apply_dot` stores it), and the stats are a field read on state
+/// the Fight already carries for direct damage — no new state.
+///
+/// `fallback` (the zero block) is returned for every batch entry that names no fighter of this fight: a glyph
+/// or trap payload (`spell_board::no_source()`, or an empty `sources` vector), and any fid outside the live
+/// tables. The out-of-range check is the ONE guard — an unknown source amplifies nothing rather than aborting
+/// the turn.
+///
+/// PARKED (#1999 clause 2, NOT ruled): a DEAD caster's poison. A corpse keeps its entry in the fighter tables,
+/// so this reads its last live stats and the poison keeps scaling — the general rule with no special case, and
+/// no fixture pins it. The reference is silent on the question; when it is ruled, the branch belongs here and
+/// nowhere else.
+fun board_caster_stats(fight: &Fight, sources: &vector<u64>, e: u64, fallback: &Stats): Stats {
+  if (e >= sources.length()) return *fallback;
+  let fid = *sources.borrow(e);
+  if (fid >= MOB_FID_BASE) {
+    let midx = fid - MOB_FID_BASE;
+    if (midx >= fight::mobs(fight).length()) return *fallback;
+    *mob::stats(fight::mobs(fight).borrow(midx))
+  } else {
+    if (fid >= fight::participants(fight).length()) return *fallback;
+    *participant::stats(fight::participants(fight).borrow(fid))
+  }
 }
 
 /// PERMANENT (turns==0) alter application: lands on the participant's BASE block (a timed alter instead becomes

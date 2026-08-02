@@ -1,0 +1,419 @@
+{
+  "meta": {
+    "id": "dot_last_tick_reads_the_live_caster_under_turn_start_expiry",
+    "class": "twin",
+    "authored": "2026-08-02",
+    "source": "authored",
+    "notes": "Issues #1999 × #2000: a 2-turn poison bites 30 then 40 — the last tick happens because the counter landing on 0 is still a covered turn, and it is priced off a buff that is live for the same reason."
+  },
+  "arena": {
+    "width": 21,
+    "height": 21,
+    "cells": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 6
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 7,
+        "y": 5
+      }
+    ]
+  },
+  "templates_raw": {
+    "yajin": {
+      "brace": {
+        "name": "Brace",
+        "description": "+50 strength on yourself for one turn",
+        "levels": [
+          {
+            "cost": 2,
+            "range": [0, 1],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "add",
+                "statistic": "strength",
+                "min": 50,
+                "max": 50,
+                "turns": 1,
+                "target": "self",
+                "chance": 100
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      },
+      "taint": {
+        "name": "Taint",
+        "description": "a fixed poison that bites on each of its turns",
+        "levels": [
+          {
+            "cost": 2,
+            "range": [0, 6],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "poison",
+                "min": 20,
+                "max": 20,
+                "element": "earth",
+                "target": "self",
+                "chance": 100,
+                "turns": 2
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      }
+    }
+  },
+  "initial": {
+    "fight_id": "capsule_dot_cross_term",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 5,
+          "y": 5
+        },
+        "health": 200,
+        "health_max": 200,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 50
+        },
+        "effects": [],
+        "spell_levels": {
+          "taint": 1,
+          "brace": 1
+        },
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 7,
+          "y": 5
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "taint",
+      "target": {
+        "x": 5,
+        "y": 5
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0"
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "brace",
+      "target": {
+        "x": 5,
+        "y": 5
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0"
+    }
+  ],
+  "pinned_facts": [
+    {
+      "cite": "cast.move tick_turn_expiry then tick_turn_start — the poison keeps its authored 2 bites and the LAST one reads the caster stats live at that tick (board_caster_stats): 200 − (30 + 40)",
+      "path": "team0.0.health",
+      "equals": 130
+    },
+    {
+      "cite": "spell_board.move decrement_fighter_statuses — by T+3 the aging has found both the poison and the buff spent and dropped them; nothing lingers past its authored coverage",
+      "path": "team0.0.effects.length",
+      "equals": 0
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_dot_cross_term",
+        "turn_order": ["p0", "m0"],
+        "seed": 1
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "spell_id": "taint",
+        "target": {
+          "x": 5,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "p0",
+            "status": "POISON"
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 8
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_effects",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 30,
+            "new_health": 170,
+            "killed": false
+          }
+        ]
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "spell_id": "brace",
+        "target": {
+          "x": 5,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "p0",
+            "status": "STAT_BUFF",
+            "stat": "strength",
+            "value": 50
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 8
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_effects",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 40,
+            "new_health": 130,
+            "killed": false
+          }
+        ]
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_cross_term",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      }
+    ],
+    "terminal_digest": "9a0fa48d",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 4,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 130,
+          "cell": {
+            "x": 5,
+            "y": 5
+          }
+        },
+        {
+          "id": "m0",
+          "health": 100,
+          "cell": {
+            "x": 7,
+            "y": 5
+          }
+        }
+      ]
+    }
+  }
+}
