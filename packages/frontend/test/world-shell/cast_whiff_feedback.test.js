@@ -96,4 +96,25 @@ describe('emit_cast_whiff_line — the whiff speaks its own line', () => {
     expect(copy).toContain('{{caster}}')
     expect(copy).toContain('{{spell}}')
   })
+
+  // #1859 — THE LINE MAY ONLY CLAIM WHAT THE VERDICT PROVES. `cast_whiffed` is a RESOLUTION verdict: nobody hit,
+  // nothing placed, nothing moved. It reads no cell and knows no occupancy, so "struck empty ground" asserted a
+  // position fact nothing in this path establishes — and a live session watched a mob cast visibly AT the player
+  // and read back that it hit the dirt. The copy is re-scoped to the resolution; the canonical cast-resolution
+  // record that could honestly speak about cells is #1993's, not this line's.
+  const GROUND_WORDS = {
+    en: ['ground', 'empty'],
+    fr: ['vide', 'sol'],
+    de: ['boden', 'leer'],
+    es: ['suelo', 'vacío'],
+    ja: ['地面', '何もない'],
+    uk: ['місце', 'землю'],
+  }
+
+  test.each(LOCALES)('%s.json — the whiff line claims no position, only the resolution', async (lang) => {
+    const json = await Bun.file(new URL(`../../src/i18n/locales/${lang}.json`, import.meta.url)).json()
+    const copy = String(json?.world_chat?.log_whiff).toLowerCase()
+
+    for (const word of GROUND_WORDS[lang]) expect(copy).not.toContain(word)
+  })
 })

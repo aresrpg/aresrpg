@@ -1862,7 +1862,7 @@
     "log_hit": "{{caster}} golpea a {{target}} por {{amount}}",
     "log_heal": "{{caster}} cura a {{target}} por {{amount}}",
     "log_absorb": "{{caster}} golpea a {{target}} pero no causa daño",
-    "log_whiff": "{{spell}} de {{caster}} solo golpeó el suelo vacío",
+    "log_whiff": "{{spell}} de {{caster}} no resolvió nada",
     "log_death": "{{target}} ha muerto",
     "log_trap": "La trampa de {{owner}} golpea a {{target}} por {{amount}}",
     "log_trap_neutral": "Una trampa golpea a {{target}} por {{amount}}",

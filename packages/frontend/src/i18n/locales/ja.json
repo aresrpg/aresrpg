@@ -1862,7 +1862,7 @@
     "log_hit": "{{caster}}が{{target}}に{{amount}}のダメージ",
     "log_heal": "{{caster}}が{{target}}を{{amount}}回復",
     "log_absorb": "{{caster}}が{{target}}を攻撃したがダメージなし",
-    "log_whiff": "{{caster}}の{{spell}}は何もない地面を撃った",
+    "log_whiff": "{{caster}}の{{spell}}は何も起こらなかった",
     "log_death": "{{target}}は死亡した",
     "log_trap": "{{owner}}の罠が{{target}}に{{amount}}のダメージ",
     "log_trap_neutral": "罠が{{target}}に{{amount}}のダメージ",

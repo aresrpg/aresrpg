@@ -1862,7 +1862,7 @@
     "log_hit": "{{caster}} frappe {{target}} pour {{amount}}",
     "log_heal": "{{caster}} soigne {{target}} de {{amount}}",
     "log_absorb": "{{caster}} frappe {{target}} sans infliger de dégâts",
-    "log_whiff": "{{spell}} de {{caster}} n’a frappé que le vide",
+    "log_whiff": "{{spell}} de {{caster}} n’a rien donné",
     "log_death": "{{target}} est mort",
     "log_trap": "Le piège de {{owner}} frappe {{target}} pour {{amount}}",
     "log_trap_neutral": "Un piège frappe {{target}} pour {{amount}}",

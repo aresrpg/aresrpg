@@ -1862,7 +1862,7 @@
     "log_hit": "{{caster}} вдарив {{target}} на {{amount}}",
     "log_heal": "{{caster}} зцілив {{target}} на {{amount}}",
     "log_absorb": "{{caster}} вдарив {{target}}, але не завдав шкоди",
-    "log_whiff": "{{spell}} від {{caster}} влучив у порожнє місце",
+    "log_whiff": "{{spell}} від {{caster}} — жодного результату",
     "log_death": "{{target}} загинув",
     "log_trap": "Пастка {{owner}} вдарила {{target}} на {{amount}}",
     "log_trap_neutral": "Пастка вдарила {{target}} на {{amount}}",
