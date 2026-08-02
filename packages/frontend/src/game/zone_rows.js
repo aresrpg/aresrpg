@@ -37,8 +37,18 @@ const settled_world_docs = new Map()
  */
 export const settled_world_doc = (world_id) => world_docs.has(world_id) ? (settled_world_docs.get(world_id) ?? null) : null
 
-/** The World doc (spawn tables + density + bounds) — one chain read per world, shared by every consumer. */
+/**
+ * THE World doc (spawn tables + density + bounds + the zone grid dials) — ONE chain read per world per session,
+ * shared by every consumer. #2054 folded the two hand-rolled twins of this cache (the world shell's search seam
+ * and the compass strip each kept their own Map over the same read) into this home; a falsy world id resolves
+ * null WITHOUT taking a cache slot, which is what those twins each guarded for locally.
+ *
+ * NEVER CACHES A NON-ANSWER: an absent world and a FAILED read both leave the map untouched, so the next caller
+ * retries. Since #2054 the SDK read itself tells those two apart (absence resolves null, failure rejects) — the
+ * catch below no longer papers over the difference for anyone downstream who wants it.
+ */
 export function zone_world_doc(/** @type {string} */ world_id) {
+  if (!world_id) return Promise.resolve(null)
   if (!world_docs.has(world_id)) {
     const read = get_sdk()
       .then((sdk) => get_world({ grpc_client: sdk.grpc_client })(world_id))

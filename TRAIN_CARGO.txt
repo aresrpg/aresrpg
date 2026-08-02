@@ -1,5 +1,1 @@
-e98eeee1f484c7e60320f6d53505b398cd2516ce train/train-70 style(sim): satisfy the sim package's own lint leg
-ae10f4c9a823c48968bc7c31598345f07771ed8d train/train-70 fix(discovery): give the finality-reconcile leg a real read ladder
-1f2368179c6b4ecddff44fdd53133ae34b286357 train/train-70 fix(bot): the oracle refuses what it cannot read
-b3c02ddbe30480ba2676e6603857332d0c876bf1 train/train-70 fix(sim): resolve recoil on the caster, not through the zone
-c2328251a09c15e7ffedaf2cf35f0cd85a7622ca train/train-70 fix(fight): hand the turn over once, when the chain says it is playable
+7b70a01f4b0f7391f452fb3fb0ca84d0743fa637 train/train-71 fix(sdk): the read seam stops merging "failed" into "absent"

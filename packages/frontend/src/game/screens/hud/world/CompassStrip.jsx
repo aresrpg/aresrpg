@@ -36,7 +36,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 
-import { get_world } from '@aresrpg/sdk/game'
 import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
 
 import './compass-strip.css'
@@ -49,7 +48,7 @@ import { use_world_binding } from '../../../../world-shell/session_gate.js'
 import { use_spawns } from '../../../../world-shell/spawns_adapter.js'
 import { use_prompt_stack, visible_prompts } from '../../../../world-shell/prompt_stack.js'
 import { zone_of, zone_of_world, world_offsets, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
-import { get_sdk } from '../../../../chain/sdk'
+import { zone_world_doc } from '../../../zone_rows.js'
 import {
   CARDINALS,
   bearing_of,
@@ -78,25 +77,9 @@ const resource_name = (job, tier) => {
   return (roster.find((r) => r.tier === t) ?? roster[0])?.name
 }
 
-// One world-doc read per world per session (zone_size / zone_ttl_ms are config-grade). A failed or empty
-// read is NOT cached — a later mount retries instead of freezing on a boot-time hiccup.
-const world_docs = new Map()
-function fetch_world_doc(world_id) {
-  if (!world_docs.has(world_id)) {
-    const read = get_sdk()
-      .then((sdk) => get_world({ grpc_client: sdk.grpc_client })(world_id))
-      .then((doc) => {
-        if (!doc) world_docs.delete(world_id)
-        return doc
-      })
-      .catch(() => {
-        world_docs.delete(world_id)
-        return null
-      })
-    world_docs.set(world_id, read)
-  }
-  return world_docs.get(world_id)
-}
+// The world doc (zone_size / zone_ttl_ms — config-grade) comes from its ONE home, `zone_rows.zone_world_doc`:
+// one chain read per world per session, and a non-answer is never cached, so a later mount retries instead of
+// freezing on a boot-time hiccup. This file used to keep a third Map over the identical read (#2054).
 
 /**
  * @param {{ mobile?: boolean }} props
@@ -119,7 +102,7 @@ export function CompassStrip({ mobile = false } = {}) {
   useEffect(() => {
     if (!world_id || synth_on) return
     let dead = false
-    fetch_world_doc(world_id).then((doc) => {
+    zone_world_doc(world_id).then((doc) => {
       if (!dead) set_world_doc(doc)
     })
     return () => {

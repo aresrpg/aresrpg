@@ -8,14 +8,13 @@
 // honest error, never a silent stall. `search_zone` is a terminal `&Random` entry: it CANNOT be dry-run;
 // the SDK builder carries the budget policy, nothing here guesses gas.
 
-import { search_zone_ptb, get_world } from '@aresrpg/sdk/game'
+import { search_zone_ptb } from '@aresrpg/sdk/game'
 import { chain_to_world, world_offsets, world_to_chain } from '@aresrpg/sdk/coords'
 import { subscribe_spawn_beats } from '@aresrpg/world/spawns_zones'
 import { SEARCH_PROGRESS_MS } from '@aresrpg/world/spawns_reconcile'
 
 import i18n from '../i18n'
 import { DEMO_NETWORK } from '../chain/deployment'
-import { get_sdk } from '../chain/sdk'
 // The engine handle from its ONE home — `game/store.js` only re-exports it for the React binding.
 // Same convention as world_join.js / lootbox_actions.js / store_patch.js.
 import { context } from '../game/core/game.js'
@@ -24,7 +23,7 @@ import { play_discovery_sfx } from '../game/core/audio/sfx.js'
 import { pulse_walk_fov } from '../game/core/camera_juice.js'
 import { read_zone_searched } from '../game/core/zone_searched.js'
 import { humanize_tx_error } from '../game/core/abort_copy.js'
-import { zone_rows_chain } from '../game/zone_rows.js'
+import { zone_rows_chain, zone_world_doc } from '../game/zone_rows.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 
@@ -54,27 +53,10 @@ subscribe_spawn_beats(spawns_store, (beat) => {
 // The zone codec (zone_of / zone_of_world / DEFAULT_ZONE_SIZE + the world↔chain offset) now lives in its
 // ONE home — `@aresrpg/sdk/coords` — consumed by both the SDK write path and every client display surface.
 
-// One world-doc read per world per session (zone_size / zone_ttl_ms are config-grade). A failed/empty read is
-// NOT cached — a later caller retries. Feeds the [F] SEARCH re-arm (zone_ttl_ms drives the §17.1 TTL readiness
-// so a discovered-but-stale zone re-arms search). Mirrors the CompassStrip's own cadence-bound world read.
-const _world_docs = new Map()
-export function fetch_world_doc(world_id) {
-  if (!world_id) return Promise.resolve(null)
-  if (!_world_docs.has(world_id)) {
-    const read = get_sdk()
-      .then((sdk) => get_world({ grpc_client: sdk.grpc_client })(world_id))
-      .then((doc) => {
-        if (!doc) _world_docs.delete(world_id)
-        return doc
-      })
-      .catch(() => {
-        _world_docs.delete(world_id)
-        return null
-      })
-    _world_docs.set(world_id, read)
-  }
-  return _world_docs.get(world_id)
-}
+// The world doc (zone_size / zone_ttl_ms — config-grade) comes from its ONE home, `zone_rows.zone_world_doc`:
+// one chain read per world per session, never caching a non-answer. This module used to keep a second Map over
+// the identical read (#2054 — one home per fact). Feeds the [F] SEARCH re-arm (zone_ttl_ms drives the §17.1 TTL
+// readiness so a discovered-but-stale zone re-arms search).
 
 // ONE read ladder for BOTH legs (#2030 — cumulative 0/180/600/1500ms). It has to outlast the fullnode
 // ledger-availability lag tx.js measures at ~570ms, because on the execute-cert fast path there is no
@@ -160,7 +142,7 @@ export function search_zone({ world_id, x, z, character_id, kiosk_id, personal_k
   return Promise.resolve()
     .then(async () => {
       // Per-world offset (bounds/2) off the cached World doc; the builder floors + translates WORLD→CHAIN.
-      const doc = await fetch_world_doc(world_id)
+      const doc = await zone_world_doc(world_id)
       spawns_input({ type: 'world_doc', doc }) // the core folds the same doc facts (idempotent)
       // THE DOOR DECIDES (D770a W2): search_intent latches the per-zone pending (single-flight as data),
       // mirrors the EZoneFresh gate, and emits the search_tx request + progress beat this edge performs.

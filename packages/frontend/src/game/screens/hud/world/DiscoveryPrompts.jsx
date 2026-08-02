@@ -34,7 +34,8 @@ import {
   resolve_progress_toast,
   trigger_search_flash,
 } from '../../../core/toast.js'
-import { search_zone, fetch_world_doc } from '../../../../world-shell/discovery_actions.js'
+import { search_zone } from '../../../../world-shell/discovery_actions.js'
+import { zone_world_doc } from '../../../zone_rows.js'
 import { zone_of_world, world_offsets, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
 import { zone_searchable } from '@aresrpg/world/spawns_reconcile'
 import { gather_gate } from '@aresrpg/world/gather_gate'
@@ -109,7 +110,7 @@ export function DiscoveryPrompts() {
   useEffect(() => {
     if (!world_id) return undefined
     let dead = false
-    fetch_world_doc(world_id).then((doc) => {
+    zone_world_doc(world_id).then((doc) => {
       if (dead) return
       set_world_doc(doc)
       spawns_input({ type: 'world_doc', doc }) // the core folds the same doc facts (idempotent)
