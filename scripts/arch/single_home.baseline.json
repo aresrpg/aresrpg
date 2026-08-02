@@ -60,7 +60,6 @@
     "GAS_BUDGET_MIST · packages/move/scripts/apply_loot_payload.mjs": 1,
     "GAS_BUDGET_MIST · packages/move/scripts/apply_spells_payload.mjs": 1,
     "GAS_BUDGET_MIST · packages/move/scripts/apply_xp_payload.mjs": 1,
-    "handler · api/sponsor.mjs": 1,
     "hash_column · packages/engine/src/gen/deco_shared.js": 1,
     "hash_column · packages/engine/src/gen/schematics/stamper.js": 1,
     "init_reporting · api/report.js": 1,
