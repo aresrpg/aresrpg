@@ -439,6 +439,28 @@ expect_collect "unreadable-sha-refuses" refused stub_fetch_rate_limited
 # 25. A fetcher that exits 0 having printed nothing is refused too — success is not a payload.
 expect_collect "silent-success-refuses" refused stub_fetch_silent
 
+# 25b. A LARGE readable payload still collects. A head-adjacent commit carries dozens of check-runs.
+#      Linux caps a SINGLE argv item at MAX_ARG_STRLEN (128KB) however roomy ARG_MAX is, and macOS
+#      caps the whole argv+env block near 1MB — so a collector that hands the payload to jq as a
+#      COMMAND-LINE ARGUMENT dies with "Argument list too long" on exactly the ranges a real
+#      promotion has. That is a READ THAT SUCCEEDED being reported as a range this run could not
+#      read: the #1002 tooth firing on a healthy range and stranding the release.
+#      The payload here is sized past both ceilings so the case is portable, and its verdict is
+#      asserted without echoing it — the point is that it collects at all.
+stub_fetch_large() {
+  jq -nc '[range(4000) | {name: "check-\(.)", status: "completed", conclusion: "success",
+    output: {summary: ("x" * 500)}}]'
+}
+LARGE_STATUS=ok
+collect_interior_check_runs "$RANGE_SHAS" stub_fetch_large >/dev/null 2>&1 || LARGE_STATUS=refused
+if [ "$LARGE_STATUS" = ok ]; then
+  echo "PASS  large-payload-collects  →  ok (payload not echoed)"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL  large-payload-collects  →  got [refused], expected [ok] — argv overflow"
+  FAIL=$((FAIL + 1))
+fi
+
 # 26. And the collector never hands a partial range to the evaluator: a refusal prints nothing, so
 #     there is no truncated payload for a caller to mistake for a clean one.
 PARTIAL=$(collect_interior_check_runs "$RANGE_SHAS" stub_fetch_rate_limited || true)

@@ -236,14 +236,28 @@ evaluate_range_green() {
 # not be read. The caller must treat that as not-green and leave the pull request queued — a refusal
 # costs one queue tick, and the queue re-runs on its own.
 collect_interior_check_runs() {
-  local shas="$1" fetch="${2:-}" sha runs acc='[]'
+  local shas="$1" fetch="${2:-}" sha runs acc='[]' tmpdir runs_file acc_file acc_next
   if [ -z "$fetch" ]; then echo "collect_interior_check_runs: a fetch function name is required" >&2; return 1; fi
+  tmpdir=$(mktemp -d) || return 1
+  trap 'rm -rf "$tmpdir"' RETURN
+  runs_file="$tmpdir/runs.json"; acc_file="$tmpdir/acc.json"; acc_next="$tmpdir/acc.next.json"
+  printf '%s' "$acc" > "$acc_file" || return 1
   for sha in $shas; do
     runs=$("$fetch" "$sha") || return 1
     # Also the empty-payload tooth: jq exits 4 on empty stdin, so a fetcher that returned success
     # while printing nothing is refused here rather than read as an ungated commit.
     runs=$(jq -ce 'if type == "array" then . else .check_runs end' <<<"$runs") || return 1
-    acc=$(jq -c --arg sha "$sha" --argjson runs "$runs" '. + [{sha: $sha, check_runs: $runs}]' <<<"$acc") || return 1
+    # ARGV IS NOT A TRANSPORT (#1002's tooth must fire on unread ranges, never on unREADABLE ones).
+    # `--argjson runs "$runs"` hands the whole payload to execve as ONE argument: Linux caps a single
+    # argv item at MAX_ARG_STRLEN (128KB) whatever ARG_MAX is, and a head-adjacent commit's check-runs
+    # blow past it. jq then dies "Argument list too long", the collector returns 1, and a range this
+    # run READ PERFECTLY WELL is refused as unreadable — the release stalls on a healthy history.
+    # Both large values therefore travel by file/stdin, where no such ceiling exists.
+    printf '%s' "$runs" > "$runs_file" || return 1
+    jq -c --arg sha "$sha" --slurpfile runs "$runs_file" '. + [{sha: $sha, check_runs: $runs[0]}]' \
+      <<<"$acc" > "$acc_next" || return 1
+    mv -f "$acc_next" "$acc_file" || return 1
+    acc=$(cat "$acc_file") || return 1
   done
   printf '%s' "$acc"
 }
