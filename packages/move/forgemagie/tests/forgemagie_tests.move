@@ -9,7 +9,7 @@
 ///    {0,1}), taux goldens (self-decay 96_040, bracket-pressure peer uplift 100_120), the recipe-less 50% cap,
 ///    wrong-template abort, statless parity, and the SLOT-WALK laws: unregistered fillers no-op (every test
 ///    pads with the gear template), a DUPLICATE registered slot mints once, a yielded rune whose template was
-///    not passed aborts `EMissingTemplate` (full revert — the gear survives is proven by the abort itself),
+///    not passed is DROPPED — never an abort, so no revert can be conditioned on the draw (#1840) —
 ///    and minted rune stacks are CATEGORY `rune` (the stackable-category fix is pinned by minting `rune`
 ///    templates, not `resource` stand-ins).
 /// Seeds drive the twins (`*_for_testing`) — same bodies as the entry doors minus `&Random` (deterministic).
@@ -40,7 +40,6 @@ const EWrongItem: u64 = 104;
 const EMalusStat: u64 = 106;
 const EMaxApps: u64 = 107;
 const EWrongTemplate: u64 = 108;
-const EMissingTemplate: u64 = 109;
 const EBadRegistration: u64 = 111;
 const C_EDomainDisabled: u64 = 103; // config
 
@@ -568,26 +567,59 @@ fun crush_duplicate_slot_mints_once() {
   sc.end();
 }
 
-#[test, expected_failure(abort_code = EMissingTemplate, location = aresrpg_forgemagie::forgemagie)]
-/// A yielded rune whose template is NOT among the slots aborts the WHOLE crush (full revert — the gear
-/// survives): the maxed +50 line ALWAYS owes ≥1 strength rune, and every slot here is the unregistered gear
-/// template (pure padding), so the walk zeroes nothing and the final audit trips.
-fun crush_missing_template_aborts() {
+#[test]
+/// #1840 — THE ANTI-REROLL LAW: a PARTIAL template roster can never abort, so the drawn roll always binds.
+/// The repealed design ran the owed-coverage audit AFTER the draw, which made the abort's OCCURRENCE a
+/// function of the outcome: a caller passing only the tier-3 (Ra) slot reverted on every Ba/Pa draw — gas
+/// only, gear untouched, board untouched — and resent the identical tx for a fresh seed until it drew Ra.
+/// Measured on this fixture the tier splits Ba/Pa/Ra across seeds (0=Ba, 1=Pa, 2=Ra, …), so that loop
+/// upgraded EVERY crush to the top tier for the price of a few reverted txs.
+///
+/// The sweep below runs that exact attacker hand — Ra-only roster, one fresh template per seed (fresh taux
+/// row), seeds spanning BOTH branches — and demands that every seed COMPLETES. Uncovered tiers are DROPPED,
+/// never minted: a filtered crush is a strict LOSS, which is precisely why it is no longer a reroll lever.
+fun crush_partial_roster_never_aborts() {
   let mut sc = ts::begin(OWNER);
-  let (cid, sword_t, _p, _x, _ba, _pa, _ra) = stage(&mut sc);
-  let gear = test_world::mint_lock_gear(&mut sc, OWNER, sword_t);
-  set_rolled_str(&mut sc, gear, SHIFT + 50); // 1.222 EV ⇒ ≥1 owed, always
+  let (cid, _s, _p, _x, _ba, _pa, ra) = stage(&mut sc);
 
-  sc.next_tx(OWNER);
-  let mut board = sc.take_shared<CrushBoard>(); let mut k = sc.take_shared<Kiosk>();
-  let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let gear_tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, sword_t);
-  let xpolicy = sc.take_shared<ItemExtractPolicy>(); let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let cfg = sc.take_shared<GameConfig>(); let ver = sc.take_shared<Version>();
-  forgemagie::crush_for_testing(
-    &mut board, &mut k, &pkcap, cid, &gear_tmpl, vector[gear],
-    &gear_tmpl, &gear_tmpl, &gear_tmpl, &gear_tmpl, // pads only — the owed strength rune has no slot
-    &xpolicy, &mkt, &cfg, &ver, 7, sc.ctx(),
-  );
-  abort
+  let mut seed = 0u64;
+  let mut saw_uncovered = false; // a Ba/Pa draw — the old code's abort branch
+  let mut saw_covered = false; // an Ra draw — the old code's success branch
+  while (seed < 6) {
+    let sword_t = make_ranged(&mut sc, b"Blade", b"blade", 50, 50, 1);
+    let gear = test_world::mint_lock_gear(&mut sc, OWNER, sword_t);
+    set_rolled_str(&mut sc, gear, SHIFT + 50); // 1.222 EV ⇒ exactly one strength rune owed, tier drawn
+    let (_, count_before) = kiosk_state(&mut sc, gear);
+
+    sc.next_tx(OWNER);
+    let mut board = sc.take_shared<CrushBoard>(); let mut k = sc.take_shared<Kiosk>();
+    let pkcap = sc.take_from_sender<PersonalKioskCap>();
+    let gear_tmpl = ts::take_shared_by_id<ItemTemplate>(&sc, sword_t);
+    let t_ra = ts::take_shared_by_id<ItemTemplate>(&sc, ra);
+    let xpolicy = sc.take_shared<ItemExtractPolicy>(); let mkt = sc.take_shared<TransferPolicy<Item>>();
+    let cfg = sc.take_shared<GameConfig>(); let ver = sc.take_shared<Version>();
+    let rolled = forgemagie::crush_for_testing(
+      &mut board, &mut k, &pkcap, cid, &gear_tmpl, vector[gear],
+      &t_ra, &gear_tmpl, &gear_tmpl, &gear_tmpl, // the attacker's filter: tier-3 slot ONLY, rest padding
+      &xpolicy, &mkt, &cfg, &ver, seed, sc.ctx(),
+    );
+    ts::return_shared(board); ts::return_shared(k); sc.return_to_sender(pkcap);
+    ts::return_shared(gear_tmpl); ts::return_shared(t_ra); ts::return_shared(xpolicy);
+    ts::return_shared(mkt); ts::return_shared(cfg); ts::return_shared(ver);
+
+    let (q_ba, q_pa, q_ra, _) = str_owed(&rolled);
+    assert!(q_ba + q_pa + q_ra >= 1); // the maxed line always owes — the draw only picks the tier
+    if (q_ba + q_pa > 0) saw_uncovered = true;
+    if (q_ra > 0) saw_covered = true;
+
+    // the gear burns whatever the draw, and ONLY the covered tier mints — the rest is dropped, not refunded
+    let (gear_alive, count_after) = kiosk_state(&mut sc, gear);
+    assert!(!gear_alive);
+    let minted = if (q_ra > 0) 1 else 0;
+    assert!(count_after == count_before - 1 + minted);
+    seed = seed + 1;
+  };
+  // both branches really ran: the sweep spans the draws the old design turned into a retry lever
+  assert!(saw_uncovered && saw_covered);
+  sc.end();
 }

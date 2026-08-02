@@ -289,7 +289,7 @@ export function raw_magnitudes(centered_stats) {
  * Pa/Ra when `value ≥ amount × 3` (the sealed reference-corpus `selectRuneTier` eligibility floor — the roll only decides
  * WHICH eligible tier fires per yielded rune, never reaches an ineligible one). The crush action refuses
  * pre-flight when any reachable key is missing from the on-chain registry (a rune the chain could owe but
- * could never mint — `EMissingTemplate` on-chain otherwise).
+ * could never mint — the chain DROPS such a row silently since #1840, so this pre-flight is the only guard).
  * @param {Record<string, number>} centered_stats the item's ROLLED block (centered u16 fields)
  * @returns {{ stat: number, tier: number }[]}
  */

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// The additive staged crush door: its ability-less `RuneMint` must land every committed template in order,
-/// close completely, preserve the legacy missing-template audit, and mint the exact legacy result for one seed.
+/// close completely, DROP any uncovered owed row without a conditional revert (#1840), and mint the exact
+/// legacy result for one seed.
 #[test_only]
 module aresrpg_forgemagie::crush_builder_tests;
 
@@ -25,7 +26,6 @@ const TIER_BA: u8 = 1;
 const TIER_PA: u8 = 2;
 const TIER_RA: u8 = 3;
 
-const EMissingTemplate: u64 = 109;
 const EWrongRuneTemplate: u64 = 115;
 const EPartialRuneRoster: u64 = 116;
 
@@ -232,12 +232,15 @@ fun closing_with_unlanded_commitment_aborts() {
   abort
 }
 
-#[test, expected_failure(abort_code = EMissingTemplate, location = aresrpg_forgemagie::forgemagie)]
-/// A complete commitment can still omit the yielded rune set; the unchanged owed-empty audit reverts the crush.
-fun leftover_owed_row_aborts() {
+#[test]
+/// #1840 (repeals `leftover_owed_row_aborts`): a complete commitment can still omit the yielded rune set, and
+/// close DROPS those rows instead of reverting — the staged door must not hand back the conditioned retry the
+/// legacy door lost. The gear still burns and the omitted rune is simply never minted (kiosk count −1).
+fun leftover_owed_row_drops() {
   let mut sc = ts::begin(OWNER);
   let (cid, sword, _ba, _pa, _ra, board_id, _other_board) = stage(&mut sc);
   let gear = maxed_gear(&mut sc, sword); // +50 Fo guarantees at least one owed rune
+  let count_before = kiosk_count(&mut sc);
   sc.next_tx(OWNER);
   let mut board = ts::take_shared_by_id<CrushBoard>(&sc, board_id);
   let mut kiosk = sc.take_shared<Kiosk>();
@@ -249,11 +252,21 @@ fun leftover_owed_row_aborts() {
   let ver = sc.take_shared<Version>();
   let mut mint = forgemagie::open_crush(vector[sword]);
   forgemagie::add_rune_template(&mut mint, &gear_template); // unregistered filler: zeroes no owed row
-  forgemagie::close_crush_for_testing(
+  let rolled = forgemagie::close_crush_for_testing(
     mint, &mut board, &mut kiosk, &pkcap, cid, &gear_template, vector[gear],
     &xpolicy, &policy, &cfg, &ver, 7, sc.ctx(),
   );
-  abort
+  ts::return_shared(board); ts::return_shared(kiosk); sc.return_to_sender(pkcap);
+  ts::return_shared(gear_template); ts::return_shared(xpolicy); ts::return_shared(policy);
+  ts::return_shared(cfg); ts::return_shared(ver);
+
+  let owed_total =
+    *rolled.borrow(forgemagie::owed_index(STR, TIER_BA)) +
+    *rolled.borrow(forgemagie::owed_index(STR, TIER_PA)) +
+    *rolled.borrow(forgemagie::owed_index(STR, TIER_RA));
+  assert!(owed_total >= 1); // the roll really owed a rune — it was dropped, not absent
+  assert_eq!(kiosk_count(&mut sc), count_before - 1); // gear burned, nothing minted
+  sc.end();
 }
 
 // ╔════════════════ [ Batch bound — the caller-supplied gear list ] ══════════ ]

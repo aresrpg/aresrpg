@@ -12,8 +12,10 @@
 //   • item-location resolution: the crush runs in the CHARACTER's kiosk (the chain borrows the character out of
 //     it and extracts the gear from it), so gear whose `/v1` row names another kiosk is refused for zero gas;
 //   • the REGISTRY guard: every rune this item's stat lines can yield (deterministic set —
-//     `reachable_rune_keys`) must be registered on the CrushBoard, else the chain would abort
-//     `EMissingTemplate` mid-tx — refused here for free instead.
+//     `reachable_rune_keys`) must be registered on the CrushBoard. Since #1840 the chain no longer aborts on
+//     an uncovered owed rune (a post-draw abort let a caller reroll until the draw suited a partial roster) —
+//     it DROPS the row, so this pre-flight is the ONLY thing standing between a stale registry and yield the
+//     player burned gear for and never receives. Never weaken it into a warning.
 //
 // GAS (money law): crush consumes `&Random` (value-dependent mint loop) ⇒ the budget comes from the MEASURED
 // constant in the SDK (`MEASURED_CRUSH_GAS_MIST` — null + loud-refuse until the publish rehearsal stamps it);
@@ -133,7 +135,7 @@ export async function crush_item({ item, character_id }) {
   if (!item?.kiosk_id) throw new Error(i18n.t('crush.no_kiosk'))
   if (String(item.kiosk_id) !== String(handle.kiosk_id)) throw new Error(i18n.t('errors.item_wrong_kiosk'))
 
-  // ── the REGISTRY guard: every reachable rune needs its registered template (else on-chain EMissingTemplate) ──
+  // ── the REGISTRY guard: every reachable rune needs its registered template (the chain drops uncovered rows) ──
   const [stats, registry] = await Promise.all([
     sdk.get_rolled_stats(item.id),
     get_crush_registry({ grpc_client: sdk.grpc_client, network: DEMO_NETWORK })(),
