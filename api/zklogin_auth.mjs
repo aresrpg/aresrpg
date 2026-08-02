@@ -17,18 +17,25 @@ const issuer_allowlist = (csv) =>
   )
 
 /**
- * Verify a fresh `<purpose>:<sender>:<epoch-ms>` challenge and require an allowlisted zkLogin signature.
+ * The half of the gate that costs NOTHING: challenge shape, sender binding, freshness, signature scheme and
+ * issuer — every check decidable from the request alone, with no socket opened. Pure and synchronous, so it is
+ * safe to run as a fast-fail before any network work is dispatched.
+ *
+ * Split out of `assert_zklogin_challenge` (#1853) rather than duplicated: the sponsor's reserve path now
+ * dispatches the balance read in PARALLEL with the signature verification, and a caller who has not even sent
+ * a well-formed, unexpired challenge must not be able to buy a fullnode round-trip with it. This function is
+ * that pre-pass; `assert_zklogin_challenge` below still runs it, so the complete gate stays one call.
+ *
  * @param {{
  *   sender: string, challenge: string, signature: string, purpose: string,
- *   client: any, ttl_ms?: number, now?: () => number, issuers?: string
+ *   ttl_ms?: number, now?: () => number, issuers?: string
  * }} input
  */
-export async function assert_zklogin_challenge({
+export function assert_zklogin_challenge_local({
   sender,
   challenge,
   signature,
   purpose,
-  client,
   ttl_ms = 5 * 60_000,
   now = Date.now,
   issuers = process.env.SPONSOR_ZKLOGIN_ISS,
@@ -54,6 +61,29 @@ export async function assert_zklogin_challenge({
   const issuer = parsed.zkLogin?.iss
   if (!issuer_allowlist(issuers).has(issuer))
     throw new Error(`zklogin-issuer: issuer ${issuer ?? '(none)'} is not allowed`)
+}
+
+/**
+ * Verify a fresh `<purpose>:<sender>:<epoch-ms>` challenge and require an allowlisted zkLogin signature.
+ * THE complete gate: the local pre-pass above plus the one check that needs the chain. Callers that ran the
+ * pre-pass separately still call this — the local checks are pure, so repeating them costs microseconds and
+ * keeps "the full challenge is verified here" true of exactly one function.
+ * @param {{
+ *   sender: string, challenge: string, signature: string, purpose: string,
+ *   client: any, ttl_ms?: number, now?: () => number, issuers?: string
+ * }} input
+ */
+export async function assert_zklogin_challenge({
+  sender,
+  challenge,
+  signature,
+  purpose,
+  client,
+  ttl_ms,
+  now,
+  issuers,
+}) {
+  assert_zklogin_challenge_local({ sender, challenge, signature, purpose, ttl_ms, now, issuers })
   await verifyPersonalMessageSignature(new TextEncoder().encode(challenge), signature, { client, address: sender })
   return sender
 }

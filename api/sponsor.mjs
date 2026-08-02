@@ -10,7 +10,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
 import { init_reporting, report_error } from './report.js'
-import { assert_zklogin_challenge } from './zklogin_auth.mjs'
+import { assert_zklogin_challenge, assert_zklogin_challenge_local } from './zklogin_auth.mjs'
 import {
   ADDR_DAILY_CAP_MIST,
   ADDR_RL_MAX,
@@ -325,6 +325,23 @@ export function assert_ptb_scope(txKindBytes) {
     )
 }
 
+/**
+ * The zkLogin gate's FREE half, run before any network work is dispatched. A challenge that is missing,
+ * mis-addressed, expired, or not a zkLogin signature at all is refusable from the request alone — and must
+ * stay that way now that the reserve path opens a balance round-trip alongside the verification (#1853).
+ * Otherwise an unauthenticated caller could spend our fullnode budget with a one-byte challenge.
+ */
+function assert_sponsor_challenge_preconditions(sender, challenge, signature) {
+  if (process.env.SPONSOR_DEV_BYPASS_ZKLOGIN === '1') return
+  assert_zklogin_challenge_local({
+    sender,
+    challenge,
+    signature,
+    purpose: 'aresrpg-sponsor',
+    ttl_ms: CHALLENGE_TTL_MS,
+  })
+}
+
 async function assert_sponsor_zklogin_challenge(sender, challenge, signature) {
   // Env-gated QA escape hatch, default off, with a deliberately loud warning.
   if (process.env.SPONSOR_DEV_BYPASS_ZKLOGIN === '1') {
@@ -585,13 +602,40 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   // allowances that multiply by instance count — so refuse here, before any verification, balance read or
   // simulation, rather than sponsor against counters that cannot hold.
   await assert_shared_store()
+  // PARALLEL READS, FIXED-ORDER VERDICT (#1853). The challenge verification and the balance read are
+  // independent round-trips, so their COST is joined — sum becomes max. Their MEANING is not: the verdicts are
+  // read back in a fixed order, challenge first, exactly as when they ran serially.
+  //
+  // `allSettled`, never `all`, and the order below is load-bearing on the money path. `Promise.all` rejects
+  // with whichever leg rejects FIRST, which would make two things depend on RPC weather: the refusal counter
+  // that moves (the /stats census would record which read was slower, not why sponsorship was declined) and
+  // the response a failed-auth caller receives — a fast local balance read beating a slow zkLogin verification
+  // would hand them `self-pay-required`, whose client arm silently self-pays. Settling both and THEN deciding
+  // makes the verdict invariant under the race; `api/sponsor.reserve_join.test.js` pins it under a fixture
+  // that forces the balance leg to win.
+  //
+  // The free half of the challenge gate stays STRICTLY BEFORE the join, because the join dispatches a balance
+  // round-trip: a malformed, mis-addressed or expired challenge is refusable from the request alone, and
+  // `sponsor.station.test.js` pins that such a caller costs us zero network. Only the two genuine round-trips
+  // — signature verification and the balance read — are what the join overlaps.
   try {
-    await assert_sponsor_zklogin_challenge(sender, challenge, signature)
+    assert_sponsor_challenge_preconditions(sender, challenge, signature)
   } catch (error) {
     count_refusal('zklogin')
     throw error
   }
-  const { balance } = await client.core.getBalance({ owner: sender })
+  const [challenge_settled, balance_settled] = await Promise.allSettled([
+    assert_sponsor_zklogin_challenge(sender, challenge, signature),
+    client.core.getBalance({ owner: sender }),
+  ])
+  if (challenge_settled.status === 'rejected') {
+    count_refusal('zklogin')
+    throw challenge_settled.reason
+  }
+  // An unanswered balance RPC is not a verdict about this request — it propagates raw and uncounted, as it did
+  // when this was a bare `await`.
+  if (balance_settled.status === 'rejected') throw balance_settled.reason
+  const { balance } = balance_settled.value
   if (BigInt(balance.balance) > SELF_PAY_MIST) {
     count_refusal('balance')
     throw sponsor_refusal(SELF_PAY_REASON, 'self-pay-required: balance exceeds 0.2 SUI — sign with your own gas')

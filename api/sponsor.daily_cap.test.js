@@ -44,7 +44,10 @@ mock.module('@mysten/sui/grpc', () => ({
     return { core }
   },
 }))
-mock.module('./zklogin_auth.mjs', () => ({ assert_zklogin_challenge: async () => {} }))
+mock.module('./zklogin_auth.mjs', () => ({
+  assert_zklogin_challenge: async () => {},
+  assert_zklogin_challenge_local: () => {},
+}))
 
 const S = await import('./sponsor.mjs')
 
