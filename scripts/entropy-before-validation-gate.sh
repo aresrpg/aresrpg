@@ -67,7 +67,12 @@ fi
 
 scan_into "$OUT_DIR/tree.json" "${MOVE_TARGETS[@]}" || exit 1
 if [ "${1:-}" = "--write-baseline" ]; then
-  node scripts/arch/entropy_before_validation_verdict.mjs --write-baseline "$BASELINE" "$OUT_DIR/tree.json"
+  # #2016 — a semgrep count that feeds a FLOOR is max-of-3: under CPU load the scanner silently drops
+  # the findings of files it could not finish. The verdict refuses fewer than 3 runs.
+  scan_into "$OUT_DIR/tree2.json" "${MOVE_TARGETS[@]}" || exit 1
+  scan_into "$OUT_DIR/tree3.json" "${MOVE_TARGETS[@]}" || exit 1
+  node scripts/arch/entropy_before_validation_verdict.mjs --write-baseline "$BASELINE" \
+    "$OUT_DIR/tree.json" "$OUT_DIR/tree2.json" "$OUT_DIR/tree3.json"
 else
   node scripts/arch/entropy_before_validation_verdict.mjs --baseline "$BASELINE" "$OUT_DIR/tree.json"
 fi

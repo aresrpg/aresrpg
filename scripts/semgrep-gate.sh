@@ -55,9 +55,15 @@ node scripts/arch/semgrep_verdict.mjs --expect scripts/arch/fixtures/expected.js
 # 2 — the real tree, ratcheted (or --write-baseline to regenerate the floor). The promoted domain
 # cores ride along — fight (M1a), party + inventory (M2), world (D770a): files that left frontend for
 # a package must never leave the dataflow net.
-scan_into "$OUT_DIR/tree.json" packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src || exit 1
+TREE_TARGETS=(packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src)
+scan_into "$OUT_DIR/tree.json" "${TREE_TARGETS[@]}" || exit 1
 if [ "${1:-}" = "--write-baseline" ]; then
-  node scripts/arch/semgrep_verdict.mjs --write-baseline scripts/arch/semgrep_baseline.json "$OUT_DIR/tree.json"
+  # #2016 — this scan's count wobbles under CPU load (measured: 144/140 on an unchanged tree), so the
+  # floor is written from the MAX of 3 runs, never one. The verdict refuses fewer than 3.
+  scan_into "$OUT_DIR/tree2.json" "${TREE_TARGETS[@]}" || exit 1
+  scan_into "$OUT_DIR/tree3.json" "${TREE_TARGETS[@]}" || exit 1
+  node scripts/arch/semgrep_verdict.mjs --write-baseline scripts/arch/semgrep_baseline.json \
+    "$OUT_DIR/tree.json" "$OUT_DIR/tree2.json" "$OUT_DIR/tree3.json"
   exit $?
 fi
 node scripts/arch/semgrep_verdict.mjs --baseline scripts/arch/semgrep_baseline.json "$OUT_DIR/tree.json"

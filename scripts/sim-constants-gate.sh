@@ -82,7 +82,21 @@ if [ "$code" -gt 1 ]; then
 fi
 
 if [ "${1:-}" = "--write-baseline" ]; then
-  node scripts/arch/sim_constants_verdict.mjs --write-baseline "$BASELINE" "$OUT_DIR/tree.json"
+  # #2016 — a semgrep count that feeds a FLOOR is max-of-3: under CPU load the scanner silently drops
+  # the findings of files it could not finish. The verdict refuses fewer than 3 runs.
+  for run in 2 3; do
+    "$SEMGREP" scan --config "$RULESET" \
+      --json --metrics=off --disable-version-check --quiet \
+      "${TARGETS[@]}" >"$OUT_DIR/tree$run.json" 2>"$OUT_DIR/err.log"
+    code=$?
+    if [ "$code" -gt 1 ]; then
+      echo "  semgrep failed (exit $code) on stability run $run:"
+      sed 's/^/    /' "$OUT_DIR/err.log" | head -20
+      exit 1
+    fi
+  done
+  node scripts/arch/sim_constants_verdict.mjs --write-baseline "$BASELINE" \
+    "$OUT_DIR/tree.json" "$OUT_DIR/tree2.json" "$OUT_DIR/tree3.json"
 else
   node scripts/arch/sim_constants_verdict.mjs --baseline "$BASELINE" "$OUT_DIR/tree.json"
 fi

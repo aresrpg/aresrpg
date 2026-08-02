@@ -6,7 +6,9 @@
 //
 //   --expect <expected.json> <red|green> <semgrep.json>   fixture self-test (exact counts)
 //   --baseline <baseline.json> <semgrep.json>             real-tree ratchet (new findings = red)
-//   --write-baseline <baseline.json> <semgrep.json>       regenerate the ratchet floor
+//   --write-baseline <baseline.json> <run1.json> <run2.json> <run3.json>   regenerate the floor
+//     (#2016 — a floor is written from the MAX of ≥3 runs of the same scan; a single-pass write is
+//      refused. Comparison stays single-pass: it can only ever be wrong in the safe direction.)
 //
 // THE JOIN (docs/CODE_LAW.md L-P4 · arch-laundered-store-write): semgrep OSS cannot relate two
 // code sites in one rule, so laundered_extract.yml emits `x-arch-writer-def` (helper $F contains a
@@ -15,6 +17,8 @@
 // Names ride in the rule MESSAGE ('x-writer-def:$F') because semgrep OSS redacts extra.metavars
 // without login. Scheduler builtins self-match in the call form — denylisted below.
 import fs from 'node:fs'
+
+import { merge_stable_scan, stability_line } from './scan_stability.mjs'
 
 const LAUNDERED_RULE = 'arch-laundered-store-write'
 const BUILTIN_NAMES = new Set([
@@ -184,8 +188,14 @@ const run_baseline = (baseline_path, semgrep_path) => {
   return 0
 }
 
-const run_write_baseline = (baseline_path, semgrep_path) => {
-  const found = effective_findings(parse_findings(read_json(semgrep_path)))
+const run_write_baseline = (baseline_path, scan_paths) => {
+  const stability = merge_stable_scan(scan_paths)
+  if (!stability.ok) {
+    console.error(stability.error)
+    return 2
+  }
+  console.log(stability_line(stability))
+  const found = effective_findings(parse_findings(stability.scan))
   const by_rule = {}
   for (const f of found.sort((a, b) => a.rule.localeCompare(b.rule) || a.path.localeCompare(b.path))) {
     by_rule[f.rule] = by_rule[f.rule] ?? {}
@@ -200,13 +210,13 @@ const [mode, ...args] = process.argv.slice(2)
 const runners = {
   '--expect': () => run_expect(args[0], args[1], args[2]),
   '--baseline': () => run_baseline(args[0], args[1]),
-  '--write-baseline': () => run_write_baseline(args[0], args[1]),
+  '--write-baseline': () => run_write_baseline(args[0], args.slice(1)),
 }
 const runner = runners[mode]
 if (!runner) {
   console.error('usage: semgrep_verdict.mjs --expect <expected.json> <red|green> <semgrep.json>')
   console.error('       semgrep_verdict.mjs --baseline <baseline.json> <semgrep.json>')
-  console.error('       semgrep_verdict.mjs --write-baseline <baseline.json> <semgrep.json>')
+  console.error('       semgrep_verdict.mjs --write-baseline <baseline.json> <run1.json> <run2.json> <run3.json>')
   process.exit(2)
 }
 process.exit(runner())

@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-rule + per-file count ratchet for scripts/entropy-before-validation-gate.sh.
+// #2016 — `--write-baseline` takes ≥3 runs of the same scan and writes their MAX; a single-pass
+// write is refused (a scan under CPU load silently drops whole files). Comparison stays single-pass.
 import fs from 'node:fs'
+
+import { merge_stable_scan, stability_line } from './scan_stability.mjs'
 
 const RULE_PREFIX = 'move-entropy-'
 const rule_of = (check_id) => check_id.split('.').pop()
@@ -40,7 +44,8 @@ const baseline_json = (actual) => {
   return `${JSON.stringify(baseline, null, 2)}\n`
 }
 
-const [mode, baseline_path, side_or_semgrep_path, fixture_semgrep_path] = process.argv.slice(2)
+const [mode, baseline_path, ...rest] = process.argv.slice(2)
+const [side_or_semgrep_path, fixture_semgrep_path] = rest
 if (
   !['--baseline', '--write-baseline', '--expect'].includes(mode) ||
   !baseline_path ||
@@ -48,11 +53,11 @@ if (
   (mode === '--expect' && !fixture_semgrep_path)
 ) {
   console.error(
-    'usage: entropy_before_validation_verdict.mjs <--baseline|--write-baseline> <baseline.json> <semgrep.json> | --expect <expected.json> <red|green> <semgrep.json>'
+    'usage: entropy_before_validation_verdict.mjs --baseline <baseline.json> <semgrep.json> | --write-baseline <baseline.json> <run1.json> <run2.json> <run3.json> | --expect <expected.json> <red|green> <semgrep.json>'
   )
   process.exit(2)
 }
-const semgrep_path = fixture_semgrep_path ?? side_or_semgrep_path
+const semgrep_path = mode === '--expect' ? fixture_semgrep_path : side_or_semgrep_path
 if (!fs.existsSync(baseline_path)) {
   console.error(`ENTROPY-BEFORE-VALIDATION GATE FAILED — baseline missing: ${baseline_path}`)
   process.exit(1)
@@ -82,8 +87,14 @@ if (mode === '--expect') {
   process.exit(0)
 }
 
+// #2016 — the floor is written from the MAX of ≥3 runs; the refusal fires before anything is judged.
+const stability = mode === '--write-baseline' ? merge_stable_scan(rest) : null
+if (stability && !stability.ok) {
+  console.error(stability.error)
+  process.exit(2)
+}
 const floor = baseline_counts(read_json(baseline_path))
-const actual = counts_of(read_json(semgrep_path))
+const actual = counts_of(stability ? stability.scan : read_json(semgrep_path))
 const keys = [...new Set([...floor.keys(), ...actual.keys()])].sort()
 const regressions = keys.filter((key) => (actual.get(key)?.count ?? 0) > (floor.get(key) ?? 0))
 const improvements = keys.filter((key) => (actual.get(key)?.count ?? 0) < (floor.get(key) ?? 0))
@@ -99,7 +110,8 @@ if (regressions.length > 0) {
   process.exit(1)
 }
 
-if (mode === '--write-baseline') {
+if (stability) {
+  console.log(stability_line(stability))
   fs.writeFileSync(baseline_path, baseline_json(actual))
   const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
   console.log(`  baseline tightened: ${baseline_path} (${total} finding(s))`)
