@@ -300,7 +300,10 @@ const sum_point_rows = (board, fighter_id, row_kind, point_kind) => {
 
 /**
  * PURGE every status row on `fighter_id` — the DEATH fold (a corpse's rows can never expire; rows it SOURCED on
- * others persist). pop/push like the Move twin so the surviving rows land in the SAME (reversed) order —
+ * others persist). Dropping them WITHOUT their reverts is what FREEZES the corpse's stat block at its
+ * death-moment value, which its own poisons then keep scaling off (#1999 rider, ruled 2026-08-02); filtering on
+ * the BEARER alone means no row keyed on the corpse survives to shift it later.
+ * pop/push like the Move twin so the surviving rows land in the SAME (reversed) order —
  * first-of-kind reads (`fighter_status_of` class) and tick emission order stay byte-identical.
  * Mirrors spell_board::clear_fighter.
  */

@@ -451,9 +451,11 @@ export const is_stunned = (state, entity_id) => {
  * `cast::board_caster_stats`). A row naming nobody, or naming a fighter this fight does not carry, amplifies off
  * nothing — the chain's zero block, reached there by the same out-of-range guard.
  *
- * PARKED (#1999 clause 2, NOT ruled): a DEAD caster's poison. A corpse keeps its entry, so this reads its last
- * live stats and the poison keeps scaling — the general rule with no special case, and no fixture pins it. When
- * the reference question is ruled, the branch belongs here and in `cast::board_caster_stats`, nowhere else.
+ * RULED 2026-08-02, option (a) — a DEAD caster's poison keeps scaling off its DEATH-MOMENT stats: the general
+ * rule with no special case, which is the faithful port (the reference's own source carries no dead-caster
+ * branch). A corpse keeps its entry and nothing re-derives it after the death fold, so `effective_stats` stands
+ * at the value it held when the fighter died. Chain twin + pin: `cast::board_caster_stats` and
+ * `dot_caster_scaling_tests::dead_casters_poison_keeps_its_death_moment_stats`.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} [source_id]
  * @returns {Partial<import('./fight_state.js').Stats>}

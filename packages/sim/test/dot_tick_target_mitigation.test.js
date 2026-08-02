@@ -143,6 +143,23 @@ describe('#1873 — a DoT tick resolves through the chain board sink, not a raw 
     expect(tick_cost(buffed).dealt).toBe(40)
   })
 
+  test('a DEAD caster still scales its poison — the death-moment stats (#1999 rider, ruled (a))', () => {
+    // RULED 2026-08-02: the general rule with no special case, which is the faithful port. A corpse keeps its
+    // entry and nothing re-derives it after the death fold, so its stat block stands at the value it held when
+    // it died — the poison outlives its caster at exactly that scaling, stable turn after turn. Design (b),
+    // dropping the caster on death, would read the unresisted flat 20 here.
+    const state = state_with_dot({ caster_stats: { strength: 50 } })
+    const dead = {
+      ...state,
+      team0: state.team0.map(entity =>
+        entity.id === 'p0' ? { ...entity, health: 0 } : entity,
+      ),
+    }
+    const first = tick_cost(dead)
+    expect(first.dealt).toBe(30)
+    expect(tick_cost(first.state).dealt).toBe(30) // STABLE across further bearer turns
+  })
+
   test('a row whose source is gone from the fight amplifies off nothing (the zero-caster fallback)', () => {
     // The chain's out-of-range guard in `cast::board_caster_stats`: a fid naming no fighter of this fight — a
     // glyph payload's NO_SOURCE sentinel, or a stale id — takes the zero block, never an abort.

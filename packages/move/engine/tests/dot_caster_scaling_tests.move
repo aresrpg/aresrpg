@@ -17,7 +17,7 @@
 #[test_only]
 module aresrpg_fight::dot_caster_scaling_tests;
 
-use aresrpg_fight::{cast, fight::{Self, Fight}, mob::{Self, MobSpec}, participant, version::Version};
+use aresrpg_fight::{cast, fight::{Self, Fight}, mob::{Self, MobSpec}, participant, retro_effects, version::Version};
 use aresrpg_fight::fight_scaffold::{combatant, mk_clock, stand_up, tsregs_for};
 use aresrpg_foundation::{spell::{Self, Stats}, spell_board, spell_effect::{Self, Effect, SpellLevel}};
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
@@ -48,6 +48,18 @@ fun strength_alter(amount: u64): Effect {
     false,
     false,
     0,
+  )
+}
+
+/// A TIMED strength alter on the caster — the buff that lives as a BOARD ROW rather than on the base block.
+/// This is the one that makes the dead-caster fixture load-bearing: the row is what the death fold drops.
+fun timed_strength_buff(amount: u64, turns: u8): Effect {
+  spell_effect::alter_stat(
+    spell_effect::stat_strength(),
+    participant::centered_value(amount, false),
+    false,
+    false,
+    turns,
   )
 }
 
@@ -86,6 +98,19 @@ fun buff_caster_strength(fight: &mut Fight, amount: u64) {
   cast::apply_effect_for_testing(
     fight, 0, 0, PLAYER_CELL, &ps, 1, PLAYER_CELL, &strength_alter(amount), &mut rng,
   );
+}
+
+/// Raise the caster's strength by `amount` for `turns` — a timed row on the effect board, not the base block.
+fun buff_caster_strength_timed(fight: &mut Fight, amount: u64, turns: u8) {
+  let ps = z();
+  let mut rng = 1u64;
+  cast::apply_effect_for_testing(
+    fight, 0, 0, PLAYER_CELL, &ps, 1, PLAYER_CELL, &timed_strength_buff(amount, turns), &mut rng,
+  );
+}
+
+fun caster_strength(f: &Fight): u64 {
+  spell::stat_strength(participant::stats(fight::participants(f).borrow(0)))
 }
 
 /// ONE tick of the mob's turn-start board work; returns the HP it lost to it.
@@ -208,6 +233,77 @@ fun dot_last_tick_under_turn_start_decrement_reads_the_live_caster() {
   cast::tick_turn_expiry(&mut fight, true, 0);
   assert!(spell_board::status_count(fight::fx(&fight)) == 0, 2);
   assert!(tick_mob_turn_start(&mut fight) == 0, 3);
+
+  ts::return_shared(fight);
+  sc.end();
+}
+
+// ══════════════════ [ the DEAD caster — RULED (a), the general rule with no special case ] ══════════════════
+
+#[test]
+/// D41 rider, RULED (a) 2026-08-02: a poison whose caster DIES keeps scaling off that caster's DEATH-MOMENT
+/// stats — the general rule applied with no special case, which is the faithful port (the reference's own source
+/// carries no dead-caster branch, so its general rule ran there too).
+///
+/// The buff is a TIMED row on purpose: that is what makes the fixture load-bearing. `spell_board::clear_fighter`
+/// drops the corpse's rows WITHOUT running their reverts, so the derived stat block is left standing at the value
+/// it held when the fighter died — buff included — and nothing afterwards re-derives it (the corpse takes no turn,
+/// and every cast sink enumerates LIVING targets only). The no-revert purge IS the freeze mechanism.
+///
+/// STABILITY is the other half of the pin: two further bearer turns after the death read the SAME 30. A design
+/// that reverted at the purge, or re-derived the corpse later, would decay to the unbuffed 20; one that dropped
+/// the source would read 0.
+fun dead_casters_poison_keeps_its_death_moment_stats() {
+  let mut sc = ts::begin(OWNER);
+  let mut fight = one_mob(&mut sc, spec(z(), 1000));
+  buff_caster_strength_timed(&mut fight, 50, 6);
+  assert!(caster_strength(&fight) == 50, 0);
+
+  spell_board::apply_dot(
+    fight::fx_mut(&mut fight), MOB_FID, PLAYER_FID, spell_effect::apply_dot(spell::el_earth(), 20, 8),
+  );
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  assert!(tick_mob_turn_start(&mut fight) == 30, 1); // alive caster: 20 × (100 + 50)/100
+
+  // THE CASTER DIES — through the real damage door, so the real death fold runs.
+  assert!(retro_effects::force_death(&mut fight, false, 0), 2);
+  assert!(!participant::is_alive(fight::participants(&fight).borrow(0)), 3);
+  // the purge took the timed row and left NO revert behind it: the block is frozen at its death-moment value
+  assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), PLAYER_FID, spell_effect::k_alter_stat()).is_empty(), 4);
+  assert!(caster_strength(&fight) == 50, 5);
+
+  // …and the poison outlives its caster at exactly that scaling, turn after turn.
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  assert!(tick_mob_turn_start(&mut fight) == 30, 6);
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  assert!(tick_mob_turn_start(&mut fight) == 30, 7); // STABLE — not the unbuffed 20, not 0
+
+  ts::return_shared(fight);
+  sc.end();
+}
+
+#[test]
+/// The corner rider (a)≡(b) rests on: NO row keyed on the corpse survives its death fold, whoever SOURCED it, so
+/// no later expiry can shift a corpse's stats. `spell_board::clear_fighter` filters on the BEARER alone
+/// (`s.fighter != fighter_id`), so a third party's row on the corpse goes with the corpse's own — and rows the
+/// corpse SOURCED on OTHERS survive by design, reverting their own bearers and never touching the corpse.
+fun the_death_fold_purges_every_row_the_corpse_bears_whoever_sourced_it() {
+  let mut sc = ts::begin(OWNER);
+  let mut fight = one_mob(&mut sc, spec(z(), 1000));
+  // a row the caster bears but the MOB sourced (a third party), alongside one it sourced itself
+  spell_board::add_status(fight::fx_mut(&mut fight), PLAYER_FID, MOB_FID, timed_strength_buff(50, 6));
+  spell_board::add_status(fight::fx_mut(&mut fight), PLAYER_FID, PLAYER_FID, timed_strength_buff(10, 6));
+  // …and one the caster SOURCED on the mob, which must OUTLIVE it
+  spell_board::add_status(fight::fx_mut(&mut fight), MOB_FID, PLAYER_FID, timed_strength_buff(10, 6));
+  assert!(spell_board::status_count(fight::fx(&fight)) == 3, 0);
+
+  assert!(retro_effects::force_death(&mut fight, false, 0), 1);
+
+  // every row the corpse BORE is gone — third-party-sourced included, so none can expire later
+  assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), PLAYER_FID, spell_effect::k_alter_stat()).is_empty(), 2);
+  // the row it SOURCED on the mob survives, exactly as a poison outliving its caster does
+  assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), MOB_FID, spell_effect::k_alter_stat()).length() == 1, 3);
+  assert!(spell_board::status_count(fight::fx(&fight)) == 1, 4);
 
   ts::return_shared(fight);
   sc.end();

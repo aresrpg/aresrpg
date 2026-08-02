@@ -1945,10 +1945,14 @@ fun apply_board_batch_from(
 /// tables. The out-of-range check is the ONE guard — an unknown source amplifies nothing rather than aborting
 /// the turn.
 ///
-/// PARKED (#1999 clause 2, NOT ruled): a DEAD caster's poison. A corpse keeps its entry in the fighter tables,
-/// so this reads its last live stats and the poison keeps scaling — the general rule with no special case, and
-/// no fixture pins it. The reference is silent on the question; when it is ruled, the branch belongs here and
-/// nowhere else.
+/// RULED 2026-08-02, option (a) — a DEAD caster's poison keeps scaling off its DEATH-MOMENT stats. The general
+/// rule applies with no special case, which IS the faithful port: the reference's own source carries no
+/// dead-caster branch, so its general rule ran there too. Mechanically the block is frozen by the death fold —
+/// `spell_board::clear_fighter` drops the corpse's rows WITHOUT their reverts and nothing re-derives a corpse
+/// afterwards (it takes no turn, and every cast sink enumerates LIVING targets only), so `participant::stats`
+/// keeps standing at the value it held when the fighter died. Pinned by
+/// `dot_caster_scaling_tests::dead_casters_poison_keeps_its_death_moment_stats`; adding an aliveness branch here
+/// is design (b) and reds exactly that fixture.
 fun board_caster_stats(fight: &Fight, sources: &vector<u64>, e: u64, fallback: &Stats): Stats {
   if (e >= sources.length()) return *fallback;
   let fid = *sources.borrow(e);

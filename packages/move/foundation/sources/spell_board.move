@@ -403,8 +403,13 @@ fun sum_point_rows(board: &BoardState, fighter_id: u64, kind: u8, point_kind: u8
 
 /// PURGE every status row on `fighter_id` — the DEATH fold (MOB_DEBUFF_HAT P3 spell_board:286): a dead fighter's
 /// rows can never expire (`decrement_fighter_statuses` runs only on its own turn-start, and a corpse has no turns),
-/// so without this the debt/credit/alter scans iterate junk for the fight's remainder. No reverts returned — a
-/// corpse's pools/stats are never read again (no revive-by-heal). Rows the dead fighter SOURCED on others persist
+/// so without this the debt/credit/alter scans iterate junk for the fight's remainder.
+///
+/// NO REVERTS RETURNED IS THE FREEZE, not an optimization (#1999 rider, ruled 2026-08-02). A corpse's stat block
+/// IS read again — its own poisons scale off it at every later tick — so dropping the rows without applying their
+/// inverses is precisely what leaves that block standing at its death-moment value, buffs included. Filtering on
+/// the BEARER alone also means every row keyed on the corpse goes, whoever SOURCED it, so no later expiry can
+/// shift a corpse's stats. Rows the dead fighter SOURCED on others persist and revert their own bearers
 /// (1.29: a poison outlives its caster).
 public fun clear_fighter(board: &mut BoardState, fighter_id: u64) {
   let mut kept = vector[];
