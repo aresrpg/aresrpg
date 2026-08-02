@@ -564,9 +564,19 @@ const merge_evidence = (found, number, evidence) => (found.has(number) ? found :
 // associated-pulls endpoint supplies the PR bodies. Bodies are the close contract contributors edit
 // and review, so commit messages, PR titles, unrelated-base PRs, and quoted transcript refs do not
 // become mutation instructions here.
+//
+// THE LANDED TEST IS THE HEAD, NOT SET-MEMBERSHIP OF THE RANGE (#1885). Stacking is the normal shape
+// here — a train queues behind another so several ride one CI cycle — and a stacked branch CONTAINS
+// its parent's commits. `/commits/{sha}/pulls` therefore names the still-open CHILD on every commit
+// of the PARENT's landing, and treating that association as "landed" drained four rows against a
+// commit that was not their fix, one of them deliberately excluded from the pull request. A pull
+// request landed when its OWN head sha is among the commits this push put on the base; a head that
+// is absent means the branch is stacked, not landed, and it drains nothing. Fails closed by
+// construction: a payload without a head sha matches no landed commit.
 export function extract_landed_references(compare, associated_pulls, repository) {
   const commits = Array.isArray(compare?.commits) ? compare.commits : []
   const pulls_by_sha = is_record(associated_pulls) ? associated_pulls : {}
+  const landed_shas = new Set(commits.map((commit) => String(commit?.sha ?? '').toLowerCase()))
   return commits.reduce((found, commit) => {
     const sha = String(commit?.sha ?? '')
     if (!is_full_sha(sha)) throw new Error('compare payload contains a commit without a full SHA')
@@ -574,6 +584,7 @@ export function extract_landed_references(compare, associated_pulls, repository)
     if (!Array.isArray(pulls)) throw new Error(`associated pull payload missing for ${sha}`)
     return pulls
       .filter((pull) => pull?.base?.ref === 'edge')
+      .filter((pull) => landed_shas.has(String(pull?.head?.sha ?? '').toLowerCase()))
       .reduce(
         (from_pulls, pull) =>
           parse_close_refs(pull?.body, repository).reduce(

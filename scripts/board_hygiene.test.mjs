@@ -40,6 +40,7 @@ const read_fixture = (name) =>
 const merged_pulls = read_fixture('merged_pulls.json')
 const open_issues = read_fixture('open_issues.json')
 const push_landing = read_fixture('push_landing.json')
+const push_landing_stacked = read_fixture('push_landing_stacked.json')
 
 const DAY_MS = 86_400_000
 const now_ms = Date.parse('2026-07-27T12:00:00Z')
@@ -315,6 +316,33 @@ describe('a push fixture resolves the exact landing range and associated PR bodi
         },
       ],
     ])
+  })
+})
+
+// #1885 — the incident, replayed from captured wire records (see the fixture's _provenance). A
+// stacked pull request's branch CONTAINS its parent's commits, so `/commits/{sha}/pulls` names the
+// child on every commit of the parent's landing. Set-membership of the range therefore cannot tell
+// "this pull request landed" from "this pull request is stacked on something that landed" — and the
+// sweep drained four rows, one of them deliberately excluded, against a commit that was not their
+// fix. The landed test is the HEAD: a pull request drains only when its own head sha is one of the
+// commits the push put on the base.
+describe('a stacked pull request drains nothing until its own head lands (#1885)', () => {
+  it('closes no row of the stacked child when only its parent train lands', () => {
+    const { compare, associated_pulls } = push_landing_stacked.stacked_push
+    const landed = extract_landed_references(compare, associated_pulls, REPOSITORY)
+    // #1879 (the parent) really landed here and its body carries only `Refs`, so an honest sweep of
+    // this push closes NOTHING. #972/#1002/#1656/#1750 are the child's rows and must all survive.
+    expect([...landed.keys()]).toEqual([])
+  })
+
+  it('closes exactly the child rows on the push that actually lands the child', () => {
+    const { compare, associated_pulls } = push_landing_stacked.own_landing_push
+    const landed = extract_landed_references(compare, associated_pulls, REPOSITORY)
+    expect([...landed.keys()]).toEqual([972, 1656, 1750])
+    expect(landed.get(972)).toEqual({
+      sha: 'd18614db08621b3cf0e70c1f4c1100284df5aa01',
+      pr_number: 1881,
+    })
   })
 })
 
