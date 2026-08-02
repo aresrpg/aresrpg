@@ -47,7 +47,7 @@ const mutation_family_off = {
 export default [
   {
     // T1 — the base FP tier
-    files: ['**/*.{js,ts,tsx,mjs,cjs}'],
+    files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
     plugins: { functional, 'fp-law': fp_law },
     rules: {
       // ratchets — measured CLEAN repo-wide on 2026-07-17, never let them regress
@@ -69,7 +69,7 @@ export default [
   },
   {
     // T2 — product code: the mutation family + module-load purity
-    files: ['packages/**/*.{js,ts,tsx,mjs,cjs}', 'api/**/*.{js,ts,tsx,mjs,cjs}'],
+    files: ['packages/**/*.{js,jsx,ts,tsx,mjs,cjs}', 'api/**/*.{js,jsx,ts,tsx,mjs,cjs}'],
     rules: {
       'fp-law/no-mutating-methods': 'warn', // L-I1/L-I2
       'no-param-reassign': ['warn', { props: true }], // L-I2: the caller's value is not yours

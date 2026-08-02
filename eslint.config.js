@@ -85,9 +85,9 @@ export default [
     // Gameplay spell truth enters through the authored chain-corpus door. The SDK JSON remains a generated
     // encyclopedia/simulator view, but it may never feed the fight reducer or its live cast adapter again.
     files: [
-      'packages/fight/src/**/*.{js,ts,tsx}',
+      'packages/fight/src/**/*.{js,jsx,ts,tsx}',
       // the package's tests live in test/ (src is source only) — same door law, same scope
-      'packages/fight/test/**/*.{js,ts,tsx}',
+      'packages/fight/test/**/*.{js,jsx,ts,tsx}',
       'packages/frontend/src/game/core/modules/fight.js',
       'packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx',
     ],
@@ -113,7 +113,7 @@ export default [
     // the law is law. Tests choreograph stores directly — exempt. .tsx joined the net with the typed tier
     // (2026-07-17; census: 1 hit, components/sponsor_runout_modal.tsx); .jsx remains out — its 15 stale
     // `react-hooks/*` disable comments error on opt-in (F-1 janitor ticket).
-    files: ['packages/frontend/src/**/*.{js,ts,tsx}'],
+    files: ['packages/frontend/src/**/*.{js,jsx,ts,tsx}'],
     ignores: ['**/*.test.*'],
     plugins: { 'one-pipeline': one_pipeline },
     rules: {
@@ -124,7 +124,7 @@ export default [
   {
     // The promoted cores (fight · world): the one-reducer law is ERROR here, and the plugin
     // registers in THIS block — the frontend-wide registration above is scoped to packages/frontend files.
-    files: ['packages/fight/src/**/*.{js,ts,tsx}', 'packages/world/src/**/*.{js,ts,tsx}'],
+    files: ['packages/fight/src/**/*.{js,jsx,ts,tsx}', 'packages/world/src/**/*.{js,jsx,ts,tsx}'],
     ignores: ['**/*.test.*'],
     plugins: { 'one-pipeline': one_pipeline },
     rules: {
@@ -169,7 +169,7 @@ export default [
     //     (`isVisible().catch(() => false)`), a boolean probe rather than an erased failure. The instrument
     //     half of the law (a swallowed `page.screenshot(…).catch(() => undefined)` that lied about artifacts)
     //     wants its own tier with a probe-aware option — a follow-up, not this gate.
-    files: ['packages/*/src/**/*.{js,ts,tsx}', 'api/**/*.{js,mjs}'],
+    files: ['packages/*/src/**/*.{js,jsx,ts,tsx}', 'api/**/*.{js,mjs}'],
     ignores: ['**/*.test.*', '**/*.spec.*'],
     plugins: { 'no-silent-failures': no_silent_failures },
     rules: { 'no-silent-failures/no-swallowed-failure': 'warn' },
@@ -182,7 +182,7 @@ export default [
     // It only shrinks as refusals learn to speak; an unlisted reducer file has a zero floor, and any finding above
     // a file's allowance is an ERROR.
     files: [
-      'packages/fight/src/**/*{fold,reduce,reducer,inbox,ingest}*.{js,ts,tsx}',
+      'packages/fight/src/**/*{fold,reduce,reducer,inbox,ingest}*.{js,jsx,ts,tsx}',
       'packages/fight/src/inputs.js',
       'packages/fight/src/store.js',
     ],
@@ -213,7 +213,7 @@ export default [
     // comments those files carry, which error against an unregistered rule (the pre-existing F-1 janitor
     // ticket the one-pipeline block below already documents). The defect class this gate exists for lives
     // in the plain-JS game logic corpus, which is fully covered here.
-    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+    files: ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -257,6 +257,10 @@ export default [
       '**/generated/*',
       'test/gold/.build/**', // the gold rig's copied ceremony workspace — regenerated every localnet boot
       'test/gold/out/**', // rig run outputs (playwright artifacts, rendered files)
+      // The arch gates' self-test corpus: deliberately-malformed snippets pinned to semgrep/scan
+      // behavior, not source. Linting them can only pressure someone into "fixing" a RED fixture,
+      // which is exactly the change that breaks the gate's self-test.
+      'scripts/arch/fixtures/**',
       'packages/sim/**',
       'packages/sdk/**',
       'packages/move/**',
