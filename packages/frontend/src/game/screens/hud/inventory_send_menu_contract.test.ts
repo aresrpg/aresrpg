@@ -24,15 +24,11 @@ describe('inventory SEND menu wiring', () => {
     expect(bag).toContain('onContextMenu={(event) =>')
   })
 
-  test('fast-slot consumables expose SEND and Explorer; runeforge rows expose SEND', () => {
-    const fast_slots = source('./FastSlots.jsx')
+  // #2060 — the fast-slot half of this contract died with FastSlots.jsx (mounted nowhere; deleted). The
+  // runeforge half is the surviving surface, so the SEND wiring stays pinned where it still ships.
+  test('runeforge rows expose SEND', () => {
     const scribe = source('../../../pages/scribe.tsx')
 
-    expect(fast_slots).toContain("project_inventory_context_actions(['use', 'clear', 'explorer'])")
-    expect(fast_slots).toContain("menu_actions.includes('send')")
-    expect(fast_slots).toContain("menu_actions.includes('explorer')")
-    expect(fast_slots).toContain('<ExplorerMenuRow object_id={item.id}')
-    expect(fast_slots).toContain('<ItemSendModal items={send_items}')
     expect(scribe).toContain('onContextMenu={(e) =>')
     expect(scribe).toContain('on_send={(item) => set_send_item(project_inventory_send_item(item, items))}')
   })
