@@ -54,10 +54,14 @@ const release = process.env.SPONSOR_RELEASE_PATH
   : checked_in_release
 const GRPC_URL = process.env.SPONSOR_GRPC_URL || `https://fullnode.${NETWORK}.sui.io:443`
 const client = new SuiGrpcClient({ network: NETWORK, baseUrl: GRPC_URL })
-const CORS = {
+// Exported because it is the ONE description of what this process lets a browser do — every route in this
+// service (the sponsor's own below, the TURN mint in server.mjs) answers with exactly these headers.
+export const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': 'content-type',
-  'access-control-allow-methods': 'POST,OPTIONS',
+  // GET is what `/`, `/stats` and the TURN mint already answer; a simple GET never preflights, so this line
+  // was not a bug — it was a lie, and a header that describes this process must describe all of it.
+  'access-control-allow-methods': 'GET,POST,OPTIONS',
   'access-control-max-age': '86400',
 }
 const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
