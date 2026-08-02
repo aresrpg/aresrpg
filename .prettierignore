@@ -4,7 +4,6 @@ packages/frontend/src/game/
 packages/frontend/public/sprites/
 packages/frontend/public/vfx/
 packages/frontend/public/forest/
-packages/frontend/public/draco/
 packages/engine/public/draco/
 public/draco/
 packages/sim/

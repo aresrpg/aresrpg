@@ -264,7 +264,6 @@ export default [
       '.claude/**',
       'public/draco/**',
       'packages/engine/public/draco/**',
-      'packages/frontend/public/draco/**',
     ],
   },
 ]

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, readdirSync, writeFileSync } from 'fs'
 import { execFileSync } from 'child_process'
 
 import { defineConfig } from 'vite'
@@ -11,6 +11,43 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 import { resolve_app_version } from './src/resolve_app_version.mjs'
 import { cdn_assets_runtime_cache } from './sw_cdn_assets_cache'
+
+// The engine owns the DRACO loading seam and its vendored decoder. Re-publish that one source tree at the
+// loader's stable `/draco/` URL instead of committing a second copy under the frontend's public directory.
+const draco_asset_directory = new URL('../engine/public/draco/', import.meta.url)
+const draco_asset_names = new Set(readdirSync(draco_asset_directory))
+
+function draco_assets_plugin(): import('vite').Plugin {
+  let command: 'build' | 'serve'
+  return {
+    name: 'engine-draco-assets',
+    configResolved({ command: resolved_command }) {
+      command = resolved_command
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const match = new URL(req.url ?? '/', 'http://vite.local').pathname.match(/^\/draco\/([^/]+)$/)
+        const asset_name = match?.[1]
+        if (!asset_name || !draco_asset_names.has(asset_name)) return next()
+        res.setHeader('Content-Type', asset_name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.end(readFileSync(new URL(asset_name, draco_asset_directory)))
+      })
+    },
+    buildStart() {
+      if (command !== 'build') return
+      for (const asset_name of [...draco_asset_names].sort()) {
+        // Rollup exposes asset emission through the hook context bound as `this`.
+        // eslint-disable-next-line functional/no-this-expressions
+        this.emitFile({
+          type: 'asset',
+          fileName: `draco/${asset_name}`,
+          source: readFileSync(new URL(asset_name, draco_asset_directory)),
+        })
+      }
+    },
+  }
+}
 
 // CONTENT AUTHORING lives with the private authoring tree — its vite middlewares (local
 // content, cosmetic GLB linking, move-hash, the seed-derived catalog) never ship here. The
@@ -118,6 +155,7 @@ export default defineConfig({
   resolve: { dedupe: ['three', 'three/webgpu'] },
   plugins: [
     ...(process.env.ARES_DEV_SOURCEMAPS ? [] : [strip_dev_sourcemaps()]),
+    draco_assets_plugin(),
     react(),
     tailwindcss(),
     vfx_lab_dev_plugin(),

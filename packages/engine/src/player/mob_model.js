@@ -27,9 +27,9 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 // instead of sync-compiling scene+shadow variants mid-play (no queue registered ⇒ resolves immediately).
 import { warm_pipelines_once } from '../render/pipeline_warm_queue.js'
 
-/** DRACO decoder directory. The decoder is a static third-party runtime asset served from the demo's
- *  Vite publicDir (packages/engine/public/draco → served at `/draco/`); setDecoderPath appends the
- *  wasm/js filenames to this base. Overridable for a non-root deploy base. */
+/** DRACO decoder directory. The engine owns the static third-party runtime assets in
+ *  packages/engine/public/draco; its Vite demo serves them directly and the frontend Vite config republishes
+ *  them at `/draco/`. setDecoderPath appends the wasm/js filenames to this base. */
 const DRACO_DECODER_URL = '/draco/'
 
 let _loader = /** @type {GLTFLoader | null} */ (null)
