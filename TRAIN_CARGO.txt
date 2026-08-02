@@ -1,1 +1,1 @@
-4da7d1fe87a8d5314183a0e74c89159e9aa11108 lane/1890-scan-roster fix(qa): dev world-fight scan carries the format-3 roster (Fixes #1890)
+1b98972c5a25a52d170140a769382e3d8335d654 train/train-49 test(encyclopedia): mob_slugs freshness tooth — served names must have keys (Refs #1368)
