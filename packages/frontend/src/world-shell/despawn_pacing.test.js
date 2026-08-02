@@ -160,12 +160,13 @@ describe('kill-despawn pacing (P1: the mob must not vanish before its death pres
     // The enqueue-time local ack (the P1 root: it emptied the wave in the click's own dispatch, so the R3b
     // queue guard + the death-present hold evaporated before a single beat played) must stay dead:
     expect(
-      source.includes("if (turn.is_local) fight_store.getState().input({ type: 'presented', seq: turn.seq })"),
+      source.includes('if (turn.is_local) fight_store.getState().input(ack)'),
       'a local turn must never ack at enqueue'
     ).toBe(false)
-    // The settle path acks EVERY played turn, locality-independent, right after the claim release:
+    // The settle path acks EVERY played turn, locality-independent, right after the claim release. `ack` is the
+    // turn's identity-stamped ack (#1724 — fight_ack_session_identity.test.js owns that half of the contract).
     expect(source).toMatch(
-      /for \(const id of claimed\) replay_owned\.delete\(id\)\s*\n\s*fight_store\.getState\(\)\.input\(\{ type: 'presented', seq: turn\.seq \}\)/
+      /for \(const id of claimed\) replay_owned\.delete\(id\)\s*\n\s*fight_store\.getState\(\)\.input\(ack\)/
     )
   })
 })

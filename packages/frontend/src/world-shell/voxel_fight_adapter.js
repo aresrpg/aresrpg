@@ -1168,6 +1168,15 @@ export function create_voxel_fight_adapter(
       last_enqueued_seq = turn.seq
       const { beats, claimed } = prepare_wave_beats(turn, { fight_id, session_generation })
       const events = bind_render_turn(beats, `${session_generation}:${fight_id}:${turn.seq}`)
+      // #1724 — THE ACK CARRIES THE IDENTITY ITS BEATS WERE STAMPED WITH. Both halves of one enqueued turn
+      // cross the same door gate, so they must present the same provenance: `prepare_wave_beats` stamps every
+      // `trap_triggered` with THIS session_generation, and an unstamped ack used to sail through the very
+      // refusal that dropped them — a session bump then silently refused each per-beat trigger while the ack
+      // still landed, and `present_turn_traps` dumped the whole turn's trap markers in one input. Stamped, a
+      // superseded wave is refused as a UNIT. Generation only, never `fight_id`: a re-key (#1609) moves the id
+      // while the fold, the inbox and this very wave survive by design, so gating the ack on it would strand
+      // an in-flight wave undrained — a frozen board is a worse failure than the one this fixes.
+      const ack = { type: 'presented', seq: turn.seq, session_generation }
       const played = render_queue
         ?.enqueue_turn({ source_turn: `wave:${turn.seq}`, events })
         .catch((error) => game_log('fight-render', 'render turn failed', { seq: turn.seq, error }))
@@ -1177,11 +1186,11 @@ export function create_voxel_fight_adapter(
         // turn's cells in the same tick this release lands. Reading the async context mirror here instead is the
         // BOOT23 mob-rollback bug (voxel_fight_ack_window.test.js).
         for (const id of claimed) replay_owned.delete(id)
-        fight_store.getState().input({ type: 'presented', seq: turn.seq })
+        fight_store.getState().input(ack)
       })
       // no queue to play through — a LOCAL turn acks immediately (nothing will ever settle; its state already
       // painted via prediction). Non-local no-queue turns keep their store-watchdog cap, exactly as before.
-      if (played == null && turn.is_local) fight_store.getState().input({ type: 'presented', seq: turn.seq })
+      if (played == null && turn.is_local) fight_store.getState().input(ack)
     }
     reconcile() // repaint promptly on every wave change (e.g. the my-turn wash's presenting gate) — idempotent
   }
