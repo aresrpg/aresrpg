@@ -24,6 +24,7 @@ const effects_source = readFileSync(new URL('../../../../world-shell/fast_travel
 const group_source = readFileSync(new URL('../../../../world-shell/group_wiring.js', import.meta.url), 'utf8')
 const chat_source = readFileSync(new URL('./WorldChat.jsx', import.meta.url), 'utf8')
 const party_source = readFileSync(new URL('./PartyFrame.jsx', import.meta.url), 'utf8')
+const nameplate_source = readFileSync(new URL('../../../remote_players.js', import.meta.url), 'utf8')
 
 describe('PlayerActionMenu cold-start party (#329)', () => {
   it('the cold-start invite path calls create_bare(), never the owned-alt-sweeping create()', () => {
@@ -55,6 +56,7 @@ describe('signed actions resolve their owner authoritatively (advisory-only law)
     expect(friends_source).toContain('owner_address: row.address')
     expect(chat_source).not.toContain('address: line.address')
     expect(party_source).not.toContain('address: member.owner')
+    expect(nameplate_source).not.toContain('address: presence')
   })
 })
 

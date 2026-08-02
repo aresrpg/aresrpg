@@ -15,7 +15,6 @@ import { fight_store } from '@aresrpg/fight/store'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
 import { world_fight_active } from '../world-shell/fight_session_scope.js'
-import { presence_character } from '../world-shell/presence_adapter.js'
 
 import { feet_of } from './ambient_placement.js'
 import { same_render_instance } from './remote_visibility_scope.js'
@@ -142,16 +141,16 @@ export function create_remote_players(engine, world_canvas = null) {
     chip.textContent = peer_display_name({ resolved_name: entry.name, address: id })
     // S-67 — the nameplate IS the in-world "click a player" seam (additive; the render/grounding loop is
     // untouched). Only THIS chip becomes interactive (chip_layer itself stays pointer-events:none); a click
-    // opens the shared PlayerActionMenu with the server-observed wallet identity (add friend / invite).
+    // opens the shared PlayerActionMenu with the CHARACTER ID alone. A rig on screen is an observation, and an
+    // observation carries no authority over who owns that character (advisory-only law) — the menu reads the
+    // owning wallet from the authoritative /v1 book before it enables anything signable.
     chip.className = 'gw-nameplate'
     chip.style.pointerEvents = 'auto'
     chip.style.cursor = 'pointer'
     chip.addEventListener('click', (event) => {
       event.stopPropagation()
-      const presence = presence_character(id)
       open_player_menu({
         id,
-        address: presence?.address ?? null,
         name: peer_display_name({ resolved_name: entry.name, address: id }),
         x: event.clientX,
         y: event.clientY,
