@@ -6,6 +6,28 @@ import i18n from './i18n'
 
 export type ToastErrorCopy = Readonly<{ message: string; diagnostic: boolean }>
 
+/**
+ * THE CLASS GUARD (#2032) — a player toast rendered `[object Object] Resetting the streams.` because a raw
+ * Error/object reached a toast door where a message STRING belongs, and the door stringified it with
+ * `String(input)`. `[object Object]` is never player copy, so the doors themselves refuse the shape: the
+ * message is extracted ONCE, here, at the boundary. A caller that hands over an Error gets its `.message`; a
+ * shape carrying no message gets the honest generic copy (`diagnostic` tells the door to keep the raw value
+ * in the sanctioned error console, exactly like `decode_toast_error`). Pure — the report is the door's effect.
+ */
+export function toast_message(input: unknown): ToastErrorCopy {
+  if (typeof input === 'string') return { message: input, diagnostic: false }
+  if (input == null) return { message: '', diagnostic: false }
+  if (typeof input === 'object') {
+    const { message } = input as Readonly<{ message?: unknown }>
+    // An Error (or any shape carrying player-readable text) still says what happened — the object tag never does.
+    if (typeof message === 'string' && message.trim())
+      return { message, diagnostic: true }
+    return { message: i18n.t('errors.request_failed'), diagnostic: true }
+  }
+  // Numbers/booleans stringify honestly; only object-shaped inputs can produce the `[object Object]` tag.
+  return { message: String(input), diagnostic: true }
+}
+
 const rejection_re =
   /user (?:rejected|denied|cancel(?:l)?ed)|rejected the request|request rejected|signature (?:was )?rejected/i
 const pending_re = /request.{0,40}(?:already )?pending|already processing|wallet_requestpermissions already pending/i

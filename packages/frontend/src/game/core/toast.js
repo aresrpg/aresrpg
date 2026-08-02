@@ -11,8 +11,24 @@
 
 import { EventEmitter } from 'events'
 
+import { toast_message } from '../../toast_error'
+import { report_error } from '../../core/report.js'
+
 const emitter = new EventEmitter()
 let seq = 0
+
+/**
+ * THE CLASS GUARD (#2032), this door's half: a title/message pair is rendered ADJACENTLY, which is exactly
+ * the `[object Object] Resetting the streams.` shape a player reported. Both halves are extracted through the
+ * one boundary decoder, and a shape that carried no player copy still reaches the sanctioned error console.
+ * @param {unknown} value @param {string} field @returns {string}
+ */
+const player_copy = (value, field) => {
+  if (typeof value === 'string') return value
+  const { message, diagnostic } = toast_message(value)
+  if (diagnostic) report_error(value, { area: 'event_toast', action: field })
+  return message
+}
 /** @typedef {{ id: number, state: 'pending' | 'success' | 'error', title: string, message: string }} ToastState */
 /** @type {ToastState | null} */
 let current = null
@@ -55,7 +71,7 @@ export const event_toast_store = {
  */
 export function push_event_toast({ state = 'info', title, message = '' }) {
   const id = ++seq
-  events = [...events, { id, state, title, message }]
+  events = [...events, { id, state, title: player_copy(title, 'title'), message: player_copy(message, 'message') }]
   if (events.length > EVENT_CAP) events = events.slice(events.length - EVENT_CAP)
   emit_events()
   setTimeout(() => dismiss_event_toast(id), EVENT_TTL)

@@ -5,7 +5,7 @@ import { create } from 'zustand'
 import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
 import { humanize_tx_error } from './game/core/abort_copy.js'
-import { decode_toast_error } from './toast_error'
+import { decode_toast_error, toast_message } from './toast_error'
 
 // The fixed app-toast layer overlays the top-right minimap with a comfortable, safe-area-aware viewport inset.
 // It clips the transform-based entrance inside a viewport-bounded box, so an entering card can never grow page
@@ -30,7 +30,8 @@ interface Toast {
 
 interface ToastState {
   toasts: Toast[]
-  add: (message: unknown, type?: 'error' | 'info') => void
+  /** `success` is the GREEN channel (app.tsx paints it emerald) — an outcome that actually landed. */
+  add: (message: unknown, type?: 'error' | 'info' | 'success') => void
   add_persistent: (
     message: string,
     type: 'error' | 'info' | 'pending',
@@ -50,10 +51,12 @@ export const use_toast = create<ToastState>((set, get) => ({
   toasts: [],
   add: (input, type = 'error') => {
     const id = next_id++
-    const decoded = type === 'error' ? decode_toast_error(input) : null
-    const message = decoded?.message ?? String(input)
-    if (decoded?.diagnostic) report_error(input, { area: 'toast', action: 'add' })
-    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }))
+    // ONE decode per input, at the boundary. The error channel maps raw provider failures to player copy
+    // (the no-jargon law); every OTHER channel still refuses a non-string shape (#2032) instead of letting
+    // `String(input)` render the `[object Object]` tag a player reported seeing in a live session.
+    const decoded = type === 'error' ? decode_toast_error(input) : toast_message(input)
+    if (decoded.diagnostic) report_error(input, { area: 'toast', action: 'add' })
+    set((s) => ({ toasts: [...s.toasts, { id, message: decoded.message, type }] }))
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000)
   },
   add_persistent: (message, type, action) => {
