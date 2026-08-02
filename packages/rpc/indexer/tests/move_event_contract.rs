@@ -96,14 +96,13 @@ const CONTRACTS: &[SourceContract] = &[
             "RecipeRetired",
             "Crafted",
         ] => Some("Recipe definitions are chain-direct shared objects and craft outcomes are transaction receipts."),
-        client [],
+        client ["Crafted"],
         client_waived [
             "RecipeCreated",
             "RecipeInputsSet",
             "RecipeCraftXpSet",
             "RecipeRetired",
-            "Crafted",
-        ] => Some("Clients read live Recipe objects and reconcile crafted items from the signed receipt."),
+        ] => Some("Clients read live Recipe objects; recipe definition changes carry no client read model."),
     ),
     contract!(
         "aresrpg/extract.move",
