@@ -9,6 +9,7 @@ import { expect, test } from 'bun:test'
 import {
   ci_context,
   republish_window_verdict,
+  run_compatibility_probe,
   size_verdict,
 } from './ceremony_preflight_compat.mjs'
 
@@ -170,4 +171,50 @@ test('a package with no budget row is still held to the chain ceiling', () => {
   expect(size_verdict({ name: 'foundation', size: 102_401 }).status).toBe(
     'over-ceiling'
   )
+})
+
+// #1847's exact death: the first upgrade build exits before compatibility verification because a
+// warning was escalated. The probe must rerun with warnings deflected, materialise the compatibility
+// list whether it is empty or not, AND preserve the warning death as its own blocking result.
+test('a warning-escalation death cannot hide either compatibility verdict', () => {
+  const warning_death = Object.assign(
+    new Error('warnings are errors'),
+    {
+      status: 1,
+      stdout: '',
+      stderr:
+        'warning[W09001]: fixture warning\nCompilation failed because warnings were treated as errors',
+    }
+  )
+  const fixtures = [
+    {
+      retry: Object.assign(new Error('incompatible'), {
+        status: 1,
+        stdout:
+          'error[Compatibility E01001]: a public function is missing\nerror[Compatibility E01002]: a public struct changed',
+        stderr: '',
+      }),
+      expected: ['E01001 a public function is missing', 'E01002 a public struct changed'],
+    },
+    { retry: 'AAECAwQ=', expected: [] },
+  ]
+
+  for (const fixture of fixtures) {
+    const calls = []
+    const run = (file, args) => {
+      calls.push([file, ...args])
+      const result = calls.length === 1 ? warning_death : fixture.retry
+      if (result instanceof Error) throw result
+      return result
+    }
+    const result = run_compatibility_probe(
+      ['client', 'upgrade', '--warnings-are-errors', 'fixture'],
+      run
+    )
+
+    expect(calls).toHaveLength(2)
+    expect(calls[1]).toContain('--silence-warnings')
+    expect([...result.errors.keys()]).toEqual(fixture.expected)
+    expect(result.warning_failure).toContain('warnings were treated as errors')
+  }
 })
