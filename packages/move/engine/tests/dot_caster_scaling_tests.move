@@ -308,3 +308,41 @@ fun the_death_fold_purges_every_row_the_corpse_bears_whoever_sourced_it() {
   ts::return_shared(fight);
   sc.end();
 }
+
+// ══════════════════ [ #2017 — the OVERLAP: a glyph payload and a DoT in ONE tick batch ] ══════════════════
+
+#[test]
+/// #2017 — THE BATCH IS ONE VECTOR. A fighter standing in a start-phase glyph WHILE poisoned takes both lines
+/// from a single `spell_board::tick_start_rows` batch: the glyph's payload effects FIRST (in `cell_entries`
+/// order), then its own DoT rows. `cast::apply_board_batch_from` indexes that whole vector with `e`, which is
+/// BOTH the damage roll's slot and the per-effect source lookup — so the two lines resolve different casters
+/// off the same index space, and which line gets which is decided by that ordering alone.
+///
+/// The overlap is what makes the ordinal load-bearing rather than cosmetic: with D41 resolving a source per
+/// effect, an ordinal that counted DoT rows alone would hand the DoT the GLYPH's (sourceless) slot. Here the
+/// glyph line stays flat at its authored 20 (anonymous — a board cell owns it) and the DoT line amplifies off
+/// its 50-strength caster to 30, in one turn-start, off one batch: 50 HP in total.
+fun glyph_and_dot_share_one_batch_and_keep_their_own_sources() {
+  let mut sc = ts::begin(OWNER);
+  let mut fight = one_mob(&mut sc, spec(z(), 1000));
+  buff_caster_strength(&mut fight, 50);
+
+  // the mob stands in a start-phase glyph AND carries the player's poison
+  spell_board::place_glyph(
+    fight::fx_mut(&mut fight), MOB0, 0, spell_effect::shape_point(), 0, 3, false,
+    vector[spell_effect::damage(spell::el_earth(), 20)],
+  );
+  spell_board::apply_dot(
+    fight::fx_mut(&mut fight), MOB_FID, PLAYER_FID, spell_effect::apply_dot(spell::el_earth(), 20, 4),
+  );
+
+  // glyph line 20 (sourceless, flat) + DoT line 30 (20 × 150/100, off its live caster) — one batch, one turn.
+  assert!(tick_mob_turn_start(&mut fight) == 50, 0);
+
+  // and the glyph alone is still flat with the DoT gone: the 20 above was never the caster-scaled 30.
+  spell_board::clear_fighter_status_kind(fight::fx_mut(&mut fight), MOB_FID, spell_effect::k_apply_dot());
+  assert!(tick_mob_turn_start(&mut fight) == 20, 1);
+
+  ts::return_shared(fight);
+  sc.end();
+}

@@ -384,6 +384,39 @@ export const check_traps = (
 }
 
 /**
+ * #2017 — HOW MANY EFFECTS PRECEDE THE FIGHTER'S DoT ROWS IN THE CHAIN'S TICK BATCH. Move builds ONE batch per
+ * turn-start (`spell_board::tick_start_rows`): every covering start-phase glyph's payload effects FIRST, in
+ * `cell_entries` order, then the fighter's own start-phase DoT rows — and `cast::apply_board_batch_from` indexes
+ * that whole batch with `e`, which is both the damage roll's slot and the per-effect source lookup. The sim
+ * applies the two halves through different doors, so a DoT's ordinal has to be OFFSET by this prefix or the two
+ * twins roll different bands the moment a poisoned fighter stands in a glyph.
+ *
+ * A payload glyph contributes one entry per payload effect; a LEGACY element/min/max glyph is the chain's
+ * one-damage-line payload and contributes exactly one. Counted from the same covering scan `check_glyphs`
+ * walks, so the prefix and the ticks that follow it can never disagree about the batch.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} entity_id
+ * @returns {number}
+ */
+export const start_glyph_batch_prefix = (state, entity_id) => {
+  const entity = find_entity(state, entity_id)
+  if (!entity) return 0
+  return state.glyphs
+    .filter(g =>
+      g.cells.some(c => c.x === entity.cell.x && c.y === entity.cell.y),
+    )
+    .reduce((sum, glyph) => {
+      if (glyph.payload && glyph.payload.length > 0)
+        return sum + glyph.payload.length
+      const legacy =
+        glyph.element !== undefined &&
+        glyph.min !== undefined &&
+        glyph.max !== undefined
+      return sum + (legacy ? 1 : 0)
+    }, 0)
+}
+
+/**
  * Trigger every glyph covering `entity_id`'s current cell (donor check_glyphs; persistent — NOT removed).
  * Called at TURN_START. rng threaded across all matching glyphs.
  * @param {import('./fight_state.js').FightState} state

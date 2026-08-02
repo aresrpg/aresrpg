@@ -523,15 +523,26 @@ const tick_damage = (state, row, victim, tick_seed, ordinal) =>
  *   the fighter whose turn is starting, mirroring `fight::turn_seed(fight, fid)`); null ⇒ the crank door
  * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[] }}
  */
-export const process_turn_effects = (state, entity_id, tick_seed = null) => {
+export const process_turn_effects = (
+  state,
+  entity_id,
+  tick_seed = null,
+  glyph_prefix = 0,
+) => {
   const entity = find_entity(state, entity_id)
   if (!entity) return { state, effects: [] }
   const rows = entity.effects.filter(effect => effect.timing === 'TURN_START')
-  // #1826 — the chain's `e` indexes the TICK BATCH, and `spell_board::tick_start` puts only the fighter's
-  // start-phase K_APPLY_DOT rows in it: a STUN / REFLECT / shield row riding the same fighter is not in that
-  // vector and must not shift a DoT's slot. So the ordinal counts DoT rows alone, in row order.
+  // #1826 — the chain's `e` indexes the TICK BATCH, and `spell_board::tick_start_rows` puts only the fighter's
+  // start-phase K_APPLY_DOT rows in its DoT half: a STUN / REFLECT / shield row riding the same fighter is not
+  // in that vector and must not shift a DoT's slot.
+  // #2017 — but the batch does NOT start at the DoT rows. Every covering start-phase glyph's payload effects sit
+  // ahead of them in the SAME vector, so the chain's `e` for the first DoT is that prefix, not 0. The sim applies
+  // glyphs through their own door (`check_glyphs`), so the caller measures the prefix and hands it in — without
+  // it, a poisoned fighter standing in a glyph rolls its band off a different slot than the chain does.
   const dot_ordinal = new Map(
-    rows.filter(row => row.dot).map((row, index) => [row.id, index]),
+    rows
+      .filter(row => row.dot)
+      .map((row, index) => [row.id, glyph_prefix + index]),
   )
   return rows.reduce(
     (acc, effect) => {

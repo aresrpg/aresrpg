@@ -32,7 +32,12 @@ import {
 } from './fight_actions.js'
 import { turn_seed } from './turn_seed.js'
 import { process_spell_cast } from './fight_spells.js'
-import { check_glyphs, check_traps, decay_glyphs } from './fight_traps.js'
+import {
+  check_glyphs,
+  check_traps,
+  decay_glyphs,
+  start_glyph_batch_prefix,
+} from './fight_traps.js'
 import { ai_choose_turn } from './fight_ai.js'
 import { process_delayed_payloads } from './fight_delayed.js'
 import { find_path_4dir } from './pathfind.js'
@@ -635,9 +640,18 @@ const handle_end_turn = (state, cmd, ctx) => {
 const run_turn_start_hazards = (state, entity_id, clock = null) => {
   const seat = state.team0.findIndex(entity => entity.id === entity_id)
   const tick_seed = clock && seat >= 0 ? turn_seed({ ...clock, seat }) : null
+  // #2017 — the chain composes ONE batch up front (`spell_board::tick_start_rows`): covering start-phase glyph
+  // payloads, then this fighter's DoT rows. Measure that prefix from the state the batch would be collected
+  // from — BEFORE any glyph fires — so the DoT ordinals index the same vector Move's `e` does.
+  const glyph_prefix = start_glyph_batch_prefix(state, entity_id)
   const glyphs = check_glyphs(state, entity_id)
   const delayed = process_delayed_payloads(glyphs.state, entity_id)
-  const ticks = process_turn_effects(delayed.state, entity_id, tick_seed)
+  const ticks = process_turn_effects(
+    delayed.state,
+    entity_id,
+    tick_seed,
+    glyph_prefix,
+  )
   const all = [...glyphs.effects, ...delayed.effects, ...ticks.effects]
   /** @type {import('./reduce.js').FightEvent[]} */
   const events =
