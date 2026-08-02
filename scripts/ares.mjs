@@ -183,6 +183,7 @@ export const unit_test_files = [
   'scripts/check-loc-ledger-workflow.test.mjs', // #1603 — promotion history scope + ordinary-PR negative control
   'scripts/check-workflow-registry.test.mjs', // #835 — the Actions registry lists `active` workflows that exist on no trunk (gold.yml, 15 red runs, none since 07-23), so the registry can never be cited as evidence that anything ran
   'scripts/scan_stability.test.mjs', // #2016 — the max-of-3 law for baseline WRITES: a mocked wobbly scanner proves the three semgrep verdicts refuse a single-pass floor and write the max
+  'scripts/gate_suite_coverage.test.mjs', // #2020 — the gate-orphan CLASS gate: every scripts/*.test.mjs must be named in a workflow run: line or justified in writing
   'test/gold/specs_anchor/click_verify_test.ts', // the harness click-decision pure unit (*_test.ts on purpose: the anchor playwright config's testMatch must never collect it)
   'test/gold/specs_anchor/fight_recovery_test.ts', // the stale-fight recovery classifier + tx-door invocation count (same *_test.ts law)
   'test/gold/specs_anchor/search_retry_test.ts', // the fixture-search retry classifier + bounded settle loop (same *_test.ts law)

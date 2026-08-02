@@ -9,7 +9,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
 
-import { afterEach, describe, expect, it } from 'bun:test'
+import { afterEach, describe, expect, it, setDefaultTimeout } from 'bun:test'
+
+// Every probe here spawns real git repos and real gate subprocesses: 1.6–3.9s each on an idle dev
+// Mac, and the heaviest drives the gate TWICE. Against bun's 5s default that is not a margin, it is a
+// coin flip — under load the second gate run gets killed mid-flight and spawnSync reports `status:
+// null`, which reads as a gate verdict of "failed" when nothing was ever judged. Same disease #641
+// fixed in the engine suite; wiring this suite into CI (#2020) is what made the flake CI's problem.
+setDefaultTimeout(60_000)
 
 const script_dir = path.dirname(file_url_to_path(import.meta.url))
 const repo_root = path.resolve(script_dir, '..')
