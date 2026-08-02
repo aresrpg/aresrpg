@@ -11,8 +11,9 @@ import { aresrpg_id } from '../../deployment/aresrpg.js'
 //
 // Consumers: the crush action passes EVERY registered template id into `crush_ptb`'s fixed slots (each owed
 // rune needs its mint slot), maps preview rows to display names, and REFUSES pre-flight when a reachable
-// (stat, tier) has no registered template (the chain would abort EMissingTemplate — honest, but the client
-// catches it for free before any gas).
+// (stat, tier) has no registered template. Since #1840 the chain DROPS an owed rune whose slot is missing
+// instead of aborting (a post-draw abort was a free reroll), so passing the full roster is a CLIENT
+// responsibility with no on-chain net: a short roster silently burns the gear for less yield.
 
 /** @typedef {{ template_id: string, stat: number, tier: number }} RuneRegistryEntry */
 /** @typedef {{ entries: RuneRegistryEntry[], by_key: Map<string, string>, by_template: Map<string, { stat: number, tier: number }> }} CrushRegistry */

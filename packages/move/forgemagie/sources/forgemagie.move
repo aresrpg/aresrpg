@@ -18,8 +18,10 @@
 ///     REGISTERED rune template (the yield SET is deterministic from the item's stat lines; only QUANTITIES
 ///     are random) and fills leftover slots with DISTINCT other ItemTemplates (distinct-padding law: duplicate
 ///     object args in one MoveCall are of unverified PTB legality, so the client never sends duplicates; the
-///     walk below tolerates them anyway). Unregistered / zero-owed / duplicate slots no-op; any owed rune
-///     whose template was NOT passed aborts (`EMissingTemplate`) — the whole tx reverts, the gear is safe.
+///     walk below tolerates them anyway). Unregistered / zero-owed / duplicate / NOT-PASSED slots all no-op:
+///     the roll binds once drawn, so an owed rune with no slot is DROPPED, never an abort (#1840 — a
+///     post-draw coverage audit made the revert conditional on the outcome, i.e. retry-until-favorable;
+///     template selection is a CLIENT concern and lives in the SDK/UI roster, which passes the whole registry).
 ///     The additive staged twin removes that fixed arity without touching `crush`: `open_crush` commits template
 ///     IDs, `add_rune_template` snapshots each matching shared template, and terminal `close_crush` performs the
 ///     same roll/mint body. Its ability-less `RuneMint` forces close in the opening PTB.
@@ -74,7 +76,6 @@ const EWrongItem: u64 = 104; // scribe: gear/template mismatch, or the item carr
 const EMalusStat: u64 = 106; // scribe: the target stat is below centre (a malus) — scribing would erase it (refused)
 const EMaxApps: u64 = 107; // scribe: this rune's per-item application cap is reached (Po/PM/PA=1, Cri=10)
 const EWrongTemplate: u64 = 108; // crush: an item in the batch is not of the passed template
-const EMissingTemplate: u64 = 109; // crush: a rune was owed whose ItemTemplate was not among the passed slots
 const EBadRegistration: u64 = 111; // register_rune: (stat, tier) is not a real Retro rune
 const EEmptyBatch: u64 = 112; // crush_orphan: empty gear batch — no item to derive the burned template id from
 const EOrphanWrongTemplate: u64 = 113; // crush_orphan: a batch item is not of the first item's derived template
@@ -243,8 +244,8 @@ entry fun scribe_rune(
 /// rounding + reference-corpus tier roll per rune), then decay front-loaded before the next item; post-loop ONE capped
 /// pressure emission, snapshot stamped POST-emission (self-exclusion). Every crushed item is DESTROYED
 /// unconditionally (sealed semantics). Minted stacks kiosk-lock via the LockPledge law; leftover owed
-/// (a yielded rune whose template was not passed) aborts `EMissingTemplate` — full revert, gear safe.
-/// Terminal `&Random` entry.
+/// (a yielded rune whose template was not passed) is DROPPED — no abort can be conditioned on the draw
+/// (#1840), so a short roster is a pure loss to its sender and never a reroll. Terminal `&Random` entry.
 entry fun crush(
   board: &mut CrushBoard,
   kiosk: &mut Kiosk,
@@ -275,14 +276,14 @@ entry fun crush(
   mint_slot(board, &mut owed, t21, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t22, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t23, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t24, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t25, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t26, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t27, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t28, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t29, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t30, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t31, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t32, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t33, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t34, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t35, kiosk, pkcap, policy, config, version, ctx);
-  assert_owed_empty(&owed);
 }
 
 // ╔════════════════ [ STAGED CRUSH — variable shared-template roster ] ════════ ]
 
 /// OPEN the additive crush builder with the template-ID commitment the client will satisfy positionally. IDs
 /// are plain values, so this command has no shared-reference arity ceiling; the 35-template catalog bound still
-/// caps work. Omitting an actually owed rune remains impossible because close retains `assert_owed_empty`.
+/// caps work. Omitting an owed rune costs the sender that rune (close drops uncovered rows — #1840), never a
+/// conditional revert: `committed` is fixed BEFORE the terminal random command, so it cannot select an outcome.
 public fun open_crush(committed: vector<ID>): RuneMint {
   assert!(committed.length() <= CRUSH_TEMPLATE_SLOTS, ERuneRosterFull);
   RuneMint { committed, landed: vector[] }
@@ -355,7 +356,6 @@ fun close_crush_seeded(
     mint_snapshot_slot(board, &mut owed, &landed[i], kiosk, pkcap, policy, config, version, ctx);
     i = i + 1;
   };
-  assert_owed_empty(&owed);
   rolled
 }
 
@@ -475,7 +475,6 @@ entry fun crush_orphan(
   mint_slot(board, &mut owed, t21, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t22, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t23, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t24, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t25, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t26, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t27, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t28, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t29, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t30, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t31, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t32, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t33, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t34, kiosk, pkcap, policy, config, version, ctx); mint_slot(board, &mut owed, t35, kiosk, pkcap, policy, config, version, ctx);
-  assert_owed_empty(&owed);
 }
 
 /// The seeded orphan roll — a FOCUSED DUPLICATE of `crush_roll` (kept additive so it never edits the frozen live
@@ -615,16 +614,6 @@ fun mint_snapshot_slot(
     Forge {}, config, t.template, t.name, t.description, t.item_type, t.category, qty, version, ctx,
   );
   item::lock_in_kiosk(pledge, stack, kiosk, personal_kiosk::borrow(pkcap), policy);
-}
-
-/// Every owed row must be zero after the mint walk — a leftover means a yielded rune's template was not among
-/// the passed slots (client bug / unregistered rune): abort so the WHOLE crush reverts and the gear survives.
-fun assert_owed_empty(owed: &vector<u64>) {
-  let mut i = 0;
-  while (i < owed.length()) {
-    assert!(*owed.borrow(i) == 0, EMissingTemplate);
-    i = i + 1;
-  };
 }
 
 // ╔════════════════ [ Reads (UI displays the coefficient — R3 visibility ruling) + puits read ] ═ ]
@@ -856,7 +845,6 @@ public fun crush_for_testing(
   mint_slot(board, &mut owed, t2, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t3, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t4, kiosk, pkcap, policy, config, version, ctx);
-  assert_owed_empty(&owed);
   rolled
 }
 
@@ -911,7 +899,6 @@ public fun crush_orphan_for_testing(
   mint_slot(board, &mut owed, t2, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t3, kiosk, pkcap, policy, config, version, ctx);
   mint_slot(board, &mut owed, t4, kiosk, pkcap, policy, config, version, ctx);
-  assert_owed_empty(&owed);
   rolled
 }
 
