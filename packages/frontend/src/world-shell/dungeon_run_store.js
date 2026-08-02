@@ -99,7 +99,7 @@ import {
 import { apply_fight_receipt } from './store_patch.js'
 import { should_boot_open } from './pending_outcomes.js'
 import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
-import { should_hold_receipt_fight } from './world_fight_receipt.js'
+import { receipt_read_miss_decision, should_hold_receipt_fight } from './world_fight_receipt.js'
 import { error_executed_digest } from './tx_digest_error.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { publish_dungeon_session } from './dungeon_session.js'
@@ -313,6 +313,11 @@ export const use_dungeon = create((set, get) => ({
   fight_id: null,
   /** An executed world create/join receipt owns fight_id while the full board read catches up. */
   fight_syncing: false,
+  /** @type {string | null} #529 — the exact fight id whose receipt-convergence loop reached its wait ceiling
+   *  without ever hydrating. It ends that receipt's benefit of the doubt over a DELETED object (never over a
+   *  merely-unreadable one), so an evaporated join collapses to its outcome flow instead of re-reading a dead
+   *  object in silence forever. Id-scoped, so it is never reset: a spent window can only ever name its own fight. */
+  fight_receipt_expired_id: null,
   /** Executed-failure proof for one exact fight@actor@deadline. Automatic fire may never cross it. */
   _turn_commit_failure: null,
   /** @type {string | null} the fight@deadline whose ONE force pass this session already owns (#1381 ③). */
@@ -1109,20 +1114,20 @@ export const use_dungeon = create((set, get) => ({
         }
         if (!is_current()) return
         if (!read) {
-          const receipt_owned = should_hold_receipt_fight(get(), live_fight_id)
-          const fresh_receipt = receipt_owned && get().fight_fresh
-          const retry_receipt_read = receipt_owned && (!definitively_gone || fresh_receipt)
+          // RECEIPT IS TRUTH, FOR A WINDOW: a just-executed create/join can beat the serving node's object
+          // availability — hold the id + syncing chip and let the receipt backoff loop keep calling refresh.
+          // Otherwise the surviving RunPass with a dead latched fight is a terminal ghost → collapse it to the
+          // outcome flow. The decision itself lives in world_fight_receipt.js (#529 bounded its gone-arm).
+          const decision = receipt_read_miss_decision({ state: get(), fight_id: live_fight_id, definitively_gone })
           fight_state_trace('fight_adoption_exact_read_missing', {
             fight_id: live_fight_id,
             definitively_gone,
-            receipt_owned,
-            fresh_receipt,
-            decision: retry_receipt_read ? 'retry' : 'drop',
+            receipt_owned: should_hold_receipt_fight(get(), live_fight_id),
+            fresh_receipt: get().fight_fresh,
+            receipt_expired: get().fight_receipt_expired_id === live_fight_id,
+            decision,
           })
-          // RECEIPT IS TRUTH: a just-executed create/join can beat the serving node's object availability — hold
-          // the id + syncing chip and let the receipt backoff loop keep calling refresh. Otherwise the surviving
-          // RunPass with a dead latched fight is a terminal ghost → collapse it to the outcome flow.
-          if (retry_receipt_read) return
+          if (decision === 'retry') return
           get()._collapse_terminal_ghost(live_fight_id)
           return
         }

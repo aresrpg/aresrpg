@@ -36,6 +36,32 @@ export function should_hold_receipt_fight(state, fight_id) {
   return Boolean(state?.fight_syncing && fight_id && state?.fight_id === fight_id)
 }
 
+/**
+ * A receipt-owned fight whose object the serving node did NOT return: keep the mount and re-read (`retry`), or
+ * let the session collapse to its outcome flow (`drop`). The ONE home for that call — `refresh` used to spell it
+ * inline, which is where it grew its unbounded arm.
+ *
+ * `definitively_gone` (the node answered "deleted", not "not yet") is normally decisive, and a FRESH create/join
+ * overrides it: a read-after-write against a just-executed receipt legitimately reports a brand-new object as
+ * absent. #529 — that override had no end. A coop join whose fight evaporated (settled/liquidated under the join,
+ * or deserted and cranked away) left a client that re-read a deleted object on the 4s heartbeat FOREVER: no
+ * board, no collapse, no outcome recovery, no word to the player. The grant is a read-after-write window, so it
+ * expires with the receipt poll that owns it — `fight_receipt_expired_id` names the exact id whose tight backoff
+ * loop reached its ceiling without ever hydrating. ID-scoped by construction: a spent window belongs to the fight
+ * that spent it and can never drop the next session this client enters.
+ *
+ * A merely-unreadable (not gone) object is untouched by the expiry — the slower heartbeat is still the honest
+ * path for a fight that is only slow to hydrate.
+ * @param {{ state:any, fight_id:string|null, definitively_gone:boolean }} args
+ * @returns {'retry'|'drop'}
+ */
+export function receipt_read_miss_decision({ state, fight_id, definitively_gone }) {
+  if (!should_hold_receipt_fight(state, fight_id)) return 'drop'
+  if (!definitively_gone) return 'retry'
+  const expired = state?.fight_receipt_expired_id != null && String(state.fight_receipt_expired_id) === String(fight_id)
+  return state?.fight_fresh && !expired ? 'retry' : 'drop'
+}
+
 /** @returns {'pending'|'hydrated'|'cancelled'} */
 function receipt_sync_state(state, fight_id) {
   if (state?.dungeon?.id === fight_id) return 'hydrated'

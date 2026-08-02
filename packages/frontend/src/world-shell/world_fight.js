@@ -196,9 +196,13 @@ function activate_world_fight({ fight_id, resumed = false, is_public = false }) 
       .catch((error) => game_log('world-fight', 'owned party auto-form stopped', error))
   void poll_receipt_fight({ fight_id, get_state: getState, refresh: () => getState().refresh() }).then((outcome) => {
     // The tight backoff loop gave up at its wait ceiling — never a silent stop: the slower 4s heartbeat
-    // (_start_polling, already running) is the one still converging it, traced here for visibility.
-    if (outcome === 'timed_out')
-      game_log('world-fight', 'receipt poll hit its wait ceiling — the 4s heartbeat keeps trying', { fight_id })
+    // (_start_polling, already running) keeps converging a fight that is merely SLOW. What ends here is the
+    // receipt's benefit of the doubt over an object the node reports DELETED (#529): past this ceiling a gone
+    // read collapses the session to its outcome flow instead of being re-read in silence forever. Stamped by id,
+    // so it can only ever speak for the fight that spent the window.
+    if (outcome !== 'timed_out') return
+    game_log('world-fight', 'receipt poll hit its wait ceiling — a GONE read now collapses honestly', { fight_id })
+    use_dungeon.setState({ fight_receipt_expired_id: fight_id })
   })
 }
 
