@@ -1,4 +1,2 @@
-9b44961b3e4a9a16a2ce638e1a74cb216cbc6282 train/train-40 test(move): reproduce compat warning death (#1847)
-49455cb3f83df9bd983305e0a35664a56f72c2e8 train/train-40 fix(move): compat warnings cannot hide the verdict
-105d2d8503aea21abae8024097134bb9c132c89c train/train-40 fix(move): match Sui warning escalation output (#1847)
-0151ea1925bda25e26b42056718d922b4ad79a2b train/train-40 fix(move): bound zone member selection scans
+6d87ff8a9f5e44b8166049ee6c5623712b1082cd train/train-41 fix(corpus): delete the bare-URL degraded mode — the pointer is the one source
+95fbbe696d1dfb9fef96e86987dd39eb451dfb35 train/train-41 fix(engine): pre-warm through the live frame, never an async compile (#1869)
