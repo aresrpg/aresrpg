@@ -1061,6 +1061,8 @@ MEMBRANE_ALLOWED_ROOT_FILES=(
   '.gitignore'
   '.prettierignore'
   '.prettierrc'
+  # The materiality bar's class list — governed like FROZEN.md: visible, reviewed edits only.
+  'ACCEPTED_DEBT.md'
   'CLA.md'
   'CLAUDE.md'
   'CONTRIBUTING.md'
