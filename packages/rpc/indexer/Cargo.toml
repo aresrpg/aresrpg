@@ -22,7 +22,7 @@ sui-indexer-alt-framework = { git = "https://github.com/MystenLabs/sui.git", rev
 # --- Store -------------------------------------------------------------------
 # Redis 8 client. JSON.* / FT.* are issued as raw commands (redis::cmd), so no
 # module-specific crate is needed — the query engine lives in the server.
-redis = { version = "0.28", features = ["tokio-comp"] }
+redis = { version = "1.5", features = ["tokio-comp"] }
 
 # --- Async runtime + framework trait glue ------------------------------------
 tokio = { version = "1", features = ["full"] }
