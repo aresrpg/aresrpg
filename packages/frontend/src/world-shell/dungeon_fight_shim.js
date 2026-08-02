@@ -17,7 +17,13 @@ import { run_signal_settlement } from './fight_claim_latch.js'
 
 // (b) the SYNC seam (chain read → core snapshot door + the per-world render offset) lives in its own module to keep
 // this shim under the ≤120-LoC thin-shim gate; re-exported here so importers keep one import site.
-export { resolve_world_offset, resolve_weapon_lines, sync_dungeon_fight } from './dungeon_fight_sync.js'
+export {
+  resolve_world_offset,
+  resolve_weapon_lines,
+  resolve_member_roster,
+  merge_mob_roster,
+  sync_dungeon_fight,
+} from './dungeon_fight_sync.js'
 
 /**
  * (a) OPEN a fight in the core — the ENGAGE/resume handoff. Idempotent for a live same-id fight (never re-wipes

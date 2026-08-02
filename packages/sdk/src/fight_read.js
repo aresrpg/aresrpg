@@ -197,6 +197,71 @@ export function get_weapon_lines(context) {
   }
 }
 
+// ╔════════════════ [ The pack's PER-MEMBER content template (#1865) ] ════════ ]
+
+/// The engine's per-member content dynamic-field key (`fight.move MemberContentKey { index: u64 }`). Matched by
+/// SUFFIX for the same reason the weapon-line key above is: the key type carries its DEFINING package.
+const MEMBER_CONTENT_KEY_SUFFIX = '::fight::MemberContentKey'
+
+/**
+ * Read a Fight's per-member content TEMPLATE ids → `{ [mob index]: MobTemplate id }` (`{}` for a homogeneous
+ * pre-member-door fight, and the honest degradation on an unreadable node).
+ *
+ * A mixed pack seats every member from its OWN spec, and `create_members` records that member's template as one
+ * indexed dynamic field per seated mob (`df::add(MemberContentKey { index: i }, GroupContent { template:
+ * committed[i], .. })`). The Fight OBJECT carries only the shared `GroupContent` — deliberately the PRIMARY's
+ * block, so every reader that never learns about members still reads something true — and each `FightMob` is
+ * minted with the ZERO address as its template. So this dynamic field is the ONLY off-chain door to which
+ * species each mob actually is: without it a rehydrating client can name the pack but not its members, and a
+ * rat renders under the group primary's name (#1865).
+ *
+ * Attached once at `create_members` and never updated, so a caller reads this ONCE per fight, not per poll.
+ * @param {import("../types.js").Context} context
+ */
+export function get_member_templates(context) {
+  const { grpc_client } = context
+  return async fight_id => {
+    try {
+      /** @type {Record<number, string>} */
+      const by_index = {}
+      let cursor = null
+      do {
+        const {
+          dynamicFields,
+          hasNextPage,
+          cursor: next,
+        } = await grpc_client.core.listDynamicFields({
+          parentId: fight_id,
+          cursor,
+        })
+        const ids = (dynamicFields ?? [])
+          .filter(field =>
+            String(field?.name?.type ?? '').endsWith(MEMBER_CONTENT_KEY_SUFFIX),
+          )
+          .map(({ fieldId }) => fieldId)
+        if (ids.length) {
+          const { objects } = await grpc_client.core.getObjects({
+            objectIds: ids,
+            include: { json: true },
+          })
+          for (const entry of objects ?? []) {
+            if (entry instanceof Error) continue
+            // `Field<MemberContentKey, GroupContent>` flattens to `{ name: { index }, value: { template, .. } }`.
+            const json = /** @type {any} */ (entry)?.json
+            const index = Number(json?.name?.index ?? NaN)
+            const template = json?.value?.template
+            if (Number.isInteger(index) && index >= 0 && template) by_index[index] = String(template)
+          }
+        }
+        cursor = hasNextPage ? next : null
+      } while (cursor)
+      return by_index
+    } catch {
+      return {}
+    }
+  }
+}
+
 /**
  * Decode a `json:true`-flattened `results::FightResult` (the soulbound per-seat outcome). `rolled` is a PLAIN
  * `vector<RolledLoot>` → `[{ item_template, qty }]` (empty `[]` on a defeat / no-drop victory). `loot` is the

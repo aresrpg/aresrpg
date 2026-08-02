@@ -108,6 +108,8 @@ import {
   sync_dungeon_fight,
   resolve_world_offset,
   resolve_weapon_lines,
+  resolve_member_roster,
+  merge_mob_roster,
   hold_until_presented,
   route_settlement,
 } from './dungeon_fight_shim.js'
@@ -970,52 +972,65 @@ export const use_dungeon = create((set, get) => ({
   },
 
   /**
-   * Resolve a Fight's GROUP template identity (name / level / element) into mob_names/levels/elements when unknown
-   * and push it into the core ctx. AWAITED by refresh BEFORE the snapshot so the mob rig loads with the REAL name
+   * Resolve a fight's mob template identities (name / level / element) into mob_names/levels/elements when unknown
+   * and push them into the core ctx. AWAITED by refresh BEFORE the snapshot so the mob rig loads with the REAL name
    * on first sight (the fight board creates a mob avatar ONCE at first-sight — a cold name bakes the hash fallback
-   * for the whole fight). Key = the Fight's `group_template` (the REAL homogeneous MobTemplate id). Immutable
-   * on-chain, so a resolved id (hit OR miss) is cached for the tab; only a cold reconnect / 2nd player pays the read.
+   * for the whole fight). Immutable on-chain, so a resolved id (hit OR miss) is cached for the tab; only a cold
+   * reconnect / 2nd player pays the read.
+   *
+   * `templates` is whichever species this fight actually seats: the PER-MEMBER ids when the rehydration read
+   * recovered them (#1865 — a mixed pack is several species and the shared `group_template` names only the
+   * primary), else the group template alone. One resolver, one map, whichever door supplied the ids.
    * @param {any} sdk @param {any} fight a decoded Fight
+   * @param {{ is_current?: () => boolean, templates?: string[] }} opts
    */
-  _resolve_mob_identities(sdk, fight, { is_current = () => true } = {}) {
-    const id = fight?.group_template
-    if (!id || !fight?.mobs?.length) return // no group template / no mobs (PvP) — nothing to resolve
+  _resolve_mob_identities(sdk, fight, { is_current = () => true, templates = [] } = {}) {
+    if (!fight?.mobs?.length) return // no mobs (PvP) — nothing to resolve
     // A world claim carried the exact seated identity roster through the fight input door. It is keyed by each
     // fold fighter id and can represent a mixed pack; re-reading the shared primary template here would be both
     // a second source and lossy. A carried id with no name is a genuine world-side miss and remains the honest
     // id fallback.
     const carried = fight_store.getState().ctx?.mob_roster
-    const carried_ids = new Set((carried ?? []).map((row) => row?.id).filter(Boolean))
-    if (fight.mobs.every((_, index) => carried_ids.has(mob_entity_id(index)))) return
+    const carried_named = new Set((carried ?? []).filter((row) => row?.name != null).map((row) => row?.id))
+    const fully_named = fight.mobs.every((_, index) => carried_named.has(mob_entity_id(index)))
+    const wanted = templates.length ? templates : fully_named ? [] : [fight?.group_template]
     const known = get().mob_names
-    if (id in known || _mob_tmpl_cache.has(id) || _mob_tmpl_pending.has(id)) return
-    _mob_tmpl_pending.add(id)
-    return get_mob_template({ grpc_client: sdk.grpc_client })(id)
-      .then((tpl) =>
-        _mob_tmpl_cache.set(
-          id,
-          tpl ? { name: tpl.name || 'Mob', min_level: tpl.min_level || 1, element: tpl.element ?? 255 } : null
-        )
+    const ids = [...new Set(wanted.filter(Boolean))].filter(
+      (id) => !(id in known) && !_mob_tmpl_cache.has(id) && !_mob_tmpl_pending.has(id)
+    )
+    if (!ids.length) return
+    for (const id of ids) _mob_tmpl_pending.add(id)
+    return Promise.all(
+      ids.map((id) =>
+        get_mob_template({ grpc_client: sdk.grpc_client })(id)
+          .then((tpl) =>
+            _mob_tmpl_cache.set(
+              id,
+              tpl ? { name: tpl.name || 'Mob', min_level: tpl.min_level || 1, element: tpl.element ?? 255 } : null
+            )
+          )
+          .catch(() => _mob_tmpl_cache.set(id, null))
+          .finally(() => _mob_tmpl_pending.delete(id))
       )
-      .catch(() => _mob_tmpl_cache.set(id, null))
-      .finally(() => {
-        _mob_tmpl_pending.delete(id)
-        if (!is_current()) return
-        const resolved = _mob_tmpl_cache.get(id)
-        if (resolved) {
-          set({
-            // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the
-            // model resolver (game/data/mobs.js) undoes it before its own catalog lookup.
-            mob_names: { ...get().mob_names, [id]: display_mob_name(resolved.name) },
-            mob_levels: { ...get().mob_levels, [id]: resolved.min_level },
-            mob_elements: { ...get().mob_elements, [id]: resolved.element },
-          })
-          fight_store.getState().input({
-            type: 'ctx',
-            ctx: { mob_names: get().mob_names, mob_levels: get().mob_levels, mob_elements: get().mob_elements },
-          })
-        }
+    ).then(() => {
+      if (!is_current()) return
+      const resolved = ids.map((id) => [id, _mob_tmpl_cache.get(id)]).filter(([, facts]) => facts)
+      if (!resolved.length) return
+      set({
+        // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the
+        // model resolver (game/data/mobs.js) undoes it before its own catalog lookup.
+        mob_names: {
+          ...get().mob_names,
+          ...Object.fromEntries(resolved.map(([id, f]) => [id, display_mob_name(f.name)])),
+        },
+        mob_levels: { ...get().mob_levels, ...Object.fromEntries(resolved.map(([id, f]) => [id, f.min_level])) },
+        mob_elements: { ...get().mob_elements, ...Object.fromEntries(resolved.map(([id, f]) => [id, f.element])) },
       })
+      fight_store.getState().input({
+        type: 'ctx',
+        ctx: { mob_names: get().mob_names, mob_levels: get().mob_levels, mob_elements: get().mob_elements },
+      })
+    })
   },
 
   /**
@@ -1149,7 +1164,17 @@ export const use_dungeon = create((set, get) => ({
           })
           return
         }
-        await get()._resolve_mob_identities(sdk, fight, { is_current })
+        // #1865 — WHICH SPECIES each mob is, on a session that did not claim this pack. A world claim composes the
+        // seated roster and carries it in; a refresh has no claim, and the object read carries only the group's
+        // PRIMARY template. The per-member templates ride indexed dynamic fields, so recover them here and resolve
+        // every distinct species — one read per fight (immutable), and an empty result leaves the group fallback
+        // exactly as it was for a homogeneous pack.
+        const member_roster = await resolve_member_roster(sdk, live_fight_id, fight.mobs?.length ?? 0)
+        if (!is_current() || get().fight_id !== live_fight_id) return
+        await get()._resolve_mob_identities(sdk, fight, {
+          is_current,
+          templates: member_roster.map((row) => row.template_id),
+        })
         if (!is_current() || get().fight_id !== live_fight_id) return
         const offset = await resolve_world_offset(sdk, get().world_id ?? fight.world)
         if (!is_current() || get().fight_id !== live_fight_id) return
@@ -1172,6 +1197,11 @@ export const use_dungeon = create((set, get) => ({
             mob_names: get().mob_names,
             mob_levels: get().mob_levels,
             mob_elements: get().mob_elements,
+            // The claim path's own composed roster WINS wherever it exists (it carries names the world already
+            // rendered); this only fills the entities it never covered — a refresh covers all of them.
+            ...(member_roster.length
+              ? { mob_roster: merge_mob_roster(fight_store.getState().ctx?.mob_roster, member_roster) }
+              : {}),
             offset,
             beat_ctx: { grid_width: GRID_W },
           },

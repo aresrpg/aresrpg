@@ -4,7 +4,8 @@
 // It owns NO fight logic: it only decodes a Fight OBJECT read and feeds its snapshot + public render facts through
 // the core's ONE input door, plus the per-world render offset. The shim re-exports both so importers are unchanged.
 
-import { decode_fight, get_weapon_lines } from '@aresrpg/sdk/fight'
+import { decode_fight, get_member_templates, get_weapon_lines } from '@aresrpg/sdk/fight'
+import { mob_entity_id } from '@aresrpg/fight/fight_control'
 import { world_offsets } from '@aresrpg/sdk/coords'
 import { get_world } from '@aresrpg/sdk/game'
 import { fight_store } from '@aresrpg/fight/store'
@@ -45,6 +46,49 @@ export async function resolve_weapon_lines(
   const by_seat = await get_weapon_lines({ grpc_client: sdk.grpc_client })(fight_id)
   _weapon_lines_cache.set(fight_id, { seats, by_seat })
   return by_seat
+}
+
+// #1865 — THE PACK'S PER-MEMBER IDENTITY, on a client that did not claim it. A world claim composes the seated
+// roster itself and carries it into the fight through `ctx.mob_roster` (world_spawns.js), so a LIVE-spawned fight
+// names every member correctly. A page refresh has no claim: the session rebuilds from chain reads alone, and the
+// only species fact those reads carry is the Fight's shared `group_template` — the PRIMARY's block. Every mob then
+// resolved through it and a mixed pack rendered one name for all of them (a rat and a Bonelet both read "Bonelet").
+// The member templates are on chain as indexed dynamic fields (`get_member_templates`), so rehydration resolves the
+// SAME entity-keyed roster shape the claim path composes — one home for the fact, two ways in.
+// IMMUTABLE for the fight's lifetime (attached once at create_members), so this is one read per fight, not per poll.
+/** @type {Map<string, { mobs: number, roster: Array<{ id:string, template_id:string }> }>} */
+const _member_roster_cache = new Map()
+export async function resolve_member_roster(
+  /** @type {any} */ sdk,
+  /** @type {string | null | undefined} */ fight_id,
+  /** @type {number} */ mob_count
+) {
+  if (!fight_id || mob_count <= 0) return []
+  const hit = _member_roster_cache.get(fight_id)
+  if (hit && hit.mobs >= mob_count) return hit.roster
+  const by_index = await get_member_templates({ grpc_client: sdk.grpc_client })(fight_id)
+  // A homogeneous (pre-member-door) fight attaches no member fields at all. Composing a roster from the shared
+  // primary would be a SECOND home for what `group_template` already says, so an empty read stays empty and the
+  // existing group fallback keeps naming those packs exactly as it did.
+  const roster = Array.from({ length: mob_count }, (_, index) => ({
+    id: mob_entity_id(index),
+    template_id: by_index[index] ?? null,
+  })).filter((row) => row.template_id != null)
+  _member_roster_cache.set(fight_id, { mobs: mob_count, roster })
+  return roster
+}
+
+/**
+ * The entity-keyed roster the projection reads, with the CLAIM's own rows winning wherever it has one: a claim
+ * composed its members from the world card and already rendered those names, while a rehydrated row carries the
+ * template id alone (the name resolves downstream through `mob_names`). Pure — one merge, keyed by fighter id,
+ * never by ordinal (#1608: an array reorder must not rename a living fighter).
+ * @param {Array<{id?:string}>|null|undefined} claimed @param {Array<{id:string, template_id:string}>} recovered
+ */
+export const merge_mob_roster = (claimed, recovered) => {
+  const rows = new Map(recovered.map((row) => [row.id, row]))
+  for (const row of claimed ?? []) if (row?.id) rows.set(row.id, row)
+  return [...rows.values()]
 }
 
 /**
