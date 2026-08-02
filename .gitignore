@@ -103,3 +103,6 @@ smoke-out/
 
 # a symlinked node_modules slips past the directory-only rule above and dangles elsewhere
 packages/move/node_modules
+
+# the upgrade ceremony's resume journal — per-run state that survives a halt, never a source
+packages/move/scripts/out/ceremony_upgrade_pending.json
