@@ -1,3 +1,4 @@
-8c2b8ead0c247cbfb49c440012b041334dc63754 lane/2008-invite-carrier style(indexer): rustfmt the party projection
-4f1f52db5b3cef56a128877033e9d2aead6e8f85 lane/2008-invite-carrier fix(party): carry the authoritative pending invite to the invitee
-d324c7fab1fee89a93b5eaf0dfe913ab7fd4887a lane/2008-invite-carrier rpc: project party pending invites and serve them by character
+576371ad3dcae66cb047ca754049e743e06b608c lane/qol-toasts feat(auto-search): persist the settings group and add a targets axis
+c544da6344d98d1a2133af5f9829ddc1d708bea5 lane/qol-toasts fix(craft): report the roll, not the transaction — honest craft outcomes
+08d14e89d7e75d698d69adbf2954aa07ea5e7cff lane/qol-toasts style(toast): prettier formatting for the toast-door guard (#2032)
+759e8e23d8f59d6c2a90fced3a3b5da1711e3cb5 lane/qol-toasts fix(toast): extract player copy at the door, never render [object Object]
