@@ -578,17 +578,27 @@ export async function adminDials({
   return execTx(client, signer, tx)
 }
 
+const created_id = (res, match) =>
+  res.r?.objectChanges?.find((c) => c.type === 'created' && match(String(c.objectType)))?.objectId ?? null
+
 /** Best-effort character mint through the SDK choke (paid door — the free door is zkLogin-gated on-chain).
+ *  TWO transactions since #1714 (`401e21c29`): character creation ends in a terminal `&Random` world join, so
+ *  the personal kiosk can no longer be created in the mint tx — mirror `test/localnet/bots/framework/driver.js`
+ *  (`onboard_kiosk()` then `create_character({world_id, kiosk_id, personal_kiosk_cap_id})`). The world is the
+ *  seeded one, read from its one home (`readManifests().seed`) — the same id both callers dial.
  *  The SDK localnet resolver gaps (GAP-1/GAP-2, documented in test/localnet/bots/framework/context.js) are
  *  owned by the live gate lane — on any build-time gap we SKIP honestly (never a raw hand-built kiosk PTB). */
 export async function tryCreateCharacter({ client, wallet, ids, kiosk_pkg, name, character_class }) {
   try {
-    const [{ create_character_paid_ptb }, { aresrpg_deployment, aresrpg_shared_ref }, { KioskClient }] =
-      await Promise.all([
-        import('../../packages/sdk/src/sui/write/items_creation.js'),
-        import('../../packages/sdk/src/deployment/aresrpg.js'),
-        load_deps(),
-      ])
+    const [
+      { create_character_paid_ptb, onboard_kiosk_ptb },
+      { aresrpg_deployment, aresrpg_shared_ref },
+      { KioskClient },
+    ] = await Promise.all([
+      import('../../packages/sdk/src/sui/write/items_creation.js'),
+      import('../../packages/sdk/src/deployment/aresrpg.js'),
+      load_deps(),
+    ])
     // diagnose GAP-1/GAP-2 before building anything (context.js precedent — refuse loudly, never guess)
     const dep = aresrpg_deployment('localnet', ids) // throws on GAP-1
     aresrpg_shared_ref('localnet', 'VERSION', false, { objectId: dep.VERSION }) // throws on GAP-2
@@ -604,23 +614,41 @@ export async function tryCreateCharacter({ client, wallet, ids, kiosk_pkg, name,
       },
     })
     const context = { network: 'localnet', ids: { aresrpg: ids }, kiosk_client }
-    const tx = create_character_paid_ptb(context)({ name, class: character_class, price_mist })
+    const world_id = readManifests().seed.world?.id
+    if (!world_id)
+      throw new Error('seed manifest has no world.id — character creation enters a world atomically (#1714)')
     const signer = await signerOf(wallet.privkey)
+
+    // tx 1 — onboard: create + share the personal kiosk and soulbind its cap, so the mint tx only borrows them.
+    const onboard = await execTx(client, signer, onboard_kiosk_ptb(context)({}))
+    // `0x2::kiosk::KioskOwnerCap` also CONTAINS '::kiosk::Kiosk', so the kiosk is matched on the exact type end.
+    const kiosk_id = created_id(onboard, (t) => t.endsWith('::kiosk::Kiosk'))
+    const personal_kiosk_cap_id = created_id(onboard, (t) => t.includes('::personal_kiosk::PersonalKioskCap'))
+    if (!onboard.ok || !kiosk_id || !personal_kiosk_cap_id)
+      return {
+        ...onboard,
+        ok: false,
+        reason: `kiosk onboarding FAILED: ${onboard.abort ?? 'no kiosk/cap in effects'} (digest ${onboard.digest})`,
+        character_id: null,
+        kiosk_id,
+        personal_kiosk_cap_id,
+      }
+
+    // tx 2 — the mint itself, entering the seeded world atomically against the kiosk onboarded above.
+    const tx = create_character_paid_ptb(context)({
+      name,
+      class: character_class,
+      price_mist,
+      world_id,
+      kiosk_id,
+      personal_kiosk_cap_id,
+    })
     const res = await execTx(client, signer, tx)
-    const character_id = res.r?.objectChanges?.find(
-      (c) => c.type === 'created' && String(c.objectType).includes('::character::Character')
-    )?.objectId
-    const kiosk_id = res.r?.objectChanges?.find(
-      (c) => c.type === 'created' && String(c.objectType).includes('::kiosk::Kiosk')
-    )?.objectId
-    const personal_kiosk_cap_id = res.r?.objectChanges?.find(
-      (c) => c.type === 'created' && String(c.objectType).includes('::personal_kiosk::PersonalKioskCap')
-    )?.objectId
     return {
       ...res,
-      character_id: character_id ?? null,
-      kiosk_id: kiosk_id ?? null,
-      personal_kiosk_cap_id: personal_kiosk_cap_id ?? null,
+      character_id: created_id(res, (t) => t.includes('::character::Character')),
+      kiosk_id,
+      personal_kiosk_cap_id,
     }
   } catch (e) {
     return { ok: false, skipped: true, reason: String(e?.message ?? e).split('\n')[0] }
