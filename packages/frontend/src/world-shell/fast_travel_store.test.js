@@ -65,14 +65,14 @@ describe('begin — idle → resolving, target seeded', () => {
     expect(again).toBe(flying) // unchanged reference — re-begin is a no-op
   })
   test('friend preflight refusal is idle-guarded, repeatable, and never clobbers an active trip', () => {
-    const offline = { type: 'begin', refusal: 'fast_travel.friend_offline' }
-    const first = reduce_fast_travel(initial_ft_state(), offline)
-    const repeated = reduce_fast_travel(first, offline)
-    expect(first).toMatchObject({ phase: 'idle', refusal: 'fast_travel.friend_offline', refusal_seq: 1 })
-    expect(repeated).toMatchObject({ phase: 'idle', refusal: 'fast_travel.friend_offline', refusal_seq: 2 })
+    const refused = { type: 'begin', refusal: 'fast_travel.realm_unreachable' }
+    const first = reduce_fast_travel(initial_ft_state(), refused)
+    const repeated = reduce_fast_travel(first, refused)
+    expect(first).toMatchObject({ phase: 'idle', refusal: 'fast_travel.realm_unreachable', refusal_seq: 1 })
+    expect(repeated).toMatchObject({ phase: 'idle', refusal: 'fast_travel.realm_unreachable', refusal_seq: 2 })
 
     const flying = run(initial_ft_state(), begin, resolved())
-    expect(reduce_fast_travel(flying, offline)).toBe(flying)
+    expect(reduce_fast_travel(flying, refused)).toBe(flying)
   })
 })
 

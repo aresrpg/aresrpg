@@ -268,8 +268,8 @@ terrain — the mismatched-height ghost problem never materializes because the r
 
 ### 4.3 Presence is mode-blind — proven, not promised
 
-The chat online count reads `select_online_count` (`game/core/presence_count.js:7`) =
-`visible_characters.size + 1`, fed by the presence atom's peer table off `pos`/`state`
+The chat observation count reads `select_observed_count` (`game/core/presence_count.js`) =
+`observed_peers.size + 1`, fed by the presence atom's peer table off `pos`/`state`
 liveness — the SAME table that already includes cross-dungeon peers the render filter drops
 (`remote_players.js:222-245` documents this exact split). The mode bit lives only in the peer
 row + the render predicate; no presence fold, expiry clock, or count selector reads it. The
