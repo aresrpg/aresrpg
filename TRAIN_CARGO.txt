@@ -1,2 +1,2 @@
-9e011ecd59291c5e731e533c9fcde65f5a8527c1 train/train-74 fix(lint): .jsx was invisible to the flat config — every glob now names it
-79d3f6e7b790ccd922cfe89a52803e6791894aa6 train/train-74 chore(lint): retire the inert react-hooks directives, order the harness imports
+b1317b2479620347fd62387bcf8a671e7aa69cb8 train/train-75 test(gold): the #2035 parity rows land in a reachable selector
+5ee5579687fa084539ddda7bb92a4de19f21abdb train/train-75 fix(gold): the parity gate resolves the corpus through ARES_SEED_DIR
