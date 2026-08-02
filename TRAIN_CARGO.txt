@@ -1,1 +1,2 @@
-1b98972c5a25a52d170140a769382e3d8335d654 train/train-49 test(encyclopedia): mob_slugs freshness tooth — served names must have keys (Refs #1368)
+19c8c5947901adabaf91d088dc24692ce1643012 lane/1993-train0-view test(fight): seal fight_visible_view with per-step replay snapshots (Refs #1993)
+08bd9f10248d310211d95747a6d5e301581447c4 lane/1993-train0-view feat(fight): fight_visible_view — the one projection, whole-but-thin (Refs #1993)
