@@ -90,12 +90,26 @@ const payload_of = (msg) => {
 // still queued: a silent give-up would leave the board frozen with no evidence.
 const REENTRANT_FOLD_CAP = 1000
 
+/** One queued input's identity for the storm report. A TYPE alone cannot convict a dispatcher when several
+ *  unrelated edges share one door — `ctx` is published by the roster adopter, seat follow, the mob-identity
+ *  resolver and the trap read alike, so a live cap firing named `ctx` and identified nothing (#1740, and the
+ *  session was gone by the time the log was read). The FIELDS the message carries are the discriminator the
+ *  report already holds. Total by construction: a hostile accessor degrades to the bare type, never a second
+ *  throw on top of the storm. */
+const storm_label = (entry) => {
+  const type = String(entry?.msg?.type ?? 'unknown')
+  try {
+    const fields = Object.keys(entry?.msg?.ctx ?? {})
+    return fields.length ? `${type}{${fields.join('+')}}` : type
+  } catch {
+    return type
+  }
+}
+
 const reentrant_storm = (pending) =>
   new Error(
     `fight store: ${REENTRANT_FOLD_CAP} re-entrant inputs folded during ONE input — a subscriber dispatches on ` +
-      `every notification and never converges (still queued: ${[
-        ...new Set(pending.map((entry) => String(entry?.msg?.type ?? 'unknown'))),
-      ].join(', ')})`
+      `every notification and never converges (still queued: ${[...new Set(pending.map(storm_label))].join(', ')})`
   )
 
 /**

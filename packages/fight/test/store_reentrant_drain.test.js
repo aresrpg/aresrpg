@@ -77,4 +77,25 @@ describe('the store drains re-entrant inputs iteratively (#1636)', () => {
     expect(() => store.getState().input({ type: 'error', message: 'after' }, 3)).not.toThrow()
     expect(store.getState().error).toBe('after')
   })
+
+  // #1740 — the cap FIRED in a real coop session on served edge and named its queue `ctx`, which identifies
+  // nothing: four unrelated edges publish through the ctx door (the roster adopter, seat follow, the mob-identity
+  // resolver, the trap read). A type alone cannot convict a dispatcher, and the session's state was gone by the
+  // time the log was read. The FIELDS a queued ctx carries do name it — they are the one discriminator the
+  // message already has in hand.
+  test('a ctx storm names the FIELDS being republished, not just the type', () => {
+    const store = create_fight_store()
+    store.getState().input({ type: 'init', fight_id: FIGHT }, 1)
+    const unsubscribe = store.subscribe(() => {
+      store.getState().input({ type: 'ctx', ctx: { roster: [] } })
+    })
+    let thrown = null
+    try {
+      store.getState().input({ type: 'ctx', ctx: {} }, 2)
+    } catch (error) {
+      thrown = error
+    }
+    unsubscribe()
+    expect(thrown?.message).toContain('ctx{roster}')
+  })
 })
