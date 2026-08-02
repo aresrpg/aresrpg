@@ -150,6 +150,14 @@ const fold = (result, type, payload) => {
       if (payload.result_id && payload.result_id !== result.result_id) return result
       if (result.loot_instances_resolved && !payload.instances) return result
       if (result.loot_resolved && !payload.resolved) return result
+      // ADOPT-DON'T-BLANK (#1867). An EMPTY declaration arriving over rows this card already holds is
+      // ABSENCE, never proof that nothing dropped: the settlement receipt certified those items and the
+      // display read behind it is a catch-up read. `mint_all_and_burn` DRAINS `rolled` one entry per
+      // `mint_rolled` (results.move), so the object read at the tail of settlement legitimately observes a
+      // shorter — or empty — declaration than the receipt that opened this card, and adopting it wholesale
+      // is what made a looted item appear, vanish, and come back when the richer instance rows landed.
+      // Certified loot leaves this slice on `close` and nowhere else.
+      if (!(payload.loot ?? []).length && (result.loot ?? []).length) return result
       return {
         ...result,
         loot: payload.loot,
