@@ -20,8 +20,7 @@ export function toast_message(input: unknown): ToastErrorCopy {
   if (typeof input === 'object') {
     const { message } = input as Readonly<{ message?: unknown }>
     // An Error (or any shape carrying player-readable text) still says what happened — the object tag never does.
-    if (typeof message === 'string' && message.trim())
-      return { message, diagnostic: true }
+    if (typeof message === 'string' && message.trim()) return { message, diagnostic: true }
     return { message: i18n.t('errors.request_failed'), diagnostic: true }
   }
   // Numbers/booleans stringify honestly; only object-shaped inputs can produce the `[object Object]` tag.

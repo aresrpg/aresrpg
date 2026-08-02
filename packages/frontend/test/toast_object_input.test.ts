@@ -54,7 +54,7 @@ describe('#2032 — no toast ever renders [object Object]', () => {
     try {
       const id = push_event_toast({
         state: 'info',
-        title: /** @type {any} */ (new Error('Presence link dropped')),
+        title: /** @type {any} */ new Error('Presence link dropped'),
         message: 'Resetting the streams.',
       })
       const entry = event_toast_store.get().find((toast) => toast.id === id)
