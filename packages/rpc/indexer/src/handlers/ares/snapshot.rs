@@ -129,6 +129,10 @@ const ARES_ORIGIN_EFFECT_BYTES: &[(&str, usize)] = &[
     ("Gjb9CppYjWUPTruSMkfJ83ZPKP7JtkXM9otobcb6K9Hc", 33),
     ("6XD9S2etC5Y7Jvj7sTjGSiz8ousCyJ8EVwXodh2nMXYd", 33),
     ("9qxy69fWNHZGUgYTr9oJStEYXk9TDMgwetkES4YSW1tH", 33),
+    // Ceremony #5 — the 2026-08-02 republish. Same widened `Effect` (9 x u8 + 3 x u64 = 33): that
+    // lineage's only `spell_effect.move` change is an added kind constant, which cannot move a
+    // fixed-scalar wire width.
+    ("F5NF7jBTonxFrPwijSRjQqk4kgJN4akQBvh89xNQaZXw", 33),
 ];
 
 #[derive(Deserialize)]
