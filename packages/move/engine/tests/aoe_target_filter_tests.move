@@ -37,6 +37,20 @@ fun single(effect: Effect): SpellLevel {
   spell_effect::new_spell_level(1, 0, 0, 40, false, false, false, false, 255, 255, 0, 0, false, vector[], vector[], vector[effect], vector[])
 }
 
+fun pair(a: Effect, b: Effect): SpellLevel {
+  spell_effect::new_spell_level(1, 0, 0, 40, false, false, false, false, 255, 255, 0, 0, false, vector[], vector[], vector[a, b], vector[])
+}
+
+/// A RECOIL line (kind 3) carrying the SAME zone geometry and enemies-only filter as the damage row beside it —
+/// authored exactly the way a corpus row would be. `apply_effect` short-circuits on the kind before any of that
+/// is read, which is the property under test.
+fun recoil(value: u64): Effect {
+  spell_effect::new_effect(
+    spell_effect::k_caster_damage(), spell::el_fire(), value, spell_effect::shape_circle(), 2,
+    spell_effect::tf_not_team(), 100, 0, 0, 0, spell_effect::phase_on_enter(),
+  )
+}
+
 fun spec(hp: u64, kit: vector<SpellLevel>): MobSpec {
   mob::new_mob_spec(1, 1, hp, 6, 6, z(), kit, 100, vector[])
 }
@@ -84,6 +98,30 @@ fun enemies_only_zone_never_splashes_the_caster_or_its_allies() {
   assert!(participant::hp(fight::participants(&fight).borrow(0)) < player_hp, 0); // the enemy took the zone
   assert!(mob::hp(fight::mobs(&fight).borrow(0)) == caster_hp, 1); // the caster did NOT
   assert!(mob::hp(fight::mobs(&fight).borrow(1)) == ally_hp, 2); // nor its ally
+  ts::return_shared(fight);
+  sc.end();
+}
+
+#[test]
+/// #1809 REOPEN — the mechanism the filter seal could not cover. `k_caster_damage` (recoil) is a CASTER-SIDE
+/// kind: `apply_effect` hits the caster for the FLAT authored value and returns before the zone is walked, so
+/// neither the geometry nor the enemies-only filter on the row is consulted. That is why a boss can measurably
+/// lose HP inside its own zone while every splash assertion above stays true. The @aresrpg/sim twin
+/// (`packages/sim/test/zone_recoil_twin.test.js`) drove this RED — it resolved kind 3 through the zone instead.
+fun recoil_is_caster_side_and_blind_to_the_zone_and_its_filter() {
+  let mut sc = ts::begin(OWNER);
+  let recoil_value = 10;
+  let mut fight = two_mobs(&mut sc, spec(500, vector[pair(zone_damage(36), recoil(recoil_value))]));
+  let player_hp = participant::hp(fight::participants(&fight).borrow(0));
+  let caster_hp = mob::hp(fight::mobs(&fight).borrow(0));
+  let ally_hp = mob::hp(fight::mobs(&fight).borrow(1));
+  let mut rng = 1u64;
+  cast::resolve_mob_cast(&mut fight, 0, 0, PLAYER_CELL, &mut rng);
+  // The caster is inside an enemies-only zone, so the filter would have spared it — the recoil is what lands,
+  // for its flat authored value, no stats and no element resist applied.
+  assert!(mob::hp(fight::mobs(&fight).borrow(0)) == caster_hp - recoil_value, 0);
+  assert!(participant::hp(fight::participants(&fight).borrow(0)) < player_hp, 1); // the zone still lands
+  assert!(mob::hp(fight::mobs(&fight).borrow(1)) == ally_hp, 2); // and the recoil never reaches the zone
   ts::return_shared(fight);
   sc.end();
 }

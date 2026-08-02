@@ -308,7 +308,7 @@ export const apply_spell_effect = (
     )
     return {
       state: after_shields,
-      direct_damage: effect.kind === K_CASTER_DAMAGE ? 0 : after.damage_dealt,
+      direct_damage: after.damage_dealt,
       effects: hit_result_effects(after_shields, after, target_id),
     }
   }
@@ -822,6 +822,30 @@ export const process_spell_cast = (
 
   const result = effect_list.reduce(
     (acc, effect) => {
+      // ── CASTER-SIDE KIND: RECOIL (#1809) ────────────────────────────────────────────────────────────────
+      // `cast.move::apply_effect` opens with `k_caster_damage` — it hits the CASTER for the flat authored
+      // value through the raw sink and RETURNS: the zone is never walked, `target_filter` never consulted, the
+      // proc roll never taken. Decoding kind 3 as an ordinary `DAMAGE` line (spell_templates.js keeps the
+      // numeric `kind` precisely so this seam can tell them apart) sent it through the zone instead, so a mob
+      // zone spell carrying a recoil row diverged twice: the chain debited the caster while the client debited
+      // nobody, and the client debited every enemy in the zone while the chain debited none. Flat, raw,
+      // unconditional — the same three properties `hit_player`/`hit_mob` have on chain.
+      if (effect.kind === K_CASTER_DAMAGE) {
+        const recoiled = apply_damage(acc.state, caster_id, effect.value ?? 0)
+        return {
+          ...acc,
+          state: recoiled.state,
+          effects: [
+            ...acc.effects,
+            {
+              target_id: caster_id,
+              damage: recoiled.damage_dealt,
+              new_health: find_entity(recoiled.state, caster_id)?.health ?? 0,
+              killed: recoiled.killed,
+            },
+          ],
+        }
+      }
       const aoe_cells = get_aoe_cells(effect, target, caster.cell)
       if (effect.type === 'PLACE_TRAP') {
         const placed = place_trap(
