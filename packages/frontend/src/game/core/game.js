@@ -127,8 +127,22 @@ export const INITIAL_STATE = {
   /** @type {any[]} chat log (Stage 5) */
   message_history: [],
 
-  /** @type {Map<string, any>} other players in range */
-  visible_characters: new Map(),
+  /**
+   * ADVISORY peer OBSERVATIONS (realtime constitution D2) — what the p2p room reported seeing, and nothing
+   * more. ONE writer: core/modules/presence.js. It answers no authority question: not who is online, not who
+   * is in this world, not who owns a character. Each row carries `observed_at` so a consumer can ask how old
+   * the observation is before acting on it.
+   * @type {Map<string, any>}
+   */
+  observed_peers: new Map(),
+  /**
+   * MY OWN followers' render rows — locally driven, derived from accepted on-chain party membership. ONE
+   * writer: world-shell/group_wiring.js's apply_follow. A separate home from the map above because it is a
+   * separate FACT: these rows are mine by construction, never an observation. The renderer composes the two
+   * (core/render_rows.js); nothing else may.
+   * @type {Map<string, any>}
+   */
+  owned_follow_render_rows: new Map(),
   /** @type {Map<string, any>} */
   visible_mobs_group: new Map(),
   /**

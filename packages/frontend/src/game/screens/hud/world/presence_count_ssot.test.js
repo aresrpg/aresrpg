@@ -6,7 +6,7 @@ import { join, relative } from 'node:path'
 
 import { describe, expect, test } from 'bun:test'
 
-import { select_online_count } from '../../../core/presence_count.js'
+import { select_observed_count } from '../../../core/presence_count.js'
 
 const WORLD_CHAT = new URL('./WorldChat.jsx', import.meta.url)
 const FRIENDS_PANEL = new URL('./OnlinePlayers.jsx', import.meta.url)
@@ -21,27 +21,48 @@ const source_paths = (dir) =>
   })
 const SOURCE_PATHS = source_paths(FRONTEND_SRC)
 
-describe('aggregate presence count SSOT', () => {
-  test('chat selector counts p2p peers plus self', () => {
-    expect(select_online_count({ visible_characters: new Map() })).toBe(1)
-    expect(select_online_count({ visible_characters: new Map([['peer-a', {}], ['peer-b', {}]]) })).toBe(3)
+describe('aggregate observation count SSOT', () => {
+  test('chat selector counts peer observations plus self', () => {
+    expect(select_observed_count({ observed_peers: new Map() })).toBe(1)
+    expect(
+      select_observed_count({
+        observed_peers: new Map([
+          ['peer-a', {}],
+          ['peer-b', {}],
+        ]),
+      })
+    ).toBe(3)
   })
 
-  test('only WorldChat reads and displays an aggregate presence count', async () => {
+  // It counts OBSERVATIONS, so it reads the observations home alone. My own party followers used to land in
+  // the same Map and silently inflate this number into a claim about how many players were around — the
+  // realtime constitution's advisory-only law, broken by a count (they now live in owned_follow_render_rows).
+  test('my own followers never inflate the observation count', () => {
+    const state = {
+      observed_peers: new Map([['peer-a', {}]]),
+      owned_follow_render_rows: new Map([
+        ['alt-1', {}],
+        ['alt-2', {}],
+      ]),
+    }
+    expect(select_observed_count(state)).toBe(2)
+  })
+
+  test('only WorldChat reads and displays an aggregate observation count', async () => {
     const [chat, friends, ...sources] = await Promise.all([
       source(WORLD_CHAT),
       source(FRIENDS_PANEL),
       ...SOURCE_PATHS.map(source),
     ])
     const aggregate_reads = SOURCE_PATHS.flatMap((path, index) =>
-      (sources[index].match(/visible_characters\??\.size/g) ?? []).map(() => relative(FRONTEND_SRC, path))
+      (sources[index].match(/observed_peers\??\.size/g) ?? []).map(() => relative(FRONTEND_SRC, path))
     )
 
     expect(aggregate_reads).toEqual(['game/core/presence_count.js'])
-    expect(chat).toContain('use_game_state(select_online_count)')
+    expect(chat).toContain('use_game_state(select_observed_count)')
     expect(chat).toContain('use_presence((state) => state.link_status)')
     expect(chat).toContain('world_chat.link_${link_status}')
-    expect(chat).toContain('<b>{online_count}</b>')
+    expect(chat).toContain('<b>{observed_count}</b>')
     expect(friends).not.toContain('party.online_here')
     expect(friends).not.toContain('gw-players__fcount')
   })

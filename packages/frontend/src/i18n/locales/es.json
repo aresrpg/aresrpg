@@ -1848,7 +1848,6 @@
     "tab_commerce": "Comercio",
     "tab_group": "Grupo",
     "tab_combat": "Combate",
-    "online": "En línea",
     "link_idle": "Presencia apagada",
     "link_connecting": "Conectando presencia",
     "link_connected": "Presencia conectada",
@@ -1872,7 +1871,8 @@
     "log_mp_drain": "{{caster}} drena {{amount}} PM a {{target}}",
     "log_dodge": "{{target}} esquiva la pérdida de {{dodged}} {{pool}}",
     "log_crit_prefix": "¡CRÍTICO!",
-    "log_unknown_fighter": "Un luchador"
+    "log_unknown_fighter": "Un luchador",
+    "observed": "vistos"
   },
   "fight_end": {
     "victory": "Victoria",

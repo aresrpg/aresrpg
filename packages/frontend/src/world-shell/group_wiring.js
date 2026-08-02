@@ -97,20 +97,23 @@ function owned_character_name(character_id) {
   return roster.find((card) => card?.id === character_id)?.name ?? null
 }
 
-/** Apply the reducer's follow rows to presence's stable Map; remote_players polls this Map every frame. */
+/** Apply the reducer's follow rows to their OWN stable render map; remote_players polls it every frame.
+ *  These rows are MY followers, derived from accepted on-chain membership — never a p2p observation, so they
+ *  no longer share a Map with one (realtime constitution D2). Single writer, single meaning: this function
+ *  owns every add and every delete here, and the renderer is the only place the two homes meet. */
 function apply_follow(rows) {
   const state = context.get_state()
-  const visible = state.visible_characters
-  if (!(visible instanceof Map)) return
+  const follow_rows = state.owned_follow_render_rows
+  if (!(follow_rows instanceof Map)) return
   const roster = state.sui?.characters ?? []
   const cards = new Map(roster.filter((card) => card?.id).map((card) => [card.id, card]))
   const leader_character_id = wiring?.store.getState().follow.leader_character_id
   const leader = roster.find((card) => card.id === leader_character_id)
   const entries = build_follow_entries(rows, cards, leader?.world_id ?? null)
   const next_ids = new Set(entries.map((row) => row.id))
-  for (const id of applied_ids) if (!next_ids.has(id) && visible.get(id)?.owned_follow) visible.delete(id)
+  for (const id of applied_ids) if (!next_ids.has(id)) follow_rows.delete(id)
   for (const row of entries) {
-    visible.set(row.id, row.entry)
+    follow_rows.set(row.id, row.entry)
   }
   applied_ids = next_ids
 }

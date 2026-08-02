@@ -16,7 +16,7 @@
 // the ≤4ms budget — and is skipped entirely on idle frames. See use_minimap.js.
 //
 // OTHER PLAYERS: peer dots project from the SAME presence bridge every other HUD surface reads —
-// core/modules/presence.js's `state.visible_characters` — via presence_markers.js's pure adapter, never a
+// the composed render rows (core/render_rows.js) — via presence_markers.js's pure adapter, never a
 // second subscription to the p2p store. Computed fresh every render (not memoized on the Map — see that
 // file's header for why) and concatenated with the spawn markers below.
 
@@ -28,6 +28,7 @@ import { use_game_state } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
 import { use_minimap } from './use_minimap.js'
 import { MinimapModal } from './MinimapModal.jsx'
+import { render_rows } from '../../core/render_rows.js'
 import { peer_markers } from './presence_markers.js'
 import './minimap.css'
 
@@ -43,20 +44,22 @@ export function Minimap() {
   const zones = use_spawns((s) => s.zones)
   const templates = use_spawns((s) => s.templates)
   const pending = use_spawns((s) => s.pending)
-  const visible_characters = use_game_state((s) => s.visible_characters)
+  // The two presence homes are read as the stable Maps they are and joined ONLY here, at the render edge.
+  const observed_peers = use_game_state((s) => s.observed_peers)
+  const owned_follow_render_rows = use_game_state((s) => s.owned_follow_render_rows)
   const canvas_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const [open, set_open] = useState(false)
 
   // Markers: plot every live spawn (draw_minimap culls to the disc); dots only on the small map (no hover/click
   // — the whole lens is one click target that opens the big map). Spawn dots are memoised on the store slices
   // (they change only on zone reconciliation); peer markers are recomputed fresh every render on purpose
-  // (presence_markers.js — visible_characters is a stable Map mutated in place, so a memo keyed on it would never
+  // (presence_markers.js — each source is a stable Map mutated in place, so a memo keyed on it would never
   // see a peer move).
   const spawn_dots = useMemo(
     () => spawn_markers({ zones, templates, pending }).map((s) => ({ x: s.x, z: s.z, kind: s.kind, key: s.key })),
     [zones, templates, pending]
   )
-  const markers = [...spawn_dots, ...peer_markers(visible_characters)]
+  const markers = [...spawn_dots, ...peer_markers(render_rows({ observed_peers, owned_follow_render_rows }))]
   use_minimap(canvas_ref, { size: SIZE, view_radius_blocks: VIEW_RADIUS_BLOCKS, sample_n: SAMPLE_N, markers, enabled: !!pose })
 
   // Spectate / pre-first-frame: no pose published → no map (PartyFrame's render-nothing idiom).

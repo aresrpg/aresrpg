@@ -16,11 +16,12 @@
 // Dropped from the full vendored Chat for the roam HUD: private DMs, the social menu, slash-commands (all live
 // in the full game HUD, not P2).
 //
-// Option B "Minimal Float": the standalone OnlinePlayers sidebar mount is gone (minimal chrome),
-// so its count folds into the chat header ("CHAT · N ONLINE"). N = the room presence roster
-// (core/modules/presence.js) + 1 for self. This is the sole aggregate presence-count read.
-// visible_characters is a Map mutated in place (its ref never changes) — subscribe to a stable digest
-// primitive so React observes spawn/despawn notifications from the presence module.
+// Option B "Minimal Float": the standalone OnlinePlayers sidebar mount is gone (minimal chrome), so its count
+// folds into the chat header ("CHAT · N SEEN"). N = the peer OBSERVATIONS this client currently holds
+// (core/modules/presence.js) + 1 for self, and the label says exactly that — it is not a player population
+// and not an online roster (realtime constitution D2). This is the sole aggregate observation-count read.
+// observed_peers is a Map mutated in place (its ref never changes) — subscribe to a stable digest primitive
+// so React observes spawn/despawn notifications from the presence module.
 //
 // Room chat: one broadcast on the lobby room's data channel, folded back through the one presence door.
 
@@ -29,7 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { CHAT_MAX_LENGTH } from '@aresrpg/world/presence'
 
 import { use_fight, use_game_state } from '../../../store.js'
-import { select_online_count } from '../../../core/presence_count.js'
+import { select_observed_count } from '../../../core/presence_count.js'
 import { send_chat_message } from '../../../core/chat_send.js'
 import { CHANNEL } from '../../../core/modules/chat.js'
 import { use_presence } from '../../../../world-shell/presence_adapter.js'
@@ -98,7 +99,7 @@ export function WorldChat({ readonly = false } = {}) {
   // LIVE fighters map for combat-log name healing (resolve_segment_text) — the core view (S2 mirror kill):
   // a NEW Map only per core fold (memoized view identity), so this stays a stable read between fight ticks.
   const fighters = use_fight(world_fight_view)?.fighters
-  const online_count = use_game_state(select_online_count)
+  const observed_count = use_game_state(select_observed_count)
   const link_status = use_presence((state) => state.link_status)
   const link_error = use_presence((state) => state.link_error)
 
@@ -187,7 +188,7 @@ export function WorldChat({ readonly = false } = {}) {
     <div className="gw-chat gw-panel" ref={root_ref}>
       <div className="gw-chat__hdr">
         <span className="gw-chat__title">
-          {t('world_chat.header')} · <b>{online_count}</b> {t('world_chat.online')} ·{' '}
+          {t('world_chat.header')} · <b>{observed_count}</b> {t('world_chat.observed')} ·{' '}
           <span
             className={`gw-chat__link gw-chat__link--${link_status}`}
             role="status"

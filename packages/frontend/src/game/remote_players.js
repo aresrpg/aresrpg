@@ -2,8 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // D206 — REMOTE PLAYERS in the voxel world (feature #19's render half; replaces roam.js's dead
 // foreign-player sprites). ONE home for BOTH modes: the walk session AND the logged-out spectate
-// diorama create this layer; it renders every presence entry (visible_characters — fed by the room
-// presence fold plus locally-driven owned followers; the active id is never inserted) as a real engine avatar
+// diorama create this layer; it renders every render row (render_rows — the room's peer OBSERVATIONS joined
+// to my own locally-driven followers, composed here at the render edge and nowhere else; the active id is
+// never inserted) as a real engine avatar
 // (class rig + hair + equipped pet companion + veteran-title aura), eases position → target_position (presence retargets, we
 // lerp — roam's contract), stands the body on the terrain via ground_surface_y (presence packets
 // carry CELLS, no y), derives yaw/anim from motion, and cleans up on despawn. Self-contained rAF;
@@ -27,6 +28,7 @@ import { PLACEHOLDER_RIG_CLASS, character_model_urls, character_rig_of } from '.
 import { read_worn_templates } from './cosmetic_glb.js'
 import { create_remote_character_cache } from './remote_character_cache.js'
 import { context } from './store.js'
+import { render_rows, render_row_of } from './core/render_rows.js'
 import { game_log } from '../core/log.js'
 import { instrument_cpu_callback } from './cpu_span.js'
 
@@ -277,13 +279,13 @@ export function create_remote_players(engine, world_canvas = null) {
       (game_log('remote', `D218 anim window: ${anim_ticks} ticks / ${rigs.size * 300} rig-frames`), (anim_ticks = 0))
     const dt = Math.min(0.1, (now - last_t) / 1000)
     last_t = now
-    const visible = context.get_state().visible_characters
+    const state = context.get_state()
     const cam = engine.get_camera?.() // viewer eye — the D237 overworld range reference (read once per frame)
     // FIGHT-VIEW CULL signal — read once per frame (same idiom as `cam` above); see remote_rig_visible.
     const fight_active = world_fight_active(fight_store.getState())
     // D237: gate SPAWNS on instance scope + overworld range — an out-of-instance or too-far peer never gets a
     // rig (one-time DEV log per peer; cleared on spawn so a later drop re-logs).
-    for (const [id, entry] of visible) {
+    for (const [id, entry] of render_rows(state)) {
       if (rigs.has(id)) continue
       const p = entry.target_position ?? entry.position ?? fallback_position
       if (should_show(id, p.x, p.z, cam)) {
@@ -297,7 +299,7 @@ export function create_remote_players(engine, world_canvas = null) {
     // D237: DROP a rig that left visibility OR fell out of my instance scope / overworld range (peer entered a
     // dungeon, or roamed too far away). Uses the rig's own eased position for the range test.
     for (const [id, r] of rigs) {
-      const entry = visible.get(id)
+      const entry = render_row_of(state, id)
       // D237 churn fix: range-test against the peer's REAL broadcast position (target_position — the SAME
       // source the spawn loop gates on), NOT the lagging eased rig position (r.x/r.z). A rig is planted at the
       // peer's OLD position (entry.position) then eases toward target; testing r.x here dropped a rig whose
@@ -328,7 +330,7 @@ export function create_remote_players(engine, world_canvas = null) {
       plate_rect = fallback_rect
     }
     for (const [id, r] of rigs) {
-      const entry = visible.get(id)
+      const entry = render_row_of(state, id)
       if (!entry) continue
       try {
         // D219: the read-model resolves classe/male ASYNC after the first pos packet — a rig spawned on

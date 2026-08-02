@@ -1848,7 +1848,6 @@
     "tab_commerce": "Handel",
     "tab_group": "Gruppe",
     "tab_combat": "Kampf",
-    "online": "Online",
     "link_idle": "Präsenz aus",
     "link_connecting": "Präsenz verbindet",
     "link_connected": "Präsenz verbunden",
@@ -1872,7 +1871,8 @@
     "log_mp_drain": "{{caster}} entzieht {{target}} {{amount}} BP",
     "log_dodge": "{{target}} weicht dem Verlust von {{dodged}} {{pool}} aus",
     "log_crit_prefix": "KRITISCH!",
-    "log_unknown_fighter": "Ein Kämpfer"
+    "log_unknown_fighter": "Ein Kämpfer",
+    "observed": "gesichtet"
   },
   "fight_end": {
     "victory": "Sieg",

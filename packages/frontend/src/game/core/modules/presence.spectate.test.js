@@ -40,7 +40,7 @@ afterEach(reset_expedition_sdk_mock)
 function make_spectator_context() {
   const events = new EventEmitter()
   let state = {
-    visible_characters: new Map(),
+    observed_peers: new Map(),
     sui: { characters: [] }, // ← ZERO own-roster: the whole point of the proof
   }
   const reducer = presence()
@@ -64,8 +64,8 @@ test('foreign avatar builds from a core peer row with an EMPTY own-roster (spect
   // A remote peer's decoded room position.
   presence_input({ type: 'peer_pos', id: 'peer_char_0xABC', x: 5, y: 7, h: 0 })
 
-  // The bridge must have inserted the foreign avatar into visible_characters from the peer row alone.
-  const entry = ctx.state.visible_characters.get('peer_char_0xABC')
+  // The bridge must have inserted the foreign avatar into observed_peers from the peer row alone.
+  const entry = ctx.state.observed_peers.get('peer_char_0xABC')
   expect(entry).toBeDefined()
   expect(entry.position).toEqual({ x: 5, y: 0, z: 7 })
   // Fallback identity (no chain reply in spectate) — renders as the default class/sprite, never crashes.
@@ -74,16 +74,16 @@ test('foreign avatar builds from a core peer row with an EMPTY own-roster (spect
 
   // Let the mocked (rejecting) identity read settle — the placeholder must SURVIVE, not throw.
   await new Promise((r) => setTimeout(r, 0))
-  expect(ctx.state.visible_characters.get('peer_char_0xABC')).toBeDefined()
+  expect(ctx.state.observed_peers.get('peer_char_0xABC')).toBeDefined()
 })
 
 test('despawn removes the foreign avatar (peer left the room)', () => {
   const ctx = make_spectator_context()
   presence().observe(ctx)
   presence_input({ type: 'peer_pos', id: 'peer_1', x: 1, y: 1 })
-  expect(ctx.state.visible_characters.has('peer_1')).toBe(true)
+  expect(ctx.state.observed_peers.has('peer_1')).toBe(true)
   presence_input({ type: 'peer_leave', id: 'peer_1' })
-  expect(ctx.state.visible_characters.has('peer_1')).toBe(false)
+  expect(ctx.state.observed_peers.has('peer_1')).toBe(false)
 })
 
 test('identity requests are NEVER left unanswered: sdk resolves but the read leg fails → record:null through the door', async () => {

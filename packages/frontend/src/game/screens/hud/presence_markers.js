@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Projects core/modules/presence.js's `visible_characters` Map into minimap marker rows — the SAME
+// Projects the composed render rows (core/render_rows.js — peer observations + my own followers) into
+// minimap marker rows — the SAME
 // {x,z,kind,key} shape world_spawns_store.js already feeds the minimap (Minimap.jsx concatenates this with
 // its spawn markers; minimap_engine.js's draw_marker dispatches on `kind`, and 'peer' paints a small cyan dot
 // — cyan is the house player-dot convention already established by the retired WorldMinimap.jsx: "owner 807:
@@ -12,17 +13,18 @@
 // remote_players.js, never written back to the shared entry) — falling back to `position` (the spawn-time
 // seed, presence.js's SPAWN branch). PURE, no React/canvas.
 //
-// Deliberately NOT memoized by callers: `visible_characters` is a stable Map mutated in place (presence.js's
+// Deliberately NOT memoized by callers: each source is a stable Map mutated in place (presence.js's
 // header: "never reallocates the Map itself"), so a dependency-array memo keyed on the Map reference would
 // never see a peer move. Minimap.jsx re-renders on the throttled player_pose heartbeat (~6/s, embed_voxel_player.js)
 // regardless of movement, so calling this fresh every render already tracks peer motion at that cadence for free.
 
 /**
- * @param {Map<string, { position?: {x:number,z:number}, target_position?: {x:number,z:number} }>} visible_characters
+ * @param {Iterable<[string, { position?: {x:number,z:number}, target_position?: {x:number,z:number} }]>} rows
+ *   the composed render rows (render_rows(state)) — a body on the map is a body on the map.
  * @returns {Array<{x:number, z:number, kind:'peer', key:string}>}
  */
-export function peer_markers(visible_characters) {
-  return Array.from(visible_characters, ([key, peer]) => ({ key, pos: peer.target_position ?? peer.position }))
+export function peer_markers(rows) {
+  return Array.from(rows, ([key, peer]) => ({ key, pos: peer.target_position ?? peer.position }))
     .filter((row) => row.pos)
     .map(({ key, pos }) => ({ x: pos.x, z: pos.z, kind: 'peer', key }))
 }

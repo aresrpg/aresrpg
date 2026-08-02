@@ -1848,7 +1848,6 @@
     "tab_commerce": "Commerce",
     "tab_group": "Party",
     "tab_combat": "Combat",
-    "online": "Online",
     "link_idle": "Presence off",
     "link_connecting": "Presence linking",
     "link_connected": "Presence connected",
@@ -1872,7 +1871,8 @@
     "log_mp_drain": "{{caster}} drained {{amount}} MP from {{target}}",
     "log_dodge": "{{target}} dodged the loss of {{dodged}} {{pool}}",
     "log_crit_prefix": "CRIT!",
-    "log_unknown_fighter": "A fighter"
+    "log_unknown_fighter": "A fighter",
+    "observed": "seen"
   },
   "fight_end": {
     "victory": "Victory",

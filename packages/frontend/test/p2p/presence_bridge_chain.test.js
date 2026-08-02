@@ -25,7 +25,7 @@ import { deliver, reset_trystero_mock } from '../../src/test_helpers/trystero_mo
 const { presence_store, presence_input } = await import('../../src/world-shell/presence_adapter.js')
 const { default: presence_module } = await import('../../src/game/core/modules/presence.js')
 const { default: chat_module } = await import('../../src/game/core/modules/chat.js')
-const { select_online_count } = await import('../../src/game/core/presence_count.js')
+const { select_observed_count } = await import('../../src/game/core/presence_count.js')
 const { join_room, leave_room } = await import('../../src/p2p/lobby-room.js')
 
 const WORLD = `0x${'a'.repeat(64)}`
@@ -37,7 +37,7 @@ const PEER = '0xPEER'
 function make_context() {
   const events = new EventEmitter()
   const modules = [presence_module(), chat_module()]
-  let state = { visible_characters: new Map(), message_history: [], selected_character_id: ME, sui: { characters: [] } }
+  let state = { observed_peers: new Map(), message_history: [], selected_character_id: ME, sui: { characters: [] } }
   const context = {
     events,
     get_state: () => state,
@@ -83,10 +83,10 @@ test('a peer through the REAL transport → game-core: visible player + online c
   expect(presence_store.getState().peers.has(PEER)).toBe(true)
 
   // 2) THE BRIDGE: the peer became a visible_character in game-core (presence.js projected it)
-  expect(await wait_for(() => context.get_state().visible_characters.has(PEER))).toBe(true)
+  expect(await wait_for(() => context.get_state().observed_peers.has(PEER))).toBe(true)
 
   // 3) the aggregate online count the WorldChat header reads = peers + self
-  expect(select_online_count(context.get_state())).toBe(2)
+  expect(select_observed_count(context.get_state())).toBe(2)
 
   // 4) a peer chat line reaches message_history through chat.js observe (subscribe_chat → dispatch → reduce)
   deliver('chat', { id: PEER, message: 'hello world', name: 'Bob', channel: 'CHAT_GENERAL' })
@@ -94,5 +94,5 @@ test('a peer through the REAL transport → game-core: visible player + online c
 
   // 5) and the peer's departure clears it — membership IS presence, with no registry to contradict it.
   presence_input({ type: 'peer_leave', id: PEER })
-  expect(await wait_for(() => !context.get_state().visible_characters.has(PEER))).toBe(true)
+  expect(await wait_for(() => !context.get_state().observed_peers.has(PEER))).toBe(true)
 })

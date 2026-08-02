@@ -9,6 +9,7 @@
 
 import { get_characters } from '../rpc/client'
 import { context } from '../game/store.js'
+import { render_row_of } from '../game/core/render_rows.js'
 import { push_event_toast } from '../game/core/toast.js'
 import { ft_dragon_glb_url, preload_mount_glb } from '../game/mount_rig.js'
 import { game_log } from '../core/log.js'
@@ -24,9 +25,17 @@ const REALM_UNREACHABLE = 'fast_travel.realm_unreachable'
 /** Address-only fallback: prefer a wallet character currently in a world, else the first. */
 const primary_of = (chars) => (chars ?? []).find((c) => c && c.world) ?? (chars ?? [])[0] ?? null
 
-/** The target peer's live broadcast position by character id (same-world retarget seed), or null. */
+// How old a peer OBSERVATION may be and still seed a landing coordinate. An observation carries its own
+// freshness for exactly this reason (realtime constitution D2): it is a hint, and a hint nobody has renewed
+// is not one. Past this the /v1 anchor stands alone — the resolver never needed the hint to reach the world.
+const POSE_HINT_MAX_AGE_MS = 30_000
+
+/** The target's last observed position by character id (same-world retarget seed), or null when we hold no
+ *  observation fresh enough to be worth anything. */
 const peer_pos_of = (cid) => {
-  const entry = context.get_state().visible_characters?.get(cid)
+  const entry = render_row_of(context.get_state(), cid)
+  const observed_at = entry?.observed_at
+  if (observed_at != null && Date.now() - observed_at > POSE_HINT_MAX_AGE_MS) return null
   const p = entry?.position ?? entry?.target_position
   return p && Number.isFinite(p.x) ? { x: p.x, z: p.z } : null
 }

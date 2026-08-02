@@ -1848,7 +1848,6 @@
     "tab_commerce": "商取引",
     "tab_group": "パーティー",
     "tab_combat": "戦闘",
-    "online": "オンライン",
     "link_idle": "プレゼンス停止",
     "link_connecting": "プレゼンス接続中",
     "link_connected": "プレゼンス接続済み",
@@ -1872,7 +1871,8 @@
     "log_mp_drain": "{{caster}}が{{target}}のMPを{{amount}}奪った",
     "log_dodge": "{{target}}が{{dodged}}{{pool}}の喪失を回避した",
     "log_crit_prefix": "クリティカル!",
-    "log_unknown_fighter": "戦闘員"
+    "log_unknown_fighter": "戦闘員",
+    "observed": "確認"
   },
   "fight_end": {
     "victory": "勝利",

@@ -1848,7 +1848,6 @@
     "tab_commerce": "Торгівля",
     "tab_group": "Група",
     "tab_combat": "Бій",
-    "online": "Онлайн",
     "link_idle": "Присутність вимкнено",
     "link_connecting": "Підключення присутності",
     "link_connected": "Присутність підключено",
@@ -1872,7 +1871,8 @@
     "log_mp_drain": "{{caster}} забрав {{amount}} ОР у {{target}}",
     "log_dodge": "{{target}} ухилився від втрати {{dodged}} {{pool}}",
     "log_crit_prefix": "КРИТ!",
-    "log_unknown_fighter": "Боєць"
+    "log_unknown_fighter": "Боєць",
+    "observed": "помічено"
   },
   "fight_end": {
     "victory": "Перемога",

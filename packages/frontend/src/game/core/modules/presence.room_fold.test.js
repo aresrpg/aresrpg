@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // ROOM FOLD PROOF — drive the exact typed inputs lobby-room.js emits through the app's one presence door and
-// assert both renderer read homes agree: visible_characters feeds remote_players' rig/chip loop, while
+// assert both renderer read homes agree: observed_peers feeds remote_players' rig/chip loop, while
 // presence_character feeds each chip's click/menu identity.
 
 import { afterEach, beforeEach, expect, test } from 'bun:test'
@@ -21,7 +21,7 @@ beforeEach(reset)
 afterEach(reset)
 
 function mount_presence_projection() {
-  let state = { visible_characters: new Map(), sui: { characters: [] } }
+  let state = { observed_peers: new Map(), sui: { characters: [] } }
   const module = presence()
   const context = {
     get_state: () => state,
@@ -45,7 +45,7 @@ test('room peer_pos, peer_state, and peer_leave fold through to the chip read ho
     position: { x: 12, y: 64, z: -7 },
     target_yaw: 1.5,
   })
-  expect(projected_state().visible_characters.get(PEER)).toMatchObject({
+  expect(projected_state().observed_peers.get(PEER)).toMatchObject({
     id: PEER,
     position: { x: 12, y: 64, z: -7 },
     target_position: { x: 12, y: 64, z: -7 },
@@ -86,7 +86,7 @@ test('room peer_pos, peer_state, and peer_leave fold through to the chip read ho
     mount_glb: 'horse.glb',
     veteran: true,
   })
-  expect(projected_state().visible_characters.get(PEER)).toMatchObject({
+  expect(projected_state().observed_peers.get(PEER)).toMatchObject({
     id: PEER,
     name: 'Room Peer',
     classe: 'yajin',
@@ -97,6 +97,6 @@ test('room peer_pos, peer_state, and peer_leave fold through to the chip read ho
   presence_input({ type: 'peer_leave', id: PEER })
 
   expect(presence_store.getState().peers.has(PEER)).toBe(false)
-  expect(projected_state().visible_characters.has(PEER)).toBe(false)
+  expect(projected_state().observed_peers.has(PEER)).toBe(false)
   expect(presence_character(PEER)).toBe(null)
 })

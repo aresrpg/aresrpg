@@ -313,14 +313,14 @@ export function create_player({
   }
   // The pilot drives the dragon flight (pure math = fast_travel_flight.js). Ground sample = the engine's
   // canonical rule (the SAME ground_surface_y remote_players + the boot scan use); live retarget reads the
-  // peer's broadcast position off the game state (visible_characters). can_fly bars takeoff mid-fight.
+  // target's last rendered position off the game state (render_row_of). can_fly bars takeoff mid-fight.
   const sample_ft_ground = (/** @type {number} */ x, /** @type {number} */ z) => {
     const g = ground_surface_y((sx, sy, sz) => engine.sample_block?.(sx, sy, sz) ?? 0, Math.floor(x), Math.floor(z))
     return g == null ? null : g
   }
   const ft_live_pos_of = (/** @type {string | null} */ id) => {
     if (!id) return null
-    const e = context.get_state().visible_characters?.get(id)
+    const e = render_row_of(context.get_state(), id)
     const p = e?.position ?? e?.target_position
     return p && Number.isFinite(p.x) ? { x: p.x, z: p.z } : null
   }
