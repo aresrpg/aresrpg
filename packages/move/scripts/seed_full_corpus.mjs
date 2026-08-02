@@ -408,51 +408,68 @@ function elements(tx) {
 }
 const fxVec = (tx, effects) =>
   tx.makeMoveVec({ type: T.effect, elements: effects })
+// PURE INPUT MEMO — the SDK allocates a FRESH PTB input per `tx.pure` call, so the corpus's repeated
+// constants (element 255, chance 100, the zero/255 defaults, the two empty u16 vectors) each burned an
+// input: the spell phase's own richest-3 probe batch measured 2070 inputs against the protocol's 2048
+// cap and the phase refused before a single signature. Same value = same input handle is PTB-legal
+// (a Move arg reads the input, it does not consume it), so one handle per distinct (kind, value) is
+// the whole fix. Keyed per Transaction via a WeakMap — a handle NEVER crosses a tx (an input index is
+// meaningless in another PTB) and the memo dies with the build. Same idiom as `elements(tx)` above.
+// Suspected trigger, UNPROVEN: an @mysten/sui dedup-behaviour change across a version bump, or plain
+// corpus growth — the margin was razor-thin either way and went negative.
+const PURE_MEMO = new WeakMap()
+const pure = (tx, kind, ...args) => {
+  let memo = PURE_MEMO.get(tx)
+  if (!memo) PURE_MEMO.set(tx, (memo = new Map()))
+  const key = `${kind}:${JSON.stringify(args, (_, v) => (typeof v === 'bigint' ? `${v}n` : v))}`
+  if (!memo.has(key)) memo.set(key, tx.pure[kind](...args))
+  return memo.get(key)
+}
 // Universal effect envelope (PHASE 8): all 22 corpus effect kinds are defined discriminants ≤ 29, so
 // `new_effect` builds them all and `is_legal` admits each (engine kinds the resolver doesn't yet READ mint
 // fine as data — balance C-6 FOLLOWUPS). element null→255; `value`/`flags` ride spell_wire.mjs's
 // `encode_effect_value` (#1250 — CENTERED for alter_stat/alter_resist, magnitude passthrough otherwise);
 // `phase` per kind (glyph/dot tick at turn START, else on-enter=0) — signature in foundation spell_effect.
 const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
-const effectFx = (tx, e) => {
+export const effectFx = (tx, e) => {
   const { value, flags } = encode_effect_value(e.kind, e.value ?? 0, e.flags ?? 0)
   return tx.moveCall({
     target: `${CFND}::spell_effect::new_effect`,
     arguments: [
-      tx.pure.u8(e.kind),
-      tx.pure.u8(e.element ?? 255),
-      tx.pure.u64(value),
-      tx.pure.u8(e.area_shape ?? 0),
-      tx.pure.u64(e.area_size ?? 0),
-      tx.pure.u8(e.target_filter ?? 0),
-      tx.pure.u8(e.chance ?? 100),
-      tx.pure.u8(e.turns ?? 0),
-      tx.pure.u8(e.stat ?? 0),
-      tx.pure.u8(flags),
-      tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
+      pure(tx, 'u8', e.kind),
+      pure(tx, 'u8', e.element ?? 255),
+      pure(tx, 'u64', value),
+      pure(tx, 'u8', e.area_shape ?? 0),
+      pure(tx, 'u64', e.area_size ?? 0),
+      pure(tx, 'u8', e.target_filter ?? 0),
+      pure(tx, 'u8', e.chance ?? 100),
+      pure(tx, 'u8', e.turns ?? 0),
+      pure(tx, 'u8', e.stat ?? 0),
+      pure(tx, 'u8', flags),
+      pure(tx, 'u8', KIND_PHASE[e.kind] ?? 0),
     ],
   })
 }
 // new_spell_level(min_cl,ap,rmin,rmax,mod,line,los,free,cpt,cpta,cd,crit_rate,ends,req[],forb[],fx[],crit_fx[])
-const spellLevel = (tx, o, fx, crit) =>
+export const spellLevel = (tx, o, fx, crit) =>
   tx.moveCall({
     target: `${CFND}::spell_effect::new_spell_level`,
     arguments: [
-      tx.pure.u16(o.min_cl),
-      tx.pure.u64(o.ap),
-      tx.pure.u64(o.rmin),
-      tx.pure.u64(o.rmax),
-      tx.pure.bool(!!o.mod),
-      tx.pure.bool(!!o.line),
-      tx.pure.bool(o.los !== false),
-      tx.pure.bool(!!o.free),
-      tx.pure.u8(o.cpt ?? 255),
-      tx.pure.u8(o.cpta ?? 255),
-      tx.pure.u8(o.cd ?? 0),
-      tx.pure.u64(o.crit ?? 0),
-      tx.pure.bool(false),
-      tx.pure.vector('u16', []),
-      tx.pure.vector('u16', []),
+      pure(tx, 'u16', o.min_cl),
+      pure(tx, 'u64', o.ap),
+      pure(tx, 'u64', o.rmin),
+      pure(tx, 'u64', o.rmax),
+      pure(tx, 'bool', !!o.mod),
+      pure(tx, 'bool', !!o.line),
+      pure(tx, 'bool', o.los !== false),
+      pure(tx, 'bool', !!o.free),
+      pure(tx, 'u8', o.cpt ?? 255),
+      pure(tx, 'u8', o.cpta ?? 255),
+      pure(tx, 'u8', o.cd ?? 0),
+      pure(tx, 'u64', o.crit ?? 0),
+      pure(tx, 'bool', false),
+      pure(tx, 'vector', 'u16', []),
+      pure(tx, 'vector', 'u16', []),
       fxVec(tx, fx),
       fxVec(tx, crit),
     ],
@@ -1354,8 +1371,8 @@ export async function seed_full_corpus() {
           tx.pure.u16(sp.unlock),
           tx.pure.string(sp.id),
           levelVec(tx, levels),
-          tx.pure.u64(SPELL_B),
-          tx.pure.u64(SPELL_P),
+          pure(tx, 'u64', SPELL_B), // batch-constant: one input for the whole PTB, not one per row
+          pure(tx, 'u64', SPELL_P),
           tx.object(VER.spells),
         ],
       })
