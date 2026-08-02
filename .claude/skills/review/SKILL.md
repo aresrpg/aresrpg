@@ -7,8 +7,10 @@ description: Pre-PR self-review checklist — the same bar this repo's gates and
 
 Run this against the **working diff** (`git diff edge...HEAD`, or your branch vs. its merge
 base), not the whole tree. Advisory and opt-in: flag what you find, fix only what your ticket
-owns — anything else becomes a filed issue, not a drive-by edit (see the "Working with an AI
-assistant" section of `CLAUDE.md`).
+owns. A pre-existing finding outside your diff is FIXED IN SCOPE when it is trivial and inside
+your fence, an EPIC CHECKBOX when it is real, and DISCARDED when it sits in an `ACCEPTED_DEBT.md`
+class below the bar — never a drive-by edit (see the "Working with an AI assistant" section of
+`CLAUDE.md`).
 
 ## 1. Run the mechanical gate first
 
@@ -87,3 +89,21 @@ and that both sides of the twin moved in the same commit.
   fix — carries both the red and the green test run.
 - Touching `changelog/NNN-RELEASE-*.md`? Player-first structure (content/features lead, ONE
   highlighted fix line max, zero infra/CI/pipeline talk) — see CONTRIBUTING.md's AUDIENCE LAW.
+
+## The materiality valve (binding, every pass)
+
+**THE BAR:** a finding is reportable only if it is **player-felt** (crash, wrong outcome, visible
+wait, confusion, money), **floor/constitution** (money, keys, truth, SSOT, the one-reducer law,
+the deterministic twin — no threshold, ever), or **release-gate** (it blocks the current spine
+phase). The tests and the accepted-class list live in
+[`ACCEPTED_DEBT.md`](../../../ACCEPTED_DEBT.md), their one home — never copied here. A finding
+sitting in a class listed there is DISCARDED AT THE INSTRUMENT, unwritten, unless that specific
+finding crosses a floor test.
+
+**TOP-5-AND-DISCARD:** a pass reports its top 5 findings ranked by the bar and discards the tail
+UNWRITTEN — no parking lots, no "minor notes" appendix. An instrument that mints rows mechanically
+computes its plan over the whole population before the first write, caps it hard, and defaults to
+dry-run.
+
+Armed gates and ratchet baselines are EXEMPT — they mint no rows and only shrink. The checklist
+above is read in full either way; the bar governs what leaves the pass, not what it looks at.
