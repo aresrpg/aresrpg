@@ -63,6 +63,13 @@ describe('EffectBadges — compact persistent-effect rows on the turn card', () 
 
   // #2000 (D42) — a 0 counter is the row's LAST COVERED TURN, not an expired row: it is live on chain and owed a
   // badge. Expiry reaches this component as an ABSENT row (the fold's `age_statuses` drops it), never as a 0.
+  // #2000 (D42) — the CAST WINDOW, the other end of the same arc: an authored-2 row that has not yet been aged
+  // (another fighter holds the active turn) reads its authored number, never one more. This is what makes the
+  // floor above a floor and not a blanket increment.
+  test('a freshly cast row displays its authored duration, not one more', () => {
+    expect(effect_badge_view(t, { id: 'cast', kind: 27, remaining_turns: 2 }).turns).toBe(2)
+  })
+
   test('a row on its last covered turn (remaining_turns 0) still renders', () => {
     expect(render([{ id: 'last', kind: 27, remaining_turns: 0 }])).toContain('Become invisible')
   })

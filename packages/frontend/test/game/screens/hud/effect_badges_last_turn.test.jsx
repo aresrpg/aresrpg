@@ -8,6 +8,11 @@
 // turn a player most needs to see a buff (its last) was the one turn the HUD hid it, while the chain still
 // resolved under it. The lifetime the family pins is 3 → 2 → 1 → 0 (packages/fight/test/badge_turn_boundary),
 // so 0 is a rendered state, not an absent one.
+//
+// DISPLAY LAW: what the badge PRINTS is not the raw counter. The reference client renders the counter raw and a
+// live row never displays zero, so the badge floors at one: this row's chain counter is 0 and its badge reads
+// "1 turn". The assertions below pin BOTH halves — the row is rendered (never filtered away), and its printed
+// duration is the floored display number, not the raw 0.
 
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -32,11 +37,11 @@ const text_of = (html) => html.replace(/<[^>]*>/g, '')
 const last_turn_invisibility = { id: 'st-last', kind: 27, remaining_turns: 0 }
 
 describe('#2000 · a row on its LAST covered turn still owns a badge', () => {
-  test('RED: the 0-counter row renders, with the chain number the family pins', () => {
+  test('RED: the 0-counter row renders, and prints the floored display number', () => {
     const html = render([last_turn_invisibility])
 
     expect([...html.matchAll(/class="fxl"/g)]).toHaveLength(1)
-    expect(text_of(html)).toContain('Become invisible · ' + t('spells.fx_turns', { count: 0 }))
+    expect(text_of(html)).toContain('Become invisible · ' + t('spells.fx_turns', { count: 1 }))
   })
 
   test('RED: it survives next to rows that still have turns to come — no row is hidden mid-window', () => {
@@ -50,7 +55,7 @@ describe('#2000 · a row on its LAST covered turn still owns a badge', () => {
     expect(render(undefined)).toBe('')
   })
 
-  test('the pure projection already read the last covered turn honestly; only the filter lied', () => {
-    expect(effect_badge_view(t, last_turn_invisibility).turns).toBe(0)
+  test('the pure projection keeps the last covered turn visible, floored so a live row never reads zero', () => {
+    expect(effect_badge_view(t, last_turn_invisibility).turns).toBe(1)
   })
 })

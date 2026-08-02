@@ -35,7 +35,11 @@ import { seed_effect_line, seed_effect_parts } from './seed-effect-line.js'
  *   stat?: number, chance?: number, source?: number }} raw
  */
 export const effect_badge_view = (t, raw, { locale = 'en', resolve_state_name } = {}) => {
-  const turns = Math.max(0, Number(raw.remaining_turns) || 0)
+  // DISPLAY LAW (#2000, D42) — the reference client renders the counter raw and a LIVE row never displays
+  // zero. Our counter is the bearer's turns STILL TO COME, so a 0 is a row on its last covered turn: with the
+  // lifecycle collecting spent rows at the bearer's turn END, a 0 reaches this view only during that final
+  // turn, and reads 1. Floor, never a blanket +1 — a freshly cast 2-turn row must still read 2, not 3.
+  const turns = Math.max(1, Number(raw.remaining_turns) || 0)
   const resolved_value = raw.value == null ? null : Number(raw.value)
   const fx = project_spell_effect({
     ...raw,
