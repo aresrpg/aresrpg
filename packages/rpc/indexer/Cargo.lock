@@ -267,7 +267,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
- "bcs",
+ "bcs 0.2.1",
  "clap",
  "dotenvy",
  "hex",
@@ -728,6 +728,15 @@ checksum = "85b6598a2f5d564fb7855dc6b06fd1c38cff5a72bd8b863a4d021938497b440a"
 dependencies = [
  "serde",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "bcs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "350f2b5fa7b76b498158ec1079dc0ea842c5b622b6b3f675005fddd889f2c9a7"
+dependencies = [
+ "serde_core",
 ]
 
 [[package]]
@@ -1986,7 +1995,7 @@ dependencies = [
  "ark-serialize",
  "auto_ops",
  "base64ct",
- "bcs",
+ "bcs 0.1.6",
  "bech32",
  "bincode",
  "blake2",
@@ -2046,7 +2055,7 @@ name = "fastcrypto-tbls"
 version = "0.1.0"
 source = "git+https://github.com/MystenLabs/fastcrypto?rev=c6010b9080b00e29d039a48c08898d90c2c1cbdd#c6010b9080b00e29d039a48c08898d90c2c1cbdd"
 dependencies = [
- "bcs",
+ "bcs 0.1.6",
  "digest 0.10.7",
  "fastcrypto",
  "hex",
@@ -2073,7 +2082,7 @@ dependencies = [
  "ark-relations",
  "ark-serialize",
  "ark-snark",
- "bcs",
+ "bcs 0.1.6",
  "byte-slice-cast",
  "derive_more 0.99.20",
  "fastcrypto",
@@ -3308,7 +3317,7 @@ version = "0.0.4"
 source = "git+https://github.com/MystenLabs/sui.git?rev=8fc60f1fa966e90398c93beb67ad4f42992889c7#8fc60f1fa966e90398c93beb67ad4f42992889c7"
 dependencies = [
  "anyhow",
- "bcs",
+ "bcs 0.1.6",
  "ethnum",
  "hex",
  "indexmap 2.14.0",
@@ -3468,7 +3477,7 @@ dependencies = [
  "anemo",
  "anemo-tower",
  "anyhow",
- "bcs",
+ "bcs 0.1.6",
  "bytes",
  "dashmap",
  "eyre",
@@ -5253,7 +5262,7 @@ name = "shared-crypto"
 version = "0.0.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=8fc60f1fa966e90398c93beb67ad4f42992889c7#8fc60f1fa966e90398c93beb67ad4f42992889c7"
 dependencies = [
- "bcs",
+ "bcs 0.1.6",
  "eyre",
  "fastcrypto",
  "serde",
@@ -5699,7 +5708,7 @@ version = "0.3.1"
 source = "git+https://github.com/MystenLabs/sui-rust-sdk.git?rev=43c5bc13202ae398b1519a3eead1f40df8ca277b#43c5bc13202ae398b1519a3eead1f40df8ca277b"
 dependencies = [
  "base64 0.22.1",
- "bcs",
+ "bcs 0.1.6",
  "bytes",
  "futures",
  "http",
@@ -5723,7 +5732,7 @@ version = "0.3.1"
 source = "git+https://github.com/MystenLabs/sui-rust-sdk.git?rev=43c5bc13202ae398b1519a3eead1f40df8ca277b#43c5bc13202ae398b1519a3eead1f40df8ca277b"
 dependencies = [
  "base64ct",
- "bcs",
+ "bcs 0.1.6",
  "blake2",
  "bnum",
  "bs58 0.5.1",
@@ -5757,7 +5766,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.21.7",
- "bcs",
+ "bcs 0.1.6",
  "better_any",
  "bincode",
  "byteorder",

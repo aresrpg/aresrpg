@@ -47,7 +47,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Move BCS — decodes on-chain event bodies (`event.contents`) into typed structs.
 # Same version the framework/sui-types already lock, so no new resolution.
-bcs = "0.1"
+bcs = "0.2"
 anyhow = "1"
 hex = "0.4"
 url = "2"
