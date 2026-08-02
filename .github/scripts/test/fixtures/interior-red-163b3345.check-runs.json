@@ -1,0 +1,34 @@
+{
+  "_provenance": {
+    "what": "The two failing check-runs still attached to 163b3345 — the commit #1002 convicted: a fix(move,sim)! whose own `gate` and `tests (fight)` read failure, and which is an ancestor of both edge and master today.",
+    "captured": "2026-08-02, GET /repos/aresrpg/aresrpg/commits/163b3345/check-runs",
+    "projection": "Field-projected, never edited: every value below is the wire byte-for-byte, but GitHub's app.owner user object is dropped. Its URL templates carry a token the public-tree membrane gate (#1784) reads as a private-content marker, and widening that gate to fit a fixture is exactly the pressure it exists to resist. Re-capture: the same endpoint, selecting .conclusion == failure, keeping id, name, status, conclusion, started_at, completed_at, head_sha, app.slug, app.name, check_suite.id, check_suite.head_branch and the pull_requests numbers.",
+    "why_the_metadata_is_empty": "head_branch is null and pull_requests is empty because the lane branch was deleted at landing. That is the measured reason the range rule does not apply the head assert's provenance filter — it would discard this evidence entirely."
+  },
+  "check_runs": [
+    {
+      "id": 89759291548,
+      "name": "tests (fight)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-07-26T05:21:18Z",
+      "completed_at": "2026-07-26T05:21:33Z",
+      "head_sha": "163b3345e12dc80780d00f2e88acdb4d710a7a52",
+      "app": { "slug": "github-actions", "name": "GitHub Actions" },
+      "check_suite": { "id": 81811605852, "head_branch": null },
+      "pull_requests": []
+    },
+    {
+      "id": 89759291531,
+      "name": "gate",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-07-26T05:21:17Z",
+      "completed_at": "2026-07-26T05:22:23Z",
+      "head_sha": "163b3345e12dc80780d00f2e88acdb4d710a7a52",
+      "app": { "slug": "github-actions", "name": "GitHub Actions" },
+      "check_suite": { "id": 81811605883, "head_branch": null },
+      "pull_requests": []
+    }
+  ]
+}

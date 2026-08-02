@@ -148,6 +148,29 @@ if [ "$GREEN" != "green" ]; then
   emit not-green; echo "${GREEN#not-green: } on $HEAD_SHA — leaving it queued"; exit 3
 fi
 
+# ── the range the push admits, not only the head (issue #1002) ───────────────────────────────
+# The assert above reads one sha; the push below fast-forwards origin/$BASE..$HEAD_SHA. CI produces
+# check-runs for a branch's HEAD and nothing else, so an interior commit with no run of its own is
+# COVERED by the head's gate — demanding per-sha green refuses every train in this repo (#1852) and
+# is the rule that was parked. What the head cannot cover is an interior commit that was gated and
+# came back RED: that verdict is a fact about that sha's tree, it survives as a checkout and bisect
+# target, and it is how 163b3345 (`gate` + `tests (fight)` failing) became an ancestor of edge. One
+# API read per interior commit; the head is excluded because it is judged above, in full.
+# This cannot wedge the master hop on history it can no longer fix: `origin/$BASE..$HEAD_SHA` excludes
+# everything already on the base, and all three known-red commits (163b3345, 6548e526, 451e477c) are
+# ancestors of master today. Arming this on the edge hop is what stops a new one being minted.
+INTERIOR_SHAS=$(git rev-list "refs/remotes/origin/${BASE}..${HEAD_SHA}" | grep -v "^${HEAD_SHA}$" || true)
+INTERIOR_JSON=$(
+  for sha in $INTERIOR_SHAS; do
+    runs=$(gh api --paginate "repos/${REPO}/commits/${sha}/check-runs" --jq '.check_runs[]' | jq -s '.')
+    jq -nc --arg sha "$sha" --argjson runs "$runs" '{sha: $sha, check_runs: $runs}'
+  done | jq -sc '.'
+)
+RANGE_GREEN=$(evaluate_range_green "$INTERIOR_JSON")
+if [ "$RANGE_GREEN" != "green" ]; then
+  emit not-green; echo "${RANGE_GREEN#not-green: } — leaving PR #$PR queued"; exit 3
+fi
+
 # ── the republish window never reaches production (#1305 review) ────────────────────────────
 # Asserted HERE, from the tree at the exact SHA about to become master, and not delegated to a
 # check-run: the preflight's own master-bound refusal is a check, and a check is only as good as

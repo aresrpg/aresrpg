@@ -159,6 +159,61 @@ evaluate_green() {
   echo green
 }
 
+# ── THE RANGE, NOT ONLY THE HEAD (#1002) ────────────────────────────────────────────────────────
+# The assert above reads ONE sha; the push below it fast-forwards a RANGE. A branch of N commits was
+# admitted on the strength of commit N, and it already put a commit whose own `gate` and
+# `tests (fight)` read failure into edge's history (163b3345, PR #979) — pinned as a fixture in
+# test/fixtures/interior-red-163b3345.check-runs.json.
+#
+# THE RULE THIS IS NOT (#1852, parked by the operator): "every sha in origin/base..head carries a
+# completed green REQUIRED check-run". That rule refuses EVERY landing in this repo. gate.yml and
+# checks.yml trigger on `pull_request` plus `push` to edge/master, so CI produces check-runs for a
+# branch's HEAD and for nothing else. Measured on train-39's real landing range: the three interior
+# commits carry 0, 0 and 0 check-runs; the head carries 49. Its unit test never caught that because
+# it fed the interior SYNTHETIC red verdicts and asserted not-green — correct for a real red, and
+# simultaneously indistinguishable from the permanent state of every interior commit in reality.
+#
+# THE RULE THAT IS THE QUEUE'S ACTUAL CONTRACT: the head's gate run covers the range's resulting
+# tree, so an interior commit with NO run of its own is covered, not unproven — that is what CI
+# offers and the head assert already reads it. What the head can never cover is an interior commit
+# that WAS gated and came back RED: that verdict is a fact about that sha's own tree, it survives in
+# history as a legitimate checkout and bisect target, and no amount of green at the tip retracts it.
+# So a completed red anywhere in the range POISONS the landing, and the only way forward is a fresh
+# commit — a rebase mints new shas and a clean range; a re-run cannot unsay a red.
+#
+# PROVENANCE IS DELIBERATELY NOT APPLIED HERE, and the fixture is why: 163b3345's two red rows carry
+# `check_suite.head_branch: null` and `pull_requests: []` — the lane branch was deleted at landing,
+# so the metadata the head's provenance filter needs is simply gone. Filtering the interior the same
+# way would discard the exact evidence this gate exists to read. The app slug still binds (a foreign
+# app cannot wedge the queue); the branch a red came from does not change what it says about the sha.
+#
+# evaluate_range_green <interior_json> [app_slug]
+#   interior_json = [{sha, check_runs: [...]}, ...] — one entry per commit in origin/base..head
+#                   EXCLUDING the head, which the assert above judges on its own, in full.
+#                   check_runs takes either payload shape, exactly like evaluate_green.
+# Prints "green" or "not-green: <reason>" naming the offending sha and checks. Always returns 0.
+evaluate_range_green() {
+  local interior_json="$1" app_slug="${2:-github-actions}" poisoned
+  poisoned=$(jq -r --arg app "$app_slug" '
+      [ .[]
+        | . as $commit
+        | ((.check_runs // []) | if type == "array" then . else .check_runs end) as $runs
+        | [ $runs[]
+            | select((.app.slug // $app) == $app)
+            | select(.status == "completed")
+            | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
+            | .name ] as $red
+        | select(($red | length) > 0)
+        | "\($commit.sha[0:12]) (\($red | unique | join(", ")))" ]
+      | join("; ")
+    ' <<<"$interior_json")
+  if [ -n "$poisoned" ]; then
+    echo "not-green: red interior commit(s) in this range: $poisoned — a red sha stays poisoned; rebase to re-cut it, a re-run cannot unsay it"
+    return 0
+  fi
+  echo green
+}
+
 # ── THE REPUBLISH WINDOW NEVER REACHES PRODUCTION (#1305 review, CRITICAL) ──────────────────────
 # packages/move/REPUBLISH_WINDOW suspends the ceremony preflight's compatibility assertions while a
 # fresh lineage is published. The preflight refuses the marker on a master-bound run, but that

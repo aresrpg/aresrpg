@@ -346,6 +346,60 @@ expect_window "window-refused-on-master"   refused master yes
 expect_window "window-allowed-on-edge"     ok      edge   yes
 expect_window "no-window-master-unaffected" ok     master no
 
+# ── 18-22. THE RANGE, NOT ONLY THE HEAD (#1002) ─────────────────────────────────────────────
+# These cases feed REAL check-run payloads captured from this repo's own CI, not synthetic
+# verdicts — which is precisely how the parked #1852 rule passed its unit test while being
+# unsatisfiable in production (it asserted a synthetic interior red as not-green, never noticing
+# that a real interior commit carries no runs at all and so read not-green forever).
+#
+#   fixtures/interior-red-163b3345.check-runs.json  — the two `failure` rows still attached to
+#     163b3345, the commit #1002 convicted: `gate` and `tests (fight)`, both completed failure,
+#     both with head_branch null and pull_requests [] because the lane branch was deleted at
+#     landing. Captured 2026-08-02 from GET /repos/aresrpg/aresrpg/commits/163b3345/check-runs,
+#     field-projected (never edited) for the reason its own _provenance records.
+#   fixtures/interior-clean-d18614db.check-runs.json — the UNPROJECTED envelope for a real interior
+#     commit of train-39's landing range: total_count 0. Captured the same day, same endpoint.
+#     This is the shape the parked rule read as "missing required checks" on every train.
+INTERIOR_RED=$(cat "${SCRIPT_DIR}/fixtures/interior-red-163b3345.check-runs.json")
+INTERIOR_CLEAN=$(cat "${SCRIPT_DIR}/fixtures/interior-clean-d18614db.check-runs.json")
+
+expect_range() { # <case-name> <expected-prefix> <interior_json>
+  local actual; actual=$(evaluate_range_green "$3")
+  case "$actual" in
+    "$2"*) echo "PASS  $1  →  $actual"; PASS=$((PASS + 1)) ;;
+    *) echo "FAIL  $1  →  got [$actual], expected prefix [$2]"; FAIL=$((FAIL + 1)) ;;
+  esac
+}
+
+# 18. THE REGRESSION THAT WEDGED #1852: a real multi-commit train. Every interior commit carries
+#     the real zero-run payload. This MUST land — anything else refuses every train in the repo.
+REAL_TRAIN_RANGE=$(jq -nc --argjson clean "$INTERIOR_CLEAN" '
+  [ {sha: "d18614db08621b3cf0e70c1f4c1100284df5aa01", check_runs: $clean},
+    {sha: "ebf431e1465515f997728792dd0386fb0ee9ae23", check_runs: $clean},
+    {sha: "9b9b4c8a316e89427e07f61c70ce5103fa148ae6", check_runs: $clean} ]')
+expect_range "real-train-interior-lands" green "$REAL_TRAIN_RANGE"
+
+# 19. THE DEFECT #1002 REPORTED: the real red commit sitting inside an otherwise-green range.
+REAL_POISONED_RANGE=$(jq -nc --argjson red "$INTERIOR_RED" --argjson clean "$INTERIOR_CLEAN" '
+  [ {sha: "163b33450000000000000000000000000000beef", check_runs: $red},
+    {sha: "d18614db08621b3cf0e70c1f4c1100284df5aa01", check_runs: $clean} ]')
+expect_range "real-interior-red-refused" not-green "$REAL_POISONED_RANGE"
+
+# 20. …and the refusal names the sha AND the checks, so the author knows what to re-cut.
+ACTUAL=$(evaluate_range_green "$REAL_POISONED_RANGE")
+case "$ACTUAL" in
+  *163b33450000*"gate"*"tests (fight)"*) echo "PASS  poisoned-refusal-names-sha-and-checks  →  $ACTUAL"; PASS=$((PASS + 1)) ;;
+  *) echo "FAIL  poisoned-refusal-names-sha-and-checks  →  got [$ACTUAL]"; FAIL=$((FAIL + 1)) ;;
+esac
+
+# 21. An empty range (a single-commit PR: the head is the whole landing) is green by construction.
+expect_range "single-commit-pr-has-no-interior" green '[]'
+
+# 22. A foreign app cannot poison the queue any more than it can vouch for it (case 16's mirror).
+FOREIGN_RED=$(jq -nc '[{sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  check_runs: [{name: "vercel", status: "completed", conclusion: "failure", app: {slug: "vercel"}}]}]')
+expect_range "foreign-app-cannot-poison" green "$FOREIGN_RED"
+
 echo
 echo "── ${PASS} passed, ${FAIL} failed ──"
 [ "$FAIL" -eq 0 ]
