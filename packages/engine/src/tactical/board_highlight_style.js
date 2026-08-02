@@ -141,12 +141,15 @@ export const CHANNELS = {
   // 0x0b4712 → 0x176a24 — the path lifts off near-black into a readable dark green of the SAME hue
   // family while the pair keeps the ≥300 lum-delta floor (469 − 165 = 304).
   los_blocked: { color: 0x7a95f8, opacity: 0.82, order: CELL_LAYER_ORDER.base },
-  // The TACKLE-LOST band (project.move_wash tackle_lost — the at-risk cells while actually tackled). WAY
-  // SOFTER than every strike red — soft enough to not feel
-  // like a AoE blob: desaturated rosy tint at low opacity + a quieter center, so the hard aoe strike red
-  // stays the loudest red on the board by a wide margin. TUNABLE: color/opacity/center dials await live A/B.
+  // The TACKLE-LOST band (project.move_wash tackle_lost — the range the tackle toll takes away). [#1659,
+  // owner 2026-07-29 live] "when tackled, the player still sees their ENTIRE MP range — cells render GREY
+  // instead of green (unreachable-because-tackled), not removed": the range is INFORMATION and the tackle is
+  // a STATE on it, so this is a neutral grey, not a warning colour. It supersedes the older rosy tint, whose
+  // red-dominance served the per-hover "you hovered past your MP" suffix that no longer paints here (the
+  // adapter's cell_hover retired it — this channel's ONLY writer is the wash's tackle band). Same base layer
+  // and the same quiet dials as before: it sits UNDER the green's attention, never beside the strike reds.
   path_blocked: {
-    color: 0xcf9a8c,
+    color: 0x939aa3,
     opacity: 0.34,
     order: CELL_LAYER_ORDER.base,
     center_alpha: 0.32,

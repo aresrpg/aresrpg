@@ -147,6 +147,19 @@ describe('move_wash — deterministic tackle preview (the exact chain contest, D
     expect(wash.tackle_lost.length).toBeGreaterThan(0)
   })
 
+  test('#1659 — a tackled seat still gets its WHOLE MP range described: green ∪ band = the raw reach, never a truncation', () => {
+    // Owner ruling 2026-07-29: the range is INFORMATION and the tackle is a STATE on it, so the cells the toll
+    // takes are RECOLOURED (grey — pinned engine-side in test/tactical/tackle_band_grey.test.js), never removed.
+    // The wash's contract is exactly that: it SPLITS the raw-MP reach in two, it never shortens it.
+    for (const world_seed of [41, 44]) {
+      const wash = move_wash(boot({ world_seed, spawn_id: 7 }).getState(), {})
+      expect(wash.tackled, `ws=${world_seed}`).toBe(true)
+      expect(new Set([...wash.reach, ...wash.tackle_lost]), `ws=${world_seed}`).toEqual(full_reach())
+      const overlap = wash.reach.filter((c) => wash.tackle_lost.includes(c))
+      expect(overlap, `ws=${world_seed}: one paint per cell`).toEqual([])
+    }
+  })
+
   test('degraded view (no world_seed/spawn_id): the risk-band fallback still paints (never a silent no-band)', () => {
     const wash = move_wash(boot().getState(), {}) // seeds null — equal agility ⇒ mp_lost 2 > 0 ⇒ band
     expect(wash.tackled).toBe(true)

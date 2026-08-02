@@ -242,14 +242,17 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     expect(b).toBeLessThan(0x50) // low blue
     expect(r).toBeLessThan(0xc0) // DARK red — deliberately not a bright red
   })
-  test('[msg 3254] path_blocked is SOFT red-ish — red-dominant but SOFTER than the aoe strike red', () => {
-    // owner: hovering past your MP paints the overflow cells "red-ish" — a soft warning, never the hard
-    // strike red (aoe must stay the loudest red on the board).
+  test('[#1659, superseding msg 3254] path_blocked is a NEUTRAL GREY — it is a range state, not a warning', () => {
+    // msg 3254 ruled this channel "red-ish" while it carried the per-hover "you hovered past your MP"
+    // overflow suffix. That suffix is dead (voxel_fight_adapter cell_hover), and the channel's only writer is
+    // now the wash's tackle-lost band — which the owner ruled GREY on 2026-07-29: a tackled seat still SEES
+    // its whole MP range, greyed rather than green. The full grey law lives in
+    // packages/engine/test/tactical/tackle_band_grey.test.js; this row keeps the palette's own guard that it
+    // is never mistaken for a strike red.
     const pb = chan(CHANNELS.path_blocked.color)
     const aoe = chan(CHANNELS.aoe.color)
-    expect(pb.r).toBeGreaterThan(pb.g) // red-dominant
-    expect(pb.r).toBeGreaterThan(pb.b)
-    expect(pb.g + pb.b).toBeGreaterThan(aoe.g + aoe.b) // desaturated (soft) vs the hard aoe red
+    expect(Math.max(pb.r, pb.g, pb.b) - Math.min(pb.r, pb.g, pb.b)).toBeLessThanOrEqual(24) // grey
+    expect(pb.g + pb.b).toBeGreaterThan(aoe.g + aoe.b) // desaturated vs the hard aoe red
     expect(CHANNELS.path_blocked.color).not.toBe(CHANNELS.aoe.color)
   })
   test('every channel opacity is punchy (≥0.5 — never wishy-washy, ref2)', () => {
