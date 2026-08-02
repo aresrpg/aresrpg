@@ -1,0 +1,16 @@
+# Build context for api/Dockerfile (the sponsor image) — the only root-context build in this repo.
+# Deny everything, then re-admit exactly the two homes that image reads: the sponsor sources and the
+# canonical release.json it bakes its PTB-scope allowlist from. A path ladder is required because a
+# "!" exception cannot re-admit a file whose parent directory is still excluded.
+*
+!api
+!packages
+packages/*
+!packages/sdk
+packages/sdk/*
+!packages/sdk/src
+packages/sdk/src/*
+!packages/sdk/src/deployment
+
+# Never, whatever the ladder above re-admits.
+**/node_modules

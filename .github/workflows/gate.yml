@@ -43,11 +43,12 @@ jobs:
       - name: api image boot smoke
         run: |
           set -euo pipefail
-          cp packages/sdk/src/deployment/release.json api/release.json
           image_name=aresrpg-api-smoke
           container_name=aresrpg-api-smoke
           listen_line='[sponsor] station-only net=testnet :9528'
-          docker build --tag "$image_name" api
+          # Root context: the image bakes the canonical release.json in place, so there is no copy
+          # to stage and none to go stale (#2026). The root .dockerignore keeps this at ~0.5 MB.
+          docker build --tag "$image_name" --file api/Dockerfile .
           trap 'docker rm --force "$container_name" >/dev/null 2>&1 || true' EXIT
           docker run --detach --name "$container_name" \
             --env GAS_STATION_URL=http://127.0.0.1:1 \

@@ -1057,6 +1057,9 @@ fixture_adjudication_controlled_gate() {
 # ── PUBLIC-TREE MEMBRANE GATE (#1784) ───────────────────────────────────────────────────────────
 MEMBRANE_ALLOWED_ROOT_FILES=(
   '.dependency-cruiser.cjs'
+  # api/Dockerfile builds from the repo root so it bakes the canonical release.json in place (#2026);
+  # this keeps that context at ~0.5 MB. Root is the only place every builder honours it.
+  '.dockerignore'
   '.env.example'
   '.gitignore'
   '.prettierignore'

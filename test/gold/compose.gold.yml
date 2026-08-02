@@ -182,7 +182,10 @@ services:
 
   sponsor:
     profiles: ['sponsor']
-    build: ../../api
+    # Root context — api/Dockerfile bakes the canonical release.json in place (#2026).
+    build:
+      context: ../..
+      dockerfile: api/Dockerfile
     image: aresrpg-gold-sponsor:latest
     depends_on:
       gas-pool:
