@@ -1,14 +1,3 @@
-760144a6db69b74ca9ba02b215232bfa26b3b1ce train/train-57 fix(hud): a live effect badge never reads zero turns
-d2a0a18000b73e4c2603616430228625d34379de train/train-57 fix(fight): collect a spent row at the bearer's turn END, not a round late
-f3bc13aca798651c91982e1ae86631e90624a52c train/train-57 test(frontend): the hover card keeps a status on its last covered turn
-f5a5872b153e51ba60e85c927d3e71fff5ab1cc4 train/train-57 test(frontend): repin the simulator durations on the turn-start clock
-5d07e8b9b8862dfe3092bd9dee721f5b95d04069 train/train-57 fix(frontend): the badge row keeps a status on its last covered turn
-cc9ff989af71240e36eda5362e6939552505e948 train/train-57 fix(fight): the status decode door never drops a row the chain states
-195b1a8150ce43e01341d40600d5f74e25f0c86f train/train-57 fix(fight): the status vocabulary keeps a row on its last covered turn
-4388a81c34a80206139214a7ed2d56081a6cb8da train/train-57 fix(fight): the preview ages statuses at the bearer's turn START (D42)
-ef2e4c0c7b5980661547c97250923e32aa8873b9 train/train-57 fix(sim): index a DoT tick off the WHOLE batch, glyph payloads first
-10b9165edb26c0ed7f973aa7eea74cd2f9db3755 train/train-57 test(fight): pin the dead-caster ruling — death-moment stats, frozen
-19ff5761dd315451848e282036252a9b00cc89de train/train-57 refactor(move): drop the NO_SOURCE accessor nothing calls
-4be1f1e080f746ebbb473e6548b8600605eb3809 train/train-57 docs(fight): retire the turn-END wording the twin no longer follows
-c03a16cd81fb10916906bc57817b931e86e7d7b3 train/train-57 feat(fight): DoT damage scales with the caster's current stats (D41)
-0a92855094d43837a4581d36c595cc9e370b46c3 train/train-57 fix(fight): status durations age at the bearer's turn START (D42)
+7cd8e58342f3f228ff084a090f911ea7477a21f0 lane/d45-rubric-caps docs: the materiality valve is an asserted clause, not an optional one
+970ad3e836d3d98c71225a0df26ce35fa328bf90 lane/d45-rubric-caps docs: ACCEPTED_DEBT — the materiality bar's class list
+24ae040a3e4f86515139db27fa8711c8815b7707 lane/d45-rubric-caps docs(loops): the materiality valve — instruments discard below the bar
