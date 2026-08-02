@@ -1,3 +1,1 @@
-94a3fac6bd0dac51bcc6c86551fe7d14de4a9173 lane/1792-turn-mint fix(api): ship the TURN mint in the image
-a5e112fe2750cac4fb9d1e239c22bf16584bf7a6 lane/1792-turn-mint fix(p2p): consume the minted TURN credential, degrade honestly without it
-970cca21cc43b6a49f73717cd953de561bfda3bc lane/1792-turn-mint api: mint short-lived TURN credentials for coturn's use-auth-secret
+6c3c60129ed2cda718838c27b091c7c64455b3b4 lane/2027-roster-storm fix(fight): gate the roster adopter on content, not on the store's array
