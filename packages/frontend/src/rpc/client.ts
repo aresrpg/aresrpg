@@ -118,6 +118,7 @@ const endpoint_backoff_attempts = new Map<string, number>()
 const WORLD_POLL_PATHS = new Set([
   '/v1/characters',
   '/v1/parties',
+  '/v1/party-invites',
   '/v1/zones',
   '/v1/fights',
   '/v1/dungeon-runs',

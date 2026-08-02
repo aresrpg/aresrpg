@@ -29,6 +29,14 @@ export async function resolve_character_docs(ids, fetch_characters = get_charact
   return new Map((characters ?? []).map((character) => [character.id, character]))
 }
 
+/** ONE character's display name through the same door — the whole "resolved name or the honest short id" rule in
+ *  one place, so no caller re-implements the fallback (the invitee on an outgoing invite toast, the inviting leader
+ *  on an incoming invite card). Never a hand-rolled address slice, never a P2P-supplied alias. */
+export async function resolve_character_name(character_id) {
+  const docs = await resolve_character_docs([character_id])
+  return docs.get(character_id)?.name || short_fighter_id(character_id)
+}
+
 /**
  * THE FIGHT'S NAME BOOK (#929) — one `ctx.roster` row per PLAYER FIGHTER, keyed by its CHARACTER id, so
  * `engine_view`'s `roster.find(c => c.id === character_id)` always matches and its last-ditch OWNER-ADDRESS

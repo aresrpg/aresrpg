@@ -34,9 +34,15 @@ import {
   leave_party as tx_leave_party,
   disband_party as tx_disband_party,
 } from './party_actions'
+import {
+  fold_pending_invite,
+  latch_declined_invite,
+  read_pending_invites,
+  reset_declined_invites,
+} from './party_invite_carrier.js'
 import { select_owned_party_join_ids } from './team_entry.js'
 import { error_executed_digest } from './tx_digest_error.js'
-import { resolve_character_docs, short_fighter_id } from './character_name_resolve.js'
+import { resolve_character_docs, resolve_character_name, short_fighter_id } from './character_name_resolve.js'
 
 const selected_character_id = () => context.get_state().selected_character_id ?? null
 const selected_character = () => {
@@ -66,13 +72,6 @@ const has_blocked_owned_join = (party, blocked_ids) => {
     const character = roster.find((row) => row.id === character_id)
     return character?.world_id === leader?.world_id && !has_character(party, character_id)
   })
-}
-
-/** The invitee's display name for the pending toast — the ONE character_name_resolve home, never a hand-rolled
- *  address slice; falls back to its own honest short id when a `/v1` doc genuinely isn't resolved yet. */
-async function resolve_invitee_name(character_id) {
-  const docs = await resolve_character_docs([character_id])
-  return docs.get(character_id)?.name || short_fighter_id(character_id)
 }
 
 /** OWNED-character display names from the local roster, synchronous — feeds the per-alt toast label (#328). */
@@ -305,7 +304,7 @@ party_store.setState({
     }
     get()._tx_phase({ busy: true, error: null })
     try {
-      const resolved_name = invited_name || (await resolve_invitee_name(invited_character_id))
+      const resolved_name = invited_name || (await resolve_character_name(invited_character_id))
       await invite_to_party(party_id, leader_character_id, invited_character_id, invited_owner, resolved_name)
       get()._dispatch({
         kind: 'intent',
@@ -362,6 +361,8 @@ party_store.setState({
     get()._tx_phase({ busy: true, error: null })
     try {
       await decline_party_invite(invite.party_id, invite.invited_character_id)
+      // Latch the refusal until the authoritative read agrees — see party_invite_carrier.js.
+      latch_declined_invite(invite.party_id, invite.invited_character_id)
       get()._dispatch({ kind: 'intent', action: 'decline', character_id: invite.invited_character_id })
       game_log('party', `invite declined for ${invite.invited_character_id.slice(0, 10)}`)
     } catch (error) {
@@ -434,7 +435,10 @@ party_store.setState({
     get()._tx_phase({ busy: false })
   },
 
-  /** Reconcile the selected character through GET /v1/parties?character= — the snapshot input source. */
+  /** Reconcile the selected character through GET /v1/parties?character= — the snapshot input source. The pending
+   *  invitations ride the SAME tick (#2008): one poll, two dimensions of the same character-keyed read, no second
+   *  clock. The pending read is fenced off on its own so a read-layer hiccup there never costs the membership
+   *  snapshot the whole party UI depends on. */
   async refresh() {
     const character_id = selected_character_id()
     if (!character_id) return
@@ -451,9 +455,23 @@ party_store.setState({
         now: Date.now(),
       })
       if (get().party) get()._tx_phase({ error: null })
+      await get()._fold_pending_invites(character_id)
     } catch (error) {
       game_log('party', 'refresh failed', error)
     }
+  },
+
+  /** Hand the carrier the poll's pending rows plus the doors it needs — the store owns identity and the reducer
+   *  door; party_invite_carrier.js owns which row is honest to deliver. */
+  async _fold_pending_invites(basis_character_id) {
+    const invites = await read_pending_invites(basis_character_id)
+    if (!invites) return
+    await fold_pending_invite(invites, basis_character_id, {
+      party_id: get().party_id,
+      incoming_invite: get().incoming_invite,
+      is_selected: () => selected_character_id() === basis_character_id,
+      dispatch: (input) => get()._dispatch(input),
+    })
   },
 
   /** Adopt the id only after this exact character's accept transaction succeeds. */
@@ -497,6 +515,7 @@ party_store.setState({
   reset_local() {
     get()._stop_polling()
     set_room_party(null)
+    reset_declined_invites()
     // Drop any toast still tracked for the OLD session — an uncleared entry would leak a "waiting…" toast that
     // nothing left in this store can ever resolve (no matching pending_invites row survives the reset below).
     const ids = get()._pending_invite_toast_ids

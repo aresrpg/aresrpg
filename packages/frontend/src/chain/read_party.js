@@ -19,3 +19,18 @@ export async function get_party(character_id, signal) {
   if (!character_id) return null
   return rpc_get('/v1/parties', { character: character_id }, signal)
 }
+
+/**
+ * GET /v1/party-invites?character=<exact selected character> — the parties currently holding a PENDING invitation
+ * for it. THE invite carrier (#2008): `party::invite` records the intent on chain and emits no event, so this
+ * authoritative read is the only honest delivery path; a P2P message could never be trusted to pop a signed-action
+ * card. Always an array — an empty one means nobody has invited this character.
+ * @param {string} character_id
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<{ party: string, leader_character: string }[]>}
+ */
+export async function get_party_invites(character_id, signal) {
+  if (!character_id) return []
+  const invites = await rpc_get('/v1/party-invites', { character: character_id }, signal)
+  return Array.isArray(invites) ? invites : []
+}
