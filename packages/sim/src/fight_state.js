@@ -338,8 +338,8 @@ export const effective_stats = entity => {
 }
 
 /**
- * Sum of the ap/mp pool modifiers active for the upcoming turn. Timed rows age at their owner's preceding turn
- * end, exactly like Move, so every row still present at begin-turn contributes to the refill.
+ * Sum of the ap/mp pool modifiers active for the upcoming turn. Timed rows age at the START of their owner's
+ * turn, ahead of the refill and exactly like Move (#2000), so every row that survives that aging contributes.
  * @param {FightEntity} entity
  * @param {'ap'|'mp'} key
  * @returns {number}

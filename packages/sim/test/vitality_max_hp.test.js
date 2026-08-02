@@ -210,10 +210,14 @@ describe('a vitality / max-hp alter moves HP CAPACITY (#1628)', () => {
     expect(of(cast, 'p0').health_max).toBe(160)
     expect(of(cast, 'p0').health).toBe(100)
 
-    // The row is 2 turns: it survives the mob's turn and dies at the bearer's own second turn start.
-    let acc = end_current_turn(cast, ctx)
-    while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
-    expect(of(acc, 'p0').health_max).toBe(160)
+    // The row is 2 turns: #2000 — it covers the cast turn plus the bearer's next TWO, and the capacity comes
+    // back at the start of the third.
+    let acc = cast
+    for (const still of [160, 160]) {
+      acc = end_current_turn(acc, ctx)
+      while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
+      expect(of(acc, 'p0').health_max).toBe(still)
+    }
     acc = end_current_turn(acc, ctx)
     while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
     expect(of(acc, 'p0').health_max).toBe(100)
@@ -251,7 +255,11 @@ describe('a vitality / max-hp alter moves HP CAPACITY (#1628)', () => {
     expect(of(cast, 'm0').health_max).toBe(70)
     expect(of(cast, 'm0').health).toBe(70)
 
+    // #2000 — the authored duration covers the victim's next turn, so the shave is still on after one round.
     let acc = end_current_turn(cast, ctx)
+    while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
+    expect(of(acc, 'm0').health_max).toBe(70)
+    acc = end_current_turn(acc, ctx)
     while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
     // Expiry restores exactly the shaved capacity — and the clamp is not a heal on the way back.
     expect(of(acc, 'm0').health_max).toBe(100)

@@ -211,7 +211,8 @@ describe("#973 status durations tick on the affected fighter's turn only (cast.m
       cur = cycle_to_player(cur, ctx)
       seen.push(row_of(cur, 'p0', 'INVISIBILITY')?.turns_remaining ?? 0)
     }
-    // The counter RENDERS 2 then 1 before it is purged — three usable turns, exactly the chain's lifetime.
+    // The counter RENDERS 2, 1, then 0 before it is purged — the cast turn plus THREE further turns of its
+    // owner, exactly the chain's lifetime under #2000's turn-start cadence.
     expect(seen).toEqual([2, 1, 0, 0])
   })
 
@@ -221,7 +222,9 @@ describe("#973 status durations tick on the affected fighter's turn only (cast.m
     let cur = reduce(cast, { type: 'end_turn', entity_id: 'p0' }, ctx).state
     const mob = get_current_turn_entity(cur).id
     cur = reduce(cur, { type: 'ai_turn', entity_id: mob }, ctx).state
-    expect(row_of(cur, 'p0', 'STAT_BUFF').turns_remaining).toBe(2)
+    // #2000 — rows age at their OWNER's turn start, so neither p0's own turn end nor the mob's whole turn
+    // touches this counter: it is still the authored 3, untouched until p0's next turn begins.
+    expect(row_of(cur, 'p0', 'STAT_BUFF').turns_remaining).toBe(3)
   })
 
   test("a mob's OWN 3-turn row ticks on its own turn only — the scope is side-symmetric", () => {

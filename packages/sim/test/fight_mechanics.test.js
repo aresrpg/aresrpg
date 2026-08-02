@@ -667,11 +667,18 @@ describe('stun skips the turn', () => {
     // end the player's turn -> the mob is stunned -> its turn is skipped, returns to the player
     const ended = reduce(cast.state, { type: 'end_turn', entity_id: 'p0' }, ctx)
     expect(ended.events.some(e => e.type === 'fight_turn_skipped')).toBe(true)
-    // the STUN was consumed (decremented to 0 + expired) and the active actor cycled back to the player
-    expect(
-      find_entity(ended.state, 'm0').effects.some(e => e.type === 'STUN'),
-    ).toBe(false)
     expect(get_current_turn_entity(ended.state).id).toBe('p0')
+    // #2000 — the mob's turn STARTED by ageing the row, and an authored 1 still covered that turn: it is SPENT
+    // (counter 0), not gone, which is exactly what makes the stun cost one whole turn and no more.
+    const spent = find_entity(ended.state, 'm0').effects.find(
+      e => e.type === 'STUN',
+    )
+    expect(spent?.turns_remaining).toBe(0)
+    // the mob's NEXT turn opens on the spent row, drops it, and the mob acts — one turn lost, exactly one
+    const after = reduce(ended.state, { type: 'end_turn', entity_id: 'p0' }, ctx)
+    expect(
+      find_entity(after.state, 'm0').effects.some(e => e.type === 'STUN'),
+    ).toBe(false)
   })
 })
 

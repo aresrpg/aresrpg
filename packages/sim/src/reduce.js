@@ -22,6 +22,7 @@ import {
 import {
   contest_tackle,
   advance_turn,
+  refill_turn_pools,
   apply_damage,
   check_victory,
   use_ap_reserve,
@@ -654,31 +655,46 @@ const run_turn_start_hazards = (state, entity_id, clock = null) => {
 }
 
 /**
- * THE TURN-END CLOCK (#1540 — the chain's cadence, one home). The ending fighter's timed rows decrement first;
- * a glyph's duration additionally ticks on PLAYER turn-ends only:
- * Move's `cast::tick_turn_end` decrements glyphs inside its NON-MOB arm (cast.move:1708, declared at
- * :1691-1692), reached from `turns::forfeit_current` (turns.move:167) — the single door every player turn end
- * goes through. A mob turn-end takes the `is_mob` arm (turns.move:280/:321) and never decrements, and a seat
- * the walk steps over (dead, or killed by its turn-START tick) never reaches a turn end at all. So this is
- * keyed on the ACTOR WHOSE TURN IS ENDING, never on the global turn ordinal — that one advances on mob turns
- * and would price a 3-turn glyph as dead after a single PvM round.
+ * THE TURN-END CLOCK (#1540 — the chain's cadence, one home). A GLYPH's duration ticks on PLAYER turn-ends only:
+ * Move's `cast::tick_turn_end` decrements glyphs inside its NON-MOB arm, reached from `turns::forfeit_current`
+ * (turns.move:167) — the single door every player turn end goes through. A mob turn-end takes the `is_mob` arm
+ * (turns.move:280/:321) and never decrements, and a seat the walk steps over (dead, or killed by its turn-START
+ * tick) never reaches a turn end at all. So this is keyed on the ACTOR WHOSE TURN IS ENDING, never on the global
+ * turn ordinal — that one advances on mob turns and would price a 3-turn glyph as dead after a single PvM round.
+ *
+ * #2000 — a fighter's OWN timed rows no longer age here: they age at the START of its turn
+ * (`run_turn_start_expiry`, the twin of `cast::tick_turn_expiry`). A glyph is a board cell entry with its own
+ * clock, not a fighter status row, so this anchor stayed exactly where it was.
  * @param {import('./fight_state.js').FightState} state  the state BEFORE the turn pointer steps
  * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
  */
 const run_turn_end = state => {
   const actor = get_current_turn_entity(state)
-  if (!actor) return { state, events: [] }
-  const expired = expire_turn_effects(state, actor.id)
-  const next = actor.is_player ? decay_glyphs(expired.state) : expired.state
+  if (!actor || !actor.is_player) return { state, events: [] }
+  return { state: decay_glyphs(state), events: [] }
+}
+
+/**
+ * THE TURN-START EXPIRY (#2000, D42) — the first thing a landed actor's turn does, ahead of its pool refill and
+ * ahead of its board ticks, mirroring `turns.move`'s `cast::tick_turn_expiry` → `point_adjust` → `begin_turn` →
+ * `cast::tick_turn_start`. Running before the refill is what keeps the retrait contract (a drain row reduces
+ * exactly the refills it still has turns for); running before the tick batch is what keeps a DoT's tick COUNT at
+ * its authored N. Never reached by a stepped-over corpse — the caller filters the dead first, exactly as the
+ * chain's queue walk does.
+ * @param {import('./fight_state.js').FightState} state @param {string} entity_id
+ * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
+ */
+const run_turn_start_expiry = (state, entity_id) => {
+  const expired = expire_turn_effects(state, entity_id)
   return {
-    state: next,
+    state: refill_turn_pools(expired.state, entity_id),
     events:
       expired.effects.length > 0
         ? [
             {
               type: 'fight_turn_effects',
               fight_id: state.fight_id,
-              entity_id: actor.id,
+              entity_id,
               effects: expired.effects,
             },
           ]
@@ -687,10 +703,10 @@ const run_turn_end = state => {
 }
 
 /**
- * Advance the turn to the next ACTABLE entity: step the index, reset AP/MP, run turn-start hazards, and skip
- * any entity that is dead OR stunned (a stunned actor loses its whole turn, then its STUN ages at that skipped
- * turn's end; emit `fight_turn_skipped` so the client shows it). Timed rows and glyph durations tick through
- * `run_turn_end` — never on a stepped-over corpse or an actor killed by its start hazards.
+ * Advance the turn to the next ACTABLE entity: step the index, age its timed rows, refill AP/MP, run turn-start
+ * hazards, and skip any entity that is dead OR stunned (a stunned actor loses its whole turn; emit
+ * `fight_turn_skipped` so the client shows it). Timed rows age in `run_turn_start_expiry` and glyph durations in
+ * `run_turn_end` — neither on a stepped-over corpse, and no hazards for an actor killed by its own start ticks.
  * Bounded by turn_order length so an all-skipped order can't loop forever. Returns the collected events.
  * @param {import('./fight_state.js').FightState} state
  * @param {ReduceContext['turn_context']|null} [clock]  the public turn clock the started turns' ticks roll off
@@ -712,8 +728,12 @@ const advance_to_actor = (state, clock = null) => {
       next = advance_turn(next)
       continue
     }
-    // Was this actor stunned at the START of its turn? It remains live through start work and expires at the
-    // skipped turn's END, matching Move's split start/end arms.
+    // TURN-START EXPIRY FIRST (#2000), then the refill it prices, then the stun read: a row that had this turn
+    // coming is still live for it (a 1-turn stun costs exactly one turn), and the aging that finds a row spent
+    // removes it before anything this turn reads it.
+    const aged = run_turn_start_expiry(next, entity.id)
+    next = aged.state
+    events = [...events, ...aged.events]
     const stunned = is_stunned(next, entity.id)
     const hazards = run_turn_start_hazards(next, entity.id, clock)
     next = hazards.state
@@ -725,8 +745,8 @@ const advance_to_actor = (state, clock = null) => {
       next = advance_turn(next)
       continue
     }
-    // Stunned -> turn is skipped; announce, run its real turn-end expiry, then step over. The turn DID begin
-    // (its start hazards just ran), so a stunned PLAYER still spends one glyph turn; a stunned mob still spends none.
+    // Stunned -> turn is skipped; announce, run its real turn-end work, then step over. The turn DID begin
+    // (its start expiry + hazards just ran), so a stunned PLAYER still spends one glyph turn; a stunned mob none.
     if (stunned) {
       events = [
         ...events,

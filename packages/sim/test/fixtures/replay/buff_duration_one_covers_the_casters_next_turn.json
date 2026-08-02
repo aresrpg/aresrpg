@@ -1,10 +1,10 @@
 {
   "meta": {
-    "id": "dot_rerolls_its_band_every_tick",
+    "id": "buff_duration_one_covers_the_casters_next_turn",
     "class": "twin",
     "authored": "2026-08-02",
     "source": "authored",
-    "notes": "Issue #1826: a [10,40] DoT bites 10 / 28 / 23 across three consecutive turn seeds — the chain rolls the band per tick; a single apply-time draw cannot produce that arc."
+    "notes": "Issue #2000 (D42): an authored duration 1 covers the cast turn plus the caster's next turn and expires at the start of the one after — the damage arc 30/30/20 reads all three, and the old end-turn cadence read 30/20/20."
   },
   "arena": {
     "width": 21,
@@ -48,13 +48,13 @@
   },
   "templates_raw": {
     "yajin": {
-      "venom": {
-        "name": "Venom",
-        "description": "a banded poison that bites every turn",
+      "brace": {
+        "name": "Brace",
+        "description": "+50 strength on yourself for one turn",
         "levels": [
           {
             "cost": 2,
-            "range": [0, 6],
+            "range": [0, 1],
             "critical_chance": 0,
             "area": 0,
             "area_type": "cell",
@@ -67,13 +67,44 @@
             "free_cell": false,
             "base_effects": [
               {
-                "type": "poison",
-                "min": 10,
-                "max": 40,
-                "element": "earth",
+                "type": "add",
+                "statistic": "strength",
+                "min": 50,
+                "max": 50,
+                "turns": 1,
                 "target": "self",
-                "chance": 100,
-                "turns": 6
+                "chance": 100
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      },
+      "smite": {
+        "name": "Smite",
+        "description": "a fixed earth line",
+        "levels": [
+          {
+            "cost": 2,
+            "range": [1, 6],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "damage",
+                "min": 20,
+                "max": 20,
+                "element": "earth",
+                "target": "enemies",
+                "chance": 100
               }
             ],
             "critical_effects": []
@@ -83,7 +114,7 @@
     }
   },
   "initial": {
-    "fight_id": "capsule_dot_per_tick_roll",
+    "fight_id": "capsule_duration_turn_start",
     "arena_seed": 1,
     "team0": [
       {
@@ -93,8 +124,8 @@
           "x": 5,
           "y": 5
         },
-        "health": 200,
-        "health_max": 200,
+        "health": 100,
+        "health_max": 100,
         "ap": 10,
         "ap_max": 10,
         "mp": 5,
@@ -112,7 +143,8 @@
         },
         "effects": [],
         "spell_levels": {
-          "venom": 1
+          "brace": 1,
+          "smite": 1
         },
         "ap_reserve": 0
       }
@@ -155,9 +187,18 @@
     {
       "type": "cast",
       "entity_id": "p0",
-      "spell_id": "venom",
+      "spell_id": "brace",
       "target": {
         "x": 5,
+        "y": 5
+      }
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "smite",
+      "target": {
+        "x": 7,
         "y": 5
       }
     },
@@ -167,14 +208,15 @@
     },
     {
       "type": "end_turn",
-      "entity_id": "m0",
-      "turn_context": {
-        "world_seed": "7",
-        "spawn_id": "1",
-        "turn_entropy": "3153583793",
-        "turn_ordinal": "1",
-        "seat": "9",
-        "slot": 0
+      "entity_id": "m0"
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "smite",
+      "target": {
+        "x": 7,
+        "y": 5
       }
     },
     {
@@ -183,75 +225,55 @@
     },
     {
       "type": "end_turn",
-      "entity_id": "m0",
-      "turn_context": {
-        "world_seed": "7",
-        "spawn_id": "1",
-        "turn_entropy": "3093350482",
-        "turn_ordinal": "2",
-        "seat": "9",
-        "slot": 0
-      }
+      "entity_id": "m0"
     },
     {
-      "type": "end_turn",
-      "entity_id": "p0"
-    },
-    {
-      "type": "end_turn",
-      "entity_id": "m0",
-      "turn_context": {
-        "world_seed": "7",
-        "spawn_id": "1",
-        "turn_entropy": "3966987260",
-        "turn_ordinal": "3",
-        "seat": "9",
-        "slot": 0
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "smite",
+      "target": {
+        "x": 7,
+        "y": 5
       }
     }
   ],
   "pinned_facts": [
     {
-      "cite": "cast.move apply_board_batch_from — roll_in_range(value, value_max, slot_damage_roll(turn_seed(fight, fid), e)) EVERY tick: 200 − (10 + 28 + 23)",
-      "path": "team0.0.health",
-      "equals": 139
+      "cite": "spell_formula.move amplify_damage — 20 × (100 + strength)/100 on a zero-resist target: 30 + 30 + 20 off 100 HP, the arc only the turn-START cadence produces (end-turn reads 50, a cast-time snapshot 10)",
+      "path": "team1.0.health",
+      "equals": 20
     },
     {
-      "cite": "spell_board.move apply_dot — the authored Effect is stored VERBATIM; its per-tick base is never collapsed to a draw at apply time",
-      "path": "team0.0.effects.0.value",
-      "equals": 10
+      "cite": "spell_board.move decrement_fighter_statuses — the aging that finds a spent row (counter 0) is the one that drops it, so by T+2 the caster carries no rows at all",
+      "path": "team0.0.effects.length",
+      "equals": 0
     },
     {
-      "cite": "spell_effect.move value_max — the DoT row keeps its authored band, which is what every tick rolls against",
-      "path": "team0.0.effects.0.value_max",
-      "equals": 40
-    },
-    {
-      "cite": "cast.move tick_turn_expiry → spell_board::decrement_fighter_statuses ages a row at ITS OWN fighter's turn START: six authored turns, p0 has started three, three left",
-      "path": "team0.0.effects.0.turns_remaining",
-      "equals": 3
+      "cite": "cast.move tick_turn_expiry — the row aged at the bearer's turn START, never its turn end; the caster's live strength is back to base once it leaves",
+      "path": "team0.0.stats.strength",
+      "equals": 0
     }
   ],
   "expected": {
     "events": [
       {
         "type": "fight_started",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "fight_id": "capsule_duration_turn_start",
         "turn_order": ["p0", "m0"],
         "seed": 1
       },
       {
         "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "fight_id": "capsule_duration_turn_start",
         "entity_id": "p0",
         "ap": 10,
         "mp": 5
       },
       {
         "type": "fight_cast",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "fight_id": "capsule_duration_turn_start",
         "entity_id": "p0",
-        "spell_id": "venom",
+        "spell_id": "brace",
         "target": {
           "x": 5,
           "y": 5
@@ -259,7 +281,73 @@
         "effects": [
           {
             "target_id": "p0",
-            "status": "POISON"
+            "status": "STAT_BUFF",
+            "stat": "strength",
+            "value": 50
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 8
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "p0",
+        "spell_id": "smite",
+        "target": {
+          "x": 7,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "m0",
+            "damage": 30,
+            "new_health": 70,
+            "killed": false
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 6
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "p0",
+        "spell_id": "smite",
+        "target": {
+          "x": 7,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "m0",
+            "damage": 30,
+            "new_health": 40,
+            "killed": false
           }
         ],
         "is_critical": false,
@@ -267,124 +355,57 @@
       },
       {
         "type": "fight_turn_end",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "fight_id": "capsule_duration_turn_start",
         "entity_id": "p0"
       },
       {
         "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "fight_id": "capsule_duration_turn_start",
         "entity_id": "m0",
         "ap": 10,
         "mp": 5
       },
       {
         "type": "fight_turn_end",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "fight_id": "capsule_duration_turn_start",
         "entity_id": "m0"
       },
       {
-        "type": "fight_turn_effects",
-        "fight_id": "capsule_dot_per_tick_roll",
+        "type": "fight_turn_start",
+        "fight_id": "capsule_duration_turn_start",
         "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_duration_turn_start",
+        "entity_id": "p0",
+        "spell_id": "smite",
+        "target": {
+          "x": 7,
+          "y": 5
+        },
         "effects": [
           {
-            "target_id": "p0",
-            "damage": 10,
-            "new_health": 190,
+            "target_id": "m0",
+            "damage": 20,
+            "new_health": 20,
             "killed": false
           }
-        ]
-      },
-      {
-        "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0",
-        "ap": 10,
-        "mp": 5
-      },
-      {
-        "type": "fight_turn_end",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0"
-      },
-      {
-        "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "m0",
-        "ap": 10,
-        "mp": 5
-      },
-      {
-        "type": "fight_turn_end",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "m0"
-      },
-      {
-        "type": "fight_turn_effects",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0",
-        "effects": [
-          {
-            "target_id": "p0",
-            "damage": 28,
-            "new_health": 162,
-            "killed": false
-          }
-        ]
-      },
-      {
-        "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0",
-        "ap": 10,
-        "mp": 5
-      },
-      {
-        "type": "fight_turn_end",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0"
-      },
-      {
-        "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "m0",
-        "ap": 10,
-        "mp": 5
-      },
-      {
-        "type": "fight_turn_end",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "m0"
-      },
-      {
-        "type": "fight_turn_effects",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0",
-        "effects": [
-          {
-            "target_id": "p0",
-            "damage": 23,
-            "new_health": 139,
-            "killed": false
-          }
-        ]
-      },
-      {
-        "type": "fight_turn_start",
-        "fight_id": "capsule_dot_per_tick_roll",
-        "entity_id": "p0",
-        "ap": 10,
-        "mp": 5
+        ],
+        "is_critical": false,
+        "ap_remaining": 8
       }
     ],
-    "terminal_digest": "3ff4cce3",
+    "terminal_digest": "7caeaa5f",
     "terminal_summary": {
       "winner": -1,
-      "turn_number": 4,
+      "turn_number": 3,
       "entities": [
         {
           "id": "p0",
-          "health": 139,
+          "health": 100,
           "cell": {
             "x": 5,
             "y": 5
@@ -392,7 +413,7 @@
         },
         {
           "id": "m0",
-          "health": 100,
+          "health": 20,
           "cell": {
             "x": 7,
             "y": 5

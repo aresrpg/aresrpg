@@ -287,23 +287,25 @@ describe('ap/mp pool modifiers', () => {
     expect(find_entity(round.state, 'p0').mp).toBe(8)
   })
 
-  // #598 (twin-parity): a turns=2 mp buff must boost the pool on its cast turn + ONE refill, then wear off —
-  // exactly like the strength buff above and like Move's give CREDIT row (aged at the prior turn-END, so its
-  // begin_turn refill never sees an expiring credit). The sim USED to refill from the row one turn too long
-  // (advance_turn reads the effective max BEFORE process_turn_effects drops the expiring row), granting a turn
-  // the chain had already expired — the "+1 MP badge showed but the MP was unusable" field report.
-  test('an mp buff wears off after its 2 turns — pool back to BASE on turn 3, not the stale buffed max (#598)', () => {
+  // #598 (twin-parity) + #2000 (D42): a turns=2 mp buff boosts the pool on its cast turn and on the caster's
+  // NEXT TWO turns — the authored number covers "this turn plus N more" — then wears off. The rows age at the
+  // caster's turn START, ahead of the refill (Move `cast::tick_turn_expiry` → `point_adjust` → `begin_turn`), so
+  // the refill that fires can never read a row the same turn-start already expired: the "+1 MP badge showed but
+  // the MP was unusable" field report is exactly that ordering, and it stays fixed under the new cadence.
+  test('an mp buff wears off after its 2 covered turns — pool back to BASE, never a stale buffed max (#598/#2000)', () => {
     const { state, ctx } = duel(4)
     const buffed = cast(state, ctx, 'p0', 'mp_buff', { x: 1, y: 5 }) // +3 mp, turns=2
     expect(find_entity(buffed.state, 'p0').mp).toBe(8) // T (cast): immediate 5 -> 8
     const t1 = end(end(buffed.state, ctx, 'p0').state, ctx, 'p1')
-    expect(find_entity(t1.state, 'p0').mp).toBe(8) // T+1: buff still live, refill 5 + 3
-    // The timed row is gone by T+2 (badge honest); the pool must follow it back to BASE, not linger at 8.
+    expect(find_entity(t1.state, 'p0').mp).toBe(8) // T+1: first covered turn, refill 5 + 3
     const t2 = end(end(t1.state, ctx, 'p0').state, ctx, 'p1')
+    expect(find_entity(t2.state, 'p0').mp).toBe(8) // T+2: second (last) covered turn
+    // The timed row is gone by T+3 (badge honest); the pool must follow it back to BASE, not linger at 8.
+    const t3 = end(end(t2.state, ctx, 'p0').state, ctx, 'p1')
     expect(
-      find_entity(t2.state, 'p0').effects.filter(e => e.stat === 'mp').length,
+      find_entity(t3.state, 'p0').effects.filter(e => e.stat === 'mp').length,
     ).toBe(0)
-    expect(find_entity(t2.state, 'p0').mp).toBe(5) // T+2: 2-turn buff expired -> base 5 (was a stale 8)
+    expect(find_entity(t3.state, 'p0').mp).toBe(5) // T+3: the 2-turn buff is spent -> base 5
   })
 
   test('an mp debuff reduces the enemy pool immediately', () => {
@@ -314,8 +316,8 @@ describe('ap/mp pool modifiers', () => {
 })
 
 // ── Expiry via the existing per-turn plumbing ───────────────────────────────────
-describe('buff duration + expiry (owner turn-end)', () => {
-  test('a 1-turn buff is gone after the caster cycles back; a 3-turn buff survives', () => {
+describe('buff duration + expiry (the owner\'s turn START — #2000)', () => {
+  test('a 1-turn buff covers the caster\'s next turn and is gone the turn after; a 3-turn buff survives both', () => {
     const { state, ctx } = duel(6)
     const short = cast(state, ctx, 'p0', 'str_buff1', { x: 1, y: 5 })
     const long = cast(short.state, ctx, 'p0', 'str_buff', { x: 1, y: 5 })
@@ -323,13 +325,21 @@ describe('buff duration + expiry (owner turn-end)', () => {
       find_entity(long.state, 'p0').effects.filter(e => e.type === 'STAT_BUFF')
         .length,
     ).toBe(2)
-    // one full round: p0 end decrements both buffs once; p1's turn leaves p0's rows untouched
+    // one full round: p0's next turn STARTS by ageing both of its rows once; p1's turn leaves them untouched.
+    // D42 — the authored 1 is still live for this turn, its counter merely spent.
     const back = end(end(long.state, ctx, 'p0').state, ctx, 'p1')
-    const buffs = find_entity(back.state, 'p0').effects.filter(
+    const covered = find_entity(back.state, 'p0').effects.filter(
+      e => e.type === 'STAT_BUFF',
+    )
+    expect(covered.length).toBe(2)
+    expect(covered.map(b => b.turns_remaining).sort()).toEqual([0, 2])
+    // a second round: the spent 1-turn row drops at that turn's start; the 3-turn one keeps going
+    const after = end(end(back.state, ctx, 'p0').state, ctx, 'p1')
+    const buffs = find_entity(after.state, 'p0').effects.filter(
       e => e.type === 'STAT_BUFF',
     )
     expect(buffs.length).toBe(1) // the 1-turn buff expired; the 3-turn one remains
-    expect(buffs[0].turns_remaining).toBe(2)
+    expect(buffs[0].turns_remaining).toBe(1)
   })
 })
 

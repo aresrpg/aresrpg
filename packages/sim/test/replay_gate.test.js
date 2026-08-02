@@ -439,6 +439,77 @@ const vitality_templates_raw = {
   },
 }
 
+// #2000 (D42) — a FIXED-band damage line plus a 1-turn self strength buff. `min === max` makes `roll_in_range`
+// degenerate and `critical_chance: 0` removes the crit branch, so every bite is pure arithmetic off the caster's
+// LIVE strength: the damage arc reads the buff's clock directly, with no seed derivation in the way.
+const brace_smite_templates_raw = {
+  yajin: {
+    brace: {
+      name: 'Brace',
+      description: '+50 strength on yourself for one turn',
+      levels: [
+        {
+          cost: 2,
+          range: [0, 1],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: false,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'add',
+              statistic: 'strength',
+              min: 50,
+              max: 50,
+              turns: 1,
+              target: 'self',
+              chance: 100,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+    smite: {
+      name: 'Smite',
+      description: 'a fixed earth line',
+      levels: [
+        {
+          cost: 2,
+          range: [1, 6],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: true,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'damage',
+              min: 20,
+              max: 20,
+              element: 'earth',
+              target: 'enemies',
+              chance: 100,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
 // A RANGE-BANDED damage-over-time (#1826). `min !== max` is the whole point: the chain re-rolls the band at
 // EVERY tick (`cast::apply_board_batch_from` → `roll_in_range(value, value_max, slot_damage_roll(turn_seed, e))`),
 // so a DoT whose band is a single number cannot measure the divergence. Self-targeted so the victim is a PLAYER
@@ -1202,7 +1273,7 @@ const scenarios = [
         equals: 40,
       },
       {
-        cite: "cast.move tick_turn_end → spell_board::decrement_fighter_statuses ages a row at ITS OWN fighter's turn end: six authored turns, p0 ended three, three left",
+        cite: "cast.move tick_turn_expiry → spell_board::decrement_fighter_statuses ages a row at ITS OWN fighter's turn START: six authored turns, p0 has started three, three left",
         path: 'team0.0.effects.0.turns_remaining',
         equals: 3,
       },
@@ -1296,6 +1367,71 @@ const scenarios = [
         cite: 'spell_board.move apply_dot — the authored band is stored verbatim and is what every tick rolls against, resistance applying after the roll',
         path: 'team0.0.effects.0.value_max',
         equals: 40,
+      },
+    ],
+  },
+  {
+    // #2000 / D42 twin parity — THE AUTHORED DURATION CARRIES ITS OWN MEANING. A duration of 1 covers the cast
+    // turn AND the caster's next turn, expiring at the start of the one after; the rows age at the bearer's turn
+    // START (`cast::tick_turn_expiry`, ahead of the refill and the tick batch), never at its turn end.
+    //
+    // The whole decrement-timing family is observable in ONE arc because the buff is read by a FIXED damage line
+    // (min == max ⇒ `roll_in_range` is degenerate ⇒ no seed math, no crit: `critical_chance: 0`). smite is
+    // `20 × (100 + strength)/100` on a zero-resist mob (`spell_formula::amplify_damage`, then
+    // `apply_resistance` is identity):
+    //   T   (cast turn)  brace → strength 50, smite = 20 × 150/100 = 30   → m0 100 → 70   [cast-turn coverage]
+    //   T+1 (next turn)  the row ages 1 → 0 and stays LIVE, smite = 30    → m0  70 → 40   [next-turn coverage]
+    //   T+2              the aging finds it spent and drops it, smite = 20 → m0  40 → 20   [expiry at T+2 start]
+    // The old end-turn cadence spent one aging on the cast turn itself, so the buff was already gone at T+1 and
+    // the arc read 30/20/20 → a terminal 30. 20 vs 30 is the discriminator, and no cast-time snapshot of the
+    // stats can produce it either (that reads 30/30/30 → 10).
+    meta: {
+      id: 'buff_duration_one_covers_the_casters_next_turn',
+      class: 'twin',
+      authored: '2026-08-02',
+      source: 'authored',
+      notes:
+        'Issue #2000 (D42): an authored duration 1 covers the cast turn plus the caster\'s next turn and expires at the start of the one after — the damage arc 30/30/20 reads all three, and the old end-turn cadence read 30/20/20.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: brace_smite_templates_raw,
+    initial: {
+      fight_id: 'capsule_duration_turn_start',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          spell_levels: { brace: 1, smite: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      { type: 'cast', entity_id: 'p0', spell_id: 'brace', target: { x: 5, y: 5 } },
+      { type: 'cast', entity_id: 'p0', spell_id: 'smite', target: { x: 7, y: 5 } },
+      // `end_turn` for the mob rather than `ai_turn`: no AI plan, no walk — the arc must read the buff clock alone.
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'end_turn', entity_id: 'm0' },
+      { type: 'cast', entity_id: 'p0', spell_id: 'smite', target: { x: 7, y: 5 } },
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'end_turn', entity_id: 'm0' },
+      { type: 'cast', entity_id: 'p0', spell_id: 'smite', target: { x: 7, y: 5 } },
+    ],
+    pinned_facts: [
+      {
+        cite: 'spell_formula.move amplify_damage — 20 × (100 + strength)/100 on a zero-resist target: 30 + 30 + 20 off 100 HP, the arc only the turn-START cadence produces (end-turn reads 50, a cast-time snapshot 10)',
+        path: 'team1.0.health',
+        equals: 20,
+      },
+      {
+        cite: 'spell_board.move decrement_fighter_statuses — the aging that finds a spent row (counter 0) is the one that drops it, so by T+2 the caster carries no rows at all',
+        path: 'team0.0.effects.length',
+        equals: 0,
+      },
+      {
+        cite: 'cast.move tick_turn_expiry — the row aged at the bearer\'s turn START, never its turn end; the caster\'s live strength is back to base once it leaves',
+        path: 'team0.0.stats.strength',
+        equals: 0,
       },
     ],
   },

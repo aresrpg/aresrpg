@@ -271,7 +271,7 @@ fun damage_to_heal_branches_once_per_direct_line() {
 #[test]
 /// Stats vector: raw142's authored duration zero is scoped to the bearer's current turn. It enters the ordinary
 /// alter-row fold immediately, then the synthetic one-turn row expires without touching the permanent base.
-fun physical_damage_zero_duration_expires_at_turn_end() {
+fun physical_damage_zero_duration_expires_at_turn_start() {
   let mut sc = ts::begin(OWNER);
   stand_up(&mut sc);
   let mut fight = create_fresh(&mut sc, 1, CHAR_A);
@@ -287,8 +287,12 @@ fun physical_damage_zero_duration_expires_at_turn_end() {
   assert!(spell::stat_physical_damage(participant::stats(fight::participants(&fight).borrow(0))) == 20, 0);
   assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), 0, spell_effect::k_alter_stat()).length() == 1, 1);
 
-  cast::tick_turn_end(&mut fight, false, 0);
-  assert!(spell::stat_physical_damage(participant::stats(fight::participants(&fight).borrow(0))) == 0, 2);
+  // The synthetic one-turn row `record_timed` mints for a raw142 duration-0 line ages like any other (#2000):
+  // live through the bearer's next turn-start, gone on the one after.
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  assert!(spell::stat_physical_damage(participant::stats(fight::participants(&fight).borrow(0))) == 20, 2);
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  assert!(spell::stat_physical_damage(participant::stats(fight::participants(&fight).borrow(0))) == 0, 4);
   assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), 0, spell_effect::k_alter_stat()).is_empty(), 3);
 
   ts::return_shared(fight);
@@ -420,7 +424,8 @@ fun stance_emits_apply_and_expiry_and_does_not_leak_to_fresh_fight() {
   assert!(spell_board::fighter_status_of(fight::fx(&fight_a), 0, spell_effect::k_stance()).is_some(), 0);
   assert!(event::events_by_type<fight_events::StanceChanged>().length() == 1, 1);
 
-  cast::tick_turn_end(&mut fight_a, false, 0);
+  cast::tick_turn_expiry(&mut fight_a, false, 0); // #2000 — the authored 1 covers the bearer's next turn
+  cast::tick_turn_expiry(&mut fight_a, false, 0);
   assert!(spell_board::fighter_status_of(fight::fx(&fight_a), 0, spell_effect::k_stance()).is_none(), 2);
   assert!(event::events_by_type<fight_events::StanceChanged>().length() == 2, 3);
 
@@ -498,7 +503,8 @@ fun vitality_punishment_changes_max_hp_then_reverts() {
   assert!(participant::max_hp(fight::participants(&fight).borrow(0)) == 105, 1);
   assert!(participant::hp(fight::participants(&fight).borrow(0)) == 88, 2);
 
-  cast::tick_turn_end(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — the mint's timed row covers the bearer's next turn
+  cast::tick_turn_expiry(&mut fight, false, 0);
   assert!(participant::max_hp(fight::participants(&fight).borrow(0)) == 100, 3);
   assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), 0, spell_effect::k_alter_stat()).is_empty(), 4);
 

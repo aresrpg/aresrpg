@@ -582,8 +582,14 @@ export const process_turn_effects = (state, entity_id, tick_seed = null) => {
 }
 
 /**
- * Decrement and expire one fighter's timed rows at that fighter's turn end. Mirrors
- * `cast::tick_turn_end` -> `spell_board::decrement_fighter_statuses`.
+ * Age and expire one fighter's timed rows at that fighter's turn START, before its pool refill and before any
+ * board tick. Mirrors `cast::tick_turn_expiry` -> `spell_board::decrement_fighter_statuses`.
+ *
+ * #2000 — `turns_remaining` counts the bearer's turns STILL TO COME, so a row is kept while it has any (its
+ * counter landing on 0 marks "this is its last turn") and drops only on the aging that finds it already spent.
+ * An authored N therefore covers the cast turn plus N further bearer turns and expires at the start of turn
+ * N+1 — the meaning the authored number carries natively. The end-turn cadence this replaced spent one aging on
+ * the cast turn itself, so an authored 1 died before its owner ever played under it.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[] }}
@@ -592,7 +598,7 @@ export const expire_turn_effects = (state, entity_id) => {
   const entity = find_entity(state, entity_id)
   if (!entity) return { state, effects: [] }
   const expired_stances = entity.effects.filter(
-    effect => effect.type === 'STANCE' && effect.turns_remaining <= 1,
+    effect => effect.type === 'STANCE' && effect.turns_remaining <= 0,
   )
   // CAPACITY EXPIRY — the exact inverse of every max-hp row that dies on this tick, SIGNED: a departing buff
   // gives its capacity back, a departing debuff returns what it shaved (Move `revert_expired_max_hp`, whose own
@@ -601,7 +607,7 @@ export const expire_turn_effects = (state, entity_id) => {
   const max_hp_expiry = entity.effects.reduce(
     (sum, effect) =>
       sum +
-      (effect.stat === 'max_hp' && effect.turns_remaining <= 1
+      (effect.stat === 'max_hp' && effect.turns_remaining <= 0
         ? effect.type === 'STAT_BUFF'
           ? -effect.value
           : effect.type === 'STAT_DEBUFF'
@@ -615,13 +621,16 @@ export const expire_turn_effects = (state, entity_id) => {
     entity_id,
     e => ({
       ...e,
+      // #2000 — DROP FIRST, then age: a row is spent only once an aging finds its counter already at 0, which
+      // is what buys the bearer the turn its counter landed on. A TIMED_PAYLOAD carries its own delayed clock
+      // and is exempt from both halves, exactly as before.
       effects: e.effects
+        .filter(eff => eff.type === 'TIMED_PAYLOAD' || eff.turns_remaining > 0)
         .map(eff =>
           eff.type === 'TIMED_PAYLOAD'
             ? eff
             : { ...eff, turns_remaining: eff.turns_remaining - 1 },
-        )
-        .filter(eff => eff.turns_remaining > 0),
+        ),
     }),
   )
   return {
@@ -634,6 +643,22 @@ export const expire_turn_effects = (state, entity_id) => {
 }
 
 // ── Turn advance ──────────────────────────────────────────────────────────────
+
+/**
+ * Refill one fighter's pools to their EFFECTIVE maxima — the sim's `participant::begin_turn` / `mob::begin_turn`.
+ * A pure function of the entity's base maxima and its LIVE rows, so re-running it after `expire_turn_effects`
+ * is what prices the refill off the rows that survived the turn-start aging (turns.move: expiry → point_adjust
+ * → begin_turn, #2000). Idempotent before anything is spent, which is the only place it is called twice.
+ * @param {import('./fight_state.js').FightState} state @param {string} entity_id
+ */
+export const refill_turn_pools = (state, entity_id) =>
+  update_entity(state, entity_id, e => ({
+    ...e,
+    ap: effective_ap_max(e),
+    mp: effective_mp_max(e),
+    ap_used: 0,
+    mp_used: 0,
+  }))
 
 /** Step to the next actor and refill its effective pools. */
 export const advance_turn = state => {
@@ -650,15 +675,10 @@ export const advance_turn = state => {
   const entity = find_entity(base_state, next_entity_id)
   if (!entity) return base_state
 
-  return update_entity(base_state, next_entity_id, e => ({
-    ...e,
-    // Refill to the EFFECTIVE pool max so an active ap/mp buff/debuff persists across this actor's turns
-    // (a no-op = e.ap_max / e.mp_max when the actor carries no ap/mp modifier).
-    ap: effective_ap_max(e),
-    mp: effective_mp_max(e),
-    ap_used: 0,
-    mp_used: 0,
-  }))
+  // Refill to the EFFECTIVE pool max so an active ap/mp buff/debuff persists across this actor's turns
+  // (a no-op = e.ap_max / e.mp_max when the actor carries no ap/mp modifier). `reduce.js` re-runs this after
+  // the landed actor's turn-start expiry, so the pools it acts with are priced off the surviving rows (#2000).
+  return refill_turn_pools(base_state, next_entity_id)
 }
 
 /**

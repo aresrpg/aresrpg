@@ -158,8 +158,9 @@ entry fun crank(fight: &mut Fight, version: &Version, clock: &Clock, r: &Random,
   resolve_from(fight, next, &mut rng, now);
 }
 
-/// End the CURRENT player's turn: end-phase board work (end-glyphs, timed expiry + revert, glyph durations —
-/// F-12) then the TurnEnded event. Used by pass/crank/fast-forward (mob turn-ends run inside their own resolve).
+/// End the CURRENT player's turn: end-phase board work (end-glyphs + glyph durations — F-12) then the TurnEnded
+/// event. Used by pass/crank/fast-forward (mob turn-ends run inside their own resolve). The fighter's own timed
+/// rows do NOT age here — #2000 moved that to `cast::tick_turn_expiry` at the bearer's turn START.
 fun forfeit_current(fight: &mut Fight) {
   let a = fight::queue_actor(fight, fight::turn_ptr(fight));
   let is_mob = interleave::actor_is_mob(&a);
@@ -227,11 +228,14 @@ public(package) fun resolve_from(fight: &mut Fight, start: u64, rng: &mut u64, n
     } else {
       let seat = interleave::actor_idx(&a);
       if (participant::is_alive(fight::participants(fight).borrow(seat))) {
-        // REFILL FIRST, board work second (MOB_DEBUFF_HAT P2 turns:213 — the mob-turn order, now side-symmetric):
-        // begin_turn refills AP/MP to net(base − debt + credit) + resets the cast counter, THEN the start
-        // glyph/DoT tick runs, so a start-glyph's give/remove-points lands on the REFILLED pools and survives
-        // into the turn (the old tick-then-refill wiped them on players only). Refilling a seat the DoT then
-        // kills is harmless — the walk moves on and the corpse's pools are never read.
+        // EXPIRY FIRST (#2000): the seat's timed rows age at the very start of its turn, so the debt/credit read
+        // just below sees exactly the rows that still have this turn coming. REFILL SECOND, board work third
+        // (MOB_DEBUFF_HAT P2 turns:213 — the mob-turn order, now side-symmetric): begin_turn refills AP/MP to
+        // net(base − debt + credit) + resets the cast counter, THEN the start glyph/DoT tick runs, so a
+        // start-glyph's give/remove-points lands on the REFILLED pools and survives into the turn (the old
+        // tick-then-refill wiped them on players only). Refilling a seat the DoT then kills is harmless — the
+        // walk moves on and the corpse's pools are never read.
+        cast::tick_turn_expiry(fight, false, seat);
         let (ap_debt, mp_debt, ap_credit, mp_credit) = cast::point_adjust(fight, false, seat);
         participant::begin_turn(fight::participants_mut(fight).borrow_mut(seat), ap_debt, mp_debt, ap_credit, mp_credit);
         if (cast::tick_turn_start(fight, false, seat)) {
@@ -267,9 +271,12 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
   // Read the shared kit base (immutable) BEFORE the mut borrow of the mob — one home per group (mob-kit dedup).
   let base_ap = mob::kit_base_ap(fight::content_kit(fight::member_content(fight, midx)));
   let base_mp = mob::kit_base_mp(fight::content_kit(fight::member_content(fight, midx)));
-  // refill to net(base − debt + credit) (MOB_DEBUFF_HAT P1 — a player's retrait actually
+  // EXPIRY FIRST (#2000 — side-symmetric with the seat arm): the mob's timed rows age at the start of its turn,
+  // so the debt/credit read below sees exactly the rows that still have this turn coming.
+  // Then refill to net(base − debt + credit) (MOB_DEBUFF_HAT P1 — a player's retrait actually
   // throttles the boss's next turn: AP debt → fewer casts, MP debt → less movement, exactly what the AI reads
   // below; an ALLY's give-points credit BOOSTS the same refill, so the boss-feed synergy is live).
+  cast::tick_turn_expiry(fight, true, midx);
   let (ap_debt, mp_debt, ap_credit, mp_credit) = cast::point_adjust(fight, true, midx);
   mob::begin_turn(fight::mobs_mut(fight).borrow_mut(midx), base_ap, base_mp, ap_debt, mp_debt, ap_credit, mp_credit);
   cast::note_mob_turn(fight, midx);

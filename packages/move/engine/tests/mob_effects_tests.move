@@ -91,11 +91,14 @@ fun mob_permanent_and_timed_alters_and_expiry() {
   // TIMED shred −10 (2 turns) → live 30→20 (base still 30).
   cast::apply_effect_for_testing(&mut fight, 0, 0, PLAYER_CELL, &ps, 1, MOB0, &resist_alter(spell::el_earth(), 10, true, 2), &mut rng);
   assert!(mob_earth_res(&fight, 0) == 20, 1);
-  // expire the timed row over its 2 turn-ends → live re-derives back to the PERMANENT base 30.
-  cast::tick_turn_end(&mut fight, true, 0);
-  assert!(mob_earth_res(&fight, 0) == 20, 2); // still 1 turn left
-  cast::tick_turn_end(&mut fight, true, 0);
-  assert!(mob_earth_res(&fight, 0) == 30, 3); // expired → back to permanent base (not the debuffed 20, not the pristine 50)
+  // #2000 — the authored 2 covers the mob's next TWO turn-starts; the third finds it spent and re-derives back
+  // to the PERMANENT base 30.
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  assert!(mob_earth_res(&fight, 0) == 20, 2); // two turns left
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  assert!(mob_earth_res(&fight, 0) == 20, 3); // its last covered turn
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  assert!(mob_earth_res(&fight, 0) == 30, 4); // expired → back to permanent base (not the debuffed 20, not the pristine 50)
   ts::return_shared(fight);
   sc.end();
 }
@@ -159,9 +162,10 @@ fun timed_strength_shred_softens_mob_outgoing_then_expires() {
   cast::apply_effect_for_testing(&mut fight, 0, 0, PLAYER_CELL, &ps, 1, MOB0, &spell_effect::alter_stat(spell_effect::stat_strength(), participant::centered_value(50, true), true, false, 2), &mut rng);
   cast::resolve_mob_cast(&mut fight, 0, 0, PLAYER_CELL, &mut rng); // now 100*(100+50)/100 = 150 → 800→650
   assert!(participant::hp(fight::participants(&fight).borrow(0)) == 650, 1);
-  // expire the shred (2 turn-ends) → mob str back to 100.
-  cast::tick_turn_end(&mut fight, true, 0);
-  cast::tick_turn_end(&mut fight, true, 0);
+  // expire the shred (#2000: an authored 2 covers two further turn-starts, so the THIRD clears it) → str back to 100.
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  cast::tick_turn_expiry(&mut fight, true, 0);
   cast::resolve_mob_cast(&mut fight, 0, 0, PLAYER_CELL, &mut rng); // 200 again → 650→450
   assert!(participant::hp(fight::participants(&fight).borrow(0)) == 450, 2);
   ts::return_shared(fight);
@@ -179,13 +183,15 @@ fun ap_drain_persists_through_begin_turn_and_clamps() {
   // GUARANTEED drain 4 AP (dodge flag off): removed 4, mob ap 6→2 immediately + a debt row.
   cast::apply_effect_for_testing(&mut fight, 0, 0, PLAYER_CELL, &ps, 1, MOB0, &spell_effect::remove_points(spell_effect::point_ap(), 4, false), &mut rng);
   assert!(mob::ap(fight::mobs(&fight).borrow(0)) == 2, 0);
+  // THE MOB'S NEXT TURN, in the real order (#2000 turns.move:resolve_mob_turn): expiry → point_adjust → refill.
+  // The authored 1 still has this turn coming, so the debt is read and the refill is base − debt (2), not 6.
+  cast::tick_turn_expiry(&mut fight, true, 0);
   let (ap_debt, mp_debt, ap_cr, mp_cr) = cast::point_adjust(&fight, true, 0);
   assert!(ap_debt == 4 && mp_debt == 0 && ap_cr == 0 && mp_cr == 0, 1);
-  // the mob's next turn REFILLS to base − debt (2), not full 6 → the drain really constrained it.
   mob::begin_turn(fight::mobs_mut(&mut fight).borrow_mut(0), 6, 6, ap_debt, mp_debt, ap_cr, mp_cr);
   assert!(mob::ap(fight::mobs(&fight).borrow(0)) == 2, 2);
-  // after the mob's turn-END the debt row expires → the FOLLOWING turn refills full.
-  cast::tick_turn_end(&mut fight, true, 0);
+  // the FOLLOWING turn opens on a spent row → it expires there and that refill is full.
+  cast::tick_turn_expiry(&mut fight, true, 0);
   let (ap_debt2, _mp2, _ac2, _mc2) = cast::point_adjust(&fight, true, 0);
   assert!(ap_debt2 == 0, 3);
   mob::begin_turn(fight::mobs_mut(&mut fight).borrow_mut(0), 6, 6, ap_debt2, 0, 0, 0);
@@ -239,13 +245,15 @@ fun ally_feed_survives_begin_turn() {
   let mut rng = 9u64;
   cast::resolve_mob_cast(&mut fight, 0, 0, MOB1, &mut rng); // ally feeds boss +2 MP
   assert!(mob::mp(fight::mobs(&fight).borrow(1)) == 8, 0); // immediate half
-  // the boss's OWN turn: begin_turn folds the credit — MP at act time is 8, not the pre-fix wiped 6.
+  // the boss's OWN turn, in the real order (#2000): expiry → point_adjust → begin_turn folds the credit —
+  // MP at act time is 8, not the pre-fix wiped 6.
+  cast::tick_turn_expiry(&mut fight, true, 1);
   let (ad, md, ac, mc) = cast::point_adjust(&fight, true, 1);
   assert!(mc == 2, 1);
   mob::begin_turn(fight::mobs_mut(&mut fight).borrow_mut(1), 6, 6, ad, md, ac, mc);
   assert!(mob::mp(fight::mobs(&fight).borrow(1)) == 8, 2); // the boss ACTS with the fed MP (moves farther)
-  // boss turn-end → the credit row expires → the following refill is back to base.
-  cast::tick_turn_end(&mut fight, true, 1);
+  // the boss's NEXT turn opens on a spent credit row → it expires there and that refill is back to base.
+  cast::tick_turn_expiry(&mut fight, true, 1);
   let (ad2, md2, ac2, mc2) = cast::point_adjust(&fight, true, 1);
   assert!(mc2 == 0, 3);
   mob::begin_turn(fight::mobs_mut(&mut fight).borrow_mut(1), 6, 6, ad2, md2, ac2, mc2);

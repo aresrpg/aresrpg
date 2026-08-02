@@ -103,10 +103,14 @@ describe('effect board — parity with spell_board.move', () => {
     expect(t.length).toBe(1)
     expect(value(t[0])).toBe(8)
     expect(tick_start(b, 2, encode(0, 0))).toEqual([]) // not another fighter's DoT
+    // #2000: the counter is "bearer turns still to come", so a 3 survives THREE agings (each of those turns
+    // ticking) and drops on the fourth — the start of the turn after its last.
     decrement_fighter_statuses(b, 1) // 3 → 2
     decrement_fighter_statuses(b, 1) // 2 → 1
+    decrement_fighter_statuses(b, 1) // 1 → 0, still live for THIS turn
     expect(status_count(b)).toBe(1)
-    decrement_fighter_statuses(b, 1) // 1 → expire
+    expect(tick_start(b, 1, encode(0, 0)).length).toBe(1) // its last tick
+    decrement_fighter_statuses(b, 1) // already spent → expire
     expect(status_count(b)).toBe(0)
   })
 })

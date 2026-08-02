@@ -102,6 +102,9 @@ describe('P1 #2 — feed-then-act: the credit survives begin_turn, then expires'
     const b = empty()
     add_status(b, 1000, 0, credit_row(POINT_MP, 2, 1)) // the ally's feed, recorded off-turn
     expect(fighter_point_credit(b, 1000, POINT_MP)).toBe(2)
+    // THE BOSS'S TURN, in the chain's order (#2000): expiry first, THEN point_adjust, then begin_turn. The
+    // authored 1 still has this turn coming, so the aging spends its counter and leaves the row live.
+    decrement_fighter_statuses(b, 1000)
     // the boss's begin_turn folds the credit — MP at act time is 8 (Move: ally_feed_survives_begin_turn).
     expect(
       net_refill(
@@ -110,7 +113,7 @@ describe('P1 #2 — feed-then-act: the credit survives begin_turn, then expires'
         fighter_point_credit(b, 1000, POINT_MP),
       ),
     ).toBe(8)
-    // the boss's turn-end expires the row (turns 1) → the following refill is back to base.
+    // the boss's NEXT turn opens on the spent row and drops it → that refill is back to base.
     decrement_fighter_statuses(b, 1000)
     expect(fighter_point_credit(b, 1000, POINT_MP)).toBe(0)
     expect(net_refill(6, 0, 0)).toBe(6)

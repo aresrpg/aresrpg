@@ -183,7 +183,9 @@ fun apply_state_row_drives_required_gate_and_expires() {
 
   cast::resolve_player_cast(&mut fight, 0, &spell, MOB_CELL);
   assert!(mob::hp(fight::mobs(&fight).borrow(0)) == 90);
-  cast::tick_turn_end(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — the authored 1 still covers the caster's next turn
+  assert!(spell_board::fighter_has_state(fight::fx(&fight), 0, 788));
+  cast::tick_turn_expiry(&mut fight, false, 0);
   assert!(!spell_board::fighter_has_state(fight::fx(&fight), 0, 788));
 
   cast::resolve_player_cast(&mut fight, 0, &spell, MOB_CELL);
@@ -233,12 +235,16 @@ fun steal_stat_has_two_timed_legs_and_both_expire() {
   assert!(debit_amount == 11 && debit_negative);
   assert!(debit.borrow().has_flag(spell_effect::flag_negative()));
 
-  cast::tick_turn_end(&mut fight, true, 0);
-  cast::tick_turn_end(&mut fight, false, 0);
-  cast::tick_turn_end(&mut fight, true, 0);
-  cast::tick_turn_end(&mut fight, false, 0);
-  cast::tick_turn_end(&mut fight, true, 0);
-  cast::tick_turn_end(&mut fight, false, 0);
+  // #2000 — both legs are authored 3, so each side's rows survive THREE of its own turn-starts and leave on the
+  // fourth: four turns per side, taken in the alternating order the queue actually walks.
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0);
   assert!(spell::stat_strength(mob::stats(fight::mobs(&fight).borrow(0))) == 0);
   assert!(spell::stat_strength(participant::stats(fight::participants(&fight).borrow(0))) == 0);
   assert!(spell_board::status_count(fight::fx(&fight)) == 0);
@@ -270,8 +276,9 @@ fun reflect_damage_consumes_flat_row_on_incoming_hit() {
   assert!(!side0 && idx0 == 0 && amount0 == 10 && hp0 == 90);
   assert!(side1 && idx1 == 0 && amount1 == 2 && hp1 == 98);
 
-  cast::tick_turn_end(&mut fight, false, 0);
-  cast::tick_turn_end(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0);
+  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — the authored 2 covers two further turn-starts
   assert!(spell_board::fighter_status_of(
     fight::fx(&fight), 0, spell_effect::k_reflect_damage(),
   ).is_none());

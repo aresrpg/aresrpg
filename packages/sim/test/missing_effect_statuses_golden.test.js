@@ -226,7 +226,11 @@ const run_stance_lifecycle = vector => {
     }),
   ])
   const expiring = cast(state, caster.id, one_turn, caster.cell)
-  const expired = expire_turn_effects(expiring.state, caster.id)
+  // #2000 — the authored 1 covers the bearer's next turn start; the STANCE_END fires on the one after.
+  const expired = expire_turn_effects(
+    expire_turn_effects(expiring.state, caster.id).state,
+    caster.id,
+  )
   const fresh = state_of(
     [fighter('p0', { x: 2, y: 2 }, true)],
     [fighter('m0', { x: 3, y: 2 }, false)],

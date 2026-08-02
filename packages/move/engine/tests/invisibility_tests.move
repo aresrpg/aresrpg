@@ -315,6 +315,11 @@ fun mob_target_input_excludes_hidden_and_all_hidden_ticks_expiry() {
   let mut rng = 7;
 
   turns::resolve_mob_turn_for_testing(&mut fight, 0, &mut rng);
+  // #2000 — a mob turn opens with `cast::tick_turn_expiry`, and the authored 1 still had this turn coming:
+  // the row is spent, not gone. The NEXT mob turn is the one that finds it spent and drops it.
+  assert!(spell_board::fighter_status_of(fight::fx(&fight), MOB_FID, spell_effect::k_apply_state()).is_some());
+
+  turns::resolve_mob_turn_for_testing(&mut fight, 0, &mut rng);
 
   assert!(spell_board::fighter_status_of(fight::fx(&fight), MOB_FID, spell_effect::k_apply_state()).is_none());
   ts::return_shared(fight);

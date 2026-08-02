@@ -229,9 +229,13 @@ export const decrement_glyphs = board => {
 }
 
 /**
- * Tick down a fighter's status durations, expiring those reaching 0. An EXPIRING revert-class row (timed
- * stat/resist buff, armor/reflect accumulator, invisibility) returns its applied Effect so the caller can undo
- * the delta; every other expiring kind just drops. Mirrors spell_board::decrement_fighter_statuses.
+ * Tick down a fighter's status durations at that fighter's turn START, expiring those already spent. An EXPIRING
+ * revert-class row (timed stat/resist buff, armor/reflect accumulator, invisibility) returns its applied Effect
+ * so the caller can undo the delta; every other expiring kind just drops. Mirrors
+ * spell_board::decrement_fighter_statuses.
+ *
+ * #2000 — `remaining_turns` counts the bearer's turns STILL TO COME, so a row survives while it has any (`> 0`)
+ * and drops on the aging that finds it at 0: an authored N covers the cast turn plus N further bearer turns.
  * @returns {import('./spell_effect.js').Effect[]} the effects whose deltas must be reverted
  */
 export const decrement_fighter_statuses = (board, fighter_id) => {
@@ -240,7 +244,7 @@ export const decrement_fighter_statuses = (board, fighter_id) => {
   while (board.statuses.length > 0) {
     const s = board.statuses.pop()
     if (s.fighter === fighter_id) {
-      if (s.remaining_turns > 1) {
+      if (s.remaining_turns > 0) {
         s.remaining_turns -= 1
         kept.push(s)
       } else if (status_needs_revert(s.kind)) {

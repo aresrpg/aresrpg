@@ -12,7 +12,7 @@
 /// the dungeon owner embeds ONE `board: BoardState` field on `Dungeon` (init `spell_board::empty()`), and the
 /// per-fighter statuses key off a `u64 fighter_id` the turn machine maps from a player SEAT or a mob index.
 /// This module is the pure primitive layer; the (held) `apply_cast`/turn-tick rewrite orchestrates the §5d
-/// ordering (start: DoT + start-glyph → act: trap on-enter → end: end-glyph → decrement durations).
+/// ordering (start: decrement durations → DoT + start-glyph → act: trap on-enter → end: end-glyph).
 module aresrpg_foundation::spell_board;
 
 use aresrpg_foundation::{combat_grid, spell_effect::{Self, Effect}};
@@ -379,7 +379,7 @@ fun sum_point_rows(board: &BoardState, fighter_id: u64, kind: u8, point_kind: u8
 }
 
 /// PURGE every status row on `fighter_id` — the DEATH fold (MOB_DEBUFF_HAT P3 spell_board:286): a dead fighter's
-/// rows can never expire (`decrement_fighter_statuses` runs only on its own turn-end, and a corpse has no turns),
+/// rows can never expire (`decrement_fighter_statuses` runs only on its own turn-start, and a corpse has no turns),
 /// so without this the debt/credit/alter scans iterate junk for the fight's remainder. No reverts returned — a
 /// corpse's pools/stats are never read again (no revive-by-heal). Rows the dead fighter SOURCED on others persist
 /// (1.29: a poison outlives its caster).
@@ -409,7 +409,7 @@ public fun fighter_alter_rows(board: &BoardState, fighter_id: u64): vector<Effec
   out
 }
 
-// ╔════════════════ [ Duration decrement (end-of-turn) ] ═════════════════════════ ]
+// ╔════ [ Duration decrement (statuses: the bearer's turn START — #2000; glyphs: player turn END) ] ═ ]
 
 /// Tick down every glyph's duration, expiring those that reach 0 (traps have no timer — untouched). A glyph
 /// placed with N turns ticks on N turns, then expires.
@@ -426,17 +426,24 @@ public fun decrement_glyphs(board: &mut BoardState) {
   board.cell_entries = kept;
 }
 
-/// Tick down a fighter's status durations (DoT/buffs/debuffs), expiring those reaching 0. #69: an EXPIRING
+/// Tick down a fighter's status durations (DoT/buffs/debuffs), expiring those already spent. #69: an EXPIRING
 /// timed `k_alter_stat` / `k_alter_resist` row carried the buff's applied delta (in its `effect` — stat/element,
 /// magnitude, and FLAG_NEGATIVE sign), so return those effects to the caller. `spell_board` can't reach
 /// `Participant`; the dungeon-level tick applies the INVERSE (revert). Every other expiring kind just drops.
+///
+/// #2000 — THE COUNTER'S MEANING. `remaining_turns` counts the bearer's turns STILL TO COME, so a row is kept
+/// while it has any (`> 0`, its counter landing on 0 marking "this is its last turn") and drops only on the
+/// aging that finds it already at 0. Paired with the turn-START cadence (`cast::tick_turn_expiry`), an authored
+/// duration N therefore covers the cast turn plus N further bearer turns and expires at the start of turn N+1 —
+/// the semantics the authored number carries natively. The end-turn `> 1` cadence spent one aging on the cast
+/// turn itself, which is why an authored 1 died before its owner ever played under it.
 public fun decrement_fighter_statuses(board: &mut BoardState, fighter_id: u64): vector<Effect> {
   let mut kept = vector[];
   let mut expired = vector[];
   while (!board.statuses.is_empty()) {
     let mut s = board.statuses.pop_back();
     if (s.fighter == fighter_id) {
-      if (s.remaining_turns > 1) { s.remaining_turns = s.remaining_turns - 1; kept.push_back(s); }
+      if (s.remaining_turns > 0) { s.remaining_turns = s.remaining_turns - 1; kept.push_back(s); }
       else if (status_needs_revert(s.kind)) {
         expired.push_back(s.effect); // timed-effect revert — fight side handles stat/resist/armor/invisibility/stance
       };
@@ -538,10 +545,13 @@ fun t_dot_lifecycle() {
   assert!(t.length() == 1 && t.borrow(0).value() == 8, 0);
   // not another fighter's DoT
   assert!(tick_start(&b, 2, combat_grid::encode(0, 0)).is_empty(), 0);
-  // 3 turns then expires
+  // #2000: the counter is "bearer turns still to come", so a 3 survives THREE agings (3->2->1->0, each of
+  // those turns ticking) and drops on the fourth — the start of the turn after its last.
   decrement_fighter_statuses(&mut b, 1); // 3->2
   decrement_fighter_statuses(&mut b, 1); // 2->1
+  decrement_fighter_statuses(&mut b, 1); // 1->0, still live for THIS turn
   assert!(b.status_count() == 1, 0);
-  decrement_fighter_statuses(&mut b, 1); // 1->expire
+  assert!(tick_start(&b, 1, combat_grid::encode(0, 0)).length() == 1, 0); // its last tick
+  decrement_fighter_statuses(&mut b, 1); // already spent -> expire
   assert!(b.status_count() == 0, 0);
 }
