@@ -1,4 +1,2 @@
-01c70a96fc661d57dd8460efdedbd42e82b0292e lane/ci-red-pack fix(promote): an unread range is refused, never read as a clean one
-35790e9b17a7e495eb9dc39386a6d7f3ee2dbde5 lane/ci-red-pack fix(sentry): a valve between Sentry and the board, and a plan read before it writes
-cb9c707a17a44df3ea98ce0250fa9cb6f0c68fb1 lane/ci-red-pack fix(promote): the landing reads its whole range, on the rule CI can satisfy
-14aab749cfa9e509998e0b3823d5434a800ffa90 lane/ci-red-pack fix(board): a pull request drains its rows on its own head, never its range
+a86d089d365e0028277fbdccd3119fb7a348ea78 lane/1862-sponsored-adoption fix(tx): adopt sponsored creates from the certified execute receipt
+b3f3cb128a1fe7a6bf5a813984ad994f6d5ed40d lane/1862-sponsored-adoption api: return the certified execute receipt, not effects only
