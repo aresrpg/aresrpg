@@ -14,7 +14,7 @@ import { craft_success_percent } from '@aresrpg/sdk/jobs'
 import { craft_affordability_of } from '../../../pages/encyclopedia/recipes'
 import { use_game_state } from '../../store.js'
 import { Tooltip } from './Tooltip.jsx'
-import { ItemIcon } from './jobs_visuals.jsx'
+import { JobItemIcon } from './jobs_visuals.jsx'
 import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { craft_item } from '../../../world-shell/craft_actions.js'
 import { play_discovery_sfx, play_fight_sfx } from '../../core/audio/sfx.js'
@@ -126,7 +126,7 @@ export function CraftControls({ recipe, job, level, owned }) {
           const enough = hn?.enough ?? false
           return (
             <div key={ing.template_id} className="jobs__ingredient">
-              <ItemIcon icon={ing.id ?? ''} size={32} />
+              <JobItemIcon icon={ing.id ?? ''} size={32} />
               <span className="jobs__ingredient-id">
                 {/* The bill of materials names items the player has to go FIND: each name is the standard
                     clickable entity reference into the encyclopedia (the ONE encyclopedia_path idiom), keyed by
@@ -222,7 +222,7 @@ export function RecipeGrid({ recipes, loading, level, on_select, selected_id = n
       className={`jobs__recipe${is_locked ? ' is-locked' : ''}${r.id === selected_id ? ' is-selected' : ''}`}
       onClick={() => on_select(r)}
     >
-      <ItemIcon icon={r.item_type} size={32} />
+      <JobItemIcon icon={r.item_type} size={32} />
       <span className="jobs__recipe-id">
         <span className="jobs__recipe-name">{r.name?.trim() || r.id}</span>
         {/* The UNLOCK level, so the number on the card agrees with the block it sits in. The output

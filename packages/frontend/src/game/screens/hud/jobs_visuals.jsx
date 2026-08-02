@@ -36,7 +36,9 @@ export function JobGlyph({ kind }) {
 }
 
 /**
- * An item icon — the REAL aresrpg asset art (assets CDN) with a graceful fallback. Mirrors the
+ * The jobs drawer's own item icon — the REAL aresrpg asset art (assets CDN) with a graceful fallback.
+ * NOT the shared `hud/ItemIcon.jsx` (different markup, different fallback ladder): this one has always
+ * been the drawer's private renderer, and the #2052 split only gave it a file. Mirrors the
  * companion `ItemImage`: tries `${ASSETS_URL}/items/<icon>.png` with `referrerPolicy="no-referrer"`,
  * and on load error swaps to a tasteful diamond GLYPH in the neutral steel tone (so a blocked or
  * missing asset never renders a broken-image box). FLAG: the assets bucket currently returns
@@ -44,7 +46,7 @@ export function JobGlyph({ kind }) {
  * glyph is the live fallback until then.
  * @param {{ icon: string, size?: number }} props
  */
-export function ItemIcon({ icon, size = 28 }) {
+export function JobItemIcon({ icon, size = 28 }) {
   const [failed, set_failed] = useState(false)
   const url = item_icon_url(icon)
   if (!url || failed) {

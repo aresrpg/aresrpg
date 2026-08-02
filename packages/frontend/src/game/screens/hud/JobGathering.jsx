@@ -15,7 +15,7 @@ import {
 } from '@aresrpg/sdk/jobs'
 
 import { use_game_state, context } from '../../store.js'
-import { ItemIcon } from './jobs_visuals.jsx'
+import { JobItemIcon } from './jobs_visuals.jsx'
 import i18n from '../../../i18n'
 import './hud-panels.css'
 import './jobs.css'
@@ -77,7 +77,7 @@ export function ResourceTable({ job, level, on_select, selected_id = null }) {
             <span className="jobs__col-tier hud-num">{i18n.t('jobs.tier_badge', { tier: res.tier })}</span>
             <span className="jobs__col-req hud-num">{i18n.t('jobs.lv_badge', { level: req })}</span>
             <span className="jobs__col-name">
-              <ItemIcon icon={res.icon} size={24} />
+              <JobItemIcon icon={res.icon} size={24} />
               {res.name}
             </span>
             <span className="jobs__col-yield hud-num">

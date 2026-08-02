@@ -31,7 +31,7 @@
 // encyclopedia render — NO modal, NO little card. A craftable recipe also shows the inline bill of
 // materials + a Craft button below the characteristics.
 //
-// Item art: ItemIcon renders the real assets-CDN art with a neutral glyph fallback (the
+// Item art: JobItemIcon renders the real assets-CDN art with a neutral glyph fallback (the
 // companion ItemImage pattern). FLAG: the assets bucket returns AccessDenied to non-companion
 // origins, so confirmed real art needs the house asset pipeline — the glyph is the live fallback.
 //
