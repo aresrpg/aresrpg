@@ -79,6 +79,13 @@ pub enum RedisWrite {
         character: String,
         owner: String,
     },
+    /// Atomic reconcile of one party's whole PENDING-invite vector against the previous
+    /// projection (`party::invite` emits no event — see `party.rs`). Latest-wins, so an
+    /// empty vector is the deletion.
+    PartyPending {
+        party: String,
+        invites: Vec<party::PendingInvite>,
+    },
 }
 
 // ── write constructors (terse match arms) ────────────────────────────────────
@@ -1443,6 +1450,17 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
                     .arg(character)
                     .arg(owner);
             }
+            RedisWrite::PartyPending {
+                party: party_id,
+                invites,
+            } => {
+                pipe.cmd("EVAL")
+                    .arg(party::LUA_PENDING)
+                    .arg(1)
+                    .arg(party::party_invites_key(party_id))
+                    .arg(party_id)
+                    .arg(serde_json::to_string(invites).unwrap_or_else(|_| "[]".to_string()));
+            }
         }
     }
     // RAW per-command replies, NOT `Pipeline::query_async` — that path runs
@@ -1505,7 +1523,8 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
             }
             RedisWrite::PartyCreate { party, .. }
             | RedisWrite::PartyJoin { party, .. }
-            | RedisWrite::PartyLeave { party, .. } => {
+            | RedisWrite::PartyLeave { party, .. }
+            | RedisWrite::PartyPending { party, .. } => {
                 return Err(err).with_context(|| format!("Party reducer {party}"));
             }
         }

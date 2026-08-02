@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, mock, test } from 'bun:test'
 
-import { handle_parties } from './parties_view.js'
+import { handle_parties, handle_party_invites } from './parties_view.js'
 
 const party_id = `0x${'a'.repeat(64)}`
 const leader = `0x${'1'.repeat(64)}`
@@ -15,11 +15,13 @@ const kiosk_id = `0x${'e'.repeat(64)}`
 
 const params = (character) => new URLSearchParams(character == null ? {} : { character })
 
-function reads(entries = []) {
+function reads(entries = [], sets = []) {
   const docs = new Map(entries)
+  const members = new Map(sets)
   return {
     get_json: mock(async (key) => docs.get(key) ?? null),
     mget_json: mock(async (keys) => keys.map((key) => docs.get(key) ?? null)),
+    smembers: mock(async (key) => members.get(key) ?? []),
   }
 }
 
@@ -104,5 +106,107 @@ describe('/v1/parties?character=', () => {
 
     const { data } = await handle_parties(params(leader), store)
     expect(data.members).toEqual([{ character: leader, owner: new_owner, order: 0 }])
+  })
+})
+
+// ROW #2008: pending invites are the ONE dimension `/v1/parties` structurally cannot serve — the invitee is by
+// definition NOT a member, so its `rpc:char_party` pointer is absent and the membership check fails closed. The
+// sibling route is the authoritative carrier the invitee polls; `party::invite` emits no event, so the row comes
+// from the Party OBJECT snapshot (indexer/src/handlers/ares/party.rs).
+describe('/v1/party-invites?character=', () => {
+  const pending_key = (party) => `rpc:party_invites:${party}`
+  const index_key = (character) => `rpc:idx:char_invites:${character}`
+  const second_party = `0x${'f'.repeat(64)}`
+
+  test('requires a character id before reading Redis', async () => {
+    const store = reads()
+    const { status, data } = await handle_party_invites(params(), store)
+    expect(status).toBe(400)
+    expect(data).toEqual({ error: 'bad_request', message: 'provide ?character=<character id>' })
+    expect(store.smembers).not.toHaveBeenCalled()
+  })
+
+  test('serves an empty list — never null — when nobody has invited the character', async () => {
+    const store = reads()
+    const { status, data } = await handle_party_invites(params(friend), store)
+    expect(status).toBe(200)
+    expect(data).toEqual([])
+    expect(store.smembers).toHaveBeenCalledWith(index_key(friend))
+  })
+
+  test('serves the pending row a non-member character can accept, with its inviting leader', async () => {
+    const store = reads(
+      [
+        [pending_key(party_id), { party: party_id, invites: [{ character: friend, owner: friend_owner }] }],
+        [
+          `rpc:party:${party_id}`,
+          { id: party_id, leader_character: leader, members: [{ character: leader, owner: shared_owner, order: 0 }] },
+        ],
+      ],
+      [[index_key(friend), [party_id]]]
+    )
+
+    const { status, data } = await handle_party_invites(params(friend), store)
+    expect(status).toBe(200)
+    expect(data).toEqual([{ party: party_id, leader_character: leader }])
+  })
+
+  test('fails closed on a stale index entry the pending document no longer lists', async () => {
+    const store = reads(
+      [
+        [pending_key(party_id), { party: party_id, invites: [{ character: alt, owner: shared_owner }] }],
+        [
+          `rpc:party:${party_id}`,
+          { id: party_id, leader_character: leader, members: [{ character: leader, owner: shared_owner, order: 0 }] },
+        ],
+      ],
+      [[index_key(friend), [party_id]]]
+    )
+    const { data } = await handle_party_invites(params(friend), store)
+    expect(data).toEqual([])
+  })
+
+  test('drops an invite for a character the party already accepted, and one with no projected party yet', async () => {
+    const store = reads(
+      [
+        [pending_key(party_id), { party: party_id, invites: [{ character: friend, owner: friend_owner }] }],
+        [
+          `rpc:party:${party_id}`,
+          {
+            id: party_id,
+            leader_character: leader,
+            members: [
+              { character: leader, owner: shared_owner, order: 0 },
+              { character: friend, owner: friend_owner, order: 1 },
+            ],
+          },
+        ],
+        [pending_key(second_party), { party: second_party, invites: [{ character: friend, owner: friend_owner }] }],
+      ],
+      [[index_key(friend), [party_id, second_party]]]
+    )
+    const { data } = await handle_party_invites(params(friend), store)
+    expect(data).toEqual([])
+  })
+
+  test('orders multiple live invitations deterministically by party id', async () => {
+    const party_doc = (id, leader_character) => [
+      `rpc:party:${id}`,
+      { id, leader_character, members: [{ character: leader_character, owner: shared_owner, order: 0 }] },
+    ]
+    const store = reads(
+      [
+        [pending_key(party_id), { party: party_id, invites: [{ character: friend, owner: friend_owner }] }],
+        [pending_key(second_party), { party: second_party, invites: [{ character: friend, owner: friend_owner }] }],
+        party_doc(party_id, leader),
+        party_doc(second_party, alt),
+      ],
+      [[index_key(friend), [second_party, party_id]]]
+    )
+    const { data } = await handle_party_invites(params(friend), store)
+    expect(data).toEqual([
+      { party: party_id, leader_character: leader },
+      { party: second_party, leader_character: alt },
+    ])
   })
 })

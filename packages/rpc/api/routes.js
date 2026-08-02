@@ -3,7 +3,7 @@
 // Pure public-route table. Keeping the map outside server.js lets unit tests assert literal route wiring
 // without importing the Bun.serve listener.
 
-import { handle_parties } from './parties_view.js'
+import { handle_parties, handle_party_invites } from './parties_view.js'
 import { handle_suins } from './suins_view.js'
 import {
   handle_characters,
@@ -54,6 +54,7 @@ export const ROUTES = Object.freeze({
   '/v1/taux': handle_taux,
   '/v1/rare-links': handle_rare_links,
   '/v1/parties': handle_parties,
+  '/v1/party-invites': handle_party_invites,
   '/v1/names': handle_names,
   '/v1/suins': handle_suins,
   '/v1/sponsor/remaining': handle_sponsor_remaining,

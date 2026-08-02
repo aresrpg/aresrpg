@@ -267,6 +267,14 @@ const ZONE_KEY_TYPE: &str = "ZoneKey";
 /// compute diet's search-committed Blake2b group root + count (`is_group_root_key`), a sibling plain
 /// struct key on the SAME World UID.
 const ZONE_GROUP_ROOT_KEY_TYPE: &str = "ZoneGroupRootKey";
+/// `aresrpg_social::party::Party` — snapshotted for its PENDING-invite vector alone (#2008). The
+/// accepted roster stays event-projected (`party.rs`'s `LUA_REDUCE`); `party::invite` and
+/// `party::decline` emit NOTHING, so an invitation exists only in these bytes. Every mutation
+/// re-outputs the shared object in its own checkpoint, which makes latest-wins on the whole
+/// vector exact. The social package is a dependency LEAF with its own address, so an activated
+/// `ARES_PACKAGES` allowlist must list it (the same requirement its event arm already carries).
+const PARTY_MODULE: &str = "party";
+const PARTY_TYPE: &str = "Party";
 /// `aresrpg::loot_box` — the soulbound `PetBoxClaim` an `open_box` roll mints and `claim_pet`
 /// consumes+deletes. Same package allowlist as `character`/`item` (core `aresrpg`), so no new
 /// allowlist entry: matched by (module, name) like every other arm here.
@@ -2341,6 +2349,12 @@ impl Processor for AresSnapshotHandler {
                         (WORLD_MODULE, WORLD_TYPE) => {
                             writes.extend(remove_world(&id));
                         }
+                        // `disband` deletes the shared Party, so no output object carries its now-empty
+                        // pending vector — the reap has to ride the delete sweep or the reverse index
+                        // would keep pointing an invited character at a party that no longer exists.
+                        (PARTY_MODULE, PARTY_TYPE) => {
+                            writes.extend(super::party::remove_party_invites(&id));
+                        }
                         (CRAFTING_MODULE, RECIPE_TYPE) => {
                             writes.extend(remove_recipe(&id));
                         }
@@ -2436,6 +2450,7 @@ impl Processor for AresSnapshotHandler {
                         }
                     },
                     (WORLD_MODULE, WORLD_TYPE) => map_world_object(&id, mv.contents()),
+                    (PARTY_MODULE, PARTY_TYPE) => super::party::map_party_object(&id, mv.contents()),
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
                         map_fight_outcome_object(&id, mv.contents(), obj.owner(), ts_ms)
