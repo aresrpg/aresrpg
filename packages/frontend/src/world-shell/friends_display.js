@@ -9,16 +9,18 @@
 import { short_fighter_id } from './character_name_resolve.js'
 
 /**
- * Precedence: the live p2p peer's self-declared name (D222, freshest signal) → the /v1 character name
- * friends_reads.read_roster already resolved (the SAME get_characters primitive the ONE HOME itself reads,
- * just queried by owner address instead of character id) → the home's own honest fallback. Never invents a
- * name, never a bespoke truncation for this surface. Pure — no IO.
+ * CANONICAL IDENTITY WINS (realtime constitution D2). A name is identity, and identity is an authority
+ * question — so the /v1 character name friends_reads.read_roster resolved (the SAME get_characters primitive
+ * the ONE HOME itself reads, just queried by owner address instead of character id) is the only name this row
+ * shows, and the home's own honest fallback covers the rest. A peer's self-declared name is an observation
+ * and used to be preferred here as "the freshest signal"; freshness is not authority, so it is gone rather
+ * than demoted — a second, unverified name beside the real one is a question no player asked.
+ * Never invents a name, never a bespoke truncation for this surface. Pure — no IO.
  * @param {{ address: string, name: string | null }} row
- * @param {{ name?: string | null } | null | undefined} peer
  * @returns {string}
  */
-export function friend_display_name(row, peer) {
-  return peer?.name || row?.name || short_fighter_id(row?.address)
+export function friend_display_name(row) {
+  return row?.name || short_fighter_id(row?.address)
 }
 
 /**

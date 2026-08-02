@@ -14,8 +14,8 @@
 // one room at one instant, and the read layer only knows when it last recorded a position. So the two facts
 // stay separate and separately labelled — `observed` (peer observation) and `position_fresh` (read layer) —
 // and friend_presence_state collapses them into seen/recent/UNSEEN, where unseen means unknown and says so.
-// Names = friend_display_name below: the indexer character name, else character_name_resolve.js's ONE HOME
-// fallback — never a raw address slice.
+// Names = friend_display_name: the CANONICAL /v1 character name, else character_name_resolve.js's ONE HOME
+// fallback — never a raw address slice, and never a name a peer merely declared for itself.
 //
 // The per-row "invite to party" that used to live here moved to PlayerActionMenu (clicking the player) so the
 // panel stays friends-first without dropping the feature. Removing a friend is the hover-× on each row.
@@ -68,10 +68,11 @@ export function OnlinePlayers() {
   // added BESIDE the read layer's `position_fresh`, never over it — two observations, two labels, no verdict.
   // name = friend_display_name's ONE derivation, always a truthy display string — never empty, never a raw
   // address needing a per-row fallback below.
-  const decorated = rows.map((r) => {
-    const peer = presence_character_by_address(r.address)
-    return { ...r, observed: !!peer, name: friend_display_name(r, peer) }
-  })
+  const decorated = rows.map((r) => ({
+    ...r,
+    observed: !!presence_character_by_address(r.address),
+    name: friend_display_name(r),
+  }))
   const seen = decorated.filter((r) => r.observed)
   const unseen = decorated.filter((r) => !r.observed)
 
