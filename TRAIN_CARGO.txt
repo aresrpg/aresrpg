@@ -1,1 +1,1 @@
-6c3c60129ed2cda718838c27b091c7c64455b3b4 lane/2027-roster-storm fix(fight): gate the roster adopter on content, not on the store's array
+260c7029111219cb4482b16ca2be1fcbd1724daa lane/ceremony-batch chore(ceremony): the remaining 8 packages upgraded (D41/D42 train)
