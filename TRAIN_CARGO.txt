@@ -1,3 +1,3 @@
-61b1edf67abfd484da86081c30afd621c7735255 train/train-46 test(fight): convict the #1872 fork — the card mirrors the chain across the flip
-d9466fc04c6022a92f689e5edbb80e6eb84c334d train/train-46 fix(fight): rehydrate per-member mob identity instead of the group primary
-e7d0294abec6adca320f377340da77f4f62b6149 train/train-46 fix(fight): hold certified loot until reconciliation confirms it
+cec5107bbece4f3273a61bbe07c3aa97367511a8 train/train-47 fix(fight): paint the placement strips from the click door, not the declared bands
+37671b9288ce17e06f0ce18f83b3f676c65ea1d8 train/train-47 fix(i18n): the whiff line claims the resolution, never the ground
+2b042bd07dbb331b4da1e9ac566fae9b81f23672 train/train-47 test(fight): inject the game context into the placement-strip mount
