@@ -46,16 +46,38 @@ import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
 import { localize_spell_state } from '../../data/spell-text.js'
 
 import { element_color } from './element-colors.js'
-import { point_keys, stat_keys } from './spell-effect-sentence.js'
 
 // ── the house value tones (single home — spellbook-data.js + classes_tab.tsx import from here) ──────────────
 export const TONE_BUFF = '#4fd6a0' // green — beneficial value (house --good / --clog-num-mp)
 export const TONE_BAD = '#ff6b6b' // red — penalty/drain value (house --bad)
 export const HEAL_PINK = '#ff6bb0' // heal value — the house heal grammar (--clog-num-heal)
 
-// Move STAT_* id (spell_effect.move:135-149) → { statistics/<icon>.png key, stat.* i18n leaf, unit? }. The
-// leaf names come from spell-effect-sentence.js (the one home for id → `stat.*`); only the icon and the unit
-// are this view's own facts. AP/MP ride the POINT_AP/POINT_MP ids of GIVE/REMOVE_POINTS through the same
+// The one home for Move STAT_* id (spell_effect.move:135-149) → `stat.*` i18n leaf. Id 10 has no view row —
+// health is not a spell-modifiable stat — but the enum stays complete here so a future arm reads its leaf off
+// the same map instead of re-deriving one.
+const stat_keys = Object.freeze({
+  0: 'stat.strength',
+  1: 'stat.intelligence',
+  2: 'stat.chance',
+  3: 'stat.agility',
+  4: 'stat.wisdom',
+  5: 'stat.vitality',
+  6: 'stat.range',
+  7: 'stat.critical_hit',
+  8: 'stat.percent_damage',
+  9: 'stat.raw_damage',
+  10: 'stats.health',
+  11: 'stat.heal',
+})
+
+/** The same, for the POINT_AP/POINT_MP ids GIVE/REMOVE/STEAL_POINTS carry (spell_effect.move:130). */
+const point_keys = Object.freeze({
+  0: 'stat.action',
+  1: 'stat.movement',
+})
+
+// STAT_* id → { statistics/<icon>.png key, stat.* i18n leaf, unit? } — only the icon and the unit are this
+// view's own facts; the leaf comes off the map above. AP/MP ride the POINT_AP/POINT_MP ids through the same
 // asset set (action/movement).
 // `unit` rides the VALUE, not the stat name (owner copy law, issue #886: the reading is `+25% Damage` — the
 // symbol '%', never the word "percent" in any locale). Percent-typed stats are the only ones that carry one.

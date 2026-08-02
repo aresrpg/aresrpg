@@ -14,8 +14,9 @@
 // key, which is how `spells.null` once painted itself into a tooltip. Any raw key path in any visible string,
 // in any locale, is a class failure here.
 
-import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
+
+import { describe, expect, test } from 'bun:test'
 import { TF_NOT_ENEMY, TF_ONLY_CASTER } from '@aresrpg/sim/spell_effect'
 
 import de from '../../../../src/i18n/locales/de.json'
@@ -24,7 +25,6 @@ import es from '../../../../src/i18n/locales/es.json'
 import fr from '../../../../src/i18n/locales/fr.json'
 import ja from '../../../../src/i18n/locales/ja.json'
 import uk from '../../../../src/i18n/locales/uk.json'
-
 import { seed_effect_parts, seed_effect_line } from '../../../../src/game/screens/hud/seed-effect-line.js'
 
 const BUNDLES = { de, en, es, fr, ja, uk }
@@ -33,13 +33,15 @@ const RAW_KEY_PATH = /\b[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+\b/i
 
 /** The shipped lookup chain: CLDR plural suffix for the locale, then the base key, then i18next's own
  * missing-key behaviour (the dotted key renders) — so a gap surfaces as the canary instead of silence. */
-const translator = (locale) => (key, params = {}) => {
-  const lookup = (k) => k.split('.').reduce((node, leaf) => (node == null ? node : node[leaf]), BUNDLES[locale])
-  const plural = params.count != null ? new Intl.PluralRules(locale).select(params.count) : null
-  const value = (plural != null ? lookup(`${key}_${plural}`) : undefined) ?? lookup(key)
-  if (typeof value !== 'string') return key
-  return value.replace(/{{(\w+)}}/g, (_, name) => String(params[name] ?? ''))
-}
+const translator =
+  (locale) =>
+  (key, params = {}) => {
+    const lookup = (k) => k.split('.').reduce((node, leaf) => (node == null ? node : node[leaf]), BUNDLES[locale])
+    const plural = params.count != null ? new Intl.PluralRules(locale).select(params.count) : null
+    const value = (plural != null ? lookup(`${key}_${plural}`) : undefined) ?? lookup(key)
+    if (typeof value !== 'string') return key
+    return value.replace(/{{(\w+)}}/g, (_, name) => String(params[name] ?? ''))
+  }
 
 // The kind universe read from `core_parts` itself — a new arm joins this sweep the day it is written, and a
 // deleted arm leaves it. The extractor self-test below keeps a blind regex from making the gate trivially green.

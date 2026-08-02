@@ -61,7 +61,7 @@ export const localize_spell_state = (state, locale = 'en') => {
 export const resolve_spell_state = (registry, reference, locale = 'en') =>
   localize_spell_state(resolve_spell_state_row(registry, reference), locale)
 
-/** The exact callback seam L1's spell_effect_sentence consumes. Registry construction happens once. */
+/** The `resolve_state_name` callback the effect surfaces consume. Registry construction happens once. */
 export const spell_state_name_resolver = (spell_corpus, locale = 'en') => {
   const registry = build_spell_state_registry(spell_corpus)
   return (reference) => resolve_spell_state(registry, reference, locale)?.name ?? null
