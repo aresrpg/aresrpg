@@ -32,6 +32,16 @@ import { add_friend_flow, remove_friend_flow } from '../../../../world-shell/fri
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { open_player_menu } from './player_menu_store.js'
 
+/**
+ * What an EMPTY panel means — two truths that must never render as each other (#2057, the same discrimination
+ * WorldTravelModal pins for the world grid): the roster is genuinely empty, or the friend-list read FAILED and
+ * we know nothing at all. A failure with rows still standing is a STALE roster, not an empty one — those rows
+ * keep rendering and this line never appears.
+ * @param {Array<any>} rows @param {string | null} error @returns {string} the i18n key the empty slot prints
+ */
+export const roster_empty_key = (rows, error) =>
+  rows.length === 0 && error ? 'presence.roster_unavailable' : 'presence.none_seen'
+
 /** @returns {import('react').ReactElement | null} */
 export function OnlinePlayers() {
   const { t } = useTranslation()
@@ -46,6 +56,7 @@ export function OnlinePlayers() {
 
   const list_id = use_friends((state) => state.list_id)
   const rows = use_friends((state) => state.rows)
+  const roster_error = use_friends((state) => state.error)
 
   // Reconciliation cadence only. Confirmed add/remove writes paint synchronously through the reducer input door.
   useEffect(() => {
@@ -108,7 +119,7 @@ export function OnlinePlayers() {
         {seen.map((r) => (
           <FriendRow key={r.address} row={r} t={t} on_remove={on_remove} />
         ))}
-        {seen.length === 0 && <div className="gw-players__empty">{t('presence.none_seen')}</div>}
+        {seen.length === 0 && <div className="gw-players__empty">{t(roster_empty_key(rows, roster_error))}</div>}
         {expanded && unseen.length > 0 && <div className="gw-players__group">{t('presence.not_seen')}</div>}
         {expanded && unseen.map((r) => <FriendRow key={r.address} row={r} t={t} on_remove={on_remove} />)}
       </div>

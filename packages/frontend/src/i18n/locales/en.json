@@ -33,6 +33,7 @@
     "collapse": "Collapse",
     "add_hint": "Paste a 0x address, or click a player in the world or chat",
     "none_seen": "No friends seen right now",
+    "roster_unavailable": "Friends unavailable — the read layer is unreachable",
     "not_seen": "Not seen",
     "hint_seen": "Seen in your session right now",
     "hint_recent": "Not seen — last known position is recent",

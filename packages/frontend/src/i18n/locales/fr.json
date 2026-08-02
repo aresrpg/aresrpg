@@ -33,6 +33,7 @@
     "collapse": "Réduire",
     "add_hint": "Collez une adresse 0x, ou cliquez sur un joueur dans le monde ou le chat",
     "none_seen": "Aucun ami vu pour l'instant",
+    "roster_unavailable": "Amis indisponibles — la couche de lecture est injoignable",
     "not_seen": "Non vus",
     "hint_seen": "Vu dans ta session en ce moment",
     "hint_recent": "Non vu — dernière position connue récente",

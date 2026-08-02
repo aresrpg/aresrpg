@@ -21,16 +21,15 @@ import { DEMO_NETWORK } from '../chain/deployment'
 const POSITION_FRESH_WINDOW_MS = 5 * 60 * 1000
 
 /** Resolve the caller's soulbound friend list (chain-direct). `{ list_id, friends: address[] }`; list_id null =
- *  no roster yet (drives the create-on-first-add flow). Best-effort — a grpc hiccup yields an empty roster. */
+ *  no roster yet (the seam's `null`, drives the create-on-first-add flow).
+ *  A FAILED read THROWS (#2057): the seam stopped merging "failed" into "absent" (#2054), and this hop keeps
+ *  that discrimination — the caller's degraded treatment says we know nothing, instead of painting a
+ *  confident empty roster over a dead transport. */
 export async function read_friend_list(address) {
   if (!address) return { list_id: null, friends: [] }
-  try {
-    const { grpc_client } = await get_sdk()
-    const fl = await get_friend_list_by_owner({ grpc_client, network: DEMO_NETWORK })(address)
-    return { list_id: fl?.id ?? null, friends: fl?.friends ?? [] }
-  } catch {
-    return { list_id: null, friends: [] }
-  }
+  const { grpc_client } = await get_sdk()
+  const fl = await get_friend_list_by_owner({ grpc_client, network: DEMO_NETWORK })(address)
+  return { list_id: fl?.id ?? null, friends: fl?.friends ?? [] }
 }
 
 /**
@@ -77,6 +76,7 @@ function zone_label(position) {
  * The full enriched roster for `address`: `{ list_id, rows }`, one row per friend address. Rows carry only
  * honest fields (null where the indexer can't resolve). Enrichment runs in ONE atomic poll (Promise.all) so the
  * whole roster is consistent per tick; a per-friend read failure degrades that row to address-only, never throws.
+ * The LIST read itself is NOT best-effort: its failure propagates (#2057) so the caller renders degraded.
  * @param {string | null} address
  * @param {AbortSignal} [signal]
  */

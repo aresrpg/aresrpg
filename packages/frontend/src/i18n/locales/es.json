@@ -33,6 +33,7 @@
     "collapse": "Contraer",
     "add_hint": "Pega una dirección 0x, o haz clic en un jugador en el mundo o el chat",
     "none_seen": "Ningún amigo visto ahora mismo",
+    "roster_unavailable": "Amigos no disponibles: la capa de lectura no responde",
     "not_seen": "No vistos",
     "hint_seen": "Visto en tu sesión ahora mismo",
     "hint_recent": "No visto — su última posición conocida es reciente",
