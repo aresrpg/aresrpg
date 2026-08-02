@@ -400,6 +400,56 @@ FOREIGN_RED=$(jq -nc '[{sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   check_runs: [{name: "vercel", status: "completed", conclusion: "failure", app: {slug: "vercel"}}]}]')
 expect_range "foreign-app-cannot-poison" green "$FOREIGN_RED"
 
+# ── 23-26. AN UNREAD RANGE IS NOT A CLEAN ONE (lead review of 317cc1cf8) ─────────────────────
+# What is injected here is the FETCH failing, never a verdict: the stub fetchers below replay the
+# captured payload for every sha they can read, and simply fail for the one they cannot. That is
+# the real hazard — `gh api` dying on a rate limit or a 5xx while the range still evaluates green.
+RANGE_SHAS="d18614db08621b3cf0e70c1f4c1100284df5aa01 ebf431e1465515f997728792dd0386fb0ee9ae23"
+
+# Reads succeed for every sha, replaying the captured zero-run envelope.
+stub_fetch_ok() { cat "${SCRIPT_DIR}/fixtures/interior-clean-d18614db.check-runs.json"; }
+# The second sha is unreadable — the shape of a rate limit mid-range.
+stub_fetch_rate_limited() {
+  if [ "$1" = "ebf431e1465515f997728792dd0386fb0ee9ae23" ]; then echo "gh: API rate limit exceeded" >&2; return 1; fi
+  cat "${SCRIPT_DIR}/fixtures/interior-clean-d18614db.check-runs.json"
+}
+# The pathology the first cut had: the read "succeeds" but writes nothing, and empty slurps to [].
+stub_fetch_silent() { return 0; }
+
+expect_collect() { # <case-name> <ok|refused> <fetch_fn>
+  local actual status
+  actual=$(collect_interior_check_runs "$RANGE_SHAS" "$3") && status=ok || status=refused
+  if [ "$status" = "$2" ]; then
+    echo "PASS  $1  →  $status${actual:+ }${actual}"
+    PASS=$((PASS + 1))
+  else
+    echo "FAIL  $1  →  got [$status], expected [$2]"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+# 23. The happy path still collects, and what it collects still evaluates green.
+expect_collect "readable-range-collects" ok stub_fetch_ok
+COLLECTED=$(collect_interior_check_runs "$RANGE_SHAS" stub_fetch_ok)
+expect_range "collected-range-evaluates" green "$COLLECTED"
+
+# 24. THE HOLE: one unreadable sha refuses the whole range rather than reading it as covered.
+expect_collect "unreadable-sha-refuses" refused stub_fetch_rate_limited
+
+# 25. A fetcher that exits 0 having printed nothing is refused too — success is not a payload.
+expect_collect "silent-success-refuses" refused stub_fetch_silent
+
+# 26. And the collector never hands a partial range to the evaluator: a refusal prints nothing, so
+#     there is no truncated payload for a caller to mistake for a clean one.
+PARTIAL=$(collect_interior_check_runs "$RANGE_SHAS" stub_fetch_rate_limited || true)
+if [ -z "$PARTIAL" ]; then
+  echo "PASS  refusal-emits-no-partial-range"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL  refusal-emits-no-partial-range  →  emitted [$PARTIAL]"
+  FAIL=$((FAIL + 1))
+fi
+
 echo
 echo "── ${PASS} passed, ${FAIL} failed ──"
 [ "$FAIL" -eq 0 ]

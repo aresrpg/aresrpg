@@ -214,6 +214,40 @@ evaluate_range_green() {
   echo green
 }
 
+# AN UNREAD RANGE IS NOT A CLEAN ONE — the fail-closed collector (lead review of 317cc1cf8).
+# The first cut of the caller built the interior payload with
+#   runs=$(gh api --paginate ".../check-runs" --jq '.check_runs[]' | jq -s '.')
+# and that fails OPEN, which is the one thing a gate may never do: when `gh api` dies on a rate
+# limit or a 5xx it writes nothing, `jq -s` slurps empty stdin to `[]`, and `[]` is BYTE-IDENTICAL
+# to the payload of a commit CI never gated — so an unreadable range evaluates "covered" and lands.
+#
+# `set -euo pipefail` does NOT save it, measured rather than assumed: with both flags in force, that
+# assignment sitting inside a command substitution (exactly how the caller builds its payload) does
+# not abort the script — the loop runs to completion and hands on `check_runs: []` with exit 0. A
+# gate whose arming depends on an ambient shell flag is prose; this one refuses explicitly.
+#
+# collect_interior_check_runs <sha-list> <fetch_fn>
+#   sha-list  = whitespace-separated interior shas.
+#   fetch_fn  = name of a function taking one sha and PRINTING its check-run payload (array or the
+#               `{check_runs: [...]}` envelope), returning non-zero if the read itself failed. The
+#               distinction that matters is the whole point: a successful read of ZERO runs is `[]`
+#               and means covered; a FAILED read is non-zero and means unknown.
+# Prints the interior JSON evaluate_range_green consumes, or nothing and returns 1 if ANY sha could
+# not be read. The caller must treat that as not-green and leave the pull request queued — a refusal
+# costs one queue tick, and the queue re-runs on its own.
+collect_interior_check_runs() {
+  local shas="$1" fetch="${2:-}" sha runs acc='[]'
+  if [ -z "$fetch" ]; then echo "collect_interior_check_runs: a fetch function name is required" >&2; return 1; fi
+  for sha in $shas; do
+    runs=$("$fetch" "$sha") || return 1
+    # Also the empty-payload tooth: jq exits 4 on empty stdin, so a fetcher that returned success
+    # while printing nothing is refused here rather than read as an ungated commit.
+    runs=$(jq -ce 'if type == "array" then . else .check_runs end' <<<"$runs") || return 1
+    acc=$(jq -c --arg sha "$sha" --argjson runs "$runs" '. + [{sha: $sha, check_runs: $runs}]' <<<"$acc") || return 1
+  done
+  printf '%s' "$acc"
+}
+
 # ── THE REPUBLISH WINDOW NEVER REACHES PRODUCTION (#1305 review, CRITICAL) ──────────────────────
 # packages/move/REPUBLISH_WINDOW suspends the ceremony preflight's compatibility assertions while a
 # fresh lineage is published. The preflight refuses the marker on a master-bound run, but that

@@ -159,13 +159,21 @@ fi
 # This cannot wedge the master hop on history it can no longer fix: `origin/$BASE..$HEAD_SHA` excludes
 # everything already on the base, and all three known-red commits (163b3345, 6548e526, 451e477c) are
 # ancestors of master today. Arming this on the edge hop is what stops a new one being minted.
+# The read is a named function so its exit code is the collector's business, never a pipe's: `gh`'s
+# status is captured directly here, and an empty result is only ever reported for a read that
+# SUCCEEDED and found no runs. See collect_interior_check_runs for what a failed read must cost.
+# shellcheck disable=SC2329  # invoked indirectly, by name, from collect_interior_check_runs
+fetch_commit_check_runs() {
+  local rows
+  rows=$(gh api --paginate "repos/${REPO}/commits/${1}/check-runs" --jq '.check_runs[]') || return 1
+  jq -s '.' <<<"$rows"
+}
 INTERIOR_SHAS=$(git rev-list "refs/remotes/origin/${BASE}..${HEAD_SHA}" | grep -v "^${HEAD_SHA}$" || true)
-INTERIOR_JSON=$(
-  for sha in $INTERIOR_SHAS; do
-    runs=$(gh api --paginate "repos/${REPO}/commits/${sha}/check-runs" --jq '.check_runs[]' | jq -s '.')
-    jq -nc --arg sha "$sha" --argjson runs "$runs" '{sha: $sha, check_runs: $runs}'
-  done | jq -sc '.'
-)
+if ! INTERIOR_JSON=$(collect_interior_check_runs "$INTERIOR_SHAS" fetch_commit_check_runs); then
+  emit not-green
+  echo "could not read the check-runs of every commit in origin/${BASE}..${HEAD_SHA} — refusing to admit a range this run could not read; leaving PR #$PR queued"
+  exit 3
+fi
 RANGE_GREEN=$(evaluate_range_green "$INTERIOR_JSON")
 if [ "$RANGE_GREEN" != "green" ]; then
   emit not-green; echo "${RANGE_GREEN#not-green: } — leaving PR #$PR queued"; exit 3
