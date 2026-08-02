@@ -1,2 +1,2 @@
-b1317b2479620347fd62387bcf8a671e7aa69cb8 train/train-75 test(gold): the #2035 parity rows land in a reachable selector
-5ee5579687fa084539ddda7bb92a4de19f21abdb train/train-75 fix(gold): the parity gate resolves the corpus through ARES_SEED_DIR
+54d1c4a1177856c2b81a6ee740d971fc70d22c9b train/train-76 docs(consumables): the batcher's surface list stops naming a deleted one
+2ca90a9d441ffd9f71819ef8e22e04f9e94063d9 train/train-76 refactor(hud): delete FastSlots — mounted nowhere
