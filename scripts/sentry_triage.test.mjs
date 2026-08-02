@@ -10,6 +10,7 @@ import {
   decide_triage,
   fingerprint_from_event,
   materially_grew,
+  qualify_for_filing,
   run_triage,
   sentry_count_marker,
   sentry_issue_marker,
@@ -22,6 +23,12 @@ const [sentry_issue] = read_fixture('sentry_issues.json')
 const latest_event = read_fixture('sentry_latest_event.json')
 const github_search = read_fixture('github_search.json')
 const github_comments = read_fixture('github_comments.json')
+const flood = read_fixture('flood_2026_08_02.json')
+
+// The valve reads a clock, so every run below pins one. `sentry_issue` was last seen
+// 2026-07-22T03:04Z; this is six hours later — inside the freshness window, so the fixture stays
+// the qualifying case it has always been instead of aging out of the suite.
+const fixture_now_ms = Date.parse('2026-07-22T09:00:00Z')
 
 describe('material Sentry growth', () => {
   it('requires both the five-event floor and 25 percent growth', () => {
@@ -58,12 +65,13 @@ describe('marker-based dedupe and updates', () => {
     })
   })
 
-  it('comments at the boundary even when the matching GitHub issue is closed', () => {
+  it('requalifies the matching GitHub issue rather than filing a second row when it is closed', () => {
     expect(github_search.items[0].state).toBe('closed')
     expect(decide_triage(sentry_issue, github_search.items, [])).toEqual({
       action: 'comment',
       issue_number: 29,
       previous_count: 100,
+      reopen: true,
     })
   })
 
@@ -77,6 +85,7 @@ describe('marker-based dedupe and updates', () => {
       action: 'comment',
       issue_number: 29,
       previous_count: 110,
+      reopen: true,
     })
   })
 
@@ -89,6 +98,7 @@ describe('marker-based dedupe and updates', () => {
       action: 'comment',
       issue_number: 29,
       previous_count: 100,
+      reopen: true,
     })
   })
 
@@ -126,7 +136,7 @@ describe('GitHub payloads', () => {
     expect(payload.body).toContain(sentry_issue_marker(sentry_issue.id))
   })
 
-  it('comments the new count without closing or reopening the issue', () => {
+  it('carries no state field — a reopen rides its own request, never the comment body', () => {
     const payload = build_update_comment(sentry_issue, 100)
     expect(Object.keys(payload)).toEqual(['body'])
     expect(payload.body).toContain('100 → 125')
@@ -146,6 +156,7 @@ const triage_config = (fetch_fn, sleep) => ({
   github_repository: 'sceat/aresrpg',
   fetch_fn,
   sleep,
+  now_ms: fixture_now_ms,
   log: () => undefined,
 })
 
@@ -278,7 +289,7 @@ describe('rate-limited API edge', () => {
     expect(requests.filter((request) => request.method === 'POST')).toHaveLength(1)
   })
 
-  it('comments an existing closed issue without fetching a fingerprint or filing a duplicate', async () => {
+  it('updates an existing closed issue without fetching a fingerprint or filing a duplicate', async () => {
     const requests = []
     const fetch_fn = async (url, options) => {
       requests.push({ url: String(url), method: options.method, body: options.body })
@@ -286,6 +297,7 @@ describe('rate-limited API edge', () => {
       if (String(url).includes('/search/issues')) return json_response(github_search)
       if (String(url).endsWith('/issues/29/comments?per_page=100')) return json_response([])
       if (String(url).endsWith('/issues/29/comments')) return json_response({ id: 1002 })
+      if (String(url).endsWith('/issues/29')) return json_response({ number: 29, state: 'open' })
       throw new Error(`unexpected request: ${url}`)
     }
 
@@ -297,5 +309,126 @@ describe('rate-limited API edge', () => {
     expect(requests.some((request) => request.url.includes('/events/latest/'))).toBe(false)
     expect(requests.filter((request) => request.method === 'POST')).toHaveLength(1)
     expect(JSON.parse(requests.at(-1).body).body).toContain('100 → 125')
+  })
+})
+
+// #1991 — the flood, replayed from the run's own inputs (see the fixture's _provenance). The
+// board is a work queue, not a mirror of Sentry: an unresolved backlog is not 92 work units.
+describe('the valve (#1991)', () => {
+  const flood_run_ms = Date.parse(flood.run_at)
+
+  it('refuses every member of the measured flood, each for a named reason', () => {
+    expect(flood.issues.map((issue) => qualify_for_filing(issue, flood_run_ms).qualified)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ])
+    const reasons = flood.issues.map((issue) => qualify_for_filing(issue, flood_run_ms).reason.split(' ')[0])
+    // Each of the three filters is load-bearing on real inputs, and none of them alone would have
+    // held the valve shut: the dev-server row dies on its origin, three week-old rows on freshness,
+    // and #1899 — first seen two hours BEFORE the run, so perfectly fresh — only on the severity
+    // floor. Drop any one filter and part of this flood files.
+    expect(reasons).toEqual([
+      'below-severity-floor',
+      'stale-fingerprint',
+      'stale-fingerprint',
+      'local-origin',
+      'stale-fingerprint',
+    ])
+  })
+
+  it('files nothing when it reads the whole flood through the real run', async () => {
+    const requests = []
+    const fetch_fn = async (url, options) => {
+      requests.push({ url: String(url), method: options.method })
+      if (String(url).includes('/projects/aresrpg/indexer/issues/')) return json_response(flood.issues)
+      if (String(url).includes('/search/issues'))
+        return json_response({ total_count: 0, incomplete_results: false, items: [] })
+      throw new Error(`unexpected request: ${url}`)
+    }
+
+    expect(await run_triage({ ...triage_config(fetch_fn, async () => undefined), now_ms: flood_run_ms })).toEqual({
+      create: 0,
+      comment: 0,
+      noop: 5,
+    })
+    expect(requests.every((request) => request.method === 'GET')).toBe(true)
+  })
+
+  it('aborts a run that would file more rows than a human reviews, before any mutation', async () => {
+    // Six qualifying rows: past the five-row ceiling, so the run is anomalous by construction and
+    // files NOTHING. A backlog drain is never a valid run — it is a bug in the valve upstream.
+    const qualifying = Array.from({ length: 6 }, (_, index) => ({
+      ...flood.issues[0],
+      id: String(200000000 + index),
+      permalink: `https://aresrpg.sentry.io/issues/${200000000 + index}/`,
+      count: '400',
+      lastSeen: flood.run_at,
+    }))
+    const requests = []
+    const fetch_fn = async (url, options) => {
+      requests.push({ url: String(url), method: options.method })
+      if (String(url).includes('/projects/aresrpg/indexer/issues/')) return json_response(qualifying)
+      if (String(url).includes('/search/issues'))
+        return json_response({ total_count: 0, incomplete_results: false, items: [] })
+      if (String(url).includes('/events/latest/')) return json_response(latest_event)
+      throw new Error(`unexpected request: ${url}`)
+    }
+
+    await expect(
+      run_triage({ ...triage_config(fetch_fn, async () => undefined), now_ms: flood_run_ms })
+    ).rejects.toThrow('would file 6 rows in one run')
+    expect(requests.every((request) => request.method === 'GET')).toBe(true)
+  })
+
+  it('reopens the row a fingerprint requalifies against instead of filing a duplicate', async () => {
+    const requests = []
+    const fetch_fn = async (url, options) => {
+      requests.push({ url: String(url), method: options.method, body: options.body })
+      if (String(url).includes('/projects/aresrpg/indexer/issues/')) return json_response([sentry_issue])
+      if (String(url).includes('/search/issues')) return json_response(github_search)
+      if (String(url).endsWith('/issues/29/comments?per_page=100')) return json_response([])
+      if (String(url).endsWith('/issues/29/comments')) return json_response({ id: 1002 })
+      if (String(url).endsWith('/issues/29')) return json_response({ number: 29, state: 'open' })
+      throw new Error(`unexpected request: ${url}`)
+    }
+
+    expect(await run_triage({ ...triage_config(fetch_fn, async () => undefined), now_ms: fixture_now_ms })).toEqual({
+      create: 0,
+      comment: 1,
+      noop: 0,
+    })
+    const mutations = requests.filter((request) => request.method !== 'GET')
+    expect(mutations.map((request) => request.method)).toEqual(['PATCH', 'POST'])
+    expect(JSON.parse(mutations[0].body)).toEqual({ state: 'open' })
+    // Exactly one row exists for this fingerprint, before and after.
+    expect(requests.some((request) => request.url.endsWith('/repos/sceat/aresrpg/issues'))).toBe(false)
+  })
+
+  it('mutates nothing in dry-run and reports the plan it would have executed', async () => {
+    const requests = []
+    const logged = []
+    const fetch_fn = async (url, options) => {
+      requests.push({ url: String(url), method: options.method })
+      if (String(url).includes('/projects/aresrpg/indexer/issues/')) return json_response([sentry_issue])
+      if (String(url).includes('/search/issues'))
+        return json_response({ total_count: 0, incomplete_results: false, items: [] })
+      if (String(url).includes('/events/latest/')) return json_response(latest_event)
+      throw new Error(`unexpected request: ${url}`)
+    }
+
+    expect(
+      await run_triage({
+        ...triage_config(fetch_fn, async () => undefined),
+        now_ms: fixture_now_ms,
+        dry_run: true,
+        log: (message) => logged.push(message),
+      })
+    ).toEqual({ create: 1, comment: 0, noop: 0 })
+    expect(requests.every((request) => request.method === 'GET')).toBe(true)
+    expect(logged.join('\n')).toContain('DRY RUN')
+    expect(logged.join('\n')).toContain('create Sentry 991234')
   })
 })

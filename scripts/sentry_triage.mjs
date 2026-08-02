@@ -46,6 +46,12 @@ const event_count = (issue) => {
   return count
 }
 
+const user_count = (issue) => {
+  const count = Number(issue?.userCount)
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error(`invalid Sentry user count for ${sentry_id(issue)}`)
+  return count
+}
+
 const issue_link = (issue) => {
   const link = new URL(String(issue?.permalink ?? ''))
   const is_sentry_host = link.hostname === 'sentry.io' || link.hostname.endsWith('.sentry.io')
@@ -94,7 +100,91 @@ export function decide_triage(issue, github_issues, comments) {
   if (!Number.isSafeInteger(issue_number) || issue_number <= 0) throw new Error('invalid GitHub issue number')
   const reported_count = latest_reported_count(sentry_id(issue), existing_issue, comments)
   if (!materially_grew(reported_count, event_count(issue))) return { action: 'noop', issue_number, reported_count }
-  return { action: 'comment', issue_number, previous_count: reported_count }
+  // REQUALIFY, NEVER DUPLICATE (#1991): a closed row whose fingerprint comes back is that row
+  // again, not a new work unit. Reopening it keeps one home per fingerprint — the alternative is
+  // a second row the dedup search will then find twice.
+  return {
+    action: 'comment',
+    issue_number,
+    previous_count: reported_count,
+    reopen: existing_issue?.state === 'closed',
+  }
+}
+
+// ── THE VALVE (#1991) ───────────────────────────────────────────────────────────────────────────
+// One run filed 92 rows in six minutes — the entire unresolved Sentry backlog, one row per raw
+// minified error, including errors first seen three weeks earlier against long-dead build hashes and
+// a `localhost:5174` origin. Sentry is the one home for raw errors; the board is a WORK QUEUE, and
+// an unresolved backlog is not 92 work units. Nothing about that run was a Sentry failure: the
+// script had no opinion about which errors deserve a row, so "unresolved" was the whole bar.
+//
+// Every threshold below is convicted by that run's own inputs, replayed in
+// fixtures/flood_2026_08_02.json:
+//   · LOCAL ORIGIN — `SyntaxError: http://localhost:5174/` (#1983). A developer's own dev server is
+//     never production truth. Read off the issue's own text rather than a Sentry `environment=`
+//     query, because the query answers with Sentry's tagging: get the environment name wrong and it
+//     returns nothing at all, and a valve that silently filters everything looks exactly like a
+//     quiet week.
+//   · SEVERITY FLOOR — the flood was dominated by single-event rows, and one of them (#1899) was
+//     filed two hours after it was first seen. Freshness alone would have let that one through; a
+//     one-event error is not yet a work unit whoever reads the board can act on.
+//   · FRESHNESS — #1930/#1975/#1990 were last seen on 2026-07-12..19 and filed on 08-02. A
+//     fingerprint nothing has produced since the last release is history, not news, and a run that
+//     drains history is never a valid run.
+// The knobs stay data so the re-enable review can move a number without moving the logic.
+export const VALVE = Object.freeze({
+  min_events: 10,
+  min_users: 1,
+  freshness_hours: 24,
+  max_creates: 5,
+})
+
+const LOCAL_ORIGIN_RE = /(?:^|[^\w.-])(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?::\d+)?(?:$|[^\w.-])/i
+
+// Pure. → { qualified, reason }. The reason is the audit line the dry-run log prints, so it names
+// the measurement and not just the verdict.
+export function qualify_for_filing(issue, now_ms, valve = VALVE) {
+  if (!Number.isSafeInteger(now_ms)) throw new Error('qualify_for_filing needs an integer now_ms')
+  const surface = [issue?.culprit, issue?.title, issue?.metadata?.value]
+    .map((value) => String(value ?? ''))
+    .join(' \n ')
+  // Ordered by how fundamental the refusal is, so the reason a run prints is the most useful one:
+  // is this production truth at all → is it news → is it big enough to be a work unit.
+  if (LOCAL_ORIGIN_RE.test(surface)) return { qualified: false, reason: 'local-origin (not production truth)' }
+  const last_seen = Date.parse(String(issue?.lastSeen ?? ''))
+  if (!Number.isFinite(last_seen)) throw new Error(`invalid Sentry lastSeen for ${sentry_id(issue)}`)
+  const age_hours = (now_ms - last_seen) / 3_600_000
+  if (age_hours > valve.freshness_hours)
+    return {
+      qualified: false,
+      reason: `stale-fingerprint (last seen ${Math.round(age_hours)}h ago, window ${valve.freshness_hours}h)`,
+    }
+  const events = event_count(issue)
+  const users = user_count(issue)
+  if (events < valve.min_events || users < valve.min_users)
+    return {
+      qualified: false,
+      reason: `below-severity-floor (${events} events / ${users} users, floor ${valve.min_events}/${valve.min_users})`,
+    }
+  return {
+    qualified: true,
+    reason: `qualified (${events} events / ${users} users, last seen ${Math.round(age_hours)}h ago)`,
+  }
+}
+
+// The anomaly door, asserted over the WHOLE plan before a single mutation leaves this process. Any
+// valve can be wrong; what must never happen again is finding out one row at a time, 4 seconds
+// apart, for six minutes. Past the ceiling the run is a bug report, not a backlog to drain.
+// A reopen counts against the ceiling too: from the board's side a resurrected row and a fresh one
+// are the same thing — a work item nobody queued arriving in bulk.
+export function assert_plan_bounded(plan, max_creates = VALVE.max_creates) {
+  const filed = plan.filter((row) => row.decision.action === 'create' || row.decision.reopen === true).length
+  if (filed > max_creates)
+    throw new Error(
+      `sentry triage ABORTED: this run would file ${filed} rows in one run (ceiling ${max_creates}). ` +
+        'A run that would flood the board is anomalous — read the plan with --dry-run before filing anything.'
+    )
+  return filed
 }
 
 export function fingerprint_from_event(event) {
@@ -308,40 +398,85 @@ const post_github = async (config, path_name, body) => {
   return github_request(config, url.href, { method: 'POST', body })
 }
 
-async function triage_one(config, issue) {
+const patch_github = async (config, path_name, body) => {
+  const repository = validate_repository(config.github_repository)
+  const url = new URL(`/repos/${repository}${path_name}`, GITHUB_API_ORIGIN)
+  return github_request(config, url.href, { method: 'PATCH', body })
+}
+
+// Phase 1 — decide, mutate nothing. Reads only. The valve gates anything that puts a NEW work item
+// on the board (a fresh row, or resurrecting a closed one); a row already open is live work and
+// stays governed by materially_grew alone.
+async function plan_one(config, issue) {
   const id = sentry_id(issue)
   const github_issues = await search_github_issues(config, id)
   const existing_issue = select_existing_issue(id, github_issues)
   const comments = existing_issue ? await list_github_comments(config, Number(existing_issue.number)) : []
   const decision = decide_triage(issue, github_issues, comments)
+  if (decision.action === 'create' || decision.reopen === true) {
+    const verdict = qualify_for_filing(issue, config.now_ms, config.valve ?? VALVE)
+    if (!verdict.qualified) return { issue, id, decision: { action: 'noop' }, reason: verdict.reason }
+  }
+  return { issue, id, decision, reason: null }
+}
 
+// Phase 3 — execute one already-decided row. Every read that could still fail closed has happened.
+async function execute_one(config, { issue, id, decision }) {
   if (decision.action === 'create') {
     const latest_event = await latest_sentry_event(config, id)
     await post_github(config, '/issues', build_github_issue(issue, fingerprint_from_event(latest_event)))
     config.log(`sentry triage: created GitHub issue for Sentry ${id}`)
-  } else if (decision.action === 'comment') {
+    return
+  }
+  if (decision.action === 'comment') {
+    // Reopen BEFORE commenting: the comment is the evidence for the reopen, and a comment on a row
+    // that failed to reopen is a note nobody is queued to read.
+    if (decision.reopen) {
+      await patch_github(config, `/issues/${decision.issue_number}`, { state: 'open' })
+      config.log(`sentry triage: reopened GitHub issue #${decision.issue_number} for Sentry ${id}`)
+    }
     await post_github(
       config,
       `/issues/${decision.issue_number}/comments`,
       build_update_comment(issue, decision.previous_count)
     )
     config.log(`sentry triage: updated GitHub issue #${decision.issue_number} for Sentry ${id}`)
-  } else {
-    config.log(`sentry triage: no material growth for Sentry ${id}`)
+    return
   }
-  return decision.action
+  config.log(`sentry triage: nothing to do for Sentry ${id}`)
 }
 
+// THE ORDER IS THE FIX. The flooding run interleaved decide-and-file, so its 92nd row was filed
+// before anything could notice there were 92 of them. Every decision is now taken first, over the
+// whole population, and the plan is bounded before a single mutation is attempted.
 export async function run_triage(config) {
   const issues = (await list_sentry_issues(config)).filter((issue) => issue?.status === 'unresolved')
-  return issues.reduce(
-    async (summary_promise, issue) => {
-      const summary = await summary_promise
-      const action = await triage_one(config, issue)
-      return { ...summary, [action]: summary[action] + 1 }
-    },
-    Promise.resolve({ create: 0, comment: 0, noop: 0 })
-  )
+  const plan = await issues.reduce(async (rows_promise, issue) => {
+    const rows = await rows_promise
+    return [...rows, await plan_one(config, issue)]
+  }, Promise.resolve([]))
+
+  assert_plan_bounded(plan, (config.valve ?? VALVE).max_creates)
+
+  for (const row of plan)
+    if (row.reason) config.log(`sentry triage: Sentry ${row.id} refused by the valve — ${row.reason}`)
+
+  if (config.dry_run) {
+    config.log(`sentry triage: DRY RUN — ${plan.length} Sentry issue(s) read, nothing written.`)
+    for (const row of plan)
+      if (row.decision.action !== 'noop')
+        config.log(
+          `sentry triage: DRY RUN would ${row.decision.action}${row.decision.reopen ? ' (reopen)' : ''} Sentry ${row.id}`
+        )
+  } else {
+    for (const row of plan) await execute_one(config, row)
+  }
+
+  return plan.reduce((summary, row) => ({ ...summary, [row.decision.action]: summary[row.decision.action] + 1 }), {
+    create: 0,
+    comment: 0,
+    noop: 0,
+  })
 }
 
 const required_env = (name) => {
@@ -351,18 +486,21 @@ const required_env = (name) => {
 }
 
 async function main() {
+  const dry_run = process.argv.slice(2).includes('--dry-run')
   const summary = await run_triage({
     sentry_auth_token: required_env('SENTRY_AUTH_TOKEN'),
     sentry_org: required_env('SENTRY_ORG'),
     sentry_project: required_env('SENTRY_PROJECT'),
     github_token: required_env('GITHUB_TOKEN'),
     github_repository: required_env('GITHUB_REPOSITORY'),
+    now_ms: Date.now(),
+    dry_run,
     fetch_fn: fetch,
     sleep: wait,
     log: (message) => console.log(message),
   })
   console.log(
-    `sentry triage complete: created=${summary.create} commented=${summary.comment} unchanged=${summary.noop}`
+    `sentry triage complete${dry_run ? ' (DRY RUN — nothing written)' : ''}: created=${summary.create} commented=${summary.comment} unchanged=${summary.noop}`
   )
 }
 

@@ -2,8 +2,22 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 name: sentry triage
 
+# DISABLED SINCE 2026-08-02 (#1991). One run filed 92 board rows in six minutes — the whole
+# unresolved Sentry backlog, one row per raw minified error. `gh workflow disable` stopped the
+# hourly refill; the rows were bulk-closed as not planned.
+#
+# Re-enabling is a REVIEWED ACT, not a flag flip, and it needs a dry-run log attached: dispatch this
+# workflow with dry_run (the default) and read the plan it prints — every refusal names its own
+# measurement, and a run past the five-row ceiling aborts before writing anything. The valve itself
+# lives in scripts/sentry_triage.mjs and is pinned against that flood's own inputs.
+
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'read Sentry and print the plan without writing to the board'
+        type: boolean
+        default: true
   schedule:
     - cron: '0 * * * *'
 
@@ -28,4 +42,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node scripts/sentry_triage.mjs
+        # A scheduled run supplies no inputs, so the flag is absent and the run is real — the
+        # dry-run door exists for the dispatch the re-enable review reads, not as a second mode
+        # the cron can drift into.
+        run: node scripts/sentry_triage.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
