@@ -1,3 +1,1 @@
-9ab991e0990765b1feb69c06dfd7e81ab385ccca train/train-72b chore(ares): run the ceremony upgrade suite in the unit slice
-f1abfe729b539d285f5ec81f401667341f2880b8 train/train-72b fix(ceremony): refuse to start without one gas coin ≥ budget ×1.2
-5b188444c2ed00ce76185ea4774c4d357536f3c9 train/train-72b fix(frontend): a failed friend-list read is no longer an empty roster
+2effda809bb9869a15663d4dcc105f3e18a326c1 train/train-73 fix(sponsor): bake release.json from its one home, not a gitignored copy
