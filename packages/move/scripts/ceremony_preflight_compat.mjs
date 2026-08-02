@@ -473,8 +473,12 @@ function execResult(run, args) {
 
 function isWarningEscalation(output) {
   return (
-    /warning(?:\[|:)/i.test(output) &&
-    /warnings? (?:are|were)(?: being)? (?:treated as )?errors?/i.test(output)
+    (/warnings? (?:are|were)(?: being)? (?:treated as )?errors?/i.test(
+      output
+    ) ||
+      /error\[E09\d{3}\]/i.test(output)) &&
+    (/warning(?:\[|:)/i.test(output) ||
+      /This warning can be suppressed/i.test(output))
   )
 }
 
