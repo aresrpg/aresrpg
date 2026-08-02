@@ -12,14 +12,13 @@
 import './boot_shim'
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { fight_store } from '@aresrpg/fight/store'
 
 import './index.css'
 import './game-tab.css'
 import './game/screens/hud/hud.css'
 import './game/screens/hud/world/game-world-hud.css'
 import './i18n'
-
-import { fight_store } from '@aresrpg/fight/store'
 import { use_fight_view } from './game/store.js'
 import { DeckCluster } from './game/screens/hud/DeckCluster.jsx'
 import { fight_spells_data, resolve_class_spells } from './game/screens/hud/fight-spells.js'
