@@ -68,12 +68,16 @@ function fold_observation(state, { character_id, world, source }) {
   if (previous?.source === 'manual' && !previous.confirmed && source !== 'manual') {
     // #708 — a lagging snapshot must never lower a chain-truth write back to its pre-travel value. A poll
     // discarded this way is the one honest log row; the batched roster feed is a cache by construction.
-    if (world !== previous.world)
-      return source === 'poll' ? stale_row(state, id, previous.world) : state
+    if (world !== previous.world) return source === 'poll' ? stale_row(state, id, previous.world) : state
     return with_book(state, new Map(state.character_world_by_id).set(id, { ...previous, confirmed: true }))
   }
   const row = { world, source, confirmed: source !== 'manual' }
-  if (previous && previous.world === row.world && previous.source === row.source && previous.confirmed === row.confirmed)
+  if (
+    previous &&
+    previous.world === row.world &&
+    previous.source === row.source &&
+    previous.confirmed === row.confirmed
+  )
     return state
   return with_book(state, new Map(state.character_world_by_id).set(id, row))
 }
@@ -104,7 +108,8 @@ export function reduce_session_gate(state, input) {
       // The card's `world_id` is a CACHED snapshot — it enters as roster-grade evidence, so a reselect can
       // never clobber a fresher chain-truth binding for the same character (the guard every caller used to
       // hand-roll now lives in the book).
-      const selected = state.character_id === input.character_id ? state : { ...state, character_id: input.character_id }
+      const selected =
+        state.character_id === input.character_id ? state : { ...state, character_id: input.character_id }
       const rekeyed = selected === state ? state : with_book(selected, selected.character_world_by_id)
       return fold_observation(rekeyed, {
         character_id: input.character_id,
