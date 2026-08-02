@@ -343,6 +343,7 @@ asset_codename_gate() {
 # pattern silently stopped matching anything reads exactly like a clean tree, and is a lie.
 SPATIAL_HOME='packages/sim/src/combat_grid.js'
 SPATIAL_METRIC_HOME="$SPATIAL_HOME"
+SPATIAL_LOS_HOME='packages/sim/src/visibility.js'
 SPATIAL_ENGINE_MIRROR='packages/engine/src/binding/board_anchor.js'
 SPATIAL_SOURCE_PATHSPEC=(
   ':(glob)packages/sim/src/**/*.js' ':(glob)packages/fight/src/**/*.js'
@@ -407,6 +408,40 @@ spatial_vocabulary_gate() {
   spatial_scan 'Math\.abs\([^()]*\.x[^()]*\)[[:space:]]*\+[[:space:]]*Math\.abs\([^()]*\.y[^()]*\)|abs_diff\(coordinate_x\(' \
     "$SPATIAL_METRIC_HOME" 'inlined manhattan distance' \
     "MANHATTAN GATE FAILED. Use manhattan_distance() from $SPATIAL_METRIC_HOME (or manhattan() from $SPATIAL_HOME for encoded cells) — this is the spell-range metric, it gets ONE definition." || failed=1
+
+  # 2b — CHEBYSHEV: the chain has NO king-move distance metric. Tackle adjacency is ORTHOGONAL
+  # (fight_tackle.js find_adjacent_enemies scans 4 cells, twin-pinned by the tackle golden vectors), and
+  # the blocker spacing ring is its own Move-mirrored loop inside the home. A JS `Math.max(|Δx|,|Δy|)`
+  # metric is therefore always a divergence factory — the bot's chebyshev "tackle ring" counted diagonal
+  # enemies as tacklers the chain never counts. Clean state is total ABSENCE, so the matcher self-tests
+  # on a synthetic violation first (matcher_fires law) instead of a home positive control.
+  local cheb_pattern='Math\.max\(Math\.abs\([^()]*\.x[^()]*\),[[:space:]]*Math\.abs\([^()]*\.y[^()]*\)\)'
+  if ! matcher_fires 'the chebyshev-metric matcher' 'const chebyshev = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))' grep_collected "$cheb_pattern" -InE; then
+    failed=1
+  else
+    local cheb_hits
+    if ! cheb_hits="$(grep_collected "$cheb_pattern" -InE)"; then
+      red "  ✗ FAIL: the chebyshev-metric scan did not run to completion — an unproven pattern is not an absent one."
+      failed=1
+    else
+      cheb_hits="$(printf '%s\n' "$cheb_hits" | awk 'NF')"
+      if [ -n "$cheb_hits" ]; then
+        red "  ✗ FAIL: king-move (chebyshev) distance metric in the fight path:"
+        echo "$cheb_hits" | cut -c1-160 | sed 's/^/      /' | head -10
+        red "CHEBYSHEV GATE FAILED. The chain has no king-move metric — tackle adjacency is manhattan() <= 1 (orthogonal, fight_tackle.js). Delete the metric; derive from manhattan()."
+        failed=1
+      else
+        grn "  ✓ no king-move (chebyshev) distance metric in the fight path (clean state is absence; matcher self-tested)"
+      fi
+    fi
+  fi
+
+  # 2c — LOS: one implementation, ever. The last second LOS (an unproven float-slope shadowcast) disagreed
+  # with the contract on 6.3% of sight lines — casts the client offered and commit_turn aborted, burned gas
+  # every time (#1536 row 1). Definitions only; `export { ... } from` re-export facades do not match.
+  spatial_scan 'export[[:space:]]+(const|function)[[:space:]]+(blocks_sight|has_line_of_sight|los_blocks|line_of_sight)[^a-z_]' \
+    "$SPATIAL_LOS_HOME" 'line-of-sight implementation' \
+    "LOS GATE FAILED. line_of_sight/blocks_sight have ONE home — $SPATIAL_LOS_HOME (the Move-proven integer twin, re-exported by @aresrpg/fight/los). A second LOS already burned gas on 6.3% of sight lines once." || failed=1
 
   # 3 — the engine's deliberate vendored copy may not drift from the home
   local home_dims mirror_dims
