@@ -48,8 +48,12 @@ fun apply_move(fight: &mut Fight, seat: u64, cell: u64) {
   // is `&Random`-free (single-PTB law) — it derives from the public turn-seed stream folded with the action
   // slot + live MP (spell_formula::tackle_seed; previewable like a crit, repriced by every failed attempt since
   // a failure always costs ≥1 MP). Path legality is pre-checked so an ILLEGAL move aborts instead of rolling —
-  // sim order: insufficient-MP/invalid-path rejection precedes the contest. A failed escape COMMITS (return,
-  // never abort): the pool loss + Tackled event must survive — an abort would refund the penalty.
+  // sim order: insufficient-MP/invalid-path rejection precedes the contest. A failed escape COMMITS (never
+  // aborts): the pool loss + Tackled event must survive — an abort would refund the penalty.
+  //
+  // TACKLE IS A TOLL, NEVER A WALL (#239, owner ruling 2026-07-21): a failed escape KEEPS its AP/MP tax and the
+  // walk then proceeds on the MP that survived, truncated to the affordable prefix of the same canonical route.
+  // The escaped case is the same statement with nothing taxed — the special case falls out of the general one.
   let lockers = tackle::locker_agilities(fight, false, seat);
   if (!lockers.is_empty()) {
     let start = participant::cell(fight::participants(fight).borrow(seat));
@@ -57,10 +61,14 @@ fun apply_move(fight: &mut Fight, seat: u64, cell: u64) {
     let slot = participant::casts_this_turn(fight::participants(fight).borrow(seat));
     let seed = spell_formula::tackle_seed(fight::turn_seed(fight, seat), slot, mp);
     let (_state, draw) = prng::rng_next(seed);
-    if (!tackle::resolve(fight, false, seat, &lockers, draw)) return // tackled — penalty committed, move denied
+    tackle::resolve(fight, false, seat, &lockers, draw);
   };
-  let (legal, cost) = movement::walk(fight, false, seat, cell, &wall_mask, mp);
+  // `mp` (pre-toll) still decides LEGALITY — the destination the player committed to was legal when they asked
+  // — while the post-toll pool decides how far the walk actually gets.
+  let surviving = participant::mp(fight::participants(fight).borrow(seat));
+  let (legal, cost) = movement::walk(fight, false, seat, cell, &wall_mask, mp, surviving);
   assert!(legal, EIllegalMove);
+  if (cost == 0) return; // the toll ate the whole pool: the tax stands, no cell is entered, no Moved is emitted
   {
     let p = fight::participants_mut(fight).borrow_mut(seat);
     participant::spend_mp(p, cost);

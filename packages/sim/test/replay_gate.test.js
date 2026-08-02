@@ -465,6 +465,69 @@ const make_entity = (id, cell, is_player, overrides = {}) => ({
 
 const scenarios = [
   {
+    // #239 twin parity — TACKLE IS A TOLL, NEVER A WALL (owner ruling 2026-07-21, restated at the row's
+    // reopen). A failed escape KEEPS its AP/MP tax and the walk then proceeds on the surviving MP, truncated
+    // to the affordable prefix of the canonical route. p0 (agi 0, dodge 2) is locked by the adjacent agi-0 m0
+    // (den 4, num 2) and commands a 4-cell walk west. The escape fails: ap −ceil(10·2/4)=5 and mp −ceil(5·2/4)=3
+    // are committed, and the 2 MP that survive still spend — p0 lands two cells along the route at (3,5), not
+    // nailed to (5,5). The old rule (failed escape ⇒ zero movement) is what this capsule fails on.
+    meta: {
+      id: 'tackled_toll_walks_the_surviving_prefix',
+      class: 'twin',
+      authored: '2026-08-02',
+      source: 'authored',
+      notes:
+        'Issue #239: a failed tackle taxes both pools and then walks the surviving MP as the affordable prefix of the canonical route — a toll, never a wall.',
+    },
+    arena: {
+      ...flat_arena_json(),
+      spawns_a: [{ x: 5, y: 5 }],
+      spawns_b: [{ x: 6, y: 5 }],
+    },
+    templates_raw: {},
+    initial: {
+      fight_id: 'capsule_tackle_toll',
+      arena_seed: 1,
+      team0: [make_entity('p0', { x: 5, y: 5 }, true, { spell_levels: {} })],
+      team1: [make_entity('m0', { x: 6, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'move',
+        entity_id: 'p0',
+        path: [
+          { x: 4, y: 5 },
+          { x: 3, y: 5 },
+          { x: 2, y: 5 },
+          { x: 1, y: 5 },
+        ],
+      },
+    ],
+    pinned_facts: [
+      {
+        cite: 'actions.move apply_move — the failed escape COMMITS its toll and the walk still runs on the surviving MP: 2 of the 4 requested steps, so the runner lands at (3,5)',
+        path: 'team0.0.cell.x',
+        equals: 3,
+      },
+      {
+        cite: 'movement.move walk — the route is the canonical shortest one, truncated to the affordable prefix; a straight westward walk never leaves row 5',
+        path: 'team0.0.cell.y',
+        equals: 5,
+      },
+      {
+        cite: 'tackle.move resolve — mp_lost = ceil(5·(4−2)/4) = 3, and the 2 MP that survive are spent by the prefix walk',
+        path: 'team0.0.mp',
+        equals: 0,
+      },
+      {
+        cite: 'tackle.move resolve — ap_lost = ceil(10·(4−2)/4) = 5; the tax stays whether or not the walk proceeds',
+        path: 'team0.0.ap',
+        equals: 5,
+      },
+    ],
+  },
+  {
     // #618 deterministic-twin discriminator. The direct (1,3)→(4,3) lane crosses living m1 at (3,3), while
     // upper and lower five-step detours are equal. Hand-tracing movement::walk: right reaches (2,3); right is then
     // occupied, so up wins before down in Move's left/right/up/down order; the remainder is right, right, down.

@@ -141,24 +141,43 @@ describe('tackle golden — reduce-level behavior (the sim rng thread)', () => {
     { x: 6, y: 5 },
   ]
 
-  test('seed42_den4_escapes: roll 0 < num 2 — the move completes', () => {
+  test('seed42_den4_escapes: roll 0 < num 2 — the move completes untaxed', () => {
     const [c] = golden.sim_thread_cases
     const res = apply_move(state_of(c.rng_seed, 0, 0), 'mover', path)
     expect(res.success).toBe(true)
-    expect(res.tackled).toBeUndefined()
+    expect(res.tackled).toBe(false)
     expect(find_entity(res.state, 'mover')?.cell).toEqual({ x: 6, y: 5 })
   })
 
-  test('seed42_den24_boundary_tackles: roll 12 ≥ num 12 — denied at the exact boundary, pools bitten', () => {
+  test('seed42_den24_boundary_tackles: roll 12 ≥ num 12 — TOLLED at the exact boundary, and the surviving MP still walks (#239)', () => {
     const [, c] = golden.sim_thread_cases
     const res = apply_move(state_of(c.rng_seed, 100, 100), 'mover', path)
+    // The contest was LOST — but a lost contest is a toll, not a wall: the tax lands and the 1 MP that
+    // survives buys exactly the 1 cell this path asked for. This is the reported #239 case verbatim.
+    expect(res.tackled).toBe(true)
+    expect(res.success).toBe(true)
+    const caught = find_entity(res.state, 'mover')
+    expect(caught?.cell).toEqual({ x: 6, y: 5 })
+    // lost fraction 12/24 of (ap 6, mp 3) → ceil 3 AP + ceil 1.5 = 2 MP (the exact_half_rounds_up vector),
+    // then the walk spends the last MP on its single step.
+    expect(caught?.ap).toBe(3)
+    expect(caught?.mp).toBe(0)
+  })
+
+  test('a toll that eats the whole pool is the old WALL — the zero-remainder case, denied with no cells entered', () => {
+    const [, c] = golden.sim_thread_cases
+    // Same contest at 1 MP: ceil(1·12/24) = 1 takes the entire pool, so nothing is left to walk.
+    const state = state_of(c.rng_seed, 100, 100)
+    const poor = {
+      ...state,
+      team0: [{ ...state.team0[0], mp: 1, mp_max: 1 }],
+    }
+    const res = apply_move(poor, 'mover', path)
     expect(res.success).toBe(false)
     expect(res.tackled).toBe(true)
     expect(res.error).toBe('TACKLED')
     const caught = find_entity(res.state, 'mover')
     expect(caught?.cell).toEqual({ x: 5, y: 5 })
-    // lost fraction 12/24 of (ap 6, mp 3) → ceil 3 AP + ceil 1.5 = 2 MP (the exact_half_rounds_up vector).
-    expect(caught?.ap).toBe(3)
-    expect(caught?.mp).toBe(1)
+    expect(caught?.mp).toBe(0)
   })
 })

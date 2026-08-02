@@ -96,6 +96,33 @@ fun move_out_of_melee_contested_and_denied() {
 }
 
 #[test]
+/// engine_toll_prefix: TACKLE IS A TOLL, NEVER A WALL (#239 — owner ruling 2026-07-21, restated at the row's
+/// reopen). Runner agi 160 (dodge 18) vs one adjacent agi-110 locker (bucket 13 ⇒ den 26, num min(26,18)=18):
+/// at full MP 3 the slot-0 draw 582013873 % 26 = 25 ≥ 18 → TACKLED. The tax is the failed fraction as always —
+/// ceil(6·8/26)=2 AP, ceil(3·8/26)=1 MP → AP 6→4, MP 3→2 — and then the 2 MP that SURVIVED still spend: the
+/// 3-step walk to 168 is truncated to its affordable 2-step prefix, so the runner lands at 167 with MP 0.
+/// This is the exact reported scenario ("enough MP for one cell, could not move at all") one step wider.
+fun tackled_move_walks_the_affordable_prefix() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = active_adjacent_fight(&mut sc);
+  participant::set_stats_for_testing(fight::participants_mut(&mut fight).borrow_mut(0), agi_stats(160));
+  mob::set_stats_for_testing(fight::mobs_mut(&mut fight).borrow_mut(0), agi_stats(110));
+  move_p0(&mut fight, &ver, 168); // 3 steps east — legal at the PRE-toll MP 3, unaffordable after the toll
+  let (cell, ap, mp) = p_state(&fight);
+  assert!(cell == 167, 0); // the toll took one step off the route; the other two still walked
+  assert!(ap == 4 && mp == 0, 1);
+  let tackled = event::events_by_type<fight_events::Tackled>();
+  assert!(tackled.length() == 1, 2);
+  let (_fid, _rim, _ri, ap_lost, mp_lost, num, den) = fight_events::tackled_for_testing(tackled.borrow(0));
+  assert!(ap_lost == 2 && mp_lost == 1 && num == 18 && den == 26, 3);
+  // The truncated walk is a REAL move: it lands, so it emits Moved exactly like an escaped one.
+  assert!(event::events_by_type<fight_events::Moved>().length() == 1, 4);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
 /// engine_escape_100v100: same draw (702229519), richer contest — runner agi 100 (dodge 12) vs locker agi 100
 /// (den 24): roll 7 < 12 → ESCAPED. The move completes (165→167, MP 3→1), AP untouched, zero Tackled events.
 fun escape_wins_the_contest_and_moves() {

@@ -300,19 +300,21 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
   // TACKLE (sim twin fight_actions.js:63-100, mob orientation): a mob leaving a living adjacent player's zone
   // contests the exit off the CRANK rng thread (the wave's entropy — like mob-cast drains; mob turns are never
   // previewable). Gated on an ACTUAL planned move so a standing mob draws nothing. A failed escape drains the
-  // mob's pools + emits Tackled and skips the walk — its planned cast then re-validates from the HELD cell
-  // (mob_can_cast), so an out-of-band cast simply dies with the escape.
-  let escaped = {
+  // mob's pools + emits Tackled and TOLLS the walk (#239) — the mob advances only as far as its surviving MP
+  // buys; its planned cast then re-validates from wherever it actually stopped (mob_can_cast), so an
+  // out-of-band cast still dies with the escape.
+  {
     let start_cell = mob::cell(fight::mobs(fight).borrow(midx));
-    if (new_cell == start_cell) true
-    else {
+    if (new_cell != start_cell) {
       let lockers = tackle::locker_agilities(fight, true, midx);
-      if (lockers.is_empty()) true
-      else tackle::resolve(fight, true, midx, &lockers, prng::draw(rng))
-    }
+      if (!lockers.is_empty()) { tackle::resolve(fight, true, midx, &lockers, prng::draw(rng)); };
+    };
   };
-  if (escaped) {
-    let (legal_move, moved_steps) = movement::walk(fight, true, midx, new_cell, &move_blocked, move_budget);
+  {
+    // TOLL, not wall (#239): the failed escape's drain already landed, and the mob advances as far as the MP it
+    // has left allows — the same prefix rule the player's `actions::apply_move` walks.
+    let surviving = mob::mp(fight::mobs(fight).borrow(midx));
+    let (legal_move, moved_steps) = movement::walk(fight, true, midx, new_cell, &move_blocked, move_budget, surviving);
     assert!(legal_move);
     if (moved_steps > 0) {
       // Reposition observability (chain-forensics 2026-07-11): a mob whose turn draws reposition-only emitted NOTHING,

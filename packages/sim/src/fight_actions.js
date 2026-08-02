@@ -91,6 +91,11 @@ export const contest_tackle = (state, entity_id, turn_context = null) => {
 
 /**
  * Apply a movement path with the exact multi-lock agility contest.
+ *
+ * TACKLE IS A TOLL, NEVER A WALL (#239, owner ruling 2026-07-21 — twin of actions.move's `surviving` cap): a
+ * failed escape keeps its AP/MP tax and the walk then rides the MP that survived, truncated to the affordable
+ * PREFIX of the same path. A toll that eats the whole pool collapses to the old denial, so the wall is just the
+ * zero-remainder case of the toll.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @param {import('./cell.js').Cell[]} path   inclusive of the start cell
@@ -116,24 +121,33 @@ export const apply_move = (state, entity_id, path, turn_context = null) => {
     return { state, success: false, error: 'INSUFFICIENT_MP', cells_moved: 0 }
 
   const contest = contest_tackle(state, entity_id, turn_context)
-  if (!contest.escaped)
+  // The toll's remainder decides how far the walk gets; an escaped contest taxed nothing, so `steps` is the
+  // whole path and the escaped case needs no branch of its own.
+  const taxed = find_entity(contest.state, entity_id)
+  const steps = Math.min(mp_cost, taxed?.mp ?? 0)
+  if (!contest.escaped && steps === 0)
     return {
       state: contest.state,
       success: false,
-      tackled: true,
+      tackled: !contest.escaped,
       cells_moved: 0,
       error: 'TACKLED',
     }
 
-  // Relocate along the path (skip the start cell), then deduct MP for the distance traveled.
-  const destination = path[path.length - 1]
+  // Relocate along the affordable prefix (skip the start cell), then deduct MP for the distance traveled.
+  const destination = path[steps]
   const moved = update_entity(contest.state, entity_id, e => ({
     ...e,
     cell: destination,
-    mp: Math.max(0, e.mp - mp_cost),
-    mp_used: e.mp_used + mp_cost,
+    mp: Math.max(0, e.mp - steps),
+    mp_used: e.mp_used + steps,
   }))
-  return { state: moved, success: true, cells_moved: mp_cost }
+  return {
+    state: moved,
+    success: true,
+    tackled: !contest.escaped,
+    cells_moved: steps,
+  }
 }
 
 // ── Damage / heal ─────────────────────────────────────────────────────────────

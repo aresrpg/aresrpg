@@ -425,11 +425,14 @@ const handle_move = (state, cmd, ctx) => {
     type: 'fight_moved',
     fight_id: state.fight_id,
     entity_id: cmd.entity_id,
-    path: walked.tackled ? [moved?.cell ?? current.cell] : walked.traversed,
+    // A tolled walk still ENTERS cells, so the event carries them; only a toll that left zero MP has no route
+    // to report and falls back to the cell the mover is standing on.
+    path: walked.traversed.length
+      ? walked.traversed
+      : [moved?.cell ?? current.cell],
     tackled: walked.tackled,
     mp_remaining: moved?.mp ?? 0,
   }
-  if (walked.tackled) return { state: walked.state, events: [moved_event] }
   const won = with_victory(state.winner, walked.state, [
     moved_event,
     ...walked.events,
@@ -459,9 +462,11 @@ const walk_path = (state, cmd, ctx) => {
     cmd.entity_id,
     cmd.turn_context ?? ctx.turn_context ?? null,
   )
-  if (!contest.escaped)
-    return { state: contest.state, traversed: [], events: [], tackled: true }
-  const walked = cmd.path.reduce(
+  // THE TOLL (#239): a failed escape's AP/MP tax is already committed by `contest_tackle`, and the walk then
+  // takes the affordable PREFIX of the canonical route — `movement::walk`'s `steps_cap` on the chain. The
+  // escaped case reaches this with an untouched pool, so the whole path survives the slice.
+  const surviving = find_entity(contest.state, cmd.entity_id)?.mp ?? 0
+  const walked = cmd.path.slice(0, surviving).reduce(
     (acc, target) => {
       if (acc.stop) return acc
       // Enter the next cell (relocate + spend 1 MP), then resolve any trap covering it from the authoritative
@@ -500,7 +505,7 @@ const walk_path = (state, cmd, ctx) => {
     state: walked.state,
     traversed: walked.traversed,
     events: walked.events,
-    tackled: false,
+    tackled: !contest.escaped,
   }
 }
 

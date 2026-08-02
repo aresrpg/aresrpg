@@ -3,8 +3,9 @@
 /// TACKLE — the ordinary-movement escape contest (chain twin of the sim's shipped rule,
 /// packages/sim/src/fight_actions.js:63-100; formula layer in `spell_formula::tackle_*`). A fighter standing
 /// orthogonally adjacent to a LIVING enemy sits in its tackle zone: an ordinary move out of the zone rolls one
-/// combined agility contest FIRST — success proceeds, failure DENIES the move and strips the failed fraction of
-/// both pools (committed, never an abort — an abort would refund the penalty). Enemies of a participant are
+/// combined agility contest FIRST — success proceeds untaxed, failure strips the failed fraction of both pools
+/// (committed, never an abort — an abort would refund the penalty) and the walk then rides whatever MP survived
+/// (#239 — a TOLL, never a wall; the truncation lives in the callers' `movement::walk` cap). Enemies of a participant are
 /// every living mob plus every living OTHER-TEAM participant (PvP); enemies of a mob are every living
 /// participant. Death exempts a tackler; INVISIBILITY does not — bodies stay physical exactly as they keep
 /// blocking cells (`displacement::add_living_bodies`), and the sim rule carries no visibility filter. Spell
@@ -53,8 +54,9 @@ public(package) fun locker_agilities(fight: &Fight, runner_is_mob: bool, runner_
 
 /// Resolve one contest from a RAW u32 `draw` (the caller owns the entropy thread: a player move passes
 /// `rng_next(tackle_seed)`'s value — deterministic + previewable; a mob move passes `prng::draw` off the crank).
-/// Returns true = ESCAPED (caller proceeds with the walk). False = TACKLED: the proportional AP/MP loss is
-/// WRITTEN and the Tackled event emitted here — the caller only denies the move. `roll = draw % den` is
+/// Returns true = ESCAPED (the walk is untaxed). False = TACKLED: the proportional AP/MP loss is WRITTEN and
+/// the Tackled event emitted here — the caller then walks the prefix the drained pool still affords, so a
+/// zero-MP remainder is exactly the old "move denied". `roll = draw % den` is
 /// byte-identical to `prng::rng_int` / the sim's `rng_int(state.rng, den)`.
 public(package) fun resolve(fight: &mut Fight, runner_is_mob: bool, runner_idx: u64, lockers: &vector<u64>, draw: u64): bool {
   let (agility, ap, mp) = if (runner_is_mob) {

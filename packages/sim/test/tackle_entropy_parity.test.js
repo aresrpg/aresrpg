@@ -76,11 +76,22 @@ describe('tackle entropy parity — Move turn clock versus sim resolution', () =
       expect(draw % fixture.contest.den).toBe(vector.roll)
 
       const result = apply_move(state_of(), 'mover', path, clock)
-      expect(result.success, vector.id).toBe(vector.escaped)
+      // #239 — the contest verdict and the WALK are separate facts now: a lost contest tolls both pools and
+      // the surviving MP still buys the step, so every row here lands on the destination and only the pools
+      // tell the two arms apart.
+      expect(result.success, vector.id).toBe(true)
       expect(result.tackled === true, vector.id).toBe(!vector.escaped)
       const mover = find_entity(result.state, 'mover')
       expect(mover?.ap, vector.id).toBe(vector.ap_after)
-      expect(mover?.mp, vector.id).toBe(vector.mp_after)
+      // The chain-authored `mp_after` is read VERBATIM, under the rule it was transcribed at: on an ESCAPED
+      // row it is already the post-walk pool; on a TACKLED row it is the post-TOLL pool, because the rule of
+      // the day then denied the walk. #239 lets that survivor walk, and this path is exactly one step — so a
+      // tackled row spends one more MP iff the toll left it any. The oracle's bytes never move.
+      const walked = vector.escaped ? 0 : Math.min(1, vector.mp_after)
+      expect(mover?.mp, vector.id).toBe(vector.mp_after - walked)
+      expect(mover?.cell, vector.id).toEqual(
+        vector.escaped || walked ? { x: 6, y: 5 } : { x: 5, y: 5 },
+      )
       // A clocked contest is a scratch draw: neither the legacy capsule field nor the crank thread moves, so a
       // mob's later draws are identical whether or not a player was tackled on the way there.
       expect(

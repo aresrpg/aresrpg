@@ -56,7 +56,7 @@ fun participant_ordinary_move_triggers_own_crossed_trap_and_resumes() {
 
   let walls = displacement::move_blocked_cells(&fight, false, 0);
   // walk fires the own-trap inline (owner-blind, #320) and RESUMES to the destination 167 (#325).
-  let (legal, moved) = movement::walk(&mut fight, false, 0, 167, &walls, 3);
+  let (legal, moved) = movement::walk(&mut fight, false, 0, 167, &walls, 3, 3);
   assert!(legal && moved == 3);
   participant::spend_mp(fight::participants_mut(&mut fight).borrow_mut(0), moved);
 
@@ -76,7 +76,7 @@ fun mob_ordinary_move_triggers_crossed_trap_and_resumes() {
 
   let walls = displacement::move_blocked_cells(&fight, true, 0);
   // walk fires the crossed trap inline and the mob RESUMES to 168 (#325).
-  let (legal, moved) = movement::walk(&mut fight, true, 0, 168, &walls, 3);
+  let (legal, moved) = movement::walk(&mut fight, true, 0, 168, &walls, 3, 3);
   assert!(legal && moved == 3);
 
   let m = fight::mobs(&fight).borrow(0);
@@ -104,7 +104,7 @@ fun ordinary_move_lethal_trap_stops_the_walk() {
   );
 
   let walls = displacement::move_blocked_cells(&fight, false, 0);
-  let (legal, moved) = movement::walk(&mut fight, false, 0, 167, &walls, 3);
+  let (legal, moved) = movement::walk(&mut fight, false, 0, 167, &walls, 3, 3);
   assert!(legal && moved == 2); // entered 165 then 166, died there — never resumed to 167
 
   let p = fight::participants(&fight).borrow(0);
@@ -119,7 +119,7 @@ fun illegal_destination_is_write_free() {
   let mut fight = fresh_fight(&mut sc);
   participant::set_cell(fight::participants_mut(&mut fight).borrow_mut(0), 164);
   let walls = displacement::move_blocked_cells(&fight, false, 0);
-  let (legal, moved) = movement::walk(&mut fight, false, 0, 168, &walls, 2);
+  let (legal, moved) = movement::walk(&mut fight, false, 0, 168, &walls, 2, 2);
   assert!(!legal && moved == 0);
   assert!(participant::cell(fight::participants(&fight).borrow(0)) == 164);
   finish(sc, fight);
@@ -147,7 +147,7 @@ fun ordinary_move_tie_break_takes_right_before_up() {
   displacement::record_trap_owner(&mut fight, 144, 0);
 
   let walls = displacement::move_blocked_cells(&fight, false, 0);
-  let (legal, moved) = movement::walk(&mut fight, false, 0, 145, &walls, 2);
+  let (legal, moved) = movement::walk(&mut fight, false, 0, 145, &walls, 2, 2);
   assert!(legal && moved == 2, 0);
 
   let p = fight::participants(&fight).borrow(0);

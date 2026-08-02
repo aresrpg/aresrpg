@@ -19,7 +19,13 @@ const EBrokenShortestPath: u64 = 101;
 /// Walk a canonical shortest route to `destination` within `budget` over the caller's frozen wall mask, firing
 /// every crossed trap inline (entrant-blind) and resuming after each survived one. Returns
 /// `(legal_destination, traversed_steps)`; `traversed_steps` is the cells actually entered — the full route
-/// unless a trap killed or displaced the mover mid-walk. An illegal destination performs no writes.
+/// unless `steps_cap` truncates it, or a trap killed or displaced the mover mid-walk. An illegal destination
+/// performs no writes.
+///
+/// `budget` decides LEGALITY (can this destination be reached at all) and `steps_cap` decides HOW FAR the mover
+/// actually gets — the two are the same number on every ordinary walk, and diverge only under the tackle TOLL
+/// (#239): a failed escape taxes the pools and the route is then truncated to the prefix the surviving MP can
+/// still afford. Capping to zero is a legal no-op walk, never an illegal destination.
 public(package) fun walk(
   fight: &mut Fight,
   target_is_mob: bool,
@@ -27,10 +33,13 @@ public(package) fun walk(
   destination: u64,
   walls: &vector<u64>,
   budget: u64,
+  steps_cap: u64,
 ): (bool, u64) {
   let start = target_cell(fight, target_is_mob, target_idx);
   let cost = combat_grid::bfs_path_cost(start, destination, walls, budget);
   if (cost == combat_grid::path_unreachable()) return (false, 0);
+  let steps = if (cost < steps_cap) cost else steps_cap;
+  if (steps == 0) return (true, 0);
   // ONE flood fill for the whole route. The walker used to run another per candidate direction per step — up to
   // `1 + steps × 4` fills for a single move, and this is the engine's hottest loop (every MOVE, and every mob
   // advance in every crank walk). The field answers the same question the per-direction call did, so the route
@@ -40,7 +49,7 @@ public(package) fun walk(
   let mut current = start;
   let mut remaining = cost;
   let mut traversed = 0;
-  while (remaining > 0) {
+  while (traversed < steps) {
     current = next_shortest_step(current, &field, walls, remaining);
     set_target_cell(fight, target_is_mob, target_idx, current);
     traversed = traversed + 1;

@@ -1,0 +1,216 @@
+{
+  "meta": {
+    "id": "tackled_toll_walks_the_surviving_prefix",
+    "class": "twin",
+    "authored": "2026-08-02",
+    "source": "authored",
+    "notes": "Issue #239: a failed tackle taxes both pools and then walks the surviving MP as the affordable prefix of the canonical route — a toll, never a wall."
+  },
+  "arena": {
+    "width": 21,
+    "height": 21,
+    "cells": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 5
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 6,
+        "y": 5
+      }
+    ]
+  },
+  "templates_raw": {},
+  "initial": {
+    "fight_id": "capsule_tackle_toll",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 5,
+          "y": 5
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 6,
+          "y": 5
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "move",
+      "entity_id": "p0",
+      "path": [
+        {
+          "x": 4,
+          "y": 5
+        },
+        {
+          "x": 3,
+          "y": 5
+        },
+        {
+          "x": 2,
+          "y": 5
+        },
+        {
+          "x": 1,
+          "y": 5
+        }
+      ]
+    }
+  ],
+  "pinned_facts": [
+    {
+      "cite": "actions.move apply_move — the failed escape COMMITS its toll and the walk still runs on the surviving MP: 2 of the 4 requested steps, so the runner lands at (3,5)",
+      "path": "team0.0.cell.x",
+      "equals": 3
+    },
+    {
+      "cite": "movement.move walk — the route is the canonical shortest one, truncated to the affordable prefix; a straight westward walk never leaves row 5",
+      "path": "team0.0.cell.y",
+      "equals": 5
+    },
+    {
+      "cite": "tackle.move resolve — mp_lost = ceil(5·(4−2)/4) = 3, and the 2 MP that survive are spent by the prefix walk",
+      "path": "team0.0.mp",
+      "equals": 0
+    },
+    {
+      "cite": "tackle.move resolve — ap_lost = ceil(10·(4−2)/4) = 5; the tax stays whether or not the walk proceeds",
+      "path": "team0.0.ap",
+      "equals": 5
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_tackle_toll",
+        "turn_order": ["p0", "m0"],
+        "seed": 1
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_tackle_toll",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_moved",
+        "fight_id": "capsule_tackle_toll",
+        "entity_id": "p0",
+        "path": [
+          {
+            "x": 4,
+            "y": 5
+          },
+          {
+            "x": 3,
+            "y": 5
+          }
+        ],
+        "tackled": true,
+        "mp_remaining": 0
+      }
+    ],
+    "terminal_digest": "d7379d4e",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 1,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 100,
+          "cell": {
+            "x": 3,
+            "y": 5
+          }
+        },
+        {
+          "id": "m0",
+          "health": 100,
+          "cell": {
+            "x": 6,
+            "y": 5
+          }
+        }
+      ]
+    }
+  }
+}
