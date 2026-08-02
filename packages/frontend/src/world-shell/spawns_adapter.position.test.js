@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs'
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { publish_dungeon_session } from './dungeon_session.js'
-import { publish_world_binding, reset_world_binding } from './session_gate.js'
+import { publish_world_binding, rebind_world_character, reset_world_binding } from './session_gate.js'
 
 const CHARACTER = '0xCHARACTER'
 const OTHER_CHARACTER = '0xOTHER_CHARACTER'
@@ -359,7 +359,9 @@ describe('world position IndexedDB edge', () => {
     bind_with_anchor(WORLD_A, anchor_at(100, 200))
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW)
 
-    publish_world_binding(OTHER_CHARACTER, WORLD_A)
+    // #2007 — a SWITCH is a selection, not a publish: an owned alt's own binding publish is a fact about that
+    // alt and must never re-key the live session (it used to, and this test rode that hijack).
+    rebind_world_character(OTHER_CHARACTER, WORLD_A)
 
     expect(position_edge.spawns_store.getState().checkpoint).toBeNull()
     expect(position_edge.spawns_store.getState().hunt_zone).toBeNull()

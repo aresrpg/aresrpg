@@ -55,3 +55,20 @@ describe('#596 — every surface projects from the ONE store', () => {
     expect(src, 'the render-published minimap copy (publish_spawns) is gone').not.toContain('publish_spawns')
   })
 })
+
+// #2007 — THE WORLD TOKEN HAS ONE WRITER. The spawns core's `world_id` is the character↔world binding, ferried
+// by the binding adapter. The renderer poll was a SECOND writer of the same token (a null on any beat it read
+// no world, a re-bind whenever the core disagreed with it), so a cadence tick could reset the core underneath a
+// travel the binding never authorized. A poll that disagrees with the token now REJECTS the beat instead.
+describe('#2007 — only the binding adapter issues the spawns world token', () => {
+  test('the renderer poll never issues world_bound', () => {
+    const src = read('./world_spawns.js')
+    expect(src, 'the renderer must not write the world token').not.toContain("type: 'world_bound'")
+  })
+
+  test('the binding adapter is still the writer, driven by the session gate', () => {
+    const src = read('../world-shell/spawns_adapter.js')
+    expect(src, 'the ferry owns the token').toContain("type: 'world_bound'")
+    expect(src, 'and it is driven by the one binding book').toContain('use_world_binding.subscribe')
+  })
+})

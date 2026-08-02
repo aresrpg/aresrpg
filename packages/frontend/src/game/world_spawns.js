@@ -332,10 +332,10 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     const world_id = current_world_id()
     ensure_zones_subscription(world_id)
     if (!world_id) {
-      if (entries.size) {
-        spawns_input({ type: 'world_bound', world_id: null }) // left the world → the core resets
-        sync_from_core() // …and every rig tears down
-      }
+      // #2007 — the world token has ONE writer (the binding adapter's session→spawns ferry). Leaving a world
+      // resets the core THERE; this poll only re-syncs its own render residency, so a cadence beat can never
+      // reset the core underneath a travel the binding never authorized.
+      if (entries.size) sync_from_core()
       return
     }
     // RECONNECT (one-shot per session): the first poll with a bound world re-mounts a world fight the character
@@ -350,7 +350,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     try {
       await ensure_world_dims(world_id)
       if (current_world_id() !== world_id) return
-      if (spawns_store.getState().world_id !== world_id) spawns_input({ type: 'world_bound', world_id }) // ferry belt
+      // The token is the binding adapter's to issue: a beat that disagrees with it is REJECTED (the ferry
+      // binds, the next beat proceeds) — never re-bound from here.
+      if (spawns_store.getState().world_id !== world_id) return
       const { zone_size, offset_x, offset_z } = spawns_store.getState()
       const p = get_player_pos()
       // Player pos is SIGNED WORLD space → the chain zone KEY (data/claim/gather) translates world→chain then floors.
