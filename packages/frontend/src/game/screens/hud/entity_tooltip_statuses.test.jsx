@@ -25,7 +25,9 @@ const text_of = (html) => html.replace(/<[^>]*>/g, '')
 const buff = { id: 's-buff', kind: 9, stat: 9, value: 1, remaining_turns: 3 }
 const dot_fire = { id: 's-dot', kind: 21, element: 0, value: 5, remaining_turns: 1 }
 const invis = { id: 's-inv', kind: 27, remaining_turns: 4 }
-const expired = { id: 's-gone', kind: 9, stat: 9, value: 99, remaining_turns: 0 }
+// #2000 (D42) — a 0 counter is the bearer's LAST COVERED TURN, not an expired row: still live on chain, still
+// readable on the hover. A genuinely gone row reaches this card as an ABSENT one (the fold drops it), never as a 0.
+const last_turn = { id: 's-last', kind: 9, stat: 9, value: 99, remaining_turns: 0 }
 const base_props = {
   team: 0,
   style: {},
@@ -38,13 +40,13 @@ const base_props = {
 }
 
 describe('TooltipCard — presented active effects are readable on the board hover', () => {
-  test('an active timed buff renders its value + remaining turns; an expired row renders nothing', () => {
+  test('an active timed buff renders its value + remaining turns; a row on its last covered turn still does', () => {
     const active_html = renderToStaticMarkup(<TooltipCard {...base_props} outcome={null} status_effects={[buff]} />)
     expect(text_of(active_html)).toContain('+1 Raw Damage · 3 turns')
 
-    const expired_html = renderToStaticMarkup(<TooltipCard {...base_props} outcome={null} status_effects={[expired]} />)
-    expect(text_of(expired_html)).not.toContain('99 Raw Damage')
-    expect(expired_html).not.toContain('hud-effects')
+    const last_html = renderToStaticMarkup(<TooltipCard {...base_props} outcome={null} status_effects={[last_turn]} />)
+    expect(text_of(last_html)).toContain('+99 Raw Damage')
+    expect(last_html).toContain('hud-effects')
   })
 
   test('each active projected effect renders through the shared compact effect-line grammar', () => {
