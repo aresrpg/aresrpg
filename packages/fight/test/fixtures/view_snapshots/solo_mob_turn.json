@@ -1,0 +1,779 @@
+[
+  {
+    "index": 0,
+    "input": "init",
+    "view": {
+      "controls": {
+        "busy": false,
+        "commit_due": false,
+        "draft_count": 0,
+        "end_turn_eligible": false,
+        "min_turn_ready_at": null,
+        "min_turn_widened_ms": 0,
+        "phase": "hidden"
+      },
+      "entities": {},
+      "mount": {
+        "adopted": false,
+        "fight_id": "0xf1647",
+        "fingerprint": null,
+        "scope": "world",
+        "sim_active": false,
+        "viewer": {
+          "address": "0xa11ce",
+          "controlled_entity_ids": [],
+          "my_entity_id": null,
+          "my_key": null,
+          "spectator": false
+        },
+        "world_active": false
+      },
+      "result": {
+        "chain_terminal_status": null,
+        "decided": null,
+        "is_over": false,
+        "provenance": null,
+        "settlement_request": null,
+        "status": null,
+        "winner": null
+      },
+      "sync": {
+        "actor_unresolved": true,
+        "board_adopted": false,
+        "failures": 0,
+        "lag_beats": 0,
+        "presenting": false,
+        "snapping": false,
+        "starved": false,
+        "truth_version": -1
+      },
+      "turn": {
+        "active_entity_id": null,
+        "active_key": null,
+        "anchor_ordinal": null,
+        "cast_presenting": false,
+        "deadlines": {
+          "placement_deadline_ms": 0,
+          "starved": false,
+          "turn_deadline_fresh": false,
+          "turn_deadline_ms": 0,
+          "turn_ms": 0
+        },
+        "draining": false,
+        "input_armed": false,
+        "is_my_turn": false,
+        "my_turn_no": 0,
+        "order": [],
+        "phase": "active",
+        "placement": false,
+        "placement_cells": {
+          "0": [],
+          "1": []
+        },
+        "presenting": false,
+        "presenting_entity_id": null,
+        "seed": {
+          "spawn_id": null,
+          "turn_entropy": null,
+          "turn_ordinal": null,
+          "world_seed": null
+        },
+        "status": null,
+        "turn_number": 0,
+        "winner": -1
+      }
+    }
+  },
+  {
+    "index": 1,
+    "input": "snapshot",
+    "view": {
+      "controls": {
+        "busy": false,
+        "commit_due": false,
+        "draft_count": 0,
+        "end_turn_eligible": true,
+        "min_turn_ready_at": 1003010,
+        "min_turn_widened_ms": 0,
+        "phase": "armed"
+      },
+      "entities": {
+        "0xchar_a": {
+          "cells": {
+            "committed": 21,
+            "display": 21,
+            "presented": 21,
+            "xy": {
+              "x": 1,
+              "y": 1
+            }
+          },
+          "id": "0xchar_a",
+          "identity": {
+            "character_id": "0xchar_a",
+            "class_id": "warrior",
+            "colors": null,
+            "element": null,
+            "hue": 0,
+            "is_player": true,
+            "level": 1,
+            "male": null,
+            "name": "0xa11c…11ce",
+            "owner": "0xa11ce",
+            "resolved": true,
+            "sex": null,
+            "team": 0,
+            "template": null
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 12,
+            "ap_max": 12,
+            "committed": 50,
+            "committed_dead": false,
+            "dead": false,
+            "display": 50,
+            "max": 50,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 50
+          }
+        },
+        "mob-0": {
+          "cells": {
+            "committed": 45,
+            "display": 45,
+            "presented": 45,
+            "xy": {
+              "x": 5,
+              "y": 2
+            }
+          },
+          "id": "mob-0",
+          "identity": {
+            "character_id": null,
+            "class_id": null,
+            "colors": null,
+            "element": 255,
+            "hue": null,
+            "is_player": false,
+            "level": 3,
+            "male": null,
+            "name": "0xmob_t",
+            "owner": null,
+            "resolved": false,
+            "sex": null,
+            "team": 1,
+            "template": "0xmob_t"
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 6,
+            "ap_max": 6,
+            "committed": 20,
+            "committed_dead": false,
+            "dead": false,
+            "display": 20,
+            "max": 20,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 20
+          }
+        }
+      },
+      "mount": {
+        "adopted": true,
+        "fight_id": "0xf1647",
+        "fingerprint": {
+          "hash": "268a40d1",
+          "turn_ordinal": "1:0"
+        },
+        "scope": "world",
+        "sim_active": false,
+        "viewer": {
+          "address": "0xa11ce",
+          "controlled_entity_ids": ["0xchar_a"],
+          "my_entity_id": "0xchar_a",
+          "my_key": "p0",
+          "spectator": false
+        },
+        "world_active": true
+      },
+      "result": {
+        "chain_terminal_status": null,
+        "decided": null,
+        "is_over": false,
+        "provenance": null,
+        "settlement_request": null,
+        "status": 1,
+        "winner": null
+      },
+      "sync": {
+        "actor_unresolved": false,
+        "board_adopted": true,
+        "failures": 0,
+        "lag_beats": 0,
+        "presenting": false,
+        "snapping": false,
+        "starved": true,
+        "truth_version": 1
+      },
+      "turn": {
+        "active_entity_id": "0xchar_a",
+        "active_key": "p0",
+        "anchor_ordinal": "1:0",
+        "cast_presenting": false,
+        "deadlines": {
+          "placement_deadline_ms": 0,
+          "starved": true,
+          "turn_deadline_fresh": false,
+          "turn_deadline_ms": 0,
+          "turn_ms": 0
+        },
+        "draining": false,
+        "input_armed": true,
+        "is_my_turn": true,
+        "my_turn_no": 1,
+        "order": ["0xchar_a", "mob-0"],
+        "phase": "active",
+        "placement": false,
+        "placement_cells": {
+          "0": [],
+          "1": []
+        },
+        "presenting": false,
+        "presenting_entity_id": null,
+        "seed": {
+          "spawn_id": null,
+          "turn_entropy": null,
+          "turn_ordinal": null,
+          "world_seed": null
+        },
+        "status": 1,
+        "turn_number": 1,
+        "winner": -1
+      }
+    }
+  },
+  {
+    "index": 2,
+    "input": "receipt",
+    "view": {
+      "controls": {
+        "busy": false,
+        "commit_due": false,
+        "draft_count": 0,
+        "end_turn_eligible": true,
+        "min_turn_ready_at": 1003010,
+        "min_turn_widened_ms": 0,
+        "phase": "armed"
+      },
+      "entities": {
+        "0xchar_a": {
+          "cells": {
+            "committed": 21,
+            "display": 21,
+            "presented": 21,
+            "xy": {
+              "x": 1,
+              "y": 1
+            }
+          },
+          "id": "0xchar_a",
+          "identity": {
+            "character_id": "0xchar_a",
+            "class_id": "warrior",
+            "colors": null,
+            "element": null,
+            "hue": 0,
+            "is_player": true,
+            "level": 1,
+            "male": null,
+            "name": "0xa11c…11ce",
+            "owner": "0xa11ce",
+            "resolved": true,
+            "sex": null,
+            "team": 0,
+            "template": null
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 12,
+            "ap_max": 12,
+            "committed": 50,
+            "committed_dead": false,
+            "dead": false,
+            "display": 50,
+            "max": 50,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 50
+          }
+        },
+        "mob-0": {
+          "cells": {
+            "committed": 45,
+            "display": 45,
+            "presented": 45,
+            "xy": {
+              "x": 5,
+              "y": 2
+            }
+          },
+          "id": "mob-0",
+          "identity": {
+            "character_id": null,
+            "class_id": null,
+            "colors": null,
+            "element": 255,
+            "hue": null,
+            "is_player": false,
+            "level": 3,
+            "male": null,
+            "name": "0xmob_t",
+            "owner": null,
+            "resolved": false,
+            "sex": null,
+            "team": 1,
+            "template": "0xmob_t"
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 6,
+            "ap_max": 6,
+            "committed": 20,
+            "committed_dead": false,
+            "dead": false,
+            "display": 20,
+            "max": 20,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 20
+          }
+        }
+      },
+      "mount": {
+        "adopted": true,
+        "fight_id": "0xf1647",
+        "fingerprint": {
+          "hash": "a6ed0b49",
+          "turn_ordinal": "1030000"
+        },
+        "scope": "world",
+        "sim_active": false,
+        "viewer": {
+          "address": "0xa11ce",
+          "controlled_entity_ids": ["0xchar_a"],
+          "my_entity_id": "0xchar_a",
+          "my_key": "p0",
+          "spectator": false
+        },
+        "world_active": true
+      },
+      "result": {
+        "chain_terminal_status": null,
+        "decided": null,
+        "is_over": false,
+        "provenance": null,
+        "settlement_request": null,
+        "status": 1,
+        "winner": null
+      },
+      "sync": {
+        "actor_unresolved": false,
+        "board_adopted": true,
+        "failures": 0,
+        "lag_beats": 1,
+        "presenting": false,
+        "snapping": false,
+        "starved": false,
+        "truth_version": 2
+      },
+      "turn": {
+        "active_entity_id": "0xchar_a",
+        "active_key": "p0",
+        "anchor_ordinal": "1030000",
+        "cast_presenting": false,
+        "deadlines": {
+          "placement_deadline_ms": 0,
+          "starved": false,
+          "turn_deadline_fresh": true,
+          "turn_deadline_ms": 1030000,
+          "turn_ms": 0
+        },
+        "draining": false,
+        "input_armed": true,
+        "is_my_turn": true,
+        "my_turn_no": 1,
+        "order": ["0xchar_a", "mob-0"],
+        "phase": "active",
+        "placement": false,
+        "placement_cells": {
+          "0": [],
+          "1": []
+        },
+        "presenting": false,
+        "presenting_entity_id": null,
+        "seed": {
+          "spawn_id": null,
+          "turn_entropy": null,
+          "turn_ordinal": null,
+          "world_seed": null
+        },
+        "status": 1,
+        "turn_number": 2,
+        "winner": -1
+      }
+    }
+  },
+  {
+    "index": 3,
+    "input": "receipt",
+    "view": {
+      "controls": {
+        "busy": false,
+        "commit_due": false,
+        "draft_count": 0,
+        "end_turn_eligible": true,
+        "min_turn_ready_at": null,
+        "min_turn_widened_ms": 0,
+        "phase": "hidden"
+      },
+      "entities": {
+        "0xchar_a": {
+          "cells": {
+            "committed": 21,
+            "display": 21,
+            "presented": 21,
+            "xy": {
+              "x": 1,
+              "y": 1
+            }
+          },
+          "id": "0xchar_a",
+          "identity": {
+            "character_id": "0xchar_a",
+            "class_id": "warrior",
+            "colors": null,
+            "element": null,
+            "hue": 0,
+            "is_player": true,
+            "level": 1,
+            "male": null,
+            "name": "0xa11c…11ce",
+            "owner": "0xa11ce",
+            "resolved": true,
+            "sex": null,
+            "team": 0,
+            "template": null
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 12,
+            "ap_max": 12,
+            "committed": 44,
+            "committed_dead": false,
+            "dead": false,
+            "display": 50,
+            "max": 50,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 50
+          }
+        },
+        "mob-0": {
+          "cells": {
+            "committed": 41,
+            "display": 45,
+            "presented": 45,
+            "xy": {
+              "x": 5,
+              "y": 2
+            }
+          },
+          "id": "mob-0",
+          "identity": {
+            "character_id": null,
+            "class_id": null,
+            "colors": null,
+            "element": 255,
+            "hue": null,
+            "is_player": false,
+            "level": 3,
+            "male": null,
+            "name": "0xmob_t",
+            "owner": null,
+            "resolved": false,
+            "sex": null,
+            "team": 1,
+            "template": "0xmob_t"
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 6,
+            "ap_max": 6,
+            "committed": 12,
+            "committed_dead": false,
+            "dead": false,
+            "display": 12,
+            "max": 20,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 12
+          }
+        }
+      },
+      "mount": {
+        "adopted": true,
+        "fight_id": "0xf1647",
+        "fingerprint": {
+          "hash": "2519f065",
+          "turn_ordinal": "1090000"
+        },
+        "scope": "world",
+        "sim_active": false,
+        "viewer": {
+          "address": "0xa11ce",
+          "controlled_entity_ids": ["0xchar_a"],
+          "my_entity_id": "0xchar_a",
+          "my_key": "p0",
+          "spectator": false
+        },
+        "world_active": true
+      },
+      "result": {
+        "chain_terminal_status": null,
+        "decided": null,
+        "is_over": false,
+        "provenance": null,
+        "settlement_request": null,
+        "status": 1,
+        "winner": null
+      },
+      "sync": {
+        "actor_unresolved": false,
+        "board_adopted": true,
+        "failures": 0,
+        "lag_beats": 10,
+        "presenting": true,
+        "snapping": false,
+        "starved": false,
+        "truth_version": 3
+      },
+      "turn": {
+        "active_entity_id": "0xchar_a",
+        "active_key": "p0",
+        "anchor_ordinal": "1090000",
+        "cast_presenting": false,
+        "deadlines": {
+          "placement_deadline_ms": 0,
+          "starved": false,
+          "turn_deadline_fresh": true,
+          "turn_deadline_ms": 1090000,
+          "turn_ms": 0
+        },
+        "draining": true,
+        "input_armed": false,
+        "is_my_turn": true,
+        "my_turn_no": 1,
+        "order": ["0xchar_a", "mob-0"],
+        "phase": "active",
+        "placement": false,
+        "placement_cells": {
+          "0": [],
+          "1": []
+        },
+        "presenting": true,
+        "presenting_entity_id": "mob-0",
+        "seed": {
+          "spawn_id": null,
+          "turn_entropy": null,
+          "turn_ordinal": null,
+          "world_seed": null
+        },
+        "status": 1,
+        "turn_number": 3,
+        "winner": -1
+      }
+    }
+  },
+  {
+    "index": 4,
+    "input": "presented",
+    "view": {
+      "controls": {
+        "busy": false,
+        "commit_due": false,
+        "draft_count": 0,
+        "end_turn_eligible": true,
+        "min_turn_ready_at": 1011000,
+        "min_turn_widened_ms": 0,
+        "phase": "armed"
+      },
+      "entities": {
+        "0xchar_a": {
+          "cells": {
+            "committed": 21,
+            "display": 21,
+            "presented": 21,
+            "xy": {
+              "x": 1,
+              "y": 1
+            }
+          },
+          "id": "0xchar_a",
+          "identity": {
+            "character_id": "0xchar_a",
+            "class_id": "warrior",
+            "colors": null,
+            "element": null,
+            "hue": 0,
+            "is_player": true,
+            "level": 1,
+            "male": null,
+            "name": "0xa11c…11ce",
+            "owner": "0xa11ce",
+            "resolved": true,
+            "sex": null,
+            "team": 0,
+            "template": null
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 12,
+            "ap_max": 12,
+            "committed": 44,
+            "committed_dead": false,
+            "dead": false,
+            "display": 44,
+            "max": 50,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 44
+          }
+        },
+        "mob-0": {
+          "cells": {
+            "committed": 41,
+            "display": 41,
+            "presented": 41,
+            "xy": {
+              "x": 1,
+              "y": 2
+            }
+          },
+          "id": "mob-0",
+          "identity": {
+            "character_id": null,
+            "class_id": null,
+            "colors": null,
+            "element": 255,
+            "hue": null,
+            "is_player": false,
+            "level": 3,
+            "male": null,
+            "name": "0xmob_t",
+            "owner": null,
+            "resolved": false,
+            "sex": null,
+            "team": 1,
+            "template": "0xmob_t"
+          },
+          "statuses": [],
+          "vitals": {
+            "alive": true,
+            "ap": 6,
+            "ap_max": 6,
+            "committed": 12,
+            "committed_dead": false,
+            "dead": false,
+            "display": 12,
+            "max": 20,
+            "mp": 3,
+            "mp_max": 3,
+            "predicted": 12
+          }
+        }
+      },
+      "mount": {
+        "adopted": true,
+        "fight_id": "0xf1647",
+        "fingerprint": {
+          "hash": "2519f065",
+          "turn_ordinal": "1090000"
+        },
+        "scope": "world",
+        "sim_active": false,
+        "viewer": {
+          "address": "0xa11ce",
+          "controlled_entity_ids": ["0xchar_a"],
+          "my_entity_id": "0xchar_a",
+          "my_key": "p0",
+          "spectator": false
+        },
+        "world_active": true
+      },
+      "result": {
+        "chain_terminal_status": null,
+        "decided": null,
+        "is_over": false,
+        "provenance": null,
+        "settlement_request": null,
+        "status": 1,
+        "winner": null
+      },
+      "sync": {
+        "actor_unresolved": false,
+        "board_adopted": true,
+        "failures": 0,
+        "lag_beats": 10,
+        "presenting": false,
+        "snapping": false,
+        "starved": false,
+        "truth_version": 3
+      },
+      "turn": {
+        "active_entity_id": "0xchar_a",
+        "active_key": "p0",
+        "anchor_ordinal": "1090000",
+        "cast_presenting": false,
+        "deadlines": {
+          "placement_deadline_ms": 0,
+          "starved": false,
+          "turn_deadline_fresh": true,
+          "turn_deadline_ms": 1090000,
+          "turn_ms": 0
+        },
+        "draining": false,
+        "input_armed": true,
+        "is_my_turn": true,
+        "my_turn_no": 2,
+        "order": ["0xchar_a", "mob-0"],
+        "phase": "active",
+        "placement": false,
+        "placement_cells": {
+          "0": [],
+          "1": []
+        },
+        "presenting": false,
+        "presenting_entity_id": null,
+        "seed": {
+          "spawn_id": null,
+          "turn_entropy": null,
+          "turn_ordinal": null,
+          "world_seed": null
+        },
+        "status": 1,
+        "turn_number": 3,
+        "winner": -1
+      }
+    }
+  }
+]
