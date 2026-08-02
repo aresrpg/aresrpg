@@ -416,7 +416,13 @@ export function DungeonBoard() {
     // own WALK beats never trip this, so the D254 cumulative-move chaining stays fluid while a walk animates).
     if (!me || !my_turn || !dungeon || fight?.cast_presenting || draft_caster_cell == null) return new Set()
     const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
-    return new Set(bfsReachable(draft_caster_cell, my_mp_eff, blocked))
+    // #1743 ONE HOME: the click affordance prices the SAME tackle toll the paint does. `my_mp_eff` is the raw
+    // pool; a bitten move pays `mp_lost` before a single cell is entered (#239), so budgeting the walk with the
+    // raw pool offered cells the chain would never land on — the reported "moved while tackled, then it all
+    // rolled back". `next_move_tackle` is the ONE contest home; nothing here re-derives the roll.
+    const move_bite = next_move_tackle(fight_store.getState())
+    const tolled_mp = Math.max(0, my_mp_eff - (move_bite?.mp_lost ?? 0))
+    return new Set(bfsReachable(draft_caster_cell, tolled_mp, blocked))
   }, [
     me,
     my_turn,
@@ -427,6 +433,8 @@ export function DungeonBoard() {
     optimistic_vacated,
     fight?.fighters,
     fight?.cast_presenting,
+    // the tackle roll folds the action SLOT (casts_this_turn), so a drafted cast reprices the toll
+    fight?.draft_count,
   ])
 
   // OPTIMISTIC CASTER CELL (FIGHT-WAVE-2 root cause): a cast AFTER a move did NOTHING. `castable` computed
@@ -609,12 +617,12 @@ export function DungeonBoard() {
     })
   }
 
-  // NO-WALK LAW (v31 — tackles are deterministic, so the walk must not be allowed at all): when
-  // next_move_tackle says my next move fails its escape, the walk NEVER starts. Predict the sim's EXACT outcome
-  // (fight_actions.apply_move failed-escape = cells_moved 0, both pools bitten): the 'Tackled' action folds the
-  // forfeit THIS frame + the hit-anim/pool-forfeit beat plays — the SAME action + producer the receipt uses, so
-  // the receipt's own Tackled event CONFIRMS (version-purge → re-fold), never corrects. Zero displacement — the
-  // move draft is untouched, my_key stays on its committed cell.
+  // THE TOLL'S FORFEIT (#239): when next_move_tackle says my next move fails its escape, the pools are bitten
+  // BEFORE the walk. Predict the sim's EXACT outcome (fight_actions.apply_move failed escape = both pools
+  // bitten, then the affordable prefix walks): the 'Tackled' action folds the forfeit THIS frame + the
+  // hit-anim/pool-forfeit beat plays — the SAME action + producer the receipt uses, so the receipt's own
+  // Tackled event CONFIRMS (version-purge → re-fold), never corrects. The displacement is the caller's: the
+  // walk is folded separately, against the pool this forfeit already lowered.
   const predict_tackle = ({ ap_lost, mp_lost }) => {
     const runner_idx = dungeon.escrow.findIndex((p) => (p.character ?? p.character_id) === entity_id)
     if (runner_idx < 0) return
@@ -1055,17 +1063,17 @@ export function DungeonBoard() {
         { blocked, mp: my_mp_eff }
       )
       if (!plan) return
-      // NO-WALK LAW (v31 — tackles are deterministic, so the walk must not be allowed at all): consult the
-      // SAME deterministic contest the commit path enforces. A bitten move is STILL a committed attempt — the
-      // chain rolls act_move(cell), fails the escape, and forfeits both pools with ZERO displacement (the sim's
-      // apply_move → cells_moved 0) — so it STAGES like any move (the receipt then CONFIRMS the forfeit; an
-      // unstaged forfeit would revert on the next commit). Only the OPTIMISTIC PRESENTATION differs: an escaping
-      // roll walks as before; a bitten one predicts the forfeit + hit-anim THIS frame and the walk NEVER starts.
+      // TOLL LAW (#239, replacing the v31 NO-WALK LAW): consult the SAME deterministic contest the commit path
+      // enforces. A bitten move is a committed attempt that STILL WALKS — the chain rolls act_move(cell), fails
+      // the escape, forfeits the failed fraction of both pools, and then walks the prefix the surviving MP
+      // affords. `reachable` already budgeted this cell against the post-toll pool, so the whole plan lands and
+      // the client folds BOTH halves: the forfeit + hit-anim THIS frame, and the walk. The receipt's own
+      // Tackled + Moved events then CONFIRM (version-purge → re-fold), never correct.
       const bite = next_move_tackle(fight_store.getState())
       append_move_step(cell)
-      fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell, landed: !bite } })
+      fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell, landed: true } })
       if (bite) predict_tackle(bite)
-      else optimistic_walk(cell, plan)
+      optimistic_walk(cell, plan)
     }
   }
 

@@ -31,7 +31,10 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
     const evolve_call = body.slice(evolve_start, evolve_end)
     expect(evolve_call).toMatch(/\bactions\s*[:,]/)
     expect(evolve_call).not.toMatch(/\bcasts\s*:/)
-    expect(src).toMatch(/kind:\s*0,\s*target:\s*cell,\s*landed:\s*!bite/)
+    // #239 — a tolled move LANDS (it walks the affordable prefix), so the staged move is always `landed: true`;
+    // the forfeit rides its own Tackled action. The walk contract itself lives in
+    // test/game/screens/hud/world/dungeon_board_tackle_reach_gate.test.js.
+    expect(src).toMatch(/kind:\s*0,\s*target:\s*cell,\s*landed:\s*true/)
     expect(src).toMatch(/landed:\s*entry\.landed/)
 
     // The old binary approximation destroyed interleaving by rebuilding two blocks. It must not remain as a

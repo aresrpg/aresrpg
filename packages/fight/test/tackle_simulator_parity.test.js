@@ -149,6 +149,7 @@ const drive = (seed) => {
     resolved_tackle: tackled_rows.length > 0,
     ap_lost: me.ap - after.ap,
     mp_lost: me.mp - after.mp,
+    mp_before: me.mp,
     walked: !(after.cell.x === me.cell.x && after.cell.y === me.cell.y),
   }
 }
@@ -176,8 +177,15 @@ describe('#1207 — the simulator resolves the tackle the client previewed', () 
     const bitten = runs.filter((run) => run.predicted_tackle && run.resolved_tackle)
     for (const run of bitten) {
       expect(run.ap_lost, `seed 0x${(run.seed >>> 0).toString(16)} ap forfeit`).toBe(run.preview.ap_lost)
-      expect(run.mp_lost, `seed 0x${(run.seed >>> 0).toString(16)} mp forfeit`).toBe(run.preview.mp_lost)
-      expect(run.walked, 'a bitten move never displaces').toBe(false)
+      // The MP delta is the announced forfeit PLUS whatever the toll walk then spent (#239): a failed escape
+      // taxes the pool and the survivor still buys the prefix — here a single step, or nothing when the toll
+      // took everything. The preview announces the FORFEIT; the walk is priced by the move itself.
+      expect(run.mp_lost, `seed 0x${(run.seed >>> 0).toString(16)} mp forfeit + toll walk`).toBe(
+        run.preview.mp_lost + (run.walked ? 1 : 0)
+      )
+      // #239 repeals "a bitten move never displaces": it displaces exactly as far as the toll left it able to.
+      // These runs are one-step moves, so the walk happens iff any MP survived the forfeit.
+      expect(run.walked, 'a bitten move walks iff the toll left it MP').toBe(run.preview.mp_lost < run.mp_before)
     }
   })
 })

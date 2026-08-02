@@ -124,8 +124,9 @@ const wash_blocked = (view, p, my_key) => {
 /** ONE deterministic tackle roll — the chain twin of actions.move: spell_formula::tackle_seed(turn_seed, slot,
  *  live mp) → prng::rng_next → the move ESCAPES iff draw % den < num. Returns the pool forfeit fight_tackle
  *  strips on a FAILED escape (tackle_losses, golden-pinned), or null when the roll escapes. Pure; the SINGLE
- *  home for the roll+loss contest — move_wash folds it (retry, reads only mp_lost), next_move_tackle calls it
- *  once (reads both pools). No copy: the sim primitives compose here and nowhere else. */
+ *  home for the roll+loss contest — both `move_wash` (reads mp_lost to bound the green band) and
+ *  `next_move_tackle` (reads both pools) call it exactly ONCE per move, because the chain rolls exactly once
+ *  per move. No copy: the sim primitives compose here and nowhere else. */
 const tackle_roll = (tseed, slot, mp, ap, num, den) => {
   const draw = rng_next(rng_seed(tackle_seed(tseed, slot, mp))).value
   if (draw % den < num) return null // this roll escapes — the move walks free
@@ -136,13 +137,14 @@ const tackle_roll = (tseed, slot, mp, ap, num, den) => {
  * THE MOVE WASH — the which-cells decision for the board's movement paint, in the core (M3; the adapter maps
  * encoded → {x,y} and calls set_cell_state, deciding nothing).
  *
- * TACKLE LAW: the light-red band shows ONLY while ACTUALLY tackled, covers ONLY "the MP
- * we can't spend or WILL loose by trying", respects max range (green ∪ red = the live-MP reach), and NEVER
+ * TACKLE LAW: the tackle-lost band shows ONLY while ACTUALLY tackled, covers ONLY "the MP
+ * we can't spend or WILL loose by trying", respects max range (green ∪ band = the live-MP reach — the full
+ * range is always DESCRIBED, never truncated away, #1659), and NEVER
  * triggers on plain MP spending. A PLAYER move's contest is DETERMINISTIC + PREVIEWABLE (actions.move:
  * tackle_seed(turn_seed, casts_this_turn, live mp) — the golden-pinned sim mirror), so "actually tackled" is
- * a FACT, not a probability: the wash PREVIEWS the exact roll chain — an escaping next roll paints NO red
- * (the move walks free, exactly as the chain will resolve it); a failing one folds the failure chain (each
- * denial strips ceil(mp·lost/den) ≥ 1 MP and reprices the next roll) to the exact MP the bites WILL eat.
+ * a FACT, not a probability: the wash PREVIEWS the exact roll — an escaping roll paints NO band
+ * (the move walks free, exactly as the chain will resolve it); a failing one strips ceil(mp·lost/den) ≥ 1 MP
+ * and the green band is the reach of what SURVIVES the toll (#239), which is exactly what the chain walks.
  * A view without world_seed/spawn_id (legacy/partial read) can't derive the roll — it keeps the fraction
  * risk-band as the honest degraded paint.
  *
@@ -187,21 +189,16 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   // preview with the anchor and diverge from the chain. One home for the seed inputs: the decoded Fight.
   const { turn_ordinal, turn_entropy } = s.view
   if (world_seed != null && spawn_id != null && turn_ordinal) {
-    // EXACT PREVIEW (the chain twin, byte-for-byte): fold the deterministic failure chain via the shared roll —
-    // moves never advance the slot; every denial strips ≥1 MP and reprices the next roll at the lower MP. Only
-    // mp_lost bounds the reach (ap_lost is the EXECUTION's forfeit, not the paint's — so no ap thread here).
+    // EXACT PREVIEW (the chain twin, byte-for-byte): ONE contest per move via the shared roll. #239 made the
+    // tackle a TOLL — a failed escape taxes both pools and the move then WALKS what survives — so there is no
+    // failure chain left to fold: the chain's `actions::apply_move` rolls once and caps the route at the
+    // post-toll pool, and this is the same arithmetic. Only mp_lost bounds the reach (ap_lost is the
+    // EXECUTION's forfeit, not the paint's — so no ap thread here).
     const tseed = turn_seed({ world_seed, spawn_id, turn_entropy, turn_ordinal, seat })
     const slot = my_next_move_slot(s, seat, row)
-    let mp_now = mp
-    let bitten = false
-    while (mp_now > 0) {
-      const bite = tackle_roll(tseed, slot, mp_now, ap, num, den)
-      if (!bite) break // this attempt ESCAPES — the walk proceeds at mp_now
-      bitten = true
-      if (!(bite.mp_lost > 0)) break // unreachable while lost > 0 ∧ mp > 0 (ceil ≥ 1); belt against a stuck fold
-      mp_now -= bite.mp_lost
-    }
-    if (!bitten) return free // the next move walks free — NO red (the "red then walked free" killer)
+    const bite = tackle_roll(tseed, slot, mp, ap, num, den)
+    if (!bite) return free // the next move walks free — NO red (the "red then walked free" killer)
+    const mp_now = Math.max(0, mp - bite.mp_lost)
     const keep = new Set(
       presented_reachable_cells({
         start: me.cell,
@@ -238,9 +235,10 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
  * THE MOVE'S TACKLE — the deterministic forfeit MY next move's escape roll WILL take, or null when the move
  * walks free (no living enemy locks me, the roll escapes, I have no MP to spend, or a seed-less view can't
  * derive the roll — then the receipt rules). The chain twin of ONE actions.move roll, the SAME contest
- * move_wash previews, EXPOSED so the optimistic execution obeys the tackle law: tackles are
- * deterministic, so the walk is never allowed at all — a bitten move NEVER walks; the client predicts the
- * sim's exact resolution (apply_move failed-escape = cells_moved 0, both pools bitten). Shares `tackle_roll`.
+ * move_wash previews, EXPOSED so the optimistic execution obeys the tackle law. Tackles are deterministic, so
+ * this is a FACT about the next move, and #239 makes it a TOLL: a bitten move still walks, but only as far as
+ * `mp − mp_lost` buys. The client folds this forfeit AND the truncated walk, which is exactly the sim's
+ * `apply_move` resolution — so the receipt confirms rather than corrects. Shares `tackle_roll`.
  * @param {any} s the fight store state @returns {{ ap_lost: number, mp_lost: number } | null}
  */
 export const next_move_tackle = (s) => {

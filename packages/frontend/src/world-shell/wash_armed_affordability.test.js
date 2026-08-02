@@ -190,15 +190,13 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     })
   })
 
-  test('CONTRACT: DungeonBoard gates the walk on the deterministic tackle — a bitten move predicts, never walks', async () => {
-    // CONTRACT (tackle is deterministic, so the walk must never be allowed to proceed speculatively): the optimistic
-    // move EXECUTION consults the SAME seed contest the paint does. Headless-pinned end-to-end in @aresrpg/fight
-    // test/tackle_move_gate.test.js (next_move_tackle → exact forfeit; the fold drops the pools + a tackled beat +
-    // NO move beat). This row pins the React WIRING those pure rows can't reach.
+  test('CONTRACT: a bitten move folds the forfeit through the SAME action the receipt folds', async () => {
+    // The optimistic move EXECUTION consults the SAME seed contest the paint does. Headless-pinned end-to-end in
+    // @aresrpg/fight test/tackle_move_gate.test.js (next_move_tackle → exact forfeit). This row pins the React
+    // WIRING of the FORFEIT half only; the walk half — #239's toll, where a bitten move still walks the
+    // affordable prefix — is owned by dungeon_board_tackle_reach_gate.test.js, its one home.
     const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
     expect(source).toContain('const bite = next_move_tackle(fight_store.getState())')
-    // bitten ⇒ predict_tackle (forfeit + hit-anim, NO walk); escaped ⇒ optimistic_walk — the exclusive branch:
-    expect(source).toMatch(/if \(bite\) predict_tackle\(bite\)\s*\n\s*else optimistic_walk/)
     expect(source).toContain('synthetic_tackled_events') // predict_tackle rides the hit-anim + forfeit beat
     expect(source).toMatch(/intent: \{ kind: 'Tackled'/) // …folding the SAME action the receipt folds
   })

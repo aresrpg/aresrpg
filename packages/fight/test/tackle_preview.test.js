@@ -116,11 +116,15 @@ describe('move_wash — deterministic tackle preview (the exact chain contest, D
     for (const c of red) expect(full.has(c)).toBe(true)
   })
 
-  test('preview exhausts MP (ws=41): tackled, NO green left, the whole reach is the red band', () => {
+  test('ONE contest per move (ws=41): the wash bites ONCE and the surviving MP still paints green (#239 toll)', () => {
+    // This fight used to fail TWICE in the wash's fold (fail → mp 1 → fail again → mp 0), because a denied move
+    // was retried and every retry rolled again. Under the toll a move contests exactly ONCE and then WALKS what
+    // survives, so there is no second roll to fold: mp 3 − ceil(3·6/12) = 1, and the 1-MP ring stays green.
     const wash = move_wash(boot({ world_seed: 41, spawn_id: 7 }).getState(), {})
     expect(wash.tackled).toBe(true)
-    expect(wash.reach).toEqual([])
-    expect(new Set(wash.tackle_lost)).toEqual(full_reach())
+    expect([...wash.reach].sort((a, b) => a - b)).toEqual(ONE_MP_REACH)
+    const full = full_reach()
+    expect(new Set([...wash.reach, ...wash.tackle_lost])).toEqual(full)
   })
 
   test('slot input: a drafted cast intent flips the SAME fight from fail to escape (ws=44, slot 1)', () => {

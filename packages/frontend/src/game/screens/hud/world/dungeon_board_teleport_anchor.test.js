@@ -20,7 +20,10 @@ describe('DungeonBoard — the next-action anchor evolves through the ordered dr
     expect(src).toMatch(/actions:\s*evolution_actions_of\(/)
     // Every next-action consumer reads that cell. Remaining MP is the already-folded ordered pool, so no flattened
     // moves-only path can charge across an intervening teleport or denied tackle.
-    expect(src).toMatch(/bfsReachable\(draft_caster_cell, my_mp_eff, blocked\)/)
+    // The reach anchors on the evolved cell and budgets off that ONE ordered pool — now through the tackle
+    // toll (#239/#1743), which is a subtraction from `my_mp_eff`, never a second budget rule.
+    expect(src).toMatch(/bfsReachable\(draft_caster_cell, tolled_mp, blocked\)/)
+    expect(src).toMatch(/const tolled_mp = Math\.max\(0, my_mp_eff - \(move_bite\?\.mp_lost \?\? 0\)\)/)
     expect(src).toMatch(/move_plan_dungeon\(\s*\{ cell: decode\(draft_caster_cell\) \}/)
     expect(src).toMatch(/const caster_cell = draft_caster_cell/)
     expect(src).not.toMatch(/draft_move_cost\(/)
