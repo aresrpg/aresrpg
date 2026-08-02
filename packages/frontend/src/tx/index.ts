@@ -675,14 +675,10 @@ export async function execute_sponsored_tx({
   // reach it. sponsor.mjs delegating its gas mechanics to the station later is a backend-only swap; this
   // door and its callers stay byte-identical.)
 
-  // kind-only bytes — no gas/sender baked in; the sponsor fills those server-side. Offline-first, with a gRPC
-  // fallback for a PTB whose runtime object inputs need on-chain resolution (join_world) — see build_sponsored_kind.
-  // The sender is set pre-build so the resolver's ownership checks run as the real owner, never 0x0.
-  const kind = await build_sponsored_kind(transaction, address)
-
   // #51.1 zkLogin gate: prove the sender is a zkLogin (Enoki) identity by signing a fresh, sender-bound
   // challenge with the wallet's personal-message signer. The sponsor re-derives the exact message,
   // verifies the sig against `sender` AND asserts the scheme is zkLogin (frontend is not trusted).
+  // Resolved BEFORE the build so an unsupported wallet still refuses without building anything.
   const pm = wallet.features['sui:signPersonalMessage'] as SignPersonalMessageFeature | undefined
   if (!pm?.signPersonalMessage) throw new Error('Wallet does not support signPersonalMessage')
   const challenge = `aresrpg-sponsor:${address}:${Date.now()}`
@@ -706,7 +702,14 @@ export async function execute_sponsored_tx({
       throw new Error(i18n.t('errors.sponsor_zklogin'))
     }
   }
-  const { signature } = await sign_challenge()
+  // #1663 PREPARE LEG, CONCURRENT: the kind-only bytes and the challenge signature are INDEPENDENT — the
+  // challenge is `aresrpg-sponsor:<sender>:<ms>` and never reads the PTB, and the build never reads the
+  // signature — yet they were awaited in series, so every sponsored transaction paid build THEN zkp-sign before
+  // its first byte reached /reserve (on a fresh Enoki session the sign leg is the lazy zkLogin PROOF fetch, the
+  // slowest single hop in the flow). Racing them makes the leg cost max() instead of sum(). The challenge
+  // timestamp is minted before both, so it only gets FRESHER against the sponsor's 5-minute TTL
+  // (SPONSOR_CHALLENGE_TTL_MS / assert_zklogin_challenge), never staler. Order of the POST body is unchanged.
+  const [kind, { signature }] = await Promise.all([build_sponsored_kind(transaction, address), sign_challenge()])
 
   // ── RESERVE (endpoint 1) ── same policy inputs as the retired single call (the kind-only PTB + the zkLogin
   // challenge). The sponsor enforces ALL money + identity policy HERE (pre-gas); any refusal is decoder-mapped by
