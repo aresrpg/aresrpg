@@ -30,17 +30,20 @@ export const world_inner_field_id = (versioned_id, version) =>
 
 /**
  * A wrapped `World`'s payload as flat json (`id` = the WORLD's id, not the field's), or null when the world is
- * absent, the payload is unreadable, or the chain speaks a version this package does not. TWO reads, no walk:
+ * ABSENT, its payload field is absent, or the chain speaks a version this package does not. TWO reads, no walk:
  * the shell names its Versioned, and the payload's address is DERIVED from it.
  *
- * NULL IS THE POINT on every failure: a world we cannot decode must never surface as an empty-but-present world
- * (issue #1315 review finding 2 — a zeroed world gets cached and the overworld quietly loses its spawns).
+ * NULL IS THE POINT on every one of those: a world we cannot decode must never surface as an empty-but-present
+ * world (issue #1315 review finding 2 — a zeroed world gets cached and the overworld quietly loses its spawns).
+ * A FAILED read is not one of them and never was — it now THROWS out of the seam (#2054) instead of arriving
+ * here disguised as an absent world, so a network blip can no longer read as "this world has no payload".
  * @param {any} grpc_client the SDK's SuiGrpcClient (has `.core.getObject`)
  * @param {string} world_id
+ * @throws when either read fails (transport / unclassified ledger error) — never on absence.
  */
 export async function read_world_inner(grpc_client, world_id) {
   const shell = await get_object_json(grpc_client, world_id)
-  if (!shell) return null
+  if (!shell) return null // ABSENT world (the read itself would have thrown)
   // `Versioned` nests as `{ id: "0x…", version: "1" }` — a nested UID renders as a bare hex string.
   const versioned_id = shell.inner?.id
   const version = Number(shell.inner?.version)
@@ -49,6 +52,6 @@ export async function read_world_inner(grpc_client, world_id) {
     grpc_client,
     world_inner_field_id(versioned_id, version),
   )
-  if (!field?.value) return null
+  if (!field?.value) return null // ABSENT payload field — a zeroed world is never synthesised
   return { ...field.value, id: shell.id ?? world_id }
 }

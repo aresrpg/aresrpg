@@ -8,13 +8,13 @@ import { get_object_json, to_bigint } from './_object.js'
 
 /**
  * Read a shared `Airdrop` object → { id, template, name, description, minted, eligible_count }. Returns null on
- * absence. (`eligible_count` is the whitelist Table's live size.)
+ * ABSENCE; a FAILED read throws (#2054). (`eligible_count` is the whitelist Table's live size.)
  * @param {import("../../../types.js").Context} context
  */
 export function get_airdrop({ grpc_client }) {
   return async airdrop_id => {
     const json = await get_object_json(grpc_client, airdrop_id)
-    if (!json) return null
+    if (!json) return null // ABSENT airdrop
     return {
       id: airdrop_id,
       template: json.template,

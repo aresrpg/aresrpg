@@ -13,7 +13,9 @@ import { get_object_json } from './_object.js'
 // the byte-exact mirror of the chain's own `zone_comp`/`zone_gen` derivation). This module reads + normalises
 // that raw state in ONE derived-DF object fetch; the CALLER (the frontend `zone_rows` composer, the localnet
 // bots) joins it with the `get_world` table snapshot and derives the rows. An undiscovered zone has NO field
-// (sparse §17.10) → null, which IS the "unsearched" signal.
+// (sparse §17.10) → null, which IS the "unsearched" signal — and since #2054 it is the ONLY thing that produces
+// it: a failed read THROWS instead of minting a counterfeit "unsearched" (#2030's false void, where a ~570ms
+// ledger lag painted an empty zone over a full one).
 
 /** BCS of `zones::ZoneKey { zx: u32, zy: u32 }` — field order mirrors the Move declaration. */
 const zone_key_bcs = bcs.struct('ZoneKey', { zx: bcs.u32(), zy: bcs.u32() })
@@ -97,7 +99,7 @@ export function get_zone_state(context) {
       zone_key_bytes(zx, zy),
     )
     const json = await get_object_json(grpc_client, field_id)
-    if (json?.value == null) return null
+    if (json?.value == null) return null // ABSENT Zone DF = UNSEARCHED (a failed read threw)
     const commitment = await get_zone_group_commitment(context)(
       world_id,
       zx,
@@ -108,8 +110,9 @@ export function get_zone_state(context) {
 }
 
 /**
- * Read the adjacent search-time mob commitment for zone `(zx, zy)`, or null when the root DF is absent or
- * unreadable. The key was introduced by an upgrade, so its introducing package id is distinct from PACKAGE_ID;
+ * Read the adjacent search-time mob commitment for zone `(zx, zy)`, or null when the root DF is ABSENT under
+ * every candidate origin (a FAILED read throws — #2054). The key was introduced by an upgrade, so its
+ * introducing package id is distinct from PACKAGE_ID;
  * the first ceremony uses LATEST_PACKAGE_ID, and later callers may pin its immutable origin through
  * `group_root_package_id`.
  * @param {import("../../../types.js").Context & { network:'mainnet'|'testnet'|'devnet'|'localnet',

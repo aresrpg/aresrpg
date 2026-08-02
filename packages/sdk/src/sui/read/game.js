@@ -9,7 +9,8 @@ import { read_world_inner } from './world_inner.js'
 
 /**
  * A `World` snapshot: seed/biome + the gates & dials a client mirrors to compute zones and pre-flight the world flows.
- * `dungeon_key_template` is the `Option<ID>` (null = no dungeon). Null if the world is unreadable.
+ * `dungeon_key_template` is the `Option<ID>` (null = no dungeon). Null when the world is ABSENT; a FAILED
+ * read throws (#2054) rather than arriving as a world that simply is not there.
  * @param {import("../../../types.js").Context} context
  */
 /**
@@ -17,14 +18,15 @@ import { read_world_inner } from './world_inner.js'
  * level band) plus its `element` discriminant (mob_template.move `element: u8` — 0=fire 1=water 2=earth
  * 3=air, 255=none). The zone-spawn rows carry only the template `ID`; this resolves it to a human name. The
  * element is what a mob's basic-attack cast VFX/SFX resolve on (vfx_map.resolve_cast_element) so every mob no
- * longer casts the neutral fallback; absent field (legacy) reads 255 → neutral. Null if the id is unreadable.
+ * longer casts the neutral fallback; absent field (legacy) reads 255 → neutral. Null when the template is
+ * ABSENT; a FAILED read throws (#2054).
  * @param {import("../../../types.js").Context} context
  */
 export function get_mob_template(context) {
   const { grpc_client } = context
   return async template_id => {
     const json = await get_object_json(grpc_client, template_id)
-    if (!json) return null
+    if (!json) return null // ABSENT template
     return {
       id: json.id,
       name: json.name ?? '',

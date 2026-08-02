@@ -1,24 +1,58 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // SHARED CHAIN-READ HELPERS for the NEW on-chain package reads (game / pools / dungeon / kolizeum). Zero-backend
-// object fetches via the house gRPC Core client, mirroring `deployment/items.js`'s reads. One home for the
-// getObject-to-json + Option/Balance/bigint normalizers so each package read module stays a thin decoder.
+// object fetches via the house gRPC Core client, mirroring `deployment/items.js`'s reads. THE ONE HOME for the
+// getObject-to-json + Option/Balance/bigint normalizers so each package read module stays a thin decoder — every
+// chain-object read in `sui/read/**` and `fight_read.js` goes through `get_object_json`, no second copy (#2054).
+
+// #2054 — THE SEAM IS HONEST: `null` means GENUINE ABSENCE and nothing else. It used to catch every error to
+// null, so a network blip, a decode miss and an empty dynamic field arrived at every consumer as the same
+// value — the shape that let a ~570ms ledger lag render an empty zone over a full one (#2030's false void).
+// Absent is DATA; failed is an ERROR; they never merge again.
 
 /**
- * getObject → flattened json (`include:{json:true}`), or null on absence / error.
+ * Is this the ledger's per-object "no such object" ANSWER (the call succeeded), rather than a failed call?
+ *
+ * WIRE PROVENANCE — probed live against `https://fullnode.testnet.sui.io:443` on 2026-08-03 through the exact
+ * `grpc_client.core.getObject({ include:{json:true} })` transport this module rides:
+ *   · absent id (`0xde…de`) → a PLAIN `Error`, no rpc `code`, message `Object 0xde…de not found` — the
+ *     per-object `google.rpc.Status.message` that `client/core.ts::getObject` re-throws out of the
+ *     `batchGetObjects` result set. The call itself SUCCEEDED; this is the ledger stating absence.
+ *   · unreachable host → `RpcError` with `code: 'INTERNAL'` ("Unable to connect…") — the call FAILED.
+ * Nothing else is recognised: an unclassified error is a failure and fails SHUT (it throws), because guessing
+ * absence is precisely the bug this seam exists to kill.
+ */
+const is_object_absent_answer = (error, object_id) =>
+  error instanceof Error &&
+  // an RpcError carries the grpc status code; a per-object ledger answer carries none
+  /** @type {any} */ (error).code == null &&
+  typeof error.message === 'string' &&
+  error.message.includes(object_id) &&
+  error.message.toLowerCase().includes('not found')
+
+/**
+ * getObject → flattened json (`include:{json:true}`).
+ * @returns {Promise<any>} the object's json, or `null` when the object genuinely does not exist.
+ * @throws when the READ fails — transport, an unclassified ledger error, or an object that answers without the
+ *   json payload the read asked for. Decode errors surface ONCE, here, at the transport boundary.
  * @param {any} grpc_client the SDK's SuiGrpcClient (has `.core.getObject`)
  * @param {string} object_id
  */
 export async function get_object_json(grpc_client, object_id) {
-  try {
-    const { object } = await grpc_client.core.getObject({
-      objectId: object_id,
-      include: { json: true },
+  const { object } = await grpc_client.core
+    .getObject({ objectId: object_id, include: { json: true } })
+    .catch((/** @type {any} */ error) => {
+      if (is_object_absent_answer(error, object_id)) return { object: null }
+      throw new Error(`[read/_object] object ${object_id} is unreadable`, {
+        cause: error,
+      })
     })
-    return object?.json ?? null
-  } catch {
-    return null
-  }
+  if (object == null) return null // the ledger positively answered "nothing at this id"
+  if (object.json == null)
+    throw new Error(
+      `[read/_object] object ${object_id} exists but answered without a json payload`,
+    )
+  return object.json
 }
 
 /** Normalize a Move `Option<T>` json (`{vec:[]}` / `{vec:[x]}` / `[x]` / bare / null) to `value | null`. */

@@ -139,6 +139,18 @@ describe('get_friend_list_by_owner — resolve the soulbound list by owner addre
       core: { listOwnedObjects: async () => owned, getObject: async () => obj },
     },
   })
+  // #2054 — the seam tells the ledger's own "not found" ANSWER (absence) apart from a failed CALL. Both shapes
+  // below are the ones captured off live testnet; see test/read_object_seam.test.js for the probe.
+  const chain_answering_absent = () => ({
+    network: 'testnet',
+    grpc_client: {
+      core: {
+        getObject: async ({ objectId }) => {
+          throw new Error(`Object ${objectId} not found`)
+        },
+      },
+    },
+  })
   test('null when the social package is unstamped on the network', async () => {
     const ctx = {
       network: 'devnet',
@@ -153,9 +165,8 @@ describe('get_friend_list_by_owner — resolve the soulbound list by owner addre
     expect(await get_friend_list_by_owner(ctx)(owner)).toBeNull()
   })
   test('null when the account has no FriendList', async () => {
-    expect(
-      await get_friend_list_by_owner(make({ objects: [] }))(owner),
-    ).toBeNull()
+    // The derived address holds nothing and the ledger says so — absence, and it stays absence.
+    expect(await get_friend_list_by_owner(chain_answering_absent())(owner)).toBeNull()
   })
   test('decodes the owned FriendList', async () => {
     const ctx = make(
@@ -170,17 +181,23 @@ describe('get_friend_list_by_owner — resolve the soulbound list by owner addre
     expect(fl.id).toBe(id('fl0'))
     expect(fl.friends).toEqual([who])
   })
-  test('swallows a grpc throw → null (best-effort read)', async () => {
+  // #2054 INVERSION: this used to assert "swallows a grpc throw → null". That null was the bug — an empty
+  // roster painted over a dead transport is indistinguishable from an account with no friends, so the UI
+  // showed "add your first friend" to players who already had one. A failed read now surfaces.
+  test('a failed read REJECTS — never a fake empty roster', async () => {
     const ctx = {
       network: 'testnet',
       grpc_client: {
         core: {
-          listOwnedObjects: async () => {
-            throw new Error('grpc down')
+          getObject: async () => {
+            throw Object.assign(new Error('Unable to connect. Is the computer able to access the url?'), {
+              name: 'RpcError',
+              code: 'INTERNAL',
+            })
           },
         },
       },
     }
-    expect(await get_friend_list_by_owner(ctx)(owner)).toBeNull()
+    await expect(get_friend_list_by_owner(ctx)(owner)).rejects.toThrow(/is unreadable/)
   })
 })

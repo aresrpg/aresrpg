@@ -388,7 +388,8 @@ export function decode_fight_event(event) {
 // ╔════════════════ [ Object fetches (gRPC Core) ] ════════════════════════════ ]
 
 /**
- * Fetch + decode a `Fight` shared object by id (null if unreadable). The zero-backend fight-board read.
+ * Fetch + decode a `Fight` shared object by id (null when the fight is ABSENT; a FAILED read throws — #2054).
+ * The zero-backend fight-board read.
  * @param {import("../types.js").Context} context
  */
 export function get_fight(context) {
@@ -398,7 +399,8 @@ export function get_fight(context) {
 }
 
 /**
- * Fetch + decode a `FightResult` object by id (null if unreadable). The client drives `open`/`mint_rolled`/`burn`
+ * Fetch + decode a `FightResult` object by id (null when ABSENT; a FAILED read throws — #2054). A degraded
+ * read must never read as "already burned". The client drives `open`/`mint_rolled`/`burn`
  * off this (`is_opened`, `rolled`).
  * @param {import("../types.js").Context} context
  */

@@ -5,6 +5,8 @@ import { deriveObjectID, deriveDynamicFieldID } from '@mysten/sui/utils'
 
 import { aresrpg_deployment } from '../../deployment/aresrpg.js'
 
+import { get_object_json, option_value } from './_object.js'
+
 // ITEM READS for the merged `aresrpg` package — zero-backend chain reads via the house gRPC Core client (object json + dynamic
 // fields), mirroring the Move getters. No devInspect: every read is an object/DF fetch, and the derived-object
 // existence checks reproduce `derived_object::exists` off-chain (deriveObjectID → the `Claimed` marker DF), the
@@ -53,19 +55,6 @@ export const ITEM_STAT_FIELDS = Object.freeze([
 const string_bytes = value => bcs.string().serialize(value).toBytes()
 const address_bytes = value => bcs.Address.serialize(value).toBytes()
 
-/** getObject → flattened json (`include:{json:true}`), or null on absence / error. */
-async function get_object_json(grpc_client, object_id) {
-  try {
-    const { object } = await grpc_client.core.getObject({
-      objectId: object_id,
-      include: { json: true },
-    })
-    return object?.json ?? null
-  } catch {
-    return null
-  }
-}
-
 /** Does the object at `object_id` exist on-chain? */
 async function object_exists(grpc_client, object_id) {
   try {
@@ -76,21 +65,13 @@ async function object_exists(grpc_client, object_id) {
   }
 }
 
-/** The V of a dynamic field `Field<K,V>` read as flattened json, or null if the field is absent. `key_bytes` is the
- *  BCS of the key value (an empty-struct key is ONE 0x00 byte — EMPTY_STRUCT_KEY, never zero bytes). */
+/** The V of a dynamic field `Field<K,V>` read as flattened json, or null if the field is ABSENT (a failed read
+ *  throws — #2054). `key_bytes` is the BCS of the key value (an empty-struct key is ONE 0x00 byte —
+ *  EMPTY_STRUCT_KEY, never zero bytes). */
 async function get_df_value_json(grpc_client, parent_id, key_type, key_bytes) {
   const field_id = deriveDynamicFieldID(parent_id, key_type, key_bytes)
   const json = await get_object_json(grpc_client, field_id)
   return json?.value ?? null
-}
-
-/** Normalize a Move `Option<T>` json (`{vec:[]}` / `{vec:[x]}` / `[x]` / bare / null) to `value | null`. */
-function option_value(opt) {
-  if (opt == null) return null
-  if (Array.isArray(opt)) return opt.length ? opt[0] : null
-  if (typeof opt === 'object' && 'vec' in opt)
-    return opt.vec.length ? opt.vec[0] : null
-  return opt
 }
 
 const option_u64 = opt => {
@@ -162,14 +143,15 @@ export function free_character_marker_id({ creation_id, package_id, owner }) {
 
 // ── CREATION gate reads ──────────────────────────────────────────────────────
 
-/** Creation gate state: `price` (MIST, per ADDITIONAL character) + `paused`. Null if the gate is unreadable.
+/** Creation gate state: `price` (MIST, per ADDITIONAL character) + `paused`. Null when the gate is ABSENT (an
+ *  unstamped deployment); a FAILED read throws (#2054) — the paid-mint price is never guessed.
  *  @param {import("../../../types.js").Context} context */
 export function get_creation_state(context) {
   const { grpc_client, network } = context
   return async () => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
     const json = await get_object_json(grpc_client, dep.CREATION)
-    if (!json) return null
+    if (!json) return null // ABSENT gate
     return { price: BigInt(json.price ?? 0), paused: Boolean(json.paused) }
   }
 }
@@ -178,9 +160,11 @@ export function get_creation_state(context) {
  *  to grey out any class not yet enabled on-chain (an un-whitelisted class shows "coming soon",
  *  and the mint-time abort 103 EUnknownClass carries the same copy). `classes.id` is the Table's inner UID
  *  (`json:true` flattens it — the get_world_explorers pattern); its entries are dynamic fields whose FLATTENED
- *  `name` is the class-id String (no BCS decode). Returns the full whitelist as an id array; ANY read failure /
- *  empty table returns `[]`, which the caller reads as "could not verify → allow all" (a read hiccup must NEVER
- *  brick the creation funnel — a genuinely un-whitelisted pick still aborts honestly at mint time).
+ *  `name` is the class-id String (no BCS decode). Returns the full whitelist as an id array. THE ONE DELIBERATE
+ *  FAIL-SOFT CONSUMER of the honest seam (#2054): the seam now throws on a failed read, and this function alone
+ *  catches it back to `[]`, which the caller reads as "could not verify → allow all" (a read hiccup must NEVER
+ *  brick the creation funnel — a genuinely un-whitelisted pick still aborts honestly at mint time). Every other
+ *  consumer lets the failure surface.
  *  @param {import("../../../types.js").Context} context */
 export function get_creation_classes(context) {
   const { grpc_client, network } = context
@@ -251,13 +235,14 @@ export function is_free_claimed(context) {
 
 // ── SHOP sale reads ──────────────────────────────────────────────────────────
 
-/** A `Sale` snapshot: price/supply/minted/window/paused + the template it sells. Null if unreadable.
+/** A `Sale` snapshot: price/supply/minted/window/paused + the template it sells. Null when ABSENT; a FAILED
+ *  read throws (#2054).
  *  @param {import("../../../types.js").Context} context */
 export function get_sale(context) {
   const { grpc_client } = context
   return async sale_id => {
     const json = await get_object_json(grpc_client, sale_id)
-    if (!json) return null
+    if (!json) return null // ABSENT sale
     return {
       id: json.id,
       template: json.template,
@@ -274,14 +259,14 @@ export function get_sale(context) {
 // ── ITEM / TEMPLATE reads ────────────────────────────────────────────────────
 
 /** An `ItemTemplate` snapshot: base fields + attached stat RANGES (min/max), damage lines and consumable effect
- *  (each null / [] when absent). Null if the template is unreadable.
+ *  (each null / [] when absent). Null when the template is ABSENT; a FAILED read throws (#2054).
  *  @param {import("../../../types.js").Context} context */
 export function get_item_template(context) {
   const { grpc_client, network } = context
   return async template_id => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
     const json = await get_object_json(grpc_client, template_id)
-    if (!json) return null
+    if (!json) return null // ABSENT template
 
     const [stats_min, stats_max, damages, effect] = await Promise.all([
       get_df_value_json(

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { get_object_json } from './_object.js'
+
 // status: 0 ACTIVE, 1 RETURNING, 2 DEAD (aresrpg::expedition)
 const STATUS_LABELS = ['active', 'returning', 'dead']
 
@@ -10,20 +12,19 @@ const STATUS_LABELS = ['active', 'returning', 'dead']
  * id (`character_id`, unchanged) AND its appearance (`character`: the FOLLOW-view avatar
  * descriptor — classe + colors + sex/male + name + experience) so a RUNNING character can be
  * followed physically, not just identified. `region` is the deploy-time config snapshot;
- * `world_id` is the World it deployed to. Returns null if the object is gone (e.g. already
- * withdrawn → deleted).
- * @param {import("../../../types.js").Context} context */
+ * `world_id` is the World it deployed to. Returns null when the object is GONE (e.g. already withdrawn →
+ * deleted) — which, before #2054, it never actually did: the transport throws on a missing id, so the whole
+ * "gone → null" contract only became true once absence was told apart from failure at the read seam.
+ * @param {import("../../../types.js").Context} context
+ * @throws when the read fails (transport / unclassified ledger error) — never on absence. */
 export function get_expedition({ grpc_client }) {
   return async ({ expedition_id }) => {
     // #23 gRPC: core.getObject({include:{json:true}}) flattens the struct (nested `.fields` gone; UID `id.id`→`id`),
     // so the escrowed Character is `fields.character` (not `.character.fields`) and every UID is a bare string.
-    const { object } = await grpc_client.core.getObject({
-      objectId: expedition_id,
-      include: { json: true },
-    })
-
-    const fields = /** @type {any} */ (object?.json)
-    if (!fields) return null
+    const fields = /** @type {any} */ (
+      await get_object_json(grpc_client, expedition_id)
+    )
+    if (!fields) return null // ABSENT expedition — withdrawn and deleted
 
     const { region } = fields
     const status = Number(fields.status)

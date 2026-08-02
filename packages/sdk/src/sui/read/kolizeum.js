@@ -14,14 +14,14 @@ export const KOLIZEUM_STATUS = {
 
 /**
  * A `Kolizeum` snapshot: creator + status + format + economics (pledge/pot) + gating (level diff, allowlist) + the two
- * side rosters (per seat: owner, character, level). Null if unreadable.
+ * side rosters (per seat: owner, character, level). Null when the lobby is ABSENT; a FAILED read throws (#2054).
  * @param {import("../../../types.js").Context} context
  */
 export function get_kolizeum(context) {
   const { grpc_client } = context
   return async kolizeum_id => {
     const json = await get_object_json(grpc_client, kolizeum_id)
-    if (!json) return null
+    if (!json) return null // ABSENT lobby
     const seats = side =>
       (Array.isArray(json[side]) ? json[side] : []).map(f => ({
         owner: f.owner,

@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { aresrpg_id } from '../../deployment/aresrpg.js'
 
+import { get_object_json } from './_object.js'
+
 // CRUSH RUNE REGISTRY read — the on-chain `forgemagie::CrushBoard.runes` table (`Table<ID, RuneRef>`: rune
 // ItemTemplate id → { stat, tier }), enumerated chain-direct via gRPC dynamic fields (the get_creation_classes
 // pattern). READ-PATH CHOICE (declared): the registry is STATIC post-seed ("runes never change" — hardcoded
@@ -53,10 +55,16 @@ export function get_crush_registry(context) {
 /** @returns {Promise<CrushRegistry>} */
 async function load_registry(grpc_client, board_id) {
   // Board json (flattened): { runes: { id: <table uid> }, taux: …, pressure: … } — the get_world_explorers pattern.
-  const { object } = await grpc_client.core.getObject({ objectId: board_id, include: { json: true } })
-  const table_id = object?.json?.runes?.id
+  // Through the ONE read seam (#2054): a FAILED read throws with its cause, absence returns null, and the two
+  // are told apart in the message instead of collapsing into one vague "unreadable".
+  const json = await get_object_json(grpc_client, board_id)
+  const table_id = json?.runes?.id
   if (!table_id)
-    throw new Error(`[crush] CrushBoard ${board_id} unreadable — no runes table id in its json.`)
+    throw new Error(
+      json == null
+        ? `[crush] CrushBoard ${board_id} does not exist.`
+        : `[crush] CrushBoard ${board_id} carries no runes table id in its json.`,
+    )
 
   /** @type {RuneRegistryEntry[]} */
   const entries = []

@@ -7,14 +7,14 @@ import { get_object_json } from './_object.js'
 
 /**
  * A `RunPass` snapshot: world, room, owner, pre-entry position, and the character binding
- * (`null` only for malformed data). Null if unreadable.
+ * (`null` only for malformed data). Null when the pass is ABSENT; a FAILED read throws (#2054).
  * @param {import("../../../types.js").Context} context
  */
 export function get_run_pass(context) {
   const { grpc_client } = context
   return async run_pass_id => {
     const json = await get_object_json(grpc_client, run_pass_id)
-    if (!json) return null
+    if (!json) return null // ABSENT pass
     return {
       id: json.id,
       world: json.world,
