@@ -1,2 +1,3 @@
-6d87ff8a9f5e44b8166049ee6c5623712b1082cd train/train-41 fix(corpus): delete the bare-URL degraded mode — the pointer is the one source
-95fbbe696d1dfb9fef96e86987dd39eb451dfb35 train/train-41 fix(engine): pre-warm through the live frame, never an async compile (#1869)
+f44276a6d8e2c52692225391ed5d18f4a6cde42d train/train-42 chore(engine): dedupe draco decoder assets
+cd9ca7d3be19516208f3584dd6393d37a7352cff train/train-42 fix(encyclopedia): mob portraits derive from the catalog key, bounded to the live population
+4a3ed0e90485b740e64670cc522a5ec7bc6913fe train/train-42 perf(tx): derive the sign-path balance from the client's balance home
