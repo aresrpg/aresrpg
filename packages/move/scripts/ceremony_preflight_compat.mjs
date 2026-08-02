@@ -24,7 +24,7 @@
 //
 // REPUBLISH MODE: while packages/move/REPUBLISH_WINDOW exists this gate runs SIZE-ONLY — see
 // republish_window_verdict below for the mode's rules and its master-bound refusal.
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -457,6 +457,56 @@ function parseCompatErrors(output) {
   return counts
 }
 
+function execResult(run, args) {
+  try {
+    return {
+      exit_code: 0,
+      output: String(run('sui', args, { encoding: 'utf-8' }) ?? ''),
+    }
+  } catch (e) {
+    return {
+      exit_code: e.status ?? 1,
+      output: `${e.stdout ?? ''}${e.stderr ?? ''}`,
+    }
+  }
+}
+
+function isWarningEscalation(output) {
+  return (
+    /warning(?:\[|:)/i.test(output) &&
+    /warnings? (?:are|were)(?: being)? (?:treated as )?errors?/i.test(output)
+  )
+}
+
+// A compiler-warning escalation exits BEFORE Sui's compatibility verifier runs. Retry that exact
+// read-only probe with the warnings deflected so the E01001/E01002 list still materialises, but keep
+// the first death as a separate blocking result — reaching the verdict must never launder a warning
+// policy failure green. `run` is injected for the fixture test; production uses the pinned Sui CLI.
+export function run_compatibility_probe(args, run = execFileSync) {
+  let result = execResult(run, args)
+  let errors = parseCompatErrors(result.output)
+  let warning_failure = null
+
+  if (
+    result.exit_code !== 0 &&
+    errors.size === 0 &&
+    isWarningEscalation(result.output)
+  ) {
+    warning_failure = `exit ${result.exit_code} — ${result.output
+      .trim()
+      .split('\n')
+      .slice(-5)
+      .join(' | ')}`
+    const retry_args = args
+      .filter((arg) => arg !== '--warnings-are-errors')
+      .concat('--silence-warnings')
+    result = execResult(run, retry_args)
+    errors = parseCompatErrors(result.output)
+  }
+
+  return { ...result, errors, warning_failure }
+}
+
 async function resolveGroundTruth(client, name, entry) {
   const manifestPkg = entry.latest ?? entry.pkg
   try {
@@ -511,19 +561,28 @@ async function checkPackage(client, release, network, name) {
   if (needsPatch)
     fs.writeFileSync(pubFile, withPublishedAt(original, network, target))
 
-  let output = ''
-  let exitCode = 0
+  let probe
   try {
-    output = execSync(
-      `sui client upgrade --serialize-unsigned-transaction --upgrade-capability ${entry.upgradeCap} ${pkgPath}`,
-      { encoding: 'utf-8' }
+    probe = run_compatibility_probe(
+      [
+        'client',
+        'upgrade',
+        '--serialize-unsigned-transaction',
+        '--upgrade-capability',
+        entry.upgradeCap,
+        pkgPath,
+      ]
     )
   } catch (e) {
-    exitCode = e.status ?? 1
-    output = `${e.stdout ?? ''}${e.stderr ?? ''}`
+    return {
+      name,
+      status: 'error',
+      detail: `compatibility probe threw — ${e?.message ?? e}`,
+    }
   } finally {
     if (needsPatch) fs.writeFileSync(pubFile, original)
   }
+  const { output, exit_code: exitCode, errors, warning_failure } = probe
 
   // The size row costs its own compile ON PURPOSE, rather than reading whatever the CLI call left in
   // build/: the compat verdict is the CLI's, the size verdict is this gate's, and a shared build
@@ -540,17 +599,32 @@ async function checkPackage(client, release, network, name) {
       fs.rmSync(size_build_root, { recursive: true, force: true })
   }
 
-  const errors = parseCompatErrors(output)
   if (errors.size > 0)
-    return { name, status: 'incompatible', errors, target, source, size }
+    return {
+      name,
+      status: 'incompatible',
+      errors,
+      target,
+      source,
+      size,
+      warning_failure,
+    }
   if (exitCode !== 0)
     return {
       name,
       status: 'error',
       detail: `exit ${exitCode} — ${output.trim().split('\n').slice(-5).join(' | ')}`,
       size,
+      warning_failure,
     }
-  return { name, status: 'compatible', target, source, size }
+  return {
+    name,
+    status: 'compatible',
+    target,
+    source,
+    size,
+    warning_failure,
+  }
 }
 
 function assert_known_packages(packages) {
@@ -654,6 +728,13 @@ async function main() {
     } else {
       any_failed = true
       console.log(`${name} ERROR  ${result.detail}`)
+    }
+
+    if (result.warning_failure) {
+      any_failed = true
+      console.log(
+        `${name} WARNING-ESCALATION  ${result.warning_failure} — compatibility verdict above was recovered with --silence-warnings; warning policy still FAILS.`
+      )
     }
 
     if (result.size != null) {
