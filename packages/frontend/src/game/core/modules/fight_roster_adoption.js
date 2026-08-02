@@ -71,7 +71,6 @@ const empty_adoption = (session_key) => ({
   session_key,
   known: new Map(),
   last_signature: null,
-  last_roster: /** @type {any[]} */ ([]),
 })
 
 // read_character also carries immutable base progression. Fight roster adoption needs only identity/appearance;
@@ -129,9 +128,17 @@ export function create_fight_roster_adoption({
       fighters: get_fighters(),
     })
     if (!rows.length) return
+    // OBSERVE THE DELTA, NOT THE ARRIVAL (#2027). The gate is CONTENT — this signature — and nothing else. It
+    // used to also demand that the store still hold the exact array we last published, which cannot converge:
+    // this adopter is subscribed to the store, so its publish re-enters the SAME door and is QUEUED (store.js's
+    // flat drain), leaving `ctx.roster` at least one publish behind. Two notifications while one publish is in
+    // flight and the reference never agrees again — every fold republished a content-identical roster until the
+    // re-entrancy breaker fired mid-fight and its throw killed the post-fight pipeline. A roster whose content
+    // did change still republishes: `rows` is composed FROM `carried`, so any foreign write moves the signature.
+    // A new session is covered by the session key above, which resets this gate wholesale.
     const signature = fight_roster_signature(rows)
-    if (signature === adoption.last_signature && carried === adoption.last_roster) return
-    adoption = { ...adoption, last_signature: signature, last_roster: rows }
+    if (signature === adoption.last_signature) return
+    adoption = { ...adoption, last_signature: signature }
     publish(rows)
   }
 
