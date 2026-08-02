@@ -1,1 +1,8 @@
+1339fcf6088d416fef73d636ce845635f61d314a train/train-71 refactor(hud): name the drawer's own item icon JobItemIcon
+fd0e107d3d2c444a4827e1129486288645ccb3f8 train/train-71 test(rpc): the client consumes Crafted — retire the waiver that says otherwise
+095bb60270d161892bd06b457b3b2017fcc5b365 train/train-71 refactor(sdk): move the craft success-rate mirror to its siblings' home
+544b59aa9a0b921c06c09fd8d8216805f516ec7b train/train-71 refactor(hud): delete the unmounted craft-queue toast surface
+f91ad7aa8961cfdd59f2d29950e330a264d8f8dc train/train-71 refactor(hud): split JobsDrawer along its section seams
+d53880f7d940ac02731d0bfc6e6b8fc6221e7e76 train/train-71 fix(fight): a predicted corpse releases its cell to the move gate
+3ca4093802703981a10fd335e0ed9b5f201ff75e train/train-71 refactor(frontend): one home for the World-doc read cache
 7b70a01f4b0f7391f452fb3fb0ca84d0743fa637 train/train-71 fix(sdk): the read seam stops merging "failed" into "absent"
