@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Spectator trap visibility — the public Fight.fx board entry reaches the fold as chain_traps, while the
-// projection decides whether this viewer receives a persistent board-render primitive. The caster-only
-// my_traps ledger remains the separate prediction/legality home.
+// Spectator trap visibility — the public Fight.fx board entry reaches the fold as chain_traps, which the fold
+// ADOPTS into the one trap ledger (#1858); the projection then crosses the viewer predicate once and decides
+// whether this viewer receives a persistent board-render primitive. Paint and prediction/legality read that
+// single result, so the two can no longer disagree about what exists.
 
 import { describe, expect, test } from 'bun:test'
 
