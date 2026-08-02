@@ -10,13 +10,23 @@ import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy } from './los.js'
 import { presented_reachable_cells } from './movement_candidates.js'
 import { committed_truth, fight_store, presented_state } from './store.js'
-import { cast_presenting, is_my_turn, is_over, presenting } from './project_state.js'
-import { engine_view, entity_id_of_key, project_board_cells } from './project_views.js'
+import { cast_presenting } from './project_state.js'
+import { engine_view, entity_id_of_key, input_armed, project_board_cells } from './project_views.js'
 import { next_action_slot } from './turn_action_slot.js'
 
 export * from './project_state.js'
 export { mob_entity_id, mob_entity_index } from './fight_control.js'
-export { board_view, committed_mob_hp, engine_view, entity_id_of_key } from './project_views.js'
+export {
+  board_view,
+  committed_mob_hp,
+  engine_view,
+  entity_id_of_key,
+  fight_visible_view,
+  // THE END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — `fight_visible_view.turn`
+  // calls the one home instead of re-deriving it). Re-exported verbatim: every importer reads them from here.
+  input_armed,
+  turn_input_armed,
+} from './project_views.js'
 export { read_fight_traps } from './trap_ledger.js'
 
 // One memoized synchronous surface shared by every consumer.
@@ -33,22 +43,6 @@ export const fight_view = () => engine_view_of(fight_store.getState())
 
 // ── M3 RENDER-CONTRACT PROJECTIONS (D768/D769 clause 3: the renderer consumes {object, timing} and computes
 //    NOTHING — every which-cells / may-I-input DECISION below moved here from the board adapter) ─────────────
-
-/** END-TURN PRESS LAW + PRESENTATION GATE — ONE predicate for every turn-input surface:
- *  the my-turn wash, the raw cell click/hover relays, and FightControls' 3-state. Moved verbatim from
- *  world-shell/voxel_fight_folds (M3: the input-arming decision is core law; the folds file re-exports this).
- *  `busy` is the run store's tx single-flight flag — true from commit_turn's FIRST line (END TURN press or a
- *  background auto-commit) through the whole in-flight window, so the wash/picking disarm at PRESS; a refused
- *  commit clears it with my_turn still true and the surfaces honestly restore. `presenting` disarms while a
- *  mob/peer replay drains (chain truth ⋀ presentation done) — full rationale in the original fold's git history.
- *  @param {boolean} my_turn @param {boolean} busy @param {boolean} [presenting_now] */
-export const turn_input_armed = (my_turn, busy, presenting_now = false) => my_turn && !busy && !presenting_now
-
-/** The state-shaped arming door: my PLAYABLE turn (committed active = me, fight undecided), not busy, nothing
- *  presenting. `busy` stays an edge INPUT — the run store owns tx single-flight across MORE than turn commits
- *  (engage/place/settle), wider than the core's own commit-flight `s.busy`. */
-export const input_armed = (s, { busy = false } = {}) =>
-  turn_input_armed(is_my_turn(s) && !is_over(s), busy, presenting(s))
 
 /** Encoded orthogonal neighbours of an encoded cell, row-safe (never wraps an edge column). */
 const neighbors_of = (cell) => {

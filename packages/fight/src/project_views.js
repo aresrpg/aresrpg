@@ -11,6 +11,15 @@ import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, ST
 import { fight_fingerprint } from './fingerprint.js'
 import { trap_render_prims } from './fight_render_prims.js'
 import {
+  deep_freeze,
+  visible_controls,
+  visible_entities,
+  visible_mount,
+  visible_result,
+  visible_sync,
+  visible_turn,
+} from './visible_facts.js'
+import {
   DUNGEON_BOARD_ORIGIN,
   cast_presenting,
   chain_terminal_status,
@@ -19,6 +28,10 @@ import {
   presenting,
   settlement_request,
 } from './project_state.js'
+
+// The END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — the view's `turn.input_armed`
+// and control-phase verdict call the one home). Re-exported verbatim: every importer reads them from here.
+export { input_armed, turn_input_armed } from './visible_facts.js'
 
 /** Fighters whose killing damage beat is unacked. This masks rendered liveness only; targeting remains committed. */
 const death_presenting_ids = (s) => {
@@ -31,6 +44,18 @@ const death_presenting_ids = (s) => {
 
 const seat_key = (seat) => `p${seat}`
 const mob_key = (idx) => `m${idx}`
+
+/** entity id → thin-fold key, built once per projection off the adopted board. Roster ORDER is presentation
+ *  metadata and never a join key (#1608) — the seat index / mob index is. */
+const fold_keys_by_entity = (view) => {
+  const keys = new Map()
+  for (const [seat, row] of (view?.escrow ?? []).entries()) {
+    const entity_id = participant_entity_id(row)
+    if (entity_id) keys.set(entity_id, seat_key(seat))
+  }
+  for (const [idx] of (view?.mobs ?? []).entries()) keys.set(mob_entity_id(idx), mob_key(idx))
+  return keys
+}
 
 const character_male = (character) => {
   if (typeof character?.male === 'boolean') return character.male
@@ -482,4 +507,54 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     // fact move_wash suppresses on, never a second UI-side flag (see cast_presenting's doc above).
     cast_presenting: cast_presenting(s),
   }
+}
+
+// ── THE ONE PROJECTION (#1993, train 0) ───────────────────────────────────────────────────────────────────────
+// `fight_visible_view(state)` — every fight-visible FACT (turn · entities · result · sync · mount · controls)
+// under one immutable object, so a surface selects a narrow key instead of joining three stores. Train 0 ships
+// the SHAPE at CURRENT PARITY: every field is the value today's fragment already produces (the derivation is
+// moved in or CALLED — `engine_view` / the `project_state` predicates / `project_hud` are its fragments, and
+// they stay exported and working). NO new reconciliation lives here; fold-first migrations are later trains.
+// Design review constraint ①: PURE over the fold's state — no store, no subscription, no write door, memoized
+// on STATE IDENTITY ONLY (the WeakMap below), which is exactly why a recompute from the same raw state is
+// deep-equal to the served view (the standing acceptance assert). The SHAPE is here, in the projections' one
+// home; the per-fact record builders sit beside it in visible_facts.js for the ≤600-LoC cap (store.js/fold.js).
+
+/**
+ * The six-fact fight-visible view. Never null: a session with no adopted board still answers `mount`/`sync`
+ * honestly (fight id known, board not here yet) instead of forcing every caller to invent that state.
+ * @param {any} s the fight store state
+ */
+const build_visible_view = (s) => {
+  const view = s?.view ?? null
+  const engine = view ? engine_view(s) : null
+  const committed = committed_truth(s)
+  const entities = visible_entities(s, engine, fold_keys_by_entity(view))
+  const active_entity_id = engine?.active_entity_id ?? null
+  const status = view ? projected_status(s) : null
+
+  // THE SHAPE — one key per fight-visible fact, each built by exactly one builder beside this file.
+  return {
+    turn: visible_turn(s, engine, committed, status),
+    entities,
+    result: visible_result(s, status),
+    sync: visible_sync(s, active_entity_id, entities),
+    mount: visible_mount(s, engine),
+    controls: visible_controls(s, engine, active_entity_id, entities),
+  }
+}
+
+// State identity is the ONLY memo key (design review constraint ①). The fight store publishes a NEW state object
+// per input, so a stale view is unrepresentable; a WeakMap keeps a dead fight's projection from outliving it.
+const VISIBLE_VIEWS = new WeakMap()
+
+/**
+ * THE fight-visible view — one immutable object owning all six fight-visible facts. Pure: same state in, the
+ * same (deep-equal) view out, no store read beside it and no write door.
+ * @param {any} s the fight store state
+ */
+export const fight_visible_view = (s) => {
+  if (s == null || typeof s !== 'object') return deep_freeze(build_visible_view({}))
+  if (!VISIBLE_VIEWS.has(s)) VISIBLE_VIEWS.set(s, deep_freeze(build_visible_view(s)))
+  return VISIBLE_VIEWS.get(s)
 }
