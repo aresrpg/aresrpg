@@ -31,6 +31,15 @@ import { can_target } from './spell_targeting.js'
  */
 
 /**
+ * #1874 — one line of the planner's reasoning. `target` names who it is playing against, `cast` names a spell
+ * that was refused everywhere the mob could stand (and why), `plan` names the turn it settled on. See
+ * `ai_explain_turn`.
+ * @typedef {{ phase: 'target', chose: string|null, why: string }
+ *   | { phase: 'cast', spell_id: string|null, refused: string[], cells_tried: number }
+ *   | { phase: 'plan', chose: 'cast'|'move+cast'|'move'|'pass', why: string }} TraceRow
+ */
+
+/**
  * The nearest living enemy by manhattan distance (deterministic tie-break: first in scan order).
  * @param {import('./fight_state.js').FightState} state
  * @param {import('./fight_state.js').FightEntity} entity
@@ -63,6 +72,9 @@ const nearest_enemy = (state, entity) => {
  * @param {import('./cell.js').Cell} target
  * @param {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
  * @param {import('./spell_targeting.js').TargetingContext} context
+ * @param {((spell_id: string, reason: string) => void)|null} [refused]  the refusal sink (#1874): called for
+ *   every spell this cell could NOT cast, with the reason it was dropped. Absent ⇒ nothing is recorded and the
+ *   decision is byte-identical (the planner is on the reducer's hot path; the instrument is opt-in).
  * @returns {{ spell_id: string, level: number } | null}
  */
 const best_castable_damage_spell = (
@@ -72,22 +84,42 @@ const best_castable_damage_spell = (
   target,
   spell_templates,
   context,
+  refused = null,
 ) => {
   const range_bonus = entity.stats.range ?? 0
+  const drop = (spell_id, reason) => {
+    refused?.(spell_id, reason)
+    return null
+  }
   let best = null
   let best_cost = -1
   for (const spell_id of Object.keys(entity.spell_levels)) {
     const template = spell_templates.get(spell_id)
-    if (!template) continue
+    if (!template) {
+      drop(spell_id, 'no_template')
+      continue
+    }
     const level = entity.spell_levels[spell_id] ?? 1
     const spell_level = template.levels[level - 1]
-    if (!spell_level) continue
-    if (spell_level.cost > entity.ap) continue
+    if (!spell_level) {
+      drop(spell_id, 'no_such_level')
+      continue
+    }
+    if (spell_level.cost > entity.ap) {
+      drop(spell_id, 'ap')
+      continue
+    }
     const is_damage = spell_level.base_effects.some(
       e => e.type === 'DAMAGE' || e.type === 'STEAL',
     )
-    if (!is_damage) continue
-    if (!can_target(spell_level, from, target, context, range_bonus)) continue
+    if (!is_damage) {
+      drop(spell_id, 'not_a_damage_spell')
+      continue
+    }
+    if (!can_target(spell_level, from, target, context, range_bonus)) {
+      drop(spell_id, 'cannot_target_from_here')
+      continue
+    }
     if (spell_level.cost > best_cost) {
       best_cost = spell_level.cost
       best = { spell_id, level }
@@ -108,6 +140,8 @@ const best_castable_damage_spell = (
  * @param {import('./pathfind.js').Reachable[]} reachable
  * @param {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
  * @param {import('./spell_targeting.js').TargetingContext} context
+ * @param {{ spell_id: string, refused: string[], cells_tried: number }[]|null} [refusals]  filled (#1874) with
+ *   ONE row per spell that was refused everywhere, carrying every distinct reason and how many cells were tried.
  * @returns {{ cell: import('./cell.js').Cell, cost: number, spell_id: string, level: number } | null}
  */
 const closest_cast_cell = (
@@ -117,7 +151,23 @@ const closest_cast_cell = (
   reachable,
   spell_templates,
   context,
+  refusals = null,
 ) => {
+  // One row per SPELL, not per (spell, cell): "bite was refused at all 12 cells I could stand on, for AP" is the
+  // answer a reader needs; twelve identical rows are noise. `castable` un-refuses a spell that worked somewhere.
+  const reasons = refusals ? new Map() : null
+  const castable = refusals ? new Set() : null
+  const sink = refusals
+    ? (spell_id, reason) => {
+        const row = reasons.get(spell_id) ?? {
+          refused: new Set(),
+          cells_tried: 0,
+        }
+        row.refused.add(reason)
+        row.cells_tried += 1
+        reasons.set(spell_id, row)
+      }
+    : null
   let best = null
   let best_cost = Infinity
   let best_dist = Infinity
@@ -130,7 +180,9 @@ const closest_cast_cell = (
       target,
       spell_templates,
       context,
+      sink,
     )
+    if (cast) castable?.add(cast.spell_id)
     if (!cast) continue
     const dist = manhattan(cell, target)
     const idx = encode(cell.x, cell.y)
@@ -145,6 +197,14 @@ const closest_cast_cell = (
       best_idx = idx
     }
   }
+  if (refusals)
+    for (const [spell_id, row] of reasons)
+      if (!castable.has(spell_id))
+        refusals.push({
+          spell_id,
+          refused: [...row.refused],
+          cells_tried: row.cells_tried,
+        })
   return best
 }
 
@@ -209,6 +269,8 @@ const search_anchor = (state, entity) => {
  * @param {(cell: import('./cell.js').Cell) => boolean} is_walkable terrain walkability
  * @param {(cell: import('./cell.js').Cell) => boolean} is_occupied living-body occupancy, excluding the mover
  * @param {import('./spell_targeting.js').TargetingContext} context
+ * @param {TraceRow[]|null} [trace]  an optional sink (#1874) the planner narrates its turn into (see
+ *   `ai_explain_turn`). Absent ⇒ nothing is recorded and the decision path is byte-identical.
  * @returns {FightAction[]}
  */
 export const ai_choose_turn = (
@@ -218,11 +280,25 @@ export const ai_choose_turn = (
   is_walkable,
   is_occupied,
   context,
+  trace = null,
 ) => {
+  // `say` closes over the ONE trace array so every exit — including the early ones — narrates itself. A pass
+  // that leaves through a branch with no `say` is exactly the silent refusal #1874 convicted.
+  const say = row => trace?.push(row)
   const entity = find_entity(state, entity_id)
-  if (!entity) return [{ type: 'end_turn' }]
+  if (!entity) {
+    say({ phase: 'plan', chose: 'pass', why: 'no such fighter in this fight' })
+    return [{ type: 'end_turn' }]
+  }
 
   const target = nearest_enemy(state, entity)
+  say({
+    phase: 'target',
+    chose: target?.id ?? null,
+    why: target
+      ? `nearest visible enemy at manhattan ${manhattan(entity.cell, target.cell)}`
+      : 'no visible enemy — every opponent is dead or invisible',
+  })
 
   // Cells reachable within MP (4-dir BFS — the Move `bfs_*` queue-discipline twin), including the mob's own cell.
   const reachable = get_reachable_cells(
@@ -236,8 +312,14 @@ export const ai_choose_turn = (
   // reposition fallback and the #1061 search walk (mirrors `combat_grid::bfs_best_toward` + `movement::walk`).
   const advance_toward = goal => {
     const landing = best_toward(entity.cell, goal, reachable)
-    if (landing.x === entity.cell.x && landing.y === entity.cell.y)
+    if (landing.x === entity.cell.x && landing.y === entity.cell.y) {
+      say({
+        phase: 'plan',
+        chose: 'pass',
+        why: `already at the local minimum toward ${goal.x},${goal.y} — ${reachable.length} reachable cell(s) on ${entity.mp} MP, none closer`,
+      })
       return [/** @type {FightAction} */ ({ type: 'end_turn' })]
+    }
     const path = find_path_4dir(
       entity.cell,
       landing,
@@ -245,21 +327,39 @@ export const ai_choose_turn = (
       is_walkable,
       is_occupied,
     )
-    return path
-      ? [/** @type {FightAction} */ ({ type: 'move', path })]
-      : [/** @type {FightAction} */ ({ type: 'end_turn' })]
+    if (!path) {
+      say({
+        phase: 'plan',
+        chose: 'pass',
+        why: `no 4-dir path within ${entity.mp} MP to the chosen landing ${landing.x},${landing.y}`,
+      })
+      return [/** @type {FightAction} */ ({ type: 'end_turn' })]
+    }
+    say({
+      phase: 'plan',
+      chose: 'move',
+      why: `no cast is reachable — closing toward ${goal.x},${goal.y}, landing ${landing.x},${landing.y}`,
+    })
+    return [/** @type {FightAction} */ ({ type: 'move', path })]
   }
 
   // 0. SEARCH (#1061): nothing visible to fight ⇒ the fighter does NOT idle — it walks toward its search
   //    landmark, hunting for the vanished enemy. Only a board with no anchor at all falls back to a pass.
   if (!target) {
     const anchor = search_anchor(state, entity)
-    return anchor ? advance_toward(anchor) : [{ type: 'end_turn' }]
+    if (anchor) return advance_toward(anchor)
+    say({
+      phase: 'plan',
+      chose: 'pass',
+      why: 'nothing visible and this board carries no search anchor to walk toward',
+    })
+    return [{ type: 'end_turn' }]
   }
 
   // 1. ATTACK: strike from the CLOSEST reachable band cell. cost 0 = strike from standing (attack-now); cost > 0 =
   //    advance exactly to that cast cell then strike (attack-move, no wasted MP). Band-aware, so a min-range spell
   //    steps to its band instead of walking into the point-blank dead zone (#606).
+  const refusals = trace ? [] : null
   const cast_plan = closest_cast_cell(
     state,
     entity,
@@ -267,7 +367,18 @@ export const ai_choose_turn = (
     reachable,
     spell_templates,
     context,
+    refusals,
   )
+  // Every spell the search dropped, with the reason(s) — this is the row that separates "the kit genuinely had
+  // nothing legal" from "something rejected an action it should have taken". An EMPTY kit says so too.
+  for (const row of refusals ?? []) say({ phase: 'cast', ...row })
+  if (trace && !refusals.length && !cast_plan)
+    say({
+      phase: 'cast',
+      spell_id: null,
+      refused: ['empty_kit'],
+      cells_tried: reachable.length,
+    })
   if (cast_plan) {
     const cast_action = /** @type {FightAction} */ ({
       type: 'cast',
@@ -275,7 +386,14 @@ export const ai_choose_turn = (
       target: target.cell,
       level: cast_plan.level,
     })
-    if (cast_plan.cost === 0) return [cast_action]
+    if (cast_plan.cost === 0) {
+      say({
+        phase: 'plan',
+        chose: 'cast',
+        why: `${cast_plan.spell_id} strikes ${target.id} from standing`,
+      })
+      return [cast_action]
+    }
     const path = find_path_4dir(
       entity.cell,
       cast_plan.cell,
@@ -283,10 +401,62 @@ export const ai_choose_turn = (
       is_walkable,
       is_occupied,
     )
-    if (path) return [{ type: 'move', path }, cast_action]
+    if (path) {
+      say({
+        phase: 'plan',
+        chose: 'move+cast',
+        why: `${cast_plan.spell_id} strikes ${target.id} from ${cast_plan.cell.x},${cast_plan.cell.y} for ${cast_plan.cost} MP`,
+      })
+      return [{ type: 'move', path }, cast_action]
+    }
+    say({
+      phase: 'cast',
+      spell_id: cast_plan.spell_id,
+      refused: ['no_path_to_the_cast_cell'],
+      cells_tried: reachable.length,
+    })
   }
 
   // 2. REPOSITION: no reachable cast cell → a single advance toward the target, monotonic (never ends farther —
   //    MP spent only to close for next turn). Mirrors the on-chain reposition fallback.
   return advance_toward(target.cell)
+}
+
+/**
+ * #1874 — THE SAME TURN, NARRATED. A mob's pass used to be indistinguishable from a defect: `ai_choose_turn`
+ * answers with `[{ type: 'end_turn' }]` and nothing else, so "the kit truly had no legal action" and "something
+ * rejected every action" read identically — the silent refusal the player-side bot (`fight/src/bot/policy.js`)
+ * is already forbidden. This runs the PLANNER ITSELF with a trace sink — one decision home, never a parallel
+ * re-derivation — and hands back the actions plus the rows it walked over:
+ *   · `{ phase: 'target', chose, why }`            — who it is playing against, or why nobody
+ *   · `{ phase: 'cast', spell_id, refused[], cells_tried }` — one row per spell refused EVERYWHERE it stood
+ *   · `{ phase: 'plan', chose, why }`              — cast / move+cast / move / pass, and the reason
+ * Pure: same inputs, same actions AND same trace. The reducer never passes a sink, so live turns are unchanged.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} entity_id
+ * @param {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
+ * @param {(cell: import('./cell.js').Cell) => boolean} is_walkable
+ * @param {(cell: import('./cell.js').Cell) => boolean} is_occupied
+ * @param {import('./spell_targeting.js').TargetingContext} context
+ * @returns {{ actions: FightAction[], trace: TraceRow[] }}
+ */
+export const ai_explain_turn = (
+  state,
+  entity_id,
+  spell_templates,
+  is_walkable,
+  is_occupied,
+  context,
+) => {
+  const trace = /** @type {TraceRow[]} */ ([])
+  const actions = ai_choose_turn(
+    state,
+    entity_id,
+    spell_templates,
+    is_walkable,
+    is_occupied,
+    context,
+    trace,
+  )
+  return { actions, trace }
 }
