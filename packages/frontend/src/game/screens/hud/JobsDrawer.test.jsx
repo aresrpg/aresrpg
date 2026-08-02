@@ -27,7 +27,11 @@ const visible_text = (html) => html.replace(/<[^>]+>/g, '')
 // executes a wallet action; the grid is pure render.
 reset_auth_mock()
 
-const { JobDetail, RecipeGrid, JobItemDetail } = await import('./JobsDrawer.jsx')
+// The drawer's sections live in sibling files (the #2052 600-LoC split); the drawer itself keeps the
+// two composers. Same modules, same render — only the home moved.
+const { JobDetail } = await import('./JobsDrawer.jsx')
+const { RecipeGrid } = await import('./JobCraft.jsx')
+const { JobItemDetail } = await import('./JobItemDetail.jsx')
 
 // CAPTURED PROVENANCE: the values are the verbatim live projection read from rpc-redis on 2026-07-25 —
 // a real armorsmith (SDK JOBS index 8) recipe minted 07-23, knowledge gate 26, output at level 151.
@@ -222,6 +226,9 @@ describe('crafting reads chain truth, never the bundled seed catalog (#765 root 
   // list). The guard covers EVERY crafting surface now, so the class cannot come back on any of them.
   for (const file of [
     './JobsDrawer.jsx',
+    // The drawer's craft surfaces after the #2052 split — the guard follows the code, not the filename.
+    './JobCraft.jsx',
+    './JobItemDetail.jsx',
     '../../../world-shell/craft_actions.js',
     './level_unlocks.js',
     './world/commission/commission_recipes.js',
