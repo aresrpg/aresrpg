@@ -10,7 +10,7 @@
 
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
-import { session_gate_input } from '../../../world-shell/session_gate.js'
+import { observe_roster_bindings, session_gate_input } from '../../../world-shell/session_gate.js'
 import { is_app_managed_follower } from '../../../world-shell/follow_gate.js'
 
 /** @type {import('../game.js').Module} */
@@ -18,30 +18,32 @@ export default function sui_session() {
   return {
     /** @param {import('../game.js').Context} context */
     observe({ events, get_state }) {
-      // #708 (the root cause behind aa123037's embed.js guard): publish below only on a genuine selection
-      // DELTA. The roster row's `world_id` is a CACHED snapshot — re-deriving and republishing it on EVERY
-      // dispatch, even a redundant reselect of the character already active, can clobber a fresher
-      // chain-truth binding a manual write (join success, the resolve-time fetch) already published for
-      // this same id. aa123037 stopped one caller (embed.js) from redispatching; this closes the class at
-      // its root so every caller (PartyFrame, CharacterSwitcher, boot_roster, ...) is covered without each
-      // hand-rolling its own guard. Track the last id THIS observer actually published for, in its own
-      // closure — the reducer-door idiom, no new store. No reset needed on logout/switch: a different
-      // account's character carries a different on-chain id, and healing an externally-drifted binding is
-      // the poll's job (session_gate.js's stale-poll guard), never a reselect's.
-      let last_published_id = null
+      // ── THE ROSTER FEED → THE BINDING BOOK (#2007). The indexed roster is EVIDENCE about every character's
+      // world, not a second home for it: ferry each delta through the binding door so the book — not each
+      // consumer's own copy of the cards — answers "which world is character X in". The reference compare is
+      // effect-edge dedupe (the reducer returns the same state for an unchanged feed anyway), never a fact.
+      let last_characters = null
+      events.on('STATE_UPDATED', (state) => {
+        const characters = state.sui?.characters ?? null
+        if (characters === last_characters) return
+        last_characters = characters
+        observe_roster_bindings(characters ?? [])
+      })
+      // #708 — the roster row's `world_id` is a CACHED snapshot; the book now floors it behind any
+      // unconfirmed chain-truth write, so a redundant reselect can no longer clobber a fresher binding and
+      // this observer needs no `last_published_id` closure of its own (that guard was a second memory of
+      // "what is character X's world"). Healing an externally-drifted binding stays the poll's job.
       events.on('action/select_character', (character_id) => {
         // #509 — an app-managed auto-follower can never become the driven character. Refusing at this ONE door
         // keeps the session scene from re-keying to a follower (the world-join auto-select focus-steal); the
         // reduce half below refuses the selection state itself. The × unfollow clears the gate, restoring both.
         if (is_app_managed_follower(character_id)) return
-        if (character_id === last_published_id) return
         const character = get_state().sui.characters.find((row) => row.id === character_id)
         // An indexed roster row carries explicit membership (`string | null`). Ferry that selection through
         // the world shell's ONE typed-input door so its character-keyed scene remounts with the HUD. An
         // An optimistic row can still have `world_id === undefined`; creation publishes the atomic receipt's
         // settled binding directly, so never invent a confirmed-unbound binding from that transient row.
         if (character?.world_id !== undefined) {
-          last_published_id = character.id
           session_gate_input({
             type: 'character_selected',
             character_id: character.id,

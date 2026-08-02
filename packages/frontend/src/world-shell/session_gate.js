@@ -4,7 +4,12 @@
 // its own PTB (#1714); this edge owns only the singleton store, stale-poll logging, and RPC binding reads.
 
 import { useStore } from 'zustand'
-import { create_session_gate_store, subscribe_stale_poll } from '@aresrpg/world/session_gate'
+import {
+  create_session_gate_store,
+  select_bound_world,
+  select_world_rows,
+  subscribe_stale_poll,
+} from '@aresrpg/world/session_gate'
 
 import { game_log } from '../core/log.js'
 
@@ -62,6 +67,25 @@ export function rebind_world_character(character_id, world_id) {
   if (world_id === undefined) throw new Error(`character ${character_id} has no indexed world binding`)
   session_gate_input({ type: 'character_selected', character_id, world_id })
 }
+
+/**
+ * Ferry the indexed roster feed into the book as roster-grade evidence (#2007). A card's `world_id` is a
+ * CACHED snapshot, so it never overrides an unconfirmed chain-truth write; `undefined` (an optimistic row)
+ * is UNKNOWN and is dropped rather than published as a confirmed-unbound binding.
+ * @param {Array<{ id?: string, world_id?: string | null }>} characters
+ */
+export function observe_roster_bindings(characters) {
+  const rows = (characters ?? [])
+    .filter((card) => card?.id && card.world_id !== undefined)
+    .map((card) => ({ character_id: card.id, world: card.world_id ?? null }))
+  if (rows.length) session_gate_input({ type: 'roster_observed', rows })
+}
+
+/** THE binding answer for one character (`undefined` = unknown, `null` = confirmed unbound). */
+export const bound_world_of = (character_id) => select_bound_world(session_gate_store.getState(), character_id)
+
+/** Member-roster world projection for cross-domain consumers — one book, resolved at decision time. */
+export const world_rows_of = (character_ids) => select_world_rows(session_gate_store.getState(), character_ids)
 
 /** Back to UNKNOWN (wallet/account switch — a stale binding must never leak a controller across accounts). */
 export function reset_world_binding() {

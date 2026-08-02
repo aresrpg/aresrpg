@@ -51,7 +51,7 @@ export async function join_world_action({ character_id, world_id = T62_WORLDS[0]
   // The bind is chain-truth NOW — publish it so the session gate swaps spectate → resident without waiting
   // on the next doc poll (session_gate.js is the one binding home; the indexer catches up behind it). Source
   // 'manual' arms the stale-poll guard: a doc poll returning the pre-travel world during indexer catch-up gets
-  // discarded instead of clobbering this write (session_gate.js's _pending_manual_target).
+  // discarded instead of clobbering this write (the book's unconfirmed chain-truth row).
   publish_world_binding(character_id, world_id, 'manual')
   return out
 }

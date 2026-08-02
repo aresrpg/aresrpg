@@ -9,68 +9,114 @@ export const SCENE_SPECTATE = 'spectate'
 export const SCENE_SESSION = 'session'
 
 /** @typedef {{ type: 'binding_published', character_id: string|null, world: string|null, source: 'manual'|'poll' }} BindingPublishedInput */
+/** @typedef {{ type: 'roster_observed', rows: Array<{ character_id: string, world: string|null }> }} RosterObservedInput */
 /** @typedef {{ type: 'character_selected', character_id: string, world_id: string|null }} CharacterSelectedInput */
 /** @typedef {{ type: 'binding_reset' }} BindingResetInput */
-/** @typedef {BindingPublishedInput|CharacterSelectedInput|BindingResetInput} SessionGateInput */
+/** @typedef {BindingPublishedInput|RosterObservedInput|CharacterSelectedInput|BindingResetInput} SessionGateInput */
 /** @typedef {{ seq: number, character_id: string, target: string|null }} StalePollRow */
+/** Provenance + freshness per binding: WHICH evidence wrote it, and whether a lagging source has caught up. */
+/** @typedef {{ world: string|null, source: 'manual'|'poll'|'roster', confirmed: boolean }} BindingRow */
 /**
  * @typedef {{
  *   character_id: string|null,
  *   world: string|null|undefined,
- *   pending_manual_target: Map<string, string|null>,
+ *   character_world_by_id: Map<string, BindingRow>,
  *   stale_poll: StalePollRow|null,
  *   input: (input: SessionGateInput, now?: number) => void
  * }} SessionGateState
  */
 
+/** THE binding answer for one character: `undefined` = unknown, `null` = confirmed unbound. */
+export function select_bound_world(state, character_id) {
+  if (!character_id) return undefined
+  return state.character_world_by_id.get(character_id)?.world
+}
+
+/** Member-roster projection for cross-domain consumers (group follow): unknown reads as unbound, never invented. */
+export function select_world_rows(state, character_ids) {
+  return (character_ids ?? [])
+    .filter(Boolean)
+    .map((character_id) => ({ character_id, world_id: select_bound_world(state, character_id) ?? null }))
+}
+
+/** Re-derive the selected character's projection from the book — `world` is a VIEW of it, never a second fact. */
+const with_book = (state, book) => {
+  const world = state.character_id ? book.get(state.character_id)?.world : undefined
+  if (book === state.character_world_by_id && world === state.world) return state
+  return { ...state, character_world_by_id: book, world }
+}
+
+const stale_row = (state, character_id, target) => ({
+  ...state,
+  stale_poll: { seq: (state.stale_poll?.seq ?? 0) + 1, character_id, target },
+})
+
 /**
- * Stale-poll reconciliation for a chain-truth write followed by an indexer-lagged poll.
+ * The ONE door every character↔world observation enters — the cached roster feed, the selected character's
+ * independent re-read, the doc poll, and a join receipt all reconcile here instead of in four consumers.
+ * RECEIPT FLOOR: a 'manual' write (chain truth: the join PTB's receipt, creation's atomic bind, a
+ * resolve-time read) arms an unconfirmed row; a lagging observation that DISAGREES with it is discarded
+ * until it agrees, and agreement confirms the row.
  * @param {SessionGateState} state
- * @param {BindingPublishedInput} input
+ * @param {{ character_id: string|null, world: string|null, source: 'manual'|'poll'|'roster' }} observation
  * @returns {SessionGateState}
  */
-function fold_binding_published(state, input) {
-  const id = input.character_id ?? null
-  const world = input.world ?? null
-  if (id && input.source === 'poll' && state.character_id != null && id !== state.character_id)
-    return {
-      ...state,
-      stale_poll: { seq: (state.stale_poll?.seq ?? 0) + 1, character_id: id, target: state.world ?? null },
-    }
-
-  let pending = state.pending_manual_target
-  if (id && input.source === 'poll' && pending.has(id)) {
-    const target = pending.get(id) ?? null
-    if (world !== target)
-      return { ...state, stale_poll: { seq: (state.stale_poll?.seq ?? 0) + 1, character_id: id, target } }
-    pending = new Map(pending)
-    pending.delete(id)
+function fold_observation(state, { character_id, world, source }) {
+  const id = character_id ?? null
+  if (!id) return state
+  const previous = state.character_world_by_id.get(id)
+  if (previous?.source === 'manual' && !previous.confirmed && source !== 'manual') {
+    // #708 — a lagging snapshot must never lower a chain-truth write back to its pre-travel value. A poll
+    // discarded this way is the one honest log row; the batched roster feed is a cache by construction.
+    if (world !== previous.world)
+      return source === 'poll' ? stale_row(state, id, previous.world) : state
+    return with_book(state, new Map(state.character_world_by_id).set(id, { ...previous, confirmed: true }))
   }
-  if (id && input.source === 'manual' && (!pending.has(id) || pending.get(id) !== world)) {
-    pending = new Map(pending)
-    pending.set(id, world)
-  }
-  if (state.character_id === id && state.world === world && pending === state.pending_manual_target) return state
-  return { ...state, character_id: id, world, pending_manual_target: pending }
+  const row = { world, source, confirmed: source !== 'manual' }
+  if (previous && previous.world === row.world && previous.source === row.source && previous.confirmed === row.confirmed)
+    return state
+  return with_book(state, new Map(state.character_world_by_id).set(id, row))
 }
 
 /** @param {SessionGateState} state @param {SessionGateInput} input @returns {SessionGateState} */
 export function reduce_session_gate(state, input) {
   switch (input.type) {
-    case 'binding_published':
-      return fold_binding_published(state, input)
-    case 'character_selected':
-      return fold_binding_published(state, {
-        type: 'binding_published',
+    case 'binding_published': {
+      const id = input.character_id ?? null
+      // BOOTSTRAP ONLY: an unselected session adopts the first binding it learns. Once a character IS
+      // selected, no observation about ANOTHER character re-keys the live session — an owned alt's
+      // world-join receipt is a fact about the alt, never a selection (#509's focus-steal class, closed at
+      // the fact's own door instead of at each publisher).
+      const adopted = id && state.character_id == null ? { ...state, character_id: id } : state
+      return fold_observation(adopted, { character_id: id, world: input.world ?? null, source: input.source })
+    }
+    case 'roster_observed': {
+      let next = state
+      for (const row of input.rows ?? [])
+        next = fold_observation(next, {
+          character_id: row?.character_id ?? null,
+          world: row?.world ?? null,
+          source: 'roster',
+        })
+      return next
+    }
+    case 'character_selected': {
+      // The card's `world_id` is a CACHED snapshot — it enters as roster-grade evidence, so a reselect can
+      // never clobber a fresher chain-truth binding for the same character (the guard every caller used to
+      // hand-roll now lives in the book).
+      const selected = state.character_id === input.character_id ? state : { ...state, character_id: input.character_id }
+      const rekeyed = selected === state ? state : with_book(selected, selected.character_world_by_id)
+      return fold_observation(rekeyed, {
         character_id: input.character_id,
         world: input.world_id ?? null,
-        source: 'manual',
+        source: 'roster',
       })
+    }
     case 'binding_reset': {
       const blank =
         state.character_id === null &&
         state.world === undefined &&
-        state.pending_manual_target.size === 0 &&
+        state.character_world_by_id.size === 0 &&
         state.stale_poll === null
       return blank
         ? state
@@ -78,7 +124,7 @@ export function reduce_session_gate(state, input) {
             ...state,
             character_id: null,
             world: undefined,
-            pending_manual_target: new Map(),
+            character_world_by_id: new Map(),
             stale_poll: null,
           }
     }
@@ -98,7 +144,7 @@ export function create_session_gate_store() {
   return createStore((set, get) => ({
     character_id: null,
     world: undefined,
-    pending_manual_target: new Map(),
+    character_world_by_id: new Map(),
     stale_poll: null,
     input: make_session_gate_input(set, get),
   }))

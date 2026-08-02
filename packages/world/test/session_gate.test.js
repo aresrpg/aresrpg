@@ -13,6 +13,8 @@ import {
   reduce_session_gate,
   resolved_mode,
   scene_target,
+  select_bound_world,
+  select_world_rows,
   subscribe_stale_poll,
 } from '../src/session_gate.js'
 
@@ -88,8 +90,53 @@ describe('settled binding atom', () => {
     gate.publish(CHAR, WORLD_B, 'poll')
     expect(gate.store.getState().world).toBe(WORLD)
     gate.publish(CHAR, WORLD, 'poll')
-    expect(gate.store.getState().pending_manual_target.has(CHAR)).toBe(false)
+    expect(gate.store.getState().character_world_by_id.get(CHAR).confirmed).toBe(true)
     gate.publish(CHAR, WORLD_B, 'poll')
+    expect(gate.store.getState().world).toBe(WORLD_B)
+  })
+
+  // ── THE BOOK (#2007 binding fold) — one character-keyed home; every world fact enters through this door.
+  it('never lets an owned alt world-join re-key the selected session', () => {
+    const gate = make_gate()
+    gate.input({ type: 'character_selected', character_id: CHAR, world_id: WORLD })
+    // group follow's join_world_action publishes chain truth for a FOLLOWER alt, not for the selected one.
+    gate.publish(OTHER_CHAR, WORLD_B, 'manual')
+    expect(gate.store.getState()).toMatchObject({ character_id: CHAR, world: WORLD })
+    expect(select_bound_world(gate.store.getState(), OTHER_CHAR)).toBe(WORLD_B)
+  })
+
+  it('folds the roster feed into the same book the selected re-read writes, receipt floored', () => {
+    const gate = make_gate()
+    gate.input({ type: 'character_selected', character_id: CHAR, world_id: WORLD })
+    gate.publish(CHAR, WORLD_B, 'manual') // join receipt — chain truth
+    // the cached roster snapshot still carries the pre-travel world for the same character
+    gate.input({ type: 'roster_observed', rows: [{ character_id: CHAR, world: WORLD }] })
+    expect(select_bound_world(gate.store.getState(), CHAR)).toBe(WORLD_B)
+    expect(gate.store.getState().world).toBe(WORLD_B)
+  })
+
+  it('answers a member roster from the book, unknown characters included', () => {
+    const gate = make_gate()
+    gate.input({
+      type: 'roster_observed',
+      rows: [
+        { character_id: CHAR, world: WORLD },
+        { character_id: OTHER_CHAR, world: null },
+      ],
+    })
+    expect(select_world_rows(gate.store.getState(), [CHAR, OTHER_CHAR, 'unknown'])).toEqual([
+      { character_id: CHAR, world_id: WORLD },
+      { character_id: OTHER_CHAR, world_id: null },
+      { character_id: 'unknown', world_id: null },
+    ])
+  })
+
+  it('a reselect of the character already active never clobbers a fresher chain-truth binding', () => {
+    const gate = make_gate()
+    gate.input({ type: 'character_selected', character_id: CHAR, world_id: WORLD })
+    gate.publish(CHAR, WORLD_B, 'manual')
+    // every caller (PartyFrame, CharacterSwitcher, boot_roster) reselects with the CACHED card world
+    gate.input({ type: 'character_selected', character_id: CHAR, world_id: WORLD })
     expect(gate.store.getState().world).toBe(WORLD_B)
   })
 
@@ -108,7 +155,7 @@ describe('settled binding atom', () => {
     expect(gate.store.getState()).toMatchObject({ character_id: OTHER_CHAR, world: WORLD_B })
   })
 
-  it('does not mutate its pending map and skips an unchanged write', () => {
+  it('does not mutate its binding book and skips an unchanged write', () => {
     const state = create_session_gate_store().getState()
     const next = reduce_session_gate(state, {
       type: 'binding_published',
@@ -116,7 +163,7 @@ describe('settled binding atom', () => {
       world: WORLD,
       source: 'manual',
     })
-    expect(next.pending_manual_target).not.toBe(state.pending_manual_target)
+    expect(next.character_world_by_id).not.toBe(state.character_world_by_id)
     const settled = reduce_session_gate(next, {
       type: 'binding_published',
       character_id: CHAR,
