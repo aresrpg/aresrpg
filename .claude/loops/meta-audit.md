@@ -27,12 +27,13 @@ evidence about whether each loop still touches reality (its anchor), not whether
 6. **Deletion pass:** does every loop still pay rent? A loop whose issues nobody has acted on in
    two cycles is either mis-targeted or theater — retune it or propose its deletion.
 7. **Hardening assertion (mechanical, no judgment):** every rubric in `.claude/loops/` — this one
-   included — must carry the three hardening clauses below: the ROW BAR, the SELF-CLEANING leg,
-   and FIX-FIRST. Enumerate the directory, check each file, and treat a loop that ships without
-   them as a meta-audit FINDING (the rubric is unhardened until it carries them; a loop rubric
-   added without the clauses is the drift this leg exists to catch). Then measure the clauses in
-   OUTPUT, per loop: rows filed that fail the bar, and open rows the edge tip has already fixed —
-   both are hardening failures of the loop that owns them, not of the board.
+   included — must carry the four hardening clauses below: the ROW BAR, the SELF-CLEANING leg,
+   FIX-FIRST, and the MATERIALITY VALVE. Enumerate the directory, check each file, and treat a
+   loop that ships without them as a meta-audit FINDING (the rubric is unhardened until it
+   carries them; a loop rubric added without the clauses is the drift this leg exists to catch).
+   Then measure the clauses in OUTPUT, per loop: rows filed that fail the bar, and open rows the
+   edge tip has already fixed — both are hardening failures of the loop that owns them, not of
+   the board.
 
 ## Output contract
 - **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's checklist directly, never as new issues.

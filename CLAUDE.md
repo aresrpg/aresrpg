@@ -116,10 +116,10 @@ assistant the same way they apply to a human contributor. Two passes are advised
   working diff. It mirrors the same bar `bun run lint` and human review already apply, so issues
   surface before review instead of during it.
 - **While working a ticket**, a lightweight maintenance pass may file **one issue per
-  drift/smell finding** encountered along the way — a stale comment, a doc that no longer
-  matches the code, a small `docs/CODE_LAW.md` violation just outside your diff. File it, don't
-  fix it: an assistant fixing things outside its ticket's scope is a bigger review burden than
-  the smell itself.
+  drift/smell finding** encountered along the way — when the finding passes the materiality bar
+  in `ACCEPTED_DEBT.md`; findings in that file's accepted classes below the bar are discarded
+  unwritten. File it, don't fix it: an assistant fixing things outside its ticket's scope is a
+  bigger review burden than the smell itself.
 
 Two rules bind every session, whatever prompted it:
 

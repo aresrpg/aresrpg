@@ -12,7 +12,8 @@ rubric is committed here; the loop's findings land on the board, never in code.
 
 **THE RULE:** a new loop names, in one line, the concern no existing loop owns AND the gate that
 will eventually replace it — no orphan concerns, no immortal prose. Redundant loops merge; every
-loop is a candidate for graduation into CI. It also ships the three hardening clauses every
-rubric here carries — the ROW BAR, the SELF-CLEANING leg, FIX-FIRST — because a loop that files
-theory, files stale, or never closes its own rows submerges the board instead of draining it.
+loop is a candidate for graduation into CI. It also ships the four hardening clauses every
+rubric here carries — the ROW BAR, the SELF-CLEANING leg, FIX-FIRST, the MATERIALITY VALVE —
+because a loop that files theory, files stale, files immaterial, or never closes its own rows
+submerges the board instead of draining it.
 The meta-audit loop asserts their presence, so a rubric added without them is a finding.
