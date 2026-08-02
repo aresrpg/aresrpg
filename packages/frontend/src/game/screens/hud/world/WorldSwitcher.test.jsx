@@ -30,10 +30,10 @@ let doc = /** @type {{ id: string, world: string | null, level: number } | null}
 const spies = [
   spyOn(React, 'useState').mockImplementation((initial) => [initial, () => {}]),
   spyOn(react_i18next, 'useTranslation').mockImplementation(() => ({ t: translate })),
-  spyOn(game_store, 'use_game_state').mockImplementation((selector) =>
+  spyOn(game_store, 'useGameState').mockImplementation((selector) =>
     selector({ selected_character_id: '0xcharacter' })
   ),
-  spyOn(rpc_view, 'use_rpc_view').mockImplementation((_fetcher, options) =>
+  spyOn(rpc_view, 'useRpcView').mockImplementation((_fetcher, options) =>
     options?.interval_ms === 15000
       ? { data: doc, refetch: () => {} }
       : // the LIVE world catalog (world_catalog.js rows: chain gate + biome, receipt label)

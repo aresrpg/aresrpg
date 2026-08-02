@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { SectionDivider, SectionTitle, ItemDetailView } from '../../components/entity_display'
 import { ItemImage } from '../../components/items'
 import { Tooltip } from '../../game/screens/hud/Tooltip.jsx'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 
 import { encyclopedia_item_asset } from './encyclopedia_assets'
 import { pet_food_rows } from './pet_foods'
@@ -82,7 +82,7 @@ export function PetFoodSection({
   on_select_item: (id: string) => void
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const rows = useMemo(() => pet_food_rows(food_slugs, items), [food_slugs, items])
   if (rows.length === 0) return null
   return (

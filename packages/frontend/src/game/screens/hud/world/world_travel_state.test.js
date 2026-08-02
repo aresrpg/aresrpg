@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit coverage for the world-travel pure derivations. The panel derivation is the
 // REGRESSION seam for the "HERE bound to the wrong character" bug: a doc from another character (the exact
-// state use_rpc_view's keep-last-good serves across a selection switch) must never bind the location line.
+// state useRpcView's keep-last-good serves across a selection switch) must never bind the location line.
 
 import { describe, expect, test } from 'bun:test'
 

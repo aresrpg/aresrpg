@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { Hammer, Loader2 } from 'lucide-react'
 import { slugs } from 'virtual:item_catalog'
 
-import { use_game_state } from '../game/store.js'
+import { useGameState } from '../game/store.js'
 import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { crush_preview, crush_item } from '../world-shell/crush_actions.js'
@@ -252,7 +252,7 @@ export function CrushMenu({
  */
 function CrushConfirmModal({ item, onClose }: { item: any; onClose: () => void }) {
   const { t } = useTranslation()
-  const character_id = use_game_state((s: any) => s.selected_character_id)
+  const character_id = useGameState((s: any) => s.selected_character_id)
   const [busy, set_busy] = useState(false)
   // ORPHAN: the item's template was deleted on-chain — crush is uncallable until
   // the `crush_orphan` door ships, so the modal shows the "removed from the game" notice + a disabled button.

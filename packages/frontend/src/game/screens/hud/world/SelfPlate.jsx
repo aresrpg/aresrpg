@@ -16,8 +16,8 @@ import { useTranslation } from 'react-i18next'
 import { character_max_hp } from '../../../../chain/read_character.js'
 import { experience_to_level, xp_progress } from '@aresrpg/sdk/experience'
 
-import { use_projected_hp } from '../../../../hooks/use_projected_hp.js'
-import { use_fight, use_game_state } from '../../../store.js'
+import { useProjectedHp } from '../../../../hooks/use_projected_hp.js'
+import { useFight, useGameState } from '../../../store.js'
 import { use_expedition, STATUS_ACTIVE } from '../../../../roster/store'
 import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
@@ -25,7 +25,7 @@ import { world_fight_view } from '../../../../world-shell/fight_session_scope.js
 const selected_character = (state, my_entity_id) =>
   state.sui.characters.find((character) => character.id === (my_entity_id ?? state.selected_character_id))
 
-// `use_game_state` snapshots are compared with Object.is. Keep the rich row selector for rendering, plus this
+// `useGameState` snapshots are compared with Object.is. Keep the rich row selector for rendering, plus this
 // primitive HP revision so a source that preserves a hydrated row's identity still repaints the integer.
 const character_hp_revision = (state, my_entity_id) => {
   const character = selected_character(state, my_entity_id)
@@ -54,7 +54,7 @@ let last_xp_pct = /** @type {number | null} */ (null)
  * toggle forces the browser to replay the keyframes even on a back-to-back hit). @param {number} signal
  * @returns {boolean}
  */
-function use_oneshot(signal) {
+function useOneshot(signal) {
   const [on, set_on] = useState(false)
   useEffect(() => {
     if (signal === 0) return // no event yet
@@ -68,10 +68,10 @@ function use_oneshot(signal) {
 /** @returns {import('react').ReactElement} */
 export function SelfPlate() {
   const { t } = useTranslation()
-  const fight = use_fight(world_fight_view)
+  const fight = useFight(world_fight_view)
   const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
-  const character = use_game_state((state) => selected_character(state, fight?.my_entity_id ?? null))
-  use_game_state((state) => character_hp_revision(state, fight?.my_entity_id ?? null))
+  const character = useGameState((state) => selected_character(state, fight?.my_entity_id ?? null))
+  useGameState((state) => character_hp_revision(state, fight?.my_entity_id ?? null))
   const expedition = use_expedition((s) => s.expedition)
   const run = !me && expedition?.status === STATUS_ACTIVE ? expedition : null
 
@@ -81,7 +81,7 @@ export function SelfPlate() {
   // (the lobby), project the on-chain current_hp so the plate reads honest HP, not stale full. The chain-exact
   // max (character_max_hp) pairs with current_hp's own scale — see read_character.js re: not get_max_health.
   const projection_live = !me && !run && Boolean(character?._type)
-  const projected_health = use_projected_hp(character, projection_live)
+  const projected_health = useProjectedHp(character, projection_live)
   const health = me?.health ?? run?.carried_hp ?? projected_health ?? character?.health ?? 0
   const max_health = me ? me.health_max : run ? run.max_hp : character?._type ? character_max_hp(character) : 0
   const hp_pct = max_health > 0 ? Math.max(0, Math.min(100, (health / max_health) * 100)) : 0
@@ -99,7 +99,7 @@ export function SelfPlate() {
     if (health < prev_hp.current) set_hit_signal((n) => n + 1)
     prev_hp.current = health
   }, [health])
-  const shaking = use_oneshot(hit_signal)
+  const shaking = useOneshot(hit_signal)
 
   // ── XP pulse: fire when the gold sliver GROWS, comparing against the module-persisted last value so the
   // common case (XP awarded during a fight → plate remounts wider) still blooms once.
@@ -108,7 +108,7 @@ export function SelfPlate() {
     if (last_xp_pct != null && xp_pct > last_xp_pct) set_xp_signal((n) => n + 1)
     last_xp_pct = xp_pct
   }, [xp_pct])
-  const xp_pulsing = use_oneshot(xp_signal)
+  const xp_pulsing = useOneshot(xp_signal)
 
   return (
     <div className={`gw-selfplate gw-panel${shaking ? ' gw-selfplate--hit' : ''}`}>

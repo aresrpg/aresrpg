@@ -35,7 +35,7 @@ import { SpellHoverTip } from '../game/screens/hud/spell-hover-tip.jsx'
 import { SpellRow, spell_copy } from '../game/screens/hud/spell_row.jsx'
 import { StatIdentity } from '../game/screens/hud/stat_row.jsx'
 import { Tooltip } from '../game/screens/hud/Tooltip.jsx'
-import { use_item_corpus } from '../pages/encyclopedia/item_corpus'
+import { useItemCorpus } from '../pages/encyclopedia/item_corpus'
 
 import { character_spell_rows, spell_level_options, type GrimoireRow } from './build_view'
 import { equipment_aggregate, resolve_loadout } from './content.js'
@@ -155,7 +155,7 @@ function BudgetHeader({
 function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
   const { t } = useTranslation()
   const input = use_simulator((state) => state.input)
-  const { by_id } = use_item_corpus()
+  const { by_id } = useItemCorpus()
   const budget = stat_budget(character.level)
   const { items } = resolve_loadout(by_id, character.loadout)
   const equipment_stats = equipment_aggregate(items)

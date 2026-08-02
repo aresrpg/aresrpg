@@ -7,7 +7,7 @@ import { slugs } from 'virtual:item_catalog'
 
 import { type ItemInfo } from '../../types/chain'
 import { use_marketplace_chain, type ListableItem, type ListableCharacter } from '../../stores/marketplace_chain'
-import { use_game_state } from '../../game/store.js'
+import { useGameState } from '../../game/store.js'
 import { get_level } from '../../experience'
 import { class_color } from '../../constants/class_colors'
 import { ItemSlot } from '../items'
@@ -102,7 +102,7 @@ export function InventoryPanel({
 }) {
   const { t } = useTranslation()
   const { listable, listable_loading, listable_characters } = use_marketplace_chain()
-  const characters = use_game_state((state) => state.sui.characters)
+  const characters = useGameState((state) => state.sui.characters)
 
   const sell_listable = useMemo(() => sell_listable_items(listable, characters), [characters, listable])
   const items = useMemo(() => aggregate_listable(sell_listable), [sell_listable])

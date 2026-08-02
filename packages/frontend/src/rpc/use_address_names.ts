@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// use_address_names — D52 SuiNS reverse resolution for the frontend, one call per PANEL, never per row.
+// useAddressNames — D52 SuiNS reverse resolution for the frontend, one call per PANEL, never per row.
 //
-// Unlike the live §14 views (use_rpc_view's continuous short-poll), SuiNS names change rarely — this is
+// Unlike the live §14 views (useRpcView's continuous short-poll), SuiNS names change rarely — this is
 // a one-shot resolve per distinct address SET, re-running only when that set's membership changes, not
 // on an interval. A caller passes the WHOLE list of addresses it currently renders (e.g. every row in a
 // panel) so they resolve in ONE /v1/names round trip; get_names' own dedup + rpc_get's LRU (rpc/client.ts)
@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { get_names } from './client'
 import type { RpcNames } from './views'
 
-export function use_address_names(addresses: (string | null | undefined)[]): RpcNames {
+export function useAddressNames(addresses: (string | null | undefined)[]): RpcNames {
   const key = [...new Set(addresses.filter((a): a is string => !!a))].sort().join(',')
   const [names, set_names] = useState<RpcNames>({})
 

@@ -9,7 +9,7 @@
 //   (2) A FROZEN SNAPSHOT. The roster was `useMemo(simulator_mob_roster, [])` over a mutable module object,
 //       so even a corpus that DID land could never reach the mounted picker.
 //
-// WHAT DRIVES WHAT: `use_mob_picker_content` is the picker's whole content brain — MobPicker is a
+// WHAT DRIVES WHAT: `useMobPickerContent` is the picker's whole content brain — MobPicker is a
 // pass-through shell over it, and renders through `createPortal`, which this repo's SSR harness cannot
 // resolve (same split rationale as PetFeedModal.test.jsx). The corpus store is driven the way every
 // store-backed component test here drives one (LevelUp.test.jsx): the hook is spied, because zustand's
@@ -27,7 +27,7 @@ import fixture from '../pages/encyclopedia/world_corpus.fixture.json'
 import * as world_corpus from '../pages/encyclopedia/world_corpus'
 import type { WorldCorpusBlob } from '../pages/encyclopedia/world_corpus'
 
-import { simulator_mob_roster, use_mob_picker_content } from './MobPicker'
+import { simulator_mob_roster, useMobPickerContent } from './MobPicker'
 
 const test_i18n = i18next.createInstance()
 void test_i18n.init({
@@ -45,7 +45,7 @@ const corpus_state = (blob?: WorldCorpusBlob) => {
 
 /** Prints exactly what the picker hands its modal — the empty line, then one row per listed mob. */
 function PickerContent() {
-  const { items, empty_label } = use_mob_picker_content()
+  const { items, empty_label } = useMobPickerContent()
   return (
     <div>
       <span id="empty">{empty_label ?? ''}</span>

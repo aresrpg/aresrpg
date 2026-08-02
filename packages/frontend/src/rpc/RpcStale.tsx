@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // RpcStale — the shared "this data isn't live right now" chip (SPEC §14 UI-DATA LAW).
 //
-// The one visible affordance the no-silent-stale rule demands: any surface reading through use_rpc_view drops
+// The one visible affordance the no-silent-stale rule demands: any surface reading through useRpcView drops
 // this in, so a failed poll is ALWAYS shown, never hidden behind a value that merely looks fresh. Gothic
 // terminal tokens (amber = degraded, per the design system's status palette) — tiny, uppercase, no radius.
 //

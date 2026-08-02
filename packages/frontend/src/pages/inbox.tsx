@@ -7,7 +7,7 @@ import { Inbox, Loader2, Wallet as WalletGlyph, LogOut } from 'lucide-react'
 import { use_auth, type AuthState } from '../auth'
 import { use_inbox } from '../stores/inbox'
 import { WalletConnectModal, is_real_wallet_session } from '../components/vault_connect'
-import { GiftCard, InboxUnavailable, use_inbox_polling } from '../components/marketplace/inbox_panel'
+import { GiftCard, InboxUnavailable, useInboxPolling } from '../components/marketplace/inbox_panel'
 import { truncate_address } from '../utils/address'
 
 // EXTERNAL /inbox — the standalone claim page for NON-players: ONE /inbox page w/ wallet connect.
@@ -19,7 +19,7 @@ import { truncate_address } from '../utils/address'
 function InboxList() {
   const { t } = useTranslation()
   const { incoming, outgoing, loading, loaded_once, error, busy_id, claim, recall } = use_inbox()
-  use_inbox_polling()
+  useInboxPolling()
 
   if (loading && !loaded_once)
     return (

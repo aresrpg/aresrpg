@@ -10,7 +10,7 @@ import { useMemo } from 'react'
 
 import { my_action_slot } from '@aresrpg/fight/project'
 
-import { use_fight, use_fight_view, use_game_state } from '../../store.js'
+import { useFight, useFightView, useGameState } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { compute_target_prediction, prediction_memo_key } from './target_prediction_core.js'
 
@@ -25,13 +25,13 @@ export { compute_target_prediction, resolve_dungeon_ref } from './target_predict
  * of what this preview depends on, never a list re-assembled here.
  * @returns {ReturnType<typeof compute_target_prediction>}
  */
-export const use_target_prediction = () => {
-  const fight = use_fight_view()
-  const hover = use_game_state((state) => state.fight_hover)
+export const useTargetPrediction = () => {
+  const fight = useFightView()
+  const hover = useGameState((state) => state.fight_hover)
   const dungeon = use_dungeon((state) => state.dungeon)
   // The slot, not a proxy for it: a scalar off the ONE derivation, so the memo re-runs on exactly the folds
   // that change this preview (a drafted cast, a landed receipt, my turn restarting) and on no other.
-  const slot = use_fight(my_action_slot)
+  const slot = useFight(my_action_slot)
 
   const args = { fight, hover, dungeon, slot }
   // ONE derivation, ONE key: the memo key comes from the same module as the derivation and is built from the same

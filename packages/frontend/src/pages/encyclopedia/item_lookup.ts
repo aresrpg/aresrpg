@@ -16,18 +16,18 @@
 // carries both, a bag/listing item carries the slug, a consumable's roll table carries whatever it was
 // authored with. The two key spaces cannot collide — an object id is 0x-hex, an art slug is an authored word.
 //
-// The corpus module is imported as a NAMESPACE deliberately: `use_item_corpus` is the ONE seam this repo's
+// The corpus module is imported as a NAMESPACE deliberately: `useItemCorpus` is the ONE seam this repo's
 // SSR test harness can spy for the whole class (same reason simulator/LoadoutSection.tsx does it), so every
 // surface built on this lookup stays drivable through a cold corpus and a landed one.
 
 import { useCallback, useMemo } from 'react'
 
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 
 import * as item_corpus from './item_corpus'
 import type { CorpusItem } from './item_corpus'
 
-/** A published row in the shape `use_template_t` reads: the lazy item-description catalog is keyed by the
+/** A published row in the shape `useTemplateT` reads: the lazy item-description catalog is keyed by the
  *  authored art slug, which on a published row is `item_type`. */
 export type LocalizableItem = CorpusItem & { desc_key: string }
 
@@ -48,9 +48,9 @@ export type ItemLookup = {
   loading: boolean
 }
 
-export function use_item_lookup(): ItemLookup {
-  const tt = use_template_t()
-  const { items, loading } = item_corpus.use_item_corpus()
+export function useItemLookup(): ItemLookup {
+  const tt = useTemplateT()
+  const { items, loading } = item_corpus.useItemCorpus()
 
   const index = useMemo(() => {
     const map = new Map<string, LocalizableItem>()

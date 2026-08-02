@@ -10,7 +10,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state, context } from '../../../store.js'
+import { useGameState, context } from '../../../store.js'
 import { push_event_toast } from '../../../core/toast.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { use_prompt_stack } from '../../../../world-shell/prompt_stack.js'
@@ -18,14 +18,14 @@ import { use_prompt_stack } from '../../../../world-shell/prompt_stack.js'
 /** @returns {import('react').ReactElement | null} */
 export function NpcPrompt() {
   const { t } = useTranslation()
-  const prompt = use_game_state((s) => s.npc_prompt)
-  const modal_open = use_game_state((s) => s.dungeons_modal)
-  const fight_mode = use_game_state((s) => s.fight_mode)
+  const prompt = useGameState((s) => s.npc_prompt)
+  const modal_open = useGameState((s) => s.dungeons_modal)
+  const fight_mode = useGameState((s) => s.fight_mode)
   // The SELECTED character — the one the NPC interaction would actually act on — gates the prompt: a
   // character already out exploring (staked) or escrowed in ANOTHER dungeon can't enter a new one
   // (dungeon::join_dungeon MoveAborts, kiosk::borrow_val: not in the kiosk). `null` (nothing selected yet)
   // never gates — there's nothing to be honest ABOUT.
-  const character = use_game_state((s) => s.sui.characters.find((c) => c.id === s.selected_character_id))
+  const character = useGameState((s) => s.sui.characters.find((c) => c.id === s.selected_character_id))
   // AMENDMENT: the RESUME/ABANDON stuck panel is DELETED —
   // a seated character NEVER sees the lobby (boot/join auto-enter the cave via cave_session); LEAVE
   // DUNGEON in-cave is the single exit. If auto-enter fails, the gate below fails LOUD with a toast.

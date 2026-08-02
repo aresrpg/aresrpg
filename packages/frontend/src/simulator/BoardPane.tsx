@@ -28,7 +28,7 @@ import { board_of, type SimBoard } from './board'
 import { cell_intent_of, setup_scene_of } from './board_paint'
 import { CharacterPicker } from './CharacterPicker'
 import { MobModal } from './MobModal'
-import { use_mob_index } from './MobPicker'
+import { useMobIndex } from './MobPicker'
 import { use_simulator } from './store'
 
 const GOLD = '#c8963c'
@@ -113,7 +113,7 @@ export function SimulatorBoardPane() {
   const board = useMemo(() => board_of(seed, anchor_nonce), [seed, anchor_nonce])
 
   // The corpus is a boot-time blob: an empty index simply means it has not landed (or is unpublished).
-  const mob_of = use_mob_index()
+  const mob_of = useMobIndex()
   // The SETUP scene, unconditionally — it is only ever shown in setup. The fight phase does not get a
   // thinner version of it (#927): a half-erased setup pass is still a second writer on the fight's board, so
   // the painter erases itself WHOLE at the handoff (mount.js `unpaint`) and this memo has one job again.

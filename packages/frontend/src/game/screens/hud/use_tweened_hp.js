@@ -32,7 +32,7 @@ export const hp_tween_step = (from, to, elapsed, duration = HP_TWEEN_MS) => {
  * @param {number} target @param {unknown} [key]
  * @returns {number} the value to render
  */
-export function use_tweened_hp(target, key) {
+export function useTweenedHp(target, key) {
   const [display, set_display] = useState(target)
   const from = useRef(target)
   const prev_key = useRef(key)

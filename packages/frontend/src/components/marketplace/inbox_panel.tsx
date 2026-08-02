@@ -96,7 +96,7 @@ export function GiftCard({
 }
 
 /** Poll the connected address's inbox on an interval + on focus; first load is silent (seeds the seen set). */
-export function use_inbox_polling() {
+export function useInboxPolling() {
   const address = use_auth((s) => s.address)
   useEffect(() => {
     if (!address) return
@@ -119,7 +119,7 @@ export function use_inbox_polling() {
 export function InboxPanel() {
   const { t } = useTranslation()
   const { incoming, outgoing, loading, loaded_once, error, busy_id, claim, recall } = use_inbox()
-  use_inbox_polling()
+  useInboxPolling()
 
   if (loading && !loaded_once) {
     return (

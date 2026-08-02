@@ -19,7 +19,7 @@ import { useMemo } from 'react'
 import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables.js'
 import { ITEM_STAT_KEY_MAP } from '../../chain/read_templates.js'
 import { get_encyclopedia } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 import type { RpcEncyclopediaItem } from '../../rpc/views'
 
 /** One published item template. `item_type` is the authored art slug (the icon key every item surface
@@ -27,7 +27,7 @@ import type { RpcEncyclopediaItem } from '../../rpc/views'
 export type CorpusItem = {
   id: string
   name: string
-  /** The published EN description (chain Display carries EN only — the locale overlay is `use_template_t`'s
+  /** The published EN description (chain Display carries EN only — the locale overlay is `useTemplateT`'s
    *  job, keyed by the authored art slug). `''` for a template that authors none. */
   description: string
   category: string
@@ -84,8 +84,8 @@ export type ItemCorpus = {
 
 /** The live corpus, subscribed. One shared app-lifetime read (the client caches `encyclopedia:all`), so a
  *  consumer rides the same fetch the encyclopedia already made. */
-export function use_item_corpus(): ItemCorpus {
-  const { data, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+export function useItemCorpus(): ItemCorpus {
+  const { data, loading } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
   const items = useMemo(() => item_corpus_from_v1(data?.items), [data])
   const by_id = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
   return { items, by_id, loading }

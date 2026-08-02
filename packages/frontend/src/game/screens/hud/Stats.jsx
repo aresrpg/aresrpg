@@ -15,12 +15,12 @@ import { get_sdk } from '../../../chain/sdk'
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
 import { get_characters, rpc_get } from '../../../rpc/client'
 import { RpcStale } from '../../../rpc/RpcStale'
-import { use_rpc_view } from '../../../rpc/use_view'
+import { useRpcView } from '../../../rpc/use_view'
 import { kiosk_for_character } from '../../../world-shell/kiosk_resolve.js'
 import { mark_ui_updated, run_tx } from '../../../world-shell/tx.js'
 import { use_toast } from '../../../toast'
 
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { humanize_tx_error } from '../../core/abort_copy.js'
 import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
@@ -101,7 +101,7 @@ export const clear_confirmed_character = (id, expected) =>
     delete confirmed_characters[id]
     return { ...current, confirmed_characters }
   })
-const use_allocation_session = () =>
+const useAllocationSession = () =>
   useSyncExternalStore(subscribe_allocation_session, allocation_session_snapshot, allocation_session_snapshot)
 
 export const empty_allocation = () => Object.fromEntries(PRIMARY_KEYS.map((key) => [key, 0]))
@@ -224,7 +224,7 @@ const class_title = (t, class_id) => {
 
 /** House-system actions, exported for DOM-less disabled-state proofs. */
 export function AllocationActions({ t, has_pending, can_confirm, on_reset, on_confirm }) {
-  const { tx_pending } = use_allocation_session()
+  const { tx_pending } = useAllocationSession()
   return (
     <div className="stats__assign-actions flex gap-2">
       <button
@@ -254,8 +254,8 @@ const bar_pct = (n) => Math.max(0, Math.min(100, n))
 /** @returns {import('react').JSX.Element} */
 export function Stats() {
   const { t } = useTranslation()
-  const characters = use_game_state((s) => s.sui.characters)
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const characters = useGameState((s) => s.sui.characters)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
   const selected_character_id_ref = useRef(selected_character_id)
   selected_character_id_ref.current = selected_character_id
 
@@ -265,7 +265,7 @@ export function Stats() {
   )
 
   // /v1 is the stat/points/HP display source; the hook visibly reports stale/offline data.
-  const character_view = use_rpc_view(
+  const character_view = useRpcView(
     async (signal) => {
       const rows = selected_character_id ? await get_characters({ id: selected_character_id }, signal) : []
       if (!rows[0]) throw new Error('character document unavailable')
@@ -279,7 +279,7 @@ export function Stats() {
     [store_character, character_view.data]
   )
   // Hold the confirmed projection until /v1 catches up, so indexer lag cannot restore spent points.
-  const { confirmed_characters, tx_pending } = use_allocation_session()
+  const { confirmed_characters, tx_pending } = useAllocationSession()
   const confirmed_character = confirmed_characters[selected_character_id] ?? null
   const character =
     confirmed_character?.id === selected_character_id && documented_character

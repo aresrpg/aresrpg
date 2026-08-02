@@ -32,7 +32,7 @@ const state = {
   level_up: null,
   fight_result: null,
 }
-const spies = [spyOn(game_store, 'use_game_state').mockImplementation((selector) => selector(state))]
+const spies = [spyOn(game_store, 'useGameState').mockImplementation((selector) => selector(state))]
 
 const { JobLevelUp } = await import('./JobLevelUp.jsx')
 
@@ -63,7 +63,7 @@ describe('JobLevelUp — issue #369 pair: opaque ground + no auto-dismiss', () =
 // the card has an IN-FLIGHT state — and cache law says absence is not emptiness: silently omitting the
 // section while the read is in flight tells the player their level-up opened nothing.
 //
-// SSR renders the first paint (renderToStaticMarkup never runs `useEffect`, so use_rpc_view is exactly at
+// SSR renders the first paint (renderToStaticMarkup never runs `useEffect`, so useRpcView is exactly at
 // its pre-fetch state) — which is precisely the moment the omission would have lied.
 describe('JobLevelUp — the recipe unlock list is live, and honest while it loads (#800)', () => {
   test('a craft job level-up shows a LOADING recipe row on first paint, never a silent omission', () => {

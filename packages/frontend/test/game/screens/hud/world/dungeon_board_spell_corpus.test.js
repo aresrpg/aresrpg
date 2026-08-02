@@ -49,7 +49,7 @@ test('DungeonBoard mounted before a delayed corpus publishes the populated spell
     set_spell_corpus_for_test([delayed_spell])
     expect(board.hand()).toEqual(['delayed_strike'])
 
-    expect(dungeon_board_source).toContain('const spell_corpus = use_spell_corpus()')
+    expect(dungeon_board_source).toContain('const spell_corpus = useSpellCorpus()')
     expect(dungeon_board_source).toMatch(
       /useMemo\(\s*\(\) => resolve_class_spells\(my_class, my_level\),\s*\[my_class, my_level, spell_corpus\]\s*\)/
     )

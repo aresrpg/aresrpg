@@ -14,7 +14,7 @@
 //   FightResult · FightSummary        (the result cards, gated on their own store slices)
 //
 // So the binding is: mount those same components, in the same layer class, gated by the same phase machine
-// (`use_fight_phase` → `should_mount_board`). Every one of them is imported from its shipped home — nothing is
+// (`useFightPhase` → `should_mount_board`). Every one of them is imported from its shipped home — nothing is
 // copied, forked, or re-styled, and the world-shell/fight_* modules the cutover lane owns are untouched.
 //
 // SEVEN OF EIGHT (issue #914). Every sibling above with a shipped home is mounted here. `SpellBar` is the one
@@ -37,7 +37,7 @@ import { useTranslation } from 'react-i18next'
 
 import { fight_layer_class } from '../game/screens/hud/mobile_layout.js'
 import { should_mount_board } from '../fight-engine/phase.js'
-import { use_fight_phase } from '../game/screens/hud/world/use_fight_phase.js'
+import { useFightPhase } from '../game/screens/hud/world/use_fight_phase.js'
 import { DungeonBoard } from '../game/screens/hud/world/DungeonBoard.jsx'
 import { EntityTooltip } from '../game/screens/hud/EntityTooltip.jsx'
 import { FightTimeline } from '../game/screens/hud/FightTimeline.jsx'
@@ -68,7 +68,7 @@ import './fight-hud.css'
  */
 export function SimulatorFightHud({ draw = false, slug_by_name = {} }) {
   const { t } = useTranslation()
-  const phase = use_fight_phase()
+  const phase = useFightPhase()
   if (!should_mount_board(phase)) return null
   return (
     // `sim-fight-layer` marks this composition as the SIMULATOR's: it is what the sim-only CSS below hangs

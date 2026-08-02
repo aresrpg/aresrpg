@@ -34,7 +34,7 @@ export function arm_projection_timer(next_ms, on_tick, deps = {}) {
  * @param {boolean} [enabled]
  * @returns {number | null}
  */
-export function use_projected_hp(character, enabled = true) {
+export function useProjectedHp(character, enabled = true) {
   const [revision, set_revision] = useState(0)
   const now_ms = Date.now()
   const live = enabled && character != null

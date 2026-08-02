@@ -13,7 +13,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state } from '../../../store.js'
+import { useGameState } from '../../../store.js'
 import { TARGET_TOOL, item_label } from './quest_ladder.js'
 import { quest_store, skip_all, skip_current } from './quest_ladder_store.js'
 import './quest-ladder.css'
@@ -21,7 +21,7 @@ import './quest-ladder.css'
 /** @returns {import('react').ReactElement | null} */
 export function QuestObjectiveCard() {
   const snapshot = useSyncExternalStore(quest_store.subscribe, quest_store.get)
-  const fight_mode = use_game_state((s) => s.fight_mode)
+  const fight_mode = useGameState((s) => s.fight_mode)
   const { t, i18n } = useTranslation()
   const [menu_open, set_menu_open] = useState(false)
 

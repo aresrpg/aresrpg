@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { ItemImage } from '../components/items'
-import { use_template_t } from '../i18n/template_t'
+import { useTemplateT } from '../i18n/template_t'
 import { AddFundsModal } from '../components/add_funds_modal'
 import { ShopSuccessModal } from '../components/shop_success_modal'
 import { ShopAmountModal } from '../components/shop_amount_modal'
@@ -22,7 +22,7 @@ import { load_roster } from '../roster/load_roster'
 import { use_toast } from '../toast'
 import { format_mist_to_sui } from '../utils/sui_mist'
 
-import { use_item_lookup } from './encyclopedia/item_lookup'
+import { useItemLookup } from './encyclopedia/item_lookup'
 import { pool_with_percent } from './lootbox_pool'
 import LOOTBOX_POOLS from './lootbox_pools.json'
 import {
@@ -70,11 +70,11 @@ export function shop_hydration_metadata(
 }
 export function ShopPage() {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const router_navigate = useNavigate()
   // Published item templates, live from /v1 (#856). This page used to read them out of the bundled seed
   // catalog, `{}` by construction here, so every name it resolved fell back to a raw underscored slug.
-  const { items: item_templates, name_of } = use_item_lookup()
+  const { items: item_templates, name_of } = useItemLookup()
 
   const address = use_auth((s: AuthState) => s.address)
   const balance_mist = use_auth((s: AuthState) => s.sui_balance_mist)

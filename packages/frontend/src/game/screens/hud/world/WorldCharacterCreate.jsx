@@ -7,7 +7,7 @@
 import { useEffect, useRef } from 'react'
 
 import i18n from '../../../../i18n'
-import { use_game_state } from '../../../store.js'
+import { useGameState } from '../../../store.js'
 import {
   character_create,
   read_allowed_classes,
@@ -121,13 +121,13 @@ export function WorldCharacterCreateSurface({ mode, on_retry = () => {}, price_s
 
 /** @param {{ pathname: string }} props */
 export function WorldCharacterCreate({ pathname }) {
-  const loaded = use_game_state((state) => state.sui.loaded)
-  const load_error = use_game_state((state) => state.sui.load_error)
-  const character_count = use_game_state((state) => state.sui.characters.length)
+  const loaded = useGameState((state) => state.sui.loaded)
+  const load_error = useGameState((state) => state.sui.load_error)
+  const character_count = useGameState((state) => state.sui.characters.length)
   // #443 — the LIVE on-chain creation price (load_roster's get_creation_state read), the same derived
   // source CharactersDrawer's paid flow reads. Falls back to the display constant while still loading;
   // the mint itself always re-reads the authoritative price, never this display value.
-  const price_sui = use_game_state((state) => state.sui.character_price_sui) ?? ADDITIONAL_CHARACTER_PRICE_SUI
+  const price_sui = useGameState((state) => state.sui.character_price_sui) ?? ADDITIONAL_CHARACTER_PRICE_SUI
   const mode = world_slot_content({ pathname, loaded, load_error, character_count })
   const retry_roster = () =>
     void import('../../../../roster/load_roster').then(({ load_roster }) => load_roster())

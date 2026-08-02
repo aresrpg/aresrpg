@@ -20,11 +20,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { get_sdk } from '../chain/sdk'
-import { use_fight_view } from '../game/store.js'
+import { useFightView } from '../game/store.js'
 import { get_status } from '../rpc/client'
 import { fold_lag_streak, is_sustained_lag, resolve_checkpoint_lag, type CheckpointLag } from '../rpc/checkpoint_lag'
 import { fold_sync_sample, format_eta_duration, project_sync_status, type SyncEstimatorState } from '../rpc/sync_eta'
-import { use_rpc_view } from '../rpc/use_view'
+import { useRpcView } from '../rpc/use_view'
 
 import { rpc_sync_header } from './rpc_sync_header'
 
@@ -48,8 +48,8 @@ async function read_checkpoint_lag(signal: AbortSignal): Promise<CheckpointLagSa
 
 export function RpcLagBanner() {
   const { t } = useTranslation()
-  const { data } = use_rpc_view(read_checkpoint_lag, { deps: [], interval_ms: POLL_MS })
-  const fight_deadline_starved = use_fight_view()?.deadline_starved ?? false
+  const { data } = useRpcView(read_checkpoint_lag, { deps: [], interval_ms: POLL_MS })
+  const fight_deadline_starved = useFightView()?.deadline_starved ?? false
   const [estimator, set_estimator] = useState<SyncEstimatorState | null>(null)
   const [lag_streak, set_lag_streak] = useState(0)
   const was_lagging_ref = useRef(false)

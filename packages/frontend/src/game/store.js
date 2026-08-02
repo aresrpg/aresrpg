@@ -28,7 +28,7 @@ const subscribe = cb => {
  * @param {(state: import('./core/game.js').State) => T} [selector]
  * @returns {T}
  */
-export function use_game_state(selector = s => /** @type {any} */ (s)) {
+export function useGameState(selector = s => /** @type {any} */ (s)) {
   return useSyncExternalStore(
     subscribe,
     () => selector(context.get_state()),
@@ -43,26 +43,26 @@ export { context } from './core/game.js'
  * React hook: subscribe a component to the live FIGHT VIEW (fight/project.js engine_view — null between
  * fights). S2 MIRROR KILL: fight truth has ONE home (fight/store.js) and this is its ONE
  * React binding — synchronous core state, never the deleted async `state.fight` copy. Bound with
- * useSyncExternalStore directly (same shape as use_game_state above): the SERVER snapshot reads the SAME
+ * useSyncExternalStore directly (same shape as useGameState above): the SERVER snapshot reads the SAME
  * live state as the client one — the repo's no-jsdom SSR test harness law — where zustand v5's own hook
  * would pin static renders to getInitialState and render every seeded test empty. Lives HERE (not fight/)
  * so the fight core stays react-free (depcruise fight-core-hermetic, a hard-zero ratchet).
  * @returns {ReturnType<typeof fight_view>}
  */
-export function use_fight_view() {
+export function useFightView() {
   return useSyncExternalStore(fight_store.subscribe, fight_view, fight_view)
 }
 
 /**
  * React hook: subscribe a component to the RAW fight-core state (the vanilla `fight_store`, promoted to
  * @aresrpg/fight at M1a). The selector must be referentially stable between updates (same law as
- * use_game_state above). This is the core's ONE raw React binding — non-React consumers call
+ * useGameState above). This is the core's ONE raw React binding — non-React consumers call
  * `fight_store.getState()` directly.
  * @template T
  * @param {(state: any) => T} [selector]
  * @returns {T}
  */
-export function use_fight(selector = s => /** @type {any} */ (s)) {
+export function useFight(selector = s => /** @type {any} */ (s)) {
   return useSyncExternalStore(
     fight_store.subscribe,
     () => selector(fight_store.getState()),

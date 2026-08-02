@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react'
 import { craft_success_percent } from '@aresrpg/sdk/jobs'
 
 import { craft_affordability_of } from '../../../pages/encyclopedia/recipes'
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { Tooltip } from './Tooltip.jsx'
 import { JobItemIcon } from './jobs_visuals.jsx'
 import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
@@ -46,9 +46,9 @@ export function CraftControls({ recipe, job, level, owned }) {
   // /v1 items list) — no second lookup, no second source that could disagree with what the tx will burn.
   const ingredients = recipe.ingredients
   // The ON-CHAIN bag — the exact stacks the craft tx burns (chain-truth home; also drives affordability above).
-  const bag_items = use_game_state((s) => s.sui.items)
+  const bag_items = useGameState((s) => s.sui.items)
   // The crafter's active character — the reference-corpus success roll runs at ITS job level (craft_ptb requires the id).
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
   const [pending, set_pending] = useState(false)
   const afford = useMemo(() => craft_affordability_of(ingredients, owned, 1), [ingredients, owned])
   // Per-ingredient have/need (drives the GREEN/ORANGE rows), keyed by the ingredient's TEMPLATE id — the
@@ -206,7 +206,7 @@ export function RecipeGrid({ recipes, loading, level, on_select, selected_id = n
   }, [recipes, level])
 
   // Loading is NOT emptiness — the honest-empty copy would read as "this job has no recipes" while the
-  // projection is still in flight (no-silent-staleness law, use_rpc_view).
+  // projection is still in flight (no-silent-staleness law, useRpcView).
   if (loading) return <div className="jobs__recipe-empty">{i18n.t('common.loading')}</div>
   if (!recipes.length) {
     return <div className="jobs__recipe-empty">{i18n.t('jobs.recipes.empty_seed')}</div>

@@ -14,7 +14,7 @@ import { ITEM_DESC_NS } from './lazy_locale'
  *   3. the EN `template[field]` (chain Display / seed EN) as the final fallback.
  * `name` keeps the inline-`i18nJson`-then-EN path (no name catalog — descriptions are the bulk).
  */
-export function use_template_t() {
+export function useTemplateT() {
   const { i18n } = useTranslation()
 
   return function template_t(

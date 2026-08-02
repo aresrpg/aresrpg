@@ -14,7 +14,7 @@ import {
   respawn_secs,
 } from '@aresrpg/sdk/jobs'
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { JobItemIcon } from './jobs_visuals.jsx'
 import i18n from '../../../i18n'
 import './hud-panels.css'
@@ -103,8 +103,8 @@ export function ResourceTable({ job, level, on_select, selected_id = null }) {
  * @returns {import('react').JSX.Element}
  */
 export function GatherBar({ job }) {
-  const gather = use_game_state((s) => s.gather)
-  const gather_target = use_game_state((s) => s.gather_target)
+  const gather = useGameState((s) => s.gather)
+  const gather_target = useGameState((s) => s.gather_target)
   // A local clock so the active harvest bar advances smoothly between server pushes.
   const [, force] = useState(0)
   const raf = useRef(/** @type {number | null} */ (null))

@@ -10,7 +10,7 @@ import { useMemo } from 'react'
 import { ItemDetailView } from '../../../components/entity_display'
 import { encyclopedia_item_view } from '../../../pages/encyclopedia/item_view_model'
 import { encyclopedia_item_asset } from '../../../pages/encyclopedia/encyclopedia_assets'
-import { use_template_t } from '../../../i18n/template_t'
+import { useTemplateT } from '../../../i18n/template_t'
 import { CraftControls } from './JobCraft.jsx'
 import i18n from '../../../i18n'
 import './jobs.css'
@@ -38,7 +38,7 @@ import './jobs.css'
  * @returns {import('react').JSX.Element}
  */
 export function JobItemDetail({ item, recipe, job, level, owned, on_back }) {
-  const tt = use_template_t()
+  const tt = useTemplateT()
 
   const view = useMemo(() => (item ? encyclopedia_item_view(item) : null), [item])
   // chain_icon_slug via encyclopedia_item_asset: the icon key of a live row IS its `item_type`, the same key

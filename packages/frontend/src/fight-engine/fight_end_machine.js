@@ -5,7 +5,7 @@
 // THE BUG THIS KILLS: a NON-TERMINAL room clear (rooms remaining) had no single fold that remembered "this
 // room's victory is resolved and we are PARKED until the player clicks the next cluster". So the ~4s poll's
 // respawn of the next room's fight slice re-ranked the board ACTIVE (phase.js rank_of_slice) at the SAME
-// dungeon id → three independent board-mount consumers (use_fight_phase → the React HUD, voxel_fight_adapter,
+// dungeon id → three independent board-mount consumers (useFightPhase → the React HUD, voxel_fight_adapter,
 // DungeonBoard) each re-derived derive_phase and re-mounted a board WITHOUT a player gesture — the
 // "auto-started the next room" ghost — while the same respawn wiped the reward recap (sync_engine first_sight
 // nulls room_recap) — the "no result card" symptom. Both are one root: fight-END had no memory. This module IS that

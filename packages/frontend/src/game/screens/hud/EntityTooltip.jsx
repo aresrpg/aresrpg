@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Board-hover fight tooltip — the fighter under the cursor on the tactical board, shown with its name + a
-// TWEENED HP (hp eases at the house pace, never snaps — use_tweened_hp) and, while a spell is armed,
+// TWEENED HP (hp eases at the house pace, never snaps — useTweenedHp) and, while a spell is armed,
 // the EXACT PREDICTED OUTCOME of that cast on the target: show exactly what will happen — the damage
 // taken, effects, kill — e.g. life (6 −4) with the −4 in red, "kills the mob". A fight is seed-deterministic, so
 // whether the cast crits is a FACT (#163): the head figure shows the resolved life-swing and, when it is a crit,
 // paints that number bold + orange — there is NO separate "CRITICAL n%" line. The prediction runs through the
-// client cast-prediction path (predict_cast → @aresrpg/sim, the ONE damage home) via use_target_prediction; this
+// client cast-prediction path (predict_cast → @aresrpg/sim, the ONE damage home) via useTargetPrediction; this
 // component (via TooltipCard) only PROJECTS its canonical actions into: the head life-swing (−N red / +N green,
 // orange on a crit), a KILLS line, the spell's secondary effect rows (shared seed_effect_line formatter), and a
 // push/pull line. It never re-simulates and never reads authored damage RANGES (ranges were the bug).
@@ -25,11 +25,11 @@ import { useTranslation } from 'react-i18next'
 import { decode, manhattan } from '@aresrpg/fight/los'
 
 import './entity-tooltip.css'
-import { use_game_state, use_fight_view } from '../../store.js'
+import { useGameState, useFightView } from '../../store.js'
 import { spell_state_name_resolver } from '../../data/spell-text.js'
-import { use_spell_corpus } from '../../data/use_spell_corpus.js'
-import { use_tweened_hp } from './use_tweened_hp.js'
-import { use_target_prediction } from './use_target_prediction.js'
+import { useSpellCorpus } from '../../data/use_spell_corpus.js'
+import { useTweenedHp } from './use_tweened_hp.js'
+import { useTargetPrediction } from './use_target_prediction.js'
 import { EMPTY_OUTCOME, predicted_target_outcome } from './target_outcome.js'
 import { TooltipCard } from './tooltip_card.jsx'
 
@@ -107,17 +107,17 @@ function build_vm(hover, fighter) {
 
 export function EntityTooltip() {
   const { t, i18n } = useTranslation()
-  const spell_corpus = use_spell_corpus()
+  const spell_corpus = useSpellCorpus()
   const locale = i18n.resolvedLanguage || i18n.language || 'en'
   const resolve_state_name = useMemo(
     () => spell_state_name_resolver(spell_corpus, locale),
     [spell_corpus, locale]
   )
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill); hover stays a game-core slice
-  const hover = use_game_state((s) => s.fight_hover)
+  const fight = useFightView() // synchronous core view (S2 mirror kill); hover stays a game-core slice
+  const hover = useGameState((s) => s.fight_hover)
   // live predict_cast for the armed spell on this target — the SINGLE resolved outcome (crit or not is a
   // seed-deterministic fact, decided upstream), its is_crit flag, and the spell's secondary effect rows.
-  const { prediction, is_crit, effects, target_ref } = use_target_prediction()
+  const { prediction, is_crit, effects, target_ref } = useTargetPrediction()
 
   const fighter = fight && hover ? fight.fighters.get(hover.entity_id) : null
   const active = !!fighter && !fighter.dead
@@ -156,7 +156,7 @@ export function EntityTooltip() {
   const view = vm ?? last_vm.current
   // HP TWEEN (life updates were too fast on the hud and the nameplate) — ease the shown hp at
   // the house pace, keyed on the fighter so a fresh hover snaps to ITS hp (never counts between two entities).
-  const shown_hp = use_tweened_hp(view?.health ?? 0, view?.key)
+  const shown_hp = useTweenedHp(view?.health ?? 0, view?.key)
 
   useEffect(() => {
     if (active) {

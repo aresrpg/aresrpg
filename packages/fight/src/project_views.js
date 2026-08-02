@@ -246,7 +246,7 @@ export const board_view = (s) => {
 
 /**
  * The FightSlice shape (fighters Map, turn/placement machine, ready set) — projected from the PRESENTED
- * state. Every HUD consumer reads it SYNCHRONOUSLY via `use_fight_view()` / `fight_view()` (the memoized
+ * state. Every HUD consumer reads it SYNCHRONOUSLY via `useFightView()` / `fight_view()` (the memoized
  * doors below) — the async game-core mirror is dead. `roster` (my kiosk characters) resolves the local seat
  * names; its ONE home is the core's own ctx (`ctx.roster`, pumped by the fight edge module on sui_data), the
  * param remains as a pure-injection override for tests/board_fight_authority.

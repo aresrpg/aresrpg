@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { NAV_ITEMS } from '../constants/navigation'
 import { DISCORD_URL } from '../constants/links'
 import { LANGUAGES } from '../i18n'
-import { use_navigate_page, use_active_page } from '../hooks/use_navigate_page'
+import { useNavigatePage, useActivePage } from '../hooks/use_navigate_page'
 
 import { WalletBar } from './wallet_bar'
 import { SponsorAllowanceBar } from './sponsor_allowance_bar'
@@ -87,8 +87,8 @@ export function DiscordCard() {
 
 export function Sidebar() {
   const { t } = useTranslation()
-  const active_page = use_active_page()
-  const navigate = use_navigate_page()
+  const active_page = useActivePage()
+  const navigate = useNavigatePage()
   return (
     // data-app-sidebar: the global fixed VersionBadge (version_badge.tsx) hides itself via :has() whenever
     // this sidebar is in the DOM — the sidebar's own bottom-center tag below is the desktop version render.

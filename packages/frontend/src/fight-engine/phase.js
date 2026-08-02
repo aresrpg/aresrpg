@@ -187,7 +187,7 @@ function terminal_unmet(dungeon, fight, my_seat) {
  * placement/active half-inits; EXIT for an unearned terminal), with the unmet names attached for the loud log.
  *
  * @param {any|null} dungeon    the freshly-read Dungeon (use_dungeon.dungeon), or null when out of session.
- * @param {any|null} fight      the engine fight slice (use_game_state.fight), or null when no board is spawned.
+ * @param {any|null} fight      the engine fight slice (useGameState.fight), or null when no board is spawned.
  * @param {any|null} my_seat    MY escrow participant row (addr === my wallet), or null if I hold no seat.
  * @returns {PhaseResult}
  */

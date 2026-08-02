@@ -22,8 +22,8 @@ import { normalize_search } from '../../utils/search'
 import { ELEMENT_COLORS, SectionDivider, SectionTitle } from '../../components/entity_display'
 import { ItemImage } from '../../components/items'
 import { display_mob_name } from '../../content/mob_name_overrides'
-import { use_template_t } from '../../i18n/template_t'
-import { use_deferred_search } from '../../hooks/use_deferred_search'
+import { useTemplateT } from '../../i18n/template_t'
+import { useDeferredSearch } from '../../hooks/use_deferred_search'
 
 import { DetailLoading, ENCYCLOPEDIA_LAYOUT } from './shared'
 // The ONE encyclopedia mob-icon home (the MinIO `mobs/` family, through the bestiary's own resolver). #353
@@ -170,7 +170,7 @@ export function RosterChip({ mob, on_click }: { mob: WorldMobRosterRow; on_click
 
 function ResourceChip({ resource, on_click }: { resource: WorldResourceRow; on_click?: () => void }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const job_key = resource.job != null ? GATHER_JOB_KEY[resource.job] : undefined
   return (
     <div
@@ -354,8 +354,8 @@ export function WorldTab({
 }) {
   const { t } = useTranslation()
   const [params, set_params] = useSearchParams()
-  // Search: instant input + deferred filter term + debounced ?q= (shared home) — see use_deferred_search.
-  const { value: search_input, set_value: set_search_input, term: search } = use_deferred_search()
+  // Search: instant input + deferred filter term + debounced ?q= (shared home) — see useDeferredSearch.
+  const { value: search_input, set_value: set_search_input, term: search } = useDeferredSearch()
   const biome = params.get('biome') || 'ALL'
   const sort = (params.get('sort') || 'band_asc') as SortOption
 

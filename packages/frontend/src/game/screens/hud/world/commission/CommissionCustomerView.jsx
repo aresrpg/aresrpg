@@ -17,11 +17,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { JOBS, job_level_progress } from '@aresrpg/sdk/jobs'
 
-import { use_game_state, context } from '../../../../store.js'
+import { useGameState, context } from '../../../../store.js'
 import { use_toast } from '../../../../../toast'
 import { use_auth } from '../../../../../auth'
 import { get_encyclopedia } from '../../../../../rpc/client'
-import { use_rpc_view } from '../../../../../rpc/use_view'
+import { useRpcView } from '../../../../../rpc/use_view'
 import { refresh_friends, use_friends } from '../../../../../world-shell/friends_adapter.js'
 import { add_friend_flow } from '../../../../../world-shell/friends_actions'
 import { ItemIcon } from '../../ItemIcon.jsx'
@@ -45,7 +45,7 @@ export function CommissionCustomerView() {
   const { t } = useTranslation()
   // The customer's OWN kiosk stock — the already-loaded on-chain bag (no fetch), the SAME source the
   // JobsDrawer prices a craft against, so a greyed row matches exactly what a craft could NOT burn.
-  const items = use_game_state(s => s.sui.items)
+  const items = useGameState(s => s.sui.items)
   const address = use_auth(s => s.address)
 
   const friend_rows = use_friends((state) => state.rows)
@@ -85,7 +85,7 @@ export function CommissionCustomerView() {
 
   // The live crafting corpus — ONE batched, session-cached `/v1/encyclopedia` read (items + recipes in a
   // single envelope), the SAME source the Jobs drawer projects through craft_recipes_for_job.
-  const { data: encyclopedia, loading: catalog_loading } = use_rpc_view(
+  const { data: encyclopedia, loading: catalog_loading } = useRpcView(
     (signal) => get_encyclopedia(undefined, signal),
     { deps: [] }
   )

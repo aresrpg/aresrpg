@@ -12,7 +12,7 @@ import { SellPanel } from '../components/marketplace/sell_panel'
 import { HistoryPanel } from '../components/marketplace/history_panel'
 import { InboxPanel } from '../components/marketplace/inbox_panel'
 import { MarketplaceFrameCorners, MarketplaceFrameOrnament } from '../components/marketplace/ornamental_frame'
-import { app_mobile_classes, use_mobile_mode } from '../game/screens/hud/mobile_layout.js'
+import { app_mobile_classes, useMobileMode } from '../game/screens/hud/mobile_layout.js'
 
 // The player-to-player kiosk marketplace — D750's full-viewport ornamental frame around the four existing modes:
 // BUY (category rail + template ledger + listing rows), SELL, HISTORY, and INBOX. The current full BUTTON switch
@@ -101,7 +101,7 @@ function ModeSwitch({ tab, on_change }: { tab: Tab; on_change: (t: Tab) => void 
 
 export function MarketplacePage() {
   const { t } = useTranslation()
-  const mobile = use_mobile_mode()
+  const mobile = useMobileMode()
   const classes = app_mobile_classes(mobile)
   const { loading, loaded_once, load, load_kiosk_profits } = use_marketplace_chain()
   const address = use_auth((s) => s.address)

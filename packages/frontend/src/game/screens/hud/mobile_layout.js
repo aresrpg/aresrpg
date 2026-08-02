@@ -9,7 +9,7 @@ const server_mobile = () => false
 const PORTRAIT_QUERY = '(orientation: portrait)'
 
 /** React binding for the lead-owned mobile-mode source of truth. */
-export function use_mobile_mode() {
+export function useMobileMode() {
   return useSyncExternalStore(subscribe_mobile, is_mobile, server_mobile)
 }
 

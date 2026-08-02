@@ -13,7 +13,7 @@ import {
   format_score,
 } from '../constants/leaderboard'
 import jobs_data from '../data/jobs.json'
-import { use_template_t } from '../i18n/template_t'
+import { useTemplateT } from '../i18n/template_t'
 
 const { JOB_MASTER_JOBS } = jobs_data
 
@@ -136,7 +136,7 @@ function JobBadges({ data_json }: { data_json: string }) {
 
 export function LeaderboardPage() {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const [category, set_category] = useState('XP')
   const [timeframe, set_timeframe] = useState('ALL TIME')
   const [dungeon_filter, set_dungeon_filter] = useState('')

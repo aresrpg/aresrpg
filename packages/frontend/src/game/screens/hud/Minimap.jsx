@@ -24,11 +24,11 @@ import { useMemo, useRef, useState } from 'react'
 
 import { spawn_markers } from '@aresrpg/world/spawns_zones'
 
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
-import { use_minimap } from './use_minimap.js'
+import { useMinimap } from './use_minimap.js'
 import { MinimapModal } from './MinimapModal.jsx'
-import { use_render_rows } from '../../core/render_rows.js'
+import { useRenderRows } from '../../core/render_rows.js'
 import { peer_markers } from './presence_markers.js'
 import './minimap.css'
 
@@ -38,7 +38,7 @@ const SAMPLE_N = 80 // terrain bitmap resolution (≈2 blocks/texel over the cov
 
 /** @returns {import('react').ReactElement | null} */
 export function Minimap() {
-  const pose = use_game_state((s) => s.player_pose)
+  const pose = useGameState((s) => s.player_pose)
   // The ONE spawns store, projected (spawn_markers) — never a render-published copy. Subscribe to the stable
   // slices (zones/templates/pending don't change on the per-frame player_pos fold) so the memo holds across frames.
   const zones = use_spawns((s) => s.zones)
@@ -46,7 +46,7 @@ export function Minimap() {
   const pending = use_spawns((s) => s.pending)
   // The composed render rows through their ONE door (core/render_rows.js). Reading the two presence homes
   // here and joining them locally would be a second composition living outside the home that owns it.
-  const rows = use_render_rows()
+  const rows = useRenderRows()
   const canvas_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const [open, set_open] = useState(false)
 
@@ -60,7 +60,7 @@ export function Minimap() {
     [zones, templates, pending]
   )
   const markers = [...spawn_dots, ...peer_markers(rows)]
-  use_minimap(canvas_ref, { size: SIZE, view_radius_blocks: VIEW_RADIUS_BLOCKS, sample_n: SAMPLE_N, markers, enabled: !!pose })
+  useMinimap(canvas_ref, { size: SIZE, view_radius_blocks: VIEW_RADIUS_BLOCKS, sample_n: SAMPLE_N, markers, enabled: !!pose })
 
   // Spectate / pre-first-frame: no pose published → no map (PartyFrame's render-nothing idiom).
   if (!pose) return null

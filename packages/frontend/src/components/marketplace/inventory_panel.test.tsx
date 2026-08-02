@@ -55,7 +55,7 @@ mock.module('../../stores/marketplace_chain', () => ({
   use_marketplace_chain: () => ({ listable, listable_loading: false, listable_characters: [] }),
 }))
 mock.module('../../game/store.js', () => ({
-  use_game_state: (selector: (state: any) => any) => selector({ sui: { characters } }),
+  useGameState: (selector: (state: any) => any) => selector({ sui: { characters } }),
 }))
 mock.module('../item_send_modal', () => ({ ItemSendModal: () => null }))
 

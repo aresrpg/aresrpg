@@ -56,7 +56,7 @@ test('an encyclopedia mounted before publication re-resolves its class spell row
     expect(snapshots).toEqual([[], ['delayed_encyclopedia']])
     // This repo has no DOM renderer: pin the final React link as a source contract. The subscription and live
     // class projection above drive the behavioral half; this guards the ClassesTab memo against going stale.
-    expect(classes_tab_source).toContain('const spell_corpus = use_spell_corpus()')
+    expect(classes_tab_source).toContain('const spell_corpus = useSpellCorpus()')
     expect(classes_tab_source).toMatch(
       /useMemo\(\s*\(\) => \(selected_class \? class_spells\(selected_class\.id\) : \[\]\),\s*\[selected_class, spell_corpus\]/
     )

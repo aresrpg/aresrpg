@@ -39,7 +39,7 @@ import { resolvable_row_ids, apply_resolved_names } from './fight_report_names.j
 import { format_mmss } from './world/compass_math.js'
 import { ItemDetailView } from '../../../components/item_detail_view'
 import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
-import { use_template_t } from '../../../i18n/template_t'
+import { useTemplateT } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
@@ -83,7 +83,7 @@ function Skel({ w = '3.5em' }) {
  * orphaned drop (missing from BOTH the bag snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot
  * template) renders the D53 bold-letter fallback instead of <ItemIcon> — a loot slot must never read as an
  * empty un-hoverable box.
- * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
+ * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, t: (key: string, opts?: any) => string }} props
  */
 function LootTile({ entry, items, template_map, slug_by_template_id, tt, t }) {
   const base_tile = resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id)
@@ -190,7 +190,7 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
  * teammate's honest "not visible to you" used to be its own italic text LINE (roughly doubling that row's
  * height across a whole roster) — it is now a single dim glyph living in the row's own trailing cell, with
  * the full sentence carried on `aria-label` instead of always-visible text.
- * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
+ * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
 function RowSpoils({ mine, spoils, items, template_map, slug_by_template_id, tt, pending, loot_units, t }) {
   if (!mine)
@@ -308,7 +308,7 @@ export function FightReport({
   }
   // Loot tooltips reuse the inventory/findables map for legacy slug-only rows, then overlay exact receipt IDs
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const [template_map, set_template_map] = useState(/** @type {Map<string, any>} */ (() => new Map()))
   const has_spoils = !!spoils
   const loot_template_ids_key = [...new Set((spoils?.loot ?? []).map((entry) => entry.template_id).filter(Boolean))]

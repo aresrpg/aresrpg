@@ -32,7 +32,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sword } from 'lucide-react'
 
-import { use_fight, use_fight_view } from '../../store.js'
+import { useFight, useFightView } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
@@ -46,8 +46,8 @@ import { Tooltip } from './Tooltip.jsx'
 import { SpellSeedTip } from './tooltip-content.jsx'
 import { resolve_key_arm, deck_my_turn, is_arm_key } from './deck-key-arm.js'
 import { next_slot_crit, socket_glows } from './deck-crit-glow.js'
-import { use_fight_phase } from './world/use_fight_phase.js'
-import { use_mobile_input_mode } from '../../touch/mobile_input_mode.js'
+import { useFightPhase } from './world/use_fight_phase.js'
+import { useMobileInputMode } from '../../touch/mobile_input_mode.js'
 import { SpellSocket } from './deck-spell-socket.jsx'
 import { SpellHoverTip } from './spell-hover-tip.jsx'
 import { socket_columns, socket_slots } from './deck-socket-grid.js'
@@ -136,8 +136,8 @@ function EmptySocket({ keyCap }) {
 
 export function DeckCluster() {
   const { t, i18n } = useTranslation()
-  const mobile = use_mobile_input_mode()
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill) — AP/hand/armed never lag a dispatch
+  const mobile = useMobileInputMode()
+  const fight = useFightView() // synchronous core view (S2 mirror kill) — AP/hand/armed never lag a dispatch
   const hand = fight?.hand ?? []
   const armed = fight?.armed_spell_id ?? null
   const hovered = fight?.hovered_spell_id ?? null
@@ -146,7 +146,7 @@ export function DeckCluster() {
   // phase a no-op keypress happened in). The bar itself no longer branches on phase to decide whether to MOUNT
   // (see the tail of this function): visibility used to be the placement gate; interactivity always was and
   // still is (my_turn/enabled below), so phase has nothing left to gate here.
-  const phase = use_fight_phase()
+  const phase = useFightPhase()
   const me = fight?.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
   const ap = me?.ap ?? 0 // FOLDED AP: drafted casts debit through the core (ap_cost intents) — sockets grey as AP drains
   // deck_my_turn is the SAME read DungeonBoard's my_turn uses (active seat + unresolved) and does NOT gate on the
@@ -172,7 +172,7 @@ export function DeckCluster() {
   const spawn_id = use_dungeon((s) => s.dungeon?.spawn_id ?? null)
   const chain_turn_entropy = use_dungeon((s) => s.dungeon?.turn_entropy ?? null)
   const chain_turn_ordinal = use_dungeon((s) => s.dungeon?.turn_ordinal ?? null)
-  const slot = use_fight(my_action_slot)
+  const slot = useFight(my_action_slot)
   // The ONE composed §7 tuple: `next_slot_crit` rolls its crit stream and `weapon_next_hit` its damage stream,
   // so the socket's glow and the number in its tooltip can never disagree about which slot they describe.
   // The slot comes from `my_action_slot` (#1224's one home) — `crit_clock_of` reads `slot`, so a raw

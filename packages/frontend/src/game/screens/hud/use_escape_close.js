@@ -5,7 +5,7 @@
 import { useEffect } from 'react'
 
 /** @param {unknown} open @param {() => void} on_close */
-export function use_escape_close(open, on_close) {
+export function useEscapeClose(open, on_close) {
   useEffect(() => {
     if (!open) return undefined
     const on_key = (/** @type {KeyboardEvent} */ e) => {

@@ -32,10 +32,10 @@ import { SimulatorBoardPane } from '../simulator/BoardPane'
 import { CharacterModal } from '../simulator/CharacterModal'
 import { CharacterRow } from '../simulator/CharacterRow'
 import { build_mob } from '../simulator/content.js'
-import { use_mob_of } from '../simulator/MobModal'
+import { useMobOf } from '../simulator/MobModal'
 import { MAX_MOBS, MAX_ROSTER, type SimCharacter } from '../simulator/reducer'
 import { boot_simulator, use_simulator } from '../simulator/store'
-import { use_sim_fight } from '../simulator/use_sim_fight.js'
+import { useSimFight } from '../simulator/use_sim_fight.js'
 
 const GOLD = '#c8963c'
 const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
@@ -131,7 +131,7 @@ function RosterSeat({
 function MobRow({ cell }: Readonly<{ cell: number }>) {
   const { t } = useTranslation()
   const pick = use_simulator((state) => state.mob_picks[cell])
-  const mob = use_mob_of(pick?.template_id)
+  const mob = useMobOf(pick?.template_id)
   const built = mob && pick ? build_mob(mob, pick.level) : null
 
   return (
@@ -178,7 +178,7 @@ function MobRow({ cell }: Readonly<{ cell: number }>) {
  */
 function FightControls() {
   const { t } = useTranslation()
-  const { phase, can_start, blocked, start, stop } = use_sim_fight()
+  const { phase, can_start, blocked, start, stop } = useSimFight()
   const blocked_label = blocked
     ? t(`simulator.fight_blocked_${blocked}`, { defaultValue: t('simulator.fight_blocked_empty_roster') })
     : null

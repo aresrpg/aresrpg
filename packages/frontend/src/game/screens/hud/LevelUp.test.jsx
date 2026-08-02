@@ -42,7 +42,7 @@ const state = {
   sui: { characters: [] },
   selected_character_id: null,
 }
-const spies = [spyOn(game_store, 'use_game_state').mockImplementation((selector) => selector(state))]
+const spies = [spyOn(game_store, 'useGameState').mockImplementation((selector) => selector(state))]
 
 const { LevelUp } = await import('./LevelUp.jsx')
 

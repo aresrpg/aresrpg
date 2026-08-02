@@ -87,7 +87,7 @@ const fight_state = (overrides = {}) => ({
 })
 
 // Drive the REAL fight core through its ONE input door (S2 mirror kill — `state.fight` is gone; components
-// read the projected view synchronously via use_fight_view). The slice-shaped `fight_state` literals above
+// read the projected view synchronously via useFightView). The slice-shaped `fight_state` literals above
 // keep serving the PURE fns (fight_turn_control_phase) untouched; the hook-path tests seed the core.
 const seed = ({ active = ME, my = ME, seats = [{ character: ME }], version = 1 } = {}) =>
   seed_fight_core({ my, seats, active, version, turn_deadline_ms: Date.now() + 90_000 })

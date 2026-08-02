@@ -6,7 +6,7 @@
 import { Skull } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 
 export interface DroppedByRow {
   id: string
@@ -24,7 +24,7 @@ export function DroppedBySection({
   on_navigate_to_mob: (id: string) => void
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   return (
     <div className="flex flex-col gap-2">
       <span className="text-[9px] tracking-[0.25em] uppercase font-semibold text-muted">

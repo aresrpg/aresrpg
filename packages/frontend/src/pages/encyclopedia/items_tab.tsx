@@ -12,13 +12,13 @@ import { SectionDivider, ItemDetailView, is_new_template, NewBadge } from '../..
 import { ItemImage } from '../../components/items'
 import { FoundInWorldsSection } from '../../components/mob_detail_view'
 import { PetFullFedNote } from '../../components/pet_power_card'
-import { use_deferred_search } from '../../hooks/use_deferred_search'
+import { useDeferredSearch } from '../../hooks/use_deferred_search'
 import { CATEGORY_GROUPS, type CategoryGroupKey } from '../../constants/encyclopedia'
 import { display_mob_name } from '../../content/mob_name_overrides'
 import { normalize_search } from '../../utils/search'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import { get_encyclopedia, get_rare_links } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 import { use_items_shop_chain } from '../../stores/items_shop_chain'
 import { marketplace_item_type_key } from '../../components/marketplace/marketplace_model'
 
@@ -64,7 +64,7 @@ export function ItemsTab({
   is_mobile: boolean
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   // The live primary shop supplies the third obtention signal alongside recipes and drops.
   const { sales: shop_sales, load: load_shop_sales } = use_items_shop_chain()
   useEffect(() => {
@@ -73,10 +73,10 @@ export function ItemsTab({
 
   // The API's no-kind form returns every catalog kind. One shared, app-lifetime client read feeds the item rows,
   // recipes, and inverted mob drops instead of mounting three independent 5-second pollers.
-  const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const { data: enc, loading } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
   const recipes = enc?.recipes
   // Golden-gather links are existence-only; the rate is the published constant above.
-  const { data: rare_links } = use_rpc_view((signal) => get_rare_links(undefined, signal), { deps: [] })
+  const { data: rare_links } = useRpcView((signal) => get_rare_links(undefined, signal), { deps: [] })
   // Invert the same authoritative on-chain mob loot projection the bestiary renders forward (dropped_by.ts —
   // the one home). Live rows in, live droppers out: no build-time id set fences this join (#1467).
   const live_dropped_by_index = useMemo(() => invert_mob_drops(enc?.mobs, display_mob_name), [enc])
@@ -94,7 +94,7 @@ export function ItemsTab({
 
   const [params, set_params] = useSearchParams()
   // Keep typing instant while deferring the 1.8k-row filter and debounced query-string update.
-  const { value: search_input, set_value: set_search_input, term: search } = use_deferred_search()
+  const { value: search_input, set_value: set_search_input, term: search } = useDeferredSearch()
   const group = (params.get('group') || 'ALL') as CategoryGroupKey
   const sub = params.get('sub') || null
   const level_min = params.get('lmin') || ''

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// use_rpc_view — the reactive short-poll reader (SPEC §14 UI-DATA LAW).
+// useRpcView — the reactive short-poll reader (SPEC §14 UI-DATA LAW).
 //
 // THE LAW, enforced here so no surface can break it:
 //   • ALL live display data is req/res short-poll — a plain interval GET. NEVER a stream/subscription.
@@ -41,9 +41,9 @@ export interface RpcViewOptions {
  *
  * @param fetcher receives an AbortSignal — pass it to the rpc client so an unmount cancels the request.
  * @example
- *   const { data, stale } = use_rpc_view(s => get_pools(undefined, s), { deps: [], interval_ms: 4000 })
+ *   const { data, stale } = useRpcView(s => get_pools(undefined, s), { deps: [], interval_ms: 4000 })
  */
-export function use_rpc_view<T>(
+export function useRpcView<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
   { interval_ms = 5000, enabled = true, deps = [] }: RpcViewOptions = {}
 ): RpcViewState<T> {

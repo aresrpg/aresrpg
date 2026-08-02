@@ -19,8 +19,8 @@
 
 import { lazy, Suspense } from 'react'
 
-import { use_navigate_page } from '../hooks/use_navigate_page'
-import { app_mobile_classes, use_mobile_mode } from '../game/screens/hud/mobile_layout.js'
+import { useNavigatePage } from '../hooks/use_navigate_page'
+import { app_mobile_classes, useMobileMode } from '../game/screens/hud/mobile_layout.js'
 import '../game/screens/hud/characters-drawer.css'
 
 const CharactersDrawer = lazy(() =>
@@ -28,8 +28,8 @@ const CharactersDrawer = lazy(() =>
 )
 
 export function CharactersPage() {
-  const navigate = use_navigate_page()
-  const classes = app_mobile_classes(use_mobile_mode())
+  const navigate = useNavigatePage()
+  const classes = app_mobile_classes(useMobileMode())
   return (
     <div className={`${classes.page} gw-tab flex flex-col`}>
       <Suspense fallback={<TabFallback />}>

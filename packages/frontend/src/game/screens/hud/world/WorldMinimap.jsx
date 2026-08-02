@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react'
 import { CELL, WORLD_SEED, world_biome, world_cell } from '@aresrpg/sim/world'
 
 import { BIOME_FILL, OBSTACLE_SHADE } from '../biome-colors.js'
-import { use_game_state, context } from '../../../store.js'
+import { useGameState, context } from '../../../store.js'
 
 const GRID = 31 // cells across (odd → the player sits dead-center)
 const PIXELS = 150 // canvas edge in CSS px (matches the mockup minimap body)
@@ -72,9 +72,9 @@ const draw = (ctx, cx, cy, seed, mobs) => {
 
 /** @returns {import('react').ReactElement} */
 export function WorldMinimap() {
-  const player_cell = use_game_state((s) => s.player_cell)
+  const player_cell = useGameState((s) => s.player_cell)
   // stable signal: a digest of the visible group ids (the Map ref never changes — see mob_groups.js)
-  const mob_signal = use_game_state((s) => {
+  const mob_signal = useGameState((s) => {
     let sig = ''
     for (const id of s.visible_mobs_group.keys()) sig += `${id}|`
     return sig

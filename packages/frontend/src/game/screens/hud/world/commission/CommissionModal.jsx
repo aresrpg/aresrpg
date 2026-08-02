@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state, context } from '../../../../store.js'
+import { useGameState, context } from '../../../../store.js'
 import { CommissionCustomerView } from './CommissionCustomerView.jsx'
 import { CommissionArtisanView } from './CommissionArtisanView.jsx'
 import './commission.css'
@@ -25,7 +25,7 @@ const close = () => context.dispatch('action/commissions_modal', false)
 /** @returns {import('react').JSX.Element | null} */
 export function CommissionModal() {
   const { t } = useTranslation()
-  const open = use_game_state(s => s.commissions_modal)
+  const open = useGameState(s => s.commissions_modal)
   const [tab, set_tab] = useState(/** @type {'customer' | 'artisan'} */ ('customer'))
 
   // Esc closes, matching every other world overlay.

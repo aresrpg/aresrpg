@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { JOBS } from '@aresrpg/sdk/jobs'
 
 import { SectionDivider } from '../../components/entity_display'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import type { RpcRecipe } from '../../rpc/views'
 
 import { recipe_for_output, recipes_consuming, short_id } from './recipes'
@@ -98,7 +98,7 @@ function RecipeSections({
   on_select_item: (id: string) => void
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
 
   // template id → the live /v1 item (name + the navigable id). Absent → short-id, non-navigable.
   const item_by_template_id = useMemo(() => new Map((items ?? []).map((item: any) => [item.id, item])), [items])

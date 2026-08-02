@@ -314,7 +314,7 @@ export async function get_mob_templates(graphql_client, package_id) {
       // orphan TAG (not drop): pre-v2 mobs predate template.move's min_level/max_level/base_hp fields — a decoded
       // object missing any of them is a stale/legacy template. We TAG `_orphan` rather than drop, so the ADMIN
       // editor still lists ALL on-chain templates (it can badge orphans); only the ENCYCLOPEDIA excludes them
-      // (use_onchain_templates {orphans:'exclude'}). Dropping in the shared reader hid the admin list entirely.
+      // (useOnchainTemplates {orphans:'exclude'}). Dropping in the shared reader hid the admin list entirely.
       const _orphan = f.min_level === undefined || f.max_level === undefined || f.base_hp === undefined
       return { ...normalize_mob_template(f, o.objectId), _orphan }
     })

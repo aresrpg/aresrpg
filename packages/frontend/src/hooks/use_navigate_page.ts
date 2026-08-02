@@ -5,7 +5,7 @@ import { useCallback } from 'react'
 
 import { type Page, PAGE_PATHS, path_to_page } from '../constants/navigation'
 
-export function use_navigate_page() {
+export function useNavigatePage() {
   const navigate = useNavigate()
   return useCallback(
     (page: Page) => {
@@ -15,7 +15,7 @@ export function use_navigate_page() {
   )
 }
 
-export function use_active_page(): Page {
+export function useActivePage(): Page {
   const { pathname } = useLocation()
   return path_to_page(pathname) ?? 'characters'
 }

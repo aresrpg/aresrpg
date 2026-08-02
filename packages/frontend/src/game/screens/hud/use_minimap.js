@@ -18,7 +18,7 @@ import { useEffect, useRef } from 'react'
 
 import { world_minimap_column } from '@aresrpg/engine3'
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { use_world_binding } from '../../../world-shell/session_gate.js'
 import { instrument_cpu_callback } from '../../cpu_span.js'
 import { select_hack_presentation } from '../../core/world_presentation.js'
@@ -78,7 +78,7 @@ const YAW_EASE_TAU_MS = 90
  * @param {boolean} [opts.enabled]
  * @returns {void}
  */
-export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, markers, enabled = true }) {
+export function useMinimap(canvas_ref, { size, view_radius_blocks, sample_n, markers, enabled = true }) {
   const tex_span = 2 * view_radius_blocks
   const RESAMPLE_STEP = Math.max(6, Math.round(view_radius_blocks * RESAMPLE_STEP_RATIO))
   // the corner-fill zoom derivation (see CORNER_FILL) + the zoom-tied relief strength (see MAP_RELIEF)
@@ -87,7 +87,7 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
   // off-centre anchor (round 5 corner hug) — biased toward the top-right by CORNER_BIAS of the half-frame.
   const cx = size / 2 + CORNER_BIAS * (size / 2)
   const cy = size / 2 - CORNER_BIAS * (size / 2)
-  const cell_key = use_game_state((s) => {
+  const cell_key = useGameState((s) => {
     const p = s.player_pose
     return p ? `${Math.round(p.x / RESAMPLE_STEP)}:${Math.round(p.z / RESAMPLE_STEP)}` : null
   })
@@ -95,7 +95,7 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
   // The LIVE session's presentation, not a second read of the preference (#812): the settings toggle
   // re-creates the session in place with no page reload, so the map must re-branch off the reducer door the
   // session publishes on every (re)boot — a preference read only re-branches when React remounts this hook.
-  const hack_map = use_game_state(select_hack_presentation)
+  const hack_map = useGameState(select_hack_presentation)
 
   const grid_ref = useRef(/** @type {import('./minimap_engine.js').ReliefGrid | null} */ (null))
   const grid_ver_ref = useRef(0)

@@ -15,8 +15,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { use_dungeon_turn } from '../dungeon-turn.js'
-import { use_fight_view } from '../../store.js'
-import { use_mobile_input_mode } from '../../touch/mobile_input_mode.js'
+import { useFightView } from '../../store.js'
+import { useMobileInputMode } from '../../touch/mobile_input_mode.js'
 
 // Recompute the remaining ms from the deadline each tick. The deadline is a server wall-clock epoch; the
 // small client/server clock skew is irrelevant for a 60s human-facing countdown (the server is authoritative
@@ -25,8 +25,8 @@ const remaining_seconds = (deadline) => (deadline > 0 ? Math.max(0, Math.ceil((d
 
 export function FightPlacementBanner() {
   const { t } = useTranslation()
-  const mobile = use_mobile_input_mode()
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill)
+  const mobile = useMobileInputMode()
+  const fight = useFightView() // synchronous core view (S2 mirror kill)
   const nudge = use_dungeon_turn((s) => s.placement_nudge)
   const placement = !!fight?.placement && fight.winner === -1
   const spectator = !!fight?.spectator

@@ -8,7 +8,7 @@ import { is_stackable_category } from '@aresrpg/sdk/items'
 
 import type { MarketplaceListing } from '../../types/chain'
 import { use_auth } from '../../auth'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import {
@@ -16,10 +16,10 @@ import {
   marketplace_buyer_total_mist,
   marketplace_purchase_balance_state,
 } from '../../utils/marketplace_purchase'
-import { app_mobile_classes, use_mobile_mode } from '../../game/screens/hud/mobile_layout.js'
+import { app_mobile_classes, useMobileMode } from '../../game/screens/hud/mobile_layout.js'
 import { ItemImage } from '../items'
 import { ItemHoverTooltip } from '../item_hover_tooltip'
-import { use_address_names } from '../../rpc/use_address_names'
+import { useAddressNames } from '../../rpc/use_address_names'
 import { make_catalog_lookup } from '../../pages/encyclopedia/item_catalog'
 
 import { CharactersPanel } from './characters_panel'
@@ -48,8 +48,8 @@ import {
 const catalog_for_name = make_catalog_lookup({ catalog, slugs })
 export function BrowsePanel() {
   const { t } = useTranslation()
-  const tt = use_template_t()
-  const is_mobile = use_mobile_mode()
+  const tt = useTemplateT()
+  const is_mobile = useMobileMode()
   const classes = app_mobile_classes(is_mobile)
   const address = use_auth((state) => state.address)
   const balance_mist = use_auth((state) => state.sui_balance_mist)
@@ -170,7 +170,7 @@ export function BrowsePanel() {
       return a < b ? -1 : a > b ? 1 : 0
     })
   }, [selected_type])
-  const seller_names = use_address_names(listing_rows.map((listing) => listing.seller_sui_address))
+  const seller_names = useAddressNames(listing_rows.map((listing) => listing.seller_sui_address))
   // ONE marketplace icon home (cosmetic-aware, the shop's resolver): the template header, the detail card,
   // and every listing row of the selected template share this — a listed cosmetic now shows its real art
   // instead of the 0x-object-id blank the old direct pass produced.

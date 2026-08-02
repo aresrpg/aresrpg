@@ -27,7 +27,7 @@ import { install_browser_globals } from '../../../../test_helpers/browser_global
 const restore_browser_globals = install_browser_globals({ with_document: true })
 let game_state = /** @type {any} */ ({ world_presentation: 'terrain', fight_mode: false })
 mock.module('../../../store.js', () => ({
-  use_game_state: (/** @type {(state: any) => any} */ selector) => selector(game_state),
+  useGameState: (/** @type {(state: any) => any} */ selector) => selector(game_state),
 }))
 
 const i18n = i18next.createInstance()

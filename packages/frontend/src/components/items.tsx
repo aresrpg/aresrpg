@@ -17,10 +17,10 @@ import {
   Rabbit,
 } from 'lucide-react'
 
-import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
+import { useItemLookup } from '../pages/encyclopedia/item_lookup'
 import { type ItemInfo } from '../types/chain'
 import { safe_json_parse } from '../safe_json_parse'
-import { use_template_t } from '../i18n/template_t'
+import { useTemplateT } from '../i18n/template_t'
 import { display_rolled_stats, has_authored_stats } from '../chain/rolled_stats.js'
 
 import {
@@ -38,11 +38,11 @@ export { ItemImage } from './item_image'
 
 export function ItemTooltipContent({ item }: { item: ItemInfo }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   // The PUBLISHED template behind this instance, resolved through the live /v1 door (#856). It used to be
   // looked up in the bundled seed catalog, which is `{}` here, so a hovered item could only ever fall back
   // to its own chain-carried name — never the localized published one.
-  const { find, name_of } = use_item_lookup()
+  const { find, name_of } = useItemLookup()
   const tmpl = find(item.template_id)
   const display_name = name_of(item.template_id, item.name)
   const resolved_description = (tmpl && tt(tmpl, 'description')) || item.description
@@ -184,10 +184,10 @@ export function ItemTooltipContent({ item }: { item: ItemInfo }) {
 }
 
 // Mouse-follow tooltip positioning, generic over the payload + renderer — the ONE hover-tooltip
-// positioning engine every surface shares. `use_onchain_item_tooltip` (chain-direct ItemTemplate,
+// positioning engine every surface shares. `useOnchainItemTooltip` (chain-direct ItemTemplate,
 // findables/recall/inventory) is the wrapper in entity_display.tsx (kept there to avoid a circular
 // import on ItemDetailView).
-export function use_mouse_tooltip<T>(render: (item: T) => React.ReactNode) {
+export function useMouseTooltip<T>(render: (item: T) => React.ReactNode) {
   const [visible, set_visible] = useState(false)
   const [pos, set_pos] = useState({ x: 0, y: 0 })
   const [item, set_item] = useState<T | null>(null)
@@ -268,7 +268,7 @@ export function item_info_to_detail_props(
  * never re-decode here.
  * @param tmpl the normalize_item_template() shape: { id, name, item_type, category, level, pods, statsJson,
  *        damages, display }
- * @param tt optional use_template_t() resolver — routes the description through the lazy item_desc
+ * @param tt optional useTemplateT() resolver — routes the description through the lazy item_desc
  *           catalog (keyed by the item_type SLUG; chain Display carries EN only) before falling back
  *           to the Display EN string. Callers are components/hooks, so each threads its own tt.
  */
@@ -299,7 +299,7 @@ export function onchain_template_to_detail_props(
     consumable_effect?: { type: string; [key: string]: any } | null
     display?: { name?: string; image_url?: string; description?: string } | null
   },
-  tt?: ReturnType<typeof use_template_t>
+  tt?: ReturnType<typeof useTemplateT>
 ) {
   const parsed_stats = safe_json_parse<Record<string, number | [number, number]>>(tmpl.statsJson, {})
   const raw_stats = tmpl.owned ? display_rolled_stats(tmpl.rolled_stats) : parsed_stats

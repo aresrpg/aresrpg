@@ -46,7 +46,7 @@ function load_onchain_templates(kind: OnChainTemplateKind, force = false): Promi
  * `opts.orphans`: 'include' (DEFAULT — the ADMIN editor lists ALL on-chain templates, orphans badge-able) or
  * 'exclude' (the ENCYCLOPEDIA drops stale/legacy templates so players never see pre-v2 / bad-category junk).
  * The module cache always holds the FULL list; the filter is applied per-consumer at return. */
-export function use_onchain_templates(
+export function useOnchainTemplates(
   kind: OnChainTemplateKind,
   opts?: { orphans?: 'include' | 'exclude' }
 ): { data: any[] | undefined; refresh: () => void } {

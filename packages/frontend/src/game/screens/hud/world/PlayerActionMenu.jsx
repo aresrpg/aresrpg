@@ -16,8 +16,8 @@ import { use_party } from '../../../../world-shell/party_store.js'
 import { add_friend_flow } from '../../../../world-shell/friends_actions'
 import { presence_characters_by_address } from '../../../../world-shell/presence_adapter.js'
 import { get_characters } from '../../../../rpc/client'
-import { use_rpc_view } from '../../../../rpc/use_view'
-import { use_game_state } from '../../../store.js'
+import { useRpcView } from '../../../../rpc/use_view'
+import { useGameState } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
 import { dispatch_fast_travel } from '../../../../world-shell/fast_travel_intent.js'
 import { ft_dragon_glb_url, preload_mount_glb } from '../../../mount_rig.js'
@@ -35,7 +35,7 @@ export function PlayerActionMenu() {
   const my_address = use_auth((s) => s.address)
   const party_busy = use_party((s) => s.busy)
   const party = use_party((s) => s.party)
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
 
   // Esc closes (bound only while open).
   useEffect(() => {
@@ -51,11 +51,11 @@ export function PlayerActionMenu() {
   // resolver use), so no observation can put an address in front of a transaction. The lone exception carries
   // no character id at all: a friend row's key IS a wallet, read from my own on-chain friend list.
   // Hoisted above the early return (below) so BOTH the render and the preload effect share one derivation.
-  const { data: target_docs } = use_rpc_view(
+  const { data: target_docs } = useRpcView(
     (signal) => (target?.id ? get_characters({ id: target.id }, signal) : Promise.resolve([])),
     { enabled: !!target?.id, deps: [target?.id], interval_ms: 15_000 }
   )
-  // The document must be about THIS character: use_rpc_view keeps its last-good data across a query change
+  // The document must be about THIS character: useRpcView keeps its last-good data across a query change
   // (its no-silent-stale contract), so switching targets briefly leaves the PREVIOUS player's document in
   // hand. An answer about someone else is not an answer — it reads as unresolved until this one lands.
   const target_doc = target_docs?.[0]

@@ -11,7 +11,7 @@
 //    purged/reconciled by the receipt + object read like every other intent.
 //  half 2 — THE MIRROR LAGGED: every HUD read went through the game-core `state.fight` copy, recomputed on
 //    core change but pumped through game.js's ASYNC action stream — ≥1 dispatch cycle stale, forever. The
-//    mirror is DELETED: HUD components subscribe to the core (use_fight_view/fight_view) and read the
+//    mirror is DELETED: HUD components subscribe to the core (useFightView/fight_view) and read the
 //    projection SYNCHRONOUSLY; `state.fight` must never exist again.
 //
 // RED (2026-07-17, pre-fix, raw): half 1 — `ap stays the refill value: expected 2, received 6`;

@@ -49,7 +49,7 @@ const mob_turn_started = {
   type: '0x0::fight_events::TurnStarted',
   parsedJson: { fight: FIGHT, is_mob: true, idx: 0, deadline_ms: 8_000 },
 }
-// The projection field both DungeonBoard and DeckCluster read via use_fight_view() → the cooldown gate's clock.
+// The projection field both DungeonBoard and DeckCluster read via useFightView() → the cooldown gate's clock.
 const my_turn_no = (store) => project.engine_view(store.getState())?.my_turn_no
 
 describe('frozen cooldown clock — the seat-turn counter advances on the PLAYABLE edge, deadline-independent', () => {

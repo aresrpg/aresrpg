@@ -37,7 +37,7 @@ import { use_prompt_stack } from '../../world-shell/prompt_stack.js'
 import { spawns_store } from '../../world-shell/spawns_adapter.js'
 import { use_world_binding } from '../../world-shell/session_gate.js'
 import { use_zones_view } from '../../rpc/zones_poll'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 import { get_encyclopedia } from '../../rpc/client'
 import { display_mob_name } from '../../content/mob_name_overrides'
 
@@ -65,7 +65,7 @@ const settings_changed = (before, after) =>
  * knows nothing about storage. The run state is never persisted — arming spends real gas, so it is always
  * the player's live decision (auto_search_pref.js carries the full reasoning).
  */
-export const use_auto_search = create((set, get) => ({
+export const useAutoSearch = create((set, get) => ({
   ...blank_auto_search(),
   ...read_auto_search_settings(),
   input: (input, now = Date.now()) => {
@@ -78,7 +78,7 @@ export const use_auto_search = create((set, get) => ({
 }))
 
 /** Dispatch one typed scouter input without exposing store plumbing at call sites. */
-export const auto_search_input = (input, now) => use_auto_search.getState().input(input, now)
+export const auto_search_input = (input, now) => useAutoSearch.getState().input(input, now)
 
 /**
  * THE CURRENT WORLD'S mob table — the template ids that can actually spawn here. Read off the World doc the
@@ -91,7 +91,7 @@ export const auto_search_input = (input, now) => use_auto_search.getState().inpu
  * callback writing the store.
  * @returns {Set<string> | null}
  */
-export function use_world_mob_ids() {
+export function useWorldMobIds() {
   const world_id = use_world_binding((state) => state.world)
   const [ids, set_ids] = useState(/** @type {Set<string> | null} */ (null))
 
@@ -124,8 +124,8 @@ export function use_world_mob_ids() {
  * @param {Set<string> | null} world_mob_ids the current world's table (`null` = not known yet)
  * @returns {{ rows: { template_id: string, name: string }[], loading: boolean }}
  */
-export function use_mob_templates(enabled, world_mob_ids) {
-  const view = use_rpc_view((signal) => get_encyclopedia('mobs', signal), { deps: [], enabled })
+export function useMobTemplates(enabled, world_mob_ids) {
+  const view = useRpcView((signal) => get_encyclopedia('mobs', signal), { deps: [], enabled })
   const rows = world_mob_ids
     ? (view.data?.mobs ?? [])
         .filter((mob) => world_mob_ids.has(String(mob.template_id)))
@@ -198,8 +198,8 @@ export function perform(command, name_of) {
  * a world teardown, leaving the world HUD) is itself a hard stop.
  * @param {{ template_id: string, name: string }[]} mob_rows the roster used to name a find
  */
-export function use_auto_search_driver(mob_rows) {
-  const armed = use_auto_search((state) => state.armed)
+export function useAutoSearchDriver(mob_rows) {
+  const armed = useAutoSearch((state) => state.armed)
   const world_id = use_world_binding((state) => state.world)
   // The shared /v1 zones poll (never a second poller) — idles while the loop is off.
   const zones_view = use_zones_view(armed ? world_id : null)
@@ -213,7 +213,7 @@ export function use_auto_search_driver(mob_rows) {
   // Command performance — one subscription for the life of the mount.
   useEffect(
     () =>
-      use_auto_search.subscribe((state, prev) => {
+      useAutoSearch.subscribe((state, prev) => {
         if (state.command && state.command !== prev.command)
           perform(state.command, (id) => names_ref.current.get(id) ?? id)
       }),

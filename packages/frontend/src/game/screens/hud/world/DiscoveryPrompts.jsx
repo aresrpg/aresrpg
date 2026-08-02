@@ -23,9 +23,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state, context } from '../../../store.js'
+import { useGameState, context } from '../../../store.js'
 import { use_prompt_stack } from '../../../../world-shell/prompt_stack.js'
-import { use_rpc_view } from '../../../../rpc/use_view'
+import { useRpcView } from '../../../../rpc/use_view'
 import { get_characters, get_zones } from '../../../../rpc/client'
 import { use_zones_view } from '../../../../rpc/zones_poll'
 import {
@@ -83,13 +83,13 @@ async function character_kiosk_handle(character_id) {
 /** @returns {null} */
 export function DiscoveryPrompts() {
   const { t } = useTranslation()
-  const character_id = use_game_state((s) => s.selected_character_id)
-  const player_cell = use_game_state((s) => s.player_cell)
-  const gather_target = use_game_state((s) => s.gather_target ?? null)
-  const characters = use_game_state((s) => s.sui.characters)
+  const character_id = useGameState((s) => s.selected_character_id)
+  const player_cell = useGameState((s) => s.player_cell)
+  const gather_target = useGameState((s) => s.gather_target ?? null)
+  const characters = useGameState((s) => s.sui.characters)
 
   // Selected character's world (RPC doc) — the zones view is keyed by world id.
-  const char_view = use_rpc_view(
+  const char_view = useRpcView(
     (signal) => (character_id ? get_characters({ ids: [character_id] }, signal) : Promise.resolve([])),
     { interval_ms: 10000, enabled: !!character_id, deps: [character_id] }
   )
@@ -209,7 +209,7 @@ export function DiscoveryPrompts() {
           }
           // Upgrade #4: the entry takes the LIVE standing position (x/z block coords, u32) — the zone
           // derivation moved on-chain. Read it at PRESS time from the ENGINE store the prompt gates on
-          // (player_cell: engine-published local truth; .y is the world-Z of the 2D cell). use_game_state is
+          // (player_cell: engine-published local truth; .y is the world-Z of the 2D cell). useGameState is
           // the useSyncExternalStore HOOK — no zustand .getState(); press-time reads go via context.get_state().
           const pos = context.get_state().player_cell ?? player_cell
           if (!handle || !pos) {

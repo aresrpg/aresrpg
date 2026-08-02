@@ -7,13 +7,13 @@ import { plan_scene } from '@aresrpg/world/session_gate'
 import { use_auth, type AuthState } from './auth'
 import { use_spectate_gate } from './stores/spectate_gate'
 import { use_follow } from './follow'
-import { use_mobile_mode } from './game/screens/hud/mobile_layout.js'
+import { useMobileMode } from './game/screens/hud/mobile_layout.js'
 import { use_world_binding, reset_world_binding, fetch_world_binding } from './world-shell/session_gate.js'
 import { resolve_world_biome } from './world-shell/world_biome.js'
 import { resolve_checkpoint_spawn } from './world-shell/world_checkpoint.js'
 import { restore_world_position } from './world-shell/spawns_adapter.js'
 import { TouchControlsLayer } from './game/touch/TouchControls.jsx'
-import { use_mobile_input_mode, use_mobile_touch_hygiene } from './game/touch/mobile_input_mode.js'
+import { useMobileInputMode, useMobileTouchHygiene } from './game/touch/mobile_input_mode.js'
 import './game/touch/touch-hygiene.css'
 import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
@@ -105,8 +105,8 @@ export function GameWorldHost(): ReactElement {
   // FOLLOW (idle-exploration reframe): when the player follows a character the scene focuses that
   // character's idle-wandering avatar (+ biome music, owned by the follow store). Default = the lobby.
   const following = use_follow((s) => s.active)
-  const mobile = use_mobile_mode()
-  const mobile_input = use_mobile_input_mode()
+  const mobile = useMobileMode()
+  const mobile_input = useMobileInputMode()
   // The world tab is the BARE ROOT (no path segment) — exact match, startsWith('/') matches everything.
   const active = location.pathname === '/'
 
@@ -115,7 +115,7 @@ export function GameWorldHost(): ReactElement {
   // a Sui address IS being in-app — there is no server-link step.
   const in_app = !!address
   const show_world = active || !in_app
-  use_mobile_touch_hygiene(mobile_input && show_world)
+  useMobileTouchHygiene(mobile_input && show_world)
 
   // INTERACTION GATE: canvas input is ignored outside spectate/play. The canvas is DISPLAY-ONLY until the visitor chose
   // spectate OR is logged in — the CSS half (canvas-bound pointer/wheel), paired with the spectate camera's own

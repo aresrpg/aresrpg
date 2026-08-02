@@ -16,10 +16,10 @@ import { ConfirmDialog } from '../screens/hud/world/ConfirmDialog.jsx'
 
 import {
   auto_search_input,
-  use_auto_search,
-  use_auto_search_driver,
-  use_mob_templates,
-  use_world_mob_ids,
+  useAutoSearch,
+  useAutoSearchDriver,
+  useMobTemplates,
+  useWorldMobIds,
 } from './auto_search_adapter.js'
 import { AutoSearchRow, AutoSearchSheet } from './auto_search_view.jsx'
 import './auto-search.css'
@@ -27,14 +27,14 @@ import './auto-search.css'
 /** @returns {import('react').ReactElement} */
 export function AutoSearchPanel() {
   const { t } = useTranslation()
-  const armed = use_auto_search((state) => state.armed)
-  const fee_pending = use_auto_search((state) => state.fee_pending)
-  const config_open = use_auto_search((state) => state.config_open)
-  const from_m = use_auto_search((state) => state.from_m)
-  const to_m = use_auto_search((state) => state.to_m)
-  const wanted = use_auto_search((state) => state.wanted)
-  const wanted_resources = use_auto_search((state) => state.wanted_resources)
-  const targets = use_auto_search((state) => state.targets)
+  const armed = useAutoSearch((state) => state.armed)
+  const fee_pending = useAutoSearch((state) => state.fee_pending)
+  const config_open = useAutoSearch((state) => state.config_open)
+  const from_m = useAutoSearch((state) => state.from_m)
+  const to_m = useAutoSearch((state) => state.to_m)
+  const wanted = useAutoSearch((state) => state.wanted)
+  const wanted_resources = useAutoSearch((state) => state.wanted_resources)
+  const targets = useAutoSearch((state) => state.targets)
 
   // The gathering roster is the sdk's own 3-job × 11-tier table (the SAME rows the jobs panel lists, keyed by
   // the same items.json slug the zone rows resolve to) — static content, no chain read, no second corpus.
@@ -50,9 +50,9 @@ export function AutoSearchPanel() {
   // The roster the sheet picks from — the bestiary's own /v1 door, read only while the sheet is open or a
   // running loop may need to name a find, and SCOPED to the mobs the current world can actually spawn (the
   // World doc's own table; it also prunes a selection the new world cannot spawn, through the fold's door).
-  const world_mob_ids = use_world_mob_ids()
-  const { rows, loading } = use_mob_templates(config_open || armed, world_mob_ids)
-  use_auto_search_driver(rows)
+  const world_mob_ids = useWorldMobIds()
+  const { rows, loading } = useMobTemplates(config_open || armed, world_mob_ids)
+  useAutoSearchDriver(rows)
 
   return (
     <>

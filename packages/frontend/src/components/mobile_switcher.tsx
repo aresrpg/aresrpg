@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Menu } from 'lucide-react'
 
 import { NAV_ITEMS, visible_nav_items, type Page } from '../constants/navigation'
-import { use_navigate_page, use_active_page } from '../hooks/use_navigate_page'
+import { useNavigatePage, useActivePage } from '../hooks/use_navigate_page'
 
 // MOBILE PAGE SWITCHER — replaces the bottom nav bar. Landscape-only mobile can't split
 // its scarce 390px height with a bar, so navigation collapses to ONE glass handle at the right edge that
@@ -16,8 +16,8 @@ import { use_navigate_page, use_active_page } from '../hooks/use_navigate_page'
 // NAV_ITEMS + the shared visible_nav_items filter (admin/disabled). Desktop keeps the Sidebar — not here.
 export function MobileSwitcher() {
   const { t } = useTranslation()
-  const active_page = use_active_page()
-  const navigate = use_navigate_page()
+  const active_page = useActivePage()
+  const navigate = useNavigatePage()
   const [open, set_open] = useState(false)
 
   const items = visible_nav_items(NAV_ITEMS, { mobile: true })

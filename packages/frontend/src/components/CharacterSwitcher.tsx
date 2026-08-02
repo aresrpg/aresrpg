@@ -23,7 +23,7 @@ import {
   select_character_session,
 } from '@aresrpg/world/character_selection'
 
-import { use_game_state, context, use_fight_view } from '../game/store.js'
+import { useGameState, context, useFightView } from '../game/store.js'
 import { use_follow } from '../follow'
 import { get_group_follow_snapshot, subscribe_group_follow } from '../world-shell/group_wiring.js'
 import { use_party } from '../world-shell/party_store.js'
@@ -50,11 +50,11 @@ const DUNGEON_STATUS_KEY = ['status_open', 'status_active', 'status_cleared', 's
 
 export function CharacterSwitcher() {
   const { t } = useTranslation()
-  const characters = use_game_state((s) => s.sui.characters)
-  const loaded = use_game_state((s) => s.sui.loaded)
-  const selected_id = use_game_state((s) => s.selected_character_id)
+  const characters = useGameState((s) => s.sui.characters)
+  const loaded = useGameState((s) => s.sui.loaded)
+  const selected_id = useGameState((s) => s.selected_character_id)
   const active_dungeon_id = use_dungeon((s) => s.dungeon_id)
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill)
+  const fight = useFightView() // synchronous core view (S2 mirror kill)
   const switching_id = useStore(character_switch_store, (state) =>
     state.phase === 'switching' ? state.target_id : null
   )

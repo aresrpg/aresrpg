@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next'
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 import classes_json from '@aresrpg/sdk/classes' with { type: 'json' }
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { resolve_class_spells } from './fight-spells.js'
 import { newly_unlocked } from './spell-unlock-select.js'
@@ -72,10 +72,10 @@ function resolve_unlock(class_id, level, levels_gained) {
  */
 export function LevelUp({ on_allocate }) {
   const { t } = useTranslation()
-  const level_up = use_game_state(s => s.level_up)
-  const result_open = use_game_state(s => !!s.fight_result)
-  const characters = use_game_state(s => s.sui.characters)
-  const selected_id = use_game_state(s => s.selected_character_id)
+  const level_up = useGameState(s => s.level_up)
+  const result_open = useGameState(s => !!s.fight_result)
+  const characters = useGameState(s => s.sui.characters)
+  const selected_id = useGameState(s => s.selected_character_id)
   // Every seeded world + its on-chain join gate (world.move `required_level`), read chain-direct + cached
   // (the /v1 worlds view omits the gate). Loaded lazily on the card's first paint; until it resolves the
   // world row is simply absent (honest — never a fabricated unlock). [] on a read failure.

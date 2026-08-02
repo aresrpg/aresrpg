@@ -87,7 +87,7 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
  * @param {LootEntry} entry
  * @param {any[]} items live bag snapshot (state.sui.items), used for exact instance enrichment
  * @param {Map<string, any>} template_map exact template id → chain template row, plus legacy item_type keys
- * @param {((tmpl: any, field: 'name' | 'description') => string) | undefined} tt use_template_t() resolver
+ * @param {((tmpl: any, field: 'name' | 'description') => string) | undefined} tt useTemplateT() resolver
  * @param {(key: string, opts?: any) => string} t
  * @param {Record<string, string>} [slug_by_template_id] live ItemTemplate id → authored render slug
  * @param {Record<string, number> | null} [rolled_stats] exact owned instance's centered-u16 StatsKey block

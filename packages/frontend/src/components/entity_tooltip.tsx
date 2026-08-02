@@ -2,9 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { ReactNode } from 'react'
 
-import { use_template_t } from '../i18n/template_t'
+import { useTemplateT } from '../i18n/template_t'
 
-import { onchain_template_to_detail_props, use_mouse_tooltip } from './items'
+import { onchain_template_to_detail_props, useMouseTooltip } from './items'
 import { ItemDetailView, RemovedItemNotice } from './item_detail_view'
 
 /**
@@ -19,9 +19,9 @@ import { ItemDetailView, RemovedItemNotice } from './item_detail_view'
  * `virtual:item_catalog`'s pet_food_slugs + the seed receipt) because this module must stay bun-importable
  * — a `virtual:` import here would break every test that transitively renders the entity_display barrel.
  */
-export function use_onchain_item_tooltip({ pet_food_row }: { pet_food_row?: ReactNode } = {}) {
-  const tt = use_template_t()
-  return use_mouse_tooltip<Parameters<typeof onchain_template_to_detail_props>[0]>((tmpl) => {
+export function useOnchainItemTooltip({ pet_food_row }: { pet_food_row?: ReactNode } = {}) {
+  const tt = useTemplateT()
+  return useMouseTooltip<Parameters<typeof onchain_template_to_detail_props>[0]>((tmpl) => {
     const detail = onchain_template_to_detail_props(tmpl, tt)
     return (
       <div

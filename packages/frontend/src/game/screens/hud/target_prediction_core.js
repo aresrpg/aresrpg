@@ -58,7 +58,7 @@ const resolve_armed_spell = (armed, me) => {
 }
 
 /**
- * THE PREVIEW'S DEPENDENCY SET — the memo key `use_target_prediction` re-runs the derivation on, living HERE next
+ * THE PREVIEW'S DEPENDENCY SET — the memo key `useTargetPrediction` re-runs the derivation on, living HERE next
  * to the derivation it keys so the two can never be maintained apart. It is the derivation's OWN inputs, never a
  * subset of them: keying on hand-picked aim primitives (the armed id, the caster, the target's cell and hp) named
  * nothing about the CASTER's status block, so a +110% damage buff folded, the card painted it, and the held hover

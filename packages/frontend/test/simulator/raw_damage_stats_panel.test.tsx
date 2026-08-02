@@ -49,7 +49,7 @@ void test_i18n.init({
 
 test('RED: a gear raw-damage bonus appears in the stats panel at its existing derived value', () => {
   const corpus = { items: [blade], by_id: new Map([[blade.id, blade]]), loading: false }
-  const corpus_spy = spyOn(item_corpus, 'use_item_corpus').mockImplementation(() => corpus)
+  const corpus_spy = spyOn(item_corpus, 'useItemCorpus').mockImplementation(() => corpus)
   try {
     const equipment_stats = equipment_aggregate([blade])
     const derived = get_secondary_stats({ equipment_stats }).find((row) => row.key === STATISTICS.RAW_DAMAGE)

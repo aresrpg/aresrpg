@@ -13,7 +13,7 @@
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { spell_detail_view, area_label } from './spell-deck-data.js'
-import { use_image_retry } from './image_retry.js'
+import { useImageRetry } from './image_retry.js'
 import './spell-detail.css'
 
 /**
@@ -26,7 +26,7 @@ import './spell-detail.css'
  */
 export function SpellArt({ icon, color, name, className = '' }) {
   const resolved = spell_icon_url(icon)
-  const { url, attempt, on_failed_attempt } = use_image_retry(resolved ? [resolved] : [])
+  const { url, attempt, on_failed_attempt } = useImageRetry(resolved ? [resolved] : [])
   if (!url)
     return (
       <span

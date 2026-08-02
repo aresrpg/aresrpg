@@ -30,7 +30,7 @@ export const simulator_mob_roster = (worlds: readonly CorpusWorld[]): CorpusMob[
     .sort((left, right) => left.minLevel - right.minLevel || left.name.localeCompare(right.name))
 
 /** The subscribed roster hook — one home for "how a component gets the simulator's mob population". */
-export const use_mob_roster = (): CorpusMob[] => {
+export const useMobRoster = (): CorpusMob[] => {
   const worlds = use_world_corpus((state) => state.worlds)
   return useMemo(() => simulator_mob_roster(worlds), [worlds])
 }
@@ -38,8 +38,8 @@ export const use_mob_roster = (): CorpusMob[] => {
 /** The roster indexed by template id — "which corpus row is this stored pick?". Re-derived when the corpus
  *  lands, never cached in module state: a `??=` index built before the blob arrives would answer "this mob
  *  no longer exists" for every stored seat, for the whole session. */
-export const use_mob_index = (): Map<string, CorpusMob> => {
-  const roster = use_mob_roster()
+export const useMobIndex = (): Map<string, CorpusMob> => {
+  const roster = useMobRoster()
   return useMemo(() => new Map(roster.map((mob) => [mob.id, mob])), [roster])
 }
 
@@ -53,9 +53,9 @@ export const use_mob_index = (): Map<string, CorpusMob> => {
  * old picker rendered "NO RESULTS FOUND · 0/0" forever, because nothing ever loaded the corpus and a
  * `useMemo(..., [])` over module state could not have noticed if something had.
  */
-export function use_mob_picker_content(): { roster: CorpusMob[]; items: PickerItem[]; empty_label?: string } {
+export function useMobPickerContent(): { roster: CorpusMob[]; items: PickerItem[]; empty_label?: string } {
   const { t } = useTranslation()
-  const roster = use_mob_roster()
+  const roster = useMobRoster()
   const status = use_world_corpus((state) => state.status)
 
   const items: PickerItem[] = useMemo(
@@ -83,7 +83,7 @@ export function MobPicker({
   value,
 }: Readonly<{ on_pick: (mob: CorpusMob) => void; on_close: () => void; value?: string }>) {
   const { t } = useTranslation()
-  const { roster, items, empty_label } = use_mob_picker_content()
+  const { roster, items, empty_label } = useMobPickerContent()
 
   return (
     <SearchPickerModal

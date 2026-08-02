@@ -549,7 +549,7 @@ export const emit_death_line = (get_state, dispatch, { target_id }) => {
 export { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '@aresrpg/fight/weapon'
 
 // Arm (or toggle off) a hand card for casting. THE ONE DOOR (fight/store.js): the core owns the toggle; every
-// consumer reads `armed_spell_id` synchronously off the projected view (use_fight_view). The board reads it to
+// consumer reads `armed_spell_id` synchronously off the projected view (useFightView). The board reads it to
 // highlight cast-range and route the next board click into a cast command.
 /** @param {string} spell_id */
 export function arm_spell(spell_id) {
@@ -622,7 +622,7 @@ export default function fight() {
       if (type.startsWith('action/fight_hover/'))
         return { ...state, fight_hover: fold_hover(state.fight_hover ?? null, type, payload) }
       // THE MIRROR IS DEAD: fight truth has ONE home (fight/store.js) and ONE synchronous
-      // read surface (use_fight_view/fight_view) — no `state.fight` copy exists to write.
+      // read surface (useFightView/fight_view) — no `state.fight` copy exists to write.
       return state
     },
     /** @param {import('../game.js').Context} context */

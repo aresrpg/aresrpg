@@ -26,7 +26,7 @@ import { Loader2 } from 'lucide-react'
 
 import { ItemImage } from '../../../components/items'
 import i18n from '../../../i18n' // singleton for toast handlers (outside the render's useTranslation closure)
-import { use_template_t } from '../../../i18n/template_t'
+import { useTemplateT } from '../../../i18n/template_t'
 import { use_toast } from '../../../toast'
 import { load_roster } from '../../../roster/load_roster.js'
 import { get_template_by_item_type_map } from '../../../chain/read_findables.js'
@@ -174,7 +174,7 @@ export function RevealStage({
  *   on_retry_blocked?:(box_id:string)=>void, on_retry_allowed?:(box_id:string)=>void }} props
  */
 export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed }) {
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const [phase, set_phase] = useState('pending')
   const [pet, set_pet] = useState(/** @type {{slug:string,name:string}|null} */ (null))
   const [collect_status, set_collect_status] = useState(

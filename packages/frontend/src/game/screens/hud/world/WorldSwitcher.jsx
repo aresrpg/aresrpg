@@ -8,7 +8,7 @@
 // title/aria). The destination picker lives in WorldTravelModal (world cards + level filter).
 //
 // Every rendered fact flows through the PURE derivations (world_travel_state.js):
-//   • derive_world_panel — the selected character's location line, IDENTITY-GUARDED: use_rpc_view keeps
+//   • derive_world_panel — the selected character's location line, IDENTITY-GUARDED: useRpcView keeps
 //     last-landed data across a selection switch, so the doc in hand can belong to a DIFFERENT character;
 //     a doc whose id mismatches is discarded (the 07-17 "HERE in First Shore" lie died at this seam). A
 //     selected character in NO world renders the honest empty state with the travel button as the CTA.
@@ -25,8 +25,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Globe } from 'lucide-react'
 
-import { use_game_state } from '../../../store.js'
-import { use_rpc_view } from '../../../../rpc/use_view'
+import { useGameState } from '../../../store.js'
+import { useRpcView } from '../../../../rpc/use_view'
 import { get_characters } from '../../../../rpc/client'
 import { load_world_catalog } from '../../../../world-shell/world_catalog.js'
 import { world_corpus_of } from '../../../../pages/encyclopedia/world_corpus'
@@ -40,7 +40,7 @@ import { derive_world_panel, derive_world_cards, filter_world_cards } from './wo
 /** @returns {import('react').ReactElement} */
 export function WorldSwitcher() {
   const { t } = useTranslation()
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
   const [travel_open, set_travel_open] = useState(false)
   const [accessible_only, set_accessible_only] = useState(false)
   // The world a card is asking to travel to — drives the house ConfirmDialog (NEVER a native
@@ -49,7 +49,7 @@ export function WorldSwitcher() {
 
   // The selected character's doc (world binding + level). Cheap 15 s poll, self-heals on focus. The raw
   // hook value is NEVER rendered directly — derive_world_panel identity-guards it (see header).
-  const view = use_rpc_view(
+  const view = useRpcView(
     /** @returns {Promise<{ id?: string, world?: string | null, level?: number | null } | null>} */ async (signal) =>
       selected_character_id ? ((await get_characters({ id: selected_character_id }, signal))[0] ?? null) : null,
     { deps: [selected_character_id], enabled: !!selected_character_id, interval_ms: 15000 }
@@ -62,7 +62,7 @@ export function WorldSwitcher() {
   // derivation never pre-locks off an unknown, and it must never pre-UNLOCK off one either. The poll costs
   // nothing once resolved (the catalog memoizes its answer) and self-heals a failed first read, which
   // memoizes nothing.
-  const catalog = use_rpc_view((signal) => load_world_catalog(signal), { deps: [] })
+  const catalog = useRpcView((signal) => load_world_catalog(signal), { deps: [] })
   const worlds = catalog.data ?? []
   const required_level_by_world = new Map(worlds.map((world) => [world.id, world.required_level]))
 

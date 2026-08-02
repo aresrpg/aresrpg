@@ -6,7 +6,7 @@
 // `vercel.json` answers a retired path with the SPA shell (HTTP 200, `text/html`), so a tab opened before the
 // deploy fails its next lazy import with
 // `TypeError: Failed to fetch dynamically imported module: …/assets/fight_shim-<old hash>.js`.
-// `use_sim_fight` defers the sim chain to exactly one such import, caught the rejection itself, and turned it
+// `useSimFight` defers the sim chain to exactly one such import, caught the rejection itself, and turned it
 // into a verdict about THE BUILD — while the app's one stale-deploy recovery never heard about it, because a
 // caught rejection raises no `unhandledrejection` and Vite's preload helper stops rethrowing the moment the
 // recovery listener cancels the event.

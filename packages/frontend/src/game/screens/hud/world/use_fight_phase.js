@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react'
 
-import { use_fight_view } from '../../../store.js'
+import { useFightView } from '../../../store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { derive_phase } from '../../../../fight-engine/phase.js'
 
@@ -18,9 +18,9 @@ import { derive_phase } from '../../../../fight-engine/phase.js'
  * here so the machine never re-derives identity (single source of truth, mirrors DungeonBoard's own `me`).
  * @returns {import('../../../../fight-engine/phase.js').PhaseResult}
  */
-export function use_fight_phase() {
+export function useFightPhase() {
   const dungeon = use_dungeon(s => s.dungeon)
-  const fight = use_fight_view() // SYNCHRONOUS core view (S2 mirror kill) — the phase machine never lags a dispatch
+  const fight = useFightView() // SYNCHRONOUS core view (S2 mirror kill) — the phase machine never lags a dispatch
   const character_id = fight?.my_entity_id ?? null
   const my_seat = useMemo(
     () =>

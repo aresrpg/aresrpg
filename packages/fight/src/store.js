@@ -635,5 +635,5 @@ export const create_fight_store = () => {
   return { ...store, trace_tap }
 }
 
-/** The app-wide singleton — VANILLA zustand (node-clean); the React hook (`use_fight`) is a frontend adapter. */
+/** The app-wide singleton — VANILLA zustand (node-clean); the React hook (`useFight`) is a frontend adapter. */
 export const fight_store = create_fight_store()

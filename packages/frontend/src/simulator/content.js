@@ -101,7 +101,7 @@ export const equipment_aggregate = (items) =>
 
 /**
  * A stored loadout (slot → item template id, the reducer's `SimCharacter.loadout`) → the live corpus rows to
- * fold. The corpus is the caller's (`use_item_corpus().by_id`) — this module stays pure and storeless.
+ * fold. The corpus is the caller's (`useItemCorpus().by_id`) — this module stays pure and storeless.
  *
  * Unresolvable ids come back as `unresolved` rather than vanishing: a build saved before a republish can
  * reference a template the current corpus no longer mints, and a silent drop would render that build naked

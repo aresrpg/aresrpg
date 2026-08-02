@@ -24,7 +24,7 @@ import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { should_auto_end_turn, should_report_stall, turn_overdue_ms } from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
-import { use_fight, use_fight_view } from '../../store.js'
+import { useFight, useFightView } from '../../store.js'
 import { min_turn_left } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
@@ -157,7 +157,7 @@ export function FightControls({
   fight_status = null,
 } = {}) {
   const { t } = useTranslation()
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill)
+  const fight = useFightView() // synchronous core view (S2 mirror kill)
   const busy = use_dungeon((s) => s.busy)
   // #921 ④ — IS THERE A CHAIN BEHIND THIS FIGHT? The auto-advance below embodies the post-deadline janitors,
   // and those are chain doors. Only a composition that has none says so (simulator/fight_shim.js seeds
@@ -169,8 +169,8 @@ export function FightControls({
   const force_passing = use_dungeon((s) => s._force_passing)
   // THE CORE FLOOR (@aresrpg/fight store PLAYER_TURN_FLOOR_MS): min_turn_left reads the core's raw
   // `turn_started_at` — a field the projected view (`fight`, above) doesn't carry — so this subscribes to
-  // the raw core state via the React binding (game/store.js use_fight; the core store itself is vanilla).
-  const fight_state = use_fight()
+  // the raw core state via the React binding (game/store.js useFight; the core store itself is vanilla).
+  const fight_state = useFight()
 
   // S-80 FORFEIT confirm — in-app modal (never a native dialog, standing rule), owned HERE so every mount
   // gets it for free. Confirming runs `on_abandon` (default: the store's `abandon_fight`).

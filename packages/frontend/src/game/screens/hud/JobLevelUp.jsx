@@ -19,10 +19,10 @@ import { useTranslation } from 'react-i18next'
 
 import { JOB_CATEGORY, JOBS, get_job, item_icon_url } from '@aresrpg/sdk/jobs'
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { get_encyclopedia } from '../../../rpc/client'
-import { use_rpc_view } from '../../../rpc/use_view'
+import { useRpcView } from '../../../rpc/use_view'
 import { craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
 import { job_unlocks } from './level_unlocks.js'
 import './result.css'
@@ -71,9 +71,9 @@ function UnlockChip({ icon, name }) {
  */
 export function JobLevelUp() {
   const { t } = useTranslation()
-  const job_level_up = use_game_state(s => s.job_level_up)
+  const job_level_up = useGameState(s => s.job_level_up)
   // Never card-over-card: the character level-up + the end-fight result own the center stage first.
-  const blocked = use_game_state(s => !!s.level_up || !!s.fight_result)
+  const blocked = useGameState(s => !!s.level_up || !!s.fight_result)
   const visible = !!job_level_up && !blocked
 
   const job_id = job_level_up?.job_id ?? null
@@ -82,7 +82,7 @@ export function JobLevelUp() {
   // Jobs drawer projects through `craft_recipes_for_job`, so the card announces exactly what the drawer
   // will let the player craft. A gathering job crafts nothing, so it never fires the read.
   const is_craft = !!job && job.category !== JOB_CATEGORY.GATHERING
-  const { data: encyclopedia, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), {
+  const { data: encyclopedia, loading } = useRpcView((signal) => get_encyclopedia(undefined, signal), {
     enabled: visible && is_craft,
     deps: [job_id],
   })

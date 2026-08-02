@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (#242 read-layer census): CompassStrip, DiscoveryPrompts, and world_spawns.js each ran their OWN
-// use_rpc_view/setInterval instance for the IDENTICAL /v1/zones read, tripling the request rate for one
+// useRpcView/setInterval instance for the IDENTICAL /v1/zones read, tripling the request rate for one
 // player's data; the sponsor allowance hook did the same across its mount sites. This proves the shared
 // primitive both fixes: one timer per key regardless of subscriber count, coalesced fetches, and a stop the
 // instant the last subscriber releases — never a background poll outliving every consumer.

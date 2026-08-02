@@ -12,10 +12,10 @@ import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 import { is_lootbox } from '../../../world-shell/lootbox_actions.js'
 import { use_toast } from '../../../toast'
 import { inventory_item_icon, is_item_listed } from './inventory-equip.js'
-import { use_escape_close } from './use_escape_close.js'
+import { useEscapeClose } from './use_escape_close.js'
 import { allow_box_retry, block_box_retry } from './lootbox-retry-guard.js'
 
-export function use_inventory_menus({ t, slugs, refresh_retry_guard }) {
+export function useInventoryMenus({ t, slugs, refresh_retry_guard }) {
   const [pet_menu, set_pet_menu] = useState(/** @type {{ x: number, y: number, pet: any } | null} */ (null))
   const [feed_modal, set_feed_modal] = useState(/** @type {{ pet: any, all: boolean } | null} */ (null))
   const [crush_menu, set_crush_menu] = useState(/** @type {{ x: number, y: number, item: any } | null} */ (null))
@@ -24,10 +24,10 @@ export function use_inventory_menus({ t, slugs, refresh_retry_guard }) {
   const [reveal_box, set_reveal_box] = useState(/** @type {any} */ (null))
   // Right-click on an EQUIPPED paper-doll/cosmetic slot (previously fell through to the native
   // browser menu). EquipMenu owns its own outside-click/Escape dismiss (mirrors CrushMenu), so — unlike
-  // pet_menu/box_menu below — this state needs no use_escape_close wiring here.
+  // pet_menu/box_menu below — this state needs no useEscapeClose wiring here.
   const [equip_menu, set_equip_menu] = useState(/** @type {{ x: number, y: number, item: any } | null} */ (null))
-  use_escape_close(pet_menu, () => set_pet_menu(null))
-  use_escape_close(box_menu, () => set_box_menu(null))
+  useEscapeClose(pet_menu, () => set_pet_menu(null))
+  useEscapeClose(box_menu, () => set_box_menu(null))
 
   /** The reveal renders the box art itself — recover the ICON slug through the SAME resolve the bag cell
    * paints with (raw `/v1` item_type is not always the icon key), so the overlay can never fall to a glyph

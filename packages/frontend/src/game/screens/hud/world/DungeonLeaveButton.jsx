@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { fight_scope_sim, fight_session_in_scope } from '../../../../world-shell/fight_session_scope.js'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
-import { use_fight_phase } from './use_fight_phase.js'
+import { useFightPhase } from './use_fight_phase.js'
 import { should_mount_board, should_show_result } from '../../../../fight-engine/phase.js'
 
 const STATUS_OPEN = 0
@@ -43,7 +43,7 @@ export function DungeonLeaveButton() {
   // The board's own ABANDON is THE exit exactly when the board is mounted (PLACEMENT/ACTIVE); the result card
   // owns the close in TERMINAL. So this fallback shows on every OTHER escrowed state (plane OPEN/ROOM_CLEARED,
   // and any half-init hold where the board deliberately did NOT mount) — never a double-exit, never zero.
-  const phase = use_fight_phase()
+  const phase = useFightPhase()
   const [confirm, set_confirm] = useState(false)
 
   // P0 STRANDED WORLD FIGHT: a BARE world fight reuses this store with run_pass_id:null AND in_session:false

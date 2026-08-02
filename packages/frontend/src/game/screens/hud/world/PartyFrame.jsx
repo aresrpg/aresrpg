@@ -11,7 +11,7 @@ import { projected_hp, character_max_hp } from '../../../../chain/read_character
 import { v1_character_to_party_row } from '../../../../chain/read_staking.js'
 
 import './game-world-hud.css'
-import { context, use_game_state } from '../../../store.js'
+import { context, useGameState } from '../../../store.js'
 import { project_party_view } from '@aresrpg/party/reduce'
 
 import { use_party } from '../../../../world-shell/party_store.js'
@@ -81,8 +81,8 @@ export function PartyFrame() {
   const my_dungeon_id = use_dungeon((state) =>
     state.in_session || world_fight_session(state) ? state.dungeon_id : null
   )
-  const selected_character_id = use_game_state((state) => state.selected_character_id)
-  const my_char_name = use_game_state(
+  const selected_character_id = useGameState((state) => state.selected_character_id)
+  const my_char_name = useGameState(
     (state) => state.sui?.characters?.find((character) => character.id === state.selected_character_id)?.name
   )
 
@@ -110,7 +110,7 @@ export function PartyFrame() {
   const decline_invite = use_party((state) => state.decline_invite)
   const party_busy = use_party((state) => state.busy)
   const invite_owned = use_party((state) => state.invite_owned)
-  const roster = use_game_state((state) => state.sui?.characters)
+  const roster = useGameState((state) => state.sui?.characters)
   const follow = useSyncExternalStore(
     subscribe_group_follow,
     get_group_follow_snapshot,

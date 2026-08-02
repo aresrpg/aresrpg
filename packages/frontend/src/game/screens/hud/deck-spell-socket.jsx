@@ -10,7 +10,7 @@
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { hover_spell } from '../../core/modules/fight.js'
-import { use_image_retry } from './image_retry.js'
+import { useImageRetry } from './image_retry.js'
 import { Tooltip } from './Tooltip.jsx'
 
 /**
@@ -58,7 +58,7 @@ export function SpellSocket({
   // for SpellArt/ItemIcon but never ported here, so a senshi switch racing a cold edge stuck on the
   // fallback until a full page refresh (fresh mount, warm edge).
   const resolved = spell_icon_url(card.icon)
-  const { url: art_url, attempt, on_failed_attempt } = use_image_retry(resolved ? [resolved] : [])
+  const { url: art_url, attempt, on_failed_attempt } = useImageRetry(resolved ? [resolved] : [])
   return (
     <Tooltip placement="top" content={tip} className="tt-card--spell" visible={hovered}>
       {/* HOVER is projected through the fight core's one input door for the socket-anchored card. */}

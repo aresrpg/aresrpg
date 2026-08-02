@@ -171,7 +171,7 @@ export const create_fight_shim = ({
     // `engine_view_of` (project.js) out of the folded turn pointer — the raw `store.getState().view`
     // is the adopted BOARD snapshot and has never carried that field. Reading it off the slice therefore yielded
     // `undefined` on every single press: END TURN refused forever, the turn never ended, and the only trace was
-    // DungeonBoard's `flush_finished ok:false`. This is the SAME door the HUD reads (`use_fight_view`), so the
+    // DungeonBoard's `flush_finished ok:false`. This is the SAME door the HUD reads (`useFightView`), so the
     // seat the shim commits for is by construction the seat the board is showing as active.
     const seat = engine_view_of(store.getState())?.active_entity_id ?? null
     if (!seat) {
@@ -224,7 +224,7 @@ export const create_fight_shim = ({
    * came back. A local no-op is only sound for a door that owes the page nothing; this one owes it the transition.
    *
    * The HOLD is the same one the chain path uses: collapse only once the killing wave has drained, so the fight
-   * never disappears out from under its own last beat. Where it collapses TO belongs to the page — `use_sim_fight`
+   * never disappears out from under its own last beat. Where it collapses TO belongs to the page — `useSimFight`
    * owns start/stop and is the one home for "a simulator fight session ended".
    */
   const finish = () => {

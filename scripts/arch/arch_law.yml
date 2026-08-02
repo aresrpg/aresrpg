@@ -47,9 +47,9 @@ rules:
         - '**/packages/frontend/src/world-shell/voxel_fight_adapter.js'
     pattern-either:
       - patterns:
-          - pattern: use_fight(...)
-          - pattern-not: use_fight(world_fight_view)
-      - pattern: use_game_state(...)
+          - pattern: useFight(...)
+          - pattern-not: useFight(world_fight_view)
+      - pattern: useGameState(...)
       - pattern: use_dungeon(...)
       - pattern: use_expedition(...)
       - pattern: use_party(...)
@@ -84,8 +84,8 @@ rules:
       - pattern: use_world_binding.getState()
       - pattern: use_presence(...)
       - pattern: use_presence.getState()
-      - pattern: use_game_state(...)
-      - pattern: use_game_state.getState()
+      - pattern: useGameState(...)
+      - pattern: useGameState.getState()
       - pattern: use_dungeon(...)
       - pattern: use_dungeon.getState()
       - pattern: context.get_state()

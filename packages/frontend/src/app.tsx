@@ -11,7 +11,7 @@ import { use_toast, TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'
 import { Sidebar, LanguageCard, DiscordCard } from './components/sidebar'
 import { MobileSwitcher } from './components/mobile_switcher'
 import { MobileOrientationGate } from './game/screens/hud/MobileOrientationGate.jsx'
-import { app_mobile_classes, mobile_shell_visibility, use_mobile_mode } from './game/screens/hud/mobile_layout.js'
+import { app_mobile_classes, mobile_shell_visibility, useMobileMode } from './game/screens/hud/mobile_layout.js'
 import { ShopPage } from './pages/shop'
 import { SpectateLanding } from './pages/auth'
 import { CharactersPage } from './pages/characters'
@@ -188,7 +188,7 @@ function GameWorldView() {
 
 function Layout() {
   const location = useLocation()
-  const mobile = use_mobile_mode()
+  const mobile = useMobileMode()
   const mobile_shell = mobile_shell_visibility(mobile, location.pathname)
   const classes = app_mobile_classes(mobile)
 
@@ -277,7 +277,7 @@ function Layout() {
 function AppBody() {
   const location = useLocation()
   const address = use_auth((s: AuthState) => s.address)
-  const mobile = use_mobile_mode()
+  const mobile = useMobileMode()
 
   // The external /inbox is a STANDALONE claim page for non-players: a plain Sui wallet connects
   // and claims item gifts — its own header + Connect CTA, no game shell / engine boot. Rendered outside the auth

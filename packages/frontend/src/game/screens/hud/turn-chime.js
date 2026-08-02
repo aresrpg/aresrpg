@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure your-turn-chime rising-edge predicate — split out of TurnBanner.jsx SPECIFICALLY so it unit-tests
-// without pulling in the component's other imports (use_game_state transitively loads auth/index.ts ->
+// without pulling in the component's other imports (useGameState transitively loads auth/index.ts ->
 // @mysten/enoki's wallet registration, which touches `window` at MODULE-LOAD time and throws under bun:test's
 // Node-like environment — the same wall deck-key-arm.js documents). Zero imports, zero DOM.
 

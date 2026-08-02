@@ -13,10 +13,10 @@
 // mechanical reasons and no others:
 //   • zustand v5's useStore pins a STATIC render (react-dom/server — this repo has no jsdom) to
 //     `getInitialState`, so a seeded store renders every board empty (the same trap game/store.js documents
-//     on use_fight_view). The stubs hand the component the SAME live state a subscription would.
+//     on useFightView). The stubs hand the component the SAME live state a subscription would.
 //   • `mock.module` is PROCESS-global in bun and three earlier suites already replace game/store.js with a
 //     PARTIAL surface (HackRadioPlayer.test.jsx, day_cycle.test.js, marketplace/inventory_panel.test.tsx) —
-//     so this file must own that door too, mirroring its FULL export surface. `use_fight_view` still returns
+//     so this file must own that door too, mirroring its FULL export surface. `useFightView` still returns
 //     the real projection of the real fold: `entity_id` is chain-shaped truth, never a literal.
 //
 // RED (at 0c72749b…fac99b5f): ReferenceError out of DungeonBoard.jsx's optimistic_vacated memo.
@@ -94,9 +94,9 @@ const static_hook = (store, state) => Object.assign((selector = (s) => s) => sel
 const GAME_STATE = { sui: { characters: [] }, world_presentation: 'terrain' }
 
 mock.module('../../../../../src/game/store.js', () => ({
-  use_game_state: (selector = (s) => s) => selector(GAME_STATE),
-  use_fight_view: () => project.fight_view(),
-  use_fight: (selector = (s) => s) => selector(fight_store.getState()),
+  useGameState: (selector = (s) => s) => selector(GAME_STATE),
+  useFightView: () => project.fight_view(),
+  useFight: (selector = (s) => s) => selector(fight_store.getState()),
   context: { get_state: () => GAME_STATE, events: { on() {}, off() {} } },
 }))
 mock.module('../../../../../src/world-shell/dungeon_store.js', () => ({

@@ -24,11 +24,11 @@ import { projected_hp, character_max_hp } from '../../../chain/read_character.js
 import { use_expedition, STATUS_ACTIVE } from '../../../roster/store'
 import { seat_character } from '../../../world-shell/seat_character.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
-import { use_fight_view, use_game_state } from '../../store.js'
+import { useFightView, useGameState } from '../../store.js'
 import { DeckCluster } from './DeckCluster.jsx'
 import { socket_columns } from './deck-socket-grid.js'
 import { get_saved_hp_display, save_hp_display } from './hp_display_pref.js'
-import { use_tweened_hp } from './use_tweened_hp.js'
+import { useTweenedHp } from './use_tweened_hp.js'
 
 // ── fight Vitals — the optE gem box (S-25) ───────────────────────────────────────────────────────
 // The gem stat box: a big faceted HP gem showing the HP PERCENT (the hero element, 2× the
@@ -49,8 +49,8 @@ const feather_mask = (/** @type {number} */ pct) => {
 
 /** @returns {import('react').ReactElement} */
 function Vitals() {
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill)
-  const character = use_game_state((s) =>
+  const fight = useFightView() // synchronous core view (S2 mirror kill)
+  const character = useGameState((s) =>
     s.sui.characters.find((c) => c.id === (fight?.my_entity_id ?? s.selected_character_id))
   )
   const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
@@ -67,7 +67,7 @@ function Vitals() {
   // HP TWEEN (life updates were too fast on the hud and the nameplate) — the SAME animation home
   // the board nameplate uses: ease the DISPLAYED number at the house pace (the gem fill already CSS-transitions).
   // Keyed on the subject so switching character/fight snaps. Aria-label keeps the TRUE hp (accessibility = truth).
-  const shown_hp = use_tweened_hp(health, fight?.my_entity_id ?? character?.id ?? 'self')
+  const shown_hp = useTweenedHp(health, fight?.my_entity_id ?? character?.id ?? 'self')
   const shown_pct = max_health > 0 ? Math.round(Math.max(0, Math.min(100, (shown_hp / max_health) * 100))) : 0
   const ap = me ? me.ap : character ? get_total_stat(character, STATISTICS.ACTION) : 0
   const mp = me ? me.mp : character ? get_total_stat(character, STATISTICS.MOVEMENT) : 0
@@ -163,13 +163,13 @@ function Vitals() {
 
 /** @returns {import('react').ReactElement} */
 export function SpellBar() {
-  const fight = use_fight_view() // core view (S2 mirror kill)
+  const fight = useFightView() // core view (S2 mirror kill)
   const fight_character_id = fight?.my_entity_id ?? null
   // #1001 — the SAME seat door DungeonBoard's spell gate reads: the wallet's roster first, else the fight's own
   // fighter, so a seat the wallet does not own (the simulator's) can never fall back to a level-1 strip. Both
   // selectors return store-owned values; the derivation happens OUTSIDE them, so the snapshot stays cached.
-  const characters = use_game_state((s) => s.sui.characters)
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const characters = useGameState((s) => s.sui.characters)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
   const character = useMemo(
     () => seat_character(characters, fight?.fighters, fight_character_id ?? selected_character_id),
     [characters, fight?.fighters, fight_character_id, selected_character_id]

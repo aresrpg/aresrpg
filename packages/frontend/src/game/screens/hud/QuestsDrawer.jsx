@@ -20,7 +20,7 @@
 
 import { useMemo, useState } from 'react'
 
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { QUEST_CHAIN as CHAIN, quest_status, trigger_label } from './quests-data.js'
 import './hud-panels.css'
 import './quests.css'
@@ -178,7 +178,7 @@ function QuestDetail({ quest, index, quests }) {
 }
 
 export function QuestsDrawer() {
-  const quests = use_game_state((s) => s.quests)
+  const quests = useGameState((s) => s.quests)
 
   // Default selection: the active quest, else the first not-yet-done, else the first.
   const default_id = useMemo(() => {

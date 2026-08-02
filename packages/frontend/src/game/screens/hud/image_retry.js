@@ -65,7 +65,7 @@ export const reduce_image_load = (state, event) => {
  * lives here — at the edge — and its due event is deduped by the reducer.
  * @param {string[]} urls @returns {{ url: string | null, attempt: number, on_failed_attempt: () => void }}
  */
-export function use_image_retry(urls) {
+export function useImageRetry(urls) {
   const [load, set_load] = useState(() => image_load_state(urls))
   const active = reduce_image_load(load, { type: 'urls', urls })
   if (active !== load) set_load(active)

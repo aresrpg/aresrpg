@@ -29,12 +29,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CHAT_MAX_LENGTH } from '@aresrpg/world/presence'
 
-import { use_fight, use_game_state } from '../../../store.js'
+import { useFight, useGameState } from '../../../store.js'
 import { select_observed_count } from '../../../core/presence_count.js'
 import { send_chat_message } from '../../../core/chat_send.js'
 import { CHANNEL } from '../../../core/modules/chat.js'
 import { use_presence } from '../../../../world-shell/presence_adapter.js'
-import { use_address_names } from '../../../../rpc/use_address_names'
+import { useAddressNames } from '../../../../rpc/use_address_names'
 import { AddressName } from '../../../../components/address_name'
 import { open_player_menu } from './player_menu_store.js'
 import { resolve_segment_text } from './combat_log_names.js'
@@ -95,11 +95,11 @@ const open_chat_menu = (/** @type {any} */ e, /** @type {any} */ line, /** @type
  *  @param {{ readonly?: boolean }} [props] @returns {import('react').ReactElement} */
 export function WorldChat({ readonly = false } = {}) {
   const { t } = useTranslation()
-  const history = use_game_state((s) => s.message_history)
+  const history = useGameState((s) => s.message_history)
   // LIVE fighters map for combat-log name healing (resolve_segment_text) — the core view (S2 mirror kill):
   // a NEW Map only per core fold (memoized view identity), so this stays a stable read between fight ticks.
-  const fighters = use_fight(world_fight_view)?.fighters
-  const observed_count = use_game_state(select_observed_count)
+  const fighters = useFight(world_fight_view)?.fighters
+  const observed_count = useGameState(select_observed_count)
   const link_status = use_presence((state) => state.link_status)
   const link_error = use_presence((state) => state.link_error)
 
@@ -118,7 +118,7 @@ export function WorldChat({ readonly = false } = {}) {
   const lines = history.filter((line) => enabled.has(line.channel ?? CHANNEL.general) && chat_line_in_scope(line))
   // D52 — one batched /v1/names round trip for the visible log; only feeds authors with no known
   // character name (line.name), so an active chatter's chosen name never changes.
-  const author_names = use_address_names(lines.map((l) => l.address))
+  const author_names = useAddressNames(lines.map((l) => l.address))
 
   // autoscroll to the newest line (also when the checkbox filter changes the visible set)
   useEffect(() => {

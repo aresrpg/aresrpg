@@ -8,7 +8,7 @@
 // CDN-edge miss under that burst 404'd once and pinned the element-tinted-initial fallback for
 // the socket's whole mount life — only a full page refresh (fresh mount, warm edge) cleared it. Same
 // hook_runner/find_img idiom as image_retry.test.jsx (no DOM harness needed — SpellSocket's only hook is
-// use_image_retry → useState).
+// useImageRetry → useState).
 
 import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'

@@ -40,7 +40,7 @@ import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
 
 import './compass-strip.css'
 import { DayNightBar } from './DayNightDial.jsx' // day-night cycle indicator — the subtle progress line on the strip's bottom edge
-import { use_game_state } from '../../../store.js'
+import { useGameState } from '../../../store.js'
 import { play_sfx } from '../../../core/audio/sfx.js'
 import { InteractionChip } from '../../../touch/InteractionChip.jsx'
 import { use_zones_view, refetch_zones } from '../../../../rpc/zones_poll'
@@ -87,8 +87,8 @@ const resource_name = (job, tier) => {
  */
 export function CompassStrip({ mobile = false } = {}) {
   const { t } = useTranslation()
-  const pose = use_game_state((s) => s.player_pose)
-  const character_id = use_game_state((s) => s.selected_character_id)
+  const pose = useGameState((s) => s.player_pose)
+  const character_id = useGameState((s) => s.selected_character_id)
   // The selected character's world binding — session_gate is the ONE binding home (three writers heal it);
   // no extra character-doc poll here. undefined (unknown) and null (unbound) both read as "no world yet".
   const bound_char = use_world_binding((s) => s.character_id)

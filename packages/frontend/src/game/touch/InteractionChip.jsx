@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { use_mobile_input_mode } from './mobile_input_mode.js'
+import { useMobileInputMode } from './mobile_input_mode.js'
 
 export const key_cap_for_mode = (key_cap, mobile) => (mobile ? null : key_cap)
 
@@ -14,7 +14,7 @@ export function press_interaction(on_trigger, event) {
  * is the exact same callback the desktop key handler invokes.
  */
 export function InteractionChip({ prompt, on_trigger, class_name, mobile: mobile_override }) {
-  const live_mobile = use_mobile_input_mode()
+  const live_mobile = useMobileInputMode()
   const mobile = mobile_override ?? live_mobile
   const key_cap = key_cap_for_mode(prompt.key, mobile)
   const label = mobile ? (prompt.mobile_label ?? prompt.label) : prompt.label

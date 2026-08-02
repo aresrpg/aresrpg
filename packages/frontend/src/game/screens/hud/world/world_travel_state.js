@@ -7,7 +7,7 @@
 // THREE pure folds, zero effects (ONE-PIPELINE law — the components render these outputs verbatim):
 //   • derive_discovery_binding — the selected character's identity-guarded settled membership.
 //   • derive_world_panel — the SELECTED character's location line. IDENTITY-GUARDED: the char-doc poll
-//     (use_rpc_view) keeps its last-landed data across a selection switch and across failed polls, so the
+//     (useRpcView) keeps its last-landed data across a selection switch and across failed polls, so the
 //     doc in hand can belong to a DIFFERENT character. A doc whose id does not match the selected character
 //     is DISCARDED (status 'unknown', renders as loading) — the 07-17 "HERE in First Shore for the first
 //     roster character" lie is structurally impossible at this seam, whatever the hook serves.

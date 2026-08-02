@@ -7,14 +7,14 @@ import { PenTool, Loader2, Sparkles, Gem, Swords, Plus, X } from 'lucide-react'
 import { use_auth } from '../auth'
 import { use_toast } from '../toast'
 import i18n from '../i18n'
-import { use_game_state } from '../game/store.js'
+import { useGameState } from '../game/store.js'
 import { get_sdk } from '../chain/sdk'
 import { resolve_rolled_stats } from '../chain/rolled_stats.js'
 import { kiosk_for_character } from '../world-shell/kiosk_resolve.js'
 import { load_roster } from '../roster/load_roster.js'
 import { get_template_by_item_type_map } from '../chain/read_findables.js'
 import { ItemDetailView } from '../components/item_detail_view'
-import { use_template_t } from '../i18n/template_t'
+import { useTemplateT } from '../i18n/template_t'
 import { ItemIcon } from '../game/screens/hud/ItemIcon.jsx'
 import { is_forge_gear, is_rune } from '../components/forge_eligibility'
 import { CrushMenu, type CrushTarget } from '../components/crush_menu'
@@ -40,12 +40,12 @@ const CARD_BG = { background: 'linear-gradient(160deg, rgba(200,150,60,0.03) 0%,
 
 export function ScribePage({ character_id = null }: { character_id?: string | null } = {}) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const address = use_auth((s) => s.address)
   // SSOT reads — the engine-store slices the Equipment tab already renders. No effect, no fetch, no spinner
   // on open: the workbench paints instantly and repaints reactively when a tx refresh lands.
-  const items = use_game_state((s: any) => s.sui.items)
-  const characters = use_game_state((s: any) => s.sui.characters)
+  const items = useGameState((s: any) => s.sui.items)
+  const characters = useGameState((s: any) => s.sui.characters)
 
   const [gear_id, set_gear_id] = useState<string | null>(null)
   const [rune_id, set_rune_id] = useState<string | null>(null)

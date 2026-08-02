@@ -204,7 +204,7 @@ describe('#916 · the spell bar renders off a LIVE sim fight', () => {
     ).toMatchSnapshot()
   })
 
-  // THE MOUNT is asserted at the source, and deliberately so: `use_fight_phase` reads `use_dungeon`, and zustand
+  // THE MOUNT is asserted at the source, and deliberately so: `useFightPhase` reads `use_dungeon`, and zustand
   // v5 pins a bound store's SERVER snapshot to `getInitialState` (the override lands on the hook function, never
   // on the api object `useStore` closes over), so `react-dom/server` renders the phase-gated layer as null no
   // matter what the fight is doing. The real mount gate is the driven browser capture on the PR; this holds the

@@ -272,65 +272,6 @@ export default [
     },
   },
   {
-    // THE snake_case BLIND SPOT (#2070) — measured, not a downgrade. `rules-of-hooks` decides what
-    // a custom hook IS from its NAME and nothing else: `/^use[A-Z0-9]/`, hard-coded, with no option
-    // to widen it (`additionalHooks` only widens EFFECT-call detection). This repo's naming law is
-    // snake_case (docs/CODE_LAW.md), so `use_rpc_view`, `use_minimap`, `use_mouse_tooltip` and every
-    // other house hook fail that test, and the rule reports each of their `useState`/`useEffect`
-    // calls as "called in a function that is neither a component nor a custom Hook".
-    //
-    // FIRST-RUN MEASUREMENT: 118 such reports across the 35 files below — and 118 of 118 carry that
-    // one message. ZERO are real hook-order violations. Erroring on them would gate the repo red on
-    // a naming mismatch, so `rules-of-hooks` is OFF for exactly this measured set — every other
-    // frontend file (the PascalCase components, where the detector works and a conditional hook is a
-    // real crash) keeps the ERROR tooth. `exhaustive-deps` stays ON here: it does not need the name.
-    //
-    // COST, stated honestly: inside these 35 files hook ORDER is unenforced — a genuine conditional
-    // hook there would be masked by the naming report anyway, so nothing enforceable is being given
-    // up, but nothing is being proven either. The only fix is renaming the hooks to `useX` (React's
-    // library-imposed name, the one camelCase carve-out docs/CODE_LAW.md already grants) — a
-    // 35-file API rename that is its own reviewed change, not a rider on wiring the plugin.
-    // This list only SHRINKS: a renamed hook leaves it and gains the ERROR tooth.
-    files: [
-      'packages/frontend/src/components/items.tsx',
-      'packages/frontend/src/components/marketplace/inbox_panel.tsx',
-      'packages/frontend/src/components/template_editor/onchain_templates.ts',
-      'packages/frontend/src/components/vault_connect.tsx',
-      'packages/frontend/src/game/data/use_spell_corpus.js',
-      'packages/frontend/src/game/dev/auto_search_adapter.js',
-      'packages/frontend/src/game/screens/hud/MinimapModal.jsx',
-      'packages/frontend/src/game/screens/hud/Stats.jsx',
-      'packages/frontend/src/game/screens/hud/image_retry.js',
-      'packages/frontend/src/game/screens/hud/mobile_layout.js',
-      'packages/frontend/src/game/screens/hud/spell_alloc_session.js',
-      'packages/frontend/src/game/screens/hud/use_escape_close.js',
-      'packages/frontend/src/game/screens/hud/use_inventory_menus.js',
-      'packages/frontend/src/game/screens/hud/use_inventory_templates.jsx',
-      'packages/frontend/src/game/screens/hud/use_minimap.js',
-      'packages/frontend/src/game/screens/hud/use_target_prediction.js',
-      'packages/frontend/src/game/screens/hud/use_tweened_hp.js',
-      'packages/frontend/src/game/screens/hud/world/SelfPlate.jsx',
-      'packages/frontend/src/game/screens/hud/world/use_fight_phase.js',
-      'packages/frontend/src/game/store.js',
-      'packages/frontend/src/game/touch/mobile_input_mode.js',
-      'packages/frontend/src/hooks/use_deferred_search.ts',
-      'packages/frontend/src/hooks/use_is_touch.ts',
-      'packages/frontend/src/hooks/use_navigate_page.ts',
-      'packages/frontend/src/hooks/use_projected_hp.js',
-      'packages/frontend/src/i18n/template_t.ts',
-      'packages/frontend/src/pages/encyclopedia/item_corpus.ts',
-      'packages/frontend/src/pages/encyclopedia/item_lookup.ts',
-      'packages/frontend/src/rpc/shared_poll.ts',
-      'packages/frontend/src/rpc/use_address_names.ts',
-      'packages/frontend/src/rpc/use_view.ts',
-      'packages/frontend/src/simulator/LoadoutSection.tsx',
-      'packages/frontend/src/simulator/MobPicker.tsx',
-      'packages/frontend/src/simulator/use_sim_fight.js',
-      'packages/frontend/src/stores/spell_seat.ts',
-    ],
-    rules: { 'react-hooks/rules-of-hooks': 'off' },
-  },
-  {
     // Vendored game source + migrated sim/sdk packages keep their own lint/format/typecheck
     // pipelines (run inside each package); the indexer is Rust. Keep them out of the companion lint.
     ignores: [

@@ -14,7 +14,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { use_prompt_stack, visible_prompts } from '../../../../world-shell/prompt_stack.js'
 import { play_sfx } from '../../../core/audio/sfx.js'
-import { use_game_state } from '../../../store.js'
+import { useGameState } from '../../../store.js'
 import { InteractionChip } from '../../../touch/InteractionChip.jsx'
 
 /** @returns {import('react').ReactElement | null} */
@@ -22,7 +22,7 @@ export function PromptStack() {
   // visible = registered AND not pending: a pressed tx-prompt vanishes instantly and stays gone until its
   // promise settles (the store's optimistic-pending law) — re-appearance is chain truth, never a double-press.
   const prompts = use_prompt_stack(useShallow(visible_prompts))
-  const fight_mode = use_game_state((s) => s.fight_mode)
+  const fight_mode = useGameState((s) => s.fight_mode)
   const active = prompts.length > 0 && !fight_mode
 
   // S-71 §2.11: this is the ONE choke every [F]/[G]/[E]/[R] world prompt press funnels through (key or

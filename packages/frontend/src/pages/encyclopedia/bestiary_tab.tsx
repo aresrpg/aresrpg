@@ -25,12 +25,12 @@ import { useTranslation } from 'react-i18next'
 import { normalize_search } from '../../utils/search'
 import { ArchiBadge, ELEMENT_COLORS, MobDetailView, is_new_template, NewBadge } from '../../components/entity_display'
 import { get_mob_tier, is_archi_tier } from '../../game/data/mobs.js'
-import { use_deferred_search } from '../../hooks/use_deferred_search'
+import { useDeferredSearch } from '../../hooks/use_deferred_search'
 import { ELEMENTS, MOB_LEVEL_BRACKETS } from '../../constants/encyclopedia'
 import { display_mob_name } from '../../content/mob_name_overrides'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import { get_encyclopedia } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 import type { RpcEncyclopedia, RpcEncyclopediaMob } from '../../rpc/views'
 import { decode_stat } from '../../chain/stat_bias'
 
@@ -111,7 +111,7 @@ export function BestiaryMobRow({
   on_select: (id: string) => void
 }>) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const el_color = ELEMENT_COLORS[(mob.element || '').toLowerCase()] || 'var(--color-muted)'
   return (
     <div
@@ -166,16 +166,16 @@ function BestiaryTab({
   is_mobile: boolean
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
 
-  const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia('mobs', signal), { deps: [] })
-  const { data: world_enc } = use_rpc_view((signal) => get_encyclopedia('worlds', signal), { deps: [] })
+  const { data: enc, loading } = useRpcView((signal) => get_encyclopedia('mobs', signal), { deps: [] })
+  const { data: world_enc } = useRpcView((signal) => get_encyclopedia('worlds', signal), { deps: [] })
   // Map §14 liveness + projected loot into display shape; unprojected resistances stay honestly empty.
   const mobs = useMemo(() => bestiary_mobs_from_v1(enc?.mobs, world_enc?.worlds), [enc, world_enc])
 
   const [params, set_params] = useSearchParams()
-  // Search: instant input + deferred filter term + debounced ?q= (shared home) — see use_deferred_search.
-  const { value: search_input, set_value: set_search_input, term: search } = use_deferred_search()
+  // Search: instant input + deferred filter term + debounced ?q= (shared home) — see useDeferredSearch.
+  const { value: search_input, set_value: set_search_input, term: search } = useDeferredSearch()
   const view_mode = (params.get('view') || 'all') as ViewMode
   const element_filters = useMemo(() => new Set((params.get('el') || '').split(',').filter(Boolean)), [params])
   const sort = (params.get('sort') || 'level_asc') as SortOption

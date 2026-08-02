@@ -28,14 +28,14 @@ import { useTranslation } from 'react-i18next'
 import { xp_progress } from '@aresrpg/sdk/experience'
 import { spell_points_for_level } from '@aresrpg/sdk/progression'
 
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { get_class } from '../../data/classes.js'
-import { use_spell_corpus } from '../../data/use_spell_corpus.js'
+import { useSpellCorpus } from '../../data/use_spell_corpus.js'
 import { resolve_spell_description } from '../../data/spell-text.js'
 import { upgrade_spell } from '../../../world-shell/spell_actions.js'
 import { mark_ui_updated } from '../../../world-shell/tx.js'
 import { use_toast } from '../../../toast'
-import { use_spell_seat } from '../../../stores/spell_seat'
+import { useSpellSeat } from '../../../stores/spell_seat'
 
 import { apply_upgrade_receipt, record_confirmed_spell } from './spell_alloc_session.js'
 
@@ -52,9 +52,9 @@ import './spellbook.css'
 /** @param {{ on_open?: (panel: string) => void }} props */
 export function Spellbook({ on_open, embedded = false }) {
   const { t, i18n } = useTranslation()
-  const characters = use_game_state((s) => s.sui.characters)
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
-  const spell_corpus = use_spell_corpus()
+  const characters = useGameState((s) => s.sui.characters)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
+  const spell_corpus = useSpellCorpus()
   const [sel_id, set_sel] = useState(/** @type {string | null} */ (null))
 
   const character = useMemo(
@@ -68,7 +68,7 @@ export function Spellbook({ on_open, embedded = false }) {
   // `confirmed` is the receipt-proven projection (spell_alloc_session — survives this drawer's remounts); the
   // rendered `alloc` is the chain read FLOORED up to it, so a stale fullnode snapshot can never regress a just-
   // proven upgrade (a spell that just leveled must never re-display as unlevelled). One home per fact, receipt floor, no async set().
-  const { allocation: alloc, chain_allocation: chain_alloc, confirmed, refetch } = use_spell_seat(character)
+  const { allocation: alloc, chain_allocation: chain_alloc, confirmed, refetch } = useSpellSeat(character)
 
   const book = useMemo(() => {
     if (!character) return null

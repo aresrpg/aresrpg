@@ -22,7 +22,7 @@ import { useEffect } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 
-import { use_game_state, context } from '../../../store.js'
+import { useGameState, context } from '../../../store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { T62_WORLDS } from '../../../../chain/deployment'
 import { as_one_toast } from '../../../../world-shell/dungeon_actions.js'
@@ -38,13 +38,13 @@ const WORLD = T62_WORLDS[0]
 /** @returns {import('react').ReactElement | null} */
 export function DungeonsModal() {
   const { t } = useTranslation()
-  const open = use_game_state((s) => s.dungeons_modal)
+  const open = useGameState((s) => s.dungeons_modal)
   // The character the player is embodying in the world — the one that ENTERS. NpcPrompt already routes an
   // in_dungeon char to RESUME and blocks an exploring one, so when THIS panel opens the selected char is
   // enterable; a burn/borrow_val MoveAbort otherwise surfaces as the honest store error below.
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
   // The wallet's loose items — the SSOT the Equipment/Scribe tabs read (load_roster fills it). No fetch here.
-  const items = use_game_state((s) => s.sui.items)
+  const items = useGameState((s) => s.sui.items)
 
   const in_session = use_dungeon((s) => s.in_session)
   const busy = use_dungeon((s) => s.busy)

@@ -92,7 +92,7 @@ const play_to_victory = async (shim, { max_turns = 60 } = {}) => {
   return shim.chain()
 }
 
-/** The page's session end, verbatim from `use_sim_fight.stop` — the ONE home for "a simulator fight is over". */
+/** The page's session end, verbatim from `useSimFight.stop` — the ONE home for "a simulator fight is over". */
 let page_phase = 'fighting'
 const session = { ended: 0 }
 const shim = create_fight_shim({

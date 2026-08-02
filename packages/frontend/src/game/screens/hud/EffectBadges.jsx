@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import './effect-badges.css'
 import { spell_state_name_resolver } from '../../data/spell-text.js'
-import { use_spell_corpus } from '../../data/use_spell_corpus.js'
+import { useSpellCorpus } from '../../data/use_spell_corpus.js'
 import { EffectLine } from './EffectLine.jsx'
 import { project_spell_effect } from './fight-spells.js'
 import { seed_effect_line, seed_effect_parts } from './seed-effect-line.js'
@@ -84,7 +84,7 @@ export function ActiveEffectRows({ effects, t, locale = 'en', resolve_state_name
 /** Turn-card adapter: hook at the component edge, pure shared rows beneath it. */
 export function EffectBadges({ effects }) {
   const { t, i18n } = useTranslation()
-  const corpus = use_spell_corpus()
+  const corpus = useSpellCorpus()
   const locale = i18n.resolvedLanguage || i18n.language || 'en'
   const resolve_state_name = useMemo(() => spell_state_name_resolver(corpus, locale), [corpus, locale])
   return <ActiveEffectRows effects={effects} t={t} locale={locale} resolve_state_name={resolve_state_name} />

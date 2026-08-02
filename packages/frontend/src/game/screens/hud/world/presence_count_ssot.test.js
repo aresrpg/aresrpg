@@ -59,7 +59,7 @@ describe('aggregate observation count SSOT', () => {
     )
 
     expect(aggregate_reads).toEqual(['game/core/presence_count.js'])
-    expect(chat).toContain('use_game_state(select_observed_count)')
+    expect(chat).toContain('useGameState(select_observed_count)')
     expect(chat).toContain('use_presence((state) => state.link_status)')
     expect(chat).toContain('world_chat.link_${link_status}')
     expect(chat).toContain('<b>{observed_count}</b>')

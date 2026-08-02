@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Globe2, Menu, MessageCircle, SlidersHorizontal, Swords, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { NAV_ITEMS } from '../../../constants/navigation'
-import { use_active_page, use_navigate_page } from '../../../hooks/use_navigate_page'
+import { useActivePage, useNavigatePage } from '../../../hooks/use_navigate_page'
 import { FightOpennessToggle } from './world/FightOpennessToggle.jsx'
 import { OnlinePlayers } from './world/OnlinePlayers.jsx'
 import { PartyFrame } from './world/PartyFrame.jsx'
@@ -41,8 +41,8 @@ function MobileMenuFab({ label, badge = 0, on_click }) {
 /** @param {{ set_drawer: (drawer: string | null) => void, open_fights: () => void, show_quest: boolean }} props */
 function MobileMenu({ set_drawer, open_fights, show_quest }) {
   const { t } = useTranslation()
-  const active_page = use_active_page()
-  const navigate = use_navigate_page()
+  const active_page = useActivePage()
+  const navigate = useNavigatePage()
   const items = NAV_ITEMS
 
   const utilities = [
@@ -104,8 +104,8 @@ function MobileMenu({ set_drawer, open_fights, show_quest }) {
  */
 export function MobileHud({ fight_mode, has_character, show_quest_card }) {
   const { t } = useTranslation()
-  const history_count = use_game_state((state) => state.message_history.length)
-  const fights_open = use_game_state((state) => !!state.fights_modal)
+  const history_count = useGameState((state) => state.message_history.length)
+  const fights_open = useGameState((state) => !!state.fights_modal)
   const [drawer, set_drawer] = useState(null)
   const [seen_messages, set_seen_messages] = useState(history_count)
   const last_drawer = useRef(drawer)

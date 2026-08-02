@@ -6,7 +6,7 @@ import { ShieldAlert, RefreshCw } from 'lucide-react'
 
 import { use_auth, type AuthState } from '../auth'
 import { get_config } from '../rpc/client'
-import { use_rpc_view } from '../rpc/use_view'
+import { useRpcView } from '../rpc/use_view'
 import { DISCORD_URL } from '../constants/links'
 
 import { ModalFrame } from './modal_frame'
@@ -56,7 +56,7 @@ export function ContractsPausedModalHost() {
   const report = use_contracts_paused((s) => s.report)
   const dismiss = use_contracts_paused((s) => s.dismiss)
 
-  const { data, refetch } = use_rpc_view(fetch_maintenance_signal, {
+  const { data, refetch } = useRpcView(fetch_maintenance_signal, {
     enabled: !!address,
     interval_ms: POLL_MS,
     deps: [address],
@@ -66,7 +66,7 @@ export function ContractsPausedModalHost() {
     report(data)
   }, [data, report])
 
-  // "on window focus" (brief-literal), on top of use_rpc_view's own visibilitychange catch-up-on-re-show.
+  // "on window focus" (brief-literal), on top of useRpcView's own visibilitychange catch-up-on-re-show.
   useEffect(() => {
     const on_focus = () => refetch()
     window.addEventListener('focus', on_focus)

@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { item_icon_url } from '@aresrpg/sdk/jobs'
 
 import { ItemTooltipCard } from '../components/item_hover_tooltip'
-import { use_mouse_tooltip } from '../components/items'
+import { useMouseTooltip } from '../components/items'
 import { SearchPickerModal, type PickerItem } from '../components/search_picker_modal'
 import { CosmeticSlots, EquipmentDoll } from '../game/screens/hud/EquipmentDoll.jsx'
 import { inventory_item_icon, SLOT_LABEL } from '../game/screens/hud/inventory-equip.js'
@@ -36,13 +36,13 @@ const slot_caption = (slot: string): string => ((SLOT_LABEL as Record<string, st
 export function LoadoutSection({ character }: Readonly<{ character: SimCharacter }>) {
   const input = use_simulator((state) => state.input)
   const [picking, set_picking] = useState<string | null>(null)
-  const { by_id } = item_corpus.use_item_corpus()
+  const { by_id } = item_corpus.useItemCorpus()
   // WHAT IS ON THE DOLL, without unequipping it to find out. The chain inventory already answers this on its
   // own paper doll through EquipmentSlot's hover seam and ONE tooltip instance for the whole panel
-  // (Inventory.jsx / use_onchain_item_tooltip); this is the same seam and the same shared card, fed the live
+  // (Inventory.jsx / useOnchainItemTooltip); this is the same seam and the same shared card, fed the live
   // corpus row instead of a chain template — so the equipped tiles and the picker rows that fill them show
   // the identical detail, at the identical roll.
-  const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = use_mouse_tooltip<CorpusItem>((item) => (
+  const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = useMouseTooltip<CorpusItem>((item) => (
     <MaxRollItemCard item={item} />
   ))
 
@@ -96,9 +96,9 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
  * LOADING; "NO RESULTS FOUND" over a cold corpus tells the player this slot has no gear in the game, which
  * is exactly the lie every one of these 20 pickers told while they read the empty bundled catalog.
  */
-export function use_slot_picker_content(slot: string): { items: PickerItem[]; empty_label?: string } {
+export function useSlotPickerContent(slot: string): { items: PickerItem[]; empty_label?: string } {
   const { t } = useTranslation()
-  const { items: corpus, loading } = item_corpus.use_item_corpus()
+  const { items: corpus, loading } = item_corpus.useItemCorpus()
   const options = useMemo(() => items_for_slot(slot, corpus), [slot, corpus])
 
   const items: PickerItem[] = useMemo(
@@ -175,8 +175,8 @@ function SlotPicker({
   on_close: () => void
 }>) {
   const { t } = useTranslation()
-  const { items, empty_label } = use_slot_picker_content(slot)
-  const { by_id } = item_corpus.use_item_corpus()
+  const { items, empty_label } = useSlotPickerContent(slot)
+  const { by_id } = item_corpus.useItemCorpus()
 
   return (
     <SearchPickerModal

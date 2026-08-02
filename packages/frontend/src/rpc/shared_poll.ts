@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // ONE ticking poll per KEY, shared by every live consumer of that key — factored out of the read-layer
-// census fix (#242): several surfaces each ran their OWN use_rpc_view instance for identical /v1 data (three
+// census fix (#242): several surfaces each ran their OWN useRpcView instance for identical /v1 data (three
 // independent /v1/zones pollers, three independent /v1/sponsor/remaining pollers), multiplying the request
 // rate for data that is the SAME for every consumer. A shared poll's timer runs iff ≥1 consumer wants that
 // key (the listener Set's own size is the refcount — no second counter to drift out of sync) and stops the
 // instant the last one releases it, so a poll never outlives every component that asked for it.
 //
-// React callers get a use_rpc_view-shaped hook (`{ data, error, loading, stale, refetch }`); non-React
+// React callers get a useRpcView-shaped hook (`{ data, error, loading, stale, refetch }`); non-React
 // callers (a plain factory/module, e.g. world_spawns.js) use `subscribe`/`snapshot` directly.
 
 import { useCallback, useEffect, useState } from 'react'
@@ -111,8 +111,8 @@ export function create_shared_poll<T>(
     if (slots.has(key)) void tick(key)
   }
 
-  /** React hook, use_rpc_view-shaped. `key` null/undefined idles (mirrors `enabled: !!key`). */
-  function use_shared_poll(key: string | null | undefined) {
+  /** React hook, useRpcView-shaped. `key` null/undefined idles (mirrors `enabled: !!key`). */
+  function useSharedPoll(key: string | null | undefined) {
     const [state, set_state] = useState<SharedPollView<T>>(() => (key ? snapshot(key) : empty_view()))
     useEffect(() => {
       if (!key) {
@@ -121,7 +121,7 @@ export function create_shared_poll<T>(
       }
       return subscribe(key, set_state)
     }, [key])
-    // Stable across renders (mirrors use_rpc_view's useCallback-memoized refetch) — callers that depend on it
+    // Stable across renders (mirrors useRpcView's useCallback-memoized refetch) — callers that depend on it
     // in an effect array (CompassStrip's search-reconcile listener) never re-subscribe on every render.
     const stable_refetch = useCallback(() => {
       if (key) refetch(key)
@@ -135,5 +135,5 @@ export function create_shared_poll<T>(
     slots.clear()
   }
 
-  return { subscribe, snapshot, refetch, use_shared_poll, _reset_for_test }
+  return { subscribe, snapshot, refetch, useSharedPoll, _reset_for_test }
 }

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { WORLD_SEED } from '@aresrpg/sim/world'
 
 import { CANVAS_H, CANVAS_W, MAP_PX, sample_world, world_to_screen } from './worldmap-data.js'
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import './hud-panels.css'
 import './map.css'
 import './worldmap.css'
@@ -54,7 +54,7 @@ export const center_on_player = (
  * @returns {import('react').JSX.Element}
  */
 export function MapDrawer() {
-  const player_cell = use_game_state((s) => s.player_cell)
+  const player_cell = useGameState((s) => s.player_cell)
   const seed = player_cell?.seed ?? WORLD_SEED
 
   const canvas_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))

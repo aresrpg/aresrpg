@@ -45,7 +45,7 @@ export const clear_confirmed_spell = (/** @type {string} */ character_id, /** @t
 
 export const spell_session_snapshot = () => session
 /** React binding — subscribe a component to the live session (the confirmed-projection map). */
-export const use_spell_alloc_session = () => useSyncExternalStore(subscribe, snapshot, snapshot)
+export const useSpellAllocSession = () => useSyncExternalStore(subscribe, snapshot, snapshot)
 
 // ── pure receipt/reconcile algebra (unit-tested; React-free) ──────────────────────────────────────────────
 

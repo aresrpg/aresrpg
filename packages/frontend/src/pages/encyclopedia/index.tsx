@@ -4,10 +4,10 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
-import { app_mobile_classes, use_mobile_mode } from '../../game/screens/hud/mobile_layout.js'
-import { use_fight_view, use_game_state } from '../../game/store.js'
+import { app_mobile_classes, useMobileMode } from '../../game/screens/hud/mobile_layout.js'
+import { useFightView, useGameState } from '../../game/store.js'
 import { get_encyclopedia } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 
 import { use_content } from './content'
 import { bind_world_corpus_to_live, use_world_corpus } from './world_corpus'
@@ -16,13 +16,13 @@ import { BestiaryTab } from './bestiary_tab'
 import { ClassesTab } from './classes_tab'
 import { JobsTab } from './jobs_tab'
 import { GameplayTab } from './gameplay_tab'
-import { use_encyclopedia_spell_seat } from './spell_seat'
+import { useEncyclopediaSpellSeat } from './spell_seat'
 import { WorldTab, type WorldRow } from './world_tab'
 
 // T8 (board ticket #8): the DUNGEONS tab was deleted — the seed has no dungeon content and the tab only ever
 // rendered an empty stub (content.ts's `templates.dungeon` was hardcoded `[]`), which is exactly the
 // "shows fake/empty data as a real feature" bug this pass removes. ITEMS/BESTIARY read real on-chain
-// templates directly inside items_tab.tsx/bestiary_tab.tsx (use_onchain_templates) instead of the bundled
+// templates directly inside items_tab.tsx/bestiary_tab.tsx (useOnchainTemplates) instead of the bundled
 // content.ts feed; JOBS' craftable-items list joined the same on-chain source — the
 // bundled seed snapshot was never generated past level 110, so recipes above it could never show — only
 // CLASSES/GAMEPLAY and JOBS' NPC-master lookup still use content.ts's static seeded data (intentionally
@@ -89,12 +89,12 @@ function BestiaryTabRoute({ is_mobile }: { is_mobile: boolean }) {
 function ClassesTabRoute({ classes, is_mobile }: { classes: any[]; is_mobile: boolean }) {
   const { id } = useParams()
   const navigate = useNavigate()
-  const character = use_game_state(
+  const character = useGameState(
     (state) => state.sui.characters?.find((character: any) => character.id === state.selected_character_id) ?? null
   )
-  const fight = use_fight_view()
+  const fight = useFightView()
   const fight_seat = character?.id ? (fight?.fighters.get(character.id) ?? null) : null
-  const seat = use_encyclopedia_spell_seat(character, fight_seat)
+  const seat = useEncyclopediaSpellSeat(character, fight_seat)
   return (
     <ClassesTab
       selected_class_id={id || null}
@@ -116,7 +116,7 @@ function ClassesTabRoute({ classes, is_mobile }: { classes: any[]; is_mobile: bo
 function WorldsTabRoute({ is_mobile }: { is_mobile: boolean }) {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { data: enc, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const { data: enc, loading } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
   const authored_worlds = use_world_corpus((state) => state.worlds)
   const bound_corpus = bind_world_corpus_to_live(authored_worlds, enc?.mobs ?? [], enc?.items ?? [], enc?.worlds ?? [])
   const corpus_by_world = new Map(bound_corpus.worlds.map((world) => [world.id, world]))
@@ -176,7 +176,7 @@ export function EncyclopediaPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
-  const is_mobile = use_mobile_mode()
+  const is_mobile = useMobileMode()
   const mobile_classes = app_mobile_classes(is_mobile)
 
   // Bundled/static seed content — still feeds CLASSES (hardcoded content, untouched by

@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { Sparkles, Heart, ArrowLeft } from 'lucide-react'
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
-import { use_template_t } from '../../i18n/template_t'
-import { use_spell_corpus } from '../../game/data/use_spell_corpus.js'
+import { useTemplateT } from '../../i18n/template_t'
+import { useSpellCorpus } from '../../game/data/use_spell_corpus.js'
 import { resolve_spell_description } from '../../game/data/spell-text.js'
 import { class_spells, seat_spell_level } from '../../game/screens/hud/fight-spells.js'
 import {
@@ -125,7 +125,7 @@ function StatChip({
 
 function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
   const { t, i18n } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const locale = i18n.resolvedLanguage || i18n.language || 'en'
   const description = resolve_spell_description(spell, locale)
   const levels: any[] = spell.levels ?? []
@@ -366,8 +366,8 @@ function ClassesTab({
   seat?: any
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
-  const spell_corpus = use_spell_corpus()
+  const tt = useTemplateT()
+  const spell_corpus = useSpellCorpus()
 
   const selected_class = useMemo(() => {
     if (!selected_class_id) return null

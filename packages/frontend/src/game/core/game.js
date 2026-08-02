@@ -214,7 +214,7 @@ export const INITIAL_STATE = {
   commissions_modal: false,
 
   // The live tactical fight is NOT game-core state (S2 mirror kill): fight truth lives in
-  // fight/store.js alone and every consumer reads it synchronously via `use_fight_view()` (game/store.js) /
+  // fight/store.js alone and every consumer reads it synchronously via `useFightView()` (game/store.js) /
   // `fight_view()` (fight/index.js). The old `state.fight` copy folded through this file's ASYNC action pump and lagged the
   // core ≥1 dispatch cycle — the AP-desync root. It must never come back.
 
@@ -223,7 +223,7 @@ export const INITIAL_STATE = {
    * is over no fighter. `entity_id` is the fighter sprite under the cursor (resolved by roam's raycast in
    * roam.js pointermove); `x`/`y` are the VIEWPORT cursor coords the React EntityTooltip anchors to. Pure
    * presentation — published by the imperative roam layer on pointermove, read by the tooltip which renders
-   * the fighter's name + HP off the core fight view (use_fight_view — never recomputed). Cleared on pointerleave
+   * the fighter's name + HP off the core fight view (useFightView — never recomputed). Cleared on pointerleave
    * / when no fighter is under the cursor; the tooltip also self-hides when not in a fight.
    * @type {{ entity_id: string, x: number, y: number } | null}
    */

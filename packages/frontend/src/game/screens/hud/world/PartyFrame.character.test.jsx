@@ -38,7 +38,7 @@ const [react_i18next, game_store, party_store, dungeon_store] = await Promise.al
 ])
 const spies = [
   spyOn(react_i18next, 'useTranslation').mockImplementation(() => ({ t: (key) => key })),
-  spyOn(game_store, 'use_game_state').mockImplementation((selector) =>
+  spyOn(game_store, 'useGameState').mockImplementation((selector) =>
     selector({ selected_character_id: null, sui: { characters: [] } })
   ),
   spyOn(party_store, 'use_party').mockImplementation((selector) => selector(party_state)),

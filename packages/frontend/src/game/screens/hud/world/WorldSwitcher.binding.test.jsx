@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // REGRESSION: the panel claimed "HERE in First Shore" for the FIRST roster
 // character while the SELECTED character was another one (in NO world → the app spectates). Mechanism:
-// use_rpc_view KEEPS its last-landed data across a deps change (selection switch) and on failed polls,
+// useRpcView KEEPS its last-landed data across a deps change (selection switch) and on failed polls,
 // so the panel can hold a doc belonging to a DIFFERENT character — and the old component rendered that
 // foreign doc's world as the current one with no identity check. The panel must derive its current-world
 // line ONLY from a doc whose id matches the selected character; anything else renders the honest
@@ -30,10 +30,10 @@ const spies = [
   // state — modal closed, nothing expanded — which is exactly where the lying line was reported.
   spyOn(React, 'useState').mockImplementation((initial) => [initial, () => {}]),
   spyOn(react_i18next, 'useTranslation').mockImplementation(() => ({ t: (key, arg) => (typeof arg === 'string' ? arg : key) })),
-  spyOn(game_store, 'use_game_state').mockImplementation((selector) => selector({ selected_character_id: SELECTED })),
+  spyOn(game_store, 'useGameState').mockImplementation((selector) => selector({ selected_character_id: SELECTED })),
   // The character-doc view serves the OTHER character's doc (the exact keep-prior-data hook state right
   // after a selection switch / during that character's failed polls). The worlds catalog stays live.
-  spyOn(rpc_view, 'use_rpc_view').mockImplementation((_fetcher, options) =>
+  spyOn(rpc_view, 'useRpcView').mockImplementation((_fetcher, options) =>
     options?.interval_ms === 15000
       ? { data: { id: OTHER, world: stale_world.id, level: 12 }, refetch: () => {} }
       : // the LIVE world catalog (world_catalog.js rows)

@@ -25,4 +25,4 @@ export { ConsumableEffectLine, ItemDetailView } from './item_detail_view'
 
 export { MobDetailView } from './mob_detail_view'
 
-export { use_onchain_item_tooltip } from './entity_tooltip'
+export { useOnchainItemTooltip } from './entity_tooltip'

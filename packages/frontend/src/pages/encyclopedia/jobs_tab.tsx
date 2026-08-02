@@ -8,10 +8,10 @@ import { JOBS } from '@aresrpg/sdk/jobs'
 import { SectionDivider, SectionTitle } from '../../components/entity_display'
 import { ItemImage } from '../../components/items'
 import jobs_data from '../../data/jobs.json'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import { normalize_search } from '../../utils/search'
 import { get_encyclopedia, get_rare_links } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 
 import { gather_ladder_of } from './world_corpus'
 import { encyclopedia_item_asset } from './encyclopedia_assets'
@@ -49,7 +49,7 @@ function JobsTab({
   is_mobile: boolean
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const [search, set_search] = useState('')
 
   const selected_job = JOB_MASTER_JOBS.find((j) => j.id === selected_job_id)
@@ -60,8 +60,8 @@ function JobsTab({
     return npcs.find((npc: any) => npc.type === 'JOB_MASTER' && npc.dialogText === selected_job_id)
   }, [selected_job_id, npcs])
 
-  const { data: enc } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
-  const { data: rare_links } = use_rpc_view((signal) => get_rare_links(undefined, signal), { deps: [] })
+  const { data: enc } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const { data: rare_links } = useRpcView((signal) => get_rare_links(undefined, signal), { deps: [] })
   const job_index = selected_job_id ? JOBS.findIndex((j) => j.id === selected_job_id.toLowerCase()) : -1
 
   // Gathering progression = the AUTHORED corpus ladder (world_corpus.ts), the ONE home shared with the

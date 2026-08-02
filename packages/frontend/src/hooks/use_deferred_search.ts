@@ -19,7 +19,7 @@ import { useSearchParams } from 'react-router-dom'
  * External `?q=` changes (back/forward, a cleared filter) are adopted back into the input, guarded by the
  * last value WE pushed so an in-flight debounce can never clobber active typing.
  */
-export function use_deferred_search(key = 'q', delay = 180) {
+export function useDeferredSearch(key = 'q', delay = 180) {
   const [params, set_params] = useSearchParams()
   const url_value = params.get(key) ?? ''
 

@@ -47,7 +47,7 @@ const CORPUS = SPELL_WIRE.rows
 const WARCLEAVE = CORPUS.find((row) => row.id === 'senshi_warcleave')
 
 /**
- * The captured amulet, through the PRODUCTION corpus door — the same rows `use_item_corpus` hands the page.
+ * The captured amulet, through the PRODUCTION corpus door — the same rows `useItemCorpus` hands the page.
  * Its identity is paired with a template id from the captured live `/v1` response; everything the fold reads
  * is the captured item wire.
  */

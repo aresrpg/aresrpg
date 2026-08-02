@@ -11,7 +11,7 @@
 // Only the RENDER edge needs them together (a body on screen is a body on screen), so only the render edge
 // joins them. Anything asking a question ABOUT a player reads the map that actually holds that fact.
 
-import { use_game_state } from '../store.js'
+import { useGameState } from '../store.js'
 
 /** Every row to draw this frame, as `[id, entry]` pairs. Observations first; my followers are mine and win a
  *  key collision by construction (a follower I drive is not a peer I merely observe).
@@ -36,8 +36,8 @@ export const render_row_of = (state, id) =>
  * a memo keyed on those references would never see a peer move.
  * @returns {Array<[string, any]>}
  */
-export const use_render_rows = () =>
+export const useRenderRows = () =>
   render_rows({
-    observed_peers: use_game_state((state) => state.observed_peers),
-    owned_follow_render_rows: use_game_state((state) => state.owned_follow_render_rows),
+    observed_peers: useGameState((state) => state.observed_peers),
+    owned_follow_render_rows: useGameState((state) => state.owned_follow_render_rows),
   })

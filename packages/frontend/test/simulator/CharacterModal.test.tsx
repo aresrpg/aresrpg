@@ -51,7 +51,7 @@ test('stat rows render base (+gear) while the input remains the editable base al
     by_id: new Map([[max_roll_helmet.id, max_roll_helmet]]),
     loading: false,
   }
-  const corpus_spy = spyOn(item_corpus, 'use_item_corpus').mockImplementation(() => corpus)
+  const corpus_spy = spyOn(item_corpus, 'useItemCorpus').mockImplementation(() => corpus)
 
   try {
     const markup = renderToStaticMarkup(

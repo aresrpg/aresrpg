@@ -27,8 +27,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { xp_progress } from '@aresrpg/sdk/experience'
 
-import { use_game_state, use_fight_view } from '../../../store.js'
-import { use_spell_corpus } from '../../../data/use_spell_corpus.js'
+import { useGameState, useFightView } from '../../../store.js'
+import { useSpellCorpus } from '../../../data/use_spell_corpus.js'
 import { use_expedition, STATUS_ACTIVE as EXPEDITION_ACTIVE } from '../../../../roster/store'
 import { seat_character } from '../../../../world-shell/seat_character.js'
 import {
@@ -84,7 +84,7 @@ import { presentation_blocked_cells } from '../../../../world-shell/fight_board_
 import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
 import { FightControls } from '../FightControls.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
-import { use_fight_phase } from './use_fight_phase.js'
+import { useFightPhase } from './use_fight_phase.js'
 import { is_active as phase_is_active, is_placement as phase_is_placement } from '../../../../fight-engine/phase.js'
 import './dungeon-board.css'
 import { game_log } from '../../../../core/log.js'
@@ -135,7 +135,7 @@ export function DungeonBoard() {
   // the DungeonLeaveButton fallback now reads the SAME machine for the single-exit law — so the old
   // `hud_mounted` store-write handshake is gone (no component writes fight state). The chrome below branches
   // on the machine's is_placement / is_active, never a raw status re-read that could disagree with the mount.
-  const phase = use_fight_phase()
+  const phase = useFightPhase()
   const dungeon = use_dungeon((s) => s.dungeon)
   const busy = use_dungeon((s) => s.busy)
   const commit_turn = use_dungeon((s) => s.commit_turn)
@@ -147,9 +147,9 @@ export function DungeonBoard() {
   // "leave dungeon" control below (run_pass_id set = a real dungeon run, not a bare world fight) so both stay honest.
   const run_pass_id = use_dungeon((s) => s.run_pass_id)
   const character_id = use_dungeon((s) => s.character_id)
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill) — the board never gates on a lagging copy
-  const characters = use_game_state((s) => s.sui.characters)
-  const spell_corpus = use_spell_corpus()
+  const fight = useFightView() // synchronous core view (S2 mirror kill) — the board never gates on a lagging copy
+  const characters = useGameState((s) => s.sui.characters)
+  const spell_corpus = useSpellCorpus()
   const controlled_character_id = fight?.my_entity_id ?? character_id
 
   // LEAVE-DUNGEON confirm modal (replaces the native window.confirm — standing house law: no OS dialogs). The

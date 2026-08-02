@@ -22,7 +22,7 @@
 
 import { onchain_template_to_detail_props } from '../components/items'
 import { item_display_level } from '../game/screens/hud/inventory-equip.js'
-import type { use_template_t } from '../i18n/template_t'
+import type { useTemplateT } from '../i18n/template_t'
 
 export type Item = {
   id: string
@@ -43,13 +43,13 @@ export type Item = {
  * @param template_map item_type slug -> template row (get_template_by_item_type_map, read_findables.js)
  * @param gear_stats the item's centered-u16 rolled stats (resolve_rolled_stats(sel_gear.id)), or null while
  *   that read is in flight / unavailable — authored stats render the shared explicit unavailable state
- * @param tt use_template_t() — localizes the template's name/description
+ * @param tt useTemplateT() — localizes the template's name/description
  */
 export function scribe_detail_props(
   sel_gear: Item | null,
   template_map: Map<string, any>,
   gear_stats: Record<string, number> | null,
-  tt: ReturnType<typeof use_template_t>
+  tt: ReturnType<typeof useTemplateT>
 ) {
   if (!sel_gear) return null
   const tmpl = template_map.get(sel_gear.item_type)

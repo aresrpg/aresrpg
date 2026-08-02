@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Store } from 'lucide-react'
 
 import { get_characters, get_listings } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
+import { useRpcView } from '../../rpc/use_view'
 import { RpcStale } from '../../rpc/RpcStale'
 import { use_auth } from '../../auth'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
@@ -17,7 +17,7 @@ import {
 } from '../../utils/marketplace_purchase'
 import { class_color, CLASS_COLORS } from '../../constants/class_colors'
 import { ChipRow } from '../chip_row'
-import { use_address_names } from '../../rpc/use_address_names'
+import { useAddressNames } from '../../rpc/use_address_names'
 
 import { MarketplaceListingRow } from './marketplace_listing_row'
 
@@ -60,7 +60,7 @@ export function CharactersPanel() {
   const [confirm_id, set_confirm_id] = useState<string | null>(null)
 
   // Listings (category "character") + class enrichment off the character docs, one atomic fetcher.
-  const view = use_rpc_view<CharacterRow[]>(
+  const view = useRpcView<CharacterRow[]>(
     async (signal) => {
       const page = await get_listings({ category: 'character', limit: 200 }, signal)
       const ids = page.listings.map((l) => l.item_id)
@@ -92,7 +92,7 @@ export function CharactersPanel() {
     if (klass) out = out.filter((r) => r.class === klass)
     return out
   }, [rows, min_level, max_level, klass])
-  const seller_names = use_address_names(filtered.map((row) => row.seller))
+  const seller_names = useAddressNames(filtered.map((row) => row.seller))
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">

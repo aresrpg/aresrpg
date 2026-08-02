@@ -51,10 +51,10 @@ import {
   equipped_gather_tool,
 } from '@aresrpg/sdk/jobs'
 
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
 import { get_encyclopedia } from '../../../rpc/client'
-import { use_rpc_view } from '../../../rpc/use_view'
+import { useRpcView } from '../../../rpc/use_view'
 import { Tooltip } from './Tooltip.jsx'
 import { JobGlyph, covers_label } from './jobs_visuals.jsx'
 import { JobList } from './JobList.jsx'
@@ -88,7 +88,7 @@ export function JobDetail({ job, xp, active, owned }) {
   // recipes in a single envelope, content_get-memoized), projected to this job. Fetched here, at the only
   // component that owns both the grid and the selected row, so the bill of materials the Craft button
   // gates on is the SAME object the grid rendered.
-  const { data: encyclopedia, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const { data: encyclopedia, loading } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
   const job_index = useMemo(() => JOBS.findIndex((j) => j.id === job.id), [job.id])
   const recipes = useMemo(
     () => craft_recipes_for_job(encyclopedia?.recipes, encyclopedia?.items, job_index),
@@ -207,9 +207,9 @@ export function JobDetail({ job, xp, active, owned }) {
  * @returns {import('react').JSX.Element}
  */
 export function JobsDrawer() {
-  const characters = use_game_state((s) => s.sui.characters)
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
-  const gather_target_job = use_game_state((s) => s.gather_target?.job_id ?? null)
+  const characters = useGameState((s) => s.sui.characters)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
+  const gather_target_job = useGameState((s) => s.gather_target?.job_id ?? null)
   const [selected_job_id, set_selected_job_id] = useState(JOBS[0].id)
 
   // Selecting a world node (a roam node-click) jumps the drawer to that gathering job so its Gather
@@ -228,7 +228,7 @@ export function JobsDrawer() {
   // ingredient GREEN/ORANGE rows + the craft affordability gate, so the client gate matches EXACTLY what the
   // craft tx can burn. Replaces the retired WS off-chain `resources` ledger (core/modules/craft.js), which no
   // longer fills without the backend — an on-chain-only ingredient is now honestly counted, not shown missing.
-  const bag_items = use_game_state((s) => s.sui.items)
+  const bag_items = useGameState((s) => s.sui.items)
   const owned = useMemo(() => {
     /** @type {Record<string, number>} */
     const map = {}

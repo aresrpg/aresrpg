@@ -8,7 +8,7 @@
 //      the row renders the gap ('—'), never a fake number. The row carries `position_fresh`: a labelled fact
 //      about the READ LAYER, never a verdict about the player (advisory-only law — see friends_display.js).
 //
-// UI-DATA LAW (DECISIONS 07-08): a friends list may lag seconds and self-heals on focus — driven by use_rpc_view.
+// UI-DATA LAW (DECISIONS 07-08): a friends list may lag seconds and self-heals on focus — driven by useRpcView.
 
 import { get_friend_list_by_owner } from '@aresrpg/sdk/social'
 

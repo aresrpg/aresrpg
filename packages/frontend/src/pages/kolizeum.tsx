@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { Loader2, Plus, Swords } from 'lucide-react'
 
 import { get_characters, get_kolizeums, get_config } from '../rpc/client'
-import { use_rpc_view } from '../rpc/use_view'
-import { use_address_names } from '../rpc/use_address_names'
+import { useRpcView } from '../rpc/use_view'
+import { useAddressNames } from '../rpc/use_address_names'
 import { RpcStale } from '../rpc/RpcStale'
 import type { RpcKolizeum } from '../rpc/views'
 import { use_auth } from '../auth'
@@ -20,7 +20,7 @@ import { get_level } from '../experience'
 import { get_sdk } from '../chain/sdk'
 import { get_listable_characters } from '../chain/read_listings'
 import { create_lobby, join_lobby, exit_lobby, cancel_lobby } from '../world-shell/kolizeum_actions'
-import { app_mobile_classes, use_mobile_mode } from '../game/screens/hud/mobile_layout.js'
+import { app_mobile_classes, useMobileMode } from '../game/screens/hud/mobile_layout.js'
 
 import { gate_cta_label } from './kolizeum_gate'
 
@@ -54,7 +54,7 @@ type OwnedChar = { id: string; kiosk_id: string; name: string; classe: string; e
 
 export function KolizeumPage() {
   const { t } = useTranslation()
-  const classes = app_mobile_classes(use_mobile_mode())
+  const classes = app_mobile_classes(useMobileMode())
   const address = use_auth((s) => s.address)
   const [tab, set_tab] = useState<Tab>('open')
   const [format, set_format] = useState<FormatChip | null>(null)
@@ -62,7 +62,7 @@ export function KolizeumPage() {
   const [busy, set_busy] = useState(false)
 
   // Lobby lifecycle — the freshest RPC path (competitive figures law): 4s short-poll + stale chip.
-  const view = use_rpc_view<{
+  const view = useRpcView<{
     lobbies: RpcKolizeum[]
     names: Map<string, { name: string | null; class: string | null }>
   }>(
@@ -95,7 +95,7 @@ export function KolizeumPage() {
   )
   // D52 — one batched /v1/names round trip for every visible lobby creator (distinct from `names` above,
   // which is the character-name Map for the side_a/side_b roster — a different identity space).
-  const creator_names = use_address_names(rows.map((k) => k.creator))
+  const creator_names = useAddressNames(rows.map((k) => k.creator))
 
   // ── owned characters for create/join (kiosk-locked roster, one-shot load — kiosk id needed by the PTB) ──
   // S-87: /v1/characters?owner= replaces the chain-direct kiosk sweep (no sdk/package_id needed anymore).

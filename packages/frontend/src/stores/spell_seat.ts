@@ -6,13 +6,13 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react'
 
 import { read_spell_state } from '../chain/read_spell_state.js'
-import { use_spell_corpus } from '../game/data/use_spell_corpus.js'
+import { useSpellCorpus } from '../game/data/use_spell_corpus.js'
 import { class_spells } from '../game/screens/hud/fight-spells.js'
 import {
   clear_confirmed_spell,
   merge_confirmed,
   spell_alloc_caught_up,
-  use_spell_alloc_session,
+  useSpellAllocSession,
 } from '../game/screens/hud/spell_alloc_session.js'
 
 export type spell_character = Readonly<{
@@ -93,10 +93,10 @@ export async function load_spell_alloc(character: spell_character): Promise<spel
  * Compose the current chain read with the receipt-proven floor. The reducer rejects late requests for both a
  * replaced Character/class/corpus seat and an earlier same-seat refetch.
  */
-export function use_spell_seat(character: spell_character | null) {
-  const spell_corpus = use_spell_corpus()
+export function useSpellSeat(character: spell_character | null) {
+  const spell_corpus = useSpellCorpus()
   const [read, dispatch] = useReducer(reduce_read, initial_read)
-  const confirmed_by_character = use_spell_alloc_session().confirmed
+  const confirmed_by_character = useSpellAllocSession().confirmed
   const character_id = character?.id ?? null
   const class_id = character?.classe ?? character?.class_id ?? null
   const confirmed = character_id ? (confirmed_by_character[character_id] ?? null) : null

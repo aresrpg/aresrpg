@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronsUp, Menu, PawPrint } from 'lucide-react'
 
-import { use_mobile_input_mode } from './mobile_input_mode.js'
+import { useMobileInputMode } from './mobile_input_mode.js'
 import { create_touch_stick_gesture } from './touch_stick_gesture.js'
 import { is_active, set_jump, set_mount_toggle, set_move, subscribe_active } from './touch_input.js'
 
@@ -25,7 +25,7 @@ import './touch-controls.css'
  */
 export function TouchControls({ on_move, on_jump, on_mount_toggle, on_menu_toggle }) {
   const { t } = useTranslation()
-  const mobile = use_mobile_input_mode()
+  const mobile = useMobileInputMode()
 
   const zone_ref = useRef(null)
   const callbacks = useRef({ on_move })

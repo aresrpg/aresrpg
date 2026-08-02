@@ -24,7 +24,7 @@ function list_real_wallets(): Wallet[] {
 }
 
 /** A live, non-Enoki Sui wallet list — reactive to browser wallet (un)registration. */
-function use_real_wallets(): Wallet[] {
+function useRealWallets(): Wallet[] {
   const [wallets, set_wallets] = useState<Wallet[]>(list_real_wallets)
   useEffect(() => {
     const registry = getWallets()
@@ -55,7 +55,7 @@ export function WalletConnectModal({ open, on_close }: { open: boolean; on_close
   const { t } = useTranslation()
   const login = use_auth((s: AuthState) => s.login)
   const is_loading = use_auth((s: AuthState) => s.is_loading)
-  const wallets = use_real_wallets()
+  const wallets = useRealWallets()
   const [connecting, set_connecting] = useState<string | null>(null)
 
   useEffect(() => {

@@ -8,11 +8,11 @@
 // template authors stats, the roll is missing" from "this item has no stats". Same class as the jobs drawer
 // (#765), the recipe detail (#821) and the level-unlock panel (#800); this is its items half.
 //
-// WHAT DRIVES WHAT: the corpus hook is the ONE spy seam (`use_item_corpus`) — the surfaces reach it through
+// WHAT DRIVES WHAT: the corpus hook is the ONE spy seam (`useItemCorpus`) — the surfaces reach it through
 // pages/encyclopedia/item_lookup.ts, which imports it as a namespace for exactly that reason. States are
 // built through the REAL projection (`item_corpus_from_v1`) from REAL `/v1` wire rows, never hand-shaped
 // objects, so a change to the wire decode surfaces here too. The hover tooltip is driven through
-// `use_tooltip_detail` because TooltipPortal renders via createPortal, which the SSR harness cannot resolve.
+// `useTooltipDetail` because TooltipPortal renders via createPortal, which the SSR harness cannot resolve.
 
 import { readFileSync } from 'node:fs'
 
@@ -26,10 +26,10 @@ import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import type { ItemInfo } from '../types/chain'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
-import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
+import { useItemLookup } from '../pages/encyclopedia/item_lookup'
 
 import { ItemTooltipContent } from './items'
-import { use_tooltip_detail } from './item_hover_tooltip'
+import { useTooltipDetail } from './item_hover_tooltip'
 
 const test_i18n = i18next.createInstance()
 void test_i18n.init({
@@ -68,7 +68,7 @@ const landed = (rows: RpcEncyclopediaItem[]): item_corpus.ItemCorpus => {
 }
 
 const render_against = (state: item_corpus.ItemCorpus, node: React.ReactElement): string => {
-  const spy = spyOn(item_corpus, 'use_item_corpus').mockImplementation(() => state)
+  const spy = spyOn(item_corpus, 'useItemCorpus').mockImplementation(() => state)
   try {
     return renderToStaticMarkup(<I18nextProvider i18n={test_i18n}>{node}</I18nextProvider>)
   } finally {
@@ -93,14 +93,14 @@ describe('the item-template surfaces read the LIVE corpus, never the bundled see
     // surface reaching for it renders empty on every real deployment. Not "prefer the live door": absent.
     expect(source).not.toContain('encyclopedia/content')
     expect(source).not.toContain('items-data')
-    expect(source).toContain('use_item_lookup')
+    expect(source).toContain('useItemLookup')
   })
 })
 
 // ── the shared door ───────────────────────────────────────────────────────────────────────────────
 
 function LookupProbe({ keys }: Readonly<{ keys: string[] }>) {
-  const { find, name_of, loading } = use_item_lookup()
+  const { find, name_of, loading } = useItemLookup()
   return (
     <div>
       <span id="loading">{String(loading)}</span>
@@ -111,7 +111,7 @@ function LookupProbe({ keys }: Readonly<{ keys: string[] }>) {
   )
 }
 
-describe('use_item_lookup — one row out of the published corpus', () => {
+describe('useItemLookup — one row out of the published corpus', () => {
   test('a cold corpus says LOADING and humanizes the key — it never invents a row', () => {
     const html = render_against(cold, <LookupProbe keys={['moon_helmet']} />)
     expect(html).toContain('<span id="loading">true</span>')
@@ -164,7 +164,7 @@ describe('ItemTooltipContent — the bag/hover cell', () => {
 })
 
 function TooltipDetailProbe({ item }: Readonly<{ item: ItemInfo }>) {
-  const detail = use_tooltip_detail(item, undefined, null)
+  const detail = useTooltipDetail(item, undefined, null)
   return (
     <div>
       <span id="name">{detail.name}</span>

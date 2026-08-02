@@ -19,7 +19,7 @@ import './game-tab.css'
 import './game/screens/hud/hud.css'
 import './game/screens/hud/world/game-world-hud.css'
 import './i18n'
-import { use_fight_view } from './game/store.js'
+import { useFightView } from './game/store.js'
 import { DeckCluster } from './game/screens/hud/DeckCluster.jsx'
 import { fight_spells_data, resolve_class_spells } from './game/screens/hud/fight-spells.js'
 
@@ -39,7 +39,7 @@ const POOL = [
  * AP/MP gems. Seeded from the fight. `?frac=1` forces the fraction state open for screenshotting either. */
 function VitalsPreview() {
   const params = new URLSearchParams(window.location.search)
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill — the dead WS bus never fed the copy)
+  const fight = useFightView() // synchronous core view (S2 mirror kill — the dead WS bus never fed the copy)
   const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
   const health = me?.health ?? 0
   const max_health = me?.health_max ?? 1

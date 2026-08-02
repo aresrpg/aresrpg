@@ -5,7 +5,7 @@
 // SOURCE: the pickers read the BUNDLED seed catalog (`@aresrpg/sdk/items-data`), which this repo ships as
 // `{}` by construction — the content boundary — so no corpus landing could ever have populated them.
 //
-// WHAT DRIVES WHAT: `use_slot_picker_content` is the picker's whole content brain — SlotPicker is a
+// WHAT DRIVES WHAT: `useSlotPickerContent` is the picker's whole content brain — SlotPicker is a
 // pass-through shell over it and renders through `createPortal`, which this repo's SSR harness cannot
 // resolve (same split rationale as MobPicker.test.tsx). The corpus hook is spied for the same reason the
 // mob picker spies its store: under SSR a subscription serves its initial state and would hide every later
@@ -22,7 +22,7 @@ import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
 
-import { MaxRollItemCard, picker_item_detail, use_slot_picker_content } from './LoadoutSection'
+import { MaxRollItemCard, picker_item_detail, useSlotPickerContent } from './LoadoutSection'
 
 const test_i18n = i18next.createInstance()
 void test_i18n.init({
@@ -59,7 +59,7 @@ const landed = (rows: RpcEncyclopediaItem[]): item_corpus.ItemCorpus => {
 
 /** Prints exactly what the picker hands its modal — the empty line, then one row per offered item. */
 function PickerContent({ slot }: Readonly<{ slot: string }>) {
-  const { items, empty_label } = use_slot_picker_content(slot)
+  const { items, empty_label } = useSlotPickerContent(slot)
   return (
     <div>
       <span id="empty">{empty_label ?? ''}</span>
@@ -72,7 +72,7 @@ function PickerContent({ slot }: Readonly<{ slot: string }>) {
 }
 
 const render_against = (state: item_corpus.ItemCorpus, slot: string): string => {
-  const spy = spyOn(item_corpus, 'use_item_corpus').mockImplementation(() => state)
+  const spy = spyOn(item_corpus, 'useItemCorpus').mockImplementation(() => state)
   try {
     return renderToStaticMarkup(
       <I18nextProvider i18n={test_i18n}>

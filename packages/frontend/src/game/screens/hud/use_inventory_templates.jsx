@@ -5,7 +5,7 @@ import { catalog, pet_food_slugs } from 'virtual:item_catalog'
 
 import { get_template_by_item_type_map, get_template_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
-import { use_onchain_item_tooltip } from '../../../components/entity_display'
+import { useOnchainItemTooltip } from '../../../components/entity_display'
 import { is_template_removed } from '../../../components/orphan_item'
 import { PetFoodHoverRow } from '../../../pages/encyclopedia/pet_food_section'
 import {
@@ -16,7 +16,7 @@ import {
 import { inventory_item_icon, item_display_level } from './inventory-equip.js'
 
 /** Live template projection + inventory tooltip state. Every ID originates in the current /v1 maps. */
-export function use_inventory_templates(items, slugs) {
+export function useInventoryTemplates(items, slugs) {
   const [template_map, set_template_map] = useState(() => new Map())
   const [template_id_map, set_template_id_map] = useState(() => new Map())
   useEffect(() => {
@@ -39,7 +39,7 @@ export function use_inventory_templates(items, slugs) {
     () => pet_max_stats_by_live_template(template_id_map.values(), catalog),
     [template_id_map]
   )
-  const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = use_onchain_item_tooltip({
+  const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = useOnchainItemTooltip({
     pet_food_row: <PetFoodHoverRow food_slugs={food_slugs} />,
   })
   const [rolled_stats_by_id, set_rolled_stats_by_id] = useState({})

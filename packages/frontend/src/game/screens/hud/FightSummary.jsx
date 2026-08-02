@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next'
 
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { get_class } from '../../data/classes.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_fight_cost, format_fight_cost } from '../../../world-shell/fight_gas_ledger.js'
@@ -28,10 +28,10 @@ const close = () => context.dispatch('action/fight_summary/close', {})
  * @returns {import('react').JSX.Element | null} */
 export function FightSummary({ slug_by_name = {} }) {
   const { t } = useTranslation()
-  const recap = use_game_state((s) => s.fight_summary)
-  const fight_result = use_game_state((s) => s.fight_result)
-  const characters = use_game_state((s) => s.sui.characters)
-  const items = use_game_state((s) => s.sui.items)
+  const recap = useGameState((s) => s.fight_summary)
+  const fight_result = useGameState((s) => s.fight_result)
+  const characters = useGameState((s) => s.sui.characters)
+  const items = useGameState((s) => s.sui.items)
   const net_mist = use_fight_cost((s) => s.net_mist)
 
   // the card shows only on a real defeat (the win celebration is FightResult's). Gate the sound + render on it.

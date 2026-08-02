@@ -17,8 +17,8 @@ const zones_poll = create_shared_poll<RpcZones>((world_id) => get_zones(world_id
 /** Non-React callers (world_spawns.js): join the shared poll for `world_id`, returns the release function. */
 export const subscribe_zones = zones_poll.subscribe
 
-/** React hook, use_rpc_view-shaped — `world_id` null/undefined idles. */
-export const use_zones_view = zones_poll.use_shared_poll
+/** React hook, useRpcView-shaped — `world_id` null/undefined idles. */
+export const use_zones_view = zones_poll.useSharedPoll
 
 /** Force an out-of-band re-read now (e.g. a just-confirmed search) — propagates to every subscriber. */
 export const refetch_zones = zones_poll.refetch

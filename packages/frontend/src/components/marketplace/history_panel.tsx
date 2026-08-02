@@ -6,13 +6,13 @@ import { Store, Loader2, Coins } from 'lucide-react'
 import { slugs } from 'virtual:item_catalog'
 
 import { get_sales_history } from '../../rpc/client'
-import { use_rpc_view } from '../../rpc/use_view'
-import { use_address_names } from '../../rpc/use_address_names'
+import { useRpcView } from '../../rpc/use_view'
+import { useAddressNames } from '../../rpc/use_address_names'
 import { RpcStale } from '../../rpc/RpcStale'
 import { use_auth } from '../../auth'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
 import { has_collectible_profits } from '../../chain/read_kiosk_profits'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import { truncate_address } from '../../utils/address'
 import { ItemImage } from '../items'
@@ -51,7 +51,7 @@ function format_ago(ms: number, lang: string): string {
 
 export function HistoryPanel() {
   const { t, i18n } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const address = use_auth((s) => s.address)
   const templates_item = use_marketplace_chain((s) => s.templates_item)
   const kiosk_profits_mist = use_marketplace_chain((s) => s.kiosk_profits_mist)
@@ -61,7 +61,7 @@ export function HistoryPanel() {
 
   // Short-poll the live view (UI-DATA LAW), gated until the wallet address resolves. `limit` in deps so
   // "Load more" re-subscribes with a wider window; the api clamps limit to 1..200.
-  const view = use_rpc_view((signal) => get_sales_history({ seller: address as string, limit }, signal), {
+  const view = useRpcView((signal) => get_sales_history({ seller: address as string, limit }, signal), {
     deps: [address, limit],
     enabled: !!address,
   })
@@ -71,7 +71,7 @@ export function HistoryPanel() {
   const lang = i18n.resolvedLanguage || i18n.language?.split('-')[0] || 'en'
 
   // D52 — one batched /v1/names round trip for every buyer in the visible rows.
-  const buyer_names = use_address_names(rows.map((r) => r.buyer))
+  const buyer_names = useAddressNames(rows.map((r) => r.buyer))
 
   const revenue = useMemo(() => {
     try {

@@ -43,7 +43,7 @@ import {
 
 import { item_icon_url } from '@aresrpg/sdk/jobs'
 
-import { use_image_retry } from './image_retry.js'
+import { useImageRetry } from './image_retry.js'
 
 // On-chain item CATEGORY → a line glyph, keyed by the exact strings item.move::verify_category accepts.
 // Shown when the CDN sprite 404s/blocks (art not yet uploaded) so the player still reads the item's KIND
@@ -143,7 +143,7 @@ export function ItemIcon({ item, alt = '', hd = false, className, glyph, categor
   } catch {
     // A lost template join supplied a Sui object id. The resolver refuses it; render the placeholder below.
   }
-  const { url, attempt, on_failed_attempt } = use_image_retry(candidates)
+  const { url, attempt, on_failed_attempt } = useImageRetry(candidates)
   // fallback precedence: explicit glyph → the item's category glyph → the generic box (last resort).
   const cat = category ?? (typeof item === 'object' && item ? (item.category ?? item.item_category) : null)
   const fallback = glyph ?? item_fallback_glyph(cat)

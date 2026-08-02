@@ -11,11 +11,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { play_sfx } from '../../core/audio/sfx.js'
-import { use_fight_view } from '../../store.js'
+import { useFightView } from '../../store.js'
 
 export function TurnBanner() {
   const { t } = useTranslation()
-  const fight = use_fight_view() // SYNCHRONOUS core truth (S2 mirror kill) — never the lagging copy
+  const fight = useFightView() // SYNCHRONOUS core truth (S2 mirror kill) — never the lagging copy
   // ACTIVE + mine + not over + not a spectator. Placement uses its own banner (FightPlacementBanner), so gate it out
   // here — the cue marks the transition INTO acting, which is exactly what the silent handoff was missing.
   // HANDOVER GATE (the turn order can already show my name and timer while other mobs are still moving): the

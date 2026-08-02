@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_auth, is_zklogin_session } from '../../../auth'
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
@@ -358,14 +358,14 @@ function RosterEntry({ character, active, busy, delete_block, on_preview, on_del
  */
 export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
   const { t } = useTranslation()
-  const characters = use_game_state((s) => s.sui.characters)
-  const selected_id = use_game_state((s) => s.selected_character_id)
-  const loaded = use_game_state((s) => s.sui.loaded)
+  const characters = useGameState((s) => s.sui.characters)
+  const selected_id = useGameState((s) => s.selected_character_id)
+  const loaded = useGameState((s) => s.sui.loaded)
   // Account-level create routing inputs (the roster/session payload): the on-chain free-character claim
   // marker (the C2 fix; the client cannot infer it from the count) and the LIVE additional-character
   // price. Fed to the create flow + the create-button copy so neither promises FREE to a claimed account.
-  const claimed_free = use_game_state((s) => s.sui.has_claimed_free_character)
-  const price_sui = use_game_state((s) => s.sui.character_price_sui) ?? ADDITIONAL_CHARACTER_PRICE_SUI
+  const claimed_free = useGameState((s) => s.sui.has_claimed_free_character)
+  const price_sui = useGameState((s) => s.sui.character_price_sui) ?? ADDITIONAL_CHARACTER_PRICE_SUI
   // Live wallet balance in MIST (single auth-store home). Drives the D50 broke-gate so a paid create that
   // can't afford the mint never attempts the tx — so refetch FRESH on drawer mount (trigger c)
   // rather than trusting a possibly-stale figure.
@@ -374,7 +374,7 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
   // The terminal error reason when the read-model never resolved (connect/fetch failed or timed out). With
   // it set + not yet loaded, the roster shows an error + Retry instead of an endless "Loading…" spinner —
   // the boot-routing 3-states law (unfetched ≠ confirmed-empty ≠ populated ≠ error). null = no error.
-  const load_error = use_game_state((s) => s.sui.load_error)
+  const load_error = useGameState((s) => s.sui.load_error)
   const [creating, set_creating] = useState(false)
   const [broke, set_broke] = useState(false)
   const [pending_id, set_pending_id] = useState(/** @type {string | null} */ (null))

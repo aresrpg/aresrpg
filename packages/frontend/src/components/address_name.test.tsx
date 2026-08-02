@@ -7,7 +7,7 @@
 // pure prop→markup rendering with no jsdom needed. get_names is tested the same way get_taux is in
 // item_detail_view.test.tsx — mock global.fetch, assert the parsed shape + the requested query param.
 //
-// use_address_names (the hook) is intentionally NOT unit-tested here: it is a thin dedupe+useEffect
+// useAddressNames (the hook) is intentionally NOT unit-tested here: it is a thin dedupe+useEffect
 // wrapper around get_names, and exercising a real effect needs a render tree (RTL), which this repo
 // doesn't carry. Its correctness rides get_names' own tests + plain React effect semantics.
 

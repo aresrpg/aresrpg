@@ -6,7 +6,7 @@ import { Loader2, Tag } from 'lucide-react'
 import { slugs } from 'virtual:item_catalog'
 
 import { use_auth } from '../../auth'
-import { use_template_t } from '../../i18n/template_t'
+import { useTemplateT } from '../../i18n/template_t'
 import { use_marketplace_chain, type ListableItem, type ListableCharacter } from '../../stores/marketplace_chain'
 import { parse_2_decimal_sui, format_mist_to_sui } from '../../utils/sui_mist'
 import { get_level } from '../../experience'
@@ -36,7 +36,7 @@ const CHARACTER_LIST_MIN_LEVEL = 30
 
 export function SellPanel() {
   const { t } = useTranslation()
-  const tt = use_template_t()
+  const tt = useTemplateT()
   const address = use_auth((s) => s.address)
   const { listings, templates_item, submit_listing, submit_delist, busy } = use_marketplace_chain()
   const submit_list_character = use_marketplace_chain((s) => s.submit_list_character)

@@ -6,5 +6,5 @@ import { useSyncExternalStore } from 'react'
 
 import { get_spell_corpus, subscribe_spell_corpus } from './spell_corpus.js'
 
-export const use_spell_corpus = () =>
+export const useSpellCorpus = () =>
   useSyncExternalStore(subscribe_spell_corpus, get_spell_corpus, get_spell_corpus)

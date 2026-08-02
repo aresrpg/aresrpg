@@ -7,7 +7,7 @@
 // frameless. TRUE MODAL: this now portals straight to document.body (createPortal — the same idiom as
 // AddFundsModal/PetFeedModal/ConfirmDialog) at a z-index above every HUD panel/toast/tooltip (see
 // minimap.css .mmx-backdrop), fixed + CENTERED OVER THE FULL BROWSER VIEWPORT rather than the game sub-area
-// beside the sidebar (see use_viewport_size, replacing round 5's game-area rect measurement — there's no
+// beside the sidebar (see useViewportSize, replacing round 5's game-area rect measurement — there's no
 // "game area" left to measure once the map floats above the sidebar too). Sizing stays 70% (now of the
 // viewport); there is still NO dark scrim (the world stays visible around it, standing order); Esc +
 // click-outside-to-close both still work, untouched by the re-parenting.
@@ -44,7 +44,7 @@ import { useTranslation } from 'react-i18next'
 import { world_minimap_column } from '@aresrpg/engine3'
 import { spawn_markers, zone_map_rects } from '@aresrpg/world/spawns_zones'
 
-import { use_game_state, context } from '../../store.js'
+import { useGameState, context } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
 import { select_hack_presentation } from '../../core/world_presentation.js'
 import {
@@ -75,7 +75,7 @@ const HIT_R = 10 // marker hit-test radius, px
  *  `.gw-hud`-scoped element whose rect IS the game area; window.innerWidth/innerHeight is the honest
  *  reference now. Re-measures on resize while the modal is open.
  *  @returns {number} */
-function use_viewport_size() {
+function useViewportSize() {
   const [size, set_size] = useState(SIZE_FALLBACK)
   useLayoutEffect(() => {
     const measure = () => set_size(Math.round(Math.min(window.innerWidth, window.innerHeight) * SIZE_FRACTION))
@@ -92,7 +92,7 @@ function use_viewport_size() {
  */
 export function MinimapModal({ onClose }) {
   const { t } = useTranslation()
-  const pose = use_game_state((s) => s.player_pose)
+  const pose = useGameState((s) => s.player_pose)
   // The ONE spawns store, projected (spawn_markers) — never a render-published copy. Stable slices → the memo
   // survives the per-frame player_pos fold, so the marker overlay only recomputes on real spawn changes.
   const zones = use_spawns((s) => s.zones)
@@ -105,7 +105,7 @@ export function MinimapModal({ onClose }) {
   const terrain_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const overlay_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const [hover, set_hover] = useState(/** @type {null | { key: string, cx: number, cy: number }} */ (null))
-  const SIZE = use_viewport_size()
+  const SIZE = useViewportSize()
   const ppb = SIZE / SPAN // north-up, no rotation ⇒ the sampled span exactly fills the canvas — no inset math needed
 
   // The TERRAIN is a SNAPSHOT centred on wherever the player was AT OPEN (region scale — "a map consult, not
@@ -117,7 +117,7 @@ export function MinimapModal({ onClose }) {
   const origin_ref = useRef({ x: 0, z: 0 })
   // Same reducer-door signal the world + small map read (one home) — hack sessions map the grid, not the
   // terrain, and a live settings flip re-branches this map without a reload (#812).
-  const hack_map = use_game_state(select_hack_presentation)
+  const hack_map = useGameState(select_hack_presentation)
   const [grid_ver, set_grid_ver] = useState(0)
 
   // ESC closes (modal idiom).

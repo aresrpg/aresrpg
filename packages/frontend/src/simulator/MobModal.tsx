@@ -26,7 +26,7 @@ import { MobSpellsSection } from '../pages/encyclopedia/mob_spells_section'
 import { mob_corpus_of, type CorpusMob } from '../pages/encyclopedia/world_corpus'
 
 import { build_mob } from './content.js'
-import { MobPicker, use_mob_index } from './MobPicker'
+import { MobPicker, useMobIndex } from './MobPicker'
 import type { SimMobPick } from './reducer'
 import { use_simulator } from './store'
 
@@ -36,8 +36,8 @@ const micro = 'text-[9px] tracking-[0.22em] uppercase'
 /** The corpus row a stored pick refers to, or null when the corpus no longer publishes it. Subscribed: the
  *  corpus is fetched at boot (main.tsx `load_world_corpus`), so a seat mounted before it lands must be told
  *  when it does — an index frozen at first read would call every stored pick a vanished mob. */
-export const use_mob_of = (template_id: string | undefined): CorpusMob | null =>
-  use_mob_index().get(template_id ?? '') ?? null
+export const useMobOf = (template_id: string | undefined): CorpusMob | null =>
+  useMobIndex().get(template_id ?? '') ?? null
 
 export function MobModal({
   cell,
@@ -47,7 +47,7 @@ export function MobModal({
   const { t } = useTranslation()
   const input = use_simulator((state) => state.input)
   const [picking, set_picking] = useState(pick === null)
-  const mob = use_mob_of(pick?.template_id)
+  const mob = useMobOf(pick?.template_id)
 
   // A pick whose corpus row vanished is still a stored seat: say so instead of rendering an empty editor.
   if (picking || !mob || !pick)

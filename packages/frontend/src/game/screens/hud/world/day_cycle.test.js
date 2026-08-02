@@ -7,12 +7,12 @@
 //
 // `mock.module` is PROCESS-global in bun and other suites already mock game/store.js (HackRadioPlayer.test.jsx,
 // components/marketplace/inventory_panel.test.tsx) — this mirrors the REAL module's FULL export surface
-// (use_game_state + context) so a partial mock never breaks a later file needing the real one.
+// (useGameState + context) so a partial mock never breaks a later file needing the real one.
 import { describe, expect, mock, test } from 'bun:test'
 
 let game_state = /** @type {any} */ ({ world_presentation: 'terrain' })
 mock.module('../../../store.js', () => ({
-  use_game_state: (/** @type {(state: any) => any} */ selector) => selector(game_state),
+  useGameState: (/** @type {(state: any) => any} */ selector) => selector(game_state),
   context: { get_state: () => game_state },
 }))
 

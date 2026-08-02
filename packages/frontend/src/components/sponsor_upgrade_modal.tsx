@@ -5,12 +5,12 @@ import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { RefreshCw } from 'lucide-react'
 
-import { use_game_state } from '../game/store.js'
+import { useGameState } from '../game/store.js'
 
 // STRICT SPONSOR UPGRADE modal. A retired-package refusal latches its state through the engine reducer; this
 // host only projects that state. Blocking by design: refreshing onto the latest package is the sole safe exit.
 export function SponsorUpgradeModalHost() {
-  const upgrade_required = use_game_state((state) => state.sponsor_upgrade_required)
+  const upgrade_required = useGameState((state) => state.sponsor_upgrade_required)
 
   if (!upgrade_required) return null
   return <SponsorUpgradeModal />

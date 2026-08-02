@@ -103,7 +103,7 @@ test('the gear aggregate is the hand-computed per-stat sum of the EQUIPPED max r
 })
 
 test('each stat row prints ITS own hand-computed contribution beside the editable allocation', () => {
-  const corpus_spy = spyOn(item_corpus, 'use_item_corpus').mockImplementation(() => corpus)
+  const corpus_spy = spyOn(item_corpus, 'useItemCorpus').mockImplementation(() => corpus)
 
   try {
     const markup = renderToStaticMarkup(

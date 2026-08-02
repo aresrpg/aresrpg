@@ -8,7 +8,7 @@ import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_auth } from '../../../auth'
 import { get_owner_items } from '../../../rpc/client'
-import { use_game_state } from '../../store.js'
+import { useGameState } from '../../store.js'
 import { equip_items } from '../../../world-shell/equip_actions.js'
 import { legacy_pet_equip_guard } from '../../../world-shell/pet_equip_guard.js'
 import { use_consumable_batched } from '../../../world-shell/consumable_actions.js'
@@ -50,11 +50,11 @@ import {
   is_equip_retry_blocked,
   is_equip_state_stale,
 } from './lootbox-retry-guard.js'
-import { use_inventory_menus } from './use_inventory_menus.js'
+import { useInventoryMenus } from './use_inventory_menus.js'
 import { is_template_removed } from '../../../components/orphan_item'
 import './hud-panels.css'
 import { game_log } from '../../../core/log.js'
-import { use_inventory_templates } from './use_inventory_templates.jsx'
+import { useInventoryTemplates } from './use_inventory_templates.jsx'
 
 const TABS = /** @type {const} */ ([
   ['equipment', 'inventory.tab_equipment'],
@@ -66,9 +66,9 @@ const TABS = /** @type {const} */ ([
 export function Inventory() {
   const { t } = useTranslation()
   const address = use_auth((state) => state.address)
-  const items = use_game_state((s) => s.sui.items)
-  const characters = use_game_state((s) => s.sui.characters)
-  const selected_character_id = use_game_state((s) => s.selected_character_id)
+  const items = useGameState((s) => s.sui.items)
+  const characters = useGameState((s) => s.sui.characters)
+  const selected_character_id = useGameState((s) => s.selected_character_id)
   const {
     template_map,
     template_id_map,
@@ -81,7 +81,7 @@ export function Inventory() {
     dismiss_item_tooltip,
     set_hovered_bag_id,
     tooltip_element,
-  } = use_inventory_templates(items, slugs)
+  } = useInventoryTemplates(items, slugs)
 
   const [, refresh_retry_guard] = useState(0)
   const {
@@ -103,7 +103,7 @@ export function Inventory() {
     on_grid_context_menu,
     on_box_retry_blocked,
     on_box_retry_allowed,
-  } = use_inventory_menus({ t, slugs, refresh_retry_guard })
+  } = useInventoryMenus({ t, slugs, refresh_retry_guard })
 
   const character = useMemo(
     () => characters?.find((c) => c.id === selected_character_id) ?? null,

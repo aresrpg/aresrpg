@@ -7,7 +7,7 @@
 // in-memory LRU+TTL (the app's ONLY client-side cache — never a client-side index/IndexedDB tier),
 // and the ONE error shape (RpcError). It never renders or polls (see use_view.ts for reactivity); the sole UI
 // side effect is one soft, localized toast after a rate-limited request's polite retry also fails. The UI-DATA
-// LAW lives one layer up: callers read through use_rpc_view, never streaming, never silently stale.
+// LAW lives one layer up: callers read through useRpcView, never streaming, never silently stale.
 //
 // No package id is hardcoded here — every id travels as a caller arg or is resolved by the api from the
 // indexer, so a testnet republish never touches this file (env.ts RPC_URL is the only deployment seam).
@@ -70,7 +70,7 @@ function build_url(path: string, params?: Params): string {
 // The ONE client-side cache (no client-side indexing, ever): a tiny in-memory LRU+TTL over GETs,
 // keyed by the full URL (path+params). It absorbs burst-duplicate reads (several components mounting the same
 // view, navigation re-fetches) without masking the short-poll cadence — the TTL sits BELOW the shortest
-// use_rpc_view interval (4s, kolizeum.tsx), so every poll tick still reaches the network. `in_flight` dedupes
+// useRpcView interval (4s, kolizeum.tsx), so every poll tick still reaches the network. `in_flight` dedupes
 // concurrent identical GETs into ONE fetch. Errors are never cached.
 const CACHE_TTL_MS = 3000
 const CONFIG_BOOT_CACHE_TTL_MS = 10_000
@@ -192,7 +192,7 @@ async function show_rate_limit_failure(wave: RateLimitWave): Promise<void> {
 // Core GET → parsed `data`, through the LRU. Throws RpcError on network failure, timeout, non-2xx, or
 // unparseable body — one funnel so every view fetcher fails identically. A shared (deduped) fetch deliberately
 // ignores callers' AbortSignals mid-flight — a shared result must not die with one caller; the signal is only
-// honored at entry, and use_rpc_view already drops superseded results via its own cancelled flag.
+// honored at entry, and useRpcView already drops superseded results via its own cancelled flag.
 //
 // `fresh` (default false) skips the LRU READ only — a caller that already knows it wants post-tx chain truth
 // (a bounded reconcile-wait right after the caller's OWN write, e.g. CompassStrip's post-search refresh) sets
@@ -329,7 +329,7 @@ async function fetch_json_once(url: string): Promise<unknown> {
 // --- typed view fetchers -----------------------------------------------------
 // Each returns the unwrapped domain slice (the array/object a surface renders), not the transport envelope.
 // Signatures accept an optional AbortSignal, honored at call entry (mid-flight fetches are shared across
-// callers; use_rpc_view discards superseded results itself).
+// callers; useRpcView discards superseded results itself).
 
 export const get_status = (signal?: AbortSignal) => rpc_get<RpcStatus>('/v1/status', undefined, signal)
 

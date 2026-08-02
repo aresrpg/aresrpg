@@ -17,7 +17,7 @@ import { report_chunk_load_failure } from '../core/stale_deploy_recovery'
 
 import { board_of } from './board'
 import { build_start_args, start_blocked_reason } from './fight_start.js'
-import { use_mob_index } from './MobPicker'
+import { useMobIndex } from './MobPicker'
 import { use_simulator } from './store'
 
 /**
@@ -47,14 +47,14 @@ export const on_shim_load_failure = () => {
  * @returns {{ phase: string, can_start: boolean, blocked: string | null,
  *   start: () => Promise<void>, stop: () => void }}
  */
-export function use_sim_fight() {
+export function useSimFight() {
   const shim = useRef(/** @type {ReturnType<typeof create_fight_shim> | null} */ (null))
   const [blocked, set_blocked] = useState(/** @type {string | null} */ (null))
   const phase = use_simulator((state) => state.phase)
   const placements = use_simulator((state) => state.placements)
   const mob_picks = use_simulator((state) => state.mob_picks)
-  const { by_id } = item_corpus.use_item_corpus()
-  const mob_by_id = use_mob_index()
+  const { by_id } = item_corpus.useItemCorpus()
+  const mob_by_id = useMobIndex()
 
   /** THE ONE way a simulator fight session ends — the STOP control's, and (#1632) the shim's own terminal
    *  exit's. Stable identity, so the shim below can be handed it once at construction. */

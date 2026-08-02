@@ -6,7 +6,7 @@
 // request). Shared by the sidebar gauge (SponsorAllowanceBar), the pre-fight hint, and the run-out modal
 // countdown so there is ONE poll and ONE source of truth. MONEY IS BIGINT here: the string mist fields
 // come back as bigint so callers never Number()-coerce a money value. Display-only — the sponsor itself
-// still fail-closes the real cap; a poll blip just shows the last-good value (use_rpc_view keeps it).
+// still fail-closes the real cap; a poll blip just shows the last-good value (useRpcView keeps it).
 
 import { use_auth, type AuthState } from '../auth'
 
@@ -20,7 +20,7 @@ export interface SponsorAllowance {
   resets_at: string | null
   /** true before the first successful load — the gauge shows a placeholder, not a scary empty bar. */
   loading: boolean
-  /** true when a poll failed while prior data is held (use_rpc_view's no-silent-stale contract). */
+  /** true when a poll failed while prior data is held (useRpcView's no-silent-stale contract). */
   stale: boolean
 }
 
@@ -29,13 +29,13 @@ export interface SponsorAllowance {
 const POLL_MS = 15000
 
 // ONE shared poll for every mount site (the sidebar gauge, the pre-fight hint, the run-out modal, settings —
-// #242 read-layer census: each used to run its OWN use_rpc_view instance for the SAME address, so "ONE poll"
+// #242 read-layer census: each used to run its OWN useRpcView instance for the SAME address, so "ONE poll"
 // above was a claim the code never actually enforced). create_shared_poll makes it literally true.
 const sponsor_poll = create_shared_poll((address) => get_sponsor_remaining(address), POLL_MS)
 
 export function use_sponsor_allowance(): SponsorAllowance | null {
   const address = use_auth((s: AuthState) => s.address)
-  const { data, loading, stale } = sponsor_poll.use_shared_poll(address ?? null)
+  const { data, loading, stale } = sponsor_poll.useSharedPoll(address ?? null)
 
   if (!address) return null
   if (!data) return { allowance_mist: 0n, spent_mist: 0n, remaining_mist: 0n, resets_at: null, loading, stale }

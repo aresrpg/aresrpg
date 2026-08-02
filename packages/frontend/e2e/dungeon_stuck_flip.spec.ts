@@ -23,7 +23,7 @@ import { test, expect, type Page } from '@playwright/test'
 // the SHIPPED dev harness state `dungeon_stuck_flip` (force_fight_board.js), which reproduces the field bug
 // FAITHFULLY: it spawns a placement slice (fight.placement=true), then flips ONLY the dungeon read to ACTIVE +
 // syncs the turn WITHOUT dispatching action/fight/started — i.e. the exact failed-respawn-flip divergence. The
-// flip therefore comes ENTIRELY from the phase machine (use_fight_phase → derive_phase → the max reconcile), the
+// flip therefore comes ENTIRELY from the phase machine (useFightPhase → derive_phase → the max reconcile), the
 // structural fix, not a second imperative write. No tx, no chain object — the divergence is injected in-store.
 //   TEST 1 — the STEER-2 stuck-flip: after the ACTIVE read lands over the stale placement slice, the board must
 //            flip: .hud-fightctl__end (END TURN) renders, .hud-fightctl__ready (the gold READY) is GONE, zero

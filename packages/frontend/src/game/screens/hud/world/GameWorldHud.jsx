@@ -30,7 +30,7 @@ import './world_toast_overlay.css'
 // `.hud-*` rules are namespaced (no `.gw-*` / global bleed), so importing it here is safe.
 import '../hud.css'
 import '../mobile-fight-hud.css'
-import { use_fight, use_game_state } from '../../../store.js'
+import { useFight, useGameState } from '../../../store.js'
 import { select_hack_presentation } from '../../../core/world_presentation.js'
 import { event_toast_store } from '../../../core/toast.js'
 import { WorldChat } from './WorldChat.jsx'
@@ -82,7 +82,7 @@ import { LevelUp } from '../LevelUp.jsx'
 import { JobLevelUp } from '../JobLevelUp.jsx'
 import { MobileHud } from '../MobileHud.jsx'
 import { MobileLayoutBoundary } from '../MobileLayoutBoundary.jsx'
-import { fight_layer_class, use_mobile_mode, world_hud_class } from '../mobile_layout.js'
+import { fight_layer_class, useMobileMode, world_hud_class } from '../mobile_layout.js'
 // CARD REMOVED: the ExploreHud exploration Shell (+ its "YOUR CHARACTERS" column) is gone from the
 // World tab — exploration lives on /exploration, and the sidebar switcher covers RESUME. Confirmed-empty
 // onboarding now lives at the GameWorldHost frame boundary, where it replaces the canvas without escaping
@@ -93,13 +93,13 @@ import { fight_layer_class, use_mobile_mode, world_hud_class } from '../mobile_l
 // DeckCluster/FightPlacementBanner/FightControls (all WS-packet-driven — see
 // core/modules/fight.js's send_fight_* senders, dead without a backend) are swapped for DungeonBoard, which
 // owns its own commit/pass-turn buttons wired to dungeon_store's real txs. FightTimeline + Vitals (below) ARE
-// genuinely reusable as-is — pure fight-view readers (use_fight_view) with no wrong-sender problem.
+// genuinely reusable as-is — pure fight-view readers (useFightView) with no wrong-sender problem.
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { DungeonBoard } from './DungeonBoard.jsx'
 import { DungeonLeaveButton } from './DungeonLeaveButton.jsx'
 import { RewardRecap } from './RewardRecap.jsx'
 import { FightSyncIndicator } from './FightSyncIndicator.jsx'
-import { use_fight_phase } from './use_fight_phase.js'
+import { useFightPhase } from './use_fight_phase.js'
 import { should_mount_board } from '../../../../fight-engine/phase.js'
 import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
@@ -108,21 +108,21 @@ export function GameWorldHud() {
   // The first-session Tutorial mounts only with a PLAYABLE roster — when the roster is confirmed-empty,
   // GameWorldHost's world-slot creator owns the canvas region; before the roster is fetched, neither shows.
   // The breadth menus live in the companion meta-tabs (sidebar routes), never here.
-  const loaded = use_game_state((s) => s.sui.loaded)
-  const has_character = use_game_state((s) => s.sui.characters.length > 0)
+  const loaded = useGameState((s) => s.sui.loaded)
+  const has_character = useGameState((s) => s.sui.characters.length > 0)
   // ONBOARDING quest ladder: the objective card shows for a playable roster until every quest is resolved
   // (or dismissed). It's anchored center-right, clear of the top-right toast stack.
   const quest_active = useSyncExternalStore(quest_store.subscribe, () => !quest_store.get().hidden)
   const show_quest_card = loaded && has_character && quest_active
-  const mobile = use_mobile_mode()
+  const mobile = useMobileMode()
   // Tactical fight flag (engine store, set by core/modules/fight.js): combat replaces the world VIEW (the
   // board renders INTO the roam scene), so the combat chrome below mounts off this flag, not a panel set.
-  const fight = use_fight(world_fight_view)
+  const fight = useFight(world_fight_view)
   const world_fight = fight != null
-  const fight_mode = use_game_state((s) => s.fight_mode) && world_fight
+  const fight_mode = useGameState((s) => s.fight_mode) && world_fight
   // HACK GRID (#812's reducer-door signal, never a second read of the preference): the LIVE session's
   // presentation, so arming/disarming hack mode adds/removes the dev entry's surfaces without a reload.
-  const hack_grid = use_game_state(select_hack_presentation)
+  const hack_grid = useGameState(select_hack_presentation)
   // VIEW-ONLY spectate: a spectator sends no commands, so the deck hand is hidden (the
   // turn controls become a "Leave spectate" — FightControls handles that itself).
   const spectating = !!fight?.spectator
@@ -133,7 +133,7 @@ export function GameWorldHud() {
   // — it mounts in PLACEMENT/ACTIVE only, and HOLDS (no board) through a half-init (status ACTIVE but the slice
   // not yet re-synced — the D77 stuck-flip), so a ghost/half board is unrepresentable. The WS (non-dungeon)
   // branch below stays on the raw flag (the machine's input is the dungeon; a world fight has none).
-  const phase = use_fight_phase()
+  const phase = useFightPhase()
   // P0 RESUME (supersedes the old interstitial): a refresh mid-fight mounts STRAIGHT into the
   // live phase — placement, active turn, or terminal — with zero "fight awaits / ENTER" gate. The mount is
   // the phase machine's call ALONE. (D107's tx-provenance half is untouched: mounting a BOARD signs nothing;

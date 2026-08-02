@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 
-import { use_game_state, context } from '../../../store.js'
+import { useGameState, context } from '../../../store.js'
 import { use_auth } from '../../../../auth'
 import { use_party } from '../../../../world-shell/party_store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
@@ -58,9 +58,9 @@ async function resolve_char_ids(addresses) {
 /** @returns {import('react').ReactElement | null} */
 export function FightsModal() {
   const { t } = useTranslation()
-  const open = use_game_state((s) => s.fights_modal)
-  const visible = use_game_state((s) => s.visible_fights)
-  const dungeon_fights = use_game_state((s) => s.visible_dungeon_fights)
+  const open = useGameState((s) => s.fights_modal)
+  const visible = useGameState((s) => s.visible_fights)
+  const dungeon_fights = useGameState((s) => s.visible_dungeon_fights)
   // In a dungeon the SAME panel lists my party's room-fights (team up for the boss fight) — a distinct
   // data source (party runs) + join door (dungeon::join_fight), but one panel, one look.
   const in_dungeon = use_dungeon((s) => !!s.in_session)
@@ -68,7 +68,7 @@ export function FightsModal() {
   const party_members = use_party((s) => s.party?.members ?? null)
   // #498: the viewer's own character ids — gates whether a hovered fight's player-side column is genuinely
   // "Your party" (spectate-relative; a public fight in the world list is usually someone else's).
-  const characters = use_game_state((s) => s.sui.characters)
+  const characters = useGameState((s) => s.sui.characters)
   const my_character_ids = useMemo(() => new Set((characters ?? []).map((c) => c.id)), [characters])
   // The client's ONE mob-name catalog (group_template id → name), fed by world_spawns' nearby group cards +
   // the fight board's own resolver + the miss-resolver below. The hover card reads it to name each opponent.

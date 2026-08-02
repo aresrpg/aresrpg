@@ -57,6 +57,6 @@ function get_server_snapshot() {
   return false
 }
 
-export function use_is_touch() {
+export function useIsTouch() {
   return useSyncExternalStore(subscribe, get_snapshot, get_server_snapshot)
 }

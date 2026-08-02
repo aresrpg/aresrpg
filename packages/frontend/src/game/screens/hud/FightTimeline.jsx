@@ -16,7 +16,7 @@ import { useEffect, useRef } from 'react'
 
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { fight_store } from '@aresrpg/fight/store'
-import { use_fight_view } from '../../store.js'
+import { useFightView } from '../../store.js'
 import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight/draft_budget'
 import { Tooltip } from './Tooltip.jsx'
 import { EffectBadges } from './EffectBadges.jsx'
@@ -29,7 +29,7 @@ import { game_log } from '../../../core/log.js'
 const ACTIVE_HIGHLIGHT_VARIANT = 'a'
 
 export function FightTimeline() {
-  const fight = use_fight_view() // synchronous core view (S2 mirror kill)
+  const fight = useFightView() // synchronous core view (S2 mirror kill)
   const deadline = fight?.turn_deadline_ms ?? 0
   // Time is a reducer INPUT: one 4/s clock folds auto-commit against the current deadline and also notifies the
   // projection subscribers that repaint this countdown. Draft count already lives in the reducer-owned staged
