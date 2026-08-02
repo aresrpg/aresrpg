@@ -87,8 +87,14 @@ export function read_fighter_statuses(json) {
     const effect = fields_of(row.effect)
     const fighter = read_fighter_fid(row.fighter)
     const kind = Number(row.kind ?? effect.kind)
+    // #2000 (D42) — A DECODE DOOR NEVER DROPS A ROW THE CHAIN SAYS EXISTS. The counter is the bearer's turns
+    // STILL TO COME, so a 0 is a row on its LAST covered turn: on chain it is live, it ticks, it moves stats, and
+    // `spell_board::decrement_fighter_statuses` removes it only at the START of the bearer's next turn. The
+    // superseded `> 0` gate here made a poll landing inside that window DELETE the row — badge, buff and haze
+    // gone a full turn early. Liveness is the chain's call and it already made it by emitting the row; this door
+    // only refuses what it cannot STATE (no owner, no kind, no number).
     const remaining_turns = Number(row.remaining_turns ?? effect.turns ?? 0)
-    if (fighter != null && Number.isFinite(kind) && remaining_turns > 0)
+    if (fighter != null && Number.isFinite(kind) && Number.isFinite(remaining_turns))
       out.push({
         fighter,
         kind,

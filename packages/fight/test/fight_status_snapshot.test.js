@@ -18,7 +18,7 @@ describe('authoritative fight status snapshot', () => {
             { fighter: '0', kind: String(INVISIBILITY_STATUS_KIND), remaining_turns: '2', effect: {} },
             { fighter: '1001', kind: 4, remaining_turns: 3, effect: { element: 2, value: 5 } }, // non-27 now KEPT
             { fields: { fighter: '1', remaining_turns: '1', effect: { fields: { kind: 27 } } } },
-            { fighter: '2', kind: 27, remaining_turns: 0, effect: {} }, // expired → dropped
+            { fighter: '2', kind: 27, remaining_turns: 0, effect: {} }, // #2000: LAST covered turn → still read
           ],
         },
       })
@@ -26,6 +26,7 @@ describe('authoritative fight status snapshot', () => {
       { fighter: 0, kind: 27, remaining_turns: 2, element: null, value: null, stat: null, chance: null, source: null },
       { fighter: 1001, kind: 4, remaining_turns: 3, element: 2, value: 5, stat: null, chance: null, source: null },
       { fighter: 1, kind: 27, remaining_turns: 1, element: null, value: null, stat: null, chance: null, source: null },
+      { fighter: 2, kind: 27, remaining_turns: 0, element: null, value: null, stat: null, chance: null, source: null },
     ])
   })
 
