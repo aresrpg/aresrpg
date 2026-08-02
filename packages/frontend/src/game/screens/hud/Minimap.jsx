@@ -28,7 +28,7 @@ import { use_game_state } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
 import { use_minimap } from './use_minimap.js'
 import { MinimapModal } from './MinimapModal.jsx'
-import { render_rows } from '../../core/render_rows.js'
+import { use_render_rows } from '../../core/render_rows.js'
 import { peer_markers } from './presence_markers.js'
 import './minimap.css'
 
@@ -44,9 +44,9 @@ export function Minimap() {
   const zones = use_spawns((s) => s.zones)
   const templates = use_spawns((s) => s.templates)
   const pending = use_spawns((s) => s.pending)
-  // The two presence homes are read as the stable Maps they are and joined ONLY here, at the render edge.
-  const observed_peers = use_game_state((s) => s.observed_peers)
-  const owned_follow_render_rows = use_game_state((s) => s.owned_follow_render_rows)
+  // The composed render rows through their ONE door (core/render_rows.js). Reading the two presence homes
+  // here and joining them locally would be a second composition living outside the home that owns it.
+  const rows = use_render_rows()
   const canvas_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const [open, set_open] = useState(false)
 
@@ -59,7 +59,7 @@ export function Minimap() {
     () => spawn_markers({ zones, templates, pending }).map((s) => ({ x: s.x, z: s.z, kind: s.kind, key: s.key })),
     [zones, templates, pending]
   )
-  const markers = [...spawn_dots, ...peer_markers(render_rows({ observed_peers, owned_follow_render_rows }))]
+  const markers = [...spawn_dots, ...peer_markers(rows)]
   use_minimap(canvas_ref, { size: SIZE, view_radius_blocks: VIEW_RADIUS_BLOCKS, sample_n: SAMPLE_N, markers, enabled: !!pose })
 
   // Spectate / pre-first-frame: no pose published → no map (PartyFrame's render-nothing idiom).
