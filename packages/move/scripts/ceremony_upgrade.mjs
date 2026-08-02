@@ -18,6 +18,9 @@
 //      no `--packages` ⇒ exactly the old one-package-per-invocation behaviour, same env vars, same exits.
 //   6. THE EXECUTED-TIMEOUT FIX (#2038) — the digest is printed and journalled the instant the tx
 //      executes, BEFORE any finality wait; a wait that times out POLLS BY DIGEST and never resends.
+//   7. THE GAS PREFLIGHT (#2046) — a hoisted gate asserting the signer holds ONE coin ≥ the modeled
+//      batch budget ×1.2 BEFORE leg 1. See below. The run body is therefore behind an is-main guard,
+//      so the gate's pure core is importable (and tested) without starting a ceremony.
 //
 // ── THE GATE DEADLOCK this file's batch mode exists to break (measured 2026-08-02) ──────────────────
 // The per-package path cannot run twice in a row on one tree, because its own two publish gates fight:
@@ -135,7 +138,133 @@ function resolve_legs() {
   })
 }
 
-const legs = resolve_legs()
+// ── DELTA 7 — THE GAS PREFLIGHT (#2046) ─────────────────────────────────────────────────────────────
+// Measured 2026-08-02 (the D41/D42 batch): the run nearly stranded at leg 5 because Sui pays a tx from ONE
+// gas coin, and the signer held the modeled total in FRAGMENTS. Every total-balance view said "funded" —
+// a total is never evidence. Worse, the mid-run consolidation that saved it was a funding move executed
+// with no prior review. Both holes close the same way: assert ONE coin ≥ the whole set's budget ×1.2
+// BEFORE leg 1, and on failure REFUSE TO START while naming the consolidation as its own reviewed act.
+// This gate NEVER consolidates — a wallet-shaping transfer is a human/seat decision, not a driver's.
+//
+// The budget is DERIVED, not passed: every leg sets exactly `leg_gas_budget()` below (the same constant the
+// tx uses), so the batch's budget is that × the leg count. It hoists for BOTH modes — the per-package path
+// is a one-leg batch and gets the identical assertion at a one-leg budget.
+export const DEFAULT_LEG_GAS_BUDGET = 1_000_000_000n
+// ×1.2 as exact integer math (6/5) — floats have no business near money.
+export const GAS_HEADROOM_NUM = 6n
+export const GAS_HEADROOM_DEN = 5n
+
+export const leg_gas_budget = (env = process.env) =>
+  BigInt(env.UPGRADE_GAS_BUDGET ?? DEFAULT_LEG_GAS_BUDGET)
+
+export const batch_gas_budget = (leg_count, env = process.env) =>
+  leg_gas_budget(env) * BigInt(leg_count)
+
+export const required_gas_coin = (budget) =>
+  (BigInt(budget) * GAS_HEADROOM_NUM) / GAS_HEADROOM_DEN
+
+/** Pure verdict over a coin set. `largest` is the ONLY figure that decides; `total` is reported to make
+ *  the trap legible in the log, never to pass the gate. */
+export function gas_preflight_verdict({ coins, budget }) {
+  const held = coins.map((c) => ({
+    coinObjectId: c.coinObjectId,
+    balance: BigInt(c.balance),
+  }))
+  const largest = held.reduce(
+    (best, c) => (best && best.balance >= c.balance ? best : c),
+    null
+  )
+  return {
+    ok: !!largest && largest.balance >= required_gas_coin(budget),
+    required: required_gas_coin(budget),
+    budget: BigInt(budget),
+    largest,
+    total: held.reduce((s, c) => s + c.balance, 0n),
+    count: held.length,
+  }
+}
+
+const as_sui = (mist) => (Number(mist) / 1e9).toFixed(6)
+
+/** The refusal text — pure, so what an operator reads is exactly what the suite asserts. */
+export function gas_refusal_report({ signer, verdict }) {
+  const { required, budget, largest, total, count } = verdict
+  const need_sui = as_sui(required)
+  return [
+    `REFUSING TO START — gas preflight failed (#2046): no single coin covers this ceremony.`,
+    `  signer:        ${signer}`,
+    `  modeled budget ${budget} MIST (${as_sui(budget)} SUI) · required single coin ×1.2 = ${required} MIST (${need_sui} SUI)`,
+    `  largest coin:  ${largest ? `${largest.coinObjectId} = ${largest.balance} MIST (${as_sui(largest.balance)} SUI)` : 'NONE — the signer holds no SUI coins'}`,
+    `  shortfall:     ${largest ? required - largest.balance : required} MIST · held ${count} coin(s) totalling ${total} MIST (${as_sui(total)} SUI)`,
+    ``,
+    `A total is not evidence: Sui pays a transaction from ONE coin. Consolidate FIRST, as its own`,
+    `reviewed act — this driver will not reshape a wallet mid-ceremony:`,
+    ``,
+    `  EXPECT_SIGNER=${signer} MIN_RESULT_SUI=${need_sui} node packages/move/scripts/fund_transfer.mjs`,
+    ``,
+    `Then re-run the ceremony unchanged.`,
+  ].join('\n')
+}
+
+// The coin READ is JSON-RPC on purpose (fund_transfer.mjs carries the same enumeration and the same why):
+// the gRPC/CLI balance views are blind to this wallet's fragments — the exact blindness that let the
+// incident happen — so a gate built on them would report the comfortable answer. Fail-closed on an
+// unconfigured endpoint rather than guessing one.
+const GAS_RPC_URL =
+  process.env.RPC_URL ??
+  (NETWORK === 'testnet' ? 'https://sui-testnet-rpc.publicnode.com' : undefined)
+
+async function raw_get_sui_coins(owner) {
+  if (!GAS_RPC_URL)
+    throw new Error(
+      `gas preflight has no JSON-RPC endpoint for NETWORK=${NETWORK} — set RPC_URL. It enumerates coins ` +
+        `over suix_getCoins because the gRPC/CLI balance views are blind to coin fragmentation.`
+    )
+  const out = []
+  let cursor = null
+  do {
+    const res = await fetch(GAS_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'suix_getCoins',
+        params: [owner, '0x2::sui::SUI', cursor, 50],
+      }),
+    }).then((r) => r.json())
+    if (res.error)
+      throw new Error(`suix_getCoins (${GAS_RPC_URL}): ${JSON.stringify(res.error)}`)
+    // A page that decodes to nothing is a BROKEN READ, never an empty wallet: coercing it to zero coins
+    // would make the gate refuse for the wrong reason (or, on the total, reassure for one).
+    if (!Array.isArray(res.result?.data))
+      throw new Error(
+        `suix_getCoins (${GAS_RPC_URL}) returned no coin page: ${JSON.stringify(res).slice(0, 200)}`
+      )
+    out.push(...res.result.data)
+    cursor = res.result.hasNextPage ? res.result.nextCursor : null
+  } while (cursor)
+  return out
+}
+
+async function assert_gas_preflight(legs) {
+  const budget = batch_gas_budget(legs.length)
+  const signer = keypair.getPublicKey().toSuiAddress()
+  const verdict = gas_preflight_verdict({
+    coins: await raw_get_sui_coins(signer),
+    budget,
+  })
+  console.log(
+    `gas preflight: ${legs.length} leg(s) × ${leg_gas_budget()} MIST = ${budget} MIST budget · ` +
+      `required single coin ×1.2 = ${verdict.required} MIST (${as_sui(verdict.required)} SUI) · ` +
+      `held ${verdict.count} coin(s), largest ${verdict.largest?.balance ?? 0n} MIST, total ${verdict.total} MIST`
+  )
+  if (!verdict.ok) {
+    console.error(gas_refusal_report({ signer, verdict }))
+    process.exit(5)
+  }
+  console.log('GAS_PREFLIGHT_OK')
+}
 
 // ── #2038 JOURNAL: a digest that exists is gas already burned. It hits stdout and DISK the instant the tx
 //    executes, before any finality wait, so a crashed/timed-out wait can never lose it. Cleared on
@@ -162,38 +291,6 @@ const clear_pending = (name) => {
   const p = read_pending()
   delete p[name]
   write_pending(p)
-}
-
-// FAIL-CLOSED before any chain read or `sui move build` (both resolve deps/chain-ids from the ambient
-// active-env): refuse unless the CLI's active-env matches NETWORK. Replaces delta-1's PROSE assumption
-// ("active env is already testnet") with a real gate (seat tripwire, DECISIONS 2026-07-19 13:35/13:40).
-assert_env(NETWORK)
-
-// FAIL-CLOSED on the wrong TREE, the sibling of the wrong-network door above (#1298): the publishing
-// HEAD must already be on trunk, the Move tree must match that commit byte for byte, and every package
-// path — which this script otherwise compiles sight-unseen — must live inside the repository the ancestry
-// proof is about (#1305 review). No override exists; a publish that is not on edge lands on edge first.
-// BATCH: asserted ONCE here, over EVERY leg, BEFORE the first publish — every byte published in this run
-// comes from the tree proven clean and landed at this instant (delta 5's whole argument).
-assert_publishable_tree({ paths: legs.map((l) => l.pkgPath) })
-
-// An unresolved journal means a previous run burned gas it never recorded. Proceeding would build the next
-// dependent against a Published.toml that may not reflect the chain — refuse, loudly, and never re-fire.
-const stale_pending = read_pending()
-if (Object.keys(stale_pending).length) {
-  console.error(
-    `REFUSING — a previous run executed upgrade(s) it never recorded:\n${Object.entries(
-      stale_pending
-    )
-      .map(([n, d]) => `  ${n} → digest ${d}`)
-      .join('\n')}`
-  )
-  console.error(
-    `Resolve each by DIGEST (never re-fire — the gas is already burned): read the receipt, write that\n` +
-      `package's Published.toml published-at + version and manifest <pkg>.latest by hand, then delete\n` +
-      `${PENDING_PATH}.`
-  )
-  process.exit(4)
 }
 
 // publish gate: the localnet publish_guard was retired 2026-07-14 (REDUCTION_PLAN §8) — the honest gate is `ares test` (SINGLE_FRAMEWORK_SPEC)
@@ -297,7 +394,9 @@ async function upgrade_one(leg) {
   // address-balance (no discrete Coin object needed): the old getCoins + raw `suix_getCoins` reservation-ref
   // fallback (and the GAS_COIN override that patched around it) is retired — it worked around a JSON-RPC-only
   // coin filter, and testnet JSON-RPC is dead now.
-  tx.setGasBudget(BigInt(process.env.UPGRADE_GAS_BUDGET ?? 1_000_000_000))
+  // ONE home for this number: the preflight above models the batch as leg_gas_budget() × leg count, so a
+  // budget the gate never saw could never be set here (#2046).
+  tx.setGasBudget(leg_gas_budget())
 
   let result = normalizeReceipt(
     await sui_client.signAndExecuteTransaction({
@@ -380,58 +479,109 @@ async function upgrade_one(leg) {
   return { name, digest: result.digest, packageId: published.packageId, net }
 }
 
-// ── The run. Legs are already in dependency order; each one's Published.toml bump is visible to the next
-//    leg's build. Manifest + stamp_all land ONCE, after the last package — the "stamp LAST" law. ──
-const done = []
-for (const leg of legs) done.push(await upgrade_one(leg))
+// ── THE RUN, behind the hoisted gates. Everything above is a declaration, so importing this module (the
+//    suite does, to test the gas gate's pure core) starts no ceremony. ──
+async function main() {
+  const legs = resolve_legs()
 
-try {
-  const manifest = read_manifest()
-  for (const { name, packageId } of done) {
-    if (!manifest[name])
-      throw new Error(`manifest ${MANIFEST_PATH} has no "${name}" package entry`)
-    manifest[name].latest = packageId
-    // ZoneGroupRootKey first ships in this aresrpg upgrade. Preserve its defining package forever;
-    // later upgrades only move the call target and must never rewrite the type identity.
-    if (name === 'aresrpg' && !manifest._type_origins?.zone_group_root)
-      manifest._type_origins = {
-        ...(manifest._type_origins ?? {}),
-        zone_group_root: packageId,
-      }
+  // FAIL-CLOSED before any chain read or `sui move build` (both resolve deps/chain-ids from the ambient
+  // active-env): refuse unless the CLI's active-env matches NETWORK. Replaces delta-1's PROSE assumption
+  // ("active env is already testnet") with a real gate (seat tripwire, DECISIONS 2026-07-19 13:35/13:40).
+  assert_env(NETWORK)
+
+  // FAIL-CLOSED on the wrong TREE, the sibling of the wrong-network door above (#1298): the publishing
+  // HEAD must already be on trunk, the Move tree must match that commit byte for byte, and every package
+  // path — which this script otherwise compiles sight-unseen — must live inside the repository the ancestry
+  // proof is about (#1305 review). No override exists; a publish that is not on edge lands on edge first.
+  // BATCH: asserted ONCE here, over EVERY leg, BEFORE the first publish — every byte published in this run
+  // comes from the tree proven clean and landed at this instant (delta 5's whole argument).
+  assert_publishable_tree({ paths: legs.map((l) => l.pkgPath) })
+
+  // An unresolved journal means a previous run burned gas it never recorded. Proceeding would build the next
+  // dependent against a Published.toml that may not reflect the chain — refuse, loudly, and never re-fire.
+  const stale_pending = read_pending()
+  if (Object.keys(stale_pending).length) {
+    console.error(
+      `REFUSING — a previous run executed upgrade(s) it never recorded:\n${Object.entries(
+        stale_pending
+      )
+        .map(([n, d]) => `  ${n} → digest ${d}`)
+        .join('\n')}`
+    )
+    console.error(
+      `Resolve each by DIGEST (never re-fire — the gas is already burned): read the receipt, write that\n` +
+        `package's Published.toml published-at + version and manifest <pkg>.latest by hand, then delete\n` +
+        `${PENDING_PATH}.`
+    )
+    process.exit(4)
+  }
+
+  // FAIL-CLOSED on a wallet that cannot pay the whole set from ONE coin (delta 7, #2046). Last of the
+  // hoisted gates: it is the only one that touches the network, and it must not read before assert_env
+  // has proven which network that is.
+  await assert_gas_preflight(legs)
+
+  // ── The run. Legs are already in dependency order; each one's Published.toml bump is visible to the next
+  //    leg's build. Manifest + stamp_all land ONCE, after the last package — the "stamp LAST" law. ──
+  const done = []
+  for (const leg of legs) done.push(await upgrade_one(leg))
+
+  try {
+    const manifest = read_manifest()
+    for (const { name, packageId } of done) {
+      if (!manifest[name])
+        throw new Error(
+          `manifest ${MANIFEST_PATH} has no "${name}" package entry`
+        )
+      manifest[name].latest = packageId
+      // ZoneGroupRootKey first ships in this aresrpg upgrade. Preserve its defining package forever;
+      // later upgrades only move the call target and must never rewrite the type identity.
+      if (name === 'aresrpg' && !manifest._type_origins?.zone_group_root)
+        manifest._type_origins = {
+          ...(manifest._type_origins ?? {}),
+          zone_group_root: packageId,
+        }
+      console.log(
+        `manifest: ${name}.latest → ${packageId} (release writer reads this)`
+      )
+    }
+    fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
+    // AUTO-STAMP, ONCE, LAST: atomically replace the one deployment config, fail-fast.
+    execSync('node stamp_all.mjs', {
+      cwd: path.dirname(fileURLToPath(import.meta.url)),
+      stdio: 'inherit',
+    })
+    // Fully recorded — chain, Published.toml, manifest and release.json now agree. Only now is the journal
+    // resolved; a survivor past this point means a run stopped with an upgrade only partly written down.
+    for (const { name } of done) clear_pending(name)
+  } catch (e) {
+    console.error(
+      `CRITICAL — ${done.length} upgrade(s) SUCCEEDED on-chain but manifest/stamp FAILED: ${e?.message ?? e}`
+    )
+    for (const { name, digest, packageId } of done)
+      console.error(`  ${name} digest ${digest} → ${packageId}`)
+    console.error(
+      'Record them BY HAND (manifest `<pkg>.latest`, then re-run stamp_all) before any dependent build/release write. NEVER re-fire an upgrade.'
+    )
+    process.exit(3)
+  }
+
+  console.log('\n──── per-package actual cost ────')
+  let total = 0n
+  for (const { name, packageId, digest, net } of done) {
+    total += net
     console.log(
-      `manifest: ${name}.latest → ${packageId} (release writer reads this)`
+      `  ${name.padEnd(11)} ${String(net).padStart(12)} MIST  ${(Number(net) / 1e9).toFixed(6)} SUI  ${digest}  → ${packageId}`
     )
   }
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
-  // AUTO-STAMP, ONCE, LAST: atomically replace the one deployment config, fail-fast.
-  execSync('node stamp_all.mjs', {
-    cwd: path.dirname(fileURLToPath(import.meta.url)),
-    stdio: 'inherit',
-  })
-  // Fully recorded — chain, Published.toml, manifest and release.json now agree. Only now is the journal
-  // resolved; a survivor past this point means a run stopped with an upgrade only partly written down.
-  for (const { name } of done) clear_pending(name)
-} catch (e) {
-  console.error(
-    `CRITICAL — ${done.length} upgrade(s) SUCCEEDED on-chain but manifest/stamp FAILED: ${e?.message ?? e}`
+  console.log(
+    `  ${'TOTAL'.padEnd(11)} ${String(total).padStart(12)} MIST  ${(Number(total) / 1e9).toFixed(6)} SUI  (${done.length} package(s))`
   )
-  for (const { name, digest, packageId } of done)
-    console.error(`  ${name} digest ${digest} → ${packageId}`)
-  console.error(
-    'Record them BY HAND (manifest `<pkg>.latest`, then re-run stamp_all) before any dependent build/release write. NEVER re-fire an upgrade.'
-  )
-  process.exit(3)
+  console.log('==================== [ x ] ====================')
 }
 
-console.log('\n──── per-package actual cost ────')
-let total = 0n
-for (const { name, packageId, digest, net } of done) {
-  total += net
-  console.log(
-    `  ${name.padEnd(11)} ${String(net).padStart(12)} MIST  ${(Number(net) / 1e9).toFixed(6)} SUI  ${digest}  → ${packageId}`
-  )
-}
-console.log(
-  `  ${'TOTAL'.padEnd(11)} ${String(total).padStart(12)} MIST  ${(Number(total) / 1e9).toFixed(6)} SUI  (${done.length} package(s))`
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 )
-console.log('==================== [ x ] ====================')
+  await main()
