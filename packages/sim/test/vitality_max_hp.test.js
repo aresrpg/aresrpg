@@ -9,8 +9,8 @@
 //   · `packages/move/engine/sources/retro_effects.move` — `is_max_hp_alter` (kind ALTER_STAT and stat 5 or 10),
 //     `apply_max_hp_alter` (positive → `add_max_hp_bonus`: capacity ONLY, current HP does not ride the gain;
 //     negative → `remove_max_hp_bonus`: capacity floors at 1 and current HP is clamped down to it) and
-//     `revert_expired_max_hp`, its exact inverse, folded at the bearer's own turn-end
-//     (`cast::tick_turn_end`) and on dispel.
+//     `revert_expired_max_hp`, its exact inverse, folded at the bearer's own turn-START
+//     (`cast::tick_turn_expiry`, #2000) and on dispel.
 //   · `packages/move/foundation/sources/spell.move:175-205` — `add_stat`/`sub_stat` have no branch for field 5
 //     or 10, which is WHY the capacity leg exists at all: for those two ids the alter's `Stats` fold is a no-op
 //     and the capacity move is the entire effect.

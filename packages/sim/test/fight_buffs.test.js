@@ -316,8 +316,8 @@ describe('ap/mp pool modifiers', () => {
 })
 
 // ── Expiry via the existing per-turn plumbing ───────────────────────────────────
-describe('buff duration + expiry (the owner\'s turn START — #2000)', () => {
-  test('a 1-turn buff covers the caster\'s next turn and is gone the turn after; a 3-turn buff survives both', () => {
+describe("buff duration + expiry (the owner's turn START — #2000)", () => {
+  test("a 1-turn buff covers the caster's next turn and is gone the turn after; a 3-turn buff survives both", () => {
     const { state, ctx } = duel(6)
     const short = cast(state, ctx, 'p0', 'str_buff1', { x: 1, y: 5 })
     const long = cast(short.state, ctx, 'p0', 'str_buff', { x: 1, y: 5 })

@@ -675,7 +675,11 @@ describe('stun skips the turn', () => {
     )
     expect(spent?.turns_remaining).toBe(0)
     // the mob's NEXT turn opens on the spent row, drops it, and the mob acts — one turn lost, exactly one
-    const after = reduce(ended.state, { type: 'end_turn', entity_id: 'p0' }, ctx)
+    const after = reduce(
+      ended.state,
+      { type: 'end_turn', entity_id: 'p0' },
+      ctx,
+    )
     expect(
       find_entity(after.state, 'm0').effects.some(e => e.type === 'STUN'),
     ).toBe(false)

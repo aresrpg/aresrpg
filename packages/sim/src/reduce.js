@@ -617,7 +617,7 @@ const handle_end_turn = (state, cmd, ctx) => {
 
 /**
  * Run the turn-start hazards for the entity whose turn just began: glyphs on its cell, then its TURN_START
- * DoT/HoT effects. Timed rows remain live through the turn and expire in `run_turn_end`, like Move. Returns the
+ * DoT/HoT effects. Timed rows are aged by `run_turn_start_expiry` just before this runs, like Move. Returns the
  * number events (`fight_turn_effects`) so the client renders the ticks. Pure (entropy is explicit: the tick
  * clock below, or the crank thread inside check_glyphs).
  *
@@ -666,12 +666,11 @@ const run_turn_start_hazards = (state, entity_id, clock = null) => {
  * (`run_turn_start_expiry`, the twin of `cast::tick_turn_expiry`). A glyph is a board cell entry with its own
  * clock, not a fighter status row, so this anchor stayed exactly where it was.
  * @param {import('./fight_state.js').FightState} state  the state BEFORE the turn pointer steps
- * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
+ * @returns {import('./fight_state.js').FightState}
  */
 const run_turn_end = state => {
   const actor = get_current_turn_entity(state)
-  if (!actor || !actor.is_player) return { state, events: [] }
-  return { state: decay_glyphs(state), events: [] }
+  return actor?.is_player ? decay_glyphs(state) : state
 }
 
 /**
@@ -715,9 +714,9 @@ const run_turn_start_expiry = (state, entity_id) => {
 const advance_to_actor = (state, clock = null) => {
   // The actor here just ENDED its turn — including a player who self-killed mid-turn, whose own pass still runs
   // the end-phase work on chain (turns.move:181-184, `forfeit_current` tolerates a dead current seat).
-  const { state: ended_state, events: ended_events } = run_turn_end(state)
+  const ended_state = run_turn_end(state)
   /** @type {import('./reduce.js').FightEvent[]} */
-  let events = ended_events
+  let events = []
   let next = advance_turn(ended_state)
   for (let i = 0; i <= next.turn_order.length; i++) {
     const entity = get_current_turn_entity(next)
@@ -739,8 +738,9 @@ const advance_to_actor = (state, clock = null) => {
     next = hazards.state
     events = [...events, ...hazards.events]
     const after = get_current_turn_entity(next)
-    // Died to its own DoT/glyph -> step over to the next actor. Its turn never ENDED (Move: `tick_turn_start`
-    // returned false and the walk moves on WITHOUT `tick_turn_end` — turns.move:237-246), so nothing ticks.
+    // Died to its own DoT/glyph -> step over to the next actor. Its turn BEGAN (the expiry above ran, exactly
+    // as the chain's `tick_turn_expiry` precedes `tick_turn_start`) but never ENDED: Move's `tick_turn_start`
+    // returned false and the walk moves on WITHOUT `tick_turn_end`, so no glyph duration is charged for it.
     if (!after || after.health <= 0) {
       next = advance_turn(next)
       continue
@@ -756,9 +756,7 @@ const advance_to_actor = (state, clock = null) => {
           entity_id: entity.id,
         },
       ]
-      const skipped_end = run_turn_end(next)
-      events = [...events, ...skipped_end.events]
-      next = advance_turn(skipped_end.state)
+      next = advance_turn(run_turn_end(next))
       continue
     }
     break

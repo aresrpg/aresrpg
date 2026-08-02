@@ -5,13 +5,13 @@
 // 2 mobs that burns 3 in one round. This file pins the sim to the CHAIN's scope so that reading can never
 // become true here.
 //
-// THE CHAIN IS THE SPEC. `turns.move` hands the tick ONE actor at a time — `forfeit_current` (turns.move:167)
-// and `resolve_mob_turn` (turns.move:316) both call `cast::tick_turn_end(fight, is_mob, idx)` for the actor
-// whose turn ENDS, and that call decrements `spell_board::decrement_fighter_statuses(fx, fid)` (cast.move:1585) —
-// the rows of THAT fighter and nobody else. A 3-turn row therefore burns exactly ONE tick per ROUND.
+// THE CHAIN IS THE SPEC. `turns.move` hands the tick ONE actor at a time — both the seat arm and
+// `resolve_mob_turn` open a turn with `cast::tick_turn_expiry(fight, is_mob, idx)` for the actor whose turn
+// STARTS (#2000), and that call decrements `spell_board::decrement_fighter_statuses(fx, fid)` — the rows of
+// THAT fighter and nobody else. A 3-turn row therefore burns exactly ONE tick per ROUND.
 //
 // The sim holds that scope and phase: `expire_turn_effects` decrements one entity's rows, and
-// `advance_to_actor` runs it only for the actor whose turn ends. These tests lock the exact cadence: three
+// `advance_to_actor` runs it only for the actor whose turn begins. These tests lock the exact cadence: three
 // usable turns, one tick at each owner turn-end.
 import { describe, expect, test } from 'bun:test'
 
@@ -187,7 +187,7 @@ const cast_self = (state, ctx, spell_id) =>
 const row_of = (state, id, type) =>
   find_entity(state, id).effects.find(effect => effect.type === type)
 
-describe("#973 status durations tick on the affected fighter's turn only (cast.move:1585 scope)", () => {
+describe("#973 status durations tick on the affected fighter's turn only (cast::tick_turn_expiry scope)", () => {
   test('a 3-turn MP status survives one full round with 2 turns remaining', () => {
     const { state, ctx } = three_seat_fight()
     expect(get_current_turn_entity(state).id).toBe('p0')

@@ -1432,7 +1432,7 @@ const scenarios = [
       authored: '2026-08-02',
       source: 'authored',
       notes:
-        'Issue #2000 (D42): an authored duration 1 covers the cast turn plus the caster\'s next turn and expires at the start of the one after — the damage arc 30/30/20 reads all three, and the old end-turn cadence read 30/20/20.',
+        "Issue #2000 (D42): an authored duration 1 covers the cast turn plus the caster's next turn and expires at the start of the one after — the damage arc 30/30/20 reads all three, and the old end-turn cadence read 30/20/20.",
     },
     arena: flat_arena_json(),
     templates_raw: brace_smite_templates_raw,
@@ -1448,15 +1448,35 @@ const scenarios = [
     },
     commands: [
       { type: 'start' },
-      { type: 'cast', entity_id: 'p0', spell_id: 'brace', target: { x: 5, y: 5 } },
-      { type: 'cast', entity_id: 'p0', spell_id: 'smite', target: { x: 7, y: 5 } },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'brace',
+        target: { x: 5, y: 5 },
+      },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'smite',
+        target: { x: 7, y: 5 },
+      },
       // `end_turn` for the mob rather than `ai_turn`: no AI plan, no walk — the arc must read the buff clock alone.
       { type: 'end_turn', entity_id: 'p0' },
       { type: 'end_turn', entity_id: 'm0' },
-      { type: 'cast', entity_id: 'p0', spell_id: 'smite', target: { x: 7, y: 5 } },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'smite',
+        target: { x: 7, y: 5 },
+      },
       { type: 'end_turn', entity_id: 'p0' },
       { type: 'end_turn', entity_id: 'm0' },
-      { type: 'cast', entity_id: 'p0', spell_id: 'smite', target: { x: 7, y: 5 } },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'smite',
+        target: { x: 7, y: 5 },
+      },
     ],
     pinned_facts: [
       {
@@ -1470,7 +1490,7 @@ const scenarios = [
         equals: 0,
       },
       {
-        cite: 'cast.move tick_turn_expiry — the row aged at the bearer\'s turn START, never its turn end; the caster\'s live strength is back to base once it leaves',
+        cite: "cast.move tick_turn_expiry — the row aged at the bearer's turn START, never its turn end; the caster's live strength is back to base once it leaves",
         path: 'team0.0.stats.strength',
         equals: 0,
       },
@@ -1516,11 +1536,21 @@ const scenarios = [
     },
     commands: [
       { type: 'start' },
-      { type: 'cast', entity_id: 'p0', spell_id: 'taint', target: { x: 5, y: 5 } },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'taint',
+        target: { x: 5, y: 5 },
+      },
       // `end_turn` for the mob rather than `ai_turn`: no AI plan, no walk — the arc must read the two clocks alone.
       { type: 'end_turn', entity_id: 'p0' },
       { type: 'end_turn', entity_id: 'm0' },
-      { type: 'cast', entity_id: 'p0', spell_id: 'brace', target: { x: 5, y: 5 } },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'brace',
+        target: { x: 5, y: 5 },
+      },
       { type: 'end_turn', entity_id: 'p0' },
       { type: 'end_turn', entity_id: 'm0' },
       { type: 'end_turn', entity_id: 'p0' },

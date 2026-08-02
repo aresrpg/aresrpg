@@ -510,8 +510,10 @@ const tick_damage = (state, row, victim, tick_seed, ordinal) =>
   )
 
 /**
- * Apply turn-start effects. Status counters age separately at the affected fighter's turn end, matching
- * `cast::tick_turn_start` / `cast::tick_turn_end` rather than disappearing as the next turn begins.
+ * Apply turn-start effects. Status counters age in a SEPARATE step that runs just BEFORE this one, at the same
+ * fighter's turn start (`expire_turn_effects`, mirroring `cast::tick_turn_expiry` → `cast::tick_turn_start`):
+ * the aging that finds a row spent removes it before this batch is collected, so a row ticks on exactly the
+ * turns its authored duration covers.
  * Banded DAMAGE rows (DoT) roll their band on EVERY tick — see `tick_damage`.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
