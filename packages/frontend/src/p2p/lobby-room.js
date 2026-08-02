@@ -33,7 +33,9 @@ import { PEER_HEARTBEAT_MS, REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
-import { NETWORK, RELAY_URL, STUN_FALLBACK_URL, STUN_URL, TURN_CRED, TURN_URL, TURN_USER } from '../env'
+import { NETWORK, RELAY_URL, STUN_FALLBACK_URL, STUN_URL } from '../env'
+
+import { TURN_ENABLED, turn_ice_server } from './turn_credentials.js'
 
 const APP_ID = `aresrpg-world-lobby-${NETWORK}`
 // ONE relay, ours (env.ts RELAY_URL is its single home). trystero reads `relayConfig.urls` — passing the list
@@ -43,15 +45,18 @@ const APP_ID = `aresrpg-world-lobby-${NETWORK}`
 // mean something. Relay redundancy is pods behind the one hostname, decided in the cluster, not in this bundle.
 const relay_config = { urls: [RELAY_URL] }
 
-// WebRTC ICE — public STUN discovers a direct path; TURN would relay the bytes for the minority whose NAT
-// never lets one form. TURN stays opt-in via VITE_TURN_URL and its absence is ANNOUNCED at join (below)
-// rather than silently degrading a symmetric-NAT player into an empty world.
-const RTC_CONFIG = {
+// WebRTC ICE — public STUN discovers a direct path; TURN relays the bytes for the minority whose NAT never
+// lets one form. STUN is unconditional and TURN is ADDITIVE: a relay we could not authenticate against leaves
+// the config exactly as it was before TURN existed, never replacing the path that works for everyone else.
+// The TURN entry's credentials are minted per session (turn_credentials.js) because our coturn runs in
+// use-auth-secret mode; its absence is ANNOUNCED at join (below) rather than silently degrading a
+// symmetric-NAT player into an empty world.
+const rtc_config = (turn_server) => ({
   iceServers: [
     { urls: [STUN_URL, ...(STUN_FALLBACK_URL ? [STUN_FALLBACK_URL] : [])] },
-    ...(TURN_URL ? [{ urls: [TURN_URL], username: TURN_USER, credential: TURN_CRED }] : []),
+    ...(turn_server ? [turn_server] : []),
   ],
-}
+})
 
 // ── THE LINK'S OWN SCHEDULE — edge-local, by the core's own division of labour ────────────────────────────────
 // @aresrpg/world's presence fold owns WHAT the link is (`link_status`, one writer, one input) and how long a
@@ -107,8 +112,10 @@ function _send_state(target) {
  *   the live world and broadcasts nothing.
  * @param {{ x: number, y: number }} [initial_cell] our spawn cell — SEEDS the atom's my_cell so a peer whose
  *   connection activates before we ever MOVE still gets a position the instant onPeerJoin fires.
+ * @returns {Promise<void>} ASYNC since #1792: the room cannot be built before its TURN credential is minted.
+ *   Callers fire and forget — every guard below is re-checked after the mint, so nothing observes the gap.
  */
-export function join_room(world_id, character_id = null, initial_cell) {
+export async function join_room(world_id, character_id = null, initial_cell) {
   if (!world_id) return game_log('p2p', 'lobby not joined — this session names no world')
   const active_character_id = my_character_id()
   // A resident A→B swap (or a world change) is a NEW network identity: leave first so peers receive A's
@@ -130,7 +137,16 @@ export function join_room(world_id, character_id = null, initial_cell) {
   if (initial_cell) presence_input({ type: 'my_cell', ...initial_cell })
   set_link('connecting')
   resumeRelayReconnection()
-  _build_room(world_id)
+  // THE ONE await on this path. trystero reads `rtcConfig` when it builds the room and WebRTC reads
+  // `iceServers` when it builds each peer connection — neither can be handed a relay afterwards, so the
+  // credential must exist BEFORE the room. Without a relay configured the ternary never evaluates its await,
+  // so that join stays as synchronous as it has always been; with one it costs a same-origin round trip.
+  // The generation bump is what keeps that suspension from forking the transport: a second join, a leave or a
+  // watchdog retirement moves the counter, and this call then knows it no longer owns the room.
+  const join_generation = ++room_generation
+  const turn_server = TURN_ENABLED ? await turn_ice_server() : null
+  if (join_generation !== room_generation) return
+  _build_room(world_id, turn_server)
   _start_watchdogs()
 }
 
@@ -156,13 +172,13 @@ let watchdogs_started = false
 /** Build (or REBUILD, on a rejoin) the trystero room + its actions/handlers. The presence ATOM (my facts + the
  *  peer table) SURVIVES a rebuild — only the dead transport is replaced — so the re-announce has facts to send
  *  and peers that truly left expire via the tick. */
-function _build_room(world_id) {
+function _build_room(world_id, turn_server) {
   const generation = ++room_generation
   link_grace_until = Date.now() + LINK_GRACE_MS
   room_world = world_id
   // The room id is the world id, and trystero hashes it into the topic (sha1 → base36, no separators), so the
   // broker's single-level topic ACL holds for any world id we ever mint.
-  room = joinRoom({ appId: APP_ID, rtcConfig: RTC_CONFIG, relayConfig: relay_config }, world_id)
+  room = joinRoom({ appId: APP_ID, rtcConfig: rtc_config(turn_server), relayConfig: relay_config }, world_id)
   pos_action = room.makeAction('pos')
   chat_action = room.makeAction('chat')
   party_chat_action = room.makeAction('pchat')
@@ -234,10 +250,11 @@ function _build_room(world_id) {
   // NO SILENT DEGRADE: without TURN, a player behind a symmetric NAT will reach the relay, complete signaling,
   // and then never form a data channel — an empty world that looks exactly like an empty world. Say so once, at
   // the seam that knows, so the failure is legible instead of inferred.
-  if (!TURN_URL)
+  if (!TURN_ENABLED)
     game_log(
       'p2p',
-      'ICE is STUN-only — TURN credentials are not minted yet, so peers behind a symmetric NAT will fail to connect'
+      'ICE is STUN-only — this build names no TURN relay (VITE_TURN_URL unset), so nothing is minted and peers ' +
+        'behind a symmetric NAT will fail to connect'
     )
 }
 
@@ -264,6 +281,10 @@ async function _rejoin() {
   const previous_room = room
   room = null
   peer_characters.clear() // trystero peer ids are stale after a leave; the character rows persist in the atom
+  // Re-mint on the way back up — a rejoin is exactly when the previous pair may have aged out, and a still-
+  // valid one is free (the mint caches it). Inside the in-flight window on purpose: this await must not open
+  // a second door through which another rejoin can start.
+  const turn_server = TURN_ENABLED ? await turn_ice_server() : null
   try {
     await previous_room?.leave()
   } catch {
@@ -273,7 +294,7 @@ async function _rejoin() {
     rejoin_in_flight = false
   }
   if (!watchdogs_started || room) return
-  _build_room(room_world)
+  _build_room(room_world, turn_server)
   _reannounce()
 }
 
