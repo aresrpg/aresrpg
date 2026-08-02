@@ -138,6 +138,7 @@ const SIM_ONLY = [
   ['packages/frontend/src/components/search_picker_modal.tsx', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/encyclopedia_assets.ts', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/mob_image.tsx', 'CORPUS'],
+  ['packages/frontend/src/pages/encyclopedia/mob_slugs.json', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/mob_spells.ts', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/mob_spells_section.tsx', 'CORPUS'],
   ['packages/frontend/src/pages/encyclopedia/world_corpus.ts', 'CORPUS'],

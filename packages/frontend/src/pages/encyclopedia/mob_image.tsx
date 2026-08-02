@@ -52,7 +52,7 @@ export function EncyclopediaMobImage({
   className,
   style,
 }: {
-  mob: { name?: string; variant?: string }
+  mob: { name?: string }
   hd?: boolean
   className?: string
   style?: React.CSSProperties
