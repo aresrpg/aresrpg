@@ -61,8 +61,10 @@ describe('EffectBadges — compact persistent-effect rows on the turn card', () 
     expect(render(undefined)).toBe('')
   })
 
-  test('an expired row (remaining_turns 0) is filtered out — never a stale badge', () => {
-    expect(render([{ id: 'gone', kind: 27, remaining_turns: 0 }])).toBe('')
+  // #2000 (D42) — a 0 counter is the row's LAST COVERED TURN, not an expired row: it is live on chain and owed a
+  // badge. Expiry reaches this component as an ABSENT row (the fold's `age_statuses` drops it), never as a 0.
+  test('a row on its last covered turn (remaining_turns 0) still renders', () => {
+    expect(render([{ id: 'last', kind: 27, remaining_turns: 0 }])).toContain('Become invisible')
   })
 
   test('every active projection row stays readable rather than collapsing behind an overflow count', () => {

@@ -55,14 +55,17 @@ export const effect_badge_view = (t, raw, { locale = 'en', resolve_state_name } 
 
 /**
  * Shared compact effect rows for a fighter. `t` is injected so TooltipCard stays a pure-props renderer; the turn
- * card's EffectBadges wrapper supplies the hook-owned translator below. Expired rows never reach the DOM.
+ * card's EffectBadges wrapper supplies the hook-owned translator below.
+ *
+ * EVERY row it is handed gets a badge (#2000, D42): `remaining_turns` counts the bearer's turns STILL TO COME, so
+ * a 0 is a row on its LAST covered turn — live on chain, kept by the fold's `age_statuses`, priced by the
+ * prediction — and the lifetime the family pins renders 3 → 2 → 1 → 0. Expiry is upstream's call, made by
+ * REMOVING the row; a `> 0` filter here hid a buff on the one turn a player most needs to see it.
  * @param {{ effects?: Array<{ id?: string | number, kind: number, remaining_turns: number }>,
  *   t: (key:string, params?:object) => string }} props
  */
 export function ActiveEffectRows({ effects, t, locale = 'en', resolve_state_name }) {
-  const rows = (effects ?? [])
-    .filter((row) => (Number(row?.remaining_turns) || 0) > 0)
-    .map((row) => effect_badge_view(t, row, { locale, resolve_state_name }))
+  const rows = (effects ?? []).map((row) => effect_badge_view(t, row, { locale, resolve_state_name }))
   if (rows.length === 0) return null
 
   return (
