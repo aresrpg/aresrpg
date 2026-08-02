@@ -19,6 +19,7 @@ import {
   truth_version,
 } from '../src/core_inbox.js'
 import { fold_canonical } from '../src/core_fold.js'
+import { roster_open } from '../src/board_state.js'
 import { revive_wire, coord_key } from '../src/core_wire.js'
 
 /** A minimal chain Hit event at (version, ordinal-by-position). */
@@ -121,19 +122,48 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
     expect(after_join.base_view.escrow.map((row) => row.character)).toEqual(['0xa', '0xb'])
   })
 
-  test('a read that has LEFT placement never re-adopts — the roster is frozen, the journal owns the rest (#701)', () => {
+  // ── THE ADMISSION LAW, resealed 2026-08-02 ────────────────────────────────────────────────────────────────
+  // The three seals below used to encode a PHASE heuristic: "a placement read always outranks an active one, an
+  // active base never re-adopts, and the base converges on max(placement reads)". The coop_roster_transition
+  // conviction (packages/fight/test/coop_roster_transition.test.js) proved that letter wrong in BOTH directions
+  // — it over-protected (a creator whose poll straddled join+force_start could never learn the joiner's seat,
+  // because the read carrying the grown roster shares its version with the events that closed the window) and
+  // under-protected (the version guard was scoped to a placement base, so a STALE placement read rolled an
+  // ACTIVE base back into the roster window). The invariant is INFORMATION ORDER, not phase; the ruled law is
+  // "an ACTIVE base never regresses; a PROVISIONAL base admits version-ordered roster supersets". These seals
+  // now state that law, in both of its directions.
+
+  test('a PROVISIONAL base admits the read that closed the window WITH its joiner (the join door)', () => {
     const created = adopt(empty_inbox(), placement, 200, {})
+    // The active read that froze the roster is the ONLY door this seat has: no later placement read can exist.
     const activated = adopt(created, { ...joined, status: 1 }, 220, {})
-    expect(activated).toBe(created) // untouched
+    expect(activated.base_version).toBe(220)
+    expect(activated.base_view.escrow.map((row) => row.character)).toEqual(['0xa', '0xb'])
   })
 
-  test('the roster window is ORDER-INDEPENDENT — every arrival order converges on the same base', () => {
+  test('a PROVISIONAL base admits a superset only in VERSION ORDER — a superset from the past is still behind', () => {
+    const created = adopt(empty_inbox(), joined, 210, {})
+    const stale = adopt(created, { ...joined, participants: [...joined.participants, { character: '0xc' }] }, 205, {})
+    expect(stale).toBe(created) // untouched — a gain of seats never buys a read out of its ordering
+  })
+
+  test('an ACTIVE base NEVER REGRESSES — neither a stale read nor one that re-opens the roster window (#701)', () => {
+    const active = adopt(empty_inbox(), { ...joined, status: 1 }, 220, {})
+    // the chain never returns a fight to placement, so a placement-shaped read against a frozen base is stale or
+    // torn by construction — and before 2026-08-02 it ADOPTED, rolling the frozen roster back into the window.
+    expect(adopt(active, joined, 210, {})).toBe(active)
+    expect(adopt(active, placement, 230, {})).toBe(active)
+    // and the ordinary stale-checkpoint half of #701 is unchanged
+    expect(adopt(active, { ...joined, status: 1 }, 215, {})).toBe(active)
+  })
+
+  test('the roster window is ORDER-INDEPENDENT — every arrival order converges on the same ROSTER', () => {
     const reads = [
       [placement, 200],
       [joined, 210],
       [{ ...joined, status: 1 }, 220],
     ]
-    const fold = (order) => order.reduce((inbox, [rows, v]) => adopt(inbox, rows, v, {}), empty_inbox())
+    const fold = (inbox, order) => order.reduce((acc, [rows, v]) => adopt(acc, rows, v, {}), inbox)
     const orders = [
       [reads[0], reads[1], reads[2]],
       [reads[2], reads[1], reads[0]],
@@ -141,9 +171,20 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
       [reads[2], reads[0], reads[1]],
       [reads[1], reads[0], reads[2], reads[1]], // + a dupe: adoption is idempotent
     ]
+    // Reads ALONE: which seats exist can never depend on arrival order. The base VERSION may legitimately differ
+    // (a client that saw the active read first is further along than one still holding a provisional base — the
+    // old `always 210` answer was only reachable through the stale-read regression closed above).
     for (const order of orders) {
-      const inbox = fold(order)
-      expect(inbox.base_version).toBe(210) // max over the placement reads
+      const inbox = fold(empty_inbox(), order)
+      expect(inbox.base_view.escrow).toHaveLength(2)
+      expect(roster_open(inbox.base_view) ? 210 : 220).toBe(inbox.base_version)
+    }
+    // With the transition PROVEN by the event tail — the steady state the one-ingress law guarantees — every
+    // order converges on the identical base, version included. Strictly stronger than the seal it replaces.
+    for (const order of orders) {
+      const tailed = admit_events(empty_inbox(), receipt_actions([hit(0, 40)], 220), 1).inbox
+      const inbox = fold(tailed, order)
+      expect(inbox.base_version).toBe(220)
       expect(inbox.base_view.escrow).toHaveLength(2)
     }
   })
@@ -197,10 +238,14 @@ describe('adopt_snapshot — the one bootstrap/reconcile door (#1336)', () => {
     expect(reason_of(at200, fight, 201, {})).toBe('unchanged')
     // a roster-less read may seed a base but never replace a live one — held, not adopted
     expect(reason_of(at200, { ...fight, participants: [] }, 300, {})).toBe('roster_hold')
-    // a post-placement read that introduces a joiner is a raced checkpoint, not the roster's source
+    // a post-placement read that introduces a joiner is the JOIN DOOR (resealed 2026-08-02) — it adopts, and
+    // names no refusal; the same read WITHOUT a roster gain is still an unproven transition.
     const placed = adopt(empty_inbox(), placement, 200, {})
-    expect(reason_of(placed, { ...joined, status: 1 }, 220, {})).toBe('raced_roster')
+    expect(reason_of(placed, { ...joined, status: 1 }, 220, {})).toBe(null)
     expect(reason_of(placed, { ...placement, status: 1 }, 220, {})).toBe('unproven_transition')
+    // an ACTIVE base names the regression it refuses — a read that would re-open the roster window is behind it
+    const active = adopt(empty_inbox(), { ...joined, status: 1 }, 220, {})
+    expect(reason_of(active, joined, 210, {})).toBe('behind')
   })
 })
 

@@ -342,39 +342,47 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const cursor = truth_version(inbox)
   const has_event_tail = Object.values(inbox.log).some((action) => Number(action.version) > inbox.base_version)
 
-  // THE JOIN DOOR (#1336 · the measured #1137/#1143 divergence). A seat enters a viewer's roster through exactly
-  // ONE door — a snapshot: the event tail names seats by INDEX and carries none of their record, so no fold can
-  // invent the row. That makes the ordering ladder below fatal for a viewer that bootstrapped before a join. The
-  // read carrying the grown roster is routinely at the SAME version as the events that closed the placement
-  // window (force_start emits its events at the version it mints) — which the cursor gate reads as `behind` —
-  // and no later placement read can exist to heal it, because the window is shut. That viewer then played the
-  // whole fight against a roster the chain had already frozen without it: the peer's seat missing (2-vs-1
-  // counts), its statuses landing on nobody, and a turn rail pointing at a fighter with no row (the deadlock).
-  // A SUPERSET is unambiguous — seats are only ever ADDED, and only by a join — so it adopts at or above the
-  // adopted base. Scoped to a base that is still PROVISIONAL (`current_roster_open`): #701's checkpoint law is
-  // untouched, an ACTIVE base stays final, and the growth this admits is the one the chain can actually produce.
-  const seat_joined =
-    has_base && current_roster_open && object_version >= inbox.base_version && roster_grew(base_view, inbox.base_view)
-
-  if (has_base && !seat_joined) {
-    // Placement bases converge on max(version); a placement read outranks an active read that raced ahead.
-    if (incoming_roster_open) {
-      if (current_roster_open && object_version <= inbox.base_version) return refuse('behind')
-    } else {
-      // Leaving placement may reconcile only the SAME frozen roster (a roster that GREW left through the join
-      // door above; anything else here changed seats without a join, which is a raced or torn read). The event
-      // tail must have already proved the lifecycle transition, otherwise arrival order between one placement
-      // and one active object would decide the roster base.
-      if (object_version <= cursor) return refuse('behind')
-      if (current_roster_open && roster_hash(base_view) !== roster_hash(inbox.base_view)) return refuse('raced_roster')
-      if (current_roster_open && !has_event_tail) return refuse('unproven_transition')
-      if (base_view.status === inbox.base_view.status) {
-        if (roster_hash(base_view) !== roster_hash(inbox.base_view)) return refuse('raced_roster')
-        if (!has_event_tail && snapshot_content_hash(base_view) === snapshot_content_hash(inbox.base_view))
-          return refuse('unchanged')
-      }
+  // THE ADMISSION LAW (ruled 2026-08-02, on the coop_roster_transition conviction — #1336 · #1137 · #1143):
+  // AN ACTIVE BASE NEVER REGRESSES; A PROVISIONAL BASE ADMITS VERSION-ORDERED ROSTER SUPERSETS.
+  //
+  // The ladder used to key on PHASE — "a placement read always outranks an active one, an active base never
+  // re-adopts" — and that heuristic was wrong in BOTH directions. It OVER-protected: a seat enters a viewer's
+  // roster through exactly one door, a snapshot (the event tail names seats by INDEX and carries none of their
+  // record, so no fold can invent the row), and the read carrying a grown roster is routinely at the SAME version
+  // as the events that closed the placement window — force_start emits its events at the version it mints — which
+  // the cursor gate read as `behind`. No later placement read can heal that, because the window is shut, so the
+  // viewer played the whole fight against a roster the chain had already frozen without it: the peer's seat
+  // missing (2-vs-1 counts), its statuses landing on nobody, a turn rail pointing at a fighter with no row (the
+  // measured turn-owner deadlock). And it UNDER-protected: because the version guard was scoped to a placement
+  // base, a STALE placement read rolled an ACTIVE base back into the roster window.
+  //
+  // The true invariant is INFORMATION ORDER, not phase. A roster SUPERSET is unambiguous — seats are only ever
+  // ADDED, and only by a join, which is legal only while the window is open — so it is a strict gain of truth.
+  // Everything else is ordering, and ordering is decided by version against the frozen side.
+  if (has_base && !current_roster_open) {
+    // ACTIVE BASE — final. The chain never returns a fight to placement, so a read that re-opens the roster
+    // window is stale or torn by construction; a read at or below the cursor is stale outright. Both would roll
+    // a frozen roster backwards (#701's checkpoint law, now guarded in the direction it was missing).
+    if (incoming_roster_open) return refuse('behind')
+    if (object_version <= cursor) return refuse('behind')
+    if (base_view.status === inbox.base_view.status) {
+      if (roster_hash(base_view) !== roster_hash(inbox.base_view)) return refuse('raced_roster')
+      if (!has_event_tail && snapshot_content_hash(base_view) === snapshot_content_hash(inbox.base_view))
+        return refuse('unchanged')
     }
-  } else if (object_version < cursor) {
+  } else if (has_base && !(object_version >= inbox.base_version && roster_grew(base_view, inbox.base_view))) {
+    // PROVISIONAL BASE — the roster window is open, so a version-ordered superset adopts (the join door above).
+    // Everything that is NOT a superset still walks the ordering ladder: a roster that changed without growing
+    // changed seats without a join, which is a raced or torn read, and the event tail must have already proved
+    // the lifecycle transition or arrival order between one placement and one active object would decide the base.
+    if (incoming_roster_open) {
+      if (object_version <= inbox.base_version) return refuse('behind')
+    } else {
+      if (object_version <= cursor) return refuse('behind')
+      if (roster_hash(base_view) !== roster_hash(inbox.base_view)) return refuse('raced_roster')
+      if (!has_event_tail) return refuse('unproven_transition')
+    }
+  } else if (!has_base && object_version < cursor) {
     // A receipt-first joiner may seed a missing base at the cursor, never behind it.
     return refuse('behind')
   }
