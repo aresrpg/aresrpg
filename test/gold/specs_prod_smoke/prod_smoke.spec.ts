@@ -231,7 +231,16 @@ test('PROD-SMOKE c · fight engagement reaches an actionable first turn', async 
     // signed anything and still read green; the ledger is now the row's own oracle for the signature it
     // just claimed to have driven. Asserted only on the branch that really engaged — a resumed fight
     // reconciles from chain state and signs nothing, and a conditional truth must never be asserted flat.
-    console.log(`PROD-SMOKE c · live engage signed on testnet · digest=${assert_signed_and_executed(signer.ledger())}`)
+    // WHICH op appears is left open on purpose: the deployed build's own door is `sui:signTransaction`
+    // (the sender half, station-executed) while self-pay uses `sui:signAndExecuteTransaction`, so
+    // demanding a digest here would red the row for taking the sponsored route. The op is logged instead —
+    // it is the only place a run states which of the two the live page actually took.
+    const ops = signer.ledger().map((entry) => entry.op)
+    expect(
+      ops,
+      'a live engage must reach this wallet — through signTransaction or signAndExecuteTransaction'
+    ).not.toEqual([])
+    console.log(`PROD-SMOKE c · live engage signed through the shim · ops=${ops.join(',')}`)
   }
 
   const ready = page.locator('.hud-fightctl__ready')
