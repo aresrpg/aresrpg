@@ -28,6 +28,7 @@ import {
   use_ap_reserve,
   process_turn_effects,
   expire_turn_effects,
+  collect_spent_turn_effects,
   is_stunned,
 } from './fight_actions.js'
 import { turn_seed } from './turn_seed.js'
@@ -676,44 +677,47 @@ const run_turn_start_hazards = (state, entity_id, clock = null) => {
  * tick) never reaches a turn end at all. So this is keyed on the ACTOR WHOSE TURN IS ENDING, never on the global
  * turn ordinal — that one advances on mob turns and would price a 3-turn glyph as dead after a single PvM round.
  *
- * #2000 — a fighter's OWN timed rows no longer age here: they age at the START of its turn
- * (`run_turn_start_expiry`, the twin of `cast::tick_turn_expiry`). A glyph is a board cell entry with its own
- * clock, not a fighter status row, so this anchor stayed exactly where it was.
+ * #2000/#2033 — a fighter's own timed rows AGE at the start of its turn (`run_turn_start_expiry`, the twin of
+ * `cast::tick_turn_expiry`) and are COLLECTED here, at its end, once spent. A glyph is a board cell entry with
+ * its own clock, not a fighter status row, so that anchor stayed exactly where it was.
  * @param {import('./fight_state.js').FightState} state  the state BEFORE the turn pointer steps
- * @returns {import('./fight_state.js').FightState}
+ * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
  */
 const run_turn_end = state => {
   const actor = get_current_turn_entity(state)
-  return actor?.is_player ? decay_glyphs(state) : state
-}
-
-/**
- * THE TURN-START EXPIRY (#2000, D42) — the first thing a landed actor's turn does, ahead of its pool refill and
- * ahead of its board ticks, mirroring `turns.move`'s `cast::tick_turn_expiry` → `point_adjust` → `begin_turn` →
- * `cast::tick_turn_start`. Running before the refill is what keeps the retrait contract (a drain row reduces
- * exactly the refills it still has turns for); running before the tick batch is what keeps a DoT's tick COUNT at
- * its authored N. Never reached by a stepped-over corpse — the caller filters the dead first, exactly as the
- * chain's queue walk does.
- * @param {import('./fight_state.js').FightState} state @param {string} entity_id
- * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
- */
-const run_turn_start_expiry = (state, entity_id) => {
-  const expired = expire_turn_effects(state, entity_id)
+  if (!actor) return { state, events: [] }
+  const glyphed = actor.is_player ? decay_glyphs(state) : state
+  // #2033 — and THEN the bearer's spent rows are collected, so coverage ends with the turn it covered rather
+  // than surviving the enemy round until this fighter's next turn start.
+  const collected = collect_spent_turn_effects(glyphed, actor.id)
   return {
-    state: refill_turn_pools(expired.state, entity_id),
+    state: collected.state,
     events:
-      expired.effects.length > 0
+      collected.effects.length > 0
         ? [
             {
               type: 'fight_turn_effects',
               fight_id: state.fight_id,
-              entity_id,
-              effects: expired.effects,
+              entity_id: actor.id,
+              effects: collected.effects,
             },
           ]
         : [],
   }
 }
+
+/**
+ * THE TURN-START AGEING (#2000, D42) — the first thing a landed actor's turn does, ahead of its pool refill and
+ * ahead of its board ticks, mirroring `turns.move`'s `cast::tick_turn_expiry` → `point_adjust` → `begin_turn` →
+ * `cast::tick_turn_start`. Running before the refill is what keeps the retrait contract (a drain row reduces
+ * exactly the refills it still has turns for); running before the tick batch is what keeps a DoT's tick COUNT at
+ * its authored N. It removes nothing (#2033 — that is the end-turn's job), so it emits no events. Never reached
+ * by a stepped-over corpse — the caller filters the dead first, exactly as the chain's queue walk does.
+ * @param {import('./fight_state.js').FightState} state @param {string} entity_id
+ * @returns {import('./fight_state.js').FightState}
+ */
+const run_turn_start_expiry = (state, entity_id) =>
+  refill_turn_pools(expire_turn_effects(state, entity_id), entity_id)
 
 /**
  * Advance the turn to the next ACTABLE entity: step the index, age its timed rows, refill AP/MP, run turn-start
@@ -728,9 +732,9 @@ const run_turn_start_expiry = (state, entity_id) => {
 const advance_to_actor = (state, clock = null) => {
   // The actor here just ENDED its turn — including a player who self-killed mid-turn, whose own pass still runs
   // the end-phase work on chain (turns.move:181-184, `forfeit_current` tolerates a dead current seat).
-  const ended_state = run_turn_end(state)
+  const { state: ended_state, events: ended_events } = run_turn_end(state)
   /** @type {import('./reduce.js').FightEvent[]} */
-  let events = []
+  let events = ended_events
   let next = advance_turn(ended_state)
   for (let i = 0; i <= next.turn_order.length; i++) {
     const entity = get_current_turn_entity(next)
@@ -744,9 +748,7 @@ const advance_to_actor = (state, clock = null) => {
     // TURN-START EXPIRY FIRST (#2000), then the refill it prices, then the stun read: a row that had this turn
     // coming is still live for it (a 1-turn stun costs exactly one turn), and the aging that finds a row spent
     // removes it before anything this turn reads it.
-    const aged = run_turn_start_expiry(next, entity.id)
-    next = aged.state
-    events = [...events, ...aged.events]
+    next = run_turn_start_expiry(next, entity.id)
     const stunned = is_stunned(next, entity.id)
     const hazards = run_turn_start_hazards(next, entity.id, clock)
     next = hazards.state
@@ -770,7 +772,9 @@ const advance_to_actor = (state, clock = null) => {
           entity_id: entity.id,
         },
       ]
-      next = advance_turn(run_turn_end(next))
+      const skipped_end = run_turn_end(next)
+      events = [...events, ...skipped_end.events]
+      next = advance_turn(skipped_end.state)
       continue
     }
     break

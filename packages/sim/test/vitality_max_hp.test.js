@@ -255,13 +255,10 @@ describe('a vitality / max-hp alter moves HP CAPACITY (#1628)', () => {
     expect(of(cast, 'm0').health_max).toBe(70)
     expect(of(cast, 'm0').health).toBe(70)
 
-    // #2000 — the authored duration covers the victim's next turn, so the shave is still on after one round.
+    // #2000 — the authored duration covers the victim's next turn; #2033 — and ends with it, so one round back
+    // to the player already finds the capacity restored. The clamp is not a heal on the way back.
     let acc = end_current_turn(cast, ctx)
     while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
-    expect(of(acc, 'm0').health_max).toBe(70)
-    acc = end_current_turn(acc, ctx)
-    while (!current_actor(acc)?.is_player) acc = end_current_turn(acc, ctx)
-    // Expiry restores exactly the shaved capacity — and the clamp is not a heal on the way back.
     expect(of(acc, 'm0').health_max).toBe(100)
     expect(of(acc, 'm0').health).toBe(70)
   })

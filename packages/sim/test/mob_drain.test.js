@@ -9,6 +9,7 @@ import {
   add_status,
   fighter_point_debt,
   fighter_point_credit,
+  collect_spent_statuses,
   decrement_fighter_statuses,
   clear_fighter,
   fighter_alter_rows,
@@ -113,8 +114,8 @@ describe('P1 #2 — feed-then-act: the credit survives begin_turn, then expires'
         fighter_point_credit(b, 1000, POINT_MP),
       ),
     ).toBe(8)
-    // the boss's NEXT turn opens on the spent row and drops it → that refill is back to base.
-    decrement_fighter_statuses(b, 1000)
+    // #2033 — that turn's END collects the spent row, so the NEXT refill is back to base.
+    collect_spent_statuses(b, 1000)
     expect(fighter_point_credit(b, 1000, POINT_MP)).toBe(0)
     expect(net_refill(6, 0, 0)).toBe(6)
   })

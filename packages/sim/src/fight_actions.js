@@ -620,19 +620,44 @@ export const process_turn_effects = (
 }
 
 /**
- * Age and expire one fighter's timed rows at that fighter's turn START, before its pool refill and before any
- * board tick. Mirrors `cast::tick_turn_expiry` -> `spell_board::decrement_fighter_statuses`.
+ * AGE one fighter's timed rows at that fighter's turn START, before its pool refill and before any board tick.
+ * Mirrors `cast::tick_turn_expiry` -> `spell_board::decrement_fighter_statuses`.
  *
- * #2000 — `turns_remaining` counts the bearer's turns STILL TO COME, so a row is kept while it has any (its
- * counter landing on 0 marks "this is its last turn") and drops only on the aging that finds it already spent.
- * An authored N therefore covers the cast turn plus N further bearer turns and expires at the start of turn
- * N+1 — the meaning the authored number carries natively. The end-turn cadence this replaced spent one aging on
- * the cast turn itself, so an authored 1 died before its owner ever played under it.
+ * #2000 — `turns_remaining` counts the bearer's turns STILL TO COME, so ageing spends one while any remain and
+ * the turn its counter lands on 0 is the row's LAST covered one: an authored N covers the cast turn plus N
+ * further bearer turns. The end-turn cadence this replaced spent one ageing on the cast turn itself, so an
+ * authored 1 died before its owner ever played under it.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} entity_id
+ * @returns {import('./fight_state.js').FightState}
+ */
+export const expire_turn_effects = (state, entity_id) =>
+  update_entity(state, entity_id, e => ({
+    ...e,
+    // #2033 — PURE AGEING: spend a counter that has turns left and remove nothing. A row whose counter lands on
+    // 0 is live for the whole turn that ageing opened; `collect_spent_turn_effects` takes it when that turn
+    // ends. A TIMED_PAYLOAD carries its own delayed clock and is exempt, exactly as before.
+    effects: e.effects.map(eff =>
+      eff.type === 'TIMED_PAYLOAD' || eff.turns_remaining <= 0
+        ? eff
+        : { ...eff, turns_remaining: eff.turns_remaining - 1 },
+    ),
+  }))
+
+/**
+ * #2033 — COLLECT one fighter's SPENT rows (counter already 0) at its turn END, reverting what they applied.
+ * Mirrors `cast::tick_turn_end` -> `spell_board::collect_spent_statuses`.
+ *
+ * Coverage must stop when the final covered turn stops. A passive row — armor, a stat buff, a resist — is read
+ * by whoever is ACTING, so a row that lingered until the bearer's next turn START kept applying through the
+ * entire enemy round in between, a round of mitigation the reference never grants (araknemu removes at the
+ * bearer's end-turn decrement). Ticks and pools are unaffected: both are start-anchored and read after ageing,
+ * so an authored N still ticks N times and still denies exactly N refills.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[] }}
  */
-export const expire_turn_effects = (state, entity_id) => {
+export const collect_spent_turn_effects = (state, entity_id) => {
   const entity = find_entity(state, entity_id)
   if (!entity) return { state, effects: [] }
   const expired_stances = entity.effects.filter(
@@ -659,16 +684,11 @@ export const expire_turn_effects = (state, entity_id) => {
     entity_id,
     e => ({
       ...e,
-      // #2000 — DROP FIRST, then age: a row is spent only once an aging finds its counter already at 0, which
-      // is what buys the bearer the turn its counter landed on. A TIMED_PAYLOAD carries its own delayed clock
-      // and is exempt from both halves, exactly as before.
-      effects: e.effects
-        .filter(eff => eff.type === 'TIMED_PAYLOAD' || eff.turns_remaining > 0)
-        .map(eff =>
-          eff.type === 'TIMED_PAYLOAD'
-            ? eff
-            : { ...eff, turns_remaining: eff.turns_remaining - 1 },
-        ),
+      // #2033 — collection drops exactly the SPENT rows (counter already 0); everything else, and every
+      // TIMED_PAYLOAD, rides on untouched. Ageing happens at the turn's start, in `expire_turn_effects`.
+      effects: e.effects.filter(
+        eff => eff.type === 'TIMED_PAYLOAD' || eff.turns_remaining > 0,
+      ),
     }),
   )
   return {

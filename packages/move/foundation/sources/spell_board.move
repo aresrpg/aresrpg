@@ -459,20 +459,47 @@ public fun decrement_glyphs(board: &mut BoardState) {
 /// magnitude, and FLAG_NEGATIVE sign), so return those effects to the caller. `spell_board` can't reach
 /// `Participant`; the dungeon-level tick applies the INVERSE (revert). Every other expiring kind just drops.
 ///
-/// #2000 — THE COUNTER'S MEANING. `remaining_turns` counts the bearer's turns STILL TO COME, so a row is kept
-/// while it has any (`> 0`, its counter landing on 0 marking "this is its last turn") and drops only on the
-/// aging that finds it already at 0. Paired with the turn-START cadence (`cast::tick_turn_expiry`), an authored
-/// duration N therefore covers the cast turn plus N further bearer turns and expires at the start of turn N+1 —
-/// the semantics the authored number carries natively. The end-turn `> 1` cadence spent one aging on the cast
-/// turn itself, which is why an authored 1 died before its owner ever played under it.
+/// #2000 — THE COUNTER'S MEANING. `remaining_turns` counts the bearer's turns STILL TO COME, so ageing a row
+/// whose counter has any left spends one; its counter landing on 0 marks "this is its last turn". Paired with
+/// the turn-START cadence (`cast::tick_turn_expiry`), an authored duration N covers the cast turn plus N further
+/// bearer turns. The end-turn `> 1` cadence this replaced spent one ageing on the cast turn itself, which is why
+/// an authored 1 died before its owner ever played under it.
+///
+/// #2033 — AGEING NEVER REMOVES. Collection is `collect_spent_statuses`, run at the bearer's turn END, so a
+/// spent row leaves the board exactly when its last covered turn ends rather than surviving the enemy round that
+/// follows. That is why this returns an EMPTY vector: nothing expires here, and the return type is the published
+/// signature kept for upgrade compatibility. A LIVING bearer therefore never presents a 0-row to this pass (the
+/// previous end-turn collected it); a corpse's rows are dropped wholesale by the death fold, `clear_fighter`.
 public fun decrement_fighter_statuses(board: &mut BoardState, fighter_id: u64): vector<Effect> {
+  let n = board.statuses.length();
+  let mut i = 0;
+  while (i < n) {
+    let s = board.statuses.borrow_mut(i);
+    if (s.fighter == fighter_id && s.remaining_turns > 0) {
+      s.remaining_turns = s.remaining_turns - 1;
+    };
+    i = i + 1;
+  };
+  vector[]
+}
+
+/// #2033 — COLLECT the bearer's SPENT rows at its turn END, returning the effects whose applied delta the fight
+/// must revert (the `status_needs_revert` set — the same one `dispel_fighter` uses). A row is spent when its
+/// counter is already 0, i.e. the turn now ending was the last one its authored duration covered.
+///
+/// THE REASON THIS IS AN END-TURN PASS. Coverage has to STOP at the end of the final covered turn: a passive row
+/// (armor, a stat buff, a resist) is read by whoever is acting, so a row that lingers until the bearer's next
+/// turn START would keep applying through the whole enemy round in between — a round of mitigation the reference
+/// never grants (araknemu removes at the bearer's end-turn decrement). Tick and pool semantics are unaffected by
+/// the move: both are start-anchored and read AFTER the ageing pass, so an authored N still ticks N times and
+/// still denies exactly N refills.
+public fun collect_spent_statuses(board: &mut BoardState, fighter_id: u64): vector<Effect> {
   let mut kept = vector[];
   let mut expired = vector[];
   while (!board.statuses.is_empty()) {
-    let mut s = board.statuses.pop_back();
-    if (s.fighter == fighter_id) {
-      if (s.remaining_turns > 0) { s.remaining_turns = s.remaining_turns - 1; kept.push_back(s); }
-      else if (status_needs_revert(s.kind)) {
+    let s = board.statuses.pop_back();
+    if (s.fighter == fighter_id && s.remaining_turns == 0) {
+      if (status_needs_revert(s.kind)) {
         expired.push_back(s.effect); // timed-effect revert — fight side handles stat/resist/armor/invisibility/stance
       };
     } else {
@@ -573,13 +600,16 @@ fun t_dot_lifecycle() {
   assert!(t.length() == 1 && t.borrow(0).value() == 8, 0);
   // not another fighter's DoT
   assert!(tick_start(&b, 2, combat_grid::encode(0, 0)).is_empty(), 0);
-  // #2000: the counter is "bearer turns still to come", so a 3 survives THREE agings (3->2->1->0, each of
-  // those turns ticking) and drops on the fourth — the start of the turn after its last.
-  decrement_fighter_statuses(&mut b, 1); // 3->2
-  decrement_fighter_statuses(&mut b, 1); // 2->1
-  decrement_fighter_statuses(&mut b, 1); // 1->0, still live for THIS turn
+  // #2000: the counter is "bearer turns still to come", so a 3 is aged on THREE of the bearer's turns
+  // (3->2->1->0), each of them ticking. #2033: ageing never removes — the turn whose ageing lands the counter
+  // on 0 is the row's LAST covered one, and its END is where `collect_spent_statuses` takes it.
+  decrement_fighter_statuses(&mut b, 1); // turn 1: 3->2
+  assert!(collect_spent_statuses(&mut b, 1).is_empty(), 0); // …still has turns to come
+  decrement_fighter_statuses(&mut b, 1); // turn 2: 2->1
+  collect_spent_statuses(&mut b, 1);
+  decrement_fighter_statuses(&mut b, 1); // turn 3: 1->0, its last covered turn
   assert!(b.status_count() == 1, 0);
-  assert!(tick_start(&b, 1, combat_grid::encode(0, 0)).length() == 1, 0); // its last tick
-  decrement_fighter_statuses(&mut b, 1); // already spent -> expire
+  assert!(tick_start(&b, 1, combat_grid::encode(0, 0)).length() == 1, 0); // its last tick, on that same turn
+  collect_spent_statuses(&mut b, 1); // …and that turn's END collects it — not a round later
   assert!(b.status_count() == 0, 0);
 }

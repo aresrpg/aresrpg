@@ -1788,39 +1788,43 @@ public(package) fun tick_turn_start(fight: &mut Fight, is_mob: bool, idx: u64): 
   fighter_alive(fight, is_mob, idx)
 }
 
-/// TURN-START EXPIRY (#2000, D42) — the FIRST thing a fighter's turn does, ahead of its AP/MP refill and ahead
-/// of every board tick. An authored duration N covers the cast turn plus N further turns of the bearer and dies
-/// at the START of turn N+1: the counter is "turns still to come" (`spell_board::decrement_fighter_statuses`),
-/// so the row is still live through the turn its counter lands on 0. Running BEFORE `begin_turn` is what keeps
-/// the retrait contract intact — a drain row reduces exactly the refills it still has turns for — and running
-/// before `tick_turn_start` is what keeps a DoT's tick COUNT at its authored N (the aging that finds the row
-/// spent removes it before that turn's tick batch is collected).
+/// TURN-START AGEING (#2000, D42) — the FIRST thing a fighter's turn does, ahead of its AP/MP refill and ahead
+/// of every board tick. An authored duration N covers the cast turn plus N further turns of the bearer: the
+/// counter is "turns still to come" (`spell_board::decrement_fighter_statuses`), and the turn its counter lands
+/// on 0 is its last covered one. Running BEFORE `begin_turn` is what keeps the retrait contract intact — a drain
+/// row reduces exactly the refills it still has turns for — and running before `tick_turn_start` is what keeps a
+/// DoT's tick COUNT at its authored N.
 ///
-/// The end-turn cadence this replaced spent one aging on the cast turn itself, so an authored 1 expired before
-/// its owner ever played under it (live behavior was correct only via the #1872 compensating corpus 2s).
-/// BOTH sides re-derive live stats from base + the surviving rows (the mob per-fight block is mutable since
-/// 2026-07-12; stale-doc fix per MOB_DEBUFF_HAT P3 cast:486).
+/// PURE AGEING (#2033): nothing is removed here and nothing needs reverting, because a spent row was already
+/// collected at the END of the turn it last covered (`tick_turn_end`). On a LIVING fighter this pass therefore
+/// never meets a 0-row at all; a corpse never reaches it (the queue walk skips the dead, and the death fold
+/// `spell_board::clear_fighter` has taken its rows anyway).
 public(package) fun tick_turn_expiry(fight: &mut Fight, is_mob: bool, idx: u64) {
   let fid = if (is_mob) mob_fid(idx) else idx;
-  let expired = spell_board::decrement_fighter_statuses(fight::fx_mut(fight), fid);
-  retro_effects::revert_expired_max_hp(fight, is_mob, idx, &expired);
-  retro_effects::emit_expired_stances(fight, is_mob, idx, &expired);
-  // An expired timed ALTER row must re-derive the fighter's live stats — for MOBS too now (their per-fight block
-  // is mutable), else a shred/buff would never wear off. Drain rows carry no revert delta (not in `expired`); the
-  // pool recomputes from base at the next `begin_turn`, so nothing to refresh there.
-  if (expired.is_empty()) return;
-  if (is_mob) refresh_mob_stats(fight, idx) else refresh_player_stats(fight, idx);
+  spell_board::decrement_fighter_statuses(fight::fx_mut(fight), fid);
 }
 
-/// Turn-END board work (§5d): end-phase glyph payloads, then the GLYPH durations, which tick on player turn-ends
-/// (v1 DECLARED anchor: exact for PvM where one player side drives the round; the per-caster anchoring refinement
-/// rides the kolizeum polish). A glyph is a board CELL entry with its own clock, not a fighter status row — #2000
-/// moved the per-fighter rows to `tick_turn_expiry` and left this anchor exactly where it was.
+/// Turn-END board work (§5d): end-phase glyph payloads, the GLYPH durations (which tick on player turn-ends —
+/// v1 DECLARED anchor: exact for PvM where one player side drives the round; the per-caster anchoring refinement
+/// rides the kolizeum polish), and then #2033's COLLECTION of the bearer's spent rows.
+///
+/// COLLECTION IS AN END-TURN ACT because coverage must stop when the final covered turn stops. A passive row —
+/// armor, a stat buff, a resist — is read by whoever is ACTING, so a row left standing until the bearer's next
+/// turn start would keep applying through the entire enemy round in between: a round of mitigation the reference
+/// never grants. Both sides re-derive live stats from base + the surviving rows (the mob per-fight block is
+/// mutable since 2026-07-12; stale-doc fix per MOB_DEBUFF_HAT P3 cast:486). Drain rows carry no revert delta
+/// (they never enter `expired`); the pool recomputes from base at the next `begin_turn`.
 public(package) fun tick_turn_end(fight: &mut Fight, is_mob: bool, idx: u64) {
   let cell = fighter_cell(fight, is_mob, idx);
   let due = spell_board::tick_end(fight::fx(fight), cell);
   apply_board_batch(fight, is_mob, idx, &due);
   if (!is_mob) spell_board::decrement_glyphs(fight::fx_mut(fight));
+  let fid = if (is_mob) mob_fid(idx) else idx;
+  let expired = spell_board::collect_spent_statuses(fight::fx_mut(fight), fid);
+  retro_effects::revert_expired_max_hp(fight, is_mob, idx, &expired);
+  retro_effects::emit_expired_stances(fight, is_mob, idx, &expired);
+  if (expired.is_empty()) return;
+  if (is_mob) refresh_mob_stats(fight, idx) else refresh_player_stats(fight, idx);
 }
 
 /// A fighter ENTERED its current cell (move / push / pull / teleport / mob advance): detonate a covering trap

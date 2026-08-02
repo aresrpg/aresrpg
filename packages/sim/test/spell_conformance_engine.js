@@ -20,7 +20,10 @@
 // value lands inside its authored BAND instead of equalling the band's floor.
 
 import { process_spell_cast } from '../src/fight_spells.js'
-import { expire_turn_effects } from '../src/fight_actions.js'
+import {
+  collect_spent_turn_effects,
+  expire_turn_effects,
+} from '../src/fight_actions.js'
 import { effective_stats, find_entity } from '../src/fight_state.js'
 import { normalize_spell_templates } from '../src/spell_templates.js'
 import { FLAG_NEGATIVE } from '../src/spell_effect.js'
@@ -408,7 +411,7 @@ const DURATION_GAP_REASON = {
 }
 
 // Tick-to-expiry proof — drive an authored timed effect, then tick the victim's
-// turn-end plumbing (`expire_turn_effects`, the sim's real per-owner decrement + expiry) and assert the freshly
+// turn plumbing (ageing then the end-turn collection — the sim's real per-owner clock) and assert the freshly
 // minted rows clear at exactly their scheduled turn. Representative (not per-effect: the decrement is generic +
 // heavily tested; this confirms it FIRES for a spell-applied row). Returns { turns, cleared_after, ok }.
 export const prove_expiry = (raw, ap_cost) => {
@@ -418,7 +421,10 @@ export const prove_expiry = (raw, ap_cost) => {
   let s = res.state
   let cleared_after = -1
   for (let t = 0; t < turns + 2 && cleared_after < 0; t += 1) {
-    s = expire_turn_effects(s, victim_id).state
+    s = collect_spent_turn_effects(
+      expire_turn_effects(s, victim_id),
+      victim_id,
+    ).state
     const victim = find_entity(s, victim_id)
     if (!victim || added_rows(before.effect_ids, victim).length === 0)
       cleared_after = t + 1

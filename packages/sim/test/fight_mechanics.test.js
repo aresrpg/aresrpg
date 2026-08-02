@@ -668,13 +668,13 @@ describe('stun skips the turn', () => {
     const ended = reduce(cast.state, { type: 'end_turn', entity_id: 'p0' }, ctx)
     expect(ended.events.some(e => e.type === 'fight_turn_skipped')).toBe(true)
     expect(get_current_turn_entity(ended.state).id).toBe('p0')
-    // #2000 — the mob's turn STARTED by ageing the row, and an authored 1 still covered that turn: it is SPENT
-    // (counter 0), not gone, which is exactly what makes the stun cost one whole turn and no more.
-    const spent = find_entity(ended.state, 'm0').effects.find(
-      e => e.type === 'STUN',
-    )
-    expect(spent?.turns_remaining).toBe(0)
-    // the mob's NEXT turn opens on the spent row, drops it, and the mob acts — one turn lost, exactly one
+    // #2000 — the mob's turn STARTED by ageing the row, and an authored 1 still covered that turn, so the turn
+    // was skipped. #2033 — that same turn's END collected the now-spent row: the stun costs one whole turn and
+    // is gone the moment that turn is over, never lingering through the round that follows.
+    expect(
+      find_entity(ended.state, 'm0').effects.some(e => e.type === 'STUN'),
+    ).toBe(false)
+    // …so the mob's next turn is a real one
     const after = reduce(
       ended.state,
       { type: 'end_turn', entity_id: 'p0' },

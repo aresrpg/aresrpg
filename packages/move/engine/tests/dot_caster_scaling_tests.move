@@ -216,23 +216,27 @@ fun dot_last_tick_under_turn_start_decrement_reads_the_live_caster() {
     fight::fx_mut(&mut fight), MOB_FID, PLAYER_FID, spell_effect::apply_dot(spell::el_earth(), 20, 2),
   );
 
-  // Turn 1: expiry ages 2 → 1, then the tick fires at the caster's CURRENT 50 strength.
+  // Turn 1 (ageing → tick → end): 2 → 1, then the tick fires at the caster's CURRENT 50 strength. The row has
+  // a turn still to come, so the end-turn collection leaves it standing.
   cast::tick_turn_expiry(&mut fight, true, 0);
   assert!(tick_mob_turn_start(&mut fight) == 30, 0);
+  cast::tick_turn_end(&mut fight, true, 0);
+  assert!(spell_board::status_count(fight::fx(&fight)) == 1, 1);
 
   // Between the turns the caster doubles its strength — the poison is a live line, not a frozen number.
   buff_caster_strength(&mut fight, 50);
 
-  // Turn 2: expiry ages 1 → 0 and KEEPS the row (D42: its counter landing on 0 is its last covered turn), so
-  // the authored 2 still bites twice — this LAST tick priced off the caster's new 100 strength.
+  // Turn 2: ageing takes 1 → 0 and KEEPS the row (D42: the turn its counter lands on 0 is its LAST covered
+  // one), so the authored 2 still bites twice — this last tick priced off the caster's new 100 strength.
+  // Its turn END is then where the spent row is collected (#2033), never a round later.
   cast::tick_turn_expiry(&mut fight, true, 0);
-  assert!(tick_mob_turn_start(&mut fight) == 40, 1);
+  assert!(tick_mob_turn_start(&mut fight) == 40, 2);
+  cast::tick_turn_end(&mut fight, true, 0);
+  assert!(spell_board::status_count(fight::fx(&fight)) == 0, 3);
 
-  // Turn 3: the aging finds the row spent and drops it BEFORE the batch is collected — no third bite, and the
-  // authored count is exactly what D42 promises rather than one tick more.
+  // Turn 3: nothing left to age and nothing to bite — the authored count is exactly what D42 promises.
   cast::tick_turn_expiry(&mut fight, true, 0);
-  assert!(spell_board::status_count(fight::fx(&fight)) == 0, 2);
-  assert!(tick_mob_turn_start(&mut fight) == 0, 3);
+  assert!(tick_mob_turn_start(&mut fight) == 0, 4);
 
   ts::return_shared(fight);
   sc.end();
@@ -342,6 +346,70 @@ fun glyph_and_dot_share_one_batch_and_keep_their_own_sources() {
   // and the glyph alone is still flat with the DoT gone: the 20 above was never the caster-scaled 30.
   spell_board::clear_fighter_status_kind(fight::fx_mut(&mut fight), MOB_FID, spell_effect::k_apply_dot());
   assert!(tick_mob_turn_start(&mut fight) == 20, 1);
+
+  ts::return_shared(fight);
+  sc.end();
+}
+
+// ══════════════════ [ #2033 — coverage STOPS at the final covered turn's END ] ══════════════════
+
+/// A flat ARMOR row (kind 24 — `spell_board::mitigate_damage` subtracts its value from every incoming line).
+/// Passive by nature: it is read by whoever is ACTING, which is what makes its removal TIMING observable from
+/// outside the bearer's own turn.
+fun armor_row(value: u64, turns: u8): Effect {
+  spell_effect::new_effect(
+    spell_effect::k_reduce_damage(), spell::el_none(), value, spell_effect::shape_point(), 0,
+    spell_effect::tf_not_enemy(), 100, turns, 0, 0, spell_effect::phase_on_enter(),
+  )
+}
+
+#[test]
+/// #2033 — THE ENEMY WINDOW. An authored 1 covers the bearer's next turn and NOTHING after it. The bug this
+/// pins: a spent row (counter 0) used to survive from the end of its last covered turn until the bearer's NEXT
+/// turn start, so it kept mitigating through the whole enemy round in between — a round of armor the reference
+/// never grants (araknemu removes at the bearer's end-turn decrement; ours tombstone-collected a round late).
+///
+/// The probe is a hit landing in exactly that window, which is where a PASSIVE row is read at all: the bearer's
+/// covered turn has ended, its next has not begun.
+fun a_spent_armor_row_does_not_mitigate_through_the_enemy_window() {
+  let mut sc = ts::begin(OWNER);
+  let mut fight = one_mob(&mut sc, spec(z(), 1000));
+  spell_board::add_status(fight::fx_mut(&mut fight), MOB_FID, MOB_FID, armor_row(15, 1));
+
+  // The bearer's covered turn: ageing spends the counter (1 -> 0) and the row is still armor for that turn…
+  cast::tick_turn_expiry(&mut fight, true, 0);
+  let before_covered = mob_hp(&fight);
+  retro_effects::hit(&mut fight, true, 0, false, 0, false, 40, 0);
+  assert!(before_covered - mob_hp(&fight) == 25, 0); // 40 − 15, mitigated on its own covered turn
+
+  // …and its coverage ENDS with that turn.
+  cast::tick_turn_end(&mut fight, true, 0);
+  assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), MOB_FID, spell_effect::k_reduce_damage()).is_empty(), 1);
+
+  // THE WINDOW: an enemy acts after the bearer's turn ended and before its next begins. Full damage.
+  let before_window = mob_hp(&fight);
+  retro_effects::hit(&mut fight, true, 0, false, 0, false, 40, 0);
+  assert!(before_window - mob_hp(&fight) == 40, 2); // the whole 40 — no lingering armor
+
+  ts::return_shared(fight);
+  sc.end();
+}
+
+#[test]
+/// The other half of the same law: a row with turns still to come is NOT collected by an end-turn, so a 2-turn
+/// armor keeps mitigating across the enemy round between its covered turns. Collection is "spent", never "any".
+fun an_unspent_armor_row_survives_the_enemy_window() {
+  let mut sc = ts::begin(OWNER);
+  let mut fight = one_mob(&mut sc, spec(z(), 1000));
+  spell_board::add_status(fight::fx_mut(&mut fight), MOB_FID, MOB_FID, armor_row(15, 2));
+
+  cast::tick_turn_expiry(&mut fight, true, 0); // 2 -> 1, one covered turn still to come
+  cast::tick_turn_end(&mut fight, true, 0); // not spent -> not collected
+  assert!(spell_board::fighter_status_rows_of(fight::fx(&fight), MOB_FID, spell_effect::k_reduce_damage()).length() == 1, 0);
+
+  let before = mob_hp(&fight);
+  retro_effects::hit(&mut fight, true, 0, false, 0, false, 40, 0);
+  assert!(before - mob_hp(&fight) == 25, 1); // still armored between its own turns
 
   ts::return_shared(fight);
   sc.end();

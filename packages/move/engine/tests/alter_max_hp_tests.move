@@ -8,7 +8,7 @@
 ///
 /// The capacity home already existed for the REACTIVE-PUNISHMENT mint (`retro_effects::trigger_punishment`
 /// bumps `add_max_hp` for exactly these two ids) and so did the expiry inverse
-/// (`retro_effects::revert_expired_max_hp`, called from `cast::tick_turn_expiry` and `cast::dispel_target`) — the
+/// (`retro_effects::revert_expired_max_hp`, called from `cast::tick_turn_end` and `cast::dispel_target`) — the
 /// ORDINARY cast arm was the only mint that never paid into it, which also left the revert asymmetric: an
 /// expiring vitality row subtracted capacity that its own application never added.
 ///
@@ -71,6 +71,13 @@ fun mob_max_hp(f: &Fight): u64 { mob::max_hp(fight::mobs(f).borrow(0)) }
 
 // ══════════════════ [ the buff lands ] ══════════════════
 
+/// One WHOLE turn of the bearer: ageing at its start (#2000), then its end-turn work, which is where a spent
+/// row is collected (#2033). Tests that only care about a row's LIFETIME drive turns through here.
+fun whole_turn(fight: &mut Fight, is_mob: bool, idx: u64) {
+  cast::tick_turn_expiry(fight, is_mob, idx);
+  cast::tick_turn_end(fight, is_mob, idx);
+}
+
 #[test]
 /// A TIMED +60 vitality self-buff raises the seat's max HP for its life and gives it back at expiry. Current HP
 /// does NOT ride the delta up (`participant::add_max_hp_bonus` — capacity only, the declared house rule) and is
@@ -89,14 +96,12 @@ fun timed_vitality_buff_raises_then_restores_player_max_hp() {
   assert!(player_max_hp(&fight) == 160, 1);
   assert!(player_hp(&fight) == 100, 2); // capacity only — no free heal
 
-  // #2000 — an authored 2 covers the cast turn plus TWO further turn-starts of the bearer; the third finds the
-  // row spent and reverts it. (The old end-turn cadence spent one aging on the cast turn itself.)
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  assert!(player_max_hp(&fight) == 160, 3); // two turns still on the row
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  assert!(player_max_hp(&fight) == 160, 4); // its LAST covered turn
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  assert!(player_max_hp(&fight) == 100, 5); // expired → exactly the gain given back, nothing leaked
+  // #2000 — an authored 2 covers the cast turn plus TWO further turns of the bearer. #2033 — and coverage ENDS
+  // with the second of those: the spent row is collected at that turn's END, not a round later.
+  whole_turn(&mut fight, false, 0);
+  assert!(player_max_hp(&fight) == 160, 3); // one covered turn still to come
+  whole_turn(&mut fight, false, 0);
+  assert!(player_max_hp(&fight) == 100, 4); // collected at its last covered turn's end — the gain given back
   ts::return_shared(fight);
   sc.end();
 }
@@ -114,9 +119,9 @@ fun timed_max_hp_buff_raises_player_max_hp() {
   );
   assert!(player_max_hp(&fight) == 125, 0);
   cast::tick_turn_expiry(&mut fight, false, 0);
-  assert!(player_max_hp(&fight) == 125, 1); // #2000 — the authored 1 covers the caster's NEXT turn too
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  assert!(player_max_hp(&fight) == 100, 2);
+  assert!(player_max_hp(&fight) == 125, 1); // #2000 — the authored 1 covers the caster's NEXT turn…
+  cast::tick_turn_end(&mut fight, false, 0);
+  assert!(player_max_hp(&fight) == 100, 2); // …#2033 — and stops when that turn does
   ts::return_shared(fight);
   sc.end();
 }
@@ -133,8 +138,8 @@ fun permanent_vitality_buff_raises_player_max_hp_forever() {
     &vitality_alter(spell_effect::stat_vitality(), 40, false, 0, spell_effect::tf_not_enemy()), &mut rng,
   );
   assert!(player_max_hp(&fight) == 140, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
+  whole_turn(&mut fight, false, 0);
+  whole_turn(&mut fight, false, 0);
   assert!(player_max_hp(&fight) == 140, 1);
   ts::return_shared(fight);
   sc.end();
@@ -154,8 +159,7 @@ fun timed_vitality_debuff_lowers_then_restores_player_max_hp() {
   );
   assert!(player_max_hp(&fight) == 70, 0);
   assert!(player_hp(&fight) == 70, 1); // current HP cannot exceed the new capacity
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — an authored 1 is covered through the bearer's next turn
+  whole_turn(&mut fight, false, 0); // #2000/#2033 — covered through the bearer's next turn, collected at its end
   assert!(player_max_hp(&fight) == 100, 2);
   assert!(player_hp(&fight) == 70, 3); // the clamp is not a heal on the way back
   ts::return_shared(fight);
@@ -176,8 +180,7 @@ fun timed_vitality_buff_raises_then_restores_mob_max_hp() {
     &vitality_alter(spell_effect::stat_vitality(), 60, false, 1, spell_effect::tf_not_team()), &mut rng,
   );
   assert!(mob_max_hp(&fight) == 560, 1);
-  cast::tick_turn_expiry(&mut fight, true, 0);
-  cast::tick_turn_expiry(&mut fight, true, 0); // #2000 — the authored 1 covers the mob's next turn too
+  whole_turn(&mut fight, true, 0); // #2000/#2033 — covers the mob's next turn, collected when that turn ends
   assert!(mob_max_hp(&fight) == 500, 2);
   ts::return_shared(fight);
   sc.end();

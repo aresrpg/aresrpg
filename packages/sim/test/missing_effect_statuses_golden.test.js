@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   apply_incoming_damage,
   expire_turn_effects,
+  collect_spent_turn_effects,
   process_turn_effects,
 } from '../src/fight_actions.js'
 import { find_entity } from '../src/fight_state.js'
@@ -226,9 +227,9 @@ const run_stance_lifecycle = vector => {
     }),
   ])
   const expiring = cast(state, caster.id, one_turn, caster.cell)
-  // #2000 — the authored 1 covers the bearer's next turn start; the STANCE_END fires on the one after.
-  const expired = expire_turn_effects(
-    expire_turn_effects(expiring.state, caster.id).state,
+  // #2000/#2033 — the authored 1 covers the bearer's next turn; the STANCE_END fires when that turn ends.
+  const expired = collect_spent_turn_effects(
+    expire_turn_effects(expiring.state, caster.id),
     caster.id,
   )
   const fresh = state_of(

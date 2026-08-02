@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   apply_incoming_damage,
   expire_turn_effects,
+  collect_spent_turn_effects,
 } from '../src/fight_actions.js'
 import { effective_stats, find_entity } from '../src/fight_state.js'
 import {
@@ -63,13 +64,11 @@ const run_named_stack = vector => {
   const second = cast(first.state, caster.id, spell, aimed.cell)
   const twice_aimed = find_entity(second.state, aimed.id)
   const twice_other = find_entity(second.state, other.id)
-  // #2000 — a row is spent only once an aging finds its counter at 0, so an authored N leaves on the (N+1)th
-  // turn start of its bearer: three agings to clear these 2-turn stack rows.
-  const tick1 = expire_turn_effects(first.state, aimed.id)
-  const tick2 = expire_turn_effects(tick1.state, aimed.id)
-  const tick3 = expire_turn_effects(tick2.state, aimed.id)
-  const before = find_entity(tick3.state, aimed.id).health
-  const after_expiry = cast(tick3.state, caster.id, spell, aimed.cell)
+  // #2000/#2033 — an authored N covers N of the bearer's turns and is collected when the Nth ENDS: two whole
+  // turns clear these 2-turn stack rows.
+  const cleared = whole_turn(whole_turn(first.state, aimed.id), aimed.id)
+  const before = find_entity(cleared, aimed.id).health
+  const after_expiry = cast(cleared, caster.id, spell, aimed.cell)
   return {
     aimed_hp_after_two: twice_aimed.health,
     other_hp_after_two: twice_other.health,
@@ -109,9 +108,9 @@ const run_punishment = vector => {
     attacker.id,
   )
   const after = find_entity(hit.state, target.id)
-  // #2000 — the mint's timed row covers the bearer's next turn; the one after is where it reverts.
-  const expired = expire_turn_effects(
-    expire_turn_effects(hit.state, target.id).state,
+  // #2000/#2033 — the mint's timed row covers the bearer's next turn and reverts when that turn ends.
+  const expired = collect_spent_turn_effects(
+    expire_turn_effects(hit.state, target.id),
     target.id,
   )
   const killed_target = fighter('m0', { x: 3, y: 2 }, false, {
@@ -244,6 +243,11 @@ const runners = {
   redirect: run_redirect,
   normalize: run_normalize,
 }
+
+/** One WHOLE turn of the bearer: ageing at its start (#2000), then the end-turn collection that takes a spent
+ *  row (#2033). Tests that only care about a row's LIFETIME drive turns through here. */
+const whole_turn = (state, id) =>
+  collect_spent_turn_effects(expire_turn_effects(state, id), id).state
 
 describe('wave 12 reaction golden vectors', () => {
   for (const vector of golden.cases)

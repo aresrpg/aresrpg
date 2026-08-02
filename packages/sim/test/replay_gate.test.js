@@ -1413,8 +1413,9 @@ const scenarios = [
   },
   {
     // #2000 / D42 twin parity — THE AUTHORED DURATION CARRIES ITS OWN MEANING. A duration of 1 covers the cast
-    // turn AND the caster's next turn, expiring at the start of the one after; the rows age at the bearer's turn
-    // START (`cast::tick_turn_expiry`, ahead of the refill and the tick batch), never at its turn end.
+    // turn AND the caster's next turn, and nothing after it: rows AGE at the bearer's turn START
+    // (`cast::tick_turn_expiry`, ahead of the refill and the tick batch) and a spent one is COLLECTED at the END
+    // of the turn it last covered (`cast::tick_turn_end`, #2033).
     //
     // The whole decrement-timing family is observable in ONE arc because the buff is read by a FIXED damage line
     // (min == max ⇒ `roll_in_range` is degenerate ⇒ no seed math, no crit: `critical_chance: 0`). smite is
@@ -1422,7 +1423,7 @@ const scenarios = [
     // `apply_resistance` is identity):
     //   T   (cast turn)  brace → strength 50, smite = 20 × 150/100 = 30   → m0 100 → 70   [cast-turn coverage]
     //   T+1 (next turn)  the row ages 1 → 0 and stays LIVE, smite = 30    → m0  70 → 40   [next-turn coverage]
-    //   T+2              the aging finds it spent and drops it, smite = 20 → m0  40 → 20   [expiry at T+2 start]
+    //   T+2              the row was collected at T+1's END, smite = 20     → m0  40 → 20   [coverage stopped]
     // The old end-turn cadence spent one aging on the cast turn itself, so the buff was already gone at T+1 and
     // the arc read 30/20/20 → a terminal 30. 20 vs 30 is the discriminator, and no cast-time snapshot of the
     // stats can produce it either (that reads 30/30/30 → 10).

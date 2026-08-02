@@ -234,23 +234,39 @@ export const decrement_glyphs = board => {
  * so the caller can undo the delta; every other expiring kind just drops. Mirrors
  * spell_board::decrement_fighter_statuses.
  *
- * #2000 — `remaining_turns` counts the bearer's turns STILL TO COME, so a row survives while it has any (`> 0`)
- * and drops on the aging that finds it at 0: an authored N covers the cast turn plus N further bearer turns.
- * @returns {import('./spell_effect.js').Effect[]} the effects whose deltas must be reverted
+ * #2000 — `remaining_turns` counts the bearer's turns STILL TO COME, so ageing spends one while any remain and
+ * the turn its counter lands on 0 is the row's last covered one: an authored N covers the cast turn plus N
+ * further bearer turns.
+ *
+ * #2033 — AGEING NEVER REMOVES. Collection is `collect_spent_statuses` at the bearer's turn END, so this
+ * returns an EMPTY array; the return is the published Move signature's mirror, kept so the twins read alike. A
+ * LIVING bearer never presents a 0-row here (its previous end-turn collected it); corpses go through
+ * `clear_fighter`.
+ * @returns {import('./spell_effect.js').Effect[]} always empty — nothing expires during ageing
  */
 export const decrement_fighter_statuses = (board, fighter_id) => {
+  for (const s of board.statuses)
+    if (s.fighter === fighter_id && s.remaining_turns > 0)
+      s.remaining_turns -= 1
+  return []
+}
+
+/**
+ * #2033 — COLLECT the bearer's SPENT rows (counter already 0) at its turn END, returning the effects whose
+ * applied delta must be reverted. Coverage has to stop when the final covered turn stops: a passive row (armor,
+ * a stat buff, a resist) is read by whoever is ACTING, so a row left until the bearer's next turn START would
+ * keep applying through the whole enemy round in between — mitigation the reference never grants. Tick and pool
+ * semantics are untouched: both are start-anchored and read AFTER ageing. Mirrors
+ * spell_board::collect_spent_statuses, pop/push order included.
+ * @returns {import('./spell_effect.js').Effect[]} the effects whose deltas must be reverted
+ */
+export const collect_spent_statuses = (board, fighter_id) => {
   const kept = []
   const expired = []
   while (board.statuses.length > 0) {
     const s = board.statuses.pop()
-    if (s.fighter === fighter_id) {
-      if (s.remaining_turns > 0) {
-        s.remaining_turns -= 1
-        kept.push(s)
-      } else if (status_needs_revert(s.kind)) {
-        expired.push(s.effect)
-      }
-      // else: drop
+    if (s.fighter === fighter_id && s.remaining_turns === 0) {
+      if (status_needs_revert(s.kind)) expired.push(s.effect)
     } else {
       kept.push(s)
     }

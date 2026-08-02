@@ -20,6 +20,7 @@ import {
   tick_start,
   tick_end,
   decrement_glyphs,
+  collect_spent_statuses,
   decrement_fighter_statuses,
   entry_count,
   status_count,
@@ -103,14 +104,16 @@ describe('effect board — parity with spell_board.move', () => {
     expect(t.length).toBe(1)
     expect(value(t[0])).toBe(8)
     expect(tick_start(b, 2, encode(0, 0))).toEqual([]) // not another fighter's DoT
-    // #2000: the counter is "bearer turns still to come", so a 3 survives THREE agings (each of those turns
-    // ticking) and drops on the fourth — the start of the turn after its last.
-    decrement_fighter_statuses(b, 1) // 3 → 2
-    decrement_fighter_statuses(b, 1) // 2 → 1
-    decrement_fighter_statuses(b, 1) // 1 → 0, still live for THIS turn
+    // #2000: a 3 is aged on THREE of the bearer's turns, each of them ticking. #2033: ageing never removes —
+    // the turn whose ageing lands the counter on 0 is the last covered one, and its END collects the row.
+    decrement_fighter_statuses(b, 1) // turn 1: 3 → 2
+    expect(collect_spent_statuses(b, 1)).toEqual([]) // …still has turns to come
+    decrement_fighter_statuses(b, 1) // turn 2: 2 → 1
+    collect_spent_statuses(b, 1)
+    decrement_fighter_statuses(b, 1) // turn 3: 1 → 0, its last covered turn
     expect(status_count(b)).toBe(1)
-    expect(tick_start(b, 1, encode(0, 0)).length).toBe(1) // its last tick
-    decrement_fighter_statuses(b, 1) // already spent → expire
+    expect(tick_start(b, 1, encode(0, 0)).length).toBe(1) // its last tick, on that same turn
+    collect_spent_statuses(b, 1) // …and that turn's END collects it — not a round later
     expect(status_count(b)).toBe(0)
   })
 })

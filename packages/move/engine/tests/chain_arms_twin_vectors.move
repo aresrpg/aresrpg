@@ -169,6 +169,13 @@ fun assert_displaced(index: u64, target_is_mob: bool, kind: u8, from_cell: u64, 
   assert!(got_kind == kind && got_from == from_cell && got_to == to_cell);
 }
 
+/// One WHOLE turn of the bearer: ageing at its start (#2000), then its end-turn work, which is where a spent
+/// row is collected (#2033). Tests that only care about a row's LIFETIME drive turns through here.
+fun whole_turn(fight: &mut Fight, is_mob: bool, idx: u64) {
+  cast::tick_turn_expiry(fight, is_mob, idx);
+  cast::tick_turn_end(fight, is_mob, idx);
+}
+
 #[test, expected_failure(abort_code = ERequiredState, location = aresrpg_fight::cast)]
 /// Sim twin: APPLY_STATE(788, 1t) is a live named row. It admits a required-state cast, then its expiry makes the
 /// same cast illegal. The expected abort is deliberately the second cast.
@@ -183,9 +190,9 @@ fun apply_state_row_drives_required_gate_and_expires() {
 
   cast::resolve_player_cast(&mut fight, 0, &spell, MOB_CELL);
   assert!(mob::hp(fight::mobs(&fight).borrow(0)) == 90);
-  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — the authored 1 still covers the caster's next turn
+  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — the authored 1 still covers the caster's next turn…
   assert!(spell_board::fighter_has_state(fight::fx(&fight), 0, 788));
-  cast::tick_turn_expiry(&mut fight, false, 0);
+  cast::tick_turn_end(&mut fight, false, 0); // …#2033 — and stops when that turn ends
   assert!(!spell_board::fighter_has_state(fight::fx(&fight), 0, 788));
 
   cast::resolve_player_cast(&mut fight, 0, &spell, MOB_CELL);
@@ -235,16 +242,14 @@ fun steal_stat_has_two_timed_legs_and_both_expire() {
   assert!(debit_amount == 11 && debit_negative);
   assert!(debit.borrow().has_flag(spell_effect::flag_negative()));
 
-  // #2000 — both legs are authored 3, so each side's rows survive THREE of its own turn-starts and leave on the
-  // fourth: four turns per side, taken in the alternating order the queue actually walks.
-  cast::tick_turn_expiry(&mut fight, true, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, true, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, true, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, true, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
+  // #2000 — both legs are authored 3, so each side's rows cover THREE of its own turns; #2033 — the third of
+  // them ends the coverage. Three whole turns per side, in the alternating order the queue actually walks.
+  whole_turn(&mut fight, true, 0);
+  whole_turn(&mut fight, false, 0);
+  whole_turn(&mut fight, true, 0);
+  whole_turn(&mut fight, false, 0);
+  whole_turn(&mut fight, true, 0);
+  whole_turn(&mut fight, false, 0);
   assert!(spell::stat_strength(mob::stats(fight::mobs(&fight).borrow(0))) == 0);
   assert!(spell::stat_strength(participant::stats(fight::participants(&fight).borrow(0))) == 0);
   assert!(spell_board::status_count(fight::fx(&fight)) == 0);
@@ -276,9 +281,8 @@ fun reflect_damage_consumes_flat_row_on_incoming_hit() {
   assert!(!side0 && idx0 == 0 && amount0 == 10 && hp0 == 90);
   assert!(side1 && idx1 == 0 && amount1 == 2 && hp1 == 98);
 
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0);
-  cast::tick_turn_expiry(&mut fight, false, 0); // #2000 — the authored 2 covers two further turn-starts
+  whole_turn(&mut fight, false, 0);
+  whole_turn(&mut fight, false, 0); // #2000/#2033 — an authored 2 covers two turns and ends with the second
   assert!(spell_board::fighter_status_of(
     fight::fx(&fight), 0, spell_effect::k_reflect_damage(),
   ).is_none());
