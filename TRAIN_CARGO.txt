@@ -1,3 +1,1 @@
-7cd8e58342f3f228ff084a090f911ea7477a21f0 lane/d45-rubric-caps docs: the materiality valve is an asserted clause, not an optional one
-970ad3e836d3d98c71225a0df26ce35fa328bf90 lane/d45-rubric-caps docs: ACCEPTED_DEBT — the materiality bar's class list
-24ae040a3e4f86515139db27fa8711c8815b7707 lane/d45-rubric-caps docs(loops): the materiality valve — instruments discard below the bar
+62b8031e683312e7ab6c16a8db21047d2f7fb735 lane/2028-gold-mint fix(gold): mint through the post-#1714 two-transaction door
