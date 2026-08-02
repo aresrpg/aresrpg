@@ -306,15 +306,25 @@ const drain_descriptor = (action) => {
   }
 }
 
-/** Move decrements every fighter row at that fighter's turn end. Rows survive with one fewer turn or disappear at
- * one; invisibility is always re-derived from the surviving rows. A legacy boolean-only fold has no duration proof,
- * so leave it untouched until its explicit StanceChanged/Revealed event. */
-const decrement_statuses = (state, key) => {
+/** THE ONE CLOCK a fighter's own timed rows run on (#2000, D42) — the client twin of `cast::tick_turn_expiry` →
+ * `spell_board::decrement_fighter_statuses`, mirrored sim-side by `fight_actions.expire_turn_effects`.
+ *
+ * `remaining_turns` counts the BEARER'S TURNS STILL TO COME, so a row is kept while it has any (its counter
+ * landing on 0 marks its LAST covered turn) and is dropped only by the aging that finds it already at 0. The
+ * aging fires at the bearer's turn START, ahead of everything that turn reads — never at a turn end, which ages
+ * nothing of the ending fighter's. An authored duration N therefore covers the cast turn plus N further bearer
+ * turns and expires at the start of turn N+1, which is what the authored number means natively; the superseded
+ * end-turn `> 1` cadence spent one aging on the cast turn itself, so an authored 1 died before its owner ever
+ * played under it (the #1872 blank-out, re-judged as a cadence bug rather than a corpus reading).
+ *
+ * Invisibility is always re-derived from the survivors. A legacy boolean-only fold has no duration proof, so
+ * leave it untouched until its explicit StanceChanged/Revealed event. */
+const age_statuses = (state, key) => {
   const rows = state.fighters[key]?.statuses
   if (!rows) return state
   const statuses = rows.flatMap((row) => {
     const remaining_turns = Number(row.remaining_turns) || 0
-    return remaining_turns > 1 ? [{ ...row, remaining_turns: remaining_turns - 1 }] : []
+    return remaining_turns > 0 ? [{ ...row, remaining_turns: remaining_turns - 1 }] : []
   })
   return patch_fighter(state, key, {
     statuses,
@@ -326,16 +336,17 @@ const decrement_statuses = (state, key) => {
  * refill law (`participant::net_refill`, `base + credit − debt` floored at 0, called from `begin_turn`) and of
  * `sim/fight_state.active_pool_modifier`: a `+1 MP · 3 turns` buff refills to base+1 for every turn inside its
  * window, a REMOVE_POINTS row subtracts (summing both into one signed net is the same floor the chain takes).
- * Duration needs no predicate of its own here — a row only reaches a TurnStarted if it survived the PRIOR
- * turn-end `decrement_statuses`, which is exactly the chain's tick scope (cast.move:1585 ages the ENDING actor's
- * rows), so presence IS activity. Kinds other than the two point ones never touch a pool: an ALTER_STAT row moves
- * a STAT, and the snapshot owns those.
+ * PRESENCE IS ACTIVITY, with no duration predicate of its own — the caller runs `age_statuses` first, so every
+ * row still standing here has this turn coming (#2000: a counter of 0 is a row on its LAST covered turn, not a
+ * dead one, exactly as `active_pool_modifier` counts every surviving row sim-side). Reading `> 0` here would
+ * deny a `+1 MP · 1 turn` grant the single refill it exists for. Kinds other than the two point ones never touch
+ * a pool: an ALTER_STAT row moves a STAT, and the snapshot owns those.
  * @param {Array<{kind?:number, stat?:number, value?:number, remaining_turns?:number}>} statuses
  * @param {'ap'|'mp'} pool
  */
 const pool_grant = (statuses, pool) =>
   (statuses ?? []).reduce((sum, row) => {
-    if (POINT_POOL[Number(row?.stat)] !== pool || (Number(row?.remaining_turns) || 0) <= 0) return sum
+    if (POINT_POOL[Number(row?.stat)] !== pool) return sum
     const kind = Number(row?.kind)
     const value = Number(row?.value) || 0
     if (kind === FX.K_GIVE_POINTS) return sum + value
@@ -415,7 +426,11 @@ export const apply_action = (state, action) => {
     }
     case 'TurnStarted': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
-      const next = ensure(state, key)
+      // TURN-START EXPIRY FIRST (#2000, D42): the landing fighter's own timed rows age here, ahead of everything
+      // this turn reads them — the refill below included. Mirrors turns.move's ordering
+      // (`cast::tick_turn_expiry` → `point_adjust` → `begin_turn` → `cast::tick_turn_start`), which is what keeps
+      // the retrait contract honest and a DoT's tick COUNT at its authored N.
+      const next = age_statuses(ensure(state, key), key)
       const turn_number = Number(next.fighters[key].turn_number ?? 0) + 1
       const observed_deadline = positive_deadline(action.deadline_ms)
       const withturn = {
@@ -459,9 +474,10 @@ export const apply_action = (state, action) => {
           })
     }
     case 'TurnEnded': {
+      // A turn END ages NOTHING of the ending fighter's own rows (#2000): that clock moved to its next turn
+      // START. All this arm still does is close the turn — the deadline stops being fresh and nobody is active.
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
-      const ended = state.active === key ? { ...state, active: null, turn_deadline_fresh: false } : state
-      return decrement_statuses(ended, key)
+      return state.active === key ? { ...state, active: null, turn_deadline_fresh: false } : state
     }
     case 'MobMoved':
       return patch_fighter(state, fighter_key({ is_mob: true, idx: action.idx }), { cell: action.to_cell })

@@ -9,13 +9,15 @@
 // row converts to a sealed check. This file is that check, driven end to end through the surface the player
 // actually sees — a real store, real receipts, `engine_view(...).effects` (the array the badge HUD renders).
 //
-// The lifetime it pins is the chain's own (`cast.move:1585` ages the ENDING actor's rows): a `turns = 3` row
-// renders 3 → 2 → 1 across the affected fighter's three turn ends, is untouched by anyone else's turn, and dies exactly when
-// the chain says it does — never at the first boundary.
+// The lifetime it pins is the chain's own (`cast::tick_turn_expiry` → `spell_board::decrement_fighter_statuses`):
+// a `turns = 3` row renders 3 → 2 → 1 → 0 across the affected fighter's own turn STARTS (#2000, D42 — a turn END
+// ages nothing), is untouched by anyone else's turn, and dies exactly when the chain says it does: on the aging
+// that finds its counter already spent, never at the first boundary.
 //
-// The other two legs of #598 are closed elsewhere and stay closed: the duration semantics leg is the design row
-// #626 (turns should not consume the cast turn — a maintainer ruling, not a bug), and the MP-pool leg was the
-// sim's refill-before-decrement ordering, fixed in `fight_state.active_pool_modifier` (its docstring cites #598).
+// The other two legs of #598 are closed elsewhere: the duration-semantics leg (#626's "turns should not consume
+// the cast turn") is what D42 finally settled IN THE LAW rather than the corpus — the counter now reads "bearer
+// turns still to come" — and the MP-pool leg was the sim's refill-before-decrement ordering, fixed in
+// `fight_state.active_pool_modifier` (its docstring cites #598).
 
 import { describe, expect, test } from 'bun:test'
 
@@ -119,21 +121,22 @@ const round = (store, version, now) => {
 }
 
 describe('#598/#597 the badge lifetime survives the turn boundary (post-V2-cutover verify)', () => {
-  test('a 3-turn buff renders 3 → 2 → 1 across MY turn ends and never blinks out early', () => {
+  test('a 3-turn buff renders 3 → 2 → 1 → 0 across MY turn starts and never blinks out early', () => {
     const store = boot()
     expect(buff_turns(store), 'the badge is there before anything moves').toBe(3)
 
     let version = 6
     const seen = []
-    for (let turn = 0; turn < 3; turn += 1) {
+    for (let turn = 0; turn < 4; turn += 1) {
       version = round(store, version, 2_000 + turn * 1_000)
       seen.push(buff_turns(store))
     }
-    // THE REPORTED DEFECT would read [null, null, null] — gone at the first boundary while still active.
-    expect(seen).toEqual([2, 1, null])
+    // THE REPORTED DEFECT would read [null, null, null, null] — gone at the first boundary while still active.
+    // The trailing 0 is the row's LAST covered turn (#2000): the aging that finds it spent is the NEXT one.
+    expect(seen).toEqual([2, 1, 0, null])
   })
 
-  test("the badge is untouched by ANOTHER fighter's turn — only the affected fighter's turn end ages it", () => {
+  test("the badge is untouched by ANOTHER fighter's turn — only the affected fighter's turn start ages it", () => {
     const store = boot()
     feed(
       store,

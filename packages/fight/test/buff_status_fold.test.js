@@ -165,10 +165,12 @@ describe('#481 self-buff action effects enter the fighter status fold', () => {
     test(`${source}: range, MP, and invisibility rows reach statuses and engine_view.effects`, () => {
       const store = drive(input())
       const { statuses } = committed_truth(store.getState()).fighters.p0
+      // The log ends on the caster's OWN TurnEnded, which under #2000 (D42) ages nothing: a fighter's rows age at
+      // its next turn START, so the authored counter is what the fold still holds here.
       expect(statuses).toEqual(
         effects.map((row) => ({
           kind: row.kind,
-          remaining_turns: row.turns - 1,
+          remaining_turns: row.turns,
           element: row.element,
           value: decoded_value(row),
           stat: row.stat,

@@ -1,26 +1,31 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Issue #1872 — THE FORK, CONVICTED. A self-cast `+10 Intelligence` buff vanished from the turn card at
-// end-turn. The row named one read that decides it: does the buff still EXIST chain-side after the flip?
+// Issue #1872 — THE FORK, CONVICTED, then RE-JUDGED by #2000. A self-cast `+10 Intelligence` buff vanished from
+// the turn card at end-turn. The row named one read that decides it: does the buff still EXIST chain-side after
+// the flip?
 //   · chain ACTIVE  ⇒ the card's projection drops applied stat rows on the flip — a client defect.
-//   · chain EXPIRED ⇒ the authored duration is 1 turn and the card behaved honestly — a corpus question.
+//   · chain EXPIRED ⇒ the authored duration is spent and the card behaved honestly — a corpus question.
+// The original read landed on EXPIRED for `turns = 1` and the answer was filed as content. #2000 (D42) overturned
+// the LAW instead: an authored 1 that dies before its owner ever plays under it is not a duration, and the
+// cadence — not the corpus — was wrong.
 //
-// This file is that read, driven through the production doors rather than argued: a real store, the real
-// receipt ingress, `engine_view(...).effects` (the exact array FightTimeline hands EffectBadges).
-//
-// The chain's own law is `cast::tick_turn_end` → `spell_board::decrement_fighter_statuses(fx, fid)`: at the
-// ENDING fighter's turn end its own rows age by one and a row reaching zero is DROPPED. A self-cast row is
-// applied during that same turn, so `turns = 1` is spent by the caster's own end-turn (the semantics #626
-// records as a maintainer ruling, not a bug) and `turns = 2` survives the flip with one turn left. The client
-// mirrors that law in `inputs.decrement_statuses`, and these cases pin BOTH sides of it:
-//   · turns = 2 — chain-active across the flip ⇒ the badge MUST survive, reading 1. If this ever goes red the
-//     fork lands on the client and #1872 is a projection defect.
-//   · turns = 1 — the chain dropped the row ⇒ the empty card is the honest reading, not a blank-out.
+// This file is still that read, driven through the production doors rather than argued: a real store, the real
+// receipt ingress, `engine_view(...).effects` (the exact array FightTimeline hands EffectBadges). What changed is
+// the law it pins. The chain's law is now `cast::tick_turn_expiry` → `spell_board::decrement_fighter_statuses`:
+// `remaining_turns` counts the bearer's turns STILL TO COME, aging fires at the BEARER's turn START, and a row is
+// dropped only by the aging that finds its counter already at 0. So a turn END ages NOTHING, and an authored N
+// covers the cast turn plus N further caster turns. The client mirrors that in `inputs.age_statuses`, and these
+// cases pin both halves:
+//   · the flip itself — the card MUST keep the row, unchanged, across the caster's own turn end. If this ever
+//     goes red the fork lands on the client and #1872 is a projection defect after all.
+//   · the caster's NEXT turn start — the counter ages by one there and NOWHERE else, and an authored 1 lands on
+//     0 while staying on the card: that turn is the one it was authored to cover.
 // Both doors that can mint the row are driven (the authoritative ActionEffect envelope AND the optimistic
 // prediction that precedes it), plus the single-page drafted commit where the cast and the turn end ride one
 // receipt, because a projection defect would only have to show up in one of them.
 //
-// Refs #1872 (fork read), #598/#597 (the badge-lifetime family this seals a second door of), #1172.
+// Refs #1872 (fork read), #2000 (D42 — the cadence this now pins), #598/#597 (the badge-lifetime family this
+// seals a second door of), #1172.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -147,8 +152,18 @@ const boot = (fight = fight_object()) => {
 const feed = (store, version, events, now) =>
   store.getState().input({ type: 'receipt', fight_id: FIGHT, version, receipt: { events } }, now)
 
+/** My turn ends, the mob plays, my next turn STARTS — the one boundary that ages my rows. Returns the next
+ *  free version so a caller can chain laps. */
+const lap = (store, version, now) => {
+  feed(store, version, [turn_ended], now)
+  feed(store, version + 1, [ev(['TurnStarted', { is_mob: true, idx: 0, deadline_ms: now + 100 }])], now + 10)
+  feed(store, version + 2, [ev(['TurnEnded', { is_mob: true, idx: 0 }])], now + 20)
+  feed(store, version + 3, [ev(['TurnStarted', { is_mob: false, idx: 0, deadline_ms: now + 200 }])], now + 30)
+  return version + 4
+}
+
 describe('#1872 a self-cast stat buff across the caster s own turn end', () => {
-  test('chain-ACTIVE (turns 2): the card keeps the row at 1 — the flip does not drop it', () => {
+  test('the flip alone ages NOTHING — the card keeps the row untouched (turns 2)', () => {
     const store = boot()
     feed(store, 2, cast_events(int_buff(2)).map(ev), 1_100)
     expect(int_row(store), 'the badge is minted by the receipt door').toMatchObject({
@@ -158,9 +173,24 @@ describe('#1872 a self-cast stat buff across the caster s own turn end', () => {
     })
 
     feed(store, 3, [turn_ended], 1_200)
-    // THE REPORTED SYMPTOM would read null here while the chain still holds the row.
-    expect(int_row(store), 'still on the card after MY turn end').toMatchObject({ value: 10, remaining_turns: 1 })
+    // THE REPORTED SYMPTOM would read null here while the chain still holds the row. Under D42 the counter does
+    // not even move: the turn END is no longer a clock for a fighter's own rows.
+    expect(int_row(store), 'still on the card after MY turn end, at its authored count').toMatchObject({
+      value: 10,
+      remaining_turns: 2,
+    })
     expect(committed_truth(store.getState()).fighters.p0.statuses).toHaveLength(1)
+  })
+
+  test('the caster s NEXT turn start is the one clock — one aging per lap', () => {
+    const store = boot()
+    feed(store, 2, cast_events(int_buff(2)).map(ev), 1_100)
+    const v = lap(store, 3, 1_200)
+    expect(int_row(store), 'aged exactly once, at MY turn start').toMatchObject({ value: 10, remaining_turns: 1 })
+    lap(store, v, 1_400)
+    expect(int_row(store), 'its last covered turn — a landed 0 is live, not expired').toMatchObject({
+      remaining_turns: 0,
+    })
   })
 
   test('chain-ACTIVE through the OPTIMISTIC door too — the prediction hands over, it does not hand back', () => {
@@ -200,23 +230,23 @@ describe('#1872 a self-cast stat buff across the caster s own turn end', () => {
     feed(store, 3, [turn_ended], 1_200)
     expect(int_row(store), 'the turn-end blanket never reaches committed truth').toMatchObject({
       value: 10,
-      remaining_turns: 1,
+      remaining_turns: 2,
     })
   })
 
   test('chain-ACTIVE on a ONE-PAGE drafted commit — cast and turn end in the same receipt', () => {
     const store = boot()
     feed(store, 2, [...cast_events(int_buff(2)).map(ev), turn_ended], 1_100)
-    expect(int_row(store)).toMatchObject({ value: 10, remaining_turns: 1 })
+    expect(int_row(store)).toMatchObject({ value: 10, remaining_turns: 2 })
   })
 
   test('a later object read RE-ADOPTS the row rather than re-aging it', () => {
     const store = boot()
     feed(store, 2, cast_events(int_buff(3)).map(ev), 1_100)
-    feed(store, 3, [turn_ended], 1_200)
+    lap(store, 3, 1_200)
     expect(int_row(store)).toMatchObject({ remaining_turns: 2 })
     // A poll AHEAD of the folded frontier is authoritative (#1584) — it states 2, and 2 is what the card keeps:
-    // the tail below the new base is not replayed on top of it, so the flip is never counted twice.
+    // the tail below the new base is not replayed on top of it, so the aging is never counted twice.
     store.getState().input(
       {
         type: 'snapshot',
@@ -245,14 +275,24 @@ describe('#1872 a self-cast stat buff across the caster s own turn end', () => {
     })
   })
 
-  test('chain-EXPIRED (turns 1): the empty card is the honest reading, not a blank-out', () => {
+  test('an authored 1 covers the cast turn AND the caster s next turn, then expires (D42 overturns #1872 s corpus reading)', () => {
     const store = boot()
     feed(store, 2, cast_events(int_buff(1)).map(ev), 1_100)
     expect(int_row(store), 'visible for the turn it was cast on').toMatchObject({ remaining_turns: 1 })
 
     feed(store, 3, [turn_ended], 1_200)
-    // `decrement_fighter_statuses` drops a row reaching zero at the ENDING fighter's turn end — chain-side and
-    // client-side alike. Nothing to render is the twin agreeing, so a card blanking here is a CONTENT reading.
+    expect(int_row(store), 'the flip does not spend it — that was the #1872 blank-out').toMatchObject({
+      remaining_turns: 1,
+    })
+
+    const v = lap(store, 4, 1_300)
+    expect(int_row(store), 'the turn it was authored to cover — counter landed on 0, row still live').toMatchObject({
+      remaining_turns: 0,
+    })
+
+    lap(store, v, 1_500)
+    // The aging that finds a spent row is the one that drops it — chain-side and client-side alike. NOW an empty
+    // card is the twin agreeing.
     expect(int_row(store)).toBeNull()
     expect(committed_truth(store.getState()).fighters.p0.statuses).toHaveLength(0)
   })

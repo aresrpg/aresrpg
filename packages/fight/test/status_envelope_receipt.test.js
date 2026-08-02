@@ -184,18 +184,21 @@ describe('#973 the receipt carries the status envelope — chips are fold truth,
     // kind that has no sign to carry.
     expect(row_of(cast.state, 'p0', K_GIVE_POINTS)).toMatchObject({ value: 1, stat: POINT_MP, chance: 100 })
 
-    // Round 1: the caster ends its turn (one tick), then BOTH mobs take theirs (no tick on the player's rows).
+    // Round 1: the caster ends its turn (no tick — a turn END ages nothing since #2000), both mobs take theirs
+    // (no tick on the player's rows either), and the caster's own turn START is the single aging of the round.
     const seen = []
     let cur = cast
-    for (let round = 0; round < 3; round += 1) {
+    for (let round = 0; round < 4; round += 1) {
       cur = drive_mobs(submit(cur, [{ type: 'end_turn', entity_id: 'p0' }]))
       seen.push([remaining(cur.state, 'p0', K_GIVE_POINTS), remaining(cur.state, 'p0', K_INVISIBILITY)])
     }
-    // Two mob turns per round, and the counter still RENDERS 2 then 1 before it is purged — the chain's
-    // lifetime (cast.move:1585 decrements the ENDING actor's rows only), never `3 → absent`.
+    // Two mob turns per round, and the counter still RENDERS 2, 1 and its last covered turn 0 before it is
+    // purged — the chain's lifetime (`cast::tick_turn_expiry` ages the STARTING actor's rows only, and the
+    // aging that finds a spent row is the one that drops it), never `3 → absent`.
     expect(seen).toEqual([
       [2, 2],
       [1, 1],
+      [0, 0],
       [null, null],
     ])
     expect(cur.state.fighters.p0.invisible).toBe(false)
