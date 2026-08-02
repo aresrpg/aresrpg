@@ -12,9 +12,10 @@
 module aresrpg::zones_tests;
 
 use aresrpg::{admin::AdminCap, character_link, config::GameConfig, test_world, version::{Self, Version}, world::{Self, World}, zone_comp, zones, zones_view};
+use aresrpg_foundation::zone_gen;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::unit_test::assert_eq;
-use sui::{clock, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}};
+use sui::{bcs, clock, hash, kiosk::Kiosk, random::{Self, Random}, test_scenario::{Self as ts, Scenario}};
 
 // ── mirrored error values ──
 const ELevelTooLow: u64 = 101; // zones
@@ -412,6 +413,39 @@ fun join_and_search_random_entries() {
   assert!(zones::zone_exists(&w, zx, zy)); // the standing zone got discovered by the real entry
   ts::return_shared(w);
   sc.end();
+}
+
+#[test]
+/// SEARCH HOT-PATH GOLDEN: 256 weighted candidates × 24 six-member groups exercises the exact format-3
+/// selection loop `search_zone` reaches through `zone_comp::y72`. The digest pins every spawn id, primary/member
+/// row, position, size and group seed for one fixed seed; the scoped gas-limit command is the cost regression.
+fun search_member_selection_large_table_is_byte_identical() {
+  let mut weights = vector<u64>[];
+  let mut member_weights = vector<u64>[];
+  let mut min_group = vector<u64>[];
+  let mut max_group = vector<u64>[];
+  let mut i = 0;
+  while (i < 256) {
+    let weight = i % 17 + 1;
+    weights.push_back(weight);
+    member_weights.push_back(if (i % 31 == 0) 0 else weight);
+    min_group.push_back(6);
+    max_group.push_back(6);
+    i = i + 1;
+  };
+  let (ids, rows, members, xs, zs, sizes, seeds) = zone_gen::derive_mob_groups_members(
+    16076161905812157559, 24, 24, &weights, &member_weights, &min_group, &max_group,
+    6, 249344, 249344, 512, 500000, 500000,
+  );
+  let mut bytes = bcs::to_bytes(&ids);
+  bytes.append(bcs::to_bytes(&rows));
+  bytes.append(bcs::to_bytes(&members));
+  bytes.append(bcs::to_bytes(&xs));
+  bytes.append(bcs::to_bytes(&zs));
+  bytes.append(bcs::to_bytes(&sizes));
+  bytes.append(bcs::to_bytes(&seeds));
+  let digest = hash::blake2b256(&bytes);
+  assert!(digest == x"f015f7136fdc7d3886f1f5e6b30db8af06705dc92e93d38e984f4e7ba4495484", 1);
 }
 
 #[test, expected_failure(abort_code = C_ENotEnabled, location = aresrpg::config)]

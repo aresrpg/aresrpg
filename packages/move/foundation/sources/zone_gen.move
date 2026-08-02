@@ -122,6 +122,37 @@ public fun p_pick_weighted(state: u64, weights: &vector<u64>): (u64, Option<u64>
   (s1, option::some(n - 1)) // unreachable (roll < total) — terminal value the compiler needs
 }
 
+/// Prefix a stable weighted table once so repeated draws can select with a binary search. Summing in row order
+/// preserves `p_pick_weighted`'s overflow behavior and its exact half-open buckets, including zero-weight plateaus.
+fun cumulative_weights(weights: &vector<u64>): vector<u64> {
+  let mut out = vector[];
+  let mut total = 0;
+  let mut i = 0;
+  while (i < weights.length()) {
+    total = total + weights[i];
+    out.push_back(total);
+    i = i + 1;
+  };
+  out
+}
+
+/// The repeated-draw twin of `p_pick_weighted`: same one RNG draw and same first bucket whose cumulative end is
+/// greater than the roll, but O(log rows) after the caller's one O(rows) prefix instead of O(rows) per draw.
+fun p_pick_cumulative(state: u64, cumulative: &vector<u64>): (u64, Option<u64>) {
+  let n = cumulative.length();
+  if (n == 0) return (state, option::none());
+  let total = cumulative[n - 1];
+  if (total == 0) return (state, option::none());
+  let (s1, roll) = prng::rng_range(state, 0, total - 1);
+  let mut lo = 0;
+  let mut hi = n;
+  while (lo < hi) {
+    let mid = lo + (hi - lo) / 2;
+    if (roll < cumulative[mid]) hi = mid else lo = mid + 1;
+  };
+  (s1, option::some(lo))
+}
+
 /// Two draws (x then z) inside the zone box `[ox,ox+zsize)×[oz,oz+zsize)`, clamped in-bounds exactly like the
 /// retired `&Random` `roll_pos` (a straddling last zone behaves identically).
 fun p_roll_pos(state: u64, ox: u32, oz: u32, zsize: u32, bx: u32, bz: u32): (u64, u32, u32) {
@@ -366,13 +397,17 @@ public fun derive_mob_groups_members(
   // A member table that is not parallel to the pick table cannot be indexed safely — treat it as "no mixing"
   // rather than aborting a derivation every reader (map, claim, RPC) runs.
   let parallel = member_weights.length() == weights.length();
+  // SEARCH HOT PATH: one format-3 group makes one primary pick plus up to 15 member picks. Prefix both stable
+  // tables once; every pick below then preserves the exact bucket/draw while avoiding repeated linear scans.
+  let pick_cumulative = cumulative_weights(weights);
+  let member_cumulative = if (parallel) cumulative_weights(member_weights) else vector[];
   let mut s = prng::rng_seed(prng::mix(seed, MOB_SALT));
   let (s0, g) = p_roll_u64(s, min_g, max_g);
   s = s0;
   let (cols, mut pool) = grid_cell_pool(ox, oz, zsize, bx, bz);
   let mut i = 0;
   while (i < g && i < pool.length()) {
-    let (s1, opt) = p_pick_weighted(s, weights);
+    let (s1, opt) = p_pick_cumulative(s, &pick_cumulative);
     s = s1;
     if (opt.is_none()) break;
     let idx = opt.destroy_some();
@@ -390,7 +425,7 @@ public fun derive_mob_groups_members(
     let mut m = 1;
     while (m < roster) {
       if (mixable) {
-        let (s7, mopt) = p_pick_weighted(s, member_weights);
+        let (s7, mopt) = p_pick_cumulative(s, &member_cumulative);
         s = s7;
         // `mixable` proves the table has a positive total, so the pick always resolves; the fallback keeps the
         // function total without a second stream shape.
