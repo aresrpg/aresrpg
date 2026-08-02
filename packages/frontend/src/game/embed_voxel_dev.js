@@ -131,14 +131,26 @@ export function install_dev_rig({
     if (!world_id) return game_log('dev', 'start_world_fight: character has no world binding')
     const zdata = await get_zones(world_id).catch(() => null)
     const zones = (zdata?.zones ?? []).filter((z) => z.discovered !== false)
-    /** @type {{spawn_id:number|string, template_id:string, zx:number, zy:number}[]} */
+    /** @type {{spawn_id:number|string, template_id:string, zx:number, zy:number, member_template_ids:string[]}[]} */
     const mobs = []
     for (const z of zones) {
       const rows = (await zone_rows_v1(world_id, z.zx, z.zy).catch(() => null)) ?? []
       // zx/zy ride along: the production engage passes them (world_spawns.js), and a zone-scoped refusal can
       // only skip a zone's remaining groups if each candidate still knows which zone it came from.
+      // So does the pack's ROSTER (#1890): a format-3 row carries its seated members, and `world_group_door`
+      // cross-checks the request roster against the freshly derived one — a candidate that drops `.members`
+      // asks for a pack the stream says does not exist and refuses `stale_stream` PRE-SIGN, every time. Same
+      // composition production's request row states (spawns_zones.js): a format-1/2 row has no roster, and
+      // that absence IS the mono-spec signal.
       for (const r of rows)
-        if (r.kind === 'mob') mobs.push({ spawn_id: r.spawn_id, template_id: r.template_id, zx: z.zx, zy: z.zy })
+        if (r.kind === 'mob')
+          mobs.push({
+            spawn_id: r.spawn_id,
+            template_id: r.template_id,
+            zx: z.zx,
+            zy: z.zy,
+            member_template_ids: Array.isArray(r.members) ? r.members : [],
+          })
     }
     game_log(
       'dev',
@@ -147,13 +159,14 @@ export function install_dev_rig({
     const scan = await scan_for_claimable_group({
       candidates: mobs,
       log: (line) => game_log('dev', `start_world_fight: ${line}`),
-      attempt: async ({ spawn_id, template_id, zx, zy }) => {
+      attempt: async ({ spawn_id, template_id, zx, zy, member_template_ids }) => {
         const { fight_id } = await create_world_fight({
           world_id,
           spawn_id,
           zx,
           zy,
           mob_template_id: template_id,
+          member_template_ids,
           character_id,
         })
         return fight_id
