@@ -20,3 +20,18 @@ import { short_fighter_id } from './character_name_resolve.js'
 export function friend_display_name(row, peer) {
   return peer?.name || row?.name || short_fighter_id(row?.address)
 }
+
+/**
+ * The friend row's presence STATE — the advisory-only law (realtime constitution D2) made mechanical here.
+ * "Is this friend online?" is an authority question and this surface holds nothing that answers it, so there
+ * is no boolean to derive: only two separately-labelled observations, and this reports which one we hold.
+ *   'seen'   — a peer observation for this wallet exists in my session right now (advisory, this instant)
+ *   'recent' — nobody is observing them, but the read layer's last-known position for them is fresh
+ *   'unseen' — neither fact is present. UNKNOWN — never "offline". Pure — no IO.
+ * @param {{ observed?: boolean, position_fresh?: boolean }} facts
+ * @returns {'seen'|'recent'|'unseen'}
+ */
+export function friend_presence_state({ observed, position_fresh } = {}) {
+  if (observed) return 'seen'
+  return position_fresh ? 'recent' : 'unseen'
+}

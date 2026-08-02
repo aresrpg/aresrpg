@@ -7,10 +7,15 @@
 //               clicking a player in the world or a name in chat → PlayerActionMenu)
 //
 // DATA (all honest, no fakes): the friend list = the reducer-owned friends atom, reconciled from read_roster
-// (chain-direct FriendList + /v1 enrichment) on a short poll + focus heal. ONLINE status = the lobby room:
-// a friend is "online" iff their wallet is in the live presence set, NOT the RPC's last-position freshness.
-// Names = friend_display_name below: the stream name when present, else
-// the indexer character name, else character_name_resolve.js's ONE HOME fallback — never a raw address slice.
+// (chain-direct FriendList + /v1 enrichment) on a short poll + focus heal.
+//
+// THIS PANEL STATES NO ONLINE VERDICT (realtime constitution D2 — presence is ADVISORY). Whether a player is
+// online is an authority question, and nothing here can answer it: a peer row is one client's observation of
+// one room at one instant, and the read layer only knows when it last recorded a position. So the two facts
+// stay separate and separately labelled — `observed` (peer observation) and `position_fresh` (read layer) —
+// and friend_presence_state collapses them into seen/recent/UNSEEN, where unseen means unknown and says so.
+// Names = friend_display_name below: the indexer character name, else character_name_resolve.js's ONE HOME
+// fallback — never a raw address slice.
 //
 // The per-row "invite to party" that used to live here moved to PlayerActionMenu (clicking the player) so the
 // panel stays friends-first without dropping the feature. Removing a friend is the hover-× on each row.
@@ -21,7 +26,7 @@ import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 
 import { presence_character_by_address, use_presence } from '../../../../world-shell/presence_adapter.js'
 import { use_auth } from '../../../../auth'
-import { friend_display_name } from '../../../../world-shell/friends_display.js'
+import { friend_display_name, friend_presence_state } from '../../../../world-shell/friends_display.js'
 import { refresh_friends, use_friends } from '../../../../world-shell/friends_adapter.js'
 import { add_friend_flow, remove_friend_flow } from '../../../../world-shell/friends_actions'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
@@ -59,15 +64,16 @@ export function OnlinePlayers() {
     }
   }, [address])
 
-  // ONLINE = present in my lobby room — membership IS the announcement (docs/REALTIME.md lane 2), so there is
-  // no registry to disagree with it. name = friend_display_name's ONE derivation, always a truthy display
-  // string — never empty, never a raw address needing a per-row fallback below.
+  // `observed` is exactly what its name says: a peer row for this wallet exists in my room right now. It is
+  // added BESIDE the read layer's `position_fresh`, never over it — two observations, two labels, no verdict.
+  // name = friend_display_name's ONE derivation, always a truthy display string — never empty, never a raw
+  // address needing a per-row fallback below.
   const decorated = rows.map((r) => {
     const peer = presence_character_by_address(r.address)
-    return { ...r, online: !!peer, name: friend_display_name(r, peer) }
+    return { ...r, observed: !!peer, name: friend_display_name(r, peer) }
   })
-  const online = decorated.filter((r) => r.online)
-  const offline = decorated.filter((r) => !r.online)
+  const seen = decorated.filter((r) => r.observed)
+  const unseen = decorated.filter((r) => !r.observed)
 
   const on_add = async () => {
     const v = input.trim()
@@ -98,12 +104,12 @@ export function OnlinePlayers() {
       </button>
 
       <div className="gw-players__list">
-        {online.map((r) => (
+        {seen.map((r) => (
           <FriendRow key={r.address} row={r} t={t} on_remove={on_remove} />
         ))}
-        {online.length === 0 && <div className="gw-players__empty">{t('presence.no_online_friends')}</div>}
-        {expanded && offline.length > 0 && <div className="gw-players__group">{t('friends.offline')}</div>}
-        {expanded && offline.map((r) => <FriendRow key={r.address} row={r} t={t} on_remove={on_remove} />)}
+        {seen.length === 0 && <div className="gw-players__empty">{t('presence.none_seen')}</div>}
+        {expanded && unseen.length > 0 && <div className="gw-players__group">{t('presence.not_seen')}</div>}
+        {expanded && unseen.map((r) => <FriendRow key={r.address} row={r} t={t} on_remove={on_remove} />)}
       </div>
 
       {expanded && (
@@ -159,16 +165,21 @@ function FriendRow({ row, t, on_remove }) {
       y: r.bottom + 4,
     })
   }
+  // ONE derivation for what this row may claim (friends_display.js) — the dot and its tooltip say the same
+  // thing, and neither of them says "online".
+  const state = friend_presence_state(row)
+  const hint = t(`presence.hint_${state}`)
   return (
-    <div className={`gw-prow gw-prow--friend${row.online ? '' : ' off'}`}>
+    <div className={`gw-prow gw-prow--friend${state === 'seen' ? '' : ' off'}`}>
       <button
         type="button"
         className="gw-prow__open"
         aria-label={row.name}
+        title={hint}
         onClick={open_menu}
         onContextMenu={open_menu}
       >
-        <span className={`gw-prow__dot${row.online ? '' : ' off'}`} />
+        <span className={`gw-prow__dot${state === 'seen' ? '' : ' off'}`} />
         <span className="gw-prow__name">{row.name}</span>
         {row.level != null && <span className="gw-prow__lvl">Lv {row.level}</span>}
       </button>

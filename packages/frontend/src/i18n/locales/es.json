@@ -31,8 +31,12 @@
     "friends": "Amigos",
     "expand": "Mostrar todos los amigos",
     "collapse": "Contraer",
-    "no_online_friends": "No hay amigos en línea",
-    "add_hint": "Pega una dirección 0x, o haz clic en un jugador en el mundo o el chat"
+    "add_hint": "Pega una dirección 0x, o haz clic en un jugador en el mundo o el chat",
+    "none_seen": "Ningún amigo visto ahora mismo",
+    "not_seen": "No vistos",
+    "hint_seen": "Visto en tu sesión ahora mismo",
+    "hint_recent": "No visto — su última posición conocida es reciente",
+    "hint_unseen": "No visto — sin rastro reciente en ningún sentido"
   },
   "world_switcher": {
     "title": "Mundos",
@@ -2617,7 +2621,6 @@
     "title": "Amigos",
     "online": "En línea",
     "total": "Total",
-    "offline": "Desconectado",
     "unknown_class": "Desconocido",
     "add_placeholder": "Nombre de jugador o dirección 0x",
     "add_cta": "Añadir amigo",

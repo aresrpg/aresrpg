@@ -31,8 +31,12 @@
     "friends": "Freunde",
     "expand": "Alle Freunde anzeigen",
     "collapse": "Einklappen",
-    "no_online_friends": "Keine Freunde online",
-    "add_hint": "0x-Adresse einfügen oder einen Spieler in der Welt oder im Chat anklicken"
+    "add_hint": "0x-Adresse einfügen oder einen Spieler in der Welt oder im Chat anklicken",
+    "none_seen": "Derzeit keine Freunde gesichtet",
+    "not_seen": "Nicht gesichtet",
+    "hint_seen": "Gerade in deiner Sitzung gesichtet",
+    "hint_recent": "Nicht gesichtet — letzte bekannte Position ist aktuell",
+    "hint_unseen": "Nicht gesichtet — keine aktuelle Spur in die eine oder andere Richtung"
   },
   "world_switcher": {
     "title": "Welten",
@@ -2617,7 +2621,6 @@
     "title": "Freunde",
     "online": "Online",
     "total": "Gesamt",
-    "offline": "Offline",
     "unknown_class": "Unbekannt",
     "add_placeholder": "Spielername oder 0x-Adresse",
     "add_cta": "Freund hinzufügen",

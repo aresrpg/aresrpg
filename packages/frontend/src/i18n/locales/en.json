@@ -31,8 +31,12 @@
     "friends": "Friends",
     "expand": "Show all friends",
     "collapse": "Collapse",
-    "no_online_friends": "No friends online",
-    "add_hint": "Paste a 0x address, or click a player in the world or chat"
+    "add_hint": "Paste a 0x address, or click a player in the world or chat",
+    "none_seen": "No friends seen right now",
+    "not_seen": "Not seen",
+    "hint_seen": "Seen in your session right now",
+    "hint_recent": "Not seen — last known position is recent",
+    "hint_unseen": "Not seen — no recent trace either way"
   },
   "world_switcher": {
     "title": "Worlds",
@@ -2617,7 +2621,6 @@
     "title": "Friends",
     "online": "Online",
     "total": "Total",
-    "offline": "Offline",
     "unknown_class": "Unknown",
     "add_placeholder": "Player name or 0x address",
     "add_cta": "Add Friend",
