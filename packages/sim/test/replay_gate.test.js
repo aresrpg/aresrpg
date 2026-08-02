@@ -439,6 +439,61 @@ const vitality_templates_raw = {
   },
 }
 
+// A RANGE-BANDED damage-over-time (#1826). `min !== max` is the whole point: the chain re-rolls the band at
+// EVERY tick (`cast::apply_board_batch_from` → `roll_in_range(value, value_max, slot_damage_roll(turn_seed, e))`),
+// so a DoT whose band is a single number cannot measure the divergence. Self-targeted so the victim is a PLAYER
+// SEAT: the chain's tick seed is `fight::turn_seed(fight, fid)` and only a player fid (== its seat) has a
+// client-previewable clock — a mob fid (1000 + idx) is crank-driven by construction.
+const venom_templates_raw = {
+  yajin: {
+    venom: {
+      name: 'Venom',
+      description: 'a banded poison that bites every turn',
+      levels: [
+        {
+          cost: 2,
+          range: [0, 6],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: false,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'poison',
+              min: 10,
+              max: 40,
+              element: 'earth',
+              target: 'self',
+              chance: 100,
+              turns: 6,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
+/** The public turn clock a capsule command carries, u64s as decimal strings exactly like a recorded capsule.
+ *  `seat` is deliberately WRONG (9, a seat nobody occupies): the DoT tick must re-seat the clock onto the
+ *  fighter whose turn is STARTING (the chain's `turn_seed(fight, victim_fid)`), never trust the seat the
+ *  outgoing actor's context carried. If it ever trusted it, every pinned tick below moves. */
+const dot_clock = (turn_ordinal, turn_entropy) => ({
+  world_seed: '7',
+  spawn_id: '1',
+  turn_entropy,
+  turn_ordinal: String(turn_ordinal),
+  seat: '9',
+  slot: 0,
+})
+
 const make_entity = (id, cell, is_player, overrides = {}) => ({
   id,
   name: id,
@@ -1058,6 +1113,98 @@ const scenarios = [
         cite: 'cast.move apply_effect — effect_proc gates every admitted target; chance 0 returns false, chance 100 returns true without drawing',
         path: 'team1.0.health',
         equals: 80,
+      },
+    ],
+  },
+  {
+    // #1826 twin parity — A DoT TICK IS A ROLL, NOT A MEMORY. The chain stores the authored Effect verbatim
+    // (`spell_board::apply_dot`) and rolls the band at EVERY tick off the victim's own turn seed
+    // (`cast::apply_board_batch_from`: `roll_in_range(effect.value(), effect.value_max(),
+    // slot_damage_roll(fight::turn_seed(fight, fid), e))`). The sim used to collapse the band to ONE draw off
+    // `turn_rng` at apply time, so tick 1 could agree by luck and every later tick was a guaranteed desync on a
+    // ranged DoT. p0 self-casts a [10,40] venom, then three turns pass: three consecutive turn seeds, three
+    // different bites. The band 10..40 over three ticks sums to 61 — NOT divisible by 3, so no frozen draw of
+    // any value can land on the pinned terminal HP.
+    meta: {
+      id: 'dot_rerolls_its_band_every_tick',
+      class: 'twin',
+      authored: '2026-08-02',
+      source: 'authored',
+      notes:
+        'Issue #1826: a [10,40] DoT bites 10 / 28 / 23 across three consecutive turn seeds — the chain rolls the band per tick; a single apply-time draw cannot produce that arc.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: venom_templates_raw,
+    initial: {
+      fight_id: 'capsule_dot_per_tick_roll',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          health: 200,
+          health_max: 200,
+          spell_levels: { venom: 1 },
+        }),
+      ],
+      team1: [make_entity('m0', { x: 7, y: 5 }, false, { spell_levels: {} })],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'venom',
+        target: { x: 5, y: 5 },
+      },
+      // Each mob turn-end advances into p0's next turn, whose START ticks the DoT. The clock rides THAT command
+      // — the entropy carrier is the fixture's own `mix(spawn_id, turn_ordinal)`, the shape production publishes
+      // on TurnStarted. `end_turn` for the mob rather than `ai_turn`: no AI plan, no walk, nothing but the tick.
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'end_turn',
+        entity_id: 'm0',
+        turn_context: dot_clock(1, '3153583793'),
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'end_turn',
+        entity_id: 'm0',
+        turn_context: dot_clock(2, '3093350482'),
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'end_turn',
+        entity_id: 'm0',
+        turn_context: dot_clock(3, '3966987260'),
+      },
+    ],
+    // Hand-derived from the Move sources (prng.move `mix`/`scramble` · spell_formula.move `slot_damage_roll`
+    // (DOMAIN_DMG 0xD1B54A35, CRIT_SCALE 10000) + `roll_in_range` · fight.move `turn_seed` =
+    // mix(mix(mix(mix(world_seed, spawn_id), entropy), ordinal), seat)), with the transcription proved against
+    // spell_formula.move's own `t_slot_damage_roll_parity_vectors` (all ten vectors reproduced) before use:
+    //   ordinal 1 → turn_seed  925360589 → roll  111 → roll_in_range(10,40, 111) = 10
+    //   ordinal 2 → turn_seed 2477364155 → roll 6104 → roll_in_range(10,40,6104) = 28
+    //   ordinal 3 → turn_seed 2229982231 → roll 4248 → roll_in_range(10,40,4248) = 23
+    // Effect ordinal `e` is 0: no glyph payload precedes the row in the tick batch.
+    pinned_facts: [
+      {
+        cite: 'cast.move apply_board_batch_from — roll_in_range(value, value_max, slot_damage_roll(turn_seed(fight, fid), e)) EVERY tick: 200 − (10 + 28 + 23)',
+        path: 'team0.0.health',
+        equals: 139,
+      },
+      {
+        cite: 'spell_board.move apply_dot — the authored Effect is stored VERBATIM; its per-tick base is never collapsed to a draw at apply time',
+        path: 'team0.0.effects.0.value',
+        equals: 10,
+      },
+      {
+        cite: 'spell_effect.move value_max — the DoT row keeps its authored band, which is what every tick rolls against',
+        path: 'team0.0.effects.0.value_max',
+        equals: 40,
+      },
+      {
+        cite: "cast.move tick_turn_end → spell_board::decrement_fighter_statuses ages a row at ITS OWN fighter's turn end: six authored turns, p0 ended three, three left",
+        path: 'team0.0.effects.0.turns_remaining',
+        equals: 3,
       },
     ],
   },

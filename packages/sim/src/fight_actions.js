@@ -4,7 +4,13 @@
 
 import { rng_int, rng_next, rng_seed } from './prng.js'
 import { turn_rng_of, with_turn_rng } from './combat_clock.js'
-import { tackle_seed, turn_seed } from './turn_seed.js'
+import {
+  crank_damage_roll,
+  roll_in_range,
+  slot_damage_roll,
+  tackle_seed,
+  turn_seed,
+} from './turn_seed.js'
 import {
   find_entity,
   next_id,
@@ -441,80 +447,114 @@ export const is_stunned = (state, entity_id) => {
 }
 
 /**
- * Apply pre-rolled turn-start effects. Status counters age separately at the affected fighter's turn end, matching
+ * #1826 — ONE TICK'S DAMAGE. A row carrying an authored band rolls it HERE, at tick time, exactly like
+ * `cast::apply_board_batch_from`: `roll_in_range(value, value_max, slot_damage_roll(turn_seed(fight, fid), e))`
+ * with `e` the row's ordinal in the tick batch. A fixed row (`value_max` absent or ≤ `value`) is the degenerate
+ * case and stays byte-identical to the pre-band behaviour. Without a turn clock the fraction comes from the
+ * crank's NON-advancing `scramble` — the same clock-less board-tick door trap and glyph ticks already use
+ * (fight_traps.js `hazard_damage`), so a mob-seat tick never invents a previewable seed it cannot have.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {{ value: number, value_max?: number }} row
+ * @param {number|null} tick_seed  the ticking fighter's turn seed, or null for the crank door
+ * @param {number} ordinal  the row's index in this fighter's tick batch (the chain's `e`)
+ * @returns {number}
+ */
+const tick_damage = (state, row, tick_seed, ordinal) =>
+  row.value_max === undefined || row.value_max <= row.value
+    ? row.value
+    : roll_in_range(
+        row.value,
+        row.value_max,
+        tick_seed === null
+          ? crank_damage_roll(turn_rng_of(state))
+          : slot_damage_roll(tick_seed, ordinal),
+      )
+
+/**
+ * Apply turn-start effects. Status counters age separately at the affected fighter's turn end, matching
  * `cast::tick_turn_start` / `cast::tick_turn_end` rather than disappearing as the next turn begins.
+ * Banded DAMAGE rows (DoT) roll their band on EVERY tick — see `tick_damage`.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
+ * @param {number|null} [tick_seed]  the ticking fighter's turn seed (reduce.js re-seats the public clock onto
+ *   the fighter whose turn is starting, mirroring `fight::turn_seed(fight, fid)`); null ⇒ the crank door
  * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[] }}
  */
-export const process_turn_effects = (state, entity_id) => {
+export const process_turn_effects = (state, entity_id, tick_seed = null) => {
   const entity = find_entity(state, entity_id)
   if (!entity) return { state, effects: [] }
-  return entity.effects
-    .filter(effect => effect.timing === 'TURN_START')
-    .reduce(
-      (acc, effect) => {
-        const here = find_entity(acc.state, entity_id)
-        if (!here || here.health <= 0) return acc
-        if (effect.type === 'DAMAGE') {
-          const after = apply_incoming_damage(
+  const rows = entity.effects.filter(effect => effect.timing === 'TURN_START')
+  // #1826 — the chain's `e` indexes the TICK BATCH, and `spell_board::tick_start` puts only the fighter's
+  // start-phase K_APPLY_DOT rows in it: a STUN / REFLECT / shield row riding the same fighter is not in that
+  // vector and must not shift a DoT's slot. So the ordinal counts DoT rows alone, in row order.
+  const dot_ordinal = new Map(
+    rows.filter(row => row.dot).map((row, index) => [row.id, index]),
+  )
+  return rows.reduce(
+    (acc, effect) => {
+      const here = find_entity(acc.state, entity_id)
+      if (!here || here.health <= 0) return acc
+      if (effect.type === 'DAMAGE') {
+        const after = apply_incoming_damage(
+          acc.state,
+          entity_id,
+          tick_damage(
             acc.state,
-            entity_id,
-            effect.value,
-            effect.source_id,
-          )
-          const recipient = find_entity(after.state, after.recipient_id)
-          return {
-            state: after.state,
-            effects: [
-              ...acc.effects,
-              ...(after.heal_dealt > 0
-                ? [
-                    {
-                      target_id: entity_id,
-                      heal: after.heal_dealt,
-                      new_health:
-                        find_entity(after.state, entity_id)?.health ??
-                        here.health,
-                    },
-                  ]
-                : [
-                    {
-                      target_id: after.recipient_id,
-                      damage: after.damage_dealt,
-                      new_health: recipient?.health ?? 0,
-                      killed: after.killed,
-                    },
-                  ]),
-              ...after.effects,
-            ],
-          }
+            effect,
+            tick_seed,
+            dot_ordinal.get(effect.id) ?? 0,
+          ),
+          effect.source_id,
+        )
+        const recipient = find_entity(after.state, after.recipient_id)
+        return {
+          state: after.state,
+          effects: [
+            ...acc.effects,
+            ...(after.heal_dealt > 0
+              ? [
+                  {
+                    target_id: entity_id,
+                    heal: after.heal_dealt,
+                    new_health:
+                      find_entity(after.state, entity_id)?.health ??
+                      here.health,
+                  },
+                ]
+              : [
+                  {
+                    target_id: after.recipient_id,
+                    damage: after.damage_dealt,
+                    new_health: recipient?.health ?? 0,
+                    killed: after.killed,
+                  },
+                ]),
+            ...after.effects,
+          ],
         }
-        if (effect.type === 'HEAL') {
-          const healed = apply_heal(acc.state, entity_id, effect.value)
-          return {
-            state: healed,
-            effects: [
-              ...acc.effects,
-              {
-                target_id: entity_id,
-                heal: effect.value,
-                new_health: Math.min(
-                  here.health_max,
-                  here.health + effect.value,
-                ),
-              },
-            ],
-          }
+      }
+      if (effect.type === 'HEAL') {
+        const healed = apply_heal(acc.state, entity_id, effect.value)
+        return {
+          state: healed,
+          effects: [
+            ...acc.effects,
+            {
+              target_id: entity_id,
+              heal: effect.value,
+              new_health: Math.min(here.health_max, here.health + effect.value),
+            },
+          ],
         }
-        return acc
-      },
-      {
-        state,
-        effects:
-          /** @type {import('./fight_spells.js').SpellCastEffect[]} */ ([]),
-      },
-    )
+      }
+      return acc
+    },
+    {
+      state,
+      effects:
+        /** @type {import('./fight_spells.js').SpellCastEffect[]} */ ([]),
+    },
+  )
 }
 
 /**

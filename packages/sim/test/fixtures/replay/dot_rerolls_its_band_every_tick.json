@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "id": "dot_rerolls_its_band_every_tick",
+    "class": "twin",
+    "authored": "2026-08-02",
+    "source": "authored",
+    "notes": "Issue #1826: a [10,40] DoT bites 10 / 28 / 23 across three consecutive turn seeds — the chain rolls the band per tick; a single apply-time draw cannot produce that arc."
+  },
+  "arena": {
+    "width": 21,
+    "height": 21,
+    "cells": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 6
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 7,
+        "y": 5
+      }
+    ]
+  },
+  "templates_raw": {
+    "yajin": {
+      "venom": {
+        "name": "Venom",
+        "description": "a banded poison that bites every turn",
+        "levels": [
+          {
+            "cost": 2,
+            "range": [0, 6],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "poison",
+                "min": 10,
+                "max": 40,
+                "element": "earth",
+                "target": "self",
+                "chance": 100,
+                "turns": 6
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      }
+    }
+  },
+  "initial": {
+    "fight_id": "capsule_dot_per_tick_roll",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 5,
+          "y": 5
+        },
+        "health": 200,
+        "health_max": 200,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {
+          "venom": 1
+        },
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 7,
+          "y": 5
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "venom",
+      "target": {
+        "x": 5,
+        "y": 5
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0",
+      "turn_context": {
+        "world_seed": "7",
+        "spawn_id": "1",
+        "turn_entropy": "3153583793",
+        "turn_ordinal": "1",
+        "seat": "9",
+        "slot": 0
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0",
+      "turn_context": {
+        "world_seed": "7",
+        "spawn_id": "1",
+        "turn_entropy": "3093350482",
+        "turn_ordinal": "2",
+        "seat": "9",
+        "slot": 0
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0",
+      "turn_context": {
+        "world_seed": "7",
+        "spawn_id": "1",
+        "turn_entropy": "3966987260",
+        "turn_ordinal": "3",
+        "seat": "9",
+        "slot": 0
+      }
+    }
+  ],
+  "pinned_facts": [
+    {
+      "cite": "cast.move apply_board_batch_from — roll_in_range(value, value_max, slot_damage_roll(turn_seed(fight, fid), e)) EVERY tick: 200 − (10 + 28 + 23)",
+      "path": "team0.0.health",
+      "equals": 139
+    },
+    {
+      "cite": "spell_board.move apply_dot — the authored Effect is stored VERBATIM; its per-tick base is never collapsed to a draw at apply time",
+      "path": "team0.0.effects.0.value",
+      "equals": 10
+    },
+    {
+      "cite": "spell_effect.move value_max — the DoT row keeps its authored band, which is what every tick rolls against",
+      "path": "team0.0.effects.0.value_max",
+      "equals": 40
+    },
+    {
+      "cite": "cast.move tick_turn_end → spell_board::decrement_fighter_statuses — six authored turns, four turn-ends spent, two left",
+      "path": "team0.0.effects.0.turns_remaining",
+      "equals": 2
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "turn_order": ["p0", "m0"],
+        "seed": 1
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "spell_id": "venom",
+        "target": {
+          "x": 5,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "p0",
+            "status": "POISON"
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 8
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_effects",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 10,
+            "new_health": 190,
+            "killed": false
+          }
+        ]
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_effects",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 28,
+            "new_health": 162,
+            "killed": false
+          }
+        ]
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_effects",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 23,
+            "new_health": 139,
+            "killed": false
+          }
+        ]
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_dot_per_tick_roll",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      }
+    ],
+    "terminal_digest": "3ff4cce3",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 4,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 139,
+          "cell": {
+            "x": 5,
+            "y": 5
+          }
+        },
+        {
+          "id": "m0",
+          "health": 100,
+          "cell": {
+            "x": 7,
+            "y": 5
+          }
+        }
+      ]
+    }
+  }
+}

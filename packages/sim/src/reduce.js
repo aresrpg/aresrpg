@@ -29,6 +29,7 @@ import {
   expire_turn_effects,
   is_stunned,
 } from './fight_actions.js'
+import { turn_seed } from './turn_seed.js'
 import { process_spell_cast } from './fight_spells.js'
 import { check_glyphs, check_traps, decay_glyphs } from './fight_traps.js'
 import { ai_choose_turn } from './fight_ai.js'
@@ -89,7 +90,8 @@ const total_health = state =>
  *   turn_context?: ReduceContext['turn_context'] }} CmdMove
  * @typedef {{ type: 'cast', entity_id: string, spell_id: string, target: import('./cell.js').Cell,
  *   turn_context?: ReduceContext['turn_context'] }} CmdCast
- * @typedef {{ type: 'end_turn', entity_id: string }} CmdEndTurn
+ * @typedef {{ type: 'end_turn', entity_id: string,
+ *   turn_context?: ReduceContext['turn_context'] }} CmdEndTurn
  * @typedef {{ type: 'use_ap_reserve', entity_id: string }} CmdUseApReserve
  * @typedef {{ type: 'abandon', entity_id: string }} CmdAbandon
  * @typedef {{ type: 'ai_turn', entity_id: string }} CmdAiTurn
@@ -195,13 +197,14 @@ const acting_entity = (state, entity_id) => {
  * already ended by the caller's `with_victory`, so this only fires when the actor's side still has survivors.
  * @param {ReduceResult} result  the already-victory-checked result of the command
  * @param {string} actor_id
+ * @param {ReduceContext['turn_context']|null} [clock]  the public turn clock the started turn's ticks roll off
  * @returns {ReduceResult}
  */
-const advance_if_dead = (result, actor_id) => {
+const advance_if_dead = (result, actor_id, clock = null) => {
   if (result.state.winner !== -1) return result
   const actor = find_entity(result.state, actor_id)
   if (!actor || actor.health > 0) return result
-  const advanced = advance_to_actor(result.state)
+  const advanced = advance_to_actor(result.state, clock)
   const next = get_current_turn_entity(advanced.state)
   const events = [
     ...result.events,
@@ -438,7 +441,11 @@ const handle_move = (state, cmd, ctx) => {
     ...walked.events,
   ])
   // If the mover died on a trap but the fight continues, its turn ends now (c156: no dead-actor turn).
-  return advance_if_dead(won, cmd.entity_id)
+  return advance_if_dead(
+    won,
+    cmd.entity_id,
+    cmd.turn_context ?? ctx.turn_context ?? null,
+  )
 }
 
 /**
@@ -557,6 +564,7 @@ const handle_cast = (state, cmd, ctx) => {
   return advance_if_dead(
     with_victory(state.winner, res.state, events),
     cmd.entity_id,
+    cmd.turn_context ?? ctx.turn_context ?? null,
   )
 }
 
@@ -565,13 +573,19 @@ const handle_cast = (state, cmd, ctx) => {
  * Donor loop.ts:346 + actions.ts:329.
  * @param {import('./fight_state.js').FightState} state
  * @param {CmdEndTurn} cmd
+ * @param {ReduceContext} [ctx]
  * @returns {ReduceResult}
  */
-const handle_end_turn = (state, cmd) => {
+const handle_end_turn = (state, cmd, ctx) => {
   const current = get_current_turn_entity(state)
   if (!current || current.id !== cmd.entity_id) return { state, events: [] }
 
-  const advanced = advance_to_actor(state)
+  // Same clock precedence as handle_move/handle_cast: a recorded capsule carries the exact public clock the
+  // live fold ran with, so a replayed turn ticks its DoT rows off the identical seed (#1826).
+  const advanced = advance_to_actor(
+    state,
+    cmd.turn_context ?? ctx?.turn_context ?? null,
+  )
   const next = get_current_turn_entity(advanced.state)
 
   /** @type {import('./reduce.js').FightEvent[]} */
@@ -603,16 +617,26 @@ const handle_end_turn = (state, cmd) => {
 /**
  * Run the turn-start hazards for the entity whose turn just began: glyphs on its cell, then its TURN_START
  * DoT/HoT effects. Timed rows remain live through the turn and expire in `run_turn_end`, like Move. Returns the
- * number events (`fight_turn_effects`) so the client renders the ticks. Pure (rng-free: DoT values are
- * pre-rolled; glyph damage threads rng inside check_glyphs).
+ * number events (`fight_turn_effects`) so the client renders the ticks. Pure (entropy is explicit: the tick
+ * clock below, or the crank thread inside check_glyphs).
+ *
+ * #1826 — THE TICK CLOCK. The chain rolls a board tick off `fight::turn_seed(fight, fid)` where `fid` is the
+ * VICTIM's own fighter id, and a DoT ticks at the start of the victim's turn — so the seed is the seat of the
+ * fighter whose turn is BEGINNING, which is exactly this `entity_id`. The clock the caller carried belongs to
+ * the outgoing actor, so its `seat` is re-derived here rather than trusted. A player's fid IS its seat
+ * (`cast.move fid_of`); a mob's is the crank-driven `1000 + idx` namespace, which has no previewable clock at
+ * all — those tick through the crank door (`process_turn_effects`'s null-seed arm), same as glyphs and traps.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
+ * @param {ReduceContext['turn_context']|null} [clock]  the public turn clock, when the caller has one
  * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
  */
-const run_turn_start_hazards = (state, entity_id) => {
+const run_turn_start_hazards = (state, entity_id, clock = null) => {
+  const seat = state.team0.findIndex(entity => entity.id === entity_id)
+  const tick_seed = clock && seat >= 0 ? turn_seed({ ...clock, seat }) : null
   const glyphs = check_glyphs(state, entity_id)
   const delayed = process_delayed_payloads(glyphs.state, entity_id)
-  const ticks = process_turn_effects(delayed.state, entity_id)
+  const ticks = process_turn_effects(delayed.state, entity_id, tick_seed)
   const all = [...glyphs.effects, ...delayed.effects, ...ticks.effects]
   /** @type {import('./reduce.js').FightEvent[]} */
   const events =
@@ -669,9 +693,10 @@ const run_turn_end = state => {
  * `run_turn_end` — never on a stepped-over corpse or an actor killed by its start hazards.
  * Bounded by turn_order length so an all-skipped order can't loop forever. Returns the collected events.
  * @param {import('./fight_state.js').FightState} state
+ * @param {ReduceContext['turn_context']|null} [clock]  the public turn clock the started turns' ticks roll off
  * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
  */
-const advance_to_actor = state => {
+const advance_to_actor = (state, clock = null) => {
   // The actor here just ENDED its turn — including a player who self-killed mid-turn, whose own pass still runs
   // the end-phase work on chain (turns.move:181-184, `forfeit_current` tolerates a dead current seat).
   const { state: ended_state, events: ended_events } = run_turn_end(state)
@@ -690,7 +715,7 @@ const advance_to_actor = state => {
     // Was this actor stunned at the START of its turn? It remains live through start work and expires at the
     // skipped turn's END, matching Move's split start/end arms.
     const stunned = is_stunned(next, entity.id)
-    const hazards = run_turn_start_hazards(next, entity.id)
+    const hazards = run_turn_start_hazards(next, entity.id, clock)
     next = hazards.state
     events = [...events, ...hazards.events]
     const after = get_current_turn_entity(next)
@@ -798,10 +823,11 @@ const handle_ai_turn = (state, cmd, ctx) => {
 
   if (acc.state.winner !== -1) return acc
 
-  const ended = handle_end_turn(acc.state, {
-    type: 'end_turn',
-    entity_id: cmd.entity_id,
-  })
+  const ended = handle_end_turn(
+    acc.state,
+    { type: 'end_turn', entity_id: cmd.entity_id },
+    ctx,
+  )
   return { state: ended.state, events: [...acc.events, ...ended.events] }
 }
 
@@ -903,7 +929,7 @@ export const reduce = (state, command, ctx) => {
     case 'cast':
       return handle_cast(state, command, ctx)
     case 'end_turn':
-      return handle_end_turn(state, command)
+      return handle_end_turn(state, command, ctx)
     case 'use_ap_reserve':
       return handle_use_ap_reserve(state, command)
     case 'abandon':

@@ -536,8 +536,7 @@ export const apply_spell_effect = (
     if (effect.min === undefined || effect.max === undefined)
       return { state, effects: [] }
     const { state: s2, id } = next_id(state)
-    const draw = rng_range(turn_rng_of(s2), effect.min, effect.max)
-    const poisoned = add_effect(with_turn_rng(s2, draw.state), target_id, {
+    const poisoned = add_effect(s2, target_id, {
       id,
       // `type: 'DAMAGE'` is deliberate — it rides the SAME tick machinery a plain damage-over-time row uses
       // (process_turn_effects only special-cases `type === 'DAMAGE'`), so the reducer never needs a parallel
@@ -549,7 +548,12 @@ export const apply_spell_effect = (
       timing: 'TURN_START',
       source_id: caster.id,
       element: effect.element,
-      value: draw.value,
+      // #1826 — THE BAND, NOT A DRAW. `spell_board::apply_dot` stores the authored Effect verbatim and the
+      // chain rolls `[value, value_max]` at EVERY tick (`cast::apply_board_batch_from`); collapsing the band
+      // to one apply-time `turn_rng` draw here made tick 2 onward a guaranteed desync on any ranged DoT.
+      // Apply draws NOTHING (the chain's `apply_dot` consumes no entropy) — the roll moved to the tick door.
+      value: effect.min,
+      value_max: effect.max,
       ...row_flags(effect),
       turns_remaining: effect.turns ?? 1,
     })

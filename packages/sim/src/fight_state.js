@@ -61,7 +61,12 @@
  * @property {EffectTiming} timing
  * @property {string} source_id     entity that applied this effect
  * @property {Element} [element]
- * @property {number} value         damage/heal amount or stat modifier
+ * @property {number} value         damage/heal amount or stat modifier — a DoT row's AUTHORED MINIMUM (#1826)
+ * @property {number} [value_max]   the authored band's top: a DoT row is stored as `[value, value_max]` exactly
+ *   like the chain's Effect (`spell_board::apply_dot`), and every tick rolls it (`process_turn_effects`).
+ *   Absent (or ≤ `value`) is the fixed case. NEVER collapsed to a draw at apply time.
+ * @property {boolean} [dot]        this DAMAGE row is a K_APPLY_DOT status, not tick bookkeeping — the badge
+ *   discriminant (statuses.status_kind_of) AND the chain's tick-batch membership (`spell_board::tick_start`)
  * @property {keyof Stats | 'ap' | 'mp' | 'summons' | 'max_hp'} [stat]   buff/debuff target; max_hp is punishment vitality bookkeeping
  * @property {number} [chance]      damage-to-heal branch chance
  * @property {number} [heal_multiplier]
