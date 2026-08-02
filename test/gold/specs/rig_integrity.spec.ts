@@ -244,7 +244,7 @@ test('gold rig · anchor rebinds authored content to this boot localnet ids', as
   expect(up_source).toContain('write_runtime_catalog({')
   for (const module_name of ['fight-spells.js', 'living_corpus.ts', 'world_corpus.ts', 'deployment.ts'])
     expect(vite_source).toContain(module_name)
-  expect(world_gate_source).toContain("import('/src/game/screens/hud/world_levels.js')")
+  expect(world_gate_source).toContain("import('/src/world-shell/world_catalog.js')")
   expect(world_gate_source).not.toContain("import('/src/chain/deployment')")
   expect(world_gate_source).toContain('const character_level = Number(character.level ?? 1)')
   expect(world_gate_source).not.toContain('Number(character.level)')

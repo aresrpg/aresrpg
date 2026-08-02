@@ -100,12 +100,12 @@ test.describe('WORLD GATE · gold-localnet runtime world catalog', () => {
     // These imports execute in the real Vite app. If the gold-only deployment alias regresses, this table carries
     // checked-in testnet ids and the exact localnet-id comparison below fails before any travel is attempted.
     const catalog = await page.evaluate(async (id) => {
-      const [world_levels, rpc] = await Promise.all([
-        import('/src/game/screens/hud/world_levels.js'),
+      const [world_catalog, rpc] = await Promise.all([
+        import('/src/world-shell/world_catalog.js'),
         import('/src/rpc/client'),
       ])
       const [runtime_worlds, characters, encyclopedia] = await Promise.all([
-        world_levels.load_world_gates(),
+        world_catalog.load_world_catalog(),
         rpc.get_characters({ id }, undefined, true),
         rpc.get_encyclopedia('worlds'),
       ])
@@ -138,11 +138,13 @@ test.describe('WORLD GATE · gold-localnet runtime world catalog', () => {
     expect(locked, 'full gold corpus must expose a world above the fresh character level').toBeTruthy()
     expect(eligible, 'full gold corpus must expose a second level-eligible world').toBeTruthy()
 
-    // Triple-check the locked gate: localnet runtime enumeration, localnet /v1 snapshot, and chain-direct World
-    // all agree before the real switcher is asked to render it.
+    // Double-check the locked gate: the localnet runtime enumeration and the localnet /v1 snapshot agree before
+    // the real switcher is asked to render it. The former third leg was a chain-direct World read
+    // (read_worlds.js's get_worlds) — DELETED by #304, which rerouted the browser off the fullnode getObjects
+    // fan-out onto this same /v1 worlds view; no browser chain-direct world reader survives to cross-check with.
     const chain_locked = await page.evaluate(async (world: RuntimeWorld) => {
-      const { get_worlds } = await import('/src/chain/read_worlds.js')
-      return (await get_worlds([world]))[0] ?? null
+      const { load_world_catalog } = await import('/src/world-shell/world_catalog.js')
+      return (await load_world_catalog()).find((entry) => entry.id === world.id) ?? null
     }, locked!)
     const locked_level = Number(by_id.get(locked!.id)?.required_level)
     expect(chain_locked?.id).toBe(locked!.id)
