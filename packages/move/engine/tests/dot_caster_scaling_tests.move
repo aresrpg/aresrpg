@@ -13,7 +13,7 @@
 /// tell the two designs apart. The flat-DoT status quo fails it too (all ticks equal).
 ///
 /// The sourceless half is pinned alongside: a glyph payload belongs to a board cell, not to a fighter, and still
-/// amplifies off nothing (`spell_board::no_source()`).
+/// amplifies off nothing (spell_board's NO_SOURCE sentinel).
 #[test_only]
 module aresrpg_fight::dot_caster_scaling_tests;
 

@@ -162,8 +162,6 @@ public fun has_trap_at(board: &BoardState, cell: u64): bool {
 /// takes the same zero-caster path (`aresrpg_fight::cast::board_caster_stats`).
 const NO_SOURCE: u64 = 18446744073709551615;
 
-public fun no_source(): u64 { NO_SOURCE }
-
 /// START-of-turn tick for fighter `fighter_id` standing on `fighter_cell`: the payloads of every start-phase
 /// glyph it stands in, plus its start-phase DoT effects (taxonomy §5d). Read-only — duration decrement is a
 /// separate turn-start step (`decrement_fighter_statuses`, run BEFORE this) so the tick order stays explicit.

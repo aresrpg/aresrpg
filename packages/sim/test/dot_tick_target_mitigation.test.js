@@ -145,7 +145,7 @@ describe('#1873 — a DoT tick resolves through the chain board sink, not a raw 
 
   test('a row whose source is gone from the fight amplifies off nothing (the zero-caster fallback)', () => {
     // The chain's out-of-range guard in `cast::board_caster_stats`: a fid naming no fighter of this fight — a
-    // glyph payload's `spell_board::no_source()`, or a stale id — takes the zero block, never an abort.
+    // glyph payload's NO_SOURCE sentinel, or a stale id — takes the zero block, never an abort.
     const state = state_with_dot({ caster_stats: { strength: 100 } })
     const orphaned = {
       ...state,

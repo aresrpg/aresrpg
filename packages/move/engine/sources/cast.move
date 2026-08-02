@@ -1845,7 +1845,7 @@ fun apply_board_batch(fight: &mut Fight, is_mob: bool, idx: u64, effects: &vecto
 }
 
 /// `sources` is the per-effect source fid (`spell_board::tick_start_rows`), positionally aligned with `effects`;
-/// an entry that names no live fighter — `spell_board::no_source()`, a stale fid, or simply a shorter vector —
+/// an entry that names no live fighter — spell_board's NO_SOURCE sentinel, a stale fid, or simply a shorter vector —
 /// amplifies off nothing. `origin` is the removed trap anchor and `collision_level` the level recorded for its
 /// owner, or 1 for a pre-upgrade trap. PUSH/PULL route through the same side-aware sink as direct spell effects.
 fun apply_board_batch_from(
@@ -1941,7 +1941,7 @@ fun apply_board_batch_from(
 /// the Fight already carries for direct damage — no new state.
 ///
 /// `fallback` (the zero block) is returned for every batch entry that names no fighter of this fight: a glyph
-/// or trap payload (`spell_board::no_source()`, or an empty `sources` vector), and any fid outside the live
+/// or trap payload (spell_board's NO_SOURCE sentinel, or an empty `sources` vector), and any fid outside the live
 /// tables. The out-of-range check is the ONE guard — an unknown source amplifies nothing rather than aborting
 /// the turn.
 ///
