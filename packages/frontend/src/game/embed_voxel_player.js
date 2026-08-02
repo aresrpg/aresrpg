@@ -31,6 +31,7 @@ import { PLACEHOLDER_RIG_CLASS, character_model_urls } from './screens/character
 import { push_event_toast } from './core/toast.js'
 import { set_local_beat } from './core/local_beat.js'
 import { walk_fov_pulse } from './core/camera_juice.js'
+import { render_row_of } from './core/render_rows.js'
 import { MOUNT_SPEED_MULTIPLIER } from './mount_speed.js'
 import {
   has_veteran_title,
