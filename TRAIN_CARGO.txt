@@ -1,1 +1,11 @@
-adad7355430513b6220266d26d770224b9776199 train/train-29 chore(ceremony): republish artifacts — nine Published.toml + manifests + release pins
+5957ac880dfdf1ecc1a30afc472931f4cea246bc train/train-31 fix(smoke): the prod-smoke shim proves a signed testnet transaction
+4e04f0316673f8f6801dc58d6f9972c6607d6191 train/train-31 feat(gates): the workflow registry reconciles against the trunks
+9900ce975564f1ddc18d58579034513afeb8d640 train/train-31 fix(smoke): the sponsored route says what it does not cover
+392313b233e1e46d4382b26cb192b45268606c9e train/train-31 chore(gates): CI invokes the smoke gates this wave landed
+b931ee3ee9c8392bd78924ceea1e4cd013d78fb2 train/train-31 feat(smoke): an unfunded smoke wallet reds as funding, not as product
+2255ff9b427dd041b475ddf040e3e092786ed579 train/train-31 style(smoke): import order and readonly params on the funding alarm
+d64f2ea81a02c90d64d0c4f963c41733263049da train/train-31 fix(smoke): the engage row asserts a signature, not a route
+8100cc4a79e6f23c8f5d13d031e37d0bce4f322f train/train-31 ci(security): scheduled CodeQL security suite + npm/cargo dependabot
+c25d61fb74d8f233bf883032e6e443f5154cf6f2 train/train-31 feat(gate): pin entropy before validation (Fixes #1841)
+0f904dbb636ff7e68224862f0bc042c8220e7ef1 train/train-31 ci(gate): wire entropy ordering into root lint
+ea0732bd2ce4ebcf0ff1db159328e2805dd8f7de train/train-31 chore(ceremony): restamp the release pin generation time
