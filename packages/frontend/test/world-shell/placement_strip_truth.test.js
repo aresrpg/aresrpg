@@ -144,6 +144,11 @@ const make_board = () => {
   }
 }
 
+// The adapter's own default is the live game context module, whose evaluation order is not this file's to
+// depend on (voxel_fight_adapter_scope.test.js takes the same injection): the paint pass under test needs the
+// STATE_UPDATED seam and a dispatch sink, nothing more.
+const game_context = { events: { on: () => {}, off: () => {} }, dispatch: () => {} }
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const poll = async (predicate, timeout = 2_000) => {
   const started = Date.now()
@@ -171,7 +176,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('#1866 — the placement strips pain
   test('the clickable blue covers the pick-accepting cells and NOTHING else', async () => {
     fight_store.getState().input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: ME } })
     fight_store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 })
-    adapter_handle.current = create_voxel_fight_adapter(board)
+    adapter_handle.current = create_voxel_fight_adapter(board, { game_context })
 
     expect(await poll(() => board.cells_on('placement').length > 0)).toBe(true)
 
