@@ -1,1 +1,3 @@
-c08d81e4abc2206e295313a0134d0a50df19cafa train/train-45 feat(gates): fight-visible source-bypass ratchet — 88 measured, shrink-only (Refs #1993)
+61b1edf67abfd484da86081c30afd621c7735255 train/train-46 test(fight): convict the #1872 fork — the card mirrors the chain across the flip
+d9466fc04c6022a92f689e5edbb80e6eb84c334d train/train-46 fix(fight): rehydrate per-member mob identity instead of the group primary
+e7d0294abec6adca320f377340da77f4f62b6149 train/train-46 fix(fight): hold certified loot until reconciliation confirms it
