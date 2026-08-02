@@ -16,7 +16,9 @@ import { SEARCH_PROGRESS_MS } from '@aresrpg/world/spawns_reconcile'
 import i18n from '../i18n'
 import { DEMO_NETWORK } from '../chain/deployment'
 import { get_sdk } from '../chain/sdk'
-import { context } from '../game/store.js'
+// The engine handle from its ONE home — `game/store.js` only re-exports it for the React binding.
+// Same convention as world_join.js / lootbox_actions.js / store_patch.js.
+import { context } from '../game/core/game.js'
 import { update_progress_toast, resolve_progress_toast, reveal_zone } from '../game/core/toast.js'
 import { play_discovery_sfx } from '../game/core/audio/sfx.js'
 import { pulse_walk_fov } from '../game/core/camera_juice.js'
@@ -74,19 +76,32 @@ export function fetch_world_doc(world_id) {
   return _world_docs.get(world_id)
 }
 
-const zone_read_delays_ms = [0, 180, 420]
+// ONE read ladder for BOTH legs (#2030 — cumulative 0/180/600/1500ms). It has to outlast the fullnode
+// ledger-availability lag tx.js measures at ~570ms, because on the execute-cert fast path there is no
+// finality wait at all: `run_tx` short-circuits `waitForTransaction` when the submit returns certified
+// effects, so the "finality reconcile" leg fires microseconds after the optimistic one, inside that same
+// window. It used to get a ladder of `[0]` — one read, no retry — and a zone with 58 groups on chain was
+// declared empty because a single lagging read came back null.
+export const ZONE_READ_DELAYS_MS = [0, 180, 420, 900]
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Fold the chain-direct rows for a known-executed search through the spawns reducer door. Null is an
- * unconfirmed empty zone seconds after a write, so the optimistic leg retries reads only; it never retries the tx.
+ * unconfirmed empty zone seconds after a write, so both legs retry reads only; neither ever retries the tx.
+ * `read_rows` is the chain-direct reader (injected in tests; production always passes the real one).
  */
-async function fold_zone_rows_after_write({ world_id, zx, zy, at_executed, reconcile = false }) {
+export async function fold_zone_rows_after_write({
+  world_id,
+  zx,
+  zy,
+  at_executed,
+  reconcile = false,
+  read_rows = zone_rows_chain,
+}) {
   const read_kind = reconcile ? 'finality-reconcile' : 'executed-fast-path'
-  const delays = reconcile ? [0] : zone_read_delays_ms
-  for (const delay_ms of delays) {
+  for (const delay_ms of ZONE_READ_DELAYS_MS) {
     if (delay_ms) await sleep(delay_ms)
-    const rows = await zone_rows_chain(world_id, zx, zy).catch((error) => {
+    const rows = await read_rows(world_id, zx, zy).catch((error) => {
       throw new Error(`[discovery/${read_kind}/failed-read] chain-direct zone ${zx}:${zy} read failed`, {
         cause: error,
       })
